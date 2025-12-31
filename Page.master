@@ -1,0 +1,363 @@
+﻿<%@ Master Language="VB" CodeFile="Page.master.vb" Inherits="Page" %>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="it">
+<head runat="server">
+    <meta charset="utf-8" />
+
+    <title>
+        <asp:ContentPlaceHolder ID="TitleContent" runat="server" />
+    </title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+
+    <!-- =========================
+         CSS Onsus (da /Public/assets/css)
+       ========================= -->
+    <link rel="stylesheet" href="/Public/assets/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/Public/css/swiper-bundle.min.css" />
+    <link rel="stylesheet" href="/Public/css/animate.css" />
+    <link rel="stylesheet" href="/Public/css/bootstrap-select.min.css" />
+    <link rel="stylesheet" href="/Public/css/drift-basic.min.css" />
+    <link rel="stylesheet" href="/Public/assets/css/image-compare-viewer.min.css" />
+    <link rel="stylesheet" href="/Public/assets/css/jquery.fancybox.min.css" />
+    <link rel="stylesheet" href="/Public/assets/css/nice-select.css" />
+    <link rel="stylesheet" href="/Public/assets/css/photoswipe.css" />
+    <link rel="stylesheet" href="/Public/assets/css/styles.css" />
+
+    <!-- CSS personalizzati KeepStore (da usare SOLO se i file esistono davvero)
+    <link rel="stylesheet" href="/Public/assets/css/custom-keepstore.css" />
+    <link rel="stylesheet" href="/Public/assets/css/custom-keepstore-theme-2.css" />
+    -->
+
+    <!-- Head specifico per singola pagina (meta, script, css aggiuntivi) -->
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
+</head>
+
+<body id="PageBody" runat="server">
+    <form id="form1" runat="server">
+
+        <!-- =========================
+             Wrapper principale Onsus
+           ========================= -->
+        <div id="wrapper" class="tf-page">
+
+            <!-- POPUP FACEBOOK (gestito dal code-behind) -->
+            <asp:Panel ID="PopUpfacebook" runat="server" CssClass="popup-facebook" Visible="false">
+                <div class="popup-overlay">
+                    <div class="popup-content">
+                        <p>Seguici su Facebook per restare aggiornato sulle nostre offerte.</p>
+                        <asp:LinkButton ID="LB_CancelFacebook" runat="server" CssClass="btn btn-primary">
+                            Chiudi
+                        </asp:LinkButton>
+                    </div>
+                </div>
+            </asp:Panel>
+
+            <!-- =========================
+                 HEADER ONSUS + LOGO + LOGIN + CARRELLO
+               ========================= -->
+            <header class="tf-header style-2">
+                <div class="inner-header">
+                    <div class="container">
+                        <div class="row align-items-center">
+                            <!-- LOGO -->
+                            <div class="col-md-3 col-7 d-flex align-items-center">
+                                <div class="logo-site">
+                                    <a href="Default.aspx">
+                                        <asp:Image ID="imgLogo" runat="server"
+                                            CssClass="lazyload logo desktop-logo"
+                                            AlternateText="Logo" />
+                                        <asp:Image ID="imgLogoMobile" runat="server"
+                                            CssClass="lazyload logo mobile-logo d-md-none d-inline-block"
+                                            AlternateText="Logo" />
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- RICERCA -->
+                            <div class="col-md-6 d-none d-md-block">
+                                <div class="header-center justify-content-end">
+                                    <div class="form-search-product style-2">
+                                        <!-- Per ora niente select categorie, usiamo solo box di ricerca -->
+                                        <fieldset>
+                                            <asp:TextBox ID="tbCerca"
+                                                runat="server"
+                                                CssClass="form-control"
+                                                placeholder="Cerca prodotti..."
+                                                AutoPostBack="true" />
+                                        </fieldset>
+                                        <button type="button" class="btn-submit-form" onclick="return false;">
+                                            <i class="icon-search"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- LOGIN, CARRELLO, AVVISI -->
+                            <div class="col-md-3 col-5">
+                                <div class="header-right d-flex justify-content-end align-items-center gap-3">
+
+                                    <!-- MINI LOGIN / ACCOUNT -->
+                                    <asp:MultiView ID="mvLogin" runat="server" ActiveViewIndex="0">
+
+                                        <!-- VIEW: NON LOGGATO -->
+                                        <asp:View ID="vwLoggedOut" runat="server">
+                                            <a href="login.aspx" class="tf-cur-item link account-link">
+                                                <i class="icon-user-3"></i>
+                                                <span class="body-small">Accedi / Registrati</span>
+                                            </a>
+                                        </asp:View>
+
+                                        <!-- VIEW: LOGGATO -->
+                                        <asp:View ID="vwLoggedIn" runat="server">
+                                            <div class="tf-cur-item account-info d-flex flex-column align-items-start">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="icon-user-3"></i>
+                                                    <span class="body-small ms-1">Ciao,</span>
+                                                    <asp:Label ID="lblUtente" runat="server" CssClass="fw-semibold ms-1" />
+                                                    <!-- LINK MY ACCOUNT -->
+                                                    <asp:HyperLink ID="hlMyAccount" runat="server"
+                                                        CssClass="body-small ms-3 text-decoration-underline"
+                                                        NavigateUrl="myaccount.aspx">
+                                                        My Account
+                                                    </asp:HyperLink>
+                                                    <a href="logout.aspx" class="body-small ms-3 text-decoration-underline">
+                                                        Esci
+                                                    </a>
+                                                </div>
+                                                <small class="body-small text-muted">
+                                                    Ultimo accesso:
+                                                    <asp:Label ID="lblAccesso" runat="server" />
+                                                </small>
+                                            </div>
+                                        </asp:View>
+
+                                    </asp:MultiView>
+
+                                    <!-- LINK LISTINO PERSONALIZZATO (Label4 / HyperLink14 usati dal VB) -->
+                                    <div class="header-listino d-none d-md-flex align-items-center">
+                                        <asp:Label ID="Label4" runat="server"
+                                            CssClass="body-small me-1"
+                                            Text="Listino personalizzato:"
+                                            Visible="false" />
+                                        <asp:HyperLink ID="HyperLink14" runat="server"
+                                            CssClass="link-main body-small"
+                                            NavigateUrl="Listino_Personalizzato.aspx"
+                                            Text="Vedi"
+                                            Visible="false" />
+                                    </div>
+
+                                    <!-- CARRELLO -->
+                                    <div class="nav-cart">
+                                        <a href="carrello.aspx" class="link nav-icon-item">
+                                            <span class="position-relative">
+                                                <i class="icon-cart"></i>
+                                                <span class="cart-count">
+                                                    <asp:Label ID="lblCarrelloCount" runat="server" Text="0" />
+                                                </span>
+                                            </span>
+                                            <span class="cart-total body-small">
+                                                <asp:Label ID="lblCarrelloTotale" runat="server" Text="0,00" />
+                                            </span>
+                                        </a>
+                                    </div>
+
+                                    <!-- AVVISO ORDINI DA SALDARE -->
+                                    <asp:Panel ID="pay_your_orders" runat="server"
+                                        CssClass="pay-your-orders"
+                                        Visible="false">
+                                        <a href="documenti.aspx?t=4" class="badge bg-warning text-dark">
+                                            Ordini da saldare:
+                                            <span id="to_pay" runat="server"></span>
+                                        </a>
+                                    </asp:Panel>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Qui in futuro potremo inserire il menu principale / categorie Onsus -->
+            </header>
+
+            <!-- =========================
+                 BANNER / STRIP PROMO - placeholder
+               ========================= -->
+            <section class="tf-section tf-banner-strip">
+                <div class="container">
+                    <!-- In questa sezione in futuro useremo DataList/Repeater legati alle SqlDataSource pubblicitarie -->
+                </div>
+            </section>
+
+            <!-- =========================
+                 CONTENUTO PRINCIPALE
+               ========================= -->
+            <main class="site-main">
+
+                <%-- INIZIO BLOCCO FIX COMPATIBILITÀ PLACEHOLDER (LEGACY)
+                     Alcune pagine legacy usano ContentPlaceHolderID="Contentplaceholder1" oppure "cph".
+                     Questi placeholder aggiuntivi evitano l'HttpException senza toccare le pagine. --%>
+                <asp:ContentPlaceHolder ID="Contentplaceholder1" runat="server" />
+                <asp:ContentPlaceHolder ID="cph" runat="server" />
+                <%-- FINE BLOCCO FIX COMPATIBILITÀ PLACEHOLDER (LEGACY) --%>
+
+                <asp:ContentPlaceHolder ID="MainContent" runat="server" />
+            </main>
+
+            <!-- =========================
+                 FOOTER
+               ========================= -->
+            <footer class="tf-footer">
+                <div class="container">
+                    <div class="row">
+                        <!-- COLONNA 1 FOOTER -->
+                        <div class="col-md-3">
+                            <asp:DataList ID="DataList_DIV1" runat="server"
+                                DataSourceID="SqlDataFooterDIV1"
+                                RepeatLayout="Flow"
+                                CssClass="footer-list">
+                                <ItemTemplate>
+                                    <a href='<%# Eval("link_esterno") %>' class="footer-link">
+                                        <%# Eval("nome") %>
+                                    </a>
+                                </ItemTemplate>
+                            </asp:DataList>
+                        </div>
+
+                        <!-- COLONNA 2 FOOTER -->
+                        <div class="col-md-3">
+                            <asp:DataList ID="DataList_DIV2" runat="server"
+                                DataSourceID="SqlDataFooterDIV2"
+                                RepeatLayout="Flow"
+                                CssClass="footer-list">
+                                <ItemTemplate>
+                                    <a href='<%# Eval("link_esterno") %>' class="footer-link">
+                                        <%# Eval("nome") %>
+                                    </a>
+                                </ItemTemplate>
+                            </asp:DataList>
+                        </div>
+
+                        <!-- COLONNA 3 FOOTER -->
+                        <div class="col-md-3">
+                            <asp:DataList ID="DataList_DIV3" runat="server"
+                                DataSourceID="SqlDataFooterDIV3"
+                                RepeatLayout="Flow"
+                                CssClass="footer-list">
+                                <ItemTemplate>
+                                    <a href='<%# Eval("link_esterno") %>' class="footer-link">
+                                        <%# Eval("nome") %>
+                                    </a>
+                                </ItemTemplate>
+                            </asp:DataList>
+                        </div>
+
+                        <!-- COLONNA 4 FOOTER -->
+                        <div class="col-md-3">
+                            <asp:DataList ID="DataList_DIV4" runat="server"
+                                DataSourceID="SqlDataFooterDIV4"
+                                RepeatLayout="Flow"
+                                CssClass="footer-list">
+                                <ItemTemplate>
+                                    <a href='<%# Eval("link_esterno") %>' class="footer-link">
+                                        <%# Eval("nome") %>
+                                    </a>
+                                </ItemTemplate>
+                            </asp:DataList>
+                        </div>
+                    </div>
+
+                    <div class="footer-bottom d-flex justify-content-between align-items-center mt-3">
+                        <div class="credits">
+                            <asp:Label ID="lblCredits" runat="server" />
+                        </div>
+                        <div class="footer-extra">
+                            <!-- Qui in futuro possiamo mostrare loghi “verified”, metodi di pagamento, ecc. -->
+                        </div>
+                    </div>
+                </div>
+            </footer>
+
+        </div> <!-- /wrapper -->
+
+        <!-- =========================
+             SQLDATASOURCE USATE DAL CODE-BEHIND
+           ========================= -->
+        <asp:SqlDataSource ID="SqlData_Popup" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+        <asp:SqlDataSource ID="SqlData_Pubblicita_Top" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+        <asp:SqlDataSource ID="SqlDataSource_Pubblicita_Sinistra_1" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+        <asp:SqlDataSource ID="SqlDataSource_Pubblicita_Sinistra_2" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+        <asp:SqlDataSource ID="SqlDataSource_Pubblicita_Sinistra_3" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+        <asp:SqlDataSource ID="SqlDataSource_Pubblicita_Destra_1" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+        <asp:SqlDataSource ID="SqlDataSource_Pubblicita_Destra_2" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+        <asp:SqlDataSource ID="SqlDataSource_Pubblicita_Destra_3" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+        <asp:SqlDataSource ID="SqlDataFooterDIV1" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+        <asp:SqlDataSource ID="SqlDataFooterDIV2" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+        <asp:SqlDataSource ID="SqlDataFooterDIV3" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+        <asp:SqlDataSource ID="SqlDataFooterDIV4" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+        <asp:SqlDataSource ID="Sql_Partners" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+        <asp:SqlDataSource ID="SqlData_TotOrdini" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+    </form>
+
+    <!-- =========================
+         JS Onsus (da /Public/assets/js)
+       ========================= -->
+    <script src="/Public/assets/js/jquery.min.js"></script>
+    <script src="/Public/assets/js/bootstrap.min.js"></script>
+    <script src="/Public/assets/js/swiper-bundle.min.js"></script>
+    <script src="/Public/assets/js/carousel.js"></script>
+    <script src="/Public/assets/js/bootstrap-select.min.js"></script>
+    <script src="/Public/assets/js/lazysize.min.js"></script>
+    <script src="/Public/assets/js/count-down.js"></script>
+    <script src="/Public/assets/js/wow.min.js"></script>
+    <script src="/Public/assets/js/multiple-modal.js"></script>
+    <script src="/Public/assets/js/infinityslide.js"></script>
+    <script src="/Public/assets/js/main.js"></script>
+    <script src="/Public/assets/js/sibforms.js" defer></script>
+
+</body>
+</html>

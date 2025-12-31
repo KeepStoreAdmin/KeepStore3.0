@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<FetchTokenResponseType xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="">
+  <Timestamp xmlns="urn:ebay:apis:eBLBaseComponents">2019-05-09T21:09:35.844Z</Timestamp>
+  <Ack xmlns="urn:ebay:apis:eBLBaseComponents">Success</Ack>
+  <CorrelationID xmlns="urn:ebay:apis:eBLBaseComponents">41453503-103c-428c-a774-642100bc7646</CorrelationID>
+  <Version xmlns="urn:ebay:apis:eBLBaseComponents">1103</Version>
+  <Build xmlns="urn:ebay:apis:eBLBaseComponents">E1103_CORE_APISIGNIN_18954667_R1</Build>
+  <eBayAuthToken xmlns="urn:ebay:apis:eBLBaseComponents">AgAAAA**AQAAAA**aAAAAA**/pTUXA**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6wFk4SlDJeCoQ2dj6x9nY+seQ**TEgEAA**AAMAAA**pjH7AUyx1WFbO8lwIB9KaYkETuVVwGLgeyjTlhF967AGKAbEx+q7AoaXQmRkZlusBVceGmAaXkGCwXaQAGyQVaL2n3XrPScxnopMOo6t1Z6IML5DVcD4jCMWMh6VNE19BMsQ53+mH+yHU9JGzbbxV3Sl09aIxrsmGtAA+rkuQmuOMMOdU7A9haxpqsw/1Pc31G740hyWdYyORQ1zUSeTUWRycLRK/lai1e4vQKo77u3uyB2sN+1VhCaif/Sp++ND0iBIjeGQMdcLLLEntZjQ93aI34TCRrswNVjEEwjCwhQSlk1Da5+LTl5WGsKlSO62ZPmeLJGdcZ9lZbw1O0IdeA088VBlvcSnKBnz4cvU/AYn/pLWQq7lR4bCAnwDqACfFzxXWVdHVBViqvYA6oMmBP0TriYkcjCKzp3Dg385nD26JGlJuQEyubtwEGG4lINC3WXkTuE7+/EaDQmBM8hNMr3MXWKkk1cEeg7vpvsC8/Y5k8FtT1wNLeBSHOy1X+9z2JKcTPv8EUTRnZk0mzxvrOMCNHH+9gqFCMJ4wIBhpSKCQrbBvFkMF1580a8LIpgl8Ze36oW622y9GTUc6FZbU9ExUYhQqLErS43qgm0EcMw3JPDbUkLq9qf+3CewoVv9hU0i4gCDY7oXcUFxqrs/PTF9VlBP70EnRwmZAiwNZled2hlq8iVIYKpm5tjCN46hXs6JF+sOKlhrDXHIx/oUcgsDXWbDbs2Qj7Q5+Qtuq2fksB6oXhbR7/SbSI0VNJkH</eBayAuthToken>
+  <HardExpirationTime xmlns="urn:ebay:apis:eBLBaseComponents">2020-10-30T21:00:46Z</HardExpirationTime>
+</FetchTokenResponseType>
