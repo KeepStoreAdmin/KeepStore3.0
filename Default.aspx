@@ -1,4 +1,4 @@
-﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
+<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
     Home
@@ -12,22 +12,37 @@
     <!-- Slide Show -->
     <div id="Slide_Show" style="max-width:600px; margin:auto; overflow:hidden;">
         <asp:SqlDataSource ID="slideShow" runat="server"
-            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-            SelectCommand="SELECT * FROM slideshows_parts WHERE slideshowId = (SELECT MAX(id) FROM slideshows WHERE placeholder = 'defaultPage' AND aziendeId = 1 ORDER BY Priorita) AND startDate<=CURDATE() AND stopDate>CURDATE() ORDER BY orderPosition">
-        </asp:SqlDataSource>
+    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+    SelectCommand="SELECT * 
+                   FROM slideshows_parts 
+                   WHERE slideshowId = (
+                        SELECT MAX(id) 
+                        FROM slideshows 
+                        WHERE placeholder = 'defaultPage' 
+                          AND aziendeId = ?AziendaID
+                   )
+                   AND startDate <= CURDATE()
+                   AND stopDate > CURDATE()
+                   ORDER BY orderPosition">
+    <SelectParameters>
+        <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" />
+    </SelectParameters>
+    </asp:SqlDataSource>
 
         <div id="Slide_Show_Container" class="slideshow-container" runat="server">
             <asp:Repeater ID="slideshowItems" runat="server" DataSourceID="slideShow">
                 <ItemTemplate>
-                    <%incrementa_slides()%>
-                    <div class="mySlides fade">
-                        <%# IIf(IsDBNull(Eval("link")) OrElse Eval("link") = "", "", "<a href='" & Eval("link") & "'>") %>
-                        <img src="/Public/Slideshows/<%#Eval("image")%>" style="width:100%" />
-                        <%# IIf(IsDBNull(Eval("link")) OrElse Eval("link") = "", "", "</a>") %>
-                        <div class="text"><%#Eval("caption")%></div>
-                    </div>
-                </ItemTemplate>
+    <% incrementa_slides() %>
+    <div class="mySlides fade">
+        <%# SlideLinkStart(Eval("link")) %>
+        <img src='<%# SafeSlideshowImageUrl(Eval("image")) %>' style="width:100%" alt="" />
+        <%# SlideLinkEnd(Eval("link")) %>
+        <div class="text"><%# SafeText(Eval("caption")) %></div>
+    </div>
+            </ItemTemplate>
+
+
             </asp:Repeater>
 
             <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
@@ -76,6 +91,82 @@
         ' --- Helper generali / slideshow / prezzi ---
 
         Dim slides As Integer = 0
+
+        ' ===========================
+' HARDENING OUTPUT (XSS / URL)
+' ===========================
+
+Function SafeText(ByVal obj As Object) As String
+    Return System.Web.HttpUtility.HtmlEncode(Convert.ToString(obj))
+End Function
+
+Function SafeAttr(ByVal obj As Object) As String
+    Return System.Web.HttpUtility.HtmlAttributeEncode(Convert.ToString(obj))
+End Function
+
+' Consente: URL relativi (/, ~/), o assoluti http/https (solo per HREF)
+Function SafeUrl(ByVal urlObj As Object) As String
+    If urlObj Is Nothing OrElse IsDBNull(urlObj) Then Return ""
+    Dim raw As String = Convert.ToString(urlObj).Trim()
+    If raw = "" Then Return ""
+
+    Dim lower As String = raw.ToLowerInvariant()
+    If lower.StartsWith("javascript:") OrElse lower.StartsWith("data:") OrElse lower.StartsWith("vbscript:") Then
+        Return ""
+    End If
+
+    If raw.StartsWith("/") OrElse raw.StartsWith("~/") Then
+        Return raw
+    End If
+
+    Dim uri As Uri = Nothing
+    If Uri.TryCreate(raw, UriKind.Absolute, uri) Then
+        If uri.Scheme = Uri.UriSchemeHttp OrElse uri.Scheme = Uri.UriSchemeHttps Then
+            Return uri.ToString()
+        End If
+    End If
+
+    Return ""
+End Function
+
+Function SlideLinkStart(ByVal linkObj As Object) As String
+    Dim u As String = SafeUrl(linkObj)
+    If u = "" Then Return ""
+    If u.StartsWith("~/") Then u = ResolveUrl(u)
+    Return "<a href=""" & SafeAttr(u) & """>"
+End Function
+
+Function SlideLinkEnd(ByVal linkObj As Object) As String
+    Dim u As String = SafeUrl(linkObj)
+    If u = "" Then Return ""
+    Return "</a>"
+End Function
+
+Function SafeFileNameOnly(ByVal fileObj As Object) As String
+    If fileObj Is Nothing OrElse IsDBNull(fileObj) Then Return ""
+    Dim s As String = Convert.ToString(fileObj).Trim()
+    If s = "" Then Return ""
+
+    s = s.Replace("\", "/")
+
+    ' blocco path traversal / path assoluti
+    If s.Contains("..") OrElse s.Contains(":") Then Return ""
+
+    ' prendo solo l'ultimo segmento
+    If s.Contains("/") Then
+        s = s.Substring(s.LastIndexOf("/"c) + 1)
+    End If
+
+    Return s
+End Function
+
+Function SafeSlideshowImageUrl(ByVal fileObj As Object) As String
+    Dim fileName As String = SafeFileNameOnly(fileObj)
+    If fileName = "" Then
+        Return ResolveUrl("~/Public/images/nofoto.gif")
+    End If
+    Return ResolveUrl("~/Public/Slideshows/" & fileName)
+End Function
 
         Function ottieni_data_oggi() As String
             Return DateTime.Now.ToString("yyyy-MM-dd")
@@ -250,7 +341,7 @@
     <% If Data_UltimiArrivi.Items.Count > 0 Then %>
 
         <!-- Articoli in vetrina - "Scelti per te" -->
-        <div class="container-fluid scelti-per-te bg-white home-box-position mt-3 bg-shadow">
+        <div class="container tf-section flat-spacing-2 scelti-per-te bg-white home-box-position mt-3 bg-shadow">
             <h1 style="padding:0px;">
                 <img src="Public/Images/scelti_per_te.png" width="100%" style="max-height: 50px;" />
             </h1>
@@ -398,7 +489,7 @@
             <br />
             <div style="max-width:100%" class="img-max-100">
                 <asp:HyperLink ID="hlBanner" runat="server"
-                    NavigateUrl='<%# "click.aspx?id=" & Eval("id") & "&link=" & Server.UrlEncode(Eval("link")) %>'
+                    NavigateUrl='<%# "click.aspx?id=" & Eval("id") %>'
                     EnableViewState="false"
                     ToolTip='<%# Eval("Descrizione") %>'
                     ImageUrl='<%# "Public/Banner/" & Eval("img_path") %>'
@@ -420,7 +511,7 @@
             <br />
             <div style="max-width:100%" class="img-max-100">
                 <asp:HyperLink ID="hlBanner" runat="server"
-                    NavigateUrl='<%# "click.aspx?id=" & Eval("id") & "&link=" & Server.UrlEncode(Eval("link")) %>'
+                    NavigateUrl='<%# "click.aspx?id=" & Eval("id") %>'
                     EnableViewState="false"
                     ToolTip='<%# Eval("Descrizione") %>'
                     ImageUrl='<%# "Public/Banner/" & Eval("img_path") %>'
@@ -438,7 +529,7 @@
     <!-- Visualizza i nuovi prodotti inseriti -->
     <br />
     <% cont = 0 %>
-    <div class="container-fluid bg-white pb-4 mt-3 home-box-position bg-shadow">
+    <div class="container tf-section flat-spacing-2 bg-white pb-4 mt-3 home-box-position bg-shadow">
         <h1 style="padding:0px;">
             <img src="Public/Images/novita.png" width="100%" style="max-height: 50px;" />
         </h1>
@@ -586,7 +677,7 @@
     <div style="clear:both;"></div>
     <div class="border-radius" style="margin:auto; border-style:none;">
 
-        <div class="container-fluid bg-white home-box-position mt-3 bg-shadow">
+        <div class="container tf-section flat-spacing-2 bg-white home-box-position mt-3 bg-shadow">
             <h1 style="padding:0px;">
                 <img src="Public/Images/piu_venduti.png" alt="" width="100%" style="max-height: 50px;" />
             </h1>
@@ -666,7 +757,7 @@
         <!-- Marche Random -->
         <br />
         <div id="boxpromo">
-            <div class="container-fluid mb-3 partners mt-3 bg-shadow home-box-position">
+            <div class="container tf-section flat-spacing-2 mb-3 partners mt-3 bg-shadow home-box-position">
                 <div class="row">
                     <h2 style="font-size: 1.7rem;">
                         Rivenditori Ufficiali - I nostri brand  <i class="fa fa-handshake"></i>
