@@ -1,0 +1,585 @@
+﻿<%@ Master Language="VB" CodeFile="Coupon.master.vb" Inherits="Coupon" %>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <title>Coupon</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400italic' rel='stylesheet' type='text/css'>
+    
+	<!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/all.min.css" rel="stylesheet" type="text/css">
+	
+    <style type="text/css">
+        body
+        {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 1rem!important;
+            background: rgb(255,255,255); /* Old browsers */
+            background: -moz-linear-gradient(top,  rgba(255,255,255,1) 0%, rgba(102,182,252,1) 100%); /* FF3.6+ */
+            background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(255,255,255,1)), color-stop(100%,rgba(102,182,252,1))); /* Chrome,Safari4+ */
+            background: -webkit-linear-gradient(top,  rgba(255,255,255,1) 0%,rgba(102,182,252,1) 100%); /* Chrome10+,Safari5.1+ */
+            background: -o-linear-gradient(top,  rgba(255,255,255,1) 0%,rgba(102,182,252,1) 100%); /* Opera 11.10+ */
+            background: -ms-linear-gradient(top,  rgba(255,255,255,1) 0%,rgba(102,182,252,1) 100%); /* IE10+ */
+            background: linear-gradient(to bottom,  rgba(255,255,255,1) 0%,rgba(102,182,252,1) 100%); /* W3C */
+            filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', endColorstr='#66b6fc',GradientType=0 ); /* IE6-9 */
+
+        }
+        
+        .pulsante_settore
+        {
+            font-size: 1rem;
+            cursor: pointer;
+            //width: 189px;
+            //height: 100%;
+            background-color: #678bac;
+            border-color: white;
+            border-width: 1px;
+            border-style: solid;
+            float: left;
+            vertical-align: middle;
+            text-align: center;
+            margin-right: 3px;
+            /*background-image: url('Images/Coupon/back_pulsante.png');*/
+            background-position:top left;
+            background-repeat:no-repeat;
+            color:white;
+        }
+        .sottomenu
+        {
+            //width: 960px;
+            height: auto;
+            margin: auto;
+            background-color: rgb(236, 236, 236);
+            padding-bottom: 5px;
+            padding-top: 5px;
+            display: none;
+        }
+        .sottomenu_pulsanti_categoria
+        {
+            font-size: 7pt;
+            min-width: 156px;
+            height:110px;
+            background-color: white;
+            vertical-align: middle;
+            text-align: center;
+            border-style: solid;
+            border-width: 2px;
+            border-color: White;
+        }
+        .sottomenu_intestazione_categoria
+        {
+            height: 30px;
+			padding: 5px;
+            color:White;
+			font-size: 1rem;
+            background-color:#678bac;
+        }
+        .sottomenu_intestazione_img_categoria
+        {
+            height: 30px;
+            font-size: 8pt;
+        }
+        .box_background
+        {
+            background-color: #393939;
+			width: 280px;
+        }
+        .box_image
+        {
+            width: 280px;
+            height: 180px;
+        }
+        .box_coupon_header
+        {
+            position: relative;
+            width: 280px;
+            height: 76px;
+            background-image: url(  'Images/Coupon/coupon_1.png' );
+        }
+        .box_coupon_footer
+        {
+            position: relative;
+            width: 280px;
+            height: 94px;
+            background-image: url(  'Images/Coupon/coupon_2.png' );
+        }
+        .box_coupon_title
+        {
+            width: 95%;
+            margin: auto;
+            padding-top: 2px;
+            color: White;
+        }
+        .box_coupon_category
+        {
+        	width:96%;
+            
+            color:White;
+            padding:2%;
+            font-weight:bold;
+            background-color:rgba(0,0,0,0.5);
+        }
+        .box_coupon_clock
+        {
+            position: absolute;
+            bottom: 3px;
+            left: 68px;
+            font-size: 15pt;
+            font-weight: bold;
+            color: White;
+        }
+        .box_coupon_price
+        {
+            position: absolute;
+            top: 0px;
+            left: 54px;
+            font-size: 35pt;
+            font-weight: bold;
+            color: White;
+        }
+        .box_coupon_price_full
+        {
+            position: absolute;
+            top: 55px;
+            right: 90px;
+            
+            font-weight: bold;
+            color: White;
+        }
+        .box_coupon_price_discount
+        {
+            position: absolute;
+            top: 19px;
+            right: 4px;
+            font-size: 23pt;
+            font-weight: bold;
+            color: White;
+        }
+        
+        /*Stile relativo al formato lista Logo_Site_Verific*/
+        #lista_site_verific
+        {
+            list-style-type:none;
+        }
+
+        #lista_site_verific li
+        {
+            float:left;
+            padding:10px;
+        }
+        
+        #footer_page a:link    {text-decoration: none; color: white;}
+        #footer_page a:visited {text-decoration: none; color: white;}
+        #footer_page a:hover   {color: white; text-decoration:underline;}
+    </style>
+    
+    <script type="text/javascript">
+        function show_sottomenu(numero, numero_totale_sottomenu){        
+            //Nascondo tutti gli altri sottomenu
+            for (var i=1;i<=numero_totale_sottomenu;i++){
+                try{
+                    document.getElementById('sm_' + i).style.display = "none";
+                }catch(err){
+                }
+            }
+            //Visualizzo l'unico sottomenu da visualizzare
+            document.getElementById('sm').style.display = "block";
+            document.getElementById('sm_' + numero).style.display = "block";
+        }
+        
+        function nascondi_sottomenu(numero_totale_sottomenu){        
+            //Nascondo tutti gli altri sottomenu
+            for (var i=1;i<=numero_totale_sottomenu;i++){
+                try{
+                    document.getElementById('sm_' + i).style.display = "none";
+                }catch(err){
+                }
+            }
+        }
+        
+        function onmouse_over_settore(numero){
+            //Visualizzo l'unico sottomenu da visualizzare
+            //document.getElementById('m_' + numero).style.backgroundColor = "#678bac";
+            document.getElementById('m_' + numero).style.color = "yellow";
+        }
+        
+        function onmouse_out_settore(numero){
+            //Visualizzo l'unico sottomenu da visualizzare
+            //document.getElementById('m_' + numero).style.backgroundColor = "white";
+            document.getElementById('m_' + numero).style.color = "white";
+        }
+    </script>
+    
+    <script type="text/javascript" language="javascript" >
+		function countdown(obj, divId, tDate)
+		{
+			this.obj		= obj;
+			this.Div		= divId;
+			this.BackColor		= "white";
+			this.ForeColor		= "black";
+			this.TargetDate		= tDate;
+			this.DisplayFormat	= "%%D%%g %%H%%h %%M%%m %%S%%s";
+			this.CountActive	= true;
+			this.DisplayStr;
+			this.Calcage		= cd_Calcage;
+			this.CountBack		= cd_CountBack;
+			this.Setup		= cd_Setup;
+			this.Setup();
+		}
+	
+		function cd_Calcage(secs, num1, num2)
+		{
+		  s = ((Math.floor(secs/num1))%num2).toString();
+		  //if (s.length < 2) s = "0" + s;
+		  return (s);
+		}
+		function cd_CountBack(secs)
+		{
+		  this.DisplayStr = this.DisplayFormat.replace(/%%D%%/g,	this.Calcage(secs,86400,100000));
+		  this.DisplayStr = this.DisplayStr.replace(/%%H%%/g,		this.Calcage(secs,3600,24));
+		  this.DisplayStr = this.DisplayStr.replace(/%%M%%/g,		this.Calcage(secs,60,60));
+		  this.DisplayStr = this.DisplayStr.replace(/%%S%%/g,		this.Calcage(secs,1,60));
+		
+		  document.getElementById(this.Div).innerHTML = this.DisplayStr;
+		  if (this.CountActive) setTimeout(this.obj +".CountBack(" + (secs-1) + ")", 990);
+		}
+		function cd_Setup()
+		{
+			this.CountBack(Math.floor(this.TargetDate/1000));
+		}
+
+    </script>
+    
+    <asp:contentplaceholder id="Contentplaceholder1" runat="server">
+    </asp:contentplaceholder>
+</head>
+<body>
+    <form id="form1" runat="server">
+    
+    <!-- Top Header -->
+        <div style="background-color:rgb(103, 139, 172); background-image:url('Images/Coupon/header.png'); background-repeat:no-repeat;" class="container-fluid">
+            
+			<div class="row">
+				<div class="col-md-12">
+					<!-- Link Utente loggato -->
+					<%If Session("LoginID") > 0 Then%>
+						<div class="d-flex flex-row-reverse">
+							<table style="height:100%; vertical-align:middle;">
+								<tr>
+									<td style="text-align:right;">
+										Sei collegato come <b><%= Session("LoginNomeCognome") %></b><br />
+										<a style="text-decoration:none; color:White;" href="coupon_utente.aspx?t=<%= Session("IdDocumentoCoupon") %>">visualizza i coupon acquistati</a><br />
+										<a style="text-decoration:none; color:Yellow;" href="logout.aspx?redirect=lista_coupon.aspx">Logout</a>
+									</td>
+								</tr>
+							</table>
+						</div>
+					<%Else%>
+						<!-- Link Utente non loggato -->
+						<div class="d-flex flex-row-reverse">
+							<table style="height:100%; vertical-align:middle; vertical-align:middle;">
+								<tr>
+									<td>
+										<table style="color:White;">
+											<tr>
+												<td style="text-align:right; font-size:0.8rem; font-weight:bold; padding-right:20px; vertical-align:bottom;">
+													<a style="color:White;" href="registrazione.aspx?coupon">Registrati</a><br />
+													<a style="color:White;" href="remind.aspx?coupon">Recupera Password</a>
+												</td>
+												<td>
+													<asp:TextBox ID="textbox_username" Style="font-size: 1rem;" Width="100px" runat="server" BackColor="#f7fdfd"></asp:TextBox>
+												</td>
+												<td>
+													<asp:TextBox ID="textbox_password" Style="font-size: 1rem;" Width="100px" runat="server" TextMode="Password" BackColor="#f7fdfd" Text="PASSWORD"></asp:TextBox>            
+												</td>
+												<td>
+													<asp:Button ID="button_login" runat="server" Text="OK" />
+												</td>
+											</tr>
+										</table>
+									</td>
+								</tr>
+							</table>
+						</div>
+					<%End If%>
+				</div>
+			</div>
+			
+			
+			<div class="row">
+				<div class="col-md-5">
+					<!-- Logo -->
+					<div style="width:100%">
+						<a href="lista_coupon.aspx"><img src='<%= Session("AziendaLogoFooter") %>' alt="" style="width:100%; max-width:300px;" /></a>
+					</div>
+				</div>
+				<div class="col-md-7" style="position:relative; align-self: flex-end;">
+					<!-- Campo di Ricerca  -->
+					<div style="color:White; text-align:right;">
+						<div style="position:relative;">
+							<asp:TextBox ID="TextBox_Campo_Ricerca" runat="server" AutoCompleteType="None" Height="54px" MaxLength="50" Font-Size="18pt" ForeColor="#4a91e9" Font-Bold="true" style="padding-left:5px;width:100%"></asp:TextBox><br />
+							<a href="lista_coupon.aspx" style="color:White; font-weight:bold; text-decoration:none;">mostra tutti</a>
+							<img style="position:absolute; top:25px; right:10px;" src="Images/Coupon/search.png" alt="" />
+						</div>
+					</div>
+				</div>
+			</div>
+            
+            
+            <div class="row">
+				<div class="col-md-12">
+					<!-- Menù -->
+					<div class="d-flex">
+						<ul class="list-inline m-0 mx-auto">
+							<asp:Repeater ID="Repeater_Settori" DataSourceID="SqlDataSettori" runat="server">
+								<ItemTemplate>
+									<%cont_settori = cont_settori + 1%>
+										<li class="pulsante_settore list-inline-item m-0 p-3" id="m_<%= (cont_settori).toString %>" onclick="show_sottomenu(<%= (cont_settori).toString %>,5);" onmouseover="onmouse_over_settore(<%= (cont_settori).toString %>);" onmouseout="onmouse_out_settore(<%= (cont_settori).toString %>);">
+											<%#Eval("NomeSettore")%>
+										</li>
+								</ItemTemplate>
+							</asp:Repeater>					  
+						</ul>
+					</div>
+				</div>
+			</div>
+
+        </div>
+        
+        <!-- Sottomenu -->
+        <% cont_settori = 0%>
+        <div class="sottomenu container-fluid" id="sm" onclick="nascondi_sottomenu(10);">
+            <!-- Lista Categorie -->
+            <asp:Repeater ID="Repeater_Settori_Categorie" DataSourceID="SqlDataSettori" runat="server">
+                <ItemTemplate>
+                    <%cont_settori = cont_settori + 1%>
+                    <!-- Sottomenu -->
+                    <div id="sm_<%= (cont_settori).toString %>" style="width:100%; display:none; overflow:auto;">
+                        <asp:Label ID="LB_Settore" runat="server" Visible="false" Text='<%# Eval("idSettore") %>'></asp:Label>
+                        <asp:Repeater ID="Repeater_Settori_Categorie" DataSourceID="SqlDataCategorie" runat="server">
+                            <ItemTemplate>
+                                <div style="padding:2px; float:left;">
+                                    <a href='<%# iif(Eval("linkCategoria")<>"",Eval("linkCategoria"),"lista_coupon.aspx?ct=" & Eval("idCategoria")) %>'>
+                                        <table class="sottomenu_pulsanti_categoria">
+                                            <tr>
+                                                <td class="sottomenu_intestazione_categoria">
+                                                    <%#Eval("NomeCategoria")%>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="sottomenu_intestazione_img_categoria">
+                                                    <img src='<%#Eval("imgCategoria")%>' title='<%#Eval("NomeCategoria")%>' alt="" />
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </a>
+                                </div>
+                            </ItemTemplate>
+                        </asp:Repeater>
+                        
+                        <asp:SqlDataSource ID="SqlDataCategorie" runat="server" 
+                        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
+                        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" 
+                        SelectCommand="SELECT * FROM coupon_categorie WHERE attiva_disattiva_categoria=1 ORDER BY OrdinamentoCategoria ASC"></asp:SqlDataSource>
+                    
+                    </div>
+                </ItemTemplate>
+            </asp:Repeater>
+        </div>
+        
+        <div class="container-fluid" style="font-family:Arial, sans-serif; overflow:auto; background-color:White;">
+            <asp:contentplaceholder id="MainContent" runat="server">
+            </asp:contentplaceholder>
+        </div>
+        
+        <script runat="server">
+            Function controlla_html(ByVal temp As Object) As Integer
+              
+                If IsDBNull(temp) Then
+                    Return 0
+                Else
+                    If temp.ToString = "" Then
+                        Return 0
+                    End If
+                End If
+              
+                Return 1
+            End Function
+      </script>
+        
+        <!-- Footer -->
+        <div id="footer_page" style="width:100%; overflow:auto; padding-bottom:10px; background-color:#2B2B2B;">
+            <table style="width:960px; height:100%; margin:auto; color:white;">
+                <tr>
+                    <td>
+                        <div style="width:95%; padding:5%;">
+                            <!-- Logo -->
+                            <%If Request.Url.AbsoluteUri.Contains("coupon") Then%>
+                                <a href="lista_coupon.aspx"><img src='<%= Session("AziendaLogoFooter") %>' alt="" style="width:95%;" /></a>
+                            <%Else%>
+                                <a href="<%= "http://" & Session("AziendaUrl") %>"><img src='<%= Session("AziendaLogo") %>' alt="" style="width:95%;" /></a>
+                            <%End If%>
+                        </div>
+                    </td>
+                    <td colspan="3">
+                        <div style="width:100%; font-family:Monospace; text-align:justify; padding-top:10px;">
+                            <%If Request.Url.AbsoluteUri.Contains("coupon") Then%>
+                                <%=Session("AziendaDescrizioneServizioCoupon")%>
+                            <%Else%>
+                                <%=Session("AziendaDescrizione")%>
+                            <%End If%>    
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4" style="padding-top:40px;">
+                    </td>
+                </tr>
+                <tr>
+                    <td style="vertical-align:top; width:25%; padding:10px; border-right: 1px dotted;">
+                        <asp:DataList ID="DataList_DIV1" DataSourceID="SqlDataFooterDIV1" runat="server">
+                            <ItemTemplate>
+                                <a href='<%# iif(Eval("link_esterno")<>"",Eval("link_esterno"),"main.aspx?id=" & Eval("id")) %>' target="<%# Eval("target") %>" title="<%# Eval("descrizione") %>"><%#Eval("nome")%></a><br />
+                            </ItemTemplate>
+                        </asp:DataList>
+                    </td>
+                    <td style="vertical-align:top; width:25%; padding:10px; border-right: 1px dotted;">
+                        <asp:DataList ID="DataList_DIV2" DataSourceID="SqlDataFooterDIV2" runat="server">
+                            <ItemTemplate>
+                                <a href='<%# iif(Eval("link_esterno")<>"",Eval("link_esterno"),"main.aspx?id=" & Eval("id")) %>' target="<%# Eval("target") %>" title="<%# Eval("descrizione") %>"><%#Eval("nome")%></a><br />
+                            </ItemTemplate>
+                        </asp:DataList>
+                    </td>
+                    <td style="vertical-align:top; width:25%; padding:10px; border-right: 1px dotted;">
+                        <asp:DataList ID="DataList_DIV3" DataSourceID="SqlDataFooterDIV3" runat="server">
+                            <ItemTemplate>
+                                <a href='<%# iif(Eval("link_esterno")<>"",Eval("link_esterno"),"main.aspx?id=" & Eval("id")) %>' target="<%# Eval("target") %>" title="<%# Eval("descrizione") %>"><%#Eval("nome")%></a><br />
+                            </ItemTemplate>
+                        </asp:DataList>
+                    </td>
+                    <td style="vertical-align:top; width:25%; padding:10px;">
+                        <asp:DataList ID="DataList_DIV4" DataSourceID="SqlDataFooterDIV4" runat="server">
+                            <ItemTemplate>
+                                <a href='<%# iif(Eval("link_esterno")<>"",Eval("link_esterno"),"main.aspx?id=" & Eval("id")) %>' target="<%# Eval("target") %>" title="<%# Eval("descrizione") %>"><%#Eval("nome")%></a><br />
+                            </ItemTemplate>
+                        </asp:DataList>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4" style="padding-top:40px;">
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4" style="height:20%; background: #7d7e7d; /* Old browsers */ background: -moz-linear-gradient(top,  #7d7e7d 0%, #0e0e0e 100%); /* FF3.6+ */ background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#7d7e7d), color-stop(100%,#0e0e0e)); /* Chrome,Safari4+ */ background: -webkit-linear-gradient(top,  #7d7e7d 0%,#0e0e0e 100%); /* Chrome10+,Safari5.1+ */ background: -o-linear-gradient(top,  #7d7e7d 0%,#0e0e0e 100%); /* Opera 11.10+ */ background: -ms-linear-gradient(top,  #7d7e7d 0%,#0e0e0e 100%); /* IE10+ */ background: linear-gradient(to bottom,  #7d7e7d 0%,#0e0e0e 100%); /* W3C */ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#7d7e7d', endColorstr='#0e0e0e',GradientType=0 ); /* IE6-9 */  text-align:left; vertical-align:middle; -webkit-border-radius: 10px; -moz-border-radius: 10px; border-radius: 10px;">
+                        <table style="width:100%;">
+                            <tr>
+                                <td style="11vertical-align:middle; padding-left:10px">                                        
+                                    <div style="float:left;">
+                                        <table style="text-align:center; vertical-align:middle;">
+                                            <tr>
+                                                <td>
+                                                    <%=Session("Script_Visite_Azienda")%>
+                                                </td>
+                                                <td style="padding-left:15px;">
+                                                    <a href="http://www.keepstore.it" target="_blank">Powered by <b>KeepStore</b></a> - <%=Session("AziendaCopyright")%>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </td>
+                                <td>
+                                    <ul id="lista_site_verific" style=" text-align:right; float:right;">
+                                        <%If Session("AziendaLogoVerificSite1") <> "" Then%>
+                                            <li>
+                                                <a href="<%= Session("LinkAziendaLogoVerificSite1") %>" target="_self"><img src="<%= Session("AziendaLogoVerificSite1") %>" title="<%# Eval("alt") %>" alt="<%# Eval("alt") %>" style="height:50px;" /></a>
+                                            </li>
+                                        <%End If%>
+                                        <%If Session("AziendaLogoVerificSite2") <> "" Then%>
+                                            <li>
+                                                <a href="<%= Session("LinkAziendaLogoVerificSite2") %>" target="_self"><img src="<%= Session("AziendaLogoVerificSite2") %>" title="<%# Eval("alt") %>" alt="<%# Eval("alt") %>" style="height:50px;" /></a>
+                                            </li>
+                                        <%End If%>
+                                        <%If Session("AziendaLogoVerificSite3") <> "" Then%>
+                                            <li>
+                                                <a href="<%= Session("LinkAziendaLogoVerificSite3") %>" target="_self"><img src="<%= Session("AziendaLogoVerificSite3") %>" title="<%# Eval("alt") %>" alt="<%# Eval("alt") %>" style="height:50px;" /></a>
+                                            </li>
+                                        <%End If%>
+                                        <%If Session("AziendaLogoVerificSite4") <> "" Then%>
+                                            <li>
+                                                <a href="<%= Session("LinkAziendaLogoVerificSite4") %>" target="_self"><img src="<%= Session("AziendaLogoVerificSite4") %>" title="<%# Eval("alt") %>" alt="<%# Eval("alt") %>" style="height:50px;" /></a>
+                                            </li>
+                                        <%End If%>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <!-- Partners --> 
+                        <div style=" width:90%; margin:auto; text-align:center; display:table;"> 
+                        <asp:DataList ID="List_Partners" runat="server" DataKeyField="id" DataSourceID="Sql_Partners" RepeatDirection="Horizontal" Width="95%" ItemStyle-HorizontalAlign="Center" ItemStyle-VerticalAlign="Middle" HorizontalAlign="Center" RepeatLayout="Flow">
+                            <ItemTemplate>
+                                <!-- Immagine Partners -->
+                                <div style="padding-right:10px; padding-top:10px; text-align:center; height:40px; overflow:hidden; text-decoration:none; float:left; display:<%# iif(controlla_html(Eval("html"))=0,"block","none") %>;">
+                                <a style="text-decoration:none; border:none;" target="_blank" href='<%# Eval("Link") %>'><img style="border:none; text-decoration:none; height:40px;" src='<%# Eval("Img") %>' alt="" title='<%# Eval("Descrizione") %>' /></a>
+                                </div>
+
+                                <!-- HTML Partners -->
+                                <div style="padding-right:10px; padding-top:10px; text-align:center; height:40px; overflow:hidden; text-decoration:none; float:left; display:<%# iif(controlla_html(Eval("html"))=1,"block","none") %>;">
+                                <%#Eval("html")%>
+                                </div>
+
+                            </ItemTemplate>
+                            <SeparatorStyle Width="10px" />
+                            <ItemStyle HorizontalAlign="Center" VerticalAlign="Middle" />
+                        </asp:DataList><br />
+                        <asp:SqlDataSource ID="Sql_Partners" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                            SelectCommand="SELECT partners.*, Ordinamento AS Expr1 FROM partners ORDER BY Expr1">
+                        </asp:SqlDataSource>
+                        </div>            
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </form>
+    
+    <!-- Data Source -->
+    <asp:SqlDataSource ID="SqlDataSettori" runat="server" 
+    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
+    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" 
+    SelectCommand="SELECT * FROM coupon_settori WHERE attiva_disattiva_settore=1 ORDER BY OrdinamentoSettore, NomeSettore"></asp:SqlDataSource>
+    
+    <asp:SqlDataSource ID="SqlDataFooterDIV1" runat="server" 
+    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
+    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+    SelectCommand="SELECT * FROM pagine WHERE (id = 0)">
+    </asp:SqlDataSource>
+    
+    <asp:SqlDataSource ID="SqlDataFooterDIV2" runat="server" 
+    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
+    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+    SelectCommand="SELECT * FROM pagine WHERE (id = 0)">
+    </asp:SqlDataSource>
+    
+    <asp:SqlDataSource ID="SqlDataFooterDIV3" runat="server" 
+    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
+    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+    SelectCommand="SELECT * FROM pagine WHERE (id = 0)">
+    </asp:SqlDataSource>
+    
+    <asp:SqlDataSource ID="SqlDataFooterDIV4" runat="server" 
+    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
+    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+    SelectCommand="SELECT * FROM pagine WHERE (id = 0)">
+    </asp:SqlDataSource>
+    
+</body>
+</html>
