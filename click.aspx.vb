@@ -1,154 +1,198 @@
-﻿Imports MySql.Data.MySqlClient
+Imports System
 Imports System.Data
+Imports System.Configuration
+Imports MySql.Data.MySqlClient
 
 Partial Class click
     Inherits System.Web.UI.Page
 
+    Private ReadOnly Property ConnString As String
+        Get
+            Dim cs = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
+            If cs Is Nothing Then Return ""
+            Return cs.ConnectionString
+        End Get
+    End Property
+
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
 
-        Dim id_pubblicita As Integer
-        Dim ip_utente As String
-        Dim id_utente As Integer
-        Dim link As String
-        Dim DataOdierna As String = Date.Today.Year.ToString & "-" & Date.Today.Month.ToString & "-" & Date.Today.Day.ToString
-
-        id_pubblicita = Request.QueryString("id")
-        ip_utente = Request.UserHostAddress
-        id_utente = Me.Session("UtentiId")
-        Dim params As New Dictionary(Of String, String)
-        params.add("@dataOdierna", DataOdierna)
-        params.add("@ipUtente", ip_utente)
-        params.add("@idPubblicità", id_pubblicita)
-        Dim dr = ExecuteQueryGetDataReader("*", "pubblicita_click", "WHERE (data_click=@dataOdierna) AND (ip_utente=@ipUtente) AND (id_pubblicita=@idPubblicità)", params)
-        Dim pubblicitaClickExists As Boolean = dr.Count > 0
-
-        If Not pubblicitaClickExists Then
-
-            'Nel caso l'utente non sia loggato
-            If (id_utente <= 0) Then
-                id_utente = -1
-            End If
-            '---------------------------------
-            params.add("@UtenteId", id_utente)
-            ExecuteInsert("pubblicita_click", "id_utente,ip_utente,id_pubblicita,data_click", "@UtenteId, @ipUtente, @idPubblicità, @dataOdierna", params)
-
-            ExecuteUpdate("pubblicitaV2", "numero_click_attuale=numero_click_attuale+1", "WHERE id = @idPubblicità", params)
-        End If
-        dr = ExecuteQueryGetDataReader("link", "pubblicitav2", "WHERE id = @idPubblicità", params)
-        link = dr(0)("link")
-
-        If Not (link.Contains("http://") OrElse link.Contains("https://")) Then
-            If (link <> "#") Then
-                link = "http://" & link
-            End If
+        ' 1) Validazione ID banner
+        Dim bannerId As Integer = 0
+        If Not Integer.TryParse(Convert.ToString(Request.QueryString("id")), bannerId) OrElse bannerId <= 0 Then
+            SafeRedirect("~/Default.aspx")
+            Exit Sub
         End If
 
-        Response.Redirect(link)
-    End Sub
+        ' 2) IP utente (max 45 per IPv6)
+        Dim userIp As String = Convert.ToString(Request.UserHostAddress)
+        If userIp Is Nothing Then userIp = ""
+        userIp = userIp.Trim()
+        If userIp.Length > 45 Then userIp = userIp.Substring(0, 45)
 
-    Protected Function ExecuteInsert(ByVal table As String, ByVal fields As String, Optional ByVal values As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing)
-        Dim sqlString As String = "INSERT INTO " & table & " (" & fields & ") VALUES (" & values & ")"
-        ExecuteNonQuery(False, sqlString, params)
-    End Function
+        ' 3) Utente (se non loggato -> -1)
+        Dim utentiId As Integer = -1
+        If Not Integer.TryParse(Convert.ToString(Session("UtentiId")), utentiId) OrElse utentiId <= 0 Then
+            utentiId = -1
+        End If
 
-    Protected Function ExecuteDelete(ByVal table As String, Optional ByVal wherePart As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing)
-        Dim sqlString As String = "DELETE FROM " & table & " " & wherePart
-        ExecuteNonQuery(False, sqlString, params)
-    End Function
+        ' 4) Azienda (se non presente in sessione -> 0, non blocco)
+        Dim aziendaId As Integer = 0
+        Integer.TryParse(Convert.ToString(Session("AziendaID")), aziendaId)
 
-    Protected Function ExecuteUpdate(ByVal table As String, ByVal fieldAndValues As String, Optional ByVal wherePart As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing)
-        Dim sqlString As String = "UPDATE " & table & " set " & fieldAndValues & " " & wherePart
-        ExecuteNonQuery(False, sqlString, params)
-    End Function
+        ' 5) Leggo link banner dal DB + verifico che il banner sia attivo
+        Dim linkRaw As String = Nothing
 
-    Protected Function ExecuteNonQuery(ByVal isStoredProcedure As Boolean, ByVal sqlString As String, Optional ByVal params As Dictionary(Of String, String) = Nothing)
-        Dim conn As New MySqlConnection
         Try
-            Dim connectionString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            If Not connectionString Is Nothing Then
-                conn.ConnectionString = connectionString
+            Dim cs As String = ConnString
+            If String.IsNullOrWhiteSpace(cs) Then
+                SafeRedirect("~/Default.aspx")
+                Exit Sub
+            End If
+
+            Using conn As New MySqlConnection(cs)
                 conn.Open()
-                Dim cmd As New MySqlCommand
-                cmd.Connection = conn
-                cmd.CommandText = sqlString
-                For Each paramName In params.Keys
-                    If paramName = "?parPrezzo" Or paramName = "?parPrezzoIvato" Then
-                        cmd.Parameters.Add(paramName, MySqlDbType.Double).Value = Convert.ToDecimal(params(paramName), System.Globalization.CultureInfo.InvariantCulture)
-                    Else
-                        cmd.Parameters.AddWithValue(paramName, params(paramName))
+
+                ' Leggo il link SOLO da DB (ignoro qualunque parametro "link" in QueryString)
+                ' Nota: filtro su aziendaId solo se disponibile (aziendaId=0 -> non filtro)
+                Using cmdLink As New MySqlCommand("
+                    SELECT link
+                    FROM pubblicitaV2
+                    WHERE id = @id
+                      AND abilitato = 1
+                      AND (@aziendaId = 0 OR id_Azienda = @aziendaId)
+                      AND data_inizio_pubblicazione <= CURDATE()
+                      AND data_fine_pubblicazione >= CURDATE()
+                    LIMIT 1;", conn)
+
+                    cmdLink.Parameters.Add("@id", MySqlDbType.Int32).Value = bannerId
+                    cmdLink.Parameters.Add("@aziendaId", MySqlDbType.Int32).Value = aziendaId
+
+                    Dim obj = cmdLink.ExecuteScalar()
+                    If obj IsNot Nothing AndAlso Not Convert.IsDBNull(obj) Then
+                        linkRaw = Convert.ToString(obj)
                     End If
-                Next
-                If isStoredProcedure Then
-                    cmd.CommandType = CommandType.StoredProcedure
-                    cmd.Parameters.AddWithValue("?parRetVal", "0")
-                    cmd.Parameters("?parRetVal").Direction = ParameterDirection.Output
-                Else
-                    cmd.CommandType = CommandType.Text
-                End If
-                cmd.ExecuteNonQuery()
-                cmd.Dispose()
-            End If
-        Finally
-            If conn.State = ConnectionState.Open Then
-                conn.Close()
-                conn.Dispose()
-            End If
-        End Try
-    End Function
+                End Using
 
-    Protected Sub ExecuteStoredProcedure(ByVal storedProcedure As String, Optional ByVal params As Dictionary(Of String, String) = Nothing)
-        ExecuteNonQuery(True, storedProcedure, params)
+                ' Se non ho un link valido -> home
+                If String.IsNullOrWhiteSpace(linkRaw) OrElse linkRaw.Trim() = "#" Then
+                    SafeRedirect("~/Default.aspx")
+                    Exit Sub
+                End If
+
+                ' 6) Check "già cliccato oggi" (stesso IP, stesso banner)
+                Dim alreadyClicked As Boolean = False
+                Using cmdCheck As New MySqlCommand("
+                    SELECT 1
+                    FROM pubblicita_click
+                    WHERE data_click = CURDATE()
+                      AND ip_utente = @ip
+                      AND id_pubblicita = @id
+                    LIMIT 1;", conn)
+
+                    cmdCheck.Parameters.Add("@ip", MySqlDbType.VarChar, 45).Value = userIp
+                    cmdCheck.Parameters.Add("@id", MySqlDbType.Int32).Value = bannerId
+
+                    Dim chk = cmdCheck.ExecuteScalar()
+                    alreadyClicked = (chk IsNot Nothing)
+                End Using
+
+                ' 7) Se non cliccato: inserisco click + incremento contatore (transazione)
+                If Not alreadyClicked Then
+                    Using tr = conn.BeginTransaction()
+                        Try
+                            Using cmdIns As New MySqlCommand("
+                                INSERT INTO pubblicita_click (id_utente, ip_utente, id_pubblicita, data_click)
+                                VALUES (@utenteId, @ip, @id, CURDATE());", conn, tr)
+
+                                cmdIns.Parameters.Add("@utenteId", MySqlDbType.Int32).Value = utentiId
+                                cmdIns.Parameters.Add("@ip", MySqlDbType.VarChar, 45).Value = userIp
+                                cmdIns.Parameters.Add("@id", MySqlDbType.Int32).Value = bannerId
+                                cmdIns.ExecuteNonQuery()
+                            End Using
+
+                            Using cmdUpd As New MySqlCommand("
+                                UPDATE pubblicitaV2
+                                SET numero_click_attuale = numero_click_attuale + 1
+                                WHERE id = @id;", conn, tr)
+
+                                cmdUpd.Parameters.Add("@id", MySqlDbType.Int32).Value = bannerId
+                                cmdUpd.ExecuteNonQuery()
+                            End Using
+
+                            tr.Commit()
+                        Catch
+                            Try : tr.Rollback() : Catch : End Try
+                            ' Non blocco il redirect se fallisce la statistica
+                        End Try
+                    End Using
+                End If
+            End Using
+
+        Catch
+            SafeRedirect("~/Default.aspx")
+            Exit Sub
+        End Try
+
+        ' 8) Redirect sicuro (anti open-redirect su schemi pericolosi)
+        Dim finalUrl As String = NormalizeRedirectUrl(linkRaw)
+        If String.IsNullOrWhiteSpace(finalUrl) Then
+            SafeRedirect("~/Default.aspx")
+            Exit Sub
+        End If
+
+        SafeRedirect(finalUrl)
     End Sub
 
-    Protected Function ExecuteQueryGetDataReader(ByVal fields As String, ByVal table As String, Optional ByVal wherePart As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing) As List(Of Dictionary(Of String, Object))
-        Dim sqlString As String = "SELECT " & fields & " FROM " & table & " " & wherePart
-        Dim dr As MySqlDataReader
-        Dim result As New List(Of Dictionary(Of String, Object))
-        Dim conn As New MySqlConnection
-        Try
-            Dim connectionString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            If Not connectionString Is Nothing Then
-                conn.ConnectionString = connectionString
-                conn.Open()
-                Dim cmd = New MySqlCommand With {
-                    .Connection = conn,
-                    .CommandType = CommandType.Text,
-                    .CommandText = sqlString
-                }
-                If Not params Is Nothing Then
-                    Dim paramName As String
-                    For Each paramName In params.Keys
-                        cmd.Parameters.AddWithValue(paramName, params(paramName))
-                    Next
-                End If
-                dr = cmd.ExecuteReader()
+    ' Consente solo:
+    ' - link interni tipo "/qualcosa"
+    ' - link assoluti http/https
+    ' Blocca javascript:, data:, file:, ecc.
+    Private Function NormalizeRedirectUrl(ByVal raw As String) As String
+        If String.IsNullOrWhiteSpace(raw) Then Return ""
 
-                While dr.Read()
-                    Dim row As New Dictionary(Of String, Object)()
+        Dim s As String = raw.Trim()
 
-                    ' Per ogni colonna nella riga, aggiungi la colonna al dizionario
-                    For i As Integer = 0 To dr.FieldCount - 1
-                        ' Prendi il nome della colonna e il valore
-                        Dim columnName As String = dr.GetName(i)
-                        Dim value As Object = dr.GetValue(i)
+        ' Evito CR/LF (header injection)
+        s = s.Replace(vbCr, "").Replace(vbLf, "")
 
-                        ' Aggiungi la colonna e il valore al dizionario
-                        row.Add(columnName, value)
-                    Next
+        If s = "#" Then Return ""
 
-                    ' Aggiungi la riga al risultato
-                    result.Add(row)
-                End While
+        ' Link interno (opzionale ma utile)
+        If s.StartsWith("/") Then
+            Return s
+        End If
 
-                dr.Close()
-                dr.Dispose()
-            End If
-        Finally
-            If conn.State = ConnectionState.Open Then
-                conn.Close()
-                conn.Dispose()
-            End If
-        End Try
-        Return result
+        ' Se manca lo schema, mantengo compatibilità col tuo legacy: prefisso http://
+        Dim candidate As String = s
+        If Not candidate.Contains("://") Then
+            candidate = "http://" & candidate
+        End If
+
+        Dim uri As Uri = Nothing
+        If Not Uri.TryCreate(candidate, UriKind.Absolute, uri) Then Return ""
+
+        If uri.Scheme <> Uri.UriSchemeHttp AndAlso uri.Scheme <> Uri.UriSchemeHttps Then Return ""
+
+        If String.IsNullOrWhiteSpace(uri.Host) Then Return ""
+
+        ' Blocca userinfo tipo user:pass@host
+        If Not String.IsNullOrEmpty(uri.UserInfo) Then Return ""
+
+        Return uri.AbsoluteUri
     End Function
+
+    Private Sub SafeRedirect(ByVal urlOrAppRelative As String)
+        Dim target As String = urlOrAppRelative
+        If String.IsNullOrWhiteSpace(target) Then
+            target = "~/Default.aspx"
+        End If
+
+        If target.StartsWith("~/") Then
+            target = ResolveUrl(target)
+        End If
+
+        Response.Redirect(target, False)
+        Context.ApplicationInstance.CompleteRequest()
+    End Sub
+
 End Class
