@@ -5,191 +5,631 @@
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <style type="text/css">
+        /* ============================================================
+           Home (Sprint 2 - HOME 1)
+           NOTE: solo stile minimo per integrare lo slideshow legacy
+           ============================================================ */
+        #Slide_Show {
+            width: 100%;
+        }
+
+        #Slide_Show .slideshow-container {
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        #Slide_Show img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        /* I controlli prev/next e dots sono gestiti dal CSS esistente.
+           Qui NON sovrascriviamo colori o layout del template. */
+    </style>
 </asp:Content>
 
-<asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" Runat="Server">
+<asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
-    <!-- Slide Show -->
-    <div id="Slide_Show" style="max-width:600px; margin:auto; overflow:hidden;">
-        <asp:SqlDataSource ID="slideShow" runat="server"
-    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-    SelectCommand="SELECT * 
-                   FROM slideshows_parts 
-                   WHERE slideshowId = (
-                        SELECT MAX(id) 
-                        FROM slideshows 
-                        WHERE placeholder = 'defaultPage' 
-                          AND aziendeId = ?AziendaID
-                   )
-                   AND startDate <= CURDATE()
-                   AND stopDate > CURDATE()
-                   ORDER BY orderPosition">
-    <SelectParameters>
-        <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" />
-    </SelectParameters>
-    </asp:SqlDataSource>
+    <!-- ============================================================
+         HOME 1 (Onsus) - HERO / BANNERS
+         (Slideshow legacy integrato nella posizione "wrap-item-2")
+         ============================================================ -->
 
-        <div id="Slide_Show_Container" class="slideshow-container" runat="server">
-            <asp:Repeater ID="slideshowItems" runat="server" DataSourceID="slideShow">
-                <ItemTemplate>
-    <% incrementa_slides() %>
-    <div class="mySlides fade">
-        <%# SlideLinkStart(Eval("link")) %>
-        <img src='<%# SafeSlideshowImageUrl(Eval("image")) %>' style="width:100%" alt="" />
-        <%# SlideLinkEnd(Eval("link")) %>
-        <div class="text"><%# SafeText(Eval("caption")) %></div>
-    </div>
-            </ItemTemplate>
+    <section class="flat-spacing-4 pt_0">
+        <div class="container">
+            <div class="s-banner-wrapper style-2">
 
+                <!-- LEFT: Department (static template) -->
+                <div class="wrap-item-1">
+                    <div class="department-menu hover-menu">
+                        <div class="sub-department-menu">
+                            <div class="department-title bg_main">
+                                <span class="icon icon-categories"></span>
+                                <span class="fw-semibold">Dipartimenti</span>
+                            </div>
+                            <ul class="department-list">
+                                <!-- Static (template). In futuro possiamo collegarlo alle categorie reali. -->
+                                <li><a href="shop-default.html" class="department-link">Laptop</a></li>
+                                <li><a href="shop-default.html" class="department-link">Computer</a></li>
+                                <li><a href="shop-default.html" class="department-link">Monitor</a></li>
+                                <li><a href="shop-default.html" class="department-link">TV</a></li>
+                                <li><a href="shop-default.html" class="department-link">Smartphone</a></li>
+                                <li><a href="shop-default.html" class="department-link">Audio</a></li>
+                                <li><a href="shop-default.html" class="department-link">Gadget</a></li>
+                                <li><a href="shop-default.html" class="department-link">Accessori</a></li>
+                            </ul>
+                        </div>
+                    </div>
 
-            </asp:Repeater>
+                    <!-- Small promo banner (static) -->
+                    <div class="banner-image-product-4 hover-img mb-20">
+                        <div class="item-product">
+                            <a href="shop-default.html" class="box-link">
+                                <div class="box-content">
+                                    <span class="sub-title">Promo</span>
+                                    <h5 class="title">Offerte del momento</h5>
+                                    <p class="price fw-semibold">Scopri</p>
+                                </div>
+                                <div class="box-image">
+                                    <img src="/Public/assets/images/banner/banner-department-1.png" alt="" onerror="this.style.display='none'" />
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
 
-            <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
-            <a class="next" onclick="plusSlides(1)">&#10095;</a>
+                <!-- CENTER: Slideshow (dinamico) -->
+                <div class="wrap-item-2">
+                    <div class="banner-image-product-4 style-2 hover-img">
+                        <div class="item-product">
+
+                            <!-- Slide Show (legacy) -->
+                            <div id="Slide_Show">
+
+                                <asp:SqlDataSource ID="slideShow" runat="server"
+                                    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                                    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                                    SelectCommand="SELECT * 
+                                                   FROM slideshows_parts 
+                                                   WHERE slideshowId = (
+                                                        SELECT MAX(id) 
+                                                        FROM slideshows 
+                                                        WHERE placeholder = 'defaultPage' 
+                                                          AND aziendeId = ?AziendaID
+                                                   )
+                                                   AND startDate <= CURDATE()
+                                                   AND stopDate > CURDATE()
+                                                   ORDER BY orderPosition">
+                                    <SelectParameters>
+                                        <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" />
+                                    </SelectParameters>
+                                </asp:SqlDataSource>
+
+                                <div id="Slide_Show_Container" class="slideshow-container" runat="server">
+                                    <asp:Repeater ID="slideshowItems" runat="server" DataSourceID="slideShow">
+                                        <ItemTemplate>
+                                            <% incrementa_slides() %>
+                                            <div class="mySlides fade">
+                                                <%# SlideLinkStart(Eval("link")) %>
+                                                <img src='<%# SafeSlideshowImageUrl(Eval("image")) %>' style="width:100%" alt="" />
+                                                <%# SlideLinkEnd(Eval("link")) %>
+                                                <div class="text"><%# SafeText(Eval("caption")) %></div>
+                                            </div>
+                                        </ItemTemplate>
+                                    </asp:Repeater>
+
+                                    <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
+                                    <a class="next" onclick="plusSlides(1)">&#10095;</a>
+                                </div>
+
+                                <div class="mt-2" style="text-align:center">
+                                    <% For i = 1 To slides %>
+                                        <span class="dot" onclick="currentSlide(<%=i%>)"></span>
+                                    <% Next i %>
+                                </div>
+
+                                <script type="text/javascript">
+                                    var slideIndex = 1;
+                                    showSlides(slideIndex);
+
+                                    function plusSlides(n) {
+                                        showSlides(slideIndex += n);
+                                    }
+
+                                    function currentSlide(n) {
+                                        showSlides(slideIndex = n);
+                                    }
+
+                                    function showSlides(n) {
+                                        var i;
+                                        var slides = document.getElementsByClassName("mySlides");
+                                        var dots = document.getElementsByClassName("dot");
+                                        if (n > slides.length) { slideIndex = 1 }
+                                        if (n < 1) { slideIndex = slides.length }
+                                        for (i = 0; i < slides.length; i++) {
+                                            slides[i].style.display = "none";
+                                        }
+                                        for (i = 0; i < dots.length; i++) {
+                                            dots[i].className = dots[i].className.replace(" active", "");
+                                        }
+                                        if (slides.length > 0) {
+                                            slides[slideIndex - 1].style.display = "block";
+                                        }
+                                        if (dots.length > 0) {
+                                            dots[slideIndex - 1].className += " active";
+                                        }
+                                    }
+                                </script>
+
+                            </div>
+                            <!-- /Slide Show -->
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: 2 banners dinamici (pubblicità id_posizione_banner=4 ordinamento 1 e 2) -->
+                <div class="wrap-item-3">
+
+                    <!-- BANNER 1 -->
+                    <div class="banner-image-product-4 style-4 hover-img mb-20">
+                        <div class="item-product">
+
+                            <asp:SqlDataSource ID="SqlDataSource_Pubblicita_id4_pos1" runat="server"
+                                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                                SelectCommand="SELECT id, id_Azienda, data_inizio_pubblicazione, data_fine_pubblicazione, limite_click, limite_impressioni, id_posizione_banner, numero_click_attuale, numero_impressioni_attuale, link, img_path, titolo, descrizione, abilitato from pubblicitaV2"
+                                UpdateCommand="update pubblicitaV2 SET numero_impressioni = numero_impressioni + 1 WHERE (id = 1)">
+                            </asp:SqlDataSource>
+
+                            <asp:Repeater ID="RepeaterPubblicita_id4_pos1" runat="server" DataSourceID="SqlDataSource_Pubblicita_id4_pos1" EnableViewState="False">
+                                <ItemTemplate>
+                                    <a href='<%# "click.aspx?id=" & Eval("id") %>' class="box-link" target="_blank" rel="noopener noreferrer">
+                                        <div class="box-image">
+                                            <img class="lazyload"
+                                                 src='<%# ResolveUrl("~/Public/Banner/" & Convert.ToString(Eval("img_path"))) %>'
+                                                 data-src='<%# ResolveUrl("~/Public/Banner/" & Convert.ToString(Eval("img_path"))) %>'
+                                                 alt='<%# SafeAttr(Eval("titolo")) %>' />
+                                        </div>
+                                    </a>
+                                </ItemTemplate>
+                            </asp:Repeater>
+
+                        </div>
+                    </div>
+
+                    <!-- BANNER 2 -->
+                    <div class="banner-image-product-4 style-4 hover-img">
+                        <div class="item-product">
+
+                            <asp:SqlDataSource ID="SqlDataSource_Pubblicita_id4_pos2" runat="server"
+                                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                                SelectCommand="SELECT id, id_Azienda, data_inizio_pubblicazione, data_fine_pubblicazione, limite_click, limite_impressioni, id_posizione_banner, numero_click_attuale, numero_impressioni_attuale, link, img_path, titolo, descrizione, abilitato from pubblicitaV2"
+                                UpdateCommand="update pubblicitaV2 SET numero_impressioni = numero_impressioni + 1 WHERE (id = 1)">
+                            </asp:SqlDataSource>
+
+                            <asp:Repeater ID="RepeaterPubblicita_id4_pos2" runat="server" DataSourceID="SqlDataSource_Pubblicita_id4_pos2" EnableViewState="False">
+                                <ItemTemplate>
+                                    <a href='<%# "click.aspx?id=" & Eval("id") %>' class="box-link" target="_blank" rel="noopener noreferrer">
+                                        <div class="box-image">
+                                            <img class="lazyload"
+                                                 src='<%# ResolveUrl("~/Public/Banner/" & Convert.ToString(Eval("img_path"))) %>'
+                                                 data-src='<%# ResolveUrl("~/Public/Banner/" & Convert.ToString(Eval("img_path"))) %>'
+                                                 alt='<%# SafeAttr(Eval("titolo")) %>' />
+                                        </div>
+                                    </a>
+                                </ItemTemplate>
+                            </asp:Repeater>
+
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Icon boxes (template) -->
+    <section class="flat-spacing-3 pt_0">
+        <div class="container">
+            <div class="swiper tf-sw-iconbox" data-preview="4" data-tablet="2" data-mobile="1" data-space-lg="0" data-space-md="0" data-space="0" data-pagination="1" data-pagination-sm="1" data-pagination-md="1" data-pagination-lg="1">
+                <div class="swiper-wrapper">
+                    <div class="swiper-slide">
+                        <div class="tf-icon-box style-border-line">
+                            <div class="icon"><i class="icon-delivery-2"></i></div>
+                            <div class="content">
+                                <h5 class="title">Spedizione veloce</h5>
+                                <p>Ordini gestiti rapidamente</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="tf-icon-box style-border-line">
+                            <div class="icon"><i class="icon-payment-2"></i></div>
+                            <div class="content">
+                                <h5 class="title">Pagamenti sicuri</h5>
+                                <p>Metodi di pagamento affidabili</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="tf-icon-box style-border-line">
+                            <div class="icon"><i class="icon-return-2"></i></div>
+                            <div class="content">
+                                <h5 class="title">Assistenza</h5>
+                                <p>Supporto pre e post vendita</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="tf-icon-box style-border-line">
+                            <div class="icon"><i class="icon-suport-3"></i></div>
+                            <div class="content">
+                                <h5 class="title">Contattaci</h5>
+                                <p>Telefono, WhatsApp e Email</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sw-pagination-iconbox sw-dots type-circle justify-content-center"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================
+         SCELTI PER TE (vetrina)
+         ============================================================ -->
+
+    <% If Data_UltimiArrivi.Items.Count > 0 Then %>
+    <section class="flat-spacing-4 pt_0">
+        <div class="container">
+            <div class="flat-title d-flex align-items-center justify-content-between flex-wrap gap-12">
+                <h2 class="flat-title-heading">Scelti per te</h2>
+            </div>
+
+            <div class="swiper tf-sw-products" data-preview="5" data-tablet="4" data-mobile="2" data-space-lg="20" data-space-md="20" data-space="10" data-pagination="2" data-pagination-sm="2" data-pagination-md="3" data-pagination-lg="3">
+                <div class="swiper-wrapper">
+
+                    <asp:Repeater ID="Data_UltimiArrivi" runat="server" DataSourceID="SdsArticoliInVetrina">
+                        <ItemTemplate>
+                            <div class="swiper-slide">
+                                <div class="card-product style-img-border">
+                                    <div class="card-product-wrapper">
+                                        <a href='articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>' class="product-img">
+                                            <img class="lazyload img-product"
+                                                 src='<%# checkImg(Eval("img1")) %>'
+                                                 data-src='<%# checkImg(Eval("img1")) %>'
+                                                 alt='<%# SafeAttr(Eval("Descrizione1")) %>' />
+                                        </a>
+
+                                        <!-- Badge sconto -->
+                                        <div class="on-sale-wrap text-end" style='display:<%# controlla_promo(Eval("inOfferta")) %>;'>
+                                            <span class="on-sale-item"><%# SafeText(sconto(Eval("ListinoUfficiale"), If(IsDBNull(Eval("PrezzoPromo")), 0, Eval("PrezzoPromo")), If(IsDBNull(Eval("PrezzoPromoIvato")), 0, Eval("PrezzoPromoIvato")), Eval("iva"))) %></span>
+                                        </div>
+                                    </div>
+
+                                    <div class="card-product-info">
+                                        <a href='articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>' class="title link">
+                                            <%# SafeText(compatta_testo(Eval("Descrizione1"), 60)) %>
+                                        </a>
+
+                                        <span class="price">
+                                            <span class="new-price">
+                                                <%# controlla_prezzo(
+                                                        If(IsDBNull(Eval("prezzo")), 0, Eval("prezzo")),
+                                                        If(IsDBNull(Eval("prezzoIvato")), 0, Eval("prezzoIvato")),
+                                                        If(Eval("InOfferta") = 0, 0, Eval("prezzoPromo")),
+                                                        If(Eval("InOfferta") = 0, 0, Eval("PrezzoPromoIvato")),
+                                                        Session("IvaTipo")
+                                                    ) %>
+                                            </span>
+                                        </span>
+
+                                        <div class="body-text-3 mt-1">
+                                            <span class="fw-semibold">Cod.</span> <%# SafeText(Eval("Codice")) %>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </ItemTemplate>
+                    </asp:Repeater>
+
+                </div>
+                <div class="sw-pagination-products sw-dots type-circle justify-content-center"></div>
+            </div>
         </div>
 
-        <br />
+        <!-- DataSource (vetrina) - il comando viene sovrascritto in Default.aspx.vb -->
+        <asp:SqlDataSource ID="SdsArticoliInVetrina" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+            SelectCommand="SELECT * FROM documenti JOIN documentirighe ON documenti.id=documentirighe.`DocumentiId` WHERE documentirighe.`ArticoliId`>0 AND documenti.`TipoDocumentiId`=11 GROUP BY documentirighe.`ArticoliId` ORDER BY documenti.id DESC LIMIT 1">
+        </asp:SqlDataSource>
 
-        <div style="text-align:center">
-            <% For i = 1 To slides %>
-                <span class="dot" onclick="currentSlide(<%=i%>)"></span>
-            <% Next i %>
+    </section>
+    <% End If %>
+
+    <!-- ============================================================
+         NOVITÀ (nuovi arrivi)
+         ============================================================ -->
+
+    <section class="flat-spacing-4 pt_0">
+        <div class="container">
+            <div class="flat-title d-flex align-items-center justify-content-between flex-wrap gap-12">
+                <h2 class="flat-title-heading">Novità</h2>
+            </div>
+
+            <div class="swiper tf-sw-products" data-preview="5" data-tablet="4" data-mobile="2" data-space-lg="20" data-space-md="20" data-space="10" data-pagination="2" data-pagination-sm="2" data-pagination-md="3" data-pagination-lg="3">
+                <div class="swiper-wrapper">
+
+                    <asp:Repeater ID="Repeat_Lista_Nuovi_Arrivi" DataSourceID="SdsNewArticoli" runat="server">
+                        <ItemTemplate>
+                            <div class="swiper-slide">
+                                <div class="card-product style-img-border">
+                                    <div class="card-product-wrapper">
+                                        <a href='articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>' class="product-img">
+                                            <img class="lazyload img-product"
+                                                 src='<%# checkImg(Eval("img1")) %>'
+                                                 data-src='<%# checkImg(Eval("img1")) %>'
+                                                 alt='<%# SafeAttr(Eval("Descrizione1")) %>' />
+                                        </a>
+
+                                        <div class="on-sale-wrap text-end" style='display:<%# controlla_promo(Eval("inOfferta")) %>;'>
+                                            <span class="on-sale-item"><%# SafeText(sconto(Eval("ListinoUfficiale"), If(IsDBNull(Eval("PrezzoPromo")), 0, Eval("PrezzoPromo")), If(IsDBNull(Eval("PrezzoPromoIvato")), 0, Eval("PrezzoPromoIvato")), Eval("iva"))) %></span>
+                                        </div>
+                                    </div>
+
+                                    <div class="card-product-info">
+                                        <a href='articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>' class="title link">
+                                            <%# SafeText(compatta_testo(Eval("Descrizione1"), 60)) %>
+                                        </a>
+
+                                        <span class="price">
+                                            <span class="new-price">
+                                                <%# controlla_prezzo(
+                                                        If(IsDBNull(Eval("prezzo")), 0, Eval("prezzo")),
+                                                        If(IsDBNull(Eval("prezzoIvato")), 0, Eval("prezzoIvato")),
+                                                        If(Eval("InOfferta") = 0, 0, Eval("prezzoPromo")),
+                                                        If(Eval("InOfferta") = 0, 0, Eval("PrezzoPromoIvato")),
+                                                        Session("IvaTipo")
+                                                    ) %>
+                                            </span>
+                                        </span>
+
+                                        <div class="body-text-3 mt-1">
+                                            <span class="fw-semibold">Cod.</span> <%# SafeText(Eval("Codice")) %>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </ItemTemplate>
+                    </asp:Repeater>
+
+                </div>
+                <div class="sw-pagination-products sw-dots type-circle justify-content-center"></div>
+            </div>
+
+            <!-- DataSource - comando sovrascritto in Default.aspx.vb -->
+            <asp:SqlDataSource ID="SdsNewArticoli" runat="server"
+                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                SelectCommand="SELECT * FROM articoli LIMIT 1">
+            </asp:SqlDataSource>
+
         </div>
+    </section>
 
-        <script type="text/javascript">
-            var slideIndex = 1;
-            showSlides(slideIndex);
+    <!-- ============================================================
+         PIÙ VENDUTI
+         ============================================================ -->
 
-            function plusSlides(n) {
-                showSlides(slideIndex += n);
-            }
+    <section class="flat-spacing-4 pt_0">
+        <div class="container">
+            <div class="flat-title d-flex align-items-center justify-content-between flex-wrap gap-12">
+                <h2 class="flat-title-heading">I più venduti</h2>
+            </div>
 
-            function currentSlide(n) {
-                showSlides(slideIndex = n);
-            }
+            <div class="swiper tf-sw-products" data-preview="5" data-tablet="4" data-mobile="2" data-space-lg="20" data-space-md="20" data-space="10" data-pagination="2" data-pagination-sm="2" data-pagination-md="3" data-pagination-lg="3">
+                <div class="swiper-wrapper">
 
-            function showSlides(n) {
-                var i;
-                var slides = document.getElementsByClassName("mySlides");
-                var dots = document.getElementsByClassName("dot");
-                if (n > slides.length) { slideIndex = 1 }
-                if (n < 1) { slideIndex = slides.length }
-                for (i = 0; i < slides.length; i++) {
-                    slides[i].style.display = "none";
-                }
-                for (i = 0; i < dots.length; i++) {
-                    dots[i].className = dots[i].className.replace(" active", "");
-                }
-                slides[slideIndex - 1].style.display = "block";
-                dots[slideIndex - 1].className += " active";
-            }
-        </script>
-    </div>
+                    <asp:Repeater ID="DataList1" runat="server" DataSourceID="sdsPiuAcquistati">
+                        <ItemTemplate>
+                            <div class="swiper-slide">
+                                <div class="card-product style-img-border">
+                                    <div class="card-product-wrapper">
+                                        <a href='articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>' class="product-img">
+                                            <img class="lazyload img-product"
+                                                 src='<%# checkImg(Eval("img1")) %>'
+                                                 data-src='<%# checkImg(Eval("img1")) %>'
+                                                 alt='<%# SafeAttr(Eval("Descrizione1")) %>' />
+                                        </a>
+
+                                        <div class="on-sale-wrap text-end" style='display:<%# controlla_promo(Eval("inOfferta")) %>;'>
+                                            <span class="on-sale-item"><%# SafeText(sconto(Eval("ListinoUfficiale"), If(IsDBNull(Eval("PrezzoPromo")), 0, Eval("PrezzoPromo")), If(IsDBNull(Eval("PrezzoPromoIvato")), 0, Eval("PrezzoPromoIvato")), Eval("iva"))) %></span>
+                                        </div>
+                                    </div>
+
+                                    <div class="card-product-info">
+                                        <a href='articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>' class="title link">
+                                            <%# SafeText(compatta_testo(Eval("Descrizione1"), 60)) %>
+                                        </a>
+
+                                        <span class="price">
+                                            <span class="new-price">
+                                                <%# controlla_prezzo(
+                                                        If(IsDBNull(Eval("prezzo")), 0, Eval("prezzo")),
+                                                        If(IsDBNull(Eval("prezzoIvato")), 0, Eval("prezzoIvato")),
+                                                        If(Eval("InOfferta") = 0, 0, Eval("prezzoPromo")),
+                                                        If(Eval("InOfferta") = 0, 0, Eval("PrezzoPromoIvato")),
+                                                        Session("IvaTipo")
+                                                    ) %>
+                                            </span>
+                                        </span>
+
+                                        <div class="body-text-3 mt-1">
+                                            <span class="fw-semibold">Cod.</span> <%# SafeText(Eval("Codice")) %>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </ItemTemplate>
+                    </asp:Repeater>
+
+                </div>
+                <div class="sw-pagination-products sw-dots type-circle justify-content-center"></div>
+            </div>
+
+            <asp:SqlDataSource ID="sdsPiuAcquistati" runat="server"
+                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                SelectCommand="SELECT * FROM documenti LIMIT 1">
+            </asp:SqlDataSource>
+
+        </div>
+    </section>
+
+    <!-- ============================================================
+         BRAND (marche random)
+         ============================================================ -->
+
+    <section class="flat-spacing-4 pt_0">
+        <div class="container">
+            <div class="flat-title d-flex align-items-center justify-content-between flex-wrap gap-12">
+                <h2 class="flat-title-heading">Rivenditori ufficiali - I nostri brand</h2>
+            </div>
+
+            <div class="row align-items-center g-3">
+                <asp:Repeater ID="MarcheRandom" runat="server" DataSourceID="sdsMarcheRandom">
+                    <ItemTemplate>
+                        <div class="col-6 col-md-2">
+                            <a class="d-block" href='<%# "articoli.aspx?ct=30000&mr=" & Eval("id") %>'>
+                                <img class="lazyload"
+                                     src='<%# ResolveUrl("~/Public/Marche/" & Convert.ToString(Eval("img"))) %>'
+                                     data-src='<%# ResolveUrl("~/Public/Marche/" & Convert.ToString(Eval("img"))) %>'
+                                     style="width:100%; max-width:150px;"
+                                     alt='<%# SafeAttr(Eval("Descrizione")) %>'
+                                     title='<%# SafeAttr(Eval("Descrizione")) %>' />
+                            </a>
+                        </div>
+                    </ItemTemplate>
+                </asp:Repeater>
+            </div>
+
+            <asp:SqlDataSource ID="sdsMarcheRandom" runat="server"
+                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                SelectCommand="SELECT * FROM marche WHERE (Abilitato=1) AND (img is not NULL) ORDER BY RAND() LIMIT 6">
+            </asp:SqlDataSource>
+        </div>
+    </section>
+
+    <!-- Nota prezzi -->
+    <section class="flat-spacing-4 pt_0">
+        <div class="container">
+            <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" CssClass="body-text-3" />
+        </div>
+    </section>
+
 
     <script runat="server">
-        ' --- Helper generali / slideshow / prezzi ---
+        ' ============================================================
+        ' Helper generali / slideshow / prezzi
+        ' ============================================================
 
         Dim slides As Integer = 0
 
         ' ===========================
-' HARDENING OUTPUT (XSS / URL)
-' ===========================
+        ' HARDENING OUTPUT (XSS / URL)
+        ' ===========================
 
-Function SafeText(ByVal obj As Object) As String
-    Return System.Web.HttpUtility.HtmlEncode(Convert.ToString(obj))
-End Function
-
-Function SafeAttr(ByVal obj As Object) As String
-    Return System.Web.HttpUtility.HtmlAttributeEncode(Convert.ToString(obj))
-End Function
-
-' Consente: URL relativi (/, ~/), o assoluti http/https (solo per HREF)
-Function SafeUrl(ByVal urlObj As Object) As String
-    If urlObj Is Nothing OrElse IsDBNull(urlObj) Then Return ""
-    Dim raw As String = Convert.ToString(urlObj).Trim()
-    If raw = "" Then Return ""
-
-    Dim lower As String = raw.ToLowerInvariant()
-    If lower.StartsWith("javascript:") OrElse lower.StartsWith("data:") OrElse lower.StartsWith("vbscript:") Then
-        Return ""
-    End If
-
-    If raw.StartsWith("/") OrElse raw.StartsWith("~/") Then
-        Return raw
-    End If
-
-    Dim uri As Uri = Nothing
-    If Uri.TryCreate(raw, UriKind.Absolute, uri) Then
-        If uri.Scheme = Uri.UriSchemeHttp OrElse uri.Scheme = Uri.UriSchemeHttps Then
-            Return uri.ToString()
-        End If
-    End If
-
-    Return ""
-End Function
-
-Function SlideLinkStart(ByVal linkObj As Object) As String
-    Dim u As String = SafeUrl(linkObj)
-    If u = "" Then Return ""
-    If u.StartsWith("~/") Then u = ResolveUrl(u)
-    Return "<a href=""" & SafeAttr(u) & """>"
-End Function
-
-Function SlideLinkEnd(ByVal linkObj As Object) As String
-    Dim u As String = SafeUrl(linkObj)
-    If u = "" Then Return ""
-    Return "</a>"
-End Function
-
-Function SafeFileNameOnly(ByVal fileObj As Object) As String
-    If fileObj Is Nothing OrElse IsDBNull(fileObj) Then Return ""
-    Dim s As String = Convert.ToString(fileObj).Trim()
-    If s = "" Then Return ""
-
-    s = s.Replace("\", "/")
-
-    ' blocco path traversal / path assoluti
-    If s.Contains("..") OrElse s.Contains(":") Then Return ""
-
-    ' prendo solo l'ultimo segmento
-    If s.Contains("/") Then
-        s = s.Substring(s.LastIndexOf("/"c) + 1)
-    End If
-
-    Return s
-End Function
-
-Function SafeSlideshowImageUrl(ByVal fileObj As Object) As String
-    Dim fileName As String = SafeFileNameOnly(fileObj)
-    If fileName = "" Then
-        Return ResolveUrl("~/Public/images/nofoto.gif")
-    End If
-    Return ResolveUrl("~/Public/Slideshows/" & fileName)
-End Function
-
-        Function ottieni_data_oggi() As String
-            Return DateTime.Now.ToString("yyyy-MM-dd")
+        Function SafeText(ByVal obj As Object) As String
+            Return System.Web.HttpUtility.HtmlEncode(Convert.ToString(obj))
         End Function
 
-        Function confronta_due_date(ByVal d1 As DateTime, ByVal d2 As DateTime) As Boolean
-            Return DateTime.Compare(d1, d2)
+        Function SafeAttr(ByVal obj As Object) As String
+            Return System.Web.HttpUtility.HtmlAttributeEncode(Convert.ToString(obj))
+        End Function
+
+        ' Consente: URL relativi (/, ~/), o assoluti http/https (solo per HREF)
+        Function SafeUrl(ByVal urlObj As Object) As String
+            If urlObj Is Nothing OrElse IsDBNull(urlObj) Then Return ""
+            Dim raw As String = Convert.ToString(urlObj).Trim()
+            If raw = "" Then Return ""
+
+            Dim lower As String = raw.ToLowerInvariant()
+            If lower.StartsWith("javascript:") OrElse lower.StartsWith("data:") OrElse lower.StartsWith("vbscript:") Then
+                Return ""
+            End If
+
+            If raw.StartsWith("/") OrElse raw.StartsWith("~/") Then
+                Return raw
+            End If
+
+            Dim uri As Uri = Nothing
+            If Uri.TryCreate(raw, UriKind.Absolute, uri) Then
+                If uri.Scheme = Uri.UriSchemeHttp OrElse uri.Scheme = Uri.UriSchemeHttps Then
+                    Return uri.ToString()
+                End If
+            End If
+
+            Return ""
+        End Function
+
+        Function SlideLinkStart(ByVal linkObj As Object) As String
+            Dim u As String = SafeUrl(linkObj)
+            If u = "" Then Return ""
+            If u.StartsWith("~/") Then u = ResolveUrl(u)
+            Return "<a href=\"" & SafeAttr(u) & "\">"
+        End Function
+
+        Function SlideLinkEnd(ByVal linkObj As Object) As String
+            Dim u As String = SafeUrl(linkObj)
+            If u = "" Then Return ""
+            Return "</a>"
+        End Function
+
+        Function SafeFileNameOnly(ByVal fileObj As Object) As String
+            If fileObj Is Nothing OrElse IsDBNull(fileObj) Then Return ""
+            Dim s As String = Convert.ToString(fileObj).Trim()
+            If s = "" Then Return ""
+
+            s = s.Replace("\\", "/")
+
+            ' blocco path traversal / path assoluti
+            If s.Contains("..") OrElse s.Contains(":") Then Return ""
+
+            ' prendo solo l'ultimo segmento
+            If s.Contains("/") Then
+                s = s.Substring(s.LastIndexOf("/"c) + 1)
+            End If
+
+            Return s
+        End Function
+
+        Function SafeSlideshowImageUrl(ByVal fileObj As Object) As String
+            Dim fileName As String = SafeFileNameOnly(fileObj)
+            If fileName = "" Then
+                Return ResolveUrl("~/Public/images/nofoto.gif")
+            End If
+            Return ResolveUrl("~/Public/Slideshows/" & fileName)
         End Function
 
         Sub incrementa_slides()
             slides += 1
         End Sub
 
+        ' ============================================================
+        ' Promo / prezzi / risparmio
+        ' ============================================================
+
         Function controlla_promo(ByVal inpromo As Integer) As String
             If inpromo = 1 Then
-                Return ""
-            Else
-                Return "none"
-            End If
-        End Function
-
-        Function controlla_prezzo_di_listino(ByVal prezzo_listino As Double) As String
-            If prezzo_listino > 0 Then
                 Return ""
             Else
                 Return "none"
@@ -244,16 +684,6 @@ End Function
             End If
         End Function
 
-        ' --- Helper per vetrina / testi / sconti ---
-
-        Function spedire_gratis(ByVal val As Integer) As String
-            If val = 1 Then
-                Return "block"
-            Else
-                Return "none"
-            End If
-        End Function
-
         Function compatta_testo(ByVal testo As String, ByVal lunghezza As Integer) As String
             If String.IsNullOrEmpty(testo) Then
                 Return ""
@@ -285,516 +715,44 @@ End Function
             Return "- " & percentuale & "%"
         End Function
 
-        Function prezzo_formattato(ByVal prezzo As String) As String
-            If Not String.IsNullOrEmpty(prezzo) Then
-                Dim temp As String() = prezzo.Split(","c)
-                If temp.Length = 2 Then
-                    Return "<span style=""font-size:27px;"">" & temp(0) & ",</span><span style=""font-size:20px;"">" & temp(1) & "</span>"
-                End If
-            End If
-            Return prezzo
-        End Function
-
-        Function adatta_testo(ByVal stringa As String, ByVal lunghezza As Integer) As String
-            If String.IsNullOrEmpty(stringa) Then
-                Return ""
-            End If
-
-            If stringa.Length > lunghezza Then
-                Return Left(stringa, lunghezza) & " ..."
-            Else
-                Return stringa
-            End If
-        End Function
-
-        ' Controllo immagine e path standard per immagini articoli
-        Function controllo_img(ByVal temp As Object) As String
-            If IsDBNull(temp) OrElse temp Is Nothing Then
-                Return "false"
-            Else
-                Return "true"
-            End If
-        End Function
+        ' ============================================================
+        ' Immagini articoli: path hardening
+        ' ============================================================
 
         Function checkImg(ByVal imgname As Object) As String
-            ' Gestione nulla / DBNull
+            ' nulla / DBNull
             If imgname Is Nothing OrElse Convert.IsDBNull(imgname) Then
-                Return "~/Public/images/nofoto.gif"
+                Return ResolveUrl("~/Public/images/nofoto.gif")
             End If
 
-            Dim fileName As String = imgname.ToString().Trim()
-
+            Dim fileName As String = Convert.ToString(imgname).Trim()
             If String.IsNullOrEmpty(fileName) Then
-                Return "~/Public/images/nofoto.gif"
+                Return ResolveUrl("~/Public/images/nofoto.gif")
             End If
 
-            ' Se è già un path (relativo o assoluto), lo lascio in pace
-            If fileName.StartsWith("~") OrElse fileName.StartsWith("/") Then
+            fileName = fileName.Replace("\\", "/")
+
+            ' blocco traversal
+            If fileName.Contains("..") OrElse fileName.Contains(":") Then
+                Return ResolveUrl("~/Public/images/nofoto.gif")
+            End If
+
+            ' già path (relativo sito)
+            If fileName.StartsWith("~/") Then
+                Return ResolveUrl(fileName)
+            End If
+            If fileName.StartsWith("/") Then
                 Return fileName
             End If
 
-            ' Nome file semplice: lo metto nella cartella articoli
-            Return "~/Public/images/articoli/" & fileName
+            ' nome file semplice
+            If fileName.Contains("/") Then
+                fileName = fileName.Substring(fileName.LastIndexOf("/"c) + 1)
+            End If
+
+            Return ResolveUrl("~/Public/images/articoli/" & fileName)
         End Function
+
     </script>
-
-    <% If Data_UltimiArrivi.Items.Count > 0 Then %>
-
-        <!-- Articoli in vetrina - "Scelti per te" -->
-        <div class="container tf-section flat-spacing-2 scelti-per-te bg-white home-box-position mt-3 bg-shadow">
-            <h1 style="padding:0px;">
-                <img src="Public/Images/scelti_per_te.png" width="100%" style="max-height: 50px;" />
-            </h1>
-            <div class="row pt-3 text-center">
-
-                <asp:Repeater ID="Data_UltimiArrivi" runat="server" DataSourceID="SdsArticoliInVetrina">
-                    <ItemTemplate>
-                        <div class="col-12 col-sm-6 col-md-4 mb-4">
-                            <div class="card" style="padding-bottom: 10px;min-height: 430px;">
-
-                                <!-- Spedizione Gratis -->
-                                <div style="height:40px; float:left; width:100px; margin:0px;  padding-top: 0px; padding-left: 0px;">
-                                    <img src="Public/Images/promoSpGratis.png"
-                                         alt="Questo articolo verrà spedito GRATIS !!!"
-                                         style='display:<%# spedire_gratis(Eval("SpeditoGratis")) %>;' />
-                                </div>
-
-                                <!-- Percentuale di Sconto -->
-                                <div style="height:40px; margin:0px; background-image:url('Public/Images/angolo_x.png'); background-repeat:repeat-x; font-style:italic; color:White; text-align:center; width:30%; min-width: 40pt; position:absolute; display:<%# controlla_promo(Eval("inOfferta")) %>;">
-                                    <span style="font-weight:bold;">sconto</span><br />
-                                    <span style="font-weight:bold;">
-                                        <%# sconto(
-                                                Eval("ListinoUfficiale"),
-                                                If(IsDBNull(Eval("PrezzoPromo")), 0, Eval("PrezzoPromo")),
-                                                If(IsDBNull(Eval("PrezzoPromoIvato")), 0, Eval("PrezzoPromoIvato")),
-                                                Eval("iva")
-                                            ) %>
-                                    </span>
-                                </div>
-
-                                <div style="height: 130px;">
-                                    <a href="articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>">
-                                        <img class="card-img-top" src='<%# checkImg(Eval("img1")) %>' alt="" />
-                                    </a>
-                                </div>
-
-                                <div class="card-body">
-                                    <h5 class="card-title" style="min-height: 57px;">
-                                        <%# compatta_testo(Eval("Descrizione1"), 30) %>
-                                    </h5>
-                                    <p class="card-text">
-                                        <%# compatta_testo(
-                                                If(Eval("taglia").Equals(DBNull.Value), "", Eval("taglia")) &
-                                                If(Eval("taglia").Equals(DBNull.Value) Or Eval("colore").Equals(DBNull.Value), "", ", ") &
-                                                If(Eval("colore").Equals(DBNull.Value), "", Eval("colore")),
-                                                22
-                                            ) %>
-                                    </p>
-
-                                    <div>
-                                        <div>
-                                            <span style="background-image:url('Images/back_menu.png'); background-position:center; background-color:gray; background-repeat:repeat-x; display:block; color:white; font-weight:bold; padding:5px; text-align: center;">
-                                                IL TUO PREZZO
-                                            </span>
-                                            <span id="infobar" style="background-image:url('Images/back_menu.png'); background-position:center; background-repeat:repeat-x; display:block; color:white; font-size:11pt; padding:5px;">
-                                                <% If Session("IvaTipo") = 1 Then %>
-                                                    <div style="width:100%; height:31px; overflow:hidden; text-align:center; font-weight:bold;">
-                                                        <%# prezzo_formattato(
-                                                                If(Eval("InOfferta") = 0,
-                                                                   Eval("Prezzo", "{0:C}"),
-                                                                   Eval("prezzoPromo", "{0:C}")
-                                                                )
-                                                            ) %>
-                                                    </div>
-                                                <% Else %>
-                                                    <div style="width:100%; height:31px; overflow:hidden; text-align:center; font-weight:bold;">
-                                                        <%# prezzo_formattato(
-                                                                If(Eval("InOfferta") = 0,
-                                                                   Eval("PrezzoIvato", "{0:C}"),
-                                                                   Eval("prezzoPromoIvato", "{0:C}")
-                                                                )
-                                                            ) %>
-                                                    </div>
-                                                <% End If %>
-                                            </span>
-                                        </div>
-
-                                        <div class="mt-2" style="font-size: 0.7rem;min-height: 64px;">
-                                            <%# compatta_testo(Eval("Descrizione2"), 100) %>
-                                        </div>
-                                    </div>
-
-                                    <div style="margin-top: 10px">
-                                        Codice: <%#Eval("Codice")%>
-                                    </div>
-
-                                    <!-- Listino Ufficiale -->
-                                    <div style="height: 35px">
-                                        <% If Session("IvaTipo") = 1 Then %>
-                                            <div style='width:100%; overflow:hidden; text-align:center; font-weight:bold; font-size:9pt; display:<%# controlla_risparmio(Eval("ListinoUfficiale"), Eval("Prezzo"), Eval("prezzoPromo")) %>;'>
-                                                prezzo di listino
-                                                <span style="text-decoration:line-through; color:Red;">
-                                                    <%# Eval("ListinoUfficiale", "{0:C}") %>
-                                                </span>
-                                            </div>
-                                            <div style='width:100%; overflow:hidden; text-align:center; font-weight:bold; font-size:11pt; display:<%# controlla_risparmio(Eval("ListinoUfficiale"), Eval("Prezzo"), Eval("prezzoPromo")) %>;'>
-                                                risparmi
-                                                <span style="color:Red; font-size:9pt;">
-                                                    <%# String.Format("{0:C}", calcola_risparmio(Eval("ListinoUfficiale"), Eval("Prezzo"), Eval("prezzoPromo"))) %>
-                                                </span>
-                                            </div>
-                                        <% Else %>
-                                            <div style='width:100%; overflow:hidden; text-align:center; font-weight:bold; font-size:9pt; display:<%# controlla_risparmio(Eval("ListinoUfficiale") * ((Eval("iva") / 100000) + 1), Eval("PrezzoIvato"), Eval("prezzoPromoIvato")) %>;'>
-                                                prezzo di listino
-                                                <span style="text-decoration:line-through; color:Red;">
-                                                    <%# String.Format("{0:C}", (Eval("ListinoUfficiale") * ((Eval("iva") / 100000) + 1))) %>
-                                                </span>
-                                            </div>
-                                            <div style='width:100%; overflow:hidden; text-align:center; font-weight:bold; font-size:11pt; display:<%# controlla_risparmio(Eval("ListinoUfficiale") * ((Eval("iva") / 100000) + 1), Eval("PrezzoIvato"), Eval("prezzoPromoIvato")) %>;'>
-                                                risparmi
-                                                <span style="color:Red; font-size:9pt;">
-                                                    <%# String.Format("{0:C}", calcola_risparmio(Eval("ListinoUfficiale") * ((Eval("iva") / 100000) + 1), Eval("PrezzoIvato"), Eval("prezzoPromoIvato"))) %>
-                                                </span>
-                                            </div>
-                                        <% End If %>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-                    </ItemTemplate>
-                </asp:Repeater>
-
-            </div>
-        </div>
-
-        <asp:SqlDataSource ID="SdsArticoliInVetrina" runat="server"
-            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-            SelectCommand="SELECT * FROM documenti JOIN documentirighe ON documenti.id=documentirighe.`DocumentiId` WHERE documentirighe.`ArticoliId`>0 AND documenti.`TipoDocumentiId`=11 GROUP BY documentirighe.`ArticoliId` ORDER BY documenti.id DESC LIMIT 1">
-        </asp:SqlDataSource>
-
-    <% End If %>
-
-    <!-- BANNER PUBBLICITARIO (id_posizione_banner=4)(ordinamento=1) -->
-    <asp:SqlDataSource ID="SqlDataSource_Pubblicita_id4_pos1" runat="server"
-        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-        SelectCommand="SELECT id, id_Azienda, data_inizio_pubblicazione, data_fine_pubblicazione, limite_click, limite_impressioni, id_posizione_banner, numero_click_attuale, numero_impressioni_attuale, link, img_path, titolo, descrizione, abilitato from pubblicitaV2"
-        UpdateCommand="update pubblicitaV2 SET numero_impressioni = numero_impressioni + 1 WHERE (id = 1)">
-    </asp:SqlDataSource>
-
-    <asp:Repeater ID="RepeaterPubblicita_id4_pos1" runat="server" DataSourceID="SqlDataSource_Pubblicita_id4_pos1" EnableViewState="False">
-        <ItemTemplate>
-            <br />
-            <div style="max-width:100%" class="img-max-100">
-                <asp:HyperLink ID="hlBanner" runat="server"
-                    NavigateUrl='<%# "click.aspx?id=" & Eval("id") %>'
-                    EnableViewState="false"
-                    ToolTip='<%# Eval("Descrizione") %>'
-                    ImageUrl='<%# "Public/Banner/" & Eval("img_path") %>'
-                    Target="_blank"></asp:HyperLink>
-            </div>
-        </ItemTemplate>
-    </asp:Repeater>
-
-    <!-- BANNER PUBBLICITARIO (id_posizione_banner=4)(ordinamento=2) -->
-    <asp:SqlDataSource ID="SqlDataSource_Pubblicita_id4_pos2" runat="server"
-        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-        SelectCommand="SELECT id, id_Azienda, data_inizio_pubblicazione, data_fine_pubblicazione, limite_click, limite_impressioni, id_posizione_banner, numero_click_attuale, numero_impressioni_attuale, link, img_path, titolo, descrizione, abilitato from pubblicitaV2"
-        UpdateCommand="update pubblicitaV2 SET numero_impressioni = numero_impressioni + 1 WHERE (id = 1)">
-    </asp:SqlDataSource>
-
-    <asp:Repeater ID="RepeaterPubblicita_id4_pos2" runat="server" DataSourceID="SqlDataSource_Pubblicita_id4_pos2" EnableViewState="False">
-        <ItemTemplate>
-            <br />
-            <div style="max-width:100%" class="img-max-100">
-                <asp:HyperLink ID="hlBanner" runat="server"
-                    NavigateUrl='<%# "click.aspx?id=" & Eval("id") %>'
-                    EnableViewState="false"
-                    ToolTip='<%# Eval("Descrizione") %>'
-                    ImageUrl='<%# "Public/Banner/" & Eval("img_path") %>'
-                    Target="_blank"></asp:HyperLink>
-            </div>
-        </ItemTemplate>
-    </asp:Repeater>
-
-    <asp:SqlDataSource ID="SdsNewArticoli" runat="server"
-        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-        SelectCommand="SELECT * FROM articoli LIMIT 1">
-    </asp:SqlDataSource>
-
-    <!-- Visualizza i nuovi prodotti inseriti -->
-    <br />
-    <% cont = 0 %>
-    <div class="container tf-section flat-spacing-2 bg-white pb-4 mt-3 home-box-position bg-shadow">
-        <h1 style="padding:0px;">
-            <img src="Public/Images/novita.png" width="100%" style="max-height: 50px;" />
-        </h1>
-
-        <asp:Repeater ID="Repeat_Lista_Nuovi_Arrivi" DataSourceID="SdsNewArticoli" runat="server">
-            <ItemTemplate>
-
-                <%
-                    cont = cont + 1
-                    If (cont = 1) Then
-                %>
-                <div class="row pt-4">
-                    <div class="col text-center">
-                        <div style="padding: 1.5rem">
-
-                            <div style="text-align:center;">
-                                <div style="width:255px; min-height: 160px;margin:auto; overflow:hidden; position:relative;">
-                                    <a href="articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>">
-                                        <img border="0" style="max-width: 180px; max-height: 120px;" src='<%# checkImg(Eval("img1")) %>' alt="" />
-                                    </a>
-                                    <div style="position:absolute; top:0px; left:44px; z-index:999; width:180px; height:50px; overflow:hidden;">
-                                        <!-- Immagine Spedizione Gratis -->
-                                        <div style="height:50px; float:left; width:50px; margin:0px;  padding-top: 0px; padding-left: 0px;">
-                                            <img src="Public/Images/bollinoSpedizioneVetrina.png"
-                                                 alt="Questo articolo verrà spedito GRATIS !!!"
-                                                 style='display:<%# spedire_gratis(Eval("SpeditoGratis")) %>;' />
-                                        </div>
-                                        <!-- Immagine in offerta -->
-                                        <div style=" width:50px; height:50px; margin:0px 0px; float:right;">
-                                            <img src="Public/Images/bollinoPromoVetrina.png"
-                                                 alt="Articolo in PROMO !!!"
-                                                 style='display:<%# controlla_promo(Eval("inOfferta"))%>;' />
-                                        </div>
-                                    </div>
-                                    <div style="text-align:center;">
-                                        <a href="articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>">
-                                            <img border="0" width="80px" src='<%# "Public/Marche/" & Eval("Marche_img") %>' alt="" />
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div style="padding-left:25px; max-width:255px; margin:auto; position:relative; text-align:justify; font-size:8pt; font-weight:bold; margin-top: 10px;">
-                                <div>
-                                    <a href="articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>">
-                                        <%# adatta_testo(Eval("Descrizione1"), 80) %><br />
-                                        <%# compatta_testo(
-                                                If(Eval("taglia").Equals(DBNull.Value), "", Eval("taglia")) &
-                                                If(Eval("taglia").Equals(DBNull.Value) Or Eval("colore").Equals(DBNull.Value), "", ", ") &
-                                                If(Eval("colore").Equals(DBNull.Value), "", Eval("colore")),
-                                                22
-                                            ) %>
-                                    </a>
-                                </div>
-
-                                <span style="background-image:url('Images/back_menu.png'); background-position:center; background-color:gray; background-repeat:repeat-x; display:block; color:white; font-weight:bold; padding:5px; text-align:center; font-size:9pt;">
-                                    IL TUO PREZZO
-                                </span>
-
-                                <span id="infobar" style="background-image:url('Images/back_menu.png'); background-position:center; background-repeat:repeat-x; display:block; color:white; font-size:11pt; padding:5px; text-align:center;">
-                                    <%# controlla_prezzo(
-                                            If(IsDBNull(Eval("prezzo")), 0, Eval("prezzo")),
-                                            If(IsDBNull(Eval("prezzoIvato")), 0, Eval("prezzoIvato")),
-                                            If(Eval("InOfferta") = 0, 0, Eval("prezzoPromo")),
-                                            If(Eval("InOfferta") = 0, 0, Eval("PrezzoPromoIvato")),
-                                            Session("IvaTipo")
-                                        ) %>
-                                </span>
-                            </div>
-
-                        </div>
-                    </div>
-                    <div class="col d-none d-sm-block" style="align-self: center;">
-                        <%
-                    Else
-                        ' Stampa degli altri
-                        If (cont = 4) Then
-                            cont = 0
-                        End If
-                        %>
-
-                        <div style="width:300px; height:93.5px; margin: 0 auto; padding-bottom:5px; text-align:left; background-image:url('Images/back_right.png'); background-repeat:no-repeat; background-position: bottom right;">
-                            <div style="width:80px; height:90px; float:left; overflow:hidden; position:relative;">
-                                <div style="position:absolute; top:0px; left:0px; z-index:999; width:80px; height:50px; overflow:hidden;">
-                                    <!-- Immagine Spedizione Gratis -->
-                                    <div style="height:40px; float:left; width:40px; margin:0px;  padding-top: 0px; padding-left: 0px;">
-                                        <img src="Public/Images/bollinoSpedizioneVetrina.png"
-                                             alt="Questo articolo verrà spedito GRATIS !!!"
-                                             style='display:<%# spedire_gratis(Eval("SpeditoGratis")) %>; width:40px;' />
-                                    </div>
-                                    <!-- Immagine in offerta -->
-                                    <div style=" width:40px; height:40px; margin:0px 0px; float:right;">
-                                        <img src="Public/Images/bollinoPromoVetrina.png"
-                                             alt="Articolo in PROMO !!!"
-                                             style='display:<%# controlla_promo(Eval("inOfferta"))%>; width:40px;' />
-                                    </div>
-                                </div>
-                                <a href="articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>">
-                                    <img border="0" width="85px" src='<%# checkImg(Eval("img1")) %>' alt="" />
-                                </a>
-                            </div>
-                            <div style="width:215px; height:90px; float:right; position:relative; font-size:7pt; padding-left:5px; text-align:justify;">
-                                <a href="articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>">
-                                    <%# adatta_testo(Eval("Descrizione1"), 100) %><br />
-                                    <%# compatta_testo(
-                                            If(Eval("taglia").Equals(DBNull.Value), "", Eval("taglia")) &
-                                            If(Eval("taglia").Equals(DBNull.Value) Or Eval("colore").Equals(DBNull.Value), "", ", ") &
-                                            If(Eval("colore").Equals(DBNull.Value), "", Eval("colore")),
-                                            22
-                                        ) %>
-                                </a>
-                                <div style="position:absolute; bottom:3px; left:5px; height:25px; text-align:left; font-size:6pt;">
-                                    <%# "<b>COD.</b><br>" & Eval("Codice") %>
-                                </div>
-                                <div style="position:absolute; bottom:-8px; right:3px; width:100px; height:30px; text-align:right; font-weight:bold; font-size:12pt; color:white;">
-                                    <%# controlla_prezzo(
-                                            If(IsDBNull(Eval("prezzo")), 0, Eval("prezzo")),
-                                            If(IsDBNull(Eval("prezzoIvato")), 0, Eval("prezzoIvato")),
-                                            If(Eval("InOfferta") = 0, 0, Eval("prezzoPromo")),
-                                            If(Eval("InOfferta") = 0, 0, Eval("PrezzoPromoIvato")),
-                                            Session("IvaTipo")
-                                        ) %>
-                                </div>
-                            </div>
-                        </div>
-
-                        <% End If
-                        If ((cont Mod 4) = 0) Then
-                        %>
-                    </div>
-                </div>
-                <% End If %>
-
-            </ItemTemplate>
-        </asp:Repeater>
-
-        <% If ((cont Mod 4) <> 0) Then %>
-            </div>
-        </div>
-        <% End If %>
-    </div>
-
-    <!-- I più venduti -->
-    <br />
-    <div style="clear:both;"></div>
-    <div class="border-radius" style="margin:auto; border-style:none;">
-
-        <div class="container tf-section flat-spacing-2 bg-white home-box-position mt-3 bg-shadow">
-            <h1 style="padding:0px;">
-                <img src="Public/Images/piu_venduti.png" alt="" width="100%" style="max-height: 50px;" />
-            </h1>
-            <div class="row mx-1">
-
-                <asp:Repeater ID="DataList1" runat="server" DataSourceID="sdsPiuAcquistati">
-                    <ItemTemplate>
-                        <div class="col-venduti my-3">
-                            <div class="card" style="width:125px; overflow:hidden;">
-                                <div style=" position:relative; width:100%; height:100%;">
-
-                                    <a href='<%# "articolo.aspx?id=" & Eval("ArticoliId") & "&TCId=" & Eval("TCId") %>' style="border-style:none; margin:auto;">
-                                        <div style="position:absolute; top:0px; left:0px; z-index:999; width:100%; height:50px; overflow:hidden;">
-                                            <!-- Immagine Spedizione Gratis -->
-                                            <div style="height:50px; float:left; width:50px; margin:0px;  padding-top: 0px; padding-left: 0px;">
-                                                <img src="Public/Images/bollinoSpedizioneVetrina.png"
-                                                     alt="Questo articolo verrà spedito GRATIS !!!"
-                                                     style='display:<%# spedire_gratis(Eval("SpeditoGratis")) %>;' />
-                                            </div>
-                                            <!-- Immagine in offerta -->
-                                            <div style=" width:50px; height:50px; margin:0px 0px; float:right;">
-                                                <img src="Public/Images/bollinoPromoVetrina.png"
-                                                     alt="Articolo in PROMO !!!"
-                                                     style='display:<%# controlla_promo(Eval("inOfferta"))%>;' />
-                                            </div>
-                                        </div>
-                                    </a>
-
-                                    <div style="overflow:hidden; text-align:center;">
-                                        <table style=" width:100%; height:100%; vertical-align:middle;">
-                                            <tr>
-                                                <td style="width:150px; height:100px; overflow:hidden; vertical-align:middle;">
-                                                    <a href='<%# "articolo.aspx?id=" & Eval("ArticoliId") & "&TCId=" & Eval("TCId") %>' style="margin:auto; border-style:none;">
-                                                        <img src="<%# checkImg(Eval("img1")) %>" style=" width:100px; border-style:none;" alt="" />
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>
-                                                    <div style="color:black; font-weight:bold; font-size:6pt; text-align:left; margin: 5px; min-height: 36px;">
-                                                        <%# compatta_testo(Eval("Descrizione1"), 22) %><br />
-                                                        <%# compatta_testo(
-                                                                If(Eval("taglia").Equals(DBNull.Value), "", Eval("taglia")) &
-                                                                If(Eval("taglia").Equals(DBNull.Value) Or Eval("colore").Equals(DBNull.Value), "", ", ") &
-                                                                If(Eval("colore").Equals(DBNull.Value), "", Eval("colore")),
-                                                                22
-                                                            ) %>
-                                                    </div>
-                                                    <div style="text-align:center; background-color:#ebebeb;">
-                                                        <span style="background-image:url('Images/back_menu.png'); background-position:center; background-color:gray; background-repeat:repeat-x; display:block; color:white; font-weight:bold; padding-top:2px; padding-bottom:2px; font-size:8pt;">
-                                                            IL TUO PREZZO
-                                                        </span>
-                                                        <span id="infobar" style="background-image:url('Images/back_menu.png'); background-position:center; background-repeat:repeat-x; display:block; color:white; font-size:11pt; font-weight:bold;">
-                                                            <%# controlla_prezzo(
-                                                                    If(IsDBNull(Eval("prezzo")), 0, Eval("prezzo")),
-                                                                    If(IsDBNull(Eval("prezzoIvato")), 0, Eval("prezzoIvato")),
-                                                                    If(Eval("InOfferta") = 0, 0, Eval("prezzoPromo")),
-                                                                    If(Eval("InOfferta") = 0, 0, Eval("PrezzoPromoIvato")),
-                                                                    Session("IvaTipo")
-                                                                ) %>
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </div>
-
-                                </div>
-                            </div>
-                        </div>
-                    </ItemTemplate>
-                </asp:Repeater>
-
-            </div>
-        </div>
-
-        <!-- Marche Random -->
-        <br />
-        <div id="boxpromo">
-            <div class="container tf-section flat-spacing-2 mb-3 partners mt-3 bg-shadow home-box-position">
-                <div class="row">
-                    <h2 style="font-size: 1.7rem;">
-                        Rivenditori Ufficiali - I nostri brand  <i class="fa fa-handshake"></i>
-                    </h2>
-                </div>
-                <div class="row">
-                    <asp:Repeater ID="MarcheRandom" runat="server" DataSourceID="sdsMarcheRandom">
-                        <ItemTemplate>
-                            <div class="col-3 col-md-2 align-self-center py-2">
-                                <a href='<%# "articoli.aspx?ct=30000&mr=" & Eval("id") %>'>
-                                    <img src="<%# "Public/Marche/" & Eval("img") %>"
-                                         style="width:100%; max-width:150px;"
-                                         alt="<%# Eval("Descrizione") %>"
-                                         title="<%# Eval("Descrizione")%>" />
-                                </a>
-                            </div>
-                        </ItemTemplate>
-                    </asp:Repeater>
-                </div>
-            </div>
-
-            <asp:SqlDataSource ID="sdsMarcheRandom" runat="server"
-                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                SelectCommand="SELECT * FROM marche WHERE (Abilitato=1) AND (img is not NULL) ORDER BY RAND() LIMIT 6">
-            </asp:SqlDataSource>
-        </div>
-
-    </div>
-
-    <asp:SqlDataSource ID="sdsPiuAcquistati" runat="server"
-        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-        SelectCommand="SELECT * FROM documenti LIMIT 1">
-    </asp:SqlDataSource>
-
-    <br />
-    <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" Font-Size="7pt" Font-Names="arial"></asp:Label><br />
 
 </asp:Content>
