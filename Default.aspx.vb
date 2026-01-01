@@ -1,6 +1,4 @@
-Imports System
 Imports System.Data
-Imports System.Configuration
 Imports MySql.Data.MySqlClient
 
 Partial Class _Default
@@ -14,19 +12,6 @@ Partial Class _Default
         nonQuerya
         scalar
     End Enum
-
-    ' ---------------------------
-    ' Helper: conversione sicura a Integer con clamp
-    ' ---------------------------
-    Private Function SafeInt(ByVal o As Object, ByVal defaultValue As Integer, ByVal minValue As Integer, ByVal maxValue As Integer) As Integer
-        Dim n As Integer = defaultValue
-        If o IsNot Nothing Then
-            Integer.TryParse(Convert.ToString(o), n)
-        End If
-        If n < minValue Then n = minValue
-        If n > maxValue Then n = maxValue
-        Return n
-    End Function
 
     Protected Function ExecuteQueryGetScalar(ByVal fields As String,
                                              ByVal table As String,
@@ -77,7 +62,8 @@ Partial Class _Default
         Dim table1 As String
         Dim table2 As String
 
-        ' Parametro IVA utente: uso SOLO @ivaUtente (coerenza)
+        ' NOTA SICUREZZA/BUGFIX:
+        ' - Uso sempre lo stesso nome parametro @ivaUtente in tutte le espressioni (prima c'era @IvaUtente)
         Dim prezzoIvato As String = "IF(@ivaUtente>0,((vsuperarticoli.Prezzo)*((@ivaUtente/100)+1)),vsuperarticoli.PrezzoIvato) AS PrezzoIvato"
         Dim prezzoPromoIvato As String = "IF(@ivaUtente>0,((vsuperarticoli.PrezzoPromo)*((@ivaUtente/100)+1)),vsuperarticoli.PrezzoPromoIvato) AS PrezzoPromoIvato"
         Dim iva As String = "IF(@ivaUtente>0,@ivaUtente,iva.valore) AS iva"
@@ -108,15 +94,9 @@ Partial Class _Default
             vsuperarticoliId = "id"
         End If
 
-        ' Listino e IVA utente in modo robusto
-        Dim listino As Integer = SafeInt(Session("Listino"), 1, 1, 9999)
-        Dim ivaUtente As Integer = SafeInt(Session("Iva_Utente"), -1, -1, 9999)
-
         ' -------------------------------
         ' Nuovi arrivi (Repeat_Lista_Nuovi_Arrivi)
         ' -------------------------------
-        Dim limitNuoviArrivi As Integer = SafeInt(Session("VetrinaArticoliUltimiArriviPuntoVendita"), 0, 0, 200) * 3
-
         sqlBaseTable = "(SELECT * FROM documenti WHERE tipoDocumentiid=11 OR tipoDocumentiid=22 ORDER BY id DESC LIMIT 20) AS documentibase"
         sqlBaseTable = "(SELECT articoliid, TCId FROM " & sqlBaseTable & " INNER JOIN documentirighe ON documentibase.id = documentirighe.DocumentiId GROUP BY " & id & " ORDER BY RAND()) AS articoliidTCIdTable"
         sqlBaseTable = "(SELECT " & vsuperarticoliFieldsAndIvaFromVsuperarticoli &
@@ -134,38 +114,36 @@ Partial Class _Default
                  " INNER JOIN " & sqlBaseTable & " ON articolibase.id = vsuperarticoli." & vsuperarticoliId &
                  " WHERE nlistino=@listino"
 
-        sqlString = "SELECT * FROM (" & table1 & " UNION ALL " & table2 & ") AS united ORDER BY RAND() LIMIT " & limitNuoviArrivi.ToString()
+        sqlString = "SELECT * FROM (" & table1 & " UNION ALL " & table2 & ") AS united ORDER BY RAND() LIMIT " &
+                    (If(Session("VetrinaArticoliUltimiArriviPuntoVendita") Is Nothing, 0, CInt(Session("VetrinaArticoliUltimiArriviPuntoVendita"))) * 3).ToString()
         sqlString = "SELECT *, taglie.descrizione AS taglia, colori.descrizione AS colore FROM (" & sqlString & ") " & tagliecoloriJoin
 
         SdsNewArticoli.SelectCommand = sqlString
         SdsNewArticoli.SelectParameters.Clear()
-        SdsNewArticoli.SelectParameters.Add("@listino", listino)
-        SdsNewArticoli.SelectParameters.Add("@ivaUtente", ivaUtente)
+        SdsNewArticoli.SelectParameters.Add("@listino", Session("listino"))
+        SdsNewArticoli.SelectParameters.Add("@ivaUtente", Session("Iva_Utente"))
 
         ' -------------------------------
         ' Articoli in vetrina (SdsArticoliInVetrina)
         ' -------------------------------
-        Dim limitVetrina As Integer = SafeInt(Session("VetrinaArticoliImpatto"), 0, 0, 200) * 3
-
         sqlBaseTable =
             "(SELECT " & vsuperarticoliFieldsAndIvaFromVsuperarticoli &
             " INNER JOIN (SELECT articoli_listini.id FROM articoli_listini INNER JOIN articoli ON articoli_listini.`ArticoliId` = articoli.id " &
             "WHERE articoli_listini.`NListino` = @listino AND articoli.vetrina = 1 ORDER BY id DESC LIMIT 50) AS vsuperarticoliids " &
             "ON vsuperarticoliids.id = vsuperarticoli.`ArticoliListiniId` ORDER BY " & id & " DESC, PrezzoPromo ASC) AS vsuperarticoliOrdered"
 
-        sqlString = "SELECT * FROM " & sqlBaseTable & " GROUP BY " & id & " ORDER BY RAND() LIMIT " & limitVetrina.ToString()
+        sqlString = "SELECT * FROM " & sqlBaseTable & " GROUP BY " & id & " ORDER BY RAND() LIMIT " &
+                    (If(Session("VetrinaArticoliImpatto") Is Nothing, 0, CInt(Session("VetrinaArticoliImpatto"))) * 3).ToString()
         sqlString = "SELECT *, taglie.descrizione AS taglia, colori.descrizione AS colore FROM (" & sqlString & ") " & tagliecoloriJoin
 
         SdsArticoliInVetrina.SelectCommand = sqlString
         SdsArticoliInVetrina.SelectParameters.Clear()
-        SdsArticoliInVetrina.SelectParameters.Add("@listino", listino)
-        SdsArticoliInVetrina.SelectParameters.Add("@ivaUtente", ivaUtente)
+        SdsArticoliInVetrina.SelectParameters.Add("@listino", Session("listino"))
+        SdsArticoliInVetrina.SelectParameters.Add("@ivaUtente", Session("Iva_Utente"))
 
         ' -------------------------------
         ' Più venduti (sdsPiuAcquistati)
         ' -------------------------------
-        Dim limitPiuVenduti As Integer = SafeInt(Session("VetrinaArticoliPiuVenduti"), 0, 0, 200) * 4
-
         sqlBaseTable =
             "(SELECT documentirighe.ArticoliId, documentirighe.TCId, COUNT(documentirighe.ArticoliId) AS Conteggio_Vendite, " &
             "DATEDIFF(CURDATE(),documenti.DataDocumento) AS Giorni " &
@@ -179,38 +157,43 @@ Partial Class _Default
             " WHERE NListino=@listino ORDER BY Conteggio_vendite DESC, PrezzoPromoIvato ASC) as vsuperarticoliOrdered"
 
         sqlString = "SELECT * FROM " & sqlBaseTable & " GROUP BY " & id &
-                    " ORDER BY conteggio_vendite DESC LIMIT " & limitPiuVenduti.ToString()
+                    " ORDER BY conteggio_vendite DESC LIMIT " &
+                    (If(Session("VetrinaArticoliPiuVenduti") Is Nothing, 0, CInt(Session("VetrinaArticoliPiuVenduti"))) * 4).ToString()
         sqlString = "SELECT *, taglie.descrizione AS taglia, colori.descrizione AS colore FROM (" & sqlString & ") " & tagliecoloriJoin
 
         sdsPiuAcquistati.SelectCommand = sqlString
         sdsPiuAcquistati.SelectParameters.Clear()
-        sdsPiuAcquistati.SelectParameters.Add("@listino", listino)
-        sdsPiuAcquistati.SelectParameters.Add("@ivaUtente", ivaUtente)
+        sdsPiuAcquistati.SelectParameters.Add("@listino", Session("listino"))
+        sdsPiuAcquistati.SelectParameters.Add("@ivaUtente", Session("Iva_Utente"))
 
         ' -------------------------------
-        ' Pubblicità (banner) - mantenuta tua logica, con AziendaID parametrico
+        ' Pubblicità (banner)
         ' -------------------------------
+        ' NOTA SICUREZZA/BUGFIX:
+        ' - Evito di concatenare la data dentro SQL (anche se è server-side) e uso un parametro @DataOdierna.
         Dim DataOdierna_mod As String = Date.Today.ToString("yyyy-MM-dd")
 
         SqlDataSource_Pubblicita_id4_pos1.SelectCommand =
             "SELECT id, id_Azienda, data_inizio_pubblicazione, data_fine_pubblicazione, limite_click, limite_impressioni, id_posizione_banner, numero_click_attuale, numero_impressioni_attuale, link, img_path, titolo, descrizione, abilitato " &
             "FROM pubblicitav2 WHERE (id_posizione_banner=4) AND (ordinamento=1) " &
-            "AND ((data_inizio_pubblicazione<='" & DataOdierna_mod & "') AND (data_fine_pubblicazione>='" & DataOdierna_mod & "')) " &
+            "AND ((data_inizio_pubblicazione<=@DataOdierna) AND (data_fine_pubblicazione>=@DataOdierna)) " &
             "AND ((numero_click_attuale<=limite_click) OR (limite_click=-1)) " &
             "AND ((numero_impressioni_attuale<=limite_impressioni) OR (limite_impressioni=-1)) " &
             "AND (abilitato=1) AND (id_Azienda=@AziendaID) ORDER BY id ASC LIMIT 1"
         SqlDataSource_Pubblicita_id4_pos1.SelectParameters.Clear()
-        SqlDataSource_Pubblicita_id4_pos1.SelectParameters.Add("@AziendaID", SafeInt(Me.Session("AziendaID"), 0, 0, Integer.MaxValue))
+        SqlDataSource_Pubblicita_id4_pos1.SelectParameters.Add("@AziendaID", Me.Session("AziendaID"))
+        SqlDataSource_Pubblicita_id4_pos1.SelectParameters.Add("@DataOdierna", DataOdierna_mod)
 
         SqlDataSource_Pubblicita_id4_pos2.SelectCommand =
             "SELECT id, id_Azienda, data_inizio_pubblicazione, data_fine_pubblicazione, limite_click, limite_impressioni, id_posizione_banner, numero_click_attuale, numero_impressioni_attuale, link, img_path, titolo, descrizione, abilitato " &
             "FROM pubblicitav2 WHERE (id_posizione_banner=4) And (ordinamento=2) " &
-            "And ((data_inizio_pubblicazione<='" & DataOdierna_mod & "') AND (data_fine_pubblicazione>='" & DataOdierna_mod & "')) " &
+            "And ((data_inizio_pubblicazione<=@DataOdierna) AND (data_fine_pubblicazione>=@DataOdierna)) " &
             "AND ((numero_click_attuale<=limite_click) OR (limite_click=-1)) " &
             "AND ((numero_impressioni_attuale<=limite_impressioni) OR (limite_impressioni=-1)) " &
             "AND (abilitato=1) AND (id_Azienda=@AziendaID) ORDER BY id ASC LIMIT 1"
         SqlDataSource_Pubblicita_id4_pos2.SelectParameters.Clear()
-        SqlDataSource_Pubblicita_id4_pos2.SelectParameters.Add("@AziendaID", SafeInt(Me.Session("AziendaID"), 0, 0, Integer.MaxValue))
+        SqlDataSource_Pubblicita_id4_pos2.SelectParameters.Add("@AziendaID", Me.Session("AziendaID"))
+        SqlDataSource_Pubblicita_id4_pos2.SelectParameters.Add("@DataOdierna", DataOdierna_mod)
 
         System.Diagnostics.Debug.WriteLine("end")
     End Sub
@@ -247,7 +230,7 @@ Partial Class _Default
         End If
 
         Dim params As New Dictionary(Of String, String)
-        ' Coerenza: uso AziendaID
+        ' NOTA: uso la chiave di sessione coerente con il resto del sito
         params.Add("@aziendaId", Convert.ToString(Session("AziendaID")))
 
         Dim slideshows As Object = ExecuteQueryGetScalar("COUNT(*)", "slideshows", wherePart, params)
