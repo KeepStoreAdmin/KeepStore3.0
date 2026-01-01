@@ -1,12 +1,11 @@
 <%@ Page Language="VB" AutoEventWireup="false" CodeFile="click.aspx.vb" Inherits="click" %>
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
+<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head runat="server">
-    <title>click</title>
-    <!-- Questa pagina non deve essere indicizzata dai motori di ricerca -->
+    <title>Redirect</title>
     <meta name="robots" content="noindex,nofollow" />
+    <meta http-equiv="Cache-Control" content="no-store" />
 </head>
 <body>
     <form id="form1" runat="server">
