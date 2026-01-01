@@ -352,11 +352,8 @@ Partial Class _Default
 
         For Each c As System.Web.UI.Control In Page.Header.Controls
             Dim lnk As System.Web.UI.HtmlControls.HtmlLink = TryCast(c, System.Web.UI.HtmlControls.HtmlLink)
-            If lnk IsNot Nothing Then
-                Dim rel As String = Convert.ToString(lnk.Attributes("rel"))
-                If Not String.IsNullOrEmpty(rel) AndAlso String.Equals(rel, "canonical", StringComparison.OrdinalIgnoreCase) Then
-                    toRemove.Add(c)
-                End If
+            If lnk IsNot Nothing AndAlso String.Equals(Convert.ToString(lnk.Attributes("rel")), "canonical", StringComparison.OrdinalIgnoreCase) Then
+                toRemove.Add(c)
             End If
         Next
 
