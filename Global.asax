@@ -1,53 +1,32 @@
 <%@ Application Language="VB" %>
+
 <script runat="server">
 
-' -----------------------------------------------------------------------------
-' Global.asax
-' - Nessun redirect automatico (evita loop su 404.aspx)
-' - Log minimale degli errori non gestiti (se App_Data è scrivibile)
-' -----------------------------------------------------------------------------
+    Sub Application_Start(ByVal sender As Object, ByVal e As EventArgs)
+        ' Avvio applicazione
+    End Sub
 
-Sub Application_Start(ByVal sender As Object, ByVal e As EventArgs)
-End Sub
+    Sub Session_Start(ByVal sender As Object, ByVal e As EventArgs)
+        ' Avvio sessione
+    End Sub
 
-Sub Session_Start(ByVal sender As Object, ByVal e As EventArgs)
-End Sub
+    Sub Application_BeginRequest(ByVal sender As Object, ByVal e As EventArgs)
+        ' Inizio richiesta
+    End Sub
 
-Sub Application_BeginRequest(ByVal sender As Object, ByVal e As EventArgs)
-End Sub
+    Sub Application_Error(ByVal sender As Object, ByVal e As EventArgs)
+        ' IMPORTANTE:
+        ' Non fare Response.Redirect qui verso 404.aspx o pagine ASPX,
+        ' altrimenti rischi loop se l’errore capita anche sulla pagina di errore.
+        ' Lasciamo gestire a customErrors/httpErrors su pagine statiche .htm
+    End Sub
 
-Sub Application_Error(ByVal sender As Object, ByVal e As EventArgs)
-    ' Log (best-effort) senza alterare la risposta
-    Try
-        Dim ex As Exception = Server.GetLastError()
-        If ex Is Nothing Then Exit Sub
+    Sub Session_End(ByVal sender As Object, ByVal e As EventArgs)
+        ' Fine sessione
+    End Sub
 
-        Dim url As String = ""
-        Try
-            url = HttpContext.Current.Request.RawUrl
-        Catch
-        End Try
-
-        Dim path As String = ""
-        Try
-            path = HttpContext.Current.Server.MapPath("~/App_Data/errors.log")
-        Catch
-        End Try
-
-        If Not String.IsNullOrEmpty(path) Then
-            Dim sep As String = Environment.NewLine & "------------------------------------------------------------" & Environment.NewLine
-            Dim msg As String = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") & " | " & url & Environment.NewLine & ex.ToString() & sep
-            System.IO.File.AppendAllText(path, msg)
-        End If
-    Catch
-        ' non interrompere l'app
-    End Try
-
-    ' IMPORTANTISSIMO: qui NON fare Response.Redirect a pagine di errore
-    ' (è la causa tipica dei loop ERR_TOO_MANY_REDIRECTS).
-End Sub
-
-Sub Application_End(ByVal sender As Object, ByVal e As EventArgs)
-End Sub
+    Sub Application_End(ByVal sender As Object, ByVal e As EventArgs)
+        ' Fine applicazione
+    End Sub
 
 </script>
