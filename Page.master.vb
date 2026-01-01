@@ -1268,17 +1268,13 @@ Partial Class Page
     End Sub
 
     '==========================================================
-    ' CERCA
+    ' CERCA Cerca() harden + URL encode
     '==========================================================
     Public Sub Cerca()
-        If (Me.tbCerca.Text.Trim <> "") AndAlso (Me.tbCerca.Text <> Application.Item("Campo_Ricerca")) Then
-            Me.Session("ct") = 30000
-            Me.Session("tp") = 0
-            Me.Session("gr") = 0
-            Me.Session("sg") = 0
-            Me.Session("mr") = 0
-            Me.Response.Redirect("articoli.aspx?q=" & Me.tbCerca.Text)
-        End If
+    If Not String.IsNullOrWhiteSpace(Me.tbCerca.Text) Then
+        Dim q As String = Me.tbCerca.Text.Trim()
+        Me.Response.Redirect("articoli.aspx?q=" & System.Web.HttpUtility.UrlEncode(q))
+    End If
     End Sub
 
     Protected Sub btEntra_Click(ByVal sender As Object, ByVal e As System.EventArgs)

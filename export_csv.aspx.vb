@@ -143,15 +143,15 @@ Partial Class export
         params.add("@id", ID)
         params.add("@password", Password)
         'Usare la riga sottostante quando verrà inserito il campo idriga nella tabella seriali
-        Dim dr = ExecuteQueryGetDataReader("export.*, vettori.iva, iva.valore", "export left join vettori on export.idVettore=vettori.id left join iva on vettori.iva=iva.id", "where (export.id=@id and export.password=@password) limit 0, 1", params)
+        Dim drExport = ExecuteQueryGetDataReader("export.*, vettori.iva, iva.valore", "export left join vettori on export.idVettore=vettori.id left join iva on vettori.iva=iva.id", "where (export.id=@id and export.password=@password) limit 0, 1", params)
 
         'Lettura Parametri
-        If dr.Count = 0 Then
+        If drExport.Count = 0 Then
             Response.Write("ID o Password errati.")
             Response.End()
         Else
             'Applicazione Iva Vettore prelevata dalla tabella Vettori, ogni vettori ha la propria iva da applicare
-            Dim row = dr(0)
+            Dim row = drExport(0)
             If (Not IsDBNull(row("Valore"))) Then
                 iva_Vettore = row("Valore")
             End If
