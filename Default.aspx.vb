@@ -255,6 +255,9 @@ Partial Class _Default
                           params)
         End If
 
+        ' SEO (Home)
+        EnsureHomeSeo()
+
     End Sub
 
     Protected Function ExecuteUpdate(ByVal table As String,
@@ -315,4 +318,133 @@ Partial Class _Default
         Return Nothing
     End Function
 
+
+
+    ' ==========================================================
+    ' SEO / AI-READINESS (HOME)
+    ' ==========================================================
+    Private Sub EnsureHomeSeo()
+        Try
+            If Page Is Nothing OrElse Page.Header Is Nothing Then Exit Sub
+
+            Dim baseUrl As String = Request.Url.GetLeftPart(UriPartial.Authority)
+            Dim canonical As String = baseUrl & ResolveUrl("~/Default.aspx")
+            AddOrReplaceCanonical(canonical)
+
+            Dim azienda As String = Convert.ToString(Session("AziendaDescrizione")).Trim()
+            If String.IsNullOrEmpty(azienda) Then azienda = "Keepstore"
+
+            Dim descr As String = "Acquista online su " & azienda & ": nuovi arrivi, articoli in vetrina e i più venduti. Spedizioni rapide e offerte aggiornate."
+            If descr.Length > 160 Then descr = descr.Substring(0, 157) & "..."
+
+            AddOrReplaceMeta("description", descr)
+            AddOrReplaceMeta("robots", "index,follow")
+
+            Dim jsonLd As String = BuildHomeJsonLd(baseUrl, azienda)
+            AddOrReplaceJsonLd("ldjson_home", jsonLd)
+        Catch
+            ' no-op: SEO non deve mai bloccare la pagina
+        End Try
+    End Sub
+
+    Private Sub AddOrReplaceCanonical(ByVal href As String)
+        Dim toRemove As New System.Collections.Generic.List(Of System.Web.UI.Control)()
+
+        For Each c As System.Web.UI.Control In Page.Header.Controls
+            Dim lnk As System.Web.UI.HtmlControls.HtmlLink = TryCast(c, System.Web.UI.HtmlControls.HtmlLink)
+            If lnk IsNot Nothing AndAlso String.Equals(lnk.Rel, "canonical", StringComparison.OrdinalIgnoreCase) Then
+                toRemove.Add(c)
+            End If
+        Next
+
+        For Each c As System.Web.UI.Control In toRemove
+            Page.Header.Controls.Remove(c)
+        Next
+
+        Dim hl As New System.Web.UI.HtmlControls.HtmlLink()
+        hl.Rel = "canonical"
+        hl.Href = href
+        Page.Header.Controls.Add(hl)
+    End Sub
+
+    Private Sub AddOrReplaceMeta(ByVal name As String, ByVal content As String)
+        Dim toRemove As New System.Collections.Generic.List(Of System.Web.UI.Control)()
+
+        For Each c As System.Web.UI.Control In Page.Header.Controls
+            Dim m As System.Web.UI.HtmlControls.HtmlMeta = TryCast(c, System.Web.UI.HtmlControls.HtmlMeta)
+            If m IsNot Nothing AndAlso String.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase) Then
+                toRemove.Add(c)
+            End If
+        Next
+
+        For Each c As System.Web.UI.Control In toRemove
+            Page.Header.Controls.Remove(c)
+        Next
+
+        Dim meta As New System.Web.UI.HtmlControls.HtmlMeta()
+        meta.Name = name
+        meta.Content = content
+        Page.Header.Controls.Add(meta)
+    End Sub
+
+    Private Sub AddOrReplaceJsonLd(ByVal controlId As String, ByVal json As String)
+        Dim existing As System.Web.UI.Control = Page.Header.FindControl(controlId)
+        If existing IsNot Nothing Then
+            Page.Header.Controls.Remove(existing)
+        End If
+
+        Dim lit As New System.Web.UI.WebControls.Literal()
+        lit.ID = controlId
+        lit.Mode = System.Web.UI.WebControls.LiteralMode.PassThrough
+        lit.Text = "<script type=""application/ld+json"">" & json & "</script>"
+        Page.Header.Controls.Add(lit)
+    End Sub
+
+    Private Function BuildHomeJsonLd(ByVal baseUrl As String, ByVal azienda As String) As String
+        Dim siteUrl As String = baseUrl & ResolveUrl("~/")
+        Dim searchUrl As String = baseUrl & ResolveUrl("~/articoli.aspx?q={search_term_string}")
+
+        Dim nameEsc As String = JsonEscape(azienda)
+        Dim siteEsc As String = JsonEscape(siteUrl)
+        Dim searchEsc As String = JsonEscape(searchUrl)
+
+        Dim json As String =
+            "{" &
+            """@context"":""https://schema.org""," &
+            """@graph"":[" &
+            "{" &
+            """@type"":""Organization""," &
+            """@id"":""" & siteEsc & "#org""," &
+            """name"":""" & nameEsc & """," &
+            """url"":""" & siteEsc & """" &
+            "}," &
+            "{" &
+            """@type"":""WebSite""," &
+            """@id"":""" & siteEsc & "#website""," &
+            """name"":""" & nameEsc & """," &
+            """url"":""" & siteEsc & """," &
+            """potentialAction"":{" &
+            """@type"":""SearchAction""," &
+            """target"":""" & searchEsc & """," &
+            """query-input"":""required name=search_term_string""" &
+            "}" &
+            "}" &
+            "]" &
+            "}"
+        Return json
+    End Function
+
+Private Function JsonEscape(ByVal s As String) As String
+    If s Is Nothing Then Return ""
+    Dim t As String = s
+
+    Dim bs As String = ChrW(92).ToString() ' backslash
+    Dim dq As String = ChrW(34).ToString() ' double quote
+
+    t = t.Replace(bs, bs & bs) ' backslash -> double backslash
+    t = t.Replace(dq, bs & dq) ' quote -> escaped quote
+
+    t = t.Replace(vbCrLf, bs & "n").Replace(vbCr, bs & "n").Replace(vbLf, bs & "n")
+    Return t
+End Function
 End Class
