@@ -182,17 +182,20 @@
                             <asp:SqlDataSource ID="SqlDataSource_Pubblicita_id4_pos1" runat="server"
                                 ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                                 ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                                SelectCommand="SELECT id, id_Azienda, data_inizio_pubblicazione, data_fine_pubblicazione, limite_click, limite_impressioni, id_posizione_banner, numero_click_attuale, numero_impressioni_attuale, link, img_path, titolo, descrizione, abilitato from pubblicitaV2"
-                                UpdateCommand="update pubblicitaV2 SET numero_impressioni = numero_impressioni + 1 WHERE (id = 1)">
+                                SelectCommand="SELECT id, link, img_path, titolo, descrizione FROM pubblicitaV2 WHERE abilitato=1 AND id_posizione_banner=4 AND ordinamento=1 AND (data_inizio_pubblicazione IS NULL OR data_inizio_pubblicazione &lt;= CURDATE()) AND (data_fine_pubblicazione IS NULL OR data_fine_pubblicazione &gt;= CURDATE()) AND (limite_impressioni IS NULL OR limite_impressioni=0 OR numero_impressioni_attuale &lt; limite_impressioni) AND (limite_click IS NULL OR limite_click=0 OR numero_click_attuale &lt; limite_click) ORDER BY id DESC LIMIT 1"
+                                UpdateCommand="UPDATE pubblicitaV2 SET numero_impressioni_attuale = numero_impressioni_attuale + 1 WHERE id=@id">
+                                <UpdateParameters>
+                                    <asp:Parameter Name="id" Type="Int32" />
+                                </UpdateParameters>
                             </asp:SqlDataSource>
 
-                            <asp:Repeater ID="RepeaterPubblicita_id4_pos1" runat="server" DataSourceID="SqlDataSource_Pubblicita_id4_pos1" EnableViewState="False">
+                            <asp:Repeater ID="RepeaterPubblicita_id4_pos1" runat="server" DataSourceID="SqlDataSource_Pubblicita_id4_pos1" EnableViewState="False" OnItemDataBound="RepeaterPubblicita_id4_pos1_ItemDataBound">
                                 <ItemTemplate>
                                     <a href='<%# "click.aspx?id=" & Eval("id") %>' class="box-link" target="_blank" rel="noopener noreferrer">
                                         <div class="box-image">
                                             <img class="lazyload"
-                                                 src='<%# ResolveUrl("~/Public/Banner/" & Convert.ToString(Eval("img_path"))) %>'
-                                                 data-src='<%# ResolveUrl("~/Public/Banner/" & Convert.ToString(Eval("img_path"))) %>'
+                                                 src='<%# ResolveUrl("~/Public/Banner/" & SafeFileNameOnly(Convert.ToString(Eval("img_path")))) %>'
+                                                 data-src='<%# ResolveUrl("~/Public/Banner/" & SafeFileNameOnly(Convert.ToString(Eval("img_path")))) %>'
                                                  alt='<%# SafeAttr(Eval("titolo")) %>' />
                                         </div>
                                     </a>
@@ -209,17 +212,20 @@
                             <asp:SqlDataSource ID="SqlDataSource_Pubblicita_id4_pos2" runat="server"
                                 ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                                 ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                                SelectCommand="SELECT id, id_Azienda, data_inizio_pubblicazione, data_fine_pubblicazione, limite_click, limite_impressioni, id_posizione_banner, numero_click_attuale, numero_impressioni_attuale, link, img_path, titolo, descrizione, abilitato from pubblicitaV2"
-                                UpdateCommand="update pubblicitaV2 SET numero_impressioni = numero_impressioni + 1 WHERE (id = 1)">
+                                SelectCommand="SELECT id, link, img_path, titolo, descrizione FROM pubblicitaV2 WHERE abilitato=1 AND id_posizione_banner=4 AND ordinamento=2 AND (data_inizio_pubblicazione IS NULL OR data_inizio_pubblicazione &lt;= CURDATE()) AND (data_fine_pubblicazione IS NULL OR data_fine_pubblicazione &gt;= CURDATE()) AND (limite_impressioni IS NULL OR limite_impressioni=0 OR numero_impressioni_attuale &lt; limite_impressioni) AND (limite_click IS NULL OR limite_click=0 OR numero_click_attuale &lt; limite_click) ORDER BY id DESC LIMIT 1"
+                                UpdateCommand="UPDATE pubblicitaV2 SET numero_impressioni_attuale = numero_impressioni_attuale + 1 WHERE id=@id">
+                                <UpdateParameters>
+                                    <asp:Parameter Name="id" Type="Int32" />
+                                </UpdateParameters>
                             </asp:SqlDataSource>
 
-                            <asp:Repeater ID="RepeaterPubblicita_id4_pos2" runat="server" DataSourceID="SqlDataSource_Pubblicita_id4_pos2" EnableViewState="False">
+                            <asp:Repeater ID="RepeaterPubblicita_id4_pos2" runat="server" DataSourceID="SqlDataSource_Pubblicita_id4_pos2" EnableViewState="False" OnItemDataBound="RepeaterPubblicita_id4_pos2_ItemDataBound">
                                 <ItemTemplate>
                                     <a href='<%# "click.aspx?id=" & Eval("id") %>' class="box-link" target="_blank" rel="noopener noreferrer">
                                         <div class="box-image">
                                             <img class="lazyload"
-                                                 src='<%# ResolveUrl("~/Public/Banner/" & Convert.ToString(Eval("img_path"))) %>'
-                                                 data-src='<%# ResolveUrl("~/Public/Banner/" & Convert.ToString(Eval("img_path"))) %>'
+                                                 src='<%# ResolveUrl("~/Public/Banner/" & SafeFileNameOnly(Convert.ToString(Eval("img_path")))) %>'
+                                                 data-src='<%# ResolveUrl("~/Public/Banner/" & SafeFileNameOnly(Convert.ToString(Eval("img_path")))) %>'
                                                  alt='<%# SafeAttr(Eval("titolo")) %>' />
                                         </div>
                                     </a>

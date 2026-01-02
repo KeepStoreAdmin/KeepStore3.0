@@ -352,8 +352,11 @@ Partial Class _Default
 
         For Each c As System.Web.UI.Control In Page.Header.Controls
             Dim lnk As System.Web.UI.HtmlControls.HtmlLink = TryCast(c, System.Web.UI.HtmlControls.HtmlLink)
-            If lnk IsNot Nothing AndAlso String.Equals(Convert.ToString(lnk.Attributes("rel")), "canonical", StringComparison.OrdinalIgnoreCase) Then
-                toRemove.Add(c)
+            If lnk IsNot Nothing Then
+                Dim rel As String = Convert.ToString(lnk.Attributes("rel"))
+                If Not String.IsNullOrEmpty(rel) AndAlso String.Equals(rel, "canonical", StringComparison.OrdinalIgnoreCase) Then
+                    toRemove.Add(c)
+                End If
             End If
         Next
 
@@ -447,4 +450,65 @@ Private Function JsonEscape(ByVal s As String) As String
     t = t.Replace(vbCrLf, bs & "n").Replace(vbCr, bs & "n").Replace(vbLf, bs & "n")
     Return t
 End Function
+
+
+    ' ===========================
+    ' BANNER HOME: Impression tracking (sicuro, parametrizzato)
+    ' ===========================
+    Private ReadOnly _pubblicitaImpressionDedup As New System.Collections.Generic.HashSet(Of Integer)()
+
+    Protected Sub RepeaterPubblicita_id4_pos1_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
+        If e Is Nothing OrElse e.Item Is Nothing Then Exit Sub
+        If e.Item.ItemType <> ListItemType.Item AndAlso e.Item.ItemType <> ListItemType.AlternatingItem Then Exit Sub
+
+        Dim idPub As Integer = 0
+        Dim objId As Object = DataBinder.Eval(e.Item.DataItem, "id")
+        If objId IsNot Nothing Then
+            Integer.TryParse(objId.ToString(), idPub)
+        End If
+
+        If idPub > 0 Then
+            IncrementPubblicitaImpression(idPub)
+        End If
+    End Sub
+
+    Protected Sub RepeaterPubblicita_id4_pos2_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
+        If e Is Nothing OrElse e.Item Is Nothing Then Exit Sub
+        If e.Item.ItemType <> ListItemType.Item AndAlso e.Item.ItemType <> ListItemType.AlternatingItem Then Exit Sub
+
+        Dim idPub As Integer = 0
+        Dim objId As Object = DataBinder.Eval(e.Item.DataItem, "id")
+        If objId IsNot Nothing Then
+            Integer.TryParse(objId.ToString(), idPub)
+        End If
+
+        If idPub > 0 Then
+            IncrementPubblicitaImpression(idPub)
+        End If
+    End Sub
+
+    Private Sub IncrementPubblicitaImpression(ByVal idPubblicita As Integer)
+        Try
+            If idPubblicita <= 0 Then Exit Sub
+            If _pubblicitaImpressionDedup.Contains(idPubblicita) Then Exit Sub
+            _pubblicitaImpressionDedup.Add(idPubblicita)
+
+            Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+            Using conn As New MySqlConnection(cs)
+                conn.Open()
+
+                Dim sql As String = "UPDATE pubblicitaV2 SET numero_impressioni_attuale = numero_impressioni_attuale + 1 " &
+                                    "WHERE (id=@id) AND (abilitato=1) " &
+                                    "AND ((limite_impressioni IS NULL) OR (limite_impressioni=0) OR (numero_impressioni_attuale < limite_impressioni))"
+
+                Using cmd As New MySqlCommand(sql, conn)
+                    cmd.Parameters.AddWithValue("@id", idPubblicita)
+                    cmd.ExecuteNonQuery()
+                End Using
+            End Using
+        Catch
+            ' Non bloccare la pagina home per tracking impression
+        End Try
+    End Sub
+
 End Class

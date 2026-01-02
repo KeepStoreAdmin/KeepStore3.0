@@ -30,6 +30,15 @@ Partial Class click
             id_utente = -1
         End If
 
+        ' Azienda corrente (se disponibile)
+        Dim id_azienda As Integer = 0
+        If Me.Session("AziendaId") IsNot Nothing Then
+            Integer.TryParse(Convert.ToString(Me.Session("AziendaId")), id_azienda)
+        End If
+        If (id_azienda <= 0) Then
+            id_azienda = 0
+        End If
+
         Dim DataOdierna As String = Date.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
 
         Dim params As New Dictionary(Of String, String)
@@ -37,6 +46,16 @@ Partial Class click
         params.Add("@ipUtente", ip_utente)
         params.Add("@idPubblicità", id_pubblicita.ToString(CultureInfo.InvariantCulture))
         params.Add("@UtenteId", id_utente.ToString(CultureInfo.InvariantCulture))
+        params.Add("@idAzienda", id_azienda.ToString(CultureInfo.InvariantCulture))
+
+        ' ===========================
+        ' VALIDAZIONE PUBBLICITA + RECUPERO LINK
+        ' ===========================
+        Dim rawLink As String = ""
+        If Not TryGetValidPubblicitaLink(params, rawLink) Then
+            SafeRedirect(ResolveUrl(FALLBACK_URL))
+            Return
+        End If
 
         ' ===========================
         ' CLICK TRACKING (1 click / ip / giorno)
@@ -55,22 +74,6 @@ Partial Class click
                           "WHERE id = @idPubblicità", params)
         End If
 
-        ' ===========================
-        ' RECUPERO LINK + SAFE REDIRECT
-        ' ===========================
-        Dim drLink = ExecuteQueryGetDataReader("link", "pubblicitav2", "WHERE id = @idPubblicità LIMIT 1", params)
-
-        Dim rawLink As String = ""
-        Try
-            If drLink IsNot Nothing AndAlso drLink.Count > 0 Then
-                If drLink(0) IsNot Nothing AndAlso drLink(0).ContainsKey("link") AndAlso drLink(0)("link") IsNot Nothing AndAlso Not IsDBNull(drLink(0)("link")) Then
-                    rawLink = drLink(0)("link").ToString()
-                End If
-            End If
-        Catch
-            rawLink = ""
-        End Try
-
         Dim redirectUrl As String = BuildSafeRedirectUrl(rawLink)
 
         If String.IsNullOrEmpty(redirectUrl) Then
@@ -79,6 +82,30 @@ Partial Class click
 
         SafeRedirect(redirectUrl)
     End Sub
+
+    Private Function TryGetValidPubblicitaLink(ByVal params As Dictionary(Of String, String), ByRef rawLink As String) As Boolean
+        rawLink = ""
+
+        Dim whereClause As String = "WHERE (id=@idPubblicità) " &
+                                   "AND (abilitato=1) " &
+                                   "AND ((data_inizio_pubblicazione IS NULL) OR (data_inizio_pubblicazione<=@dataOdierna)) " &
+                                   "AND ((data_fine_pubblicazione IS NULL) OR (data_fine_pubblicazione>=@dataOdierna)) " &
+                                   "AND ((limite_click IS NULL) OR (limite_click=0) OR (numero_click_attuale < limite_click)) " &
+                                   "AND ((id_Azienda IS NULL) OR (id_Azienda=0) OR (id_Azienda=@idAzienda)) " &
+                                   "LIMIT 0, 1"
+
+        Dim drLink = ExecuteQueryGetDataReader("link", "pubblicitaV2", whereClause, params)
+        If drLink IsNot Nothing AndAlso drLink.Count > 0 Then
+            ' E' una List(Of Dictionary(Of String, Object))
+            Try
+                rawLink = Convert.ToString(drLink(0)("link"))
+            Catch
+                rawLink = ""
+            End Try
+        End If
+
+        Return Not String.IsNullOrWhiteSpace(rawLink)
+    End Function
 
     ' ===========================
     ' SAFE REDIRECT (riduce open redirect / XSS)
