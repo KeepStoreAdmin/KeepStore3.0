@@ -22,7 +22,7 @@
     Protected Sub Page_Load(sender As Object, e As EventArgs)
         ' Sicurezza: accesso consentito solo con token (impostalo tu e poi rimuovi questa pagina)
         Dim token As String = Convert.ToString(Request.QueryString("token"))
-        If String.IsNullOrEmpty(token) OrElse token <> "Germano_2026_TOKEN_LUNG" Then
+        If String.IsNullOrEmpty(token) OrElse token <> "IL_TUO_TOKEN" Then
             Response.StatusCode = 404
             Response.End()
             Return
