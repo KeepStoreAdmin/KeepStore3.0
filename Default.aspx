@@ -93,17 +93,7 @@
                                 <asp:SqlDataSource ID="slideShow" runat="server"
                                     ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                                     ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                                    SelectCommand="SELECT * 
-                                                   FROM slideshows_parts 
-                                                   WHERE slideshowId = (
-                                                        SELECT MAX(id) 
-                                                        FROM slideshows 
-                                                        WHERE placeholder = 'defaultPage' 
-                                                          AND aziendeId = ?AziendaID
-                                                   )
-                                                   AND startDate <= CURDATE()
-                                                   AND stopDate > CURDATE()
-                                                   ORDER BY orderPosition">
+								SelectCommand="SELECT sp.* FROM slideshows_parts sp WHERE sp.slideshowId = (SELECT MAX(s.id) FROM slideshows s WHERE LOWER(s.placeholder) = 'defaultpage' AND s.aziendeId = ?AziendaID AND s.abilitato = 1 AND (s.dataInizioPubblicazione IS NULL OR s.dataInizioPubblicazione = '0000-00-00' OR s.dataInizioPubblicazione <= CURDATE()) AND (s.dataFinePubblicazione IS NULL OR s.dataFinePubblicazione = '0000-00-00' OR s.dataFinePubblicazione >= CURDATE())) AND (sp.startDate IS NULL OR sp.startDate = '0000-00-00' OR sp.startDate <= CURDATE()) AND (sp.stopDate IS NULL OR sp.stopDate = '0000-00-00' OR sp.stopDate >= CURDATE()) ORDER BY sp.ord">
                                     <SelectParameters>
                                         <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" />
                                     </SelectParameters>
@@ -117,7 +107,7 @@
                                                 <%# SlideLinkStart(Eval("link")) %>
                                                 <img src='<%# SafeSlideshowImageUrl(Eval("image")) %>' style="width:100%" alt="" />
                                                 <%# SlideLinkEnd(Eval("link")) %>
-                                                <div class="text"><%# SafeText(Eval("caption")) %></div>
+															<div class="text"><%# SafeText(Eval("content")) %></div>
                                             </div>
                                         </ItemTemplate>
                                     </asp:Repeater>
@@ -182,7 +172,7 @@
                             <!-- ========================= -->
 <!-- INIZIO BLOCCO SPRINT2_HOME1_STEP5 SqlDataSource_Pubblicita_id4_pos1 (BANNERS POS4 ORD1) -->
 <!-- ========================= -->
-<asp:SqlDataSource ID="SqlDataSource_Pubblicita_id4_pos1" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" SelectCommand="SELECT id, id_Azienda, data_inizio_pubblicazione, data_fine_pubblicazione, limite_click, limite_impressioni, id_posizione_banner, ordinamento, numero_click_attuale, numero_impressioni_attuale, link, img_path, titolo, descrizione, abilitato FROM pubblicitav2 WHERE abilitato=1 AND id_posizione_banner=4 AND ordinamento=1 AND (id_Azienda=?AziendaID OR id_Azienda=0 OR id_Azienda IS NULL) AND (data_inizio_pubblicazione IS NULL OR data_inizio_pubblicazione='0000-00-00 00:00:00' OR data_inizio_pubblicazione<=NOW()) AND (data_fine_pubblicazione IS NULL OR data_fine_pubblicazione='0000-00-00 00:00:00' OR data_fine_pubblicazione>=NOW()) AND (limite_click IS NULL OR limite_click=0 OR numero_click_attuale < limite_click) AND (limite_impressioni IS NULL OR limite_impressioni=0 OR numero_impressioni_attuale < limite_impressioni) ORDER BY ordinamento ASC, id DESC LIMIT 1" UpdateCommand="UPDATE pubblicitav2 SET numero_impressioni_attuale = numero_impressioni_attuale + 1 WHERE id=?id">
+<asp:SqlDataSource ID="SqlDataSource_Pubblicita_id4_pos1" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" SelectCommand="SELECT id, id_Azienda, data_inizio_pubblicazione, data_fine_pubblicazione, limite_click, limite_impressioni, id_posizione_banner, ordinamento, numero_click_attuale, numero_impressioni_attuale, link, img_path, titolo, descrizione, abilitato FROM pubblicitav2 WHERE abilitato=1 AND id_posizione_banner=4 AND ordinamento=1 AND (id_Azienda=?AziendaID OR id_Azienda=0 OR id_Azienda IS NULL) AND (data_inizio_pubblicazione IS NULL OR data_inizio_pubblicazione='0000-00-00 00:00:00' OR data_inizio_pubblicazione<=NOW()) AND (data_fine_pubblicazione IS NULL OR data_fine_pubblicazione='0000-00-00 00:00:00' OR data_fine_pubblicazione>=NOW()) AND (limite_click IS NULL OR limite_click=0 OR IFNULL(numero_click_attuale,0) < limite_click) AND (limite_impressioni IS NULL OR limite_impressioni=0 OR IFNULL(numero_impressioni_attuale,0) < limite_impressioni) ORDER BY ordinamento ASC, id DESC LIMIT 1" UpdateCommand="UPDATE pubblicitav2 SET numero_impressioni_attuale = numero_impressioni_attuale + 1 WHERE id=?id">
     <SelectParameters>
         <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" DefaultValue="0" />
     </SelectParameters>
@@ -198,9 +188,9 @@
                                 <ItemTemplate>
                                     <a href='<%# "click.aspx?id=" & Eval("id") %>' class="box-link" target="_blank" rel="noopener noreferrer">
                                         <div class="box-image">
-                                            <img class="lazyload"
-                                                 src='<%# ResolveUrl("~/Public/Banner/" & Convert.ToString(Eval("img_path"))) %>'
-                                                 data-src='<%# ResolveUrl("~/Public/Banner/" & Convert.ToString(Eval("img_path"))) %>'
+	                                            <img class="lazyload"
+	                                                 src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
+	                                                 data-src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
                                                  alt='<%# SafeAttr(Eval("titolo")) %>' />
                                         </div>
                                     </a>
@@ -217,7 +207,7 @@
                             <!-- ========================= -->
 <!-- INIZIO BLOCCO SPRINT2_HOME1_STEP5 SqlDataSource_Pubblicita_id4_pos2 (BANNERS POS4 ORD2) -->
 <!-- ========================= -->
-<asp:SqlDataSource ID="SqlDataSource_Pubblicita_id4_pos2" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" SelectCommand="SELECT id, id_Azienda, data_inizio_pubblicazione, data_fine_pubblicazione, limite_click, limite_impressioni, id_posizione_banner, ordinamento, numero_click_attuale, numero_impressioni_attuale, link, img_path, titolo, descrizione, abilitato FROM pubblicitav2 WHERE abilitato=1 AND id_posizione_banner=4 AND ordinamento=2 AND (id_Azienda=?AziendaID OR id_Azienda=0 OR id_Azienda IS NULL) AND (data_inizio_pubblicazione IS NULL OR data_inizio_pubblicazione='0000-00-00 00:00:00' OR data_inizio_pubblicazione<=NOW()) AND (data_fine_pubblicazione IS NULL OR data_fine_pubblicazione='0000-00-00 00:00:00' OR data_fine_pubblicazione>=NOW()) AND (limite_click IS NULL OR limite_click=0 OR numero_click_attuale < limite_click) AND (limite_impressioni IS NULL OR limite_impressioni=0 OR numero_impressioni_attuale < limite_impressioni) ORDER BY ordinamento ASC, id DESC LIMIT 1" UpdateCommand="UPDATE pubblicitav2 SET numero_impressioni_attuale = numero_impressioni_attuale + 1 WHERE id=?id">
+<asp:SqlDataSource ID="SqlDataSource_Pubblicita_id4_pos2" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" SelectCommand="SELECT id, id_Azienda, data_inizio_pubblicazione, data_fine_pubblicazione, limite_click, limite_impressioni, id_posizione_banner, ordinamento, numero_click_attuale, numero_impressioni_attuale, link, img_path, titolo, descrizione, abilitato FROM pubblicitav2 WHERE abilitato=1 AND id_posizione_banner=4 AND ordinamento=2 AND (id_Azienda=?AziendaID OR id_Azienda=0 OR id_Azienda IS NULL) AND (data_inizio_pubblicazione IS NULL OR data_inizio_pubblicazione='0000-00-00 00:00:00' OR data_inizio_pubblicazione<=NOW()) AND (data_fine_pubblicazione IS NULL OR data_fine_pubblicazione='0000-00-00 00:00:00' OR data_fine_pubblicazione>=NOW()) AND (limite_click IS NULL OR limite_click=0 OR IFNULL(numero_click_attuale,0) < limite_click) AND (limite_impressioni IS NULL OR limite_impressioni=0 OR IFNULL(numero_impressioni_attuale,0) < limite_impressioni) ORDER BY ordinamento ASC, id DESC LIMIT 1" UpdateCommand="UPDATE pubblicitav2 SET numero_impressioni_attuale = numero_impressioni_attuale + 1 WHERE id=?id">
     <SelectParameters>
         <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" DefaultValue="0" />
     </SelectParameters>
@@ -233,9 +223,9 @@
                                 <ItemTemplate>
                                     <a href='<%# "click.aspx?id=" & Eval("id") %>' class="box-link" target="_blank" rel="noopener noreferrer">
                                         <div class="box-image">
-                                            <img class="lazyload"
-                                                 src='<%# ResolveUrl("~/Public/Banner/" & Convert.ToString(Eval("img_path"))) %>'
-                                                 data-src='<%# ResolveUrl("~/Public/Banner/" & Convert.ToString(Eval("img_path"))) %>'
+	                                            <img class="lazyload"
+	                                                 src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
+	                                                 data-src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
                                                  alt='<%# SafeAttr(Eval("titolo")) %>' />
                                         </div>
                                     </a>
@@ -635,6 +625,42 @@
             End If
             Return ResolveUrl("~/Public/Slideshows/" & fileName)
         End Function
+
+		Function SafeBannerImageUrl(ByVal fileObj As Object) As String
+			Dim raw As String = Convert.ToString(fileObj)
+			If raw Is Nothing Then raw = ""
+			raw = raw.Trim().Replace("\\", "/")
+			Dim low As String = raw.ToLowerInvariant()
+
+			If low = "" Then
+				Return ResolveUrl("~/Public/images/nofoto.gif")
+			End If
+
+			' blocca schemi non sicuri
+			If low.StartsWith("javascript:") OrElse low.StartsWith("data:") Then
+				Return ResolveUrl("~/Public/images/nofoto.gif")
+			End If
+
+			' URL assoluti (http/https)
+			If low.StartsWith("http://") OrElse low.StartsWith("https://") Then
+				Return raw
+			End If
+
+			' percorsi già assoluti / virtuali
+			If low.StartsWith("~/") Then
+				Return ResolveUrl(raw)
+			End If
+			If low.StartsWith("/") Then
+				Return raw
+			End If
+
+			' pulizia: mantieni solo il nome file e ricostruisci nel folder banner
+			Dim fileName As String = SafeFileNameOnly(raw)
+			If fileName = "" Then
+				Return ResolveUrl("~/Public/images/nofoto.gif")
+			End If
+			Return ResolveUrl("~/Public/Banner/" & fileName)
+		End Function
 
         Sub incrementa_slides()
             slides += 1
