@@ -19,13 +19,10 @@
 
 <script runat="server">
 
-    ' CAMBIA QUESTO TOKEN con uno tuo, poi usa lo stesso nell'URL:
-    ' https://www.taikun.it/diagnostic.aspx?token=IL_TOKEN_ESATTO
-    Private Const DIAG_TOKEN As String = "KS_DEBUG_2026_CAMBIA_QUESTO"
-
     Protected Sub Page_Load(sender As Object, e As EventArgs)
+        ' Sicurezza: accesso consentito solo con token (impostalo tu e poi rimuovi questa pagina)
         Dim token As String = Convert.ToString(Request.QueryString("token"))
-        If String.IsNullOrEmpty(token) OrElse token <> DIAG_TOKEN Then
+        If String.IsNullOrEmpty(token) OrElse token <> "Germano_2026_TOKEN_LUNG" Then
             Response.StatusCode = 404
             Response.End()
             Return
@@ -39,12 +36,14 @@
         sb.AppendLine("AppPath: " & Request.ApplicationPath)
         sb.AppendLine("MachineName: " & Environment.MachineName)
 
+        ' Se esiste un log semplice in App_Data, lo mostriamo.
         Dim logPath As String = Server.MapPath("~/App_Data/last_error.txt")
-        sb.AppendLine("")
         If File.Exists(logPath) Then
+            sb.AppendLine("")
             sb.AppendLine("--- last_error.txt ---")
             sb.AppendLine(File.ReadAllText(logPath, Encoding.UTF8))
         Else
+            sb.AppendLine("")
             sb.AppendLine("(Nessun last_error.txt in App_Data)")
         End If
 
