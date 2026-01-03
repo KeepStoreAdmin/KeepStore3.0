@@ -1,50 +1,187 @@
-﻿Imports MySql.Data.MySqlClient
+Imports MySql.Data.MySqlClient
 Imports System.Data
+Imports System.Globalization
 
 Partial Class click
     Inherits System.Web.UI.Page
 
+    Private Const FALLBACK_URL As String = "~/Default.aspx"
+
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
 
-        Dim id_pubblicita As Integer
-        Dim ip_utente As String
-        Dim id_utente As Integer
-        Dim link As String
-        Dim DataOdierna As String = Date.Today.Year.ToString & "-" & Date.Today.Month.ToString & "-" & Date.Today.Day.ToString
+        ' ===========================
+        ' INPUT HARDENING (id)
+        ' ===========================
+        Dim id_pubblicita As Integer = 0
+        If Not Integer.TryParse(Request.QueryString("id"), id_pubblicita) OrElse id_pubblicita <= 0 Then
+            SafeRedirect(ResolveUrl(FALLBACK_URL))
+            Return
+        End If
 
-        id_pubblicita = Request.QueryString("id")
-        ip_utente = Request.UserHostAddress
-        id_utente = Me.Session("UtentiId")
+        ' IP utente (compatibile con reverse proxy: usa il primo X-Forwarded-For se presente)
+        Dim ip_utente As String = GetClientIp()
+
+        ' Nel caso l'utente non sia loggato
+        Dim id_utente As Integer = 0
+        If Me.Session("UtentiId") IsNot Nothing Then
+            Integer.TryParse(Convert.ToString(Me.Session("UtentiId")), id_utente)
+        End If
+        If (id_utente <= 0) Then
+            id_utente = -1
+        End If
+
+        ' Azienda corrente (se disponibile)
+        Dim id_azienda As Integer = 0
+        If Me.Session("AziendaId") IsNot Nothing Then
+            Integer.TryParse(Convert.ToString(Me.Session("AziendaId")), id_azienda)
+        End If
+        If (id_azienda <= 0) Then
+            id_azienda = 0
+        End If
+
+        Dim DataOdierna As String = Date.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+
         Dim params As New Dictionary(Of String, String)
-        params.add("@dataOdierna", DataOdierna)
-        params.add("@ipUtente", ip_utente)
-        params.add("@idPubblicità", id_pubblicita)
-        Dim dr = ExecuteQueryGetDataReader("*", "pubblicita_click", "WHERE (data_click=@dataOdierna) AND (ip_utente=@ipUtente) AND (id_pubblicita=@idPubblicità)", params)
-        Dim pubblicitaClickExists As Boolean = dr.Count > 0
+        params.Add("@dataOdierna", DataOdierna)
+        params.Add("@ipUtente", ip_utente)
+        params.Add("@idPubblicità", id_pubblicita.ToString(CultureInfo.InvariantCulture))
+        params.Add("@UtenteId", id_utente.ToString(CultureInfo.InvariantCulture))
+        params.Add("@idAzienda", id_azienda.ToString(CultureInfo.InvariantCulture))
+
+        ' ===========================
+        ' VALIDAZIONE PUBBLICITA + RECUPERO LINK
+        ' ===========================
+        Dim rawLink As String = ""
+        If Not TryGetValidPubblicitaLink(params, rawLink) Then
+            SafeRedirect(ResolveUrl(FALLBACK_URL))
+            Return
+        End If
+
+        ' ===========================
+        ' CLICK TRACKING (1 click / ip / giorno)
+        ' ===========================
+        Dim drClicks = ExecuteQueryGetDataReader("id", "pubblicita_click",
+            "WHERE (data_click=@dataOdierna) AND (ip_utente=@ipUtente) AND (id_pubblicita=@idPubblicità)",
+            params)
+
+        Dim pubblicitaClickExists As Boolean = (drClicks IsNot Nothing AndAlso drClicks.Count > 0)
 
         If Not pubblicitaClickExists Then
+            ExecuteInsert("pubblicita_click", "id_utente,ip_utente,id_pubblicita,data_click",
+                          "@UtenteId, @ipUtente, @idPubblicità, @dataOdierna", params)
 
-            'Nel caso l'utente non sia loggato
-            If (id_utente <= 0) Then
-                id_utente = -1
-            End If
-            '---------------------------------
-            params.add("@UtenteId", id_utente)
-            ExecuteInsert("pubblicita_click", "id_utente,ip_utente,id_pubblicita,data_click", "@UtenteId, @ipUtente, @idPubblicità, @dataOdierna", params)
-
-            ExecuteUpdate("pubblicitaV2", "numero_click_attuale=numero_click_attuale+1", "WHERE id = @idPubblicità", params)
-        End If
-        dr = ExecuteQueryGetDataReader("link", "pubblicitav2", "WHERE id = @idPubblicità", params)
-        link = dr(0)("link")
-
-        If Not (link.Contains("http://") OrElse link.Contains("https://")) Then
-            If (link <> "#") Then
-                link = "http://" & link
-            End If
+            ExecuteUpdate("pubblicitaV2", "numero_click_attuale=numero_click_attuale+1",
+                          "WHERE id = @idPubblicità", params)
         End If
 
-        Response.Redirect(link)
+        Dim redirectUrl As String = BuildSafeRedirectUrl(rawLink)
+
+        If String.IsNullOrEmpty(redirectUrl) Then
+            redirectUrl = ResolveUrl(FALLBACK_URL)
+        End If
+
+        SafeRedirect(redirectUrl)
     End Sub
+
+    Private Function TryGetValidPubblicitaLink(ByVal params As Dictionary(Of String, String), ByRef rawLink As String) As Boolean
+        rawLink = ""
+
+        Dim whereClause As String = "WHERE (id=@idPubblicità) " &
+                                   "AND (abilitato=1) " &
+                                   "AND ((data_inizio_pubblicazione IS NULL) OR (data_inizio_pubblicazione<=@dataOdierna)) " &
+                                   "AND ((data_fine_pubblicazione IS NULL) OR (data_fine_pubblicazione>=@dataOdierna)) " &
+                                   "AND ((limite_click IS NULL) OR (limite_click=0) OR (numero_click_attuale < limite_click)) " &
+                                   "AND ((id_Azienda IS NULL) OR (id_Azienda=0) OR (id_Azienda=@idAzienda)) " &
+                                   "LIMIT 0, 1"
+
+        Dim drLink = ExecuteQueryGetDataReader("link", "pubblicitaV2", whereClause, params)
+        If drLink IsNot Nothing AndAlso drLink.Count > 0 Then
+            ' E' una List(Of Dictionary(Of String, Object))
+            Try
+                rawLink = Convert.ToString(drLink(0)("link"))
+            Catch
+                rawLink = ""
+            End Try
+        End If
+
+        Return Not String.IsNullOrWhiteSpace(rawLink)
+    End Function
+
+    ' ===========================
+    ' SAFE REDIRECT (riduce open redirect / XSS)
+    ' - consente SOLO:
+    '   * URL assoluti http/https
+    '   * URL relativi (/ oppure ~/)
+    ' - blocca javascript:, data:, vbscript:, CRLF, URL vuoti
+    ' ===========================
+    Private Function BuildSafeRedirectUrl(ByVal rawLink As String) As String
+        If String.IsNullOrWhiteSpace(rawLink) Then Return ""
+
+        Dim s As String = rawLink.Trim()
+
+        ' prevenzione header injection
+        If s.Contains(vbCr) OrElse s.Contains(vbLf) Then Return ""
+
+        If s = "#" Then
+            Return ResolveUrl(FALLBACK_URL)
+        End If
+
+        ' URL relativi (interni)
+        If s.StartsWith("/") OrElse s.StartsWith("~/") Then
+            If s.StartsWith("~/") Then
+                Return ResolveUrl(s)
+            End If
+            Return s
+        End If
+
+        ' Blocca schemi pericolosi espliciti
+        Dim lower As String = s.ToLowerInvariant()
+        If lower.StartsWith("javascript:") OrElse lower.StartsWith("data:") OrElse lower.StartsWith("vbscript:") Then
+            Return ""
+        End If
+
+        ' Assoluto già completo
+        Dim uri As Uri = Nothing
+        If Uri.TryCreate(s, UriKind.Absolute, uri) Then
+            If uri.Scheme = Uri.UriSchemeHttp OrElse uri.Scheme = Uri.UriSchemeHttps Then
+                Return uri.ToString()
+            End If
+            Return ""
+        End If
+
+        ' Se manca lo schema, prova ad aggiungere http:// (mantiene la compatibilità con i dati legacy)
+        If Uri.TryCreate("http://" & s, UriKind.Absolute, uri) Then
+            If uri.Scheme = Uri.UriSchemeHttp OrElse uri.Scheme = Uri.UriSchemeHttps Then
+                Return uri.ToString()
+            End If
+        End If
+
+        Return ""
+    End Function
+
+    Private Sub SafeRedirect(ByVal url As String)
+        ' Evita ThreadAbortException: Redirect(False) + CompleteRequest()
+        Response.Redirect(url, False)
+        Context.ApplicationInstance.CompleteRequest()
+    End Sub
+
+    Private Function GetClientIp() As String
+        Try
+            Dim xff As String = Request.Headers("X-Forwarded-For")
+            If Not String.IsNullOrWhiteSpace(xff) Then
+                Dim parts As String() = xff.Split(","c)
+                If parts IsNot Nothing AndAlso parts.Length > 0 Then
+                    Dim candidate As String = parts(0).Trim()
+                    If candidate.Length > 0 AndAlso candidate.Length <= 45 Then
+                        Return candidate
+                    End If
+                End If
+            End If
+        Catch
+        End Try
+
+        Return Convert.ToString(Request.UserHostAddress)
+    End Function
 
     Protected Function ExecuteInsert(ByVal table As String, ByVal fields As String, Optional ByVal values As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing)
         Dim sqlString As String = "INSERT INTO " & table & " (" & fields & ") VALUES (" & values & ")"
@@ -65,19 +202,24 @@ Partial Class click
         Dim conn As New MySqlConnection
         Try
             Dim connectionString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            If Not connectionString Is Nothing Then
+            If Not String.IsNullOrEmpty(connectionString) Then
                 conn.ConnectionString = connectionString
                 conn.Open()
+
                 Dim cmd As New MySqlCommand
                 cmd.Connection = conn
                 cmd.CommandText = sqlString
-                For Each paramName In params.Keys
-                    If paramName = "?parPrezzo" Or paramName = "?parPrezzoIvato" Then
-                        cmd.Parameters.Add(paramName, MySqlDbType.Double).Value = Convert.ToDecimal(params(paramName), System.Globalization.CultureInfo.InvariantCulture)
-                    Else
-                        cmd.Parameters.AddWithValue(paramName, params(paramName))
-                    End If
-                Next
+
+                If params IsNot Nothing Then
+                    For Each paramName In params.Keys
+                        If paramName = "?parPrezzo" OrElse paramName = "?parPrezzoIvato" Then
+                            cmd.Parameters.Add(paramName, MySqlDbType.Double).Value = Convert.ToDecimal(params(paramName), CultureInfo.InvariantCulture)
+                        Else
+                            cmd.Parameters.AddWithValue(paramName, params(paramName))
+                        End If
+                    Next
+                End If
+
                 If isStoredProcedure Then
                     cmd.CommandType = CommandType.StoredProcedure
                     cmd.Parameters.AddWithValue("?parRetVal", "0")
@@ -85,6 +227,7 @@ Partial Class click
                 Else
                     cmd.CommandType = CommandType.Text
                 End If
+
                 cmd.ExecuteNonQuery()
                 cmd.Dispose()
             End If
@@ -107,7 +250,7 @@ Partial Class click
         Dim conn As New MySqlConnection
         Try
             Dim connectionString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            If Not connectionString Is Nothing Then
+            If Not String.IsNullOrEmpty(connectionString) Then
                 conn.ConnectionString = connectionString
                 conn.Open()
                 Dim cmd = New MySqlCommand With {
@@ -115,8 +258,7 @@ Partial Class click
                     .CommandType = CommandType.Text,
                     .CommandText = sqlString
                 }
-                If Not params Is Nothing Then
-                    Dim paramName As String
+                If params IsNot Nothing Then
                     For Each paramName In params.Keys
                         cmd.Parameters.AddWithValue(paramName, params(paramName))
                     Next
@@ -128,15 +270,11 @@ Partial Class click
 
                     ' Per ogni colonna nella riga, aggiungi la colonna al dizionario
                     For i As Integer = 0 To dr.FieldCount - 1
-                        ' Prendi il nome della colonna e il valore
                         Dim columnName As String = dr.GetName(i)
                         Dim value As Object = dr.GetValue(i)
-
-                        ' Aggiungi la colonna e il valore al dizionario
                         row.Add(columnName, value)
                     Next
 
-                    ' Aggiungi la riga al risultato
                     result.Add(row)
                 End While
 
@@ -151,4 +289,5 @@ Partial Class click
         End Try
         Return result
     End Function
+
 End Class
