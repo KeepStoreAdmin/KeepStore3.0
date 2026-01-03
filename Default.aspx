@@ -94,21 +94,7 @@
     runat="server"
     ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
     ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-    SelectCommand="
-        SELECT sp.*
-        FROM slideshows_parts sp
-        WHERE sp.slideshowId = (
-            SELECT MAX(s.id)
-            FROM slideshows s
-            WHERE LOWER(s.placeholder) = 'defaultpage'
-              AND s.aziendeId = ?AziendaID
-              AND s.abilitato = 1
-              AND (s.dataInizioPubblicazione IS NULL OR s.dataInizioPubblicazione <= CURDATE())
-              AND (s.dataFinePubblicazione IS NULL OR s.dataFinePubblicazione >= CURDATE())
-        )
-        AND (sp.startDate IS NULL OR sp.startDate <= CURDATE())
-        AND (sp.stopDate IS NULL OR sp.stopDate >= CURDATE())
-        ORDER BY sp.ord">
+    SelectCommand="SELECT sp.id, sp.slideshowId, sp.orderPosition, sp.image, sp.link, sp.content, '' AS target FROM slideshows_parts sp WHERE sp.slideshowId = (SELECT MAX(id) FROM slideshows WHERE placeholder = 'defaultPage' AND aziendeId = 1) AND (CASE WHEN CAST(sp.startDate AS CHAR(10)) = '0000-00-00' THEN DATE('1900-01-01') ELSE sp.startDate END) <= CURDATE() AND (CASE WHEN CAST(sp.stopDate AS CHAR(10)) = '0000-00-00' THEN DATE('2999-12-31') ELSE sp.stopDate END) > CURDATE() ORDER BY sp.orderPosition">
     <SelectParameters>
         <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" />
     </SelectParameters>
@@ -192,23 +178,7 @@
     ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
     ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" 
 
-    SelectCommand="
-        SELECT 
-            id, id_Azienda, data_inizio_pubblicazione, data_fine_pubblicazione,
-            limite_click, limite_impressioni, id_posizione_banner, ordinamento,
-            numero_click_attuale, numero_impressioni_attuale, link, img_path,
-            titolo, descrizione, abilitato
-        FROM pubblicitav2
-        WHERE abilitato = 1
-          AND id_posizione_banner = 4
-          AND ordinamento = 1
-          AND (id_Azienda = ?AziendaID OR id_Azienda = 0 OR id_Azienda IS NULL)
-          AND (data_inizio_pubblicazione IS NULL OR data_inizio_pubblicazione <= NOW())
-          AND (data_fine_pubblicazione IS NULL OR data_fine_pubblicazione >= NOW())
-          AND (limite_click IS NULL OR limite_click = 0 OR IFNULL(numero_click_attuale,0) < limite_click)
-          AND (limite_impressioni IS NULL OR limite_impressioni = 0 OR IFNULL(numero_impressioni_attuale,0) < limite_impressioni)
-        ORDER BY ordinamento ASC, id DESC
-        LIMIT 1"
+    SelectCommand="SELECT p.titolo, p.immagine, p.link, '' AS target FROM pubblicitav2 p WHERE p.abilitato = 1 AND p.id_posizione = 4 AND (p.data_inizio_pubblicazione IS NULL OR CAST(p.data_inizio_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_inizio_pubblicazione <= NOW()) AND (p.data_fine_pubblicazione IS NULL OR CAST(p.data_fine_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_fine_pubblicazione >= NOW()) ORDER BY p.ordinamento ASC, p.id DESC LIMIT 0,1"
     
     UpdateCommand="
         UPDATE pubblicitav2 
@@ -257,23 +227,7 @@
     ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
     ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" 
 
-    SelectCommand="
-        SELECT 
-            id, id_Azienda, data_inizio_pubblicazione, data_fine_pubblicazione,
-            limite_click, limite_impressioni, id_posizione_banner, ordinamento,
-            numero_click_attuale, numero_impressioni_attuale, link, img_path,
-            titolo, descrizione, abilitato
-        FROM pubblicitav2
-        WHERE abilitato = 1
-          AND id_posizione_banner = 4
-          AND ordinamento = 2
-          AND (id_Azienda = ?AziendaID OR id_Azienda = 0 OR id_Azienda IS NULL)
-          AND (data_inizio_pubblicazione IS NULL OR data_inizio_pubblicazione <= NOW())
-          AND (data_fine_pubblicazione IS NULL OR data_fine_pubblicazione >= NOW())
-          AND (limite_click IS NULL OR limite_click = 0 OR IFNULL(numero_click_attuale,0) < limite_click)
-          AND (limite_impressioni IS NULL OR limite_impressioni = 0 OR IFNULL(numero_impressioni_attuale,0) < limite_impressioni)
-        ORDER BY ordinamento ASC, id DESC
-        LIMIT 1"
+    SelectCommand="SELECT p.titolo, p.immagine, p.link, '' AS target FROM pubblicitav2 p WHERE p.abilitato = 1 AND p.id_posizione = 4 AND (p.data_inizio_pubblicazione IS NULL OR CAST(p.data_inizio_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_inizio_pubblicazione <= NOW()) AND (p.data_fine_pubblicazione IS NULL OR CAST(p.data_fine_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_fine_pubblicazione >= NOW()) ORDER BY p.ordinamento ASC, p.id DESC LIMIT 1,1"
 
     UpdateCommand="
         UPDATE pubblicitav2 
