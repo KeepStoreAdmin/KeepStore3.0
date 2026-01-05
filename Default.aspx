@@ -1,5 +1,10 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
 
+<!-- ============================================================
+     Default.aspx (HOME) - Layout FULL-WIDTH con banner + sezioni
+     NOTE: mantiene logica e controlli esistenti
+     ============================================================ -->
+
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
     Home
 </asp:Content>
@@ -35,12 +40,12 @@
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
     <!-- ============================================================
-         HOME 1 (Onsus) - HERO / BANNERS
+         HERO / BANNERS (FULL-WIDTH)
          (Slideshow legacy integrato nella posizione "wrap-item-2")
          ============================================================ -->
 
-    <section class="flat-spacing-4 pt_0">
-        <div class="container">
+    <section class="tf-sp-2 pt-0">
+        <div class="container-full">
             <div class="s-banner-wrapper style-2">
 
                 <!-- LEFT: Department (static template) -->
@@ -53,14 +58,14 @@
                             </div>
                             <ul class="department-list">
                                 <!-- Static (template). In futuro possiamo collegarlo alle categorie reali. -->
-                                <li><a href="shop-default.html" class="department-link">Laptop</a></li>
-                                <li><a href="shop-default.html" class="department-link">Computer</a></li>
-                                <li><a href="shop-default.html" class="department-link">Monitor</a></li>
-                                <li><a href="shop-default.html" class="department-link">TV</a></li>
-                                <li><a href="shop-default.html" class="department-link">Smartphone</a></li>
-                                <li><a href="shop-default.html" class="department-link">Audio</a></li>
-                                <li><a href="shop-default.html" class="department-link">Gadget</a></li>
-                                <li><a href="shop-default.html" class="department-link">Accessori</a></li>
+                                <li><a href="articoli.aspx" class="department-link">Laptop</a></li>
+                                <li><a href="articoli.aspx" class="department-link">Computer</a></li>
+                                <li><a href="articoli.aspx" class="department-link">Monitor</a></li>
+                                <li><a href="articoli.aspx" class="department-link">TV</a></li>
+                                <li><a href="articoli.aspx" class="department-link">Smartphone</a></li>
+                                <li><a href="articoli.aspx" class="department-link">Audio</a></li>
+                                <li><a href="articoli.aspx" class="department-link">Gadget</a></li>
+                                <li><a href="articoli.aspx" class="department-link">Accessori</a></li>
                             </ul>
                         </div>
                     </div>
@@ -68,7 +73,7 @@
                     <!-- Small promo banner (static) -->
                     <div class="banner-image-product-4 hover-img mb-20">
                         <div class="item-product">
-                            <a href="shop-default.html" class="box-link">
+                            <a href="articoli.aspx" class="box-link">
                                 <div class="box-content">
                                     <span class="sub-title">Promo</span>
                                     <h5 class="title">Offerte del momento</h5>
@@ -89,44 +94,44 @@
 
                             <!-- Slide Show (legacy) -->
                             <div id="Slide_Show">
-                                <asp:SqlDataSource 
-    ID="slideShow" 
-    runat="server"
-    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-    SelectCommand="
-        SELECT 
-            sp.id,
-            sp.slideshowId,
-            sp.orderPosition,
-            sp.image,
-            sp.link,
-            IFNULL(sp.caption,'') AS content,
-            '' AS target
-        FROM slideshows_parts sp
-        WHERE sp.slideshowId = (
-            SELECT MAX(id) 
-            FROM slideshows 
-            WHERE placeholder = 'defaultPage'
-              AND aziendeId = @AziendaID
-        )
-        AND (CASE 
-                WHEN sp.startDate IS NULL OR CAST(sp.startDate AS CHAR(10)) = '0000-00-00' 
-                THEN DATE('1900-01-01') 
-                ELSE sp.startDate 
-             END) <= CURDATE()
-        AND (CASE 
-                WHEN sp.stopDate IS NULL OR CAST(sp.stopDate AS CHAR(10)) = '0000-00-00' 
-                THEN DATE('2999-12-31') 
-                ELSE sp.stopDate 
-             END) > CURDATE()
-        ORDER BY sp.orderPosition
-    ">
-    <SelectParameters>
-        <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" DefaultValue="1" />
-    </SelectParameters>
-</asp:SqlDataSource>
 
+                                <asp:SqlDataSource 
+                                    ID="slideShow" 
+                                    runat="server"
+                                    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                                    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                                    SelectCommand="
+                                        SELECT 
+                                            sp.id,
+                                            sp.slideshowId,
+                                            sp.orderPosition,
+                                            sp.image,
+                                            sp.link,
+                                            IFNULL(sp.caption,'') AS content,
+                                            '' AS target
+                                        FROM slideshows_parts sp
+                                        WHERE sp.slideshowId = (
+                                            SELECT MAX(id) 
+                                            FROM slideshows 
+                                            WHERE placeholder = 'defaultPage'
+                                              AND aziendeId = @AziendaID
+                                        )
+                                        AND (CASE 
+                                                WHEN sp.startDate IS NULL OR CAST(sp.startDate AS CHAR(10)) = '0000-00-00' 
+                                                THEN DATE('1900-01-01') 
+                                                ELSE sp.startDate 
+                                             END) <= CURDATE()
+                                        AND (CASE 
+                                                WHEN sp.stopDate IS NULL OR CAST(sp.stopDate AS CHAR(10)) = '0000-00-00' 
+                                                THEN DATE('2999-12-31') 
+                                                ELSE sp.stopDate 
+                                             END) > CURDATE()
+                                        ORDER BY sp.orderPosition
+                                    ">
+                                    <SelectParameters>
+                                        <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" DefaultValue="1" />
+                                    </SelectParameters>
+                                </asp:SqlDataSource>
 
                                 <div id="Slide_Show_Container" class="slideshow-container" runat="server">
                                     <asp:Repeater ID="slideshowItems" runat="server" DataSourceID="slideShow">
@@ -136,7 +141,7 @@
                                                 <%# SlideLinkStart(Eval("link")) %>
                                                 <img src='<%# SafeSlideshowImageUrl(Eval("image")) %>' style="width:100%" alt="" />
                                                 <%# SlideLinkEnd(Eval("link")) %>
-															<div class="text"><%# SafeText(Eval("content")) %></div>
+                                                <div class="text"><%# SafeText(Eval("content")) %></div>
                                             </div>
                                         </ItemTemplate>
                                     </asp:Repeater>
@@ -199,41 +204,41 @@
                         <div class="item-product">
 
                             <!-- ========================= -->
-<!-- INIZIO BLOCCO SPRINT2_HOME1_STEP5 SqlDataSource_Pubblicita_id4_pos1 (BANNERS POS4 ORD1) -->
-<!-- ========================= -->
-<asp:SqlDataSource 
-    ID="SqlDataSource_Pubblicita_id4_pos1" 
-    runat="server" 
-    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
-    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" 
+                            <!-- INIZIO BLOCCO SPRINT2_HOME1_STEP5 SqlDataSource_Pubblicita_id4_pos1 (BANNERS POS4 ORD1) -->
+                            <!-- ========================= -->
+                            <asp:SqlDataSource 
+                                ID="SqlDataSource_Pubblicita_id4_pos1" 
+                                runat="server" 
+                                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
+                                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" 
 
-    SelectCommand="SELECT p.titolo, p.immagine, p.link, '' AS target FROM pubblicitav2 p WHERE p.abilitato = 1 AND p.id_posizione = 4 AND (p.data_inizio_pubblicazione IS NULL OR CAST(p.data_inizio_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_inizio_pubblicazione <= NOW()) AND (p.data_fine_pubblicazione IS NULL OR CAST(p.data_fine_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_fine_pubblicazione >= NOW()) ORDER BY p.ordinamento ASC, p.id DESC LIMIT 0,1"
-    
-    UpdateCommand="
-        UPDATE pubblicitav2 
-        SET numero_impressioni_attuale = numero_impressioni_attuale + 1 
-        WHERE id = ?id">
+                                SelectCommand="SELECT p.titolo, p.immagine, p.link, '' AS target FROM pubblicitav2 p WHERE p.abilitato = 1 AND p.id_posizione = 4 AND (p.data_inizio_pubblicazione IS NULL OR CAST(p.data_inizio_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_inizio_pubblicazione <= NOW()) AND (p.data_fine_pubblicazione IS NULL OR CAST(p.data_fine_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_fine_pubblicazione >= NOW()) ORDER BY p.ordinamento ASC, p.id DESC LIMIT 0,1"
 
-    <SelectParameters>
-        <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" DefaultValue="0" />
-    </SelectParameters>
+                                UpdateCommand="
+                                    UPDATE pubblicitav2 
+                                    SET numero_impressioni_attuale = numero_impressioni_attuale + 1 
+                                    WHERE id = ?id">
 
-    <UpdateParameters>
-        <asp:Parameter Name="id" Type="Int32" />
-    </UpdateParameters>
+                                <SelectParameters>
+                                    <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" DefaultValue="0" />
+                                </SelectParameters>
 
-</asp:SqlDataSource>
-<!-- ========================= -->
-<!-- FINE BLOCCO SPRINT2_HOME1_STEP5 SqlDataSource_Pubblicita_id4_pos1 -->
-<!-- ========================= -->
+                                <UpdateParameters>
+                                    <asp:Parameter Name="id" Type="Int32" />
+                                </UpdateParameters>
+
+                            </asp:SqlDataSource>
+                            <!-- ========================= -->
+                            <!-- FINE BLOCCO SPRINT2_HOME1_STEP5 SqlDataSource_Pubblicita_id4_pos1 -->
+                            <!-- ========================= -->
 
                             <asp:Repeater ID="RepeaterPubblicita_id4_pos1" runat="server" OnItemDataBound="RepeaterPubblicita_id4_pos1_ItemDataBound" DataSourceID="SqlDataSource_Pubblicita_id4_pos1" EnableViewState="False">
                                 <ItemTemplate>
                                     <a href='<%# "click.aspx?id=" & Eval("id") %>' class="box-link" target="_blank" rel="noopener noreferrer">
                                         <div class="box-image">
-	                                            <img class="lazyload"
-	                                                 src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
-	                                                 data-src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
+                                            <img class="lazyload"
+                                                 src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
+                                                 data-src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
                                                  alt='<%# SafeAttr(Eval("titolo")) %>' />
                                         </div>
                                     </a>
@@ -248,41 +253,41 @@
                         <div class="item-product">
 
                             <!-- ========================= -->
-<!-- INIZIO BLOCCO SPRINT2_HOME1_STEP5 SqlDataSource_Pubblicita_id4_pos2 (BANNERS POS4 ORD2) -->
-<!-- ========================= -->
-<asp:SqlDataSource 
-    ID="SqlDataSource_Pubblicita_id4_pos2" 
-    runat="server" 
-    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
-    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" 
+                            <!-- INIZIO BLOCCO SPRINT2_HOME1_STEP5 SqlDataSource_Pubblicita_id4_pos2 (BANNERS POS4 ORD2) -->
+                            <!-- ========================= -->
+                            <asp:SqlDataSource 
+                                ID="SqlDataSource_Pubblicita_id4_pos2" 
+                                runat="server" 
+                                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
+                                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" 
 
-    SelectCommand="SELECT p.titolo, p.immagine, p.link, '' AS target FROM pubblicitav2 p WHERE p.abilitato = 1 AND p.id_posizione = 4 AND (p.data_inizio_pubblicazione IS NULL OR CAST(p.data_inizio_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_inizio_pubblicazione <= NOW()) AND (p.data_fine_pubblicazione IS NULL OR CAST(p.data_fine_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_fine_pubblicazione >= NOW()) ORDER BY p.ordinamento ASC, p.id DESC LIMIT 1,1"
+                                SelectCommand="SELECT p.titolo, p.immagine, p.link, '' AS target FROM pubblicitav2 p WHERE p.abilitato = 1 AND p.id_posizione = 4 AND (p.data_inizio_pubblicazione IS NULL OR CAST(p.data_inizio_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_inizio_pubblicazione <= NOW()) AND (p.data_fine_pubblicazione IS NULL OR CAST(p.data_fine_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_fine_pubblicazione >= NOW()) ORDER BY p.ordinamento ASC, p.id DESC LIMIT 1,1"
 
-    UpdateCommand="
-        UPDATE pubblicitav2 
-        SET numero_impressioni_attuale = numero_impressioni_attuale + 1 
-        WHERE id = ?id">
+                                UpdateCommand="
+                                    UPDATE pubblicitav2 
+                                    SET numero_impressioni_attuale = numero_impressioni_attuale + 1 
+                                    WHERE id = ?id">
 
-    <SelectParameters>
-        <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" DefaultValue="0" />
-    </SelectParameters>
+                                <SelectParameters>
+                                    <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" DefaultValue="0" />
+                                </SelectParameters>
 
-    <UpdateParameters>
-        <asp:Parameter Name="id" Type="Int32" />
-    </UpdateParameters>
+                                <UpdateParameters>
+                                    <asp:Parameter Name="id" Type="Int32" />
+                                </UpdateParameters>
 
-</asp:SqlDataSource>
-<!-- ========================= -->
-<!-- FINE BLOCCO SPRINT2_HOME1_STEP5 SqlDataSource_Pubblicita_id4_pos2 -->
-<!-- ========================= -->
+                            </asp:SqlDataSource>
+                            <!-- ========================= -->
+                            <!-- FINE BLOCCO SPRINT2_HOME1_STEP5 SqlDataSource_Pubblicita_id4_pos2 -->
+                            <!-- ========================= -->
 
                             <asp:Repeater ID="RepeaterPubblicita_id4_pos2" runat="server" OnItemDataBound="RepeaterPubblicita_id4_pos2_ItemDataBound" DataSourceID="SqlDataSource_Pubblicita_id4_pos2" EnableViewState="False">
                                 <ItemTemplate>
                                     <a href='<%# "click.aspx?id=" & Eval("id") %>' class="box-link" target="_blank" rel="noopener noreferrer">
                                         <div class="box-image">
-	                                            <img class="lazyload"
-	                                                 src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
-	                                                 data-src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
+                                            <img class="lazyload"
+                                                 src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
+                                                 data-src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
                                                  alt='<%# SafeAttr(Eval("titolo")) %>' />
                                         </div>
                                     </a>
@@ -299,8 +304,8 @@
     </section>
 
     <!-- Icon boxes (template) -->
-    <section class="flat-spacing-3 pt_0">
-        <div class="container">
+    <div class="tf-sp-2 pt-0">
+        <div class="container-full">
             <div class="swiper tf-sw-iconbox" data-preview="4" data-tablet="2" data-mobile="1" data-space-lg="0" data-space-md="0" data-space="0" data-pagination="1" data-pagination-sm="1" data-pagination-md="1" data-pagination-lg="1">
                 <div class="swiper-wrapper">
                     <div class="swiper-slide">
@@ -340,18 +345,18 @@
                         </div>
                     </div>
                 </div>
-                <div class="sw-pagination-iconbox sw-dots type-circle justify-content-center"></div>
+                <div class="d-flex sw-dot-default sw-pagination-iconbox justify-content-center"></div>
             </div>
         </div>
-    </section>
+    </div>
 
     <!-- ============================================================
          SCELTI PER TE (vetrina)
          ============================================================ -->
 
     <% If Data_UltimiArrivi.Items.Count > 0 Then %>
-    <section class="flat-spacing-4 pt_0">
-        <div class="container">
+    <section class="tf-sp-2 pt-0">
+        <div class="container-full">
             <div class="flat-title d-flex align-items-center justify-content-between flex-wrap gap-12">
                 <h2 class="flat-title-heading">Scelti per te</h2>
             </div>
@@ -365,7 +370,11 @@
                                 <div class="card-product style-img-border">
                                     <div class="card-product-wrapper">
                                         <a href='articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>' class="product-img">
-                                            <img class="lazyload img-product"
+                                            <img class="img-product lazyload"
+                                                 src='<%# checkImg(Eval("img1")) %>'
+                                                 data-src='<%# checkImg(Eval("img1")) %>'
+                                                 alt='<%# SafeAttr(Eval("Descrizione1")) %>' />
+                                            <img class="img-hover lazyload"
                                                  src='<%# checkImg(Eval("img1")) %>'
                                                  data-src='<%# checkImg(Eval("img1")) %>'
                                                  alt='<%# SafeAttr(Eval("Descrizione1")) %>' />
@@ -378,24 +387,24 @@
                                     </div>
 
                                     <div class="card-product-info">
-                                        <a href='articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>' class="title link">
-                                            <%# SafeText(compatta_testo(Eval("Descrizione1"), 60)) %>
-                                        </a>
-
-                                        <span class="price">
-                                            <span class="new-price">
-                                                <%# controlla_prezzo(
-                                                        If(IsDBNull(Eval("prezzo")), 0, Eval("prezzo")),
-                                                        If(IsDBNull(Eval("prezzoIvato")), 0, Eval("prezzoIvato")),
-                                                        If(Eval("InOfferta") = 0, 0, Eval("prezzoPromo")),
-                                                        If(Eval("InOfferta") = 0, 0, Eval("PrezzoPromoIvato")),
-                                                        Session("IvaTipo")
-                                                    ) %>
-                                            </span>
-                                        </span>
-
-                                        <div class="body-text-3 mt-1">
-                                            <span class="fw-semibold">Cod.</span> <%# SafeText(Eval("Codice")) %>
+                                        <div class="box-title">
+                                            <div class="d-flex flex-column">
+                                                <p class="caption text-main-2 font-2">Cod. <%# SafeText(Eval("Codice")) %></p>
+                                                <a href='articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>' class="name-product body-md-2 fw-semibold text-secondary link">
+                                                    <%# SafeText(compatta_testo(Eval("Descrizione1"), 60)) %>
+                                                </a>
+                                            </div>
+                                            <p class="price-wrap fw-medium">
+                                                <span class="new-price price-text fw-medium">
+                                                    <%# controlla_prezzo(
+                                                            If(IsDBNull(Eval("prezzo")), 0, Eval("prezzo")),
+                                                            If(IsDBNull(Eval("prezzoIvato")), 0, Eval("prezzoIvato")),
+                                                            If(Eval("InOfferta") = 0, 0, Eval("prezzoPromo")),
+                                                            If(Eval("InOfferta") = 0, 0, Eval("PrezzoPromoIvato")),
+                                                            Session("IvaTipo")
+                                                        ) %>
+                                                </span>
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -404,7 +413,7 @@
                     </asp:Repeater>
 
                 </div>
-                <div class="sw-pagination-products sw-dots type-circle justify-content-center"></div>
+                <div class="d-flex sw-dot-default sw-pagination-products justify-content-center"></div>
             </div>
         </div>
 
@@ -422,8 +431,8 @@
          NOVITÀ (nuovi arrivi)
          ============================================================ -->
 
-    <section class="flat-spacing-4 pt_0">
-        <div class="container">
+    <section class="tf-sp-2 pt-0">
+        <div class="container-full">
             <div class="flat-title d-flex align-items-center justify-content-between flex-wrap gap-12">
                 <h2 class="flat-title-heading">Novità</h2>
             </div>
@@ -437,7 +446,11 @@
                                 <div class="card-product style-img-border">
                                     <div class="card-product-wrapper">
                                         <a href='articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>' class="product-img">
-                                            <img class="lazyload img-product"
+                                            <img class="img-product lazyload"
+                                                 src='<%# checkImg(Eval("img1")) %>'
+                                                 data-src='<%# checkImg(Eval("img1")) %>'
+                                                 alt='<%# SafeAttr(Eval("Descrizione1")) %>' />
+                                            <img class="img-hover lazyload"
                                                  src='<%# checkImg(Eval("img1")) %>'
                                                  data-src='<%# checkImg(Eval("img1")) %>'
                                                  alt='<%# SafeAttr(Eval("Descrizione1")) %>' />
@@ -449,24 +462,24 @@
                                     </div>
 
                                     <div class="card-product-info">
-                                        <a href='articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>' class="title link">
-                                            <%# SafeText(compatta_testo(Eval("Descrizione1"), 60)) %>
-                                        </a>
-
-                                        <span class="price">
-                                            <span class="new-price">
-                                                <%# controlla_prezzo(
-                                                        If(IsDBNull(Eval("prezzo")), 0, Eval("prezzo")),
-                                                        If(IsDBNull(Eval("prezzoIvato")), 0, Eval("prezzoIvato")),
-                                                        If(Eval("InOfferta") = 0, 0, Eval("prezzoPromo")),
-                                                        If(Eval("InOfferta") = 0, 0, Eval("PrezzoPromoIvato")),
-                                                        Session("IvaTipo")
-                                                    ) %>
-                                            </span>
-                                        </span>
-
-                                        <div class="body-text-3 mt-1">
-                                            <span class="fw-semibold">Cod.</span> <%# SafeText(Eval("Codice")) %>
+                                        <div class="box-title">
+                                            <div class="d-flex flex-column">
+                                                <p class="caption text-main-2 font-2">Cod. <%# SafeText(Eval("Codice")) %></p>
+                                                <a href='articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>' class="name-product body-md-2 fw-semibold text-secondary link">
+                                                    <%# SafeText(compatta_testo(Eval("Descrizione1"), 60)) %>
+                                                </a>
+                                            </div>
+                                            <p class="price-wrap fw-medium">
+                                                <span class="new-price price-text fw-medium">
+                                                    <%# controlla_prezzo(
+                                                            If(IsDBNull(Eval("prezzo")), 0, Eval("prezzo")),
+                                                            If(IsDBNull(Eval("prezzoIvato")), 0, Eval("prezzoIvato")),
+                                                            If(Eval("InOfferta") = 0, 0, Eval("prezzoPromo")),
+                                                            If(Eval("InOfferta") = 0, 0, Eval("PrezzoPromoIvato")),
+                                                            Session("IvaTipo")
+                                                        ) %>
+                                                </span>
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -475,7 +488,7 @@
                     </asp:Repeater>
 
                 </div>
-                <div class="sw-pagination-products sw-dots type-circle justify-content-center"></div>
+                <div class="d-flex sw-dot-default sw-pagination-products justify-content-center"></div>
             </div>
 
             <!-- DataSource - comando sovrascritto in Default.aspx.vb -->
@@ -492,8 +505,8 @@
          PIÙ VENDUTI
          ============================================================ -->
 
-    <section class="flat-spacing-4 pt_0">
-        <div class="container">
+    <section class="tf-sp-2 pt-0">
+        <div class="container-full">
             <div class="flat-title d-flex align-items-center justify-content-between flex-wrap gap-12">
                 <h2 class="flat-title-heading">I più venduti</h2>
             </div>
@@ -507,7 +520,11 @@
                                 <div class="card-product style-img-border">
                                     <div class="card-product-wrapper">
                                         <a href='articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>' class="product-img">
-                                            <img class="lazyload img-product"
+                                            <img class="img-product lazyload"
+                                                 src='<%# checkImg(Eval("img1")) %>'
+                                                 data-src='<%# checkImg(Eval("img1")) %>'
+                                                 alt='<%# SafeAttr(Eval("Descrizione1")) %>' />
+                                            <img class="img-hover lazyload"
                                                  src='<%# checkImg(Eval("img1")) %>'
                                                  data-src='<%# checkImg(Eval("img1")) %>'
                                                  alt='<%# SafeAttr(Eval("Descrizione1")) %>' />
@@ -519,24 +536,24 @@
                                     </div>
 
                                     <div class="card-product-info">
-                                        <a href='articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>' class="title link">
-                                            <%# SafeText(compatta_testo(Eval("Descrizione1"), 60)) %>
-                                        </a>
-
-                                        <span class="price">
-                                            <span class="new-price">
-                                                <%# controlla_prezzo(
-                                                        If(IsDBNull(Eval("prezzo")), 0, Eval("prezzo")),
-                                                        If(IsDBNull(Eval("prezzoIvato")), 0, Eval("prezzoIvato")),
-                                                        If(Eval("InOfferta") = 0, 0, Eval("prezzoPromo")),
-                                                        If(Eval("InOfferta") = 0, 0, Eval("PrezzoPromoIvato")),
-                                                        Session("IvaTipo")
-                                                    ) %>
-                                            </span>
-                                        </span>
-
-                                        <div class="body-text-3 mt-1">
-                                            <span class="fw-semibold">Cod.</span> <%# SafeText(Eval("Codice")) %>
+                                        <div class="box-title">
+                                            <div class="d-flex flex-column">
+                                                <p class="caption text-main-2 font-2">Cod. <%# SafeText(Eval("Codice")) %></p>
+                                                <a href='articolo.aspx?id=<%# Eval("ArticoliId") %>&amp;TCId=<%# Eval("TCId") %>' class="name-product body-md-2 fw-semibold text-secondary link">
+                                                    <%# SafeText(compatta_testo(Eval("Descrizione1"), 60)) %>
+                                                </a>
+                                            </div>
+                                            <p class="price-wrap fw-medium">
+                                                <span class="new-price price-text fw-medium">
+                                                    <%# controlla_prezzo(
+                                                            If(IsDBNull(Eval("prezzo")), 0, Eval("prezzo")),
+                                                            If(IsDBNull(Eval("prezzoIvato")), 0, Eval("prezzoIvato")),
+                                                            If(Eval("InOfferta") = 0, 0, Eval("prezzoPromo")),
+                                                            If(Eval("InOfferta") = 0, 0, Eval("PrezzoPromoIvato")),
+                                                            Session("IvaTipo")
+                                                        ) %>
+                                                </span>
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -545,7 +562,7 @@
                     </asp:Repeater>
 
                 </div>
-                <div class="sw-pagination-products sw-dots type-circle justify-content-center"></div>
+                <div class="d-flex sw-dot-default sw-pagination-products justify-content-center"></div>
             </div>
 
             <asp:SqlDataSource ID="sdsPiuAcquistati" runat="server"
@@ -561,8 +578,8 @@
          BRAND (marche random)
          ============================================================ -->
 
-    <section class="flat-spacing-4 pt_0">
-        <div class="container">
+    <section class="tf-sp-2 pt-0">
+        <div class="container-full">
             <div class="flat-title d-flex align-items-center justify-content-between flex-wrap gap-12">
                 <h2 class="flat-title-heading">Rivenditori ufficiali - I nostri brand</h2>
             </div>
@@ -593,8 +610,8 @@
     </section>
 
     <!-- Nota prezzi -->
-    <section class="flat-spacing-4 pt_0">
-        <div class="container">
+    <section class="tf-sp-2 pt-0">
+        <div class="container-full">
             <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" CssClass="body-text-3" />
         </div>
     </section>
@@ -644,37 +661,35 @@
             Return ""
         End Function
 
-    Protected Function SlideLinkStart(ByVal linkObj As Object) As String
-    Dim u As String = ""
+        Protected Function SlideLinkStart(ByVal linkObj As Object) As String
+            Dim u As String = ""
 
-    If linkObj IsNot Nothing AndAlso linkObj IsNot DBNull.Value Then
-        u = linkObj.ToString().Trim()
-    End If
+            If linkObj IsNot Nothing AndAlso linkObj IsNot DBNull.Value Then
+                u = linkObj.ToString().Trim()
+            End If
 
-    If u = "" Then Return ""
+            u = SafeUrl(u)
+            If u = "" Then Return ""
 
-    If u.StartsWith("~/") Then
-        u = ResolveUrl(u)
-    End If
+            If u.StartsWith("~/"c) Then
+                u = ResolveUrl(u)
+            End If
 
-    Return "<a href=""" & SafeAttr(u) & """>"
-    End Function
+            Return "<a href=""" & SafeAttr(u) & """>"
+        End Function
 
-    Protected Function SlideLinkEnd(ByVal linkObj As Object) As String
-    Dim u As String = ""
+        Protected Function SlideLinkEnd(ByVal linkObj As Object) As String
+            Dim u As String = ""
 
-    If linkObj IsNot Nothing AndAlso linkObj IsNot DBNull.Value Then
-        u = linkObj.ToString().Trim()
-    End If
+            If linkObj IsNot Nothing AndAlso linkObj IsNot DBNull.Value Then
+                u = linkObj.ToString().Trim()
+            End If
 
-    If u = "" Then Return ""
-    Return "</a>"
-    End Function
+            u = SafeUrl(u)
+            If u = "" Then Return ""
 
-    Private Function SafeAttr(ByVal s As String) As String
-    If String.IsNullOrEmpty(s) Then Return ""
-    Return System.Web.HttpUtility.HtmlAttributeEncode(s)
-    End Function
+            Return "</a>"
+        End Function
 
         Function SafeFileNameOnly(ByVal fileObj As Object) As String
             If fileObj Is Nothing OrElse IsDBNull(fileObj) Then Return ""
@@ -682,6 +697,7 @@
             If s = "" Then Return ""
 
             s = s.Replace("\\", "/")
+            s = s.Replace("\", "/")
 
             ' blocco path traversal / path assoluti
             If s.Contains("..") OrElse s.Contains(":") Then Return ""
@@ -702,41 +718,41 @@
             Return ResolveUrl("~/Public/Slideshows/" & fileName)
         End Function
 
-		Function SafeBannerImageUrl(ByVal fileObj As Object) As String
-			Dim raw As String = Convert.ToString(fileObj)
-			If raw Is Nothing Then raw = ""
-			raw = raw.Trim().Replace("\\", "/")
-			Dim low As String = raw.ToLowerInvariant()
+        Function SafeBannerImageUrl(ByVal fileObj As Object) As String
+            Dim raw As String = Convert.ToString(fileObj)
+            If raw Is Nothing Then raw = ""
+            raw = raw.Trim().Replace("\\", "/").Replace("\", "/")
+            Dim low As String = raw.ToLowerInvariant()
 
-			If low = "" Then
-				Return ResolveUrl("~/Public/images/nofoto.gif")
-			End If
+            If low = "" Then
+                Return ResolveUrl("~/Public/images/nofoto.gif")
+            End If
 
-			' blocca schemi non sicuri
-			If low.StartsWith("javascript:") OrElse low.StartsWith("data:") Then
-				Return ResolveUrl("~/Public/images/nofoto.gif")
-			End If
+            ' blocca schemi non sicuri
+            If low.StartsWith("javascript:") OrElse low.StartsWith("data:") Then
+                Return ResolveUrl("~/Public/images/nofoto.gif")
+            End If
 
-			' URL assoluti (http/https)
-			If low.StartsWith("http://") OrElse low.StartsWith("https://") Then
-				Return raw
-			End If
+            ' URL assoluti (http/https)
+            If low.StartsWith("http://") OrElse low.StartsWith("https://") Then
+                Return raw
+            End If
 
-			' percorsi già assoluti / virtuali
-			If low.StartsWith("~/") Then
-				Return ResolveUrl(raw)
-			End If
-			If low.StartsWith("/") Then
-				Return raw
-			End If
+            ' percorsi già assoluti / virtuali
+            If low.StartsWith("~/") Then
+                Return ResolveUrl(raw)
+            End If
+            If low.StartsWith("/") Then
+                Return raw
+            End If
 
-			' pulizia: mantieni solo il nome file e ricostruisci nel folder banner
-			Dim fileName As String = SafeFileNameOnly(raw)
-			If fileName = "" Then
-				Return ResolveUrl("~/Public/images/nofoto.gif")
-			End If
-			Return ResolveUrl("~/Public/Banner/" & fileName)
-		End Function
+            ' pulizia: mantieni solo il nome file e ricostruisci nel folder banner
+            Dim fileName As String = SafeFileNameOnly(raw)
+            If fileName = "" Then
+                Return ResolveUrl("~/Public/images/nofoto.gif")
+            End If
+            Return ResolveUrl("~/Public/Banner/" & fileName)
+        End Function
 
         Sub incrementa_slides()
             slides += 1
@@ -849,6 +865,7 @@
             End If
 
             fileName = fileName.Replace("\\", "/")
+            fileName = fileName.Replace("\", "/")
 
             ' blocco traversal
             If fileName.Contains("..") OrElse fileName.Contains(":") Then

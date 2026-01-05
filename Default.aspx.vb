@@ -1,4 +1,3 @@
-Imports System.Data
 Imports MySql.Data.MySqlClient
 
 Partial Class _Default
@@ -397,7 +396,7 @@ Partial Class _Default
             ' hardening: evita chiusure </script> involontarie
             json = json.Replace("</", "<\/")
 
-            lit.Text = "<script type=""application/ld+json"">" & json & "</script>"
+            lit.Text = "<script type=\"application/ld+json\">" & json & "</script>"
 
         Catch
             ' Non bloccare la home
@@ -414,23 +413,23 @@ Partial Class _Default
 
         Dim json As String =
             "{" &
-                """@context"":""https://schema.org""," &
-                """@graph"":[" &
+                "\"@context\":\"https://schema.org\"," &
+                "\"@graph\":[" &
                     "{" &
-                        """@type"":""Organization""," &
-                        """@id"":""" & siteEsc & "#org""," &
-                        """name"":""" & nameEsc & """," &
-                        """url"":""" & siteEsc & """" &
+                        "\"@type\":\"Organization\"," &
+                        "\"@id\":\"" & siteEsc & "#org\"," &
+                        "\"name\":\"" & nameEsc & "\"," &
+                        "\"url\":\"" & siteEsc & "\"" &
                     "}," &
                     "{" &
-                        """@type"":""WebSite""," &
-                        """@id"":""" & siteEsc & "#website""," &
-                        """name"":""" & nameEsc & """," &
-                        """url"":""" & siteEsc & """," &
-                        """potentialAction"":{" &
-                            """@type"":""SearchAction""," &
-                            """target"":""" & searchEsc & """," &
-                            """query-input"":""required name=search_term_string""" &
+                        "\"@type\":\"WebSite\"," &
+                        "\"@id\":\"" & siteEsc & "#website\"," &
+                        "\"name\":\"" & nameEsc & "\"," &
+                        "\"url\":\"" & siteEsc & "\"," &
+                        "\"potentialAction\":{" &
+                            "\"@type\":\"SearchAction\"," &
+                            "\"target\":\"" & searchEsc & "\"," &
+                            "\"query-input\":\"required name=search_term_string\"" &
                         "}" &
                     "}" &
                 "]" &
@@ -509,34 +508,34 @@ Partial Class _Default
     End Sub
 
     ' Risolve in modo robusto i percorsi immagini provenienti dal DB
-Protected Function ResolveMediaUrl(rawPath As Object, defaultFolderInPublic As String) As String
-    Dim p As String = If(rawPath Is Nothing, "", rawPath.ToString().Trim())
+    Protected Function ResolveMediaUrl(rawPath As Object, defaultFolderInPublic As String) As String
+        Dim p As String = If(rawPath Is Nothing, "", rawPath.ToString().Trim())
 
-    If String.IsNullOrEmpty(p) Then Return ""
+        If String.IsNullOrEmpty(p) Then Return ""
 
-    ' URL assoluto
-    If p.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse p.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
-        Return p
-    End If
+        ' URL assoluto
+        If p.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse p.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+            Return p
+        End If
 
-    ' Già in formato ASP.NET
-    If p.StartsWith("~/") Then
-        Return ResolveUrl(p)
-    End If
+        ' Già in formato ASP.NET
+        If p.StartsWith("~/") Then
+            Return ResolveUrl(p)
+        End If
 
-    ' Path assoluto sito (/Public/..., /Images/...)
-    If p.StartsWith("/") Then
-        Return ResolveUrl("~" & p)
-    End If
+        ' Path assoluto sito (/Public/..., /Images/...)
+        If p.StartsWith("/") Then
+            Return ResolveUrl("~" & p)
+        End If
 
-    ' Path relativo già completo
-    If p.StartsWith("Public/", StringComparison.OrdinalIgnoreCase) OrElse p.StartsWith("Images/", StringComparison.OrdinalIgnoreCase) Then
-        Return ResolveUrl("~/" & p)
-    End If
+        ' Path relativo già completo
+        If p.StartsWith("Public/", StringComparison.OrdinalIgnoreCase) OrElse p.StartsWith("Images/", StringComparison.OrdinalIgnoreCase) Then
+            Return ResolveUrl("~/" & p)
+        End If
 
-    ' Solo filename: lo metto nella cartella standard
-    Dim folder As String = defaultFolderInPublic.Trim("/"c)
-    Return ResolveUrl("~/Public/" & folder & "/" & p.TrimStart("/"c))
+        ' Solo filename: lo metto nella cartella standard
+        Dim folder As String = defaultFolderInPublic.Trim("/"c)
+        Return ResolveUrl("~/Public/" & folder & "/" & p.TrimStart("/"c))
     End Function
 
 End Class
