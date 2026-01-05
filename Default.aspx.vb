@@ -1,3 +1,5 @@
+Imports System.Data
+Imports System.Data.Common
 Imports MySql.Data.MySqlClient
 
 Partial Class _Default
@@ -300,30 +302,88 @@ Partial Class _Default
     ' ==========================================================
     ' SEO / AI-READINESS (HOME)
     ' ==========================================================
+    ' ============================
+' JSON ESCAPE
+' ============================
+Private Function JsonEscape(ByVal s As String) As String
+    If s Is Nothing Then Return ""
+
+    Dim t As String = s
+
+    t = t.Replace("\", "\\")
+    t = t.Replace("""", "\""")
+    t = t.Replace(vbCrLf, "\n").Replace(vbCr, "\n").Replace(vbLf, "\n")
+
+    Return t
+End Function
+
+
+' ============================
+' COSTRUZIONE JSON-LD HOME
+' ============================
+Private Function BuildHomeJsonLd(ByVal baseUrl As String, ByVal azienda As String) As String
+    Dim siteUrl As String = baseUrl & ResolveUrl("~/")
+    Dim searchUrl As String = baseUrl & ResolveUrl("~/articoli.aspx?q={search_term_string}")
+
+    Dim nameEsc As String = JsonEscape(azienda)
+    Dim siteEsc As String = JsonEscape(siteUrl)
+    Dim searchEsc As String = JsonEscape(searchUrl)
+
+    Dim json As String =
+        "{" &
+            """@context"":""https://schema.org""," &
+            """@graph"":[" &
+                "{" &
+                    """@type"":""Organization""," &
+                    """@id"":""" & siteEsc & "#org""," &
+                    """name"":""" & nameEsc & """," &
+                    """url"":""" & siteEsc & """" &
+                "}," &
+                "{" &
+                    """@type"":""WebSite""," &
+                    """@id"":""" & siteEsc & "#website""," &
+                    """name"":""" & nameEsc & """," &
+                    """url"":""" & siteEsc & """," &
+                    """potentialAction"":{" &
+                        """@type"":""SearchAction""," &
+                        """target"":""" & searchEsc & """," &
+                        """query-input"":""required name=search_term_string""" &
+                    "}" &
+                "}" &
+            "]" &
+        "}"
+
+    Return json
+End Function
+
+
+    ' ============================
+    ' INSERIMENTO SEO NELLA HOME
+    ' ============================
     Private Sub EnsureHomeSeo()
-        Try
-            If Page Is Nothing OrElse Page.Header Is Nothing Then Exit Sub
+    Try
+        If Page Is Nothing OrElse Page.Header Is Nothing Then Exit Sub
 
-            Dim baseUrl As String = Request.Url.GetLeftPart(UriPartial.Authority)
-            Dim canonical As String = baseUrl & ResolveUrl("~/Default.aspx")
+        Dim baseUrl As String = Request.Url.GetLeftPart(UriPartial.Authority)
+        Dim canonical As String = baseUrl & ResolveUrl("~/Default.aspx")
 
-            AddOrReplaceCanonical(canonical)
+        AddOrReplaceCanonical(canonical)
 
-            Dim azienda As String = Convert.ToString(Session("AziendaDescrizione")).Trim()
-            If String.IsNullOrEmpty(azienda) Then azienda = "Keepstore"
+        Dim azienda As String = Convert.ToString(Session("AziendaDescrizione")).Trim()
+        If String.IsNullOrEmpty(azienda) Then azienda = "Keepstore"
 
-            Dim descr As String = "Acquista online su " & azienda & ": nuovi arrivi, articoli in vetrina e i più venduti. Spedizioni rapide e offerte aggiornate."
-            If descr.Length > 160 Then descr = descr.Substring(0, 157) & "..."
+        Dim descr As String = "Acquista online su " & azienda & ": nuovi arrivi, articoli in vetrina e i più venduti. Spedizioni rapide e offerte aggiornate."
+        If descr.Length > 160 Then descr = descr.Substring(0, 157) & "..."
 
-            AddOrReplaceMeta("description", descr)
-            AddOrReplaceMeta("robots", "index,follow")
+        AddOrReplaceMeta("description", descr)
+        AddOrReplaceMeta("robots", "index,follow")
 
-            Dim jsonLd As String = BuildHomeJsonLd(baseUrl, azienda)
-            AddOrReplaceJsonLd("ldjson_home", jsonLd)
+        Dim jsonLd As String = BuildHomeJsonLd(baseUrl, azienda)
+        AddOrReplaceJsonLd("ldjson_home", jsonLd)
 
-        Catch
-            ' no-op: SEO non deve mai bloccare la pagina
-        End Try
+    Catch
+        ' SEO non deve mai bloccare la pagina
+    End Try
     End Sub
 
     Private Sub AddOrReplaceCanonical(ByVal href As String)
@@ -371,71 +431,71 @@ Partial Class _Default
 
     ' STEP6: JSON-LD realmente emesso in <head> (prima era vuoto)
     Private Sub AddOrReplaceJsonLd(ByVal controlId As String, ByVal json As String)
-        Try
-            If Page Is Nothing OrElse Page.Header Is Nothing Then Exit Sub
+    Try
+        If Page Is Nothing OrElse Page.Header Is Nothing Then Exit Sub
 
-            Dim lit As System.Web.UI.WebControls.Literal = TryCast(Page.Header.FindControl(controlId), System.Web.UI.WebControls.Literal)
-            If lit Is Nothing Then
-                Dim existing As System.Web.UI.Control = Page.Header.FindControl(controlId)
-                If existing IsNot Nothing Then Page.Header.Controls.Remove(existing)
+        Dim lit As System.Web.UI.WebControls.Literal = TryCast(Page.Header.FindControl(controlId), System.Web.UI.WebControls.Literal)
+        If lit Is Nothing Then
+            Dim existing As System.Web.UI.Control = Page.Header.FindControl(controlId)
+            If existing IsNot Nothing Then Page.Header.Controls.Remove(existing)
 
-                lit = New System.Web.UI.WebControls.Literal()
-                lit.ID = controlId
-                lit.Mode = System.Web.UI.WebControls.LiteralMode.PassThrough
-                Page.Header.Controls.Add(lit)
-            End If
+            lit = New System.Web.UI.WebControls.Literal()
+            lit.ID = controlId
+            lit.Mode = System.Web.UI.WebControls.LiteralMode.PassThrough
+            Page.Header.Controls.Add(lit)
+        End If
 
-            If json Is Nothing Then json = ""
-            json = json.Trim()
+        If json Is Nothing Then json = ""
+        json = json.Trim()
 
-            If json.Length = 0 Then
-                lit.Text = ""
-                Exit Sub
-            End If
+        If json.Length = 0 Then
+            lit.Text = ""
+            Exit Sub
+        End If
 
-            ' hardening: evita chiusure </script> involontarie
-            json = json.Replace("</", "<\/")
+        ' hardening: evita chiusure </script> involontarie
+        json = json.Replace("</", "<\/")
 
-            lit.Text = "<script type=\"application/ld+json\">" & json & "</script>"
+        lit.Text = "<script type=""application/ld+json"">" & json & "</script>"
 
-        Catch
-            ' Non bloccare la home
-        End Try
+    Catch
+        ' Non bloccare la home
+    End Try
     End Sub
 
     Private Function BuildHomeJsonLd(ByVal baseUrl As String, ByVal azienda As String) As String
-        Dim siteUrl As String = baseUrl & ResolveUrl("~/")
-        Dim searchUrl As String = baseUrl & ResolveUrl("~/articoli.aspx?q={search_term_string}")
+    Dim siteUrl As String = baseUrl & ResolveUrl("~/")
+    Dim searchUrl As String = baseUrl & ResolveUrl("~/articoli.aspx?q={search_term_string}")
 
-        Dim nameEsc As String = JsonEscape(azienda)
-        Dim siteEsc As String = JsonEscape(siteUrl)
-        Dim searchEsc As String = JsonEscape(searchUrl)
+    Dim nameEsc As String = JsonEscape(azienda)
+    Dim siteEsc As String = JsonEscape(siteUrl)
+    Dim searchEsc As String = JsonEscape(searchUrl)
 
-        Dim json As String =
-            "{" &
-                "\"@context\":\"https://schema.org\"," &
-                "\"@graph\":[" &
-                    "{" &
-                        "\"@type\":\"Organization\"," &
-                        "\"@id\":\"" & siteEsc & "#org\"," &
-                        "\"name\":\"" & nameEsc & "\"," &
-                        "\"url\":\"" & siteEsc & "\"" &
-                    "}," &
-                    "{" &
-                        "\"@type\":\"WebSite\"," &
-                        "\"@id\":\"" & siteEsc & "#website\"," &
-                        "\"name\":\"" & nameEsc & "\"," &
-                        "\"url\":\"" & siteEsc & "\"," &
-                        "\"potentialAction\":{" &
-                            "\"@type\":\"SearchAction\"," &
-                            "\"target\":\"" & searchEsc & "\"," &
-                            "\"query-input\":\"required name=search_term_string\"" &
-                        "}" &
+    Dim json As String =
+        "{" &
+            """@context"":""https://schema.org""," &
+            """@graph"":[" &
+                "{" &
+                    """@type"":""Organization""," &
+                    """@id"":""" & siteEsc & "#org""," &
+                    """name"":""" & nameEsc & """," &
+                    """url"":""" & siteEsc & """" &
+                "}," &
+                "{" &
+                    """@type"":""WebSite""," &
+                    """@id"":""" & siteEsc & "#website""," &
+                    """name"":""" & nameEsc & """," &
+                    """url"":""" & siteEsc & """," &
+                    """potentialAction"":{" &
+                        """@type"":""SearchAction""," &
+                        """target"":""" & searchEsc & """," &
+                        """query-input"":""required name=search_term_string""" &
                     "}" &
-                "]" &
-            "}"
+                "}" &
+            "]" &
+        "}"
 
-        Return json
+    Return json
     End Function
 
     Private Function JsonEscape(ByVal s As String) As String
