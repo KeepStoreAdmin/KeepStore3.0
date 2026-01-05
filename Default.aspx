@@ -647,26 +647,34 @@
     Protected Function SlideLinkStart(ByVal linkObj As Object) As String
     Dim u As String = ""
 
-    If linkObj Is Nothing OrElse Convert.IsDBNull(linkObj) Then Return ""
+    If linkObj IsNot Nothing AndAlso linkObj IsNot DBNull.Value Then
+        u = linkObj.ToString().Trim()
+    End If
 
-    u = linkObj.ToString().Trim()
     If u = "" Then Return ""
 
-    If u.StartsWith("~/") Then u = ResolveUrl(u)
+    If u.StartsWith("~/") Then
+        u = ResolveUrl(u)
+    End If
 
-        Return "<a href=""" & SafeAttr(u) & """>"
-    nd Function
+    Return "<a href=""" & SafeAttr(u) & """>"
+    End Function
 
     Protected Function SlideLinkEnd(ByVal linkObj As Object) As String
     Dim u As String = ""
 
-    If linkObj Is Nothing OrElse Convert.IsDBNull(linkObj) Then Return ""
+    If linkObj IsNot Nothing AndAlso linkObj IsNot DBNull.Value Then
+        u = linkObj.ToString().Trim()
+    End If
 
-    u = linkObj.ToString().Trim()
     If u = "" Then Return ""
-
     Return "</a>"
-        End Function
+    End Function
+
+    Private Function SafeAttr(ByVal s As String) As String
+    If String.IsNullOrEmpty(s) Then Return ""
+    Return System.Web.HttpUtility.HtmlAttributeEncode(s)
+    End Function
 
         Function SafeFileNameOnly(ByVal fileObj As Object) As String
             If fileObj Is Nothing OrElse IsDBNull(fileObj) Then Return ""
