@@ -540,4 +540,3 @@ Protected Function ResolveMediaUrl(rawPath As Object, defaultFolderInPublic As S
     End Function
 
 End Class
-
