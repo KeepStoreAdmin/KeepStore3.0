@@ -644,17 +644,28 @@
             Return ""
         End Function
 
-        Function SlideLinkStart(ByVal linkObj As Object) As String
-            Dim u As String = SafeUrl(linkObj)
-            If u = "" Then Return ""
-            If u.StartsWith("~/") Then u = ResolveUrl(u)
-            Return "<a href=\"" & SafeAttr(u) & "\">"
-        End Function
+    Protected Function SlideLinkStart(ByVal linkObj As Object) As String
+    Dim u As String = ""
 
-        Function SlideLinkEnd(ByVal linkObj As Object) As String
-            Dim u As String = SafeUrl(linkObj)
-            If u = "" Then Return ""
-            Return "</a>"
+    If linkObj Is Nothing OrElse Convert.IsDBNull(linkObj) Then Return ""
+
+    u = linkObj.ToString().Trim()
+    If u = "" Then Return ""
+
+    If u.StartsWith("~/") Then u = ResolveUrl(u)
+
+        Return "<a href=""" & SafeAttr(u) & """>"
+    nd Function
+
+    Protected Function SlideLinkEnd(ByVal linkObj As Object) As String
+    Dim u As String = ""
+
+    If linkObj Is Nothing OrElse Convert.IsDBNull(linkObj) Then Return ""
+
+    u = linkObj.ToString().Trim()
+    If u = "" Then Return ""
+
+    Return "</a>"
         End Function
 
         Function SafeFileNameOnly(ByVal fileObj As Object) As String
