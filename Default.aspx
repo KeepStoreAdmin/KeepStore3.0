@@ -94,33 +94,39 @@
     runat="server"
     ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
     ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-    SelectCommand="SELECT sp.id,
-                          sp.slideshowId,
-                          sp.orderPosition,
-                          sp.image,
-                          sp.link,
-                          IFNULL(sp.caption,'') AS content,
-                          '' AS target
-                   FROM slideshows_parts sp
-                   WHERE sp.slideshowId = (SELECT MAX(id)
-                                           FROM slideshows
-                                           WHERE placeholder = 'defaultPage'
-                                             AND aziendeId = 1)
-                     AND (CASE
-                            WHEN CAST(sp.startDate AS CHAR(10)) = '0000-00-00'
-                              THEN DATE('1900-01-01')
-                            ELSE sp.startDate
-                          END) <= CURDATE()
-                     AND (CASE
-                            WHEN CAST(sp.stopDate AS CHAR(10)) = '0000-00-00'
-                              THEN DATE('2999-12-31')
-                            ELSE sp.stopDate
-                          END) > CURDATE()
-                   ORDER BY sp.orderPosition">
+    SelectCommand="
+        SELECT 
+            sp.id,
+            sp.slideshowId,
+            sp.orderPosition,
+            sp.image,
+            sp.link,
+            IFNULL(sp.caption,'') AS content,
+            '' AS target
+        FROM slideshows_parts sp
+        WHERE sp.slideshowId = (
+            SELECT MAX(id) 
+            FROM slideshows 
+            WHERE placeholder = 'defaultPage'
+              AND aziendeId = @AziendaID
+        )
+        AND (CASE 
+                WHEN sp.startDate IS NULL OR CAST(sp.startDate AS CHAR(10)) = '0000-00-00' 
+                THEN DATE('1900-01-01') 
+                ELSE sp.startDate 
+             END) <= CURDATE()
+        AND (CASE 
+                WHEN sp.stopDate IS NULL OR CAST(sp.stopDate AS CHAR(10)) = '0000-00-00' 
+                THEN DATE('2999-12-31') 
+                ELSE sp.stopDate 
+             END) > CURDATE()
+        ORDER BY sp.orderPosition
+    ">
     <SelectParameters>
-        <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" />
+        <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" DefaultValue="1" />
     </SelectParameters>
-                                </asp:SqlDataSource>
+</asp:SqlDataSource>
+
 
                                 <div id="Slide_Show_Container" class="slideshow-container" runat="server">
                                     <asp:Repeater ID="slideshowItems" runat="server" DataSourceID="slideShow">
@@ -638,17 +644,28 @@
             Return ""
         End Function
 
-        Function SlideLinkStart(ByVal linkObj As Object) As String
-            Dim u As String = SafeUrl(linkObj)
-            If u = "" Then Return ""
-            If u.StartsWith("~/") Then u = ResolveUrl(u)
-            Return "<a href=\"" & SafeAttr(u) & "\">"
-        End Function
+    Protected Function SlideLinkStart(ByVal linkObj As Object) As String
+    Dim u As String = ""
 
-        Function SlideLinkEnd(ByVal linkObj As Object) As String
-            Dim u As String = SafeUrl(linkObj)
-            If u = "" Then Return ""
-            Return "</a>"
+    If linkObj Is Nothing OrElse Convert.IsDBNull(linkObj) Then Return ""
+
+    u = linkObj.ToString().Trim()
+    If u = "" Then Return ""
+
+    If u.StartsWith("~/") Then u = ResolveUrl(u)
+
+        Return "<a href=""" & SafeAttr(u) & """>"
+    nd Function
+
+    Protected Function SlideLinkEnd(ByVal linkObj As Object) As String
+    Dim u As String = ""
+
+    If linkObj Is Nothing OrElse Convert.IsDBNull(linkObj) Then Return ""
+
+    u = linkObj.ToString().Trim()
+    If u = "" Then Return ""
+
+    Return "</a>"
         End Function
 
         Function SafeFileNameOnly(ByVal fileObj As Object) As String
