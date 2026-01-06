@@ -1,15 +1,16 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
 
+<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
+    Home
+</asp:Content>
+
+
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
     <%-- ============================================================
          Default.aspx (HOME) - Layout FULL-WIDTH con banner + sezioni
          NOTE: mantiene logica e controlli esistenti
     ============================================================ --%>
 
-    <!-- il resto del tuo HeadContent -->
-</asp:Content>
-
-<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
     <style type="text/css">
         /* ============================================================
            Home (Sprint 2 - HOME 1)
