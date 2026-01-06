@@ -1,9 +1,10 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
 
-<%-- ============================================================
+<!-- ============================================================
      Default.aspx (HOME) - Layout FULL-WIDTH con banner + sezioni
      NOTE: mantiene logica e controlli esistenti
-     ============================================================ --%>
+     ============================================================ -->
+
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
     Home
 </asp:Content>
@@ -670,7 +671,7 @@
             u = SafeUrl(u)
             If u = "" Then Return ""
 
-            If u.StartsWith("~/"c) Then
+            If u.StartsWith("~/") Then
                 u = ResolveUrl(u)
             End If
 

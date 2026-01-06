@@ -1,8 +1,3 @@
-Imports System
-Imports System.Data
-Imports System.Configuration
-Imports System.Globalization
-Imports System.Web
 Imports MySql.Data.MySqlClient
 
 Partial Class _Default
@@ -302,36 +297,33 @@ Partial Class _Default
         Return Nothing
     End Function
 
-    ' ============================
-    ' SEO COMPLETO DELLA HOME
-    ' ============================
+    ' ==========================================================
+    ' SEO / AI-READINESS (HOME)
+    ' ==========================================================
     Private Sub EnsureHomeSeo()
-    Try
-        If Page Is Nothing OrElse Page.Header Is Nothing Then Exit Sub
+        Try
+            If Page Is Nothing OrElse Page.Header Is Nothing Then Exit Sub
 
-        Dim baseUrl As String = Request.Url.GetLeftPart(UriPartial.Authority)
-        Dim canonical As String = baseUrl & ResolveUrl("~/Default.aspx")
+            Dim baseUrl As String = Request.Url.GetLeftPart(UriPartial.Authority)
+            Dim canonical As String = baseUrl & ResolveUrl("~/Default.aspx")
 
-        AddOrReplaceCanonical(canonical)
+            AddOrReplaceCanonical(canonical)
 
-        Dim azienda As String = Convert.ToString(Session("AziendaDescrizione")).Trim()
-        If String.IsNullOrEmpty(azienda) Then azienda = "Keepstore"
+            Dim azienda As String = Convert.ToString(Session("AziendaDescrizione")).Trim()
+            If String.IsNullOrEmpty(azienda) Then azienda = "Keepstore"
 
-        Dim descr As String =
-            "Acquista online su " & azienda &
-            ": nuovi arrivi, articoli in vetrina e i più venduti. Spedizioni rapide e offerte aggiornate."
+            Dim descr As String = "Acquista online su " & azienda & ": nuovi arrivi, articoli in vetrina e i più venduti. Spedizioni rapide e offerte aggiornate."
+            If descr.Length > 160 Then descr = descr.Substring(0, 157) & "..."
 
-        If descr.Length > 160 Then descr = descr.Substring(0, 157) & "..."
+            AddOrReplaceMeta("description", descr)
+            AddOrReplaceMeta("robots", "index,follow")
 
-        AddOrReplaceMeta("description", descr)
-        AddOrReplaceMeta("robots", "index,follow")
+            Dim jsonLd As String = BuildHomeJsonLd(baseUrl, azienda)
+            AddOrReplaceJsonLd("ldjson_home", jsonLd)
 
-        Dim jsonLd As String = BuildHomeJsonLd(baseUrl, azienda)
-        AddOrReplaceJsonLd("ldjson_home", jsonLd)
-
-    Catch
-        ' SEO non deve mai bloccare la pagina
-    End Try
+        Catch
+            ' no-op: SEO non deve mai bloccare la pagina
+        End Try
     End Sub
 
     Private Sub AddOrReplaceCanonical(ByVal href As String)
@@ -378,383 +370,86 @@ Partial Class _Default
     End Sub
 
     ' STEP6: JSON-LD realmente emesso in <head> (prima era vuoto)
-    ' ============================
-    ' INSERIMENTO JSON-LD NEL <HEAD>
-    ' ============================
     Private Sub AddOrReplaceJsonLd(ByVal controlId As String, ByVal json As String)
-    Try
-        If Page Is Nothing OrElse Page.Header Is Nothing Then Exit Sub
+        Try
+            If Page Is Nothing OrElse Page.Header Is Nothing Then Exit Sub
 
-        Dim lit As System.Web.UI.WebControls.Literal = TryCast(Page.Header.FindControl(controlId), System.Web.UI.WebControls.Literal)
-        If lit Is Nothing Then
-            Dim existing As System.Web.UI.Control = Page.Header.FindControl(controlId)
-            If existing IsNot Nothing Then Page.Header.Controls.Remove(existing)
+            Dim lit As System.Web.UI.WebControls.Literal = TryCast(Page.Header.FindControl(controlId), System.Web.UI.WebControls.Literal)
+            If lit Is Nothing Then
+                Dim existing As System.Web.UI.Control = Page.Header.FindControl(controlId)
+                If existing IsNot Nothing Then Page.Header.Controls.Remove(existing)
 
-            lit = New System.Web.UI.WebControls.Literal()
-            lit.ID = controlId
-            lit.Mode = System.Web.UI.WebControls.LiteralMode.PassThrough
-            Page.Header.Controls.Add(lit)
-        End If
+                lit = New System.Web.UI.WebControls.Literal()
+                lit.ID = controlId
+                lit.Mode = System.Web.UI.WebControls.LiteralMode.PassThrough
+                Page.Header.Controls.Add(lit)
+            End If
 
-        If json Is Nothing Then json = ""
-        json = json.Trim()
+            If json Is Nothing Then json = ""
+            json = json.Trim()
 
-        If json.Length = 0 Then
-            lit.Text = ""
-            Exit Sub
-        End If
+            If json.Length = 0 Then
+                lit.Text = ""
+                Exit Sub
+            End If
 
-        ' hardening: evita chiusure </script> involontarie
-        json = json.Replace("</", "<\/")
+            ' hardening: evita chiusure </script> involontarie
+            json = json.Replace("</", "<\/")
 
-        lit.Text = "<script type=""application/ld+json"">" & json & "</script>"
+            lit.Text = "<script type=\"application/ld+json\">" & json & "</script>"
 
-    Catch
-        ' Non bloccare la home
-    End Try
+        Catch
+            ' Non bloccare la home
+        End Try
     End Sub
 
-    ' ==========================================================
-    ' COSTRUZIONE JSON ESCAPE - DINAMICO DA DB (SEO / AI-READINESS) - robusto per JSON-LD dentro <script>
-    ' ==========================================================
-    Private Function JsonEscape(ByVal s As String) As String
-    If String.IsNullOrEmpty(s) Then Return ""
+    Private Function BuildHomeJsonLd(ByVal baseUrl As String, ByVal azienda As String) As String
+        Dim siteUrl As String = baseUrl & ResolveUrl("~/")
+        Dim searchUrl As String = baseUrl & ResolveUrl("~/articoli.aspx?q={search_term_string}")
 
-    ' Normalizza i fine-linea (CRLF/CR -> LF) per coerenza
-    Dim normalized As String = s.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf)
+        Dim nameEsc As String = JsonEscape(azienda)
+        Dim siteEsc As String = JsonEscape(siteUrl)
+        Dim searchEsc As String = JsonEscape(searchUrl)
 
-    ' Escape robusto
-    Dim t As String = System.Web.HttpUtility.JavaScriptStringEncode(normalized)
-
-    ' Hardening: evita chiusure involontarie del tag <script> in casi limite
-    t = t.Replace("</", "<\/")
-
-    Return t
-End Function
-
-
-' ============================
-' COSTRUZIONE JSON-LD HOME (DINAMICO DA DB - MySQL)
-' ============================
-Private Function BuildHomeJsonLd(ByVal baseUrl As String, ByVal aziendaSession As String) As String
-
-    Dim siteUrl As String = baseUrl & ResolveUrl("~/")
-    Dim searchUrl As String = baseUrl & ResolveUrl("~/articoli.aspx?q={search_term_string}")
-
-    ' Logo: prova da Session("Logo"), altrimenti fallback
-    Dim logoPath As String = ""
-    If Session IsNot Nothing AndAlso Session("Logo") IsNot Nothing Then
-        logoPath = Convert.ToString(Session("Logo"))
-    End If
-
-    Dim logoUrl As String
-    If Not String.IsNullOrWhiteSpace(logoPath) Then
-        If logoPath.StartsWith("http", StringComparison.OrdinalIgnoreCase) Then
-            logoUrl = logoPath
-        Else
-            logoUrl = baseUrl & ResolveUrl(logoPath)
-        End If
-    Else
-        logoUrl = baseUrl & ResolveUrl("~/Public/images/nofoto.gif")
-    End If
-
-    Dim connString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-
-    Dim nListino As Integer = 0
-    If Session IsNot Nothing AndAlso Session("listino") IsNot Nothing Then
-        Integer.TryParse(Convert.ToString(Session("listino")), nListino)
-    End If
-
-    ' --- DATI AZIENDA ---
-    Dim ragioneSociale As String = aziendaSession
-    Dim indirizzo As String = ""
-    Dim cap As String = ""
-    Dim citta As String = ""
-    Dim provincia As String = ""
-    Dim paese As String = ""
-    Dim telefono As String = ""
-    Dim email As String = ""
-
-    Dim categoryItems As New List(Of String)()
-    Dim productItems As New List(Of String)()
-    Dim faqItems As New List(Of String)()
-
-    Using cn As New MySqlConnection(connString)
-        cn.Open()
-
-        ' ============================
-        ' 1) AZIENDA
-        ' ============================
-        Dim sqlAzienda As String =
-            "SELECT RagioneSociale, Indirizzo, Cap, Citta, Provincia, FE_IdPaese, Telefono, email " &
-            "FROM aziende " &
-            "LIMIT 1;"
-
-        Using cmd As New MySqlCommand(sqlAzienda, cn)
-            Using dr As MySqlDataReader = cmd.ExecuteReader()
-                If dr.Read() Then
-                    If Not dr.IsDBNull(0) Then ragioneSociale = Convert.ToString(dr(0))
-                    If Not dr.IsDBNull(1) Then indirizzo = Convert.ToString(dr(1))
-                    If Not dr.IsDBNull(2) Then cap = Convert.ToString(dr(2))
-                    If Not dr.IsDBNull(3) Then citta = Convert.ToString(dr(3))
-                    If Not dr.IsDBNull(4) Then provincia = Convert.ToString(dr(4))
-                    If Not dr.IsDBNull(5) Then paese = Convert.ToString(dr(5)) ' FE_IdPaese
-                    If Not dr.IsDBNull(6) Then telefono = Convert.ToString(dr(6))
-                    If Not dr.IsDBNull(7) Then email = Convert.ToString(dr(7)) ' email
-                End If
-            End Using
-        End Using
-
-        If String.IsNullOrWhiteSpace(ragioneSociale) Then ragioneSociale = aziendaSession
-        If String.IsNullOrWhiteSpace(ragioneSociale) Then ragioneSociale = "Keepstore"
-
-        ' ============================
-        ' 2) CATEGORIE
-        ' ============================
-        Dim sqlCategorie As String =
-            "SELECT id, Descrizione " &
-            "FROM categorie " &
-            "ORDER BY ordinamento;"
-
-        Using cmd As New MySqlCommand(sqlCategorie, cn)
-            Using dr As MySqlDataReader = cmd.ExecuteReader()
-                Dim pos As Integer = 1
-                While dr.Read()
-                    Dim catId As Integer = If(dr.IsDBNull(0), 0, Convert.ToInt32(dr(0)))
-                    Dim catNome As String = If(dr.IsDBNull(1), "", Convert.ToString(dr(1)))
-
-                    If catId > 0 AndAlso Not String.IsNullOrWhiteSpace(catNome) Then
-                        Dim catUrl As String = siteUrl & "articoli.aspx?ct=" & catId.ToString()
-                        categoryItems.Add(
-                            "{" &
-                                """@type"":""ListItem""," &
-                                """position"":" & pos & "," &
-                                """name"":""" & JsonEscape(catNome) & """," &
-                                """url"":""" & JsonEscape(catUrl) & """" &
-                            "}"
-                        )
-                        pos += 1
-                    End If
-                End While
-            End Using
-        End Using
-
-        ' ============================
-        ' 3) PRODOTTI (articoli + listini + giacenze)
-        ' ============================
-        Dim sqlProdotti As String =
-            "SELECT " &
-            "  a.id, a.Descrizione1, a.Img1, a.Codice, a.Ean, " &
-            "  COALESCE(al.PrezzoIvato, al.Prezzo, 0) AS PrezzoOut, " &
-            "  COALESCE(SUM(ag.Giacenza), 0) AS Qty " &
-            "FROM articoli a " &
-            "LEFT JOIN articoli_listini al ON al.ArticoliId = a.id AND al.NListino = @listino " &
-            "LEFT JOIN articoli_giacenze ag ON ag.ArticoliId = a.id " &
-            "WHERE a.Abilitato = 1 " &
-            "GROUP BY a.id, a.Descrizione1, a.Img1, a.Codice, a.Ean, al.PrezzoIvato, al.Prezzo " &
-            "ORDER BY a.id DESC " &
-            "LIMIT 20;"
-
-        Using cmd As New MySqlCommand(sqlProdotti, cn)
-            cmd.Parameters.Add("@listino", MySqlDbType.Int32).Value = nListino
-
-            Using dr As MySqlDataReader = cmd.ExecuteReader()
-                While dr.Read()
-                    Dim idArt As Integer = If(dr.IsDBNull(0), 0, Convert.ToInt32(dr(0)))
-                    Dim descr As String = If(dr.IsDBNull(1), "", Convert.ToString(dr(1)))
-                    Dim img As String = If(dr.IsDBNull(2), "", Convert.ToString(dr(2)))
-                    Dim codice As String = If(dr.IsDBNull(3), "", Convert.ToString(dr(3)))
-                    Dim ean As String = If(dr.IsDBNull(4), "", Convert.ToString(dr(4)))
-
-                    Dim prezzoOut As Decimal = 0D
-                    If Not dr.IsDBNull(5) Then prezzoOut = Convert.ToDecimal(dr(5))
-
-                    Dim qty As Decimal = 0D
-                    If Not dr.IsDBNull(6) Then qty = Convert.ToDecimal(dr(6))
-
-                    If idArt <= 0 OrElse String.IsNullOrWhiteSpace(descr) Then Continue While
-
-                    Dim prodUrl As String = siteUrl & "articolo.aspx?id=" & idArt.ToString()
-
-                    Dim imgUrl As String
-                    If Not String.IsNullOrWhiteSpace(img) Then
-                        imgUrl = siteUrl & "Public/images/articoli/" & img
-                    Else
-                        imgUrl = siteUrl & "Public/images/nofoto.gif"
-                    End If
-
-                    Dim availability As String = If(qty > 0D, "https://schema.org/InStock", "https://schema.org/OutOfStock")
-                    Dim priceStr As String = prezzoOut.ToString("0.00", CultureInfo.InvariantCulture)
-
-                    Dim skuValue As String = ""
-                    If Not String.IsNullOrWhiteSpace(codice) Then
-                        skuValue = codice
-                    ElseIf Not String.IsNullOrWhiteSpace(ean) Then
-                        skuValue = ean
-                    End If
-
-                    Dim skuJson As String = ""
-                    If Not String.IsNullOrWhiteSpace(skuValue) Then
-                        skuJson = ",""sku"":""" & JsonEscape(skuValue) & """"
-                    End If
-
-                    productItems.Add(
-                        "{" &
-                            """@type"":""Product""," &
-                            """@id"":""" & JsonEscape(prodUrl) & "#product""," &
-                            """name"":""" & JsonEscape(descr) & """," &
-                            """image"":""" & JsonEscape(imgUrl) & """," &
-                            """url"":""" & JsonEscape(prodUrl) & """" &
-                            skuJson & "," &
-                            """offers"":{" &
-                                """@type"":""Offer""," &
-                                """price"":""" & priceStr & """," &
-                                """priceCurrency"":""EUR""," &
-                                """availability"":""" & availability & """," &
-                                """url"":""" & JsonEscape(prodUrl) & """" &
-                            "}" &
-                        "}"
-                    )
-                End While
-            End Using
-        End Using
-
-    End Using ' cn
-
-    ' ============================
-    ' 4) FAQ (statiche)
-    ' ============================
-    Dim faqs As New List(Of Tuple(Of String, String)) From {
-        Tuple.Create("Come funziona la spedizione?", "Offriamo spedizioni rapide con corriere espresso in tutta Italia."),
-        Tuple.Create("Posso restituire un prodotto?", "Sì, hai 14 giorni di tempo per effettuare il reso secondo le nostre condizioni."),
-        Tuple.Create("Quali metodi di pagamento accettate?", "Accettiamo carte di credito, PayPal e altri metodi sicuri.")
-    }
-
-    For Each f In faqs
-        faqItems.Add(
+        Dim json As String =
             "{" &
-                """@type"":""Question""," &
-                """name"":""" & JsonEscape(f.Item1) & """," &
-                """acceptedAnswer"":{" &
-                    """@type"":""Answer""," &
-                    """text"":""" & JsonEscape(f.Item2) & """" &
-                "}" &
+                "\"@context\":\"https://schema.org\"," &
+                "\"@graph\":[" &
+                    "{" &
+                        "\"@type\":\"Organization\"," &
+                        "\"@id\":\"" & siteEsc & "#org\"," &
+                        "\"name\":\"" & nameEsc & "\"," &
+                        "\"url\":\"" & siteEsc & "\"" &
+                    "}," &
+                    "{" &
+                        "\"@type\":\"WebSite\"," &
+                        "\"@id\":\"" & siteEsc & "#website\"," &
+                        "\"name\":\"" & nameEsc & "\"," &
+                        "\"url\":\"" & siteEsc & "\"," &
+                        "\"potentialAction\":{" &
+                            "\"@type\":\"SearchAction\"," &
+                            "\"target\":\"" & searchEsc & "\"," &
+                            "\"query-input\":\"required name=search_term_string\"" &
+                        "}" &
+                    "}" &
+                "]" &
             "}"
-        )
-    Next
 
-    ' ============================
-    ' 5) @graph finale
-    ' ============================
-    Dim graphParts As New List(Of String)()
+        Return json
+    End Function
 
-    Dim siteEsc As String = JsonEscape(siteUrl)
-    Dim nameEsc As String = JsonEscape(ragioneSociale)
+    Private Function JsonEscape(ByVal s As String) As String
+        If s Is Nothing Then Return ""
 
-    graphParts.Add(
-        "{" &
-            """@type"":""Organization""," &
-            """@id"":""" & siteEsc & "#org""," &
-            """name"":""" & nameEsc & """," &
-            """url"":""" & siteEsc & """," &
-            """logo"":""" & JsonEscape(logoUrl) & """" &
-        "}"
-    )
+        Dim t As String = s
+        Dim bs As String = ChrW(92).ToString() ' backslash
+        Dim dq As String = ChrW(34).ToString() ' double quote
 
-    Dim emailJson As String = ""
-    If Not String.IsNullOrWhiteSpace(email) Then
-        emailJson = ",""email"":""" & JsonEscape(email) & """"
-    End If
+        t = t.Replace(bs, bs & bs) ' backslash -> double backslash
+        t = t.Replace(dq, bs & dq) ' quote -> escaped quote
+        t = t.Replace(vbCrLf, bs & "n").Replace(vbCr, bs & "n").Replace(vbLf, bs & "n")
 
-    graphParts.Add(
-        "{" &
-            """@type"":""LocalBusiness""," &
-            """@id"":""" & siteEsc & "#local""," &
-            """name"":""" & nameEsc & """," &
-            """url"":""" & siteEsc & """," &
-            """image"":""" & JsonEscape(logoUrl) & """," &
-            """telephone"":""" & JsonEscape(telefono) & """" &
-            emailJson & "," &
-            """address"":{" &
-                """@type"":""PostalAddress""," &
-                """streetAddress"":""" & JsonEscape(indirizzo) & """," &
-                """postalCode"":""" & JsonEscape(cap) & """," &
-                """addressLocality"":""" & JsonEscape(citta) & """," &
-                """addressRegion"":""" & JsonEscape(provincia) & """," &
-                """addressCountry"":""" & JsonEscape(paese) & """" &
-            "}" &
-        "}"
-    )
-
-    graphParts.Add(
-        "{" &
-            """@type"":""WebSite""," &
-            """@id"":""" & siteEsc & "#website""," &
-            """name"":""" & nameEsc & """," &
-            """url"":""" & siteEsc & """," &
-            """publisher"":{""@id"":""" & siteEsc & "#org""}," &
-            """potentialAction"":{" &
-                """@type"":""SearchAction""," &
-                """target"":""" & JsonEscape(searchUrl) & """," &
-                """query-input"":""required name=search_term_string""" &
-            "}" &
-        "}"
-    )
-
-    graphParts.Add(
-        "{" &
-            """@type"":""WebPage""," &
-            """@id"":""" & siteEsc & "#webpage""," &
-            """url"":""" & siteEsc & """," &
-            """name"":""" & nameEsc & " - Home""," &
-            """isPartOf"":{""@id"":""" & siteEsc & "#website""}," &
-            """about"":{""@id"":""" & siteEsc & "#org""}," &
-            """inLanguage"":""it-IT""" &
-        "}"
-    )
-
-    graphParts.Add(
-        "{" &
-            """@type"":""BreadcrumbList""," &
-            """@id"":""" & siteEsc & "#breadcrumb""," &
-            """itemListElement"":[{" &
-                """@type"":""ListItem""," &
-                """position"":1," &
-                """name"":""Home""," &
-                """item"":""" & siteEsc & """" &
-            "}]" &
-        "}"
-    )
-
-    graphParts.Add(
-        "{" &
-            """@type"":""ItemList""," &
-            """@id"":""" & siteEsc & "#categories""," &
-            """name"":""Categorie principali""," &
-            """itemListElement"":[" & String.Join(",", categoryItems.ToArray()) & "]" &
-        "}"
-    )
-
-    graphParts.Add(
-        "{" &
-            """@type"":""FAQPage""," &
-            """@id"":""" & siteEsc & "#faq""," &
-            """mainEntity"":[" & String.Join(",", faqItems.ToArray()) & "]" &
-        "}"
-    )
-
-    For Each p As String In productItems
-        graphParts.Add(p)
-    Next
-
-    Dim json As String =
-        "{" &
-            """@context"":""https://schema.org""," &
-            """@graph"":[" & String.Join(",", graphParts.ToArray()) & "]" &
-        "}"
-
-    Return json
-
+        Return t
     End Function
 
     ' ===========================
