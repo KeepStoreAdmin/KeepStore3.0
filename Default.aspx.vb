@@ -1,4 +1,6 @@
 Imports MySql.Data.MySqlClient
+Imports System.Data
+Imports System.Configuration
 
 Partial Class _Default
     Inherits System.Web.UI.Page
@@ -426,6 +428,37 @@ End Sub
         meta.Content = content
         Page.Header.Controls.Add(meta)
     End Sub
+    ' Wrapper: meta name="..."
+    Private Sub AddOrReplaceMetaName(ByVal name As String, ByVal content As String)
+        AddOrReplaceMeta(name, content)
+    End Sub
+
+    ' Wrapper: meta property="..." (OpenGraph, etc.)
+    Private Sub AddOrReplaceMetaProperty(ByVal [property] As String, ByVal content As String)
+        If Page.Header Is Nothing Then Exit Sub
+
+        ' remove existing meta with matching property attribute
+        Dim toRemove As New System.Collections.Generic.List(Of Control)()
+        For Each c As Control In Page.Header.Controls
+            Dim m As HtmlMeta = TryCast(c, HtmlMeta)
+            If m IsNot Nothing Then
+                Dim p As String = ""
+                If m.Attributes("property") IsNot Nothing Then p = m.Attributes("property").ToString()
+                If String.Equals(p, [property], StringComparison.OrdinalIgnoreCase) Then
+                    toRemove.Add(c)
+                End If
+            End If
+        Next
+        For Each c As Control In toRemove
+            Page.Header.Controls.Remove(c)
+        Next
+
+        Dim meta As New HtmlMeta()
+        meta.Attributes("property") = [property]
+        meta.Content = content
+        Page.Header.Controls.Add(meta)
+    End Sub
+
 
     ' STEP6: JSON-LD realmente emesso in <head> (prima era vuoto)
 
