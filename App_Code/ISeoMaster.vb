@@ -1,7 +1,8 @@
 Option Strict On
+Option Explicit On
 
-' Interfaccia minima per far esporre al MasterPage (Page.master) un payload JSON-LD
-' che verrà iniettato nel <head> tramite l'asp:Literal litSeoJsonLd.
+' Minimal interface exposed by the MasterPage (Page.master) to receive JSON-LD payloads
+' (injected in <head> through an <asp:Literal ID="litSeoJsonLd">).
 Public Interface ISeoMaster
     Property SeoJsonLd As String
 End Interface
