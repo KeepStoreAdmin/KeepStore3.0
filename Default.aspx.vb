@@ -310,17 +310,48 @@ Partial Class _Default
     Private Function JsonEscape(ByVal s As String) As String
     If String.IsNullOrEmpty(s) Then Return ""
 
-    ' Normalizza i fine-linea (CRLF/CR -> LF)
-    Dim normalized As String = s.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf)
+    Dim sb As New System.Text.StringBuilder(s.Length + 16)
+    Dim i As Integer = 0
 
-    ' Escape robusto per stringhe JSON/JS (include caratteri di controllo)
-    Dim encoded As String = System.Web.HttpUtility.JavaScriptStringEncode(normalized)
+    While i < s.Length
+        Dim ch As Char = s.Chars(i)
 
-    ' Hardening minimo quando il JSON finisce in <script> (evita chiusure involontarie)
-    encoded = encoded.Replace("</", "<\/")
+        Select Case ch
+            Case "\"c
+                sb.Append("\\")
+            Case """"c
+                sb.Append("\""")
+            Case ControlChars.Tab
+                sb.Append("\t")
+            Case ControlChars.Back
+                sb.Append("\b")
+            Case ControlChars.FormFeed
+                sb.Append("\f")
+            Case ControlChars.Cr
+                ' CRLF o CR -> \n
+                sb.Append("\n")
+                If (i + 1 < s.Length) AndAlso s.Chars(i + 1) = ControlChars.Lf Then
+                    i += 1 ' salta LF dopo CR
+                End If
+            Case ControlChars.Lf
+                sb.Append("\n")
+            Case Else
+                Dim code As Integer = AscW(ch)
+                If code < 32 Then
+                    ' altri caratteri di controllo -> \uXXXX
+                    sb.Append("\u")
+                    sb.Append(code.ToString("x4"))
+                Else
+                    sb.Append(ch)
+                End If
+        End Select
 
-    Return encoded
+        i += 1
+    End While
+
+    Return sb.ToString()
     End Function
+
 
 ' ============================
 ' COSTRUZIONE JSON-LD HOME (DINAMICO DA DB)
