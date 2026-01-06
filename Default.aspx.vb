@@ -303,30 +303,52 @@ Partial Class _Default
     ' SEO / AI-READINESS (HOME)
     ' ==========================================================
     Private Sub EnsureHomeSeo()
-        Try
-            If Page Is Nothing OrElse Page.Header Is Nothing Then Exit Sub
+    ' ============================================================
+    ' SEO HOME (title, meta, canonical, JSON-LD)
+    ' ============================================================
+    Dim siteName As String = SafeSessionString("AziendaNome", "KeepStore")
+    Dim baseUrl As String = SafeSessionString("AziendaUrl", Request.Url.GetLeftPart(UriPartial.Authority) & ResolveUrl("~/"))
+    If Not baseUrl.EndsWith("/") Then baseUrl &= "/"
 
-            Dim baseUrl As String = Request.Url.GetLeftPart(UriPartial.Authority)
-            Dim canonical As String = baseUrl & ResolveUrl("~/Default.aspx")
+    Dim title As String = siteName & " | Computer e Telefonia - Offerte Online"
+    Dim descr As String = "Vendita online e assistenza tecnica per computer, smartphone, periferiche e consumabili. Spedizione rapida e pagamenti sicuri."
 
-            AddOrReplaceCanonical(canonical)
+    ' Title (placeholder in master + Page.Title per compatibilità)
+    Page.Title = title
+    If litTitleContent IsNot Nothing Then
+        litTitleContent.Text = Server.HtmlEncode(title)
+    End If
 
-            Dim azienda As String = Convert.ToString(Session("AziendaDescrizione")).Trim()
-            If String.IsNullOrEmpty(azienda) Then azienda = "Keepstore"
+    ' Canonical
+    Dim canonical As String = baseUrl
+    AddOrReplaceCanonical(canonical)
 
-            Dim descr As String = "Acquista online su " & azienda & ": nuovi arrivi, articoli in vetrina e i più venduti. Spedizioni rapide e offerte aggiornate."
-            If descr.Length > 160 Then descr = descr.Substring(0, 157) & "..."
+    ' Meta principali
+    AddOrReplaceMeta("description", descr)
+    AddOrReplaceMeta("robots", "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1")
 
-            AddOrReplaceMeta("description", descr)
-            AddOrReplaceMeta("robots", "index,follow")
+    ' OpenGraph (minimo indispensabile)
+    Dim logoUrl As String = SafeSessionString("AziendaLogo", "")
+    If Not String.IsNullOrEmpty(logoUrl) Then
+        If Not logoUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase) Then
+            logoUrl = baseUrl.TrimEnd("/"c) & "/" & logoUrl.TrimStart("/"c)
+        End If
+    End If
 
-            Dim jsonLd As String = BuildHomeJsonLd(baseUrl, azienda)
-            AddOrReplaceJsonLd("ldjson_home", jsonLd)
+    SeoBuilder.ApplyOpenGraph(Me, title, descr, canonical, logoUrl)
 
-        Catch
-            ' no-op: SEO non deve mai bloccare la pagina
-        End Try
-    End Sub
+    ' JSON-LD avanzato (centralizzato)
+    Dim jsonLdScript As String = SeoBuilder.BuildHomeJsonLd(Me, title, descr, canonical, logoUrl)
+
+    Dim seoMaster As ISeoMaster = TryCast(Me.Master, ISeoMaster)
+    If seoMaster IsNot Nothing Then
+        seoMaster.SeoJsonLd = jsonLdScript
+    Else
+        ' Fallback: se la master non implementa ISeoMaster, lo iniettiamo comunque in head
+        AddOrReplaceJsonLd(jsonLdScript, True)
+    End If
+End Sub
+
 
     Private Sub AddOrReplaceCanonical(ByVal href As String)
         Dim toRemove As New System.Collections.Generic.List(Of System.Web.UI.Control)()
@@ -404,6 +426,26 @@ Partial Class _Default
             ' Non bloccare la home
         End Try
     End Sub
+Private Sub AddOrReplaceJsonLd(ByVal jsonOrScript As String, ByVal alreadyScript As Boolean)
+    ' alreadyScript=True: jsonOrScript contiene già il tag <script type="application/ld+json">...</script>
+    ' alreadyScript=False: jsonOrScript contiene solo JSON e il metodo lo wrappa
+    If alreadyScript Then
+        Dim lit As New Literal()
+        lit.Text = jsonOrScript
+        ' rimuove eventuali precedenti ld+json generati in questa pagina
+        For i As Integer = Page.Header.Controls.Count - 1 To 0 Step -1
+            Dim l As Literal = TryCast(Page.Header.Controls(i), Literal)
+            If l IsNot Nothing AndAlso l.Text IsNot Nothing AndAlso l.Text.IndexOf("application/ld+json", StringComparison.OrdinalIgnoreCase) >= 0 Then
+                Page.Header.Controls.RemoveAt(i)
+            End If
+        Next
+        Page.Header.Controls.Add(lit)
+    Else
+        AddOrReplaceJsonLd(jsonOrScript)
+    End If
+End Sub
+
+
 
     Private Function BuildHomeJsonLd(ByVal baseUrl As String, ByVal azienda As String) As String
         Dim siteUrl As String = baseUrl & ResolveUrl("~/")
