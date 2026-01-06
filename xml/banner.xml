@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<banner>
+	<globals 
+		width="600" height="300" 
+		currentItem="0" radius="0" randomize="false" showTimerClock="true"
+		showButtons="true" buttonPosition="left" buttonPadding="1" buttonMargin="15"
+		buttonBgAlpha="0.3" currentButtonBgColor="#FFFFFF" currentButtonFontColor="#000000"
+		cssFile="css/banner.css"
+	/>
+	
+	<item src="Images/Slide_Show/slideshow_0.jpg" timer="10" link="#" target="_self" contentX="100" contentY="150">
+		<content fontColor="336688" fontSize="16" bgColor="000000" bgAlpha="0" spacing="1">
+			<![CDATA[TEST]]>
+		</content>
+		<content fontColor="336688" fontSize="12" bgColor="000000" bgAlpha="0" spacing="1">
+			<![CDATA[TEST2]]>
+		</content>
+	</item>
+	
+	<item src="Images/Slide_Show/slideshow_1.jpg" timer="5" link="articoli.aspx?st=7&ct=57" target="_self" contentX="0" contentY="150">
+	</item>
+	
+	<item src="Images/Slide_Show/slideshow_2.jpg" timer="5" link="articoli.aspx?st=7&ct=58" target="_self" contentX="0" contentY="150">	
+	</item>
+	
+	<item src="Images/Slide_Show/slideshow_3.jpg" timer="5" link="articoli.aspx?st=7&ct=61" target="_self" contentX="0" contentY="150">	
+	</item>
+	
+	<item src="Images/Slide_Show/slideshow_4.jpg" timer="5" link="articolo.aspx?id=17343" target="_self" contentX="0" contentY="150">	
+	</item>
+	
+	<item src="Images/Slide_Show/slideshow_5.jpg" timer="5" link="articolo.aspx?id=15118" target="_self" contentX="0" contentY="150">	
+	</item>
+	
+	<item src="Images/Slide_Show/slideshow_6.jpg" timer="5" link="articolo.aspx?id=17148" target="_self" contentX="0" contentY="150">	
+	</item>
+	
+	<item src="Images/Slide_Show/slideshow_7.jpg" timer="5" link="articolo.aspx?id=13629" target="_self" contentX="0" contentY="150">	
+	</item>
+	
+	<item src="Images/Slide_Show/slideshow_8.jpg" timer="5" link="articolo.aspx?id=14985" target="_self" contentX="0" contentY="150">	
+	</item>
+	
+	<item src="Images/Slide_Show/slideshow_9.jpg" timer="5" link="articoli.aspx?st=33&ct=73" target="_self" contentX="0" contentY="150">
+	</item>
+	
+	<item src="Images/Slide_Show/slideshow_10.jpg" timer="5" link="articoli.aspx?ct=9&mr=&tp=58&gr=0&sg=0&q=&spedgratis=0&inpromo=" target="_self" contentX="0" contentY="150">
+	</item>
+	
+	<item src="Images/Slide_Show/slideshow_11.jpg" timer="5" link="articoli.aspx?ct=63&mr=286&tp=158&gr=0&sg=0&q=&spedgratis=0&inpromo=" target="_self" contentX="0" contentY="150">
+	</item>
+	
+	<item src="Images/Slide_Show/slideshow_12.jpg" timer="5" link="articoli.aspx?st=33&ct=122&mr=281&tp=384&gr=-1&sg=-1" target="_self" contentX="0" contentY="150">
+	</item>
+	
+	<item src="Images/Slide_Show/slideshow_13.jpg" timer="5" link="articoli.aspx?st=33&ct=122&mr=281&tp=384&gr=-1&sg=-1" target="_self" contentX="0" contentY="150">
+	</item>
+</banner>
+
+

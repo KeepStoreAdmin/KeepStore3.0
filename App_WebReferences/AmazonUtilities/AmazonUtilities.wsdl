@@ -1,0 +1,917 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tm="http://microsoft.com/wsdl/mime/textMatching/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:tns="http://www.keepstore.it/" xmlns:s="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" targetNamespace="http://www.keepstore.it/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <wsdl:types>
+    <s:schema elementFormDefault="qualified" targetNamespace="http://www.keepstore.it/">
+      <s:element name="getFeedSubmissionResult">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="awsAccessKeyId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="mwsAuthToken" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="countryCode" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="sellerId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="hachKey" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="FeedSubmissionId" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getFeedSubmissionResultResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getFeedSubmissionResultResult">
+              <s:complexType>
+                <s:sequence>
+                  <s:element ref="s:schema" />
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="setShipperTrakingNumber">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="awsAccessKeyId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="mwsAuthToken" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="countryCode" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="sellerId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="hachKey" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="merchantOrderId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="shipperTrackingNumber" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="carrierName" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="setShipperTrakingNumberResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="setShipperTrakingNumberResult">
+              <s:complexType>
+                <s:sequence>
+                  <s:element ref="s:schema" />
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="setSellerOrderId">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="awsAccessKeyId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="mwsAuthToken" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="countryCode" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="sellerId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="hachKey" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="amazonOrderId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="merchantOrderId" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="setSellerOrderIdResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="setSellerOrderIdResult">
+              <s:complexType>
+                <s:sequence>
+                  <s:element ref="s:schema" />
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getProductCategoryByAsin">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="asin" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="awsAccessKeyId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="mwsAuthToken" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="countryCode" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="sellerId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="hachKey" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getProductCategoryByAsinResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getProductCategoryByAsinResult">
+              <s:complexType>
+                <s:sequence>
+                  <s:element ref="s:schema" />
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getProductByEan">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="ean" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="awsAccessKeyId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="mwsAuthToken" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="countryCode" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="sellerId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="hachKey" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getProductByEanResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getProductByEanResult">
+              <s:complexType>
+                <s:sequence>
+                  <s:element ref="s:schema" />
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getProductByAsin">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="asin" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="awsAccessKeyId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="mwsAuthToken" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="countryCode" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="sellerId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="hachKey" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getProductByAsinResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getProductByAsinResult">
+              <s:complexType>
+                <s:sequence>
+                  <s:element ref="s:schema" />
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getNewOrdersByTimespan">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="awsAccessKeyId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="mwsAuthToken" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="countryCode" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="sellerId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="hachKey" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="daysToCheck" type="s:int" />
+            <s:element minOccurs="1" maxOccurs="1" name="hoursToCheck" type="s:int" />
+            <s:element minOccurs="1" maxOccurs="1" name="minutesToCheck" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getNewOrdersByTimespanResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getNewOrdersByTimespanResult">
+              <s:complexType>
+                <s:sequence>
+                  <s:element ref="s:schema" />
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getNewOrders">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="awsAccessKeyId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="mwsAuthToken" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="countryCode" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="sellerId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="hachKey" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getNewOrdersResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getNewOrdersResult">
+              <s:complexType>
+                <s:sequence>
+                  <s:element ref="s:schema" />
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getOrder">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="awsAccessKeyId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="mwsAuthToken" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="countryCode" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="sellerId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="hachKey" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="amazonOrderId" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getOrderResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getOrderResult">
+              <s:complexType>
+                <s:sequence>
+                  <s:element ref="s:schema" />
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getOrders">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="awsAccessKeyId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="mwsAuthToken" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="countryCode" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="sellerId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="hachKey" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="amazonOrderIdList" type="tns:ArrayOfString" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ArrayOfString">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="string" nillable="true" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="getOrdersResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getOrdersResult">
+              <s:complexType>
+                <s:sequence>
+                  <s:element ref="s:schema" />
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getListOrderItem">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="awsAccessKeyId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="mwsAuthToken" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="countryCode" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="sellerId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="hachKey" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="AmazonOrderId" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getListOrderItemResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getListOrderItemResult">
+              <s:complexType>
+                <s:sequence>
+                  <s:element ref="s:schema" />
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getSignature">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="stringToHash" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="hachKey" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getSignatureResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getSignatureResult" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getWholeBrowsenodesTable">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="countryCodex" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getWholeBrowsenodesTableResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getWholeBrowsenodesTableResult">
+              <s:complexType>
+                <s:sequence>
+                  <s:element ref="s:schema" />
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getBrowsenodesPaths">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="countryCodex" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getBrowsenodesPathsResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getBrowsenodesPathsResult">
+              <s:complexType>
+                <s:sequence>
+                  <s:element ref="s:schema" />
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getBrowsenodesRowByNodePath">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="countryCodex" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="nodePath" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getBrowsenodesRowByNodePathResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getBrowsenodesRowByNodePathResult">
+              <s:complexType>
+                <s:sequence>
+                  <s:element ref="s:schema" />
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getBrowsenodesRowById">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="countryCodex" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="id" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getBrowsenodesRowByIdResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getBrowsenodesRowByIdResult">
+              <s:complexType>
+                <s:sequence>
+                  <s:element ref="s:schema" />
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getBrowsenodesRowByNodeId">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="countryCodex" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="nodeId" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getBrowsenodesRowByNodeIdResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getBrowsenodesRowByNodeIdResult">
+              <s:complexType>
+                <s:sequence>
+                  <s:element ref="s:schema" />
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+    </s:schema>
+  </wsdl:types>
+  <wsdl:message name="getFeedSubmissionResultSoapIn">
+    <wsdl:part name="parameters" element="tns:getFeedSubmissionResult" />
+  </wsdl:message>
+  <wsdl:message name="getFeedSubmissionResultSoapOut">
+    <wsdl:part name="parameters" element="tns:getFeedSubmissionResultResponse" />
+  </wsdl:message>
+  <wsdl:message name="setShipperTrakingNumberSoapIn">
+    <wsdl:part name="parameters" element="tns:setShipperTrakingNumber" />
+  </wsdl:message>
+  <wsdl:message name="setShipperTrakingNumberSoapOut">
+    <wsdl:part name="parameters" element="tns:setShipperTrakingNumberResponse" />
+  </wsdl:message>
+  <wsdl:message name="setSellerOrderIdSoapIn">
+    <wsdl:part name="parameters" element="tns:setSellerOrderId" />
+  </wsdl:message>
+  <wsdl:message name="setSellerOrderIdSoapOut">
+    <wsdl:part name="parameters" element="tns:setSellerOrderIdResponse" />
+  </wsdl:message>
+  <wsdl:message name="getProductCategoryByAsinSoapIn">
+    <wsdl:part name="parameters" element="tns:getProductCategoryByAsin" />
+  </wsdl:message>
+  <wsdl:message name="getProductCategoryByAsinSoapOut">
+    <wsdl:part name="parameters" element="tns:getProductCategoryByAsinResponse" />
+  </wsdl:message>
+  <wsdl:message name="getProductByEanSoapIn">
+    <wsdl:part name="parameters" element="tns:getProductByEan" />
+  </wsdl:message>
+  <wsdl:message name="getProductByEanSoapOut">
+    <wsdl:part name="parameters" element="tns:getProductByEanResponse" />
+  </wsdl:message>
+  <wsdl:message name="getProductByAsinSoapIn">
+    <wsdl:part name="parameters" element="tns:getProductByAsin" />
+  </wsdl:message>
+  <wsdl:message name="getProductByAsinSoapOut">
+    <wsdl:part name="parameters" element="tns:getProductByAsinResponse" />
+  </wsdl:message>
+  <wsdl:message name="getNewOrdersByTimespanSoapIn">
+    <wsdl:part name="parameters" element="tns:getNewOrdersByTimespan" />
+  </wsdl:message>
+  <wsdl:message name="getNewOrdersByTimespanSoapOut">
+    <wsdl:part name="parameters" element="tns:getNewOrdersByTimespanResponse" />
+  </wsdl:message>
+  <wsdl:message name="getNewOrdersSoapIn">
+    <wsdl:part name="parameters" element="tns:getNewOrders" />
+  </wsdl:message>
+  <wsdl:message name="getNewOrdersSoapOut">
+    <wsdl:part name="parameters" element="tns:getNewOrdersResponse" />
+  </wsdl:message>
+  <wsdl:message name="getOrderSoapIn">
+    <wsdl:part name="parameters" element="tns:getOrder" />
+  </wsdl:message>
+  <wsdl:message name="getOrderSoapOut">
+    <wsdl:part name="parameters" element="tns:getOrderResponse" />
+  </wsdl:message>
+  <wsdl:message name="getOrdersSoapIn">
+    <wsdl:part name="parameters" element="tns:getOrders" />
+  </wsdl:message>
+  <wsdl:message name="getOrdersSoapOut">
+    <wsdl:part name="parameters" element="tns:getOrdersResponse" />
+  </wsdl:message>
+  <wsdl:message name="getListOrderItemSoapIn">
+    <wsdl:part name="parameters" element="tns:getListOrderItem" />
+  </wsdl:message>
+  <wsdl:message name="getListOrderItemSoapOut">
+    <wsdl:part name="parameters" element="tns:getListOrderItemResponse" />
+  </wsdl:message>
+  <wsdl:message name="getSignatureSoapIn">
+    <wsdl:part name="parameters" element="tns:getSignature" />
+  </wsdl:message>
+  <wsdl:message name="getSignatureSoapOut">
+    <wsdl:part name="parameters" element="tns:getSignatureResponse" />
+  </wsdl:message>
+  <wsdl:message name="getWholeBrowsenodesTableSoapIn">
+    <wsdl:part name="parameters" element="tns:getWholeBrowsenodesTable" />
+  </wsdl:message>
+  <wsdl:message name="getWholeBrowsenodesTableSoapOut">
+    <wsdl:part name="parameters" element="tns:getWholeBrowsenodesTableResponse" />
+  </wsdl:message>
+  <wsdl:message name="getBrowsenodesPathsSoapIn">
+    <wsdl:part name="parameters" element="tns:getBrowsenodesPaths" />
+  </wsdl:message>
+  <wsdl:message name="getBrowsenodesPathsSoapOut">
+    <wsdl:part name="parameters" element="tns:getBrowsenodesPathsResponse" />
+  </wsdl:message>
+  <wsdl:message name="getBrowsenodesRowByNodePathSoapIn">
+    <wsdl:part name="parameters" element="tns:getBrowsenodesRowByNodePath" />
+  </wsdl:message>
+  <wsdl:message name="getBrowsenodesRowByNodePathSoapOut">
+    <wsdl:part name="parameters" element="tns:getBrowsenodesRowByNodePathResponse" />
+  </wsdl:message>
+  <wsdl:message name="getBrowsenodesRowByIdSoapIn">
+    <wsdl:part name="parameters" element="tns:getBrowsenodesRowById" />
+  </wsdl:message>
+  <wsdl:message name="getBrowsenodesRowByIdSoapOut">
+    <wsdl:part name="parameters" element="tns:getBrowsenodesRowByIdResponse" />
+  </wsdl:message>
+  <wsdl:message name="getBrowsenodesRowByNodeIdSoapIn">
+    <wsdl:part name="parameters" element="tns:getBrowsenodesRowByNodeId" />
+  </wsdl:message>
+  <wsdl:message name="getBrowsenodesRowByNodeIdSoapOut">
+    <wsdl:part name="parameters" element="tns:getBrowsenodesRowByNodeIdResponse" />
+  </wsdl:message>
+  <wsdl:portType name="ServiceSoap">
+    <wsdl:operation name="getFeedSubmissionResult">
+      <wsdl:input message="tns:getFeedSubmissionResultSoapIn" />
+      <wsdl:output message="tns:getFeedSubmissionResultSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="setShipperTrakingNumber">
+      <wsdl:input message="tns:setShipperTrakingNumberSoapIn" />
+      <wsdl:output message="tns:setShipperTrakingNumberSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="setSellerOrderId">
+      <wsdl:input message="tns:setSellerOrderIdSoapIn" />
+      <wsdl:output message="tns:setSellerOrderIdSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getProductCategoryByAsin">
+      <wsdl:input message="tns:getProductCategoryByAsinSoapIn" />
+      <wsdl:output message="tns:getProductCategoryByAsinSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getProductByEan">
+      <wsdl:input message="tns:getProductByEanSoapIn" />
+      <wsdl:output message="tns:getProductByEanSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getProductByAsin">
+      <wsdl:input message="tns:getProductByAsinSoapIn" />
+      <wsdl:output message="tns:getProductByAsinSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getNewOrdersByTimespan">
+      <wsdl:input message="tns:getNewOrdersByTimespanSoapIn" />
+      <wsdl:output message="tns:getNewOrdersByTimespanSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getNewOrders">
+      <wsdl:input message="tns:getNewOrdersSoapIn" />
+      <wsdl:output message="tns:getNewOrdersSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getOrder">
+      <wsdl:input message="tns:getOrderSoapIn" />
+      <wsdl:output message="tns:getOrderSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getOrders">
+      <wsdl:input message="tns:getOrdersSoapIn" />
+      <wsdl:output message="tns:getOrdersSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getListOrderItem">
+      <wsdl:input message="tns:getListOrderItemSoapIn" />
+      <wsdl:output message="tns:getListOrderItemSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getSignature">
+      <wsdl:input message="tns:getSignatureSoapIn" />
+      <wsdl:output message="tns:getSignatureSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getWholeBrowsenodesTable">
+      <wsdl:input message="tns:getWholeBrowsenodesTableSoapIn" />
+      <wsdl:output message="tns:getWholeBrowsenodesTableSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getBrowsenodesPaths">
+      <wsdl:input message="tns:getBrowsenodesPathsSoapIn" />
+      <wsdl:output message="tns:getBrowsenodesPathsSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getBrowsenodesRowByNodePath">
+      <wsdl:input message="tns:getBrowsenodesRowByNodePathSoapIn" />
+      <wsdl:output message="tns:getBrowsenodesRowByNodePathSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getBrowsenodesRowById">
+      <wsdl:input message="tns:getBrowsenodesRowByIdSoapIn" />
+      <wsdl:output message="tns:getBrowsenodesRowByIdSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getBrowsenodesRowByNodeId">
+      <wsdl:input message="tns:getBrowsenodesRowByNodeIdSoapIn" />
+      <wsdl:output message="tns:getBrowsenodesRowByNodeIdSoapOut" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="ServiceSoap" type="tns:ServiceSoap">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="getFeedSubmissionResult">
+      <soap:operation soapAction="http://www.keepstore.it/getFeedSubmissionResult" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="setShipperTrakingNumber">
+      <soap:operation soapAction="http://www.keepstore.it/setShipperTrakingNumber" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="setSellerOrderId">
+      <soap:operation soapAction="http://www.keepstore.it/setSellerOrderId" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getProductCategoryByAsin">
+      <soap:operation soapAction="http://www.keepstore.it/getProductCategoryByAsin" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getProductByEan">
+      <soap:operation soapAction="http://www.keepstore.it/getProductByEan" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getProductByAsin">
+      <soap:operation soapAction="http://www.keepstore.it/getProductByAsin" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getNewOrdersByTimespan">
+      <soap:operation soapAction="http://www.keepstore.it/getNewOrdersByTimespan" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getNewOrders">
+      <soap:operation soapAction="http://www.keepstore.it/getNewOrders" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getOrder">
+      <soap:operation soapAction="http://www.keepstore.it/getOrder" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getOrders">
+      <soap:operation soapAction="http://www.keepstore.it/getOrders" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getListOrderItem">
+      <soap:operation soapAction="http://www.keepstore.it/getListOrderItem" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSignature">
+      <soap:operation soapAction="http://www.keepstore.it/getSignature" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getWholeBrowsenodesTable">
+      <soap:operation soapAction="http://www.keepstore.it/getWholeBrowsenodesTable" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getBrowsenodesPaths">
+      <soap:operation soapAction="http://www.keepstore.it/getBrowsenodesPaths" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getBrowsenodesRowByNodePath">
+      <soap:operation soapAction="http://www.keepstore.it/getBrowsenodesRowByNodePath" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getBrowsenodesRowById">
+      <soap:operation soapAction="http://www.keepstore.it/getBrowsenodesRowById" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getBrowsenodesRowByNodeId">
+      <soap:operation soapAction="http://www.keepstore.it/getBrowsenodesRowByNodeId" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:binding name="ServiceSoap12" type="tns:ServiceSoap">
+    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="getFeedSubmissionResult">
+      <soap12:operation soapAction="http://www.keepstore.it/getFeedSubmissionResult" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="setShipperTrakingNumber">
+      <soap12:operation soapAction="http://www.keepstore.it/setShipperTrakingNumber" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="setSellerOrderId">
+      <soap12:operation soapAction="http://www.keepstore.it/setSellerOrderId" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getProductCategoryByAsin">
+      <soap12:operation soapAction="http://www.keepstore.it/getProductCategoryByAsin" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getProductByEan">
+      <soap12:operation soapAction="http://www.keepstore.it/getProductByEan" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getProductByAsin">
+      <soap12:operation soapAction="http://www.keepstore.it/getProductByAsin" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getNewOrdersByTimespan">
+      <soap12:operation soapAction="http://www.keepstore.it/getNewOrdersByTimespan" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getNewOrders">
+      <soap12:operation soapAction="http://www.keepstore.it/getNewOrders" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getOrder">
+      <soap12:operation soapAction="http://www.keepstore.it/getOrder" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getOrders">
+      <soap12:operation soapAction="http://www.keepstore.it/getOrders" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getListOrderItem">
+      <soap12:operation soapAction="http://www.keepstore.it/getListOrderItem" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSignature">
+      <soap12:operation soapAction="http://www.keepstore.it/getSignature" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getWholeBrowsenodesTable">
+      <soap12:operation soapAction="http://www.keepstore.it/getWholeBrowsenodesTable" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getBrowsenodesPaths">
+      <soap12:operation soapAction="http://www.keepstore.it/getBrowsenodesPaths" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getBrowsenodesRowByNodePath">
+      <soap12:operation soapAction="http://www.keepstore.it/getBrowsenodesRowByNodePath" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getBrowsenodesRowById">
+      <soap12:operation soapAction="http://www.keepstore.it/getBrowsenodesRowById" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getBrowsenodesRowByNodeId">
+      <soap12:operation soapAction="http://www.keepstore.it/getBrowsenodesRowByNodeId" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="Service">
+    <wsdl:port name="ServiceSoap" binding="tns:ServiceSoap">
+      <soap:address location="http://www.keepstore.it/AmazonUtilities.asmx" />
+    </wsdl:port>
+    <wsdl:port name="ServiceSoap12" binding="tns:ServiceSoap12">
+      <soap12:address location="http://www.keepstore.it/AmazonUtilities.asmx" />
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

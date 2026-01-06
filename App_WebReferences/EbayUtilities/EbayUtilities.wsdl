@@ -1,0 +1,1067 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:tns="https://www.keepstore.it/" xmlns:s="http://www.w3.org/2001/XMLSchema" xmlns:s1="http://www.ebay.com/marketplace/services" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tm="http://microsoft.com/wsdl/mime/textMatching/" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" targetNamespace="https://www.keepstore.it/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <wsdl:types>
+    <s:schema elementFormDefault="qualified" targetNamespace="https://www.keepstore.it/">
+      <s:import namespace="http://www.ebay.com/marketplace/services" />
+      <s:element name="getSiteCode">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="country" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getSiteCodeResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getSiteCodeResult" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getCountries">
+        <s:complexType />
+      </s:element>
+      <s:element name="getCountriesResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getCountriesResult">
+              <s:complexType>
+                <s:sequence>
+                  <s:element ref="s:schema" />
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getSignInPage">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="companyId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="secret" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getSignInPageResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getSignInPageResult" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="fetchToken">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="sessionId" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="fetchTokenResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="fetchTokenResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getTokenStatus">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="token" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="country" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getTokenStatusResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getTokenStatusResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="createUploadJobRequest">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="token" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="country" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="uploadJobType" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="createUploadJobRequestResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="createUploadJobRequestResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="startUploadJobRequest">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="token" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="country" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="jobId" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="startUploadJobRequestResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="startUploadJobRequestResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="uploadFileRequest">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="token" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="country" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="jobId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="fileReferenceId" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="zipFile" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="uploadFileRequestResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="uploadFileRequestResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="abortJobRequest">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="token" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="country" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="jobId" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="abortJobRequestResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="abortJobRequestResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getJobStatusRequest">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="token" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="country" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="jobId" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getJobStatusRequestResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getJobStatusRequestResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getJobsRequestAborted">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="token" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="country" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="jobType" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getJobsRequestAbortedResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getJobsRequestAbortedResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getJobsRequestCompleted">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="token" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="country" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="jobType" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getJobsRequestCompletedResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getJobsRequestCompletedResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getJobsRequestCreated">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="token" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="country" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="jobType" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getJobsRequestCreatedResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getJobsRequestCreatedResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getJobsRequest">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="token" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="country" type="s:string" />
+            <s:element minOccurs="1" maxOccurs="1" name="jobStatus" type="s1:JobStatus" />
+            <s:element minOccurs="0" maxOccurs="1" name="jobType" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getJobsRequestResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getJobsRequestResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getJobsRequestAllStatus">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="token" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="country" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="jobType" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getJobsRequestAllStatusResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getJobsRequestAllStatusResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getMyEbaySelling">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="token" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="country" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getMyEbaySellingResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getMyEbaySellingResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getSellerProfiles">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="token" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="country" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getSellerProfilesResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getSellerProfilesResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getCategories">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="token" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="country" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getCategoriesResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getCategoriesResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getNewOrders">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="token" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="country" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getNewOrdersResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getNewOrdersResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getOrders">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="token" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="country" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="orderIds" type="tns:ArrayOfString" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ArrayOfString">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="string" nillable="true" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="getOrdersResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getOrdersResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getOrder">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="token" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="country" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="orderId" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="getOrderResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="getOrderResult">
+              <s:complexType mixed="true">
+                <s:sequence>
+                  <s:any />
+                </s:sequence>
+              </s:complexType>
+            </s:element>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+    </s:schema>
+    <s:schema elementFormDefault="qualified" targetNamespace="http://www.ebay.com/marketplace/services">
+      <s:simpleType name="JobStatus">
+        <s:restriction base="s:string">
+          <s:enumeration value="Created" />
+          <s:enumeration value="Scheduled" />
+          <s:enumeration value="InProcess" />
+          <s:enumeration value="Completed" />
+          <s:enumeration value="Aborted" />
+          <s:enumeration value="Failed" />
+        </s:restriction>
+      </s:simpleType>
+    </s:schema>
+  </wsdl:types>
+  <wsdl:message name="getSiteCodeSoapIn">
+    <wsdl:part name="parameters" element="tns:getSiteCode" />
+  </wsdl:message>
+  <wsdl:message name="getSiteCodeSoapOut">
+    <wsdl:part name="parameters" element="tns:getSiteCodeResponse" />
+  </wsdl:message>
+  <wsdl:message name="getCountriesSoapIn">
+    <wsdl:part name="parameters" element="tns:getCountries" />
+  </wsdl:message>
+  <wsdl:message name="getCountriesSoapOut">
+    <wsdl:part name="parameters" element="tns:getCountriesResponse" />
+  </wsdl:message>
+  <wsdl:message name="getSignInPageSoapIn">
+    <wsdl:part name="parameters" element="tns:getSignInPage" />
+  </wsdl:message>
+  <wsdl:message name="getSignInPageSoapOut">
+    <wsdl:part name="parameters" element="tns:getSignInPageResponse" />
+  </wsdl:message>
+  <wsdl:message name="fetchTokenSoapIn">
+    <wsdl:part name="parameters" element="tns:fetchToken" />
+  </wsdl:message>
+  <wsdl:message name="fetchTokenSoapOut">
+    <wsdl:part name="parameters" element="tns:fetchTokenResponse" />
+  </wsdl:message>
+  <wsdl:message name="getTokenStatusSoapIn">
+    <wsdl:part name="parameters" element="tns:getTokenStatus" />
+  </wsdl:message>
+  <wsdl:message name="getTokenStatusSoapOut">
+    <wsdl:part name="parameters" element="tns:getTokenStatusResponse" />
+  </wsdl:message>
+  <wsdl:message name="createUploadJobRequestSoapIn">
+    <wsdl:part name="parameters" element="tns:createUploadJobRequest" />
+  </wsdl:message>
+  <wsdl:message name="createUploadJobRequestSoapOut">
+    <wsdl:part name="parameters" element="tns:createUploadJobRequestResponse" />
+  </wsdl:message>
+  <wsdl:message name="startUploadJobRequestSoapIn">
+    <wsdl:part name="parameters" element="tns:startUploadJobRequest" />
+  </wsdl:message>
+  <wsdl:message name="startUploadJobRequestSoapOut">
+    <wsdl:part name="parameters" element="tns:startUploadJobRequestResponse" />
+  </wsdl:message>
+  <wsdl:message name="uploadFileRequestSoapIn">
+    <wsdl:part name="parameters" element="tns:uploadFileRequest" />
+  </wsdl:message>
+  <wsdl:message name="uploadFileRequestSoapOut">
+    <wsdl:part name="parameters" element="tns:uploadFileRequestResponse" />
+  </wsdl:message>
+  <wsdl:message name="abortJobRequestSoapIn">
+    <wsdl:part name="parameters" element="tns:abortJobRequest" />
+  </wsdl:message>
+  <wsdl:message name="abortJobRequestSoapOut">
+    <wsdl:part name="parameters" element="tns:abortJobRequestResponse" />
+  </wsdl:message>
+  <wsdl:message name="getJobStatusRequestSoapIn">
+    <wsdl:part name="parameters" element="tns:getJobStatusRequest" />
+  </wsdl:message>
+  <wsdl:message name="getJobStatusRequestSoapOut">
+    <wsdl:part name="parameters" element="tns:getJobStatusRequestResponse" />
+  </wsdl:message>
+  <wsdl:message name="getJobsRequestAbortedSoapIn">
+    <wsdl:part name="parameters" element="tns:getJobsRequestAborted" />
+  </wsdl:message>
+  <wsdl:message name="getJobsRequestAbortedSoapOut">
+    <wsdl:part name="parameters" element="tns:getJobsRequestAbortedResponse" />
+  </wsdl:message>
+  <wsdl:message name="getJobsRequestCompletedSoapIn">
+    <wsdl:part name="parameters" element="tns:getJobsRequestCompleted" />
+  </wsdl:message>
+  <wsdl:message name="getJobsRequestCompletedSoapOut">
+    <wsdl:part name="parameters" element="tns:getJobsRequestCompletedResponse" />
+  </wsdl:message>
+  <wsdl:message name="getJobsRequestCreatedSoapIn">
+    <wsdl:part name="parameters" element="tns:getJobsRequestCreated" />
+  </wsdl:message>
+  <wsdl:message name="getJobsRequestCreatedSoapOut">
+    <wsdl:part name="parameters" element="tns:getJobsRequestCreatedResponse" />
+  </wsdl:message>
+  <wsdl:message name="getJobsRequestSoapIn">
+    <wsdl:part name="parameters" element="tns:getJobsRequest" />
+  </wsdl:message>
+  <wsdl:message name="getJobsRequestSoapOut">
+    <wsdl:part name="parameters" element="tns:getJobsRequestResponse" />
+  </wsdl:message>
+  <wsdl:message name="getJobsRequestAllStatusSoapIn">
+    <wsdl:part name="parameters" element="tns:getJobsRequestAllStatus" />
+  </wsdl:message>
+  <wsdl:message name="getJobsRequestAllStatusSoapOut">
+    <wsdl:part name="parameters" element="tns:getJobsRequestAllStatusResponse" />
+  </wsdl:message>
+  <wsdl:message name="getMyEbaySellingSoapIn">
+    <wsdl:part name="parameters" element="tns:getMyEbaySelling" />
+  </wsdl:message>
+  <wsdl:message name="getMyEbaySellingSoapOut">
+    <wsdl:part name="parameters" element="tns:getMyEbaySellingResponse" />
+  </wsdl:message>
+  <wsdl:message name="getSellerProfilesSoapIn">
+    <wsdl:part name="parameters" element="tns:getSellerProfiles" />
+  </wsdl:message>
+  <wsdl:message name="getSellerProfilesSoapOut">
+    <wsdl:part name="parameters" element="tns:getSellerProfilesResponse" />
+  </wsdl:message>
+  <wsdl:message name="getCategoriesSoapIn">
+    <wsdl:part name="parameters" element="tns:getCategories" />
+  </wsdl:message>
+  <wsdl:message name="getCategoriesSoapOut">
+    <wsdl:part name="parameters" element="tns:getCategoriesResponse" />
+  </wsdl:message>
+  <wsdl:message name="getNewOrdersSoapIn">
+    <wsdl:part name="parameters" element="tns:getNewOrders" />
+  </wsdl:message>
+  <wsdl:message name="getNewOrdersSoapOut">
+    <wsdl:part name="parameters" element="tns:getNewOrdersResponse" />
+  </wsdl:message>
+  <wsdl:message name="getOrdersSoapIn">
+    <wsdl:part name="parameters" element="tns:getOrders" />
+  </wsdl:message>
+  <wsdl:message name="getOrdersSoapOut">
+    <wsdl:part name="parameters" element="tns:getOrdersResponse" />
+  </wsdl:message>
+  <wsdl:message name="getOrderSoapIn">
+    <wsdl:part name="parameters" element="tns:getOrder" />
+  </wsdl:message>
+  <wsdl:message name="getOrderSoapOut">
+    <wsdl:part name="parameters" element="tns:getOrderResponse" />
+  </wsdl:message>
+  <wsdl:portType name="KsEbayServiceSoap">
+    <wsdl:operation name="getSiteCode">
+      <wsdl:input message="tns:getSiteCodeSoapIn" />
+      <wsdl:output message="tns:getSiteCodeSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getCountries">
+      <wsdl:input message="tns:getCountriesSoapIn" />
+      <wsdl:output message="tns:getCountriesSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getSignInPage">
+      <wsdl:input message="tns:getSignInPageSoapIn" />
+      <wsdl:output message="tns:getSignInPageSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="fetchToken">
+      <wsdl:input message="tns:fetchTokenSoapIn" />
+      <wsdl:output message="tns:fetchTokenSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getTokenStatus">
+      <wsdl:input message="tns:getTokenStatusSoapIn" />
+      <wsdl:output message="tns:getTokenStatusSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="createUploadJobRequest">
+      <wsdl:input message="tns:createUploadJobRequestSoapIn" />
+      <wsdl:output message="tns:createUploadJobRequestSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="startUploadJobRequest">
+      <wsdl:input message="tns:startUploadJobRequestSoapIn" />
+      <wsdl:output message="tns:startUploadJobRequestSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="uploadFileRequest">
+      <wsdl:input message="tns:uploadFileRequestSoapIn" />
+      <wsdl:output message="tns:uploadFileRequestSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="abortJobRequest">
+      <wsdl:input message="tns:abortJobRequestSoapIn" />
+      <wsdl:output message="tns:abortJobRequestSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getJobStatusRequest">
+      <wsdl:input message="tns:getJobStatusRequestSoapIn" />
+      <wsdl:output message="tns:getJobStatusRequestSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getJobsRequestAborted">
+      <wsdl:input message="tns:getJobsRequestAbortedSoapIn" />
+      <wsdl:output message="tns:getJobsRequestAbortedSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getJobsRequestCompleted">
+      <wsdl:input message="tns:getJobsRequestCompletedSoapIn" />
+      <wsdl:output message="tns:getJobsRequestCompletedSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getJobsRequestCreated">
+      <wsdl:input message="tns:getJobsRequestCreatedSoapIn" />
+      <wsdl:output message="tns:getJobsRequestCreatedSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getJobsRequest">
+      <wsdl:input message="tns:getJobsRequestSoapIn" />
+      <wsdl:output message="tns:getJobsRequestSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getJobsRequestAllStatus">
+      <wsdl:input message="tns:getJobsRequestAllStatusSoapIn" />
+      <wsdl:output message="tns:getJobsRequestAllStatusSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getMyEbaySelling">
+      <wsdl:input message="tns:getMyEbaySellingSoapIn" />
+      <wsdl:output message="tns:getMyEbaySellingSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getSellerProfiles">
+      <wsdl:input message="tns:getSellerProfilesSoapIn" />
+      <wsdl:output message="tns:getSellerProfilesSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getCategories">
+      <wsdl:input message="tns:getCategoriesSoapIn" />
+      <wsdl:output message="tns:getCategoriesSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getNewOrders">
+      <wsdl:input message="tns:getNewOrdersSoapIn" />
+      <wsdl:output message="tns:getNewOrdersSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getOrders">
+      <wsdl:input message="tns:getOrdersSoapIn" />
+      <wsdl:output message="tns:getOrdersSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="getOrder">
+      <wsdl:input message="tns:getOrderSoapIn" />
+      <wsdl:output message="tns:getOrderSoapOut" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="KsEbayServiceSoap" type="tns:KsEbayServiceSoap">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="getSiteCode">
+      <soap:operation soapAction="https://www.keepstore.it/getSiteCode" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getCountries">
+      <soap:operation soapAction="https://www.keepstore.it/getCountries" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSignInPage">
+      <soap:operation soapAction="https://www.keepstore.it/getSignInPage" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="fetchToken">
+      <soap:operation soapAction="https://www.keepstore.it/fetchToken" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getTokenStatus">
+      <soap:operation soapAction="https://www.keepstore.it/getTokenStatus" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="createUploadJobRequest">
+      <soap:operation soapAction="https://www.keepstore.it/createUploadJobRequest" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="startUploadJobRequest">
+      <soap:operation soapAction="https://www.keepstore.it/startUploadJobRequest" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="uploadFileRequest">
+      <soap:operation soapAction="https://www.keepstore.it/uploadFileRequest" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="abortJobRequest">
+      <soap:operation soapAction="https://www.keepstore.it/abortJobRequest" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getJobStatusRequest">
+      <soap:operation soapAction="https://www.keepstore.it/getJobStatusRequest" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getJobsRequestAborted">
+      <soap:operation soapAction="https://www.keepstore.it/getJobsRequestAborted" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getJobsRequestCompleted">
+      <soap:operation soapAction="https://www.keepstore.it/getJobsRequestCompleted" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getJobsRequestCreated">
+      <soap:operation soapAction="https://www.keepstore.it/getJobsRequestCreated" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getJobsRequest">
+      <soap:operation soapAction="https://www.keepstore.it/getJobsRequest" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getJobsRequestAllStatus">
+      <soap:operation soapAction="https://www.keepstore.it/getJobsRequestAllStatus" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getMyEbaySelling">
+      <soap:operation soapAction="https://www.keepstore.it/getMyEbaySelling" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSellerProfiles">
+      <soap:operation soapAction="https://www.keepstore.it/getSellerProfiles" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getCategories">
+      <soap:operation soapAction="https://www.keepstore.it/getCategories" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getNewOrders">
+      <soap:operation soapAction="https://www.keepstore.it/getNewOrders" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getOrders">
+      <soap:operation soapAction="https://www.keepstore.it/getOrders" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getOrder">
+      <soap:operation soapAction="https://www.keepstore.it/getOrder" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:binding name="KsEbayServiceSoap12" type="tns:KsEbayServiceSoap">
+    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="getSiteCode">
+      <soap12:operation soapAction="https://www.keepstore.it/getSiteCode" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getCountries">
+      <soap12:operation soapAction="https://www.keepstore.it/getCountries" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSignInPage">
+      <soap12:operation soapAction="https://www.keepstore.it/getSignInPage" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="fetchToken">
+      <soap12:operation soapAction="https://www.keepstore.it/fetchToken" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getTokenStatus">
+      <soap12:operation soapAction="https://www.keepstore.it/getTokenStatus" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="createUploadJobRequest">
+      <soap12:operation soapAction="https://www.keepstore.it/createUploadJobRequest" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="startUploadJobRequest">
+      <soap12:operation soapAction="https://www.keepstore.it/startUploadJobRequest" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="uploadFileRequest">
+      <soap12:operation soapAction="https://www.keepstore.it/uploadFileRequest" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="abortJobRequest">
+      <soap12:operation soapAction="https://www.keepstore.it/abortJobRequest" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getJobStatusRequest">
+      <soap12:operation soapAction="https://www.keepstore.it/getJobStatusRequest" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getJobsRequestAborted">
+      <soap12:operation soapAction="https://www.keepstore.it/getJobsRequestAborted" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getJobsRequestCompleted">
+      <soap12:operation soapAction="https://www.keepstore.it/getJobsRequestCompleted" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getJobsRequestCreated">
+      <soap12:operation soapAction="https://www.keepstore.it/getJobsRequestCreated" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getJobsRequest">
+      <soap12:operation soapAction="https://www.keepstore.it/getJobsRequest" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getJobsRequestAllStatus">
+      <soap12:operation soapAction="https://www.keepstore.it/getJobsRequestAllStatus" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getMyEbaySelling">
+      <soap12:operation soapAction="https://www.keepstore.it/getMyEbaySelling" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getSellerProfiles">
+      <soap12:operation soapAction="https://www.keepstore.it/getSellerProfiles" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getCategories">
+      <soap12:operation soapAction="https://www.keepstore.it/getCategories" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getNewOrders">
+      <soap12:operation soapAction="https://www.keepstore.it/getNewOrders" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getOrders">
+      <soap12:operation soapAction="https://www.keepstore.it/getOrders" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getOrder">
+      <soap12:operation soapAction="https://www.keepstore.it/getOrder" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="KsEbayService">
+    <wsdl:port name="KsEbayServiceSoap" binding="tns:KsEbayServiceSoap">
+      <soap:address location="https://www.keepstore.it/EbayUtilities.asmx" />
+    </wsdl:port>
+    <wsdl:port name="KsEbayServiceSoap12" binding="tns:KsEbayServiceSoap12">
+      <soap12:address location="https://www.keepstore.it/EbayUtilities.asmx" />
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

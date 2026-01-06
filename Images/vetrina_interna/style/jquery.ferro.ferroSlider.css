@@ -1,0 +1,85 @@
+a{
+	color:white;
+}
+
+
+.slidingSpacesNavigation{
+	position: absolute;
+	left:0;
+	bottom:0;
+	background:black;
+	opacity:0.8;
+	width:100%;
+	text-align:center;
+	height:50px;
+}
+
+#slidingSpacesNavigationMap{
+	position: fixed;
+	/*background:black;*/
+	opacity:0.5;
+	text-align:center;
+	float:right;
+	line-height:10px;
+	padding:5px;
+	/*-moz-box-shadow: 0px 0px 10px #ffffff;
+  	-webkit-box-shadow: 0px 0px 10px #ffffff;
+  	box-shadow: 0px 0px 10px #ffffff;*/
+}
+
+#slidingSpacesNavigationMap a{
+	float:left;
+	width:10px;
+	height:10px;
+	margin:2px;
+	-webkit-border-radius:10px;
+	-moz-border-radius:10px;
+}
+
+.slidingSpacesNavigationMap{
+	position: absolute;
+	bottom:0;
+	right:0;
+	background:black;
+	filter: alpha(opacity = 50);
+	opacity:0.5;
+	text-align:center;
+	float:right;
+	line-height:10px;
+}
+
+.slidingSpacesNavigationDot{
+	position: relative;
+	background:white;
+	filter: alpha(opacity = 40);
+	opacity:0.4;
+}
+
+.slidingSpacesNavigationDotActual{
+	position: relative;
+	background:white;
+	filter: alpha(opacity = 80);
+	opacity:0.8;
+	float:left;
+}
+
+.slidingSpacesNavigationDotEmpty{
+	position: relative;
+	background-color:none;
+	filter: alpha(opacity = 0);
+	opacity:0;
+	float:left;
+}
+
+.slidingSpacesNavigation ul li{
+	display:inline;
+	margin-right:5px;
+}
+
+.slidingSpacesNavigation ul li:last-child{
+	display:inline;
+}
+
+#slidingSpacesNavigationFeedback{
+	position:fixed;
+}

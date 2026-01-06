@@ -1,0 +1,145 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>ConwayControls</name>
+    </assembly>
+    <members>
+        <member name="T:ConwayControls.Web.RadioButton">
+            <summary>
+            RadioButton used primarily in DataGrids.  Prevents "Name" attribute from becoming part of the Grid's naming hierarchy, which will allow
+            the use of the group.
+            </summary>
+        </member>
+        <member name="M:ConwayControls.Web.RadioButton.#ctor">
+            <summary>
+            RadioButton used primarily in DataGrids.  Prevents "Name" attribute from becoming part of the Grid's naming hierarchy, which will allow
+            the use of the group.
+            </summary>
+        </member>
+        <member name="M:ConwayControls.Web.RadioButton.RaisePostDataChangedEvent">
+            <summary>
+            Raises the change event for this Radio Button.  This occurs automatically through PostBack.
+            </summary>
+        </member>
+        <member name="M:ConwayControls.Web.RadioButton.LoadPostData(System.String,System.Collections.Specialized.NameValueCollection)">
+            <summary>
+            Changes the state of the Radio Button using ViewState through the PostBack process.  This occurs automatically.
+            </summary>
+            <param name="postDataKey">The control ID being loaded</param>
+            <param name="postCollection">The collection of objects with StateBags</param>
+            <returns>bool</returns>
+        </member>
+        <member name="P:ConwayControls.Web.RadioButton.Text">
+            <summary>
+            Gets or sets the text of the Radio Button.  Will also allow the radio to be checked/unchecked if clicked.
+            </summary>
+        </member>
+        <member name="P:ConwayControls.Web.RadioButton.GroupName">
+            <summary>
+            Gets or set the group to assign this Radio Button to.
+            </summary>
+        </member>
+        <member name="P:ConwayControls.Web.RadioButton.AutoPostBack">
+            <summary>
+            Gets or sets the Radio Button to automatically postback to the server after it is checked.
+            </summary>
+        </member>
+        <member name="P:ConwayControls.Web.RadioButton.TextAlign">
+            <summary>
+            Gets or sets the alignment of the text in respect to this Radio Button.
+            </summary>
+        </member>
+        <member name="P:ConwayControls.Web.RadioButton.Value">
+            <summary>
+            Gets or set an additional value to assign to this Radio Button.
+            </summary>
+        </member>
+        <member name="P:ConwayControls.Web.RadioButton.Checked">
+            <summary>
+            Gets or sets the the checked state of this Radio Button.
+            </summary>
+        </member>
+        <member name="E:ConwayControls.Web.RadioButton.CheckChanged">
+            <summary>
+            Occurs on PostBack when the radio button is checked.
+            </summary>
+        </member>
+        <member name="T:ConwayControls.Web.PopUpType">
+            <summary>
+            used to determine which PopUps are affected by the AuthenticatePopUp Component.
+            </summary>
+        </member>
+        <member name="F:ConwayControls.Web.PopUpType.All">
+            <summary>
+            the component will execute All PopUps.
+            </summary>
+        </member>
+        <member name="F:ConwayControls.Web.PopUpType.OnlyThoseInNameList">
+            <summary>
+            the component will only execute those PopUps that have been identified in the NameList.
+            </summary>
+        </member>
+        <member name="T:ConwayControls.Web.AuthenticatePopUp">
+            <summary>
+            AuthenticatePopUp control that, when placed on a popup window, will determine if the user's authenticated session has ended.  If
+            it has, this control will close the popup and redirect the parent window to the ReturnUrl.
+            </summary>
+        </member>
+        <member name="M:ConwayControls.Web.AuthenticatePopUp.#ctor">
+            <summary>
+            AuthenticatePopUp control that, when placed on a popup window, will determine if the user's authenticated session has ended.  If
+            it has, this control will close the popup and redirect the parent window to the ReturnUrl.
+            </summary>
+        </member>
+        <member name="M:ConwayControls.Web.AuthenticatePopUp.Execute">
+            <summary>
+            executes the component's authentication process
+            </summary>
+        </member>
+        <member name="P:ConwayControls.Web.AuthenticatePopUp.RedirectParentWindow">
+            <summary>
+            Get or set to determine if the parent window is redirected to the loginUrl.
+            </summary>
+        </member>
+        <member name="P:ConwayControls.Web.AuthenticatePopUp.QueryStringProperty">
+            <summary>
+            Gets or sets the property that determines that the page was redirected from a popup.
+            </summary>
+        </member>
+        <member name="P:ConwayControls.Web.AuthenticatePopUp.Page">
+            <summary>
+            Gets or sets the containing page.
+            </summary>
+        </member>
+        <member name="P:ConwayControls.Web.AuthenticatePopUp.NameList">
+            <summary>
+            the list of popup names you want this component to include during execution
+            </summary>
+        </member>
+        <member name="P:ConwayControls.Web.AuthenticatePopUp.IgnoreCase">
+            <summary>
+            specifies whether or not to ignore the case of names.
+            </summary>
+        </member>
+        <member name="P:ConwayControls.Web.AuthenticatePopUp.PopUpType">
+            <summary>
+            allows the execution all PopUps or only those listed in your name list.
+            </summary>
+        </member>
+        <member name="T:ConwayControls.Web.NameListConverter">
+            <summary>
+            TypeConverter specific to the NameList for the AuthenticatePopUp Component.
+            </summary>
+        </member>
+        <member name="T:ConwayControls.Web.Designers.ConwayControlDesigner">
+            <summary>
+            Control Designer for Conway Controls.
+            </summary>
+        </member>
+        <member name="T:ConwayControls.Web.Designers.RadioButtonDesigner">
+            <summary>
+            Control Designer specifically for the ConwayControls.Web.RadioButton
+            </summary>
+        </member>
+    </members>
+</doc>

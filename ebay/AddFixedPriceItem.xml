@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<BulkDataExchangeRequests xmlns="urn:ebay:apis:eBLBaseComponents">
+<Header>
+<Version>1095</Version>
+<SiteID>101</SiteID>
+</Header>
+<AddFixedPriceItemRequest xmlns="urn:ebay:apis:eBLBaseComponents">
+<ErrorLanguage>it_IT</ErrorLanguage>
+<WarningLevel>High</WarningLevel>
+<Version>1095</Version>
+<Item>
+<ConditionID>1000</ConditionID>
+<Country>IT</Country>
+<Currency>EUR</Currency>
+<Description>STAMPANTE POS TERMICA METEOR SPRINT R 80MM BLACK PORTA USB + RS232C + ETHERNET PER STAMPE RICEVUTE/COMANDE/SCOMMESSE + TAGLIERINA</Description>
+<DispatchTimeMax>5</DispatchTimeMax>
+<InventoryTrackingMethod>SKU</InventoryTrackingMethod>
+<ItemSpecifics>
+<NameValueList>
+<Name>Brand</Name>
+<Value>sony</Value>
+</NameValueList>
+<NameValueList>
+<Name>EAN</Name>
+<Value>9789229300009</Value>
+</NameValueList>
+</ItemSpecifics>
+<ListingDuration>GTC</ListingDuration>
+<ListingType>FixedPriceItem</ListingType>
+<Location>san sebastiano al vesuvio</Location>
+<PostalCode>80040</PostalCode>
+<PrimaryCategory>
+<CategoryID>153797</CategoryID>
+</PrimaryCategory>
+<Quantity>89</Quantity>
+<SellerProfiles>
+<SellerPaymentProfile>
+<PaymentProfileID>6002992000</PaymentProfileID>
+</SellerPaymentProfile>
+<SellerReturnProfile>
+<ReturnProfileID>6002997000</ReturnProfileID>
+</SellerReturnProfile>
+<SellerShippingProfile><ShippingProfileID>6002993000</ShippingProfileID>
+</SellerShippingProfile>
+</SellerProfiles>
+<Site>Italy</Site>
+<SKU>SPRINT/R1</SKU>
+<StartPrice>110</StartPrice>
+<Title>bella stampante</Title>
+<PictureDetails>
+<PictureURL>https://www.taikun.it/pictures/pict1B.jpg</PictureURL><PictureURL>https://www.taikun.it/pictures/pict1B.jpg</PictureURL><PictureURL>https://www.taikun.it/pictures/pict1B.jpg</PictureURL><PictureURL>https://www.taikun.it/pictures/pict1B.jpg</PictureURL><PictureURL>https://www.taikun.it/pictures/pict1B.jpg</PictureURL><PictureURL>https://www.taikun.it/pictures/pict1B.jpg</PictureURL>
+</PictureDetails>
+
+</Item>
+</AddFixedPriceItemRequest>
+
+<AddFixedPriceItemRequest xmlns="urn:ebay:apis:eBLBaseComponents">
+<ErrorLanguage>it_IT</ErrorLanguage>
+<WarningLevel>High</WarningLevel>
+<Version>1095</Version>
+<Item>
+<ConditionID>1000</ConditionID>
+<Country>IT</Country>
+<Currency>EUR</Currency>
+<Description>STAMPANTE POS TERMICA METEOR SPRINT R 80MM BLACK PORTA USB + RS232C + ETHERNET PER STAMPE RICEVUTE/COMANDE/SCOMMESSE + TAGLIERINA</Description>
+<DispatchTimeMax>5</DispatchTimeMax>
+<InventoryTrackingMethod>SKU</InventoryTrackingMethod>
+<ItemSpecifics>
+<NameValueList>
+<Name>Brand</Name>
+<Value>sony</Value>
+</NameValueList>
+<NameValueList>
+<Name>EAN</Name>
+<Value>9789229300009</Value>
+</NameValueList>
+</ItemSpecifics>
+<ListingDuration>GTC</ListingDuration>
+<ListingType>FixedPriceItem</ListingType>
+<Location>san sebastiano al vesuvio</Location>
+<PostalCode>80040</PostalCode>
+<PrimaryCategory>
+<CategoryID>153797</CategoryID>
+</PrimaryCategory>
+<Quantity>89</Quantity>
+<SellerProfiles>
+<SellerPaymentProfile>
+<PaymentProfileID>6002992000</PaymentProfileID>
+</SellerPaymentProfile>
+<SellerReturnProfile>
+<ReturnProfileID>6002997000</ReturnProfileID>
+</SellerReturnProfile>
+<SellerShippingProfile><ShippingProfileID>6002993000</ShippingProfileID>
+</SellerShippingProfile>
+</SellerProfiles>
+<Site>Italy</Site>
+<SKU>SPRINT/R2</SKU>
+<StartPrice>110</StartPrice>
+<Title>bella stampante</Title>
+<PictureDetails>
+<PictureURL>https://www.taikun.it/pictures/pict1B.jpg</PictureURL><PictureURL>https://www.taikun.it/pictures/pict1B.jpg</PictureURL><PictureURL>https://www.taikun.it/pictures/pict1B.jpg</PictureURL><PictureURL>https://www.taikun.it/pictures/pict1B.jpg</PictureURL><PictureURL>https://www.taikun.it/pictures/pict1B.jpg</PictureURL><PictureURL>https://www.taikun.it/pictures/pict1B.jpg</PictureURL>
+</PictureDetails>
+
+</Item>
+</AddFixedPriceItemRequest>
+
+</BulkDataExchangeRequests>

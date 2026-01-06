@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<banner>
+	<globals 
+		width="600" height="300" 
+		currentItem="0" radius="0" randomize="false" showTimerClock="true"
+		showButtons="true" buttonPosition="right" buttonPadding="1" buttonMargin="15"
+		buttonBgAlpha="0.6" currentButtonBgColor="#FFFFFF" currentButtonFontColor="#000000"
+		cssFile="css/banner.css"
+	/>
+	<item src="#Immagine#" timer="#Timer#" link="#Link#" target="_self" contentX="#Coordinate_X#" contentY="Coordinate_Y">
+		<content fontColor="#Colore_Scritta_Titolo#" fontSize="#Grandezza_Scritta_Titolo#" bgColor="#Colore_Sfondo_Scritta_Titolo#" bgAlpha="#Trasparenza_Sfondo_Scritta_Titolo#" spacing="1">
+			<![CDATA[#Titolo#]]>
+		</content>
+		<content fontColor="#Colore_Scritta_Descrizione#" fontSize="#Grandezza_Scritta_Descrizione#" bgColor="#Colore_Sfondo_Scritta_Descrizione#" bgAlpha="#Trasparenza_Sfondo_Scritta_Descrizione#" spacing="1">
+			<![CDATA[#descrizione#]]>
+		</content>
+	</item>
+</banner>
+
+#Titolo#		--> Titolo della Slide
+#descrizione#	--> Descrizione della Slide
+
+#Immagine# 		--> SRC immagine da caricare, la grandezza deve essere 600x300
+#Timer#			--> Durata diapositiva, tempo di visualizzazione della diapositiva
+#Link#			--> Link URL quando clicco sull'immagine
+#Coordinate_X#	--> Coordinate X per la posizione delle scritte sulla diapositiva
+#Coordinate_Y#	--> Coordinate Y per la posizione delle scritte sulla diapositiva
+
+#Colore_Scritta_Titolo#				--> Colore scritta TITOLO
+#Grandezza_Scritta_Titolo#			--> Grandezza in pt del TITOLO
+#Colore_Sfondo_Scritta_Titolo#		--> Colore background del TITOLO
+#Trasparenza_Sfondo_Scritta_Titolo#	--> Percentuale trasparenza sfondo TITOLO (MAX 1, inserire intervalli decimali)
+
+#Colore_Scritta_Descrizione#			--> Colore scritta DESCRIZIONE
+#Grandezza_Scritta_Descrizione#			--> Grandezza in pt del DESCRIZIONE
+#Colore_Sfondo_Scritta_Descrizione#		--> Colore background del DESCRIZIONE
+#Trasparenza_Sfondo_Scritta_Descrizione#--> Percentuale trasparenza sfondo DESCRIZIONE ((MAX 1, inserire intervalli decimali))
+
+ps. Racchiudere sempre i nuovi Banner tra i tag <item></item>
+

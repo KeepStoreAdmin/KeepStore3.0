@@ -1,0 +1,548 @@
+﻿<?xml version="1.0"?>
+<doc>
+<assembly>
+<name>
+BancaSella
+</name>
+</assembly>
+<members>
+<member name="F:BancaSella.comunicationBancaSella._form1">
+<summary>
+Controllo form1.
+</summary>
+<remarks>
+Campo generato automaticamente.
+Per la modifica, spostare la dichiarazione di campo dal file di progettazione al file code-behind.
+</remarks>
+</member>
+<member name="T:BancaSella.My.MyWebExtension">
+ <summary>
+ Modulo utilizzato per definire le proprietà disponibili nello spazio dei nomi My per i progetti Web.
+ </summary>
+ <remarks></remarks>
+</member>
+<member name="P:BancaSella.My.MyWebExtension.Computer">
+ <summary>
+ Restituisce informazioni sul computer host.
+ </summary>
+</member>
+<member name="P:BancaSella.My.MyWebExtension.User">
+ <summary>
+ Restituisce informazioni sull'utente Web corrente.
+ </summary>
+</member>
+<member name="P:BancaSella.My.MyWebExtension.Request">
+ <summary>
+ Restituisce l'oggetto Request.
+ </summary>
+</member>
+<member name="P:BancaSella.My.MyWebExtension.Response">
+ <summary>
+ Restituisce l'oggetto Response.
+ </summary>
+</member>
+<member name="P:BancaSella.My.MyWebExtension.Log">
+ <summary>
+ Restituisce l'oggetto AspLog.
+ </summary>
+</member>
+<member name="F:BancaSella.rispostaSella._form1">
+<summary>
+Controllo form1.
+</summary>
+<remarks>
+Campo generato automaticamente.
+Per la modifica, spostare la dichiarazione di campo dal file di progettazione al file code-behind.
+</remarks>
+</member>
+<member name="T:BancaSella.ServiceGestPay.ShippingDetails">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingDetails.shipToName">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingDetails.shipToStreet">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingDetails.shipToCity">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingDetails.shipToState">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingDetails.shipToCountryCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingDetails.shipToZip">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingDetails.shipToStreet2">
+<remarks/>
+</member>
+<member name="T:BancaSella.ServiceGestPay.ProductDetail">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ProductDetail.ProductCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ProductDetail.SKU">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ProductDetail.Name">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ProductDetail.Description">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ProductDetail.Quantity">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ProductDetail.Price">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ProductDetail.UnitPrice">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ProductDetail.Type">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ProductDetail.Vat">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ProductDetail.Discount">
+<remarks/>
+</member>
+<member name="T:BancaSella.ServiceGestPay.BillingAddress">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.BillingAddress.ProfileID">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.BillingAddress.FirstName">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.BillingAddress.MiddleName">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.BillingAddress.Lastname">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.BillingAddress.StreetNumber">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.BillingAddress.StreetName">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.BillingAddress.Streetname2">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.BillingAddress.HouseNumber">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.BillingAddress.HouseExtention">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.BillingAddress.City">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.BillingAddress.ZipCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.BillingAddress.State">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.BillingAddress.CountryCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.BillingAddress.Email">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.BillingAddress.PrimaryPhone">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.BillingAddress.SecondaryPhone">
+<remarks/>
+</member>
+<member name="T:BancaSella.ServiceGestPay.ShippingAddress">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingAddress.ProfileID">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingAddress.FirstName">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingAddress.MiddleName">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingAddress.Lastname">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingAddress.StreetName">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingAddress.Streetname2">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingAddress.HouseNumber">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingAddress.HouseExtention">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingAddress.City">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingAddress.ZipCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingAddress.State">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingAddress.CountryCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingAddress.Email">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingAddress.PrimaryPhone">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ShippingAddress.SecondaryPhone">
+<remarks/>
+</member>
+<member name="T:BancaSella.ServiceGestPay.CustomerDetail">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.CustomerDetail.ProfileID">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.CustomerDetail.MerchantCustomerID">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.CustomerDetail.FirstName">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.CustomerDetail.MiddleName">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.CustomerDetail.Lastname">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.CustomerDetail.PrimaryEmail">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.CustomerDetail.SecondaryEmail">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.CustomerDetail.PrimaryPhone">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.CustomerDetail.SecondaryPhone">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.CustomerDetail.DateOfBirth">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.CustomerDetail.Gender">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.CustomerDetail.SocialSecurityNumber">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.CustomerDetail.Company">
+<remarks/>
+</member>
+<member name="T:BancaSella.ServiceGestPay.EcommGestpayPaymentDetails">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.EcommGestpayPaymentDetails.CustomerDetail">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.EcommGestpayPaymentDetails.ShippingAddress">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.EcommGestpayPaymentDetails.BillingAddress">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.EcommGestpayPaymentDetails.ProductDetails">
+<remarks/>
+</member>
+<member name="T:BancaSella.ServiceGestPay.ConselCustomerInfo">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.Surname">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.Name">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.TaxationCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.Address">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.City">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.StateCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.DateAddress">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.Phone">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.MobilePhone">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.MunicipalCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.StateBirthDate">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.BirthDate">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.Mail">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.MunicipalDocumentCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.Employment">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.WorkingAddress">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.MunicipalWorkingCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.DocumentState">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.DocumentNumber">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.MunicipalBirthCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.VisaExpiryDate">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.Iban">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.DocumentDate">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.WorkingTelNumber">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.WorkingState">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.ConselCustomerInfo.MonthlyPay">
+<remarks/>
+</member>
+<member name="T:BancaSella.ServiceGestPay.RedItem">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedItem.Item_ProductCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedItem.Item_StockKeepingUnit">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedItem.Item_Description">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedItem.Item_Quantity">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedItem.Item_UnitCost">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedItem.Item_TotalCost">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedItem.Item_ShippingNumber">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedItem.Item_GiftMessage">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedItem.Item_PartEAN_Number">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedItem.Item_ShippingComments">
+<remarks/>
+</member>
+<member name="T:BancaSella.ServiceGestPay.RedItems">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedItems.NumberOfItems">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedItems.Red_Item">
+<remarks/>
+</member>
+<member name="T:BancaSella.ServiceGestPay.RedCustomerData">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedCustomerData.MerchantWebSite">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedCustomerData.Customer_IPAddress">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedCustomerData.PC_FingerPrint">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedCustomerData.PreviousCustomer">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedCustomerData.Red_Merchant_ID">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedCustomerData.Red_ServiceType">
+<remarks/>
+</member>
+<member name="T:BancaSella.ServiceGestPay.RedBillingInfo">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedBillingInfo.Billing_Id">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedBillingInfo.Billing_Name">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedBillingInfo.Billing_Surname">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedBillingInfo.Billing_DateOfBirth">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedBillingInfo.Billing_Email">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedBillingInfo.Billing_Address">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedBillingInfo.Billing_Address2">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedBillingInfo.Billing_City">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedBillingInfo.Billing_StateCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedBillingInfo.Billing_Country">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedBillingInfo.Billing_PostalCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedBillingInfo.Billing_HomePhone">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedBillingInfo.Billing_WorkPhone">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedBillingInfo.Billing_MobilePhone">
+<remarks/>
+</member>
+<member name="T:BancaSella.ServiceGestPay.RedShippingInfo">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedShippingInfo.Shipping_Name">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedShippingInfo.Shipping_Surname">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedShippingInfo.Shipping_Email">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedShippingInfo.Shipping_Address">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedShippingInfo.Shipping_Address2">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedShippingInfo.Shipping_City">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedShippingInfo.Shipping_StateCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedShippingInfo.Shipping_Country">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedShippingInfo.Shipping_PostalCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedShippingInfo.Shipping_HomePhone">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedShippingInfo.Shipping_MobilePhone">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedShippingInfo.Shipping_FaxPhone">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedShippingInfo.Shipping_TimeToDeparture">
+<remarks/>
+</member>
+<member name="T:BancaSella.ServiceGestPay.RedCustomerInfo">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedCustomerInfo.Customer_Title">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedCustomerInfo.Customer_Name">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedCustomerInfo.Customer_Surname">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedCustomerInfo.Customer_Email">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedCustomerInfo.Customer_Address">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedCustomerInfo.Customer_Address2">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedCustomerInfo.Customer_City">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedCustomerInfo.Customer_StateCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedCustomerInfo.Customer_Country">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedCustomerInfo.Customer_PostalCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.RedCustomerInfo.Customer_Phone">
+<remarks/>
+</member>
+<member name="T:BancaSella.ServiceGestPay.PaymentTypeDetail">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.PaymentTypeDetail.MyBankBankCode">
+<remarks/>
+</member>
+<member name="P:BancaSella.ServiceGestPay.PaymentTypeDetail.IdealBankCode">
+<remarks/>
+</member>
+</members>
+</doc>

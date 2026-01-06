@@ -1,0 +1,396 @@
+<wsdl:definitions xmlns:tm="http://microsoft.com/wsdl/mime/textMatching/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:tns="https://www.keepstore.it/" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:s="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" targetNamespace="https://www.keepstore.it/">
+<wsdl:types>
+<s:schema elementFormDefault="qualified" targetNamespace="https://www.keepstore.it/">
+<s:element name="GetCountries">
+<s:complexType/>
+</s:element>
+<s:element name="GetCountriesResponse">
+<s:complexType>
+<s:sequence>
+<s:element minOccurs="0" maxOccurs="1" name="GetCountriesResult">
+<s:complexType>
+<s:annotation>
+<s:appinfo>
+<ActualType xmlns="http://schemas.microsoft.com/2003/10/Serialization/" Name="DataSet" Namespace="http://schemas.datacontract.org/2004/07/System.Data"/>
+</s:appinfo>
+</s:annotation>
+<s:sequence>
+<s:element ref="s:schema"/>
+<s:any/>
+</s:sequence>
+</s:complexType>
+</s:element>
+</s:sequence>
+</s:complexType>
+</s:element>
+<s:element name="GetProvinces">
+<s:complexType>
+<s:sequence>
+<s:element minOccurs="0" maxOccurs="1" name="abbreviationCountry" type="s:string"/>
+</s:sequence>
+</s:complexType>
+</s:element>
+<s:element name="GetProvincesResponse">
+<s:complexType>
+<s:sequence>
+<s:element minOccurs="0" maxOccurs="1" name="GetProvincesResult">
+<s:complexType>
+<s:annotation>
+<s:appinfo>
+<ActualType xmlns="http://schemas.microsoft.com/2003/10/Serialization/" Name="DataSet" Namespace="http://schemas.datacontract.org/2004/07/System.Data"/>
+</s:appinfo>
+</s:annotation>
+<s:sequence>
+<s:element ref="s:schema"/>
+<s:any/>
+</s:sequence>
+</s:complexType>
+</s:element>
+</s:sequence>
+</s:complexType>
+</s:element>
+<s:element name="GetCitiesFromProvince">
+<s:complexType>
+<s:sequence>
+<s:element minOccurs="0" maxOccurs="1" name="abbreviationProvince" type="s:string"/>
+</s:sequence>
+</s:complexType>
+</s:element>
+<s:element name="GetCitiesFromProvinceResponse">
+<s:complexType>
+<s:sequence>
+<s:element minOccurs="0" maxOccurs="1" name="GetCitiesFromProvinceResult">
+<s:complexType>
+<s:annotation>
+<s:appinfo>
+<ActualType xmlns="http://schemas.microsoft.com/2003/10/Serialization/" Name="DataSet" Namespace="http://schemas.datacontract.org/2004/07/System.Data"/>
+</s:appinfo>
+</s:annotation>
+<s:sequence>
+<s:element ref="s:schema"/>
+<s:any/>
+</s:sequence>
+</s:complexType>
+</s:element>
+</s:sequence>
+</s:complexType>
+</s:element>
+<s:element name="GetProvinceFromCity">
+<s:complexType>
+<s:sequence>
+<s:element minOccurs="0" maxOccurs="1" name="nameCity" type="s:string"/>
+</s:sequence>
+</s:complexType>
+</s:element>
+<s:element name="GetProvinceFromCityResponse">
+<s:complexType>
+<s:sequence>
+<s:element minOccurs="0" maxOccurs="1" name="GetProvinceFromCityResult">
+<s:complexType>
+<s:annotation>
+<s:appinfo>
+<ActualType xmlns="http://schemas.microsoft.com/2003/10/Serialization/" Name="DataSet" Namespace="http://schemas.datacontract.org/2004/07/System.Data"/>
+</s:appinfo>
+</s:annotation>
+<s:sequence>
+<s:element ref="s:schema"/>
+<s:any/>
+</s:sequence>
+</s:complexType>
+</s:element>
+</s:sequence>
+</s:complexType>
+</s:element>
+<s:element name="GetCitiesFromPostcodeCode">
+<s:complexType>
+<s:sequence>
+<s:element minOccurs="0" maxOccurs="1" name="code" type="s:string"/>
+</s:sequence>
+</s:complexType>
+</s:element>
+<s:element name="GetCitiesFromPostcodeCodeResponse">
+<s:complexType>
+<s:sequence>
+<s:element minOccurs="0" maxOccurs="1" name="GetCitiesFromPostcodeCodeResult">
+<s:complexType>
+<s:annotation>
+<s:appinfo>
+<ActualType xmlns="http://schemas.microsoft.com/2003/10/Serialization/" Name="DataSet" Namespace="http://schemas.datacontract.org/2004/07/System.Data"/>
+</s:appinfo>
+</s:annotation>
+<s:sequence>
+<s:element ref="s:schema"/>
+<s:any/>
+</s:sequence>
+</s:complexType>
+</s:element>
+</s:sequence>
+</s:complexType>
+</s:element>
+<s:element name="GetPostcodeCodes">
+<s:complexType>
+<s:sequence>
+<s:element minOccurs="0" maxOccurs="1" name="nameCity" type="s:string"/>
+</s:sequence>
+</s:complexType>
+</s:element>
+<s:element name="GetPostcodeCodesResponse">
+<s:complexType>
+<s:sequence>
+<s:element minOccurs="0" maxOccurs="1" name="GetPostcodeCodesResult">
+<s:complexType>
+<s:annotation>
+<s:appinfo>
+<ActualType xmlns="http://schemas.microsoft.com/2003/10/Serialization/" Name="DataSet" Namespace="http://schemas.datacontract.org/2004/07/System.Data"/>
+</s:appinfo>
+</s:annotation>
+<s:sequence>
+<s:element ref="s:schema"/>
+<s:any/>
+</s:sequence>
+</s:complexType>
+</s:element>
+</s:sequence>
+</s:complexType>
+</s:element>
+<s:element name="GetAllDataFromPostcodeCode">
+<s:complexType>
+<s:sequence>
+<s:element minOccurs="0" maxOccurs="1" name="code" type="s:string"/>
+</s:sequence>
+</s:complexType>
+</s:element>
+<s:element name="GetAllDataFromPostcodeCodeResponse">
+<s:complexType>
+<s:sequence>
+<s:element minOccurs="0" maxOccurs="1" name="GetAllDataFromPostcodeCodeResult">
+<s:complexType>
+<s:annotation>
+<s:appinfo>
+<ActualType xmlns="http://schemas.microsoft.com/2003/10/Serialization/" Name="DataSet" Namespace="http://schemas.datacontract.org/2004/07/System.Data"/>
+</s:appinfo>
+</s:annotation>
+<s:sequence>
+<s:element ref="s:schema"/>
+<s:any/>
+</s:sequence>
+</s:complexType>
+</s:element>
+</s:sequence>
+</s:complexType>
+</s:element>
+</s:schema>
+</wsdl:types>
+<wsdl:message name="GetCountriesSoapIn">
+<wsdl:part name="parameters" element="tns:GetCountries"/>
+</wsdl:message>
+<wsdl:message name="GetCountriesSoapOut">
+<wsdl:part name="parameters" element="tns:GetCountriesResponse"/>
+</wsdl:message>
+<wsdl:message name="GetProvincesSoapIn">
+<wsdl:part name="parameters" element="tns:GetProvinces"/>
+</wsdl:message>
+<wsdl:message name="GetProvincesSoapOut">
+<wsdl:part name="parameters" element="tns:GetProvincesResponse"/>
+</wsdl:message>
+<wsdl:message name="GetCitiesFromProvinceSoapIn">
+<wsdl:part name="parameters" element="tns:GetCitiesFromProvince"/>
+</wsdl:message>
+<wsdl:message name="GetCitiesFromProvinceSoapOut">
+<wsdl:part name="parameters" element="tns:GetCitiesFromProvinceResponse"/>
+</wsdl:message>
+<wsdl:message name="GetProvinceFromCitySoapIn">
+<wsdl:part name="parameters" element="tns:GetProvinceFromCity"/>
+</wsdl:message>
+<wsdl:message name="GetProvinceFromCitySoapOut">
+<wsdl:part name="parameters" element="tns:GetProvinceFromCityResponse"/>
+</wsdl:message>
+<wsdl:message name="GetCitiesFromPostcodeCodeSoapIn">
+<wsdl:part name="parameters" element="tns:GetCitiesFromPostcodeCode"/>
+</wsdl:message>
+<wsdl:message name="GetCitiesFromPostcodeCodeSoapOut">
+<wsdl:part name="parameters" element="tns:GetCitiesFromPostcodeCodeResponse"/>
+</wsdl:message>
+<wsdl:message name="GetPostcodeCodesSoapIn">
+<wsdl:part name="parameters" element="tns:GetPostcodeCodes"/>
+</wsdl:message>
+<wsdl:message name="GetPostcodeCodesSoapOut">
+<wsdl:part name="parameters" element="tns:GetPostcodeCodesResponse"/>
+</wsdl:message>
+<wsdl:message name="GetAllDataFromPostcodeCodeSoapIn">
+<wsdl:part name="parameters" element="tns:GetAllDataFromPostcodeCode"/>
+</wsdl:message>
+<wsdl:message name="GetAllDataFromPostcodeCodeSoapOut">
+<wsdl:part name="parameters" element="tns:GetAllDataFromPostcodeCodeResponse"/>
+</wsdl:message>
+<wsdl:portType name="CityRegistrySoap">
+<wsdl:operation name="GetCountries">
+<wsdl:input message="tns:GetCountriesSoapIn"/>
+<wsdl:output message="tns:GetCountriesSoapOut"/>
+</wsdl:operation>
+<wsdl:operation name="GetProvinces">
+<wsdl:input message="tns:GetProvincesSoapIn"/>
+<wsdl:output message="tns:GetProvincesSoapOut"/>
+</wsdl:operation>
+<wsdl:operation name="GetCitiesFromProvince">
+<wsdl:input message="tns:GetCitiesFromProvinceSoapIn"/>
+<wsdl:output message="tns:GetCitiesFromProvinceSoapOut"/>
+</wsdl:operation>
+<wsdl:operation name="GetProvinceFromCity">
+<wsdl:input message="tns:GetProvinceFromCitySoapIn"/>
+<wsdl:output message="tns:GetProvinceFromCitySoapOut"/>
+</wsdl:operation>
+<wsdl:operation name="GetCitiesFromPostcodeCode">
+<wsdl:input message="tns:GetCitiesFromPostcodeCodeSoapIn"/>
+<wsdl:output message="tns:GetCitiesFromPostcodeCodeSoapOut"/>
+</wsdl:operation>
+<wsdl:operation name="GetPostcodeCodes">
+<wsdl:input message="tns:GetPostcodeCodesSoapIn"/>
+<wsdl:output message="tns:GetPostcodeCodesSoapOut"/>
+</wsdl:operation>
+<wsdl:operation name="GetAllDataFromPostcodeCode">
+<wsdl:input message="tns:GetAllDataFromPostcodeCodeSoapIn"/>
+<wsdl:output message="tns:GetAllDataFromPostcodeCodeSoapOut"/>
+</wsdl:operation>
+</wsdl:portType>
+<wsdl:binding name="CityRegistrySoap" type="tns:CityRegistrySoap">
+<soap:binding transport="http://schemas.xmlsoap.org/soap/http"/>
+<wsdl:operation name="GetCountries">
+<soap:operation soapAction="https://www.keepstore.it/GetCountries" style="document"/>
+<wsdl:input>
+<soap:body use="literal"/>
+</wsdl:input>
+<wsdl:output>
+<soap:body use="literal"/>
+</wsdl:output>
+</wsdl:operation>
+<wsdl:operation name="GetProvinces">
+<soap:operation soapAction="https://www.keepstore.it/GetProvinces" style="document"/>
+<wsdl:input>
+<soap:body use="literal"/>
+</wsdl:input>
+<wsdl:output>
+<soap:body use="literal"/>
+</wsdl:output>
+</wsdl:operation>
+<wsdl:operation name="GetCitiesFromProvince">
+<soap:operation soapAction="https://www.keepstore.it/GetCitiesFromProvince" style="document"/>
+<wsdl:input>
+<soap:body use="literal"/>
+</wsdl:input>
+<wsdl:output>
+<soap:body use="literal"/>
+</wsdl:output>
+</wsdl:operation>
+<wsdl:operation name="GetProvinceFromCity">
+<soap:operation soapAction="https://www.keepstore.it/GetProvinceFromCity" style="document"/>
+<wsdl:input>
+<soap:body use="literal"/>
+</wsdl:input>
+<wsdl:output>
+<soap:body use="literal"/>
+</wsdl:output>
+</wsdl:operation>
+<wsdl:operation name="GetCitiesFromPostcodeCode">
+<soap:operation soapAction="https://www.keepstore.it/GetCitiesFromPostcodeCode" style="document"/>
+<wsdl:input>
+<soap:body use="literal"/>
+</wsdl:input>
+<wsdl:output>
+<soap:body use="literal"/>
+</wsdl:output>
+</wsdl:operation>
+<wsdl:operation name="GetPostcodeCodes">
+<soap:operation soapAction="https://www.keepstore.it/GetPostcodeCodes" style="document"/>
+<wsdl:input>
+<soap:body use="literal"/>
+</wsdl:input>
+<wsdl:output>
+<soap:body use="literal"/>
+</wsdl:output>
+</wsdl:operation>
+<wsdl:operation name="GetAllDataFromPostcodeCode">
+<soap:operation soapAction="https://www.keepstore.it/GetAllDataFromPostcodeCode" style="document"/>
+<wsdl:input>
+<soap:body use="literal"/>
+</wsdl:input>
+<wsdl:output>
+<soap:body use="literal"/>
+</wsdl:output>
+</wsdl:operation>
+</wsdl:binding>
+<wsdl:binding name="CityRegistrySoap12" type="tns:CityRegistrySoap">
+<soap12:binding transport="http://schemas.xmlsoap.org/soap/http"/>
+<wsdl:operation name="GetCountries">
+<soap12:operation soapAction="https://www.keepstore.it/GetCountries" style="document"/>
+<wsdl:input>
+<soap12:body use="literal"/>
+</wsdl:input>
+<wsdl:output>
+<soap12:body use="literal"/>
+</wsdl:output>
+</wsdl:operation>
+<wsdl:operation name="GetProvinces">
+<soap12:operation soapAction="https://www.keepstore.it/GetProvinces" style="document"/>
+<wsdl:input>
+<soap12:body use="literal"/>
+</wsdl:input>
+<wsdl:output>
+<soap12:body use="literal"/>
+</wsdl:output>
+</wsdl:operation>
+<wsdl:operation name="GetCitiesFromProvince">
+<soap12:operation soapAction="https://www.keepstore.it/GetCitiesFromProvince" style="document"/>
+<wsdl:input>
+<soap12:body use="literal"/>
+</wsdl:input>
+<wsdl:output>
+<soap12:body use="literal"/>
+</wsdl:output>
+</wsdl:operation>
+<wsdl:operation name="GetProvinceFromCity">
+<soap12:operation soapAction="https://www.keepstore.it/GetProvinceFromCity" style="document"/>
+<wsdl:input>
+<soap12:body use="literal"/>
+</wsdl:input>
+<wsdl:output>
+<soap12:body use="literal"/>
+</wsdl:output>
+</wsdl:operation>
+<wsdl:operation name="GetCitiesFromPostcodeCode">
+<soap12:operation soapAction="https://www.keepstore.it/GetCitiesFromPostcodeCode" style="document"/>
+<wsdl:input>
+<soap12:body use="literal"/>
+</wsdl:input>
+<wsdl:output>
+<soap12:body use="literal"/>
+</wsdl:output>
+</wsdl:operation>
+<wsdl:operation name="GetPostcodeCodes">
+<soap12:operation soapAction="https://www.keepstore.it/GetPostcodeCodes" style="document"/>
+<wsdl:input>
+<soap12:body use="literal"/>
+</wsdl:input>
+<wsdl:output>
+<soap12:body use="literal"/>
+</wsdl:output>
+</wsdl:operation>
+<wsdl:operation name="GetAllDataFromPostcodeCode">
+<soap12:operation soapAction="https://www.keepstore.it/GetAllDataFromPostcodeCode" style="document"/>
+<wsdl:input>
+<soap12:body use="literal"/>
+</wsdl:input>
+<wsdl:output>
+<soap12:body use="literal"/>
+</wsdl:output>
+</wsdl:operation>
+</wsdl:binding>
+<wsdl:service name="CityRegistry">
+<wsdl:port name="CityRegistrySoap" binding="tns:CityRegistrySoap">
+<soap:address location="https://www.keepstore.it/cityregistry.asmx"/>
+</wsdl:port>
+<wsdl:port name="CityRegistrySoap12" binding="tns:CityRegistrySoap12">
+<soap12:address location="https://www.keepstore.it/cityregistry.asmx"/>
+</wsdl:port>
+</wsdl:service>
+</wsdl:definitions>

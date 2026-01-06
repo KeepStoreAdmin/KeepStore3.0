@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<banner>
+	<globals 
+		width="600" height="300" 
+		currentItem="0" radius="0" randomize="false" showTimerClock="true"
+		showButtons="true" buttonPosition="right" buttonPadding="1" buttonMargin="15"
+		buttonBgAlpha="0.6" currentButtonBgColor="#FFFFFF" currentButtonFontColor="#000000"
+		cssFile="css/banner.css"
+	/>
+	<item src="Images/Slide_Show/1.jpg" timer="10" link="http://www.flashcomponents.net/" target="_blank" contentX="0" contentY="100">
+		<content fontColor="#FFFFFF" fontSize="36" bgColor="#99CC00" bgAlpha="1" spacing="1">
+			<![CDATA[Masterizzatore DVD]]>
+		</content>
+		<content fontColor="#000000" fontSize="10" bgColor="#FFFFFF" bgAlpha="1" spacing="1">
+			<![CDATA[HTML formatted text which can support <a href="http://www.flashcomponents.net/author/flashblue.html" target="_blank">hyperlinks</a>]]>
+		</content>
+		<content fontColor="#FFFFFF" fontSize="14" bgColor="#000000" bgAlpha="0.3">
+			<![CDATA[<p>50<br />euro</p>]]>
+		</content>		
+	</item>
+	<item src="Images/Slide_Show/1.jpg" timer="8" link="http://www.flashcomponents.net/author/flashblue.html" target="_blank" contentX="275" contentY="100" contentAlign="right">
+		<content fontColor="#F80046" fontSize="24" bgColor="#FFFFFF" bgAlpha="0.6">
+			<![CDATA[STORMY WINTER]]>
+		</content>		
+		<content fontColor="#FFFFFF" fontSize="28" bgColor="#000000" bgAlpha="0.8">
+			<![CDATA[TWO OLD CARS LONELY]]>
+		</content>
+		<content fontColor="#FFFFFF" fontSize="16" bgColor="#F80046" bgAlpha="0.8">
+			<![CDATA[WINTER SCENE]]>
+		</content>
+	</item>	
+	<item src="Images/Slide_Show/1.jpg" timer="7" link="http://www.flashcomponents.net/author/flashblue/components/index.html" target="" contentX="15" contentY="15" contentAlign="center">
+		<content fontColor="#0099FF" fontSize="32" bgColor="#000000" bgAlpha="1" spacing="2">
+			<![CDATA[WINTER NIGHT]]>
+		</content>		
+		<content fontColor="#FFFFFF" fontSize="14" bgColor="#000000" bgAlpha="0.5">
+			<![CDATA[WINTER IN EUROPE]]>
+		</content>
+	</item>
+	<item src="Images/Slide_Show/1.jpg" timer="6" contentX="130" contentY="130">
+		<content fontColor="#68a830" fontSize="40" bgColor="#FFFFFF" bgAlpha="1" bgRadius="6">
+			<![CDATA[SAMPLE SWF FILE]]>
+		</content>
+	</item>
+</banner>
