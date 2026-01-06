@@ -1,10 +1,9 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
 
-<!-- ============================================================
+<%-- ============================================================
      Default.aspx (HOME) - Layout FULL-WIDTH con banner + sezioni
      NOTE: mantiene logica e controlli esistenti
-     ============================================================ -->
-
+     ============================================================ --%>
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
     Home
 </asp:Content>
@@ -39,34 +38,61 @@
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
-        <!-- ============================================================
+    <!-- ============================================================
          HERO / BANNERS (FULL-WIDTH)
-         Layout ispirato a index.html del template (3 blocchi)
+         (Slideshow legacy integrato nella posizione "wrap-item-2")
          ============================================================ -->
 
-    <section class="tf-sp-5 pt-0">
-        <div class="container">
-            <div class="s-banner-wrapper">
+    <section class="tf-sp-2 pt-0">
+        <div class="container-full">
+            <div class="s-banner-wrapper style-2">
 
-                <!-- LEFT: Banner static (template) -->
-                <div class="collection-position-1 hover-img">
-                    <div class="cls-category style-abs">
-                        <a href="articoli.aspx" class="img-box img-style d-block">
-                            <img src="/Public/assets/images/banner/banner-collection-4.jpg" alt="" onerror="this.style.display='none'" />
-                        </a>
-                        <div class="content">
-                            <div class="text-title">Promo</div>
-                            <h4 class="title">Offerte del momento</h4>
-                            <a href="articoli.aspx" class="btn-line">Vai allo shop</a>
+                <!-- LEFT: Department (static template) -->
+                <div class="wrap-item-1">
+                    <div class="department-menu hover-menu">
+                        <div class="sub-department-menu">
+                            <div class="department-title bg_main">
+                                <span class="icon icon-categories"></span>
+                                <span class="fw-semibold">Dipartimenti</span>
+                            </div>
+                            <ul class="department-list">
+                                <!-- Static (template). In futuro possiamo collegarlo alle categorie reali. -->
+                                <li><a href="articoli.aspx" class="department-link">Laptop</a></li>
+                                <li><a href="articoli.aspx" class="department-link">Computer</a></li>
+                                <li><a href="articoli.aspx" class="department-link">Monitor</a></li>
+                                <li><a href="articoli.aspx" class="department-link">TV</a></li>
+                                <li><a href="articoli.aspx" class="department-link">Smartphone</a></li>
+                                <li><a href="articoli.aspx" class="department-link">Audio</a></li>
+                                <li><a href="articoli.aspx" class="department-link">Gadget</a></li>
+                                <li><a href="articoli.aspx" class="department-link">Accessori</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Small promo banner (static) -->
+                    <div class="banner-image-product-4 hover-img mb-20">
+                        <div class="item-product">
+                            <a href="articoli.aspx" class="box-link">
+                                <div class="box-content">
+                                    <span class="sub-title">Promo</span>
+                                    <h5 class="title">Offerte del momento</h5>
+                                    <p class="price fw-semibold">Scopri</p>
+                                </div>
+                                <div class="box-image">
+                                    <img src="/Public/assets/images/banner/banner-department-1.png" alt="" onerror="this.style.display='none'" />
+                                </div>
+                            </a>
                         </div>
                     </div>
                 </div>
 
                 <!-- CENTER: Slideshow (dinamico) -->
-                <div class="collection-position-2 hover-img">
-                    <div class="cls-category style-abs">
-                        <div class="img-box img-style d-block">
-<div id="Slide_Show">
+                <div class="wrap-item-2">
+                    <div class="banner-image-product-4 style-2 hover-img">
+                        <div class="item-product">
+
+                            <!-- Slide Show (legacy) -->
+                            <div id="Slide_Show">
 
                                 <asp:SqlDataSource 
                                     ID="slideShow" 
@@ -163,16 +189,23 @@
                                 </script>
 
                             </div>
-                            <!-- /Slide Show -->                        </div>
+                            <!-- /Slide Show -->
+
+                        </div>
                     </div>
                 </div>
 
                 <!-- RIGHT: 2 banners dinamici (pubblicità id_posizione_banner=4 ordinamento 1 e 2) -->
-                <div class="collection-position-3 hover-img">
-                    <div class="cls-category style-abs mb-20">
+                <div class="wrap-item-3">
+
+                    <!-- BANNER 1 -->
+                    <div class="banner-image-product-4 style-4 hover-img mb-20">
                         <div class="item-product">
 
-<asp:SqlDataSource 
+                            <!-- ========================= -->
+                            <!-- INIZIO BLOCCO SPRINT2_HOME1_STEP5 SqlDataSource_Pubblicita_id4_pos1 (BANNERS POS4 ORD1) -->
+                            <!-- ========================= -->
+                            <asp:SqlDataSource 
                                 ID="SqlDataSource_Pubblicita_id4_pos1" 
                                 runat="server" 
                                 ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
@@ -194,28 +227,34 @@
                                 </UpdateParameters>
 
                             </asp:SqlDataSource>
+                            <!-- ========================= -->
+                            <!-- FINE BLOCCO SPRINT2_HOME1_STEP5 SqlDataSource_Pubblicita_id4_pos1 -->
+                            <!-- ========================= -->
 
-<asp:Repeater ID="RepeaterPubblicita_id4_pos1" runat="server" OnItemDataBound="RepeaterPubblicita_id4_pos1_ItemDataBound" DataSourceID="SqlDataSource_Pubblicita_id4_pos1" EnableViewState="False">
+                            <asp:Repeater ID="RepeaterPubblicita_id4_pos1" runat="server" OnItemDataBound="RepeaterPubblicita_id4_pos1_ItemDataBound" DataSourceID="SqlDataSource_Pubblicita_id4_pos1" EnableViewState="False">
                                 <ItemTemplate>
-                                    <a href='<%# "click.aspx?id=" & Eval("id") %>' class="img-box img-style d-block" target="_blank" rel="noopener noreferrer">
-                                        <img class="lazyload"
-                                             src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
-                                             data-src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
-                                             alt='<%# SafeAttr(Eval("titolo")) %>' />
+                                    <a href='<%# "click.aspx?id=" & Eval("id") %>' class="box-link" target="_blank" rel="noopener noreferrer">
+                                        <div class="box-image">
+                                            <img class="lazyload"
+                                                 src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
+                                                 data-src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
+                                                 alt='<%# SafeAttr(Eval("titolo")) %>' />
+                                        </div>
                                     </a>
-                                    <div class="content">
-                                        <div class="text-title">Promo</div>
-                                        <h4 class="title"><%# SafeText(Eval("titolo")) %></h4>
-                                    </div>
                                 </ItemTemplate>
                             </asp:Repeater>
 
                         </div>
                     </div>
-                    <div class="cls-category style-abs ">
+
+                    <!-- BANNER 2 -->
+                    <div class="banner-image-product-4 style-4 hover-img">
                         <div class="item-product">
 
-<asp:SqlDataSource 
+                            <!-- ========================= -->
+                            <!-- INIZIO BLOCCO SPRINT2_HOME1_STEP5 SqlDataSource_Pubblicita_id4_pos2 (BANNERS POS4 ORD2) -->
+                            <!-- ========================= -->
+                            <asp:SqlDataSource 
                                 ID="SqlDataSource_Pubblicita_id4_pos2" 
                                 runat="server" 
                                 ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
@@ -237,19 +276,20 @@
                                 </UpdateParameters>
 
                             </asp:SqlDataSource>
+                            <!-- ========================= -->
+                            <!-- FINE BLOCCO SPRINT2_HOME1_STEP5 SqlDataSource_Pubblicita_id4_pos2 -->
+                            <!-- ========================= -->
 
-<asp:Repeater ID="RepeaterPubblicita_id4_pos2" runat="server" OnItemDataBound="RepeaterPubblicita_id4_pos2_ItemDataBound" DataSourceID="SqlDataSource_Pubblicita_id4_pos2" EnableViewState="False">
+                            <asp:Repeater ID="RepeaterPubblicita_id4_pos2" runat="server" OnItemDataBound="RepeaterPubblicita_id4_pos2_ItemDataBound" DataSourceID="SqlDataSource_Pubblicita_id4_pos2" EnableViewState="False">
                                 <ItemTemplate>
-                                    <a href='<%# "click.aspx?id=" & Eval("id") %>' class="img-box img-style d-block" target="_blank" rel="noopener noreferrer">
-                                        <img class="lazyload"
-                                             src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
-                                             data-src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
-                                             alt='<%# SafeAttr(Eval("titolo")) %>' />
+                                    <a href='<%# "click.aspx?id=" & Eval("id") %>' class="box-link" target="_blank" rel="noopener noreferrer">
+                                        <div class="box-image">
+                                            <img class="lazyload"
+                                                 src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
+                                                 data-src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
+                                                 alt='<%# SafeAttr(Eval("titolo")) %>' />
+                                        </div>
                                     </a>
-                                    <div class="content">
-                                        <div class="text-title">Promo</div>
-                                        <h4 class="title"><%# SafeText(Eval("titolo")) %></h4>
-                                    </div>
                                 </ItemTemplate>
                             </asp:Repeater>
 
@@ -262,56 +302,54 @@
         </div>
     </section>
 
-<!-- Icon boxes (template) -->
-    <section class="flat-spacing-3 pt_0">
-        <div class="container">
-            <div class="tf-iconbox-line">
-                <div class="swiper tf-sw-iconbox line" data-preview="4" data-tablet="2" data-mobile="1" data-space-lg="30" data-space-md="15" data-space="15" data-pagination="1" data-pagination-sm="1" data-pagination-md="1" data-pagination-lg="1">
-                    <div class="swiper-wrapper">
-                        <div class="swiper-slide">
-                            <div class="tf-icon-box style-line">
-                                <div class="icon"><i class="icon-delivery-2"></i></div>
-                                <div class="content">
-                                    <h5 class="title">Spedizione veloce</h5>
-                                    <p>Ordini gestiti rapidamente</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="swiper-slide">
-                            <div class="tf-icon-box style-line">
-                                <div class="icon"><i class="icon-payment-2"></i></div>
-                                <div class="content">
-                                    <h5 class="title">Pagamenti sicuri</h5>
-                                    <p>Metodi di pagamento affidabili</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="swiper-slide">
-                            <div class="tf-icon-box style-line">
-                                <div class="icon"><i class="icon-return-2"></i></div>
-                                <div class="content">
-                                    <h5 class="title">Assistenza</h5>
-                                    <p>Supporto pre e post vendita</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="swiper-slide">
-                            <div class="tf-icon-box style-line">
-                                <div class="icon"><i class="icon-suport-3"></i></div>
-                                <div class="content">
-                                    <h5 class="title">Contattaci</h5>
-                                    <p>Telefono, WhatsApp e Email</p>
-                                </div>
+    <!-- Icon boxes (template) -->
+    <div class="tf-sp-2 pt-0">
+        <div class="container-full">
+            <div class="swiper tf-sw-iconbox" data-preview="4" data-tablet="2" data-mobile="1" data-space-lg="0" data-space-md="0" data-space="0" data-pagination="1" data-pagination-sm="1" data-pagination-md="1" data-pagination-lg="1">
+                <div class="swiper-wrapper">
+                    <div class="swiper-slide">
+                        <div class="tf-icon-box style-border-line">
+                            <div class="icon"><i class="icon-delivery-2"></i></div>
+                            <div class="content">
+                                <h5 class="title">Spedizione veloce</h5>
+                                <p>Ordini gestiti rapidamente</p>
                             </div>
                         </div>
                     </div>
-                    <div class="sw-dot-default sw-pagination-iconbox line"></div>
+                    <div class="swiper-slide">
+                        <div class="tf-icon-box style-border-line">
+                            <div class="icon"><i class="icon-payment-2"></i></div>
+                            <div class="content">
+                                <h5 class="title">Pagamenti sicuri</h5>
+                                <p>Metodi di pagamento affidabili</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="tf-icon-box style-border-line">
+                            <div class="icon"><i class="icon-return-2"></i></div>
+                            <div class="content">
+                                <h5 class="title">Assistenza</h5>
+                                <p>Supporto pre e post vendita</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="tf-icon-box style-border-line">
+                            <div class="icon"><i class="icon-suport-3"></i></div>
+                            <div class="content">
+                                <h5 class="title">Contattaci</h5>
+                                <p>Telefono, WhatsApp e Email</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+                <div class="d-flex sw-dot-default sw-pagination-iconbox justify-content-center"></div>
             </div>
         </div>
-    </section>
+    </div>
 
-<!-- ============================================================
+    <!-- ============================================================
          SCELTI PER TE (vetrina)
          ============================================================ -->
 
