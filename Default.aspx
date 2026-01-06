@@ -1,4 +1,6 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
+
+
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server"><%: Page.Title %></asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
@@ -668,7 +670,7 @@
             u = SafeUrl(u)
             If u = "" Then Return ""
 
-            If u.StartsWith("~/"c) Then
+            If u.StartsWith("~/") Then
                 u = ResolveUrl(u)
             End If
 
