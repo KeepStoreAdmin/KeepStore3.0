@@ -33,6 +33,13 @@ Public NotInheritable Class SeoBuilder
     Private Const Q As Char = ChrW(34)   ' "
     Private Const BS As Char = ChrW(92)  ' \
 
+    ' Control characters (explicit Char constants to keep Option Strict On safe)
+    Private Const CH_BACK As Char = ChrW(8)     ' \b
+    Private Const CH_TAB As Char = ChrW(9)      ' \t
+    Private Const CH_LF As Char = ChrW(10)      ' \n
+    Private Const CH_FF As Char = ChrW(12)      ' \f
+    Private Const CH_CR As Char = ChrW(13)      ' \r
+
     ' ------------------------------------------------------------
     ' DTOs (nested to avoid name collisions in legacy projects)
     ' ------------------------------------------------------------
@@ -88,19 +95,19 @@ Public NotInheritable Class SeoBuilder
                     ' \\  (backslash + backslash)
                     sb.Append(BS).Append(BS)
 
-                Case ControlChars.Back
+                Case CH_BACK
                     sb.Append(BS).Append("b"c)
 
-                Case ControlChars.FormFeed
+                Case CH_FF
                     sb.Append(BS).Append("f"c)
 
-                Case ControlChars.NewLine
+                Case CH_LF
                     sb.Append(BS).Append("n"c)
 
-                Case ControlChars.Cr
+                Case CH_CR
                     sb.Append(BS).Append("r"c)
 
-                Case ControlChars.Tab
+                Case CH_TAB
                     sb.Append(BS).Append("t"c)
 
                 Case Else
