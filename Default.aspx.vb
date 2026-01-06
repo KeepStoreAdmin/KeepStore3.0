@@ -1,5 +1,3 @@
-Imports System.Data
-Imports System.Configuration
 Imports MySql.Data.MySqlClient
 
 Partial Class _Default
@@ -302,61 +300,89 @@ Partial Class _Default
     ' ==========================================================
     ' SEO / AI-READINESS (HOME)
     ' ==========================================================
-    Private Sub EnsureHomeSeo()
-    ' ============================================================
-    ' SEO HOME - Avanzato (Meta + OpenGraph + JSON-LD)
-    ' ============================================================
-
-    Dim siteName As String = SafeSessionString("AziendaNome", "KeepStore")
-
-    Dim baseUrl As String = SafeSessionString("AziendaUrl", Request.Url.GetLeftPart(UriPartial.Authority) & ResolveUrl("~/"))
-    If Not baseUrl.EndsWith("/") Then baseUrl &= "/"
-
-    Dim title As String = siteName & " | Computer e Telefonia - Offerte Online"
-    Dim descr As String = "Vendita online e assistenza tecnica per computer, smartphone, periferiche e consumabili. Spedizione rapida e pagamenti sicuri."
-    Dim canonical As String = baseUrl
-
-    Dim logoUrl As String = SafeSessionString("AziendaLogo", "")
-    If Not String.IsNullOrEmpty(logoUrl) Then
-        logoUrl = ResolveMediaUrl(logoUrl, baseUrl)
-    End If
-
-    ' <title> nel Master (Page.master usa il ContentPlaceHolder TitleContent)
-    If litTitleContent IsNot Nothing Then
-        litTitleContent.Text = Server.HtmlEncode(title)
-    End If
-
-    ' Title + Meta description + Canonical
-    SeoBuilder.SetTitle(Me, title)
-    SeoBuilder.SetMetaDescription(Me, descr)
-    SeoBuilder.SetCanonical(Me, canonical)
-
-    ' Robots (rich previews)
-    Dim robots As String = "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
-    SeoBuilder.SetMetaTag(Me, "robots", robots)
-    SeoBuilder.SetMetaTag(Me, "googlebot", robots)
-    SeoBuilder.SetMetaTag(Me, "bingbot", robots)
-
-    ' OpenGraph / Twitter
-    SeoBuilder.ApplyOpenGraph(Me, title, descr, canonical, logoUrl)
-
-    ' FAQ HTML (visibile) - stessa fonte usata dal JSON-LD (FAQPage)
+' ============================================================
+' SEO / JSON-LD (HOME)
+' ============================================================
+Private Sub EnsureHomeSeo()
     Try
-        Dim faqs As List(Of SeoBuilder.SeoFaq) = SeoBuilder.GetHomeFaq()
-        If rFaqHome IsNot Nothing Then
-            rFaqHome.DataSource = faqs
-            rFaqHome.DataBind()
+        Dim baseUrl As String = Request.Url.GetLeftPart(UriPartial.Authority)
+        Dim canonical As String = baseUrl & ResolveUrl("~/")
+        If Not canonical.EndsWith("/") Then canonical &= "/"
+
+        Dim azienda As String = SeoBuilder.SafeSessionString("AziendaNome", "TAIKUN.IT")
+
+        Dim descr As String = SeoBuilder.SafeSessionString("AziendaDescrizione", "")
+        If String.IsNullOrWhiteSpace(descr) Then
+            descr = "E-commerce " & azienda & ": informatica, telefonia, periferiche, consumabili e accessori. Scopri offerte e nuovi arrivi con disponibilità aggiornata."
         End If
+
+        ' Versione breve per meta/OG/Twitter (evita descrizioni troppo lunghe)
+        Dim descrMeta As String = descr.Replace(ControlChars.Cr, " ").Replace(ControlChars.Lf, " ").Trim()
+        If descrMeta.Length > 170 Then descrMeta = descrMeta.Substring(0, 167) & "..."
+
+        Dim pageTitle As String = azienda & " | Informatica, Telefonia, Periferiche e Consumabili"
+        Me.Title = pageTitle
+
+        ' Meta standard
+        AddOrReplaceMeta("description", descrMeta)
+        AddOrReplaceMetaName("robots", "index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1")
+        AddOrReplaceCanonical(canonical)
+
+        ' Open Graph
+        AddOrReplaceMetaProperty("og:type", "website")
+        AddOrReplaceMetaProperty("og:locale", "it_IT")
+        AddOrReplaceMetaProperty("og:site_name", azienda)
+        AddOrReplaceMetaProperty("og:title", pageTitle)
+        AddOrReplaceMetaProperty("og:description", descrMeta)
+        AddOrReplaceMetaProperty("og:url", canonical)
+
+        ' Twitter
+        AddOrReplaceMetaName("twitter:title", pageTitle)
+        AddOrReplaceMetaName("twitter:description", descrMeta)
+
+        ' Immagine (logo/og)
+        Dim imageUrl As String = SeoBuilder.SafeSessionString("AziendaOgImage", "")
+        If String.IsNullOrWhiteSpace(imageUrl) Then
+            imageUrl = SeoBuilder.SafeSessionString("AziendaLogo", "")
+        End If
+
+        If Not String.IsNullOrWhiteSpace(imageUrl) Then
+            ' Normalizza URL assoluto
+            If Not (imageUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse imageUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) Then
+                If imageUrl.StartsWith("~/") OrElse imageUrl.StartsWith("/") Then
+                    imageUrl = baseUrl & ResolveUrl(imageUrl)
+                Else
+                    imageUrl = baseUrl & ResolveUrl("~/" & imageUrl.TrimStart("/"c))
+                End If
+            End If
+
+            AddOrReplaceMetaProperty("og:image", imageUrl)
+            AddOrReplaceMetaProperty("og:image:alt", azienda)
+            AddOrReplaceMetaName("twitter:card", "summary_large_image")
+            AddOrReplaceMetaName("twitter:image", imageUrl)
+        Else
+            AddOrReplaceMetaName("twitter:card", "summary")
+        End If
+
+        ' JSON-LD @graph (SeoBuilder avanzato)
+        Dim logoUrl As String = SeoBuilder.SafeSessionString("AziendaLogo", "")
+        If Not String.IsNullOrWhiteSpace(logoUrl) Then
+            If Not (logoUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse logoUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) Then
+                If logoUrl.StartsWith("~/") OrElse logoUrl.StartsWith("/") Then
+                    logoUrl = baseUrl & ResolveUrl(logoUrl)
+                Else
+                    logoUrl = baseUrl & ResolveUrl("~/" & logoUrl.TrimStart("/"c))
+                End If
+            End If
+        End If
+
+        Dim jsonLdScript As String = SeoBuilder.BuildHomeJsonLd(Me, pageTitle, descr, canonical, logoUrl)
+        SeoBuilder.SetJsonLdOnMaster(Me, jsonLdScript)
+
     Catch
-        ' Non bloccare la Home per il solo binding FAQ
+        ' Fail-safe: non bloccare il rendering della home per errori SEO
     End Try
-
-    ' JSON-LD (advanced graph)
-    Dim jsonLdScript As String = SeoBuilder.BuildHomeJsonLd(Me, title, descr, canonical, logoUrl)
-    SeoBuilder.SetJsonLdOnMaster(Me, jsonLdScript)
-
 End Sub
-
 
     Private Sub AddOrReplaceCanonical(ByVal href As String)
         Dim toRemove As New System.Collections.Generic.List(Of System.Web.UI.Control)()
@@ -402,124 +428,6 @@ End Sub
     End Sub
 
     ' STEP6: JSON-LD realmente emesso in <head> (prima era vuoto)
-    Private Sub AddOrReplaceJsonLd(ByVal controlId As String, ByVal json As String)
-        Try
-            If Page Is Nothing OrElse Page.Header Is Nothing Then Exit Sub
-
-            Dim lit As System.Web.UI.WebControls.Literal = TryCast(Page.Header.FindControl(controlId), System.Web.UI.WebControls.Literal)
-            If lit Is Nothing Then
-                Dim existing As System.Web.UI.Control = Page.Header.FindControl(controlId)
-                If existing IsNot Nothing Then Page.Header.Controls.Remove(existing)
-
-                lit = New System.Web.UI.WebControls.Literal()
-                lit.ID = controlId
-                lit.Mode = System.Web.UI.WebControls.LiteralMode.PassThrough
-                Page.Header.Controls.Add(lit)
-            End If
-
-            If json Is Nothing Then json = ""
-            json = json.Trim()
-
-            If json.Length = 0 Then
-                lit.Text = ""
-                Exit Sub
-            End If
-
-            ' hardening: evita chiusure </script> involontarie
-            json = json.Replace("</", "<\/")
-
-            lit.Text = "<script type=""application/ld+json"">" & json & "</script>"
-
-        Catch
-            ' Non bloccare la home
-        End Try
-    End Sub
-Private Sub AddOrReplaceJsonLd(ByVal jsonOrScript As String, ByVal alreadyScript As Boolean)
-    ' alreadyScript=True: jsonOrScript contiene già il tag <script type="application/ld+json">...</script>
-    ' alreadyScript=False: jsonOrScript contiene solo JSON e il metodo lo wrappa
-    If alreadyScript Then
-        Dim lit As New Literal()
-        lit.Text = jsonOrScript
-        ' rimuove eventuali precedenti ld+json generati in questa pagina
-        For i As Integer = Page.Header.Controls.Count - 1 To 0 Step -1
-            Dim l As Literal = TryCast(Page.Header.Controls(i), Literal)
-            If l IsNot Nothing AndAlso l.Text IsNot Nothing AndAlso l.Text.IndexOf("application/ld+json", StringComparison.OrdinalIgnoreCase) >= 0 Then
-                Page.Header.Controls.RemoveAt(i)
-            End If
-        Next
-        Page.Header.Controls.Add(lit)
-    Else
-        AddOrReplaceJsonLd("litSeoJsonLd", jsonOrScript)
-    End If
-End Sub
-
-
-
-    Private Function BuildHomeJsonLd(ByVal baseUrl As String, ByVal azienda As String) As String
-        Dim siteUrl As String = baseUrl & ResolveUrl("~/")
-        Dim searchUrl As String = baseUrl & ResolveUrl("~/articoli.aspx?q={search_term_string}")
-
-        Dim nameEsc As String = JsonEscape(azienda)
-        Dim siteEsc As String = JsonEscape(siteUrl)
-        Dim searchEsc As String = JsonEscape(searchUrl)
-
-        Dim json As String =
-            "{" &
-                """@context"":""https://schema.org""," &
-                """@graph"":[" &
-                    "{" &
-                        """@type"":""Organization""," &
-                        """@id"":""" & siteEsc & "#org""," &
-                        """name"":""" & nameEsc & """," &
-                        """url"":""" & siteEsc & """" &
-                    "}," &
-                    "{" &
-                        """@type"":""WebSite""," &
-                        """@id"":""" & siteEsc & "#website""," &
-                        """name"":""" & nameEsc & """," &
-                        """url"":""" & siteEsc & """," &
-                        """potentialAction"":{" &
-                            """@type"":""SearchAction""," &
-                            """target"":""" & searchEsc & """," &
-                            """query-input"":""required name=search_term_string""" &
-                        "}" &
-                    "}" &
-                "]" &
-            "}"
-
-        Return json
-    End Function
-
-    ' Safe read Session string with fallback (Option Strict friendly)
-    Private Function SafeSessionString(ByVal key As String, ByVal fallback As String) As String
-        Try
-            Dim o As Object = Session(key)
-            If o Is Nothing Then Return fallback
-
-            Dim s As String = TryCast(o, String)
-            If s Is Nothing Then s = o.ToString()
-
-            If String.IsNullOrWhiteSpace(s) Then Return fallback
-            Return s.Trim()
-        Catch
-            Return fallback
-        End Try
-    End Function
-
-
-    Private Function JsonEscape(ByVal s As String) As String
-        If s Is Nothing Then Return ""
-
-        Dim t As String = s
-        Dim bs As String = ChrW(92).ToString() ' backslash
-        Dim dq As String = ChrW(34).ToString() ' double quote
-
-        t = t.Replace(bs, bs & bs) ' backslash -> double backslash
-        t = t.Replace(dq, bs & dq) ' quote -> escaped quote
-        t = t.Replace(vbCrLf, bs & "n").Replace(vbCr, bs & "n").Replace(vbLf, bs & "n")
-
-        Return t
-    End Function
 
     ' ===========================
     ' BANNER HOME: Impression tracking (sicuro, parametrizzato)
