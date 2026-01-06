@@ -302,46 +302,6 @@ Partial Class _Default
         Return Nothing
     End Function
 
-    ' ==========================================================
-    ' SEO / AI-READINESS (HOME)  - JSON ESCAPE
-    ' ==========================================================
-    Private Function JsonEscape(ByVal s As String) As String
-    If String.IsNullOrEmpty(s) Then Return ""
-
-    Dim sb As New System.Text.StringBuilder(s.Length + 16)
-
-    For i As Integer = 0 To s.Length - 1
-        Dim ch As Char = s.Chars(i)
-        Dim code As Integer = AscW(ch)
-
-        Select Case ch
-            Case """"c
-                sb.Append("\""")          ' "
-            Case "\"c
-                sb.Append("\\")           ' \
-            Case ChrW(8)
-                sb.Append("\b")           ' backspace
-            Case ChrW(12)
-                sb.Append("\f")           ' formfeed
-            Case vbTab
-                sb.Append("\t")           ' tab
-            Case vbCr
-                sb.Append("\n")           ' normalizza CR a \n
-            Case vbLf
-                sb.Append("\n")           ' normalizza LF a \n
-            Case Else
-                If code >= 0 AndAlso code < 32 Then
-                    sb.Append("\u")
-                    sb.Append(code.ToString("x4"))
-                Else
-                    sb.Append(ch)
-                End If
-        End Select
-    Next
-
-    Return sb.ToString()
-    End Function
-
     ' ============================
     ' SEO COMPLETO DELLA HOME
     ' ============================
@@ -454,14 +414,17 @@ Partial Class _Default
     End Try
     End Sub
 
-    ' ============================
-    ' COSTRUZIONE JSON ESCAPE - DINAMICO DA DB (robusto per JSON-LD dentro <script>)
-    ' ============================
+    ' ==========================================================
+    ' COSTRUZIONE JSON ESCAPE - DINAMICO DA DB (SEO / AI-READINESS) - robusto per JSON-LD dentro <script>
+    ' ==========================================================
     Private Function JsonEscape(ByVal s As String) As String
     If String.IsNullOrEmpty(s) Then Return ""
 
-    ' JavaScriptStringEncode è più sicuro e completo dei Replace manuali
-    Dim t As String = System.Web.HttpUtility.JavaScriptStringEncode(s)
+    ' Normalizza i fine-linea per avere JSON più coerente (CRLF/CR -> LF)
+    Dim normalized As String = s.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf)
+
+    ' Escape robusto (gestisce anche caratteri di controllo)
+    Dim t As String = System.Web.HttpUtility.JavaScriptStringEncode(normalized)
 
     ' Hardening: evita chiusure involontarie del tag <script> in casi limite
     t = t.Replace("</", "<\/")
