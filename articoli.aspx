@@ -1,42 +1,27 @@
 ﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="articoli.aspx.vb" Inherits="Articoli" MaintainScrollPositionOnPostback="true" %>
-<script runat="server">
-    Public Function sotto_stringa(ByVal valore As Object) As String
-        ' Gestione null / DBNull
-        If valore Is Nothing OrElse valore Is DBNull.Value Then
-            Return ""
-        End If
-
-        Dim testo As String = valore.ToString().Trim()
-
-        ' Lunghezza massima del riassunto (puoi cambiarla se vuoi)
-        Dim maxLen As Integer = 250
-
-        If testo.Length <= maxLen Then
-            Return testo
-        End If
-
-        ' Cerco di troncare alla fine di una parola
-        Dim taglio As Integer = maxLen
-        Dim spazio As Integer = testo.LastIndexOf(" "c, maxLen - 1)
-        If spazio > 0 Then
-            taglio = spazio
-        End If
-
-        testo = testo.Substring(0, taglio) & "..."
-        Return testo
-    End Function
-</script>
-
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
     Catalogo prodotti
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+
+    <link rel="canonical" href="<%= Request.Url.GetLeftPart(System.UriPartial.Path) %>" />
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" Runat="Server">
 
-    <div class="container mt-3">
+    
+    <div class="tf-breadcrumb">
+        <div class="container">
+            <ul class="breadcrumb-list">
+                <li><a href="<%= ResolveUrl("~/Default.aspx") %>" class="text">Home</a></li>
+                <li><span class="text">Articoli</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <section class="flat-spacing-2">
+<div class="container mt-3">
         <h1>
             <asp:FormView ID="FormView1" runat="server" DataSourceID="sdsCategorie" EnableViewState="False">
                 <ItemTemplate>
@@ -452,4 +437,6 @@
         }
     </script>
 	
+    </section>
+
 </asp:Content>
