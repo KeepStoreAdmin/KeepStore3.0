@@ -915,6 +915,13 @@ Public NotInheritable Class SeoBuilder
         End Try
         Return ""
     End Function
+    ' Public overload with default value
+    Public Shared Function SafeSessionString(ByVal key As String, ByVal defaultValue As String) As String
+        Dim v As String = SafeSessionString(key)
+        If String.IsNullOrEmpty(v) Then Return defaultValue
+        Return v
+    End Function
+
 
     Private Shared Function SafeSessionString(key As String) As String
         Try
