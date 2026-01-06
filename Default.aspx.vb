@@ -304,49 +304,57 @@ Partial Class _Default
     ' ==========================================================
     Private Sub EnsureHomeSeo()
     ' ============================================================
-    ' SEO HOME (title, meta, canonical, JSON-LD)
+    ' SEO HOME - Avanzato (Meta + OpenGraph + JSON-LD)
     ' ============================================================
+
     Dim siteName As String = SafeSessionString("AziendaNome", "KeepStore")
+
     Dim baseUrl As String = SafeSessionString("AziendaUrl", Request.Url.GetLeftPart(UriPartial.Authority) & ResolveUrl("~/"))
     If Not baseUrl.EndsWith("/") Then baseUrl &= "/"
 
     Dim title As String = siteName & " | Computer e Telefonia - Offerte Online"
     Dim descr As String = "Vendita online e assistenza tecnica per computer, smartphone, periferiche e consumabili. Spedizione rapida e pagamenti sicuri."
+    Dim canonical As String = baseUrl
 
-    ' Title (placeholder in master + Page.Title per compatibilità)
-    Page.Title = title
+    Dim logoUrl As String = SafeSessionString("AziendaLogo", "")
+    If Not String.IsNullOrEmpty(logoUrl) Then
+        logoUrl = ResolveMediaUrl(logoUrl, baseUrl)
+    End If
+
+    ' <title> nel Master (Page.master usa il ContentPlaceHolder TitleContent)
     If litTitleContent IsNot Nothing Then
         litTitleContent.Text = Server.HtmlEncode(title)
     End If
 
-    ' Canonical
-    Dim canonical As String = baseUrl
-    AddOrReplaceCanonical(canonical)
+    ' Title + Meta description + Canonical
+    SeoBuilder.SetTitle(Me, title)
+    SeoBuilder.SetMetaDescription(Me, descr)
+    SeoBuilder.SetCanonical(Me, canonical)
 
-    ' Meta principali
-    AddOrReplaceMeta("description", descr)
-    AddOrReplaceMeta("robots", "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1")
+    ' Robots (rich previews)
+    Dim robots As String = "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
+    SeoBuilder.SetMetaTag(Me, "robots", robots)
+    SeoBuilder.SetMetaTag(Me, "googlebot", robots)
+    SeoBuilder.SetMetaTag(Me, "bingbot", robots)
 
-    ' OpenGraph (minimo indispensabile)
-    Dim logoUrl As String = SafeSessionString("AziendaLogo", "")
-    If Not String.IsNullOrEmpty(logoUrl) Then
-        If Not logoUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase) Then
-            logoUrl = baseUrl.TrimEnd("/"c) & "/" & logoUrl.TrimStart("/"c)
-        End If
-    End If
-
+    ' OpenGraph / Twitter
     SeoBuilder.ApplyOpenGraph(Me, title, descr, canonical, logoUrl)
 
-    ' JSON-LD avanzato (centralizzato)
-    Dim jsonLdScript As String = SeoBuilder.BuildHomeJsonLd(Me, title, descr, canonical, logoUrl)
+    ' FAQ HTML (visibile) - stessa fonte usata dal JSON-LD (FAQPage)
+    Try
+        Dim faqs As List(Of SeoBuilder.SeoFaq) = SeoBuilder.GetHomeFaq()
+        If rFaqHome IsNot Nothing Then
+            rFaqHome.DataSource = faqs
+            rFaqHome.DataBind()
+        End If
+    Catch
+        ' Non bloccare la Home per il solo binding FAQ
+    End Try
 
-    Dim seoMaster As ISeoMaster = TryCast(Me.Master, ISeoMaster)
-    If seoMaster IsNot Nothing Then
-        seoMaster.SeoJsonLd = jsonLdScript
-    Else
-        ' Fallback: se la master non implementa ISeoMaster, lo iniettiamo comunque in head
-        AddOrReplaceJsonLd(jsonLdScript, True)
-    End If
+    ' JSON-LD (advanced graph)
+    Dim jsonLdScript As String = SeoBuilder.BuildHomeJsonLd(Me, title, descr, canonical, logoUrl)
+    SeoBuilder.SetJsonLdOnMaster(Me, jsonLdScript)
+
 End Sub
 
 
