@@ -32,7 +32,7 @@
 
     <!-- Head specifico per singola pagina (meta, script, css aggiuntivi) -->
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
-    <asp:Literal ID="litSeoJsonLd" runat="server" EnableViewState="false" />
+    <asp:Literal ID="litSeoJsonLd" runat="server" />
 </head>
 
 <body id="PageBody" runat="server">
