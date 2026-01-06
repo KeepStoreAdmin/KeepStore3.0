@@ -4,13 +4,7 @@
     Home
 </asp:Content>
 
-
-<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <%-- ============================================================
-         Default.aspx (HOME) - Layout FULL-WIDTH con banner + sezioni
-         NOTE: mantiene logica e controlli esistenti
-    ============================================================ --%>
-
+<asp:Content ID="cphHeadHome" ContentPlaceHolderID="HeadContent" runat="server">
     <style type="text/css">
         /* ============================================================
            Home (Sprint 2 - HOME 1)
