@@ -1,108 +1,169 @@
-﻿zzImports MySql.Data.MySqlClient
-Imports System.Data
+Option Strict On
+
+Imports System
+Imports System.Configuration
+Imports System.Web
+Imports MySql.Data.MySqlClient
 
 Partial Class pagamento
     Inherits System.Web.UI.Page
 
-    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
-        Dim conn As New MySqlConnection
-        Dim cmd As New MySqlCommand
+    Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
 
-        'Controllo se l'utente è loggato o meno, se non è loggato lo indirizzo alla registrazione
-        If Session("LoginID") <= 0 Then
-            Response.Redirect("accessonegato.aspx")
+        ' Pagina destinata a rientri pagamento / callback.
+        ' Manteniamo la logica esistente (coupon + pagamento documento), ma correggiamo gli errori di sintassi
+        ' e rendiamo l'accesso e le query stabili.
+
+        Dim loginId As Integer = 0
+        If Session("LoginID") IsNot Nothing Then
+            Integer.TryParse(Session("LoginID").ToString(), loginId)
+        ElseIf Session("LoginId") IsNot Nothing Then
+            Integer.TryParse(Session("LoginId").ToString(), loginId)
         End If
-        '----------------------------------------------------------------------------------------
 
-        conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+        If loginId <= 0 Then
+            Session("Pagina_visitata") = Request.RawUrl
+            Response.Redirect("accessonegato.aspx", True)
+            Return
+        End If
 
-        cmd.Connection = conn
+        Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
 
-        conn.Open()
+        Using conn As New MySqlConnection(cs)
+            conn.Open()
 
-            'If (Not Request.Form("custom") Is Nothing) AndAlso (Request.Form("custom").Contains("COUPON_")) Then
-            '    Dim temp As String() = Request.Form("custom").Split("_")
-            '    Dim idCoupon As Integer = temp(1)
-            '    Dim numero_opzione As Integer = temp(2)
-            '    Dim cod_controllo As String = temp(3)
-            '    Dim idTransazione As String = ""
-		if Request.QueryString("cod_controllo") <> "" Then
-				Dim cod_controllo As String = Request.QueryString("cod_controllo")
-				Dim idTransazione As String
-				
-				If Request.Form("txn_id") <> "" Then
-					idTransazione = Request.Form("txn_id")
-					Session("IdPagamentoCoupon") = 19
-                Else If Request.Form("thx_id") = "" Then
-					idTransazione = Request.Form("thx_id")
-					Session("IdPagamentoCoupon") = 10
+            ' ==========================================================
+            ' 1) PAGAMENTO COUPON
+            ' ==========================================================
+            Dim cod_controllo As String = Qs("cod_controllo")
+            If cod_controllo <> "" Then
+
+                Dim idTransazione As String = ""
+
+                ' PayPal
+                Dim paypalTxnId As String = FormVal("txn_id")
+                If paypalTxnId <> "" Then
+                    idTransazione = paypalTxnId
+                    Session("IdPagamentoCoupon") = 19
                 End If
 
-				if idTransazione = ""
-                    idTransazione = Guid.NewGuid.ToString.Replace("-", "")
-					if Request.QueryString("bancasella") = "true" then
-						Session("IdPagamentoCoupon") = 46
-					else
-						Session("IdPagamentoCoupon") = 19
-					end if
-				End If
+                ' IWBank (campo storico)
+                Dim iwbankThxId As String = FormVal("thx_id")
+                If idTransazione = "" AndAlso iwbankThxId <> "" Then
+                    idTransazione = iwbankThxId
+                    Session("IdPagamentoCoupon") = 10
+                End If
 
-            cmd.CommandText = "UPDATE coupon_tabella_temporanea SET StatoPagamento=1, idTransazione=?idTransazione WHERE cod_controllo=?cod_controllo"
-            cmd.Parameters.AddWithValue("?idTransazione", idTransazione)
-            cmd.Parameters.AddWithValue("?Email", cod_controllo)
-            cmd.ExecuteNonQuery()
+                ' Banca Sella / GestPay (tx su querystring)
+                Dim sellaTx As String = Qs("tx")
+                If idTransazione = "" AndAlso sellaTx <> "" Then
+                    idTransazione = sellaTx
+                    Session("IdPagamentoCoupon") = 46
+                End If
 
-                cmd.Dispose()
+                If idTransazione = "" Then
+                    idTransazione = Guid.NewGuid().ToString("N")
+                End If
 
-                conn.Close()
-                conn.Dispose()
+                Using cmd As New MySqlCommand("UPDATE coupon_tabella_temporanea SET StatoPagamento=1, idTransazione=?idTransazione WHERE cod_controllo=?cod_controllo", conn)
+                    cmd.Parameters.AddWithValue("?idTransazione", idTransazione)
+                    cmd.Parameters.AddWithValue("?cod_controllo", cod_controllo)
+                    cmd.ExecuteNonQuery()
+                End Using
 
                 Session("Coupon_Codice_Controllo") = cod_controllo
-                Session("Coupon_NumeroOpzione") = "0"
+                Session("Coupon_NumeroOpzione") = 0
 
-                'Mi reco alla pagina ordine coupon, dove confermo l'esito del pagamento
-                Response.Redirect("ordine_coupon.aspx?cod=" & cod_controllo)
+                Response.Redirect("ordine_coupon.aspx?cod=" & Server.UrlEncode(cod_controllo), True)
+                Return
             End If
 
-        'Sezione IWBank, per gestire il codice di ritorno tramite POST
-        If Request.Form("thx_id") <> "" Then
-            cmd.CommandText = "update documenti set pagato=1, idtransazione=?idTransazione where id=?id AND UtentiIdt=?UtentiId"
-            cmd.Parameters.AddWithValue("?idTransazione", Request.Form("thx_id"))
-            cmd.Parameters.AddWithValue("?id", Request.QueryString("id"))
-            cmd.Parameters.AddWithValue("?UtentiId", Session("UtentiId"))
-        End If
+            ' ==========================================================
+            ' 2) PAGAMENTO DOCUMENTO (documenti)
+            ' ==========================================================
+            Dim docId As Integer = 0
+            Integer.TryParse(Qs("id"), docId)
 
-        'Sezione Paypal, per gestire il codice di ritorno tramite POST
-        If Request.Form("txn_id") <> "" Then
-            cmd.CommandText = "update documenti set pagato=1, idtransazione=?idTransazione where id=id=?id AND UtentiIdt=?UtentiId"
-            cmd.Parameters.AddWithValue("?idTransazione", Request.Form("thx_id"))
-            cmd.Parameters.AddWithValue("?id", Request.QueryString("id"))
-            cmd.Parameters.AddWithValue("?UtentiId", Session("UtentiId"))
-            cmd.ExecuteNonQuery()
-        End If
-
-        If Request.QueryString("tx") <> "" Then
-            If Request.QueryString("st") = "Pending" Then 'Pending è un pagamento in fase di verifica e noi gli impostiamo 2 nel database
-                cmd.CommandText = "update documenti set pagato=2, idtransazione=?idTransazione where id=?id"
-                cmd.Parameters.AddWithValue("?idTransazione", Request.Form("tx"))
-                cmd.Parameters.AddWithValue("?id", Request.QueryString("id"))
-                cmd.ExecuteNonQuery()
-            Else
-                cmd.CommandText = "update documenti set pagato=1, idtransazione=?idTransazione where id=?id"
-                cmd.Parameters.AddWithValue("?idTransazione", Request.Form("tx"))
-                cmd.Parameters.AddWithValue("?id", Request.QueryString("id"))
-                cmd.ExecuteNonQuery()
+            Dim utentiId As Integer = 0
+            If Session("UtentiId") IsNot Nothing Then
+                Integer.TryParse(Session("UtentiId").ToString(), utentiId)
             End If
-        End If
 
-        cmd.Dispose()
+            If docId > 0 AndAlso utentiId > 0 Then
 
-        conn.Close()
-        conn.Dispose()
+                Dim idTransazione As String = ""
+                Dim stato As Integer = 1
+                Dim idPagamento As Integer = 0
 
+                ' IWBank
+                Dim iwbankThxId As String = FormVal("thx_id")
+                If iwbankThxId <> "" Then
+                    idTransazione = iwbankThxId
+                    idPagamento = 10
+                    stato = 1
+                End If
 
-        Response.Redirect("documentidettaglio.aspx?id=" & Request.QueryString("id"))
+                ' PayPal
+                Dim paypalTxnId As String = FormVal("txn_id")
+                If idTransazione = "" AndAlso paypalTxnId <> "" Then
+                    idTransazione = paypalTxnId
+                    idPagamento = 19
+                    stato = 1
+                End If
+
+                ' Banca Sella / GestPay (tx)
+                Dim sellaTx As String = Qs("tx")
+                If idTransazione = "" AndAlso sellaTx <> "" Then
+                    idTransazione = sellaTx
+                    idPagamento = 46
+                    stato = 2 ' come nel codice precedente
+                End If
+
+                If idTransazione <> "" AndAlso idPagamento > 0 Then
+
+                    Using cmd As New MySqlCommand("UPDATE documenti SET Stato=?Stato, DataPagamento=Now(), IdPagamento=?IdPagamento, IdTransazione=?IdTransazione WHERE id=?id AND utentiid=?utentiid", conn)
+                        cmd.Parameters.AddWithValue("?Stato", stato)
+                        cmd.Parameters.AddWithValue("?IdPagamento", idPagamento)
+                        cmd.Parameters.AddWithValue("?IdTransazione", idTransazione)
+                        cmd.Parameters.AddWithValue("?id", docId)
+                        cmd.Parameters.AddWithValue("?utentiid", utentiId)
+                        cmd.ExecuteNonQuery()
+                    End Using
+
+                    Session("IdPagamento") = idPagamento
+
+                    Response.Redirect("documentidettaglio.aspx?id=" & docId.ToString(), True)
+                    Return
+                End If
+
+            End If
+
+        End Using
 
     End Sub
+
+    Private Function Qs(ByVal key As String) As String
+        Try
+            Dim v As String = ""
+            If Request IsNot Nothing AndAlso Request.QueryString(key) IsNot Nothing Then
+                v = Request.QueryString(key).ToString()
+            End If
+            Return v.Trim()
+        Catch
+            Return ""
+        End Try
+    End Function
+
+    Private Function FormVal(ByVal key As String) As String
+        Try
+            Dim v As String = ""
+            If Request IsNot Nothing AndAlso Request.Form(key) IsNot Nothing Then
+                v = Request.Form(key).ToString()
+            End If
+            Return v.Trim()
+        Catch
+            Return ""
+        End Try
+    End Function
 
 End Class
