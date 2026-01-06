@@ -1,10 +1,13 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
 
-<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
-    <asp:Literal ID="litTitleContent" runat="server" />
-</asp:Content>
+<!-- ============================================================
+     Default.aspx (HOME) - Layout FULL-WIDTH con banner + sezioni
+     NOTE: mantiene logica e controlli esistenti
+     ============================================================ -->
 
-<asp:Content ID="cphHeadHome" ContentPlaceHolderID="HeadContent" runat="server">
+<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server"><%: Page.Title %></asp:Content>
+
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
     <style type="text/css">
         /* ============================================================
            Home (Sprint 2 - HOME 1)
@@ -34,10 +37,6 @@
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
-<main id="main-content" role="main">
-
-
-    <h1 class="visually-hidden"><%= Server.HtmlEncode(Page.Title) %></h1>
     <!-- ============================================================
          HERO / BANNERS (FULL-WIDTH)
          (Slideshow legacy integrato nella posizione "wrap-item-2")
@@ -56,16 +55,21 @@
                                 <span class="fw-semibold">Dipartimenti</span>
                             </div>
                             <ul class="department-list">
-                                <!-- Static (template). In futuro possiamo collegarlo alle categorie reali. -->
-                                <li><a href="articoli.aspx" class="department-link">Laptop</a></li>
-                                <li><a href="articoli.aspx" class="department-link">Computer</a></li>
-                                <li><a href="articoli.aspx" class="department-link">Monitor</a></li>
-                                <li><a href="articoli.aspx" class="department-link">TV</a></li>
-                                <li><a href="articoli.aspx" class="department-link">Smartphone</a></li>
-                                <li><a href="articoli.aspx" class="department-link">Audio</a></li>
-                                <li><a href="articoli.aspx" class="department-link">Gadget</a></li>
-                                <li><a href="articoli.aspx" class="department-link">Accessori</a></li>
-                            </ul>
+                                <asp:Repeater ID="rptHeroCats" runat="server" DataSourceID="SdsHeroCats">
+                                    <ItemTemplate>
+                                        <li class="department-item">
+                                            <a class="department-link" href='<%# "articoli.aspx?ct=" & Eval("id") %>'>
+                                                <%# SafeText(Eval("descrizione")) %>
+                                            </a>
+                                        </li>
+                                    </ItemTemplate>
+                                </asp:Repeater>
+</ul>
+                            <asp:SqlDataSource ID="SdsHeroCats" runat="server"
+                                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                                SelectCommand="SELECT id, descrizione FROM categorie ORDER BY ordinamento LIMIT 10">
+                            </asp:SqlDataSource>
+
                         </div>
                     </div>
 
@@ -616,28 +620,7 @@
     </section>
 
 
-    
-
-    <!-- FAQ (contenuto visibile: coerente con FAQPage JSON-LD) -->
-    <asp:Repeater ID="rFaqHome" runat="server">
-        <HeaderTemplate>
-            <section class="container my-5 taikun-faq" aria-labelledby="home-faq-title">
-                <h2 id="home-faq-title" class="h3 mb-4">Domande frequenti</h2>
-        </HeaderTemplate>
-
-        <ItemTemplate>
-            <details class="mb-3">
-                <summary class="font-weight-bold"><%# Eval("Question") %></summary>
-                <div class="mt-2"><%# Eval("Answer") %></div>
-            </details>
-        </ItemTemplate>
-
-        <FooterTemplate>
-            </section>
-        </FooterTemplate>
-    </asp:Repeater>
-
-<script runat="server">
+    <script runat="server">
         ' ============================================================
         ' Helper generali / slideshow / prezzi
         ' ============================================================
@@ -691,7 +674,7 @@
             u = SafeUrl(u)
             If u = "" Then Return ""
 
-            If u.StartsWith("~/") Then
+            If u.StartsWith("~/"c) Then
                 u = ResolveUrl(u)
             End If
 
@@ -910,6 +893,4 @@
 
     </script>
 
-
-</main>
 </asp:Content>
