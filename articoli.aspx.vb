@@ -1368,4 +1368,38 @@ Partial Class Articoli
             End If
         End Try
     End Sub
+
+
+    ' ======================================================================
+    ' Helper: estrazione descrizione breve (usata nel databinding in markup)
+    ' ======================================================================
+    Public Function sotto_stringa(ByVal testo As Object) As String
+        Dim s As String = ""
+        If testo IsNot Nothing Then
+            s = Convert.ToString(testo)
+        End If
+
+        If String.IsNullOrEmpty(s) Then Return ""
+
+        ' Decode eventuali entità HTML, rimuove tag e normalizza spazi
+        Try
+            s = System.Web.HttpUtility.HtmlDecode(s)
+        Catch
+            ' ignore
+        End Try
+
+        s = Regex.Replace(s, "<[^>]*>", " ")
+        s = Regex.Replace(s, "\s+", " ").Trim()
+
+        Dim maxLen As Integer = 180
+        If s.Length > maxLen Then
+            s = s.Substring(0, maxLen).Trim()
+            If s.Length > 0 Then s &= "..."
+        End If
+
+        ' Encode output per evitare HTML injection nel markup
+        Return Server.HtmlEncode(s)
+    End Function
+
+
 End Class

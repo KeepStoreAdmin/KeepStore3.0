@@ -1,15 +1,10 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
 
-<!-- ============================================================
-     Default.aspx (HOME) - Layout FULL-WIDTH con banner + sezioni
-     NOTE: mantiene logica e controlli esistenti
-     ============================================================ -->
-
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
-    Home
+    <asp:Literal ID="litTitleContent" runat="server" />
 </asp:Content>
 
-<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+<asp:Content ID="cphHeadHome" ContentPlaceHolderID="HeadContent" runat="server">
     <style type="text/css">
         /* ============================================================
            Home (Sprint 2 - HOME 1)
@@ -39,6 +34,10 @@
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
+<main id="main-content" role="main">
+
+
+    <h1 class="visually-hidden">Home - KeepStore</h1>
     <!-- ============================================================
          HERO / BANNERS (FULL-WIDTH)
          (Slideshow legacy integrato nella posizione "wrap-item-2")
@@ -671,7 +670,7 @@
             u = SafeUrl(u)
             If u = "" Then Return ""
 
-            If u.StartsWith("~/"c) Then
+            If u.StartsWith("~/") Then
                 u = ResolveUrl(u)
             End If
 
@@ -890,4 +889,6 @@
 
     </script>
 
+
+</main>
 </asp:Content>
