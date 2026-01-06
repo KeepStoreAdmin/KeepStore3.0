@@ -12,18 +12,21 @@ Partial Class Page
 ' ============================================================
 ' SEO JSON-LD (iniettato dalle pagine contenuto tramite SeoBuilder)
 ' ============================================================
-Public Property SeoJsonLd As String Implements ISeoMaster.SeoJsonLd
-    Get
-        Dim o As Object = ViewState("SeoJsonLd")
-        If o IsNot Nothing Then
-            Return o.ToString()
-        End If
-        Return ""
-    End Get
-    Set(value As String)
-        ViewState("SeoJsonLd") = value
-    End Set
-End Property
+Private _seoJsonLd As String = String.Empty
+
+    Public Property SeoJsonLd As String Implements ISeoMaster.SeoJsonLd
+        Get
+            Return If(_seoJsonLd, String.Empty)
+        End Get
+        Set(value As String)
+            _seoJsonLd = If(value, String.Empty)
+
+            ' Aggiorna subito il literal nel <head> (se già disponibile)
+            If litSeoJsonLd IsNot Nothing Then
+                litSeoJsonLd.Text = _seoJsonLd
+            End If
+        End Set
+    End Property
 
 Private Function HeaderHasMeta(ByVal metaName As String) As Boolean
     If Page Is Nothing OrElse Page.Header Is Nothing Then Return False
