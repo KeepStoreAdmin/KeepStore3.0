@@ -1,9 +1,9 @@
+Imports System
 Imports System.Data
-Imports System.Data.Common
-Imports MySql.Data.MySqlClient
-Imports System.Globalization
 Imports System.Configuration
+Imports System.Globalization
 Imports System.Web
+Imports MySql.Data.MySqlClient
 
 Partial Class _Default
     Inherits System.Web.UI.Page
@@ -420,54 +420,52 @@ Partial Class _Default
     Private Function JsonEscape(ByVal s As String) As String
     If String.IsNullOrEmpty(s) Then Return ""
 
-    ' Normalizza i fine-linea per avere JSON più coerente (CRLF/CR -> LF)
+    ' Normalizza i fine-linea (CRLF/CR -> LF) per coerenza
     Dim normalized As String = s.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf)
 
-    ' Escape robusto (gestisce anche caratteri di controllo)
+    ' Escape robusto
     Dim t As String = System.Web.HttpUtility.JavaScriptStringEncode(normalized)
 
     ' Hardening: evita chiusure involontarie del tag <script> in casi limite
     t = t.Replace("</", "<\/")
 
     Return t
-    End Function
+End Function
 
-    ' ============================
-    ' COSTRUZIONE JSON-LD HOME (DINAMICO DA DB - MySQL)
-    ' ============================
-    Private Function BuildHomeJsonLd(ByVal baseUrl As String, ByVal aziendaSession As String) As String
+
+' ============================
+' COSTRUZIONE JSON-LD HOME (DINAMICO DA DB - MySQL)
+' ============================
+Private Function BuildHomeJsonLd(ByVal baseUrl As String, ByVal aziendaSession As String) As String
 
     Dim siteUrl As String = baseUrl & ResolveUrl("~/")
     Dim searchUrl As String = baseUrl & ResolveUrl("~/articoli.aspx?q={search_term_string}")
 
-    ' Se hai già un logo “ufficiale” in Session, preferiscilo. Altrimenti usa un path stabile.
-    Dim logoPath As String = Nothing
+    ' Logo: prova da Session("Logo"), altrimenti fallback
+    Dim logoPath As String = ""
     If Session IsNot Nothing AndAlso Session("Logo") IsNot Nothing Then
         logoPath = Convert.ToString(Session("Logo"))
     End If
 
     Dim logoUrl As String
     If Not String.IsNullOrWhiteSpace(logoPath) Then
-        ' Session("Logo") spesso contiene già un percorso tipo "/Public/..."
         If logoPath.StartsWith("http", StringComparison.OrdinalIgnoreCase) Then
             logoUrl = logoPath
         Else
             logoUrl = baseUrl & ResolveUrl(logoPath)
         End If
     Else
-        ' fallback (modifica se il tuo logo reale è diverso)
         logoUrl = baseUrl & ResolveUrl("~/Public/images/nofoto.gif")
     End If
 
     Dim connString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
 
-    ' Listino corrente (se presente)
     Dim nListino As Integer = 0
     If Session IsNot Nothing AndAlso Session("listino") IsNot Nothing Then
         Integer.TryParse(Convert.ToString(Session("listino")), nListino)
     End If
 
-    ' --- DATI AZIENDA (Organization / LocalBusiness) ---
+    ' --- DATI AZIENDA ---
     Dim ragioneSociale As String = aziendaSession
     Dim indirizzo As String = ""
     Dim cap As String = ""
@@ -477,7 +475,6 @@ Partial Class _Default
     Dim telefono As String = ""
     Dim email As String = ""
 
-    ' --- LISTE JSON ---
     Dim categoryItems As New List(Of String)()
     Dim productItems As New List(Of String)()
     Dim faqItems As New List(Of String)()
@@ -486,15 +483,14 @@ Partial Class _Default
         cn.Open()
 
         ' ============================
-        ' 1) AZIENDA (tabella: aziende)
-        ' Campi coerenti con taikun.sql:
-        ' RagioneSociale, Indirizzo, Cap, Citta, Provincia, FE_IdPaese, Telefono, email
+        ' 1) AZIENDA
         ' ============================
-        Using cmd As New MySqlCommand("
-            SELECT RagioneSociale, Indirizzo, Cap, Citta, Provincia, FE_IdPaese, Telefono, email
-            FROM aziende
-            LIMIT 1;", cn)
+        Dim sqlAzienda As String =
+            "SELECT RagioneSociale, Indirizzo, Cap, Citta, Provincia, FE_IdPaese, Telefono, email " &
+            "FROM aziende " &
+            "LIMIT 1;"
 
+        Using cmd As New MySqlCommand(sqlAzienda, cn)
             Using dr As MySqlDataReader = cmd.ExecuteReader()
                 If dr.Read() Then
                     If Not dr.IsDBNull(0) Then ragioneSociale = Convert.ToString(dr(0))
@@ -513,15 +509,14 @@ Partial Class _Default
         If String.IsNullOrWhiteSpace(ragioneSociale) Then ragioneSociale = "Keepstore"
 
         ' ============================
-        ' 2) CATEGORIE (tabella: categorie)
-        ' Campi coerenti: id, Descrizione, ordinamento
-        ' Link coerente col tuo sito: articoli.aspx?ct=ID
+        ' 2) CATEGORIE
         ' ============================
-        Using cmd As New MySqlCommand("
-            SELECT id, Descrizione
-            FROM categorie
-            ORDER BY ordinamento;", cn)
+        Dim sqlCategorie As String =
+            "SELECT id, Descrizione " &
+            "FROM categorie " &
+            "ORDER BY ordinamento;"
 
+        Using cmd As New MySqlCommand(sqlCategorie, cn)
             Using dr As MySqlDataReader = cmd.ExecuteReader()
                 Dim pos As Integer = 1
                 While dr.Read()
@@ -545,30 +540,22 @@ Partial Class _Default
         End Using
 
         ' ============================
-        ' 3) PRODOTTI (articoli + articoli_listini + articoli_giacenze)
-        ' - articoli: id, Descrizione1, Img1, Codice, Ean, Abilitato
-        ' - articoli_listini: PrezzoIvato/Prezzo filtrati su NListino
-        ' - articoli_giacenze: SUM(Giacenza)
+        ' 3) PRODOTTI (articoli + listini + giacenze)
         ' ============================
-        Using cmd As New MySqlCommand("
-            SELECT
-                a.id,
-                a.Descrizione1,
-                a.Img1,
-                a.Codice,
-                a.Ean,
-                IFNULL(al.PrezzoIvato, al.Prezzo, 0) AS PrezzoOut,
-                IFNULL(SUM(ag.Giacenza), 0) AS Qty
-            FROM articoli a
-            LEFT JOIN articoli_listini al
-                ON al.ArticoliId = a.id AND al.NListino = @listino
-            LEFT JOIN articoli_giacenze ag
-                ON ag.ArticoliId = a.id
-            WHERE a.Abilitato = 1
-            GROUP BY a.id, a.Descrizione1, a.Img1, a.Codice, a.Ean, al.PrezzoIvato, al.Prezzo
-            ORDER BY a.id DESC
-            LIMIT 20;", cn)
+        Dim sqlProdotti As String =
+            "SELECT " &
+            "  a.id, a.Descrizione1, a.Img1, a.Codice, a.Ean, " &
+            "  COALESCE(al.PrezzoIvato, al.Prezzo, 0) AS PrezzoOut, " &
+            "  COALESCE(SUM(ag.Giacenza), 0) AS Qty " &
+            "FROM articoli a " &
+            "LEFT JOIN articoli_listini al ON al.ArticoliId = a.id AND al.NListino = @listino " &
+            "LEFT JOIN articoli_giacenze ag ON ag.ArticoliId = a.id " &
+            "WHERE a.Abilitato = 1 " &
+            "GROUP BY a.id, a.Descrizione1, a.Img1, a.Codice, a.Ean, al.PrezzoIvato, al.Prezzo " &
+            "ORDER BY a.id DESC " &
+            "LIMIT 20;"
 
+        Using cmd As New MySqlCommand(sqlProdotti, cn)
             cmd.Parameters.Add("@listino", MySqlDbType.Int32).Value = nListino
 
             Using dr As MySqlDataReader = cmd.ExecuteReader()
@@ -578,8 +565,10 @@ Partial Class _Default
                     Dim img As String = If(dr.IsDBNull(2), "", Convert.ToString(dr(2)))
                     Dim codice As String = If(dr.IsDBNull(3), "", Convert.ToString(dr(3)))
                     Dim ean As String = If(dr.IsDBNull(4), "", Convert.ToString(dr(4)))
+
                     Dim prezzoOut As Decimal = 0D
                     If Not dr.IsDBNull(5) Then prezzoOut = Convert.ToDecimal(dr(5))
+
                     Dim qty As Decimal = 0D
                     If Not dr.IsDBNull(6) Then qty = Convert.ToDecimal(dr(6))
 
@@ -587,7 +576,7 @@ Partial Class _Default
 
                     Dim prodUrl As String = siteUrl & "articolo.aspx?id=" & idArt.ToString()
 
-                    Dim imgUrl As String = ""
+                    Dim imgUrl As String
                     If Not String.IsNullOrWhiteSpace(img) Then
                         imgUrl = siteUrl & "Public/images/articoli/" & img
                     Else
@@ -606,7 +595,7 @@ Partial Class _Default
 
                     Dim skuJson As String = ""
                     If Not String.IsNullOrWhiteSpace(skuValue) Then
-                        skuJson = ",""" & "sku" & """:""" & JsonEscape(skuValue) & """"
+                        skuJson = ",""sku"":""" & JsonEscape(skuValue) & """"
                     End If
 
                     productItems.Add(
@@ -633,7 +622,7 @@ Partial Class _Default
     End Using ' cn
 
     ' ============================
-    ' 4) FAQ (statiche - puoi renderle dinamiche dopo)
+    ' 4) FAQ (statiche)
     ' ============================
     Dim faqs As New List(Of Tuple(Of String, String)) From {
         Tuple.Create("Come funziona la spedizione?", "Offriamo spedizioni rapide con corriere espresso in tutta Italia."),
@@ -655,14 +644,13 @@ Partial Class _Default
     Next
 
     ' ============================
-    ' 5) COSTRUZIONE @graph (senza virgole finali)
+    ' 5) @graph finale
     ' ============================
     Dim graphParts As New List(Of String)()
 
     Dim siteEsc As String = JsonEscape(siteUrl)
     Dim nameEsc As String = JsonEscape(ragioneSociale)
 
-    ' Organization
     graphParts.Add(
         "{" &
             """@type"":""Organization""," &
@@ -673,10 +661,9 @@ Partial Class _Default
         "}"
     )
 
-    ' LocalBusiness (aggiunge email solo se presente)
     Dim emailJson As String = ""
     If Not String.IsNullOrWhiteSpace(email) Then
-        emailJson = ",""" & "email" & """:""" & JsonEscape(email) & """"
+        emailJson = ",""email"":""" & JsonEscape(email) & """"
     End If
 
     graphParts.Add(
@@ -699,7 +686,6 @@ Partial Class _Default
         "}"
     )
 
-    ' WebSite + SearchAction
     graphParts.Add(
         "{" &
             """@type"":""WebSite""," &
@@ -715,7 +701,6 @@ Partial Class _Default
         "}"
     )
 
-    ' WebPage
     graphParts.Add(
         "{" &
             """@type"":""WebPage""," &
@@ -728,23 +713,19 @@ Partial Class _Default
         "}"
     )
 
-    ' BreadcrumbList (solo Home)
     graphParts.Add(
         "{" &
             """@type"":""BreadcrumbList""," &
             """@id"":""" & siteEsc & "#breadcrumb""," &
-            """itemListElement"":[" &
-                "{" &
-                    """@type"":""ListItem""," &
-                    """position"":1," &
-                    """name"":""Home""," &
-                    """item"":""" & siteEsc & """" &
-                "}" &
-            "]" &
+            """itemListElement"":[{" &
+                """@type"":""ListItem""," &
+                """position"":1," &
+                """name"":""Home""," &
+                """item"":""" & siteEsc & """" &
+            "}]" &
         "}"
     )
 
-    ' ItemList Categorie
     graphParts.Add(
         "{" &
             """@type"":""ItemList""," &
@@ -754,7 +735,6 @@ Partial Class _Default
         "}"
     )
 
-    ' FAQPage
     graphParts.Add(
         "{" &
             """@type"":""FAQPage""," &
@@ -763,12 +743,10 @@ Partial Class _Default
         "}"
     )
 
-    ' Prodotti
     For Each p As String In productItems
         graphParts.Add(p)
     Next
 
-    ' JSON finale
     Dim json As String =
         "{" &
             """@context"":""https://schema.org""," &
@@ -776,6 +754,7 @@ Partial Class _Default
         "}"
 
     Return json
+
     End Function
 
     ' ===========================
