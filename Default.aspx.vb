@@ -441,7 +441,7 @@ Private Sub AddOrReplaceJsonLd(ByVal jsonOrScript As String, ByVal alreadyScript
         Next
         Page.Header.Controls.Add(lit)
     Else
-        AddOrReplaceJsonLd(jsonOrScript)
+        AddOrReplaceJsonLd("litSeoJsonLd", jsonOrScript)
     End If
 End Sub
 
@@ -481,6 +481,23 @@ End Sub
 
         Return json
     End Function
+
+    ' Safe read Session string with fallback (Option Strict friendly)
+    Private Function SafeSessionString(ByVal key As String, ByVal fallback As String) As String
+        Try
+            Dim o As Object = Session(key)
+            If o Is Nothing Then Return fallback
+
+            Dim s As String = TryCast(o, String)
+            If s Is Nothing Then s = o.ToString()
+
+            If String.IsNullOrWhiteSpace(s) Then Return fallback
+            Return s.Trim()
+        Catch
+            Return fallback
+        End Try
+    End Function
+
 
     Private Function JsonEscape(ByVal s As String) As String
         If s Is Nothing Then Return ""
