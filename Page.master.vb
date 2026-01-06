@@ -6,6 +6,37 @@ Imports System.Text.RegularExpressions
 
 Partial Class Page
     Inherits System.Web.UI.MasterPage
+    Implements ISeoMaster
+
+
+' ============================================================
+' SEO JSON-LD (iniettato dalle pagine contenuto tramite SeoBuilder)
+' ============================================================
+Public Property SeoJsonLd As String Implements ISeoMaster.SeoJsonLd
+    Get
+        Dim o As Object = ViewState("SeoJsonLd")
+        If o IsNot Nothing Then
+            Return o.ToString()
+        End If
+        Return ""
+    End Get
+    Set(value As String)
+        ViewState("SeoJsonLd") = value
+    End Set
+End Property
+
+Private Function HeaderHasMeta(ByVal metaName As String) As Boolean
+    If Page Is Nothing OrElse Page.Header Is Nothing Then Return False
+    For Each c As Control In Page.Header.Controls
+        Dim hm As HtmlMeta = TryCast(c, HtmlMeta)
+        If hm IsNot Nothing AndAlso Not String.IsNullOrEmpty(hm.Name) Then
+            If String.Equals(hm.Name, metaName, StringComparison.OrdinalIgnoreCase) Then
+                Return True
+            End If
+        End If
+    Next
+    Return False
+End Function
 
     Dim IvaTipo As Integer
     Dim conn As New MySqlConnection
@@ -338,7 +369,13 @@ Partial Class Page
 
         'Meta tag SEO
         Meta()
-    End Sub
+    
+        ' SEO JSON-LD (se valorizzato dalla pagina contenuto)
+        If litSeoJsonLd IsNot Nothing Then
+            litSeoJsonLd.Text = SeoJsonLd
+        End If
+
+End Sub
 
     '==========================================================
     ' SUPPORTO IVA DI DEFAULT
@@ -1244,28 +1281,32 @@ Partial Class Page
     ' META TAG SEO
     '==========================================================
     Sub Meta()
-        Dim description As String
-        description = Me.Page.Title
-        description = Regex.Replace(description, "<[^>]*>", "")
+    ' Meta legacy: mantiene compatibilità, ma NON sovrascrive i meta tag se già presenti nella pagina contenuto.
+    Dim description As String = Me.Page.Title
+    description = Regex.Replace(description, "<[^>]*>", "")
 
-        If description.Length > 255 Then
-            description = description.Substring(0, 255)
-        End If
+    If description.Length > 255 Then
+        description = description.Substring(0, 255)
+    End If
 
-        Dim MetaDescription As HtmlMeta = New HtmlMeta
-        MetaDescription.Name = "description"
-        MetaDescription.Content = description
-        Me.Page.Header.Controls.Add(MetaDescription)
+    If Not HeaderHasMeta("description") Then
+        Dim metaDescription As New HtmlMeta()
+        metaDescription.Name = "description"
+        metaDescription.Content = description
+        Me.Page.Header.Controls.Add(metaDescription)
+    End If
 
-        Dim keywords As String
-        keywords = Me.Page.Title
-        keywords = keywords.Replace(" ", ",")
+    Dim keywords As String = Me.Page.Title
+    keywords = keywords.Replace(" ", ",")
 
-        Dim MetaKeywords As HtmlMeta = New HtmlMeta
-        MetaKeywords.Name = "keywords"
-        MetaKeywords.Content = keywords
-        Me.Page.Header.Controls.Add(MetaKeywords)
-    End Sub
+    If Not HeaderHasMeta("keywords") Then
+        Dim metaKeywords As New HtmlMeta()
+        metaKeywords.Name = "keywords"
+        metaKeywords.Content = keywords
+        Me.Page.Header.Controls.Add(metaKeywords)
+    End If
+End Sub
+
 
     '==========================================================
     ' CERCA Cerca() harden + URL encode

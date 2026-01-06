@@ -1,7 +1,7 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
-    Home
+    <asp:Literal ID="litTitleContent" runat="server" />
 </asp:Content>
 
 <asp:Content ID="cphHeadHome" ContentPlaceHolderID="HeadContent" runat="server">
@@ -34,6 +34,10 @@
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
+<main id="main-content" role="main">
+
+
+    <h1 class="visually-hidden">Home - KeepStore</h1>
     <!-- ============================================================
          HERO / BANNERS (FULL-WIDTH)
          (Slideshow legacy integrato nella posizione "wrap-item-2")
@@ -885,4 +889,6 @@
 
     </script>
 
+
+</main>
 </asp:Content>
