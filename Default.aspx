@@ -37,7 +37,7 @@
 <main id="main-content" role="main">
 
 
-    <h1 class="visually-hidden">Home - KeepStore</h1>
+    <h1 class="visually-hidden"><%= Server.HtmlEncode(Page.Title) %></h1>
     <!-- ============================================================
          HERO / BANNERS (FULL-WIDTH)
          (Slideshow legacy integrato nella posizione "wrap-item-2")
@@ -616,7 +616,28 @@
     </section>
 
 
-    <script runat="server">
+    
+
+    <!-- FAQ (contenuto visibile: coerente con FAQPage JSON-LD) -->
+    <asp:Repeater ID="rFaqHome" runat="server">
+        <HeaderTemplate>
+            <section class="container my-5 taikun-faq" aria-labelledby="home-faq-title">
+                <h2 id="home-faq-title" class="h3 mb-4">Domande frequenti</h2>
+        </HeaderTemplate>
+
+        <ItemTemplate>
+            <details class="mb-3">
+                <summary class="font-weight-bold"><%# Eval("Question") %></summary>
+                <div class="mt-2"><%# Eval("Answer") %></div>
+            </details>
+        </ItemTemplate>
+
+        <FooterTemplate>
+            </section>
+        </FooterTemplate>
+    </asp:Repeater>
+
+<script runat="server">
         ' ============================================================
         ' Helper generali / slideshow / prezzi
         ' ============================================================
