@@ -3,35 +3,45 @@ Option Explicit On
 
 Imports System
 Imports System.Collections.Generic
+Imports System.Configuration
+Imports System.Data
+Imports System.Data.Common
+Imports System.Globalization
 Imports System.Text
 Imports System.Web
 Imports System.Web.UI
 Imports System.Web.UI.HtmlControls
 Imports System.Web.UI.WebControls
 
-' SeoBuilder: utility class for SEO meta tags + JSON-LD generation (VB.NET / .NET 4.x compatible)
+' NOTE:
+' - Questo file deve esistere UNA sola volta dentro /App_Code.
+' - NON devono esserci copie tipo SeoBuilder_fix.vb, SeoBuilder_old.vb, ecc., altrimenti si innescano conflitti/compilazioni multiple.
+
 Public NotInheritable Class SeoBuilder
 
     Private Sub New()
     End Sub
 
-    Private Const Q As String = """" ' double quote character (")
-    Private Const BS As String = "\"  ' backslash character (\)
+    Private Const Q As Char = ChrW(34)   ' "
+    Private Const BS As Char = ChrW(92)  ' \
 
-    ' -----------------------------
-    ' JSON helpers
-    ' -----------------------------
-    Public Shared Function JsonEscape(ByVal s As String) As String
-        If s Is Nothing Then Return String.Empty
+    ' ===========================
+    ' JSON string escaping (safe for JSON-LD)
+    ' ===========================
+    Public Shared Function JsonEscape(ByVal value As String) As String
+        If value Is Nothing Then Return ""
+        Dim sb As New StringBuilder(value.Length + 16)
 
-        Dim sb As New StringBuilder(Math.Max(16, s.Length + 8))
-
-        For Each ch As Char In s
+        For Each ch As Char In value
             Select Case ch
-                Case """"c
+                Case Q
                     sb.Append(BS).Append(Q)
-                Case "\"c
+                Case BS
                     sb.Append(BS).Append(BS)
+                Case ControlChars.Back
+                    sb.Append(BS).Append("b")
+                Case ControlChars.FormFeed
+                    sb.Append(BS).Append("f")
                 Case ControlChars.Cr
                     sb.Append(BS).Append("r")
                 Case ControlChars.Lf
@@ -51,46 +61,15 @@ Public NotInheritable Class SeoBuilder
         Return sb.ToString()
     End Function
 
-    ' -----------------------------
-    ' <head> helpers
-    ' -----------------------------
-    Public Shared Sub EnsureCanonical(ByVal page As Page, ByVal canonicalUrl As String)
-        If page Is Nothing OrElse page.Header Is Nothing Then Return
-        If String.IsNullOrEmpty(canonicalUrl) Then Return
-
-        Dim head As HtmlHead = page.Header
-        Dim existing As HtmlLink = Nothing
-
-        For Each c As Control In head.Controls
-            Dim lnk As HtmlLink = TryCast(c, HtmlLink)
-            If lnk IsNot Nothing Then
-                Dim rel As String = Nothing
-                If lnk.Attributes IsNot Nothing Then rel = lnk.Attributes("rel")
-                If Not String.IsNullOrEmpty(rel) AndAlso String.Equals(rel, "canonical", StringComparison.OrdinalIgnoreCase) Then
-                    existing = lnk
-                    Exit For
-                End If
-            End If
-        Next
-
-        If existing Is Nothing Then
-            existing = New HtmlLink()
-            existing.Attributes("rel") = "canonical"
-            head.Controls.Add(existing)
-        End If
-
-        existing.Href = canonicalUrl
-    End Sub
-
-    Public Shared Sub EnsureMetaName(ByVal page As Page, ByVal name As String, ByVal content As String)
+    ' ===========================
+    ' META / OG helpers
+    ' ===========================
+    Public Shared Sub AddOrReplaceMeta(ByVal page As Page, ByVal name As String, ByVal content As String)
         If page Is Nothing OrElse page.Header Is Nothing Then Return
         If String.IsNullOrEmpty(name) Then Return
-        If content Is Nothing Then content = String.Empty
 
-        Dim head As HtmlHead = page.Header
         Dim existing As HtmlMeta = Nothing
-
-        For Each c As Control In head.Controls
+        For Each c As Control In page.Header.Controls
             Dim m As HtmlMeta = TryCast(c, HtmlMeta)
             If m IsNot Nothing AndAlso String.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase) Then
                 existing = m
@@ -101,21 +80,18 @@ Public NotInheritable Class SeoBuilder
         If existing Is Nothing Then
             existing = New HtmlMeta()
             existing.Name = name
-            head.Controls.Add(existing)
+            page.Header.Controls.Add(existing)
         End If
 
-        existing.Content = content
+        existing.Content = If(content, "")
     End Sub
 
-    Public Shared Sub EnsureMetaProperty(ByVal page As Page, ByVal prop As String, ByVal content As String)
+    Public Shared Sub AddOrReplaceMetaProperty(ByVal page As Page, ByVal prop As String, ByVal content As String)
         If page Is Nothing OrElse page.Header Is Nothing Then Return
         If String.IsNullOrEmpty(prop) Then Return
-        If content Is Nothing Then content = String.Empty
 
-        Dim head As HtmlHead = page.Header
         Dim existing As HtmlMeta = Nothing
-
-        For Each c As Control In head.Controls
+        For Each c As Control In page.Header.Controls
             Dim m As HtmlMeta = TryCast(c, HtmlMeta)
             If m IsNot Nothing Then
                 Dim p As String = m.Attributes("property")
@@ -129,127 +105,196 @@ Public NotInheritable Class SeoBuilder
         If existing Is Nothing Then
             existing = New HtmlMeta()
             existing.Attributes("property") = prop
-            head.Controls.Add(existing)
+            page.Header.Controls.Add(existing)
         End If
 
-        existing.Content = content
+        existing.Content = If(content, "")
     End Sub
 
-    Public Shared Sub ApplyOpenGraphBasic(ByVal page As Page,
-                                         ByVal pageUrl As String,
-                                         ByVal title As String,
-                                         ByVal description As String,
-                                         ByVal imageUrl As String,
-                                         Optional ByVal locale As String = "it_IT")
-        EnsureMetaProperty(page, "og:type", "website")
-        EnsureMetaProperty(page, "og:url", pageUrl)
-        EnsureMetaProperty(page, "og:title", title)
-        EnsureMetaProperty(page, "og:description", description)
-        If Not String.IsNullOrEmpty(imageUrl) Then EnsureMetaProperty(page, "og:image", imageUrl)
-        If Not String.IsNullOrEmpty(locale) Then EnsureMetaProperty(page, "og:locale", locale)
+    Public Shared Sub SetCanonical(ByVal page As Page, ByVal canonicalUrl As String)
+        If page Is Nothing OrElse page.Header Is Nothing Then Return
+        If String.IsNullOrEmpty(canonicalUrl) Then Return
 
-        EnsureMetaName(page, "twitter:card", If(String.IsNullOrEmpty(imageUrl), "summary", "summary_large_image"))
-        EnsureMetaName(page, "twitter:title", title)
-        EnsureMetaName(page, "twitter:description", description)
-        If Not String.IsNullOrEmpty(imageUrl) Then EnsureMetaName(page, "twitter:image", imageUrl)
-    End Sub
+        Dim existing As HtmlLink = Nothing
+        For Each c As Control In page.Header.Controls
+            Dim l As HtmlLink = TryCast(c, HtmlLink)
+            If l IsNot Nothing Then
+                Dim rel As String = l.Attributes("rel")
+                If Not String.IsNullOrEmpty(rel) AndAlso String.Equals(rel, "canonical", StringComparison.OrdinalIgnoreCase) Then
+                    existing = l
+                    Exit For
+                End If
+            End If
+        Next
 
-    ' -----------------------------
-    ' JSON-LD builders (safe-by-default)
-    ' -----------------------------
-    Public Shared Function BuildHomeJsonLd(ByVal baseUrl As String,
-                                          ByVal pageUrl As String,
-                                          ByVal siteName As String,
-                                          ByVal logoUrl As String,
-                                          Optional ByVal organizationName As String = Nothing,
-                                          Optional ByVal telephone As String = Nothing,
-                                          Optional ByVal email As String = Nothing) As String
-
-        If String.IsNullOrEmpty(organizationName) Then organizationName = siteName
-
-        Dim orgId As String = baseUrl.TrimEnd("/"c) & "/#organization"
-        Dim logoId As String = baseUrl.TrimEnd("/"c) & "/#logo"
-        Dim websiteId As String = baseUrl.TrimEnd("/"c) & "/#website"
-        Dim webpageId As String = pageUrl.TrimEnd("/"c) & "/#webpage"
-
-        Dim sb As New StringBuilder(2048)
-
-        sb.Append("{")
-        sb.Append(Q).Append("@context").Append(Q).Append(":").Append(Q).Append("https://schema.org").Append(Q).Append(",")
-        sb.Append(Q).Append("@graph").Append(Q).Append(":").Append("[")
-
-        ' ImageObject logo (optional)
-        If Not String.IsNullOrEmpty(logoUrl) Then
-            sb.Append("{")
-            sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("ImageObject").Append(Q).Append(",")
-            sb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(logoId)).Append(Q).Append(",")
-            sb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(logoUrl)).Append(Q)
-            sb.Append("},")
+        If existing Is Nothing Then
+            existing = New HtmlLink()
+            existing.Attributes("rel") = "canonical"
+            page.Header.Controls.Add(existing)
         End If
+
+        existing.Href = canonicalUrl
+    End Sub
+
+    Public Shared Sub ApplyOpenGraph(ByVal page As Page,
+                                    ByVal title As String,
+                                    ByVal description As String,
+                                    ByVal canonicalUrl As String,
+                                    ByVal imageUrl As String)
+
+        AddOrReplaceMetaProperty(page, "og:type", "website")
+        AddOrReplaceMetaProperty(page, "og:title", If(title, ""))
+        AddOrReplaceMetaProperty(page, "og:description", If(description, ""))
+        AddOrReplaceMetaProperty(page, "og:url", If(canonicalUrl, ""))
+
+        If Not String.IsNullOrEmpty(imageUrl) Then
+            AddOrReplaceMetaProperty(page, "og:image", imageUrl)
+        End If
+
+        AddOrReplaceMeta(page, "twitter:card", If(String.IsNullOrEmpty(imageUrl), "summary", "summary_large_image"))
+        AddOrReplaceMeta(page, "twitter:title", If(title, ""))
+        AddOrReplaceMeta(page, "twitter:description", If(description, ""))
+        If Not String.IsNullOrEmpty(imageUrl) Then
+            AddOrReplaceMeta(page, "twitter:image", imageUrl)
+        End If
+    End Sub
+
+    ' ===========================
+    ' JSON-LD builders
+    ' ===========================
+    ' Ritorna il tag <script type="application/ld+json">...</script>
+    Public Shared Function BuildHomeJsonLd(ByVal page As Page,
+                                          ByVal title As String,
+                                          ByVal description As String,
+                                          ByVal canonicalUrl As String,
+                                          ByVal logoUrl As String) As String
+
+        Dim baseUrl As String = GetBaseUrl(page)
+        If String.IsNullOrEmpty(baseUrl) Then baseUrl = canonicalUrl
+
+        Dim orgId As String = CombineUrl(baseUrl, "#organization")
+        Dim websiteId As String = CombineUrl(baseUrl, "#website")
+        Dim webpageId As String = CombineUrl(canonicalUrl, "#webpage")
+        Dim logoId As String = CombineUrl(baseUrl, "#logo")
+        Dim searchTarget As String = CombineUrl(baseUrl, "articoli.aspx?q={search_term_string}")
+
+        Dim json As New StringBuilder(2048)
+        json.Append("{").Append(Q).Append("@context").Append(Q).Append(":").Append(Q).Append("https://schema.org").Append(Q).Append(",")
+        json.Append(Q).Append("@graph").Append(Q).Append(":[")
 
         ' Organization
-        sb.Append("{")
-        sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("Organization").Append(Q).Append(",")
-        sb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(orgId)).Append(Q).Append(",")
-        sb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(organizationName)).Append(Q).Append(",")
-        sb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(baseUrl)).Append(Q)
+        json.Append("{")
+        json.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("Organization").Append(Q).Append(",")
+        json.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(orgId)).Append(Q).Append(",")
+        json.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(GetSiteName())).Append(Q)
 
         If Not String.IsNullOrEmpty(logoUrl) Then
-            sb.Append(",").Append(Q).Append("logo").Append(Q).Append(":").Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(logoId)).Append(Q).Append("}")
+            json.Append(",").Append(Q).Append("logo").Append(Q).Append(":{")
+            json.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(logoId)).Append(Q)
+            json.Append("}")
         End If
-        If Not String.IsNullOrEmpty(email) Then
-            sb.Append(",").Append(Q).Append("email").Append(Q).Append(":").Append(Q).Append(JsonEscape(email)).Append(Q)
-        End If
-        If Not String.IsNullOrEmpty(telephone) Then
-            sb.Append(",").Append(Q).Append("telephone").Append(Q).Append(":").Append(Q).Append(JsonEscape(telephone)).Append(Q)
-        End If
-        sb.Append("},")
 
-        ' WebSite
-        sb.Append("{")
-        sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("WebSite").Append(Q).Append(",")
-        sb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(websiteId)).Append(Q).Append(",")
-        sb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(baseUrl)).Append(Q).Append(",")
-        sb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(siteName)).Append(Q).Append(",")
-        sb.Append(Q).Append("publisher").Append(Q).Append(":").Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(orgId)).Append(Q).Append("}")
-        sb.Append("},")
+        json.Append("},")
+
+        ' Logo (ImageObject)
+        If Not String.IsNullOrEmpty(logoUrl) Then
+            json.Append("{")
+            json.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("ImageObject").Append(Q).Append(",")
+            json.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(logoId)).Append(Q).Append(",")
+            json.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(logoUrl)).Append(Q)
+            json.Append("},")
+        End If
+
+        ' WebSite + SearchAction
+        json.Append("{")
+        json.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("WebSite").Append(Q).Append(",")
+        json.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(websiteId)).Append(Q).Append(",")
+        json.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(baseUrl)).Append(Q).Append(",")
+        json.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(GetSiteName())).Append(Q).Append(",")
+        json.Append(Q).Append("publisher").Append(Q).Append(":{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(orgId)).Append(Q).Append("},")
+        json.Append(Q).Append("potentialAction").Append(Q).Append(":{")
+        json.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("SearchAction").Append(Q).Append(",")
+        json.Append(Q).Append("target").Append(Q).Append(":").Append(Q).Append(JsonEscape(searchTarget)).Append(Q).Append(",")
+        json.Append(Q).Append("query-input").Append(Q).Append(":").Append(Q).Append("required name=search_term_string").Append(Q)
+        json.Append("}")
+        json.Append("},")
 
         ' WebPage
-        sb.Append("{")
-        sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("WebPage").Append(Q).Append(",")
-        sb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(webpageId)).Append(Q).Append(",")
-        sb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(pageUrl)).Append(Q).Append(",")
-        sb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(siteName)).Append(Q).Append(",")
-        sb.Append(Q).Append("isPartOf").Append(Q).Append(":").Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(websiteId)).Append(Q).Append("}")
-        sb.Append("}")
+        json.Append("{")
+        json.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("WebPage").Append(Q).Append(",")
+        json.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(webpageId)).Append(Q).Append(",")
+        json.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(canonicalUrl)).Append(Q).Append(",")
+        json.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(title)).Append(Q).Append(",")
+        json.Append(Q).Append("description").Append(Q).Append(":").Append(Q).Append(JsonEscape(description)).Append(Q).Append(",")
+        json.Append(Q).Append("isPartOf").Append(Q).Append(":{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(websiteId)).Append(Q).Append("}")
+        json.Append("}")
 
-        sb.Append("]")
-        sb.Append("}")
-
-        Return sb.ToString()
+        json.Append("]}")
+        Return "<script type=" & Q & "application/ld+json" & Q & ">" & json.ToString() & "</script>"
     End Function
 
-    ' -----------------------------
-    ' Injection helper
-    ' -----------------------------
-    Public Shared Sub TrySetMasterJsonLd(ByVal page As Page, ByVal jsonLd As String)
+    ' ===========================
+    ' JSON-LD injection helper
+    ' ===========================
+    Public Shared Sub SetJsonLdOnMaster(ByVal page As Page, ByVal jsonLdScript As String)
         If page Is Nothing Then Return
 
-        Dim m As Object = page.Master
-        Dim seoMaster As ISeoMaster = TryCast(m, ISeoMaster)
-        If seoMaster IsNot Nothing Then
-            seoMaster.SeoJsonLd = jsonLd
-            Return
-        End If
+        ' Preferred: strongly-typed interface
+        Dim mp As MasterPage = page.Master
+        If mp IsNot Nothing Then
+            Dim seoMp As ISeoMaster = TryCast(mp, ISeoMaster)
+            If seoMp IsNot Nothing Then
+                seoMp.SeoJsonLd = jsonLdScript
+                Return
+            End If
 
-        ' Fallback: try to find literal in master
-        If m IsNot Nothing Then
-            Dim lit As Control = m.FindControl("litSeoJsonLd")
-            Dim l As Literal = TryCast(lit, Literal)
-            If l IsNot Nothing Then
-                l.Text = jsonLd
+            ' Fallback: literal in master head
+            Dim ctrl As Control = mp.FindControl("litSeoJsonLd")
+            Dim lit As Literal = TryCast(ctrl, Literal)
+            If lit IsNot Nothing Then
+                lit.Text = jsonLdScript
             End If
         End If
     End Sub
+
+    ' ===========================
+    ' Utilities
+    ' ===========================
+    Private Shared Function GetBaseUrl(ByVal page As Page) As String
+        Try
+            If page Is Nothing OrElse page.Request Is Nothing OrElse page.Request.Url Is Nothing Then Return ""
+            Dim u As Uri = page.Request.Url
+            Dim baseUrl As String = u.Scheme & "://" & u.Authority & "/"
+            Return baseUrl
+        Catch
+            Return ""
+        End Try
+    End Function
+
+    Private Shared Function CombineUrl(ByVal baseUrl As String, ByVal relativeOrFragment As String) As String
+        If String.IsNullOrEmpty(baseUrl) Then Return relativeOrFragment
+        If String.IsNullOrEmpty(relativeOrFragment) Then Return baseUrl
+
+        If relativeOrFragment.StartsWith("#") Then
+            Dim b As String = baseUrl.TrimEnd("/"c)
+            Return b & relativeOrFragment
+        End If
+
+        If baseUrl.EndsWith("/"c) Then
+            Return baseUrl & relativeOrFragment.TrimStart("/"c)
+        End If
+        Return baseUrl & "/" & relativeOrFragment.TrimStart("/"c)
+    End Function
+
+    ' Se nel progetto esiste una Session/Config con nome sito, puoi adattare qui senza toccare altre parti.
+    Private Shared Function GetSiteName() As String
+        Try
+            ' Preferenza: web.config appSettings
+            Dim v As String = ConfigurationManager.AppSettings("SiteName")
+            If Not String.IsNullOrEmpty(v) Then Return v
+        Catch
+        End Try
+        Return "KeepStore"
+    End Function
 
 End Class
