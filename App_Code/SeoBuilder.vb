@@ -246,652 +246,497 @@ Public NotInheritable Class SeoBuilder
         Return BuildHomeJsonLdGraph(baseUrl, canonical, titleText, description, absLogo, company, categories, products, faqs)
     End Function
 
-    Private Shared Function BuildHomeJsonLdGraph(baseUrl As String,
-                                                canonical As String,
-                                                titleText As String,
-                                                description As String,
-                                                absLogo As String,
-                                                company As CompanyData,
-                                                categories As List(Of SeoCategory),
-                                                products As List(Of SeoProduct),
-                                                faqs As List(Of SeoFaq)) As String
+    ' ============================================================
+' Build HOME JSON-LD (@graph completo)
+' ============================================================
+Private Shared Function BuildHomeJsonLdGraph(page As Page,
+                                            titleText As String,
+                                            descriptionText As String,
+                                            canonicalUrl As String,
+                                            ogImageUrl As String) As String
+    Try
+        Dim baseUrl As String = GetBaseUrl(page)
+        If String.IsNullOrEmpty(baseUrl) Then
+            ' Fallback ultra-safe
+            If page IsNot Nothing AndAlso page.Request IsNot Nothing Then
+                baseUrl = page.Request.Url.GetLeftPart(UriPartial.Authority) & page.ResolveUrl("~/")
+            Else
+                Return ""
+            End If
+        End If
+        If Not baseUrl.EndsWith("/", StringComparison.Ordinal) Then baseUrl &= "/"
 
-        Const Q As String = """"
+        Dim canonical As String = SafeTrim(canonicalUrl)
+        If String.IsNullOrEmpty(canonical) Then canonical = baseUrl
 
+        Dim siteName As String = GetSiteName(page)
+        If String.IsNullOrEmpty(siteName) Then siteName = "TAIKUN.IT"
+
+        Dim company As CompanyInfo = GetCompanyFromSession(page)
+
+        ' ID stabili
         Dim orgId As String = baseUrl & "#org"
-        Dim localId As String = baseUrl & "#localbusiness"
-        Dim websiteId As String = baseUrl & "#website"
         Dim logoId As String = baseUrl & "#logo"
-
+        Dim lbId As String = baseUrl & "#localbusiness"
+        Dim websiteId As String = baseUrl & "#website"
         Dim webpageId As String = canonical & "#webpage"
         Dim breadcrumbId As String = canonical & "#breadcrumb"
         Dim categoriesId As String = canonical & "#categories"
         Dim productsId As String = canonical & "#products"
         Dim faqId As String = canonical & "#faq"
 
-        Dim orgName As String = If(company IsNot Nothing AndAlso Not String.IsNullOrEmpty(company.Name), company.Name, GetSiteNameFromBase(baseUrl))
-        Dim orgEmail As String = If(company IsNot Nothing, company.Email, String.Empty)
-        Dim orgPhone As String = If(company IsNot Nothing, company.Telephone, String.Empty)
+        Dim companyName As String = SafeTrim(company.Name)
+        If String.IsNullOrEmpty(companyName) Then companyName = siteName
 
-        Dim sellerId As String = If(company IsNot Nothing AndAlso (Not String.IsNullOrEmpty(company.Email) OrElse Not String.IsNullOrEmpty(company.Telephone)), localId, orgId)
+        Dim logoUrlAbs As String = SafeTrim(company.LogoUrl)
+        If String.IsNullOrEmpty(logoUrlAbs) Then logoUrlAbs = SafeTrim(ogImageUrl)
+        logoUrlAbs = ToAbsoluteUrl(baseUrl, logoUrlAbs)
 
-        Dim sb As New StringBuilder(8192)
-        sb.Append("<script type=""application/ld+json"">")
-        sb.Append("{")
-        sb.Append(Q).Append("@context").Append(Q).Append(":").Append(Q).Append("https://schema.org").Append(Q).Append(",")
-        sb.Append(Q).Append("@graph").Append(Q).Append(":[")
+        Dim ogImageAbs As String = ToAbsoluteUrl(baseUrl, ogImageUrl)
 
-        Dim firstGraph As Boolean = True
+        Dim graph As New List(Of String)()
 
-        ' ------------------------------------------------------------
-        ' Logo (ImageObject)
-        ' ------------------------------------------------------------
-        If Not String.IsNullOrEmpty(absLogo) Then
-            AppendGraphSep(sb, firstGraph)
-            sb.Append("{")
-            sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("ImageObject").Append(Q).Append(",")
-            sb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(logoId)).Append(Q).Append(",")
-            sb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(absLogo)).Append(Q).Append(",")
-            sb.Append(Q).Append("contentUrl").Append(Q).Append(":").Append(Q).Append(JsonEscape(absLogo)).Append(Q)
-            sb.Append("}")
-        End If
-
-        ' ------------------------------------------------------------
+        ' ----------------------------
         ' Organization
-        ' ------------------------------------------------------------
-        AppendGraphSep(sb, firstGraph)
-        sb.Append("{")
-        sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("Organization").Append(Q).Append(",")
-        sb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(orgId)).Append(Q).Append(",")
-        sb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(orgName)).Append(Q).Append(",")
-        sb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(baseUrl)).Append(Q)
-
-        If Not String.IsNullOrEmpty(absLogo) Then
-            sb.Append(",").Append(Q).Append("logo").Append(Q).Append(":").Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(logoId)).Append(Q).Append("}")
+        ' ----------------------------
+        Dim orgSb As New StringBuilder()
+        orgSb.Append("{")
+        orgSb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("Organization").Append(Q).Append(",")
+        orgSb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(orgId)).Append(Q).Append(",")
+        orgSb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(companyName)).Append(Q).Append(",")
+        orgSb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(baseUrl)).Append(Q)
+        If Not String.IsNullOrEmpty(logoUrlAbs) Then
+            orgSb.Append(",").Append(Q).Append("logo").Append(Q).Append(":")
+            orgSb.Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(logoId)).Append(Q).Append("}")
         End If
-        If Not String.IsNullOrEmpty(orgEmail) Then
-            sb.Append(",").Append(Q).Append("email").Append(Q).Append(":").Append(Q).Append(JsonEscape(orgEmail)).Append(Q)
+        If Not String.IsNullOrEmpty(company.VatId) Then
+            orgSb.Append(",").Append(Q).Append("vatID").Append(Q).Append(":").Append(Q).Append(JsonEscape(company.VatId)).Append(Q)
         End If
-        If Not String.IsNullOrEmpty(orgPhone) Then
-            sb.Append(",").Append(Q).Append("telephone").Append(Q).Append(":").Append(Q).Append(JsonEscape(orgPhone)).Append(Q)
+        orgSb.Append("}")
+        graph.Add(orgSb.ToString())
+
+        ' ----------------------------
+        ' ImageObject (logo)
+        ' ----------------------------
+        If Not String.IsNullOrEmpty(logoUrlAbs) Then
+            Dim logoSb As New StringBuilder()
+            logoSb.Append("{")
+            logoSb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("ImageObject").Append(Q).Append(",")
+            logoSb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(logoId)).Append(Q).Append(",")
+            logoSb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(logoUrlAbs)).Append(Q).Append(",")
+            logoSb.Append(Q).Append("contentUrl").Append(Q).Append(":").Append(Q).Append(JsonEscape(logoUrlAbs)).Append(Q).Append(",")
+            logoSb.Append(Q).Append("caption").Append(Q).Append(":").Append(Q).Append(JsonEscape(companyName & " logo")).Append(Q).Append(",")
+            logoSb.Append(Q).Append("inLanguage").Append(Q).Append(":").Append(Q).Append("it-IT").Append(Q)
+            logoSb.Append("}")
+            graph.Add(logoSb.ToString())
         End If
 
-        Dim fb As String = SafeSessionString("facebookLink")
-        If Not String.IsNullOrEmpty(fb) Then
-            sb.Append(",").Append(Q).Append("sameAs").Append(Q).Append(":[").Append(Q).Append(JsonEscape(fb)).Append(Q).Append("]")
-        End If
-
-        sb.Append("}")
-
-        ' ------------------------------------------------------------
+        ' ----------------------------
         ' LocalBusiness
-        ' ------------------------------------------------------------
-        If company IsNot Nothing AndAlso (Not String.IsNullOrEmpty(company.Address) OrElse Not String.IsNullOrEmpty(company.Telephone) OrElse Not String.IsNullOrEmpty(company.Email)) Then
-            AppendGraphSep(sb, firstGraph)
-            sb.Append("{")
-            sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("LocalBusiness").Append(Q).Append(",")
-            sb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(localId)).Append(Q).Append(",")
-            sb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(orgName)).Append(Q).Append(",")
-            sb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(baseUrl)).Append(Q).Append(",")
-            sb.Append(Q).Append("parentOrganization").Append(Q).Append(":").Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(orgId)).Append(Q).Append("}")
+        ' ----------------------------
+        Dim hasAddress As Boolean =
+            (Not String.IsNullOrEmpty(company.StreetAddress)) OrElse
+            (Not String.IsNullOrEmpty(company.PostalCode)) OrElse
+            (Not String.IsNullOrEmpty(company.AddressLocality)) OrElse
+            (Not String.IsNullOrEmpty(company.AddressRegion)) OrElse
+            (Not String.IsNullOrEmpty(company.CountryCode))
 
-            If Not String.IsNullOrEmpty(absLogo) Then
-                sb.Append(",").Append(Q).Append("image").Append(Q).Append(":").Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(logoId)).Append(Q).Append("}")
-                sb.Append(",").Append(Q).Append("logo").Append(Q).Append(":").Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(logoId)).Append(Q).Append("}")
+        Dim addrJson As String = ""
+        If hasAddress Then
+            Dim aSb As New StringBuilder()
+            aSb.Append("{")
+            aSb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("PostalAddress").Append(Q)
+            If Not String.IsNullOrEmpty(company.StreetAddress) Then
+                aSb.Append(",").Append(Q).Append("streetAddress").Append(Q).Append(":").Append(Q).Append(JsonEscape(company.StreetAddress)).Append(Q)
             End If
-            If Not String.IsNullOrEmpty(company.Telephone) Then
-                sb.Append(",").Append(Q).Append("telephone").Append(Q).Append(":").Append(Q).Append(JsonEscape(company.Telephone)).Append(Q)
+            If Not String.IsNullOrEmpty(company.PostalCode) Then
+                aSb.Append(",").Append(Q).Append("postalCode").Append(Q).Append(":").Append(Q).Append(JsonEscape(company.PostalCode)).Append(Q)
             End If
-            If Not String.IsNullOrEmpty(company.Email) Then
-                sb.Append(",").Append(Q).Append("email").Append(Q).Append(":").Append(Q).Append(JsonEscape(company.Email)).Append(Q)
+            If Not String.IsNullOrEmpty(company.AddressLocality) Then
+                aSb.Append(",").Append(Q).Append("addressLocality").Append(Q).Append(":").Append(Q).Append(JsonEscape(company.AddressLocality)).Append(Q)
             End If
-
-            Dim hasAddress As Boolean = Not String.IsNullOrEmpty(company.Address) OrElse Not String.IsNullOrEmpty(company.City) OrElse Not String.IsNullOrEmpty(company.PostalCode)
-            If hasAddress Then
-                sb.Append(",").Append(Q).Append("address").Append(Q).Append(":{")
-                sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("PostalAddress").Append(Q)
-
-                If Not String.IsNullOrEmpty(company.Address) Then
-                    sb.Append(",").Append(Q).Append("streetAddress").Append(Q).Append(":").Append(Q).Append(JsonEscape(company.Address)).Append(Q)
-                End If
-                If Not String.IsNullOrEmpty(company.City) Then
-                    sb.Append(",").Append(Q).Append("addressLocality").Append(Q).Append(":").Append(Q).Append(JsonEscape(company.City)).Append(Q)
-                End If
-                If Not String.IsNullOrEmpty(company.Province) Then
-                    sb.Append(",").Append(Q).Append("addressRegion").Append(Q).Append(":").Append(Q).Append(JsonEscape(company.Province)).Append(Q)
-                End If
-                If Not String.IsNullOrEmpty(company.PostalCode) Then
-                    sb.Append(",").Append(Q).Append("postalCode").Append(Q).Append(":").Append(Q).Append(JsonEscape(company.PostalCode)).Append(Q)
-                End If
-
-                Dim cc As String = company.CountryCode
-                If String.IsNullOrEmpty(cc) Then cc = "IT"
-                sb.Append(",").Append(Q).Append("addressCountry").Append(Q).Append(":").Append(Q).Append(JsonEscape(cc)).Append(Q)
-
-                sb.Append("}")
+            If Not String.IsNullOrEmpty(company.AddressRegion) Then
+                aSb.Append(",").Append(Q).Append("addressRegion").Append(Q).Append(":").Append(Q).Append(JsonEscape(company.AddressRegion)).Append(Q)
             End If
-
-            sb.Append("}")
+            If Not String.IsNullOrEmpty(company.CountryCode) Then
+                aSb.Append(",").Append(Q).Append("addressCountry").Append(Q).Append(":").Append(Q).Append(JsonEscape(company.CountryCode)).Append(Q)
+            End If
+            aSb.Append("}")
+            addrJson = aSb.ToString()
         End If
 
-        ' ------------------------------------------------------------
+        Dim lbSb As New StringBuilder()
+        lbSb.Append("{")
+        lbSb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("LocalBusiness").Append(Q).Append(",")
+        lbSb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(lbId)).Append(Q).Append(",")
+        lbSb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(companyName)).Append(Q).Append(",")
+        lbSb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(baseUrl)).Append(Q)
+        If Not String.IsNullOrEmpty(logoUrlAbs) Then
+            lbSb.Append(",").Append(Q).Append("image").Append(Q).Append(":")
+            lbSb.Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(logoId)).Append(Q).Append("}")
+        End If
+        If Not String.IsNullOrEmpty(company.Email) Then
+            lbSb.Append(",").Append(Q).Append("email").Append(Q).Append(":").Append(Q).Append(JsonEscape(company.Email)).Append(Q)
+        End If
+        If Not String.IsNullOrEmpty(company.Telephone) Then
+            lbSb.Append(",").Append(Q).Append("telephone").Append(Q).Append(":").Append(Q).Append(JsonEscape(company.Telephone)).Append(Q)
+        End If
+        If Not String.IsNullOrEmpty(company.VatId) Then
+            lbSb.Append(",").Append(Q).Append("vatID").Append(Q).Append(":").Append(Q).Append(JsonEscape(company.VatId)).Append(Q)
+        End If
+        If Not String.IsNullOrEmpty(addrJson) Then
+            lbSb.Append(",").Append(Q).Append("address").Append(Q).Append(":").Append(addrJson)
+        End If
+        lbSb.Append(",").Append(Q).Append("parentOrganization").Append(Q).Append(":")
+        lbSb.Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(orgId)).Append(Q).Append("}")
+        lbSb.Append("}")
+        graph.Add(lbSb.ToString())
+
+        ' ----------------------------
         ' WebSite + SearchAction
-        ' ------------------------------------------------------------
-        AppendGraphSep(sb, firstGraph)
-        sb.Append("{")
-        sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("WebSite").Append(Q).Append(",")
-        sb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(websiteId)).Append(Q).Append(",")
-        sb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(baseUrl)).Append(Q).Append(",")
-        sb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(orgName)).Append(Q).Append(",")
-        sb.Append(Q).Append("publisher").Append(Q).Append(":").Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(orgId)).Append(Q).Append("},")
-        sb.Append(Q).Append("potentialAction").Append(Q).Append(":{")
-        sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("SearchAction").Append(Q).Append(",")
-        sb.Append(Q).Append("target").Append(Q).Append(":").Append(Q).Append(JsonEscape(baseUrl & "articoli.aspx?q={search_term_string}")).Append(Q).Append(",")
-        sb.Append(Q).Append("query-input").Append(Q).Append(":").Append(Q).Append("required name=search_term_string").Append(Q)
-        sb.Append("}")
-        sb.Append("}")
+        ' ----------------------------
+        Dim searchTarget As String = baseUrl & "articoli.aspx?q={search_term_string}"
 
-        ' ------------------------------------------------------------
-        ' WebPage
-        ' ------------------------------------------------------------
-        AppendGraphSep(sb, firstGraph)
-        sb.Append("{")
-        sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("WebPage").Append(Q).Append(",")
-        sb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(webpageId)).Append(Q).Append(",")
-        sb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(canonical)).Append(Q).Append(",")
-        sb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(If(titleText, ""))).Append(Q).Append(",")
-        sb.Append(Q).Append("description").Append(Q).Append(":").Append(Q).Append(JsonEscape(If(description, ""))).Append(Q).Append(",")
-        sb.Append(Q).Append("isPartOf").Append(Q).Append(":").Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(websiteId)).Append(Q).Append("},")
-        sb.Append(Q).Append("breadcrumb").Append(Q).Append(":").Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(breadcrumbId)).Append(Q).Append("}")
+        Dim wSb As New StringBuilder()
+        wSb.Append("{")
+        wSb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("WebSite").Append(Q).Append(",")
+        wSb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(websiteId)).Append(Q).Append(",")
+        wSb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(baseUrl)).Append(Q).Append(",")
+        wSb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(siteName)).Append(Q).Append(",")
+        wSb.Append(Q).Append("potentialAction").Append(Q).Append(":").Append("{")
+        wSb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("SearchAction").Append(Q).Append(",")
+        wSb.Append(Q).Append("target").Append(Q).Append(":").Append(Q).Append(JsonEscape(searchTarget)).Append(Q).Append(",")
+        wSb.Append(Q).Append("query-input").Append(Q).Append(":").Append(Q).Append("required name=search_term_string").Append(Q)
+        wSb.Append("}")
+        wSb.Append("}")
+        graph.Add(wSb.ToString())
 
-        If Not String.IsNullOrEmpty(absLogo) Then
-            sb.Append(",").Append(Q).Append("primaryImageOfPage").Append(Q).Append(":").Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(logoId)).Append(Q).Append("}")
+        ' ----------------------------
+        ' BreadcrumbList (Home)
+        ' ----------------------------
+        Dim bSb As New StringBuilder()
+        bSb.Append("{")
+        bSb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("BreadcrumbList").Append(Q).Append(",")
+        bSb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(breadcrumbId)).Append(Q).Append(",")
+        bSb.Append(Q).Append("itemListElement").Append(Q).Append(":[{")
+        bSb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("ListItem").Append(Q).Append(",")
+        bSb.Append(Q).Append("position").Append(Q).Append(":1,")
+        bSb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append("Home").Append(Q).Append(",")
+        bSb.Append(Q).Append("item").Append(Q).Append(":").Append(Q).Append(JsonEscape(canonical)).Append(Q)
+        bSb.Append("}]}")
+        graph.Add(bSb.ToString())
+
+        ' ----------------------------
+        ' WebPage (Home)
+        ' ----------------------------
+        Dim pSb As New StringBuilder()
+        pSb.Append("{")
+        pSb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("WebPage").Append(Q).Append(",")
+        pSb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(webpageId)).Append(Q).Append(",")
+        pSb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(canonical)).Append(Q).Append(",")
+        pSb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(SafeTrim(titleText))).Append(Q)
+        If Not String.IsNullOrEmpty(descriptionText) Then
+            pSb.Append(",").Append(Q).Append("description").Append(Q).Append(":").Append(Q).Append(JsonEscape(SafeTrim(descriptionText))).Append(Q)
         End If
+        pSb.Append(",").Append(Q).Append("isPartOf").Append(Q).Append(":")
+        pSb.Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(websiteId)).Append(Q).Append("}")
+        pSb.Append(",").Append(Q).Append("about").Append(Q).Append(":")
+        pSb.Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(orgId)).Append(Q).Append("}")
+        pSb.Append(",").Append(Q).Append("publisher").Append(Q).Append(":")
+        pSb.Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(orgId)).Append(Q).Append("}")
+        pSb.Append(",").Append(Q).Append("breadcrumb").Append(Q).Append(":")
+        pSb.Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(breadcrumbId)).Append(Q).Append("}")
+        pSb.Append(",").Append(Q).Append("inLanguage").Append(Q).Append(":").Append(Q).Append("it-IT").Append(Q)
+        If Not String.IsNullOrEmpty(ogImageAbs) Then
+            pSb.Append(",").Append(Q).Append("primaryImageOfPage").Append(Q).Append(":")
+            pSb.Append("{").Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("ImageObject").Append(Q).Append(",")
+            pSb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(ogImageAbs)).Append(Q)
+            pSb.Append("}")
+        End If
+        pSb.Append("}")
+        graph.Add(pSb.ToString())
 
-        sb.Append("}")
-
-        ' ------------------------------------------------------------
-        ' BreadcrumbList
-        ' ------------------------------------------------------------
-        AppendGraphSep(sb, firstGraph)
-        sb.Append("{")
-        sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("BreadcrumbList").Append(Q).Append(",")
-        sb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(breadcrumbId)).Append(Q).Append(",")
-        sb.Append(Q).Append("itemListElement").Append(Q).Append(":[{")
-        sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("ListItem").Append(Q).Append(",")
-        sb.Append(Q).Append("position").Append(Q).Append(":1,")
-        sb.Append(Q).Append("item").Append(Q).Append(":{")
-        sb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(canonical)).Append(Q).Append(",")
-        sb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape("Home")).Append(Q)
-        sb.Append("}}]")
-        sb.Append("}")
-
-        ' ------------------------------------------------------------
-        ' Categories ItemList
-        ' ------------------------------------------------------------
+        ' ----------------------------
+        ' ItemList categorie (DB)
+        ' ----------------------------
+        Dim categories As List(Of SeoCategory) = LoadHomeCategories(page, baseUrl, 30)
         If categories IsNot Nothing AndAlso categories.Count > 0 Then
-            AppendGraphSep(sb, firstGraph)
-            sb.Append("{")
-            sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("ItemList").Append(Q).Append(",")
-            sb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(categoriesId)).Append(Q).Append(",")
-            sb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape("Categorie")).Append(Q).Append(",")
-            sb.Append(Q).Append("itemListElement").Append(Q).Append(":[")
-
-            Dim cpos As Integer = 0
-            For Each c As SeoCategory In categories
-                If c Is Nothing OrElse String.IsNullOrEmpty(c.Url) OrElse String.IsNullOrEmpty(c.Name) Then Continue For
-                cpos += 1
-                If cpos > 1 Then sb.Append(",")
-                sb.Append("{")
-                sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("ListItem").Append(Q).Append(",")
-                sb.Append(Q).Append("position").Append(Q).Append(":").Append(cpos).Append(",")
-                sb.Append(Q).Append("item").Append(Q).Append(":{")
-                sb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(c.Url)).Append(Q).Append(",")
-                sb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(c.Name)).Append(Q)
-                sb.Append("}}")
+            Dim cSb As New StringBuilder()
+            cSb.Append("{")
+            cSb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("ItemList").Append(Q).Append(",")
+            cSb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(categoriesId)).Append(Q).Append(",")
+            cSb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape("Categorie")).Append(Q).Append(",")
+            cSb.Append(Q).Append("itemListElement").Append(Q).Append(":[")
+            For i As Integer = 0 To categories.Count - 1
+                If i > 0 Then cSb.Append(",")
+                cSb.Append("{")
+                cSb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("ListItem").Append(Q).Append(",")
+                cSb.Append(Q).Append("position").Append(Q).Append(":").Append((i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture)).Append(",")
+                cSb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(categories(i).Name)).Append(Q).Append(",")
+                cSb.Append(Q).Append("item").Append(Q).Append(":").Append(Q).Append(JsonEscape(categories(i).Url)).Append(Q)
+                cSb.Append("}")
             Next
-
-            sb.Append("]")
-            sb.Append("}")
+            cSb.Append("]}")
+            graph.Add(cSb.ToString())
         End If
 
-        ' ------------------------------------------------------------
-        ' Product entities + ItemList
-        ' ------------------------------------------------------------
+        ' ----------------------------
+        ' Prodotti HOME (DB) + ItemList + Product/Offer
+        ' ----------------------------
+        Dim products As List(Of SeoProduct) = LoadHomeProducts(page, baseUrl, 12)
         If products IsNot Nothing AndAlso products.Count > 0 Then
+            ' ItemList prodotti
+            Dim lSb As New StringBuilder()
+            lSb.Append("{")
+            lSb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("ItemList").Append(Q).Append(",")
+            lSb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(productsId)).Append(Q).Append(",")
+            lSb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape("Prodotti in evidenza")).Append(Q).Append(",")
+            lSb.Append(Q).Append("itemListElement").Append(Q).Append(":[")
+            For i As Integer = 0 To products.Count - 1
+                If i > 0 Then lSb.Append(",")
+                lSb.Append("{")
+                lSb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("ListItem").Append(Q).Append(",")
+                lSb.Append(Q).Append("position").Append(Q).Append(":").Append((i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture)).Append(",")
+                lSb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(products(i).Name)).Append(Q).Append(",")
+                lSb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(products(i).Url)).Append(Q).Append(",")
+                lSb.Append(Q).Append("item").Append(Q).Append(":")
+                lSb.Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(products(i).ProductId)).Append(Q).Append("}")
+                lSb.Append("}")
+            Next
+            lSb.Append("]}")
+            graph.Add(lSb.ToString())
 
-            For Each p As SeoProduct In products
-                If p Is Nothing OrElse String.IsNullOrEmpty(p.Url) OrElse String.IsNullOrEmpty(p.Name) Then Continue For
+            ' Product nodes
+            For Each pr As SeoProduct In products
+                Dim prSb As New StringBuilder()
+                prSb.Append("{")
+                prSb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("Product").Append(Q).Append(",")
+                prSb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(pr.ProductId)).Append(Q).Append(",")
+                prSb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(pr.Name)).Append(Q).Append(",")
+                prSb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(pr.Url)).Append(Q)
 
-                AppendGraphSep(sb, firstGraph)
-                sb.Append("{")
-                sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("Product").Append(Q).Append(",")
-                sb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(p.Url)).Append(Q).Append(",")
-                sb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(p.Name)).Append(Q)
-
-                If Not String.IsNullOrEmpty(p.Sku) Then
-                    sb.Append(",").Append(Q).Append("sku").Append(Q).Append(":").Append(Q).Append(JsonEscape(p.Sku)).Append(Q)
+                If Not String.IsNullOrEmpty(pr.ImageUrl) Then
+                    prSb.Append(",").Append(Q).Append("image").Append(Q).Append(":[").Append(Q).Append(JsonEscape(pr.ImageUrl)).Append(Q).Append("]")
+                End If
+                If Not String.IsNullOrEmpty(pr.CategoryName) Then
+                    prSb.Append(",").Append(Q).Append("category").Append(Q).Append(":").Append(Q).Append(JsonEscape(pr.CategoryName)).Append(Q)
                 End If
 
-                If Not String.IsNullOrEmpty(p.ImageUrl) Then
-                    sb.Append(",").Append(Q).Append("image").Append(Q).Append(":[").Append(Q).Append(JsonEscape(p.ImageUrl)).Append(Q).Append("]")
+                ' Brand (minimo ma utile agli assistenti AI)
+                prSb.Append(",").Append(Q).Append("brand").Append(Q).Append(":")
+                prSb.Append("{").Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("Brand").Append(Q).Append(",")
+                prSb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(siteName)).Append(Q)
+                prSb.Append("}")
+
+                ' Offer
+                If pr.Price > 0D Then
+                    Dim priceStr As String = pr.Price.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+                    Dim availability As String = If(pr.InStock, "https://schema.org/InStock", "https://schema.org/OutOfStock")
+                    Dim offerId As String = pr.Url & "#offer"
+
+                    prSb.Append(",").Append(Q).Append("offers").Append(Q).Append(":")
+                    prSb.Append("{")
+                    prSb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("Offer").Append(Q).Append(",")
+                    prSb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(offerId)).Append(Q).Append(",")
+                    prSb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(pr.Url)).Append(Q).Append(",")
+                    prSb.Append(Q).Append("priceCurrency").Append(Q).Append(":").Append(Q).Append("EUR").Append(Q).Append(",")
+                    prSb.Append(Q).Append("price").Append(Q).Append(":").Append(Q).Append(JsonEscape(priceStr)).Append(Q).Append(",")
+                    prSb.Append(Q).Append("availability").Append(Q).Append(":").Append(Q).Append(JsonEscape(availability)).Append(Q).Append(",")
+                    prSb.Append(Q).Append("itemCondition").Append(Q).Append(":").Append(Q).Append("https://schema.org/NewCondition").Append(Q).Append(",")
+                    prSb.Append(Q).Append("seller").Append(Q).Append(":")
+                    prSb.Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(lbId)).Append(Q).Append("}")
+                    prSb.Append("}")
                 End If
 
-                Dim cur As String = If(String.IsNullOrEmpty(p.Currency), "EUR", p.Currency)
-                Dim priceToUse As Decimal = If(p.HasSalePrice AndAlso p.SalePrice > 0D, p.SalePrice, p.Price)
-                Dim availability As String = If(String.IsNullOrEmpty(p.AvailabilityUrl), "https://schema.org/InStock", p.AvailabilityUrl)
-
-                sb.Append(",").Append(Q).Append("offers").Append(Q).Append(":{")
-                sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("Offer").Append(Q).Append(",")
-                sb.Append(Q).Append("url").Append(Q).Append(":").Append(Q).Append(JsonEscape(p.Url)).Append(Q).Append(",")
-                sb.Append(Q).Append("priceCurrency").Append(Q).Append(":").Append(Q).Append(JsonEscape(cur)).Append(Q).Append(",")
-                sb.Append(Q).Append("price").Append(Q).Append(":").Append(Q).Append(priceToUse.ToString("0.00", CultureInfo.InvariantCulture)).Append(Q).Append(",")
-                sb.Append(Q).Append("availability").Append(Q).Append(":").Append(Q).Append(JsonEscape(availability)).Append(Q).Append(",")
-                sb.Append(Q).Append("itemCondition").Append(Q).Append(":").Append(Q).Append("https://schema.org/NewCondition").Append(Q).Append(",")
-                sb.Append(Q).Append("seller").Append(Q).Append(":").Append("{").Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(sellerId)).Append(Q).Append("}")
-                sb.Append("}")
-
-                sb.Append("}")
+                prSb.Append("}")
+                graph.Add(prSb.ToString())
             Next
-
-            AppendGraphSep(sb, firstGraph)
-            sb.Append("{")
-            sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("ItemList").Append(Q).Append(",")
-            sb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(productsId)).Append(Q).Append(",")
-            sb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape("Prodotti in evidenza")).Append(Q).Append(",")
-            sb.Append(Q).Append("itemListElement").Append(Q).Append(":[")
-
-            Dim ppos As Integer = 0
-            For Each p As SeoProduct In products
-                If p Is Nothing OrElse String.IsNullOrEmpty(p.Url) OrElse String.IsNullOrEmpty(p.Name) Then Continue For
-                ppos += 1
-                If ppos > 1 Then sb.Append(",")
-                sb.Append("{")
-                sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("ListItem").Append(Q).Append(",")
-                sb.Append(Q).Append("position").Append(Q).Append(":").Append(ppos).Append(",")
-                sb.Append(Q).Append("item").Append(Q).Append(":{")
-                sb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(p.Url)).Append(Q).Append(",")
-                sb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(p.Name)).Append(Q)
-                sb.Append("}}")
-            Next
-
-            sb.Append("]")
-            sb.Append("}")
         End If
 
-        ' ------------------------------------------------------------
+        ' ----------------------------
         ' FAQPage
-        ' ------------------------------------------------------------
+        ' ----------------------------
+        Dim faqs As List(Of FaqItem) = GetHomeFaq()
         If faqs IsNot Nothing AndAlso faqs.Count > 0 Then
-            AppendGraphSep(sb, firstGraph)
-            sb.Append("{")
-            sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("FAQPage").Append(Q).Append(",")
-            sb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(faqId)).Append(Q).Append(",")
-            sb.Append(Q).Append("mainEntity").Append(Q).Append(":[")
-
-            Dim qpos As Integer = 0
-            For Each f As SeoFaq In faqs
-                If f Is Nothing OrElse String.IsNullOrEmpty(f.Question) OrElse String.IsNullOrEmpty(f.Answer) Then Continue For
-                qpos += 1
-                If qpos > 1 Then sb.Append(",")
-                sb.Append("{")
-                sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("Question").Append(Q).Append(",")
-                sb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(f.Question)).Append(Q).Append(",")
-                sb.Append(Q).Append("acceptedAnswer").Append(Q).Append(":{")
-                sb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("Answer").Append(Q).Append(",")
-                sb.Append(Q).Append("text").Append(Q).Append(":").Append(Q).Append(JsonEscape(f.Answer)).Append(Q)
-                sb.Append("}}")
+            Dim fSb As New StringBuilder()
+            fSb.Append("{")
+            fSb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("FAQPage").Append(Q).Append(",")
+            fSb.Append(Q).Append("@id").Append(Q).Append(":").Append(Q).Append(JsonEscape(faqId)).Append(Q).Append(",")
+            fSb.Append(Q).Append("mainEntity").Append(Q).Append(":[")
+            For i As Integer = 0 To faqs.Count - 1
+                If i > 0 Then fSb.Append(",")
+                fSb.Append("{")
+                fSb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("Question").Append(Q).Append(",")
+                fSb.Append(Q).Append("name").Append(Q).Append(":").Append(Q).Append(JsonEscape(faqs(i).Question)).Append(Q).Append(",")
+                fSb.Append(Q).Append("acceptedAnswer").Append(Q).Append(":")
+                fSb.Append("{")
+                fSb.Append(Q).Append("@type").Append(Q).Append(":").Append(Q).Append("Answer").Append(Q).Append(",")
+                fSb.Append(Q).Append("text").Append(Q).Append(":").Append(Q).Append(JsonEscape(faqs(i).Answer)).Append(Q)
+                fSb.Append("}")
+                fSb.Append("}")
             Next
-
-            sb.Append("]")
-            sb.Append("}")
+            fSb.Append("]}")
+            graph.Add(fSb.ToString())
         End If
 
-        sb.Append("]}")
-        sb.Append("</script>")
+        ' ----------------------------
+        ' Root
+        ' ----------------------------
+        If graph.Count = 0 Then Return ""
 
-        Return sb.ToString()
-    End Function
+        Dim root As New StringBuilder()
+        root.Append("{")
+        root.Append(Q).Append("@context").Append(Q).Append(":").Append(Q).Append("https://schema.org").Append(Q).Append(",")
+        root.Append(Q).Append("@graph").Append(Q).Append(":[")
+        root.Append(String.Join(",", graph.ToArray()))
+        root.Append("]}")
+        Return root.ToString()
 
-    Private Shared Sub AppendGraphSep(sb As StringBuilder, ByRef firstGraph As Boolean)
-        If Not firstGraph Then sb.Append(",")
-        firstGraph = False
+    Catch
+        ' SEO non deve mai rompere la pagina
+        Return ""
+    End Try
+End Function
+
+' ============================================================
+' DB helpers per HOME JSON-LD (categorie + prodotti)
+' ============================================================
+Private NotInheritable Class SeoCategory
+    Public ReadOnly Id As Integer
+    Public ReadOnly Name As String
+    Public ReadOnly Url As String
+
+    Public Sub New(id As Integer, name As String, url As String)
+        Me.Id = id
+        Me.Name = name
+        Me.Url = url
     End Sub
+End Class
 
-    ' ============================================================
-    ' JSON-LD injection (Master or fallback literal)
-    ' ============================================================
-    Public Shared Sub SetJsonLdOnMaster(page As Page, jsonLdScript As String)
-        If page Is Nothing Then Return
+Private NotInheritable Class SeoProduct
+    Public ReadOnly Id As Integer
+    Public ReadOnly Name As String
+    Public ReadOnly Url As String
+    Public ReadOnly ImageUrl As String
+    Public ReadOnly Price As Decimal
+    Public ReadOnly InStock As Boolean
+    Public ReadOnly CategoryName As String
+    Public ReadOnly ProductId As String
 
-        Dim masterSeo As ISeoMaster = TryCast(page.Master, ISeoMaster)
-        If masterSeo IsNot Nothing Then
-            masterSeo.SeoJsonLd = jsonLdScript
-            Return
-        End If
-
-        Dim mp As MasterPage = page.Master
-        If mp IsNot Nothing Then
-            Dim litCtrl As Control = mp.FindControl("litSeoJsonLd")
-            Dim lit As Literal = TryCast(litCtrl, Literal)
-            If lit IsNot Nothing Then
-                lit.Text = jsonLdScript
-            End If
-        End If
+    Public Sub New(id As Integer, name As String, url As String, imageUrl As String, price As Decimal, inStock As Boolean, categoryName As String)
+        Me.Id = id
+        Me.Name = name
+        Me.Url = url
+        Me.ImageUrl = imageUrl
+        Me.Price = price
+        Me.InStock = inStock
+        Me.CategoryName = categoryName
+        Me.ProductId = url & "#product"
     End Sub
+End Class
 
-    ' ============================================================
-    ' Data retrieval helpers
-    ' ============================================================
-    Private Shared Function GetCompanyData(page As Page) As CompanyData
-        Dim host As String = ""
-        If page IsNot Nothing AndAlso page.Request IsNot Nothing AndAlso page.Request.Url IsNot Nothing Then host = page.Request.Url.Host
+Private Shared Function LoadHomeCategories(page As Page, baseUrl As String, maxCount As Integer) As List(Of SeoCategory)
+    Dim cacheKey As String = "SEO_HOME_CATS_" & maxCount.ToString(System.Globalization.CultureInfo.InvariantCulture)
+    Dim cached As List(Of SeoCategory) = TryCast(System.Web.HttpRuntime.Cache(cacheKey), List(Of SeoCategory))
+    If cached IsNot Nothing Then Return cached
 
-        Dim aziendaId As Integer = 0
-        Try
-            Dim idObj As Object = Nothing
-            If page IsNot Nothing AndAlso page.Session IsNot Nothing Then idObj = page.Session("AziendaID")
-            If idObj IsNot Nothing Then Integer.TryParse(idObj.ToString(), aziendaId)
-        Catch
-        End Try
+    Dim list As New List(Of SeoCategory)()
 
-        Dim cacheKey As String = If(aziendaId > 0, "SEO_COMPANY_" & aziendaId.ToString(), "SEO_COMPANY_HOST_" & host)
-        Dim cached As CompanyData = TryCast(HttpRuntime.Cache(cacheKey), CompanyData)
-        If cached IsNot Nothing Then Return cached
-
-        Dim result As New CompanyData()
-        result.CountryCode = "IT"
-
-        Try
-            Dim cs As String = ""
-            If ConfigurationManager.ConnectionStrings("EntropicConnectionString") IsNot Nothing Then
-                cs = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            End If
-            If String.IsNullOrEmpty(cs) Then
-                ' Fallback solo da session/appsettings
-                result.Name = SafeSessionString("AziendaNome")
-                result.Email = SafeSessionString("AziendaEmail")
-                result.Telephone = GetCompanyPhone(page)
-                HttpRuntime.Cache.Insert(cacheKey, result, Nothing, DateTime.UtcNow.AddHours(6), System.Web.Caching.Cache.NoSlidingExpiration)
-                Return result
-            End If
-
-            Using conn As New MySqlConnection(cs)
-                conn.Open()
-
-                If aziendaId > 0 Then
-                    Using cmd As New MySqlCommand("SELECT Nome, RagioneSociale, Indirizzo, Citta, Provincia, Cap, Telefono, Email, IdPaese FROM aziende WHERE Id=@id LIMIT 1", conn)
-                        cmd.Parameters.AddWithValue("@id", aziendaId)
-                        Using r As MySqlDataReader = cmd.ExecuteReader()
-                            If r.Read() Then
-                                result.Name = SafeDbString(r, "Nome")
-                                result.LegalName = SafeDbString(r, "RagioneSociale")
-                                If String.IsNullOrEmpty(result.Name) Then result.Name = result.LegalName
-                                result.Address = SafeDbString(r, "Indirizzo")
-                                result.City = SafeDbString(r, "Citta")
-                                result.Province = SafeDbString(r, "Provincia")
-                                result.PostalCode = SafeDbString(r, "Cap")
-                                result.Telephone = SafeDbString(r, "Telefono")
-                                result.Email = SafeDbString(r, "Email")
-                                Dim idPaeseStr As String = SafeDbString(r, "IdPaese")
-                                If Not String.IsNullOrEmpty(idPaeseStr) AndAlso idPaeseStr.Length = 2 Then
-                                    result.CountryCode = idPaeseStr.ToUpperInvariant()
-                                End If
-                            End If
-                        End Using
-                    End Using
-                ElseIf Not String.IsNullOrEmpty(host) Then
-                    Using cmd As New MySqlCommand("SELECT a.Nome, a.RagioneSociale, a.Indirizzo, a.Citta, a.Provincia, a.Cap, a.Telefono, a.Email, a.IdPaese FROM aziende a LEFT JOIN pagine p ON a.Id=p.IdAziende WHERE p.Url1 LIKE @h OR p.Url2 LIKE @h OR p.Url3 LIKE @h OR p.Url4 LIKE @h LIMIT 1", conn)
-                        cmd.Parameters.AddWithValue("@h", "%" & host & "%")
-                        Using r As MySqlDataReader = cmd.ExecuteReader()
-                            If r.Read() Then
-                                result.Name = SafeDbString(r, "Nome")
-                                result.LegalName = SafeDbString(r, "RagioneSociale")
-                                If String.IsNullOrEmpty(result.Name) Then result.Name = result.LegalName
-                                result.Address = SafeDbString(r, "Indirizzo")
-                                result.City = SafeDbString(r, "Citta")
-                                result.Province = SafeDbString(r, "Provincia")
-                                result.PostalCode = SafeDbString(r, "Cap")
-                                result.Telephone = SafeDbString(r, "Telefono")
-                                result.Email = SafeDbString(r, "Email")
-                                Dim idPaeseStr As String = SafeDbString(r, "IdPaese")
-                                If Not String.IsNullOrEmpty(idPaeseStr) AndAlso idPaeseStr.Length = 2 Then
-                                    result.CountryCode = idPaeseStr.ToUpperInvariant()
-                                End If
-                            End If
-                        End Using
-                    End Using
-                End If
-            End Using
-
-        Catch
-            ' Non interrompere il rendering della pagina per SEO
-        End Try
-
-        If String.IsNullOrEmpty(result.Name) Then result.Name = SafeSessionString("AziendaNome")
-        If String.IsNullOrEmpty(result.Email) Then result.Email = GetCompanyEmail(page)
-        If String.IsNullOrEmpty(result.Telephone) Then result.Telephone = GetCompanyPhone(page)
-
-        HttpRuntime.Cache.Insert(cacheKey, result, Nothing, DateTime.UtcNow.AddHours(6), System.Web.Caching.Cache.NoSlidingExpiration)
-        Return result
-    End Function
-
-    Private Shared Function GetHomeCategories(baseUrl As String, limit As Integer) As List(Of SeoCategory)
-        Dim host As String = ""
-        Try
-            Dim ctx As HttpContext = HttpContext.Current
-            If ctx IsNot Nothing AndAlso ctx.Request IsNot Nothing AndAlso ctx.Request.Url IsNot Nothing Then host = ctx.Request.Url.Host
-        Catch
-        End Try
-
-        Dim lim As Integer = limit
-        If lim <= 0 Then lim = 12
-        If lim > 50 Then lim = 50
-
-        Dim cacheKey As String = "SEO_HOME_CATEGORIES_" & host & "_" & lim.ToString()
-        Dim cached As List(Of SeoCategory) = TryCast(HttpRuntime.Cache(cacheKey), List(Of SeoCategory))
-        If cached IsNot Nothing Then Return cached
-
-        Dim list As New List(Of SeoCategory)()
-
-        Try
-            Dim cs As String = ""
-            If ConfigurationManager.ConnectionStrings("EntropicConnectionString") IsNot Nothing Then
-                cs = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            End If
-            If String.IsNullOrEmpty(cs) Then Return list
-
-            Using conn As New MySqlConnection(cs)
-                conn.Open()
-                Dim sql As String = "SELECT id, descrizione FROM categorie ORDER BY ordinamento LIMIT " & lim.ToString()
-                Using cmd As New MySqlCommand(sql, conn)
-                    Using r As MySqlDataReader = cmd.ExecuteReader()
-                        While r.Read()
-                            Dim id As Integer = 0
-                            If Not r.IsDBNull(0) Then Integer.TryParse(r.GetValue(0).ToString(), id)
-                            Dim name As String = If(r.IsDBNull(1), "", r.GetValue(1).ToString())
-                            If id > 0 AndAlso Not String.IsNullOrEmpty(name) Then
-                                list.Add(New SeoCategory With {.Id = id, .Name = name, .Url = baseUrl & "articoli.aspx?ct=" & id.ToString()})
-                            End If
-                        End While
-                    End Using
+    Try
+        Dim cs As String = System.Configuration.ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+        Using cn As New MySqlConnection(cs)
+            cn.Open()
+            Using cmd As New MySqlCommand("SELECT Id, Descrizione FROM Categorie ORDER BY Ordinamento ASC, Descrizione ASC LIMIT @lim", cn)
+                cmd.Parameters.AddWithValue("@lim", maxCount)
+                Using rdr As MySqlDataReader = cmd.ExecuteReader()
+                    While rdr.Read()
+                        Dim id As Integer = SafeInt32(rdr("Id"), 0)
+                        Dim name As String = SafeTrim(rdr("Descrizione"))
+                        If id > 0 AndAlso Not String.IsNullOrEmpty(name) Then
+                            Dim url As String = baseUrl & "articoli.aspx?ct=" & id.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                            list.Add(New SeoCategory(id, name, url))
+                        End If
+                    End While
                 End Using
             End Using
-        Catch
-        End Try
+        End Using
+    Catch
+        ' ignora
+    End Try
 
-        HttpRuntime.Cache.Insert(cacheKey, list, Nothing, DateTime.UtcNow.AddHours(6), System.Web.Caching.Cache.NoSlidingExpiration)
-        Return list
-    End Function
+    System.Web.HttpRuntime.Cache.Insert(
+        cacheKey,
+        list,
+        Nothing,
+        DateTime.UtcNow.AddMinutes(30),
+        System.Web.Caching.Cache.NoSlidingExpiration
+    )
 
-    Private Shared Function GetHomeProductsFromHomeDataSources(page As Page, baseUrl As String, maxItems As Integer) As List(Of SeoProduct)
-        Dim result As New List(Of SeoProduct)()
-        Dim seen As New HashSet(Of Integer)()
+    Return list
+End Function
 
-        Dim ids As String() = {"SdsNewArticoli", "sdsPiuAcquistati", "SdsArticoliInVetrina"}
-        For Each dsId As String In ids
-            If result.Count >= maxItems Then Exit For
+Private Shared Function LoadHomeProducts(page As Page, baseUrl As String, maxCount As Integer) As List(Of SeoProduct)
+    Dim cacheKey As String = "SEO_HOME_PROD_" & maxCount.ToString(System.Globalization.CultureInfo.InvariantCulture)
+    Dim cached As List(Of SeoProduct) = TryCast(System.Web.HttpRuntime.Cache(cacheKey), List(Of SeoProduct))
+    If cached IsNot Nothing Then Return cached
 
-            Dim ds As SqlDataSource = TryCast(FindControlRecursive(page, dsId), SqlDataSource)
-            If ds Is Nothing Then Continue For
+    Dim list As New List(Of SeoProduct)()
 
-            Dim dv As DataView = Nothing
-            Try
-                dv = TryCast(ds.Select(DataSourceSelectArguments.Empty), DataView)
-            Catch
-                dv = Nothing
-            End Try
+    Try
+        Dim cs As String = System.Configuration.ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+        Using cn As New MySqlConnection(cs)
+            cn.Open()
 
-            If dv Is Nothing Then Continue For
+            Dim sql As String =
+                "SELECT a.id, a.Descrizione1, a.Prezzo, a.PrezzoScontato, a.Img1, " &
+                "IFNULL(g.Giacenza,0) AS Giacenza, c.Descrizione AS Categoria " &
+                "FROM Articoli a " &
+                "LEFT JOIN articoli_giacenze g ON g.ArticoliId = a.id " &
+                "LEFT JOIN Categorie c ON c.Id = a.CategorieId " &
+                "ORDER BY a.id DESC " &
+                "LIMIT @lim"
 
-            For Each row As DataRowView In dv
-                If result.Count >= maxItems Then Exit For
+            Using cmd As New MySqlCommand(sql, cn)
+                cmd.Parameters.AddWithValue("@lim", maxCount)
 
-                Try
-                    If row Is Nothing OrElse row.Row Is Nothing OrElse row.Row.Table Is Nothing Then Continue For
-                    Dim t As DataTable = row.Row.Table
+                Using rdr As MySqlDataReader = cmd.ExecuteReader()
+                    While rdr.Read()
+                        Dim id As Integer = SafeInt32(rdr("id"), 0)
+                        Dim name As String = SafeTrim(rdr("Descrizione1"))
+                        If id <= 0 OrElse String.IsNullOrEmpty(name) Then Continue While
 
-                    If Not t.Columns.Contains("id") Then Continue For
-                    If Not t.Columns.Contains("descrizione1") Then Continue For
+                        Dim prezzo As Decimal = SafeDec(rdr("Prezzo"), 0D)
+                        Dim sconto As Decimal = SafeDec(rdr("PrezzoScontato"), 0D)
+                        Dim finalPrice As Decimal = prezzo
+                        If sconto > 0D AndAlso (prezzo <= 0D OrElse sconto < prezzo) Then finalPrice = sconto
 
-                    Dim id As Integer = SafeInt(row("id"))
-                    If id <= 0 Then Continue For
-                    If seen.Contains(id) Then Continue For
+                        Dim giac As Integer = SafeInt32(rdr("Giacenza"), 0)
+                        Dim inStock As Boolean = (giac > 0)
 
-                    Dim name As String = SafeStr(row("descrizione1"))
-                    If String.IsNullOrEmpty(name) Then Continue For
+                        Dim catName As String = SafeTrim(rdr("Categoria"))
 
-                    Dim sku As String = If(t.Columns.Contains("codice"), SafeStr(row("codice")), "")
-                    Dim img As String = If(t.Columns.Contains("img1"), SafeStr(row("img1")), "")
+                        Dim url As String = baseUrl & "articolo.aspx?id=" & id.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                        Dim img As String = SafeTrim(rdr("Img1"))
+                        Dim imgAbs As String = ToAbsoluteUrl(baseUrl, img)
 
-                    Dim absImg As String = ToAbsoluteUrl(page, baseUrl, img)
-                    Dim url As String = baseUrl & "articolo.aspx?id=" & id.ToString()
-
-                    ' prezzo coerente con quanto mostrato a video (promo + iva)
-                    Dim ivaUtente As Integer = SafeIntFromSession(page, "Iva_Utente", 1)
-
-                    Dim prezzo As Decimal = If(t.Columns.Contains("prezzo"), SafeDec(row("prezzo")), 0D)
-                    Dim prezzoIvato As Decimal = If(t.Columns.Contains("prezzoIvato"), SafeDec(row("prezzoIvato")), 0D)
-                    Dim prezzoPromo As Decimal = If(t.Columns.Contains("prezzoPromo"), SafeDec(row("prezzoPromo")), 0D)
-                    Dim prezzoPromoIvato As Decimal = If(t.Columns.Contains("prezzoPromoIvato"), SafeDec(row("prezzoPromoIvato")), 0D)
-
-                    Dim regular As Decimal = If(ivaUtente = 0, prezzo, prezzoIvato)
-                    Dim promo As Decimal = If(ivaUtente = 0, prezzoPromo, prezzoPromoIvato)
-
-                    Dim hasSale As Boolean = (promo > 0D AndAlso promo < regular)
-
-                    Dim giac As Integer = 0
-                    If t.Columns.Contains("giacenza") Then giac = SafeInt(row("giacenza"))
-                    Dim availability As String = If(giac > 0, "https://schema.org/InStock", "https://schema.org/OutOfStock")
-
-                    Dim p As New SeoProduct()
-                    p.Id = id
-                    p.Sku = sku
-                    p.Name = name
-                    p.Url = url
-                    p.ImageUrl = absImg
-                    p.Price = regular
-                    p.SalePrice = promo
-                    p.HasSalePrice = hasSale
-                    p.Currency = "EUR"
-                    p.AvailabilityUrl = availability
-
-                    result.Add(p)
-                    seen.Add(id)
-
-                Catch
-                    ' Ignora singola riga non coerente
-                End Try
-
-            Next
-        Next
-
-        Return result
-    End Function
-
-    Private Shared Function GetHomeProductsFromDb(page As Page, baseUrl As String, limit As Integer) As List(Of SeoProduct)
-        Dim list As New List(Of SeoProduct)()
-
-        Dim lim As Integer = limit
-        If lim <= 0 Then lim = 12
-        If lim > 30 Then lim = 30
-
-        Dim host As String = ""
-        If page IsNot Nothing AndAlso page.Request IsNot Nothing AndAlso page.Request.Url IsNot Nothing Then host = page.Request.Url.Host
-
-        Dim cacheKey As String = "SEO_HOME_PRODUCTS_DB_" & host & "_" & lim.ToString()
-        Dim cached As List(Of SeoProduct) = TryCast(HttpRuntime.Cache(cacheKey), List(Of SeoProduct))
-        If cached IsNot Nothing Then Return cached
-
-        Try
-            Dim cs As String = ""
-            If ConfigurationManager.ConnectionStrings("EntropicConnectionString") IsNot Nothing Then
-                cs = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            End If
-            If String.IsNullOrEmpty(cs) Then Return list
-
-            Using conn As New MySqlConnection(cs)
-                conn.Open()
-                Dim sql As String =
-                    "SELECT a.id, a.codice, a.descrizione1, a.prezzo, a.prezzoscontato, a.img1, COALESCE(g.giacenza,0) AS giacenza " &
-                    "FROM varticoligiacenze a " &
-                    "LEFT JOIN articoli_giacenze g ON g.ArticoliId = a.id " &
-                    "WHERE a.abilitato=1 " &
-                    "ORDER BY a.visite DESC " &
-                    "LIMIT " & lim.ToString()
-
-                Using cmd As New MySqlCommand(sql, conn)
-                    Using r As MySqlDataReader = cmd.ExecuteReader()
-                        While r.Read()
-                            Dim id As Integer = 0
-                            If Not r.IsDBNull(0) Then Integer.TryParse(r.GetValue(0).ToString(), id)
-                            If id <= 0 Then Continue While
-
-                            Dim sku As String = If(r.IsDBNull(1), "", r.GetValue(1).ToString())
-                            Dim name As String = If(r.IsDBNull(2), "", r.GetValue(2).ToString())
-                            If String.IsNullOrEmpty(name) Then Continue While
-
-                            Dim price As Decimal = 0D
-                            If Not r.IsDBNull(3) Then price = Convert.ToDecimal(r.GetValue(3), CultureInfo.InvariantCulture)
-
-                            Dim sale As Decimal = 0D
-                            Dim hasSale As Boolean = False
-                            If Not r.IsDBNull(4) Then
-                                sale = Convert.ToDecimal(r.GetValue(4), CultureInfo.InvariantCulture)
-                                If sale > 0D AndAlso sale < price Then hasSale = True
-                            End If
-
-                            Dim img As String = If(r.IsDBNull(5), "", r.GetValue(5).ToString())
-                            Dim absImg As String = ToAbsoluteUrl(page, baseUrl, img)
-
-                            Dim giac As Integer = 0
-                            If Not r.IsDBNull(6) Then Integer.TryParse(r.GetValue(6).ToString(), giac)
-                            Dim availability As String = If(giac > 0, "https://schema.org/InStock", "https://schema.org/OutOfStock")
-
-                            Dim url As String = baseUrl & "articolo.aspx?id=" & id.ToString()
-
-                            Dim p As New SeoProduct()
-                            p.Id = id
-                            p.Sku = sku
-                            p.Name = name
-                            p.Url = url
-                            p.ImageUrl = absImg
-                            p.Price = price
-                            p.SalePrice = sale
-                            p.HasSalePrice = hasSale
-                            p.Currency = "EUR"
-                            p.AvailabilityUrl = availability
-
-                            list.Add(p)
-                        End While
-                    End Using
+                        list.Add(New SeoProduct(id, name, url, imgAbs, finalPrice, inStock, catName))
+                    End While
                 End Using
             End Using
-        Catch
-        End Try
+        End Using
+    Catch
+        ' ignora
+    End Try
 
-        HttpRuntime.Cache.Insert(cacheKey, list, Nothing, DateTime.UtcNow.AddMinutes(30), System.Web.Caching.Cache.NoSlidingExpiration)
-        Return list
+    System.Web.HttpRuntime.Cache.Insert(
+        cacheKey,
+        list,
+        Nothing,
+        DateTime.UtcNow.AddMinutes(15),
+        System.Web.Caching.Cache.NoSlidingExpiration
+    )
+
+    Return list
     End Function
 
     Private Shared Function FindControlRecursive(root As Control, id As String) As Control
