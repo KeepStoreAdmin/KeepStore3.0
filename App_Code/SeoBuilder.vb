@@ -14,12 +14,11 @@ Imports System.Web.Script.Serialization
 ' - VB.NET compatibile con .NET 4.x / VB 2012
 ' - Option Strict ON (no late binding / no conversioni implicite)
 ' - Helper SEO: meta, canonical, OpenGraph/Twitter, JSON-LD
+'
+' NOTE IMPORTANTE:
+' - L'interfaccia ISeoMaster DEVE esistere UNA SOLA VOLTA nel progetto.
+' - In questo file NON la dichiariamo per evitare conflitti (BC30175).
 ' ============================================================
-
-' Master contract (Page.master.vb può implementarlo)
-Public Interface ISeoMaster
-    Property SeoJsonLd As String
-End Interface
 
 ' ============================================================
 ' Helper "globali" richiamabili anche SENZA prefisso da code-behind
@@ -235,15 +234,18 @@ Public NotInheritable Class SeoBuilder
         Dim found As HtmlLink = Nothing
         For Each c As Control In page.Header.Controls
             Dim l As HtmlLink = TryCast(c, HtmlLink)
-            If l IsNot Nothing AndAlso String.Equals(l.Rel, "canonical", StringComparison.OrdinalIgnoreCase) Then
-                found = l
-                Exit For
+            If l IsNot Nothing Then
+                Dim rel As String = l.Attributes("rel")
+                If Not String.IsNullOrEmpty(rel) AndAlso String.Equals(rel, "canonical", StringComparison.OrdinalIgnoreCase) Then
+                    found = l
+                    Exit For
+                End If
             End If
         Next
 
         If found Is Nothing Then
             found = New HtmlLink()
-            found.Rel = "canonical"
+            found.Attributes("rel") = "canonical"
             page.Header.Controls.Add(found)
         End If
 
@@ -295,14 +297,21 @@ Public NotInheritable Class SeoBuilder
 
         Dim payload As String = s
         If s.IndexOf("<script", StringComparison.OrdinalIgnoreCase) < 0 Then
-            payload = "<script type=""application/ld+json"">" & s & "</script>"
+            payload = "<script type=\"application/ld+json\">" & s & "</script>"
         End If
 
+        ' Usa ISeoMaster SE presente (deve essere definita altrove una sola volta)
         Dim master As MasterPage = page.Master
-        Dim mSeo As ISeoMaster = TryCast(master, ISeoMaster)
-        If mSeo IsNot Nothing Then
-            mSeo.SeoJsonLd = payload
-            Exit Sub
+        If master IsNot Nothing Then
+            Try
+                Dim typed As ISeoMaster = TryCast(master, ISeoMaster)
+                If typed IsNot Nothing Then
+                    typed.SeoJsonLd = payload
+                    Exit Sub
+                End If
+            Catch
+                ' ignore
+            End Try
         End If
 
         If master IsNot Nothing Then
