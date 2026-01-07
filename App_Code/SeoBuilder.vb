@@ -75,7 +75,7 @@ Public NotInheritable Class SeoBuilder
     End Sub
 
     ' ---------------------------
-    ' JSON escaping (NO stile C#)
+    ' JSON escaping (VB corretto)
     ' ---------------------------
     Public Shared Function JsonEscape(ByVal value As String) As String
         If value Is Nothing Then Return ""
@@ -297,7 +297,8 @@ Public NotInheritable Class SeoBuilder
 
         Dim payload As String = s
         If s.IndexOf("<script", StringComparison.OrdinalIgnoreCase) < 0 Then
-            payload = "<script type=\"application/ld+json\">" & s & "</script>"
+            ' VB: le virgolette vanno raddoppiate, NON si usa \" nel literal
+            payload = "<script type=""application/ld+json"">" & s & "</script>"
         End If
 
         ' Usa ISeoMaster SE presente (deve essere definita altrove una sola volta)
@@ -324,7 +325,7 @@ Public NotInheritable Class SeoBuilder
     End Sub
 
     ' ---------------------------
-    ' HOME JSON-LD (stabile, no DB assumptions)
+    ' HOME JSON-LD (stabile, senza presupposti DB)
     ' ---------------------------
     Public Shared Function BuildHomeJsonLd(ByVal page As Page,
                                           ByVal baseUrl As String,
