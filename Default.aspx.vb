@@ -1,7 +1,6 @@
 Imports MySql.Data.MySqlClient
-Imports System.Data
-Imports System.Configuration
 
+Imports System.Data
 Partial Class _Default
     Inherits System.Web.UI.Page
 
@@ -311,9 +310,9 @@ Private Sub EnsureHomeSeo()
         Dim canonical As String = baseUrl & ResolveUrl("~/")
         If Not canonical.EndsWith("/") Then canonical &= "/"
 
-        Dim azienda As String = SeoBuilder.SafeSessionString("AziendaNome", "TAIKUN.IT")
+        Dim azienda As String = SafeSessionString("AziendaNome", "TAIKUN.IT")
 
-        Dim descr As String = SeoBuilder.SafeSessionString("AziendaDescrizione", "")
+        Dim descr As String = SafeSessionString("AziendaDescrizione", "")
         If String.IsNullOrWhiteSpace(descr) Then
             descr = "E-commerce " & azienda & ": informatica, telefonia, periferiche, consumabili e accessori. Scopri offerte e nuovi arrivi con disponibilità aggiornata."
         End If
@@ -343,9 +342,9 @@ Private Sub EnsureHomeSeo()
         AddOrReplaceMetaName("twitter:description", descrMeta)
 
         ' Immagine (logo/og)
-        Dim imageUrl As String = SeoBuilder.SafeSessionString("AziendaOgImage", "")
+        Dim imageUrl As String = SafeSessionString("AziendaOgImage", "")
         If String.IsNullOrWhiteSpace(imageUrl) Then
-            imageUrl = SeoBuilder.SafeSessionString("AziendaLogo", "")
+            imageUrl = SafeSessionString("AziendaLogo", "")
         End If
 
         If Not String.IsNullOrWhiteSpace(imageUrl) Then
@@ -367,7 +366,7 @@ Private Sub EnsureHomeSeo()
         End If
 
         ' JSON-LD @graph (SeoBuilder avanzato)
-        Dim logoUrl As String = SeoBuilder.SafeSessionString("AziendaLogo", "")
+        Dim logoUrl As String = SafeSessionString("AziendaLogo", "")
         If Not String.IsNullOrWhiteSpace(logoUrl) Then
             If Not (logoUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse logoUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) Then
                 If logoUrl.StartsWith("~/") OrElse logoUrl.StartsWith("/") Then
@@ -428,36 +427,63 @@ End Sub
         meta.Content = content
         Page.Header.Controls.Add(meta)
     End Sub
-    ' Wrapper: meta name="..."
-    Private Sub AddOrReplaceMetaName(ByVal name As String, ByVal content As String)
-        AddOrReplaceMeta(name, content)
-    End Sub
 
-    ' Wrapper: meta property="..." (OpenGraph, etc.)
-    Private Sub AddOrReplaceMetaProperty(ByVal [property] As String, ByVal content As String)
-        If Page.Header Is Nothing Then Exit Sub
 
-        ' remove existing meta with matching property attribute
-        Dim toRemove As New System.Collections.Generic.List(Of Control)()
-        For Each c As Control In Page.Header.Controls
-            Dim m As HtmlMeta = TryCast(c, HtmlMeta)
-            If m IsNot Nothing Then
-                Dim p As String = ""
-                If m.Attributes("property") IsNot Nothing Then p = m.Attributes("property").ToString()
-                If String.Equals(p, [property], StringComparison.OrdinalIgnoreCase) Then
-                    toRemove.Add(c)
-                End If
+' ------------------------------------------------------------
+' Helpers
+' ------------------------------------------------------------
+Private Function SafeSessionString(ByVal key As String, ByVal fallback As String) As String
+    Try
+        If Session IsNot Nothing AndAlso Session(key) IsNot Nothing Then
+            Dim s As String = Convert.ToString(Session(key))
+            If Not String.IsNullOrEmpty(s) Then Return s
+        End If
+    Catch
+    End Try
+    Return fallback
+End Function
+
+Private Sub AddOrReplaceMetaName(ByVal metaName As String, ByVal content As String)
+    If Page Is Nothing OrElse Page.Header Is Nothing Then Return
+    If String.IsNullOrEmpty(metaName) Then Return
+
+    ' Remove existing <meta name="...">
+    For i As Integer = Page.Header.Controls.Count - 1 To 0 Step -1
+        Dim hm As HtmlMeta = TryCast(Page.Header.Controls(i), HtmlMeta)
+        If hm IsNot Nothing Then
+            If (Not String.IsNullOrEmpty(hm.Name)) AndAlso hm.Name.Equals(metaName, StringComparison.OrdinalIgnoreCase) Then
+                Page.Header.Controls.RemoveAt(i)
             End If
-        Next
-        For Each c As Control In toRemove
-            Page.Header.Controls.Remove(c)
-        Next
+        End If
+    Next
 
-        Dim meta As New HtmlMeta()
-        meta.Attributes("property") = [property]
-        meta.Content = content
-        Page.Header.Controls.Add(meta)
-    End Sub
+    Dim m As New HtmlMeta()
+    m.Name = metaName
+    m.Content = If(content, "")
+    Page.Header.Controls.Add(m)
+End Sub
+
+Private Sub AddOrReplaceMetaProperty(ByVal propertyName As String, ByVal content As String)
+    If Page Is Nothing OrElse Page.Header Is Nothing Then Return
+    If String.IsNullOrEmpty(propertyName) Then Return
+
+    ' Remove existing <meta property="...">
+    For i As Integer = Page.Header.Controls.Count - 1 To 0 Step -1
+        Dim hm As HtmlMeta = TryCast(Page.Header.Controls(i), HtmlMeta)
+        If hm IsNot Nothing Then
+            Dim prop As String = Nothing
+            If hm.Attributes IsNot Nothing Then prop = hm.Attributes("property")
+            If (Not String.IsNullOrEmpty(prop)) AndAlso prop.Equals(propertyName, StringComparison.OrdinalIgnoreCase) Then
+                Page.Header.Controls.RemoveAt(i)
+            End If
+        End If
+    Next
+
+    Dim m As New HtmlMeta()
+    m.Attributes("property") = propertyName
+    m.Content = If(content, "")
+    Page.Header.Controls.Add(m)
+End Sub
 
 
     ' STEP6: JSON-LD realmente emesso in <head> (prima era vuoto)
