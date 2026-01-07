@@ -314,9 +314,8 @@ Private Sub EnsureHomeSeo()
 
         Dim descr As String = SafeSessionString("AziendaDescrizione", "")
         If String.IsNullOrWhiteSpace(descr) Then
-            descr = "E-commerce " & azienda & ": informatica, telefonia, periferiche, consumabili e accessori. Scopri offerte e nuovi arrivi con disponibilità aggiornata."
-        End If
-
+    descr = "E-commerce " & azienda & ": informatica, telefonia, periferiche, consumabili e accessori. Scopri offerte e nuovi arrivi con disponibilità aggiornata."
+End If
         ' Versione breve per meta/OG/Twitter (evita descrizioni troppo lunghe)
         Dim descrMeta As String = descr.Replace(ControlChars.Cr, " ").Replace(ControlChars.Lf, " ").Trim()
         If descrMeta.Length > 170 Then descrMeta = descrMeta.Substring(0, 167) & "..."
