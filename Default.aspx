@@ -1,6 +1,4 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
-
-
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server"><%: Page.Title %></asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
@@ -63,6 +61,7 @@
 </ul>
                             <asp:SqlDataSource ID="SdsHeroCats" runat="server"
                                 ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                                ProviderName="MySql.Data.MySqlClient"
                                 SelectCommand="SELECT id, descrizione FROM categorie ORDER BY ordinamento LIMIT 10">
                             </asp:SqlDataSource>
 
@@ -98,7 +97,7 @@
                                     ID="slideShow" 
                                     runat="server"
                                     ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                                    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                                    ProviderName="MySql.Data.MySqlClient"
                                     SelectCommand="
                                         SELECT 
                                             sp.id,
@@ -209,7 +208,7 @@
                                 ID="SqlDataSource_Pubblicita_id4_pos1" 
                                 runat="server" 
                                 ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
-                                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" 
+                                ProviderName="MySql.Data.MySqlClient" 
 
                                 SelectCommand="SELECT p.titolo, p.immagine, p.link, '' AS target FROM pubblicitav2 p WHERE p.abilitato = 1 AND p.id_posizione = 4 AND (p.data_inizio_pubblicazione IS NULL OR CAST(p.data_inizio_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_inizio_pubblicazione <= NOW()) AND (p.data_fine_pubblicazione IS NULL OR CAST(p.data_fine_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_fine_pubblicazione >= NOW()) ORDER BY p.ordinamento ASC, p.id DESC LIMIT 0,1"
 
@@ -258,7 +257,7 @@
                                 ID="SqlDataSource_Pubblicita_id4_pos2" 
                                 runat="server" 
                                 ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
-                                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" 
+                                ProviderName="MySql.Data.MySqlClient" 
 
                                 SelectCommand="SELECT p.titolo, p.immagine, p.link, '' AS target FROM pubblicitav2 p WHERE p.abilitato = 1 AND p.id_posizione = 4 AND (p.data_inizio_pubblicazione IS NULL OR CAST(p.data_inizio_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_inizio_pubblicazione <= NOW()) AND (p.data_fine_pubblicazione IS NULL OR CAST(p.data_fine_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_fine_pubblicazione >= NOW()) ORDER BY p.ordinamento ASC, p.id DESC LIMIT 1,1"
 
@@ -419,7 +418,7 @@
         <!-- DataSource (vetrina) - il comando viene sovrascritto in Default.aspx.vb -->
         <asp:SqlDataSource ID="SdsArticoliInVetrina" runat="server"
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+            ProviderName="MySql.Data.MySqlClient"
             SelectCommand="SELECT * FROM documenti JOIN documentirighe ON documenti.id=documentirighe.`DocumentiId` WHERE documentirighe.`ArticoliId`>0 AND documenti.`TipoDocumentiId`=11 GROUP BY documentirighe.`ArticoliId` ORDER BY documenti.id DESC LIMIT 1">
         </asp:SqlDataSource>
 
@@ -493,7 +492,7 @@
             <!-- DataSource - comando sovrascritto in Default.aspx.vb -->
             <asp:SqlDataSource ID="SdsNewArticoli" runat="server"
                 ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                ProviderName="MySql.Data.MySqlClient"
                 SelectCommand="SELECT * FROM articoli LIMIT 1">
             </asp:SqlDataSource>
 
@@ -566,7 +565,7 @@
 
             <asp:SqlDataSource ID="sdsPiuAcquistati" runat="server"
                 ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                ProviderName="MySql.Data.MySqlClient"
                 SelectCommand="SELECT * FROM documenti LIMIT 1">
             </asp:SqlDataSource>
 
@@ -602,7 +601,7 @@
 
             <asp:SqlDataSource ID="sdsMarcheRandom" runat="server"
                 ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                ProviderName="MySql.Data.MySqlClient"
                 SelectCommand="SELECT * FROM marche WHERE (Abilitato=1) AND (img is not NULL) ORDER BY RAND() LIMIT 6">
             </asp:SqlDataSource>
         </div>
