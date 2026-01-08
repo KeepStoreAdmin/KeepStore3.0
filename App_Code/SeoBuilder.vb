@@ -2,442 +2,521 @@ Option Strict On
 Option Explicit On
 
 Imports System
-Imports System.Collections.Generic
-Imports System.Configuration
-Imports System.Globalization
 Imports System.Text
+Imports System.Globalization
+Imports System.Collections.Generic
 Imports System.Web
 Imports System.Web.UI
-Imports System.Web.UI.WebControls
 Imports System.Web.UI.HtmlControls
-Imports MySql.Data.MySqlClient
+Imports System.Web.UI.WebControls
+Imports System.Data
 
-' ==========================================================
+' ============================================================
 ' SeoBuilder.vb
-' - NON dichiara l'interfaccia ISeoMaster (sta nel file ISeoMaster.vb)
-' - Fix stringhe VB (niente \"), fix canonical (HtmlLink non ha .Rel), fix JsonEscape (Char)
-' - JSON-LD Home "avanzato": Organization + WebSite + WebPage + Breadcrumb
-'   + tentativo di categorie/prodotti reali da vsuperarticoli (fail-safe)
-' ==========================================================
+' Utilities SEO + JSON-LD
+'
+' NOTE IMPORTANTI:
+' - Nessuna dipendenza da interfacce (evita conflitti tipo ISeoMaster duplicata).
+' - Per Home (Default.aspx): JSON-LD costruito preferendo i dati REALI già usati
+'   dalla pagina tramite SqlDataSource (categorie + prodotti).
+' - Se un DataSource non è presente o la query fallisce, la sezione JSON-LD viene
+'   omessa (fail-safe, nessun errore a runtime).
+' ============================================================
+
 Public NotInheritable Class SeoBuilder
 
     Private Sub New()
     End Sub
 
-    ' ----------------------------
-    ' API pubblica (usata da Default.aspx.vb)
-    ' ----------------------------
-    Public Shared Function BuildHomeJsonLd(ByVal page As Page,
-                                           ByVal titleText As String,
-                                           ByVal descriptionText As String,
-                                           ByVal canonicalUrl As String,
-                                           ByVal ogImageUrl As String) As String
+    ' ------------------------------------------------------------
+    ' Public API
+    ' ------------------------------------------------------------
 
-        Dim baseUrl As String = ""
-        Try
-            If page IsNot Nothing AndAlso page.Request IsNot Nothing AndAlso page.Request.Url IsNot Nothing Then
-                baseUrl = page.Request.Url.GetLeftPart(UriPartial.Authority)
-            End If
-        Catch
-        End Try
+    Public Shared Function BuildHomeJsonLd(page As Page, baseUrl As String, pageUrl As String, siteName As String, description As String) As String
+        Dim graph As New List(Of String)()
 
-        If String.IsNullOrWhiteSpace(canonicalUrl) Then
-            canonicalUrl = CombineUrl(baseUrl, "/")
+        Dim orgId As String = baseUrl.TrimEnd("/"c) & "/#organization"
+        Dim webSiteId As String = baseUrl.TrimEnd("/"c) & "/#website"
+        Dim webPageId As String = pageUrl & "#webpage"
+
+        ' Organization (minimo, robusto)
+        graph.Add(BuildOrganizationNode(orgId, baseUrl, siteName))
+
+        ' WebSite
+        graph.Add(BuildWebSiteNode(webSiteId, baseUrl, siteName, orgId))
+
+        ' WebPage
+        graph.Add(BuildWebPageNode(webPageId, pageUrl, siteName, description, webSiteId))
+
+        ' BreadcrumbList (Home)
+        graph.Add(BuildHomeBreadcrumbNode(baseUrl))
+
+        ' ItemList categorie (dipartimenti) - usa Data_Dipartimenti (Default.aspx)
+        Dim catNode As String = BuildHomeCategoriesItemList(page, baseUrl)
+        If Not String.IsNullOrWhiteSpace(catNode) Then
+            graph.Add(catNode)
         End If
 
-        Dim siteName As String = ExtractSiteName(titleText)
-        Dim descr As String = If(descriptionText, "").Trim()
+        ' ItemList prodotti (ultimi arrivi) - usa Data_UltimiArrivi (Default.aspx)
+        Dim prodNewNode As String = BuildHomeProductsItemList(page, baseUrl, "Data_UltimiArrivi", "Ultimi arrivi", "home-products-new", 12)
+        If Not String.IsNullOrWhiteSpace(prodNewNode) Then
+            graph.Add(prodNewNode)
+        End If
 
-        Dim categories As List(Of CatItem) = TryGetCategoriesFromVsuperarticoli()
-        Dim products As List(Of ProdItem) = TryGetProductsFromVsuperarticoli()
+        ' ItemList prodotti (più acquistati) - usa sdsPiuAcquistati (Default.aspx)
+        Dim prodBestNode As String = BuildHomeProductsItemList(page, baseUrl, "sdsPiuAcquistati", "Più acquistati", "home-products-best", 12)
+        If Not String.IsNullOrWhiteSpace(prodBestNode) Then
+            graph.Add(prodBestNode)
+        End If
 
-        Dim sb As New StringBuilder(4096)
-
+        Dim sb As New StringBuilder()
         sb.Append("{")
         sb.Append("""@context"":""https://schema.org"",")
         sb.Append("""@graph"":[")
-
-        ' Organization
-        sb.Append("{")
-        sb.Append("""@type"":""Organization"",")
-        sb.Append("""@id"":""" & JsonEscape(CombineUrl(baseUrl, "/#organization")) & """,")
-        sb.Append("""name"":""" & JsonEscape(siteName) & """,")
-        sb.Append("""url"":""" & JsonEscape(baseUrl) & """")
-
-        Dim logoAbs As String = NormalizeAbsoluteUrl(baseUrl, ogImageUrl)
-        If Not String.IsNullOrWhiteSpace(logoAbs) Then
-            sb.Append(",""logo"":{")
-            sb.Append("""@type"":""ImageObject"",")
-            sb.Append("""url"":""" & JsonEscape(logoAbs) & """")
-            sb.Append("}")
-        End If
-        sb.Append("},")
-
-        ' WebSite + SearchAction
-        sb.Append("{")
-        sb.Append("""@type"":""WebSite"",")
-        sb.Append("""@id"":""" & JsonEscape(CombineUrl(baseUrl, "/#website")) & """,")
-        sb.Append("""url"":""" & JsonEscape(baseUrl) & """,")
-        sb.Append("""name"":""" & JsonEscape(siteName) & """,")
-        sb.Append("""publisher"":{""@id"":""" & JsonEscape(CombineUrl(baseUrl, "/#organization")) & """},")
-        sb.Append("""potentialAction"":{")
-        sb.Append("""@type"":""SearchAction"",")
-        sb.Append("""target"":""" & JsonEscape(CombineUrl(baseUrl, "/articoli.aspx?q={search_term_string}")) & """,")
-        sb.Append("""query-input"":""required name=search_term_string""")
-        sb.Append("}")
-        sb.Append("},")
-
-        ' WebPage (Home)
-        sb.Append("{")
-        sb.Append("""@type"":""WebPage"",")
-        sb.Append("""@id"":""" & JsonEscape(canonicalUrl & "#webpage") & """,")
-        sb.Append("""url"":""" & JsonEscape(canonicalUrl) & """,")
-        sb.Append("""name"":""" & JsonEscape(If(titleText, siteName)) & """,")
-        sb.Append("""description"":""" & JsonEscape(descr) & """,")
-        sb.Append("""isPartOf"":{""@id"":""" & JsonEscape(CombineUrl(baseUrl, "/#website")) & """}")
-        sb.Append("},")
-
-        ' BreadcrumbList (Home)
-        sb.Append("{")
-        sb.Append("""@type"":""BreadcrumbList"",")
-        sb.Append("""@id"":""" & JsonEscape(canonicalUrl & "#breadcrumb") & """,")
-        sb.Append("""itemListElement"":[")
-        sb.Append("{")
-        sb.Append("""@type"":""ListItem"",")
-        sb.Append("""position"":1,")
-        sb.Append("""name"":""Home"",")
-        sb.Append("""item"":""" & JsonEscape(canonicalUrl) & """")
-        sb.Append("}")
-        sb.Append("]")
-        sb.Append("}")
-
-        ' ItemList categorie (se disponibili)
-        If categories IsNot Nothing AndAlso categories.Count > 0 Then
-            sb.Append(",{")
-            sb.Append("""@type"":""ItemList"",")
-            sb.Append("""@id"":""" & JsonEscape(canonicalUrl & "#categories") & """,")
-            sb.Append("""name"":""Categorie"",")
-            sb.Append("""itemListElement"":[")
-            For i As Integer = 0 To categories.Count - 1
-                If i > 0 Then sb.Append(",")
-                Dim c As CatItem = categories(i)
-                Dim url As String = CombineUrl(baseUrl, "/articoli.aspx?ct=" & c.Id.ToString(CultureInfo.InvariantCulture))
-                sb.Append("{")
-                sb.Append("""@type"":""ListItem"",")
-                sb.Append("""position"":" & (i + 1).ToString(CultureInfo.InvariantCulture) & ",")
-                sb.Append("""name"":""" & JsonEscape(c.Name) & """,")
-                sb.Append("""item"":""" & JsonEscape(url) & """")
-                sb.Append("}")
-            Next
-            sb.Append("]")
-            sb.Append("}")
-        End If
-
-        ' ItemList prodotti (se disponibili)
-        If products IsNot Nothing AndAlso products.Count > 0 Then
-            sb.Append(",{")
-            sb.Append("""@type"":""ItemList"",")
-            sb.Append("""@id"":""" & JsonEscape(canonicalUrl & "#products") & """,")
-            sb.Append("""name"":""Prodotti in evidenza"",")
-            sb.Append("""itemListElement"":[")
-            For i As Integer = 0 To products.Count - 1
-                If i > 0 Then sb.Append(",")
-                Dim p As ProdItem = products(i)
-                Dim pUrl As String = CombineUrl(baseUrl, "/articolo.aspx?id=" & p.Id.ToString(CultureInfo.InvariantCulture))
-
-                sb.Append("{")
-                sb.Append("""@type"":""ListItem"",")
-                sb.Append("""position"":" & (i + 1).ToString(CultureInfo.InvariantCulture) & ",")
-                sb.Append("""item"":{")
-                sb.Append("""@type"":""Product"",")
-                sb.Append("""@id"":""" & JsonEscape(pUrl) & """,")
-                sb.Append("""name"":""" & JsonEscape(p.Name) & """,")
-                sb.Append("""url"":""" & JsonEscape(pUrl) & """")
-
-                If Not String.IsNullOrWhiteSpace(p.Sku) Then
-                    sb.Append(",""sku"":""" & JsonEscape(p.Sku) & """")
-                End If
-
-                If Not String.IsNullOrWhiteSpace(p.Gtin13) Then
-                    sb.Append(",""gtin13"":""" & JsonEscape(p.Gtin13) & """")
-                End If
-
-                If Not String.IsNullOrWhiteSpace(p.Brand) Then
-                    sb.Append(",""brand"":{""@type"":""Brand"",""name"":""" & JsonEscape(p.Brand) & """}")
-                End If
-
-                If Not String.IsNullOrWhiteSpace(p.ImageUrl) Then
-                    sb.Append(",""image"":""" & JsonEscape(NormalizeAbsoluteUrl(baseUrl, p.ImageUrl)) & """")
-                End If
-
-                If p.Price.HasValue Then
-                    sb.Append(",""offers"":{")
-                    sb.Append("""@type"":""Offer"",")
-                    sb.Append("""priceCurrency"":""EUR"",")
-                    sb.Append("""price"":""" & p.Price.Value.ToString("0.##", CultureInfo.InvariantCulture) & """,")
-                    sb.Append("""availability"":""https://schema.org/InStock""")
-                    sb.Append("}")
-                End If
-
-                sb.Append("}") ' item(Product)
-                sb.Append("}") ' ListItem
-            Next
-            sb.Append("]")
-            sb.Append("}")
-        End If
-
-        sb.Append("]") ' @graph
-        sb.Append("}") ' root
+        For i As Integer = 0 To graph.Count - 1
+            If i > 0 Then sb.Append(",")
+            sb.Append(graph(i))
+        Next
+        sb.Append("]}")
 
         Return sb.ToString()
     End Function
 
-    Public Shared Sub SetJsonLdOnMaster(ByVal page As Page, ByVal jsonLdOrScript As String)
-        If page Is Nothing Then Exit Sub
+    Public Shared Sub ApplyCanonicalAndMeta(page As Page, canonicalUrl As String, description As String, robots As String)
+        If page Is Nothing OrElse page.Header Is Nothing Then Exit Sub
 
-        Dim s As String = If(jsonLdOrScript, "").Trim()
-        If String.IsNullOrWhiteSpace(s) Then Exit Sub
+        EnsureCanonicalLink(page, canonicalUrl)
+        EnsureMeta(page, "description", description)
+        EnsureMeta(page, "robots", robots)
+    End Sub
+
+    Public Shared Sub ApplyOpenGraph(page As Page, pageUrl As String, title As String, description As String, imageUrl As String)
+        If page Is Nothing OrElse page.Header Is Nothing Then Exit Sub
+
+        EnsureMetaProperty(page, "og:type", "website")
+        EnsureMetaProperty(page, "og:url", pageUrl)
+        EnsureMetaProperty(page, "og:title", title)
+        EnsureMetaProperty(page, "og:description", description)
+        If Not String.IsNullOrWhiteSpace(imageUrl) Then
+            EnsureMetaProperty(page, "og:image", imageUrl)
+        End If
+
+        EnsureMetaProperty(page, "twitter:card", "summary_large_image")
+        EnsureMetaProperty(page, "twitter:title", title)
+        EnsureMetaProperty(page, "twitter:description", description)
+        If Not String.IsNullOrWhiteSpace(imageUrl) Then
+            EnsureMetaProperty(page, "twitter:image", imageUrl)
+        End If
+    End Sub
+
+    Public Shared Sub SetJsonLdOnMaster(page As Page, jsonLd As String, Optional literalId As String = "litSeoJsonLd")
+        If page Is Nothing Then Exit Sub
+        If String.IsNullOrWhiteSpace(jsonLd) Then Exit Sub
+
+        Dim master As MasterPage = page.Master
+        If master Is Nothing Then Exit Sub
+
+        Dim lit As Literal = TryCast(FindControlRecursive(master, literalId), Literal)
+        If lit Is Nothing Then Exit Sub
+
+        lit.Text = EnsureJsonLdScript(jsonLd)
+    End Sub
+
+    ' ------------------------------------------------------------
+    ' Nodes builders (JSON-LD)
+    ' ------------------------------------------------------------
+
+    Private Shared Function BuildOrganizationNode(orgId As String, baseUrl As String, siteName As String) As String
+        Dim sb As New StringBuilder()
+        sb.Append("{")
+        sb.Append("""@type"":""Organization"",")
+        sb.Append("""@id"":""") : sb.Append(JsonEscape(orgId)) : sb.Append(""",")
+        sb.Append("""name"":""") : sb.Append(JsonEscape(siteName)) : sb.Append(""",")
+        sb.Append("""url"":""") : sb.Append(JsonEscape(baseUrl)) : sb.Append("""")
+        sb.Append("}")
+        Return sb.ToString()
+    End Function
+
+    Private Shared Function BuildWebSiteNode(webSiteId As String, baseUrl As String, siteName As String, orgId As String) As String
+        Dim sb As New StringBuilder()
+        sb.Append("{")
+        sb.Append("""@type"":""WebSite"",")
+        sb.Append("""@id"":""") : sb.Append(JsonEscape(webSiteId)) : sb.Append(""",")
+        sb.Append("""url"":""") : sb.Append(JsonEscape(baseUrl)) : sb.Append(""",")
+        sb.Append("""name"":""") : sb.Append(JsonEscape(siteName)) : sb.Append(""",")
+        sb.Append("""publisher"":{""@id"":""") : sb.Append(JsonEscape(orgId)) : sb.Append("""}")
+        sb.Append("}")
+        Return sb.ToString()
+    End Function
+
+    Private Shared Function BuildWebPageNode(webPageId As String, pageUrl As String, title As String, description As String, webSiteId As String) As String
+        Dim sb As New StringBuilder()
+        sb.Append("{")
+        sb.Append("""@type"":""WebPage"",")
+        sb.Append("""@id"":""") : sb.Append(JsonEscape(webPageId)) : sb.Append(""",")
+        sb.Append("""url"":""") : sb.Append(JsonEscape(pageUrl)) : sb.Append(""",")
+        sb.Append("""name"":""") : sb.Append(JsonEscape(title)) : sb.Append(""",")
+        If Not String.IsNullOrWhiteSpace(description) Then
+            sb.Append("""description"":""") : sb.Append(JsonEscape(description)) : sb.Append(""",")
+        End If
+        sb.Append("""isPartOf"":{""@id"":""") : sb.Append(JsonEscape(webSiteId)) : sb.Append("""}")
+        sb.Append("}")
+        Return sb.ToString()
+    End Function
+
+    Private Shared Function BuildHomeBreadcrumbNode(baseUrl As String) As String
+        Dim sb As New StringBuilder()
+        sb.Append("{")
+        sb.Append("""@type"":""BreadcrumbList"",")
+        sb.Append("""@id"":""") : sb.Append(JsonEscape(baseUrl.TrimEnd("/"c) & "/#breadcrumb")) : sb.Append(""",")
+        sb.Append("""itemListElement"":[")
+        sb.Append("{""@type"":""ListItem"",""position"":1,""name"":""Home"",""item"":""")
+        sb.Append(JsonEscape(baseUrl))
+        sb.Append("""}")
+        sb.Append("]}")
+        Return sb.ToString()
+    End Function
+
+    Private Shared Function BuildHomeCategoriesItemList(page As Page, baseUrl As String) As String
+        Dim dv As DataView = TryGetDataView(page, "Data_Dipartimenti")
+        If dv Is Nothing OrElse dv.Table Is Nothing OrElse dv.Table.Rows.Count = 0 Then
+            Return String.Empty
+        End If
+
+        ' colonne attese in Default.aspx: id, descrizione
+        If Not dv.Table.Columns.Contains("id") OrElse Not dv.Table.Columns.Contains("descrizione") Then
+            Return String.Empty
+        End If
+
+        Dim maxItems As Integer = 12
+        Dim count As Integer = Math.Min(maxItems, dv.Table.Rows.Count)
+
+        Dim sb As New StringBuilder()
+        sb.Append("{")
+        sb.Append("""@type"":""ItemList"",")
+        sb.Append("""@id"":""") : sb.Append(JsonEscape(baseUrl.TrimEnd("/"c) & "/#home-categories")) : sb.Append(""",")
+        sb.Append("""name"":""Dipartimenti"",")
+        sb.Append("""itemListElement"":[")
+
+        Dim pos As Integer = 0
+        For i As Integer = 0 To count - 1
+            Dim r As DataRow = dv.Table.Rows(i)
+            Dim id As String = SafeToString(r("id"))
+            Dim name As String = SafeToString(r("descrizione"))
+            If String.IsNullOrWhiteSpace(id) OrElse String.IsNullOrWhiteSpace(name) Then
+                Continue For
+            End If
+
+            pos += 1
+            If pos > 1 Then sb.Append(",")
+
+            Dim url As String = baseUrl.TrimEnd("/"c) & "/articoli.aspx?ct=" & HttpUtility.UrlEncode(id)
+
+            sb.Append("{""@type"":""ListItem"",""position"":")
+            sb.Append(pos.ToString(CultureInfo.InvariantCulture))
+            sb.Append(",""name"":""") : sb.Append(JsonEscape(name)) : sb.Append("""")
+            sb.Append(",""url"":""") : sb.Append(JsonEscape(url)) : sb.Append("""}")
+        Next
+
+        sb.Append("]}")
+
+        If pos = 0 Then Return String.Empty
+        Return sb.ToString()
+    End Function
+
+    Private Shared Function BuildHomeProductsItemList(page As Page, baseUrl As String, dataSourceId As String, listName As String, nodeSuffix As String, maxItems As Integer) As String
+        Dim dv As DataView = TryGetDataView(page, dataSourceId)
+        If dv Is Nothing OrElse dv.Table Is Nothing OrElse dv.Table.Rows.Count = 0 Then
+            Return String.Empty
+        End If
+
+        ' colonne minime necessarie per costruire URL + nome
+        Dim hasCod As Boolean = dv.Table.Columns.Contains("Codice")
+        Dim hasArtId As Boolean = dv.Table.Columns.Contains("ArticoliId")
+        Dim hasTcId As Boolean = dv.Table.Columns.Contains("TCId")
+        Dim hasName As Boolean = dv.Table.Columns.Contains("Descrizione1")
+
+        If Not hasCod OrElse Not hasArtId OrElse Not hasTcId OrElse Not hasName Then
+            Return String.Empty
+        End If
+
+        Dim count As Integer = Math.Min(Math.Max(1, maxItems), dv.Table.Rows.Count)
+
+        Dim sb As New StringBuilder()
+        sb.Append("{")
+        sb.Append("""@type"":""ItemList"",")
+        sb.Append("""@id"":""") : sb.Append(JsonEscape(baseUrl.TrimEnd("/"c) & "/#" & nodeSuffix)) : sb.Append(""",")
+        sb.Append("""name"":""") : sb.Append(JsonEscape(listName)) : sb.Append(""",")
+        sb.Append("""itemListElement"":[")
+
+        Dim pos As Integer = 0
+
+        For i As Integer = 0 To count - 1
+            Dim r As DataRow = dv.Table.Rows(i)
+
+            Dim codice As String = SafeToString(r("Codice"))
+            Dim artId As String = SafeToString(r("ArticoliId"))
+            Dim tcId As String = SafeToString(r("TCId"))
+            Dim nome As String = SafeToString(r("Descrizione1"))
+
+            If String.IsNullOrWhiteSpace(codice) OrElse String.IsNullOrWhiteSpace(artId) OrElse String.IsNullOrWhiteSpace(tcId) OrElse String.IsNullOrWhiteSpace(nome) Then
+                Continue For
+            End If
+
+            Dim url As String = baseUrl.TrimEnd("/"c) & "/articolo.aspx?cod=" & HttpUtility.UrlEncode(codice) & "&id=" & HttpUtility.UrlEncode(artId) & "&tc=" & HttpUtility.UrlEncode(tcId)
+
+            ' Immagine
+            Dim imageUrl As String = String.Empty
+            If dv.Table.Columns.Contains("img1") Then
+                Dim img As String = SafeToString(r("img1"))
+                If Not String.IsNullOrWhiteSpace(img) Then
+                    imageUrl = baseUrl.TrimEnd("/"c) & "/Public/images/articoli/" & Uri.EscapeDataString(img)
+                End If
+            End If
+            If String.IsNullOrWhiteSpace(imageUrl) Then
+                imageUrl = baseUrl.TrimEnd("/"c) & "/Public/images/nofoto.gif"
+            End If
+
+            ' Marca
+            Dim marca As String = String.Empty
+            If dv.Table.Columns.Contains("marca") Then
+                marca = SafeToString(r("marca"))
+            End If
+
+            ' Prezzo + offerta
+            Dim price As String = String.Empty
+            Dim hasOfferta As Boolean = dv.Table.Columns.Contains("offerta")
+            Dim isOfferta As Boolean = False
+            If hasOfferta Then
+                Dim oVal As String = SafeToString(r("offerta"))
+                isOfferta = (oVal = "1")
+            End If
+
+            If isOfferta AndAlso dv.Table.Columns.Contains("PrezzoIvatoScontato") Then
+                price = ToDecimalInvariantString(r("PrezzoIvatoScontato"))
+            End If
+            If String.IsNullOrWhiteSpace(price) AndAlso dv.Table.Columns.Contains("PrezzoIvato") Then
+                price = ToDecimalInvariantString(r("PrezzoIvato"))
+            End If
+
+            ' Quantita
+            Dim inStock As Boolean = True
+            If dv.Table.Columns.Contains("quantita") Then
+                Dim qDec As Decimal
+                If TryGetDecimal(r("quantita"), qDec) Then
+                    inStock = (qDec > 0D)
+                End If
+            End If
+
+            ' Product node
+            Dim productJson As New StringBuilder()
+            productJson.Append("{")
+            productJson.Append("""@type"":""Product"",")
+            productJson.Append("""name"":""") : productJson.Append(JsonEscape(nome)) : productJson.Append(""",")
+            productJson.Append("""url"":""") : productJson.Append(JsonEscape(url)) : productJson.Append(""",")
+            productJson.Append("""image"":""") : productJson.Append(JsonEscape(imageUrl)) : productJson.Append(""",")
+            productJson.Append("""sku"":""") : productJson.Append(JsonEscape(codice)) : productJson.Append("""")
+
+            If Not String.IsNullOrWhiteSpace(marca) Then
+                productJson.Append(",""brand"":{""@type"":""Brand"",""name"":""")
+                productJson.Append(JsonEscape(marca))
+                productJson.Append("""}")
+            End If
+
+            If Not String.IsNullOrWhiteSpace(price) Then
+                productJson.Append(",""offers"":{")
+                productJson.Append("""@type"":""Offer"",")
+                productJson.Append("""url"":""") : productJson.Append(JsonEscape(url)) : productJson.Append(""",")
+                productJson.Append("""priceCurrency"":""EUR"",")
+                productJson.Append("""price"":""") : productJson.Append(price) : productJson.Append(""",")
+                productJson.Append("""availability"":""")
+                productJson.Append(If(inStock, "https://schema.org/InStock", "https://schema.org/OutOfStock"))
+                productJson.Append("""}")
+            End If
+
+            productJson.Append("}")
+
+            pos += 1
+            If pos > 1 Then sb.Append(",")
+
+            sb.Append("{""@type"":""ListItem"",""position"":")
+            sb.Append(pos.ToString(CultureInfo.InvariantCulture))
+            sb.Append(",""item"":")
+            sb.Append(productJson.ToString())
+            sb.Append("}")
+        Next
+
+        sb.Append("]}")
+
+        If pos = 0 Then Return String.Empty
+        Return sb.ToString()
+    End Function
+
+    ' ------------------------------------------------------------
+    ' Meta helpers
+    ' ------------------------------------------------------------
+
+    Private Shared Sub EnsureCanonicalLink(p As Page, canonicalUrl As String)
+        If p Is Nothing OrElse p.Header Is Nothing Then Exit Sub
+        If String.IsNullOrWhiteSpace(canonicalUrl) Then Exit Sub
+
+        Dim found As HtmlLink = Nothing
+
+        For Each c As Control In p.Header.Controls
+            Dim l As HtmlLink = TryCast(c, HtmlLink)
+            If l IsNot Nothing Then
+                Dim rel As String = ""
+                If l.Attributes("rel") IsNot Nothing Then rel = l.Attributes("rel")
+                If String.Equals(rel, "canonical", StringComparison.OrdinalIgnoreCase) Then
+                    found = l
+                    Exit For
+                End If
+            End If
+        Next
+
+        If found Is Nothing Then
+            found = New HtmlLink()
+            p.Header.Controls.Add(found)
+        End If
+
+        found.Attributes("rel") = "canonical"
+        found.Href = canonicalUrl
+    End Sub
+
+    Private Shared Sub EnsureMeta(p As Page, name As String, content As String)
+        If p Is Nothing OrElse p.Header Is Nothing Then Exit Sub
+        If String.IsNullOrWhiteSpace(name) OrElse String.IsNullOrWhiteSpace(content) Then Exit Sub
+
+        Dim found As HtmlMeta = Nothing
+        For Each c As Control In p.Header.Controls
+            Dim m As HtmlMeta = TryCast(c, HtmlMeta)
+            If m IsNot Nothing AndAlso String.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase) Then
+                found = m
+                Exit For
+            End If
+        Next
+
+        If found Is Nothing Then
+            found = New HtmlMeta()
+            found.Name = name
+            p.Header.Controls.Add(found)
+        End If
+
+        found.Content = content
+    End Sub
+
+    Private Shared Sub EnsureMetaProperty(p As Page, propName As String, content As String)
+        If p Is Nothing OrElse p.Header Is Nothing Then Exit Sub
+        If String.IsNullOrWhiteSpace(propName) OrElse String.IsNullOrWhiteSpace(content) Then Exit Sub
+
+        Dim found As HtmlMeta = Nothing
+        For Each c As Control In p.Header.Controls
+            Dim m As HtmlMeta = TryCast(c, HtmlMeta)
+            If m IsNot Nothing Then
+                Dim prop As String = ""
+                If m.Attributes("property") IsNot Nothing Then prop = m.Attributes("property")
+                If String.Equals(prop, propName, StringComparison.OrdinalIgnoreCase) Then
+                    found = m
+                    Exit For
+                End If
+            End If
+        Next
+
+        If found Is Nothing Then
+            found = New HtmlMeta()
+            found.Attributes("property") = propName
+            p.Header.Controls.Add(found)
+        End If
+
+        found.Content = content
+    End Sub
+
+    Private Shared Function EnsureJsonLdScript(s As String) As String
+        If String.IsNullOrWhiteSpace(s) Then Return String.Empty
 
         Dim payload As String = s
         If s.IndexOf("<script", StringComparison.OrdinalIgnoreCase) < 0 Then
             payload = "<script type=""application/ld+json"">" & s & "</script>"
         End If
 
-        ' 1) Se la Master implementa ISeoMaster, usa il contratto
-        Try
-            Dim m As ISeoMaster = TryCast(page.Master, ISeoMaster)
-            If m IsNot Nothing Then
-                m.SeoJsonLd = payload
-                Exit Sub
-            End If
-        Catch
-        End Try
-
-        ' 2) Altrimenti cerca un Literal "litSeoJsonLd" e scrivilo lì
-        Dim lit As Literal = Nothing
-        Try
-            Dim c As Control = FindControlRecursive(page, "litSeoJsonLd")
-            lit = TryCast(c, Literal)
-        Catch
-        End Try
-
-        If lit IsNot Nothing Then
-            lit.Text = payload
-            Exit Sub
-        End If
-
-        ' 3) Fallback: inietta in <head>
-        Try
-            If page.Header IsNot Nothing Then
-                page.Header.Controls.Add(New LiteralControl(payload))
-            End If
-        Catch
-        End Try
-    End Sub
-
-    ' ----------------------------
-    ' Query reali (fail-safe) da vsuperarticoli
-    ' ----------------------------
-    Private Shared Function TryGetCategoriesFromVsuperarticoli() As List(Of CatItem)
-        Dim outList As New List(Of CatItem)()
-
-        Try
-            Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            If String.IsNullOrWhiteSpace(cs) Then Return outList
-
-            Using conn As New MySqlConnection(cs)
-                conn.Open()
-
-                Dim sql As String =
-                    "SELECT DISTINCT CategorieId AS Id, CategorieDescrizione AS Nome " &
-                    "FROM vsuperarticoli " &
-                    "WHERE CategorieId IS NOT NULL AND CategorieId <> 0 " &
-                    "AND CategorieDescrizione IS NOT NULL AND CategorieDescrizione <> '' " &
-                    "ORDER BY Nome ASC LIMIT 12"
-
-                Using cmd As New MySqlCommand(sql, conn)
-                    Using r As MySqlDataReader = cmd.ExecuteReader()
-                        While r.Read()
-                            Dim id As Integer = 0
-                            If Not r.IsDBNull(0) Then Integer.TryParse(r(0).ToString(), id)
-                            Dim nome As String = If(r.IsDBNull(1), "", Convert.ToString(r(1)))
-                            nome = nome.Trim()
-
-                            If id > 0 AndAlso nome <> "" Then
-                                outList.Add(New CatItem With {.Id = id, .Name = nome})
-                            End If
-                        End While
-                    End Using
-                End Using
-            End Using
-        Catch
-            ' Fail-safe
-        End Try
-
-        Return outList
+        Return payload
     End Function
 
-    Private Shared Function TryGetProductsFromVsuperarticoli() As List(Of ProdItem)
-        Dim outList As New List(Of ProdItem)()
+    ' ------------------------------------------------------------
+    ' DataSource helpers
+    ' ------------------------------------------------------------
+
+    Private Shared Function TryGetDataView(page As Page, dataSourceId As String) As DataView
+        If page Is Nothing Then Return Nothing
+        If String.IsNullOrWhiteSpace(dataSourceId) Then Return Nothing
 
         Try
-            Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            If String.IsNullOrWhiteSpace(cs) Then Return outList
+            Dim ctl As Control = FindControlRecursive(page, dataSourceId)
+            If ctl Is Nothing Then Return Nothing
 
-            Using conn As New MySqlConnection(cs)
-                conn.Open()
+            Dim sds As SqlDataSource = TryCast(ctl, SqlDataSource)
+            If sds Is Nothing Then Return Nothing
 
-                ' Nota: COALESCE/NULLIF riducono il rischio di colonne vuote
-                Dim sql As String =
-                    "SELECT id, " &
-                    "COALESCE(NULLIF(DescrizioneLunga,''), NULLIF(DescrizioneBreve,''), NULLIF(Descrizione1,''), NULLIF(Descrizione,''), NULLIF(Codice,'')) AS Nome, " &
-                    "NULLIF(Codice,'') AS Sku, " &
-                    "NULLIF(Ean,'') AS Ean, " &
-                    "NULLIF(MarcheDescrizione,'') AS Brand, " &
-                    "PrezzoIvato AS Prezzo, " &
-                    "NULLIF(img1,'') AS Img " &
-                    "FROM vsuperarticoli " &
-                    "WHERE id IS NOT NULL AND id <> 0 " &
-                    "ORDER BY id DESC LIMIT 8"
-
-                Using cmd As New MySqlCommand(sql, conn)
-                    Using r As MySqlDataReader = cmd.ExecuteReader()
-                        While r.Read()
-                            Dim id As Integer = 0
-                            If Not r.IsDBNull(0) Then Integer.TryParse(r(0).ToString(), id)
-                            If id <= 0 Then Continue While
-
-                            Dim nome As String = If(r.IsDBNull(1), "", Convert.ToString(r(1))).Trim()
-                            If nome = "" Then nome = "Prodotto " & id.ToString(CultureInfo.InvariantCulture)
-
-                            Dim sku As String = If(r.IsDBNull(2), "", Convert.ToString(r(2))).Trim()
-                            Dim ean As String = If(r.IsDBNull(3), "", Convert.ToString(r(3))).Trim()
-                            Dim brand As String = If(r.IsDBNull(4), "", Convert.ToString(r(4))).Trim()
-
-                            Dim priceVal As Nullable(Of Decimal) = Nothing
-                            If Not r.IsDBNull(5) Then
-                                Dim tmp As Decimal
-                                If Decimal.TryParse(r(5).ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, tmp) Then
-                                    priceVal = tmp
-                                ElseIf Decimal.TryParse(r(5).ToString(), NumberStyles.Any, CultureInfo.CurrentCulture, tmp) Then
-                                    priceVal = tmp
-                                End If
-                            End If
-
-                            Dim img As String = If(r.IsDBNull(6), "", Convert.ToString(r(6))).Trim()
-
-                            outList.Add(New ProdItem With {
-                                .Id = id,
-                                .Name = nome,
-                                .Sku = sku,
-                                .Gtin13 = ean,
-                                .Brand = brand,
-                                .Price = priceVal,
-                                .ImageUrl = img
-                            })
-                        End While
-                    End Using
-                End Using
-            End Using
+            Dim data As IEnumerable = sds.Select(DataSourceSelectArguments.Empty)
+            Dim dv As DataView = TryCast(data, DataView)
+            Return dv
         Catch
-            ' Se la query "ricca" fallisce per colonne non presenti, degradazione controllata:
-            Try
-                Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-                Using conn As New MySqlConnection(cs)
-                    conn.Open()
-                    Dim sql2 As String = "SELECT id, NULLIF(Codice,'') AS Nome FROM vsuperarticoli WHERE id IS NOT NULL AND id<>0 ORDER BY id DESC LIMIT 8"
-                    Using cmd2 As New MySqlCommand(sql2, conn)
-                        Using r2 As MySqlDataReader = cmd2.ExecuteReader()
-                            While r2.Read()
-                                Dim id As Integer = 0
-                                If Not r2.IsDBNull(0) Then Integer.TryParse(r2(0).ToString(), id)
-                                If id <= 0 Then Continue While
-                                Dim nome As String = If(r2.IsDBNull(1), "", Convert.ToString(r2(1))).Trim()
-                                If nome = "" Then nome = "Prodotto " & id.ToString(CultureInfo.InvariantCulture)
-                                outList.Add(New ProdItem With {.Id = id, .Name = nome})
-                            End While
-                        End Using
-                    End Using
-                End Using
-            Catch
-            End Try
+            Return Nothing
         End Try
-
-        Return outList
     End Function
 
-    ' ----------------------------
-    ' Helpers
-    ' ----------------------------
-    Private Shared Function ExtractSiteName(ByVal titleText As String) As String
-        Dim t As String = If(titleText, "").Trim()
-        If t = "" Then Return "TAIKUN.IT"
+    Private Shared Function FindControlRecursive(root As Control, id As String) As Control
+        If root Is Nothing Then Return Nothing
+        If String.Equals(root.ID, id, StringComparison.OrdinalIgnoreCase) Then Return root
 
-        ' Se c'è un separatore tipico, prendi la parte a sinistra (nome brand)
-        Dim p As Integer = t.IndexOf("|"c)
-        If p > 0 Then Return t.Substring(0, p).Trim()
+        For Each c As Control In root.Controls
+            Dim r As Control = FindControlRecursive(c, id)
+            If r IsNot Nothing Then Return r
+        Next
 
-        p = t.IndexOf("-"c)
-        If p > 0 Then Return t.Substring(0, p).Trim()
-
-        Return t
+        Return Nothing
     End Function
 
-    Private Shared Function CombineUrl(ByVal baseUrl As String, ByVal path As String) As String
-        If String.IsNullOrWhiteSpace(baseUrl) Then Return If(path, "")
-        Dim b As String = baseUrl.TrimEnd("/"c)
-        Dim p As String = If(path, "/").Trim()
-        If Not p.StartsWith("/", StringComparison.OrdinalIgnoreCase) Then p = "/" & p
-        Return b & p
-    End Function
+    ' ------------------------------------------------------------
+    ' JSON helpers
+    ' ------------------------------------------------------------
 
-    Private Shared Function NormalizeAbsoluteUrl(ByVal baseUrl As String, ByVal urlOrPath As String) As String
-        Dim s As String = If(urlOrPath, "").Trim()
-        If s = "" Then Return ""
-
-        If s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse s.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
-            Return s
-        End If
-
-        If s.StartsWith("~/", StringComparison.OrdinalIgnoreCase) Then
-            s = s.Substring(1) ' -> "/..."
-        End If
-
-        If s.StartsWith("/", StringComparison.OrdinalIgnoreCase) Then
-            Return CombineUrl(baseUrl, s)
-        End If
-
-        Return CombineUrl(baseUrl, "/" & s)
-    End Function
-
-    Public Shared Function JsonEscape(ByVal value As String) As String
+    Public Shared Function JsonEscape(value As String) As String
         If value Is Nothing Then Return ""
 
-        Dim sb As New StringBuilder(value.Length + 32)
+        Dim sb As New StringBuilder(value.Length + 16)
 
         For Each ch As Char In value
-            Dim code As Integer = AscW(ch)
-
-            Select Case code
-                Case 34 ' "
-                    sb.Append("\""")
-                Case 92 ' \
-                    sb.Append("\\")
-                Case 8 ' backspace
-                    sb.Append("\b")
-                Case 12 ' formfeed
-                    sb.Append("\f")
-                Case 10 ' lf
-                    sb.Append("\n")
-                Case 13 ' cr
-                    sb.Append("\r")
-                Case 9 ' tab
-                    sb.Append("\t")
+            Select Case ch
+                Case """"c
+                    sb.Append("\\"c)
+                    sb.Append(""""c)
+                Case "\\"c
+                    sb.Append("\\"c)
+                    sb.Append("\\"c)
+                Case "/"c
+                    sb.Append("\\"c)
+                    sb.Append("/"c)
+                Case ControlChars.Back
+                    sb.Append("\\"c)
+                    sb.Append("b"c)
+                Case ControlChars.FormFeed
+                    sb.Append("\\"c)
+                    sb.Append("f"c)
+                Case ControlChars.Lf
+                    sb.Append("\\"c)
+                    sb.Append("n"c)
+                Case ControlChars.Cr
+                    sb.Append("\\"c)
+                    sb.Append("r"c)
+                Case ControlChars.Tab
+                    sb.Append("\\"c)
+                    sb.Append("t"c)
                 Case Else
-                    ' Controlli e separatori unicode "problematici"
-                    If code < 32 OrElse code = 8232 OrElse code = 8233 Then
+                    Dim code As Integer = AscW(ch)
+                    If code < 32 OrElse code = &H2028 OrElse code = &H2029 Then
                         sb.Append("\u")
-                        sb.Append(code.ToString("x4"))
+                        sb.Append(code.ToString("x4", CultureInfo.InvariantCulture))
                     Else
                         sb.Append(ch)
                     End If
@@ -447,34 +526,42 @@ Public NotInheritable Class SeoBuilder
         Return sb.ToString()
     End Function
 
-    Private Shared Function FindControlRecursive(ByVal root As Control, ByVal id As String) As Control
-        If root Is Nothing OrElse String.IsNullOrEmpty(id) Then Return Nothing
-
-        Dim c As Control = root.FindControl(id)
-        If c IsNot Nothing Then Return c
-
-        For Each child As Control In root.Controls
-            Dim found As Control = FindControlRecursive(child, id)
-            If found IsNot Nothing Then Return found
-        Next
-
-        Return Nothing
+    Private Shared Function SafeToString(o As Object) As String
+        If o Is Nothing OrElse Convert.IsDBNull(o) Then Return ""
+        Return Convert.ToString(o, CultureInfo.InvariantCulture)
     End Function
 
-    ' DTO interni
-    Private Class CatItem
-        Public Property Id As Integer
-        Public Property Name As String
-    End Class
+    Private Shared Function TryGetDecimal(o As Object, ByRef value As Decimal) As Boolean
+        value = 0D
+        If o Is Nothing OrElse Convert.IsDBNull(o) Then Return False
 
-    Private Class ProdItem
-        Public Property Id As Integer
-        Public Property Name As String
-        Public Property Sku As String
-        Public Property Gtin13 As String
-        Public Property Brand As String
-        Public Property Price As Nullable(Of Decimal)
-        Public Property ImageUrl As String
-    End Class
+        If TypeOf o Is Decimal Then
+            value = CType(o, Decimal)
+            Return True
+        End If
+        If TypeOf o Is Double Then
+            value = Convert.ToDecimal(CType(o, Double), CultureInfo.InvariantCulture)
+            Return True
+        End If
+        If TypeOf o Is Single Then
+            value = Convert.ToDecimal(CType(o, Single), CultureInfo.InvariantCulture)
+            Return True
+        End If
+        If TypeOf o Is Integer OrElse TypeOf o Is Long OrElse TypeOf o Is Short Then
+            value = Convert.ToDecimal(o, CultureInfo.InvariantCulture)
+            Return True
+        End If
+
+        Dim s As String = Convert.ToString(o, CultureInfo.InvariantCulture)
+        If String.IsNullOrWhiteSpace(s) Then Return False
+
+        Return Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, value)
+    End Function
+
+    Private Shared Function ToDecimalInvariantString(o As Object) As String
+        Dim d As Decimal
+        If Not TryGetDecimal(o, d) Then Return ""
+        Return d.ToString("0.00", CultureInfo.InvariantCulture)
+    End Function
 
 End Class
