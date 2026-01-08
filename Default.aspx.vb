@@ -246,6 +246,9 @@ Partial Class _Default
 
         ' SEO (Home)
         EnsureHomeSeo()
+
+        SeoBuilder.ApplyHomeSeo(Me.Page)
+
     End Sub
 
     Protected Function ExecuteUpdate(ByVal table As String, ByVal fieldAndValues As String, Optional ByVal wherePart As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing) As Object
