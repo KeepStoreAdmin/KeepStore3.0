@@ -382,17 +382,17 @@ Public NotInheritable Class SeoBuilder
                     sb.Append("\\")
                 Case """"c
                     sb.Append("\")
-                    sb.Append(""""")
+                    sb.Append("""")
                 Case ControlChars.Cr
-                    sb.Append("\\r")
+                    sb.Append("\r")
                 Case ControlChars.Lf
-                    sb.Append("\\n")
+                    sb.Append("\n")
                 Case ControlChars.Tab
-                    sb.Append("\\t")
+                    sb.Append("\t")
                 Case Else
                     Dim code As Integer = AscW(ch)
                     If code < 32 Then
-                        sb.Append("\\u").Append(code.ToString("x4"))
+                        sb.Append("\u").Append(code.ToString("x4"))
                     Else
                         sb.Append(ch)
                     End If
