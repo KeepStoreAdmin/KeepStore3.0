@@ -525,7 +525,7 @@ If buonoTot > 0 Then
     Public Sub LeggiVettori()
 
     Dim i As Integer
-    Dim rb As ConwayControls.Web.RadioButton
+    Dim rb As RadioButton
     Dim AsssicurazionePercentuale As Double
     Dim AssicurazioneMinimo As Double
     Dim TotAssicurazione As Double
@@ -721,7 +721,7 @@ If buonoTot > 0 Then
     Public Sub LeggiPagamenti()
 
     Dim i As Integer
-    Dim rb As ConwayControls.Web.RadioButton
+    Dim rb As RadioButton
     Dim Percentuale As Double
     Dim Fisso As Double
     Dim Minimo As Double
@@ -846,13 +846,13 @@ If buonoTot > 0 Then
     Dim Peso As Label
     Dim Costo As Label
     Dim Percentuale As Label
-    Dim Selezione As ConwayControls.Web.RadioButton
+    Dim Selezione As RadioButton
 
     cont_indice_riga += 1
 
     If e.Row.RowType = DataControlRowType.DataRow Then
 
-        Selezione = TryCast(e.Row.FindControl("rbSpedizione"), ConwayControls.Web.RadioButton)
+        Selezione = TryCast(e.Row.FindControl("rbSpedizione"), RadioButton)
         Soglia = TryCast(e.Row.FindControl("lblSogliaMinima"), Label)
         Peso = TryCast(e.Row.FindControl("lblPeso"), Label)
         Costo = TryCast(e.Row.FindControl("lblCosto"), Label)
@@ -1400,8 +1400,8 @@ End Function
 
     Protected Sub gvVettoriPromo_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles gvVettoriPromo.PreRender
         Dim i As Integer = 0
-        Dim Selezione_Vettore As ConwayControls.Web.RadioButton
-        'Dim Selezione_Vettore_Temp As ConwayControls.Web.RadioButton
+        Dim Selezione_Vettore As RadioButton
+        'Dim Selezione_Vettore_Temp As RadioButton
 
         If indice_riga_da_selezionare > -1 Then
             '(indice_riga_da_selezionare - 2) e non (indice_riga_da_selezionare - 1) perchè il DataRowBound viene fatto una volta in più
@@ -1602,6 +1602,18 @@ End Function
     lblBuonoSconto.Text = "€ " & FormatNumber(-scontoCalc, 2)
 
     End If
+
+    ' --- SEO hardening: carrello/checkout noindex + canonical + JSON-LD ---
+Dim canonical As String = Request.Url.GetLeftPart(UriPartial.Path)
+
+SeoBuilder.AddOrReplaceMeta(Me, "robots", "noindex, nofollow")
+SeoBuilder.SetCanonical(Me, canonical)
+
+Dim jsonLd As String = SeoBuilder.BuildSimplePageJsonLd(Me.Title,
+                                                        "Checkout e riepilogo carrello su Taikun.",
+                                                        canonical,
+                                                        "CheckoutPage")
+SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
 
 
             ' IVA per scorporare il buono: se l'utente ha IVA propria uso quella (percentuale), altrimenti default
