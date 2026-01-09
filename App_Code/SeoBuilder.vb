@@ -407,8 +407,8 @@ Public NotInheritable Class SeoBuilder
                 Case "\"c
                     sb.Append("\\")
                 Case """"c
-                 sb.Append("\")
-                 sb.Append(""""")
+    sb.Append("\")
+    sb.Append("""")
                 Case ControlChars.Cr
                     sb.Append("\r")
                 Case ControlChars.Lf
