@@ -370,6 +370,32 @@ Public NotInheritable Class SeoBuilder
         If String.IsNullOrWhiteSpace(url) Then Return ""
         Return url.Trim()
     End Function
+    
+    Public Shared Function BuildSimplePageJsonLd(pageTitle As String,
+                                             pageDescription As String,
+                                             canonicalUrl As String,
+                                             pageType As String) As String
+    Dim t As String = If(String.IsNullOrWhiteSpace(pageType), "WebPage", pageType.Trim())
+    Dim name As String = If(pageTitle, "").Trim()
+    Dim descr As String = If(pageDescription, "").Trim()
+    Dim url As String = NormalizeUrl(canonicalUrl)
+
+    Dim sb As New StringBuilder()
+    sb.Append("{")
+    sb.Append("""@context"":""https://schema.org"",")
+    sb.Append("""@type"":""").Append(JsonEscape(t)).Append(""",")
+    sb.Append("""name"":""").Append(JsonEscape(name)).Append("""")
+
+    If Not String.IsNullOrWhiteSpace(descr) Then
+        sb.Append(",").Append("""description"":""").Append(JsonEscape(descr)).Append("""")
+    End If
+    If Not String.IsNullOrWhiteSpace(url) Then
+        sb.Append(",").Append("""url"":""").Append(JsonEscape(url)).Append("""")
+    End If
+
+    sb.Append("}")
+    Return sb.ToString()
+    End Function
 
     ' JSON string escape safe for schema.org payloads.
     Public Shared Function JsonEscape(value As String) As String
@@ -381,8 +407,8 @@ Public NotInheritable Class SeoBuilder
                 Case "\"c
                     sb.Append("\\")
                 Case """"c
-                    sb.Append("\")
-                    sb.Append("""")
+                 sb.Append("\")
+                 sb.Append(""""")
                 Case ControlChars.Cr
                     sb.Append("\r")
                 Case ControlChars.Lf
