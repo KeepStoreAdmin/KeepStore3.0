@@ -98,9 +98,13 @@ Partial Class wishlist
 		Sqlstring = Sqlstring + " LEFT OUTER JOIN varticoli_iva ON varticoli_iva.ArticoliId = wishlist.id_articolo"
         Sqlstring = Sqlstring + " WHERE (wishlist.id_utente=@id) AND (NListino=@listino) GROUP BY id"
         sdsArticoli.SelectCommand = Sqlstring
-        SQLDATA_Promo.SelectParameters.Add("@IvaUtente", Session("Iva_Utente"))
-        SQLDATA_Promo.SelectParameters.Add("@id", Session("UtentiId"))
-        SQLDATA_Promo.SelectParameters.Add("@listino", Session("listino"))
+        Dim sdsPromo As SqlDataSource = TryCast(SeoBuilder.FindControlRecursive(Me, "SQLDATA_Promo"), SqlDataSource)
+        If sdsPromo IsNot Nothing Then
+        sdsPromo.SelectParameters.Clear()
+        sdsPromo.SelectParameters.Add("IvaUtente", Convert.ToString(Session("Iva_Utente")))
+        sdsPromo.SelectParameters.Add("id", Convert.ToString(Session("UtentiId")))
+        sdsPromo.SelectParameters.Add("listino", Convert.ToString(Session("listino")))
+        End If
     End Sub
 
     Public Sub SetSelectedIndex(ByVal dl As DataList, ByVal val As Integer)
