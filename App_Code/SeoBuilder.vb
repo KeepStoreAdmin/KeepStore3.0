@@ -1,581 +1,468 @@
+' App_Code/SeoBuilder.vb
 Option Strict On
 Option Explicit On
 
 Imports System
-Imports System.Collections
-Imports System.Collections.Generic
 Imports System.Data
+Imports System.Globalization
 Imports System.Text
 Imports System.Web
-Imports System.Web.Script.Serialization
 Imports System.Web.UI
-Imports System.Web.UI.WebControls
 Imports System.Web.UI.HtmlControls
-
-' ============================================================
-' SeoBuilder.vb
-' - Compatibilità VB.NET (.NET 4.x / VB 2012)
-' - Nessuna interfaccia (evita duplicati tipo ISeoMaster)
-' - JSON-LD Home: tenta di leggere categorie/prodotti dai DataSource
-'   già presenti in Default.aspx (o dai controlli che li usano).
-' ============================================================
+Imports System.Web.UI.WebControls
 
 Public NotInheritable Class SeoBuilder
 
     Private Sub New()
     End Sub
 
-    ' ------------------------------------------------------------
-    ' API pubblica (usata da Default.aspx.vb)
-    ' ------------------------------------------------------------
+    ' =========================================================
+    ' API "stabile" (retrocompatibile)
+    ' Questi metodi DEVONO esistere perché sono chiamati dalle pagine.
+    ' =========================================================
 
-    ' NOTA: questa signature è quella che il tuo Default.aspx.vb sta usando
-    ' (vedi errore: SeoBuilder.BuildHomeJsonLd(Me, pageTitle, descr, canonical, logoUrl))
+    ' 1) Chiamata attuale (da Default.aspx.vb): SeoBuilder.ApplyHomeSeo(Me.Page)
+    Public Shared Sub ApplyHomeSeo(ByVal page As Page)
+        If page Is Nothing Then Return
+
+        Dim canonical As String = GetHomeCanonicalUrl(page)
+        Dim title As String = SafeString(page.Title)
+        If String.IsNullOrWhiteSpace(title) Then
+            title = GetCompanyNameFallback()
+        End If
+
+        Dim descr As String = GetDefaultHomeDescription()
+        Dim logoUrl As String = GetLogoUrl(page)
+
+        ' Canonical + Meta base
+        EnsureCanonical(page, canonical)
+        EnsureMetaName(page, "description", descr)
+        EnsureMetaName(page, "robots", "index,follow")
+
+        ' OpenGraph base (sempre utile)
+        ApplyOpenGraph(page, canonical, title, descr, logoUrl, Nothing)
+
+        ' JSON-LD avanzato Home (usa DataSource esistenti se presenti)
+        Dim jsonLd As String = BuildHomeJsonLd(page, title, descr, canonical, logoUrl)
+        SetJsonLdOnMaster(page, jsonLd)
+    End Sub
+
+    ' 2) Chiamata che avevi in una variante precedente
     Public Shared Function BuildHomeJsonLd(ByVal page As Page,
-                                           ByVal pageTitle As String,
-                                           ByVal descr As String,
-                                           ByVal canonicalUrl As String,
-                                           ByVal logoUrl As String) As String
+                                          ByVal pageTitle As String,
+                                          ByVal description As String,
+                                          ByVal canonicalUrl As String,
+                                          ByVal logoUrl As String) As String
 
         Dim baseUrl As String = GetBaseUrl(page)
-        Dim canonicalAbs As String = ToAbsoluteUrl(page, canonicalUrl)
 
-        ' Raccolta dati (best-effort) da controlli/DataSource esistenti
-        Dim dvCats As DataView = FirstNonEmptyDataView(page,
-            New String() {"Data_Dipartimenti", "SdsHeroCats", "rptHeroCats"})
-
-        Dim dvNew As DataView = FirstNonEmptyDataView(page,
-            New String() {"Data_UltimiArrivi", "Repeat_Lista_Nuovi_Arrivi", "SdsNewArticoli", "SdsArticoliInVetrina"})
-
-        Dim dvBest As DataView = FirstNonEmptyDataView(page,
-            New String() {"sdsPiuAcquistati", "DataList1", "rptPiuAcquistati"})
-
-        Dim hostName As String = TryGetHostName(page)
-        Dim siteName As String = If(String.IsNullOrWhiteSpace(hostName), "Sito e-commerce", hostName)
-
-        ' @graph
-        Dim graph As New List(Of Object)()
-
-        Dim orgId As String = baseUrl.TrimEnd("/"c) & "#organization"
-        Dim webSiteId As String = baseUrl.TrimEnd("/"c) & "#website"
-        Dim webPageId As String = canonicalAbs & "#webpage"
+        Dim sb As New StringBuilder(8192)
+        sb.Append("{")
+        sb.Append("""@context"":""https://schema.org"",")
+        sb.Append("""@graph"":[")
 
         ' Organization
-        Dim org As New Dictionary(Of String, Object)()
-        org("@type") = "Organization"
-        org("@id") = orgId
-        org("name") = siteName
-        org("url") = baseUrl
+        Dim orgId As String = baseUrl & "/#org"
+        Dim siteId As String = baseUrl & "/#website"
+        Dim pageId As String = canonicalUrl & "#webpage"
 
-        Dim logoAbs As String = ToAbsoluteUrl(page, logoUrl)
-        If Not String.IsNullOrWhiteSpace(logoAbs) Then
-            Dim logo As New Dictionary(Of String, Object)()
-            logo("@type") = "ImageObject"
-            logo("url") = logoAbs
-            org("logo") = logo
+        sb.Append("{")
+        sb.Append("""@type"":""Organization"",")
+        sb.Append("""@id"":""").Append(JsonEscape(orgId)).Append(""",")
+        sb.Append("""name"":""").Append(JsonEscape(GetCompanyNameFallback())).Append("""")
+        If Not String.IsNullOrWhiteSpace(logoUrl) Then
+            sb.Append(",""logo"":{")
+            sb.Append("""@type"":""ImageObject"",")
+            sb.Append("""url"":""").Append(JsonEscape(logoUrl)).Append("""")
+            sb.Append("}")
         End If
-        graph.Add(org)
+        sb.Append("},")
 
-        ' WebSite
-        Dim website As New Dictionary(Of String, Object)()
-        website("@type") = "WebSite"
-        website("@id") = webSiteId
-        website("url") = baseUrl
-        website("name") = siteName
-        website("publisher") = New Dictionary(Of String, Object)() From {{"@id", orgId}}
-        graph.Add(website)
+        ' WebSite + SearchAction
+        sb.Append("{")
+        sb.Append("""@type"":""WebSite"",")
+        sb.Append("""@id"":""").Append(JsonEscape(siteId)).Append(""",")
+        sb.Append("""url"":""").Append(JsonEscape(baseUrl & "/")).Append(""",")
+        sb.Append("""name"":""").Append(JsonEscape(GetCompanyNameFallback())).Append(""",")
+        sb.Append("""potentialAction"":{")
+        sb.Append("""@type"":""SearchAction"",")
+        sb.Append("""target"":""").Append(JsonEscape(baseUrl & "/articoli.aspx?q={search_term_string}")).Append(""",")
+        sb.Append("""query-input"":""required name=search_term_string""")
+        sb.Append("}")
+        sb.Append("},")
 
         ' WebPage (Home)
-        Dim webpage As New Dictionary(Of String, Object)()
-        webpage("@type") = "WebPage"
-        webpage("@id") = webPageId
-        webpage("url") = canonicalAbs
-        webpage("isPartOf") = New Dictionary(Of String, Object)() From {{"@id", webSiteId}}
-        webpage("about") = New Dictionary(Of String, Object)() From {{"@id", orgId}}
+        sb.Append("{")
+        sb.Append("""@type"":""WebPage"",")
+        sb.Append("""@id"":""").Append(JsonEscape(pageId)).Append(""",")
+        sb.Append("""url"":""").Append(JsonEscape(canonicalUrl)).Append(""",")
+        sb.Append("""name"":""").Append(JsonEscape(pageTitle)).Append(""",")
+        sb.Append("""description"":""").Append(JsonEscape(description)).Append(""",")
+        sb.Append("""isPartOf"":{""@id"":""").Append(JsonEscape(siteId)).Append("""},")
+        sb.Append("""about"":{""@id"":""").Append(JsonEscape(orgId)).Append("""}")
+        sb.Append("}")
 
-        If Not String.IsNullOrWhiteSpace(pageTitle) Then
-            webpage("name") = pageTitle
-        End If
-        If Not String.IsNullOrWhiteSpace(descr) Then
-            webpage("description") = descr
-        End If
-        graph.Add(webpage)
-
-        ' BreadcrumbList (Home)
-        Dim crumbs As New Dictionary(Of String, Object)()
-        crumbs("@type") = "BreadcrumbList"
-        crumbs("@id") = canonicalAbs & "#breadcrumb"
-        crumbs("itemListElement") = New List(Of Object)() From {
-            New Dictionary(Of String, Object)() From {
-                {"@type", "ListItem"},
-                {"position", 1},
-                {"name", "Home"},
-                {"item", canonicalAbs}
-            }
-        }
-        graph.Add(crumbs)
-
-        ' ItemList categorie
-        Dim catList As Dictionary(Of String, Object) = BuildCategoryItemList(page, dvCats, canonicalAbs)
-        If catList IsNot Nothing Then
-            graph.Add(catList)
+        ' ItemList: categorie
+        Dim catList As List(Of JsonItem) = ReadCategoryItemsFromDataSource(page, "Data_Dipartimenti", baseUrl)
+        If catList.Count > 0 Then
+            sb.Append(",")
+            AppendItemList(sb, canonicalUrl & "#categories", "Categorie", catList)
         End If
 
-        ' ItemList prodotti (ultimi arrivi)
-        Dim newList As Dictionary(Of String, Object) = BuildProductItemList(page, dvNew, canonicalAbs, "Ultimi arrivi", "#ultimi-arrivi", 12)
-        If newList IsNot Nothing Then
-            graph.Add(newList)
+        ' ItemList: Ultimi Arrivi (ID richiesto: Data_UltimiArrivi; fallback comune: SdsNewArticoli)
+        Dim latest As List(Of JsonItem) = ReadProductItemsFromDataSource(page, "Data_UltimiArrivi", baseUrl, 12)
+        If latest.Count = 0 Then
+            latest = ReadProductItemsFromDataSource(page, "SdsNewArticoli", baseUrl, 12)
+        End If
+        If latest.Count > 0 Then
+            sb.Append(",")
+            AppendItemList(sb, canonicalUrl & "#latest", "Ultimi arrivi", latest)
         End If
 
-        ' ItemList prodotti (più acquistati)
-        Dim bestList As Dictionary(Of String, Object) = BuildProductItemList(page, dvBest, canonicalAbs, "Più acquistati", "#piu-acquistati", 12)
-        If bestList IsNot Nothing Then
-            graph.Add(bestList)
+        ' ItemList: Più acquistati (ID richiesto: sdsPiuAcquistati)
+        Dim top As List(Of JsonItem) = ReadProductItemsFromDataSource(page, "sdsPiuAcquistati", baseUrl, 12)
+        If top.Count > 0 Then
+            sb.Append(",")
+            AppendItemList(sb, canonicalUrl & "#top", "Più acquistati", top)
         End If
 
-        Dim root As New Dictionary(Of String, Object)()
-        root("@context") = "https://schema.org"
-        root("@graph") = graph
-
-        Return SerializeJson(root)
+        sb.Append("]}")
+        Return EnsureJsonLdScriptTag(sb.ToString())
     End Function
 
-    ' NOTA: questa Sub è quella che il tuo Default.aspx.vb sta usando
-    ' (vedi errore: SeoBuilder.SetJsonLdOnMaster(Me, jsonLdScript))
-    Public Shared Sub SetJsonLdOnMaster(ByVal page As Page, ByVal jsonLdOrScript As String)
-        If page Is Nothing Then Exit Sub
-        If String.IsNullOrWhiteSpace(jsonLdOrScript) Then Exit Sub
+    ' 3) Chiamata che avevi in una variante precedente
+    Public Shared Sub SetJsonLdOnMaster(ByVal page As Page, ByVal jsonLdScriptOrJson As String)
+        If page Is Nothing Then Return
 
-        Dim payload As String = EnsureJsonLdScriptTag(jsonLdOrScript)
+        Dim script As String = EnsureJsonLdScriptTag(jsonLdScriptOrJson)
 
-        ' 1) Preferenza: Literal in MasterPage <asp:Literal ID="litSeoJsonLd" ... />
-        Dim lit As Literal = TryCast(FindControlRecursive(page.Master, "litSeoJsonLd"), Literal)
-        If lit IsNot Nothing Then
-            lit.Text = payload
-            Exit Sub
+        ' prova su Master
+        Dim lit As Literal = Nothing
+        If page.Master IsNot Nothing Then
+            lit = TryCast(FindControlRecursive(page.Master, "litSeoJsonLd"), Literal)
         End If
 
-        ' 2) Fallback: aggiunge direttamente in <head>
-        If page.Header IsNot Nothing Then
-            ' Evita duplicati sullo stesso ciclo pagina
-            Dim existing As Control = FindControlRecursive(page.Header, "litSeoJsonLdFallback")
-            If existing IsNot Nothing Then
-                Dim litExisting As Literal = TryCast(existing, Literal)
-                If litExisting IsNot Nothing Then
-                    litExisting.Text = payload
-                    Exit Sub
-                End If
-            End If
+        ' fallback: prova su Page
+        If lit Is Nothing Then
+            lit = TryCast(FindControlRecursive(page, "litSeoJsonLd"), Literal)
+        End If
 
-            Dim l As New Literal()
-            l.ID = "litSeoJsonLdFallback"
-            l.Text = payload
-            page.Header.Controls.Add(l)
+        If lit IsNot Nothing Then
+            lit.Text = script
+            Return
+        End If
+
+        ' fallback: inietta in <head runat="server">
+        If page.Header IsNot Nothing Then
+            page.Header.Controls.Add(New LiteralControl(script))
         End If
     End Sub
 
-    ' ------------------------------------------------------------
-    ' Helpers SEO base (meta/canonical/OpenGraph)
-    ' ------------------------------------------------------------
+    ' =========================================================
+    ' Canonical / Meta / OpenGraph
+    ' =========================================================
 
     Public Shared Sub EnsureCanonical(ByVal page As Page, ByVal canonicalUrl As String)
-        If page Is Nothing Then Exit Sub
-        If page.Header Is Nothing Then Exit Sub
-        If String.IsNullOrWhiteSpace(canonicalUrl) Then Exit Sub
+        If page Is Nothing OrElse page.Header Is Nothing Then Return
+        If String.IsNullOrWhiteSpace(canonicalUrl) Then Return
 
-        Dim absUrl As String = ToAbsoluteUrl(page, canonicalUrl)
-
-        ' cerca link rel=canonical già esistente
+        Dim existing As HtmlLink = Nothing
         For Each c As Control In page.Header.Controls
             Dim l As HtmlLink = TryCast(c, HtmlLink)
             If l IsNot Nothing Then
-                Dim rel As String = Convert.ToString(l.Attributes("rel"))
-                If String.Equals(rel, "canonical", StringComparison.OrdinalIgnoreCase) Then
-                    l.Href = absUrl
-                    Exit Sub
+                Dim rel As String = SafeString(l.Attributes("rel"))
+                If rel.Equals("canonical", StringComparison.OrdinalIgnoreCase) Then
+                    existing = l
+                    Exit For
                 End If
             End If
         Next
 
-        Dim canon As New HtmlLink()
-        canon.Attributes("rel") = "canonical"
-        canon.Href = absUrl
-        page.Header.Controls.Add(canon)
+        If existing Is Nothing Then
+            Dim link As New HtmlLink()
+            link.Attributes("rel") = "canonical"
+            link.Href = canonicalUrl
+            page.Header.Controls.Add(link)
+        Else
+            existing.Href = canonicalUrl
+        End If
     End Sub
 
-    Private Shared Sub EnsureMeta(ByVal page As Page, ByVal name As String, ByVal content As String)
-        If page Is Nothing Then Exit Sub
-        If page.Header Is Nothing Then Exit Sub
-        If String.IsNullOrWhiteSpace(name) Then Exit Sub
-        If String.IsNullOrWhiteSpace(content) Then Exit Sub
+    Public Shared Sub EnsureMetaName(ByVal page As Page, ByVal metaName As String, ByVal content As String)
+        If page Is Nothing OrElse page.Header Is Nothing Then Return
+        If String.IsNullOrWhiteSpace(metaName) Then Return
+        If content Is Nothing Then content = ""
 
+        Dim found As HtmlMeta = Nothing
+        For Each c As Control In page.Header.Controls
+            Dim m As HtmlMeta = TryCast(c, HtmlMeta)
+            If m IsNot Nothing AndAlso SafeString(m.Name).Equals(metaName, StringComparison.OrdinalIgnoreCase) Then
+                found = m
+                Exit For
+            End If
+        Next
+
+        If found Is Nothing Then
+            Dim m As New HtmlMeta()
+            m.Name = metaName
+            m.Content = content
+            page.Header.Controls.Add(m)
+        Else
+            found.Content = content
+        End If
+    End Sub
+
+    Public Shared Sub EnsureMetaProperty(ByVal page As Page, ByVal propName As String, ByVal content As String)
+        If page Is Nothing OrElse page.Header Is Nothing Then Return
+        If String.IsNullOrWhiteSpace(propName) Then Return
+        If content Is Nothing Then content = ""
+
+        Dim found As HtmlMeta = Nothing
         For Each c As Control In page.Header.Controls
             Dim m As HtmlMeta = TryCast(c, HtmlMeta)
             If m IsNot Nothing Then
-                If String.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase) Then
-                    m.Content = content
-                    Exit Sub
+                Dim p As String = SafeString(m.Attributes("property"))
+                If p.Equals(propName, StringComparison.OrdinalIgnoreCase) Then
+                    found = m
+                    Exit For
                 End If
             End If
         Next
 
-        Dim meta As New HtmlMeta()
-        meta.Name = name
-        meta.Content = content
-        page.Header.Controls.Add(meta)
-    End Sub
-
-    Private Shared Sub EnsureMetaProperty(ByVal page As Page, ByVal prop As String, ByVal content As String)
-        If page Is Nothing Then Exit Sub
-        If page.Header Is Nothing Then Exit Sub
-        If String.IsNullOrWhiteSpace(prop) Then Exit Sub
-        If String.IsNullOrWhiteSpace(content) Then Exit Sub
-
-        For Each c As Control In page.Header.Controls
-            Dim m As HtmlMeta = TryCast(c, HtmlMeta)
-            If m IsNot Nothing Then
-                Dim p As String = Convert.ToString(m.Attributes("property"))
-                If String.Equals(p, prop, StringComparison.OrdinalIgnoreCase) Then
-                    m.Content = content
-                    Exit Sub
-                End If
-            End If
-        Next
-
-        Dim meta As New HtmlMeta()
-        meta.Attributes("property") = prop
-        meta.Content = content
-        page.Header.Controls.Add(meta)
+        If found Is Nothing Then
+            Dim m As New HtmlMeta()
+            m.Attributes("property") = propName
+            m.Content = content
+            page.Header.Controls.Add(m)
+        Else
+            found.Content = content
+        End If
     End Sub
 
     Public Shared Sub ApplyOpenGraph(ByVal page As Page,
-                                    ByVal title As String,
-                                    ByVal descr As String,
                                     ByVal canonicalUrl As String,
-                                    ByVal imageUrl As String)
+                                    ByVal title As String,
+                                    ByVal description As String,
+                                    ByVal imageUrl As String,
+                                    ByVal siteName As String)
 
-        If page Is Nothing Then Exit Sub
-        If page.Header Is Nothing Then Exit Sub
+        If page Is Nothing OrElse page.Header Is Nothing Then Return
 
-        Dim canonAbs As String = ToAbsoluteUrl(page, canonicalUrl)
-        Dim imgAbs As String = ToAbsoluteUrl(page, imageUrl)
-
+        EnsureMetaProperty(page, "og:url", canonicalUrl)
         EnsureMetaProperty(page, "og:type", "website")
-        If Not String.IsNullOrWhiteSpace(title) Then EnsureMetaProperty(page, "og:title", title)
-        If Not String.IsNullOrWhiteSpace(descr) Then EnsureMetaProperty(page, "og:description", descr)
-        If Not String.IsNullOrWhiteSpace(canonAbs) Then EnsureMetaProperty(page, "og:url", canonAbs)
-        If Not String.IsNullOrWhiteSpace(imgAbs) Then EnsureMetaProperty(page, "og:image", imgAbs)
+        EnsureMetaProperty(page, "og:title", title)
+        EnsureMetaProperty(page, "og:description", description)
 
-        ' Twitter Card (minimale)
-        EnsureMeta(page, "twitter:card", If(String.IsNullOrWhiteSpace(imgAbs), "summary", "summary_large_image"))
-        If Not String.IsNullOrWhiteSpace(title) Then EnsureMeta(page, "twitter:title", title)
-        If Not String.IsNullOrWhiteSpace(descr) Then EnsureMeta(page, "twitter:description", descr)
-        If Not String.IsNullOrWhiteSpace(imgAbs) Then EnsureMeta(page, "twitter:image", imgAbs)
+        If Not String.IsNullOrWhiteSpace(imageUrl) Then
+            EnsureMetaProperty(page, "og:image", imageUrl)
+        End If
+
+        If String.IsNullOrWhiteSpace(siteName) Then
+            siteName = GetCompanyNameFallback()
+        End If
+        EnsureMetaProperty(page, "og:site_name", siteName)
     End Sub
 
-    ' ------------------------------------------------------------
-    ' JSON-LD builders (ItemList categorie/prodotti)
-    ' ------------------------------------------------------------
+    ' =========================================================
+    ' JSON-LD helpers
+    ' =========================================================
 
-    Private Shared Function BuildCategoryItemList(ByVal page As Page, ByVal dv As DataView, ByVal canonicalAbs As String) As Dictionary(Of String, Object)
-        If dv Is Nothing OrElse dv.Count = 0 Then Return Nothing
+    Private Shared Sub AppendItemList(ByVal sb As StringBuilder,
+                                      ByVal listId As String,
+                                      ByVal listName As String,
+                                      ByVal items As List(Of JsonItem))
 
-        Dim listItems As New List(Of Object)()
-        Dim pos As Integer = 1
+        sb.Append("{")
+        sb.Append("""@type"":""ItemList"",")
+        sb.Append("""@id"":""").Append(JsonEscape(listId)).Append(""",")
+        sb.Append("""name"":""").Append(JsonEscape(listName)).Append(""",")
+        sb.Append("""itemListElement"":[")
 
-        For Each drv As DataRowView In dv
-            If pos > 24 Then Exit For
+        For i As Integer = 0 To items.Count - 1
+            If i > 0 Then sb.Append(",")
+            Dim it As JsonItem = items(i)
+            sb.Append("{")
+            sb.Append("""@type"":""ListItem"",")
+            sb.Append("""position"":").Append((i + 1).ToString(CultureInfo.InvariantCulture)).Append(",")
+            sb.Append("""item"":{")
+            sb.Append("""@type"":""").Append(JsonEscape(it.SchemaType)).Append(""",")
+            sb.Append("""name"":""").Append(JsonEscape(it.Name)).Append(""",")
+            sb.Append("""url"":""").Append(JsonEscape(it.Url)).Append("""")
 
-            Dim name As String = GetStringField(drv, "descrizione", "Descrizione", "nome", "Nome", "name", "Name", "titolo", "Titolo")
-            If String.IsNullOrWhiteSpace(name) Then Continue For
+            If Not String.IsNullOrWhiteSpace(it.ImageUrl) Then
+                sb.Append(",""image"":""").Append(JsonEscape(it.ImageUrl)).Append("""")
+            End If
+            If Not String.IsNullOrWhiteSpace(it.Sku) Then
+                sb.Append(",""sku"":""").Append(JsonEscape(it.Sku)).Append("""")
+            End If
 
-            Dim ct As Integer = GetIntField(drv, "ct", "CT", "CategoriaId", "categoriaid", "id", "ID")
-            Dim st As Integer = GetIntField(drv, "st", "ST", "SettoreId", "settoreid", "id_settore", "Id_Settore", "settore", "Settore")
+            If it.Price.HasValue Then
+                sb.Append(",""offers"":{")
+                sb.Append("""@type"":""Offer"",")
+                sb.Append("""priceCurrency"":""EUR"",")
+                sb.Append("""price"":""").Append(it.Price.Value.ToString("0.00", CultureInfo.InvariantCulture)).Append("""")
+                sb.Append("}")
+            End If
 
-            Dim rel As String = BuildCategoryRelativeUrl(st, ct)
-            If String.IsNullOrWhiteSpace(rel) Then Continue For
-
-            Dim url As String = CombineAbsolute(GetBaseUrl(page), rel)
-
-            Dim item As New Dictionary(Of String, Object)()
-            item("@type") = "ListItem"
-            item("position") = pos
-            item("item") = New Dictionary(Of String, Object)() From {
-                {"@id", url},
-                {"name", name}
-            }
-
-            listItems.Add(item)
-            pos += 1
+            sb.Append("}") ' item
+            sb.Append("}") ' ListItem
         Next
 
-        If listItems.Count = 0 Then Return Nothing
+        sb.Append("]") ' itemListElement
+        sb.Append("}")
+    End Sub
 
-        Dim catList As New Dictionary(Of String, Object)()
-        catList("@type") = "ItemList"
-        catList("@id") = canonicalAbs & "#categorie"
-        catList("name") = "Categorie"
-        catList("itemListElement") = listItems
-        Return catList
-    End Function
+    Private Shared Function ReadCategoryItemsFromDataSource(ByVal page As Page, ByVal dataSourceId As String, ByVal baseUrl As String) As List(Of JsonItem)
+        Dim list As New List(Of JsonItem)()
 
-    Private Shared Function BuildProductItemList(ByVal page As Page,
-                                                ByVal dv As DataView,
-                                                ByVal canonicalAbs As String,
-                                                ByVal listName As String,
-                                                ByVal anchor As String,
-                                                ByVal maxItems As Integer) As Dictionary(Of String, Object)
+        Dim dv As DataView = SelectDataView(page, dataSourceId)
+        If dv Is Nothing Then Return list
 
-        If dv Is Nothing OrElse dv.Count = 0 Then Return Nothing
-
-        Dim listItems As New List(Of Object)()
-        Dim pos As Integer = 1
-
-        For Each drv As DataRowView In dv
-            If pos > maxItems Then Exit For
-
-            Dim name As String = GetStringField(drv, "descrizione", "Descrizione", "nome", "Nome", "name", "Name", "titolo", "Titolo")
+        Dim max As Integer = Math.Min(dv.Count, 24)
+        For i As Integer = 0 To max - 1
+            Dim row As DataRowView = dv(i)
+            Dim id As Long = GetLong(row, "id", "CategorieId", "catid")
+            Dim name As String = GetString(row, "descrizione", "Descrizione", "nome", "Name", "titolo", "Titolo")
             If String.IsNullOrWhiteSpace(name) Then Continue For
 
-            Dim id As Integer = GetIntField(drv, "ArticoliId", "articoliid", "id", "ID")
-            Dim tcId As Integer = GetIntField(drv, "TCId", "tcid", "TC", "tc")
-            If tcId = 0 Then tcId = -1
-
-            Dim relUrl As String = ""
+            Dim url As String
             If id > 0 Then
-                relUrl = "articolo.aspx?id=" & id.ToString() & "&TCId=" & tcId.ToString()
+                url = baseUrl & "/articoli.aspx?ct=" & id.ToString(CultureInfo.InvariantCulture)
             Else
-                Dim cod As String = GetStringField(drv, "cod", "Cod", "cod_articolo", "Cod_Articolo", "codice", "Codice")
-                If Not String.IsNullOrWhiteSpace(cod) Then
-                    relUrl = "articolo.aspx?cod=" & HttpUtility.UrlEncode(cod)
-                End If
+                url = baseUrl & "/articoli.aspx"
             End If
 
-            If String.IsNullOrWhiteSpace(relUrl) Then Continue For
-            Dim url As String = CombineAbsolute(GetBaseUrl(page), relUrl)
+            list.Add(New JsonItem With {.SchemaType = "Thing", .Name = name.Trim(), .Url = url})
+        Next
 
-            Dim prod As New Dictionary(Of String, Object)()
-            prod("@type") = "Product"
-            prod("name") = name
-            prod("url") = url
+        Return list
+    End Function
 
-            Dim img As String = GetStringField(drv, "img", "Img", "immagine", "Immagine", "foto", "Foto", "Img1", "img1", "foto1", "Foto1")
-            Dim imgAbs As String = NormalizeImageUrl(page, img)
-            If Not String.IsNullOrWhiteSpace(imgAbs) Then
-                prod("image") = imgAbs
+    Private Shared Function ReadProductItemsFromDataSource(ByVal page As Page, ByVal dataSourceId As String, ByVal baseUrl As String, ByVal max As Integer) As List(Of JsonItem)
+        Dim list As New List(Of JsonItem)()
+
+        Dim dv As DataView = SelectDataView(page, dataSourceId)
+        If dv Is Nothing Then Return list
+
+        Dim take As Integer = Math.Min(dv.Count, Math.Max(1, max))
+        For i As Integer = 0 To take - 1
+            Dim row As DataRowView = dv(i)
+
+            Dim name As String = GetString(row, "Descrizione1", "descrizione1", "Descrizione", "descrizione", "titolo", "Titolo", "name", "Nome")
+            If String.IsNullOrWhiteSpace(name) Then Continue For
+
+            Dim sku As String = GetString(row, "Codice", "codice", "sku", "SKU")
+            Dim artId As Long = GetLong(row, "Articoliid", "ArticoliId", "id", "ID")
+            Dim tcId As Long = GetLong(row, "TCId", "tcid")
+
+            Dim url As String
+            If artId > 0 AndAlso tcId > 0 Then
+                url = baseUrl & "/articolo.aspx?id=" & artId.ToString(CultureInfo.InvariantCulture) & "&TCId=" & tcId.ToString(CultureInfo.InvariantCulture)
+            ElseIf artId > 0 Then
+                url = baseUrl & "/articolo.aspx?id=" & artId.ToString(CultureInfo.InvariantCulture)
+            ElseIf tcId > 0 Then
+                url = baseUrl & "/articolo.aspx?TCId=" & tcId.ToString(CultureInfo.InvariantCulture)
+            Else
+                url = baseUrl & "/articolo.aspx"
             End If
 
-            Dim item As New Dictionary(Of String, Object)()
-            item("@type") = "ListItem"
-            item("position") = pos
-            item("item") = prod
+            Dim img As String = GetString(row, "img1", "Img1", "immagine", "Immagine", "foto", "Foto")
+            Dim imgUrl As String = Nothing
+            If Not String.IsNullOrWhiteSpace(img) Then
+                ' percorso standard progetto
+                imgUrl = baseUrl & "/Public/images/articoli/" & img.Trim().TrimStart("/"c)
+            Else
+                imgUrl = baseUrl & "/Public/images/nofoto.gif"
+            End If
 
-            listItems.Add(item)
-            pos += 1
+            Dim price As Decimal? = GetBestPrice(row)
+
+            list.Add(New JsonItem With {
+                .SchemaType = "Product",
+                .Name = name.Trim(),
+                .Url = url,
+                .ImageUrl = imgUrl,
+                .Sku = sku,
+                .Price = price
+            })
         Next
 
-        If listItems.Count = 0 Then Return Nothing
-
-        Dim pl As New Dictionary(Of String, Object)()
-        pl("@type") = "ItemList"
-        pl("@id") = canonicalAbs & anchor
-        pl("name") = listName
-        pl("itemListElement") = listItems
-        Return pl
+        Return list
     End Function
 
-    Private Shared Function BuildCategoryRelativeUrl(ByVal st As Integer, ByVal ct As Integer) As String
-        ' Su webaffare.it (legacy) i link categoria risultano tipicamente: articoli.aspx?st=X&ct=Y
-        If st > 0 AndAlso ct > 0 Then
-            Return "articoli.aspx?st=" & st.ToString() & "&ct=" & ct.ToString()
+    Private Shared Function GetBestPrice(ByVal row As DataRowView) As Decimal?
+        ' Strategia robusta:
+        ' - se esiste InOfferta e prezzoPromoIvato / prezzoPromo, usa quello
+        ' - altrimenti prezzoIvato / prezzo
+        Dim inOfferta As Boolean = GetBool(row, "InOfferta", "inofferta", "promo", "Promo")
+
+        Dim pPromoI As Decimal? = GetDecimal(row, "PrezzoPromoIvato", "prezzopromoivato", "PromoIvato")
+        Dim pPromo As Decimal? = GetDecimal(row, "prezzoPromo", "PrezzoPromo", "Promo")
+
+        Dim pI As Decimal? = GetDecimal(row, "PrezzoIvato", "prezzoivato")
+        Dim p As Decimal? = GetDecimal(row, "Prezzo", "prezzo")
+
+        If inOfferta Then
+            If pPromoI.HasValue AndAlso pPromoI.Value > 0D Then Return pPromoI
+            If pPromo.HasValue AndAlso pPromo.Value > 0D Then Return pPromo
         End If
 
-        ' fallback (se il datasource restituisce solo uno dei due)
-        If ct > 0 Then
-            Return "articoli.aspx?ct=" & ct.ToString()
-        End If
-        If st > 0 Then
-            Return "articoli.aspx?st=" & st.ToString()
-        End If
-        Return ""
-    End Function
-
-    ' ------------------------------------------------------------
-    ' DataSource helpers
-    ' ------------------------------------------------------------
-
-    Private Shared Function FirstNonEmptyDataView(ByVal page As Page, ByVal ids As String()) As DataView
-        If ids Is Nothing Then Return Nothing
-        For Each id As String In ids
-            Dim dv As DataView = TrySelectDataView(page, id)
-            If dv IsNot Nothing AndAlso dv.Count > 0 Then Return dv
-        Next
+        If pI.HasValue AndAlso pI.Value > 0D Then Return pI
+        If p.HasValue AndAlso p.Value > 0D Then Return p
         Return Nothing
     End Function
 
-    Private Shared Function TrySelectDataView(ByVal page As Page, ByVal idOrControl As String) As DataView
-        If page Is Nothing Then Return Nothing
-        If String.IsNullOrWhiteSpace(idOrControl) Then Return Nothing
+    Private Shared Function SelectDataView(ByVal page As Page, ByVal dataSourceId As String) As DataView
+        If page Is Nothing OrElse String.IsNullOrWhiteSpace(dataSourceId) Then Return Nothing
 
-        ' 1) cerca un SqlDataSource con questo ID
-        Dim ds As SqlDataSource = TryCast(FindControlRecursive(page, idOrControl), SqlDataSource)
-        If ds Is Nothing Then ds = TryCast(FindControlRecursive(page.Master, idOrControl), SqlDataSource)
+        Dim ctrl As Control = FindControlRecursive(page, dataSourceId)
+        Dim sds As SqlDataSource = TryCast(ctrl, SqlDataSource)
+        If sds Is Nothing Then Return Nothing
 
-        If ds IsNot Nothing Then
-            Return SelectToDataView(ds)
-        End If
-
-        ' 2) se l'ID è un controllo (Repeater/DataList/ListView) che usa DataSourceID,
-        '    risolve il relativo DataSource e lo seleziona.
-        Dim ctrl As Control = FindControlRecursive(page, idOrControl)
-        If ctrl Is Nothing Then ctrl = FindControlRecursive(page.Master, idOrControl)
-        If ctrl Is Nothing Then Return Nothing
-
-        Dim prop = ctrl.GetType().GetProperty("DataSourceID")
-        If prop Is Nothing Then Return Nothing
-
-        Dim dsid As String = TryCast(prop.GetValue(ctrl, Nothing), String)
-        If String.IsNullOrWhiteSpace(dsid) Then Return Nothing
-
-        Dim ds2 As SqlDataSource = TryCast(FindControlRecursive(page, dsid), SqlDataSource)
-        If ds2 Is Nothing Then ds2 = TryCast(FindControlRecursive(page.Master, dsid), SqlDataSource)
-        If ds2 Is Nothing Then Return Nothing
-
-        Return SelectToDataView(ds2)
-    End Function
-
-    Private Shared Function SelectToDataView(ByVal ds As SqlDataSource) As DataView
-        If ds Is Nothing Then Return Nothing
         Try
-            Dim data As IEnumerable = TryCast(ds.Select(DataSourceSelectArguments.Empty), IEnumerable)
-            Dim dv As DataView = TryCast(data, DataView)
-            If dv IsNot Nothing Then Return dv
-
-            Dim dt As DataTable = TryCast(data, DataTable)
-            If dt IsNot Nothing Then Return dt.DefaultView
-
+            Dim o As Object = sds.Select(DataSourceSelectArguments.Empty)
+            Return TryCast(o, DataView)
         Catch
-            ' Best-effort: non blocca la pagina se il datasource non è selezionabile in quel momento
-        End Try
-        Return Nothing
-    End Function
-
-    Private Shared Function FindControlRecursive(ByVal root As Control, ByVal id As String) As Control
-        If root Is Nothing Then Return Nothing
-        If String.IsNullOrEmpty(id) Then Return Nothing
-
-        Dim direct As Control = root.FindControl(id)
-        If direct IsNot Nothing Then Return direct
-
-        For Each child As Control In root.Controls
-            Dim found As Control = FindControlRecursive(child, id)
-            If found IsNot Nothing Then Return found
-        Next
-
-        Return Nothing
-    End Function
-
-    ' ------------------------------------------------------------
-    ' Utility URL / JSON
-    ' ------------------------------------------------------------
-
-    Private Shared Function GetBaseUrl(ByVal page As Page) As String
-        If page Is Nothing OrElse HttpContext.Current Is Nothing Then Return ""
-        Dim req As HttpRequest = HttpContext.Current.Request
-        Dim uri As Uri = req.Url
-        Dim baseUrl As String = uri.Scheme & "://" & uri.Authority & req.ApplicationPath
-        If Not baseUrl.EndsWith("/"c) Then baseUrl &= "/"
-        Return baseUrl
-    End Function
-
-    Private Shared Function TryGetHostName(ByVal page As Page) As String
-        Try
-            If HttpContext.Current Is Nothing OrElse HttpContext.Current.Request Is Nothing Then Return ""
-            Return HttpContext.Current.Request.Url.Host
-        Catch
-            Return ""
+            Return Nothing
         End Try
     End Function
 
-    Private Shared Function CombineAbsolute(ByVal baseUrl As String, ByVal relativeOrAbs As String) As String
-        If String.IsNullOrWhiteSpace(relativeOrAbs) Then Return baseUrl
-        If relativeOrAbs.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse relativeOrAbs.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
-            Return relativeOrAbs
+    Public Shared Function EnsureJsonLdScriptTag(ByVal jsonOrScript As String) As String
+        If String.IsNullOrWhiteSpace(jsonOrScript) Then Return ""
+        Dim s As String = jsonOrScript.Trim()
+        If s.StartsWith("<script", StringComparison.OrdinalIgnoreCase) Then
+            Return s
         End If
-        If relativeOrAbs.StartsWith("/"c) Then
-            Return baseUrl.TrimEnd("/"c) & relativeOrAbs
-        End If
-        Return baseUrl.TrimEnd("/"c) & "/" & relativeOrAbs.TrimStart("/"c)
+        Return "<script type=""application/ld+json"">" & s & "</script>"
     End Function
 
-    Public Shared Function ToAbsoluteUrl(ByVal page As Page, ByVal url As String) As String
-        If String.IsNullOrWhiteSpace(url) Then Return ""
-        If url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
-            Return url
-        End If
-        Dim baseUrl As String = GetBaseUrl(page)
-        Return CombineAbsolute(baseUrl, url)
-    End Function
-
-    Private Shared Function NormalizeImageUrl(ByVal page As Page, ByVal img As String) As String
-        If String.IsNullOrWhiteSpace(img) Then Return ""
-
-        Dim trimmed As String = img.Trim()
-        If trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
-            Return trimmed
-        End If
-
-        If trimmed.StartsWith("/"c) Then
-            Return CombineAbsolute(GetBaseUrl(page), trimmed)
-        End If
-
-        ' Se è un filename, prova il percorso standard immagini prodotto
-        If trimmed.IndexOf("/"c) < 0 AndAlso trimmed.IndexOf("\"c) < 0 Then
-            Return CombineAbsolute(GetBaseUrl(page), "Public/images/articoli/" & trimmed)
-        End If
-
-        Return CombineAbsolute(GetBaseUrl(page), trimmed)
-    End Function
-
-    Private Shared Function EnsureJsonLdScriptTag(ByVal jsonLdOrScript As String) As String
-        Dim t As String = jsonLdOrScript.Trim()
-        If t.StartsWith("<script", StringComparison.OrdinalIgnoreCase) Then Return t
-        Return "<script type=""application/ld+json"">" & t & "</script>"
-    End Function
-
-    Private Shared Function SerializeJson(ByVal obj As Object) As String
-        Dim jss As New JavaScriptSerializer()
-        jss.MaxJsonLength = Integer.MaxValue
-        Return jss.Serialize(obj)
-    End Function
-
-    ' Mantengo JsonEscape PUBLIC perché spesso torna utile anche altrove;
-    ' qui è corretta (niente escape C# con \" o char costanti errate).
+    ' JSON string escaping “safe” per VB 2012
     Public Shared Function JsonEscape(ByVal value As String) As String
         If value Is Nothing Then Return ""
+
         Dim sb As New StringBuilder(value.Length + 16)
 
         For Each ch As Char In value
-            Select Case ch
-                Case """"c
-                    sb.Append("\\""") ' => \"
-                Case "\"c
-                    sb.Append("\\")   ' => \\
-                Case ChrW(8) ' backspace
-                    sb.Append("\b")
-                Case ChrW(12) ' form feed
-                    sb.Append("\f")
-                Case ChrW(10) ' \n
-                    sb.Append("\n")
-                Case ChrW(13) ' \r
-                    sb.Append("\r")
-                Case ChrW(9) ' \t
-                    sb.Append("\t")
+            Select Case AscW(ch)
+                Case 34 ' "
+                    sb.Append("\"c) : sb.Append(""""c)
+                Case 92 ' \
+                    sb.Append("\"c) : sb.Append("\"c)
+                Case 8 ' backspace
+                    sb.Append("\"c) : sb.Append("b"c)
+                Case 12 ' formfeed
+                    sb.Append("\"c) : sb.Append("f"c)
+                Case 10 ' lf
+                    sb.Append("\"c) : sb.Append("n"c)
+                Case 13 ' cr
+                    sb.Append("\"c) : sb.Append("r"c)
+                Case 9 ' tab
+                    sb.Append("\"c) : sb.Append("t"c)
                 Case Else
                     Dim code As Integer = AscW(ch)
                     If code < 32 Then
                         sb.Append("\u")
-                        sb.Append(code.ToString("x4"))
+                        sb.Append(code.ToString("x4", CultureInfo.InvariantCulture))
                     Else
                         sb.Append(ch)
                     End If
@@ -585,45 +472,176 @@ Public NotInheritable Class SeoBuilder
         Return sb.ToString()
     End Function
 
-    Private Shared Function GetStringField(ByVal drv As DataRowView, ByVal ParamArray names() As String) As String
-        If drv Is Nothing OrElse names Is Nothing Then Return ""
+    ' =========================================================
+    ' Control finding
+    ' =========================================================
+
+    Public Shared Function FindControlRecursive(ByVal root As Control, ByVal id As String) As Control
+        If root Is Nothing OrElse String.IsNullOrWhiteSpace(id) Then Return Nothing
+
+        Dim c As Control = root.FindControl(id)
+        If c IsNot Nothing Then Return c
+
+        For Each child As Control In root.Controls
+            Dim found As Control = FindControlRecursive(child, id)
+            If found IsNot Nothing Then Return found
+        Next
+
+        Return Nothing
+    End Function
+
+    ' =========================================================
+    ' URL / fallback helpers
+    ' =========================================================
+
+    Private Shared Function GetBaseUrl(ByVal page As Page) As String
+        Dim ctx As HttpContext = HttpContext.Current
+        If ctx Is Nothing OrElse ctx.Request Is Nothing Then Return ""
+
+        Dim req As HttpRequest = ctx.Request
+        Dim scheme As String = If(req.IsSecureConnection, "https", "http")
+        Dim host As String = req.Url.Host
+        Dim port As Integer = req.Url.Port
+
+        Dim isDefaultPort As Boolean = (scheme = "http" AndAlso port = 80) OrElse (scheme = "https" AndAlso port = 443)
+        If isDefaultPort Then
+            Return scheme & "://" & host
+        End If
+        Return scheme & "://" & host & ":" & port.ToString(CultureInfo.InvariantCulture)
+    End Function
+
+    Private Shared Function GetHomeCanonicalUrl(ByVal page As Page) As String
+        Dim baseUrl As String = GetBaseUrl(page)
+        If String.IsNullOrWhiteSpace(baseUrl) Then Return "/"
+        Return baseUrl & "/"
+    End Function
+
+    Private Shared Function GetLogoUrl(ByVal page As Page) As String
+        ' Prova a leggere da Session (se Page.master.vb la valorizza)
+        Dim ctx As HttpContext = HttpContext.Current
+        Dim baseUrl As String = GetBaseUrl(page)
+
+        If ctx IsNot Nothing AndAlso ctx.Session IsNot Nothing Then
+            Dim s As String = SafeString(TryCast(ctx.Session("logo"), Object))
+            If Not String.IsNullOrWhiteSpace(s) Then
+                ' se è già assoluto
+                If s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse s.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+                    Return s
+                End If
+                ' se è relativo
+                If s.StartsWith("/", StringComparison.Ordinal) Then
+                    Return baseUrl & s
+                End If
+                Return baseUrl & "/" & s
+            End If
+        End If
+
+        ' fallback
+        If Not String.IsNullOrWhiteSpace(baseUrl) Then
+            Return baseUrl & "/Public/images/logo.png"
+        End If
+        Return "/Public/images/logo.png"
+    End Function
+
+    Private Shared Function GetCompanyNameFallback() As String
+        Dim ctx As HttpContext = HttpContext.Current
+        If ctx IsNot Nothing AndAlso ctx.Session IsNot Nothing Then
+            Dim rs As String = SafeString(TryCast(ctx.Session("ragionesociale"), Object))
+            If Not String.IsNullOrWhiteSpace(rs) Then Return rs.Trim()
+        End If
+        Return "KeepStore"
+    End Function
+
+    Private Shared Function GetDefaultHomeDescription() As String
+        ' descrizione “safe” (non dipende da tabelle DB)
+        Dim name As String = GetCompanyNameFallback()
+        Return name & " - Catalogo online, offerte e nuovi arrivi. Spedizione rapida e assistenza clienti."
+    End Function
+
+    Private Shared Function SafeString(ByVal o As Object) As String
+        If o Is Nothing Then Return ""
+        Return Convert.ToString(o, CultureInfo.InvariantCulture)
+    End Function
+
+    ' =========================================================
+    ' DataRowView safe getters
+    ' =========================================================
+
+    Private Shared Function HasCol(ByVal row As DataRowView, ByVal colName As String) As Boolean
+        If row Is Nothing OrElse row.DataView Is Nothing OrElse row.DataView.Table Is Nothing Then Return False
+        Return row.DataView.Table.Columns.Contains(colName)
+    End Function
+
+    Private Shared Function GetString(ByVal row As DataRowView, ByVal ParamArray names() As String) As String
         For Each n As String In names
-            If String.IsNullOrWhiteSpace(n) Then Continue For
-            If HasColumn(drv, n) Then
-                Dim o As Object = drv(n)
+            If Not String.IsNullOrWhiteSpace(n) AndAlso HasCol(row, n) Then
+                Dim o As Object = row(n)
                 If o IsNot Nothing AndAlso o IsNot DBNull.Value Then
-                    Return Convert.ToString(o)
+                    Dim s As String = Convert.ToString(o, CultureInfo.InvariantCulture)
+                    If Not String.IsNullOrWhiteSpace(s) Then Return s
                 End If
             End If
         Next
         Return ""
     End Function
 
-    Private Shared Function GetIntField(ByVal drv As DataRowView, ByVal ParamArray names() As String) As Integer
-        If drv Is Nothing OrElse names Is Nothing Then Return 0
+    Private Shared Function GetLong(ByVal row As DataRowView, ByVal ParamArray names() As String) As Long
         For Each n As String In names
-            If String.IsNullOrWhiteSpace(n) Then Continue For
-            If HasColumn(drv, n) Then
-                Dim o As Object = drv(n)
+            If Not String.IsNullOrWhiteSpace(n) AndAlso HasCol(row, n) Then
+                Dim o As Object = row(n)
                 If o IsNot Nothing AndAlso o IsNot DBNull.Value Then
-                    Dim s As String = Convert.ToString(o)
-                    Dim v As Integer = 0
-                    If Integer.TryParse(s, v) Then Return v
+                    Dim s As String = Convert.ToString(o, CultureInfo.InvariantCulture)
+                    Dim v As Long
+                    If Long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, v) Then Return v
                 End If
             End If
         Next
-        Return 0
+        Return 0L
     End Function
 
-    Private Shared Function HasColumn(ByVal drv As DataRowView, ByVal name As String) As Boolean
-        If drv Is Nothing OrElse drv.DataView Is Nothing OrElse drv.DataView.Table Is Nothing Then Return False
-        If drv.DataView.Table.Columns.Contains(name) Then Return True
+    Private Shared Function GetDecimal(ByVal row As DataRowView, ByVal ParamArray names() As String) As Decimal?
+        For Each n As String In names
+            If Not String.IsNullOrWhiteSpace(n) AndAlso HasCol(row, n) Then
+                Dim o As Object = row(n)
+                If o IsNot Nothing AndAlso o IsNot DBNull.Value Then
+                    Dim v As Decimal
+                    If TypeOf o Is Decimal Then
+                        v = DirectCast(o, Decimal)
+                        Return v
+                    End If
+                    Dim s As String = Convert.ToString(o, CultureInfo.InvariantCulture)
+                    If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, v) Then Return v
+                End If
+            End If
+        Next
+        Return Nothing
+    End Function
 
-        ' fallback case-insensitive
-        For Each col As DataColumn In drv.DataView.Table.Columns
-            If String.Equals(col.ColumnName, name, StringComparison.OrdinalIgnoreCase) Then Return True
+    Private Shared Function GetBool(ByVal row As DataRowView, ByVal ParamArray names() As String) As Boolean
+        For Each n As String In names
+            If Not String.IsNullOrWhiteSpace(n) AndAlso HasCol(row, n) Then
+                Dim o As Object = row(n)
+                If o IsNot Nothing AndAlso o IsNot DBNull.Value Then
+                    If TypeOf o Is Boolean Then Return DirectCast(o, Boolean)
+                    Dim s As String = Convert.ToString(o, CultureInfo.InvariantCulture).Trim()
+                    If s = "1" OrElse s.Equals("true", StringComparison.OrdinalIgnoreCase) Then Return True
+                End If
+            End If
         Next
         Return False
     End Function
+
+    ' =========================================================
+    ' Internal model
+    ' =========================================================
+
+    Private Class JsonItem
+        Public Property SchemaType As String
+        Public Property Name As String
+        Public Property Url As String
+        Public Property ImageUrl As String
+        Public Property Sku As String
+        Public Property Price As Decimal?
+    End Class
 
 End Class
