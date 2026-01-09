@@ -192,7 +192,6 @@ Partial Class _Default
 
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
 
-        Me.Title = Me.Title & " - " & Convert.ToString(Me.Session("AziendaDescrizione"))
 
         IvaTipo = 0
         If Session("IvaTipo") IsNot Nothing Then Integer.TryParse(Session("IvaTipo").ToString(), IvaTipo)
@@ -247,7 +246,6 @@ Partial Class _Default
         ' SEO (Home)
         EnsureHomeSeo()
 
-        SeoBuilder.ApplyHomeSeo(Me.Page)
 
     End Sub
 
