@@ -21,22 +21,7 @@ Public NotInheritable Class SeoBuilder
     ' --------------------------
     ' PUBLIC: High level helpers
     ' --------------------------
-    ' ===================== INIZIO BLOCCO COMPATIBILITÀ (carrello + altre pagine) =====================
-' Alcune pagine chiamano nomi "storici" (AddOrReplaceMeta / SetCanonical).
-' Qui li mappiamo ai metodi reali (EnsureMetaName / EnsureCanonical) senza cambiare logica.
 
-Public Shared Sub AddOrReplaceMeta(page As Page, name As String, content As String)
-    EnsureMetaName(page, name, content)
-End Sub
-
-Public Shared Sub AddOrReplaceMetaProperty(page As Page, prop As String, content As String)
-    EnsureMetaProperty(page, prop, content)
-End Sub
-
-Public Shared Sub SetCanonical(page As Page, canonicalUrl As String)
-    EnsureCanonical(page, canonicalUrl)
-End Sub
-' ===================== FINE BLOCCO COMPATIBILITÀ =====================
     ' Backward-compatible wrapper (some pages may call this name).
     Public Shared Sub ApplyHomeSeo(page As Page)
         Dim title As String = If(page IsNot Nothing, page.Title, String.Empty)
@@ -335,7 +320,8 @@ End Sub
             page.Header.Controls.Add(scriptTag)
         End If
     End Sub
-    Public Shared Function FindControlRecursive(root As Control, id As String) As Control
+
+    Private Shared Function FindControlRecursive(root As Control, id As String) As Control
         If root Is Nothing OrElse String.IsNullOrEmpty(id) Then Return Nothing
         Dim c As Control = root.FindControl(id)
         If c IsNot Nothing Then Return c
@@ -384,78 +370,35 @@ End Sub
         If String.IsNullOrWhiteSpace(url) Then Return ""
         Return url.Trim()
     End Function
-    
-    Public Shared Function BuildSimplePageJsonLd(pageTitle As String,
-                                             pageDescription As String,
-                                             canonicalUrl As String,
-                                             pageType As String) As String
-    Dim t As String = If(String.IsNullOrWhiteSpace(pageType), "WebPage", pageType.Trim())
-    Dim name As String = If(pageTitle, "").Trim()
-    Dim descr As String = If(pageDescription, "").Trim()
-    Dim url As String = NormalizeUrl(canonicalUrl)
-
-    Dim sb As New StringBuilder()
-    sb.Append("{")
-    sb.Append("""@context"":""https://schema.org"",")
-    sb.Append("""@type"":""").Append(JsonEscape(t)).Append(""",")
-    sb.Append("""name"":""").Append(JsonEscape(name)).Append("""")
-
-    If Not String.IsNullOrWhiteSpace(descr) Then
-        sb.Append(",").Append("""description"":""").Append(JsonEscape(descr)).Append("""")
-    End If
-    If Not String.IsNullOrWhiteSpace(url) Then
-        sb.Append(",").Append("""url"":""").Append(JsonEscape(url)).Append("""")
-    End If
-
-    sb.Append("}")
-    Return sb.ToString()
-    End Function
 
     ' JSON string escape safe for schema.org payloads.
     Public Shared Function JsonEscape(value As String) As String
-    If String.IsNullOrEmpty(value) Then Return ""
+        If value Is Nothing Then Return ""
 
-    Dim sb As New StringBuilder(value.Length + 16)
-
-    For Each ch As Char In value
-        Select Case ch
-
-            Case "\"c
-                ' JSON escape for a backslash character => "\\"
-                sb.Append("\"c).Append("\"c)
-
-            Case """"c
-                ' JSON escape for a quote character => "\""
-                sb.Append("\"c).Append(""""c)
-
-            Case ControlChars.Cr
-                sb.Append("\r")
-
-            Case ControlChars.Lf
-                sb.Append("\n")
-
-            Case ControlChars.Tab
-                sb.Append("\t")
-
-            Case ControlChars.Back
-                sb.Append("\b")
-
-            Case ControlChars.FormFeed
-                sb.Append("\f")
-
-            Case Else
-                Dim code As Integer = AscW(ch)
-
-                If code < 32 Then
-                    sb.Append("\u").Append(code.ToString("x4"))
-                Else
-                    sb.Append(ch)
-                End If
-
-        End Select
-    Next
-
-    Return sb.ToString()
-End Function
+        Dim sb As New StringBuilder(value.Length + 16)
+        For Each ch As Char In value
+            Select Case ch
+                Case "\"c
+                    sb.Append("\\")
+                Case """"c
+                    sb.Append("\")
+                    sb.Append("""")
+                Case ControlChars.Cr
+                    sb.Append("\r")
+                Case ControlChars.Lf
+                    sb.Append("\n")
+                Case ControlChars.Tab
+                    sb.Append("\t")
+                Case Else
+                    Dim code As Integer = AscW(ch)
+                    If code < 32 Then
+                        sb.Append("\u").Append(code.ToString("x4"))
+                    Else
+                        sb.Append(ch)
+                    End If
+            End Select
+        Next
+        Return sb.ToString()
+    End Function
 
 End Class
