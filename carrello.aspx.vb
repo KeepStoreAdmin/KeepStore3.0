@@ -1606,8 +1606,8 @@ End Function
     ' --- SEO hardening: carrello/checkout noindex + canonical + JSON-LD ---
 Dim canonical As String = Request.Url.GetLeftPart(UriPartial.Path)
 
-AddOrReplaceMeta(Me, "robots", "noindex, nofollow")
-SetCanonical(Me, canonical)
+AddOrReplaceMeta(Me.Page, "robots", "noindex, nofollow")
+SetCanonical(Me.Page, canonical)
 
 Dim jsonLd As String = SeoBuilder.BuildSimplePageJsonLd(Me.Title,
                                                         "Checkout e riepilogo carrello su Taikun.",
@@ -3473,7 +3473,7 @@ End Function
     ' SEO helpers locali (compatibilità: SeoBuilder non disponibile)
     ' ============================================================
 
-    Private Shared Sub AddOrReplaceMeta(ByVal page As Page, ByVal metaName As String, ByVal metaContent As String)
+    Private Shared Sub AddOrReplaceMeta(ByVal page As System.Web.UI.Page, ByVal metaName As String, ByVal metaContent As String)
         If page Is Nothing OrElse page.Header Is Nothing Then Exit Sub
 
         Dim found As System.Web.UI.HtmlControls.HtmlMeta = Nothing
@@ -3494,7 +3494,7 @@ End Function
         found.Content = metaContent
     End Sub
 
-    Private Shared Sub SetCanonical(ByVal page As Page, ByVal canonicalUrl As String)
+    Private Shared Sub SetCanonical(ByVal page As System.Web.UI.Page, ByVal canonicalUrl As String)
         If page Is Nothing OrElse page.Header Is Nothing Then Exit Sub
         If String.IsNullOrWhiteSpace(canonicalUrl) Then Exit Sub
 
@@ -3518,37 +3518,44 @@ End Function
 
         found.Href = canonicalUrl
     End Sub
-
     Private Shared Function BuildSimplePageJsonLd(ByVal pageTitle As String, ByVal descr As String, ByVal canonicalUrl As String) As String
-        Dim t As String = System.Web.HttpUtility.JavaScriptStringEncode(If(pageTitle, ""))
-        Dim d As String = System.Web.HttpUtility.JavaScriptStringEncode(If(descr, ""))
-        Dim u As String = System.Web.HttpUtility.JavaScriptStringEncode(If(canonicalUrl, ""))
-
-        Dim sb As New System.Text.StringBuilder()
-        sb.Append("{\"@context\":\"https://schema.org\",\"@type\":\"WebPage\"")
-        If t <> "" Then sb.Append(",\"name\":\"").Append(t).Append("\"")
-        If d <> "" Then sb.Append(",\"description\":\"").Append(d).Append("\"")
-        If u <> "" Then sb.Append(",\"url\":\"").Append(u).Append("\"")
+        Dim sb As New StringBuilder()
+        sb.Append("{""@context"":""https://schema.org"",""@type"":""WebPage"")
+        sb.Append(",""name"":""").Append(JsonEscape(pageTitle)).Append("""")
+        sb.Append(",""url"":""").Append(JsonEscape(canonicalUrl)).Append("""")
+        If Not String.IsNullOrEmpty(descr) Then
+            sb.Append(",""description"":""").Append(JsonEscape(descr)).Append("""")
+        End If
         sb.Append("}")
         Return sb.ToString()
     End Function
-
-    Private Shared Sub SetJsonLdOnMaster(ByVal page As Page, ByVal jsonLd As String)
-        If page Is Nothing Then Exit Sub
-        If String.IsNullOrWhiteSpace(jsonLd) Then Exit Sub
-
-        Dim scriptTag As String = "<script type=\"application/ld+json\">" & jsonLd & "</script>"
-
-        If page.Master IsNot Nothing Then
-            Dim lit As System.Web.UI.WebControls.Literal = TryCast(page.Master.FindControl("litSeoJsonLd"), System.Web.UI.WebControls.Literal)
-            If lit IsNot Nothing Then
-                lit.Text = scriptTag
-                Exit Sub
+    Private Shared Sub SetJsonLdOnMaster(ByVal page As System.Web.UI.Page, ByVal jsonLd As String)
+        Try
+            Dim m As Object = page.Master
+            If m IsNot Nothing Then
+                Dim prop = m.GetType().GetProperty("SeoJsonLd")
+                If prop IsNot Nothing AndAlso prop.CanWrite Then
+                    prop.SetValue(m, jsonLd, Nothing)
+                    Return
+                End If
             End If
-        End If
+        Catch
+            ' NOP
+        End Try
 
-        If page.Header IsNot Nothing Then
-            page.Header.Controls.Add(New System.Web.UI.LiteralControl(scriptTag))
-        End If
+        Try
+            Dim ph As Control = page.Header.FindControl("HeadContent")
+            If ph Is Nothing Then
+                ' fallback: inject directly in <head>
+                ph = page.Header
+            End If
+
+            Dim lit As New Literal()
+            lit.ID = "litJsonLd"
+            lit.Text = "<script type=""application/ld+json"">" & jsonLd & "</script>"
+            ph.Controls.Add(lit)
+        Catch
+            ' NOP
+        End Try
     End Sub
 End Class
