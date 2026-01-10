@@ -211,6 +211,16 @@ Partial Class Articolo
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
         SettaTitolo()
         AggiornaVisite()
+        Try
+
+            EnsureProductSeo()
+
+        Catch
+
+            ' no-op
+
+        End Try
+
     End Sub
 
     Public Sub SettaTitolo()
@@ -712,13 +722,6 @@ Partial Class Articolo
     ' ============================================================
     ' SEO (Scheda Prodotto)
     ' ============================================================
-    Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
-        Try
-            EnsureProductSeo()
-        Catch
-            ' no-op
-        End Try
-    End Sub
 
     Private Sub EnsureProductSeo()
         Dim canonical As String = Request.Url.GetLeftPart(UriPartial.Path)
@@ -765,39 +768,53 @@ Partial Class Articolo
         End Try
     End Sub
 
-    Private Shared Function BuildProductJsonLd(ByVal name As String, ByVal sku As String, ByVal img1 As String, ByVal canonical As String, ByVal hasPrice As Boolean, ByVal price As Decimal, ByVal giacenza As Integer) As String
-        Dim sb As New System.Text.StringBuilder(512)
+    Private Shared Function BuildProductJsonLd(ByVal name As String, ByVal sku As String, ByVal imgUrl As String, ByVal canonicalUrl As String, ByVal hasPrice As Boolean, ByVal priceValue As Decimal, ByVal giacenza As Integer) As String
+        Dim sb As New System.Text.StringBuilder()
+
         sb.Append("{")
-        sb.Append("\"@context\":\"https://schema.org\",")
-        sb.Append("\"@type\":\"Product\",")
-        sb.Append("\"name\":\"").Append(JsonEscape(name)).Append("\"")
+        sb.Append("""@context"":""https://schema.org"",")
+        sb.Append("""@type"":""Product"",")
+        sb.Append("""name"":""")
+        sb.Append(JsonEscape(name))
+        sb.Append("""")
 
         If Not String.IsNullOrEmpty(sku) Then
-            sb.Append(",\"sku\":\"").Append(JsonEscape(sku)).Append("\"")
+            sb.Append(","""sku"":""")
+            sb.Append(JsonEscape(sku))
+            sb.Append("""")
         End If
 
-        If Not String.IsNullOrEmpty(img1) Then
-            Dim imgUrl As String = ResolveImageAbsolute(img1)
-            If Not String.IsNullOrEmpty(imgUrl) Then
-                sb.Append(",\"image\":[\"").Append(JsonEscape(imgUrl)).Append("\"]")
-            End If
+        If Not String.IsNullOrEmpty(imgUrl) Then
+            sb.Append(","""image""":[""")
+            sb.Append(JsonEscape(imgUrl))
+            sb.Append("""]")
         End If
 
-        sb.Append(",\"url\":\"").Append(JsonEscape(canonical)).Append("\"")
+        If Not String.IsNullOrEmpty(canonicalUrl) Then
+            sb.Append(","""url"":""")
+            sb.Append(JsonEscape(canonicalUrl))
+            sb.Append("""")
+        End If
 
         If hasPrice Then
-            sb.Append(",\"offers\":{")
-            sb.Append("\"@type\":\"Offer\",")
-            sb.Append("\"priceCurrency\":\"EUR\",")
-            sb.Append("\"price\":\"").Append(JsonEscape(price.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))).Append("\",")
-            Dim availability As String = If(giacenza > 0, "https://schema.org/InStock", "https://schema.org/OutOfStock")
-            sb.Append("\"availability\":\"").Append(JsonEscape(availability)).Append("\"")
+            sb.Append(","""offers"":{")
+            sb.Append("""@type"":""Offer"",")
+            sb.Append("""priceCurrency"":""EUR"",")
+            sb.Append("""price"":""")
+            sb.Append(priceValue.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))
+            sb.Append(""",")
+
+            Dim avail As String = If(giacenza > 0, "https://schema.org/InStock", "https://schema.org/OutOfStock")
+            sb.Append("""availability"":""")
+            sb.Append(avail)
+            sb.Append("""")
             sb.Append("}")
         End If
 
         sb.Append("}")
         Return sb.ToString()
     End Function
+
 
     Private Shared Function ResolveImageAbsolute(ByVal img1 As String) As String
         Try
@@ -863,7 +880,7 @@ Partial Class Articolo
         End Try
     End Function
 
-    Private Shared Sub AddOrReplaceMeta(ByVal page As Page, ByVal metaName As String, ByVal metaContent As String)
+    Private Shared Sub AddOrReplaceMeta(ByVal page As System.Web.UI.Page, ByVal metaName As String, ByVal metaContent As String)
         If page Is Nothing OrElse page.Header Is Nothing Then Exit Sub
 
         Dim found As System.Web.UI.HtmlControls.HtmlMeta = Nothing
@@ -884,7 +901,7 @@ Partial Class Articolo
         found.Content = metaContent
     End Sub
 
-    Private Shared Sub SetCanonical(ByVal page As Page, ByVal canonicalUrl As String)
+    Private Shared Sub SetCanonical(ByVal page As System.Web.UI.Page, ByVal canonicalUrl As String)
         If page Is Nothing OrElse page.Header Is Nothing Then Exit Sub
 
         Dim found As System.Web.UI.HtmlControls.HtmlLink = Nothing
@@ -905,10 +922,10 @@ Partial Class Articolo
         found.Href = canonicalUrl
     End Sub
 
-    Private Shared Sub SetJsonLdOnMaster(ByVal page As Page, ByVal jsonLd As String)
+    Private Shared Sub SetJsonLdOnMaster(ByVal page As System.Web.UI.Page, ByVal jsonLd As String)
         If page Is Nothing Then Exit Sub
 
-        Dim script As String = "<script type=\"application/ld+json\">" & jsonLd & "</script>"
+        Dim script As String = "<script type=""application/ld+json"">" & jsonLd & "</script>"
 
         Try
             If page.Master IsNot Nothing Then
