@@ -1,31 +1,14 @@
-<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="carrello.aspx.vb" Inherits="carrello" %>
+﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="carrello.aspx.vb" Inherits="carrello" Debug="true"%>
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server"><%: Page.Title %></asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <!-- Carrello (KEEPSTORE3) - HeadContent lasciato intenzionalmente minimale -->
+    <style type="text/css">
+        /* Carrello: integrazione template (minimo indispensabile) */
+        .cart-table img { max-width: 90px; height: auto; }
+    </style>
 </asp:Content>
 
-<asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
-    <!-- ============================================================
-         carrello.aspx (KEEPSTORE3 - TEMPLATE-FIRST)
-         FIX PARSER: nessun markup/commento fuori dai blocchi <asp:Content>
-         NOTE: markup derivato da Entropic per stabilità + compatibilità IDs.
-         ============================================================ -->
-
-    <!-- Page Title / Breadcrumb (template wrapper) -->
-    <section class="tf-page-title style-2">
-        <div class="container">
-            <div class="tf-page-title-inner">
-                <h1 class="heading">Carrello</h1>
-                <ul class="tf-breadcrumb">
-                    <li><a href="Default.aspx">Home</a></li>
-                    <li>Carrello</li>
-                </ul>
-            </div>
-        </div>
-    </section>
-
-
+<asp:Content ID="Content2" ContentPlaceHolderID="Contentplaceholder1" Runat="Server">
 
 
     <asp:ScriptManager ID="ScriptManager1" runat="server" />
@@ -59,8 +42,10 @@
     <asp:LinkButton ID="dummy2" runat="server"></asp:LinkButton>
 
 
+</asp:Content>
 
 
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
 
     <h1>Il tuo carrello</h1>
 
@@ -132,7 +117,6 @@
                                             <asp:Label ID="lblValoreIva" runat="server" BackColor="#e12825" Font-Size="7pt" ForeColor="white" Style="line-height: 150%" Text='<%# Eval("Valoreiva") %>' Visible="False"></asp:Label>
                                             <asp:Label ID="lblidIvaRC" runat="server" BackColor="#e12825" Font-Size="7pt" ForeColor="white" Style="line-height: 150%" Text='<%# Eval("IdIvaRC") %>' Visible="False"></asp:Label>
                                             <asp:Label ID="lblPeso" runat="server" Text='<%# Eval("PesoRiga") %>' Visible="False"></asp:Label>
-<asp:Label ID="lblArrivo" runat="server" Text="0" Visible="False"></asp:Label>
                                         </td>
                                     </tr>
                                 </table>
@@ -265,7 +249,6 @@
                                             <asp:Label ID="lblValoreIva" runat="server" BackColor="#e12825" Font-Size="7pt" ForeColor="white" Style="line-height: 150%" Text='<%# Eval("Valoreiva") %>' Visible="False"></asp:Label>
                                             <asp:Label ID="lblidIvaRC" runat="server" BackColor="#e12825" Font-Size="7pt" ForeColor="white" Style="line-height: 150%" Text='<%# Eval("IdIvaRC") %>' Visible="False"></asp:Label>
                                             <asp:Label ID="lblPeso" runat="server" Text='<%# Eval("PesoRiga") %>' Visible="False"></asp:Label>
-<asp:Label ID="lblArrivo" runat="server" Text="0" Visible="False"></asp:Label>
                                         </td>
                                     </tr>
                                     
@@ -553,8 +536,7 @@
             <Columns>
                 <asp:TemplateField ShowHeader="False">
                     <ItemTemplate>
-                        <asp:RadioButton ID="rbSpedizione" runat="server" AutoPostBack="True" Checked='false'
-                            GroupName="spedizione" Value='<%# Eval("Id") %>' />
+                        <asp:RadioButton ID="rbSpedizione" runat="server" AutoPostBack="True" GroupName="spedizione" />
                     </ItemTemplate>
                     <ItemStyle HorizontalAlign="Left" VerticalAlign="Middle" />
                 </asp:TemplateField>
@@ -642,8 +624,7 @@
                 <asp:TemplateField Visible="False">
                     <ItemTemplate>
                         Soglia:<asp:Label ID="lblSogliaMinima" runat="server" Text='<%# Eval("Soglia_Minima") %>'></asp:Label><br />
-                        Peso Max:<asp:Label ID="lblPeso" runat="server" Text='<%# Eval("PesoMax") %>'></asp:Label>
-<asp:Label ID="lblArrivo" runat="server" Text="0" Visible="False"></asp:Label><br />
+                        Peso Max:<asp:Label ID="lblPeso" runat="server" Text='<%# Eval("PesoMax") %>'></asp:Label><br />
                         Percentuale:<asp:Label ID="lblPercentuale" runat="server" Text='<%# Eval("Costo_Percentuale") %>'></asp:Label>
                     </ItemTemplate>
                 </asp:TemplateField>
@@ -702,8 +683,7 @@
             <Columns>
                 <asp:TemplateField HeaderText="Seleziona">
                     <ItemTemplate>
-                        <asp:RadioButton id="rbSpedizione" runat="server" autopostback="True" checked='false'
-                            groupname="spedizione" value='<%# Eval("Id") %>'></asp:RadioButton>
+                        <asp:RadioButton id="rbSpedizione" runat="server" autopostback="True" groupname="spedizione" ></asp:RadioButton>
                     </ItemTemplate>
                 </asp:TemplateField>
                 <asp:TemplateField HeaderText="id" InsertVisible="False" SortExpression="id" Visible="False">
@@ -800,7 +780,7 @@
                     <td style=" text-align:left; vertical-align:middle;">
                       <asp:RadioButton ID="rbSpedizioneGratis" runat="server" AutoPostBack="True" Checked='True'
                       Font-Bold="True" Font-Names="Arial" ForeColor="Red" GroupName="spedizione"
-                      Text="" Value='<%# Eval("Id") %>' />
+                      Text="" />
                     </td>
                     <td>
                         <img src="Public/Vettori/free.jpg"  alt=""/>
@@ -883,8 +863,8 @@
 						<Columns>
 							<asp:TemplateField HeaderText="sel">
 								<ItemTemplate>
-									<asp:RadioButton id="rbPagamento" runat="server" checked='<%# Eval("Predefinito") %>'
-										groupname="pagamento" value='<%# eval("id") %>' AutoPostBack="True"></asp:RadioButton>
+									<asp:RadioButton id="rbPagamento" runat="server" Checked='<%# Eval("Predefinito") %>'
+										groupname="pagamento" AutoPostBack="True"></asp:RadioButton>
 								</ItemTemplate>
 							</asp:TemplateField>
 							<asp:TemplateField>
@@ -1184,7 +1164,7 @@
                         </td>
                     </tr>  
                     <tr>
-						<td colspan="2"><asp:CheckBox runat="server" ID="CHKPREDEFINITO" Text="Indirizzo predefinito" Checked="false" /><br />
+						<td colspan="2"><asp:CheckBox runat="server" ID="CHKPREDEFINITO" Text="Indirizzo predefinito" /><br />
 						</td>
 					</tr> 
                     <tr>
@@ -1340,6 +1320,6 @@
 			End If
 		End Function
 	</script>
-
-
 </asp:Content>
+
+
