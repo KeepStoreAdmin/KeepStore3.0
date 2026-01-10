@@ -779,25 +779,25 @@ Partial Class Articolo
         sb.Append("""")
 
         If Not String.IsNullOrEmpty(sku) Then
-            sb.Append(","""sku"":""")
+            sb.Append(",""sku"":""")
             sb.Append(JsonEscape(sku))
             sb.Append("""")
         End If
 
         If Not String.IsNullOrEmpty(imgUrl) Then
-            sb.Append(","""image""":[""")
+            sb.Append(",""image"":[""")
             sb.Append(JsonEscape(imgUrl))
             sb.Append("""]")
         End If
 
         If Not String.IsNullOrEmpty(canonicalUrl) Then
-            sb.Append(","""url"":""")
+            sb.Append(",""url"":""")
             sb.Append(JsonEscape(canonicalUrl))
             sb.Append("""")
         End If
 
         If hasPrice Then
-            sb.Append(","""offers"":{")
+            sb.Append(",""offers"":{")
             sb.Append("""@type"":""Offer"",")
             sb.Append("""priceCurrency"":""EUR"",")
             sb.Append("""price"":""")
