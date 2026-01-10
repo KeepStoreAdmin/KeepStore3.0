@@ -335,8 +335,7 @@ End Sub
             page.Header.Controls.Add(scriptTag)
         End If
     End Sub
-
-    Private Shared Function FindControlRecursive(root As Control, id As String) As Control
+    Public Shared Function FindControlRecursive(root As Control, id As String) As Control
         If root Is Nothing OrElse String.IsNullOrEmpty(id) Then Return Nothing
         Dim c As Control = root.FindControl(id)
         If c IsNot Nothing Then Return c
