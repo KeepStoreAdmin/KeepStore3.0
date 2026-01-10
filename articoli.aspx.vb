@@ -1,4 +1,4 @@
-Imports MySql.Data.MySqlClient
+﻿Imports MySql.Data.MySqlClient
 Imports System.Data
 Imports System.Text.RegularExpressions
 Imports System.Collections
@@ -1475,13 +1475,45 @@ Partial Class Articoli
     End Sub
     Private Shared Function BuildSimplePageJsonLd(ByVal pageTitle As String, ByVal descr As String, ByVal canonicalUrl As String) As String
         Dim sb As New StringBuilder()
-        sb.Append("{""@context"":""https://schema.org"",""@type"":""WebPage"")
+        sb.Append("{""@context"":""https://schema.org"",""@type"":""WebPage""")
         sb.Append(",""name"":""").Append(JsonEscape(pageTitle)).Append("""")
         sb.Append(",""url"":""").Append(JsonEscape(canonicalUrl)).Append("""")
         If Not String.IsNullOrEmpty(descr) Then
             sb.Append(",""description"":""").Append(JsonEscape(descr)).Append("""")
         End If
         sb.Append("}")
+        Return sb.ToString()
+    End Function
+
+    Private Shared Function JsonEscape(ByVal s As String) As String
+        If s Is Nothing Then Return ""
+        Dim sb As New StringBuilder(s.Length + 16)
+
+        For Each ch As Char In s
+            Select Case ch
+                Case """"c
+                    ' JSON: \"
+                    sb.Append("\\")
+                    sb.Append(ChrW(34))
+                Case "\"c
+                    ' JSON: \\
+                    sb.Append("\\\\")
+                Case ControlChars.Cr
+                    sb.Append("\\r")
+                Case ControlChars.Lf
+                    sb.Append("\\n")
+                Case ControlChars.Tab
+                    sb.Append("\\t")
+                Case Else
+                    Dim code As Integer = AscW(ch)
+                    If code < 32 Then
+                        sb.Append("\\u").Append(code.ToString("x4"))
+                    Else
+                        sb.Append(ch)
+                    End If
+            End Select
+        Next
+
         Return sb.ToString()
     End Function
     Private Shared Sub SetJsonLdOnMaster(ByVal page As System.Web.UI.Page, ByVal jsonLd As String)
