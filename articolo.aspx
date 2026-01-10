@@ -1,8 +1,6 @@
 ﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="articolo.aspx.vb" Inherits="articolo" Debug="true" %>
 
-<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
-    Scheda prodotto
-</asp:Content>
+<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server"><%: Page.Title %></asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
 </asp:Content>
