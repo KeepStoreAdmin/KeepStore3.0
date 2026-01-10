@@ -708,4 +708,231 @@ Partial Class Articolo
         Response.Redirect(Request.Url.AbsolutePath & "?id=" & requestId & "&TCid=" & list.SelectedValue)
     End Sub
 
+
+    ' ============================================================
+    ' SEO (Scheda Prodotto)
+    ' ============================================================
+    Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
+        Try
+            EnsureProductSeo()
+        Catch
+            ' no-op
+        End Try
+    End Sub
+
+    Private Sub EnsureProductSeo()
+        Dim canonical As String = Request.Url.GetLeftPart(UriPartial.Path)
+        AddOrReplaceMeta(Me.Page, "robots", "index, follow")
+        SetCanonical(Me.Page, canonical)
+
+        Dim name As String = Nothing
+        Dim sku As String = Nothing
+        Dim img1 As String = Nothing
+        Dim price As Decimal = 0D
+        Dim hasPrice As Boolean = False
+        Dim giacenza As Integer = 0
+
+        Try
+            Dim dv As System.Data.DataView = TryCast(sdsArticolo.Select(System.Web.UI.DataSourceSelectArguments.Empty), System.Data.DataView)
+            If dv IsNot Nothing AndAlso dv.Count > 0 Then
+                Dim r As System.Data.DataRowView = dv(0)
+                name = SafeStr(r, "Descrizione1")
+                sku = SafeStr(r, "Codice")
+                img1 = SafeStr(r, "Img1")
+                giacenza = SafeInt(r, "Giacenza")
+
+                ' Prezzo: preferisci promo ivato, poi ivato, poi base
+                If TryGetDec(r, "PrezzoPromoIvato", price) Then
+                    hasPrice = True
+                ElseIf TryGetDec(r, "PrezzoIvato", price) Then
+                    hasPrice = True
+                ElseIf TryGetDec(r, "PrezzoPromo", price) Then
+                    hasPrice = True
+                ElseIf TryGetDec(r, "Prezzo", price) Then
+                    hasPrice = True
+                End If
+
+                If Not String.IsNullOrEmpty(name) Then
+                    Page.Title = name
+                    AddOrReplaceMeta(Me.Page, "description", LeftSafe(name, 155))
+
+                    Dim jsonLd As String = BuildProductJsonLd(name, sku, img1, canonical, hasPrice, price, giacenza)
+                    SetJsonLdOnMaster(Me.Page, jsonLd)
+                End If
+            End If
+        Catch
+            ' no-op
+        End Try
+    End Sub
+
+    Private Shared Function BuildProductJsonLd(ByVal name As String, ByVal sku As String, ByVal img1 As String, ByVal canonical As String, ByVal hasPrice As Boolean, ByVal price As Decimal, ByVal giacenza As Integer) As String
+        Dim sb As New System.Text.StringBuilder(512)
+        sb.Append("{")
+        sb.Append("\"@context\":\"https://schema.org\",")
+        sb.Append("\"@type\":\"Product\",")
+        sb.Append("\"name\":\"").Append(JsonEscape(name)).Append("\"")
+
+        If Not String.IsNullOrEmpty(sku) Then
+            sb.Append(",\"sku\":\"").Append(JsonEscape(sku)).Append("\"")
+        End If
+
+        If Not String.IsNullOrEmpty(img1) Then
+            Dim imgUrl As String = ResolveImageAbsolute(img1)
+            If Not String.IsNullOrEmpty(imgUrl) Then
+                sb.Append(",\"image\":[\"").Append(JsonEscape(imgUrl)).Append("\"]")
+            End If
+        End If
+
+        sb.Append(",\"url\":\"").Append(JsonEscape(canonical)).Append("\"")
+
+        If hasPrice Then
+            sb.Append(",\"offers\":{")
+            sb.Append("\"@type\":\"Offer\",")
+            sb.Append("\"priceCurrency\":\"EUR\",")
+            sb.Append("\"price\":\"").Append(JsonEscape(price.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))).Append("\",")
+            Dim availability As String = If(giacenza > 0, "https://schema.org/InStock", "https://schema.org/OutOfStock")
+            sb.Append("\"availability\":\"").Append(JsonEscape(availability)).Append("\"")
+            sb.Append("}")
+        End If
+
+        sb.Append("}")
+        Return sb.ToString()
+    End Function
+
+    Private Shared Function ResolveImageAbsolute(ByVal img1 As String) As String
+        Try
+            ' Path canonico progetto: ~/Public/images/articoli/
+            Dim rel As String = "~/Public/images/articoli/" & img1
+            Dim urlRel As String = System.Web.VirtualPathUtility.ToAbsolute(rel)
+
+            Dim ctx As System.Web.HttpContext = System.Web.HttpContext.Current
+            If ctx Is Nothing OrElse ctx.Request Is Nothing OrElse ctx.Request.Url Is Nothing Then Return urlRel
+
+            Dim baseUrl As String = ctx.Request.Url.GetLeftPart(UriPartial.Authority)
+            Return baseUrl & urlRel
+        Catch
+            Return ""
+        End Try
+    End Function
+
+    Private Shared Function LeftSafe(ByVal s As String, ByVal maxLen As Integer) As String
+        If String.IsNullOrEmpty(s) Then Return ""
+        If s.Length <= maxLen Then Return s
+        Return s.Substring(0, maxLen)
+    End Function
+
+    Private Shared Function SafeStr(ByVal r As System.Data.DataRowView, ByVal col As String) As String
+        Try
+            If r Is Nothing OrElse r.Row Is Nothing OrElse Not r.Row.Table.Columns.Contains(col) Then Return ""
+            Dim v As Object = r(col)
+            If v Is Nothing OrElse v Is DBNull.Value Then Return ""
+            Return Convert.ToString(v)
+        Catch
+            Return ""
+        End Try
+    End Function
+
+    Private Shared Function SafeInt(ByVal r As System.Data.DataRowView, ByVal col As String) As Integer
+        Try
+            Dim s As String = SafeStr(r, col)
+            Dim i As Integer
+            If Integer.TryParse(s, i) Then Return i
+            Return 0
+        Catch
+            Return 0
+        End Try
+    End Function
+
+    Private Shared Function TryGetDec(ByVal r As System.Data.DataRowView, ByVal col As String, ByRef value As Decimal) As Boolean
+        Try
+            Dim s As String = SafeStr(r, col)
+            Dim d As Decimal
+            If Decimal.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, d) Then
+                value = d
+                Return True
+            End If
+
+            If Decimal.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.CurrentCulture, d) Then
+                value = d
+                Return True
+            End If
+
+            Return False
+        Catch
+            Return False
+        End Try
+    End Function
+
+    Private Shared Sub AddOrReplaceMeta(ByVal page As Page, ByVal metaName As String, ByVal metaContent As String)
+        If page Is Nothing OrElse page.Header Is Nothing Then Exit Sub
+
+        Dim found As System.Web.UI.HtmlControls.HtmlMeta = Nothing
+        For Each c As Control In page.Header.Controls
+            Dim m As System.Web.UI.HtmlControls.HtmlMeta = TryCast(c, System.Web.UI.HtmlControls.HtmlMeta)
+            If m IsNot Nothing AndAlso String.Equals(m.Name, metaName, StringComparison.OrdinalIgnoreCase) Then
+                found = m
+                Exit For
+            End If
+        Next
+
+        If found Is Nothing Then
+            found = New System.Web.UI.HtmlControls.HtmlMeta()
+            found.Name = metaName
+            page.Header.Controls.Add(found)
+        End If
+
+        found.Content = metaContent
+    End Sub
+
+    Private Shared Sub SetCanonical(ByVal page As Page, ByVal canonicalUrl As String)
+        If page Is Nothing OrElse page.Header Is Nothing Then Exit Sub
+
+        Dim found As System.Web.UI.HtmlControls.HtmlLink = Nothing
+        For Each c As Control In page.Header.Controls
+            Dim l As System.Web.UI.HtmlControls.HtmlLink = TryCast(c, System.Web.UI.HtmlControls.HtmlLink)
+            If l IsNot Nothing AndAlso String.Equals(Convert.ToString(l.Attributes("rel")), "canonical", StringComparison.OrdinalIgnoreCase) Then
+                found = l
+                Exit For
+            End If
+        Next
+
+        If found Is Nothing Then
+            found = New System.Web.UI.HtmlControls.HtmlLink()
+            found.Attributes("rel") = "canonical"
+            page.Header.Controls.Add(found)
+        End If
+
+        found.Href = canonicalUrl
+    End Sub
+
+    Private Shared Sub SetJsonLdOnMaster(ByVal page As Page, ByVal jsonLd As String)
+        If page Is Nothing Then Exit Sub
+
+        Dim script As String = "<script type=\"application/ld+json\">" & jsonLd & "</script>"
+
+        Try
+            If page.Master IsNot Nothing Then
+                Dim lit As System.Web.UI.WebControls.Literal = TryCast(page.Master.FindControl("litSeoJsonLd"), System.Web.UI.WebControls.Literal)
+                If lit IsNot Nothing Then
+                    lit.Text = script
+                    Exit Sub
+                End If
+            End If
+        Catch
+            ' no-op
+        End Try
+
+        Try
+            If page.Header IsNot Nothing Then
+                page.Header.Controls.Add(New LiteralControl(script))
+            End If
+        Catch
+            ' no-op
+        End Try
+    End Sub
+
+    Private Shared Function JsonEscape(ByVal s As String) As String
+        If s Is Nothing Then Return ""
+        Return System.Web.HttpUtility.JavaScriptStringEncode(s)
+    End Function
 End Class
