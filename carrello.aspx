@@ -1,6 +1,4 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="carrello.aspx.vb" Inherits="carrello" %>
-<%@ Register assembly="ConwayControls" namespace="Conway.Web.UI.WebControls" tagprefix="ccwc" %>
-
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server"><%: Page.Title %></asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
@@ -555,7 +553,7 @@
             <Columns>
                 <asp:TemplateField ShowHeader="False">
                     <ItemTemplate>
-                        <ccwc:RadioButton ID="rbSpedizione" runat="server" AutoPostBack="True" Checked='false'
+                        <asp:RadioButton ID="rbSpedizione" runat="server" AutoPostBack="True" Checked='false'
                             GroupName="spedizione" Value='<%# Eval("Id") %>' />
                     </ItemTemplate>
                     <ItemStyle HorizontalAlign="Left" VerticalAlign="Middle" />
@@ -704,8 +702,8 @@
             <Columns>
                 <asp:TemplateField HeaderText="Seleziona">
                     <ItemTemplate>
-                        <ccwc:radiobutton id="rbSpedizione" runat="server" autopostback="True" checked='false'
-                            groupname="spedizione" value='<%# Eval("Id") %>'></ccwc:radiobutton>
+                        <asp:RadioButton id="rbSpedizione" runat="server" autopostback="True" checked='false'
+                            groupname="spedizione" value='<%# Eval("Id") %>'></asp:RadioButton>
                     </ItemTemplate>
                 </asp:TemplateField>
                 <asp:TemplateField HeaderText="id" InsertVisible="False" SortExpression="id" Visible="False">
@@ -800,7 +798,7 @@
             <table>
                 <tr>
                     <td style=" text-align:left; vertical-align:middle;">
-                      <ccwc:RadioButton ID="rbSpedizioneGratis" runat="server" AutoPostBack="True" Checked='True'
+                      <asp:RadioButton ID="rbSpedizioneGratis" runat="server" AutoPostBack="True" Checked='True'
                       Font-Bold="True" Font-Names="Arial" ForeColor="Red" GroupName="spedizione"
                       Text="" Value='<%# Eval("Id") %>' />
                     </td>
@@ -885,8 +883,8 @@
 						<Columns>
 							<asp:TemplateField HeaderText="sel">
 								<ItemTemplate>
-									<ccwc:radiobutton id="rbPagamento" runat="server" checked='<%# Eval("Predefinito") %>'
-										groupname="pagamento" value='<%# eval("id") %>' AutoPostBack="True"></ccwc:radiobutton>
+									<asp:RadioButton id="rbPagamento" runat="server" checked='<%# Eval("Predefinito") %>'
+										groupname="pagamento" value='<%# eval("id") %>' AutoPostBack="True"></asp:RadioButton>
 								</ItemTemplate>
 							</asp:TemplateField>
 							<asp:TemplateField>
