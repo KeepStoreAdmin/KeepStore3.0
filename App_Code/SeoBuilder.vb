@@ -399,32 +399,49 @@ Public NotInheritable Class SeoBuilder
 
     ' JSON string escape safe for schema.org payloads.
     Public Shared Function JsonEscape(value As String) As String
-        If value Is Nothing Then Return ""
+    If String.IsNullOrEmpty(value) Then Return ""
 
-        Dim sb As New StringBuilder(value.Length + 16)
-        For Each ch As Char In value
-            Select Case ch
-                Case "\"c
-                    sb.Append("\\")
-                Case """"c
-    sb.Append("\")
-    sb.Append("""")
-                Case ControlChars.Cr
-                    sb.Append("\r")
-                Case ControlChars.Lf
-                    sb.Append("\n")
-                Case ControlChars.Tab
-                    sb.Append("\t")
-                Case Else
-                    Dim code As Integer = AscW(ch)
-                    If code < 32 Then
-                        sb.Append("\u").Append(code.ToString("x4"))
-                    Else
-                        sb.Append(ch)
-                    End If
-            End Select
-        Next
-        Return sb.ToString()
-    End Function
+    Dim sb As New StringBuilder(value.Length + 16)
+
+    For Each ch As Char In value
+        Select Case ch
+
+            Case "\"c
+                ' JSON escape for a backslash character => "\\"
+                sb.Append("\"c).Append("\"c)
+
+            Case """"c
+                ' JSON escape for a quote character => "\""
+                sb.Append("\"c).Append(""""c)
+
+            Case ControlChars.Cr
+                sb.Append("\r")
+
+            Case ControlChars.Lf
+                sb.Append("\n")
+
+            Case ControlChars.Tab
+                sb.Append("\t")
+
+            Case ControlChars.Back
+                sb.Append("\b")
+
+            Case ControlChars.FormFeed
+                sb.Append("\f")
+
+            Case Else
+                Dim code As Integer = AscW(ch)
+
+                If code < 32 Then
+                    sb.Append("\u").Append(code.ToString("x4"))
+                Else
+                    sb.Append(ch)
+                End If
+
+        End Select
+    Next
+
+    Return sb.ToString()
+End Function
 
 End Class
