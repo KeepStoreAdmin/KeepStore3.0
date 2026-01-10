@@ -21,7 +21,22 @@ Public NotInheritable Class SeoBuilder
     ' --------------------------
     ' PUBLIC: High level helpers
     ' --------------------------
+    ' ===================== INIZIO BLOCCO COMPATIBILITÀ (carrello + altre pagine) =====================
+' Alcune pagine chiamano nomi "storici" (AddOrReplaceMeta / SetCanonical).
+' Qui li mappiamo ai metodi reali (EnsureMetaName / EnsureCanonical) senza cambiare logica.
 
+Public Shared Sub AddOrReplaceMeta(page As Page, name As String, content As String)
+    EnsureMetaName(page, name, content)
+End Sub
+
+Public Shared Sub AddOrReplaceMetaProperty(page As Page, prop As String, content As String)
+    EnsureMetaProperty(page, prop, content)
+End Sub
+
+Public Shared Sub SetCanonical(page As Page, canonicalUrl As String)
+    EnsureCanonical(page, canonicalUrl)
+End Sub
+' ===================== FINE BLOCCO COMPATIBILITÀ =====================
     ' Backward-compatible wrapper (some pages may call this name).
     Public Shared Sub ApplyHomeSeo(page As Page)
         Dim title As String = If(page IsNot Nothing, page.Title, String.Empty)
