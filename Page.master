@@ -77,8 +77,8 @@
                         <div class="col-lg-6 col-md-6 d-none d-md-block">
                             <div class="search-box">
                                 <div class="input-group">
-                                    <asp:TextBox ID="txtSearch" runat="server" CssClass="form-control" placeholder="Cerca prodotti..." />
-                                    <button type="button" class="btn btn-primary" runat="server" id="btnSearch" onserverclick="btnSearch_ServerClick">Cerca</button>
+                                    <asp:TextBox ID="tbCerca" runat="server" CssClass="form-control" placeholder="Cerca prodotti..." />
+                                    <button type="submit" class="btn btn-primary" runat="server" id="btnSearch" onserverclick="btnSearch_ServerClick">Cerca</button>
                                 </div>
                             </div>
                         </div>
@@ -125,6 +125,8 @@
 
         <!-- =============== POPUP FACEBOOK LIKE (richiesto da Page.master.vb) =============== -->
         <asp:Panel ID="PopUpfacebook" runat="server" Visible="False">
+        <asp:LinkButton ID="LB_CancelFacebook" runat="server" CssClass="fb-like-popup-close" CausesValidation="false" ToolTip="Chiudi">×</asp:LinkButton>
+
             <!-- Sezione volutamente minimale: la logica visibilità è gestita in Page.master.vb -->
         </asp:Panel>
         <!-- =============== /POPUP FACEBOOK LIKE =============== -->
@@ -162,6 +164,18 @@
         <script src="/Public/assets/js/bootstrap.bundle.min.js"></script>
         <script src="/Public/assets/js/main.js"></script>
 
-    </form>
+    
+        <!-- ============================================================
+             LEGACY PLACEHOLDERS (non visibili) - necessari per compatibilità
+             con Page.master.vb (eventi Init) senza alterare il layout template
+             ============================================================ -->
+        <asp:Panel ID="pnlLegacyPlaceholders" runat="server" Visible="false">
+            <asp:DataList ID="DataList_DIV1" runat="server"></asp:DataList>
+            <asp:DataList ID="DataList_DIV2" runat="server"></asp:DataList>
+            <asp:DataList ID="DataList_DIV3" runat="server"></asp:DataList>
+            <asp:DataList ID="DataList_DIV4" runat="server"></asp:DataList>
+        </asp:Panel>
+
+</form>
 </body>
 </html>

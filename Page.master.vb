@@ -1427,4 +1427,17 @@ End Sub
         End If
     End Sub
 
+
+
+    ' ============================================================
+    ' SEARCH (header) - button click
+    ' ============================================================
+    Protected Sub btnSearch_ServerClick(ByVal sender As Object, ByVal e As System.EventArgs)
+        Try
+            Cerca()
+        Catch ex As Exception
+            ' fail-safe: non interrompe la pagina
+        End Try
+    End Sub
+
 End Class
