@@ -116,7 +116,7 @@
                                                         <asp:DataList ID="DataList_HeaderCategories" runat="server" DataSourceID="SqlDataFooterDIV1" RepeatLayout="Flow">
                                                             <ItemTemplate>
                                                                 <li class="menu-item">
-                                                                    <a href="<%# Eval(&quot;link_esterno&quot;) %>"><span><%# Eval(&quot;nome&quot;) %></span></a>
+                                                                    <a href="<%# Eval("link_esterno") %>"><span><%# Eval("nome") %></span></a>
                                                                 </li>
                                                             </ItemTemplate>
                                                         </asp:DataList>
@@ -167,7 +167,7 @@
                                 <asp:DataList ID="DataList_DIV1" runat="server" DataSourceID="SqlDataFooterDIV1" RepeatLayout="Flow">
                                     <ItemTemplate>
                                         <div class="footer-link">
-                                            <a href="<%# Eval(&quot;link_esterno&quot;) %>"><%# Eval(&quot;nome&quot;) %></a>
+                                            <a href="<%# Eval("link_esterno") %>"><%# Eval("nome") %></a>
                                         </div>
                                     </ItemTemplate>
                                 </asp:DataList>
@@ -180,7 +180,7 @@
                                 <asp:DataList ID="DataList_DIV2" runat="server" DataSourceID="SqlDataFooterDIV2" RepeatLayout="Flow">
                                     <ItemTemplate>
                                         <div class="footer-link">
-                                            <a href="<%# Eval(&quot;link_esterno&quot;) %>"><%# Eval(&quot;nome&quot;) %></a>
+                                            <a href="<%# Eval("link_esterno") %>"><%# Eval("nome") %></a>
                                         </div>
                                     </ItemTemplate>
                                 </asp:DataList>
@@ -193,7 +193,7 @@
                                 <asp:DataList ID="DataList_DIV3" runat="server" DataSourceID="SqlDataFooterDIV3" RepeatLayout="Flow">
                                     <ItemTemplate>
                                         <div class="footer-link">
-                                            <a href="<%# Eval(&quot;link_esterno&quot;) %>"><%# Eval(&quot;nome&quot;) %></a>
+                                            <a href="<%# Eval("link_esterno") %>"><%# Eval("nome") %></a>
                                         </div>
                                     </ItemTemplate>
                                 </asp:DataList>
@@ -206,7 +206,7 @@
                                 <asp:DataList ID="DataList_DIV4" runat="server" DataSourceID="SqlDataFooterDIV4" RepeatLayout="Flow">
                                     <ItemTemplate>
                                         <div class="footer-link">
-                                            <a href="<%# Eval(&quot;link_esterno&quot;) %>"><%# Eval(&quot;nome&quot;) %></a>
+                                            <a href="<%# Eval("link_esterno") %>"><%# Eval("nome") %></a>
                                         </div>
                                     </ItemTemplate>
                                 </asp:DataList>
