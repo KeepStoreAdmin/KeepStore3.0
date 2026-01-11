@@ -40,8 +40,8 @@
                             <p class="mb-0">Metti “Mi piace” alla nostra pagina per restare aggiornato su offerte e novità.</p>
                         </div>
                         <div class="modal-footer">
-                            <a class="btn btn-primary" href="#" onclick="this.closest('.modal').style.display='none'; return false;">Chiudi</a>
-                        </div>
+                        <asp:LinkButton ID="LB_CancelFacebook" runat="server" CssClass="btn btn-primary" Text="Chiudi" CausesValidation="False" />
+                    </div>
                     </div>
                 </div>
             </div>
@@ -143,18 +143,77 @@
              Footer (template-first)
              ============================================================ -->
         <footer class="footer-area footer-2">
-            <div class="container">
-                <div class="footer-bottom">
-                    <div class="row">
-                        <div class="col-12 text-center">
-                            <p class="text">
-                                <asp:Literal ID="lblCredits" runat="server" />
-                            </p>
-                        </div>
+    <div class="container">
+
+        <!-- ============================================================
+             FOOTER TOP (menu informativi legacy - DataList_DIV1..DIV4)
+             NOTE: popolato via Page.master.vb (SqlDataFooterDIV1..DIV4)
+             ============================================================ -->
+        <div class="footer-top pt-4 pb-3">
+            <div class="row g-4">
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="footer-widget">
+                        <h6 class="footer-title mb-3">Informazioni</h6>
+                        <asp:DataList ID="DataList_DIV1" runat="server" DataSourceID="SqlDataFooterDIV1" RepeatLayout="Flow">
+                            <HeaderTemplate><ul class="list-unstyled mb-0"></HeaderTemplate>
+                            <ItemTemplate>
+                                <li class="mb-2"><a href="<%# Eval("link_esterno") %>" target="<%# Eval("target") %>"><%# Eval("nome") %></a></li>
+                            </ItemTemplate>
+                            <FooterTemplate></ul></FooterTemplate>
+                        </asp:DataList>
                     </div>
                 </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="footer-widget">
+                        <h6 class="footer-title mb-3">Servizi</h6>
+                        <asp:DataList ID="DataList_DIV2" runat="server" DataSourceID="SqlDataFooterDIV2" RepeatLayout="Flow">
+                            <HeaderTemplate><ul class="list-unstyled mb-0"></HeaderTemplate>
+                            <ItemTemplate>
+                                <li class="mb-2"><a href="<%# Eval("link_esterno") %>" target="<%# Eval("target") %>"><%# Eval("nome") %></a></li>
+                            </ItemTemplate>
+                            <FooterTemplate></ul></FooterTemplate>
+                        </asp:DataList>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="footer-widget">
+                        <h6 class="footer-title mb-3">Supporto</h6>
+                        <asp:DataList ID="DataList_DIV3" runat="server" DataSourceID="SqlDataFooterDIV3" RepeatLayout="Flow">
+                            <HeaderTemplate><ul class="list-unstyled mb-0"></HeaderTemplate>
+                            <ItemTemplate>
+                                <li class="mb-2"><a href="<%# Eval("link_esterno") %>" target="<%# Eval("target") %>"><%# Eval("nome") %></a></li>
+                            </ItemTemplate>
+                            <FooterTemplate></ul></FooterTemplate>
+                        </asp:DataList>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="footer-widget">
+                        <h6 class="footer-title mb-3">Altro</h6>
+                        <asp:DataList ID="DataList_DIV4" runat="server" DataSourceID="SqlDataFooterDIV4" RepeatLayout="Flow">
+                            <HeaderTemplate><ul class="list-unstyled mb-0"></HeaderTemplate>
+                            <ItemTemplate>
+                                <li class="mb-2"><a href="<%# Eval("link_esterno") %>" target="<%# Eval("target") %>"><%# Eval("nome") %></a></li>
+                            </ItemTemplate>
+                            <FooterTemplate></ul></FooterTemplate>
+                        </asp:DataList>
+                    </div>
+                </div>
+
             </div>
-        </footer>
+        </div>
+
+        <div class="footer-bottom d-flex justify-content-between align-items-center py-3 border-top">
+            <div class="footer-copyright">
+                <p class="mb-0">&copy; <%: DateTime.Now.Year %> Taikun. Tutti i diritti riservati.</p>
+            </div>
+        </div>
+    </div>
+</footer>
 
         <!-- ============================================================
              DataSources (legacy, required by Page.master.vb)
@@ -170,6 +229,25 @@
         <asp:SqlDataSource ID="Sql_Partners" runat="server"
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+<!-- ============================================================
+     FOOTER MENUS (legacy) - popolati via code-behind
+     ============================================================ -->
+<asp:SqlDataSource ID="SqlDataFooterDIV1" runat="server"
+    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+<asp:SqlDataSource ID="SqlDataFooterDIV2" runat="server"
+    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+<asp:SqlDataSource ID="SqlDataFooterDIV3" runat="server"
+    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+<asp:SqlDataSource ID="SqlDataFooterDIV4" runat="server"
+    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
 
 
         <!-- Template JS -->
