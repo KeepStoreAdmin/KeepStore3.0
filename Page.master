@@ -166,6 +166,11 @@
         <asp:SqlDataSource ID="SqlData_TotOrdini" runat="server"
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+        <!-- Partner footer / slider (query valorizzata da Page.master.vb) -->
+        <asp:SqlDataSource ID="Sql_Partners" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
 
         <!-- Template JS -->
         <script src="/Public/assets/js/vendor/jquery-3.6.0.min.js"></script>
