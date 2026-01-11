@@ -21,10 +21,6 @@ Imports System.Web.UI.HtmlControls
 '   - NON dipende da tabelle/campi DB: qui si lavora su stringhe e Session/Request
 ' ============================================================
 
-Public Interface ISeoMaster
-    Property SeoJsonLd As String
-End Interface
-
 Public NotInheritable Class SeoBuilder
 
     Private Sub New()
@@ -119,7 +115,7 @@ Public NotInheritable Class SeoBuilder
         Dim found As HtmlLink = Nothing
         For Each ctrl As Control In page.Header.Controls
             Dim l As HtmlLink = TryCast(ctrl, HtmlLink)
-            If l IsNot Nothing AndAlso String.Equals(l.Rel, "canonical", StringComparison.OrdinalIgnoreCase) Then
+            If l IsNot Nothing AndAlso String.Equals(Convert.ToString(l.Attributes("rel")), "canonical", StringComparison.OrdinalIgnoreCase) Then
                 found = l
                 Exit For
             End If
@@ -127,7 +123,7 @@ Public NotInheritable Class SeoBuilder
 
         If found Is Nothing Then
             found = New HtmlLink()
-            found.Rel = "canonical"
+            found.Attributes("rel") = "canonical"
             page.Header.Controls.Add(found)
         End If
 
