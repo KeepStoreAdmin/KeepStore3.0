@@ -38,7 +38,27 @@
 <body class="preload-wrapper">
     <form id="form1" runat="server">
 
-        <div id="wrapper">
+        
+        <!-- ============================================================
+             POPUP FACEBOOK LIKE (legacy)
+             - Serve solo come container server-side per la logica in Page.master.vb
+             - La visibilità viene gestita via cookie "FacebookLike"
+           ============================================================ -->
+        <asp:Panel ID="PopUpfacebook" runat="server" Visible="false">
+            <div class="ks-facebooklike-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;"></div>
+            <div class="ks-facebooklike-box" style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:12px;max-width:520px;width:92%;z-index:9999;box-shadow:0 10px 30px rgba(0,0,0,.25);">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(0,0,0,.08);">
+                    <strong>Seguici su Facebook</strong>
+                    <button type="button" onclick="this.closest('.ks-facebooklike-box').parentElement.style.display='none';" style="border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;">×</button>
+                </div>
+                <div style="padding:16px;">
+                    <p style="margin:0 0 10px 0;">Se ti va, metti “Mi piace” alla nostra pagina.</p>
+                    <a href="<%: Convert.ToString(Session("FacebookLike")) %>" target="_blank" rel="noopener nofollow" class="btn btn-primary">Apri Facebook</a>
+                </div>
+            </div>
+        </asp:Panel>
+
+<div id="wrapper">
             <asp:ContentPlaceHolder ID="Contentplaceholder1" runat="server"></asp:ContentPlaceHolder>
 
             <!-- Header -->
