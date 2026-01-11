@@ -192,6 +192,13 @@ Public NotInheritable Class SeoBuilder
     End Sub
 
     ' ------------------------------------------------------------
+    ' COMPAT: alias usato da alcune pagine (carrello/checkout)
+    ' ------------------------------------------------------------
+    Public Shared Sub SetJsonLdOnMaster(ByVal ctx As Object, ByVal jsonLd As String)
+        ApplyJsonLd(ctx, jsonLd)
+    End Sub
+
+    ' ------------------------------------------------------------
     ' Ricerca controllo ricorsiva (utile per Master / template)
     ' ------------------------------------------------------------
     Public Shared Function FindControlRecursive(ByVal root As Control, ByVal id As String) As Control
