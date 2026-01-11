@@ -4,178 +4,175 @@
 <html lang="it">
 <head runat="server">
     <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title><asp:ContentPlaceHolder ID="TitleContent" runat="server" /></title>
 
-    <!-- SEO / JSON-LD (iniettato da code-behind master via SeoBuilder) -->
-    <asp:Literal ID="litSeoJsonLd" runat="server" EnableViewState="False"></asp:Literal>
-
-    <!-- Template CSS (KeepStore1/Onus) -->
+    <!-- Template CSS -->
     <link rel="stylesheet" href="/Public/assets/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="/Public/assets/css/style.css" />
-    <link rel="stylesheet" href="/Public/assets/css/responsive.css" />
+    <link rel="stylesheet" href="/Public/assets/css/animate.css" />
+    <link rel="stylesheet" href="/Public/assets/css/slick.css" />
+    <link rel="stylesheet" href="/Public/assets/css/lineicons.css" />
+    <link rel="stylesheet" href="/Public/assets/css/main.css" />
+
+    <!-- SEO / JSON-LD injection -->
+    <asp:Literal ID="litSeoJsonLd" runat="server" EnableViewState="False" />
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 </head>
 
-<!-- FIX: PageBody richiesto da Page.master.vb -->
 <body id="PageBody" runat="server">
     <form id="form1" runat="server">
 
-        <!-- =============== HEADER =============== -->
-        <header class="header-area header-style-1">
-
-            <!-- Topbar -->
-            <div class="header-top">
-                <div class="container">
-                    <div class="row align-items-center">
-
-                        <div class="col-lg-6 col-md-6">
-                            <div class="header-top-left">
-                                <span class="text-muted">
-                                    <asp:Literal ID="litTopMessage" runat="server" EnableViewState="False"></asp:Literal>
-                                </span>
-                            </div>
+        <!-- ============================================================
+             Global: Facebook Like popup placeholder (legacy)
+             NOTE: controllato dal code-behind (PopUpfacebook.Visible)
+             ============================================================ -->
+        <asp:Panel ID="PopUpfacebook" runat="server" Visible="False">
+            <div class="modal fade show" style="display:block; background: rgba(0,0,0,.55);" role="dialog" aria-modal="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Seguici su Facebook</h5>
                         </div>
-
-                        <div class="col-lg-6 col-md-6 text-end">
-                            <div class="header-top-right">
-                                <asp:PlaceHolder ID="phLoginLinks" runat="server">
-                                    <a href="/login.aspx">Accedi</a>
-                                    <span class="mx-2">|</span>
-                                    <a href="/registrazione.aspx">Registrati</a>
-                                </asp:PlaceHolder>
-
-                                <asp:PlaceHolder ID="phLoggedLinks" runat="server" Visible="False">
-                                    <a href="/myaccount.aspx">Il mio account</a>
-                                    <span class="mx-2">|</span>
-                                    <a href="/logout.aspx">Esci</a>
-                                </asp:PlaceHolder>
-                            </div>
+                        <div class="modal-body">
+                            <p class="mb-0">Metti “Mi piace” alla nostra pagina per restare aggiornato su offerte e novità.</p>
                         </div>
-
+                        <div class="modal-footer">
+                            <a class="btn btn-primary" href="#" onclick="this.closest('.modal').style.display='none'; return false;">Chiudi</a>
+                        </div>
                     </div>
                 </div>
             </div>
+        </asp:Panel>
 
-            <!-- Main header -->
-            <div class="header-middle">
+        <!-- ============================================================
+             Header (template-first)
+             ============================================================ -->
+        <header class="header-area">
+            <div class="navbar-area">
                 <div class="container">
-                    <div class="row align-items-center">
+                    <nav class="navbar navbar-expand-lg">
 
-                        <!-- Logo -->
-                        <div class="col-lg-3 col-md-3 col-6">
-                            <div class="logo">
-                                <a href="/Default.aspx">
-                                    <asp:Image ID="imgLogo" runat="server" AlternateText="Taikun" />
-                                </a>
-                            </div>
+                        <a class="navbar-brand" href="/Default.aspx">
+                            <asp:Image ID="imgLogo" runat="server" AlternateText="Taikun" CssClass="d-none d-lg-inline-block" />
+                            <asp:Image ID="imgLogoMobile" runat="server" AlternateText="Taikun" CssClass="d-inline-block d-lg-none" />
+                        </a>
+
+                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                            <span class="toggler-icon"></span>
+                            <span class="toggler-icon"></span>
+                            <span class="toggler-icon"></span>
+                        </button>
+
+                        <div class="collapse navbar-collapse sub-menu-bar" id="navbarSupportedContent">
+                            <ul class="navbar-nav ms-auto" id="nav">
+                                <li class="nav-item"><a href="/Default.aspx">Home</a></li>
+                                <li class="nav-item"><a href="/articoli.aspx">Catalogo</a></li>
+
+                                <!-- Listino personalizzato (legacy) -->
+                                <li class="nav-item">
+                                    <asp:Label ID="Label4" runat="server" Text="" Visible="False" CssClass="me-2" />
+                                    <asp:HyperLink ID="HyperLink14" runat="server" Text="" Visible="False" NavigateUrl="#" />
+                                </li>
+
+                                <!-- Pagamenti ordini (legacy, badge) -->
+                                <li id="pay_your_orders" runat="server" class="nav-item" visible="false">
+                                    <a href="/pay_your_orders.aspx">
+                                        Pagamenti
+                                        <span id="to_pay" runat="server" class="badge bg-danger ms-1">0</span>
+                                    </a>
+                                </li>
+                            </ul>
                         </div>
 
-                        <!-- Search -->
-                        <div class="col-lg-6 col-md-6 d-none d-md-block">
-                            <div class="search-box">
+                        <!-- Search + Account + Cart -->
+                        <div class="navbar-btn d-none d-lg-flex align-items-center" style="gap: 10px;">
+
+                            <!-- Search (legacy: tbCerca + btnSearch_ServerClick) -->
+                            <div class="header-search">
                                 <div class="input-group">
-                                    <asp:TextBox ID="tbCerca" runat="server" CssClass="form-control" placeholder="Cerca prodotti..." />
-                                    <button type="submit" class="btn btn-primary" runat="server" id="btnSearch" onserverclick="btnSearch_ServerClick">Cerca</button>
+                                    <asp:TextBox ID="tbCerca" runat="server" CssClass="form-control" placeholder="Cerca prodotti..." AutoPostBack="True" />
+                                    <asp:Button ID="btnSearch" runat="server" CssClass="btn btn-primary" Text="Cerca" OnClick="btnSearch_ServerClick" />
                                 </div>
                             </div>
+
+                            <!-- Login / Account (legacy: mvLogin) -->
+                            <asp:MultiView ID="mvLogin" runat="server">
+                                <asp:View ID="viewGuest" runat="server">
+                                    <a class="btn btn-outline-primary" href="/login.aspx">Accedi</a>
+                                </asp:View>
+                                <asp:View ID="viewLogged" runat="server">
+                                    <div class="d-flex align-items-center" style="gap: 10px;">
+                                        <span class="small">
+                                            <asp:Label ID="lblUtente" runat="server" Text="" />
+                                            <asp:Label ID="lblAccesso" runat="server" Text="" CssClass="text-muted ms-1" />
+                                        </span>
+                                        <a class="btn btn-outline-secondary" href="/logout.aspx">Esci</a>
+                                    </div>
+                                </asp:View>
+                            </asp:MultiView>
+
+                            <!-- Cart (legacy: lblCarrelloCount / lblCarrelloTotale) -->
+                            <a class="btn btn-outline-dark position-relative" href="/carrello.aspx" aria-label="Carrello">
+                                <span class="me-2">Carrello</span>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    <asp:Label ID="lblCarrelloCount" runat="server" Text="0" />
+                                </span>
+                            </a>
+                            <span class="small text-muted" style="white-space:nowrap;">
+                                <asp:Label ID="lblCarrelloTotale" runat="server" Text="" />
+                            </span>
+
                         </div>
 
-                        <!-- Cart -->
-                        <div class="col-lg-3 col-md-3 col-6 text-end">
-                            <div class="header-actions">
-                                <a href="/carrello.aspx" class="btn btn-outline-secondary position-relative">
-                                    Carrello
-                                    <asp:Literal ID="litCartBadge" runat="server" EnableViewState="False"></asp:Literal>
-                                </a>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-
-            <!-- Nav -->
-            <div class="header-bottom">
-                <div class="container">
-                    <nav class="main-menu">
-                        <ul class="menu">
-                            <li class="menu-item"><a href="/Default.aspx"><span>Home</span></a></li>
-
-                            <!-- Menu dinamico (esempio: categorie) -->
-                            <asp:Repeater ID="rptMenuCategorie" runat="server">
-                                <ItemTemplate>
-                                    <li class="menu-item">
-                                        <a href='<%# Eval("link_esterno") %>'><span><%# Eval("nome") %></span></a>
-                                    </li>
-                                </ItemTemplate>
-                            </asp:Repeater>
-
-                            <li class="menu-item"><a href="/contatti.aspx"><span>Contatti</span></a></li>
-                        </ul>
                     </nav>
                 </div>
             </div>
-
         </header>
-        <!-- =============== /HEADER =============== -->
 
-
-        <!-- =============== POPUP FACEBOOK LIKE (richiesto da Page.master.vb) =============== -->
-        <asp:Panel ID="PopUpfacebook" runat="server" Visible="False">
-        <asp:LinkButton ID="LB_CancelFacebook" runat="server" CssClass="fb-like-popup-close" CausesValidation="false" ToolTip="Chiudi">×</asp:LinkButton>
-
-            <!-- Sezione volutamente minimale: la logica visibilità è gestita in Page.master.vb -->
-        </asp:Panel>
-        <!-- =============== /POPUP FACEBOOK LIKE =============== -->
-
-
-        <!-- =============== MAIN CONTENT =============== -->
-        <main class="main-content">
+        <!-- ============================================================
+             Main Content
+             ============================================================ -->
+        <main>
             <asp:ContentPlaceHolder ID="MainContent" runat="server" />
         </main>
-        <!-- =============== /MAIN CONTENT =============== -->
 
-
-        <!-- =============== FOOTER =============== -->
-        <footer class="footer-area">
+        <!-- ============================================================
+             Footer (template-first)
+             ============================================================ -->
+        <footer class="footer-area footer-2">
             <div class="container">
-                <div class="footer-bottom text-center py-4">
-                    <asp:Literal ID="litFooter" runat="server" EnableViewState="False"></asp:Literal>
+                <div class="footer-bottom">
+                    <div class="row">
+                        <div class="col-12 text-center">
+                            <p class="text">
+                                <asp:Literal ID="lblCredits" runat="server" />
+                            </p>
+                        </div>
+                    </div>
                 </div>
-
-                <!-- DataSources utilizzati dalla master / code-behind -->
-                <asp:SqlDataSource ID="SqlData_Categorie" runat="server"></asp:SqlDataSource>
-                <asp:SqlDataSource ID="SqlData_MenuTop" runat="server"></asp:SqlDataSource>
-                <asp:SqlDataSource ID="SqlData_Carrello" runat="server"></asp:SqlDataSource>
-                <asp:SqlDataSource ID="SqlDataAnnunciHome2" runat="server"></asp:SqlDataSource>
-
-                <!-- FIX: richiesto da Page.master.vb -->
-                <asp:SqlDataSource ID="SqlData_Popup" runat="server"></asp:SqlDataSource>
-
             </div>
         </footer>
-        <!-- =============== /FOOTER =============== -->
+
+        <!-- ============================================================
+             DataSources (legacy, required by Page.master.vb)
+             ============================================================ -->
+        <asp:SqlDataSource ID="SqlData_Popup" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+        <asp:SqlDataSource ID="SqlData_TotOrdini" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
 
         <!-- Template JS -->
-        <script src="/Public/assets/js/jquery.min.js"></script>
+        <script src="/Public/assets/js/vendor/jquery-3.6.0.min.js"></script>
         <script src="/Public/assets/js/bootstrap.bundle.min.js"></script>
+        <script src="/Public/assets/js/slick.min.js"></script>
         <script src="/Public/assets/js/main.js"></script>
 
-    
-        <!-- ============================================================
-             LEGACY PLACEHOLDERS (non visibili) - necessari per compatibilità
-             con Page.master.vb (eventi Init) senza alterare il layout template
-             ============================================================ -->
-        <asp:Panel ID="pnlLegacyPlaceholders" runat="server" Visible="false">
-            <asp:DataList ID="DataList_DIV1" runat="server"></asp:DataList>
-            <asp:DataList ID="DataList_DIV2" runat="server"></asp:DataList>
-            <asp:DataList ID="DataList_DIV3" runat="server"></asp:DataList>
-            <asp:DataList ID="DataList_DIV4" runat="server"></asp:DataList>
-        </asp:Panel>
-
-</form>
+    </form>
 </body>
 </html>
