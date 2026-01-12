@@ -69,7 +69,39 @@
                         <div class="collapse navbar-collapse sub-menu-bar" id="navbarSupportedContent">
                             <ul class="navbar-nav ms-auto" id="nav">
                                 <li class="nav-item"><a href="/Default.aspx">Home</a></li>
-                                <li class="nav-item"><a href="/articoli.aspx">Catalogo</a></li>
+                                <li class="nav-item"><a class="nav-link" href="/articoli.aspx" id="HomeCatalogo">Catalogo</a></li>
+
+
+<asp:Repeater ID="rptNavSettori" runat="server">
+    <ItemTemplate>
+        <li class="nav-item dropdown d-flex align-items-center">
+<a class="nav-link" href="<%# Eval("DefaultUrl") %>">
+    <%# SafeText(Eval("Descrizione")) %>
+</a>
+<a class="nav-link dropdown-toggle dropdown-toggle-split" href="#" id="<%# "navSettore" & Eval("Id") %>" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    <span class="visually-hidden">Toggle Dropdown</span>
+</a>
+<ul class="dropdown-menu" aria-labelledby="<%# "navSettore" & Eval("Id") %>">
+    <li>
+        <a class="dropdown-item fw-semibold" href="<%# Eval("DefaultUrl") %>">
+            Tutto <%# SafeText(Eval("Descrizione")) %>
+        </a>
+    </li>
+    <li><hr class="dropdown-divider" /></li>
+    <asp:Repeater ID="rptNavCategorie" runat="server">
+        <ItemTemplate>
+            <li>
+                <a class="dropdown-item" href="<%# Eval("Url") %>"><%# SafeText(Eval("Descrizione")) %></a>
+            </li>
+        </ItemTemplate>
+    </asp:Repeater>
+</ul></li>
+                    </ItemTemplate>
+                </asp:Repeater>
+            </ul>
+        </li>
+    </ItemTemplate>
+</asp:Repeater>
 
                                 <!-- Listino personalizzato (legacy) -->
                                 <li class="nav-item">
