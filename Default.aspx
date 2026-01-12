@@ -52,15 +52,17 @@
                                 <asp:Repeater ID="rptHeroCats" runat="server" DataSourceID="SdsHeroCats">
                                     <ItemTemplate>
                                         <li class="department-item">
-                                            <a class="department-link" href='<%# "articoli.aspx?st=" & Eval("SettoriId") %>'><%# SafeText(Eval("descrizione")) %></a>
+                                            <a class="department-link" href='<%# "articoli.aspx?ct=" & Eval("id") %>'>
+                                                <%# SafeText(Eval("descrizione")) %>
+                                            </a>
                                         </li>
                                     </ItemTemplate>
                                 </asp:Repeater>
-                            </ul>
+</ul>
                             <asp:SqlDataSource ID="SdsHeroCats" runat="server"
                                 ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                                 ProviderName="MySql.Data.MySqlClient"
-                                SelectCommand="SELECT id AS SettoriId, Descrizione AS descrizione FROM settori WHERE Abilitato=1 ORDER BY Ordinamento LIMIT 10">
+                                SelectCommand="SELECT id, descrizione FROM categorie ORDER BY ordinamento LIMIT 10">
                             </asp:SqlDataSource>
 
                         </div>

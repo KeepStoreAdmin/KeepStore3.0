@@ -574,4 +574,32 @@ End Sub
         Return ResolveUrl("~/Public/" & folder & "/" & p.TrimStart("/"c))
     End Function
 
+
+
+    '==========================================================
+    ' HOME - Settori (Dipartimenti): URL compatibile legacy (webaffare.it)
+    '==========================================================
+    Protected Function BuildSettoreUrl(ByVal settoreIdObj As Object, ByVal defaultCtObj As Object, ByVal defaultTpObj As Object) As String
+        Dim settoreId As Integer = 0
+        Integer.TryParse(Convert.ToString(settoreIdObj), settoreId)
+
+        If settoreId <= 0 Then
+            Return "articoli.aspx"
+        End If
+
+        Dim ct As Integer = 0
+        Integer.TryParse(Convert.ToString(defaultCtObj), ct)
+
+        Dim tp As Integer = 0
+        Integer.TryParse(Convert.ToString(defaultTpObj), tp)
+
+        If ct > 0 AndAlso tp > 0 Then
+            Return "articoli.aspx?st=" & settoreId.ToString() & "&ct=" & ct.ToString() & "&tp=" & tp.ToString()
+        ElseIf ct > 0 Then
+            Return "articoli.aspx?st=" & settoreId.ToString() & "&ct=" & ct.ToString()
+        Else
+            Return "articoli.aspx?st=" & settoreId.ToString()
+        End If
+    End Function
+
 End Class
