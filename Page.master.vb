@@ -1458,31 +1458,57 @@ End Sub
 
 
 
-'==========================================================
-' NAVBAR (template-first): Settori + Categorie abilitate
-'==========================================================
-Private Class NavCategoriaItem
+' ===========================================================
+'  NAV MODELS (Settori -> Categorie -> Tipologie)
+'  Fix: aggiunge Tipologie/SettoriId/DefaultUrl e definisce NavTipologiaItem
+' ===========================================================
+
+Public Class NavTipologiaItem
     Public Property Id As Integer
     Public Property Descrizione As String
-    Public Property Url As String
+
+    ' URL completo del tipo:
+    '   articoli.aspx?ct=<cat>&st=<settore>&tp=<tipologia>
+    Public Property DefaultUrl As String
 End Class
 
-Private Class NavSettoreItem
+Public Class NavCategoriaItem
     Public Property Id As Integer
     Public Property Descrizione As String
+
+    ' Settore padre (serve per costruire URL e per debug)
+    Public Property SettoriId As Integer
+
+    ' URL “di default” della categoria, tipicamente punta alla prima tipologia abilitata
     Public Property DefaultUrl As String
+
+    ' Tipologie figlie
+    Public Property Tipologie As List(Of NavTipologiaItem)
+
+    ' Compatibilità legacy (se in qualche punto vecchio usavi .Url)
+    Public Property Url As String
+        Get
+            Return DefaultUrl
+        End Get
+        Set(value As String)
+            DefaultUrl = value
+        End Set
+    End Property
+End Class
+
+Public Class NavSettoreItem
+    Public Property Id As Integer
+    Public Property Descrizione As String
+
+    ' URL “di default” del settore, tipicamente punta a prima categoria -> prima tipologia
+    Public Property DefaultUrl As String
+
     Public Property Categorie As List(Of NavCategoriaItem)
 End Class
 
-Private Sub BindNavSettori()
-    Try
-        Dim nav As List(Of NavSettoreItem) = LoadNavSettori()
-        rptNavSettori.DataSource = nav
-        rptNavSettori.DataBind()
-    Catch ex As Exception
-        ' Fail-safe: non bloccare la master in caso di errore menu
-    End Try
-End Sub
+' ===========================================================
+'  FINE NAV MODELS
+' ===========================================================
 
     '==========================================================
     ' MENU NAV (Settori → Categorie → Tipologie) - gerarchia legacy
