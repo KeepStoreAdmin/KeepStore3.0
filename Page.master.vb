@@ -1,4 +1,4 @@
-﻿﻿Imports MySql.Data.MySqlClient
+Imports MySql.Data.MySqlClient
 Imports System.Data
 Imports System.Configuration
 Imports System.Web.UI.HtmlControls

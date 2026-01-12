@@ -1,4 +1,5 @@
-﻿Partial Class Coupon
+Partial Class Coupon
+    Protected cont_settori As Integer = 0
     Inherits System.Web.UI.MasterPage
     Implements ISeoMaster
 
