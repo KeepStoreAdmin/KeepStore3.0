@@ -126,6 +126,7 @@ End Function
             End If
         End If
     
+    End Sub
     '==========================================================
     ' NAVBAR: Settori/Categorie/Tipologie (abilitati)
     '==========================================================
@@ -140,7 +141,6 @@ End Function
         End Try
     End Sub
 
-End Sub
 
     '==========================================================
     ' INIT: azienda, catalogo, popup, sfondo, social
