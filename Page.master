@@ -36,6 +36,51 @@
     }
 }
 </style>
+<style>
+/* ===========================
+   MEGA MENU (3 livelli)
+   Settore -> Categoria -> Tipologia
+   =========================== */
+
+/* Il <li> che contiene un sotto-menu */
+.dropdown-submenu {
+  position: relative;
+}
+
+/* Il sotto-menu (tipologie) affiancato a destra */
+.dropdown-submenu > .dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -0.25rem;
+}
+
+/* Desktop: apri su hover (esperienza “a colonne” tipo webaffare) */
+@media (min-width: 992px) {
+  .navbar .dropdown-menu > li:hover > .dropdown-menu {
+    display: block;
+  }
+}
+
+/* Evita che l’anchor split si prenda tutta la riga */
+.dropdown-submenu.d-flex > a.dropdown-toggle-split,
+.nav-item.d-flex > a.dropdown-toggle-split {
+  width: auto !important;
+  flex: 0 0 auto;
+  padding-left: .6rem;
+  padding-right: .8rem;
+}
+
+/* Allinea bene le due “colonne” (testo + freccia) */
+.dropdown-submenu.d-flex > a.dropdown-item.flex-grow-1,
+.nav-item.d-flex > a.nav-link {
+  flex: 1 1 auto;
+}
+
+/* Migliora la visibilità del nested menu */
+.dropdown-menu.show {
+  display: block;
+}
+</style>
 </head>
 
 <body id="PageBody" runat="server">
@@ -345,6 +390,44 @@
         <script src="/Public/assets/js/bootstrap.bundle.min.js"></script>
         <script src="/Public/assets/js/slick.min.js"></script>
         <script src="/Public/assets/js/main.js"></script>
+    <script>
+(function () {
+  function onReady(fn) {
+    if (document.readyState !== "loading") fn();
+    else document.addEventListener("DOMContentLoaded", fn);
+  }
+
+  onReady(function () {
+
+    // Non chiudere il menu cliccando dentro
+    document.querySelectorAll(".dropdown-menu").forEach(function (m) {
+      m.addEventListener("click", function (e) { e.stopPropagation(); });
+    });
+
+    // Gestione toggle "split" per sottomenu (categorie->tipologie)
+    document.querySelectorAll(".dropdown-submenu > a.dropdown-toggle-split").forEach(function (toggle) {
+      toggle.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        var li = toggle.closest(".dropdown-submenu");
+        if (!li) return;
+
+        var submenu = li.querySelector(":scope > .dropdown-menu");
+        if (!submenu) return;
+
+        // Chiudi eventuali altri submenu fratelli
+        li.parentElement.querySelectorAll(":scope > .dropdown-submenu > .dropdown-menu.show").forEach(function (open) {
+          if (open !== submenu) open.classList.remove("show");
+        });
+
+        submenu.classList.toggle("show");
+      });
+    });
+
+  });
+})();
+</script>
 
     </form>
     <script type="text/javascript">
