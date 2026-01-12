@@ -20,6 +20,22 @@
     <asp:Literal ID="litSeoJsonLd" runat="server" EnableViewState="False" />
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
+    <style type="text/css">
+/* Multi-level dropdown (Settore -> Categoria -> Tipologia) */
+.dropdown-menu li { position: relative; }
+.dropdown-menu .dropdown-menu {
+    top: 0;
+    left: 100%;
+    margin-top: -0.25rem;
+}
+
+/* Desktop: mostra i submenu al passaggio */
+@media (min-width: 992px) {
+    .dropdown-menu > li:hover > .dropdown-menu {
+        display: block;
+    }
+}
+</style>
 </head>
 
 <body id="PageBody" runat="server">
@@ -74,30 +90,65 @@
 
 <asp:Repeater ID="rptNavSettori" runat="server" OnItemDataBound="rptNavSettori_ItemDataBound">
     <ItemTemplate>
-        <li class="nav-item dropdown d-flex align-items-center">
-            <a class="nav-link" href="<%# Eval("DefaultUrl") %>"><%# SafeText(Eval("Descrizione")) %></a>
-            <a class="nav-link dropdown-toggle dropdown-toggle-split" href="#" id='<%# "navSettore" & Eval("Id") %>' role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <span class="visually-hidden">Toggle Dropdown</span>
+        <li class="dropdown dropend">
+            <!-- Settore: APRE il menu (non naviga). La navigazione è su "Tutto Settore" -->
+            <a class="dropdown-item dropdown-toggle d-flex justify-content-between align-items-center"
+               href="#"
+               id='<%# "navSettore" & Eval("Id") %>'
+               data-bs-toggle="dropdown"
+               aria-expanded="false">
+                <span><%# SafeText(Eval("Descrizione")) %></span>
             </a>
+
             <ul class="dropdown-menu" aria-labelledby='<%# "navSettore" & Eval("Id") %>'>
+                <!-- Navigazione al Settore -->
                 <li>
-                    <a class="dropdown-item fw-semibold" href="<%# Eval("DefaultUrl") %>">Tutto <%# SafeText(Eval("Descrizione")) %></a>
+                    <a class="dropdown-item fw-bold" href='<%# Eval("DefaultUrl") %>'>
+                        Tutto <%# SafeText(Eval("Descrizione")) %>
+                    </a>
                 </li>
                 <li><hr class="dropdown-divider" /></li>
 
+                <!-- Categorie del Settore -->
                 <asp:Repeater ID="rptNavCategorie" runat="server" OnItemDataBound="rptNavCategorie_ItemDataBound">
                     <ItemTemplate>
-                        <li>
-                            <a class="dropdown-item fw-semibold" href="<%# Eval("DefaultUrl") %>"><%# SafeText(Eval("Descrizione")) %></a>
-                        </li>
+                        <li class="dropdown dropend">
+                            <!-- Categoria: APRE le Tipologie (non naviga). La navigazione è su "Tutte Categoria" -->
+                            <a class="dropdown-item dropdown-toggle d-flex justify-content-between align-items-center"
+                               href="#"
+                               id='<%# "navCategoria" & Eval("Id") %>'
+                               data-bs-toggle="dropdown"
+                               aria-expanded="false">
+                                <span><%# SafeText(Eval("Descrizione")) %></span>
+                            </a>
 
-                        <asp:Repeater ID="rptNavTipologie" runat="server">
-                            <ItemTemplate>
+                            <ul class="dropdown-menu" aria-labelledby='<%# "navCategoria" & Eval("Id") %>'>
+                                <!-- Navigazione alla Categoria -->
                                 <li>
-                                    <a class="dropdown-item ps-4" href="<%# Eval("DefaultUrl") %>"><%# SafeText(Eval("Descrizione")) %></a>
+                                    <a class="dropdown-item fw-bold" href='<%# Eval("DefaultUrl") %>'>
+                                        Tutte <%# SafeText(Eval("Descrizione")) %>
+                                    </a>
                                 </li>
-                            </ItemTemplate>
-                        </asp:Repeater>
+                                <li><hr class="dropdown-divider" /></li>
+
+                                <!-- Tipologie della Categoria -->
+                                <asp:Repeater ID="rptNavTipologie" runat="server">
+                                    <ItemTemplate>
+                                        <li>
+                                            <a class="dropdown-item" href='<%# Eval("DefaultUrl") %>'>
+                                                <%# SafeText(Eval("Descrizione")) %>
+                                            </a>
+                                        </li>
+                                    </ItemTemplate>
+                                </asp:Repeater>
+                            </ul>
+                        </li>
+                    </ItemTemplate>
+                </asp:Repeater>
+            </ul>
+        </li>
+    </ItemTemplate>
+</asp:Repeater>
 
                         <li><hr class="dropdown-divider" /></li>
                     </ItemTemplate>
@@ -296,5 +347,29 @@
         <script src="/Public/assets/js/main.js"></script>
 
     </form>
+    <script type="text/javascript">
+(function () {
+    function enableHoverDropdowns() {
+        if (typeof bootstrap === "undefined" || !bootstrap.Dropdown) return;
+
+        var isDesktop = window.matchMedia("(min-width: 992px)").matches;
+        if (!isDesktop) return;
+
+        document.querySelectorAll(".navbar .dropdown").forEach(function (dd) {
+            var toggle = dd.querySelector(":scope > a[data-bs-toggle='dropdown']");
+            if (!toggle) return;
+
+            dd.addEventListener("mouseenter", function () {
+                bootstrap.Dropdown.getOrCreateInstance(toggle).show();
+            });
+            dd.addEventListener("mouseleave", function () {
+                bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
+            });
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", enableHoverDropdowns);
+})();
+</script>
 </body>
 </html>
