@@ -1544,7 +1544,7 @@ End Class
             conn.Open()
 
             ' 1) Settori (abilitati)
-            Using cmdS As New MySqlCommand("SELECT id, Descrizione FROM settori WHERE Abilitato=1 ORDER BY Ordinamento, id", conn)
+            Using cmdS As New MySqlCommand("SELECT id, Descrizione FROM settori WHERE Abilitato=1 ORDER BY Predefinito DESC, Ordinamento, Descrizione, id", conn)
                 Using rdr As MySqlDataReader = cmdS.ExecuteReader()
                     While rdr.Read()
                         Dim settoreId As Integer = Convert.ToInt32(rdr("id"))
@@ -1568,7 +1568,7 @@ End Class
                 "FROM categorie c " &
                 "INNER JOIN settori s ON s.id=c.SettoriId AND s.Abilitato=1 " &
                 "WHERE c.Abilitato=1 " &
-                "ORDER BY c.SettoriId, c.Ordinamento, c.id"
+                "ORDER BY c.SettoriId, c.Ordinamento, c.Descrizione, c.id"
 
             Using cmdC As New MySqlCommand(sqlC, conn)
                 Using rdr As MySqlDataReader = cmdC.ExecuteReader()
@@ -1599,7 +1599,7 @@ End Class
                 "INNER JOIN categorie c ON c.id=t.CategorieId AND c.Abilitato=1 " &
                 "INNER JOIN settori s ON s.id=c.SettoriId AND s.Abilitato=1 " &
                 "WHERE t.Abilitato=1 " &
-                "ORDER BY c.SettoriId, c.id, t.Ordinamento, t.id"
+                "ORDER BY c.SettoriId, c.Ordinamento, c.Descrizione, c.id, t.Ordinamento, t.Descrizione, t.id"
 
             Using cmdT As New MySqlCommand(sqlT, conn)
                 Using rdr As MySqlDataReader = cmdT.ExecuteReader()

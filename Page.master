@@ -72,45 +72,41 @@
                                 <li class="nav-item"><a class="nav-link" href="/articoli.aspx" id="HomeCatalogo">Catalogo</a></li>
 
 
-<asp:Repeater ID="rptNavSettori" runat="server">
+<asp:Repeater ID="rptNavSettori" runat="server" OnItemDataBound="rptNavSettori_ItemDataBound">
     <ItemTemplate>
         <li class="nav-item dropdown d-flex align-items-center">
-<a class="nav-link" href="<%# Eval("DefaultUrl") %>">
-    <%# SafeText(Eval("Descrizione")) %>
-</a>
-<a class="nav-link dropdown-toggle dropdown-toggle-split" href="#" id="<%# "navSettore" & Eval("Id") %>" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-    <span class="visually-hidden">Toggle Dropdown</span>
-</a>
-<ul class="dropdown-menu" aria-labelledby="<%# "navSettore" & Eval("Id") %>">
-    <li>
-        <a class="dropdown-item fw-semibold" href="<%# Eval("DefaultUrl") %>">
-            Tutto <%# SafeText(Eval("Descrizione")) %>
-        </a>
-    </li>
-    <li><hr class="dropdown-divider" /></li>
-    <asp:Repeater ID="rptNavCategorie" runat="server" OnItemDataBound="rptNavCategorie_ItemDataBound">
-        <ItemTemplate>
-                                                                <li>
-                                                                    <a class="dropdown-item fw-semibold" href='<%# Eval("DefaultUrl") %>'><%# SafeText(Eval("Descrizione")) %></a>
-                                                                </li>
+            <a class="nav-link" href="<%# Eval(\"DefaultUrl\") %>"><%# SafeText(Eval(\"Descrizione\")) %></a>
+            <a class="nav-link dropdown-toggle dropdown-toggle-split" href="#" id="<%# \"navSettore\" & Eval(\"Id\") %>" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="visually-hidden">Toggle Dropdown</span>
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="<%# \"navSettore\" & Eval(\"Id\") %>">
+                <li>
+                    <a class="dropdown-item fw-semibold" href="<%# Eval(\"DefaultUrl\") %>">Tutto <%# SafeText(Eval(\"Descrizione\")) %></a>
+                </li>
+                <li><hr class="dropdown-divider" /></li>
 
-                                                                <asp:Repeater ID="rptNavTipologie" runat="server">
-                                                                    <ItemTemplate>
-                                                                        <li>
-                                                                            <a class="dropdown-item ps-4" href='<%# Eval("DefaultUrl") %>'><%# SafeText(Eval("Descrizione")) %></a>
-                                                                        </li>
-                                                                    </ItemTemplate>
-                                                                </asp:Repeater>
+                <asp:Repeater ID="rptNavCategorie" runat="server" OnItemDataBound="rptNavCategorie_ItemDataBound">
+                    <ItemTemplate>
+                        <li>
+                            <a class="dropdown-item fw-semibold" href="<%# Eval(\"DefaultUrl\") %>"><%# SafeText(Eval(\"Descrizione\")) %></a>
+                        </li>
 
-                                                                <li><hr class="dropdown-divider" /></li></ItemTemplate>
-    </asp:Repeater>
-</ul></li>
+                        <asp:Repeater ID="rptNavTipologie" runat="server">
+                            <ItemTemplate>
+                                <li>
+                                    <a class="dropdown-item ps-4" href="<%# Eval(\"DefaultUrl\") %>"><%# SafeText(Eval(\"Descrizione\")) %></a>
+                                </li>
+                            </ItemTemplate>
+                        </asp:Repeater>
+
+                        <li><hr class="dropdown-divider" /></li>
                     </ItemTemplate>
                 </asp:Repeater>
             </ul>
         </li>
     </ItemTemplate>
 </asp:Repeater>
+
 
                                 <!-- Listino personalizzato (legacy) -->
                                 <li class="nav-item">
