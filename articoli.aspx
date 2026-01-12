@@ -1,4 +1,4 @@
-﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="articoli.aspx.vb" Inherits="Articoli" MaintainScrollPositionOnPostback="true" %>
+<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="articoli.aspx.vb" Inherits="Articoli" MaintainScrollPositionOnPostback="true" %>
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
     Catalogo prodotti
 </asp:Content>

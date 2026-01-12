@@ -1,5 +1,7 @@
-﻿Imports MySql.Data.MySqlClient
+Imports MySql.Data.MySqlClient
 Imports System.Data
+Imports System.Text
+Imports System.Web
 Imports System.Text.RegularExpressions
 Imports System.Collections
 Imports System.Collections.Generic
@@ -78,6 +80,19 @@ Partial Class Articoli
             Dim filtersToRemove As String = Request.QueryString("rimuovi")
             Response.Redirect(changeUrlGetParam(Request.UrlReferrer.ToString, filtersToRemove, String.Empty).Replace("rimuovi=" & filtersToRemove, String.Empty))
         End If
+
+        
+
+        '==========================================================
+        ' STEP 3 (CATALOGO): Normalizzazione parametri st/ct/tp e Session
+        ' - Garantisce che i SqlDataSource basati su Session (st/ct) funzionino sempre
+        ' - Se arriva solo st o solo ct, completa i parametri mancanti in modo coerente
+        '==========================================================
+        If Not Me.IsPostBack Then
+            EnsureCatalogQueryDefaults()
+        End If
+
+        SyncCatalogSessionFromQuery()
 
         If Me.IsPostBack = False Then
             changeCheckBoxDependingFromUrl(CheckBox_Disponibile, "disponibile", "1")
@@ -1172,6 +1187,219 @@ Partial Class Articoli
         Return String.Join(",", validIds)
     End Function
 
+    '==========================================================
+    ' STEP 3 (CATALOGO): st/ct/tp defaults + Session sync
+    '==========================================================
+    Private Sub EnsureCatalogQueryDefaults()
+        Try
+            Dim pid As Integer = 0
+            Integer.TryParse(Request.QueryString("pid"), pid)
+
+            Dim q As String = Convert.ToString(Request.QueryString("q"))
+            If pid > 0 OrElse Not String.IsNullOrEmpty(q) Then
+                ' Dettaglio prodotto o ricerca libera: non forziamo default di navigazione
+                Exit Sub
+            End If
+
+            Dim stId As Integer = 0
+            Dim ctId As Integer = 0
+            Integer.TryParse(Request.QueryString("st"), stId)
+            Integer.TryParse(Request.QueryString("ct"), ctId)
+
+            Dim tpRaw As String = Convert.ToString(Request.QueryString("tp"))
+            Dim tpCanonical As String = tpRaw
+
+            Dim needRedirect As Boolean = False
+
+            ' 1) Se ho ct ma st mancante o incoerente, ricavo st dalla categoria (tabelle reali)
+            If ctId > 0 Then
+                Dim stFromCat As Integer = LookupSettoreIdByCategoria(ctId)
+                If stFromCat > 0 AndAlso (stId <= 0 OrElse stId <> stFromCat) Then
+                    stId = stFromCat
+                    needRedirect = True
+                End If
+            End If
+
+            ' 2) Se ho st ma ct mancante, prendo una categoria di default del settore
+            If stId > 0 AndAlso ctId <= 0 Then
+                Dim defaultCt As Integer = LookupDefaultCategoriaIdBySettore(stId)
+                If defaultCt > 0 Then
+                    ctId = defaultCt
+                    needRedirect = True
+                End If
+            End If
+
+            ' 3) Se manca tp ma ho ct, prendo una tipologia di default della categoria
+            If String.IsNullOrEmpty(tpRaw) AndAlso ctId > 0 Then
+                Dim defaultTp As Integer = LookupDefaultTipologiaIdByCategoria(ctId)
+                If defaultTp > 0 Then
+                    tpCanonical = defaultTp.ToString()
+                    needRedirect = True
+                End If
+            End If
+
+            ' 4) Redirect solo se ho completato / corretto i parametri base di navigazione
+            If needRedirect Then
+                Dim dict As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+
+                For Each k As String In Request.QueryString.AllKeys
+                    If String.IsNullOrEmpty(k) Then Continue For
+                    dict(k) = Request.QueryString(k)
+                Next
+
+                If stId > 0 Then
+                    dict("st") = stId.ToString()
+                ElseIf dict.ContainsKey("st") Then
+                    dict.Remove("st")
+                End If
+
+                If ctId > 0 Then
+                    dict("ct") = ctId.ToString()
+                ElseIf dict.ContainsKey("ct") Then
+                    dict.Remove("ct")
+                End If
+
+                If Not String.IsNullOrEmpty(tpCanonical) Then
+                    dict("tp") = tpCanonical
+                ElseIf dict.ContainsKey("tp") Then
+                    dict.Remove("tp")
+                End If
+
+                Dim qs As String = BuildQueryString(dict)
+                Dim url As String = Request.Path
+                If Not String.IsNullOrEmpty(qs) Then
+                    url &= "?" & qs
+                End If
+
+                Response.Redirect(url, True)
+            End If
+
+        Catch
+            'non blocca la pagina: se non riesco a determinare default, proseguo
+        End Try
+    End Sub
+
+    Private Sub SyncCatalogSessionFromQuery()
+        Try
+            Dim stId As Integer = 0
+            Dim ctId As Integer = 0
+            Integer.TryParse(Request.QueryString("st"), stId)
+            Integer.TryParse(Request.QueryString("ct"), ctId)
+
+            ' Se manca st ma ho ct, ricavo st per far funzionare i datasource (tipologie, ecc.)
+            If stId <= 0 AndAlso ctId > 0 Then
+                stId = LookupSettoreIdByCategoria(ctId)
+            End If
+
+            If stId > 0 Then
+                Session("st") = stId
+            End If
+
+            If ctId > 0 Then
+                Session("ct") = ctId
+            End If
+
+        Catch
+            'silent
+        End Try
+    End Sub
+
+    Private Function BuildQueryString(ByVal dict As Dictionary(Of String, String)) As String
+        If dict Is Nothing OrElse dict.Count = 0 Then Return String.Empty
+
+        Dim ordered As New List(Of String)
+
+        If dict.ContainsKey("st") Then ordered.Add("st")
+        If dict.ContainsKey("ct") Then ordered.Add("ct")
+        If dict.ContainsKey("tp") Then ordered.Add("tp")
+
+        Dim rest As New List(Of String)
+        For Each k As String In dict.Keys
+            If String.Equals(k, "st", StringComparison.OrdinalIgnoreCase) Then Continue For
+            If String.Equals(k, "ct", StringComparison.OrdinalIgnoreCase) Then Continue For
+            If String.Equals(k, "tp", StringComparison.OrdinalIgnoreCase) Then Continue For
+            rest.Add(k)
+        Next
+        rest.Sort()
+        ordered.AddRange(rest)
+
+        Dim sb As New StringBuilder()
+        For Each k As String In ordered
+            Dim v As String = dict(k)
+            If String.IsNullOrEmpty(k) Then Continue For
+            If v Is Nothing Then v = String.Empty
+
+            If sb.Length > 0 Then sb.Append("&")
+            sb.Append(HttpUtility.UrlEncode(k))
+            sb.Append("=")
+            sb.Append(HttpUtility.UrlEncode(v))
+        Next
+
+        Return sb.ToString()
+    End Function
+
+    Private Function LookupSettoreIdByCategoria(ByVal categoriaId As Integer) As Integer
+        If categoriaId <= 0 Then Return 0
+        Try
+            Dim connStr As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+            Using conn As New MySqlConnection(connStr)
+                conn.Open()
+                Using cmd As New MySqlCommand("SELECT Id_settore FROM categorie WHERE id=@id LIMIT 1", conn)
+                    cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = categoriaId
+                    Dim obj As Object = cmd.ExecuteScalar()
+                    If obj Is Nothing OrElse obj Is DBNull.Value Then Return 0
+                    Dim st As Integer = 0
+                    Integer.TryParse(Convert.ToString(obj), st)
+                    Return st
+                End Using
+            End Using
+        Catch
+            Return 0
+        End Try
+    End Function
+
+    Private Function LookupDefaultCategoriaIdBySettore(ByVal settoreId As Integer) As Integer
+        If settoreId <= 0 Then Return 0
+        Try
+            Dim connStr As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+            Using conn As New MySqlConnection(connStr)
+                conn.Open()
+                Using cmd As New MySqlCommand("SELECT id FROM categorie WHERE Abilitato=1 AND Id_settore=@st ORDER BY Ordinamento, Descrizione, id LIMIT 1", conn)
+                    cmd.Parameters.Add("@st", MySqlDbType.Int32).Value = settoreId
+                    Dim obj As Object = cmd.ExecuteScalar()
+                    If obj Is Nothing OrElse obj Is DBNull.Value Then Return 0
+                    Dim ct As Integer = 0
+                    Integer.TryParse(Convert.ToString(obj), ct)
+                    Return ct
+                End Using
+            End Using
+        Catch
+            Return 0
+        End Try
+    End Function
+
+    Private Function LookupDefaultTipologiaIdByCategoria(ByVal categoriaId As Integer) As Integer
+        If categoriaId <= 0 Then Return 0
+        Try
+            Dim connStr As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+            Using conn As New MySqlConnection(connStr)
+                conn.Open()
+                Using cmd As New MySqlCommand("SELECT id FROM tipologie WHERE Abilitato=1 AND Id_categoria=@ct ORDER BY Ordinamento, Descrizione, id LIMIT 1", conn)
+                    cmd.Parameters.Add("@ct", MySqlDbType.Int32).Value = categoriaId
+                    Dim obj As Object = cmd.ExecuteScalar()
+                    If obj Is Nothing OrElse obj Is DBNull.Value Then Return 0
+                    Dim tp As Integer = 0
+                    Integer.TryParse(Convert.ToString(obj), tp)
+                    Return tp
+                End Using
+            End Using
+        Catch
+            Return 0
+        End Try
+    End Function
+
+
+
     Function getFilterIds(ByVal parName As String) As String()
         If Not String.IsNullOrEmpty(Request.QueryString(parName)) Then
             Return Request.QueryString(parName).Split("|"c)
@@ -1411,6 +1639,43 @@ Partial Class Articoli
 
     Private Sub EnsureCatalogSeo()
         Dim canonical As String = Request.Url.GetLeftPart(UriPartial.Path)
+
+        ' Canonical: per navigazione categoria (st/ct/tp) manteniamo i parametri base,
+        ' mentre per ricerca (q) o dettaglio (pid) restiamo su path pulito.
+        Dim _pid As Integer = 0
+        Integer.TryParse(Request.QueryString("pid"), _pid)
+        Dim _q As String = Convert.ToString(Request.QueryString("q"))
+
+        If _pid <= 0 AndAlso String.IsNullOrEmpty(_q) Then
+            Dim _st As Integer = 0
+            Dim _ct As Integer = 0
+            Integer.TryParse(Request.QueryString("st"), _st)
+            Integer.TryParse(Request.QueryString("ct"), _ct)
+            Dim _tpRaw As String = Convert.ToString(Request.QueryString("tp"))
+
+            Dim parts As New List(Of String)()
+            If _st > 0 Then parts.Add("st=" & _st.ToString())
+            If _ct > 0 Then parts.Add("ct=" & _ct.ToString())
+
+            If Not String.IsNullOrEmpty(_tpRaw) Then
+                Dim _tp As String = _tpRaw.Replace("|", ",")
+                Dim firstTp As String = ""
+                For Each token As String In _tp.Split(","c)
+                    Dim id As Integer = 0
+                    If Integer.TryParse(token.Trim(), id) AndAlso id > 0 Then
+                        firstTp = id.ToString()
+                        Exit For
+                    End If
+                Next
+                If Not String.IsNullOrEmpty(firstTp) Then
+                    parts.Add("tp=" & firstTp)
+                End If
+            End If
+
+            If parts.Count > 0 Then
+                canonical &= "?" & String.Join("&", parts.ToArray())
+            End If
+        End If
 
         If String.IsNullOrEmpty(Page.Title) Then
             Page.Title = "Catalogo prodotti"
