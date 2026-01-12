@@ -1,4 +1,4 @@
-﻿Imports MySql.Data.MySqlClient
+﻿﻿Imports MySql.Data.MySqlClient
 Imports System.Data
 Imports System.Configuration
 Imports System.Web.UI.HtmlControls
@@ -125,7 +125,22 @@ End Function
                 rpt.DataBind()
             End If
         End If
+    
+    '==========================================================
+    ' NAVBAR: Settori/Categorie/Tipologie (abilitati)
+    '==========================================================
+    Private Sub BindNavSettori()
+        Try
+            If rptNavSettori Is Nothing Then Exit Sub
+            Dim data As List(Of NavSettoreItem) = LoadNavSettori()
+            rptNavSettori.DataSource = data
+            rptNavSettori.DataBind()
+        Catch ex As Exception
+            'Fail-safe: non bloccare la pagina per un errore menu
+        End Try
     End Sub
+
+End Sub
 
     '==========================================================
     ' INIT: azienda, catalogo, popup, sfondo, social
@@ -1465,6 +1480,7 @@ End Sub
 
 Public Class NavTipologiaItem
     Public Property Id As Integer
+    Public Property CategorieId As Integer
     Public Property Descrizione As String
 
     ' URL completo del tipo:
