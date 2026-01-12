@@ -209,7 +209,9 @@
 
         <div class="footer-bottom d-flex justify-content-between align-items-center py-3 border-top">
             <div class="footer-copyright">
-                <p class="mb-0">&copy; <%: DateTime.Now.Year %> Taikun. Tutti i diritti riservati.</p>
+                <p class="mb-0">&copy; <%: DateTime.Now.Year %> Taikun. Tutti i diritti riservati.
+                    <asp:Label ID="lblCredits" runat="server" CssClass="ms-2"></asp:Label>
+                </p>
             </div>
         </div>
     </div>
