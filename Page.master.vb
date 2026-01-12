@@ -114,6 +114,19 @@ End Function
         End Try
     End Sub
 
+    Protected Sub rptNavCategorie_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
+        If e.Item.ItemType = ListItemType.Item OrElse e.Item.ItemType = ListItemType.AlternatingItem Then
+            Dim c As NavCategoriaItem = TryCast(e.Item.DataItem, NavCategoriaItem)
+            If c Is Nothing Then Exit Sub
+
+            Dim rpt As Repeater = TryCast(e.Item.FindControl("rptNavTipologie"), Repeater)
+            If rpt IsNot Nothing Then
+                rpt.DataSource = c.Tipologie
+                rpt.DataBind()
+            End If
+        End If
+    End Sub
+
     '==========================================================
     ' INIT: azienda, catalogo, popup, sfondo, social
     '==========================================================
@@ -1471,86 +1484,127 @@ Private Sub BindNavSettori()
     End Try
 End Sub
 
-Private Function LoadNavSettori() As List(Of NavSettoreItem)
-    Dim result As New List(Of NavSettoreItem)()
-    Dim map As New Dictionary(Of Integer, NavSettoreItem)()
-    Dim firstCatUrl As New Dictionary(Of Integer, String)()
+    '==========================================================
+    ' MENU NAV (Settori → Categorie → Tipologie) - gerarchia legacy
+    '   - Mostra SOLO elementi Abilitato=1
+    '   - Link coerenti come webaffare: articoli.aspx?ct=...&st=...&tp=...
+    '==========================================================
+    Private Function LoadNavSettori() As List(Of NavSettoreItem)
 
-    Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+        Dim result As New List(Of NavSettoreItem)()
 
-    Using cn As New MySqlConnection(cs)
-        cn.Open()
+        Dim connStr As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
 
-        ' 1) Settori abilitati
-        Using cmd As New MySqlCommand("SELECT id, Descrizione, Ordinamento FROM settori WHERE Abilitato = 1 ORDER BY Ordinamento, id", cn)
-            Using dr As MySqlDataReader = cmd.ExecuteReader()
-                While dr.Read()
-                    Dim sid As Integer = Convert.ToInt32(dr("id"))
-                    Dim descr As String = Convert.ToString(dr("Descrizione"))
+        Dim settoriById As New Dictionary(Of Integer, NavSettoreItem)()
+        Dim categorieById As New Dictionary(Of Integer, NavCategoriaItem)()
 
-                    Dim s As New NavSettoreItem()
-                    s.Id = sid
-                    s.Descrizione = descr
-                    s.DefaultUrl = ResolveUrl("~/articoli.aspx") & "?st=" & sid.ToString()
-                    s.Categorie = New List(Of NavCategoriaItem)()
+        Using conn As New MySqlConnection(connStr)
+            conn.Open()
 
-                    map(sid) = s
-                    result.Add(s)
-                End While
+            ' 1) Settori (abilitati)
+            Using cmdS As New MySqlCommand("SELECT id, Descrizione FROM settori WHERE Abilitato=1 ORDER BY Ordinamento, id", conn)
+                Using rdr As MySqlDataReader = cmdS.ExecuteReader()
+                    While rdr.Read()
+                        Dim settoreId As Integer = Convert.ToInt32(rdr("id"))
+                        Dim descr As String = Convert.ToString(rdr("Descrizione"))
+
+                        Dim s As New NavSettoreItem()
+                        s.Id = settoreId
+                        s.Descrizione = descr
+                        s.Categorie = New List(Of NavCategoriaItem)()
+                        s.DefaultUrl = ResolveUrl("~/articoli.aspx?st=" & settoreId.ToString())
+
+                        settoriById(settoreId) = s
+                        result.Add(s)
+                    End While
+                End Using
             End Using
+
+            ' 2) Categorie (abilitate) collegate a Settori abilitati
+            Dim sqlC As String =
+                "SELECT c.id, c.Descrizione, c.SettoriId " &
+                "FROM categorie c " &
+                "INNER JOIN settori s ON s.id=c.SettoriId AND s.Abilitato=1 " &
+                "WHERE c.Abilitato=1 " &
+                "ORDER BY c.SettoriId, c.Ordinamento, c.id"
+
+            Using cmdC As New MySqlCommand(sqlC, conn)
+                Using rdr As MySqlDataReader = cmdC.ExecuteReader()
+                    While rdr.Read()
+                        Dim catId As Integer = Convert.ToInt32(rdr("id"))
+                        Dim catDesc As String = Convert.ToString(rdr("Descrizione"))
+                        Dim settoreId As Integer = Convert.ToInt32(rdr("SettoriId"))
+
+                        If settoriById.ContainsKey(settoreId) Then
+                            Dim c As New NavCategoriaItem()
+                            c.Id = catId
+                            c.Descrizione = catDesc
+                            c.SettoriId = settoreId
+                            c.Tipologie = New List(Of NavTipologiaItem)()
+                            c.DefaultUrl = ResolveUrl("~/articoli.aspx?ct=" & catId.ToString() & "&st=" & settoreId.ToString())
+
+                            categorieById(catId) = c
+                            settoriById(settoreId).Categorie.Add(c)
+                        End If
+                    End While
+                End Using
+            End Using
+
+            ' 3) Tipologie (abilitate) collegate a Categorie/Settori abilitati
+            Dim sqlT As String =
+                "SELECT t.id, t.Descrizione, t.CategorieId, c.SettoriId " &
+                "FROM tipologie t " &
+                "INNER JOIN categorie c ON c.id=t.CategorieId AND c.Abilitato=1 " &
+                "INNER JOIN settori s ON s.id=c.SettoriId AND s.Abilitato=1 " &
+                "WHERE t.Abilitato=1 " &
+                "ORDER BY c.SettoriId, c.id, t.Ordinamento, t.id"
+
+            Using cmdT As New MySqlCommand(sqlT, conn)
+                Using rdr As MySqlDataReader = cmdT.ExecuteReader()
+                    While rdr.Read()
+                        Dim tpId As Integer = Convert.ToInt32(rdr("id"))
+                        Dim tpDesc As String = Convert.ToString(rdr("Descrizione"))
+                        Dim catId As Integer = Convert.ToInt32(rdr("CategorieId"))
+                        Dim settoreId As Integer = Convert.ToInt32(rdr("SettoriId"))
+
+                        If categorieById.ContainsKey(catId) Then
+                            Dim t As New NavTipologiaItem()
+                            t.Id = tpId
+                            t.Descrizione = tpDesc
+                            t.CategorieId = catId
+                            t.DefaultUrl = ResolveUrl("~/articoli.aspx?ct=" & catId.ToString() & "&st=" & settoreId.ToString() & "&tp=" & tpId.ToString())
+
+                            categorieById(catId).Tipologie.Add(t)
+                        End If
+                    End While
+                End Using
+            End Using
+
         End Using
 
-        ' 2) Categorie abilitate (con DefaultTp calcolato su tipologie abilitate)
-        Dim sqlCats As String =
-            "SELECT c.id, c.SettoriId, c.Descrizione, c.Ordinamento, " &
-            " (SELECT t.id FROM tipologie t WHERE t.CategorieId = c.id AND t.Abilitato = 1 ORDER BY t.Ordinamento, t.id LIMIT 1) AS DefaultTp " &
-            "FROM categorie c " &
-            "WHERE c.Abilitato = 1 " &
-            "ORDER BY c.SettoriId, c.Ordinamento, c.id"
+        ' 4) DefaultUrl coerenti (settore → prima categoria → prima tipologia)
+        For Each s As NavSettoreItem In result
 
-        Using cmd2 As New MySqlCommand(sqlCats, cn)
-            Using dr2 As MySqlDataReader = cmd2.ExecuteReader()
-                While dr2.Read()
-                    Dim cid As Integer = Convert.ToInt32(dr2("id"))
-                    Dim sid As Integer = Convert.ToInt32(dr2("SettoriId"))
-                    Dim cdescr As String = Convert.ToString(dr2("Descrizione"))
+            For Each c As NavCategoriaItem In s.Categorie
+                If c.Tipologie IsNot Nothing AndAlso c.Tipologie.Count > 0 Then
+                    ' categoria punta alla prima tipologia abilitata (come legacy)
+                    c.DefaultUrl = c.Tipologie(0).DefaultUrl
+                Else
+                    c.DefaultUrl = ResolveUrl("~/articoli.aspx?ct=" & c.Id.ToString() & "&st=" & s.Id.ToString())
+                End If
+            Next
 
-                    Dim tp As Integer = 0
-                    If Not Convert.IsDBNull(dr2("DefaultTp")) Then
-                        Integer.TryParse(Convert.ToString(dr2("DefaultTp")), tp)
-                    End If
+            If s.Categorie IsNot Nothing AndAlso s.Categorie.Count > 0 Then
+                s.DefaultUrl = s.Categorie(0).DefaultUrl
+            Else
+                s.DefaultUrl = ResolveUrl("~/articoli.aspx?st=" & s.Id.ToString())
+            End If
 
-                    If map.ContainsKey(sid) Then
-                        Dim url As String = ResolveUrl("~/articoli.aspx") & "?st=" & sid.ToString() & "&ct=" & cid.ToString()
-                        If tp > 0 Then
-                            url &= "&tp=" & tp.ToString()
-                        End If
+        Next
 
-                        Dim c As New NavCategoriaItem()
-                        c.Id = cid
-                        c.Descrizione = cdescr
-                        c.Url = url
+        Return result
 
-                        map(sid).Categorie.Add(c)
-
-                        If Not firstCatUrl.ContainsKey(sid) Then
-                            firstCatUrl(sid) = url
-                        End If
-                    End If
-                End While
-            End Using
-        End Using
-    End Using
-
-    ' DefaultUrl settore = prima categoria disponibile (come webaffare.it: st + ct (+tp))
-    For Each s As NavSettoreItem In result
-        If firstCatUrl.ContainsKey(s.Id) Then
-            s.DefaultUrl = firstCatUrl(s.Id)
-        End If
-    Next
-
-    Return result
-End Function
+    End Function
 
 Protected Sub rptNavSettori_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs) Handles rptNavSettori.ItemDataBound
     If e.Item.ItemType = ListItemType.Item OrElse e.Item.ItemType = ListItemType.AlternatingItem Then

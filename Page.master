@@ -88,12 +88,21 @@
         </a>
     </li>
     <li><hr class="dropdown-divider" /></li>
-    <asp:Repeater ID="rptNavCategorie" runat="server">
+    <asp:Repeater ID="rptNavCategorie" runat="server" OnItemDataBound="rptNavCategorie_ItemDataBound">
         <ItemTemplate>
-            <li>
-                <a class="dropdown-item" href="<%# Eval("Url") %>"><%# SafeText(Eval("Descrizione")) %></a>
-            </li>
-        </ItemTemplate>
+                                                                <li>
+                                                                    <a class="dropdown-item fw-semibold" href='<%# Eval("DefaultUrl") %>'><%# SafeText(Eval("Descrizione")) %></a>
+                                                                </li>
+
+                                                                <asp:Repeater ID="rptNavTipologie" runat="server">
+                                                                    <ItemTemplate>
+                                                                        <li>
+                                                                            <a class="dropdown-item ps-4" href='<%# Eval("DefaultUrl") %>'><%# SafeText(Eval("Descrizione")) %></a>
+                                                                        </li>
+                                                                    </ItemTemplate>
+                                                                </asp:Repeater>
+
+                                                                <li><hr class="dropdown-divider" /></li></ItemTemplate>
     </asp:Repeater>
 </ul></li>
                     </ItemTemplate>
