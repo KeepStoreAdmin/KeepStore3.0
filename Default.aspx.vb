@@ -583,23 +583,27 @@ End Sub
         Dim settoreId As Integer = 0
         Integer.TryParse(Convert.ToString(settoreIdObj), settoreId)
 
-        If settoreId <= 0 Then
-            Return "articoli.aspx"
-        End If
-
         Dim ct As Integer = 0
         Integer.TryParse(Convert.ToString(defaultCtObj), ct)
 
         Dim tp As Integer = 0
         Integer.TryParse(Convert.ToString(defaultTpObj), tp)
 
-        If ct > 0 AndAlso tp > 0 Then
-            Return "articoli.aspx?st=" & settoreId.ToString() & "&ct=" & ct.ToString() & "&tp=" & tp.ToString()
-        ElseIf ct > 0 Then
-            Return "articoli.aspx?st=" & settoreId.ToString() & "&ct=" & ct.ToString()
-        Else
-            Return "articoli.aspx?st=" & settoreId.ToString()
+        If settoreId <= 0 Then
+            Return ResolveUrl("~/articoli.aspx")
         End If
+
+        Dim url As String = ResolveUrl("~/articoli.aspx") & "?st=" & settoreId.ToString()
+
+        If ct > 0 Then
+            url &= "&ct=" & ct.ToString()
+        End If
+
+        If tp > 0 Then
+            url &= "&tp=" & tp.ToString()
+        End If
+
+        Return url
     End Function
 
 
@@ -607,32 +611,7 @@ End Sub
 '==========================================================
 ' HOME: URL helper per Settori (st/ct/tp) - template-first
 '==========================================================
-Protected Function GetSettoreUrl(ByVal settoreIdObj As Object, ByVal defaultCtObj As Object, ByVal defaultTpObj As Object) As String
-    Dim settoreId As Integer = 0
-    Integer.TryParse(Convert.ToString(settoreIdObj), settoreId)
 
-    Dim ct As Integer = 0
-    Integer.TryParse(Convert.ToString(defaultCtObj), ct)
-
-    Dim tp As Integer = 0
-    Integer.TryParse(Convert.ToString(defaultTpObj), tp)
-
-    If settoreId <= 0 Then
-        Return ResolveUrl("~/articoli.aspx")
-    End If
-
-    Dim url As String = ResolveUrl("~/articoli.aspx") & "?st=" & settoreId.ToString()
-
-    If ct > 0 Then
-        url &= "&ct=" & ct.ToString()
-    End If
-
-    If tp > 0 Then
-        url &= "&tp=" & tp.ToString()
-    End If
-
-    Return url
-End Function
 
 
 End Class
