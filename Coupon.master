@@ -257,6 +257,7 @@
     
     <asp:contentplaceholder id="Contentplaceholder1" runat="server">
     </asp:contentplaceholder>
+    <asp:Literal ID="litSeoJsonLd" runat="server" EnableViewState="false" />
 </head>
 <body>
     <form id="form1" runat="server">
@@ -549,7 +550,8 @@
                 </tr>
             </table>
         </div>
-    </form>
+        <asp:Literal ID="litYear" runat="server" EnableViewState="false" Visible="false" />
+</form>
     
     <!-- Data Source -->
     <asp:SqlDataSource ID="SqlDataSettori" runat="server" 

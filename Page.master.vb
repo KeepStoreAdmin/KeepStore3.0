@@ -1566,4 +1566,14 @@ Protected Sub rptNavSettori_ItemDataBound(ByVal sender As Object, ByVal e As Rep
 End Sub
 
 
+
+    '------------------------------------------------------------
+    ' Utility: HTML encode per binding in markup (prevenzione XSS)
+    '------------------------------------------------------------
+    Public Function SafeText(ByVal value As Object) As String
+        Dim s As String = Convert.ToString(value)
+        If s Is Nothing Then s = String.Empty
+        Return System.Web.HttpUtility.HtmlEncode(s)
+    End Function
+
 End Class

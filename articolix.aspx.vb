@@ -122,4 +122,44 @@ Partial Class articolix
         ' Idem: se vuoi la stessa funzione di articoli.aspx, la puoi incollare qui.
     End Sub
 
+
+    '------------------------------------------------------------
+    ' Helpers per binding markup (legacy)
+    '------------------------------------------------------------
+    Protected Function checkImg(ByVal value As Object) As String
+        Dim s As String = Convert.ToString(value)
+        If String.IsNullOrWhiteSpace(s) Then
+            'fallback: lascia vuoto (o sostituisci con un placeholder se presente)
+            Return String.Empty
+        End If
+
+        s = s.Trim()
+
+        If s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse s.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+            Return s
+        End If
+
+        If s.StartsWith("/") Then
+            Return s
+        End If
+
+        'Percorso legacy più comune
+        Return ResolveUrl("~/public/immagini/" & s.TrimStart("/"c))
+    End Function
+
+    Protected Function sotto_stringa(ByVal value As Object) As String
+        Dim s As String = Convert.ToString(value)
+        If String.IsNullOrEmpty(s) Then Return String.Empty
+
+        'rimuove HTML base
+        s = System.Text.RegularExpressions.Regex.Replace(s, "<.*?>", String.Empty)
+
+        'taglio descrizione
+        If s.Length > 160 Then
+            s = s.Substring(0, 160) & "..."
+        End If
+
+        Return s
+    End Function
+
 End Class
