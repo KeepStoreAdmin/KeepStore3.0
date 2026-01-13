@@ -1,12 +1,7 @@
 ﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="carrello.aspx.vb" Inherits="carrello" Debug="true"%>
-<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server"><%: Page.Title %></asp:Content>
 
-<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <style type="text/css">
-        /* Carrello: integrazione template (minimo indispensabile) */
-        .cart-table img { max-width: 90px; height: auto; }
-    </style>
-</asp:Content>
+<%@ Register Assembly="ConwayControls" Namespace="ConwayControls.Web" TagPrefix="ccwc" %>
+
 
 <asp:Content ID="Content2" ContentPlaceHolderID="Contentplaceholder1" Runat="Server">
 
@@ -45,7 +40,7 @@
 </asp:Content>
 
 
-<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+<asp:Content ID="Content1" ContentPlaceHolderID="cph" Runat="Server">
 
     <h1>Il tuo carrello</h1>
 
@@ -536,7 +531,8 @@
             <Columns>
                 <asp:TemplateField ShowHeader="False">
                     <ItemTemplate>
-                        <asp:RadioButton ID="rbSpedizione" runat="server" AutoPostBack="True" GroupName="spedizione" />
+                        <ccwc:RadioButton ID="rbSpedizione" runat="server" AutoPostBack="True" Checked='false'
+                            GroupName="spedizione" Value='<%# Eval("Id") %>' />
                     </ItemTemplate>
                     <ItemStyle HorizontalAlign="Left" VerticalAlign="Middle" />
                 </asp:TemplateField>
@@ -683,7 +679,8 @@
             <Columns>
                 <asp:TemplateField HeaderText="Seleziona">
                     <ItemTemplate>
-                        <asp:RadioButton id="rbSpedizione" runat="server" autopostback="True" groupname="spedizione" ></asp:RadioButton>
+                        <ccwc:radiobutton id="rbSpedizione" runat="server" autopostback="True" checked='false'
+                            groupname="spedizione" value='<%# Eval("Id") %>'></ccwc:radiobutton>
                     </ItemTemplate>
                 </asp:TemplateField>
                 <asp:TemplateField HeaderText="id" InsertVisible="False" SortExpression="id" Visible="False">
@@ -778,9 +775,9 @@
             <table>
                 <tr>
                     <td style=" text-align:left; vertical-align:middle;">
-                      <asp:RadioButton ID="rbSpedizioneGratis" runat="server" AutoPostBack="True" Checked='True'
+                      <ccwc:RadioButton ID="rbSpedizioneGratis" runat="server" AutoPostBack="True" Checked='True'
                       Font-Bold="True" Font-Names="Arial" ForeColor="Red" GroupName="spedizione"
-                      Text="" />
+                      Text="" Value='<%# Eval("Id") %>' />
                     </td>
                     <td>
                         <img src="Public/Vettori/free.jpg"  alt=""/>
@@ -863,8 +860,8 @@
 						<Columns>
 							<asp:TemplateField HeaderText="sel">
 								<ItemTemplate>
-									<asp:RadioButton id="rbPagamento" runat="server" Checked='<%# Eval("Predefinito") %>'
-										groupname="pagamento" AutoPostBack="True"></asp:RadioButton>
+									<ccwc:radiobutton id="rbPagamento" runat="server" checked='<%# Eval("Predefinito") %>'
+										groupname="pagamento" value='<%# eval("id") %>' AutoPostBack="True"></ccwc:radiobutton>
 								</ItemTemplate>
 							</asp:TemplateField>
 							<asp:TemplateField>
@@ -1164,7 +1161,7 @@
                         </td>
                     </tr>  
                     <tr>
-						<td colspan="2"><asp:CheckBox runat="server" ID="CHKPREDEFINITO" Text="Indirizzo predefinito" /><br />
+						<td colspan="2"><asp:CheckBox runat="server" ID="CHKPREDEFINITO" Text="Indirizzo predefinito" Checked="false" /><br />
 						</td>
 					</tr> 
                     <tr>

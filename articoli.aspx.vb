@@ -1810,22 +1810,4 @@ Partial Class Articoli
             ' NOP
         End Try
     End Sub
-
-
-    '==========================================================
-    ' URL helpers (template-first)
-    '==========================================================
-    Protected Function BuildCategoriaUrl(ByVal catId As Object) As String
-        Dim st As String = Convert.ToString(Session("st"))
-        If String.IsNullOrEmpty(st) Then st = Convert.ToString(Request("st"))
-        If String.IsNullOrEmpty(st) Then st = "0"
-        Dim id As Integer = 0
-        Try
-            id = Convert.ToInt32(catId)
-        Catch
-            id = 0
-        End Try
-        Return ResolveUrl("~/articoli.aspx?st=" & st & "&ct=" & id.ToString())
-    End Function
-
 End Class
