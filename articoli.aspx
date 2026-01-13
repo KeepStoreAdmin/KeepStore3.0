@@ -47,10 +47,9 @@
     <asp:SqlDataSource ID="sdsCategorieSettore" runat="server" 
         ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
         ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" 
-        SelectCommand="SELECT id, Codice, Descrizione, SettoriCodice, SettoriDescrizone FROM vCategorieSettori WHERE Abilitato=?Abilitato AND SettoriCodice=?SettoriCodice ORDER BY Ordinamento, Descrizione">
+        SelectCommand="SELECT DISTINCT CategorieId AS Id, CategorieDescrizione AS Descrizione FROM varticolibase WHERE SettoriId=?SettoriId ORDER BY CategorieDescrizione">
         <SelectParameters>
-            <asp:Parameter Name="Abilitato" Type="Int32" DefaultValue="1" />
-            <asp:SessionParameter Name="SettoriCodice" SessionField="st" Type="Int32" />
+            <asp:SessionParameter Name="SettoriId" SessionField="st" Type="Int32" />
         </SelectParameters>
     </asp:SqlDataSource>
 
@@ -112,7 +111,7 @@
                             <asp:Repeater ID="rptCategorieSettore" runat="server" DataSourceID="sdsCategorieSettore">
                                 <ItemTemplate>
                                     <li class="py-1">
-                                        <a class="text-decoration-none" href='<%# "articoli.aspx?st=" & Eval("SettoriCodice") & "&ct=" & Eval("Id") %>'>
+                                        <a class="text-decoration-none" href='<%# "articoli.aspx?st=" & Session("st") & "&ct=" & Eval("Id") %>'>
                                             <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>
                                         </a>
                                     </li>
