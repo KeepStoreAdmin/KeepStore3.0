@@ -17,7 +17,9 @@
     <link rel="stylesheet" href="/Public/assets/css/main.css" />
 
     <!-- SEO / JSON-LD injection -->
-    <asp:Literal ID="litSeoJsonLd" runat="server" EnableViewState="False" />
+    <asp:PlaceHolder ID="phSeoJsonLd" runat="server" Visible="false">
+        <script type="application/ld+json"><asp:Literal ID="litSeoJsonLd" runat="server" EnableViewState="False" /></script>
+    </asp:PlaceHolder>
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 </head>

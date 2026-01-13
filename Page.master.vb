@@ -22,6 +22,10 @@ Private _seoJsonLd As String = String.Empty
             _seoJsonLd = If(value, String.Empty)
 
             ' Aggiorna subito il literal nel <head> (se già disponibile)
+            If phSeoJsonLd IsNot Nothing Then
+                phSeoJsonLd.Visible = Not String.IsNullOrWhiteSpace(_seoJsonLd)
+            End If
+
             If litSeoJsonLd IsNot Nothing Then
                 litSeoJsonLd.Text = _seoJsonLd
             End If
