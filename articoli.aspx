@@ -44,6 +44,17 @@
         </SelectParameters>
     </asp:SqlDataSource>
 
+    <asp:SqlDataSource ID="sdsCategorieSettore" runat="server" 
+        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
+        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" 
+        SelectCommand="SELECT id, Codice, Descrizione, SettoriCodice, SettoriDescrizone FROM vCategorieSettori WHERE Abilitato=?Abilitato AND SettoriCodice=?SettoriCodice ORDER BY Ordinamento, Descrizione">
+        <SelectParameters>
+            <asp:Parameter Name="Abilitato" Type="Int32" DefaultValue="1" />
+            <asp:SessionParameter Name="SettoriCodice" SessionField="st" Type="Int32" />
+        </SelectParameters>
+    </asp:SqlDataSource>
+
+
     <asp:SqlDataSource ID="sdsTipologie" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
         ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
         SelectCommand="SELECT * FROM vcategorietipologie WHERE ((Abilitato = ?Abilitato) AND (SettoriId = ?SettoriId) AND (CategorieId = ?CategorieId)) ORDER BY Ordinamento, Descrizione" EnableViewState="False">
@@ -89,7 +100,50 @@
     </asp:SqlDataSource>
 
     <div class="container">
-        <div class="row mt-3" runat="server" id="tNavig">
+
+        <div class="row mt-3">
+
+            <!-- Sidebar (Categorie / Tipologie) -->
+            <div class="col-lg-3 mb-4">
+                <div class="card mb-3">
+                    <div class="card-header bg-light"><strong>Categorie</strong></div>
+                    <div class="card-body p-2">
+                        <ul class="list-unstyled mb-0">
+                            <asp:Repeater ID="rptCategorieSettore" runat="server" DataSourceID="sdsCategorieSettore">
+                                <ItemTemplate>
+                                    <li class="py-1">
+                                        <a class="text-decoration-none" href='<%# "articoli.aspx?st=" & Eval("SettoriCodice") & "&ct=" & Eval("Id") %>'>
+                                            <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>
+                                        </a>
+                                    </li>
+                                </ItemTemplate>
+                            </asp:Repeater>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header bg-light"><strong>Tipologie</strong></div>
+                    <div class="card-body p-2">
+                        <ul class="list-unstyled mb-0">
+                            <asp:Repeater ID="rptTipologieLink" runat="server" DataSourceID="sdsTipologie">
+                                <ItemTemplate>
+                                    <li class="py-1">
+                                        <a class="text-decoration-none" href='<%# "articoli.aspx?st=" & Session("st") & "&ct=" & Session("ct") & "&tp=" & Eval("Id") %>'>
+                                            <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>
+                                        </a>
+                                    </li>
+                                </ItemTemplate>
+                            </asp:Repeater>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main content -->
+            <div class="col-lg-9">
+
+                <div class="row mt-3" runat="server" id="tNavig">
 
             <div id="filtersMr" class="col-12 col-md-6" style="padding-right: 2px; padding-left: 2px;">
                 <asp:DataList ID="DataList4" runat="server" DataSourceID="sdsMarche" RepeatLayout="Flow" Font-Size="8pt">
@@ -162,7 +216,6 @@
                     <SelectedItemStyle Font-Bold="True" />
                 </asp:DataList>
             </div>
-        </div>
     </div>
 
     <asp:SqlDataSource ID="sdsArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
@@ -436,7 +489,13 @@
             $('#filtersSg').append('<div style="position: absolute;top:0;left:0;width: 100%;height:100%;z-index:2;opacity:0.4;filter: alpha(opacity = 50)"></div>');
         }
     </script>
-	
+
+            </div>
+
+        </div>
+
+    </div>
+
     </section>
 
 </asp:Content>
