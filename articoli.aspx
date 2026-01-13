@@ -129,7 +129,7 @@
                             <asp:Repeater ID="rptTipologieLink" runat="server" DataSourceID="sdsTipologie">
                                 <ItemTemplate>
                                     <li class="py-1">
-                                        <a class="text-decoration-none" href='<%# "articoli.aspx?st=" & Session("st") & "&ct=" & Session("ct") & "&tp=" & Eval("Id") %>'>
+                                        <a class="text-decoration-none" href='<%# "articoli.aspx?st=" & Session("st") & "&ct=" & Session("ct") & "&tp=" & Eval("TipologieId") %>'>
                                             <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>
                                         </a>
                                     </li>
