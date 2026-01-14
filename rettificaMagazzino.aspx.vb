@@ -2,7 +2,7 @@
 Imports System.Data
 
 Partial Class Articoli
-    Inherits System.Web.UI.Page
+    Inherits AntiCsrfPage
 
     Dim IvaTipo As Integer
     Dim DispoTipo As Integer
@@ -15,6 +15,22 @@ Partial Class Articoli
     End Function
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+
+        KeepStoreSecurity.AddSecurityHeaders(Response)
+        KeepStoreSecurity.RequireHttps(Request, Response)
+
+        ' Hard authorization gate: this page is for internal stock correction.
+        Dim gestoreId As Integer = KeepStoreSecurity.SqlCleanInt(Session("GestoreId"), 0, 0, Integer.MaxValue)
+        If gestoreId <= 0 Then
+            If Session("UtentiId") Is Nothing Then
+                Response.Redirect("~/loginUtente.aspx")
+            Else
+                Response.StatusCode = 403
+                Response.Write("Accesso negato")
+                Context.ApplicationInstance.CompleteRequest()
+            End If
+            Return
+        End If
 
         'Redirect nel caso c'è la presenza di #up
         If Request.Url.AbsoluteUri.Contains("%23up") Or (Request.Url.AbsoluteUri.Contains("#23up")) Then
@@ -31,7 +47,7 @@ Partial Class Articoli
 
         'Assegnazione della variabile in offerta, per visualizzare solo i prodotti in offerta
         If Me.Request.QueryString("inpromo") <> "" Then
-            InOfferta = Me.Request.QueryString("inpromo")
+            InOfferta = KeepStoreSecurity.SqlCleanInt(Request.QueryString("inpromo"), 0, 0, 1)
         End If
 
         
@@ -108,7 +124,7 @@ Partial Class Articoli
 
             'Carico le variabili da Sessione se non sono presenti nella QueryString
             If Me.Request.QueryString("st") <> "" Then
-                SettoriId = Me.Request.QueryString("st")
+            SettoriId = KeepStoreSecurity.SqlCleanInt(Request.QueryString("st"), 0, 0, 999999)
             Else
                 SettoriId = Me.Session("st")
             End If
@@ -120,7 +136,7 @@ Partial Class Articoli
             End If
 
             If Me.Request.QueryString("tp") <> "" Then
-                TipologieId = Me.Request.QueryString("tp")
+            TipologieId = KeepStoreSecurity.SqlCleanInt(Request.QueryString("tp"), 0, 0, 999999)
             Else
                 TipologieId = Me.Session("tp")
             End If
@@ -138,13 +154,13 @@ Partial Class Articoli
             End If
 
             If Me.Request.QueryString("mr") <> "" Then
-                MarcheId = Me.Request.QueryString("mr")
+            MarcheId = KeepStoreSecurity.SqlCleanInt(Request.QueryString("mr"), 0, 0, 999999)
             Else
                 MarcheId = Me.Session("mr")
             End If
 
             If Me.Request.QueryString("pid") <> "" Then
-                OfferteId = Me.Request.QueryString("pid")
+            OfferteId = KeepStoreSecurity.SqlCleanInt(Request.QueryString("pid"), 0, 0, 999999)
             Else
                 OfferteId = Me.Session("pid")
             End If
@@ -175,7 +191,23 @@ Partial Class Articoli
             End If
 
             'Utile per visualizzare i prezzi con iva dell'utente
-            Dim strSelect As String = "SELECT id, Codice, Ean, Descrizione1, Descrizione2, DescrizioneLunga, Prezzo, IF((" & Session("AbilitatoIvaReverseCharge") & "=1) AND (ValoreIvaRC>-1),((Prezzo)*((ValoreIvaRC/100)+1)),IF(" & Session("Iva_Utente") & ">0,((Prezzo)*((" & Session("Iva_Utente") & "/100)+1)),PrezzoIvato)) AS PrezzoIvato, Img1, MarcheDescrizione, Disponibilita, Giacenza, InOrdine, Impegnata, InOfferta, SettoriDescrizione, CategorieDescrizione, TipologieDescrizione, GruppiDescrizione, SottogruppiDescrizione, MarcheDescrizione, Marche_img, PrezzoPromo, IF((" & Session("AbilitatoIvaReverseCharge") & "=1) AND (ValoreIvaRC>-1),((PrezzoPromo)*((ValoreIvaRC/100)+1)),IF(" & Session("Iva_Utente") & ">0,((PrezzoPromo)*((" & Session("Iva_Utente") & "/100)+1)),PrezzoPromoIvato)) AS PrezzoPromoIvato, MarcheId, CategorieId, TipologieId, IF(PrezzoPromo IS NULL,Prezzo,PrezzoPromo) Ord_PrezzoPromo, IF(PrezzoPromoIvato IS NULL,PrezzoIvato,IF((" & Session("AbilitatoIvaReverseCharge") & "=1) AND (ValoreIvaRC>-1),((PrezzoPromo)*((ValoreIvaRC/100)+1)),IF(" & Session("Iva_Utente") & ">0,((PrezzoPromo)*((" & Session("Iva_Utente") & "/100)+1)),PrezzoPromoIvato))) Ord_PrezzoPromoIvato FROM vsuperarticoli "
+            Dim strSelect As String = "SELECT id, Codice, Ean, Descrizione1, Descrizione2, DescrizioneLunga, Prezzo, IF((@ivaRC=1) AND (ValoreIvaRC>-1),((Prezzo)*((ValoreIvaRC/100)+1)),IF(@iva>0,((Prezzo)*((@iva/100)+1)),PrezzoIvato)) AS PrezzoIvato, Img1, MarcheDescrizione, Disponibilita, Giacenza, InOrdine, Impegnata, InOfferta, SettoriDescrizione, CategorieDescrizione, TipologieDescrizione, GruppiDescrizione, SottogruppiDescrizione, MarcheDescrizione, Marche_img, PrezzoPromo, IF((@ivaRC=1) AND (ValoreIvaRC>-1),((PrezzoPromo)*((ValoreIvaRC/100)+1)),IF(@iva>0,((PrezzoPromo)*((@iva/100)+1)),PrezzoPromoIvato)) AS PrezzoPromoIvato, MarcheId, CategorieId, TipologieId, IF(PrezzoPromo IS NULL,Prezzo,PrezzoPromo) Ord_PrezzoPromo, IF(PrezzoPromoIvato IS NULL,PrezzoIvato,IF((@ivaRC=1) AND (ValoreIvaRC>-1),((PrezzoPromo)*((ValoreIvaRC/100)+1)),IF(@iva>0,((PrezzoPromo)*((@iva/100)+1)),PrezzoPromoIvato))) Ord_PrezzoPromoIvato FROM vsuperarticoli "
+        ' Parameters used inside strSelect (avoid SQL injection via concatenated session values)
+        Dim ivaUtente As Decimal = KeepStoreSecurity.SqlCleanDecimal(Session("Iva_Utente"), 0D, 0D, 100D)
+        Dim ivaRC As Integer = KeepStoreSecurity.SqlCleanInt(Session("AbilitatoIvaReverseCharge"), 0, 0, 1)
+        If sdsArticoli IsNot Nothing Then
+            If sdsArticoli.SelectParameters("iva") IsNot Nothing Then
+                sdsArticoli.SelectParameters("iva").DefaultValue = ivaUtente.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            Else
+                sdsArticoli.SelectParameters.Add("iva", ivaUtente.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            End If
+            If sdsArticoli.SelectParameters("ivaRC") IsNot Nothing Then
+                sdsArticoli.SelectParameters("ivaRC").DefaultValue = ivaRC.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            Else
+                sdsArticoli.SelectParameters.Add("ivaRC", ivaRC.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            End If
+        End If
+
 
             Dim strWhere As String = ""
             Dim strWhere2 As String = "WHERE 1=1 "

@@ -2,7 +2,7 @@
 Imports System.Data
 
 Partial Class wishlist
-    Inherits System.Web.UI.Page
+    Inherits AntiCsrfPage
 
     Dim IvaTipo As Integer
     Dim DispoTipo As Integer
@@ -15,6 +15,9 @@ Partial Class wishlist
     End Function
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        KeepStoreSecurity.AddSecurityHeaders(Response)
+        KeepStoreSecurity.RequireHttps(Request, Response)
+
         If Session("UtentiId") < 1 Then
             Response.Redirect("default.aspx")
         End If
