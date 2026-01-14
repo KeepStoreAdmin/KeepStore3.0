@@ -2,76 +2,56 @@ Imports System
 Imports System.Web
 Imports System.Web.UI
 
-' Base page implementing an Anti-CSRF token bound to ViewStateUserKey.
-' Inherit from this page in all WebForms pages that perform state-changing actions.
+' AntiCsrfPage: mitigazione CSRF per WebForms
+' Pattern: ViewStateUserKey + token in cookie + token in ViewState (double submit)
 Public Class AntiCsrfPage
     Inherits Page
 
-    Private Const AntiXsrfTokenKey As String = "__AntiXsrfToken"
-    Private Const AntiXsrfUserNameKey As String = "__AntiXsrfUserName"
-
-    Private _antiXsrfTokenValue As String
+    Private Const AntiCsrfTokenKey As String = "__AntiCsrfToken"
+    Private Const AntiCsrfUserNameKey As String = "__AntiCsrfUserName"
+    Private _antiCsrfTokenValue As String
 
     Protected Overrides Sub OnInit(e As EventArgs)
         MyBase.OnInit(e)
 
-        Dim requestCookie As HttpCookie = Request.Cookies(AntiXsrfTokenKey)
+        Dim requestCookie As HttpCookie = Request.Cookies(AntiCsrfTokenKey)
         Dim cookieValue As String = If(requestCookie IsNot Nothing, requestCookie.Value, Nothing)
 
-        Dim guid As Guid
-        If Not String.IsNullOrEmpty(cookieValue) AndAlso Guid.TryParse(cookieValue, guid) Then
-            _antiXsrfTokenValue = cookieValue
+        If Not String.IsNullOrEmpty(cookieValue) AndAlso IsGuid(cookieValue) Then
+            _antiCsrfTokenValue = cookieValue
         Else
-            _antiXsrfTokenValue = Guid.NewGuid().ToString("N")
-            Dim responseCookie As New HttpCookie(AntiXsrfTokenKey) With {
-                .HttpOnly = True,
-                .Value = _antiXsrfTokenValue
-            }
-
+            _antiCsrfTokenValue = Guid.NewGuid().ToString("N")
+            Dim responseCookie As New HttpCookie(AntiCsrfTokenKey, _antiCsrfTokenValue)
+            responseCookie.HttpOnly = True
+            responseCookie.SameSite = SameSiteMode.Lax
             If Request.IsSecureConnection Then
                 responseCookie.Secure = True
             End If
-
-            ' SameSite requires .NET 4.7.2+; ignore if not supported by runtime.
-            Try
-                responseCookie.SameSite = SameSiteMode.Lax
-            Catch
-            End Try
-
             Response.Cookies.Set(responseCookie)
         End If
 
-        Page.ViewStateUserKey = _antiXsrfTokenValue
-        AddHandler Page.PreLoad, AddressOf AntiXsrfPreLoad
+        ViewStateUserKey = _antiCsrfTokenValue
+        AddHandler PreLoad, AddressOf AntiCsrfPreLoad
     End Sub
 
-    Private Sub AntiXsrfPreLoad(sender As Object, e As EventArgs)
+    Private Sub AntiCsrfPreLoad(sender As Object, e As EventArgs)
         If Not IsPostBack Then
-            ViewState(AntiXsrfTokenKey) = _antiXsrfTokenValue
-            ViewState(AntiXsrfUserNameKey) = CurrentUserName()
+            ViewState(AntiCsrfTokenKey) = _antiCsrfTokenValue
+            ViewState(AntiCsrfUserNameKey) = If(Context IsNot Nothing AndAlso Context.User IsNot Nothing AndAlso Context.User.Identity IsNot Nothing, Context.User.Identity.Name, String.Empty)
         Else
-            Dim vsToken As String = TryCast(ViewState(AntiXsrfTokenKey), String)
-            Dim vsUser As String = TryCast(ViewState(AntiXsrfUserNameKey), String)
+            Dim token As String = TryCast(ViewState(AntiCsrfTokenKey), String)
+            Dim userName As String = TryCast(ViewState(AntiCsrfUserNameKey), String)
+            Dim currentUser As String = If(Context IsNot Nothing AndAlso Context.User IsNot Nothing AndAlso Context.User.Identity IsNot Nothing, Context.User.Identity.Name, String.Empty)
 
-            If String.IsNullOrEmpty(vsToken) OrElse String.IsNullOrEmpty(vsUser) Then
-                Throw New InvalidOperationException("Anti-CSRF token missing.")
-            End If
-
-            If Not String.Equals(vsToken, _antiXsrfTokenValue, StringComparison.Ordinal) Then
-                Throw New InvalidOperationException("Anti-CSRF token validation failed.")
-            End If
-
-            If Not String.Equals(vsUser, CurrentUserName(), StringComparison.Ordinal) Then
-                Throw New InvalidOperationException("Anti-CSRF user validation failed.")
+            If String.IsNullOrEmpty(token) OrElse Not String.Equals(token, _antiCsrfTokenValue, StringComparison.Ordinal) OrElse Not String.Equals(userName, currentUser, StringComparison.Ordinal) Then
+                Throw New HttpException(403, "CSRF validation failed.")
             End If
         End If
     End Sub
 
-    Protected Overridable Function CurrentUserName() As String
-        If Context IsNot Nothing AndAlso Context.User IsNot Nothing AndAlso Context.User.Identity IsNot Nothing AndAlso Context.User.Identity.IsAuthenticated Then
-            Return Context.User.Identity.Name
-        End If
-        ' Fallback for anonymous sessions.
-        Return String.Empty
+    Private Shared Function IsGuid(value As String) As Boolean
+        If String.IsNullOrEmpty(value) Then Return False
+        Dim g As Guid
+        Return Guid.TryParse(value, g)
     End Function
 End Class
