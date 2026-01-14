@@ -5,15 +5,9 @@
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
 
-    <link rel="canonical" href="<%= Request.Url.GetLeftPart(System.UriPartial.Path) %>
+    <link rel="canonical" href="<%= System.Web.HttpUtility.HtmlAttributeEncode(Request.Url.GetLeftPart(System.UriPartial.Path)) %>" />
     <style type="text/css">
-        /* KeepStore: migliora usabilità liste filtri lunghe (Marche/Tipologie) senza toccare la logica dei filtri */
         .filter-scroll { max-height: 260px; overflow: auto; padding-right: 6px; }
-    </style>
-" />
-
-    <style>
-        /* KeepStore: pager (GridView) – estetica coerente con template Onus */
         .pagination-ys { display: flex; justify-content: center; margin-top: 18px; }
         .pagination-ys table { margin: 0; border-collapse: separate; border-spacing: 6px 0; }
         .pagination-ys td { padding: 0; }
@@ -112,7 +106,7 @@
                 <ItemTemplate>
                     <asp:Label ID="lblSettore" runat="server" Text='<%# ucase(Eval("SettoriDescrizone")) %>' EnableViewState="False"></asp:Label>
                     »
-                    <asp:Label ID="lblCategoria" runat="server" Text='<%# Eval("Descrizione") %>' EnableViewState="False"></asp:Label>
+                    <asp:Label ID="lblCategoria" runat="server" Text='<%# H(Eval("Descrizione")) %>' EnableViewState="False"></asp:Label>
                 </ItemTemplate>
             </asp:FormView>
             <asp:Label ID="lblRicerca" runat="server" Text="Risultato ricerca per:" Font-Bold="False" Visible="False"></asp:Label>
@@ -417,9 +411,9 @@
                                         </a>
                                     </li>
                                     <li>
-                                        <a href='https://wa.me/?text=<%# Eval("Descrizione1") %> - https://<%# Session("AziendaUrl") %>/articolo.aspx?id=<%# Eval("id") %>%26TCid=<%# Eval("TCid") %>'
+                                        <a href='<%# GetWhatsAppShareUrl(Eval("Descrizione1"), Eval("id"), Eval("TCid")) %>'
                                            class="box-icon btn-icon-action hover-tooltip tooltip-left">
-                                            <img src='https://<%# Session("AziendaUrl") %>/Public/Images/WhatsApp-Symbolo.png'
+                                            <img src='<%# GetWhatsAppIconUrl() %>'
                                                  alt="WhatsApp"
                                                  style="height:24px;" />
                                             <span class="tooltip">Condividi su WhatsApp</span>

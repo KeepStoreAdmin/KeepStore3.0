@@ -7,7 +7,7 @@ Imports System.Collections
 Imports System.Collections.Generic
 
 Partial Class Articoli
-    Inherits System.Web.UI.Page
+    Inherits AntiCsrfPage
 
     Dim IvaTipo As Integer
     Dim DispoTipo As Integer
@@ -203,7 +203,10 @@ End Sub
         Dim sqlString As String
         sqlString = "select * from " & tableName & " inner join articoli_tagliecolori where " & tableName & ".id = articoli_tagliecolori." & idColumnName
         If otherDropdownlistIndex > 0 Then
-            sqlString = sqlString & " And articoli_tagliecolori." & otherIdColumnName & " = " & otherDropdownlistValue
+            Dim otherId As Integer = 0
+            If Integer.TryParse(otherDropdownlistValue, otherId) AndAlso otherId > 0 Then
+                sqlString = sqlString & " And articoli_tagliecolori." & otherIdColumnName & " = " & otherId.ToString()
+            End If
         End If
         sqlString = sqlString & " And articoli_tagliecolori.ArticoliId in (SELECT id FROM (" & articoliFiltrati & ") AS articoliFiltrati)"
         sqlString = sqlString & " And " & tableName & ".abilitato = 1 Group by " & tableName & ".id order by " & tableName & ".id"
@@ -540,20 +543,25 @@ End Sub
                 strWhere = strWhere & " AND articoli_tagliecolori.ColoreId=" & Drop_Filtra_Colore.SelectedValue
             End If
         End If
-
         If strCerca <> "" Then
-            strCerca = strCerca.Replace("'", "").Trim()
-            Dim Parole() As String = Split(strCerca, " ")
+            ' NOTE: SQL hardening (incremental): escape user input for LIKE clauses.
+            '       Next step (optional) is full parameterization via MySqlCommand/SqlDataSource parameters.
+            Dim userCerca As String = Convert.ToString(strCerca).Trim()
+            If userCerca.Length > 120 Then userCerca = userCerca.Substring(0, 120)
+
+            Dim cercaSql As String = SqlEscapeLike(userCerca)
+            Dim Parole() As String = Split(userCerca, " ")
+
             If (Parole.Length > 1) Then
                 Dim Temp1 As String = ""
                 Dim Temp2 As String = ""
 
-                strWhere = strWhere & " AND ((Codice like '%" & strCerca & "%') OR (Ean like '%" & strCerca & "%') OR ((Descrizione1 like '%" & Parole(0) & "%')"
-                strWhere2 = strWhere2 & " AND ((varticolibase.Codice like '%" & strCerca & "%') OR (varticolibase.Ean like '%" & strCerca & "%') OR ((varticolibase.Descrizione1 like '%" & Parole(0) & "%')"
+                strWhere = strWhere & " AND ((Codice like '%" & cercaSql & "%' ) OR (Ean like '%" & cercaSql & "%' ) OR ((Descrizione1 like '%" & SqlEscapeLike(Parole(0)) & "%' )"
+                strWhere2 = strWhere2 & " AND ((varticolibase.Codice like '%" & cercaSql & "%' ) OR (varticolibase.Ean like '%" & cercaSql & "%' ) OR ((varticolibase.Descrizione1 like '%" & SqlEscapeLike(Parole(0)) & "%' )"
 
                 For i As Integer = 1 To (Parole.Length - 1)
-                    Temp1 = Temp1 & " AND (Descrizione1 like '%" & Parole(i) & "%')"
-                    Temp2 = Temp2 & " AND (varticolibase.Descrizione1 like '%" & Parole(i) & "%')"
+                    Temp1 = Temp1 & " AND (Descrizione1 like '%" & SqlEscapeLike(Parole(i)) & "%' )"
+                    Temp2 = Temp2 & " AND (varticolibase.Descrizione1 like '%" & SqlEscapeLike(Parole(i)) & "%' )"
                 Next
 
                 Temp1 = Temp1 & "))"
@@ -562,15 +570,14 @@ End Sub
                 strWhere = strWhere & Temp1
                 strWhere2 = strWhere2 & Temp2
             Else
-                strWhere = strWhere & " AND ((Codice like '%" & strCerca & "%') or (Descrizione1 like '%" & strCerca & "%') or (Ean like '%" & strCerca & "%'))"
-                strWhere2 = strWhere2 & " AND ((varticolibase.Codice like '%" & strCerca & "%') or (varticolibase.Descrizione1 like '%" & strCerca & "%') or (varticolibase.Ean like '%" & strCerca & "%'))"
+                strWhere = strWhere & " AND ((Codice like '%" & cercaSql & "%' ) or (Descrizione1 like '%" & cercaSql & "%' ) or (Ean like '%" & cercaSql & "%' ))"
+                strWhere2 = strWhere2 & " AND ((varticolibase.Codice like '%" & cercaSql & "%' ) or (varticolibase.Descrizione1 like '%" & cercaSql & "%' ) or (varticolibase.Ean like '%" & cercaSql & "%' ))"
             End If
 
             Me.lblRicerca.Visible = True
-            Me.lblRisultati.Text = strCerca
-            Me.Title = Me.Title & " > " & lblRicerca.Text & strCerca
+            Me.lblRisultati.Text = H(userCerca)
+            Me.Title = Me.Title & " > " & lblRicerca.Text & userCerca
         End If
-
         strWhere = strWhere & " GROUP BY id"
 
         If Drop_Ordinamento.SelectedValue = "P_offerta" Then
@@ -1127,15 +1134,18 @@ End Sub
     End Function
 
     Sub alert(ByVal message As String)
-        Dim myScript As String = "window.alert('" & message.Replace("'", "|") & "');"
+        Dim safeMsg As String = System.Web.HttpUtility.JavaScriptStringEncode(Convert.ToString(message))
+        Dim myScript As String = "window.alert('" & safeMsg & "');"
         ClientScript.RegisterStartupScript(Me.GetType(), "myScript", myScript, True)
     End Sub
 
+
     Function getCorrectLengthDescription(ByVal description As String) As String
-        If description IsNot Nothing AndAlso description.Length > 28 Then
-            Return description.Substring(0, 26) & "..."
+        Dim s As String = Convert.ToString(description)
+        If s IsNot Nothing AndAlso s.Length > 28 Then
+            s = s.Substring(0, 26) & "..."
         End If
-        Return description
+        Return H(s)
     End Function
 
     ' *** GESTIONE IMMAGINI PRODOTTO ***
@@ -1822,6 +1832,15 @@ End Sub
         Return System.Web.HttpUtility.HtmlAttributeEncode(Convert.ToString(value))
     End Function
 
+    ' Escape value for safe inclusion inside MySQL string literals within LIKE patterns.
+    Protected Function SqlEscapeLike(value As String, Optional maxLen As Integer = 120) As String
+        If value Is Nothing Then Return ""
+        Dim v As String = value.Trim()
+        If v.Length > maxLen Then v = v.Substring(0, maxLen)
+        ' MySqlHelper.EscapeString escapes quotes and backslashes for use inside string literals.
+        Return MySql.Data.MySqlClient.MySqlHelper.EscapeString(v)
+    End Function
+
     Private Function QS(key As String, Optional maxLen As Integer = 200) As String
         Dim v As String = Convert.ToString(Request.QueryString(key))
         If v Is Nothing Then Return ""
@@ -1849,4 +1868,20 @@ End Sub
         Return System.Text.RegularExpressions.Regex.IsMatch(raw, "^\d+\|[A-Za-z0-9\-\._% ]+$")
     End Function
 
+
+    ' WhatsApp share helpers (URL-encoded and attribute-safe)
+    Protected Function GetWhatsAppShareUrl(descrizione As Object, id As Object, tcid As Object) As String
+        Dim descr As String = Convert.ToString(descrizione)
+        Dim host As String = Convert.ToString(Session("AziendaUrl"))
+        Dim baseUrl As String = "https://" & host & "/articolo.aspx?id=" & Convert.ToString(id) & "&TCid=" & Convert.ToString(tcid)
+        Dim text As String = descr & " - " & baseUrl
+        Dim url As String = "https://wa.me/?text=" & System.Web.HttpUtility.UrlEncode(text)
+        Return System.Web.HttpUtility.HtmlAttributeEncode(url)
+    End Function
+
+    Protected Function GetWhatsAppIconUrl() As String
+        Dim host As String = Convert.ToString(Session("AziendaUrl"))
+        Dim url As String = "https://" & host & "/Public/Images/WhatsApp-Symbolo.png"
+        Return System.Web.HttpUtility.HtmlAttributeEncode(url)
+    End Function
 End Class
