@@ -4,42 +4,173 @@
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <link rel="canonical" href="<%= Request.Url.GetLeftPart(System.UriPartial.Path) %>" />
 
-    <link rel="canonical" href="<%= Request.Url.GetLeftPart(System.UriPartial.Path) %>
     <style type="text/css">
-        /* KeepStore: migliora usabilità liste filtri lunghe (Marche/Tipologie) senza toccare la logica dei filtri */
-        .filter-scroll { max-height: 260px; overflow: auto; padding-right: 6px; }
-    </style>
-" />
+        /* Sidebar filter: scrollable blocks */
+        .filter-scroll {
+            max-height: 240px;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+        .filter-scroll::-webkit-scrollbar { width: 6px; }
+        .filter-scroll::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
 
-    <style>
-        /* KeepStore: pager (GridView) – estetica coerente con template Onus */
-        .pagination-ys { display: flex; justify-content: center; margin-top: 18px; }
-        .pagination-ys table { margin: 0; border-collapse: separate; border-spacing: 6px 0; }
-        .pagination-ys td { padding: 0; }
-        .pagination-ys a, .pagination-ys span {
+        /* GridView => responsive product grid */
+        .ks-products { --ks-cols: 4; }
+        @media (max-width: 1199.98px) { .ks-products { --ks-cols: 3; } }
+        @media (max-width: 991.98px)  { .ks-products { --ks-cols: 2; } }
+        @media (max-width: 575.98px)  { .ks-products { --ks-cols: 1; } }
+
+        .ks-products #GridView1 { width: 100%; }
+        .ks-products #GridView1 > tbody {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+        .ks-products #GridView1 > tbody > tr {
+            flex: 0 0 calc((100% - (var(--ks-cols) - 1) * 24px) / var(--ks-cols));
+            max-width: calc((100% - (var(--ks-cols) - 1) * 24px) / var(--ks-cols));
+        }
+        .ks-products #GridView1 > tbody > tr > td {
+            display: block;
+            padding: 0 !important;
+            border: 0 !important;
+        }
+        /* Pager/Footer rows must span full width */
+        .ks-products #GridView1 > tbody > tr.pagination-ys,
+        .ks-products #GridView1 > tbody > tr.bg-light,
+        .ks-products #GridView1 > tbody > tr.text-center,
+        .ks-products #GridView1 > tbody > tr > td.pagination-ys,
+        .ks-products #GridView1 > tbody > tr > td.bg-light,
+        .ks-products #GridView1 > tbody > tr > td.text-center {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+
+        /* GridView pager styling (closest to ONUS) */
+        .pagination-ys a,
+        .pagination-ys span {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             min-width: 38px;
             height: 38px;
             padding: 0 10px;
-            border: 1px solid rgba(0,0,0,.12);
+            margin: 0 4px;
+            border: 1px solid rgba(0, 0, 0, 0.15);
             border-radius: 10px;
             text-decoration: none;
+            font-size: 14px;
             line-height: 1;
         }
+        .pagination-ys a:hover { border-color: rgba(0, 0, 0, 0.35); }
         .pagination-ys span {
-            background: #111;
-            color: #fff;
-            border-color: #111;
+            background: rgba(0, 0, 0, 0.06);
+            font-weight: 600;
         }
-        .pagination-ys a:hover { background: rgba(0,0,0,.04); }
 
-        /* CheckBox WebForms: migliora allineamento input/label nei filtri */
-        .filterCheckbox input[type="checkbox"] { margin-right: 8px; vertical-align: middle; }
-        .filterCheckbox label { margin: 0; vertical-align: middle; }
+        /* Mobile filter drawer (no duplicated server-controls) */
+        .ks-sidebar-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 1040;
+            display: none;
+        }
+        .ks-shop-sidebar {
+            position: relative;
+        }
+        @media (max-width: 1199.98px) {
+            .ks-shop-sidebar {
+                position: fixed;
+                top: 0;
+                left: -360px;
+                height: 100vh;
+                width: 340px;
+                max-width: 92vw;
+                z-index: 1050;
+                background: #fff;
+                overflow-y: auto;
+                padding: 18px 18px 24px 18px;
+                transition: left 0.22s ease-in-out;
+                box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+            }
+            html.ks-sidebar-open .ks-shop-sidebar { left: 0; }
+            html.ks-sidebar-open .ks-sidebar-backdrop { display: block; }
+            html.ks-sidebar-open { overflow: hidden; }
+        }
+
+        /* View control buttons */
+        .ks-view-btn {
+            width: 38px;
+            height: 38px;
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            border-radius: 10px;
+            background: transparent;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        .ks-view-btn[aria-pressed="true"] {
+            background: rgba(0, 0, 0, 0.06);
+            border-color: rgba(0, 0, 0, 0.35);
+        }
     </style>
+
+    <script type="text/javascript">
+        (function () {
+            function qs(sel) { return document.querySelector(sel); }
+            function setHtmlClass(cls, enabled) {
+                var el = document.documentElement;
+                if (!el) return;
+                if (enabled) el.classList.add(cls); else el.classList.remove(cls);
+            }
+
+            window.KeepStoreSidebar = {
+                open: function () { setHtmlClass("ks-sidebar-open", true); },
+                close: function () { setHtmlClass("ks-sidebar-open", false); },
+                toggle: function () {
+                    var el = document.documentElement;
+                    if (!el) return;
+                    if (el.classList.contains("ks-sidebar-open")) window.KeepStoreSidebar.close();
+                    else window.KeepStoreSidebar.open();
+                }
+            };
+
+            window.KeepStoreView = {
+                setCols: function (cols) {
+                    var grid = qs("#ksProducts");
+                    if (!grid) return;
+                    grid.style.setProperty("--ks-cols", String(cols));
+
+                    var btns = document.querySelectorAll("[data-ks-cols]");
+                    btns.forEach(function (b) {
+                        b.setAttribute("aria-pressed", (b.getAttribute("data-ks-cols") === String(cols)) ? "true" : "false");
+                    });
+                }
+            };
+
+            document.addEventListener("DOMContentLoaded", function () {
+                // Close sidebar when clicking backdrop
+                var backdrop = qs("#ksSidebarBackdrop");
+                if (backdrop) backdrop.addEventListener("click", function () { window.KeepStoreSidebar.close(); });
+
+                // Default view based on viewport (keeps mobile readable)
+                var defaultCols = 4;
+                if (window.matchMedia) {
+                    if (window.matchMedia("(max-width: 575.98px)").matches) defaultCols = 1;
+                    else if (window.matchMedia("(max-width: 991.98px)").matches) defaultCols = 2;
+                    else if (window.matchMedia("(max-width: 1199.98px)").matches) defaultCols = 3;
+                }
+                window.KeepStoreView.setCols(defaultCols);
+});
+        })();
+    </script>
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" Runat="Server">
@@ -137,8 +268,12 @@
         <div class="row mt-3">
 
             <!-- Sidebar (Template Onus, SINISTRA) -->
-            <div class="col-lg-3 mb-4">
+            <div class="col-lg-3 mb-4 ks-shop-sidebar" id="ksShopSidebar">
                 <aside class="sidebar-filter">
+                <div class="d-flex d-xl-none justify-content-between align-items-center mb-3">
+                    <p class="title-sidebar fw-semibold mb-0">Filtri</p>
+                    <button type="button" class="btn-close" aria-label="Chiudi" onclick="KeepStoreSidebar.close();"></button>
+                </div>
 
                     <!-- Navigazione categorie -->
                     <div class="facet-categories mb-4">
@@ -272,36 +407,65 @@
     </asp:SqlDataSource>
 
     <div class="container mt-3">
-        <div class="tf-shop-control flex-wrap gap-10 mb-3">
-            <div class="tf-shop-control-left">
-                <p class="body-text-3 mb-0">
-                    <span class="fw-semibold">Trovati:</span>
-                    <asp:Label ID="lblTrovati" runat="server" Font-Bold="True"></asp:Label>
-                    <span class="ms-1">articoli</span>
-                    <span class="text-muted ms-2">|</span>
-                    <span class="ms-2">Visualizzati:</span>
-                    <asp:Label ID="lblLinee" runat="server" Text="0"></asp:Label>
-                </p>
-            </div>
+        
+            <div class="tf-shop-control flex-wrap gap-10 mb-3">
+                <div class="d-flex align-items-center gap-10 flex-wrap">
+                    <button type="button" class="tf-btn-filter d-flex d-xl-none align-items-center gap-6" onclick="KeepStoreSidebar.open();" aria-label="Apri filtri">
+                        <span class="ks-view-btn" style="border:0; width:auto; height:auto; border-radius:0; padding:0; background:transparent;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M3 5h18M6 12h12M10 19h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </span>
+                        <span class="body-md-2 fw-medium">Filtri</span>
+                    </button>
 
-            <div class="tf-shop-control-right d-flex align-items-center flex-wrap gap-10 ms-auto">
-                <div class="d-flex align-items-center gap-8">
-                    <asp:CheckBox ID="CheckBox_Disponibile" runat="server" AutoPostBack="True" Text="Solo disponibili" />
+                    <p class="body-text-3 mb-0">
+                        <span class="fw-semibold">Trovati:</span> <asp:Label ID="lblTrovati" runat="server"></asp:Label>
+                        <span class="ms-2 d-none d-md-inline">Mostra:</span> <asp:Label ID="lblLinee" runat="server" Text="0"></asp:Label>
+                    </p>
                 </div>
 
-                <div class="d-flex align-items-center gap-8">
-                    <span class="body-text-3">Ordina per</span>
-                    <asp:DropDownList ID="Drop_Ordinamento" runat="server" AutoPostBack="True" CssClass="form-select form-select-sm">
+                <div class="d-flex align-items-center gap-10 flex-wrap">
+                    <div class="d-flex align-items-center gap-6">
+                        <button type="button" class="ks-view-btn" data-ks-cols="4" aria-pressed="true" aria-label="Vista 4 colonne" onclick="KeepStoreView.setCols(4);">
+                            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                        <button type="button" class="ks-view-btn" data-ks-cols="3" aria-pressed="false" aria-label="Vista 3 colonne" onclick="KeepStoreView.setCols(3);">
+                            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M4 4h5v7H4V4zm7 0h5v7h-5V4zm7 0h2v7h-2V4zM4 13h5v7H4v-7zm7 0h5v7h-5v-7zm7 0h2v7h-2v-7z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                        <button type="button" class="ks-view-btn" data-ks-cols="2" aria-pressed="false" aria-label="Vista 2 colonne" onclick="KeepStoreView.setCols(2);">
+                            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M4 4h8v7H4V4zm10 0h6v7h-6V4zM4 13h8v7H4v-7zm10 13v-7h6v7h-6z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                        <button type="button" class="ks-view-btn" data-ks-cols="1" aria-pressed="false" aria-label="Vista lista" onclick="KeepStoreView.setCols(1);">
+                            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M4 6h16M4 12h16M4 18h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-6">
+                        <span class="body-text-3">Ordina:</span>
+                        <asp:DropDownList ID="Drop_Ordinamento" runat="server" AutoPostBack="True" CssClass="form-select form-select-sm">
                         <asp:ListItem Value="varticolibase.Codice">Codice</asp:ListItem>
                         <asp:ListItem Value="varticolibase.Descrizione1">Descrizione</asp:ListItem>
                         <asp:ListItem Value="varticolibase.PrezzoAcquisto">Prezzo crescente</asp:ListItem>
                         <asp:ListItem Value="varticolibase.PrezzoAcquisto DESC">Prezzo decrescente</asp:ListItem>
                     </asp:DropDownList>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-6">
+                        <asp:CheckBox ID="CheckBox_Disponibile" runat="server" AutoPostBack="True" CssClass="tf-check" Text="Solo disponibili" />
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div id="filtritagliaecolore" runat="server" class="tf-shop-control flex-wrap gap-10 mb-2">
+<div id="filtritagliaecolore" runat="server" class="tf-shop-control flex-wrap gap-10 mb-2">
             <div class="d-flex align-items-center gap-8">
                 <span class="body-text-3">Filtra taglia</span>
                 <asp:DropDownList ID="Drop_Filtra_Taglia" style="text-align:left;vertical-align:middle" runat="server" Width="140px" AutoPostBack="True" BackColor="#FFFF80" Font-Bold="False" Font-Size="10pt" ForeColor="Black">
@@ -319,7 +483,8 @@
     </div> <!-- fine container mt-3 -->
 
     <div class="bg-white home-box-position bg-shadow">
-        <asp:GridView ID="GridView1" runat="server"
+        <div id="ksProducts" class="ks-products">
+                        <asp:GridView ID="GridView1" runat="server"
             AutoGenerateColumns="False"
             DataKeyNames="id"
             DataSourceID="sdsArticoli"
@@ -512,6 +677,7 @@
             <PagerStyle CssClass="pagination-ys" />
             <PagerSettings Mode="NumericFirstLast" FirstPageText="Inizio" LastPageText="Fine" />
         </asp:GridView>
+                    </div>
     </div>
 	
     <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" Font-Size="7pt" Font-Names="arial"></asp:Label><br /><br />
@@ -542,6 +708,8 @@
 
     </div>
 
-    </section>
+    
+    <div id="ksSidebarBackdrop" class="ks-sidebar-backdrop" aria-hidden="true"></div>
+</section>
 
 </asp:Content>
