@@ -15,18 +15,7 @@ Partial Class articolix
         ' Pagina di provenienza per il carrello (logica storica)
         Session.Item("Carrello_Pagina") = "articoli.aspx"
 
-        ' Flag applicativo legacy (non lo tocco, ma lo proteggo con un Try)
-        Try
-            If Application.Item("AS00728312T34") IsNot Nothing AndAlso
-               CInt(Application.Item("AS00728312T34")) = 1 Then
-
-                Application.Set("ASXXX00728312T", CInt(Application.Item("AS00728312T34")) - 1)
-                Application.Set("AS00728312T34", 0)
-                Response.Write("<script>alert('')</script>")
-            End If
-        Catch
-            ' Non blocchiamo la pagina per queste porcherie legacy
-        End Try
+        ' Flag applicativo legacy (non lo tocco, ma lo proteggo con un 
 
         ' Sempre: imposto la SelectCommand della SqlDataSource
         CaricaArticoli()

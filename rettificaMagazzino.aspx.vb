@@ -34,11 +34,7 @@ Partial Class Articoli
             InOfferta = Me.Request.QueryString("inpromo")
         End If
 
-        If Application.Item("AS00728312T34") = 1 Then
-            Application.Set("ASXXX00728312T", Application.Item("AS00728312T34") - 1)
-            Application.Set("AS00728312T34", 0)
-            Response.Write("<script>alert('')</script>")
-        End If
+        
     End Sub
 
     Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.LoadComplete
