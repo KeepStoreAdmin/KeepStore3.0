@@ -16,7 +16,7 @@ Partial Class wishlist
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         KeepStoreSecurity.AddSecurityHeaders(Response)
-        KeepStoreSecurity.RequireHttps(Request, Response)
+        KeepStoreSecurity.RequireHttps(Request, Response, enableHsts:=True)
 
         If Session("UtentiId") < 1 Then
             Response.Redirect("default.aspx")
