@@ -102,120 +102,151 @@
 
         <div class="row mt-3">
 
-            <!-- Sidebar (Categorie / Tipologie) -->
+            <!-- Sidebar (Template Onus, SINISTRA) -->
             <div class="col-lg-3 mb-4">
-                <div class="card mb-3">
-                    <div class="card-header bg-light"><strong>Categorie</strong></div>
-                    <div class="card-body p-2">
-                        <ul class="list-unstyled mb-0">
+                <aside class="sidebar-filter">
+
+                    <!-- Navigazione categorie -->
+                    <div class="facet-categories mb-4">
+                        <h6 class="title fw-medium">Categorie</h6>
+                        <ul>
                             <asp:Repeater ID="rptCategorieSettore" runat="server" DataSourceID="sdsCategorieSettore">
                                 <ItemTemplate>
-                                    <li class="py-1">
-                                        <a class="text-decoration-none" href='<%# "articoli.aspx?st=" & Session("st") & "&ct=" & Eval("Id") %>'>
+                                    <li>
+                                        <a href='<%# "articoli.aspx?st=" & Session("st") & "&ct=" & Eval("Id") %>'>
                                             <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>
+                                            <i class="icon-arrow-right"></i>
                                         </a>
                                     </li>
                                 </ItemTemplate>
                             </asp:Repeater>
                         </ul>
                     </div>
-                </div>
 
-                <div class="card mb-3">
-                    <div class="card-header bg-light"><strong>Tipologie</strong></div>
-                    <div class="card-body p-2">
-                        <ul class="list-unstyled mb-0">
+                    <!-- Navigazione tipologie (link) -->
+                    <div class="facet-categories mb-4">
+                        <h6 class="title fw-medium">Tipologie</h6>
+                        <ul>
                             <asp:Repeater ID="rptTipologieLink" runat="server" DataSourceID="sdsTipologie">
                                 <ItemTemplate>
-                                    <li class="py-1">
-                                        <a class="text-decoration-none" href='<%# "articoli.aspx?st=" & Session("st") & "&ct=" & Session("ct") & "&tp=" & Eval("TipologieId") %>'>
+                                    <li>
+                                        <a href='<%# "articoli.aspx?st=" & Session("st") & "&ct=" & Session("ct") & "&tp=" & Eval("TipologieId") %>'>
                                             <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>
+                                            <i class="icon-arrow-right"></i>
                                         </a>
                                     </li>
                                 </ItemTemplate>
                             </asp:Repeater>
                         </ul>
                     </div>
-                </div>
+
+                    <!-- Filtri (checkbox multi-selezione) -->
+                    <div class="mt-4" runat="server" id="tNavig">
+
+                        <div id="filtersMr" class="mb-4" style="position:relative;">
+                            <asp:DataList ID="DataList4" runat="server" DataSourceID="sdsMarche" RepeatLayout="Flow" Font-Size="8pt">
+                                <HeaderTemplate>
+                                    <div class="widget-facet facet-fieldset">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <p class="facet-title title-sidebar fw-semibold mb-0">Marche</p>
+                                            <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# If(Me.Request.Url.Query IsNot Nothing AndAlso Me.Request.Url.Query.Length>0, Me.Request.Url.toString & "&rimuovi=mr", Me.Request.Url.toString & "?rimuovi=mr") %>' Text="Rimuovi tutti"></asp:HyperLink>
+                                        </div>
+                                        <div class="box-fieldset-item">
+                                </HeaderTemplate>
+                                <ItemTemplate>
+                                    <fieldset class="fieldset-item">
+                                        <%# If(filterIdsContains("mr",Eval("marcheid").ToString()),"<b>","") %>
+                                        <asp:CheckBox ID='CheckBoxMr' checked='<%# If(filterIdsContains("mr",Eval("marcheid").ToString()),True,False) %>' runat='server' AutoPostBack='True' OnCheckedChanged ='CheckBoxMr_CheckedChanged' filterId='<%# Eval("marcheid") %>' CssClass='tf-check filterCheckbox' Text='<%# getCorrectLengthDescription(Eval("Descrizione")) & " " & "<span class=""text-main-4"">(" & Eval("Numero") & ")</span>"  %>' Width='150px' ToolTip='Applica/Rimuovi Filtro'/></asp:CheckBox>
+                                        <%# If(filterIdsContains("mr",Eval("marcheid").ToString()),"</b>","") %>
+                                    </fieldset>
+                                </ItemTemplate>
+                                <FooterTemplate>
+                                        </div>
+                                    </div>
+                                </FooterTemplate>
+                            </asp:DataList>
+                        </div>
+
+                        <div id="filtersTp" class="mb-4" style="position:relative;">
+                            <asp:DataList ID="DataList1" runat="server" DataSourceID="sdsTipologie" RepeatLayout="Flow" Font-Size="8pt">
+                                <HeaderTemplate>
+                                    <div class="widget-facet facet-fieldset">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <p class="facet-title title-sidebar fw-semibold mb-0">Tipologie</p>
+                                            <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# If(Me.Request.Url.Query IsNot Nothing AndAlso Me.Request.Url.Query.Length>0, Me.Request.Url.toString & "&rimuovi=tp", Me.Request.Url.toString & "?rimuovi=tp") %>' Text="Rimuovi tutti"></asp:HyperLink>
+                                        </div>
+                                        <div class="box-fieldset-item">
+                                </HeaderTemplate>
+                                <ItemTemplate>
+                                    <fieldset class="fieldset-item">
+                                        <%# If(filterIdsContains("tp",Eval("TipologieId").ToString()),"<b>","") %>
+                                        <asp:CheckBox ID='CheckBoxTp' checked='<%# If(filterIdsContains("tp",Eval("TipologieId").ToString()),True,False) %>' runat='server' AutoPostBack='True' OnCheckedChanged ='CheckBoxTp_CheckedChanged' filterId='<%# Eval("TipologieId") %>' CssClass='tf-check filterCheckbox' Text='<%# getCorrectLengthDescription(Eval("Descrizione")) & " " & "<span class=""text-main-4"">(" & Eval("Numero") & ")</span>"  %>' Width='150px' ToolTip='Applica/Rimuovi Filtro'/></asp:CheckBox>
+                                        <%# If(filterIdsContains("tp",Eval("TipologieId").ToString()),"</b>","") %>
+                                    </fieldset>
+                                </ItemTemplate>
+                                <FooterTemplate>
+                                        </div>
+                                    </div>
+                                </FooterTemplate>
+                            </asp:DataList>
+                        </div>
+
+                        <div id="filtersGr" class="mb-4" style="position:relative;">
+                            <asp:DataList ID="DataList2" runat="server" DataSourceID="sdsGruppo" RepeatLayout="Flow" Font-Size="8pt">
+                                <HeaderTemplate>
+                                    <div class="widget-facet facet-fieldset">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <p class="facet-title title-sidebar fw-semibold mb-0">Gruppo</p>
+                                            <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# If(Me.Request.Url.Query IsNot Nothing AndAlso Me.Request.Url.Query.Length>0, Me.Request.Url.toString & "&rimuovi=gr", Me.Request.Url.toString & "?rimuovi=gr") %>' Text="Rimuovi tutti"></asp:HyperLink>
+                                        </div>
+                                        <div class="box-fieldset-item">
+                                </HeaderTemplate>
+                                <ItemTemplate>
+                                    <fieldset class="fieldset-item">
+                                        <%# If(filterIdsContains("gr",Eval("GruppiId").ToString()),"<b>","") %>
+                                        <asp:CheckBox ID='CheckBoxGr' checked='<%# If(filterIdsContains("gr",Eval("GruppiId").ToString()),True,False) %>' runat='server' AutoPostBack='True' OnCheckedChanged ='CheckBoxGr_CheckedChanged' filterId='<%# Eval("GruppiId") %>' CssClass='tf-check filterCheckbox' Text='<%# getCorrectLengthDescription(Eval("Descrizione")) & " " & "<span class=""text-main-4"">(" & Eval("Numero") & ")</span>"  %>' Width='150px' ToolTip='Applica/Rimuovi Filtro'/></asp:CheckBox>
+                                        <%# If(filterIdsContains("gr",Eval("GruppiId").ToString()),"</b>","") %>
+                                    </fieldset>
+                                </ItemTemplate>
+                                <FooterTemplate>
+                                        </div>
+                                    </div>
+                                </FooterTemplate>
+                            </asp:DataList>
+                        </div>
+
+                        <div id="filtersSg" class="mb-4" style="position:relative;">
+                            <asp:DataList ID="DataList3" runat="server" DataSourceID="sdsSottogruppo" RepeatLayout="Flow" Font-Size="8pt">
+                                <HeaderTemplate>
+                                    <div class="widget-facet facet-fieldset">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <p class="facet-title title-sidebar fw-semibold mb-0">Sottogruppi</p>
+                                            <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# If(Me.Request.Url.Query IsNot Nothing AndAlso Me.Request.Url.Query.Length>0, Me.Request.Url.toString & "&rimuovi=sg", Me.Request.Url.toString & "?rimuovi=sg") %>' Text="Rimuovi tutti"></asp:HyperLink>
+                                        </div>
+                                        <div class="box-fieldset-item">
+                                </HeaderTemplate>
+                                <ItemTemplate>
+                                    <fieldset class="fieldset-item">
+                                        <%# If(filterIdsContains("sg",Eval("SottogruppiId").ToString()),"<b>","") %>
+                                        <asp:CheckBox ID='CheckBoxSg' checked='<%# If(filterIdsContains("sg",Eval("SottogruppiId").ToString()),True,False) %>' runat='server' AutoPostBack='True' OnCheckedChanged ='CheckBoxSg_CheckedChanged' filterId='<%# Eval("SottogruppiId") %>' CssClass='tf-check filterCheckbox' Text='<%# getCorrectLengthDescription(Eval("Descrizione")) & " " & "<span class=""text-main-4"">(" & Eval("Numero") & ")</span>"  %>' Width='150px' ToolTip='Applica/Rimuovi Filtro'/></asp:CheckBox>
+                                        <%# If(filterIdsContains("sg",Eval("SottogruppiId").ToString()),"</b>","") %>
+                                    </fieldset>
+                                </ItemTemplate>
+                                <FooterTemplate>
+                                        </div>
+                                    </div>
+                                </FooterTemplate>
+                            </asp:DataList>
+                        </div>
+
+                    </div>
+
+                </aside>
             </div>
 
             <!-- Main content -->
+
             <div class="col-lg-9">
-
-                <div class="row mt-3" runat="server" id="tNavig">
-
-            <div id="filtersMr" class="col-12 col-md-6" style="padding-right: 2px; padding-left: 2px;">
-                <asp:DataList ID="DataList4" runat="server" DataSourceID="sdsMarche" RepeatLayout="Flow" Font-Size="8pt">
-                    <SelectedItemStyle Font-Bold="True" />
-                    <HeaderTemplate>
-                        <div style=" font-weight:bold; font-size:10pt; background-position: left top; color:White; background-image:url('Public/Images/back.jpg'); background-repeat:repeat-x; text-align:center;">
-                            MARCHE
-                        </div>
-                        <asp:Label ID="Label2" runat="server" Text=": :" Font-Bold="true" ForeColor="#E12825"></asp:Label>&nbsp;&nbsp;&nbsp;
-                        <asp:HyperLink CssClass='filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# Me.Request.Url.toString & "&rimuovi=mr" %>' Text="Rimuovi tutti"></asp:HyperLink>
-                    </HeaderTemplate>
-                    <ItemTemplate>
-                        <%# If(filterIdsContains("mr",Eval("marcheid").ToString()),"<b>","") %>
-                        <asp:CheckBox ID='CheckBoxMr' checked='<%# If(filterIdsContains("mr",Eval("marcheid").ToString()),True,False) %>' runat='server' AutoPostBack='True' OnCheckedChanged ='CheckBoxMr_CheckedChanged' filterId='<%# Eval("marcheid") %>' CssClass='filterCheckbox' Text='<%# getCorrectLengthDescription(Eval("Descrizione")) & " " & "<font color=#E12825>("& Eval("Numero") &")</font>"  %>' Width='150px' ToolTip='Applica/Rimuovi Filtro'/></asp:CheckBox> 
-                        <%# If(filterIdsContains("mr",Eval("marcheid").ToString()),"</b>","") %>
-                    </ItemTemplate>
-                </asp:DataList>
-            </div>
-		
-            <div id="filtersTp" class="col-12 col-md-6" style="padding-right: 2px; padding-left: 2px;">
-                <asp:DataList ID="DataList1" runat="server" DataSourceID="sdsTipologie" RepeatLayout="Flow" Font-Size="8pt">
-                    <ItemTemplate>
-                        <%# If(filterIdsContains("tp",Eval("TipologieId").ToString()),"<b>","") %>
-                        <asp:CheckBox ID='CheckBoxTp' checked='<%# If(filterIdsContains("tp",Eval("TipologieId").ToString()),True,False) %>' runat='server' AutoPostBack='True' OnCheckedChanged ='CheckBoxTp_CheckedChanged' filterId='<%# Eval("TipologieId") %>' CssClass='filterCheckbox' Text='<%# getCorrectLengthDescription(Eval("Descrizione")) & " " & "<font color=#E12825>("& Eval("Numero") &")</font>"  %>' Width='150px' ToolTip='Applica/Rimuovi Filtro'/></asp:CheckBox> 
-                        <%# If(filterIdsContains("tp",Eval("TipologieId").ToString()),"</b>","") %>
-                    </ItemTemplate>
-                    <HeaderTemplate>
-                        <div style=" font-weight:bold; font-size:10pt; background-position: left top; color:White; background-image:url('Public/Images/back.jpg'); background-repeat:repeat-x; text-align:center;">
-                            TIPOLOGIE
-                        </div>
-                        <asp:Label ID="Label2" runat="server" Text=": :" Font-Bold="true" ForeColor="#E12825"></asp:Label>&nbsp;&nbsp;&nbsp;
-                        <asp:HyperLink CssClass='filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# Me.Request.Url.toString & "&rimuovi=tp" %>' Text="Rimuovi tutti"></asp:HyperLink>
-                    </HeaderTemplate>
-                    <SelectedItemStyle Font-Bold="True" />
-                </asp:DataList>
-            </div>
-		
-            <div id="filtersGr" class="col-12 col-md-6" style="padding-right: 2px; padding-left: 2px;">
-                <asp:DataList ID="DataList2" runat="server" DataSourceID="sdsGruppo" RepeatLayout="Flow" Font-Size="8pt">
-                    <ItemTemplate>
-                        <%# If(filterIdsContains("gr",Eval("GruppiId").ToString()),"<b>","") %>
-                        <asp:CheckBox ID='CheckBoxGr' checked='<%# If(filterIdsContains("gr",Eval("GruppiId").ToString()),True,False) %>' runat='server' AutoPostBack='True' OnCheckedChanged ='CheckBoxGr_CheckedChanged' filterId='<%# Eval("GruppiId") %>' CssClass='filterCheckbox' Text='<%# getCorrectLengthDescription(Eval("Descrizione")) & " " & "<font color=#E12825>("& Eval("Numero") &")</font>"  %>' Width='150px' ToolTip='Applica/Rimuovi Filtro'/></asp:CheckBox> 
-                        <%# If(filterIdsContains("gr",Eval("GruppiId").ToString()),"</b>","") %>
-                    </ItemTemplate>
-                    <HeaderTemplate>
-                        <div style=" font-weight:bold; font-size:10pt; background-position: left top; color:White; background-image:url('Public/Images/back.jpg'); background-repeat:repeat-x; text-align:center;">
-                            GRUPPO
-                        </div>
-                        <asp:Label CssClass='filterRemoveAll' ID="Label2" runat="server" Text=": :" Font-Bold="true" ForeColor="#E12825"></asp:Label>&nbsp;&nbsp;
-                        <asp:HyperLink ID="hlTutti" runat="server" NavigateUrl='<%# Me.Request.Url.toString & "&rimuovi=gr" %>' Text="Rimuovi tutti"></asp:HyperLink>
-                    </HeaderTemplate>
-                    <SelectedItemStyle Font-Bold="True" />
-                </asp:DataList>
-            </div>
-		
-            <div id="filtersSg" class="col-12 col-md-6" style="padding-right: 2px; padding-left: 2px;">
-                <asp:DataList ID="DataList3" runat="server" DataSourceID="sdsSottogruppo" RepeatLayout="Flow" Font-Size="8pt">
-                    <ItemTemplate>
-                        <%# If(filterIdsContains("sg",Eval("SottogruppiId").ToString()),"<b>","") %>
-                        <asp:CheckBox ID='CheckBoxSg' checked='<%# If(filterIdsContains("sg",Eval("SottogruppiId").ToString()),True,False) %>' runat='server' AutoPostBack='True' OnCheckedChanged ='CheckBoxSg_CheckedChanged' filterId='<%# Eval("SottogruppiId") %>' CssClass='filterCheckbox' Text='<%# getCorrectLengthDescription(Eval("Descrizione")) & " " & "<font color=#E12825>("& Eval("Numero") &")</font>"  %>' Width='150px' ToolTip='Applica/Rimuovi Filtro'/></asp:CheckBox> 
-                        <%# If(filterIdsContains("sg",Eval("SottogruppiId").ToString()),"</b>","") %>
-                    </ItemTemplate>
-                    <HeaderTemplate>
-                        <div style=" font-weight:bold; font-size:10pt; background-position: left top; color:White; background-image:url('Public/Images/back.jpg'); text-align:center;">
-                            SOTTOGRUPPI
-                        </div>
-                        <asp:Label CssClass='filterRemoveAll' ID="Label2" runat="server" Text=": :" Font-Bold="true" ForeColor="#E12825"></asp:Label>&nbsp;&nbsp;
-                        <asp:HyperLink ID="hlTutti" runat="server" NavigateUrl='<%# Me.Request.Url.toString & "&rimuovi=sg" %>' Text="Rimuovi tutti"></asp:HyperLink>
-                    </HeaderTemplate>
-                    <SelectedItemStyle Font-Bold="True" />
-                </asp:DataList>
-            </div>
-    </div>
 
     <asp:SqlDataSource ID="sdsArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
         ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
