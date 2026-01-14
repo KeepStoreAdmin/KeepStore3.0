@@ -20,7 +20,7 @@ Partial Class Articoli
         KeepStoreSecurity.RequireHttps(Request, Response)
 
         ' Hard authorization gate: this page is for internal stock correction.
-        Dim gestoreId As Integer = KeepStoreSecurity.SqlCleanInt(Session("GestoreId"), 0, 0, Integer.MaxValue)
+        Dim gestoreId As Integer = KeepStoreSecurity.SqlCleanInt(Session("GestoreId"), 0)
         If gestoreId <= 0 Then
             If Session("UtentiId") Is Nothing Then
                 Response.Redirect("~/loginUtente.aspx")
@@ -47,7 +47,7 @@ Partial Class Articoli
 
         'Assegnazione della variabile in offerta, per visualizzare solo i prodotti in offerta
         If Me.Request.QueryString("inpromo") <> "" Then
-            InOfferta = KeepStoreSecurity.SqlCleanInt(Request.QueryString("inpromo"), 0, 0, 1)
+            InOfferta = KeepStoreSecurity.SqlCleanInt(Request.QueryString("inpromo"), 0)
         End If
 
         
@@ -120,63 +120,73 @@ Partial Class Articoli
             Dim MarcheId As Integer
             Dim OfferteId As Integer
             Dim strCerca As String = ""
-            Dim SpedizioneGratis As Integer = Me.Request.QueryString("spedgratis")
+            Dim SpedizioneGratis As Integer = KeepStoreSecurity.SqlCleanInt(Me.Request.QueryString("spedgratis"), 0)
 
-            'Carico le variabili da Sessione se non sono presenti nella QueryString
+            'Carico le variabili da Sessione se non sono presenti nella QueryString (tutte sanificate)
+
+            'Settore (st) - compatibilità legacy: Session("settore")
             If Me.Request.QueryString("st") <> "" Then
-            SettoriId = KeepStoreSecurity.SqlCleanInt(Request.QueryString("st"), 0, 0, 999999)
+                SettoriId = KeepStoreSecurity.SqlCleanInt(Me.Request.QueryString("st"), 0)
+                Me.Session("st") = SettoriId
+                Me.Session("settore") = SettoriId
             Else
-                SettoriId = Me.Session("st")
+                Dim stSess As Object = If(Convert.ToString(Me.Session("settore")) <> "", Me.Session("settore"), Me.Session("st"))
+                SettoriId = KeepStoreSecurity.SqlCleanInt(stSess, 0)
             End If
 
             If Me.Request.QueryString("ct") <> "" Then
-                CategorieId = Me.Request.QueryString("ct")
+                CategorieId = KeepStoreSecurity.SqlCleanInt(Me.Request.QueryString("ct"), 0)
+                Me.Session("ct") = CategorieId
             Else
-                CategorieId = Me.Session("ct")
+                CategorieId = KeepStoreSecurity.SqlCleanInt(Me.Session("ct"), 0)
             End If
 
             If Me.Request.QueryString("tp") <> "" Then
-            TipologieId = KeepStoreSecurity.SqlCleanInt(Request.QueryString("tp"), 0, 0, 999999)
+                TipologieId = KeepStoreSecurity.SqlCleanInt(Me.Request.QueryString("tp"), 0)
+                Me.Session("tp") = TipologieId
             Else
-                TipologieId = Me.Session("tp")
+                TipologieId = KeepStoreSecurity.SqlCleanInt(Me.Session("tp"), 0)
             End If
 
             If Me.Request.QueryString("gr") <> "" Then
-                GruppiId = Me.Request.QueryString("gr")
+                GruppiId = KeepStoreSecurity.SqlCleanInt(Me.Request.QueryString("gr"), 0)
+                Me.Session("gr") = GruppiId
             Else
-                GruppiId = Me.Session("gr")
+                GruppiId = KeepStoreSecurity.SqlCleanInt(Me.Session("gr"), 0)
             End If
 
-            If Me.Request.QueryString("sg") <> "" Then
-                SottogruppiId = Me.Request.QueryString("sg")
+            'Sotto-gruppo (accetta sia "s" che "sg")
+            Dim sParam As String = Convert.ToString(Me.Request.QueryString("s"))
+            If sParam = "" Then sParam = Convert.ToString(Me.Request.QueryString("sg"))
+            If sParam <> "" Then
+                SottogruppiId = KeepStoreSecurity.SqlCleanInt(sParam, 0)
+                Me.Session("sg") = SottogruppiId
             Else
-                SottogruppiId = Me.Session("sg")
+                SottogruppiId = KeepStoreSecurity.SqlCleanInt(Me.Session("sg"), 0)
             End If
 
+            'Marchio (mr) - compatibilità legacy: Session("marchio")
             If Me.Request.QueryString("mr") <> "" Then
-            MarcheId = KeepStoreSecurity.SqlCleanInt(Request.QueryString("mr"), 0, 0, 999999)
+                MarcheId = KeepStoreSecurity.SqlCleanInt(Me.Request.QueryString("mr"), 0)
+                Me.Session("mr") = MarcheId
+                Me.Session("marchio") = MarcheId
             Else
-                MarcheId = Me.Session("mr")
+                Dim mrSess As Object = If(Convert.ToString(Me.Session("marchio")) <> "", Me.Session("marchio"), Me.Session("mr"))
+                MarcheId = KeepStoreSecurity.SqlCleanInt(mrSess, 0)
             End If
 
-            If Me.Request.QueryString("pid") <> "" Then
-            OfferteId = KeepStoreSecurity.SqlCleanInt(Request.QueryString("pid"), 0, 0, 999999)
+            If Me.Request.QueryString("inpromo") <> "" Then
+                OfferteId = KeepStoreSecurity.SqlCleanInt(Me.Request.QueryString("inpromo"), 0)
+                Me.Session("inpromo") = OfferteId
             Else
-                OfferteId = Me.Session("pid")
+                OfferteId = KeepStoreSecurity.SqlCleanInt(Me.Session("inpromo"), 0)
             End If
 
             If Me.Request.QueryString("q") <> "" Then
-                strCerca = Me.Request.QueryString("q").Replace("%23up", "").Replace("#up", "")
+                strCerca = Convert.ToString(Me.Request.QueryString("q"))
+                Me.Session("q") = strCerca
             Else
-                If Not Session("q") Is Nothing Then
-                    strCerca = Me.Session("q").Replace("%23up", "").Replace("#up", "")
-                End If
-            End If
-
-            If InOfferta = 1 Then
-                Session("Promo") = 1
-            Else
-                Session("Promo") = 0
+                strCerca = Convert.ToString(Me.Session("q"))
             End If
 
             If Not strCerca Is Nothing Then
@@ -193,8 +203,8 @@ Partial Class Articoli
             'Utile per visualizzare i prezzi con iva dell'utente
             Dim strSelect As String = "SELECT id, Codice, Ean, Descrizione1, Descrizione2, DescrizioneLunga, Prezzo, IF((@ivaRC=1) AND (ValoreIvaRC>-1),((Prezzo)*((ValoreIvaRC/100)+1)),IF(@iva>0,((Prezzo)*((@iva/100)+1)),PrezzoIvato)) AS PrezzoIvato, Img1, MarcheDescrizione, Disponibilita, Giacenza, InOrdine, Impegnata, InOfferta, SettoriDescrizione, CategorieDescrizione, TipologieDescrizione, GruppiDescrizione, SottogruppiDescrizione, MarcheDescrizione, Marche_img, PrezzoPromo, IF((@ivaRC=1) AND (ValoreIvaRC>-1),((PrezzoPromo)*((ValoreIvaRC/100)+1)),IF(@iva>0,((PrezzoPromo)*((@iva/100)+1)),PrezzoPromoIvato)) AS PrezzoPromoIvato, MarcheId, CategorieId, TipologieId, IF(PrezzoPromo IS NULL,Prezzo,PrezzoPromo) Ord_PrezzoPromo, IF(PrezzoPromoIvato IS NULL,PrezzoIvato,IF((@ivaRC=1) AND (ValoreIvaRC>-1),((PrezzoPromo)*((ValoreIvaRC/100)+1)),IF(@iva>0,((PrezzoPromo)*((@iva/100)+1)),PrezzoPromoIvato))) Ord_PrezzoPromoIvato FROM vsuperarticoli "
         ' Parameters used inside strSelect (avoid SQL injection via concatenated session values)
-        Dim ivaUtente As Decimal = KeepStoreSecurity.SqlCleanDecimal(Session("Iva_Utente"), 0D, 0D, 100D)
-        Dim ivaRC As Integer = KeepStoreSecurity.SqlCleanInt(Session("AbilitatoIvaReverseCharge"), 0, 0, 1)
+        Dim ivaUtente As Decimal = KeepStoreSecurity.SqlCleanDecimal(Session("Iva_Utente"), 0D)
+        Dim ivaRC As Integer = KeepStoreSecurity.SqlCleanInt(Session("AbilitatoIvaReverseCharge"), 0)
         If sdsArticoli IsNot Nothing Then
             If sdsArticoli.SelectParameters("iva") IsNot Nothing Then
                 sdsArticoli.SelectParameters("iva").DefaultValue = ivaUtente.ToString(System.Globalization.CultureInfo.InvariantCulture)
