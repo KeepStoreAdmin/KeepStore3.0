@@ -5,7 +5,12 @@
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
 
-    <link rel="canonical" href="<%= Request.Url.GetLeftPart(System.UriPartial.Path) %>" />
+    <link rel="canonical" href="<%= Request.Url.GetLeftPart(System.UriPartial.Path) %>
+    <style type="text/css">
+        /* KeepStore: migliora usabilità liste filtri lunghe (Marche/Tipologie) senza toccare la logica dei filtri */
+        .filter-scroll { max-height: 260px; overflow: auto; padding-right: 6px; }
+    </style>
+" />
 
     <style>
         /* KeepStore: pager (GridView) – estetica coerente con template Onus */
@@ -152,22 +157,6 @@
                         </ul>
                     </div>
 
-                    <!-- Navigazione tipologie (link) -->
-                    <div class="facet-categories mb-4">
-                        <h6 class="title fw-medium">Tipologie</h6>
-                        <ul>
-                            <asp:Repeater ID="rptTipologieLink" runat="server" DataSourceID="sdsTipologie">
-                                <ItemTemplate>
-                                    <li>
-                                        <a href='<%# "articoli.aspx?st=" & Session("st") & "&ct=" & Session("ct") & "&tp=" & Eval("TipologieId") %>'>
-                                            <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>
-                                            <i class="icon-arrow-right"></i>
-                                        </a>
-                                    </li>
-                                </ItemTemplate>
-                            </asp:Repeater>
-                        </ul>
-                    </div>
 
                     <!-- Filtri (checkbox multi-selezione) -->
                     <div class="mt-4" runat="server" id="tNavig">
@@ -180,7 +169,7 @@
                                             <p class="facet-title title-sidebar fw-semibold mb-0">Marche</p>
                                             <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# changeUrlGetParam(Me.Request.Url.toString, "rimuovi", "mr") %>' Text="Rimuovi tutti"></asp:HyperLink>
                                         </div>
-                                        <div class="box-fieldset-item">
+                                        <div class="box-fieldset-item filter-scroll">
                                 </HeaderTemplate>
                                 <ItemTemplate>
                                     <fieldset class="fieldset-item">
@@ -204,7 +193,7 @@
                                             <p class="facet-title title-sidebar fw-semibold mb-0">Tipologie</p>
                                             <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# changeUrlGetParam(Me.Request.Url.toString, "rimuovi", "tp") %>' Text="Rimuovi tutti"></asp:HyperLink>
                                         </div>
-                                        <div class="box-fieldset-item">
+                                        <div class="box-fieldset-item filter-scroll">
                                 </HeaderTemplate>
                                 <ItemTemplate>
                                     <fieldset class="fieldset-item">
