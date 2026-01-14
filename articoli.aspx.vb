@@ -153,8 +153,8 @@ End Sub
             filtritagliaecolore.Visible = True
             Dim TagliaIndex As Integer
             Dim ColoreIndex As Integer
-            Dim TagliaValue As String
-            Dim ColoreValue As String
+            Dim TagliaValue As String = String.Empty
+            Dim ColoreValue As String = String.Empty
 
             If Me.IsPostBack = False And Request.QueryString("taglia") <> String.Empty Then
                 Dim rawTaglia As String = QS("taglia", 40)
@@ -1819,7 +1819,7 @@ End Sub
     End Function
 
     Protected Function HA(value As Object) As String
-        Return Server.HtmlAttributeEncode(Convert.ToString(value))
+        Return System.Web.HttpUtility.HtmlAttributeEncode(Convert.ToString(value))
     End Function
 
     Private Function QS(key As String, Optional maxLen As Integer = 200) As String
