@@ -134,29 +134,36 @@ Partial Class wishlist
     End Sub
 
     'Restituisce 1 se ci sono delle promo valide sull'articiolo altrimenti 0
-    Function controlla_promo_articolo(ByVal cod_articolo As Integer, ByVal listino As Integer) As Integer
-        Dim conn As New MySqlConnection
-        conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+    Private Function controlla_promo_articolo(cod_articolo As Integer, listino As Integer) As Integer
+    Dim ris As Integer = 0
+
+    Using conn As New MySql.Data.MySqlClient.MySqlConnection(ConnectionString)
         conn.Open()
 
-        Dim cmd As New MySqlCommand
+        Using cmd As New MySql.Data.MySqlClient.MySqlCommand()
+            cmd.Connection = conn
+            cmd.CommandText =
+                "SELECT id FROM vsuperarticoli " &
+                "WHERE (ID=@id AND NListino=@listino) " &
+                "AND (OfferteDataInizio <= CURDATE()) AND (OfferteDataFine >= CURDATE()) " &
+                "AND (InOfferta=1) " &
+                "ORDER BY PrezzoPromo DESC"
 
-        cmd.CommandText = "SELECT id FROM vsuperarticoli WHERE (ID=" & cod_articolo & " AND NListino=" & listino & ") AND ((OfferteDataInizio <= CURDATE()) AND (OfferteDataFine >= CURDATE())) AND (InOfferta=1) ORDER BY PrezzoPromo DESC"
+            cmd.Parameters.Clear()
+            cmd.Parameters.Add("@id", MySql.Data.MySqlClient.MySqlDbType.Int32).Value = cod_articolo
+            cmd.Parameters.Add("@listino", MySql.Data.MySqlClient.MySqlDbType.Int32).Value = listino
 
-        cmd.Connection = conn
-        Dim dr As MySqlDataReader = cmd.ExecuteReader()
-        dr.Read()
+            Using rd As MySql.Data.MySqlClient.MySqlDataReader = cmd.ExecuteReader()
+                If rd.Read() Then
+                    ris = Convert.ToInt32(rd("id"))
+                End If
+            End Using
+        End Using
+    End Using
 
-        If (dr.HasRows) Then
-            dr.Close()
-            conn.Close()
-            Return 1
-        Else
-            dr.Close()
-            conn.Close()
-            Return 0
-        End If
+    Return ris
     End Function
+
 
     Protected Sub GridView1_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles GridView1.PreRender
         Dim img, img2 As Image

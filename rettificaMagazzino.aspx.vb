@@ -516,28 +516,34 @@ Partial Class Articoli
     End Sub
 
     'Restituisce 1 se ci sono delle promo valide sull'articiolo altrimenti 0
-    Function controlla_promo_articolo(ByVal cod_articolo As Integer, ByVal listino As Integer) As Integer
-        Dim conn As New MySqlConnection
-        conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+    Private Function controlla_promo_articolo(cod_articolo As Integer, listino As Integer) As Integer
+    Dim ris As Integer = 0
+
+    Using conn As New MySql.Data.MySqlClient.MySqlConnection(ConnectionString)
         conn.Open()
 
-        Dim cmd As New MySqlCommand
+        Using cmd As New MySql.Data.MySqlClient.MySqlCommand()
+            cmd.Connection = conn
+            cmd.CommandText =
+                "SELECT codice FROM vsuperarticoli " &
+                "WHERE (codice=@codice AND NListino=@listino) " &
+                "AND (OfferteDataInizio <= CURDATE()) AND (OfferteDataFine >= CURDATE()) " &
+                "AND (InOfferta=1) " &
+                "ORDER BY PrezzoPromo DESC"
 
-        cmd.CommandText = "SELECT id FROM vsuperarticoli WHERE (ID=" & cod_articolo & " AND NListino=" & listino & ") AND ((OfferteDataInizio <= CURDATE()) AND (OfferteDataFine >= CURDATE())) AND (InOfferta=1) ORDER BY PrezzoPromo DESC"
+            cmd.Parameters.Clear()
+            cmd.Parameters.Add("@codice", MySql.Data.MySqlClient.MySqlDbType.Int32).Value = cod_articolo
+            cmd.Parameters.Add("@listino", MySql.Data.MySqlClient.MySqlDbType.Int32).Value = listino
 
-        cmd.Connection = conn
-        Dim dr As MySqlDataReader = cmd.ExecuteReader()
-        dr.Read()
+            Using rd As MySql.Data.MySqlClient.MySqlDataReader = cmd.ExecuteReader()
+                If rd.Read() Then
+                    ris = Convert.ToInt32(rd("codice"))
+                End If
+            End Using
+        End Using
+    End Using
 
-        If (dr.HasRows) Then
-            dr.Close()
-            conn.Close()
-            Return 1
-        Else
-            dr.Close()
-            conn.Close()
-            Return 0
-        End If
+    Return ris
     End Function
 
     Protected Sub GridView1_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles GridView1.PreRender
@@ -895,29 +901,30 @@ Partial Class Articoli
         End If
     End Sub
 
-    Public Function spedito_gratis(ByVal idArticolo As Integer, ByVal listino As Integer) As Integer
-        Dim conn As New MySqlConnection
-        conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+    Private Function spedito_gratis(listino As Integer) As Integer
+    Dim ris As Integer = 0
+
+    Using conn As New MySql.Data.MySqlClient.MySqlConnection(ConnectionString)
         conn.Open()
 
-        Dim cmd As New MySqlCommand
+        Using cmd As New MySql.Data.MySqlClient.MySqlCommand()
+            cmd.Connection = conn
+            cmd.CommandText =
+                "SELECT IF(SpedizioneGratis_Listini LIKE CONCAT('%', @listino, ';%'), 1, 0) AS flag " &
+                "FROM spedizione WHERE id=1"
 
-        cmd.CommandText = "SELECT SpedizioneGratis_Listini, SpedizioneGratis_Data_Inizio, SpedizioneGratis_Data_Fine, id FROM articoli WHERE (SpedizioneGratis_Listini LIKE CONCAT('%'," & listino & ", ';%')) AND (id = " & idArticolo & ") AND (SpedizioneGratis_Data_Inizio <= CURDATE()) AND (SpedizioneGratis_Data_Fine >= CURDATE())"
+            cmd.Parameters.Clear()
+            cmd.Parameters.Add("@listino", MySql.Data.MySqlClient.MySqlDbType.Int32).Value = listino
 
-        cmd.Connection = conn
-        Dim dr As MySqlDataReader = cmd.ExecuteReader()
-        dr.Read()
+            Using rd As MySql.Data.MySqlClient.MySqlDataReader = cmd.ExecuteReader()
+                If rd.Read() Then
+                    ris = Convert.ToInt32(rd("flag"))
+                End If
+            End Using
+        End Using
+    End Using
 
-        'Restituisce 1 nel caso ci sia almeno una riga come risultato, e quindi il settore relativo all' IDArticolo è ABILITATO altrimenti restituisce 0
-        If (dr.HasRows = True) Then
-            conn.Close()
-            dr.Close()
-            Return 1
-        Else
-            conn.Close()
-            dr.Close()
-            Return 0
-        End If
+    Return ris
     End Function
 
     Protected Sub Drop_Ordinamento_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Ordinamento.SelectedIndexChanged
@@ -966,29 +973,28 @@ Partial Class Articoli
         End If
     End Sub
 
-    Function controlla_abilitazione_settore(ByVal idArticolo As Integer) As Integer
-        Dim conn As New MySqlConnection
-        conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+    Private Function controlla_abilitazione_settore(idArticolo As Integer) As Integer
+    Dim ris As Integer = 0
+
+    Using conn As New MySql.Data.MySqlClient.MySqlConnection(ConnectionString)
         conn.Open()
 
-        Dim cmd As New MySqlCommand
+        Using cmd As New MySql.Data.MySqlClient.MySqlCommand()
+            cmd.Connection = conn
+            cmd.CommandText = "SELECT SettoreId FROM articoli WHERE ID=@id"
 
-        cmd.CommandText = "SELECT * FROM vsuperarticoli INNER JOIN settori ON settori.id=vsuperarticoli.SettoriId WHERE (vsuperarticoli.id=" & idArticolo & ") AND (settori.Abilitato=1)"
+            cmd.Parameters.Clear()
+            cmd.Parameters.Add("@id", MySql.Data.MySqlClient.MySqlDbType.Int32).Value = idArticolo
 
-        cmd.Connection = conn
-        Dim dr As MySqlDataReader = cmd.ExecuteReader()
-        dr.Read()
+            Using rd As MySql.Data.MySqlClient.MySqlDataReader = cmd.ExecuteReader()
+                If rd.Read() AndAlso rd("SettoreId") IsNot DBNull.Value Then
+                    ris = Convert.ToInt32(rd("SettoreId"))
+                End If
+            End Using
+        End Using
+    End Using
 
-        'Restituisce 1 nel caso ci sia almeno una riga come risultato, e quindi il settore relativo all' IDArticolo è ABILITATO altrimenti restituisce 0
-        If (dr.HasRows = True) Then
-            conn.Close()
-            dr.Close()
-            Return 1
-        Else
-            conn.Close()
-            dr.Close()
-            Return 0
-        End If
+    Return ris
     End Function
 
     Protected Sub CheckBox_Disponibile_CheckedChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles CheckBox_Disponibile.CheckedChanged
