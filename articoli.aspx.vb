@@ -52,19 +52,19 @@ Partial Class Articoli
         Dim sgAreEquals As Boolean = True
 
         If filters.ContainsKey("mr") Then
-            mrAreEquals = AreArraysEqual(Request.QueryString("mr").Split("|"c), filters.Item("mr").Split("|"c))
+            mrAreEquals = AreArraysEqual(QSSplit("mr"), filters.Item("mr").Split("|"c))
             newUrl = changeUrlGetParam(newUrl, "mr", filters.Item("mr"))
         End If
         If filters.ContainsKey("tp") Then
-            tpAreEquals = AreArraysEqual(Request.QueryString("tp").Split("|"c), filters.Item("tp").Split("|"c))
+            tpAreEquals = AreArraysEqual(QSSplit("tp"), filters.Item("tp").Split("|"c))
             newUrl = changeUrlGetParam(newUrl, "tp", filters.Item("tp"))
         End If
         If filters.ContainsKey("gr") Then
-            grAreEquals = AreArraysEqual(Request.QueryString("gr").Split("|"c), filters.Item("gr").Split("|"c))
+            grAreEquals = AreArraysEqual(QSSplit("gr"), filters.Item("gr").Split("|"c))
             newUrl = changeUrlGetParam(newUrl, "gr", filters.Item("gr"))
         End If
         If filters.ContainsKey("sg") Then
-            sgAreEquals = AreArraysEqual(Request.QueryString("sg").Split("|"c), filters.Item("sg").Split("|"c))
+            sgAreEquals = AreArraysEqual(QSSplit("sg"), filters.Item("sg").Split("|"c))
             newUrl = changeUrlGetParam(newUrl, "sg", filters.Item("sg"))
         End If
 
@@ -119,13 +119,7 @@ Partial Class Articoli
                 InOfferta = tmpInOfferta
             End If
         End If
-
-        If Application.Item("AS00728312T34") = 1 Then
-            Application.Set("ASXXX00728312T", Application.Item("AS00728312T34") - 1)
-            Application.Set("AS00728312T34", 0)
-            Response.Write("<script>alert('')</script>")
-        End If
-    End Sub
+End Sub
 
     Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.LoadComplete
         IvaTipo = Me.Session("IvaTipo")
@@ -163,18 +157,26 @@ Partial Class Articoli
             Dim ColoreValue As String
 
             If Me.IsPostBack = False And Request.QueryString("taglia") <> String.Empty Then
-                Dim tagliaIndexAndValue = Request.QueryString("taglia").Split("|"c)
-                TagliaIndex = CInt(tagliaIndexAndValue(0).ToString)
-                TagliaValue = tagliaIndexAndValue(1)
+                Dim rawTaglia As String = QS("taglia", 40)
+                If Not IsValidIndexAndValue(rawTaglia) Then rawTaglia = ""
+                Dim tagliaIndexAndValue As String() = If(String.IsNullOrEmpty(rawTaglia), New String() {}, rawTaglia.Split("|"c))
+                If tagliaIndexAndValue.Length >= 2 Then
+                    TagliaIndex = CInt(tagliaIndexAndValue(0).ToString)
+                    TagliaValue = tagliaIndexAndValue(1)
+                End If
             Else
                 TagliaIndex = Drop_Filtra_Taglia.SelectedIndex
                 TagliaValue = Drop_Filtra_Taglia.SelectedValue
             End If
 
             If Me.IsPostBack = False And Request.QueryString("colore") <> String.Empty Then
-                Dim coloreIndexAndValue = Request.QueryString("colore").Split("|"c)
-                ColoreIndex = CInt(coloreIndexAndValue(0).ToString)
-                ColoreValue = coloreIndexAndValue(1)
+                Dim rawColore As String = QS("colore", 40)
+                If Not IsValidIndexAndValue(rawColore) Then rawColore = ""
+                Dim coloreIndexAndValue As String() = If(String.IsNullOrEmpty(rawColore), New String() {}, rawColore.Split("|"c))
+                If coloreIndexAndValue.Length >= 2 Then
+                    ColoreIndex = CInt(coloreIndexAndValue(0).ToString)
+                    ColoreValue = coloreIndexAndValue(1)
+                End If
             Else
                 ColoreIndex = Drop_Filtra_Colore.SelectedIndex
                 ColoreValue = Drop_Filtra_Colore.SelectedValue
@@ -288,8 +290,8 @@ Partial Class Articoli
         SottogruppiId = SafeIdListFromQuery("sg")
         MarcheId = SafeIdListFromQuery("mr")
 
-        If Me.Request.QueryString("q") <> "" Then
-            strCerca = Me.Request.QueryString("q").Replace("%23up", "").Replace("#up", "")
+        If QS("q", 80) <> "" Then
+            strCerca = QS("q", 80).Replace("%23up", "").Replace("#up", "")
         Else
             If Session("q") IsNot Nothing Then
                 strCerca = sostituisci_caratteri_speciali(Session("q").Replace("%23up", "").Replace("#up", ""))
@@ -1195,7 +1197,7 @@ Partial Class Articoli
             Dim pid As Integer = 0
             Integer.TryParse(Request.QueryString("pid"), pid)
 
-            Dim q As String = Convert.ToString(Request.QueryString("q"))
+            Dim q As String = QS("q", 80)
             If pid > 0 OrElse Not String.IsNullOrEmpty(q) Then
                 ' Dettaglio prodotto o ricerca libera: non forziamo default di navigazione
                 Exit Sub
@@ -1644,7 +1646,7 @@ Partial Class Articoli
         ' mentre per ricerca (q) o dettaglio (pid) restiamo su path pulito.
         Dim _pid As Integer = 0
         Integer.TryParse(Request.QueryString("pid"), _pid)
-        Dim _q As String = Convert.ToString(Request.QueryString("q"))
+        Dim _q As String = QS("q", 80)
 
         If _pid <= 0 AndAlso String.IsNullOrEmpty(_q) Then
             Dim _st As Integer = 0
@@ -1810,4 +1812,41 @@ Partial Class Articoli
             ' NOP
         End Try
     End Sub
+
+    '--- Security helpers (XSS + QueryString validation) ------------------------
+    Protected Function H(value As Object) As String
+        Return Server.HtmlEncode(Convert.ToString(value))
+    End Function
+
+    Protected Function HA(value As Object) As String
+        Return Server.HtmlAttributeEncode(Convert.ToString(value))
+    End Function
+
+    Private Function QS(key As String, Optional maxLen As Integer = 200) As String
+        Dim v As String = Convert.ToString(Request.QueryString(key))
+        If v Is Nothing Then Return ""
+        v = v.Trim()
+        If v.Length > maxLen Then v = v.Substring(0, maxLen)
+        Return v
+    End Function
+
+    Private Function QSSplit(key As String) As String()
+        Dim v As String = QS(key)
+        If String.IsNullOrEmpty(v) Then Return New String() {}
+        Return v.Split("|"c)
+    End Function
+
+    Private Function IsValidMultiIdList(raw As String) As Boolean
+        If String.IsNullOrEmpty(raw) Then Return False
+        ' Format used in this project: index|id|id|id...
+        Return System.Text.RegularExpressions.Regex.IsMatch(raw, "^\d+(\|\d+)+$")
+    End Function
+
+    Private Function IsValidIndexAndValue(raw As String) As Boolean
+        If String.IsNullOrEmpty(raw) Then Return False
+        ' Format: index|value  (value can be numeric or short token)
+        If raw.Length > 80 Then Return False
+        Return System.Text.RegularExpressions.Regex.IsMatch(raw, "^\d+\|[A-Za-z0-9\-\._% ]+$")
+    End Function
+
 End Class
