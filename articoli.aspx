@@ -6,6 +6,35 @@
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
 
     <link rel="canonical" href="<%= Request.Url.GetLeftPart(System.UriPartial.Path) %>" />
+
+    <style>
+        /* KeepStore: pager (GridView) – estetica coerente con template Onus */
+        .pagination-ys { display: flex; justify-content: center; margin-top: 18px; }
+        .pagination-ys table { margin: 0; border-collapse: separate; border-spacing: 6px 0; }
+        .pagination-ys td { padding: 0; }
+        .pagination-ys a, .pagination-ys span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 38px;
+            height: 38px;
+            padding: 0 10px;
+            border: 1px solid rgba(0,0,0,.12);
+            border-radius: 10px;
+            text-decoration: none;
+            line-height: 1;
+        }
+        .pagination-ys span {
+            background: #111;
+            color: #fff;
+            border-color: #111;
+        }
+        .pagination-ys a:hover { background: rgba(0,0,0,.04); }
+
+        /* CheckBox WebForms: migliora allineamento input/label nei filtri */
+        .filterCheckbox input[type="checkbox"] { margin-right: 8px; vertical-align: middle; }
+        .filterCheckbox label { margin: 0; vertical-align: middle; }
+    </style>
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" Runat="Server">
@@ -149,7 +178,7 @@
                                     <div class="widget-facet facet-fieldset">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <p class="facet-title title-sidebar fw-semibold mb-0">Marche</p>
-                                            <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# If(Me.Request.Url.Query IsNot Nothing AndAlso Me.Request.Url.Query.Length>0, Me.Request.Url.toString & "&rimuovi=mr", Me.Request.Url.toString & "?rimuovi=mr") %>' Text="Rimuovi tutti"></asp:HyperLink>
+                                            <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# changeUrlGetParam(Me.Request.Url.toString, "rimuovi", "mr") %>' Text="Rimuovi tutti"></asp:HyperLink>
                                         </div>
                                         <div class="box-fieldset-item">
                                 </HeaderTemplate>
@@ -173,7 +202,7 @@
                                     <div class="widget-facet facet-fieldset">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <p class="facet-title title-sidebar fw-semibold mb-0">Tipologie</p>
-                                            <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# If(Me.Request.Url.Query IsNot Nothing AndAlso Me.Request.Url.Query.Length>0, Me.Request.Url.toString & "&rimuovi=tp", Me.Request.Url.toString & "?rimuovi=tp") %>' Text="Rimuovi tutti"></asp:HyperLink>
+                                            <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# changeUrlGetParam(Me.Request.Url.toString, "rimuovi", "tp") %>' Text="Rimuovi tutti"></asp:HyperLink>
                                         </div>
                                         <div class="box-fieldset-item">
                                 </HeaderTemplate>
@@ -197,7 +226,7 @@
                                     <div class="widget-facet facet-fieldset">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <p class="facet-title title-sidebar fw-semibold mb-0">Gruppo</p>
-                                            <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# If(Me.Request.Url.Query IsNot Nothing AndAlso Me.Request.Url.Query.Length>0, Me.Request.Url.toString & "&rimuovi=gr", Me.Request.Url.toString & "?rimuovi=gr") %>' Text="Rimuovi tutti"></asp:HyperLink>
+                                            <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# changeUrlGetParam(Me.Request.Url.toString, "rimuovi", "gr") %>' Text="Rimuovi tutti"></asp:HyperLink>
                                         </div>
                                         <div class="box-fieldset-item">
                                 </HeaderTemplate>
@@ -221,7 +250,7 @@
                                     <div class="widget-facet facet-fieldset">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <p class="facet-title title-sidebar fw-semibold mb-0">Sottogruppi</p>
-                                            <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# If(Me.Request.Url.Query IsNot Nothing AndAlso Me.Request.Url.Query.Length>0, Me.Request.Url.toString & "&rimuovi=sg", Me.Request.Url.toString & "?rimuovi=sg") %>' Text="Rimuovi tutti"></asp:HyperLink>
+                                            <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# changeUrlGetParam(Me.Request.Url.toString, "rimuovi", "sg") %>' Text="Rimuovi tutti"></asp:HyperLink>
                                         </div>
                                         <div class="box-fieldset-item">
                                 </HeaderTemplate>
@@ -254,50 +283,48 @@
     </asp:SqlDataSource>
 
     <div class="container mt-3">
-        <center>
-            <br />
-            <asp:Label ID="lblTrovati" runat="server" Font-Bold="True" ForeColor="#E12825"></asp:Label>
-            articoli trovati <i>(<asp:Label ID="lblLinee" runat="server" Text="0" Font-Size="8pt">&gt;</asp:Label> per pagina)<br /></i>
-        </center>
+        <div class="tf-shop-control flex-wrap gap-10 mb-3">
+            <div class="tf-shop-control-left">
+                <p class="body-text-3 mb-0">
+                    <span class="fw-semibold">Trovati:</span>
+                    <asp:Label ID="lblTrovati" runat="server" Font-Bold="True"></asp:Label>
+                    <span class="ms-1">articoli</span>
+                    <span class="text-muted ms-2">|</span>
+                    <span class="ms-2">Visualizzati:</span>
+                    <asp:Label ID="lblLinee" runat="server" Text="0"></asp:Label>
+                </p>
+            </div>
 
-        <!-- Oridinamento Articoli -->
-        <br /><br />
-        <div class="container">
-            <div class="row">
-                <div class="form-group col-md-6">
-                    <asp:CheckBox ID="CheckBox_Disponibile" runat="server" Text="Solo Disponibili" Width="150px" AutoPostBack="True" style="float:left;font-size:10pt;margin-top:2pt;margin-left: 15px;" CssClass='filterCheckbox availablesOnly' />
+            <div class="tf-shop-control-right d-flex align-items-center flex-wrap gap-10 ms-auto">
+                <div class="d-flex align-items-center gap-8">
+                    <asp:CheckBox ID="CheckBox_Disponibile" runat="server" AutoPostBack="True" Text="Solo disponibili" />
                 </div>
-			
-                <div class="form-group col-md-6">
-                    <span style="width:240px;font-size:10pt;display:inline-block"></span>
-                    <span style="width:90px;display:inline-block;text-align:right">Ordina per</span>
-                    <asp:DropDownList ID="Drop_Ordinamento" style="vertical-align:middle" runat="server" Width="140px" AutoPostBack="True" BackColor="#FFFF80" Font-Bold="False" Font-Size="10pt" ForeColor="Black">
-                        <asp:ListItem Value="P_offerta">offerta</asp:ListItem>
-                        <asp:ListItem Value="P_basso">prezzo più basso</asp:ListItem>
-                        <asp:ListItem Value="P_alto">prezzo più alto</asp:ListItem>
-                        <asp:ListItem Value="P_recenti">più recenti</asp:ListItem>
-                        <asp:ListItem Value="P_popolarità">popolarità</asp:ListItem>
+
+                <div class="d-flex align-items-center gap-8">
+                    <span class="body-text-3">Ordina per</span>
+                    <asp:DropDownList ID="Drop_Ordinamento" runat="server" AutoPostBack="True" CssClass="form-select form-select-sm">
+                        <asp:ListItem Value="varticolibase.Codice">Codice</asp:ListItem>
+                        <asp:ListItem Value="varticolibase.Descrizione1">Descrizione</asp:ListItem>
+                        <asp:ListItem Value="varticolibase.PrezzoAcquisto">Prezzo crescente</asp:ListItem>
+                        <asp:ListItem Value="varticolibase.PrezzoAcquisto DESC">Prezzo decrescente</asp:ListItem>
                     </asp:DropDownList>
                 </div>
             </div>
-		
-            <div id="filtritagliaecolore" runat="server">			
-                <div class="row">
-                    <div class="form-group col-md-6">
-                        <span style="width:240px;font-size:10pt;display:inline-block"></span>
-                        <span style="width:90px;display:inline-block;text-align:right">Filtra taglia</span>
-                        <asp:DropDownList ID="Drop_Filtra_Taglia" style="text-align:left;vertical-align:middle" runat="server" Width="140px" AutoPostBack="True" BackColor="#FFFF80" Font-Bold="False" Font-Size="10pt" ForeColor="Black">
-                            <asp:ListItem Value="P_tutte_taglie">Tutte</asp:ListItem>
-                        </asp:DropDownList>
-                    </div>
-                    <div class="form-group col-md-6">
-                        <span style="width:240px;font-size:10pt;display:inline-block"></span>
-                        <span style="width:90px;display:inline-block;text-align:right">Filtra colore</span>
-                        <asp:DropDownList ID="Drop_Filtra_Colore" style="text-align:left;vertical-align:middle" runat="server" Width="140px" AutoPostBack="True" BackColor="#FFFF80" Font-Bold="False" Font-Size="10pt" ForeColor="Black">
-                            <asp:ListItem Value="P_tutti_colori">Tutti</asp:ListItem>
-                        </asp:DropDownList>	
-                    </div>
-                </div>
+        </div>
+
+        <div id="filtritagliaecolore" runat="server" class="tf-shop-control flex-wrap gap-10 mb-2">
+            <div class="d-flex align-items-center gap-8">
+                <span class="body-text-3">Filtra taglia</span>
+                <asp:DropDownList ID="Drop_Filtra_Taglia" style="text-align:left;vertical-align:middle" runat="server" Width="140px" AutoPostBack="True" BackColor="#FFFF80" Font-Bold="False" Font-Size="10pt" ForeColor="Black">
+                    <asp:ListItem Value="P_tutte_taglie">Tutte</asp:ListItem>
+                </asp:DropDownList>
+            </div>
+
+            <div class="d-flex align-items-center gap-8">
+                <span class="body-text-3">Filtra colore</span>
+                <asp:DropDownList ID="Drop_Filtra_Colore" style="text-align:left;vertical-align:middle" runat="server" Width="140px" AutoPostBack="True" BackColor="#FFFF80" Font-Bold="False" Font-Size="10pt" ForeColor="Black">
+                    <asp:ListItem Value="P_tutti_colori">Tutti</asp:ListItem>
+                </asp:DropDownList>
             </div>
         </div>
     </div> <!-- fine container mt-3 -->
