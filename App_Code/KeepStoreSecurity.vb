@@ -135,30 +135,42 @@ Public Module KeepStoreSecurity
         End Try
     End Sub
 
-    Public Sub RequireHttps(req As HttpRequest, resp As HttpResponse)
-        If req Is Nothing OrElse resp Is Nothing Then Return
+    Public Sub RequireHttps(req As HttpRequest, resp As HttpResponse, Optional enableHsts As Boolean = False)
+    If req Is Nothing OrElse resp Is Nothing Then Return
 
-        ' Se sei dietro proxy/CDN: gestisci anche X-Forwarded-Proto
-        Dim xfproto As String = ""
+    ' Supporto proxy/CDN: X-Forwarded-Proto
+    Dim xfproto As String = ""
+    Try
+        xfproto = Convert.ToString(req.Headers("X-Forwarded-Proto"))
+    Catch
+    End Try
+
+    Dim isHttps As Boolean = req.IsSecureConnection OrElse String.Equals(xfproto, "https", StringComparison.OrdinalIgnoreCase)
+
+    ' Se già HTTPS e richiesta HSTS -> imposta header (best effort)
+    If isHttps AndAlso enableHsts Then
         Try
-            xfproto = Convert.ToString(req.Headers("X-Forwarded-Proto"))
+            ' 1 anno; se vuoi più conservativo, riduci max-age
+            SafeSetHeader(resp, "Strict-Transport-Security", "max-age=31536000; includeSubDomains")
         Catch
+            ' ignore
         End Try
+    End If
 
-        Dim isHttps As Boolean = req.IsSecureConnection OrElse String.Equals(xfproto, "https", StringComparison.OrdinalIgnoreCase)
-
-        If Not isHttps Then
-            Try
-                Dim url As Uri = req.Url
-                Dim b As New UriBuilder(url)
-                b.Scheme = Uri.UriSchemeHttps
-                b.Port = -1 ' default 443
-                resp.Redirect(b.Uri.ToString(), True)
-            Catch
-                ' se non riesce, non bloccare
-            End Try
-        End If
+    ' Se non HTTPS -> redirect a HTTPS
+    If Not isHttps Then
+        Try
+            Dim url As Uri = req.Url
+            Dim b As New UriBuilder(url)
+            b.Scheme = Uri.UriSchemeHttps
+            b.Port = -1 ' default 443
+            resp.Redirect(b.Uri.ToString(), True)
+        Catch
+            ' se non riesce, non bloccare
+        End Try
+    End If
     End Sub
+
 
 
     ' ==========================================================
