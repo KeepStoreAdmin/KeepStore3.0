@@ -73,12 +73,7 @@ Partial Class Articoli
         Me.GridView1.PageIndex = Session("Articoli_PageIndex")
 
         'Inserimento della stringa di ricerca nella tabella query_string, per l'indicizzazione
-        Dim conn As New MySqlConnection
-        Dim cmd As New MySqlCommand
-        Dim sqlString As String = ""
-        Dim dsData As New DataSet
-        Dim strCerca As String = Me.Session("q")
-
+        If Not IsPostBack AndAlso IsPostRequest() Then
         Try
 
             conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
@@ -107,6 +102,7 @@ Partial Class Articoli
             End If
 
         End Try
+        End If
     End Sub
 
     Public Sub CaricaArticoli()
@@ -932,18 +928,31 @@ Partial Class Articoli
     End Sub
 
     Protected Sub BT_Aggiungi_wishlist_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+        If Not IsPostRequest() Then
+            RejectNonPost()
+            Exit Sub
+        End If
+
+        Dim utentiId As Integer = KeepStoreSecurity.SqlCleanInt(Session.Item("UtentiID"))
+        Dim articoloId As Integer = 0
+        If sender IsNot Nothing AndAlso TypeOf sender Is Control Then
+            Dim ArticoloIdCtrl As Label = CType(CType(sender, Control).NamingContainer.FindControl("label_idArticolo"), Label)
+            If ArticoloIdCtrl IsNot Nothing Then
+                articoloId = KeepStoreSecurity.SqlCleanInt(ArticoloIdCtrl.Text)
+            End If
+        End If
+        If utentiId <= 0 OrElse articoloId <= 0 Then
+            Exit Sub
+        End If
+
         Dim conn As New MySqlConnection
         conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
         conn.Open()
 
-        Dim cmd As New MySqlCommand
-
-        Dim ArticoloId As Label = sender.NamingContainer.FindControl("label_idArticolo")
-
-        If (Session.Item("UtentiId") > 0) Then
+        Dim cmd As New MySqlCommand        If utentiId > 0 Then
             cmd.CommandText = "Select id_wishlist from wishlist where (id_articolo=?ArticoloId) AND (id_utente=?UtentiID)"
-            cmd.Parameters.AddWithValue("?ArticoloId", ArticoloId.Text)
-            cmd.Parameters.AddWithValue("?UtentiID", Session.Item("UtentiID"))
+            cmd.Parameters.Add("?ArticoloId", MySqlDbType.Int32).Value = articoloId
+            cmd.Parameters.Add("?UtentiID", MySqlDbType.Int32).Value = utentiId
 
             cmd.Connection = conn
             Dim dr As MySqlDataReader = cmd.ExecuteReader()
@@ -956,8 +965,8 @@ Partial Class Articoli
                 cmd.CommandType = CommandType.StoredProcedure
                 cmd.CommandText = "NewElement_Wishlist"
 
-                cmd.Parameters.AddWithValue("?pIdUtente", Session.Item("UtentiID"))
-                cmd.Parameters.AddWithValue("?pIdArticolo", ArticoloId.Text)
+                cmd.Parameters.Add("?pIdUtente", MySqlDbType.Int32).Value = utentiId
+                cmd.Parameters.Add("?pIdArticolo", MySqlDbType.Int32).Value = articoloId
                 cmd.ExecuteNonQuery()
             End If
 
@@ -1013,4 +1022,17 @@ Partial Class Articoli
             CheckBox_Disponibile.Checked = False
         End If
     End Sub
+
+    ' STEP 5 - State change only via POST (anti-CSRF + hardening)
+    Private Function IsPostRequest() As Boolean
+        Return String.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase)
+    End Function
+
+    Private Sub RejectNonPost()
+        Response.StatusCode = 405
+        Response.StatusDescription = "Method Not Allowed"
+        Response.AddHeader("Allow", "POST")
+        Context.ApplicationInstance.CompleteRequest()
+    End Sub
+
 End Class

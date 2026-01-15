@@ -51,12 +51,7 @@ Partial Class wishlist
         Me.GridView1.PageIndex = Session("Articoli_PageIndex")
 
         'Inserimento della stringa di ricerca nella tabella query_string, per l'indicizzazione
-        Dim conn As New MySqlConnection
-        Dim cmd As New MySqlCommand
-        Dim sqlString As String = ""
-        Dim dsData As New DataSet
-        Dim strCerca As String = Me.Session("q")
-
+        If Not IsPostBack AndAlso IsPostRequest() Then
         Try
 
             conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
@@ -85,6 +80,7 @@ Partial Class wishlist
             End If
 
         End Try
+        End If
     End Sub
 
     Public Sub CaricaArticoli()
@@ -529,6 +525,23 @@ Partial Class wishlist
     End Sub
 
     Protected Sub BT_Rimuovi_wishlist_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+        If Not IsPostRequest() Then
+            RejectNonPost()
+            Exit Sub
+        End If
+
+        Dim utentiId As Integer = KeepStoreSecurity.SqlCleanInt(Session.Item("UtentiID"))
+        Dim articoloId As Integer = 0
+        If sender IsNot Nothing AndAlso TypeOf sender Is Control Then
+            Dim ArticoloIdCtrl As Label = CType(CType(sender, Control).NamingContainer.FindControl("label_idArticolo"), Label)
+            If ArticoloIdCtrl IsNot Nothing Then
+                articoloId = KeepStoreSecurity.SqlCleanInt(ArticoloIdCtrl.Text)
+            End If
+        End If
+        If utentiId <= 0 OrElse articoloId <= 0 Then
+            Exit Sub
+        End If
+
         Dim conn As New MySqlConnection
         conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
         conn.Open()
@@ -542,8 +555,8 @@ Partial Class wishlist
         cmd.CommandType = CommandType.StoredProcedure
         cmd.CommandText = "RemoveElement_Wishlist"
 
-        cmd.Parameters.AddWithValue("?pIdUtente", Session.Item("UtentiID"))
-        cmd.Parameters.AddWithValue("?pIdArticolo", ArticoloId.Text)
+        cmd.Parameters.Add("?pIdUtente", MySqlDbType.Int32).Value = utentiId
+        cmd.Parameters.Add("?pIdArticolo", MySqlDbType.Int32).Value = articoloId
         cmd.ExecuteNonQuery()
 
         cmd.Parameters.Clear()
@@ -555,6 +568,15 @@ Partial Class wishlist
 
 
     Protected Sub LB_cancella_tutta_wishlist_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles LB_cancella_tutta_wishlist.Click
+        If Not IsPostRequest() Then
+            RejectNonPost()
+            Exit Sub
+        End If
+
+        Dim utentiId As Integer = KeepStoreSecurity.SqlCleanInt(Session.Item("UtentiID"))
+        If utentiId <= 0 Then
+            Exit Sub
+        End If
         Dim conn As New MySqlConnection
         conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
         conn.Open()
@@ -568,7 +590,7 @@ Partial Class wishlist
         cmd.CommandType = CommandType.StoredProcedure
         cmd.CommandText = "RemoveElement_All_Wishlist"
 
-        cmd.Parameters.AddWithValue("?pIdUtente", Session.Item("UtentiID"))
+        cmd.Parameters.Add("?pIdUtente", MySqlDbType.Int32).Value = utentiId
         cmd.ExecuteNonQuery()
 
         cmd.Parameters.Clear()
@@ -581,4 +603,17 @@ Partial Class wishlist
     Protected Sub LB_crea_html_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles LB_crea_html.Click
         Response.Redirect("mail_html_entropic.aspx?mod=1")
     End Sub
+
+    ' STEP 5 - State change only via POST (anti-CSRF + hardening)
+    Private Function IsPostRequest() As Boolean
+        Return String.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase)
+    End Function
+
+    Private Sub RejectNonPost()
+        Response.StatusCode = 405
+        Response.StatusDescription = "Method Not Allowed"
+        Response.AddHeader("Allow", "POST")
+        Context.ApplicationInstance.CompleteRequest()
+    End Sub
+
 End Class
