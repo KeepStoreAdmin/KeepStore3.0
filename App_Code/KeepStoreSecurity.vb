@@ -15,6 +15,18 @@ Imports MySql.Data.MySqlClient
 ' Nota: le policy (CSP, cache, ecc.) sono volutamente "incrementali" per ridurre il rischio di breaking change.
 Public Module KeepStoreSecurity
 
+    Public Function SafeLocalRedirectUrl(url As String, fallback As String) As String
+    If String.IsNullOrWhiteSpace(url) Then Return fallback
+    url = url.Trim()
+
+    Dim low = url.ToLowerInvariant()
+    If low.StartsWith("http://") OrElse low.StartsWith("https://") OrElse low.StartsWith("//") Then Return fallback
+    If url.Contains(ChrW(0)) Then Return fallback
+    If Not url.StartsWith("/") AndAlso Not url.Contains(".aspx") Then Return fallback
+
+    Return url
+    End Function
+
     ' -----------------------------
     ' Response hardening
     ' -----------------------------
@@ -160,6 +172,18 @@ Public Module KeepStoreSecurity
     Public Function SqlEscapeLike(value As String) As String
         If value Is Nothing Then Return ""
         Return Regex.Replace(value, "([\[\]%_])", "[$1]")
+    End Function
+
+Public Function H(value As Object) As String
+    Return System.Web.HttpUtility.HtmlEncode(Convert.ToString(value))
+End Function
+
+Public Function HA(value As Object) As String
+    Return System.Web.HttpUtility.HtmlAttributeEncode(Convert.ToString(value))
+End Function
+
+Public Function U(value As Object) As String
+    Return System.Web.HttpUtility.UrlEncode(Convert.ToString(value))
     End Function
 
     ' ==========================
