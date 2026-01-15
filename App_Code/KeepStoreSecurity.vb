@@ -124,7 +124,7 @@ Public Module KeepStoreSecurity
         Dim s As String = Convert.ToString(value)
         If String.IsNullOrWhiteSpace(s) Then Return defaultValue
         Dim n As Integer
-        If Integer.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, n) Then Return n
+        If Integer.TryParse(s, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, n) Then Return n
         Return defaultValue
     End Function
 
@@ -139,8 +139,9 @@ Public Module KeepStoreSecurity
 
         s = s.Trim()
         Dim dec As Decimal
-        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, dec) Then Return dec
-        If Decimal.TryParse(s, NumberStyles.Any, New CultureInfo("it-IT"), dec) Then Return dec
+        If Decimal.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, dec) Then Return dec
+        If Decimal.TryParse(s, System.Globalization.NumberStyles.Any, New System.Globalization.CultureInfo("it-IT"), dec) Then Return dec
+
         Return defaultValue
     End Function
 
@@ -150,7 +151,7 @@ Public Module KeepStoreSecurity
         Dim clean As New System.Collections.Generic.List(Of String)()
         For Each p In parts
             Dim n As Integer
-            If Integer.TryParse(p.Trim(), n) Then clean.Add(n.ToString(CultureInfo.InvariantCulture))
+            If Integer.TryParse(p.Trim(), n) Then clean.Add(n.ToString(System.Globalization.CultureInfo.InvariantCulture))
         Next
         Return String.Join(",", clean)
     End Function
