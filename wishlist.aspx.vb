@@ -1,8 +1,17 @@
 ﻿Imports MySql.Data.MySqlClient
 Imports System.Data
+Imports System.Configuration
 
 Partial Class wishlist
     Inherits AntiCsrfPage
+
+    ' Connection string (MySQL)
+    Private ReadOnly Property ConnectionString As String
+        Get
+            Return ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+        End Get
+    End Property
+
 
     Dim IvaTipo As Integer
     Dim DispoTipo As Integer
