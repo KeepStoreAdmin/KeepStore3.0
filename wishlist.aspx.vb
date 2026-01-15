@@ -561,7 +561,9 @@ End Function
 
         Dim cmd As New MySqlCommand
 
-        Dim ArticoloId As Label = sender.NamingContainer.FindControl("label_idArticolo")
+        Dim lblArticoloId As Label = CType(sender.NamingContainer.FindControl("label_idArticolo"), Label)
+        Dim articoloId As Integer = KeepStoreSecurity.SqlCleanInt(If(lblArticoloId IsNot Nothing, lblArticoloId.Text, ""), 0)
+
 
         'Inserisco articolo
         cmd.Connection = conn

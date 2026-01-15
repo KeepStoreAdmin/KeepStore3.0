@@ -962,7 +962,10 @@ End Function
         conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
         conn.Open()
 
-        Dim cmd As New MySqlCommand        If utentiId > 0 Then
+        Dim cmd As New MySqlCommand()
+        cmd.Connection = conn
+        If utentiId > 0 Then
+
             cmd.CommandText = "Select id_wishlist from wishlist where (id_articolo=?ArticoloId) AND (id_utente=?UtentiID)"
             cmd.Parameters.Add("?ArticoloId", MySqlDbType.Int32).Value = articoloId
             cmd.Parameters.Add("?UtentiID", MySqlDbType.Int32).Value = utentiId
