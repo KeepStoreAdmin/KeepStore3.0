@@ -30,6 +30,8 @@ End Function
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
 
         KeepStoreSecurity.AddSecurityHeaders(Response)
+        ' Analytics GET logging (non impatta la logica filtri)
+        KeepStoreSecurity.LogGetAnalytics(Request, "rettificaMagazzino")
         KeepStoreSecurity.RequireHttps(Request, Response)
 
         ' Hard authorization gate: this page is for internal stock correction.

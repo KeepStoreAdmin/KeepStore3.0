@@ -29,6 +29,8 @@ End Function
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         KeepStoreSecurity.AddSecurityHeaders(Response)
+        ' Analytics GET logging (non impatta la logica filtri)
+        KeepStoreSecurity.LogGetAnalytics(Request, "wishlist")
         KeepStoreSecurity.RequireHttps(Request, Response, enableHsts:=True)
 
         If Session("UtentiId") < 1 Then
@@ -114,6 +116,10 @@ End Function
         sdsPromo.SelectParameters.Add("listino", Convert.ToString(Session("listino")))
         End If
     End Sub
+
+    If Not IsPostBack Then
+    KeepStoreSecurity.LogAnalyticsQueryStringGet(Request, "wishlist.aspx")
+    End If
 
     Public Sub SetSelectedIndex(ByVal dl As DataList, ByVal val As Integer)
         Dim i As Integer
