@@ -1,7 +1,10 @@
-Imports System
-Imports System.Globalization
+Imports System.Text
 Imports System.Text.RegularExpressions
+Imports System.Security.Cryptography
 Imports System.Web
+Imports System.Web.Caching
+Imports System.Configuration
+Imports MySql.Data.MySqlClient
 
 ' KeepStoreSecurity
 ' - Output encoding helpers
@@ -156,5 +159,176 @@ Public Module KeepStoreSecurity
         If value Is Nothing Then Return ""
         Return Regex.Replace(value, "([\[\]%_])", "[$1]")
     End Function
+
+    ' ==========================
+' Analytics GET logging robusto
+' ==========================
+Public Sub LogAnalyticsQueryStringGet(request As HttpRequest, pageName As String)
+    If request Is Nothing Then Exit Sub
+    If String.IsNullOrWhiteSpace(pageName) Then pageName = "page"
+
+    ' Solo GET (analytics). Nessuna write su POST qui.
+    If Not request.HttpMethod.Equals("GET", StringComparison.OrdinalIgnoreCase) Then Exit Sub
+
+    ' Skip crawler/bot (best effort)
+    Try
+        If request.Browser IsNot Nothing AndAlso request.Browser.Crawler Then Exit Sub
+    Catch
+        ' ignore
+    End Try
+
+    ' Non loggare richieste che contengono parametri tipici di azione (state change)
+    Dim actionKeys As String() = {"del", "delete", "remove", "removeall", "add", "apply", "save", "op", "action"}
+    For Each k In actionKeys
+        If Not String.IsNullOrEmpty(Convert.ToString(request.QueryString(k))) Then Exit Sub
+    Next
+
+    ' Allowlist parametri "navigazione/filtri" (autodiscovery: registra solo quelli presenti)
+    Dim allowed As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {
+        "q", "s", "sg", "st", "ct", "tp", "gr", "mr", "inpromo", "dispo", "spedgratis",
+        "page", "p", "sort", "ord", "view"
+    }
+
+    Dim sb As New StringBuilder()
+    sb.Append(pageName).Append("|")
+
+    Dim any As Boolean = False
+    Dim keys As String() = request.QueryString.AllKeys
+    If keys Is Nothing OrElse keys.Length = 0 Then Exit Sub
+
+    For Each key As String In keys
+        If String.IsNullOrWhiteSpace(key) Then Continue For
+        If Not allowed.Contains(key) Then Continue For
+
+        Dim raw As String = Convert.ToString(request.QueryString(key))
+        Dim norm As String = NormalizeAnalyticsValue(raw)
+        If String.IsNullOrEmpty(norm) Then Continue For
+
+        If any Then sb.Append("&")
+        sb.Append(key).Append("=").Append(norm)
+        any = True
+    Next
+
+    If Not any Then Exit Sub
+
+    Dim payload As String = sb.ToString()
+
+    ' Limite colonna legacy (QString tipicamente 250/255)
+    If payload.Length > 250 Then payload = payload.Substring(0, 250)
+
+    ' Rate-limit per IP (max 30 log/min per IP)
+    Dim ip As String = GetClientIp(request)
+    If String.IsNullOrEmpty(ip) Then ip = "0.0.0.0"
+
+    If Not RateLimitIp(ip, 30) Then Exit Sub
+
+    ' Deduplica (stesso ip+payload per 10 minuti)
+    Dim dedupeKey As String = "qslog:" & HashKey(ip & "|" & payload)
+    If HttpRuntime.Cache(dedupeKey) IsNot Nothing Then Exit Sub
+    HttpRuntime.Cache.Insert(
+        dedupeKey, "1", Nothing,
+        DateTime.UtcNow.AddMinutes(10),
+        Cache.NoSlidingExpiration
+    )
+
+    ' Insert parametrizzato
+    Try
+        Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+        Using conn As New MySqlConnection(cs)
+            conn.Open()
+            Using cmd As New MySqlCommand("INSERT INTO query_string (QString) VALUES (?qs)", conn)
+                cmd.Parameters.Add("?qs", MySqlDbType.VarChar, 250).Value = payload
+                cmd.ExecuteNonQuery()
+            End Using
+        End Using
+    Catch
+        ' Analytics must never break the page
+    End Try
+End Sub
+
+Private Function NormalizeAnalyticsValue(value As String) As String
+    If String.IsNullOrEmpty(value) Then Return ""
+
+    Dim v As String = value
+
+    ' Decode best-effort
+    Try
+        v = HttpUtility.UrlDecode(v)
+    Catch
+        ' ignore
+    End Try
+    Try
+        v = HttpUtility.HtmlDecode(v)
+    Catch
+        ' ignore
+    End Try
+
+    v = v.Trim()
+    If v.Length = 0 Then Return ""
+
+    ' Hard filters: evita payload HTML/JS/URL
+    Dim low As String = v.ToLowerInvariant()
+    If low.Contains("<") OrElse low.Contains(">") Then Return ""
+    If low.Contains("script") OrElse low.Contains("onerror") OrElse low.Contains("onload") Then Return ""
+    If low.Contains("http://") OrElse low.Contains("https://") Then Return ""
+
+    ' Evita email (PII)
+    If v.Contains("@") Then Return ""
+
+    ' Normalizza spazi
+    v = Regex.Replace(v, "\s+", " ").Trim()
+
+    ' Permetti: lettere/numeri/spazio e pochi separatori utili ai filtri
+    ' (Unicode letters + digits)
+    v = Regex.Replace(v, "[^\p{L}\p{Nd}\s\-\_\.\,\:\|\/]", "")
+
+    ' Limite per valore
+    If v.Length > 80 Then v = v.Substring(0, 80)
+
+    Return v
+End Function
+
+Private Function GetClientIp(request As HttpRequest) As String
+    If request Is Nothing Then Return ""
+    Dim xff As String = Convert.ToString(request.Headers("X-Forwarded-For"))
+    If Not String.IsNullOrEmpty(xff) Then
+        Dim first As String = xff.Split(","c)(0).Trim()
+        If first.Length > 0 Then Return first
+    End If
+    Return Convert.ToString(request.UserHostAddress)
+End Function
+
+Private Function RateLimitIp(ip As String, maxPerMinute As Integer) As Boolean
+    Try
+        Dim key As String = "qslogip:" & ip
+        Dim obj = HttpRuntime.Cache(key)
+        Dim n As Integer = 0
+        If obj IsNot Nothing Then
+            Integer.TryParse(Convert.ToString(obj), n)
+        End If
+        If n >= maxPerMinute Then Return False
+
+        HttpRuntime.Cache.Insert(
+            key, (n + 1).ToString(),
+            Nothing,
+            DateTime.UtcNow.AddMinutes(1),
+            Cache.NoSlidingExpiration
+        )
+        Return True
+    Catch
+        ' se cache fallisce, non bloccare (ma perderai rate-limit)
+        Return True
+    End Try
+End Function
+
+Private Function HashKey(input As String) As String
+    If input Is Nothing Then input = ""
+    Using sha As SHA256 = SHA256.Create()
+        Dim bytes = Encoding.UTF8.GetBytes(input)
+        Dim hash = sha.ComputeHash(bytes)
+        ' 24 char bastano per key cache
+        Return BitConverter.ToString(hash).Replace("-", "").Substring(0, 24)
+    End Using
+End Function
 
 End Module
