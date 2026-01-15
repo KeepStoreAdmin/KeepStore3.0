@@ -10,9 +10,13 @@ Partial Class Articoli
     Dim InOfferta As Integer
 
     Function sostituisci_caratteri_speciali(ByRef stringa As String) As String
-        stringa = Server.HtmlDecode(stringa)
-        Return stringa
-    End Function
+    If stringa Is Nothing Then Return ""
+    stringa = Server.UrlDecode(stringa)
+    stringa = Server.HtmlDecode(stringa)
+    stringa = stringa.Replace(ChrW(0), "").Trim()
+    If stringa.Length > 250 Then stringa = stringa.Substring(0, 250)
+    Return stringa
+End Function
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
 
@@ -71,38 +75,38 @@ Partial Class Articoli
 
         Me.GridView1.PageSize = Me.Session("RigheArticoli")
         Me.GridView1.PageIndex = Session("Articoli_PageIndex")
-
-        'Inserimento della stringa di ricerca nella tabella query_string, per l'indicizzazione
-        If Not IsPostBack AndAlso IsPostRequest() Then
-        Try
-
-            conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            conn.Open()
-
-            sqlString = "INSERT INTO query_string (QString) VALUES (?search)"
-
-            cmd.Connection = conn
-            cmd.CommandType = CommandType.Text
-            cmd.CommandText = sqlString
-            cmd.Parameters.AddWithValue("?search", strCerca)
-
-            strCerca = sostituisci_caratteri_speciali(strCerca)
-            If (strCerca.Contains("&") = False) Or (strCerca.Contains(";") = False) Then 'Non inseriamo nel Database le parole che contengono "&" o "amp;"
-                cmd.ExecuteNonQuery()
-            End If
-
-            cmd.Dispose()
-        Catch ex As Exception
-
-        Finally
-
-            If conn.State = ConnectionState.Open Then
-                conn.Close()
-                conn.Dispose()
-            End If
-
-        End Try
+        'Analytics: logging query_string anche per GET (analytics)
+        If Not IsPostBack AndAlso String.Equals(Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) Then
+            Try
+                Dim sb As New System.Text.StringBuilder()
+                Dim keys() As String = New String() {"q","s","sg","st","ct","tp","gr","mr","inpromo","dispo","spedgratis"}
+                For Each k As String In keys
+                    Dim v As String = Convert.ToString(Request.QueryString(k))
+                    If Not String.IsNullOrWhiteSpace(v) Then
+                        v = sostituisci_caratteri_speciali(v)
+                        If v <> "" Then
+                            If sb.Length > 0 Then sb.Append(" ")
+                            sb.Append(k).Append("=").Append(v)
+                        End If
+                    End If
+                Next
+                Dim qsToLog As String = sb.ToString()
+                If qsToLog.Length > 0 Then
+                    If qsToLog.Length > 250 Then qsToLog = qsToLog.Substring(0, 250)
+                    Using connLog As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                        connLog.Open()
+                        Using cmdLog As New MySqlCommand("INSERT INTO query_string (QString) VALUES (?qs)", connLog)
+                            cmdLog.Parameters.Add("?qs", MySqlDbType.VarChar).Value = qsToLog
+                            cmdLog.ExecuteNonQuery()
+                        End Using
+                    End Using
+                End If
+            Catch
+                'No-op: analytics must never break page rendering
+            End Try
         End If
+
+
     End Sub
 
     Public Sub CaricaArticoli()
