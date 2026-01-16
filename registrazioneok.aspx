@@ -1,5 +1,5 @@
 ﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="registrazioneok.aspx.vb" Inherits="registrazioneok" title="Untitled Page" %>
-<asp:Content ID="Content1" ContentPlaceHolderID="Contentplaceholder1" Runat="Server">
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
     <%If Request.QueryString("state") = "coupon" Then  %>
         <meta http-equiv="refresh" content="2; url='<%= "login.aspx?username=" & Session("Login_User") & "&passw=" & Session("Login_Password") & "&redirect=" & Request.QueryString("redirect") %>' />
     <%else %>

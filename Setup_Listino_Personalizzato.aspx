@@ -2,7 +2,7 @@
 
 <%@ Register Assembly="Microsoft.ReportViewer.WebForms, Version=9.0.0.0, Culture=neutral, PublicKeyToken=B03F5F7F11D50A3A"
     Namespace="Microsoft.Reporting.WebForms" TagPrefix="rsweb" %>
-<asp:Content ID="Content1" ContentPlaceHolderID="Contentplaceholder1" Runat="Server">
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
 </asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
     <asp:SqlDataSource ID="SqlData_Listino_Personalizzato" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"

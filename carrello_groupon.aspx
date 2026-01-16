@@ -1,6 +1,6 @@
 ﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="carrello_groupon.aspx.vb" Inherits="carrello_groupon" title="Pagina senza titolo" %>
 
-<asp:Content ID="Content1" ContentPlaceHolderID="Contentplaceholder1" Runat="Server">
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
     <link href='http://fonts.googleapis.com/css?family=Asap:700' rel='stylesheet' type='text/css'>
 </asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">

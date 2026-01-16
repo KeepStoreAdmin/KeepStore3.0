@@ -1,6 +1,6 @@
 ﻿<%@ Page Language="VB" MasterPageFile="~/Coupon.master" AutoEventWireup="false" CodeFile="coupon_dettagli.aspx.vb" Inherits="coupon_dettagli" title="Pagina senza titolo" %>
 
-<asp:Content ID="Content1" ContentPlaceHolderID="Contentplaceholder1" Runat="Server">
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
     <script src="Public/script/google_maps.js" type="text/javascript"></script>
     
     <script type="text/javascript" language="javascript" >

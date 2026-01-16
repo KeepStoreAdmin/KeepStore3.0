@@ -3,7 +3,7 @@
 <%@ Register Assembly="ConwayControls" Namespace="ConwayControls.Web" TagPrefix="ccwc" %>
 
 
-<asp:Content ID="Content2" ContentPlaceHolderID="Contentplaceholder1" Runat="Server">
+<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
 
 
     <asp:ScriptManager ID="ScriptManager1" runat="server" />

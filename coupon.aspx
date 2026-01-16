@@ -1,6 +1,6 @@
 ﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="coupon.aspx.vb" Inherits="coupon" title="Pagina senza titolo" %>
 
-<asp:Content ID="Content1" ContentPlaceHolderID="Contentplaceholder1" Runat="Server">
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
 
     <script src="Public/script/jquery-1.4.2.min.js" type="text/javascript"></script>
     <script src="Public/script/jquery.facets.js" type="text/javascript"></script>
