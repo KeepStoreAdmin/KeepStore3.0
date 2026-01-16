@@ -20,19 +20,7 @@ Public Module KeepStoreSecurity
         Return HttpUtility.HtmlAttributeEncode(Convert.ToString(value))
     End Function
 
-    Public Function Js(value As Object) As String
-        Return HttpUtility.JavaScriptStringEncode(Convert.ToString(value))
-    End Function
-
-    Public Function Url(value As Object) As String
-        Return HttpUtility.UrlEncode(Convert.ToString(value))
-    End Function
-
-    ' Backward-compatible aliases used across existing pages (.aspx markup):
-    '   H  = HTML encode
-    '   HA = HTML attribute encode
-    '   U  = URL encode
-    '   J  = JavaScript string encode
+    ' Short aliases used in ASPX data-binding to keep markup readable
     Public Function H(value As Object) As String
         Return Html(value)
     End Function
@@ -45,8 +33,13 @@ Public Module KeepStoreSecurity
         Return Url(value)
     End Function
 
-    Public Function J(value As Object) As String
-        Return Js(value)
+
+    Public Function Js(value As Object) As String
+        Return HttpUtility.JavaScriptStringEncode(Convert.ToString(value))
+    End Function
+
+    Public Function Url(value As Object) As String
+        Return HttpUtility.UrlEncode(Convert.ToString(value))
     End Function
 
     ' ---------------------------
@@ -165,6 +158,9 @@ Public Module KeepStoreSecurity
         If String.Equals(m, "GET", StringComparison.OrdinalIgnoreCase) OrElse String.Equals(m, "HEAD", StringComparison.OrdinalIgnoreCase) Then
             Dim url As Uri = req.Url
             Dim httpsUrl As String = "https://" & url.Host
+            If Not url.IsDefaultPort AndAlso url.Port <> 80 AndAlso url.Port <> 443 Then
+                ' Keep non-standard ports only if explicitly configured; default: drop.
+            End If
             httpsUrl &= url.PathAndQuery
 
             Try
@@ -194,31 +190,37 @@ Public Module KeepStoreSecurity
         If resp Is Nothing Then Exit Sub
 
         Try
+            ' Prevent MIME sniffing
             If String.IsNullOrEmpty(resp.Headers("X-Content-Type-Options")) Then
                 resp.Headers("X-Content-Type-Options") = "nosniff"
             End If
 
+            ' Clickjacking protection (use SAMEORIGIN for classic WebForms)
             If String.IsNullOrEmpty(resp.Headers("X-Frame-Options")) Then
                 resp.Headers("X-Frame-Options") = "SAMEORIGIN"
             End If
 
+            ' Referrer policy
             If String.IsNullOrEmpty(resp.Headers("Referrer-Policy")) Then
                 resp.Headers("Referrer-Policy") = "strict-origin-when-cross-origin"
             End If
 
+            ' Legacy XSS filter header (still harmless)
             If String.IsNullOrEmpty(resp.Headers("X-XSS-Protection")) Then
                 resp.Headers("X-XSS-Protection") = "0"
             End If
 
+            ' Basic permissions policy
             If String.IsNullOrEmpty(resp.Headers("Permissions-Policy")) Then
                 resp.Headers("Permissions-Policy") = "geolocation=(), microphone=(), camera=()"
             End If
 
-            ' NOTE: CSP va tarata sul sito; questa è una base permissiva per non rompere il template.
+            ' NOTE: Content-Security-Policy should be tuned per site.
             If String.IsNullOrEmpty(resp.Headers("Content-Security-Policy")) Then
                 resp.Headers("Content-Security-Policy") = "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: https:; frame-ancestors 'self';"
             End If
         Catch
+            ' Must never break rendering.
         End Try
     End Sub
 
@@ -261,7 +263,7 @@ Public Module KeepStoreSecurity
                 End Using
             End Using
         Catch
-            ' analytics non deve mai rompere la pagina
+            ' No-op: analytics must never break the site.
         End Try
     End Sub
 
