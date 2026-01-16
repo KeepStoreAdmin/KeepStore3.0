@@ -3521,21 +3521,10 @@ Private Sub SetControlBool(ByVal c As Control, ByVal propName As String, ByVal v
     End Try
 End Sub
 
-Private Function RbChecked(ByVal rb As Control) As Boolean
-    Return GetControlBool(rb, "Checked", False)
-End Function
-
-Private Sub RbSetChecked(ByVal rb As Control, ByVal v As Boolean)
-    SetControlBool(rb, "Checked", v)
-End Sub
-
 Private Function RbEnabled(ByVal rb As Control) As Boolean
     Return GetControlBool(rb, "Enabled", False)
 End Function
 
-Private Sub RbSetEnabled(ByVal rb As Control, ByVal v As Boolean)
-    SetControlBool(rb, "Enabled", v)
-End Sub
 
 
     ' ============================================================
