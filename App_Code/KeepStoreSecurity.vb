@@ -1,298 +1,277 @@
 Imports System
-Imports System.Collections.Generic
-Imports System.Collections.Specialized
+Imports System.Text
+Imports System.Web
 Imports System.Configuration
 Imports System.Globalization
-Imports System.IO
-Imports System.Text
-Imports System.Text.RegularExpressions
-Imports System.Web
-Imports System.Diagnostics
+Imports MySql.Data.MySqlClient
 
+' KeepStore shared security helpers.
+' Goal: safe-by-default utilities (SQL parameter safety, output encoding, headers, HTTPS).
 Public Module KeepStoreSecurity
 
-    ' ==========================================================
-    '  PARSING / CLEANING (SQL-safe)
-    ' ==========================================================
-
-    Public Function SqlCleanInt(value As Object, Optional defaultValue As Integer = 0) As Integer
-        Try
-            If value Is Nothing Then Return defaultValue
-            Dim s As String = Convert.ToString(value)
-            If String.IsNullOrWhiteSpace(s) Then Return defaultValue
-
-            Dim n As Integer
-            ' Compatibilità VB2012: NumberStyles/CultureInfo via Imports System.Globalization
-            If Integer.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, n) Then Return n
-
-            ' Fallback: estrai prima sequenza numerica (anche se sporca)
-            Dim m As Match = Regex.Match(s, "-?\d+")
-            If m.Success AndAlso Integer.TryParse(m.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, n) Then Return n
-
-            Return defaultValue
-        Catch
-            Return defaultValue
-        End Try
-    End Function
-
-    Public Function SqlCleanDecimal(value As Object, Optional defaultValue As Decimal = 0D) As Decimal
-        Try
-            If value Is Nothing Then Return defaultValue
-            Dim s As String = Convert.ToString(value)
-            If String.IsNullOrWhiteSpace(s) Then Return defaultValue
-
-            Dim d As Decimal
-            ' Prima prova InvariantCulture (.)
-            If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then Return d
-            ' Poi prova it-IT (,)
-            If Decimal.TryParse(s, NumberStyles.Any, New CultureInfo("it-IT"), d) Then Return d
-
-            ' Fallback: normalizza virgola/punto
-            Dim normalized As String = s.Trim().Replace(",", ".")
-            If Decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then Return d
-
-            Return defaultValue
-        Catch
-            Return defaultValue
-        End Try
-    End Function
-
-    ' CSV di interi: "1,2,3" -> solo numeri, massimo maxItems
-    Public Function SqlCleanCsvInt(value As Object, Optional maxItems As Integer = 200) As String
-        If value Is Nothing Then Return ""
-        Dim s As String = Convert.ToString(value)
-        If String.IsNullOrWhiteSpace(s) Then Return ""
-
-        Dim parts As String() = s.Split(New Char() {","c, ";"c, "|"c}, StringSplitOptions.RemoveEmptyEntries)
-        Dim clean As New List(Of String)()
-
-        For Each p As String In parts
-            Dim n As Integer
-            If Integer.TryParse(p.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, n) Then
-                clean.Add(n.ToString(CultureInfo.InvariantCulture))
-                If clean.Count >= maxItems Then Exit For
-            End If
-        Next
-
-        Return String.Join(",", clean.ToArray())
-    End Function
-
-
-    ' ==========================================================
-    '  OUTPUT ENCODING (XSS-safe)
-    ' ==========================================================
-
-    Public Function H(value As Object) As String
+    ' ---------------------------
+    ' Output encoding helpers
+    ' ---------------------------
+    Public Function Html(value As Object) As String
         Return HttpUtility.HtmlEncode(Convert.ToString(value))
     End Function
 
-    Public Function HA(value As Object) As String
-        ' Encoding per attributi HTML (alt, title, data-*, ecc.)
+    Public Function HtmlAttr(value As Object) As String
         Return HttpUtility.HtmlAttributeEncode(Convert.ToString(value))
     End Function
 
-    Public Function U(value As Object) As String
+    Public Function Js(value As Object) As String
+        Return HttpUtility.JavaScriptStringEncode(Convert.ToString(value))
+    End Function
+
+    Public Function Url(value As Object) As String
         Return HttpUtility.UrlEncode(Convert.ToString(value))
     End Function
 
+    ' ---------------------------
+    ' Input cleaning / parsing
+    ' ---------------------------
+    Public Function SqlCleanInt(value As Object,
+                               Optional defaultValue As Integer = 0,
+                               Optional minValue As Integer = Integer.MinValue,
+                               Optional maxValue As Integer = Integer.MaxValue) As Integer
+        Dim s As String = Convert.ToString(value)
+        If String.IsNullOrWhiteSpace(s) Then Return defaultValue
+        s = s.Trim()
 
-    ' ==========================================================
-    '  SECURITY HEADERS + HTTPS
-    ' ==========================================================
+        Dim n As Integer
+        ' Prefer invariant parsing; fall back to current culture.
+        If Integer.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, n) OrElse Integer.TryParse(s, n) Then
+            If n < minValue Then Return minValue
+            If n > maxValue Then Return maxValue
+            Return n
+        End If
 
-    Public Sub AddSecurityHeaders(resp As HttpResponse)
-        If resp Is Nothing Then Return
+        Return defaultValue
+    End Function
 
+    Public Function SqlCleanDecimal(value As Object,
+                                   Optional defaultValue As Decimal = 0D,
+                                   Optional minValue As Decimal = Decimal.MinValue,
+                                   Optional maxValue As Decimal = Decimal.MaxValue) As Decimal
+        Dim s As String = Convert.ToString(value)
+        If String.IsNullOrWhiteSpace(s) Then Return defaultValue
+        s = s.Trim()
+
+        Dim d As Decimal
+        ' Invariant first
+        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then
+            Return ClampDecimal(d, minValue, maxValue)
+        End If
+
+        ' it-IT fallback (common in input)
         Try
-            ' X-Content-Type-Options
-            SafeSetHeader(resp, "X-Content-Type-Options", "nosniff")
-
-            ' Clickjacking
-            SafeSetHeader(resp, "X-Frame-Options", "SAMEORIGIN")
-
-            ' Referrer Policy
-            SafeSetHeader(resp, "Referrer-Policy", "strict-origin-when-cross-origin")
-
-            ' Basic CSP (conservativa, non rompe layout tipico)
-            ' Nota: se in futuro usi JS inline, potresti dover allentare.
-            SafeSetHeader(resp, "Content-Security-Policy", "default-src 'self' https: data:; img-src 'self' https: data:; style-src 'self' https: 'unsafe-inline'; script-src 'self' https: 'unsafe-inline'")
-
-            ' Permissions Policy (minima)
-            SafeSetHeader(resp, "Permissions-Policy", "geolocation=(), microphone=(), camera=()")
-        Catch
-            ' non bloccare la pagina per colpa headers
-        End Try
-    End Sub
-
-    Private Sub SafeSetHeader(resp As HttpResponse, name As String, value As String)
-        Try
-            resp.Headers.Remove(name)
+            Dim it As New CultureInfo("it-IT")
+            If Decimal.TryParse(s, NumberStyles.Any, it, d) Then
+                Return ClampDecimal(d, minValue, maxValue)
+            End If
         Catch
         End Try
-        Try
-            resp.Headers.Set(name, value)
-        Catch
-        End Try
-    End Sub
 
-    Public Sub RequireHttps(req As HttpRequest, resp As HttpResponse, Optional enableHsts As Boolean = False)
-    If req Is Nothing OrElse resp Is Nothing Then Return
+        ' Current culture fallback
+        If Decimal.TryParse(s, d) Then
+            Return ClampDecimal(d, minValue, maxValue)
+        End If
 
-    ' Supporto proxy/CDN: X-Forwarded-Proto
-    Dim xfproto As String = ""
-    Try
-        xfproto = Convert.ToString(req.Headers("X-Forwarded-Proto"))
-    Catch
-    End Try
+        Return defaultValue
+    End Function
 
-    Dim isHttps As Boolean = req.IsSecureConnection OrElse String.Equals(xfproto, "https", StringComparison.OrdinalIgnoreCase)
+    Private Function ClampDecimal(d As Decimal, minValue As Decimal, maxValue As Decimal) As Decimal
+        If d < minValue Then Return minValue
+        If d > maxValue Then Return maxValue
+        Return d
+    End Function
 
-    ' Se già HTTPS e richiesta HSTS -> imposta header (best effort)
-    If isHttps AndAlso enableHsts Then
-        Try
-            ' 1 anno; se vuoi più conservativo, riduci max-age
-            SafeSetHeader(resp, "Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-        Catch
-            ' ignore
-        End Try
-    End If
+    ' Builds a comma-separated list of positive integer ids, safe for SQL IN(...)
+    ' Use only when parameter arrays are not feasible.
+    Public Function SafeCsvIds(csv As String, Optional maxItems As Integer = 100) As String
+        If String.IsNullOrWhiteSpace(csv) Then Return ""
+        Dim parts As String() = csv.Split(New Char() {","c}, StringSplitOptions.RemoveEmptyEntries)
+        Dim outParts As New System.Collections.Generic.List(Of String)()
 
-    ' Se non HTTPS -> redirect a HTTPS
-    If Not isHttps Then
-        Try
-            Dim url As Uri = req.Url
-            Dim b As New UriBuilder(url)
-            b.Scheme = Uri.UriSchemeHttps
-            b.Port = -1 ' default 443
-            resp.Redirect(b.Uri.ToString(), True)
-        Catch
-            ' se non riesce, non bloccare
-        End Try
-    End If
-    End Sub
-
-    ' ==========================================================
-    '  GET ANALYTICS LOGGING (robusto, senza supposizioni)
-    ' ==========================================================
-    ' Obiettivo: loggare querystring anche su GET per analytics,
-    ' senza dipendere da parametri "noti".
-    '
-    ' - Logga SOLO GET
-    ' - Sanitizza valori
-    ' - Denylist chiavi sensibili (token, password, auth, ecc.)
-    ' - Limita lunghezze per evitare log injection / DoS
-    ' - Fallback: scrive in App_Data (di solito scrivibile in ASP.NET)
-    ' ==========================================================
-
-    Public Sub LogGetAnalytics(req As HttpRequest, pageKey As String)
-        If req Is Nothing Then Return
-        If Not String.Equals(req.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) Then Return
-
-        Dim qs As NameValueCollection = req.QueryString
-        If qs Is Nothing OrElse qs.Count = 0 Then Return
-
-        Dim pairs As New List(Of String)()
-
-        For Each k As String In qs.AllKeys
-            If String.IsNullOrWhiteSpace(k) Then Continue For
-            If IsSensitiveKey(k) Then Continue For
-
-            Dim v As String = qs(k)
-            If v Is Nothing Then Continue For
-
-            Dim safeKey As String = SanitizeForLog(k, 60)
-            Dim safeVal As String = SanitizeForLog(v, 250)
-
-            pairs.Add(safeKey & "=" & safeVal)
-            If pairs.Count >= 30 Then Exit For ' hard cap
+        For Each p As String In parts
+            Dim n As Integer
+            If Integer.TryParse(p.Trim(), n) AndAlso n > 0 Then
+                outParts.Add(n.ToString(CultureInfo.InvariantCulture))
+                If outParts.Count >= maxItems Then Exit For
+            End If
         Next
 
-        If pairs.Count = 0 Then Return
-
-        Dim ip As String = GetClientIp(req)
-        Dim line As String = DateTime.UtcNow.ToString("o") & vbTab & SanitizeForLog(pageKey, 40) & vbTab & SanitizeForLog(ip, 80) & vbTab & String.Join("&", pairs.ToArray())
-
-        AppendAnalyticsLine(line)
-    End Sub
-
-    Private Function IsSensitiveKey(key As String) As Boolean
-        Dim k As String = key.Trim().ToLowerInvariant()
-
-        ' Denylist tipica: evita di loggare credenziali / token / session
-        If k.Contains("password") Then Return True
-        If k.Contains("passwd") Then Return True
-        If k.Contains("pwd") Then Return True
-        If k.Contains("token") Then Return True
-        If k.Contains("auth") Then Return True
-        If k.Contains("session") Then Return True
-        If k.Contains("cookie") Then Return True
-        If k.Contains("apikey") OrElse k.Contains("api_key") Then Return True
-        If k.StartsWith("__", StringComparison.Ordinal) Then Return True ' riservati ASP.NET
-
-        Return False
+        Return String.Join(",", outParts.ToArray())
     End Function
 
-    Private Function SanitizeForLog(value As String, maxLen As Integer) As String
+    ' Escapes a value for safe inclusion inside MySQL string literals within LIKE patterns.
+    ' Prefer parameters, but when a LIKE needs escaping this is useful.
+    Public Function SqlEscapeLike(value As String, Optional maxLen As Integer = 120) As String
         If value Is Nothing Then Return ""
-        Dim s As String = value
-
-        ' no CR/LF/TAB (anti log injection)
-        s = s.Replace(vbCr, " ").Replace(vbLf, " ").Replace(vbTab, " ")
-
-        ' riduci whitespace
-        s = Regex.Replace(s, "\s+", " ").Trim()
-
-        ' taglia
-        If maxLen > 0 AndAlso s.Length > maxLen Then s = s.Substring(0, maxLen)
-
-        ' sostituisci caratteri “strani” con _
-        ' (manteniamo lettere/numeri/spazi e pochi simboli utili)
-        s = Regex.Replace(s, "[^\w\s\-\.\,\:\@\+\/\=\(\)\[\]]", "_")
-
-        Return s
+        Dim v As String = value.Trim()
+        If v.Length > maxLen Then v = v.Substring(0, maxLen)
+        Return MySqlHelper.EscapeString(v)
     End Function
 
-    Private Sub AppendAnalyticsLine(line As String)
-        Try
-            Dim ctx As HttpContext = HttpContext.Current
-            If ctx Is Nothing Then
-                Trace.WriteLine("KS_ANALYTICS_GET: " & line)
-                Return
-            End If
+    ' ---------------------------
+    ' HTTPS + headers hardening
+    ' ---------------------------
+    Public Sub RequireHttps(req As HttpRequest, resp As HttpResponse, Optional enableHsts As Boolean = False)
+        If req Is Nothing OrElse resp Is Nothing Then Exit Sub
 
-            Dim path As String = ctx.Server.MapPath("~/App_Data/ks-analytics-get.log")
+        Dim isHttps As Boolean = req.IsSecureConnection
+        Dim xfProto As String = Convert.ToString(req.Headers("X-Forwarded-Proto"))
+        If Not String.IsNullOrEmpty(xfProto) AndAlso String.Equals(xfProto, "https", StringComparison.OrdinalIgnoreCase) Then
+            isHttps = True
+        End If
 
-            SyncLock GetType(KeepStoreSecurity)
-                File.AppendAllText(path, line & Environment.NewLine, Encoding.UTF8)
-            End SyncLock
-
-        Catch ex As Exception
-            ' fallback: non rompere mai la pagina
+        If enableHsts AndAlso isHttps Then
+            ' 1 year + include subdomains
             Try
-                Trace.WriteLine("KS_ANALYTICS_GET_ERR: " & ex.Message)
+                resp.Headers("Strict-Transport-Security") = "max-age=31536000; includeSubDomains"
             Catch
             End Try
+        End If
+
+        If isHttps Then Exit Sub
+
+        ' Avoid redirect loops on local dev.
+        If req.IsLocal Then Exit Sub
+
+        ' Best-effort redirect to HTTPS for idempotent methods.
+        Dim m As String = Convert.ToString(req.HttpMethod)
+        If String.Equals(m, "GET", StringComparison.OrdinalIgnoreCase) OrElse String.Equals(m, "HEAD", StringComparison.OrdinalIgnoreCase) Then
+            Dim url As Uri = req.Url
+            Dim httpsUrl As String = "https://" & url.Host
+            If Not url.IsDefaultPort AndAlso url.Port <> 80 AndAlso url.Port <> 443 Then
+                ' Keep non-standard ports only if explicitly configured; default: drop.
+            End If
+            httpsUrl &= url.PathAndQuery
+
+            Try
+                resp.Clear()
+                resp.StatusCode = 301
+                resp.StatusDescription = "Moved Permanently"
+                resp.AddHeader("Location", httpsUrl)
+                HttpContext.Current.ApplicationInstance.CompleteRequest()
+            Catch
+                Try
+                    resp.Redirect(httpsUrl, True)
+                Catch
+                End Try
+            End Try
+        Else
+            ' For POST/PUT etc, do not redirect automatically.
+            Try
+                resp.StatusCode = 403
+                resp.Write("HTTPS required")
+                HttpContext.Current.ApplicationInstance.CompleteRequest()
+            Catch
+            End Try
+        End If
+    End Sub
+
+    Public Sub AddSecurityHeaders(resp As HttpResponse)
+        If resp Is Nothing Then Exit Sub
+
+        Try
+            ' Prevent MIME sniffing
+            If String.IsNullOrEmpty(resp.Headers("X-Content-Type-Options")) Then
+                resp.Headers("X-Content-Type-Options") = "nosniff"
+            End If
+
+            ' Clickjacking protection (use SAMEORIGIN for classic WebForms)
+            If String.IsNullOrEmpty(resp.Headers("X-Frame-Options")) Then
+                resp.Headers("X-Frame-Options") = "SAMEORIGIN"
+            End If
+
+            ' Referrer policy
+            If String.IsNullOrEmpty(resp.Headers("Referrer-Policy")) Then
+                resp.Headers("Referrer-Policy") = "strict-origin-when-cross-origin"
+            End If
+
+            ' Legacy XSS filter header (still harmless)
+            If String.IsNullOrEmpty(resp.Headers("X-XSS-Protection")) Then
+                resp.Headers("X-XSS-Protection") = "0"
+            End If
+
+            ' Basic permissions policy
+            If String.IsNullOrEmpty(resp.Headers("Permissions-Policy")) Then
+                resp.Headers("Permissions-Policy") = "geolocation=(), microphone=(), camera=()"
+            End If
+
+            ' NOTE: Content-Security-Policy should be tuned per site.
+            If String.IsNullOrEmpty(resp.Headers("Content-Security-Policy")) Then
+                resp.Headers("Content-Security-Policy") = "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: https:; frame-ancestors 'self';"
+            End If
+        Catch
+            ' Must never break rendering.
         End Try
     End Sub
 
-    Public Function GetClientIp(req As HttpRequest) As String
+    ' ---------------------------
+    ' Analytics GET logging helpers
+    ' ---------------------------
+    Public Function BuildAnalyticsQueryString(req As HttpRequest, allowKeys As String(), Optional maxLen As Integer = 250) As String
+        If req Is Nothing OrElse allowKeys Is Nothing OrElse allowKeys.Length = 0 Then Return ""
+
+        Dim sb As New StringBuilder()
+
+        For Each k As String In allowKeys
+            Dim raw As String = Convert.ToString(req.QueryString(k))
+            If String.IsNullOrWhiteSpace(raw) Then Continue For
+
+            Dim v As String = SanitizeForLog(raw, 80)
+            If v.Length = 0 Then Continue For
+
+            If sb.Length > 0 Then sb.Append(" ")
+            sb.Append(k).Append("=").Append(v)
+
+            If sb.Length >= maxLen Then Exit For
+        Next
+
+        Dim out As String = sb.ToString()
+        If out.Length > maxLen Then out = out.Substring(0, maxLen)
+        Return out
+    End Function
+
+    Public Sub TryLogQueryStringToDb(qs As String, Optional connectionStringName As String = "EntropicConnectionString")
+        If String.IsNullOrWhiteSpace(qs) Then Exit Sub
+
         Try
-            Dim xff As String = Convert.ToString(req.Headers("X-Forwarded-For"))
-            If Not String.IsNullOrWhiteSpace(xff) Then
-                ' primo IP della catena
-                Dim parts As String() = xff.Split(","c)
-                If parts IsNot Nothing AndAlso parts.Length > 0 Then
-                    Return parts(0).Trim()
-                End If
-            End If
+            Dim cs As String = ConfigurationManager.ConnectionStrings(connectionStringName).ConnectionString
+            Using conn As New MySqlConnection(cs)
+                conn.Open()
+                Using cmd As New MySqlCommand("INSERT INTO query_string (QString) VALUES (?qs)", conn)
+                    cmd.Parameters.Add("?qs", MySqlDbType.VarChar).Value = qs
+                    cmd.ExecuteNonQuery()
+                End Using
+            End Using
+        Catch
+            ' No-op: analytics must never break the site.
+        End Try
+    End Sub
+
+    Public Function SanitizeForLog(value As String, Optional maxLen As Integer = 250) As String
+        If value Is Nothing Then Return ""
+
+        Dim v As String = value
+        Try
+            v = HttpUtility.UrlDecode(v)
+        Catch
+        End Try
+        Try
+            v = HttpUtility.HtmlDecode(v)
         Catch
         End Try
 
-        Try
-            Return Convert.ToString(req.UserHostAddress)
-        Catch
-            Return ""
-        End Try
+        v = v.Replace(ChrW(0), "")
+        v = v.Replace(ChrW(10), " ").Replace(ChrW(13), " ")
+        v = v.Trim()
+
+        If v.Length > maxLen Then v = v.Substring(0, maxLen)
+        Return v
     End Function
 
 End Module

@@ -2,44 +2,35 @@ Imports System
 Imports System.Web
 Imports System.Web.UI
 
-' Base page:
-' - HTTPS enforcement (con supporto X-Forwarded-Proto)
-' - Security headers
-' - Anti-CSRF token (cookie + viewstate)
+' Base page implementing an Anti-CSRF token bound to ViewStateUserKey.
+' Inherit from this page in WebForms pages that perform state-changing actions.
 Public Class AntiCsrfPage
     Inherits Page
 
     Private Const AntiXsrfTokenKey As String = "__AntiXsrfToken"
     Private Const AntiXsrfUserNameKey As String = "__AntiXsrfUserName"
+
     Private _antiXsrfTokenValue As String
 
-    Protected Overrides Sub OnInit(e As EventArgs)
+    Protected Overrides Sub OnPreInit(e As EventArgs)
+        MyBase.OnPreInit(e)
 
-        ' 1) HTTPS + HSTS (best effort) + 2) headers di hardening
-        KeepStoreSecurity.RequireHttps(Request, Response, enableHsts:=True)
+        ' 1) HTTPS + HSTS (best effort) + 2) security headers
         KeepStoreSecurity.AddSecurityHeaders(Response)
+        KeepStoreSecurity.RequireHttps(Request, Response, enableHsts:=True)
+    End Sub
 
-        ' Difesa aggiuntiva su ViewState (one-click / CSRF-like)
-        Try
-            If Context IsNot Nothing AndAlso Context.Session IsNot Nothing AndAlso
-               Not String.IsNullOrEmpty(Context.Session.SessionID) Then
-                ViewStateUserKey = Context.Session.SessionID
-            End If
-        Catch
-            ' ignore
-        End Try
+    Protected Overrides Sub OnInit(e As EventArgs)
+        MyBase.OnInit(e)
 
-        ' -----------------------------
-        ' Anti-CSRF token (cookie + viewstate)
-        ' -----------------------------
         Dim requestCookie As HttpCookie = Request.Cookies(AntiXsrfTokenKey)
-        Dim guidValue As Guid
+        Dim cookieValue As String = If(requestCookie IsNot Nothing, requestCookie.Value, Nothing)
 
-        If requestCookie IsNot Nothing AndAlso Guid.TryParse(requestCookie.Value, guidValue) Then
-            _antiXsrfTokenValue = requestCookie.Value
+        Dim guid As Guid
+        If Not String.IsNullOrEmpty(cookieValue) AndAlso Guid.TryParse(cookieValue, guid) Then
+            _antiXsrfTokenValue = cookieValue
         Else
             _antiXsrfTokenValue = Guid.NewGuid().ToString("N")
-
             Dim responseCookie As New HttpCookie(AntiXsrfTokenKey) With {
                 .HttpOnly = True,
                 .Value = _antiXsrfTokenValue
@@ -49,47 +40,46 @@ Public Class AntiCsrfPage
                 responseCookie.Secure = True
             End If
 
-            ' SameSite: Lax = buon compromesso (blocca gran parte CSRF senza rompere navigazione da link esterni)
+            ' SameSite requires .NET 4.7.2+; ignore if not supported by runtime.
             Try
                 responseCookie.SameSite = SameSiteMode.Lax
             Catch
-                ' ignore (fallback framework vecchi)
             End Try
 
             Response.Cookies.Set(responseCookie)
         End If
 
         Page.ViewStateUserKey = _antiXsrfTokenValue
-
-        AddHandler Page.PreLoad, AddressOf Master_Page_PreLoad
-
-        MyBase.OnInit(e)
+        AddHandler Page.PreLoad, AddressOf AntiXsrfPreLoad
     End Sub
 
-    Private Sub Master_Page_PreLoad(sender As Object, e As EventArgs)
-        Dim currentUser As String = String.Empty
-        Try
-            If Context IsNot Nothing AndAlso Context.User IsNot Nothing AndAlso Context.User.Identity IsNot Nothing Then
-                currentUser = Context.User.Identity.Name
-            End If
-        Catch
-            currentUser = String.Empty
-        End Try
-
+    Private Sub AntiXsrfPreLoad(sender As Object, e As EventArgs)
         If Not IsPostBack Then
             ViewState(AntiXsrfTokenKey) = _antiXsrfTokenValue
-            ViewState(AntiXsrfUserNameKey) = currentUser
+            ViewState(AntiXsrfUserNameKey) = CurrentUserName()
         Else
-            Dim viewStateToken As String = TryCast(ViewState(AntiXsrfTokenKey), String)
-            Dim viewStateUser As String = TryCast(ViewState(AntiXsrfUserNameKey), String)
+            Dim vsToken As String = TryCast(ViewState(AntiXsrfTokenKey), String)
+            Dim vsUser As String = TryCast(ViewState(AntiXsrfUserNameKey), String)
 
-            If String.IsNullOrEmpty(viewStateToken) _
-               OrElse Not String.Equals(viewStateToken, _antiXsrfTokenValue, StringComparison.Ordinal) _
-               OrElse Not String.Equals(viewStateUser, currentUser, StringComparison.Ordinal) Then
+            If String.IsNullOrEmpty(vsToken) OrElse String.IsNullOrEmpty(vsUser) Then
+                Throw New InvalidOperationException("Anti-CSRF token missing.")
+            End If
 
-                Throw New InvalidOperationException("Validation of Anti-CSRF token failed.")
+            If Not String.Equals(vsToken, _antiXsrfTokenValue, StringComparison.Ordinal) Then
+                Throw New InvalidOperationException("Anti-CSRF token validation failed.")
+            End If
+
+            If Not String.Equals(vsUser, CurrentUserName(), StringComparison.Ordinal) Then
+                Throw New InvalidOperationException("Anti-CSRF user validation failed.")
             End If
         End If
     End Sub
+
+    Protected Overridable Function CurrentUserName() As String
+        If Context IsNot Nothing AndAlso Context.User IsNot Nothing AndAlso Context.User.Identity IsNot Nothing AndAlso Context.User.Identity.IsAuthenticated Then
+            Return Context.User.Identity.Name
+        End If
+        Return String.Empty
+    End Function
 
 End Class
