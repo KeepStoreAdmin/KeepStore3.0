@@ -12,6 +12,55 @@ Partial Class carrello
 
 Protected differenzaTrasportoGratis As Double = 0
 
+' --- HELPERS (in classe carrello) ---
+Private Function RbGetChecked(ByVal ctrl As Control) As Boolean
+    Try
+        If ctrl Is Nothing Then Return False
+        Dim p = ctrl.GetType().GetProperty("Checked")
+        If p Is Nothing Then Return False
+        Dim v As Object = p.GetValue(ctrl, Nothing)
+        If TypeOf v Is Boolean Then Return CBool(v)
+        Return False
+    Catch
+        Return False
+    End Try
+End Function
+
+Private Sub RbSetChecked(ByVal ctrl As Control, ByVal value As Boolean)
+    Try
+        If ctrl Is Nothing Then Exit Sub
+        Dim p = ctrl.GetType().GetProperty("Checked")
+        If p Is Nothing OrElse Not p.CanWrite Then Exit Sub
+        p.SetValue(ctrl, value, Nothing)
+    Catch
+        ' NOP
+    End Try
+End Sub
+
+Private Function RbGetEnabled(ByVal ctrl As Control) As Boolean
+    Try
+        If ctrl Is Nothing Then Return False
+        Dim p = ctrl.GetType().GetProperty("Enabled")
+        If p Is Nothing Then Return False
+        Dim v As Object = p.GetValue(ctrl, Nothing)
+        If TypeOf v Is Boolean Then Return CBool(v)
+        Return False
+    Catch
+        Return False
+    End Try
+End Function
+
+Private Sub RbSetEnabled(ByVal ctrl As Control, ByVal value As Boolean)
+    Try
+        If ctrl Is Nothing Then Exit Sub
+        Dim p = ctrl.GetType().GetProperty("Enabled")
+        If p Is Nothing OrElse Not p.CanWrite Then Exit Sub
+        p.SetValue(ctrl, value, Nothing)
+    Catch
+        ' NOP
+    End Try
+End Sub
+
     'dichiarazioni campi pagina
 Private IvaTipo As Integer = 0
 Private DispoTipo As Integer = 0
@@ -525,7 +574,7 @@ If buonoTot > 0 Then
     Public Sub LeggiVettori()
 
     Dim i As Integer
-    Dim rb As RadioButton
+    Dim rb As Control
     Dim AsssicurazionePercentuale As Double
     Dim AssicurazioneMinimo As Double
     Dim TotAssicurazione As Double
@@ -545,8 +594,8 @@ If buonoTot > 0 Then
     'Controllo se Esiste ed è abilitato un Vettore PROMO
     Dim Vettore_Promo_Abilitato As Integer = 0
     For i = 0 To (Me.gvVettoriPromo.Rows.Count - 1)
-        rb = gvVettoriPromo.Rows(i).FindControl("rbSpedizione")
-        If rb IsNot Nothing AndAlso rb.Enabled = True Then
+        rb = TryCast(gvVettoriPromo.Rows(i).FindControl("rbSpedizione"), Control)
+        If rb IsNot Nothing AndAlso RbGetEnabled(rb) = True Then
             Vettore_Promo_Abilitato = 1
             Exit For
         End If
@@ -555,8 +604,8 @@ If buonoTot > 0 Then
     'Controllo se è selezionato un vettore NORMALE
     Dim Vettore_NoNPromo_Selezionato As Integer = 0
     For i = 0 To (Me.gvVettori.Rows.Count - 1)
-        rb = gvVettori.Rows(i).FindControl("rbSpedizione")
-        If rb IsNot Nothing AndAlso rb.Checked = True Then
+        rb = TryCast(gvVettori.Rows(i).FindControl("rbSpedizione"), Control)
+        If rb IsNot Nothing AndAlso RbGetChecked(rb) = True Then
             Vettore_NoNPromo_Selezionato = 1
             Exit For
         End If
@@ -566,24 +615,24 @@ If buonoTot > 0 Then
 
         For i = 0 To gvVettori.Rows.Count - 1
 
-            rb = gvVettori.Rows(i).FindControl("rbSpedizione")
-            If rb IsNot Nothing AndAlso rb.Checked Then
+            rb = TryCast(gvVettori.Rows(i).FindControl("rbSpedizione"), Control)
+            If rb IsNot Nothing AndAlso RbGetChecked(rb) Then
 
                 sel = True
 
                 'Spedizione
-                lblCosto = gvVettori.Rows(i).FindControl("lblCosto")
+                lblCosto = TryCast(gvVettori.Rows(i).FindControl("lblCosto"), Label)
                 Dim costoSped As Double = SafeMoney(If(lblCosto IsNot Nothing, lblCosto.Text, "0"), 0)
                 Me.lblSpeseSped.Text = String.Format("{0:c}", costoSped)
 
-                lbl = gvVettori.Rows(i).FindControl("lblId")
+                lbl = TryCast(gvVettori.Rows(i).FindControl("lblId"), Label)
                 If lbl IsNot Nothing Then Me.tbVettoriId.Text = lbl.Text
 
                 'Assicurazione
-                lbl = gvVettori.Rows(i).FindControl("lblAssPerc")
+                lbl = TryCast(gvVettori.Rows(i).FindControl("lblAssPerc"), Label)
                 AsssicurazionePercentuale = SafeDblFromText(If(lbl IsNot Nothing, lbl.Text, "0"), 0)
 
-                lbl = gvVettori.Rows(i).FindControl("lblAssicurazioneMinimo")
+                lbl = TryCast(gvVettori.Rows(i).FindControl("lblAssicurazioneMinimo"), Label)
                 AssicurazioneMinimo = SafeMoney(If(lbl IsNot Nothing, lbl.Text, "0"), 0)
 
                 Dim imponibileValTmp As Double = SafeMoney(Me.lblImponibile.Text, 0)
@@ -595,9 +644,9 @@ If buonoTot > 0 Then
                 Me.lblAssicurazione.Text = String.Format("{0:c}", TotAssicurazione)
 
                 'Contrassegno
-                lblContrPerc = gvVettori.Rows(i).FindControl("lblContrPerc")
-                lblContrFisso = gvVettori.Rows(i).FindControl("lblContrFisso")
-                lblContrMinimo = gvVettori.Rows(i).FindControl("lblContrMinimo")
+                lblContrPerc = TryCast(gvVettori.Rows(i).FindControl("lblContrPerc"), Label)
+                lblContrFisso = TryCast(gvVettori.Rows(i).FindControl("lblContrFisso"), Label)
+                lblContrMinimo = TryCast(gvVettori.Rows(i).FindControl("lblContrMinimo"), Label)
 
                 Me.tbContrFisso.Text = If(lblContrFisso IsNot Nothing, lblContrFisso.Text, "")
                 Me.tbContrPerc.Text = If(lblContrPerc IsNot Nothing, lblContrPerc.Text, "")
@@ -623,9 +672,9 @@ If buonoTot > 0 Then
 
         If sel = False Then
             If (gvVettori.Rows.Count > 0) And (Selezionato_Vettore_Promo = 0) Then
-                rb = gvVettori.Rows(0).FindControl("rbSpedizione")
+                rb = TryCast(gvVettori.Rows(0).FindControl("rbSpedizione"), Control)
                 If rb IsNot Nothing Then
-                    rb.Checked = True
+                    RbSetChecked(rb, True)
                     LeggiVettori()
                     Exit Sub
                 End If
@@ -636,29 +685,29 @@ If buonoTot > 0 Then
 
         For i = 0 To Me.gvVettoriPromo.Rows.Count - 1
 
-            rb = gvVettoriPromo.Rows(i).FindControl("rbSpedizione")
+            rb = TryCast(gvVettoriPromo.Rows(i).FindControl("rbSpedizione"), Control)
 
-            If rb IsNot Nothing AndAlso rb.Enabled = True Then
-                rb.Checked = True
+            If rb IsNot Nothing AndAlso RbGetEnabled(rb) = True Then
+                RbSetChecked(rb, True)
             End If
 
-            If rb IsNot Nothing AndAlso rb.Checked Then
+            If rb IsNot Nothing AndAlso RbGetChecked(rb) Then
 
                 sel = True
 
                 'Spedizione
-                lblCosto = gvVettoriPromo.Rows(i).FindControl("lblCosto")
+                lblCosto = TryCast(gvVettoriPromo.Rows(i).FindControl("lblCosto"), Label)
                 Dim costoSped As Double = SafeMoney(If(lblCosto IsNot Nothing, lblCosto.Text, "0"), 0)
                 Me.lblSpeseSped.Text = String.Format("{0:c}", costoSped)
 
-                lbl = gvVettoriPromo.Rows(i).FindControl("lblId")
+                lbl = TryCast(gvVettoriPromo.Rows(i).FindControl("lblId"), Label)
                 If lbl IsNot Nothing Then Me.tbVettoriId.Text = lbl.Text
 
                 'Assicurazione
-                lbl = gvVettoriPromo.Rows(i).FindControl("lblAssPerc")
+                lbl = TryCast(gvVettoriPromo.Rows(i).FindControl("lblAssPerc"), Label)
                 AsssicurazionePercentuale = SafeDblFromText(If(lbl IsNot Nothing, lbl.Text, "0"), 0)
 
-                lbl = gvVettoriPromo.Rows(i).FindControl("lblAssicurazioneMinimo")
+                lbl = TryCast(gvVettoriPromo.Rows(i).FindControl("lblAssicurazioneMinimo"), Label)
                 AssicurazioneMinimo = SafeMoney(If(lbl IsNot Nothing, lbl.Text, "0"), 0)
 
                 Dim imponibileValTmp As Double = SafeMoney(Me.lblImponibile.Text, 0)
@@ -670,9 +719,9 @@ If buonoTot > 0 Then
                 Me.lblAssicurazione.Text = String.Format("{0:c}", TotAssicurazione)
 
                 'Contrassegno
-                lblContrPerc = gvVettoriPromo.Rows(i).FindControl("lblContrPerc")
-                lblContrFisso = gvVettoriPromo.Rows(i).FindControl("lblContrFisso")
-                lblContrMinimo = gvVettoriPromo.Rows(i).FindControl("lblContrMinimo")
+                lblContrPerc = TryCast(gvVettoriPromo.Rows(i).FindControl("lblContrPerc"), Label)
+                lblContrFisso = TryCast(gvVettoriPromo.Rows(i).FindControl("lblContrFisso"), Label)
+                lblContrMinimo = TryCast(gvVettoriPromo.Rows(i).FindControl("lblContrMinimo"), Label)
 
                 Me.tbContrFisso.Text = If(lblContrFisso IsNot Nothing, lblContrFisso.Text, "")
                 Me.tbContrPerc.Text = If(lblContrPerc IsNot Nothing, lblContrPerc.Text, "")
@@ -703,8 +752,7 @@ If buonoTot > 0 Then
         Session("Iva_Vettori") = IvaVettore(SafeIntFromText(tbVettoriId.Text, 0))
     End If
 
-    End Sub
-
+End Sub
 
     Public Sub AggiornaSpeseAssicurazione()
         If Me.cbAssicurazione.Checked Then
@@ -721,7 +769,7 @@ If buonoTot > 0 Then
     Public Sub LeggiPagamenti()
 
     Dim i As Integer
-    Dim rb As RadioButton
+    Dim rb As Control
     Dim Percentuale As Double
     Dim Fisso As Double
     Dim Minimo As Double
@@ -740,24 +788,22 @@ If buonoTot > 0 Then
     Dim ivaVett As Integer = GetSessionInt("Iva_Vettori", 0)
 
     Dim ivaUtentePerc As Double = SafeDblFromText(If(Session("Iva_Utente"), "-1").ToString(), -1)
-    ' Assicurazione: se l'utente ha IVA specifica uso quella (percentuale), altrimenti uso la default (preleva_ValoreIva(-1))
     Dim ivaAssPerc As Double = If(ivaUtentePerc > -1, ivaUtentePerc, preleva_ValoreIva(-1))
 
     Dim ivaCalcolata As Double = calcola_iva(spedD, ivaVett) + assD * (ivaAssPerc / 100)
 
     Me.lblIva.Text = "€ " & FormatNumber(ivaCalcolata, 2)
 
-    ' Totale base per calcolare percentuali pagamento
     Dim totBase As Double = impD + spedD + assD + ivaCalcolata
 
     For i = 0 To gvPagamento.Rows.Count - 1
 
-        rb = gvPagamento.Rows(i).FindControl("rbPagamento")
-        If firstSelectableIndex = -1 AndAlso rb IsNot Nothing AndAlso rb.Enabled Then
+        rb = TryCast(gvPagamento.Rows(i).FindControl("rbPagamento"), Control)
+        If firstSelectableIndex = -1 AndAlso rb IsNot Nothing AndAlso RbGetEnabled(rb) Then
             firstSelectableIndex = i
         End If
 
-        lblContrassegno = gvPagamento.Rows(i).FindControl("lblContrassegno")
+        lblContrassegno = TryCast(gvPagamento.Rows(i).FindControl("lblContrassegno"), Label)
 
         If lblContrassegno IsNot Nothing AndAlso Val(lblContrassegno.Text) = 1 Then
 
@@ -767,19 +813,19 @@ If buonoTot > 0 Then
 
             If RitiroSede = True Then
                 If rb IsNot Nothing Then
-                    rb.Checked = False
-                    rb.Enabled = False
+                    RbSetChecked(rb, False)
+                    RbSetEnabled(rb, False)
                 End If
             Else
-                If rb IsNot Nothing Then rb.Enabled = True
+                If rb IsNot Nothing Then RbSetEnabled(rb, True)
             End If
 
         Else
 
-            lbl = gvPagamento.Rows(i).FindControl("lblCostoP")
+            lbl = TryCast(gvPagamento.Rows(i).FindControl("lblCostoP"), Label)
             Percentuale = SafeDblFromText(If(lbl IsNot Nothing, lbl.Text, "0"), 0)
 
-            lbl = gvPagamento.Rows(i).FindControl("lblCostoF")
+            lbl = TryCast(gvPagamento.Rows(i).FindControl("lblCostoF"), Label)
             Fisso = SafeMoney(If(lbl IsNot Nothing, lbl.Text, "0"), 0)
 
             Minimo = 0
@@ -791,20 +837,20 @@ If buonoTot > 0 Then
             totPagamento = Minimo
         End If
 
-        lbl = gvPagamento.Rows(i).FindControl("lblCosto")
+        lbl = TryCast(gvPagamento.Rows(i).FindControl("lblCosto"), Label)
         Try
             If lbl IsNot Nothing Then lbl.Text = String.Format("{0:c}", totPagamento)
         Catch
             If lbl IsNot Nothing Then lbl.Text = "€ 0,00"
         End Try
 
-        If rb IsNot Nothing AndAlso rb.Checked = True AndAlso rb.Enabled = True Then
+        If rb IsNot Nothing AndAlso RbGetChecked(rb) = True AndAlso RbGetEnabled(rb) = True Then
             sel = True
 
-            lbl = gvPagamento.Rows(i).FindControl("lblId")
+            lbl = TryCast(gvPagamento.Rows(i).FindControl("lblId"), Label)
             If lbl IsNot Nothing Then Me.tbPagamenti.Text = lbl.Text
 
-            lbl = gvPagamento.Rows(i).FindControl("lblShopLogin")
+            lbl = TryCast(gvPagamento.Rows(i).FindControl("lblShopLogin"), Label)
             If lbl IsNot Nothing Then Me.tbShopIdGestPay.Text = lbl.Text
 
             Me.lblPagamento.Text = String.Format("{0:c}", totPagamento)
@@ -812,19 +858,18 @@ If buonoTot > 0 Then
 
     Next
 
-    ' Se non selezionato nulla, seleziono la prima opzione disponibile (senza CDbl su "€ ...")
     If sel = False AndAlso firstSelectableIndex > -1 Then
 
-        rb = gvPagamento.Rows(firstSelectableIndex).FindControl("rbPagamento")
-        If rb IsNot Nothing Then rb.Checked = True
+        rb = TryCast(gvPagamento.Rows(firstSelectableIndex).FindControl("rbPagamento"), Control)
+        If rb IsNot Nothing Then RbSetChecked(rb, True)
 
-        lbl = gvPagamento.Rows(firstSelectableIndex).FindControl("lblId")
+        lbl = TryCast(gvPagamento.Rows(firstSelectableIndex).FindControl("lblId"), Label)
         If lbl IsNot Nothing Then Me.tbPagamenti.Text = lbl.Text
 
-        lbl = gvPagamento.Rows(firstSelectableIndex).FindControl("lblShopLogin")
+        lbl = TryCast(gvPagamento.Rows(firstSelectableIndex).FindControl("lblShopLogin"), Label)
         If lbl IsNot Nothing Then Me.tbShopIdGestPay.Text = lbl.Text
 
-        lbl = gvPagamento.Rows(firstSelectableIndex).FindControl("lblCosto")
+        lbl = TryCast(gvPagamento.Rows(firstSelectableIndex).FindControl("lblCosto"), Label)
         If lbl IsNot Nothing Then
             Me.lblPagamento.Text = lbl.Text
         Else
@@ -833,26 +878,24 @@ If buonoTot > 0 Then
 
     End If
 
-    ' Aggiorno Totale con pagamento corrente
     Dim pagD As Double = SafeMoney(Me.lblPagamento.Text, 0)
     Me.lblTotale.Text = "€ " & FormatNumber(impD + ivaCalcolata + assD + spedD + pagD + buonoD, 2)
 
-    End Sub
-
-
+End Sub
 
     Protected Sub gvVettoriPromo_RowDataBound(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.GridViewRowEventArgs) Handles gvVettoriPromo.RowDataBound
+
     Dim Soglia As Label
     Dim Peso As Label
     Dim Costo As Label
     Dim Percentuale As Label
-    Dim Selezione As RadioButton
+    Dim Selezione As Control
 
     cont_indice_riga += 1
 
     If e.Row.RowType = DataControlRowType.DataRow Then
 
-        Selezione = TryCast(e.Row.FindControl("rbSpedizione"), RadioButton)
+        Selezione = TryCast(e.Row.FindControl("rbSpedizione"), Control)
         Soglia = TryCast(e.Row.FindControl("lblSogliaMinima"), Label)
         Peso = TryCast(e.Row.FindControl("lblPeso"), Label)
         Costo = TryCast(e.Row.FindControl("lblCosto"), Label)
@@ -864,8 +907,8 @@ If buonoTot > 0 Then
         If (sogliaVal <= (imponibile - imponibile_gratis)) AndAlso (pesoVal >= pesoTotale) Then
 
             If Selezione IsNot Nothing Then
-                Selezione.Enabled = False
-                Selezione.Checked = False
+                RbSetEnabled(Selezione, False)
+                RbSetChecked(Selezione, False)
             End If
 
             Try
@@ -885,12 +928,13 @@ If buonoTot > 0 Then
 
         Else
             If Selezione IsNot Nothing Then
-                Selezione.Enabled = False
+                RbSetEnabled(Selezione, False)
             End If
         End If
 
     End If
-    End Sub
+
+End Sub
 
 
     Public Sub BindLstDestinazioneLstScegliIndirizzo
@@ -1399,45 +1443,28 @@ End Function
     End Sub
 
     Protected Sub gvVettoriPromo_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles gvVettoriPromo.PreRender
-        Dim i As Integer = 0
-        Dim Selezione_Vettore As RadioButton
-        'Dim Selezione_Vettore_Temp As RadioButton
 
-        If indice_riga_da_selezionare > -1 Then
-            '(indice_riga_da_selezionare - 2) e non (indice_riga_da_selezionare - 1) perchè il DataRowBound viene fatto una volta in più
-            Selezione_Vettore = Me.gvVettoriPromo.Rows(indice_riga_da_selezionare - 2).FindControl("rbSpedizione")
-            Selezione_Vettore.Enabled = True
-            Selezione_Vettore.Checked = True
+    Dim Selezione_Vettore As Control
 
-            Selezionato_Vettore_Promo = 1
+    If indice_riga_da_selezionare > -1 Then
+        ' (indice_riga_da_selezionare - 2) e non (indice_riga_da_selezionare - 1) perchè il DataRowBound viene fatto una volta in più
+        Selezione_Vettore = TryCast(Me.gvVettoriPromo.Rows(indice_riga_da_selezionare - 2).FindControl("rbSpedizione"), Control)
+        If Selezione_Vettore IsNot Nothing Then
+            RbSetEnabled(Selezione_Vettore, True)
+            RbSetChecked(Selezione_Vettore, True)
         End If
 
-        'For i = 0 To Me.gvVettoriPromo.Rows.Count - 1
-        'Selezione_Vettore = Me.gvVettoriPromo.Rows(i).FindControl("rbSpedizione")
+        Selezionato_Vettore_Promo = 1
+    End If
 
-        'If Selezione_Vettore.Enabled = True Then
-        'Selezione_Vettore.Checked = True
-        'Selezionato_Vettore_Promo = 1
-        'End If
+    ' Nel caso ci sia nel carrello SOLO prodotti GRATIS
+    If (imponibile - imponibile_gratis = 0) Then
+        Me.Panel_SpedizioneGratis.Visible = True
+    Else
+        Me.Panel_SpedizioneGratis.Visible = False
+    End If
 
-        'If ((i = 1) And (Selezione_Vettore.Enabled = True)) Then
-        'Selezione_Vettore_Temp = Me.gvVettoriPromo.Rows(i - 1).FindControl("rbSpedizione")
-        'Selezione_Vettore_Temp.Enabled = False
-
-        'If Selezione_Vettore.Enabled = True Then
-        'Selezione_Vettore.Checked = True
-        'Selezionato_Vettore_Promo = 1
-        'End If
-        'End If
-        'Next
-
-        'Nel caso ci sia nel carrello SOLO prodotti GRATIS
-        If (imponibile - imponibile_gratis = 0) Then
-            Me.Panel_SpedizioneGratis.Visible = True
-        Else
-            Me.Panel_SpedizioneGratis.Visible = False
-        End If
-    End Sub
+End Sub
 
     Protected Sub rbSpedizioneGratis_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles rbSpedizioneGratis.PreRender
         Dim conn As New MySqlConnection
@@ -3467,6 +3494,48 @@ End Function
 
     End Sub
 
+    ' =========================
+' RADIOBUTTON COMPAT (ASP.NET + ConwayControls)
+' =========================
+Private Function GetControlBool(ByVal c As Control, ByVal propName As String, Optional ByVal def As Boolean = False) As Boolean
+    If c Is Nothing Then Return def
+    Try
+        Dim pi = c.GetType().GetProperty(propName)
+        If pi Is Nothing Then Return def
+        Dim v As Object = pi.GetValue(c, Nothing)
+        If v Is Nothing OrElse v Is DBNull.Value Then Return def
+        Return Convert.ToBoolean(v)
+    Catch
+        Return def
+    End Try
+End Function
+
+Private Sub SetControlBool(ByVal c As Control, ByVal propName As String, ByVal value As Boolean)
+    If c Is Nothing Then Exit Sub
+    Try
+        Dim pi = c.GetType().GetProperty(propName)
+        If pi Is Nothing OrElse Not pi.CanWrite Then Exit Sub
+        pi.SetValue(c, value, Nothing)
+    Catch
+        ' NOP
+    End Try
+End Sub
+
+Private Function RbChecked(ByVal rb As Control) As Boolean
+    Return GetControlBool(rb, "Checked", False)
+End Function
+
+Private Sub RbSetChecked(ByVal rb As Control, ByVal v As Boolean)
+    SetControlBool(rb, "Checked", v)
+End Sub
+
+Private Function RbEnabled(ByVal rb As Control) As Boolean
+    Return GetControlBool(rb, "Enabled", False)
+End Function
+
+Private Sub RbSetEnabled(ByVal rb As Control, ByVal v As Boolean)
+    SetControlBool(rb, "Enabled", v)
+End Sub
 
 
     ' ============================================================
