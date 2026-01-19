@@ -1,4 +1,4 @@
-﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="documenti.aspx.vb" Inherits="documenti" Debug="true" %>
+<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="documenti.aspx.vb" Inherits="documenti" Debug="true" %>
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
     Consultazione documenti
@@ -6,25 +6,40 @@
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
     <style type="text/css">
-        .selezionato {
+        /* KeepStore STEP22A (ONUS) - Tab tipo documento */
+        .ks-doc-typebar { margin: 0 0 18px 0; }
+        .ks-doc-typebar .selezionato,
+        .ks-doc-typebar .nonSelezionato {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(0,0,0,0.10);
+            text-decoration: none;
             font-size: 14px;
-            color: Red;
-            font-weight: bolder;
-            margin: auto;
+            line-height: 1;
+            user-select: none;
+            margin: 0;
         }
-        .nonSelezionato {
-            font-size: 14px;
-            font-weight: normal;
-            margin: auto;
+        .ks-doc-typebar .nonSelezionato { background: #ffffff; color: #111111; font-weight: 500; }
+        .ks-doc-typebar .selezionato { background: #111111; color: #ffffff; font-weight: 700; border-color: #111111; }
+        .ks-doc-typebar .nonSelezionato:hover { background: rgba(0,0,0,0.03); }
+
+        /* Fieldset (Panel GroupingText) in stile card */
+        .ks-fieldset {
+            border: 1px solid rgba(0,0,0,0.08) !important;
+            background: #ffffff;
+            padding: 16px 16px 14px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+            margin: 0;
         }
-        fieldset {
-            padding-bottom: 0.625em;
-            padding-left: 0.5em;
-            padding-right: 0.5em;
-            border: 2px groove;
-        }
-        legend {
+        .ks-fieldset legend {
             width: auto !important;
+            padding: 0 10px;
+            font-size: 14px;
+            font-weight: 700;
         }
 
         /* Spinner pagina */
@@ -34,6 +49,7 @@
             padding: 20px;
             text-align: center;
             margin: 20px 0;
+            border-radius: 16px;
         }
 
         .ks-spinner-circle {
@@ -50,7 +66,22 @@
             from { transform: rotate(0deg); }
             to   { transform: rotate(360deg); }
         }
-    </style>
+
+        /* Sidebar sticky (desktop) */
+        .ks-myaccount .wrap-sidebar-account {
+            position: sticky;
+            top: 110px;
+        }
+        @media (max-width: 991px) {
+            .ks-myaccount .wrap-sidebar-account { position: static; top: auto; }
+        }
+
+        /* Form controls (minimo) */
+        .ks-doc-filters .form-select,
+        .ks-doc-filters input[type='text'] {
+            max-width: 100%;
+        }
+</style>
 
     <script type="text/javascript">
         function ksHideSpinnerAndShowContent() {
@@ -95,21 +126,7 @@
 
     <!-- CONTENUTO PRINCIPALE (inizialmente nascosto, lo mostra lo script) -->
     <asp:Panel ID="pnlContent" runat="server" Style="display:none;">
-
-        <h1>Consultazione documenti</h1>
-
-        <!-- BOTTONE TORNA A MY ACCOUNT -->
-        <div style="margin-bottom:20px;">
-            <asp:HyperLink 
-                ID="hlBackMyAccount" 
-                runat="server"
-                NavigateUrl="myaccount.aspx"
-                CssClass="tf-btn-icon type-2 style-white">
-                &laquo; Torna alla pagina My Account
-            </asp:HyperLink>
-        </div>
-
-        <% If Session("esito_invio_mail") = "1" Or Session("esito_invio_mail") = "0" Then %>
+<% If Session("esito_invio_mail") = "1" Or Session("esito_invio_mail") = "0" Then %>
         <script type="text/javascript">
             JQ(document).ready(
                 function () {
@@ -181,99 +198,164 @@
             SelectCommand="SELECT * FROM documentistati;">
         </asp:SqlDataSource>
         
-        <asp:Repeater ID="rTipo" runat="server" DataSourceID="sdsTipo">
-            <HeaderTemplate>
-                <div style="padding:5px; padding-right:15px; margin-right:3px; display:block;">
-                    Selezionare il tipo di documento
-                </div>
-                <div>
-            </HeaderTemplate>
-            <ItemTemplate>
-                <div style="padding:5px; padding-right:15px; float:left; background-color:#ccc; margin-right:3px; margin-bottom:3px;">
-                    <asp:LinkButton ID="lbTipoDocumento" runat="server" CssClass="disable" 
-                        tipoDocumento='<%# Eval("id") %>' 
-                        OnClick="tipoDocumentoClick" 
-                        OnPreRender="preRenderClick">
-                        <%# Eval("descrizione")%>
-                    </asp:LinkButton>
-                </div>
-            </ItemTemplate>
-            <FooterTemplate>
-                </div>
-                <br />
-                <br />
-                <br />
-            </FooterTemplate>
-        </asp:Repeater>
+        
+        <div class="ks-myaccount">
 
-        <br /><br />
-        <asp:Label runat="server" ID="lblInfo" Visible="false"></asp:Label>
-        <br />
-
-        <div class="row">
-            <div class="col-12 col-md-6 mb-3">
-                <asp:Panel ID="Panel1" runat="server" Font-Size="Small" GroupingText="Ricerca rapida">
-                    <span style="font-weight:normal;">Visualizza</span>
-                    <asp:DropDownList ID="filtroTempo" runat="server" OnSelectedIndexChanged="filtroDataRapido" AutoPostBack="true">
-                        <asp:ListItem Value="-1" Selected="True">tutti i documenti</asp:ListItem>
-                        <asp:ListItem Value="7">i documenti dell'ultima settimana</asp:ListItem>
-                        <asp:ListItem Value="30">i documenti dell'ultimo mese</asp:ListItem>
-                        <asp:ListItem Value="60">i documenti degli ultimi due mesi</asp:ListItem>
-                        <asp:ListItem Value="90">i documenti degli ultimi tre mesi</asp:ListItem>
-                    </asp:DropDownList>
-                </asp:Panel>
+            <!-- Breakcrumbs (ONUS) -->
+            <div class="tf-sp-1 pb-0">
+                <div class="container">
+                    <ul class="breakcrumbs">
+                        <li><a href="Default.aspx" class="body-small link">Home</a></li>
+                        <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
+                        <li><a href="myaccount.aspx" class="body-small link">Account</a></li>
+                        <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
+                        <li><span class="body-small">Documenti</span></li>
+                    </ul>
+                </div>
             </div>
-            <div class="col-12 col-md-6 mb-3">
-                <asp:Panel ID="Panel2" runat="server" Font-Size="Small" GroupingText="Ricerca dettagliata" Style="width:100%" CssClass="float-md-right">
-                    <div>
-                        <div style="float:left; padding:5px; width:75px; text-align:right;">Filtra dal</div>
-                        <div style="float:left;">
-                            <asp:TextBox runat="server" ID="dataInizio" Width="150px"></asp:TextBox>
-                            <asp:ImageButton runat="server" ID="ib_calendarInizio" ImageUrl="Public/Images/calendar_icon.gif" />
-                        </div>
-                        <div style="clear:both"></div>
-                        <div style="float:left;padding:5px; width:75px; text-align:right;">al</div>
-                        <div style="float:left;">
-                            <asp:TextBox runat="server" ID="dataFine" Width="150px"></asp:TextBox>
-                            <asp:ImageButton runat="server" ID="ImageButton1" ImageUrl="Public/Images/calendar_icon.gif" />
-                        </div>
-                        <div style="clear:both"></div>
-                        <div style="padding-left:87px;">
-                            <asp:Calendar ID="Calendar1" runat="server" Width="150px" Visible="false">
-                                <SelectedDayStyle BackColor="#4E4E4E" />
-                                <WeekendDayStyle BackColor="#C4C4C4" />
-                            </asp:Calendar>
-                            <asp:Calendar ID="Calendar2" runat="server" Width="150px" Visible="false">
-                                <SelectedDayStyle BackColor="#4E4E4E" />
-                                <WeekendDayStyle BackColor="#C4C4C4" />
-                            </asp:Calendar>
+
+            <section class="tf-sp-2">
+                <div class="container">
+                    <div class="row">
+
+                    <div class="col-lg-3">
+                        <div class="wrap-sidebar-account">
+                            <ul class="my-account-nav content-append">
+                                <li><a href="myaccount.aspx" class="my-account-nav-item">Dashboard</a></li>
+                                <li><a href="datiutente.aspx" class="my-account-nav-item">I miei dati</a></li>
+                                <li>
+                                    <% If Convert.ToString(Request.QueryString("t")) = "4" Then %>
+                                        <span class="my-account-nav-item active">I miei ordini</span>
+                                    <% Else %>
+                                        <a href="documenti.aspx?t=4" class="my-account-nav-item">I miei ordini</a>
+                                    <% End If %>
+                                </li>
+                                <li>
+                                    <% If Convert.ToString(Request.QueryString("t")) = "2" Then %>
+                                        <span class="my-account-nav-item active">Le mie fatture</span>
+                                    <% Else %>
+                                        <a href="documenti.aspx?t=2" class="my-account-nav-item">Le mie fatture</a>
+                                    <% End If %>
+                                </li>
+                                <li>
+                                    <% If Convert.ToString(Request.QueryString("t")) = "1" Then %>
+                                        <span class="my-account-nav-item active">I miei DDT</span>
+                                    <% Else %>
+                                        <a href="documenti.aspx?t=1" class="my-account-nav-item">I miei DDT</a>
+                                    <% End If %>
+                                </li>
+                                <li><a href="wishlist.aspx" class="my-account-nav-item">Wishlist</a></li>
+                                <li><a href="password.aspx" class="my-account-nav-item">Cambia password</a></li>
+                                <li><a href="logout.aspx" class="my-account-nav-item">Logout</a></li>
+                            </ul>
                         </div>
                     </div>
-                </asp:Panel>
-            </div>
-            
-            <div class="col-12 doc-btn-filtra">
-                <asp:Button ID="Button1" CssClass="btn btn-default" runat="server" Style="float: right;" 
-                    Text="Filtra" OnClick="applicaFiltri" />
-            </div>
-        </div>
-        
-        <div style="clear:both;"></div>
 
-        <div class="row my-3">
-            <div class="col-12 col-md-6">
-                <span style="color:Red; font-weight:bold;"><%= nDocTrovati %></span> documenti trovati
-            </div>
-            <div class="col-12 col-md-6 text-md-right">
-                Filtra documenti per stato &nbsp;
-                <asp:DropDownList ID="filtroStati" runat="server" AutoPostBack="True"
-                    DataSourceID="sdsStatoOrdine" DataTextField="Descrizione1" DataValueField="id"
-                    OnSelectedIndexChanged="applicaFiltri" OnDataBound="aggiungiStato">
-                </asp:DropDownList>
-            </div>
-        </div>
-        
-        <asp:GridView ID="GridView1" runat="server" AllowPaging="True" AutoGenerateColumns="False"
+                        <div class="col-lg-9">
+                            <div class="my-account-content account-dashboard">
+
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                    <div>
+                                        <h3 class="fw-semibold mb-0">I miei documenti</h3>
+                                        <div class="body-small text-main-2">Consulta ordini, fatture e DDT.</div>
+                                    </div>
+                                    <asp:HyperLink 
+                                        ID="hlBackMyAccount" 
+                                        runat="server"
+                                        NavigateUrl="myaccount.aspx"
+                                        CssClass="tf-btn btn-line">&laquo; Torna a My Account</asp:HyperLink>
+                                </div>
+
+
+                    <div class="ks-doc-typebar">
+                        <div class="body-small text-main-2 mb-2">Seleziona il tipo di documento</div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <asp:Repeater ID="rTipo" runat="server" DataSourceID="sdsTipo">
+                                <ItemTemplate>
+                                    <asp:LinkButton ID="lbTipoDocumento" runat="server" CssClass="nonSelezionato" 
+                                        tipoDocumento='<%# Eval("id") %>' 
+                                        OnClick="tipoDocumentoClick" 
+                                        OnPreRender="preRenderClick">
+                                        <%# Eval("descrizione") %>
+                                    </asp:LinkButton>
+                                </ItemTemplate>
+                            </asp:Repeater>
+                        </div>
+                    </div>
+
+                    <asp:Label runat="server" ID="lblInfo" Visible="false"></asp:Label>
+
+                    <div class="ks-doc-filters">
+                        <div class="row g-3">
+                            <div class="col-12 col-lg-6">
+                                <asp:Panel ID="Panel1" runat="server" Font-Size="Small" GroupingText="Ricerca rapida" CssClass="ks-fieldset">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="body-small text-main-2">Visualizza</span>
+                                        <asp:DropDownList ID="filtroTempo" runat="server" OnSelectedIndexChanged="filtroDataRapido" AutoPostBack="true" CssClass="form-select form-select-sm">
+                                            <asp:ListItem Value="-1" Selected="True">tutti i documenti</asp:ListItem>
+                                            <asp:ListItem Value="7">i documenti dell'ultima settimana</asp:ListItem>
+                                            <asp:ListItem Value="30">i documenti dell'ultimo mese</asp:ListItem>
+                                            <asp:ListItem Value="60">i documenti degli ultimi due mesi</asp:ListItem>
+                                            <asp:ListItem Value="90">i documenti degli ultimi tre mesi</asp:ListItem>
+                                        </asp:DropDownList>
+                                    </div>
+                                </asp:Panel>
+                            </div>
+
+                            <div class="col-12 col-lg-6">
+                                <asp:Panel ID="Panel2" runat="server" Font-Size="Small" GroupingText="Ricerca dettagliata" CssClass="ks-fieldset">
+                                    <div class="row g-2">
+                                        <div class="col-12 col-md-6">
+                                            <div class="body-small text-main-2 mb-1">Dal</div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <asp:TextBox runat="server" ID="dataInizio" CssClass="tf-input" Width="150px"></asp:TextBox>
+                                                <asp:ImageButton runat="server" ID="ib_calendarInizio" ImageUrl="Public/Images/calendar_icon.gif" />
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12 col-md-6">
+                                            <div class="body-small text-main-2 mb-1">Al</div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <asp:TextBox runat="server" ID="dataFine" CssClass="tf-input" Width="150px"></asp:TextBox>
+                                                <asp:ImageButton runat="server" ID="ImageButton1" ImageUrl="Public/Images/calendar_icon.gif" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-2">
+                                        <asp:Calendar ID="Calendar1" runat="server" Width="150px" Visible="false">
+                                            <SelectedDayStyle BackColor="#4E4E4E" />
+                                            <WeekendDayStyle BackColor="#C4C4C4" />
+                                        </asp:Calendar>
+                                        <asp:Calendar ID="Calendar2" runat="server" Width="150px" Visible="false">
+                                            <SelectedDayStyle BackColor="#4E4E4E" />
+                                            <WeekendDayStyle BackColor="#C4C4C4" />
+                                        </asp:Calendar>
+                                    </div>
+                                </asp:Panel>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-3">
+                            <asp:Button ID="Button1" runat="server" Text="Filtra" OnClick="applicaFiltri" CssClass="tf-btn btn-fill" OnClientClick="ksShowSpinnerOnSubmit();" />
+                        </div>
+                    </div>
+
+                    <div class="row align-items-center g-2 my-3">
+                        <div class="col-12 col-md-6">
+                            <span class="body-md-2"><span class="text-secondary fw-semibold"><%= nDocTrovati %></span> documenti trovati</span>
+                        </div>
+                        <div class="col-12 col-md-6 d-flex justify-content-md-end align-items-center gap-2">
+                            <span class="body-small text-main-2">Stato</span>
+                            <asp:DropDownList ID="filtroStati" runat="server" AutoPostBack="True"
+                                DataSourceID="sdsStatoOrdine" DataTextField="Descrizione1" DataValueField="id"
+                                OnSelectedIndexChanged="applicaFiltri" OnDataBound="aggiungiStato" CssClass="form-select form-select-sm">
+                            </asp:DropDownList>
+                        </div>
+                    </div>
+
+
+<asp:GridView ID="GridView1" runat="server" AllowPaging="True" AutoGenerateColumns="False"
             CellPadding="5" DataKeyNames="id" DataSourceID="sdsDocumenti" EmptyDataText="Nessun documento presente"
             Font-Size="8pt" GridLines="None" PageSize="20" Width="100%">
             <EmptyDataRowStyle Font-Bold="False" Height="100px" HorizontalAlign="Center" />
@@ -415,6 +497,15 @@
             <AlternatingRowStyle BackColor="WhiteSmoke" BorderStyle="None" />
             <RowStyle Height="25px" />
         </asp:GridView>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
 
     </asp:Panel> <!-- fine pnlContent -->
 
