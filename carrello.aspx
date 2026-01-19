@@ -38,6 +38,21 @@
         @media (max-width: 991px){
             .ks-cart-buttons .ks-right{margin-left:0;width:100%}
         }
+        /* KeepStore: checkout patch (ONUS) */
+        .ks-checkout .wrap{border:1px solid #eee;border-radius:12px;padding:1rem;margin-bottom:1rem;background:#fff}
+        .ks-checkout .wrap .title{margin-bottom:.75rem}
+        .ks-checkout .ks-checkout-grid{width:100%;border-collapse:collapse}
+        .ks-checkout .ks-checkout-grid td{padding:.5rem .5rem;vertical-align:middle}
+        .ks-checkout .ks-checkout-grid tr{border-bottom:1px solid #eee}
+        .ks-checkout .ks-checkout-grid tr:last-child{border-bottom:none}
+        .ks-checkout .ks-checkout-actions{display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;justify-content:space-between}
+        .ks-checkout .ks-checkout-actions .tf-btn{min-width:220px}
+.ks-checkout .btn-gray{background:#e5e5e5;color:#111;border-color:#e5e5e5}
+.ks-checkout a.tf-btn.btn-gray{background:#e5e5e5;color:#111}
+        @media (max-width: 767px){
+            .ks-checkout .ks-checkout-actions .tf-btn{width:100%}
+        }
+
     </style>
 
     <script type="text/javascript">
@@ -557,32 +572,19 @@
     </section>
 
 <asp:Panel ID="Panel_Unico" runat="server">   
-    <table width="100%" border="0" runat="server" id="tOrdine" visible="false">
-    <tr>
-        <td colspan="2" style=" border-top-style:solid; border-top-width:1px; border-top-color:Gray; padding-top:10px; padding-bottom:10px;">
-        </td>
-    </tr>
+    <table width="100%" border="0" runat="server" id="tOrdine" visible="false" class="ks-checkout">
+    
     
     <tr><td style="width: 100%;" colspan="2" valign="top" >
     
     <div id="promo_vettori">
-    <asp:Panel ID="pSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;">
-        <!--<div id="infobar" style="width:100%; color:White; font-weight:bold; height:50px; background-image:url('Public/Images/StepCarrello1.png'); background-size:100%; background-repeat:no-repeat;"></div>-->		
-		<div class="row shopBar">
-			<div class="col-12">
-				<div style="display: flex;align-items: center;">
-					<span class="step-number">1</span>
-					<div class="w-100 step-text">
-						<span>STEP di <% if Session("LoginId")>0 then %> 5 <% else %> 2 <% end if %></span>
-						<span class="ml-5">SPEDIZIONE</span>
-					</div>
-				</div>
-			</div>
-		</div>
-		
-        <asp:GridView ID="gvVettoriPromo" runat="server"
+    <asp:Panel ID="pSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;" CssClass="wrap">
+        
+                <h5 class="title fw-semibold">Spedizione</h5>
+<!--<div id="infobar" style="width:100%; color:White; font-weight:bold; height:50px; background-image:url('Public/Images/StepCarrello1.png'); background-size:100%; background-repeat:no-repeat;"></div>-->
+<asp:GridView ID="gvVettoriPromo" runat="server"
         AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsVettoriPromo"
-        Font-Size="8pt" GridLines="None" Width="100%" DataKeyNames="id" BorderColor="#383838" BorderStyle="Solid" BorderWidth="2px">
+        Font-Size="8pt" GridLines="None" Width="100%" DataKeyNames="id" BorderColor="#383838" BorderStyle="Solid" BorderWidth="2px" CssClass="ks-checkout-grid">
             <Columns>
                 <asp:TemplateField ShowHeader="False">
                     <ItemTemplate>
@@ -728,7 +730,7 @@
         <br />
             
         <div id="gvVettori_tooltip">
-        <asp:GridView ID="gvVettori" runat="server" AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsVettori" Font-Size="8pt" GridLines="None" Width="100%" DataKeyNames="id" ShowHeader="False">
+        <asp:GridView ID="gvVettori" runat="server" AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsVettori" Font-Size="8pt" GridLines="None" Width="100%" DataKeyNames="id" ShowHeader="False" CssClass="ks-checkout-grid">
             <HeaderStyle Font-Bold="False" Font-Size="8pt" HorizontalAlign="Left" ForeColor="#2050AF" />
             <AlternatingRowStyle BackColor="WhiteSmoke" BorderStyle="None" />
             <Columns>
@@ -866,27 +868,13 @@
     </td>
     </tr>
 
-    <tr>
-        <td colspan="2">
-			<div class="row shopBar">
-				<div class="col-12">
-					<div style="display: flex;align-items: center;">
-						<span class="step-number">2</span>
-						<div class="w-100 step-text">
-							<span>STEP di <% if Session("LoginId")>0 then %> 5 <% else %> 2 <% end if %></span>
-							<span class="ml-5">ASSICURAZIONE E PAGAMENTO</span>
-						</div>
-					</div>
-				</div>
-			</div>
-        </td>
-    </tr>
-    
-    <tr style="border-bottom:">
+<tr style="border-bottom:">
 		<td>
 		<div class="row">
 			<div class="col-12 col-md-6">
-				<asp:Panel ID="pAssicurazione" runat="server" Width="100%"  Visible="true" style="overflow:hidden; margin-bottom: 15px" >
+				<asp:Panel ID="pAssicurazione" runat="server" Width="100%"  Visible="true" style="overflow:hidden; margin-bottom: 15px"  CssClass="wrap">
+					<h5 class="title fw-semibold">Assicurazione</h5>
+
 					<table cellpadding="1" width="100%">
 						<tr>
 							<td><asp:CheckBox ID="cbAssicurazione" runat="server" AutoPostBack="True" /></td>
@@ -897,7 +885,9 @@
 				</asp:Panel>   
 			</div>
 			<div class="col-12 col-md-6">
-			  <asp:Panel ID="pPagamento" runat="server" Width="99.5%" Visible="true">
+			  <asp:Panel ID="pPagamento" runat="server" Width="99.5%" Visible="true" CssClass="wrap">
+					<h5 class="title fw-semibold">Pagamento</h5>
+
 					<asp:SqlDataSource ID="sdsPagamento" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
 						ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
 						SelectCommand="SELECT * FROM vpagamentitipo WHERE Abilitato=1 AND CostoMassimo >= ?CostoMassimo AND (Web=1 OR UtenteID=?UtenteID) AND AziendeID=?AziendaID GROUP BY id ORDER BY Ordinamento, Descrizione">
@@ -909,7 +899,7 @@
 					</asp:SqlDataSource>
 					
 					<div id="gvPagamento_tooltip">
-					<asp:GridView ID="gvPagamento" runat="server"
+					<asp:GridView ID="gvPagamento" runat="server" CssClass="ks-checkout-grid"
 					AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsPagamento"
 					Font-Size="8pt" GridLines="None" Width="100%" ShowHeader="False" DataKeyNames="id">
 						<Columns>
@@ -996,18 +986,10 @@
     <tr>
     
     <td colspan="2">
-    <asp:Panel ID="PnlFatturazione" runat="server" Width="100%" Visible="true" style="overflow:hidden;" >
-		<div class="row shopBar">
-			<div class="col-12">
-				<div style="display: flex;align-items: center;">			
-					<span class="step-number">3</span>
-					<div class="w-100 step-text">
-						<span>STEP di 5</span>
-						<span class="ml-5">DATI FATTURAZIONE</span>
-					</div>
-				</div>
-			</div>
-		</div>
+    <asp:Panel ID="PnlFatturazione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap">
+							<h5 class="title fw-semibold">Dati fatturazione</h5>
+
+		
         <table cellspacing="5" border="0" style="border-bottom-style:solid;" width="100%">
             
             <tr>
@@ -1073,18 +1055,10 @@
 	    <tr>
     
     <td colspan="2">
-    <asp:Panel ID="PnlSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;" >
-		<div class="row shopBar">
-			<div class="col-12">
-				<div style="display: flex;align-items: center;">
-					<span class="step-number">4</span>
-					<div class="w-100 step-text">
-						<span>STEP di 5</span>
-						<span class="ml-5">INDIRIZZO DI SPEDIZIONE</span>
-					</div>
-				</div>
-			</div>
-		</div>
+    <asp:Panel ID="PnlSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap">
+							<h5 class="title fw-semibold">Indirizzo di spedizione</h5>
+
+		
         <table cellspacing="5" border="0" style="border-bottom-style:solid;" width="100%">
 		<% If LstScegliIndirizzo.items.count > 0 Then %>
             <tr>
@@ -1145,7 +1119,9 @@
     <tr>
         <td colspan="2">
 		<div id="panel" runat="server">
-            <asp:Panel ID="PnlDestinazione" runat="server" Width="100%" Visible="True" GroupingText="Inserisci i dati" >
+            <asp:Panel ID="PnlDestinazione" runat="server" Width="100%" Visible="True" GroupingText="Inserisci i dati"  CssClass="wrap">
+							<h5 class="title fw-semibold">Gestisci destinazione</h5>
+
 				<input type="hidden" runat="server" id="insOmod">
 				<!--
                 <asp:Label ID="LblDescrDest" runat="server" Text=""></asp:Label>
@@ -1236,48 +1212,35 @@
 	
     <tr>
 		<td colspan="2">
-		<asp:Panel ID="Panel_Note" runat="server" Width="100%" Visible="False">
-			<div class="row shopBar">
-				<div class="col-12">
-					<div style="display: flex;align-items: center;">
-						<span class="step-number">5</span>
-						<div class="w-100 step-text">
-							<span>STEP di 5</span>
-							<span class="ml-5">NOTE</span>
-						</div>
-					</div>
-				</div>
-			</div>
+		<asp:Panel ID="Panel_Note" runat="server" Width="100%" Visible="False" CssClass="wrap">
+					<h5 class="title fw-semibold">Note</h5>
+
+			
 			
 				<br/><asp:TextBox ID="txtNoteSpedizione" TextMode="MultiLine" Rows="5" runat="server" Width="100%"></asp:TextBox>
 			</asp:Panel>
 		</td>
 	</tr>
-    <tr><td colspan="3"><br/><hr size="1"/></td></tr>
+    <tr><td colspan="2"><br/><hr size="1"/></td></tr>
     
-     <tr><td colspan="3" align="center">
-   <table style="text-align:center;" width="100%">
-   <tr>
-        <td style=" border-bottom-style:solid; border-bottom-width:1px; border-bottom-color:Gray; padding-bottom:10px;">
-			<asp:LinkButton Visible="False" CausesValidation="false" ID="btSalvaPreventivo" runat="server" ForeColor="White" OnClientClick="javascript:visualizza_spinner_caricamento();"><div id="infobar" style="width:30%; background-color:#70db10; text-align:center; padding:5px; padding:5px; color:White; font-weight:bold; font-size:12pt; float:left;">SALVA PREVENTIVO</div></asp:LinkButton>
-            <%if Session("DESTINAZIONEALTERNATIVA")=0 then %>
-				<asp:LinkButton CausesValidation="false" ID="btInviaOrdine" runat="server" ForeColor="White" OnClientClick="javascript:visualizza_spinner_caricamento();"><div id="confermaOrdinde" style="background-color:#70db10; text-align:center; padding:5px; padding:5px; color:White; font-weight:bold; font-size:12pt; float:right;">CONFERMA ORDINE</div></asp:LinkButton>
-			<%else%>
-				<div id="confermaOrdinde" style="max-width: 200px; background-color:lightgray; text-align:center; padding:5px; padding:5px; color:White; font-weight:bold; font-size:12pt; float:right;">CONFERMA ORDINE</div>
-			<%end if%> 
-        </td>
-   </tr>
-   <tr>
-        <td style="text-align:center;">
-            <div id="spinner_caricamento" style=" text-align:center; display:none; padding-top:5px; padding-bottom:5px;">
+     <tr>
+    <td colspan="2">
+        <div class="wrap">
+            <div class="ks-checkout-actions">
+                <asp:LinkButton Visible="False" CausesValidation="false" ID="btSalvaPreventivo" runat="server" CssClass="tf-btn btn-gray" OnClientClick="javascript:visualizza_spinner_caricamento();">SALVA PREVENTIVO</asp:LinkButton>
+                <%if Session("DESTINAZIONEALTERNATIVA")=0 then %>
+                    <asp:LinkButton CausesValidation="false" ID="btInviaOrdine" runat="server" OnClientClick="javascript:visualizza_spinner_caricamento();"><div id="confermaOrdinde" class="tf-btn">CONFERMA ORDINE</div></asp:LinkButton>
+                <%else%>
+                    <div id="confermaOrdinde" class="tf-btn btn-gray" style="pointer-events:none;opacity:.6;">CONFERMA ORDINE</div>
+                <%end if%>
+            </div>
+            <div id="spinner_caricamento" style="text-align:center;display:none;padding-top:5px;padding-bottom:5px;">
                 <div><b>ATTENDERE L'INVIO AI NOSTRI SERVER</b></div><br />
                 <img src="Public/Images/spinner.gif" alt="" />
             </div>
-        </td>
-   </tr>
-   </table>
-   
-   </td></tr>
+        </div>
+    </td>
+</tr>
    </table>   
       <script type="text/javascript">
         function visualizza_spinner_caricamento(){
