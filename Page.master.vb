@@ -1350,19 +1350,28 @@ End Sub
     ' CERCA Cerca() harden + URL encode
     '==========================================================
     Public Sub Cerca()
+    Dim q As String = ""
+
     If Not String.IsNullOrWhiteSpace(Me.tbCerca.Text) Then
-        Dim q As String = Me.tbCerca.Text.Trim()
+        q = Me.tbCerca.Text.Trim()
+    End If
+
+    ' Mobile search fallback
+    If String.IsNullOrWhiteSpace(q) Then
+        If Not IsNothing(Me.tbCercaMobile) AndAlso Not String.IsNullOrWhiteSpace(Me.tbCercaMobile.Text) Then
+            q = Me.tbCercaMobile.Text.Trim()
+        End If
+    End If
+
+    If Not String.IsNullOrWhiteSpace(q) Then
         Me.Response.Redirect("articoli.aspx?q=" & System.Web.HttpUtility.UrlEncode(q))
     End If
     End Sub
 
-    Protected Sub btEntra_Click(ByVal sender As Object, ByVal e As System.EventArgs)
-        ' Gestito da Login() in Page_Load
+    Protected Sub tbCercaMobile_TextChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles tbCercaMobile.TextChanged
+    Cerca()
     End Sub
 
-    Protected Sub tbCerca_TextChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles tbCerca.TextChanged
-        Cerca()
-    End Sub
 
     '==========================================================
     ' IVA VETTORE DEFAULT

@@ -9,12 +9,18 @@
 
     <title><asp:ContentPlaceHolder ID="TitleContent" runat="server" /></title>
 
-    <!-- Template CSS -->
+    <!-- ============================================================
+         ONus (core assets)
+         NOTE: i file CSS sono in /Public/assets/css
+         ============================================================ -->
+    <link rel="stylesheet" href="/Public/assets/fonts/font.css" />
+    <link rel="stylesheet" href="/Public/assets/icons/icomoon/style.css" />
+
     <link rel="stylesheet" href="/Public/assets/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/Public/assets/css/nice-select.css" />
+    <link rel="stylesheet" href="/Public/assets/css/swiper-bundle.min.css" />
     <link rel="stylesheet" href="/Public/assets/css/animate.css" />
-    <link rel="stylesheet" href="/Public/assets/css/slick.css" />
-    <link rel="stylesheet" href="/Public/assets/css/lineicons.css" />
-    <link rel="stylesheet" href="/Public/assets/css/main.css" />
+    <link rel="stylesheet" href="/Public/assets/css/styles.css" />
 
     <!-- SEO / JSON-LD injection -->
     <asp:PlaceHolder ID="phSeoJsonLd" runat="server" Visible="false">
@@ -24,7 +30,7 @@
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 </head>
 
-<body id="PageBody" runat="server">
+<body id="PageBody" runat="server" class="preload-wrapper popup-loader">
     <form id="form1" runat="server">
 
         <!-- ============================================================
@@ -42,73 +48,139 @@
                             <p class="mb-0">Metti “Mi piace” alla nostra pagina per restare aggiornato su offerte e novità.</p>
                         </div>
                         <div class="modal-footer">
-                        <asp:LinkButton ID="LB_CancelFacebook" runat="server" CssClass="btn btn-primary" Text="Chiudi" CausesValidation="False" />
-                    </div>
+                            <asp:LinkButton ID="LB_CancelFacebook" runat="server" CssClass="btn btn-primary" Text="Chiudi" CausesValidation="False" />
+                        </div>
                     </div>
                 </div>
             </div>
         </asp:Panel>
 
-        <!-- ============================================================
-             Header (template-first)
-             ============================================================ -->
-        <header class="header-area">
-            <div class="navbar-area">
-                <div class="container">
-                    <nav class="navbar navbar-expand-lg">
+        <div id="wrapper">
 
-                        <a class="navbar-brand" href="/Default.aspx">
-                            <asp:Image ID="imgLogo" runat="server" AlternateText="Taikun" CssClass="d-none d-lg-inline-block" />
-                            <asp:Image ID="imgLogoMobile" runat="server" AlternateText="Taikun" CssClass="d-inline-block d-lg-none" />
-                        </a>
+            <!-- ============================================================
+                 HEADER (migrazione ONus)
+                 - Mantiene ID/handler esistenti (imgLogo/imgLogoMobile, tbCerca, btnSearch, mvLogin, rptNavSettori, lblCarrelloCount/lblCarrelloTotale)
+                 ============================================================ -->
+            <header class="tf-header">
+                <div class="inner-header line-bt">
+                    <div class="container">
+                        <div class="header-inner d-flex align-items-center justify-content-between gap-20">
 
-                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                            <span class="toggler-icon"></span>
-                            <span class="toggler-icon"></span>
-                            <span class="toggler-icon"></span>
-                        </button>
+                            <!-- Logo -->
+                            <div class="header-left d-flex align-items-center">
+                                <a class="logo-site" href="/Default.aspx" aria-label="Home">
+                                    <asp:Image ID="imgLogo" runat="server" AlternateText="Taikun" CssClass="d-none d-lg-inline-block" />
+                                    <asp:Image ID="imgLogoMobile" runat="server" AlternateText="Taikun" CssClass="d-inline-block d-lg-none" />
+                                </a>
+                            </div>
 
-                        <div class="collapse navbar-collapse sub-menu-bar" id="navbarSupportedContent">
-                            <ul class="navbar-nav ms-auto" id="nav">
-                                <li class="nav-item"><a href="/Default.aspx">Home</a></li>
+                            <!-- Search (desktop) -->
+                            <div class="header-center d-none d-lg-block flex-grow-1 px-3">
+                                <div class="form-search-product w-100">
+                                    <fieldset class="w-100">
+                                        <asp:TextBox ID="tbCerca" runat="server" CssClass="form-control" placeholder="Cerca prodotti..." AutoPostBack="True" />
+                                    </fieldset>
+                                    <asp:Button ID="btnSearch" runat="server" CssClass="btn-submit-form" Text="" OnClick="btnSearch_ServerClick" />
+                                </div>
+                            </div>
+
+                            <!-- Account + Cart -->
+                            <div class="header-right d-flex align-items-center gap-20">
+
+                                <!-- Login / Account (legacy: mvLogin) -->
+                                <asp:MultiView ID="mvLogin" runat="server">
+                                    <asp:View ID="viewGuest" runat="server">
+                                        <a class="tf-btn-icon style-2" href="/login.aspx" aria-label="Accedi">
+                                            <i class="icon icon-user"></i>
+                                            <span class="body-text-3 fw-normal d-none d-xl-inline">Accedi</span>
+                                        </a>
+                                    </asp:View>
+                                    <asp:View ID="viewLogged" runat="server">
+                                        <div class="d-flex align-items-center gap-12">
+                                            <a class="tf-btn-icon style-2" href="/my-account.aspx" aria-label="Account">
+                                                <i class="icon icon-user"></i>
+                                                <span class="body-text-3 fw-normal d-none d-xl-inline">
+                                                    <asp:Label ID="lblUtente" runat="server" Text="" />
+                                                    <asp:Label ID="lblAccesso" runat="server" Text="" CssClass="text-main-2 ms-1" />
+                                                </span>
+                                            </a>
+                                            <a class="tf-btn btn-line" href="/logout.aspx">Esci</a>
+                                        </div>
+                                    </asp:View>
+                                </asp:MultiView>
+
+                                <!-- Cart (legacy: lblCarrelloCount / lblCarrelloTotale) -->
+                                <a class="tf-btn-icon style-2" href="/carrello.aspx" aria-label="Carrello">
+                                    <i class="icon icon-cart2"></i>
+                                    <span class="count-box">
+                                        <asp:Label ID="lblCarrelloCount" runat="server" Text="0" />
+                                    </span>
+                                    <span class="body-text-3 fw-normal d-none d-xl-inline">Carrello</span>
+                                </a>
+
+                                <span class="body-text-3 text-main-2 d-none d-xl-inline" style="white-space:nowrap;">
+                                    <asp:Label ID="lblCarrelloTotale" runat="server" Text="" />
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Search (mobile) -->
+                        <div class="d-lg-none mt-3">
+                            <div class="form-search-product w-100">
+                                <fieldset class="w-100">
+                                    <asp:TextBox ID="tbCercaMobile" runat="server" CssClass="form-control" placeholder="Cerca prodotti..." AutoPostBack="True" />
+                                </fieldset>
+                                <asp:Button ID="btnSearchMobile" runat="server" CssClass="btn-submit-form" Text="" OnClick="btnSearch_ServerClick" />
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Menu (desktop) -->
+                <div class="header-bottom d-none d-lg-block">
+                    <div class="container">
+                        <nav class="main-menu">
+                            <ul class="navigation-menu navbar-nav flex-row flex-wrap gap-20 mb-0" id="nav">
+                                <li class="nav-item"><a class="nav-link" href="/Default.aspx">Home</a></li>
                                 <li class="nav-item"><a class="nav-link" href="/articoli.aspx" id="HomeCatalogo">Catalogo</a></li>
 
+                                <asp:Repeater ID="rptNavSettori" runat="server" OnItemDataBound="rptNavSettori_ItemDataBound">
+                                    <ItemTemplate>
+                                        <li class="nav-item dropdown d-flex align-items-center">
+                                            <a class="nav-link" href="<%# Eval("DefaultUrl") %>"><%# SafeText(Eval("Descrizione")) %></a>
+                                            <a class="nav-link dropdown-toggle dropdown-toggle-split" href="#" id='<%# "navSettore" & Eval("Id") %>' role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <span class="visually-hidden">Toggle Dropdown</span>
+                                            </a>
+                                            <ul class="dropdown-menu" aria-labelledby='<%# "navSettore" & Eval("Id") %>'>
+                                                <li>
+                                                    <a class="dropdown-item fw-semibold" href="<%# Eval("DefaultUrl") %>">Tutto <%# SafeText(Eval("Descrizione")) %></a>
+                                                </li>
+                                                <li><hr class="dropdown-divider" /></li>
 
-<asp:Repeater ID="rptNavSettori" runat="server" OnItemDataBound="rptNavSettori_ItemDataBound">
-    <ItemTemplate>
-        <li class="nav-item dropdown d-flex align-items-center">
-            <a class="nav-link" href="<%# Eval("DefaultUrl") %>"><%# SafeText(Eval("Descrizione")) %></a>
-            <a class="nav-link dropdown-toggle dropdown-toggle-split" href="#" id='<%# "navSettore" & Eval("Id") %>' role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <span class="visually-hidden">Toggle Dropdown</span>
-            </a>
-            <ul class="dropdown-menu" aria-labelledby='<%# "navSettore" & Eval("Id") %>'>
-                <li>
-                    <a class="dropdown-item fw-semibold" href="<%# Eval("DefaultUrl") %>">Tutto <%# SafeText(Eval("Descrizione")) %></a>
-                </li>
-                <li><hr class="dropdown-divider" /></li>
+                                                <asp:Repeater ID="rptNavCategorie" runat="server" OnItemDataBound="rptNavCategorie_ItemDataBound">
+                                                    <ItemTemplate>
+                                                        <li>
+                                                            <a class="dropdown-item fw-semibold" href="<%# Eval("DefaultUrl") %>"><%# SafeText(Eval("Descrizione")) %></a>
+                                                        </li>
 
-                <asp:Repeater ID="rptNavCategorie" runat="server" OnItemDataBound="rptNavCategorie_ItemDataBound">
-                    <ItemTemplate>
-                        <li>
-                            <a class="dropdown-item fw-semibold" href="<%# Eval("DefaultUrl") %>"><%# SafeText(Eval("Descrizione")) %></a>
-                        </li>
+                                                        <asp:Repeater ID="rptNavTipologie" runat="server">
+                                                            <ItemTemplate>
+                                                                <li>
+                                                                    <a class="dropdown-item ps-4" href="<%# Eval("DefaultUrl") %>"><%# SafeText(Eval("Descrizione")) %></a>
+                                                                </li>
+                                                            </ItemTemplate>
+                                                        </asp:Repeater>
 
-                        <asp:Repeater ID="rptNavTipologie" runat="server">
-                            <ItemTemplate>
-                                <li>
-                                    <a class="dropdown-item ps-4" href="<%# Eval("DefaultUrl") %>"><%# SafeText(Eval("Descrizione")) %></a>
-                                </li>
-                            </ItemTemplate>
-                        </asp:Repeater>
-
-                        <li><hr class="dropdown-divider" /></li>
-                    </ItemTemplate>
-                </asp:Repeater>
-            </ul>
-        </li>
-    </ItemTemplate>
-</asp:Repeater>
-
+                                                        <li><hr class="dropdown-divider" /></li>
+                                                    </ItemTemplate>
+                                                </asp:Repeater>
+                                            </ul>
+                                        </li>
+                                    </ItemTemplate>
+                                </asp:Repeater>
 
                                 <!-- Listino personalizzato (legacy) -->
                                 <li class="nav-item">
@@ -116,158 +188,117 @@
                                     <asp:HyperLink ID="HyperLink14" runat="server" Text="" Visible="False" NavigateUrl="#" />
                                 </li>
 
-                                <!-- Pagamenti ordini (legacy, badge) -->
+                                <!-- Pagamenti ordini -->
                                 <li id="pay_your_orders" runat="server" class="nav-item" visible="false">
-                                    <a href="/pay_your_orders.aspx">
+                                    <a class="nav-link" href="/pay_your_orders.aspx">
                                         Pagamenti
                                         <span id="to_pay" runat="server" class="badge bg-danger ms-1">0</span>
                                     </a>
                                 </li>
                             </ul>
-                        </div>
+                        </nav>
+                    </div>
+                </div>
+            </header>
 
-                        <!-- Search + Account + Cart -->
-                        <div class="navbar-btn d-none d-lg-flex align-items-center" style="gap: 10px;">
+            <!-- Main Content -->
+            <main>
+                <asp:ContentPlaceHolder ID="MainContent" runat="server" />
 
-                            <!-- Search (legacy: tbCerca + btnSearch_ServerClick) -->
-                            <div class="header-search">
-                                <div class="input-group">
-                                    <asp:TextBox ID="tbCerca" runat="server" CssClass="form-control" placeholder="Cerca prodotti..." AutoPostBack="True" />
-                                    <asp:Button ID="btnSearch" runat="server" CssClass="btn btn-primary" Text="Cerca" OnClick="btnSearch_ServerClick" />
+                <!-- Legacy aliases -->
+                <asp:ContentPlaceHolder ID="ContentPlaceHolder1" runat="server" />
+                <asp:ContentPlaceHolder ID="cph" runat="server" />
+            </main>
+
+            <!-- Footer (ONus) -->
+            <footer class="tf-footer">
+                <div class="ft-body-wrap">
+                    <div class="ft-body-inner">
+                        <div class="container">
+                            <div class="ft-inner flex-wrap flex-xl-nowrap">
+
+                                <div class="ft-logo">
+                                    <a href="/Default.aspx" class="logo-site" aria-label="Home">
+                                        <asp:Image ID="imgLogoFooter" runat="server" AlternateText="Taikun" Visible="false" />
+                                        <img src="/Public/onsus/images/logo/logo.svg" alt="Logo" />
+                                    </a>
                                 </div>
+
+                                <ul class="ft-link-wrap w-100 tf-grid-layout md-col-2 lg-col-4">
+
+                                    <li class="footer-col-block">
+                                        <h6 class="ft-heading footer-heading-mobile fw-semibold">Informazioni</h6>
+                                        <div class="tf-collapse-content">
+                                            <asp:DataList ID="DataList_DIV1" runat="server" DataSourceID="SqlDataFooterDIV1" RepeatLayout="Flow">
+                                                <HeaderTemplate><ul class="ft-menu-list"></HeaderTemplate>
+                                                <ItemTemplate>
+                                                    <li><a class="link" href="<%# Eval("link_esterno") %>" target="<%# Eval("target") %>"><%# Eval("nome") %></a></li>
+                                                </ItemTemplate>
+                                                <FooterTemplate></ul></FooterTemplate>
+                                            </asp:DataList>
+                                        </div>
+                                    </li>
+
+                                    <li class="footer-col-block">
+                                        <h6 class="ft-heading footer-heading-mobile fw-semibold">Servizi</h6>
+                                        <div class="tf-collapse-content">
+                                            <asp:DataList ID="DataList_DIV2" runat="server" DataSourceID="SqlDataFooterDIV2" RepeatLayout="Flow">
+                                                <HeaderTemplate><ul class="ft-menu-list"></HeaderTemplate>
+                                                <ItemTemplate>
+                                                    <li><a class="link" href="<%# Eval("link_esterno") %>" target="<%# Eval("target") %>"><%# Eval("nome") %></a></li>
+                                                </ItemTemplate>
+                                                <FooterTemplate></ul></FooterTemplate>
+                                            </asp:DataList>
+                                        </div>
+                                    </li>
+
+                                    <li class="footer-col-block">
+                                        <h6 class="ft-heading footer-heading-mobile fw-semibold">Supporto</h6>
+                                        <div class="tf-collapse-content">
+                                            <asp:DataList ID="DataList_DIV3" runat="server" DataSourceID="SqlDataFooterDIV3" RepeatLayout="Flow">
+                                                <HeaderTemplate><ul class="ft-menu-list"></HeaderTemplate>
+                                                <ItemTemplate>
+                                                    <li><a class="link" href="<%# Eval("link_esterno") %>" target="<%# Eval("target") %>"><%# Eval("nome") %></a></li>
+                                                </ItemTemplate>
+                                                <FooterTemplate></ul></FooterTemplate>
+                                            </asp:DataList>
+                                        </div>
+                                    </li>
+
+                                    <li class="footer-col-block type-sp-2">
+                                        <h6 class="ft-heading footer-heading-mobile fw-semibold">Altro</h6>
+                                        <div class="tf-collapse-content">
+                                            <asp:DataList ID="DataList_DIV4" runat="server" DataSourceID="SqlDataFooterDIV4" RepeatLayout="Flow">
+                                                <HeaderTemplate><ul class="ft-menu-list"></HeaderTemplate>
+                                                <ItemTemplate>
+                                                    <li><a class="link" href="<%# Eval("link_esterno") %>" target="<%# Eval("target") %>"><%# Eval("nome") %></a></li>
+                                                </ItemTemplate>
+                                                <FooterTemplate></ul></FooterTemplate>
+                                            </asp:DataList>
+                                        </div>
+                                    </li>
+
+                                </ul>
+
                             </div>
-
-                            <!-- Login / Account (legacy: mvLogin) -->
-                            <asp:MultiView ID="mvLogin" runat="server">
-                                <asp:View ID="viewGuest" runat="server">
-                                    <a class="btn btn-outline-primary" href="/login.aspx">Accedi</a>
-                                </asp:View>
-                                <asp:View ID="viewLogged" runat="server">
-                                    <div class="d-flex align-items-center" style="gap: 10px;">
-                                        <span class="small">
-                                            <asp:Label ID="lblUtente" runat="server" Text="" />
-                                            <asp:Label ID="lblAccesso" runat="server" Text="" CssClass="text-muted ms-1" />
-                                        </span>
-                                        <a class="btn btn-outline-secondary" href="/logout.aspx">Esci</a>
-                                    </div>
-                                </asp:View>
-                            </asp:MultiView>
-
-                            <!-- Cart (legacy: lblCarrelloCount / lblCarrelloTotale) -->
-                            <a class="btn btn-outline-dark position-relative" href="/carrello.aspx" aria-label="Carrello">
-                                <span class="me-2">Carrello</span>
-                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                    <asp:Label ID="lblCarrelloCount" runat="server" Text="0" />
-                                </span>
-                            </a>
-                            <span class="small text-muted" style="white-space:nowrap;">
-                                <asp:Label ID="lblCarrelloTotale" runat="server" Text="" />
-                            </span>
-
                         </div>
+                    </div>
 
-                    </nav>
-                </div>
-            </div>
-        </header>
-
-        <!-- ============================================================
-             Main Content
-             ============================================================ -->
-        <main>
-            <asp:ContentPlaceHolder ID="MainContent" runat="server" />
-
-            <!-- Legacy aliases (minimizza regressioni su pagine esistenti)
-                 - ContentPlaceHolder1: molte pagine legacy
-                 - cph: alcune pagine legacy
-                 Nota: NON aggiungere varianti di casing (es. "Contentplaceholder1"),
-                 perché ASP.NET tratta gli ID come non-case-sensitive e genera errore di duplicato.
-            -->
-            <asp:ContentPlaceHolder ID="ContentPlaceHolder1" runat="server" />
-            <asp:ContentPlaceHolder ID="cph" runat="server" />
-        </main>
-
-        <!-- ============================================================
-             Footer (template-first)
-             ============================================================ -->
-        <footer class="footer-area footer-2">
-    <div class="container">
-
-        <!-- ============================================================
-             FOOTER TOP (menu informativi legacy - DataList_DIV1..DIV4)
-             NOTE: popolato via Page.master.vb (SqlDataFooterDIV1..DIV4)
-             ============================================================ -->
-        <div class="footer-top pt-4 pb-3">
-            <div class="row g-4">
-
-                <div class="col-lg-3 col-md-6">
-                    <div class="footer-widget">
-                        <h6 class="footer-title mb-3">Informazioni</h6>
-                        <asp:DataList ID="DataList_DIV1" runat="server" DataSourceID="SqlDataFooterDIV1" RepeatLayout="Flow">
-                            <HeaderTemplate><ul class="list-unstyled mb-0"></HeaderTemplate>
-                            <ItemTemplate>
-                                <li class="mb-2"><a href="<%# Eval("link_esterno") %>" target="<%# Eval("target") %>"><%# Eval("nome") %></a></li>
-                            </ItemTemplate>
-                            <FooterTemplate></ul></FooterTemplate>
-                        </asp:DataList>
+                    <div class="ft-body-center bg-gray">
+                        <div class="container">
+                            <div class="ft-body-center-inner d-flex flex-wrap justify-content-between align-items-center gap-10 py-3">
+                                <p class="mb-0 body-text-3">&copy; <%: DateTime.Now.Year %> Taikun. Tutti i diritti riservati.
+                                    <asp:Label ID="lblCredits" runat="server" CssClass="ms-2"></asp:Label>
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </footer>
 
-                <div class="col-lg-3 col-md-6">
-                    <div class="footer-widget">
-                        <h6 class="footer-title mb-3">Servizi</h6>
-                        <asp:DataList ID="DataList_DIV2" runat="server" DataSourceID="SqlDataFooterDIV2" RepeatLayout="Flow">
-                            <HeaderTemplate><ul class="list-unstyled mb-0"></HeaderTemplate>
-                            <ItemTemplate>
-                                <li class="mb-2"><a href="<%# Eval("link_esterno") %>" target="<%# Eval("target") %>"><%# Eval("nome") %></a></li>
-                            </ItemTemplate>
-                            <FooterTemplate></ul></FooterTemplate>
-                        </asp:DataList>
-                    </div>
-                </div>
+        </div><!-- /#wrapper -->
 
-                <div class="col-lg-3 col-md-6">
-                    <div class="footer-widget">
-                        <h6 class="footer-title mb-3">Supporto</h6>
-                        <asp:DataList ID="DataList_DIV3" runat="server" DataSourceID="SqlDataFooterDIV3" RepeatLayout="Flow">
-                            <HeaderTemplate><ul class="list-unstyled mb-0"></HeaderTemplate>
-                            <ItemTemplate>
-                                <li class="mb-2"><a href="<%# Eval("link_esterno") %>" target="<%# Eval("target") %>"><%# Eval("nome") %></a></li>
-                            </ItemTemplate>
-                            <FooterTemplate></ul></FooterTemplate>
-                        </asp:DataList>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6">
-                    <div class="footer-widget">
-                        <h6 class="footer-title mb-3">Altro</h6>
-                        <asp:DataList ID="DataList_DIV4" runat="server" DataSourceID="SqlDataFooterDIV4" RepeatLayout="Flow">
-                            <HeaderTemplate><ul class="list-unstyled mb-0"></HeaderTemplate>
-                            <ItemTemplate>
-                                <li class="mb-2"><a href="<%# Eval("link_esterno") %>" target="<%# Eval("target") %>"><%# Eval("nome") %></a></li>
-                            </ItemTemplate>
-                            <FooterTemplate></ul></FooterTemplate>
-                        </asp:DataList>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
-        <div class="footer-bottom d-flex justify-content-between align-items-center py-3 border-top">
-            <div class="footer-copyright">
-                <p class="mb-0">&copy; <%: DateTime.Now.Year %> Taikun. Tutti i diritti riservati.
-                    <asp:Label ID="lblCredits" runat="server" CssClass="ms-2"></asp:Label>
-                </p>
-            </div>
-        </div>
-    </div>
-</footer>
-
-        <!-- ============================================================
-             DataSources (legacy, required by Page.master.vb)
-             ============================================================ -->
+        <!-- DataSources (legacy, required by Page.master.vb) -->
         <asp:SqlDataSource ID="SqlData_Popup" runat="server"
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
@@ -275,36 +306,38 @@
         <asp:SqlDataSource ID="SqlData_TotOrdini" runat="server"
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
-        <!-- Partner footer / slider (query valorizzata da Page.master.vb) -->
+
         <asp:SqlDataSource ID="Sql_Partners" runat="server"
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
 
-<!-- ============================================================
-     FOOTER MENUS (legacy) - popolati via code-behind
-     ============================================================ -->
-<asp:SqlDataSource ID="SqlDataFooterDIV1" runat="server"
-    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+        <asp:SqlDataSource ID="SqlDataFooterDIV1" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
 
-<asp:SqlDataSource ID="SqlDataFooterDIV2" runat="server"
-    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+        <asp:SqlDataSource ID="SqlDataFooterDIV2" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
 
-<asp:SqlDataSource ID="SqlDataFooterDIV3" runat="server"
-    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+        <asp:SqlDataSource ID="SqlDataFooterDIV3" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
 
-<asp:SqlDataSource ID="SqlDataFooterDIV4" runat="server"
-    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+        <asp:SqlDataSource ID="SqlDataFooterDIV4" runat="server"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
 
-
-        <!-- Template JS -->
-        <script src="/Public/assets/js/vendor/jquery-3.6.0.min.js"></script>
-        <script src="/Public/assets/js/bootstrap.bundle.min.js"></script>
-        <script src="/Public/assets/js/slick.min.js"></script>
-        <script src="/Public/assets/js/main.js"></script>
+        <!-- ONus JS -->
+        <script src="/Public/onsus/js/jquery.min.js"></script>
+        <script src="/Public/onsus/js/bootstrap.min.js"></script>
+        <script src="/Public/onsus/js/bootstrap-select.min.js"></script>
+        <script src="/Public/onsus/js/jquery.nice-select.js"></script>
+        <script src="/Public/onsus/js/swiper-bundle.min.js"></script>
+        <script src="/Public/onsus/js/wow.min.js"></script>
+        <script src="/Public/onsus/js/infinityslide.js"></script>
+        <script src="/Public/onsus/js/multiple-modal.js"></script>
+        <script src="/Public/onsus/js/shop.js"></script>
+        <script src="/Public/onsus/js/main.js"></script>
 
     </form>
 </body>
