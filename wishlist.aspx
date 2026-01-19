@@ -1,18 +1,10 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="wishlist.aspx.vb" Inherits="wishlist" MaintainScrollPositionOnPostback="true" %>
-
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
 
-    <!-- DataSource principale: il SelectCommand viene sovrascritto da wishlist.aspx.vb (CaricaArticoli) -->
-    <asp:SqlDataSource ID="sdsArticoli" runat="server"
-        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+    <asp:SqlDataSource ID="sdsArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
         ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-        SelectCommand="SELECT id, Codice, Descrizione1, PrezzoAcquisto, Img1, DescrizioneLunga FROM varticolibase ORDER BY Codice"
+        SelectCommand="SELECT id, Codice, Descrizione1, PrezzoAcquisto, Img1, DescrizioneLunga FROM varticolibase ORDER BY NoPromo DESC, Codice, Descrizione1"
         EnableViewState="False">
-        <SelectParameters>
-            <asp:SessionParameter Name="IvaUtente" SessionField="Iva_Utente" Type="Int32" DefaultValue="0" />
-            <asp:SessionParameter Name="id" SessionField="id" Type="Int32" DefaultValue="0" />
-            <asp:SessionParameter Name="listino" SessionField="listino" Type="Int32" DefaultValue="1" />
-        </SelectParameters>
     </asp:SqlDataSource>
 
     <script runat="server">
@@ -25,242 +17,273 @@
         End Function
 
         Function controllaLunghezzaTesto(ByVal testo As String, ByVal lunghezza As Integer) As String
-            If testo Is Nothing Then Return ""
+            If testo Is Nothing Then
+                Return ""
+            End If
             If testo.Length > lunghezza Then
                 Return Left(testo, lunghezza) & "..."
             Else
                 Return testo
             End If
         End Function
+
+        Function checkImg(ByVal temp As Object) As String
+            Dim imgname As String = ""
+
+            If temp IsNot Nothing AndAlso Not Convert.IsDBNull(temp) Then
+                imgname = Convert.ToString(temp)
+            End If
+
+            If imgname Is Nothing Then
+                imgname = ""
+            End If
+
+            imgname = imgname.Trim()
+
+            If imgname = "" Then
+                Return ResolveUrl("~/Public/images/nofoto.gif")
+            End If
+
+            If imgname.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse imgname.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+                Return imgname
+            End If
+
+            ' Se il DB contiene gia' un percorso (es. Public/foto/xxx.jpg)
+            If imgname.IndexOf("/") >= 0 OrElse imgname.IndexOf("\\") >= 0 Then
+                imgname = imgname.Replace("\\", "/")
+                imgname = imgname.TrimStart("/"c)
+                Return ResolveUrl("~/" & imgname)
+            End If
+
+            Return ResolveUrl("~/Public/foto/" & imgname)
+        End Function
     </script>
 
-</asp:Content>
-
-<asp:Content ID="Content2" ContentPlaceHolderID="cph" Runat="Server">
-
-    <style>
-        /* STEP21: Wishlist in stile ONUS (hard-hide markup legacy senza rimuovere i controlli necessari al code-behind) */
-        .ks-legacy-hidden { display: none !important; }
-        .ks-btn-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; }
-        .ks-btn-overlay { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-        .ks-wishlist-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
-        .ks-wishlist-actions .tf-btn { min-width: 200px; }
-        .ks-wishlist-qty { max-width: 90px; }
-        .ks-wishlist-meta { font-size: 12px; opacity: .85; }
-        .ks-wishlist-product-title { font-weight: 600; }
-        .ks-wishlist-empty { padding: 30px 0; text-align: center; }
-        .ks-wishlist-empty h6 { margin-bottom: 6px; }
+    <style type="text/css">
+        /* Micro-adattamenti per la GridView in stile ONUS */
+        .ks-table-clean { width: 100%; }
+        .ks-table-clean th, .ks-table-clean td { vertical-align: middle; }
+        .ks-wl-actions { gap: 10px; }
+        .ks-qty { width: 64px; text-align: right; }
+        .ks-hidden { display: none !important; }
+        .ks-btn-image { border: 0; background: transparent; }
     </style>
 
-    <!-- Breadcrumb (ONUS) -->
+    <!-- Breakcrumbs -->
     <div class="tf-sp-3 pb-0">
         <div class="container">
-            <ul class="breadcrumb-menu p-0 m-0">
-                <li><a href="Default.aspx">Home</a></li>
-                <li><span>Wishlist</span></li>
+            <ul class="breakcrumbs">
+                <li>
+                    <a href="Default.aspx" class="body-small link">Home</a>
+                </li>
+                <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
+                <li><span class="body-small">Wishlist</span></li>
             </ul>
         </div>
     </div>
+    <!-- /Breakcrumbs -->
 
+    <!-- Wishlist -->
     <div class="tf-sp-2">
         <div class="container">
 
-            <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
                 <div>
-                    <h4 class="mb-1">Wishlist</h4>
-                    <div class="ks-wishlist-meta">
-                        <asp:Label ID="lblTrovati" runat="server" Font-Bold="True"></asp:Label>
-                        articoli presenti nella wishlist
-                        <i>(<asp:Label ID="lblLinee" runat="server" Text="0"></asp:Label> per pagina)</i>
+                    <h4 class="fw-semibold mb-1">Wishlist</h4>
+                    <div class="body-md-2 text-main-2">
+                        <asp:Label ID="lblTrovati" runat="server" Text="0" Font-Bold="True"></asp:Label>
+                        <span> articoli</span>
                     </div>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center ks-wl-actions">
+
+                    <% If Convert.ToString(Session("G2A")) = "1" Then%>
+                        <asp:LinkButton ID="LB_cancella_tutta_wishlist" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">
+                            <span class="text-white">Svuota wishlist</span>
+                        </asp:LinkButton>
+                    <% End If %>
+
+                    <asp:ImageButton ID="Selezione_Multipla" runat="server" title="Aggiungi gli articoli selezionati al carrello"
+                        OnClick="Selezione_Multipla_Click" ImageUrl="~/Public/Images/aggiungiMultiplo.png" CausesValidation="false" />
+
+                    <% If Convert.ToString(Session("genera_html_mail")) = "1" Then%>
+                        <asp:LinkButton ID="LB_crea_html" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">
+                            <span class="text-white">Crea HTML</span>
+                        </asp:LinkButton>
+                    <% End If %>
+
                 </div>
             </div>
 
-            <!-- Tabella Wishlist (ONUS) -->
-            <div class="table-responsive">
-                <asp:GridView ID="GridView1" runat="server"
-                    AutoGenerateColumns="False"
-                    DataKeyNames="id"
-                    DataSourceID="sdsArticoli"
-                    AllowPaging="True"
-                    PageSize="20"
-                    GridLines="None"
-                    CellPadding="0"
-                    CssClass="tf-table-wishlist"
-                    ShowHeader="True">
-
-                    <EmptyDataTemplate>
-                        <div class="ks-wishlist-empty">
-                            <h6>La tua wishlist è vuota</h6>
-                            <p class="mb-0">Aggiungi prodotti ai preferiti e li troverai qui.</p>
-                        </div>
-                    </EmptyDataTemplate>
+            <div class="tf-wishlist">
+                <asp:GridView ID="GridView1" runat="server" AutoGenerateColumns="False" DataKeyNames="id"
+                    DataSourceID="sdsArticoli" AllowPaging="True" GridLines="None" CellPadding="0"
+                    Width="100%" ShowHeader="True" CssClass="tf-table-wishlist ks-table-clean">
 
                     <Columns>
 
                         <!-- Remove -->
-                        <asp:TemplateField HeaderText="">
+                        <asp:TemplateField>
+                            <HeaderStyle CssClass="wishlist-item_remove" />
+                            <ItemStyle CssClass="wishlist-item_remove" />
                             <ItemTemplate>
-                                <asp:Label ID="label_idArticolo" runat="server" Text='<%# Eval("id") %>' Visible="False"></asp:Label>
-                                <asp:LinkButton ID="LB_wishlist" runat="server" CssClass="remove" OnClick="BT_Rimuovi_wishlist_Click" ToolTip="Rimuovi dalla wishlist">
-                                    <span class="icon-close"></span>
-                                </asp:LinkButton>
+                                <asp:LinkButton ID="BT_Rimuovi_wishlist" runat="server" OnClick="BT_Rimuovi_wishlist_Click" CausesValidation="false"
+                                    CssClass="link cs-pointer" Text="<i class='icon-close remove'></i>"></asp:LinkButton>
+                                <asp:Label ID="label_idArticolo" runat="server" Text='<%# Eval("id") %>' Visible="false"></asp:Label>
                             </ItemTemplate>
                         </asp:TemplateField>
 
                         <!-- Image -->
-                        <asp:TemplateField HeaderText="">
+                        <asp:TemplateField>
+                            <HeaderStyle CssClass="wishlist-item_image" />
+                            <ItemStyle CssClass="wishlist-item_image" />
                             <ItemTemplate>
-                                <asp:HyperLink ID="HyperLink3" runat="server" NavigateUrl='<%# "articolo.aspx?id=" & Eval("id") %>'>
-                                    <asp:Image ID="Image1" runat="server" ImageUrl='<%# Eval("Img1") %>' AlternateText='<%# Eval("Descrizione1") %>' />
+                                <asp:HyperLink ID="HyperLink3" runat="server" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("id") %>'>
+                                    <img alt="Image" class="lazyload" src='<%# checkImg(Eval("Img1")) %>' data-src='<%# checkImg(Eval("Img1")) %>' />
                                 </asp:HyperLink>
                             </ItemTemplate>
                         </asp:TemplateField>
 
-                        <!-- Product -->
-                        <asp:TemplateField HeaderText="Product">
+                        <!-- Info -->
+                        <asp:TemplateField>
+                            <HeaderStyle CssClass="wishlist-item_info" />
+                            <ItemStyle CssClass="wishlist-item_info" />
                             <ItemTemplate>
-                                <div class="wishlist-product-info">
-                                    <asp:Panel ID="Panel_in_offerta" runat="server" CssClass="mb-1" Visible="False">
-                                        <span class="badge bg-danger">Promo</span>
-                                    </asp:Panel>
+                                <a class="text-line-clamp-2 body-md-2 fw-semibold text-secondary link"
+                                    href='<%# "articolo.aspx?id=" & Eval("id") %>'>
+                                    <%# controllaLunghezzaTesto(Convert.ToString(Eval("Descrizione1")), 90) %>
+                                </a>
 
-                                    <asp:HyperLink ID="HyperLink1" runat="server" CssClass="ks-wishlist-product-title" NavigateUrl='<%# "articolo.aspx?id=" & Eval("id") %>'>
-                                        <%# controllaLunghezzaTesto(Convert.ToString(Eval("Descrizione1")), 80) %>
-                                    </asp:HyperLink>
-
-                                    <div class="ks-wishlist-meta">
-                                        Codice: <asp:Label ID="Label2" runat="server" Text='<%# Eval("Codice") %>'></asp:Label>
-                                    </div>
-
-                                    <asp:Label ID="tagliecolori" runat="server" CssClass="ks-wishlist-meta"></asp:Label>
+                                <div class="body-small text-main-2 mt-1">
+                                    <asp:Label ID="tagliecolori" runat="server"></asp:Label>
                                 </div>
 
-                                <!-- Controlli legacy richiesti dal code-behind -->
-                                <asp:Panel ID="pnlLegacy1" runat="server" CssClass="ks-legacy-hidden">
-                                    <asp:Label ID="lblID" runat="server" Text='<%# Eval("id") %>'></asp:Label>
-                                    <asp:TextBox ID="tbid" runat="server" Text='<%# Eval("id") %>'></asp:TextBox>
-                                    <asp:TextBox ID="tbInOfferta" runat="server" Text='<%# Eval("InOfferta") %>'></asp:TextBox>
-
-                                    <asp:SqlDataSource ID="sdsPromo" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                                        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
-
-                                    <asp:Repeater ID="rPromo" runat="server" DataSourceID="sdsPromo" OnItemDataBound="rPromo_ItemDataBound">
-                                        <ItemTemplate>
-                                            <div class="ks-legacy-hidden">
-                                                <asp:Label ID="lblOfferta" runat="server" Text="OFFERTA"></asp:Label>
-                                                <asp:Label ID="lblInOfferta" runat="server" Text='<%# Eval("InOfferta") %>'></asp:Label>
-                                                <asp:Label ID="lblQtaMin" runat="server" Text='<%# Eval("OfferteQntMinima") %>'></asp:Label>
-                                                <asp:Label ID="lblMultipli" runat="server" Text='<%# Eval("OfferteMultipli") %>'></asp:Label>
-                                                <asp:Label ID="lblPrezzoPromo" runat="server" Text='<%# Eval("PrezzoPromo") %>'></asp:Label>
-                                                <asp:Label ID="lblPrezzoPromoIvato" runat="server" Text='<%# Eval("PrezzoPromoIvato") %>'></asp:Label>
-                                            </div>
-                                        </ItemTemplate>
-                                    </asp:Repeater>
-                                </asp:Panel>
-
+                                <!-- Hidden fields used by code-behind -->
+                                <asp:Label ID="lblID" runat="server" Text='<%# Eval("id") %>' Visible="false"></asp:Label>
+                                <asp:TextBox ID="tbid" runat="server" Text='<%# Eval("id") %>' Visible="false" EnableViewState="false"></asp:TextBox>
+                                <asp:TextBox ID="tbInOfferta" runat="server" Text='<%# Eval("InOfferta") %>' Visible="false" EnableViewState="false"></asp:TextBox>
                             </ItemTemplate>
                         </asp:TemplateField>
 
                         <!-- Price -->
-                        <asp:TemplateField HeaderText="Price">
+                        <asp:TemplateField>
+                            <HeaderStyle CssClass="wishlist-item_price" />
+                            <ItemStyle CssClass="wishlist-item_price" />
                             <ItemTemplate>
-                                <div class="price-wrap fw-medium flex-nowrap">
-                                    <asp:Label ID="lblPrezzoPromo" runat="server" Visible="false" CssClass="price-text new-price"></asp:Label>
-                                    <asp:Label ID="lblPrezzo" runat="server" Text='<%# "€ " & FormatNumber(Eval("Prezzo"), 2) %>' CssClass="price-text"></asp:Label>
-                                    <asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# "€ " & FormatNumber(Eval("PrezzoIvato"), 2) %>' CssClass="price-text"></asp:Label>
+
+                                <p class="price-wrap fw-medium flex-nowrap">
+                                    <asp:Label ID="lblPrezzoPromo" runat="server" CssClass="new-price price-text fw-medium mb-0" Text='<%# Eval("PrezzoPromo", "{0:N2}") %>'></asp:Label>
+                                    <asp:Label ID="lblPrezzoPromoIvato" runat="server" CssClass="new-price price-text fw-medium mb-0" Text='<%# Eval("PrezzoPromoIvato", "{0:N2}") %>' Visible="false"></asp:Label>
+
+                                    <asp:Label ID="lblPrezzo" runat="server" CssClass="old-price body-md-2 text-main-2 fw-normal" Text='<%# Eval("Prezzo", "{0:N2}") %>'></asp:Label>
+                                    <asp:Label ID="lblPrezzoIvato" runat="server" CssClass="old-price body-md-2 text-main-2 fw-normal" Text='<%# Eval("PrezzoIvato", "{0:N2}") %>' Visible="false"></asp:Label>
+                                </p>
+
+                                <!-- Hidden legacy price digits to satisfy existing code (kept for backward compatibility) -->
+                                <div class="ks-hidden">
+                                    <asp:Image ID="img_prezzo9" runat="server" />
+                                    <asp:Image ID="img_prezzo8" runat="server" />
+                                    <asp:Image ID="img_prezzo7" runat="server" />
+                                    <asp:Image ID="img_prezzo6" runat="server" />
+                                    <asp:Image ID="img_prezzo5" runat="server" />
+                                    <asp:Image ID="img_prezzo4" runat="server" />
+                                    <asp:Image ID="img_prezzo3" runat="server" />
+                                    <asp:Image ID="img_prezzo2" runat="server" />
+                                    <asp:Image ID="img_prezzo1" runat="server" />
                                 </div>
 
-                                <!-- Immagini cifre prezzo (legacy) - mantenute per compatibilità, ma nascoste via CSS -->
-                                <div class="ks-legacy-hidden">
-                                    <asp:Image ID="img_prezzo1" runat="server" />
-                                    <asp:Image ID="img_prezzo2" runat="server" />
-                                    <asp:Image ID="img_prezzo3" runat="server" />
-                                    <asp:Image ID="img_prezzo4" runat="server" />
-                                    <asp:Image ID="img_prezzo5" runat="server" />
-                                    <asp:Image ID="img_prezzo6" runat="server" />
-                                    <asp:Image ID="img_prezzo7" runat="server" />
-                                    <asp:Image ID="img_prezzo8" runat="server" />
-                                    <asp:Image ID="img_prezzo9" runat="server" />
-                                </div>
+                                <!-- Promo repeater (gestito dal code-behind) -->
+                                <asp:SqlDataSource ID="sdsPromo" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                                    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                                    SelectCommand="SELECT '' AS OfferteDescrizione, 0 AS InOfferta, 0 AS OfferteQntMinima, 0 AS OfferteMultipli WHERE 1=0" EnableViewState="False" />
+
+                                <asp:Repeater ID="rPromo" runat="server" DataSourceID="sdsPromo" EnableViewState="false" OnItemDataBound="rPromo_ItemDataBound">
+                                    <ItemTemplate>
+                                        <asp:Label ID="lblOfferta" runat="server" Text='<%# Eval("OfferteDescrizione") %>' Visible="false"></asp:Label>
+                                        <asp:Label ID="lblInOfferta" runat="server" Text='<%# Eval("InOfferta") %>' Visible="false"></asp:Label>
+                                        <asp:Label ID="lblQtaMin" runat="server" Text='<%# Eval("OfferteQntMinima") %>' Visible="false"></asp:Label>
+                                        <asp:Label ID="lblMultipli" runat="server" Text='<%# Eval("OfferteMultipli") %>' Visible="false"></asp:Label>
+                                    </ItemTemplate>
+                                </asp:Repeater>
+
+                                <asp:Panel ID="Panel_in_offerta" runat="server" Visible="False"></asp:Panel>
+
                             </ItemTemplate>
                         </asp:TemplateField>
 
                         <!-- Stock -->
-                        <asp:TemplateField HeaderText="Stock">
+                        <asp:TemplateField>
+                            <HeaderStyle CssClass="wishlist-item_stock" />
+                            <ItemStyle CssClass="wishlist-item_stock" />
                             <ItemTemplate>
-                                <span class="wishlist-stock-status">
-                                    <%# If((If(IsDBNull(Eval("Disponibilita")), 0, Convert.ToInt32(Eval("Disponibilita")))) > 0, "In Stock", "Out of Stock") %>
-                                </span>
+                                <asp:Image ID="imgDispo" runat="server" Visible="false" />
+                                <asp:Image ID="imgArrivo" runat="server" Visible="false" />
 
-                                <!-- Dati legacy per code-behind (logica disponibilità) -->
-                                <div class="ks-legacy-hidden">
-                                    <asp:Label ID="Label_dispo" runat="server" Text='<%# Eval("Disponibilita") %>'></asp:Label>
-                                    <asp:Label ID="Label_arrivo" runat="server" Text='<%# Eval("Arrivo") %>'></asp:Label>
-                                    <asp:Label ID="Label_imp" runat="server" Text='<%# Eval("Impegnata") %>'></asp:Label>
-                                    <asp:Label ID="lblImpegnata" runat="server"></asp:Label>
-                                    <asp:Image ID="imgDispo" runat="server" />
-                                    <asp:Image ID="imgArrivo" runat="server" />
-                                </div>
+                                <asp:Label ID="Label_dispo" runat="server" CssClass="wishlist-stock-status" ForeColor="Red" Text='<%# Eval("Giacenza") %>'></asp:Label>
+                                <asp:Label ID="Label_arrivo" runat="server" Visible="false" Text='<%# Eval("InOrdine") %>'></asp:Label>
+                                <asp:Label ID="Label_imp" runat="server" Visible="false" Text='<%# Eval("Impegnata") %>'></asp:Label>
+                                <asp:Label ID="lblImpegnata" runat="server" Visible="false" Text='<%# Eval("Impegnata") %>'></asp:Label>
+
                             </ItemTemplate>
                         </asp:TemplateField>
 
                         <!-- Action -->
-                        <asp:TemplateField HeaderText="Action">
+                        <asp:TemplateField>
+                            <HeaderStyle CssClass="wishlist-item_action" />
+                            <ItemStyle CssClass="wishlist-item_action" />
                             <ItemTemplate>
-                                <div class="d-flex flex-column gap-2">
 
-                                    <!-- Quantità -->
-                                    <asp:TextBox ID="tbQuantita" runat="server" CssClass="form-control ks-wishlist-qty" Text="1" MaxLength="3"></asp:TextBox>
+                                <!-- Spedizione Gratis (necessario per logica carrello) -->
+                                <asp:SqlDataSource ID="sdsSpedizioneGratis" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                                    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                                    SelectCommand="SELECT SpedizioneGratis_Listini, SpedizioneGratis_Data_Inizio, SpedizioneGratis_Data_Fine, id FROM articoli WHERE (SpedizioneGratis_Listini LIKE CONCAT('%', @Param1, ';%')) AND (id = @Param2) AND (SpedizioneGratis_Data_Inizio <= CURDATE()) AND (SpedizioneGratis_Data_Fine >= CURDATE())">
+                                    <SelectParameters>
+                                        <asp:SessionParameter Name="Param1" SessionField="Listino" />
+                                        <asp:ControlParameter ControlID="lblID" Name="Param2" PropertyName="Text" />
+                                    </SelectParameters>
+                                </asp:SqlDataSource>
 
-                                    <!-- Aggiungi al carrello (wrapper ONUS, click passa all'ImageButton invisibile) -->
-                                    <div class="ks-btn-wrap tf-btn btn-gray">
-                                        Aggiungi al carrello
-                                        <asp:ImageButton ID="ImageButton1" runat="server" ImageUrl="~/Public/Banner/blank.GIF" CssClass="ks-btn-overlay" OnClick="ImageButton1_Click" />
-                                    </div>
+                                <asp:GridView ID="GridView3" runat="server" AutoGenerateColumns="False" DataSourceID="sdsSpedizioneGratis" BorderWidth="0px" ShowHeader="False" CssClass="ks-hidden">
+                                    <Columns>
+                                        <asp:TemplateField>
+                                            <ItemTemplate>
+                                                <img style="border-width:0px; background-color:white; margin-top:5px;" src="Images/freeshipping.gif" title='Questo articolo verra' spedito GRATIS !!! fino al <%# Eval("SpedizioneGratis_Data_Fine","{0:d}") %>' alt="" />
+                                            </ItemTemplate>
+                                        </asp:TemplateField>
+                                    </Columns>
+                                </asp:GridView>
 
-                                    <!-- Multiselezione (checkbox) -->
+                                <div class="d-flex flex-column align-items-end gap-2">
                                     <div class="d-flex align-items-center gap-2">
+                                        <asp:TextBox ID="tbQuantita" runat="server" Text="1" CssClass="ks-qty" />
                                         <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" />
-                                        <span class="ks-wishlist-meta">Seleziona</span>
                                     </div>
 
-                                    <!-- GridView3 + datasource spedizione gratis (legacy) -->
-                                    <div class="ks-legacy-hidden">
-                                        <asp:SqlDataSource ID="sdsSpedizioneGratis" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                                            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" SelectCommand=""></asp:SqlDataSource>
-                                        <asp:GridView ID="GridView3" runat="server" AutoGenerateColumns="False" DataSourceID="sdsSpedizioneGratis">
-                                            <Columns>
-                                                <asp:BoundField DataField="Spedizione" HeaderText="Spedizione" />
-                                            </Columns>
-                                        </asp:GridView>
-                                    </div>
+                                    <asp:ImageButton ID="ImageButton1" runat="server" ImageUrl="Images/cart.png" ToolTip="Aggiungi al Carrello" OnClick="ImageButton1_Click"
+                                        CssClass="ks-btn-image" CausesValidation="false" />
 
+                                    <asp:RequiredFieldValidator ID="RequiredFieldValidator2" runat="server" ControlToValidate="tbQuantita" Display="Dynamic" ErrorMessage="!" SetFocusOnError="True"></asp:RequiredFieldValidator>
+                                    <asp:CompareValidator ID="CompareValidator2" runat="server" ControlToValidate="tbQuantita" Display="Dynamic" ErrorMessage="!" Operator="GreaterThan" SetFocusOnError="True" Type="Integer" ValueToCompare="0"></asp:CompareValidator>
                                 </div>
+
                             </ItemTemplate>
                         </asp:TemplateField>
 
                     </Columns>
 
+                    <PagerStyle CssClass="nav" />
                 </asp:GridView>
+
             </div>
 
-            <!-- Azioni pagina (ONUS) -->
-            <div class="mt-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
-
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <asp:Label ID="lblPrezzi" runat="server" CssClass="ks-legacy-hidden"></asp:Label>
-                </div>
-
-                <div class="ks-wishlist-actions">
-                    <asp:ImageButton ID="Selezione_Multipla" runat="server" ImageUrl="~/Images/bt_acquista.jpg" OnClick="Selezione_Multipla_Click" AlternateText="Aggiungi selezionati" ToolTip="Aggiungi selezionati al carrello" />
-                    <asp:LinkButton ID="LB_cancella_tutta_wishlist" runat="server" CssClass="tf-btn btn-gray" ToolTip="Svuota wishlist">Svuota wishlist</asp:LinkButton>
-                    <asp:LinkButton ID="LB_crea_html" runat="server" CssClass="tf-btn btn-gray" ToolTip="Crea HTML">Crea HTML</asp:LinkButton>
-                </div>
-
+            <div class="mt-3">
+                <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" CssClass="body-small text-main-2"></asp:Label>
+                <asp:Label ID="lblLinee" runat="server" Text="0" Visible="false"></asp:Label>
             </div>
 
         </div>
     </div>
+    <!-- /Wishlist -->
 
 </asp:Content>
