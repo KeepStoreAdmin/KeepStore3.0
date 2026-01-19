@@ -3,6 +3,79 @@
 <%@ Register Assembly="ConwayControls" Namespace="ConwayControls.Web" TagPrefix="ccwc" %>
 
 
+
+
+<asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
+    <!-- ONUS: page-scoped assets (safe even if the MasterPage already loads them) -->
+    <link rel="stylesheet" href="/Public/assets/icons/icomoon/style.css" />
+    <link rel="stylesheet" href="/Public/assets/css/styles.css" />
+
+    <style>
+        /* KeepStore: cart patch (ONUS) */
+        .ks-cart-title{display:flex;flex-wrap:wrap;gap:.5rem;align-items:baseline}
+        .ks-cart-title .ks-brand{color:#e12825;font-weight:700}
+        .ks-cart-badge-free{display:inline-block;padding:.15rem .5rem;border-radius:999px;font-size:12px;background:#f2f7ff}
+        .ks-cart-bottom{margin-top:1.5rem}
+        .ks-summary-box{border:1px solid #eee;border-radius:12px;padding:1rem}
+        .ks-summary-table td{padding:.35rem 0}
+        .ks-alert{padding:.75rem 1rem;border-radius:12px;margin-top:1rem}
+        .ks-alert-danger{background:#fff1f1;border:1px solid #ffd0d0;color:#b00020}
+        .ks-alert-warning{background:#fff7e6;border:1px solid #ffe0a3;color:#7a4c00;padding:.75rem 1rem;border-radius:12px;margin-top:1rem}
+        .ks-coupon-panel{border:1px solid #eee;border-radius:12px;padding:1rem}
+        .ks-coupon-panel .tf-btn{white-space:nowrap}
+        .ks-cart-buttons{margin-top:1rem;display:flex;flex-wrap:wrap;gap:.75rem;align-items:center}
+        .ks-cart-buttons .ks-right{margin-left:auto}
+        .ks-cart-item-promo td{padding-top:0}
+        .ks-promo-badge{display:inline-flex;align-items:center;gap:.5rem;border:1px dashed #ddd;border-radius:12px;padding:.4rem .6rem;background:#fafafa;font-size:.85rem}
+        .ks-promo-badge strong{color:#e12825}
+        .tf-table-page-cart .remove-cart a{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:999px;border:1px solid #eee}
+        .tf-table-page-cart .remove-cart a:hover{border-color:#ccc}
+        .ks-discount-card{border:1px solid #eee;border-radius:12px;overflow:hidden}
+        .ks-discount-card__header{padding:.75rem 1rem;background:#f6f6f6;font-weight:700}
+        .ks-discount-card__body{display:flex;gap:1rem;align-items:flex-start;justify-content:space-between;padding:1rem}
+        .ks-discount-card__value{font-weight:800;color:#e12825;white-space:nowrap}
+        .ks-discount-card__footer{padding:.6rem 1rem;background:#fafafa;text-align:right}
+        @media (max-width: 991px){
+            .ks-cart-buttons .ks-right{margin-left:0;width:100%}
+        }
+    </style>
+
+    <script type="text/javascript">
+        (function () {
+            function closest(el, selector) {
+                while (el && el.nodeType === 1) {
+                    if (el.matches(selector)) return el;
+                    el = el.parentElement;
+                }
+                return null;
+            }
+
+            function initQtyButtons() {
+                var buttons = document.querySelectorAll('.ks-wg-quantity .btn-quantity');
+                for (var i = 0; i < buttons.length; i++) {
+                    buttons[i].addEventListener('click', function (e) {
+                        e.preventDefault();
+                        var wg = closest(e.currentTarget, '.ks-wg-quantity');
+                        if (!wg) return;
+                        var input = wg.querySelector('input');
+                        if (!input) return;
+                        var val = parseInt(input.value, 10);
+                        if (isNaN(val)) val = 1;
+                        if (e.currentTarget.classList.contains('btn-increase')) val++;
+                        if (e.currentTarget.classList.contains('btn-decrease')) val = Math.max(1, val - 1);
+                        input.value = val;
+                    });
+                }
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initQtyButtons);
+            } else {
+                initQtyButtons();
+            }
+        })();
+    </script>
+</asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
 
 
@@ -42,466 +115,448 @@
 
 <asp:Content ID="Content1" ContentPlaceHolderID="cph" Runat="Server">
 
-    <h1>Il tuo carrello</h1>
-
-<br />
-    <asp:SqlDataSource ID="sdsArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-        EnableViewState="False" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-        SelectCommand="SELECT vcarrello.id, vcarrello.LoginId, vcarrello.SessionId, vcarrello.DataOra, vcarrello.ArticoliId, vcarrello.Codice, vcarrello.Descrizione1, vcarrello.Qnt, vcarrello.NListino, vcarrello.OfferteDettaglioID, vcarrello.Ean, vcarrello.Descrizione2, vcarrello.UmID, vcarrello.MarcheId, vcarrello.MarcheDescrizione, vcarrello.MarcheOrdinamento, vcarrello.iva, vcarrello.Peso, vcarrello.PesoRiga, vcarrello.Img1, vcarrello.Giacenza, vcarrello.InOrdine, vcarrello.Disponibilita, vcarrello.Impegnata, vcarrello.ScortaMinima, vcarrello.Prezzo, vcarrello.PrezzoIvato, vcarrello.Importo, vcarrello.ImportoIvato, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine FROM vcarrello LEFT OUTER JOIN articoli ON vcarrello.ArticoliId = articoli.id WHERE (articoli.SpedizioneGratis_Listini IS NULL) ORDER BY vcarrello.id"
-        DeleteCommand="delete from carrello where (Id = ?Id)"
-        UpdateCommand="update carrello set qnt = ?Qnt where (Id = ?Id)">
-                    
-    </asp:SqlDataSource><asp:SqlDataSource ID="sdsArticoli_Spedizione_Gratis" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-        EnableViewState="False" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-        SelectCommand="SELECT vcarrello.id, vcarrello.LoginId, vcarrello.SessionId, vcarrello.DataOra, vcarrello.ArticoliId, vcarrello.Codice, vcarrello.Descrizione1, vcarrello.Qnt, vcarrello.NListino, vcarrello.OfferteDettaglioID, vcarrello.Ean, vcarrello.Descrizione2, vcarrello.UmID, vcarrello.MarcheId, vcarrello.MarcheDescrizione, vcarrello.MarcheOrdinamento, vcarrello.iva, vcarrello.Valoreiva, vcarrello.Peso, vcarrello.PesoRiga, vcarrello.Img1, vcarrello.Giacenza, vcarrello.InOrdine, vcarrello.Disponibilita, vcarrello.Impegnata, vcarrello.ScortaMinima, vcarrello.Prezzo, vcarrello.PrezzoIvato, vcarrello.Importo, vcarrello.ImportoIvato, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine FROM vcarrello LEFT OUTER JOIN articoli ON vcarrello.ArticoliId = articoli.id WHERE (articoli.SpedizioneGratis_Listini IS NOT NULL) ORDER BY vcarrello.id"
-        DeleteCommand="delete from carrello where (Id = ?Id)"
-        UpdateCommand="update carrello set qnt = ?Qnt where (Id = ?Id)">
-        </asp:SqlDataSource>
-        
-        
-    <script runat="server">
-        Function stampa_iva_applicata(ByVal DescrizioneEsenzioneIva As String, ByVal DescrizioneIvaRC As String) As String
-            If DescrizioneIvaRC <> "" Then
-                Return DescrizioneIvaRC
-            Else
-                Return DescrizioneEsenzioneIva
-            End If
-        End Function
-        
-        Function controllaLunghezzaTesto(ByVal testo As String, ByVal lunghezza As Integer) As String
-            If testo.Length > lunghezza Then
-                Return Left(testo, lunghezza) & "..."
-            Else
-                Return testo
-            End If
-        End Function
-    </script>
-        
-    
-    <!-- Sezione degli Articoli Spediti GRATIS -->
-	<asp:Repeater ID="gvArticoliGratis" runat="server" DataSourceID="sdsArticoli_Spedizione_Gratis" OnItemCommand="gvArticoliGratis_ItemCommand">
-
-                <ItemTemplate>
-                    <div class="row table-res m-0" style="border-style:dotted; border-bottom-style:none; border-color:Gray; border-width:1px;">
-                        
-                            <div class="col-2" style="align-self: center;">
-                                <!-- Immagine -->
-                                <div class="text-center">
-                                    <asp:HyperLink ID="HyperLink3" runat="server" NavigateUrl='<%# "~/articolo.aspx?id="& Eval("articoliid") &"&TCid=" & Eval("TCid") %>' >
-										<asp:Image ID="Image2" runat="server" style="width: 100%; max-width: 90px;" ImageUrl='<%# checkImg(Eval("img1")) %>' />
-									</asp:HyperLink>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-5">
-								<div class="table-res-header">
-									Descrizione
-								</div>
-							
-                                <table style="border-collapse:collapse; width:100%">
-                                    <tr>
-                                        <td style="font-size:10pt; vertical-align:top;">
-                                            <!-- Descrizione -->
-                                            <asp:HyperLink ID="HyperLink5" ToolTip='<%# Eval("Descrizione1") %>' runat="server" NavigateUrl='<%# "~/articolo.aspx?id="& Eval("articoliid") &"&TCid=" & Eval("TCid") %>' style="cursor:hand">
-                                                <asp:Label ID="Label2" runat="server" Text='<%# Eval("MarcheDescrizione") %>' Font-Bold="True" Font-Size="10pt" ForeColor="Red"></asp:Label><span style="padding-left:5px; font-size:9pt;"><%#controllaLunghezzaTesto(Eval("Descrizione1"), 60)%></span>
-                                            </asp:HyperLink>
-                                            </br>
-                                            <asp:Label ID="tagliecolori" runat="server" Text='<%# Eval("taglia") & " " & Eval("colore") %>'></asp:Label>
-                                            <asp:TextBox ID="tbArtID" runat="server" Text='<%# Eval("ArticoliID") %>' Visible="false"></asp:TextBox>
-                                            
-                                            <asp:Label ID="lblIvaReverseCharge" runat="server" Text='<%# stampa_iva_applicata(If(IsDBNull(Eval("DescrizioneEsenzioneIva")), "", Eval("DescrizioneEsenzioneIva")),If(IsDBNull(Eval("DescrizioneIvaRC")), "", Eval("DescrizioneIvaRC"))) %>' Visible="true" Font-Size="7pt"></asp:Label>
-                                            <asp:Label ID="lblValoreIva" runat="server" BackColor="#e12825" Font-Size="7pt" ForeColor="white" Style="line-height: 150%" Text='<%# Eval("Valoreiva") %>' Visible="False"></asp:Label>
-                                            <asp:Label ID="lblidIvaRC" runat="server" BackColor="#e12825" Font-Size="7pt" ForeColor="white" Style="line-height: 150%" Text='<%# Eval("IdIvaRC") %>' Visible="False"></asp:Label>
-                                            <asp:Label ID="lblPeso" runat="server" Text='<%# Eval("PesoRiga") %>' Visible="False"></asp:Label>
-                                        </td>
-                                    </tr>
-                                </table>
-								<div class="row">
-									<div class="col-12 col-md-6 pr-0">								
-										Codice<asp:Label ID="Label3" runat="server"  Text='<%# Eval("Codice") %>' Font-Size="8pt" style="padding-left:10px; font-weight:bold;"></asp:Label>
-									
-										<asp:Label ID="Label7" runat="server"  Text='<%# Eval("Ean") %>' Font-Size="5pt" Visible="false"></asp:Label>    
-										<asp:Label ID="lblImp" runat="server" Text='<%# Eval("Impegnata")%>' Font-Size="6pt" Visible="false"></asp:Label>
-										<asp:Label ID="lbl" runat="server" Text='<%# Eval("InOrdine")%>' Font-Size="6pt" Visible="false"></asp:Label>
-									</div>
-									<div class="col-12 col-md-6 pr-0">
-										Disponibilità<asp:Image ID="imgDispo" runat="server" style="padding-left:10px;" /><asp:Label ID="lblDispo" runat="server" Text='<%# Eval("giacenza")%>' Font-Size="8pt" style="padding-left:10px; font-weight:bold;"></asp:Label>
-									</div>
-								</div>
-                            </div>
-							<div class="col-2">
-								<div class="table-res-header">
-									Prezzo
-								</div>
-								<div style="text-align:center; font-weight:bold; vertical-align:top;">
-									<asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# Bind("PrezzoIvato", "{0:C}") %>'></asp:Label>
-									<asp:Label ID="lblPrezzo" runat="server" Text='<%# Bind("Prezzo", "{0:C}") %>'></asp:Label>
-									<div style="font-size:7pt; color:Red; font-weight:normal; padding-top:5px;"><span style="color:rgb(192, 192, 192);"><%= IIf(Me.Session("IvaTipo") = 1, "+", "")%>IVA. <%# Eval("ValoreIva")%>%</span></div>
-									<div style="margin:auto;"><img src="Images/spedizione_gratis.png" alt="" style="padding:10px; height:30px;"/></div>																						
-								</div>
-							</div>
-							<div class="col-2 col-md-1">
-								<div class="table-res-header">
-									Q.tà
-								</div>
-								<div style="width:55px; text-align:center; font-size:10pt; vertical-align:top; border-right-style:solid; border-left-style:solid; border-color:#f0f0f0; border-width:1px;">
-									<i data-qty-action="decrementQty" style="color: #383838; font-size:11px; margin: 0px!important;" class="fa fa-minus-circle fa-2x align-self-center mx-1"></i>
-									<asp:TextBox ID="tbQta" runat="server" Text='<%# Eval("qnt") %>' style="width:20px; font-size:11pt; font-weight:bold; border-style:none; text-align:center; border-style:none;" MaxLength="4"/>
-									<i data-qty-action="incrementQty" style="color: #383838; font-size:11px; margin: 0px!important;" class="fa fa-plus-circle fa-2x align-self-center mx-1"></i>		
-									<div>
-										<asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" style="margin:auto; font-size:7pt; color:Gray;">Aggiorna</asp:LinkButton>
-									</div>
-									<div style="padding-top:5px;">
-										<asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%# Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" style="margin:auto; font-size:7pt; color:rgb(205, 38, 44);">Elimina</asp:LinkButton>
-									</div>
-	  
-									<asp:TextBox ID="tbID" runat="server" Text='<%# Eval("id") %>' Visible="false"/>
-								</div>
-							</div>
-                            <div class="offset-2 col-10 offset-md-0 col-md-2" style="text-align:right; vertical-align:middle; font-weight:bold; font-size:12pt;">
-								<div class="table-res-header">
-									Prezzo Totale
-								</div>
-                                <table style=" width:100%; height:100%; vertical-align:top; text-align:center;">
-                                    <tr>
-                                        <td style="font-weight: 800; vertical-align:top; color:rgb(205, 38, 44);">
-                                            <asp:Label ID="lblImportoIvato" runat="server" Text='<%# Bind("ImportoIvato", "{0:C}") %>'></asp:Label>
-                                            <asp:Label ID="lblImporto" runat="server" Text='<%# Bind("Importo", "{0:C}") %>' Visible="false"></asp:Label>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                        <div class="col-12 mt-2"></div>
-                        
-						
-                        <asp:SqlDataSource ID="sdsPromo" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                            SelectCommand="SELECT * FROM vsuperarticoli WHERE ID=?ID AND NListino=?NListino GROUP BY offerteQntMinima, offerteMultipli, nlistino ORDER BY PrezzoPromo DESC" EnableViewState="False">
-                            <SelectParameters>
-                                <asp:ControlParameter Name="ID" ControlID="tbArtID" PropertyName="Text" Type="Int32" />
-                                <asp:SessionParameter Name="NListino" SessionField="listino" Type="Int32" />
-                            </SelectParameters>
-                        </asp:SqlDataSource>
-                        
-                        <asp:Repeater ID="rPromo" runat="server" DataSourceID="sdsPromo" EnableViewState="false" OnItemDataBound="rPromo_ItemDataBound">
-                            <ItemTemplate>
-                                <div>
-                                    <div style="display:none;">
-                                        <asp:Label ID="lblQtaMin" runat="server" Text='<%# Eval("OfferteQntMinima") %>' Visible="false"></asp:Label>
-                                        <asp:Label ID="lblMultipli" runat="server" Text='<%# Eval("OfferteMultipli") %>' Visible="false"></asp:Label>
-                                        <asp:Label ID="lblPrezzoPromo" runat="server" Text='<%# Eval("PrezzoPromo") %>' Visible="false"></asp:Label>
-                                        <asp:Label ID="lblPrezzoPromoIvato" runat="server" Text='<%# Eval("PrezzoPromoIvato") %>' Visible="false"></asp:Label>
-                                        <asp:Label ID="lblInOfferta" runat="server" Text='<%# Eval("InOfferta") %>' Visible="false"></asp:Label>
-                                        <asp:Label ID="lblDataInizio" runat="server" Text='<%# Eval("OfferteDataInizio") %>' Visible="false"></asp:Label>
-                                        <asp:Label ID="lblDataFine" runat="server" Text='<%# Eval("OfferteDataFine") %>' Visible="false"></asp:Label>
-                                        <asp:Label ID="lblidIvaRC" runat="server" BackColor="#e12825" Font-Size="7pt" ForeColor="white" Text='<%# Eval("IdIvaRC") %>' Visible="False"></asp:Label>
-                                        <asp:Label ID="lblValoreIvaRC" runat="server" BackColor="#e12825" Font-Size="7pt" ForeColor="white" Text='<%# Eval("ValoreIvaRC") %>' Visible="False"></asp:Label>
-                                    </div>
-                                </div>
-								<div class="col-12" style="<%# iif(Eval("InOfferta")=1,"","display:none;") %>">
-									<div class="d-inline-flex w-100-mobile" style="min-width: 55%;border-style:dotted; font-size:6pt; border-width:1px; border-color:Gray; text-align:left; vertical-align:middle; font-weight:bold; background-color:rgb(244, 244, 244);">
-										<div style="float:left; background-color:Red; color:White; padding:2px; border-bottom-style: none; border-top-style: dotted; border-color: Gray; border-width: 1px;">PROMO</div>
-										<asp:Label ID="lblOfferta" runat="server" Visible="false" Font-Size="8pt" Text='<%# "PROMO FINO AL "& Eval("OfferteDataFine") %>' ForeColor="black" style="border-bottom-style: none; border-top-style: dotted; border-right-style: dotted; border-color: Gray; border-width: 1px; padding: 2px; background: #f4f4f4;padding-left:20px;width: 100%;"></asp:Label>
-									</div>
-								</div>
-                            </ItemTemplate>
-                        </asp:Repeater>
-                            
-                    </div>
-                </ItemTemplate>
-    </asp:Repeater>
-    
-    <!-- Sezione degli Articoli normali, senza spedizione Gratis -->
-    <asp:Repeater ID="Repeater1" runat="server" DataSourceID="sdsArticoli" OnItemCommand="Repeater1_ItemCommand">
-        
-            
-                <ItemTemplate>
-                    <div class="row table-res m-0" style="border-style:dotted; border-bottom-style:none; border-color:Gray; border-width:1px;">
-                        
-                            <div class="col-2" style="align-self: center;">
-                                <!-- Immagine -->
-                                <div class="text-center">
-                                    <asp:HyperLink ID="HyperLink3" runat="server" NavigateUrl='<%# "~/articolo.aspx?id="& Eval("articoliid") &"&TCid=" & Eval("TCid") %>' >
-										<asp:Image ID="Image2" runat="server" style="width: 100%; max-width: 90px;" ImageUrl='<%# checkImg(Eval("img1")) %>' />
-									</asp:HyperLink>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-5">
-								<div class="table-res-header">
-									Descrizione
-								</div>
-							
-                                <table style="border-collapse:collapse; width:100%">
-                                    <tr>
-                                        <td style="font-size:10pt; vertical-align:top;">
-                                            <!-- Descrizione -->
-                                            <asp:HyperLink ID="HyperLink5" ToolTip='<%# Eval("Descrizione1") %>' runat="server" NavigateUrl='<%# "~/articolo.aspx?id="& Eval("articoliid") &"&TCid=" & Eval("TCid") %>' style="cursor:hand">
-                                                <asp:Label ID="Label2" runat="server" Text='<%# Eval("MarcheDescrizione") %>' Font-Bold="True" Font-Size="10pt" ForeColor="Red"></asp:Label><span style="padding-left:5px; font-size:9pt;"><%#controllaLunghezzaTesto(Eval("Descrizione1"), 60)%></span>
-                                            </asp:HyperLink>
-                                            </br>
-                                            <asp:Label ID="tagliecolori" runat="server" Text='<%# Eval("taglia") & " " & Eval("colore") %>'></asp:Label>
-                                            <asp:TextBox ID="tbArtID" runat="server" Text='<%# Eval("ArticoliID") %>' Visible="false"></asp:TextBox>
-                                            
-                                            <asp:Label ID="lblIvaReverseCharge" runat="server" Text='<%# stampa_iva_applicata(If(IsDBNull(Eval("DescrizioneEsenzioneIva")), "", Eval("DescrizioneEsenzioneIva")),If(IsDBNull(Eval("DescrizioneIvaRC")), "", Eval("DescrizioneIvaRC"))) %>' Visible="true" Font-Size="7pt"></asp:Label>
-                                            <asp:Label ID="lblValoreIva" runat="server" BackColor="#e12825" Font-Size="7pt" ForeColor="white" Style="line-height: 150%" Text='<%# Eval("Valoreiva") %>' Visible="False"></asp:Label>
-                                            <asp:Label ID="lblidIvaRC" runat="server" BackColor="#e12825" Font-Size="7pt" ForeColor="white" Style="line-height: 150%" Text='<%# Eval("IdIvaRC") %>' Visible="False"></asp:Label>
-                                            <asp:Label ID="lblPeso" runat="server" Text='<%# Eval("PesoRiga") %>' Visible="False"></asp:Label>
-                                        </td>
-                                    </tr>
-                                    
-                                </table>
-								<div class="row">
-									<div class="col-12 col-md-6 pr-0">								
-										Codice<asp:Label ID="Label3" runat="server"  Text='<%# Eval("Codice") %>' Font-Size="8pt" style="padding-left:10px; font-weight:bold;"></asp:Label>
-									
-										<asp:Label ID="Label7" runat="server"  Text='<%# Eval("Ean") %>' Font-Size="5pt" Visible="false"></asp:Label>    
-										<asp:Label ID="lblImp" runat="server" Text='<%# Eval("Impegnata")%>' Font-Size="6pt" Visible="false"></asp:Label>
-										<asp:Label ID="lbl" runat="server" Text='<%# Eval("InOrdine")%>' Font-Size="6pt" Visible="false"></asp:Label>
-									</div>
-									<div class="col-12 col-md-6 pr-0">
-										Disponibilità<asp:Image ID="imgDispo" runat="server" style="padding-left:10px;" /><asp:Label ID="lblDispo" runat="server" Text='<%# Eval("giacenza")%>' Font-Size="8pt" style="padding-left:10px; font-weight:bold;"></asp:Label>
-									</div>
-								</div>
-                            </div>
-							<div class="col-2">
-								<div class="table-res-header">
-									Prezzo
-								</div>
-								<div style="text-align:center; font-weight:bold; vertical-align:top;">
-									<asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# Eval("PrezzoIvato") %>'></asp:Label>
-									<asp:Label ID="lblPrezzo" runat="server" Text='<%# Bind("Prezzo", "{0:C}") %>'></asp:Label>
-									<div style="font-size:7pt; color:Red; font-weight:normal; padding-top:5px;"><span style="color:rgb(192, 192, 192);"><%= IIf(Me.Session("IvaTipo") = 1, "+", "")%>IVA. <%# Eval("ValoreIva")%>%</span></div>
-								</div>
-							</div>
-							<div class="col-2 col-md-1">
-								<div class="table-res-header">
-									Q.tà
-								</div>
-								<div style="width:55px; text-align:center; font-size:10pt; vertical-align:top; border-right-style:solid; border-left-style:solid; border-color:#f0f0f0; border-width:1px;">
-									<i data-qty-action="decrementQty" style="color: #383838; font-size:11px; margin: 0px!important;" class="fa fa-minus-circle fa-2x align-self-center mx-1"></i>
-									<asp:TextBox ID="tbQta" runat="server" Text='<%# Eval("qnt") %>' style="width:20px; font-size:11pt; font-weight:bold; border-style:none; text-align:center; border-style:none;" MaxLength="4"/>
-									<i data-qty-action="incrementQty" style="color: #383838; font-size:11px; margin: 0px!important;" class="fa fa-plus-circle fa-2x align-self-center mx-1"></i>		
-									<div>
-										<asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" style="margin:auto; font-size:7pt; color:Gray;">Aggiorna</asp:LinkButton>
-									</div>
-									<div style="padding-top:5px;">
-										<asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%# Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" style="margin:auto; font-size:7pt; color:rgb(205, 38, 44);">Elimina</asp:LinkButton>
-									</div>
-	  
-									<asp:TextBox ID="tbID" runat="server" Text='<%# Eval("id") %>' Visible="false"/>
-								</div>
-							</div>
-                            <div class="offset-2 col-10 offset-md-0 col-md-2" style="text-align:right; vertical-align:middle; font-weight:bold; font-size:12pt;">
-								<div class="table-res-header">
-									Prezzo Totale
-								</div>
-                                <table style=" width:100%; height:100%; vertical-align:top; text-align:center;">
-                                    <tr>
-                                        <td style="font-weight: 800; vertical-align:top; color:rgb(205, 38, 44);">
-                                            <asp:Label ID="lblImportoIvato" runat="server" Text='<%# Bind("ImportoIvato", "{0:C}") %>'></asp:Label>
-                                            <asp:Label ID="lblImporto" runat="server" Text='<%# Bind("Importo", "{0:C}") %>' Visible="false"></asp:Label>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                        <div class="col-12 mt-2"></div>
-                        
-                        <asp:SqlDataSource ID="sdsPromo" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                            SelectCommand="SELECT * FROM vsuperarticoli WHERE ID=?ID AND NListino=?NListino GROUP BY offerteQntMinima, offerteMultipli, nlistino ORDER BY PrezzoPromo DESC" EnableViewState="False">
-                            <SelectParameters>
-                                <asp:ControlParameter Name="ID" ControlID="tbArtID" PropertyName="Text" Type="Int32" />
-                                <asp:SessionParameter Name="NListino" SessionField="listino" Type="Int32" />
-                            </SelectParameters>
-                        </asp:SqlDataSource>
-                        
-                        <asp:Repeater ID="rPromo" runat="server" DataSourceID="sdsPromo" EnableViewState="false" OnItemDataBound="rPromo_ItemDataBound">
-                            <ItemTemplate>
-                                <div>
-                                    <div style="display:none;">
-                                        <asp:Label ID="lblQtaMin" runat="server" Text='<%# Eval("OfferteQntMinima") %>' Visible="false"></asp:Label>
-                                        <asp:Label ID="lblMultipli" runat="server" Text='<%# Eval("OfferteMultipli") %>' Visible="false"></asp:Label>
-                                        <asp:Label ID="lblPrezzoPromo" runat="server" Text='<%# Eval("PrezzoPromo") %>' Visible="false"></asp:Label>
-                                        <asp:Label ID="lblPrezzoPromoIvato" runat="server" Text='<%# Eval("PrezzoPromoIvato") %>' Visible="false"></asp:Label>
-                                        <asp:Label ID="lblInOfferta" runat="server" Text='<%# Eval("InOfferta") %>' Visible="false"></asp:Label>
-                                        <asp:Label ID="lblDataInizio" runat="server" Text='<%# Eval("OfferteDataInizio") %>' Visible="false"></asp:Label>
-                                        <asp:Label ID="lblDataFine" runat="server" Text='<%# Eval("OfferteDataFine") %>' Visible="false"></asp:Label>
-                                        <asp:Label ID="lblidIvaRC" runat="server" BackColor="#e12825" Font-Size="7pt" ForeColor="white" Text='<%# Eval("IdIvaRC") %>' Visible="False"></asp:Label>
-                                        <asp:Label ID="lblValoreIvaRC" runat="server" BackColor="#e12825" Font-Size="7pt" ForeColor="white" Text='<%# Eval("ValoreIvaRC") %>' Visible="False"></asp:Label>
-                                    </div>
-                                </div>
-								<div class="col-12" style="<%# iif(Eval("InOfferta")=1,"","display:none;") %>">
-									<div class="d-inline-flex w-100-mobile" style="min-width: 55%;border-style:dotted; font-size:6pt; border-width:1px; border-color:Gray; text-align:left; vertical-align:middle; font-weight:bold; background-color:rgb(244, 244, 244);">
-										<div style="float:left; background-color:Red; color:White; padding:2px; border-bottom-style: none; border-top-style: dotted; border-color: Gray; border-width: 1px;">PROMO</div>
-										<asp:Label ID="lblOfferta" runat="server" Visible="false" Font-Size="8pt" Text='<%# "PROMO FINO AL "& Eval("OfferteDataFine") %>' ForeColor="black" style="border-bottom-style: none; border-top-style: dotted; border-right-style: dotted; border-color: Gray; border-width: 1px; padding: 2px; background: #f4f4f4;padding-left:20px;width: 100%;"></asp:Label>
-									</div>
-								</div>
-                            </ItemTemplate>
-                        </asp:Repeater>
-                            
-                    </div>
-                </ItemTemplate>
-            
-        
-        
-    </asp:Repeater>
-    
-    <div id="Qnt_Errata" runat="server" style=" width:97%; font-size:10pt; padding:10px; text-align:center; color:white; background-color:Red; font-weight:bold; border:dotted 1px black;" visible="false">
-        E' stata impostata una quantità articolo minore o uguale a 0.<br />Eliminare l'articolo dal carrello o impostare una quantità maggiore di 0.
+    <!-- Breadcrumb -->
+    <div class="tf-sp-3 pb-0">
+        <div class="container">
+            <ul class="breakcrumbs">
+                <li><a href="/Default.aspx" class="body-small link">Home</a></li>
+                <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
+                <li><span class="body-small">Carrello</span></li>
+            </ul>
+        </div>
     </div>
-    
-    <!-- Buono Sconto -->
-    <asp:SqlDataSource ID="SqlDataBuonoSconto" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-        EnableViewState="False" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-        SelectCommand="SELECT * FROM buoni_sconti WHERE id=@idBuonoSconto">
-        <SelectParameters>
-            <asp:SessionParameter DefaultValue="0" Name="idBuonoSconto" SessionField="BuonoSconto_id" Type="Int32" />
-        </SelectParameters>
-    </asp:SqlDataSource>
-    
-    <asp:GridView ID="GV_BuoniSconti" DataSourceID="SqlDataBuonoSconto" runat="server" AutoGenerateColumns="False" GridLines="None" BorderStyle="None" CellSpacing="0" ShowHeader="False" Width="100%">
-        <Columns>
-            <asp:TemplateField>
-                <ItemTemplate>
-                    <asp:Label ID="lbl_idBuonoSconto" runat="server" Text='<%# Eval("id")%>' Visible="false"></asp:Label>
-                    <asp:Label ID="lbl_Percentuale_BuonoSconto" runat="server" Text='<%# Eval("scontoPercentuale")%>' Visible="false"></asp:Label>
-                    <asp:Label ID="lbl_scontoFisso_BuonoSconto" runat="server" Text='<%# Eval("scontoFisso")%>' Visible="false"></asp:Label>
-                    <asp:Label ID="lbl_valore_BuonoSconto" runat="server" Text='<%# Eval("valore")%>' Visible="false"></asp:Label>
-                    <asp:Label ID="lbl_ScontoVettore" runat="server" Text='<%# Eval("scontoVettore")%>' Visible="false"></asp:Label>
-                   
-                    <table style="width:100%; vertical-align:middle; border:2px red dotted; border-collapse:collapse;">
+
+    <section class="s-shoping-cart tf-sp-2">
+        <div class="container">
+
+            <div class="checkout-status tf-sp-2 pt-0">
+                <div class="checkout-status-wrap">
+                    <div class="checkout-status-list">
+                        <div class="checkout-status-item active">
+                            <span class="icon"><i class="icon icon-bag"></i></span>
+                            <span class="text">Carrello</span>
+                        </div>
+                        <div class="checkout-status-item">
+                            <span class="icon"><i class="icon icon-credit-card"></i></span>
+                            <span class="text">Checkout</span>
+                        </div>
+                        <div class="checkout-status-item">
+                            <span class="icon"><i class="icon icon-check"></i></span>
+                            <span class="text">Conferma</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="heading-section mb-3">
+                <h3 class="heading">Il tuo carrello</h3>
+                <div class="body-text-3">
+                    <asp:Label ID="lblArticoli" runat="server" Text="" Font-Bold="true" ForeColor="#E12825"></asp:Label>
+                    <asp:Label ID="lblPresenti" runat="server" Text=""></asp:Label>
+                </div>
+                <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" Font-Size="7pt" Font-Names="arial"></asp:Label>
+            </div>
+
+            <asp:SqlDataSource ID="sdsArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                EnableViewState="False" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                SelectCommand="SELECT vcarrello.id, vcarrello.LoginId, vcarrello.SessionId, vcarrello.DataOra, vcarrello.ArticoliId, vcarrello.Codice, vcarrello.Descrizione1, vcarrello.Qnt, vcarrello.NListino, vcarrello.OfferteDettaglioID, vcarrello.Ean, vcarrello.Descrizione2, vcarrello.UmID, vcarrello.MarcheId, vcarrello.MarcheDescrizione, vcarrello.MarcheOrdinamento, vcarrello.iva, vcarrello.Peso, vcarrello.PesoRiga, vcarrello.Img1, vcarrello.Giacenza, vcarrello.InOrdine, vcarrello.Disponibilita, vcarrello.Impegnata, vcarrello.ScortaMinima, vcarrello.Prezzo, vcarrello.PrezzoIvato, vcarrello.Importo, vcarrello.ImportoIvato, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine FROM vcarrello LEFT OUTER JOIN articoli ON vcarrello.ArticoliId = articoli.id WHERE (articoli.SpedizioneGratis_Listini IS NULL) ORDER BY vcarrello.id"
+                DeleteCommand="delete from carrello where (Id = ?Id)"
+                UpdateCommand="update carrello set qnt = ?Qnt where (Id = ?Id)">
+            </asp:SqlDataSource>
+
+            <asp:SqlDataSource ID="sdsArticoli_Spedizione_Gratis" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                EnableViewState="False" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                SelectCommand="SELECT vcarrello.id, vcarrello.LoginId, vcarrello.SessionId, vcarrello.DataOra, vcarrello.ArticoliId, vcarrello.Codice, vcarrello.Descrizione1, vcarrello.Qnt, vcarrello.NListino, vcarrello.OfferteDettaglioID, vcarrello.Ean, vcarrello.Descrizione2, vcarrello.UmID, vcarrello.MarcheId, vcarrello.MarcheDescrizione, vcarrello.MarcheOrdinamento, vcarrello.iva, vcarrello.Valoreiva, vcarrello.Peso, vcarrello.PesoRiga, vcarrello.Img1, vcarrello.Giacenza, vcarrello.InOrdine, vcarrello.Disponibilita, vcarrello.Impegnata, vcarrello.ScortaMinima, vcarrello.Prezzo, vcarrello.PrezzoIvato, vcarrello.Importo, vcarrello.ImportoIvato, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine FROM vcarrello LEFT OUTER JOIN articoli ON vcarrello.ArticoliId = articoli.id WHERE (articoli.SpedizioneGratis_Listini IS NOT NULL) ORDER BY vcarrello.id"
+                DeleteCommand="delete from carrello where (Id = ?Id)"
+                UpdateCommand="update carrello set qnt = ?Qnt where (Id = ?Id)">
+            </asp:SqlDataSource>
+
+            <script runat="server">
+                Function stampa_iva_applicata(ByVal DescrizioneEsenzioneIva As String, ByVal DescrizioneIvaRC As String) As String
+                    If DescrizioneIvaRC <> "" Then
+                        Return DescrizioneIvaRC
+                    Else
+                        Return DescrizioneEsenzioneIva
+                    End If
+                End Function
+
+                Function controllaLunghezzaTesto(ByVal testo As String, ByVal lunghezza As Integer) As String
+                    If testo.Length > lunghezza Then
+                        Return Left(testo, lunghezza) & "..."
+                    Else
+                        Return testo
+                    End If
+                End Function
+            </script>
+
+            <div class="overflow-x-auto">
+                <table class="tf-table-page-cart">
+                    <thead>
                         <tr>
-                            <td colspan="2" style="text-align:center; color:White; font-weight:bold; font-size:15px; padding:2px; background-color:rgb(109, 109, 109);">
-                                BUONO SCONTO
-                            </td>
+                            <th>Prodotto</th>
+                            <th>Prezzo</th>
+                            <th>Q.tà</th>
+                            <th>Totale</th>
+                            <th></th>
                         </tr>
-                        <tr style="background-color:white;">
-                            <td style="width:70%; padding:2px;">
-                                <b style="font-size:15px;">
-                                    <asp:Label ID="lbl_Descrizione1_BuonoSconto" runat="server" Text='<%#Eval("descrizione1")%>'></asp:Label></b><br />
-                                    <asp:Label ID="lbl_Descrizione2_BuonoSconto" runat="server" Text='<%#Eval("descrizione2")%>'></asp:Label>
-                            </td>
-                            <td style="text-align:right; padding:2px; color:Red;">
-                               <asp:Label ID="lbl_TotSconto" runat="server" Text=""></asp:Label>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="2" style="background-color:rgb(109, 109, 109); color:White; text-align:right;">
-                                <asp:LinkButton ID="CancellaBuonoSconto" CommandName="CancellaBuonoSconto" runat="server" style="color:White;">X Elimina Buono Sconto</asp:LinkButton>                                
-                            </td>
-                        </tr>
-                    </table>
-                </ItemTemplate>
-            </asp:TemplateField>
-        </Columns>
-    </asp:GridView>
-<hr />
+                    </thead>
+                    <tbody>
 
-	<div class="container">
-		<div class="row my-2">
-			<div class="col-12 col-md-8">
-				<asp:Label ID="lblArticoli" runat="server" Text="" Font-Bold="true" ForeColor="#E12825"></asp:Label>
-				<asp:Label ID="lblPresenti" runat="server" Text=""></asp:Label>
-				<br /><br />
-				<asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" Font-Size="7pt" Font-Names="arial"></asp:Label>
+                        <!-- Sezione degli Articoli Spediti GRATIS -->
+                        <asp:Repeater ID="gvArticoliGratis" runat="server" DataSourceID="sdsArticoli_Spedizione_Gratis" OnItemCommand="gvArticoliGratis_ItemCommand">
+                            <ItemTemplate>
+                                <tr class="tf-cart-item">
+                                    <td class="tf-cart-item_product">
+                                        <asp:HyperLink ID="HyperLink3" runat="server" CssClass="img-box" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCid") %>'>
+                                            <asp:Image ID="Image2" runat="server" ImageUrl='<%# checkImg(Eval("img1")) %>' AlternateText="" />
+                                        </asp:HyperLink>
+                                        <div class="cart-info">
+                                            <asp:HyperLink ID="HyperLink5" runat="server" CssClass="cart-title body-md-2 fw-semibold link" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCid") %>'>
+                                                <span class="ks-cart-title">
+                                                    <asp:Label ID="Label2" runat="server" Text='<%# Eval("MarcheDescrizione") %>' CssClass="ks-brand"></asp:Label>
+                                                    <span><%# controllaLunghezzaTesto(Eval("Descrizione1"), 60) %></span>
+                                                </span>
+                                            </asp:HyperLink>
 
-				<asp:Panel ID="Panel_BuoniSconto" runat="server" HorizontalAlign="left" style="padding:5px; border-width:1px; text-align:center; margin-top: 20px;border-top-style: solid;border-bottom-style: solid;overflow:hidden;background-color: #444444;" >
-							<div>
-							<b style="color:#70db10">CODICE SCONTO</b>
-							</div>
-							<div>
-							<asp:TextBox ID="TB_BuonoSconto" runat="server" style="height:20px; text-align:center; font-weight:bold; width:98%; text-transform:uppercase; padding:1%; padding-left:1%;"></asp:TextBox>            
-							</div>
-							<div>
-							<asp:Image ID="checkOKBuonoSconto" runat="server" ImageUrl="Public/Images/Ok.png" Height="30px" Visible="false" style="position:absolute; right:2px; top:0px;" />
-							</div>
-							<div>
-							<asp:Image ID="checkNOBuonoSconto" runat="server" ImageUrl="Public/Images/Remove.png" Height="30px" Visible="false" style="position:absolute; right:2px; top:0px;"/>
-							</div>
-							<div>
-							<asp:Button ID="BT_ApplicaBuonoSconto" style="border-style: none; margin-top: 3px; background-color: #70db10; color: white;" runat="server" CausesValidation="false" Text="Aggiungi" Height="100%"/>
-							</div>
-							<div>
-							<asp:Label ID="lblBuonoScontoConvalida" runat="server" Text=""></asp:Label>
-							</div>
-							<div>
-							<asp:LinkButton ID="LB_CancelBuonoSconto" runat="server" style="float:right;" Font-Size="8pt" ForeColor="Red" Visible="false">X Cancella Codice Buono</asp:LinkButton>
-							</div>
-					</asp:Panel>
-				
-				<br />
+                                            <div class="variant-box">
+                                                <p class="body-text-3">Variante:</p>
+                                                <asp:Label ID="tagliecolori" runat="server" CssClass="body-text-3" Text='<%# Eval("taglia") & " " & Eval("colore") %>'></asp:Label>
+                                            </div>
 
-				<asp:TextBox ID="tbVettoriId" runat="server" ToolTip="VettoriId" style="display:none" Width="20px"></asp:TextBox>
-				<asp:TextBox ID="tbPagamenti" runat="server" ToolTip="PagamentiId" style="display:none" Width="20px"></asp:TextBox>
-				<asp:TextBox ID="tbShopIdGestPay" runat="server" ToolTip="tShopIdGestPay" style="display:none" Width="20px"></asp:TextBox>
-				<asp:TextBox ID="tbContrPerc" runat="server" ToolTip="Contrassegno Percentuale" style="display:none" Width="20px"></asp:TextBox>
-				<asp:TextBox ID="tbContrFisso" runat="server" ToolTip="Contrassegno Fisso" style="display:none" Width="20px"></asp:TextBox>
-				<asp:TextBox ID="tbContrMinimo" runat="server" ToolTip="Contrassegno Minimo" style="display:none" Width="20px"></asp:TextBox>
-				<asp:TextBox ID="tbPeso" runat="server" Width="20px" style="display:none" ToolTip="Peso"></asp:TextBox>
-				<asp:TextBox ID="tbTotale" runat="server" Width="20px" style="display:none" ToolTip="Totale"></asp:TextBox> 
+                                            <div class="body-text-3 mt-1">
+                                                <span>Codice: <asp:Label ID="Label3" runat="server" Text='<%# Eval("Codice") %>' Font-Bold="true"></asp:Label></span>
+                                                <span class="mx-2">|</span>
+                                                <span>Disponibilità: <asp:Label ID="lblDispo" runat="server" Text='<%# Eval("giacenza") %>' Font-Bold="true"></asp:Label></span>
+                                            </div>
 
-			</div>
-			<div class="col-12 col-md-4" style="line-height: 135%;font-size:9pt;">
-				<table width="100%" id="TableConteggi" runat="server" visible="false">
-					<tr>
-						<td align="right" valign="top" style="line-height: 135%;font-size:9pt; width:70%;">
-							Imponibile:</td>
-						<td align="right" width="30%" valign="top" style="font-size:9pt"><asp:Label ID="lblImponibile" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
-					</tr>
-					<tr>
-						<td align="right" valign="top" style="line-height: 135%;font-size:9pt; width:70%;">
-							Spedizione:</td>
-						<td align="right" width="30%" valign="top" style="font-size:9pt"><asp:Label ID="lblSpeseSped" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
-					</tr>
-					<tr>
-						<td align="right" valign="top" style="line-height: 135%;font-size:9pt; width:70%;">
-							Assicurazione:</td>
-						<td align="right" width="30%" valign="top" style="font-size:9pt"><asp:Label ID="lblSpeseAss" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
-					</tr>
-					<tr>
-						<td align="right" valign="top" style="line-height: 135%;font-size:9pt; width:70%;">
-							IVA:</td>
-						<td align="right" width="30%" valign="top" style="font-size:9pt"><asp:Label ID="lblIva" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
-					</tr>
-					<tr>
-						<td align="right" valign="top" style="line-height: 135%;font-size:9pt; width:70%;">
-							Pagamento:</td>
-						<td align="right" width="30%" valign="top" style="font-size:9pt"><asp:Label ID="lblPagamento" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
-					</tr>
-					<tr>
-						<td align="right" valign="top" style="line-height: 135%;font-size:9pt; width:70%;">
-							Buono Sconto:</td>
-						<td align="right" width="30%" valign="top" style="font-size:9pt"><asp:Label ID="lblBuonoSconto" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
-					</tr>
-					<tr>
-						<td align="right" valign="top" style="line-height: 135%;font-size:9pt; width:70%;">
-							Buono Sconto IVA:</td>
-						<td align="right" width="30%" valign="top" style="font-size:9pt"><asp:Label ID="lblBuonoScontoIVA" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
-					</tr>
-					<tr>
-						<td align="right" valign="top" style="line-height: 135%;font-size:9pt; width:70%;"><b>
-							Totale:</b></td>
-						<td align="right" width="30%" valign="top" style="font-size:9pt"><asp:Label ID="lblTotale" runat="server" Text="&#8364; 0,00" Font-Bold="true" style="color:rgb(205, 38, 44);"></asp:Label></td>
-					</tr>
-				</table>
-			</div>
-		</div>
-		<div ID="canorder" runat="server" Style="font-size:12px; color:white; background:red; text-align:center">
-			Non sei un utente abilitato a procedere con l'ordine. Contattaci se desideri invece procedere
-			</div>
-	</div>
-	<div class="row">
-		<div class="col-12">
+                                            <span class="ks-cart-badge-free mt-2">Spedizione gratis</span>
 
-			<asp:LinkButton ID="btContinua" runat="server" Style="min-width:130px; font-size:12px; border-radius: unset" ForeColor="White" CssClass="btn btn-default m-1" CausesValidation="false">Continua lo Shopping</asp:LinkButton>
+                                            <!-- Hidden / technical fields (used by VB code-behind) -->
+                                            <asp:TextBox ID="tbArtID" runat="server" Text='<%# Eval("ArticoliID") %>' Visible="false"></asp:TextBox>
+                                            <asp:Label ID="lblIvaReverseCharge" runat="server" Text='<%# stampa_iva_applicata(If(IsDBNull(Eval("DescrizioneEsenzioneIva")), "", Eval("DescrizioneEsenzioneIva")),If(IsDBNull(Eval("DescrizioneIvaRC")), "", Eval("DescrizioneIvaRC"))) %>' Visible="true" Font-Size="7pt"></asp:Label>
+                                            <asp:Label ID="lblValoreIva" runat="server" Text='<%# Eval("Valoreiva") %>' Visible="False"></asp:Label>
+                                            <asp:Label ID="lblidIvaRC" runat="server" Text='<%# Eval("IdIvaRC") %>' Visible="False"></asp:Label>
+                                            <asp:Label ID="lblPeso" runat="server" Text='<%# Eval("PesoRiga") %>' Visible="False"></asp:Label>
+                                            <asp:Label ID="lblArrivo" runat="server" Text="" Visible="False"></asp:Label>
+                                            <asp:Label ID="Label7" runat="server" Text='<%# Eval("Ean") %>' Visible="false"></asp:Label>
+                                            <asp:Label ID="lblImp" runat="server" Text='<%# Eval("Impegnata")%>' Visible="false"></asp:Label>
+                                            <asp:Label ID="lbl" runat="server" Text='<%# Eval("InOrdine")%>' Visible="false"></asp:Label>
+                                            <asp:Image ID="imgDispo" runat="server" Visible="false" />
+                                        </div>
+                                    </td>
 
-			<asp:LinkButton ID="btAggiorna" runat="server" Style="min-width:130px; font-size:12px; border-radius: unset" ForeColor="White" CssClass="btn btn-default m-1" CausesValidation="false">Aggiorna Carrello</asp:LinkButton>
+                                    <td data-cart-title="Prezzo" class="tf-cart-item_price">
+                                        <p class="cart-price price-text fw-medium">
+                                            <asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# Bind("PrezzoIvato", "{0:C}") %>'></asp:Label>
+                                            <asp:Label ID="lblPrezzo" runat="server" Text='<%# Bind("Prezzo", "{0:C}") %>'></asp:Label>
+                                        </p>
+                                        <p class="body-text-3 text-secondary"><%= IIf(Me.Session("IvaTipo") = 1, "+", "")%>IVA. <%# Eval("ValoreIva")%>%</p>
+                                    </td>
 
-			<asp:LinkButton ID="btSvuota" runat="server" Style="min-width:130px; font-size:12px; border-radius: unset" ForeColor="White" CssClass="btn btn-default m-1" CausesValidation="false">Svuota Carrello</asp:LinkButton>
-		<div style="text-align: right;float: right;">
-        <asp:LinkButton ID="btCompleta" runat="server" ForeColor="White" CssClass="btn btn-lg btn-default m-1" Style="min-width:130px; font-size:15px;background-color: #70db10!important; border-radius: unset" CausesValidation="false">Procedi con l'ordine</asp:LinkButton>
-		</div>
-			
-		</div>
-	</div>
-	<asp:Panel ID="Panel_Unico" runat="server">   
+                                    <td data-cart-title="Q.tà" class="tf-cart-item_quantity">
+                                        <div class="wg-quantity ks-wg-quantity">
+                                            <span class="btn-quantity btn-decrease"><i class="icon icon-minus"></i></span>
+                                            <asp:TextBox ID="tbQta" runat="server" Text='<%# Eval("qnt") %>' CssClass="quantity-product" MaxLength="4" />
+                                            <span class="btn-quantity btn-increase"><i class="icon icon-plus"></i></span>
+                                        </div>
+                                        <div class="mt-2">
+                                            <asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link body-text-3">Aggiorna</asp:LinkButton>
+                                        </div>
+                                        <asp:TextBox ID="tbID" runat="server" Text='<%# Eval("id") %>' Visible="false" />
+                                    </td>
+
+                                    <td data-cart-title="Totale" class="tf-cart-item_total">
+                                        <p class="cart-total total-price price-text fw-medium">
+                                            <asp:Label ID="lblImportoIvato" runat="server" Text='<%# Bind("ImportoIvato", "{0:C}") %>'></asp:Label>
+                                            <asp:Label ID="lblImporto" runat="server" Text='<%# Bind("Importo", "{0:C}") %>' Visible="false"></asp:Label>
+                                        </p>
+                                    </td>
+
+                                    <td class="remove-cart">
+                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%# Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link" Text="<i class='icon icon-close'></i>"></asp:LinkButton>
+                                    </td>
+                                </tr>
+
+                                <tr class="ks-cart-item-promo">
+                                    <td colspan="5">
+                                        <asp:SqlDataSource ID="sdsPromo" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                                            SelectCommand="SELECT * FROM vsuperarticoli WHERE ID=?ID AND NListino=?NListino GROUP BY offerteQntMinima, offerteMultipli, nlistino ORDER BY PrezzoPromo DESC" EnableViewState="False">
+                                            <SelectParameters>
+                                                <asp:ControlParameter Name="ID" ControlID="tbArtID" PropertyName="Text" Type="Int32" />
+                                                <asp:SessionParameter Name="NListino" SessionField="listino" Type="Int32" />
+                                            </SelectParameters>
+                                        </asp:SqlDataSource>
+
+                                        <asp:Repeater ID="rPromo" runat="server" DataSourceID="sdsPromo" EnableViewState="false" OnItemDataBound="rPromo_ItemDataBound">
+                                            <ItemTemplate>
+                                                <div style="display:none;">
+                                                    <asp:Label ID="lblQtaMin" runat="server" Text='<%# Eval("OfferteQntMinima") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblMultipli" runat="server" Text='<%# Eval("OfferteMultipli") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblPrezzoPromo" runat="server" Text='<%# Eval("PrezzoPromo") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblPrezzoPromoIvato" runat="server" Text='<%# Eval("PrezzoPromoIvato") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblInOfferta" runat="server" Text='<%# Eval("InOfferta") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblDataInizio" runat="server" Text='<%# Eval("OfferteDataInizio") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblDataFine" runat="server" Text='<%# Eval("OfferteDataFine") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblidIvaRC" runat="server" Text='<%# Eval("IdIvaRC") %>' Visible="False"></asp:Label>
+                                                    <asp:Label ID="lblValoreIvaRC" runat="server" Text='<%# Eval("ValoreIvaRC") %>' Visible="False"></asp:Label>
+                                                </div>
+                                                <div style="<%# iif(Eval("InOfferta")=1,"","display:none;") %>">
+                                                    <span class="ks-promo-badge">
+                                                        <strong>PROMO</strong>
+                                                        <asp:Label ID="lblOfferta" runat="server" Visible="false" Text='<%# "PROMO FINO AL " & Eval("OfferteDataFine") %>'></asp:Label>
+                                                    </span>
+                                                </div>
+                                            </ItemTemplate>
+                                        </asp:Repeater>
+                                    </td>
+                                </tr>
+                            </ItemTemplate>
+                        </asp:Repeater>
+
+                        <!-- Sezione degli Articoli normali, senza spedizione Gratis -->
+                        <asp:Repeater ID="Repeater1" runat="server" DataSourceID="sdsArticoli" OnItemCommand="Repeater1_ItemCommand">
+                            <ItemTemplate>
+                                <tr class="tf-cart-item">
+                                    <td class="tf-cart-item_product">
+                                        <asp:HyperLink ID="HyperLink3" runat="server" CssClass="img-box" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCid") %>'>
+                                            <asp:Image ID="Image2" runat="server" ImageUrl='<%# checkImg(Eval("img1")) %>' AlternateText="" />
+                                        </asp:HyperLink>
+                                        <div class="cart-info">
+                                            <asp:HyperLink ID="HyperLink5" runat="server" CssClass="cart-title body-md-2 fw-semibold link" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCid") %>'>
+                                                <span class="ks-cart-title">
+                                                    <asp:Label ID="Label2" runat="server" Text='<%# Eval("MarcheDescrizione") %>' CssClass="ks-brand"></asp:Label>
+                                                    <span><%# controllaLunghezzaTesto(Eval("Descrizione1"), 60) %></span>
+                                                </span>
+                                            </asp:HyperLink>
+
+                                            <div class="variant-box">
+                                                <p class="body-text-3">Variante:</p>
+                                                <asp:Label ID="tagliecolori" runat="server" CssClass="body-text-3" Text='<%# Eval("taglia") & " " & Eval("colore") %>'></asp:Label>
+                                            </div>
+
+                                            <div class="body-text-3 mt-1">
+                                                <span>Codice: <asp:Label ID="Label3" runat="server" Text='<%# Eval("Codice") %>' Font-Bold="true"></asp:Label></span>
+                                                <span class="mx-2">|</span>
+                                                <span>Disponibilità: <asp:Label ID="lblDispo" runat="server" Text='<%# Eval("giacenza") %>' Font-Bold="true"></asp:Label></span>
+                                            </div>
+
+                                            <!-- Hidden / technical fields (used by VB code-behind) -->
+                                            <asp:TextBox ID="tbArtID" runat="server" Text='<%# Eval("ArticoliID") %>' Visible="false"></asp:TextBox>
+                                            <asp:Label ID="lblIvaReverseCharge" runat="server" Text='<%# stampa_iva_applicata(If(IsDBNull(Eval("DescrizioneEsenzioneIva")), "", Eval("DescrizioneEsenzioneIva")),If(IsDBNull(Eval("DescrizioneIvaRC")), "", Eval("DescrizioneIvaRC"))) %>' Visible="true" Font-Size="7pt"></asp:Label>
+                                            <asp:Label ID="lblValoreIva" runat="server" Text='<%# Eval("Valoreiva") %>' Visible="False"></asp:Label>
+                                            <asp:Label ID="lblidIvaRC" runat="server" Text='<%# Eval("IdIvaRC") %>' Visible="False"></asp:Label>
+                                            <asp:Label ID="lblPeso" runat="server" Text='<%# Eval("PesoRiga") %>' Visible="False"></asp:Label>
+                                            <asp:Label ID="lblArrivo" runat="server" Text="" Visible="False"></asp:Label>
+                                            <asp:Label ID="Label7" runat="server" Text='<%# Eval("Ean") %>' Visible="false"></asp:Label>
+                                            <asp:Label ID="lblImp" runat="server" Text='<%# Eval("Impegnata")%>' Visible="false"></asp:Label>
+                                            <asp:Label ID="lbl" runat="server" Text='<%# Eval("InOrdine")%>' Visible="false"></asp:Label>
+                                            <asp:Image ID="imgDispo" runat="server" Visible="false" />
+                                        </div>
+                                    </td>
+
+                                    <td data-cart-title="Prezzo" class="tf-cart-item_price">
+                                        <p class="cart-price price-text fw-medium">
+                                            <asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# Eval("PrezzoIvato") %>'></asp:Label>
+                                            <asp:Label ID="lblPrezzo" runat="server" Text='<%# Bind("Prezzo", "{0:C}") %>'></asp:Label>
+                                        </p>
+                                        <p class="body-text-3 text-secondary"><%= IIf(Me.Session("IvaTipo") = 1, "+", "")%>IVA. <%# Eval("ValoreIva")%>%</p>
+                                    </td>
+
+                                    <td data-cart-title="Q.tà" class="tf-cart-item_quantity">
+                                        <div class="wg-quantity ks-wg-quantity">
+                                            <span class="btn-quantity btn-decrease"><i class="icon icon-minus"></i></span>
+                                            <asp:TextBox ID="tbQta" runat="server" Text='<%# Eval("qnt") %>' CssClass="quantity-product" MaxLength="4" />
+                                            <span class="btn-quantity btn-increase"><i class="icon icon-plus"></i></span>
+                                        </div>
+                                        <div class="mt-2">
+                                            <asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link body-text-3">Aggiorna</asp:LinkButton>
+                                        </div>
+                                        <asp:TextBox ID="tbID" runat="server" Text='<%# Eval("id") %>' Visible="false" />
+                                    </td>
+
+                                    <td data-cart-title="Totale" class="tf-cart-item_total">
+                                        <p class="cart-total total-price price-text fw-medium">
+                                            <asp:Label ID="lblImportoIvato" runat="server" Text='<%# Bind("ImportoIvato", "{0:C}") %>'></asp:Label>
+                                            <asp:Label ID="lblImporto" runat="server" Text='<%# Bind("Importo", "{0:C}") %>' Visible="false"></asp:Label>
+                                        </p>
+                                    </td>
+
+                                    <td class="remove-cart">
+                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%# Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link" Text="<i class='icon icon-close'></i>"></asp:LinkButton>
+                                    </td>
+                                </tr>
+
+                                <tr class="ks-cart-item-promo">
+                                    <td colspan="5">
+                                        <asp:SqlDataSource ID="sdsPromo" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                                            SelectCommand="SELECT * FROM vsuperarticoli WHERE ID=?ID AND NListino=?NListino GROUP BY offerteQntMinima, offerteMultipli, nlistino ORDER BY PrezzoPromo DESC" EnableViewState="False">
+                                            <SelectParameters>
+                                                <asp:ControlParameter Name="ID" ControlID="tbArtID" PropertyName="Text" Type="Int32" />
+                                                <asp:SessionParameter Name="NListino" SessionField="listino" Type="Int32" />
+                                            </SelectParameters>
+                                        </asp:SqlDataSource>
+
+                                        <asp:Repeater ID="rPromo" runat="server" DataSourceID="sdsPromo" EnableViewState="false" OnItemDataBound="rPromo_ItemDataBound">
+                                            <ItemTemplate>
+                                                <div style="display:none;">
+                                                    <asp:Label ID="lblQtaMin" runat="server" Text='<%# Eval("OfferteQntMinima") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblMultipli" runat="server" Text='<%# Eval("OfferteMultipli") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblPrezzoPromo" runat="server" Text='<%# Eval("PrezzoPromo") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblPrezzoPromoIvato" runat="server" Text='<%# Eval("PrezzoPromoIvato") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblInOfferta" runat="server" Text='<%# Eval("InOfferta") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblDataInizio" runat="server" Text='<%# Eval("OfferteDataInizio") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblDataFine" runat="server" Text='<%# Eval("OfferteDataFine") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblidIvaRC" runat="server" Text='<%# Eval("IdIvaRC") %>' Visible="False"></asp:Label>
+                                                    <asp:Label ID="lblValoreIvaRC" runat="server" Text='<%# Eval("ValoreIvaRC") %>' Visible="False"></asp:Label>
+                                                </div>
+                                                <div style="<%# iif(Eval("InOfferta")=1,"","display:none;") %>">
+                                                    <span class="ks-promo-badge">
+                                                        <strong>PROMO</strong>
+                                                        <asp:Label ID="lblOfferta" runat="server" Visible="false" Text='<%# "PROMO FINO AL " & Eval("OfferteDataFine") %>'></asp:Label>
+                                                    </span>
+                                                </div>
+                                            </ItemTemplate>
+                                        </asp:Repeater>
+                                    </td>
+                                </tr>
+                            </ItemTemplate>
+                        </asp:Repeater>
+
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="Qnt_Errata" runat="server" class="ks-alert ks-alert-danger" visible="false">
+                E' stata impostata una quantità articolo minore o uguale a 0.<br />Eliminare l'articolo dal carrello o impostare una quantità maggiore di 0.
+            </div>
+
+            <!-- Buono Sconto (dati) -->
+            <asp:SqlDataSource ID="SqlDataBuonoSconto" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                EnableViewState="False" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                SelectCommand="SELECT * FROM buoni_sconti WHERE id=@idBuonoSconto">
+                <SelectParameters>
+                    <asp:SessionParameter DefaultValue="0" Name="idBuonoSconto" SessionField="BuonoSconto_id" Type="Int32" />
+                </SelectParameters>
+            </asp:SqlDataSource>
+
+            <asp:GridView ID="GV_BuoniSconti" DataSourceID="SqlDataBuonoSconto" runat="server" AutoGenerateColumns="False" GridLines="None" BorderStyle="None" CellSpacing="0" ShowHeader="False" Width="100%">
+                <Columns>
+                    <asp:TemplateField>
+                        <ItemTemplate>
+                            <asp:Label ID="lbl_idBuonoSconto" runat="server" Text='<%# Eval("id")%>' Visible="false"></asp:Label>
+                            <asp:Label ID="lbl_Percentuale_BuonoSconto" runat="server" Text='<%# Eval("scontoPercentuale")%>' Visible="false"></asp:Label>
+                            <asp:Label ID="lbl_scontoFisso_BuonoSconto" runat="server" Text='<%# Eval("scontoFisso")%>' Visible="false"></asp:Label>
+                            <asp:Label ID="lbl_valore_BuonoSconto" runat="server" Text='<%# Eval("valore")%>' Visible="false"></asp:Label>
+                            <asp:Label ID="lbl_ScontoVettore" runat="server" Text='<%# Eval("scontoVettore")%>' Visible="false"></asp:Label>
+
+                            <div class="ks-discount-card mb-3">
+                                <div class="ks-discount-card__header">BUONO SCONTO</div>
+                                <div class="ks-discount-card__body">
+                                    <div>
+                                        <div class="body-md-2 fw-semibold">
+                                            <asp:Label ID="lbl_Descrizione1_BuonoSconto" runat="server" Text='<%#Eval("descrizione1")%>'></asp:Label>
+                                        </div>
+                                        <div class="body-text-3">
+                                            <asp:Label ID="lbl_Descrizione2_BuonoSconto" runat="server" Text='<%#Eval("descrizione2")%>'></asp:Label>
+                                        </div>
+                                    </div>
+                                    <div class="ks-discount-card__value">
+                                        <asp:Label ID="lbl_TotSconto" runat="server" Text=""></asp:Label>
+                                    </div>
+                                </div>
+                                <div class="ks-discount-card__footer">
+                                    <asp:LinkButton ID="CancellaBuonoSconto" CommandName="CancellaBuonoSconto" runat="server" CssClass="link">Elimina buono sconto</asp:LinkButton>
+                                </div>
+                            </div>
+                        </ItemTemplate>
+                    </asp:TemplateField>
+                </Columns>
+            </asp:GridView>
+
+            <div class="row g-4 ks-cart-bottom">
+                <div class="col-12 col-lg-8">
+                    <asp:Panel ID="Panel_BuoniSconto" runat="server" HorizontalAlign="left" CssClass="ks-coupon-panel">
+                        <div class="mb-2"><b>CODICE SCONTO</b></div>
+                        <div class="d-flex gap-2 align-items-center flex-wrap">
+                            <asp:TextBox ID="TB_BuonoSconto" runat="server" CssClass="form-control" Style="max-width: 320px; text-transform:uppercase; font-weight:bold; text-align:center;"></asp:TextBox>
+                            <asp:Button ID="BT_ApplicaBuonoSconto" runat="server" CausesValidation="false" Text="Aggiungi" CssClass="tf-btn btn-gray" />
+                        </div>
+                        <div class="mt-2">
+                            <asp:Image ID="checkOKBuonoSconto" runat="server" ImageUrl="Public/Images/Ok.png" Height="30px" Visible="false" />
+                            <asp:Image ID="checkNOBuonoSconto" runat="server" ImageUrl="Public/Images/Remove.png" Height="30px" Visible="false" />
+                            <asp:Label ID="lblBuonoScontoConvalida" runat="server" Text=""></asp:Label>
+                            <asp:LinkButton ID="LB_CancelBuonoSconto" runat="server" CssClass="link" ForeColor="Red" Visible="false">Elimina codice</asp:LinkButton>
+                        </div>
+                    </asp:Panel>
+
+                    <!-- Hidden technical fields used by VB -->
+                    <asp:TextBox ID="tbVettoriId" runat="server" ToolTip="VettoriId" Style="display:none" Width="20px"></asp:TextBox>
+                    <asp:TextBox ID="tbPagamenti" runat="server" ToolTip="PagamentiId" Style="display:none" Width="20px"></asp:TextBox>
+                    <asp:TextBox ID="tbShopIdGestPay" runat="server" ToolTip="tShopIdGestPay" Style="display:none" Width="20px"></asp:TextBox>
+                    <asp:TextBox ID="tbContrPerc" runat="server" ToolTip="Contrassegno Percentuale" Style="display:none" Width="20px"></asp:TextBox>
+                    <asp:TextBox ID="tbContrFisso" runat="server" ToolTip="Contrassegno Fisso" Style="display:none" Width="20px"></asp:TextBox>
+                    <asp:TextBox ID="tbContrMinimo" runat="server" ToolTip="Contrassegno Minimo" Style="display:none" Width="20px"></asp:TextBox>
+                    <asp:TextBox ID="tbPeso" runat="server" Width="20px" Style="display:none" ToolTip="Peso"></asp:TextBox>
+                    <asp:TextBox ID="tbTotale" runat="server" Width="20px" Style="display:none" ToolTip="Totale"></asp:TextBox>
+                </div>
+
+                <div class="col-12 col-lg-4">
+                    <div class="ks-summary-box">
+                        <table width="100%" id="TableConteggi" runat="server" visible="false" class="ks-summary-table">
+                            <tr>
+                                <td align="right" style="width:70%;">Imponibile:</td>
+                                <td align="right" style="width:30%;"><asp:Label ID="lblImponibile" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                            </tr>
+                            <tr>
+                                <td align="right">Spedizione:</td>
+                                <td align="right"><asp:Label ID="lblSpeseSped" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                            </tr>
+                            <tr>
+                                <td align="right">Assicurazione:</td>
+                                <td align="right"><asp:Label ID="lblSpeseAss" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                            </tr>
+                            <tr>
+                                <td align="right">IVA:</td>
+                                <td align="right"><asp:Label ID="lblIva" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                            </tr>
+                            <tr>
+                                <td align="right">Pagamento:</td>
+                                <td align="right"><asp:Label ID="lblPagamento" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                            </tr>
+                            <tr>
+                                <td align="right">Buono Sconto:</td>
+                                <td align="right"><asp:Label ID="lblBuonoSconto" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                            </tr>
+                            <tr>
+                                <td align="right">Buono Sconto IVA:</td>
+                                <td align="right"><asp:Label ID="lblBuonoScontoIVA" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                            </tr>
+                            <tr>
+                                <td align="right"><b>Totale:</b></td>
+                                <td align="right"><asp:Label ID="lblTotale" runat="server" Text="&#8364; 0,00" Font-Bold="true" Style="color:rgb(205, 38, 44);"></asp:Label></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div ID="canorder" runat="server" class="ks-alert-warning">
+                Non sei un utente abilitato a procedere con l'ordine. Contattaci se desideri invece procedere
+            </div>
+
+            <div class="ks-cart-buttons">
+                <asp:LinkButton ID="btContinua" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Continua lo Shopping</asp:LinkButton>
+                <asp:LinkButton ID="btAggiorna" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Aggiorna Carrello</asp:LinkButton>
+                <asp:LinkButton ID="btSvuota" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Svuota Carrello</asp:LinkButton>
+                <div class="ks-right">
+                    <asp:LinkButton ID="btCompleta" runat="server" CssClass="tf-btn" CausesValidation="false">Procedi con l'ordine</asp:LinkButton>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+<asp:Panel ID="Panel_Unico" runat="server">   
     <table width="100%" border="0" runat="server" id="tOrdine" visible="false">
     <tr>
         <td colspan="2" style=" border-top-style:solid; border-top-width:1px; border-top-color:Gray; padding-top:10px; padding-bottom:10px;">
