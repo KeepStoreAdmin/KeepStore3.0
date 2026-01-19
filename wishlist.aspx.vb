@@ -299,8 +299,18 @@ End Function
                 PrezzoIvato.Visible = True
             End If
 
-            Prezzo.Visible = False
-            PrezzoIvato.Visible = False
+            'STEP21 (ONUS): il layout ONUS usa prezzo testuale; manteniamo le Label visibili
+            'e disattiviamo la resa "prezzo con immagini" (le immagini restano nel markup per
+            'compatibilità, ma non vengono renderizzate).
+            img_cifra1.Visible = False
+            img_cifra2.Visible = False
+            img_cifra3.Visible = False
+            img_cifra4.Visible = False
+            img_cifra5.Visible = False
+            img_cifra6.Visible = False
+            img_cifra7.Visible = False
+            img_cifra8.Visible = False
+            img_cifra9.Visible = False
 
             img = GridView1.Rows(i).FindControl("imgDispo")
             img2 = GridView1.Rows(i).FindControl("imgArrivo")
@@ -393,6 +403,9 @@ End Function
         Dim Offerta As Label = e.Item.FindControl("lblOfferta")
         Dim InOfferta As Label = e.Item.FindControl("lblInOfferta")
 
+        'Hardening: controlli minimi
+        If Offerta Is Nothing OrElse InOfferta Is Nothing Then Exit Sub
+
         'Salvo in session inOfferta per controllare se visualizzare o meno da articoli.aspx
         'Session("InOfferta") = InOfferta.Text
 
@@ -401,47 +414,68 @@ End Function
         Dim PrezzoPromo As Label = e.Item.FindControl("lblPrezzoPromo")
         Dim PrezzoPromoIvato As Label = e.Item.FindControl("lblPrezzoPromoIvato")
 
-        Dim dispo As Label = e.Item.Parent.Parent.FindControl("Label_dispo")
-        Dim Panel_offerta As Panel = e.Item.Parent.Parent.FindControl("Panel_in_offerta")
+        If QtaMin Is Nothing OrElse QtaMultipli Is Nothing OrElse PrezzoPromo Is Nothing OrElse PrezzoPromoIvato Is Nothing Then Exit Sub
+
+        'STEP21 (ONUS): lookup controlli robusto - non dipendere da e.Item.Parent.Parent,
+        'che cambia se varia il markup.
+        Dim rp As Repeater = TryCast(sender, Repeater)
+        Dim row As GridViewRow = Nothing
+        If rp IsNot Nothing Then
+            row = TryCast(rp.NamingContainer, GridViewRow)
+        End If
+        If row Is Nothing Then Exit Sub
+
+        Dim dispo As Label = TryCast(row.FindControl("Label_dispo"), Label)
+        Dim Panel_offerta As Panel = TryCast(row.FindControl("Panel_in_offerta"), Panel)
         'Dim img_offerta As Image = e.Item.Parent.Parent.FindControl("img_offerta")
-        Dim Qta As TextBox = e.Item.Parent.Parent.FindControl("tbQuantita")
-        Dim ParentPrezzoPromo As Label = e.Item.Parent.Parent.FindControl("lblPrezzoPromo")
-        Dim ParentPrezzo As Label = e.Item.Parent.Parent.FindControl("lblPrezzo")
-        Dim ParentPrezzoIvato As Label = e.Item.Parent.Parent.FindControl("lblPrezzoIvato")
+        Dim Qta As TextBox = TryCast(row.FindControl("tbQuantita"), TextBox)
+        Dim ParentPrezzoPromo As Label = TryCast(row.FindControl("lblPrezzoPromo"), Label)
+        Dim ParentPrezzo As Label = TryCast(row.FindControl("lblPrezzo"), Label)
+        Dim ParentPrezzoIvato As Label = TryCast(row.FindControl("lblPrezzoIvato"), Label)
+
+        'Hardening: se manca qualche controllo critico, esco per evitare NullReference.
+        If Panel_offerta Is Nothing Then Exit Sub
+        If Qta Is Nothing Then Exit Sub
+        If ParentPrezzoPromo Is Nothing Then Exit Sub
+        If ParentPrezzo Is Nothing Then Exit Sub
+        If ParentPrezzoIvato Is Nothing Then Exit Sub
 
         ' ------------------------------- Prezzo con immagini ----------------------------
         Dim temp As String = ""
-        Dim img_cifra9 As Image = e.Item.Parent.Parent.FindControl("img_prezzo9")
-        Dim img_cifra8 As Image = e.Item.Parent.Parent.FindControl("img_prezzo8")
-        Dim img_cifra7 As Image = e.Item.Parent.Parent.FindControl("img_prezzo7")
-        Dim img_cifra6 As Image = e.Item.Parent.Parent.FindControl("img_prezzo6")
-        Dim img_cifra5 As Image = e.Item.Parent.Parent.FindControl("img_prezzo5")
-        Dim img_cifra4 As Image = e.Item.Parent.Parent.FindControl("img_prezzo4")
-        Dim img_cifra3 As Image = e.Item.Parent.Parent.FindControl("img_prezzo3")
-        Dim img_cifra2 As Image = e.Item.Parent.Parent.FindControl("img_prezzo2")
-        Dim img_cifra1 As Image = e.Item.Parent.Parent.FindControl("img_prezzo1")
+        Dim img_cifra9 As Image = TryCast(row.FindControl("img_prezzo9"), Image)
+        Dim img_cifra8 As Image = TryCast(row.FindControl("img_prezzo8"), Image)
+        Dim img_cifra7 As Image = TryCast(row.FindControl("img_prezzo7"), Image)
+        Dim img_cifra6 As Image = TryCast(row.FindControl("img_prezzo6"), Image)
+        Dim img_cifra5 As Image = TryCast(row.FindControl("img_prezzo5"), Image)
+        Dim img_cifra4 As Image = TryCast(row.FindControl("img_prezzo4"), Image)
+        Dim img_cifra3 As Image = TryCast(row.FindControl("img_prezzo3"), Image)
+        Dim img_cifra2 As Image = TryCast(row.FindControl("img_prezzo2"), Image)
+        Dim img_cifra1 As Image = TryCast(row.FindControl("img_prezzo1"), Image)
         
-        img_cifra1.Visible = False
-        img_cifra2.Visible = False
-        img_cifra3.Visible = False
-        img_cifra4.Visible = False
-        img_cifra5.Visible = False
-        img_cifra6.Visible = False
-        img_cifra7.Visible = False
-        img_cifra8.Visible = False
-        img_cifra9.Visible = False
+        If img_cifra1 IsNot Nothing Then img_cifra1.Visible = False
+        If img_cifra2 IsNot Nothing Then img_cifra2.Visible = False
+        If img_cifra3 IsNot Nothing Then img_cifra3.Visible = False
+        If img_cifra4 IsNot Nothing Then img_cifra4.Visible = False
+        If img_cifra5 IsNot Nothing Then img_cifra5.Visible = False
+        If img_cifra6 IsNot Nothing Then img_cifra6.Visible = False
+        If img_cifra7 IsNot Nothing Then img_cifra7.Visible = False
+        If img_cifra8 IsNot Nothing Then img_cifra8.Visible = False
+        If img_cifra9 IsNot Nothing Then img_cifra9.Visible = False
 
+
+        Dim qMin As Integer = KeepStoreSecurity.SqlCleanInt(If(QtaMin IsNot Nothing, QtaMin.Text, ""), 0)
+        Dim qMul As Integer = KeepStoreSecurity.SqlCleanInt(If(QtaMultipli IsNot Nothing, QtaMultipli.Text, ""), 0)
 
         If InOfferta.Text = 1 Then
             Panel_offerta.Visible = True
             'img_offerta.Visible = True
 
-            If QtaMin.Text > 0 Then
-                Offerta.Text = Offerta.Text & " MINIMO " & QtaMin.Text & " PZ."
-                Qta.Text = QtaMin.Text
-            ElseIf QtaMultipli.Text > 0 Then
-                Offerta.Text = Offerta.Text & " MULTIPLI " & QtaMultipli.Text & " PZ."
-                Qta.Text = QtaMultipli.Text
+            If qMin > 0 Then
+                Offerta.Text = Offerta.Text & " MINIMO " & qMin.ToString() & " PZ."
+                Qta.Text = qMin.ToString()
+            ElseIf qMul > 0 Then
+                Offerta.Text = Offerta.Text & " MULTIPLI " & qMul.ToString() & " PZ."
+                Qta.Text = qMul.ToString()
             End If
 
             If IvaTipo = 1 Then
@@ -462,7 +496,8 @@ End Function
 
 
             Dim cifre_da_visualizzare As String = ""
-            If Val(dispo.Text) > 0 Then
+            Dim dispoValue As Integer = KeepStoreSecurity.SqlCleanInt(If(dispo IsNot Nothing, dispo.Text, ""), 0)
+            If dispoValue > 0 Then
                 cifre_da_visualizzare = "Images/cifre_ok/"
             Else
                 cifre_da_visualizzare = "Images/cifre_no/"
@@ -502,9 +537,28 @@ End Function
         End If
 
         'Nascondo le Label dei prezzi
-        ParentPrezzoPromo.Visible = False
-        ParentPrezzo.Visible = False
-        ParentPrezzoIvato.Visible = False
+        'STEP21 (ONUS): il layout ONUS usa prezzo testuale.
+        ' - ParentPrezzoPromo = prezzo promo (nuovo)
+        ' - ParentPrezzo / ParentPrezzoIvato = prezzo originale (barrato)
+        ParentPrezzoPromo.Visible = True
+        If IvaTipo = 1 Then
+            ParentPrezzo.Visible = True
+            ParentPrezzoIvato.Visible = False
+        ElseIf IvaTipo = 2 Then
+            ParentPrezzo.Visible = False
+            ParentPrezzoIvato.Visible = True
+        End If
+
+        'Disattivo prezzo con immagini
+        img_cifra1.Visible = False
+        img_cifra2.Visible = False
+        img_cifra3.Visible = False
+        img_cifra4.Visible = False
+        img_cifra5.Visible = False
+        img_cifra6.Visible = False
+        img_cifra7.Visible = False
+        img_cifra8.Visible = False
+        img_cifra9.Visible = False
     End Sub
 
     Protected Sub Selezione_Multipla_Click(ByVal sender As Object, ByVal e As System.Web.UI.ImageClickEventArgs)
