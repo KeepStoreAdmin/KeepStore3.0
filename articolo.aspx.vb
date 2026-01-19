@@ -1,4 +1,4 @@
-﻿Imports MySql.Data.MySqlClient
+Imports MySql.Data.MySqlClient
 Imports System.Data
 
 Partial Class Articolo
@@ -220,6 +220,9 @@ Partial Class Articolo
             ' no-op
 
         End Try
+        ' STEP19 - UI
+        SetProductTabsCss()
+
 
     End Sub
 
@@ -652,6 +655,30 @@ Partial Class Articolo
         MV.ActiveViewIndex = 3
     End Sub
 
+
+    ' STEP19 - UI: classi ONUS per tab (nessuna modifica logica)
+    Private Sub SetProductTabsCss()
+        Try
+            If Me.fvPage Is Nothing Then Return
+
+            Dim mv As MultiView = TryCast(Me.fvPage.FindControl("Multi_Vista"), MultiView)
+            If mv Is Nothing Then Return
+
+            Dim lb0 As LinkButton = TryCast(Me.fvPage.FindControl("LB_Dettagli"), LinkButton)
+            Dim lb1 As LinkButton = TryCast(Me.fvPage.FindControl("LB_ArtCollegati"), LinkButton)
+            Dim lb2 As LinkButton = TryCast(Me.fvPage.FindControl("LB_Recensioni"), LinkButton)
+            Dim lb3 As LinkButton = TryCast(Me.fvPage.FindControl("LB_NormeGaranzia"), LinkButton)
+
+            Dim i As Integer = mv.ActiveViewIndex
+
+            If lb0 IsNot Nothing Then lb0.CssClass = If(i = 0, "nav-link active", "nav-link")
+            If lb1 IsNot Nothing Then lb1.CssClass = If(i = 1, "nav-link active", "nav-link")
+            If lb2 IsNot Nothing Then lb2.CssClass = If(i = 2, "nav-link active", "nav-link")
+            If lb3 IsNot Nothing Then lb3.CssClass = If(i = 3, "nav-link active", "nav-link")
+        Catch ex As Exception
+            ' no-op (UI only)
+        End Try
+    End Sub
     ' FILTRI TAGLIA COLORE
 
     Public Sub showTagliecolori()

@@ -1,4 +1,4 @@
-﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="articolo.aspx.vb" Inherits="articolo" Debug="true" %>
+<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="articolo.aspx.vb" Inherits="articolo" Debug="true" %>
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server"><%: Page.Title %></asp:Content>
 
@@ -52,34 +52,83 @@ Dim sku As String = pairInidsFbPixelsSku.value%>
 <%Next%>
 <!-- -------------------------------------------- -->
 
-<script type="text/javascript" src="https://code.jquery.com/jquery-latest.js"></script> 
-<script type="text/javascript" src="Public/script/ddpowerzoomer.js"></script>
 <script type="text/javascript">
-jQuery(document).ready(function($){
+document.addEventListener('DOMContentLoaded', function () {
+    function byId(id) { return document.getElementById(id); }
 
- $("a#close-panel").click(function(){
-     $("#lightbox, #lightbox-panel").fadeOut(300);
- });
- 
- $('#dettagli_arrivi').click(function(){
-     $("#lightbox-panel").fadeIn(300);
- });
+    var panel = byId('lightbox-panel');
+    var close = byId('close-panel');
 
-//Swap Image on Click
- $("ul.thumb li a").click(function() {
-     var mainImage = $(this).attr("href"); //Find Image Name
-     $("#main_view img").attr({ src: mainImage });
-     $("#lightbox-panel #img").attr({ src: mainImage });
-     return false;		
- });
- 
- $('#main_img').click(function(){
-     $("#lightbox-panel").fadeIn(300);
- });
+    function hidePanel() {
+        if (panel) { panel.style.display = 'none'; }
+    }
 
+    function showPanel() {
+        if (panel) { panel.style.display = 'block'; }
+    }
+
+    if (close) {
+        close.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            hidePanel();
+        });
+    }
+
+    var mainImg = byId('main_img');
+    if (mainImg) {
+        mainImg.addEventListener('click', function (ev) {
+            // Il markup già richiama nascondi_dettagli_lightbox();
+            showPanel();
+        });
+    }
+
+    // Swap immagini: thumbnail -> main + lightbox
+    var thumbLinks = document.querySelectorAll('ul.thumb li a');
+    for (var i = 0; i < thumbLinks.length; i++) {
+        thumbLinks[i].addEventListener('click', function (ev) {
+            ev.preventDefault();
+            var href = this.getAttribute('href');
+            if (!href) { return; }
+
+            var mainViewImg = document.querySelector('#main_view img');
+            if (mainViewImg) { mainViewImg.setAttribute('src', href); }
+
+            var lbImg = byId('img');
+            if (lbImg) { lbImg.setAttribute('src', href); }
+        });
+    }
+
+    // Quantità +/- (compatibile WebForms: cerca input id che termina con tbQuantita)
+    function getQtyInput() {
+        return document.querySelector("input[id$='tbQuantita']");
+    }
+
+    function clampInt(v, defVal) {
+        var n = parseInt(v, 10);
+        if (isNaN(n) || n < 1) { n = defVal; }
+        return n;
+    }
+
+    var dec = document.querySelector("[data-qty-action='decrementQty']");
+    var inc = document.querySelector("[data-qty-action='incrementQty']");
+
+    if (dec) {
+        dec.addEventListener('click', function () {
+            var q = getQtyInput();
+            if (!q) { return; }
+            q.value = Math.max(1, clampInt(q.value, 1) - 1);
+        });
+    }
+
+    if (inc) {
+        inc.addEventListener('click', function () {
+            var q = getQtyInput();
+            if (!q) { return; }
+            q.value = clampInt(q.value, 1) + 1;
+        });
+    }
 });
-</script> 
-
+</script>
 <style type="text/css">
 #lightbox-panel {
  display:none;
@@ -92,6 +141,34 @@ jQuery(document).ready(function($){
 }
 select {
  text-align: center;
+}
+</style>
+
+<style type="text/css">
+/* STEP19 - ONUS polish (product detail) */
+.ks-prod-tabs {
+    margin: 0;
+    border-bottom: 1px solid rgba(0,0,0,.1);
+}
+.ks-prod-tabs .nav-link {
+    font-weight: 600;
+    letter-spacing: .02em;
+}
+.ks-prod-tabwrap {
+    border-radius: 14px;
+}
+#main_view {
+    margin: 0 !important;
+}
+ul.thumb {
+    list-style: none;
+    padding-left: 0;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+ul.thumb li {
+    float: none !important;
 }
 </style>
 
@@ -169,14 +246,6 @@ select {
     End Function
 </script>
 
-<div class="container mt-3">
-    <div class="row">
-        <div class="col-12">
-            <h1>Scheda Prodotto</h1>
-        </div>
-    </div>
-</div>
-
 <asp:SqlDataSource ID="sdsArticolo" runat="server" 
     ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
     ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
@@ -187,7 +256,8 @@ select {
     </SelectParameters>
 </asp:SqlDataSource>
     
-<div class="container-fluid bg-white home-box-position mt-3 bg-shadow">
+<section class="tf-main-product section-image-zoom">
+    <div class="container">
     <asp:FormView ID="fvPage" runat="server" DataKeyNames="id" DataSourceID="sdsArticolo" Width="100%" Height="1px">
         <ItemTemplate>
 
@@ -264,14 +334,31 @@ select {
                 </a>
             </div>
             <!-- -------------- -->
-            
-            <br />
-            <asp:HyperLink ID="HyperLink1" runat="server" ToolTip="Visualizza tutta la categoria" Font-Size="8pt" 
-                NavigateUrl='<%# "articoli.aspx?st="& Eval("SettoriId") &"&ct="& Eval("CategorieID") &"&mr="& Eval("MarcheId") &"&tp="& Eval("TipologieID") &"&gr="& Eval("GruppiID") &"&sg="& Eval("SottogruppiID") %>'
-                Text='<%# Eval("SettoriDescrizione") & " <font color=#E12825><b>»</b></font> " & Eval("CategorieDescrizione") & " <font color=#E12825><b>»</b></font> "& Eval("MarcheDescrizione") &" <font color=#E12825><b>»</b></font> "& Eval("TipologieDescrizione") &" <font color=#E12825><b>»</b></font> "& Eval("GruppiDescrizione") &" <font color=#E12825><b>»</b></font> "& Eval("SottogruppiDescrizione") %>'>
-            </asp:HyperLink>
-            <br /><br />
-
+            <!-- Breadcrumbs (ONUS) -->
+            <div class="tf-sp-1">
+                <div class="container">
+                    <ul class="breakcrumbs">
+                        <li>
+                            <a href="default.aspx" class="body-small link">Home</a>
+                        </li>
+                        <li class="d-flex align-items-center">
+                            <i class="icon icon-arrow-right"></i>
+                        </li>
+                        <li>
+                            <asp:HyperLink ID="HyperLink1" runat="server" ToolTip="Visualizza tutta la categoria" CssClass="body-small link" Font-Size="8pt"
+                                NavigateUrl='<%# "articoli.aspx?st="& Eval("SettoriId") &"&ct="& Eval("CategorieID") &"&mr="& Eval("MarcheId") &"&tp="& Eval("TipologieID") &"&gr="& Eval("GruppiID") &"&sg="& Eval("SottogruppiID") %>'
+                                Text='<%# Eval("SettoriDescrizione") & " / " & Eval("CategorieDescrizione") & " / " & Eval("MarcheDescrizione") & " / " & Eval("TipologieDescrizione") & " / " & Eval("GruppiDescrizione") & " / " & Eval("SottogruppiDescrizione") %>'>
+                            </asp:HyperLink>
+                        </li>
+                        <li class="d-flex align-items-center">
+                            <i class="icon icon-arrow-right"></i>
+                        </li>
+                        <li>
+                            <span class="body-small"><%# Eval("MarcheDescrizione") %> - <%# Eval("Descrizione1") %></span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
             <span class="link">
             <!-- Articolo Nuovo -->
             <div class="bg-white">
@@ -714,32 +801,29 @@ select {
                     End If
                 End Function
             </script>
-            
-            <!-- Menu TAB -->
-            <div class="bg-white" style="width:100%; padding-top:0px; overflow:auto; height:auto; color:White; font-weight:bold; font-size:8pt; border-bottom-style:solid; border-bottom-width:2px; border-color:Gray;">
-                <div id="infobar" style="text-align:left; float:left; width:148px; height:33px; background-image:url('Images/tab.png'); background-repeat:no-repeat; background-position:top left; z-index:1;">
-                    <div style="margin-left:28px; margin-top:12px; overflow:auto;">
-                        <asp:LinkButton ID="LB_Dettagli" ForeColor="white" runat="server" OnClick="LB_Dettagli_Click" CausesValidation="False">DETTAGLI</asp:LinkButton>
-                    </div>
-                </div>
-                <div id="infobar" style="text-align:left; float:left; width:148px; height:33px; background-image:url('Images/tab.png'); background-repeat:no-repeat; background-position:top left; z-index:2; margin-left:-25px;">
-                    <div style="margin-left:13px; margin-top:12px; overflow:auto;">
-                        <asp:LinkButton ID="LB_ArtCollegati" ForeColor="white" runat="server" OnClick="LB_ArtCollegati_Click" CausesValidation="False">ART. CORRELATI</asp:LinkButton>
-                    </div>
-                </div>
-                <div id="infobar" style="text-align:left; float:left; width:148px; height:33px; background-image:url('Images/tab.png'); background-repeat:no-repeat; background-position:top left; z-index:2; margin-left:-25px;">
-                    <div style="margin-left:25px; margin-top:12px; overflow:auto;">
-                        <asp:LinkButton ID="LB_Recensioni" ForeColor="white" runat="server" OnClick="LB_Recensioni_Click" CausesValidation="False">IN PROMO</asp:LinkButton>
-                    </div>
-                </div>
-				<div id="infobar" style="text-align:left; float:left; width:148px; height:33px; background-image:url('Images/tab.png'); background-repeat:no-repeat; background-position:top left; z-index:2; margin-left:-25px;">
-                    <div style="margin-left:25px; margin-top:12px; overflow:auto;">
-                        <asp:LinkButton ID="LB_NormeGaranzia" ForeColor="white" runat="server" OnClick="LB_NormeGaranzia_Click" CausesValidation="False">GARANZIA</asp:LinkButton>
-                    </div>
+            <!-- Menu TAB (ONUS) -->
+            <div class="tf-sp-2">
+                <div class="container">
+                    <ul class="nav nav-tabs ks-prod-tabs" role="tablist">
+                        <li class="nav-item">
+                            <asp:LinkButton ID="LB_Dettagli" runat="server" CssClass="nav-link" OnClick="LB_Dettagli_Click" CausesValidation="False">DETTAGLI</asp:LinkButton>
+                        </li>
+                        <li class="nav-item">
+                            <asp:LinkButton ID="LB_ArtCollegati" runat="server" CssClass="nav-link" OnClick="LB_ArtCollegati_Click" CausesValidation="False">ART. CORRELATI</asp:LinkButton>
+                        </li>
+                        <li class="nav-item">
+                            <asp:LinkButton ID="LB_Recensioni" runat="server" CssClass="nav-link" OnClick="LB_Recensioni_Click" CausesValidation="False">IN PROMO</asp:LinkButton>
+                        </li>
+                        <li class="nav-item">
+                            <asp:LinkButton ID="LB_NormeGaranzia" runat="server" CssClass="nav-link" OnClick="LB_NormeGaranzia_Click" CausesValidation="False">GARANZIA</asp:LinkButton>
+                        </li>
+                    </ul>
                 </div>
             </div>
 
-            <div class="bg-white w-100" style="overflow:hidden;">
+<div class="tf-sp-1">
+                <div class="container">
+                    <div class="bg-white p-3 ks-prod-tabwrap" style="overflow:hidden;">
                 <asp:MultiView ID="Multi_Vista" runat="server" ActiveViewIndex="0">
                     <asp:View ID="Tab1" runat="server">
                         <div class="p-3" style="overflow:auto;">
@@ -762,11 +846,14 @@ select {
                     </asp:View>
                </asp:MultiView>
            </div>
+                </div>
+            </div>
 
            <div class="fb-comments" data-href='<%= Request.url.AbsoluteUri %>' data-width="660px" data-numposts="5" data-colorscheme="light" style="margin-top:10px; border-top:1px solid gray;"></div>
 
         </ItemTemplate>
     </asp:FormView>
-</div> <!-- fine container-fluid bg-white home-box-position mt-3 bg-shadow -->
+</div>
+</section> <!-- fine tf-main-product -->
 
 </asp:Content>
