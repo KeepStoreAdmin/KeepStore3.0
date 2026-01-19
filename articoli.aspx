@@ -33,7 +33,84 @@
         /* CheckBox WebForms: migliora allineamento input/label nei filtri */
         .filterCheckbox input[type="checkbox"] { margin-right: 8px; vertical-align: middle; }
         .filterCheckbox label { margin: 0; vertical-align: middle; }
-    </style>
+    
+
+        /* ==========================================================
+           STEP16 (CATALOGO/UI): GridView -> ONus grid + card polish
+           - Trasforma la <table> del GridView in una griglia responsive
+           - Uniforma immagini, hover, badge e barra quantità
+           ========================================================== */
+        table.ks-gridview-as-grid {
+            width: 100% !important;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 20px;
+        }
+        @media (max-width: 1199.98px) {
+            table.ks-gridview-as-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        }
+        @media (max-width: 991.98px) {
+            table.ks-gridview-as-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 575.98px) {
+            table.ks-gridview-as-grid { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+        }
+        table.ks-gridview-as-grid > tbody,
+        table.ks-gridview-as-grid > tbody > tr,
+        table.ks-gridview-as-grid > tbody > tr > td {
+            display: contents;
+        }
+
+        /* Eccezioni per footer/pager, che devono stare a tutta larghezza */
+        table.ks-gridview-as-grid > tbody > tr.ks-grid-footer,
+        table.ks-gridview-as-grid > tbody > tr.pagination-ys {
+            display: block !important;
+            grid-column: 1 / -1;
+        }
+        table.ks-gridview-as-grid > tbody > tr.ks-grid-footer > td,
+        table.ks-gridview-as-grid > tbody > tr.pagination-ys > td {
+            display: block;
+            width: 100%;
+        }
+
+        /* Card: immagine quadrata e hover */
+        .ks-card-product .product-img {
+            display: block;
+            position: relative;
+            aspect-ratio: 1 / 1;
+            overflow: hidden;
+        }
+        .ks-card-product .img-product,
+        .ks-card-product .img-hover {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain;
+        }
+        .ks-card-product .img-hover {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transition: opacity .25s ease;
+        }
+        .ks-card-product:hover .img-hover { opacity: 1; }
+
+        /* Quantità: usa classi ONus (main.js) */
+        .ks-card-product .wg-quantity {
+            min-width: 120px;
+        }
+        .ks-card-product .quantity-product {
+            width: 48px;
+            text-align: center;
+        }
+
+        /* Multi selezione: compatta e non invasiva */
+        .ks-card-product .ks-multi {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+</style>
     <style>
         /* Facet filters: link-style checkbox (can be reverted to classic checkbox) */
         .filterLink input[type="checkbox"]{
@@ -83,32 +160,6 @@
             flex-wrap:wrap;
             margin-top:6px;
         }
-
-        /* GridView -> ONus grid layout (senza cambiare controllo WebForms) */
-        .ks-gridview-as-grid{ width:100%; }
-        .ks-gridview-as-grid > tbody{ display:flex; flex-wrap:wrap; gap:24px; }
-        .ks-gridview-as-grid > tbody > tr{ display:block; flex: 0 0 calc(25% - 24px); }
-        .ks-gridview-as-grid > tbody > tr > td{ display:block; padding:0 !important; border:0 !important; }
-
-        @media (max-width: 1199.98px){
-            .ks-gridview-as-grid > tbody > tr{ flex-basis: calc(33.333% - 24px); }
-        }
-        @media (max-width: 991.98px){
-            .ks-gridview-as-grid > tbody > tr{ flex-basis: calc(50% - 24px); }
-        }
-        @media (max-width: 575.98px){
-            .ks-gridview-as-grid > tbody{ gap:16px; }
-            .ks-gridview-as-grid > tbody > tr{ flex-basis: 100%; }
-        }
-
-        /* Pager row: prova a forzare full-width in modalita' flex */
-        .ks-gridview-as-grid tr.pagination-ys{ flex: 0 0 100%; width:100%; }
-        .ks-gridview-as-grid td.pagination-ys{ width:100%; }
-
-        /* Card: piccoli uniformatori */
-        .ks-gridview-as-grid .card-product{ height:100%; }
-        .ks-gridview-as-grid .card-product-wrapper .product-img{ display:block; }
-        .ks-gridview-as-grid .card-product-wrapper .product-img img{ width:100%; height:auto; object-fit:contain; }
     </style>
 
 </asp:Content>
@@ -203,433 +254,347 @@
         </SelectParameters>
     </asp:SqlDataSource>
 
-    <div class="container">
+    <div class="flat-content">
+        <div class="container">
+            <div class="tf-product-view-content wrapper-control-shop">
 
-	    <div class="row mt-3 tf-product-view-content wrapper-control-shop">
+                <!-- AREA CONTENUTO (prodotti) -->
+                <div class="content-area">
 
-	            <!-- Sidebar (Template ONus, DESTRA su desktop) -->
-	            <div class="col-lg-3 mb-4 order-lg-2">
-	                <aside class="canvas-filter-product sidebar-filter handle-canvas right">
-	                    <div class="canvas-wrapper">
-	                        <!-- Mobile header (chiusura filtri) -->
-	                        <div class="canvas-header d-flex d-xl-none justify-content-between align-items-center">
-	                            <h5 class="title">Filtri</h5>
-	                            <span class="icon-close close-filter"></span>
-	                        </div>
-	                        <div class="canvas-body">
+                    <asp:SqlDataSource ID="sdsArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+                        SelectCommand="SELECT id, Codice, Descrizione1, PrezzoAcquisto, Img1, DescrizioneLunga FROM varticolibase ORDER BY Codice, Descrizione1" EnableViewState="False">
+                    </asp:SqlDataSource>
 
-                    <!-- Navigazione categorie -->
-                    <div class="facet-categories mb-4">
-                        <h6 class="title fw-medium">Categorie</h6>
-                        <ul>
-                            <asp:Repeater ID="rptCategorieSettore" runat="server" DataSourceID="sdsCategorieSettore">
-                                <ItemTemplate>
-                                    <li>
-                                        <a href='<%# "articoli.aspx?st=" & Session("st") & "&ct=" & Eval("Id") %>'>
-                                            <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>
-                                            <i class="icon-arrow-right"></i>
-                                        </a>
-                                    </li>
-                                </ItemTemplate>
-                            </asp:Repeater>
-                        </ul>
+                    <div class="tf-shop-control flex-wrap gap-10 mb-3">
+                        <div class="d-flex align-items-center gap-10">
+                            <button id="filterShop" type="button" class="tf-btn-filter d-flex d-xl-none">
+                                <span class="icon icon-filter">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#121212" viewBox="0 0 256 256">
+                                        <path d="M176,80a8,8,0,0,1,8-8h32a8,8,0,0,1,0,16H184A8,8,0,0,1,176,80ZM40,88H144v16a8,8,0,0,0,16,0V56a8,8,0,0,0-16,0V72H40a8,8,0,0,0,0,16Zm176,80H120a8,8,0,0,0,0,16h96a8,8,0,0,0,0-16ZM88,144a8,8,0,0,0-8,8v16H40a8,8,0,0,0,0,16H80v16a8,8,0,0,0,16,0V152A8,8,0,0,0,88,144Z"></path>
+                                    </svg>
+                                </span>
+                                <span class="body-md-2 fw-medium">Filtri</span>
+                            </button>
+
+                            <p class="body-text-3 mb-0 d-none d-lg-block">
+                                <span class="fw-semibold">Trovati:</span>
+                                <asp:Label ID="lblTrovati" runat="server" Font-Bold="True"></asp:Label>
+                                <span class="ms-1">articoli</span>
+                                <span class="text-muted ms-2">|</span>
+                                <span class="ms-2">Visualizzati:</span>
+                                <asp:Label ID="lblLinee" runat="server" Text="0"></asp:Label>
+                            </p>
+                        </div>
+
+                        <div class="tf-shop-control-right d-flex align-items-center flex-wrap gap-10 ms-auto">
+                            <div class="d-flex align-items-center gap-8">
+                                <asp:CheckBox ID="CheckBox_Disponibile" runat="server" AutoPostBack="True" Text="Solo disponibili" />
+                            </div>
+
+                            <div class="d-flex align-items-center gap-8">
+                                <span class="body-text-3">Ordina per</span>
+                                <asp:DropDownList ID="Drop_Ordinamento" runat="server" AutoPostBack="True" CssClass="form-select form-select-sm">
+                                    <asp:ListItem Value="varticolibase.Codice">Codice</asp:ListItem>
+                                    <asp:ListItem Value="varticolibase.Descrizione1">Descrizione</asp:ListItem>
+                                    <asp:ListItem Value="varticolibase.PrezzoAcquisto">Prezzo crescente</asp:ListItem>
+                                    <asp:ListItem Value="varticolibase.PrezzoAcquisto DESC">Prezzo decrescente</asp:ListItem>
+                                </asp:DropDownList>
+                            </div>
+                        </div>
                     </div>
 
-
-                    <!-- Filtri (checkbox multi-selezione) -->
-                    <div class="mt-4" runat="server" id="tNavig">
-
-                        <div id="filtersMr" class="mb-4" style="position:relative;">
-                            <asp:DataList ID="DataList4" runat="server" DataSourceID="sdsMarche" RepeatLayout="Flow" Font-Size="8pt">
-                                <HeaderTemplate>
-                                    <div class="widget-facet facet-fieldset">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <p class="facet-title title-sidebar fw-semibold mb-0">Marche</p>
-                                            <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# changeUrlGetParam(Me.Request.Url.toString, "rimuovi", "mr") %>' Text="Rimuovi tutti"></asp:HyperLink>
-                                        </div>
-                                        <div class="box-fieldset-item filter-scroll">
-                                </HeaderTemplate>
-                                <ItemTemplate>
-                                    <fieldset class="fieldset-item">
-                                        <%# If(filterIdsContains("mr",Eval("marcheid").ToString()),"<b>","") %>
-                                        <asp:CheckBox ID='CheckBoxMr' checked='<%# If(filterIdsContains("mr",Eval("marcheid").ToString()),True,False) %>' runat='server' AutoPostBack='True' OnCheckedChanged ='CheckBoxMr_CheckedChanged' filterId='<%# Eval("marcheid") %>' CssClass='tf-check filterCheckbox' Text='<%# getCorrectLengthDescription(Eval("Descrizione")) & " " & "<span class=""text-main-4"">(" & Eval("Numero") & ")</span>"  %>' Width='150px' ToolTip='Applica/Rimuovi Filtro'/></asp:CheckBox>
-                                        <%# If(filterIdsContains("mr",Eval("marcheid").ToString()),"</b>","") %>
-                                    </fieldset>
-                                </ItemTemplate>
-                                <FooterTemplate>
-                                        </div>
-                                    </div>
-                                </FooterTemplate>
-                            </asp:DataList>
+                    <div id="filtritagliaecolore" runat="server" class="tf-shop-control flex-wrap gap-10 mb-3">
+                        <div class="d-flex align-items-center gap-8">
+                            <span class="body-text-3">Filtra taglia</span>
+                            <asp:DropDownList ID="Drop_Filtra_Taglia" runat="server" Width="160px" AutoPostBack="True" CssClass="form-select form-select-sm">
+                                <asp:ListItem Value="P_tutte_taglie">Tutte</asp:ListItem>
+                            </asp:DropDownList>
                         </div>
 
-                        <div id="filtersTp" class="mb-4" style="position:relative;">
-                            <asp:DataList ID="DataList1" runat="server" DataSourceID="sdsTipologie" RepeatLayout="Flow" Font-Size="8pt">
-                                <HeaderTemplate>
-                                    <div class="widget-facet facet-fieldset">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <p class="facet-title title-sidebar fw-semibold mb-0">Tipologie</p>
-                                            <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# changeUrlGetParam(Me.Request.Url.toString, "rimuovi", "tp") %>' Text="Rimuovi tutti"></asp:HyperLink>
-                                        </div>
-                                        <div class="box-fieldset-item filter-scroll">
-                                </HeaderTemplate>
-                                <ItemTemplate>
-                                    <fieldset class="fieldset-item">
-                                        <%# If(filterIdsContains("tp",Eval("TipologieId").ToString()),"<b>","") %>
-                                        <asp:CheckBox ID='CheckBoxTp' checked='<%# If(filterIdsContains("tp",Eval("TipologieId").ToString()),True,False) %>' runat='server' AutoPostBack='True' OnCheckedChanged ='CheckBoxTp_CheckedChanged' filterId='<%# Eval("TipologieId") %>' CssClass='tf-check filterCheckbox' Text='<%# getCorrectLengthDescription(Eval("Descrizione")) & " " & "<span class=""text-main-4"">(" & Eval("Numero") & ")</span>"  %>' Width='150px' ToolTip='Applica/Rimuovi Filtro'/></asp:CheckBox>
-                                        <%# If(filterIdsContains("tp",Eval("TipologieId").ToString()),"</b>","") %>
-                                    </fieldset>
-                                </ItemTemplate>
-                                <FooterTemplate>
-                                        </div>
-                                    </div>
-                                </FooterTemplate>
-                            </asp:DataList>
+                        <div class="d-flex align-items-center gap-8">
+                            <span class="body-text-3">Filtra colore</span>
+                            <asp:DropDownList ID="Drop_Filtra_Colore" runat="server" Width="160px" AutoPostBack="True" CssClass="form-select form-select-sm">
+                                <asp:ListItem Value="P_tutti_colori">Tutti</asp:ListItem>
+                            </asp:DropDownList>
                         </div>
+                    </div>
 
-                        <div id="filtersGr" class="mb-4" style="position:relative;">
-                            <asp:DataList ID="DataList2" runat="server" DataSourceID="sdsGruppo" RepeatLayout="Flow" Font-Size="8pt">
-                                <HeaderTemplate>
-                                    <div class="widget-facet facet-fieldset">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <p class="facet-title title-sidebar fw-semibold mb-0">Gruppo</p>
-                                            <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# changeUrlGetParam(Me.Request.Url.toString, "rimuovi", "gr") %>' Text="Rimuovi tutti"></asp:HyperLink>
+                    <div class="gridLayout-wrapper">
+                        <asp:GridView ID="GridView1" runat="server"
+                            AutoGenerateColumns="False"
+                            DataKeyNames="id"
+                            DataSourceID="sdsArticoli"
+                            AllowPaging="True"
+                            Font-Size="8pt"
+                            GridLines="None"
+                            CellPadding="0"
+                            Width="100%"
+                            ShowFooter="True"
+                            ShowHeader="False"
+                            CssClass="table-borderless ks-gridview-as-grid tf-grid-layout lg-col-4 md-col-3 sm-col-2 flat-grid-product wrapper-shop layout-tabgrid-1">
+
+                            <Columns>
+                                <asp:TemplateField>
+                                    <ItemTemplate>
+                                        <div class="card-product ks-card-product">
+
+                                            <div class="card-product-wrapper">
+                                                <a href='<%# ResolveUrl("~/articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCid")) %>' class="product-img">
+                                                    <asp:Image ID="imgProd" runat="server" CssClass="img-product lazyload" AlternateText='<%# H(Eval("Descrizione1")) %>' ImageUrl='<%# checkImg(Eval("img1")) %>' />
+                                                    <asp:Image ID="imgHover" runat="server" CssClass="img-hover lazyload" AlternateText='<%# H(Eval("Descrizione1")) %>' ImageUrl='<%# checkImg(Eval("img1")) %>' />
+                                                </a>
+
+                                                <ul class="list-product-btn top-0 end-0">
+                                                    <li>
+                                                        <asp:ImageButton ID="ImageButton2" runat="server" OnClick="ImageButton1_Click" CssClass="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left" ToolTip="Aggiungi al carrello" ImageUrl="~/Public/onsus/images/icon-cart2.svg" />
+                                                    </li>
+
+                                                    <li class="d-none d-sm-block wishlist">
+                                                        <asp:LinkButton ID="LB_wishlist" runat="server" OnClick="BT_Aggiungi_wishlist_Click" CssClass="box-icon btn-icon-action hover-tooltip tooltip-left">
+                                                            <i class="icon icon-heart2"></i>
+                                                            <span class="tooltip">Wishlist</span>
+                                                        </asp:LinkButton>
+                                                    </li>
+
+                                                    <li>
+                                                        <a href='<%# ResolveUrl("~/articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCid")) %>' class="box-icon btn-icon-action hover-tooltip tooltip-left">
+                                                            <i class="icon icon-view"></i>
+                                                            <span class="tooltip">Scheda tecnica</span>
+                                                        </a>
+                                                    </li>
+
+                                                    <li class="d-none d-sm-block">
+                                                        <a href='<%# GetWhatsAppShareUrl(Eval("Descrizione1"), Eval("id"), Eval("TCid")) %>' class="box-icon btn-icon-action hover-tooltip tooltip-left">
+                                                            <img src='<%# GetWhatsAppIconUrl() %>' alt="WhatsApp" style="height:24px;" />
+                                                            <span class="tooltip">WhatsApp</span>
+                                                        </a>
+                                                    </li>
+                                                </ul>
+
+                                                <asp:Panel ID="pnlSale" runat="server" Visible='<%# Eval("InOfferta") %>'>
+                                                    <div class="box-sale-wrap pst-default">
+                                                        <p class="small-text">Sale</p>
+                                                        <p class="title-sidebar-2"><%# GetDiscountPercent(Eval("PrezzoOldIvato"), Eval("PrezzoIvato")) %></p>
+                                                    </div>
+                                                </asp:Panel>
+                                            </div>
+
+                                            <div class="card-product-info">
+                                                <div class="box-title">
+                                                    <div>
+                                                        <p class="product-tag caption text-main-2"><%# H(Eval("MarcheDescrizione")) %></p>
+                                                        <asp:HyperLink ID="hlTitolo" runat="server" CssClass="name-product body-md-2 fw-semibold text-secondary link" NavigateUrl='<%# ResolveUrl("~/articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCid")) %>' Text='<%# H(Eval("Descrizione1")) %>'></asp:HyperLink>
+                                                    </div>
+                                                    <p class="price-wrap fw-medium">
+                                                        <asp:Label ID="lblPrezzoPromo" runat="server" CssClass="new-price price-text fw-medium" Text='<%# Bind("PrezzoIvato", "{0:C}") %>'></asp:Label>
+                                                        <asp:Label ID="lblPrezzoVecchio" runat="server" CssClass="old-price body-md-2 text-main-2" Visible='<%# Eval("InOfferta") %>' Text='<%# Bind("PrezzoOldIvato", "{0:C}") %>'></asp:Label>
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div class="card-product-btn">
+                                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-10">
+                                                    <div class="wg-quantity">
+                                                        <span class="btn-quantity minus-btn"><i class="icon-minus"></i></span>
+                                                        <asp:TextBox ID="tbQuantita" runat="server" CssClass="quantity-product" Text="1" MaxLength="4"></asp:TextBox>
+                                                        <span class="btn-quantity plus-btn"><i class="icon-plus"></i></span>
+                                                    </div>
+
+                                                    <div class="ks-multi">
+                                                        <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" ToolTip="Seleziona per aggiunta multipla" />
+                                                        <span class="caption text-main-2">Multi</span>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Campi per la logica esistente (ID/TCID/QTA) -->
+                                                <asp:TextBox ID="tbID" runat="server" Text='<%# Eval("ID") %>' Visible="false"></asp:TextBox>
+                                                <asp:HiddenField ID="hfIdArticolo" runat="server" Value='<%# Eval("ID") %>' />
+                                                <asp:HiddenField ID="hfTCId" runat="server" Value='<%# Eval("TCid") %>' />
+                                            </div>
                                         </div>
-                                        <div class="box-fieldset-item">
-                                </HeaderTemplate>
-                                <ItemTemplate>
-                                    <fieldset class="fieldset-item">
-                                        <%# If(filterIdsContains("gr",Eval("GruppiId").ToString()),"<b>","") %>
-                                        <asp:CheckBox ID='CheckBoxGr' checked='<%# If(filterIdsContains("gr",Eval("GruppiId").ToString()),True,False) %>' runat='server' AutoPostBack='True' OnCheckedChanged ='CheckBoxGr_CheckedChanged' filterId='<%# Eval("GruppiId") %>' CssClass='tf-check filterCheckbox' Text='<%# getCorrectLengthDescription(Eval("Descrizione")) & " " & "<span class=""text-main-4"">(" & Eval("Numero") & ")</span>"  %>' Width='150px' ToolTip='Applica/Rimuovi Filtro'/></asp:CheckBox>
-                                        <%# If(filterIdsContains("gr",Eval("GruppiId").ToString()),"</b>","") %>
-                                    </fieldset>
-                                </ItemTemplate>
-                                <FooterTemplate>
+                                    </ItemTemplate>
+
+                                    <FooterTemplate>
+                                        <div class="ks-grid-footer d-flex justify-content-center align-items-center gap-10 py-3">
+                                            <span class="body-text-3 fw-semibold">Aggiungi selezionati</span>
+                                            <asp:ImageButton ID="Selezione_Multipla" runat="server" ImageUrl="~/Public/Images/aggiungiMultiplo.png" OnClick="Selezione_Multipla_Click" AlternateText="Aggiungi selezionati" />
                                         </div>
-                                    </div>
-                                </FooterTemplate>
-                            </asp:DataList>
-                        </div>
+                                    </FooterTemplate>
+                                </asp:TemplateField>
+                            </Columns>
+                            <FooterStyle CssClass="ks-grid-footer" />
 
-                        <div id="filtersSg" class="mb-4" style="position:relative;">
-                            <asp:DataList ID="DataList3" runat="server" DataSourceID="sdsSottogruppo" RepeatLayout="Flow" Font-Size="8pt">
-                                <HeaderTemplate>
-                                    <div class="widget-facet facet-fieldset">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <p class="facet-title title-sidebar fw-semibold mb-0">Sottogruppi</p>
-                                            <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# changeUrlGetParam(Me.Request.Url.toString, "rimuovi", "sg") %>' Text="Rimuovi tutti"></asp:HyperLink>
-                                        </div>
-                                        <div class="box-fieldset-item">
-                                </HeaderTemplate>
-                                <ItemTemplate>
-                                    <fieldset class="fieldset-item">
-                                        <%# If(filterIdsContains("sg",Eval("SottogruppiId").ToString()),"<b>","") %>
-                                        <asp:CheckBox ID='CheckBoxSg' checked='<%# If(filterIdsContains("sg",Eval("SottogruppiId").ToString()),True,False) %>' runat='server' AutoPostBack='True' OnCheckedChanged ='CheckBoxSg_CheckedChanged' filterId='<%# Eval("SottogruppiId") %>' CssClass='tf-check filterCheckbox' Text='<%# getCorrectLengthDescription(Eval("Descrizione")) & " " & "<span class=""text-main-4"">(" & Eval("Numero") & ")</span>"  %>' Width='150px' ToolTip='Applica/Rimuovi Filtro'/></asp:CheckBox>
-                                        <%# If(filterIdsContains("sg",Eval("SottogruppiId").ToString()),"</b>","") %>
-                                    </fieldset>
-                                </ItemTemplate>
-                                <FooterTemplate>
-                                        </div>
-                                    </div>
-                                </FooterTemplate>
-                            </asp:DataList>
-                        </div>
 
-	                    </div>
-	                </div>
 
-	                </aside>
-            </div>
+                            <PagerStyle CssClass="pagination-ys" />
+                            <PagerSettings Position="Bottom" Mode="NumericFirstLast" FirstPageText="&lt;&lt;" LastPageText="&gt;&gt;" />
+                        </asp:GridView>
+                    </div>
 
-            <!-- Main content -->
+                    <div class="mt-3">
+                        <asp:Label ID="lblPrezzi" runat="server" Font-Italic="True" ForeColor="#7D879C" Text="*Prezzi" Font-Size="7pt" Font-Names="arial"></asp:Label>
+                    </div>
 
-	            <div class="col-lg-9 order-lg-1 content-area">
-
-    <asp:SqlDataSource ID="sdsArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-        SelectCommand="SELECT id, Codice, Descrizione1, PrezzoAcquisto, Img1, DescrizioneLunga FROM varticolibase ORDER BY Codice, Descrizione1" EnableViewState="False">
-    </asp:SqlDataSource>
-
-	    <div class="mt-3">
-        <div class="tf-shop-control flex-wrap gap-10 mb-3">
-	            <div class="tf-shop-control-left d-flex align-items-center gap-10">
-	                <a href="javascript:void(0)" id="filterShop" class="tf-btn-filter d-flex d-xl-none">
-	                    <span class="icon icon-filter"></span>
-	                    <span class="text">Filtri</span>
-	                </a>
-                <p class="body-text-3 mb-0">
-                    <span class="fw-semibold">Trovati:</span>
-                    <asp:Label ID="lblTrovati" runat="server" Font-Bold="True"></asp:Label>
-                    <span class="ms-1">articoli</span>
-                    <span class="text-muted ms-2">|</span>
-                    <span class="ms-2">Visualizzati:</span>
-                    <asp:Label ID="lblLinee" runat="server" Text="0"></asp:Label>
-                </p>
-            </div>
-
-            <div class="tf-shop-control-right d-flex align-items-center flex-wrap gap-10 ms-auto">
-                <div class="d-flex align-items-center gap-8">
-                    <asp:CheckBox ID="CheckBox_Disponibile" runat="server" AutoPostBack="True" Text="Solo disponibili" />
                 </div>
 
-                <div class="d-flex align-items-center gap-8">
-                    <span class="body-text-3">Ordina per</span>
-                    <asp:DropDownList ID="Drop_Ordinamento" runat="server" AutoPostBack="True" CssClass="form-select form-select-sm filterLink">
-                        <asp:ListItem Value="varticolibase.Codice">Codice</asp:ListItem>
-                        <asp:ListItem Value="varticolibase.Descrizione1">Descrizione</asp:ListItem>
-                        <asp:ListItem Value="varticolibase.PrezzoAcquisto">Prezzo crescente</asp:ListItem>
-                        <asp:ListItem Value="varticolibase.PrezzoAcquisto DESC">Prezzo decrescente</asp:ListItem>
-                    </asp:DropDownList>
-                </div>
-            </div>
-        </div>
+                    <script type="text/javascript">
+                        $(function () {
+                            $("[id*=CheckBoxMr]").click(disable_checkbox);
+                            $("[id*=CheckBoxTp]").click(disable_checkbox);
+                            $("[id*=CheckBoxGr]").click(disable_checkbox);
+                            $("[id*=CheckBoxSg]").click(disable_checkbox);
+                        });
 
-	        <div id="filtritagliaecolore" runat="server" class="tf-shop-control flex-wrap gap-10 mb-2">
-            <div class="d-flex align-items-center gap-8">
-                <span class="body-text-3">Filtra taglia</span>
-	                <asp:DropDownList ID="Drop_Filtra_Taglia" style="text-align:left;vertical-align:middle" runat="server" Width="140px" AutoPostBack="True" CssClass="form-select form-select-sm filterLink">
-                    <asp:ListItem Value="P_tutte_taglie">Tutte</asp:ListItem>
-                </asp:DropDownList>
-            </div>
+                        function disable_checkbox() {
+                            $('#filtersMr').fadeTo('fast', .6);
+                            $('#filtersMr').append('<div style="position: absolute;top:0;left:0;width: 100%;height:100%;z-index:2;opacity:0.4;filter: alpha(opacity = 50)"></div>');
+                            $('#filtersTp').fadeTo('fast', .6);
+                            $('#filtersTp').append('<div style="position: absolute;top:0;left:0;width: 100%;height:100%;z-index:2;opacity:0.4;filter: alpha(opacity = 50)"></div>');
+                            $('#filtersGr').fadeTo('fast', .6);
+                            $('#filtersGr').append('<div style="position: absolute;top:0;left:0;width: 100%;height:100%;z-index:2;opacity:0.4;filter: alpha(opacity = 50)"></div>');
+                            $('#filtersSg').fadeTo('fast', .6);
+                            $('#filtersSg').append('<div style="position: absolute;top:0;left:0;width: 100%;height:100%;z-index:2;opacity:0.4;filter: alpha(opacity = 50)"></div>');
+                        }
+                    </script>
 
-            <div class="d-flex align-items-center gap-8">
-                <span class="body-text-3">Filtra colore</span>
-	                <asp:DropDownList ID="Drop_Filtra_Colore" style="text-align:left;vertical-align:middle" runat="server" Width="140px" AutoPostBack="True" CssClass="form-select form-select-sm filterLink">
-                    <asp:ListItem Value="P_tutti_colori">Tutti</asp:ListItem>
-                </asp:DropDownList>
-            </div>
-        </div>
-	    </div>
 
-    <div class="bg-white home-box-position bg-shadow">
-        <asp:GridView ID="GridView1" runat="server"
-            AutoGenerateColumns="False"
-            DataKeyNames="id"
-            DataSourceID="sdsArticoli"
-            AllowPaging="True"
-            Font-Size="8pt"
-            GridLines="None"
-            CellPadding="3"
-            Width="100%"
-            ShowFooter="True"
-            ShowHeader="False"
-	            CssClass="table-borderless ks-gridview-as-grid">
+                <!-- SIDEBAR / FILTRI (ONus: canvas-filter-product right) -->
+                <div class="canvas-filter-product sidebar-filter handle-canvas right">
+                    <div class="canvas-wrapper">
+                        <div class="canvas-header d-flex d-xl-none">
+                            <h5 class="title">Filtri</h5>
+                            <span class="icon-close link icon-close-popup close-filter"></span>
+                        </div>
+                        <div class="canvas-body">
 
-            <Columns>
-                <asp:TemplateField>
-                    <ItemTemplate>
-	                        <div class="card-product">
-	                            <div class="card-product-wrapper">
-                                <!-- IMMAGINE PRODOTTO -->
-                                <a href='<%# ResolveUrl("~/articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCid")) %>'
-                                   class="product-img">
-                                    <asp:Image ID="imgProd"
-                                               runat="server"
-                                               CssClass="img-product lazyload"
-                                               AlternateText='<%# H(Eval("Descrizione1")) %>'
-                                               ImageUrl='<%# checkImg(Eval("img1")) %>' />
-                                </a>
-
-                                <!-- BOTTONI AZIONE (wishlist, scheda, whatsapp) -->
-                                <ul class="list-product-btn">
-                                    <li class="wishlist">
-                                        <asp:LinkButton ID="LB_wishlist"
-                                                        runat="server"
-                                                        OnClick="BT_Aggiungi_wishlist_Click"
-                                                        CssClass="box-icon btn-icon-action hover-tooltip tooltip-left">
-                                            <i class="icon icon-heart2"></i>
-                                            <span class="tooltip">Aggiungi a Wishlist</span>
-                                        </asp:LinkButton>
-                                    </li>
-                                    <li>
-                                        <a href='<%# ResolveUrl("~/articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCid")) %>'
-                                           class="box-icon btn-icon-action hover-tooltip tooltip-left">
-                                            <i class="icon icon-view"></i>
-                                            <span class="tooltip">Scheda tecnica</span>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href='<%# GetWhatsAppShareUrl(Eval("Descrizione1"), Eval("id"), Eval("TCid")) %>'
-                                           class="box-icon btn-icon-action hover-tooltip tooltip-left">
-                                            <img src='<%# GetWhatsAppIconUrl() %>'
-                                                 alt="WhatsApp"
-                                                 style="height:24px;" />
-                                            <span class="tooltip">Condividi su WhatsApp</span>
-                                        </a>
-                                    </li>
+                            <!-- Navigazione categorie -->
+                            <div class="facet-categories mb-4">
+                                <h6 class="title fw-medium">Categorie</h6>
+                                <ul>
+                                    <asp:Repeater ID="rptCategorieSettore" runat="server" DataSourceID="sdsCategorieSettore">
+                                        <ItemTemplate>
+                                            <li>
+                                                <a href='<%# "articoli.aspx?st=" & Session("st") & "&ct=" & Eval("Id") %>'>
+                                                    <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>
+                                                    <i class="icon-arrow-right"></i>
+                                                </a>
+                                            </li>
+                                        </ItemTemplate>
+                                    </asp:Repeater>
                                 </ul>
                             </div>
 
-                            <!-- INFO PRODOTTO -->
-                            <div class="card-product-info">
-                                <div class="box-title d-flex flex-column">
-                                    <p class="caption text-main-2 font-2">
-                                        <%# H(Eval("MarcheDescrizione")) %>
-                                    </p>
-                                    <h6>
-                                        <asp:HyperLink ID="hlTitolo"
-                                                       runat="server"
-                                                       CssClass="name-product body-md-2 fw-semibold text-secondary link"
-                                                       NavigateUrl='<%# ResolveUrl("~/articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCid")) %>'
-                                                       Text='<%# H(Eval("Descrizione1")) %>' />
-                                    </h6>
+                            <!-- Filtri (checkbox multi-selezione) -->
+                            <div class="mt-4" runat="server" id="tNavig">
+
+                                <div id="filtersMr" class="mb-4" style="position:relative;">
+                                    <asp:DataList ID="DataList4" runat="server" DataSourceID="sdsMarche" RepeatLayout="Flow" Font-Size="8pt">
+                                        <HeaderTemplate>
+                                            <div class="widget-facet facet-fieldset">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <p class="facet-title title-sidebar fw-semibold mb-0">Marche</p>
+                                                    <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# changeUrlGetParam(Me.Request.Url.toString, "rimuovi", "mr") %>' Text="Rimuovi tutti"></asp:HyperLink>
+                                                </div>
+                                                <div class="box-fieldset-item filter-scroll">
+                                        </HeaderTemplate>
+                                        <ItemTemplate>
+                                            <fieldset class="fieldset-item">
+                                                <%# If(filterIdsContains("mr",Eval("marcheid").ToString()),"<b>","") %>
+                                                <asp:CheckBox ID='CheckBoxMr' checked='<%# If(filterIdsContains("mr",Eval("marcheid").ToString()),True,False) %>' runat='server' AutoPostBack='True' OnCheckedChanged ='CheckBoxMr_CheckedChanged' filterId='<%# Eval("marcheid") %>' CssClass='tf-check filterCheckbox' Text='<%# getCorrectLengthDescription(Eval("Descrizione")) & " " & "<span class=""text-main-4"">(" & Eval("Numero") & ")</span>"  %>' Width='150px' ToolTip='Applica/Rimuovi Filtro'/></asp:CheckBox>
+                                                <%# If(filterIdsContains("mr",Eval("marcheid").ToString()),"</b>","") %>
+                                            </fieldset>
+                                        </ItemTemplate>
+                                        <FooterTemplate>
+                                                </div>
+                                            </div>
+                                        </FooterTemplate>
+                                    </asp:DataList>
                                 </div>
 
-                                <!-- CODICE / EAN -->
-                                <p class="body-small text-main-2 mb-1">
-                                    Codice:
-                                    <span class="fw-semibold"><%# H(Eval("Codice")) %></span>
-                                    &nbsp;&nbsp;
-                                    EAN:
-                                    <span class="fw-semibold"><%# Eval("Ean") %></span>
-                                </p>
-
-                                <!-- DESCRIZIONE BREVE -->
-                                <p class="body-text-3" style="text-align:justify;">
-                                    <%# sotto_stringa(Eval("DescrizioneLunga")) %>
-                                </p>
-
-                                <!-- DISPONIBILITÀ -->
-                                <div class="d-flex flex-wrap align-items-center mt-2 mb-2"
-                                     style="border-top:1px dotted #ccc; border-bottom:1px dotted #ccc; padding:4px 0;">
-                                    <span class="body-small fw-semibold mr-2">Disponibilità:</span>
-                                    <asp:Label ID="Label_dispo"
-                                               runat="server"
-                                               CssClass="body-small fw-bold text-danger"
-                                               Text='<%# IIf(Eval("Giacenza") > 1000, ">1000", IIf(Eval("Giacenza").ToString().Contains("-"), Eval("Giacenza").ToString().Replace("-","&minus;"), Eval("Giacenza"))) %>' />
-                                    &nbsp;&nbsp;
-                                    <span class="body-small fw-semibold mr-1">Impegnati:</span>
-                                    <asp:Label ID="Label_imp"
-                                               runat="server"
-                                               CssClass="body-small fw-bold text-danger"
-                                               Text='<%# IIf(Val(Eval("Impegnata").ToString()) > 1000, ">1000", Val(Eval("Impegnata").ToString())) %>' />
-                                    &nbsp;&nbsp;
-                                    <span class="body-small fw-semibold mr-1">In arrivo:</span>
-                                    <asp:Label ID="Label_arrivo"
-                                               runat="server"
-                                               CssClass="body-small fw-bold text-danger"
-                                               Text='<%# IIf(Val(Eval("InOrdine").ToString()) > 1000, ">1000", Val(Eval("InOrdine").ToString())) %>' />
+                                <div id="filtersTp" class="mb-4" style="position:relative;">
+                                    <asp:DataList ID="DataList1" runat="server" DataSourceID="sdsTipologie" RepeatLayout="Flow" Font-Size="8pt">
+                                        <HeaderTemplate>
+                                            <div class="widget-facet facet-fieldset">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <p class="facet-title title-sidebar fw-semibold mb-0">Tipologie</p>
+                                                    <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# changeUrlGetParam(Me.Request.Url.toString, "rimuovi", "tp") %>' Text="Rimuovi tutti"></asp:HyperLink>
+                                                </div>
+                                                <div class="box-fieldset-item filter-scroll">
+                                        </HeaderTemplate>
+                                        <ItemTemplate>
+                                            <fieldset class="fieldset-item">
+                                                <%# If(filterIdsContains("tp",Eval("TipologieId").ToString()),"<b>","") %>
+                                                <asp:CheckBox ID='CheckBoxTp' checked='<%# If(filterIdsContains("tp",Eval("TipologieId").ToString()),True,False) %>' runat='server' AutoPostBack='True' OnCheckedChanged ='CheckBoxTp_CheckedChanged' filterId='<%# Eval("TipologieId") %>' CssClass='tf-check filterCheckbox' Text='<%# getCorrectLengthDescription(Eval("Descrizione")) & " " & "<span class=""text-main-4"">(" & Eval("Numero") & ")</span>"  %>' Width='150px' ToolTip='Applica/Rimuovi Filtro'/></asp:CheckBox>
+                                                <%# If(filterIdsContains("tp",Eval("TipologieId").ToString()),"</b>","") %>
+                                            </fieldset>
+                                        </ItemTemplate>
+                                        <FooterTemplate>
+                                                </div>
+                                            </div>
+                                        </FooterTemplate>
+                                    </asp:DataList>
                                 </div>
 
-                                <!-- PREZZO + PROMO -->
-                                <div class="d-flex flex-wrap justify-content-between align-items-center mt-2">
-                                    <div>
-                                        <asp:Label ID="lblPrezzoPromo"
-                                                   runat="server"
-                                                   CssClass="h4 fw-normal text-primary mb-0 d-block"
-                                                   Text='<%# Bind("PrezzoIvato", "{0:C}") %>'></asp:Label>
-
-                                        <asp:Panel ID="Panel_in_offerta"
-                                                   runat="server"
-                                                   Visible='<%# Eval("InOfferta") %>'>
-                                            <span class="body-small text-main-2">
-                                                invece di
-                                                <asp:Label ID="Label4"
-                                                           runat="server"
-                                                           CssClass="text-danger"
-                                                           Style="text-decoration:line-through;"
-                                                           Text='<%# Bind("PrezzoOldIvato", "{0:C}") %>'></asp:Label>
-                                            </span>
-                                        </asp:Panel>
-                                    </div>
-
-                                    <!-- STATO DISPONIBILE / NON DISPONIBILE -->
-                                    <div class="text-right">
-                                        <%# IIf(Eval("Giacenza") > 0,
-                                                "<span style=""color:green; font-weight:bold; font-size:11pt;"">DISPONIBILE</span>",
-                                                "<span style=""color:red; font-weight:bold; font-size:12pt;"">NON DISPONIBILE</span>") %>
-                                    </div>
+                                <div id="filtersGr" class="mb-4" style="position:relative;">
+                                    <asp:DataList ID="DataList2" runat="server" DataSourceID="sdsGruppo" RepeatLayout="Flow" Font-Size="8pt">
+                                        <HeaderTemplate>
+                                            <div class="widget-facet facet-fieldset">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <p class="facet-title title-sidebar fw-semibold mb-0">Gruppo</p>
+                                                    <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# changeUrlGetParam(Me.Request.Url.tostring, "rimuovi", "gr") %>' Text="Rimuovi tutti"></asp:HyperLink>
+                                                </div>
+                                                <div class="box-fieldset-item">
+                                        </HeaderTemplate>
+                                        <ItemTemplate>
+                                            <fieldset class="fieldset-item">
+                                                <%# If(filterIdsContains("gr",Eval("GruppiId").ToString()),"<b>","") %>
+                                                <asp:CheckBox ID='CheckBoxGr' checked='<%# If(filterIdsContains("gr",Eval("GruppiId").ToString()),True,False) %>' runat='server' AutoPostBack='True' OnCheckedChanged ='CheckBoxGr_CheckedChanged' filterId='<%# Eval("GruppiId") %>' CssClass='tf-check filterCheckbox' Text='<%# getCorrectLengthDescription(Eval("Descrizione")) & " " & "<span class=""text-main-4"">(" & Eval("Numero") & ")</span>"  %>' Width='150px' ToolTip='Applica/Rimuovi Filtro'/></asp:CheckBox>
+                                                <%# If(filterIdsContains("gr",Eval("GruppiId").ToString()),"</b>","") %>
+                                            </fieldset>
+                                        </ItemTemplate>
+                                        <FooterTemplate>
+                                                </div>
+                                            </div>
+                                        </FooterTemplate>
+                                    </asp:DataList>
                                 </div>
 
-                                <!-- QUANTITÀ + CARRELLO -->
-                                <div class="d-flex flex-wrap justify-content-end align-items-center mt-3">
-                                    <asp:CheckBox ID="CheckBox_SelezioneMultipla"
-                                                  runat="server"
-                                                  CssClass="mr-2" />
-
-                                    <div class="d-flex align-items-center mr-2" style="height:37px; background-color: #f0f0f0;">
-                                        <i data-qty-action="decrementQty"
-                                           class="fa fa-minus-circle fa-2x align-self-center mx-1"
-                                           style="font-size:16px;"></i>
-                                        <asp:TextBox ID="tbQuantita"
-                                                     runat="server"
-                                                     Width="50px"
-                                                     Style="text-align:center;font-size: 13px; font-weight: bold;"
-                                                     MaxLength="4">1</asp:TextBox>
-                                        <i data-qty-action="incrementQty"
-                                           class="fa fa-plus-circle fa-2x align-self-center mx-1"
-                                           style="font-size:16px;"></i>
-                                    </div>
-
-	                                    <asp:ImageButton ID="ImageButton2"
-	                                                     runat="server"
-	                                                     OnClick="ImageButton1_Click"
-	                                                     ToolTip="Aggiungi al Carrello"
-	                                                     AlternateText="Aggiungi al carrello"
-	                                                     CssClass="box-icon btn-icon-action"
-	                                                     Style="border:none;height:45px;width:45px;padding:0;"
-	                                                     ImageUrl="~/Public/onsus/images/icon-cart2.svg" />
+                                <div id="filtersSg" class="mb-4" style="position:relative;">
+                                    <asp:DataList ID="DataList3" runat="server" DataSourceID="sdsSottogruppo" RepeatLayout="Flow" Font-Size="8pt">
+                                        <HeaderTemplate>
+                                            <div class="widget-facet facet-fieldset">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <p class="facet-title title-sidebar fw-semibold mb-0">Sottogruppi</p>
+                                                    <asp:HyperLink CssClass='body-text-3 link filterRemoveAll' ID="hlTutti" runat="server" NavigateUrl='<%# changeUrlGetParam(Me.Request.Url.toString, "rimuovi", "sg") %>' Text="Rimuovi tutti"></asp:HyperLink>
+                                                </div>
+                                                <div class="box-fieldset-item">
+                                        </HeaderTemplate>
+                                        <ItemTemplate>
+                                            <fieldset class="fieldset-item">
+                                                <%# If(filterIdsContains("sg",Eval("SottogruppiId").ToString()),"<b>","") %>
+                                                <asp:CheckBox ID='CheckBoxSg' checked='<%# If(filterIdsContains("sg",Eval("SottogruppiId").ToString()),True,False) %>' runat='server' AutoPostBack='True' OnCheckedChanged ='CheckBoxSg_CheckedChanged' filterId='<%# Eval("SottogruppiId") %>' CssClass='tf-check filterCheckbox' Text='<%# getCorrectLengthDescription(Eval("Descrizione")) & " " & "<span class=""text-main-4"">(" & Eval("Numero") & ")</span>"  %>' Width='150px' ToolTip='Applica/Rimuovi Filtro'/></asp:CheckBox>
+                                                <%# If(filterIdsContains("sg",Eval("SottogruppiId").ToString()),"</b>","") %>
+                                            </fieldset>
+                                        </ItemTemplate>
+                                        <FooterTemplate>
+                                                </div>
+                                            </div>
+                                        </FooterTemplate>
+                                    </asp:DataList>
                                 </div>
+
                             </div>
 
-                            <!-- hidden fields -->
-                            <asp:TextBox ID="tbID" runat="server" Text='<%# Eval("ID") %>' Visible="false"></asp:TextBox>
-                            <asp:TextBox ID="tbInOfferta" runat="server" Text='<%# Eval("InOfferta") %>' Visible="false"></asp:TextBox>
-                            <asp:HiddenField ID="hfIdArticolo" runat="server" Value='<%# Eval("ID") %>' />
-                            <asp:HiddenField ID="hfTCId" runat="server" Value='<%# Eval("TCid") %>' />
                         </div>
-                    </ItemTemplate>
-
-                    <FooterTemplate>
-                        <img src="Public/Images/selection.gif" style="max-width:100%" alt="" />
-                        &nbsp;&nbsp;&nbsp;
-                        <asp:ImageButton ID="Selezione_Multipla"
-                                         runat="server"
-                                         title="Aggiungi gli articoli selezionati al carrello"
-                                         OnClick="Selezione_Multipla_Click"
-                                         ImageUrl="~/Public/Images/aggiungiMultiplo.png" />
-                    </FooterTemplate>
-
-                    <FooterStyle CssClass="bg-light text-center" />
-                </asp:TemplateField>
-            </Columns>
-
-            <PagerStyle CssClass="pagination-ys" />
-            <PagerSettings Mode="NumericFirstLast" FirstPageText="Inizio" LastPageText="Fine" />
-        </asp:GridView>
-    </div>
-	
-    <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" Font-Size="7pt" Font-Names="arial"></asp:Label><br /><br />
-    
-    <script type="text/javascript">
-        $(function () {
-            $("[id*=CheckBoxMr]").click(disable_checkbox);
-            $("[id*=CheckBoxTp]").click(disable_checkbox);
-            $("[id*=CheckBoxGr]").click(disable_checkbox);
-            $("[id*=CheckBoxSg]").click(disable_checkbox);
-        });
-		
-        function disable_checkbox() {
-            $('#filtersMr').fadeTo('fast', .6);
-            $('#filtersMr').append('<div style="position: absolute;top:0;left:0;width: 100%;height:100%;z-index:2;opacity:0.4;filter: alpha(opacity = 50)"></div>');
-            $('#filtersTp').fadeTo('fast', .6);
-            $('#filtersTp').append('<div style="position: absolute;top:0;left:0;width: 100%;height:100%;z-index:2;opacity:0.4;filter: alpha(opacity = 50)"></div>');
-            $('#filtersGr').fadeTo('fast', .6);
-            $('#filtersGr').append('<div style="position: absolute;top:0;left:0;width: 100%;height:100%;z-index:2;opacity:0.4;filter: alpha(opacity = 50)"></div>');
-            $('#filtersSg').fadeTo('fast', .6);
-            $('#filtersSg').append('<div style="position: absolute;top:0;left:0;width: 100%;height:100%;z-index:2;opacity:0.4;filter: alpha(opacity = 50)"></div>');
-        }
-    </script>
+                    </div>
+                </div>
 
             </div>
-
         </div>
+    </div>
 
-	    </div>
-
-	    <!-- Overlay richiesto da /Public/onsus/js/main.js per il toggle dei filtri mobile -->
-	    <div class="overlay-filter"></div>
-
-	    </section>
+    <div class="overlay-filter" id="overlay-filter"></div>
+</section>
 
 </asp:Content>

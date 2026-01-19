@@ -1868,6 +1868,21 @@ End Sub
         Return System.Text.RegularExpressions.Regex.IsMatch(raw, "^\d+\|[A-Za-z0-9\-\._% ]+$")
     End Function
 
+    ' UI helper: percentuale sconto (es. "-25%") calcolata in modo robusto.
+    Protected Function GetDiscountPercent(oldPriceObj As Object, newPriceObj As Object) As String
+        Dim oldD As Decimal = KeepStoreSecurity.SqlCleanDecimal(oldPriceObj, 0D)
+        Dim newD As Decimal = KeepStoreSecurity.SqlCleanDecimal(newPriceObj, 0D)
+
+        If oldD <= 0D OrElse newD <= 0D OrElse newD >= oldD Then Return ""
+
+        Dim pctDec As Decimal = ((oldD - newD) / oldD) * 100D
+        Dim pct As Integer = CInt(Math.Round(pctDec, 0, MidpointRounding.AwayFromZero))
+        If pct <= 0 Then Return ""
+
+        Return "-" & pct.ToString() & "%"
+    End Function
+
+
 
     ' WhatsApp share helpers (URL-encoded and attribute-safe)
     Protected Function GetWhatsAppShareUrl(descrizione As Object, id As Object, tcid As Object) As String
