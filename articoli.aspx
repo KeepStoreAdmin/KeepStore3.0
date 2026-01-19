@@ -83,6 +83,32 @@
             flex-wrap:wrap;
             margin-top:6px;
         }
+
+        /* GridView -> ONus grid layout (senza cambiare controllo WebForms) */
+        .ks-gridview-as-grid{ width:100%; }
+        .ks-gridview-as-grid > tbody{ display:flex; flex-wrap:wrap; gap:24px; }
+        .ks-gridview-as-grid > tbody > tr{ display:block; flex: 0 0 calc(25% - 24px); }
+        .ks-gridview-as-grid > tbody > tr > td{ display:block; padding:0 !important; border:0 !important; }
+
+        @media (max-width: 1199.98px){
+            .ks-gridview-as-grid > tbody > tr{ flex-basis: calc(33.333% - 24px); }
+        }
+        @media (max-width: 991.98px){
+            .ks-gridview-as-grid > tbody > tr{ flex-basis: calc(50% - 24px); }
+        }
+        @media (max-width: 575.98px){
+            .ks-gridview-as-grid > tbody{ gap:16px; }
+            .ks-gridview-as-grid > tbody > tr{ flex-basis: 100%; }
+        }
+
+        /* Pager row: prova a forzare full-width in modalita' flex */
+        .ks-gridview-as-grid tr.pagination-ys{ flex: 0 0 100%; width:100%; }
+        .ks-gridview-as-grid td.pagination-ys{ width:100%; }
+
+        /* Card: piccoli uniformatori */
+        .ks-gridview-as-grid .card-product{ height:100%; }
+        .ks-gridview-as-grid .card-product-wrapper .product-img{ display:block; }
+        .ks-gridview-as-grid .card-product-wrapper .product-img img{ width:100%; height:auto; object-fit:contain; }
     </style>
 
 </asp:Content>
@@ -179,11 +205,18 @@
 
     <div class="container">
 
-        <div class="row mt-3">
+	    <div class="row mt-3 tf-product-view-content wrapper-control-shop">
 
-            <!-- Sidebar (Template Onus, SINISTRA) -->
-            <div class="col-lg-3 mb-4">
-                <aside class="sidebar-filter">
+	            <!-- Sidebar (Template ONus, DESTRA su desktop) -->
+	            <div class="col-lg-3 mb-4 order-lg-2">
+	                <aside class="canvas-filter-product sidebar-filter handle-canvas right">
+	                    <div class="canvas-wrapper">
+	                        <!-- Mobile header (chiusura filtri) -->
+	                        <div class="canvas-header d-flex d-xl-none justify-content-between align-items-center">
+	                            <h5 class="title">Filtri</h5>
+	                            <span class="icon-close close-filter"></span>
+	                        </div>
+	                        <div class="canvas-body">
 
                     <!-- Navigazione categorie -->
                     <div class="facet-categories mb-4">
@@ -302,23 +335,28 @@
                             </asp:DataList>
                         </div>
 
-                    </div>
+	                    </div>
+	                </div>
 
-                </aside>
+	                </aside>
             </div>
 
             <!-- Main content -->
 
-            <div class="col-lg-9">
+	            <div class="col-lg-9 order-lg-1 content-area">
 
     <asp:SqlDataSource ID="sdsArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
         ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
         SelectCommand="SELECT id, Codice, Descrizione1, PrezzoAcquisto, Img1, DescrizioneLunga FROM varticolibase ORDER BY Codice, Descrizione1" EnableViewState="False">
     </asp:SqlDataSource>
 
-    <div class="container mt-3">
+	    <div class="mt-3">
         <div class="tf-shop-control flex-wrap gap-10 mb-3">
-            <div class="tf-shop-control-left">
+	            <div class="tf-shop-control-left d-flex align-items-center gap-10">
+	                <a href="javascript:void(0)" id="filterShop" class="tf-btn-filter d-flex d-xl-none">
+	                    <span class="icon icon-filter"></span>
+	                    <span class="text">Filtri</span>
+	                </a>
                 <p class="body-text-3 mb-0">
                     <span class="fw-semibold">Trovati:</span>
                     <asp:Label ID="lblTrovati" runat="server" Font-Bold="True"></asp:Label>
@@ -346,22 +384,22 @@
             </div>
         </div>
 
-        <div id="filtritagliaecolore" runat="server" class="tf-shop-control flex-wrap gap-10 mb-2">
+	        <div id="filtritagliaecolore" runat="server" class="tf-shop-control flex-wrap gap-10 mb-2">
             <div class="d-flex align-items-center gap-8">
                 <span class="body-text-3">Filtra taglia</span>
-                <asp:DropDownList ID="Drop_Filtra_Taglia" style="text-align:left;vertical-align:middle" runat="server" Width="140px" AutoPostBack="True" BackColor="#FFFF80" Font-Bold="False" Font-Size="10pt" ForeColor="Black">
+	                <asp:DropDownList ID="Drop_Filtra_Taglia" style="text-align:left;vertical-align:middle" runat="server" Width="140px" AutoPostBack="True" CssClass="form-select form-select-sm filterLink">
                     <asp:ListItem Value="P_tutte_taglie">Tutte</asp:ListItem>
                 </asp:DropDownList>
             </div>
 
             <div class="d-flex align-items-center gap-8">
                 <span class="body-text-3">Filtra colore</span>
-                <asp:DropDownList ID="Drop_Filtra_Colore" style="text-align:left;vertical-align:middle" runat="server" Width="140px" AutoPostBack="True" BackColor="#FFFF80" Font-Bold="False" Font-Size="10pt" ForeColor="Black">
+	                <asp:DropDownList ID="Drop_Filtra_Colore" style="text-align:left;vertical-align:middle" runat="server" Width="140px" AutoPostBack="True" CssClass="form-select form-select-sm filterLink">
                     <asp:ListItem Value="P_tutti_colori">Tutti</asp:ListItem>
                 </asp:DropDownList>
             </div>
         </div>
-    </div> <!-- fine container mt-3 -->
+	    </div>
 
     <div class="bg-white home-box-position bg-shadow">
         <asp:GridView ID="GridView1" runat="server"
@@ -375,13 +413,13 @@
             Width="100%"
             ShowFooter="True"
             ShowHeader="False"
-            CssClass="table-borderless">
+	            CssClass="table-borderless ks-gridview-as-grid">
 
             <Columns>
                 <asp:TemplateField>
                     <ItemTemplate>
-                        <div class="card-product style-border mb-4">
-                            <div class="card-product-wrapper d-flex flex-wrap">
+	                        <div class="card-product">
+	                            <div class="card-product-wrapper">
                                 <!-- IMMAGINE PRODOTTO -->
                                 <a href='<%# ResolveUrl("~/articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCid")) %>'
                                    class="product-img">
@@ -523,12 +561,14 @@
                                            style="font-size:16px;"></i>
                                     </div>
 
-                                    <asp:ImageButton ID="ImageButton2"
-                                                     runat="server"
-                                                     OnClick="ImageButton1_Click"
-                                                     ToolTip="Aggiungi al Carrello"
-                                                     Style="border:none;height:37px; width:180px;"
-                                                     ImageUrl="Public/Images/spazio_vuoto.gif" />
+	                                    <asp:ImageButton ID="ImageButton2"
+	                                                     runat="server"
+	                                                     OnClick="ImageButton1_Click"
+	                                                     ToolTip="Aggiungi al Carrello"
+	                                                     AlternateText="Aggiungi al carrello"
+	                                                     CssClass="box-icon btn-icon-action"
+	                                                     Style="border:none;height:45px;width:45px;padding:0;"
+	                                                     ImageUrl="~/Public/onsus/images/icon-cart2.svg" />
                                 </div>
                             </div>
 
@@ -585,8 +625,11 @@
 
         </div>
 
-    </div>
+	    </div>
 
-    </section>
+	    <!-- Overlay richiesto da /Public/onsus/js/main.js per il toggle dei filtri mobile -->
+	    <div class="overlay-filter"></div>
+
+	    </section>
 
 </asp:Content>
