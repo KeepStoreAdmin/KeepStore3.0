@@ -511,8 +511,6 @@
                     </div>
                 </ItemTemplate>
             </asp:TemplateField>
-
-            <!-- Campi tecnici nascosti -->
             <asp:BoundField DataField="TotIva" HeaderText="Iva" SortExpression="TotIva" DataFormatString="{0:C}" Visible="False" />
             <asp:BoundField DataField="NDocumento" HeaderText="NDocumento" ReadOnly="True" Visible="False" />
             <asp:BoundField DataField="id" HeaderText="id" ReadOnly="True" SortExpression="id" Visible="False" />
