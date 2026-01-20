@@ -4,6 +4,7 @@ Imports System.IO
 Imports System.Text
 Imports System.Web
 Imports System.Configuration
+Imports System.Security.Principal
 Imports MySql.Data.MySqlClient
 
 Partial Class cambiapassword
@@ -22,8 +23,82 @@ Partial Class cambiapassword
         End Get
     End Property
 
-    Private Function LogFolderPhysical() As String
-        Return Server.MapPath("~/App_Data/Logs")
+    Private Enum LogDirMode
+        PrimaryAppData = 0
+        FallbackTemp = 1
+        None = 2
+    End Enum
+
+    Private _logDirResolved As String = ""
+    Private _logDirMode As LogDirMode = LogDirMode.None
+
+    Private Function CurrentProcessIdentity() As String
+        Try
+            Dim wi As WindowsIdentity = WindowsIdentity.GetCurrent()
+            If wi IsNot Nothing AndAlso Not String.IsNullOrEmpty(wi.Name) Then
+                Return wi.Name
+            End If
+        Catch
+        End Try
+        Return "(unknown)"
+    End Function
+
+    Private Function PrimaryLogFolderPhysical() As String
+        Try
+            Return Server.MapPath("~/App_Data/Logs")
+        Catch
+            Return ""
+        End Try
+    End Function
+
+    Private Function FallbackLogFolderPhysical() As String
+        Try
+            Return Path.Combine(Path.GetTempPath(), "KeepStoreLogs")
+        Catch
+            Return ""
+        End Try
+    End Function
+
+    Private Function TryWriteTest(ByVal dir As String, ByVal fileName As String, ByVal tag As String, ByRef err As Exception) As Boolean
+        err = Nothing
+        Try
+            If String.IsNullOrEmpty(dir) Then Return False
+            Directory.CreateDirectory(dir)
+            Dim fp As String = Path.Combine(dir, fileName)
+            File.AppendAllText(fp, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") & " | " & tag & Environment.NewLine, Encoding.UTF8)
+            Return True
+        Catch ex As Exception
+            err = ex
+            Return False
+        End Try
+    End Function
+
+    Private Function ResolveLogFolder() As String
+        If Not String.IsNullOrEmpty(_logDirResolved) AndAlso _logDirMode <> LogDirMode.None Then
+            Return _logDirResolved
+        End If
+
+        Dim ex1 As Exception = Nothing
+        Dim primary As String = PrimaryLogFolderPhysical()
+        If TryWriteTest(primary, "log_write_test.txt", "write-test", ex1) Then
+            _logDirResolved = primary
+            _logDirMode = LogDirMode.PrimaryAppData
+            Return _logDirResolved
+        End If
+
+        ' Fallback: TEMP (utile su hosting dove App_Data e' readonly per l'identity IIS)
+        Dim ex2 As Exception = Nothing
+        Dim fallback As String = FallbackLogFolderPhysical()
+        If TryWriteTest(fallback, "log_write_test.txt", "write-test", ex2) Then
+            _logDirResolved = fallback
+            _logDirMode = LogDirMode.FallbackTemp
+            Return _logDirResolved
+        End If
+
+        ' Nessuna cartella scrivibile
+        _logDirResolved = primary
+        _logDirMode = LogDirMode.None
+        Return _logDirResolved
     End Function
 
     Private Sub AppendDiag(ByVal msg As String)
@@ -35,29 +110,30 @@ Partial Class cambiapassword
     End Sub
 
     Private Sub EnsureLogWritable()
-        ' Test reale di scrittura in App_Data\Logs (serve anche per capire perche' i log globali non vengono creati)
-        Try
-            Dim dir As String = LogFolderPhysical()
-            If String.IsNullOrEmpty(dir) Then
-                AppendDiag("Log path: Server.MapPath ha restituito vuoto")
-                Return
-            End If
+        ' Test reale di scrittura log. Se App_Data\Logs non e' scrivibile, tenta fallback TEMP.
+        Dim primary As String = PrimaryLogFolderPhysical()
+        Dim resolved As String = ResolveLogFolder()
 
-            Directory.CreateDirectory(dir)
-            Dim testFile As String = Path.Combine(dir, "log_write_test.txt")
-            File.AppendAllText(testFile, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") & " | write-test" & Environment.NewLine, Encoding.UTF8)
-
-            AppendDiag("Logging: OK (cartella: " & dir & ")")
-        Catch ex As Exception
-            AppendDiag("Logging: ERRORE (cartella: " & LogFolderPhysical() & ")")
-            AppendDiag("Motivo: " & ex.GetType().Name & " - " & ex.Message)
-            AppendDiagTech(ex.ToString())
-        End Try
+        If _logDirMode = LogDirMode.PrimaryAppData Then
+            AppendDiag("Logging: OK (cartella: " & resolved & ")")
+        ElseIf _logDirMode = LogDirMode.FallbackTemp Then
+            AppendDiag("Logging: OK (fallback TEMP) (cartella: " & resolved & ")")
+            AppendDiag("Nota: App_Data\\Logs non e' scrivibile per l'identity IIS. Vedi istruzioni permessi.")
+            AppendDiag("Percorso primario (non scrivibile): " & primary)
+        Else
+            AppendDiag("Logging: ERRORE (primario: " & primary & ")")
+            AppendDiag("Fallback TEMP: " & FallbackLogFolderPhysical())
+            AppendDiag("Motivo: nessun percorso scrivibile per questa identity.")
+        End If
     End Sub
 
     Private Sub WriteLog(ByVal msg As String)
         Try
-            Dim dir As String = LogFolderPhysical()
+            Dim dir As String = ResolveLogFolder()
+            If String.IsNullOrEmpty(dir) Then
+                AppendDiag("WriteLog fallito: log dir vuota")
+                Return
+            End If
             Directory.CreateDirectory(dir)
             Dim fp As String = Path.Combine(dir, "cambiapassword.log")
             File.AppendAllText(fp, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") & " | " & msg & Environment.NewLine, Encoding.UTF8)
@@ -93,6 +169,11 @@ Partial Class cambiapassword
             ' Diagnostica base (sempre compilata; mostrata solo se necessario)
             AppendDiag("Pagina: cambiapassword.aspx")
             AppendDiag("Ora server: " & DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"))
+            AppendDiag("Identity processo: " & CurrentProcessIdentity())
+            Try
+                AppendDiag("AppDomain: " & Convert.ToString(HttpRuntime.AppDomainAppId))
+            Catch
+            End Try
             AppendDiag("LoginId session: " & Convert.ToString(Session("LoginId")))
             AppendDiag("ConnString presente: " & If(String.IsNullOrEmpty(ConnString), "NO", "SI"))
 
