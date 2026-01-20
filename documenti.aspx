@@ -411,7 +411,6 @@
         <EmptyDataRowStyle Font-Bold="False" Height="100px" HorizontalAlign="Center" />
 
         <Columns>
-            <!-- Numero documento -->
             <asp:TemplateField HeaderText="Numero">
                 <ItemTemplate>
                     <div class="d-flex flex-column">
@@ -451,21 +450,18 @@
                 </ItemTemplate>
             </asp:TemplateField>
 
-            <!-- Data -->
             <asp:TemplateField HeaderText="Data">
                 <ItemTemplate>
                     <span class="body-text-3"><%# Eval("DataDocumento", "{0:d}") %></span>
                 </ItemTemplate>
             </asp:TemplateField>
 
-            <!-- Stato -->
             <asp:TemplateField HeaderText="Stato">
                 <ItemTemplate>
                     <span class="body-text-3 ks-status-pill"><%# Eval("StatiDescrizione1") %></span>
                 </ItemTemplate>
             </asp:TemplateField>
 
-            <!-- Totale -->
             <asp:TemplateField HeaderText="Totale">
                 <ItemTemplate>
                     <div class="d-flex flex-column">
@@ -475,7 +471,6 @@
                 </ItemTemplate>
             </asp:TemplateField>
 
-            <!-- Azione -->
             <asp:TemplateField HeaderText="Azione">
                 <ItemTemplate>
                     <div class="ks-action-stack">
