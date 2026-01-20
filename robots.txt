@@ -1,15 +1,17 @@
-# KeepStore 3.0 - Robots policy (STEP32 suggested alignment)
+# KeepStore 3.0 - Robots policy (STEP32A final)
+# Goal: reduce crawler traps from stateful/action URLs and protect private/account flows.
+# Note: SEO policy for faceted navigation (st/ct/gr/mr/sg/tp) is enforced via meta robots + canonical (STEP27/STEP29),
+# so we DO NOT disallow those parameters here (otherwise crawlers cannot read noindex/canonical).
+
 User-agent: *
 
-# Block action URLs / faceted traps
+# Block action URLs (state-changing or trap URLs)
 Disallow: /*rimuovi=
 Disallow: /*?rimuovi=
 Disallow: /*&rimuovi=
-Disallow: /*st=
-Disallow: /*?st=
-Disallow: /*&st=
 
-# Block non-indexable areas (align to KeepStore 3.0 real pages)
+# Block non-indexable areas (private / transactional.
+# Keep aligned to KeepStore 3.0 real pages)
 Disallow: /myaccount
 Disallow: /myaccount/
 Disallow: /myaccount.aspx
