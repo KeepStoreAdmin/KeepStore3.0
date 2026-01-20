@@ -1,347 +1,418 @@
 Imports System
+Imports System.Collections.Generic
 Imports System.Configuration
-Imports System.Globalization
 Imports System.Text
 Imports System.Web
 Imports System.Web.Caching
+Imports System.Xml
 Imports MySql.Data.MySqlClient
 
-Partial Class sitemap
+' KeepStore 3.0 - Sitemap generator (STEP33B)
+' - Generates an XML Sitemap (or Sitemap Index if too many URLs)
+' - Includes:
+'   * Home + core public pages
+'   * Catalog listing URLs (articoli.aspx) only for SEO-indexable combinations (st/ct/tp/gr/sg/mr)
+'   * Product detail URLs (articolo.aspx?id=...&TCid=...)
+Public Class sitemap
     Inherits System.Web.UI.Page
 
-    Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
+    Private Const MAX_URLS_PER_SITEMAP As Integer = 40000
+    Private Const CACHE_KEY_URLS As String = "KeepStore.Sitemap.UrlList.v1"
+    Private Const CACHE_MINUTES As Integer = 60
+
+    Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
         Response.Clear()
         Response.ContentType = "application/xml"
         Response.ContentEncoding = Encoding.UTF8
 
-        ' Cache (default 60 minuti)
-        Dim cacheMinutes As Integer = GetIntAppSetting("KeepStore.Sitemap.CacheMinutes", 60)
-        Dim cacheKey As String = "KeepStore.Sitemap.Xml.v33"
-        Dim cached As String = TryCast(Context.Cache(cacheKey), String)
+        Dim allUrls As List(Of String) = GetOrBuildUrlList()
+        If allUrls Is Nothing Then allUrls = New List(Of String)()
 
-        If Not String.IsNullOrEmpty(cached) Then
-            Response.Write(cached)
-            Response.End()
-            Return
+        Dim part As Integer = 0
+        Integer.TryParse(Request.QueryString("part"), part)
+
+        If allUrls.Count > MAX_URLS_PER_SITEMAP AndAlso part <= 0 Then
+            WriteSitemapIndex(allUrls.Count)
+        Else
+            WriteUrlSet(allUrls, part)
         End If
 
-        Dim baseUrl As String = GetBaseUrl()
-        Dim lastMod As String = DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
-
-        ' Limiti anti-esplosione (default 45000 url)
-        Dim maxUrls As Integer = GetIntAppSetting("KeepStore.Sitemap.MaxUrls", 45000)
-        Dim urlCount As Integer = 0
-
-        Dim sb As New StringBuilder(1024 * 64)
-        sb.Append("<?xml version=""1.0"" encoding=""UTF-8""?>").Append(vbCrLf)
-        sb.Append("<urlset xmlns=""http://www.sitemaps.org/schemas/sitemap/0.9"">").Append(vbCrLf)
-
-        ' ---- URL STATICHE (minime e sicure) ----
-        AddUrl(sb, "/", lastMod, "daily", "1.0", baseUrl, urlCount, maxUrls)
-        AddUrl(sb, "/articoli.aspx", lastMod, "daily", "0.9", baseUrl, urlCount, maxUrls)
-
-        ' Se queste pagine esistono nel tuo progetto, bene; se non esistono, puoi commentarle.
-        AddUrl(sb, "/about.aspx", lastMod, "monthly", "0.4", baseUrl, urlCount, maxUrls)
-        AddUrl(sb, "/contact.aspx", lastMod, "monthly", "0.4", baseUrl, urlCount, maxUrls)
-        AddUrl(sb, "/privacy.aspx", lastMod, "yearly", "0.2", baseUrl, urlCount, maxUrls)
-        AddUrl(sb, "/faq.aspx", lastMod, "yearly", "0.2", baseUrl, urlCount, maxUrls)
-
-        ' ---- STEP33: URL DINAMICHE DA DB (prodotti + facet SEO consentite) ----
-        Try
-            AddDynamicDbUrls(sb, baseUrl, lastMod, urlCount, maxUrls)
-        Catch
-            ' Non blocchiamo mai la sitemap: in caso di errore DB, pubblichiamo almeno le statiche.
-        End Try
-
-        sb.Append("</urlset>")
-
-        Dim xmlOut As String = sb.ToString()
-
-        ' Cache pubblica lato crawler + cache server-side
-        Response.Cache.SetCacheability(HttpCacheability.Public)
-        Response.Cache.SetMaxAge(TimeSpan.FromMinutes(cacheMinutes))
-        Context.Cache.Insert(cacheKey, xmlOut, Nothing, DateTime.UtcNow.AddMinutes(cacheMinutes), Cache.NoSlidingExpiration)
-
-        Response.Write(xmlOut)
-        Response.End()
+        Response.Flush()
+        HttpContext.Current.ApplicationInstance.CompleteRequest()
     End Sub
 
-    Private Sub AddDynamicDbUrls(ByVal sb As StringBuilder,
-                                 ByVal baseUrl As String,
-                                 ByVal lastMod As String,
-                                 ByRef urlCount As Integer,
-                                 ByVal maxUrls As Integer)
+    Private Function GetOrBuildUrlList() As List(Of String)
+        Dim nocache As String = Convert.ToString(Request.QueryString("nocache"))
+        If String.Equals(nocache, "1", StringComparison.Ordinal) Then
+            HttpRuntime.Cache.Remove(CACHE_KEY_URLS)
+        End If
 
-        Dim connName As String = GetStringAppSetting("KeepStore.Sitemap.ConnectionStringName", "EntropicConnectionString")
-        Dim cs = ConfigurationManager.ConnectionStrings(connName)
-        If cs Is Nothing OrElse String.IsNullOrEmpty(cs.ConnectionString) Then Exit Sub
+        Dim cached As Object = HttpRuntime.Cache(CACHE_KEY_URLS)
+        Dim urls As List(Of String) = TryCast(cached, List(Of String))
+        If urls IsNot Nothing AndAlso urls.Count > 0 Then
+            Return urls
+        End If
 
-        ' Tabella/view sorgente: preferisco vsuperarticoli (se esiste), altrimenti articoli
-        Dim preferredSource As String = GetStringAppSetting("KeepStore.Sitemap.Source", "vsuperarticoli")
-        Dim source As String = SafeIdentifier(preferredSource)
-        If String.IsNullOrEmpty(source) Then source = "vsuperarticoli"
+        urls = BuildUrlList()
+        HttpRuntime.Cache.Insert(CACHE_KEY_URLS, urls, Nothing, DateTime.UtcNow.AddMinutes(CACHE_MINUTES), Cache.NoSlidingExpiration)
+        Return urls
+    End Function
 
-        Dim includeProducts As Boolean = (GetStringAppSetting("KeepStore.Sitemap.IncludeProducts", "1") <> "0")
-        Dim includeFacets As Boolean = (GetStringAppSetting("KeepStore.Sitemap.IncludeFacets", "1") <> "0")
+    Private Function BuildUrlList() As List(Of String)
+        Dim baseUrl As String = GetBaseUrl()
+        Dim setUrls As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
 
-        ' Limiti “per ramo”
-        Dim maxProducts As Integer = GetIntAppSetting("KeepStore.Sitemap.MaxProducts", 20000)
-        Dim maxPairs As Integer = GetIntAppSetting("KeepStore.Sitemap.MaxSettoreCategoria", 2000)
-        Dim maxBrands As Integer = GetIntAppSetting("KeepStore.Sitemap.MaxBrandsPerPair", 30)
-        Dim maxGroups As Integer = GetIntAppSetting("KeepStore.Sitemap.MaxGroupsPerPair", 30)
-        Dim maxGroupSubPairs As Integer = GetIntAppSetting("KeepStore.Sitemap.MaxGroupSubPairsPerPair", 40)
-        Dim maxTypes As Integer = GetIntAppSetting("KeepStore.Sitemap.MaxTipologiePerPair", 12)
+        ' --- Core public pages (keep intentionally small)
+        Dim homeRel As String = Convert.ToString(ConfigurationManager.AppSettings("KeepStore.Sitemap.Home"))
+        If String.IsNullOrEmpty(homeRel) Then homeRel = "default.aspx"
 
-        Dim productDetailFmt As String = GetStringAppSetting("KeepStore.Sitemap.ProductDetailFormat", "articolo.aspx?id={0}")
+        AddAbs(setUrls, baseUrl, homeRel)
+        AddAbs(setUrls, baseUrl, "articoli.aspx")
+        AddAbs(setUrls, baseUrl, "contattaci.aspx")
 
-        Using cn As New MySqlConnection(cs.ConnectionString)
-            cn.Open()
+        ' --- Catalog listing URLs (SEO allowlist)
+        Try
+            AddCatalogListingUrlsFromDb(setUrls, baseUrl)
+        Catch
+            ' Best-effort: sitemap still works with core URLs
+        End Try
 
-            If Not DbObjectExists(cn, source) Then
-                source = "articoli"
-                If Not DbObjectExists(cn, source) Then Exit Sub
-            End If
+        ' --- Product detail URLs
+        Try
+            AddProductUrlsFromDb(setUrls, baseUrl)
+        Catch
+            ' Best-effort
+        End Try
 
-            ' ========== 1) DETTAGLIO PRODOTTI ==========
-            If includeProducts AndAlso urlCount < maxUrls Then
-                Dim sqlProd As String =
-                    "SELECT DISTINCT id " &
-                    "FROM `" & source & "` " &
-                    "WHERE id > 0 " &
-                    "ORDER BY id DESC " &
-                    "LIMIT @lim;"
+        Dim urls As New List(Of String)(setUrls)
+        urls.Sort(StringComparer.OrdinalIgnoreCase)
+        Return urls
+    End Function
 
-                Using cmd As New MySqlCommand(sqlProd, cn)
-                    cmd.CommandTimeout = 30
-                    cmd.Parameters.AddWithValue("@lim", maxProducts)
+    Private Sub WriteSitemapIndex(totalCount As Integer)
+        Dim baseUrl As String = GetBaseUrl()
+        Dim parts As Integer = CInt(Math.Ceiling(totalCount / CDbl(MAX_URLS_PER_SITEMAP)))
 
-                    Using r = cmd.ExecuteReader()
-                        While r.Read() AndAlso urlCount < maxUrls
-                            Dim id As Integer = Convert.ToInt32(r(0))
-                            Dim rel As String = String.Format(CultureInfo.InvariantCulture, productDetailFmt, id)
-                            AddUrl(sb, "/" & rel.TrimStart("/"c), lastMod, "weekly", "0.7", baseUrl, urlCount, maxUrls)
-                        End While
-                    End Using
+        Dim settings As New XmlWriterSettings()
+        settings.Encoding = Encoding.UTF8
+        settings.Indent = True
+        settings.OmitXmlDeclaration = False
+
+        Using xw As XmlWriter = XmlWriter.Create(Response.Output, settings)
+            xw.WriteStartDocument()
+            xw.WriteStartElement("sitemapindex", "http://www.sitemaps.org/schemas/sitemap/0.9")
+
+            For i As Integer = 1 To parts
+                xw.WriteStartElement("sitemap")
+                xw.WriteElementString("loc", CombineUrl(baseUrl, "sitemap.aspx?part=" & i.ToString()))
+                xw.WriteElementString("lastmod", DateTime.UtcNow.ToString("yyyy-MM-dd"))
+                xw.WriteEndElement()
+            Next
+
+            xw.WriteEndElement()
+            xw.WriteEndDocument()
+        End Using
+    End Sub
+
+    Private Sub WriteUrlSet(allUrls As List(Of String), part As Integer)
+        Dim startIndex As Integer = 0
+        If part > 0 Then
+            startIndex = (part - 1) * MAX_URLS_PER_SITEMAP
+        End If
+
+        If startIndex < 0 Then startIndex = 0
+        If startIndex > allUrls.Count Then startIndex = allUrls.Count
+
+        Dim takeCount As Integer = Math.Min(MAX_URLS_PER_SITEMAP, Math.Max(0, allUrls.Count - startIndex))
+        Dim slice As List(Of String)
+        If startIndex = 0 AndAlso takeCount = allUrls.Count Then
+            slice = allUrls
+        Else
+            slice = allUrls.GetRange(startIndex, takeCount)
+        End If
+
+        Dim settings As New XmlWriterSettings()
+        settings.Encoding = Encoding.UTF8
+        settings.Indent = True
+        settings.OmitXmlDeclaration = False
+
+        Using xw As XmlWriter = XmlWriter.Create(Response.Output, settings)
+            xw.WriteStartDocument()
+            xw.WriteStartElement("urlset", "http://www.sitemaps.org/schemas/sitemap/0.9")
+
+            For Each url As String In slice
+                If String.IsNullOrEmpty(url) Then Continue For
+                xw.WriteStartElement("url")
+                xw.WriteElementString("loc", url)
+                xw.WriteElementString("lastmod", DateTime.UtcNow.ToString("yyyy-MM-dd"))
+                xw.WriteEndElement()
+            Next
+
+            xw.WriteEndElement()
+            xw.WriteEndDocument()
+        End Using
+    End Sub
+
+    Private Sub AddCatalogListingUrlsFromDb(target As HashSet(Of String), baseUrl As String)
+        Dim cs As String = GetConnectionString()
+        If String.IsNullOrEmpty(cs) Then Exit Sub
+
+        Using conn As New MySqlConnection(cs)
+            conn.Open()
+
+            ' 1) st+ct
+            Using cmd As New MySqlCommand("SELECT DISTINCT SettoriId, CategorieId FROM vsuperarticoli WHERE CategorieId IS NOT NULL AND CategorieId<>0 AND SettoriId IS NOT NULL AND SettoriId<>0", conn)
+                Using r As MySqlDataReader = cmd.ExecuteReader()
+                    While r.Read()
+                        Dim st As Integer = SafeInt(r, 0)
+                        Dim ct As Integer = SafeInt(r, 1)
+                        If IsSeoIndexAllowed(st, ct, 0, 0, 0, 0) Then
+                            AddAbs(target, baseUrl, BuildCatalogUrl(st, ct, 0, 0, 0, 0))
+                        End If
+                    End While
                 End Using
-            End If
+            End Using
 
-            ' ========== 2) LISTING FACET SEO (solo combinazioni consentite) ==========
-            If includeFacets AndAlso urlCount < maxUrls Then
-
-                ' Coppie base: st+ct
-                Dim sqlPairs As String =
-                    "SELECT DISTINCT SettoriId, CategorieId " &
-                    "FROM `" & source & "` " &
-                    "WHERE SettoriId > 0 AND CategorieId > 0 " &
-                    "LIMIT @lim;"
-
-                Dim pairs As New List(Of Tuple(Of Integer, Integer))()
-
-                Using cmdPairs As New MySqlCommand(sqlPairs, cn)
-                    cmdPairs.CommandTimeout = 30
-                    cmdPairs.Parameters.AddWithValue("@lim", maxPairs)
-
-                    Using r = cmdPairs.ExecuteReader()
-                        While r.Read()
-                            Dim st As Integer = Convert.ToInt32(r(0))
-                            Dim ct As Integer = Convert.ToInt32(r(1))
-                            pairs.Add(Tuple.Create(st, ct))
-                        End While
-                    End Using
+            ' 2) st+ct+tp
+            Using cmd As New MySqlCommand("SELECT DISTINCT SettoriId, CategorieId, TipologieId FROM vsuperarticoli WHERE TipologieId IS NOT NULL AND TipologieId<>0 AND CategorieId IS NOT NULL AND CategorieId<>0 AND SettoriId IS NOT NULL AND SettoriId<>0", conn)
+                Using r As MySqlDataReader = cmd.ExecuteReader()
+                    While r.Read()
+                        Dim st As Integer = SafeInt(r, 0)
+                        Dim ct As Integer = SafeInt(r, 1)
+                        Dim tp As Integer = SafeInt(r, 2)
+                        If IsSeoIndexAllowed(st, ct, tp, 0, 0, 0) Then
+                            AddAbs(target, baseUrl, BuildCatalogUrl(st, ct, tp, 0, 0, 0))
+                        End If
+                    End While
                 End Using
+            End Using
 
-                For Each p In pairs
-                    If urlCount >= maxUrls Then Exit For
+            ' 3) st+ct+(gr|sg|mr) WITHOUT tp
+            AddFacetListingWithoutTp(conn, target, baseUrl, "GruppiId", "SELECT DISTINCT SettoriId, CategorieId, GruppiId FROM vsuperarticoli WHERE GruppiId IS NOT NULL AND GruppiId<>0 AND CategorieId IS NOT NULL AND CategorieId<>0 AND SettoriId IS NOT NULL AND SettoriId<>0")
+            AddFacetListingWithoutTp(conn, target, baseUrl, "SottogruppiId", "SELECT DISTINCT SettoriId, CategorieId, SottogruppiId FROM vsuperarticoli WHERE SottogruppiId IS NOT NULL AND SottogruppiId<>0 AND CategorieId IS NOT NULL AND CategorieId<>0 AND SettoriId IS NOT NULL AND SettoriId<>0")
+            AddFacetListingWithoutTp(conn, target, baseUrl, "MarcheId", "SELECT DISTINCT SettoriId, CategorieId, MarcheId FROM vsuperarticoli WHERE MarcheId IS NOT NULL AND MarcheId<>0 AND CategorieId IS NOT NULL AND CategorieId<>0 AND SettoriId IS NOT NULL AND SettoriId<>0")
 
-                    Dim st As Integer = p.Item1
-                    Dim ct As Integer = p.Item2
+            ' 4) st+ct+tp+(gr|sg|mr)
+            AddFacetListingWithTp(conn, target, baseUrl, "GruppiId", "SELECT DISTINCT SettoriId, CategorieId, TipologieId, GruppiId FROM vsuperarticoli WHERE TipologieId IS NOT NULL AND TipologieId<>0 AND GruppiId IS NOT NULL AND GruppiId<>0 AND CategorieId IS NOT NULL AND CategorieId<>0 AND SettoriId IS NOT NULL AND SettoriId<>0")
+            AddFacetListingWithTp(conn, target, baseUrl, "SottogruppiId", "SELECT DISTINCT SettoriId, CategorieId, TipologieId, SottogruppiId FROM vsuperarticoli WHERE TipologieId IS NOT NULL AND TipologieId<>0 AND SottogruppiId IS NOT NULL AND SottogruppiId<>0 AND CategorieId IS NOT NULL AND CategorieId<>0 AND SettoriId IS NOT NULL AND SettoriId<>0")
+            AddFacetListingWithTp(conn, target, baseUrl, "MarcheId", "SELECT DISTINCT SettoriId, CategorieId, TipologieId, MarcheId FROM vsuperarticoli WHERE TipologieId IS NOT NULL AND TipologieId<>0 AND MarcheId IS NOT NULL AND MarcheId<>0 AND CategorieId IS NOT NULL AND CategorieId<>0 AND SettoriId IS NOT NULL AND SettoriId<>0")
 
-                    ' Base indexabile: st+ct
-                    AddUrl(sb, "/" & BuildArticoliUrl(st, ct, 0, 0, 0, 0), lastMod, "daily", "0.8", baseUrl, urlCount, maxUrls)
-                    If urlCount >= maxUrls Then Exit For
-
-                    ' Tipologie (tp) - opzionale, sempre con st+ct
-                    Dim tpList As List(Of Integer) = GetTopIds(cn, source, "TipologieId", st, ct, maxTypes)
-                    For Each tp In tpList
-                        If urlCount >= maxUrls Then Exit For
-                        AddUrl(sb, "/" & BuildArticoliUrl(st, ct, tp, 0, 0, 0), lastMod, "weekly", "0.7", baseUrl, urlCount, maxUrls)
-                    Next
-
-                    ' Marche (mr) - (st+ct + mr) (tp NON combinato qui, per evitare esplosione)
-                    Dim mrList As List(Of Integer) = GetTopIds(cn, source, "MarcheId", st, ct, maxBrands)
-                    For Each mr In mrList
-                        If urlCount >= maxUrls Then Exit For
-                        AddUrl(sb, "/" & BuildArticoliUrl(st, ct, 0, mr, 0, 0), lastMod, "weekly", "0.65", baseUrl, urlCount, maxUrls)
-                    Next
-
-                    ' Gruppi (gr) - (st+ct + gr)
-                    Dim grList As List(Of Integer) = GetTopIds(cn, source, "GruppiId", st, ct, maxGroups)
-                    For Each gr In grList
-                        If urlCount >= maxUrls Then Exit For
-                        AddUrl(sb, "/" & BuildArticoliUrl(st, ct, 0, 0, gr, 0), lastMod, "weekly", "0.65", baseUrl, urlCount, maxUrls)
-                    Next
-
-                    ' Gruppo + Sottogruppo (gr+sg) - combinazione consentita
-                    Dim sqlGrSg As String =
-                        "SELECT GruppiId, SottoGruppiId, COUNT(*) AS cnt " &
-                        "FROM `" & source & "` " &
-                        "WHERE SettoriId=@st AND CategorieId=@ct AND GruppiId>0 AND SottoGruppiId>0 " &
-                        "GROUP BY GruppiId, SottoGruppiId " &
-                        "ORDER BY cnt DESC " &
-                        "LIMIT @lim;"
-
-                    Using cmd As New MySqlCommand(sqlGrSg, cn)
-                        cmd.CommandTimeout = 30
-                        cmd.Parameters.AddWithValue("@st", st)
-                        cmd.Parameters.AddWithValue("@ct", ct)
-                        cmd.Parameters.AddWithValue("@lim", maxGroupSubPairs)
-
-                        Using r = cmd.ExecuteReader()
-                            While r.Read() AndAlso urlCount < maxUrls
-                                Dim gr As Integer = Convert.ToInt32(r(0))
-                                Dim sg As Integer = Convert.ToInt32(r(1))
-                                AddUrl(sb, "/" & BuildArticoliUrl(st, ct, 0, 0, gr, sg), lastMod, "weekly", "0.6", baseUrl, urlCount, maxUrls)
-                            End While
-                        End Using
-                    End Using
-                Next
-            End If
+            ' 5) st+ct+tp+gr+sg (hier pair)
+            Using cmd As New MySqlCommand("SELECT DISTINCT SettoriId, CategorieId, TipologieId, GruppiId, SottogruppiId FROM vsuperarticoli WHERE TipologieId IS NOT NULL AND TipologieId<>0 AND GruppiId IS NOT NULL AND GruppiId<>0 AND SottogruppiId IS NOT NULL AND SottogruppiId<>0 AND CategorieId IS NOT NULL AND CategorieId<>0 AND SettoriId IS NOT NULL AND SettoriId<>0", conn)
+                Using r As MySqlDataReader = cmd.ExecuteReader()
+                    While r.Read()
+                        Dim st As Integer = SafeInt(r, 0)
+                        Dim ct As Integer = SafeInt(r, 1)
+                        Dim tp As Integer = SafeInt(r, 2)
+                        Dim gr As Integer = SafeInt(r, 3)
+                        Dim sg As Integer = SafeInt(r, 4)
+                        If IsSeoIndexAllowed(st, ct, tp, gr, sg, 0) Then
+                            AddAbs(target, baseUrl, BuildCatalogUrl(st, ct, tp, gr, sg, 0))
+                        End If
+                    End While
+                End Using
+            End Using
 
         End Using
     End Sub
 
-    Private Function GetTopIds(ByVal cn As MySqlConnection,
-                              ByVal source As String,
-                              ByVal col As String,
-                              ByVal st As Integer,
-                              ByVal ct As Integer,
-                              ByVal lim As Integer) As List(Of Integer)
-
-        Dim safeCol As String = SafeIdentifier(col)
-        Dim res As New List(Of Integer)()
-        If String.IsNullOrEmpty(safeCol) Then Return res
-        If lim <= 0 Then Return res
-
-        Dim sql As String =
-            "SELECT " & safeCol & " AS id, COUNT(*) AS cnt " &
-            "FROM `" & source & "` " &
-            "WHERE SettoriId=@st AND CategorieId=@ct AND " & safeCol & " > 0 " &
-            "GROUP BY " & safeCol & " " &
-            "ORDER BY cnt DESC " &
-            "LIMIT @lim;"
-
-        Using cmd As New MySqlCommand(sql, cn)
-            cmd.CommandTimeout = 30
-            cmd.Parameters.AddWithValue("@st", st)
-            cmd.Parameters.AddWithValue("@ct", ct)
-            cmd.Parameters.AddWithValue("@lim", lim)
-
-            Using r = cmd.ExecuteReader()
+    Private Sub AddFacetListingWithoutTp(conn As MySqlConnection, target As HashSet(Of String), baseUrl As String, facetName As String, sql As String)
+        Using cmd As New MySqlCommand(sql, conn)
+            Using r As MySqlDataReader = cmd.ExecuteReader()
                 While r.Read()
-                    res.Add(Convert.ToInt32(r(0)))
+                    Dim st As Integer = SafeInt(r, 0)
+                    Dim ct As Integer = SafeInt(r, 1)
+                    Dim v As Integer = SafeInt(r, 2)
+
+                    Dim gr As Integer = 0
+                    Dim sg As Integer = 0
+                    Dim mr As Integer = 0
+
+                    If String.Equals(facetName, "GruppiId", StringComparison.OrdinalIgnoreCase) Then gr = v
+                    If String.Equals(facetName, "SottogruppiId", StringComparison.OrdinalIgnoreCase) Then sg = v
+                    If String.Equals(facetName, "MarcheId", StringComparison.OrdinalIgnoreCase) Then mr = v
+
+                    If IsSeoIndexAllowed(st, ct, 0, gr, sg, mr) Then
+                        AddAbs(target, baseUrl, BuildCatalogUrl(st, ct, 0, gr, sg, mr))
+                    End If
                 End While
             End Using
         End Using
-
-        Return res
-    End Function
-
-    Private Function BuildArticoliUrl(ByVal st As Integer,
-                                      ByVal ct As Integer,
-                                      ByVal tp As Integer,
-                                      ByVal mr As Integer,
-                                      ByVal gr As Integer,
-                                      ByVal sg As Integer) As String
-
-        ' Canonical stabile: st, ct, tp, mr, gr, sg
-        Dim q As New List(Of String)()
-        q.Add("st=" & st.ToString(CultureInfo.InvariantCulture))
-        q.Add("ct=" & ct.ToString(CultureInfo.InvariantCulture))
-
-        If tp > 0 Then q.Add("tp=" & tp.ToString(CultureInfo.InvariantCulture))
-        If mr > 0 Then q.Add("mr=" & mr.ToString(CultureInfo.InvariantCulture))
-        If gr > 0 Then q.Add("gr=" & gr.ToString(CultureInfo.InvariantCulture))
-        If sg > 0 Then q.Add("sg=" & sg.ToString(CultureInfo.InvariantCulture))
-
-        Return "articoli.aspx?" & String.Join("&", q.ToArray())
-    End Function
-
-    Private Sub AddUrl(ByVal sb As StringBuilder,
-                       ByVal loc As String,
-                       ByVal lastmod As String,
-                       ByVal changefreq As String,
-                       ByVal priority As String,
-                       ByVal baseUrl As String,
-                       ByRef urlCount As Integer,
-                       ByVal maxUrls As Integer)
-
-        If urlCount >= maxUrls Then Exit Sub
-
-        Dim fullLoc As String = loc
-        If Not fullLoc.StartsWith("http", StringComparison.OrdinalIgnoreCase) Then
-            If Not fullLoc.StartsWith("/", StringComparison.Ordinal) Then fullLoc = "/" & fullLoc
-            fullLoc = baseUrl.TrimEnd("/"c) & fullLoc
-        End If
-
-        sb.Append("  <url>").Append(vbCrLf)
-        sb.Append("    <loc>").Append(HttpUtility.HtmlEncode(fullLoc)).Append("</loc>").Append(vbCrLf)
-        sb.Append("    <lastmod>").Append(lastmod).Append("</lastmod>").Append(vbCrLf)
-        sb.Append("    <changefreq>").Append(changefreq).Append("</changefreq>").Append(vbCrLf)
-        sb.Append("    <priority>").Append(priority).Append("</priority>").Append(vbCrLf)
-        sb.Append("  </url>").Append(vbCrLf)
-
-        urlCount += 1
     End Sub
 
-    Private Function GetBaseUrl() As String
-        Dim absApp As String = VirtualPathUtility.ToAbsolute("~/")
-        Dim u As Uri = Request.Url
-        Dim basePart As String = u.Scheme & "://" & u.Authority
-        Return basePart.TrimEnd("/"c) & absApp.TrimEnd("/"c)
-    End Function
+    Private Sub AddFacetListingWithTp(conn As MySqlConnection, target As HashSet(Of String), baseUrl As String, facetName As String, sql As String)
+        Using cmd As New MySqlCommand(sql, conn)
+            Using r As MySqlDataReader = cmd.ExecuteReader()
+                While r.Read()
+                    Dim st As Integer = SafeInt(r, 0)
+                    Dim ct As Integer = SafeInt(r, 1)
+                    Dim tp As Integer = SafeInt(r, 2)
+                    Dim v As Integer = SafeInt(r, 3)
 
-    Private Function DbObjectExists(ByVal cn As MySqlConnection, ByVal name As String) As Boolean
-        Dim obj As String = SafeIdentifier(name)
-        If String.IsNullOrEmpty(obj) Then Return False
+                    Dim gr As Integer = 0
+                    Dim sg As Integer = 0
+                    Dim mr As Integer = 0
 
-        Dim sql As String =
-            "SELECT COUNT(*) " &
-            "FROM information_schema.tables " &
-            "WHERE table_schema = DATABASE() AND table_name = @n;"
+                    If String.Equals(facetName, "GruppiId", StringComparison.OrdinalIgnoreCase) Then gr = v
+                    If String.Equals(facetName, "SottogruppiId", StringComparison.OrdinalIgnoreCase) Then sg = v
+                    If String.Equals(facetName, "MarcheId", StringComparison.OrdinalIgnoreCase) Then mr = v
 
-        Using cmd As New MySqlCommand(sql, cn)
-            cmd.CommandTimeout = 15
-            cmd.Parameters.AddWithValue("@n", obj)
-            Dim n As Integer = Convert.ToInt32(cmd.ExecuteScalar())
-            Return (n > 0)
+                    If IsSeoIndexAllowed(st, ct, tp, gr, sg, mr) Then
+                        AddAbs(target, baseUrl, BuildCatalogUrl(st, ct, tp, gr, sg, mr))
+                    End If
+                End While
+            End Using
         End Using
+    End Sub
+
+    Private Sub AddProductUrlsFromDb(target As HashSet(Of String), baseUrl As String)
+        Dim cs As String = GetConnectionString()
+        If String.IsNullOrEmpty(cs) Then Exit Sub
+
+        Using conn As New MySqlConnection(cs)
+            conn.Open()
+
+            Using cmd As New MySqlCommand("SELECT DISTINCT id, TCid FROM vsuperarticoli WHERE id IS NOT NULL AND id<>0", conn)
+                Using r As MySqlDataReader = cmd.ExecuteReader()
+                    While r.Read()
+                        Dim id As Integer = SafeInt(r, 0)
+                        Dim tc As Integer = SafeInt(r, 1)
+                        If id <= 0 Then Continue While
+
+                        Dim rel As String
+                        If tc > 0 Then
+                            rel = "articolo.aspx?id=" & id.ToString() & "&TCid=" & tc.ToString()
+                        Else
+                            rel = "articolo.aspx?id=" & id.ToString()
+                        End If
+                        AddAbs(target, baseUrl, rel)
+                    End While
+                End Using
+            End Using
+        End Using
+    End Sub
+
+    Private Shared Function BuildCatalogUrl(st As Integer, ct As Integer, tp As Integer, gr As Integer, sg As Integer, mr As Integer) As String
+        Dim sb As New StringBuilder("articoli.aspx")
+        Dim hasQ As Boolean = False
+
+        AppendParam(sb, hasQ, "st", st)
+        AppendParam(sb, hasQ, "ct", ct)
+        AppendParam(sb, hasQ, "tp", tp)
+        AppendParam(sb, hasQ, "gr", gr)
+        AppendParam(sb, hasQ, "sg", sg)
+        AppendParam(sb, hasQ, "mr", mr)
+
+        Return sb.ToString()
     End Function
 
-    Private Function SafeIdentifier(ByVal s As String) As String
-        If String.IsNullOrEmpty(s) Then Return ""
-        s = s.Trim()
+    Private Shared Sub AppendParam(sb As StringBuilder, ByRef hasQ As Boolean, key As String, value As Integer)
+        If value <= 0 Then Exit Sub
+        sb.Append(If(hasQ, "&", "?"))
+        hasQ = True
+        sb.Append(key)
+        sb.Append("=")
+        sb.Append(value.ToString())
+    End Sub
 
-        ' Permettiamo solo A-Z a-z 0-9 _
-        For Each ch As Char In s
-            If Not (Char.IsLetterOrDigit(ch) OrElse ch = "_"c) Then
-                Return ""
-            End If
-        Next
+    ' SEO allowlist (must match articoli.aspx.vb - STEP27)
+    Private Shared Function IsSeoIndexAllowed(stId As Integer, ctId As Integer, tpId As Integer, grId As Integer, sgId As Integer, mrId As Integer) As Boolean
+        If stId <= 0 OrElse ctId <= 0 Then Return False
 
-        Return s
+        Dim facetCount As Integer = 0
+        If grId > 0 Then facetCount += 1
+        If sgId > 0 Then facetCount += 1
+        If mrId > 0 Then facetCount += 1
+
+        If tpId <= 0 Then
+            ' Allow only: st+ct OR st+ct+(one facet)
+            Return facetCount <= 1
+        End If
+
+        ' With tp:
+        ' Allow: st+ct+tp OR st+ct+tp+(one facet)
+        If facetCount <= 1 Then Return True
+
+        ' Allow only the hierarchy pair: gr+sg (no mr) when tp is present
+        If mrId > 0 Then Return False
+        Return (grId > 0 AndAlso sgId > 0)
     End Function
 
-    Private Function GetStringAppSetting(ByVal key As String, ByVal defValue As String) As String
-        Dim v As String = ConfigurationManager.AppSettings(key)
-        If String.IsNullOrEmpty(v) Then Return defValue
+    Private Shared Function SafeInt(r As MySqlDataReader, ordinal As Integer) As Integer
+        If r Is Nothing OrElse ordinal < 0 OrElse ordinal >= r.FieldCount Then Return 0
+        If r.IsDBNull(ordinal) Then Return 0
+        Dim o As Object = r.GetValue(ordinal)
+        If o Is Nothing Then Return 0
+        Dim v As Integer = 0
+        Integer.TryParse(Convert.ToString(o), v)
         Return v
     End Function
 
-    Private Function GetIntAppSetting(ByVal key As String, ByVal defValue As Integer) As Integer
-        Dim v As String = ConfigurationManager.AppSettings(key)
-        Dim n As Integer
-        If Integer.TryParse(v, n) Then Return n
-        Return defValue
+    Private Shared Sub AddAbs(target As HashSet(Of String), baseUrl As String, relOrAbs As String)
+        If target Is Nothing Then Exit Sub
+        If String.IsNullOrWhiteSpace(relOrAbs) Then Exit Sub
+
+        Dim u As String = relOrAbs.Trim()
+        If u.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse u.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+            target.Add(u)
+            Exit Sub
+        End If
+
+        target.Add(CombineUrl(baseUrl, u))
+    End Sub
+
+    Private Shared Function CombineUrl(baseUrl As String, rel As String) As String
+        Dim b As String = If(baseUrl, "").Trim()
+        Dim r As String = If(rel, "").Trim()
+
+        If String.IsNullOrEmpty(b) Then Return r
+        If String.IsNullOrEmpty(r) Then Return b
+
+        If b.EndsWith("/", StringComparison.Ordinal) Then b = b.Substring(0, b.Length - 1)
+        If r.StartsWith("/", StringComparison.Ordinal) Then r = r.Substring(1)
+        Return b & "/" & r
+    End Function
+
+    Private Function GetBaseUrl() As String
+        Dim configured As String = Convert.ToString(ConfigurationManager.AppSettings("KeepStore.Sitemap.BaseUrl"))
+        If Not String.IsNullOrEmpty(configured) Then
+            configured = configured.Trim()
+            If configured.EndsWith("/", StringComparison.Ordinal) Then
+                configured = configured.Substring(0, configured.Length - 1)
+            End If
+            Return configured
+        End If
+
+        Dim req As HttpRequest = HttpContext.Current.Request
+        Dim root As String = req.Url.GetLeftPart(UriPartial.Authority)
+        Dim appPath As String = VirtualPathUtility.ToAbsolute("~")
+        If String.IsNullOrEmpty(appPath) Then appPath = "/"
+        If Not appPath.EndsWith("/", StringComparison.Ordinal) Then appPath &= "/"
+        If appPath.StartsWith("/", StringComparison.Ordinal) Then appPath = appPath.Substring(1)
+
+        Dim b As String = root
+        If b.EndsWith("/", StringComparison.Ordinal) Then b = b.Substring(0, b.Length - 1)
+        If String.IsNullOrEmpty(appPath) Then Return b
+        Return b & "/" & appPath.TrimEnd("/"c)
+    End Function
+
+    Private Function GetConnectionString() As String
+        Dim cs As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("ConnString")
+        If cs IsNot Nothing AndAlso Not String.IsNullOrEmpty(cs.ConnectionString) Then Return cs.ConnectionString
+
+        cs = ConfigurationManager.ConnectionStrings("MySqlConnection")
+        If cs IsNot Nothing AndAlso Not String.IsNullOrEmpty(cs.ConnectionString) Then Return cs.ConnectionString
+
+        cs = ConfigurationManager.ConnectionStrings("MySqlConnectionString")
+        If cs IsNot Nothing AndAlso Not String.IsNullOrEmpty(cs.ConnectionString) Then Return cs.ConnectionString
+
+        ' Fallback: first connection string
+        If ConfigurationManager.ConnectionStrings IsNot Nothing AndAlso ConfigurationManager.ConnectionStrings.Count > 0 Then
+            Dim first As ConnectionStringSettings = ConfigurationManager.ConnectionStrings(0)
+            If first IsNot Nothing AndAlso Not String.IsNullOrEmpty(first.ConnectionString) Then Return first.ConnectionString
+        End If
+
+        Return Nothing
     End Function
 
 End Class
