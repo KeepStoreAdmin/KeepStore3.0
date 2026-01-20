@@ -1,7 +1,7 @@
-# KeepStore 3.0 - Robots policy
+# KeepStore 3.0 - Robots policy (STEP32 suggested alignment)
 User-agent: *
 
-# Block action URLs / traps
+# Block action URLs / faceted traps
 Disallow: /*rimuovi=
 Disallow: /*?rimuovi=
 Disallow: /*&rimuovi=
@@ -9,15 +9,10 @@ Disallow: /*st=
 Disallow: /*?st=
 Disallow: /*&st=
 
-# Block account / transazionali / non-indexable
+# Block non-indexable areas (align to KeepStore 3.0 real pages)
 Disallow: /myaccount
+Disallow: /myaccount/
 Disallow: /myaccount.aspx
-Disallow: /login.aspx
-Disallow: /logout.aspx
-Disallow: /registrazione.aspx
-Disallow: /password.aspx
-Disallow: /remind.aspx
-
 Disallow: /carrello.aspx
 Disallow: /ordine.aspx
 Disallow: /pagamento.aspx
@@ -33,4 +28,4 @@ Disallow: /App_Data/
 Disallow: /App_Code/
 Disallow: /bin/
 
-# Sitemap: https://www.taikun.it/sitemap.xml
+Sitemap: https://www.taikun.it/sitemap.aspx
