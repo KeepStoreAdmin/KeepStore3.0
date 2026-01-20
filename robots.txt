@@ -1,0 +1,41 @@
+# KeepStore 3.0 - Robots policy (STEP28)
+# Goal: reduce crawler traps from faceted navigation and protect private/account flows.
+# Note: directives are interpreted slightly differently by crawlers; Google honors Allow/Disallow precedence.
+
+User-agent: *
+
+# Block action URLs / faceted traps
+Disallow: /*rimuovi=
+Disallow: /*&rimuovi=
+Disallow: /*?rimuovi=
+
+# Block account / checkout / non-indexable areas
+Disallow: /my-account
+Disallow: /my-account/
+Disallow: /my-account-*
+Disallow: /checkout
+Disallow: /checkout/
+Disallow: /shop-cart
+Disallow: /shop-cart/
+Disallow: /wishlist
+Disallow: /wishlist/
+Disallow: /compare
+Disallow: /compare/
+Disallow: /track-your-order
+Disallow: /track-your-order/
+Disallow: /documenti
+Disallow: /documenti/
+Disallow: /documentidettaglio
+Disallow: /documentidettaglio/
+Disallow: /datiutente
+Disallow: /datiutente/
+Disallow: /cambiapassword
+Disallow: /cambiapassword/
+
+# Sensitive / internal folders (defense-in-depth)
+Disallow: /App_Data/
+Disallow: /App_Code/
+Disallow: /bin/
+
+# If you have a sitemap, uncomment and update this line:
+# Sitemap: https://www.taikun.it/sitemap.xml
