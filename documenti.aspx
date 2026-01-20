@@ -81,6 +81,45 @@
         .ks-doc-filters input[type='text'] {
             max-width: 100%;
         }
+
+        /* KeepStore STEP22B (ONUS) - Tabella ordine/documenti */
+        .tf-order_history-table { margin-top: 12px; }
+        .ks-order-table { width: 100%; }
+        .ks-order-table th, .ks-order-table td { padding: 14px 12px; vertical-align: top; }
+        .ks-order-table .td-order-item td { border-bottom: 1px solid rgba(0,0,0,0.06); }
+        .ks-status-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(0,0,0,0.06);
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .ks-action-stack { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .ks-icon-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,0.12);
+            background: #ffffff;
+            padding: 0;
+        }
+        .ks-icon-btn img { max-width: 20px; max-height: 20px; }
+        .ks-order-details summary { cursor: pointer; }
+        .ks-order-details summary::-webkit-details-marker { display: none; }
+        .ks-order-details-body {
+            margin-top: 8px;
+            padding: 10px 12px;
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 14px;
+            background: rgba(0,0,0,0.02);
+        }
+
 </style>
 
     <script type="text/javascript">
@@ -355,148 +394,147 @@
                     </div>
 
 
-<asp:GridView ID="GridView1" runat="server" AllowPaging="True" AutoGenerateColumns="False"
-            CellPadding="5" DataKeyNames="id" DataSourceID="sdsDocumenti" EmptyDataText="Nessun documento presente"
-            Font-Size="8pt" GridLines="None" PageSize="20" Width="100%">
-            <EmptyDataRowStyle Font-Bold="False" Height="100px" HorizontalAlign="Center" />
-            <Columns>
-                <asp:TemplateField HeaderText="Informazioni Documento" SortExpression="DataDocumento">
-                    <EditItemTemplate></EditItemTemplate>
-                    <ItemTemplate>
-                        <div class="row">
-                            <div class="col-12 col-md-3 col-lg-2 pb-2 my-auto d-md-block d-flex align-items-center doc-col-1">
-                                <div>
-                                    <% If Request.QueryString("t") = Session("IdDocumentoCoupon") Then %>
-                                        <asp:HyperLink ID="HyperLink1" runat="server" ForeColor="#E12825" 
-                                            NavigateUrl='<%# "coupon_esito_acquisto.aspx?id=" & Eval("Coupon_idCoupon") & "&cod=" & Eval("Coupon_CodControllo") %>' 
-                                            Text="Dettaglio Documento">
-                                        </asp:HyperLink>
-                                    <% Else %>
-                                        <asp:HyperLink ID="HyperLink2" runat="server" ForeColor="#E12825" 
-                                            NavigateUrl='<%# Eval("id", "documentidettaglio.aspx?id={0}") %>' 
-                                            Text="Dettaglio Documento">
-                                        </asp:HyperLink>
-                                    <% End If %>
-                                </div>
-                                
-                                <asp:ImageButton ID="imgStampaDoc" idDoc='<%# Eval("id")%>' runat="server" 
-                                    ToolTip="Richiedi documento tramite posta elettronica" 
-                                    ImageUrl="images/pdf2mail.png" OnClick="stampaClick" />
-                                
-                                <% If Request.QueryString("t") = Session("IdDocumentoCoupon") Then %>
-                                    <a href="<%# "coupon_esito_acquisto.aspx?id=" & Eval("Coupon_idCoupon") & "&cod=" & Eval("Coupon_CodControllo") %>" 
-                                       style="display:<%# IIf(Eval("Pagato") = 1 Or (Eval("PagamentiTipoOnline") = 0), "", "none")%>; color:#E12825;">
-                                        <img src="Public/Images/Pagato.png" alt="" />
-                                    </a>
-                                <% Else %>
-                                    <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>" 
-                                       style="display:<%# IIf((Eval("Pagato") = 1 And (Eval("PagamentiTipoOnline") > 0)) Or (Eval("CodiceAutorizzazione") <> ""), "", "none")%>; color:#E12825;">
-                                        <img src="Public/Images/Pagato.png" alt="" />
-                                    </a>
-                                    <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>" 
-                                       style="display:<%# MostraPagaOra(Eval("Pagato"), Eval("CodiceAutorizzazione"), Eval("StatiId"), Eval("PagamentiTipoOnline")) %>; color:#E12825;">
-                                        <img src="Public/Images/Paga_Ora.png" alt="" />
-                                    </a>
-                                <% End If %>
+<div class="tf-order_history-table">
+    <asp:GridView ID="GridView1" runat="server"
+        AllowPaging="True"
+        AutoGenerateColumns="False"
+        DataKeyNames="id"
+        DataSourceID="sdsDocumenti"
+        EmptyDataText="Nessun documento presente"
+        GridLines="None"
+        PageSize="20"
+        Width="100%"
+        CssClass="table_def ks-order-table"
+        UseAccessibleHeader="True"
+        OnPreRender="GridView1_PreRender_22B">
 
-                                <table style="margin-top:5px;">
-                                    <tr>
-                                        <td align="center">
-                                            <a <%# SafeTrackingHref(Eval("Tracking")) %> style="text-decoration:none;">
-                                                <img src='<%# IIf(Convert.ToString(Eval("Tracking")) = "", "Public/Vettori/tracking_no.jpg", "Public/Vettori/tracking.jpg") %>'
-                                                     alt="" title="Clicca per visualizzare il tracking" />
-                                            </a>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
+        <EmptyDataRowStyle Font-Bold="False" Height="100px" HorizontalAlign="Center" />
 
-                            <div class="col-12 col-md-9 col-lg-10">
-                                <table width="100%" style="border-width:0px;">
-                                    <tr>
-                                        <td align="center" style="background-color:#ccc;font-size:14px; border-style:solid; border-color:White; border-width:1px;"><strong>Numero</strong></td>
-                                        <td align="center" style="background-color:#ccc;font-size:14px; border-style:solid; border-color:White; border-width:1px;"><strong>Data</strong></td>
-                                        <td align="center" style="background-color:#ccc;font-size:14px; border-style:solid; border-color:White; border-width:1px;"><strong>Imponibile</strong></td>
-                                        <td align="center" style="background-color:#ccc;font-size:14px; border-style:solid; border-color:White; border-width:1px;"><strong>Totale</strong></td>
-                                        <td align="center" style="background-color:#ccc;font-size:14px; border-style:solid; border-color:White; border-width:1px;"><strong>Stato</strong></td>
-                                    </tr>
-                                    <tr>
-                                        <td align="center" style="font-size:14px; background-color:#f0efef; border-style:solid; border-color:White; border-width:1px;">
-                                            <% If Request.QueryString("t") = Session("IdDocumentoCoupon") Then %>
-                                                <asp:HyperLink ForeColor="#E12825" Font-Bold="true" ID="idcoupon" runat="server"
-                                                    NavigateUrl='<%# "coupon_esito_acquisto.aspx?id=" & Eval("Coupon_idCoupon") & "&cod=" & Eval("Coupon_CodControllo") %>'
-                                                    Text='<%# Eval("NDocumento") %>'
-                                                    ToolTip='<%# "Visualizza Dettagli " & Eval("tipodocumentidescrizione") %>'>
-                                                </asp:HyperLink>
-                                            <% Else %>
-                                                <asp:HyperLink ForeColor="#E12825" Font-Bold="true" ID="iddoc" runat="server"
-                                                    NavigateUrl='<%# Eval("id", "documentidettaglio.aspx?id={0}") %>'
-                                                    Text='<%# Eval("NDocumento") %>'
-                                                    ToolTip='<%# "Visualizza Dettagli " & Eval("tipodocumentidescrizione") %>'>
-                                                </asp:HyperLink>
-                                            <% End If %>
-                                        </td>
-                                        <td align="center" style="font-size:12px; background-color:#f0efef;border-style:solid; border-color:White; border-width:1px;"><%# Eval("DataDocumento", "{0:d}") %></td>
-                                        <td align="center" style="font-size:12px; background-color:#f0efef;border-style:solid; border-color:White; border-width:1px;"><%# Eval("TotImponibile", "{0:C}") %></td>
-                                        <td align="center" style="font-size:12px; background-color:#f0efef;border-style:solid; border-color:White; border-width:1px;"><%# Eval("TotaleDocumento", "{0:C}") %></td>
-                                        <td align="center" style="font-size:12px; background-color:#f0efef;border-style:solid; border-color:White; border-width:1px;"><%# Eval("StatiDescrizione1") %></td>
-                                    </tr>
-                                </table>
-
-                                <div style="border-style:solid; border-width:1px; border-color:#ccc; width:100%;">
-                                    <table width="100%" style="margin-top:10px;border-width:0px;">
-                                        <tr style="border-style:solid; border-color:White; border-width:1px;">
-                                            <td valign="top" align="left" style="background-color:#ccc"><strong>Destinatario</strong></td>
-                                            <td style="background-color:#f0efef"><%# Eval("RagioneSociale") %> <%# Eval("CognomeNome") %> - <%# Eval("SedeLegale") %></td>
-                                        </tr>
-                                        <tr style="border-style:solid; border-color:White; border-width:1px;">
-                                            <td valign="top" align="left" style="background-color:#ccc;width: 100px;"><strong>Altra destinazione </strong></td>
-                                            <td style="background-color:#f0efef"><%# Eval("DestinazioneMerci") %></td>
-                                        </tr>
-                                        <tr style="border-style:solid; border-color:White; border-width:1px;">
-                                            <td valign="top" align="left" style="background-color:#ccc"><strong>Pagamento</strong></td>
-                                            <td style="background-color:#f0efef"><%# Eval("PagamentiTipoDescrizione") %></td>
-                                        </tr>
-                                        <tr style="border-style:solid; border-color:White; border-width:1px;">
-                                            <td valign="top" align="left" style="background-color:#ccc"><strong>Spedizione</strong></td>
-                                            <td style="background-color:#f0efef"><%# Eval("VettoriDescrizione") %></td>
-                                        </tr>
-                                        <tr style="border-style:solid; border-color:White; border-width:1px;">
-                                            <td valign="top" align="left" style="background-color:#ccc"><strong>Tracking</strong></td>
-                                            <td style="background-color:#f0efef">
-                                                <%# separa_tracking(Eval("Tracking"), Eval("Link_Tracking")) %>
-                                            </td>
-                                        </tr>
-                                        <tr style="border-style:solid; border-color:White; border-width:1px;<%# testNote(Eval("Note")) %>">
-                                            <td valign="top" align="left" style="background-color:#ccc"><strong>Note Corriere</strong></td>
-                                            <td style="background-color:#f0efef"><%# Eval("Note") %></td>
-                                        </tr>
-                                        <tr style="border-style:solid; border-color:White; border-width:1px;">
-                                            <td valign="top" align="left" style="background-color:#ccc"><strong>Note</strong></td>
-                                            <td style="background-color:#f0efef"><%# Eval("NoteEsterne") %></td>
-                                        </tr>
-                                    </table>
-                                </div>
-                            </div>
+        <Columns>
+            <!-- Numero documento -->
+            <asp:TemplateField HeaderText="Numero">
+                <ItemTemplate>
+                    <div class="d-flex flex-column">
+                        <div class="body-text-3">
+                            <% If Request.QueryString("t") = Session("IdDocumentoCoupon") Then %>
+                                <asp:HyperLink ForeColor="#E12825" Font-Bold="true" ID="idcoupon" runat="server"
+                                    NavigateUrl='<%# "coupon_esito_acquisto.aspx?id=" & Eval("Coupon_idCoupon") & "&cod=" & Eval("Coupon_CodControllo") %>'
+                                    Text='<%# Eval("NDocumento") %>'
+                                    ToolTip='<%# "Visualizza Dettagli " & Eval("tipodocumentidescrizione") %>'>
+                                </asp:HyperLink>
+                                <!-- Hidden iddoc (compatibilità RowCommand legacy) -->
+                                <asp:HyperLink ID="iddoc" runat="server" Visible="false"
+                                    NavigateUrl='<%# Eval("id", "documentidettaglio.aspx?id={0}") %>'
+                                    Text='<%# Eval("NDocumento") %>'></asp:HyperLink>
+                            <% Else %>
+                                <asp:HyperLink ForeColor="#E12825" Font-Bold="true" ID="iddoc" runat="server"
+                                    NavigateUrl='<%# Eval("id", "documentidettaglio.aspx?id={0}") %>'
+                                    Text='<%# Eval("NDocumento") %>'
+                                    ToolTip='<%# "Visualizza Dettagli " & Eval("tipodocumentidescrizione") %>'>
+                                </asp:HyperLink>
+                            <% End If %>
                         </div>
-                    </ItemTemplate>
-                    <ItemStyle Font-Size="8pt" />
-                </asp:TemplateField>
-                
-                <asp:BoundField DataField="TotIva" HeaderText="Iva" SortExpression="TotIva" DataFormatString="{0:C}" Visible="False">
-                    <HeaderStyle HorizontalAlign="Right" />
-                    <ItemStyle HorizontalAlign="Right" />
-                </asp:BoundField>
-                
-                <asp:BoundField DataField="NDocumento" HeaderText="NDocumento" ReadOnly="True" Visible="False" />
-                <asp:BoundField DataField="id" HeaderText="id" ReadOnly="True" SortExpression="id" Visible="False" />
-            </Columns>
-            <PagerStyle CssClass="nav" Font-Bold="True" />
-            <HeaderStyle Font-Bold="False" Font-Size="8pt" ForeColor="#2050AF" HorizontalAlign="Left" />
-            <EditRowStyle Font-Bold="False" />
-            <AlternatingRowStyle BackColor="WhiteSmoke" BorderStyle="None" />
-            <RowStyle Height="25px" />
-        </asp:GridView>
+
+                        <details class="ks-order-details mt-1">
+                            <summary class="body-small link">Info</summary>
+                            <div class="ks-order-details-body">
+                                <div class="body-small"><strong>Destinatario:</strong> <%# Eval("RagioneSociale") %> <%# Eval("CognomeNome") %> - <%# Eval("SedeLegale") %></div>
+                                <div class="body-small"><strong>Altra destinazione:</strong> <%# Eval("DestinazioneMerci") %></div>
+                                <div class="body-small"><strong>Pagamento:</strong> <%# Eval("PagamentiTipoDescrizione") %></div>
+                                <div class="body-small"><strong>Spedizione:</strong> <%# Eval("VettoriDescrizione") %></div>
+                                <div class="body-small"><strong>Tracking:</strong> <%# separa_tracking(Eval("Tracking"), Eval("Link_Tracking")) %></div>
+                                <div class="body-small" style="<%# testNote(Eval("Note")) %>"><strong>Note corriere:</strong> <%# Eval("Note") %></div>
+                                <div class="body-small"><strong>Note:</strong> <%# Eval("NoteEsterne") %></div>
+                            </div>
+                        </details>
+                    </div>
+                </ItemTemplate>
+            </asp:TemplateField>
+
+            <!-- Data -->
+            <asp:TemplateField HeaderText="Data">
+                <ItemTemplate>
+                    <span class="body-text-3"><%# Eval("DataDocumento", "{0:d}") %></span>
+                </ItemTemplate>
+            </asp:TemplateField>
+
+            <!-- Stato -->
+            <asp:TemplateField HeaderText="Stato">
+                <ItemTemplate>
+                    <span class="body-text-3 ks-status-pill"><%# Eval("StatiDescrizione1") %></span>
+                </ItemTemplate>
+            </asp:TemplateField>
+
+            <!-- Totale -->
+            <asp:TemplateField HeaderText="Totale">
+                <ItemTemplate>
+                    <div class="d-flex flex-column">
+                        <div class="body-text-3"><%# Eval("TotaleDocumento", "{0:C}") %></div>
+                        <div class="body-small text-main-2">Imponibile: <%# Eval("TotImponibile", "{0:C}") %></div>
+                    </div>
+                </ItemTemplate>
+            </asp:TemplateField>
+
+            <!-- Azione -->
+            <asp:TemplateField HeaderText="Azione">
+                <ItemTemplate>
+                    <div class="ks-action-stack">
+
+                        <% If Request.QueryString("t") = Session("IdDocumentoCoupon") Then %>
+                            <a href="<%# "coupon_esito_acquisto.aspx?id=" & Eval("Coupon_idCoupon") & "&cod=" & Eval("Coupon_CodControllo") %>" class="tf-btn btn-small d-inline-flex">
+                                <span class="text-white">Dettaglio</span>
+                            </a>
+                        <% Else %>
+                            <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>" class="tf-btn btn-small d-inline-flex">
+                                <span class="text-white">Dettaglio</span>
+                            </a>
+                        <% End If %>
+
+                        <asp:ImageButton ID="imgStampaDoc" idDoc='<%# Eval("id")%>' runat="server"
+                            ToolTip="Richiedi documento tramite posta elettronica"
+                            ImageUrl="images/pdf2mail.png" OnClick="stampaClick" CssClass="ks-icon-btn" />
+
+                        <% If Request.QueryString("t") = Session("IdDocumentoCoupon") Then %>
+                            <a href="<%# "coupon_esito_acquisto.aspx?id=" & Eval("Coupon_idCoupon") & "&cod=" & Eval("Coupon_CodControllo") %>"
+                               class="ks-icon-btn"
+                               style="display:<%# IIf(Eval("Pagato") = 1 Or (Eval("PagamentiTipoOnline") = 0), "", "none")%>;">
+                                <img src="Public/Images/Pagato.png" alt="Pagato" />
+                            </a>
+                        <% Else %>
+                            <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>"
+                               class="ks-icon-btn"
+                               style="display:<%# IIf((Eval("Pagato") = 1 And (Eval("PagamentiTipoOnline") > 0)) Or (Eval("CodiceAutorizzazione") <> ""), "", "none")%>;">
+                                <img src="Public/Images/Pagato.png" alt="Pagato" />
+                            </a>
+                            <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>"
+                               class="ks-icon-btn"
+                               style="display:<%# MostraPagaOra(Eval("Pagato"), Eval("CodiceAutorizzazione"), Eval("StatiId"), Eval("PagamentiTipoOnline")) %>;">
+                                <img src="Public/Images/Paga_Ora.png" alt="Paga ora" />
+                            </a>
+                        <% End If %>
+
+                        <a <%# SafeTrackingHref(Eval("Tracking")) %> class="ks-icon-btn" target="_blank" title="Tracking">
+                            <img src='<%# GetTrackingImage(Eval("Tracking")) %>' alt="Tracking" />
+                        </a>
+
+                    </div>
+                </ItemTemplate>
+            </asp:TemplateField>
+
+            <!-- Campi tecnici nascosti -->
+            <asp:BoundField DataField="TotIva" HeaderText="Iva" SortExpression="TotIva" DataFormatString="{0:C}" Visible="False" />
+            <asp:BoundField DataField="NDocumento" HeaderText="NDocumento" ReadOnly="True" Visible="False" />
+            <asp:BoundField DataField="id" HeaderText="id" ReadOnly="True" SortExpression="id" Visible="False" />
+        </Columns>
+
+        <PagerStyle CssClass="nav" Font-Bold="True" />
+        <HeaderStyle CssClass="title-sidebar fw-medium" />
+        <EditRowStyle Font-Bold="False" />
+        <RowStyle CssClass="td-order-item" Height="25px" />
+
+    </asp:GridView>
+</div>
+
 
                             </div>
                         </div>
@@ -510,6 +548,19 @@
     </asp:Panel> <!-- fine pnlContent -->
 
     <script runat="server">
+        ' KeepStore STEP22B: forza <thead> per compatibilita stile ONUS
+        Protected Sub GridView1_PreRender_22B(ByVal sender As Object, ByVal e As System.EventArgs)
+            Try
+                Dim gv As System.Web.UI.WebControls.GridView = TryCast(sender, System.Web.UI.WebControls.GridView)
+                If gv Is Nothing Then Exit Sub
+                gv.UseAccessibleHeader = True
+                If gv.HeaderRow IsNot Nothing Then
+                    gv.HeaderRow.TableSection = System.Web.UI.WebControls.TableRowSection.TableHeader
+                End If
+            Catch
+            End Try
+        End Sub
+
         Function testNote(ByVal note As Object) As String
             Try
                 Return CStr(IIf(note = "", "display:none;", ""))
