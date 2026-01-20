@@ -100,7 +100,7 @@
                                     </asp:View>
                                     <asp:View ID="viewLogged" runat="server">
                                         <div class="d-flex align-items-center gap-12">
-                                            <a class="tf-btn-icon style-2" href="/my-account.aspx" aria-label="Account">
+                                            <a class="tf-btn-icon style-2" href="/myaccount.aspx" aria-label="Account">
                                                 <i class="icon icon-user"></i>
                                                 <span class="body-text-3 fw-normal d-none d-xl-inline">
                                                     <asp:Label ID="lblUtente" runat="server" Text="" />

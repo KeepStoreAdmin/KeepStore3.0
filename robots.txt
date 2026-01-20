@@ -1,41 +1,36 @@
-# KeepStore 3.0 - Robots policy (STEP28)
-# Goal: reduce crawler traps from faceted navigation and protect private/account flows.
-# Note: directives are interpreted slightly differently by crawlers; Google honors Allow/Disallow precedence.
-
+# KeepStore 3.0 - Robots policy
 User-agent: *
 
-# Block action URLs / faceted traps
+# Block action URLs / traps
 Disallow: /*rimuovi=
-Disallow: /*&rimuovi=
 Disallow: /*?rimuovi=
+Disallow: /*&rimuovi=
+Disallow: /*st=
+Disallow: /*?st=
+Disallow: /*&st=
 
-# Block account / checkout / non-indexable areas
-Disallow: /my-account
-Disallow: /my-account/
-Disallow: /my-account-*
-Disallow: /checkout
-Disallow: /checkout/
-Disallow: /shop-cart
-Disallow: /shop-cart/
-Disallow: /wishlist
-Disallow: /wishlist/
-Disallow: /compare
-Disallow: /compare/
-Disallow: /track-your-order
-Disallow: /track-your-order/
-Disallow: /documenti
-Disallow: /documenti/
-Disallow: /documentidettaglio
-Disallow: /documentidettaglio/
-Disallow: /datiutente
-Disallow: /datiutente/
-Disallow: /cambiapassword
-Disallow: /cambiapassword/
+# Block account / transazionali / non-indexable
+Disallow: /myaccount
+Disallow: /myaccount.aspx
+Disallow: /login.aspx
+Disallow: /logout.aspx
+Disallow: /registrazione.aspx
+Disallow: /password.aspx
+Disallow: /remind.aspx
+
+Disallow: /carrello.aspx
+Disallow: /ordine.aspx
+Disallow: /pagamento.aspx
+Disallow: /wishlist.aspx
+Disallow: /documenti.aspx
+Disallow: /documentidettaglio.aspx
+Disallow: /datiutente.aspx
+Disallow: /cambiapassword.aspx
+Disallow: /pay_your_orders.aspx
 
 # Sensitive / internal folders (defense-in-depth)
 Disallow: /App_Data/
 Disallow: /App_Code/
 Disallow: /bin/
 
-# If you have a sitemap, uncomment and update this line:
 # Sitemap: https://www.taikun.it/sitemap.xml

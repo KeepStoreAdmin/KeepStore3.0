@@ -81,21 +81,34 @@ Private Sub ApplyGlobalSeoPolicy()
 
         ' Aree non SEO / private / transazionali
         Dim isNonSeo As Boolean = False
-        If pathLower.Contains("/my-account") Then isNonSeo = True
-        If pathLower.Contains("/checkout") Then isNonSeo = True
-        If pathLower.Contains("/carrello") Then isNonSeo = True
-        If pathLower.Contains("/shop-cart") Then isNonSeo = True
-        If pathLower.Contains("/wishlist") Then isNonSeo = True
-        If pathLower.Contains("/compare") Then isNonSeo = True
-        If pathLower.Contains("/track-your-order") Then isNonSeo = True
-        If pathLower.Contains("/documenti") Then isNonSeo = True
-        If pathLower.Contains("/documentidettaglio") Then isNonSeo = True
-        If pathLower.Contains("/datiutente") Then isNonSeo = True
-        If pathLower.Contains("/cambiapassword") Then isNonSeo = True
-        If pathLower.Contains("/login") Then isNonSeo = True
-        If pathLower.Contains("/logout") Then isNonSeo = True
-        If pathLower.Contains("/register") Then isNonSeo = True
-        If pathLower.Contains("/pay_your_orders") Then isNonSeo = True
+
+        ' Elenco pagine NON SEO (transazionali / account / aree riservate)
+        Dim nonSeoPages As String() = New String() { _
+            "/myaccount.aspx", _
+            "/datiutente.aspx", _
+            "/cambiapassword.aspx", _
+            "/wishlist.aspx", _
+            "/documenti.aspx", _
+            "/documentidettaglio.aspx", _
+            "/carrello.aspx", _
+            "/ordine.aspx", _
+            "/pagamento.aspx", _
+            "/login.aspx", _
+            "/logout.aspx", _
+            "/registrazione.aspx", _
+            "/registrazioneok.aspx", _
+            "/password.aspx", _
+            "/remind.aspx", _
+            "/accessonegato.aspx", _
+            "/pay_your_orders.aspx" _
+        }
+
+        For Each pth As String In nonSeoPages
+            If pathLower.EndsWith(pth) Then
+                isNonSeo = True
+                Exit For
+            End If
+        Next
 
         Dim applyNoIndex As Boolean = (hasRimuovi OrElse hasSt OrElse isNonSeo)
 
@@ -115,16 +128,16 @@ Private Sub ApplyGlobalSeoPolicy()
         End Try
 
         ' Canonical: senza querystring (evita duplicati su pagine transazionali)
-        Dim canonicalUrl As String = "https://" & Request.Url.Authority & path
+        Dim canonicalUrl As String = Request.Url.Scheme & "://" & Request.Url.Authority & path
 
         Dim sb As New StringBuilder()
         If Not HeaderHasMeta("robots") Then
-            sb.Append("<meta name=\"robots\" content=\"noindex,follow\" />")
+            sb.Append("<meta name=""robots"" content=""noindex,follow"" />")
             sb.Append(vbCrLf)
         End If
-        sb.Append("<link rel=\"canonical\" href=\"")
+        sb.Append("<link rel=""canonical"" href=""")
         sb.Append(HttpUtility.HtmlAttributeEncode(canonicalUrl))
-        sb.Append("\" />")
+        sb.Append("""" />")
 
         litGlobalSeoHead.Text = sb.ToString()
 
