@@ -220,19 +220,11 @@ Public Class KeepStoreAnalyticsGetModule
 
     Private Sub AppendToFile(ByVal ctx As HttpContext, ByVal line As String)
         Try
-            Dim baseDir As String = ctx.Server.MapPath("~/App_Data")
-            Dim logDir As String = Path.Combine(baseDir, "logs")
-            Dim filePath As String = Path.Combine(logDir, "analytics-get-" & DateTime.UtcNow.ToString("yyyyMMdd", CultureInfo.InvariantCulture) & ".log")
-
-            SyncLock _lockObj
-                If Not Directory.Exists(logDir) Then Directory.CreateDirectory(logDir)
-                Using fs As New FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)
-                    Using sw As New StreamWriter(fs, Encoding.UTF8)
-                        sw.WriteLine(line)
-                    End Using
-                End Using
-            End SyncLock
-
+            Dim fn As String = "analytics-get-" & DateTime.UtcNow.ToString("yyyyMMdd", CultureInfo.InvariantCulture) & ".log"
+            Dim ex As Exception = Nothing
+            If Not KeepStoreLog.TryAppendLine(fn, line, ctx, ex) Then
+                ' fail-open: non bloccare la richiesta; se serve, Trace.WriteLine e' gia' gestito da KeepStoreLog
+            End If
         Catch
             ' ignore
         End Try
