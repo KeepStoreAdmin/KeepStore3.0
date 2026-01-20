@@ -6,7 +6,6 @@ Imports System.Text.RegularExpressions
 Imports System.Collections
 Imports System.Collections.Generic
 
-Imports System.Collections.Specialized
 Partial Class Articoli
     Inherits AntiCsrfPage
 
@@ -75,17 +74,14 @@ Partial Class Articoli
     End Sub
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
-        '==========================================================
-        ' STEP 17 (CATALOGO/SEO+ROBUSTEZZA): Normalizzazione URL
-        ' - Elimina chiavi vuote (es. ?=&) e gestisce rimozione filtri via ?rimuovi=...
-        ' - Evita open-redirect (non usa Referrer come base redirect)
-        ' - Riduce crawler-trap da querystring sporca
-        '==========================================================
-        If Not Me.IsPostBack AndAlso String.Equals(Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) Then
-            NormalizeArticoliUrl()
+        oldUrl = HttpContext.Current.Request.Url.AbsoluteUri
+
+        If Request.QueryString("rimuovi") <> String.Empty Then
+            Dim filtersToRemove As String = Request.QueryString("rimuovi")
+            Response.Redirect(changeUrlGetParam(Request.UrlReferrer.ToString, filtersToRemove, String.Empty).Replace("rimuovi=" & filtersToRemove, String.Empty))
         End If
 
-        oldUrl = HttpContext.Current.Request.Url.AbsoluteUri
+        
 
         '==========================================================
         ' STEP 3 (CATALOGO): Normalizzazione parametri st/ct/tp e Session
@@ -108,6 +104,13 @@ Partial Class Articoli
             Response.Redirect(Request.Url.AbsoluteUri.Replace("%23up", "").Replace("#23up", ""))
         End If
 
+        '==========================================================
+        ' STEP 27 (SEO): policy indicizzazione (st/ct/tp/gr/sg/mr)
+        ' - Decide quali combinazioni possono essere indicizzate
+        ' - Imposta Canonical e Robots (meta + X-Robots-Tag)
+        '==========================================================
+        ApplySeoIndexPolicy()
+
         Session.Item("Pagina_visitata_Articoli") = Me.Request.Url.ToString 'Aggiorno l'ultima pagina visitata in Articoli
         Me.Session("Carrello_Pagina") = "articoli.aspx"
 
@@ -123,84 +126,7 @@ Partial Class Articoli
                 InOfferta = tmpInOfferta
             End If
         End If
-End Sub
-
-    '==========================================================
-    ' STEP 17 (CATALOGO/SEO+ROBUSTEZZA) - helper
-    ' Normalizza querystring e gestisce ?rimuovi=
-    '==========================================================
-    Private Sub NormalizeArticoliUrl()
-        Try
-            Dim cur As Uri = Request.Url
-            Dim nvc As NameValueCollection = HttpUtility.ParseQueryString(cur.Query)
-
-            ' 1) rimozione filtri via ?rimuovi=<chiave> (supporto retro-compatibile)
-            Dim toRemoveKey As String = Convert.ToString(nvc.Get("rimuovi"))
-            If Not String.IsNullOrEmpty(toRemoveKey) Then
-                toRemoveKey = SanitizeQueryKey(toRemoveKey)
-                If Not String.IsNullOrEmpty(toRemoveKey) Then
-                    nvc.Remove(toRemoveKey)
-                End If
-                nvc.Remove("rimuovi")
-            End If
-
-            ' 2) elimina chiavi vuote / parametri vuoti (es. ?=&)
-            If nvc.AllKeys IsNot Nothing Then
-                For Each k As String In nvc.AllKeys
-                    If String.IsNullOrEmpty(k) Then
-                        nvc.Remove(k)
-                    End If
-                Next
-            End If
-
-            Dim keys As String() = nvc.AllKeys
-            If keys IsNot Nothing Then
-                For Each k As String In keys
-                    If k IsNot Nothing AndAlso nvc(k) IsNot Nothing AndAlso nvc(k).Trim() = "" Then
-                        nvc.Remove(k)
-                    End If
-                Next
-            End If
-
-            Dim normalizedQuery As String = nvc.ToString()
-            Dim currentQuery As String = cur.Query
-            If currentQuery.StartsWith("?") Then currentQuery = currentQuery.Substring(1)
-
-            If normalizedQuery <> currentQuery Then
-                Dim newUrl As String = cur.GetLeftPart(UriPartial.Path)
-                If Not String.IsNullOrEmpty(normalizedQuery) Then
-                    newUrl &= "?" & normalizedQuery
-                End If
-                Response.Redirect(newUrl, True)
-            End If
-
-            ' 3) header anti-index per pagine con query (crawler trap reduction)
-            If cur.Query IsNot Nothing AndAlso cur.Query.Length > 1 Then
-                Try
-                    Response.Headers.Remove("X-Robots-Tag")
-                    Response.Headers.Add("X-Robots-Tag", "noindex,follow")
-                Catch
-                End Try
-            End If
-        Catch
-            ' non bloccare la pagina: fallback silenzioso
-        End Try
     End Sub
-
-    Private Function SanitizeQueryKey(ByVal k As String) As String
-        If k Is Nothing Then Return ""
-        k = k.Trim()
-        If k.Length = 0 Then Return ""
-        If k.Length > 25 Then k = k.Substring(0, 25)
-        Dim sb As New StringBuilder()
-        For i As Integer = 0 To k.Length - 1
-            Dim ch As Char = k(i)
-            If Char.IsLetterOrDigit(ch) OrElse ch = "_"c Then
-                sb.Append(ch)
-            End If
-        Next
-        Return sb.ToString()
-    End Function
 
     Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.LoadComplete
         IvaTipo = Me.Session("IvaTipo")
@@ -1148,27 +1074,27 @@ End Sub
             End If
         End If
 
-        Dim newUrl As String = changeUrlGetParam(Request.Url.AbsoluteUri, parName, parValue)
+        Dim newUrl As String = changeUrlGetParam(Request.UrlReferrer.ToString, parName, parValue)
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub Drop_Ordinamento_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Ordinamento.SelectedIndexChanged
-        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.Url.AbsoluteUri, Drop_Ordinamento, "ordinamento")
+        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.UrlReferrer.ToString, Drop_Ordinamento, "ordinamento")
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub Drop_Filtra_Taglia_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Filtra_Taglia.SelectedIndexChanged
-        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.Url.AbsoluteUri, Drop_Filtra_Taglia, "taglia")
+        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.UrlReferrer.ToString, Drop_Filtra_Taglia, "taglia")
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub Drop_Filtra_Colore_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Filtra_Colore.SelectedIndexChanged
-        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.Url.AbsoluteUri, Drop_Filtra_Colore, "colore")
+        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.UrlReferrer.ToString, Drop_Filtra_Colore, "colore")
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub CheckBox_Disponibile_CheckedChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles CheckBox_Disponibile.CheckedChanged
-        Dim newUrl As String = changeUrlDependingFromCheckBox(Request.Url.AbsoluteUri, CheckBox_Disponibile, "disponibile", "1", "0")
+        Dim newUrl As String = changeUrlDependingFromCheckBox(Request.UrlReferrer.ToString, CheckBox_Disponibile, "disponibile", "1", "0")
         Response.Redirect(newUrl)
     End Sub
     Sub changeCheckBoxDependingFromUrl(ByVal checkBox As CheckBox, ByVal parName As String, ByVal parValueIfChecked As String)
@@ -1206,48 +1132,12 @@ End Sub
     End Function
 
     Function changeUrlGetParam(ByVal url As String, ByVal parName As String, ByVal parValue As String) As String
-        ' Versione robusta: evita query rotte (?=&), preserva path e gestisce encoding
-        If String.IsNullOrEmpty(url) Then
-            url = Request.Url.AbsoluteUri
+        Dim newUrl As String = Regex.Replace(url, "&" & parName & "=([^&])+", String.Empty)
+        newUrl = Regex.Replace(newUrl, "\?" & parName & "=([^&])+", "?")
+        If parValue <> String.Empty Then
+            newUrl = newUrl & "&" & parName & "=" & parValue
         End If
-
-        Dim basePart As String = url
-        Dim fragment As String = ""
-        Dim hashPos As Integer = basePart.IndexOf("#"c)
-        If hashPos >= 0 Then
-            fragment = basePart.Substring(hashPos)
-            basePart = basePart.Substring(0, hashPos)
-        End If
-
-        Dim qPos As Integer = basePart.IndexOf("?"c)
-        Dim pathPart As String = basePart
-        Dim queryPart As String = ""
-        If qPos >= 0 Then
-            pathPart = basePart.Substring(0, qPos)
-            queryPart = basePart.Substring(qPos + 1)
-        End If
-
-        Dim nvc As NameValueCollection = HttpUtility.ParseQueryString(queryPart)
-        ' Rimuove eventuali chiavi vuote prodotte da URL non validi
-        If nvc.AllKeys IsNot Nothing Then
-            For Each k As String In nvc.AllKeys
-                If String.IsNullOrEmpty(k) Then
-                    nvc.Remove(k)
-                End If
-            Next
-        End If
-
-        If String.IsNullOrEmpty(parValue) Then
-            nvc.Remove(parName)
-        Else
-            nvc.Set(parName, parValue)
-        End If
-
-        Dim newQuery As String = nvc.ToString()
-        If Not String.IsNullOrEmpty(newQuery) Then
-            Return pathPart & "?" & newQuery & fragment
-        End If
-        Return pathPart & fragment
+        Return newUrl.Replace("?&", "?")
     End Function
 
     Sub alert(ByVal message As String)
@@ -1314,6 +1204,205 @@ End Sub
         End If
 
         Return String.Join(",", validIds)
+    End Function
+
+    '==========================================================
+    ' STEP 27 (SEO): noindex/canonical per faccette catalogo
+    ' Parametri SEO consentiti: st, ct, tp, gr, sg, mr
+    ' Regola pratica (anti-crawl-bloat):
+    '   - INDEX se (st+ct) presenti e:
+    '       * tp singolo (default) + (nessun altro filtro), oppure
+    '       * tp singolo + 1 solo filtro tra mr/gr/sg (singolo), oppure
+    '       * tp singolo + coppia gerarchica gr+sg (singoli)
+    '   - NOINDEX per multiselezione (id multipli) e per combinazioni multiple (es. mr+gr, mr+sg, mr+gr+sg, ecc.)
+    '   - NOINDEX se sono presenti altri parametri (q, pid, ordinamento, disponibile, taglia, colore, ...)
+    '==========================================================
+    Private Sub ApplySeoIndexPolicy()
+        Try
+            If litSeoHead Is Nothing Then Exit Sub
+
+            Dim basePath As String = Request.Url.GetLeftPart(UriPartial.Path)
+
+            Dim stId As Integer = GetQsIntSafe("st")
+            Dim ctId As Integer = GetQsIntSafe("ct")
+            Dim tpIds As List(Of Integer) = GetQsIdListSafe("tp")
+            Dim grIds As List(Of Integer) = GetQsIdListSafe("gr")
+            Dim sgIds As List(Of Integer) = GetQsIdListSafe("sg")
+            Dim mrIds As List(Of Integer) = GetQsIdListSafe("mr")
+
+            Dim allowIndex As Boolean = IsSeoIndexAllowed(stId, ctId, tpIds, grIds, sgIds, mrIds)
+
+            Dim canonical As String = BuildSeoCanonicalUrl(basePath, allowIndex, stId, ctId, tpIds, grIds, sgIds, mrIds)
+            Dim robots As String = If(allowIndex, "index,follow", "noindex,follow")
+
+            Dim sb As New StringBuilder()
+            sb.Append("<link rel=""canonical"" href=""")
+            sb.Append(HttpUtility.HtmlAttributeEncode(canonical))
+            sb.Append(""" />").Append(vbCrLf)
+            sb.Append("<meta name=""robots"" content=""")
+            sb.Append(robots)
+            sb.Append(""" />").Append(vbCrLf)
+
+            litSeoHead.Text = sb.ToString()
+
+            If Not allowIndex Then
+                Try
+                    Response.AddHeader("X-Robots-Tag", "noindex,follow")
+                Catch
+                    'ignore
+                End Try
+            End If
+        Catch
+            'non blocca la pagina
+        End Try
+    End Sub
+
+    Private Function IsSeoIndexAllowed(ByVal stId As Integer,
+                                      ByVal ctId As Integer,
+                                      ByVal tpIds As List(Of Integer),
+                                      ByVal grIds As List(Of Integer),
+                                      ByVal sgIds As List(Of Integer),
+                                      ByVal mrIds As List(Of Integer)) As Boolean
+        ' st/ct obbligatori
+        If stId <= 0 OrElse ctId <= 0 Then Return False
+
+        ' Se ci sono parametri extra (diversi da st/ct/tp/gr/sg/mr) => NOINDEX
+        Try
+            For Each k As String In Request.QueryString.AllKeys
+                If String.IsNullOrEmpty(k) Then Continue For
+                Dim keyLower As String = k.ToLowerInvariant()
+                If keyLower = "st" OrElse keyLower = "ct" OrElse keyLower = "tp" OrElse keyLower = "gr" OrElse keyLower = "sg" OrElse keyLower = "mr" Then
+                    Continue For
+                End If
+                Dim v As String = Convert.ToString(Request.QueryString(k))
+                If Not String.IsNullOrEmpty(v) Then
+                    Return False
+                End If
+            Next
+        Catch
+            Return False
+        End Try
+
+        ' Multi-selezione => NOINDEX
+        If tpIds IsNot Nothing AndAlso tpIds.Count > 1 Then Return False
+        If grIds IsNot Nothing AndAlso grIds.Count > 1 Then Return False
+        If sgIds IsNot Nothing AndAlso sgIds.Count > 1 Then Return False
+        If mrIds IsNot Nothing AndAlso mrIds.Count > 1 Then Return False
+
+        Dim hasTp As Boolean = (tpIds IsNot Nothing AndAlso tpIds.Count = 1)
+        Dim hasGr As Boolean = (grIds IsNot Nothing AndAlso grIds.Count = 1)
+        Dim hasSg As Boolean = (sgIds IsNot Nothing AndAlso sgIds.Count = 1)
+        Dim hasMr As Boolean = (mrIds IsNot Nothing AndAlso mrIds.Count = 1)
+
+        Dim activeCount As Integer = 0
+        If hasTp Then activeCount += 1
+        If hasGr Then activeCount += 1
+        If hasSg Then activeCount += 1
+        If hasMr Then activeCount += 1
+
+        ' (st+ct) e nessuna faccetta => INDEX
+        If activeCount = 0 Then Return True
+
+        ' Solo una faccetta singola => INDEX
+        If activeCount = 1 Then Return True
+
+        ' tp + 1 sola faccetta => INDEX
+        If hasTp AndAlso activeCount = 2 Then
+            ' tp + mr  | tp + gr | tp + sg
+            If hasMr AndAlso Not hasGr AndAlso Not hasSg Then Return True
+            If hasGr AndAlso Not hasMr AndAlso Not hasSg Then Return True
+            If hasSg AndAlso Not hasMr AndAlso Not hasGr Then Return True
+        End If
+
+        ' tp + gr + sg (coppia gerarchica) => INDEX
+        If hasTp AndAlso hasGr AndAlso hasSg AndAlso Not hasMr Then
+            If activeCount = 3 Then Return True
+        End If
+
+        Return False
+    End Function
+
+    Private Function BuildSeoCanonicalUrl(ByVal basePath As String,
+                                         ByVal allowIndex As Boolean,
+                                         ByVal stId As Integer,
+                                         ByVal ctId As Integer,
+                                         ByVal tpIds As List(Of Integer),
+                                         ByVal grIds As List(Of Integer),
+                                         ByVal sgIds As List(Of Integer),
+                                         ByVal mrIds As List(Of Integer)) As String
+
+        Dim parts As New List(Of String)
+
+        If stId > 0 Then parts.Add("st=" & stId.ToString())
+        If ctId > 0 Then parts.Add("ct=" & ctId.ToString())
+
+        ' tp è considerato parte della navigazione base (se singolo)
+        If tpIds IsNot Nothing AndAlso tpIds.Count = 1 Then
+            parts.Add("tp=" & tpIds(0).ToString())
+        End If
+
+        If allowIndex Then
+            Dim hasTp As Boolean = (tpIds IsNot Nothing AndAlso tpIds.Count = 1)
+            Dim hasGr As Boolean = (grIds IsNot Nothing AndAlso grIds.Count = 1)
+            Dim hasSg As Boolean = (sgIds IsNot Nothing AndAlso sgIds.Count = 1)
+            Dim hasMr As Boolean = (mrIds IsNot Nothing AndAlso mrIds.Count = 1)
+
+            ' tp + gr + sg
+            If hasTp AndAlso hasGr AndAlso hasSg AndAlso Not hasMr Then
+                parts.Add("gr=" & grIds(0).ToString())
+                parts.Add("sg=" & sgIds(0).ToString())
+            Else
+                ' tp + 1 sola faccetta
+                If hasMr AndAlso Not hasGr AndAlso Not hasSg Then
+                    parts.Add("mr=" & mrIds(0).ToString())
+                ElseIf hasGr AndAlso Not hasMr AndAlso Not hasSg Then
+                    parts.Add("gr=" & grIds(0).ToString())
+                ElseIf hasSg AndAlso Not hasMr AndAlso Not hasGr Then
+                    parts.Add("sg=" & sgIds(0).ToString())
+                End If
+            End If
+        End If
+
+        If parts.Count = 0 Then
+            Return basePath
+        End If
+
+        Return basePath & "?" & String.Join("&", parts.ToArray())
+    End Function
+
+    Private Function GetQsIntSafe(ByVal name As String) As Integer
+        Dim v As Integer = 0
+        Try
+            Integer.TryParse(Convert.ToString(Request.QueryString(name)), v)
+        Catch
+            v = 0
+        End Try
+        If v < 0 Then v = 0
+        Return v
+    End Function
+
+    Private Function GetQsIdListSafe(ByVal name As String) As List(Of Integer)
+        Dim list As New List(Of Integer)
+        Try
+            Dim raw As String = Convert.ToString(Request.QueryString(name))
+            If String.IsNullOrEmpty(raw) Then Return list
+
+            Dim parts As String() = raw.Split(New Char() {"|"c, ","c}, StringSplitOptions.RemoveEmptyEntries)
+            Dim seen As New Dictionary(Of Integer, Boolean)()
+
+            For Each p As String In parts
+                Dim id As Integer = 0
+                If Integer.TryParse(p.Trim(), id) AndAlso id > 0 Then
+                    If Not seen.ContainsKey(id) Then
+                        seen.Add(id, True)
+                        list.Add(id)
+                    End If
+                End If
+            Next
+        Catch
+            'ignore
+        End Try
+        Return list
     End Function
 
     '==========================================================

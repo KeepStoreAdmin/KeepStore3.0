@@ -5,7 +5,7 @@
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
 
-    <link rel="canonical" href="<%= System.Web.HttpUtility.HtmlAttributeEncode(Request.Url.GetLeftPart(System.UriPartial.Path)) %>" />
+    <asp:Literal ID="litSeoHead" runat="server" />
     <style type="text/css">
         .filter-scroll { max-height: 260px; overflow: auto; padding-right: 6px; }
         .pagination-ys { display: flex; justify-content: center; margin-top: 18px; }
