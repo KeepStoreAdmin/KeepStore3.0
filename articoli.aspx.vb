@@ -1,10 +1,13 @@
 Imports MySql.Data.MySqlClient
+Imports System
 Imports System.Data
 Imports System.Text
 Imports System.Web
 Imports System.Text.RegularExpressions
 Imports System.Collections
 Imports System.Collections.Generic
+Imports System.Collections.Specialized
+
 
 Partial Class Articoli
     Inherits AntiCsrfPage
@@ -73,7 +76,7 @@ Partial Class Articoli
         End If
     End Sub
 
-    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load   
         oldUrl = HttpContext.Current.Request.Url.AbsoluteUri
 
         If Request.QueryString("rimuovi") <> String.Empty Then
@@ -1899,4 +1902,136 @@ End Sub
         Dim url As String = "https://" & host & "/Public/Images/WhatsApp-Symbolo.png"
         Return System.Web.HttpUtility.HtmlAttributeEncode(url)
     End Function
+
+    ' =========================
+' URL NORMALIZATION / HARDENING
+' =========================
+Private Sub NormalizeArticoliUrl()
+    Try
+        If Request Is Nothing OrElse Request.Url Is Nothing Then Exit Sub
+
+        Dim qsRaw As String = Request.Url.Query
+        If String.IsNullOrEmpty(qsRaw) Then Exit Sub
+
+        Dim qs As String = qsRaw
+        If qs.StartsWith("?") Then qs = qs.Substring(1)
+
+        Dim nvc As NameValueCollection = HttpUtility.ParseQueryString(qs)
+
+        ' Rimuove chiavi vuote generate da querystring sporche tipo &=& o && ecc.
+        If nvc IsNot Nothing AndAlso nvc.AllKeys IsNot Nothing Then
+            For Each k As String In nvc.AllKeys
+                If k Is Nothing OrElse k.Trim() = "" Then
+                    nvc.Remove(k)
+                End If
+            Next
+        End If
+
+        ' Gestione parametro rimuovi=xxx -> elimina sia rimuovi che la chiave indicata
+        Dim keyToRemove As String = SafeKey(Request.QueryString("rimuovi"))
+        If keyToRemove <> "" Then
+            nvc.Remove("rimuovi")
+            nvc.Remove(keyToRemove)
+        End If
+
+        ' Pulizia valori (anti URL injection / anti caratteri strani)
+        If nvc IsNot Nothing AndAlso nvc.AllKeys IsNot Nothing Then
+            For Each k As String In nvc.AllKeys
+                If k Is Nothing Then Continue For
+                Dim v As String = nvc(k)
+                Dim cleaned As String = CleanQueryValue(v)
+                If cleaned <> v Then
+                    nvc(k) = cleaned
+                End If
+            Next
+        End If
+
+        ' Ricostruzione querystring ordinata e stabile (evita url diversi per gli stessi filtri)
+        Dim normalizedQs As String = BuildSortedQuery(nvc)
+
+        ' Se non cambia nulla, non fare redirect
+        If String.Equals(qs, normalizedQs, StringComparison.Ordinal) Then Exit Sub
+
+        Dim target As String = Request.Path
+        If normalizedQs <> "" Then target &= "?" & normalizedQs
+
+        ' Redirect interno (NO open redirect: usa sempre Request.Path)
+        Response.Redirect(target, True)
+
+    Catch
+        ' In caso di errore: non bloccare la pagina
+    End Try
+End Sub
+
+Private Function SafeKey(ByVal input As String) As String
+    If String.IsNullOrEmpty(input) Then Return ""
+    Dim s As String = input.Trim()
+
+    ' Limite lunghezza
+    If s.Length > 20 Then s = s.Substring(0, 20)
+
+    Dim sb As New StringBuilder()
+    For Each ch As Char In s
+        If Char.IsLetterOrDigit(ch) OrElse ch = "_"c Then
+            sb.Append(Char.ToLowerInvariant(ch))
+        End If
+    Next
+
+    Return sb.ToString()
+End Function
+
+Private Function CleanQueryValue(ByVal input As String) As String
+    If input Is Nothing Then Return ""
+    Dim s As String = input
+
+    ' Limite sicurezza
+    If s.Length > 200 Then s = s.Substring(0, 200)
+
+    Dim sb As New StringBuilder()
+    For Each ch As Char In s
+        ' Consentiti: alfanumerici + separatori usati nei tuoi filtri (comma, dash, underscore, punto, spazio)
+        If Char.IsLetterOrDigit(ch) _
+            OrElse ch = ","c _
+            OrElse ch = "-"c _
+            OrElse ch = "_"c _
+            OrElse ch = "."c _
+            OrElse ch = " "c Then
+            sb.Append(ch)
+        End If
+    Next
+
+    Return sb.ToString().Trim()
+End Function
+
+Private Function BuildSortedQuery(ByVal nvc As NameValueCollection) As String
+    If nvc Is Nothing OrElse nvc.Count = 0 Then Return ""
+
+    Dim keys As New List(Of String)()
+    If nvc.AllKeys IsNot Nothing Then
+        For Each k As String In nvc.AllKeys
+            If k IsNot Nothing AndAlso k.Trim() <> "" Then keys.Add(k.Trim())
+        Next
+    End If
+
+    keys.Sort(StringComparer.OrdinalIgnoreCase)
+
+    Dim sb As New StringBuilder()
+    For Each k As String In keys
+        Dim v As String = nvc(k)
+        If v Is Nothing Then v = ""
+
+        If sb.Length > 0 Then sb.Append("&")
+
+        sb.Append(HttpUtility.UrlEncode(k))
+
+        ' Manteniamo la forma key=value solo se value non vuoto
+        If v.Trim() <> "" Then
+            sb.Append("="c)
+            sb.Append(HttpUtility.UrlEncode(v))
+        End If
+    Next
+
+    Return sb.ToString()
+    End Function
+
 End Class
