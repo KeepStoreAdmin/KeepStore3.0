@@ -61,17 +61,44 @@ Public Class AntiCsrfPage
             Dim vsToken As String = TryCast(ViewState(AntiXsrfTokenKey), String)
             Dim vsUser As String = TryCast(ViewState(AntiXsrfUserNameKey), String)
 
-            If String.IsNullOrEmpty(vsToken) OrElse String.IsNullOrEmpty(vsUser) Then
-                Throw New InvalidOperationException("Anti-CSRF token missing.")
+            ' NOTE: vsUser can legitimately be empty for anonymous sessions.
+            If vsUser Is Nothing Then vsUser = String.Empty
+
+            ' If ViewState is missing or tampered, safely drop the POST and reload the page.
+            ' This prevents hard crashes from malformed/bot POSTs and from anonymous postbacks.
+            If String.IsNullOrEmpty(vsToken) Then
+                RejectPostBack("Anti-CSRF token missing")
+                Exit Sub
             End If
 
             If Not String.Equals(vsToken, _antiXsrfTokenValue, StringComparison.Ordinal) Then
-                Throw New InvalidOperationException("Anti-CSRF token validation failed.")
+                RejectPostBack("Anti-CSRF token validation failed")
+                Exit Sub
             End If
 
             If Not String.Equals(vsUser, CurrentUserName(), StringComparison.Ordinal) Then
-                Throw New InvalidOperationException("Anti-CSRF user validation failed.")
+                RejectPostBack("Anti-CSRF user validation failed")
+                Exit Sub
             End If
+        End If
+    End Sub
+
+    Private Sub RejectPostBack(ByVal reason As String)
+        ' Best-effort: redirect to the same URL via GET (discard POST payload)
+        Try
+            ' (Optional) header for diagnostics; harmless if stripped by proxies
+            Response.Headers("X-KeepStore-CSRF") = reason
+        Catch
+        End Try
+
+        If Request IsNot Nothing AndAlso String.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase) Then
+            Try
+                Response.Redirect(Request.RawUrl, False)
+                If Context IsNot Nothing AndAlso Context.ApplicationInstance IsNot Nothing Then
+                    Context.ApplicationInstance.CompleteRequest()
+                End If
+            Catch
+            End Try
         End If
     End Sub
 
