@@ -53,6 +53,8 @@
 
                         <div class="wrap">
                             <h4 class="fw-semibold mb-20">Cambia Password</h4>
+                            <asp:Label ID="lblEsito" runat="server" EnableViewState="false" CssClass="text-danger"></asp:Label>
+
 
                             <div class="mb-20">
                                 <p>

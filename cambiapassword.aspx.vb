@@ -1,5 +1,6 @@
 Imports MySql.Data.MySqlClient
 Imports System.Data
+Imports System.IO
 
 Partial Class cambiapassword
     Inherits System.Web.UI.Page
@@ -11,7 +12,9 @@ Partial Class cambiapassword
     End Property
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
-        ' Pagina riservata: se non sei loggato, vai a accessonegato.aspx
+        lblEsito.Text = ""
+
+        ' Pagina riservata
         If Session("LoginId") Is Nothing Then
             Response.Redirect("accessonegato.aspx", True)
             Exit Sub
@@ -31,14 +34,12 @@ Partial Class cambiapassword
                 lblMesi.Text = ""
             End Try
 
-            ' Precarico dati login (senza esporre password al client)
+            ' Precarico dati login (senza esporre password)
             LoadLoginData()
 
-            ' Stato pannelli
             tRegistrazione.Visible = True
             tAggiorna.Visible = False
         End If
-
     End Sub
 
     Private Sub LoadLoginData()
@@ -52,35 +53,26 @@ Partial Class cambiapassword
             Using conn As New MySqlConnection(ConnString)
                 conn.Open()
 
-                Using cmd As New MySqlCommand("SELECT Username, Email FROM vlogin WHERE id = ?id LIMIT 0,1", conn)
+                ' Tabella fisica: login (vlogin e' una vista)
+                Using cmd As New MySqlCommand("SELECT UserName, email FROM login WHERE id = ?id LIMIT 0,1", conn)
                     cmd.CommandType = CommandType.Text
                     cmd.Parameters.Clear()
                     cmd.Parameters.AddWithValue("?id", loginId)
 
                     Using dr As MySqlDataReader = cmd.ExecuteReader()
                         If dr.Read() Then
-                            Try
-                                tbUsername.Text = Convert.ToString(dr("Username"))
-                            Catch
-                                tbUsername.Text = ""
-                            End Try
-
-                            Try
-                                tbEmail.Text = Convert.ToString(dr("Email"))
-                            Catch
-                                tbEmail.Text = ""
-                            End Try
+                            tbUsername.Text = Convert.ToString(dr("UserName"))
+                            tbEmail.Text = Convert.ToString(dr("email"))
                         End If
                     End Using
                 End Using
             End Using
-        Catch
-            ' In produzione: eventuale logging
+        Catch ex As Exception
+            LogException("LoadLoginData", ex)
         End Try
     End Sub
 
     Protected Sub cvOldPassword_ServerValidate(ByVal source As Object, ByVal args As ServerValidateEventArgs)
-        ' Valida la password vecchia lato server (evita compare con textbox nascosta)
         args.IsValid = False
 
         Dim loginId As Integer = KeepStoreSecurity.ParseInt(Session("LoginId"), 0)
@@ -97,7 +89,7 @@ Partial Class cambiapassword
             Using conn As New MySqlConnection(ConnString)
                 conn.Open()
 
-                Using cmd As New MySqlCommand("SELECT Password FROM vlogin WHERE id = ?id LIMIT 0,1", conn)
+                Using cmd As New MySqlCommand("SELECT Password FROM login WHERE id = ?id LIMIT 0,1", conn)
                     cmd.CommandType = CommandType.Text
                     cmd.Parameters.Clear()
                     cmd.Parameters.AddWithValue("?id", loginId)
@@ -110,21 +102,23 @@ Partial Class cambiapassword
                     End Using
 
                     If Not String.IsNullOrEmpty(dbPwd) Then
-                        ' stesso criterio del login: confronto case-insensitive
-                        If dbPwd.Trim().ToLower() = oldPwd.Trim().ToLower() Then
+                        ' Legacy-compatible: confronto case-insensitive
+                        If String.Equals(dbPwd.Trim(), oldPwd.Trim(), StringComparison.OrdinalIgnoreCase) Then
                             args.IsValid = True
                         End If
                     End If
                 End Using
             End Using
-        Catch
-            ' In caso di errore tecnico, non faccio passare la validazione
+
+        Catch ex As Exception
+            LogException("cvOldPassword_ServerValidate", ex)
             args.IsValid = False
         End Try
     End Sub
 
     Protected Sub btRegistrati_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btRegistrati.Click
-        ' Rispetta i validator
+        lblEsito.Text = ""
+
         If Not Page.IsValid Then
             Exit Sub
         End If
@@ -135,48 +129,68 @@ Partial Class cambiapassword
             Exit Sub
         End If
 
-        Dim newPwd As String = tbPasswordNuova.Text
-        Dim newPwd2 As String = tbPasswordConferma.Text
+        Dim newPwd As String = Convert.ToString(tbPasswordNuova.Text)
+        Dim newPwd2 As String = Convert.ToString(tbPasswordConferma.Text)
 
         If String.IsNullOrWhiteSpace(newPwd) OrElse String.IsNullOrWhiteSpace(newPwd2) Then
+            lblEsito.Text = "Inserisci la nuova password e la conferma."
             Exit Sub
         End If
 
         If newPwd <> newPwd2 Then
+            lblEsito.Text = "Le password non coincidono."
             Exit Sub
         End If
+
+        ' Criterio legacy: almeno 8 caratteri, solo lettere/numeri/_ e spazi (nessun carattere speciale)
+        ' (coerente con regex [\w\s]{8,} lato ASPX)
 
         Try
             Using conn As New MySqlConnection(ConnString)
                 conn.Open()
 
-                Using cmd As New MySqlCommand("UPDATE vlogin SET Password = ?pwd, DataPassword = ?dp WHERE id = ?id", conn)
+                Using cmd As New MySqlCommand("UPDATE login SET Password = ?pwd, DataPassword = ?dp WHERE id = ?id", conn)
                     cmd.CommandType = CommandType.Text
                     cmd.Parameters.Clear()
                     cmd.Parameters.AddWithValue("?pwd", newPwd)
-                    cmd.Parameters.AddWithValue("?dp", DateTime.Today)
+                    cmd.Parameters.AddWithValue("?dp", DateTime.Now)
                     cmd.Parameters.AddWithValue("?id", loginId)
 
                     Dim rows As Integer = cmd.ExecuteNonQuery()
 
                     If rows > 0 Then
-                        ' aggiorno sessione usata dal master per la scadenza
-                        Session("DataPassword") = DateTime.Today
-
+                        Session("DataPassword") = DateTime.Now
                         tRegistrazione.Visible = False
                         tAggiorna.Visible = True
 
-                        ' pulizia campi
                         tbPasswordVecchia.Text = ""
                         tbPasswordNuova.Text = ""
                         tbPasswordConferma.Text = ""
+                    Else
+                        lblEsito.Text = "Errore tecnico durante l'aggiornamento della password."
                     End If
                 End Using
             End Using
-        Catch
-            ' Fallback: la pagina resta visibile con i validator; non crasho.
-        End Try
 
+        Catch ex As Exception
+            LogException("btRegistrati_Click", ex)
+            lblEsito.Text = "Errore tecnico durante l'aggiornamento della password."
+        End Try
+    End Sub
+
+    Private Sub LogException(ByVal context As String, ByVal ex As Exception)
+        Try
+            Dim baseDir As String = Server.MapPath("~/App_Data/Logs")
+            If Not Directory.Exists(baseDir) Then
+                Directory.CreateDirectory(baseDir)
+            End If
+
+            Dim path As String = Path.Combine(baseDir, "cambiapassword.log")
+            Dim msg As String = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") & " | " & context & " | " & ex.GetType().FullName & " | " & ex.Message & Environment.NewLine & ex.StackTrace & Environment.NewLine & "----" & Environment.NewLine
+            File.AppendAllText(path, msg)
+        Catch
+            ' no-throw
+        End Try
     End Sub
 
 End Class
