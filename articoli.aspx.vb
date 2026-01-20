@@ -1,14 +1,12 @@
 Imports MySql.Data.MySqlClient
-Imports System
 Imports System.Data
 Imports System.Text
 Imports System.Web
 Imports System.Text.RegularExpressions
 Imports System.Collections
 Imports System.Collections.Generic
+
 Imports System.Collections.Specialized
-
-
 Partial Class Articoli
     Inherits AntiCsrfPage
 
@@ -76,15 +74,18 @@ Partial Class Articoli
         End If
     End Sub
 
-    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load   
-        oldUrl = HttpContext.Current.Request.Url.AbsoluteUri
-
-        If Request.QueryString("rimuovi") <> String.Empty Then
-            Dim filtersToRemove As String = Request.QueryString("rimuovi")
-            Response.Redirect(changeUrlGetParam(Request.UrlReferrer.ToString, filtersToRemove, String.Empty).Replace("rimuovi=" & filtersToRemove, String.Empty))
+    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        '==========================================================
+        ' STEP 17 (CATALOGO/SEO+ROBUSTEZZA): Normalizzazione URL
+        ' - Elimina chiavi vuote (es. ?=&) e gestisce rimozione filtri via ?rimuovi=...
+        ' - Evita open-redirect (non usa Referrer come base redirect)
+        ' - Riduce crawler-trap da querystring sporca
+        '==========================================================
+        If Not Me.IsPostBack AndAlso String.Equals(Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) Then
+            NormalizeArticoliUrl()
         End If
 
-        
+        oldUrl = HttpContext.Current.Request.Url.AbsoluteUri
 
         '==========================================================
         ' STEP 3 (CATALOGO): Normalizzazione parametri st/ct/tp e Session
@@ -123,6 +124,83 @@ Partial Class Articoli
             End If
         End If
 End Sub
+
+    '==========================================================
+    ' STEP 17 (CATALOGO/SEO+ROBUSTEZZA) - helper
+    ' Normalizza querystring e gestisce ?rimuovi=
+    '==========================================================
+    Private Sub NormalizeArticoliUrl()
+        Try
+            Dim cur As Uri = Request.Url
+            Dim nvc As NameValueCollection = HttpUtility.ParseQueryString(cur.Query)
+
+            ' 1) rimozione filtri via ?rimuovi=<chiave> (supporto retro-compatibile)
+            Dim toRemoveKey As String = Convert.ToString(nvc.Get("rimuovi"))
+            If Not String.IsNullOrEmpty(toRemoveKey) Then
+                toRemoveKey = SanitizeQueryKey(toRemoveKey)
+                If Not String.IsNullOrEmpty(toRemoveKey) Then
+                    nvc.Remove(toRemoveKey)
+                End If
+                nvc.Remove("rimuovi")
+            End If
+
+            ' 2) elimina chiavi vuote / parametri vuoti (es. ?=&)
+            If nvc.AllKeys IsNot Nothing Then
+                For Each k As String In nvc.AllKeys
+                    If String.IsNullOrEmpty(k) Then
+                        nvc.Remove(k)
+                    End If
+                Next
+            End If
+
+            Dim keys As String() = nvc.AllKeys
+            If keys IsNot Nothing Then
+                For Each k As String In keys
+                    If k IsNot Nothing AndAlso nvc(k) IsNot Nothing AndAlso nvc(k).Trim() = "" Then
+                        nvc.Remove(k)
+                    End If
+                Next
+            End If
+
+            Dim normalizedQuery As String = nvc.ToString()
+            Dim currentQuery As String = cur.Query
+            If currentQuery.StartsWith("?") Then currentQuery = currentQuery.Substring(1)
+
+            If normalizedQuery <> currentQuery Then
+                Dim newUrl As String = cur.GetLeftPart(UriPartial.Path)
+                If Not String.IsNullOrEmpty(normalizedQuery) Then
+                    newUrl &= "?" & normalizedQuery
+                End If
+                Response.Redirect(newUrl, True)
+            End If
+
+            ' 3) header anti-index per pagine con query (crawler trap reduction)
+            If cur.Query IsNot Nothing AndAlso cur.Query.Length > 1 Then
+                Try
+                    Response.Headers.Remove("X-Robots-Tag")
+                    Response.Headers.Add("X-Robots-Tag", "noindex,follow")
+                Catch
+                End Try
+            End If
+        Catch
+            ' non bloccare la pagina: fallback silenzioso
+        End Try
+    End Sub
+
+    Private Function SanitizeQueryKey(ByVal k As String) As String
+        If k Is Nothing Then Return ""
+        k = k.Trim()
+        If k.Length = 0 Then Return ""
+        If k.Length > 25 Then k = k.Substring(0, 25)
+        Dim sb As New StringBuilder()
+        For i As Integer = 0 To k.Length - 1
+            Dim ch As Char = k(i)
+            If Char.IsLetterOrDigit(ch) OrElse ch = "_"c Then
+                sb.Append(ch)
+            End If
+        Next
+        Return sb.ToString()
+    End Function
 
     Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.LoadComplete
         IvaTipo = Me.Session("IvaTipo")
@@ -1070,27 +1148,27 @@ End Sub
             End If
         End If
 
-        Dim newUrl As String = changeUrlGetParam(Request.UrlReferrer.ToString, parName, parValue)
+        Dim newUrl As String = changeUrlGetParam(Request.Url.AbsoluteUri, parName, parValue)
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub Drop_Ordinamento_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Ordinamento.SelectedIndexChanged
-        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.UrlReferrer.ToString, Drop_Ordinamento, "ordinamento")
+        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.Url.AbsoluteUri, Drop_Ordinamento, "ordinamento")
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub Drop_Filtra_Taglia_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Filtra_Taglia.SelectedIndexChanged
-        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.UrlReferrer.ToString, Drop_Filtra_Taglia, "taglia")
+        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.Url.AbsoluteUri, Drop_Filtra_Taglia, "taglia")
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub Drop_Filtra_Colore_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Filtra_Colore.SelectedIndexChanged
-        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.UrlReferrer.ToString, Drop_Filtra_Colore, "colore")
+        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.Url.AbsoluteUri, Drop_Filtra_Colore, "colore")
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub CheckBox_Disponibile_CheckedChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles CheckBox_Disponibile.CheckedChanged
-        Dim newUrl As String = changeUrlDependingFromCheckBox(Request.UrlReferrer.ToString, CheckBox_Disponibile, "disponibile", "1", "0")
+        Dim newUrl As String = changeUrlDependingFromCheckBox(Request.Url.AbsoluteUri, CheckBox_Disponibile, "disponibile", "1", "0")
         Response.Redirect(newUrl)
     End Sub
     Sub changeCheckBoxDependingFromUrl(ByVal checkBox As CheckBox, ByVal parName As String, ByVal parValueIfChecked As String)
@@ -1128,12 +1206,48 @@ End Sub
     End Function
 
     Function changeUrlGetParam(ByVal url As String, ByVal parName As String, ByVal parValue As String) As String
-        Dim newUrl As String = Regex.Replace(url, "&" & parName & "=([^&])+", String.Empty)
-        newUrl = Regex.Replace(newUrl, "\?" & parName & "=([^&])+", "?")
-        If parValue <> String.Empty Then
-            newUrl = newUrl & "&" & parName & "=" & parValue
+        ' Versione robusta: evita query rotte (?=&), preserva path e gestisce encoding
+        If String.IsNullOrEmpty(url) Then
+            url = Request.Url.AbsoluteUri
         End If
-        Return newUrl.Replace("?&", "?")
+
+        Dim basePart As String = url
+        Dim fragment As String = ""
+        Dim hashPos As Integer = basePart.IndexOf("#"c)
+        If hashPos >= 0 Then
+            fragment = basePart.Substring(hashPos)
+            basePart = basePart.Substring(0, hashPos)
+        End If
+
+        Dim qPos As Integer = basePart.IndexOf("?"c)
+        Dim pathPart As String = basePart
+        Dim queryPart As String = ""
+        If qPos >= 0 Then
+            pathPart = basePart.Substring(0, qPos)
+            queryPart = basePart.Substring(qPos + 1)
+        End If
+
+        Dim nvc As NameValueCollection = HttpUtility.ParseQueryString(queryPart)
+        ' Rimuove eventuali chiavi vuote prodotte da URL non validi
+        If nvc.AllKeys IsNot Nothing Then
+            For Each k As String In nvc.AllKeys
+                If String.IsNullOrEmpty(k) Then
+                    nvc.Remove(k)
+                End If
+            Next
+        End If
+
+        If String.IsNullOrEmpty(parValue) Then
+            nvc.Remove(parName)
+        Else
+            nvc.Set(parName, parValue)
+        End If
+
+        Dim newQuery As String = nvc.ToString()
+        If Not String.IsNullOrEmpty(newQuery) Then
+            Return pathPart & "?" & newQuery & fragment
+        End If
+        Return pathPart & fragment
     End Function
 
     Sub alert(ByVal message As String)
@@ -1902,136 +2016,4 @@ End Sub
         Dim url As String = "https://" & host & "/Public/Images/WhatsApp-Symbolo.png"
         Return System.Web.HttpUtility.HtmlAttributeEncode(url)
     End Function
-
-    ' =========================
-' URL NORMALIZATION / HARDENING
-' =========================
-Private Sub NormalizeArticoliUrl()
-    Try
-        If Request Is Nothing OrElse Request.Url Is Nothing Then Exit Sub
-
-        Dim qsRaw As String = Request.Url.Query
-        If String.IsNullOrEmpty(qsRaw) Then Exit Sub
-
-        Dim qs As String = qsRaw
-        If qs.StartsWith("?") Then qs = qs.Substring(1)
-
-        Dim nvc As NameValueCollection = HttpUtility.ParseQueryString(qs)
-
-        ' Rimuove chiavi vuote generate da querystring sporche tipo &=& o && ecc.
-        If nvc IsNot Nothing AndAlso nvc.AllKeys IsNot Nothing Then
-            For Each k As String In nvc.AllKeys
-                If k Is Nothing OrElse k.Trim() = "" Then
-                    nvc.Remove(k)
-                End If
-            Next
-        End If
-
-        ' Gestione parametro rimuovi=xxx -> elimina sia rimuovi che la chiave indicata
-        Dim keyToRemove As String = SafeKey(Request.QueryString("rimuovi"))
-        If keyToRemove <> "" Then
-            nvc.Remove("rimuovi")
-            nvc.Remove(keyToRemove)
-        End If
-
-        ' Pulizia valori (anti URL injection / anti caratteri strani)
-        If nvc IsNot Nothing AndAlso nvc.AllKeys IsNot Nothing Then
-            For Each k As String In nvc.AllKeys
-                If k Is Nothing Then Continue For
-                Dim v As String = nvc(k)
-                Dim cleaned As String = CleanQueryValue(v)
-                If cleaned <> v Then
-                    nvc(k) = cleaned
-                End If
-            Next
-        End If
-
-        ' Ricostruzione querystring ordinata e stabile (evita url diversi per gli stessi filtri)
-        Dim normalizedQs As String = BuildSortedQuery(nvc)
-
-        ' Se non cambia nulla, non fare redirect
-        If String.Equals(qs, normalizedQs, StringComparison.Ordinal) Then Exit Sub
-
-        Dim target As String = Request.Path
-        If normalizedQs <> "" Then target &= "?" & normalizedQs
-
-        ' Redirect interno (NO open redirect: usa sempre Request.Path)
-        Response.Redirect(target, True)
-
-    Catch
-        ' In caso di errore: non bloccare la pagina
-    End Try
-End Sub
-
-Private Function SafeKey(ByVal input As String) As String
-    If String.IsNullOrEmpty(input) Then Return ""
-    Dim s As String = input.Trim()
-
-    ' Limite lunghezza
-    If s.Length > 20 Then s = s.Substring(0, 20)
-
-    Dim sb As New StringBuilder()
-    For Each ch As Char In s
-        If Char.IsLetterOrDigit(ch) OrElse ch = "_"c Then
-            sb.Append(Char.ToLowerInvariant(ch))
-        End If
-    Next
-
-    Return sb.ToString()
-End Function
-
-Private Function CleanQueryValue(ByVal input As String) As String
-    If input Is Nothing Then Return ""
-    Dim s As String = input
-
-    ' Limite sicurezza
-    If s.Length > 200 Then s = s.Substring(0, 200)
-
-    Dim sb As New StringBuilder()
-    For Each ch As Char In s
-        ' Consentiti: alfanumerici + separatori usati nei tuoi filtri (comma, dash, underscore, punto, spazio)
-        If Char.IsLetterOrDigit(ch) _
-            OrElse ch = ","c _
-            OrElse ch = "-"c _
-            OrElse ch = "_"c _
-            OrElse ch = "."c _
-            OrElse ch = " "c Then
-            sb.Append(ch)
-        End If
-    Next
-
-    Return sb.ToString().Trim()
-End Function
-
-Private Function BuildSortedQuery(ByVal nvc As NameValueCollection) As String
-    If nvc Is Nothing OrElse nvc.Count = 0 Then Return ""
-
-    Dim keys As New List(Of String)()
-    If nvc.AllKeys IsNot Nothing Then
-        For Each k As String In nvc.AllKeys
-            If k IsNot Nothing AndAlso k.Trim() <> "" Then keys.Add(k.Trim())
-        Next
-    End If
-
-    keys.Sort(StringComparer.OrdinalIgnoreCase)
-
-    Dim sb As New StringBuilder()
-    For Each k As String In keys
-        Dim v As String = nvc(k)
-        If v Is Nothing Then v = ""
-
-        If sb.Length > 0 Then sb.Append("&")
-
-        sb.Append(HttpUtility.UrlEncode(k))
-
-        ' Manteniamo la forma key=value solo se value non vuoto
-        If v.Trim() <> "" Then
-            sb.Append("="c)
-            sb.Append(HttpUtility.UrlEncode(v))
-        End If
-    Next
-
-    Return sb.ToString()
-    End Function
-
 End Class
