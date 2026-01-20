@@ -3,6 +3,8 @@ Imports System.Data
 Imports System.Configuration
 Imports System.Web.UI.HtmlControls
 Imports System.Text.RegularExpressions
+Imports System.Web
+Imports System.Text
 
 Partial Class Page
     Inherits System.Web.UI.MasterPage
@@ -45,7 +47,97 @@ Private Function HeaderHasMeta(ByVal metaName As String) As Boolean
     Return False
 End Function
 
-    Dim IvaTipo As Integer
+    
+' ============================================================
+' STEP29 - SEO globale (noindex + canonical) per pagine NON SEO
+' - Non tocca logica business, filtri o postback
+' - Evita indicizzazione aree private e URL azione (rimuovi/st)
+' ============================================================
+Private Sub ApplyGlobalSeoPolicy()
+    Try
+        If litGlobalSeoHead Is Nothing OrElse Request Is Nothing OrElse Request.Url Is Nothing Then Exit Sub
+
+        Dim path As String = String.Empty
+        Try
+            path = If(Request.Url.AbsolutePath, String.Empty)
+        Catch
+            path = If(Request.Path, String.Empty)
+        End Try
+        Dim pathLower As String = path.ToLowerInvariant()
+
+        ' Pagine SEO (gestiscono già canonical/noindex): non interferire
+        If pathLower.EndsWith("/articoli.aspx") OrElse pathLower.EndsWith("/articolo.aspx") Then
+            litGlobalSeoHead.Text = String.Empty
+            Exit Sub
+        End If
+
+        Dim qs As NameValueCollection = Request.QueryString
+        Dim hasRimuovi As Boolean = False
+        Dim hasSt As Boolean = False
+        If qs IsNot Nothing Then
+            hasRimuovi = (qs("rimuovi") IsNot Nothing AndAlso qs("rimuovi").ToString().Trim() <> "")
+            hasSt = (qs("st") IsNot Nothing AndAlso qs("st").ToString().Trim() <> "")
+        End If
+
+        ' Aree non SEO / private / transazionali
+        Dim isNonSeo As Boolean = False
+        If pathLower.Contains("/my-account") Then isNonSeo = True
+        If pathLower.Contains("/checkout") Then isNonSeo = True
+        If pathLower.Contains("/carrello") Then isNonSeo = True
+        If pathLower.Contains("/shop-cart") Then isNonSeo = True
+        If pathLower.Contains("/wishlist") Then isNonSeo = True
+        If pathLower.Contains("/compare") Then isNonSeo = True
+        If pathLower.Contains("/track-your-order") Then isNonSeo = True
+        If pathLower.Contains("/documenti") Then isNonSeo = True
+        If pathLower.Contains("/documentidettaglio") Then isNonSeo = True
+        If pathLower.Contains("/datiutente") Then isNonSeo = True
+        If pathLower.Contains("/cambiapassword") Then isNonSeo = True
+        If pathLower.Contains("/login") Then isNonSeo = True
+        If pathLower.Contains("/logout") Then isNonSeo = True
+        If pathLower.Contains("/register") Then isNonSeo = True
+        If pathLower.Contains("/pay_your_orders") Then isNonSeo = True
+
+        Dim applyNoIndex As Boolean = (hasRimuovi OrElse hasSt OrElse isNonSeo)
+
+        If Not applyNoIndex Then
+            litGlobalSeoHead.Text = String.Empty
+            Exit Sub
+        End If
+
+        ' Header HTTP (preferibile ai bot)
+        Try
+            Response.Headers("X-Robots-Tag") = "noindex,follow"
+        Catch
+            Try
+                Response.AddHeader("X-Robots-Tag", "noindex,follow")
+            Catch
+            End Try
+        End Try
+
+        ' Canonical: senza querystring (evita duplicati su pagine transazionali)
+        Dim canonicalUrl As String = "https://" & Request.Url.Authority & path
+
+        Dim sb As New StringBuilder()
+        If Not HeaderHasMeta("robots") Then
+            sb.Append("<meta name=\"robots\" content=\"noindex,follow\" />")
+            sb.Append(vbCrLf)
+        End If
+        sb.Append("<link rel=\"canonical\" href=\"")
+        sb.Append(HttpUtility.HtmlAttributeEncode(canonicalUrl))
+        sb.Append("\" />")
+
+        litGlobalSeoHead.Text = sb.ToString()
+
+    Catch
+        ' Fail-safe: mai bloccare la master per SEO
+        Try
+            If litGlobalSeoHead IsNot Nothing Then litGlobalSeoHead.Text = String.Empty
+        Catch
+        End Try
+    End Try
+End Sub
+
+Dim IvaTipo As Integer
     Dim conn As New MySqlConnection
     Dim conn2 As New MySqlConnection
     Dim cmd As New MySqlCommand
@@ -339,6 +431,9 @@ End Sub
     ' PRE-RENDER: mini-login, badge ordini, carrello, meta
     '==========================================================
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
+        ' STEP29: applica policy SEO globale (noindex/canonical su pagine non SEO)
+        ApplyGlobalSeoPolicy()
+
         '---------------------------
         ' LINK LISTINO PERSONALIZZATO
         '---------------------------
