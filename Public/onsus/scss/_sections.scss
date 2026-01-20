@@ -1213,14 +1213,14 @@
     }
 }
 
-.my-account-nav {
+.myaccount-nav {
     display: flex;
     flex-direction: column;
     gap: 10px;
     position: sticky;
     top: 0;
 
-    .my-account-nav-item {
+    .myaccount-nav-item {
         display: flex;
         width: 100%;
         border: 1px solid var(--gray-4);
