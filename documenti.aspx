@@ -415,23 +415,19 @@
                 <ItemTemplate>
                     <div class="d-flex flex-column">
                         <div class="body-text-3">
-                            <% If Request.QueryString("t") = Session("IdDocumentoCoupon") Then %>
-                                <asp:HyperLink ForeColor="#E12825" Font-Bold="true" ID="idcoupon" runat="server"
-                                    NavigateUrl='<%# "coupon_esito_acquisto.aspx?id=" & Eval("Coupon_idCoupon") & "&cod=" & Eval("Coupon_CodControllo") %>'
-                                    Text='<%# Eval("NDocumento") %>'
-                                    ToolTip='<%# "Visualizza Dettagli " & Eval("tipodocumentidescrizione") %>'>
-                                </asp:HyperLink>
-                                <!-- Hidden iddoc (compatibilità RowCommand legacy) -->
-                                <asp:HyperLink ID="iddoc" runat="server" Visible="false"
-                                    NavigateUrl='<%# Eval("id", "documentidettaglio.aspx?id={0}") %>'
-                                    Text='<%# Eval("NDocumento") %>'></asp:HyperLink>
-                            <% Else %>
-                                <asp:HyperLink ForeColor="#E12825" Font-Bold="true" ID="iddoc" runat="server"
-                                    NavigateUrl='<%# Eval("id", "documentidettaglio.aspx?id={0}") %>'
-                                    Text='<%# Eval("NDocumento") %>'
-                                    ToolTip='<%# "Visualizza Dettagli " & Eval("tipodocumentidescrizione") %>'>
-                                </asp:HyperLink>
-                            <% End If %>
+                            <asp:HyperLink ForeColor="#E12825" Font-Bold="true" ID="idcoupon" runat="server"
+                                Visible='<%# (Convert.ToString(Request.QueryString("t")) = Convert.ToString(Session("IdDocumentoCoupon"))) %>'
+                                NavigateUrl='<%# "coupon_esito_acquisto.aspx?id=" & Eval("Coupon_idCoupon") & "&cod=" & Eval("Coupon_CodControllo") %>'
+                                Text='<%# Eval("NDocumento") %>'
+                                ToolTip='<%# "Visualizza Dettagli " & Eval("tipodocumentidescrizione") %>'>
+                            </asp:HyperLink>
+
+                            <asp:HyperLink ForeColor="#E12825" Font-Bold="true" ID="iddoc" runat="server"
+                                Visible='<%# Not (Convert.ToString(Request.QueryString("t")) = Convert.ToString(Session("IdDocumentoCoupon"))) %>'
+                                NavigateUrl='<%# Eval("id", "documentidettaglio.aspx?id={0}") %>'
+                                Text='<%# Eval("NDocumento") %>'
+                                ToolTip='<%# "Visualizza Dettagli " & Eval("tipodocumentidescrizione") %>'>
+                            </asp:HyperLink>
                         </div>
 
                         <details class="ks-order-details mt-1">
