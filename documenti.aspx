@@ -259,39 +259,39 @@
 
                     <div class="col-lg-3">
                         <div class="wrap-sidebar-account">
-                            <ul class="my-account-nav content-append">
-                                <li><a href="myaccount.aspx" class="my-account-nav-item">Dashboard</a></li>
-                                <li><a href="datiutente.aspx" class="my-account-nav-item">I miei dati</a></li>
+                            <ul class="myaccount-nav content-append">
+                                <li><a href="myaccount.aspx" class="myaccount-nav-item">Dashboard</a></li>
+                                <li><a href="datiutente.aspx" class="myaccount-nav-item">I miei dati</a></li>
                                 <li>
                                     <% If Convert.ToString(Request.QueryString("t")) = "4" Then %>
-                                        <span class="my-account-nav-item active">I miei ordini</span>
+                                        <span class="myaccount-nav-item active">I miei ordini</span>
                                     <% Else %>
-                                        <a href="documenti.aspx?t=4" class="my-account-nav-item">I miei ordini</a>
+                                        <a href="documenti.aspx?t=4" class="myaccount-nav-item">I miei ordini</a>
                                     <% End If %>
                                 </li>
                                 <li>
                                     <% If Convert.ToString(Request.QueryString("t")) = "2" Then %>
-                                        <span class="my-account-nav-item active">Le mie fatture</span>
+                                        <span class="myaccount-nav-item active">Le mie fatture</span>
                                     <% Else %>
-                                        <a href="documenti.aspx?t=2" class="my-account-nav-item">Le mie fatture</a>
+                                        <a href="documenti.aspx?t=2" class="myaccount-nav-item">Le mie fatture</a>
                                     <% End If %>
                                 </li>
                                 <li>
                                     <% If Convert.ToString(Request.QueryString("t")) = "1" Then %>
-                                        <span class="my-account-nav-item active">I miei DDT</span>
+                                        <span class="myaccount-nav-item active">I miei DDT</span>
                                     <% Else %>
-                                        <a href="documenti.aspx?t=1" class="my-account-nav-item">I miei DDT</a>
+                                        <a href="documenti.aspx?t=1" class="myaccount-nav-item">I miei DDT</a>
                                     <% End If %>
                                 </li>
-                                <li><a href="wishlist.aspx" class="my-account-nav-item">Wishlist</a></li>
-                                <li><a href="password.aspx" class="my-account-nav-item">Cambia password</a></li>
-                                <li><a href="logout.aspx" class="my-account-nav-item">Logout</a></li>
+                                <li><a href="wishlist.aspx" class="myaccount-nav-item">Wishlist</a></li>
+                                <li><a href="password.aspx" class="myaccount-nav-item">Cambia password</a></li>
+                                <li><a href="logout.aspx" class="myaccount-nav-item">Logout</a></li>
                             </ul>
                         </div>
                     </div>
 
                         <div class="col-lg-9">
-                            <div class="my-account-content account-dashboard">
+                            <div class="myaccount-content account-dashboard">
 
                                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                                     <div>

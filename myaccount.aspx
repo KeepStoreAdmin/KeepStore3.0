@@ -137,23 +137,23 @@
                     <!-- Sidebar -->
                     <div class="col-lg-3">
                         <div class="wrap-sidebar-account">
-                            <ul class="my-account-nav content-append">
-                                <li><span class="my-account-nav-item active">Dashboard</span></li>
-                                <li><a href="datiutente.aspx" class="my-account-nav-item">I miei dati</a></li>
-                                <li><a href="documenti.aspx?t=4" class="my-account-nav-item">I miei ordini</a></li>
-                                <li><a href="documenti.aspx?t=2" class="my-account-nav-item">Le mie fatture</a></li>
-                                <li><a href="documenti.aspx?t=1" class="my-account-nav-item">I miei DDT</a></li>
-                                <li><a href="wishlist.aspx" class="my-account-nav-item">Wishlist</a></li>
-                                <li><a href="password.aspx" class="my-account-nav-item">Cambia password</a></li>
-                                <li><a href="remind.aspx" class="my-account-nav-item">Recupero accesso</a></li>
-                                <li><a href="logout.aspx" class="my-account-nav-item">Logout</a></li>
+                            <ul class="myaccount-nav content-append">
+                                <li><span class="myaccount-nav-item active">Dashboard</span></li>
+                                <li><a href="datiutente.aspx" class="myaccount-nav-item">I miei dati</a></li>
+                                <li><a href="documenti.aspx?t=4" class="myaccount-nav-item">I miei ordini</a></li>
+                                <li><a href="documenti.aspx?t=2" class="myaccount-nav-item">Le mie fatture</a></li>
+                                <li><a href="documenti.aspx?t=1" class="myaccount-nav-item">I miei DDT</a></li>
+                                <li><a href="wishlist.aspx" class="myaccount-nav-item">Wishlist</a></li>
+                                <li><a href="password.aspx" class="myaccount-nav-item">Cambia password</a></li>
+                                <li><a href="remind.aspx" class="myaccount-nav-item">Recupero accesso</a></li>
+                                <li><a href="logout.aspx" class="myaccount-nav-item">Logout</a></li>
                             </ul>
                         </div>
                     </div>
 
                     <!-- Content -->
                     <div class="col-lg-9">
-                        <asp:Panel ID="pnlAccount" runat="server" CssClass="my-account-content account-dashboard">
+                        <asp:Panel ID="pnlAccount" runat="server" CssClass="myaccount-content account-dashboard">
 
                             <div class="mb_60">
                                 <h3 class="fw-semibold mb-20">Area personale</h3>
