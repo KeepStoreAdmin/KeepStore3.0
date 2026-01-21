@@ -1,7 +1,9 @@
 Imports System
 Imports System.Collections.Generic
 Imports System.Configuration
+Imports System.Globalization
 Imports System.Text
+Imports System.IO
 Imports System.Web
 Imports System.Web.Caching
 Imports System.Xml
@@ -18,27 +20,32 @@ Public Class sitemap
 
     Private Const MAX_URLS_PER_SITEMAP As Integer = 40000
     Private Const CACHE_KEY_URLS As String = "KeepStore.Sitemap.UrlList.v1"
+    Private Const CACHE_KEY_LASTMOD As String = "KeepStore.Sitemap.LastModMap.v1"
+
+    Private Shared ReadOnly _fileCacheLock As New Object()
     Private Const CACHE_MINUTES As Integer = 60
 
-    Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
+        Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
         Response.Clear()
         Response.ContentType = "application/xml"
         Response.ContentEncoding = Encoding.UTF8
 
+        Dim part As Integer = SafeInt(Request.QueryString("part"))
+        If part < 0 Then part = 0
+
+        ' File cache (App_Data) — avoids DB queries when warm
+        Dim cacheFileName As String = If(part <= 0, "sitemap.xml", "sitemap-part-" & part.ToString() & ".xml")
+        If TryServeFileCache(cacheFileName) Then Return
+
         Dim allUrls As List(Of String) = GetOrBuildUrlList()
-        If allUrls Is Nothing Then allUrls = New List(Of String)()
 
-        Dim part As Integer = 0
-        Integer.TryParse(Request.QueryString("part"), part)
-
-        If allUrls.Count > MAX_URLS_PER_SITEMAP AndAlso part <= 0 Then
-            WriteSitemapIndex(allUrls.Count)
+        If part <= 0 AndAlso allUrls.Count > MAX_URLS_PER_SITEMAP Then
+            ' Serve sitemap index
+            WriteSitemapIndex(allUrls.Count, cacheFileName)
         Else
-            WriteUrlSet(allUrls, part)
+            If part <= 0 Then part = 1
+            WriteUrlSet(allUrls, part, cacheFileName)
         End If
-
-        Response.Flush()
-        HttpContext.Current.ApplicationInstance.CompleteRequest()
     End Sub
 
     Private Function GetOrBuildUrlList() As List(Of String)
@@ -89,67 +96,80 @@ Public Class sitemap
         Return urls
     End Function
 
-    Private Sub WriteSitemapIndex(totalCount As Integer)
+        Private Sub WriteSitemapIndex(totalCount As Integer, cacheFileName As String)
         Dim baseUrl As String = GetBaseUrl()
         Dim parts As Integer = CInt(Math.Ceiling(totalCount / CDbl(MAX_URLS_PER_SITEMAP)))
+        If parts < 1 Then parts = 1
 
-        Dim settings As New XmlWriterSettings()
-        settings.Encoding = Encoding.UTF8
-        settings.Indent = True
-        settings.OmitXmlDeclaration = False
+        Dim settings As New XmlWriterSettings() With {
+            .Encoding = Encoding.UTF8,
+            .Indent = True,
+            .OmitXmlDeclaration = False
+        }
 
-        Using xw As XmlWriter = XmlWriter.Create(Response.Output, settings)
-            xw.WriteStartDocument()
-            xw.WriteStartElement("sitemapindex", "http://www.sitemaps.org/schemas/sitemap/0.9")
+        Using ms As New MemoryStream()
+            Using xw As XmlWriter = XmlWriter.Create(ms, settings)
+                xw.WriteStartDocument()
+                xw.WriteStartElement("sitemapindex", "http://www.sitemaps.org/schemas/sitemap/0.9")
 
-            For i As Integer = 1 To parts
-                xw.WriteStartElement("sitemap")
-                xw.WriteElementString("loc", CombineUrl(baseUrl, "sitemap.aspx?part=" & i.ToString()))
-                xw.WriteElementString("lastmod", DateTime.UtcNow.ToString("yyyy-MM-dd"))
+                Dim today As String = DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+
+                For i As Integer = 1 To parts
+                    xw.WriteStartElement("sitemap")
+                    xw.WriteElementString("loc", CombineUrl(baseUrl, "sitemap.aspx?part=" & i))
+                    xw.WriteElementString("lastmod", today)
+                    xw.WriteEndElement()
+                Next
+
                 xw.WriteEndElement()
-            Next
+                xw.WriteEndDocument()
+            End Using
 
-            xw.WriteEndElement()
-            xw.WriteEndDocument()
+            Dim bytes As Byte() = ms.ToArray()
+            TryWriteFileCache(cacheFileName, bytes)
+            Response.BinaryWrite(bytes)
         End Using
     End Sub
 
-    Private Sub WriteUrlSet(allUrls As List(Of String), part As Integer)
-        Dim startIndex As Integer = 0
-        If part > 0 Then
-            startIndex = (part - 1) * MAX_URLS_PER_SITEMAP
-        End If
+        Private Sub WriteUrlSet(allUrls As List(Of String), part As Integer, cacheFileName As String)
+        Dim startIndex As Integer = (part - 1) * MAX_URLS_PER_SITEMAP
+        Dim slice As IEnumerable(Of String) = allUrls.Skip(startIndex).Take(MAX_URLS_PER_SITEMAP)
 
-        If startIndex < 0 Then startIndex = 0
-        If startIndex > allUrls.Count Then startIndex = allUrls.Count
+        Dim lastModMap As Dictionary(Of String, DateTime) = GetOrBuildLastModMap()
 
-        Dim takeCount As Integer = Math.Min(MAX_URLS_PER_SITEMAP, Math.Max(0, allUrls.Count - startIndex))
-        Dim slice As List(Of String)
-        If startIndex = 0 AndAlso takeCount = allUrls.Count Then
-            slice = allUrls
-        Else
-            slice = allUrls.GetRange(startIndex, takeCount)
-        End If
+        Dim settings As New XmlWriterSettings() With {
+            .Encoding = Encoding.UTF8,
+            .Indent = True,
+            .OmitXmlDeclaration = False
+        }
 
-        Dim settings As New XmlWriterSettings()
-        settings.Encoding = Encoding.UTF8
-        settings.Indent = True
-        settings.OmitXmlDeclaration = False
+        Using ms As New MemoryStream()
+            Using xw As XmlWriter = XmlWriter.Create(ms, settings)
+                xw.WriteStartDocument()
+                xw.WriteStartElement("urlset", "http://www.sitemaps.org/schemas/sitemap/0.9")
 
-        Using xw As XmlWriter = XmlWriter.Create(Response.Output, settings)
-            xw.WriteStartDocument()
-            xw.WriteStartElement("urlset", "http://www.sitemaps.org/schemas/sitemap/0.9")
+                Dim todayUtc As DateTime = DateTime.UtcNow
 
-            For Each url As String In slice
-                If String.IsNullOrEmpty(url) Then Continue For
-                xw.WriteStartElement("url")
-                xw.WriteElementString("loc", url)
-                xw.WriteElementString("lastmod", DateTime.UtcNow.ToString("yyyy-MM-dd"))
+                For Each u As String In slice
+                    xw.WriteStartElement("url")
+                    xw.WriteElementString("loc", u)
+
+                    Dim lm As DateTime = todayUtc
+                    If lastModMap IsNot Nothing AndAlso lastModMap.ContainsKey(u) Then
+                        lm = lastModMap(u)
+                    End If
+                    xw.WriteElementString("lastmod", lm.ToUniversalTime().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))
+
+                    xw.WriteEndElement()
+                Next
+
                 xw.WriteEndElement()
-            Next
+                xw.WriteEndDocument()
+            End Using
 
-            xw.WriteEndElement()
-            xw.WriteEndDocument()
+            Dim bytes As Byte() = ms.ToArray()
+            TryWriteFileCache(cacheFileName, bytes)
+            Response.BinaryWrite(bytes)
         End Using
     End Sub
 
@@ -336,6 +356,218 @@ Public Class sitemap
         ' Allow only the hierarchy pair: gr+sg (no mr) when tp is present
         If mrId > 0 Then Return False
         Return (grId > 0 AndAlso sgId > 0)
+    End Function
+
+
+    ' =========================
+    ' LastMod map (best-effort from DB)
+    ' =========================
+    Private Function GetOrBuildLastModMap() As Dictionary(Of String, DateTime)
+        Dim cached As Dictionary(Of String, DateTime) = TryCast(HttpRuntime.Cache(CACHE_KEY_LASTMOD), Dictionary(Of String, DateTime))
+        If cached IsNot Nothing Then Return cached
+
+        Dim map As Dictionary(Of String, DateTime) = BuildLastModMapFromDb()
+        HttpRuntime.Cache.Insert(CACHE_KEY_LASTMOD, map, Nothing, DateTime.UtcNow.AddMinutes(CACHE_MINUTES), Cache.NoSlidingExpiration)
+        Return map
+    End Function
+
+    Private Function BuildLastModMapFromDb() As Dictionary(Of String, DateTime)
+        Dim result As New Dictionary(Of String, DateTime)(StringComparer.OrdinalIgnoreCase)
+
+        Dim connStr As String = GetConnectionString()
+        If String.IsNullOrEmpty(connStr) Then Return result
+
+        Dim baseUrl As String = GetBaseUrl()
+
+        Using conn As New MySqlConnection(connStr)
+            conn.Open()
+
+            Dim explicitCol As String = ConfigurationManager.AppSettings("KeepStore.Sitemap.LastModColumn")
+            Dim lastModCol As String = Nothing
+            If Not String.IsNullOrWhiteSpace(explicitCol) Then
+                lastModCol = explicitCol.Trim()
+            Else
+                lastModCol = FindBestLastModColumn(conn, "vsuperarticoli")
+            End If
+
+            If String.IsNullOrWhiteSpace(lastModCol) Then
+                Return result
+            End If
+
+            Dim safeCol As String = lastModCol.Replace("`", "``")
+
+            Dim sql As String =
+                "SELECT id, TCid, MAX(`" & safeCol & "`) AS lastmod " &
+                "FROM vsuperarticoli " &
+                "WHERE id IS NOT NULL AND id <> 0 AND TCid IS NOT NULL AND TCid <> 0 " &
+                "GROUP BY id, TCid"
+
+            Using cmd As New MySqlCommand(sql, conn)
+                Using rdr As MySqlDataReader = cmd.ExecuteReader()
+                    While rdr.Read()
+                        Dim id As String = Convert.ToString(rdr("id"))
+                        Dim tcid As String = Convert.ToString(rdr("TCid"))
+                        If String.IsNullOrWhiteSpace(id) OrElse String.IsNullOrWhiteSpace(tcid) Then Continue While
+                        If Convert.IsDBNull(rdr("lastmod")) Then Continue While
+
+                        Dim lm As DateTime
+                        Try
+                            lm = Convert.ToDateTime(rdr("lastmod"), CultureInfo.InvariantCulture)
+                        Catch
+                            Continue While
+                        End Try
+
+                        If lm.Year <= 1900 Then Continue While
+
+                        Dim url As String = EnsureAbsolute(baseUrl, BuildProductUrl(id, tcid))
+
+                        If result.ContainsKey(url) Then
+                            If lm > result(url) Then result(url) = lm
+                        Else
+                            result.Add(url, lm)
+                        End If
+                    End While
+                End Using
+            End Using
+        End Using
+
+        Return result
+    End Function
+
+    Private Function FindBestLastModColumn(conn As MySqlConnection, viewName As String) As String
+        Dim candidates As String() = New String() {
+            "lastmod", "last_mod", "modified", "modified_at", "updated_at",
+            "datamodifica", "data_modifica", "datamod", "data_mod",
+            "dataaggiornamento", "data_aggiornamento", "dataagg", "data_agg",
+            "dataultima", "data_ultima", "dataultimamodifica", "data_ultimamodifica"
+        }
+
+        Dim inList As New StringBuilder()
+        For i As Integer = 0 To candidates.Length - 1
+            If i > 0 Then inList.Append(",")
+            inList.Append("'")
+            inList.Append(candidates(i).Replace("'", "''"))
+            inList.Append("'")
+        Next
+
+        Dim sql As String =
+            "SELECT COLUMN_NAME " &
+            "FROM INFORMATION_SCHEMA.COLUMNS " &
+            "WHERE TABLE_SCHEMA = DATABASE() " &
+            "  AND TABLE_NAME = @tbl " &
+            "  AND LOWER(COLUMN_NAME) IN (" & inList.ToString() & ") " &
+            "LIMIT 1"
+
+        Using cmd As New MySqlCommand(sql, conn)
+            cmd.Parameters.AddWithValue("@tbl", viewName)
+            Dim o As Object = cmd.ExecuteScalar()
+            If o IsNot Nothing AndAlso o IsNot DBNull.Value Then
+                Return Convert.ToString(o)
+            End If
+        End Using
+
+        Return Nothing
+    End Function
+
+    ' =========================
+    ' File cache (App_Data)
+    ' =========================
+    Private Function FileCacheEnabled() As Boolean
+        Return ReadAppSettingBool("KeepStore.Sitemap.FileCacheEnabled", True)
+    End Function
+
+    Private Function FileCacheMinutes() As Integer
+        Return ReadAppSettingInt("KeepStore.Sitemap.FileCacheMinutes", CACHE_MINUTES)
+    End Function
+
+    Private Function FileCacheFolderVirtual() As String
+        Dim v As String = ConfigurationManager.AppSettings("KeepStore.Sitemap.FileCacheFolder")
+        If String.IsNullOrWhiteSpace(v) Then v = "~/App_Data/Sitemaps"
+        Return v.Trim()
+    End Function
+
+    Private Function GetFileCachePath(fileName As String) As String
+        Dim folder As String = FileCacheFolderVirtual()
+
+        Dim physicalFolder As String
+        If folder.StartsWith("~", StringComparison.Ordinal) OrElse folder.StartsWith("/", StringComparison.Ordinal) Then
+            physicalFolder = Server.MapPath(folder)
+        ElseIf folder.IndexOf(":\", StringComparison.Ordinal) >= 0 OrElse folder.StartsWith("\\", StringComparison.Ordinal) Then
+            physicalFolder = folder
+        Else
+            physicalFolder = Server.MapPath("~/" & folder.TrimStart("/"c))
+        End If
+
+        Return Path.Combine(physicalFolder, fileName)
+    End Function
+
+    Private Function TryServeFileCache(fileName As String) As Boolean
+        If Not FileCacheEnabled() Then Return False
+
+        Dim ttl As Integer = FileCacheMinutes()
+        If ttl <= 0 Then Return False
+
+        Dim p As String = GetFileCachePath(fileName)
+
+        Try
+            If File.Exists(p) Then
+                Dim last As DateTime = File.GetLastWriteTimeUtc(p)
+                If (DateTime.UtcNow - last) <= TimeSpan.FromMinutes(ttl) Then
+                    Dim bytes As Byte() = File.ReadAllBytes(p)
+
+                    Response.Clear()
+                    Response.ContentType = "application/xml"
+                    Response.ContentEncoding = Encoding.UTF8
+                    Response.BinaryWrite(bytes)
+                    Response.Flush()
+                    Context.ApplicationInstance.CompleteRequest()
+                    Return True
+                End If
+            End If
+        Catch
+        End Try
+
+        Return False
+    End Function
+
+    Private Sub TryWriteFileCache(fileName As String, bytes As Byte())
+        If Not FileCacheEnabled() Then Exit Sub
+
+        Dim p As String = GetFileCachePath(fileName)
+
+        Try
+            SyncLock _fileCacheLock
+                Dim dir As String = Path.GetDirectoryName(p)
+                If Not Directory.Exists(dir) Then Directory.CreateDirectory(dir)
+                File.WriteAllBytes(p, bytes)
+            End SyncLock
+        Catch
+        End Try
+    End Sub
+
+    Private Function ReadAppSettingInt(key As String, defaultValue As Integer) As Integer
+        Try
+            Dim raw As String = ConfigurationManager.AppSettings(key)
+            Dim v As Integer
+            If Integer.TryParse(raw, v) Then Return v
+        Catch
+        End Try
+        Return defaultValue
+    End Function
+
+    Private Function ReadAppSettingBool(key As String, defaultValue As Boolean) As Boolean
+        Try
+            Dim raw As String = ConfigurationManager.AppSettings(key)
+            If String.IsNullOrWhiteSpace(raw) Then Return defaultValue
+
+            Dim v As Boolean
+            If Boolean.TryParse(raw, v) Then Return v
+
+            If String.Equals(raw.Trim(), "1", StringComparison.OrdinalIgnoreCase) Then Return True
+            If String.Equals(raw.Trim(), "0", StringComparison.OrdinalIgnoreCase) Then Return False
+        Catch
+        End Try
+        Return defaultValue
     End Function
 
     Private Shared Function SafeInt(r As MySqlDataReader, ordinal As Integer) As Integer
