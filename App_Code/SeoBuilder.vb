@@ -349,4 +349,32 @@ Public NotInheritable Class SeoBuilder
         Return Nothing
     End Function
 
+        ' Aggiunge o aggiorna <meta name="..."> nel tag <head runat="server">
+    Public Shared Sub AddOrReplaceNameMeta(ByVal page As System.Web.UI.Page, ByVal name As String, ByVal content As String)
+    If page Is Nothing Then Exit Sub
+    If page.Header Is Nothing Then Exit Sub
+    If String.IsNullOrEmpty(name) Then Exit Sub
+
+    Dim head As System.Web.UI.HtmlControls.HtmlHead = page.Header
+    Dim found As System.Web.UI.HtmlControls.HtmlMeta = Nothing
+
+    For Each c As System.Web.UI.Control In head.Controls
+        Dim m As System.Web.UI.HtmlControls.HtmlMeta = TryCast(c, System.Web.UI.HtmlControls.HtmlMeta)
+        If m IsNot Nothing Then
+            If Not String.IsNullOrEmpty(m.Name) AndAlso String.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase) Then
+                found = m
+                Exit For
+            End If
+        End If
+    Next
+
+    If found Is Nothing Then
+        found = New System.Web.UI.HtmlControls.HtmlMeta()
+        found.Name = name
+        head.Controls.Add(found)
+    End If
+
+    found.Content = If(content, String.Empty)
+    End Sub
+
 End Class
