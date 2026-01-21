@@ -8873,14 +8873,14 @@ html:not([dir=rtl]) .noUi-horizontal .noUi-handle {
   cursor: pointer;
 }
 
-.my-account-nav {
+.myaccount-nav {
   display: flex;
   flex-direction: column;
   gap: 10px;
   position: sticky;
   top: 0;
 }
-.my-account-nav .my-account-nav-item {
+.myaccount-nav .myaccount-nav-item {
   display: flex;
   width: 100%;
   border: 1px solid var(--gray-4);
@@ -8891,7 +8891,7 @@ html:not([dir=rtl]) .noUi-horizontal .noUi-handle {
   line-height: 20px;
   position: relative;
 }
-.my-account-nav .my-account-nav-item:hover, .my-account-nav .my-account-nav-item.active {
+.myaccount-nav .myaccount-nav-item:hover, .myaccount-nav .myaccount-nav-item.active {
   background-color: var(--gray-5);
   color: var(--primary);
   border-color: var(--gray-5);
