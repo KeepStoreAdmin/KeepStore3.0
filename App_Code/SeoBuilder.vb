@@ -80,6 +80,13 @@ Public NotInheritable Class SeoBuilder
         found.Content = If(metaContent, "")
     End Sub
 
+    ' Compatibility alias.
+    ' Some pages call SeoBuilder.AddOrReplaceNameMeta(); in KeepStore it's equivalent to AddOrReplaceMeta()
+    ' (i.e., targets <meta name="...">).
+    Public Shared Sub AddOrReplaceNameMeta(ByVal ctx As Object, ByVal metaName As String, ByVal metaContent As String)
+        AddOrReplaceMeta(ctx, metaName, metaContent)
+    End Sub
+
     Public Shared Sub AddOrReplacePropertyMeta(ByVal ctx As Object, ByVal propertyName As String, ByVal metaContent As String)
         Dim page As Page = ResolvePage(ctx)
         If page Is Nothing OrElse page.Header Is Nothing Then Exit Sub
