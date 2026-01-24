@@ -347,7 +347,7 @@
 
                                                 <ul class="list-product-btn top-0 end-0">
                                                     <li>
-                                                        <asp:ImageButton ID="ImageButton2" runat="server" OnClick="ImageButton1_Click" CssClass="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left" ToolTip="Aggiungi al carrello" ImageUrl="~/Public/onsus/images/icon-cart2.svg" />
+                                                        <asp:ImageButton ID="ImageButton2" runat="server" OnClick="ImageButton1_Click" CssClass="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left" ToolTip="Aggiungi al carrello" ImageUrl="~/Public/assets/images/icon-cart2.svg" />
                                                     </li>
 
                                                     <li class="d-none d-sm-block wishlist">

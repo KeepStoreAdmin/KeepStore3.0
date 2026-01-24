@@ -83,6 +83,8 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Required by ONSUS zoom.js (Drift pane container) -->
                         <div class="tf-zoom-main"></div>
                     </div>
 
@@ -200,7 +202,7 @@
                                         Spedizione e resi vengono calcolati al checkout in base all'indirizzo e al peso/volume dell'ordine.
                                     </p>
                                     <p class="mb-0">
-                                        Per informazioni aggiuntive puoi contattarci dalla pagina <a href="contact.html">Contatti</a>.
+                                        Per informazioni aggiuntive puoi contattarci dalla pagina <a href="Contattaci.aspx">Contatti</a>.
                                     </p>
                                 </div>
                             </div>
@@ -212,4 +214,8 @@
         </section>
     </asp:Panel>
 
+</asp:Content>
+
+<asp:Content ID="ScriptsContentArticolo" ContentPlaceHolderID="ScriptsContent" runat="server">
+    <script type="module" src="/Public/assets/js/zoom.js"></script>
 </asp:Content>
