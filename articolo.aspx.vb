@@ -26,7 +26,13 @@ Partial Class articolo
             Return
         End If
 
-        _listino = GetSessionInt("listino", 0)
+        ' ==========================================================
+        ' LISTINO: nel progetto è gestito principalmente tramite Session("Listino")
+        ' (default anonimi = 1). Alcune parti legacy usano anche Session("listino").
+        ' Se qui leggiamo 0, la query su vsuperarticoli (NListino=@nlistino) non
+        ' ritorna righe e si ottiene "Articolo non trovato" con ID valido.
+        ' ==========================================================
+        _listino = GetCurrentListino()
         _tcEnabled = (GetSessionInt("TC", 0) = 1)
 
         If Not IsPostBack Then
@@ -44,7 +50,10 @@ Partial Class articolo
         _tcidPresent = (Request.QueryString("TCid") IsNot Nothing)
         If _tcidPresent Then
             Dim tmp As Integer
-            If Integer.TryParse(Convert.ToString(Request.QueryString("TCid")), tmp) AndAlso tmp >= 0 Then
+            ' Nel DB Taikun/KeepStore il "non variante" è storicamente TCid = -1.
+            ' Il listing (articoli.aspx) costruisce link includendo sempre TCid; se qui
+            ' rifiutiamo -1, generiamo redirect e (con listino errato) si arriva al "non trovato".
+            If Integer.TryParse(Convert.ToString(Request.QueryString("TCid")), tmp) AndAlso tmp >= -1 Then
                 _tcid = tmp
             Else
                 ' Parametro non valido -> pulisco URL
@@ -52,7 +61,8 @@ Partial Class articolo
                 Return False
             End If
         Else
-            _tcid = 0
+            ' Coerenza col progetto: default TCid = -1
+            _tcid = -1
         End If
 
         Return True
@@ -63,9 +73,9 @@ Partial Class articolo
 
         ' Se TCid presente ma non esiste (vecchio link o variante rimossa), provo a caricare senza TCid e redirigo sulla variante di default
         If row Is Nothing AndAlso _tcEnabled AndAlso _tcidPresent Then
-            Dim fallback As DataRow = GetProductRow(_id, 0, includeTcidFilter:=False)
+            Dim fallback As DataRow = GetProductRow(_id, -1, includeTcidFilter:=False)
             If fallback IsNot Nothing Then
-                Dim defaultTcid As Integer = GetRowInt(fallback, "TCid", 0)
+                Dim defaultTcid As Integer = GetRowInt(fallback, "TCid", -1)
                 Dim redirectUrl As String = BuildProductUrl(_id, defaultTcid, includeTcid:=True)
                 Response.Redirect(redirectUrl, True)
                 Return
@@ -220,6 +230,8 @@ Partial Class articolo
 
         ' Varianti (Taglia/Colore)
         Dim currentTcid As Integer = GetRowInt(row, "TCid", _tcid)
+        ' Mantengo il TCid effettivo caricato (serve per Aggiungi al carrello anche quando il dropdown non è visibile)
+        _tcid = currentTcid
         BindVariantsIfNeeded(_id, currentTcid)
 
         ' Immagini
@@ -602,7 +614,8 @@ Partial Class articolo
         End If
         If qty > 9999 Then qty = 9999
 
-        Dim tcidToUse As Integer = 0
+        ' Nel progetto il default "senza varianti" è TCid=-1 (vedi aggiungi.aspx.vb).
+        Dim tcidToUse As Integer = -1
         If _tcEnabled Then
             tcidToUse = _tcid
 
@@ -705,6 +718,27 @@ Partial Class articolo
 
     Private Function GetConnectionString() As String
         Return ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+    End Function
+
+    ' Listino robusto: usa Session("Listino") come fonte principale, con fallback a Session("listino").
+    ' Imposta anche in Session per coerenza con le altre pagine.
+    Private Function GetCurrentListino() As Integer
+        Dim n As Integer = 0
+
+        n = GetSessionInt("Listino", 0)
+        If n <= 0 Then
+            n = GetSessionInt("listino", 0)
+        End If
+
+        If n <= 0 Then
+            n = 1
+        End If
+
+        ' Mantengo entrambe le chiavi per compatibilità con codice legacy
+        Session("Listino") = n
+        Session("listino") = n
+
+        Return n
     End Function
 
 End Class
