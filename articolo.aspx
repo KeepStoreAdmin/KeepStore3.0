@@ -83,6 +83,7 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="tf-zoom-main"></div>
                     </div>
 
                     <!-- Info -->
