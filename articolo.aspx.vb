@@ -69,7 +69,7 @@ Partial Class articolo
     End Function
 
     Private Sub LoadPage()
-        Dim row As DataRow = GetProductRow(_id, _tcid, includeTcidFilter:=(_tcidPresent AndAlso _tcEnabled))
+        Dim row As DataRow = GetProductRow(_id, _tcid, includeTcidFilter:=(_tcidPresent AndAlso _tcEnabled AndAlso _tcid > 0))
 
         ' Se TCid presente ma non esiste (vecchio link o variante rimossa), provo a caricare senza TCid e redirigo sulla variante di default
         If row Is Nothing AndAlso _tcEnabled AndAlso _tcidPresent Then
@@ -92,68 +92,57 @@ Partial Class articolo
     End Sub
 
     Private Function GetProductRow(id As Integer, tcid As Integer, includeTcidFilter As Boolean) As DataRow
+        ' Nota: in alcuni DB TCid "non variante" puo' essere -1 oppure 0.
+        ' Per evitare falsi "Articolo non trovato" quando arriva TCid dal listing,
+        ' se il filtro TCid non restituisce righe riproviamo senza filtro.
         Try
-            Dim sql As String = BuildProductSql(includeTcidFilter)
-
-            Using cn As New MySqlConnection(GetConnectionString())
-                cn.Open()
-                Using cmd As New MySqlCommand(sql, cn)
-                    cmd.Parameters.AddWithValue("@id", id)
-                    cmd.Parameters.AddWithValue("@nlistino", _listino)
-
-                    If includeTcidFilter Then
-                        cmd.Parameters.AddWithValue("@tcid", tcid)
-                    End If
-
-                    Dim dt As New DataTable()
-                    Using da As New MySqlDataAdapter(cmd)
-                        da.Fill(dt)
-                    End Using
-
-                    If dt.Rows.Count = 0 Then Return Nothing
-                    Return dt.Rows(0)
-                End Using
-            End Using
-        Catch
+            Dim row As DataRow = TryGetProductRowInternal(id, tcid, includeTcidFilter)
+            If row Is Nothing AndAlso includeTcidFilter Then
+                row = TryGetProductRowInternal(id, tcid, False)
+            End If
+            Return row
+        Catch ex As Exception
+            KeepStoreLog.Error("articolo.aspx", "Errore GetProductRow (id=" & id.ToString() & ", tcid=" & tcid.ToString() & ", listino=" & _listino.ToString() & ")", ex, HttpContext.Current)
             Return Nothing
         End Try
+    End Function
+
+    Private Function TryGetProductRowInternal(id As Integer, tcid As Integer, includeTcidFilter As Boolean) As DataRow
+        Dim sql As String = BuildProductSql(includeTcidFilter)
+
+        Using cn As New MySqlConnection(GetConnectionString())
+            cn.Open()
+            Using cmd As New MySqlCommand(sql, cn)
+                cmd.Parameters.AddWithValue("@id", id)
+                cmd.Parameters.AddWithValue("@nlistino", _listino)
+
+                If includeTcidFilter Then
+                    cmd.Parameters.AddWithValue("@tcid", tcid)
+                End If
+
+                Dim dt As New DataTable()
+                Using da As New MySqlDataAdapter(cmd)
+                    da.Fill(dt)
+                End Using
+
+                If dt.Rows.Count = 0 Then Return Nothing
+                Return dt.Rows(0)
+            End Using
+        End Using
     End Function
 
     Private Function BuildProductSql(includeTcidFilter As Boolean) As String
         Dim sb As New StringBuilder()
 
-        sb.AppendLine("SELECT")
-        sb.AppendLine("  p.*,")
-        sb.AppendLine("  IF(img1.Img IS NULL OR img1.Img='', p.Img1, img1.Img) AS Img1,")
-        sb.AppendLine("  IF(img2.Img IS NULL OR img2.Img='', p.Img2, img2.Img) AS Img2,")
-        sb.AppendLine("  IF(img3.Img IS NULL OR img3.Img='', p.Img3, img3.Img) AS Img3,")
-        sb.AppendLine("  IF(img4.Img IS NULL OR img4.Img='', p.Img4, img4.Img) AS Img4,")
-        sb.AppendLine("  IF(img5.Img IS NULL OR img5.Img='', p.Img5, img5.Img) AS Img5,")
-        sb.AppendLine("  IF(img6.Img IS NULL OR img6.Img='', p.Img6, img6.Img) AS Img6,")
-        sb.AppendLine("  arr.Arrivo AS Arrivo")
-        sb.AppendLine("FROM (")
-        sb.AppendLine("  SELECT *")
-        sb.AppendLine("  FROM vsuperarticoli")
-        sb.AppendLine("  WHERE ID=@id AND NListino=@nlistino")
+        sb.AppendLine("SELECT *")
+        sb.AppendLine("FROM vsuperarticoli")
+        sb.AppendLine("WHERE ID=@id AND NListino=@nlistino")
 
         If includeTcidFilter Then
-            sb.AppendLine("    AND TCid=@tcid")
+            sb.AppendLine("  AND TCid=@tcid")
         End If
 
-        sb.AppendLine("  LIMIT 1")
-        sb.AppendLine(") AS p")
-        sb.AppendLine("LEFT JOIN articoliimmagini AS img1 ON img1.IdArticolo = p.ID AND img1.IdTC = p.TCid AND img1.ordine = 1")
-        sb.AppendLine("LEFT JOIN articoliimmagini AS img2 ON img2.IdArticolo = p.ID AND img2.IdTC = p.TCid AND img2.ordine = 2")
-        sb.AppendLine("LEFT JOIN articoliimmagini AS img3 ON img3.IdArticolo = p.ID AND img3.IdTC = p.TCid AND img3.ordine = 3")
-        sb.AppendLine("LEFT JOIN articoliimmagini AS img4 ON img4.IdArticolo = p.ID AND img4.IdTC = p.TCid AND img4.ordine = 4")
-        sb.AppendLine("LEFT JOIN articoliimmagini AS img5 ON img5.IdArticolo = p.ID AND img5.IdTC = p.TCid AND img5.ordine = 5")
-        sb.AppendLine("LEFT JOIN articoliimmagini AS img6 ON img6.IdArticolo = p.ID AND img6.IdTC = p.TCid AND img6.ordine = 6")
-        sb.AppendLine("LEFT JOIN (")
-        sb.AppendLine("  SELECT IdArticolo, TCid, GROUP_CONCAT(DISTINCT Arrivo SEPARATOR ' / ') AS Arrivo")
-        sb.AppendLine("  FROM articoli_arrivi")
-        sb.AppendLine("  GROUP BY IdArticolo, TCid")
-        sb.AppendLine(") AS arr ON arr.IdArticolo = p.ID AND arr.TCid = p.TCid")
-
+        sb.AppendLine("LIMIT 1")
         Return sb.ToString()
     End Function
 
@@ -201,11 +190,15 @@ Partial Class articolo
         End If
 
         ' Prezzi
-        Dim prezzo As Nullable(Of Decimal) = GetRowDecimal(row, "PrezzoIvato")
-        Dim prezzoOld As Nullable(Of Decimal) = GetRowDecimal(row, "PrezzoOldIvato")
-        Dim inOfferta As Boolean = (GetRowInt(row, "InOfferta", 0) = 1)
+        Dim prezzoListino As Nullable(Of Decimal) = GetRowDecimal(row, "PrezzoIvato")
+        Dim prezzoPromo As Nullable(Of Decimal) = GetRowDecimal(row, "PrezzoPromoIvato")
 
-        litPriceHtml.Text = BuildPriceHtml(prezzo, prezzoOld, inOfferta)
+        Dim inOfferta As Boolean = (GetRowInt(row, "InOfferta", 0) = 1) AndAlso prezzoPromo.HasValue AndAlso prezzoPromo.Value > 0D
+
+        Dim prezzoCorrente As Nullable(Of Decimal) = If(inOfferta, prezzoPromo, prezzoListino)
+        Dim prezzoBarrato As Nullable(Of Decimal) = If(inOfferta, prezzoListino, CType(Nothing, Nullable(Of Decimal)))
+
+        litPriceHtml.Text = BuildPriceHtml(prezzoCorrente, prezzoBarrato, inOfferta)
 
         ' Descrizione breve
         Dim shortDesc As String = FirstNonEmpty(GetRowString(row, "Descrizione2"), GetRowString(row, "Sottotitolo"))
@@ -417,7 +410,9 @@ Partial Class articolo
             Dim sku As String = FirstNonEmpty(GetRowString(row, "SKU"), GetRowString(row, "Codice"), _id.ToString())
             Dim img As String = MakeAbsoluteUrl(NormalizeImageUrl(GetRowString(row, "Img1")))
 
-            Dim prezzo As Nullable(Of Decimal) = GetRowDecimal(row, "PrezzoIvato")
+            Dim prezzoListino As Nullable(Of Decimal) = GetRowDecimal(row, "PrezzoIvato")
+            Dim prezzoPromo As Nullable(Of Decimal) = GetRowDecimal(row, "PrezzoPromoIvato")
+            Dim prezzo As Nullable(Of Decimal) = If(prezzoPromo.HasValue AndAlso prezzoPromo.Value > 0D, prezzoPromo, prezzoListino)
 
             Dim parts As New List(Of String)()
             parts.Add("""@context"":""https://schema.org""")
