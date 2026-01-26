@@ -84,15 +84,11 @@
                             </div>
                         </div>
 
-                        <!-- Required by ONSUS zoom.js (Drift pane container) -->
-                        <div class="tf-zoom-main"></div>
-                                        </div>
-
                     <div class="tf-zoom-main"></div>
                 </div>
 
                 <!-- Info -->
-                <div class="tf-product-info-wrap position-relative">
+                    <div class="tf-product-info-wrap position-relative">
                         <div class="tf-product-info-list">
                             <div class="tf-product-info-title">
                                 <h1 class="title"><asp:Literal ID="litNome" runat="server" /></h1>

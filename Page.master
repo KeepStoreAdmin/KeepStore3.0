@@ -17,12 +17,9 @@
     <link rel="stylesheet" href="/Public/assets/icons/icomoon/style.css" />
 
     <link rel="stylesheet" href="/Public/assets/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="/Public/assets/css/bootstrap-select.min.css" />
     <link rel="stylesheet" href="/Public/assets/css/nice-select.css" />
     <link rel="stylesheet" href="/Public/assets/css/swiper-bundle.min.css" />
     <link rel="stylesheet" href="/Public/assets/css/animate.css" />
-    <link rel="stylesheet" href="/Public/assets/css/photoswipe.css" />
-    <link rel="stylesheet" href="/Public/assets/css/drift-basic.min.css" />
     <link rel="stylesheet" href="/Public/assets/css/styles.css" />
 
     <!-- SEO / JSON-LD injection -->
@@ -333,33 +330,37 @@
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
 
-        <!-- ONSUS JS (tutto da /Public/assets/js) -->
-        <script src="/Public/assets/js/jquery.min.js"></script>
-        <script src="/Public/assets/js/bootstrap.min.js"></script>
+        <!-- ONus JS -->
 
-        <script src="/Public/assets/js/bootstrap-select.min.js"></script>
-        <script src="/Public/assets/js/jquery.nice-select.js"></script>
+    
 
-        <script src="/Public/assets/js/swiper-bundle.min.js"></script>
-        <script src="/Public/assets/js/carousel.js"></script>
+    <!-- ONSUS JS (tutto da /Public/assets/js) -->
+    <script src="/Public/assets/js/jquery.min.js"></script>
+    <script src="/Public/assets/js/bootstrap.min.js"></script>
 
-        <script src="/Public/assets/js/lazysize.min.js"></script>
-        <script src="/Public/assets/js/count-down.js"></script>
+    <script src="/Public/assets/js/bootstrap-select.min.js"></script>
+    <script src="/Public/assets/js/jquery.nice-select.js"></script>
 
-        <script src="/Public/assets/js/wow.min.js"></script>
-        <script src="/Public/assets/js/multiple-modal.js"></script>
-        <script src="/Public/assets/js/infinityslide.js"></script>
+    <script src="/Public/assets/js/swiper-bundle.min.js"></script>
+    <script src="/Public/assets/js/carousel.js"></script>
 
-        <script src="/Public/assets/js/shop.js"></script>
-        <script src="/Public/assets/js/main.js"></script>
-        <script src="/Public/assets/js/sibforms.js"></script>
+    <script src="/Public/assets/js/lazysize.min.js"></script>
+    <script src="/Public/assets/js/count-down.js"></script>
 
-        <!-- Drift serve al Product Detail (zoom) -->
-        <script src="/Public/assets/js/drift.min.js"></script>
+    <script src="/Public/assets/js/wow.min.js"></script>
+    <script src="/Public/assets/js/multiple-modal.js"></script>
+    <script src="/Public/assets/js/infinityslide.js"></script>
 
-        <!-- Script specifici pagina (es. zoom.js su articolo.aspx) -->
-        <asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
+    <script src="/Public/assets/js/shop.js"></script>
+    <script src="/Public/assets/js/main.js"></script>
+    <script src="/Public/assets/js/sibforms.js"></script>
 
-    </form>
+    <!-- Drift serve al Product Detail (zoom) -->
+    <script src="/Public/assets/js/drift.min.js"></script>
+
+    <!-- Script specifici pagina -->
+    <asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
+
+</form>
 </body>
 </html>

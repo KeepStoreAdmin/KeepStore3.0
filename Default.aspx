@@ -36,12 +36,12 @@
          (Slideshow legacy integrato nella posizione "wrap-item-2")
          ============================================================ -->
 
-    <section class="tf-sp-2 pt-0">
-        <div class="container-full">
-            <div class="s-banner-wrapper style-2">
+    <section class="tf-sp-5">
+        <div class="container">
+            <div class="s-banner-wrapper">
 
                 <!-- LEFT: Department (static template) -->
-                <div class="wrap-item-1">
+                <div class="wrap-item-1 d-none d-lg-block">
                     <div class="department-menu hover-menu">
                         <div class="sub-department-menu">
                             <div class="department-title bg_main">
@@ -303,7 +303,7 @@
 
     <!-- Icon boxes (template) -->
     <div class="tf-sp-2 pt-0">
-        <div class="container-full">
+        <div class="container">
             <div class="swiper tf-sw-iconbox" data-preview="4" data-tablet="2" data-mobile="1" data-space-lg="0" data-space-md="0" data-space="0" data-pagination="1" data-pagination-sm="1" data-pagination-md="1" data-pagination-lg="1">
                 <div class="swiper-wrapper">
                     <div class="swiper-slide">
@@ -353,8 +353,8 @@
          ============================================================ -->
 
     <% If Data_UltimiArrivi.Items.Count > 0 Then %>
-    <section class="tf-sp-2 pt-0">
-        <div class="container-full">
+    <section class="tf-sp-5">
+        <div class="container">
             <div class="flat-title d-flex align-items-center justify-content-between flex-wrap gap-12">
                 <h2 class="flat-title-heading">Scelti per te</h2>
             </div>
@@ -429,8 +429,8 @@
          NOVITÀ (nuovi arrivi)
          ============================================================ -->
 
-    <section class="tf-sp-2 pt-0">
-        <div class="container-full">
+    <section class="tf-sp-5">
+        <div class="container">
             <div class="flat-title d-flex align-items-center justify-content-between flex-wrap gap-12">
                 <h2 class="flat-title-heading">Novità</h2>
             </div>
@@ -503,8 +503,8 @@
          PIÙ VENDUTI
          ============================================================ -->
 
-    <section class="tf-sp-2 pt-0">
-        <div class="container-full">
+    <section class="tf-sp-5">
+        <div class="container">
             <div class="flat-title d-flex align-items-center justify-content-between flex-wrap gap-12">
                 <h2 class="flat-title-heading">I più venduti</h2>
             </div>
@@ -576,8 +576,8 @@
          BRAND (marche random)
          ============================================================ -->
 
-    <section class="tf-sp-2 pt-0">
-        <div class="container-full">
+    <section class="tf-sp-5">
+        <div class="container">
             <div class="flat-title d-flex align-items-center justify-content-between flex-wrap gap-12">
                 <h2 class="flat-title-heading">Rivenditori ufficiali - I nostri brand</h2>
             </div>
@@ -608,8 +608,8 @@
     </section>
 
     <!-- Nota prezzi -->
-    <section class="tf-sp-2 pt-0">
-        <div class="container-full">
+    <section class="tf-sp-5">
+        <div class="container">
             <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" CssClass="body-text-3" />
         </div>
     </section>
