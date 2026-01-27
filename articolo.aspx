@@ -4,6 +4,10 @@
     <asp:Literal ID="litJsonLdHead" runat="server" />
 </asp:Content>
 
+<asp:Content ID="ContentScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
+    <script type="module" src="/Public/assets/js/zoom.js"></script>
+</asp:Content>
+
 <asp:Content ID="ContentMain" ContentPlaceHolderID="MainContent" runat="server">
 
     <!-- Breadcrumbs -->
@@ -83,11 +87,10 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+	                    <div class="tf-zoom-main"></div>
 
-                    <div class="tf-zoom-main"></div>
-                </div>
-
-                <!-- Info -->
+                    <!-- Info -->
                     <div class="tf-product-info-wrap position-relative">
                         <div class="tf-product-info-list">
                             <div class="tf-product-info-title">
@@ -201,7 +204,7 @@
                                         Spedizione e resi vengono calcolati al checkout in base all'indirizzo e al peso/volume dell'ordine.
                                     </p>
                                     <p class="mb-0">
-                                        Per informazioni aggiuntive puoi contattarci dalla pagina <a href="Contattaci.aspx">Contatti</a>.
+	                                        Per informazioni aggiuntive puoi contattarci dalla pagina <a href="Contattaci.aspx">Contatti</a>.
                                     </p>
                                 </div>
                             </div>
@@ -215,6 +218,6 @@
 
 </asp:Content>
 
-<asp:Content ID="ScriptsContentArticolo" ContentPlaceHolderID="ScriptsContent" runat="server">
+<asp:Content ID="ContentScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script type="module" src="/Public/assets/js/zoom.js"></script>
 </asp:Content>

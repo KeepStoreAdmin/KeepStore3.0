@@ -223,7 +223,7 @@
                                 <div class="ft-logo">
                                     <a href="/Default.aspx" class="logo-site" aria-label="Home">
                                         <asp:Image ID="imgLogoFooter" runat="server" AlternateText="Taikun" Visible="false" />
-                                        <img src="/Public/assets/images/logo/logo.svg" alt="Logo" />
+									<img src="/Public/assets/images/logo/logo.svg" alt="Logo" />
                                     </a>
                                 </div>
 
@@ -330,37 +330,25 @@
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
 
-        <!-- ONus JS -->
+		<!-- ONSUS JS (tutto da /Public/assets) -->
+		<script src="/Public/assets/js/jquery.min.js"></script>
+		<script src="/Public/assets/js/bootstrap.min.js"></script>
+		<script src="/Public/assets/js/bootstrap-select.min.js"></script>
+		<script src="/Public/assets/js/jquery.nice-select.js"></script>
+		<script src="/Public/assets/js/swiper-bundle.min.js"></script>
+		<script src="/Public/assets/js/carousel.js"></script>
+		<script src="/Public/assets/js/wow.min.js"></script>
+		<script src="/Public/assets/js/infinityslide.js"></script>
+		<script src="/Public/assets/js/multiple-modal.js"></script>
+		<script src="/Public/assets/js/lazysize.min.js"></script>
+		<script src="/Public/assets/js/shop.js"></script>
+		<script src="/Public/assets/js/main.js"></script>
+		<script src="/Public/assets/js/sibforms.js"></script>
+		<script src="/Public/assets/js/drift.min.js"></script>
 
-    
+		<!-- Script specifici pagina (es. zoom.js su articolo.aspx) -->
+		<asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
 
-    <!-- ONSUS JS (tutto da /Public/assets/js) -->
-    <script src="/Public/assets/js/jquery.min.js"></script>
-    <script src="/Public/assets/js/bootstrap.min.js"></script>
-
-    <script src="/Public/assets/js/bootstrap-select.min.js"></script>
-    <script src="/Public/assets/js/jquery.nice-select.js"></script>
-
-    <script src="/Public/assets/js/swiper-bundle.min.js"></script>
-    <script src="/Public/assets/js/carousel.js"></script>
-
-    <script src="/Public/assets/js/lazysize.min.js"></script>
-    <script src="/Public/assets/js/count-down.js"></script>
-
-    <script src="/Public/assets/js/wow.min.js"></script>
-    <script src="/Public/assets/js/multiple-modal.js"></script>
-    <script src="/Public/assets/js/infinityslide.js"></script>
-
-    <script src="/Public/assets/js/shop.js"></script>
-    <script src="/Public/assets/js/main.js"></script>
-    <script src="/Public/assets/js/sibforms.js"></script>
-
-    <!-- Drift serve al Product Detail (zoom) -->
-    <script src="/Public/assets/js/drift.min.js"></script>
-
-    <!-- Script specifici pagina -->
-    <asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
-
-</form>
+    </form>
 </body>
 </html>
