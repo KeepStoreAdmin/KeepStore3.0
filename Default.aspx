@@ -40,25 +40,30 @@
         <div class="container">
             <div class="s-banner-wrapper">
 
-                <!-- LEFT: Department (static template) -->
+                <!-- LEFT: Department (Home 1) -->
                 <div class="wrap-item-1 d-none d-lg-block">
-                    <div class="department-menu hover-menu">
-                        <div class="sub-department-menu">
-                            <div class="department-title bg_main">
-                                <span class="icon icon-categories"></span>
-                                <span class="fw-semibold">Dipartimenti</span>
-                            </div>
-                            <ul class="department-list">
+                    <div class="tf-nav-menu">
+                        <div class="main-nav">
+                            <h6 class="fw-semibold title">
+                                <i class="icon-menu-dots"></i>
+                                Dipartimenti
+                            </h6>
+
+                            <ul class="menu-category-list">
                                 <asp:Repeater ID="rptHeroCats" runat="server" DataSourceID="SdsHeroCats">
                                     <ItemTemplate>
-                                        <li class="department-item">
-                                            <a class="department-link" href='<%# BuildSettoreUrl(Eval("id"), Eval("DefaultCt"), Eval("DefaultTp")) %>'>
-                                                <%# SafeText(Eval("descrizione")) %>
+                                        <li class="menu-item">
+                                            <a href='<%# BuildSettoreUrl(Eval("id"), Eval("DefaultCt"), Eval("DefaultTp")) %>' class="item-link body-text-3">
+                                                <span>
+                                                    <i class="icon icon-categories"></i>
+                                                    <%# SafeText(Eval("descrizione")) %>
+                                                </span>
                                             </a>
                                         </li>
                                     </ItemTemplate>
                                 </asp:Repeater>
-</ul>
+                            </ul>
+
                             <asp:SqlDataSource ID="SdsHeroCats" runat="server"
                                 ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                                 ProviderName="MySql.Data.MySqlClient"
@@ -68,7 +73,7 @@
                         </div>
                     </div>
 
-                    <!-- Small promo banner (static) -->
+                    <!-- Small promo banner -->
                     <div class="banner-image-product-4 hover-img mb-20">
                         <div class="item-product">
                             <a href="articoli.aspx" class="box-link">
@@ -85,7 +90,7 @@
                     </div>
                 </div>
 
-                <!-- CENTER: Slideshow (dinamico) -->
+                <!-- CENTER: Slideshow (dinamico) --> (dinamico) -->
                 <div class="wrap-item-2">
                     <div class="banner-image-product-4 style-2 hover-img">
                         <div class="item-product">
@@ -137,7 +142,7 @@
                                             <% incrementa_slides() %>
                                             <div class="mySlides fade">
                                                 <%# SlideLinkStart(Eval("link")) %>
-                                                <img src='<%# SafeSlideshowImageUrl(Eval("image")) %>' style="width:100%" alt="" />
+                                                <img class="lazyload" src='<%# SafeSlideshowImageUrl(Eval("image")) %>' data-src='<%# SafeSlideshowImageUrl(Eval("image")) %>' alt="" />
                                                 <%# SlideLinkEnd(Eval("link")) %>
                                                 <div class="text"><%# SafeText(Eval("content")) %></div>
                                             </div>
@@ -304,7 +309,7 @@
     <!-- Icon boxes (template) -->
     <div class="tf-sp-2 pt-0">
         <div class="container">
-            <div class="swiper tf-sw-iconbox" data-preview="4" data-tablet="2" data-mobile="1" data-space-lg="0" data-space-md="0" data-space="0" data-pagination="1" data-pagination-sm="1" data-pagination-md="1" data-pagination-lg="1">
+            <div class="swiper tf-sw-iconbox" data-preview="5" data-tablet="3" data-mobile-sm="2" data-mobile="1" data-space-lg="20" data-space-md="20" data-space="15" data-pagination="1" data-pagination-sm="1" data-pagination-md="1" data-pagination-lg="1">
                 <div class="swiper-wrapper">
                     <div class="swiper-slide">
                         <div class="tf-icon-box style-border-line">
