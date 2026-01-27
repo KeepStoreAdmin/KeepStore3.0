@@ -208,9 +208,16 @@ Partial Class aggiungi
 
                 Dim selezionamultipla_ID As String = parts(0)
                 Dim selezionamultipla_TCID As String = parts(1)
+                If String.IsNullOrWhiteSpace(selezionamultipla_TCID) Then
+                    selezionamultipla_TCID = "-1"
+                End If
                 Dim selezionamultipla_Qta As String = parts(2)
                 Dim selezionamultipla_SpedGRATIS As String = parts(3)
 
+                ' SpedizioneGratis: deve essere 0/1 (evita '' che rompe MySQL)
+                Dim _pgTmp As Integer = 0
+                If Not Integer.TryParse(selezionamultipla_SpedGRATIS, _pgTmp) Then _pgTmp = 0
+                selezionamultipla_SpedGRATIS = _pgTmp.ToString()
                 Dim quantitaRiga As Double = 0
 
                 Dim wherePart As String
@@ -395,7 +402,11 @@ Partial Class aggiungi
                 paramsProcedure.Add("?parPrezzo", Prezzo.ToString().Replace(","c, "."c))
                 paramsProcedure.Add("?parPrezzoIvato", PrezzoIvato.ToString().Replace(","c, "."c))
                 paramsProcedure.Add("?parOfferteDettaglioID", OfferteDettagliID.ToString())
-                paramsProcedure.Add("?parProdottoGratis", Convert.ToString(Session("ProdottoGratis")))
+                Dim prodottoGratis As Integer = 0
+                If Session("ProdottoGratis") IsNot Nothing Then
+                    Integer.TryParse(Session("ProdottoGratis").ToString(), prodottoGratis)
+                End If
+                paramsProcedure.Add("?parProdottoGratis", prodottoGratis.ToString())
                 ExecuteStoredProcedure("Newcarrello", paramsProcedure)
 
                 AggiornaVisite(CInt(ListaArticoli(i)))
