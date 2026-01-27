@@ -5,8 +5,6 @@
     <%else %>
         <meta http-equiv="refresh" content="2; url=default.aspx" />
     <%end if %>
-</asp:Content>
-<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
 <table cellpadding="1" cellspacing="5" border="0" width="100%" runat="server" id="tConclusa" visible="true">
     <tr>
         <td colspan="2"><br /><br /><hr size="1" /><br /></td>
@@ -25,6 +23,6 @@
         <td colspan="2" ><br /><hr size="1"/><br /></td>
     </tr>
 </table>
-
 </asp:Content>
+
 

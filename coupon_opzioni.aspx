@@ -1,9 +1,7 @@
 ﻿<%@ Page Language="VB" MasterPageFile="~/Coupon.master" AutoEventWireup="false" CodeFile="coupon_opzioni.aspx.vb" Inherits="coupon_opzioni" title="Pagina senza titolo" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
-</asp:Content>
 
-<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
     <div style="width:100%;">
         <script runat="server">
             Function controllo_presenza_opzione(ByVal opzione As Integer) As String
@@ -185,4 +183,6 @@
         SelectCommand="SELECT * FROM coupon_inserzione"></asp:SqlDataSource>
         
 </asp:Content>
+
+
 

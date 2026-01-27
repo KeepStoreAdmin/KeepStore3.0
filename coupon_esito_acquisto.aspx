@@ -3,9 +3,7 @@
 <%@ Import Namespace="System.IO" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
-</asp:Content>
 
-<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
 <asp:DataList ID="Esito_pagamento_coupon" runat="server" DataSourceID="SqlData_Coupon" style="margin:auto;">
         <ItemTemplate>
             <div style="margin:auto; margin-top:20px; position:relative; width:500px; height:200px; border-color:Black; border-width:1px; border-style:solid;">
@@ -248,4 +246,6 @@
         ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" 
     SelectCommand="SELECT * FROM coupon_inserzione"></asp:SqlDataSource>
 </asp:Content>
+
+
 

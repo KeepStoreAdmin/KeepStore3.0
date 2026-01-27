@@ -1,7 +1,6 @@
 ﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="coupon.aspx.vb" Inherits="coupon" title="Pagina senza titolo" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
-
     <script src="Public/script/jquery-1.4.2.min.js" type="text/javascript"></script>
     <script src="Public/script/jquery.facets.js" type="text/javascript"></script>
     <script src="Public/script/common.js" type="text/javascript"></script>
@@ -65,9 +64,6 @@
     
     <link href="Public/style/facets.css" rel="stylesheet" type="text/css" />
     <link href="Public/style/menu.css" rel="stylesheet" type="text/css" />
-</asp:Content>
-<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
-
 <script runat="server">
     Function calcola_secondi(ByVal data As String) As String
         Dim temp_data As String() = data.Split("/")
@@ -255,4 +251,5 @@
         </SelectParameters>
     </asp:SqlDataSource>
 </asp:Content>
+
 

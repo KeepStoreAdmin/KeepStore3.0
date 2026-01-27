@@ -1,8 +1,7 @@
 ﻿<%@ Page Language="VB" MasterPageFile="~/Coupon.master" AutoEventWireup="false" CodeFile="lista_coupon.aspx.vb" Inherits="lista_coupon" title="Pagina senza titolo" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
-</asp:Content>
-<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
+
     <script runat="server">
         Function calcola_secondi(ByVal data As String) As String
             Dim temp_data As String() = data.Split("/")
@@ -83,4 +82,5 @@
     ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" 
     SelectCommand="SELECT * FROM coupon_inserzione WHERE ((DATEDIFF(CURDATE(),DataInizio)>=0) AND (DATEDIFF(CURDATE(),DataFine)<=0))"></asp:SqlDataSource>
 </asp:Content>
+
 

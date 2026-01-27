@@ -44,10 +44,6 @@
 
     <link href="Public/style/facets.css" rel="stylesheet" type="text/css" />
     <link href="Public/style/menu.css" rel="stylesheet" type="text/css" />
-
-</asp:Content>
-
-<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
     <script runat="server">
         Function calcola_secondi(ByVal data As String) As String
             Dim temp_data As String() = data.Split("/")
@@ -309,4 +305,6 @@
         SelectCommand="SELECT * FROM coupon_inserzione">
     </asp:SqlDataSource>
 </asp:Content>
+
+
 

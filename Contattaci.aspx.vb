@@ -1,4 +1,4 @@
-﻿Option Strict On
+Option Strict On
 Option Explicit On
 
 Imports System
@@ -7,8 +7,6 @@ Imports System.Net
 Imports System.Net.Mail
 Imports System.Text
 Imports System.Web
-Imports System.Web.UI
-Imports System.Web.UI.HtmlControls
 Imports MySql.Data.MySqlClient
 
 Partial Class Contattaci
@@ -20,15 +18,16 @@ Partial Class Contattaci
         Return Convert.ToString(o)
     End Function
 
+    Private Shared Function TrimToLen(ByVal value As String, ByVal maxLen As Integer) As String
+        If value Is Nothing Then Return ""
+        Dim s As String = value.Trim()
+        If s.Length > maxLen Then s = s.Substring(0, maxLen)
+        Return s
+    End Function
+
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         If Not IsPostBack Then
             Me.Title = "Contattaci"
-            Try
-                Dim azi As String = S("AziendaNome")
-                If azi <> "" Then Me.Title = "Contattaci - " & azi
-            Catch
-            End Try
-
             LoadCompanyInfo()
             ApplySeoBasics()
         End If
@@ -36,37 +35,31 @@ Partial Class Contattaci
 
     Private Sub ApplySeoBasics()
         Try
-            ' Canonical coerente (no stravolgimenti: usiamo URL assoluto)
-            Dim host As String = Request.Url.GetLeftPart(UriPartial.Authority)
-            Dim canonical As String = host.TrimEnd("/"c) & "/Contattaci.aspx"
+            Dim host As String = Request.Url.GetLeftPart(UriPartial.Authority).TrimEnd("/"c)
+            Dim canonical As String = host & Me.ResolveUrl("~/Contattaci.aspx")
             SeoBuilder.SetCanonical(Me, canonical)
 
-            ' Description semplice e stabile
-            Dim desc As String = "Contatta " & S("AziendaNome") & " per informazioni, preventivi e assistenza."
-            SeoBuilder.AddOrReplaceNameMeta(Me, "description", desc)
+            Dim azi As String = S("AziendaNome")
+            If azi <> "" Then
+                SeoBuilder.AddOrReplaceNameMeta(Me, "description", "Contatta " & azi & " per informazioni, preventivi e assistenza.")
+            End If
         Catch
             ' fail-open
         End Try
     End Sub
 
     Private Sub LoadCompanyInfo()
-        Dim ragione As String = ""
+        Dim ragione As String = S("AziendaNome")
         Dim indirizzo As String = ""
         Dim cap As String = ""
         Dim citta As String = ""
         Dim prov As String = ""
         Dim telefono As String = ""
-        Dim email As String = ""
-
-        ' fallback da session (almeno email e nome di solito ci sono)
-        ragione = S("AziendaNome")
-        email = S("AziendaEmail")
+        Dim email As String = S("AziendaEmail")
 
         Try
-            Dim idAzienda As Integer = -1
-            Integer.TryParse(S("AziendaID"), idAzienda)
-
-            If idAzienda > 0 Then
+            Dim idAzienda As Integer
+            If Integer.TryParse(S("AziendaID"), idAzienda) AndAlso idAzienda > 0 Then
                 Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
                 Using cn As New MySqlConnection(cs)
                     cn.Open()
@@ -90,34 +83,25 @@ Partial Class Contattaci
             KeepStoreLog.Error("contattaci", "Errore caricamento dati azienda", ex, HttpContext.Current)
         End Try
 
-        ' Render UI
-        Dim addressText As String = HttpUtility.HtmlEncode(indirizzo)
-        If cap <> "" OrElse citta <> "" OrElse prov <> "" Then
-            Dim tail As String = (cap & " " & citta).Trim()
-            If prov <> "" Then tail &= " (" & prov & ")"
-            If addressText <> "" Then
-                addressText &= "<br />" & HttpUtility.HtmlEncode(tail)
+        Dim line1 As String = TrimToLen(indirizzo, 200)
+        Dim cityLine As String = (cap & " " & citta).Trim()
+        If prov <> "" Then cityLine = (cityLine & " (" & prov & ")").Trim()
+
+        Dim htmlAddress As String = ""
+        If line1 <> "" Then htmlAddress = HttpUtility.HtmlEncode(line1)
+        If cityLine <> "" Then
+            If htmlAddress <> "" Then
+                htmlAddress &= "<br />" & HttpUtility.HtmlEncode(cityLine)
             Else
-                addressText = HttpUtility.HtmlEncode(tail)
+                htmlAddress = HttpUtility.HtmlEncode(cityLine)
             End If
-        Else
-            addressText = HttpUtility.HtmlEncode(addressText)
         End If
+        If String.IsNullOrWhiteSpace(htmlAddress) Then htmlAddress = HttpUtility.HtmlEncode(ragione)
 
-        ' If indirizzo vuoto, mostriamo almeno ragione sociale
-        If String.IsNullOrWhiteSpace(addressText) Then
-            addressText = HttpUtility.HtmlEncode(ragione)
-        End If
+        litAddress.Text = htmlAddress
+        litPhone.Text = HttpUtility.HtmlEncode(If(String.IsNullOrWhiteSpace(telefono), "-", telefono))
+        litEmail.Text = HttpUtility.HtmlEncode(If(String.IsNullOrWhiteSpace(email), "-", email))
 
-        litAddress.Text = addressText
-
-        If telefono = "" Then telefono = "-"
-        litPhone.Text = HttpUtility.HtmlEncode(telefono)
-
-        If email = "" Then email = "-"
-        litEmail.Text = HttpUtility.HtmlEncode(email)
-
-        ' Links (map / tel / mail)
         Try
             Dim addrForMap As String = (indirizzo & " " & cap & " " & citta & " " & prov).Trim()
             If addrForMap = "" Then addrForMap = ragione
@@ -129,14 +113,14 @@ Partial Class Contattaci
             lnkMap.HRef = mapUrl
             iframeMap.Attributes("src") = mapEmbed
 
-            If telefono <> "-" AndAlso telefono.Trim() <> "" Then
-                Dim telClean As String = telefono.Trim()
+            Dim telClean As String = telefono.Trim().Replace(" ", "").Replace(".", "").Replace("-", "")
+            If telClean <> "" Then
                 lnkPhone.HRef = "tel:" & telClean
             Else
                 lnkPhone.HRef = mapUrl
             End If
 
-            If email <> "-" AndAlso email.Trim() <> "" Then
+            If email.Trim() <> "" AndAlso email <> "-" Then
                 lnkEmail.HRef = "mailto:" & email.Trim()
             Else
                 lnkEmail.HRef = mapUrl
@@ -151,83 +135,79 @@ Partial Class Contattaci
         lblAlert.Text = ""
 
         If Not Page.IsValid Then
-            ShowAlert("Verifica i campi evidenziati.", isError:=True)
+            ShowAlert("Verifica i campi evidenziati.", True)
             Return
         End If
 
-        Dim nome As String = txtNome.Text.Trim()
-        Dim fromEmailUser As String = txtEmail.Text.Trim()
-        Dim oggetto As String = txtOggetto.Text.Trim()
-        Dim messaggio As String = txtMessaggio.Text.Trim()
+        Dim nome As String = TrimToLen(txtNome.Text, 120)
+        Dim fromEmailUser As String = TrimToLen(txtEmail.Text, 180)
+        Dim oggetto As String = TrimToLen(txtOggetto.Text, 150)
+        Dim messaggio As String = TrimToLen(txtMessaggio.Text, 4000)
 
         If nome = "" OrElse fromEmailUser = "" OrElse oggetto = "" OrElse messaggio = "" Then
-            ShowAlert("Compila tutti i campi obbligatori.", isError:=True)
+            ShowAlert("Compila tutti i campi obbligatori.", True)
             Return
         End If
 
         Dim aziendaNome As String = S("AziendaNome")
         Dim aziendaEmail As String = S("AziendaEmail")
-
         If aziendaEmail = "" Then
-            ShowAlert("In questo momento non è possibile inviare il messaggio. Puoi contattarci via email o telefono indicati a destra.", isError:=True)
+            ShowAlert("In questo momento non è possibile inviare il messaggio. Contattaci via email/telefono indicati a destra.", True)
             Return
         End If
 
         Try
-            Dim oMsg As New MailMessage()
-
-            ' From: azienda (per evitare problemi SPF/DMARC); ReplyTo: utente
-            oMsg.From = New MailAddress(aziendaEmail, If(aziendaNome, "KeepStore"))
-            oMsg.To.Add(New MailAddress(aziendaEmail, If(aziendaNome, "KeepStore")))
-            oMsg.ReplyToList.Add(New MailAddress(fromEmailUser, nome))
-
-            oMsg.Subject = "[Contatto sito] " & oggetto
-            oMsg.IsBodyHtml = True
-
-            Dim sb As New StringBuilder()
-            sb.Append("<font face='arial' size='2' color='black'>")
-            sb.Append("<b>Richiesta da:</b> ").Append(HttpUtility.HtmlEncode(nome)).Append("<br/>")
-            sb.Append("<b>Email:</b> ").Append(HttpUtility.HtmlEncode(fromEmailUser)).Append("<br/>")
-            sb.Append("<b>Oggetto:</b> ").Append(HttpUtility.HtmlEncode(oggetto)).Append("<br/><br/>")
-            sb.Append("<b>Messaggio:</b><br/>")
-            sb.Append(HttpUtility.HtmlEncode(messaggio).Replace(vbCrLf, "<br/>"))
-            sb.Append("</font>")
-            oMsg.Body = sb.ToString()
-
-            Dim smtpHost As String = S("smtp")
+            Dim smtpHost As String = S("smtp").Trim()
             If smtpHost = "" Then Throw New Exception("SMTP host non configurato (Session(smtp) vuota).")
 
-            Dim oSmtp As New SmtpClient(smtpHost)
-            oSmtp.DeliveryMethod = SmtpDeliveryMethod.Network
+            Using oMsg As New MailMessage()
+                oMsg.From = New MailAddress(aziendaEmail, If(String.IsNullOrWhiteSpace(aziendaNome), "KeepStore", aziendaNome))
+                oMsg.To.Add(New MailAddress(aziendaEmail))
+                oMsg.ReplyToList.Add(New MailAddress(fromEmailUser, nome))
 
-            Dim userSmtp As String = S("User_smtp")
-            Dim passSmtp As String = S("Password_smtp")
+                oMsg.Subject = "[Contatto sito] " & oggetto
+                oMsg.SubjectEncoding = Encoding.UTF8
+                oMsg.BodyEncoding = Encoding.UTF8
+                oMsg.IsBodyHtml = True
 
-            If userSmtp <> "" Then
-                Dim oCredential As New NetworkCredential(userSmtp, passSmtp)
-                oSmtp.UseDefaultCredentials = False
-                oSmtp.Credentials = oCredential
-            End If
+                Dim sb As New StringBuilder()
+                sb.Append("<font face='arial' size='2' color='black'>")
+                sb.Append("<b>Richiesta da:</b> ").Append(HttpUtility.HtmlEncode(nome)).Append("<br/>")
+                sb.Append("<b>Email:</b> ").Append(HttpUtility.HtmlEncode(fromEmailUser)).Append("<br/>")
+                sb.Append("<b>Oggetto:</b> ").Append(HttpUtility.HtmlEncode(oggetto)).Append("<br/><br/>")
+                sb.Append("<b>Messaggio:</b><br/>")
+                sb.Append(HttpUtility.HtmlEncode(messaggio).Replace(vbCrLf, "<br/>"))
+                sb.Append("</font>")
+                oMsg.Body = sb.ToString()
 
-            oSmtp.Send(oMsg)
+                Using oSmtp As New SmtpClient(smtpHost)
+                    oSmtp.DeliveryMethod = SmtpDeliveryMethod.Network
+
+                    Dim userSmtp As String = S("User_smtp").Trim()
+                    Dim passSmtp As String = S("Password_smtp")
+
+                    If userSmtp <> "" Then
+                        oSmtp.UseDefaultCredentials = False
+                        oSmtp.Credentials = New NetworkCredential(userSmtp, passSmtp)
+                    End If
+
+                    oSmtp.Send(oMsg)
+                End Using
+            End Using
 
             txtOggetto.Text = ""
             txtMessaggio.Text = ""
-            ShowAlert("Messaggio inviato correttamente. Ti risponderemo il prima possibile.", isError:=False)
+            ShowAlert("Messaggio inviato correttamente. Ti risponderemo il prima possibile.", False)
 
         Catch ex As Exception
             KeepStoreLog.Error("contattaci", "Errore invio mail contatto", ex, HttpContext.Current)
-            ShowAlert("Errore durante l'invio del messaggio. Riprova più tardi o contattaci via email/telefono.", isError:=True)
+            ShowAlert("Errore durante l'invio del messaggio. Riprova più tardi o contattaci via email/telefono.", True)
         End Try
     End Sub
 
     Private Sub ShowAlert(ByVal msg As String, ByVal isError As Boolean)
         pnlAlert.Visible = True
-        If isError Then
-            pnlAlert.CssClass = "alert alert-danger"
-        Else
-            pnlAlert.CssClass = "alert alert-success"
-        End If
+        pnlAlert.CssClass = If(isError, "alert alert-danger", "alert alert-success")
         lblAlert.Text = HttpUtility.HtmlEncode(msg)
     End Sub
 

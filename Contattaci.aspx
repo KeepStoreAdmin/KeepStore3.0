@@ -1,136 +1,146 @@
-﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Contattaci.aspx.vb" Inherits="Contattaci" %>
-<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server"><%: Page.Title %></asp:Content>
+<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Contattaci.aspx.vb" Inherits="Contattaci" %>
+
+<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
+    Contattaci
+</asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <!-- Contact page specific head (kept minimal on purpose) -->
+    <style>
+        .ks-contact .bottom { margin-top: 24px; }
+        .ks-contact .contact-wrap { background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px; padding: 18px; }
+        .ks-contact .contact-info { background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px; padding: 18px; }
+        .ks-contact .contact-info .info-list { list-style: none; padding-left: 0; margin: 0; }
+        .ks-contact .contact-info .info-list li { display:flex; gap:10px; padding: 10px 0; border-bottom: 1px dashed rgba(0,0,0,0.08); }
+        .ks-contact .contact-info .info-list li:last-child { border-bottom: 0; }
+        .ks-contact .contact-info .icon { width: 34px; height: 34px; border-radius: 10px; display:flex; align-items:center; justify-content:center; background:#f6f6f6; }
+        .ks-contact iframe { border-radius: 14px; width: 100%; }
+        .ks-contact .form-contact textarea { height: 170px; }
+        .ks-contact .alert { border-radius: 14px; }
+    </style>
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
-    <!-- Breadcrumb -->
-    <section class="tf-breadcrumb">
-        <div class="container">
-            <div class="wrap-breadcrumb">
-                <div class="breadcrumb-content">
-                    <div class="title-breadcrumb">Contattaci</div>
-                    <div class="breadcrumb-list">
-                        <a href="/Default.aspx" class="breadcrumb-item">Home</a>
-                        <div class="breadcrumb-item dot"><span></span></div>
-                        <div class="breadcrumb-item">Contattaci</div>
-                    </div>
-                </div>
+    <div class="ks-contact">
+
+        <!-- Breakcrumbs (ONSUS) -->
+        <div class="tf-sp-1 pb-0">
+            <div class="container">
+                <ul class="breakcrumbs">
+                    <li>
+                        <a href="<%= ResolveUrl("~/Default.aspx") %>" class="body-small link">Home</a>
+                    </li>
+                    <li class="d-flex align-items-center">
+                        <i class="icon icon-arrow-right"></i>
+                    </li>
+                    <li>
+                        <span class="body-small">Contattaci</span>
+                    </li>
+                </ul>
             </div>
         </div>
-    </section>
 
-    <!-- Contact (ONSUS) -->
-    <section class="tf-sp-2">
-        <div class="container">
+        <section class="tf-sp-2">
+            <div class="container">
 
-            <asp:Panel ID="pnlAlert" runat="server" Visible="false">
-                <asp:Label ID="lblAlert" runat="server"></asp:Label>
-            </asp:Panel>
-
-            <div class="wg-map">
                 <iframe id="iframeMap" runat="server"
-                        height="585" style="border-radius:8px; width: 100%; border:0;" allowfullscreen=""
+                        src="https://www.google.com/maps?q=Italy&output=embed"
+                        height="585" style="border:0;"
+                        allowfullscreen="allowfullscreen"
                         referrerpolicy="no-referrer-when-downgrade">
                 </iframe>
 
                 <div class="bottom">
-                    <div class="contact-wrap">
-                        <div class="box-title">
-                            <h5 class="fw-semibold">Richiedi informazioni</h5>
-                            <p class="body-text-3">
-                                Compila il form: ti risponderemo il prima possibile.
-                            </p>
-                        </div>
+                    <div class="row g-3">
 
-                        <asp:ValidationSummary ID="vsForm" runat="server"
-                            CssClass="text-danger mb-3"
-                            DisplayMode="BulletList"
-                            HeaderText="Controlla i campi:" />
+                        <!-- Form -->
+                        <div class="col-lg-7">
+                            <div class="contact-wrap">
+                                <div class="box-title mb-3">
+                                    <h5 class="fw-semibold mb-10">Contattaci</h5>
+                                    <p class="body-text-3 mb-0">
+                                        Compila il form: ti risponderemo entro 24 ore lavorative.
+                                    </p>
+                                </div>
 
-                        <div class="form-contact def">
+                                <asp:Panel ID="pnlAlert" runat="server" Visible="false" CssClass="alert alert-danger mb-3">
+                                    <asp:Label ID="lblAlert" runat="server" EnableViewState="false" />
+                                </asp:Panel>
 
-                            <fieldset>
-                                <label for="txtNome">Nome</label>
-                                <asp:TextBox ID="txtNome" runat="server" />
-                                <asp:RequiredFieldValidator ID="rfvNome" runat="server"
-                                    ControlToValidate="txtNome"
-                                    ErrorMessage="Inserisci il nome."
-                                    Display="None" />
-                            </fieldset>
+                                <div class="form-contact def">
+                                    <fieldset>
+                                        <label>Nome</label>
+                                        <asp:TextBox ID="txtNome" runat="server" CssClass="def" />
+                                        <asp:RequiredFieldValidator ID="rfvNome" runat="server"
+                                            ControlToValidate="txtNome" Display="Dynamic"
+                                            ErrorMessage="Inserisci il nome." />
+                                    </fieldset>
 
-                            <fieldset>
-                                <label for="txtEmail">Email</label>
-                                <asp:TextBox ID="txtEmail" runat="server" TextMode="Email" />
-                                <asp:RequiredFieldValidator ID="rfvEmail" runat="server"
-                                    ControlToValidate="txtEmail"
-                                    ErrorMessage="Inserisci l'email."
-                                    Display="None" />
-                                <asp:RegularExpressionValidator ID="revEmail" runat="server"
-                                    ControlToValidate="txtEmail"
-                                    ErrorMessage="Email non valida."
-                                    ValidationExpression="^[^\s@]+@[^\s@]+\.[^\s@]+$"
-                                    Display="None" />
-                            </fieldset>
+                                    <fieldset>
+                                        <label>Email</label>
+                                        <asp:TextBox ID="txtEmail" runat="server" CssClass="def" TextMode="Email" />
+                                        <asp:RequiredFieldValidator ID="rfvEmail" runat="server"
+                                            ControlToValidate="txtEmail" Display="Dynamic"
+                                            ErrorMessage="Inserisci l'email." />
+                                    </fieldset>
 
-                            <fieldset>
-                                <label for="txtOggetto">Oggetto</label>
-                                <asp:TextBox ID="txtOggetto" runat="server" />
-                                <asp:RequiredFieldValidator ID="rfvOggetto" runat="server"
-                                    ControlToValidate="txtOggetto"
-                                    ErrorMessage="Inserisci l'oggetto."
-                                    Display="None" />
-                            </fieldset>
+                                    <fieldset>
+                                        <label>Oggetto</label>
+                                        <asp:TextBox ID="txtOggetto" runat="server" CssClass="def" />
+                                        <asp:RequiredFieldValidator ID="rfvOggetto" runat="server"
+                                            ControlToValidate="txtOggetto" Display="Dynamic"
+                                            ErrorMessage="Inserisci l'oggetto." />
+                                    </fieldset>
 
-                            <fieldset class="d-flex flex-column">
-                                <label for="txtMessaggio">Messaggio</label>
-                                <asp:TextBox ID="txtMessaggio" runat="server" TextMode="MultiLine" Style="height:170px;" />
-                                <asp:RequiredFieldValidator ID="rfvMessaggio" runat="server"
-                                    ControlToValidate="txtMessaggio"
-                                    ErrorMessage="Inserisci il messaggio."
-                                    Display="None" />
-                            </fieldset>
+                                    <fieldset class="d-flex flex-column">
+                                        <label>Messaggio</label>
+                                        <asp:TextBox ID="txtMessaggio" runat="server" CssClass="def" TextMode="MultiLine" />
+                                        <asp:RequiredFieldValidator ID="rfvMessaggio" runat="server"
+                                            ControlToValidate="txtMessaggio" Display="Dynamic"
+                                            ErrorMessage="Inserisci il messaggio." />
+                                    </fieldset>
 
-                            <div class="box-btn-submit">
-                                <asp:Button ID="btnInvia" runat="server"
-                                    CssClass="tf-btn text-white w-100"
-                                    Text="Invia messaggio"
-                                    OnClick="btnInvia_Click" />
+                                    <div class="box-btn-submit mt-3">
+                                        <asp:Button ID="btnInvia" runat="server" Text="Invia messaggio"
+                                            CssClass="tf-btn text-white w-100"
+                                            OnClick="btnInvia_Click" CausesValidation="true" />
+                                    </div>
+                                </div>
                             </div>
-
                         </div>
-                    </div>
 
-                    <div class="contact-info">
-                        <h5 class="fw-semibold">Informazioni di contatto</h5>
-                        <ul class="info-list">
-                            <li>
-                                <span class="icon"><i class="icon-location"></i></span>
-                                <a id="lnkMap" runat="server" class="link" target="_blank">
-                                    <asp:Literal ID="litAddress" runat="server" />
-                                </a>
-                            </li>
-                            <li>
-                                <span class="icon"><i class="icon-phone"></i></span>
-                                <a id="lnkPhone" runat="server" class="product-title fw-semibold link">
-                                    <span><asp:Literal ID="litPhone" runat="server" /></span>
-                                </a>
-                            </li>
-                            <li>
-                                <span class="icon"><i class="icon-direction"></i></span>
-                                <a id="lnkEmail" runat="server" class="link">
-                                    <span><asp:Literal ID="litEmail" runat="server" /></span>
-                                </a>
-                            </li>
-                        </ul>
+                        <!-- Info -->
+                        <div class="col-lg-5">
+                            <div class="contact-info">
+                                <h5 class="fw-semibold mb-10">Informazioni</h5>
+                                <ul class="info-list">
+                                    <li>
+                                        <span class="icon"><i class="icon-location"></i></span>
+                                        <a id="lnkMap" runat="server" class="link" target="_blank">
+                                            <asp:Literal ID="litAddress" runat="server" />
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <span class="icon"><i class="icon-phone"></i></span>
+                                        <a id="lnkPhone" runat="server" class="product-title fw-semibold link">
+                                            <asp:Literal ID="litPhone" runat="server" />
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <span class="icon"><i class="icon-direction"></i></span>
+                                        <a id="lnkEmail" runat="server" class="link">
+                                            <asp:Literal ID="litEmail" runat="server" />
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
             </div>
-        </div>
-    </section>
+        </section>
+    </div>
 
 </asp:Content>

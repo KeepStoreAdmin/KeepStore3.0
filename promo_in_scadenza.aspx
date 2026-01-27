@@ -40,8 +40,6 @@
 		}
 
     </script>
-</asp:Content>
-<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
     <script runat="server">
         Function calcola_secondi(ByVal data As String) As String
             Dim temp_data As String() = data.Split("/")
@@ -253,4 +251,5 @@
         SelectCommand="SELECT * FROM [1_pubblico]"></asp:SqlDataSource>    
     
 </asp:Content>
+
 

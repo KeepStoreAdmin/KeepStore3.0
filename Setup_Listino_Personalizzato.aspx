@@ -3,8 +3,7 @@
 <%@ Register Assembly="Microsoft.ReportViewer.WebForms, Version=9.0.0.0, Culture=neutral, PublicKeyToken=B03F5F7F11D50A3A"
     Namespace="Microsoft.Reporting.WebForms" TagPrefix="rsweb" %>
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
-</asp:Content>
-<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
+
     <asp:SqlDataSource ID="SqlData_Listino_Personalizzato" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
         InsertCommand="INSERT INTO listini_personalizzati(Nome_Listino, ID_Utente, IVA) VALUES (@Param1, @Param2, @Param3)"
         ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
@@ -135,4 +134,5 @@
     <br />
     <br />
 </asp:Content>
+
 

@@ -2,8 +2,6 @@
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
     <link href='http://fonts.googleapis.com/css?family=Asap:700' rel='stylesheet' type='text/css'>
-</asp:Content>
-<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
     <div style=" width:500px; margin:auto; text-align:center;">
         <img src="Images/groupon/groupon_logo.png" style=" width:500px;" /> <br /><br />
         <span>INSERIRE IL CODICE COUPON</span>
@@ -80,4 +78,5 @@
         </UpdateParameters>
     </asp:SqlDataSource>
 </asp:Content>
+
 

@@ -1,8 +1,7 @@
 ﻿<%@ Page Language="VB" MasterPageFile="~/Coupon.master" AutoEventWireup="false" CodeFile="coupon_utente.aspx.vb" Inherits="coupon_utente" title="Pagina senza titolo" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
-</asp:Content>
-<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
+
     <asp:GridView ID="GridView1" runat="server" AllowPaging="True" AutoGenerateColumns="False"
         CellPadding="5" DataKeyNames="id" DataSourceID="sdsDocumenti" EmptyDataText="Nessun documento presente"
         Font-Size="8pt" GridLines="None" PageSize="20" Width="100%">
@@ -152,4 +151,5 @@
     <asp:SqlDataSource ID="sdsStatoOrdine" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" SelectCommand="SELECT * FROM documentistati;">
     </asp:SqlDataSource>
 </asp:Content>
+
 

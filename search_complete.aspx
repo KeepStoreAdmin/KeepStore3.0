@@ -1,7 +1,6 @@
 ﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="search_complete.aspx.vb" Inherits="search_complete" title="Untitled Page" %>
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
-</asp:Content>
-<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
+
     Ricerca Avanzata<br />
     <br />
     <asp:SqlDataSource ID="Sql_Categorie" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
@@ -95,3 +94,4 @@
     <asp:Button ID="Button_Effettua_Ricerca" runat="server" Text="Effettua la ricerca"
         Width="200px" /><br />
 </asp:Content>
+
