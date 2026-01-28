@@ -185,7 +185,6 @@
 
                     <Columns>
 
-                        <!-- Remove -->
                         <asp:TemplateField>
                             <HeaderStyle CssClass="wishlist-item_remove" />
                             <ItemStyle CssClass="wishlist-item_remove" />
@@ -196,7 +195,6 @@
                             </ItemTemplate>
                         </asp:TemplateField>
 
-                        <!-- Image -->
                         <asp:TemplateField>
                             <HeaderStyle CssClass="wishlist-item_image" />
                             <ItemStyle CssClass="wishlist-item_image" />
@@ -207,7 +205,6 @@
                             </ItemTemplate>
                         </asp:TemplateField>
 
-                        <!-- Info -->
                         <asp:TemplateField>
                             <HeaderStyle CssClass="wishlist-item_info" />
                             <ItemStyle CssClass="wishlist-item_info" />
@@ -221,14 +218,12 @@
                                     <asp:Label ID="tagliecolori" runat="server"></asp:Label>
                                 </div>
 
-                                <!-- Hidden fields used by code-behind -->
                                 <asp:Label ID="lblID" runat="server" Text='<%# Eval("id") %>' Visible="false"></asp:Label>
                                 <asp:TextBox ID="tbid" runat="server" Text='<%# Eval("id") %>' Visible="false" EnableViewState="false"></asp:TextBox>
                                 <asp:TextBox ID="tbInOfferta" runat="server" Text='<%# Eval("InOfferta") %>' Visible="false" EnableViewState="false"></asp:TextBox>
                             </ItemTemplate>
                         </asp:TemplateField>
 
-                        <!-- Price -->
                         <asp:TemplateField>
                             <HeaderStyle CssClass="wishlist-item_price" />
                             <ItemStyle CssClass="wishlist-item_price" />
@@ -242,7 +237,6 @@
                                     <asp:Label ID="lblPrezzoIvato" runat="server" CssClass="old-price body-md-2 text-main-2 fw-normal" Text='<%# Eval("PrezzoIvato", "{0:N2}") %>' Visible="false"></asp:Label>
                                 </p>
 
-                                <!-- Hidden legacy price digits to satisfy existing code (kept for backward compatibility) -->
                                 <div class="ks-hidden">
                                     <asp:Image ID="img_prezzo9" runat="server" />
                                     <asp:Image ID="img_prezzo8" runat="server" />
@@ -255,7 +249,6 @@
                                     <asp:Image ID="img_prezzo1" runat="server" />
                                 </div>
 
-                                <!-- Promo repeater (gestito dal code-behind) -->
                                 <asp:SqlDataSource ID="sdsPromo" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                                     ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
                                     SelectCommand="SELECT '' AS OfferteDescrizione, 0 AS InOfferta, 0 AS OfferteQntMinima, 0 AS OfferteMultipli WHERE 1=0" EnableViewState="False" />
@@ -274,7 +267,6 @@
                             </ItemTemplate>
                         </asp:TemplateField>
 
-                        <!-- Stock -->
                         <asp:TemplateField>
                             <HeaderStyle CssClass="wishlist-item_stock" />
                             <ItemStyle CssClass="wishlist-item_stock" />
@@ -290,13 +282,11 @@
                             </ItemTemplate>
                         </asp:TemplateField>
 
-                        <!-- Action -->
                         <asp:TemplateField>
                             <HeaderStyle CssClass="wishlist-item_action" />
                             <ItemStyle CssClass="wishlist-item_action" />
                             <ItemTemplate>
 
-                                <!-- Spedizione Gratis (necessario per logica carrello) -->
                                 <asp:SqlDataSource ID="sdsSpedizioneGratis" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                                     ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
                                     SelectCommand="SELECT SpedizioneGratis_Listini, SpedizioneGratis_Data_Inizio, SpedizioneGratis_Data_Fine, id FROM articoli WHERE (SpedizioneGratis_Listini LIKE CONCAT('%', @Param1, ';%')) AND (id = @Param2) AND (SpedizioneGratis_Data_Inizio <= CURDATE()) AND (SpedizioneGratis_Data_Fine >= CURDATE())">
