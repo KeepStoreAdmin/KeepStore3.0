@@ -53,9 +53,9 @@ Partial Class documentidettaglio
             Dim isHttp As Boolean = (urlTrim.StartsWith("http://") OrElse urlTrim.StartsWith("https://"))
 
             If isHttp Then
-                sb.Append("<a class=\"link\" href=\"")
+	                sb.Append("<a class=""link"" href=""")
                 sb.Append(HttpUtility.HtmlAttributeEncode(url))
-                sb.Append("\" target=\"_blank\" rel=\"noopener noreferrer\">")
+			    		    sb.Append(""" target=""_blank"" rel=""noopener noreferrer"">")
                 sb.Append(HttpUtility.HtmlEncode(code))
                 sb.Append("</a>")
             Else
@@ -63,7 +63,7 @@ Partial Class documentidettaglio
             End If
 
             If i < parts.Length - 1 Then
-                sb.Append(" <span class=\"ks-muted\">;</span> ")
+	                sb.Append(" <span class=""ks-muted"">;</span> ")
             End If
         Next
 
