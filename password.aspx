@@ -95,7 +95,53 @@
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
-    <!-- SPINNER DI PAGINA -->
+    
+    <div class="ks-myaccount">
+
+        <!-- Breakcrumbs (ONUS) -->
+        <div class="tf-sp-1 pb-0">
+            <div class="container">
+                <ul class="breakcrumbs">
+                    <li><a href="Default.aspx" class="body-small link">Home</a></li>
+                    <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
+                    <li><a href="myaccount.aspx" class="body-small link">Account</a></li>
+                    <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
+                    <li><span class="body-small">Cambia password</span></li>
+                </ul>
+            </div>
+        </div>
+
+        <section class="tf-sp-2">
+            <div class="container">
+                <div class="row">
+
+                    <div class="col-lg-3">
+                        <div class="wrap-sidebar-account">
+                            <ul class="myaccount-nav content-append">
+                                <li><a href="myaccount.aspx" class="myaccount-nav-item">Dashboard</a></li>
+                                <li><a href="datiutente.aspx" class="myaccount-nav-item">I miei dati</a></li>
+                                <li><a href="documenti.aspx?t=4" class="myaccount-nav-item">I miei ordini</a></li>
+                                <li><a href="documenti.aspx?t=2" class="myaccount-nav-item">Le mie fatture</a></li>
+                                <li><a href="documenti.aspx?t=1" class="myaccount-nav-item">I miei DDT</a></li>
+                                <li><a href="wishlist.aspx" class="myaccount-nav-item">Wishlist</a></li>
+                                <li><span class="myaccount-nav-item active">Cambia password</span></li>
+                                <li><a href="remind.aspx" class="myaccount-nav-item">Recupero accesso</a></li>
+                                <li><a href="logout.aspx" class="myaccount-nav-item">Logout</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-9">
+                        <div class="myaccount-content account-dashboard">
+
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                <div>
+                                    <h3 class="fw-semibold mb-0">Cambia password</h3>
+                                    <div class="body-small text-main-2">Aggiorna la password del tuo account.</div>
+                                </div>
+                            </div>
+
+<!-- SPINNER DI PAGINA -->
     <asp:Panel ID="pnlLoading" runat="server" CssClass="ks-loading-panel">
         <div class="ks-spinner-circle"></div>
         <div>Caricamento dati in corso...</div>
@@ -103,15 +149,12 @@
 
     <!-- CONTENUTO PRINCIPALE -->
     <asp:Panel ID="pnlContent" runat="server" Style="display:none;">
-
-        <h1>Cambia password</h1>
-
         <div style="margin-bottom:20px;">
             <asp:HyperLink 
                 ID="hlBackMyAccount" 
                 runat="server"
                 NavigateUrl="myaccount.aspx"
-                CssClass="tf-btn-icon type-2 style-white">
+                CssClass="tf-btn btn-line">
                 &laquo; Torna alla pagina My Account
             </asp:HyperLink>
         </div>
@@ -123,7 +166,7 @@
             <div class="pwd-row">
                 <label for="tbPasswordAttuale">Password attuale</label>
                 <asp:TextBox ID="tbPasswordAttuale" runat="server"
-                             CssClass="form-control"
+                             CssClass="tf-input"
                              TextMode="Password" />
                 <asp:RequiredFieldValidator ID="rfvOld"
                     runat="server"
@@ -136,7 +179,7 @@
             <div class="pwd-row">
                 <label for="tbPasswordNuova">Nuova password</label>
                 <asp:TextBox ID="tbPasswordNuova" runat="server"
-                             CssClass="form-control"
+                             CssClass="tf-input"
                              TextMode="Password" />
                 <asp:RequiredFieldValidator ID="rfvNew"
                     runat="server"
@@ -149,7 +192,7 @@
             <div class="pwd-row">
                 <label for="tbPasswordConferma">Conferma nuova password</label>
                 <asp:TextBox ID="tbPasswordConferma" runat="server"
-                             CssClass="form-control"
+                             CssClass="tf-input"
                              TextMode="Password" />
                 <asp:RequiredFieldValidator ID="rfvNew2"
                     runat="server"
@@ -168,7 +211,7 @@
 
             <div class="pwd-row">
                 <asp:Button ID="btnSalva" runat="server"
-                            CssClass="btn btn-primary"
+                            CssClass="tf-btn btn-fill w-100"
                             Text="Aggiorna password"
                             OnClientClick="ksShowSpinnerOnSubmit();" />
             </div>
@@ -179,5 +222,15 @@
         </asp:Panel>
 
     </asp:Panel>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+    </div>
+
 
 </asp:Content>

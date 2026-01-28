@@ -112,15 +112,58 @@
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
+    
+    <div class="ks-myaccount">
 
-    <h1>I miei dati</h1>
+        <!-- Breakcrumbs (ONUS) -->
+        <div class="tf-sp-1 pb-0">
+            <div class="container">
+                <ul class="breakcrumbs">
+                    <li><a href="Default.aspx" class="body-small link">Home</a></li>
+                    <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
+                    <li><a href="myaccount.aspx" class="body-small link">Account</a></li>
+                    <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
+                    <li><span class="body-small">I miei dati</span></li>
+                </ul>
+            </div>
+        </div>
 
-    <div style="margin-bottom:20px;">
+        <section class="tf-sp-2">
+            <div class="container">
+                <div class="row">
+
+                    <div class="col-lg-3">
+                        <div class="wrap-sidebar-account">
+                            <ul class="myaccount-nav content-append">
+                                <li><a href="myaccount.aspx" class="myaccount-nav-item">Dashboard</a></li>
+                                <li><span class="myaccount-nav-item active">I miei dati</span></li>
+                                <li><a href="documenti.aspx?t=4" class="myaccount-nav-item">I miei ordini</a></li>
+                                <li><a href="documenti.aspx?t=2" class="myaccount-nav-item">Le mie fatture</a></li>
+                                <li><a href="documenti.aspx?t=1" class="myaccount-nav-item">I miei DDT</a></li>
+                                <li><a href="wishlist.aspx" class="myaccount-nav-item">Wishlist</a></li>
+                                <li><a href="password.aspx" class="myaccount-nav-item">Cambia password</a></li>
+                                <li><a href="remind.aspx" class="myaccount-nav-item">Recupero accesso</a></li>
+                                <li><a href="logout.aspx" class="myaccount-nav-item">Logout</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-9">
+                        <div class="myaccount-content account-dashboard">
+
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                <div>
+                                    <h3 class="fw-semibold mb-0">I miei dati</h3>
+                                    <div class="body-small text-main-2">Gestisci i tuoi dati anagrafici e fiscali.</div>
+                                </div>
+                            </div>
+
+<div style="margin-bottom:20px;">
         <asp:HyperLink 
             ID="hlBackMyAccount" 
             runat="server"
             NavigateUrl="myaccount.aspx"
-            CssClass="tf-btn-icon type-2 style-white">
+            CssClass="tf-btn btn-line">
             &laquo; Torna alla pagina My Account
         </asp:HyperLink>
     </div>
@@ -339,7 +382,7 @@
                     <div class="ks-edit-buttons">
                         <asp:Button ID="btnEdit" runat="server"
                             Text="Modifica dati"
-                            CssClass="tf-btn-icon type-2 style-white"
+                            CssClass="tf-btn btn-line"
                             CommandName="Edit" />
                     </div>
 
@@ -554,12 +597,12 @@
                     <div class="ks-edit-buttons">
                         <asp:Button ID="btnUpdate" runat="server"
                             Text="Salva"
-                            CssClass="tf-btn-icon type-2 style-white"
+                            CssClass="tf-btn btn-line"
                             CommandName="Update"
                             OnClientClick="ksShowSpinnerOnSubmit();" />
                         <asp:Button ID="btnCancel" runat="server"
                             Text="Annulla"
-                            CssClass="tf-btn-icon type-2 style-white"
+                            CssClass="tf-btn btn-line"
                             CommandName="Cancel" />
                     </div>
 
@@ -612,5 +655,15 @@
         </asp:SqlDataSource>
 
     </asp:Panel>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+    </div>
+
 
 </asp:Content>
