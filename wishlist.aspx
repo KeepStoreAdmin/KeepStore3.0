@@ -1,7 +1,69 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="wishlist.aspx.vb" Inherits="wishlist" MaintainScrollPositionOnPostback="true" %>
+<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
+    Wishlist
+</asp:Content>
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <style type="text/css">
+        /* Small alignment for legacy wishlist table inside ONSUS layout */
+        .ks-myaccount table { width: 100%; }
+        .ks-myaccount .GridView, .ks-myaccount .grid { width: 100%; }
+    </style>
+</asp:Content>
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+<div class="ks-myaccount">
 
-    <asp:SqlDataSource ID="sdsArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+
+        <!-- Breakcrumbs (ONUS) -->
+        <div class="tf-sp-1 pb-0">
+            <div class="container">
+                <ul class="breakcrumbs">
+                    <li>
+                        <a href="Default.aspx" class="body-small link">Home</a>
+                    </li>
+                    <li class="d-flex align-items-center">
+                        <i class="icon icon-arrow-right"></i>
+                    </li>
+                    <li>
+                        <a href="myaccount.aspx" class="body-small link">Account</a>
+                    </li>
+                    <li class="d-flex align-items-center">
+                        <i class="icon icon-arrow-right"></i>
+                    </li>
+                    <li>
+                        <span class="body-small">Wishlist</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- My Account (ONUS) -->
+        <section class="tf-sp-2">
+            <div class="container">
+                <div class="row">
+                    <!-- Sidebar -->
+                    <div class="col-lg-3">
+                        <div class="wrap-sidebar-account">
+                            <ul class="myaccount-nav content-append">
+                                <li><a href="myaccount.aspx" class="myaccount-nav-item">Dashboard</a></li>
+                                <li><a href="datiutente.aspx" class="myaccount-nav-item">I miei dati</a></li>
+                                <li><a href="documenti.aspx?t=4" class="myaccount-nav-item">I miei ordini</a></li>
+                                <li><a href="documenti.aspx?t=2" class="myaccount-nav-item">Le mie fatture</a></li>
+                                <li><a href="documenti.aspx?t=1" class="myaccount-nav-item">I miei DDT</a></li>
+                                <li><span class="myaccount-nav-item active">Wishlist</span></li>
+                                <li><a href="password.aspx" class="myaccount-nav-item">Cambia password</a></li>
+                                <li><a href="remind.aspx" class="myaccount-nav-item">Recupero accesso</a></li>
+                                <li><a href="logout.aspx" class="myaccount-nav-item">Logout</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="col-lg-9">
+                        <div class="tf-section-heading mb-4">
+                            <h3 class="heading">Wishlist</h3>
+                        </div>
+
+<asp:SqlDataSource ID="sdsArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
         ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
         SelectCommand="SELECT id, Codice, Descrizione1, PrezzoAcquisto, Img1, DescrizioneLunga FROM varticolibase ORDER BY NoPromo DESC, Codice, Descrizione1"
         EnableViewState="False">
@@ -69,46 +131,25 @@
         .ks-btn-image { border: 0; background: transparent; }
     </style>
 
-
-    <div class="ks-myaccount">
-
-        <!-- Breakcrumbs (ONUS) -->
-        <div class="tf-sp-1 pb-0">
-            <div class="container">
-                <ul class="breakcrumbs">
-                    <li><a href="Default.aspx" class="body-small link">Home</a></li>
-                    <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
-                    <li><a href="myaccount.aspx" class="body-small link">Account</a></li>
-                    <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
-                    <li><span class="body-small">Wishlist</span></li>
-                </ul>
-            </div>
+    <!-- Breakcrumbs -->
+    <div class="tf-sp-3 pb-0">
+        <div class="container">
+            <ul class="breakcrumbs">
+                <li>
+                    <a href="Default.aspx" class="body-small link">Home</a>
+                </li>
+                <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
+                <li><span class="body-small">Wishlist</span></li>
+            </ul>
         </div>
+    </div>
+    <!-- /Breakcrumbs -->
 
-        <section class="tf-sp-2">
-            <div class="container">
-                <div class="row">
+    <!-- Wishlist -->
+    <div class="tf-sp-2">
+        <div class="container">
 
-                    <div class="col-lg-3">
-                        <div class="wrap-sidebar-account">
-                            <ul class="myaccount-nav content-append">
-                                <li><a href="myaccount.aspx" class="myaccount-nav-item">Dashboard</a></li>
-                                <li><a href="datiutente.aspx" class="myaccount-nav-item">I miei dati</a></li>
-                                <li><a href="documenti.aspx?t=4" class="myaccount-nav-item">I miei ordini</a></li>
-                                <li><a href="documenti.aspx?t=2" class="myaccount-nav-item">Le mie fatture</a></li>
-                                <li><a href="documenti.aspx?t=1" class="myaccount-nav-item">I miei DDT</a></li>
-                                <li><span class="myaccount-nav-item active">Wishlist</span></li>
-                                <li><a href="password.aspx" class="myaccount-nav-item">Cambia password</a></li>
-                                <li><a href="remind.aspx" class="myaccount-nav-item">Recupero accesso</a></li>
-                                <li><a href="logout.aspx" class="myaccount-nav-item">Logout</a></li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="col-lg-9">
-                        <div class="myaccount-content account-dashboard">
-
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
                 <div>
                     <h4 class="fw-semibold mb-1">Wishlist</h4>
                     <div class="body-md-2 text-main-2">
@@ -303,14 +344,13 @@
                 <asp:Label ID="lblLinee" runat="server" Text="0" Visible="false"></asp:Label>
             </div>
 
-                        </div>
-                    </div>
+        </div>
+    </div>
+    <!-- /Wishlist -->
 
+                    </div>
                 </div>
             </div>
         </section>
-
-    </div>
-
-
+</div>
 </asp:Content>

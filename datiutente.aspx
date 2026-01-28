@@ -112,26 +112,37 @@
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
-    
-    <div class="ks-myaccount">
+<div class="ks-myaccount">
+
 
         <!-- Breakcrumbs (ONUS) -->
         <div class="tf-sp-1 pb-0">
             <div class="container">
                 <ul class="breakcrumbs">
-                    <li><a href="Default.aspx" class="body-small link">Home</a></li>
-                    <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
-                    <li><a href="myaccount.aspx" class="body-small link">Account</a></li>
-                    <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
-                    <li><span class="body-small">I miei dati</span></li>
+                    <li>
+                        <a href="Default.aspx" class="body-small link">Home</a>
+                    </li>
+                    <li class="d-flex align-items-center">
+                        <i class="icon icon-arrow-right"></i>
+                    </li>
+                    <li>
+                        <a href="myaccount.aspx" class="body-small link">Account</a>
+                    </li>
+                    <li class="d-flex align-items-center">
+                        <i class="icon icon-arrow-right"></i>
+                    </li>
+                    <li>
+                        <span class="body-small">I miei dati</span>
+                    </li>
                 </ul>
             </div>
         </div>
 
+        <!-- My Account (ONUS) -->
         <section class="tf-sp-2">
             <div class="container">
                 <div class="row">
-
+                    <!-- Sidebar -->
                     <div class="col-lg-3">
                         <div class="wrap-sidebar-account">
                             <ul class="myaccount-nav content-append">
@@ -148,22 +159,20 @@
                         </div>
                     </div>
 
+                    <!-- Content -->
                     <div class="col-lg-9">
-                        <div class="myaccount-content account-dashboard">
+                        <div class="tf-section-heading mb-4">
+                            <h3 class="heading">I miei dati</h3>
+                        </div>
 
-                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                                <div>
-                                    <h3 class="fw-semibold mb-0">I miei dati</h3>
-                                    <div class="body-small text-main-2">Gestisci i tuoi dati anagrafici e fiscali.</div>
-                                </div>
-                            </div>
+<h1>I miei dati</h1>
 
-<div style="margin-bottom:20px;">
+    <div style="margin-bottom:20px;">
         <asp:HyperLink 
             ID="hlBackMyAccount" 
             runat="server"
             NavigateUrl="myaccount.aspx"
-            CssClass="tf-btn btn-line">
+            CssClass="tf-btn-icon type-2 style-white">
             &laquo; Torna alla pagina My Account
         </asp:HyperLink>
     </div>
@@ -382,7 +391,7 @@
                     <div class="ks-edit-buttons">
                         <asp:Button ID="btnEdit" runat="server"
                             Text="Modifica dati"
-                            CssClass="tf-btn btn-line"
+                            CssClass="tf-btn-icon type-2 style-white"
                             CommandName="Edit" />
                     </div>
 
@@ -597,12 +606,12 @@
                     <div class="ks-edit-buttons">
                         <asp:Button ID="btnUpdate" runat="server"
                             Text="Salva"
-                            CssClass="tf-btn btn-line"
+                            CssClass="tf-btn-icon type-2 style-white"
                             CommandName="Update"
                             OnClientClick="ksShowSpinnerOnSubmit();" />
                         <asp:Button ID="btnCancel" runat="server"
                             Text="Annulla"
-                            CssClass="tf-btn btn-line"
+                            CssClass="tf-btn-icon type-2 style-white"
                             CommandName="Cancel" />
                     </div>
 
@@ -656,14 +665,9 @@
 
     </asp:Panel>
 
-                        </div>
                     </div>
-
                 </div>
             </div>
         </section>
-
-    </div>
-
-
+</div>
 </asp:Content>

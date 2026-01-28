@@ -94,27 +94,37 @@
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
+<div class="ks-myaccount">
 
-    
-    <div class="ks-myaccount">
 
         <!-- Breakcrumbs (ONUS) -->
         <div class="tf-sp-1 pb-0">
             <div class="container">
                 <ul class="breakcrumbs">
-                    <li><a href="Default.aspx" class="body-small link">Home</a></li>
-                    <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
-                    <li><a href="myaccount.aspx" class="body-small link">Account</a></li>
-                    <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
-                    <li><span class="body-small">Cambia password</span></li>
+                    <li>
+                        <a href="Default.aspx" class="body-small link">Home</a>
+                    </li>
+                    <li class="d-flex align-items-center">
+                        <i class="icon icon-arrow-right"></i>
+                    </li>
+                    <li>
+                        <a href="myaccount.aspx" class="body-small link">Account</a>
+                    </li>
+                    <li class="d-flex align-items-center">
+                        <i class="icon icon-arrow-right"></i>
+                    </li>
+                    <li>
+                        <span class="body-small">Cambia password</span>
+                    </li>
                 </ul>
             </div>
         </div>
 
+        <!-- My Account (ONUS) -->
         <section class="tf-sp-2">
             <div class="container">
                 <div class="row">
-
+                    <!-- Sidebar -->
                     <div class="col-lg-3">
                         <div class="wrap-sidebar-account">
                             <ul class="myaccount-nav content-append">
@@ -131,15 +141,11 @@
                         </div>
                     </div>
 
+                    <!-- Content -->
                     <div class="col-lg-9">
-                        <div class="myaccount-content account-dashboard">
-
-                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                                <div>
-                                    <h3 class="fw-semibold mb-0">Cambia password</h3>
-                                    <div class="body-small text-main-2">Aggiorna la password del tuo account.</div>
-                                </div>
-                            </div>
+                        <div class="tf-section-heading mb-4">
+                            <h3 class="heading">Cambia password</h3>
+                        </div>
 
 <!-- SPINNER DI PAGINA -->
     <asp:Panel ID="pnlLoading" runat="server" CssClass="ks-loading-panel">
@@ -149,12 +155,15 @@
 
     <!-- CONTENUTO PRINCIPALE -->
     <asp:Panel ID="pnlContent" runat="server" Style="display:none;">
+
+        <h1>Cambia password</h1>
+
         <div style="margin-bottom:20px;">
             <asp:HyperLink 
                 ID="hlBackMyAccount" 
                 runat="server"
                 NavigateUrl="myaccount.aspx"
-                CssClass="tf-btn btn-line">
+                CssClass="tf-btn-icon type-2 style-white">
                 &laquo; Torna alla pagina My Account
             </asp:HyperLink>
         </div>
@@ -166,7 +175,7 @@
             <div class="pwd-row">
                 <label for="tbPasswordAttuale">Password attuale</label>
                 <asp:TextBox ID="tbPasswordAttuale" runat="server"
-                             CssClass="tf-input"
+                             CssClass="form-control"
                              TextMode="Password" />
                 <asp:RequiredFieldValidator ID="rfvOld"
                     runat="server"
@@ -179,7 +188,7 @@
             <div class="pwd-row">
                 <label for="tbPasswordNuova">Nuova password</label>
                 <asp:TextBox ID="tbPasswordNuova" runat="server"
-                             CssClass="tf-input"
+                             CssClass="form-control"
                              TextMode="Password" />
                 <asp:RequiredFieldValidator ID="rfvNew"
                     runat="server"
@@ -192,7 +201,7 @@
             <div class="pwd-row">
                 <label for="tbPasswordConferma">Conferma nuova password</label>
                 <asp:TextBox ID="tbPasswordConferma" runat="server"
-                             CssClass="tf-input"
+                             CssClass="form-control"
                              TextMode="Password" />
                 <asp:RequiredFieldValidator ID="rfvNew2"
                     runat="server"
@@ -211,7 +220,7 @@
 
             <div class="pwd-row">
                 <asp:Button ID="btnSalva" runat="server"
-                            CssClass="tf-btn btn-fill w-100"
+                            CssClass="btn btn-primary"
                             Text="Aggiorna password"
                             OnClientClick="ksShowSpinnerOnSubmit();" />
             </div>
@@ -223,14 +232,9 @@
 
     </asp:Panel>
 
-                        </div>
                     </div>
-
                 </div>
             </div>
         </section>
-
-    </div>
-
-
+</div>
 </asp:Content>
