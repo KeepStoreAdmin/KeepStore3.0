@@ -29,8 +29,6 @@ End Function
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         KeepStoreSecurity.AddSecurityHeaders(Response)
-        ' Analytics GET logging (non impatta la logica filtri)
-        KeepStoreSecurity.LogGetAnalytics(Request, "wishlist")
         KeepStoreSecurity.RequireHttps(Request, Response, enableHsts:=True)
 
         If Session("UtentiId") < 1 Then
