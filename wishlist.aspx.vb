@@ -98,6 +98,20 @@ End Function
 
     Public Sub CaricaArticoli()
         'Utile per visualizzare i prezzi con iva dell'utente
+
+        'La SelectCommand che viene assegnata qui sotto usa parametri (@IvaUtente, @id, @listino).
+        'ATTENZIONE: SeoBuilder.FindControlRecursive(...) puo' innescare il DataBind della GridView/SqlDataSource.
+        'Se i parametri non sono gia' definiti, MySQL solleva: "Parameter '@IvaUtente' must be defined".
+        Dim ivaUtenteStr As String = Convert.ToString(Session("Iva_Utente"))
+        If String.IsNullOrWhiteSpace(ivaUtenteStr) Then ivaUtenteStr = "0"
+        'MySQL accetta il punto come separatore decimale: uniformo eventuale virgola.
+        ivaUtenteStr = ivaUtenteStr.Replace(",", ".")
+
+        Dim idUtenteStr As String = Convert.ToString(Session("UtentiId"))
+        If String.IsNullOrWhiteSpace(idUtenteStr) Then idUtenteStr = "0"
+
+        Dim listinoStr As String = Convert.ToString(Session("listino"))
+        If String.IsNullOrWhiteSpace(listinoStr) Then listinoStr = "0"
         Dim Sqlstring As String = "SELECT vsuperarticoli.id AS id, vsuperarticoli.Codice AS Codice, vsuperarticoli.Ean AS Ean, vsuperarticoli.Descrizione1 AS Descrizione1, vsuperarticoli.Descrizione2 AS Descrizione2, vsuperarticoli.DescrizioneLunga AS DescrizioneLunga, vsuperarticoli.UmId AS UmId, vsuperarticoli.Vetrina AS Vestrina, vsuperarticoli.MarcheId AS MarcheId, vsuperarticoli.MarcheDescrizione AS MarcheDescrizione, vsuperarticoli.Marche_img AS Marche_img, vsuperarticoli.MarcheOrdinamento AS MarcheOrdinamento, vsuperarticoli.SettoriId AS SettoriId, vsuperarticoli.SettoriDescrizione AS SettoriDescrizione, vsuperarticoli.SettoriOrdinamento AS SettoriOrdinamento, vsuperarticoli.CategorieId AS CategorieId, vsuperarticoli.CategorieDescrizione AS CategorieDescrizione, vsuperarticoli.CategorieOrdinamento AS CategorieOrdinamento, vsuperarticoli.TipologieId AS TipologieId, vsuperarticoli.TipologieDescrizione AS TipologieDescrizione, vsuperarticoli.TipologieOrdinamento AS TipologieOrdinamento, vsuperarticoli.GruppiId AS GruppiId, vsuperarticoli.GruppiDescrizione AS GruppiDescrizione, vsuperarticoli.GruppiOrdinamento AS GruppiOrdinamento, vsuperarticoli.SottoGruppiId AS SottoGruppiId, vsuperarticoli.SottogruppiDescrizione AS SottogruppiDescrizione, vsuperarticoli.SottogruppiOrdinamento AS SottogruppiOrdinamento, vsuperarticoli.ArticoliIva AS ArticoliId, vsuperarticoli.Peso AS Peso, vsuperarticoli.ArticoliPrezzoAcquisto AS ArticoliPrezzoAcquisto, vsuperarticoli.ListinoUfficiale AS ListinoUfficiale, vsuperarticoli.Img1 AS Img1, vsuperarticoli.Img2 AS Img2, vsuperarticoli.Img3 AS Img3, vsuperarticoli.Img4 AS Img4	, vsuperarticoli.LinkProduttore AS LinkProduttore, vsuperarticoli.Brochure AS Brochure, vsuperarticoli.DataCreazione AS DataCreazione, vsuperarticoli.visite AS Visite, vsuperarticoli.Export AS Export, vsuperarticoli.Giacenza AS Giacenza, vsuperarticoli.InOrdine AS InOrdine, vsuperarticoli.Disponibilita AS Disponibilita, vsuperarticoli.Impegnata AS Impegnata, vsuperarticoli.ScortaMinima AS ScortaMinima, vsuperarticoli.ArticoliListiniId AS ArticoliListiniId, vsuperarticoli.NListino AS NListino, vsuperarticoli.PrezzoAcquisto AS PrezzoAcquisto, vsuperarticoli.Ricarico AS Ricarico, vsuperarticoli.sconto1 AS sconto1, vsuperarticoli.sconto2 AS sconto2	, vsuperarticoli.iva AS iva, vsuperarticoli.Prezzo AS Prezzo, IF(@IvaUtente>0,((vsuperarticoli.Prezzo)*((@IvaUtente/100)+1)),vsuperarticoli.PrezzoIvato) AS PrezzoIvato, vsuperarticoli.SpedizioneGratis_Listini AS SpedizioneGratis_Listini, vsuperarticoli.SpedizioneGratis_Data_Inizio AS SpedizioneGratis_Data_Inizio, vsuperarticoli.SpedizioneGratis_Data_Fine AS SpedizioneGratis_Data_Fine, vsuperarticoli.OfferteID AS OfferteID, vsuperarticoli.OfferteDettagliId AS OfferteDettagliId, vsuperarticoli.OfferteDescrizione AS OfferteDescrizione, vsuperarticoli.OfferteImmagine AS OfferteImmagine, vsuperarticoli.OfferteDataInizio AS OfferteDataInizio, vsuperarticoli.OfferteDataFine AS OfferteDataFine	, vsuperarticoli.OfferteDaListino AS OfferteDaListino, vsuperarticoli.OfferteAListino AS OfferteAListino, vsuperarticoli.OfferteQntMinima AS OfferteQntMinima, vsuperarticoli.OfferteMultipli AS OfferteMultipli, vsuperarticoli.OffertePrezzo AS OffertePrezzo, vsuperarticoli.InOfferta AS InOfferta, vsuperarticoli.PrezzoPromo AS PrezzoPromo, IF(@IvaUtente>0,((vsuperarticoli.PrezzoPromo)*((@IvaUtente/100)+1)),vsuperarticoli.PrezzoPromoIvato) AS PrezzoPromoIvato, wishlist.id_utente, taglie.descrizione as taglia, colori.descrizione as colore, varticoli_iva.valore as ValoreIva FROM wishlist"
         Sqlstring = Sqlstring + " INNER JOIN vsuperarticoli ON (wishlist.id_articolo = vsuperarticoli.id)"
 		Sqlstring = Sqlstring + " LEFT OUTER JOIN articoli_tagliecolori ON wishlist.TCid = articoli_tagliecolori.id"
@@ -105,6 +119,13 @@ End Function
         Sqlstring = Sqlstring + " LEFT OUTER JOIN colori ON articoli_tagliecolori.coloreid = colori.id"
 		Sqlstring = Sqlstring + " LEFT OUTER JOIN varticoli_iva ON varticoli_iva.ArticoliId = wishlist.id_articolo"
         Sqlstring = Sqlstring + " WHERE (wishlist.id_utente=@id) AND (NListino=@listino) GROUP BY id"
+
+        'Definisco i parametri PRIMA di qualunque FindControl/DataBind.
+        sdsArticoli.SelectParameters.Clear()
+        sdsArticoli.SelectParameters.Add("@IvaUtente", ivaUtenteStr)
+        sdsArticoli.SelectParameters.Add("@id", idUtenteStr)
+        sdsArticoli.SelectParameters.Add("@listino", listinoStr)
+
         sdsArticoli.SelectCommand = Sqlstring
         Dim sdsPromo As SqlDataSource = TryCast(SeoBuilder.FindControlRecursive(Me, "SQLDATA_Promo"), SqlDataSource)
         If sdsPromo IsNot Nothing Then
