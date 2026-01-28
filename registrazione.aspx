@@ -1,6 +1,64 @@
 ﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="registrazione.aspx.vb" Inherits="registrazione" %>
 
+
+<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
+    Registrazione
+</asp:Content>
+
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <style>
+        /* Registrazione - wrapper stile Onsus (senza toccare la logica VB) */
+        .ks-auth-register .ks-register-card {
+            padding: 28px;
+            border: 1px solid rgba(0,0,0,.08);
+            border-radius: 12px;
+            background: #fff;
+        }
+
+        .ks-auth-register h1 {
+            margin-bottom: 18px;
+        }
+
+        /* normalizza un po' le tabelle legacy senza riscriverle */
+        .ks-auth-register table {
+            width: 100%;
+        }
+
+        .ks-auth-register table[style*="border-style:solid"] {
+            border-color: rgba(0,0,0,.08) !important;
+            border-width: 1px !important;
+            background-color: #fff !important;
+        }
+
+        /* allinea l'aspetto dei campi ai form Onsus/Bootstrap */
+        .ks-auth-register input[type="text"],
+        .ks-auth-register input[type="password"],
+        .ks-auth-register input[type="email"],
+        .ks-auth-register select,
+        .ks-auth-register textarea {
+            border-radius: 8px;
+        }
+    </style>
+</asp:Content>
+
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+
+    <div class="tf-breadcrumb">
+        <div class="container">
+            <ul class="breadcrumb-list">
+                <li><a href="<%= ResolveUrl("~/Default.aspx") %>" class="text">Home</a></li>
+                <li><a href="login.aspx" class="text">Accedi</a></li>
+                <li><span class="text">Registrazione</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <section class="flat-spacing-2 ks-auth-register">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-xl-10 col-lg-11">
+                    <div class="ks-register-card">
+
 <script language="vbscript" type="text/vbscript">
 
 sub ctl00_cph_tRegistrazione_onkeydown()
@@ -864,5 +922,11 @@ setInputFilter(document.getElementById("hexTextBox"), function(value) {
     </tr>
 </table>
 
-</asp:Content>
 
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</asp:Content>

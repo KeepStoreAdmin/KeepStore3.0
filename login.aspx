@@ -6,105 +6,113 @@
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
     <style>
-        #tabellaLogin {
-            margin-top: 30px;
+        /* Login - layout Onsus */
+        .ks-auth-card {
+            padding: 28px;
+            border: 1px solid rgba(0,0,0,.08);
+            border-radius: 12px;
+            background: #fff;
+        }
+
+        .ks-auth-card .validator,
+        .ks-auth-card .validator span,
+        .ks-auth-card .validator div {
+            display: block;
+            margin-top: 6px;
+        }
+
+        .ks-auth-card .validator,
+        .ks-auth-card .validator span {
+            color: #dc3545;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .ks-auth-links a {
+            display: inline-block;
+            margin-top: 6px;
         }
     </style>
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
-    <h1 align="center">Accedi</h1>
-
-    <div class="ks-table" id="tabellaLogin">
-
-        <!-- USERNAME -->
-        <div class="ks-sector" style="margin-top:10px">
-            <div class="ks-col">
-                <div class="ks-row login-content login-label">
-                    <asp:Label ID="lblUsername" runat="server" Text="USERNAME:" Visible="True"></asp:Label>
-                </div>
-            </div>
+    <div class="tf-breadcrumb">
+        <div class="container">
+            <ul class="breadcrumb-list">
+                <li><a href="<%= ResolveUrl("~/Default.aspx") %>" class="text">Home</a></li>
+                <li><span class="text">Accedi</span></li>
+            </ul>
         </div>
-
-        <div class="ks-sector-no-flex">
-            <div class="ks-col">
-                <div class="ks-row login-content" style="text-align:right">
-                    <i id="login-user-icon" class="fa fa-user-circle fa-3x"></i>
-                </div>
-                <div class="ks-row login-content">
-                </div>
-            </div>
-            <div class="ks-col">
-                <div class="ks-row login-content">
-                    <asp:TextBox ID="tbUsername" CssClass="form-control" AutoPostBack="false" runat="server" Visible="True"></asp:TextBox>
-                </div>
-                <div class="ks-row login-content validator">
-                    <asp:RequiredFieldValidator ID="RequiredFieldValidatorUser" runat="server"
-                        ControlToValidate="tbUsername"
-                        Display="Dynamic"
-                        ErrorMessage="Inserire Username"></asp:RequiredFieldValidator>
-                </div>
-            </div>
-        </div>
-
-        <!-- PASSWORD -->
-        <div class="ks-sector" style="margin-top:10px">
-            <div class="ks-col">
-                <div class="ks-row login-content login-label">
-                    <asp:Label ID="lblPassword" runat="server" Text="PASSWORD:" Visible="True"></asp:Label>
-                </div>
-            </div>
-        </div>
-
-        <div class="ks-sector-no-flex">
-            <div class="ks-col">
-                <div class="ks-row login-content" style="text-align:right">
-                    <i id="login-pass-icon" class="fa fa-key fa-3x"></i>
-                </div>
-                <div class="ks-row login-content">
-                </div>
-            </div>
-            <div class="ks-col">
-                <div class="ks-row login-content">
-                    <asp:TextBox ID="tbPassword" CssClass="form-control" AutoPostBack="false"
-                        TextMode="Password" runat="server" Visible="True"></asp:TextBox>
-                </div>
-                <div class="ks-row login-content validator">
-                    <asp:RequiredFieldValidator ID="RequiredFieldValidatorPass" runat="server"
-                        ControlToValidate="tbPassword"
-                        Display="Dynamic"
-                        ErrorMessage="Inserire Password"></asp:RequiredFieldValidator>
-                </div>
-            </div>
-        </div>
-
-        <!-- BOTTONI + LINK -->
-        <div class="ks-sector" style="margin-top:20px">
-            <div class="ks-col">
-                <div class="ks-row login-content" style="text-align:center">
-                    <asp:Button 
-                        ID="btnLogin" 
-                        runat="server" 
-                        Text="Login"
-                        CssClass="tf-btn-icon type-2 style-white" 
-                        OnClick="btnLogin_Click"
-                        CausesValidation="True"
-                        Visible="True" />
-                </div>
-                <div class="ks-row login-content" style="text-align:center">
-                    <asp:Label ID="lblLogin" runat="server" Font-Size="8pt"
-                        ForeColor="Red" Font-Bold="True" EnableViewState="False"></asp:Label>
-                </div>
-                <div class="ks-row login-content" style="text-align:center">
-                    <a id="hlRegistrati" href="registrazione.aspx" style="font-weight:bold;">REGISTRATI!</a>
-                </div>
-                <div class="ks-row login-content" style="text-align:center">
-                    <a id="hlRemind" href="remind.aspx">PASSWORD PERSA?</a>
-                </div>
-            </div>
-        </div>
-
     </div>
+
+    <section class="flat-spacing-2">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-xl-5 col-lg-6 col-md-8">
+                    <div class="ks-auth-card">
+
+                        <h5 class="title fw-semibold mb-4">Accedi</h5>
+
+                        <div class="form-log">
+                            <div class="form-content">
+
+                                <fieldset>
+                                    <label class="fw-semibold body-md-2">
+                                        <asp:Label ID="lblUsername" runat="server" Text="Username *" Visible="True"></asp:Label>
+                                    </label>
+                                    <asp:TextBox ID="tbUsername" CssClass="form-control" AutoPostBack="false" runat="server" Visible="True"></asp:TextBox>
+                                    <div class="validator">
+                                        <asp:RequiredFieldValidator ID="RequiredFieldValidatorUser" runat="server"
+                                            ControlToValidate="tbUsername"
+                                            Display="Dynamic"
+                                            ErrorMessage="Inserire Username"></asp:RequiredFieldValidator>
+                                    </div>
+                                </fieldset>
+
+                                <fieldset>
+                                    <label class="fw-semibold body-md-2">
+                                        <asp:Label ID="lblPassword" runat="server" Text="Password *" Visible="True"></asp:Label>
+                                    </label>
+                                    <asp:TextBox ID="tbPassword" CssClass="form-control" AutoPostBack="false" TextMode="Password" runat="server" Visible="True"></asp:TextBox>
+                                    <div class="validator">
+                                        <asp:RequiredFieldValidator ID="RequiredFieldValidatorPass" runat="server"
+                                            ControlToValidate="tbPassword"
+                                            Display="Dynamic"
+                                            ErrorMessage="Inserire Password"></asp:RequiredFieldValidator>
+                                    </div>
+                                </fieldset>
+
+                                <div class="ks-auth-links text-end">
+                                    <a id="hlRemind" href="remind.aspx" class="link body-text-3">Password persa?</a>
+                                </div>
+
+                            </div>
+
+                            <asp:Button
+                                ID="btnLogin"
+                                runat="server"
+                                Text="Login"
+                                CssClass="tf-btn w-100 text-white"
+                                OnClick="btnLogin_Click"
+                                CausesValidation="True"
+                                Visible="True" />
+
+                            <div class="mt-3 text-center">
+                                <asp:Label ID="lblLogin" runat="server" Font-Size="8pt"
+                                    ForeColor="Red" Font-Bold="True" EnableViewState="False"></asp:Label>
+                            </div>
+
+                            <p class="body-text-3 text-center mt-3 mb-0">
+                                Non hai un account?
+                                <a id="hlRegistrati" href="registrazione.aspx" class="text-primary">Registrati</a>
+                            </p>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
 </asp:Content>
