@@ -2,9 +2,116 @@ Imports System.Data
 Imports System
 Imports System.Text
 Imports System.Web
+Imports MySql.Data.MySqlClient
+Imports System.Configuration
 
 Partial Class documentidettaglio
     Inherits System.Web.UI.Page
+
+    Private _fallbackTipoDocumentoId As Integer = -1
+
+    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        ' Richiede login
+        If Session("LoginId") Is Nothing OrElse Convert.ToString(Session("LoginId")) = "" Then
+            Response.Redirect("accesonegato.aspx")
+            Return
+        End If
+
+        Dim idDocumento As Integer = -1
+        If Not Integer.TryParse(Convert.ToString(Request.QueryString("id")), idDocumento) OrElse idDocumento <= 0 Then
+            Response.Redirect("documenti.aspx?t=" & GetFallbackTipoDocumentoId().ToString(), True)
+            Return
+        End If
+
+        If Not IsPostBack Then
+            Dim tipoDocId As Integer = -1
+            If Not DocumentoAppartieneAUtente(idDocumento, tipoDocId) Then
+                Response.Redirect("documenti.aspx?t=" & GetFallbackTipoDocumentoId().ToString(), True)
+                Return
+            End If
+
+            ' Breadcrumb: torna alla tipologia corretta
+            If tipoDocId > 0 Then
+                hlDocumenti.NavigateUrl = "documenti.aspx?t=" & tipoDocId.ToString()
+            Else
+                hlDocumenti.NavigateUrl = "documenti.aspx?t=" & GetFallbackTipoDocumentoId().ToString()
+            End If
+        End If
+    End Sub
+
+    Private Function DocumentoAppartieneAUtente(ByVal idDocumento As Integer, ByRef tipoDocId As Integer) As Boolean
+        tipoDocId = -1
+        Try
+            Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+            Using c As New MySqlConnection(cs)
+                Using cmd As New MySqlCommand("SELECT TipoDocumentiId FROM vdocumenti WHERE Id=@id AND UtentiId=@uid LIMIT 1", c)
+                    cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = idDocumento
+                    cmd.Parameters.Add("@uid", MySqlDbType.Int32).Value = Convert.ToInt32(Session("UtentiID"))
+                    c.Open()
+                    Dim o As Object = cmd.ExecuteScalar()
+                    If o Is Nothing OrElse Convert.IsDBNull(o) Then Return False
+                    Integer.TryParse(Convert.ToString(o), tipoDocId)
+                    Return True
+                End Using
+            End Using
+        Catch
+            Return False
+        End Try
+    End Function
+
+    Private Function GetFallbackTipoDocumentoId() As Integer
+        If _fallbackTipoDocumentoId > 0 Then Return _fallbackTipoDocumentoId
+
+        If TipoDocumentoExists(4) Then
+            _fallbackTipoDocumentoId = 4
+            Return _fallbackTipoDocumentoId
+        End If
+
+        Dim first As Integer = GetFirstEnabledTipoDocumentoId()
+        If first > 0 Then
+            _fallbackTipoDocumentoId = first
+            Return _fallbackTipoDocumentoId
+        End If
+
+        _fallbackTipoDocumentoId = 4
+        Return _fallbackTipoDocumentoId
+    End Function
+
+    Private Function TipoDocumentoExists(ByVal tipoId As Integer) As Boolean
+        If tipoId <= 0 Then Return False
+        Try
+            Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+            Using c As New MySqlConnection(cs)
+                Using cmd As New MySqlCommand("SELECT 1 FROM tipodocumenti WHERE id=@id AND Web=1 AND Abilitato=1 LIMIT 1", c)
+                    cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = tipoId
+                    c.Open()
+                    Dim o As Object = cmd.ExecuteScalar()
+                    Return (o IsNot Nothing AndAlso Not Convert.IsDBNull(o))
+                End Using
+            End Using
+        Catch
+            Return False
+        End Try
+    End Function
+
+    Private Function GetFirstEnabledTipoDocumentoId() As Integer
+        Try
+            Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+            Using c As New MySqlConnection(cs)
+                Using cmd As New MySqlCommand("SELECT id FROM tipodocumenti WHERE Web=1 AND Abilitato=1 ORDER BY Ordinamento, Descrizione LIMIT 1", c)
+                    c.Open()
+                    Dim o As Object = cmd.ExecuteScalar()
+                    If o Is Nothing OrElse Convert.IsDBNull(o) Then Return -1
+                    Dim id As Integer = 0
+                    If Integer.TryParse(Convert.ToString(o), id) AndAlso id > 0 Then Return id
+                End Using
+            End Using
+        Catch
+            ' ignore
+        End Try
+        Return -1
+    End Function
+
 
     ' Null-safe: limita testo a lunghezza massima.
     Protected Function AdattaTesto(ByVal testo As Object, ByVal lunghezza As Integer) As String

@@ -58,7 +58,7 @@
                     <i class="icon icon-arrow-right"></i>
                 </li>
                 <li>
-                    <a href="documenti.aspx" class="body-small link">I miei documenti</a>
+                    <asp:HyperLink ID="hlDocumenti" runat="server" CssClass="body-small link" NavigateUrl="documenti.aspx?t=4">I miei documenti</asp:HyperLink>
                 </li>
                 <li class="d-flex align-items-center">
                     <i class="icon icon-arrow-right"></i>

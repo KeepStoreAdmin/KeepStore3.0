@@ -1,4 +1,4 @@
-﻿Imports MySql.Data.MySqlClient
+Imports MySql.Data.MySqlClient
 Imports System.Data
 Imports System.Net.Mail
 Imports System.Configuration
@@ -10,6 +10,75 @@ Partial Class documenti
     Dim strSql As String = ""
 
     Public nDocTrovati As String = "0"
+
+
+    '==============================================================
+    ' Safe tipo documento (QueryString t)
+    ' - se manca o è invalido: redirect a t=4 (se esiste), altrimenti primo tipo disponibile
+    '==============================================================
+    Private _safeTipoDocumentoId As Integer = -1
+
+    Private ReadOnly Property SafeTipoDocumentoId As Integer
+        Get
+            If _safeTipoDocumentoId > 0 Then Return _safeTipoDocumentoId
+            _safeTipoDocumentoId = ComputeSafeTipoDocumentoId()
+            Return _safeTipoDocumentoId
+        End Get
+    End Property
+
+    Private Function ComputeSafeTipoDocumentoId() As Integer
+        Dim requested As Integer = -1
+        If Integer.TryParse(Convert.ToString(Request.QueryString("t")), requested) Then
+            If TipoDocumentoExists(requested) Then
+                Return requested
+            End If
+        End If
+
+        ' Preferisci 4 (Ordini) se disponibile
+        If TipoDocumentoExists(4) Then
+            Return 4
+        End If
+
+        Dim fallback As Integer = GetFirstEnabledTipoDocumentoId()
+        If fallback > 0 Then Return fallback
+
+        Return 4
+    End Function
+
+    Private Function TipoDocumentoExists(ByVal tipoId As Integer) As Boolean
+        If tipoId <= 0 Then Return False
+        Try
+            Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+            Using c As New MySqlConnection(cs)
+                Using cmd As New MySqlCommand("SELECT 1 FROM tipodocumenti WHERE id=@id AND Web=1 AND Abilitato=1 LIMIT 1", c)
+                    cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = tipoId
+                    c.Open()
+                    Dim o As Object = cmd.ExecuteScalar()
+                    Return (o IsNot Nothing AndAlso Not Convert.IsDBNull(o))
+                End Using
+            End Using
+        Catch
+            Return False
+        End Try
+    End Function
+
+    Private Function GetFirstEnabledTipoDocumentoId() As Integer
+        Try
+            Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+            Using c As New MySqlConnection(cs)
+                Using cmd As New MySqlCommand("SELECT id FROM tipodocumenti WHERE Web=1 AND Abilitato=1 ORDER BY Ordinamento, Descrizione LIMIT 1", c)
+                    c.Open()
+                    Dim o As Object = cmd.ExecuteScalar()
+                    If o Is Nothing OrElse Convert.IsDBNull(o) Then Return -1
+                    Dim id As Integer = 0
+                    If Integer.TryParse(Convert.ToString(o), id) AndAlso id > 0 Then Return id
+                    Return -1
+                End Using
+            End Using
+        Catch
+            Return -1
+        End Try
+    End Function
 
     '==============================================================
     ' PAGE LOAD: protezione accesso
@@ -27,7 +96,19 @@ Partial Class documenti
             Exit Sub
         End If
 
-        ' Eventuale logica iniziale (se ti serve in futuro)
+        
+        ' Hardening: forza querystring t valida (preferisci t=4)
+        Dim requestedT As Integer = -1
+        Dim hasT As Boolean = Integer.TryParse(Convert.ToString(Request.QueryString("t")), requestedT)
+        Dim safeT As Integer = SafeTipoDocumentoId
+
+        If Not IsPostBack Then
+            If (Not hasT) OrElse (requestedT <> safeT) Then
+                Response.Redirect("documenti.aspx?t=" & safeT.ToString(), True)
+                Exit Sub
+            End If
+        End If
+' Eventuale logica iniziale (se ti serve in futuro)
         'If Not IsPostBack Then
         '    ...
         'End If
@@ -66,7 +147,7 @@ Partial Class documenti
     '==============================================================
     Sub preRenderClick(sender As Object, e As EventArgs)
         If Page.IsPostBack = False Then
-            Dim t1 As String = Request.QueryString("t")
+            Dim t1 As String = SafeTipoDocumentoId.ToString()
 
             Dim link As LinkButton = CType(sender, LinkButton)
             Dim t As String = link.Attributes("tipoDocumento")
@@ -82,7 +163,11 @@ Partial Class documenti
         Dim link As LinkButton = CType(sender, LinkButton)
         Dim t As String = link.Attributes("tipoDocumento")
 
-        Response.Redirect("documenti.aspx?t=" & t)
+        Dim tipo As Integer = -1
+        If Not Integer.TryParse(Convert.ToString(t), tipo) Then tipo = SafeTipoDocumentoId
+        If Not TipoDocumentoExists(tipo) Then tipo = SafeTipoDocumentoId
+
+        Response.Redirect("documenti.aspx?t=" & tipo.ToString())
     End Sub
 
     Sub aggiungiStato(sender As Object, e As EventArgs)
@@ -128,57 +213,76 @@ Partial Class documenti
     '==============================================================
     ' APPLICA FILTRI (date + stato) → aggiorna sdsDocumenti
     '==============================================================
-    Sub applicaFiltri(sender As Object, e As EventArgs)
+    
+    Private Function TryParseDDMMYYYY(ByVal raw As String, ByRef dt As DateTime) As Boolean
+        If raw Is Nothing Then Return False
+        raw = raw.Trim()
+        If raw = "" Then Return False
+        Return DateTime.TryParseExact(raw, "dd-MM-yyyy", System.Globalization.CultureInfo.GetCultureInfo("it-IT"), System.Globalization.DateTimeStyles.None, dt)
+    End Function
 
-        Dim idStato As Integer = filtroStati.SelectedValue
-        Dim inizio As Date
-        Dim fine As Date
+Sub applicaFiltri(sender As Object, e As EventArgs)
 
-        Try
-            inizio = Date.Parse(dataInizio.Text)
-        Catch
-            dataInizio.Text = ""
-            inizio = Date.MinValue
-        End Try
+        Dim tipoDocumentoId As Integer = SafeTipoDocumentoId
 
-        Try
-            fine = Date.Parse(dataFine.Text)
-        Catch
-            fine = Date.Now
-            dataFine.Text = Format(fine, "dd-MM-yyyy")
-        End Try
+        ' Base query (con filtri aggiunti SOLO se validi)
+        Dim strSql As String = "SELECT `Id`, `DataDocumento`, `NumeroDoc`, `DocumentoStatiId`, `StatiId`, `Stati`, `TipoDocumento`, `TipoDoc`, `Token`, `TipoDocumentoAvanzato`, `TipoDocAv`, `IdDocumentoAvanzato`, `Note`, `DocumentoStatoAvanzatoId`, `StatoAvanzato`, `Magazzino` FROM `vdocumenti` WHERE ((`UtentiId`=?UtentiId) AND (`TipoDocumentiId`=?TipoDocumentiId))"
 
-        Dim condizione As String = ""
-
-        If idStato > -1 Then
-            ' uso ?idStato perché il provider è MySql (stessa sintassi che usi già per ?UtentiId)
-            condizione = " AND (StatiId = ?idStato)"
+        ' Stato
+        Dim idStato As Integer = -1
+        If filtroStati IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(filtroStati.SelectedValue), idStato) AndAlso idStato > -1 Then
+            strSql &= " AND (`StatiId`=?idStato)"
+        Else
+            idStato = -1
         End If
 
-        sdsDocumenti.SelectCommand =
-            "SELECT * FROM (`vdocumenti` " &
-            "LEFT JOIN `utenti` ON (`vdocumenti`.`UtentiId` = `utenti`.`Id`) " &
-            "LEFT JOIN (SELECT id, Link_Tracking FROM `vettori`) AS vettori ON (`vdocumenti`.`VettoriId` = `vettori`.`id`) " &
-            ") LEFT JOIN pagamentitipo ON vdocumenti.pagamentiTipoId = pagamentiTipo.id " &
-            "WHERE ( (UtentiId = ?UtentiId) " &
-            "AND (TipoDocumentiId = ?TipoDocumentiId) " &
-            "AND (DataDocumento >= '" & Format(inizio, "yyyy-MM-dd") & "') " &
-            "AND (DataDocumento <= '" & Format(fine, "yyyy-MM-dd") & "') " &
-            condizione & " ) " &
-            "ORDER BY vdocumenti.ID DESC"
+        ' Date range (formato dd-MM-yyyy)
+        Dim hasInizio As Boolean = False
+        Dim inizio As DateTime
+        If dataInizio IsNot Nothing Then
+            Dim rawInizio As String = Convert.ToString(dataInizio.Text)
+            If TryParseDDMMYYYY(rawInizio, inizio) Then
+                hasInizio = True
+            Else
+                dataInizio.Text = ""
+            End If
+        End If
 
-        ' RIMETTO TUTTI I PARAMETRI A MANO (li avevi cancellati con Clear)
+        Dim fine As DateTime = DateTime.Now
+        If dataFine IsNot Nothing Then
+            Dim rawFine As String = Convert.ToString(dataFine.Text)
+            Dim tmpFine As DateTime
+            If TryParseDDMMYYYY(rawFine, tmpFine) Then
+                fine = tmpFine
+            Else
+                fine = DateTime.Now
+            End If
+            dataFine.Text = fine.ToString("dd-MM-yyyy")
+        End If
+
+        If hasInizio Then
+            strSql &= " AND (`DataDocumento` >= ?DataInizio)"
+        End If
+        strSql &= " AND (`DataDocumento` <= ?DataFine)"
+
+        strSql &= " ORDER BY `DataDocumento` DESC, `NumeroDoc` DESC"
+
+        sdsDocumenti.SelectCommand = strSql
+
         sdsDocumenti.SelectParameters.Clear()
         sdsDocumenti.SelectParameters.Add("UtentiId", TypeCode.Int32, Convert.ToString(Session("UtentiID")))
-        sdsDocumenti.SelectParameters.Add("TipoDocumentiId", TypeCode.Int16, Convert.ToString(Request.QueryString("t")))
+        sdsDocumenti.SelectParameters.Add("TipoDocumentiId", TypeCode.Int16, tipoDocumentoId.ToString())
+
         If idStato > -1 Then
-            sdsDocumenti.SelectParameters.Add("idStato", TypeCode.Int32, idStato.ToString())
+            sdsDocumenti.SelectParameters.Add("idStato", TypeCode.Int16, idStato.ToString())
         End If
+        If hasInizio Then
+            sdsDocumenti.SelectParameters.Add("DataInizio", TypeCode.DateTime, inizio.ToString("yyyy-MM-dd"))
+        End If
+        sdsDocumenti.SelectParameters.Add("DataFine", TypeCode.DateTime, fine.ToString("yyyy-MM-dd"))
 
-        Session("filtroDocumentoDataInizio") = dataInizio.Text
-        Session("filtroDocumentoDataFine") = dataFine.Text
-
-        rTipo.DataBind()
+        GridView1.DataBind()
+        nDocTrovati = GridView1.Rows.Count.ToString()
 
     End Sub
 
@@ -220,7 +324,7 @@ Partial Class documenti
             End If
 
             ' Torno sempre alla pagina documenti, con t invariato
-            Response.Redirect("documenti.aspx?t=" & Request.QueryString("t"))
+            Response.Redirect("documenti.aspx?t=" & SafeTipoDocumentoId.ToString())
         End Try
 
     End Sub
@@ -263,7 +367,7 @@ Partial Class documenti
                     conn.Dispose()
                 End If
 
-                Response.Redirect("documenti.aspx")
+                Response.Redirect("documenti.aspx?t=" & SafeTipoDocumentoId.ToString())
             End Try
         End If
     End Sub
