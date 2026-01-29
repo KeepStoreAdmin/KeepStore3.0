@@ -114,6 +114,16 @@ Private Sub ApplyGlobalSeoPolicy()
             End Try
         End Try
 
+        ' Hardening: evita caching su pagine non-SEO / transazionali (possono contenere dati personali)
+        Try
+            Response.Cache.SetCacheability(HttpCacheability.NoCache)
+            Response.Cache.SetNoStore()
+            Response.Cache.SetRevalidation(HttpCacheRevalidation.AllCaches)
+            Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1))
+        Catch
+        End Try
+
+
         ' Canonical: senza querystring (evita duplicati su pagine transazionali)
         Dim canonicalUrl As String = "https://" & Request.Url.Authority & path
 
@@ -246,6 +256,22 @@ Dim IvaTipo As Integer
         conn2.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
         cmd.Connection = conn
 
+
+
+        ' ============================================================
+        ' STEP-Sec: Anti-CSRF (ViewStateUserKey)
+        ' - Lega il ViewState alla sessione per ridurre CSRF/replay cross-user
+        ' - Fail-safe: non blocca mai la pagina
+        ' ============================================================
+        Try
+            If Me.Page IsNot Nothing AndAlso Me.Session IsNot Nothing Then
+                Dim sid As String = Convert.ToString(Me.Session.SessionID)
+                If Not String.IsNullOrEmpty(sid) Then
+                    Me.Page.ViewStateUserKey = sid
+                End If
+            End If
+        Catch
+        End Try
         LeggiAzienda()
         SettaCatalogo()
 
