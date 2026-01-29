@@ -338,13 +338,26 @@ Public NotInheritable Class SeoBuilder
     Private Shared Function FindControlRecursiveInternal(ByVal root As Control, ByVal id As String) As Control
         If root Is Nothing Then Return Nothing
 
-        Dim direct As Control = root.FindControl(id)
-        If direct IsNot Nothing Then Return direct
+        ' IMPORTANT:
+        ' Evitiamo root.FindControl(id) perché su controlli databound (GridView, Repeater, DataList, ecc.)
+        ' può forzare EnsureChildControls/DataBind ed eseguire query premature (parametri non ancora impostati).
+        ' Qui la ricerca è intenzionalmente "side-effect free".
+        Try
+            If Not String.IsNullOrEmpty(root.ID) AndAlso String.Equals(root.ID, id, StringComparison.Ordinal) Then
+                Return root
+            End If
+        Catch
+            ' ignore
+        End Try
 
-        For Each child As Control In root.Controls
-            Dim found As Control = FindControlRecursiveInternal(child, id)
-            If found IsNot Nothing Then Return found
-        Next
+        Try
+            For Each child As Control In root.Controls
+                Dim found As Control = FindControlRecursiveInternal(child, id)
+                If found IsNot Nothing Then Return found
+            Next
+        Catch
+            ' ignore
+        End Try
 
         Return Nothing
     End Function
