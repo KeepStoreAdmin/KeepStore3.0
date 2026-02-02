@@ -1,15 +1,14 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" %>
-<%@ OutputCache Location="None" NoStore="true" Duration="0" VaryByParam="None" %>
 
 <script runat="server">
     ' ============================================================
     ' Alias page (hardening):
-    ' - Alcuni template/account puntano a /pay_your_orders.aspx
+    ' - Alcuni link puntano a /pay_your_orders.aspx
     ' - In KeepStore il pagamento ordini è gestito da /documenti.aspx?t=4
-    ' - Questa pagina esegue solo redirect server-side, con noindex + no-store
+    ' - Questa pagina esegue SOLO un redirect server-side, con noindex + no-store
     ' ============================================================
     Protected Overrides Sub OnLoad(ByVal e As EventArgs)
-        ' Hardening: no-store / no-cache
+        ' Hardening: no-store / no-cache (anche per response di redirect)
         Response.Cache.SetCacheability(HttpCacheability.NoCache)
         Response.Cache.SetNoStore()
         Response.Cache.SetRevalidation(HttpCacheRevalidation.AllCaches)
@@ -31,7 +30,7 @@
 </asp:Content>
 
 <asp:Content ID="cntHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <!-- In caso di body (client/edge che mostra contenuto di una 302), mantieni noindex + no-store anche in markup -->
+    <!-- Fallback: in caso di client/edge che mostra contenuto di una 302 -->
     <meta name="robots" content="noindex, nofollow" />
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
     <meta http-equiv="Pragma" content="no-cache" />
@@ -41,7 +40,7 @@
 <asp:Content ID="cntMain" ContentPlaceHolderID="MainContent" runat="server">
 </asp:Content>
 
-<!-- Legacy placeholders (presenti in Page.master) -->
+<!-- Legacy aliases presenti in Page.master -->
 <asp:Content ID="cntLegacy1" ContentPlaceHolderID="ContentPlaceHolder1" runat="server">
 </asp:Content>
 <asp:Content ID="cntLegacy2" ContentPlaceHolderID="cph" runat="server">
