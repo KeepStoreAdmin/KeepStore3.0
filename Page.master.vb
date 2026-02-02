@@ -147,6 +147,41 @@ Private Sub ApplyGlobalSeoPolicy()
     End Try
 End Sub
 
+
+' ============================================================
+' SECURITY: Rimuove il cookie legacy "Password" (conteneva la password in chiaro)
+' - Migrazione trasparente: se un client ha ancora quel cookie, viene eliminato.
+' - Fail-safe: non interrompe mai il rendering.
+' ============================================================
+Private Sub ExpireLegacyPasswordCookie()
+    Try
+        Dim legacy As HttpCookie = Nothing
+        Try
+            legacy = Request.Cookies("Password")
+        Catch
+            legacy = Nothing
+        End Try
+
+        If legacy Is Nothing Then Exit Sub
+
+        Dim expired As New HttpCookie("Password")
+        expired.Value = ""
+        expired.Path = "/"
+        expired.HttpOnly = True
+        expired.Secure = Request.IsSecureConnection
+        Try
+            expired.SameSite = SameSiteMode.Lax
+        Catch
+            ' SameSite non disponibile in alcune configurazioni legacy
+        End Try
+        expired.Expires = DateTime.UtcNow.AddDays(-7)
+
+        Response.Cookies.Set(expired)
+    Catch
+        ' mai bloccare la master per la gestione cookie
+    End Try
+End Sub
+
 Dim IvaTipo As Integer
     Dim conn As New MySqlConnection
     Dim conn2 As New MySqlConnection
@@ -373,6 +408,10 @@ Dim IvaTipo As Integer
             Session.Item("Pagina_visitata") = Me.Request.Url
         End If
 
+
+        ' SECURITY: rimuove subito il cookie legacy \"Password\" (se presente)
+        ExpireLegacyPasswordCookie()
+
         ' Controlli login sulla master (se esistono)
         Dim tbUser As TextBox = TryCast(Me.FindControl("tbUsername"), TextBox)
         Dim tbPass As TextBox = TryCast(Me.FindControl("tbPassword"), TextBox)
@@ -400,12 +439,8 @@ Dim IvaTipo As Integer
                     Dim aziendaNome As Object = Me.Session("AziendaNome")
                     If aziendaNome IsNot Nothing AndAlso Not IsNothing(Me.Request.Cookies(aziendaNome.ToString())) Then
                         tbUser.Text = Me.Request.Cookies(aziendaNome.ToString())("Username")
-                        Try
-                            tbPass.Text = Me.Request.Cookies("Password")("Password")
-                        Catch
-                            tbPass.Text = ""
-                        End Try
-                    End If
+                        tbPass.Text = ""
+End If
                 End If
             End If
         End If
@@ -1038,9 +1073,29 @@ End Sub
                 Me.Session("Listino") = dr.Item("listino")
                 Me.Session("IvaTipo") = dr.Item("IvaTipo")
                 Me.Session("DataPassword") = dr.Item("DataPassword")
-                Me.Response.Cookies(Me.Session("AziendaNome"))("Username") = user
-                Me.Response.Cookies("Password")("Password") = pass
-                Me.Response.Cookies(Me.Session("AziendaNome")).Expires = DateTime.Now.AddYears(1)
+                ' Cookie username (OK)
+                Try
+                    If Me.Session("AziendaNome") IsNot Nothing Then
+                        Dim cookieName As String = Me.Session("AziendaNome").ToString()
+                        If Not String.IsNullOrEmpty(cookieName) Then
+                            Dim c As HttpCookie = Response.Cookies(cookieName)
+                            c("Username") = user
+                            c.HttpOnly = True
+                            c.Secure = Request.IsSecureConnection
+                            c.Path = "/"
+                            Try
+                                c.SameSite = SameSiteMode.Lax
+                            Catch
+                            End Try
+                            c.Expires = DateTime.Now.AddYears(1)
+                        End If
+                    End If
+                Catch
+                End Try
+
+                ' SECURITY: non salvare mai la password nei cookie.
+                ' Elimino eventuale cookie legacy "Password" residuo.
+                ExpireLegacyPasswordCookie()
 
             Else
                 If lblLogin IsNot Nothing Then
