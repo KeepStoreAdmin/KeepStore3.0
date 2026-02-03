@@ -3,6 +3,7 @@ Imports System.Collections.Generic
 Imports System.Configuration
 Imports System.IO
 Imports System.Text
+Imports System.Security.Cryptography
 Imports System.Web
 Imports System.Web.UI
 Imports MySql.Data.MySqlClient
@@ -24,6 +25,12 @@ Partial Class sitemap
     Private ReadOnly _listingPath As String
 
     Private ReadOnly _staticUrls As List(Of String)
+
+    ' HTTP caching / canonical host
+    Private ReadOnly _hostOverride As String
+    Private ReadOnly _httpCacheEnabled As Boolean
+    Private ReadOnly _httpCacheMaxAgeSeconds As Integer
+
 
     Private Class CacheSignatureInfo
         Public Property Signature As String
@@ -48,7 +55,12 @@ Partial Class sitemap
         _homePath = NormalizePath(GetStringAppSetting("KeepStore.Sitemap.Home", "default.aspx"))
         _listingPath = NormalizePath(GetStringAppSetting("KeepStore.Sitemap.Listing", "articoli.aspx"))
 
-        _staticUrls = New List(Of String)()
+        
+
+        _hostOverride = (GetStringAppSetting("KeepStore.Sitemap.HostOverride", "") & "").Trim()
+        _httpCacheEnabled = GetBoolAppSetting("KeepStore.Sitemap.HttpCache.Enabled", True)
+        _httpCacheMaxAgeSeconds = GetIntAppSetting("KeepStore.Sitemap.HttpCache.MaxAgeSeconds", Math.Max(60, _fileCacheTtlMinutes * 60))
+_staticUrls = New List(Of String)()
         _staticUrls.Add(_homePath)
         _staticUrls.Add(_listingPath)
         _staticUrls.Add("about.html")
@@ -61,48 +73,34 @@ Partial Class sitemap
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
         Response.ContentType = "application/xml"
         Response.Charset = "utf-8"
+        Response.ContentEncoding = Encoding.UTF8
 
-        ' Hardening: evita che la sitemap venga indicizzata come "pagina"
-        Try
-            Response.Headers("X-Robots-Tag") = "noindex,follow"
-        Catch
-            Try
-                Response.AddHeader("X-Robots-Tag", "noindex,follow")
-            Catch
-            End Try
-        End Try
-
-        ' Cache HTTP moderna (ETag + Last-Modified) per ridurre fetch inutili (Google/AI crawler)
-        ' NB: usiamo come riferimento la signature/MAX(data) (se disponibile) oppure DateTime.UtcNow.
+        ' Sitemap is not a user-facing document
+        Response.AddHeader("X-Robots-Tag", "noindex, nofollow")
 
         Dim host As String = GetHost()
 
-                Dim sig As CacheSignatureInfo = Nothing
-        If _fileCacheEnabled Then
+        ' Calcolo signature (per HTTP cache e/o file cache)
+        Dim sig As CacheSignatureInfo = Nothing
+        Try
             sig = ComputeCacheSignature(host)
+        Catch
+            sig = New CacheSignatureInfo() With {.Signature = "", .DataMaxUtc = Nothing}
+        End Try
 
-            ' HTTP caching headers (ETag + Last-Modified)
-            Dim lastModUtc As DateTime = If(sig IsNot Nothing AndAlso sig.DataMaxUtc.HasValue, sig.DataMaxUtc.Value, DateTime.UtcNow)
-            Dim etagBase As String = If(sig IsNot Nothing AndAlso Not String.IsNullOrEmpty(sig.Signature), sig.Signature, host.ToLowerInvariant() & "|" & lastModUtc.ToString("yyyyMMddHHmmss"))
-            Dim etag As String = ComputeStrongEtag(etagBase)
+        ' HTTP caching (ETag / Last-Modified / 304)
+        If _httpCacheEnabled Then
+            ApplyHttpCacheHeaders(sig)
 
-            Try
-                Response.Cache.SetCacheability(HttpCacheability.Public)
-                Response.Cache.SetLastModified(lastModUtc)
-                Response.Cache.SetETag(etag)
-                Response.Cache.SetMaxAge(TimeSpan.FromMinutes(_fileCacheTtlMinutes))
-                Response.Cache.SetRevalidation(HttpCacheRevalidation.AllCaches)
-            Catch
-            End Try
-
-            If IsNotModified(etag, lastModUtc) Then
+            If IsNotModified(sig) Then
                 Response.StatusCode = 304
-                Response.StatusDescription = "Not Modified"
                 Response.SuppressContent = True
-                Context.ApplicationInstance.CompleteRequest()
                 Return
             End If
+        End If
 
+        ' File cache (serve xml già generato)
+        If _fileCacheEnabled Then
             If TryServeFromCache(host, sig) Then
                 Return
             End If
@@ -550,50 +548,7 @@ Partial Class sitemap
         Return dict
     End Function
 
-    
-    Private Function ComputeStrongEtag(ByVal input As String) As String
-        If input Is Nothing Then input = ""
-        Using sha As System.Security.Cryptography.SHA1 = System.Security.Cryptography.SHA1.Create()
-            Dim bytes As Byte() = Encoding.UTF8.GetBytes(input)
-            Dim hash As Byte() = sha.ComputeHash(bytes)
-            Dim sb As New StringBuilder()
-            For Each b As Byte In hash
-                sb.Append(b.ToString("x2"))
-            Next
-            Return """ & sb.ToString() & """
-        End Using
-    End Function
-
-    Private Function IsNotModified(ByVal etag As String, ByVal lastModUtc As DateTime) As Boolean
-        Try
-            Dim inm As String = Request.Headers("If-None-Match")
-            If Not String.IsNullOrEmpty(inm) AndAlso Not String.IsNullOrEmpty(etag) Then
-                If String.Equals(inm.Trim(), etag, StringComparison.Ordinal) Then
-                    Return True
-                End If
-            End If
-        Catch
-        End Try
-
-        Try
-            Dim ims As String = Request.Headers("If-Modified-Since")
-            If Not String.IsNullOrEmpty(ims) Then
-                Dim since As DateTime
-                If DateTime.TryParse(ims, since) Then
-                    Dim sinceUtc As DateTime = since.ToUniversalTime()
-                    ' Tolleranza 1 secondo
-                    If lastModUtc <= sinceUtc.AddSeconds(1) Then
-                        Return True
-                    End If
-                End If
-            End If
-        Catch
-        End Try
-
-        Return False
-    End Function
-
-'---------------- Helpers ----------------
+    '---------------- Helpers ----------------
 
     Private Function FormatAsW3C(dtUtc As Nullable(Of DateTime)) As String
         If Not dtUtc.HasValue Then Return Nothing
@@ -601,22 +556,22 @@ Partial Class sitemap
         Return utc.ToString("yyyy-MM-ddTHH:mm:ssZ")
     End Function
 
-        Private Function GetHost() As String
-        ' Se vuoi forzare un host canonico (es. dietro reverse proxy / multi-host), configura:
-        ' <add key="KeepStore.Sitemap.HostOverride" value="https://www.taikun.it" />
-        Dim overrideHost As String = GetStringAppSetting("KeepStore.Sitemap.HostOverride", "")
-        If Not String.IsNullOrEmpty(overrideHost) Then
-            Dim h As String = overrideHost.Trim()
-            If h.StartsWith("//") Then h = "https:" & h
-            If Not h.StartsWith("http://", StringComparison.OrdinalIgnoreCase) AndAlso Not h.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
-                ' Se viene passato solo host (es. www.taikun.it), assumiamo https
-                h = "https://" & h
-            End If
-            Return h.TrimEnd("/"c)
+    Private Function GetHost() As String
+        ' Host canonico (utile con reverse proxy / multi-host)
+        If Not String.IsNullOrEmpty(_hostOverride) Then
+            Try
+                Dim u As Uri = New Uri(_hostOverride, UriKind.Absolute)
+                Return u.Scheme & "://" & u.Authority
+            Catch
+                Dim h As String = _hostOverride.Trim().TrimEnd("/"c)
+                If h.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse h.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+                    Return h
+                End If
+            End Try
         End If
 
         Dim uri As Uri = Request.Url
-        Return (uri.Scheme & "://" & uri.Authority).TrimEnd("/"c)
+        Return uri.Scheme & "://" & uri.Authority
     End Function
 
     Private Function MakeAbsolute(host As String, url As String) As String
@@ -676,6 +631,92 @@ Partial Class sitemap
         Dim i As Integer
         If Integer.TryParse(v, i) Then Return i
         Return defaultValue
+    End Function
+
+
+
+    '---------------- HTTP cache helpers ----------------
+
+    Private Sub ApplyHttpCacheHeaders(sig As CacheSignatureInfo)
+        Dim maxAge As Integer = _httpCacheMaxAgeSeconds
+        If maxAge < 60 Then maxAge = 60
+
+        Response.Cache.SetCacheability(HttpCacheability.Public)
+        Response.Cache.SetMaxAge(TimeSpan.FromSeconds(maxAge))
+        Response.Cache.SetRevalidation(HttpCacheRevalidation.AllCaches)
+        Response.Cache.SetExpires(DateTime.UtcNow.AddSeconds(maxAge))
+        Response.Cache.AppendCacheExtension("stale-while-revalidate=60")
+        Response.Cache.VaryByHeaders("Accept-Encoding") = True
+
+        Dim lastModUtc As Nullable(Of DateTime) = Nothing
+        If sig IsNot Nothing AndAlso sig.DataMaxUtc.HasValue Then
+            lastModUtc = sig.DataMaxUtc.Value
+        End If
+
+        If lastModUtc.HasValue Then
+            Response.Cache.SetLastModified(lastModUtc.Value)
+        End If
+
+        Dim etag As String = ComputeEtag(sig)
+        If Not String.IsNullOrEmpty(etag) Then
+            Response.Cache.SetETag(etag)
+        End If
+    End Sub
+
+    Private Function IsNotModified(sig As CacheSignatureInfo) As Boolean
+        Dim etag As String = ComputeEtag(sig)
+        If Not String.IsNullOrEmpty(etag) Then
+            Dim inm As String = (Request.Headers("If-None-Match") & "").Trim()
+            If String.Equals(inm, etag, StringComparison.Ordinal) Then
+                Return True
+            End If
+        End If
+
+        Dim imsRaw As String = (Request.Headers("If-Modified-Since") & "").Trim()
+        If Not String.IsNullOrEmpty(imsRaw) Then
+            Dim ims As DateTime
+            If DateTime.TryParse(imsRaw, ims) Then
+                Dim lastModUtc As Nullable(Of DateTime) = Nothing
+                If sig IsNot Nothing AndAlso sig.DataMaxUtc.HasValue Then
+                    lastModUtc = sig.DataMaxUtc.Value
+                End If
+
+                If lastModUtc.HasValue Then
+                    Dim lastModNoMs As DateTime = New DateTime(lastModUtc.Value.Year, lastModUtc.Value.Month, lastModUtc.Value.Day, lastModUtc.Value.Hour, lastModUtc.Value.Minute, lastModUtc.Value.Second, DateTimeKind.Utc)
+                    Dim imsUtc As DateTime = ims.ToUniversalTime()
+                    If imsUtc >= lastModNoMs Then
+                        Return True
+                    End If
+                End If
+            End If
+        End If
+
+        Return False
+    End Function
+
+    Private Function ComputeEtag(sig As CacheSignatureInfo) As String
+        Try
+            Dim baseStr As String = ""
+            If sig IsNot Nothing AndAlso Not String.IsNullOrEmpty(sig.Signature) Then
+                baseStr = sig.Signature
+            End If
+
+            If String.IsNullOrEmpty(baseStr) Then
+                Return ""
+            End If
+
+            Using sha As SHA256 = SHA256.Create()
+                Dim bytes As Byte() = Encoding.UTF8.GetBytes(baseStr)
+                Dim hash As Byte() = sha.ComputeHash(bytes)
+                Dim hex As New StringBuilder(hash.Length * 2)
+                For Each b As Byte In hash
+                    hex.Append(b.ToString("x2"))
+                Next
+                Return "W/""" & hex.ToString() & """"
+            End Using
+        Catch
+            Return ""
+        End Try
     End Function
 
 End Class
