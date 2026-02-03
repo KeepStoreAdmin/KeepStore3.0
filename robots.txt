@@ -1,4 +1,6 @@
-# KeepStore 3.0 - Robots policy (STEP32 suggested alignment)
+# KeepStore 3.0 - Robots policy
+# Obiettivo: consentire il crawling delle pagine pubbliche (catalogo/contenuti) e bloccare aree non indicizzabili
+# (account, carrello/checkout, azioni) per evitare duplicati, leak di URL sensibili e crawl trap.
 User-agent: *
 
 # Block action URLs / faceted traps
@@ -6,10 +8,10 @@ Disallow: /*rimuovi=
 Disallow: /*?rimuovi=
 Disallow: /*&rimuovi=
 
-# NOTE: we do NOT block st= (settore) because it's part of the SEO catalog URLs.
-# Indexation is controlled by: canonical + meta robots (noindex) where needed.
+# NOTE: non blocchiamo st= (settore) perché fa parte delle URL SEO del catalogo.
+# L'indicizzazione è governata da: canonical + meta robots (noindex) dove necessario.
 
-# Block non-indexable areas (align to KeepStore 3.0 real pages)
+# Block non-indexable areas (align to KeepStore real pages)
 Disallow: /myaccount
 Disallow: /myaccount/
 Disallow: /myaccount.aspx
@@ -28,4 +30,6 @@ Disallow: /App_Data/
 Disallow: /App_Code/
 Disallow: /bin/
 
+# Sitemaps (preferita: sitemap index; mantenuta compatibilità con la sitemap dinamica)
+Sitemap: https://www.taikun.it/sitemap.xml
 Sitemap: https://www.taikun.it/sitemap.aspx
