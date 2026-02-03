@@ -1,4 +1,4 @@
-﻿Imports MySql.Data.MySqlClient
+Imports MySql.Data.MySqlClient
 Imports System.Data
 Imports System.Globalization
 Imports System.Net
@@ -348,6 +348,35 @@ Partial Class ordine
                         Dim sitoWeb As String = HttpUtility.UrlEncode(If(TryCast(Me.Session("AziendaUrl"), String), ""))
                         Dim buyerName As String = HttpUtility.UrlEncode(If(TryCast(Me.Session("LoginNomeCognome"), String), ""))
                         Dim buyerEmail As String = HttpUtility.UrlEncode(If(TryCast(Me.Session("LoginEmail"), String), ""))
+
+                        ' Log diagnostico minimale (no PII): init chiamata GestPay/Banca Sella.
+                        ' Salva su DB (bancasella_log) solo dati tecnici utili (idDocumento, shopTransactionId, amount, currency).
+                        Try
+                            Using cmdLog As New MySql.Data.MySqlClient.MySqlCommand("INSERT INTO bancasella_log (IP, Log, XML) VALUES (?ip, ?log, ?xml)", conn)
+                                Dim ipClient As String = Request.UserHostAddress
+                                If ipClient Is Nothing Then ipClient = ""
+                                If ipClient.Length > 20 Then ipClient = ipClient.Substring(0, 20)
+
+                                Dim shopTrIdDecoded As String = ""
+                                Try
+                                    shopTrIdDecoded = System.Web.HttpUtility.UrlDecode(shopTransactionId)
+                                Catch
+                                End Try
+
+                                Dim logMsg As String = "INIT GestPay: idDocumento=" & id.ToString() &
+                                                       "; shopTransactionId=" & shopTrIdDecoded &
+                                                       "; amount=" & amountVal.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) &
+                                                       "; currency=" & currency
+                                If logMsg.Length > 1000 Then logMsg = logMsg.Substring(0, 1000)
+
+                                cmdLog.Parameters.AddWithValue("?ip", ipClient)
+                                cmdLog.Parameters.AddWithValue("?log", logMsg)
+                                cmdLog.Parameters.AddWithValue("?xml", "")
+                                cmdLog.ExecuteNonQuery()
+                            End Using
+                        Catch
+                            ' non bloccare il checkout per problemi di logging
+                        End Try
 
                         redirect = "/bancasella.aspx?currency=" & currency &
                                    "&amount=" & amount &
