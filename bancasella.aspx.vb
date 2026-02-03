@@ -1,4 +1,4 @@
-﻿Imports System.Data
+Imports System.Data
 Imports MySql.Data.MySqlClient
 Imports it.sella.ecomms2s
 Imports System.Xml
@@ -125,6 +125,7 @@ Partial Class BancaSella
 
             Dim nodeError As XmlNode = xmlReturn.SelectSingleNode("/GestPayCryptDecrypt/ErrorCode")
             If nodeError Is Nothing Then
+                SafeWriteBancaSellaLog("EncryptResponse", iddocumento, shopTransactionId, amount, currency, "MISSING", "ErrorCode mancante")
                 result = "Risposta di Banca Sella non valida (ErrorCode mancante)."
                 Exit Sub
             End If
@@ -137,6 +138,7 @@ Partial Class BancaSella
                 ' -----------------------------------------------------
                 Dim nodeCrypt As XmlNode = xmlReturn.SelectSingleNode("/GestPayCryptDecrypt/CryptDecryptString")
                 If nodeCrypt Is Nothing Then
+                    SafeWriteBancaSellaLog("EncryptResponse", iddocumento, shopTransactionId, amount, currency, "MISSING", "CryptDecryptString mancante")
                     result = "Risposta di Banca Sella non valida (CryptDecryptString mancante)."
                     Exit Sub
                 End If
@@ -161,11 +163,14 @@ Partial Class BancaSella
                 Dim errDescNode As XmlNode = xmlReturn.SelectSingleNode("/GestPayCryptDecrypt/ErrorDescription")
                 Dim errDesc As String = If(errDescNode IsNot Nothing, errDescNode.InnerText.Trim(), "")
 
-                result = "Errore Banca Sella. Codice: " & errorCode &
+                
+                SafeWriteBancaSellaLog("EncryptError", iddocumento, shopTransactionId, amount, currency, errorCode, errDesc)
+result = "Errore Banca Sella. Codice: " & errorCode &
                          If(errDesc <> "", " - " & errDesc, "")
             End If
 
         Catch ex As Exception
+            SafeWriteBancaSellaLog("Exception", (Request.QueryString("idDocumento") & "").Trim(), (Request.QueryString("shopTransactionId") & "").Trim(), (Request.QueryString("amount") & "").Trim(), (Request.QueryString("currency") & "").Trim(), ex.GetType().Name, ex.Message)
             '=========================================================
             ' 8) Qualsiasi eccezione lato .NET
             '=========================================================
@@ -237,5 +242,73 @@ Partial Class BancaSella
 
         Return resultList
     End Function
+
+
+    '=========================================================
+    ' Logging diagnostico minimale (NO PII) su DB: bancasella_log
+    ' - Non salva email/nome
+    ' - Non salva CryptDecryptString
+    ' - Troncamento a 1000 char per Log/XML
+    '=========================================================
+    Private Function TruncValue(ByVal s As String, ByVal maxLen As Integer) As String
+        If s Is Nothing Then Return ""
+        If s.Length <= maxLen Then Return s
+        Return s.Substring(0, maxLen)
+    End Function
+
+    Private Sub SafeWriteBancaSellaLog(ByVal stepName As String,
+                                      ByVal iddocumento As String,
+                                      ByVal shopTransactionId As String,
+                                      ByVal amount As String,
+                                      ByVal currency As String,
+                                      ByVal errorCode As String,
+                                      ByVal errorDesc As String)
+        Try
+            Dim ipClient As String = Request.UserHostAddress
+            If ipClient Is Nothing Then ipClient = ""
+            If ipClient.Length > 20 Then ipClient = ipClient.Substring(0, 20)
+
+            Dim localAddr As String = ""
+            Try
+                localAddr = (Request.ServerVariables("LOCAL_ADDR") & "").Trim()
+            Catch
+                localAddr = ""
+            End Try
+
+            Dim msg As String = stepName &
+                                ": idDocumento=" & (iddocumento & "").Trim() &
+                                "; shopTransactionId=" & (shopTransactionId & "").Trim() &
+                                "; amount=" & (amount & "").Trim() &
+                                "; currency=" & (currency & "").Trim() &
+                                "; errorCode=" & (errorCode & "").Trim()
+            If Not String.IsNullOrEmpty(localAddr) Then
+                msg &= "; localAddr=" & localAddr
+            End If
+
+            msg = TruncValue(msg, 1000)
+
+            Dim xmlMini As String = ""
+            If Not String.IsNullOrEmpty(errorCode) OrElse Not String.IsNullOrEmpty(errorDesc) Then
+                Dim escCode As String = System.Security.SecurityElement.Escape((errorCode & "").Trim())
+                Dim escDesc As String = System.Security.SecurityElement.Escape((errorDesc & "").Trim())
+                If Not String.IsNullOrEmpty(escCode) Then xmlMini &= "<ErrorCode>" & escCode & "</ErrorCode>"
+                If Not String.IsNullOrEmpty(escDesc) Then xmlMini &= "<ErrorDescription>" & escDesc & "</ErrorDescription>"
+            End If
+
+            xmlMini = TruncValue(xmlMini, 1000)
+
+            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                conn.Open()
+                Using cmd As New MySqlCommand("INSERT INTO bancasella_log (IP, Log, XML) VALUES (?ip, ?log, ?xml)", conn)
+                    cmd.Parameters.AddWithValue("?ip", ipClient)
+                    cmd.Parameters.AddWithValue("?log", msg)
+                    cmd.Parameters.AddWithValue("?xml", xmlMini)
+                    cmd.ExecuteNonQuery()
+                End Using
+            End Using
+        Catch
+            ' Non interrompere mai il flusso pagamento per problemi di logging
+        End Try
+    End Sub
 
 End Class
