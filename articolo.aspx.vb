@@ -403,39 +403,170 @@ Partial Class articolo
         Return uri.Scheme & "://" & uri.Authority
     End Function
 
-    Private Function BuildProductJsonLd(row As DataRow, canonical As String, metaDesc As String) As String
+        Private Function BuildProductJsonLd(row As DataRow, canonical As String, metaDesc As String) As String
+        ' Miglioramento SEO/AI:
+        ' - JSON-LD @graph coerente (Organization + WebSite + WebPage + BreadcrumbList + Product)
+        ' - Include GTIN (EAN) se presente
+        ' - Offer con currency e (se disponibile) availability
         Try
+            Dim js As New System.Web.Script.Serialization.JavaScriptSerializer()
+
             Dim name As String = FirstNonEmpty(GetRowString(row, "Descrizione1"), GetRowString(row, "Nome"), "Articolo")
             Dim brand As String = FirstNonEmpty(GetRowString(row, "MarcheDescrizione"), GetRowString(row, "Marca"))
             Dim sku As String = FirstNonEmpty(GetRowString(row, "SKU"), GetRowString(row, "Codice"), _id.ToString())
-            Dim img As String = MakeAbsoluteUrl(NormalizeImageUrl(GetRowString(row, "Img1")))
+            Dim ean As String = FirstNonEmpty(GetRowString(row, "Ean"), GetRowString(row, "EAN"))
+
+            Dim img As String = NormalizeImageUrl(GetRowString(row, "Img1"))
+            If Not String.IsNullOrEmpty(img) Then
+                img = MakeAbsoluteUrl(img)
+            End If
 
             Dim prezzoListino As Nullable(Of Decimal) = GetRowDecimal(row, "PrezzoIvato")
             Dim prezzoPromo As Nullable(Of Decimal) = GetRowDecimal(row, "PrezzoPromoIvato")
             Dim prezzo As Nullable(Of Decimal) = If(prezzoPromo.HasValue AndAlso prezzoPromo.Value > 0D, prezzoPromo, prezzoListino)
 
-            Dim parts As New List(Of String)()
-            parts.Add("""@context"":""https://schema.org""")
-            parts.Add("""@type"":""Product""")
-            parts.Add("""name"":" & JsonString(name))
-            parts.Add("""description"":" & JsonString(metaDesc))
-            parts.Add("""sku"":" & JsonString(sku))
-            parts.Add("""url"":" & JsonString(canonical))
+            ' --- Base entity ids
+            Dim baseUrl As String = canonical.TrimEnd("/"c)
+            Dim orgId As String = baseUrl & "#organization"
+            Dim webSiteId As String = baseUrl & "#website"
+            Dim webPageId As String = baseUrl & "#webpage"
+            Dim productId As String = baseUrl & "#product"
 
-            If Not String.IsNullOrEmpty(img) Then
-                parts.Add("""image"":" & JsonString(img))
-            End If
+            ' --- Organization (dati best-effort da Session)
+            Dim orgName As String = ""
+            Try
+                orgName = TryCast(Session("AziendaNome"), String)
+            Catch
+            End Try
+            If String.IsNullOrEmpty(orgName) Then orgName = "Taikun"
 
+            Dim organization As New Dictionary(Of String, Object)()
+            organization("@type") = "Organization"
+            organization("@id") = orgId
+            organization("name") = orgName
+            organization("url") = Request.Url.GetLeftPart(UriPartial.Authority) & ResolveUrl("~/")
+
+            ' --- WebSite
+            Dim webSite As New Dictionary(Of String, Object)()
+            webSite("@type") = "WebSite"
+            webSite("@id") = webSiteId
+            webSite("url") = organization("url")
+            webSite("name") = orgName
+            webSite("publisher") = New Dictionary(Of String, Object) From {{"@id", orgId}}
+
+            ' --- BreadcrumbList (Home > Catalogo > Prodotto)
+            Dim breadcrumbItems As New List(Of Object)()
+            breadcrumbItems.Add(New Dictionary(Of String, Object) From {
+                {"@type", "ListItem"},
+                {"position", 1},
+                {"name", "Home"},
+                {"item", Request.Url.GetLeftPart(UriPartial.Authority) & ResolveUrl("~/")}
+            })
+            breadcrumbItems.Add(New Dictionary(Of String, Object) From {
+                {"@type", "ListItem"},
+                {"position", 2},
+                {"name", "Catalogo"},
+                {"item", Request.Url.GetLeftPart(UriPartial.Authority) & ResolveUrl("~/articoli.aspx")}
+            })
+            breadcrumbItems.Add(New Dictionary(Of String, Object) From {
+                {"@type", "ListItem"},
+                {"position", 3},
+                {"name", name},
+                {"item", canonical}
+            })
+
+            Dim breadcrumb As New Dictionary(Of String, Object)()
+            breadcrumb("@type") = "BreadcrumbList"
+            breadcrumb("@id") = baseUrl & "#breadcrumb"
+            breadcrumb("itemListElement") = breadcrumbItems.ToArray()
+
+            ' --- Product
+            Dim product As New Dictionary(Of String, Object)()
+            product("@type") = "Product"
+            product("@id") = productId
+            product("name") = name
+            If Not String.IsNullOrEmpty(metaDesc) Then product("description") = metaDesc
+            product("sku") = sku
+            product("url") = canonical
+            If Not String.IsNullOrEmpty(img) Then product("image") = img
             If Not String.IsNullOrEmpty(brand) Then
-                parts.Add("""brand"":{""@type"":""Brand"",""name"":" & JsonString(brand) & "}")
+                product("brand") = New Dictionary(Of String, Object) From {{"@type", "Brand"}, {"name", brand}}
             End If
 
+            ' GTIN: se EAN 13 -> gtin13, se 14 -> gtin14, altrimenti generic gtin
+            If Not String.IsNullOrEmpty(ean) Then
+                Dim sbDigits As New StringBuilder()
+                For Each ch As Char In ean
+                    If Char.IsDigit(ch) Then sbDigits.Append(ch)
+                Next
+                Dim digitsOnly As String = sbDigits.ToString()
+                If digitsOnly.Length = 13 Then
+                    product("gtin13") = digitsOnly
+                ElseIf digitsOnly.Length = 14 Then
+                    product("gtin14") = digitsOnly
+                ElseIf digitsOnly.Length > 0 Then
+                    product("gtin") = digitsOnly
+                End If
+            End If
+
+            ' Offer
             If prezzo.HasValue AndAlso prezzo.Value > 0D Then
-                Dim offer As String = "{""@type"":""Offer"",""price"":" & JsonNumber(prezzo.Value) & ",""priceCurrency"":""EUR"",""url"":" & JsonString(canonical) & "}"
-                parts.Add("""offers"":" & offer)
+                Dim offer As New Dictionary(Of String, Object)()
+                offer("@type") = "Offer"
+                offer("price") = prezzo.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+                offer("priceCurrency") = "EUR"
+                offer("url") = canonical
+
+                ' availability: best-effort se esiste un campo stock/giacenza
+                Dim availability As String = ""
+                Dim stock As Integer = 0
+                Dim stockFound As Boolean = False
+                For Each col As String In New String() {"Giacenza", "Disponibilita", "Disponibile", "Quantita", "Qta"}
+                    If row IsNot Nothing AndAlso row.Table IsNot Nothing AndAlso row.Table.Columns.Contains(col) Then
+                        Dim v As String = Convert.ToString(row(col))
+                        If Integer.TryParse(v, stock) Then
+                            stockFound = True
+                            Exit For
+                        End If
+                    End If
+                Next
+                If stockFound Then
+                    availability = If(stock > 0, "https://schema.org/InStock", "https://schema.org/OutOfStock")
+                    offer("availability") = availability
+                End If
+
+                offer("itemCondition") = "https://schema.org/NewCondition"
+                offer("seller") = New Dictionary(Of String, Object) From {{"@id", orgId}}
+
+                product("offers") = offer
             End If
 
-            Dim json As String = "{" & String.Join(",", parts.ToArray()) & "}"
+            ' --- WebPage
+            Dim webPage As New Dictionary(Of String, Object)()
+            webPage("@type") = "WebPage"
+            webPage("@id") = webPageId
+            webPage("url") = canonical
+            webPage("name") = name
+            If Not String.IsNullOrEmpty(metaDesc) Then webPage("description") = metaDesc
+            webPage("isPartOf") = New Dictionary(Of String, Object) From {{"@id", webSiteId}}
+            webPage("about") = New Dictionary(Of String, Object) From {{"@id", orgId}}
+            webPage("mainEntity") = New Dictionary(Of String, Object) From {{"@id", productId}}
+            If Not String.IsNullOrEmpty(img) Then
+                webPage("primaryImageOfPage") = New Dictionary(Of String, Object) From {{"@type", "ImageObject"}, {"url", img}}
+            End If
+
+            Dim graph As New List(Of Object)()
+            graph.Add(organization)
+            graph.Add(webSite)
+            graph.Add(webPage)
+            graph.Add(breadcrumb)
+            graph.Add(product)
+
+            Dim root As New Dictionary(Of String, Object)()
+            root("@context") = "https://schema.org"
+            root("@graph") = graph
+
+            Dim json As String = js.Serialize(root)
             Return "<script type=""application/ld+json"">" & json & "</script>"
         Catch
             Return ""

@@ -62,11 +62,46 @@ Partial Class sitemap
         Response.ContentType = "application/xml"
         Response.Charset = "utf-8"
 
+        ' Hardening: evita che la sitemap venga indicizzata come "pagina"
+        Try
+            Response.Headers("X-Robots-Tag") = "noindex,follow"
+        Catch
+            Try
+                Response.AddHeader("X-Robots-Tag", "noindex,follow")
+            Catch
+            End Try
+        End Try
+
+        ' Cache HTTP moderna (ETag + Last-Modified) per ridurre fetch inutili (Google/AI crawler)
+        ' NB: usiamo come riferimento la signature/MAX(data) (se disponibile) oppure DateTime.UtcNow.
+
         Dim host As String = GetHost()
 
-        Dim sig As CacheSignatureInfo = Nothing
+                Dim sig As CacheSignatureInfo = Nothing
         If _fileCacheEnabled Then
             sig = ComputeCacheSignature(host)
+
+            ' HTTP caching headers (ETag + Last-Modified)
+            Dim lastModUtc As DateTime = If(sig IsNot Nothing AndAlso sig.DataMaxUtc.HasValue, sig.DataMaxUtc.Value, DateTime.UtcNow)
+            Dim etagBase As String = If(sig IsNot Nothing AndAlso Not String.IsNullOrEmpty(sig.Signature), sig.Signature, host.ToLowerInvariant() & "|" & lastModUtc.ToString("yyyyMMddHHmmss"))
+            Dim etag As String = ComputeStrongEtag(etagBase)
+
+            Try
+                Response.Cache.SetCacheability(HttpCacheability.Public)
+                Response.Cache.SetLastModified(lastModUtc)
+                Response.Cache.SetETag(etag)
+                Response.Cache.SetMaxAge(TimeSpan.FromMinutes(_fileCacheTtlMinutes))
+                Response.Cache.SetRevalidation(HttpCacheRevalidation.AllCaches)
+            Catch
+            End Try
+
+            If IsNotModified(etag, lastModUtc) Then
+                Response.StatusCode = 304
+                Response.StatusDescription = "Not Modified"
+                Response.SuppressContent = True
+                Context.ApplicationInstance.CompleteRequest()
+                Return
+            End If
 
             If TryServeFromCache(host, sig) Then
                 Return
@@ -515,7 +550,50 @@ Partial Class sitemap
         Return dict
     End Function
 
-    '---------------- Helpers ----------------
+    
+    Private Function ComputeStrongEtag(ByVal input As String) As String
+        If input Is Nothing Then input = ""
+        Using sha As System.Security.Cryptography.SHA1 = System.Security.Cryptography.SHA1.Create()
+            Dim bytes As Byte() = Encoding.UTF8.GetBytes(input)
+            Dim hash As Byte() = sha.ComputeHash(bytes)
+            Dim sb As New StringBuilder()
+            For Each b As Byte In hash
+                sb.Append(b.ToString("x2"))
+            Next
+            Return """ & sb.ToString() & """
+        End Using
+    End Function
+
+    Private Function IsNotModified(ByVal etag As String, ByVal lastModUtc As DateTime) As Boolean
+        Try
+            Dim inm As String = Request.Headers("If-None-Match")
+            If Not String.IsNullOrEmpty(inm) AndAlso Not String.IsNullOrEmpty(etag) Then
+                If String.Equals(inm.Trim(), etag, StringComparison.Ordinal) Then
+                    Return True
+                End If
+            End If
+        Catch
+        End Try
+
+        Try
+            Dim ims As String = Request.Headers("If-Modified-Since")
+            If Not String.IsNullOrEmpty(ims) Then
+                Dim since As DateTime
+                If DateTime.TryParse(ims, since) Then
+                    Dim sinceUtc As DateTime = since.ToUniversalTime()
+                    ' Tolleranza 1 secondo
+                    If lastModUtc <= sinceUtc.AddSeconds(1) Then
+                        Return True
+                    End If
+                End If
+            End If
+        Catch
+        End Try
+
+        Return False
+    End Function
+
+'---------------- Helpers ----------------
 
     Private Function FormatAsW3C(dtUtc As Nullable(Of DateTime)) As String
         If Not dtUtc.HasValue Then Return Nothing
@@ -523,9 +601,22 @@ Partial Class sitemap
         Return utc.ToString("yyyy-MM-ddTHH:mm:ssZ")
     End Function
 
-    Private Function GetHost() As String
+        Private Function GetHost() As String
+        ' Se vuoi forzare un host canonico (es. dietro reverse proxy / multi-host), configura:
+        ' <add key="KeepStore.Sitemap.HostOverride" value="https://www.taikun.it" />
+        Dim overrideHost As String = GetStringAppSetting("KeepStore.Sitemap.HostOverride", "")
+        If Not String.IsNullOrEmpty(overrideHost) Then
+            Dim h As String = overrideHost.Trim()
+            If h.StartsWith("//") Then h = "https:" & h
+            If Not h.StartsWith("http://", StringComparison.OrdinalIgnoreCase) AndAlso Not h.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+                ' Se viene passato solo host (es. www.taikun.it), assumiamo https
+                h = "https://" & h
+            End If
+            Return h.TrimEnd("/"c)
+        End If
+
         Dim uri As Uri = Request.Url
-        Return uri.Scheme & "://" & uri.Authority
+        Return (uri.Scheme & "://" & uri.Authority).TrimEnd("/"c)
     End Function
 
     Private Function MakeAbsolute(host As String, url As String) As String
