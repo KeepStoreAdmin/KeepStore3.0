@@ -276,4 +276,7 @@
             document.getElementById("bsButton").innerHTML = "HTML5 is not suported by your browser!";
         }
     </script>
+
+
+    <asp:Literal ID="litGoogleSurveyOptIn" runat="server"></asp:Literal>
 </asp:Content>

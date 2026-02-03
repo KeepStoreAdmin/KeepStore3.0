@@ -132,6 +132,7 @@ Partial Class pagamento
 
                     Session("IdPagamento") = idPagamento
 
+                    Session("GCR_ShowOptIn_DocId") = docId
                     Response.Redirect("documentidettaglio.aspx?id=" & docId.ToString(), True)
                     Return
                 End If

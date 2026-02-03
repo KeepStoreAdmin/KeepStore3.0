@@ -4,6 +4,7 @@ Imports System.Text
 Imports System.Web
 Imports MySql.Data.MySqlClient
 Imports System.Configuration
+Imports System.Globalization
 
 Partial Class documentidettaglio
     Inherits System.Web.UI.Page
@@ -36,6 +37,10 @@ Partial Class documentidettaglio
             Else
                 hlDocumenti.NavigateUrl = "documenti.aspx?t=" & GetFallbackTipoDocumentoId().ToString()
             End If
+
+            ' Google Customer Reviews - Survey Opt-in (mostra solo al rientro dal checkout)
+            TryRenderGoogleCustomerReviewsOptIn(idDocumento)
+
         End If
     End Sub
 
@@ -261,6 +266,110 @@ Partial Class documentidettaglio
             ctrl.Visible = value
         Catch
             ' ignore
+        End Try
+    End Sub
+
+
+    Private Sub TryRenderGoogleCustomerReviewsOptIn(ByVal idDocumento As Integer)
+        ' Google Customer Reviews (Survey Opt-in)
+        ' Mostra il popup SOLO subito dopo il checkout (gating tramite Session("GCR_ShowOptIn_DocId"))
+        Try
+            If Session Is Nothing OrElse Session("GCR_ShowOptIn_DocId") Is Nothing Then Return
+
+            Dim sessionDocId As Integer = 0
+            If Not Integer.TryParse(Convert.ToString(Session("GCR_ShowOptIn_DocId")), sessionDocId) Then Return
+            If sessionDocId <= 0 OrElse sessionDocId <> idDocumento Then Return
+
+            ' Clear early: evita ri-trigger su refresh/visite successive
+            Session("GCR_ShowOptIn_DocId") = Nothing
+
+            Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+
+            Dim merchantId As String = ""
+            Dim buyerEmail As String = ""
+            Dim deliveryCountry As String = ""
+            Dim baseDocDate As DateTime = DateTime.Today
+
+            Dim sql As String = ""
+            sql &= "SELECT "
+            sql &= "  IFNULL(a.google_merchant_id,'') AS google_merchant_id, "
+            sql &= "  IFNULL(u.email,'') AS buyer_email, "
+            sql &= "  IFNULL(ui.NazioneA,'') AS nazione, "
+            sql &= "  d.DataDocumento AS data_documento "
+            sql &= "FROM documenti d "
+            sql &= "LEFT JOIN aziende a ON a.id = d.AziendeId "
+            sql &= "LEFT JOIN utenti u ON u.id = d.UtentiId "
+            sql &= "LEFT JOIN utentiindirizzi ui ON ui.id = d.UtentiIndirizziId "
+            sql &= "WHERE d.id=@id AND d.UtentiId=@uid "
+            sql &= "LIMIT 1"
+
+            Using c As New MySqlConnection(cs)
+                c.Open()
+
+                Using cmd As New MySqlCommand(sql, c)
+                    cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = idDocumento
+                    cmd.Parameters.Add("@uid", MySqlDbType.Int32).Value = Convert.ToInt32(Session("UtentiID"))
+
+                    Using dr As MySqlDataReader = cmd.ExecuteReader()
+                        If dr.Read() Then
+                            merchantId = Convert.ToString(dr("google_merchant_id")).Trim()
+                            buyerEmail = Convert.ToString(dr("buyer_email")).Trim()
+                            deliveryCountry = Convert.ToString(dr("nazione")).Trim().ToUpperInvariant()
+
+                            Try
+                                Dim oDt As Object = dr("data_documento")
+                                If oDt IsNot Nothing AndAlso oDt IsNot DBNull.Value Then
+                                    baseDocDate = CType(oDt, DateTime)
+                                End If
+                            Catch
+                            End Try
+                        End If
+                    End Using
+                End Using
+            End Using
+
+            ' Parametri minimi richiesti da Google
+            If String.IsNullOrWhiteSpace(merchantId) Then Return
+            If String.IsNullOrWhiteSpace(buyerEmail) Then Return
+
+            If String.IsNullOrWhiteSpace(deliveryCountry) OrElse deliveryCountry.Length <> 2 Then
+                deliveryCountry = "IT"
+            End If
+
+            ' Strategia B: data stimata consegna deterministica (DataDocumento + N giorni)
+            Const defaultDeliveryDays As Integer = 5
+            Dim estimatedDelivery As DateTime = baseDocDate.AddDays(defaultDeliveryDays)
+            Dim estimatedDeliveryStr As String = estimatedDelivery.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+
+            Dim orderIdStr As String = idDocumento.ToString(CultureInfo.InvariantCulture)
+
+            ' Output encoding (JS)
+            Dim jsMerchantId As String = HttpUtility.JavaScriptStringEncode(merchantId)
+            Dim jsOrderId As String = HttpUtility.JavaScriptStringEncode(orderIdStr)
+            Dim jsEmail As String = HttpUtility.JavaScriptStringEncode(buyerEmail)
+            Dim jsCountry As String = HttpUtility.JavaScriptStringEncode(deliveryCountry)
+            Dim jsEdd As String = HttpUtility.JavaScriptStringEncode(estimatedDeliveryStr)
+
+            Dim sb As New StringBuilder()
+            sb.AppendLine("<script src=""https://apis.google.com/js/platform.js?onload=renderOptIn"" async defer></script>")
+            sb.AppendLine("<script>")
+            sb.AppendLine("window.renderOptIn = function() {")
+            sb.AppendLine("  window.gapi.load('surveyoptin', function() {")
+            sb.AppendLine("    window.gapi.surveyoptin.render({")
+            sb.AppendLine("      ""merchant_id"": """ & jsMerchantId & """,")
+            sb.AppendLine("      ""order_id"": """ & jsOrderId & """,")
+            sb.AppendLine("      ""email"": """ & jsEmail & """,")
+            sb.AppendLine("      ""delivery_country"": """ & jsCountry & """,")
+            sb.AppendLine("      ""estimated_delivery_date"": """ & jsEdd & """")
+            sb.AppendLine("    });")
+            sb.AppendLine("  });")
+            sb.AppendLine("};")
+            sb.AppendLine("</script>")
+
+            litGoogleSurveyOptIn.Text = sb.ToString()
+
+        Catch
+            ' Fail-closed: nessun impatto sul checkout
         End Try
     End Sub
 
