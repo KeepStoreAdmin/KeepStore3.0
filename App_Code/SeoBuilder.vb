@@ -55,6 +55,25 @@ Public NotInheritable Class SeoBuilder
         Return json
     End Function
 
+    ' Estrae il payload JSON da un eventuale <script type="application/ld+json">...</script>
+    ' Utile per compatibilità: alcune pagine passano JSON puro, altre passano già lo script tag.
+    Private Shared Function ExtractJsonLdPayload(ByVal raw As String) As String
+        If String.IsNullOrWhiteSpace(raw) Then Return ""
+        Dim s As String = raw.Trim()
+
+        If s.StartsWith("<script", StringComparison.OrdinalIgnoreCase) Then
+            Dim startIdx As Integer = s.IndexOf(">"c)
+            Dim endIdx As Integer = s.LastIndexOf("</script>", StringComparison.OrdinalIgnoreCase)
+            If startIdx >= 0 AndAlso endIdx > startIdx Then
+                Dim inner As String = s.Substring(startIdx + 1, endIdx - (startIdx + 1))
+                Return inner.Trim()
+            End If
+        End If
+
+        Return s
+    End Function
+
+
     ' -----------------------------
     ' META + CANONICAL
     ' -----------------------------
@@ -291,27 +310,27 @@ Public NotInheritable Class SeoBuilder
         ApplyJsonLd(ctx, jsonLd)
     End Sub
 
-    Public Shared Sub ApplyJsonLd(ByVal ctx As Object, ByVal jsonLd As String)
+        Public Shared Sub ApplyJsonLd(ByVal ctx As Object, ByVal jsonLd As String)
         If String.IsNullOrWhiteSpace(jsonLd) Then Exit Sub
 
         Dim page As Page = ResolvePage(ctx)
         If page Is Nothing Then Exit Sub
 
-        Dim payload As String = jsonLd.Trim()
-
-        Dim scriptTag As String = payload
-        If Not payload.StartsWith("<script", StringComparison.OrdinalIgnoreCase) Then
-            scriptTag = "<script type=""application/ld+json"">" & payload & "</script>"
-        End If
+        ' Importante:
+        ' - Page.master ha già <script type="application/ld+json"> ... </script>
+        ' - quindi, se la master implementa ISeoMaster, dobbiamo salvare SOLO JSON (no tag <script>)
+        Dim payload As String = ExtractJsonLdPayload(jsonLd)
+        If String.IsNullOrWhiteSpace(payload) Then Exit Sub
 
         Dim master As ISeoMaster = TryCast(page.Master, ISeoMaster)
         If master IsNot Nothing Then
-            master.SeoJsonLd = scriptTag
+            master.SeoJsonLd = payload
             Exit Sub
         End If
 
-        ' Fallback: se non c'è la master o non implementa ISeoMaster, appendo direttamente in <head>
+        ' Fallback: se non c'è la master o non implementa ISeoMaster, iniettiamo lo <script> direttamente in <head>
         If page.Header IsNot Nothing Then
+            Dim scriptTag As String = "<script type=""application/ld+json"">" & payload & "</script>"
             page.Header.Controls.Add(New LiteralControl(scriptTag))
         End If
     End Sub
