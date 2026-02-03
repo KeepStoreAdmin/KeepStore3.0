@@ -1,4 +1,4 @@
-﻿Imports System.Data
+Imports System.Data
 Imports MySql.Data.MySqlClient
 Imports it.sella.ecomms2s
 Imports System.Xml
@@ -35,7 +35,17 @@ Partial Class BancaSella_comunication
             Dim ipClient As String = Request.UserHostAddress
             Dim params As New Dictionary(Of String, String)
             params.add("@ipClient", ipClient)
-            params.add("@log", "Errore comunication -> " & ex.Message)
+            Dim safeDetails As String = ex.Message
+            Try
+                If ex.StackTrace IsNot Nothing Then
+                    Dim firstLine As String = ex.StackTrace.Split(New String() {vbCrLf, vbLf}, StringSplitOptions.RemoveEmptyEntries)(0)
+                    safeDetails &= " | " & firstLine
+                End If
+            Catch
+            End Try
+            If safeDetails Is Nothing Then safeDetails = ""
+            If safeDetails.Length > 1000 Then safeDetails = safeDetails.Substring(0, 1000)
+            params.add("@log", "Errore comunication -> " & safeDetails)
             ExecuteInsert("bancasella_log", "IP, Log", "@ipClient,@log", params)
         End Try
     End Sub

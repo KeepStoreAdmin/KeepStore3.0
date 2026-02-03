@@ -1,4 +1,4 @@
-﻿Imports System.Data
+Imports System.Data
 Imports MySql.Data.MySqlClient
 Imports it.sella.ecomms2s
 Imports System.Xml
@@ -54,29 +54,68 @@ Partial Class BancaSella_responseClient
         End If
     End Sub
 
+        Private Function TruncValue(ByVal s As String, ByVal maxLen As Integer) As String
+        If s Is Nothing Then Return ""
+        If s.Length <= maxLen Then Return s
+        Return s.Substring(0, maxLen)
+    End Function
+
     Private Sub writeDBLog(ByVal log As String)
-        writeDBLog(log, "")
+        writeDBLog(log, CType(Nothing, XmlNode))
     End Sub
 
+    ' Log minimale + sicuro:
+    ' - Non salva querystring
+    ' - Non salva campi potenzialmente sensibili
+    ' - Salva un sottoinsieme utile per diagnosi (esito, id transazione, errori)
     Private Sub writeDBLog(ByVal log As String, ByVal decryptedData As XmlNode)
         Dim xmlFinale As String = ""
-        Dim nodeName As String
-        Dim i As Integer
-        For i = 0 To decryptedData.ChildNodes.Count - 1
-            nodeName = decryptedData.ChildNodes(i).Name
-            If decryptedData.SelectSingleNode(nodeName).InnerText <> "" Then
-                xmlFinale = xmlFinale & "<" & nodeName & ">" & decryptedData.SelectSingleNode(nodeName).InnerText & "</" & nodeName & ">"
+
+        Try
+            If decryptedData IsNot Nothing Then
+                Dim allowed As String() = {
+                    "TransactionResult",
+                    "ShopTransactionID",
+                    "AuthorizationCode",
+                    "ErrorCode",
+                    "ErrorDescription",
+                    "BankTransactionID",
+                    "CustomInfo"
+                }
+
+                For Each nodeName As String In allowed
+                    Dim n As XmlNode = decryptedData.SelectSingleNode(nodeName)
+                    If n IsNot Nothing Then
+                        Dim v As String = n.InnerText
+                        If Not String.IsNullOrEmpty(v) Then
+                            ' Escape per evitare rotture del log XML
+                            Dim esc As String = System.Security.SecurityElement.Escape(v)
+                            xmlFinale &= "<" & nodeName & ">" & esc & "</" & nodeName & ">"
+                        End If
+                    End If
+                Next
             End If
-        Next i
+        Catch
+            ' Se il building XML fallisce, logga comunque solo il messaggio testuale
+            xmlFinale = ""
+        End Try
+
         writeDBLog(log, xmlFinale)
     End Sub
 
     Private Sub writeDBLog(ByVal log As String, ByVal xmlFinale As String)
         Dim ipClient As String = Request.UserHostAddress
+        If ipClient Is Nothing Then ipClient = ""
+        If ipClient.Length > 20 Then ipClient = ipClient.Substring(0, 20)
+
+        Dim safeLog As String = TruncValue(log, 1000)
+        Dim safeXml As String = TruncValue(xmlFinale, 1000)
+
         Dim params As New Dictionary(Of String, String)
-        params.add("@ipClient", ipClient)
-        params.add("@log", log)
-        params.add("@xmlFinale", xmlFinale)
+        params.Add("@ipClient", ipClient)
+        params.Add("@log", safeLog)
+        params.Add("@xmlFinale", safeXml)
+
         ExecuteInsert("bancasella_log", "IP, Log, XML", "@ipClient,@log,@xmlFinale", params)
     End Sub
 
