@@ -3,11 +3,10 @@ Imports System.Collections.Generic
 Imports System.Configuration
 Imports System.IO
 Imports System.Text
-Imports System.Text.RegularExpressions
-Imports System.Xml
 Imports System.Web
 Imports System.Web.UI
 Imports MySql.Data.MySqlClient
+Imports System.Text.RegularExpressions
 
 Partial Class sitemap
     Inherits System.Web.UI.Page
@@ -23,13 +22,10 @@ Partial Class sitemap
     Private _listingPath As String
     Private _staticUrls As List(Of String)
 
-    ' Audit: coerenza sitemap vs robots
+    ' Audit (optional) and Robots alignment
     Private _auditEnabled As Boolean
     Private _auditToken As String
-
-    ' Robots-aligned filter (defense-in-depth)
-    Private _disallowRules As List(Of String)
-
+    Private _disallowRegex As List(Of Regex)
 
     Private Class CacheSignatureInfo
         Public Property Signature As String
@@ -61,87 +57,60 @@ Partial Class sitemap
         _staticUrls.Add("contact.aspx")
         _staticUrls.Add("privacy.aspx")
         _staticUrls.Add("faq.aspx")
-        _staticUrls.Add("track-your-order.html")
+        _staticUrls.Add("track-your-order.aspx")
+' Audit (optional)
+_auditEnabled = GetBoolAppSetting("KeepStore.Sitemap.Audit.Enabled", False)
+_auditToken = GetStringAppSetting("KeepStore.Sitemap.Audit.Token", "")
 
-        ' Audit settings
-        _auditEnabled = GetBoolAppSetting("KeepStore.Sitemap.Audit.Enabled", False)
-        _auditToken = GetStringAppSetting("KeepStore.Sitemap.Audit.Token", "")
-
-        ' Robots Disallow alignment (optional)
-        _disallowRules = LoadDisallowRulesFromRobots()
-        If _disallowRules Is Nothing OrElse _disallowRules.Count = 0 Then
-            _disallowRules = New List(Of String)()
-            _disallowRules.Add("/myaccount")
-            _disallowRules.Add("/myaccount/")
-            _disallowRules.Add("/myaccount.aspx")
-            _disallowRules.Add("/carrello.aspx")
-            _disallowRules.Add("/ordine.aspx")
-            _disallowRules.Add("/pagamento.aspx")
-            _disallowRules.Add("/wishlist.aspx")
-            _disallowRules.Add("/documenti.aspx")
-            _disallowRules.Add("/documentidettaglio.aspx")
-            _disallowRules.Add("/datiutente.aspx")
-            _disallowRules.Add("/cambiapassword.aspx")
-            _disallowRules.Add("/pay_your_orders.aspx")
-            _disallowRules.Add("/app_data/")
-            _disallowRules.Add("/app_code/")
-            _disallowRules.Add("/bin/")
-            _disallowRules.Add("/*rimuovi=")
-            _disallowRules.Add("/*?rimuovi=")
-            _disallowRules.Add("/*&rimuovi=")
-        End If
+' Robots Disallow alignment (optional)
+_disallowRegex = LoadDisallowRegexFromRobots()
+If _disallowRegex Is Nothing Then _disallowRegex = New List(Of Regex)()
 
     End Sub
 
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
-        Dim host As String = GetHost()
-        Dim wantAudit As Boolean = String.Equals((Request.QueryString("audit") & "").Trim(), "1", StringComparison.OrdinalIgnoreCase) OrElse _
-                             String.Equals((Request.QueryString("audit") & "").Trim(), "true", StringComparison.OrdinalIgnoreCase)
+    Dim host As String = GetHost()
 
-        If wantAudit Then
-            If Not IsAuditAllowed() Then
-                Response.StatusCode = 404
-                Response.SuppressContent = True
-                Return
-            End If
-
-            Response.ContentType = "text/plain"
-            Response.Charset = "utf-8"
-            Response.ContentEncoding = Encoding.UTF8
-            Response.Cache.SetCacheability(HttpCacheability.NoCache)
-            Response.Cache.SetNoStore()
-            Response.Cache.SetExpires(DateTime.UtcNow.AddYears(-1))
-            Response.AddHeader("X-Robots-Tag", "noindex, nofollow")
-
-            Response.Write(BuildAuditReport(host))
+    ' Optional audit endpoint: sitemap.aspx?audit=1&token=...
+    If String.Equals(Request.QueryString("audit"), "1", StringComparison.Ordinal) Then
+        If Not IsAuditAllowed() Then
+            Response.StatusCode = 404
+            Response.End()
             Return
         End If
 
-        Response.ContentType = "application/xml"
+        Response.ContentType = "text/plain"
         Response.Charset = "utf-8"
-        Response.ContentEncoding = Encoding.UTF8
-        Response.AddHeader("X-Robots-Tag", "noindex, nofollow")
-        Dim sig As CacheSignatureInfo = Nothing
-        If _fileCacheEnabled Then
-            sig = ComputeCacheSignature(host)
+        Response.Cache.SetCacheability(HttpCacheability.NoCache)
+        Response.Cache.SetNoStore()
 
-            If TryServeFromCache(host, sig) Then
-                Return
-            End If
+        Response.Write(BuildAuditReport(host))
+        Return
+    End If
+
+    Response.ContentType = "application/xml"
+    Response.Charset = "utf-8"
+
+    Dim sig As CacheSignatureInfo = Nothing
+    If _fileCacheEnabled Then
+        sig = ComputeCacheSignature(host)
+        If TryServeFromCache(host, sig) Then
+            Return
         End If
+    End If
 
-        Dim xml As String = BuildXml(host, sig)
+    Dim xml As String = BuildXml(host, sig)
 
-        If _fileCacheEnabled Then
-            WriteCache(host, sig, xml)
-        End If
+    If _fileCacheEnabled Then
+        WriteCache(host, sig, xml)
+    End If
 
-        Response.Write(xml)
-    End Sub
+    Response.Write(xml)
+End Sub
+
 
     Private Function BuildXml(host As String, sig As CacheSignatureInfo) As String
         Dim urls As New List(Of Tuple(Of String, String, String, String))()
-        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
 
         Dim globalLastModUtc As Nullable(Of DateTime) = Nothing
         If sig IsNot Nothing AndAlso sig.DataMaxUtc.HasValue Then
@@ -160,11 +129,11 @@ Partial Class sitemap
         End If
 
         ' Static URLs (home + listing + static pages)
-        AddStaticUrls(urls, seen, host, fallbackUtc)
+        AddStaticUrls(urls, host, fallbackUtc)
 
         ' Dynamic URLs
-        AddDynamicArticoliUrls(urls, seen, host)
-        AddDynamicCategoryUrls(urls, seen, host, globalLastModUtc)
+        AddDynamicArticoliUrls(urls, host)
+        AddDynamicCategoryUrls(urls, host, globalLastModUtc)
 
         Dim sb As New StringBuilder()
         sb.Append("<?xml version=""1.0"" encoding=""UTF-8""?>")
@@ -212,31 +181,43 @@ Partial Class sitemap
         Return sb.ToString()
     End Function
 
-    Private Sub AddStaticUrls(urls As List(Of Tuple(Of String, String, String, String)), seen As HashSet(Of String), host As String, lastModUtc As Nullable(Of DateTime))
+    Private Sub AddStaticUrls(urls As List(Of Tuple(Of String, String, String, String)), host As String, lastModUtc As Nullable(Of DateTime))
         ' Home
-        AddUrl(urls, seen, MakeAbsolute(host, _homePath), FormatAsW3C(lastModUtc), "daily", "1.0")
+        AddUrl(urls, MakeAbsolute(host, _homePath), FormatAsW3C(lastModUtc), "daily", "1.0")
 
         ' Listing (articoli.aspx) -> lastmod "reale" (MAX(data))
-        AddUrl(urls, seen, MakeAbsolute(host, _listingPath), FormatAsW3C(lastModUtc), "daily", "0.9")
+        AddUrl(urls, MakeAbsolute(host, _listingPath), FormatAsW3C(lastModUtc), "daily", "0.9")
 
-        ' Other static pages
-        For Each rel As String In _staticUrls
-            If rel.Equals(_homePath, StringComparison.OrdinalIgnoreCase) OrElse rel.Equals(_listingPath, StringComparison.OrdinalIgnoreCase) Then
-                Continue For
-            End If
-            AddUrl(urls, seen, MakeAbsolute(host, rel), FormatAsW3C(lastModUtc), "monthly", "0.4")
-        Next
+' Other static pages
+For Each rel As String In _staticUrls
+    If rel.Equals(_homePath, StringComparison.OrdinalIgnoreCase) OrElse rel.Equals(_listingPath, StringComparison.OrdinalIgnoreCase) Then
+        Continue For
+    End If
+
+    ' Best-effort: do not emit static URLs that don't exist physically (prevents sitemap 404 noise)
+    Try
+        Dim relPhys As String = "~/" & rel.TrimStart("/"c)
+        Dim phys As String = Server.MapPath(relPhys)
+        If Not String.IsNullOrEmpty(phys) AndAlso Not File.Exists(phys) Then
+            Continue For
+        End If
+    Catch
+        ' ignore (keep URL)
+    End Try
+
+    AddUrl(urls, MakeAbsolute(host, rel), FormatAsW3C(lastModUtc), "monthly", "0.4")
+Next
     End Sub
 
-    Private Sub AddDynamicArticoliUrls(urls As List(Of Tuple(Of String, String, String, String)), seen As HashSet(Of String), host As String)
+    Private Sub AddDynamicArticoliUrls(urls As List(Of Tuple(Of String, String, String, String)), host As String)
         For Each row As Tuple(Of String, Nullable(Of DateTime)) In QueryUrlAndLastMod("v_sitemap_prodotti")
             Dim absUrl As String = MakeAbsolute(host, row.Item1)
             Dim lastmod As String = FormatAsW3C(row.Item2)
-            AddUrl(urls, seen, absUrl, lastmod, "weekly", "0.7")
+            AddUrl(urls, absUrl, lastmod, "weekly", "0.7")
         Next
     End Sub
 
-    Private Sub AddDynamicCategoryUrls(urls As List(Of Tuple(Of String, String, String, String)), seen As HashSet(Of String), host As String, globalLastModUtc As Nullable(Of DateTime))
+    Private Sub AddDynamicCategoryUrls(urls As List(Of Tuple(Of String, String, String, String)), host As String, globalLastModUtc As Nullable(Of DateTime))
         Dim catMap As Dictionary(Of Integer, DateTime) = Nothing
         If _fromDbLastMod Then
             catMap = GetCategoryLastModUtcMap()
@@ -261,28 +242,43 @@ Partial Class sitemap
             End If
 
             Dim absUrl As String = MakeAbsolute(host, urlRel)
-            AddUrl(urls, seen, absUrl, FormatAsW3C(lastModUtc), "weekly", "0.6")
+            AddUrl(urls, absUrl, FormatAsW3C(lastModUtc), "weekly", "0.6")
         Next
     End Sub
 
-    Private Sub AddUrl(urls As List(Of Tuple(Of String, String, String, String)), seen As HashSet(Of String), loc As String, lastmodW3c As String, changefreq As String, priority As String)
-        If String.IsNullOrEmpty(loc) Then Return
-        Dim norm As String = NormalizeLoc(loc)
-        If String.IsNullOrEmpty(norm) Then Return
-        If IsDisallowedByRobots(norm) Then Return
-        If seen IsNot Nothing Then
-            If seen.Contains(norm) Then Return
-            seen.Add(norm)
-        End If
-        urls.Add(New Tuple(Of String, String, String, String)(norm, lastmodW3c, changefreq, priority))
-    End Sub
+    Private Sub AddUrl(urls As List(Of Tuple(Of String, String, String, String)), loc As String, lastmodW3c As String, changefreq As String, priority As String)
+    If urls Is Nothing Then Return
+    If String.IsNullOrEmpty(loc) Then Return
+
+    ' Skip URLs disallowed by robots.txt (best-effort)
+    If IsDisallowedByRobots(loc) Then
+        Return
+    End If
+
+    ' De-duplicate (per-request)
+    Dim key As String = "__KS_SITEMAP_SEEN__"
+    Dim seen As HashSet(Of String) = TryCast(Context.Items(key), HashSet(Of String))
+    If seen Is Nothing Then
+        seen = New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Context.Items(key) = seen
+    End If
+    If seen.Contains(loc) Then Return
+    seen.Add(loc)
+
+    urls.Add(New Tuple(Of String, String, String, String)(loc, lastmodW3c, changefreq, priority))
+End Sub
+
 
     '---------------- DB: URL + last_mod ----------------
-    Private Iterator Function QueryUrlAndLastMod(viewName As String) As IEnumerable(Of Tuple(Of String, Nullable(Of DateTime)))
-        For Each info As UrlLastModInfo In QueryUrlAndLastModInfo(viewName)
-            Yield New Tuple(Of String, Nullable(Of DateTime))(info.Url, info.LastModUtc)
-        Next
-    End Function
+
+    Private Function QueryUrlAndLastMod(viewName As String) As IEnumerable(Of Tuple(Of String, Nullable(Of DateTime)))
+    Dim list As New List(Of Tuple(Of String, Nullable(Of DateTime)))()
+    For Each info As UrlLastModInfo In QueryUrlAndLastModInfo(viewName)
+        list.Add(New Tuple(Of String, Nullable(Of DateTime))(info.Url, info.LastModUtc))
+    Next
+    Return list
+End Function
+
 
     Private Iterator Function QueryUrlAndLastModInfo(viewName As String) As IEnumerable(Of UrlLastModInfo)
         Dim sql As String = "SELECT * FROM " & viewName
@@ -579,63 +575,6 @@ Partial Class sitemap
         Return dict
     End Function
 
-
-    Private Function NormalizeLoc(loc As String) As String
-        Dim u As String = (loc & "").Trim()
-        If u = "" Then Return ""
-
-        Dim protoSep As Integer = u.IndexOf("://")
-        If protoSep > 0 Then
-            Dim head As String = u.Substring(0, protoSep + 3)
-            Dim tail As String = u.Substring(protoSep + 3)
-            While tail.Contains("//")
-                tail = tail.Replace("//", "/")
-            End While
-            u = head & tail
-        End If
-
-        Return u
-    End Function
-
-    Private Function IsDisallowedByRobots(absUrl As String) As Boolean
-        Try
-            If _disallowRules Is Nothing OrElse _disallowRules.Count = 0 Then
-                Dim u As String = (absUrl & "").ToLowerInvariant()
-                If u.Contains("rimuovi=") Then Return True
-                Return False
-            End If
-
-            Dim uri As New Uri(absUrl, UriKind.Absolute)
-            Dim target As String = (uri.AbsolutePath & uri.Query).ToLowerInvariant()
-
-            For Each rule As String In _disallowRules
-                Dim r As String = (rule & "").Trim()
-                If r = "" Then Continue For
-                If r = "/" Then Continue For
-
-                Dim rr As String = r.ToLowerInvariant()
-
-                If rr.Contains("*") Then
-                    Dim pattern As String = "^" & Regex.Escape(rr).Replace("\*", ".*")
-                    If Regex.IsMatch(target, pattern, RegexOptions.IgnoreCase) Then
-                        Return True
-                    End If
-                Else
-                    If target.StartsWith(rr, StringComparison.OrdinalIgnoreCase) Then
-                        Return True
-                    End If
-                End If
-            Next
-
-            If target.Contains("rimuovi=") Then Return True
-
-        Catch
-            Return True
-        End Try
-
-        Return False
-    End Function
-
     '---------------- Helpers ----------------
 
     Private Function FormatAsW3C(dtUtc As Nullable(Of DateTime)) As String
@@ -706,183 +645,6 @@ Partial Class sitemap
         Dim i As Integer
         If Integer.TryParse(v, i) Then Return i
         Return defaultValue
-    End Function
-
-
-    ' ===== Robots.txt parsing (Disallow) =====
-    Private Function LoadDisallowRulesFromRobots() As List(Of String)
-        Dim rules As New List(Of String)()
-
-        Try
-            Dim p As String = Server.MapPath("~/robots.txt")
-            If Not File.Exists(p) Then Return rules
-
-            Dim lines() As String = File.ReadAllLines(p, Encoding.UTF8)
-
-            Dim inStarSection As Boolean = False
-            For Each raw As String In lines
-                Dim line As String = (raw & "")
-                Dim hashPos As Integer = line.IndexOf("#"c)
-                If hashPos >= 0 Then line = line.Substring(0, hashPos)
-                line = line.Trim()
-                If line = "" Then Continue For
-
-                Dim lower As String = line.ToLowerInvariant()
-
-                If lower.StartsWith("user-agent:") Then
-                    Dim ua As String = line.Substring("user-agent:".Length).Trim()
-                    inStarSection = (ua = "*" OrElse ua = """*""" OrElse ua.ToLowerInvariant() = "*")
-                    Continue For
-                End If
-
-                ' Se non ci sono sezioni specifiche, accettiamo comunque i Disallow (robust)
-                If lower.StartsWith("disallow:") Then
-                    If (Not inStarSection) AndAlso HasAnyUserAgent(lines) Then
-                        ' se ci sono sezioni User-agent e questa non è la *, ignoriamo
-                        Continue For
-                    End If
-
-                    Dim pathRule As String = line.Substring("disallow:".Length).Trim()
-                    If pathRule = "" Then Continue For
-                    If pathRule = "/" Then
-                        ' Disallow: / => blocco totale (non lo applichiamo qui per non azzerare sitemap per errore)
-                        rules.Add("/")
-                        Continue For
-                    End If
-
-                    If Not pathRule.StartsWith("/") Then pathRule = "/" & pathRule
-                    rules.Add(pathRule)
-                End If
-            Next
-
-        Catch
-            ' ignore: in caso di errori torniamo lista vuota e usiamo fallback
-        End Try
-
-        Return rules
-    End Function
-
-    Private Function HasAnyUserAgent(lines() As String) As Boolean
-        Try
-            For Each raw As String In lines
-                Dim line As String = (raw & "").Trim().ToLowerInvariant()
-                If line.StartsWith("user-agent:") Then Return True
-            Next
-        Catch
-        End Try
-        Return False
-    End Function
-
-    ' ===== Audit access control =====
-    Private Function IsAuditAllowed() As Boolean
-        Try
-            If Request IsNot Nothing AndAlso Request.IsLocal Then Return True
-        Catch
-        End Try
-
-        If Not _auditEnabled Then Return False
-
-        If String.IsNullOrEmpty(_auditToken) Then Return False
-        If _auditToken.Length < 16 Then Return False
-
-        Dim t As String = (Request.QueryString("token") & "")
-        If t = "" Then Return False
-
-        Return SlowEquals(t, _auditToken)
-    End Function
-
-    Private Function SlowEquals(a As String, b As String) As Boolean
-        If a Is Nothing OrElse b Is Nothing Then Return False
-        Dim ba() As Byte = Encoding.UTF8.GetBytes(a)
-        Dim bb() As Byte = Encoding.UTF8.GetBytes(b)
-        Dim diff As Integer = ba.Length Xor bb.Length
-        Dim maxLen As Integer = Math.Min(ba.Length, bb.Length)
-        For i As Integer = 0 To maxLen - 1
-            diff = diff Or (ba(i) Xor bb(i))
-        Next
-        Return diff = 0
-    End Function
-
-    ' ===== Audit report: sitemap URLs vs robots rules =====
-    Private Function BuildAuditReport(host As String) As String
-        Dim sb As New StringBuilder()
-
-        sb.AppendLine("KeepStore Sitemap Audit (sitemap vs robots)")
-        sb.AppendLine("UTC: " & DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"))
-        sb.AppendLine("Host: " & host)
-        sb.AppendLine("Robots rules loaded: " & If(_disallowRules Is Nothing, "0", _disallowRules.Count.ToString()))
-        sb.AppendLine("")
-
-        Dim xml As String = BuildXml(host)
-        Dim urls As List(Of String) = ExtractLocUrls(xml)
-
-        sb.AppendLine("URLs in sitemap: " & urls.Count.ToString())
-
-        ' duplicates
-        Dim setLower As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-        Dim dupCount As Integer = 0
-        For Each u As String In urls
-            If Not setLower.Add(u) Then dupCount += 1
-        Next
-        sb.AppendLine("Duplicates: " & dupCount.ToString())
-
-        ' scheme checks
-        Dim nonHttps As Integer = 0
-        For Each u As String In urls
-            If Not u.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then nonHttps += 1
-        Next
-        sb.AppendLine("Non-HTTPS: " & nonHttps.ToString())
-
-        ' disallowed checks
-        Dim disallowed As New List(Of String)()
-        For Each u As String In urls
-            If IsDisallowedByRobots(u) Then
-                disallowed.Add(u)
-            End If
-        Next
-        sb.AppendLine("Robots-disallowed: " & disallowed.Count.ToString())
-
-        If disallowed.Count > 0 Then
-            sb.AppendLine("")
-            sb.AppendLine("Sample disallowed (max 50):")
-            Dim maxN As Integer = Math.Min(50, disallowed.Count)
-            For i As Integer = 0 To maxN - 1
-                sb.AppendLine("- " & disallowed(i))
-            Next
-        End If
-
-        Return sb.ToString()
-    End Function
-
-    Private Function ExtractLocUrls(xml As String) As List(Of String)
-        Dim res As New List(Of String)()
-        If String.IsNullOrEmpty(xml) Then Return res
-
-        Try
-            Dim doc As New XmlDocument()
-            doc.XmlResolver = Nothing
-            doc.LoadXml(xml)
-
-            Dim nsmgr As New XmlNamespaceManager(doc.NameTable)
-            nsmgr.AddNamespace("sm", "http://www.sitemaps.org/schemas/sitemap/0.9")
-            Dim nodes As XmlNodeList = doc.SelectNodes("//sm:url/sm:loc", nsmgr)
-            If nodes IsNot Nothing Then
-                For Each n As XmlNode In nodes
-                    Dim v As String = (n.InnerText & "").Trim()
-                    If v <> "" Then res.Add(v)
-                Next
-            End If
-
-        Catch
-            ' fallback regex
-            Dim rx As New Regex("<loc>(.*?)</loc>", RegexOptions.IgnoreCase Or RegexOptions.Singleline)
-            For Each m As Match In rx.Matches(xml)
-                Dim v As String = (m.Groups(1).Value & "").Trim()
-                If v <> "" Then res.Add(System.Web.HttpUtility.HtmlDecode(v))
-            Next
-        End Try
-
-        Return res
     End Function
 
 End Class
