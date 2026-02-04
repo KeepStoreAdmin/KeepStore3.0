@@ -27,12 +27,13 @@ Partial Class sitemap
 
     Private ReadOnly _staticUrls As List(Of String)
 
+    
+
     ' Audit mode: sitemap vs robots coherence report
     Private ReadOnly _auditEnabled As Boolean
     Private ReadOnly _auditToken As String
 
-
-    Private Class CacheSignatureInfo
+Private Class CacheSignatureInfo
         Public Property Signature As String
         Public Property DataMaxUtc As Nullable(Of DateTime)
     End Class
@@ -63,12 +64,11 @@ Partial Class sitemap
         _staticUrls.Add("privacy.html")
         _staticUrls.Add("faq.html")
         _staticUrls.Add("track-your-order.html")
-
-        ' Audit config (disabled by default for remote; allowed locally)
-        _auditEnabled = GetBoolAppSetting("KeepStore.Sitemap.Audit.Enabled", True)
+        ' Audit config (remote disabled unless enabled+token; always allowed locally)
+        _auditEnabled = GetBoolAppSetting("KeepStore.Sitemap.Audit.Enabled", False)
         _auditToken = GetStringAppSetting("KeepStore.Sitemap.Audit.Token", "")
 
-End Sub
+    End Sub
 
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
         Response.ContentType = "application/xml"
@@ -76,7 +76,7 @@ End Sub
 
         ' Optional: audit mode (sitemap URLs vs robots.txt rules)
         Dim auditReq As Boolean = String.Equals((Request.QueryString("audit") & "").Trim(), "1", StringComparison.Ordinal)
-        If auditReq AndAlso _auditEnabled Then
+        If auditReq Then
             If IsAuditAuthorized() Then
                 RunSitemapRobotsAudit()
                 Return
@@ -613,5 +613,306 @@ End Sub
         If Integer.TryParse(v, i) Then Return i
         Return defaultValue
     End Function
+
+
+    '================== AUDIT: sitemap vs robots.txt ==================
+
+    Private Function IsAuditAuthorized() As Boolean
+        ' Local requests are always allowed
+        If Request IsNot Nothing AndAlso Request.IsLocal Then
+            Return True
+        End If
+
+        ' Remote: require explicit enable + strong token
+        If Not _auditEnabled Then
+            Return False
+        End If
+
+        If String.IsNullOrEmpty(_auditToken) OrElse _auditToken.Trim().Length < 16 Then
+            Return False
+        End If
+
+        Dim token As String = (Request.QueryString("token") & "").Trim()
+        If String.IsNullOrEmpty(token) Then
+            Return False
+        End If
+
+        Return String.Equals(token, _auditToken, StringComparison.Ordinal)
+    End Function
+
+    Private Sub RunSitemapRobotsAudit()
+        ' Hardening: never cache audit output
+        Response.ContentType = "text/plain"
+        Response.Charset = "utf-8"
+        Response.ContentEncoding = Encoding.UTF8
+        Response.Cache.SetCacheability(HttpCacheability.NoCache)
+        Response.Cache.SetNoStore()
+        Response.Cache.SetExpires(DateTime.UtcNow.AddDays(-1))
+        Response.AddHeader("X-Robots-Tag", "noindex, nofollow")
+
+        Dim host As String = GetHost()
+
+        ' Robots rules (User-agent: *)
+        Dim wildcardRules As New List(Of String)()
+        Dim hasRimuoviTrap As Boolean = False
+        Dim disallowPrefixes As List(Of String) = LoadRobotsDisallowPrefixes(hasRimuoviTrap, wildcardRules)
+
+        Dim sb As New StringBuilder()
+        sb.AppendLine("KeepStore Sitemap/Robots Audit")
+        sb.AppendLine("GeneratedUtc: " & DateTime.UtcNow.ToString("o"))
+        sb.AppendLine("Host: " & host)
+        sb.AppendLine("AuditRemoteEnabled: " & _auditEnabled.ToString())
+        sb.AppendLine("RobotsDisallowPrefixes: " & disallowPrefixes.Count.ToString())
+        sb.AppendLine("RobotsWildcardRules: " & wildcardRules.Count.ToString())
+        If hasRimuoviTrap Then
+            sb.AppendLine("RobotsHasRimuoviTrap: True")
+        Else
+            sb.AppendLine("RobotsHasRimuoviTrap: False")
+        End If
+        sb.AppendLine("")
+
+        ' 1) Read cached sitemap if present
+        Dim cacheXml As String = ""
+        Dim cachePath As String = ""
+        Try
+            Dim dirPath As String = Server.MapPath(_fileCachePath)
+            If Not String.IsNullOrEmpty(dirPath) Then
+                cachePath = Path.Combine(dirPath, "sitemap.xml")
+                If File.Exists(cachePath) Then
+                    cacheXml = File.ReadAllText(cachePath, Encoding.UTF8)
+                End If
+            End If
+        Catch
+            cacheXml = ""
+        End Try
+
+        If Not String.IsNullOrEmpty(cacheXml) Then
+            sb.AppendLine("=== CACHE SITEMAP ===")
+            sb.AppendLine("CachePath: " & cachePath)
+            AuditOneSitemapXml(sb, cacheXml, disallowPrefixes, wildcardRules, hasRimuoviTrap)
+            sb.AppendLine("")
+        Else
+            sb.AppendLine("=== CACHE SITEMAP ===")
+            sb.AppendLine("CachePath: " & cachePath)
+            sb.AppendLine("Status: not found / empty")
+            sb.AppendLine("")
+        End If
+
+        ' 2) Generate fresh sitemap (bypasses disk cache usage)
+        sb.AppendLine("=== FRESH SITEMAP ===")
+        Dim sig As CacheSignatureInfo = Nothing
+        Try
+            If _fileCacheEnabled Then
+                sig = ComputeCacheSignature(host)
+            End If
+        Catch
+            sig = Nothing
+        End Try
+
+        Dim freshXml As String = ""
+        Try
+            freshXml = BuildXml(host, sig)
+        Catch ex As Exception
+            sb.AppendLine("ERROR generating fresh sitemap: " & ex.Message)
+            Response.Write(sb.ToString())
+            Return
+        End Try
+
+        AuditOneSitemapXml(sb, freshXml, disallowPrefixes, wildcardRules, hasRimuoviTrap)
+
+        Response.Write(sb.ToString())
+    End Sub
+
+    Private Sub AuditOneSitemapXml(sb As StringBuilder,
+                                  xml As String,
+                                  disallowPrefixes As List(Of String),
+                                  wildcardRules As List(Of String),
+                                  hasRimuoviTrap As Boolean)
+
+        Dim locs As List(Of String) = ExtractSitemapLocs(xml)
+
+        Dim total As Integer = locs.Count
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim dup As Integer = 0
+        Dim nonHttps As Integer = 0
+        Dim disallowed As Integer = 0
+
+        Dim disallowedSamples As New List(Of String)()
+
+        For Each u As String In locs
+            Dim url As String = (u & "").Trim()
+            If url = "" Then Continue For
+
+            If seen.Contains(url) Then
+                dup += 1
+            Else
+                seen.Add(url)
+            End If
+
+            If Not url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+                nonHttps += 1
+            End If
+
+            Dim rule As String = GetRobotsBlockRule(url, disallowPrefixes, wildcardRules, hasRimuoviTrap)
+            If Not String.IsNullOrEmpty(rule) Then
+                disallowed += 1
+                If disallowedSamples.Count < 50 Then
+                    disallowedSamples.Add(url & " | " & rule)
+                End If
+            End If
+        Next
+
+        sb.AppendLine("TotalLoc: " & total.ToString())
+        sb.AppendLine("UniqueLoc: " & seen.Count.ToString())
+        sb.AppendLine("DuplicateLoc: " & dup.ToString())
+        sb.AppendLine("NonHttpsLoc: " & nonHttps.ToString())
+        sb.AppendLine("DisallowedByRobots: " & disallowed.ToString())
+
+        If disallowedSamples.Count > 0 Then
+            sb.AppendLine("")
+            sb.AppendLine("DisallowedSamples (max 50):")
+            For Each s As String In disallowedSamples
+                sb.AppendLine(" - " & s)
+            Next
+        End If
+    End Sub
+
+    Private Function ExtractSitemapLocs(xml As String) As List(Of String)
+        Dim out As New List(Of String)()
+        If String.IsNullOrEmpty(xml) Then Return out
+
+        Try
+            Dim doc As New XmlDocument()
+            doc.XmlResolver = Nothing
+            doc.LoadXml(xml)
+
+            Dim ns As New XmlNamespaceManager(doc.NameTable)
+            ns.AddNamespace("sm", "http://www.sitemaps.org/schemas/sitemap/0.9")
+
+            Dim nodes As XmlNodeList = doc.SelectNodes("//sm:loc", ns)
+            If nodes IsNot Nothing Then
+                For Each n As XmlNode In nodes
+                    Dim v As String = (n.InnerText & "").Trim()
+                    If v <> "" Then out.Add(v)
+                Next
+            End If
+        Catch
+            ' ignore parse errors
+        End Try
+
+        Return out
+    End Function
+
+    Private Function LoadRobotsDisallowPrefixes(ByRef hasRimuoviTrap As Boolean, ByRef wildcardRules As List(Of String)) As List(Of String)
+        Dim prefixes As New List(Of String)()
+        hasRimuoviTrap = False
+        If wildcardRules Is Nothing Then wildcardRules = New List(Of String)()
+
+        Try
+            Dim robotsPath As String = Server.MapPath("~/robots.txt")
+            If String.IsNullOrEmpty(robotsPath) OrElse (Not File.Exists(robotsPath)) Then
+                Return prefixes
+            End If
+
+            Dim inStarBlock As Boolean = False
+            Dim seenStarBlock As Boolean = False
+
+            Dim lines() As String = File.ReadAllLines(robotsPath, Encoding.UTF8)
+            For Each raw As String In lines
+                Dim line As String = (raw & "").Trim()
+                If line = "" Then Continue For
+
+                ' Strip comments
+                Dim hashIdx As Integer = line.IndexOf("#"c)
+                If hashIdx >= 0 Then
+                    line = line.Substring(0, hashIdx).Trim()
+                    If line = "" Then Continue For
+                End If
+
+                Dim idx As Integer = line.IndexOf(":"c)
+                If idx <= 0 Then Continue For
+
+                Dim key As String = line.Substring(0, idx).Trim().ToLowerInvariant()
+                Dim val As String = line.Substring(idx + 1).Trim()
+
+                If key = "user-agent" Then
+                    Dim ua As String = (val & "").Trim()
+                    If ua = "*" Then
+                        inStarBlock = True
+                        seenStarBlock = True
+                    Else
+                        If seenStarBlock Then
+                            inStarBlock = False
+                        End If
+                    End If
+                    Continue For
+                End If
+
+                If key = "disallow" AndAlso inStarBlock Then
+                    If String.IsNullOrEmpty(val) Then Continue For
+                    If val = "/" Then Continue For
+
+                    Dim v As String = val.Trim()
+                    If v.Contains("*") OrElse v.Contains("?") Then
+                        wildcardRules.Add(v)
+                        If v.ToLowerInvariant().Contains("rimuovi=") Then
+                            hasRimuoviTrap = True
+                        End If
+                        Continue For
+                    End If
+
+                    If Not v.StartsWith("/", StringComparison.Ordinal) Then Continue For
+                    prefixes.Add(v.ToLowerInvariant())
+                End If
+            Next
+        Catch
+            Return prefixes
+        End Try
+
+        ' Dedupe
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim out As New List(Of String)()
+        For Each p As String In prefixes
+            If String.IsNullOrEmpty(p) Then Continue For
+            If seen.Contains(p) Then Continue For
+            seen.Add(p)
+            out.Add(p)
+        Next
+
+        Return out
+    End Function
+
+    Private Function GetRobotsBlockRule(absUrl As String,
+                                       disallowPrefixes As List(Of String),
+                                       wildcardRules As List(Of String),
+                                       hasRimuoviTrap As Boolean) As String
+        If String.IsNullOrEmpty(absUrl) Then Return ""
+
+        Try
+            Dim uri As New Uri(absUrl, UriKind.Absolute)
+            Dim path As String = (uri.AbsolutePath & "").ToLowerInvariant()
+            Dim qs As String = (uri.Query & "").ToLowerInvariant()
+
+            ' Special-case rimuovi trap
+            If hasRimuoviTrap AndAlso qs.Contains("rimuovi=") Then
+                Return "robots: rimuovi= trap"
+            End If
+
+            If disallowPrefixes IsNot Nothing Then
+                For Each p As String In disallowPrefixes
+                    Dim pref As String = (p & "").ToLowerInvariant()
+                    If pref <> "" AndAlso path.StartsWith(pref) Then
+                        Return "robots disallow: " & p
+                    End If
+                Next
+            End If
+        Catch
+            ' If URL is not absolute/parseable, treat as problematic
+            Return "invalid URL"
+        End Try
+
+        Return ""
+    End Function
+
 
 End Class
