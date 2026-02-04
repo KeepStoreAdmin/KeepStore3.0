@@ -1,6 +1,4 @@
-# KeepStore 3.0 - Robots policy
-# Obiettivo: consentire il crawling delle pagine pubbliche (catalogo/contenuti) e bloccare aree non indicizzabili
-# (account, carrello/checkout, azioni) per evitare duplicati, leak di URL sensibili e crawl trap.
+# KeepStore 3.0 - Robots policy (alignment sitemap.xml + sitemap.aspx)
 User-agent: *
 
 # Block action URLs / faceted traps
@@ -8,10 +6,10 @@ Disallow: /*rimuovi=
 Disallow: /*?rimuovi=
 Disallow: /*&rimuovi=
 
-# NOTE: non blocchiamo st= (settore) perché fa parte delle URL SEO del catalogo.
-# L'indicizzazione è governata da: canonical + meta robots (noindex) dove necessario.
+# NOTE: we do NOT block st= (settore) because it's part of the SEO catalog URLs.
+# Indexation is controlled by: canonical + meta robots (noindex) where needed.
 
-# Block non-indexable areas (align to KeepStore real pages)
+# Block non-indexable areas (align to KeepStore 3.0 real pages)
 Disallow: /myaccount
 Disallow: /myaccount/
 Disallow: /myaccount.aspx
