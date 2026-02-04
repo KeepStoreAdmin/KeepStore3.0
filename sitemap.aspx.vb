@@ -6,6 +6,8 @@ Imports System.Text
 Imports System.Web
 Imports System.Web.UI
 Imports MySql.Data.MySqlClient
+Imports System.Xml
+Imports System.Text.RegularExpressions
 
 Partial Class sitemap
     Inherits System.Web.UI.Page
@@ -25,13 +27,11 @@ Partial Class sitemap
 
     Private ReadOnly _staticUrls As List(Of String)
 
+    ' Audit mode: sitemap vs robots coherence report
+    Private ReadOnly _auditEnabled As Boolean
+    Private ReadOnly _auditToken As String
 
-    ' Robots-aligned hard filter (defense-in-depth):
-    ' evita l'inclusione in sitemap di URL dichiarate Disallow nel robots.txt.
-    Private ReadOnly _disallowPrefixes As List(Of String)
 
-    ' Per deduplica delle <loc> (case-insensitive) durante la generazione.
-    Private _seenLoc As HashSet(Of String)
     Private Class CacheSignatureInfo
         Public Property Signature As String
         Public Property DataMaxUtc As Nullable(Of DateTime)
@@ -63,44 +63,31 @@ Partial Class sitemap
         _staticUrls.Add("privacy.html")
         _staticUrls.Add("faq.html")
         _staticUrls.Add("track-your-order.html")
-        ' ✅ Allineamento robots.txt -> sitemap: carica i Disallow (se disponibili) per escludere URL non indicizzabili
-        _disallowPrefixes = LoadDisallowPrefixesFromRobots()
 
-        ' Fallback: se robots.txt manca o non contiene regole parsabili, manteniamo una baseline sicura.
-        If _disallowPrefixes Is Nothing OrElse _disallowPrefixes.Count = 0 Then
-            _disallowPrefixes = New List(Of String)()
-            _disallowPrefixes.Add("/myaccount")
-            _disallowPrefixes.Add("/myaccount/")
-            _disallowPrefixes.Add("/myaccount.aspx")
-            _disallowPrefixes.Add("/my-account")
-            _disallowPrefixes.Add("/my-account/")
-            _disallowPrefixes.Add("/my-account.aspx")
+        ' Audit config (disabled by default for remote; allowed locally)
+        _auditEnabled = GetBoolAppSetting("KeepStore.Sitemap.Audit.Enabled", True)
+        _auditToken = GetStringAppSetting("KeepStore.Sitemap.Audit.Token", "")
 
-            _disallowPrefixes.Add("/carrello.aspx")
-            _disallowPrefixes.Add("/ordine.aspx")
-            _disallowPrefixes.Add("/pagamento.aspx")
-            _disallowPrefixes.Add("/wishlist.aspx")
-
-            _disallowPrefixes.Add("/documenti.aspx")
-            _disallowPrefixes.Add("/documentidettaglio.aspx")
-            _disallowPrefixes.Add("/datiutente.aspx")
-            _disallowPrefixes.Add("/cambiapassword.aspx")
-            _disallowPrefixes.Add("/pay_your_orders.aspx")
-
-            _disallowPrefixes.Add("/app_data/")
-            _disallowPrefixes.Add("/app_code/")
-            _disallowPrefixes.Add("/bin/")
-        End If
-
-    End Sub
+End Sub
 
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
         Response.ContentType = "application/xml"
         Response.Charset = "utf-8"
-        Response.ContentEncoding = Encoding.UTF8
 
-        ' Sitemap is not a user-facing document
-        Response.AddHeader("X-Robots-Tag", "noindex, nofollow")
+        ' Optional: audit mode (sitemap URLs vs robots.txt rules)
+        Dim auditReq As Boolean = String.Equals((Request.QueryString("audit") & "").Trim(), "1", StringComparison.Ordinal)
+        If auditReq AndAlso _auditEnabled Then
+            If IsAuditAuthorized() Then
+                RunSitemapRobotsAudit()
+                Return
+            Else
+                ' Do not disclose the existence of the audit endpoint
+                Response.StatusCode = 404
+                Response.SuppressContent = True
+                Return
+            End If
+        End If
+
 
         Dim host As String = GetHost()
 
@@ -124,8 +111,6 @@ Partial Class sitemap
 
     Private Function BuildXml(host As String, sig As CacheSignatureInfo) As String
         Dim urls As New List(Of Tuple(Of String, String, String, String))()
-
-        _seenLoc = New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
 
         Dim globalLastModUtc As Nullable(Of DateTime) = Nothing
         If sig IsNot Nothing AndAlso sig.DataMaxUtc.HasValue Then
@@ -251,20 +236,7 @@ Partial Class sitemap
 
     Private Sub AddUrl(urls As List(Of Tuple(Of String, String, String, String)), loc As String, lastmodW3c As String, changefreq As String, priority As String)
         If String.IsNullOrEmpty(loc) Then Return
-
-        Dim normalizedLoc As String = NormalizeLoc(loc)
-        If String.IsNullOrEmpty(normalizedLoc) Then Return
-
-        ' Exclude non-public / non-indexable URLs (robots-aligned)
-        If IsDisallowed(normalizedLoc) Then Return
-
-        ' Dedupe <loc> (case-insensitive)
-        If _seenLoc IsNot Nothing Then
-            If _seenLoc.Contains(normalizedLoc) Then Return
-            _seenLoc.Add(normalizedLoc)
-        End If
-
-        urls.Add(New Tuple(Of String, String, String, String)(normalizedLoc, lastmodW3c, changefreq, priority))
+        urls.Add(New Tuple(Of String, String, String, String)(loc, lastmodW3c, changefreq, priority))
     End Sub
 
     '---------------- DB: URL + last_mod ----------------
@@ -642,113 +614,4 @@ Partial Class sitemap
         Return defaultValue
     End Function
 
-
-
-    '================== Robots.txt alignment (defense-in-depth) ==================
-    ' Parsing minimale e sicuro:
-    ' - usa solo "Disallow:" con path semplici (senza wildcard)
-    ' - ignora "Disallow: /" (block-all)
-    ' - normalizza in lower-case per confronti case-insensitive
-    Private Function LoadDisallowPrefixesFromRobots() As List(Of String)
-        Dim rules As New List(Of String)()
-
-        Try
-            Dim robotsPath As String = Server.MapPath("~/robots.txt")
-            If String.IsNullOrEmpty(robotsPath) OrElse (Not File.Exists(robotsPath)) Then
-                Return rules
-            End If
-
-            Dim lines As String() = Nothing
-            Try
-                lines = File.ReadAllLines(robotsPath, Encoding.UTF8)
-            Catch
-                lines = File.ReadAllLines(robotsPath)
-            End Try
-
-            For Each raw As String In lines
-                Dim line As String = (raw & "").Trim()
-                If line = "" Then Continue For
-                If line.StartsWith("#") Then Continue For
-
-                Dim idx As Integer = line.IndexOf(":"c)
-                If idx <= 0 Then Continue For
-
-                Dim k As String = line.Substring(0, idx).Trim().ToLowerInvariant()
-                If k <> "disallow" Then Continue For
-
-                Dim v As String = line.Substring(idx + 1).Trim()
-                If v = "" Then Continue For
-
-                ' Ignore block-all
-                If v = "/" Then Continue For
-
-                ' Accept only simple prefixes (no wildcard / query patterns)
-                If v.Contains("*") OrElse v.Contains("?") Then Continue For
-                If Not v.StartsWith("/", StringComparison.Ordinal) Then Continue For
-
-                rules.Add(v.ToLowerInvariant())
-            Next
-        Catch
-            ' ignore: fallback list will be used
-        End Try
-
-        ' Dedupe
-        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-        Dim out As New List(Of String)()
-        For Each r As String In rules
-            If String.IsNullOrEmpty(r) Then Continue For
-            If seen.Contains(r) Then Continue For
-            seen.Add(r)
-            out.Add(r)
-        Next
-
-        Return out
-    End Function
-
-    Private Function NormalizeLoc(loc As String) As String
-        Dim u As String = (loc & "").Trim()
-        If u = "" Then Return ""
-
-        ' Remove accidental double slashes after host (except "https://")
-        Dim protoSep As Integer = u.IndexOf("://"c)
-        If protoSep > 0 Then
-            Dim head As String = u.Substring(0, protoSep + 3)
-            Dim tail As String = u.Substring(protoSep + 3)
-            While tail.Contains("//")
-                tail = tail.Replace("//", "/")
-            End While
-            u = head & tail
-        End If
-
-        Return u
-    End Function
-
-    Private Function IsDisallowed(absUrl As String) As Boolean
-        Try
-            Dim uri As Uri = Nothing
-            If Uri.TryCreate(absUrl, UriKind.Absolute, uri) Then
-                Dim path As String = (uri.AbsolutePath & "").ToLowerInvariant()
-
-                If _disallowPrefixes IsNot Nothing Then
-                    For Each pfx As String In _disallowPrefixes
-                        Dim d As String = (pfx & "").ToLowerInvariant()
-                        If d <> "" AndAlso path.StartsWith(d) Then
-                            Return True
-                        End If
-                    Next
-                End If
-
-                ' Block crawl-trap parameter rimuovi=
-                Dim qs As String = (uri.Query & "").ToLowerInvariant()
-                If qs.Contains("rimuovi=") Then
-                    Return True
-                End If
-            End If
-        Catch
-            ' On parse/other errors, exclude to be safe
-            Return True
-        End Try
-
-        Return False
-    End Function
 End Class
