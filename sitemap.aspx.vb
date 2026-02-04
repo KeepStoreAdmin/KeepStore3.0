@@ -584,7 +584,7 @@ Partial Class sitemap
         Dim u As String = (loc & "").Trim()
         If u = "" Then Return ""
 
-        Dim protoSep As Integer = u.IndexOf("://"c)
+        Dim protoSep As Integer = u.IndexOf("://")
         If protoSep > 0 Then
             Dim head As String = u.Substring(0, protoSep + 3)
             Dim tail As String = u.Substring(protoSep + 3)
@@ -706,6 +706,183 @@ Partial Class sitemap
         Dim i As Integer
         If Integer.TryParse(v, i) Then Return i
         Return defaultValue
+    End Function
+
+
+    ' ===== Robots.txt parsing (Disallow) =====
+    Private Function LoadDisallowRulesFromRobots() As List(Of String)
+        Dim rules As New List(Of String)()
+
+        Try
+            Dim p As String = Server.MapPath("~/robots.txt")
+            If Not File.Exists(p) Then Return rules
+
+            Dim lines() As String = File.ReadAllLines(p, Encoding.UTF8)
+
+            Dim inStarSection As Boolean = False
+            For Each raw As String In lines
+                Dim line As String = (raw & "")
+                Dim hashPos As Integer = line.IndexOf("#"c)
+                If hashPos >= 0 Then line = line.Substring(0, hashPos)
+                line = line.Trim()
+                If line = "" Then Continue For
+
+                Dim lower As String = line.ToLowerInvariant()
+
+                If lower.StartsWith("user-agent:") Then
+                    Dim ua As String = line.Substring("user-agent:".Length).Trim()
+                    inStarSection = (ua = "*" OrElse ua = """*""" OrElse ua.ToLowerInvariant() = "*")
+                    Continue For
+                End If
+
+                ' Se non ci sono sezioni specifiche, accettiamo comunque i Disallow (robust)
+                If lower.StartsWith("disallow:") Then
+                    If (Not inStarSection) AndAlso HasAnyUserAgent(lines) Then
+                        ' se ci sono sezioni User-agent e questa non è la *, ignoriamo
+                        Continue For
+                    End If
+
+                    Dim pathRule As String = line.Substring("disallow:".Length).Trim()
+                    If pathRule = "" Then Continue For
+                    If pathRule = "/" Then
+                        ' Disallow: / => blocco totale (non lo applichiamo qui per non azzerare sitemap per errore)
+                        rules.Add("/")
+                        Continue For
+                    End If
+
+                    If Not pathRule.StartsWith("/") Then pathRule = "/" & pathRule
+                    rules.Add(pathRule)
+                End If
+            Next
+
+        Catch
+            ' ignore: in caso di errori torniamo lista vuota e usiamo fallback
+        End Try
+
+        Return rules
+    End Function
+
+    Private Function HasAnyUserAgent(lines() As String) As Boolean
+        Try
+            For Each raw As String In lines
+                Dim line As String = (raw & "").Trim().ToLowerInvariant()
+                If line.StartsWith("user-agent:") Then Return True
+            Next
+        Catch
+        End Try
+        Return False
+    End Function
+
+    ' ===== Audit access control =====
+    Private Function IsAuditAllowed() As Boolean
+        Try
+            If Request IsNot Nothing AndAlso Request.IsLocal Then Return True
+        Catch
+        End Try
+
+        If Not _auditEnabled Then Return False
+
+        If String.IsNullOrEmpty(_auditToken) Then Return False
+        If _auditToken.Length < 16 Then Return False
+
+        Dim t As String = (Request.QueryString("token") & "")
+        If t = "" Then Return False
+
+        Return SlowEquals(t, _auditToken)
+    End Function
+
+    Private Function SlowEquals(a As String, b As String) As Boolean
+        If a Is Nothing OrElse b Is Nothing Then Return False
+        Dim ba() As Byte = Encoding.UTF8.GetBytes(a)
+        Dim bb() As Byte = Encoding.UTF8.GetBytes(b)
+        Dim diff As Integer = ba.Length Xor bb.Length
+        Dim maxLen As Integer = Math.Min(ba.Length, bb.Length)
+        For i As Integer = 0 To maxLen - 1
+            diff = diff Or (ba(i) Xor bb(i))
+        Next
+        Return diff = 0
+    End Function
+
+    ' ===== Audit report: sitemap URLs vs robots rules =====
+    Private Function BuildAuditReport(host As String) As String
+        Dim sb As New StringBuilder()
+
+        sb.AppendLine("KeepStore Sitemap Audit (sitemap vs robots)")
+        sb.AppendLine("UTC: " & DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"))
+        sb.AppendLine("Host: " & host)
+        sb.AppendLine("Robots rules loaded: " & If(_disallowRules Is Nothing, "0", _disallowRules.Count.ToString()))
+        sb.AppendLine("")
+
+        Dim xml As String = BuildXml(host)
+        Dim urls As List(Of String) = ExtractLocUrls(xml)
+
+        sb.AppendLine("URLs in sitemap: " & urls.Count.ToString())
+
+        ' duplicates
+        Dim setLower As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim dupCount As Integer = 0
+        For Each u As String In urls
+            If Not setLower.Add(u) Then dupCount += 1
+        Next
+        sb.AppendLine("Duplicates: " & dupCount.ToString())
+
+        ' scheme checks
+        Dim nonHttps As Integer = 0
+        For Each u As String In urls
+            If Not u.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then nonHttps += 1
+        Next
+        sb.AppendLine("Non-HTTPS: " & nonHttps.ToString())
+
+        ' disallowed checks
+        Dim disallowed As New List(Of String)()
+        For Each u As String In urls
+            If IsDisallowedByRobots(u) Then
+                disallowed.Add(u)
+            End If
+        Next
+        sb.AppendLine("Robots-disallowed: " & disallowed.Count.ToString())
+
+        If disallowed.Count > 0 Then
+            sb.AppendLine("")
+            sb.AppendLine("Sample disallowed (max 50):")
+            Dim maxN As Integer = Math.Min(50, disallowed.Count)
+            For i As Integer = 0 To maxN - 1
+                sb.AppendLine("- " & disallowed(i))
+            Next
+        End If
+
+        Return sb.ToString()
+    End Function
+
+    Private Function ExtractLocUrls(xml As String) As List(Of String)
+        Dim res As New List(Of String)()
+        If String.IsNullOrEmpty(xml) Then Return res
+
+        Try
+            Dim doc As New XmlDocument()
+            doc.XmlResolver = Nothing
+            doc.LoadXml(xml)
+
+            Dim nsmgr As New XmlNamespaceManager(doc.NameTable)
+            nsmgr.AddNamespace("sm", "http://www.sitemaps.org/schemas/sitemap/0.9")
+            Dim nodes As XmlNodeList = doc.SelectNodes("//sm:url/sm:loc", nsmgr)
+            If nodes IsNot Nothing Then
+                For Each n As XmlNode In nodes
+                    Dim v As String = (n.InnerText & "").Trim()
+                    If v <> "" Then res.Add(v)
+                Next
+            End If
+
+        Catch
+            ' fallback regex
+            Dim rx As New Regex("<loc>(.*?)</loc>", RegexOptions.IgnoreCase Or RegexOptions.Singleline)
+            For Each m As Match In rx.Matches(xml)
+                Dim v As String = (m.Groups(1).Value & "").Trim()
+                If v <> "" Then res.Add(System.Web.HttpUtility.HtmlDecode(v))
+            Next
+        End Try
+
+        Return res
     End Function
 
 End Class
