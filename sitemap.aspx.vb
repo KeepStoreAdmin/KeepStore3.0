@@ -33,10 +33,19 @@ Partial Class sitemap
     End Class
 
     Private Class UrlLastModInfo
-        Public Property Url As String
-        Public Property LastModUtc As Nullable(Of DateTime)
-        Public Property HasExplicitLastMod As Boolean
-    End Class
+    Public Property Url As String
+    Public Property LastModUtc As Nullable(Of DateTime)
+    Public Property HasExplicitLastMod As Boolean
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(url As String, lastModUtc As Nullable(Of DateTime))
+        Me.Url = url
+        Me.LastModUtc = lastModUtc
+    End Sub
+End Class
+
 
     Protected Sub Page_Init(sender As Object, e As EventArgs) Handles Me.Init
         ' Config (appSettings)
@@ -209,7 +218,7 @@ For Each rel As String In _staticUrls
 Next
     End Sub
 
-    Private Sub AddDynamicArticoliUrls(urls As List(Of Tuple(Of String, String, String, String)), host As String)
+    Private Sub AddDynamicArticoliUrls(urls As List(Of Tuple(Of String, String, String, String)), host As String, Optional fallbackUtc As Nullable(Of DateTime) = Nothing, Optional sig As String = Nothing, Optional bypassRobots As Boolean = False)
         For Each row As Tuple(Of String, Nullable(Of DateTime)) In QueryUrlAndLastMod("v_sitemap_prodotti")
             Dim absUrl As String = MakeAbsolute(host, row.Item1)
             Dim lastmod As String = FormatAsW3C(row.Item2)
@@ -245,6 +254,11 @@ Next
             AddUrl(urls, absUrl, FormatAsW3C(lastModUtc), "weekly", "0.6")
         Next
     End Sub
+' Compatibility wrapper: older patches referenced AddDynamicFacetUrls.
+Private Sub AddDynamicFacetUrls(urls As List(Of Tuple(Of String, String, String, String)), host As String, globalLastModUtc As Nullable(Of DateTime))
+    AddDynamicCategoryUrls(urls, host, globalLastModUtc)
+End Sub
+
 
     Private Sub AddUrl(urls As List(Of Tuple(Of String, String, String, String)), loc As String, lastmodW3c As String, changefreq As String, priority As String)
     If urls Is Nothing Then Return
@@ -279,45 +293,50 @@ End Sub
     Return list
 End Function
 
+
     Private Function QueryUrlAndLastModInfo(viewName As String) As List(Of UrlLastModInfo)
-        Dim res As New List(Of UrlLastModInfo)()
+    Dim res As New List(Of UrlLastModInfo)()
+    If String.IsNullOrWhiteSpace(viewName) Then Return res
 
-        If String.IsNullOrEmpty(viewName) Then Return res
+    Dim cs As String = GetConnectionString()
+    If String.IsNullOrEmpty(cs) Then Return res
 
-        Dim sql As String = "SELECT * FROM " & viewName
+    Try
+        Using conn As New MySqlConnection(cs)
+            conn.Open()
+            Using cmd As MySqlCommand = CreateCommand(conn, "SELECT url, last_mod FROM " & viewName & " ORDER BY url")
+                Using rd As MySqlDataReader = cmd.ExecuteReader()
+                    While rd.Read()
+                        Dim u As String = Convert.ToString(rd("url"))
+                        If String.IsNullOrWhiteSpace(u) Then Continue While
 
-        Dim fallbackUtc As Nullable(Of DateTime) = Nothing
-        If _fromDbLastMod Then
-            fallbackUtc = DateTime.UtcNow.AddDays(-_fallbackLastModDays)
-        End If
-
-        Try
-            Using conn As MySqlConnection = GetMySqlConnection()
-                conn.Open()
-                Using cmd As New MySqlCommand(sql, conn)
-                    cmd.CommandTimeout = 60
-                    Using rd As MySqlDataReader = cmd.ExecuteReader()
-                        While rd.Read()
-                            Dim u As String = SafeDbString(rd, "url")
-                            If String.IsNullOrEmpty(u) Then Continue While
-
-                            Dim lmUtc As Nullable(Of DateTime) = Nothing
-                            If _fromDbLastMod Then
-                                lmUtc = SafeDbDateUtc(rd, "last_mod")
-                                If Not lmUtc.HasValue Then lmUtc = fallbackUtc
+                        Dim lmUtc As Nullable(Of DateTime) = Nothing
+                        Dim hasLm As Boolean = False
+                        Try
+                            Dim ordLm As Integer = rd.GetOrdinal("last_mod")
+                            If ordLm >= 0 AndAlso Not rd.IsDBNull(ordLm) Then
+                                Dim dt As DateTime = Convert.ToDateTime(rd.GetValue(ordLm))
+                                lmUtc = DateTime.SpecifyKind(dt, DateTimeKind.Utc)
+                                hasLm = True
                             End If
+                        Catch
+                            ' ignore
+                        End Try
 
-                            res.Add(New UrlLastModInfo(u, lmUtc))
-                        End While
-                    End Using
+                        Dim info As New UrlLastModInfo(u, lmUtc)
+                        info.HasExplicitLastMod = hasLm
+                        res.Add(info)
+                    End While
                 End Using
             End Using
-        Catch
-            ' best-effort: ignore DB errors
-        End Try
+        End Using
+    Catch
+        ' If the view/table doesn't exist or DB is down, keep sitemap functional.
+    End Try
 
-        Return res
-    End Function
+    Return res
+End Function
+
 
     Private Function GetCategoryLastModUtcMap() As Dictionary(Of Integer, DateTime)
         Dim map As New Dictionary(Of Integer, DateTime)()
@@ -608,7 +627,286 @@ End Function
         Return ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
     End Function
 
-    Private Function GetStringAppSetting(key As String, defaultValue As String) As String
+    
+' =========================
+' Robots.txt alignment
+' =========================
+
+Private Function LoadDisallowRegexFromRobots() As List(Of Regex)
+    Dim res As New List(Of Regex)()
+
+    Try
+        Dim robotsPhys As String = Nothing
+
+        ' Prefer HttpContext.Current to avoid edge cases.
+        Dim ctx As HttpContext = HttpContext.Current
+        If ctx IsNot Nothing Then
+            Try
+                robotsPhys = ctx.Server.MapPath("~/robots.txt")
+            Catch
+            End Try
+        End If
+
+        If String.IsNullOrEmpty(robotsPhys) Then
+            Try
+                robotsPhys = Server.MapPath("~/robots.txt")
+            Catch
+            End Try
+        End If
+
+        If String.IsNullOrEmpty(robotsPhys) OrElse Not File.Exists(robotsPhys) Then Return res
+
+        Dim currentAgents As New List(Of String)()
+        Dim currentDisallow As New List(Of String)()
+        Dim hasDirective As Boolean = False
+
+        For Each raw As String In File.ReadAllLines(robotsPhys)
+            Dim line As String = raw
+            If line Is Nothing Then Continue For
+
+            ' Strip comments
+            Dim hashIdx As Integer = line.IndexOf("#"c)
+            If hashIdx >= 0 Then line = line.Substring(0, hashIdx)
+
+            line = line.Trim()
+            If line.Length = 0 Then
+                ' blank line separates groups
+                If hasDirective Then FinalizeRobotsGroup(currentAgents, currentDisallow, res, hasDirective)
+                Continue For
+            End If
+
+            Dim colonIdx As Integer = line.IndexOf(":"c)
+            If colonIdx <= 0 Then Continue For
+
+            Dim key As String = line.Substring(0, colonIdx).Trim().ToLowerInvariant()
+            Dim value As String = ""
+            If colonIdx + 1 < line.Length Then value = line.Substring(colonIdx + 1).Trim()
+
+            If key = "user-agent" Then
+                ' If directives were already seen, a new user-agent starts a new group.
+                If hasDirective Then FinalizeRobotsGroup(currentAgents, currentDisallow, res, hasDirective)
+                currentAgents.Add(value)
+            ElseIf key = "disallow" Then
+                hasDirective = True
+                currentDisallow.Add(value)
+            ElseIf key = "allow" Then
+                ' We ignore Allow (sitemap filtering is conservative). Audit output still shows what gets excluded.
+                hasDirective = True
+            Else
+                ' ignore
+            End If
+        Next
+
+        If currentAgents.Count > 0 OrElse currentDisallow.Count > 0 Then
+            FinalizeRobotsGroup(currentAgents, currentDisallow, res, hasDirective)
+        End If
+
+    Catch
+        ' ignore
+    End Try
+
+    Return res
+End Function
+
+Private Sub FinalizeRobotsGroup(currentAgents As List(Of String), currentDisallow As List(Of String), res As List(Of Regex), ByRef hasDirective As Boolean)
+    If currentAgents Is Nothing OrElse currentAgents.Count = 0 Then
+        If currentAgents IsNot Nothing Then currentAgents.Clear()
+        If currentDisallow IsNot Nothing Then currentDisallow.Clear()
+        hasDirective = False
+        Return
+    End If
+
+    Dim appliesToAll As Boolean = False
+    For Each a As String In currentAgents
+        If String.Equals(a, "*", StringComparison.OrdinalIgnoreCase) Then
+            appliesToAll = True
+            Exit For
+        End If
+    Next
+
+    If appliesToAll AndAlso currentDisallow IsNot Nothing Then
+        For Each rule As String In currentDisallow
+            Dim rx As Regex = RobotsPatternToRegex(rule)
+            If rx IsNot Nothing Then res.Add(rx)
+        Next
+    End If
+
+    currentAgents.Clear()
+    currentDisallow.Clear()
+    hasDirective = False
+End Sub
+
+
+Private Function RobotsPatternToRegex(rule As String) As Regex
+    If rule Is Nothing Then Return Nothing
+
+    Dim pat As String = rule.Trim()
+    If pat.Length = 0 Then Return Nothing ' empty Disallow => allow all
+    If pat = "/" Then pat = "/*" ' disallow everything
+
+    ' Support wildcard (*) and end-anchor ($) as commonly used in robots.txt
+    Dim endAnchor As Boolean = False
+    If pat.EndsWith("$") Then
+        endAnchor = True
+        pat = pat.Substring(0, pat.Length - 1)
+    End If
+
+    Dim rxPat As String = Regex.Escape(pat).Replace("\*", ".*")
+    rxPat = "^" & rxPat
+    If endAnchor Then rxPat &= "$"
+
+    Return New Regex(rxPat, RegexOptions.IgnoreCase Or RegexOptions.CultureInvariant)
+End Function
+
+Private Function IsDisallowedByRobots(loc As String) As Boolean
+    If _disallowRegex Is Nothing OrElse _disallowRegex.Count = 0 Then Return False
+    If String.IsNullOrWhiteSpace(loc) Then Return False
+
+    Dim pathAndQuery As String = loc
+
+    Try
+        Dim u As Uri = Nothing
+        If Uri.TryCreate(loc, UriKind.Absolute, u) AndAlso u IsNot Nothing Then
+            pathAndQuery = u.PathAndQuery
+        End If
+    Catch
+        ' keep raw loc
+    End Try
+
+    If String.IsNullOrWhiteSpace(pathAndQuery) Then Return False
+
+    For Each rx As Regex In _disallowRegex
+        If rx IsNot Nothing AndAlso rx.IsMatch(pathAndQuery) Then
+            Return True
+        End If
+    Next
+
+    Return False
+End Function
+
+' =========================
+' Audit endpoint
+' =========================
+
+Private Function IsAuditAllowed() As Boolean
+    If Not _auditEnabled Then Return False
+
+    Try
+        If Request IsNot Nothing AndAlso Request.IsLocal Then
+            Return True
+        End If
+    Catch
+    End Try
+
+    If String.IsNullOrEmpty(_auditToken) OrElse _auditToken.Length < 8 Then Return False
+    Dim t As String = Convert.ToString(Request.QueryString("token"))
+    Return String.Equals(t, _auditToken, StringComparison.Ordinal)
+End Function
+
+Private Function BuildAuditReport(host As String) As String
+    Dim sb As New StringBuilder()
+
+    sb.AppendLine("KeepStore Sitemap Audit")
+    sb.AppendLine("UTC Now: " & DateTime.UtcNow.ToString("u"))
+    sb.AppendLine("Host: " & host)
+    sb.AppendLine("Cache.Enabled: " & _fileCacheEnabled.ToString())
+    sb.AppendLine("Cache.TtlMinutes: " & _fileCacheTtlMinutes.ToString())
+    sb.AppendLine("Robots.DisallowRegex.Count: " & If(_disallowRegex Is Nothing, 0, _disallowRegex.Count).ToString())
+    sb.AppendLine()
+
+    Dim sig As String = ""
+    Try
+        sig = ComputeCacheSignature(host)
+    Catch
+        sig = ""
+    End Try
+
+    Dim filteredXml As String = ""
+    Dim filteredLocs As New List(Of String)()
+    Try
+        filteredXml = BuildXml(host, sig)
+        filteredLocs = ExtractLocsFromXml(filteredXml)
+    Catch
+    End Try
+
+    ' Build an "unfiltered" sitemap by temporarily disabling robots filtering
+    Dim allLocs As New List(Of String)()
+    Dim disallowed As New List(Of String)()
+    Dim saved As List(Of Regex) = _disallowRegex
+
+    Try
+        _disallowRegex = New List(Of Regex)() ' disables filtering inside AddUrl()
+        Dim allXml As String = BuildXml(host, sig & "_AUDIT_ALL")
+        allLocs = ExtractLocsFromXml(allXml)
+    Catch
+    Finally
+        _disallowRegex = saved
+    End Try
+
+    Try
+        For Each u As String In allLocs
+            If IsDisallowedByRobots(u) Then disallowed.Add(u)
+        Next
+    Catch
+    End Try
+
+    ' Verify filtered sitemap doesn't contain disallowed URLs
+    Dim disallowedInFiltered As New List(Of String)()
+    Try
+        For Each u As String In filteredLocs
+            If IsDisallowedByRobots(u) Then disallowedInFiltered.Add(u)
+        Next
+    Catch
+    End Try
+
+    sb.AppendLine("URLs (without robots filtering): " & allLocs.Count.ToString())
+    sb.AppendLine("URLs disallowed by robots.txt: " & disallowed.Count.ToString())
+    sb.AppendLine("URLs (final sitemap output): " & filteredLocs.Count.ToString())
+    sb.AppendLine("Disallowed URLs still present in final sitemap: " & disallowedInFiltered.Count.ToString())
+    sb.AppendLine()
+
+    If disallowed.Count > 0 Then
+        sb.AppendLine("First disallowed URLs (max 200):")
+        Dim maxN As Integer = Math.Min(200, disallowed.Count)
+        For i As Integer = 0 To maxN - 1
+            sb.AppendLine(" - " & disallowed(i))
+        Next
+        sb.AppendLine()
+    End If
+
+    If disallowedInFiltered.Count > 0 Then
+        sb.AppendLine("ERROR: Disallowed URLs found in final sitemap (max 200):")
+        Dim maxN As Integer = Math.Min(200, disallowedInFiltered.Count)
+        For i As Integer = 0 To maxN - 1
+            sb.AppendLine(" - " & disallowedInFiltered(i))
+        Next
+        sb.AppendLine()
+    End If
+
+    Return sb.ToString()
+End Function
+
+Private Function ExtractLocsFromXml(xml As String) As List(Of String)
+    Dim res As New List(Of String)()
+    If String.IsNullOrEmpty(xml) Then Return res
+
+    Try
+        For Each m As Match In Regex.Matches(xml, "<loc>(.*?)</loc>", RegexOptions.IgnoreCase Or RegexOptions.Singleline)
+            Dim v As String = m.Groups(1).Value
+            If String.IsNullOrEmpty(v) Then Continue For
+            Try
+                v = HttpUtility.HtmlDecode(v)
+            Catch
+            End Try
+            res.Add(v.Trim())
+        Next
+    Catch
+    End Try
+
+    Return res
+End Function
+
+Private Function GetStringAppSetting(key As String, defaultValue As String) As String
         Dim v As String = ConfigurationManager.AppSettings(key)
         If String.IsNullOrEmpty(v) Then Return defaultValue
         Return v.Trim()
