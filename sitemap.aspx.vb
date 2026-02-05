@@ -108,204 +108,78 @@ If _disallowRegex Is Nothing Then _disallowRegex = New List(Of Regex)()
     Response.Write(xml)
 End Sub
 
-' ---------------- Robots / Audit helpers ----------------
 
-Private Function IsAuditAllowed() As Boolean
-    If Not _auditEnabled Then Return False
-    If String.IsNullOrEmpty(_auditToken) OrElse _auditToken.Length < 8 Then Return False
+    Private Function BuildXml(host As String, sig As CacheSignatureInfo) As String
+        Dim urls As New List(Of Tuple(Of String, String, String, String))()
 
-    Dim t As String = Convert.ToString(Request.QueryString("token"))
-    If String.IsNullOrEmpty(t) Then Return False
-
-    Return String.Equals(t, _auditToken, StringComparison.Ordinal)
-End Function
-
-Private Function BuildAuditReport(host As String) As String
-    Dim sb As New StringBuilder()
-    sb.AppendLine("KeepStore Sitemap Audit")
-    sb.AppendLine("Host: " & host)
-    sb.AppendLine("UtcNow: " & DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"))
-    sb.AppendLine("Cache.Enabled: " & _fileCacheEnabled.ToString())
-    sb.AppendLine("Cache.TtlMinutes: " & _fileCacheTtlMinutes.ToString())
-    sb.AppendLine("Robots.DisallowRegex.Count: " & If(_disallowRegex Is Nothing, 0, _disallowRegex.Count).ToString())
-
-    Dim sig As CacheSignatureInfo = Nothing
-    Dim urls As List(Of Tuple(Of String, String, String, String)) = CollectUrls(host, sig)
-
-    sb.AppendLine("Sitemap.UrlCount: " & urls.Count.ToString())
-
-    Dim mismatches As New List(Of String)()
-    For Each t As Tuple(Of String, String, String, String) In urls
-        Dim loc As String = t.Item1
-        If IsDisallowedByRobots(loc) Then
-            mismatches.Add(loc)
+        Dim globalLastModUtc As Nullable(Of DateTime) = Nothing
+        If sig IsNot Nothing AndAlso sig.DataMaxUtc.HasValue Then
+            globalLastModUtc = sig.DataMaxUtc
+        ElseIf _fromDbLastMod Then
+            globalLastModUtc = GetSitemapDataMaxUtc()
         End If
-    Next
 
-    sb.AppendLine("Mismatches (in sitemap but disallowed by robots): " & mismatches.Count.ToString())
-    If mismatches.Count > 0 Then
-        sb.AppendLine("First mismatches:")
-        Dim maxN As Integer = Math.Min(200, mismatches.Count)
-        For i As Integer = 0 To maxN - 1
-            sb.AppendLine(mismatches(i))
-        Next
-    End If
-
-    Return sb.ToString()
-End Function
-
-Private Function LoadDisallowRegexFromRobots() As List(Of Regex)
-    Dim res As New List(Of Regex)()
-
-    Try
-        Dim ctx As HttpContext = HttpContext.Current
-        If ctx Is Nothing OrElse ctx.Server Is Nothing Then Return res
-
-        Dim robotsPhys As String = ctx.Server.MapPath("~/robots.txt")
-        If String.IsNullOrEmpty(robotsPhys) OrElse Not File.Exists(robotsPhys) Then Return res
-
-        Dim lines As String() = File.ReadAllLines(robotsPhys)
-
-        Dim inStarGroup As Boolean = False
-        Dim sawAnyUserAgent As Boolean = False
-
-        For Each raw As String In lines
-            Dim line As String = raw
-
-            Dim hashPos As Integer = line.IndexOf("#"c)
-            If hashPos >= 0 Then line = line.Substring(0, hashPos)
-
-            line = line.Trim()
-            If line.Length = 0 Then Continue For
-
-            Dim colonPos As Integer = line.IndexOf(":"c)
-            If colonPos <= 0 Then Continue For
-
-            Dim key As String = line.Substring(0, colonPos).Trim().ToLowerInvariant()
-            Dim val As String = line.Substring(colonPos + 1).Trim()
-
-            If key = "user-agent" Then
-                sawAnyUserAgent = True
-                inStarGroup = String.Equals(val, "*", StringComparison.Ordinal)
-            ElseIf key = "disallow" Then
-                ' Consider only the "*" group. If robots.txt has no UA headers, treat it as global.
-                If (Not sawAnyUserAgent) OrElse inStarGroup Then
-                    If String.IsNullOrEmpty(val) Then Continue For ' empty Disallow means "allow all"
-                    Dim rx As Regex = RobotsPatternToRegex(val)
-                    If rx IsNot Nothing Then res.Add(rx)
-                End If
+        Dim fallbackUtc As Nullable(Of DateTime) = Nothing
+        If _fromDbLastMod Then
+            If globalLastModUtc.HasValue Then
+                fallbackUtc = globalLastModUtc
+            Else
+                fallbackUtc = DateTime.UtcNow.AddDays(-_fallbackLastModDays)
             End If
+        End If
+
+        ' Static URLs (home + listing + static pages)
+        AddStaticUrls(urls, host, fallbackUtc)
+
+        ' Dynamic URLs
+        AddDynamicArticoliUrls(urls, host)
+        AddDynamicCategoryUrls(urls, host, globalLastModUtc)
+
+        Dim sb As New StringBuilder()
+        sb.Append("<?xml version=""1.0"" encoding=""UTF-8""?>")
+        sb.Append(vbCrLf)
+        sb.Append("<urlset xmlns=""http://www.sitemaps.org/schemas/sitemap/0.9"">")
+        sb.Append(vbCrLf)
+
+        For Each t As Tuple(Of String, String, String, String) In urls
+            sb.Append("  <url>")
+            sb.Append(vbCrLf)
+
+            sb.Append("    <loc>")
+            sb.Append(HttpUtility.HtmlEncode(t.Item1))
+            sb.Append("</loc>")
+            sb.Append(vbCrLf)
+
+            If Not String.IsNullOrEmpty(t.Item2) Then
+                sb.Append("    <lastmod>")
+                sb.Append(t.Item2)
+                sb.Append("</lastmod>")
+                sb.Append(vbCrLf)
+            End If
+
+            If Not String.IsNullOrEmpty(t.Item3) Then
+                sb.Append("    <changefreq>")
+                sb.Append(t.Item3)
+                sb.Append("</changefreq>")
+                sb.Append(vbCrLf)
+            End If
+
+            If Not String.IsNullOrEmpty(t.Item4) Then
+                sb.Append("    <priority>")
+                sb.Append(t.Item4)
+                sb.Append("</priority>")
+                sb.Append(vbCrLf)
+            End If
+
+            sb.Append("  </url>")
+            sb.Append(vbCrLf)
         Next
-    Catch
-        ' Non bloccare sitemap se robots.txt è assente o non leggibile
-    End Try
 
-    Return res
-End Function
+        sb.Append("</urlset>")
+        sb.Append(vbCrLf)
 
-Private Function RobotsPatternToRegex(disallowPattern As String) As Regex
-    If String.IsNullOrEmpty(disallowPattern) Then Return Nothing
-
-    Dim p As String = disallowPattern.Trim()
-    If p.Length = 0 Then Return Nothing
-
-    Dim endAnchor As Boolean = False
-    If p.EndsWith("$") Then
-        endAnchor = True
-        p = p.Substring(0, p.Length - 1)
-    End If
-
-    If p.Length = 0 Then Return Nothing
-    If Not p.StartsWith("/") Then p = "/" & p
-
-    Dim sb As New StringBuilder()
-    For Each ch As Char In p
-        If ch = "*"c Then
-            sb.Append(".*")
-        Else
-            sb.Append(Regex.Escape(ch.ToString()))
-        End If
-    Next
-
-    Dim rxPattern As String = "^" & sb.ToString()
-    If endAnchor Then rxPattern &= "$"
-
-    Return New Regex(rxPattern, RegexOptions.IgnoreCase)
-End Function
-
-Private Function IsDisallowedByRobots(loc As String) As Boolean
-    If _disallowRegex Is Nothing OrElse _disallowRegex.Count = 0 Then Return False
-    If String.IsNullOrEmpty(loc) Then Return False
-
-    Dim pathQuery As String = loc
-
-    Try
-        Dim u As Uri = Nothing
-        If Uri.TryCreate(loc, UriKind.Absolute, u) Then
-            pathQuery = u.AbsolutePath
-            If Not String.IsNullOrEmpty(u.Query) Then pathQuery &= u.Query
-        End If
-
-        If String.IsNullOrEmpty(pathQuery) Then Return False
-        If Not pathQuery.StartsWith("/") Then
-            ' Fallback: estrai la parte a partire dal primo "/"
-            Dim slashPos As Integer = pathQuery.IndexOf("/"c)
-            If slashPos >= 0 Then pathQuery = pathQuery.Substring(slashPos)
-        End If
-    Catch
-        ' ignore
-    End Try
-
-    For Each rx As Regex In _disallowRegex
-        If rx IsNot Nothing AndAlso rx.IsMatch(pathQuery) Then Return True
-    Next
-
-    Return False
-End Function
-
-
-
-Private Function CollectUrls(host As String, sig As CacheSignatureInfo) As List(Of Tuple(Of String, String, String, String))
-    Dim urls As New List(Of Tuple(Of String, String, String, String))()
-
-    ' lastmod base
-    Dim fallbackUtc As DateTime = DateTime.UtcNow.AddDays(-_fallbackLastModDays)
-
-    ' Static URLs
-    AddStaticUrls(urls, host, fallbackUtc)
-
-    ' Dynamic content
-    AddDynamicArticoliUrls(urls, host, fallbackUtc, sig)
-    AddDynamicFacetUrls(urls, host, fallbackUtc)
-
-    Return urls
-End Function
-
-Private Function BuildXml(host As String, sig As CacheSignatureInfo) As String
-    Dim urls As List(Of Tuple(Of String, String, String, String)) = CollectUrls(host, sig)
-
-    Dim sb As New StringBuilder()
-    sb.AppendLine("<?xml version=""1.0"" encoding=""UTF-8""?>")
-    sb.AppendLine("<urlset xmlns=""http://www.sitemaps.org/schemas/sitemap/0.9"">")
-
-    For Each t As Tuple(Of String, String, String, String) In urls
-        sb.AppendLine("  <url>")
-        sb.AppendLine("    <loc>" & XmlEscape(t.Item1) & "</loc>")
-        If Not String.IsNullOrEmpty(t.Item2) Then
-            sb.AppendLine("    <lastmod>" & t.Item2 & "</lastmod>")
-        End If
-        If Not String.IsNullOrEmpty(t.Item3) Then
-            sb.AppendLine("    <changefreq>" & t.Item3 & "</changefreq>")
-        End If
-        If Not String.IsNullOrEmpty(t.Item4) Then
-            sb.AppendLine("    <priority>" & t.Item4 & "</priority>")
-        End If
-        sb.AppendLine("  </url>")
-    Next
-
-    sb.AppendLine("</urlset>")
-    Return sb.ToString()
-End Function
+        Return sb.ToString()
+    End Function
 
     Private Sub AddStaticUrls(urls As List(Of Tuple(Of String, String, String, String)), host As String, lastModUtc As Nullable(Of DateTime))
         ' Home
@@ -405,8 +279,11 @@ End Sub
     Return list
 End Function
 
+    Private Function QueryUrlAndLastModInfo(viewName As String) As List(Of UrlLastModInfo)
+        Dim res As New List(Of UrlLastModInfo)()
 
-    Private Iterator Function QueryUrlAndLastModInfo(viewName As String) As IEnumerable(Of UrlLastModInfo)
+        If String.IsNullOrEmpty(viewName) Then Return res
+
         Dim sql As String = "SELECT * FROM " & viewName
 
         Dim fallbackUtc As Nullable(Of DateTime) = Nothing
@@ -414,52 +291,32 @@ End Function
             fallbackUtc = DateTime.UtcNow.AddDays(-_fallbackLastModDays)
         End If
 
-        Using cn As New MySqlConnection(GetConnectionString())
-            cn.Open()
-            Using cmd As New MySqlCommand(sql, cn)
-                Using reader As MySqlDataReader = cmd.ExecuteReader()
-                    Dim idxUrl As Integer = -1
-                    Dim idxLastMod As Integer = -1
+        Try
+            Using conn As MySqlConnection = GetMySqlConnection()
+                conn.Open()
+                Using cmd As New MySqlCommand(sql, conn)
+                    cmd.CommandTimeout = 60
+                    Using rd As MySqlDataReader = cmd.ExecuteReader()
+                        While rd.Read()
+                            Dim u As String = SafeDbString(rd, "url")
+                            If String.IsNullOrEmpty(u) Then Continue While
 
-                    Try
-                        idxUrl = reader.GetOrdinal("url")
-                    Catch ex As Exception
-                        Throw New ApplicationException("Sitemap view '" & viewName & "' must expose a 'url' column.", ex)
-                    End Try
+                            Dim lmUtc As Nullable(Of DateTime) = Nothing
+                            If _fromDbLastMod Then
+                                lmUtc = SafeDbDateUtc(rd, "last_mod")
+                                If Not lmUtc.HasValue Then lmUtc = fallbackUtc
+                            End If
 
-                    Try
-                        idxLastMod = reader.GetOrdinal("last_mod")
-                    Catch ex As Exception
-                        idxLastMod = -1
-                    End Try
-
-                    While reader.Read()
-                        Dim urlRel As String = Convert.ToString(reader.GetValue(idxUrl))
-                        If String.IsNullOrEmpty(urlRel) Then
-                            Continue While
-                        End If
-
-                        Dim hasExplicit As Boolean = False
-                        Dim lastModUtc As Nullable(Of DateTime) = Nothing
-
-                        If idxLastMod <> -1 AndAlso Not reader.IsDBNull(idxLastMod) Then
-                            lastModUtc = ParseUtc(reader.GetValue(idxLastMod))
-                            hasExplicit = lastModUtc.HasValue
-                        End If
-
-                        If Not lastModUtc.HasValue Then
-                            lastModUtc = fallbackUtc
-                        End If
-
-                        Dim info As New UrlLastModInfo()
-                        info.Url = urlRel
-                        info.LastModUtc = lastModUtc
-                        info.HasExplicitLastMod = hasExplicit
-                        Yield info
-                    End While
+                            res.Add(New UrlLastModInfo(u, lmUtc))
+                        End While
+                    End Using
                 End Using
             End Using
-        End Using
+        Catch
+            ' best-effort: ignore DB errors
+        End Try
+
+        Return res
     End Function
 
     Private Function GetCategoryLastModUtcMap() As Dictionary(Of Integer, DateTime)
