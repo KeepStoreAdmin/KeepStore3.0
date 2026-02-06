@@ -3,475 +3,297 @@ Imports System.Collections.Generic
 Imports System.Configuration
 Imports System.Globalization
 Imports System.IO
+Imports System.Security
 Imports System.Security.Cryptography
 Imports System.Text
 Imports System.Text.RegularExpressions
 Imports System.Web
+Imports System.Web.UI
 Imports MySql.Data.MySqlClient
 
-Partial Class sitemap
-    Inherits System.Web.UI.Page
+' Sitemap generator with:
+' - Optional file cache in ~/App_Data/Sitemaps (served dynamically by sitemap.aspx)
+' - Optional audit mode: /sitemap.aspx?audit=1&token=...
+' - Optional robots.txt Disallow alignment (URLs matching Disallow are excluded)
+Public Class sitemap
+    Inherits Page
 
-    ' ----------------------------
-    ' Settings (loaded per-request)
-    ' ----------------------------
-    Private _fileCacheEnabled As Boolean = True
-    Private _fileCachePath As String = "~/App_Data/Sitemaps"
-    Private _fileCacheTtlMinutes As Integer = 60
+    ' === Config keys (web.config / appSettings) ===
+    Private Const KEY_AUDIT_ENABLED As String = "KeepStore.Sitemap.Audit.Enabled"
+    Private Const KEY_AUDIT_TOKEN As String = "KeepStore.Sitemap.Audit.Token"
 
-    Private _auditEnabled As Boolean = False
-    Private _auditToken As String = ""
+    Private Const KEY_CACHE_ENABLED As String = "KeepStore.Sitemap.FileCache.Enabled"
+    Private Const KEY_CACHE_PATH As String = "KeepStore.Sitemap.FileCache.Path"
+    Private Const KEY_CACHE_TTL As String = "KeepStore.Sitemap.FileCache.TtlMinutes"
 
-    Private _alignRobotsDisallow As Boolean = False
-    Private _disallowRegex As List(Of Regex) = Nothing
+    Private Const KEY_MYSQL_VIEW_ARTICOLI As String = "KeepStore.Sitemap.MySql.ViewArticoli"
+    Private Const KEY_MYSQL_VIEW_FACETS As String = "KeepStore.Sitemap.MySql.ViewCategorie"
+    Private Const KEY_MYSQL_CONNNAME As String = "KeepStore.Sitemap.MySql.ConnectionStringName"
 
-    Private _maxUrlsPerPart As Integer = 45000 ' below 50k hard limit
+    Private Const KEY_ROBOTS_ENABLED As String = "KeepStore.Sitemap.Robots.Enabled"
+    Private Const KEY_ROBOTS_UA As String = "KeepStore.Sitemap.Robots.UserAgent"
 
-    ' ----------------------------
-    ' Models
-    ' ----------------------------
-    Private Class CacheSignatureInfo
-        Public Signature As String
-        Public DataMaxUtc As Nullable(Of DateTime)
-    End Class
+    ' === Runtime state ===
+    Private _auditEnabled As Boolean
+    Private _auditToken As String
 
-    ' ----------------------------
-    ' Page entry
-    ' ----------------------------
-    Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
-        Response.BufferOutput = True
+    Private _fileCacheEnabled As Boolean
+    Private _fileCachePath As String
+    Private _fileCacheTtlMinutes As Integer
 
-        Dim host As String = ResolveBaseUrl()
-        LoadSettings()
+    Private _mysqlViewArticoli As String
+    Private _mysqlViewFacets As String
+    Private _mysqlConnName As String
 
-        ' Optional: align sitemap output to robots.txt Disallow rules
-        If _alignRobotsDisallow Then
-            _disallowRegex = LoadDisallowRegexFromRobots()
-            If _disallowRegex Is Nothing Then _disallowRegex = New List(Of Regex)()
-        Else
-            _disallowRegex = New List(Of Regex)()
-        End If
+    Private _robotsEnabled As Boolean
+    Private _robotsUserAgent As String
+    Private _disallowRegex As List(Of Regex)
 
-        ' Audit endpoint (token protected)
-        If StringEquals(Request.QueryString("audit"), "1") AndAlso IsAuditAllowed() Then
-            Response.ContentType = "text/plain"
-            Response.ContentEncoding = Encoding.UTF8
-            Response.Write(BuildAuditReport(host))
+    Protected Overrides Sub OnInit(e As EventArgs)
+        MyBase.OnInit(e)
+        InitializeSettings()
+        ' Pre-load robots rules (never throws to caller)
+        _disallowRegex = SafeLoadDisallowRegex()
+    End Sub
+
+    Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
+        Dim host As String = GetHostBase()
+        Dim isAuditReq As Boolean = IsAuditRequest()
+
+        If isAuditReq Then
+            ' Audit should be able to surface exceptions even when customErrors is RemoteOnly.
+            Response.TrySkipIisCustomErrors = True
+            Response.Clear()
+            Response.ContentType = "text/plain; charset=utf-8"
+
+            If Not IsAuditAllowed() Then
+                Response.StatusCode = 403
+                Response.Write("403 Forbidden" & Environment.NewLine & "Audit is disabled or token invalid.")
+                Context.ApplicationInstance.CompleteRequest()
+                Return
+            End If
+
+            Try
+                Dim report As String = BuildAuditReport(host)
+                Response.StatusCode = 200
+                Response.Write(report)
+            Catch ex As Exception
+                Response.StatusCode = 500
+                Response.Write("AUDIT ERROR: " & ex.GetType().FullName & Environment.NewLine)
+                Response.Write(ex.Message & Environment.NewLine & Environment.NewLine)
+                Response.Write(ex.StackTrace)
+            End Try
+
+            Context.ApplicationInstance.CompleteRequest()
             Return
         End If
 
+        ' Normal sitemap XML
+        Response.TrySkipIisCustomErrors = True
+        Response.Clear()
+        Response.ContentType = "application/xml; charset=utf-8"
+
         Try
-            Dim sig As CacheSignatureInfo = ComputeCacheSignature(host)
+            Dim xml As String = Nothing
 
-            Dim part As Integer = 0
-            Integer.TryParse(Convert.ToString(Request.QueryString("part")), part)
-
-            Dim xml As String = TryReadFromFileCache(sig, part)
-            If xml Is Nothing Then
-                xml = BuildXml(host, sig, part)
-                TryWriteToFileCache(sig, part, xml)
+            ' Try cache first
+            If _fileCacheEnabled Then
+                xml = TryReadCache(host)
             End If
 
-            Response.ContentType = "application/xml"
-            Response.ContentEncoding = Encoding.UTF8
+            If String.IsNullOrEmpty(xml) Then
+                xml = BuildXml(host)
+
+                ' Write cache best-effort (never fail request on cache errors)
+                If _fileCacheEnabled Then
+                    TryWriteCache(host, xml)
+                End If
+            End If
+
+            Response.StatusCode = 200
             Response.Write(xml)
         Catch ex As Exception
-            ' If something goes wrong, do not leak details publicly.
+            ' Never expose details publicly; keep generic.
             Response.StatusCode = 500
-            Response.ContentType = "text/plain"
-            Response.ContentEncoding = Encoding.UTF8
-
-            If IsAuditAllowed() AndAlso StringEquals(Request.QueryString("debug"), "1") Then
-                Response.Write("ERROR: " & ex.ToString())
-            Else
-                Response.Write("Internal Server Error")
-            End If
+            Response.ContentType = "text/plain; charset=utf-8"
+            Response.Write("Internal Server Error")
         End Try
+
+        Context.ApplicationInstance.CompleteRequest()
     End Sub
 
-    ' ----------------------------
-    ' Settings + helpers
-    ' ----------------------------
-    Private Sub LoadSettings()
-        _fileCacheEnabled = GetAppSettingBool("KeepStore.Sitemap.FileCache.Enabled", True)
-        _fileCachePath = GetAppSetting("KeepStore.Sitemap.FileCache.Path", "~/App_Data/Sitemaps")
-        _fileCacheTtlMinutes = GetAppSettingInt("KeepStore.Sitemap.FileCache.TtlMinutes", 60)
+    ' =========================
+    ' Settings
+    ' =========================
+    Private Sub InitializeSettings()
+        _auditEnabled = GetBool(KEY_AUDIT_ENABLED, False)
+        _auditToken = GetString(KEY_AUDIT_TOKEN, "")
 
-        _auditEnabled = GetAppSettingBool("KeepStore.Sitemap.Audit.Enabled", False)
-        _auditToken = GetAppSetting("KeepStore.Sitemap.Audit.Token", "")
+        _fileCacheEnabled = GetBool(KEY_CACHE_ENABLED, True)
+        _fileCachePath = GetString(KEY_CACHE_PATH, "~/App_Data/Sitemaps")
+        _fileCacheTtlMinutes = GetInt(KEY_CACHE_TTL, 720)
 
-        _alignRobotsDisallow = GetAppSettingBool("KeepStore.Sitemap.AlignRobotsDisallow", False)
-        _maxUrlsPerPart = GetAppSettingInt("KeepStore.Sitemap.MaxUrlsPerPart", 45000)
-        If _maxUrlsPerPart < 1000 Then _maxUrlsPerPart = 1000
-        If _maxUrlsPerPart > 50000 Then _maxUrlsPerPart = 50000
+        _mysqlViewArticoli = GetString(KEY_MYSQL_VIEW_ARTICOLI, "").Trim()
+        _mysqlViewFacets = GetString(KEY_MYSQL_VIEW_FACETS, "").Trim()
+        _mysqlConnName = GetString(KEY_MYSQL_CONNNAME, "EntropicConnectionString").Trim()
+
+        _robotsEnabled = GetBool(KEY_ROBOTS_ENABLED, True)
+        _robotsUserAgent = GetString(KEY_ROBOTS_UA, "*").Trim()
+        If String.IsNullOrEmpty(_robotsUserAgent) Then _robotsUserAgent = "*"
     End Sub
 
-    Private Function ResolveBaseUrl() As String
-        Dim baseFromCfg As String = GetAppSetting("KeepStore.Sitemap.BaseUrl", "")
-        If Not String.IsNullOrEmpty(baseFromCfg) Then
-            Return baseFromCfg.TrimEnd("/"c)
-        End If
-
-        If Request Is Nothing OrElse Request.Url Is Nothing Then Return "https://www.taikun.it"
-        Return Request.Url.GetLeftPart(UriPartial.Authority)
-    End Function
-
-    Private Shared Function StringEquals(a As String, b As String) As Boolean
-        Return String.Equals(Convert.ToString(a), Convert.ToString(b), StringComparison.Ordinal)
-    End Function
-
-    Private Shared Function GetAppSetting(key As String, Optional defaultValue As String = "") As String
+    Private Function GetString(key As String, def As String) As String
         Dim v As String = Convert.ToString(ConfigurationManager.AppSettings(key))
-        If String.IsNullOrEmpty(v) Then Return defaultValue
+        If String.IsNullOrEmpty(v) Then Return def
         Return v
     End Function
 
-    Private Shared Function GetAppSettingBool(key As String, defaultValue As Boolean) As Boolean
-        Dim v As String = GetAppSetting(key, Nothing)
-        If String.IsNullOrEmpty(v) Then Return defaultValue
-        Dim b As Boolean
-        If Boolean.TryParse(v, b) Then Return b
-        If v = "1" Then Return True
-        If v = "0" Then Return False
-        Return defaultValue
+    Private Function GetBool(key As String, def As Boolean) As Boolean
+        Dim v As String = Convert.ToString(ConfigurationManager.AppSettings(key))
+        If String.IsNullOrEmpty(v) Then Return def
+        v = v.Trim().ToLowerInvariant()
+        If v = "1" OrElse v = "true" OrElse v = "yes" Then Return True
+        If v = "0" OrElse v = "false" OrElse v = "no" Then Return False
+        Return def
     End Function
 
-    Private Shared Function GetAppSettingInt(key As String, defaultValue As Integer) As Integer
-        Dim v As String = GetAppSetting(key, Nothing)
-        If String.IsNullOrEmpty(v) Then Return defaultValue
-        Dim i As Integer
-        If Integer.TryParse(v, i) Then Return i
-        Return defaultValue
+    Private Function GetInt(key As String, def As Integer) As Integer
+        Dim v As String = Convert.ToString(ConfigurationManager.AppSettings(key))
+        Dim n As Integer = 0
+        If Integer.TryParse(v, NumberStyles.Integer, CultureInfo.InvariantCulture, n) Then Return n
+        Return def
     End Function
 
-    ' ----------------------------
+    ' =========================
     ' Audit
-    ' ----------------------------
+    ' =========================
+    Private Function IsAuditRequest() As Boolean
+        Dim q As String = Convert.ToString(Request.QueryString("audit"))
+        If String.IsNullOrEmpty(q) Then Return False
+        q = q.Trim()
+        Return (q = "1" OrElse q.Equals("true", StringComparison.OrdinalIgnoreCase))
+    End Function
+
     Private Function IsAuditAllowed() As Boolean
         If Not _auditEnabled Then Return False
-        If String.IsNullOrEmpty(_auditToken) OrElse _auditToken.Length < 16 Then Return False
+
+        ' Local requests allowed (useful for server-side debugging)
+        Try
+            If Request IsNot Nothing AndAlso Request.IsLocal Then Return True
+        Catch
+            ' ignore
+        End Try
+
+        If String.IsNullOrEmpty(_auditToken) OrElse _auditToken.Length < 12 Then Return False
 
         Dim t As String = Convert.ToString(Request.QueryString("token"))
         If String.IsNullOrEmpty(t) Then Return False
 
-        Return StringEquals(t, _auditToken)
+        Return SecureEquals(t, _auditToken)
+    End Function
+
+    Private Function SecureEquals(a As String, b As String) As Boolean
+        If a Is Nothing OrElse b Is Nothing Then Return False
+        Dim ba() As Byte = Encoding.UTF8.GetBytes(a)
+        Dim bb() As Byte = Encoding.UTF8.GetBytes(b)
+        If ba.Length <> bb.Length Then Return False
+        Dim diff As Integer = 0
+        For i As Integer = 0 To ba.Length - 1
+            diff = diff Or (ba(i) Xor bb(i))
+        Next
+        Return diff = 0
     End Function
 
     Private Function BuildAuditReport(host As String) As String
         Dim sb As New StringBuilder()
 
-        sb.AppendLine("KeepStore Sitemap Audit")
-        sb.AppendLine("Time(UTC): " & DateTime.UtcNow.ToString("o"))
+        sb.AppendLine("=== KeepStore Sitemap Audit ===")
+        sb.AppendLine("Time (UTC): " & DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture))
         sb.AppendLine("Host: " & host)
         sb.AppendLine("")
+        sb.AppendLine("Audit.Enabled: " & _auditEnabled.ToString())
         sb.AppendLine("Cache.Enabled: " & _fileCacheEnabled.ToString())
         sb.AppendLine("Cache.Path: " & _fileCachePath)
-        sb.AppendLine("Cache.TtlMinutes: " & _fileCacheTtlMinutes.ToString())
-        sb.AppendLine("MaxUrlsPerPart: " & _maxUrlsPerPart.ToString())
-        sb.AppendLine("AlignRobotsDisallow: " & _alignRobotsDisallow.ToString())
-        sb.AppendLine("Robots.DisallowRegex.Count: " & If(_disallowRegex Is Nothing, 0, _disallowRegex.Count).ToString())
+        sb.AppendLine("Cache.TtlMinutes: " & _fileCacheTtlMinutes.ToString(CultureInfo.InvariantCulture))
+        sb.AppendLine("MySql.ConnName: " & _mysqlConnName)
+        sb.AppendLine("MySql.ViewArticoli: " & _mysqlViewArticoli)
+        sb.AppendLine("MySql.ViewCategorie: " & _mysqlViewFacets)
+        sb.AppendLine("Robots.Enabled: " & _robotsEnabled.ToString())
+        sb.AppendLine("Robots.UserAgent: " & _robotsUserAgent)
+        sb.AppendLine("Robots.DisallowRegex.Count: " & If(_disallowRegex Is Nothing, 0, _disallowRegex.Count).ToString(CultureInfo.InvariantCulture))
         sb.AppendLine("")
 
-        Try
-            Dim sig As CacheSignatureInfo = ComputeCacheSignature(host)
-            sb.AppendLine("Signature: " & If(sig Is Nothing, "(null)", sig.Signature))
-            sb.AppendLine("DataMaxUtc: " & If(sig Is Nothing OrElse Not sig.DataMaxUtc.HasValue, "(null)", sig.DataMaxUtc.Value.ToString("o")))
-        Catch ex As Exception
-            sb.AppendLine("Signature: ERROR - " & ex.Message)
-        End Try
+        ' Cache status
+        If _fileCacheEnabled Then
+            Dim info As String = DescribeCache(host)
+            sb.AppendLine(info)
+            sb.AppendLine("")
+        End If
 
-        ' Check cache directory
-        Try
-            If _fileCacheEnabled Then
-                Dim physDir As String = SafeMapPath(_fileCachePath)
-                sb.AppendLine("")
-                sb.AppendLine("Cache.PhysicalPath: " & physDir)
-                sb.AppendLine("Cache.DirExists: " & Directory.Exists(physDir).ToString())
+        ' Build full list and filtered list
+        Dim allUrls As List(Of SitemapUrl) = BuildUrlList(host, includeRobotsDisallowed:=True)
+        Dim filtered As New List(Of SitemapUrl)()
+        Dim disallowed As New List(Of SitemapUrl)()
+
+        For Each u As SitemapUrl In allUrls
+            If IsDisallowedByRobots(u.Loc) Then
+                disallowed.Add(u)
+            Else
+                filtered.Add(u)
             End If
-        Catch ex As Exception
-            sb.AppendLine("Cache.PhysicalPath: ERROR - " & ex.Message)
-        End Try
+        Next
+
+        sb.AppendLine("URL Counts")
+        sb.AppendLine("  Total (before robots filter): " & allUrls.Count.ToString(CultureInfo.InvariantCulture))
+        sb.AppendLine("  Robots disallowed: " & disallowed.Count.ToString(CultureInfo.InvariantCulture))
+        sb.AppendLine("  Final (after filter): " & filtered.Count.ToString(CultureInfo.InvariantCulture))
+        sb.AppendLine("")
+
+        If disallowed.Count > 0 Then
+            sb.AppendLine("Disallowed URLs (first 200):")
+            Dim n As Integer = Math.Min(200, disallowed.Count)
+            For i As Integer = 0 To n - 1
+                sb.AppendLine("  - " & disallowed(i).Loc)
+            Next
+            If disallowed.Count > 200 Then sb.AppendLine("  ... (" & (disallowed.Count - 200).ToString(CultureInfo.InvariantCulture) & " more)")
+            sb.AppendLine("")
+        End If
+
+        sb.AppendLine("Sample Final URLs (first 50):")
+        Dim m As Integer = Math.Min(50, filtered.Count)
+        For i As Integer = 0 To m - 1
+            sb.AppendLine("  - " & filtered(i).Loc)
+        Next
 
         Return sb.ToString()
     End Function
 
-    ' ----------------------------
-    ' Robots.txt alignment
-    ' ----------------------------
-    Private Function LoadDisallowRegexFromRobots() As List(Of Regex)
-        Dim res As New List(Of Regex)()
+    ' =========================
+    ' Build XML
+    ' =========================
+    Private Function BuildXml(host As String) As String
+        Dim urls As List(Of SitemapUrl) = BuildUrlList(host, includeRobotsDisallowed:=False)
 
-        Try
-            Dim robotsPhys As String = SafeMapPath("~/robots.txt")
-            If String.IsNullOrEmpty(robotsPhys) OrElse Not File.Exists(robotsPhys) Then
-                Return res
-            End If
-
-            Dim active As Boolean = False
-
-            For Each rawLine As String In File.ReadAllLines(robotsPhys, Encoding.UTF8)
-                Dim line As String = If(rawLine, "").Trim()
-                If line = "" Then Continue For
-
-                Dim hashIdx As Integer = line.IndexOf("#"c)
-                If hashIdx >= 0 Then line = line.Substring(0, hashIdx).Trim()
-                If line = "" Then Continue For
-
-                If line.StartsWith("User-agent:", StringComparison.OrdinalIgnoreCase) Then
-                    Dim ua As String = line.Substring("User-agent:".Length).Trim()
-                    active = (ua = "*")
-                    Continue For
-                End If
-
-                If Not active Then Continue For
-
-                If line.StartsWith("Disallow:", StringComparison.OrdinalIgnoreCase) Then
-                    Dim pat As String = line.Substring("Disallow:".Length).Trim()
-                    If String.IsNullOrEmpty(pat) Then Continue For ' empty Disallow means allow all
-                    ' Prefix match per robots spec; support wildcard *
-                    Dim rx As String = "^" & WildcardPathToRegex(pat)
-                    res.Add(New Regex(rx, RegexOptions.IgnoreCase Or RegexOptions.Compiled))
-                End If
-            Next
-        Catch
-            ' Ignore robots parsing errors; sitemap should still work
-        End Try
-
-        Return res
-    End Function
-
-    Private Shared Function WildcardPathToRegex(pathPattern As String) As String
-        ' Escape everything, then restore wildcard support for *
-        Dim esc As String = Regex.Escape(pathPattern)
-        esc = esc.Replace("\*", ".*")
-        Return esc
-    End Function
-
-    Private Function IsDisallowedByRobots(loc As String) As Boolean
-        If _disallowRegex Is Nothing OrElse _disallowRegex.Count = 0 Then Return False
-
-        Try
-            Dim u As New Uri(loc)
-            Dim p As String = u.AbsolutePath
-            For Each rx As Regex In _disallowRegex
-                If rx IsNot Nothing AndAlso rx.IsMatch(p) Then Return True
-            Next
-        Catch
-            ' If URL is malformed, do not include it in sitemap
-            Return True
-        End Try
-
-        Return False
-    End Function
-
-    ' ----------------------------
-    ' File cache
-    ' ----------------------------
-    Private Function TryReadFromFileCache(sig As CacheSignatureInfo, part As Integer) As String
-        If Not _fileCacheEnabled Then Return Nothing
-        If sig Is Nothing OrElse String.IsNullOrEmpty(sig.Signature) Then Return Nothing
-
-        Try
-            Dim physDir As String = SafeMapPath(_fileCachePath)
-            If String.IsNullOrEmpty(physDir) OrElse Not Directory.Exists(physDir) Then Return Nothing
-
-            Dim physFile As String = GetCacheFilePath(physDir, sig.Signature, part)
-            If Not File.Exists(physFile) Then Return Nothing
-
-            Dim fi As New FileInfo(physFile)
-            Dim ageMinutes As Double = (DateTime.UtcNow - fi.LastWriteTimeUtc).TotalMinutes
-            If ageMinutes > _fileCacheTtlMinutes Then Return Nothing
-
-            Return File.ReadAllText(physFile, Encoding.UTF8)
-        Catch
-            Return Nothing
-        End Try
-    End Function
-
-    Private Sub TryWriteToFileCache(sig As CacheSignatureInfo, part As Integer, xml As String)
-        If Not _fileCacheEnabled Then Return
-        If sig Is Nothing OrElse String.IsNullOrEmpty(sig.Signature) Then Return
-
-        Try
-            Dim physDir As String = SafeMapPath(_fileCachePath)
-            If String.IsNullOrEmpty(physDir) Then Return
-
-            ' Safety: never write outside the application root
-            Dim appRoot As String = HttpRuntime.AppDomainAppPath
-            If Not physDir.StartsWith(appRoot, StringComparison.OrdinalIgnoreCase) Then Return
-
-            If Not Directory.Exists(physDir) Then Directory.CreateDirectory(physDir)
-
-            Dim physFile As String = GetCacheFilePath(physDir, sig.Signature, part)
-            Dim tmp As String = physFile & ".tmp"
-
-            File.WriteAllText(tmp, xml, Encoding.UTF8)
-
-            ' Atomic-ish replace
-            If File.Exists(physFile) Then
-                File.Delete(physFile)
-            End If
-            File.Move(tmp, physFile)
-        Catch
-            ' Ignore cache write failures
-        End Try
-    End Sub
-
-    Private Shared Function GetCacheFilePath(physDir As String, signature As String, part As Integer) As String
-        Dim h As String = Sha1Hex(signature)
-        Dim suffix As String = If(part <= 0, "_index", "_part" & part.ToString())
-        Return Path.Combine(physDir, "sitemap_" & h & suffix & ".xml")
-    End Function
-
-    Private Shared Function Sha1Hex(input As String) As String
-        Using sha As SHA1 = SHA1.Create()
-            Dim b() As Byte = Encoding.UTF8.GetBytes(If(input, ""))
-            Dim h() As Byte = sha.ComputeHash(b)
-            Dim sb As New StringBuilder(h.Length * 2)
-            For Each bb As Byte In h
-                sb.Append(bb.ToString("x2"))
-            Next
-            Return sb.ToString()
-        End Using
-    End Function
-
-    Private Function SafeMapPath(virtualPath As String) As String
-        Try
-            If Server Is Nothing Then
-                Dim ctx As HttpContext = HttpContext.Current
-                If ctx IsNot Nothing AndAlso ctx.Server IsNot Nothing Then
-                    Return ctx.Server.MapPath(virtualPath)
-                End If
-                Return Nothing
-            End If
-            Return Server.MapPath(virtualPath)
-        Catch
-            Return Nothing
-        End Try
-    End Function
-
-    ' ----------------------------
-    ' Sitemap generation
-    ' ----------------------------
-    Private Function ComputeCacheSignature(host As String) As CacheSignatureInfo
-        Dim info As New CacheSignatureInfo()
-        info.DataMaxUtc = Nothing
-
-        Dim maxUtc As Nullable(Of DateTime) = Nothing
-
-        ' Try to use DB last_mod max (optional)
-        Dim cs As String = GetConnectionString()
-        If Not String.IsNullOrEmpty(cs) Then
-            Dim vArt As String = GetAppSetting("KeepStore.Sitemap.DbView.Articoli", "v_sitemap_articoli")
-            Dim vFac As String = GetAppSetting("KeepStore.Sitemap.DbView.Facets", "v_sitemap_facets")
-            Dim vProd As String = GetAppSetting("KeepStore.Sitemap.DbView.Products", "v_sitemap_products")
-
-            maxUtc = MaxUtc(maxUtc, TryGetMaxUtcFromView(cs, vArt))
-            maxUtc = MaxUtc(maxUtc, TryGetMaxUtcFromView(cs, vFac))
-            maxUtc = MaxUtc(maxUtc, TryGetMaxUtcFromView(cs, vProd))
-        End If
-
-        info.DataMaxUtc = maxUtc
-
-        Dim sigParts As New List(Of String)()
-        sigParts.Add(host)
-        sigParts.Add("mx=" & If(maxUtc.HasValue, maxUtc.Value.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture), "none"))
-        sigParts.Add("robots=" & _alignRobotsDisallow.ToString())
-        sigParts.Add("mpp=" & _maxUrlsPerPart.ToString())
-        info.Signature = String.Join("|", sigParts.ToArray())
-
-        Return info
-    End Function
-
-    Private Shared Function MaxUtc(a As Nullable(Of DateTime), b As Nullable(Of DateTime)) As Nullable(Of DateTime)
-        If Not a.HasValue Then Return b
-        If Not b.HasValue Then Return a
-        If b.Value > a.Value Then Return b
-        Return a
-    End Function
-
-    Private Function TryGetMaxUtcFromView(cs As String, viewName As String) As Nullable(Of DateTime)
-        If String.IsNullOrEmpty(cs) OrElse String.IsNullOrEmpty(viewName) Then Return Nothing
-        Try
-            Using conn As New MySqlConnection(cs)
-                conn.Open()
-                Using cmd As MySqlCommand = CreateCommand(conn, "SELECT MAX(last_mod) FROM " & viewName)
-                    Dim o As Object = cmd.ExecuteScalar()
-                    If o Is Nothing OrElse o Is DBNull.Value Then Return Nothing
-                    Dim dt As DateTime
-                    If TypeOf o Is DateTime Then
-                        dt = CType(o, DateTime)
-                    Else
-                        If Not DateTime.TryParse(Convert.ToString(o), dt) Then Return Nothing
-                    End If
-                    If dt.Kind = DateTimeKind.Unspecified Then
-                        dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc)
-                    Else
-                        dt = dt.ToUniversalTime()
-                    End If
-                    Return dt
-                End Using
-            End Using
-        Catch
-            Return Nothing
-        End Try
-    End Function
-
-    Private Function BuildXml(host As String, sig As CacheSignatureInfo, part As Integer) As String
-        Dim urls As New List(Of Tuple(Of String, String, String, String))()
-
-        ' Static + dynamic content
-        AddStaticUrls(urls, host, sig)
-
-        Dim fallbackUtc As Nullable(Of DateTime) = Nothing
-        If sig IsNot Nothing Then fallbackUtc = sig.DataMaxUtc
-
-        AddDynamicArticoliUrls(urls, host, fallbackUtc, sig)
-        AddDynamicFacetUrls(urls, host, fallbackUtc)
-        AddDynamicProductUrls(urls, host, fallbackUtc)
-
-        ' Deduplicate + robots filter
-        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-        Dim filtered As New List(Of Tuple(Of String, String, String, String))()
-        For Each t In urls
-            Dim loc As String = t.Item1
-            If String.IsNullOrEmpty(loc) Then Continue For
-            If Not seen.Add(loc) Then Continue For
-            If _alignRobotsDisallow AndAlso IsDisallowedByRobots(loc) Then Continue For
-            filtered.Add(t)
-        Next
-
-        ' Split into parts (if needed)
-        If part <= 0 AndAlso filtered.Count > _maxUrlsPerPart Then
-            Return BuildIndexXml(host, sig, filtered.Count)
-        End If
-
-        If part > 0 Then
-            Dim startIdx As Integer = (part - 1) * _maxUrlsPerPart
-            Dim endIdx As Integer = Math.Min(startIdx + _maxUrlsPerPart, filtered.Count)
-            If startIdx < 0 OrElse startIdx >= filtered.Count Then
-                ' out-of-range part -> empty urlset
-                filtered = New List(Of Tuple(Of String, String, String, String))()
-            Else
-                filtered = filtered.GetRange(startIdx, endIdx - startIdx)
-            End If
+        ' Sitemaps.org limit
+        If urls.Count > 50000 Then
+            urls = urls.GetRange(0, 50000)
         End If
 
         Dim sb As New StringBuilder()
         sb.AppendLine("<?xml version=""1.0"" encoding=""UTF-8""?>")
         sb.AppendLine("<urlset xmlns=""http://www.sitemaps.org/schemas/sitemap/0.9"">")
 
-        For Each t In filtered
+        For Each u As SitemapUrl In urls
             sb.AppendLine("  <url>")
-            sb.AppendLine("    <loc>" & XmlEscape(t.Item1) & "</loc>")
-            If Not String.IsNullOrEmpty(t.Item2) Then
-                sb.AppendLine("    <lastmod>" & XmlEscape(t.Item2) & "</lastmod>")
+            sb.AppendLine("    <loc>" & XmlEscape(u.Loc) & "</loc>")
+            If u.LastModUtc.HasValue Then
+                sb.AppendLine("    <lastmod>" & u.LastModUtc.Value.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture) & "</lastmod>")
             End If
-            If Not String.IsNullOrEmpty(t.Item3) Then
-                sb.AppendLine("    <changefreq>" & XmlEscape(t.Item3) & "</changefreq>")
+            If Not String.IsNullOrEmpty(u.ChangeFreq) Then
+                sb.AppendLine("    <changefreq>" & XmlEscape(u.ChangeFreq) & "</changefreq>")
             End If
-            If Not String.IsNullOrEmpty(t.Item4) Then
-                sb.AppendLine("    <priority>" & XmlEscape(t.Item4) & "</priority>")
+            If Not String.IsNullOrEmpty(u.Priority) Then
+                sb.AppendLine("    <priority>" & XmlEscape(u.Priority) & "</priority>")
             End If
             sb.AppendLine("  </url>")
         Next
@@ -480,227 +302,395 @@ Partial Class sitemap
         Return sb.ToString()
     End Function
 
-    Private Function BuildIndexXml(host As String, sig As CacheSignatureInfo, totalUrls As Integer) As String
-        Dim parts As Integer = CInt(Math.Ceiling(totalUrls / CDbl(_maxUrlsPerPart)))
-        If parts < 1 Then parts = 1
+    Private Function BuildUrlList(host As String, includeRobotsDisallowed As Boolean) As List(Of SitemapUrl)
+        Dim urls As New List(Of SitemapUrl)()
+        Dim fallbackUtc As DateTime = DateTime.UtcNow
 
-        Dim sb As New StringBuilder()
-        sb.AppendLine("<?xml version=""1.0"" encoding=""UTF-8""?>")
-        sb.AppendLine("<sitemapindex xmlns=""http://www.sitemaps.org/schemas/sitemap/0.9"">")
+        AddStaticUrls(urls, host, fallbackUtc)
+        AddDynamicArticoliUrls(urls, host, fallbackUtc)
+        AddDynamicFacetUrls(urls, host, fallbackUtc)
 
-        For i As Integer = 1 To parts
-            Dim loc As String = host.TrimEnd("/"c) & "/sitemap.aspx?part=" & i.ToString()
-            sb.AppendLine("  <sitemap>")
-            sb.AppendLine("    <loc>" & XmlEscape(loc) & "</loc>")
-            If sig IsNot Nothing AndAlso sig.DataMaxUtc.HasValue Then
-                sb.AppendLine("    <lastmod>" & sig.DataMaxUtc.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) & "</lastmod>")
+        ' De-dup and (optionally) robots filter
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim out As New List(Of SitemapUrl)()
+
+        For Each u As SitemapUrl In urls
+            If u Is Nothing Then Continue For
+            If String.IsNullOrEmpty(u.Loc) Then Continue For
+
+            Dim loc As String = NormalizeAbsoluteUrl(host, u.Loc)
+            If String.IsNullOrEmpty(loc) Then Continue For
+
+            If Not seen.Add(loc) Then Continue For
+
+            If (Not includeRobotsDisallowed) AndAlso IsDisallowedByRobots(loc) Then
+                Continue For
             End If
-            sb.AppendLine("  </sitemap>")
+
+            u.Loc = loc
+            out.Add(u)
         Next
 
-        sb.AppendLine("</sitemapindex>")
+        Return out
+    End Function
+
+    Private Sub AddStaticUrls(urls As List(Of SitemapUrl), host As String, fallbackUtc As DateTime)
+        ' IMPORTANT: keep these limited and stable. Add more if you have real public pages.
+        Dim staticPaths As String() = New String() { _
+            "/", _
+            "/articoli.aspx", _
+            "/categorie.aspx", _
+            "/contatti.aspx", _
+            "/privacy.aspx", _
+            "/faq.aspx" _
+        }
+
+        For Each p As String In staticPaths
+            urls.Add(New SitemapUrl(host & p, fallbackUtc, "weekly", "0.8"))
+        Next
+    End Sub
+
+    ' =========================
+    ' Dynamic URLs from MySQL views
+    ' Expected columns: url (VARCHAR), last_mod (DATETIME/TIMESTAMP nullable)
+    ' =========================
+    Private Sub AddDynamicArticoliUrls(urls As List(Of SitemapUrl), host As String, fallbackUtc As DateTime)
+        If String.IsNullOrEmpty(_mysqlViewArticoli) Then Return
+        Dim items As List(Of SitemapUrl) = TryLoadFromView(_mysqlViewArticoli, host, fallbackUtc)
+        For Each u As SitemapUrl In items
+            u.ChangeFreq = "daily"
+            u.Priority = "0.9"
+            urls.Add(u)
+        Next
+    End Sub
+
+    Private Sub AddDynamicFacetUrls(urls As List(Of SitemapUrl), host As String, fallbackUtc As DateTime)
+        If String.IsNullOrEmpty(_mysqlViewFacets) Then Return
+        Dim items As List(Of SitemapUrl) = TryLoadFromView(_mysqlViewFacets, host, fallbackUtc)
+        For Each u As SitemapUrl In items
+            u.ChangeFreq = "weekly"
+            u.Priority = "0.7"
+            urls.Add(u)
+        Next
+    End Sub
+
+    Private Function TryLoadFromView(viewName As String, host As String, fallbackUtc As DateTime) As List(Of SitemapUrl)
+        Dim res As New List(Of SitemapUrl)()
+
+        Dim safeView As String = ValidateSqlIdentifier(viewName)
+        If String.IsNullOrEmpty(safeView) Then
+            Return res
+        End If
+
+        Dim cs As String = Nothing
+        Try
+            Dim csObj = ConfigurationManager.ConnectionStrings(_mysqlConnName)
+            If csObj IsNot Nothing Then cs = csObj.ConnectionString
+        Catch
+            cs = Nothing
+        End Try
+
+        If String.IsNullOrEmpty(cs) Then Return res
+
+        Try
+            Using conn As New MySqlConnection(cs)
+                conn.Open()
+                Using cmd As New MySqlCommand("SELECT url, last_mod FROM " & safeView & " ORDER BY url", conn)
+                    cmd.CommandTimeout = 30
+                    Using rd As MySqlDataReader = cmd.ExecuteReader()
+                        While rd.Read()
+                            Dim u As String = SafeDbString(rd, 0)
+                            If String.IsNullOrEmpty(u) Then Continue While
+
+                            Dim lmUtc As Nullable(Of DateTime) = Nothing
+                            Dim lm As Nullable(Of DateTime) = SafeDbDateTime(rd, 1)
+                            If lm.HasValue Then
+                                lmUtc = DateTime.SpecifyKind(lm.Value, DateTimeKind.Utc)
+                            Else
+                                lmUtc = fallbackUtc
+                            End If
+
+                            res.Add(New SitemapUrl(u, lmUtc, Nothing, Nothing))
+                        End While
+                    End Using
+                End Using
+            End Using
+        Catch
+            ' On DB errors: keep sitemap alive (audit will show counts, but we don't crash).
+        End Try
+
+        Return res
+    End Function
+
+    Private Function ValidateSqlIdentifier(name As String) As String
+        If String.IsNullOrEmpty(name) Then Return Nothing
+        name = name.Trim()
+        ' allow schema-qualified: schema.view
+        If Not Regex.IsMatch(name, "^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)?$") Then Return Nothing
+        Return name
+    End Function
+
+    Private Function SafeDbString(rd As MySqlDataReader, ordinal As Integer) As String
+        Try
+            If rd.IsDBNull(ordinal) Then Return Nothing
+            Return Convert.ToString(rd.GetValue(ordinal))
+        Catch
+            Return Nothing
+        End Try
+    End Function
+
+    Private Function SafeDbDateTime(rd As MySqlDataReader, ordinal As Integer) As Nullable(Of DateTime)
+        Try
+            If rd.IsDBNull(ordinal) Then Return Nothing
+            Dim v As Object = rd.GetValue(ordinal)
+            If TypeOf v Is DateTime Then
+                Return CType(v, DateTime)
+            End If
+            Dim s As String = Convert.ToString(v)
+            Dim dt As DateTime
+            If DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal Or DateTimeStyles.AdjustToUniversal, dt) Then
+                Return dt
+            End If
+        Catch
+        End Try
+        Return Nothing
+    End Function
+
+    ' =========================
+    ' Robots.txt Disallow
+    ' =========================
+    Private Function SafeLoadDisallowRegex() As List(Of Regex)
+        Dim empty As New List(Of Regex)()
+        If Not _robotsEnabled Then Return empty
+
+        Try
+            Dim robotsPhys As String = Server.MapPath("~/robots.txt")
+            If String.IsNullOrEmpty(robotsPhys) OrElse Not File.Exists(robotsPhys) Then
+                Return empty
+            End If
+
+            Dim lines() As String = File.ReadAllLines(robotsPhys, Encoding.UTF8)
+
+            ' Parse groups
+            Dim currentApplies As Boolean = False
+            Dim disallowPatterns As New List(Of String)()
+
+            For Each raw As String In lines
+                Dim line As String = raw
+                If line Is Nothing Then Continue For
+
+                ' strip comments
+                Dim hash As Integer = line.IndexOf("#"c)
+                If hash >= 0 Then line = line.Substring(0, hash)
+                line = line.Trim()
+                If line.Length = 0 Then Continue For
+
+                Dim colon As Integer = line.IndexOf(":"c)
+                If colon <= 0 Then Continue For
+
+                Dim key As String = line.Substring(0, colon).Trim().ToLowerInvariant()
+                Dim val As String = line.Substring(colon + 1).Trim()
+
+                If key = "user-agent" Then
+                    Dim ua As String = val.Trim()
+                    ' When a new UA is encountered, recompute whether this group applies.
+                    currentApplies = UserAgentMatches(ua, _robotsUserAgent)
+                ElseIf key = "disallow" Then
+                    If currentApplies Then
+                        If Not String.IsNullOrEmpty(val) Then
+                            disallowPatterns.Add(val)
+                        End If
+                    End If
+                End If
+            Next
+
+            Dim regs As New List(Of Regex)()
+            For Each p As String In disallowPatterns
+                Dim rx As Regex = CompileRobotsPattern(p)
+                If rx IsNot Nothing Then regs.Add(rx)
+            Next
+
+            Return regs
+        Catch
+            Return empty
+        End Try
+    End Function
+
+    Private Function UserAgentMatches(robotsUa As String, targetUa As String) As Boolean
+        If String.IsNullOrEmpty(robotsUa) Then Return False
+        If robotsUa = "*" Then Return True
+        If String.Equals(targetUa, "*", StringComparison.OrdinalIgnoreCase) Then
+            ' target is wildcard: accept all groups
+            Return True
+        End If
+        Return robotsUa.Trim().ToLowerInvariant() = targetUa.Trim().ToLowerInvariant()
+    End Function
+
+    Private Function CompileRobotsPattern(pattern As String) As Regex
+        If String.IsNullOrEmpty(pattern) Then Return Nothing
+        pattern = pattern.Trim()
+        If pattern = "/" Then
+            ' Disallow all
+            Return New Regex("^/.*", RegexOptions.IgnoreCase Or RegexOptions.CultureInvariant)
+        End If
+
+        Dim anchorEnd As Boolean = False
+        If pattern.EndsWith("$", StringComparison.Ordinal) Then
+            anchorEnd = True
+            pattern = pattern.Substring(0, pattern.Length - 1)
+        End If
+
+        ' Escape regex special chars, then unescape '*' wildcards
+        Dim escaped As String = Regex.Escape(pattern).Replace("\*", ".*")
+        Dim rxPattern As String = "^" & escaped
+        If anchorEnd Then rxPattern &= "$"
+        Return New Regex(rxPattern, RegexOptions.IgnoreCase Or RegexOptions.CultureInvariant)
+    End Function
+
+    Private Function IsDisallowedByRobots(absUrl As String) As Boolean
+        If Not _robotsEnabled Then Return False
+        If _disallowRegex Is Nothing OrElse _disallowRegex.Count = 0 Then Return False
+        If String.IsNullOrEmpty(absUrl) Then Return False
+
+        Dim pathAndQuery As String = absUrl
+        Try
+            Dim uri As New Uri(absUrl, UriKind.Absolute)
+            pathAndQuery = uri.PathAndQuery
+        Catch
+            ' keep as-is
+        End Try
+
+        For Each rx As Regex In _disallowRegex
+            If rx Is Nothing Then Continue For
+            If rx.IsMatch(pathAndQuery) Then Return True
+        Next
+
+        Return False
+    End Function
+
+    ' =========================
+    ' Cache
+    ' =========================
+    Private Function DescribeCache(host As String) As String
+        Dim sb As New StringBuilder()
+        sb.AppendLine("Cache Status")
+        Try
+            Dim dirPhys As String = Server.MapPath(_fileCachePath)
+            Dim filePhys As String = Path.Combine(dirPhys, GetCacheFileName(host))
+            sb.AppendLine("  Dir: " & dirPhys)
+            sb.AppendLine("  File: " & filePhys)
+
+            If File.Exists(filePhys) Then
+                Dim fi As New FileInfo(filePhys)
+                sb.AppendLine("  Exists: True")
+                sb.AppendLine("  Size: " & fi.Length.ToString(CultureInfo.InvariantCulture))
+                sb.AppendLine("  LastWriteUtc: " & fi.LastWriteTimeUtc.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture))
+                sb.AppendLine("  AgeMinutes: " & (DateTime.UtcNow - fi.LastWriteTimeUtc).TotalMinutes.ToString("0.0", CultureInfo.InvariantCulture))
+            Else
+                sb.AppendLine("  Exists: False")
+            End If
+        Catch ex As Exception
+            sb.AppendLine("  ERROR: " & ex.Message)
+        End Try
         Return sb.ToString()
     End Function
 
-    Private Sub AddStaticUrls(urls As List(Of Tuple(Of String, String, String, String)), host As String, sig As CacheSignatureInfo)
-        Dim lastMod As String = ""
-        If sig IsNot Nothing AndAlso sig.DataMaxUtc.HasValue Then
-            lastMod = sig.DataMaxUtc.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
-        End If
+    Private Function TryReadCache(host As String) As String
+        Try
+            Dim dirPhys As String = Server.MapPath(_fileCachePath)
+            Dim filePhys As String = Path.Combine(dirPhys, GetCacheFileName(host))
 
-        Dim homePath As String = GetAppSetting("KeepStore.Sitemap.Home", "/")
-        If String.IsNullOrEmpty(homePath) Then homePath = "/"
-        urls.Add(Tuple.Create(CombineUrl(host, homePath), lastMod, "daily", "1.0"))
+            If Not File.Exists(filePhys) Then Return Nothing
 
-        ' Add some common static pages if present
-        Dim staticCsv As String = GetAppSetting("KeepStore.Sitemap.StaticPaths", "/about.html,/contact.html,/privacy.html")
-        For Each p As String In staticCsv.Split(","c)
-            Dim pp As String = If(p, "").Trim()
-            If pp = "" Then Continue For
-            urls.Add(Tuple.Create(CombineUrl(host, pp), lastMod, "weekly", "0.6"))
+            Dim age As TimeSpan = DateTime.UtcNow - File.GetLastWriteTimeUtc(filePhys)
+            If age.TotalMinutes > _fileCacheTtlMinutes Then Return Nothing
+
+            Return File.ReadAllText(filePhys, Encoding.UTF8)
+        Catch
+            Return Nothing
+        End Try
+    End Function
+
+    Private Sub TryWriteCache(host As String, xml As String)
+        Try
+            Dim dirPhys As String = Server.MapPath(_fileCachePath)
+            If String.IsNullOrEmpty(dirPhys) Then Return
+
+            If Not Directory.Exists(dirPhys) Then
+                Directory.CreateDirectory(dirPhys)
+            End If
+
+            Dim filePhys As String = Path.Combine(dirPhys, GetCacheFileName(host))
+            Dim tmpPhys As String = filePhys & ".tmp"
+
+            File.WriteAllText(tmpPhys, xml, Encoding.UTF8)
+
+            ' atomic replace
+            If File.Exists(filePhys) Then
+                File.Delete(filePhys)
+            End If
+            File.Move(tmpPhys, filePhys)
+        Catch
+            ' Do not fail sitemap on cache errors.
+        End Try
+    End Sub
+
+    Private Function GetCacheFileName(host As String) As String
+        ' Host may contain scheme and port; hash to a safe file name.
+        Dim h As String = host.ToLowerInvariant()
+        Dim bytes() As Byte = Encoding.UTF8.GetBytes(h)
+        Dim hash() As Byte
+        Using sha As SHA256 = SHA256.Create()
+            hash = sha.ComputeHash(bytes)
+        End Using
+        Dim hex As New StringBuilder()
+        For Each b As Byte In hash
+            hex.Append(b.ToString("x2", CultureInfo.InvariantCulture))
         Next
-    End Sub
-
-    Private Sub AddDynamicArticoliUrls(urls As List(Of Tuple(Of String, String, String, String)),
-                                       host As String,
-                                       Optional fallbackUtc As Nullable(Of DateTime) = Nothing,
-                                       Optional sig As CacheSignatureInfo = Nothing)
-
-        Dim cs As String = GetConnectionString()
-        If String.IsNullOrEmpty(cs) Then Return
-
-        Dim viewName As String = GetAppSetting("KeepStore.Sitemap.DbView.Articoli", "v_sitemap_articoli")
-
-        Try
-            Using conn As New MySqlConnection(cs)
-                conn.Open()
-                Using cmd As MySqlCommand = CreateCommand(conn, "SELECT url, last_mod FROM " & viewName & " ORDER BY url")
-                    Using rd As MySqlDataReader = cmd.ExecuteReader()
-                        While rd.Read()
-                            Dim u As String = SafeDbString(rd, 0)
-                            If String.IsNullOrEmpty(u) Then Continue While
-
-                            Dim lmUtc As Nullable(Of DateTime) = SafeDbDateUtc(rd, 1)
-                            Dim lm As String = ""
-                            If lmUtc.HasValue Then
-                                lm = lmUtc.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
-                            ElseIf fallbackUtc.HasValue Then
-                                lm = fallbackUtc.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
-                            End If
-
-                            urls.Add(Tuple.Create(NormalizeUrl(host, u), lm, "weekly", "0.7"))
-                        End While
-                    End Using
-                End Using
-            End Using
-        Catch
-            ' Ignore DB issues; sitemap should still return static urls
-        End Try
-    End Sub
-
-    Private Sub AddDynamicFacetUrls(urls As List(Of Tuple(Of String, String, String, String)),
-                                    host As String,
-                                    Optional fallbackUtc As Nullable(Of DateTime) = Nothing)
-
-        If Not GetAppSettingBool("KeepStore.Sitemap.IncludeCatalogFacets", False) Then Return
-
-        Dim cs As String = GetConnectionString()
-        If String.IsNullOrEmpty(cs) Then Return
-
-        Dim viewName As String = GetAppSetting("KeepStore.Sitemap.DbView.Facets", "v_sitemap_facets")
-
-        Try
-            Using conn As New MySqlConnection(cs)
-                conn.Open()
-                Using cmd As MySqlCommand = CreateCommand(conn, "SELECT url, last_mod FROM " & viewName & " ORDER BY url")
-                    Using rd As MySqlDataReader = cmd.ExecuteReader()
-                        While rd.Read()
-                            Dim u As String = SafeDbString(rd, 0)
-                            If String.IsNullOrEmpty(u) Then Continue While
-
-                            Dim lmUtc As Nullable(Of DateTime) = SafeDbDateUtc(rd, 1)
-                            Dim lm As String = ""
-                            If lmUtc.HasValue Then
-                                lm = lmUtc.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
-                            ElseIf fallbackUtc.HasValue Then
-                                lm = fallbackUtc.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
-                            End If
-
-                            urls.Add(Tuple.Create(NormalizeUrl(host, u), lm, "weekly", "0.5"))
-                        End While
-                    End Using
-                End Using
-            End Using
-        Catch
-        End Try
-    End Sub
-
-    Private Sub AddDynamicProductUrls(urls As List(Of Tuple(Of String, String, String, String)),
-                                      host As String,
-                                      Optional fallbackUtc As Nullable(Of DateTime) = Nothing)
-
-        If Not GetAppSettingBool("KeepStore.Sitemap.IncludeProductDetails", False) Then Return
-
-        Dim cs As String = GetConnectionString()
-        If String.IsNullOrEmpty(cs) Then Return
-
-        Dim viewName As String = GetAppSetting("KeepStore.Sitemap.DbView.Products", "v_sitemap_products")
-
-        Try
-            Using conn As New MySqlConnection(cs)
-                conn.Open()
-                Using cmd As MySqlCommand = CreateCommand(conn, "SELECT url, last_mod FROM " & viewName & " ORDER BY url")
-                    Using rd As MySqlDataReader = cmd.ExecuteReader()
-                        While rd.Read()
-                            Dim u As String = SafeDbString(rd, 0)
-                            If String.IsNullOrEmpty(u) Then Continue While
-
-                            Dim lmUtc As Nullable(Of DateTime) = SafeDbDateUtc(rd, 1)
-                            Dim lm As String = ""
-                            If lmUtc.HasValue Then
-                                lm = lmUtc.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
-                            ElseIf fallbackUtc.HasValue Then
-                                lm = fallbackUtc.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
-                            End If
-
-                            urls.Add(Tuple.Create(NormalizeUrl(host, u), lm, "weekly", "0.8"))
-                        End While
-                    End Using
-                End Using
-            End Using
-        Catch
-        End Try
-    End Sub
-
-    ' ----------------------------
-    ' DB helpers
-    ' ----------------------------
-    Private Function GetConnectionString() As String
-        Dim name As String = GetAppSetting("KeepStore.Sitemap.Db.ConnectionStringName", "EntropicConnectionString")
-        Dim cs As ConnectionStringSettings = ConfigurationManager.ConnectionStrings(name)
-        If cs Is Nothing OrElse String.IsNullOrEmpty(cs.ConnectionString) Then Return Nothing
-        Return cs.ConnectionString
+        Return "sitemap_" & hex.ToString().Substring(0, 16) & ".xml"
     End Function
 
-    Private Function CreateCommand(conn As MySqlConnection, sql As String) As MySqlCommand
-        Dim cmd As New MySqlCommand(sql, conn)
-        cmd.CommandTimeout = GetAppSettingInt("KeepStore.Sitemap.Db.CommandTimeoutSec", 30)
-        Return cmd
+    ' =========================
+    ' Utilities
+    ' =========================
+    Private Function GetHostBase() As String
+        ' Always prefer current request authority.
+        Dim u As Uri = Request.Url
+        Return u.Scheme & "://" & u.Authority
     End Function
 
-    Private Shared Function SafeDbString(rd As MySqlDataReader, ordinal As Integer) As String
-        If rd Is Nothing Then Return ""
-        If rd.IsDBNull(ordinal) Then Return ""
-        Return Convert.ToString(rd.GetValue(ordinal))
-    End Function
+    Private Function NormalizeAbsoluteUrl(host As String, url As String) As String
+        If String.IsNullOrEmpty(url) Then Return Nothing
+        url = url.Trim()
 
-    Private Shared Function SafeDbDateUtc(rd As MySqlDataReader, ordinal As Integer) As Nullable(Of DateTime)
-        If rd Is Nothing OrElse rd.IsDBNull(ordinal) Then Return Nothing
-        Dim o As Object = rd.GetValue(ordinal)
-        Dim dt As DateTime
-
-        If TypeOf o Is DateTime Then
-            dt = CType(o, DateTime)
-        Else
-            If Not DateTime.TryParse(Convert.ToString(o), dt) Then Return Nothing
+        If url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+            Return url
         End If
 
-        If dt.Kind = DateTimeKind.Unspecified Then
-            dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc)
-        Else
-            dt = dt.ToUniversalTime()
+        If Not url.StartsWith("/", StringComparison.Ordinal) Then
+            url = "/" & url
         End If
-        Return dt
+
+        Return host & url
     End Function
 
-    ' ----------------------------
-    ' URL + XML helpers
-    ' ----------------------------
-    Private Shared Function CombineUrl(host As String, path As String) As String
-        Dim h As String = If(host, "").TrimEnd("/"c)
-        Dim p As String = If(path, "")
-        If p = "" Then p = "/"
-        If Not p.StartsWith("/") AndAlso Not p.StartsWith("http", StringComparison.OrdinalIgnoreCase) Then
-            p = "/" & p
-        End If
-        If p.StartsWith("http", StringComparison.OrdinalIgnoreCase) Then
-            Return p
-        End If
-        Return h & p
-    End Function
-
-    Private Shared Function NormalizeUrl(host As String, u As String) As String
-        Dim s As String = If(u, "").Trim()
-        If s = "" Then Return ""
-        If s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse s.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
-            Return s
-        End If
-        Return CombineUrl(host, s)
-    End Function
-
-    Private Shared Function XmlEscape(s As String) As String
+    Private Function XmlEscape(s As String) As String
         If s Is Nothing Then Return ""
-        Return System.Security.SecurityElement.Escape(s)
+        Return SecurityElement.Escape(s)
     End Function
 
+    ' Simple container
+    Private Class SitemapUrl
+        Public Property Loc As String
+        Public Property LastModUtc As Nullable(Of DateTime)
+        Public Property ChangeFreq As String
+        Public Property Priority As String
+
+        Public Sub New(loc As String, lastModUtc As Nullable(Of DateTime), changeFreq As String, priority As String)
+            Me.Loc = loc
+            Me.LastModUtc = lastModUtc
+            Me.ChangeFreq = changeFreq
+            Me.Priority = priority
+        End Sub
+    End Class
 End Class
