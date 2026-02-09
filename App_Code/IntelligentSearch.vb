@@ -41,7 +41,7 @@ Public Module IntelligentSearch
                                              ByVal nListino As Integer,
                                              ByVal q As String,
                                              Optional limit As Integer = 48) As MySqlCommand
-        If conn Is Nothing Then Throw New ArgumentNullException(NameOf(conn))
+        If conn Is Nothing Then Throw New ArgumentNullException("conn")
 
         Dim query As String = NormalizeQuery(q, 120)
         Dim qExact As String = query
