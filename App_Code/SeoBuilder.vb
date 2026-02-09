@@ -93,7 +93,11 @@ Public NotInheritable Class SeoBuilder
         If found Is Nothing Then
             found = New HtmlMeta()
             found.Name = metaName
-            page.Header.Controls.Add(found)
+            Dim headC As Control = FindControlRecursive(page, "phHeadDynamic")
+                        If headC Is Nothing Then headC = FindControlRecursive(page, "phHeadLinks")
+                        If headC IsNot Nothing Then
+                            headC.Controls.Add(found)
+                        End If
         End If
 
         found.Content = If(metaContent, "")
@@ -125,7 +129,11 @@ Public NotInheritable Class SeoBuilder
         If found Is Nothing Then
             found = New HtmlMeta()
             found.Attributes("property") = propertyName
-            page.Header.Controls.Add(found)
+            Dim headC As Control = FindControlRecursive(page, "phHeadDynamic")
+                        If headC Is Nothing Then headC = FindControlRecursive(page, "phHeadLinks")
+                        If headC IsNot Nothing Then
+                            headC.Controls.Add(found)
+                        End If
         End If
 
         found.Content = If(metaContent, "")
@@ -150,7 +158,11 @@ Public NotInheritable Class SeoBuilder
         If found Is Nothing Then
             found = New HtmlLink()
             found.Attributes("rel") = "canonical"
-            page.Header.Controls.Add(found)
+            Dim headC As Control = FindControlRecursive(page, "phHeadDynamic")
+            If headC Is Nothing Then headC = FindControlRecursive(page, "phHeadLinks")
+            If headC IsNot Nothing Then
+                headC.Controls.Add(found)
+            End If
         End If
 
         found.Href = href
@@ -331,7 +343,11 @@ Public NotInheritable Class SeoBuilder
         ' Fallback: se non c'è la master o non implementa ISeoMaster, iniettiamo lo <script> direttamente in <head>
         If page.Header IsNot Nothing Then
             Dim scriptTag As String = "<script type=""application/ld+json"">" & payload & "</script>"
-            page.Header.Controls.Add(New LiteralControl(scriptTag))
+            Dim headC As Control = FindControlRecursive(page, "phHeadDynamic")
+            If headC Is Nothing Then headC = FindControlRecursive(page, "phHeadLinks")
+            If headC IsNot Nothing Then
+                headC.Controls.Add(New LiteralControl(scriptTag))
+            End If
         End If
     End Sub
 
