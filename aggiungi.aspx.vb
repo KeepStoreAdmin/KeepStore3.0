@@ -2,7 +2,7 @@
 Imports System.Data
 
 Partial Class aggiungi
-    Inherits System.Web.UI.Page
+    Inherits AntiCsrfPage
 
     ' Dati utente per Facebook Pixel
     Public firstName As String

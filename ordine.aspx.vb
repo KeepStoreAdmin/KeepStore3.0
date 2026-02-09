@@ -8,7 +8,7 @@ Imports System.Security.Authentication
 Imports System.Web
 
 Partial Class ordine
-    Inherits System.Web.UI.Page
+    Inherits AntiCsrfPage
 
     Const _Tls12 As SslProtocols = DirectCast(&HC00, SslProtocols)
     Const Tls12 As SecurityProtocolType = DirectCast(_Tls12, SecurityProtocolType)

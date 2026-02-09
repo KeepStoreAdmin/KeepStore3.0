@@ -617,21 +617,39 @@ End If
             Me.lblRisultati.Text = H(userCerca)
             Me.Title = Me.Title & " > " & lblRicerca.Text & userCerca
         End If
-        strWhere = strWhere & " GROUP BY id"
+        Dim orderSet As Boolean = False
 
-        If Drop_Ordinamento.SelectedValue = "P_offerta" Then
+        strWhere = strWhere & " GROUP BY id"
+        ' ============================================================
+        ' SMART SEARCH (AI-like) - Ranking di rilevanza senza nuove tabelle
+        ' - Boost per match esatto Codice/EAN
+        ' - Boost per match prefisso/contiene su Descrizione1
+        ' - Tie-breaker su visite + disponibilita'
+        ' ============================================================
+        If strCerca <> "" AndAlso (Drop_Ordinamento.SelectedValue = "" OrElse Drop_Ordinamento.SelectedValue = "P_rilevanza") Then
+            orderSet = True
+            strWhere &= " ORDER BY " &
+                        " (Codice = ?q) DESC," &
+                        " (Ean = ?q) DESC," &
+                        " (Descrizione1 LIKE CONCAT(?q, '%')) DESC," &
+                        " (Descrizione1 LIKE CONCAT('%', ?q, '%')) DESC," &
+                        " visite DESC," &
+                        " (Giacenza-Impegnata) DESC"
+        End If
+
+        If Not orderSet AndAlso Drop_Ordinamento.SelectedValue = "P_offerta" Then
             strWhere = strWhere & " ORDER BY InOfferta DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
         End If
-        If Drop_Ordinamento.SelectedValue = "P_basso" Then
+        If Not orderSet AndAlso Drop_Ordinamento.SelectedValue = "P_basso" Then
             strWhere = strWhere & " ORDER BY PrezzoIvato ASC, Prezzo ASC, Ord_PrezzoPromo ASC, Ord_PrezzoPromoIvato ASC,  (Giacenza-Impegnata) DESC"
         End If
-        If Drop_Ordinamento.SelectedValue = "P_alto" Then
+        If Not orderSet AndAlso Drop_Ordinamento.SelectedValue = "P_alto" Then
             strWhere = strWhere & " ORDER BY PrezzoIvato DESC, Prezzo DESC, Ord_PrezzoPromo ASC, Ord_PrezzoPromoIvato ASC,  (Giacenza-Impegnata) DESC"
         End If
-        If Drop_Ordinamento.SelectedValue = "P_popolarità" Then
+        If Not orderSet AndAlso Drop_Ordinamento.SelectedValue = "P_popolarità" Then
             strWhere = strWhere & " ORDER BY visite DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
         End If
-        If Drop_Ordinamento.SelectedValue = "P_recenti" Then
+        If Not orderSet AndAlso Drop_Ordinamento.SelectedValue = "P_recenti" Then
             strWhere = strWhere & " ORDER BY id DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
         End If
 

@@ -8,7 +8,7 @@ Imports System.Web.UI.WebControls
 
 
 Partial Class carrello
-    Inherits System.Web.UI.Page
+    Inherits AntiCsrfPage
 
 Protected differenzaTrasportoGratis As Double = 0
 
