@@ -976,8 +976,8 @@ End Sub
         obj3.Attributes.Add("rel", "shortcut icon")
         obj3.Href = Session("IconaWeb")
 
-        Me.Page.Header.Controls.Add(objcss)
-        Me.Page.Header.Controls.Add(obj3)
+        Me.phHeadDynamic.Controls.Add(objcss)
+        Me.phHeadDynamic.Controls.Add(obj3)
     End Sub
 
     Public Sub SettoreDefault()
@@ -1507,7 +1507,7 @@ End Sub
         Dim metaDescription As New HtmlMeta()
         metaDescription.Name = "description"
         metaDescription.Content = description
-        Me.Page.Header.Controls.Add(metaDescription)
+        Me.phHeadDynamic.Controls.Add(metaDescription)
     End If
 
     Dim keywords As String = Me.Page.Title
@@ -1517,7 +1517,7 @@ End Sub
         Dim metaKeywords As New HtmlMeta()
         metaKeywords.Name = "keywords"
         metaKeywords.Content = keywords
-        Me.Page.Header.Controls.Add(metaKeywords)
+        Me.phHeadDynamic.Controls.Add(metaKeywords)
     End If
 End Sub
 
