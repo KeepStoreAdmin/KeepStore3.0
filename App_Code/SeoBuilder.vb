@@ -381,32 +381,68 @@ Public NotInheritable Class SeoBuilder
         Return Nothing
     End Function
 
-        ' Aggiunge o aggiorna <meta name="..."> nel tag <head runat="server">
+        ' Aggiunge o aggiorna <meta name="...">.
+        '
+        ' IMPORTANT (WebForms):
+        ' Se nel <head> della MasterPage ci sono code blocks (<% ... %>), ASP.NET può impedire
+        ' modifiche a Page.Header.Controls e lanciare:
+        ' "Impossibile modificare la raccolta Controls perché il controllo contiene blocchi di codice".
+        '
+        ' KeepStore risolve rendendo disponibile un PlaceHolder server-side nel <head> (es: phHeadDynamic).
+        ' Qui aggiungiamo/aggiorniamo i meta su quel contenitore, evitando Page.Header.Controls.Add.
     Public Shared Sub AddOrReplaceNameMeta(ByVal page As System.Web.UI.Page, ByVal name As String, ByVal content As String)
-    If page Is Nothing Then Exit Sub
-    If page.Header Is Nothing Then Exit Sub
-    If String.IsNullOrEmpty(name) Then Exit Sub
+        If page Is Nothing Then Exit Sub
+        If page.Header Is Nothing Then Exit Sub
+        If String.IsNullOrEmpty(name) Then Exit Sub
 
-    Dim head As System.Web.UI.HtmlControls.HtmlHead = page.Header
-    Dim found As System.Web.UI.HtmlControls.HtmlMeta = Nothing
+        Dim head As System.Web.UI.HtmlControls.HtmlHead = page.Header
+        Dim found As System.Web.UI.HtmlControls.HtmlMeta = Nothing
 
-    For Each c As System.Web.UI.Control In head.Controls
-        Dim m As System.Web.UI.HtmlControls.HtmlMeta = TryCast(c, System.Web.UI.HtmlControls.HtmlMeta)
-        If m IsNot Nothing Then
-            If Not String.IsNullOrEmpty(m.Name) AndAlso String.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase) Then
-                found = m
-                Exit For
+        ' 1) prova a trovare meta già presente in head
+        Try
+            For Each c As System.Web.UI.Control In head.Controls
+                Dim m As System.Web.UI.HtmlControls.HtmlMeta = TryCast(c, System.Web.UI.HtmlControls.HtmlMeta)
+                If m IsNot Nothing Then
+                    If Not String.IsNullOrEmpty(m.Name) AndAlso String.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase) Then
+                        found = m
+                        Exit For
+                    End If
+                End If
+            Next
+        Catch
+            ' ignore
+        End Try
+
+        ' 2) se non trovato, aggiungi al PlaceHolder nel <head> (phHeadDynamic / phHeadLinks)
+        If found Is Nothing Then
+            found = New System.Web.UI.HtmlControls.HtmlMeta()
+            found.Name = name
+
+            Dim container As System.Web.UI.Control = Nothing
+            Try
+                ' Cerca il placeholder nella Master (preferito)
+                container = FindControlRecursive(page, "phHeadDynamic")
+                If container Is Nothing Then
+                    container = FindControlRecursive(page, "phHeadLinks")
+                End If
+            Catch
+                container = Nothing
+            End Try
+
+            If container IsNot Nothing Then
+                container.Controls.Add(found)
+            Else
+                ' Fallback: tenta su head.Controls (può fallire in presenza di code blocks)
+                Try
+                    head.Controls.Add(found)
+                Catch
+                    ' Se fallisce, non interrompere la pagina: il meta è opzionale.
+                    Exit Sub
+                End Try
             End If
         End If
-    Next
 
-    If found Is Nothing Then
-        found = New System.Web.UI.HtmlControls.HtmlMeta()
-        found.Name = name
-        head.Controls.Add(found)
-    End If
-
-    found.Content = If(content, String.Empty)
+        found.Content = If(content, String.Empty)
     End Sub
 
 End Class
