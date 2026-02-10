@@ -1,14 +1,92 @@
-﻿Imports System
+Imports System
 Imports System.Data
 Imports System.Configuration
 Imports System.Globalization
 Imports MySql.Data.MySqlClient
 Imports System.Web.UI
 Imports System.Web.UI.WebControls
+Imports System.Security.Cryptography
+Imports System.Web
 
 
 Partial Class carrello
     Inherits AntiCsrfPage
+
+
+' === HARDENING HELPERS (VB2012 safe) ===
+Private Const CHECKOUT_TOKEN_SESSION_KEY As String = "CheckoutToken"
+Private Const CHECKOUT_TOKEN_TIME_SESSION_KEY As String = "CheckoutTokenIssuedUtc"
+
+Private Function GenerateCheckoutToken() As String
+    ' 32 bytes random -> Base64Url (no +,/ or =)
+    Dim bytes(31) As Byte
+    Try
+        Using rng As New RNGCryptoServiceProvider()
+            rng.GetBytes(bytes)
+        End Using
+    Catch
+        ' Fallback (should never happen)
+        Dim g As Guid = Guid.NewGuid()
+        bytes = g.ToByteArray()
+    End Try
+
+    Dim b64 As String = Convert.ToBase64String(bytes)
+    b64 = b64.Replace("+"c, "-"c).Replace("/"c, "_"c).TrimEnd("="c)
+    Return b64
+End Function
+
+Private Sub RedirectToOrdine()
+    ' Issue one-time token (anti-replay / direct access hardening)
+    Dim token As String = GenerateCheckoutToken()
+    Session(CHECKOUT_TOKEN_SESSION_KEY) = token
+    Session(CHECKOUT_TOKEN_TIME_SESSION_KEY) = DateTime.UtcNow
+    Session("Ordine_FromCheckout") = 1
+
+    Dim url As String = "ordine.aspx?t=" & HttpUtility.UrlEncode(token)
+    Response.Redirect(url, True)
+End Sub
+
+Private Sub RedirectToOrdineWithQuery(ByVal extraQuery As String)
+    Dim token As String = GenerateCheckoutToken()
+    Session(CHECKOUT_TOKEN_SESSION_KEY) = token
+    Session(CHECKOUT_TOKEN_TIME_SESSION_KEY) = DateTime.UtcNow
+    Session("Ordine_FromCheckout") = 1
+
+    Dim url As String = "ordine.aspx?t=" & HttpUtility.UrlEncode(token)
+    If Not String.IsNullOrEmpty(extraQuery) Then
+        If extraQuery.StartsWith("&") Then extraQuery = extraQuery.Substring(1)
+        If extraQuery.StartsWith("?") Then extraQuery = extraQuery.Substring(1)
+        url &= "&" & extraQuery
+    End If
+    Response.Redirect(url, True)
+End Sub
+
+
+Private Sub SafeRedirectLocal(ByVal url As String)
+    If String.IsNullOrEmpty(url) Then
+        Response.Redirect("default.aspx", True)
+        Return
+    End If
+
+    If Not UrlIsLocal(url) Then
+        Response.Redirect("default.aspx", True)
+        Return
+    End If
+
+    Response.Redirect(url, True)
+End Sub
+
+Private Function UrlIsLocal(ByVal url As String) As Boolean
+    ' Minimal local-url check compatible with .NET 4.0
+    If String.IsNullOrEmpty(url) Then Return False
+    If url.StartsWith("/") Then
+        If url.StartsWith("//") OrElse url.StartsWith("/\") Then Return False
+        Return True
+    End If
+    If url.StartsWith("~/") Then Return True
+    Return False
+End Function
+
 
 Protected differenzaTrasportoGratis As Double = 0
 
@@ -552,7 +630,7 @@ If buonoTot > 0 Then
             End If
             Me.Session("NoteDocumento") = Me.txtNoteSpedizione.Text
 
-            Response.Redirect("ordine.aspx?C=" & Cookie.ToUpper)
+            RedirectToOrdineWithQuery("C=" & HttpUtility.UrlEncode(Cookie.ToUpper()))
 
             'Test di controllo, relativo al buono sconto del carrello
             'Dim test As Integer = 0
@@ -2976,7 +3054,7 @@ Protected Sub btContinua_Click(ByVal sender As Object, ByVal e As System.EventAr
         If Session.Item("Pagina_visitata_Articoli").ToString = String.Empty Then
             Response.Redirect("default.aspx")
         Else
-            Response.Redirect(Session.Item("Pagina_visitata_Articoli").ToString)
+            SafeRedirectLocal(Session.Item("Pagina_visitata_Articoli").ToString())
         End If
     End If
 End Sub
@@ -3018,7 +3096,7 @@ Protected Sub btSalvaPreventivo_click(ByVal sender As Object, ByVal e As System.
 
     Me.Session("NoteDocumento") = Me.txtNoteSpedizione.Text
 
-    Response.Redirect("ordine.aspx")
+    RedirectToOrdine()
 End Sub
 
 

@@ -6,6 +6,7 @@ Imports System.Net.Mail
 Imports BancaSella
 Imports System.Security.Authentication
 Imports System.Web
+Imports System.Security.Cryptography
 
 Partial Class ordine
     Inherits AntiCsrfPage
@@ -31,6 +32,53 @@ Partial Class ordine
     Public utenteId As Integer = -1
     Public idsFbPixelsSku As New Dictionary(Of String, String)
     Public redirect As String = ""
+
+' === HARDENING: anti-replay token from carrello -> ordine (VB2012 safe) ===
+Private Const CHECKOUT_TOKEN_SESSION_KEY As String = "CheckoutToken"
+Private Const CHECKOUT_TOKEN_TIME_SESSION_KEY As String = "CheckoutTokenIssuedUtc"
+Private Const CHECKOUT_TOKEN_QS_KEY As String = "t"
+Private Shared ReadOnly CHECKOUT_TOKEN_MAX_AGE As TimeSpan = TimeSpan.FromMinutes(30)
+
+Private Function GetQueryString(ByVal key As String, Optional ByVal maxLen As Integer = 200) As String
+    Try
+        Dim v As String = Convert.ToString(Request.QueryString(key))
+        If v Is Nothing Then Return ""
+        v = v.Trim()
+        If v.Length > maxLen Then v = v.Substring(0, maxLen)
+        Return v
+    Catch
+        Return ""
+    End Try
+End Function
+
+Private Function ConsumeValidCheckoutToken() As Boolean
+    ' Required token to prevent direct access + replay
+    Dim token As String = GetQueryString(CHECKOUT_TOKEN_QS_KEY, 256)
+    If String.IsNullOrEmpty(token) Then Return False
+
+    Dim sToken As String = ""
+    If Session(CHECKOUT_TOKEN_SESSION_KEY) IsNot Nothing Then
+        sToken = Convert.ToString(Session(CHECKOUT_TOKEN_SESSION_KEY))
+    End If
+    If String.IsNullOrEmpty(sToken) Then Return False
+    If Not String.Equals(token, sToken, StringComparison.Ordinal) Then Return False
+
+    Dim issuedUtc As DateTime = DateTime.MinValue
+    If Session(CHECKOUT_TOKEN_TIME_SESSION_KEY) IsNot Nothing Then
+        DateTime.TryParse(Convert.ToString(Session(CHECKOUT_TOKEN_TIME_SESSION_KEY)), issuedUtc)
+    End If
+    If issuedUtc <> DateTime.MinValue Then
+        Dim age As TimeSpan = DateTime.UtcNow.Subtract(issuedUtc)
+        If age > CHECKOUT_TOKEN_MAX_AGE Then Return False
+    End If
+
+    ' Consume (one-time)
+    Session(CHECKOUT_TOKEN_SESSION_KEY) = Nothing
+    Session(CHECKOUT_TOKEN_TIME_SESSION_KEY) = Nothing
+    Return True
+End Function
+
+
 
     Private ReadOnly Property Semaforo As Object
         Get
@@ -116,6 +164,13 @@ Partial Class ordine
             Me.Response.Redirect("accessonegato.aspx", True)
             Exit Sub
         End If
+
+' Hardening: require one-time token issued by carrello (anti-replay + block direct access)
+If Not ConsumeValidCheckoutToken() Then
+    Response.Redirect("carrello.aspx", True)
+    Exit Sub
+End If
+
 
         SyncLock Semaforo
 
