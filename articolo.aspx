@@ -212,8 +212,38 @@
         </section>
     </asp:Panel>
 
-</asp:Content>
+	    <!-- Related products (bound server-side; no inline functions in markup) -->
+	    <asp:PlaceHolder ID="phRelated" runat="server" Visible="False">
+	        <section class="flat-spacing pt-0">
+	            <div class="container">
+	                <div class="tf-section-title mb_30">
+	                    <h2 class="title">Prodotti correlati</h2>
+	                </div>
+	                <div class="tf-grid-layout tf-col-4 gap30">
+	                    <asp:Repeater ID="rptRelated" runat="server" OnItemDataBound="rptRelated_ItemDataBound">
+	                        <ItemTemplate>
+	                            <div class="card-product">
+	                                <div class="card-product-wrapper">
+	                                    <asp:HyperLink ID="hlRelImg" runat="server" CssClass="product-img">
+	                                        <asp:Image ID="imgRel" runat="server" CssClass="img-fluid" AlternateText="" />
+	                                    </asp:HyperLink>
+	                                </div>
+	                                <div class="card-product-info">
+	                                    <asp:HyperLink ID="hlRelName" runat="server" CssClass="title link" />
+	                                    <div class="price">
+	                                        <asp:Literal ID="litRelPrice" runat="server" EnableViewState="False" />
+	                                    </div>
+	                                </div>
+	                            </div>
+	                        </ItemTemplate>
+	                    </asp:Repeater>
+	                </div>
+	            </div>
+	        </section>
+	    </asp:PlaceHolder>
 
-<asp:Content ID="ScriptsArticolo" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script type="module" src="/Public/assets/onsus/js/zoom.js"></script>
-</asp:Content>
+	</asp:Content>
+
+	<asp:Content ID="ScriptsArticolo" ContentPlaceHolderID="ScriptsContent" runat="server">
+	    <script type="module" src="/Public/assets/onsus/js/zoom.js"></script>
+	</asp:Content>
