@@ -591,8 +591,8 @@ Public Class sitemap
 
     Private Function RenderSitemapIndex(ByVal host As String, ByVal lastModUtc As Nullable(Of DateTime), ByVal parts As Integer) As String
         Dim sb As New StringBuilder()
-        sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
-        sb.AppendLine("<sitemapindex xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">")
+        sb.AppendLine("<?xml version=""1.0"" encoding=""UTF-8""?>")
+        sb.AppendLine("<sitemapindex xmlns=""http://www.sitemaps.org/schemas/sitemap/0.9"">")
 
         Dim lm As String = ""
         If lastModUtc.HasValue Then
@@ -615,8 +615,8 @@ Public Class sitemap
 
     Private Function RenderUrlSet(ByVal entries As List(Of UrlEntry)) As String
         Dim sb As New StringBuilder()
-        sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
-        sb.AppendLine("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">")
+        sb.AppendLine("<?xml version=""1.0"" encoding=""UTF-8""?>")
+        sb.AppendLine("<urlset xmlns=""http://www.sitemaps.org/schemas/sitemap/0.9"">")
 
         If entries IsNot Nothing Then
             For Each it As UrlEntry In entries
@@ -637,7 +637,7 @@ Public Class sitemap
 
     Private Function XmlEscape(ByVal s As String) As String
         If s Is Nothing Then Return ""
-        Return s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;").Replace("'", "&apos;")
+        Return s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("""""", "&quot;").Replace("'", "&apos;")
     End Function
 
     Private Function ComputeLatestLastModUtc(ByVal urls As List(Of UrlEntry)) As Nullable(Of DateTime)

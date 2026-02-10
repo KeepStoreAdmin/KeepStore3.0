@@ -30,6 +30,9 @@
     <!-- SEO globale (robots/canonical) - injected by Page.master.vb -->
     <asp:Literal ID="litGlobalSeoHead" runat="server" EnableViewState="False" />
 
+    <!-- Dynamic HEAD items (links/meta) injected safely even with <% ... %> blocks -->
+    <asp:PlaceHolder ID="phHeadDynamic" runat="server" EnableViewState="False" />
+
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 </head>
 
@@ -81,10 +84,9 @@
                             <div class="header-center d-none d-lg-block flex-grow-1 px-3">
                                 <div class="form-search-product w-100">
                                     <fieldset class="w-100">
-                                        <asp:TextBox ID="tbCerca" ClientIDMode="Static" runat="server" CssClass="form-control" placeholder="Cerca prodotti..." AutoPostBack="True" />
-                                        <div id="ksSuggest" class="dropdown-menu w-100" style="max-height:320px; overflow:auto;"></div>
+                                        <asp:TextBox ID="tbCerca" runat="server" CssClass="form-control" placeholder="Cerca prodotti..." AutoPostBack="True" />
                                     </fieldset>
-                                    <asp:Button ID="btnSearch" ClientIDMode="Static" runat="server" CssClass="btn-submit-form" Text="" OnClick="btnSearch_ServerClick" />
+                                    <asp:Button ID="btnSearch" runat="server" CssClass="btn-submit-form" Text="" OnClick="btnSearch_ServerClick" />
                                 </div>
                             </div>
 
@@ -344,7 +346,6 @@
 		<script src="<%= ThemeManager.Asset("js/lazysize.min.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/shop.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/main.js") %>"></script>
-    <script src="<%= ThemeManager.Asset("js/keepstore.js") %>" defer></script>
 		<script src="<%= ThemeManager.Asset("js/sibforms.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/drift.min.js") %>"></script>
 
