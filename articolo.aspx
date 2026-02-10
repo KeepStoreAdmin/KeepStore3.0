@@ -212,6 +212,35 @@
         </section>
     </asp:Panel>
 
+    <!-- Prodotti correlati (AI-like, senza nuove tabelle) -->
+    <asp:PlaceHolder ID="phRelated" runat="server" Visible="false">
+        <section class="flat-spacing pt-0">
+            <div class="container">
+                <div class="heading-section-2">
+                    <h2 class="title">Prodotti correlati</h2>
+                </div>
+
+                <div class="tf-grid-layout tf-col-4">
+                    <asp:Repeater ID="rptRelated" runat="server">
+                        <ItemTemplate>
+                            <div class="card-product">
+                                <div class="card-product-wrapper">
+                                    <a href='<%# Eval("Url") %>' class="product-img">
+                                        <img class="img-product" loading="lazy" src='<%# Eval("Img") %>' alt='<%# HttpUtility.HtmlEncode(Eval("Nome")) %>' />
+                                    </a>
+                                </div>
+                                <div class="card-product-info">
+                                    <a href='<%# Eval("Url") %>' class="name-product"><%# HttpUtility.HtmlEncode(Eval("Nome")) %></a>
+                                    <div class="box-price-product"><%# Eval("PrezzoHtml") %></div>
+                                </div>
+                            </div>
+                        </ItemTemplate>
+                    </asp:Repeater>
+                </div>
+            </div>
+        </section>
+    </asp:PlaceHolder>
+
 </asp:Content>
 
 <asp:Content ID="ScriptsArticolo" ContentPlaceHolderID="ScriptsContent" runat="server">

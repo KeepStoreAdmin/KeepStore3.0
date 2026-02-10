@@ -207,20 +207,63 @@ Partial Class Articoli
                                             ByVal allValueString As String,
                                             ByVal articoliFiltrati As String)
 
-        Dim sqlString As String
-        sqlString = "select * from " & tableName & " inner join articoli_tagliecolori where " & tableName & ".id = articoli_tagliecolori." & idColumnName
+        ' Hardening: table/column names sono costanti (taglie/colori) e vengono validati.
+        ' Il valore variabile (otherId) passa sempre da parametro MySQL.
+        Dim safeTable As String = tableName
+        If Not (String.Equals(safeTable, "taglie", StringComparison.OrdinalIgnoreCase) OrElse String.Equals(safeTable, "colori", StringComparison.OrdinalIgnoreCase)) Then
+            Throw New InvalidOperationException("Tabella non consentita per TC filter")
+        End If
+
+        Dim safeIdCol As String = idColumnName
+        Dim safeOtherCol As String = otherIdColumnName
+        Dim allowedCols As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {"tagliaid", "coloreid"}
+        If Not allowedCols.Contains(safeIdCol) OrElse Not allowedCols.Contains(safeOtherCol) Then
+            Throw New InvalidOperationException("Colonna non consentita per TC filter")
+        End If
+
+        Dim sb As New StringBuilder()
+        sb.Append("select * from ").Append(safeTable).Append(" inner join articoli_tagliecolori where ")
+        sb.Append(safeTable).Append(".id = articoli_tagliecolori.").Append(safeIdCol)
+
+        Dim useOther As Boolean = False
+        Dim otherId As Integer = 0
         If otherDropdownlistIndex > 0 Then
-            Dim otherId As Integer = 0
             If Integer.TryParse(otherDropdownlistValue, otherId) AndAlso otherId > 0 Then
-                sqlString = sqlString & " And articoli_tagliecolori." & otherIdColumnName & " = " & otherId.ToString()
+                useOther = True
+                sb.Append(" And articoli_tagliecolori.").Append(safeOtherCol).Append(" = @otherId")
             End If
         End If
-        sqlString = sqlString & " And articoli_tagliecolori.ArticoliId in (SELECT id FROM (" & articoliFiltrati & ") AS articoliFiltrati)"
-        sqlString = sqlString & " And " & tableName & ".abilitato = 1 Group by " & tableName & ".id order by " & tableName & ".id"
 
-        PopulateDropdownlist(conn, sqlString, list, "descrizione", "id")
+        ' Nota: articoliFiltrati è una subquery costruita internamente dalla pagina (ID numerici già normalizzati).
+        sb.Append(" And articoli_tagliecolori.ArticoliId in (SELECT id FROM (").Append(articoliFiltrati).Append(") AS articoliFiltrati)")
+        sb.Append(" And ").Append(safeTable).Append(".abilitato = 1 Group by ").Append(safeTable).Append(".id order by ").Append(safeTable).Append(".id")
+
+        Using cmd As MySqlCommand = conn.CreateCommand()
+            cmd.CommandType = CommandType.Text
+            cmd.CommandText = sb.ToString()
+            If useOther Then
+                cmd.Parameters.AddWithValue("@otherId", otherId)
+            End If
+            PopulateDropdownlist(cmd, list, "descrizione", "id")
+        End Using
         list.Items.Insert(0, New ListItem(allValueString, "0"))
         list.SelectedValue = dropdownlistValue
+    End Sub
+
+    ' Overload hardened: permette query parametriche.
+    Public Sub PopulateDropdownlist(ByVal cmd As MySqlCommand,
+                                    ByVal list As DropDownList,
+                                    ByVal textField As String,
+                                    ByVal valueField As String)
+        Dim dt As New DataTable
+        Using da As New MySqlDataAdapter(cmd)
+            da.Fill(dt)
+        End Using
+
+        list.DataSource = dt
+        list.DataTextField = textField
+        list.DataValueField = valueField
+        list.DataBind()
     End Sub
 
     Public Sub PopulateDropdownlist(ByVal conn As MySqlConnection,
@@ -240,6 +283,12 @@ Partial Class Articoli
         list.DataTextField = textField
         list.DataValueField = valueField
         list.DataBind()
+    End Sub
+
+    Private Sub AddSdsDoubleParam(name As String, value As Double)
+        ' SqlDataSource + MySQL: usiamo sempre parametri, evitando concatenazioni.
+        ' TypeCode.Double serializza correttamente in InvariantCulture.
+        Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter(name, TypeCode.Double, value.ToString(System.Globalization.CultureInfo.InvariantCulture)))
     End Sub
     'FILTRI TAGLIA COLORE - FINE
 
@@ -477,38 +526,36 @@ Partial Class Articoli
             Dim Prezzo_MIN As Double = Val(Session.Item("Valore_Prezzo_MIN"))
             Dim Prezzo_MAX As Double = Val(Session.Item("Valore_Prezzo_MAX"))
 
-            If ((Prezzo_MIN > 0) And (Prezzo_MAX > 0)) Then
-                If (Me.Session("IvaTipo") = 2) Then
-                    strWhere = strWhere &
-                        " AND (((PrezzoIvato<='" & Prezzo_MAX.ToString.Replace(",", ".") & "') AND (PrezzoIvato>='" & Prezzo_MIN.ToString.Replace(",", ".") & "'))" &
-                        " OR ((PrezzoPromoIvato<='" & Prezzo_MAX.ToString.Replace(",", ".") & "') AND (PrezzoPromoIvato>='" & Prezzo_MIN.ToString.Replace(",", ".") & "')))"
+            ' Hardening: filtro prezzo 100% parametrico (evita concatenazioni SQL)
+            If (Prezzo_MIN > 0) Then
+                AddSdsDoubleParam("PMin", Prezzo_MIN)
+            End If
+            If (Prezzo_MAX > 0) Then
+                AddSdsDoubleParam("PMax", Prezzo_MAX)
+            End If
+
+            If (Me.Session("IvaTipo") = 2) Then
+                ' PrezzoIvato / PrezzoPromoIvato
+                If (Prezzo_MIN > 0) AndAlso (Prezzo_MAX > 0) Then
+                    strWhere &= " AND (((PrezzoIvato <= ?PMax) AND (PrezzoIvato >= ?PMin)) OR ((PrezzoPromoIvato <= ?PMax) AND (PrezzoPromoIvato >= ?PMin)))"
                 Else
-                    strWhere = strWhere &
-                        " AND (((Prezzo<='" & Prezzo_MAX.ToString.Replace(",", ".") & "') AND (Prezzo>='" & Prezzo_MIN.ToString.Replace(",", ".") & "'))" &
-                        " OR ((PrezzoPromo<='" & Prezzo_MAX.ToString.Replace(",", ".") & "') AND (PrezzoPromo>='" & Prezzo_MIN.ToString.Replace(",", ".") & "')))"
+                    If (Prezzo_MIN > 0) Then
+                        strWhere &= " AND ((PrezzoIvato >= ?PMin) OR (PrezzoPromoIvato >= ?PMin))"
+                    End If
+                    If (Prezzo_MAX > 0) Then
+                        strWhere &= " AND ((PrezzoIvato <= ?PMax) OR (PrezzoPromoIvato <= ?PMax))"
+                    End If
                 End If
             Else
-                If (Me.Session("IvaTipo") = 2) Then
-                    If (Prezzo_MIN > 0) Then
-                        strWhere = strWhere &
-                            " AND ((PrezzoIvato>='" & Prezzo_MIN.ToString.Replace(",", ".") & "')" &
-                            " OR (PrezzoPromoIvato>='" & Prezzo_MIN.ToString.Replace(",", ".") & "'))"
-                    End If
-                    If (Prezzo_MAX > 0) Then
-                        strWhere = strWhere &
-                            " AND ((PrezzoIvato<='" & Prezzo_MAX.ToString.Replace(",", ".") & "')" &
-                            " OR (PrezzoPromoIvato<='" & Prezzo_MAX.ToString.Replace(",", ".") & "'))"
-                    End If
+                ' Prezzo / PrezzoPromo
+                If (Prezzo_MIN > 0) AndAlso (Prezzo_MAX > 0) Then
+                    strWhere &= " AND (((Prezzo <= ?PMax) AND (Prezzo >= ?PMin)) OR ((PrezzoPromo <= ?PMax) AND (PrezzoPromo >= ?PMin)))"
                 Else
                     If (Prezzo_MIN > 0) Then
-                        strWhere = strWhere &
-                            " AND ((Prezzo>='" & Prezzo_MIN.ToString.Replace(",", ".") & "')" &
-                            " OR (PrezzoPromo>='" & Prezzo_MIN.ToString.Replace(",", ".") & "'))"
+                        strWhere &= " AND ((Prezzo >= ?PMin) OR (PrezzoPromo >= ?PMin))"
                     End If
                     If (Prezzo_MAX > 0) Then
-                        strWhere = strWhere &
-                            " AND ((Prezzo<='" & Prezzo_MAX.ToString.Replace(",", ".") & "')" &
-                            " OR (PrezzoPromo<='" & Prezzo_MAX.ToString.Replace(",", ".") & "'))"
+                        strWhere &= " AND ((Prezzo <= ?PMax) OR (PrezzoPromo <= ?PMax))"
                     End If
                 End If
             End If
@@ -517,38 +564,34 @@ Partial Class Articoli
         If ((Session.Item("Controllo_Variabile_PrezzoMinMax") = 1) And (Session("Prezzo_MIN") = "") And (Session("Prezzo_MAX") = "") And (Me.Page.IsPostBack = True)) Then
             Dim Prezzo_MIN As Double = Val(Session("Valore_Prezzo_MIN"))
             Dim Prezzo_MAX As Double = Val(Session("Valore_Prezzo_MAX"))
-            If ((Prezzo_MIN > 0) And (Prezzo_MAX > 0)) Then
-                If (Me.Session("IvaTipo") = 2) Then
-                    strWhere = strWhere &
-                        " AND (((PrezzoIvato<='" & Prezzo_MAX.ToString.Replace(",", ".") & "') AND (PrezzoIvato>='" & Prezzo_MIN.ToString.Replace(",", ".") & "'))" &
-                        " OR ((PrezzoPromoIvato<='" & Prezzo_MAX.ToString.Replace(",", ".") & "') AND (PrezzoPromoIvato>='" & Prezzo_MIN.ToString.Replace(",", ".") & "')))"
+            ' Hardening: filtro prezzo parametrico anche nelle PostBack
+            If (Prezzo_MIN > 0) Then
+                AddSdsDoubleParam("PMin", Prezzo_MIN)
+            End If
+            If (Prezzo_MAX > 0) Then
+                AddSdsDoubleParam("PMax", Prezzo_MAX)
+            End If
+
+            If (Me.Session("IvaTipo") = 2) Then
+                If (Prezzo_MIN > 0) AndAlso (Prezzo_MAX > 0) Then
+                    strWhere &= " AND (((PrezzoIvato <= ?PMax) AND (PrezzoIvato >= ?PMin)) OR ((PrezzoPromoIvato <= ?PMax) AND (PrezzoPromoIvato >= ?PMin)))"
                 Else
-                    strWhere = strWhere &
-                        " AND (((Prezzo<='" & Prezzo_MAX.ToString.Replace(",", ".") & "') AND (Prezzo>='" & Prezzo_MIN.ToString.Replace(",", ".") & "'))" &
-                        " OR ((PrezzoPromo<='" & Prezzo_MAX.ToString.Replace(",", ".") & "') AND (PrezzoPromo>='" & Prezzo_MIN.ToString.Replace(",", ".") & "')))"
+                    If (Prezzo_MIN > 0) Then
+                        strWhere &= " AND ((PrezzoIvato >= ?PMin) OR (PrezzoPromoIvato >= ?PMin))"
+                    End If
+                    If (Prezzo_MAX > 0) Then
+                        strWhere &= " AND ((PrezzoIvato <= ?PMax) OR (PrezzoPromoIvato <= ?PMax))"
+                    End If
                 End If
             Else
-                If (Me.Session("IvaTipo") = 2) Then
-                    If (Prezzo_MIN > 0) Then
-                        strWhere = strWhere &
-                            " AND ((PrezzoIvato>='" & Prezzo_MIN.ToString.Replace(",", ".") & "')" &
-                            " OR (PrezzoPromoIvato>='" & Prezzo_MIN.ToString.Replace(",", ".") & "'))"
-                    End If
-                    If (Prezzo_MAX > 0) Then
-                        strWhere = strWhere &
-                            " AND ((PrezzoIvato<='" & Prezzo_MAX.ToString.Replace(",", ".") & "')" &
-                            " OR (PrezzoPromoIvato<='" & Prezzo_MAX.ToString.Replace(",", ".") & "'))"
-                    End If
+                If (Prezzo_MIN > 0) AndAlso (Prezzo_MAX > 0) Then
+                    strWhere &= " AND (((Prezzo <= ?PMax) AND (Prezzo >= ?PMin)) OR ((PrezzoPromo <= ?PMax) AND (PrezzoPromo >= ?PMin)))"
                 Else
                     If (Prezzo_MIN > 0) Then
-                        strWhere = strWhere &
-                            " AND ((Prezzo>='" & Prezzo_MIN.ToString.Replace(",", ".") & "')" &
-                            " OR (PrezzoPromo>='" & Prezzo_MIN.ToString.Replace(",", ".") & "'))"
+                        strWhere &= " AND ((Prezzo >= ?PMin) OR (PrezzoPromo >= ?PMin))"
                     End If
                     If (Prezzo_MAX > 0) Then
-                        strWhere = strWhere &
-                            " AND ((Prezzo<='" & Prezzo_MAX.ToString.Replace(",", ".") & "')" &
-                            " OR (PrezzoPromo<='" & Prezzo_MAX.ToString.Replace(",", ".") & "'))"
+                        strWhere &= " AND ((Prezzo <= ?PMax) OR (PrezzoPromo <= ?PMax))"
                     End If
                 End If
             End If
@@ -571,86 +614,59 @@ Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("Col
         End If
         Dim userCerca As String = ""
         If strCerca <> "" Then
-        userCerca = Convert.ToString(strCerca).Trim()
-        If userCerca.Length > 120 Then userCerca = userCerca.Substring(0, 120)
-    
-        Dim userCerca As String = Convert.ToString(strCerca).Trim()
-    If userCerca.Length > 120 Then userCerca = userCerca.Substring(0, 120)
+            ' Hardening + stabilità VB2012: singola variabile, nessuna shadow/duplicazione.
+            userCerca = Convert.ToString(strCerca).Trim()
+            If userCerca.Length > 120 Then userCerca = userCerca.Substring(0, 120)
 
-    Dim cercaSql As String = SqlEscapeLike(userCerca)
-    Dim Parole() As String = Split(userCerca, " ")
+            Dim cercaSql As String = SqlEscapeLike(userCerca)
+            Dim Parole() As String = Split(userCerca, " ")
 
-    Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("q", TypeCode.String, cercaSql))
+            Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("q", TypeCode.String, cercaSql))
 
-    If (Parole.Length > 1) Then
-        Dim Temp1 As String = ""
-        Dim Temp2 As String = ""
+            If (Parole.Length > 1) Then
+                Dim Temp1 As String = ""
+                Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("q0", TypeCode.String, SqlEscapeLike(Parole(0))))
 
-        Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("q0", TypeCode.String, SqlEscapeLike(Parole(0))))
+                strWhere &= " AND ((Codice LIKE CONCAT('%', ?q, '%') ) OR (Ean LIKE CONCAT('%', ?q, '%') ) OR ((Descrizione1 LIKE CONCAT('%', ?q0, '%') )"
 
-        strWhere &= " AND ((Codice LIKE CONCAT('%', ?q, '%') ) OR (Ean LIKE CONCAT('%', ?q, '%') ) OR ((Descrizione1 LIKE CONCAT('%', ?q0, '%') )"
-        strWhere2 &= " AND ((varticolibase.Codice like '%" & cercaSql & "%' ) OR (varticolibase.Ean like '%" & cercaSql & "%' ) OR ((varticolibase.Descrizione1 like '%" & SqlEscapeLike(Parole(0)) & "%' )"
+                For i As Integer = 1 To (Parole.Length - 1)
+                    Dim pn As String = "q" & i.ToString()
+                    Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter(pn, TypeCode.String, SqlEscapeLike(Parole(i))))
+                    Temp1 &= " AND (Descrizione1 LIKE CONCAT('%', ?" & pn & ", '%') )"
+                Next
 
-        For i As Integer = 1 To (Parole.Length - 1)
-            Dim pn As String = "q" & i.ToString()
-            Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter(pn, TypeCode.String, SqlEscapeLike(Parole(i))))
-            Temp1 &= " AND (Descrizione1 LIKE CONCAT('%', ?" & pn & ", '%') )"
-            Temp2 &= " AND (varticolibase.Descrizione1 like '%" & SqlEscapeLike(Parole(i)) & "%' )"
-        Next
+                Temp1 &= "))"
+                strWhere &= Temp1
+            Else
+                strWhere &= " AND ((Codice LIKE CONCAT('%', ?q, '%') ) OR (Descrizione1 LIKE CONCAT('%', ?q, '%') ) OR (Ean LIKE CONCAT('%', ?q, '%') ))"
+            End If
 
-        Temp1 &= "))"
-        Temp2 &= "))"
-
-        strWhere &= Temp1
-        strWhere2 &= Temp2
-    Else
-        strWhere &= " AND ((Codice LIKE CONCAT('%', ?q, '%') ) OR (Descrizione1 LIKE CONCAT('%', ?q, '%') ) OR (Ean LIKE CONCAT('%', ?q, '%') ))"
-        strWhere2 &= " AND ((varticolibase.Codice like '%" & cercaSql & "%' ) or (varticolibase.Descrizione1 like '%" & cercaSql & "%' ) or (varticolibase.Ean like '%" & cercaSql & "%' ))"
-    End If
-
-    Me.lblRicerca.Visible = True
-    Me.lblRisultati.Text = H(strCerca)
-Me.Title = Me.Title & " > " & lblRicerca.Text & strCerca
-End If
-
+            ' NB: strWhere2 (dataset filtri laterali) non include la ricerca utente per evitare concatenazioni SQL.
             Me.lblRicerca.Visible = True
             Me.lblRisultati.Text = H(userCerca)
             Me.Title = Me.Title & " > " & lblRicerca.Text & userCerca
         End If
-        Dim orderSet As Boolean = False
-
         strWhere = strWhere & " GROUP BY id"
-        ' ============================================================
-        ' SMART SEARCH (AI-like) - Ranking di rilevanza senza nuove tabelle
-        ' - Boost per match esatto Codice/EAN
-        ' - Boost per match prefisso/contiene su Descrizione1
-        ' - Tie-breaker su visite + disponibilita'
-        ' ============================================================
-        If strCerca <> "" AndAlso (Drop_Ordinamento.SelectedValue = "" OrElse Drop_Ordinamento.SelectedValue = "P_rilevanza") Then
-            orderSet = True
-            strWhere &= " ORDER BY " &
-                        " (Codice = ?q) DESC," &
-                        " (Ean = ?q) DESC," &
-                        " (Descrizione1 LIKE CONCAT(?q, '%')) DESC," &
-                        " (Descrizione1 LIKE CONCAT('%', ?q, '%')) DESC," &
-                        " visite DESC," &
-                        " (Giacenza-Impegnata) DESC"
-        End If
 
-        If Not orderSet AndAlso Drop_Ordinamento.SelectedValue = "P_offerta" Then
+        If Drop_Ordinamento.SelectedValue = "P_offerta" Then
             strWhere = strWhere & " ORDER BY InOfferta DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
         End If
-        If Not orderSet AndAlso Drop_Ordinamento.SelectedValue = "P_basso" Then
+        If Drop_Ordinamento.SelectedValue = "P_basso" Then
             strWhere = strWhere & " ORDER BY PrezzoIvato ASC, Prezzo ASC, Ord_PrezzoPromo ASC, Ord_PrezzoPromoIvato ASC,  (Giacenza-Impegnata) DESC"
         End If
-        If Not orderSet AndAlso Drop_Ordinamento.SelectedValue = "P_alto" Then
+        If Drop_Ordinamento.SelectedValue = "P_alto" Then
             strWhere = strWhere & " ORDER BY PrezzoIvato DESC, Prezzo DESC, Ord_PrezzoPromo ASC, Ord_PrezzoPromoIvato ASC,  (Giacenza-Impegnata) DESC"
         End If
-        If Not orderSet AndAlso Drop_Ordinamento.SelectedValue = "P_popolarità" Then
+        If Drop_Ordinamento.SelectedValue = "P_popolarità" Then
             strWhere = strWhere & " ORDER BY visite DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
         End If
-        If Not orderSet AndAlso Drop_Ordinamento.SelectedValue = "P_recenti" Then
+        If Drop_Ordinamento.SelectedValue = "P_recenti" Then
             strWhere = strWhere & " ORDER BY id DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
+        End If
+
+        ' Default deterministico (stabilità paginazione)
+        If String.IsNullOrEmpty(Drop_Ordinamento.SelectedValue) Then
+            strWhere &= " ORDER BY InOfferta DESC, visite DESC, id DESC"
         End If
 
         If TC = 1 Then
