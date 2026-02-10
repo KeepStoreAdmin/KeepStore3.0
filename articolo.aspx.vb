@@ -9,7 +9,7 @@ Imports HtmlAgilityPack
 Imports MySql.Data.MySqlClient
 
 Partial Class articolo
-    Inherits System.Web.UI.Page
+    Inherits AntiCsrfPage
 
     Private _id As Integer
     Private _tcid As Integer
@@ -53,7 +53,7 @@ Partial Class articolo
     Private Function TryParseParams() As Boolean
         Dim idStr As String = Convert.ToString(Request.QueryString("id"))
         If Not Integer.TryParse(idStr, _id) OrElse _id <= 0 Then
-            Response.Redirect("default.aspx", True)
+            SafeRedirectLocal("default.aspx")
             Return False
         End If
 
@@ -67,7 +67,7 @@ Partial Class articolo
                 _tcid = tmp
             Else
                 ' Parametro non valido -> pulisco URL
-                Response.Redirect("articolo.aspx?id=" & _id.ToString(), True)
+                SafeRedirectLocal("articolo.aspx?id=" & _id.ToString())
                 Return False
             End If
         Else
@@ -87,7 +87,7 @@ Partial Class articolo
             If fallback IsNot Nothing Then
                 Dim defaultTcid As Integer = GetRowInt(fallback, "TCid", -1)
                 Dim redirectUrl As String = BuildProductUrl(_id, defaultTcid, includeTcid:=True)
-                Response.Redirect(redirectUrl, True)
+                SafeRedirectLocal(redirectUrl)
                 Return
             End If
         End If

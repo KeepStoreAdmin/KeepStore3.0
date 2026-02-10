@@ -16,6 +16,49 @@ Partial Class Articoli
     Dim filters As New Dictionary(Of String, String)
     Dim oldUrl As String
 
+    ' =============================
+    ' Redirect hardening (open redirect)
+    ' =============================
+    Private Sub SafeRedirectLocal(ByVal url As String)
+        If String.IsNullOrEmpty(url) Then
+            Response.Redirect("default.aspx", True)
+            Return
+        End If
+
+        Dim u As Uri = Nothing
+        If Uri.TryCreate(url, UriKind.Relative, u) Then
+            Response.Redirect(url, True)
+            Return
+        End If
+
+        If Uri.TryCreate(url, UriKind.Absolute, u) Then
+            Dim cur As Uri = Request.Url
+            If String.Equals(u.Scheme, cur.Scheme, StringComparison.OrdinalIgnoreCase) AndAlso
+               String.Equals(u.Host, cur.Host, StringComparison.OrdinalIgnoreCase) AndAlso
+               u.Port = cur.Port Then
+                Response.Redirect(u.PathAndQuery, True)
+                Return
+            End If
+        End If
+
+        Response.Redirect("default.aspx", True)
+    End Sub
+
+    Private Function SafeReferrerUrl() As String
+        Try
+            Dim r As Uri = Request.UrlReferrer
+            If r Is Nothing Then Return String.Empty
+            Dim cur As Uri = Request.Url
+            If String.Equals(r.Scheme, cur.Scheme, StringComparison.OrdinalIgnoreCase) AndAlso
+               String.Equals(r.Host, cur.Host, StringComparison.OrdinalIgnoreCase) AndAlso
+               r.Port = cur.Port Then
+                Return r.PathAndQuery
+            End If
+        Catch
+        End Try
+        Return String.Empty
+    End Function
+
     Function sostituisci_caratteri_speciali(ByRef stringa As String) As String
         stringa = Server.HtmlEncode(stringa)
 
@@ -69,7 +112,7 @@ Partial Class Articoli
         End If
 
         If Not (mrAreEquals And tpAreEquals And grAreEquals And sgAreEquals) Then
-            Response.Redirect(newUrl)
+            SafeRedirectLocal(newUrl)
         End If
     End Sub
 
@@ -77,8 +120,12 @@ Partial Class Articoli
         oldUrl = HttpContext.Current.Request.Url.AbsoluteUri
 
         If Request.QueryString("rimuovi") <> String.Empty Then
-            Dim filtersToRemove As String = Request.QueryString("rimuovi")
-            Response.Redirect(changeUrlGetParam(Request.UrlReferrer.ToString, filtersToRemove, String.Empty).Replace("rimuovi=" & filtersToRemove, String.Empty))
+            Dim filtersToRemove As String = QS("rimuovi", 40)
+            ' Hardening: evita open-redirect e referrer nullo.
+            Dim baseUrl As String = SafeReferrerUrl()
+            If String.IsNullOrEmpty(baseUrl) Then baseUrl = oldUrl
+            Dim target As String = changeUrlGetParam(baseUrl, filtersToRemove, String.Empty).Replace("rimuovi=" & filtersToRemove, String.Empty)
+            SafeRedirectLocal(target)
         End If
 
         
@@ -101,7 +148,7 @@ Partial Class Articoli
 
         'Redirect nel caso c'è la presenza di #up
         If Request.Url.AbsoluteUri.Contains("%23up") Or (Request.Url.AbsoluteUri.Contains("#23up")) Then
-            Response.Redirect(Request.Url.AbsoluteUri.Replace("%23up", "").Replace("#23up", ""))
+            SafeRedirectLocal(Request.Url.AbsoluteUri.Replace("%23up", "").Replace("#23up", ""))
         End If
 
         '==========================================================
