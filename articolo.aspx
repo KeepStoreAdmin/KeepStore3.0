@@ -220,7 +220,7 @@
 	                    <h2 class="title">Prodotti correlati</h2>
 	                </div>
 	                <div class="tf-grid-layout tf-col-4 gap30">
-	                    <asp:Repeater ID="rptRelated" runat="server" OnItemDataBound="rptRelated_ItemDataBound">
+	                    <asp:Repeater ID="rptRelated" runat="server">
 	                        <ItemTemplate>
 	                            <div class="card-product">
 	                                <div class="card-product-wrapper">
