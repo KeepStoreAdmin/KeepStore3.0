@@ -8,23 +8,6 @@ Imports System.Text
 
 Partial Class Page
     Inherits System.Web.UI.MasterPage
-
-
-' Returns a safe container inside <head> where we can inject <link>/<meta> even if <head> contains <% ... %> blocks.
-Private Function GetHeadDynamicContainer() As Control
-    Dim c As Control = Nothing
-    Try
-        c = Me.FindControl("phHeadDynamic")
-        If c Is Nothing Then
-            ' fallback for older patches
-            c = Me.FindControl("phHeadLinks")
-        End If
-    Catch
-        c = Nothing
-    End Try
-    Return c
-End Function
-
     Implements ISeoMaster
 
 
@@ -50,6 +33,19 @@ Private _seoJsonLd As String = String.Empty
             End If
         End Set
     End Property
+
+    ' Ritorna un contenitore sicuro dentro <head> per iniettare meta/link anche quando
+    ' il master contiene blocchi <% ... %> (in tal caso Page.Header.Controls.Add lancia eccezione).
+    Private Function GetHeadDynamicContainer() As Control
+        ' Preferisci placeholder dedicato nel master
+        Dim c As Control = Me.FindControl("phHeadDynamic")
+        If c IsNot Nothing Then Return c
+        ' Fallback (patch precedenti)
+        c = Me.FindControl("phHeadLinks")
+        If c IsNot Nothing Then Return c
+        Return Nothing
+    End Function
+
 
 Private Function HeaderHasMeta(ByVal metaName As String) As Boolean
     If Page Is Nothing OrElse Page.Header Is Nothing Then Return False
@@ -977,6 +973,7 @@ End Sub
     End Sub
 
     Public Sub ImpostaTemplate()
+        Dim headC As Control = GetHeadDynamicContainer()
         Me.Page.Title = Me.Session("AziendaNome")
         Me.imgLogo.ImageUrl = Me.Session("AziendaLogo")
         Me.imgLogo.AlternateText = Me.Session("AziendaNome") & " - " & Me.Session("AziendaDescrizione")
@@ -993,10 +990,8 @@ End Sub
         obj3.Attributes.Add("rel", "shortcut icon")
         obj3.Href = Session("IconaWeb")
 
-        Dim headC As Control = GetHeadDynamicContainer()
         If headC IsNot Nothing Then headC.Controls.Add(objcss)
-        Dim headC2 As Control = GetHeadDynamicContainer()
-        If headC2 IsNot Nothing Then headC2.Controls.Add(obj3)
+        If headC IsNot Nothing Then headC.Controls.Add(obj3)
     End Sub
 
     Public Sub SettoreDefault()
@@ -1514,6 +1509,7 @@ End Sub
     ' META TAG SEO
     '==========================================================
     Sub Meta()
+        Dim headC As Control = GetHeadDynamicContainer()
     ' Meta legacy: mantiene compatibilità, ma NON sovrascrive i meta tag se già presenti nella pagina contenuto.
     Dim description As String = Me.Page.Title
     description = Regex.Replace(description, "<[^>]*>", "")
@@ -1526,8 +1522,7 @@ End Sub
         Dim metaDescription As New HtmlMeta()
         metaDescription.Name = "description"
         metaDescription.Content = description
-        Dim headC3 As Control = GetHeadDynamicContainer()
-        If headC3 IsNot Nothing Then headC3.Controls.Add(metaDescription)
+        If headC IsNot Nothing Then headC.Controls.Add(metaDescription)
     End If
 
     Dim keywords As String = Me.Page.Title
@@ -1537,8 +1532,7 @@ End Sub
         Dim metaKeywords As New HtmlMeta()
         metaKeywords.Name = "keywords"
         metaKeywords.Content = keywords
-        Dim headC4 As Control = GetHeadDynamicContainer()
-        If headC4 IsNot Nothing Then headC4.Controls.Add(metaKeywords)
+        If headC IsNot Nothing Then headC.Controls.Add(metaKeywords)
     End If
 End Sub
 

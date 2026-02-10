@@ -30,7 +30,6 @@
     <!-- SEO globale (robots/canonical) - injected by Page.master.vb -->
     <asp:Literal ID="litGlobalSeoHead" runat="server" EnableViewState="False" />
 
-    <!-- Dynamic HEAD items (links/meta) injected safely even with <% ... %> blocks -->
     <asp:PlaceHolder ID="phHeadDynamic" runat="server" EnableViewState="False" />
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
