@@ -11,7 +11,7 @@
 
     <!-- ============================================================
          ONus (core assets)
-         NOTE: i file CSS sono in /Public/assets/css
+         NOTE: i file CSS sono in /Public/assets/onsus/css
          ============================================================ -->
     <link rel="stylesheet" href="<%= ThemeManager.Asset("fonts/font.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("icons/icomoon/style.css") %>" />
@@ -29,9 +29,9 @@
 
     <!-- SEO globale (robots/canonical) - injected by Page.master.vb -->
     <asp:Literal ID="litGlobalSeoHead" runat="server" EnableViewState="False" />
-    <asp:PlaceHolder ID="phHeadDynamic" runat="server" EnableViewState="False" />
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
+    <asp:PlaceHolder ID="phHeadLinks" runat="server" />
 </head>
 
 <body id="PageBody" runat="server" class="preload-wrapper popup-loader">
@@ -333,19 +333,19 @@
 
 		<!-- ONSUS JS (tutto da /Public/assets) -->
 		<script src="<%= ThemeManager.Asset("js/jquery.min.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/bootstrap.min.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/bootstrap-select.min.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/jquery.nice-select.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/swiper-bundle.min.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/carousel.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/wow.min.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/infinityslide.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/multiple-modal.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/lazysize.min.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/shop.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/main.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/sibforms.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/drift.min.js") %>"></script>
+		<script defer src="<%= ThemeManager.Asset("js/bootstrap.min.js") %>"></script>
+		<script defer src="<%= ThemeManager.Asset("js/bootstrap-select.min.js") %>"></script>
+		<script defer src="<%= ThemeManager.Asset("js/jquery.nice-select.js") %>"></script>
+		<script defer src="<%= ThemeManager.Asset("js/swiper-bundle.min.js") %>"></script>
+		<script defer src="<%= ThemeManager.Asset("js/carousel.js") %>"></script>
+		<script defer src="<%= ThemeManager.Asset("js/wow.min.js") %>"></script>
+		<script defer src="<%= ThemeManager.Asset("js/infinityslide.js") %>"></script>
+		<script defer src="<%= ThemeManager.Asset("js/multiple-modal.js") %>"></script>
+		<script defer src="<%= ThemeManager.Asset("js/lazysize.min.js") %>"></script>
+		<script defer src="<%= ThemeManager.Asset("js/shop.js") %>"></script>
+		<script defer src="<%= ThemeManager.Asset("js/main.js") %>"></script>
+		<script defer src="<%= ThemeManager.Asset("js/sibforms.js") %>"></script>
+		<script defer src="<%= ThemeManager.Asset("js/drift.min.js") %>"></script>
 
 		<!-- Script specifici pagina (es. zoom.js su articolo.aspx) -->
 		<asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
