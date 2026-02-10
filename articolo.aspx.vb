@@ -661,7 +661,7 @@ Partial Class articolo
             If prezzo.HasValue AndAlso prezzo.Value > 0D Then
                 Dim offer As New Dictionary(Of String, Object)()
                 offer("@type") = "Offer"
-                offer("price") = prezzo.Value.ToString("0.00", System.System.Globalization.CultureInfo.InvariantCulture)
+                offer("price") = prezzo.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
                 offer("priceCurrency") = "EUR"
                 offer("url") = canonical
 
@@ -727,7 +727,7 @@ Partial Class articolo
     End Function
 
     Private Function JsonNumber(value As Decimal) As String
-        Return value.ToString(System.System.Globalization.CultureInfo.InvariantCulture)
+        Return value.ToString(System.Globalization.CultureInfo.InvariantCulture)
     End Function
 
     Private Function BuildMetaDescription(row As DataRow, fallbackName As String) As String
