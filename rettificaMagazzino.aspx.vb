@@ -117,11 +117,6 @@ End Function
 
 
     End Sub
-
-    If Not IsPostBack Then
-    KeepStoreSecurity.LogAnalyticsQueryStringGet(Request, "rettificaMagazzino.aspx")
-    End If
-
     Public Sub CaricaArticoli()
         If Page.IsPostBack = False Then
             Dim NListino As Integer = Me.Session("Listino")

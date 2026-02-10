@@ -131,7 +131,9 @@ Partial Class articolo
     Private Function LoadRelatedInternal(catId As Integer, marcaId As Integer, maxItems As Integer) As List(Of RelatedItem)
         Dim results As New List(Of RelatedItem)()
 
-        Using conn As MySqlConnection = Connessione()
+        Dim connString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+
+        Using conn As New MySqlConnection(connString)
             conn.Open()
 
             ' 1) stessa categoria
@@ -231,7 +233,7 @@ Partial Class articolo
     Private Function SafeDec(v As Object, fallback As Decimal) As Decimal
         If v Is Nothing OrElse v Is DBNull.Value Then Return fallback
         Dim d As Decimal
-        If Decimal.TryParse(Convert.ToString(v), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, d) Then Return d
+        If Decimal.TryParse(Convert.ToString(v), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, d) Then Return d
         If Decimal.TryParse(Convert.ToString(v), d) Then Return d
         Return fallback
     End Function
@@ -659,7 +661,7 @@ Partial Class articolo
             If prezzo.HasValue AndAlso prezzo.Value > 0D Then
                 Dim offer As New Dictionary(Of String, Object)()
                 offer("@type") = "Offer"
-                offer("price") = prezzo.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+                offer("price") = prezzo.Value.ToString("0.00", System.System.Globalization.CultureInfo.InvariantCulture)
                 offer("priceCurrency") = "EUR"
                 offer("url") = canonical
 
@@ -725,7 +727,7 @@ Partial Class articolo
     End Function
 
     Private Function JsonNumber(value As Decimal) As String
-        Return value.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        Return value.ToString(System.System.Globalization.CultureInfo.InvariantCulture)
     End Function
 
     Private Function BuildMetaDescription(row As DataRow, fallbackName As String) As String
@@ -814,7 +816,9 @@ Partial Class articolo
             Dim nodes As HtmlNodeCollection = doc.DocumentNode.SelectNodes("//*")
             If nodes Is Nothing Then Return ""
 
-            For Each n As HtmlNode In nodes.ToArray()
+            Dim i As Integer
+            For i = nodes.Count - 1 To 0 Step -1
+                Dim n As HtmlNode = nodes(i)
                 Dim tag As String = n.Name
 
                 ' rimuove tag pericolosi e quelli non in allowlist (sostituisce con testo)
