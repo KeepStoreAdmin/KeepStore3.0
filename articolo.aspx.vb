@@ -3,13 +3,13 @@ Imports System.Collections.Generic
 Imports System.Configuration
 Imports System.Data
 Imports System.Text
-Imports HtmlAgilityPack
 Imports System.Web
 Imports System.Web.UI.WebControls
+Imports HtmlAgilityPack
 Imports MySql.Data.MySqlClient
 
 Partial Class articolo
-    Inherits AntiCsrfPage
+    Inherits System.Web.UI.Page
 
     Private _id As Integer
     Private _tcid As Integer
@@ -20,6 +20,15 @@ Partial Class articolo
     Private Class ImgItem
         Public Property Url As String
         Public Property Alt As String
+    End Class
+
+    Private Class RelatedItem
+        Public Property Id As Integer
+        Public Property Tcid As Integer
+        Public Property Nome As String
+        Public Property Img As String
+        Public Property Url As String
+        Public Property PrezzoHtml As String
     End Class
 
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
@@ -89,9 +98,144 @@ Partial Class articolo
         End If
 
         BindProduct(row)
-        BindRelatedProducts(row)
         ApplySeo(row)
+        BindRelatedProducts(row)
     End Sub
+
+    Private Sub BindRelatedProducts(row As DataRow)
+        ' Correlati "AI-like" basati solo su tabelle esistenti.
+        ' Strategia:
+        ' 1) stessa categoria (CategorieId)
+        ' 2) stesso brand (MarcheId)
+        ' Ordinamento: popolarità + disponibilità + offerta.
+        Try
+            Dim catId As Integer = GetRowInt(row, "CategorieId", 0)
+            Dim marcaId As Integer = GetRowInt(row, "MarcheId", 0)
+
+            Dim items As List(Of RelatedItem) = LoadRelatedInternal(catId, marcaId, 8)
+            If items Is Nothing OrElse items.Count = 0 Then
+                phRelated.Visible = False
+                Return
+            End If
+
+            phRelated.Visible = True
+            rptRelated.DataSource = items
+            rptRelated.DataBind()
+        Catch ex As Exception
+            ' Non blocca la pagina prodotto se fallisce la sezione correlati
+            phRelated.Visible = False
+            KeepStoreLog.Error("articolo.aspx", "Errore BindRelatedProducts (id=" & _id.ToString() & ")", ex, HttpContext.Current)
+        End Try
+    End Sub
+
+    Private Function LoadRelatedInternal(catId As Integer, marcaId As Integer, maxItems As Integer) As List(Of RelatedItem)
+        Dim results As New List(Of RelatedItem)()
+
+        Using conn As MySqlConnection = Connessione()
+            conn.Open()
+
+            ' 1) stessa categoria
+            If catId > 0 Then
+                Using cmd As New MySqlCommand()
+                    cmd.Connection = conn
+                    cmd.CommandText = "SELECT id, TCid, Descrizione1, Img1, InOfferta, Prezzo, PrezzoIvato, PrezzoPromo, PrezzoPromoIvato " &
+                                      "FROM vsuperarticoli " &
+                                      "WHERE NListino=?n AND id<>?id AND CategorieId=?cat " &
+                                      "ORDER BY InOfferta DESC, (Giacenza-Impegnata) DESC, visite DESC, id DESC " &
+                                      "LIMIT " & maxItems.ToString()
+                    cmd.Parameters.AddWithValue("?n", _listino)
+                    cmd.Parameters.AddWithValue("?id", _id)
+                    cmd.Parameters.AddWithValue("?cat", catId)
+                    AppendRelated(cmd, results, maxItems)
+                End Using
+            End If
+
+            ' 2) stessa marca (integrazione se non basta)
+            If (results.Count < maxItems) AndAlso (marcaId > 0) Then
+                Using cmd2 As New MySqlCommand()
+                    cmd2.Connection = conn
+                    cmd2.CommandText = "SELECT id, TCid, Descrizione1, Img1, InOfferta, Prezzo, PrezzoIvato, PrezzoPromo, PrezzoPromoIvato " &
+                                       "FROM vsuperarticoli " &
+                                       "WHERE NListino=?n AND id<>?id AND MarcheId=?mr " &
+                                       "ORDER BY InOfferta DESC, (Giacenza-Impegnata) DESC, visite DESC, id DESC " &
+                                       "LIMIT " & maxItems.ToString()
+                    cmd2.Parameters.AddWithValue("?n", _listino)
+                    cmd2.Parameters.AddWithValue("?id", _id)
+                    cmd2.Parameters.AddWithValue("?mr", marcaId)
+                    AppendRelated(cmd2, results, maxItems)
+                End Using
+            End If
+        End Using
+
+        Return results
+    End Function
+
+    Private Sub AppendRelated(cmd As MySqlCommand, results As List(Of RelatedItem), maxItems As Integer)
+        Dim seen As New HashSet(Of Integer)()
+        For Each it As RelatedItem In results
+            seen.Add(it.Id)
+        Next
+
+        Using rdr As MySqlDataReader = cmd.ExecuteReader()
+            While rdr.Read() AndAlso results.Count < maxItems
+                Dim idVal As Integer = SafeInt(rdr("id"), 0)
+                If idVal <= 0 Then Continue While
+                If seen.Contains(idVal) Then Continue While
+
+                Dim tcidVal As Integer = SafeInt(rdr("TCid"), -1)
+                Dim nameVal As String = Convert.ToString(rdr("Descrizione1"))
+                Dim imgVal As String = NormalizeImageUrl(Convert.ToString(rdr("Img1")))
+                Dim inOfferta As Integer = SafeInt(rdr("InOfferta"), 0)
+
+                Dim prezzoIvato As Decimal = SafeDec(rdr("PrezzoIvato"), 0D)
+                Dim prezzoPromoIvato As Decimal = SafeDec(rdr("PrezzoPromoIvato"), 0D)
+                Dim prezzo As Decimal = SafeDec(rdr("Prezzo"), 0D)
+                Dim prezzoPromo As Decimal = SafeDec(rdr("PrezzoPromo"), 0D)
+
+                Dim prezzoCorrente As Decimal = prezzoIvato
+                Dim prezzoBarrato As Decimal = 0D
+                If (GetSessionInt("IvaTipo", 2) = 2) Then
+                    If inOfferta = 1 AndAlso prezzoPromoIvato > 0D Then
+                        prezzoCorrente = prezzoPromoIvato
+                        prezzoBarrato = prezzoIvato
+                    End If
+                Else
+                    prezzoCorrente = prezzo
+                    If inOfferta = 1 AndAlso prezzoPromo > 0D Then
+                        prezzoCorrente = prezzoPromo
+                        prezzoBarrato = prezzo
+                    End If
+                End If
+
+                Dim item As New RelatedItem()
+                item.Id = idVal
+                item.Tcid = tcidVal
+                item.Nome = nameVal
+                item.Img = imgVal
+                item.Url = BuildProductUrl(idVal, tcidVal, includeTcid:=(_tcEnabled AndAlso tcidVal <> -1))
+                item.PrezzoHtml = BuildPriceHtml(prezzoCorrente, prezzoBarrato, inOfferta)
+
+                results.Add(item)
+                seen.Add(idVal)
+            End While
+        End Using
+    End Sub
+
+    Private Function SafeInt(v As Object, fallback As Integer) As Integer
+        If v Is Nothing OrElse v Is DBNull.Value Then Return fallback
+        Dim n As Integer
+        If Integer.TryParse(Convert.ToString(v), n) Then Return n
+        Return fallback
+    End Function
+
+    Private Function SafeDec(v As Object, fallback As Decimal) As Decimal
+        If v Is Nothing OrElse v Is DBNull.Value Then Return fallback
+        Dim d As Decimal
+        If Decimal.TryParse(Convert.ToString(v), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, d) Then Return d
+        If Decimal.TryParse(Convert.ToString(v), d) Then Return d
+        Return fallback
+    End Function
+
 
     Private Function GetProductRow(id As Integer, tcid As Integer, includeTcidFilter As Boolean) As DataRow
         ' Nota: in alcuni DB TCid "non variante" puo' essere -1 oppure 0.
@@ -600,79 +744,6 @@ Partial Class articolo
         Return plain
     End Function
 
-    
-    Private Function SanitizeHtmlBasic(ByVal html As String) As String
-        If String.IsNullOrEmpty(html) Then Return ""
-
-        Try
-            Dim doc As New HtmlAgilityPack.HtmlDocument()
-            doc.OptionFixNestedTags = True
-            doc.LoadHtml(html)
-
-            Dim allowedTags As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-            allowedTags.Add("p") : allowedTags.Add("br") : allowedTags.Add("ul") : allowedTags.Add("ol") : allowedTags.Add("li")
-            allowedTags.Add("b") : allowedTags.Add("strong") : allowedTags.Add("i") : allowedTags.Add("em")
-            allowedTags.Add("u") : allowedTags.Add("h2") : allowedTags.Add("h3") : allowedTags.Add("h4")
-            allowedTags.Add("table") : allowedTags.Add("thead") : allowedTags.Add("tbody") : allowedTags.Add("tr") : allowedTags.Add("th") : allowedTags.Add("td")
-            allowedTags.Add("span") : allowedTags.Add("div")
-
-            Dim allowedAttrs As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-            allowedAttrs.Add("class") : allowedAttrs.Add("style")
-
-            Dim nodes As New List(Of HtmlAgilityPack.HtmlNode)(doc.DocumentNode.Descendants())
-            For Each n As HtmlAgilityPack.HtmlNode In nodes
-                If n.NodeType <> HtmlAgilityPack.HtmlNodeType.Element Then Continue For
-
-                Dim tagName As String = n.Name
-                If tagName = "script" OrElse tagName = "style" OrElse tagName = "iframe" OrElse tagName = "object" Then
-                    n.Remove()
-                    Continue For
-                End If
-
-                If Not allowedTags.Contains(tagName) Then
-                    ' unwrap: keep inner text/html
-                    Dim parent = n.ParentNode
-                    If parent IsNot Nothing Then
-                        For Each child As HtmlAgilityPack.HtmlNode In n.ChildNodes
-                            parent.InsertBefore(child, n)
-                        Next
-                        n.Remove()
-                    Else
-                        n.Remove()
-                    End If
-                    Continue For
-                End If
-
-                ' strip dangerous attributes
-                If n.HasAttributes Then
-                    Dim toRemove As New List(Of HtmlAgilityPack.HtmlAttribute)()
-                    For Each a As HtmlAgilityPack.HtmlAttribute In n.Attributes
-                        Dim an As String = a.Name
-                        Dim av As String = a.Value
-
-                        If an.StartsWith("on", StringComparison.OrdinalIgnoreCase) Then
-                            toRemove.Add(a)
-                        ElseIf an.Equals("href", StringComparison.OrdinalIgnoreCase) OrElse an.Equals("src", StringComparison.OrdinalIgnoreCase) Then
-                            If av IsNot Nothing AndAlso av.Trim().ToLowerInvariant().StartsWith("javascript:") Then
-                                toRemove.Add(a)
-                            End If
-                        ElseIf Not allowedAttrs.Contains(an) Then
-                            toRemove.Add(a)
-                        End If
-                    Next
-                    For Each a As HtmlAgilityPack.HtmlAttribute In toRemove
-                        n.Attributes.Remove(a)
-                    Next
-                End If
-            Next
-
-            Return doc.DocumentNode.InnerHtml
-        Catch
-            Return RemoveScriptBlocks(html)
-        End Try
-    End Function
-
-
     Private Function NormalizeDescriptionHtml(value As String) As String
         If String.IsNullOrEmpty(value) Then
             Return ""
@@ -683,8 +754,8 @@ Partial Class articolo
         ' Se sembra HTML, lascio passare (rimuovo solo eventuali <script>)
         Dim looksHtml As Boolean = (s.IndexOf("<"c) >= 0 AndAlso s.IndexOf(">"c) >= 0)
         If looksHtml Then
-            s = RemoveScriptBlocks(s)
-            Return s
+            ' Hardening XSS: sanitizzazione allowlist (tag/attributi) + rimozione script/iframe.
+            Return SanitizeHtmlAllowBasic(s)
         End If
 
         s = Server.HtmlEncode(s)
@@ -713,6 +784,110 @@ Partial Class articolo
 
         Return html
     End Function
+
+    Private Function SanitizeHtmlAllowBasic(html As String) As String
+        If String.IsNullOrEmpty(html) Then Return ""
+
+        ' 1) rimuove blocchi <script> (fallback) e poi parse HTML.
+        Dim input As String = RemoveScriptBlocks(html)
+
+        Try
+            Dim doc As New HtmlDocument()
+            doc.OptionFixNestedTags = True
+            doc.LoadHtml(input)
+
+            ' tag consentiti (basic eCommerce)
+            Dim allowedTags As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {
+                "p", "br", "strong", "b", "em", "i", "u",
+                "ul", "ol", "li",
+                "h1", "h2", "h3", "h4", "h5", "h6",
+                "div", "span",
+                "table", "thead", "tbody", "tr", "th", "td",
+                "a", "img"
+            }
+
+            ' attributi consentiti
+            Dim allowedAttrs As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {
+                "href", "src", "alt", "title", "class", "id", "name", "target", "rel"
+            }
+
+            Dim nodes As HtmlNodeCollection = doc.DocumentNode.SelectNodes("//*")
+            If nodes Is Nothing Then Return ""
+
+            For Each n As HtmlNode In nodes.ToArray()
+                Dim tag As String = n.Name
+
+                ' rimuove tag pericolosi e quelli non in allowlist (sostituisce con testo)
+                If tag.Equals("script", StringComparison.OrdinalIgnoreCase) OrElse
+                   tag.Equals("iframe", StringComparison.OrdinalIgnoreCase) OrElse
+                   tag.Equals("object", StringComparison.OrdinalIgnoreCase) OrElse
+                   tag.Equals("embed", StringComparison.OrdinalIgnoreCase) OrElse
+                   tag.Equals("link", StringComparison.OrdinalIgnoreCase) OrElse
+                   tag.Equals("meta", StringComparison.OrdinalIgnoreCase) OrElse
+                   tag.Equals("style", StringComparison.OrdinalIgnoreCase) Then
+                    n.Remove()
+                    Continue For
+                End If
+
+                If Not allowedTags.Contains(tag) Then
+                    ' conserva testo interno (se presente)
+                    Dim text As String = HttpUtility.HtmlEncode(n.InnerText)
+                    n.ParentNode.ReplaceChild(HtmlNode.CreateNode(text), n)
+                    Continue For
+                End If
+
+                ' pulizia attributi
+                If n.HasAttributes Then
+                    Dim toRemove As New List(Of HtmlAttribute)()
+                    For Each a As HtmlAttribute In n.Attributes
+                        Dim an As String = a.Name
+                        Dim av As String = If(a.Value, "")
+
+                        ' elimina handler on* e attributi non consentiti
+                        If an.StartsWith("on", StringComparison.OrdinalIgnoreCase) OrElse Not allowedAttrs.Contains(an) Then
+                            toRemove.Add(a)
+                            Continue For
+                        End If
+
+                        ' elimina javascript: nelle URL
+                        If (an.Equals("href", StringComparison.OrdinalIgnoreCase) OrElse an.Equals("src", StringComparison.OrdinalIgnoreCase)) Then
+                            Dim v As String = av.Trim()
+                            If v.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) Then
+                                toRemove.Add(a)
+                                Continue For
+                            End If
+                        End If
+
+                        ' normalizza target
+                        If an.Equals("target", StringComparison.OrdinalIgnoreCase) Then
+                            If Not av.Equals("_blank", StringComparison.OrdinalIgnoreCase) Then
+                                toRemove.Add(a)
+                            Else
+                                ' security: rel
+                                If n.Name.Equals("a", StringComparison.OrdinalIgnoreCase) Then
+                                    If n.Attributes("rel") Is Nothing Then
+                                        n.Attributes.Add("rel", "noopener")
+                                    End If
+                                End If
+                            End If
+                        End If
+                    Next
+
+                    For Each a As HtmlAttribute In toRemove
+                        n.Attributes.Remove(a)
+                    Next
+                End If
+            Next
+
+            Return doc.DocumentNode.InnerHtml
+        Catch
+            ' fallback: encode
+            Dim safe As String = HttpUtility.HtmlEncode(input)
+            safe = safe.Replace(vbCrLf, "<br />").Replace(vbLf, "<br />")
+            Return "<p>" & safe & "</p>"
+        End Try
+    End Function
+
 
     Private Function StripHtml(html As String) As String
         If String.IsNullOrEmpty(html) Then Return ""
@@ -942,102 +1117,18 @@ Partial Class articolo
         Return n
     End Function
 
-Private Sub BindRelatedProducts(ByVal row As DataRow)
+
+
+    ' VB2012-safe conversion helper (DBNull/Null -> 0)
+    Private Function SafeToInt(ByVal o As Object) As Integer
         Try
-            Dim currentId As Integer = SafeToInt(row("id"))
-            Dim catId As Integer = SafeToInt(row("CategorieId"))
-            Dim marcaId As Integer = SafeToInt(row("MarcheId"))
-            Dim tipoId As Integer = SafeToInt(row("TipologieId"))
-            Dim gruppoId As Integer = SafeToInt(row("GruppiId"))
-            Dim sottoId As Integer = SafeToInt(row("SottogruppiId"))
-
-            Dim sql As New StringBuilder()
-            sql.Append("SELECT id, Descrizione1, Img1, PrezzoIvato, PrezzoPromoIvato, InOfferta, CategorieId, MarcheId, TipologieId, GruppiId, SottogruppiId ")
-            sql.Append("FROM vsuperarticoli WHERE (0=0) ")
-            sql.Append("AND id<>?id ")
-            sql.Append("AND NListino=?NListino ")
-            sql.Append("AND (Giacenza-Impegnata) > 0 ")
-
-            ' Ranking: prima stessa sottocategoria/gruppo, poi tipologia/marca, poi categoria
-            sql.Append("AND ( ")
-            sql.Append(" (SottogruppiId=?Sg) OR (GruppiId=?Gr) OR (TipologieId=?Tp) OR (MarcheId=?Mr) OR (CategorieId=?Cat) ")
-            sql.Append(") ")
-            sql.Append("ORDER BY ")
-            sql.Append(" (SottogruppiId=?Sg) DESC, (GruppiId=?Gr) DESC, (TipologieId=?Tp) DESC, (MarcheId=?Mr) DESC, ")
-            sql.Append(" P_rilevanza DESC, visite DESC, InOfferta DESC, PrezzoPromoIvato ASC, PrezzoIvato ASC ")
-            sql.Append("LIMIT 12")
-
-            Dim dt As DataTable = Nothing
-            Using conn As New MySqlConnection(GetConnString())
-                Using cmd As New MySqlCommand(sql.ToString(), conn)
-                    cmd.Parameters.AddWithValue("?id", currentId)
-                    cmd.Parameters.AddWithValue("?NListino", SafeToInt(Session("NListino")))
-                    cmd.Parameters.AddWithValue("?Cat", catId)
-                    cmd.Parameters.AddWithValue("?Mr", marcaId)
-                    cmd.Parameters.AddWithValue("?Tp", tipoId)
-                    cmd.Parameters.AddWithValue("?Gr", gruppoId)
-                    cmd.Parameters.AddWithValue("?Sg", sottoId)
-
-                    Using da As New MySqlDataAdapter(cmd)
-                        dt = New DataTable()
-                        da.Fill(dt)
-                    End Using
-                End Using
-            End Using
-
-            If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
-                phRelated.Visible = True
-                rptRelated.DataSource = dt
-                rptRelated.DataBind()
-            Else
-                phRelated.Visible = False
-            End If
+            If o Is Nothing OrElse o Is DBNull.Value Then Return 0
+            Dim s As String = Convert.ToString(o)
+            Dim n As Integer = 0
+            If Integer.TryParse(s, n) Then Return n
         Catch
-            phRelated.Visible = False
         End Try
-    End Sub
-
-    Protected Sub rptRelated_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
-        If e.Item.ItemType <> ListItemType.Item AndAlso e.Item.ItemType <> ListItemType.AlternatingItem Then Return
-
-        Dim drv As DataRowView = TryCast(e.Item.DataItem, DataRowView)
-        If drv Is Nothing Then Return
-
-        Dim id As Integer = SafeToInt(drv("id"))
-        Dim name As String = SafeToString(drv("Descrizione1"))
-        Dim img1 As String = SafeToString(drv("Img1"))
-
-        Dim url As String = "articolo.aspx?id=" & id.ToString()
-        Dim imgUrl As String = NormalizeImageUrl(img1)
-
-        Dim hlImg As HyperLink = TryCast(e.Item.FindControl("hlRelImg"), HyperLink)
-        Dim hlName As HyperLink = TryCast(e.Item.FindControl("hlRelName"), HyperLink)
-        Dim img As Image = TryCast(e.Item.FindControl("imgRel"), Image)
-        Dim litPrice As Literal = TryCast(e.Item.FindControl("litRelPrice"), Literal)
-
-        If hlImg IsNot Nothing Then hlImg.NavigateUrl = url
-        If hlName IsNot Nothing Then
-            hlName.NavigateUrl = url
-            hlName.Text = name
-        End If
-        If img IsNot Nothing Then
-            img.ImageUrl = imgUrl
-            img.AlternateText = name
-        End If
-
-        If litPrice IsNot Nothing Then
-            Dim promo As Decimal = SafeToDec(drv("PrezzoPromoIvato"))
-            Dim price As Decimal = SafeToDec(drv("PrezzoIvato"))
-            If promo > 0D AndAlso promo < price Then
-                litPrice.Text = "<span class=""new"">" & FormatPrice(promo) & "</span><span class=""old"">" & FormatPrice(price) & "</span>"
-            Else
-                litPrice.Text = "<span class=""new"">" & FormatPrice(price) & "</span>"
-            End If
-        End If
-    End Sub
-
-    Private Function FormatPrice(ByVal value As Decimal) As String
-        Return value.ToString("N2") & " €"
+        Return 0
     End Function
 
 End Class

@@ -250,6 +250,8 @@ list.Items.Insert(0, New ListItem(allValueString, "0"))
         list.DataValueField = valueField
         list.DataBind()
 
+	End Sub
+
 ' Overload: usa MySqlCommand già parametrizzato (VB2012-safe)
 Public Sub PopulateDropdownlist(ByVal conn As MySqlConnection,
                                 ByVal cmd As MySqlCommand,
@@ -267,7 +269,7 @@ Public Sub PopulateDropdownlist(ByVal conn As MySqlConnection,
     list.DataValueField = valueField
     list.DataBind()
 End Sub
-    End Sub
+
     'FILTRI TAGLIA COLORE - FINE
 
     Public Sub CaricaArticoli()
@@ -397,7 +399,13 @@ End Sub
         Dim strWhere As String = ""
         Dim strWhere2 As String = "WHERE 1=1 "
 
-        If SettoriId > 0 And OfferteId = 0 Then
+        
+        ' placeholders IN-lists (VB2012-safe)
+        Dim inMr As String = ""
+        Dim inTp As String = ""
+        Dim inGr As String = ""
+        Dim inSg As String = ""
+If SettoriId > 0 And OfferteId = 0 Then
             ' logica per settore (lasciata commentata come nel codice originale)
         End If
 
