@@ -11,7 +11,7 @@
 
     <!-- ============================================================
          ONus (core assets)
-         NOTE: i file CSS sono in /Public/assets/css
+         NOTE: i file CSS sono in /Public/assets/onsus/css
          ============================================================ -->
     <link rel="stylesheet" href="<%= ThemeManager.Asset("fonts/font.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("icons/icomoon/style.css") %>" />
@@ -30,6 +30,7 @@
     <!-- SEO globale (robots/canonical) - injected by Page.master.vb -->
     <asp:Literal ID="litGlobalSeoHead" runat="server" EnableViewState="False" />
 
+    <!-- Dynamic HEAD items (links/meta) injected safely even with <% ... %> blocks -->
     <asp:PlaceHolder ID="phHeadDynamic" runat="server" EnableViewState="False" />
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />

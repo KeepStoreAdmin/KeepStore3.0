@@ -378,48 +378,48 @@ Partial Class Articoli
             If (Session("ct") <> 30000) Then
                 strWhere &= " AND (CategorieId=?CategorieId) "
                 Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("CategorieId", TypeCode.Int32, CategorieId.ToString()))
-                strWhere2 = strWhere2 & " AND (varticolibase.CategorieId=" & CategorieId & ") "
+                strWhere2 = strWhere2 & " AND (varticolibase.CategorieId=?CategorieId) "
             End If
             TitoloCategoria()
         ElseIf OfferteId > 0 Then
             strWhere &= " AND (OfferteId=?OfferteId) "
             Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("OfferteId", TypeCode.Int32, OfferteId.ToString()))
-            strWhere2 = strWhere2 & " AND (varticolibase.OfferteId = " & OfferteId & ") "
+            strWhere2 = strWhere2 & " AND (varticolibase.OfferteId=?OfferteId) "
             Me.tNavig.Visible = False
         ElseIf strCerca = "" OrElse strCerca Is Nothing Then
             Response.Redirect("default.aspx")
         End If
 
         If Not String.IsNullOrEmpty(MarcheId) Then
-    Dim inMr As String = BuildInParamsForSds(MarcheId, "mr", Me.sdsArticoli.SelectParameters)
-    If inMr <> "" Then
-        strWhere &= " AND MarcheId IN (" & inMr & ") "
-    End If
-    strWhere2 &= " AND varticolibase.MarcheId in (" & MarcheId & ") "
-    End If
+            inMr = BuildInParamsForSds(MarcheId, "mr", Me.sdsArticoli.SelectParameters)
+            If inMr <> "" Then
+                strWhere &= " AND MarcheId IN (" & inMr & ") "
+                strWhere2 &= " AND varticolibase.MarcheId IN (" & inMr & ") "
+            End If
+        End If
 
         If Not String.IsNullOrEmpty(TipologieId) Then
-    Dim inMr As String = BuildInParamsForSds(TipologieId, "tp", Me.sdsArticoli.SelectParameters)
-    If inMr <> "" Then
-        strWhere &= " AND TipologieId IN (" & inMr & ") "
-    End If
-    strWhere2 &= " AND varticolibase.TipologieId in (" & TipologieId & ") "
+            inTp = BuildInParamsForSds(TipologieId, "tp", Me.sdsArticoli.SelectParameters)
+            If inTp <> "" Then
+                strWhere &= " AND TipologieId IN (" & inTp & ") "
+                strWhere2 &= " AND varticolibase.TipologieId IN (" & inTp & ") "
+            End If
         End If
 
        If Not String.IsNullOrEmpty(GruppiId) Then
-    Dim inMr As String = BuildInParamsForSds(GruppiId, "gr", Me.sdsArticoli.SelectParameters)
-    If inMr <> "" Then
-        strWhere &= " AND GruppiId IN (" & inMr & ") "
-    End If
-    strWhere2 &= " AND varticolibase.GruppiId in (" & GruppiId & ") "
+            inGr = BuildInParamsForSds(GruppiId, "gr", Me.sdsArticoli.SelectParameters)
+            If inGr <> "" Then
+                strWhere &= " AND GruppiId IN (" & inGr & ") "
+                strWhere2 &= " AND varticolibase.GruppiId IN (" & inGr & ") "
+            End If
         End If
 
        If Not String.IsNullOrEmpty(SottogruppiId) Then
-    Dim inMr As String = BuildInParamsForSds(SottogruppiId, "sg", Me.sdsArticoli.SelectParameters)
-    If inMr <> "" Then
-        strWhere &= " AND SottogruppiId IN (" & inMr & ") "
-    End If
-    strWhere2 &= " AND varticolibase.SottogruppiId in (" & SottogruppiId & ") "
+            inSg = BuildInParamsForSds(SottogruppiId, "sg", Me.sdsArticoli.SelectParameters)
+            If inSg <> "" Then
+                strWhere &= " AND SottogruppiId IN (" & inSg & ") "
+                strWhere2 &= " AND varticolibase.SottogruppiId IN (" & inSg & ") "
+            End If
         End If
 
          If SpedizioneGratis = 1 Then
@@ -428,7 +428,7 @@ Partial Class Articoli
                 " AND (SpedizioneGratis_Data_Inizio <= CURDATE())" &
                 " AND (SpedizioneGratis_Data_Fine >= CURDATE())"
             strWhere2 = strWhere2 &
-                " AND (SpedizioneGratis_Listini LIKE CONCAT('%', " & NListino & ", ';%'))" &
+                " AND (SpedizioneGratis_Listini LIKE CONCAT('%', ?NListino, ';%'))" &
                 " AND (SpedizioneGratis_Data_Inizio <= CURDATE())" &
                 " AND (SpedizioneGratis_Data_Fine >= CURDATE())"
         Else
@@ -637,7 +637,7 @@ strWhere = strWhere & " GROUP BY id"
 
         Me.sdsArticoli.SelectCommand = strSelect & " WHERE Nlistino=?NListino " & strWhere
 
-        strWhere2 = " LEFT JOIN vsuperarticoli ON vsuperarticoli.Id = varticolibase.id " & strWhere2 & " AND Nlistino=" & NListino
+        strWhere2 = " LEFT JOIN vsuperarticoli ON vsuperarticoli.Id = varticolibase.id " & strWhere2 & " AND Nlistino=?NListino"
 
         Me.sdsMarche.SelectCommand =
             "select Giacenza, `varticolibase`.`MarcheId` AS `MarcheId`,`Marche`.`Descrizione` AS `Descrizione`," &
@@ -669,6 +669,12 @@ strWhere = strWhere & " GROUP BY id"
             Regex.Replace(strWhere2, " AND varticolibase.SottogruppiId in \(([^\)])+\) ", String.Empty) &
             " group by `SottoGruppi`.`Descrizione` order by `SottoGruppi`.`Ordinamento`, `SottoGruppi`.`Descrizione`"
 
+
+        ' Ensure all filter datasources reuse the exact same parameters (100% param-only)
+        CopyParams(Me.sdsArticoli.SelectParameters, Me.sdsMarche.SelectParameters)
+        CopyParams(Me.sdsArticoli.SelectParameters, Me.sdsTipologie.SelectParameters)
+        CopyParams(Me.sdsArticoli.SelectParameters, Me.sdsGruppo.SelectParameters)
+        CopyParams(Me.sdsArticoli.SelectParameters, Me.sdsSottogruppo.SelectParameters)
         If (InOfferta = 1) Then
             Me.sdsTipologie.SelectCommand =
                 "SELECT *, COUNT(TipologieId) AS Numero FROM (" &
@@ -676,15 +682,15 @@ strWhere = strWhere & " GROUP BY id"
                 " TipologieId, TipologieDescrizione AS Descrizione, GruppiId, GruppiDescrizione, SottogruppiId, SottogruppiDescrizione" &
                 " FROM vsuperarticoli" &
                 " WHERE (inofferta=1)" &
-                " AND ((" & NListino & ">=OfferteDaListino) AND (" & NListino & "<=OfferteAListino))" &
-                " AND (NListino=" & NListino & ")" &
+                " AND ((?NListino>=OfferteDaListino) AND (?NListino<=OfferteAListino))" &
+                " AND (NListino=?NListino)" &
                 " AND ((CURDATE()>=offerteDatainizio) AND (CURDATE()<=offerteDataFine))" &
                 " AND (TipologieDescrizione IS NOT NULL)" &
                 " AND (" &
-                IIf(Not String.IsNullOrEmpty(MarcheId), "(MarcheId in (" & MarcheId & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(TipologieId), "(TipologieId in (" & TipologieId & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(GruppiId), "(GruppiId in (" & GruppiId & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(SottogruppiId), "(SottogruppiId in (" & SottogruppiId & "))", "(1=1)") &
+                IIf(Not String.IsNullOrEmpty(MarcheId) AndAlso inMr <> "", "(MarcheId in (" & inMr & "))", "(1=1)") & " AND " &
+                IIf(Not String.IsNullOrEmpty(TipologieId) AndAlso inTp <> "", "(TipologieId in (" & inTp & "))", "(1=1)") & " AND " &
+                IIf(Not String.IsNullOrEmpty(GruppiId) AndAlso inGr <> "", "(GruppiId in (" & inGr & "))", "(1=1)") & " AND " &
+                IIf(Not String.IsNullOrEmpty(SottogruppiId) AndAlso inSg <> "", "(SottogruppiId in (" & inSg & "))", "(1=1)") &
                 ") GROUP BY id) AS t1 GROUP BY Tipologieid"
 
             Me.sdsGruppo.SelectCommand =
@@ -693,15 +699,15 @@ strWhere = strWhere & " GROUP BY id"
                 " TipologieId, TipologieDescrizione, GruppiId, GruppiDescrizione AS Descrizione, SottogruppiId, SottogruppiDescrizione" &
                 " FROM vsuperarticoli" &
                 " WHERE (inofferta=1)" &
-                " AND ((" & NListino & ">=OfferteDaListino) AND (" & NListino & "<=OfferteAListino))" &
-                " AND (NListino=" & NListino & ")" &
+                " AND ((?NListino>=OfferteDaListino) AND (?NListino<=OfferteAListino))" &
+                " AND (NListino=?NListino)" &
                 " AND ((CURDATE()>=offerteDatainizio) AND (CURDATE()<=offerteDataFine))" &
                 " AND (GruppiDescrizione IS NOT NULL)" &
                 " AND (" &
-                IIf(Not String.IsNullOrEmpty(MarcheId), "(MarcheId in (" & MarcheId & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(TipologieId), "(TipologieId in (" & TipologieId & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(GruppiId), "(GruppiId in (" & GruppiId & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(SottogruppiId), "(SottogruppiId in (" & SottogruppiId & "))", "(1=1)") &
+                IIf(Not String.IsNullOrEmpty(MarcheId) AndAlso inMr <> "", "(MarcheId in (" & inMr & "))", "(1=1)") & " AND " &
+                IIf(Not String.IsNullOrEmpty(TipologieId) AndAlso inTp <> "", "(TipologieId in (" & inTp & "))", "(1=1)") & " AND " &
+                IIf(Not String.IsNullOrEmpty(GruppiId) AndAlso inGr <> "", "(GruppiId in (" & inGr & "))", "(1=1)") & " AND " &
+                IIf(Not String.IsNullOrEmpty(SottogruppiId) AndAlso inSg <> "", "(SottogruppiId in (" & inSg & "))", "(1=1)") &
                 ") GROUP BY id) AS t1 GROUP BY GruppiId"
 
             Me.sdsSottogruppo.SelectCommand =
@@ -710,15 +716,15 @@ strWhere = strWhere & " GROUP BY id"
                 " TipologieId, TipologieDescrizione, GruppiId, GruppiDescrizione, SottogruppiId, SottogruppiDescrizione AS Descrizione" &
                 " FROM vsuperarticoli" &
                 " WHERE (inofferta=1)" &
-                " AND ((" & NListino & ">=OfferteDaListino) AND (" & NListino & "<=OfferteAListino))" &
-                " AND (NListino=" & NListino & ")" &
+                " AND ((?NListino>=OfferteDaListino) AND (?NListino<=OfferteAListino))" &
+                " AND (NListino=?NListino)" &
                 " AND ((CURDATE()>=offerteDatainizio) AND (CURDATE()<=offerteDataFine))" &
                 " AND (SottogruppiDescrizione IS NOT NULL)" &
                 " AND (" &
-                IIf(Not String.IsNullOrEmpty(MarcheId), "(MarcheId in (" & MarcheId & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(TipologieId), "(TipologieId in (" & TipologieId & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(GruppiId), "(GruppiId in (" & GruppiId & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(SottogruppiId), "(SottogruppiId in (" & SottogruppiId & "))", "(1=1)") &
+                IIf(Not String.IsNullOrEmpty(MarcheId) AndAlso inMr <> "", "(MarcheId in (" & inMr & "))", "(1=1)") & " AND " &
+                IIf(Not String.IsNullOrEmpty(TipologieId) AndAlso inTp <> "", "(TipologieId in (" & inTp & "))", "(1=1)") & " AND " &
+                IIf(Not String.IsNullOrEmpty(GruppiId) AndAlso inGr <> "", "(GruppiId in (" & inGr & "))", "(1=1)") & " AND " &
+                IIf(Not String.IsNullOrEmpty(SottogruppiId) AndAlso inSg <> "", "(SottogruppiId in (" & inSg & "))", "(1=1)") &
                 ") GROUP BY id) AS t1 GROUP BY Gruppiid"
 
             Me.sdsMarche.SelectCommand =
@@ -727,15 +733,15 @@ strWhere = strWhere & " GROUP BY id"
                 " TipologieId, TipologieDescrizione, GruppiId, GruppiDescrizione, SottogruppiId, SottogruppiDescrizione" &
                 " FROM vsuperarticoli" &
                 " WHERE (inofferta=1)" &
-                " AND ((" & NListino & ">=OfferteDaListino) AND (" & NListino & "<=OfferteAListino))" &
-                " AND (NListino=" & NListino & ")" &
+                " AND ((?NListino>=OfferteDaListino) AND (?NListino<=OfferteAListino))" &
+                " AND (NListino=?NListino)" &
                 " AND ((CURDATE()>=offerteDatainizio) AND (CURDATE()<=offerteDataFine))" &
                 " AND (MarcheDescrizione IS NOT NULL)" &
                 " AND (" &
-                IIf(Not String.IsNullOrEmpty(MarcheId), "(MarcheId in (" & MarcheId & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(TipologieId), "(TipologieId in (" & TipologieId & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(GruppiId), "(GruppiId in (" & GruppiId & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(SottogruppiId), "(SottogruppiId in (" & SottogruppiId & "))", "(1=1)") &
+                IIf(Not String.IsNullOrEmpty(MarcheId) AndAlso inMr <> "", "(MarcheId in (" & inMr & "))", "(1=1)") & " AND " &
+                IIf(Not String.IsNullOrEmpty(TipologieId) AndAlso inTp <> "", "(TipologieId in (" & inTp & "))", "(1=1)") & " AND " &
+                IIf(Not String.IsNullOrEmpty(GruppiId) AndAlso inGr <> "", "(GruppiId in (" & inGr & "))", "(1=1)") & " AND " &
+                IIf(Not String.IsNullOrEmpty(SottogruppiId) AndAlso inSg <> "", "(SottogruppiId in (" & inSg & "))", "(1=1)") &
                 ") GROUP BY id) AS t1 GROUP BY marcheid"
         End If
 
@@ -2156,4 +2162,15 @@ strWhere = strWhere & " GROUP BY id"
         Dim url As String = "https://" & host & "/Public/Images/WhatsApp-Symbolo.png"
         Return System.Web.HttpUtility.HtmlAttributeEncode(url)
     End Function
+    Private Shared Sub CopyParams(ByVal src As ParameterCollection, ByVal dst As ParameterCollection)
+        dst.Clear()
+        For Each p As Parameter In src
+            Dim np As New Parameter(p.Name, p.Type)
+            np.DefaultValue = p.DefaultValue
+            np.Direction = p.Direction
+            np.ConvertEmptyStringToNull = p.ConvertEmptyStringToNull
+            dst.Add(np)
+        Next
+    End Sub
+
 End Class

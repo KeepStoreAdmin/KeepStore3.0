@@ -215,5 +215,40 @@
 </asp:Content>
 
 <asp:Content ID="ScriptsArticolo" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script type="module" src="/Public/assets/js/zoom.js"></script>
+    <script type="module" src="/Public/assets/onsus/js/zoom.js"></script>
 </asp:Content>
+
+        <!-- Related products -->
+        <asp:PlaceHolder ID="phRelated" runat="server" Visible="false">
+            <section class="tf-section tf-related-product">
+                <div class="container">
+                    <div class="tf-section-title">
+                        <h2 class="title">Prodotti correlati</h2>
+                    </div>
+                    <div class="swiper-container swiper-related">
+                        <div class="swiper-wrapper">
+                            <asp:Repeater ID="rptRelated" runat="server" OnItemDataBound="rptRelated_ItemDataBound">
+                                <ItemTemplate>
+                                    <div class="swiper-slide">
+                                        <div class="card-product">
+                                            <div class="card-product-wrapper">
+                                                <asp:HyperLink ID="hlRelImg" runat="server" CssClass="product-img" NavigateUrl="#">
+                                                    <asp:Image ID="imgRel" runat="server" AlternateText="" />
+                                                </asp:HyperLink>
+                                            </div>
+                                            <div class="card-product-info">
+                                                <asp:HyperLink ID="hlRelName" runat="server" CssClass="title link" NavigateUrl="#" Text='<%# Eval("Descrizione1") %>' />
+                                                <div class="price">
+                                                    <asp:Literal ID="litRelPrice" runat="server" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </ItemTemplate>
+                            </asp:Repeater>
+                        </div>
+                        <div class="swiper-pagination"></div>
+                    </div>
+                </div>
+            </section>
+        </asp:PlaceHolder>

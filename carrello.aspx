@@ -7,8 +7,8 @@
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
     <!-- ONUS: page-scoped assets (safe even if the MasterPage already loads them) -->
-    <link rel="stylesheet" href="/Public/assets/icons/icomoon/style.css" />
-    <link rel="stylesheet" href="/Public/assets/css/styles.css" />
+    <link rel="stylesheet" href="/Public/assets/onsus/icons/icomoon/style.css" />
+    <link rel="stylesheet" href="/Public/assets/onsus/css/styles.css" />
 
     <style>
         /* KeepStore: cart patch (ONUS) */
