@@ -209,17 +209,26 @@ Partial Class Articoli
 
         Dim sqlString As String
         sqlString = "select * from " & tableName & " inner join articoli_tagliecolori where " & tableName & ".id = articoli_tagliecolori." & idColumnName
-        If otherDropdownlistIndex > 0 Then
-            Dim otherId As Integer = 0
-            If Integer.TryParse(otherDropdownlistValue, otherId) AndAlso otherId > 0 Then
-                sqlString = sqlString & " And articoli_tagliecolori." & otherIdColumnName & " = " & otherId.ToString()
-            End If
-        End If
-        sqlString = sqlString & " And articoli_tagliecolori.ArticoliId in (SELECT id FROM (" & articoliFiltrati & ") AS articoliFiltrati)"
-        sqlString = sqlString & " And " & tableName & ".abilitato = 1 Group by " & tableName & ".id order by " & tableName & ".id"
+        Dim otherIdParam As Integer = 0
+Dim useOtherParam As Boolean = False
+If otherDropdownlistIndex > 0 Then
+    If Integer.TryParse(otherDropdownlistValue, otherIdParam) AndAlso otherIdParam > 0 Then
+        useOtherParam = True
+        sqlString = sqlString & " And articoli_tagliecolori." & otherIdColumnName & " = ?OtherId"
+    End If
+End If
+sqlString = sqlString & " And articoli_tagliecolori.ArticoliId in (SELECT id FROM (" & articoliFiltrati & ") AS articoliFiltrati)"
+sqlString = sqlString & " And " & tableName & ".abilitato = 1 Group by " & tableName & ".id order by " & tableName & ".id"
 
-        PopulateDropdownlist(conn, sqlString, list, "descrizione", "id")
-        list.Items.Insert(0, New ListItem(allValueString, "0"))
+If useOtherParam Then
+    Dim cmdDrop As New MySqlCommand(sqlString, conn)
+    cmdDrop.Parameters.AddWithValue("?OtherId", otherIdParam)
+    PopulateDropdownlist(conn, cmdDrop, list, "descrizione", "id")
+Else
+    PopulateDropdownlist(conn, sqlString, list, "descrizione", "id")
+End If
+
+list.Items.Insert(0, New ListItem(allValueString, "0"))
         list.SelectedValue = dropdownlistValue
     End Sub
 
@@ -240,6 +249,24 @@ Partial Class Articoli
         list.DataTextField = textField
         list.DataValueField = valueField
         list.DataBind()
+
+' Overload: usa MySqlCommand già parametrizzato (VB2012-safe)
+Public Sub PopulateDropdownlist(ByVal conn As MySqlConnection,
+                                ByVal cmd As MySqlCommand,
+                                ByVal list As DropDownList,
+                                ByVal textField As String,
+                                ByVal valueField As String)
+    Dim dt As New DataTable
+    cmd.Connection = conn
+    cmd.CommandType = CommandType.Text
+    Using da As New MySqlDataAdapter(cmd)
+        da.Fill(dt)
+    End Using
+    list.DataSource = dt
+    list.DataTextField = textField
+    list.DataValueField = valueField
+    list.DataBind()
+End Sub
     End Sub
     'FILTRI TAGLIA COLORE - FINE
 
@@ -461,98 +488,75 @@ Partial Class Articoli
             Session("Valore_Prezzo_MAX") = ""
         End If
 
-        ' Gestione filtri prezzo (copiata dalla versione originale)
-        If (Session.Item("Controllo_Variabile_PrezzoMinMax") = 0) AndAlso ((Session.Item("Prezzo_MIN") <> "") OrElse (Session.Item("Prezzo_MAX") <> "")) Then
-            Session.Item("Controllo_Variabile_PrezzoMinMax") = 1
-            If (Session.Item("Prezzo_MIN").ToString <> "") Then
-                Session("Valore_Prezzo_MIN") = System.Convert.ToDouble(Session.Item("Prezzo_MIN").ToString.Replace(".", ","))
-            End If
-            If (Session.Item("Prezzo_MAX").ToString <> "") Then
-                Session("Valore_Prezzo_MAX") = System.Convert.ToDouble(Session.Item("Prezzo_MAX").ToString.Replace(".", ","))
-            End If
+'Gestione filtri prezzo (100% parametrici - VB2012 safe)
+If Page.IsPostBack = False Then
+    Session("Valore_Prezzo_MIN") = ""
+    Session("Valore_Prezzo_MAX") = ""
+    Session("Controllo_Variabile_PrezzoMinMax") = 0
+End If
 
-            Session.Item("Prezzo_MIN") = ""
-            Session.Item("Prezzo_MAX") = ""
+' Se arrivano valori dai controlli/Query (Prezzo_MIN/Prezzo_MAX) li congeliamo in Valore_* una sola volta
+If (Session.Item("Controllo_Variabile_PrezzoMinMax") = 0) AndAlso
+   ((Session.Item("Prezzo_MIN") <> "") OrElse (Session.Item("Prezzo_MAX") <> "")) Then
 
-            Dim Prezzo_MIN As Double = Val(Session.Item("Valore_Prezzo_MIN"))
-            Dim Prezzo_MAX As Double = Val(Session.Item("Valore_Prezzo_MAX"))
+    If (Session.Item("Prezzo_MIN") <> "") Then
+        Session("Valore_Prezzo_MIN") = Session.Item("Prezzo_MIN")
+        Session.Item("Prezzo_MIN") = ""
+    End If
 
-            If ((Prezzo_MIN > 0) And (Prezzo_MAX > 0)) Then
-                If (Me.Session("IvaTipo") = 2) Then
-                    strWhere = strWhere &
-                        " AND (((PrezzoIvato<='" & Prezzo_MAX.ToString.Replace(",", ".") & "') AND (PrezzoIvato>='" & Prezzo_MIN.ToString.Replace(",", ".") & "'))" &
-                        " OR ((PrezzoPromoIvato<='" & Prezzo_MAX.ToString.Replace(",", ".") & "') AND (PrezzoPromoIvato>='" & Prezzo_MIN.ToString.Replace(",", ".") & "')))"
-                Else
-                    strWhere = strWhere &
-                        " AND (((Prezzo<='" & Prezzo_MAX.ToString.Replace(",", ".") & "') AND (Prezzo>='" & Prezzo_MIN.ToString.Replace(",", ".") & "'))" &
-                        " OR ((PrezzoPromo<='" & Prezzo_MAX.ToString.Replace(",", ".") & "') AND (PrezzoPromo>='" & Prezzo_MIN.ToString.Replace(",", ".") & "')))"
-                End If
-            Else
-                If (Me.Session("IvaTipo") = 2) Then
-                    If (Prezzo_MIN > 0) Then
-                        strWhere = strWhere &
-                            " AND ((PrezzoIvato>='" & Prezzo_MIN.ToString.Replace(",", ".") & "')" &
-                            " OR (PrezzoPromoIvato>='" & Prezzo_MIN.ToString.Replace(",", ".") & "'))"
-                    End If
-                    If (Prezzo_MAX > 0) Then
-                        strWhere = strWhere &
-                            " AND ((PrezzoIvato<='" & Prezzo_MAX.ToString.Replace(",", ".") & "')" &
-                            " OR (PrezzoPromoIvato<='" & Prezzo_MAX.ToString.Replace(",", ".") & "'))"
-                    End If
-                Else
-                    If (Prezzo_MIN > 0) Then
-                        strWhere = strWhere &
-                            " AND ((Prezzo>='" & Prezzo_MIN.ToString.Replace(",", ".") & "')" &
-                            " OR (PrezzoPromo>='" & Prezzo_MIN.ToString.Replace(",", ".") & "'))"
-                    End If
-                    If (Prezzo_MAX > 0) Then
-                        strWhere = strWhere &
-                            " AND ((Prezzo<='" & Prezzo_MAX.ToString.Replace(",", ".") & "')" &
-                            " OR (PrezzoPromo<='" & Prezzo_MAX.ToString.Replace(",", ".") & "'))"
-                    End If
-                End If
-            End If
-        End If
+    If (Session.Item("Prezzo_MAX") <> "") Then
+        Session("Valore_Prezzo_MAX") = Session.Item("Prezzo_MAX")
+        Session.Item("Prezzo_MAX") = ""
+    End If
 
-        If ((Session.Item("Controllo_Variabile_PrezzoMinMax") = 1) And (Session("Prezzo_MIN") = "") And (Session("Prezzo_MAX") = "") And (Me.Page.IsPostBack = True)) Then
-            Dim Prezzo_MIN As Double = Val(Session("Valore_Prezzo_MIN"))
-            Dim Prezzo_MAX As Double = Val(Session("Valore_Prezzo_MAX"))
-            If ((Prezzo_MIN > 0) And (Prezzo_MAX > 0)) Then
-                If (Me.Session("IvaTipo") = 2) Then
-                    strWhere = strWhere &
-                        " AND (((PrezzoIvato<='" & Prezzo_MAX.ToString.Replace(",", ".") & "') AND (PrezzoIvato>='" & Prezzo_MIN.ToString.Replace(",", ".") & "'))" &
-                        " OR ((PrezzoPromoIvato<='" & Prezzo_MAX.ToString.Replace(",", ".") & "') AND (PrezzoPromoIvato>='" & Prezzo_MIN.ToString.Replace(",", ".") & "')))"
-                Else
-                    strWhere = strWhere &
-                        " AND (((Prezzo<='" & Prezzo_MAX.ToString.Replace(",", ".") & "') AND (Prezzo>='" & Prezzo_MIN.ToString.Replace(",", ".") & "'))" &
-                        " OR ((PrezzoPromo<='" & Prezzo_MAX.ToString.Replace(",", ".") & "') AND (PrezzoPromo>='" & Prezzo_MIN.ToString.Replace(",", ".") & "')))"
-                End If
-            Else
-                If (Me.Session("IvaTipo") = 2) Then
-                    If (Prezzo_MIN > 0) Then
-                        strWhere = strWhere &
-                            " AND ((PrezzoIvato>='" & Prezzo_MIN.ToString.Replace(",", ".") & "')" &
-                            " OR (PrezzoPromoIvato>='" & Prezzo_MIN.ToString.Replace(",", ".") & "'))"
-                    End If
-                    If (Prezzo_MAX > 0) Then
-                        strWhere = strWhere &
-                            " AND ((PrezzoIvato<='" & Prezzo_MAX.ToString.Replace(",", ".") & "')" &
-                            " OR (PrezzoPromoIvato<='" & Prezzo_MAX.ToString.Replace(",", ".") & "'))"
-                    End If
-                Else
-                    If (Prezzo_MIN > 0) Then
-                        strWhere = strWhere &
-                            " AND ((Prezzo>='" & Prezzo_MIN.ToString.Replace(",", ".") & "')" &
-                            " OR (PrezzoPromo>='" & Prezzo_MIN.ToString.Replace(",", ".") & "'))"
-                    End If
-                    If (Prezzo_MAX > 0) Then
-                        strWhere = strWhere &
-                            " AND ((Prezzo<='" & Prezzo_MAX.ToString.Replace(",", ".") & "')" &
-                            " OR (PrezzoPromo<='" & Prezzo_MAX.ToString.Replace(",", ".") & "'))"
-                    End If
-                End If
-            End If
-        End If
+    Session.Item("Controllo_Variabile_PrezzoMinMax") = 1
+End If
+
+' Applica filtro prezzo con parametri (Pmin/Pmax) se valorizzato
+Dim hasPmin As Boolean = False
+Dim hasPmax As Boolean = False
+Dim pminVal As Decimal = 0D
+Dim pmaxVal As Decimal = 0D
+
+If Session.Item("Controllo_Variabile_PrezzoMinMax") = 1 Then
+    Dim sMin As String = Convert.ToString(Session("Valore_Prezzo_MIN"))
+    Dim sMax As String = Convert.ToString(Session("Valore_Prezzo_MAX"))
+
+    If sMin <> "" Then
+        Decimal.TryParse(sMin.Replace(",", "."), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, pminVal)
+        If pminVal > 0D Then hasPmin = True
+    End If
+
+    If sMax <> "" Then
+        Decimal.TryParse(sMax.Replace(",", "."), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, pmaxVal)
+        If pmaxVal > 0D Then hasPmax = True
+    End If
+
+    Dim colPrice As String
+    Dim colPromo As String
+    If IvaTipo = 2 Then
+        colPrice = "PrezzoIvato"
+        colPromo = "PrezzoPromoIvato"
+    Else
+        colPrice = "Prezzo"
+        colPromo = "PrezzoPromo"
+    End If
+
+    If hasPmin AndAlso hasPmax Then
+        strWhere &= " AND ((" & colPromo & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromo & " IS NULL AND " & colPrice & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromo & " IS NOT NULL AND " & colPromo & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromo & " IS NULL AND " & colPrice & " BETWEEN ?Pmin AND ?Pmax))"
+        strWhere2 &= " AND ((" & colPromo & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromo & " IS NULL AND " & colPrice & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromo & " IS NOT NULL AND " & colPromo & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromo & " IS NULL AND " & colPrice & " BETWEEN ?Pmin AND ?Pmax))"
+    ElseIf hasPmin Then
+        strWhere &= " AND ((" & colPromo & " >= ?Pmin) OR (" & colPromo & " IS NULL AND " & colPrice & " >= ?Pmin))"
+        strWhere2 &= " AND ((" & colPromo & " >= ?Pmin) OR (" & colPromo & " IS NULL AND " & colPrice & " >= ?Pmin))"
+    ElseIf hasPmax Then
+        strWhere &= " AND ((" & colPromo & " <= ?Pmax) OR (" & colPromo & " IS NULL AND " & colPrice & " <= ?Pmax))"
+        strWhere2 &= " AND ((" & colPromo & " <= ?Pmax) OR (" & colPromo & " IS NULL AND " & colPrice & " <= ?Pmax))"
+    End If
+End If
+
+' Parametri prezzo per SqlDataSource (aggiunti solo se necessari)
+If hasPmin Then sdsArticoli.SelectParameters.Add(New Parameter("Pmin", TypeCode.Decimal, pminVal.ToString(Globalization.CultureInfo.InvariantCulture)))
+If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.Decimal, pmaxVal.ToString(Globalization.CultureInfo.InvariantCulture)))
 
         If (InOfferta = 1) Then
             strWhere = strWhere & " AND (InOfferta = 1) "
