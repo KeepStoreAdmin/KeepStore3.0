@@ -3,14 +3,12 @@ Imports System.Collections.Generic
 Imports System.Configuration
 Imports System.Data
 Imports System.Text
-Imports System.Text.RegularExpressions
 Imports System.Web
 Imports System.Web.UI.WebControls
-Imports HtmlAgilityPack
 Imports MySql.Data.MySqlClient
 
 Partial Class articolo
-    Inherits AntiCsrfPage
+    Inherits System.Web.UI.Page
 
     Private _id As Integer
     Private _tcid As Integer
@@ -91,7 +89,6 @@ Partial Class articolo
 
         BindProduct(row)
         ApplySeo(row)
-        BindRelatedProducts(row)
     End Sub
 
     Private Function GetProductRow(id As Integer, tcid As Integer, includeTcidFilter As Boolean) As DataRow
@@ -602,114 +599,23 @@ Partial Class articolo
     End Function
 
     Private Function NormalizeDescriptionHtml(value As String) As String
-        If String.IsNullOrEmpty(value) Then Return ""
+        If String.IsNullOrEmpty(value) Then
+            Return ""
+        End If
 
         Dim s As String = value.Trim()
 
+        ' Se sembra HTML, lascio passare (rimuovo solo eventuali <script>)
         Dim looksHtml As Boolean = (s.IndexOf("<"c) >= 0 AndAlso s.IndexOf(">"c) >= 0)
         If looksHtml Then
-            Return SanitizeHtmlAllowBasic(s)
+            s = RemoveScriptBlocks(s)
+            Return s
         End If
 
         s = Server.HtmlEncode(s)
         s = s.Replace(vbCrLf, "<br />").Replace(vbLf, "<br />")
         Return "<p>" & s & "</p>"
     End Function
-
-    ' Allowlist sanitizer (HtmlAgilityPack) - VB2012 safe
-    Private Function SanitizeHtmlAllowBasic(ByVal html As String) As String
-        If String.IsNullOrEmpty(html) Then Return ""
-
-        Dim doc As New HtmlDocument()
-        doc.OptionFixNestedTags = True
-        doc.OptionAutoCloseOnEnd = True
-        doc.LoadHtml(html)
-
-        Dim dangerousTags As String() = New String() {"script", "iframe", "object", "embed", "style", "meta", "link", "base", "form", "input", "button"}
-        For Each tag As String In dangerousTags
-            Dim nodes = doc.DocumentNode.SelectNodes("//" & tag)
-            If nodes IsNot Nothing Then
-                For Each n As HtmlNode In nodes
-                    n.Remove()
-                Next
-            End If
-        Next
-
-        Dim allowedTags As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-        Dim ok As String() = New String() {"p","br","b","strong","i","em","u","ul","ol","li","h2","h3","h4","blockquote","span","div","table","thead","tbody","tr","th","td","a","img"}
-        For Each t As String In ok
-            allowedTags.Add(t)
-        Next
-
-        Dim allNodes = doc.DocumentNode.SelectNodes("//*")
-        If allNodes IsNot Nothing Then
-            For Each n As HtmlNode In allNodes.ToArray()
-                If n.NodeType <> HtmlNodeType.Element Then Continue For
-
-                If Not allowedTags.Contains(n.Name) Then
-                    ' unwrap: keep inner text/children
-                    Dim parent = n.ParentNode
-                    If parent IsNot Nothing Then
-                        For Each child As HtmlNode In n.ChildNodes.ToArray()
-                            parent.InsertBefore(child, n)
-                        Next
-                        n.Remove()
-                    Else
-                        n.Remove()
-                    End If
-                    Continue For
-                End If
-
-                ' Remove event handlers and dangerous attributes
-                For Each a As HtmlAttribute In n.Attributes.ToArray()
-                    Dim an As String = a.Name
-                    If an Is Nothing Then Continue For
-                    If an.StartsWith("on", StringComparison.OrdinalIgnoreCase) Then
-                        n.Attributes.Remove(a)
-                        Continue For
-                    End If
-                    If an.Equals("style", StringComparison.OrdinalIgnoreCase) Then
-                        n.Attributes.Remove(a)
-                        Continue For
-                    End If
-                    If n.Name.Equals("a", StringComparison.OrdinalIgnoreCase) AndAlso an.Equals("href", StringComparison.OrdinalIgnoreCase) Then
-                        Dim v As String = Convert.ToString(a.Value)
-                        If IsDangerousUrl(v) Then
-                            n.Attributes.Remove(a)
-                        End If
-                    End If
-                    If n.Name.Equals("img", StringComparison.OrdinalIgnoreCase) AndAlso (an.Equals("src", StringComparison.OrdinalIgnoreCase) OrElse an.Equals("data-src", StringComparison.OrdinalIgnoreCase)) Then
-                        Dim v As String = Convert.ToString(a.Value)
-                        If IsDangerousUrl(v) Then
-                            n.Attributes.Remove(a)
-                        End If
-                    End If
-                Next
-
-                ' target=_blank => rel=noopener
-                If n.Name.Equals("a", StringComparison.OrdinalIgnoreCase) Then
-                    Dim target As String = n.GetAttributeValue("target", "")
-                    If target = "_blank" Then
-                        Dim rel As String = n.GetAttributeValue("rel", "")
-                        If rel.IndexOf("noopener", StringComparison.OrdinalIgnoreCase) < 0 Then
-                            n.SetAttributeValue("rel", "noopener")
-                        End If
-                    End If
-                End If
-            Next
-        End If
-
-        Return doc.DocumentNode.InnerHtml
-    End Function
-
-    Private Shared Function IsDangerousUrl(ByVal url As String) As Boolean
-        If String.IsNullOrEmpty(url) Then Return False
-        Dim u As String = url.Trim().ToLowerInvariant()
-        If u.StartsWith("javascript:") Then Return True
-        If u.StartsWith("data:text/html") Then Return True
-        Return False
-    End Function
-
 
     Private Function RemoveScriptBlocks(html As String) As String
         If String.IsNullOrEmpty(html) Then Return ""

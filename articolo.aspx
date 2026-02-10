@@ -2,41 +2,6 @@
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
     <asp:Literal ID="litJsonLdHead" runat="server" />
-
-    <!-- Related products -->
-    <asp:PlaceHolder ID="phRelated" runat="server" Visible="false">
-        <section class="related-product-area pt-60 pb-30">
-            <div class="container">
-                <div class="section__title-wrapper mb-40">
-                    <h2 class="section__title">Prodotti correlati</h2>
-                </div>
-                <div class="row">
-                    <asp:Repeater ID="rptRelated" runat="server">
-                        <ItemTemplate>
-                            <div class="col-6 col-md-4 col-lg-3 mb-30">
-                                <div class="product__item">
-                                    <div class="product__thumb w-img">
-                                        <a href="<%# KsProdUrl(Eval("id")) %>">
-                                            <img loading="lazy" src="<%# KsProdImg(Eval("Img1")) %>" alt="<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>" />
-                                        </a>
-                                    </div>
-                                    <div class="product__content">
-                                        <h3 class="product__title">
-                                            <a href="<%# KsProdUrl(Eval("id")) %>"><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %></a>
-                                        </h3>
-                                        <div class="product__price">
-                                            <%# KsPriceHtml(Container.DataItem) %>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </ItemTemplate>
-                    </asp:Repeater>
-                </div>
-            </div>
-        </section>
-    </asp:PlaceHolder>
-
 </asp:Content>
 
 <asp:Content ID="ContentMain" ContentPlaceHolderID="MainContent" runat="server">
@@ -247,78 +212,8 @@
         </section>
     </asp:Panel>
 
-
-    <!-- Related products -->
-    <asp:PlaceHolder ID="phRelated" runat="server" Visible="false">
-        <section class="related-product-area pt-60 pb-30">
-            <div class="container">
-                <div class="section__title-wrapper mb-40">
-                    <h2 class="section__title">Prodotti correlati</h2>
-                </div>
-                <div class="row">
-                    <asp:Repeater ID="rptRelated" runat="server">
-                        <ItemTemplate>
-                            <div class="col-6 col-md-4 col-lg-3 mb-30">
-                                <div class="product__item">
-                                    <div class="product__thumb w-img">
-                                        <a href="<%# KsProdUrl(Eval("id")) %>">
-                                            <img loading="lazy" src="<%# KsProdImg(Eval("Img1")) %>" alt="<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>" />
-                                        </a>
-                                    </div>
-                                    <div class="product__content">
-                                        <h3 class="product__title">
-                                            <a href="<%# KsProdUrl(Eval("id")) %>"><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %></a>
-                                        </h3>
-                                        <div class="product__price">
-                                            <%# KsPriceHtml(Container.DataItem) %>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </ItemTemplate>
-                    </asp:Repeater>
-                </div>
-            </div>
-        </section>
-    </asp:PlaceHolder>
-
 </asp:Content>
 
 <asp:Content ID="ScriptsArticolo" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script type="module" src="/Public/assets/js/zoom.js"></script>
-
-    <!-- Related products -->
-    <asp:PlaceHolder ID="phRelated" runat="server" Visible="false">
-        <section class="related-product-area pt-60 pb-30">
-            <div class="container">
-                <div class="section__title-wrapper mb-40">
-                    <h2 class="section__title">Prodotti correlati</h2>
-                </div>
-                <div class="row">
-                    <asp:Repeater ID="rptRelated" runat="server">
-                        <ItemTemplate>
-                            <div class="col-6 col-md-4 col-lg-3 mb-30">
-                                <div class="product__item">
-                                    <div class="product__thumb w-img">
-                                        <a href="<%# KsProdUrl(Eval("id")) %>">
-                                            <img loading="lazy" src="<%# KsProdImg(Eval("Img1")) %>" alt="<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>" />
-                                        </a>
-                                    </div>
-                                    <div class="product__content">
-                                        <h3 class="product__title">
-                                            <a href="<%# KsProdUrl(Eval("id")) %>"><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %></a>
-                                        </h3>
-                                        <div class="product__price">
-                                            <%# KsPriceHtml(Container.DataItem) %>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </ItemTemplate>
-                    </asp:Repeater>
-                </div>
-            </div>
-        </section>
-    </asp:PlaceHolder>
-
 </asp:Content>

@@ -9,40 +9,6 @@ Imports System.Collections.Generic
 Partial Class Articoli
     Inherits AntiCsrfPage
 
-    ' ============================
-    ' HARDENING HELPERS (VB2012)
-    ' ============================
-    Private Shared Function ParseIdList(ByVal raw As String, Optional ByVal maxItems As Integer = 30) As List(Of Integer)
-        Dim ids As New List(Of Integer)()
-        If String.IsNullOrEmpty(raw) Then Return ids
-        Dim parts() As String = raw.Split(","c)
-        For Each p As String In parts
-            If ids.Count >= maxItems Then Exit For
-            Dim t As String = p.Trim()
-            Dim v As Integer
-            If Integer.TryParse(t, v) AndAlso v > 0 Then
-                If Not ids.Contains(v) Then ids.Add(v)
-            End If
-        Next
-        Return ids
-    End Function
-
-    Private Shared Function AddInClause(ByVal fieldName As String,
-                                        ByVal ids As List(Of Integer),
-                                        ByVal paramPrefix As String,
-                                        ByVal parameters As System.Web.UI.WebControls.ParameterCollection) As String
-        If ids Is Nothing OrElse ids.Count = 0 Then Return String.Empty
-        Dim names As New List(Of String)()
-        Dim i As Integer = 0
-        For Each v As Integer In ids
-            Dim pName As String = paramPrefix & i.ToString()
-            names.Add("?" & pName)
-            parameters.Add(New System.Web.UI.WebControls.Parameter(pName, TypeCode.Int32, v.ToString()))
-            i += 1
-        Next
-        Return " AND " & fieldName & " IN (" & String.Join(",", names.ToArray()) & ") "
-    End Function
-
     Dim IvaTipo As Integer
     Dim DispoTipo As Integer
     Dim DispoMinima As Integer
@@ -412,14 +378,14 @@ Partial Class Articoli
             If (Session("ct") <> 30000) Then
                 strWhere &= " AND (CategorieId=?CategorieId) "
                 Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("CategorieId", TypeCode.Int32, CategorieId.ToString()))
-                strWhere2 &= " AND (varticolibase.CategorieId=?CategorieId) " 
-End If
+                strWhere2 = strWhere2 & " AND (varticolibase.CategorieId=" & CategorieId & ") "
+            End If
             TitoloCategoria()
         ElseIf OfferteId > 0 Then
             strWhere &= " AND (OfferteId=?OfferteId) "
             Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("OfferteId", TypeCode.Int32, OfferteId.ToString()))
-            strWhere2 &= " AND (varticolibase.OfferteId=?OfferteId) " 
-Me.tNavig.Visible = False
+            strWhere2 = strWhere2 & " AND (varticolibase.OfferteId = " & OfferteId & ") "
+            Me.tNavig.Visible = False
         ElseIf strCerca = "" OrElse strCerca Is Nothing Then
             Response.Redirect("default.aspx")
         End If
@@ -429,9 +395,7 @@ Me.tNavig.Visible = False
     If inMr <> "" Then
         strWhere &= " AND MarcheId IN (" & inMr & ") "
     End If
-    If inMr <> "" Then
-        strWhere2 &= " AND varticolibase.MarcheId IN (" & inMr & ") "
-    End If
+    strWhere2 &= " AND varticolibase.MarcheId in (" & MarcheId & ") "
     End If
 
         If Not String.IsNullOrEmpty(TipologieId) Then
@@ -439,9 +403,7 @@ Me.tNavig.Visible = False
     If inMr <> "" Then
         strWhere &= " AND TipologieId IN (" & inMr & ") "
     End If
-    If inMr <> "" Then
-        strWhere2 &= " AND varticolibase.TipologieId IN (" & inMr & ") "
-    End If
+    strWhere2 &= " AND varticolibase.TipologieId in (" & TipologieId & ") "
         End If
 
        If Not String.IsNullOrEmpty(GruppiId) Then
@@ -449,9 +411,7 @@ Me.tNavig.Visible = False
     If inMr <> "" Then
         strWhere &= " AND GruppiId IN (" & inMr & ") "
     End If
-    If inMr <> "" Then
-        strWhere2 &= " AND varticolibase.GruppiId IN (" & inMr & ") "
-    End If
+    strWhere2 &= " AND varticolibase.GruppiId in (" & GruppiId & ") "
         End If
 
        If Not String.IsNullOrEmpty(SottogruppiId) Then
@@ -459,9 +419,7 @@ Me.tNavig.Visible = False
     If inMr <> "" Then
         strWhere &= " AND SottogruppiId IN (" & inMr & ") "
     End If
-    If inMr <> "" Then
-        strWhere2 &= " AND varticolibase.SottogruppiId IN (" & inMr & ") "
-    End If
+    strWhere2 &= " AND varticolibase.SottogruppiId in (" & SottogruppiId & ") "
         End If
 
          If SpedizioneGratis = 1 Then
@@ -470,7 +428,7 @@ Me.tNavig.Visible = False
                 " AND (SpedizioneGratis_Data_Inizio <= CURDATE())" &
                 " AND (SpedizioneGratis_Data_Fine >= CURDATE())"
             strWhere2 = strWhere2 &
-                " AND (SpedizioneGratis_Listini LIKE CONCAT('%', ?NListino, ';%'))" &
+                " AND (SpedizioneGratis_Listini LIKE CONCAT('%', " & NListino & ", ';%'))" &
                 " AND (SpedizioneGratis_Data_Inizio <= CURDATE())" &
                 " AND (SpedizioneGratis_Data_Fine >= CURDATE())"
         Else
@@ -611,55 +569,51 @@ Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("Tag
 Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("ColoreId", TypeCode.Int32, Drop_Filtra_Colore.SelectedValue))
             End If
         End If
+                ' --- Ricerca (VB2012-safe, param-only) ---
         Dim userCerca As String = ""
-        If strCerca <> "" Then
-        userCerca = Convert.ToString(strCerca).Trim()
-        If userCerca.Length > 120 Then userCerca = userCerca.Substring(0, 120)
-    
-        Dim userCerca As String = Convert.ToString(strCerca).Trim()
-    If userCerca.Length > 120 Then userCerca = userCerca.Substring(0, 120)
+        If Not String.IsNullOrEmpty(Convert.ToString(strCerca)) Then
+            userCerca = Convert.ToString(strCerca).Trim()
+            If userCerca.Length > 120 Then userCerca = userCerca.Substring(0, 120)
+        End If
 
-    Dim cercaSql As String = SqlEscapeLike(userCerca)
-    Dim Parole() As String = Split(userCerca, " ")
+        If userCerca <> "" Then
+            Dim cercaSql As String = SqlEscapeLike(userCerca)
+            Dim Parole() As String = Split(userCerca, " ")
 
-    Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("q", TypeCode.String, cercaSql))
+            Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("q", TypeCode.String, cercaSql))
 
-    If (Parole.Length > 1) Then
-        Dim Temp1 As String = ""
-        Dim Temp2 As String = ""
+            If (Parole.Length > 1) Then
+                Dim Temp1 As String = ""
+                Dim Temp2 As String = ""
 
-        Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("q0", TypeCode.String, SqlEscapeLike(Parole(0))))
+                Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("q0", TypeCode.String, SqlEscapeLike(Parole(0))))
 
-        strWhere &= " AND ((Codice LIKE CONCAT('%', ?q, '%') ) OR (Ean LIKE CONCAT('%', ?q, '%') ) OR ((Descrizione1 LIKE CONCAT('%', ?q0, '%') )"
-        strWhere2 &= " AND ((varticolibase.Codice LIKE CONCAT('%', ?q, '%') ) OR (varticolibase.Ean LIKE CONCAT('%', ?q, '%') ) OR ((varticolibase.Descrizione1 like '%" & SqlEscapeLike(Parole(0)) & "%' )"
+                strWhere &= " AND ((Codice LIKE CONCAT('%', ?q, '%') ) OR (Ean LIKE CONCAT('%', ?q, '%') ) OR ((Descrizione1 LIKE CONCAT('%', ?q0, '%') )"
+                strWhere2 &= " AND ((varticolibase.Codice LIKE CONCAT('%', ?q, '%') ) OR (varticolibase.Ean LIKE CONCAT('%', ?q, '%') ) OR ((varticolibase.Descrizione1 LIKE CONCAT('%', ?q0, '%') )"
 
-        For i As Integer = 1 To (Parole.Length - 1)
-            Dim pn As String = "q" & i.ToString()
-            Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter(pn, TypeCode.String, SqlEscapeLike(Parole(i))))
-            Temp1 &= " AND (Descrizione1 LIKE CONCAT('%', ?" & pn & ", '%') )"
-            Temp2 &= " AND (varticolibase.Descrizione1 like '%" & SqlEscapeLike(Parole(i)) & "%' )"
-        Next
+                For i As Integer = 1 To (Parole.Length - 1)
+                    Dim pn As String = "q" & i.ToString()
+                    Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter(pn, TypeCode.String, SqlEscapeLike(Parole(i))))
+                    Temp1 &= " AND (Descrizione1 LIKE CONCAT('%', ?" & pn & ", '%') )"
+                    Temp2 &= " AND (varticolibase.Descrizione1 LIKE CONCAT('%', ?" & pn & ", '%') )"
+                Next
 
-        Temp1 &= "))"
-        Temp2 &= "))"
+                Temp1 &= "))"
+                Temp2 &= "))"
 
-        strWhere &= Temp1
-        strWhere2 &= Temp2
-    Else
-        strWhere &= " AND ((Codice LIKE CONCAT('%', ?q, '%') ) OR (Descrizione1 LIKE CONCAT('%', ?q, '%') ) OR (Ean LIKE CONCAT('%', ?q, '%') ))"
-        strWhere2 &= " AND ((varticolibase.Codice LIKE CONCAT('%', ?q, '%') ) OR (varticolibase.Descrizione1 LIKE CONCAT('%', ?q, '%') ) OR (varticolibase.Ean LIKE CONCAT('%', ?q, '%') ))"
-    End If
-
-    Me.lblRicerca.Visible = True
-    Me.lblRisultati.Text = H(strCerca)
-Me.Title = Me.Title & " > " & lblRicerca.Text & strCerca
-End If
+                strWhere &= Temp1
+                strWhere2 &= Temp2
+            Else
+                strWhere &= " AND ((Codice LIKE CONCAT('%', ?q, '%') ) OR (Descrizione1 LIKE CONCAT('%', ?q, '%') ) OR (Ean LIKE CONCAT('%', ?q, '%') ))"
+                strWhere2 &= " AND ((varticolibase.Codice LIKE CONCAT('%', ?q, '%') ) OR (varticolibase.Descrizione1 LIKE CONCAT('%', ?q, '%') ) OR (varticolibase.Ean LIKE CONCAT('%', ?q, '%') ))"
+            End If
 
             Me.lblRicerca.Visible = True
             Me.lblRisultati.Text = H(userCerca)
             Me.Title = Me.Title & " > " & lblRicerca.Text & userCerca
         End If
-        strWhere = strWhere & " GROUP BY id"
+
+strWhere = strWhere & " GROUP BY id"
 
         If Drop_Ordinamento.SelectedValue = "P_offerta" Then
             strWhere = strWhere & " ORDER BY InOfferta DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
@@ -683,7 +637,7 @@ End If
 
         Me.sdsArticoli.SelectCommand = strSelect & " WHERE Nlistino=?NListino " & strWhere
 
-        strWhere2 = " LEFT JOIN vsuperarticoli ON vsuperarticoli.Id = varticolibase.id " & strWhere2 & " AND Nlistino=?NListino" 
+        strWhere2 = " LEFT JOIN vsuperarticoli ON vsuperarticoli.Id = varticolibase.id " & strWhere2 & " AND Nlistino=" & NListino
 
         Me.sdsMarche.SelectCommand =
             "select Giacenza, `varticolibase`.`MarcheId` AS `MarcheId`,`Marche`.`Descrizione` AS `Descrizione`," &
@@ -2115,24 +2069,25 @@ End If
     Private Function BuildInParamsForSds(ByVal idsCsv As String,
                                     ByVal paramPrefix As String,
                                     ByVal pc As System.Web.UI.WebControls.ParameterCollection) As String
-    If String.IsNullOrEmpty(idsCsv) Then Return ""
+    If String.IsNullOrWhiteSpace(idsCsv) Then Return ""
 
-    Dim ids As List(Of Integer) = ParseIdList(idsCsv, 40)
-    If ids Is Nothing OrElse ids.Count = 0 Then Return ""
-
+    Dim parts() As String = idsCsv.Split(","c)
     Dim placeholders As New List(Of String)()
     Dim i As Integer = 0
-    For Each idVal As Integer In ids
+
+    For Each p As String In parts
+        Dim v As String = p.Trim()
+        If v = "" Then Continue For
+
         Dim name As String = paramPrefix & i.ToString()
         placeholders.Add("?" & name)
-        pc.Add(New System.Web.UI.WebControls.Parameter(name, TypeCode.Int32, idVal.ToString()))
+        pc.Add(New System.Web.UI.WebControls.Parameter(name, TypeCode.Int32, v))
         i += 1
     Next
 
     If placeholders.Count = 0 Then Return ""
     Return String.Join(",", placeholders.ToArray())
-End Function
-
+    End Function
 
     ' Escape value for safe inclusion inside MySQL string literals within LIKE patterns.
     Protected Function SqlEscapeLike(value As String, Optional maxLen As Integer = 120) As String
