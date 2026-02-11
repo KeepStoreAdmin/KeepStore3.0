@@ -90,8 +90,7 @@
                     </div>
                 </div>
 
-                <!-- CENTER: Slideshow (dinamico) --> (dinamico) -->
-                <div class="wrap-item-2">
+                <!-- CENTER: Slideshow (dinamico) -->                 <div class="wrap-item-2">
                     <div class="banner-image-product-4 style-2 hover-img">
                         <div class="item-product">
 
