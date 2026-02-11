@@ -4,6 +4,23 @@ Imports System.Data
 Partial Class _Default
     Inherits System.Web.UI.Page
 
+    ' VB2012-safe helper: read integer session values with a default fallback.
+    ' Some installs don't set these session keys; without a default they produce LIMIT 0.
+    Private Function GetSessionInt(ByVal key As String, ByVal defaultValue As Integer) As Integer
+        Try
+            Dim raw As Object = Session(key)
+            If raw Is Nothing Then Return defaultValue
+
+            Dim n As Integer
+            If Integer.TryParse(Convert.ToString(raw), n) Then
+                If n > 0 Then Return n
+            End If
+        Catch
+            ' swallow and use default
+        End Try
+        Return defaultValue
+    End Function
+
     Dim IvaTipo As Integer
     Public cont As Integer = 0
     Dim valoreIva As Integer
@@ -108,7 +125,7 @@ Partial Class _Default
         table2 = "SELECT " & vsuperarticoliFieldsAndIvaFromVsuperarticoli & " INNER JOIN " & sqlBaseTable & " ON articolibase.id = vsuperarticoli." & vsuperarticoliId & " WHERE nlistino=@listino"
 
         sqlString = "SELECT * FROM (" & table1 & " UNION ALL " & table2 & ") AS united ORDER BY RAND() LIMIT " &
-                    (If(Session("VetrinaArticoliUltimiArriviPuntoVendita") Is Nothing, 0, CInt(Session("VetrinaArticoliUltimiArriviPuntoVendita"))) * 3).ToString()
+                    (GetSessionInt("VetrinaArticoliUltimiArriviPuntoVendita", 2) * 3).ToString()
 
         sqlString = "SELECT *, taglie.descrizione AS taglia, colori.descrizione AS colore FROM (" & sqlString & ") " & tagliecoloriJoin
 
@@ -126,7 +143,7 @@ Partial Class _Default
                        "ON vsuperarticoliids.id = vsuperarticoli.`ArticoliListiniId` ORDER BY " & id & " DESC, PrezzoPromo ASC) AS vsuperarticoliOrdered"
 
         sqlString = "SELECT * FROM " & sqlBaseTable & " GROUP BY " & id & " ORDER BY RAND() LIMIT " &
-                    (If(Session("VetrinaArticoliImpatto") Is Nothing, 0, CInt(Session("VetrinaArticoliImpatto"))) * 3).ToString()
+                    (GetSessionInt("VetrinaArticoliImpatto", 2) * 3).ToString()
 
         sqlString = "SELECT *, taglie.descrizione AS taglia, colori.descrizione AS colore FROM (" & sqlString & ") " & tagliecoloriJoin
 
@@ -147,7 +164,7 @@ Partial Class _Default
         sqlBaseTable = "(SELECT Conteggio_Vendite, " & vsuperarticoliFieldsAndIvaFromVsuperarticoli & " INNER JOIN " & sqlBaseTable & " ON documentiTable." & id & "=vsuperarticoli." & vsuperarticoliId & " WHERE NListino=@listino ORDER BY Conteggio_vendite DESC, PrezzoPromoIvato ASC) as vsuperarticoliOrdered"
 
         sqlString = "SELECT * FROM " & sqlBaseTable & " GROUP BY " & id & " ORDER BY conteggio_vendite DESC LIMIT " &
-                    (If(Session("VetrinaArticoliPiuVenduti") Is Nothing, 0, CInt(Session("VetrinaArticoliPiuVenduti"))) * 4).ToString()
+                    (GetSessionInt("VetrinaArticoliPiuVenduti", 2) * 4).ToString()
 
         sqlString = "SELECT *, taglie.descrizione AS taglia, colori.descrizione AS colore FROM (" & sqlString & ") " & tagliecoloriJoin
 
