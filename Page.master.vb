@@ -34,19 +34,6 @@ Private _seoJsonLd As String = String.Empty
         End Set
     End Property
 
-    ' Ritorna un contenitore sicuro dentro <head> per iniettare meta/link anche quando
-    ' il master contiene blocchi <% ... %> (in tal caso Page.Header.Controls.Add lancia eccezione).
-    Private Function GetHeadDynamicContainer() As Control
-        ' Preferisci placeholder dedicato nel master
-        Dim c As Control = Me.FindControl("phHeadDynamic")
-        If c IsNot Nothing Then Return c
-        ' Fallback (patch precedenti)
-        c = Me.FindControl("phHeadLinks")
-        If c IsNot Nothing Then Return c
-        Return Nothing
-    End Function
-
-
 Private Function HeaderHasMeta(ByVal metaName As String) As Boolean
     If Page Is Nothing OrElse Page.Header Is Nothing Then Return False
     For Each c As Control In Page.Header.Controls
@@ -973,7 +960,6 @@ End Sub
     End Sub
 
     Public Sub ImpostaTemplate()
-        Dim headC As Control = GetHeadDynamicContainer()
         Me.Page.Title = Me.Session("AziendaNome")
         Me.imgLogo.ImageUrl = Me.Session("AziendaLogo")
         Me.imgLogo.AlternateText = Me.Session("AziendaNome") & " - " & Me.Session("AziendaDescrizione")
@@ -990,8 +976,8 @@ End Sub
         obj3.Attributes.Add("rel", "shortcut icon")
         obj3.Href = Session("IconaWeb")
 
-        If headC IsNot Nothing Then headC.Controls.Add(objcss)
-        If headC IsNot Nothing Then headC.Controls.Add(obj3)
+        Me.Page.Header.Controls.Add(objcss)
+        Me.Page.Header.Controls.Add(obj3)
     End Sub
 
     Public Sub SettoreDefault()
@@ -1509,7 +1495,6 @@ End Sub
     ' META TAG SEO
     '==========================================================
     Sub Meta()
-        Dim headC As Control = GetHeadDynamicContainer()
     ' Meta legacy: mantiene compatibilità, ma NON sovrascrive i meta tag se già presenti nella pagina contenuto.
     Dim description As String = Me.Page.Title
     description = Regex.Replace(description, "<[^>]*>", "")
@@ -1522,7 +1507,7 @@ End Sub
         Dim metaDescription As New HtmlMeta()
         metaDescription.Name = "description"
         metaDescription.Content = description
-        If headC IsNot Nothing Then headC.Controls.Add(metaDescription)
+        Me.Page.Header.Controls.Add(metaDescription)
     End If
 
     Dim keywords As String = Me.Page.Title
@@ -1532,7 +1517,7 @@ End Sub
         Dim metaKeywords As New HtmlMeta()
         metaKeywords.Name = "keywords"
         metaKeywords.Content = keywords
-        If headC IsNot Nothing Then headC.Controls.Add(metaKeywords)
+        Me.Page.Header.Controls.Add(metaKeywords)
     End If
 End Sub
 
