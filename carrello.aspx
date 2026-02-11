@@ -6,95 +6,25 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <!-- ONUS: page-scoped assets (safe even if the MasterPage already loads them) -->
-    <link rel="stylesheet" href="/Public/assets/onsus/icons/icomoon/style.css" />
-    <link rel="stylesheet" href="/Public/assets/onsus/css/styles.css" />
+        <!-- Onsus template: assets loaded in MasterPage -->
 
-    <style>
-        /* KeepStore: cart patch (ONUS) */
-        .ks-cart-title{display:flex;flex-wrap:wrap;gap:.5rem;align-items:baseline}
-        .ks-cart-title .ks-brand{color:#e12825;font-weight:700}
-        .ks-cart-badge-free{display:inline-block;padding:.15rem .5rem;border-radius:999px;font-size:12px;background:#f2f7ff}
-        .ks-cart-bottom{margin-top:1.5rem}
-        .ks-summary-box{border:1px solid #eee;border-radius:12px;padding:1rem}
-        .ks-summary-table td{padding:.35rem 0}
-        .ks-alert{padding:.75rem 1rem;border-radius:12px;margin-top:1rem}
-        .ks-alert-danger{background:#fff1f1;border:1px solid #ffd0d0;color:#b00020}
-        .ks-alert-warning{background:#fff7e6;border:1px solid #ffe0a3;color:#7a4c00;padding:.75rem 1rem;border-radius:12px;margin-top:1rem}
-        .ks-coupon-panel{border:1px solid #eee;border-radius:12px;padding:1rem}
-        .ks-coupon-panel .tf-btn{white-space:nowrap}
-        .ks-cart-buttons{margin-top:1rem;display:flex;flex-wrap:wrap;gap:.75rem;align-items:center}
-        .ks-cart-buttons .ks-right{margin-left:auto}
-        .ks-cart-item-promo td{padding-top:0}
-        .ks-promo-badge{display:inline-flex;align-items:center;gap:.5rem;border:1px dashed #ddd;border-radius:12px;padding:.4rem .6rem;background:#fafafa;font-size:.85rem}
-        .ks-promo-badge strong{color:#e12825}
-        .tf-table-page-cart .remove-cart a{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:999px;border:1px solid #eee}
-        .tf-table-page-cart .remove-cart a:hover{border-color:#ccc}
-        .ks-discount-card{border:1px solid #eee;border-radius:12px;overflow:hidden}
-        .ks-discount-card__header{padding:.75rem 1rem;background:#f6f6f6;font-weight:700}
-        .ks-discount-card__body{display:flex;gap:1rem;align-items:flex-start;justify-content:space-between;padding:1rem}
-        .ks-discount-card__value{font-weight:800;color:#e12825;white-space:nowrap}
-        .ks-discount-card__footer{padding:.6rem 1rem;background:#fafafa;text-align:right}
-        @media (max-width: 991px){
-            .ks-cart-buttons .ks-right{margin-left:0;width:100%}
-        }
-        /* KeepStore: checkout patch (ONUS) */
-        .ks-checkout .wrap{border:1px solid #eee;border-radius:12px;padding:1rem;margin-bottom:1rem;background:#fff}
-        .ks-checkout .wrap .title{margin-bottom:.75rem}
-        .ks-checkout .ks-checkout-grid{width:100%;border-collapse:collapse}
-        .ks-checkout .ks-checkout-grid td{padding:.5rem .5rem;vertical-align:middle}
-        .ks-checkout .ks-checkout-grid tr{border-bottom:1px solid #eee}
-        .ks-checkout .ks-checkout-grid tr:last-child{border-bottom:none}
-        .ks-checkout .ks-checkout-actions{display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;justify-content:space-between}
-        .ks-checkout .ks-checkout-actions .tf-btn{min-width:220px}
-.ks-checkout .btn-gray{background:#e5e5e5;color:#111;border-color:#e5e5e5}
-.ks-checkout a.tf-btn.btn-gray{background:#e5e5e5;color:#111}
-        @media (max-width: 767px){
-            .ks-checkout .ks-checkout-actions .tf-btn{width:100%}
-        }
-
-    </style>
-
-    <script type="text/javascript">
-        (function () {
-            function closest(el, selector) {
-                while (el && el.nodeType === 1) {
-                    if (el.matches(selector)) return el;
-                    el = el.parentElement;
-                }
-                return null;
-            }
-
-            function initQtyButtons() {
-                var buttons = document.querySelectorAll('.ks-wg-quantity .btn-quantity');
-                for (var i = 0; i < buttons.length; i++) {
-                    buttons[i].addEventListener('click', function (e) {
-                        e.preventDefault();
-                        var wg = closest(e.currentTarget, '.ks-wg-quantity');
-                        if (!wg) return;
-                        var input = wg.querySelector('input');
-                        if (!input) return;
-                        var val = parseInt(input.value, 10);
-                        if (isNaN(val)) val = 1;
-                        if (e.currentTarget.classList.contains('btn-increase')) val++;
-                        if (e.currentTarget.classList.contains('btn-decrease')) val = Math.max(1, val - 1);
-                        input.value = val;
-                    });
-                }
-            }
-
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initQtyButtons);
-            } else {
-                initQtyButtons();
-            }
-        })();
-    </script>
 </asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
 
 
-    <asp:ScriptManager ID="ScriptManager1" runat="server" />
+    <div class="page-title">
+    <div class="container">
+        <h3 class="heading">Carrello</h3>
+        <ul class="breadcrumbs">
+            <li><a href="/Default.aspx">Home</a></li>
+            <li>Carrello</li>
+        </ul>
+    </div>
+</div>
+
+<section class="tf-section tf-page-cart">
+    <div class="container">
+<asp:ScriptManager ID="ScriptManager1" runat="server" />
 
     <asp:Panel ID="PanelDestinazione" runat="server" Style="display: none">
         <div id="Div1" class="checkout_box_500">
@@ -123,6 +53,9 @@
         </div>
     </asp:Panel>
     <asp:LinkButton ID="dummy2" runat="server"></asp:LinkButton>
+    </div>
+</section>
+
 
 
 </asp:Content>

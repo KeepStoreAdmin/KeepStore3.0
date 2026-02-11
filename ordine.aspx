@@ -27,7 +27,19 @@
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
-    <% For Each pairInidsFbPixelsSku As System.Collections.Generic.KeyValuePair(Of String, String) In idsFbPixelsSku %>
+    <div class="page-title">
+    <div class="container">
+        <h3 class="heading">Checkout</h3>
+        <ul class="breadcrumbs">
+            <li><a href="/Default.aspx">Home</a></li>
+            <li>Checkout</li>
+        </ul>
+    </div>
+</div>
+
+<section class="tf-section tf-page-checkout">
+    <div class="container">
+<% For Each pairInidsFbPixelsSku As System.Collections.Generic.KeyValuePair(Of String, String) In idsFbPixelsSku %>
         <!-- Facebook Pixel Code -->
         <script>
             !function (f, b, e, v, n, t, s) {
@@ -172,5 +184,8 @@
             </div>
         </div>
     </section>
+    </div>
+</section>
+
 
 </asp:Content>
