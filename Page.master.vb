@@ -967,16 +967,16 @@ End Sub
         Me.imgLogoMobile.AlternateText = Me.Session("AziendaNome") & " - " & Me.Session("AziendaDescrizione")
         Me.lblCredits.Text = Me.Session("Credits")
 
-        Dim objcss As New HtmlLink()
-        Dim obj3 As New HtmlLink()
-        objcss.Href = "~/public/style/" & Session("css")
-        objcss.Attributes.Add("rel", "stylesheet")
-        objcss.Attributes.Add("type", "text/css")
+        ' IMPORTANT:
+        ' Il nuovo template Onsus carica i CSS dal master (Public/assets/onsus/...).
+        ' Il vecchio sito invece iniettava un CSS "legacy" da /public/style/ tramite Session("css"),
+        ' che sovrascrive completamente la grafica (background laterali, layout vecchio, ecc.).
+        ' Qui disabilitiamo l'iniezione del CSS legacy e lasciamo solo l'icona (favicon).
 
+        Dim obj3 As New HtmlLink()
         obj3.Attributes.Add("rel", "shortcut icon")
         obj3.Href = Session("IconaWeb")
 
-        Me.Page.Header.Controls.Add(objcss)
         Me.Page.Header.Controls.Add(obj3)
     End Sub
 
