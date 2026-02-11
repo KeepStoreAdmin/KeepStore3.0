@@ -2,6 +2,14 @@
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
     Consultazione documenti
+    </div>
+</section>
+
+    </div>
+</section>
+    </div>
+</section>
+
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
@@ -157,7 +165,20 @@
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" Runat="Server">
 
-    <!-- SPINNER DI PAGINA -->
+    <section class="tf-page-title style-2">
+    <div class="container">
+        <div class="heading text-center">I miei ordini</div>
+        <div class="text-center">
+            <ul class="breadcrumbs d-flex align-items-center justify-content-center">
+                <li><a href="Default.aspx">Home</a></li>
+                <li><i class="icon-arrow-right"></i></li>
+                <li>Ordini</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- SPINNER DI PAGINA -->
     <asp:Panel ID="pnlLoading" runat="server" CssClass="ks-loading-panel">
         <div class="ks-spinner-circle"></div>
         <div>Caricamento documenti in corso...</div>
@@ -178,7 +199,7 @@
                     var popWidth = dim[0].split('=')[1]; //Gets the first query string value
 
                     //Fade in the Popup and add close button
-                    JQ('#' + popID).fadeIn().css({ 'width': Number(popWidth) }).prepend('<a href="#" class="close"><img src="public/images/close_pop.png" class="btn_close" title="Close Window" alt="Close" /></a>');
+                    JQ('#' + popID).fadeIn().css({ 'width': Number(popWidth) }).prepend('<a href="#" class="close"><img src="Public/assets/onsus/images/close_pop.png" class="btn_close" title="Close Window" alt="Close" /></a>');
 
                     //Define margin for center alignment (vertical + horizontal)
                     var popMargTop = (10 + 80) / 2;
@@ -210,7 +231,7 @@
                Session("esito_invio_mail") = 0
         %>
         <div id="popup" class="popup_block" style="display:none; vertical-align:middle;">
-            <div><img src="Public/Images/Ok.png" alt="" /></div><br />
+            <div><img src="Public/assets/onsus/images/Ok.png" alt="" /></div><br />
             <div>Richiesta inoltrata. Riceverà il documento presso la sua casella email !!!</div>
         </div>
         <% End If %>
@@ -348,7 +369,7 @@
                                             <div class="body-small text-main-2 mb-1">Dal</div>
                                             <div class="d-flex align-items-center gap-2">
                                                 <asp:TextBox runat="server" ID="dataInizio" CssClass="tf-input" Width="150px"></asp:TextBox>
-                                                <asp:ImageButton runat="server" ID="ib_calendarInizio" ImageUrl="Public/Images/calendar_icon.gif" />
+                                                <asp:ImageButton runat="server" ID="ib_calendarInizio" ImageUrl="Public/assets/onsus/images/calendar_icon.gif" />
                                             </div>
                                         </div>
 
@@ -356,7 +377,7 @@
                                             <div class="body-small text-main-2 mb-1">Al</div>
                                             <div class="d-flex align-items-center gap-2">
                                                 <asp:TextBox runat="server" ID="dataFine" CssClass="tf-input" Width="150px"></asp:TextBox>
-                                                <asp:ImageButton runat="server" ID="ImageButton1" ImageUrl="Public/Images/calendar_icon.gif" />
+                                                <asp:ImageButton runat="server" ID="ImageButton1" ImageUrl="Public/assets/onsus/images/calendar_icon.gif" />
                                             </div>
                                         </div>
                                     </div>
@@ -489,18 +510,18 @@
                             <a href="<%# "coupon_esito_acquisto.aspx?id=" & Eval("Coupon_idCoupon") & "&cod=" & Eval("Coupon_CodControllo") %>"
                                class="ks-icon-btn"
                                style="display:<%# IIf(Eval("Pagato") = 1 Or (Eval("PagamentiTipoOnline") = 0), "", "none")%>;">
-                                <img src="Public/Images/Pagato.png" alt="Pagato" />
+                                <img src="Public/assets/onsus/images/Pagato.png" alt="Pagato" />
                             </a>
                         <% Else %>
                             <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>"
                                class="ks-icon-btn"
                                style="display:<%# IIf((Eval("Pagato") = 1 And (Eval("PagamentiTipoOnline") > 0)) Or (Eval("CodiceAutorizzazione") <> ""), "", "none")%>;">
-                                <img src="Public/Images/Pagato.png" alt="Pagato" />
+                                <img src="Public/assets/onsus/images/Pagato.png" alt="Pagato" />
                             </a>
                             <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>"
                                class="ks-icon-btn"
                                style="display:<%# MostraPagaOra(Eval("Pagato"), Eval("CodiceAutorizzazione"), Eval("StatiId"), Eval("PagamentiTipoOnline")) %>;">
-                                <img src="Public/Images/Paga_Ora.png" alt="Paga ora" />
+                                <img src="Public/assets/onsus/images/Paga_Ora.png" alt="Paga ora" />
                             </a>
                         <% End If %>
 
@@ -616,7 +637,7 @@
                     Dim href As String = link_tracking.Replace("#ID#", codice)
                     Dim safeHref As String = System.Web.HttpUtility.HtmlAttributeEncode(href)
 
-                    sb.Append("<img src=""Public/Images/interrogativo.png"" alt="""" title=""Clicca sul Numero Tracking"">")
+                    sb.Append("<img src=""Public/assets/onsus/images/interrogativo.png"" alt="""" title=""Clicca sul Numero Tracking"">")
                     sb.Append("<a href=""")
                     sb.Append(safeHref)
                     sb.Append(""" target=""_blank"">")

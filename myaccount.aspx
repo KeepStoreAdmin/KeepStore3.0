@@ -106,7 +106,7 @@
         <div class="ks-spinner-box">
             <div><b>Attendere, caricamento area personale...</b></div>
             <br />
-            <img src="Public/Images/spinner.gif" alt="Caricamento..." />
+            <img src="Public/assets/onsus/images/spinner.gif" alt="Caricamento..." />
         </div>
     </div>
 

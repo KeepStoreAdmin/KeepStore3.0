@@ -6,6 +6,14 @@
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
     I miei dati
+    </div>
+</section>
+
+    </div>
+</section>
+    </div>
+</section>
+
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
@@ -112,6 +120,19 @@
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
+<section class="tf-page-title style-2">
+    <div class="container">
+        <div class="heading text-center">Dati utente</div>
+        <div class="text-center">
+            <ul class="breadcrumbs d-flex align-items-center justify-content-center">
+                <li><a href="Default.aspx">Home</a></li>
+                <li><i class="icon-arrow-right"></i></li>
+                <li>Dati utente</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
 <div class="ks-myaccount">
 
 
