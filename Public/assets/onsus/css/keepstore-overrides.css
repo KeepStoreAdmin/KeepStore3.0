@@ -1,0 +1,29 @@
+/* KeepStore -> Onsus bridge overrides
+   Goal: make legacy ASP.NET GridView markup behave like Onsus card grids.
+*/
+
+/* If a GridView table is used as a grid container, force grid display */
+.ks-gridview-as-grid.tf-grid-layout { display: grid !important; }
+
+/* Remove table layout artefacts */
+.ks-gridview-as-grid {
+  width: 100%;
+  border: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* Flatten table sections so the inner .card-product becomes the grid item */
+.ks-gridview-as-grid > tbody,
+.ks-gridview-as-grid > tbody > tr,
+.ks-gridview-as-grid > tbody > tr > td {
+  display: contents;
+}
+
+.ks-gridview-as-grid td {
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+/* Safety */
+.ks-gridview-as-grid .card-product { min-width: 0; }
