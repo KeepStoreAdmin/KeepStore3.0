@@ -11,16 +11,16 @@
 
     <!-- ============================================================
          ONus (core assets)
-         NOTE: i file CSS sono in /Public/assets/css
+         NOTE: i file CSS/JS sono in /Public/assets/onsus
          ============================================================ -->
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("fonts/font.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("icons/icomoon/style.css") %>" />
+    <link rel="stylesheet" href="/Public/assets/onsus/fonts/font.css" />
+    <link rel="stylesheet" href="/Public/assets/onsus/iconfont/iconfont.css" />
 
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/bootstrap.min.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/nice-select.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/swiper-bundle.min.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/animate.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/styles.css") %>" />
+    <link rel="stylesheet" href="/Public/assets/onsus/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/Public/assets/onsus/css/nice-select.css" />
+    <link rel="stylesheet" href="/Public/assets/onsus/css/swiper-bundle.min.css" />
+    <link rel="stylesheet" href="/Public/assets/onsus/css/animate.css" />
+    <link rel="stylesheet" href="/Public/assets/onsus/css/styles.css" />
 
     <!-- SEO / JSON-LD injection -->
     <asp:PlaceHolder ID="phSeoJsonLd" runat="server" Visible="false">
@@ -223,7 +223,7 @@
                                 <div class="ft-logo">
                                     <a href="/Default.aspx" class="logo-site" aria-label="Home">
                                         <asp:Image ID="imgLogoFooter" runat="server" AlternateText="Taikun" Visible="false" />
-									<img src="<%= ThemeManager.Asset("images/logo/logo.svg") %>" alt="Logo" />
+									<img src="/Public/assets/images/logo/logo.svg" alt="Logo" />
                                     </a>
                                 </div>
 
@@ -331,20 +331,20 @@
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
 
 		<!-- ONSUS JS (tutto da /Public/assets) -->
-		<script src="<%= ThemeManager.Asset("js/jquery.min.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/bootstrap.min.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/bootstrap-select.min.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/jquery.nice-select.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/swiper-bundle.min.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/carousel.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/wow.min.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/infinityslide.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/multiple-modal.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/lazysize.min.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/shop.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/main.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/sibforms.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/drift.min.js") %>"></script>
+		<script src="/Public/assets/onsus/js/jquery.min.js"></script>
+		<script src="/Public/assets/onsus/js/bootstrap.min.js"></script>
+		<script src="/Public/assets/onsus/js/bootstrap-select.min.js"></script>
+		<script src="/Public/assets/onsus/js/jquery.nice-select.js"></script>
+		<script src="/Public/assets/onsus/js/swiper-bundle.min.js"></script>
+		<script src="/Public/assets/onsus/js/carousel.js"></script>
+		<script src="/Public/assets/onsus/js/wow.min.js"></script>
+		<script src="/Public/assets/onsus/js/infinityslide.js"></script>
+		<script src="/Public/assets/onsus/js/multiple-modal.js"></script>
+		<script src="/Public/assets/onsus/js/lazysize.min.js"></script>
+		<script src="/Public/assets/onsus/js/shop.js"></script>
+		<script src="/Public/assets/onsus/js/main.js"></script>
+		<script src="/Public/assets/onsus/js/sibforms.js"></script>
+		<script src="/Public/assets/onsus/js/drift.min.js"></script>
 
 		<!-- Script specifici pagina (es. zoom.js su articolo.aspx) -->
 		<asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
