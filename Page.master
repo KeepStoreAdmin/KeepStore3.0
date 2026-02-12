@@ -9,18 +9,18 @@
 
     <title><asp:ContentPlaceHolder ID="TitleContent" runat="server" /></title>
 
-	<!-- ============================================================
-	     ONSUS template (core assets)
-	     Tutti i riferimenti puntano a /Public/assets/onsus/
-	     ============================================================ -->
-	<link rel="stylesheet" href="/Public/assets/onsus/fonts/font.css" />
-	<link rel="stylesheet" href="/Public/assets/onsus/icons/icomoon/style.css" />
+    <!-- ============================================================
+         ONus (core assets)
+         NOTE: i file CSS sono in /Public/assets/css
+         ============================================================ -->
+    <link rel="stylesheet" href="/Public/assets/onsus/fonts/font.css" />
+    <link rel="stylesheet" href="/Public/assets/onsus/icons/icomoon/style.css" />
 
-	<link rel="stylesheet" href="/Public/assets/onsus/css/bootstrap.min.css" />
-	<link rel="stylesheet" href="/Public/assets/onsus/css/nice-select.css" />
-	<link rel="stylesheet" href="/Public/assets/onsus/css/swiper-bundle.min.css" />
-	<link rel="stylesheet" href="/Public/assets/onsus/css/animate.css" />
-	<link rel="stylesheet" href="/Public/assets/onsus/css/styles.css" />
+    <link rel="stylesheet" href="/Public/assets/onsus/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/Public/assets/onsus/css/nice-select.css" />
+    <link rel="stylesheet" href="/Public/assets/onsus/css/swiper-bundle.min.css" />
+    <link rel="stylesheet" href="/Public/assets/onsus/css/animate.css" />
+    <link rel="stylesheet" href="/Public/assets/onsus/css/styles.css" />
 
     <!-- SEO / JSON-LD injection -->
     <asp:PlaceHolder ID="phSeoJsonLd" runat="server" Visible="false">
@@ -81,9 +81,10 @@
                             <div class="header-center d-none d-lg-block flex-grow-1 px-3">
                                 <div class="form-search-product w-100">
                                     <fieldset class="w-100">
-                                        <asp:TextBox ID="tbCerca" runat="server" CssClass="form-control" placeholder="Cerca prodotti..." AutoPostBack="True" />
+                                        <asp:TextBox ID="tbCerca" ClientIDMode="Static" runat="server" CssClass="form-control" placeholder="Cerca prodotti..." AutoPostBack="True" />
+                                        <div id="ksSuggest" class="dropdown-menu w-100" style="max-height:320px; overflow:auto;"></div>
                                     </fieldset>
-                                    <asp:Button ID="btnSearch" runat="server" CssClass="btn-submit-form" Text="" OnClick="btnSearch_ServerClick" />
+                                    <asp:Button ID="btnSearch" ClientIDMode="Static" runat="server" CssClass="btn-submit-form" Text="" OnClick="btnSearch_ServerClick" />
                                 </div>
                             </div>
 
@@ -223,7 +224,7 @@
                                 <div class="ft-logo">
                                     <a href="/Default.aspx" class="logo-site" aria-label="Home">
                                         <asp:Image ID="imgLogoFooter" runat="server" AlternateText="Taikun" Visible="false" />
-									<img src="<%= ThemeManager.Asset("images/logo/logo.svg") %>" alt="Logo" />
+									<img src="/Public/assets/onsus/images/logo/logo.svg" alt="Logo" />
                                     </a>
                                 </div>
 
@@ -343,6 +344,7 @@
 		<script src="/Public/assets/onsus/js/lazysize.min.js"></script>
 		<script src="/Public/assets/onsus/js/shop.js"></script>
 		<script src="/Public/assets/onsus/js/main.js"></script>
+    <script src="/Public/assets/onsus/js/keepstore.js" defer></script>
 		<script src="/Public/assets/onsus/js/sibforms.js"></script>
 		<script src="/Public/assets/onsus/js/drift.min.js"></script>
 
