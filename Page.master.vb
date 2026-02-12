@@ -7,6 +7,9 @@ Imports System.Web
 Imports System.Text
 
 Partial Class Page
+    Inherits System.Web.UI.MasterPage
+    Implements ISeoMaster
+
 
     ' Helper: safely add controls to <head> (works even if Header is missing)
     Private Sub AddToHeader(ByVal c As Control)
@@ -17,13 +20,7 @@ Partial Class Page
         Catch
             ' no-op
         End Try
-    End Sub
-
-    Inherits System.Web.UI.MasterPage
-    Implements ISeoMaster
-
-
-' ============================================================
+    End Sub' ============================================================
 ' SEO JSON-LD (iniettato dalle pagine contenuto tramite SeoBuilder)
 ' ============================================================
 Private _seoJsonLd As String = String.Empty
@@ -47,7 +44,7 @@ Private _seoJsonLd As String = String.Empty
     End Property
 
     ' Ritorna un contenitore sicuro dentro <head> per iniettare meta/link anche quando
-    ' il master contiene blocchi <% ... %> (in tal caso Page.Header.Controls.Add lancia eccezione).
+    ' il master contiene blocchi <% ... %> (in tal caso Me.Page.Header.Controls.Add lancia eccezione).
     Private Function GetHeadDynamicContainer() As Control
         ' Preferisci placeholder dedicato nel master
         Dim c As Control = Me.FindControl("phHeadDynamic")
@@ -60,8 +57,8 @@ Private _seoJsonLd As String = String.Empty
 
 
 Private Function HeaderHasMeta(ByVal metaName As String) As Boolean
-    If Page Is Nothing OrElse Page.Header Is Nothing Then Return False
-    For Each c As Control In Page.Header.Controls
+    If Me.Page Is Nothing OrElse Me.Page.Header Is Nothing Then Return False
+    For Each c As Control In Me.Page.Header.Controls
         Dim hm As HtmlMeta = TryCast(c, HtmlMeta)
         If hm IsNot Nothing AndAlso Not String.IsNullOrEmpty(hm.Name) Then
             If String.Equals(hm.Name, metaName, StringComparison.OrdinalIgnoreCase) Then
