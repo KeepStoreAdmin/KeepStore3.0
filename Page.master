@@ -1,4 +1,4 @@
-<%@ Master Language="VB" AutoEventWireup="false" CodeFile="Page.master.vb" Inherits="PageMaster" %>
+<%@ Master Language="VB" AutoEventWireup="false" CodeFile="Page.master.vb" Inherits="Page" %>
 
 <!DOCTYPE html>
 <html lang="it">
@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/swiper-bundle.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/animate.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/styles.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore-overrides.css") %>" />
 
     <!-- SEO / JSON-LD injection -->
     <asp:PlaceHolder ID="phSeoJsonLd" runat="server" Visible="false">
@@ -31,11 +32,7 @@
     <asp:Literal ID="litGlobalSeoHead" runat="server" EnableViewState="False" />
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
-        <!-- Injected dynamically by Page.master.vb (avoid Header.Controls.Add due to <% %> blocks) -->
-        <asp:PlaceHolder ID="phHeadDynamic" runat="server" />
-        <link id="lnkDynamicCss" runat="server" rel="stylesheet" type="text/css" />
-        <link id="lnkDynamicFavicon" runat="server" rel="shortcut icon" type="image/x-icon" />
-    </head>
+</head>
 
 <body id="PageBody" runat="server" class="preload-wrapper popup-loader">
     <form id="form1" runat="server">
@@ -334,7 +331,7 @@
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
 
-		<!-- ONSUS JS (tutto da /Public/assets) -->
+		<!-- KEEPSTORE JS (tutto da /Public/assets) -->
 		<script src="<%= ThemeManager.Asset("js/jquery.min.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/bootstrap.min.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/bootstrap-select.min.js") %>"></script>
@@ -347,6 +344,7 @@
 		<script src="<%= ThemeManager.Asset("js/lazysize.min.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/shop.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/main.js") %>"></script>
+		<script src="<%= ThemeManager.Asset("js/keepstore-init.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/sibforms.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/drift.min.js") %>"></script>
 

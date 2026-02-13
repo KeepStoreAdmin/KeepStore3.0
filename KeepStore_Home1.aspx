@@ -5393,3 +5393,13 @@
         <!-- /Recently -->
         <!-- Footer -->
 </asp:Content>
+<asp:Content ID="cntScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
+    <script type="text/javascript">
+        (function() {
+            if (typeof window.keepStoreInit === 'function') {
+                window.keepStoreInit();
+            }
+            /* home specific hooks */
+        })();
+    </script>
+</asp:Content>

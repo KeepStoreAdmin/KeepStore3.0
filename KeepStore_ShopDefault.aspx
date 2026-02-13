@@ -2455,3 +2455,13 @@
         <!-- /Iconbox -->
         <!-- Footer -->
 </asp:Content>
+<asp:Content ID="cntScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
+    <script type="text/javascript">
+        (function() {
+            if (typeof window.keepStoreInit === 'function') {
+                window.keepStoreInit();
+            }
+            /* shop specific hooks */ if (typeof window.keepStoreShopInit==='function') { window.keepStoreShopInit(); }
+        })();
+    </script>
+</asp:Content>
