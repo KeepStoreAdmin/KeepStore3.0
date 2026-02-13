@@ -7,42 +7,44 @@ Imports System.Web
 Imports System.Text
 
 Partial Class PageMaster
+'==========================================================
+' Helper: trova controlli anche quando non sono WithEvents
+'==========================================================
+
     Inherits System.Web.UI.MasterPage
     Implements ISeoMaster
 
-    '--- Helper per rendere il Master robusto anche quando alcuni controlli non esistono nel markup ---
-    Private Function FindControlRecursive(ByVal root As Control, ByVal id As String) As Control
-        If root Is Nothing OrElse String.IsNullOrEmpty(id) Then Return Nothing
-        Dim direct As Control = root.FindControl(id)
-        If direct IsNot Nothing Then Return direct
-        For Each child As Control In root.Controls
-            Dim found As Control = FindControlRecursive(child, id)
-            If found IsNot Nothing Then Return found
-        Next
-        Return Nothing
-    End Function
+Private Function FindControlRecursive(ByVal root As Control, ByVal id As String) As Control
+    If root Is Nothing OrElse String.IsNullOrEmpty(id) Then Return Nothing
 
-    Private Function FindCtrl(Of T As Control)(ByVal id As String) As T
-        Dim c As Control = FindControlRecursive(Me, id)
-        Return TryCast(c, T)
-    End Function
+    Dim direct As Control = root.FindControl(id)
+    If direct IsNot Nothing Then Return direct
 
-    Private Sub TryAddToHeader(ByVal c As Control)
-        ' Non usare Page.Header.Controls.Add quando nel <head> ci sono blocchi <% %>:
-        ' genera HttpException "Impossibile modificare la raccolta Controls...".
-        ' Usiamo invece un PlaceHolder runat=server dentro il <head>.
+    For Each child As Control In root.Controls
+        Dim found As Control = FindControlRecursive(child, id)
+        If found IsNot Nothing Then Return found
+    Next
+
+    Return Nothing
+End Function
+
+Private Function FindCtrl(Of T As Control)(ByVal id As String) As T
+    Dim c As Control = FindControlRecursive(Me, id)
+    Return TryCast(c, T)
+End Function
+
+
+
+    ' Helper: safely add controls to <head> (works even if Header is missing)
+    Private Sub AddToHeader(ByVal c As Control)
         Try
             If c Is Nothing Then Exit Sub
-            Dim ph As PlaceHolder = FindCtrl(Of PlaceHolder)("phHeadDynamic")
-            If ph Is Nothing Then Exit Sub
-            ph.Controls.Add(c)
+            If Me.Page Is Nothing OrElse Me.Page.Header Is Nothing Then Exit Sub
+            Me.Page.Header.Controls.Add(c)
         Catch
+            ' no-op
         End Try
-    End Sub
-
-
-
-' ============================================================
+    End Sub' ============================================================
 ' SEO JSON-LD (iniettato dalle pagine contenuto tramite SeoBuilder)
 ' ============================================================
 Private _seoJsonLd As String = String.Empty
@@ -65,9 +67,22 @@ Private _seoJsonLd As String = String.Empty
         End Set
     End Property
 
+    ' Ritorna un contenitore sicuro dentro <head> per iniettare meta/link anche quando
+    ' il master contiene blocchi <% ... %> (in tal caso Me.Page.Header.Controls.Add lancia eccezione).
+    Private Function GetHeadDynamicContainer() As Control
+        ' Preferisci placeholder dedicato nel master
+        Dim c As Control = Me.FindControl("phHeadDynamic")
+        If c IsNot Nothing Then Return c
+        ' Fallback (patch precedenti)
+        c = Me.FindControl("phHeadLinks")
+        If c IsNot Nothing Then Return c
+        Return Nothing
+    End Function
+
+
 Private Function HeaderHasMeta(ByVal metaName As String) As Boolean
-    If Page Is Nothing OrElse Page.Header Is Nothing Then Return False
-    For Each c As Control In Page.Header.Controls
+    If Me.Page Is Nothing OrElse Me.Page.Header Is Nothing Then Return False
+    For Each c As Control In Me.Page.Header.Controls
         Dim hm As HtmlMeta = TryCast(c, HtmlMeta)
         If hm IsNot Nothing AndAlso Not String.IsNullOrEmpty(hm.Name) Then
             If String.Equals(hm.Name, metaName, StringComparison.OrdinalIgnoreCase) Then
@@ -126,7 +141,7 @@ Private Sub ApplyGlobalSeoPolicy()
         If pathLower.Contains("/login") Then isNonSeo = True
         If pathLower.Contains("/logout") Then isNonSeo = True
         If pathLower.Contains("/register") Then isNonSeo = True
-        If pathLower.Contains("/pay_your_orders") Then isNonSeo = True
+        If pathLower.Contains("/payYourOrders") Then isNonSeo = True
 
         Dim applyNoIndex As Boolean = (hasRimuovi OrElse hasSt OrElse isNonSeo)
 
@@ -430,27 +445,6 @@ Dim IvaTipo As Integer
         Load_social_buttons()
 
         cmd.Dispose()
-
-        ' Wiring eventi per controlli opzionali (evita errori di compilazione se il markup cambia)
-        Dim rptNav As Repeater = FindCtrl(Of Repeater)("rptNavSettori")
-        If rptNav IsNot Nothing Then
-            AddHandler rptNav.ItemDataBound, AddressOf rptNavSettori_ItemDataBound
-        End If
-
-        Dim tbMob As TextBox = FindCtrl(Of TextBox)("tbCercaMobile")
-        If tbMob IsNot Nothing Then
-            AddHandler tbMob.TextChanged, AddressOf tbCercaMobile_TextChanged
-        End If
-
-        Dim dl1 As DataList = FindCtrl(Of DataList)("DataList_DIV1")
-        If dl1 IsNot Nothing Then AddHandler dl1.Init, AddressOf DataList_DIV1_Init
-        Dim dl2 As DataList = FindCtrl(Of DataList)("DataList_DIV2")
-        If dl2 IsNot Nothing Then AddHandler dl2.Init, AddressOf DataList_DIV2_Init
-        Dim dl3 As DataList = FindCtrl(Of DataList)("DataList_DIV3")
-        If dl3 IsNot Nothing Then AddHandler dl3.Init, AddressOf DataList_DIV3_Init
-        Dim dl4 As DataList = FindCtrl(Of DataList)("DataList_DIV4")
-        If dl4 IsNot Nothing Then AddHandler dl4.Init, AddressOf DataList_DIV4_Init
-
     End Sub
 
     '==========================================================
@@ -545,38 +539,33 @@ End Sub
     ' PRE-RENDER: mini-login, badge ordini, carrello, meta
     '==========================================================
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
+
+        ' dynamic controls (Onsus template does not expose all legacy IDs)
+        Dim lbl4 As Label = FindCtrl(Of Label)("Label4")
+        Dim hl14 As HyperLink = FindCtrl(Of HyperLink)("HyperLink14")
+        Dim mv As MultiView = FindCtrl(Of MultiView)("mvLogin")
+        Dim payYourOrders As Control = FindControlRecursive(Me, "pay_your_orders")
+        Dim toPay As System.Web.UI.HtmlControls.HtmlGenericControl = TryCast(FindControlRecursive(Me, "to_pay"), System.Web.UI.HtmlControls.HtmlGenericControl)
         ' STEP29: applica policy SEO globale (noindex/canonical su pagine non SEO)
         ApplyGlobalSeoPolicy()
 
         '---------------------------
-        '---------------------------
         ' LINK LISTINO PERSONALIZZATO
         '---------------------------
-        Dim lbl4 As Label = Nothing
-        Dim hl14 As HyperLink = Nothing
-        Dim mv As MultiView = Nothing
-        Dim payYourOrders As Control = Nothing
-        Dim toPay As System.Web.UI.HtmlControls.HtmlGenericControl = Nothing
         Try
-            lbl4 = FindCtrl(Of Label)("Label4")
-            hl14 = FindCtrl(Of HyperLink)("HyperLink14")
-            mv = FindCtrl(Of MultiView)("mvLogin")
-            payYourOrders = FindControlRecursive(Me, "pay_your_orders")
-            toPay = TryCast(FindControlRecursive(Me, "to_pay"), System.Web.UI.HtmlControls.HtmlGenericControl)
-
             If Not IsNothing(Session("AbilitaListino")) AndAlso
                IsNumeric(Session("AbilitaListino")) AndAlso
                CInt(Session("AbilitaListino")) > 0 Then
 
-                If lbl4 IsNot Nothing Then lbl4.Visible = True
-                If hl14 IsNot Nothing Then hl14.Visible = True
+                If lbl4 IsNot Nothing Then If lbl4 IsNot Nothing Then lbl4.Visible = True
+                If hl14 IsNot Nothing Then If hl14 IsNot Nothing Then hl14.Visible = True
             Else
-                If lbl4 IsNot Nothing Then lbl4.Visible = False
-                If hl14 IsNot Nothing Then hl14.Visible = False
+                If lbl4 IsNot Nothing Then If lbl4 IsNot Nothing Then lbl4.Visible = False
+                If hl14 IsNot Nothing Then If hl14 IsNot Nothing Then hl14.Visible = False
             End If
         Catch
-            If lbl4 IsNot Nothing Then lbl4.Visible = False
-            If hl14 IsNot Nothing Then hl14.Visible = False
+            If lbl4 IsNot Nothing Then If lbl4 IsNot Nothing Then lbl4.Visible = False
+            If hl14 IsNot Nothing Then If hl14 IsNot Nothing Then hl14.Visible = False
         End Try
 
         '---------------------------
@@ -584,15 +573,15 @@ End Sub
         '---------------------------
         If Not Me.Session("LoginId") Is Nothing Then
             ' Utente loggato → mostra view 1 (Ciao, Nome + Esci)
-            If mv IsNot Nothing Then mv.ActiveViewIndex = 1
+            If mv IsNot Nothing Then If mv IsNot Nothing Then mv.ActiveViewIndex = 1
 
-            Dim lblUser As Label = TryCast(mv.FindControl("lblUtente"), Label)
+            Dim lblUser As Label = If(mv Is Nothing, Nothing, TryCast(mv.FindControl("lblUtente"), Label))
             If lblUser IsNot Nothing AndAlso Session("LoginNomeCognome") IsNot Nothing Then
                 lblUser.Text = Session("LoginNomeCognome").ToString()
             End If
 
             ' *** CORRETTO QUI: niente "Is Not Nothing" su Session("LoginUltimoAccesso") ***
-            Dim lblAccesso As Label = TryCast(mv.FindControl("lblAccesso"), Label)
+            Dim lblAccesso As Label = If(mv Is Nothing, Nothing, TryCast(mv.FindControl("lblAccesso"), Label))
             If lblAccesso IsNot Nothing Then
                 Dim lastAccess As String = Convert.ToString(Session("LoginUltimoAccesso"))
                 If String.IsNullOrEmpty(lastAccess) Then
@@ -603,17 +592,17 @@ End Sub
             End If
 
             ' Ordini da saldare (badge)
-            Dim toPayString As String = get_documents_to_pay()
+            Dim toPayString As String = get_documents_toPay()
             If toPayString <> "0" Then
-                If payYourOrders IsNot Nothing Then payYourOrders.Visible = True
-                If toPay IsNot Nothing Then toPay.InnerHtml = toPayString
+                If payYourOrders IsNot Nothing Then If payYourOrders IsNot Nothing Then payYourOrders.Visible = True
+                If toPay IsNot Nothing Then CType(toPay, HtmlGenericControl).InnerHtml = toPayString
             Else
-                If payYourOrders IsNot Nothing Then payYourOrders.Visible = False
+                If payYourOrders IsNot Nothing Then If payYourOrders IsNot Nothing Then payYourOrders.Visible = False
             End If
         Else
             ' Utente NON loggato → mostra view 0 (Accedi / Registrati)
-            If mv IsNot Nothing Then mv.ActiveViewIndex = 0
-            If payYourOrders IsNot Nothing Then payYourOrders.Visible = False
+            If mv IsNot Nothing Then If mv IsNot Nothing Then mv.ActiveViewIndex = 0
+            If payYourOrders IsNot Nothing Then If payYourOrders IsNot Nothing Then payYourOrders.Visible = False
         End If
 
         'IVA tipo (campo di classe, usato solo legacy)
@@ -1025,35 +1014,28 @@ End Sub
     End Sub
 
     Public Sub ImpostaTemplate()
-        Me.Page.Title = Me.Session("AziendaNome")
         Dim imgLogoCtrl As Image = FindCtrl(Of Image)("imgLogo")
         Dim imgLogoMobileCtrl As Image = FindCtrl(Of Image)("imgLogoMobile")
         Dim lblCreditsCtrl As Label = FindCtrl(Of Label)("lblCredits")
+        Dim headC As Control = GetHeadDynamicContainer()
+        Me.Page.Title = Me.Session("AziendaNome")
+        If imgLogoCtrl IsNot Nothing Then If imgLogoCtrl IsNot Nothing Then imgLogoCtrl.ImageUrl = Me.Session("AziendaLogo")
+        If imgLogoCtrl IsNot Nothing Then If imgLogoCtrl IsNot Nothing Then imgLogoCtrl.AlternateText = Me.Session("AziendaNome") & " - " & Me.Session("AziendaDescrizione")
+        imgLogoMobileCtrl.ImageUrl = Me.Session("AziendaLogo")
+        imgLogoMobileCtrl.AlternateText = Me.Session("AziendaNome") & " - " & Me.Session("AziendaDescrizione")
+        If lblCreditsCtrl IsNot Nothing Then If lblCreditsCtrl IsNot Nothing Then lblCreditsCtrl.Text = Me.Session("Credits")
 
-        If imgLogoCtrl IsNot Nothing Then imgLogoCtrl.ImageUrl = Me.Session("AziendaLogo")
-        If imgLogoCtrl IsNot Nothing Then imgLogoCtrl.AlternateText = Me.Session("AziendaNome") & " - " & Me.Session("AziendaDescrizione")
-        If imgLogoMobileCtrl IsNot Nothing Then imgLogoMobileCtrl.ImageUrl = Me.Session("AziendaLogo")
-        If imgLogoMobileCtrl IsNot Nothing Then imgLogoMobileCtrl.AlternateText = Me.Session("AziendaNome") & " - " & Me.Session("AziendaDescrizione")
-        If lblCreditsCtrl IsNot Nothing Then lblCreditsCtrl.Text = Me.Session("Credits")
+        Dim objcss As New HtmlLink()
+        Dim obj3 As New HtmlLink()
+        objcss.Href = "~/public/style/" & Session("css")
+        objcss.Attributes.Add("rel", "stylesheet")
+        objcss.Attributes.Add("type", "text/css")
 
-        ' IMPORTANT: do NOT use Page.Header.Controls.Add here.
-        ' The <head> in this project contains inline code blocks (<% ... %>) and ASP.NET throws
-        ' "Impossibile modificare la raccolta Controls..." if we attempt to add controls at runtime.
-        ' We instead declare <link runat="server"> elements in the .master and just set Href here.
+        obj3.Attributes.Add("rel", "shortcut icon")
+        obj3.Href = Session("IconaWeb")
 
-        Dim lnkCss As HtmlLink = FindCtrl(Of HtmlLink)("lnkDynamicCss")
-        If lnkCss IsNot Nothing Then
-            lnkCss.Href = "~/public/style/" & Convert.ToString(Session("css"))
-            lnkCss.Attributes("rel") = "stylesheet"
-            lnkCss.Attributes("type") = "text/css"
-        End If
-
-        Dim lnkFavicon As HtmlLink = FindCtrl(Of HtmlLink)("lnkDynamicFavicon")
-        If lnkFavicon IsNot Nothing Then
-            lnkFavicon.Href = Convert.ToString(Session("IconaWeb"))
-            lnkFavicon.Attributes("rel") = "shortcut icon"
-            lnkFavicon.Attributes("type") = "image/x-icon"
-        End If
+        If headC IsNot Nothing Then headC.Controls.Add(objcss)
+        If headC IsNot Nothing Then headC.Controls.Add(obj3)
     End Sub
 
     Public Sub SettoreDefault()
@@ -1403,7 +1385,7 @@ End Sub
     '================================================================
     '  DOCUMENTI DA SALDARE (badge "Ordini da saldare")
     '================================================================
-    Private Function get_documents_to_pay() As String
+    Private Function get_documents_toPay() As String
         ' Se non è loggato, nessun ordine da saldare
         If Session("LoginId") Is Nothing Then
             Return "0"
@@ -1460,12 +1442,14 @@ End Sub
     ' CARRELLO HEADER (quantità + totale) - HARDENED
     '==========================================================
     Public Sub LeggiCarrello()
+        Dim lblCarrelloCountCtrl As Label = FindCtrl(Of Label)("lblCarrelloCount")
+        Dim lblCarrelloTotaleCtrl As Label = FindCtrl(Of Label)("lblCarrelloTotale")
         ' Reset di default
-        If lblCarrelloCount IsNot Nothing Then
-            lblCarrelloCount.Text = "0"
+        If lblCarrelloCountCtrl IsNot Nothing Then
+            If lblCarrelloCountCtrl IsNot Nothing Then lblCarrelloCountCtrl.Text = "0"
         End If
-        If lblCarrelloTotale IsNot Nothing Then
-            lblCarrelloTotale.Text = "0,00"
+        If lblCarrelloTotaleCtrl IsNot Nothing Then
+            If lblCarrelloTotaleCtrl IsNot Nothing Then lblCarrelloTotaleCtrl.Text = "0,00"
         End If
 
         Session("Carrello_Quantita") = 0
@@ -1488,9 +1472,6 @@ End Sub
         Dim connString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
 
         Try
-            Dim lblCarrelloCount As Label = FindCtrl(Of Label)("lblCarrelloCount")
-            Dim lblCarrelloTotale As Label = FindCtrl(Of Label)("lblCarrelloTotale")
-
             Using localConn As New MySqlConnection(connString)
                 localConn.Open()
 
@@ -1527,8 +1508,8 @@ End Sub
 
                                 Session("Carrello_Quantita") = qVal
 
-                                If lblCarrelloCount IsNot Nothing Then
-                                    lblCarrelloCount.Text = qVal.ToString()
+                                If lblCarrelloCountCtrl IsNot Nothing Then
+                                    If lblCarrelloCountCtrl IsNot Nothing Then lblCarrelloCountCtrl.Text = qVal.ToString()
                                 End If
                             End If
 
@@ -1543,9 +1524,9 @@ End Sub
 
                                 Session("Carrello_Totale_Merce") = Convert.ToDouble(totDec)
 
-                                If lblCarrelloTotale IsNot Nothing Then
+                                If lblCarrelloTotaleCtrl IsNot Nothing Then
                                     ' Formato italiano: "1.234,56"
-                                    lblCarrelloTotale.Text = totDec.ToString("N2")
+                                    If lblCarrelloTotaleCtrl IsNot Nothing Then lblCarrelloTotaleCtrl.Text = totDec.ToString("N2")
                                 End If
                             End If
                         End If
@@ -1554,11 +1535,11 @@ End Sub
             End Using
         Catch
             ' In caso di errore DB: lascio i valori a 0
-            If lblCarrelloCount IsNot Nothing Then
-                lblCarrelloCount.Text = "0"
+            If lblCarrelloCountCtrl IsNot Nothing Then
+                If lblCarrelloCountCtrl IsNot Nothing Then lblCarrelloCountCtrl.Text = "0"
             End If
-            If lblCarrelloTotale IsNot Nothing Then
-                lblCarrelloTotale.Text = "0,00"
+            If lblCarrelloTotaleCtrl IsNot Nothing Then
+                If lblCarrelloTotaleCtrl IsNot Nothing Then lblCarrelloTotaleCtrl.Text = "0,00"
             End If
             Session("Carrello_Quantita") = 0
             Session("Carrello_Totale_Merce") = 0D
@@ -1574,6 +1555,7 @@ End Sub
     ' META TAG SEO
     '==========================================================
     Sub Meta()
+        Dim headC As Control = GetHeadDynamicContainer()
     ' Meta legacy: mantiene compatibilità, ma NON sovrascrive i meta tag se già presenti nella pagina contenuto.
     Dim description As String = Me.Page.Title
     description = Regex.Replace(description, "<[^>]*>", "")
@@ -1586,7 +1568,7 @@ End Sub
         Dim metaDescription As New HtmlMeta()
         metaDescription.Name = "description"
         metaDescription.Content = description
-        TryAddToHeader(metaDescription)
+        If headC IsNot Nothing Then headC.Controls.Add(metaDescription)
     End If
 
     Dim keywords As String = Me.Page.Title
@@ -1596,7 +1578,7 @@ End Sub
         Dim metaKeywords As New HtmlMeta()
         metaKeywords.Name = "keywords"
         metaKeywords.Content = keywords
-        TryAddToHeader(metaKeywords)
+        If headC IsNot Nothing Then headC.Controls.Add(metaKeywords)
     End If
 End Sub
 
@@ -1605,10 +1587,9 @@ End Sub
     ' CERCA Cerca() harden + URL encode
     '==========================================================
     Public Sub Cerca()
-    Dim tbCercaCtrl As TextBox = FindCtrl(Of TextBox)("tbCerca")
-    Dim tbCercaMobileCtrl As TextBox = FindCtrl(Of TextBox)("tbCercaMobile")
-
-    Dim q As String = ""
+        Dim tbCercaCtrl As TextBox = FindCtrl(Of TextBox)("tbCerca")
+        Dim tbCercaMobileCtrl As TextBox = FindCtrl(Of TextBox)("tbCercaMobile")
+        Dim q As String = ""
 
     If tbCercaCtrl IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(tbCercaCtrl.Text) Then
         q = tbCercaCtrl.Text.Trim()
@@ -1616,7 +1597,7 @@ End Sub
 
     ' Mobile search fallback
     If String.IsNullOrWhiteSpace(q) Then
-        If tbCercaMobileCtrl IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(tbCercaMobileCtrl.Text) Then
+        If Not IsNothing(tbCercaMobileCtrl) AndAlso Not String.IsNullOrWhiteSpace(tbCercaMobileCtrl.Text) Then
             q = tbCercaMobileCtrl.Text.Trim()
         End If
     End If
