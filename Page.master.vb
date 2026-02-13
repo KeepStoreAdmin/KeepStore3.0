@@ -117,7 +117,7 @@ Private Sub ApplyGlobalSeoPolicy()
         If pathLower.Contains("/login") Then isNonSeo = True
         If pathLower.Contains("/logout") Then isNonSeo = True
         If pathLower.Contains("/register") Then isNonSeo = True
-        If pathLower.Contains("/pay_your_orders") Then isNonSeo = True
+        If pathLower.Contains("/payYourOrders") Then isNonSeo = True
 
         Dim applyNoIndex As Boolean = (hasRimuovi OrElse hasSt OrElse isNonSeo)
 
@@ -295,10 +295,11 @@ Dim IvaTipo As Integer
     '==========================================================
     Private Sub BindNavSettori()
         Try
-            If rptNavSettori Is Nothing Then Exit Sub
+            Dim rpt As Repeater = FindCtrl(Of Repeater)("rptNavSettori")
+            If rpt Is Nothing Then Exit Sub
             Dim data As List(Of NavSettoreItem) = LoadNavSettori()
-            rptNavSettori.DataSource = data
-            rptNavSettori.DataBind()
+            rpt.DataSource = data
+            rpt.DataBind()
         Catch ex As Exception
             'Fail-safe: non bloccare la pagina per un errore menu
         End Try
@@ -514,6 +515,13 @@ End Sub
     ' PRE-RENDER: mini-login, badge ordini, carrello, meta
     '==========================================================
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
+
+        ' dynamic controls (Onsus template does not expose all legacy IDs)
+        Dim lbl4 As Label = FindCtrl(Of Label)("Label4")
+        Dim hl14 As HyperLink = FindCtrl(Of HyperLink)("HyperLink14")
+        Dim mv As MultiView = FindCtrl(Of MultiView)("mvLogin")
+        Dim payYourOrders As Control = FindControlRecursive(Me, "pay_your_orders")
+        Dim toPay As System.Web.UI.HtmlControls.HtmlGenericControl = TryCast(FindControlRecursive(Me, "to_pay"), System.Web.UI.HtmlControls.HtmlGenericControl)
         ' STEP29: applica policy SEO globale (noindex/canonical su pagine non SEO)
         ApplyGlobalSeoPolicy()
 
@@ -525,15 +533,15 @@ End Sub
                IsNumeric(Session("AbilitaListino")) AndAlso
                CInt(Session("AbilitaListino")) > 0 Then
 
-                Me.Label4.Visible = True
-                Me.HyperLink14.Visible = True
+                If lbl4 IsNot Nothing Then If lbl4 IsNot Nothing Then lbl4.Visible = True
+                If hl14 IsNot Nothing Then If hl14 IsNot Nothing Then hl14.Visible = True
             Else
-                Me.Label4.Visible = False
-                Me.HyperLink14.Visible = False
+                If lbl4 IsNot Nothing Then If lbl4 IsNot Nothing Then lbl4.Visible = False
+                If hl14 IsNot Nothing Then If hl14 IsNot Nothing Then hl14.Visible = False
             End If
         Catch
-            Me.Label4.Visible = False
-            Me.HyperLink14.Visible = False
+            If lbl4 IsNot Nothing Then If lbl4 IsNot Nothing Then lbl4.Visible = False
+            If hl14 IsNot Nothing Then If hl14 IsNot Nothing Then hl14.Visible = False
         End Try
 
         '---------------------------
@@ -541,15 +549,15 @@ End Sub
         '---------------------------
         If Not Me.Session("LoginId") Is Nothing Then
             ' Utente loggato → mostra view 1 (Ciao, Nome + Esci)
-            Me.mvLogin.ActiveViewIndex = 1
+            If mv IsNot Nothing Then If mv IsNot Nothing Then mv.ActiveViewIndex = 1
 
-            Dim lblUser As Label = TryCast(Me.mvLogin.FindControl("lblUtente"), Label)
+            Dim lblUser As Label = If(mv Is Nothing, Nothing, TryCast(mv.FindControl("lblUtente"), Label))
             If lblUser IsNot Nothing AndAlso Session("LoginNomeCognome") IsNot Nothing Then
                 lblUser.Text = Session("LoginNomeCognome").ToString()
             End If
 
             ' *** CORRETTO QUI: niente "Is Not Nothing" su Session("LoginUltimoAccesso") ***
-            Dim lblAccesso As Label = TryCast(Me.mvLogin.FindControl("lblAccesso"), Label)
+            Dim lblAccesso As Label = If(mv Is Nothing, Nothing, TryCast(mv.FindControl("lblAccesso"), Label))
             If lblAccesso IsNot Nothing Then
                 Dim lastAccess As String = Convert.ToString(Session("LoginUltimoAccesso"))
                 If String.IsNullOrEmpty(lastAccess) Then
@@ -560,17 +568,17 @@ End Sub
             End If
 
             ' Ordini da saldare (badge)
-            Dim toPayString As String = get_documents_to_pay()
+            Dim toPayString As String = get_documents_toPay()
             If toPayString <> "0" Then
-                pay_your_orders.Visible = True
-                to_pay.InnerHtml = toPayString
+                If payYourOrders IsNot Nothing Then If payYourOrders IsNot Nothing Then payYourOrders.Visible = True
+                If toPay IsNot Nothing Then CType(toPay, HtmlGenericControl).InnerHtml = toPayString
             Else
-                pay_your_orders.Visible = False
+                If payYourOrders IsNot Nothing Then If payYourOrders IsNot Nothing Then payYourOrders.Visible = False
             End If
         Else
             ' Utente NON loggato → mostra view 0 (Accedi / Registrati)
-            Me.mvLogin.ActiveViewIndex = 0
-            pay_your_orders.Visible = False
+            If mv IsNot Nothing Then If mv IsNot Nothing Then mv.ActiveViewIndex = 0
+            If payYourOrders IsNot Nothing Then If payYourOrders IsNot Nothing Then payYourOrders.Visible = False
         End If
 
         'IVA tipo (campo di classe, usato solo legacy)
@@ -982,13 +990,16 @@ End Sub
     End Sub
 
     Public Sub ImpostaTemplate()
+        Dim imgLogoCtrl As Image = FindCtrl(Of Image)("imgLogo")
+        Dim imgLogoMobileCtrl As Image = FindCtrl(Of Image)("imgLogoMobile")
+        Dim lblCreditsCtrl As Label = FindCtrl(Of Label)("lblCredits")
         Dim headC As Control = GetHeadDynamicContainer()
         Me.Page.Title = Me.Session("AziendaNome")
-        Me.imgLogo.ImageUrl = Me.Session("AziendaLogo")
-        Me.imgLogo.AlternateText = Me.Session("AziendaNome") & " - " & Me.Session("AziendaDescrizione")
-        Me.imgLogoMobile.ImageUrl = Me.Session("AziendaLogo")
-        Me.imgLogoMobile.AlternateText = Me.Session("AziendaNome") & " - " & Me.Session("AziendaDescrizione")
-        Me.lblCredits.Text = Me.Session("Credits")
+        If imgLogoCtrl IsNot Nothing Then If imgLogoCtrl IsNot Nothing Then imgLogoCtrl.ImageUrl = Me.Session("AziendaLogo")
+        If imgLogoCtrl IsNot Nothing Then If imgLogoCtrl IsNot Nothing Then imgLogoCtrl.AlternateText = Me.Session("AziendaNome") & " - " & Me.Session("AziendaDescrizione")
+        imgLogoMobileCtrl.ImageUrl = Me.Session("AziendaLogo")
+        imgLogoMobileCtrl.AlternateText = Me.Session("AziendaNome") & " - " & Me.Session("AziendaDescrizione")
+        If lblCreditsCtrl IsNot Nothing Then If lblCreditsCtrl IsNot Nothing Then lblCreditsCtrl.Text = Me.Session("Credits")
 
         Dim objcss As New HtmlLink()
         Dim obj3 As New HtmlLink()
@@ -1350,7 +1361,7 @@ End Sub
     '================================================================
     '  DOCUMENTI DA SALDARE (badge "Ordini da saldare")
     '================================================================
-    Private Function get_documents_to_pay() As String
+    Private Function get_documents_toPay() As String
         ' Se non è loggato, nessun ordine da saldare
         If Session("LoginId") Is Nothing Then
             Return "0"
@@ -1407,12 +1418,14 @@ End Sub
     ' CARRELLO HEADER (quantità + totale) - HARDENED
     '==========================================================
     Public Sub LeggiCarrello()
+        Dim lblCarrelloCountCtrl As Label = FindCtrl(Of Label)("lblCarrelloCount")
+        Dim lblCarrelloTotaleCtrl As Label = FindCtrl(Of Label)("lblCarrelloTotale")
         ' Reset di default
-        If lblCarrelloCount IsNot Nothing Then
-            lblCarrelloCount.Text = "0"
+        If lblCarrelloCountCtrl IsNot Nothing Then
+            If lblCarrelloCountCtrl IsNot Nothing Then lblCarrelloCountCtrl.Text = "0"
         End If
-        If lblCarrelloTotale IsNot Nothing Then
-            lblCarrelloTotale.Text = "0,00"
+        If lblCarrelloTotaleCtrl IsNot Nothing Then
+            If lblCarrelloTotaleCtrl IsNot Nothing Then lblCarrelloTotaleCtrl.Text = "0,00"
         End If
 
         Session("Carrello_Quantita") = 0
@@ -1471,8 +1484,8 @@ End Sub
 
                                 Session("Carrello_Quantita") = qVal
 
-                                If lblCarrelloCount IsNot Nothing Then
-                                    lblCarrelloCount.Text = qVal.ToString()
+                                If lblCarrelloCountCtrl IsNot Nothing Then
+                                    If lblCarrelloCountCtrl IsNot Nothing Then lblCarrelloCountCtrl.Text = qVal.ToString()
                                 End If
                             End If
 
@@ -1487,9 +1500,9 @@ End Sub
 
                                 Session("Carrello_Totale_Merce") = Convert.ToDouble(totDec)
 
-                                If lblCarrelloTotale IsNot Nothing Then
+                                If lblCarrelloTotaleCtrl IsNot Nothing Then
                                     ' Formato italiano: "1.234,56"
-                                    lblCarrelloTotale.Text = totDec.ToString("N2")
+                                    If lblCarrelloTotaleCtrl IsNot Nothing Then lblCarrelloTotaleCtrl.Text = totDec.ToString("N2")
                                 End If
                             End If
                         End If
@@ -1498,11 +1511,11 @@ End Sub
             End Using
         Catch
             ' In caso di errore DB: lascio i valori a 0
-            If lblCarrelloCount IsNot Nothing Then
-                lblCarrelloCount.Text = "0"
+            If lblCarrelloCountCtrl IsNot Nothing Then
+                If lblCarrelloCountCtrl IsNot Nothing Then lblCarrelloCountCtrl.Text = "0"
             End If
-            If lblCarrelloTotale IsNot Nothing Then
-                lblCarrelloTotale.Text = "0,00"
+            If lblCarrelloTotaleCtrl IsNot Nothing Then
+                If lblCarrelloTotaleCtrl IsNot Nothing Then lblCarrelloTotaleCtrl.Text = "0,00"
             End If
             Session("Carrello_Quantita") = 0
             Session("Carrello_Totale_Merce") = 0D
@@ -1550,16 +1563,18 @@ End Sub
     ' CERCA Cerca() harden + URL encode
     '==========================================================
     Public Sub Cerca()
-    Dim q As String = ""
+        Dim tbCercaCtrl As TextBox = FindCtrl(Of TextBox)("tbCerca")
+        Dim tbCercaMobileCtrl As TextBox = FindCtrl(Of TextBox)("tbCercaMobile")
+        Dim q As String = ""
 
-    If Not String.IsNullOrWhiteSpace(Me.tbCerca.Text) Then
-        q = Me.tbCerca.Text.Trim()
+    If tbCercaCtrl IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(tbCercaCtrl.Text) Then
+        q = tbCercaCtrl.Text.Trim()
     End If
 
     ' Mobile search fallback
     If String.IsNullOrWhiteSpace(q) Then
-        If Not IsNothing(Me.tbCercaMobile) AndAlso Not String.IsNullOrWhiteSpace(Me.tbCercaMobile.Text) Then
-            q = Me.tbCercaMobile.Text.Trim()
+        If Not IsNothing(tbCercaMobileCtrl) AndAlso Not String.IsNullOrWhiteSpace(tbCercaMobileCtrl.Text) Then
+            q = tbCercaMobileCtrl.Text.Trim()
         End If
     End If
 
@@ -1568,7 +1583,7 @@ End Sub
     End If
     End Sub
 
-    Protected Sub tbCercaMobile_TextChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles tbCercaMobile.TextChanged
+    Protected Sub tbCercaMobile_TextChanged(ByVal sender As Object, ByVal e As System.EventArgs)
     Cerca()
     End Sub
 
@@ -1609,7 +1624,7 @@ End Sub
     '==========================================================
     ' FOOTER DIV (menu informativi)
     '==========================================================
-    Protected Sub DataList_DIV1_Init(ByVal sender As Object, ByVal e As System.EventArgs) Handles DataList_DIV1.Init
+    Protected Sub DataList_DIV1_Init(ByVal sender As Object, ByVal e As System.EventArgs)
         If IsNothing(Me.Session("AziendaID")) Then
             LeggiAzienda()
         End If
@@ -1618,7 +1633,7 @@ End Sub
         SqlDataFooterDIV1.SelectParameters.Add("?id", Session("AziendaID"))
     End Sub
 
-    Protected Sub DataList_DIV2_Init(ByVal sender As Object, ByVal e As System.EventArgs) Handles DataList_DIV2.Init
+    Protected Sub DataList_DIV2_Init(ByVal sender As Object, ByVal e As System.EventArgs)
         If IsNothing(Me.Session("AziendaID")) Then
             LeggiAzienda()
         End If
@@ -1627,7 +1642,7 @@ End Sub
         SqlDataFooterDIV2.SelectParameters.Add("?id", Session("AziendaID"))
     End Sub
 
-    Protected Sub DataList_DIV3_Init(ByVal sender As Object, ByVal e As System.EventArgs) Handles DataList_DIV3.Init
+    Protected Sub DataList_DIV3_Init(ByVal sender As Object, ByVal e As System.EventArgs)
         If IsNothing(Me.Session("AziendaID")) Then
             LeggiAzienda()
         End If
@@ -1636,7 +1651,7 @@ End Sub
         SqlDataFooterDIV3.SelectParameters.Add("?id", Session("AziendaID"))
     End Sub
 
-    Protected Sub DataList_DIV4_Init(ByVal sender As Object, ByVal e As System.EventArgs) Handles DataList_DIV4.Init
+    Protected Sub DataList_DIV4_Init(ByVal sender As Object, ByVal e As System.EventArgs)
         If IsNothing(Me.Session("AziendaID")) Then
             LeggiAzienda()
         End If
@@ -1861,7 +1876,7 @@ End Class
 
     End Function
 
-Protected Sub rptNavSettori_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs) Handles rptNavSettori.ItemDataBound
+Protected Sub rptNavSettori_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
     If e.Item.ItemType = ListItemType.Item OrElse e.Item.ItemType = ListItemType.AlternatingItem Then
         Dim s As NavSettoreItem = TryCast(e.Item.DataItem, NavSettoreItem)
         If s Is Nothing Then Exit Sub
