@@ -545,14 +545,20 @@ End Sub
         ApplyGlobalSeoPolicy()
 
         '---------------------------
+        '---------------------------
         ' LINK LISTINO PERSONALIZZATO
         '---------------------------
+        Dim lbl4 As Label = Nothing
+        Dim hl14 As HyperLink = Nothing
+        Dim mv As MultiView = Nothing
+        Dim payYourOrders As Control = Nothing
+        Dim toPay As System.Web.UI.HtmlControls.HtmlGenericControl = Nothing
         Try
-            Dim lbl4 As Label = FindCtrl(Of Label)("Label4")
-            Dim hl14 As HyperLink = FindCtrl(Of HyperLink)("HyperLink14")
-            Dim mv As MultiView = FindCtrl(Of MultiView)("mvLogin")
-            Dim payYourOrders As Control = FindControlRecursive(Me, "pay_your_orders")
-            Dim toPay As System.Web.UI.HtmlControls.HtmlGenericControl = TryCast(FindControlRecursive(Me, "to_pay"), System.Web.UI.HtmlControls.HtmlGenericControl)
+            lbl4 = FindCtrl(Of Label)("Label4")
+            hl14 = FindCtrl(Of HyperLink)("HyperLink14")
+            mv = FindCtrl(Of MultiView)("mvLogin")
+            payYourOrders = FindControlRecursive(Me, "pay_your_orders")
+            toPay = TryCast(FindControlRecursive(Me, "to_pay"), System.Web.UI.HtmlControls.HtmlGenericControl)
 
             If Not IsNothing(Session("AbilitaListino")) AndAlso
                IsNumeric(Session("AbilitaListino")) AndAlso
