@@ -28,10 +28,14 @@ Partial Class PageMaster
     End Function
 
     Private Sub TryAddToHeader(ByVal c As Control)
+        ' Non usare Page.Header.Controls.Add quando nel <head> ci sono blocchi <% %>:
+        ' genera HttpException "Impossibile modificare la raccolta Controls...".
+        ' Usiamo invece un PlaceHolder runat=server dentro il <head>.
         Try
             If c Is Nothing Then Exit Sub
-            If Me.Page Is Nothing OrElse Me.Page.Header Is Nothing Then Exit Sub
-            Me.Page.Header.Controls.Add(c)
+            Dim ph As PlaceHolder = FindCtrl(Of PlaceHolder)("phHeadDynamic")
+            If ph Is Nothing Then Exit Sub
+            ph.Controls.Add(c)
         Catch
         End Try
     End Sub
@@ -1032,17 +1036,24 @@ End Sub
         If imgLogoMobileCtrl IsNot Nothing Then imgLogoMobileCtrl.AlternateText = Me.Session("AziendaNome") & " - " & Me.Session("AziendaDescrizione")
         If lblCreditsCtrl IsNot Nothing Then lblCreditsCtrl.Text = Me.Session("Credits")
 
-        Dim objcss As New HtmlLink()
-        Dim obj3 As New HtmlLink()
-        objcss.Href = "~/public/style/" & Session("css")
-        objcss.Attributes.Add("rel", "stylesheet")
-        objcss.Attributes.Add("type", "text/css")
+        ' IMPORTANT: do NOT use Page.Header.Controls.Add here.
+        ' The <head> in this project contains inline code blocks (<% ... %>) and ASP.NET throws
+        ' "Impossibile modificare la raccolta Controls..." if we attempt to add controls at runtime.
+        ' We instead declare <link runat="server"> elements in the .master and just set Href here.
 
-        obj3.Attributes.Add("rel", "shortcut icon")
-        obj3.Href = Session("IconaWeb")
+        Dim lnkCss As HtmlLink = FindCtrl(Of HtmlLink)("lnkDynamicCss")
+        If lnkCss IsNot Nothing Then
+            lnkCss.Href = "~/public/style/" & Convert.ToString(Session("css"))
+            lnkCss.Attributes("rel") = "stylesheet"
+            lnkCss.Attributes("type") = "text/css"
+        End If
 
-        Me.Page.Header.Controls.Add(objcss)
-        Me.Page.Header.Controls.Add(obj3)
+        Dim lnkFavicon As HtmlLink = FindCtrl(Of HtmlLink)("lnkDynamicFavicon")
+        If lnkFavicon IsNot Nothing Then
+            lnkFavicon.Href = Convert.ToString(Session("IconaWeb"))
+            lnkFavicon.Attributes("rel") = "shortcut icon"
+            lnkFavicon.Attributes("type") = "image/x-icon"
+        End If
     End Sub
 
     Public Sub SettoreDefault()
@@ -1575,7 +1586,7 @@ End Sub
         Dim metaDescription As New HtmlMeta()
         metaDescription.Name = "description"
         metaDescription.Content = description
-        Me.Page.Header.Controls.Add(metaDescription)
+        TryAddToHeader(metaDescription)
     End If
 
     Dim keywords As String = Me.Page.Title
@@ -1585,7 +1596,7 @@ End Sub
         Dim metaKeywords As New HtmlMeta()
         metaKeywords.Name = "keywords"
         metaKeywords.Content = keywords
-        Me.Page.Header.Controls.Add(metaKeywords)
+        TryAddToHeader(metaKeywords)
     End If
 End Sub
 

@@ -31,7 +31,11 @@
     <asp:Literal ID="litGlobalSeoHead" runat="server" EnableViewState="False" />
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
-</head>
+        <!-- Injected dynamically by Page.master.vb (avoid Header.Controls.Add due to <% %> blocks) -->
+        <asp:PlaceHolder ID="phHeadDynamic" runat="server" />
+        <link id="lnkDynamicCss" runat="server" rel="stylesheet" type="text/css" />
+        <link id="lnkDynamicFavicon" runat="server" rel="shortcut icon" type="image/x-icon" />
+    </head>
 
 <body id="PageBody" runat="server" class="preload-wrapper popup-loader">
     <form id="form1" runat="server">
