@@ -1,0 +1,35 @@
+/* Taikun - Onsus override layer */
+
+/* Kill any legacy background images or side banners */
+html, body {
+  background: #fff !important;
+  background-image: none !important;
+}
+body::before, body::after {
+  background: none !important;
+  background-image: none !important;
+}
+
+/* Common legacy wrappers (safe no-op if not present) */
+#SfondoSinistra, #SfondoDestra, #bgLeft, #bgRight,
+.sfondo, .sfondo-sx, .sfondo-dx, .bg-left, .bg-right,
+.left-banner, .right-banner, .side-banner,
+.banner-left, .banner-right {
+  display: none !important;
+}
+
+/* Ensure Onsus layout can stretch full width */
+#main-content, .main-content {
+  min-height: 40vh;
+}
+
+/* Make old ASP controls look closer to Onsus */
+.table, table.grid, table.GridView, table#gvArticoli, table#gvCarrello {
+  width: 100%;
+}
+
+/* Remove unexpected margins from legacy content */
+asp\:Content, .content, .Content, .main, .Main {
+  margin: 0;
+  padding: 0;
+}
