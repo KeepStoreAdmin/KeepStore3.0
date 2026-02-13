@@ -1,4 +1,4 @@
-<%@ Master Language="VB" AutoEventWireup="false" CodeFile="Page.master.vb" Inherits="Page" %>
+<%@ Master Language="VB" AutoEventWireup="false" CodeFile="Page.master.vb" Inherits="PageMaster" %>
 
 <!DOCTYPE html>
 <html lang="it">
@@ -64,507 +64,145 @@
                  HEADER (migrazione ONus)
                  - Mantiene ID/handler esistenti (imgLogo/imgLogoMobile, tbCerca, btnSearch, mvLogin, rptNavSettori, lblCarrelloCount/lblCarrelloTotale)
                  ============================================================ -->
-            <header class="tf-header style-2">
-<div class="inner-header">
-<div class="container">
-<div class="row">
-<div class="col-md-3 col-7 d-flex align-items-center">
-<div class="logo-site">
-<a href="Default.aspx">
-<img alt="Logo" class="lazyload" decoding="async" height="128" sizes="(max-width: 328px) 100vw, 328px" src="/Public/assets/onsus/images/logo/logo.webp" srcset="/Public/assets/onsus/images/logo/logo.webp 328w" width="578"/>
-</a>
-</div>
-</div>
-<div class="col-md-6 d-none d-md-block">
-<div class="header-center justify-content-end">
-<form class="form-search-product style-2">
-<div class="select-category">
-<select class="dropdown_product_cat" id="product_cat" name="product_cat">
-<option selected="selected" value="">All categories</option>
-<option class="level-0" value="apple-products">Apple products</option>
-<option class="level-0" value="audio-equipments">Audio Equipments</option>
-<option class="level-0" value="camera-video">Camera &amp; Video</option>
-<option class="level-0" value="game-room-furniture">Game &amp; Room Furniture
-                                            </option>
-<option class="level-0" value="gaming-accessories">Gaming Accessories
-                                            </option>
-<option class="level-0" value="headphone">Headphone</option>
-<option class="level-0" value="laptop-tablet">Laptop &amp; Tablet</option>
-<option class="level-0" value="server-workstation">Server &amp; Workstation
-                                            </option>
-<option class="level-0" value="smartphone">Smartphone</option>
-<option class="level-0" value="smartwatch">Smartwatch</option>
-<option class="level-0" value="storage-digital-devices">Storage &amp; Digital
-                                                Devices</option>
-<option class="level-0" value="tv-computer-screen">TV &amp; Computer Screen
-                                            </option>
-</select>
-<ul class="select-options">
-<li class="link" rel=""><span>All categories</span></li>
-<li class="link" rel="apple-products"><span>Apple products</span> </li>
-<li class="link" rel="audio-equipments"><span>Audio Equipments</span></li>
-<li class="link" rel="camera-video"><span>Camera &amp; Video</span></li>
-<li class="link" rel="game-room-furniture"><span>Game &amp; Room
-                                                    Furniture</span></li>
-<li class="link" rel="gaming-accessories"><span>Gaming Accessories</span>
-</li>
-<li class="link" rel="headphone"><span>Headphone</span></li>
-<li class="link" rel="laptop-tablet"><span>Laptop &amp; Tablet</span></li>
-<li class="link" rel="server-workstation"><span>Server &amp; Workstation</span>
-</li>
-<li class="link" rel="smartphone"><span>Smartphone</span></li>
-<li class="link" rel="smartwatch"><span>Smartwatch</span></li>
-<li class="link" rel="storage-digital-devices"><span>Storage &amp; Digital
-                                                    Devices</span></li>
-<li class="link" rel="tv-computer-screen"><span>TV &amp; Computer Screen</span>
-</li>
-</ul>
-</div>
-<span class="br-line type-vertical bg-line"></span>
-<fieldset>
-<input placeholder="Search for products" type="text"/>
-</fieldset>
-<button class="btn-submit-form" type="submit">
-<i class="icon-search"></i>
-</button>
-</form>
-</div>
-</div>
-<div class="col-md-3 col-5 d-flex align-items-center justify-content-end">
-<div class="header-right">
-<div class="support-wrap d-none d-xl-flex">
-<img alt="" class="flex-shrink-0" src="icons/headphone-2.svg" style="height: 44px; width: 44px;"/>
-<div class="content">
-<p class="call-us body-text-3">
-                                            Call us now:
-                                            <a class="text-primary link-main body-md-2" href="tel:1234567">+1(800) 123
-                                                4567</a>
-</p>
-<p class="mail-us body-text-3">
-                                            Email:
-                                            <a class="text-secondary link-main" href="mailto:Onsus@support.com">Onsus@support.com</a>
-</p>
-</div>
-</div>
-<ul class="nav-icon justify-content-xl-center d-xl-none">
-<li class="nav-account">
-<a class="link nav-icon-item" data-bs-toggle="modal" href="#log">
-<span>
-<svg fill="none" height="23" viewbox="0 0 22 23" width="22" xmlns="http://www.w3.org/2000/svg">
-<path d="M10.9998 11.5283C5.20222 11.5283 0.485352 16.2452 0.485352 22.0428C0.485352 22.2952 0.69017 22.5 0.942518 22.5C1.19487 22.5 1.39968 22.2952 1.39968 22.0428C1.39968 16.749 5.70606 12.4426 10.9999 12.4426C16.2937 12.4426 20.6001 16.749 20.6001 22.0428C20.6001 22.2952 20.8049 22.5 21.0572 22.5C21.3096 22.5 21.5144 22.2952 21.5144 22.0428C21.5144 16.2443 16.7975 11.5283 10.9998 11.5283Z" fill="#333E48" stroke="#333E48" stroke-width="0.3"></path>
-<path d="M10.9999 0.5C8.22767 0.5 5.97119 2.75557 5.97119 5.52866C5.97119 8.30174 8.22771 10.5573 10.9999 10.5573C13.772 10.5573 16.0285 8.30174 16.0285 5.52866C16.0285 2.75557 13.772 0.5 10.9999 0.5ZM10.9999 9.64303C8.73146 9.64303 6.88548 7.79705 6.88548 5.52866C6.88548 3.26027 8.73146 1.41429 10.9999 1.41429C13.2682 1.41429 15.1142 3.26027 15.1142 5.52866C15.1142 7.79705 13.2682 9.64303 10.9999 9.64303Z" fill="#333E48" stroke="#333E48" stroke-width="0.3"></path>
-</svg>
-</span>
-<p class="body-small">
-                                                Sign in
-                                            </p>
-</a>
-</li>
-<li class="nav-cart">
-<a class="link nav-icon-item" data-bs-toggle="offcanvas" href="#shoppingCart">
-<span>
-<svg fill="none" height="26" viewbox="0 0 26 26" width="26" xmlns="http://www.w3.org/2000/svg">
-<path d="M8.55865 19.1096C6.8483 19.1096 5.46191 20.496 5.46191 22.2064C5.46191 23.9165 6.8483 25.3029 8.55865 25.3029C10.2688 25.3029 11.6552 23.9165 11.6552 22.2064C11.6534 20.4969 10.2681 19.1114 8.55865 19.1096ZM8.55865 24.1644C7.47712 24.1644 6.60037 23.2877 6.60037 22.2064C6.60037 21.1248 7.47712 20.2481 8.55865 20.2481C9.63996 20.2481 10.5167 21.1248 10.5167 22.2064C10.5167 23.2877 9.63996 24.1644 8.55865 24.1644Z" fill="#333E48"></path>
-<path d="M25.436 6.1144H5.33643L4.92663 3.82036C4.67403 2.40819 3.56715 1.30353 2.15453 1.05382L0.668757 0.792113C0.359017 0.736969 0.0635073 0.943536 0.00836329 1.25305C-0.0465584 1.56279 0.159787 1.8583 0.469527 1.91345L1.96086 2.17516C2.90187 2.34193 3.63853 3.07859 3.80529 4.01959L5.82027 15.387C6.05819 16.7472 7.24001 17.7393 8.62083 17.738H20.5746C21.8305 17.7418 22.9396 16.9197 23.3014 15.7172L25.9767 6.84861C26.0263 6.67562 25.995 6.48929 25.8913 6.34209C25.7831 6.19956 25.6147 6.11551 25.436 6.1144ZM22.214 15.3813C21.9992 16.1035 21.3337 16.5975 20.5804 16.5938H8.62661C7.79745 16.596 7.08769 15.9994 6.94739 15.182L5.54144 7.24707H24.6731L22.214 15.3813Z" fill="#333E48"></path>
-<path d="M20.512 19.1096C18.8017 19.1096 17.4153 20.496 17.4153 22.2064C17.4153 23.9165 18.8017 25.3029 20.512 25.3029C22.2221 25.3029 23.6085 23.9165 23.6085 22.2064C23.6068 20.4969 22.2215 19.1114 20.512 19.1096ZM20.512 24.1644C19.4305 24.1644 18.5537 23.2877 18.5537 22.2064C18.5537 21.1248 19.4305 20.2481 20.512 20.2481C21.5933 20.2481 22.4701 21.1248 22.4701 22.2064C22.4701 23.2877 21.5933 24.1644 20.512 24.1644Z" fill="#333E48"></path>
-</svg>
-</span>
-<p class="body-small">
-                                                Your cart:
-                                            </p>
-</a>
-</li>
-<li class="d-flex align-items-center d-xl-none">
-<a aria-controls="mobileMenu" class="mobile-button" data-bs-toggle="offcanvas" href="#mobileMenu">
-<span></span>
-</a>
-</li>
-</ul>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="header-bottom bg-gray-5 d-none d-xl-block">
-<div class="container relative">
-<div class="row">
-<div class="col-xl-9 col-12">
-<div class="header-bt-left">
-<nav class="main-nav-menu">
-<ul class="nav-list">
-<li class="nav-item active pst-unset">
-<a class="item-link link body-md-2 fw-semibold" href="#">
-<span>Home</span>
-<i class="icon icon-arrow-down"></i>
-</a>
-<div class="sub-menu-container mega-menu mega-home">
-<div class="container">
-<ul class="row-demo">
-<li class="demo-item active">
-<a href="Default.aspx">
-<div class="demo-image relative">
-<img alt="" class="lazyload" data-src="/Public/assets/onsus/images/demo/home-1.webp" height="218" src="/Public/assets/onsus/images/demo/home-1.webp" width="199"/>
-</div>
-<p class="demo-label">
-<span class="demo-new">New</span>
-<span>Trend</span>
-</p>
-<span class="demo-name">Home 1</span>
-</a>
-</li>
-<li class="demo-item">
-<a href="home-2.html">
-<div class="demo-image relative">
-<img alt="" class="lazyload" data-src="/Public/assets/onsus/images/demo/home-2.webp" height="218" src="/Public/assets/onsus/images/demo/home-2.webp" width="199"/>
-</div>
-<p class="demo-label">
-<span class="demo-new">New</span>
-<span class="demo-hot">New</span>
-</p>
-<span class="demo-name">Home 2</span>
-</a>
-</li>
-<li class="demo-item">
-<a href="home-3.html">
-<div class="demo-image relative">
-<img alt="" class="lazyload" data-src="/Public/assets/onsus/images/demo/home-3.webp" height="218" src="/Public/assets/onsus/images/demo/home-3.webp" width="199"/>
-</div>
-<p class="demo-label">
-<span class="demo-new">New</span>
-</p>
-<span class="demo-name">Home 3</span>
-</a>
-</li>
-<li class="demo-item">
-<a href="home-4.html">
-<div class="demo-image relative">
-<img alt="" class="lazyload" data-src="/Public/assets/onsus/images/demo/home-4.webp" height="218" src="/Public/assets/onsus/images/demo/home-4.webp" width="199"/>
-</div>
-<p class="demo-label">
-<span class="demo-new">New</span>
-</p>
-<span class="demo-name">Home 4</span>
-</a>
-</li>
-<li class="demo-item">
-<a href="home-5.html">
-<div class="demo-image relative">
-<img alt="" class="lazyload" data-src="/Public/assets/onsus/images/demo/home-5.webp" height="218" src="/Public/assets/onsus/images/demo/home-5.webp" width="199"/>
-</div>
-<p class="demo-label">
-<span class="demo-new">New</span>
-<span>Trend</span>
-</p>
-<span class="demo-name">Home 5</span>
-</a>
-</li>
-<li class="demo-item">
-<a href="home-6.html">
-<div class="demo-image relative">
-<img alt="" class="lazyload" data-src="/Public/assets/onsus/images/demo/home-6.webp" height="218" src="/Public/assets/onsus/images/demo/home-6.webp" width="199"/>
-</div>
-<p class="demo-label">
-<span class="demo-new">New</span>
-<span>Trend</span>
-</p>
-<span class="demo-name">Home 6</span>
-</a>
-</li>
-<li class="demo-item">
-<a href="home-7.html">
-<div class="demo-image relative">
-<img alt="" class="lazyload" data-src="/Public/assets/onsus/images/demo/home-7.webp" height="218" src="/Public/assets/onsus/images/demo/home-7.webp" width="199"/>
-</div>
-<p class="demo-label">
-<span class="demo-new">New</span>
-<span class="demo-hot">Hot</span>
-</p>
-<span class="demo-name">Home 7</span>
-</a>
-</li>
-<li class="demo-item">
-<a href="home-8.html">
-<div class="demo-image relative">
-<img alt="" class="lazyload" data-src="/Public/assets/onsus/images/demo/home-8.webp" height="218" src="/Public/assets/onsus/images/demo/home-8.webp" width="199"/>
-</div>
-<p class="demo-label">
-<span class="demo-new">New</span>
-<span class="demo-hot">Hot</span>
-</p>
-<span class="demo-name">Home 8</span>
-</a>
-</li>
-<li class="demo-item">
-<a href="home-9.html">
-<div class="demo-image relative">
-<img alt="" class="lazyload" data-src="/Public/assets/onsus/images/demo/home-9.webp" height="218" src="/Public/assets/onsus/images/demo/home-9.webp" width="199"/>
-</div>
-<p class="demo-label">
-<span class="demo-new">New</span>
-<span class="demo-hot">Hot</span>
-</p>
-<span class="demo-name">Home 9</span>
-</a>
-</li>
-<li class="demo-item">
-<a href="home-10.html">
-<div class="demo-image relative">
-<img alt="" class="lazyload" data-src="/Public/assets/onsus/images/demo/home-10.webp" height="218" src="/Public/assets/onsus/images/demo/home-10.webp" width="199"/>
-</div>
-<p class="demo-label">
-<span class="demo-new">New</span>
-<span class="demo-hot">Hot</span>
-</p>
-<span class="demo-name">Home 10</span>
-</a>
-</li>
-<li class="demo-item">
-<a href="home-11.html">
-<div class="demo-image relative">
-<img alt="" class="lazyload" data-src="/Public/assets/onsus/images/demo/home-11.webp" height="218" src="/Public/assets/onsus/images/demo/home-11.webp" width="199"/>
-</div>
-<p class="demo-label">
-<span class="demo-new">New</span>
-<span class="demo-hot">Hot</span>
-</p>
-<span class="demo-name">Home 11</span>
-</a>
-</li>
-</ul>
-<!-- <div class="view-all-demo text-center">
-                                                        <a href="#modalDemo" data-bs-toggle="modal"
-                                                            class="tf-btn d-inline-flex">
-                                                            <span class="text-white">View All Demos</span>
-                                                        </a>
-                                                    </div> -->
-</div>
-</div>
-</li>
-<li class="nav-item">
-<a class="item-link body-md-2 fw-semibold" href="#">
-<span>Shop</span>
-<i class="icon icon-arrow-down"></i>
-</a>
-<div class="sub-menu-container mega-menu text-nowrap">
-<div class="wrapper-sub-menu">
-<div class="mega-menu-item">
-<p class="menu-heading body-small">SHOP LAYOUT</p>
-<ul class="menu-list">
-<li>
-<a class="body-md-2 link" href="articoli.aspx">
-<span>Shop Default</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="shop-right-sidebar.html">
-<span>Shop Right Sidebar</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="shop-fullwidth.html">
-<span>Shop Full Width</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="cart.aspx">
-<span>Shop Cart</span>
-</a>
-</li>
-</ul>
-</div>
-<div class="mega-menu-item">
-<p class="menu-heading body-small">WOO PAGE</p>
-<ul class="menu-list">
-<li>
-<a class="body-md-2 link" href="compare.aspx">
-<span>Compare</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="wishlist.aspx">
-<span>Wishlist</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="checkout.aspx">
-<span>Check Out</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="order-details.html">
-<span>Order Detail</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="track-your-order.html">
-<span>Track Your Order</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="myaccount.aspx">
-<span>My Account</span>
-</a>
-</li>
-</ul>
-</div>
-</div>
-</div>
-</li>
-<li class="nav-item">
-<a class="item-link body-md-2 fw-semibold" href="#">
-<span>Product</span>
-<i class="icon icon-arrow-down"></i>
-</a>
-<div class="sub-menu-container mega-menu text-nowrap">
-<div class="wrapper-sub-menu">
-<div class="mega-menu-item">
-<p class="menu-heading body-small">PRODUCT LAYOUTS</p>
-<ul class="menu-list">
-<li>
-<a class="body-md-2 link" href="articolo.aspx">
-<span>Product Detail</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="product-thumbs-right.html">
-<span>Product Right Thumbnail</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="product-thumbs-left.html">
-<span>Product Left Thumbnail</span>
-</a>
-</li>
-</ul>
-</div>
-<div class="mega-menu-item">
-<p class="menu-heading body-small">PRODUCT DETAILS</p>
-<ul class="menu-list">
-<li>
-<a class="body-md-2 link" href="product-detail-2.html">
-<span>Product Detail Style 2</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="product-detail-3.html">
-<span>Product Detail Style 3</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="product-detail-4.html">
-<span>Product Detail Style 4</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="product-inner-zoom.html">
-<span>Product Inner Zoom</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="product-inner-circle-zoom.html">
-<span>Product Inner Circle Zoom</span>
-</a>
-</li>
-</ul>
-</div>
-</div>
-</div>
-</li>
-<li class="nav-item">
-<a class="item-link body-md-2 fw-semibold" href="#">
-<span>Blog</span>
-<i class="icon icon-arrow-down"></i>
-</a>
-<div class="sub-menu-container">
-<ul class="sub-menu-list">
-<li>
-<a class="body-md-2 link" href="blog-list.html">
-<span>Blog List</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="blog-grid.html">
-<span>Blog Grid</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="blog-detail.html">
-<span>Blog Detail</span>
-</a>
-</li>
-</ul>
-</div>
-</li>
-<li class="nav-item relative">
-<a class="item-link body-md-2 fw-semibold" href="#">
-<span>Page</span>
-<i class="icon icon-arrow-down"></i>
-</a>
-<div class="sub-menu-container">
-<ul class="sub-menu-list">
-<li>
-<a class="body-md-2 link" href="contact.aspx">
-<span>Contact</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="about.aspx">
-<span>About</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="privacy.html">
-<span>Privacy</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="faq.html">
-<span>FAQs</span>
-</a>
-</li>
-<li>
-<a class="body-md-2 link" href="404.html">
-<span>404</span>
-</a>
-</li>
-</ul>
-</div>
-</li>
-</ul>
-</nav>
-</div>
-</div>
-<div class="col-xl-3 d-none d-xl-flex align-items-center justify-content-end">
-<div class="header-bt-right">
-<ul class="nav-icon style-2">
-<li><a data-bs-toggle="offcanvas" href="#compare">
-<svg fill="none" height="26" viewbox="0 0 26 26" width="26" xmlns="http://www.w3.org/2000/svg">
-<path d="M7.85714 10.4286L4.42857 13.8572L1 10.4286" stroke="#333E48" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"></path>
-<path d="M18.1429 15.625L21.5714 12.1964L25 15.625" stroke="#333E48" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"></path>
-<path d="M7 20.7142C7 19.2941 5.84874 18.1428 4.42858 18.1428C3.00841 18.1428 1.85715 19.2941 1.85715 20.7142C1.85715 22.1344 3.00841 23.2856 4.42858 23.2856C5.84874 23.2856 7 22.1344 7 20.7142Z" stroke="#333E48" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"></path>
-<path d="M24.1429 5.28575C24.1429 3.86559 22.9916 2.71432 21.5714 2.71432C20.1513 2.71432 19 3.86559 19 5.28575C19 6.70591 20.1513 7.85718 21.5714 7.85718C22.9916 7.85718 24.1429 6.70591 24.1429 5.28575Z" stroke="#333E48" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"></path>
-<path d="M4.42856 13L4.42856 8.5C4.42856 7.64752 4.76721 6.82995 5.37 6.22716C5.9728 5.62436 6.79036 5.28571 7.64284 5.28571L19 5.28571" stroke="#333E48" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"></path>
-<path d="M21.5714 13.0535L21.5714 17.5535C21.5714 18.406 21.2328 19.2236 20.63 19.8264C20.0272 20.4292 19.2096 20.7678 18.3571 20.7678L7 20.7678" stroke="#333E48" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2"></path>
-</svg>
-<span class="count-box">0</span>
-</a></li>
-<li><a class="d-flex" href="wishlist.aspx">
-<i class="icon-hearth text-main fs-26 link"></i>
-<span class="count-box">4</span>
-</a></li>
-<li class="nav-shop-cart">
-<a class="d-flex" data-bs-toggle="offcanvas" href="#shoppingCart">
-<i class="icon-cart text-main fs-26 link"></i>
-<span class="count-box">10</span>
-</a>
-</li>
-</ul>
-</div>
-</div>
-</div>
-</div>
-</div>
-</header>
+            <header class="tf-header">
+                <div class="inner-header line-bt">
+                    <div class="container">
+                        <div class="header-inner d-flex align-items-center justify-content-between gap-20">
+
+                            <!-- Logo -->
+                            <div class="header-left d-flex align-items-center">
+                                <a class="logo-site" href="/Default.aspx" aria-label="Home">
+                                    <asp:Image ID="imgLogo" runat="server" AlternateText="Taikun" CssClass="d-none d-lg-inline-block" />
+                                    <asp:Image ID="imgLogoMobile" runat="server" AlternateText="Taikun" CssClass="d-inline-block d-lg-none" />
+                                </a>
+                            </div>
+
+                            <!-- Search (desktop) -->
+                            <div class="header-center d-none d-lg-block flex-grow-1 px-3">
+                                <div class="form-search-product w-100">
+                                    <fieldset class="w-100">
+                                        <asp:TextBox ID="tbCerca" runat="server" CssClass="form-control" placeholder="Cerca prodotti..." AutoPostBack="True" />
+                                    </fieldset>
+                                    <asp:Button ID="btnSearch" runat="server" CssClass="btn-submit-form" Text="" OnClick="btnSearch_ServerClick" />
+                                </div>
+                            </div>
+
+                            <!-- Account + Cart -->
+                            <div class="header-right d-flex align-items-center gap-20">
+
+                                <!-- Login / Account (legacy: mvLogin) -->
+                                <asp:MultiView ID="mvLogin" runat="server">
+                                    <asp:View ID="viewGuest" runat="server">
+                                        <a class="tf-btn-icon style-2" href="/login.aspx" aria-label="Accedi">
+                                            <i class="icon icon-user"></i>
+                                            <span class="body-text-3 fw-normal d-none d-xl-inline">Accedi</span>
+                                        </a>
+                                    </asp:View>
+                                    <asp:View ID="viewLogged" runat="server">
+                                        <div class="d-flex align-items-center gap-12">
+                                            <a class="tf-btn-icon style-2" href="/myaccount.aspx" aria-label="Account">
+                                                <i class="icon icon-user"></i>
+                                                <span class="body-text-3 fw-normal d-none d-xl-inline">
+                                                    <asp:Label ID="lblUtente" runat="server" Text="" />
+                                                    <asp:Label ID="lblAccesso" runat="server" Text="" CssClass="text-main-2 ms-1" />
+                                                </span>
+                                            </a>
+                                            <a class="tf-btn btn-line" href="/logout.aspx">Esci</a>
+                                        </div>
+                                    </asp:View>
+                                </asp:MultiView>
+
+                                <!-- Cart (legacy: lblCarrelloCount / lblCarrelloTotale) -->
+                                <a class="tf-btn-icon style-2" href="/carrello.aspx" aria-label="Carrello">
+                                    <i class="icon icon-cart2"></i>
+                                    <span class="count-box">
+                                        <asp:Label ID="lblCarrelloCount" runat="server" Text="0" />
+                                    </span>
+                                    <span class="body-text-3 fw-normal d-none d-xl-inline">Carrello</span>
+                                </a>
+
+                                <span class="body-text-3 text-main-2 d-none d-xl-inline" style="white-space:nowrap;">
+                                    <asp:Label ID="lblCarrelloTotale" runat="server" Text="" />
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Search (mobile) -->
+                        <div class="d-lg-none mt-3">
+                            <div class="form-search-product w-100">
+                                <fieldset class="w-100">
+                                    <asp:TextBox ID="tbCercaMobile" runat="server" CssClass="form-control" placeholder="Cerca prodotti..." AutoPostBack="True" />
+                                </fieldset>
+                                <asp:Button ID="btnSearchMobile" runat="server" CssClass="btn-submit-form" Text="" OnClick="btnSearch_ServerClick" />
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Menu (desktop) -->
+                <div class="header-bottom d-none d-lg-block">
+                    <div class="container">
+                        <nav class="main-menu">
+                            <ul class="navigation-menu navbar-nav flex-row flex-wrap gap-20 mb-0" id="nav">
+                                <li class="nav-item"><a class="nav-link" href="/Default.aspx">Home</a></li>
+                                <li class="nav-item"><a class="nav-link" href="/articoli.aspx" id="HomeCatalogo">Catalogo</a></li>
+
+                                <asp:Repeater ID="rptNavSettori" runat="server" OnItemDataBound="rptNavSettori_ItemDataBound">
+                                    <ItemTemplate>
+                                        <li class="nav-item dropdown d-flex align-items-center">
+                                            <a class="nav-link" href="<%# Eval("DefaultUrl") %>"><%# SafeText(Eval("Descrizione")) %></a>
+                                            <a class="nav-link dropdown-toggle dropdown-toggle-split" href="#" id='<%# "navSettore" & Eval("Id") %>' role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <span class="visually-hidden">Toggle Dropdown</span>
+                                            </a>
+                                            <ul class="dropdown-menu" aria-labelledby='<%# "navSettore" & Eval("Id") %>'>
+                                                <li>
+                                                    <a class="dropdown-item fw-semibold" href="<%# Eval("DefaultUrl") %>">Tutto <%# SafeText(Eval("Descrizione")) %></a>
+                                                </li>
+                                                <li><hr class="dropdown-divider" /></li>
+
+                                                <asp:Repeater ID="rptNavCategorie" runat="server" OnItemDataBound="rptNavCategorie_ItemDataBound">
+                                                    <ItemTemplate>
+                                                        <li>
+                                                            <a class="dropdown-item fw-semibold" href="<%# Eval("DefaultUrl") %>"><%# SafeText(Eval("Descrizione")) %></a>
+                                                        </li>
+
+                                                        <asp:Repeater ID="rptNavTipologie" runat="server">
+                                                            <ItemTemplate>
+                                                                <li>
+                                                                    <a class="dropdown-item ps-4" href="<%# Eval("DefaultUrl") %>"><%# SafeText(Eval("Descrizione")) %></a>
+                                                                </li>
+                                                            </ItemTemplate>
+                                                        </asp:Repeater>
+
+                                                        <li><hr class="dropdown-divider" /></li>
+                                                    </ItemTemplate>
+                                                </asp:Repeater>
+                                            </ul>
+                                        </li>
+                                    </ItemTemplate>
+                                </asp:Repeater>
+
+                                <!-- Listino personalizzato (legacy) -->
+                                <li class="nav-item">
+                                    <asp:Label ID="Label4" runat="server" Text="" Visible="False" CssClass="me-2" />
+                                    <asp:HyperLink ID="HyperLink14" runat="server" Text="" Visible="False" NavigateUrl="#" />
+                                </li>
+
+                                <!-- Pagamenti ordini -->
+                                <li id="pay_your_orders" runat="server" class="nav-item" visible="false">
+                                    <a class="nav-link" href="/pay_your_orders.aspx">
+                                        Pagamenti
+                                        <span id="to_pay" runat="server" class="badge bg-danger ms-1">0</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </header>
 
             <!-- Main Content -->
             <main>
@@ -577,171 +215,89 @@
 
             <!-- Footer (ONus) -->
             <footer class="tf-footer">
-<div class="ft-body-wrap">
-<div class="ft-body-inner">
-<div class="container">
-<div class="ft-inner flex-wrap flex-xl-nowrap">
-<div class="ft-logo">
-<a class="logo-site" href="Default.aspx">
-<img alt="Logo" class="lazyload" decoding="async" height="128" src="/Public/assets/onsus/images/logo/logo.webp" srcset="/Public/assets/onsus/images/logo/logo.webp 328w" width="185"/>
-</a>
-<div class="method-payment">
-<p>
-                                        We accept:
-                                    </p>
-<ul class="method-list">
-<li>
-<img alt="Payment" src="/Public/assets/onsus/images/payment/visa.svg"/>
-</li>
-<li>
-<img alt="Payment" src="/Public/assets/onsus/images/payment/paypal.svg"/>
-</li>
-<li>
-<img alt="Payment" src="/Public/assets/onsus/images/payment/discover.svg"/>
-</li>
-<li>
-<img alt="Payment" src="/Public/assets/onsus/images/payment/master.svg"/>
-</li>
-</ul>
-</div>
-</div>
-<ul class="ft-link-wrap w-100 tf-grid-layout md-col-2 lg-col-4">
-<li class="footer-col-block">
-<h6 class="ft-heading footer-heading-mobile fw-semibold">Get help</h6>
-<div class="tf-collapse-content">
-<ul class="ft-menu-list">
-<li><a class="link" href="privacy.html">Delivery Information</a></li>
-<li><a class="link" href="faq.html">Sale Terms &amp; Conditions</a></li>
-<li><a class="link" href="privacy.html">Returns &amp; Refunds</a></li>
-<li><a class="link" href="privacy.html">Privacy Notice</a></li>
-<li><a class="link" href="faq.html">Shopping FAQs</a></li>
-</ul>
-</div>
-</li>
-<li class="footer-col-block">
-<h6 class="ft-heading footer-heading-mobile fw-semibold">Popular categories</h6>
-<div class="tf-collapse-content">
-<ul class="ft-menu-list">
-<li><a class="link" href="articoli.aspx">Laptops &amp; Computers</a></li>
-<li><a class="link" href="articoli.aspx">Cameras &amp; Photography</a></li>
-<li><a class="link" href="articoli.aspx">Smart Phones &amp; Tablets</a></li>
-<li><a class="link" href="articoli.aspx">Video Games &amp; Consoles</a></li>
-<li><a class="link" href="articoli.aspx">TV &amp; Audio</a></li>
-<li><a class="link" href="articoli.aspx">Gadgets</a></li>
-<li><a class="link" href="articoli.aspx">Waterproof Headphones</a></li>
-</ul>
-</div>
-</li>
-<li class="footer-col-block">
-<h6 class="ft-heading footer-heading-mobile fw-semibold">Customer Care</h6>
-<div class="tf-collapse-content">
-<ul class="ft-menu-list">
-<li><a class="link" href="myaccount.aspx">My Account</a></li>
-<li><a class="link" href="track-your-order.html">Track your Order</a></li>
-<li><a class="link" href="contact.aspx">Customer Service</a></li>
-<li><a class="link" href="privacy.html">Returns/Exchange</a></li>
-<li><a class="link" href="faq.html">FAQs</a></li>
-<li><a class="link" href="contact.aspx">Product Support</a></li>
-</ul>
-</div>
-</li>
-<li class="footer-col-block type-sp-2">
-<h6 class="ft-heading footer-heading-mobile fw-semibold">Contact</h6>
-<div class="tf-collapse-content">
-<ul class="ft-menu-list ft-contact-list">
-<li>
-<i class="icon">
-<i class="icon-location"></i>
-</i>
-<a class="link" href="#">
-                                                    8500 Lorem Street
-                                                    Chicago, IL 55030 Dolor sit amet
-                                                </a>
-</li>
-<li>
-<i class="icon">
-<i class="icon-phone"></i>
-</i>
-<a class="product-title" href="tel:88001234567">
-<span class="product-title text-primary">
-                                                        +8(800) 123 4567
-                                                    </span>
-</a>
-</li>
-<li>
-<span class="icon">
-<i class="icon-direction"></i>
-</span>
-<a class="" href="mailto:onsus@support.com">
-<span class="text-primary">
-                                                        onsus@support.com
-                                                    </span>
-</a>
-</li>
-</ul>
-</div>
-</li>
-</ul>
-</div>
-</div>
-</div>
-<div class="ft-body-center bg-gray">
-<div class="container">
-<div class="ft-center justify-content-xxl-between">
-<p class="notice text-white justify-content-xxl-between">
-<span class="main-title fw-semibold">
-<img alt="" src="/Public/assets/onsus/images/mail.svg"/>
-                                    10% Off Your First Order
-                                </span>
-<span class="body-text-3">
-                                    Be the first to know about offers, new products and discounted products
-                                </span>
-</p>
-<form accept-charset="utf-8" class="form-newsletter" data-mailchimp="true" method="post">
-<div class="subscribe-content">
-<fieldset class="email">
-<input aria-required="true" class="subscribe-email type-fs-2" name="email-form" placeholder="Enter your email address" required="" tabindex="0" type="email"/>
-</fieldset>
-<div class="button-submit">
-<button class="subscribe-button tf-btn btn-large hover-shine" type="submit">
-<span class="body-md-2 fw-semibold text-white">
-                                                Subscribe
-                                            </span>
-</button>
-</div>
-</div>
-</form>
-</div>
-</div>
-</div>
-<div class="ft-body-bottom">
-<div class="container">
-<div class="ft-bottom">
-<ul class="social-list">
-<li><a href="https://www.facebook.com"><i class="icon-facebook"></i></a></li>
-<li><a href="https://x.com/"><i class="icon-x"></i></a></li>
-<li><a href="https://www.instagram.com/"><i class="icon-instagram"></i></a></li>
-<li><a href="https://www.linkedin.com/"><i class="icon-linkin"></i></a></li>
-<li><a href="https://web.whatsapp.com/"><i class="icon-whatapp"></i></a></li>
-</ul>
-<ul class="ft-menu-list-2 body-text-3">
-<li><a class="title-sidebar link fw-bold" href="blog-grid.html">New arrivals</a></li>
-<li><a class="title-sidebar link fw-bold" href="blog-grid.html">Best sale</a></li>
-<li><a class="title-sidebar link fw-bold" href="blog-grid.html">Value of the day</a>
-</li>
-<li><a class="title-sidebar link fw-bold" href="blog-grid.html">Top 100 offers</a></li>
-<li><a class="title-sidebar link fw-bold" href="blog-grid.html">Blog</a></li>
-<li><a class="title-sidebar link fw-bold" href="blog-grid.html"><i class="icon-fire"></i> 50% OFF</a>
-</li>
-</ul>
-<p class="nocopy caption text-center">
-<span class="fw-medium">Onsus.</span>© 2025. All right reserved - Designed by ThemesFlat
-                            </p>
-</div>
-</div>
-</div>
-</div>
-</footer>
+                <div class="ft-body-wrap">
+                    <div class="ft-body-inner">
+                        <div class="container">
+                            <div class="ft-inner flex-wrap flex-xl-nowrap">
+
+                                <div class="ft-logo">
+                                    <a href="/Default.aspx" class="logo-site" aria-label="Home">
+                                        <asp:Image ID="imgLogoFooter" runat="server" AlternateText="Taikun" Visible="false" />
+									<img src="<%= ThemeManager.Asset("images/logo/logo.svg") %>" alt="Logo" />
+                                    </a>
+                                </div>
+
+                                <ul class="ft-link-wrap w-100 tf-grid-layout md-col-2 lg-col-4">
+
+                                    <li class="footer-col-block">
+                                        <h6 class="ft-heading footer-heading-mobile fw-semibold">Informazioni</h6>
+                                        <div class="tf-collapse-content">
+                                            <asp:DataList ID="DataList_DIV1" runat="server" DataSourceID="SqlDataFooterDIV1" RepeatLayout="Flow">
+                                                <HeaderTemplate><ul class="ft-menu-list"></HeaderTemplate>
+                                                <ItemTemplate>
+                                                    <li><a class="link" href="<%# Eval("link_esterno") %>" target="<%# Eval("target") %>"><%# Eval("nome") %></a></li>
+                                                </ItemTemplate>
+                                                <FooterTemplate></ul></FooterTemplate>
+                                            </asp:DataList>
+                                        </div>
+                                    </li>
+
+                                    <li class="footer-col-block">
+                                        <h6 class="ft-heading footer-heading-mobile fw-semibold">Servizi</h6>
+                                        <div class="tf-collapse-content">
+                                            <asp:DataList ID="DataList_DIV2" runat="server" DataSourceID="SqlDataFooterDIV2" RepeatLayout="Flow">
+                                                <HeaderTemplate><ul class="ft-menu-list"></HeaderTemplate>
+                                                <ItemTemplate>
+                                                    <li><a class="link" href="<%# Eval("link_esterno") %>" target="<%# Eval("target") %>"><%# Eval("nome") %></a></li>
+                                                </ItemTemplate>
+                                                <FooterTemplate></ul></FooterTemplate>
+                                            </asp:DataList>
+                                        </div>
+                                    </li>
+
+                                    <li class="footer-col-block">
+                                        <h6 class="ft-heading footer-heading-mobile fw-semibold">Supporto</h6>
+                                        <div class="tf-collapse-content">
+                                            <asp:DataList ID="DataList_DIV3" runat="server" DataSourceID="SqlDataFooterDIV3" RepeatLayout="Flow">
+                                                <HeaderTemplate><ul class="ft-menu-list"></HeaderTemplate>
+                                                <ItemTemplate>
+                                                    <li><a class="link" href="<%# Eval("link_esterno") %>" target="<%# Eval("target") %>"><%# Eval("nome") %></a></li>
+                                                </ItemTemplate>
+                                                <FooterTemplate></ul></FooterTemplate>
+                                            </asp:DataList>
+                                        </div>
+                                    </li>
+
+                                    <li class="footer-col-block type-sp-2">
+                                        <h6 class="ft-heading footer-heading-mobile fw-semibold">Altro</h6>
+                                        <div class="tf-collapse-content">
+                                            <asp:DataList ID="DataList_DIV4" runat="server" DataSourceID="SqlDataFooterDIV4" RepeatLayout="Flow">
+                                                <HeaderTemplate><ul class="ft-menu-list"></HeaderTemplate>
+                                                <ItemTemplate>
+                                                    <li><a class="link" href="<%# Eval("link_esterno") %>" target="<%# Eval("target") %>"><%# Eval("nome") %></a></li>
+                                                </ItemTemplate>
+                                                <FooterTemplate></ul></FooterTemplate>
+                                            </asp:DataList>
+                                        </div>
+                                    </li>
+
+                                </ul>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ft-body-center bg-gray">
+                        <div class="container">
+                            <div class="ft-body-center-inner d-flex flex-wrap justify-content-between align-items-center gap-10 py-3">
+                                <p class="mb-0 body-text-3">&copy; <%: DateTime.Now.Year %> Taikun. Tutti i diritti riservati.
+                                    <asp:Label ID="lblCredits" runat="server" CssClass="ms-2"></asp:Label>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </footer>
 
         </div><!-- /#wrapper -->
 
