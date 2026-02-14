@@ -17,76 +17,7 @@
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <style type="text/css">
-        .account-box {
-            border: 1px solid #ddd;
-            padding: 15px;
-            margin-bottom: 20px;
-            background-color: #fff;
-        }
-
-        .account-box h2 {
-            font-size: 20px;
-            margin-bottom: 10px;
-        }
-
-        .account-section-title {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
-
-        .account-field-label {
-            font-weight: bold;
-        }
-
-        .account-field-value {
-            margin-bottom: 5px;
-        }
-
-        .ks-loading-panel {
-            border: 1px solid #ddd;
-            background-color: #fff;
-            padding: 20px;
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        .ks-spinner-circle {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            border: 3px solid #ccc;
-            border-top-color: #333;
-            animation: ks-spin 0.8s linear infinite;
-            margin: 0 auto 8px;
-        }
-
-        @keyframes ks-spin {
-            from { transform: rotate(0deg); }
-            to   { transform: rotate(360deg); }
-        }
-
-        .ks-edit-buttons {
-            margin-top: 20px;
-            text-align: right;
-        }
-
-        .ks-edit-buttons .tf-btn-icon {
-            margin-left: 5px;
-        }
-
-        .text-muted-small {
-            font-size: 0.9rem;
-            color: #666;
-        }
-
-        .text-error {
-            color: red;
-        }
-    </style>
-
-    <script type="text/javascript">
+<script type="text/javascript">
         function ksHideSpinnerAndShowContent() {
             var spinner = document.getElementById('<%= pnlLoading.ClientID %>');
             var content = document.getElementById('<%= pnlContent.ClientID %>');
@@ -134,7 +65,6 @@
 </section>
 
 <div class="ks-myaccount">
-
 
         <!-- Breakcrumbs (ONUS) -->
         <div class="tf-sp-1 pb-0">

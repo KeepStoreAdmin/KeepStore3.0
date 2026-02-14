@@ -1,1 +1,3 @@
-/* Override specifici Taikun/KeepStore. */
+/* Override grafici KeepStore (sovrascrive il template)
+   - Usalo per correzioni rapide senza toccare i CSS vendor
+*/

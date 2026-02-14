@@ -1,50 +1,25 @@
-/*!
- * keepstore-init.js
- * Init "safe" per il template (non rompe se alcune librerie non sono presenti su certe pagine).
- */
-(function () {
-  "use strict";
+/* KeepStore init - fail-safe
+   Non deve lanciare eccezioni se alcune librerie non sono presenti su una pagina.
+*/
+(function (w) {
+  'use strict';
 
-  function callIfFn(fnName) {
-    try {
-      var fn = window[fnName];
-      if (typeof fn === "function") fn();
-    } catch (e) { /* noop */ }
+  function safe(fn) {
+    try { fn(); } catch (e) { /* no-op */ }
   }
 
-  // Base init: chiamalo sempre
-  window.keepStoreInit = function () {
-    // WOW.js
-    try { if (window.WOW) new WOW().init(); } catch (e) {}
-
-    // nice-select (jQuery plugin)
-    try {
-      if (window.jQuery && jQuery.fn && typeof jQuery.fn.niceSelect === "function") {
-        jQuery("select").niceSelect();
-      }
-    } catch (e) {}
-
-    // bootstrap-select (jQuery plugin)
-    try {
-      if (window.jQuery && jQuery.fn && typeof jQuery.fn.selectpicker === "function") {
-        jQuery(".selectpicker").selectpicker();
-      }
-    } catch (e) {}
+  w.keepStoreInit = function () {
+    // hook globale futuro
   };
 
-  // Init pagina shop (filtri, listing)
-  window.keepStoreShopInit = function () {
-    // Se esiste la funzione del template shop.js, lasciala fare.
-    callIfFn("shopInit");
+  w.keepStoreShopInit = function () {
+    // hook shop/listing futuro
   };
 
-  // Init pagina prodotto (zoom/drift ecc.)
-  window.keepStoreProductInit = function () {
-    // Drift
-    try {
-      if (window.Drift) {
-        // drift.min.js del template inizializza spesso via data-attributes
-      }
-    } catch (e) {}
+  w.keepStoreProductInit = function () {
+    // hook product future
   };
-})();
+
+  // Auto-init base
+  safe(function () { w.keepStoreInit && w.keepStoreInit(); });
+})(window);

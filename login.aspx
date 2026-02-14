@@ -5,34 +5,7 @@
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <style>
-        /* Login - layout Onsus */
-        .ks-auth-card {
-            padding: 28px;
-            border: 1px solid rgba(0,0,0,.08);
-            border-radius: 12px;
-            background: #fff;
-        }
-
-        .ks-auth-card .validator,
-        .ks-auth-card .validator span,
-        .ks-auth-card .validator div {
-            display: block;
-            margin-top: 6px;
-        }
-
-        .ks-auth-card .validator,
-        .ks-auth-card .validator span {
-            color: #dc3545;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .ks-auth-links a {
-            display: inline-block;
-            margin-top: 6px;
-        }
-    </style>
+    
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">

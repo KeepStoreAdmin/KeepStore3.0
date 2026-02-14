@@ -9,50 +9,7 @@
 </asp:Content>
 
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
-    <style type="text/css">
-        /* KeepStore STEP20 (ONUS): spinner */
-        #spinner_myaccount {
-            display: none;
-            position: fixed;
-            z-index: 9999;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(255, 255, 255, 0.75);
-            text-align: center;
-            padding-top: 180px;
-        }
-
-        #spinner_myaccount .ks-spinner-box {
-            display: inline-block;
-            background: #ffffff;
-            border-radius: 14px;
-            padding: 20px 26px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-        }
-
-        /* Sidebar sticky (desktop) */
-        .ks-myaccount .wrap-sidebar-account {
-            position: sticky;
-            top: 110px;
-        }
-
-        @media (max-width: 991px) {
-            .ks-myaccount .wrap-sidebar-account {
-                position: static;
-                top: auto;
-            }
-        }
-
-        /* Small polish for quick links */
-        .ks-myaccount .ks-quick-links .tf-btn {
-            width: 100%;
-            justify-content: center;
-        }
-    </style>
-
-    <script type="text/javascript">
+<script type="text/javascript">
         function showMyAccountSpinner() {
             var sp = document.getElementById('spinner_myaccount');
             if (sp) {
@@ -106,7 +63,7 @@
         <div class="ks-spinner-box">
             <div><b>Attendere, caricamento area personale...</b></div>
             <br />
-            <img src="Public/assets/onsus/images/spinner.gif" alt="Caricamento..." />
+            <img src="Public/assets/keepstore/images/spinner.gif" alt="Caricamento..." />
         </div>
     </div>
 

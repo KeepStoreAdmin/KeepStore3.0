@@ -3,15 +3,9 @@
     Wishlist
 </asp:Content>
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <style type="text/css">
-        /* Small alignment for legacy wishlist table inside ONSUS layout */
-        .ks-myaccount table { width: 100%; }
-        .ks-myaccount .GridView, .ks-myaccount .grid { width: 100%; }
-    </style>
 </asp:Content>
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
 <div class="ks-myaccount">
-
 
         <!-- Breakcrumbs (ONUS) -->
         <div class="tf-sp-1 pb-0">
@@ -120,18 +114,7 @@
             Return ResolveUrl("~/Public/foto/" & imgname)
         End Function
     </script>
-
-    <style type="text/css">
-        /* Micro-adattamenti per la GridView in stile ONUS */
-        .ks-table-clean { width: 100%; }
-        .ks-table-clean th, .ks-table-clean td { vertical-align: middle; }
-        .ks-wl-actions { gap: 10px; }
-        .ks-qty { width: 64px; text-align: right; }
-        .ks-hidden { display: none !important; }
-        .ks-btn-image { border: 0; background: transparent; }
-    </style>
-
-    <!-- Breakcrumbs -->
+<!-- Breakcrumbs -->
     <div class="tf-sp-3 pb-0">
         <div class="container">
             <ul class="breakcrumbs">

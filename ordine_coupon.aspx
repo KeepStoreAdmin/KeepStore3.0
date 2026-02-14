@@ -9,11 +9,6 @@
     <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-
-<style>
-        /* KeepStore: pagina tecnica di redirect coupon (layout ONUS minimale) */
-        .ks-coupon-center{max-width:760px;margin:0 auto}
-    </style>
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">

@@ -83,14 +83,14 @@
                                     <p class="price fw-semibold">Scopri</p>
                                 </div>
                                 <div class="box-image">
-                                    <img src="/Public/assets/keepstore/images/banner/banner-department-1.png" alt="" onerror="this.style.display='none'" />
+                                    <img src="/Public/assets/onsus/images/banner/banner-department-1.png" alt="" onerror="this.style.display='none'" />
                                 </div>
                             </a>
                         </div>
                     </div>
                 </div>
 
-                <!-- CENTER: Slideshow (dinamico) --> (dinamico) -->
+                <!-- CENTER: Slideshow (dinamico) -->
                 <div class="wrap-item-2">
                     <div class="banner-image-product-4 style-2 hover-img">
                         <div class="item-product">

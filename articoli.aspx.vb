@@ -470,19 +470,27 @@ If SettoriId > 0 And OfferteId = 0 Then
             Me.Session("SpedGratis") = 0
         End If
 
-        If Me.Page.IsPostBack = False Then
-            Session.Item("Controllo_Variabile_Promo") = 0
-        End If
+        'Filtro PROMO (InOfferta=1) - logica compatta e stabile:
+' - attivo se arriva ?inpromo=1 oppure se Session("Promo")=1 (one-shot)
+' - applica il filtro sia a strWhere che a strWhere2
+Dim promoActive As Boolean = (InOfferta = 1)
 
-        If ((Session.Item("Controllo_Variabile_Promo") = 0) And (Session.Item("Promo") = 1)) Then
-            Session.Item("Controllo_Variabile_Promo") = 1
-            Session.Item("Promo") = 0
-            strWhere = strWhere & " AND (InOfferta = 1) "
-        End If
+If Not promoActive Then
+    Dim promoObj As Object = Session.Item("Promo")
+    Dim promoInt As Integer = 0
+    If promoObj IsNot Nothing AndAlso Integer.TryParse(promoObj.ToString(), promoInt) AndAlso promoInt = 1 Then
+        promoActive = True
+        'one-shot: dopo il primo load lo resettiamo
+        Session.Item("Promo") = 0
+    End If
+End If
 
-        If ((Session.Item("Controllo_Variabile_Promo") = 1) And (Session.Item("Promo") = 0) And (Me.Page.IsPostBack = True)) Then
-            strWhere = strWhere & " AND (InOfferta = 1) "
-        End If
+If promoActive Then
+    'allineiamo anche la variabile per il resto della pagina (datasource promo)
+    InOfferta = 1
+    strWhere &= " AND (InOfferta = 1) "
+    strWhere2 &= " AND (varticolibase.InOfferta = 1) "
+End If
 
         If CheckBox_Disponibile.Checked = True Then
             Session.Item("Disp") = 0
@@ -566,19 +574,20 @@ End If
 If hasPmin Then sdsArticoli.SelectParameters.Add(New Parameter("Pmin", TypeCode.Decimal, pminVal.ToString(Globalization.CultureInfo.InvariantCulture)))
 If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.Decimal, pmaxVal.ToString(Globalization.CultureInfo.InvariantCulture)))
 
-        If (InOfferta = 1) Then
-            strWhere = strWhere & " AND (InOfferta = 1) "
-        End If
-
         Dim TC As Integer = Session("TC")
         If TC = 1 Then
+            ' Filtro Taglia/Colore: applicato sia alla query principale (join già presente)
+            ' sia a strWhere2 (usato per i conteggi filtri laterali) tramite EXISTS su TCid.
             If Drop_Filtra_Taglia.SelectedIndex > 0 Then
                 strWhere &= " AND articoli_tagliecolori.TagliaId=?TagliaId"
-Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("TagliaId", TypeCode.Int32, Drop_Filtra_Taglia.SelectedValue))
+                strWhere2 &= " AND EXISTS (SELECT 1 FROM articoli_tagliecolori atc WHERE atc.id = vsuperarticoli.TCid AND atc.TagliaId=?TagliaId)"
+                Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("TagliaId", TypeCode.Int32, Drop_Filtra_Taglia.SelectedValue))
             End If
+
             If Drop_Filtra_Colore.SelectedIndex > 0 Then
                 strWhere &= " AND articoli_tagliecolori.ColoreId=?ColoreId"
-Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("ColoreId", TypeCode.Int32, Drop_Filtra_Colore.SelectedValue))
+                strWhere2 &= " AND EXISTS (SELECT 1 FROM articoli_tagliecolori atc WHERE atc.id = vsuperarticoli.TCid AND atc.ColoreId=?ColoreId)"
+                Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("ColoreId", TypeCode.Int32, Drop_Filtra_Colore.SelectedValue))
             End If
         End If
                 ' --- Ricerca (VB2012-safe, param-only) ---
@@ -627,7 +636,7 @@ Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("Col
 
 strWhere = strWhere & " GROUP BY id"
 
-        ' Ordinamento: whitelist + default deterministico
+        ' Ordinamento (whitelist)
         Select Case Drop_Ordinamento.SelectedValue
             Case "P_offerta"
                 strWhere &= " ORDER BY InOfferta DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
@@ -640,16 +649,15 @@ strWhere = strWhere & " GROUP BY id"
             Case "P_recenti"
                 strWhere &= " ORDER BY id DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
             Case "P_codice"
-                strWhere &= " ORDER BY Codice ASC, id DESC"
+                strWhere &= " ORDER BY Codice ASC, (Giacenza-Impegnata) DESC"
             Case "P_descrizione"
-                strWhere &= " ORDER BY Descrizione1 ASC, id DESC"
-            Case Else ' "P_rilevanza" o valori non previsti
-                ' Se esiste una ricerca testuale (q), valorizziamo prima la disponibilità e la popolarità.
-                ' Mantiene un risultato stabile anche senza q.
-                strWhere &= " ORDER BY (Giacenza-Impegnata) DESC, visite DESC, id DESC"
+                strWhere &= " ORDER BY Descrizione1 ASC, (Giacenza-Impegnata) DESC"
+            Case Else
+                ' Default: rilevanza (stabile)
+                strWhere &= " ORDER BY (Giacenza-Impegnata) DESC, id DESC"
         End Select
 
-If TC = 1 Then
+        If TC = 1 Then
             strWhere = strWhere & " ,articoli_tagliecolori.TagliaId, articoli_tagliecolori.ColoreId"
         End If
 
@@ -694,6 +702,15 @@ If TC = 1 Then
         CopyParams(Me.sdsArticoli.SelectParameters, Me.sdsGruppo.SelectParameters)
         CopyParams(Me.sdsArticoli.SelectParameters, Me.sdsSottogruppo.SelectParameters)
         If (InOfferta = 1) Then
+            ' Extra promo filters: ONLY parameter placeholders (mr/tp/gr/sg) generated by BuildInParamsForSds.
+            ' No raw string values are concatenated into SQL.
+            Dim promoExtraFilters As New List(Of String)
+            If Not String.IsNullOrEmpty(inMr) Then promoExtraFilters.Add("(MarcheId IN (" & inMr & "))")
+            If Not String.IsNullOrEmpty(inTp) Then promoExtraFilters.Add("(TipologieId IN (" & inTp & "))")
+            If Not String.IsNullOrEmpty(inGr) Then promoExtraFilters.Add("(GruppiId IN (" & inGr & "))")
+            If Not String.IsNullOrEmpty(inSg) Then promoExtraFilters.Add("(SottogruppiId IN (" & inSg & "))")
+            Dim promoExtraWhere As String = If(promoExtraFilters.Count > 0, " AND " & String.Join(" AND ", promoExtraFilters.ToArray()), "")
+
             Me.sdsTipologie.SelectCommand =
                 "SELECT *, COUNT(TipologieId) AS Numero FROM (" &
                 " SELECT MarcheId, MarcheDescrizione, SettoriId, SettoriDescrizione, CategorieId, CategorieDescrizione," &
@@ -704,12 +721,8 @@ If TC = 1 Then
                 " AND (NListino=?NListino)" &
                 " AND ((CURDATE()>=offerteDatainizio) AND (CURDATE()<=offerteDataFine))" &
                 " AND (TipologieDescrizione IS NOT NULL)" &
-                " AND (" &
-                IIf(Not String.IsNullOrEmpty(MarcheId) AndAlso inMr <> "", "(MarcheId in (" & inMr & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(TipologieId) AndAlso inTp <> "", "(TipologieId in (" & inTp & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(GruppiId) AndAlso inGr <> "", "(GruppiId in (" & inGr & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(SottogruppiId) AndAlso inSg <> "", "(SottogruppiId in (" & inSg & "))", "(1=1)") &
-                ") GROUP BY id) AS t1 GROUP BY Tipologieid"
+                promoExtraWhere &
+                " GROUP BY id) AS t1 GROUP BY Tipologieid"
 
             Me.sdsGruppo.SelectCommand =
                 "SELECT *, COUNT(GruppiId) AS Numero FROM (" &
@@ -721,12 +734,8 @@ If TC = 1 Then
                 " AND (NListino=?NListino)" &
                 " AND ((CURDATE()>=offerteDatainizio) AND (CURDATE()<=offerteDataFine))" &
                 " AND (GruppiDescrizione IS NOT NULL)" &
-                " AND (" &
-                IIf(Not String.IsNullOrEmpty(MarcheId) AndAlso inMr <> "", "(MarcheId in (" & inMr & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(TipologieId) AndAlso inTp <> "", "(TipologieId in (" & inTp & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(GruppiId) AndAlso inGr <> "", "(GruppiId in (" & inGr & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(SottogruppiId) AndAlso inSg <> "", "(SottogruppiId in (" & inSg & "))", "(1=1)") &
-                ") GROUP BY id) AS t1 GROUP BY GruppiId"
+                promoExtraWhere &
+                " GROUP BY id) AS t1 GROUP BY GruppiId"
 
             Me.sdsSottogruppo.SelectCommand =
                 "SELECT *, COUNT(SottogruppiId) AS Numero FROM (" &
@@ -738,12 +747,8 @@ If TC = 1 Then
                 " AND (NListino=?NListino)" &
                 " AND ((CURDATE()>=offerteDatainizio) AND (CURDATE()<=offerteDataFine))" &
                 " AND (SottogruppiDescrizione IS NOT NULL)" &
-                " AND (" &
-                IIf(Not String.IsNullOrEmpty(MarcheId) AndAlso inMr <> "", "(MarcheId in (" & inMr & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(TipologieId) AndAlso inTp <> "", "(TipologieId in (" & inTp & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(GruppiId) AndAlso inGr <> "", "(GruppiId in (" & inGr & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(SottogruppiId) AndAlso inSg <> "", "(SottogruppiId in (" & inSg & "))", "(1=1)") &
-                ") GROUP BY id) AS t1 GROUP BY Gruppiid"
+                promoExtraWhere &
+                " GROUP BY id) AS t1 GROUP BY Gruppiid"
 
             Me.sdsMarche.SelectCommand =
                 "SELECT *, COUNT(MarcheId) AS Numero FROM (" &
@@ -755,12 +760,8 @@ If TC = 1 Then
                 " AND (NListino=?NListino)" &
                 " AND ((CURDATE()>=offerteDatainizio) AND (CURDATE()<=offerteDataFine))" &
                 " AND (MarcheDescrizione IS NOT NULL)" &
-                " AND (" &
-                IIf(Not String.IsNullOrEmpty(MarcheId) AndAlso inMr <> "", "(MarcheId in (" & inMr & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(TipologieId) AndAlso inTp <> "", "(TipologieId in (" & inTp & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(GruppiId) AndAlso inGr <> "", "(GruppiId in (" & inGr & "))", "(1=1)") & " AND " &
-                IIf(Not String.IsNullOrEmpty(SottogruppiId) AndAlso inSg <> "", "(SottogruppiId in (" & inSg & "))", "(1=1)") &
-                ") GROUP BY id) AS t1 GROUP BY marcheid"
+                promoExtraWhere &
+                " GROUP BY id) AS t1 GROUP BY marcheid"
         End If
 
         Dim conn As New MySqlConnection
@@ -2091,26 +2092,37 @@ If TC = 1 Then
     End Function
 
     Private Function BuildInParamsForSds(ByVal idsCsv As String,
-                                    ByVal paramPrefix As String,
-                                    ByVal pc As System.Web.UI.WebControls.ParameterCollection) As String
-    If String.IsNullOrWhiteSpace(idsCsv) Then Return ""
+                                        ByVal paramPrefix As String,
+                                        ByVal pc As System.Web.UI.WebControls.ParameterCollection) As String
+        If String.IsNullOrWhiteSpace(idsCsv) Then Return ""
 
-    Dim parts() As String = idsCsv.Split(","c)
-    Dim placeholders As New List(Of String)()
-    Dim i As Integer = 0
+        Dim parts() As String = idsCsv.Split(","c)
+        Dim placeholders As New List(Of String)()
+        Dim i As Integer = 0
 
-    For Each p As String In parts
-        Dim v As String = p.Trim()
-        If v = "" Then Continue For
+        For Each p As String In parts
+            Dim vRaw As String = p.Trim()
+            If vRaw = "" Then Continue For
 
-        Dim name As String = paramPrefix & i.ToString()
-        placeholders.Add("?" & name)
-        pc.Add(New System.Web.UI.WebControls.Parameter(name, TypeCode.Int32, v))
-        i += 1
-    Next
+            Dim v As Integer
+            If Not Integer.TryParse(vRaw, v) Then Continue For
+            If v <= 0 Then Continue For
 
-    If placeholders.Count = 0 Then Return ""
-    Return String.Join(",", placeholders.ToArray())
+            Dim name As String = paramPrefix & i.ToString()
+
+            ' Avoid accidental collisions if the same prefix gets reused.
+            If pc(name) IsNot Nothing Then
+                i += 1
+                Continue For
+            End If
+
+            placeholders.Add("?" & name)
+            pc.Add(New System.Web.UI.WebControls.Parameter(name, TypeCode.Int32, v.ToString()))
+            i += 1
+        Next
+
+        If placeholders.Count = 0 Then Return ""
+        Return String.Join(",", placeholders.ToArray())
     End Function
 
     ' Escape value for safe inclusion inside MySQL string literals within LIKE patterns.

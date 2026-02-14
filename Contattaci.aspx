@@ -5,18 +5,7 @@
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <style>
-        .ks-contact .bottom { margin-top: 24px; }
-        .ks-contact .contact-wrap { background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px; padding: 18px; }
-        .ks-contact .contact-info { background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px; padding: 18px; }
-        .ks-contact .contact-info .info-list { list-style: none; padding-left: 0; margin: 0; }
-        .ks-contact .contact-info .info-list li { display:flex; gap:10px; padding: 10px 0; border-bottom: 1px dashed rgba(0,0,0,0.08); }
-        .ks-contact .contact-info .info-list li:last-child { border-bottom: 0; }
-        .ks-contact .contact-info .icon { width: 34px; height: 34px; border-radius: 10px; display:flex; align-items:center; justify-content:center; background:#f6f6f6; }
-        .ks-contact iframe { border-radius: 14px; width: 100%; }
-        .ks-contact .form-contact textarea { height: 170px; }
-        .ks-contact .alert { border-radius: 14px; }
-    </style>
+    <%-- NOTE: stili Contattaci spostati in /Public/assets/keepstore/css/keepstore.css --%>
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">

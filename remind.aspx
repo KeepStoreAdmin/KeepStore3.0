@@ -5,72 +5,7 @@
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <style type="text/css">
-        /* mini spinner per operazione in corso (invio email) */
-        #remind-spinner {
-            margin-top: 16px;
-            text-align: center;
-            display: none;
-        }
-
-        #remind-spinner img {
-            width: 40px;
-            height: 40px;
-        }
-
-        #remind-spinner p {
-            margin-top: 10px;
-            font-size: 0.95rem;
-            color: #555;
-        }
-
-        /* Spinner pagina */
-        .ks-loading-panel {
-            border: 1px solid rgba(0,0,0,.08);
-            background-color: #fff;
-            padding: 20px;
-            text-align: center;
-            margin: 20px 0;
-            border-radius: 12px;
-        }
-
-        .ks-spinner-circle {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            border: 3px solid #ccc;
-            border-top-color: #333;
-            animation: ks-spin 0.8s linear infinite;
-            margin: 0 auto 8px;
-        }
-
-        @keyframes ks-spin {
-            from { transform: rotate(0deg); }
-            to   { transform: rotate(360deg); }
-        }
-
-        /* Card stile Onsus */
-        .ks-auth-card {
-            padding: 28px;
-            border: 1px solid rgba(0,0,0,.08);
-            border-radius: 12px;
-            background: #fff;
-        }
-
-        .ks-auth-card .validator,
-        .ks-auth-card .validator span,
-        .ks-auth-card .validator div {
-            display: block;
-            margin-top: 6px;
-        }
-
-        .ks-auth-card .validator,
-        .ks-auth-card .validator span {
-            color: #dc3545;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-    </style>
+    
 
     <script type="text/javascript">
         // Spinner invio email (già presente)

@@ -9,20 +9,6 @@
     <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-
-<style>
-        /* KeepStore: ONUS alignment for ordine.aspx (solo layout, nessuna logica VB toccata) */
-        .ks-order-center{max-width:860px;margin:0 auto}
-        .ks-alert{padding:14px 16px;border-radius:14px;border:1px solid rgba(0,0,0,0.10);background:#fff}
-        .ks-alert-danger{border-color:#ffd0d0;background:#fff1f1;color:#b00020}
-        .ks-order-actions{margin-top:14px}
-        .ks-order-actions .tf-btn{display:inline-flex}
-        .ks-order-inline-label{display:inline-block}
-        .ks-order-inline-label + .ks-order-inline-label{margin-left:6px}
-        @media (max-width: 575px){
-            .ks-order-actions .tf-btn{width:100%;justify-content:center}
-        }
-    </style>
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
@@ -186,6 +172,5 @@
     </section>
     </div>
 </section>
-
 
 </asp:Content>

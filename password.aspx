@@ -9,58 +9,7 @@
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <style type="text/css">
-        .pwd-box {
-            border: 1px solid #ddd;
-            padding: 15px;
-            margin-bottom: 20px;
-            background-color: #fff;
-            max-width: 500px;
-        }
-
-        .pwd-box h2 {
-            font-size: 20px;
-            margin-bottom: 15px;
-        }
-
-        .pwd-row {
-            margin-bottom: 10px;
-        }
-
-        .pwd-row label {
-            display: block;
-            margin-bottom: 3px;
-            font-weight: 600;
-        }
-
-        .pwd-message {
-            margin-top: 10px;
-        }
-
-        /* Spinner pagina */
-        .ks-loading-panel {
-            border: 1px solid #ddd;
-            background-color: #fff;
-            padding: 20px;
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        .ks-spinner-circle {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            border: 3px solid #ccc;
-            border-top-color: #333;
-            animation: ks-spin 0.8s linear infinite;
-            margin: 0 auto 8px;
-        }
-
-        @keyframes ks-spin {
-            from { transform: rotate(0deg); }
-            to   { transform: rotate(360deg); }
-        }
-    </style>
+    
 
     <script type="text/javascript">
         function ksHideSpinnerAndShowContent() {

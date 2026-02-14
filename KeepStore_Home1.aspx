@@ -19,7 +19,7 @@
                                 </h6>
                                 <ul class="menu-category-list">
                                     <li class="menu-item">
-                                        <a href="shop-default.html" class="item-link body-text-3">
+                                        <a href="KeepStore_ShopDefault.aspx" class="item-link body-text-3">
                                             <span>
                                                 <i class="icon icon-clothing"></i>
                                                 Apparel
@@ -28,27 +28,27 @@
                                         <div class="sub-menu-container d-flex">
 
                                             <ul class="sub-menu-list">
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">New
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">New
                                                         arrival</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Steall
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Steall
                                                         the deals</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Best
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Best
                                                         sellers</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Men</a>
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Men</a>
                                                 </li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Season
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Season
                                                         collection</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">This
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">This
                                                         Week's Highlights</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Home
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Home
                                                         wear</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Underwear</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Travel
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Underwear</a></li>
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Travel
                                                         clothes</a></li>
                                             </ul>
                                             <div class="cls-category style-abs abs-2 hover-img">
-                                                <a href="product-detail.html" class="img-box img-style d-block">
-                                                    <img src="images/collection/autumn-cls.webp" data-src="images/collection/autumn-cls.webp" alt=""
+                                                <a href="articoli.aspx" class="img-box img-style d-block">
+                                                    <img src="/Public/assets/keepstore/images/collection/autumn-cls.webp" data-src="/Public/assets/keepstore/images/collection/autumn-cls.webp" alt=""
                                                         class=" lazyload">
                                                 </a>
                                                 <div class="content text-center">
@@ -57,7 +57,7 @@
                                                         <p class="product-title-2 text-uppercase">Autumn collection</p>
                                                     </div>
                                                     <div class="box-btn">
-                                                        <a href="product-detail.html" class="tf-btn btn-line-white text-main d-inline-flex">
+                                                        <a href="articoli.aspx" class="tf-btn btn-line-white text-main d-inline-flex">
                                                             <span>Shop now</span>
                                                         </a>
                                                     </div>
@@ -66,7 +66,7 @@
                                         </div>
                                     </li>
                                     <li class="menu-item">
-                                        <a href="shop-default.html" class="item-link body-text-3">
+                                        <a href="KeepStore_ShopDefault.aspx" class="item-link body-text-3">
                                             <span>
                                                 <span class="icon">
                                                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -104,22 +104,22 @@
                                         </a>
                                         <div class="sub-menu-container">
                                             <ul class="sub-menu-list">
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Engine</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Lubricants & Fluids</a>
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Engine</a></li>
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Lubricants & Fluids</a>
                                                 </li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Best
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Best
                                                         sellers</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Cooling
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Cooling
                                                         System</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Exhaust
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Exhaust
                                                         System</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Battery</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Interior</a></li>
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Battery</a></li>
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Interior</a></li>
                                             </ul>
                                         </div>
                                     </li>
                                     <li class="menu-item">
-                                        <a href="shop-default.html" class="item-link body-text-3">
+                                        <a href="KeepStore_ShopDefault.aspx" class="item-link body-text-3">
                                             <span>
                                                 <i class="icon icon-beauti"></i>
                                                 Beauty & personal care
@@ -127,18 +127,18 @@
                                         </a>
                                         <div class="sub-menu-container">
                                             <ul class="sub-menu-list">
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Skincare</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Makeup</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Haircare</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Fragrance
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Skincare</a></li>
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Makeup</a></li>
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Haircare</a></li>
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Fragrance
                                                         & Deodorant</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Body
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Body
                                                         Care</a></li>
                                             </ul>
                                         </div>
                                     </li>
                                     <li class="menu-item">
-                                        <a href="shop-default.html" class="item-link body-text-3">
+                                        <a href="KeepStore_ShopDefault.aspx" class="item-link body-text-3">
                                             <span>
                                                 <i class="icon icon-computer"></i>
                                                 Consumer Electronics
@@ -146,18 +146,18 @@
                                         </a>
                                         <div class="sub-menu-container">
                                             <ul class="sub-menu-list">
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Mobile
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Mobile
                                                         Devices</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Computers</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Audio &
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Computers</a></li>
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Audio &
                                                         Video</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Smart
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Smart
                                                         Home</a></li>
                                             </ul>
                                         </div>
                                     </li>
                                     <li class="menu-item">
-                                        <a href="shop-default.html" class="item-link body-text-3">
+                                        <a href="KeepStore_ShopDefault.aspx" class="item-link body-text-3">
                                             <span>
                                                 <i class="icon icon-sofa"></i>
                                                 Furniture
@@ -165,15 +165,15 @@
                                         </a>
                                         <div class="sub-menu-container">
                                             <ul class="sub-menu-list">
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Living
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Living
                                                         Room</a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Dining &
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Dining &
                                                         Kitchen</a></li>
                                             </ul>
                                         </div>
                                     </li>
                                     <li class="menu-item">
-                                        <a href="shop-default.html" class="item-link body-text-3">
+                                        <a href="KeepStore_ShopDefault.aspx" class="item-link body-text-3">
                                             <span>
                                                 <i class="icon icon-computer-wifi"></i>
                                                 Home products
@@ -181,7 +181,7 @@
                                         </a>
                                     </li>
                                     <li class="menu-item">
-                                        <a href="shop-default.html" class="item-link body-text-3">
+                                        <a href="KeepStore_ShopDefault.aspx" class="item-link body-text-3">
                                             <span>
                                                 <i class="icon icon-machine"></i>
                                                 Machinery
@@ -189,15 +189,15 @@
                                         </a>
                                         <div class="sub-menu-container">
                                             <ul class="sub-menu-list">
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Industrial </a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Construction </a></li>
-                                                <li class="sub-menu-item"><a href="shop-default.html" class="body-text-3 link">Metal &
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Industrial </a></li>
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Construction </a></li>
+                                                <li class="sub-menu-item"><a href="KeepStore_ShopDefault.aspx" class="body-text-3 link">Metal &
                                                         Woodworking</a></li>
                                             </ul>
                                         </div>
                                     </li>
                                     <li class="menu-item">
-                                        <a href="shop-default.html" class="item-link body-text-3">
+                                        <a href="KeepStore_ShopDefault.aspx" class="item-link body-text-3">
                                             <span>
                                                 <i class="icon icon-jewelry"></i>
                                                 Timepieces, jewelry & eyewear
@@ -205,7 +205,7 @@
                                         </a>
                                     </li>
                                     <li class="menu-item">
-                                        <a href="shop-default.html" class="item-link body-text-3">
+                                        <a href="KeepStore_ShopDefault.aspx" class="item-link body-text-3">
                                             <span>
                                                 <i class="icon icon-tool"></i>
                                                 Tool & hardware
@@ -213,7 +213,7 @@
                                         </a>
                                     </li>
                                     <li class="menu-item">
-                                        <a href="shop-default.html" class="item-link body-text-3">
+                                        <a href="KeepStore_ShopDefault.aspx" class="item-link body-text-3">
                                             <span>
                                                 <i class="icon icon-best-seller"></i>
                                                 Bestseller
@@ -231,7 +231,7 @@
                                 <div class="box-title">
                                     <div class="d-grid gap-10">
                                         <h2 class="fw-normal">
-                                            <a href="product-detail.html" class="link font-5 text-white">
+                                            <a href="articoli.aspx" class="link font-5 text-white">
                                                 The New <br>
                                                 Standard
                                             </a>
@@ -246,23 +246,23 @@
                                     </div>
                                 </div>
                                 <div class="box-btn">
-                                    <a href="product-detail.html" class="tf-btn-icon type-2 style-white">
+                                    <a href="articoli.aspx" class="tf-btn-icon type-2 style-white">
                                         <i class="icon-circle-chevron-right"></i>
                                         <span>Shop now</span>
                                     </a>
                                 </div>
                             </div>
-                            <a href="product-detail.html" class="img-style img-item overflow-visible">
-                                <img width="800" height="794" src="images/item/tivi-3.webp" data-src="images/item/tivi-3.webp" alt=""
+                            <a href="articoli.aspx" class="img-style img-item overflow-visible">
+                                <img width="800" height="794" src="/Public/assets/keepstore/images/item/tivi-3.webp" data-src="/Public/assets/keepstore/images/item/tivi-3.webp" alt=""
                                     class="lazyload">
                             </a>
                         </div>
                     </div>
                     <div class="wrap-item-3">
                         <div class="cls-category style-abs hover-img">
-                            <a href="product-detail.html" class="img-box img-style d-block">
-                                <img width="540" height="398" src="images/collection/cls-category-5.webp"
-                                    data-src="images/collection/cls-category-5.webp" alt="" class="lazyload">
+                            <a href="articoli.aspx" class="img-box img-style d-block">
+                                <img width="540" height="398" src="/Public/assets/keepstore/images/collection/cls-category-5.webp"
+                                    data-src="/Public/assets/keepstore/images/collection/cls-category-5.webp" alt="" class="lazyload">
                             </a>
                             <div class="content">
                                 <div class="box-title">
@@ -270,7 +270,7 @@
                                     <p class="text-white main-title-2 text-uppercase fw-bold">deals</p>
                                     <p class="text-white product-title-2 text-uppercase">on the cameras</p>
                                 </div>
-                                <a href="product-detail.html" class="tf-btn-icon style-white">
+                                <a href="articoli.aspx" class="tf-btn-icon style-white">
                                     <i class="icon-circle-chevron-right"></i>
                                     <span>Shop now</span>
                                 </a>
@@ -281,9 +281,9 @@
                             </div>
                         </div>
                         <div class="cls-category style-abs hover-img">
-                            <a href="product-detail.html" class="img-box img-style d-block">
-                                <img width="540" height="398" src="images/collection/cls-category-6.webp"
-                                    data-src="images/collection/cls-category-6.webp" alt="" class="lazyload">
+                            <a href="articoli.aspx" class="img-box img-style d-block">
+                                <img width="540" height="398" src="/Public/assets/keepstore/images/collection/cls-category-6.webp"
+                                    data-src="/Public/assets/keepstore/images/collection/cls-category-6.webp" alt="" class="lazyload">
                             </a>
                             <div class="content">
                                 <div class="box-title">
@@ -291,7 +291,7 @@
                                     <p class="text-white main-title-2 text-uppercase fw-bold">deals</p>
                                     <p class="text-white product-title-2 text-uppercase">on the cameras</p>
                                 </div>
-                                <a href="product-detail.html" class="tf-btn-icon style-white">
+                                <a href="articoli.aspx" class="tf-btn-icon style-white">
                                     <i class="icon-circle-chevron-right"></i>
                                     <span>Shop now</span>
                                 </a>
@@ -399,29 +399,29 @@
                                 <div class="card-product style-border wow fadeInLeft" data-wow-delay="0">
                                     <div class="card-product-wrapper overflow-visible ">
                                         <div class="product-thumb-image">
-                                            <a href="product-detail.html" class="card-image">
-                                                <img width="600" height="520" src="images/product/product-thumb/product-1.webp" alt="Image Product"
+                                            <a href="articoli.aspx" class="card-image">
+                                                <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/product-1.webp" alt="Image Product"
                                                     class="lazyload img-product">
                                             </a>
                                             <ul class="list-image-product">
                                                 <li class="image-swap active">
-                                                    <img width="600" height="520" src="images/product/product-thumb/product-1.webp"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/product-1.webp"
                                                         alt="Image Product" class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-1.jpg" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-1.jpg" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-2.jpg" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-2.jpg" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-3.webp" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-3.webp" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-4.webp" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-4.webp" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                             </ul>
@@ -464,7 +464,7 @@
                                         <div class="box-title gap-xl-12">
                                             <div class="d-flex flex-column">
                                                 <h6>
-                                                    <a href="product-detail.html" class="name-product fw-semibold text-secondary link">
+                                                    <a href="articoli.aspx" class="name-product fw-semibold text-secondary link">
                                                         30" Antique Bronze Baldaud Roman Numeral Wall Clock
                                                     </a>
                                                 </h6>
@@ -503,29 +503,29 @@
                                 <div class="card-product style-border  wow fadeInLeft" data-wow-delay="0.1s">
                                     <div class="card-product-wrapper overflow-visible">
                                         <div class="product-thumb-image">
-                                            <a href="product-detail.html" class="card-image">
-                                                <img width="600" height="520" src="images/product/product-thumb/product-2.webp" alt="Image Product"
+                                            <a href="articoli.aspx" class="card-image">
+                                                <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/product-2.webp" alt="Image Product"
                                                     class="lazyload img-product">
                                             </a>
                                             <ul class="list-image-product">
                                                 <li class="image-swap active">
-                                                    <img width="600" height="520" src="images/product/product-thumb/product-2.webp"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/product-2.webp"
                                                         alt="Image Product" class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-5.webp" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-5.webp" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-6.jpg" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-6.jpg" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-7.jpg" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-7.jpg" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-8.jpg" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-8.jpg" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                             </ul>
@@ -568,7 +568,7 @@
                                         <div class="box-title gap-xl-12">
                                             <div class="d-flex flex-column">
                                                 <h6>
-                                                    <a href="product-detail.html" class="name-product fw-semibold text-secondary link">
+                                                    <a href="articoli.aspx" class="name-product fw-semibold text-secondary link">
                                                         Canon PowerShot SX70 HS Digital Camerat
                                                     </a>
                                                 </h6>
@@ -607,29 +607,29 @@
                                 <div class="card-product style-border wow fadeInLeft" data-wow-delay="0.2s">
                                     <div class="card-product-wrapper overflow-visible">
                                         <div class="product-thumb-image">
-                                            <a href="product-detail.html" class="card-image">
-                                                <img width="600" height="520" src="images/product/product-thumb/product-3.webp" alt="Image Product"
+                                            <a href="articoli.aspx" class="card-image">
+                                                <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/product-3.webp" alt="Image Product"
                                                     class="lazyload img-product">
                                             </a>
                                             <ul class="list-image-product">
                                                 <li class="image-swap active">
-                                                    <img width="600" height="520" src="images/product/product-thumb/product-3.webp"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/product-3.webp"
                                                         alt="Image Product" class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-9.jpg" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-9.jpg" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-10.jpg" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-10.jpg" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-11.webp" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-11.webp" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-12.jpg" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-12.jpg" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                             </ul>
@@ -672,7 +672,7 @@
                                         <div class="box-title gap-xl-12">
                                             <div class="d-flex flex-column">
                                                 <h6>
-                                                    <a href="product-detail.html" class="name-product fw-semibold text-secondary link">
+                                                    <a href="articoli.aspx" class="name-product fw-semibold text-secondary link">
                                                         Net10 Alcatel TCL A3, 32GB, Black Prepaid Smartphone (Locked)
                                                     </a>
                                                 </h6>
@@ -711,29 +711,29 @@
                                 <div class="card-product style-border wow fadeInLeft" data-wow-delay="0.3s">
                                     <div class="card-product-wrapper overflow-visible">
                                         <div class="product-thumb-image">
-                                            <a href="product-detail.html" class="card-image">
-                                                <img width="600" height="520" src="images/product/product-thumb/product-4.webp" alt="Image Product"
+                                            <a href="articoli.aspx" class="card-image">
+                                                <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/product-4.webp" alt="Image Product"
                                                     class="lazyload img-product">
                                             </a>
                                             <ul class="list-image-product">
                                                 <li class="image-swap active">
-                                                    <img width="600" height="520" src="images/product/product-thumb/product-4.webp"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/product-4.webp"
                                                         alt="Image Product" class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-13.jpg" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-13.jpg" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-14.jpg" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-14.jpg" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-15.jpg" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-15.jpg" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-16.webp" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-16.webp" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                             </ul>
@@ -776,7 +776,7 @@
                                         <div class="box-title gap-xl-12">
                                             <div class="d-flex flex-column">
                                                 <h6>
-                                                    <a href="product-detail.html" class="name-product fw-semibold text-secondary link">
+                                                    <a href="articoli.aspx" class="name-product fw-semibold text-secondary link">
                                                         Microsoft Xbox One X Console w/ Accessories, 1TB HDD - White
                                                     </a>
                                                 </h6>
@@ -815,29 +815,29 @@
                                 <div class="card-product style-border">
                                     <div class="card-product-wrapper overflow-visible">
                                         <div class="product-thumb-image">
-                                            <a href="product-detail.html" class="card-image">
-                                                <img width="600" height="520" src="images/product/product-thumb/product-1.webp" alt="Image Product"
+                                            <a href="articoli.aspx" class="card-image">
+                                                <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/product-1.webp" alt="Image Product"
                                                     class="lazyload img-product">
                                             </a>
                                             <ul class="list-image-product">
                                                 <li class="image-swap active">
-                                                    <img width="600" height="520" src="images/product/product-thumb/product-1.webp"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/product-1.webp"
                                                         alt="Image Product" class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-1.jpg" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-1.jpg" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-2.jpg" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-2.jpg" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-3.webp" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-3.webp" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                                 <li class="image-swap">
-                                                    <img width="600" height="520" src="images/product/product-thumb/thumb-4.webp" alt="Image Product"
+                                                    <img width="600" height="520" src="/Public/assets/keepstore/images/product/product-thumb/thumb-4.webp" alt="Image Product"
                                                         class="lazyload">
                                                 </li>
                                             </ul>
@@ -880,7 +880,7 @@
                                         <div class="box-title gap-xl-12">
                                             <div class="d-flex flex-column">
                                                 <h6>
-                                                    <a href="product-detail.html" class="name-product fw-semibold text-secondary link">
+                                                    <a href="articoli.aspx" class="name-product fw-semibold text-secondary link">
                                                         30" Antique Bronze Baldaud Roman Numeral Wall Clock
                                                     </a>
                                                 </h6>
@@ -931,8 +931,8 @@
         <section class="has-bg-img" data-bg-img="images/banner/banner-1.jpg" data-bg-size="cover" data-bg-repeat="no-repeat">
             <div class="container">
                 <div class="banner-image-product hover-img">
-                    <a href="product-detail.html" class="image img-2 img-style overflow-visible relative">
-                        <img width="994" height="986" src="images/item/tivi.webp" data-src="images/item/tivi.webp" alt="" class="lazyload">
+                    <a href="articoli.aspx" class="image img-2 img-style overflow-visible relative">
+                        <img width="994" height="986" src="/Public/assets/keepstore/images/item/tivi.webp" data-src="/Public/assets/keepstore/images/item/tivi.webp" alt="" class="lazyload">
                         <div class="box-sale-wrap position1">
                             <p class="small-text">Sale</p>
                             <p class="title-sidebar-2">25%</p>
@@ -941,7 +941,7 @@
                     <div class="content">
                         <div class="box-title">
                             <h1 class="fw-normal">
-                                <a href="product-detail.html" class="link text-white">
+                                <a href="articoli.aspx" class="link text-white">
                                     GameConsole <br class="d-none d-xl-block">
                                     Destiny Special Edition
                                 </a>
@@ -952,7 +952,7 @@
                             </div>
                         </div>
                         <div class="box-btn">
-                            <a href="product-detail.html" class="tf-btn-icon type-2 style-white">
+                            <a href="articoli.aspx" class="tf-btn-icon type-2 style-white">
                                 <i class="icon-circle-chevron-right"></i>
                                 <span>Shop now</span>
                             </a>
@@ -989,11 +989,11 @@
                                     <li class="wow fadeInUp" data-wow-delay="0">
                                         <div class="card-product style-row row-small-2 ">
                                             <div class="card-product-wrapper">
-                                                <a href="product-detail.html" class="product-img">
-                                                    <img class="img-product lazyload" src="images/product/product-77-w.jpg"
-                                                        data-src="images/product/product-77-w.jpg" alt="image-product">
-                                                    <img class="img-hover lazyload" src="images/product/product-8.jpg"
-                                                        data-src="images/product/product-8.jpg" alt="image-product">
+                                                <a href="articoli.aspx" class="product-img">
+                                                    <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-77-w.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-77-w.jpg" alt="image-product">
+                                                    <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-8.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-8.jpg" alt="image-product">
                                                 </a>
                                             </div>
                                             <div class="card-product-info">
@@ -1002,7 +1002,7 @@
                                                         <p class="caption text-main-2 font-2">
                                                             Smartphone
                                                         </p>
-                                                        <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                             Huawei Nova 8 Pro 4G – Powerful Performance, 120Hz Display,
                                                             66W Fast Charging
                                                         </a>
@@ -1050,11 +1050,11 @@
                                     <li class="wow fadeInUp" data-wow-delay="0">
                                         <div class="card-product style-row row-small-2 ">
                                             <div class="card-product-wrapper">
-                                                <a href="product-detail.html" class="product-img">
-                                                    <img class="img-product lazyload" src="images/product/product-78.jpg"
-                                                        data-src="images/product/product-78.jpg" alt="image-product">
-                                                    <img class="img-hover lazyload" src="images/product/product-37.jpg"
-                                                        data-src="images/product/product-37.jpg" alt="image-product">
+                                                <a href="articoli.aspx" class="product-img">
+                                                    <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-78.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-78.jpg" alt="image-product">
+                                                    <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-37.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-37.jpg" alt="image-product">
                                                 </a>
                                             </div>
                                             <div class="card-product-info">
@@ -1063,7 +1063,7 @@
                                                         <p class="caption text-main-2 font-2">
                                                             Headphone
                                                         </p>
-                                                        <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                             Eskuche 33iS – Retro Design, Premium Sound, Cables
                                                         </a>
                                                     </div>
@@ -1109,11 +1109,11 @@
                                     <li class="wow fadeInUp" data-wow-delay="0">
                                         <div class="card-product style-row row-small-2 ">
                                             <div class="card-product-wrapper">
-                                                <a href="product-detail.html" class="product-img">
-                                                    <img class="img-product lazyload" src="images/product/product-79.jpg"
-                                                        data-src="images/product/product-79.jpg" alt="image-product">
-                                                    <img class="img-hover lazyload" src="images/product/product-72.jpg"
-                                                        data-src="images/product/product-72.jpg" alt="image-product">
+                                                <a href="articoli.aspx" class="product-img">
+                                                    <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-79.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-79.jpg" alt="image-product">
+                                                    <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-72.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-72.jpg" alt="image-product">
                                                 </a>
                                             </div>
                                             <div class="card-product-info">
@@ -1122,7 +1122,7 @@
                                                         <p class="caption text-main-2 font-2">
                                                             Smartwatch
                                                         </p>
-                                                        <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                             Apple Watch Series 1 Aluminum case with Sport Band
                                                         </a>
                                                     </div>
@@ -1175,34 +1175,34 @@
                                                 <div class="swiper-wrapper">
                                                     <!-- item 1 -->
                                                     <div class="swiper-slide">
-                                                        <a href="product-detail.html" class="d-block tf-image-view">
+                                                        <a href="articoli.aspx" class="d-block tf-image-view">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/product-5.webp"
-                                                                data-src="images/product/product-thumb/product-5.webp" alt="" class="lazyload">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/product-5.webp"
+                                                                data-src="/Public/assets/keepstore/images/product/product-thumb/product-5.webp" alt="" class="lazyload">
                                                         </a>
                                                     </div>
                                                     <!-- item 2 -->
                                                     <div class="swiper-slide">
-                                                        <a href="product-detail.html" class="d-block tf-image-view">
+                                                        <a href="articoli.aspx" class="d-block tf-image-view">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/thumb-17.webp"
-                                                                data-src="images/product/product-thumb/thumb-17.webp" alt="" class="lazyload">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/thumb-17.webp"
+                                                                data-src="/Public/assets/keepstore/images/product/product-thumb/thumb-17.webp" alt="" class="lazyload">
                                                         </a>
                                                     </div>
                                                     <!-- item 3 -->
                                                     <div class="swiper-slide">
-                                                        <a href="product-detail.html" class="d-block tf-image-view">
+                                                        <a href="articoli.aspx" class="d-block tf-image-view">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/thumb-18.jpg"
-                                                                data-src="images/product/product-thumb/thumb-18.jpg" alt="" class="lazyload">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/thumb-18.jpg"
+                                                                data-src="/Public/assets/keepstore/images/product/product-thumb/thumb-18.jpg" alt="" class="lazyload">
                                                         </a>
                                                     </div>
                                                     <!-- item 4 -->
                                                     <div class="swiper-slide">
-                                                        <a href="product-detail.html" class="d-block tf-image-view">
+                                                        <a href="articoli.aspx" class="d-block tf-image-view">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/thumb-19.webp"
-                                                                data-src="images/product/product-thumb/thumb-19.webp" alt="" class="lazyload">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/thumb-19.webp"
+                                                                data-src="/Public/assets/keepstore/images/product/product-thumb/thumb-19.webp" alt="" class="lazyload">
                                                         </a>
                                                     </div>
                                                 </div>
@@ -1213,28 +1213,28 @@
                                                     <div class="swiper-slide">
                                                         <div class="item">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/product-5.webp" alt="">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/product-5.webp" alt="">
                                                         </div>
                                                     </div>
                                                     <!-- item 2 -->
                                                     <div class="swiper-slide">
                                                         <div class="item">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/thumb-17.webp" alt="">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/thumb-17.webp" alt="">
                                                         </div>
                                                     </div>
                                                     <!-- item 3 -->
                                                     <div class="swiper-slide">
                                                         <div class="item">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/thumb-18.jpg" alt="">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/thumb-18.jpg" alt="">
                                                         </div>
                                                     </div>
                                                     <!-- item 4 -->
                                                     <div class="swiper-slide">
                                                         <div class="item">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/thumb-19.webp" alt="">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/thumb-19.webp" alt="">
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1249,7 +1249,7 @@
                                         <div class="box-title gap-xl-6">
                                             <div class="d-flex flex-column">
                                                 <h6 class="bg-white relative z-5">
-                                                    <a href="product-detail.html" class="name-product fw-semibold text-secondary link">
+                                                    <a href="articoli.aspx" class="name-product fw-semibold text-secondary link">
                                                         Drone with Camera 1080P HD, Toss to Launch RC Drone for Adults
                                                         with Smart APP Trajectory
                                                         Flight Altitude Hold One Key Take Off/Landing Headless 360°Flip
@@ -1307,11 +1307,11 @@
                                     <li class="wow fadeInUp" data-wow-delay="0">
                                         <div class="card-product style-row row-small-2 ">
                                             <div class="card-product-wrapper">
-                                                <a href="product-detail.html" class="product-img">
-                                                    <img class="img-product lazyload" src="images/product/product-80w.jpg"
-                                                        data-src="images/product/product-80w.jpg" alt="image-product">
-                                                    <img class="img-hover lazyload" src="images/product/product-73.jpg"
-                                                        data-src="images/product/product-73.jpg" alt="image-product">
+                                                <a href="articoli.aspx" class="product-img">
+                                                    <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-80w.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-80w.jpg" alt="image-product">
+                                                    <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-73.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-73.jpg" alt="image-product">
                                                 </a>
                                             </div>
                                             <div class="card-product-info">
@@ -1320,7 +1320,7 @@
                                                         <p class="caption text-main-2 font-2">
                                                             Camera & Accessories
                                                         </p>
-                                                        <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                             Nikon D3500 W/ AF-P DX NIKKOR 18-55mm f/3.5-5.6G
                                                         </a>
                                                     </div>
@@ -1367,11 +1367,11 @@
                                     <li class="wow fadeInUp" data-wow-delay="0">
                                         <div class="card-product style-row row-small-2 ">
                                             <div class="card-product-wrapper">
-                                                <a href="product-detail.html" class="product-img">
-                                                    <img class="img-product lazyload" src="images/product/product-75.jpg"
-                                                        data-src="images/product/product-75.jpg" alt="image-product">
-                                                    <img class="img-hover lazyload" src="images/product/product-20.jpg"
-                                                        data-src="images/product/product-20.jpg" alt="image-product">
+                                                <a href="articoli.aspx" class="product-img">
+                                                    <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-75.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-75.jpg" alt="image-product">
+                                                    <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-20.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-20.jpg" alt="image-product">
                                                 </a>
                                             </div>
                                             <div class="card-product-info">
@@ -1380,7 +1380,7 @@
                                                         <p class="caption text-main-2 font-2">
                                                             Headphone
                                                         </p>
-                                                        <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                             Audio-Technica ATH-AD700X Audiophile Open-Air
                                                         </a>
                                                     </div>
@@ -1426,11 +1426,11 @@
                                     <li class="wow fadeInUp" data-wow-delay="0">
                                         <div class="card-product style-row row-small-2 ">
                                             <div class="card-product-wrapper">
-                                                <a href="product-detail.html" class="product-img">
-                                                    <img class="img-product lazyload" src="images/product/sc-1.jpg" data-src="images/product/sc-1.jpg"
+                                                <a href="articoli.aspx" class="product-img">
+                                                    <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/sc-1.jpg" data-src="/Public/assets/keepstore/images/product/sc-1.jpg"
                                                         alt="image-product">
-                                                    <img class="img-hover lazyload" src="images/product/product-15.jpg"
-                                                        data-src="images/product/product-15.jpg" alt="image-product">
+                                                    <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-15.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-15.jpg" alt="image-product">
                                                 </a>
                                             </div>
                                             <div class="card-product-info">
@@ -1439,7 +1439,7 @@
                                                         <p class="caption text-main-2 font-2">
                                                             Smartwatch
                                                         </p>
-                                                        <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                             HAFURY Women Smart Watch, Smartwatch for Android/iOS
                                                         </a>
                                                     </div>
@@ -1493,11 +1493,11 @@
                                     <li class="wow fadeInUp" data-wow-delay="0">
                                         <div class="card-product style-row row-small-2 ">
                                             <div class="card-product-wrapper">
-                                                <a href="product-detail.html" class="product-img">
-                                                    <img class="img-product lazyload" src="images/product/product-79.jpg"
-                                                        data-src="images/product/product-79.jpg" alt="image-product">
-                                                    <img class="img-hover lazyload" src="images/product/product-72.jpg"
-                                                        data-src="images/product/product-72.jpg" alt="image-product">
+                                                <a href="articoli.aspx" class="product-img">
+                                                    <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-79.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-79.jpg" alt="image-product">
+                                                    <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-72.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-72.jpg" alt="image-product">
                                                 </a>
                                             </div>
                                             <div class="card-product-info">
@@ -1506,7 +1506,7 @@
                                                         <p class="caption text-main-2 font-2">
                                                             Smartwatch
                                                         </p>
-                                                        <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                             Apple Watch Series 1 Aluminum case with Sport Band
                                                         </a>
                                                     </div>
@@ -1553,11 +1553,11 @@
                                     <li class="wow fadeInUp" data-wow-delay="0">
                                         <div class="card-product style-row row-small-2 ">
                                             <div class="card-product-wrapper">
-                                                <a href="product-detail.html" class="product-img">
-                                                    <img class="img-product lazyload" src="images/product/product-77-w.jpg"
-                                                        data-src="images/product/product-77-w.jpg" alt="image-product">
-                                                    <img class="img-hover lazyload" src="images/product/product-8.jpg"
-                                                        data-src="images/product/product-8.jpg" alt="image-product">
+                                                <a href="articoli.aspx" class="product-img">
+                                                    <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-77-w.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-77-w.jpg" alt="image-product">
+                                                    <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-8.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-8.jpg" alt="image-product">
                                                 </a>
                                             </div>
                                             <div class="card-product-info">
@@ -1566,7 +1566,7 @@
                                                         <p class="caption text-main-2 font-2">
                                                             Smartphone
                                                         </p>
-                                                        <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                             Huawei Nova 8 Pro 4G – Powerful Performance, 120Hz Display,
                                                             66W Fast Charging
                                                         </a>
@@ -1614,11 +1614,11 @@
                                     <li class="wow fadeInUp" data-wow-delay="0">
                                         <div class="card-product style-row row-small-2 ">
                                             <div class="card-product-wrapper">
-                                                <a href="product-detail.html" class="product-img">
-                                                    <img class="img-product lazyload" src="images/product/product-78.jpg"
-                                                        data-src="images/product/product-78.jpg" alt="image-product">
-                                                    <img class="img-hover lazyload" src="images/product/product-37.jpg"
-                                                        data-src="images/product/product-37.jpg" alt="image-product">
+                                                <a href="articoli.aspx" class="product-img">
+                                                    <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-78.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-78.jpg" alt="image-product">
+                                                    <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-37.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-37.jpg" alt="image-product">
                                                 </a>
                                             </div>
                                             <div class="card-product-info">
@@ -1627,7 +1627,7 @@
                                                         <p class="caption text-main-2 font-2">
                                                             Headphone
                                                         </p>
-                                                        <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                             Eskuche 33iS – Retro Design, Premium Sound, Cables
                                                         </a>
                                                     </div>
@@ -1680,34 +1680,34 @@
                                                 <div class="swiper-wrapper">
                                                     <!-- item 1 -->
                                                     <div class="swiper-slide">
-                                                        <a href="product-detail.html" class="d-block tf-image-view">
+                                                        <a href="articoli.aspx" class="d-block tf-image-view">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/product-5.webp"
-                                                                data-src="images/product/product-thumb/product-5.webp" alt="" class="lazyload">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/product-5.webp"
+                                                                data-src="/Public/assets/keepstore/images/product/product-thumb/product-5.webp" alt="" class="lazyload">
                                                         </a>
                                                     </div>
                                                     <!-- item 2 -->
                                                     <div class="swiper-slide">
-                                                        <a href="product-detail.html" class="d-block tf-image-view">
+                                                        <a href="articoli.aspx" class="d-block tf-image-view">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/thumb-17.webp"
-                                                                data-src="images/product/product-thumb/thumb-17.webp" alt="" class="lazyload">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/thumb-17.webp"
+                                                                data-src="/Public/assets/keepstore/images/product/product-thumb/thumb-17.webp" alt="" class="lazyload">
                                                         </a>
                                                     </div>
                                                     <!-- item 3 -->
                                                     <div class="swiper-slide">
-                                                        <a href="product-detail.html" class="d-block tf-image-view">
+                                                        <a href="articoli.aspx" class="d-block tf-image-view">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/thumb-18.jpg"
-                                                                data-src="images/product/product-thumb/thumb-18.jpg" alt="" class="lazyload">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/thumb-18.jpg"
+                                                                data-src="/Public/assets/keepstore/images/product/product-thumb/thumb-18.jpg" alt="" class="lazyload">
                                                         </a>
                                                     </div>
                                                     <!-- item 4 -->
                                                     <div class="swiper-slide">
-                                                        <a href="product-detail.html" class="d-block tf-image-view">
+                                                        <a href="articoli.aspx" class="d-block tf-image-view">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/thumb-19.webp"
-                                                                data-src="images/product/product-thumb/thumb-19.webp" alt="" class="lazyload">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/thumb-19.webp"
+                                                                data-src="/Public/assets/keepstore/images/product/product-thumb/thumb-19.webp" alt="" class="lazyload">
                                                         </a>
                                                     </div>
                                                 </div>
@@ -1718,27 +1718,27 @@
                                                     <div class="swiper-slide">
                                                         <div class="item">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/product-5.webp" alt="">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/product-5.webp" alt="">
                                                         </div>
                                                     </div>
                                                     <!-- item 2 -->
                                                     <div class="swiper-slide">
                                                         <div class="item">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/thumb-17.webp" alt="">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/thumb-17.webp" alt="">
                                                         </div>
                                                     </div>
                                                     <!-- item 3 -->
                                                     <div class="swiper-slide">
                                                         <div class="item">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/thumb-18.jpg" alt="">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/thumb-18.jpg" alt="">
                                                         </div>
                                                     </div>
                                                     <!-- item 4 -->
                                                     <div class="swiper-slide">
                                                         <div class="item">
-                                                            <img src="images/product/product-thumb/thumb-19.webp" alt="">
+                                                            <img src="/Public/assets/keepstore/images/product/product-thumb/thumb-19.webp" alt="">
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1753,7 +1753,7 @@
                                         <div class="box-title gap-xl-6">
                                             <div class="d-flex flex-column">
                                                 <h6 class="bg-white relative z-5">
-                                                    <a href="product-detail.html" class="name-product fw-semibold text-secondary link">
+                                                    <a href="articoli.aspx" class="name-product fw-semibold text-secondary link">
                                                         Drone with Camera 1080P HD, Toss to Launch RC Drone for Adults
                                                         with Smart APP Trajectory
                                                         Flight Altitude Hold One Key Take Off/Landing Headless 360°Flip
@@ -1811,11 +1811,11 @@
                                     <li class="wow fadeInUp" data-wow-delay="0">
                                         <div class="card-product style-row row-small-2 ">
                                             <div class="card-product-wrapper">
-                                                <a href="product-detail.html" class="product-img">
-                                                    <img class="img-product lazyload" src="images/product/product-75.jpg"
-                                                        data-src="images/product/product-75.jpg" alt="image-product">
-                                                    <img class="img-hover lazyload" src="images/product/product-20.jpg"
-                                                        data-src="images/product/product-20.jpg" alt="image-product">
+                                                <a href="articoli.aspx" class="product-img">
+                                                    <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-75.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-75.jpg" alt="image-product">
+                                                    <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-20.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-20.jpg" alt="image-product">
                                                 </a>
                                             </div>
                                             <div class="card-product-info">
@@ -1824,7 +1824,7 @@
                                                         <p class="caption text-main-2 font-2">
                                                             Headphone
                                                         </p>
-                                                        <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                             Audio-Technica ATH-AD700X Audiophile Open-Air
                                                         </a>
                                                     </div>
@@ -1870,11 +1870,11 @@
                                     <li class="wow fadeInUp" data-wow-delay="0">
                                         <div class="card-product style-row row-small-2 ">
                                             <div class="card-product-wrapper">
-                                                <a href="product-detail.html" class="product-img">
-                                                    <img class="img-product lazyload" src="images/product/sc-1.jpg" data-src="images/product/sc-1.jpg"
+                                                <a href="articoli.aspx" class="product-img">
+                                                    <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/sc-1.jpg" data-src="/Public/assets/keepstore/images/product/sc-1.jpg"
                                                         alt="image-product">
-                                                    <img class="img-hover lazyload" src="images/product/product-15.jpg"
-                                                        data-src="images/product/product-15.jpg" alt="image-product">
+                                                    <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-15.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-15.jpg" alt="image-product">
                                                 </a>
                                             </div>
                                             <div class="card-product-info">
@@ -1883,7 +1883,7 @@
                                                         <p class="caption text-main-2 font-2">
                                                             Smartwatch
                                                         </p>
-                                                        <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                             HAFURY Women Smart Watch, Smartwatch for Android/iOS
                                                         </a>
                                                     </div>
@@ -1929,11 +1929,11 @@
                                     <li class="wow fadeInUp" data-wow-delay="0">
                                         <div class="card-product style-row row-small-2 ">
                                             <div class="card-product-wrapper">
-                                                <a href="product-detail.html" class="product-img">
-                                                    <img class="img-product lazyload" src="images/product/product-80w.jpg"
-                                                        data-src="images/product/product-80w.jpg" alt="image-product">
-                                                    <img class="img-hover lazyload" src="images/product/product-73.jpg"
-                                                        data-src="images/product/product-73.jpg" alt="image-product">
+                                                <a href="articoli.aspx" class="product-img">
+                                                    <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-80w.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-80w.jpg" alt="image-product">
+                                                    <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-73.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-73.jpg" alt="image-product">
                                                 </a>
                                             </div>
                                             <div class="card-product-info">
@@ -1942,7 +1942,7 @@
                                                         <p class="caption text-main-2 font-2">
                                                             Camera & Accessories
                                                         </p>
-                                                        <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                             Nikon D3500 W/ AF-P DX NIKKOR 18-55mm f/3.5-5.6G
                                                         </a>
                                                     </div>
@@ -1997,11 +1997,11 @@
                                     <li class="wow fadeInUp" data-wow-delay="0">
                                         <div class="card-product style-row row-small-2 ">
                                             <div class="card-product-wrapper">
-                                                <a href="product-detail.html" class="product-img">
-                                                    <img class="img-product lazyload" src="images/product/product-80w.jpg"
-                                                        data-src="images/product/product-80w.jpg" alt="image-product">
-                                                    <img class="img-hover lazyload" src="images/product/product-73.jpg"
-                                                        data-src="images/product/product-73.jpg" alt="image-product">
+                                                <a href="articoli.aspx" class="product-img">
+                                                    <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-80w.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-80w.jpg" alt="image-product">
+                                                    <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-73.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-73.jpg" alt="image-product">
                                                 </a>
                                             </div>
                                             <div class="card-product-info">
@@ -2010,7 +2010,7 @@
                                                         <p class="caption text-main-2 font-2">
                                                             Camera & Accessories
                                                         </p>
-                                                        <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                             Nikon D3500 W/ AF-P DX NIKKOR 18-55mm f/3.5-5.6G
                                                         </a>
                                                     </div>
@@ -2057,11 +2057,11 @@
                                     <li class="wow fadeInUp" data-wow-delay="0">
                                         <div class="card-product style-row row-small-2 ">
                                             <div class="card-product-wrapper">
-                                                <a href="product-detail.html" class="product-img">
-                                                    <img class="img-product lazyload" src="images/product/product-75.jpg"
-                                                        data-src="images/product/product-75.jpg" alt="image-product">
-                                                    <img class="img-hover lazyload" src="images/product/product-20.jpg"
-                                                        data-src="images/product/product-20.jpg" alt="image-product">
+                                                <a href="articoli.aspx" class="product-img">
+                                                    <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-75.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-75.jpg" alt="image-product">
+                                                    <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-20.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-20.jpg" alt="image-product">
                                                 </a>
                                             </div>
                                             <div class="card-product-info">
@@ -2070,7 +2070,7 @@
                                                         <p class="caption text-main-2 font-2">
                                                             Headphone
                                                         </p>
-                                                        <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                             Audio-Technica ATH-AD700X Audiophile Open-Air
                                                         </a>
                                                     </div>
@@ -2116,11 +2116,11 @@
                                     <li class="wow fadeInUp" data-wow-delay="0">
                                         <div class="card-product style-row row-small-2 ">
                                             <div class="card-product-wrapper">
-                                                <a href="product-detail.html" class="product-img">
-                                                    <img class="img-product lazyload" src="images/product/sc-1.jpg" data-src="images/product/sc-1.jpg"
+                                                <a href="articoli.aspx" class="product-img">
+                                                    <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/sc-1.jpg" data-src="/Public/assets/keepstore/images/product/sc-1.jpg"
                                                         alt="image-product">
-                                                    <img class="img-hover lazyload" src="images/product/product-15.jpg"
-                                                        data-src="images/product/product-15.jpg" alt="image-product">
+                                                    <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-15.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-15.jpg" alt="image-product">
                                                 </a>
                                             </div>
                                             <div class="card-product-info">
@@ -2129,7 +2129,7 @@
                                                         <p class="caption text-main-2 font-2">
                                                             Smartwatch
                                                         </p>
-                                                        <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                             HAFURY Women Smart Watch, Smartwatch for Android/iOS
                                                         </a>
                                                     </div>
@@ -2182,34 +2182,34 @@
                                                 <div class="swiper-wrapper">
                                                     <!-- item 1 -->
                                                     <div class="swiper-slide">
-                                                        <a href="product-detail.html" class="d-block tf-image-view">
+                                                        <a href="articoli.aspx" class="d-block tf-image-view">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/product-5.webp"
-                                                                data-src="images/product/product-thumb/product-5.webp" alt="" class="lazyload">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/product-5.webp"
+                                                                data-src="/Public/assets/keepstore/images/product/product-thumb/product-5.webp" alt="" class="lazyload">
                                                         </a>
                                                     </div>
                                                     <!-- item 2 -->
                                                     <div class="swiper-slide">
-                                                        <a href="product-detail.html" class="d-block tf-image-view">
+                                                        <a href="articoli.aspx" class="d-block tf-image-view">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/thumb-17.webp"
-                                                                data-src="images/product/product-thumb/thumb-17.webp" alt="" class="lazyload">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/thumb-17.webp"
+                                                                data-src="/Public/assets/keepstore/images/product/product-thumb/thumb-17.webp" alt="" class="lazyload">
                                                         </a>
                                                     </div>
                                                     <!-- item 3 -->
                                                     <div class="swiper-slide">
-                                                        <a href="product-detail.html" class="d-block tf-image-view">
+                                                        <a href="articoli.aspx" class="d-block tf-image-view">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/thumb-18.jpg"
-                                                                data-src="images/product/product-thumb/thumb-18.jpg" alt="" class="lazyload">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/thumb-18.jpg"
+                                                                data-src="/Public/assets/keepstore/images/product/product-thumb/thumb-18.jpg" alt="" class="lazyload">
                                                         </a>
                                                     </div>
                                                     <!-- item 4 -->
                                                     <div class="swiper-slide">
-                                                        <a href="product-detail.html" class="d-block tf-image-view">
+                                                        <a href="articoli.aspx" class="d-block tf-image-view">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/thumb-19.webp"
-                                                                data-src="images/product/product-thumb/thumb-19.webp" alt="" class="lazyload">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/thumb-19.webp"
+                                                                data-src="/Public/assets/keepstore/images/product/product-thumb/thumb-19.webp" alt="" class="lazyload">
                                                         </a>
                                                     </div>
                                                 </div>
@@ -2220,28 +2220,28 @@
                                                     <div class="swiper-slide">
                                                         <div class="item">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/product-5.webp" alt="">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/product-5.webp" alt="">
                                                         </div>
                                                     </div>
                                                     <!-- item 2 -->
                                                     <div class="swiper-slide">
                                                         <div class="item">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/thumb-17.webp" alt="">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/thumb-17.webp" alt="">
                                                         </div>
                                                     </div>
                                                     <!-- item 3 -->
                                                     <div class="swiper-slide">
                                                         <div class="item">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/thumb-18.jpg" alt="">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/thumb-18.jpg" alt="">
                                                         </div>
                                                     </div>
                                                     <!-- item 4 -->
                                                     <div class="swiper-slide">
                                                         <div class="item">
                                                             <img decoding="async" fetchpriority="high" width="857" height="482"
-                                                                src="images/product/product-thumb/thumb-19.webp" alt="">
+                                                                src="/Public/assets/keepstore/images/product/product-thumb/thumb-19.webp" alt="">
                                                         </div>
                                                     </div>
                                                 </div>
@@ -2256,7 +2256,7 @@
                                         <div class="box-title gap-xl-6">
                                             <div class="d-flex flex-column">
                                                 <h6 class="bg-white relative z-5">
-                                                    <a href="product-detail.html" class="name-product fw-semibold text-secondary link">
+                                                    <a href="articoli.aspx" class="name-product fw-semibold text-secondary link">
                                                         Drone with Camera 1080P HD, Toss to Launch RC Drone for Adults
                                                         with Smart APP Trajectory
                                                         Flight Altitude Hold One Key Take Off/Landing Headless 360°Flip
@@ -2314,11 +2314,11 @@
                                     <li class="wow fadeInUp" data-wow-delay="0">
                                         <div class="card-product style-row row-small-2 ">
                                             <div class="card-product-wrapper">
-                                                <a href="product-detail.html" class="product-img">
-                                                    <img class="img-product lazyload" src="images/product/product-77-w.jpg"
-                                                        data-src="images/product/product-77-w.jpg" alt="image-product">
-                                                    <img class="img-hover lazyload" src="images/product/product-8.jpg"
-                                                        data-src="images/product/product-8.jpg" alt="image-product">
+                                                <a href="articoli.aspx" class="product-img">
+                                                    <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-77-w.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-77-w.jpg" alt="image-product">
+                                                    <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-8.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-8.jpg" alt="image-product">
                                                 </a>
                                             </div>
                                             <div class="card-product-info">
@@ -2327,7 +2327,7 @@
                                                         <p class="caption text-main-2 font-2">
                                                             Smartphone
                                                         </p>
-                                                        <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                             Huawei Nova 8 Pro 4G – Powerful Performance, 120Hz Display,
                                                             66W Fast Charging
                                                         </a>
@@ -2375,11 +2375,11 @@
                                     <li class="wow fadeInUp" data-wow-delay="0">
                                         <div class="card-product style-row row-small-2 ">
                                             <div class="card-product-wrapper">
-                                                <a href="product-detail.html" class="product-img">
-                                                    <img class="img-product lazyload" src="images/product/product-78.jpg"
-                                                        data-src="images/product/product-78.jpg" alt="image-product">
-                                                    <img class="img-hover lazyload" src="images/product/product-37.jpg"
-                                                        data-src="images/product/product-37.jpg" alt="image-product">
+                                                <a href="articoli.aspx" class="product-img">
+                                                    <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-78.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-78.jpg" alt="image-product">
+                                                    <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-37.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-37.jpg" alt="image-product">
                                                 </a>
                                             </div>
                                             <div class="card-product-info">
@@ -2388,7 +2388,7 @@
                                                         <p class="caption text-main-2 font-2">
                                                             Headphone
                                                         </p>
-                                                        <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                             Eskuche 33iS – Retro Design, Premium Sound, Cables
                                                         </a>
                                                     </div>
@@ -2434,11 +2434,11 @@
                                     <li class="wow fadeInUp" data-wow-delay="0">
                                         <div class="card-product style-row row-small-2 ">
                                             <div class="card-product-wrapper">
-                                                <a href="product-detail.html" class="product-img">
-                                                    <img class="img-product lazyload" src="images/product/product-79.jpg"
-                                                        data-src="images/product/product-79.jpg" alt="image-product">
-                                                    <img class="img-hover lazyload" src="images/product/product-72.jpg"
-                                                        data-src="images/product/product-72.jpg" alt="image-product">
+                                                <a href="articoli.aspx" class="product-img">
+                                                    <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-79.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-79.jpg" alt="image-product">
+                                                    <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-72.jpg"
+                                                        data-src="/Public/assets/keepstore/images/product/product-72.jpg" alt="image-product">
                                                 </a>
                                             </div>
                                             <div class="card-product-info">
@@ -2447,7 +2447,7 @@
                                                         <p class="caption text-main-2 font-2">
                                                             Smartwatch
                                                         </p>
-                                                        <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                             Apple Watch Series 1 Aluminum case with Sport Band
                                                         </a>
                                                     </div>
@@ -2508,8 +2508,8 @@
                         <!-- item 1 -->
                         <div class="swiper-slide">
                             <div class="cls-category style-abs hover-img wow fadeInLeft" data-wow-delay="0">
-                                <a href="product-detail.html" class="img-box img-style d-block">
-                                    <img src="images/collection/cls-category-1.webp" data-src="images/collection/cls-category-1.webp" alt=""
+                                <a href="articoli.aspx" class="img-box img-style d-block">
+                                    <img src="/Public/assets/keepstore/images/collection/cls-category-1.webp" data-src="/Public/assets/keepstore/images/collection/cls-category-1.webp" alt=""
                                         class="lazyload">
                                 </a>
                                 <div class="content">
@@ -2518,7 +2518,7 @@
                                         <p class="main-title-2 fw-bold">deals</p>
                                         <p class="product-title-2">on the headphones</p>
                                     </div>
-                                    <a href="product-detail.html" class="tf-btn-icon style-white">
+                                    <a href="articoli.aspx" class="tf-btn-icon style-white">
                                         <i class="icon-circle-chevron-right"></i>
                                         <span class="font-2">Shop now</span>
                                     </a>
@@ -2532,8 +2532,8 @@
                         <!-- item 2 -->
                         <div class="swiper-slide">
                             <div class="cls-category style-abs hover-img wow fadeInLeft" data-wow-delay="0.1s">
-                                <a href="product-detail.html" class="img-box img-style d-block">
-                                    <img src="images/collection/cls-category-2.webp" data-src="images/collection/cls-category-2.webp" alt=""
+                                <a href="articoli.aspx" class="img-box img-style d-block">
+                                    <img src="/Public/assets/keepstore/images/collection/cls-category-2.webp" data-src="/Public/assets/keepstore/images/collection/cls-category-2.webp" alt=""
                                         class="lazyload">
                                 </a>
                                 <div class="content">
@@ -2542,7 +2542,7 @@
                                         <p class="main-title-2 fw-bold">deals</p>
                                         <p class="product-title-2">on the cameras</p>
                                     </div>
-                                    <a href="product-detail.html" class="tf-btn-icon style-white">
+                                    <a href="articoli.aspx" class="tf-btn-icon style-white">
                                         <i class="icon-circle-chevron-right"></i>
                                         <span class="font-2">Shop now</span>
                                     </a>
@@ -2556,8 +2556,8 @@
                         <!-- item 3 -->
                         <div class="swiper-slide">
                             <div class="cls-category style-abs hover-img wow fadeInLeft" data-wow-delay="0.2s">
-                                <a href="product-detail.html" class="img-box img-style d-block">
-                                    <img src="images/collection/cls-category-3.jpg" data-src="images/collection/cls-category-3.jpg" alt=""
+                                <a href="articoli.aspx" class="img-box img-style d-block">
+                                    <img src="/Public/assets/keepstore/images/collection/cls-category-3.jpg" data-src="/Public/assets/keepstore/images/collection/cls-category-3.jpg" alt=""
                                         class="lazyload">
                                 </a>
                                 <div class="content">
@@ -2566,7 +2566,7 @@
                                         <p class="main-title-2 fw-bold">deals</p>
                                         <p class="product-title-2">on the phones</p>
                                     </div>
-                                    <a href="product-detail.html" class="tf-btn-icon style-white">
+                                    <a href="articoli.aspx" class="tf-btn-icon style-white">
                                         <i class="icon-circle-chevron-right"></i>
                                         <span class="font-2">Shop now</span>
                                     </a>
@@ -2580,8 +2580,8 @@
                         <!-- item 4 -->
                         <div class="swiper-slide">
                             <div class="cls-category style-abs hover-img wow fadeInLeft" data-wow-delay="0.3s">
-                                <a href="product-detail.html" class="img-box img-style d-block">
-                                    <img src="images/collection/cls-category-4.webp" data-src="images/collection/cls-category-4.webp" alt=""
+                                <a href="articoli.aspx" class="img-box img-style d-block">
+                                    <img src="/Public/assets/keepstore/images/collection/cls-category-4.webp" data-src="/Public/assets/keepstore/images/collection/cls-category-4.webp" alt=""
                                         class="lazyload">
                                 </a>
                                 <div class="content">
@@ -2590,7 +2590,7 @@
                                         <p class="text-black main-title-2 text-uppercase fw-bold">deals</p>
                                         <p class="text-black product-title-2 text-uppercase">on the watchs</p>
                                     </div>
-                                    <a href="product-detail.html" class="tf-btn-icon">
+                                    <a href="articoli.aspx" class="tf-btn-icon">
                                         <i class="icon-circle-chevron-right"></i>
                                         <span>Shop now</span>
                                     </a>
@@ -2630,10 +2630,10 @@
                         <div class="swiper-slide">
                             <div class="card-product style-img-border wow fadeInUp" data-wow-delay="0">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-24.jpg" data-src="images/product/product-24.jpg"
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-24.jpg" data-src="/Public/assets/keepstore/images/product/product-24.jpg"
                                             alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-149.jpg" data-src="images/product/product-149.jpg"
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-149.jpg" data-src="/Public/assets/keepstore/images/product/product-149.jpg"
                                             alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
@@ -2669,7 +2669,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Laptop & Computer</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 HP Pavilion 14-dv0598sa 14" Full HD Intel Core i3-1115G4
                                             </a>
                                         </div>
@@ -2684,10 +2684,10 @@
                         <div class="swiper-slide">
                             <div class="card-product style-img-border wow fadeInUp" data-wow-delay="0.1s">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-25.jpg" data-src="images/product/product-25.jpg"
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-25.jpg" data-src="/Public/assets/keepstore/images/product/product-25.jpg"
                                             alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-74.jpg" data-src="images/product/product-74.jpg"
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-74.jpg" data-src="/Public/assets/keepstore/images/product/product-74.jpg"
                                             alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
@@ -2723,7 +2723,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Smartphone</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 iPhone 11 Pro Max – Super Retina XDR, A13 Bionic, Triple-Camera System
                                             </a>
                                         </div>
@@ -2738,10 +2738,10 @@
                         <div class="swiper-slide">
                             <div class="card-product style-img-border wow fadeInUp" data-wow-delay="0.2s">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-26w.jpg"
-                                            data-src="images/product/product-26w.jpg" alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-26w.jpg" data-src="images/product/product-26w.jpg"
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-26w.jpg"
+                                            data-src="/Public/assets/keepstore/images/product/product-26w.jpg" alt="image-product">
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-26w.jpg" data-src="/Public/assets/keepstore/images/product/product-26w.jpg"
                                             alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
@@ -2777,7 +2777,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Musicphone</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 Sony Ericsson Unveils Seventh Walkman Phone – Music & Style Combined
                                             </a>
                                         </div>
@@ -2793,10 +2793,10 @@
                         <div class="swiper-slide">
                             <div class="card-product style-img-border wow fadeInUp" data-wow-delay="0.3s">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-27w.jpg"
-                                            data-src="images/product/product-27w.jpg" alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-135.jpg" data-src="images/product/product-135.jpg"
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-27w.jpg"
+                                            data-src="/Public/assets/keepstore/images/product/product-27w.jpg" alt="image-product">
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-135.jpg" data-src="/Public/assets/keepstore/images/product/product-135.jpg"
                                             alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
@@ -2832,7 +2832,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Accessories</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 USB-C Hub & Docking Station – Multiport Adapter for Laptops & Devices
                                             </a>
                                         </div>
@@ -2847,10 +2847,10 @@
                         <div class="swiper-slide">
                             <div class="card-product style-img-border wow fadeInUp" data-wow-delay="0.4s">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-28.jpg" data-src="images/product/product-28.jpg"
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-28.jpg" data-src="/Public/assets/keepstore/images/product/product-28.jpg"
                                             alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-84.jpg" data-src="images/product/product-84.jpg"
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-84.jpg" data-src="/Public/assets/keepstore/images/product/product-84.jpg"
                                             alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
@@ -2886,7 +2886,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Smartwatch</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 UMIDIGI Uwatch 2S – Fitness Tracker with Heart Rate Monitor & 1.3" Touch
                                                 Screen
                                             </a>
@@ -2902,10 +2902,10 @@
                         <div class="swiper-slide">
                             <div class="card-product style-img-border wow fadeInUp" data-wow-delay="0">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-31.jpg" data-src="images/product/product-31.jpg"
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-31.jpg" data-src="/Public/assets/keepstore/images/product/product-31.jpg"
                                             alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-31.jpg" data-src="images/product/product-31.jpg"
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-31.jpg" data-src="/Public/assets/keepstore/images/product/product-31.jpg"
                                             alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
@@ -2941,7 +2941,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Electronics</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 10,000mAh PD 3.0 Power Bank – 18W Fast Charging USB-C Battery Pack
                                             </a>
                                         </div>
@@ -2956,10 +2956,10 @@
                         <div class="swiper-slide">
                             <div class="card-product style-img-border wow fadeInUp" data-wow-delay="0.1s">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-32.jpg" data-src="images/product/product-32.jpg"
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-32.jpg" data-src="/Public/assets/keepstore/images/product/product-32.jpg"
                                             alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-32.jpg" data-src="images/product/product-32.jpg"
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-32.jpg" data-src="/Public/assets/keepstore/images/product/product-32.jpg"
                                             alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
@@ -2995,7 +2995,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Smartspeaker</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 Echo Dot (3rd Gen) – Smart Speaker with Clock & Alexa
                                             </a>
                                         </div>
@@ -3010,10 +3010,10 @@
                         <div class="swiper-slide">
                             <div class="card-product style-img-border wow fadeInUp" data-wow-delay="0.2s">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-33.jpg" data-src="images/product/product-33.jpg"
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-33.jpg" data-src="/Public/assets/keepstore/images/product/product-33.jpg"
                                             alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-49.jpg" data-src="images/product/product-49.jpg"
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-49.jpg" data-src="/Public/assets/keepstore/images/product/product-49.jpg"
                                             alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
@@ -3049,7 +3049,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Wireless Earbuds</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 TWS Y50 Wireless Earbuds – Bluetooth 5.0, HiFi Sound for Xiaomi &
                                                 Samsung
                                             </a>
@@ -3065,10 +3065,10 @@
                         <div class="swiper-slide">
                             <div class="card-product style-img-border wow fadeInUp" data-wow-delay="0.3s">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-34.jpg" data-src="images/product/product-34.jpg"
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-34.jpg" data-src="/Public/assets/keepstore/images/product/product-34.jpg"
                                             alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-109.jpg" data-src="images/product/product-109.jpg"
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-109.jpg" data-src="/Public/assets/keepstore/images/product/product-109.jpg"
                                             alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
@@ -3104,7 +3104,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Smartwatch</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 Amazfit GTS 2 Mini – GPS Smartwatch with Alexa, 14-Day Battery, 70+
                                                 Sports Modes
                                             </a>
@@ -3120,10 +3120,10 @@
                         <div class="swiper-slide">
                             <div class="card-product style-img-border wow fadeInUp" data-wow-delay="0.4s">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-35.jpg" data-src="images/product/product-35.jpg"
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-35.jpg" data-src="/Public/assets/keepstore/images/product/product-35.jpg"
                                             alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-35.jpg" data-src="images/product/product-35.jpg"
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-35.jpg" data-src="/Public/assets/keepstore/images/product/product-35.jpg"
                                             alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
@@ -3159,7 +3159,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Electronics</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 Apple Magic Mouse (USB-C) – Multi-Touch Wireless Mouse
                                             </a>
                                         </div>
@@ -3174,10 +3174,10 @@
                         <div class="swiper-slide">
                             <div class="card-product style-img-border">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-29.jpg" data-src="images/product/product-29.jpg"
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-29.jpg" data-src="/Public/assets/keepstore/images/product/product-29.jpg"
                                             alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-29.jpg" data-src="images/product/product-29.jpg"
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-29.jpg" data-src="/Public/assets/keepstore/images/product/product-29.jpg"
                                             alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
@@ -3213,7 +3213,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Electronics</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 Remax RB-M23 UFO – Portable Bluetooth Speaker with Deep Bass & Stylish
                                                 Design
                                             </a>
@@ -3229,10 +3229,10 @@
                         <div class="swiper-slide">
                             <div class="card-product style-small style-img-border">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-36.jpg" data-src="images/product/product-36.jpg"
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-36.jpg" data-src="/Public/assets/keepstore/images/product/product-36.jpg"
                                             alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-36.jpg" data-src="images/product/product-36.jpg"
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-36.jpg" data-src="/Public/assets/keepstore/images/product/product-36.jpg"
                                             alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
@@ -3268,7 +3268,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Electronics</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 Harman Kardon Aura Studio 3 – 130W Wireless Bluetooth Speaker with
                                                 Premium Sound
                                             </a>
@@ -3289,12 +3289,12 @@
         <!-- Banner Product -->
         <section>
             <div class="container">
-                <a href="product-detail.html" class="banner-image-product-2 hover-img d-block">
+                <a href="articoli.aspx" class="banner-image-product-2 hover-img d-block">
                     <div class="item-image item-1 img-style overflow-visible">
-                        <img src="images/item/camera-2.webp" data-src="images/item/camera-2.webp" alt="" class="lazyload">
+                        <img src="/Public/assets/keepstore/images/item/camera-2.webp" data-src="/Public/assets/keepstore/images/item/camera-2.webp" alt="" class="lazyload">
                     </div>
                     <div class="item-image item-2 img-style overflow-visible d-none d-lg-block">
-                        <img src="images/item/camera-3.webp" data-src="images/item/camera-3.webp" alt="" class="lazyload">
+                        <img src="/Public/assets/keepstore/images/item/camera-3.webp" data-src="/Public/assets/keepstore/images/item/camera-3.webp" alt="" class="lazyload">
                     </div>
                     <div class=" item-banner has-bg-img" data-bg-img="images/banner/banner-2.jpg" data-bg-size="cover" data-bg-repeat="no-repeat">
                         <div class="inner">
@@ -3339,11 +3339,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-66.jpg"
-                                                            data-src="images/product/product-66.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-45.jpg"
-                                                            data-src="images/product/product-45.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-66.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-66.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-45.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-45.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -3352,7 +3352,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Game Controller
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 Retroflag Case for Raspberry Pi 3 B+ – Classic Design
                                                                 with Game Controller Compatibility
@@ -3401,11 +3401,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-67w.jpg"
-                                                            data-src="images/product/product-67w.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-25.jpg"
-                                                            data-src="images/product/product-25.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-67w.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-67w.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-25.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-25.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -3414,7 +3414,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Smartphone
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 iPhone 11 (64GB) VN/A – Powerful Performance, Dual
                                                                 Camera, Liquid Retina Display
@@ -3462,11 +3462,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-68.jpg"
-                                                            data-src="images/product/product-68.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-54.jpg"
-                                                            data-src="images/product/product-54.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-68.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-68.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-54.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-54.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -3475,7 +3475,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Wireless Earbuds
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 Apple AirPods – True Wireless Earbuds with Seamless
                                                                 Connectivity
@@ -3528,11 +3528,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-69.jpg"
-                                                            data-src="images/product/product-69.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-69.jpg"
-                                                            data-src="images/product/product-69.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-69.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-69.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-69.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-69.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -3541,7 +3541,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Camera & Accessories
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 Leica Summaron-M 28mm f/5.6 – Classic Prime Lens Boxed
                                                                 Edition
@@ -3590,11 +3590,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-75.jpg"
-                                                            data-src="images/product/product-75.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-65w.jpg"
-                                                            data-src="images/product/product-65w.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-75.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-75.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-65w.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-65w.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -3603,7 +3603,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Headphone
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 Beats Studio3 Wireless – Noise Cancelling Headphones
                                                                 with Apple W1 Chip & Class 1 Bluetooth
@@ -3651,11 +3651,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-70.jpg"
-                                                            data-src="images/product/product-70.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-28.jpg"
-                                                            data-src="images/product/product-28.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-70.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-70.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-28.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-28.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -3664,7 +3664,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Smartwatch
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 Fitbit Charge 2 – Lavender Rose Gold Smart Fitness
                                                                 Tracker (Size S/L)
@@ -3739,11 +3739,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-69.jpg"
-                                                            data-src="images/product/product-69.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-69.jpg"
-                                                            data-src="images/product/product-69.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-69.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-69.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-69.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-69.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -3752,7 +3752,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Camera & Accessories
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 Leica Summaron-M 28mm f/5.6 – Classic Prime Lens Boxed
                                                                 Edition
@@ -3801,11 +3801,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-75.jpg"
-                                                            data-src="images/product/product-75.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-65w.jpg"
-                                                            data-src="images/product/product-65w.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-75.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-75.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-65w.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-65w.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -3814,7 +3814,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Headphone
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 Beats Studio3 Wireless – Noise Cancelling Headphones
                                                                 with Apple W1 Chip & Class 1 Bluetooth
@@ -3862,11 +3862,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-70.jpg"
-                                                            data-src="images/product/product-70.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-28.jpg"
-                                                            data-src="images/product/product-28.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-70.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-70.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-28.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-28.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -3875,7 +3875,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Smartwatch
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 Fitbit Charge 2 – Lavender Rose Gold Smart Fitness
                                                                 Tracker (Size S/L)
@@ -3929,11 +3929,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/sc-1.jpg"
-                                                            data-src="images/product/sc-1.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-34.jpg"
-                                                            data-src="images/product/product-34.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/sc-1.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/sc-1.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-34.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-34.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -3942,7 +3942,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Smartwatch
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 Apple Watch Series 2 (38mm) – Aluminum Case, Call &
                                                                 Message Support
@@ -3991,11 +3991,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-71.jpg"
-                                                            data-src="images/product/product-71.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-52.jpg"
-                                                            data-src="images/product/product-52.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-71.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-71.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-52.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-52.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -4004,7 +4004,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Laptop & Computer
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 HP 15-fd0079TU – Intel i5-1335U, 16GB RAM, 512GB SSD,
                                                                 15.6" FHD Display
@@ -4052,11 +4052,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-72.jpg"
-                                                            data-src="images/product/product-72.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-59.jpg"
-                                                            data-src="images/product/product-59.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-72.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-72.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-59.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-59.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -4065,7 +4065,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Smartwatch
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 Huami Amazfit GTS 2 – Smartwatch with AMOLED Display &
                                                                 Multi-Sport Modes
@@ -4140,11 +4140,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/sc-1.jpg"
-                                                            data-src="images/product/sc-1.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-34.jpg"
-                                                            data-src="images/product/product-34.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/sc-1.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/sc-1.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-34.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-34.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -4153,7 +4153,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Smartwatch
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 Apple Watch Series 2 (38mm) – Aluminum Case, Call &
                                                                 Message Support
@@ -4202,11 +4202,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-71.jpg"
-                                                            data-src="images/product/product-71.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-52.jpg"
-                                                            data-src="images/product/product-52.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-71.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-71.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-52.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-52.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -4215,7 +4215,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Laptop & Computer
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 HP 15-fd0079TU – Intel i5-1335U, 16GB RAM, 512GB SSD,
                                                                 15.6" FHD Display
@@ -4263,11 +4263,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-72.jpg"
-                                                            data-src="images/product/product-72.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-59.jpg"
-                                                            data-src="images/product/product-59.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-72.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-72.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-59.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-59.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -4276,7 +4276,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Smartwatch
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 Huami Amazfit GTS 2 – Smartwatch with AMOLED Display &
                                                                 Multi-Sport Modes
@@ -4330,11 +4330,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-73.jpg"
-                                                            data-src="images/product/product-73.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-47.jpg"
-                                                            data-src="images/product/product-47.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-73.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-73.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-47.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-47.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -4343,7 +4343,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Camera & Accessories
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 Sony ZV-1 (White) – Compact Digital Camera for Vlogging
                                                                 & Content Creation
@@ -4392,11 +4392,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-76.jpg"
-                                                            data-src="images/product/product-76.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-57.jpg"
-                                                            data-src="images/product/product-57.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-76.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-76.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-57.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-57.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -4405,7 +4405,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Game Consoles
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 Sony PlayStation 5 (PS5) – Next-Gen Gaming Console with
                                                                 Ultra-Fast SSD & 4K Graphics
@@ -4453,11 +4453,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-74.jpg"
-                                                            data-src="images/product/product-74.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-25.jpg"
-                                                            data-src="images/product/product-25.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-74.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-74.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-25.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-25.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -4466,7 +4466,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Smartphone
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 iPhone 6 Plus (128GB) – Pre-Owned Smartphone with Large
                                                                 Display & iOS Experience
@@ -4540,11 +4540,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-73.jpg"
-                                                            data-src="images/product/product-73.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-47.jpg"
-                                                            data-src="images/product/product-47.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-73.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-73.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-47.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-47.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -4553,7 +4553,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Camera & Accessories
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 Sony ZV-1 (White) – Compact Digital Camera for Vlogging
                                                                 & Content Creation
@@ -4602,11 +4602,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-76.jpg"
-                                                            data-src="images/product/product-76.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-57.jpg"
-                                                            data-src="images/product/product-57.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-76.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-76.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-57.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-57.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -4615,7 +4615,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Game Consoles
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 Sony PlayStation 5 (PS5) – Next-Gen Gaming Console with
                                                                 Ultra-Fast SSD & 4K Graphics
@@ -4663,11 +4663,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-74.jpg"
-                                                            data-src="images/product/product-74.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-25.jpg"
-                                                            data-src="images/product/product-25.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-74.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-74.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-25.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-25.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -4676,7 +4676,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Smartphone
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 iPhone 6 Plus (128GB) – Pre-Owned Smartphone with Large
                                                                 Display & iOS Experience
@@ -4729,11 +4729,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-66.jpg"
-                                                            data-src="images/product/product-66.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-45.jpg"
-                                                            data-src="images/product/product-45.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-66.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-66.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-45.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-45.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -4742,7 +4742,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Game Controller
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 Retroflag Case for Raspberry Pi 3 B+ – Classic Design
                                                                 with Game Controller Compatibility
@@ -4791,11 +4791,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-67w.jpg"
-                                                            data-src="images/product/product-67w.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-25.jpg"
-                                                            data-src="images/product/product-25.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-67w.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-67w.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-25.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-25.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -4804,7 +4804,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Smartphone
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 iPhone 11 (64GB) VN/A – Powerful Performance, Dual
                                                                 Camera, Liquid Retina Display
@@ -4852,11 +4852,11 @@
                                         <li class="wow fadeInUp" data-wow-delay="0s">
                                             <div class="card-product style-row row-small-2 ">
                                                 <div class="card-product-wrapper">
-                                                    <a href="product-detail.html" class="product-img">
-                                                        <img class="img-product lazyload" src="images/product/product-68.jpg"
-                                                            data-src="images/product/product-68.jpg" alt="image-product">
-                                                        <img class="img-hover lazyload" src="images/product/product-54.jpg"
-                                                            data-src="images/product/product-54.jpg" alt="image-product">
+                                                    <a href="articoli.aspx" class="product-img">
+                                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-68.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-68.jpg" alt="image-product">
+                                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-54.jpg"
+                                                            data-src="/Public/assets/keepstore/images/product/product-54.jpg" alt="image-product">
                                                     </a>
                                                 </div>
                                                 <div class="card-product-info">
@@ -4865,7 +4865,7 @@
                                                             <p class="caption text-main-2 font-2">
                                                                 Wireless Earbuds
                                                             </p>
-                                                            <a href="product-detail.html"
+                                                            <a href="articoli.aspx"
                                                                 class="name-product body-md-2 fw-semibold text-secondary link">
                                                                 Apple AirPods – True Wireless Earbuds with Seamless
                                                                 Connectivity
@@ -4930,9 +4930,9 @@
                     <div class="swiper-wrapper">
                         <!-- item 1 -->
                         <div class="swiper-slide">
-                            <a href="product-detail.html" class="banner-image-product-2 type-sp-2 hover-img d-block">
+                            <a href="articoli.aspx" class="banner-image-product-2 type-sp-2 hover-img d-block">
                                 <div class="item-image img-style overflow-visible position2">
-                                    <img src="images/item/laptop.webp" data-src="images/item/laptop.webp" alt="" class="lazyload">
+                                    <img src="/Public/assets/keepstore/images/item/laptop.webp" data-src="/Public/assets/keepstore/images/item/laptop.webp" alt="" class="lazyload">
                                 </div>
                                 <div class=" item-banner has-bg-img " data-bg-img="images/banner/banner-3.jpg" data-bg-size="cover"
                                     data-bg-repeat="no-repeat">
@@ -4955,9 +4955,9 @@
                         </div>
                         <!-- item 2 -->
                         <div class="swiper-slide">
-                            <a href="product-detail.html" class="banner-image-product-2 style-2 type-sp-2 hover-img d-block">
+                            <a href="articoli.aspx" class="banner-image-product-2 style-2 type-sp-2 hover-img d-block">
                                 <div class="item-image img-style overflow-visible position3">
-                                    <img src="images/item/camera-1.webp" data-src="images/item/camera-1.webp" alt="" class="lazyload">
+                                    <img src="/Public/assets/keepstore/images/item/camera-1.webp" data-src="/Public/assets/keepstore/images/item/camera-1.webp" alt="" class="lazyload">
                                 </div>
                                 <div class=" item-banner has-bg-img " data-bg-img="images/banner/banner-4.jpg" data-bg-size="cover"
                                     data-bg-repeat="no-repeat">
@@ -5005,11 +5005,11 @@
                         <div class="swiper-slide">
                             <div class="card-product style-img-border wow fadeInLeft" data-wow-delay="0s">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-134.jpg"
-                                            data-src="images/product/product-134.jpg" alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-detail-12.jpg"
-                                            data-src="images/product/product-detail-12.jpg" alt="image-product">
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-134.jpg"
+                                            data-src="/Public/assets/keepstore/images/product/product-134.jpg" alt="image-product">
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-detail-12.jpg"
+                                            data-src="/Public/assets/keepstore/images/product/product-detail-12.jpg" alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
                                         <li>
@@ -5044,7 +5044,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Headphone</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 Urbanears Pampas – Wireless Over-Ear Headphones with Immersive Sound
                                                 (Almond Beige)
                                             </a>
@@ -5060,11 +5060,11 @@
                         <div class="swiper-slide">
                             <div class="card-product style-img-border wow fadeInLeft" data-wow-delay="0.1s">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-2.jpg" data-src="images/product/product-2.jpg"
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-2.jpg" data-src="/Public/assets/keepstore/images/product/product-2.jpg"
                                             alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-detail-9.jpg"
-                                            data-src="images/product/product-detail-9.jpg" alt="image-product">
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-detail-9.jpg"
+                                            data-src="/Public/assets/keepstore/images/product/product-detail-9.jpg" alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
                                         <li>
@@ -5099,7 +5099,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Headphone</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 Upgrader Headphones – Altec Lansing by ECCO Design, Premium Sound &
                                                 Comfort
                                             </a>
@@ -5115,10 +5115,10 @@
                         <div class="swiper-slide">
                             <div class="card-product style-img-border wow fadeInLeft" data-wow-delay="0.2s">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-3.webp" data-src="images/product/product-3.webp"
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-3.webp" data-src="/Public/assets/keepstore/images/product/product-3.webp"
                                             alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-10.jpg" data-src="images/product/product-10.jpg"
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-10.jpg" data-src="/Public/assets/keepstore/images/product/product-10.jpg"
                                             alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
@@ -5154,7 +5154,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Smartwatch</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 Apple Watch Series 6 (GPS) – 40mm Aluminum Case with Sport Band,
                                                 Official Warranty
                                             </a>
@@ -5171,10 +5171,10 @@
                         <div class="swiper-slide">
                             <div class="card-product style-img-border wow fadeInLeft" data-wow-delay="0.3s">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-4.jpg" data-src="images/product/product-4.jpg"
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-4.jpg" data-src="/Public/assets/keepstore/images/product/product-4.jpg"
                                             alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-19.jpg" data-src="images/product/product-19.jpg"
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-19.jpg" data-src="/Public/assets/keepstore/images/product/product-19.jpg"
                                             alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
@@ -5210,7 +5210,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Laptop & Computer</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 Lenovo Yoga 910-13IKB – 2-in-1 Ultrabook with Touchscreen & 360° Hinge
                                             </a>
                                         </div>
@@ -5225,10 +5225,10 @@
                         <div class="swiper-slide">
                             <div class="card-product style-img-border wow fadeInLeft" data-wow-delay="0.4s">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-5.webp" data-src="images/product/product-5.webp"
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-5.webp" data-src="/Public/assets/keepstore/images/product/product-5.webp"
                                             alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-153.jpg" data-src="images/product/product-153.jpg"
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-153.jpg" data-src="/Public/assets/keepstore/images/product/product-153.jpg"
                                             alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
@@ -5264,7 +5264,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Wireless Earphones</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 JBL LIVE200BT – Wireless Neckband Earphones with Premium Sound & Comfort
                                             </a>
                                         </div>
@@ -5279,10 +5279,10 @@
                         <div class="swiper-slide">
                             <div class="card-product style-img-border">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-6.jpg" data-src="images/product/product-6.jpg"
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-6.jpg" data-src="/Public/assets/keepstore/images/product/product-6.jpg"
                                             alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-43.jpg" data-src="images/product/product-43.jpg"
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-43.jpg" data-src="/Public/assets/keepstore/images/product/product-43.jpg"
                                             alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
@@ -5318,7 +5318,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Electronics</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 SteelSeries Aerox 9 Wireless – Ultra-Lightweight Gaming Mouse with 12
                                                 Programmable Buttons
                                             </a>
@@ -5334,10 +5334,10 @@
                         <div class="swiper-slide">
                             <div class="card-product style-img-border">
                                 <div class="card-product-wrapper">
-                                    <a href="product-detail.html" class="product-img">
-                                        <img class="img-product lazyload" src="images/product/product-7.jpg" data-src="images/product/product-7.jpg"
+                                    <a href="articoli.aspx" class="product-img">
+                                        <img class="img-product lazyload" src="/Public/assets/keepstore/images/product/product-7.jpg" data-src="/Public/assets/keepstore/images/product/product-7.jpg"
                                             alt="image-product">
-                                        <img class="img-hover lazyload" src="images/product/product-7.jpg" data-src="images/product/product-7.jpg"
+                                        <img class="img-hover lazyload" src="/Public/assets/keepstore/images/product/product-7.jpg" data-src="/Public/assets/keepstore/images/product/product-7.jpg"
                                             alt="image-product">
                                     </a>
                                     <ul class="list-product-btn">
@@ -5373,7 +5373,7 @@
                                     <div class="box-title">
                                         <div class="d-flex flex-column">
                                             <p class="caption text-main-2 font-2">Wired Earphones</p>
-                                            <a href="product-detail.html" class="name-product body-md-2 fw-semibold text-secondary link">
+                                            <a href="articoli.aspx" class="name-product body-md-2 fw-semibold text-secondary link">
                                                 3.5mm Stereo Earphones – HiFi Bass Headphones with Microphone for Music
                                                 & Calls
                                             </a>

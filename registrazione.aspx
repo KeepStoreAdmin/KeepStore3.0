@@ -6,39 +6,7 @@
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <style>
-        /* Registrazione - wrapper stile Onsus (senza toccare la logica VB) */
-        .ks-auth-register .ks-register-card {
-            padding: 28px;
-            border: 1px solid rgba(0,0,0,.08);
-            border-radius: 12px;
-            background: #fff;
-        }
-
-        .ks-auth-register h1 {
-            margin-bottom: 18px;
-        }
-
-        /* normalizza un po' le tabelle legacy senza riscriverle */
-        .ks-auth-register table {
-            width: 100%;
-        }
-
-        .ks-auth-register table[style*="border-style:solid"] {
-            border-color: rgba(0,0,0,.08) !important;
-            border-width: 1px !important;
-            background-color: #fff !important;
-        }
-
-        /* allinea l'aspetto dei campi ai form Onsus/Bootstrap */
-        .ks-auth-register input[type="text"],
-        .ks-auth-register input[type="password"],
-        .ks-auth-register input[type="email"],
-        .ks-auth-register select,
-        .ks-auth-register textarea {
-            border-radius: 8px;
-        }
-    </style>
+    
 </asp:Content>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">

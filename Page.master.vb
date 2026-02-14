@@ -1026,16 +1026,24 @@ End Sub
 	        Dim aziendaLogo As String = If(Me.Session("AziendaLogo") Is Nothing, "", Me.Session("AziendaLogo").ToString())
 	        Dim credits As String = If(Me.Session("Credits") Is Nothing, "", Me.Session("Credits").ToString())
 
-	        Me.Page.Title = aziendaNome
+        If aziendaNome <> "" Then Me.Page.Title = aziendaNome
 	        Dim altLogo As String = (aziendaNome & " - " & aziendaDescrizione).Trim()
 
 	        If imgLogoCtrl IsNot Nothing Then
-	            If aziendaLogo <> "" Then imgLogoCtrl.ImageUrl = aziendaLogo
+	            If aziendaLogo <> "" Then
+	                imgLogoCtrl.ImageUrl = aziendaLogo
+	            ElseIf String.IsNullOrEmpty(imgLogoCtrl.ImageUrl) Then
+	                imgLogoCtrl.ImageUrl = ResolveUrl("~/Public/assets/keepstore/images/logo/logo.webp")
+	            End If
 	            If altLogo <> "" Then imgLogoCtrl.AlternateText = altLogo
 	        End If
 
 	        If imgLogoMobileCtrl IsNot Nothing Then
-	            If aziendaLogo <> "" Then imgLogoMobileCtrl.ImageUrl = aziendaLogo
+	            If aziendaLogo <> "" Then
+	                imgLogoMobileCtrl.ImageUrl = aziendaLogo
+	            ElseIf String.IsNullOrEmpty(imgLogoMobileCtrl.ImageUrl) Then
+	                imgLogoMobileCtrl.ImageUrl = ResolveUrl("~/Public/assets/keepstore/images/logo/logo.webp")
+	            End If
 	            If altLogo <> "" Then imgLogoMobileCtrl.AlternateText = altLogo
 	        End If
 

@@ -13,124 +13,7 @@
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <style type="text/css">
-        /* KeepStore STEP22A (ONUS) - Tab tipo documento */
-        .ks-doc-typebar { margin: 0 0 18px 0; }
-        .ks-doc-typebar .selezionato,
-        .ks-doc-typebar .nonSelezionato {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px 14px;
-            border-radius: 14px;
-            border: 1px solid rgba(0,0,0,0.10);
-            text-decoration: none;
-            font-size: 14px;
-            line-height: 1;
-            user-select: none;
-            margin: 0;
-        }
-        .ks-doc-typebar .nonSelezionato { background: #ffffff; color: #111111; font-weight: 500; }
-        .ks-doc-typebar .selezionato { background: #111111; color: #ffffff; font-weight: 700; border-color: #111111; }
-        .ks-doc-typebar .nonSelezionato:hover { background: rgba(0,0,0,0.03); }
-
-        /* Fieldset (Panel GroupingText) in stile card */
-        .ks-fieldset {
-            border: 1px solid rgba(0,0,0,0.08) !important;
-            background: #ffffff;
-            padding: 16px 16px 14px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.04);
-            margin: 0;
-        }
-        .ks-fieldset legend {
-            width: auto !important;
-            padding: 0 10px;
-            font-size: 14px;
-            font-weight: 700;
-        }
-
-        /* Spinner pagina */
-        .ks-loading-panel {
-            border: 1px solid #ddd;
-            background-color: #fff;
-            padding: 20px;
-            text-align: center;
-            margin: 20px 0;
-            border-radius: 16px;
-        }
-
-        .ks-spinner-circle {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            border: 3px solid #ccc;
-            border-top-color: #333;
-            animation: ks-spin 0.8s linear infinite;
-            margin: 0 auto 8px;
-        }
-
-        @keyframes ks-spin {
-            from { transform: rotate(0deg); }
-            to   { transform: rotate(360deg); }
-        }
-
-        /* Sidebar sticky (desktop) */
-        .ks-myaccount .wrap-sidebar-account {
-            position: sticky;
-            top: 110px;
-        }
-        @media (max-width: 991px) {
-            .ks-myaccount .wrap-sidebar-account { position: static; top: auto; }
-        }
-
-        /* Form controls (minimo) */
-        .ks-doc-filters .form-select,
-        .ks-doc-filters input[type='text'] {
-            max-width: 100%;
-        }
-
-        /* KeepStore STEP22B (ONUS) - Tabella ordine/documenti */
-        .tf-order_history-table { margin-top: 12px; }
-        .ks-order-table { width: 100%; }
-        .ks-order-table th, .ks-order-table td { padding: 14px 12px; vertical-align: top; }
-        .ks-order-table .td-order-item td { border-bottom: 1px solid rgba(0,0,0,0.06); }
-        .ks-status-pill {
-            display: inline-flex;
-            align-items: center;
-            padding: 6px 10px;
-            border-radius: 999px;
-            background: rgba(0,0,0,0.06);
-            font-size: 12px;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-        .ks-action-stack { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-        .ks-icon-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            border: 1px solid rgba(0,0,0,0.12);
-            background: #ffffff;
-            padding: 0;
-        }
-        .ks-icon-btn img { max-width: 20px; max-height: 20px; }
-        .ks-order-details summary { cursor: pointer; }
-        .ks-order-details summary::-webkit-details-marker { display: none; }
-        .ks-order-details-body {
-            margin-top: 8px;
-            padding: 10px 12px;
-            border: 1px solid rgba(0,0,0,0.08);
-            border-radius: 14px;
-            background: rgba(0,0,0,0.02);
-        }
-
-</style>
-
-    <script type="text/javascript">
+<script type="text/javascript">
         function ksHideSpinnerAndShowContent() {
             var spinner = document.getElementById('<%= pnlLoading.ClientID %>');
             var content = document.getElementById('<%= pnlContent.ClientID %>');
@@ -199,7 +82,7 @@
                     var popWidth = dim[0].split('=')[1]; //Gets the first query string value
 
                     //Fade in the Popup and add close button
-                    JQ('#' + popID).fadeIn().css({ 'width': Number(popWidth) }).prepend('<a href="#" class="close"><img src="Public/assets/onsus/images/close_pop.png" class="btn_close" title="Close Window" alt="Close" /></a>');
+                    JQ('#' + popID).fadeIn().css({ 'width': Number(popWidth) }).prepend('<a href="#" class="close"><img src="Public/assets/keepstore/images/close_pop.png" class="btn_close" title="Close Window" alt="Close" /></a>');
 
                     //Define margin for center alignment (vertical + horizontal)
                     var popMargTop = (10 + 80) / 2;
@@ -231,7 +114,7 @@
                Session("esito_invio_mail") = 0
         %>
         <div id="popup" class="popup_block" style="display:none; vertical-align:middle;">
-            <div><img src="Public/assets/onsus/images/Ok.png" alt="" /></div><br />
+            <div><img src="Public/assets/keepstore/images/Ok.png" alt="" /></div><br />
             <div>Richiesta inoltrata. Riceverà il documento presso la sua casella email !!!</div>
         </div>
         <% End If %>
@@ -326,7 +209,6 @@
                                         CssClass="tf-btn btn-line">&laquo; Torna a My Account</asp:HyperLink>
                                 </div>
 
-
                     <div class="ks-doc-typebar">
                         <div class="body-small text-main-2 mb-2">Seleziona il tipo di documento</div>
                         <div class="d-flex flex-wrap gap-2">
@@ -369,7 +251,7 @@
                                             <div class="body-small text-main-2 mb-1">Dal</div>
                                             <div class="d-flex align-items-center gap-2">
                                                 <asp:TextBox runat="server" ID="dataInizio" CssClass="tf-input" Width="150px"></asp:TextBox>
-                                                <asp:ImageButton runat="server" ID="ib_calendarInizio" ImageUrl="Public/assets/onsus/images/calendar_icon.gif" />
+                                                <asp:ImageButton runat="server" ID="ib_calendarInizio" ImageUrl="Public/assets/keepstore/images/calendar_icon.gif" />
                                             </div>
                                         </div>
 
@@ -377,7 +259,7 @@
                                             <div class="body-small text-main-2 mb-1">Al</div>
                                             <div class="d-flex align-items-center gap-2">
                                                 <asp:TextBox runat="server" ID="dataFine" CssClass="tf-input" Width="150px"></asp:TextBox>
-                                                <asp:ImageButton runat="server" ID="ImageButton1" ImageUrl="Public/assets/onsus/images/calendar_icon.gif" />
+                                                <asp:ImageButton runat="server" ID="ImageButton1" ImageUrl="Public/assets/keepstore/images/calendar_icon.gif" />
                                             </div>
                                         </div>
                                     </div>
@@ -413,7 +295,6 @@
                             </asp:DropDownList>
                         </div>
                     </div>
-
 
 <div class="tf-order_history-table">
     <asp:GridView ID="GridView1" runat="server"
@@ -510,18 +391,18 @@
                             <a href="<%# "coupon_esito_acquisto.aspx?id=" & Eval("Coupon_idCoupon") & "&cod=" & Eval("Coupon_CodControllo") %>"
                                class="ks-icon-btn"
                                style="display:<%# IIf(Eval("Pagato") = 1 Or (Eval("PagamentiTipoOnline") = 0), "", "none")%>;">
-                                <img src="Public/assets/onsus/images/Pagato.png" alt="Pagato" />
+                                <img src="Public/assets/keepstore/images/Pagato.png" alt="Pagato" />
                             </a>
                         <% Else %>
                             <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>"
                                class="ks-icon-btn"
                                style="display:<%# IIf((Eval("Pagato") = 1 And (Eval("PagamentiTipoOnline") > 0)) Or (Eval("CodiceAutorizzazione") <> ""), "", "none")%>;">
-                                <img src="Public/assets/onsus/images/Pagato.png" alt="Pagato" />
+                                <img src="Public/assets/keepstore/images/Pagato.png" alt="Pagato" />
                             </a>
                             <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>"
                                class="ks-icon-btn"
                                style="display:<%# MostraPagaOra(Eval("Pagato"), Eval("CodiceAutorizzazione"), Eval("StatiId"), Eval("PagamentiTipoOnline")) %>;">
-                                <img src="Public/assets/onsus/images/Paga_Ora.png" alt="Paga ora" />
+                                <img src="Public/assets/keepstore/images/Paga_Ora.png" alt="Paga ora" />
                             </a>
                         <% End If %>
 
@@ -545,7 +426,6 @@
     </asp:GridView>
 </div>
 
-
                             </div>
                         </div>
                     </div>
@@ -553,7 +433,6 @@
             </section>
 
         </div>
-
 
     </asp:Panel> <!-- fine pnlContent -->
 
@@ -637,7 +516,7 @@
                     Dim href As String = link_tracking.Replace("#ID#", codice)
                     Dim safeHref As String = System.Web.HttpUtility.HtmlAttributeEncode(href)
 
-                    sb.Append("<img src=""Public/assets/onsus/images/interrogativo.png"" alt="""" title=""Clicca sul Numero Tracking"">")
+                    sb.Append("<img src=""Public/assets/keepstore/images/interrogativo.png"" alt="""" title=""Clicca sul Numero Tracking"">")
                     sb.Append("<a href=""")
                     sb.Append(safeHref)
                     sb.Append(""" target=""_blank"">")

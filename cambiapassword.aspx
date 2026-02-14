@@ -2,62 +2,7 @@
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
 
-<style type="text/css">
-    /* STEP25C: istruzioni cambio password + diagnostica minima + layout ONUS compatibile */
-    .ks-box {
-        background: #fff;
-        border: 1px solid #e5e5e5;
-        border-radius: 14px;
-        padding: 18px;
-        margin: 16px 0;
-    }
-    .ks-alert {
-        border-radius: 12px;
-        padding: 14px 16px;
-        border: 1px solid #e5e5e5;
-        background: #fafafa;
-        margin: 12px 0;
-    }
-    .ks-alert-info { background: #f4f8ff; border-color: #d7e6ff; }
-    .ks-alert-danger { background: #fff5f5; border-color: #ffd6d6; }
-    .ks-alert-success { background: #f3fff6; border-color: #c8f1d4; }
 
-    .ks-rules ul { margin: 8px 0 0 18px; }
-    .ks-rules li { margin: 4px 0; }
-
-    .ks-form-row { margin-bottom: 12px; }
-    .ks-form-row label { font-weight: 600; display: block; margin-bottom: 6px; }
-    .ks-form-row input[type=password],
-    .ks-form-row input[type=text] {
-        width: 100%;
-        max-width: 420px;
-        padding: 10px 12px;
-        border: 1px solid #dcdcdc;
-        border-radius: 10px;
-    }
-
-    .ks-actions { margin-top: 14px; }
-    .ks-actions input[type=submit],
-    .ks-actions button {
-        padding: 12px 16px;
-        border-radius: 12px;
-        border: 0;
-        cursor: pointer;
-    }
-
-    .ks-small { font-size: 0.95rem; opacity: 0.85; }
-    .ks-tech {
-        margin-top: 10px;
-        font-size: 0.92rem;
-        background: #111;
-        color: #f1f1f1;
-        border-radius: 12px;
-        padding: 10px 12px;
-        overflow-x: auto;
-        white-space: pre-wrap;
-        word-break: break-word;
-    }
-</style>
 
 <script type="text/javascript">
 (function () {
