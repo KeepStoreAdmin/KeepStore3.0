@@ -2097,10 +2097,20 @@ strWhere = strWhere & " GROUP BY id"
         Dim v As String = p.Trim()
         If v = "" Then Continue For
 
-        Dim name As String = paramPrefix & i.ToString()
+        ' Hardening: accept only numeric IDs to avoid runtime conversion errors
+        Dim id As Integer
+        If Not Integer.TryParse(v, id) Then Continue For
+        If id <= 0 Then Continue For
+
+        ' Avoid collisions if the same prefix is ever reused on the same ParameterCollection
+        Dim name As String
+        Do
+            name = paramPrefix & i.ToString()
+            i += 1
+        Loop While pc(name) IsNot Nothing
+
         placeholders.Add("?" & name)
-        pc.Add(New System.Web.UI.WebControls.Parameter(name, TypeCode.Int32, v))
-        i += 1
+        pc.Add(New System.Web.UI.WebControls.Parameter(name, TypeCode.Int32, id.ToString()))
     Next
 
     If placeholders.Count = 0 Then Return ""
