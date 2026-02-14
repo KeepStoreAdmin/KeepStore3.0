@@ -1018,21 +1018,39 @@ End Sub
         Dim imgLogoMobileCtrl As Image = FindCtrl(Of Image)("imgLogoMobile")
         Dim lblCreditsCtrl As Label = FindCtrl(Of Label)("lblCredits")
         Dim headC As Control = GetHeadDynamicContainer()
-        Me.Page.Title = Me.Session("AziendaNome")
-        If imgLogoCtrl IsNot Nothing Then If imgLogoCtrl IsNot Nothing Then imgLogoCtrl.ImageUrl = Me.Session("AziendaLogo")
-        If imgLogoCtrl IsNot Nothing Then If imgLogoCtrl IsNot Nothing Then imgLogoCtrl.AlternateText = Me.Session("AziendaNome") & " - " & Me.Session("AziendaDescrizione")
-        imgLogoMobileCtrl.ImageUrl = Me.Session("AziendaLogo")
-        imgLogoMobileCtrl.AlternateText = Me.Session("AziendaNome") & " - " & Me.Session("AziendaDescrizione")
-        If lblCreditsCtrl IsNot Nothing Then If lblCreditsCtrl IsNot Nothing Then lblCreditsCtrl.Text = Me.Session("Credits")
+
+	        ' Defensive: i controlli possono non esistere su alcune pagine/master varianti.
+	        ' Inoltre le session potrebbero non essere ancora valorizzate in Page_Init.
+	        Dim aziendaNome As String = If(Me.Session("AziendaNome") Is Nothing, "", Me.Session("AziendaNome").ToString())
+	        Dim aziendaDescrizione As String = If(Me.Session("AziendaDescrizione") Is Nothing, "", Me.Session("AziendaDescrizione").ToString())
+	        Dim aziendaLogo As String = If(Me.Session("AziendaLogo") Is Nothing, "", Me.Session("AziendaLogo").ToString())
+	        Dim credits As String = If(Me.Session("Credits") Is Nothing, "", Me.Session("Credits").ToString())
+
+	        Me.Page.Title = aziendaNome
+	        Dim altLogo As String = (aziendaNome & " - " & aziendaDescrizione).Trim()
+
+	        If imgLogoCtrl IsNot Nothing Then
+	            If aziendaLogo <> "" Then imgLogoCtrl.ImageUrl = aziendaLogo
+	            If altLogo <> "" Then imgLogoCtrl.AlternateText = altLogo
+	        End If
+
+	        If imgLogoMobileCtrl IsNot Nothing Then
+	            If aziendaLogo <> "" Then imgLogoMobileCtrl.ImageUrl = aziendaLogo
+	            If altLogo <> "" Then imgLogoMobileCtrl.AlternateText = altLogo
+	        End If
+
+	        If lblCreditsCtrl IsNot Nothing Then
+	            lblCreditsCtrl.Text = credits
+	        End If
 
         Dim objcss As New HtmlLink()
         Dim obj3 As New HtmlLink()
-        objcss.Href = "~/public/style/" & Session("css")
+	        objcss.Href = "~/public/style/" & If(Session("css") Is Nothing, "", Session("css").ToString())
         objcss.Attributes.Add("rel", "stylesheet")
         objcss.Attributes.Add("type", "text/css")
 
         obj3.Attributes.Add("rel", "shortcut icon")
-        obj3.Href = Session("IconaWeb")
+	        obj3.Href = If(Session("IconaWeb") Is Nothing, "", Session("IconaWeb").ToString())
 
         If headC IsNot Nothing Then headC.Controls.Add(objcss)
         If headC IsNot Nothing Then headC.Controls.Add(obj3)
