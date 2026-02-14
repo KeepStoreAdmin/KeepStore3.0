@@ -83,7 +83,7 @@
                                     <p class="price fw-semibold">Scopri</p>
                                 </div>
                                 <div class="box-image">
-                                    <img src="/Public/assets/onsus/images/banner/banner-department-1.png" alt="" onerror="this.style.display='none'" />
+                                    <img src="/Public/assets/keepstore/images/banner/banner-department-1.png" alt="" onerror="this.style.display='none'" />
                                 </div>
                             </a>
                         </div>
