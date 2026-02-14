@@ -10,8 +10,8 @@
     <title><asp:ContentPlaceHolder ID="TitleContent" runat="server" /></title>
 
     <!-- ============================================================
-         KeepStore (core assets)
-         NOTE: i file CSS sono in /Public/assets/keepstore/css
+         ONus (core assets)
+         NOTE: i file CSS sono in /Public/assets/css
          ============================================================ -->
     <link rel="stylesheet" href="<%= ThemeManager.Asset("fonts/font.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("icons/icomoon/style.css") %>" />
@@ -32,9 +32,14 @@
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 
-    <!-- CSS custom KeepStore (centralizzato) -->
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/taikun-keepstore-overrides.css") %>" />
+    <!-- ONSUS CSS -->
+    <link rel="stylesheet" href="/Public/assets/keepstore/icon/icomoon/style.css" />
+    <link rel="stylesheet" href="/Public/assets/keepstore/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/Public/assets/keepstore/css/animate.css" />
+    <link rel="stylesheet" href="/Public/assets/keepstore/css/swiper-bundle.min.css" />
+    <link rel="stylesheet" href="/Public/assets/keepstore/css/select2.min.css" />
+    <link rel="stylesheet" href="/Public/assets/keepstore/css/main.css" />
+    <link rel="stylesheet" href="/Public/assets/keepstore/css/taikun-onsus-overrides.css" />
 
 </head>
 
@@ -66,7 +71,7 @@
         <div id="wrapper">
 
             <!-- ============================================================
-                 HEADER (migrazione KeepStore)
+                 HEADER (migrazione ONus)
                  - Mantiene ID/handler esistenti (imgLogo/imgLogoMobile, tbCerca, btnSearch, mvLogin, rptNavSettori, lblCarrelloCount/lblCarrelloTotale)
                  ============================================================ -->
             <header class="tf-header style-2">
@@ -371,7 +376,7 @@
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="cart.aspx">
+<a class="body-md-2 link" href="carrello.aspx">
 <span>Shop Cart</span>
 </a>
 </li>
@@ -381,7 +386,7 @@
 <p class="menu-heading body-small">WOO PAGE</p>
 <ul class="menu-list">
 <li>
-<a class="body-md-2 link" href="compare.aspx">
+<a class="body-md-2 link" href="articoli.aspx">
 <span>Compare</span>
 </a>
 </li>
@@ -391,7 +396,7 @@
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="checkout.aspx">
+<a class="body-md-2 link" href="carrello.aspx">
 <span>Check Out</span>
 </a>
 </li>
@@ -508,12 +513,12 @@
 <div class="sub-menu-container">
 <ul class="sub-menu-list">
 <li>
-<a class="body-md-2 link" href="contact.aspx">
+<a class="body-md-2 link" href="Contattaci.aspx">
 <span>Contact</span>
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="about.aspx">
+<a class="body-md-2 link" href="KeepStore_Home1.aspx">
 <span>About</span>
 </a>
 </li>
@@ -580,7 +585,7 @@
                 <asp:ContentPlaceHolder ID="cph" runat="server" />
             </main>
 
-            <!-- Footer (KeepStore) -->
+            <!-- Footer (ONus) -->
             <footer class="tf-footer">
 <div class="ft-body-wrap">
 <div class="ft-body-inner">
@@ -643,10 +648,10 @@
 <ul class="ft-menu-list">
 <li><a class="link" href="myaccount.aspx">My Account</a></li>
 <li><a class="link" href="track-your-order.html">Track your Order</a></li>
-<li><a class="link" href="contact.aspx">Customer Service</a></li>
+<li><a class="link" href="Contattaci.aspx">Customer Service</a></li>
 <li><a class="link" href="privacy.html">Returns/Exchange</a></li>
 <li><a class="link" href="faq.html">FAQs</a></li>
-<li><a class="link" href="contact.aspx">Product Support</a></li>
+<li><a class="link" href="Contattaci.aspx">Product Support</a></li>
 </ul>
 </div>
 </li>
@@ -779,7 +784,7 @@
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
 
-		<!-- KeepStore JS (tutto da /Public/assets) -->
+		<!-- ONSUS JS (tutto da /Public/assets) -->
 		<script src="<%= ThemeManager.Asset("js/jquery.min.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/bootstrap.min.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/bootstrap-select.min.js") %>"></script>
@@ -792,7 +797,6 @@
 		<script src="<%= ThemeManager.Asset("js/lazysize.min.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/shop.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/main.js") %>"></script>
-        <script src="<%= ThemeManager.Asset("js/keepstore-init.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/sibforms.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/drift.min.js") %>"></script>
 

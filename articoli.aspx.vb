@@ -627,23 +627,29 @@ Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("Col
 
 strWhere = strWhere & " GROUP BY id"
 
-        If Drop_Ordinamento.SelectedValue = "P_offerta" Then
-            strWhere = strWhere & " ORDER BY InOfferta DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
-        End If
-        If Drop_Ordinamento.SelectedValue = "P_basso" Then
-            strWhere = strWhere & " ORDER BY PrezzoIvato ASC, Prezzo ASC, Ord_PrezzoPromo ASC, Ord_PrezzoPromoIvato ASC,  (Giacenza-Impegnata) DESC"
-        End If
-        If Drop_Ordinamento.SelectedValue = "P_alto" Then
-            strWhere = strWhere & " ORDER BY PrezzoIvato DESC, Prezzo DESC, Ord_PrezzoPromo ASC, Ord_PrezzoPromoIvato ASC,  (Giacenza-Impegnata) DESC"
-        End If
-        If Drop_Ordinamento.SelectedValue = "P_popolarità" Then
-            strWhere = strWhere & " ORDER BY visite DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
-        End If
-        If Drop_Ordinamento.SelectedValue = "P_recenti" Then
-            strWhere = strWhere & " ORDER BY id DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
-        End If
+        ' Ordinamento: whitelist + default deterministico
+        Select Case Drop_Ordinamento.SelectedValue
+            Case "P_offerta"
+                strWhere &= " ORDER BY InOfferta DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
+            Case "P_basso"
+                strWhere &= " ORDER BY PrezzoIvato ASC, Prezzo ASC, Ord_PrezzoPromo ASC, Ord_PrezzoPromoIvato ASC, (Giacenza-Impegnata) DESC"
+            Case "P_alto"
+                strWhere &= " ORDER BY PrezzoIvato DESC, Prezzo DESC, Ord_PrezzoPromo ASC, Ord_PrezzoPromoIvato ASC, (Giacenza-Impegnata) DESC"
+            Case "P_popolarità"
+                strWhere &= " ORDER BY visite DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
+            Case "P_recenti"
+                strWhere &= " ORDER BY id DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
+            Case "P_codice"
+                strWhere &= " ORDER BY Codice ASC, id DESC"
+            Case "P_descrizione"
+                strWhere &= " ORDER BY Descrizione1 ASC, id DESC"
+            Case Else ' "P_rilevanza" o valori non previsti
+                ' Se esiste una ricerca testuale (q), valorizziamo prima la disponibilità e la popolarità.
+                ' Mantiene un risultato stabile anche senza q.
+                strWhere &= " ORDER BY (Giacenza-Impegnata) DESC, visite DESC, id DESC"
+        End Select
 
-        If TC = 1 Then
+If TC = 1 Then
             strWhere = strWhere & " ,articoli_tagliecolori.TagliaId, articoli_tagliecolori.ColoreId"
         End If
 
@@ -2097,20 +2103,10 @@ strWhere = strWhere & " GROUP BY id"
         Dim v As String = p.Trim()
         If v = "" Then Continue For
 
-        ' Hardening: accept only numeric IDs to avoid runtime conversion errors
-        Dim id As Integer
-        If Not Integer.TryParse(v, id) Then Continue For
-        If id <= 0 Then Continue For
-
-        ' Avoid collisions if the same prefix is ever reused on the same ParameterCollection
-        Dim name As String
-        Do
-            name = paramPrefix & i.ToString()
-            i += 1
-        Loop While pc(name) IsNot Nothing
-
+        Dim name As String = paramPrefix & i.ToString()
         placeholders.Add("?" & name)
-        pc.Add(New System.Web.UI.WebControls.Parameter(name, TypeCode.Int32, id.ToString()))
+        pc.Add(New System.Web.UI.WebControls.Parameter(name, TypeCode.Int32, v))
+        i += 1
     Next
 
     If placeholders.Count = 0 Then Return ""
