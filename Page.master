@@ -46,6 +46,20 @@
 <body id="PageBody" runat="server" class="preload-wrapper popup-loader">
     <form id="form1" runat="server">
 
+        <!-- Scroll Top -->
+        <button id="goTop" type="button">
+            <span class="border-progress"></span>
+            <span class="icon icon-arrow-right"></span>
+        </button>
+
+        <!-- preload -->
+        <div class="preload preload-container" id="preload">
+            <div class="preload-logo">
+                <div class="spinner"></div>
+            </div>
+        </div>
+        <!-- /preload -->
+
         <!-- ============================================================
              Global: Facebook Like popup placeholder (legacy)
              NOTE: controllato dal code-behind (PopUpfacebook.Visible)
@@ -376,7 +390,7 @@
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="carrello.aspx">
+<a class="body-md-2 link" href="cart.aspx">
 <span>Shop Cart</span>
 </a>
 </li>
@@ -386,7 +400,7 @@
 <p class="menu-heading body-small">WOO PAGE</p>
 <ul class="menu-list">
 <li>
-<a class="body-md-2 link" href="articoli.aspx">
+<a class="body-md-2 link" href="compare.aspx">
 <span>Compare</span>
 </a>
 </li>
@@ -396,7 +410,7 @@
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="carrello.aspx">
+<a class="body-md-2 link" href="checkout.aspx">
 <span>Check Out</span>
 </a>
 </li>
@@ -513,12 +527,12 @@
 <div class="sub-menu-container">
 <ul class="sub-menu-list">
 <li>
-<a class="body-md-2 link" href="Contattaci.aspx">
+<a class="body-md-2 link" href="contact.aspx">
 <span>Contact</span>
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="KeepStore_Home1.aspx">
+<a class="body-md-2 link" href="about.aspx">
 <span>About</span>
 </a>
 </li>
@@ -648,10 +662,10 @@
 <ul class="ft-menu-list">
 <li><a class="link" href="myaccount.aspx">My Account</a></li>
 <li><a class="link" href="track-your-order.html">Track your Order</a></li>
-<li><a class="link" href="Contattaci.aspx">Customer Service</a></li>
+<li><a class="link" href="contact.aspx">Customer Service</a></li>
 <li><a class="link" href="privacy.html">Returns/Exchange</a></li>
 <li><a class="link" href="faq.html">FAQs</a></li>
-<li><a class="link" href="Contattaci.aspx">Product Support</a></li>
+<li><a class="link" href="contact.aspx">Product Support</a></li>
 </ul>
 </div>
 </li>
