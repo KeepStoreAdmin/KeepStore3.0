@@ -140,16 +140,10 @@
                             <div class="d-flex align-items-center gap-8">
                                 <span class="body-text-3">Ordina per</span>
                                 <asp:DropDownList ID="Drop_Ordinamento" runat="server" AutoPostBack="True" CssClass="form-select form-select-sm">
-                                    
-                                    <asp:ListItem Value="P_rilevanza">Rilevanza</asp:ListItem>
-                                    <asp:ListItem Value="P_recenti">Più recenti</asp:ListItem>
-                                    <asp:ListItem Value="P_popolarità">Popolarità</asp:ListItem>
-                                    <asp:ListItem Value="P_offerta">In offerta</asp:ListItem>
-                                    <asp:ListItem Value="P_basso">Prezzo crescente</asp:ListItem>
-                                    <asp:ListItem Value="P_alto">Prezzo decrescente</asp:ListItem>
-                                    <asp:ListItem Value="P_codice">Codice</asp:ListItem>
-                                    <asp:ListItem Value="P_descrizione">Descrizione</asp:ListItem>
-
+                                    <asp:ListItem Value="varticolibase.Codice">Codice</asp:ListItem>
+                                    <asp:ListItem Value="varticolibase.Descrizione1">Descrizione</asp:ListItem>
+                                    <asp:ListItem Value="varticolibase.PrezzoAcquisto">Prezzo crescente</asp:ListItem>
+                                    <asp:ListItem Value="varticolibase.PrezzoAcquisto DESC">Prezzo decrescente</asp:ListItem>
                                 </asp:DropDownList>
                             </div>
                         </div>
