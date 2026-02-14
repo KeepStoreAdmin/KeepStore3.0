@@ -245,5 +245,5 @@
 	</asp:Content>
 
 	<asp:Content ID="ScriptsArticolo" ContentPlaceHolderID="ScriptsContent" runat="server">
-	    <script type="module" src="/Public/assets/onsus/js/zoom.js"></script>
+	    <script type="module" src="<%= ThemeManager.Asset(""js/zoom.js"") %>"></script>
 	</asp:Content>
