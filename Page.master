@@ -11,7 +11,7 @@
 
     <!-- ============================================================
          ONus (core assets)
-         NOTE: i file CSS sono in /Public/assets/css
+         NOTE: i file CSS sono in /Public/assets/keepstore/css
          ============================================================ -->
     <link rel="stylesheet" href="<%= ThemeManager.Asset("fonts/font.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("icons/icomoon/style.css") %>" />
