@@ -42,9 +42,9 @@
                     <div class="inputcontainer">
                         <p style="text-align: center">
                             <br />
-                            <asp:ImageButton runat="server" ID="ImgBtnDestinazioneSi" ImageUrl="images/modalok.png" TITLE="SI" STYLE="cursor:pointer;" />
+                            <asp:ImageButton runat="server" ID="ImgBtnDestinazioneSi" ImageUrl="/Public/assets/keepstore/images/keepstore/modalok.svg" TITLE="SI" STYLE="cursor:pointer;" />
                             &nbsp;
-                            <asp:ImageButton runat="server" ID="ImgBtnDestinazioneNo" ImageUrl="images/modalno.png" TITLE="NO" STYLE="cursor:pointer;" />
+                            <asp:ImageButton runat="server" ID="ImgBtnDestinazioneNo" ImageUrl="/Public/assets/keepstore/images/keepstore/modalno.svg" TITLE="NO" STYLE="cursor:pointer;" />
                         </p>
                     </div>
                 </div>
@@ -161,34 +161,34 @@
                                         <div class="cart-info">
                                             <asp:HyperLink ID="HyperLink5" runat="server" CssClass="cart-title body-md-2 fw-semibold link" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCid") %>'>
                                                 <span class="ks-cart-title">
-                                                    <asp:Label ID="Label2" runat="server" Text='<%# Eval("MarcheDescrizione") %>' CssClass="ks-brand"></asp:Label>
+                                                    <asp:Label ID="Label2" runat="server" Text='<%#: Eval("MarcheDescrizione") %>' CssClass="ks-brand"></asp:Label>
                                                     <span><%# controllaLunghezzaTesto(Eval("Descrizione1"), 60) %></span>
                                                 </span>
                                             </asp:HyperLink>
 
                                             <div class="variant-box">
                                                 <p class="body-text-3">Variante:</p>
-                                                <asp:Label ID="tagliecolori" runat="server" CssClass="body-text-3" Text='<%# Eval("taglia") & " " & Eval("colore") %>'></asp:Label>
+                                                <asp:Label ID="tagliecolori" runat="server" CssClass="body-text-3" Text='<%#: Eval("taglia") & " " & Eval("colore") %>'></asp:Label>
                                             </div>
 
                                             <div class="body-text-3 mt-1">
-                                                <span>Codice: <asp:Label ID="Label3" runat="server" Text='<%# Eval("Codice") %>' Font-Bold="true"></asp:Label></span>
+                                                <span>Codice: <asp:Label ID="Label3" runat="server" Text='<%#: Eval("Codice") %>' Font-Bold="true"></asp:Label></span>
                                                 <span class="mx-2">|</span>
-                                                <span>Disponibilità: <asp:Label ID="lblDispo" runat="server" Text='<%# Eval("giacenza") %>' Font-Bold="true"></asp:Label></span>
+                                                <span>Disponibilità: <asp:Label ID="lblDispo" runat="server" Text='<%#: Eval("giacenza") %>' Font-Bold="true"></asp:Label></span>
                                             </div>
 
                                             <span class="ks-cart-badge-free mt-2">Spedizione gratis</span>
 
                                             <!-- Hidden / technical fields (used by VB code-behind) -->
-                                            <asp:TextBox ID="tbArtID" runat="server" Text='<%# Eval("ArticoliID") %>' Visible="false"></asp:TextBox>
+                                            <asp:TextBox ID="tbArtID" runat="server" Text='<%#: Eval("ArticoliID") %>' Visible="false"></asp:TextBox>
                                             <asp:Label ID="lblIvaReverseCharge" runat="server" Text='<%# stampa_iva_applicata(If(IsDBNull(Eval("DescrizioneEsenzioneIva")), "", Eval("DescrizioneEsenzioneIva")),If(IsDBNull(Eval("DescrizioneIvaRC")), "", Eval("DescrizioneIvaRC"))) %>' Visible="true" Font-Size="7pt"></asp:Label>
-                                            <asp:Label ID="lblValoreIva" runat="server" Text='<%# Eval("Valoreiva") %>' Visible="False"></asp:Label>
-                                            <asp:Label ID="lblidIvaRC" runat="server" Text='<%# Eval("IdIvaRC") %>' Visible="False"></asp:Label>
-                                            <asp:Label ID="lblPeso" runat="server" Text='<%# Eval("PesoRiga") %>' Visible="False"></asp:Label>
+                                            <asp:Label ID="lblValoreIva" runat="server" Text='<%#: Eval("Valoreiva") %>' Visible="False"></asp:Label>
+                                            <asp:Label ID="lblidIvaRC" runat="server" Text='<%#: Eval("IdIvaRC") %>' Visible="False"></asp:Label>
+                                            <asp:Label ID="lblPeso" runat="server" Text='<%#: Eval("PesoRiga") %>' Visible="False"></asp:Label>
                                             <asp:Label ID="lblArrivo" runat="server" Text="" Visible="False"></asp:Label>
-                                            <asp:Label ID="Label7" runat="server" Text='<%# Eval("Ean") %>' Visible="false"></asp:Label>
-                                            <asp:Label ID="lblImp" runat="server" Text='<%# Eval("Impegnata")%>' Visible="false"></asp:Label>
-                                            <asp:Label ID="lbl" runat="server" Text='<%# Eval("InOrdine")%>' Visible="false"></asp:Label>
+                                            <asp:Label ID="Label7" runat="server" Text='<%#: Eval("Ean") %>' Visible="false"></asp:Label>
+                                            <asp:Label ID="lblImp" runat="server" Text='<%#: Eval("Impegnata")%>' Visible="false"></asp:Label>
+                                            <asp:Label ID="lbl" runat="server" Text='<%#: Eval("InOrdine")%>' Visible="false"></asp:Label>
                                             <asp:Image ID="imgDispo" runat="server" Visible="false" />
                                         </div>
                                     </td>
@@ -198,19 +198,19 @@
                                             <asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# Bind("PrezzoIvato", "{0:C}") %>'></asp:Label>
                                             <asp:Label ID="lblPrezzo" runat="server" Text='<%# Bind("Prezzo", "{0:C}") %>'></asp:Label>
                                         </p>
-                                        <p class="body-text-3 text-secondary"><%= IIf(Me.Session("IvaTipo") = 1, "+", "")%>IVA. <%# Eval("ValoreIva")%>%</p>
+                                        <p class="body-text-3 text-secondary"><%= IIf(Me.Session("IvaTipo") = 1, "+", "")%>IVA. <%#: Eval("ValoreIva")%>%</p>
                                     </td>
 
                                     <td data-cart-title="Q.tà" class="tf-cart-item_quantity">
                                         <div class="wg-quantity ks-wg-quantity">
                                             <span class="btn-quantity btn-decrease"><i class="icon icon-minus"></i></span>
-                                            <asp:TextBox ID="tbQta" runat="server" Text='<%# Eval("qnt") %>' CssClass="quantity-product" MaxLength="4" />
+                                            <asp:TextBox ID="tbQta" runat="server" Text='<%#: Eval("qnt") %>' CssClass="quantity-product" MaxLength="4" />
                                             <span class="btn-quantity btn-increase"><i class="icon icon-plus"></i></span>
                                         </div>
                                         <div class="mt-2">
                                             <asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link body-text-3">Aggiorna</asp:LinkButton>
                                         </div>
-                                        <asp:TextBox ID="tbID" runat="server" Text='<%# Eval("id") %>' Visible="false" />
+                                        <asp:TextBox ID="tbID" runat="server" Text='<%#: Eval("id") %>' Visible="false" />
                                     </td>
 
                                     <td data-cart-title="Totale" class="tf-cart-item_total">
@@ -221,7 +221,7 @@
                                     </td>
 
                                     <td class="remove-cart">
-                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%# Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link" Text="<i class='icon icon-close'></i>"></asp:LinkButton>
+                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link" Text="<i class='icon icon-close'></i>"></asp:LinkButton>
                                     </td>
                                 </tr>
 
@@ -238,15 +238,15 @@
                                         <asp:Repeater ID="rPromo" runat="server" DataSourceID="sdsPromo" EnableViewState="false" OnItemDataBound="rPromo_ItemDataBound">
                                             <ItemTemplate>
                                                 <div style="display:none;">
-                                                    <asp:Label ID="lblQtaMin" runat="server" Text='<%# Eval("OfferteQntMinima") %>' Visible="false"></asp:Label>
-                                                    <asp:Label ID="lblMultipli" runat="server" Text='<%# Eval("OfferteMultipli") %>' Visible="false"></asp:Label>
-                                                    <asp:Label ID="lblPrezzoPromo" runat="server" Text='<%# Eval("PrezzoPromo") %>' Visible="false"></asp:Label>
-                                                    <asp:Label ID="lblPrezzoPromoIvato" runat="server" Text='<%# Eval("PrezzoPromoIvato") %>' Visible="false"></asp:Label>
-                                                    <asp:Label ID="lblInOfferta" runat="server" Text='<%# Eval("InOfferta") %>' Visible="false"></asp:Label>
-                                                    <asp:Label ID="lblDataInizio" runat="server" Text='<%# Eval("OfferteDataInizio") %>' Visible="false"></asp:Label>
-                                                    <asp:Label ID="lblDataFine" runat="server" Text='<%# Eval("OfferteDataFine") %>' Visible="false"></asp:Label>
-                                                    <asp:Label ID="lblidIvaRC" runat="server" Text='<%# Eval("IdIvaRC") %>' Visible="False"></asp:Label>
-                                                    <asp:Label ID="lblValoreIvaRC" runat="server" Text='<%# Eval("ValoreIvaRC") %>' Visible="False"></asp:Label>
+                                                    <asp:Label ID="lblQtaMin" runat="server" Text='<%#: Eval("OfferteQntMinima") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblMultipli" runat="server" Text='<%#: Eval("OfferteMultipli") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblPrezzoPromo" runat="server" Text='<%#: Eval("PrezzoPromo") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblPrezzoPromoIvato" runat="server" Text='<%#: Eval("PrezzoPromoIvato") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblInOfferta" runat="server" Text='<%#: Eval("InOfferta") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblDataInizio" runat="server" Text='<%#: Eval("OfferteDataInizio") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblDataFine" runat="server" Text='<%#: Eval("OfferteDataFine") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblidIvaRC" runat="server" Text='<%#: Eval("IdIvaRC") %>' Visible="False"></asp:Label>
+                                                    <asp:Label ID="lblValoreIvaRC" runat="server" Text='<%#: Eval("ValoreIvaRC") %>' Visible="False"></asp:Label>
                                                 </div>
                                                 <div style="<%# iif(Eval("InOfferta")=1,"","display:none;") %>">
                                                     <span class="ks-promo-badge">
@@ -272,54 +272,54 @@
                                         <div class="cart-info">
                                             <asp:HyperLink ID="HyperLink5" runat="server" CssClass="cart-title body-md-2 fw-semibold link" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCid") %>'>
                                                 <span class="ks-cart-title">
-                                                    <asp:Label ID="Label2" runat="server" Text='<%# Eval("MarcheDescrizione") %>' CssClass="ks-brand"></asp:Label>
+                                                    <asp:Label ID="Label2" runat="server" Text='<%#: Eval("MarcheDescrizione") %>' CssClass="ks-brand"></asp:Label>
                                                     <span><%# controllaLunghezzaTesto(Eval("Descrizione1"), 60) %></span>
                                                 </span>
                                             </asp:HyperLink>
 
                                             <div class="variant-box">
                                                 <p class="body-text-3">Variante:</p>
-                                                <asp:Label ID="tagliecolori" runat="server" CssClass="body-text-3" Text='<%# Eval("taglia") & " " & Eval("colore") %>'></asp:Label>
+                                                <asp:Label ID="tagliecolori" runat="server" CssClass="body-text-3" Text='<%#: Eval("taglia") & " " & Eval("colore") %>'></asp:Label>
                                             </div>
 
                                             <div class="body-text-3 mt-1">
-                                                <span>Codice: <asp:Label ID="Label3" runat="server" Text='<%# Eval("Codice") %>' Font-Bold="true"></asp:Label></span>
+                                                <span>Codice: <asp:Label ID="Label3" runat="server" Text='<%#: Eval("Codice") %>' Font-Bold="true"></asp:Label></span>
                                                 <span class="mx-2">|</span>
-                                                <span>Disponibilità: <asp:Label ID="lblDispo" runat="server" Text='<%# Eval("giacenza") %>' Font-Bold="true"></asp:Label></span>
+                                                <span>Disponibilità: <asp:Label ID="lblDispo" runat="server" Text='<%#: Eval("giacenza") %>' Font-Bold="true"></asp:Label></span>
                                             </div>
 
                                             <!-- Hidden / technical fields (used by VB code-behind) -->
-                                            <asp:TextBox ID="tbArtID" runat="server" Text='<%# Eval("ArticoliID") %>' Visible="false"></asp:TextBox>
+                                            <asp:TextBox ID="tbArtID" runat="server" Text='<%#: Eval("ArticoliID") %>' Visible="false"></asp:TextBox>
                                             <asp:Label ID="lblIvaReverseCharge" runat="server" Text='<%# stampa_iva_applicata(If(IsDBNull(Eval("DescrizioneEsenzioneIva")), "", Eval("DescrizioneEsenzioneIva")),If(IsDBNull(Eval("DescrizioneIvaRC")), "", Eval("DescrizioneIvaRC"))) %>' Visible="true" Font-Size="7pt"></asp:Label>
-                                            <asp:Label ID="lblValoreIva" runat="server" Text='<%# Eval("Valoreiva") %>' Visible="False"></asp:Label>
-                                            <asp:Label ID="lblidIvaRC" runat="server" Text='<%# Eval("IdIvaRC") %>' Visible="False"></asp:Label>
-                                            <asp:Label ID="lblPeso" runat="server" Text='<%# Eval("PesoRiga") %>' Visible="False"></asp:Label>
+                                            <asp:Label ID="lblValoreIva" runat="server" Text='<%#: Eval("Valoreiva") %>' Visible="False"></asp:Label>
+                                            <asp:Label ID="lblidIvaRC" runat="server" Text='<%#: Eval("IdIvaRC") %>' Visible="False"></asp:Label>
+                                            <asp:Label ID="lblPeso" runat="server" Text='<%#: Eval("PesoRiga") %>' Visible="False"></asp:Label>
                                             <asp:Label ID="lblArrivo" runat="server" Text="" Visible="False"></asp:Label>
-                                            <asp:Label ID="Label7" runat="server" Text='<%# Eval("Ean") %>' Visible="false"></asp:Label>
-                                            <asp:Label ID="lblImp" runat="server" Text='<%# Eval("Impegnata")%>' Visible="false"></asp:Label>
-                                            <asp:Label ID="lbl" runat="server" Text='<%# Eval("InOrdine")%>' Visible="false"></asp:Label>
+                                            <asp:Label ID="Label7" runat="server" Text='<%#: Eval("Ean") %>' Visible="false"></asp:Label>
+                                            <asp:Label ID="lblImp" runat="server" Text='<%#: Eval("Impegnata")%>' Visible="false"></asp:Label>
+                                            <asp:Label ID="lbl" runat="server" Text='<%#: Eval("InOrdine")%>' Visible="false"></asp:Label>
                                             <asp:Image ID="imgDispo" runat="server" Visible="false" />
                                         </div>
                                     </td>
 
                                     <td data-cart-title="Prezzo" class="tf-cart-item_price">
                                         <p class="cart-price price-text fw-medium">
-                                            <asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# Eval("PrezzoIvato") %>'></asp:Label>
+                                            <asp:Label ID="lblPrezzoIvato" runat="server" Text='<%#: Eval("PrezzoIvato") %>'></asp:Label>
                                             <asp:Label ID="lblPrezzo" runat="server" Text='<%# Bind("Prezzo", "{0:C}") %>'></asp:Label>
                                         </p>
-                                        <p class="body-text-3 text-secondary"><%= IIf(Me.Session("IvaTipo") = 1, "+", "")%>IVA. <%# Eval("ValoreIva")%>%</p>
+                                        <p class="body-text-3 text-secondary"><%= IIf(Me.Session("IvaTipo") = 1, "+", "")%>IVA. <%#: Eval("ValoreIva")%>%</p>
                                     </td>
 
                                     <td data-cart-title="Q.tà" class="tf-cart-item_quantity">
                                         <div class="wg-quantity ks-wg-quantity">
                                             <span class="btn-quantity btn-decrease"><i class="icon icon-minus"></i></span>
-                                            <asp:TextBox ID="tbQta" runat="server" Text='<%# Eval("qnt") %>' CssClass="quantity-product" MaxLength="4" />
+                                            <asp:TextBox ID="tbQta" runat="server" Text='<%#: Eval("qnt") %>' CssClass="quantity-product" MaxLength="4" />
                                             <span class="btn-quantity btn-increase"><i class="icon icon-plus"></i></span>
                                         </div>
                                         <div class="mt-2">
                                             <asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link body-text-3">Aggiorna</asp:LinkButton>
                                         </div>
-                                        <asp:TextBox ID="tbID" runat="server" Text='<%# Eval("id") %>' Visible="false" />
+                                        <asp:TextBox ID="tbID" runat="server" Text='<%#: Eval("id") %>' Visible="false" />
                                     </td>
 
                                     <td data-cart-title="Totale" class="tf-cart-item_total">
@@ -330,7 +330,7 @@
                                     </td>
 
                                     <td class="remove-cart">
-                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%# Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link" Text="<i class='icon icon-close'></i>"></asp:LinkButton>
+                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link" Text="<i class='icon icon-close'></i>"></asp:LinkButton>
                                     </td>
                                 </tr>
 
@@ -347,15 +347,15 @@
                                         <asp:Repeater ID="rPromo" runat="server" DataSourceID="sdsPromo" EnableViewState="false" OnItemDataBound="rPromo_ItemDataBound">
                                             <ItemTemplate>
                                                 <div style="display:none;">
-                                                    <asp:Label ID="lblQtaMin" runat="server" Text='<%# Eval("OfferteQntMinima") %>' Visible="false"></asp:Label>
-                                                    <asp:Label ID="lblMultipli" runat="server" Text='<%# Eval("OfferteMultipli") %>' Visible="false"></asp:Label>
-                                                    <asp:Label ID="lblPrezzoPromo" runat="server" Text='<%# Eval("PrezzoPromo") %>' Visible="false"></asp:Label>
-                                                    <asp:Label ID="lblPrezzoPromoIvato" runat="server" Text='<%# Eval("PrezzoPromoIvato") %>' Visible="false"></asp:Label>
-                                                    <asp:Label ID="lblInOfferta" runat="server" Text='<%# Eval("InOfferta") %>' Visible="false"></asp:Label>
-                                                    <asp:Label ID="lblDataInizio" runat="server" Text='<%# Eval("OfferteDataInizio") %>' Visible="false"></asp:Label>
-                                                    <asp:Label ID="lblDataFine" runat="server" Text='<%# Eval("OfferteDataFine") %>' Visible="false"></asp:Label>
-                                                    <asp:Label ID="lblidIvaRC" runat="server" Text='<%# Eval("IdIvaRC") %>' Visible="False"></asp:Label>
-                                                    <asp:Label ID="lblValoreIvaRC" runat="server" Text='<%# Eval("ValoreIvaRC") %>' Visible="False"></asp:Label>
+                                                    <asp:Label ID="lblQtaMin" runat="server" Text='<%#: Eval("OfferteQntMinima") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblMultipli" runat="server" Text='<%#: Eval("OfferteMultipli") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblPrezzoPromo" runat="server" Text='<%#: Eval("PrezzoPromo") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblPrezzoPromoIvato" runat="server" Text='<%#: Eval("PrezzoPromoIvato") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblInOfferta" runat="server" Text='<%#: Eval("InOfferta") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblDataInizio" runat="server" Text='<%#: Eval("OfferteDataInizio") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblDataFine" runat="server" Text='<%#: Eval("OfferteDataFine") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblidIvaRC" runat="server" Text='<%#: Eval("IdIvaRC") %>' Visible="False"></asp:Label>
+                                                    <asp:Label ID="lblValoreIvaRC" runat="server" Text='<%#: Eval("ValoreIvaRC") %>' Visible="False"></asp:Label>
                                                 </div>
                                                 <div style="<%# iif(Eval("InOfferta")=1,"","display:none;") %>">
                                                     <span class="ks-promo-badge">
@@ -391,21 +391,21 @@
                 <Columns>
                     <asp:TemplateField>
                         <ItemTemplate>
-                            <asp:Label ID="lbl_idBuonoSconto" runat="server" Text='<%# Eval("id")%>' Visible="false"></asp:Label>
-                            <asp:Label ID="lbl_Percentuale_BuonoSconto" runat="server" Text='<%# Eval("scontoPercentuale")%>' Visible="false"></asp:Label>
-                            <asp:Label ID="lbl_scontoFisso_BuonoSconto" runat="server" Text='<%# Eval("scontoFisso")%>' Visible="false"></asp:Label>
-                            <asp:Label ID="lbl_valore_BuonoSconto" runat="server" Text='<%# Eval("valore")%>' Visible="false"></asp:Label>
-                            <asp:Label ID="lbl_ScontoVettore" runat="server" Text='<%# Eval("scontoVettore")%>' Visible="false"></asp:Label>
+                            <asp:Label ID="lbl_idBuonoSconto" runat="server" Text='<%#: Eval("id")%>' Visible="false"></asp:Label>
+                            <asp:Label ID="lbl_Percentuale_BuonoSconto" runat="server" Text='<%#: Eval("scontoPercentuale")%>' Visible="false"></asp:Label>
+                            <asp:Label ID="lbl_scontoFisso_BuonoSconto" runat="server" Text='<%#: Eval("scontoFisso")%>' Visible="false"></asp:Label>
+                            <asp:Label ID="lbl_valore_BuonoSconto" runat="server" Text='<%#: Eval("valore")%>' Visible="false"></asp:Label>
+                            <asp:Label ID="lbl_ScontoVettore" runat="server" Text='<%#: Eval("scontoVettore")%>' Visible="false"></asp:Label>
 
                             <div class="ks-discount-card mb-3">
                                 <div class="ks-discount-card__header">BUONO SCONTO</div>
                                 <div class="ks-discount-card__body">
                                     <div>
                                         <div class="body-md-2 fw-semibold">
-                                            <asp:Label ID="lbl_Descrizione1_BuonoSconto" runat="server" Text='<%#Eval("descrizione1")%>'></asp:Label>
+                                            <asp:Label ID="lbl_Descrizione1_BuonoSconto" runat="server" Text='<%#: Eval("descrizione1")%>'></asp:Label>
                                         </div>
                                         <div class="body-text-3">
-                                            <asp:Label ID="lbl_Descrizione2_BuonoSconto" runat="server" Text='<%#Eval("descrizione2")%>'></asp:Label>
+                                            <asp:Label ID="lbl_Descrizione2_BuonoSconto" runat="server" Text='<%#: Eval("descrizione2")%>'></asp:Label>
                                         </div>
                                     </div>
                                     <div class="ks-discount-card__value">
@@ -522,13 +522,13 @@
                 <asp:TemplateField ShowHeader="False">
                     <ItemTemplate>
                         <ccwc:RadioButton ID="rbSpedizione" runat="server" AutoPostBack="True" Checked='false'
-                            GroupName="spedizione" Value='<%# Eval("Id") %>' />
+                            GroupName="spedizione" Value='<%#: Eval("Id") %>' />
                     </ItemTemplate>
                     <ItemStyle HorizontalAlign="Left" VerticalAlign="Middle" />
                 </asp:TemplateField>
                 <asp:TemplateField InsertVisible="False" SortExpression="id" Visible="False" ShowHeader="False">
                     <EditItemTemplate>
-                        <asp:Label ID="Label1" runat="server" Text='<%# Eval("id") %>'></asp:Label>
+                        <asp:Label ID="Label1" runat="server" Text='<%#: Eval("id") %>'></asp:Label>
                     </EditItemTemplate>
                     <ItemTemplate>
                         <asp:Label ID="lblId" runat="server" Text='<%# Bind("id") %>'></asp:Label>
@@ -537,7 +537,7 @@
                 </asp:TemplateField>
                 <asp:TemplateField InsertVisible="False" ShowHeader="False">
                      <ItemTemplate>
-                        <img src='<%# "Public/Vettori/" & Eval("Img") %>' title='PROMO fino al <%# Eval("Promo_Data_Fine","{0:d}") %>' alt="" />
+                        <img src='<%# "Public/Vettori/" & Eval("Img") %>' title='PROMO fino al <%#: Eval("Promo_Data_Fine","{0:d}") %>' alt="" />
                     </ItemTemplate>
                     <ItemStyle HorizontalAlign="Left" VerticalAlign="Middle" />
                 </asp:TemplateField>
@@ -609,9 +609,9 @@
                 </asp:TemplateField>
                 <asp:TemplateField Visible="False">
                     <ItemTemplate>
-                        Soglia:<asp:Label ID="lblSogliaMinima" runat="server" Text='<%# Eval("Soglia_Minima") %>'></asp:Label><br />
-                        Peso Max:<asp:Label ID="lblPeso" runat="server" Text='<%# Eval("PesoMax") %>'></asp:Label><br />
-                        Percentuale:<asp:Label ID="lblPercentuale" runat="server" Text='<%# Eval("Costo_Percentuale") %>'></asp:Label>
+                        Soglia:<asp:Label ID="lblSogliaMinima" runat="server" Text='<%#: Eval("Soglia_Minima") %>'></asp:Label><br />
+                        Peso Max:<asp:Label ID="lblPeso" runat="server" Text='<%#: Eval("PesoMax") %>'></asp:Label><br />
+                        Percentuale:<asp:Label ID="lblPercentuale" runat="server" Text='<%#: Eval("Costo_Percentuale") %>'></asp:Label>
                     </ItemTemplate>
                 </asp:TemplateField>
                 <asp:TemplateField HeaderText="Spesa Minima (IVA incl)">
@@ -670,12 +670,12 @@
                 <asp:TemplateField HeaderText="Seleziona">
                     <ItemTemplate>
                         <ccwc:radiobutton id="rbSpedizione" runat="server" autopostback="True" checked='false'
-                            groupname="spedizione" value='<%# Eval("Id") %>'></ccwc:radiobutton>
+                            groupname="spedizione" value='<%#: Eval("Id") %>'></ccwc:radiobutton>
                     </ItemTemplate>
                 </asp:TemplateField>
                 <asp:TemplateField HeaderText="id" InsertVisible="False" SortExpression="id" Visible="False">
                     <EditItemTemplate>
-                        <asp:Label ID="Label1" runat="server" Text='<%# Eval("id") %>'></asp:Label>
+                        <asp:Label ID="Label1" runat="server" Text='<%#: Eval("id") %>'></asp:Label>
                     </EditItemTemplate>
                     <ItemTemplate>
                         <asp:Label ID="lblId" runat="server" Text='<%# Bind("id") %>'></asp:Label>
@@ -683,7 +683,7 @@
                 </asp:TemplateField>
                 <asp:TemplateField InsertVisible="False" ShowHeader="False">
                      <ItemTemplate>
-                        <img class="ml-2" src='<%# "Public/Vettori/" & Eval("Img") %>' title='<%# Eval("Informazioni") %>' alt="" />
+                        <img class="ml-2" src='<%# "Public/Vettori/" & Eval("Img") %>' title='<%#: Eval("Informazioni") %>' alt="" />
                     </ItemTemplate>
                 </asp:TemplateField>
                 <asp:BoundField DataField="Descrizione" HeaderText="Descrizione" SortExpression="Descrizione" >
@@ -767,7 +767,7 @@
                     <td style=" text-align:left; vertical-align:middle;">
                       <ccwc:RadioButton ID="rbSpedizioneGratis" runat="server" AutoPostBack="True" Checked='True'
                       Font-Bold="True" Font-Names="Arial" ForeColor="Red" GroupName="spedizione"
-                      Text="" Value='<%# Eval("Id") %>' />
+                      Text="" Value='<%#: Eval("Id") %>' />
                     </td>
                     <td>
                         <img src="Public/Vettori/free.jpg"  alt=""/>
@@ -838,18 +838,18 @@
 						<Columns>
 							<asp:TemplateField HeaderText="sel">
 								<ItemTemplate>
-									<ccwc:radiobutton id="rbPagamento" runat="server" checked='<%# Eval("Predefinito") %>'
+									<ccwc:radiobutton id="rbPagamento" runat="server" checked='<%#: Eval("Predefinito") %>'
 										groupname="pagamento" value='<%# eval("id") %>' AutoPostBack="True"></ccwc:radiobutton>
 								</ItemTemplate>
 							</asp:TemplateField>
 							<asp:TemplateField>
 							<ItemTemplate>
-								<img class="ml-2" src='<%# "Public/Pagamenti/" & Eval("Img") %>' title='<%# Eval("Informazioni") %>' alt="" />
+								<img class="ml-2" src='<%# "Public/Pagamenti/" & Eval("Img") %>' title='<%#: Eval("Informazioni") %>' alt="" />
 							</ItemTemplate>
 							</asp:TemplateField>
 							<asp:TemplateField HeaderText="id" InsertVisible="False" SortExpression="id" Visible="False">
 								<EditItemTemplate>
-									<asp:Label ID="Label1" runat="server" Text='<%# Eval("id") %>'></asp:Label>
+									<asp:Label ID="Label1" runat="server" Text='<%#: Eval("id") %>'></asp:Label>
 								</EditItemTemplate>
 								<ItemTemplate>
 									<asp:Label ID="lblId" runat="server" Text='<%# Bind("id") %>'></asp:Label>

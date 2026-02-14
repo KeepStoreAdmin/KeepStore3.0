@@ -1,5 +1,7 @@
 ﻿Imports MySql.Data.MySqlClient
 Imports System.Data
+Imports System.Text.RegularExpressions
+Imports System.Web
 
 Partial Class aggiungi
     Inherits AntiCsrfPage
@@ -16,6 +18,13 @@ Partial Class aggiungi
     Public facebook_pixel_id As String
     Public utenteId As String = "-1"
     Public idsFbPixelsSku As New Dictionary(Of String, String)
+
+    Private Function IsValidPixelId(ByVal pixelId As String) As Boolean
+        If String.IsNullOrEmpty(pixelId) Then Return False
+        Return Regex.IsMatch(pixelId, "^\d{5,20}$")
+    End Function
+
+
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         Dim articoliIdGlobali As String = String.Empty
@@ -57,7 +66,7 @@ Partial Class aggiungi
         End If
 
         ' 7) Redirect al carrello
-        Me.Response.Redirect("carrello.aspx")
+        Me.ClientScript.RegisterStartupScript(Me.GetType(), "ks_redir", "window.location.href='carrello.aspx';", True)
     End Sub
 
     ' =======================================
@@ -505,7 +514,7 @@ Partial Class aggiungi
 
             If newIdFbPixel <> oldIdFbPixel Then
                 If oldIdFbPixel <> String.Empty Then
-                    idsFbPixelsSku.Add(oldIdFbPixel, sku)
+                    If IsValidPixelId(oldIdFbPixel) Then idsFbPixelsSku.Add(oldIdFbPixel, sku)
                 End If
                 oldIdFbPixel = newIdFbPixel
                 sku = String.Empty
@@ -517,7 +526,7 @@ Partial Class aggiungi
         Next
 
         If oldIdFbPixel <> String.Empty Then
-            idsFbPixelsSku.Add(oldIdFbPixel, sku)
+            If IsValidPixelId(oldIdFbPixel) Then idsFbPixelsSku.Add(oldIdFbPixel, sku)
         End If
     End Sub
 

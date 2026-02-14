@@ -1,0 +1,157 @@
+/* KeepStore custom CSS (centralizzato)
+   NOTE: generato spostando i blocchi <style> dalle pagine ASPX.
+   Questo file deve rimanere separato dal template (Onsus) per facilitare future migrazioni.
+*/
+
+.filter-scroll { max-height: 260px; overflow: auto; padding-right: 6px; }
+        .pagination-ys { display: flex; justify-content: center; margin-top: 18px; }
+        .pagination-ys table { margin: 0; border-collapse: separate; border-spacing: 6px 0; }
+        .pagination-ys td { padding: 0; }
+        .pagination-ys a, .pagination-ys span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 38px;
+            height: 38px;
+            padding: 0 10px;
+            border: 1px solid rgba(0,0,0,.12);
+            border-radius: 10px;
+            text-decoration: none;
+            line-height: 1;
+        }
+        .pagination-ys span {
+            background: #111;
+            color: #fff;
+            border-color: #111;
+        }
+        .pagination-ys a:hover { background: rgba(0,0,0,.04); }
+
+        /* CheckBox WebForms: migliora allineamento input/label nei filtri */
+        .filterCheckbox input[type="checkbox"] { margin-right: 8px; vertical-align: middle; }
+        .filterCheckbox label { margin: 0; vertical-align: middle; }
+    
+
+        /* ==========================================================
+           STEP16 (CATALOGO/UI): GridView -> ONus grid + card polish
+           - Trasforma la <table> del GridView in una griglia responsive
+           - Uniforma immagini, hover, badge e barra quantità
+           ========================================================== */
+        table.ks-gridview-as-grid {
+            width: 100% !important;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 20px;
+        }
+        @media (max-width: 1199.98px) {
+            table.ks-gridview-as-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        }
+        @media (max-width: 991.98px) {
+            table.ks-gridview-as-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 575.98px) {
+            table.ks-gridview-as-grid { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+        }
+        table.ks-gridview-as-grid > tbody,
+        table.ks-gridview-as-grid > tbody > tr,
+        table.ks-gridview-as-grid > tbody > tr > td {
+            display: contents;
+        }
+
+        /* Eccezioni per footer/pager, che devono stare a tutta larghezza */
+        table.ks-gridview-as-grid > tbody > tr.ks-grid-footer,
+        table.ks-gridview-as-grid > tbody > tr.pagination-ys {
+            display: block !important;
+            grid-column: 1 / -1;
+        }
+        table.ks-gridview-as-grid > tbody > tr.ks-grid-footer > td,
+        table.ks-gridview-as-grid > tbody > tr.pagination-ys > td {
+            display: block;
+            width: 100%;
+        }
+
+        /* Card: immagine quadrata e hover */
+        .ks-card-product .product-img {
+            display: block;
+            position: relative;
+            aspect-ratio: 1 / 1;
+            overflow: hidden;
+        }
+        .ks-card-product .img-product,
+        .ks-card-product .img-hover {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain;
+        }
+        .ks-card-product .img-hover {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transition: opacity .25s ease;
+        }
+        .ks-card-product:hover .img-hover { opacity: 1; }
+
+        /* Quantità: usa classi ONus (main.js) */
+        .ks-card-product .wg-quantity {
+            min-width: 120px;
+        }
+        .ks-card-product .quantity-product {
+            width: 48px;
+            text-align: center;
+        }
+
+        /* Multi selezione: compatta e non invasiva */
+        .ks-card-product .ks-multi {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+/* Facet filters: link-style checkbox (can be reverted to classic checkbox) */
+        .filterLink input[type="checkbox"]{
+            position:absolute;
+            opacity:0;
+            width:1px;
+            height:1px;
+            margin:0;
+            padding:0;
+        }
+        .filterLink label{
+            cursor:pointer;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+        .filterLink input[type="checkbox"]:checked + label{
+            font-weight:600;
+            text-decoration:none;
+        }
+        .filterLink label:focus,
+        .filterLink label:hover{
+            text-decoration-thickness: 2px;
+        }
+
+        /* Product card micro-alignments */
+        .card-product .name-product{
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 3.0em;
+        }
+        .card-product .price-wrap{
+            display:flex;
+            gap:8px;
+            align-items:baseline;
+            flex-wrap:wrap;
+        }
+        .card-product .price-wrap .compare-at{
+            text-decoration: line-through;
+            opacity: .6;
+            font-size: .9em;
+        }
+        .card-product .product-badges{
+            display:flex;
+            gap:6px;
+            flex-wrap:wrap;
+            margin-top:6px;
+        }
+

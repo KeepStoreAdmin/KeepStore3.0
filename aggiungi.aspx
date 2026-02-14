@@ -9,8 +9,16 @@
 
 <body>
 <% For Each pairInidsFbPixelsSku In idsFbPixelsSku
-       Dim facebook_pixel_id As String = pairInidsFbPixelsSku.Key
-       Dim sku As String = pairInidsFbPixelsSku.Value %>
+       Dim facebook_pixel_id As String = System.Web.HttpUtility.JavaScriptStringEncode(pairInidsFbPixelsSku.Key)
+       Dim sku As String = System.Web.HttpUtility.JavaScriptStringEncode(pairInidsFbPixelsSku.Value)
+       Dim fnJs As String = System.Web.HttpUtility.JavaScriptStringEncode(firstName)
+       Dim lnJs As String = System.Web.HttpUtility.JavaScriptStringEncode(lastName)
+       Dim emJs As String = System.Web.HttpUtility.JavaScriptStringEncode(email)
+       Dim phJs As String = System.Web.HttpUtility.JavaScriptStringEncode(phone)
+       Dim countryJs As String = System.Web.HttpUtility.JavaScriptStringEncode(country)
+       Dim provinceJs As String = System.Web.HttpUtility.JavaScriptStringEncode(province)
+       Dim cityJs As String = System.Web.HttpUtility.JavaScriptStringEncode(city)
+       Dim capJs As String = System.Web.HttpUtility.JavaScriptStringEncode(cap) %>
 <!-- Facebook Pixel Code -->
 <script>
   !function(f,b,e,v,n,t,s)
@@ -22,14 +30,14 @@
   s.parentNode.insertBefore(t,s)}(window, document,'script',
   'https://connect.facebook.net/en_US/fbevents.js');
   fbq('init', '<%=facebook_pixel_id%>'<%If utenteId = "-1" Then%>);<%Else%>, {
-	fn: '<%=firstName%>',
-    ln: '<%=lastName%>',
-	em: '<%=email%>',
-    ph: '<%=phone%>',
-	country: '<%=country%>',
-	st: '<%=province%>',
-	ct: '<%=city%>',
-	zp: '<%=cap%>'
+	fn: '<%=fnJs%>',
+    ln: '<%=lnJs%>',
+	em: '<%=emJs%>',
+    ph: '<%=phJs%>',
+	country: '<%=countryJs%>',
+	st: '<%=provinceJs%>',
+	ct: '<%=cityJs%>',
+	zp: '<%=capJs%>'
   });<%End If%>
   fbq('track', 'AddToCart', {
     content_ids: '<%=sku%>',
@@ -41,6 +49,11 @@
 /></noscript>
 <!-- End Facebook Pixel Code -->
 <% Next %>
+
+<script>
+  // Redirect client-side: consente ai pixel di partire prima del cambio pagina
+  window.location.replace("carrello.aspx");
+</script>
 
     <form id="form1" runat="server">
         <div>

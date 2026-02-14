@@ -8,7 +8,7 @@ Imports System.Web
 ' Centralizza i percorsi degli asset del template.
 '
 ' Oggi: Onsus (ThemeForest)
-'   /Public/assets/onsus/
+'   /Public/assets/keepstore/
 ' Domani: qualunque template
 '   basta cambiare KeepStore.Theme.AssetsBaseUrl in web.config
 '
@@ -22,7 +22,7 @@ Imports System.Web
 ' ============================================================
 Public Module ThemeManager
 
-    Private Const DefaultBaseUrl As String = "/Public/assets/onsus/"
+    Private Const DefaultBaseUrl As String = "/Public/assets/keepstore/"
 
     ''' <summary>
     ''' Base URL per gli asset del template corrente.

@@ -21,6 +21,8 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/swiper-bundle.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/animate.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/styles.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/taikun-keepstore-overrides.css") %>" />
 
     <!-- SEO / JSON-LD injection -->
     <asp:PlaceHolder ID="phSeoJsonLd" runat="server" Visible="false">
@@ -31,16 +33,6 @@
     <asp:Literal ID="litGlobalSeoHead" runat="server" EnableViewState="False" />
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
-
-    <!-- ONSUS CSS -->
-    <link rel="stylesheet" href="/Public/assets/keepstore/icon/icomoon/style.css" />
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/animate.css" />
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/swiper-bundle.min.css" />
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/select2.min.css" />
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/main.css" />
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/taikun-onsus-overrides.css" />
-
 </head>
 
 <body id="PageBody" runat="server" class="preload-wrapper popup-loader">
@@ -682,9 +674,9 @@
 <span class="icon">
 <i class="icon-direction"></i>
 </span>
-<a class="" href="mailto:onsus@support.com">
+<a class="" href="mailto:support@taikun.it">
 <span class="text-primary">
-                                                        onsus@support.com
+                                                        support@taikun.it
                                                     </span>
 </a>
 </li>
