@@ -114,25 +114,9 @@
             Return ResolveUrl("~/Public/foto/" & imgname)
         End Function
     </script>
-<!-- Breakcrumbs -->
-    <div class="tf-sp-3 pb-0">
-        <div class="container">
-            <ul class="breakcrumbs">
-                <li>
-                    <a href="Default.aspx" class="body-small link">Home</a>
-                </li>
-                <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
-                <li><span class="body-small">Wishlist</span></li>
-            </ul>
-        </div>
-    </div>
-    <!-- /Breakcrumbs -->
 
-    <!-- Wishlist -->
-    <div class="tf-sp-2">
-        <div class="container">
-
-            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                        <!-- Wishlist -->
+                        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
                 <div>
                     <h4 class="fw-semibold mb-1">Wishlist</h4>
                     <div class="body-md-2 text-main-2">
@@ -317,9 +301,7 @@
                 <asp:Label ID="lblLinee" runat="server" Text="0" Visible="false"></asp:Label>
             </div>
 
-        </div>
-    </div>
-    <!-- /Wishlist -->
+                        <!-- /Wishlist -->
 
                     </div>
                 </div>

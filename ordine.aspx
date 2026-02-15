@@ -1,4 +1,4 @@
-<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="ordine.aspx.vb" Inherits="ordine" EnableViewState="false" ValidateRequest="true" %>
+﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="ordine.aspx.vb" Inherits="ordine" EnableViewState="false" ValidateRequest="true" %>
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
     Ordine
@@ -13,19 +13,7 @@
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
-    <div class="page-title">
-    <div class="container">
-        <h3 class="heading">Checkout</h3>
-        <ul class="breadcrumbs">
-            <li><a href="/Default.aspx">Home</a></li>
-            <li>Checkout</li>
-        </ul>
-    </div>
-</div>
-
-<section class="tf-section tf-page-checkout">
-    <div class="container">
-<% For Each pairInidsFbPixelsSku As System.Collections.Generic.KeyValuePair(Of String, String) In idsFbPixelsSku %>
+    <% For Each pairInidsFbPixelsSku As System.Collections.Generic.KeyValuePair(Of String, String) In idsFbPixelsSku %>
         <!-- Facebook Pixel Code -->
         <script>
             !function (f, b, e, v, n, t, s) {
@@ -104,7 +92,7 @@
         })();
     </script>
 
-    <!-- Breadcrumb (ONUS) -->
+    <!-- Breadcrumb -->
     <div class="tf-sp-3 pb-0">
         <div class="container">
             <ul class="breakcrumbs">
@@ -116,6 +104,27 @@
             </ul>
         </div>
     </div>
+
+
+    <div class="checkout-status tf-sp-2 pt-0">
+        <div class="checkout-status-wrap">
+            <div class="checkout-status-list">
+                <div class="checkout-status-item">
+                    <span class="icon"><i class="icon icon-bag"></i></span>
+                    <span class="text">Carrello</span>
+                </div>
+                <div class="checkout-status-item active">
+                    <span class="icon"><i class="icon icon-credit-card"></i></span>
+                    <span class="text">Checkout</span>
+                </div>
+                <div class="checkout-status-item">
+                    <span class="icon"><i class="icon icon-check"></i></span>
+                    <span class="text">Conferma</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <section class="tf-sp-2">
         <div class="container">
@@ -170,7 +179,5 @@
             </div>
         </div>
     </section>
-    </div>
-</section>
 
 </asp:Content>

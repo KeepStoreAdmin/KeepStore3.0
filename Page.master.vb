@@ -100,6 +100,34 @@ End Function
 ' - Evita indicizzazione aree private e URL azione (rimuovi/st)
 ' ============================================================
 Private Sub ApplyGlobalSeoPolicy()
+
+        '---------------------------
+        ' HEADER ICONS (Account / Wishlist) - template integration
+        '---------------------------
+        Try
+            Dim lnkAcc As System.Web.UI.HtmlControls.HtmlAnchor = FindCtrl(Of System.Web.UI.HtmlControls.HtmlAnchor)("lnkAccount")
+            Dim lnkAccMob As System.Web.UI.HtmlControls.HtmlAnchor = FindCtrl(Of System.Web.UI.HtmlControls.HtmlAnchor)("lnkAccountMobile")
+            Dim lblWish As Label = FindCtrl(Of Label)("lblWishlistCount")
+
+            Dim isLogged As Boolean = False
+            Dim loginIdVal As Integer = 0
+            If Not IsNothing(Session("LoginId")) AndAlso Integer.TryParse(Session("LoginId").ToString(), loginIdVal) AndAlso loginIdVal > 0 Then isLogged = True
+            If Not isLogged AndAlso Not IsNothing(Session("LoginID")) AndAlso Integer.TryParse(Session("LoginID").ToString(), loginIdVal) AndAlso loginIdVal > 0 Then isLogged = True
+
+            Dim accountUrl As String = If(isLogged, "myaccount.aspx", "login.aspx")
+
+            If lnkAcc IsNot Nothing Then lnkAcc.HRef = accountUrl
+            If lnkAccMob IsNot Nothing Then lnkAccMob.HRef = accountUrl
+
+            ' Wishlist: nel progetto attuale non esiste ancora un conteggio persistente -> default 0 (fail-safe)
+            If lblWish IsNot Nothing Then
+                lblWish.Text = "0"
+                lblWish.Visible = False
+            End If
+        Catch ex As Exception
+            ' fail-safe
+        End Try
+
     Try
         If litGlobalSeoHead Is Nothing OrElse Request Is Nothing OrElse Request.Url Is Nothing Then Exit Sub
 

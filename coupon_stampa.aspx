@@ -8,13 +8,7 @@
 <head runat="server">
     <title>Stampa il tuo Coupon</title>
     
-    <style type="text/css">
-        #tab td
-        {
-            border-style:none;
-            border-width:0px;	
-        }
-    </style>
+    
 </head>
 <body>
     <form id="form1" runat="server">

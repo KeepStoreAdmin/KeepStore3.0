@@ -63,7 +63,7 @@
         <div class="ks-spinner-box">
             <div><b>Attendere, caricamento area personale...</b></div>
             <br />
-            <img src="Public/assets/keepstore/images/spinner.gif" alt="Caricamento..." />
+            <img src="/Public/assets/keepstore/images/spinner.gif" alt="Caricamento..." />
         </div>
     </div>
 

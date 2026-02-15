@@ -223,7 +223,7 @@
 </a>
 </li>
 <li class="demo-item">
-<a href="home-2.html">
+<a href="Default.aspx">
 <div class="demo-image relative">
 <img alt="" class="lazyload" data-src="/Public/assets/keepstore/images/demo/home-2.webp" height="218" src="/Public/assets/keepstore/images/demo/home-2.webp" width="199"/>
 </div>
@@ -235,7 +235,7 @@
 </a>
 </li>
 <li class="demo-item">
-<a href="home-3.html">
+<a href="Default.aspx">
 <div class="demo-image relative">
 <img alt="" class="lazyload" data-src="/Public/assets/keepstore/images/demo/home-3.webp" height="218" src="/Public/assets/keepstore/images/demo/home-3.webp" width="199"/>
 </div>
@@ -246,7 +246,7 @@
 </a>
 </li>
 <li class="demo-item">
-<a href="home-4.html">
+<a href="Default.aspx">
 <div class="demo-image relative">
 <img alt="" class="lazyload" data-src="/Public/assets/keepstore/images/demo/home-4.webp" height="218" src="/Public/assets/keepstore/images/demo/home-4.webp" width="199"/>
 </div>
@@ -257,7 +257,7 @@
 </a>
 </li>
 <li class="demo-item">
-<a href="home-5.html">
+<a href="Default.aspx">
 <div class="demo-image relative">
 <img alt="" class="lazyload" data-src="/Public/assets/keepstore/images/demo/home-5.webp" height="218" src="/Public/assets/keepstore/images/demo/home-5.webp" width="199"/>
 </div>
@@ -269,7 +269,7 @@
 </a>
 </li>
 <li class="demo-item">
-<a href="home-6.html">
+<a href="Default.aspx">
 <div class="demo-image relative">
 <img alt="" class="lazyload" data-src="/Public/assets/keepstore/images/demo/home-6.webp" height="218" src="/Public/assets/keepstore/images/demo/home-6.webp" width="199"/>
 </div>
@@ -281,7 +281,7 @@
 </a>
 </li>
 <li class="demo-item">
-<a href="home-7.html">
+<a href="Default.aspx">
 <div class="demo-image relative">
 <img alt="" class="lazyload" data-src="/Public/assets/keepstore/images/demo/home-7.webp" height="218" src="/Public/assets/keepstore/images/demo/home-7.webp" width="199"/>
 </div>
@@ -293,7 +293,7 @@
 </a>
 </li>
 <li class="demo-item">
-<a href="home-8.html">
+<a href="Default.aspx">
 <div class="demo-image relative">
 <img alt="" class="lazyload" data-src="/Public/assets/keepstore/images/demo/home-8.webp" height="218" src="/Public/assets/keepstore/images/demo/home-8.webp" width="199"/>
 </div>
@@ -305,7 +305,7 @@
 </a>
 </li>
 <li class="demo-item">
-<a href="home-9.html">
+<a href="Default.aspx">
 <div class="demo-image relative">
 <img alt="" class="lazyload" data-src="/Public/assets/keepstore/images/demo/home-9.webp" height="218" src="/Public/assets/keepstore/images/demo/home-9.webp" width="199"/>
 </div>
@@ -317,7 +317,7 @@
 </a>
 </li>
 <li class="demo-item">
-<a href="home-10.html">
+<a href="Default.aspx">
 <div class="demo-image relative">
 <img alt="" class="lazyload" data-src="/Public/assets/keepstore/images/demo/home-10.webp" height="218" src="/Public/assets/keepstore/images/demo/home-10.webp" width="199"/>
 </div>
@@ -329,7 +329,7 @@
 </a>
 </li>
 <li class="demo-item">
-<a href="home-11.html">
+<a href="Default.aspx">
 <div class="demo-image relative">
 <img alt="" class="lazyload" data-src="/Public/assets/keepstore/images/demo/home-11.webp" height="218" src="/Public/assets/keepstore/images/demo/home-11.webp" width="199"/>
 </div>
@@ -366,12 +366,12 @@
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="shop-right-sidebar.html">
+<a class="body-md-2 link" href="KeepStore_ShopDefault.aspx">
 <span>Shop Right Sidebar</span>
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="shop-fullwidth.html">
+<a class="body-md-2 link" href="KeepStore_ShopDefault.aspx">
 <span>Shop Full Width</span>
 </a>
 </li>
@@ -401,12 +401,12 @@
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="order-details.html">
+<a class="body-md-2 link" href="myaccount.aspx">
 <span>Order Detail</span>
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="track-your-order.html">
+<a class="body-md-2 link" href="pay_your_orders.aspx">
 <span>Track Your Order</span>
 </a>
 </li>
@@ -436,12 +436,12 @@
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="product-thumbs-right.html">
+<a class="body-md-2 link" href="articoli.aspx">
 <span>Product Right Thumbnail</span>
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="product-thumbs-left.html">
+<a class="body-md-2 link" href="articoli.aspx">
 <span>Product Left Thumbnail</span>
 </a>
 </li>
@@ -451,27 +451,27 @@
 <p class="menu-heading body-small">PRODUCT DETAILS</p>
 <ul class="menu-list">
 <li>
-<a class="body-md-2 link" href="product-detail-2.html">
+<a class="body-md-2 link" href="articoli.aspx">
 <span>Product Detail Style 2</span>
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="product-detail-3.html">
+<a class="body-md-2 link" href="articoli.aspx">
 <span>Product Detail Style 3</span>
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="product-detail-4.html">
+<a class="body-md-2 link" href="articoli.aspx">
 <span>Product Detail Style 4</span>
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="product-inner-zoom.html">
+<a class="body-md-2 link" href="articoli.aspx">
 <span>Product Inner Zoom</span>
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="product-inner-circle-zoom.html">
+<a class="body-md-2 link" href="articoli.aspx">
 <span>Product Inner Circle Zoom</span>
 </a>
 </li>
@@ -488,17 +488,17 @@
 <div class="sub-menu-container">
 <ul class="sub-menu-list">
 <li>
-<a class="body-md-2 link" href="blog-list.html">
+<a class="body-md-2 link" href="Default.aspx">
 <span>Blog List</span>
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="blog-grid.html">
+<a class="body-md-2 link" href="Default.aspx">
 <span>Blog Grid</span>
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="blog-detail.html">
+<a class="body-md-2 link" href="Default.aspx">
 <span>Blog Detail</span>
 </a>
 </li>
@@ -523,17 +523,17 @@
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="privacy.html">
+<a class="body-md-2 link" href="Contattaci.aspx">
 <span>Privacy</span>
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="faq.html">
+<a class="body-md-2 link" href="Contattaci.aspx">
 <span>FAQs</span>
 </a>
 </li>
 <li>
-<a class="body-md-2 link" href="404.html">
+<a class="body-md-2 link" href="404.aspx">
 <span>404</span>
 </a>
 </li>
@@ -620,11 +620,11 @@
 <h6 class="ft-heading footer-heading-mobile fw-semibold">Get help</h6>
 <div class="tf-collapse-content">
 <ul class="ft-menu-list">
-<li><a class="link" href="privacy.html">Delivery Information</a></li>
-<li><a class="link" href="faq.html">Sale Terms &amp; Conditions</a></li>
-<li><a class="link" href="privacy.html">Returns &amp; Refunds</a></li>
-<li><a class="link" href="privacy.html">Privacy Notice</a></li>
-<li><a class="link" href="faq.html">Shopping FAQs</a></li>
+<li><a class="link" href="Contattaci.aspx">Delivery Information</a></li>
+<li><a class="link" href="Contattaci.aspx">Sale Terms &amp; Conditions</a></li>
+<li><a class="link" href="Contattaci.aspx">Returns &amp; Refunds</a></li>
+<li><a class="link" href="Contattaci.aspx">Privacy Notice</a></li>
+<li><a class="link" href="Contattaci.aspx">Shopping FAQs</a></li>
 </ul>
 </div>
 </li>
@@ -647,10 +647,10 @@
 <div class="tf-collapse-content">
 <ul class="ft-menu-list">
 <li><a class="link" href="myaccount.aspx">My Account</a></li>
-<li><a class="link" href="track-your-order.html">Track your Order</a></li>
+<li><a class="link" href="pay_your_orders.aspx">Track your Order</a></li>
 <li><a class="link" href="contact.aspx">Customer Service</a></li>
-<li><a class="link" href="privacy.html">Returns/Exchange</a></li>
-<li><a class="link" href="faq.html">FAQs</a></li>
+<li><a class="link" href="Contattaci.aspx">Returns/Exchange</a></li>
+<li><a class="link" href="Contattaci.aspx">FAQs</a></li>
 <li><a class="link" href="contact.aspx">Product Support</a></li>
 </ul>
 </div>
@@ -735,13 +735,13 @@
 <li><a href="https://web.whatsapp.com/"><i class="icon-whatapp"></i></a></li>
 </ul>
 <ul class="ft-menu-list-2 body-text-3">
-<li><a class="title-sidebar link fw-bold" href="blog-grid.html">New arrivals</a></li>
-<li><a class="title-sidebar link fw-bold" href="blog-grid.html">Best sale</a></li>
-<li><a class="title-sidebar link fw-bold" href="blog-grid.html">Value of the day</a>
+<li><a class="title-sidebar link fw-bold" href="Default.aspx">New arrivals</a></li>
+<li><a class="title-sidebar link fw-bold" href="Default.aspx">Best sale</a></li>
+<li><a class="title-sidebar link fw-bold" href="Default.aspx">Value of the day</a>
 </li>
-<li><a class="title-sidebar link fw-bold" href="blog-grid.html">Top 100 offers</a></li>
-<li><a class="title-sidebar link fw-bold" href="blog-grid.html">Blog</a></li>
-<li><a class="title-sidebar link fw-bold" href="blog-grid.html"><i class="icon-fire"></i> 50% OFF</a>
+<li><a class="title-sidebar link fw-bold" href="Default.aspx">Top 100 offers</a></li>
+<li><a class="title-sidebar link fw-bold" href="Default.aspx">Blog</a></li>
+<li><a class="title-sidebar link fw-bold" href="Default.aspx"><i class="icon-fire"></i> 50% OFF</a>
 </li>
 </ul>
 <p class="nocopy caption text-center">

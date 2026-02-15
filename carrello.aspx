@@ -11,57 +11,37 @@
 </asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
 
-
-    <div class="page-title">
-    <div class="container">
-        <h3 class="heading">Carrello</h3>
-        <ul class="breadcrumbs">
-            <li><a href="/Default.aspx">Home</a></li>
-            <li>Carrello</li>
-        </ul>
-    </div>
-</div>
-
-<section class="tf-section tf-page-cart">
-    <div class="container">
-<asp:ScriptManager ID="ScriptManager1" runat="server" />
-
-    <asp:Panel ID="PanelDestinazione" runat="server" Style="display: none">
-        <div id="Div1" class="checkout_box_500">
-            <div id="Div2" style="margin: 0px 20px; padding-top: 15px; height: 500px;">
-                <h2>
-                    <asp:Label ID="lblIntestDestinazione" runat="server"></asp:Label>
-                </h2>
-                <hr size="0" />
-                <div>
+    <asp:ScriptManager ID="ScriptManager1" runat="server" />
+    
+        <asp:Panel ID="PanelDestinazione" runat="server" Style="display: none">
+            <div id="Div1" class="checkout_box_500">
+                <div id="Div2" style="margin: 0px 20px; padding-top: 15px; height: 500px;">
+                    <h2>
+                        <asp:Label ID="lblIntestDestinazione" runat="server"></asp:Label>
+                    </h2>
+                    <hr size="0" />
                     <div>
-                        <br />
-                        <label for="rdoExisting">Già esiste una seconda destinazione predefinita. 
-                        Sostituirla con questa?</label>
-                    </div>
-                    <div class="inputcontainer">
-                        <p style="text-align: center">
+                        <div>
                             <br />
-                            <asp:ImageButton runat="server" ID="ImgBtnDestinazioneSi" ImageUrl="/Public/assets/keepstore/images/keepstore/modalok.svg" TITLE="SI" STYLE="cursor:pointer;" />
-                            &nbsp;
-                            <asp:ImageButton runat="server" ID="ImgBtnDestinazioneNo" ImageUrl="/Public/assets/keepstore/images/keepstore/modalno.svg" TITLE="NO" STYLE="cursor:pointer;" />
-                        </p>
+                            <label for="rdoExisting">Già esiste una seconda destinazione predefinita. 
+                            Sostituirla con questa?</label>
+                        </div>
+                        <div class="inputcontainer">
+                            <p style="text-align: center">
+                                <br />
+                                <asp:ImageButton runat="server" ID="ImgBtnDestinazioneSi" ImageUrl="/Public/assets/keepstore/images/keepstore/modalok.svg" TITLE="SI" STYLE="cursor:pointer;" />
+                                &nbsp;
+                                <asp:ImageButton runat="server" ID="ImgBtnDestinazioneNo" ImageUrl="/Public/assets/keepstore/images/keepstore/modalno.svg" TITLE="NO" STYLE="cursor:pointer;" />
+                            </p>
+                        </div>
                     </div>
+                    
                 </div>
-                
             </div>
-        </div>
-    </asp:Panel>
-    <asp:LinkButton ID="dummy2" runat="server"></asp:LinkButton>
-    </div>
-</section>
+        </asp:Panel>
+        <asp:LinkButton ID="dummy2" runat="server"></asp:LinkButton>
 
-
-
-</asp:Content>
-
-
-<asp:Content ID="Content1" ContentPlaceHolderID="cph" Runat="Server">
+ ContentPlaceHolderID="cph" Runat="Server">
 
     <!-- Breadcrumb -->
     <div class="tf-sp-3 pb-0">

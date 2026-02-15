@@ -2,31 +2,7 @@
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server"><%: Page.Title %></asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <style type="text/css">
-        /* ============================================================
-           Home (Sprint 2 - HOME 1)
-           NOTE: solo stile minimo per integrare lo slideshow legacy
-           ============================================================ */
-        #Slide_Show {
-            width: 100%;
-        }
-
-        #Slide_Show .slideshow-container {
-            width: 100%;
-            position: relative;
-            overflow: hidden;
-            border-radius: 12px;
-        }
-
-        #Slide_Show img {
-            display: block;
-            width: 100%;
-            height: auto;
-        }
-
-        /* I controlli prev/next e dots sono gestiti dal CSS esistente.
-           Qui NON sovrascriviamo colori o layout del template. */
-    </style>
+    
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
@@ -83,7 +59,7 @@
                                     <p class="price fw-semibold">Scopri</p>
                                 </div>
                                 <div class="box-image">
-                                    <img src="/Public/assets/onsus/images/banner/banner-department-1.png" alt="" onerror="this.style.display='none'" />
+                                    <img src="/Public/assets/keepstore/images/banner/banner-department-1.png" alt="" onerror="this.style.display='none'" />
                                 </div>
                             </a>
                         </div>

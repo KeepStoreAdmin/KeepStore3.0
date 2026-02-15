@@ -535,3 +535,59 @@ body
             width: 100%;
             justify-content: center;
         }
+
+
+/* ============================
+   Default.aspx - inline styles moved here
+   ============================ */
+/* ============================================================
+           Home (Sprint 2 - HOME 1)
+           NOTE: solo stile minimo per integrare lo slideshow legacy
+           ============================================================ */
+        #Slide_Show {
+            width: 100%;
+        }
+
+        #Slide_Show .slideshow-container {
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        #Slide_Show img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        /* I controlli prev/next e dots sono gestiti dal CSS esistente.
+           Qui NON sovrascriviamo colori o layout del template. */
+
+
+/* ============================
+   Default_Copia.aspx - inline styles moved here
+   ============================ */
+/* ============================================================
+           Home (Sprint 2 - HOME 1)
+           NOTE: solo stile minimo per integrare lo slideshow legacy
+           ============================================================ */
+        #Slide_Show {
+            width: 100%;
+        }
+
+        #Slide_Show .slideshow-container {
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        #Slide_Show img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        /* I controlli prev/next e dots sono gestiti dal CSS esistente.
+           Qui NON sovrascriviamo colori o layout del template. */
