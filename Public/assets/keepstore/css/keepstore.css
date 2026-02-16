@@ -641,3 +641,34 @@ body
 
         /* I controlli prev/next e dots sono gestiti dal CSS esistente.
            Qui NON sovrascriviamo colori o layout del template. */
+
+/* ==========================================================
+   MyAccount: card + address widgets (Onsus-aligned)
+   ========================================================== */
+.ks-card {
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 14px;
+    padding: 18px;
+}
+
+.list-account-address .account-address-item {
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 14px;
+    padding: 18px;
+    background: #fff;
+}
+
+.list-account-address .account-address-item .info-detail {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.list-account-address .account-address-item .box-infor {
+    min-width: 220px;
+}
+
+.list-account-address .account-address-item.ks-muted {
+    opacity: .9;
+}

@@ -5,7 +5,7 @@
     Inherits="datiutente" %>
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
-    I miei dati
+    Dettagli account
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
@@ -54,7 +54,7 @@
                     <i class="icon icon-arrow-right"></i>
                     <a href="myaccount.aspx" class="text">Account</a>
                     <i class="icon icon-arrow-right"></i>
-                    <span class="text">I miei dati</span>
+                    <span class="text">Dettagli account</span>
                 </div>
             </div>
         </div>
@@ -69,10 +69,9 @@
                         <div class="wrap-sidebar-account">
                             <ul class="myaccount-nav content-append">
                                 <li><a href="myaccount.aspx" class="myaccount-nav-item">Dashboard</a></li>
-                                <li><span class="myaccount-nav-item active">I miei dati</span></li>
                                 <li><a href="documenti.aspx?t=4" class="myaccount-nav-item">I miei ordini</a></li>
-                                <li><a href="documenti.aspx?t=2" class="myaccount-nav-item">Le mie fatture</a></li>
-                                <li><a href="documenti.aspx?t=1" class="myaccount-nav-item">I miei DDT</a></li>
+                                <li><a href="my-account-address.aspx" class="myaccount-nav-item">Indirizzi</a></li>
+                                <li><span class="myaccount-nav-item active">Dettagli account</span></li>
                                 <li><a href="wishlist.aspx" class="myaccount-nav-item">Wishlist</a></li>
                                 <li><a href="password.aspx" class="myaccount-nav-item">Cambia password</a></li>
                                 <li><a href="remind.aspx" class="myaccount-nav-item">Recupero accesso</a></li>
@@ -84,7 +83,7 @@
                     <!-- Content -->
                     <div class="col-lg-9">
                         <div class="tf-section-heading mb-4">
-                            <h3 class="heading">I miei dati</h3>
+                            <h3 class="heading">Dettagli account</h3>
                         </div>
 
     <div style="margin-bottom:20px;">

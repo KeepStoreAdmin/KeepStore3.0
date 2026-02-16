@@ -23,6 +23,13 @@ Partial Class datiutente
 
         If Not IsPostBack Then
             lblEsito.Text = ""
+
+            ' Supporto deep-link in modalità modifica (es. da my-account-edit.aspx)
+            Dim qEdit As String = Convert.ToString(Request.QueryString("edit"))
+            If qEdit = "1" OrElse qEdit.Equals("true", StringComparison.OrdinalIgnoreCase) Then
+                fvUtente.ChangeMode(FormViewMode.Edit)
+                fvUtente.DataBind()
+            End If
         End If
     End Sub
 
