@@ -2,6 +2,32 @@
 Partial Class carrello_groupon
     Inherits System.Web.UI.Page
 
+    ''' <summary>
+    ''' Helper di binding: calcola e formatta il prezzo fisso IVA inclusa.
+    ''' Manteniamo la logica qui (code-behind) per evitare script/runat nel markup.
+    ''' </summary>
+    Public Function PrezzoFissoConIva(ByVal prezzoFissoObj As Object, ByVal ivaObj As Object) As String
+        Dim prezzoFisso As Double = 0
+        Dim iva As Double = 0
+
+        Try
+            If prezzoFissoObj IsNot Nothing AndAlso Not Convert.IsDBNull(prezzoFissoObj) Then
+                prezzoFisso = Convert.ToDouble(prezzoFissoObj)
+            End If
+        Catch
+        End Try
+
+        Try
+            If ivaObj IsNot Nothing AndAlso Not Convert.IsDBNull(ivaObj) Then
+                iva = Convert.ToDouble(ivaObj)
+            End If
+        Catch
+        End Try
+
+        Dim totale As Double = prezzoFisso * ((iva / 100.0R) + 1.0R)
+        Return String.Format(System.Globalization.CultureInfo.CurrentCulture, "{0:C}", totale)
+    End Function
+
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         'Controllo se l'Azienda è abilitata per Groupon
         If ((Me.Session("Abilita_Groupon") = 0) Or (Me.Session("UtentiId") = -1)) Then

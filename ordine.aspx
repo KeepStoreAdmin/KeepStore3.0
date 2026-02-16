@@ -93,37 +93,21 @@
     </script>
 
     <!-- Breadcrumb -->
-    <div class="tf-sp-3 pb-0">
+    <div class="tf-sp-1">
         <div class="container">
-            <ul class="breakcrumbs">
-                <li><a href="<%= ResolveUrl("~/Default.aspx") %>" class="body-small link">Home</a></li>
-                <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
-                <li><a href="<%= ResolveUrl("~/carrello.aspx") %>" class="body-small link">Carrello</a></li>
-                <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
-                <li><span class="body-small">Ordine</span></li>
-            </ul>
-        </div>
-    </div>
-
-
-    <div class="checkout-status tf-sp-2 pt-0">
-        <div class="checkout-status-wrap">
-            <div class="checkout-status-list">
-                <div class="checkout-status-item">
-                    <span class="icon"><i class="icon icon-bag"></i></span>
-                    <span class="text">Carrello</span>
-                </div>
-                <div class="checkout-status-item active">
-                    <span class="icon"><i class="icon icon-credit-card"></i></span>
-                    <span class="text">Checkout</span>
-                </div>
-                <div class="checkout-status-item">
-                    <span class="icon"><i class="icon icon-check"></i></span>
-                    <span class="text">Conferma</span>
+            <div class="tf-breadcrumb-wrap">
+                <div class="tf-breadcrumb-list">
+                    <a href="<%= ResolveUrl("~/Default.aspx") %>" class="text">Home</a>
+                    <i class="icon icon-arrow-right"></i>
+                    <a href="<%= ResolveUrl("~/carrello.aspx") %>" class="text">Carrello</a>
+                    <i class="icon icon-arrow-right"></i>
+                    <span class="text">Ordine</span>
                 </div>
             </div>
         </div>
     </div>
+
+</div>
 
 
     <section class="tf-sp-2">
@@ -143,13 +127,13 @@
 
                     <div class="order-detail-wrap">
 
-                        <div style="margin-bottom:14px;">
+                        <div class="mb_16">
                             <asp:Label ID="img_bs_label" runat="server" />
                         </div>
 
                         <asp:Panel ID="Panel1" runat="server">
-                            <h4 class="heading" style="margin-bottom:8px;">Ordine inviato</h4>
-                            <p class="body-text-3" style="margin:0;">
+                            <h4 class="heading" class="heading mb_8">Ordine inviato</h4>
+                            <p class="body-text-3 mb-0">
                                 <span class="ks-order-inline-label"><asp:Label ID="Label2" runat="server" Text="" Font-Bold="true"></asp:Label></span>
                                 <span class="ks-order-inline-label">n° <asp:Label ID="Label1" runat="server" Text="" Font-Bold="true"></asp:Label></span>
                                 <span class="ks-order-inline-label">del <asp:Label ID="Label3" runat="server" Text="" Font-Bold="true"></asp:Label></span>

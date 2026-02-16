@@ -347,11 +347,21 @@ Dim IvaTipo As Integer
     '==========================================================
     Private Sub BindNavSettori()
         Try
-            Dim rpt As Repeater = FindCtrl(Of Repeater)("rptNavSettori")
-            If rpt Is Nothing Then Exit Sub
             Dim data As List(Of NavSettoreItem) = LoadNavSettori()
-            rpt.DataSource = data
-            rpt.DataBind()
+
+            Dim rpt As Repeater = FindCtrl(Of Repeater)("rptNavSettori")
+            If rpt IsNot Nothing Then
+                rpt.DataSource = data
+                rpt.DataBind()
+            End If
+
+            ' Mobile menu (stessa gerarchia)
+            Dim rptM As Repeater = FindCtrl(Of Repeater)("rptNavSettoriMobile")
+            If rptM IsNot Nothing Then
+                rptM.DataSource = data
+                rptM.DataBind()
+            End If
+
         Catch ex As Exception
             'Fail-safe: non bloccare la pagina per un errore menu
         End Try
@@ -1977,5 +1987,36 @@ End Sub
         If s Is Nothing Then s = String.Empty
         Return System.Web.HttpUtility.HtmlEncode(s)
     End Function
+
+
+
+'==========================================================
+' NAV MOBILE: Settori/Categorie/Tipologie
+'==========================================================
+Protected Sub rptNavSettoriMobile_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
+    If e.Item.ItemType = ListItemType.Item OrElse e.Item.ItemType = ListItemType.AlternatingItem Then
+        Dim s As NavSettoreItem = TryCast(e.Item.DataItem, NavSettoreItem)
+        If s Is Nothing Then Exit Sub
+
+        Dim rpt As Repeater = TryCast(e.Item.FindControl("rptNavCategorieMobile"), Repeater)
+        If rpt IsNot Nothing Then
+            rpt.DataSource = s.Categorie
+            rpt.DataBind()
+        End If
+    End If
+End Sub
+
+Protected Sub rptNavCategorieMobile_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
+    If e.Item.ItemType = ListItemType.Item OrElse e.Item.ItemType = ListItemType.AlternatingItem Then
+        Dim c As NavCategoriaItem = TryCast(e.Item.DataItem, NavCategoriaItem)
+        If c Is Nothing Then Exit Sub
+
+        Dim rpt As Repeater = TryCast(e.Item.FindControl("rptNavTipologieMobile"), Repeater)
+        If rpt IsNot Nothing Then
+            rpt.DataSource = c.Tipologie
+            rpt.DataBind()
+        End If
+    End If
+End Sub
 
 End Class

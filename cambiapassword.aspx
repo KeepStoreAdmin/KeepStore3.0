@@ -1,5 +1,9 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="cambiapassword.aspx.vb" Inherits="cambiapassword" %>
 
+<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
+    Cambia password
+</asp:Content>
+
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
 
 
@@ -20,6 +24,21 @@
     });
 })();
 </script>
+
+<!-- Breadcrumbs (Onsus) -->
+<div class="tf-sp-1 pb-0">
+    <div class="container">
+        <div class="tf-breadcrumb-wrap">
+            <div class="tf-breadcrumb-list">
+                <a href="Default.aspx" class="text">Home</a>
+                <i class="icon icon-arrow-right"></i>
+                <a href="myaccount.aspx" class="text">Account</a>
+                <i class="icon icon-arrow-right"></i>
+                <span class="text">Cambia password</span>
+            </div>
+        </div>
+    </div>
+</div>
 
 <section class="tf-sp-2">
     <div class="container">

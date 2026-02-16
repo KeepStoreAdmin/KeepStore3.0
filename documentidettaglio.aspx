@@ -1,15 +1,7 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="documentidettaglio.aspx.vb" Inherits="documentidettaglio" %>
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
-    Dettaglio documento
-    </div>
-</section>
-
-    </div>
-</section>
-    </div>
-</section>
-
+    Dettaglio ordine
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
@@ -17,46 +9,59 @@
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" Runat="Server">
-
-    <section class="tf-page-title style-2">
-    <div class="container">
-        <div class="heading text-center">Dettaglio ordine</div>
-        <div class="text-center">
-            <ul class="breadcrumbs d-flex align-items-center justify-content-center">
-                <li><a href="Default.aspx">Home</a></li>
-                <li><i class="icon-arrow-right"></i></li>
-                <li>Dettaglio ordine</li>
-            </ul>
-        </div>
-    </div>
-</section>
-
-<div class="tf-breadcrumb">
+<div class="tf-sp-1 pb-0">
         <div class="container">
-            <ul class="breakcrumbs">
-                <li>
-                    <a href="default.aspx" class="body-small link">Home</a>
-                </li>
-                <li class="d-flex align-items-center">
+            <div class="tf-breadcrumb-wrap">
+                <div class="tf-breadcrumb-list">
+                    <a href="default.aspx" class="text">Home</a>
                     <i class="icon icon-arrow-right"></i>
-                </li>
-                <li>
-                    <asp:HyperLink ID="hlDocumenti" runat="server" CssClass="body-small link" NavigateUrl="documenti.aspx?t=4">I miei documenti</asp:HyperLink>
-                </li>
-                <li class="d-flex align-items-center">
+                    <a href="myaccount.aspx" class="text">Account</a>
                     <i class="icon icon-arrow-right"></i>
-                </li>
-                <li>
-                    <span class="body-small">Dettaglio documento</span>
-                </li>
-            </ul>
+                    <asp:HyperLink ID="hlDocumenti" runat="server" CssClass="text" NavigateUrl="documenti.aspx?t=4">Ordini</asp:HyperLink>
+                    <i class="icon icon-arrow-right"></i>
+                    <span class="text">Dettaglio</span>
+                </div>
+            </div>
         </div>
     </div>
 
     <section class="tf-sp-2 ks-order-detail">
         <div class="container">
 
-            <asp:SqlDataSource ID="sdsTestata" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" SelectCommand="SELECT * FROM vdocumenti LEFT JOIN vettori ON vdocumenti.`VettoriId`=vettori.`id` WHERE ((vdocumenti.Id = ?Id) AND (vdocumenti.UtentiId = ?UtentiId))">
+            <script runat="server">
+                ' KeepStore: immagine prodotto sicura (fallback nofoto)
+                Protected Function SafeImg(ByVal temp As Object) As String
+                    Dim imgname As String = ""
+                    Try
+                        If temp IsNot Nothing AndAlso Not Convert.IsDBNull(temp) Then
+                            imgname = Convert.ToString(temp)
+                        End If
+                    Catch
+                    End Try
+
+                    If imgname Is Nothing Then imgname = ""
+                    imgname = imgname.Trim()
+
+                    If imgname = "" Then
+                        Return ResolveUrl("~/Public/images/nofoto.gif")
+                    End If
+
+                    If imgname.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse imgname.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+                        Return imgname
+                    End If
+
+                    ' Se il DB contiene gia' un percorso (es. Public/foto/xxx.jpg)
+                    If imgname.IndexOf("/") >= 0 OrElse imgname.IndexOf("\\") >= 0 Then
+                        imgname = imgname.Replace("\\", "/")
+                        imgname = imgname.TrimStart("/"c)
+                        Return ResolveUrl("~/" & imgname)
+                    End If
+
+                    Return ResolveUrl("~/Public/foto/" & imgname)
+                End Function
+            </script>
+
+            <asp:SqlDataSource ID="sdsTestata" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" SelectCommand="SELECT * FROM (vdocumenti LEFT JOIN utenti ON vdocumenti.`UtentiId` = utenti.`Id`) LEFT JOIN vettori ON vdocumenti.`VettoriId` = vettori.`id` WHERE ((vdocumenti.Id = ?Id) AND (vdocumenti.UtentiId = ?UtentiId))">
                 <SelectParameters>
                     <asp:QueryStringParameter Name="Id" Type="Int64" QueryStringField="id"/>
                     <asp:SessionParameter Name="UtentiId" SessionField="UtentiID" Type="int32" />
@@ -81,8 +86,11 @@
                             <li>Documento: <strong><%# Eval("TipoDocumentiDescrizione") %> n. <%# Eval("NDocumento") %></strong></li>
                             <li>Data: <strong><%# Eval("DataDocumento", "{0:d}") %></strong></li>
                             <li>Totale: <strong><%# Eval("TotaleDocumento", "{0:C}") %></strong></li>
-                            <li>Stato: <strong><%# Eval("StatiDescrizione1") %> <%# Eval("StatiDescrizione2") %></strong></li>
+                            <li>Pagamento: <strong><%# Eval("PagamentiTipoDescrizione") %></strong></li>
                         </ul>
+                        <div class="mt-3">
+                            <span class="body-text-3">Stato: <strong><%# Eval("StatiDescrizione1") %> <%# Eval("StatiDescrizione2") %></strong></span>
+                        </div>
 
                         <div class="order-detail-wrap">
                             <h5 class="fw-bold">Spedizione, pagamento e tracking</h5>
@@ -93,6 +101,31 @@
                                     <span class="fw-semibold">Tracking:</span>
                                     <span class="ks-muted"><%# SeparaTracking(Eval("Tracking"), Eval("Link_Tracking")) %></span>
                                 </p>
+                            </div>
+                        </div>
+
+                        <div class="row gap-30 gap-sm-0">
+                            <div class="col-sm-6 col-12">
+                                <div class="order-detail-wrap">
+                                    <h5 class="fw-bold">Indirizzo di fatturazione</h5>
+                                    <div class="billing-info">
+                                        <p><%# Eval("RagioneSociale") %></p>
+                                        <p><%# Eval("CognomeNome") %></p>
+                                        <p><%# Eval("Indirizzo") %></p>
+                                        <p><%# Eval("Cap") %> <%# Eval("Citta") %> (<%# Eval("Provincia") %>)</p>
+                                        <p><%# Eval("Telefono") %> <%# IIf(String.IsNullOrEmpty(Convert.ToString(Eval("Cellulare"))), "", " - " & Eval("Cellulare")) %></p>
+                                        <p><%# Eval("Email") %></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-12">
+                                <div class="order-detail-wrap">
+                                    <h5 class="fw-bold">Indirizzo di spedizione</h5>
+                                    <div class="billing-info">
+                                        <p><%# IIf(String.IsNullOrEmpty(Convert.ToString(Eval("DestinazioneMerci"))), Eval("Indirizzo"), Eval("DestinazioneMerci")) %></p>
+                                        <p><%# Eval("Cap") %> <%# Eval("Citta") %> (<%# Eval("Provincia") %>)</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -115,26 +148,50 @@
                 </asp:FormView>
 
                 <div class="order-detail-wrap">
-                    <h5 class="fw-bold">Righe documento</h5>
+                    <h5 class="fw-bold">Articoli</h5>
 
-                    <asp:GridView ID="GridView2" runat="server" AutoGenerateColumns="False" CellPadding="3" DataKeyNames="id" DataSourceID="sdsRigheSpedizioneGratis" EmptyDataText="" Font-Size="8pt" GridLines="None" PageSize="15" Width="100%" CssClass="tf-table-order-detail" RowStyle-CssClass="tf-order-item">
+                    <!-- Righe: spedizione gratis (se presenti) -->
+                    <asp:GridView ID="GridView2" runat="server" AutoGenerateColumns="False" CellPadding="0" DataKeyNames="id" DataSourceID="sdsRigheSpedizioneGratis" EmptyDataText="" GridLines="None" PageSize="100" Width="100%" CssClass="tf-table-order-detail" RowStyle-CssClass="tf-order-item">
                         <Columns>
                             <asp:TemplateField HeaderText="Prodotto">
                                 <ItemTemplate>
-                                    <div class="tf-order-item_product">
-                                        <asp:HyperLink ID="hlProdottoSpGratis" runat="server" CssClass="link fw-normal"
-                                            NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("ArticoliId") & "&TCId=" & Eval("TCId") %>'
-                                            Text='<%# Eval("Descrizione1") %>' />
-                                        <span class="text-black">×<%# Eval("Qnt") %></span>
-                                        <div class="body-small ks-muted">Spedizione gratis</div>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="tf-order-img" style="width:64px; min-width:64px;">
+                                            <img class="lazyload" src='<%# SafeImg(Eval("Img1")) %>' data-src='<%# SafeImg(Eval("Img1")) %>' alt="" style="width:64px; height:64px; object-fit:cover; border-radius:8px;" />
+                                        </div>
+                                        <div class="tf-order-item_product">
+                                            <asp:HyperLink ID="hlProdottoSpGratis" runat="server" CssClass="link fw-normal"
+                                                NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("ArticoliId") & "&TCId=" & Eval("TCId") %>'
+                                                Text='<%# Eval("Descrizione1") %>' />
+                                            <div class="body-small ks-muted mt-1">
+                                                <span>Codice: <%# Eval("Codice") %></span>
+                                                <span class="ms-2"><%# Eval("taglia") & " " & Eval("colore") %></span>
+                                                <span class="ms-2 badge bg-success" style="font-weight:600;">Spedizione gratis</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </ItemTemplate>
                             </asp:TemplateField>
+
+                            <asp:TemplateField HeaderText="Prezzo">
+                                <ItemTemplate>
+                                    <span class="fw-medium"><%# Eval("PrezzoIvato", "{0:C}") %></span>
+                                </ItemTemplate>
+                                <ItemStyle HorizontalAlign="Right" Wrap="False" />
+                            </asp:TemplateField>
+
+                            <asp:TemplateField HeaderText="Q.tà">
+                                <ItemTemplate>
+                                    <span class="fw-medium">×<%# Eval("Qnt") %></span>
+                                </ItemTemplate>
+                                <ItemStyle HorizontalAlign="Center" Wrap="False" />
+                            </asp:TemplateField>
+
                             <asp:TemplateField HeaderText="Totale">
                                 <ItemTemplate>
                                     <span class="fw-medium"><%# Eval("ImportoIvato", "{0:C}") %></span>
                                 </ItemTemplate>
-                                <ItemStyle HorizontalAlign="Right" />
+                                <ItemStyle HorizontalAlign="Right" Wrap="False" />
                             </asp:TemplateField>
                         </Columns>
                         <HeaderStyle Font-Bold="True" />
@@ -147,24 +204,44 @@
                         </div>
                     <% End If %>
 
-                    <asp:GridView ID="GridView1" runat="server" AutoGenerateColumns="False" CellPadding="3" DataKeyNames="id" DataSourceID="sdsRighe" EmptyDataText="" Font-Size="8pt" GridLines="None" PageSize="15" Width="100%" CssClass="tf-table-order-detail" RowStyle-CssClass="tf-order-item">
+                    <!-- Righe standard -->
+                    <asp:GridView ID="GridView1" runat="server" AutoGenerateColumns="False" CellPadding="0" DataKeyNames="id" DataSourceID="sdsRighe" EmptyDataText="" GridLines="None" PageSize="100" Width="100%" CssClass="tf-table-order-detail" RowStyle-CssClass="tf-order-item">
                         <Columns>
                             <asp:TemplateField HeaderText="Prodotto">
                                 <ItemTemplate>
-                                    <div class="tf-order-item_product">
-                                        <asp:HyperLink ID="hlProdotto" runat="server" CssClass="link fw-normal"
-                                            NavigateUrl='<%# IIf(Eval("articoliid") > 0, "~/articolo.aspx?id=" & Eval("articoliid") & "&TCId=" & Eval("TCId"), "#") %>'
-                                            Text='<%# AdattaTesto(Eval("Descrizione1"), 110) %>' />
-                                        <span class="text-black">×<%# Eval("Qnt") %></span>
-                                        <div class="body-small ks-muted">
-                                            <span>EAN: <%# Eval("Ean") %></span>
-                                            <span class="ms-2">Codice: <%# Eval("Codice") %></span>
-                                            <span class="ms-2">Marca: <%# Eval("MarcheDescrizione") %></span>
-                                            <span class="ms-2"><%# Eval("taglia") & " " & Eval("colore") %></span>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="tf-order-img" style="width:64px; min-width:64px;">
+                                            <img class="lazyload" src='<%# SafeImg(Eval("Img1")) %>' data-src='<%# SafeImg(Eval("Img1")) %>' alt="" style="width:64px; height:64px; object-fit:cover; border-radius:8px;" />
+                                        </div>
+                                        <div class="tf-order-item_product">
+                                            <asp:HyperLink ID="hlProdotto" runat="server" CssClass="link fw-normal"
+                                                NavigateUrl='<%# IIf(Eval("articoliid") > 0, "~/articolo.aspx?id=" & Eval("articoliid") & "&TCId=" & Eval("TCId"), "#") %>'
+                                                Text='<%# AdattaTesto(Eval("Descrizione1"), 110) %>' />
+                                            <div class="body-small ks-muted mt-1">
+                                                <span>EAN: <%# Eval("Ean") %></span>
+                                                <span class="ms-2">Codice: <%# Eval("Codice") %></span>
+                                                <span class="ms-2">Marca: <%# Eval("MarcheDescrizione") %></span>
+                                                <span class="ms-2"><%# Eval("taglia") & " " & Eval("colore") %></span>
+                                            </div>
                                         </div>
                                     </div>
                                 </ItemTemplate>
                             </asp:TemplateField>
+
+                            <asp:TemplateField HeaderText="Prezzo">
+                                <ItemTemplate>
+                                    <span class="fw-medium"><%# Eval("PrezzoIvato", "{0:C}") %></span>
+                                </ItemTemplate>
+                                <ItemStyle HorizontalAlign="Right" Wrap="False" />
+                            </asp:TemplateField>
+
+                            <asp:TemplateField HeaderText="Q.tà">
+                                <ItemTemplate>
+                                    <span class="fw-medium">×<%# Eval("Qnt") %></span>
+                                </ItemTemplate>
+                                <ItemStyle HorizontalAlign="Center" Wrap="False" />
+                            </asp:TemplateField>
+
                             <asp:TemplateField HeaderText="Totale">
                                 <ItemTemplate>
                                     <span class="fw-medium"><%# Eval("ImportoIvato", "{0:C}") %></span>

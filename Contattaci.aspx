@@ -14,20 +14,16 @@
 
         <!-- Breakcrumbs (ONSUS) -->
         <div class="tf-sp-1 pb-0">
-            <div class="container">
-                <ul class="breakcrumbs">
-                    <li>
-                        <a href="<%= ResolveUrl("~/Default.aspx") %>" class="body-small link">Home</a>
-                    </li>
-                    <li class="d-flex align-items-center">
-                        <i class="icon icon-arrow-right"></i>
-                    </li>
-                    <li>
-                        <span class="body-small">Contattaci</span>
-                    </li>
-                </ul>
+        <div class="container">
+            <div class="tf-breadcrumb-wrap">
+                <div class="tf-breadcrumb-list">
+                    <a href="Default.aspx" class="text">Home</a>
+                    <i class="icon icon-arrow-right"></i>
+                    <span class="text">Contatti</span>
+                </div>
             </div>
         </div>
+    </div>
 
         <section class="tf-sp-2">
             <div class="container">

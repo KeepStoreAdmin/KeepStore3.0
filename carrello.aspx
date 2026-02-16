@@ -41,16 +41,19 @@
         </asp:Panel>
         <asp:LinkButton ID="dummy2" runat="server"></asp:LinkButton>
 
- ContentPlaceHolderID="cph" Runat="Server">
+
+    <!-- NOTE: rimosso frammento di markup corrotto rimasto da una migrazione precedente (carattere di controllo). -->
 
     <!-- Breadcrumb -->
     <div class="tf-sp-3 pb-0">
         <div class="container">
-            <ul class="breakcrumbs">
-                <li><a href="/Default.aspx" class="body-small link">Home</a></li>
-                <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
-                <li><span class="body-small">Carrello</span></li>
-            </ul>
+            <div class="tf-breadcrumb-wrap">
+                <div class="tf-breadcrumb-list">
+                    <a href="/Default.aspx" class="text">Home</a>
+                    <i class="icon icon-arrow-right"></i>
+                    <span class="text">Carrello</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -117,8 +120,10 @@
                 End Function
             </script>
 
-            <div class="overflow-x-auto">
-                <table class="tf-table-page-cart">
+            <div class="row g-4">
+                <div class="col-12">
+                    <div class="overflow-x-auto">
+                        <table class="tf-table-page-cart">
                     <thead>
                         <tr>
                             <th>Prodotto</th>
@@ -351,7 +356,9 @@
                         </asp:Repeater>
 
                     </tbody>
-                </table>
+                        </table>
+                    </div>
+                </div>
             </div>
 
             <div id="Qnt_Errata" runat="server" class="ks-alert ks-alert-danger" visible="false">
@@ -429,7 +436,9 @@
                 </div>
 
                 <div class="col-12 col-lg-4">
-                    <div class="ks-summary-box">
+                    <div class="tf-page-cart-footer">
+                        <div class="tf-cart-summery">
+                            <h4 class="title">Riepilogo</h4>
                         <table width="100%" id="TableConteggi" runat="server" visible="false" class="ks-summary-table">
                             <tr>
                                 <td align="right" style="width:70%;">Imponibile:</td>
@@ -464,6 +473,7 @@
                                 <td align="right"><asp:Label ID="lblTotale" runat="server" Text="&#8364; 0,00" Font-Bold="true" Style="color:rgb(205, 38, 44);"></asp:Label></td>
                             </tr>
                         </table>
+                        </div>
                     </div>
                 </div>
             </div>

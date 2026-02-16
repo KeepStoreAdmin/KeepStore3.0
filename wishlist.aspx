@@ -9,26 +9,18 @@
 
         <!-- Breakcrumbs (ONUS) -->
         <div class="tf-sp-1 pb-0">
-            <div class="container">
-                <ul class="breakcrumbs">
-                    <li>
-                        <a href="Default.aspx" class="body-small link">Home</a>
-                    </li>
-                    <li class="d-flex align-items-center">
-                        <i class="icon icon-arrow-right"></i>
-                    </li>
-                    <li>
-                        <a href="myaccount.aspx" class="body-small link">Account</a>
-                    </li>
-                    <li class="d-flex align-items-center">
-                        <i class="icon icon-arrow-right"></i>
-                    </li>
-                    <li>
-                        <span class="body-small">Wishlist</span>
-                    </li>
-                </ul>
+        <div class="container">
+            <div class="tf-breadcrumb-wrap">
+                <div class="tf-breadcrumb-list">
+                    <a href="Default.aspx" class="text">Home</a>
+                    <i class="icon icon-arrow-right"></i>
+                    <a href="myaccount.aspx" class="text">Account</a>
+                    <i class="icon icon-arrow-right"></i>
+                    <span class="text">Wishlist</span>
+                </div>
             </div>
         </div>
+    </div>
 
         <!-- My Account (ONUS) -->
         <section class="tf-sp-2">
@@ -116,9 +108,9 @@
     </script>
 
                         <!-- Wishlist -->
-                        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                        <div class="tf-section-heading mb-4 d-flex flex-wrap justify-content-between align-items-center">
                 <div>
-                    <h4 class="fw-semibold mb-1">Wishlist</h4>
+                    <h3 class="heading mb-1">Wishlist</h3>
                     <div class="body-md-2 text-main-2">
                         <asp:Label ID="lblTrovati" runat="server" Text="0" Font-Bold="True"></asp:Label>
                         <span> articoli</span>
@@ -133,7 +125,7 @@
                         </asp:LinkButton>
                     <% End If %>
 
-                    <asp:ImageButton ID="Selezione_Multipla" runat="server" title="Aggiungi gli articoli selezionati al carrello"
+                    <asp:ImageButton CssClass="tf-btn btn-line" ID="Selezione_Multipla" runat="server" title="Aggiungi gli articoli selezionati al carrello"
                         OnClick="Selezione_Multipla_Click" ImageUrl="~/Public/Images/aggiungiMultiplo.png" CausesValidation="false" />
 
                     <% If Convert.ToString(Session("genera_html_mail")) = "1" Then%>
@@ -271,7 +263,18 @@
                                             </ItemTemplate>
                                         </asp:TemplateField>
                                     </Columns>
-                                </asp:GridView>
+
+                    <EmptyDataTemplate>
+                        <div class='tf-empty-state text-center py-5'>
+                            <div class='heading'>La tua wishlist è vuota</div>
+                            <p class='text-main-2 mt-2'>Aggiungi articoli che ti interessano per ritrovarli qui rapidamente.</p>
+                            <div class='mt-4'>
+                                <a class='tf-btn btn-fill' href='articoli.aspx'>Vai al catalogo</a>
+                            </div>
+                        </div>
+                    </EmptyDataTemplate>
+
+                </asp:GridView>
 
                                 <div class="d-flex flex-column align-items-end gap-2">
                                     <div class="d-flex align-items-center gap-2">

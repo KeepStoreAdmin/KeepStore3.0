@@ -10,16 +10,20 @@
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
-    <div class="tf-breadcrumb">
+    <!-- Breadcrumbs (Onsus) -->
+    <div class="tf-sp-1 pb-0">
         <div class="container">
-            <ul class="breadcrumb-list">
-                <li><a href="<%= ResolveUrl("~/Default.aspx") %>" class="text">Home</a></li>
-                <li><span class="text">Accedi</span></li>
-            </ul>
+            <div class="tf-breadcrumb-wrap">
+                <div class="tf-breadcrumb-list">
+                    <a href="<%= ResolveUrl("~/Default.aspx") %>" class="text">Home</a>
+                    <i class="icon icon-arrow-right"></i>
+                    <span class="text">Accedi</span>
+                </div>
+            </div>
         </div>
     </div>
 
-    <section class="flat-spacing-2">
+    <section class="flat-spacing">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-xl-5 col-lg-6 col-md-8">

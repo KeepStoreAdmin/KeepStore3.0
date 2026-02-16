@@ -58,17 +58,22 @@
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" Runat="Server">
 
-    <div class="tf-breadcrumb">
+    <!-- Breadcrumbs (Onsus) -->
+    <div class="tf-sp-1 pb-0">
         <div class="container">
-            <ul class="breadcrumb-list">
-                <li><a href="<%= ResolveUrl("~/Default.aspx") %>" class="text">Home</a></li>
-                <li><a href="login.aspx" class="text">Accedi</a></li>
-                <li><span class="text">Recupero accesso</span></li>
-            </ul>
+            <div class="tf-breadcrumb-wrap">
+                <div class="tf-breadcrumb-list">
+                    <a href="<%= ResolveUrl("~/Default.aspx") %>" class="text">Home</a>
+                    <i class="icon icon-arrow-right"></i>
+                    <a href="login.aspx" class="text">Accedi</a>
+                    <i class="icon icon-arrow-right"></i>
+                    <span class="text">Recupero accesso</span>
+                </div>
+            </div>
         </div>
     </div>
 
-    <section class="flat-spacing-2">
+    <section class="flat-spacing">
         <div class="container">
 
             <!-- SPINNER DI PAGINA -->

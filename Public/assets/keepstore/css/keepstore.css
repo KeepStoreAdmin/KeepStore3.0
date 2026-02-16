@@ -84,6 +84,56 @@
 a:focus {
 outline: none;
 }
+
+
+/* ==============================
+   Onsus wrap for legacy forms (Registrazione/Login)
+   NOTE: in precedenza era finito nel path errato; la versione corretta è questa.
+   ============================== */
+.ks-legacy-panel {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.ks-auth-register table {
+  width: 100% !important;
+  border-collapse: collapse;
+}
+
+.ks-auth-register table[style*="border-style:solid"],
+.ks-auth-register table[style*="border-width"],
+.ks-auth-register table[style*="border-color"],
+.ks-auth-register #tipologiacliente,
+.ks-auth-register #sceltatipologiacliente {
+  border: 1px solid rgba(0,0,0,.08) !important;
+  background: #fff !important;
+  border-radius: 12px;
+}
+
+.ks-auth-register td {
+  vertical-align: top;
+}
+
+.ks-auth-register input[type="text"],
+.ks-auth-register input[type="password"],
+.ks-auth-register select,
+.ks-auth-register textarea {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+  border-radius: 10px;
+}
+
+.ks-auth-register .validator,
+.ks-auth-register span[style*="background-color:Red"],
+.ks-auth-register span[style*="background-color: red"],
+.ks-auth-register font[color="Red"],
+.ks-auth-register .error {
+  display: inline-block;
+  margin-top: 6px;
+}
 a.trigger{
 	position: absolute;
 	background:#717171 url(Images/Immagini_Listini_Personalizzati/Slide/plus.png) 6% 55% no-repeat;

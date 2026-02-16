@@ -6,18 +6,26 @@
 
 <asp:Content ID="ContentMain" ContentPlaceHolderID="MainContent" runat="server">
 
-    <!-- Breadcrumbs -->
-    <div class="tf-sp-1">
+    <!-- Breadcrumbs (Onsus style) -->
+    <div class="tf-breakcrumb">
         <div class="container">
-            <div class="tf-breadcrumb-wrap">
-                <div class="tf-breadcrumb-list">
-                    <a href="default.aspx" class="text">Home</a>
+            <ul class="breakcrumb-list">
+                <li>
+                    <a href="default.aspx" class="body-small link">Home</a>
+                </li>
+                <li class="d-flex align-items-center">
                     <i class="icon icon-arrow-right"></i>
-                    <a href="articoli.aspx" class="text">Articoli</a>
+                </li>
+                <li>
+                    <a href="articoli.aspx" class="body-small link">Shop</a>
+                </li>
+                <li class="d-flex align-items-center">
                     <i class="icon icon-arrow-right"></i>
-                    <span class="text"><asp:Literal ID="litBreadcrumbCurrent" runat="server" /></span>
-                </div>
-            </div>
+                </li>
+                <li>
+                    <span class="body-small"><asp:Literal ID="litBreadcrumbCurrent" runat="server" /></span>
+                </li>
+            </ul>
         </div>
     </div>
 
@@ -40,210 +48,302 @@
 
     <!-- Product -->
     <asp:Panel ID="pnlProduct" runat="server" Visible="false">
-        <section class="flat-spacing">
-            <div class="container">
-                <div class="tf-main-product section-image-zoom">
-                    <!-- Media -->
-                    <div class="tf-product-media-wrap">
-                        <div class="thumbs-slider">
-                            <div class="swiper tf-product-media-main" id="gallery-swiper-started">
-                                <div class="swiper-wrapper">
-                                    <asp:Repeater ID="rptMainImages" runat="server">
-                                        <ItemTemplate>
-                                            <div class="swiper-slide">
-                                                <a href='<%# Eval("Url") %>' target="_blank" class="item">
-                                                    <img class="tf-image-zoom lazyload"
-                                                         data-src='<%# Eval("Url") %>'
-                                                         src='<%# Eval("Url") %>'
-                                                         data-zoom='<%# Eval("Url") %>'
-                                                         alt='<%# Eval("Alt") %>' />
-                                                </a>
-                                            </div>
-                                        </ItemTemplate>
-                                    </asp:Repeater>
-                                </div>
-                                <div class="swiper-button-next button-style-arrow thumbs-next"></div>
-                                <div class="swiper-button-prev button-style-arrow thumbs-prev"></div>
-                            </div>
+        <!-- Product Main (Onsus product-detail like) -->
+        <section>
+            <div class="tf-main-product section-image-zoom">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <!-- Product Image -->
+                            <div class="tf-product-media-wrap thumbs-default sticky-top">
+                                <div class="thumbs-slider">
+                                    <div class="swiper tf-product-media-main" id="gallery-swiper-started">
+                                        <div class="swiper-wrapper">
+                                            <asp:Repeater ID="rptMainImages" runat="server">
+                                                <ItemTemplate>
+                                                    <div class="swiper-slide">
+                                                        <a href='<%# Eval("Url") %>' target="_blank" class="item">
+                                                            <img class="tf-image-zoom lazyload"
+                                                                 src='<%# Eval("Url") %>'
+                                                                 data-zoom='<%# Eval("Url") %>'
+                                                                 data-src='<%# Eval("Url") %>'
+                                                                 alt='<%# Eval("Alt") %>' />
+                                                        </a>
+                                                    </div>
+                                                </ItemTemplate>
+                                            </asp:Repeater>
+                                        </div>
+                                    </div>
 
-                            <div class="swiper tf-product-media-thumbs other-image-zoom" data-direction="vertical">
-                                <div class="swiper-wrapper">
-                                    <asp:Repeater ID="rptThumbs" runat="server">
-                                        <ItemTemplate>
-                                            <div class="swiper-slide">
-                                                <div class="item">
-                                                    <img class="lazyload"
-                                                         data-src='<%# Eval("Url") %>'
-                                                         src='<%# Eval("Url") %>'
-                                                         alt='<%# Eval("Alt") %>' />
+                                    <div class="container-swiper">
+                                        <div class="swiper tf-product-media-thumbs other-image-zoom" data-direction="horizontal">
+                                            <div class="swiper-wrapper stagger-wrap">
+                                                <asp:Repeater ID="rptThumbs" runat="server">
+                                                    <ItemTemplate>
+                                                        <div class="swiper-slide stagger-item">
+                                                            <div class="item">
+                                                                <img class="lazyload"
+                                                                     data-src='<%# Eval("Url") %>'
+                                                                     src='<%# Eval("Url") %>'
+                                                                     alt='<%# Eval("Alt") %>' />
+                                                            </div>
+                                                        </div>
+                                                    </ItemTemplate>
+                                                </asp:Repeater>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- /Product Image -->
+                        </div>
+
+                        <div class="col-md-6">
+                            <!-- Product Info -->
+                            <div class="tf-product-info-wrap position-relative">
+                                <div class="tf-zoom-main"></div>
+                                <div class="tf-product-info-list other-image-zoom flex-xxl-nowrap">
+                                    <div class="tf-product-info-content">
+                                        <div class="infor-heading">
+                                            <p class="caption">
+                                                <span class="text-main-2">Codice:</span>
+                                                <span class="text-secondary fw-semibold"><asp:Literal ID="litCodice" runat="server" /></span>
+                                            </p>
+                                            <h5 class="product-info-name fw-semibold">
+                                                <asp:Literal ID="litNome" runat="server" />
+                                            </h5>
+                                            <ul class="product-info-rate-wrap">
+                                                <asp:PlaceHolder ID="phBrand" runat="server" Visible="false">
+                                                    <li class="d-flex">
+                                                        <span class="caption text-main-2">Marca:&nbsp;</span>
+                                                        <asp:HyperLink ID="lnkMarca" runat="server" CssClass="caption text-secondary link fw-semibold" />
+                                                    </li>
+                                                </asp:PlaceHolder>
+                                                <asp:PlaceHolder ID="phEan" runat="server" Visible="false">
+                                                    <li>
+                                                        <span class="caption text-main-2">EAN:&nbsp;</span>
+                                                        <span class="caption text-secondary fw-semibold"><asp:Literal ID="litEan" runat="server" /></span>
+                                                    </li>
+                                                </asp:PlaceHolder>
+                                                <asp:PlaceHolder ID="phAvailability" runat="server" Visible="false">
+                                                    <li>
+                                                        <span class="caption text-main-2">Disponibilità:&nbsp;</span>
+                                                        <span class="caption text-secondary fw-semibold"><asp:Literal ID="litAvailability" runat="server" /></span>
+                                                    </li>
+                                                </asp:PlaceHolder>
+                                            </ul>
+                                        </div>
+
+                                        <div class="infor-center">
+                                            <div class="product-info-price">
+                                                <asp:Literal ID="litPriceHtml" runat="server" />
+                                            </div>
+                                            <div class="mt-3">
+                                                <asp:Literal ID="litShortDesc" runat="server" />
+                                            </div>
+                                        </div>
+
+                                        <div class="infor-bottom">
+                                            <h6 class="fw-semibold">Info</h6>
+                                            <ul class="product-about-list">
+                                                <li>
+                                                    <p class="body-text-3 mb-0">Seleziona quantità e aggiungi al carrello.</p>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <!-- Sticky box (CTA/Quantity/Variant) -->
+                                    <div class="tf-product-info-choose-option sticky-top">
+                                        <div class="product-delivery">
+                                            <p class="price-text fw-medium text-primary">
+                                                <asp:Literal ID="litPriceHtml2" runat="server" />
+                                            </p>
+                                            <p>
+                                                <i class="icon-delivery-2"></i>
+                                                Spedizione calcolata al checkout
+                                            </p>
+                                        </div>
+
+                                        <asp:Panel ID="pnlVariants" runat="server" Visible="false">
+                                            <div class="product-color">
+                                                <p class="title body-text-3">Variante</p>
+                                                <div class="tf-select-color">
+                                                    <asp:DropDownList ID="ddlTc" runat="server" AutoPostBack="true" CssClass="select-color" OnSelectedIndexChanged="ddlTc_SelectedIndexChanged" />
                                                 </div>
                                             </div>
-                                        </ItemTemplate>
-                                    </asp:Repeater>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="tf-zoom-main"></div>
-                    </div>
+                                        </asp:Panel>
 
-                    <!-- Info -->
-                    <div class="tf-product-info-wrap position-relative">
-                        <div class="tf-product-info-list">
-                            <div class="tf-product-info-title">
-                                <h1 class="title"><asp:Literal ID="litNome" runat="server" /></h1>
-                            </div>
+                                        <div class="product-quantity">
+                                            <p class="title body-text-3">Quantity</p>
+                                            <div class="wg-quantity">
+                                                <button type="button" class="btn-quantity btn-decrease" onclick="(function(){var i=document.getElementById('<%= txtQty.ClientID %>'); if(!i) return; var v=parseInt(i.value||'1',10); if(isNaN(v)||v<=1){i.value='1';} else {i.value=(v-1).toString();}})();">
+                                                    <i class="icon-minus"></i>
+                                                </button>
+                                                <asp:TextBox ID="txtQty" runat="server" CssClass="quantity-product" Text="1" />
+                                                <button type="button" class="btn-quantity btn-increase" onclick="(function(){var i=document.getElementById('<%= txtQty.ClientID %>'); if(!i) return; var v=parseInt(i.value||'1',10); if(isNaN(v)||v<1){v=1;} i.value=(v+1).toString();})();">
+                                                    <i class="icon-plus"></i>
+                                                </button>
+                                            </div>
+                                            <div class="mt-2">
+                                                <asp:Literal ID="litQtyHelp" runat="server" />
+                                            </div>
+                                        </div>
 
-                            <div class="tf-product-info-price">
-                                <asp:Literal ID="litPriceHtml" runat="server" />
-                            </div>
+                                        <div class="product-box-btn">
+                                            <asp:LinkButton ID="btnAddToCart" runat="server" CssClass="tf-btn text-white" OnClick="btnAddToCart_Click">
+                                                Aggiungi al carrello
+                                                <i class="icon-cart-2"></i>
+                                            </asp:LinkButton>
+                                            <a href="carrello.aspx" class="tf-btn text-white btn-gray">Vai al carrello</a>
+                                        </div>
 
-                            <div class="tf-product-info-desc">
-                                <asp:Literal ID="litShortDesc" runat="server" />
-                            </div>
-
-                            <asp:Panel ID="pnlVariants" runat="server" Visible="false">
-                                <div class="tf-product-info-variant">
-                                    <div class="variant-picker-item">
-                                        <div class="variant-picker-label">Variante</div>
-                                        <asp:DropDownList ID="ddlTc" runat="server" AutoPostBack="true" CssClass="form-select" OnSelectedIndexChanged="ddlTc_SelectedIndexChanged" />
+                                        <div class="product-detail">
+                                            <p class="caption">Details</p>
+                                            <p class="body-text-3">
+                                                <span>Reso: 30 giorni (ove applicabile)</span>
+                                                <span>Supporto: assistenza tecnica disponibile</span>
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
-                            </asp:Panel>
-
-                            <div class="tf-product-info-quantity">
-                                <div class="quantity-title">Quantità</div>
-                                <div class="wg-quantity">
-                                    <asp:TextBox ID="txtQty" runat="server" CssClass="quantity-input" Text="1" />
-                                </div>
-                                <asp:Literal ID="litQtyHelp" runat="server" />
                             </div>
-
-                            <div class="tf-product-info-buy-button">
-                                <asp:LinkButton ID="btnAddToCart" runat="server" CssClass="tf-btn btn-fill justify-content-center fw-6 fs-16 flex-grow-1 animate-hover-btn" OnClick="btnAddToCart_Click">
-                                    Aggiungi al carrello
-                                </asp:LinkButton>
-                            </div>
-
-                            <div class="tf-product-info-meta">
-                                <div class="meta-item">
-                                    Codice:
-                                    <span class="meta-value"><asp:Literal ID="litCodice" runat="server" /></span>
-                                </div>
-
-                                <asp:PlaceHolder ID="phBrand" runat="server" Visible="false">
-                                    <div class="meta-item">
-                                        Marca:
-                                        <span class="meta-value"><asp:HyperLink ID="lnkMarca" runat="server" /></span>
-                                    </div>
-                                </asp:PlaceHolder>
-
-                                <asp:PlaceHolder ID="phEan" runat="server" Visible="false">
-                                    <div class="meta-item">
-                                        EAN:
-                                        <span class="meta-value"><asp:Literal ID="litEan" runat="server" /></span>
-                                    </div>
-                                </asp:PlaceHolder>
-
-                                <asp:PlaceHolder ID="phAvailability" runat="server" Visible="false">
-                                    <div class="meta-item">
-                                        Disponibilità:
-                                        <span class="meta-value"><asp:Literal ID="litAvailability" runat="server" /></span>
-                                    </div>
-                                </asp:PlaceHolder>
-                            </div>
-
+                            <!-- /Product Info -->
                         </div>
                     </div>
                 </div>
+            </div>
+        </section>
 
-                <!-- Tabs -->
-                <div class="flat-spacing pt-0">
-                    <div class="tf-product-description">
-                        <ul class="nav nav-tabs" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link active" data-bs-toggle="tab" href="#tab-desc" role="tab" aria-selected="true">Descrizione</a>
+        <!-- Product Description Tab (Onsus style) -->
+        <section class="tf-sp-4">
+            <div class="container">
+                <div class="flat-animate-tab flat-title-tab-product-des">
+                    <div class="flat-title-tab text-center">
+                        <ul class="menu-tab-line" role="tablist">
+                            <li class="nav-tab-item" role="presentation">
+                                <a href="#prd-des" class="tab-link product-title fw-semibold active" data-bs-toggle="tab">Description</a>
                             </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link" data-bs-toggle="tab" href="#tab-info" role="tab" aria-selected="false">Dettagli</a>
+                            <li class="nav-tab-item" role="presentation">
+                                <a href="#prd-infor" class="tab-link product-title fw-semibold" data-bs-toggle="tab">Product information</a>
                             </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link" data-bs-toggle="tab" href="#tab-shipping" role="tab" aria-selected="false">Spedizione</a>
+                            <li class="nav-tab-item" role="presentation">
+                                <a href="#prd-ship" class="tab-link product-title fw-semibold" data-bs-toggle="tab">Shipping</a>
                             </li>
                         </ul>
-
-                        <div class="tab-content">
-                            <div class="tab-pane fade show active" id="tab-desc" role="tabpanel">
-                                <div class="tf-accordion-content">
-                                    <asp:Literal ID="litLongDesc" runat="server" Mode="PassThrough" />
-                                </div>
+                    </div>
+                    <div class="tab-content">
+                        <div class="tab-pane active show" id="prd-des" role="tabpanel">
+                            <div class="tab-main tab-des">
+                                <asp:Literal ID="litLongDesc" runat="server" Mode="PassThrough" />
                             </div>
-
-                            <div class="tab-pane fade" id="tab-info" role="tabpanel">
-                                <div class="tf-accordion-content">
-                                    <ul class="list-unstyled mb-0">
-                                        <li><strong>Codice:</strong> <asp:Literal ID="litCodice2" runat="server" /></li>
-
-                                        <asp:PlaceHolder ID="phEan2" runat="server" Visible="false">
-                                            <li><strong>EAN:</strong> <asp:Literal ID="litEan2" runat="server" /></li>
-                                        </asp:PlaceHolder>
-
-                                        <asp:PlaceHolder ID="phBrand2" runat="server" Visible="false">
-                                            <li><strong>Marca:</strong> <asp:Literal ID="litMarca2" runat="server" /></li>
-                                        </asp:PlaceHolder>
-                                    </ul>
-                                </div>
+                        </div>
+                        <div class="tab-pane" id="prd-infor" role="tabpanel">
+                            <div class="tab-main tab-infor">
+                                <ul class="product-fearture-list">
+                                    <li>
+                                        <p class="body-md-2 fw-semibold">Codice</p>
+                                        <span class="body-text-3"><asp:Literal ID="litCodice2" runat="server" /></span>
+                                    </li>
+                                    <asp:PlaceHolder ID="phEan2" runat="server" Visible="false">
+                                        <li>
+                                            <p class="body-md-2 fw-semibold">EAN</p>
+                                            <span class="body-text-3"><asp:Literal ID="litEan2" runat="server" /></span>
+                                        </li>
+                                    </asp:PlaceHolder>
+                                    <asp:PlaceHolder ID="phBrand2" runat="server" Visible="false">
+                                        <li>
+                                            <p class="body-md-2 fw-semibold">Marca</p>
+                                            <span class="body-text-3"><asp:Literal ID="litMarca2" runat="server" /></span>
+                                        </li>
+                                    </asp:PlaceHolder>
+                                </ul>
                             </div>
-
-                            <div class="tab-pane fade" id="tab-shipping" role="tabpanel">
-                                <div class="tf-accordion-content">
-                                    <p class="mb-2">
-                                        Spedizione e resi vengono calcolati al checkout in base all'indirizzo e al peso/volume dell'ordine.
-                                    </p>
-                                    <p class="mb-0">
-                                        Per informazioni aggiuntive puoi contattarci dalla pagina <a href="Contattaci.aspx">Contatti</a>.
-                                    </p>
-                                </div>
+                        </div>
+                        <div class="tab-pane" id="prd-ship" role="tabpanel">
+                            <div class="tab-main tab-des">
+                                <p class="body-text-3">
+                                    Spedizione e resi vengono calcolati al checkout in base all'indirizzo e al peso/volume dell'ordine.
+                                </p>
+                                <p class="body-text-3 mb-0">
+                                    Per informazioni aggiuntive puoi contattarci dalla pagina <a class="link text-secondary" href="Contattaci.aspx">Contatti</a>.
+                                </p>
                             </div>
                         </div>
                     </div>
                 </div>
-
             </div>
         </section>
     </asp:Panel>
 
-	    <!-- Related products (bound server-side; no inline functions in markup) -->
-	    <asp:PlaceHolder ID="phRelated" runat="server" Visible="False">
-	        <section class="flat-spacing pt-0">
-	            <div class="container">
-	                <div class="tf-section-title mb_30">
-	                    <h2 class="title">Prodotti correlati</h2>
-	                </div>
-	                <div class="tf-grid-layout tf-col-4 gap30">
-	                    <asp:Repeater ID="rptRelated" runat="server">
-	                        <ItemTemplate>
-	                            <div class="card-product">
-	                                <div class="card-product-wrapper">
-	                                    <asp:HyperLink ID="hlRelImg" runat="server" CssClass="product-img">
-	                                        <asp:Image ID="imgRel" runat="server" CssClass="img-fluid" AlternateText="" />
-	                                    </asp:HyperLink>
-	                                </div>
-	                                <div class="card-product-info">
-	                                    <asp:HyperLink ID="hlRelName" runat="server" CssClass="title link" />
-	                                    <div class="price">
-	                                        <asp:Literal ID="litRelPrice" runat="server" EnableViewState="False" />
-	                                    </div>
-	                                </div>
-	                            </div>
-	                        </ItemTemplate>
-	                    </asp:Repeater>
-	                </div>
-	            </div>
-	        </section>
-	    </asp:PlaceHolder>
+    <!-- Related products (Onsus slider style; bound server-side) -->
+    <asp:PlaceHolder ID="phRelated" runat="server" Visible="False">
+        <section class="tf-sp-2 pt-0">
+            <div class="container">
+                <div class="flat-title">
+                    <h5 class="fw-semibold">Prodotti correlati</h5>
+                    <div class="box-btn-slide relative">
+                        <div class="swiper-button-prev nav-swiper nav-prev-products">
+                            <i class="icon-arrow-left-lg"></i>
+                        </div>
+                        <div class="swiper-button-next nav-swiper nav-next-products">
+                            <i class="icon-arrow-right-lg"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="swiper tf-sw-products" data-preview="5" data-tablet="4" data-mobile-sm="3" data-mobile="2"
+                     data-space-lg="30" data-space-md="20" data-space="15" data-pagination="2" data-pagination-sm="3"
+                     data-pagination-md="4" data-pagination-lg="5" data-nav-prev=".nav-prev-products" data-nav-next=".nav-next-products">
+                    <div class="swiper-wrapper">
+                        <asp:Repeater ID="rptRelated" runat="server">
+                            <ItemTemplate>
+                                <div class="swiper-slide">
+                                    <div class="card-product">
+                                        <div class="card-product-wrapper">
+                                            <a href='<%# Eval("Url") %>' class="product-img">
+                                                <img class="img-product lazyload" src='<%# Eval("Img") %>' data-src='<%# Eval("Img") %>' alt='<%# System.Web.HttpUtility.HtmlAttributeEncode(Eval("Nome")) %>' />
+                                                <img class="img-hover lazyload" src='<%# Eval("Img") %>' data-src='<%# Eval("Img") %>' alt='<%# System.Web.HttpUtility.HtmlAttributeEncode(Eval("Nome")) %>' />
+                                            </a>
+                                            <ul class="list-product-btn">
+                                                <li>
+                                                    <a href='<%# Eval("Url") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left">
+                                                        <span class="icon icon-cart2"></span>
+                                                        <span class="tooltip">Vedi prodotto</span>
+                                                    </a>
+                                                </li>
+                                                <li class="d-none d-sm-block">
+                                                    <a href='<%# Eval("Url") %>' class="box-icon quickview btn-icon-action hover-tooltip tooltip-left">
+                                                        <span class="icon icon-view"></span>
+                                                        <span class="tooltip">Dettagli</span>
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                        <div class="card-product-info">
+                                            <div class="box-title">
+                                                <div class="d-flex flex-column">
+                                                    <a href='<%# Eval("Url") %>' class="name-product body-md-2 fw-semibold text-secondary link">
+                                                        <%# System.Web.HttpUtility.HtmlEncode(Eval("Nome")) %>
+                                                    </a>
+                                                </div>
+                                                <p class="price-wrap fw-medium">
+                                                    <%# Eval("PrezzoHtml") %>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </ItemTemplate>
+                        </asp:Repeater>
+                    </div>
+                    <div class="d-flex d-lg-none sw-dot-default sw-pagination-products justify-content-center"></div>
+                </div>
+            </div>
+        </section>
+    </asp:PlaceHolder>
 
-	</asp:Content>
+</asp:Content>
 
-	<asp:Content ID="ScriptsArticolo" ContentPlaceHolderID="ScriptsContent" runat="server">
-	    <script type="module" src="/Public/assets/keepstore/js/zoom.js"></script>
-	</asp:Content>
+<asp:Content ID="ScriptsArticolo" ContentPlaceHolderID="ScriptsContent" runat="server">
+    <script type="module" src="<%= ThemeManager.Asset("js/zoom.js") %>"></script>
+</asp:Content>

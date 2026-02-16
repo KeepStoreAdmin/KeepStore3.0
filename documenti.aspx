@@ -1,15 +1,7 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="documenti.aspx.vb" Inherits="documenti" Debug="true" %>
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
-    Consultazione documenti
-    </div>
-</section>
-
-    </div>
-</section>
-    </div>
-</section>
-
+    I miei documenti
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
@@ -47,20 +39,6 @@
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" Runat="Server">
-
-    <section class="tf-page-title style-2">
-    <div class="container">
-        <div class="heading text-center">I miei ordini</div>
-        <div class="text-center">
-            <ul class="breadcrumbs d-flex align-items-center justify-content-center">
-                <li><a href="Default.aspx">Home</a></li>
-                <li><i class="icon-arrow-right"></i></li>
-                <li>Ordini</li>
-            </ul>
-        </div>
-    </div>
-</section>
-
 <!-- SPINNER DI PAGINA -->
     <asp:Panel ID="pnlLoading" runat="server" CssClass="ks-loading-panel">
         <div class="ks-spinner-circle"></div>
@@ -146,16 +124,18 @@
 
             <!-- Breakcrumbs (ONUS) -->
             <div class="tf-sp-1 pb-0">
-                <div class="container">
-                    <ul class="breakcrumbs">
-                        <li><a href="Default.aspx" class="body-small link">Home</a></li>
-                        <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
-                        <li><a href="myaccount.aspx" class="body-small link">Account</a></li>
-                        <li class="d-flex align-items-center"><i class="icon icon-arrow-right"></i></li>
-                        <li><span class="body-small">Documenti</span></li>
-                    </ul>
+        <div class="container">
+            <div class="tf-breadcrumb-wrap">
+                <div class="tf-breadcrumb-list">
+                    <a href="Default.aspx" class="text">Home</a>
+                    <i class="icon icon-arrow-right"></i>
+                    <a href="myaccount.aspx" class="text">Account</a>
+                    <i class="icon icon-arrow-right"></i>
+                    <span class="text">Documenti</span>
                 </div>
             </div>
+        </div>
+    </div>
 
             <section class="tf-sp-2">
                 <div class="container">

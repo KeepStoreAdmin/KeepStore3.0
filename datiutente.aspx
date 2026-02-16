@@ -6,14 +6,6 @@
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
     I miei dati
-    </div>
-</section>
-
-    </div>
-</section>
-    </div>
-</section>
-
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
@@ -51,43 +43,22 @@
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
-<section class="tf-page-title style-2">
-    <div class="container">
-        <div class="heading text-center">Dati utente</div>
-        <div class="text-center">
-            <ul class="breadcrumbs d-flex align-items-center justify-content-center">
-                <li><a href="Default.aspx">Home</a></li>
-                <li><i class="icon-arrow-right"></i></li>
-                <li>Dati utente</li>
-            </ul>
-        </div>
-    </div>
-</section>
-
 <div class="ks-myaccount">
 
         <!-- Breakcrumbs (ONUS) -->
         <div class="tf-sp-1 pb-0">
-            <div class="container">
-                <ul class="breakcrumbs">
-                    <li>
-                        <a href="Default.aspx" class="body-small link">Home</a>
-                    </li>
-                    <li class="d-flex align-items-center">
-                        <i class="icon icon-arrow-right"></i>
-                    </li>
-                    <li>
-                        <a href="myaccount.aspx" class="body-small link">Account</a>
-                    </li>
-                    <li class="d-flex align-items-center">
-                        <i class="icon icon-arrow-right"></i>
-                    </li>
-                    <li>
-                        <span class="body-small">I miei dati</span>
-                    </li>
-                </ul>
+        <div class="container">
+            <div class="tf-breadcrumb-wrap">
+                <div class="tf-breadcrumb-list">
+                    <a href="Default.aspx" class="text">Home</a>
+                    <i class="icon icon-arrow-right"></i>
+                    <a href="myaccount.aspx" class="text">Account</a>
+                    <i class="icon icon-arrow-right"></i>
+                    <span class="text">I miei dati</span>
+                </div>
             </div>
         </div>
+    </div>
 
         <!-- My Account (ONUS) -->
         <section class="tf-sp-2">
@@ -116,14 +87,12 @@
                             <h3 class="heading">I miei dati</h3>
                         </div>
 
-<h1>I miei dati</h1>
-
     <div style="margin-bottom:20px;">
         <asp:HyperLink 
             ID="hlBackMyAccount" 
             runat="server"
             NavigateUrl="myaccount.aspx"
-            CssClass="tf-btn-icon type-2 style-white">
+            CssClass="tf-btn btn-line">
             &laquo; Torna alla pagina My Account
         </asp:HyperLink>
     </div>
@@ -342,7 +311,7 @@
                     <div class="ks-edit-buttons">
                         <asp:Button ID="btnEdit" runat="server"
                             Text="Modifica dati"
-                            CssClass="tf-btn-icon type-2 style-white"
+                            CssClass="tf-btn btn-line"
                             CommandName="Edit" />
                     </div>
 
@@ -557,12 +526,12 @@
                     <div class="ks-edit-buttons">
                         <asp:Button ID="btnUpdate" runat="server"
                             Text="Salva"
-                            CssClass="tf-btn-icon type-2 style-white"
+                            CssClass="tf-btn btn-line"
                             CommandName="Update"
                             OnClientClick="ksShowSpinnerOnSubmit();" />
                         <asp:Button ID="btnCancel" runat="server"
                             Text="Annulla"
-                            CssClass="tf-btn-icon type-2 style-white"
+                            CssClass="tf-btn btn-line"
                             CommandName="Cancel" />
                     </div>
 

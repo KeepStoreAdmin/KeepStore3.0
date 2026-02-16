@@ -49,23 +49,15 @@
         <!-- Breakcrumbs (ONUS) -->
         <div class="tf-sp-1 pb-0">
             <div class="container">
-                <ul class="breakcrumbs">
-                    <li>
-                        <a href="Default.aspx" class="body-small link">Home</a>
-                    </li>
-                    <li class="d-flex align-items-center">
+                <div class="tf-breadcrumb-wrap">
+                    <div class="tf-breadcrumb-list">
+                        <a href="Default.aspx" class="text">Home</a>
                         <i class="icon icon-arrow-right"></i>
-                    </li>
-                    <li>
-                        <a href="myaccount.aspx" class="body-small link">Account</a>
-                    </li>
-                    <li class="d-flex align-items-center">
+                        <a href="myaccount.aspx" class="text">Account</a>
                         <i class="icon icon-arrow-right"></i>
-                    </li>
-                    <li>
-                        <span class="body-small">Cambia password</span>
-                    </li>
-                </ul>
+                        <span class="text">Cambia password</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -94,6 +86,7 @@
                     <div class="col-lg-9">
                         <div class="tf-section-heading mb-4">
                             <h3 class="heading">Cambia password</h3>
+                            <p class="text mt-2">Aggiorna la tua password in modo sicuro.</p>
                         </div>
 
 <!-- SPINNER DI PAGINA -->
@@ -105,78 +98,57 @@
     <!-- CONTENUTO PRINCIPALE -->
     <asp:Panel ID="pnlContent" runat="server" Style="display:none;">
 
-        <h1>Cambia password</h1>
-
-        <div style="margin-bottom:20px;">
-            <asp:HyperLink 
-                ID="hlBackMyAccount" 
+        <div class="mb-3">
+            <asp:HyperLink
+                ID="hlBackMyAccount"
                 runat="server"
                 NavigateUrl="myaccount.aspx"
-                CssClass="tf-btn-icon type-2 style-white">
-                &laquo; Torna alla pagina My Account
+                CssClass="tf-btn btn-line">
+                &laquo; Torna al tuo account
             </asp:HyperLink>
         </div>
 
-        <asp:Panel ID="pnlPassword" runat="server" CssClass="pwd-box">
-            <h2>Modifica la tua password</h2>
-            <p>Inserisci la password attuale e quella nuova.</p>
+        <asp:Panel ID="pnlPassword" runat="server" CssClass="ks-auth-card">
+            <h5 class="title fw-semibold mb-2">Modifica password</h5>
+            <p class="body-text-3 mb-4">Inserisci la password attuale e imposta quella nuova.</p>
 
-            <div class="pwd-row">
-                <label for="tbPasswordAttuale">Password attuale</label>
-                <asp:TextBox ID="tbPasswordAttuale" runat="server"
-                             CssClass="form-control"
-                             TextMode="Password" />
-                <asp:RequiredFieldValidator ID="rfvOld"
-                    runat="server"
-                    ControlToValidate="tbPasswordAttuale"
-                    ErrorMessage="Inserisci la password attuale."
-                    Display="Dynamic"
-                    ForeColor="Red" />
+            <div class="form-log">
+                <div class="form-content">
+
+                    <fieldset>
+                        <label class="fw-semibold body-md-2" for="tbPasswordAttuale">Password attuale *</label>
+                        <asp:TextBox ID="tbPasswordAttuale" runat="server" CssClass="form-control" TextMode="Password" />
+                        <div class="validator">
+                            <asp:RequiredFieldValidator ID="rfvOld" runat="server" ControlToValidate="tbPasswordAttuale" ErrorMessage="Inserisci la password attuale." Display="Dynamic" ForeColor="Red" />
+                        </div>
+                    </fieldset>
+
+                    <fieldset>
+                        <label class="fw-semibold body-md-2" for="tbPasswordNuova">Nuova password *</label>
+                        <asp:TextBox ID="tbPasswordNuova" runat="server" CssClass="form-control" TextMode="Password" />
+                        <div class="validator">
+                            <asp:RequiredFieldValidator ID="rfvNew" runat="server" ControlToValidate="tbPasswordNuova" ErrorMessage="Inserisci la nuova password." Display="Dynamic" ForeColor="Red" />
+                        </div>
+                    </fieldset>
+
+                    <fieldset>
+                        <label class="fw-semibold body-md-2" for="tbPasswordConferma">Conferma nuova password *</label>
+                        <asp:TextBox ID="tbPasswordConferma" runat="server" CssClass="form-control" TextMode="Password" />
+                        <div class="validator">
+                            <asp:RequiredFieldValidator ID="rfvNew2" runat="server" ControlToValidate="tbPasswordConferma" ErrorMessage="Conferma la nuova password." Display="Dynamic" ForeColor="Red" />
+                            <asp:CompareValidator ID="cvPwd" runat="server" ControlToValidate="tbPasswordConferma" ControlToCompare="tbPasswordNuova" ErrorMessage="Le nuove password non coincidono." Display="Dynamic" ForeColor="Red" />
+                        </div>
+                    </fieldset>
+
+                </div>
+
+                <asp:Button ID="btnSalva" runat="server" CssClass="tf-btn w-100 text-white" Text="Aggiorna password" OnClientClick="ksShowSpinnerOnSubmit();" />
+
+                <div class="mt-3 text-center">
+                    <asp:Label ID="lblMessaggio" runat="server" />
+                </div>
             </div>
 
-            <div class="pwd-row">
-                <label for="tbPasswordNuova">Nuova password</label>
-                <asp:TextBox ID="tbPasswordNuova" runat="server"
-                             CssClass="form-control"
-                             TextMode="Password" />
-                <asp:RequiredFieldValidator ID="rfvNew"
-                    runat="server"
-                    ControlToValidate="tbPasswordNuova"
-                    ErrorMessage="Inserisci la nuova password."
-                    Display="Dynamic"
-                    ForeColor="Red" />
-            </div>
-
-            <div class="pwd-row">
-                <label for="tbPasswordConferma">Conferma nuova password</label>
-                <asp:TextBox ID="tbPasswordConferma" runat="server"
-                             CssClass="form-control"
-                             TextMode="Password" />
-                <asp:RequiredFieldValidator ID="rfvNew2"
-                    runat="server"
-                    ControlToValidate="tbPasswordConferma"
-                    ErrorMessage="Conferma la nuova password."
-                    Display="Dynamic"
-                    ForeColor="Red" />
-                <asp:CompareValidator ID="cvPwd"
-                    runat="server"
-                    ControlToValidate="tbPasswordConferma"
-                    ControlToCompare="tbPasswordNuova"
-                    ErrorMessage="Le nuove password non coincidono."
-                    Display="Dynamic"
-                    ForeColor="Red" />
-            </div>
-
-            <div class="pwd-row">
-                <asp:Button ID="btnSalva" runat="server"
-                            CssClass="btn btn-primary"
-                            Text="Aggiorna password"
-                            OnClientClick="ksShowSpinnerOnSubmit();" />
-            </div>
-
-            <div class="pwd-row pwd-message">
-                <asp:Label ID="lblMessaggio" runat="server" />
-            </div>
         </asp:Panel>
 
     </asp:Panel>

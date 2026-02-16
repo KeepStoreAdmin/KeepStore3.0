@@ -347,6 +347,8 @@ Partial Class articolo
         Dim prezzoBarrato As Nullable(Of Decimal) = If(inOfferta, prezzoListino, CType(Nothing, Nullable(Of Decimal)))
 
         litPriceHtml.Text = BuildPriceHtml(prezzoCorrente, prezzoBarrato, inOfferta)
+        ' Box prezzo sticky (stesso HTML del prezzo principale)
+        litPriceHtml2.Text = litPriceHtml.Text
 
         ' Descrizione breve
         Dim shortDesc As String = FirstNonEmpty(GetRowString(row, "Descrizione2"), GetRowString(row, "Sottotitolo"))
