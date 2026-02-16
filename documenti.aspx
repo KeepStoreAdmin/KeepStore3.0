@@ -145,7 +145,8 @@
                         <div class="wrap-sidebar-account">
                             <ul class="myaccount-nav content-append">
                                 <li><a href="myaccount.aspx" class="myaccount-nav-item">Dashboard</a></li>
-                                <li><a href="my-account-edit.aspx" class="myaccount-nav-item">Dettagli account</a></li>
+                                <li><a href="datiutente.aspx?tab=account" class="myaccount-nav-item">Dettagli account</a></li>
+                                <li><a href="datiutente.aspx?tab=addr" class="myaccount-nav-item">Indirizzi</a></li>
                                 <li>
                                     <% If Convert.ToString(Request.QueryString("t")) = "4" Then %>
                                         <span class="myaccount-nav-item active">I miei ordini</span>
@@ -167,7 +168,6 @@
                                         <a href="documenti.aspx?t=1" class="myaccount-nav-item">I miei DDT</a>
                                     <% End If %>
                                 </li>
-                                <li><a href="my-account-address.aspx" class="myaccount-nav-item">Indirizzi</a></li>
                                 <li><a href="wishlist.aspx" class="myaccount-nav-item">Wishlist</a></li>
                                 <li><a href="password.aspx" class="myaccount-nav-item">Cambia password</a></li>
                                 <li><a href="logout.aspx" class="myaccount-nav-item">Logout</a></li>

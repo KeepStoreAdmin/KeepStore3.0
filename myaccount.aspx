@@ -92,9 +92,11 @@
                         <div class="wrap-sidebar-account">
                             <ul class="myaccount-nav content-append">
                                 <li><span class="myaccount-nav-item active">Dashboard</span></li>
+                                <li><a href="datiutente.aspx?tab=account" class="myaccount-nav-item">Dettagli account</a></li>
+                                <li><a href="datiutente.aspx?tab=addr" class="myaccount-nav-item">Indirizzi</a></li>
                                 <li><a href="documenti.aspx?t=4" class="myaccount-nav-item">I miei ordini</a></li>
-                                <li><a href="my-account-address.aspx" class="myaccount-nav-item">Indirizzi</a></li>
-                                <li><a href="my-account-edit.aspx" class="myaccount-nav-item">Dettagli account</a></li>
+                                <li><a href="documenti.aspx?t=2" class="myaccount-nav-item">Le mie fatture</a></li>
+                                <li><a href="documenti.aspx?t=1" class="myaccount-nav-item">I miei DDT</a></li>
                                 <li><a href="wishlist.aspx" class="myaccount-nav-item">Wishlist</a></li>
                                 <li><a href="password.aspx" class="myaccount-nav-item">Cambia password</a></li>
                                 <li><a href="remind.aspx" class="myaccount-nav-item">Recupero accesso</a></li>
@@ -113,7 +115,7 @@
                                     Da qui puoi consultare i tuoi
                                     <a class="text-secondary link fw-medium" href="documenti.aspx?t=4">ordini</a>,
                                     gestire i tuoi
-                                    <a class="text-secondary link fw-medium" href="my-account-edit.aspx">dati</a>
+                                    <a class="text-secondary link fw-medium" href="datiutente.aspx">dati</a>
                                     e aggiornare le informazioni dell’account.
                                 </p>
                             </div>
@@ -123,7 +125,7 @@
                                     <a href="documenti.aspx?t=4" class="tf-btn btn-line">I miei ordini</a>
                                 </div>
                                 <div class="col-md-4">
-                                    <a href="my-account-edit.aspx" class="tf-btn btn-line">Dettagli account</a>
+                                    <a href="datiutente.aspx" class="tf-btn btn-line">I miei dati</a>
                                 </div>
                                 <div class="col-md-4">
                                     <a href="password.aspx" class="tf-btn btn-line">Cambia password</a>
