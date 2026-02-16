@@ -143,34 +143,34 @@
 
                     <div class="col-lg-3">
                         <div class="wrap-sidebar-account">
-                            <ul class="myaccount-nav content-append">
-                                <li><a href="myaccount.aspx" class="myaccount-nav-item">Dashboard</a></li>
-                                <li><a href="datiutente.aspx?tab=account" class="myaccount-nav-item">Dettagli account</a></li>
-                                <li><a href="datiutente.aspx?tab=addr" class="myaccount-nav-item">Indirizzi</a></li>
+                            <ul class="my-account-nav content-append">
+                                <li><a href="myaccount.aspx" class="my-account-nav-item">Dashboard</a></li>
+                                <li><a href="datiutente.aspx?tab=account" class="my-account-nav-item">Dettagli account</a></li>
+                                <li><a href="datiutente.aspx?tab=addr" class="my-account-nav-item">Indirizzi</a></li>
                                 <li>
                                     <% If Convert.ToString(Request.QueryString("t")) = "4" Then %>
-                                        <span class="myaccount-nav-item active">I miei ordini</span>
+                                        <span class="my-account-nav-item active">I miei ordini</span>
                                     <% Else %>
-                                        <a href="documenti.aspx?t=4" class="myaccount-nav-item">I miei ordini</a>
+                                        <a href="documenti.aspx?t=4" class="my-account-nav-item">I miei ordini</a>
                                     <% End If %>
                                 </li>
                                 <li>
                                     <% If Convert.ToString(Request.QueryString("t")) = "2" Then %>
-                                        <span class="myaccount-nav-item active">Le mie fatture</span>
+                                        <span class="my-account-nav-item active">Le mie fatture</span>
                                     <% Else %>
-                                        <a href="documenti.aspx?t=2" class="myaccount-nav-item">Le mie fatture</a>
+                                        <a href="documenti.aspx?t=2" class="my-account-nav-item">Le mie fatture</a>
                                     <% End If %>
                                 </li>
                                 <li>
                                     <% If Convert.ToString(Request.QueryString("t")) = "1" Then %>
-                                        <span class="myaccount-nav-item active">I miei DDT</span>
+                                        <span class="my-account-nav-item active">I miei DDT</span>
                                     <% Else %>
-                                        <a href="documenti.aspx?t=1" class="myaccount-nav-item">I miei DDT</a>
+                                        <a href="documenti.aspx?t=1" class="my-account-nav-item">I miei DDT</a>
                                     <% End If %>
                                 </li>
-                                <li><a href="wishlist.aspx" class="myaccount-nav-item">Wishlist</a></li>
-                                <li><a href="password.aspx" class="myaccount-nav-item">Cambia password</a></li>
-                                <li><a href="logout.aspx" class="myaccount-nav-item">Logout</a></li>
+                                <li><a href="wishlist.aspx" class="my-account-nav-item">Wishlist</a></li>
+                                <li><a href="password.aspx" class="my-account-nav-item">Cambia password</a></li>
+                                <li><a href="logout.aspx" class="my-account-nav-item">Logout</a></li>
                             </ul>
                         </div>
                     </div>
@@ -180,7 +180,7 @@
 
                                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                                     <div>
-                                        <h3 class="fw-semibold mb-0">I miei documenti</h3>
+                                        <h4 class="fw-semibold mb-20">Storico ordini</h4>
                                         <div class="body-small text-main-2">Consulta ordini, fatture e DDT.</div>
                                     </div>
                                     <asp:HyperLink 
@@ -284,6 +284,7 @@
         DataKeyNames="id"
         DataSourceID="sdsDocumenti"
         EmptyDataText="Nessun documento presente"
+        
         GridLines="None"
         PageSize="20"
         Width="100%"
@@ -292,6 +293,13 @@
         OnPreRender="GridView1_PreRender_22B">
 
         <EmptyDataRowStyle Font-Bold="False" Height="100px" HorizontalAlign="Center" />
+
+        <EmptyDataTemplate>
+            <div class="tf-page-title style-2">
+                <div class="heading text-center">Nessun documento trovato</div>
+                <p class="text text-center mt-2">Prova a cambiare filtri o intervallo date.</p>
+            </div>
+        </EmptyDataTemplate>
 
         <Columns>
             <asp:TemplateField HeaderText="Numero">
@@ -337,16 +345,13 @@
 
             <asp:TemplateField HeaderText="Stato">
                 <ItemTemplate>
-                    <span class="body-text-3 ks-status-pill"><%# Eval("StatiDescrizione1") %></span>
+                    <span class="body-text-3 <%# GetOrderStatusCss(Eval("StatiDescrizione1")) %>"><%# Eval("StatiDescrizione1") %></span>
                 </ItemTemplate>
             </asp:TemplateField>
 
             <asp:TemplateField HeaderText="Totale">
                 <ItemTemplate>
-                    <div class="d-flex flex-column">
-                        <div class="body-text-3"><%# Eval("TotaleDocumento", "{0:C}") %></div>
-                        <div class="body-small text-main-2">Imponibile: <%# Eval("TotImponibile", "{0:C}") %></div>
-                    </div>
+                    <div class="body-text-3"><%# Eval("TotaleDocumento", "{0:C}") %></div>
                 </ItemTemplate>
             </asp:TemplateField>
 

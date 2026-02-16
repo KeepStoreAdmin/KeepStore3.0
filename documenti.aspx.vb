@@ -136,6 +136,37 @@ Partial Class documenti
     End Function
 
     '==============================================================
+    ' CSS stato ordine (classi Onsus)
+    '==============================================================
+    Protected Function GetOrderStatusCss(ByVal statusObj As Object) As String
+        Try
+            Dim s As String = ""
+            If statusObj IsNot Nothing AndAlso Not Convert.IsDBNull(statusObj) Then
+                s = statusObj.ToString().Trim().ToLowerInvariant()
+            End If
+            If String.IsNullOrEmpty(s) Then Return ""
+
+            If s.Contains("consegn") OrElse s.Contains("delivered") Then
+                Return "text-delivered"
+            End If
+            If s.Contains("sped") OrElse s.Contains("in trans") OrElse s.Contains("on the way") OrElse s.Contains("in consegn") Then
+                Return "text-on-the-way"
+            End If
+            If s.Contains("annull") OrElse s.Contains("cancell") OrElse s.Contains("rifiut") Then
+                Return "text-cancelled"
+            End If
+            If s.Contains("lavor") OrElse s.Contains("processing") OrElse s.Contains("prepar") Then
+                Return "text-processing"
+            End If
+
+            Return ""
+        Catch
+            Return ""
+        End Try
+    End Function
+
+
+    '==============================================================
     ' Titolo pagina
     '==============================================================
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
