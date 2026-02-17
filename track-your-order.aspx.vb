@@ -1,8 +1,6 @@
-Imports System
+Imports MySql.Data.MySqlClient
 Imports System.Configuration
 Imports System.Globalization
-Imports System.Text
-Imports MySql.Data.MySqlClient
 
 Partial Class track_your_order
     Inherits System.Web.UI.Page
@@ -10,7 +8,6 @@ Partial Class track_your_order
     Protected Sub btnTrack_Click(sender As Object, e As EventArgs)
         pnlMsg.Visible = False
         pnlResult.Visible = False
-        hlTracking.Visible = False
 
         Dim rawN As String = If(txtOrderNumber.Text, "").Trim()
         Dim email As String = If(txtEmail.Text, "").Trim()
