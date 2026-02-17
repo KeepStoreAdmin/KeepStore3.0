@@ -16,6 +16,35 @@ Partial Class coupon_esito_acquisto
         SqlData_CouponInserzioni.SelectCommand = "SELECT * FROM coupon_inserzione JOIN coupon_partners ON coupon_inserzione.idPartner=coupon_partners.idPartner JOIN coupon_tabella_temporanea ON coupon_inserzione.idCoupon=coupon_tabella_temporanea.idCoupon WHERE (coupon_tabella_temporanea.idCoupon=" & Request.QueryString("id") & ") AND (cod_controllo='" & Request.QueryString("cod") & "')"
     End Sub
 
+    '------------------------------------------------------------
+    ' Helper migrate dal markup (bonifica legacy)
+    '------------------------------------------------------------
+    Protected Function controllo_presenza_opzione(ByVal opzione As String) As String
+        If String.IsNullOrEmpty(opzione) Then
+            Return "none"
+        End If
+        Return ""
+    End Function
+
+    ' Nota: nel markup storico era duplicata rispetto a controllo_presenza_opzione.
+    ' La manteniamo per compatibilità (stessa semantica di visualizzazione).
+    Protected Function reindirizza_a_opzioni(ByVal opzione As String) As String
+        Return controllo_presenza_opzione(opzione)
+    End Function
+
+    Protected Function visualizza_descrizione_tecnica(ByVal stringa As Object) As String
+        If stringa Is Nothing OrElse IsDBNull(stringa) Then
+            Return "none"
+        End If
+
+        Dim s As String = TryCast(stringa, String)
+        If String.IsNullOrEmpty(s) Then
+            Return "none"
+        End If
+
+        Return ""
+    End Function
+
     'Helper spostata dal markup (bonifica legacy)
     Protected Function genera_qrcode(ByVal stringa As String, ByVal dimensione As Integer, ByVal folder As String) As String
         If String.IsNullOrWhiteSpace(folder) Then folder = "Public/temp"
