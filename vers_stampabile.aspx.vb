@@ -324,4 +324,90 @@ Partial Class vers_stampabile
 
     End Sub
 
+
+    '--- Helper functions migrated from inline <script runat="server"> blocks (bonifica legacy) ---
+    Protected Function Sostituisci_caratteri(ByVal temp As String) As String
+        If temp Is Nothing Then Return ""
+        Return System.Web.HttpUtility.HtmlEncode(temp)
+    End Function
+
+    Protected Function checkImg(ByVal imgname As String) As String
+        If Not String.IsNullOrWhiteSpace(imgname) Then
+            Return "public/foto/" & imgname.Trim()
+        End If
+        Return "Public/Foto/img_non_disponibile.png"
+    End Function
+
+    Protected Function controllo_img(ByVal temp As Object) As Boolean
+        If temp Is Nothing OrElse IsDBNull(temp) Then Return False
+        Return temp.ToString().Trim() <> ""
+    End Function
+
+    Protected Function visualizza_promo(ByVal temp As Object) As String
+        Dim v As Integer = 0
+        If temp IsNot Nothing AndAlso Not IsDBNull(temp) Then
+            Integer.TryParse(temp.ToString(), v)
+        End If
+        Return If(v = 1, "", "none")
+    End Function
+
+    Protected Function cod_articolo() As String
+        Return If(Request.QueryString("id"), "")
+    End Function
+
+    Protected Function controlla_iva_spedizione() As Integer
+        Return If(TryCast(Session.Item("IvaTipo"), Integer?), 0)
+    End Function
+
+    Protected Function controlla_iva_listinoufficiale() As Integer
+        Return If(TryCast(Session.Item("IvaTipo"), Integer?), 0)
+    End Function
+
+    Protected Function controlla_brochure(ByVal obj As Object) As Integer
+        If obj Is Nothing OrElse IsDBNull(obj) Then Return 0
+        Return If(obj.ToString().Trim() <> "", 1, 0)
+    End Function
+
+    Protected Function controlla_link_produttore(ByVal obj As Object) As Integer
+        If obj Is Nothing OrElse IsDBNull(obj) Then Return 0
+        Dim s As String = obj.ToString().Trim()
+        Return If(s <> "" AndAlso s.Length > 10, 1, 0)
+    End Function
+
+    Protected Function controlla_note_garanzia(ByVal obj As Object) As Integer
+        If obj Is Nothing OrElse IsDBNull(obj) Then Return 0
+        Return If(obj.ToString().Trim() <> "", 1, 0)
+    End Function
+
+    Protected Function controlla_garanzia(ByVal obj As Object) As Integer
+        If obj Is Nothing OrElse IsDBNull(obj) Then Return 0
+        Dim v As Decimal = 0D
+        Decimal.TryParse(obj.ToString(), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, v)
+        Return If(v > 0D, 1, 0)
+    End Function
+
+    Protected Function valore_LU(ByVal tmp As Object, ByVal iva As Integer) As String
+        If tmp Is Nothing OrElse IsDBNull(tmp) Then Return "-"
+        Dim v As Decimal = 0D
+        If Not Decimal.TryParse(tmp.ToString(), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, v) Then Return "-"
+        If v = 0D Then Return "-"
+        If controlla_iva_listinoufficiale() = 2 Then
+            Return String.Format("{0:c}", v * ((iva / 100D) + 1D))
+        End If
+        Return String.Format("{0:c}", v)
+    End Function
+
+    Protected Function convalida_stringa(ByVal temp As String) As String
+        If temp Is Nothing Then Return ""
+        Dim safe As String = Server.HtmlEncode(temp)
+        Return safe.Replace("&#160;", " ").Replace("&lt;", "<").Replace("&gt;", ">").Replace("&quot;", ChrW(34))
+    End Function
+
+    Protected Function visualizza_descr_lunga(ByVal descr_html As String) As String
+        If String.IsNullOrEmpty(descr_html) Then
+            Return "True"
+        End If
+        Return "False"
+    End Function
+
 End Class

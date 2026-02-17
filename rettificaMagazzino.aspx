@@ -211,35 +211,11 @@
                                                 </div>
                                             </div>    
                                             <!-- Controllo se esiste l'immagine -->
-                                            <script runat="server">
-                                                Function controllo_img(ByVal temp) As String
-                                                    If IsDBNull(temp) Then
-                                                        Return "false"
-                                                    Else
-                                                        Return "true"
-                                                    End If
-                                                End Function
-                                                
-                                                Function checkImg(ByVal imgname As String) As String
-                                                    If imgname <> "" Then
-                                                        Return "public/foto/_" & imgname
-                                                    Else
-                                                        Return "Public/Foto/img_non_disponibile.png"
-                                                    End If
-                                                End Function
-                                            </script>
-                                            
-                                        </td>
+                                            </td>
                                     </tr>
                                     <tr>
                                         <td colspan="2" style="border-style:none; height:40px; padding:5px; text-align:left;">
                                             <!-- Descrizione Breve -->
-                                            <script runat="server">
-                                                Function sotto_stringa(ByVal temp As String) As String
-                                                    temp = Server.HtmlEncode(temp)
-                                                    Return Left(temp.Replace("&#160;", " "), 200) & " ..."
-                                                End Function
-                                            </script>
                                             <asp:Label ID="Label1" runat="server" Text='<%# Eval("Descrizione2") %>' Font-Size="8pt" style="text-align:justify;" wrap="true" EnableTheming="False" EnableViewState="False"></asp:Label>
                                         </td>
                                     </tr>

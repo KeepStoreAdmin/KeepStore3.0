@@ -8,15 +8,7 @@
 </head>
 <body style="font-family:Arial; font-size:12pt;">
 <form runat="server" style="width:960px; margin:auto;" action="#" onsubmit="return false;">
-<script runat="server">
-    Function Sostituisci_caratteri(ByVal temp As String) As String
-               
-        Return System.Web.HttpUtility.HtmlEncode(temp)
-        
-    End Function
-</script>
-
- <h1 style="width:956px; color:black; padding:5px; font-weight:bold; font-size:18pt; border-color:Black; border-width:2px; border-style:solid;">Scheda Prodotto</h1>
+<h1 style="width:956px; color:black; padding:5px; font-weight:bold; font-size:18pt; border-color:Black; border-width:2px; border-style:solid;">Scheda Prodotto</h1>
  
     <asp:SqlDataSource ID="sdsArticolo" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"  ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
         SelectCommand="SELECT * FROM vsuperarticoli  WHERE (id = ?id) and (NListino = ?NListino)">
@@ -29,23 +21,6 @@
           <ItemTemplate>            
            
            <!-- Sezione Immagini -->
-           <script runat="server">
-               Function checkImg(ByVal imgname As String) As String
-                   If imgname <> "" Then
-                       Return "public/foto/" & imgname
-                   Else
-                       Return "Public/Foto/img_non_disponibile.png"
-                   End If
-               End Function
-                                    
-               Function controllo_img(ByVal temp) As String
-                   If IsDBNull(temp) Then
-                       Return "false"
-                   Else
-                       Return "true"
-                   End If
-               End Function
-           </script>
            <table width="960px" style="width:960px; height:150px; vertical-align:middle; text-align:center; padding-bottom:50px;" cellpadding="0px" cellspacing="0px">
                 <tr>
                     <td rowspan="2" style="width:360px; height:200px; overflow:hidden;">
@@ -99,17 +74,6 @@
                         
                         <asp:Repeater ID="rPromo" runat="server" DataSourceID="sdsPromo" EnableViewState="false" OnItemDataBound="rPromo_ItemDataBound">
                         <ItemTemplate>
-                        <script runat="server">
-                            Function visualizza_promo(ByVal temp As Integer) As String
-                                If temp = 1 Then
-                                    Return ""
-                                Else
-                                    Return "none"
-                                End If
-                            End Function
-                        </script>
-                        
-                        
                         <table id="vis_promo" style=" vertical-align:middle; width:98%; height:27px; border-style:none; display:<%# visualizza_promo(Eval("InOfferta"))%>; border-color:Red; border-width:2px; border-style:dashed; color:Black;" cellspacing="0">
                             <tr>
                                 <td style="width:120px; text-align:center; font-size:14pt; font-weight:bold;">PROMO</td>
@@ -182,12 +146,6 @@
                             <br /><br />
                         </div>
                         
-                        <script runat="server">
-                            Function cod_articolo() As String
-                                Return Request.QueryString("id")
-                            End Function
-                        </script>
-                    
                         <asp:Label ID="Label4" runat="server" Text='<%# Eval("Prezzo", "{0:C}") %>' Visible='False'></asp:Label>
                         <asp:Label ID="lblID" runat="server" Text='<%# Bind("ID") %>' Visible="false"></asp:Label>
                     </div>
@@ -298,98 +256,10 @@
                     </SelectParameters>
                 </asp:SqlDataSource>
                         
-                <script runat="server">
-                    Function controlla_iva_spedizione() As Integer
-                        Return Session.Item("IvaTipo")
-                    End Function
-                    
-                    Function controlla_iva_listinoufficiale() As Integer
-                        Return Session.Item("IvaTipo")
-                    End Function
-                </script>
-                
                 <asp:TextBox ID="tbID" runat="server" Text='<%# Eval("ID") %>' Width="30" EnableViewState="false" Visible="false"></asp:TextBox>
             </div>
 
-           <script runat="server">
-               Function controlla_brochure(ByVal obj As Object) As Integer
-                   If Not IsDBNull(obj) Then
-                       If obj.ToString <> "" Then
-                           Return 1
-                       Else
-                           Return 0
-                       End If
-                   Else
-                       Return 0
-                   End If
-               End Function
-                
-               Function controlla_link_produttore(ByVal obj As Object) As Integer
-                   If Not IsDBNull(obj) Then
-                       If ((obj.ToString <> "") And (obj.ToString.Length > 10)) Then
-                           Return 1
-                       Else
-                           Return 0
-                       End If
-                   Else
-                       Return 0
-                   End If
-               End Function
-                
-               Function controlla_note_garanzia(ByVal obj As Object) As Integer
-                   If Not IsDBNull(obj) Then
-                       If (obj.ToString <> "") Then
-                           Return 1
-                       Else
-                           Return 0
-                       End If
-                   Else
-                       Return 0
-                   End If
-               End Function
-            
-               Function controlla_garanzia(ByVal obj As Object) As Integer
-                   If Not IsDBNull(obj) Then
-                       If ((obj.ToString <> "") And (Val(obj.ToString) > 0)) Then
-                           Return 1
-                       Else
-                           Return 0
-                       End If
-                   Else
-                       Return 0
-                   End If
-               End Function
-            
-               Function valore_LU(ByVal tmp As Object, ByVal iva As Integer) As String
-                   If IsDBNull(tmp) Or tmp.ToString = "0" Then
-                       Return "-"
-                   Else
-                       If controlla_iva_listinoufficiale() = 2 Then
-                           Return String.Format("{0:c}", tmp * ((iva / 100) + 1))
-                       Else
-                           Return String.Format("{0:c}", tmp)
-                       End If
-                   End If
-               End Function
-
-               Function convalida_stringa(ByVal temp As String) As String
-                   If IsDBNull(temp) Then
-                       Return ""
-                   End If
-                   temp = Server.HtmlEncode(temp)
-                   Return temp.Replace("&#160;", " ").Replace("&lt;", "<").Replace("&gt;", ">").Replace("&quot;", """")
-               End Function
-
-               Function visualizza_descr_lunga(ByVal descr_html As String) As String
-                   If (IsDBNull(descr_html) Or (descr_html = "")) Then
-                       Return "True"
-                   Else
-                       Return "False"
-                   End If
-               End Function
-        </script>                                     
-
-        </ItemTemplate>
+           </ItemTemplate>
     </asp:FormView>
     
     <script type="text/javascript">

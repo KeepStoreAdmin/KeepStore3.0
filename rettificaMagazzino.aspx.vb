@@ -1050,4 +1050,31 @@ End Function
         Context.ApplicationInstance.CompleteRequest()
     End Sub
 
+
+'--- Helper functions migrated from inline <script runat="server"> blocks (bonifica legacy) ---
+Protected Function controllo_img(ByVal temp As Object) As Boolean
+    If temp Is Nothing OrElse IsDBNull(temp) Then Return False
+    Dim s As String = temp.ToString().Trim()
+    Return s <> ""
+End Function
+
+Protected Function checkImg(ByVal imgname As String) As String
+    If String.IsNullOrWhiteSpace(imgname) Then
+        Return "Public/Foto/img_non_disponibile.png"
+    End If
+    ' this page historically uses underscore-prefixed images
+    Return "public/foto/_" & imgname.Trim()
+End Function
+
+Protected Function sotto_stringa(ByVal temp As String) As String
+    If String.IsNullOrEmpty(temp) Then Return ""
+    Dim safe As String = Server.HtmlEncode(temp).Replace("&#160;", " ")
+    If safe.Length > 200 Then
+        safe = safe.Substring(0, 200) & " ..."
+    Else
+        safe &= " ..."
+    End If
+    Return safe
+End Function
+
 End Class
