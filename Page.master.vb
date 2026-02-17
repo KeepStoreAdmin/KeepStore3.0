@@ -828,19 +828,34 @@ End Sub
         Try
             Dim theme As String = ThemeManager.ThemeName
 
-            ' data attribute
-            If PageBody IsNot Nothing Then
-                PageBody.Attributes("data-ks-theme") = theme
+            If PageBody Is Nothing Then Exit Sub
 
-                ' aggiungo classe tema senza distruggere classi esistenti
-                Dim cls As String = Convert.ToString(PageBody.Attributes("class"))
-                Dim tag As String = "ks-theme-" & theme
-                If String.IsNullOrWhiteSpace(cls) Then
-                    PageBody.Attributes("class") = tag
-                ElseIf cls.IndexOf(tag, StringComparison.OrdinalIgnoreCase) < 0 Then
-                    PageBody.Attributes("class") = (cls & " " & tag).Trim()
-                End If
+            ' Base body classes (tokenizzabili via web.config)
+            Dim baseCls As String = ThemeManager.Css("body", "preload-wrapper popup-loader color-primary").Trim()
+
+            ' Aggiungo classi base + tag tema senza perdere eventuali altre classi già presenti
+            Dim cls As String = Convert.ToString(PageBody.Attributes("class"))
+            cls = If(cls, String.Empty).Trim()
+
+            ' Merge base classes
+            If Not String.IsNullOrWhiteSpace(baseCls) Then
+                For Each part As String In baseCls.Split(New Char() {" "c}, StringSplitOptions.RemoveEmptyEntries)
+                    If cls.IndexOf(part, StringComparison.OrdinalIgnoreCase) < 0 Then
+                        cls = (cls & " " & part).Trim()
+                    End If
+                Next
             End If
+
+            ' Theme tag
+            Dim tag As String = ("ks-theme-" & theme).Trim()
+            If cls.IndexOf(tag, StringComparison.OrdinalIgnoreCase) < 0 Then
+                cls = (cls & " " & tag).Trim()
+            End If
+
+            PageBody.Attributes("class") = cls
+
+            ' data attribute
+            PageBody.Attributes("data-ks-theme") = theme
         Catch
             ' no-op
         End Try

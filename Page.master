@@ -39,7 +39,7 @@
 
 </head>
 
-<body id="PageBody" runat="server" class="<%= ThemeManager.Css("body", "preload-wrapper popup-loader color-primary") %>">
+<body id="PageBody" runat="server">
     <form id="form1" runat="server">
 
         <!-- ============================================================
