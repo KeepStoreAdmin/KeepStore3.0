@@ -539,12 +539,12 @@ If Session.Item("Controllo_Variabile_PrezzoMinMax") = 1 Then
     Dim sMax As String = Convert.ToString(Session("Valore_Prezzo_MAX"))
 
     If sMin <> "" Then
-        Decimal.TryParse(sMin.Replace(",", "."), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, pminVal)
+        Decimal.TryParse(sMin.Replace(",", "."), System.System.System.Globalization.NumberStyles.Any, System.System.System.Globalization.CultureInfo.InvariantCulture, pminVal)
         If pminVal > 0D Then hasPmin = True
     End If
 
     If sMax <> "" Then
-        Decimal.TryParse(sMax.Replace(",", "."), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, pmaxVal)
+        Decimal.TryParse(sMax.Replace(",", "."), System.System.System.Globalization.NumberStyles.Any, System.System.System.Globalization.CultureInfo.InvariantCulture, pmaxVal)
         If pmaxVal > 0D Then hasPmax = True
     End If
 
@@ -571,8 +571,8 @@ If Session.Item("Controllo_Variabile_PrezzoMinMax") = 1 Then
 End If
 
 ' Parametri prezzo per SqlDataSource (aggiunti solo se necessari)
-If hasPmin Then sdsArticoli.SelectParameters.Add(New Parameter("Pmin", TypeCode.Decimal, pminVal.ToString(Globalization.CultureInfo.InvariantCulture)))
-If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.Decimal, pmaxVal.ToString(Globalization.CultureInfo.InvariantCulture)))
+If hasPmin Then sdsArticoli.SelectParameters.Add(New Parameter("Pmin", TypeCode.Decimal, pminVal.ToString(System.System.System.Globalization.CultureInfo.InvariantCulture)))
+If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.Decimal, pmaxVal.ToString(System.System.System.Globalization.CultureInfo.InvariantCulture)))
 
         Dim TC As Integer = Session("TC")
         If TC = 1 Then
