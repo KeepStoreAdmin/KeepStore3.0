@@ -553,10 +553,10 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
                 Dim href As String = link_tracking.Replace("#ID#", codice)
                 Dim safeHref As String = System.Web.HttpUtility.HtmlAttributeEncode(href)
 
-                sb.Append("<img src=\"Public/assets/keepstore/images/interrogativo.png\" alt=\"\" title=\"Clicca sul Numero Tracking\">")
-                sb.Append("<a href=\"")
+                sb.Append("<img src=""Public/assets/keepstore/images/interrogativo.png"" alt="""" title=""Clicca sul Numero Tracking"">")
+                sb.Append("<a href=""")
                 sb.Append(safeHref)
-                sb.Append("\" target=\"_blank\">")
+                sb.Append(""" target=""_blank"">")
                 sb.Append(safeCode)
                 sb.Append("</a>; ")
             End If

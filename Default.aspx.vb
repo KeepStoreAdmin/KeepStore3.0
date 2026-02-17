@@ -636,7 +636,9 @@ End Sub
     ' Helper generali / slideshow / prezzi
     ' ============================================================
 
-    Private slides As Integer = 0
+    ' NOTE: referenced directly from Default.aspx markup (For i = 1 To slides)
+    ' so it must not be Private.
+    Protected slides As Integer = 0
 
     ' ===========================
     ' HARDENING OUTPUT (XSS / URL)

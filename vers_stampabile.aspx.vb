@@ -399,7 +399,7 @@ Partial Class vers_stampabile
     Protected Function controlla_garanzia(ByVal obj As Object) As Integer
         If obj Is Nothing OrElse IsDBNull(obj) Then Return 0
         Dim v As Decimal = 0D
-        Decimal.TryParse(obj.ToString(), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, v)
+        Decimal.TryParse(obj.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, v)
         Return If(v > 0D, 1, 0)
     End Function
 
@@ -407,7 +407,7 @@ Partial Class vers_stampabile
         If tmp Is Nothing OrElse IsDBNull(tmp) Then Return "-"
 
         Dim v As Decimal = 0D
-        If Not Decimal.TryParse(tmp.ToString(), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, v) Then Return "-"
+        If Not Decimal.TryParse(tmp.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, v) Then Return "-"
         If v = 0D Then Return "-"
 
         If controlla_iva_listinoufficiale() = 2 Then

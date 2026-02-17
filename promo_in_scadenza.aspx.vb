@@ -60,4 +60,61 @@ Partial Class promo_in_scadenza
         Return temp_sec.TotalMilliseconds.ToString(System.Globalization.CultureInfo.InvariantCulture)
     End Function
 
+    ' =========================
+    ' Helper legacy usate nel markup (migrate da <script runat="server">)
+    ' =========================
+
+    ' Ritorna "block" o "none" per mostrare/nascondere l'icona spedizione gratis.
+    Protected Function spedire_gratis(ByVal obj As Object) As String
+        Try
+            If obj Is Nothing OrElse IsDBNull(obj) Then Return "none"
+            Dim n As Integer = 0
+            If Integer.TryParse(Convert.ToString(obj), n) AndAlso n = 1 Then
+                Return "block"
+            End If
+        Catch
+        End Try
+        Return "none"
+    End Function
+
+    ' Calcola una percentuale di sconto partendo dal Listino e dal prezzo promo.
+    ' Mantiene la logica esistente: se mancano dati, non mostra nulla.
+    Protected Function sconto(ByVal listinoObj As Object, ByVal prezzoPromoObj As Object, ByVal prezzoPromoIvatoObj As Object) As String
+        Dim listino As Decimal = 0D
+        Dim promo As Decimal = 0D
+
+        If listinoObj Is Nothing OrElse IsDBNull(listinoObj) Then Return ""
+        If Not Decimal.TryParse(Convert.ToString(listinoObj), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, listino) Then Return ""
+        If listino <= 0D Then Return ""
+
+        ' Preferisco PrezzoPromo se valorizzato, altrimenti uso PrezzoPromoIvato.
+        If prezzoPromoObj IsNot Nothing AndAlso Not IsDBNull(prezzoPromoObj) Then
+            Decimal.TryParse(Convert.ToString(prezzoPromoObj), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, promo)
+        End If
+        If promo <= 0D AndAlso prezzoPromoIvatoObj IsNot Nothing AndAlso Not IsDBNull(prezzoPromoIvatoObj) Then
+            Decimal.TryParse(Convert.ToString(prezzoPromoIvatoObj), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, promo)
+        End If
+        If promo <= 0D OrElse promo >= listino Then Return ""
+
+        Dim perc As Integer = CInt(Math.Round((1D - (promo / listino)) * 100D, MidpointRounding.AwayFromZero))
+        If perc <= 0 Then Return ""
+        Return "-" & perc.ToString() & "%"
+    End Function
+
+    ' Troncamento testo (stesso comportamento legacy: aggiunge "..." quando necessario)
+    Protected Function compatta_testo(ByVal obj As Object, ByVal maxLen As Integer) As String
+        Dim s As String = ""
+        If obj IsNot Nothing AndAlso Not IsDBNull(obj) Then s = Convert.ToString(obj)
+        s = s.Trim()
+        If maxLen <= 0 Then Return s
+        If s.Length <= maxLen Then Return s
+        Return s.Substring(0, maxLen) & "..."
+    End Function
+
+    ' Normalizza una stringa prezzo già formattata (es. da Eval("{0:C}")) senza cambiare la logica.
+    Protected Function prezzo_formattato(ByVal obj As Object) As String
+        If obj Is Nothing OrElse IsDBNull(obj) Then Return ""
+        Return Convert.ToString(obj)
+    End Function
+
 End Class
