@@ -830,13 +830,10 @@ End Sub
 
             If PageBody Is Nothing Then Exit Sub
 
-            ' data attribute
-            PageBody.Attributes("data-ks-theme") = theme
-
             ' Base body classes (tokenizzabili via web.config)
             Dim baseCls As String = ThemeManager.Css("body", "preload-wrapper popup-loader color-primary").Trim()
 
-            ' Merge: base classes + theme tag, senza distruggere eventuali classi già presenti
+            ' Merge classi: preservo eventuali classi pre-esistenti
             Dim cls As String = Convert.ToString(PageBody.Attributes("class"))
             cls = If(cls, String.Empty).Trim()
 
@@ -848,12 +845,16 @@ End Sub
                 Next
             End If
 
+            ' Theme tag
             Dim tag As String = ("ks-theme-" & theme).Trim()
-            If cls.IndexOf(tag, StringComparison.OrdinalIgnoreCase) < 0 Then
+            If Not String.IsNullOrWhiteSpace(tag) AndAlso cls.IndexOf(tag, StringComparison.OrdinalIgnoreCase) < 0 Then
                 cls = (cls & " " & tag).Trim()
             End If
 
             PageBody.Attributes("class") = cls
+
+            ' data attribute
+            PageBody.Attributes("data-ks-theme") = theme
         Catch
             ' no-op
         End Try
