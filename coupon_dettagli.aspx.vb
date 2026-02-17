@@ -50,4 +50,54 @@ Partial Class coupon_dettagli
             Response.Redirect("coupon.aspx")
         End If
     End Sub
+
+    '=== Helper spostate dal markup (bonifica legacy) ===
+    Protected Function calcola_secondi(ByVal data As String) As String
+        If String.IsNullOrWhiteSpace(data) Then Return "0"
+        Dim temp_data As String() = data.Split("/"c)
+        If temp_data.Length <> 3 Then Return "0"
+
+        Dim giorno As Integer
+        Dim mese As Integer
+        Dim anno As Integer
+        If Not Integer.TryParse(temp_data(0), giorno) Then Return "0"
+        If Not Integer.TryParse(temp_data(1), mese) Then Return "0"
+        If Not Integer.TryParse(temp_data(2), anno) Then Return "0"
+
+        Dim temp_data1 As New DateTime(anno, mese, giorno, 0, 0, 0)
+        Dim temp_data2 As DateTime = Date.Now
+        'Le promo scadono alla mezzanotte del giorno di fine
+        temp_data1 = temp_data1.AddDays(1)
+        Dim temp_sec As TimeSpan = temp_data1.Subtract(temp_data2)
+        Return temp_sec.TotalMilliseconds
+    End Function
+
+    Protected Function controllo_presenza_opzione(ByVal opzione As String) As String
+        If Not String.IsNullOrEmpty(opzione) Then
+            Return ""
+        End If
+        Return "none"
+    End Function
+
+    Protected Function reindirizza_a_opzioni(ByVal opzione As String) As String
+        'Compatibilità: stessa logica di controllo_presenza_opzione
+        If Not String.IsNullOrEmpty(opzione) Then
+            Return ""
+        End If
+        Return "none"
+    End Function
+
+    Protected Function visualizza_descrizione_tecnica(ByVal stringa As Object) As String
+        If stringa Is Nothing OrElse IsDBNull(stringa) Then Return "none"
+        Dim s As String = TryCast(stringa, String)
+        If String.IsNullOrEmpty(s) Then Return "none"
+        Return ""
+    End Function
+
+    Protected Function adatta_titolo(ByVal titolo As String, ByVal lunghezza As Integer) As String
+        If String.IsNullOrEmpty(titolo) Then Return ""
+        If lunghezza <= 0 Then Return ""
+        If titolo.Length <= lunghezza Then Return titolo
+        Return Left(titolo, lunghezza) & " ..."
+    End Function
 End Class

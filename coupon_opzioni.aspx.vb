@@ -15,6 +15,14 @@ Partial Class coupon_opzioni
         SqlData_CouponInserzioni.SelectParameters.Add("@idCoupon", Request.QueryString("id"))
     End Sub
 
+    'Helper spostata dal markup (bonifica legacy)
+    Protected Function controllo_presenza_opzione(ByVal opzione As Integer) As String
+        If opzione > 0 Then
+            Return ""
+        End If
+        Return "none"
+    End Function
+
 	Protected Sub acquista(ByVal sender As Object, ByVal db As String)
 	    'Controllo se l'utente è loggato o meno, se non è loggato lo indirizzo alla registrazione
         If Session("LoginID") <= 0 Then

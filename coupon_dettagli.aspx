@@ -44,17 +44,7 @@
 
     <link href="Public/style/facets.css" rel="stylesheet" type="text/css" />
     <link href="Public/style/menu.css" rel="stylesheet" type="text/css" />
-    <script runat="server">
-        Function calcola_secondi(ByVal data As String) As String
-            Dim temp_data As String() = data.Split("/")
-            Dim temp_data1 As New DateTime(temp_data(2), temp_data(1), temp_data(0), 0, 0, 0)
-            Dim temp_data2 As New DateTime(Date.Now.Year, Date.Now.Month, Date.Now.Day, Date.Now.Hour, Date.Now.Minute, Date.Now.Second)
-            'Aggiungo 1 giorno in più, perchè le nostre promo scadono alla mezzanotte del giorno di fine
-            temp_data1 = temp_data1.AddDays(1)
-            Dim temp_sec As TimeSpan = temp_data1.Subtract(temp_data2)
-            Return temp_sec.TotalMilliseconds
-        End Function
-    </script>
+
     
     <!-- COUPON -->
     <a name="coupon"></a>
@@ -148,23 +138,7 @@
                                                 <br /><br /><b style="font-size:10pt; display:<%#controllo_presenza_opzione(Eval("opzione1_descrizione").ToString.Replace(vbCrLf, "<br/>"))%>;">Opzioni</b><br />
                                                 <ul style=" width:90%; line-height:30px;" type="square">
                                                     
-                                                    <script runat="server">
-                                                        Function controllo_presenza_opzione(ByVal opzione As String) As String
-                                                            If opzione <> "" Then
-                                                                Return ""
-                                                            Else
-                                                                Return "none"
-                                                            End If
-                                                        End Function
-                                                        
-                                                        Function reindirizza_a_opzioni(ByVal opzione As String) As String
-                                                            If opzione <> "" Then
-                                                                Return ""
-                                                            Else
-                                                                Return "none"
-                                                            End If
-                                                        End Function
-                                                    </script>
+
                                                     
                                                     <li style="margin-left:-30px; display:<%#controllo_presenza_opzione(Eval("opzione1_descrizione").ToString.Replace(vbCrLf, "<br/>"))%>;">
                                                         <%#Eval("opzione1_descrizione").ToString.Replace(vbCrLf, "<br/>")%> <b> a € <%#String.Format("{0:n}", Eval("opzione1_prezzo"))%></b> invece di € <%#String.Format("{0:n}", Eval("opzione1_prezzodilistino"))%>
@@ -220,20 +194,7 @@
                            </tr>
                            <tr>
                                 <td colspan="2">
-                                    <script runat="server">
-                                        Function visualizza_descrizione_tecnica(ByVal stringa As Object) As String
-                                            If Not IsDBNull(stringa) Then
-                                                stringa = CType(stringa, String)
-                                                If stringa <> "" Then
-                                                    Return ""
-                                                Else
-                                                    Return "none"
-                                                End If
-                                            Else
-                                                Return "none"
-                                            End If
-                                        End Function
-                                    </script>
+
                                     
                                     <!-- Box Articolo - 1 Sezione -->
                                      <div style="display:<%# visualizza_descrizione_tecnica(Eval("DescrizioneTecnica"))%>; width:100%; padding-top:20px; padding-bottom:20px;">
@@ -244,11 +205,7 @@
                         </table>
                     </div>
                     <div class="col-12 col-lg-4" style="margin: 0 auto;">
-                        <script runat="server">
-                            Function adatta_titolo(ByVal titolo As String, ByVal lunghezza As Integer) As String
-                                Return Left(titolo, lunghezza) & " ..."
-                            End Function
-                        </script>
+
                         <!-- Inserzioni Random -->
                         <asp:Repeater ID="Repeater_Coupon_Random" runat="server" DataSourceID="SqlCoupon_Random">
                             <ItemTemplate>

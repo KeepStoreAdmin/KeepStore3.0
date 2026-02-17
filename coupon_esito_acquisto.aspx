@@ -42,35 +42,7 @@
                 </div>
             </div>
                 
-            <script runat="server">
-                Function genera_qrcode(ByVal stringa As String, ByVal dimensione As Integer, ByVal folder As String) As String
-                    'Controllo se la cartella temporanea di salvataggio esiste oppure devo crearla
-                    If Directory.Exists(Server.MapPath("./") & folder) = False Then
-                        Directory.CreateDirectory(Server.MapPath("./") & folder)
-                    End If
-                    
-                    Dim fileList As String() = Directory.GetFiles(Server.MapPath("./") & folder, "*.*")
-                    
-                    'Elimino tutti i file nella cartella temporanea
-                    For Each f As String In fileList
-                        File.Delete(f)
-                    Next
-                    
-                    Dim fn As String = stringa & "_" & String.Format("{0:MMddyyhhmmss}", DateTime.Now()) & ".png"
-
-                    Try
-                        Dim client As New System.Net.WebClient
-                        client.DownloadFile("http://chart.apis.google.com/chart?cht=qr&chs=" & dimensione & "x" & dimensione & "&chl=" & stringa, Server.MapPath("./") & folder & "/" & fn)
-                        client = Nothing
-                    Catch ex As Exception
-                        'Return immagine negativa (QrCode non generato)
-                        Return "<img src='Immagini/No_Image.jpg' alt=''>"
-                    End Try
-
-                    'I have an <asp:label> on my form so I can quickly test if the file downloaded.
-                    Return "<img src='" & folder & "/" & fn & "' alt=''>"
-                End Function
-            </script>
+            
             
             <!-- <img src="barcode.ashx?barcode=123456" alt="" /> -->
             

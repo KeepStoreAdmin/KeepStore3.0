@@ -3,15 +3,7 @@
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
 
     <div style="width:100%;">
-        <script runat="server">
-            Function controllo_presenza_opzione(ByVal opzione As Integer) As String
-                If opzione > 0 Then
-                    Return ""
-                Else
-                    Return "none"
-                End If
-            End Function
-        </script> 
+        
 
         <asp:DataList ID="Coupon_Opzioni" runat="server" 
             DataSourceID="SqlData_CouponInserzioni" Width="99.9%" ShowFooter="False" 
