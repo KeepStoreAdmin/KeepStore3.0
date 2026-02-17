@@ -96,6 +96,54 @@ End Function
 
     End Sub
 
+    Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
+        Try
+            Dim n As Integer = 0
+            Integer.TryParse(Convert.ToString(lblTrovati.Text), n)
+            phEmpty.Visible = (n <= 0)
+            phTable.Visible = Not phEmpty.Visible
+        Catch
+            'No-op
+        End Try
+    End Sub
+
+    Protected Function TruncateText(ByVal testo As String, ByVal lunghezza As Integer) As String
+        If testo Is Nothing Then Return ""
+        Dim t As String = Convert.ToString(testo)
+        If t.Length > lunghezza Then
+            Return Left(t, lunghezza) & "..."
+        End If
+        Return t
+    End Function
+
+    Protected Function CheckImg(ByVal temp As Object) As String
+        Dim imgname As String = ""
+        If temp IsNot Nothing AndAlso Not Convert.IsDBNull(temp) Then
+            imgname = Convert.ToString(temp)
+        End If
+
+        If imgname Is Nothing Then imgname = ""
+        imgname = imgname.Trim()
+
+        If imgname = "" Then
+            Return ResolveUrl("~/Public/images/nofoto.gif")
+        End If
+
+        If imgname.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse imgname.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+            Return imgname
+        End If
+
+        ' Se il DB contiene già un percorso (es. Public/foto/xxx.jpg)
+        If imgname.IndexOf("/") >= 0 OrElse imgname.IndexOf("\") >= 0 Then
+            imgname = imgname.Replace("\", "/")
+            imgname = imgname.TrimStart("/"c)
+            Return ResolveUrl("~/" & imgname)
+        End If
+
+        Return ResolveUrl("~/Public/foto/" & imgname)
+    End Function
+
+
 Private Function GetWishlistTcidColumnName() As String
     Try
         Using conn As New MySqlConnection(ConnectionString)

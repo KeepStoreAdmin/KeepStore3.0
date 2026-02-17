@@ -31,13 +31,13 @@
                         <div class="wrap-sidebar-account">
                             <ul class="myaccount-nav content-append">
                                 <li><a href="myaccount.aspx" class="myaccount-nav-item">Dashboard</a></li>
-                                <li><a href="datiutente.aspx" class="myaccount-nav-item">I miei dati</a></li>
+                                <li><a href="datiutente.aspx?tab=account" class="myaccount-nav-item">Dettagli account</a></li>
+                                <li><a href="datiutente.aspx?tab=addr" class="myaccount-nav-item">Indirizzi</a></li>
                                 <li><a href="documenti.aspx?t=4" class="myaccount-nav-item">I miei ordini</a></li>
                                 <li><a href="documenti.aspx?t=2" class="myaccount-nav-item">Le mie fatture</a></li>
                                 <li><a href="documenti.aspx?t=1" class="myaccount-nav-item">I miei DDT</a></li>
                                 <li><span class="myaccount-nav-item active">Wishlist</span></li>
                                 <li><a href="password.aspx" class="myaccount-nav-item">Cambia password</a></li>
-                                <li><a href="remind.aspx" class="myaccount-nav-item">Recupero accesso</a></li>
                                 <li><a href="logout.aspx" class="myaccount-nav-item">Logout</a></li>
                             </ul>
                         </div>
@@ -45,68 +45,11 @@
 
                     <!-- Content -->
                     <div class="col-lg-9">
-                        <div class="tf-section-heading mb-4">
-                            <h3 class="heading">Wishlist</h3>
-                        </div>
-
 <asp:SqlDataSource ID="sdsArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
         ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
         SelectCommand="SELECT id, Codice, Descrizione1, PrezzoAcquisto, Img1, DescrizioneLunga FROM varticolibase ORDER BY NoPromo DESC, Codice, Descrizione1"
         EnableViewState="False">
     </asp:SqlDataSource>
-
-    <script runat="server">
-        Function stampa_iva_applicata(ByVal DescrizioneEsenzioneIva As String, ByVal DescrizioneIvaRC As String) As String
-            If DescrizioneIvaRC <> "" Then
-                Return DescrizioneIvaRC
-            Else
-                Return DescrizioneEsenzioneIva
-            End If
-        End Function
-
-        Function controllaLunghezzaTesto(ByVal testo As String, ByVal lunghezza As Integer) As String
-            If testo Is Nothing Then
-                Return ""
-            End If
-            If testo.Length > lunghezza Then
-                Return Left(testo, lunghezza) & "..."
-            Else
-                Return testo
-            End If
-        End Function
-
-        Function checkImg(ByVal temp As Object) As String
-            Dim imgname As String = ""
-
-            If temp IsNot Nothing AndAlso Not Convert.IsDBNull(temp) Then
-                imgname = Convert.ToString(temp)
-            End If
-
-            If imgname Is Nothing Then
-                imgname = ""
-            End If
-
-            imgname = imgname.Trim()
-
-            If imgname = "" Then
-                Return ResolveUrl("~/Public/images/nofoto.gif")
-            End If
-
-            If imgname.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse imgname.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
-                Return imgname
-            End If
-
-            ' Se il DB contiene gia' un percorso (es. Public/foto/xxx.jpg)
-            If imgname.IndexOf("/") >= 0 OrElse imgname.IndexOf("\\") >= 0 Then
-                imgname = imgname.Replace("\\", "/")
-                imgname = imgname.TrimStart("/"c)
-                Return ResolveUrl("~/" & imgname)
-            End If
-
-            Return ResolveUrl("~/Public/foto/" & imgname)
-        End Function
-    </script>
-
                         <!-- Wishlist -->
                         <div class="tf-section-heading mb-4 d-flex flex-wrap justify-content-between align-items-center">
                 <div>
@@ -137,7 +80,19 @@
                 </div>
             </div>
 
-            <div class="tf-wishlist">
+            
+                        <asp:PlaceHolder ID="phEmpty" runat="server" Visible="false">
+                            <div class="tf-page-title style-2 mb_30">
+                                <div class="heading text-center">La tua wishlist è vuota</div>
+                                <p class="text text-center mt-2">Aggiungi un prodotto alla wishlist per ritrovarlo rapidamente qui.</p>
+                                <div class="text-center mt-4">
+                                    <a class="tf-btn btn-fill" href="articoli.aspx">Vai al catalogo</a>
+                                </div>
+                            </div>
+                        </asp:PlaceHolder>
+
+                        <asp:PlaceHolder ID="phTable" runat="server">
+<div class="tf-wishlist">
                 <asp:GridView ID="GridView1" runat="server" AutoGenerateColumns="False" DataKeyNames="id"
                     DataSourceID="sdsArticoli" AllowPaging="True" GridLines="None" CellPadding="0"
                     Width="100%" ShowHeader="True" CssClass="tf-table-wishlist ks-table-clean">
@@ -159,7 +114,7 @@
                             <ItemStyle CssClass="wishlist-item_image" />
                             <ItemTemplate>
                                 <asp:HyperLink ID="HyperLink3" runat="server" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("id") %>'>
-                                    <img alt="Image" class="lazyload" src='<%# checkImg(Eval("Img1")) %>' data-src='<%# checkImg(Eval("Img1")) %>' />
+                                    <img alt="Image" class="lazyload" src='<%# CheckImg(Eval("Img1")) %>' data-src='<%# CheckImg(Eval("Img1")) %>' />
                                 </asp:HyperLink>
                             </ItemTemplate>
                         </asp:TemplateField>
@@ -170,7 +125,7 @@
                             <ItemTemplate>
                                 <a class="text-line-clamp-2 body-md-2 fw-semibold text-secondary link"
                                     href='<%# "articolo.aspx?id=" & Eval("id") %>'>
-                                    <%# controllaLunghezzaTesto(Convert.ToString(Eval("Descrizione1")), 90) %>
+                                    <%# TruncateText(Convert.ToString(Eval("Descrizione1")), 90) %>
                                 </a>
 
                                 <div class="body-small text-main-2 mt-1">
@@ -303,6 +258,8 @@
                 <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" CssClass="body-small text-main-2"></asp:Label>
                 <asp:Label ID="lblLinee" runat="server" Text="0" Visible="false"></asp:Label>
             </div>
+
+                        </asp:PlaceHolder>
 
                         <!-- /Wishlist -->
 
