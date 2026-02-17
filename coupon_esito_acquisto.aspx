@@ -99,8 +99,7 @@
                             
                             <br /><br /><b style="font-size:10pt; display:<%#controllo_presenza_opzione(Eval("opzione1_descrizione").ToString.Replace(vbCrLf, "<br/>"))%>;">Opzioni</b><br />
                             <ul style=" width:90%; line-height:16px;" type="square">
-
-                                <li style="display:<%#controllo_presenza_opzione(Eval("opzione1_descrizione").ToString.Replace(vbCrLf, "<br/>"))%>;">
+<li style="display:<%#controllo_presenza_opzione(Eval("opzione1_descrizione").ToString.Replace(vbCrLf, "<br/>"))%>;">
                                     <%#Eval("opzione1_descrizione").ToString.Replace(vbCrLf, "<br/>")%> <b> a € <%#String.Format("{0:n}", Eval("opzione1_prezzo"))%></b> invece di € <%#String.Format("{0:n}", Eval("opzione1_prezzodilistino"))%>
                                 </li>
                                 <li style="display:<%#controllo_presenza_opzione(Eval("opzione2_descrizione").ToString.Replace(vbCrLf, "<br/>"))%>;">
@@ -141,8 +140,7 @@
                         <%#Eval("GoogleMaps_iFrame")%>
                     </div>
                 </div>
-
-                <!-- Box Articolo - 1 Sezione -->
+<!-- Box Articolo - 1 Sezione -->
                 <div style="display:<%# visualizza_descrizione_tecnica(Eval("DescrizioneTecnica"))%>; background-color:#e6e6e6; width:100%; overflow:auto; font-weight:bold; font-size:150%; padding-bottom:10px; padding-top:20px; border-color:Black; border-style:solid; border-width:0px; border-bottom-width:1px;">
                     Descrizione Tecnica
                 </div>
