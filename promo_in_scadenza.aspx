@@ -40,19 +40,7 @@
 		}
 
     </script>
-    <script runat="server">
-        Function calcola_secondi(ByVal data As String) As String
-            Dim temp_data As String() = data.Split("/")
-            Dim temp_data1 As New DateTime(temp_data(2), temp_data(1), temp_data(0), 0, 0, 0)
-            Dim temp_data2 As New DateTime(Date.Now.Year, Date.Now.Month, Date.Now.Day, Date.Now.Hour, Date.Now.Minute, Date.Now.Second)
-            'Aggiungo 1 giorno in più, perchè le nostre promo scadono alla mezzanotte del giorno di fine
-            temp_data1 = temp_data1.AddDays(1)
-            Dim temp_sec As TimeSpan = temp_data1.Subtract(temp_data2)
-            Return temp_sec.TotalMilliseconds
-        End Function
-    </script>
-    
-    <div style=" width:650px; margin:auto; text-align:center;">
+<div style=" width:650px; margin:auto; text-align:center;">
     
     <img src="Images/bannerOfferte.gif" /><br /><br />
     
@@ -110,16 +98,7 @@
                   <td rowspan="2">
                    <div width="13" height="208" ></div></td>
                   <td height="196px" >
-                        <script runat="server">
-                            Function spedire_gratis(ByVal val As Integer) As String
-                                If val = 1 Then
-                                    Return "block"
-                                Else
-                                    Return "none"
-                                End If
-                            End Function
-                        </script>
-                        <div style="height:191px; width:10px; float:right;">
+<div style="height:191px; width:10px; float:right;">
                             <img src="Public/Images/angolo.png" style="top:0px; left:0px;" height="80px;" />
                         </div>
                         <div style="height:191px; width:191px; overflow:hidden; position:relative;">
@@ -129,21 +108,7 @@
                                 <img src="Public/Images/promoSpGratis.png" alt="Questo articolo verrà spedito GRATIS !!!" style=" display:<%# spedire_gratis(Eval("SpeditoGratis")) %>;" />
                               </div>
                               <!-- Bollino Sconto-->
-                              <script runat="server">
-                                  Function sconto(ByVal listino_ufficiale As Double, ByVal prezzo_promo As Double, ByVal prezzo_promo_ivato As Double) As String
-                                      If ((prezzo_promo > 0) And (prezzo_promo_ivato > 0) And (listino_ufficiale > 0)) Then
-                                          If Session("IvaTipo") = 1 Then
-                                              Return "- " & String.Format("{0:0}", ((listino_ufficiale - prezzo_promo) * 100) / listino_ufficiale) & "%"
-                                          Else
-                                              Return "- " & String.Format("{0:0}", ((listino_ufficiale - prezzo_promo_ivato) * 100) / listino_ufficiale) & "%"
-                                          End If
-                                      Else
-                                          Return "- 0%"
-                                      End If
-                                  End Function
-                              </script>
-                              
-                              <!-- Percentuale di Sconto -->
+<!-- Percentuale di Sconto -->
                               <div style="height:40px; float:right; margin:0px; background-image:url('Public/Images/angolo_x.png'); background-repeat:repeat-x; padding-top:2px; padding-left: 2px; padding-right:2px; font-style:italic; color:White; text-align:center;"><span style="font-family:Verdana, Geneva, sans-serif; font-size:12px; font-weight:bold;">sconto</span><br /><span style="font-family:Verdana, Geneva, sans-serif; font-size:18px;  font-weight:bold;"><%#sconto(Eval("Listino_Ufficiale"), Eval("PrezzoPromo"), Eval("PrezzoPromoIvato"))%></span>
                               </div>
                              </div>
@@ -164,12 +129,7 @@
                  <tr>
                   <td style="width:13px; height:35px; "></td>
                   <td >
-                  <script runat="server">
-                      Function compatta_testo(ByVal testo As String, ByVal lunghezza As Integer) As String
-                          Return Left(testo, lunghezza) & "..."
-                      End Function
-                  </script>
-                   <div style="width:191px; height:35px;overflow:hidden;font-size:14px; font-weight:bold;" ><%#compatta_testo(Eval("Descrizione1"), 37)%></div></td>
+<div style="width:191px; height:35px;overflow:hidden;font-size:14px; font-weight:bold;" ><%#compatta_testo(Eval("Descrizione1"), 37)%></div></td>
                   <td style=" width:10px; height:25px;">
                 </td>
                  </tr>
@@ -202,13 +162,7 @@
                   
                  <tr>
                   <td colspan="3" >
-                        <script runat="server">
-                            Function prezzo_formattato(ByVal prezzo As String) As String
-                                Dim temp As String() = prezzo.Split(",")
-                                Return "<span style=""font-size:27px;"">" & temp(0) & ",</span><span style=""font-size:20px;"">" & temp(1) & "</span>"
-                            End Function
-                        </script>
-                        <%If Session("IvaTipo") = 1 Then%>
+<%If Session("IvaTipo") = 1 Then%>
                             <div style="width:100%; height:31px; overflow:hidden; text-align:center; font-weight:bold;" ><%#prezzo_formattato(Eval("prezzoPromo", "{0:C}"))%></div>
                         <%Else%>
                             <div style="width:100%; height:31px; overflow:hidden; text-align:center; font-weight:bold;" ><%#prezzo_formattato(Eval("prezzoPromoIvato", "{0:C}"))%></div>

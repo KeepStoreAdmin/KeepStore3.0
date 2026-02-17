@@ -38,4 +38,26 @@ Partial Class promo_in_scadenza
     Protected Sub sdsArticoli_Selecting(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.SqlDataSourceSelectingEventArgs) Handles sdsArticoli.Selecting
         e.Command.CommandTimeout = 0
     End Sub
+
+    Protected Function calcola_secondi(ByVal data As String) As String
+        If String.IsNullOrEmpty(data) Then Return "0"
+        Dim d As DateTime
+        If Not DateTime.TryParseExact(data, "dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, d) Then
+            ' fallback (in caso di formati diversi)
+            Dim temp_data As String() = data.Split("/"c)
+            If temp_data.Length < 3 Then Return "0"
+            Try
+                d = New DateTime(CInt(temp_data(2)), CInt(temp_data(1)), CInt(temp_data(0)), 0, 0, 0)
+            Catch
+                Return "0"
+            End Try
+        End If
+
+        Dim nowDt As DateTime = DateTime.Now
+        'Aggiungo 1 giorno in più, perchè le nostre promo scadono alla mezzanotte del giorno di fine
+        d = d.AddDays(1)
+        Dim temp_sec As TimeSpan = d.Subtract(nowDt)
+        Return temp_sec.TotalMilliseconds.ToString(System.Globalization.CultureInfo.InvariantCulture)
+    End Function
+
 End Class

@@ -1,24 +1,7 @@
 ﻿<%@ Page Language="VB" MasterPageFile="~/Coupon.master" AutoEventWireup="false" CodeFile="lista_coupon.aspx.vb" Inherits="lista_coupon" title="Pagina senza titolo" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
-
-    <script runat="server">
-        Function calcola_secondi(ByVal data As String) As String
-            Dim temp_data As String() = data.Split("/")
-            Dim temp_data1 As New DateTime(temp_data(2), temp_data(1), temp_data(0), 0, 0, 0)
-            Dim temp_data2 As New DateTime(Date.Now.Year, Date.Now.Month, Date.Now.Day, Date.Now.Hour, Date.Now.Minute, Date.Now.Second)
-            'Aggiungo 1 giorno in più, perchè le nostre promo scadono alla mezzanotte del giorno di fine
-            temp_data1 = temp_data1.AddDays(1)
-            Dim temp_sec As TimeSpan = temp_data1.Subtract(temp_data2)
-            Return temp_sec.TotalMilliseconds
-        End Function
-        
-        Function adatta_titolo(ByVal titolo As String, ByVal lunghezza As Integer) As String
-            Return Left(titolo, lunghezza) & " ..."
-        End Function
-    </script>
-    
-    <div class="row">
+<div class="row">
 		<asp:Repeater ID="Repeater_Coupon" DataSourceID="SqlDataCoupon" runat="server">
 			<ItemTemplate>
 				<% cont_clock = cont_clock + 1%>
