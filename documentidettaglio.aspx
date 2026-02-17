@@ -27,40 +27,6 @@
 
     <section class="tf-sp-2 ks-order-detail">
         <div class="container">
-
-            <script runat="server">
-                ' KeepStore: immagine prodotto sicura (fallback nofoto)
-                Protected Function SafeImg(ByVal temp As Object) As String
-                    Dim imgname As String = ""
-                    Try
-                        If temp IsNot Nothing AndAlso Not Convert.IsDBNull(temp) Then
-                            imgname = Convert.ToString(temp)
-                        End If
-                    Catch
-                    End Try
-
-                    If imgname Is Nothing Then imgname = ""
-                    imgname = imgname.Trim()
-
-                    If imgname = "" Then
-                        Return ResolveUrl("~/Public/images/nofoto.gif")
-                    End If
-
-                    If imgname.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse imgname.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
-                        Return imgname
-                    End If
-
-                    ' Se il DB contiene gia' un percorso (es. Public/foto/xxx.jpg)
-                    If imgname.IndexOf("/") >= 0 OrElse imgname.IndexOf("\\") >= 0 Then
-                        imgname = imgname.Replace("\\", "/")
-                        imgname = imgname.TrimStart("/"c)
-                        Return ResolveUrl("~/" & imgname)
-                    End If
-
-                    Return ResolveUrl("~/Public/foto/" & imgname)
-                End Function
-            </script>
-
             <asp:SqlDataSource ID="sdsTestata" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" SelectCommand="SELECT * FROM (vdocumenti LEFT JOIN utenti ON vdocumenti.`UtentiId` = utenti.`Id`) LEFT JOIN vettori ON vdocumenti.`VettoriId` = vettori.`id` WHERE ((vdocumenti.Id = ?Id) AND (vdocumenti.UtentiId = ?UtentiId))">
                 <SelectParameters>
                     <asp:QueryStringParameter Name="Id" Type="Int64" QueryStringField="id"/>

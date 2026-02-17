@@ -136,37 +136,6 @@ Partial Class documenti
     End Function
 
     '==============================================================
-    ' CSS stato ordine (classi Onsus)
-    '==============================================================
-    Protected Function GetOrderStatusCss(ByVal statusObj As Object) As String
-        Try
-            Dim s As String = ""
-            If statusObj IsNot Nothing AndAlso Not Convert.IsDBNull(statusObj) Then
-                s = statusObj.ToString().Trim().ToLowerInvariant()
-            End If
-            If String.IsNullOrEmpty(s) Then Return ""
-
-            If s.Contains("consegn") OrElse s.Contains("delivered") Then
-                Return "text-delivered"
-            End If
-            If s.Contains("sped") OrElse s.Contains("in trans") OrElse s.Contains("on the way") OrElse s.Contains("in consegn") Then
-                Return "text-on-the-way"
-            End If
-            If s.Contains("annull") OrElse s.Contains("cancell") OrElse s.Contains("rifiut") Then
-                Return "text-cancelled"
-            End If
-            If s.Contains("lavor") OrElse s.Contains("processing") OrElse s.Contains("prepar") Then
-                Return "text-processing"
-            End If
-
-            Return ""
-        Catch
-            Return ""
-        End Try
-    End Function
-
-
-    '==============================================================
     ' Titolo pagina
     '==============================================================
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
@@ -503,6 +472,97 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
             Return "none"
         End Try
 
+    End Function
+
+    '==============================================================
+    ' KeepStore STEP22B: forza <thead> per compatibilita stile Onsus
+    '==============================================================
+    Protected Sub GridView1_PreRender_22B(ByVal sender As Object, ByVal e As System.EventArgs) Handles GridView1.PreRender
+        Try
+            GridView1.UseAccessibleHeader = True
+            If GridView1.HeaderRow IsNot Nothing Then
+                GridView1.HeaderRow.TableSection = System.Web.UI.WebControls.TableRowSection.TableHeader
+            End If
+        Catch
+        End Try
+    End Sub
+
+    Public Function testNote(ByVal note As Object) As String
+        Try
+            Return CStr(IIf(note = "", "display:none;", ""))
+        Catch
+            Return "display:none;"
+        End Try
+    End Function
+
+    ' Sanifica l’href del tracking (no javascript:, no valori vuoti, no DBNull)
+    Public Function SafeTrackingHref(ByVal trackingObj As Object) As String
+        Try
+            If trackingObj Is Nothing OrElse IsDBNull(trackingObj) Then
+                Return ""
+            End If
+
+            Dim url As String = trackingObj.ToString().Trim()
+            If String.IsNullOrEmpty(url) Then
+                Return ""
+            End If
+
+            Dim lower As String = url.ToLowerInvariant()
+            If Not (lower.StartsWith("http://") OrElse lower.StartsWith("https://")) Then
+                ' Blocca link non sicuri (javascript:, data:, ecc.)
+                Return ""
+            End If
+
+            Dim safeUrl As String = System.Web.HttpUtility.HtmlAttributeEncode(url)
+            Return "href=\"" & safeUrl & "\""
+        Catch
+            Return ""
+        End Try
+    End Function
+
+    ' Gestisce la logica del tracking multiplo usando il template Link_Tracking
+    Public Function separa_tracking(ByVal trackingObj As Object, ByVal linkTrackingObj As Object) As String
+        Dim tracking As String = ""
+        Dim link_tracking As String = ""
+
+        If trackingObj IsNot Nothing AndAlso Not IsDBNull(trackingObj) Then
+            tracking = trackingObj.ToString()
+        End If
+
+        If linkTrackingObj IsNot Nothing AndAlso Not IsDBNull(linkTrackingObj) Then
+            link_tracking = linkTrackingObj.ToString()
+        End If
+
+        If String.IsNullOrWhiteSpace(tracking) OrElse String.IsNullOrWhiteSpace(link_tracking) Then
+            Return ""
+        End If
+
+        Dim ltLower As String = link_tracking.ToLowerInvariant()
+        If Not (ltLower.StartsWith("http://") OrElse ltLower.StartsWith("https://")) Then
+            ' Template di tracking non sicuro: non mostro nulla
+            Return ""
+        End If
+
+        Dim temp As String() = tracking.Split(";"c)
+        Dim sb As New System.Text.StringBuilder()
+
+        For Each codiceRaw As String In temp
+            Dim codice As String = codiceRaw.Trim()
+            If codice <> "" Then
+                Dim safeCode As String = System.Web.HttpUtility.HtmlEncode(codice)
+                Dim href As String = link_tracking.Replace("#ID#", codice)
+                Dim safeHref As String = System.Web.HttpUtility.HtmlAttributeEncode(href)
+
+                sb.Append("<img src=\"Public/assets/keepstore/images/interrogativo.png\" alt=\"\" title=\"Clicca sul Numero Tracking\">")
+                sb.Append("<a href=\"")
+                sb.Append(safeHref)
+                sb.Append("\" target=\"_blank\">")
+                sb.Append(safeCode)
+                sb.Append("</a>; ")
+            End If
+        Next
+
+        Return sb.ToString()
     End Function
 
 End Class

@@ -143,34 +143,34 @@
 
                     <div class="col-lg-3">
                         <div class="wrap-sidebar-account">
-                            <ul class="my-account-nav content-append">
-                                <li><a href="myaccount.aspx" class="my-account-nav-item">Dashboard</a></li>
-                                <li><a href="datiutente.aspx?tab=account" class="my-account-nav-item">Dettagli account</a></li>
-                                <li><a href="datiutente.aspx?tab=addr" class="my-account-nav-item">Indirizzi</a></li>
+                            <ul class="myaccount-nav content-append">
+                                <li><a href="myaccount.aspx" class="myaccount-nav-item">Dashboard</a></li>
+                                <li><a href="datiutente.aspx?tab=account" class="myaccount-nav-item">Dettagli account</a></li>
+                                <li><a href="datiutente.aspx?tab=addr" class="myaccount-nav-item">Indirizzi</a></li>
                                 <li>
                                     <% If Convert.ToString(Request.QueryString("t")) = "4" Then %>
-                                        <span class="my-account-nav-item active">I miei ordini</span>
+                                        <span class="myaccount-nav-item active">I miei ordini</span>
                                     <% Else %>
-                                        <a href="documenti.aspx?t=4" class="my-account-nav-item">I miei ordini</a>
+                                        <a href="documenti.aspx?t=4" class="myaccount-nav-item">I miei ordini</a>
                                     <% End If %>
                                 </li>
                                 <li>
                                     <% If Convert.ToString(Request.QueryString("t")) = "2" Then %>
-                                        <span class="my-account-nav-item active">Le mie fatture</span>
+                                        <span class="myaccount-nav-item active">Le mie fatture</span>
                                     <% Else %>
-                                        <a href="documenti.aspx?t=2" class="my-account-nav-item">Le mie fatture</a>
+                                        <a href="documenti.aspx?t=2" class="myaccount-nav-item">Le mie fatture</a>
                                     <% End If %>
                                 </li>
                                 <li>
                                     <% If Convert.ToString(Request.QueryString("t")) = "1" Then %>
-                                        <span class="my-account-nav-item active">I miei DDT</span>
+                                        <span class="myaccount-nav-item active">I miei DDT</span>
                                     <% Else %>
-                                        <a href="documenti.aspx?t=1" class="my-account-nav-item">I miei DDT</a>
+                                        <a href="documenti.aspx?t=1" class="myaccount-nav-item">I miei DDT</a>
                                     <% End If %>
                                 </li>
-                                <li><a href="wishlist.aspx" class="my-account-nav-item">Wishlist</a></li>
-                                <li><a href="password.aspx" class="my-account-nav-item">Cambia password</a></li>
-                                <li><a href="logout.aspx" class="my-account-nav-item">Logout</a></li>
+                                <li><a href="wishlist.aspx" class="myaccount-nav-item">Wishlist</a></li>
+                                <li><a href="password.aspx" class="myaccount-nav-item">Cambia password</a></li>
+                                <li><a href="logout.aspx" class="myaccount-nav-item">Logout</a></li>
                             </ul>
                         </div>
                     </div>
@@ -180,7 +180,7 @@
 
                                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                                     <div>
-                                        <h4 class="fw-semibold mb-20">Storico ordini</h4>
+                                        <h3 class="fw-semibold mb-0">I miei documenti</h3>
                                         <div class="body-small text-main-2">Consulta ordini, fatture e DDT.</div>
                                     </div>
                                     <asp:HyperLink 
@@ -284,7 +284,6 @@
         DataKeyNames="id"
         DataSourceID="sdsDocumenti"
         EmptyDataText="Nessun documento presente"
-        
         GridLines="None"
         PageSize="20"
         Width="100%"
@@ -293,13 +292,6 @@
         OnPreRender="GridView1_PreRender_22B">
 
         <EmptyDataRowStyle Font-Bold="False" Height="100px" HorizontalAlign="Center" />
-
-        <EmptyDataTemplate>
-            <div class="tf-page-title style-2">
-                <div class="heading text-center">Nessun documento trovato</div>
-                <p class="text text-center mt-2">Prova a cambiare filtri o intervallo date.</p>
-            </div>
-        </EmptyDataTemplate>
 
         <Columns>
             <asp:TemplateField HeaderText="Numero">
@@ -345,13 +337,16 @@
 
             <asp:TemplateField HeaderText="Stato">
                 <ItemTemplate>
-                    <span class="body-text-3 <%# GetOrderStatusCss(Eval("StatiDescrizione1")) %>"><%# Eval("StatiDescrizione1") %></span>
+                    <span class="body-text-3 ks-status-pill"><%# Eval("StatiDescrizione1") %></span>
                 </ItemTemplate>
             </asp:TemplateField>
 
             <asp:TemplateField HeaderText="Totale">
                 <ItemTemplate>
-                    <div class="body-text-3"><%# Eval("TotaleDocumento", "{0:C}") %></div>
+                    <div class="d-flex flex-column">
+                        <div class="body-text-3"><%# Eval("TotaleDocumento", "{0:C}") %></div>
+                        <div class="body-small text-main-2">Imponibile: <%# Eval("TotImponibile", "{0:C}") %></div>
+                    </div>
                 </ItemTemplate>
             </asp:TemplateField>
 
@@ -421,98 +416,4 @@
         </div>
 
     </asp:Panel> <!-- fine pnlContent -->
-
-    <script runat="server">
-        ' KeepStore STEP22B: forza <thead> per compatibilita stile ONUS
-        Protected Sub GridView1_PreRender_22B(ByVal sender As Object, ByVal e As System.EventArgs)
-            Try
-                Dim gv As System.Web.UI.WebControls.GridView = TryCast(sender, System.Web.UI.WebControls.GridView)
-                If gv Is Nothing Then Exit Sub
-                gv.UseAccessibleHeader = True
-                If gv.HeaderRow IsNot Nothing Then
-                    gv.HeaderRow.TableSection = System.Web.UI.WebControls.TableRowSection.TableHeader
-                End If
-            Catch
-            End Try
-        End Sub
-
-        Function testNote(ByVal note As Object) As String
-            Try
-                Return CStr(IIf(note = "", "display:none;", ""))
-            Catch
-                Return "display:none;"
-            End Try
-        End Function
-
-        ' Sanifica l’href del tracking (no javascript:, no valori vuoti, no DBNull)
-        Function SafeTrackingHref(ByVal trackingObj As Object) As String
-            Try
-                If trackingObj Is Nothing OrElse IsDBNull(trackingObj) Then
-                    Return ""
-                End If
-
-                Dim url As String = trackingObj.ToString().Trim()
-                If String.IsNullOrEmpty(url) Then
-                    Return ""
-                End If
-
-                Dim lower As String = url.ToLowerInvariant()
-                If Not (lower.StartsWith("http://") OrElse lower.StartsWith("https://")) Then
-                    ' Blocca link non sicuri (javascript:, data:, ecc.)
-                    Return ""
-                End If
-
-                Dim safeUrl As String = System.Web.HttpUtility.HtmlAttributeEncode(url)
-                Return "href=""" & safeUrl & """"
-            Catch
-                Return ""
-            End Try
-        End Function
-
-        ' Gestisce la logica del tracking multiplo usando il template Link_Tracking
-        Function separa_tracking(ByVal trackingObj As Object, ByVal linkTrackingObj As Object) As String
-            Dim tracking As String = ""
-            Dim link_tracking As String = ""
-
-            If trackingObj IsNot Nothing AndAlso Not IsDBNull(trackingObj) Then
-                tracking = trackingObj.ToString()
-            End If
-
-            If linkTrackingObj IsNot Nothing AndAlso Not IsDBNull(linkTrackingObj) Then
-                link_tracking = linkTrackingObj.ToString()
-            End If
-
-            If String.IsNullOrWhiteSpace(tracking) OrElse String.IsNullOrWhiteSpace(link_tracking) Then
-                Return ""
-            End If
-
-            Dim ltLower As String = link_tracking.ToLowerInvariant()
-            If Not (ltLower.StartsWith("http://") OrElse ltLower.StartsWith("https://")) Then
-                ' Template di tracking non sicuro: non mostro nulla
-                Return ""
-            End If
-
-            Dim temp As String() = tracking.Split(";"c)
-            Dim sb As New System.Text.StringBuilder()
-
-            For Each codiceRaw As String In temp
-                Dim codice As String = codiceRaw.Trim()
-                If codice <> "" Then
-                    Dim safeCode As String = System.Web.HttpUtility.HtmlEncode(codice)
-                    Dim href As String = link_tracking.Replace("#ID#", codice)
-                    Dim safeHref As String = System.Web.HttpUtility.HtmlAttributeEncode(href)
-
-                    sb.Append("<img src=""Public/assets/keepstore/images/interrogativo.png"" alt="""" title=""Clicca sul Numero Tracking"">")
-                    sb.Append("<a href=""")
-                    sb.Append(safeHref)
-                    sb.Append(""" target=""_blank"">")
-                    sb.Append(safeCode)
-                    sb.Append("</a>; ")
-                End If
-            Next
-
-            Return sb.ToString()
-        End Function
-    </script>
-
 </asp:Content>
