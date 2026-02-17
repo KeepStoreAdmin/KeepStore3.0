@@ -9,6 +9,47 @@ Partial Class coupon
     'Per la spaziatura dei coupon random
     Public cont_coupon_random As Integer = 0
 
+    ' Bonifica legacy: prima era in <script runat="server"> nella pagina
+    Public Function calcola_secondi(ByVal data As String) As String
+        If String.IsNullOrWhiteSpace(data) Then
+            Return "0"
+        End If
+        Dim temp_data As String() = data.Split("/"c)
+        If temp_data.Length < 3 Then
+            Return "0"
+        End If
+        Dim dd As Integer = Val(temp_data(0))
+        Dim mm As Integer = Val(temp_data(1))
+        Dim yy As Integer = Val(temp_data(2))
+        If dd <= 0 OrElse mm <= 0 OrElse yy <= 0 Then
+            Return "0"
+        End If
+        Dim temp_data1 As New DateTime(yy, mm, dd, 0, 0, 0)
+        Dim temp_data2 As DateTime = Date.Now
+        ' Aggiungo 1 giorno in più, perché le promo scadono a mezzanotte del giorno di fine
+        temp_data1 = temp_data1.AddDays(1)
+        Dim temp_sec As TimeSpan = temp_data1.Subtract(temp_data2)
+        Return temp_sec.TotalMilliseconds.ToString(System.Globalization.CultureInfo.InvariantCulture)
+    End Function
+
+    Public Function adatta_titolo(ByVal titolo As String, ByVal lunghezza As Integer) As String
+        Dim s As String = If(titolo, "")
+        If lunghezza <= 0 Then
+            Return s
+        End If
+        If s.Length <= lunghezza Then
+            Return s
+        End If
+        Return Left(s, lunghezza) & " ..."
+    End Function
+
+    ' Maschera per lo slider settori (mantiene lo stesso comportamento legacy)
+    Public Function Maschera() As String
+        val1_maschera = val1_maschera + 131
+        val2_maschera = val2_maschera + 131
+        Return "clip:rect(0px " & val1_maschera & "px 455px " & val2_maschera & "px);"
+    End Function
+
     Protected Sub Repeater_MenuSettori_ItemDataBound(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.RepeaterItemEventArgs) Handles Repeater_MenuSettori.ItemDataBound
         'Creo le Categorie rispettive al Settore Creato dal repeater
         Dim temp_repeater As Repeater = sender

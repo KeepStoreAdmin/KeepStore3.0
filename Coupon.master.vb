@@ -21,4 +21,16 @@ Partial Class Coupon
             litSeoJsonLd.Text = ""
         End If
     End Sub
+
+    ' Bonifica legacy: prima era in <script runat="server"> nel master
+    Protected Function controlla_html(ByVal temp As Object) As Integer
+        If IsDBNull(temp) OrElse temp Is Nothing Then
+            Return 0
+        End If
+        Dim s As String = temp.ToString()
+        If String.IsNullOrWhiteSpace(s) Then
+            Return 0
+        End If
+        Return 1
+    End Function
 End Class

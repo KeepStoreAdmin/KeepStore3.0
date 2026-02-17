@@ -233,20 +233,7 @@
             </asp:contentplaceholder>
         </div>
         
-        <script runat="server">
-            Function controlla_html(ByVal temp As Object) As Integer
-              
-                If IsDBNull(temp) Then
-                    Return 0
-                Else
-                    If temp.ToString = "" Then
-                        Return 0
-                    End If
-                End If
-              
-                Return 1
-            End Function
-      </script>
+        <%-- Bonifica legacy: funzioni server spostate nel code-behind (Coupon.master.vb) --%>
         
         <!-- Footer -->
         <div id="footer_page" style="width:100%; overflow:auto; padding-bottom:10px; background-color:#2B2B2B;">

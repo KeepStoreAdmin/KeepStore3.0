@@ -64,17 +64,7 @@
     
     <link href="Public/style/facets.css" rel="stylesheet" type="text/css" />
     <link href="Public/style/menu.css" rel="stylesheet" type="text/css" />
-<script runat="server">
-    Function calcola_secondi(ByVal data As String) As String
-        Dim temp_data As String() = data.Split("/")
-        Dim temp_data1 As New DateTime(temp_data(2), temp_data(1), temp_data(0), 0, 0, 0)
-        Dim temp_data2 As New DateTime(Date.Now.Year, Date.Now.Month, Date.Now.Day, Date.Now.Hour, Date.Now.Minute, Date.Now.Second)
-        'Aggiungo 1 giorno in più, perchè le nostre promo scadono alla mezzanotte del giorno di fine
-        temp_data1 = temp_data1.AddDays(1)
-        Dim temp_sec As TimeSpan = temp_data1.Subtract(temp_data2)
-        Return temp_sec.TotalMilliseconds
-    End Function
-</script>
+<%-- Bonifica legacy: helper server spostate nel code-behind (coupon.aspx.vb) --%>
 
 <div id="navigation-panel" style="margin-left:6px;">
                 <div class="menu">
@@ -102,14 +92,7 @@
                 <div id="main-image-box">
                     <asp:Repeater ID="Repeater_SfondiSettori" DataSourceID="SqlDataSettori" runat="server">
                         <ItemTemplate>
-                            <script runat="server">
-                                Function maschera(ByRef val1 As Integer, ByRef val2 As Integer) As String
-                                    val1 = val1 + 131
-                                    val2 = val2 + 131
-                                    Return "clip:rect(0px " & val1 & "px " & "455px " & val2 & "px);"
-                                End Function
-                            </script>
-                            <div class="clip facets" style="background-image:url('<%# "public/coupon/sfondi_settori/" & Eval("imgSettore")%>'); <%= maschera(val1_maschera,val2_maschera)%>">
+                            <div class="clip facets" style='<%# "background-image:url(\"public/coupon/sfondi_settori/" & Eval("imgSettore") & "\"); " & Maschera() %>'>
 						        <div class="container"></div>
                             </div>
                         </ItemTemplate>
@@ -136,11 +119,7 @@
     
     <br />
     
-    <script runat="server">
-        Function adatta_titolo(ByVal titolo As String, ByVal lunghezza As Integer) As String
-            Return Left(titolo, lunghezza) & " ..."
-        End Function
-    </script>
+    <%-- Bonifica legacy: helper server spostate nel code-behind (coupon.aspx.vb) --%>
     
     <asp:GridView ID="GV_Coupon" runat="server" DataSourceID="SqlCoupon" style="float:left;"
         ShowHeader="False" Width="460px" AutoGenerateColumns="false" BorderStyle="None" CellSpacing="0" CellPadding="0" BorderWidth="1px" RowStyle-BorderStyle="None" GridLines="None">
