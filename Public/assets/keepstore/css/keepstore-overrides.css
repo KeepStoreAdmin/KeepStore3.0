@@ -1,5 +1,5 @@
-/* KeepStore -> Onsus bridge overrides
-   Goal: make legacy ASP.NET GridView markup behave like Onsus card grids.
+/* KeepStore bridge overrides
+   Obiettivo: rendere il markup legacy ASP.NET (GridView) coerente col tema grafico.
 */
 
 /* If a GridView table is used as a grid container, force grid display */

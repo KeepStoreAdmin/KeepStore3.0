@@ -8,7 +8,7 @@
 
     <div class="ks-myaccount">
 
-        <!-- Breadcrumb Onsus -->
+        <!-- Breadcrumb (tema) -->
         <div class="tf-sp-1 pb-0">
             <div class="container">
                 <div class="tf-breadcrumb-wrap">

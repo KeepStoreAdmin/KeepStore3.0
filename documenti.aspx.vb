@@ -475,7 +475,7 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
     End Function
 
     '==============================================================
-    ' KeepStore STEP22B: forza <thead> per compatibilita stile Onsus
+    ' KeepStore: forza <thead> per compatibilita stile tema
     '==============================================================
     Protected Sub GridView1_PreRender_22B(ByVal sender As Object, ByVal e As System.EventArgs) Handles GridView1.PreRender
         Try

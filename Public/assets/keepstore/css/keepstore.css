@@ -87,7 +87,7 @@ outline: none;
 
 
 /* ==============================
-   Onsus wrap for legacy forms (Registrazione/Login)
+   Wrap per form legacy (Registrazione/Login)
    NOTE: in precedenza era finito nel path errato; la versione corretta è questa.
    ============================== */
 .ks-legacy-panel {
@@ -643,7 +643,7 @@ body
            Qui NON sovrascriviamo colori o layout del template. */
 
 /* ==========================================================
-   MyAccount: card + address widgets (Onsus-aligned)
+   MyAccount: card + address widgets (allineati al tema)
    ========================================================== */
 .ks-card {
     border: 1px solid rgba(0,0,0,.08);

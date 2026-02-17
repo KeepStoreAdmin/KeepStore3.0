@@ -584,7 +584,7 @@ End Sub
     '==========================================================
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
 
-        ' dynamic controls (Onsus template does not expose all legacy IDs)
+		' controlli dinamici (il tema grafico non espone tutti gli ID legacy)
         Dim lbl4 As Label = FindCtrl(Of Label)("Label4")
         Dim hl14 As HyperLink = FindCtrl(Of HyperLink)("HyperLink14")
         Dim mv As MultiView = FindCtrl(Of MultiView)("mvLogin")
@@ -828,34 +828,31 @@ End Sub
         Try
             Dim theme As String = ThemeManager.ThemeName
 
-            If PageBody Is Nothing Then Exit Sub
+			If PageBody Is Nothing Then Exit Sub
 
-            ' Base body classes (tokenizzabili via web.config)
-            Dim baseCls As String = ThemeManager.Css("body", "preload-wrapper popup-loader color-primary").Trim()
+			' Base body classes (tokenizzabili via web.config)
+			Dim baseCls As String = ThemeManager.Css("body", "preload-wrapper popup-loader color-primary").Trim()
 
-            ' Aggiungo classi base + tag tema senza perdere eventuali altre classi già presenti
-            Dim cls As String = Convert.ToString(PageBody.Attributes("class"))
-            cls = If(cls, String.Empty).Trim()
+			' Merge classi senza perdere eventuali altre classi già presenti
+			Dim cls As String = Convert.ToString(PageBody.Attributes("class"))
+			cls = If(cls, String.Empty).Trim()
 
-            ' Merge base classes
-            If Not String.IsNullOrWhiteSpace(baseCls) Then
-                For Each part As String In baseCls.Split(New Char() {" "c}, StringSplitOptions.RemoveEmptyEntries)
-                    If cls.IndexOf(part, StringComparison.OrdinalIgnoreCase) < 0 Then
-                        cls = (cls & " " & part).Trim()
-                    End If
-                Next
-            End If
+			If Not String.IsNullOrWhiteSpace(baseCls) Then
+				For Each part As String In baseCls.Split(New Char() {" "c}, StringSplitOptions.RemoveEmptyEntries)
+					If cls.IndexOf(part, StringComparison.OrdinalIgnoreCase) < 0 Then
+						cls = (cls & " " & part).Trim()
+					End If
+				Next
+			End If
 
-            ' Theme tag
-            Dim tag As String = ("ks-theme-" & theme).Trim()
-            If cls.IndexOf(tag, StringComparison.OrdinalIgnoreCase) < 0 Then
-                cls = (cls & " " & tag).Trim()
-            End If
+			' Theme tag
+			Dim tag As String = ("ks-theme-" & theme).Trim()
+			If cls.IndexOf(tag, StringComparison.OrdinalIgnoreCase) < 0 Then
+				cls = (cls & " " & tag).Trim()
+			End If
 
-            PageBody.Attributes("class") = cls
-
-            ' data attribute
-            PageBody.Attributes("data-ks-theme") = theme
+			PageBody.Attributes("class") = cls
+			PageBody.Attributes("data-ks-theme") = theme
         Catch
             ' no-op
         End Try

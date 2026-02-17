@@ -6,7 +6,7 @@
 
 <asp:Content ID="ContentMain" ContentPlaceHolderID="MainContent" runat="server">
 
-    <!-- Breadcrumbs (Onsus style) -->
+    <!-- Breadcrumbs (tema) -->
     <div class="tf-breakcrumb">
         <div class="container">
             <ul class="breakcrumb-list">
@@ -48,7 +48,7 @@
 
     <!-- Product -->
     <asp:Panel ID="pnlProduct" runat="server" Visible="false">
-        <!-- Product Main (Onsus product-detail like) -->
+        <!-- Product Main (product-detail like) -->
         <section>
             <div class="tf-main-product section-image-zoom">
                 <div class="container">
@@ -215,7 +215,7 @@
             </div>
         </section>
 
-        <!-- Product Description Tab (Onsus style) -->
+        <!-- Product Description Tab (tema) -->
         <section class="tf-sp-4">
             <div class="container">
                 <div class="flat-animate-tab flat-title-tab-product-des">
@@ -276,7 +276,7 @@
         </section>
     </asp:Panel>
 
-    <!-- Related products (Onsus slider style; bound server-side) -->
+    <!-- Related products (slider style; bound server-side) -->
     <asp:PlaceHolder ID="phRelated" runat="server" Visible="False">
         <section class="tf-sp-2 pt-0">
             <div class="container">
