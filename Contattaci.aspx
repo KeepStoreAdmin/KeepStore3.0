@@ -12,7 +12,7 @@
 
     <div class="ks-contact">
 
-        <!-- Breakcrumbs (ONSUS) -->
+        <!-- Breadcrumbs (template) -->
         <div class="tf-sp-1 pb-0">
         <div class="container">
             <div class="tf-breadcrumb-wrap">

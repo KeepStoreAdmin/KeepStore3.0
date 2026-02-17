@@ -14,6 +14,36 @@ Partial Class PageMaster
     Inherits System.Web.UI.MasterPage
     Implements ISeoMaster
 
+    ' ==============================
+    ' Theme/footer small helpers
+    ' ==============================
+    Private Function GetAppSetting(ByVal key As String, ByVal defaultValue As String) As String
+        Try
+            Dim v As String = ConfigurationManager.AppSettings(key)
+            If Not String.IsNullOrWhiteSpace(v) Then Return v.Trim()
+        Catch
+            ' ignore
+        End Try
+        Return defaultValue
+    End Function
+
+    Public ReadOnly Property SupportEmail As String
+        Get
+            ' Preferisci setting esplicito
+            Dim fallbackHost As String = "example.com"
+            Try
+                If Me.Request IsNot Nothing AndAlso Me.Request.Url IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(Me.Request.Url.Host) Then
+                    fallbackHost = Me.Request.Url.Host
+                End If
+            Catch
+                ' ignore
+            End Try
+
+            Dim fallback As String = "info@" & fallbackHost
+            Return GetAppSetting("KeepStore.Site.SupportEmail", fallback)
+        End Get
+    End Property
+
 Private Function FindControlRecursive(ByVal root As Control, ByVal id As String) As Control
     If root Is Nothing OrElse String.IsNullOrEmpty(id) Then Return Nothing
 
@@ -497,6 +527,13 @@ Dim IvaTipo As Integer
         ' SECURITY: rimuove subito il cookie legacy \"Password\" (se presente)
         ExpireLegacyPasswordCookie()
 
+        ' Footer contact (configurable)
+        Try
+            If litSupportEmail IsNot Nothing Then litSupportEmail.Text = Server.HtmlEncode(SupportEmail)
+        Catch
+            ' no-op
+        End Try
+
         ' Controlli login sulla master (se esistono)
         Dim tbUser As TextBox = TryCast(Me.FindControl("tbUsername"), TextBox)
         Dim tbPass As TextBox = TryCast(Me.FindControl("tbPassword"), TextBox)
@@ -578,7 +615,7 @@ End Sub
     '==========================================================
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
 
-        ' dynamic controls (Onsus template does not expose all legacy IDs)
+        ' dynamic controls (il template non espone tutti gli ID legacy)
         Dim lbl4 As Label = FindCtrl(Of Label)("Label4")
         Dim hl14 As HyperLink = FindCtrl(Of HyperLink)("HyperLink14")
         Dim mv As MultiView = FindCtrl(Of MultiView)("mvLogin")

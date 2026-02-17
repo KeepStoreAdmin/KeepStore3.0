@@ -10,17 +10,17 @@
     <title><asp:ContentPlaceHolder ID="TitleContent" runat="server" /></title>
 
     <!-- ============================================================
-         ONus (core assets)
-         NOTE: i file CSS sono in /Public/assets/css
+         Core assets (tema grafico corrente)
+         NOTE: i file sono serviti da AssetsBaseUrl (ThemeManager)
          ============================================================ -->
     <link rel="stylesheet" href="<%= ThemeManager.Asset("fonts/font.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("icons/icomoon/style.css") %>" />
 
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/bootstrap.min.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/nice-select.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/swiper-bundle.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/animate.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/styles.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/swiper-bundle.min.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/select2.min.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/main.css") %>" />
 
     <!-- SEO / JSON-LD injection -->
     <asp:PlaceHolder ID="phSeoJsonLd" runat="server" Visible="false">
@@ -32,21 +32,14 @@
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 
-    <!-- ONSUS CSS -->
-    <link rel="stylesheet" href="/Public/assets/keepstore/icon/icomoon/style.css" />
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/animate.css" />
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/swiper-bundle.min.css" />
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/select2.min.css" />
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/main.css" />
-    <!-- Override / bridge CSS (ordine: base template -> override taikun -> bridge legacy -> custom per pagine) -->
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/taikun-keepstore-overrides.css" />
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/keepstore-overrides.css" />
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/keepstore.css" />
+    <!-- Override / bridge CSS (ordine: base tema -> override taikun -> bridge legacy -> custom per pagine) -->
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/taikun-keepstore-overrides.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore-overrides.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore.css") %>" />
 
 </head>
 
-<body id="PageBody" runat="server" class="preload-wrapper popup-loader color-primary">
+<body id="PageBody" runat="server" class="preload-wrapper popup-loader color-primary ks-theme-<%= ThemeManager.ThemeName %>" data-ks-theme="<%= ThemeManager.ThemeName %>">
     <form id="form1" runat="server">
 
         <!-- ============================================================
@@ -215,7 +208,7 @@
     </div>
 </header>
 
-<!-- Mobile Menu (Onsus) -->
+<!-- Mobile Menu (template) -->
 <div class="offcanvas offcanvas-start canvas-mb" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
     <div class="canvas-header">
         <h5 class="offcanvas-title" id="mobileMenuLabel">Menu</h5>
@@ -388,11 +381,11 @@
 <span class="icon">
 <i class="icon-direction"></i>
 </span>
-<a class="" href="mailto:onsus@support.com">
-<span class="text-primary">
-                                                        onsus@support.com
-                                                    </span>
-</a>
+                <a class="" href="mailto:<%= SupportEmail %>">
+                    <span class="text-primary">
+                        <asp:Literal ID="litSupportEmail" runat="server" EnableViewState="False" />
+                    </span>
+                </a>
 </li>
 </ul>
 </div>
@@ -451,8 +444,8 @@
 </li>
 </ul>
 <p class="nocopy caption text-center">
-<span class="fw-medium">Onsus.</span>© 2025. All right reserved - Designed by ThemesFlat
-                            </p>
+    <span class="fw-medium">KeepStore</span> © <%= DateTime.Now.Year %>. Tutti i diritti riservati.
+</p>
 </div>
 </div>
 </div>
@@ -490,7 +483,7 @@
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
 
-		<!-- ONSUS JS (tutto da /Public/assets) -->
+		<!-- JS (tema grafico corrente) -->
 		<script src="<%= ThemeManager.Asset("js/jquery.min.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/bootstrap.min.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/bootstrap-select.min.js") %>"></script>
