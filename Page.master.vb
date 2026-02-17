@@ -221,25 +221,6 @@ Private Sub ApplyGlobalSeoPolicy()
     End Try
 End Sub
 
-    Private Sub ApplyThemeTagging()
-        Try
-            Dim theme As String = ThemeManager.ThemeName
-
-            ' data attribute per debug/diagnostica
-            PageBody.Attributes("data-ks-theme") = theme
-
-            ' classe di tema (senza rompere classi esistenti)
-            Dim cls As String = Convert.ToString(PageBody.Attributes("class"))
-            Dim themeCls As String = "ks-theme-" & theme
-            If cls Is Nothing Then cls = String.Empty
-            If cls.IndexOf(themeCls, StringComparison.OrdinalIgnoreCase) < 0 Then
-                PageBody.Attributes("class") = (cls & " " & themeCls).Trim()
-            End If
-        Catch
-            ' non blocco la pagina se per qualche motivo ThemeManager non e' disponibile
-        End Try
-    End Sub
-
 
 ' ============================================================
 ' SECURITY: Rimuove il cookie legacy "Password" (conteneva la password in chiaro)
@@ -508,6 +489,12 @@ Dim IvaTipo As Integer
     ' LOAD: login automatico, cookie, scadenza password, partners
     '==========================================================
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        ' Tema grafico: tagging per CSS token/switch (non altera la logica business)
+        ApplyThemeTagging()
+
+        ' Footer: email supporto configurabile (fallback safe)
+        ApplySupportEmail()
+
         If Not Me.Request.Url.ToString.Contains("accessonegato.aspx") Then
             Session.Item("Pagina_visitata") = Me.Request.Url
         End If
@@ -515,9 +502,6 @@ Dim IvaTipo As Integer
 
         ' SECURITY: rimuove subito il cookie legacy \"Password\" (se presente)
         ExpireLegacyPasswordCookie()
-
-        ' Theme tagging (supporto future switch senza toccare ogni pagina)
-        ApplyThemeTagging()
 
         ' Controlli login sulla master (se esistono)
         Dim tbUser As TextBox = TryCast(Me.FindControl("tbUsername"), TextBox)
@@ -838,6 +822,59 @@ End Sub
                 Session("Articoli_PageIndex") = Nothing
             End If
         End If
+    End Sub
+
+    Private Sub ApplyThemeTagging()
+        Try
+            Dim theme As String = ThemeManager.ThemeName
+
+            ' data attribute
+            If PageBody IsNot Nothing Then
+                PageBody.Attributes("data-ks-theme") = theme
+
+                ' aggiungo classe tema senza distruggere classi esistenti
+                Dim cls As String = Convert.ToString(PageBody.Attributes("class"))
+                Dim tag As String = "ks-theme-" & theme
+                If String.IsNullOrWhiteSpace(cls) Then
+                    PageBody.Attributes("class") = tag
+                ElseIf cls.IndexOf(tag, StringComparison.OrdinalIgnoreCase) < 0 Then
+                    PageBody.Attributes("class") = (cls & " " & tag).Trim()
+                End If
+            End If
+        Catch
+            ' no-op
+        End Try
+    End Sub
+
+    Private Sub ApplySupportEmail()
+        Try
+            Dim email As String = String.Empty
+            Try
+                email = Convert.ToString(ConfigurationManager.AppSettings("KeepStore.Site.SupportEmail"))
+            Catch
+                email = String.Empty
+            End Try
+
+            If String.IsNullOrWhiteSpace(email) Then
+                ' fallback: info@host
+                Dim host As String = String.Empty
+                Try
+                    host = Me.Request.Url.Host
+                Catch
+                    host = ""
+                End Try
+                If String.IsNullOrWhiteSpace(host) Then host = "keepstore.it"
+                email = "info@" & host
+            End If
+
+            Dim lit As Literal = TryCast(Me.FindControl("litSupportEmail"), Literal)
+            If lit IsNot Nothing Then lit.Text = HttpUtility.HtmlEncode(email)
+
+            Dim a As HtmlAnchor = TryCast(Me.FindControl("lnkSupportEmail"), HtmlAnchor)
+            If a IsNot Nothing Then a.HRef = "mailto:" & email
+        Catch
+            ' no-op
+        End Try
     End Sub
 
     '==========================================================

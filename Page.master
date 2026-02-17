@@ -10,7 +10,8 @@
     <title><asp:ContentPlaceHolder ID="TitleContent" runat="server" /></title>
 
     <!-- ============================================================
-         Core assets tema (gestiti da ThemeManager)
+         Core assets (tema grafico)
+         Base path: /Public/assets/keepstore/
          ============================================================ -->
     <link rel="stylesheet" href="<%= ThemeManager.Asset("fonts/font.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("icons/icomoon/style.css") %>" />
@@ -31,14 +32,14 @@
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 
-    <!-- Override / bridge CSS (ordine: base tema -> override taikun -> bridge legacy -> custom per pagine) -->
+    <!-- Override / bridge CSS (ordine: base -> override taikun -> bridge legacy -> custom per pagine) -->
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/taikun-keepstore-overrides.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore-overrides.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore.css") %>" />
 
 </head>
 
-<body id="PageBody" runat="server" class="preload-wrapper popup-loader color-primary">
+<body id="PageBody" runat="server" class="<%= ThemeManager.Css("body", "preload-wrapper popup-loader color-primary") %>">
     <form id="form1" runat="server">
 
         <!-- ============================================================
@@ -66,7 +67,7 @@
         <div id="wrapper">
 
             <!-- ============================================================
-                 HEADER (tema KeepStore)
+                 HEADER
                  - Mantiene ID/handler esistenti (imgLogo/imgLogoMobile, tbCerca, btnSearch, mvLogin, rptNavSettori, lblCarrelloCount/lblCarrelloTotale)
                  ============================================================ -->
             <header class="tf-header style-2">
@@ -207,7 +208,7 @@
     </div>
 </header>
 
-<!-- Mobile Menu (Onsus) -->
+<!-- Mobile Menu -->
 <div class="offcanvas offcanvas-start canvas-mb" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
     <div class="canvas-header">
         <h5 class="offcanvas-title" id="mobileMenuLabel">Menu</h5>
@@ -283,7 +284,7 @@
                 <asp:ContentPlaceHolder ID="cph" runat="server" />
             </main>
 
-            <!-- Footer (ONus) -->
+            <!-- Footer -->
             <footer class="tf-footer">
 <div class="ft-body-wrap">
 <div class="ft-body-inner">
@@ -380,10 +381,8 @@
 <span class="icon">
 <i class="icon-direction"></i>
 </span>
-<a class="" href="mailto:onsus@support.com">
-<span class="text-primary">
-                                                        onsus@support.com
-                                                    </span>
+<a id="lnkSupportEmail" runat="server" class="" href="#">
+<span class="text-primary"><asp:Literal ID="litSupportEmail" runat="server" EnableViewState="False" /></span>
 </a>
 </li>
 </ul>
@@ -443,8 +442,8 @@
 </li>
 </ul>
 <p class="nocopy caption text-center">
-<span class="fw-medium">Onsus.</span>© 2025. All right reserved - Designed by ThemesFlat
-                            </p>
+<span class="fw-medium">KeepStore</span> © <%= DateTime.Now.Year %>
+</p>
 </div>
 </div>
 </div>
@@ -482,7 +481,7 @@
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
 
-		<!-- ONSUS JS (tutto da /Public/assets) -->
+		<!-- JS (tutto da /Public/assets/keepstore/) -->
 		<script src="<%= ThemeManager.Asset("js/jquery.min.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/bootstrap.min.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/bootstrap-select.min.js") %>"></script>
