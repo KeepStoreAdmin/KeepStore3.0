@@ -42,6 +42,13 @@
 <body id="PageBody" runat="server">
     <form id="form1" runat="server">
 
+        <!-- Preload (template core) -->
+        <div class="preload preload-container" id="preload" aria-hidden="true">
+            <div class="preload-logo">
+                <img src="<%= ThemeManager.Asset("images/logo/logo.webp") %>" alt="KeepStore" />
+            </div>
+        </div>
+
         <!-- ============================================================
              Global: Facebook Like popup placeholder (legacy)
              NOTE: controllato dal code-behind (PopUpfacebook.Visible)
@@ -496,6 +503,11 @@
 		<script src="<%= ThemeManager.Asset("js/main.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/sibforms.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/drift.min.js") %>"></script>
+
+        <!-- Scroll to top (template core) -->
+        <button type="button" id="btnScrollTop" class="tf-btn btn-scroll-top" aria-label="Torna su">
+            <i class="icon icon-arrow-up"></i>
+        </button>
 
 		<!-- Script specifici pagina (es. zoom.js su articolo.aspx) -->
 		<asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
