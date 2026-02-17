@@ -101,26 +101,7 @@
                 DeleteCommand="delete from carrello where (Id = ?Id)"
                 UpdateCommand="update carrello set qnt = ?Qnt where (Id = ?Id)">
             </asp:SqlDataSource>
-
-            <script runat="server">
-                Function stampa_iva_applicata(ByVal DescrizioneEsenzioneIva As String, ByVal DescrizioneIvaRC As String) As String
-                    If DescrizioneIvaRC <> "" Then
-                        Return DescrizioneIvaRC
-                    Else
-                        Return DescrizioneEsenzioneIva
-                    End If
-                End Function
-
-                Function controllaLunghezzaTesto(ByVal testo As String, ByVal lunghezza As Integer) As String
-                    If testo.Length > lunghezza Then
-                        Return Left(testo, lunghezza) & "..."
-                    Else
-                        Return testo
-                    End If
-                End Function
-            </script>
-
-            <div class="row g-4">
+<div class="row g-4">
                 <div class="col-12">
                     <div class="overflow-x-auto">
                         <table class="tf-table-page-cart">
@@ -607,27 +588,7 @@
                 <asp:TemplateField HeaderText="Spesa Minima (IVA incl)">
                     <ItemTemplate>
                         <asp:Label ID="Label2" runat="server" Text='<%# String.Format("{0:c}", Eval("Soglia_Minima")*((Session("Iva_Vettori")/100)+1)) %>'></asp:Label>
-                        
-                        <script runat="server">
-                            Function mancano_ancora(ByVal soglia As Double, ByVal imponibile As Double, ByVal imponibile_gratis As Double) As String
-                                If soglia - (imponibile - imponibile_gratis) < 0 Then
-                                    Return "** SOGLIA SUPERATA **"
-                                Else
-                                    Return "Per usufruire della PROMO mancano ancora " & String.Format("{0:c}", ((soglia - (imponibile - imponibile_gratis)) * ((Session("Iva_Vettori") / 100) + 1))) & " - Non vengono conteggiati gli articoli con SPEDIZIONE GRATIS"
-                                End If
-                            End Function
-                            
-                            Function mancano_ancora_number(ByVal soglia As Double, ByVal imponibile As Double, ByVal imponibile_gratis As Double) As String
-                                If soglia - (imponibile - imponibile_gratis) > 0 Then
-                                    differenzaTrasportoGratis = ((soglia - (imponibile - imponibile_gratis)) * ((Session("Iva_Vettori") / 100) + 1))
-                                    Return 1
-                                Else
-                                    Return 0
-                                End If
-                            End Function
-                        </script>
-                        
-                        <span style="display:none;"><%# mancano_ancora_number(Eval("Soglia_Minima"), imponibile, imponibile_gratis)%></span>
+<span style="display:none;"><%# mancano_ancora_number(Eval("Soglia_Minima"), imponibile, imponibile_gratis)%></span>
                         <img src="Public/Images/interrogativo.png" alt="" title="<%# mancano_ancora(Eval("Soglia_Minima"),imponibile, imponibile_gratis)%>" />
                     
                     </ItemTemplate>
@@ -1240,24 +1201,6 @@
     <br />
     <br />
 	<!-- Controllo se esiste l'immagine -->
-	<script runat="server">
-
-		Function controllo_img(ByVal temp) As String
-			If IsDBNull(temp) Then
-				Return "false"
-			Else
-				Return "true"
-			End If
-		End Function
-		
-		Function checkImg(ByVal imgname As String) As String
-			If imgname <> "" Then
-				Return "public/foto/_" & imgname
-			Else
-				Return "Public/Foto/img_non_disponibile.png"
-			End If
-		End Function
-	</script>
 </asp:Content>
 
 

@@ -90,6 +90,75 @@ End Function
 
 Protected differenzaTrasportoGratis As Double = 0
 
+' === MARKUP HELPERS (migrated from inline <script runat="server"> blocks) ===
+Protected Function stampa_iva_applicata(ByVal DescrizioneEsenzioneIva As String, ByVal DescrizioneIvaRC As String) As String
+    If Not String.IsNullOrEmpty(DescrizioneIvaRC) Then
+        Return DescrizioneIvaRC
+    End If
+    Return If(DescrizioneEsenzioneIva, "")
+End Function
+
+Protected Function controllaLunghezzaTesto(ByVal testo As Object, ByVal lunghezza As Integer) As String
+    Dim s As String = If(testo Is Nothing OrElse testo Is DBNull.Value, "", testo.ToString())
+    If lunghezza <= 0 Then Return s
+    If s.Length > lunghezza Then
+        Return Left(s, lunghezza) & "..."
+    End If
+    Return s
+End Function
+
+Protected Function mancano_ancora(ByVal soglia As Double, ByVal imponibileLocal As Double, ByVal imponibileGratisLocal As Double) As String
+    Dim ivaVettori As Double = 0
+    Try
+        Dim o As Object = Session("Iva_Vettori")
+        If o IsNot Nothing AndAlso o IsNot DBNull.Value Then Double.TryParse(o.ToString(), ivaVettori)
+    Catch
+    End Try
+
+    Dim diff As Double = soglia - (imponibileLocal - imponibileGratisLocal)
+    If diff < 0 Then
+        Return "** SOGLIA SUPERATA **"
+    End If
+
+    Dim diffIvato As Double = diff * ((ivaVettori / 100) + 1)
+    Return "Per usufruire della PROMO mancano ancora " & String.Format("{0:c}", diffIvato) & " - Non vengono conteggiati gli articoli con SPEDIZIONE GRATIS"
+End Function
+
+Protected Function mancano_ancora_number(ByVal soglia As Double, ByVal imponibileLocal As Double, ByVal imponibileGratisLocal As Double) As Integer
+    Dim ivaVettori As Double = 0
+    Try
+        Dim o As Object = Session("Iva_Vettori")
+        If o IsNot Nothing AndAlso o IsNot DBNull.Value Then Double.TryParse(o.ToString(), ivaVettori)
+    Catch
+    End Try
+
+    Dim diff As Double = soglia - (imponibileLocal - imponibileGratisLocal)
+    If diff > 0 Then
+        differenzaTrasportoGratis = diff * ((ivaVettori / 100) + 1)
+        Return 1
+    End If
+
+    differenzaTrasportoGratis = 0
+    Return 0
+End Function
+
+Protected Function controllo_img(ByVal temp As Object) As String
+    If temp Is Nothing OrElse temp Is DBNull.Value Then
+        Return "false"
+    End If
+    Return "true"
+End Function
+
+Protected Function checkImg(ByVal imgname As Object) As String
+    Dim s As String = If(imgname Is Nothing OrElse imgname Is DBNull.Value, "", imgname.ToString())
+    If Not String.IsNullOrEmpty(s) Then
+        Return "public/foto/_" & s
+    End If
+    Return "Public/Foto/img_non_disponibile.png"
+End Function
+
+'
+
 ' --- HELPERS (in classe carrello) ---
 Private Function RbGetChecked(ByVal ctrl As Control) As Boolean
     Try
