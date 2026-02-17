@@ -1,4 +1,4 @@
-﻿<%@ Page Language="VB" AutoEventWireup="false" CodeFile="listini.aspx.vb" Inherits="test" MaintainScrollPositionOnPostBack="true"%>
+<%@ Page Language="VB" AutoEventWireup="false" CodeFile="listini.aspx.vb" Inherits="test" MaintainScrollPositionOnPostBack="true"%>
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -387,17 +387,7 @@ $(document).ready(function(){
                 &nbsp;&nbsp;
                 </asp:Panel>
              &nbsp;<br />
-            <script runat="server">
-                'funzione che cambia colore al filtro "settore" 
-                Protected Function colora(ByVal descr) As String
-                    If Request.QueryString("n") = descr Then
-                        Return "font-weight: bold; color: navy; text-decoration: none"
-                    Else
-                        Return "font-weight: bold; color: white; text-decoration: none"
-                    End If
-                End Function
-            </script>
-            <asp:Panel ID="Panel_ListinoDaStampare" runat="server" Width="659px">
+<asp:Panel ID="Panel_ListinoDaStampare" runat="server" Width="659px">
                 <asp:SqlDataSource ID="SqlData_ListinoDaStampare" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                     ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
                     SelectCommand="SELECT vsuperarticoli.id, vsuperarticoli.Codice, vsuperarticoli.Descrizione1, vsuperarticoli.MarcheDescrizione, vsuperarticoli.SettoriId, vsuperarticoli.SettoriDescrizione, vsuperarticoli.CategorieId, vsuperarticoli.CategorieDescrizione, vsuperarticoli.TipologieId, vsuperarticoli.TipologieDescrizione, vsuperarticoli.GruppiId, vsuperarticoli.GruppiDescrizione, vsuperarticoli.SottoGruppiId, vsuperarticoli.SottogruppiDescrizione, vsuperarticoli.ArticoliIva, vsuperarticoli.Giacenza, vsuperarticoli.InOrdine, vsuperarticoli.Disponibilita, vsuperarticoli.Impegnata, vsuperarticoli.ArticoliListiniId, vsuperarticoli.NListino, vsuperarticoli.Prezzo, vsuperarticoli.PrezzoIvato, vsuperarticoli.OfferteID, vsuperarticoli.OfferteDettagliId, vsuperarticoli.OfferteDescrizione, vsuperarticoli.OfferteDataInizio, vsuperarticoli.OfferteDataFine, vsuperarticoli.OfferteDaListino, vsuperarticoli.OfferteAListino, vsuperarticoli.OfferteQntMinima, vsuperarticoli.OfferteMultipli, vsuperarticoli.OffertePrezzo, vsuperarticoli.OfferteSconto, vsuperarticoli.InOfferta, vsuperarticoli.PrezzoPromo, vsuperarticoli.PrezzoPromoIvato, dettagli_listino_personalizzato.ID_Listino_Personalizzato, dettagli_listino_personalizzato.Ricarico, dettagli_listino_personalizzato.Promo FROM vsuperarticoli LEFT OUTER JOIN dettagli_listino_personalizzato ON vsuperarticoli.SettoriId = dettagli_listino_personalizzato.ID_Settore AND vsuperarticoli.CategorieId = dettagli_listino_personalizzato.ID_Categoria AND vsuperarticoli.TipologieId = dettagli_listino_personalizzato.ID_Tipologia WHERE (dettagli_listino_personalizzato.ID_Listino_Personalizzato = 10) AND (vsuperarticoli.NListino = 5) ORDER BY vsuperarticoli.SettoriDescrizione, vsuperarticoli.CategorieDescrizione, vsuperarticoli.TipologieDescrizione, vsuperarticoli.id, vsuperarticoli.OfferteMultipli">

@@ -1,4 +1,4 @@
-﻿
+
 Partial Class vetrina_interna
     Inherits System.Web.UI.Page
 
@@ -80,3 +80,22 @@ Partial Class vetrina_interna
         ' ---------------------------------------------------------------------------------
     End Sub
 End Class
+
+Protected Function adatta_titolo(ByVal temp As String) As String
+    Try
+        If temp Is Nothing Then Return ""
+        If temp.Length > 50 Then
+            Return Left(temp, 50) & " ..."
+        Else
+            Return temp
+        End If
+    Catch
+        Return ""
+    End Try
+End Function
+
+Protected Function genera_id() As Integer
+    cont_prodotti = cont_prodotti + 1
+    Return cont_prodotti
+End Function
+

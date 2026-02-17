@@ -1,31 +1,5 @@
-<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" %>
+<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false"  CodeFile="pay_your_orders.aspx.vb" Inherits="pay_your_orders" %>
 <%@ OutputCache Location="None" NoStore="true" Duration="0" VaryByParam="None" %>
-
-<script runat="server">
-    ' ============================================================
-    ' Alias page (hardening):
-    ' - Alcuni template/account puntano a /pay_your_orders.aspx
-    ' - In KeepStore il pagamento ordini è gestito da /documenti.aspx?t=4
-    ' - Questa pagina esegue solo redirect server-side, con noindex + no-store
-    ' ============================================================
-    Protected Overrides Sub OnLoad(ByVal e As EventArgs)
-        ' Hardening: no-store / no-cache
-        Response.Cache.SetCacheability(HttpCacheability.NoCache)
-        Response.Cache.SetNoStore()
-        Response.Cache.SetRevalidation(HttpCacheRevalidation.AllCaches)
-        Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1))
-        Response.Cache.SetMaxAge(TimeSpan.Zero)
-        Response.Cache.AppendCacheExtension("must-revalidate, proxy-revalidate")
-
-        ' Hardening: noindex
-        Response.AddHeader("X-Robots-Tag", "noindex, nofollow")
-
-        ' Redirect (alias) -> pagina corretta
-        Response.Redirect("/documenti.aspx?t=4", False)
-        Context.ApplicationInstance.CompleteRequest()
-    End Sub
-</script>
-
 <asp:Content ID="cntTitle" ContentPlaceHolderID="TitleContent" runat="server">
     Pagamenti
 </asp:Content>

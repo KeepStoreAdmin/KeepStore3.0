@@ -1,4 +1,4 @@
-﻿<%@ Page Language="VB" MasterPageFile="~/Coupon.master" AutoEventWireup="false" CodeFile="coupon_utente.aspx.vb" Inherits="coupon_utente" title="Pagina senza titolo" %>
+<%@ Page Language="VB" MasterPageFile="~/Coupon.master" AutoEventWireup="false" CodeFile="coupon_utente.aspx.vb" Inherits="coupon_utente" title="Pagina senza titolo" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
 
@@ -83,34 +83,10 @@
                     <tr style=" border-style:solid; border-color:White; border-width:1px;">
                         <td  valign="top" align="left" style="background-color:#ccc" ><strong>Tracking</strong></td>
                         <td style="background-color:#f0efef" >
-                            <script runat="server">
-                                Function separa_tracking(ByVal tracking As String, ByVal link_tracking As String) As String
-                                    Dim temp As String() = tracking.Split(";")
-                                    Dim risultato As String = ""
-                                    Dim i As Integer = 0
-                                    
-                                    For i = 0 To temp.Length - 1
-                                        If temp(i) <> "" Then
-                                            risultato = risultato & "<img src=""Public/Images/interrogativo.png"" alt="""" title=""Clicca sul Numero Tracking"">" & "<a href=""" & link_tracking.Replace("#ID#", temp(i)) & """ target=""_blank"">" & temp(i) & "</a>; "
-                                        End If
-                                    Next
-                                    
-                                    Return risultato
-                                End Function
-                            </script>
-                            <%# separa_tracking(Eval("Tracking").ToString(), Eval("Link_Tracking").ToString())%>
+<%# separa_tracking(Eval("Tracking").ToString(), Eval("Link_Tracking").ToString())%>
                         </td>
                     </tr>
-                    <script runat="server">
-                        Function testNote(ByVal note As Object) As String
-                            Try
-                                Return CStr(IIf(note = "", "display:none;", ""))
-                            Catch
-                                Return "display:none;"
-                            End Try
-                        End Function
-                    </script>
-                    <tr style="border-style:solid; border-color:White; border-width:1px;<%# testNote(Eval("Note")) %>" >
+<tr style="border-style:solid; border-color:White; border-width:1px;<%# testNote(Eval("Note")) %>" >
                         <td valign="top" align="left" style="background-color:#ccc"><strong>Note Corriere</strong></td>
                         <td style="background-color:#f0efef" ><%# Eval("Note") %> </td>
                     </tr>

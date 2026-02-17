@@ -1,4 +1,4 @@
-﻿<%@ Page Language="VB" AutoEventWireup="false" CodeFile="vetrina_interna.aspx.vb" Inherits="vetrina_interna" %>
+<%@ Page Language="VB" AutoEventWireup="false" CodeFile="vetrina_interna.aspx.vb" Inherits="vetrina_interna" %>
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -59,23 +59,7 @@
             </SelectParameters>
         </asp:SqlDataSource>
         </div>
-        
-        <script runat="server">
-            Function adatta_titolo(ByVal temp As String) As String
-                If temp.Length > 50 Then
-                    Return Left(temp, 50) & " ..."
-                Else
-                    Return temp
-                End If
-            End Function
-            
-            Function genera_id() As Integer
-                cont_prodotti = cont_prodotti + 1
-                Return cont_prodotti
-            End Function
-        </script>
-        
-        <asp:Repeater ID="Repeater1" runat="server" DataSourceID="SqlData_ArticoliVetrina">
+<asp:Repeater ID="Repeater1" runat="server" DataSourceID="SqlData_ArticoliVetrina">
             <ItemTemplate>
             <div id='<%# "div" & genera_id() %>' class="slidingSpaces demo4" title="" style=" width:100%; height:100%;">
 			    <img src="" class="bg"/>

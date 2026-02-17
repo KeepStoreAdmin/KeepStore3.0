@@ -1,4 +1,4 @@
-﻿Imports MySql.Data.MySqlClient
+Imports MySql.Data.MySqlClient
 Imports System.Data
 
 Partial Class coupon_utente
@@ -117,3 +117,46 @@ Partial Class coupon_utente
         End Try
     End Function
 End Class
+
+Protected Function separa_tracking(ByVal tracking As String, ByVal link_tracking As String) As String
+    Try
+        If String.IsNullOrEmpty(tracking) Then Return ""
+        Dim temp As String() = tracking.Split(";"c)
+        Dim risultato As String = ""
+        For i As Integer = 0 To temp.Length - 1
+            Dim id As String = ""
+            Try
+                id = temp(i).Trim()
+            Catch
+                id = ""
+            End Try
+
+            If id <> "" Then
+                Dim href As String = "#"
+                Try
+                    href = Convert.ToString(link_tracking).Replace("#ID#", id)
+                Catch
+                    href = "#"
+                End Try
+
+                risultato &= "<img src=""Public/Images/interrogativo.png"" alt="""" title=""Clicca sul Numero Tracking"">" &
+                             "<a href=""" & Server.HtmlAttributeEncode(href) & """ target=""_blank"">" &
+                             Server.HtmlEncode(id) & "</a>; "
+            End If
+        Next
+        Return risultato
+    Catch
+        Return ""
+    End Try
+End Function
+
+Protected Function testNote(ByVal note As Object) As String
+    Try
+        Dim s As String = Convert.ToString(note)
+        If String.IsNullOrEmpty(s) Then Return "display:none;"
+        Return ""
+    Catch
+        Return "display:none;"
+    End Try
+End Function
+
