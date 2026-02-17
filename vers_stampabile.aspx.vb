@@ -325,17 +325,34 @@ Partial Class vers_stampabile
     End Sub
 
 
-    '--- Helper functions migrated from inline <script runat="server"> blocks (bonifica legacy) ---
+        '--- Helper functions migrated from inline <script runat="server"> blocks (bonifica legacy) ---
+
+    Private Function SessionInt(ByVal key As String, Optional ByVal defaultValue As Integer = 0) As Integer
+        Try
+            Dim o As Object = Session(key)
+            If o Is Nothing OrElse IsDBNull(o) Then Return defaultValue
+
+            If TypeOf o Is Integer Then Return CInt(o)
+
+            Dim i As Integer
+            If Integer.TryParse(o.ToString(), i) Then Return i
+
+        Catch
+            ' no-op
+        End Try
+        Return defaultValue
+    End Function
+
     Protected Function Sostituisci_caratteri(ByVal temp As String) As String
         If temp Is Nothing Then Return ""
         Return System.Web.HttpUtility.HtmlEncode(temp)
     End Function
 
     Protected Function checkImg(ByVal imgname As String) As String
-        If Not String.IsNullOrWhiteSpace(imgname) Then
-            Return "public/foto/" & imgname.Trim()
+        If String.IsNullOrWhiteSpace(imgname) Then
+            Return "Public/Foto/img_non_disponibile.png"
         End If
-        Return "Public/Foto/img_non_disponibile.png"
+        Return "Public/Foto/" & imgname.Trim()
     End Function
 
     Protected Function controllo_img(ByVal temp As Object) As Boolean
@@ -356,11 +373,11 @@ Partial Class vers_stampabile
     End Function
 
     Protected Function controlla_iva_spedizione() As Integer
-        Return If(TryCast(Session.Item("IvaTipo"), Integer?), 0)
+        Return SessionInt("IvaTipo", 0)
     End Function
 
     Protected Function controlla_iva_listinoufficiale() As Integer
-        Return If(TryCast(Session.Item("IvaTipo"), Integer?), 0)
+        Return SessionInt("IvaTipo", 0)
     End Function
 
     Protected Function controlla_brochure(ByVal obj As Object) As Integer
@@ -388,26 +405,27 @@ Partial Class vers_stampabile
 
     Protected Function valore_LU(ByVal tmp As Object, ByVal iva As Integer) As String
         If tmp Is Nothing OrElse IsDBNull(tmp) Then Return "-"
+
         Dim v As Decimal = 0D
         If Not Decimal.TryParse(tmp.ToString(), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, v) Then Return "-"
         If v = 0D Then Return "-"
+
         If controlla_iva_listinoufficiale() = 2 Then
             Return String.Format("{0:c}", v * ((iva / 100D) + 1D))
         End If
+
         Return String.Format("{0:c}", v)
     End Function
 
     Protected Function convalida_stringa(ByVal temp As String) As String
         If temp Is Nothing Then Return ""
+        ' Manteniamo lo stesso comportamento legacy: encode + sostituzioni mirate
         Dim safe As String = Server.HtmlEncode(temp)
         Return safe.Replace("&#160;", " ").Replace("&lt;", "<").Replace("&gt;", ">").Replace("&quot;", ChrW(34))
     End Function
 
     Protected Function visualizza_descr_lunga(ByVal descr_html As String) As String
-        If String.IsNullOrEmpty(descr_html) Then
-            Return "True"
-        End If
-        Return "False"
+        Return If(String.IsNullOrEmpty(descr_html), "True", "False")
     End Function
 
 End Class
