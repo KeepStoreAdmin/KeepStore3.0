@@ -10,17 +10,16 @@
     <title><asp:ContentPlaceHolder ID="TitleContent" runat="server" /></title>
 
     <!-- ============================================================
-         Core assets (tema grafico corrente)
-         NOTE: i file sono serviti da AssetsBaseUrl (ThemeManager)
+         Core assets tema (gestiti da ThemeManager)
          ============================================================ -->
     <link rel="stylesheet" href="<%= ThemeManager.Asset("fonts/font.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("icons/icomoon/style.css") %>" />
 
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/bootstrap.min.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/animate.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/nice-select.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/swiper-bundle.min.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/select2.min.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/main.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/animate.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/styles.css") %>" />
 
     <!-- SEO / JSON-LD injection -->
     <asp:PlaceHolder ID="phSeoJsonLd" runat="server" Visible="false">
@@ -39,7 +38,7 @@
 
 </head>
 
-<body id="PageBody" runat="server" class="preload-wrapper popup-loader color-primary ks-theme-<%= ThemeManager.ThemeName %>" data-ks-theme="<%= ThemeManager.ThemeName %>">
+<body id="PageBody" runat="server" class="preload-wrapper popup-loader color-primary">
     <form id="form1" runat="server">
 
         <!-- ============================================================
@@ -67,7 +66,7 @@
         <div id="wrapper">
 
             <!-- ============================================================
-                 HEADER (migrazione ONus)
+                 HEADER (tema KeepStore)
                  - Mantiene ID/handler esistenti (imgLogo/imgLogoMobile, tbCerca, btnSearch, mvLogin, rptNavSettori, lblCarrelloCount/lblCarrelloTotale)
                  ============================================================ -->
             <header class="tf-header style-2">
@@ -208,7 +207,7 @@
     </div>
 </header>
 
-<!-- Mobile Menu (template) -->
+<!-- Mobile Menu (Onsus) -->
 <div class="offcanvas offcanvas-start canvas-mb" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
     <div class="canvas-header">
         <h5 class="offcanvas-title" id="mobileMenuLabel">Menu</h5>
@@ -381,11 +380,11 @@
 <span class="icon">
 <i class="icon-direction"></i>
 </span>
-                <a class="" href="mailto:<%= SupportEmail %>">
-                    <span class="text-primary">
-                        <asp:Literal ID="litSupportEmail" runat="server" EnableViewState="False" />
-                    </span>
-                </a>
+<a class="" href="mailto:onsus@support.com">
+<span class="text-primary">
+                                                        onsus@support.com
+                                                    </span>
+</a>
 </li>
 </ul>
 </div>
@@ -444,8 +443,8 @@
 </li>
 </ul>
 <p class="nocopy caption text-center">
-    <span class="fw-medium">KeepStore</span> © <%= DateTime.Now.Year %>. Tutti i diritti riservati.
-</p>
+<span class="fw-medium">Onsus.</span>© 2025. All right reserved - Designed by ThemesFlat
+                            </p>
 </div>
 </div>
 </div>
@@ -483,7 +482,7 @@
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
 
-		<!-- JS (tema grafico corrente) -->
+		<!-- ONSUS JS (tutto da /Public/assets) -->
 		<script src="<%= ThemeManager.Asset("js/jquery.min.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/bootstrap.min.js") %>"></script>
 		<script src="<%= ThemeManager.Asset("js/bootstrap-select.min.js") %>"></script>
