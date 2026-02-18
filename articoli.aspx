@@ -350,7 +350,6 @@
     </LayoutTemplate>
 
     <ItemTemplate>
-    <ItemTemplate>
         <div class="card-product ks-card-product">
             <div class="card-product-wrapper">
                 <a href='<%# ResolveUrl("~/articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCid")) %>' class="product-img">
@@ -449,7 +448,6 @@
             </div>
         </div>
     </ItemTemplate>
-</ItemTemplate>
 
     <EmptyDataTemplate>
         <div class="tf-page-title py-5">

@@ -139,8 +139,23 @@ Partial Class Articoli
 
         CaricaArticoli()
 
-        Me.GridView1.PageSize = Me.Session("RigheArticoli")
-        Me.GridView1.PageIndex = Session("Articoli_PageIndex")
+' Paging (ListView + DataPager)
+Dim ps As Integer = 12
+Dim tmpPs As Integer
+If Session("RigheArticoli") IsNot Nothing AndAlso Integer.TryParse(Session("RigheArticoli").ToString(), tmpPs) AndAlso tmpPs > 0 Then
+    ps = tmpPs
+End If
+dpProdotti.PageSize = ps
+
+Dim pageIndex As Integer = 0
+Dim tmpIdx As Integer
+If Session("Articoli_PageIndex") IsNot Nothing AndAlso Integer.TryParse(Session("Articoli_PageIndex").ToString(), tmpIdx) AndAlso tmpIdx >= 0 Then
+    pageIndex = tmpIdx
+End If
+
+' startRowIndex = pageIndex * pageSize
+dpProdotti.SetPageProperties(pageIndex * ps, ps, False)
+lblLinee.Text = ps.ToString()
 
         'Inserimento della stringa di ricerca nella tabella query_string, per l'indicizzazione
         If Session("q") IsNot Nothing Then
@@ -792,10 +807,6 @@ strWhere = strWhere & " GROUP BY id"
         Me.lblTrovati.Text = e.AffectedRows.ToString
     End Sub
 
-    Protected Sub GridView1_PageIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles GridView1.PageIndexChanged
-        Session("Articoli_PageIndex") = Me.GridView1.PageIndex
-    End Sub
-
     Function controlla_promo_articolo(ByVal cod_articolo As Integer, ByVal listino As Integer) As Integer
         Dim params As New Dictionary(Of String, Object)
         params.Add("@Listino", listino)
@@ -811,31 +822,12 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     ' *** VERSIONE RIPULITA: niente più sdsPromo/rPromo/img semaforo ***
-    Protected Sub GridView1_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles GridView1.PreRender
-        ' Nascondo il bottone Wishlist se l'utente non è loggato
-        For i As Integer = 0 To GridView1.Rows.Count - 1
-            Dim lbWishlist As LinkButton = TryCast(GridView1.Rows(i).FindControl("LB_wishlist"), LinkButton)
-            If lbWishlist IsNot Nothing Then
-                Dim idUtente As Integer = 0
-                If Session.Item("UtentiId") IsNot Nothing Then
-                    Integer.TryParse(Session.Item("UtentiId").ToString(), idUtente)
-                End If
-                If idUtente <= 0 Then
-                    lbWishlist.Visible = False
-                End If
-            End If
-        Next
-
-        ' Numero righe per pagina
-        Me.lblLinee.Text = Me.GridView1.PageSize
-    End Sub
-
     ' CLICK SU ICONA "CARRELLO" PER SINGOLO ARTICOLO
     Protected Sub ImageButton1_Click(ByVal sender As Object, ByVal e As System.Web.UI.ImageClickEventArgs)
         Dim img As ImageButton = TryCast(sender, ImageButton)
         If img Is Nothing Then Exit Sub
 
-        Dim row As GridViewRow = TryCast(img.NamingContainer, GridViewRow)
+        Dim row As Control = TryCast(img.NamingContainer, Control)
         If row Is Nothing Then Exit Sub
 
         ' Listino corrente (default 1)
@@ -916,7 +908,93 @@ strWhere = strWhere & " GROUP BY id"
         ' Se in futuro ripristini il repeater delle promo, questa logica andrà riallineata al layout.
     End Sub
 
-    Protected Sub Selezione_Multipla_Click(ByVal sender As Object, ByVal e As System.Web.UI.ImageClickEventArgs)
+    
+
+' =========================
+' ListView paging / UI hooks
+' =========================
+Protected Sub lvProdotti_PagePropertiesChanging(ByVal sender As Object, ByVal e As PagePropertiesChangingEventArgs)
+    dpProdotti.SetPageProperties(e.StartRowIndex, e.MaximumRows, True)
+
+    ' Mantengo la compatibilità con la vecchia Session("Articoli_PageIndex")
+    If e.MaximumRows > 0 Then
+        Session("Articoli_PageIndex") = (e.StartRowIndex \ e.MaximumRows)
+    Else
+        Session("Articoli_PageIndex") = 0
+    End If
+End Sub
+
+Protected Sub lvProdotti_PreRender(ByVal sender As Object, ByVal e As System.EventArgs)
+    ' Allineo PageSize con la preferenza utente (se presente)
+    Dim ps As Integer = dpProdotti.PageSize
+    Dim tmpPs As Integer
+    If Session("RigheArticoli") IsNot Nothing AndAlso Integer.TryParse(Session("RigheArticoli").ToString(), tmpPs) AndAlso tmpPs > 0 Then
+        ps = tmpPs
+    End If
+    If dpProdotti.PageSize <> ps Then dpProdotti.PageSize = ps
+    lblLinee.Text = ps.ToString()
+
+    ' Wishlist visibile solo se loggato
+    Dim idUtente As Integer = 0
+    Integer.TryParse(Convert.ToString(Session.Item("UtentiId")), idUtente)
+    For Each item As ListViewDataItem In lvProdotti.Items
+        Dim lbWishlist As LinkButton = TryCast(item.FindControl("LB_wishlist"), LinkButton)
+        If lbWishlist IsNot Nothing Then
+            lbWishlist.Visible = (idUtente > 0)
+        End If
+    Next
+
+    ' Wrapper UI (pager / multi footer)
+    If ksMultiFooter IsNot Nothing Then ksMultiFooter.Visible = (lvProdotti.Items.Count > 0)
+    If ksPagerWrap IsNot Nothing Then ksPagerWrap.Visible = (lvProdotti.Items.Count > 0)
+End Sub
+
+' Click su icona "carrello" (nuovo template: LinkButton LB_addToCart)
+Protected Sub LB_AddToCart_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+    Dim ctrl As Control = TryCast(sender, Control)
+    If ctrl Is Nothing Then Exit Sub
+
+    Dim row As Control = TryCast(ctrl.NamingContainer, Control)
+    If row Is Nothing Then Exit Sub
+
+    ' Listino corrente (default 1)
+    Dim listino As Integer = 1
+    Dim rawListino As String = Convert.ToString(Session("Listino"))
+    Dim tmpListino As Integer
+    If Integer.TryParse(rawListino, tmpListino) AndAlso tmpListino > 0 Then
+        listino = tmpListino
+    End If
+
+    ' 1) ID ARTICOLO
+    Dim idVal As Integer = GetArticoloIdFromRow(row)
+    If idVal <= 0 Then
+        Response.Redirect("articoli.aspx")
+        Return
+    End If
+
+    ' 2) QUANTITÀ
+    Dim qta As Integer = GetQuantitaFromRow(row)
+
+    ' 3) TCID (Taglia/Colore) se presente, altrimenti -1
+    Dim tcIdVal As Integer = GetTCIdFromRow(row)
+
+    ' 4) PRODOTTO GRATIS (spedito gratis) calcolato da DB
+    Session("ProdottoGratis") = spedito_gratis(idVal, listino)
+
+    ' 5) CONTROLLO SETTORE
+    If controlla_abilitazione_settore(idVal) = 1 Then
+        Session("Carrello_ArticoloId") = idVal.ToString()
+        Session("Carrello_TCId") = tcIdVal.ToString()
+        Session("Carrello_Quantita") = qta.ToString()
+        Session("Carrello_SelezioneMultipla") = Nothing
+
+        Response.Redirect("aggiungi.aspx")
+    Else
+        Response.Redirect("settore_disabilitato.aspx")
+    End If
+End Sub
+
+Protected Sub Selezione_Multipla_Click(ByVal sender As Object, ByVal e As System.Web.UI.ImageClickEventArgs)
         Dim listaArticoli As New ArrayList()
 
         ' Listino corrente (default 1)
@@ -927,7 +1005,7 @@ strWhere = strWhere & " GROUP BY id"
             listino = tmpList
         End If
 
-        For Each row As GridViewRow In Me.GridView1.Rows
+        For Each row As ListViewDataItem In Me.lvProdotti.Items
             Dim temp_check As CheckBox = TryCast(row.FindControl("CheckBox_SelezioneMultipla"), CheckBox)
             If temp_check IsNot Nothing AndAlso temp_check.Checked Then
 
@@ -971,7 +1049,7 @@ strWhere = strWhere & " GROUP BY id"
     ' ============================
     ' HELPER PER LETTURA DATI DAL ROW
     ' ============================
-    Private Function GetArticoloIdFromRow(ByVal row As GridViewRow) As Integer
+    Private Function GetArticoloIdFromRow(ByVal row As Control) As Integer
         Dim idVal As Integer = 0
 
         Dim lblId As Label = TryCast(row.FindControl("lblID"), Label)
@@ -995,7 +1073,7 @@ strWhere = strWhere & " GROUP BY id"
         Return idVal
     End Function
 
-    Private Function GetQuantitaFromRow(ByVal row As GridViewRow) As Integer
+    Private Function GetQuantitaFromRow(ByVal row As Control) As Integer
         Dim qta As Integer = 1
         Dim qtaBox As TextBox = TryCast(row.FindControl("tbQuantita"), TextBox)
         If qtaBox IsNot Nothing Then
@@ -1006,7 +1084,7 @@ strWhere = strWhere & " GROUP BY id"
         Return qta
     End Function
 
-    Private Function GetTCIdFromRow(ByVal row As GridViewRow) As Integer
+    Private Function GetTCIdFromRow(ByVal row As Control) As Integer
         Dim tcIdVal As Integer = -1
         Dim lblTC As Label = TryCast(row.FindControl("lblTCId"), Label)
         Dim hfTC As HiddenField = TryCast(row.FindControl("hfTCId"), HiddenField)
@@ -1039,13 +1117,12 @@ strWhere = strWhere & " GROUP BY id"
         Dim ctrl As Control = TryCast(sender, Control)
         If ctrl Is Nothing Then Return
 
-        Dim row As GridViewRow = TryCast(ctrl.NamingContainer, GridViewRow)
+        Dim row As Control = TryCast(ctrl.NamingContainer, Control)
         If row Is Nothing Then Return
 
         Dim idVal As Integer = GetArticoloIdFromRow(row)
         Dim tcIdVal As Integer = GetTCIdFromRow(row)
-
-        Dim idUtente As Integer = 0
+Dim idUtente As Integer = 0
         Integer.TryParse(Convert.ToString(Session.Item("UtentiId")), idUtente)
 
         If idUtente <= 0 OrElse idVal <= 0 Then
@@ -2161,7 +2238,48 @@ strWhere = strWhere & " GROUP BY id"
         Return System.Text.RegularExpressions.Regex.IsMatch(raw, "^\d+\|[A-Za-z0-9\-\._% ]+$")
     End Function
 
-    ' UI helper: percentuale sconto (es. "-25%") calcolata in modo robusto.
+    ' =========================
+' UI helper: promo / prezzi (nuovo template)
+' =========================
+Protected Function HasPromo(inOffertaObj As Object, prezzoPromoObj As Object) As Boolean
+    Dim inOfferta As Integer = 0
+    Dim raw As String = Convert.ToString(inOffertaObj)
+    If raw IsNot Nothing AndAlso raw.Trim().Equals("True", StringComparison.OrdinalIgnoreCase) Then
+        inOfferta = 1
+    Else
+        Integer.TryParse(raw, inOfferta)
+    End If
+
+    Dim promo As Decimal = KeepStoreSecurity.SqlCleanDecimal(prezzoPromoObj, 0D)
+    Return (inOfferta = 1 AndAlso promo > 0D)
+End Function
+
+Private Function FormatPriceEUR(val As Decimal) As String
+    If val <= 0D Then Return ""
+    Dim it As Globalization.CultureInfo = Globalization.CultureInfo.GetCultureInfo("it-IT")
+    Return "€ " & val.ToString("N2", it)
+End Function
+
+Protected Function GetPriceNewText(inOffertaObj As Object, prezzoPromoObj As Object, prezzoObj As Object) As String
+    Dim prezzo As Decimal = KeepStoreSecurity.SqlCleanDecimal(prezzoObj, 0D)
+    Dim promo As Decimal = KeepStoreSecurity.SqlCleanDecimal(prezzoPromoObj, 0D)
+
+    If HasPromo(inOffertaObj, prezzoPromoObj) AndAlso promo > 0D Then
+        Return FormatPriceEUR(promo)
+    End If
+
+    Return FormatPriceEUR(prezzo)
+End Function
+
+Protected Function GetPriceOldText(inOffertaObj As Object, prezzoPromoObj As Object, prezzoObj As Object) As String
+    Dim prezzo As Decimal = KeepStoreSecurity.SqlCleanDecimal(prezzoObj, 0D)
+    If HasPromo(inOffertaObj, prezzoPromoObj) Then
+        Return FormatPriceEUR(prezzo)
+    End If
+    Return ""
+End Function
+
+' UI helper: percentuale sconto (es. "-25%") calcolata in modo robusto.
     Protected Function GetDiscountPercent(oldPriceObj As Object, newPriceObj As Object) As String
         Dim oldD As Decimal = KeepStoreSecurity.SqlCleanDecimal(oldPriceObj, 0D)
         Dim newD As Decimal = KeepStoreSecurity.SqlCleanDecimal(newPriceObj, 0D)
