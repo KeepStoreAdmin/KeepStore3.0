@@ -79,23 +79,23 @@ Partial Class vetrina_interna
 
         ' ---------------------------------------------------------------------------------
     End Sub
+    ' Helper usati dal markup (Repeater databinding)
+    Protected Function adatta_titolo(ByVal temp As Object) As String
+        Try
+            Dim s As String = Convert.ToString(temp)
+            If String.IsNullOrEmpty(s) Then Return ""
+            If s.Length > 50 Then
+                Return Left(s, 50) & " ..."
+            Else
+                Return s
+            End If
+        Catch
+            Return ""
+        End Try
+    End Function
+
+    Protected Function genera_id() As Integer
+        cont_prodotti = cont_prodotti + 1
+        Return cont_prodotti
+    End Function
 End Class
-
-Protected Function adatta_titolo(ByVal temp As String) As String
-    Try
-        If temp Is Nothing Then Return ""
-        If temp.Length > 50 Then
-            Return Left(temp, 50) & " ..."
-        Else
-            Return temp
-        End If
-    Catch
-        Return ""
-    End Try
-End Function
-
-Protected Function genera_id() As Integer
-    cont_prodotti = cont_prodotti + 1
-    Return cont_prodotti
-End Function
-

@@ -300,16 +300,16 @@
                                     </p>
 <ul class="method-list">
 <li>
-<img alt="Payment" src="<%= ThemeManager.Asset(\"images/payment/visa.svg\") %>"/>
+<img alt="Payment" src="<%= ThemeManager.Asset("images/payment/visa.svg") %>"/>
 </li>
 <li>
-<img alt="Payment" src="<%= ThemeManager.Asset(\"images/payment/paypal.svg\") %>"/>
+<img alt="Payment" src="<%= ThemeManager.Asset("images/payment/paypal.svg") %>"/>
 </li>
 <li>
-<img alt="Payment" src="<%= ThemeManager.Asset(\"images/payment/discover.svg\") %>"/>
+<img alt="Payment" src="<%= ThemeManager.Asset("images/payment/discover.svg") %>"/>
 </li>
 <li>
-<img alt="Payment" src="<%= ThemeManager.Asset(\"images/payment/master.svg\") %>"/>
+<img alt="Payment" src="<%= ThemeManager.Asset("images/payment/master.svg") %>"/>
 </li>
 </ul>
 </div>

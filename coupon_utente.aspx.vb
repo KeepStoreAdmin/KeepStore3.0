@@ -77,12 +77,12 @@ Partial Class coupon_utente
         End Try
     End Sub
 
-    Protected Function ExecuteInsert(ByVal table As String, ByVal fields As String, Optional ByVal values As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing)
+    Protected Sub ExecuteInsert(ByVal table As String, ByVal fields As String, Optional ByVal values As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing)
         Dim sqlString As String = "INSERT INTO " & table & " (" & fields & ") VALUES (" & values & ")"
         ExecuteNonQuery(False, sqlString, params)
-    End Function
+    End Sub
 
-    Protected Function ExecuteNonQuery(ByVal isStoredProcedure As Boolean, ByVal sqlString As String, Optional ByVal params As Dictionary(Of String, String) = Nothing)
+    Protected Sub ExecuteNonQuery(ByVal isStoredProcedure As Boolean, ByVal sqlString As String, Optional ByVal params As Dictionary(Of String, String) = Nothing)
         Dim conn As New MySqlConnection
         Try
             Dim connectionString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
@@ -92,6 +92,7 @@ Partial Class coupon_utente
                 Dim cmd As New MySqlCommand
                 cmd.Connection = conn
                 cmd.CommandText = sqlString
+                If params IsNot Nothing Then
                 For Each paramName In params.Keys
                     If paramName = "?parPrezzo" Or paramName = "?parPrezzoIvato" Then
                         cmd.Parameters.Add(paramName, MySqlDbType.Double).Value = Convert.ToDecimal(params(paramName), System.Globalization.CultureInfo.InvariantCulture)
@@ -99,6 +100,7 @@ Partial Class coupon_utente
                         cmd.Parameters.AddWithValue(paramName, params(paramName))
                     End If
                 Next
+                End If
                 If isStoredProcedure Then
                     cmd.CommandType = CommandType.StoredProcedure
                     cmd.Parameters.AddWithValue("?parRetVal", "0")
@@ -115,48 +117,52 @@ Partial Class coupon_utente
                 conn.Dispose()
             End If
         End Try
-    End Function
-End Class
+    End Sub
+    ' Helper per la visualizzazione Tracking (usato nel markup con databinding)
+    Protected Function separa_tracking(ByVal tracking As String, ByVal link_tracking As String) As String
+        Try
+            If String.IsNullOrEmpty(tracking) Then Return ""
 
-Protected Function separa_tracking(ByVal tracking As String, ByVal link_tracking As String) As String
-    Try
-        If String.IsNullOrEmpty(tracking) Then Return ""
-        Dim temp As String() = tracking.Split(";"c)
-        Dim risultato As String = ""
-        For i As Integer = 0 To temp.Length - 1
-            Dim id As String = ""
-            Try
-                id = temp(i).Trim()
-            Catch
-                id = ""
-            End Try
+            Dim temp As String() = tracking.Split(";"c)
+            Dim risultato As String = ""
+            Dim imgUrl As String = ResolveUrl("~/Public/Images/interrogativo.png")
 
-            If id <> "" Then
-                Dim href As String = "#"
+            For i As Integer = 0 To temp.Length - 1
+                Dim id As String = ""
                 Try
-                    href = Convert.ToString(link_tracking).Replace("#ID#", id)
+                    id = temp(i).Trim()
                 Catch
-                    href = "#"
+                    id = ""
                 End Try
 
-                risultato &= "<img src=""Public/Images/interrogativo.png"" alt="""" title=""Clicca sul Numero Tracking"">" &
-                             "<a href=""" & Server.HtmlAttributeEncode(href) & """ target=""_blank"">" &
-                             Server.HtmlEncode(id) & "</a>; "
-            End If
-        Next
-        Return risultato
-    Catch
-        Return ""
-    End Try
-End Function
+                If id <> "" Then
+                    Dim href As String = "#"
+                    Try
+                        href = Convert.ToString(link_tracking).Replace("#ID#", id)
+                    Catch
+                        href = "#"
+                    End Try
 
-Protected Function testNote(ByVal note As Object) As String
-    Try
-        Dim s As String = Convert.ToString(note)
-        If String.IsNullOrEmpty(s) Then Return "display:none;"
-        Return ""
-    Catch
-        Return "display:none;"
-    End Try
-End Function
+                    risultato &= "<img src=""" & Server.HtmlAttributeEncode(imgUrl) & """ alt="""" title=""Clicca sul Numero Tracking"">" &
+                                 "<a href=""" & Server.HtmlAttributeEncode(href) & """ target=""_blank"">" &
+                                 Server.HtmlEncode(id) & "</a>; "
+                End If
+            Next
 
+            Return risultato
+        Catch
+            Return ""
+        End Try
+    End Function
+
+    ' Se la nota corriere è vuota, nasconde la riga (usato nello style attribute del markup)
+    Protected Function testNote(ByVal note As Object) As String
+        Try
+            Dim s As String = Convert.ToString(note)
+            If String.IsNullOrEmpty(s) Then Return "display:none;"
+            Return ""
+        Catch
+            Return "display:none;"
+        End Try
+    End Function
+End Class

@@ -1929,19 +1929,17 @@ Partial Class test
             End If
         Next
     End Sub
-End Class
-
-' Funzione che cambia colore al filtro "settore" (era inline in listini.aspx)
-Protected Function colora(ByVal descr As Object) As String
-    Try
-        Dim d As String = Convert.ToString(descr)
-        If Convert.ToString(Request.QueryString("n")) = d Then
-            Return "font-weight: bold; color: navy; text-decoration: none"
-        Else
+    ' Funzione che cambia colore al filtro "settore" (era inline in listini.aspx)
+    Protected Function colora(ByVal descr As Object) As String
+        Try
+            Dim d As String = Convert.ToString(descr)
+            If Convert.ToString(Request.QueryString("n")) = d Then
+                Return "font-weight: bold; color: navy; text-decoration: none"
+            Else
+                Return "font-weight: bold; color: white; text-decoration: none"
+            End If
+        Catch
             Return "font-weight: bold; color: white; text-decoration: none"
-        End If
-    Catch
-        Return "font-weight: bold; color: white; text-decoration: none"
-    End Try
-End Function
-
+        End Try
+    End Function
+End Class
