@@ -5,6 +5,7 @@ Imports System.Web
 Imports System.Text.RegularExpressions
 Imports System.Collections
 Imports System.Collections.Generic
+Imports System.Web.UI.WebControls
 
 Partial Class Articoli
     Inherits AntiCsrfPage
@@ -128,7 +129,41 @@ Partial Class Articoli
         End If
     End Sub
 
-    Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.LoadComplete
+    
+    ' ==========================================================
+    '  PAGER HELPERS (ListView + DataPager)
+    ' ==========================================================
+    Private Sub ApplyPagerSettings(ByVal doDataBind As Boolean)
+        Dim pageSize As Integer = 12
+        If Session("RigheArticoli") IsNot Nothing Then Integer.TryParse(Session("RigheArticoli").ToString(), pageSize)
+        If pageSize <= 0 Then pageSize = 12
+
+        If Me.dpProdotti IsNot Nothing Then
+            Me.dpProdotti.PageSize = pageSize
+
+            Dim pageIndex As Integer = 0
+            If Session("Articoli_PageIndex") IsNot Nothing Then Integer.TryParse(Session("Articoli_PageIndex").ToString(), pageIndex)
+            If pageIndex < 0 Then pageIndex = 0
+
+            Dim startRow As Integer = pageIndex * pageSize
+            Me.dpProdotti.SetPageProperties(startRow, pageSize, doDataBind)
+        End If
+
+        If Me.lblLinee IsNot Nothing Then Me.lblLinee.Text = pageSize.ToString()
+    End Sub
+
+    Protected Sub lvProdotti_PagePropertiesChanging(ByVal sender As Object, ByVal e As PagePropertiesChangingEventArgs)
+        ' Salvo la pagina corrente per mantenere lo stato tra postback/filtri
+        Dim pageIndex As Integer = 0
+        If e.MaximumRows > 0 Then pageIndex = CInt(Math.Floor(e.StartRowIndex / e.MaximumRows))
+        Session("Articoli_PageIndex") = pageIndex
+
+        If Me.dpProdotti IsNot Nothing Then
+            Me.dpProdotti.SetPageProperties(e.StartRowIndex, e.MaximumRows, False)
+        End If
+    End Sub
+
+Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.LoadComplete
         IvaTipo = Me.Session("IvaTipo")
 
         If IvaTipo = 1 Then
@@ -139,8 +174,7 @@ Partial Class Articoli
 
         CaricaArticoli()
 
-        Me.GridView1.PageSize = Me.Session("RigheArticoli")
-        Me.GridView1.PageIndex = Session("Articoli_PageIndex")
+        ApplyPagerSettings(False)
 
         'Inserimento della stringa di ricerca nella tabella query_string, per l'indicizzazione
         If Session("q") IsNot Nothing Then
@@ -791,11 +825,6 @@ strWhere = strWhere & " GROUP BY id"
     Protected Sub sdsArticoli_Selected(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.SqlDataSourceStatusEventArgs) Handles sdsArticoli.Selected
         Me.lblTrovati.Text = e.AffectedRows.ToString
     End Sub
-
-    Protected Sub GridView1_PageIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles GridView1.PageIndexChanged
-        Session("Articoli_PageIndex") = Me.GridView1.PageIndex
-    End Sub
-
     Function controlla_promo_articolo(ByVal cod_articolo As Integer, ByVal listino As Integer) As Integer
         Dim params As New Dictionary(Of String, Object)
         params.Add("@Listino", listino)
@@ -809,25 +838,20 @@ strWhere = strWhere & " GROUP BY id"
             Return 0
         End If
     End Function
-
-    ' *** VERSIONE RIPULITA: niente più sdsPromo/rPromo/img semaforo ***
-    Protected Sub GridView1_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles GridView1.PreRender
+    ' *** LISTVIEW PreRender (UI adjustments) ***
+    Protected Sub lvProdotti_PreRender(ByVal sender As Object, ByVal e As System.EventArgs)
         ' Nascondo il bottone Wishlist se l'utente non è loggato
-        For i As Integer = 0 To GridView1.Rows.Count - 1
-            Dim lbWishlist As LinkButton = TryCast(GridView1.Rows(i).FindControl("LB_wishlist"), LinkButton)
-            If lbWishlist IsNot Nothing Then
-                Dim idUtente As Integer = 0
-                If Session.Item("UtentiId") IsNot Nothing Then
-                    Integer.TryParse(Session.Item("UtentiId").ToString(), idUtente)
-                End If
-                If idUtente <= 0 Then
-                    lbWishlist.Visible = False
-                End If
-            End If
+        Dim idUtente As Integer = 0
+        If Session.Item("UtentiId") IsNot Nothing Then Integer.TryParse(Session.Item("UtentiId").ToString(), idUtente)
+        For Each it As ListViewDataItem In Me.lvProdotti.Items
+            Dim lbWishlist As LinkButton = TryCast(it.FindControl("LB_wishlist"), LinkButton)
+            If lbWishlist IsNot Nothing AndAlso idUtente <= 0 Then lbWishlist.Visible = False
         Next
 
-        ' Numero righe per pagina
-        Me.lblLinee.Text = Me.GridView1.PageSize
+        ' Footer multi-selezione e pager: li mostro solo se ho risultati
+        Dim hasItems As Boolean = (Me.lvProdotti.Items.Count > 0)
+        If Me.ksMultiFooter IsNot Nothing Then Me.ksMultiFooter.Visible = hasItems
+        If Me.ksPagerWrap IsNot Nothing Then Me.ksPagerWrap.Visible = hasItems
     End Sub
 
     ' CLICK SU ICONA "CARRELLO" PER SINGOLO ARTICOLO
@@ -835,8 +859,8 @@ strWhere = strWhere & " GROUP BY id"
         Dim img As ImageButton = TryCast(sender, ImageButton)
         If img Is Nothing Then Exit Sub
 
-        Dim row As GridViewRow = TryCast(img.NamingContainer, GridViewRow)
-        If row Is Nothing Then Exit Sub
+        Dim item As ListViewDataItem = TryCast(img.NamingContainer, ListViewDataItem)
+        If item Is Nothing Then Exit Sub
 
         ' Listino corrente (default 1)
         Dim listino As Integer = 1
@@ -847,7 +871,7 @@ strWhere = strWhere & " GROUP BY id"
         End If
 
         ' 1) ID ARTICOLO (usando gli helper)
-        Dim idVal As Integer = GetArticoloIdFromRow(row)
+        Dim idVal As Integer = GetArticoloIdFromContainer(item)
         If idVal <= 0 Then
             ' Non riesco a capire che articolo sia, torno semplicemente alla lista
             Response.Redirect("articoli.aspx")
@@ -855,10 +879,10 @@ strWhere = strWhere & " GROUP BY id"
         End If
 
         ' 2) QUANTITÀ
-        Dim qta As Integer = GetQuantitaFromRow(row)
+        Dim qta As Integer = GetQuantitaFromContainer(item)
 
         ' 3) TCID (Taglia/Colore) se presente, altrimenti -1
-        Dim tcIdVal As Integer = GetTCIdFromRow(row)
+        Dim tcIdVal As Integer = GetTCIdFromContainer(item)
 
         ' 4) PRODOTTO GRATIS (spedito gratis) calcolato da DB
         Session("ProdottoGratis") = spedito_gratis(idVal, listino)
@@ -927,11 +951,11 @@ strWhere = strWhere & " GROUP BY id"
             listino = tmpList
         End If
 
-        For Each row As GridViewRow In Me.GridView1.Rows
-            Dim temp_check As CheckBox = TryCast(row.FindControl("CheckBox_SelezioneMultipla"), CheckBox)
+        For Each it As ListViewDataItem In Me.lvProdotti.Items
+            Dim temp_check As CheckBox = TryCast(it.FindControl("CheckBox_SelezioneMultipla"), CheckBox)
             If temp_check IsNot Nothing AndAlso temp_check.Checked Then
 
-                Dim idVal As Integer = GetArticoloIdFromRow(row)
+                Dim idVal As Integer = GetArticoloIdFromContainer(it)
                 If idVal <= 0 Then Continue For
 
                 ' Controllo settore per ogni articolo selezionato
@@ -940,8 +964,8 @@ strWhere = strWhere & " GROUP BY id"
                     Return
                 End If
 
-                Dim tcIdVal As Integer = GetTCIdFromRow(row)
-                Dim qta As Integer = GetQuantitaFromRow(row)
+                Dim tcIdVal As Integer = GetTCIdFromContainer(it)
+                Dim qta As Integer = GetQuantitaFromContainer(it)
                 Dim prodottoGratisFlag As Integer = spedito_gratis(idVal, listino)
 
                 ' Stesso formato di sempre: id,tcid,qta,ProdottoGratis
@@ -971,14 +995,14 @@ strWhere = strWhere & " GROUP BY id"
     ' ============================
     ' HELPER PER LETTURA DATI DAL ROW
     ' ============================
-    Private Function GetArticoloIdFromRow(ByVal row As GridViewRow) As Integer
+    Private Function GetArticoloIdFromContainer(ByVal container As Control) As Integer
         Dim idVal As Integer = 0
 
-        Dim lblId As Label = TryCast(row.FindControl("lblID"), Label)
-        Dim lblId2 As Label = TryCast(row.FindControl("ID"), Label)
-        Dim tbId As TextBox = TryCast(row.FindControl("tbID"), TextBox)
-        Dim hfId As HiddenField = TryCast(row.FindControl("hfID"), HiddenField)
-        Dim hfIdArt As HiddenField = TryCast(row.FindControl("hfIdArticolo"), HiddenField)
+        Dim lblId As Label = TryCast(container.FindControl("lblID"), Label)
+        Dim lblId2 As Label = TryCast(container.FindControl("ID"), Label)
+        Dim tbId As TextBox = TryCast(container.FindControl("tbID"), TextBox)
+        Dim hfId As HiddenField = TryCast(container.FindControl("hfID"), HiddenField)
+        Dim hfIdArt As HiddenField = TryCast(container.FindControl("hfIdArticolo"), HiddenField)
 
         If lblId IsNot Nothing Then
             Integer.TryParse(lblId.Text, idVal)
@@ -995,9 +1019,9 @@ strWhere = strWhere & " GROUP BY id"
         Return idVal
     End Function
 
-    Private Function GetQuantitaFromRow(ByVal row As GridViewRow) As Integer
+    Private Function GetQuantitaFromContainer(ByVal container As Control) As Integer
         Dim qta As Integer = 1
-        Dim qtaBox As TextBox = TryCast(row.FindControl("tbQuantita"), TextBox)
+        Dim qtaBox As TextBox = TryCast(container.FindControl("tbQuantita"), TextBox)
         If qtaBox IsNot Nothing Then
             If Not Integer.TryParse(qtaBox.Text, qta) OrElse qta <= 0 Then
                 qta = 1
@@ -1006,10 +1030,10 @@ strWhere = strWhere & " GROUP BY id"
         Return qta
     End Function
 
-    Private Function GetTCIdFromRow(ByVal row As GridViewRow) As Integer
+    Private Function GetTCIdFromContainer(ByVal container As Control) As Integer
         Dim tcIdVal As Integer = -1
-        Dim lblTC As Label = TryCast(row.FindControl("lblTCId"), Label)
-        Dim hfTC As HiddenField = TryCast(row.FindControl("hfTCId"), HiddenField)
+        Dim lblTC As Label = TryCast(container.FindControl("lblTCId"), Label)
+        Dim hfTC As HiddenField = TryCast(container.FindControl("hfTCId"), HiddenField)
 
         If lblTC IsNot Nothing Then
             Integer.TryParse(lblTC.Text, tcIdVal)
@@ -1039,11 +1063,11 @@ strWhere = strWhere & " GROUP BY id"
         Dim ctrl As Control = TryCast(sender, Control)
         If ctrl Is Nothing Then Return
 
-        Dim row As GridViewRow = TryCast(ctrl.NamingContainer, GridViewRow)
-        If row Is Nothing Then Return
+        Dim item As ListViewDataItem = TryCast(ctrl.NamingContainer, ListViewDataItem)
+        If item Is Nothing Then Return
 
-        Dim idVal As Integer = GetArticoloIdFromRow(row)
-        Dim tcIdVal As Integer = GetTCIdFromRow(row)
+        Dim idVal As Integer = GetArticoloIdFromContainer(item)
+        Dim tcIdVal As Integer = GetTCIdFromContainer(item)
 
         Dim idUtente As Integer = 0
         Integer.TryParse(Convert.ToString(Session.Item("UtentiId")), idUtente)

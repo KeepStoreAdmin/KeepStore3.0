@@ -93,7 +93,7 @@
                 <div class="col-xl-3 col-md-3 col-7 d-flex align-items-center">
                     <div class="logo-site">
                         <a href="Default.aspx" class="d-inline-block">
-                            <asp:Image ID="imgLogo" runat="server" AlternateText="KeepStore" CssClass="lazyload" ImageUrl="/Public/assets/keepstore/images/logo/logo.webp" />
+                            <asp:Image ID="imgLogo" runat="server" AlternateText="KeepStore" CssClass="lazyload" ImageUrl="" />
                         </a>
                     </div>
                 </div>
@@ -227,6 +227,9 @@
 <div class="offcanvas offcanvas-start canvas-mb" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
     <div class="canvas-header">
         <h5 class="offcanvas-title" id="mobileMenuLabel">Menu</h5>
+        <div class="ms-auto me-2 d-flex align-items-center">
+            <asp:Image ID="imgLogoMobile" runat="server" AlternateText="KeepStore" CssClass="lazyload" ImageUrl="" Height="32" />
+        </div>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
 
@@ -307,7 +310,7 @@
 <div class="ft-inner flex-wrap flex-xl-nowrap">
 <div class="ft-logo">
 <a class="logo-site" href="Default.aspx">
-<img alt="Logo" class="lazyload" decoding="async" height="128" src="/Public/assets/keepstore/images/logo/logo.webp" srcset="/Public/assets/keepstore/images/logo/logo.webp 328w" width="185"/>
+<img alt="Logo" class="lazyload" decoding="async" height="128" src="<%= ThemeManager.Asset("images/logo/logo.webp") %>" srcset="<%= ThemeManager.Asset("images/logo/logo.webp") %> 328w" width="185"/>
 </a>
 <div class="method-payment">
 <p>
@@ -315,16 +318,16 @@
                                     </p>
 <ul class="method-list">
 <li>
-<img alt="Payment" src="/Public/assets/keepstore/images/payment/visa.svg"/>
+<img alt="Payment" src="<%= ThemeManager.Asset("images/payment/visa.svg") %>"/>
 </li>
 <li>
-<img alt="Payment" src="/Public/assets/keepstore/images/payment/paypal.svg"/>
+<img alt="Payment" src="<%= ThemeManager.Asset("images/payment/paypal.svg") %>"/>
 </li>
 <li>
-<img alt="Payment" src="/Public/assets/keepstore/images/payment/discover.svg"/>
+<img alt="Payment" src="<%= ThemeManager.Asset("images/payment/discover.svg") %>"/>
 </li>
 <li>
-<img alt="Payment" src="/Public/assets/keepstore/images/payment/master.svg"/>
+<img alt="Payment" src="<%= ThemeManager.Asset("images/payment/master.svg") %>"/>
 </li>
 </ul>
 </div>
@@ -412,7 +415,7 @@
 <div class="ft-center justify-content-xxl-between">
 <p class="notice text-white justify-content-xxl-between">
 <span class="main-title fw-semibold">
-<img alt="" src="/Public/assets/keepstore/images/mail.svg"/>
+<img alt="" src="<%= ThemeManager.Asset("images/mail.svg") %>"/>
                                     10% Off Your First Order
                                 </span>
 <span class="body-text-3">

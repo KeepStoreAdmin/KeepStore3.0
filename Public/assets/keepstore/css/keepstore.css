@@ -672,3 +672,30 @@ body
 .list-account-address .account-address-item.ks-muted {
     opacity: .9;
 }
+/* ============================================================
+   KeepStore - DataPager styled like template pagination
+   (articoli.aspx ListView)
+   ============================================================ */
+.ks-pager > span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ks-pager a,
+.ks-pager span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 999px;
+  text-decoration: none;
+}
+
+.ks-pager .ks-current {
+  font-weight: 600;
+  cursor: default;
+  pointer-events: none;
+}

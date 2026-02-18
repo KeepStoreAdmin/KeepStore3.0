@@ -1144,7 +1144,7 @@ End Sub
 	            If aziendaLogo <> "" Then
 	                imgLogoCtrl.ImageUrl = aziendaLogo
 	            ElseIf String.IsNullOrEmpty(imgLogoCtrl.ImageUrl) Then
-	                imgLogoCtrl.ImageUrl = ResolveUrl("~/Public/assets/keepstore/images/logo/logo.webp")
+	                imgLogoCtrl.ImageUrl = ThemeManager.Asset("images/logo/logo.webp")
 	            End If
 	            If altLogo <> "" Then imgLogoCtrl.AlternateText = altLogo
 	        End If
@@ -1153,7 +1153,7 @@ End Sub
 	            If aziendaLogo <> "" Then
 	                imgLogoMobileCtrl.ImageUrl = aziendaLogo
 	            ElseIf String.IsNullOrEmpty(imgLogoMobileCtrl.ImageUrl) Then
-	                imgLogoMobileCtrl.ImageUrl = ResolveUrl("~/Public/assets/keepstore/images/logo/logo.webp")
+	                imgLogoMobileCtrl.ImageUrl = ThemeManager.Asset("images/logo/logo.webp")
 	            End If
 	            If altLogo <> "" Then imgLogoMobileCtrl.AlternateText = altLogo
 	        End If

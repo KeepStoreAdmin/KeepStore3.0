@@ -338,126 +338,56 @@
                     </div>
 
                     <div class="gridLayout-wrapper">
-                        <asp:GridView ID="GridView1" runat="server"
-                            AutoGenerateColumns="False"
-                            DataKeyNames="id"
-                            DataSourceID="sdsArticoli"
-                            AllowPaging="True"
-                            Font-Size="8pt"
-                            GridLines="None"
-                            CellPadding="0"
-                            Width="100%"
-                            ShowFooter="True"
-                            ShowHeader="False"
-                            CssClass="table-borderless ks-gridview-as-grid tf-grid-layout lg-col-4 md-col-3 sm-col-2 flat-grid-product wrapper-shop layout-tabgrid-1">
+                        <asp:ListView ID="lvProdotti" runat="server"
+    DataKeyNames="id"
+    DataSourceID="sdsArticoli"
+    OnPagePropertiesChanging="lvProdotti_PagePropertiesChanging"
+    OnPreRender="lvProdotti_PreRender">
+    <LayoutTemplate>
+        <div class="tf-grid-layout lg-col-4 md-col-3 sm-col-2 flat-grid-product wrapper-shop layout-tabgrid-1">
+            <asp:PlaceHolder ID="itemPlaceholder" runat="server" />
+        </div>
+    </LayoutTemplate>
 
-                            <Columns>
-                                <asp:TemplateField>
-                                    <ItemTemplate>
-                                        <div class="card-product ks-card-product">
+    <ItemTemplate>
+        <asp:Label ID="lblSettore" runat="server" Text='<%# ucase(Eval("SettoriDescrizone")) %>' EnableViewState="False"></asp:Label>
+                    »
+                    <asp:Label ID="lblCategoria" runat="server" Text='<%# H(Eval("Descrizione")) %>' EnableViewState="False"></asp:Label>
+    </ItemTemplate>
 
-                                            <div class="card-product-wrapper">
-                                                <a href='<%# ResolveUrl("~/articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCid")) %>' class="product-img">
-                                                    <asp:Image ID="imgProd" runat="server" CssClass="img-product lazyload" AlternateText='<%# H(Eval("Descrizione1")) %>' ImageUrl='<%# checkImg(Eval("img1")) %>' />
-                                                    <asp:Image ID="imgHover" runat="server" CssClass="img-hover lazyload" AlternateText='<%# H(Eval("Descrizione1")) %>' ImageUrl='<%# checkImg(Eval("img1")) %>' />
-                                                </a>
-
-                                                <ul class="list-product-btn top-0 end-0">
-                                                    <li>
-                                                        <asp:ImageButton ID="ImageButton2" runat="server" OnClick="ImageButton1_Click" CssClass="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left" ToolTip="Aggiungi al carrello" ImageUrl="~/Public/assets/keepstore/images/icon-cart2.svg" />
-                                                    </li>
-
-                                                    <li class="d-none d-sm-block wishlist">
-                                                        <asp:LinkButton ID="LB_wishlist" runat="server" OnClick="BT_Aggiungi_wishlist_Click" CssClass="box-icon btn-icon-action hover-tooltip tooltip-left">
-                                                            <i class="icon icon-heart2"></i>
-                                                            <span class="tooltip">Wishlist</span>
-                                                        </asp:LinkButton>
-                                                    </li>
-
-                                                    <li>
-                                                        <a href='<%# ResolveUrl("~/articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCid")) %>' class="box-icon btn-icon-action hover-tooltip tooltip-left">
-                                                            <i class="icon icon-view"></i>
-                                                            <span class="tooltip">Scheda tecnica</span>
-                                                        </a>
-                                                    </li>
-
-                                                    <li class="d-none d-sm-block">
-                                                        <a href='<%# GetWhatsAppShareUrl(Eval("Descrizione1"), Eval("id"), Eval("TCid")) %>' class="box-icon btn-icon-action hover-tooltip tooltip-left">
-                                                            <img src='<%# GetWhatsAppIconUrl() %>' alt="WhatsApp" style="height:24px;" />
-                                                            <span class="tooltip">WhatsApp</span>
-                                                        </a>
-                                                    </li>
-                                                </ul>
-
-                                                <asp:Panel ID="pnlSale" runat="server" Visible='<%# Eval("InOfferta") %>'>
-                                                    <div class="box-sale-wrap pst-default">
-                                                        <p class="small-text">Sale</p>
-                                                        <p class="title-sidebar-2"><%# GetDiscountPercent(Eval("PrezzoOldIvato"), Eval("PrezzoIvato")) %></p>
-                                                    </div>
-                                                </asp:Panel>
-                                            </div>
-
-                                            <div class="card-product-info">
-                                                <div class="box-title">
-                                                    <div>
-                                                        <p class="product-tag caption text-main-2"><%# H(Eval("MarcheDescrizione")) %></p>
-                                                        <asp:HyperLink ID="hlTitolo" runat="server" CssClass="name-product body-md-2 fw-semibold text-secondary link" NavigateUrl='<%# ResolveUrl("~/articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCid")) %>' Text='<%# H(Eval("Descrizione1")) %>'></asp:HyperLink>
-                                                    </div>
-                                                    <p class="price-wrap fw-medium">
-                                                        <asp:Label ID="lblPrezzoPromo" runat="server" CssClass="new-price price-text fw-medium" Text='<%# Bind("PrezzoIvato", "{0:C}") %>'></asp:Label>
-                                                        <asp:Label ID="lblPrezzoVecchio" runat="server" CssClass="old-price body-md-2 text-main-2" Visible='<%# Eval("InOfferta") %>' Text='<%# Bind("PrezzoOldIvato", "{0:C}") %>'></asp:Label>
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            <div class="card-product-btn">
-                                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-10">
-                                                    <div class="wg-quantity">
-                                                        <span class="btn-quantity minus-btn"><i class="icon-minus"></i></span>
-                                                        <asp:TextBox ID="tbQuantita" runat="server" CssClass="quantity-product" Text="1" MaxLength="4"></asp:TextBox>
-                                                        <span class="btn-quantity plus-btn"><i class="icon-plus"></i></span>
-                                                    </div>
-
-                                                    <div class="ks-multi">
-                                                        <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" ToolTip="Seleziona per aggiunta multipla" />
-                                                        <span class="caption text-main-2">Multi</span>
-                                                    </div>
-                                                </div>
-
-                                                <!-- Campi per la logica esistente (ID/TCID/QTA) -->
-                                                <asp:TextBox ID="tbID" runat="server" Text='<%# Eval("ID") %>' Visible="false"></asp:TextBox>
-                                                <asp:HiddenField ID="hfIdArticolo" runat="server" Value='<%# Eval("ID") %>' />
-                                                <asp:HiddenField ID="hfTCId" runat="server" Value='<%# Eval("TCid") %>' />
-                                            </div>
-                                        </div>
-                                    </ItemTemplate>
-
-                                    <FooterTemplate>
-                                        <div class="ks-grid-footer d-flex justify-content-center align-items-center gap-10 py-3">
-                                            <span class="body-text-3 fw-semibold">Aggiungi selezionati</span>
-                                            <asp:ImageButton ID="Selezione_Multipla" runat="server" ImageUrl="~/Public/Images/aggiungiMultiplo.png" OnClick="Selezione_Multipla_Click" AlternateText="Aggiungi selezionati" />
-                                        </div>
-                                    </FooterTemplate>
-                                </asp:TemplateField>
-                            </Columns>
-
-                            <EmptyDataTemplate>
-                                <div class="tf-page-title py-5">
+    <EmptyDataTemplate>
+        <div class="tf-page-title py-5">
                                     <div class="heading text-center">Nessun prodotto trovato</div>
                                     <p class="text text-center mt-3">Prova a rimuovere alcuni filtri o cambia ricerca.</p>
                                     <div class="text-center mt-4">
                                         <a class="tf-btn btn-fill" href="articoli.aspx">Rimuovi filtri</a>
                                     </div>
                                 </div>
-                            </EmptyDataTemplate>
+    </EmptyDataTemplate>
+</asp:ListView>
 
-                            <FooterStyle CssClass="ks-grid-footer" />
+<div id="ksMultiFooter" runat="server" class="ks-grid-footer d-flex justify-content-center align-items-center gap-10 py-3">
+    <span class="body-text-3 fw-semibold">Aggiungi selezionati</span>
+    <asp:ImageButton ID="Selezione_Multipla" runat="server" ImageUrl="~/Public/Images/aggiungiMultiplo.png" OnClick="Selezione_Multipla_Click" AlternateText="Aggiungi selezionati" />
+</div>
 
-
-
-                            <PagerStyle CssClass="pagination-ys" />
-                            <PagerSettings Position="Bottom" Mode="NumericFirstLast" FirstPageText="&lt;&lt;" LastPageText="&gt;&gt;" />
-                        </asp:GridView>
+<div id="ksPagerWrap" runat="server" class="d-flex justify-content-center mt-4">
+    <div class="ks-pager wg-pagination wd-load">
+        <asp:DataPager ID="dpProdotti" runat="server" PagedControlID="lvProdotti" PageSize="12">
+            <Fields>
+                <asp:NextPreviousPagerField ShowFirstPageButton="False" ShowPreviousPageButton="True"
+                    ShowNextPageButton="False" ShowLastPageButton="False" ButtonType="Link"
+                    PreviousPageText="<i class='icon-arrow-left-lg'></i>"  ButtonCssClass="link" />
+                <asp:NumericPagerField ButtonType="Link" RenderNonBreakingSpacesBetweenControls="False"
+                    NumericButtonCssClass="title-normal link"
+                    CurrentPageLabelCssClass="title-normal link ks-current" />
+                <asp:NextPreviousPagerField ShowFirstPageButton="False" ShowPreviousPageButton="False"
+                    ShowNextPageButton="True" ShowLastPageButton="False" ButtonType="Link"
+                    NextPageText="<i class='icon-arrow-right-lg'></i>"  ButtonCssClass="link" />
+            </Fields>
+        </asp:DataPager>
+    </div>
+</div>
                     </div>
 
                     <div class="mt-3">
