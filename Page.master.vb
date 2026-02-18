@@ -584,7 +584,7 @@ End Sub
     '==========================================================
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
 
-        ' dynamic controls (new template does not expose all legacy IDs)
+        ' dynamic controls (Onsus template does not expose all legacy IDs)
         Dim lbl4 As Label = FindCtrl(Of Label)("Label4")
         Dim hl14 As HyperLink = FindCtrl(Of HyperLink)("HyperLink14")
         Dim mv As MultiView = FindCtrl(Of MultiView)("mvLogin")
@@ -1143,7 +1143,7 @@ End Sub
 	        If imgLogoCtrl IsNot Nothing Then
 	            If aziendaLogo <> "" Then
 	                imgLogoCtrl.ImageUrl = aziendaLogo
-	            ElseIf String.IsNullOrEmpty(imgLogoCtrl.ImageUrl) Then
+	            Else
 	                imgLogoCtrl.ImageUrl = ThemeManager.Asset("images/logo/logo.webp")
 	            End If
 	            If altLogo <> "" Then imgLogoCtrl.AlternateText = altLogo
@@ -1152,7 +1152,7 @@ End Sub
 	        If imgLogoMobileCtrl IsNot Nothing Then
 	            If aziendaLogo <> "" Then
 	                imgLogoMobileCtrl.ImageUrl = aziendaLogo
-	            ElseIf String.IsNullOrEmpty(imgLogoMobileCtrl.ImageUrl) Then
+	            Else
 	                imgLogoMobileCtrl.ImageUrl = ThemeManager.Asset("images/logo/logo.webp")
 	            End If
 	            If altLogo <> "" Then imgLogoMobileCtrl.AlternateText = altLogo

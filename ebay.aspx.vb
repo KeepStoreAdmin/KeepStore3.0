@@ -749,8 +749,8 @@ Partial Class ebay
 		Dim root As XmlElement
 		Dim result As String = String.Empty
 		Dim attempts As Integer = 0
-		Dim jobId As String
-		Dim fileReferenceId As String
+		Dim jobId As String = String.Empty
+		Dim fileReferenceId As String = String.Empty
 		REM Dim createUploadJobResponse As XmlDocument
 		REM while attempts < 12
 			try
@@ -771,6 +771,9 @@ Partial Class ebay
 			REM attempts = 0
 			REM root = createUploadJobResponse.DocumentElement
 		if result = String.Empty Then
+			If String.IsNullOrEmpty(jobId) OrElse String.IsNullOrEmpty(fileReferenceId) Then
+			    Return "Missing jobId/fileReferenceId"
+			End If
 			ebayUtilities.uploadFileRequest(accessToken, country, jobId, fileReferenceId, Server.MapPath(".") & "\ebay\" & uploadJobType & ".zip")
 			REM Dim startUploadJobResponse As XmlDocument = ToXmlDocument(ebayUtilities.startUploadJobRequest(accessToken, country, jobId))
 			REM root = startUploadJobResponse.DocumentElement

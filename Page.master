@@ -39,25 +39,10 @@
 
 </head>
 
-<body id="PageBody" runat="server" class='<%= ThemeManager.Css("body", "preload-wrapper popup-loader") %>'>
+<body id="PageBody" runat="server">
 <form id="form1" runat="server">
 
-        
-        <!-- Scroll Top -->
-        <button id="goTop" type="button">
-            <span class="border-progress"></span>
-            <span class="icon icon-arrow-right"></span>
-        </button>
-
-        <!-- preload -->
-        <div class="preload preload-container" id="preload">
-            <div class="preload-logo">
-                <div class="spinner"></div>
-            </div>
-        </div>
-        <!-- /preload -->
-
-<!-- ============================================================
+        <!-- ============================================================
              Global: Facebook Like popup placeholder (legacy)
              NOTE: controllato dal code-behind (PopUpfacebook.Visible)
              ============================================================ -->
@@ -93,7 +78,7 @@
                 <div class="col-xl-3 col-md-3 col-7 d-flex align-items-center">
                     <div class="logo-site">
                         <a href="Default.aspx" class="d-inline-block">
-                            <asp:Image ID="imgLogo" runat="server" AlternateText="KeepStore" CssClass="lazyload" ImageUrl="" />
+                            <asp:Image ID="imgLogo" runat="server" AlternateText="KeepStore" CssClass="lazyload" ImageUrl="/Public/assets/keepstore/images/logo/logo.webp" />
                         </a>
                     </div>
                 </div>
@@ -227,9 +212,6 @@
 <div class="offcanvas offcanvas-start canvas-mb" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
     <div class="canvas-header">
         <h5 class="offcanvas-title" id="mobileMenuLabel">Menu</h5>
-        <div class="ms-auto me-2 d-flex align-items-center">
-            <asp:Image ID="imgLogoMobile" runat="server" AlternateText="KeepStore" CssClass="lazyload" ImageUrl="" Height="32" />
-        </div>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
 
@@ -318,16 +300,16 @@
                                     </p>
 <ul class="method-list">
 <li>
-<img alt="Payment" src="<%= ThemeManager.Asset("images/payment/visa.svg") %>"/>
+<img alt="Payment" src="<%= ThemeManager.Asset(\"images/payment/visa.svg\") %>"/>
 </li>
 <li>
-<img alt="Payment" src="<%= ThemeManager.Asset("images/payment/paypal.svg") %>"/>
+<img alt="Payment" src="<%= ThemeManager.Asset(\"images/payment/paypal.svg\") %>"/>
 </li>
 <li>
-<img alt="Payment" src="<%= ThemeManager.Asset("images/payment/discover.svg") %>"/>
+<img alt="Payment" src="<%= ThemeManager.Asset(\"images/payment/discover.svg\") %>"/>
 </li>
 <li>
-<img alt="Payment" src="<%= ThemeManager.Asset("images/payment/master.svg") %>"/>
+<img alt="Payment" src="<%= ThemeManager.Asset(\"images/payment/master.svg\") %>"/>
 </li>
 </ul>
 </div>
