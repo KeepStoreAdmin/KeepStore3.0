@@ -57,15 +57,43 @@ Public Module ThemeManager
     ''' Base URL per gli asset del template corrente.
     ''' Configurabile via appSettings: KeepStore.Theme.AssetsBaseUrl
     ''' </summary>
+    ' <summary>
+    ' Base URL per gli asset del template corrente.
+    ' Priorità (web.config / appSettings):
+    '  1) KeepStore.Theme.AssetsBaseUrl
+    '  2) KeepStore.Theme.BaseUrl (alias compatibilità)
+    '  3) /Public/assets/<ThemeName>/ (auto)
+    '  4) default: /Public/assets/keepstore/
+    ' </summary>
     Public ReadOnly Property AssetsBaseUrl As String
         Get
             Dim v As String = Nothing
+
+            ' 1) AssetsBaseUrl
             Try
                 v = ConfigurationManager.AppSettings("KeepStore.Theme.AssetsBaseUrl")
             Catch
                 v = Nothing
             End Try
 
+            ' 2) BaseUrl alias (compatibilità)
+            If String.IsNullOrWhiteSpace(v) Then
+                Try
+                    v = ConfigurationManager.AppSettings("KeepStore.Theme.BaseUrl")
+                Catch
+                    v = Nothing
+                End Try
+            End If
+
+            ' 3) fallback automatico su ThemeName
+            If String.IsNullOrWhiteSpace(v) Then
+                Dim tn As String = ThemeName
+                If Not String.IsNullOrWhiteSpace(tn) Then
+                    v = "/Public/assets/" & tn & "/"
+                End If
+            End If
+
+            ' 4) fallback finale
             If String.IsNullOrWhiteSpace(v) Then
                 v = DefaultBaseUrl
             End If
@@ -77,6 +105,15 @@ Public Module ThemeManager
             If Not v.EndsWith("/", StringComparison.Ordinal) Then v &= "/"
 
             Return v
+        End Get
+    End Property
+
+    ' <summary>
+    ' Alias di AssetsBaseUrl (compatibilità semantica).
+    ' </summary>
+    Public ReadOnly Property BaseUrl As String
+        Get
+            Return AssetsBaseUrl
         End Get
     End Property
 

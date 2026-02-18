@@ -101,9 +101,9 @@
                                 <asp:TextBox ID="tbTipo" runat="server" Visible="false" Text='<%# Eval("TipoDocumentiId") %>' Width="10"></asp:TextBox>
                                 <asp:TextBox ID="tbOnline" runat="server" Visible="false" Text='<%# Eval("PagamentiTipoOnline") %>' Width="10"></asp:TextBox>
 
-                                <asp:ImageButton ID="btBancaSella" runat="server" Visible="false" CommandName="PagamentoBancaSella" CommandArgument='<%# Eval("ShopLogin") %>' codiceAutorizzazione='<%# Eval("CodiceAutorizzazione")%>' idDocumento='<%# Eval("id") %>' nDocumento='<%# Eval("NDocumento") %>' totaleDocumento='<%# Eval("TotaleDocumento") %>' ToolTip="Paga Adesso" ImageUrl="Public/assets/keepstore/images/paga_adesso.gif" Style="height:42px;" />
+                                <asp:ImageButton ID="btBancaSella" runat="server" Visible="false" CommandName="PagamentoBancaSella" CommandArgument='<%# Eval("ShopLogin") %>' codiceAutorizzazione='<%# Eval("CodiceAutorizzazione")%>' idDocumento='<%# Eval("id") %>' nDocumento='<%# Eval("NDocumento") %>' totaleDocumento='<%# Eval("TotaleDocumento") %>' ToolTip="Paga Adesso" ImageUrl="/Public/Images/paga_adesso.gif" Style="height:42px;" />
 
-                                <asp:ImageButton ID="btIwBank" runat="server" Visible="false" PostBackUrl='<%# "https://checkout.iwsmile.it/Pagamenti/?ACCOUNT=" & Me.Session("AccountIwBank") & "&ITEM_NAME=Ordine+n.+" & Eval("NDocumento") & "+del+" & Eval("DataDocumento") & "&ITEM_NUMBER=" & Eval("NDocumento") & "&QUANTITY=1&FLAG_ONLY_IWS=0&AMOUNT=" & Replace(Replace(Eval("TotaleDocumento", "{0:N}"), ".", ""), ",", ".") & "&NOTE=0&URL_OK=" & Request.Url.Scheme & "://" & Request.Url.Host & "/pagamento.aspx?id=" & Eval("id") & "&URL_BAD=" & Request.Url.Scheme & "://" & Request.Url.Host & "/documentidettaglio.aspx?id=" & Eval("id") %>' ToolTip="Paga con IwBank" ImageUrl="Public/assets/keepstore/images/paga_adesso.gif" Style="height:42px;" />
+                                <asp:ImageButton ID="btIwBank" runat="server" Visible="false" PostBackUrl='<%# "https://checkout.iwsmile.it/Pagamenti/?ACCOUNT=" & Me.Session("AccountIwBank") & "&ITEM_NAME=Ordine+n.+" & Eval("NDocumento") & "+del+" & Eval("DataDocumento") & "&ITEM_NUMBER=" & Eval("NDocumento") & "&QUANTITY=1&FLAG_ONLY_IWS=0&AMOUNT=" & Replace(Replace(Eval("TotaleDocumento", "{0:N}"), ".", ""), ",", ".") & "&NOTE=0&URL_OK=" & Request.Url.Scheme & "://" & Request.Url.Host & "/pagamento.aspx?id=" & Eval("id") & "&URL_BAD=" & Request.Url.Scheme & "://" & Request.Url.Host & "/documentidettaglio.aspx?id=" & Eval("id") %>' ToolTip="Paga con IwBank" ImageUrl="/Public/Images/paga_adesso.gif" Style="height:42px;" />
 
                                 <asp:Button ID="btPayPal" runat="server" Visible="false" Text="PAGA ADESSO" Font-Bold="true" CommandName="PagamentoPayPal" idDocumento='<%# Eval("id") %>' nDocumento='<%# Eval("NDocumento") %>' totaleDocumento='<%# Replace(Replace(Eval("TotaleDocumento", "{0:N}"), ".", ""), ",", ".") %>' dataDocumento='<%# Eval("DataDocumento") %>' ToolTip="Paga con PayPal" CssClass="tf-btn" />
                             </div>
@@ -166,7 +166,7 @@
 
                     <% If Me.GridView2.Rows.Count > 0 Then %>
                         <div style="margin:10px 0;">
-                            <img src="Public/assets/keepstore/images/spGratis.gif" alt="Spedizione gratis" />
+                            <img src="/Public/Images/spGratis.gif" alt="Spedizione gratis" />
                         </div>
                     <% End If %>
 

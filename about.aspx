@@ -35,7 +35,7 @@
                 </div>
                 <div class="col-lg-6">
                     <div class="tf-img-with-text">
-                        <img class="lazyload" data-src="/Public/onsus/images/slider/slider-1.jpg" src="/Public/onsus/images/slider/slider-1.jpg" alt="KeepStore" />
+                        <img class="lazyload" data-src='<%= ThemeManager.Asset("images/banner/banner-11.jpg") %>' src='<%= ThemeManager.Asset("images/banner/banner-11.jpg") %>' alt="KeepStore" />
                     </div>
                 </div>
             </div>

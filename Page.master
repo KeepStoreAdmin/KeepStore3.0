@@ -39,10 +39,25 @@
 
 </head>
 
-<body id="PageBody" runat="server">
+<body id="PageBody" runat="server" class='<%= ThemeManager.Css("body", "preload-wrapper popup-loader") %>'>
 <form id="form1" runat="server">
 
-        <!-- ============================================================
+        
+        <!-- Scroll Top -->
+        <button id="goTop" type="button">
+            <span class="border-progress"></span>
+            <span class="icon icon-arrow-right"></span>
+        </button>
+
+        <!-- preload -->
+        <div class="preload preload-container" id="preload">
+            <div class="preload-logo">
+                <div class="spinner"></div>
+            </div>
+        </div>
+        <!-- /preload -->
+
+<!-- ============================================================
              Global: Facebook Like popup placeholder (legacy)
              NOTE: controllato dal code-behind (PopUpfacebook.Visible)
              ============================================================ -->

@@ -1,4 +1,4 @@
-<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="documenti.aspx.vb" Inherits="documenti" Debug="true" %>
+<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="documenti.aspx.vb" Inherits="documenti" Debug="false" %>
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
     I miei documenti
@@ -60,7 +60,7 @@
                     var popWidth = dim[0].split('=')[1]; //Gets the first query string value
 
                     //Fade in the Popup and add close button
-                    JQ('#' + popID).fadeIn().css({ 'width': Number(popWidth) }).prepend('<a href="#" class="close"><img src="Public/assets/keepstore/images/close_pop.png" class="btn_close" title="Close Window" alt="Close" /></a>');
+                    JQ('#' + popID).fadeIn().css({ 'width': Number(popWidth) }).prepend('<a href="#" class="close"><img src="/Public/Images/close_pop.png" class="btn_close" title="Close Window" alt="Close" /></a>');
 
                     //Define margin for center alignment (vertical + horizontal)
                     var popMargTop = (10 + 80) / 2;
@@ -92,7 +92,7 @@
                Session("esito_invio_mail") = 0
         %>
         <div id="popup" class="popup_block" style="display:none; vertical-align:middle;">
-            <div><img src="Public/assets/keepstore/images/Ok.png" alt="" /></div><br />
+            <div><img src="/Public/Images/Ok.png" alt="" /></div><br />
             <div>Richiesta inoltrata. Riceverà il documento presso la sua casella email !!!</div>
         </div>
         <% End If %>
@@ -232,7 +232,7 @@
                                             <div class="body-small text-main-2 mb-1">Dal</div>
                                             <div class="d-flex align-items-center gap-2">
                                                 <asp:TextBox runat="server" ID="dataInizio" CssClass="tf-input" Width="150px"></asp:TextBox>
-                                                <asp:ImageButton runat="server" ID="ib_calendarInizio" ImageUrl="Public/assets/keepstore/images/calendar_icon.gif" />
+                                                <asp:ImageButton runat="server" ID="ib_calendarInizio" ImageUrl="/Public/Images/calendar_icon.gif" />
                                             </div>
                                         </div>
 
@@ -240,7 +240,7 @@
                                             <div class="body-small text-main-2 mb-1">Al</div>
                                             <div class="d-flex align-items-center gap-2">
                                                 <asp:TextBox runat="server" ID="dataFine" CssClass="tf-input" Width="150px"></asp:TextBox>
-                                                <asp:ImageButton runat="server" ID="ImageButton1" ImageUrl="Public/assets/keepstore/images/calendar_icon.gif" />
+                                                <asp:ImageButton runat="server" ID="ImageButton1" ImageUrl="/Public/Images/calendar_icon.gif" />
                                             </div>
                                         </div>
                                     </div>
@@ -366,24 +366,24 @@
 
                         <asp:ImageButton ID="imgStampaDoc" idDoc='<%# Eval("id")%>' runat="server"
                             ToolTip="Richiedi documento tramite posta elettronica"
-                            ImageUrl="images/pdf2mail.png" OnClick="stampaClick" CssClass="ks-icon-btn" />
+                            ImageUrl="/Images/pdf2mail.png" OnClick="stampaClick" CssClass="ks-icon-btn" />
 
                         <% If Request.QueryString("t") = Session("IdDocumentoCoupon") Then %>
                             <a href="<%# "coupon_esito_acquisto.aspx?id=" & Eval("Coupon_idCoupon") & "&cod=" & Eval("Coupon_CodControllo") %>"
                                class="ks-icon-btn"
                                style="display:<%# IIf(Eval("Pagato") = 1 Or (Eval("PagamentiTipoOnline") = 0), "", "none")%>;">
-                                <img src="Public/assets/keepstore/images/Pagato.png" alt="Pagato" />
+                                <img src="/Public/Images/pagato.png" alt="Pagato" />
                             </a>
                         <% Else %>
                             <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>"
                                class="ks-icon-btn"
                                style="display:<%# IIf((Eval("Pagato") = 1 And (Eval("PagamentiTipoOnline") > 0)) Or (Eval("CodiceAutorizzazione") <> ""), "", "none")%>;">
-                                <img src="Public/assets/keepstore/images/Pagato.png" alt="Pagato" />
+                                <img src="/Public/Images/pagato.png" alt="Pagato" />
                             </a>
                             <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>"
                                class="ks-icon-btn"
                                style="display:<%# MostraPagaOra(Eval("Pagato"), Eval("CodiceAutorizzazione"), Eval("StatiId"), Eval("PagamentiTipoOnline")) %>;">
-                                <img src="Public/assets/keepstore/images/Paga_Ora.png" alt="Paga ora" />
+                                <img src="/Public/Images/Paga_Ora.png" alt="Paga ora" />
                             </a>
                         <% End If %>
 
