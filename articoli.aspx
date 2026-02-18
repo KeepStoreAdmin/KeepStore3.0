@@ -513,7 +513,7 @@
                     </script>
 
 
-                <!-- SIDEBAR / FILTRI (ONus: canvas-filter-product right) -->
+                <!-- SIDEBAR / FILTRI (canvas-filter-product right) -->
                 
 
             </div>

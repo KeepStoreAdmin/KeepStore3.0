@@ -122,7 +122,7 @@
         
         <div class="ks-myaccount">
 
-            <!-- Breakcrumbs (ONUS) -->
+            <!-- Breadcrumb -->
             <div class="tf-sp-1 pb-0">
         <div class="container">
             <div class="tf-breadcrumb-wrap">
@@ -316,13 +316,13 @@
                         <details class="ks-order-details mt-1">
                             <summary class="body-small link">Info</summary>
                             <div class="ks-order-details-body">
-                                <div class="body-small"><strong>Destinatario:</strong> <%# Eval("RagioneSociale") %> <%# Eval("CognomeNome") %> - <%# Eval("SedeLegale") %></div>
-                                <div class="body-small"><strong>Altra destinazione:</strong> <%# Eval("DestinazioneMerci") %></div>
-                                <div class="body-small"><strong>Pagamento:</strong> <%# Eval("PagamentiTipoDescrizione") %></div>
-                                <div class="body-small"><strong>Spedizione:</strong> <%# Eval("VettoriDescrizione") %></div>
+                                <div class="body-small"><strong>Destinatario:</strong> <%#: Eval("RagioneSociale") %> <%#: Eval("CognomeNome") %> - <%#: Eval("SedeLegale") %></div>
+                                <div class="body-small"><strong>Altra destinazione:</strong> <%#: Eval("DestinazioneMerci") %></div>
+                                <div class="body-small"><strong>Pagamento:</strong> <%#: Eval("PagamentiTipoDescrizione") %></div>
+                                <div class="body-small"><strong>Spedizione:</strong> <%#: Eval("VettoriDescrizione") %></div>
                                 <div class="body-small"><strong>Tracking:</strong> <%# separa_tracking(Eval("Tracking"), Eval("Link_Tracking")) %></div>
-                                <div class="body-small" style="<%# testNote(Eval("Note")) %>"><strong>Note corriere:</strong> <%# Eval("Note") %></div>
-                                <div class="body-small"><strong>Note:</strong> <%# Eval("NoteEsterne") %></div>
+                                <div class="body-small" style="<%# testNote(Eval("Note")) %>"><strong>Note corriere:</strong> <%#: Eval("Note") %></div>
+                                <div class="body-small"><strong>Note:</strong> <%#: Eval("NoteEsterne") %></div>
                             </div>
                         </details>
                     </div>
@@ -337,7 +337,7 @@
 
             <asp:TemplateField HeaderText="Stato">
                 <ItemTemplate>
-                    <span class="body-text-3 ks-status-pill"><%# Eval("StatiDescrizione1") %></span>
+                    <span class="body-text-3 ks-status-pill"><%#: Eval("StatiDescrizione1") %></span>
                 </ItemTemplate>
             </asp:TemplateField>
 

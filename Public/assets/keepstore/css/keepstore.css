@@ -1,6 +1,673 @@
-/*!
- * KeepStore - legacy alias
- * NOTE: Questa copia è mantenuta solo per compatibilità.
- * La sorgente canonica è: /Public/assets/keepstore/css/keepstore.css
- */
-@import url("css/keepstore.css");
+/* KeepStore custom CSS (centralizzato) - Inserire qui gli stili estratti dalle pagine ASPX (evitare <style> inline) */
+
+
+/* ===== Estratto da: datiutente.aspx ===== */
+.account-box {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: #fff;
+        }
+
+        .account-box h2 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .account-section-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .account-field-label {
+            font-weight: bold;
+        }
+
+        .account-field-value {
+            margin-bottom: 5px;
+        }
+
+        .ks-loading-panel {
+            border: 1px solid #ddd;
+            background-color: #fff;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .ks-spinner-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 3px solid #ccc;
+            border-top-color: #333;
+            animation: ks-spin 0.8s linear infinite;
+            margin: 0 auto 8px;
+        }
+
+        @keyframes ks-spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+
+        .ks-edit-buttons {
+            margin-top: 20px;
+            text-align: right;
+        }
+
+        .ks-edit-buttons .tf-btn-icon {
+            margin-left: 5px;
+        }
+
+        .text-muted-small {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .text-error {
+            color: red;
+        }
+
+
+/* ===== Estratto da: listini.aspx ===== */
+/* body { color:#333; width:600px; font-size:14px; font-family:Verdana, Geneva, sans-serif; margin:0 auto; padding:0 100px;
+} */
+a:focus {
+outline: none;
+}
+
+
+/* ============================== Wrap per form legacy (Registrazione/Login) NOTE: in precedenza era finito nel path errato; la versione corretta è questa. ============================== */
+.ks-legacy-panel {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.ks-auth-register table {
+  width: 100% !important;
+  border-collapse: collapse;
+}
+
+.ks-auth-register table[style*="border-style:solid"],
+.ks-auth-register table[style*="border-width"],
+.ks-auth-register table[style*="border-color"],
+.ks-auth-register #tipologiacliente,
+.ks-auth-register #sceltatipologiacliente {
+  border: 1px solid rgba(0,0,0,.08) !important;
+  background: #fff !important;
+  border-radius: 12px;
+}
+
+.ks-auth-register td {
+  vertical-align: top;
+}
+
+.ks-auth-register input[type="text"],
+.ks-auth-register input[type="password"],
+.ks-auth-register select,
+.ks-auth-register textarea {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+  border-radius: 10px;
+}
+
+.ks-auth-register .validator,
+.ks-auth-register span[style*="background-color:Red"],
+.ks-auth-register span[style*="background-color: red"],
+.ks-auth-register font[color="Red"],
+.ks-auth-register .error {
+  display: inline-block;
+  margin-top: 6px;
+}
+a.trigger{
+	position: absolute;
+	background:#717171 url(Images/Immagini_Listini_Personalizzati/Slide/plus.png) 6% 55% no-repeat;
+	text-decoration: none;
+	font-size: 16px;
+	letter-spacing:-1px;
+	font-family: verdana, helvetica, arial, sans-serif;
+	color:#fff;
+	padding:7px 15px 6px 30px;
+	font-weight: bold;
+	
+	z-index:2;
+}
+a.trigger.right {
+	right: 0;
+	border-bottom-left-radius: 5px;
+	border-top-left-radius: 5px;
+	-moz-border-radius-bottomleft: 5px;
+	-moz-border-radius-topleft: 5px;
+	-webkit-border-bottom-left-radius: 5px;
+	-webkit-border-top-left-radius: 5px;
+}
+a.trigger:hover {
+	background-color:#df4c49;
+}
+a.active.trigger {
+	background:#df4c49 url(Images/Immagini_Listini_Personalizzati/Slide/minus.png) 6% 55% no-repeat;
+}
+.panel {
+	border: solid 1px;
+	border-color: #E12825;
+	position: absolute;
+	display: none;
+	background: #ffffff;
+	width: 700px;
+	height: auto;
+	z-index:1;
+}
+
+.panel.right {
+	width: 700px;
+	right: 0;
+	padding: 10px 50px 10px 10px;
+	border-bottom-left-radius: 15px;
+	border-top-left-radius: 15px;
+	-moz-border-radius-bottomleft: 15px;
+	-moz-border-radius-topleft: 15px;
+	-webkit-border-bottom-left-radius: 15px;
+	-webkit-border-top-left-radius: 15px;
+}
+.panel.right h1 { font-size: 13pt; color:#000000;}
+.panel.right h2 { font-size: 12pt; color:#000000;}
+.panel.right h3 { font-size: 10pt; color:#000000;}
+.panel.right ul { padding-top: 0px;color:#000000;}
+
+.panel p {
+	font-size:11px;
+}
+
+
+/* ===== Estratto da: ordine.aspx ===== */
+/* KeepStore: alignment for ordine.aspx (solo layout, nessuna logica VB toccata) */
+        .ks-order-center{max-width:860px;margin:0 auto}
+        .ks-alert{padding:14px 16px;border-radius:14px;border:1px solid rgba(0,0,0,0.10);background:#fff}
+        .ks-alert-danger{border-color:#ffd0d0;background:#fff1f1;color:#b00020}
+        .ks-order-actions{margin-top:14px}
+        .ks-order-actions .tf-btn{display:inline-flex}
+        .ks-order-inline-label{display:inline-block}
+        .ks-order-inline-label + .ks-order-inline-label{margin-left:6px}
+        @media (max-width: 575px){
+            .ks-order-actions .tf-btn{width:100%;justify-content:center}
+        }
+
+
+/* ===== Estratto da: ordine_coupon.aspx ===== */
+/* KeepStore: pagina tecnica di redirect coupon (layout minimale) */
+        .ks-coupon-center{max-width:760px;margin:0 auto}
+
+
+/* ===== Estratto da: wishlist.aspx ===== */
+/* Small alignment for legacy wishlist table inside NEW layout */
+        .ks-myaccount table { width: 100%; }
+        .ks-myaccount .GridView, .ks-myaccount .grid { width: 100%; }
+/* Micro-adattamenti per la GridView in stile */
+        .ks-table-clean { width: 100%; }
+        .ks-table-clean th, .ks-table-clean td { vertical-align: middle; }
+        .ks-wl-actions { gap: 10px; }
+        .ks-qty { width: 64px; text-align: right; }
+        .ks-hidden { display: none !important; }
+        .ks-btn-image { border: 0; background: transparent; }
+
+
+/* ===== Estratto da: Coupon.master ===== */
+body
+        {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 1rem!important;
+            background: rgb(255,255,255); /* Old browsers */
+            background: -moz-linear-gradient(top,  rgba(255,255,255,1) 0%, rgba(102,182,252,1) 100%); /* FF3.6+ */
+            background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(255,255,255,1)), color-stop(100%,rgba(102,182,252,1))); /* Chrome,Safari4+ */
+            background: -webkit-linear-gradient(top,  rgba(255,255,255,1) 0%,rgba(102,182,252,1) 100%); /* Chrome10+,Safari5.1+ */
+            background: -o-linear-gradient(top,  rgba(255,255,255,1) 0%,rgba(102,182,252,1) 100%); /* Opera 11.10+ */
+            background: -ms-linear-gradient(top,  rgba(255,255,255,1) 0%,rgba(102,182,252,1) 100%); /* IE10+ */
+            background: linear-gradient(to bottom,  rgba(255,255,255,1) 0%,rgba(102,182,252,1) 100%); /* W3C */
+            filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', endColorstr='#66b6fc',GradientType=0 ); /* IE6-9 */
+
+        }
+        
+        .pulsante_settore
+        {
+            font-size: 1rem;
+            cursor: pointer;
+            //width: 189px;
+            //height: 100%;
+            background-color: #678bac;
+            border-color: white;
+            border-width: 1px;
+            border-style: solid;
+            float: left;
+            vertical-align: middle;
+            text-align: center;
+            margin-right: 3px;
+            /* background-image: url('Images/Coupon/back_pulsante.png'); */
+            background-position:top left;
+            background-repeat:no-repeat;
+            color:white;
+        }
+        .sottomenu
+        {
+            //width: 960px;
+            height: auto;
+            margin: auto;
+            background-color: rgb(236, 236, 236);
+            padding-bottom: 5px;
+            padding-top: 5px;
+            display: none;
+        }
+        .sottomenu_pulsanti_categoria
+        {
+            font-size: 7pt;
+            min-width: 156px;
+            height:110px;
+            background-color: white;
+            vertical-align: middle;
+            text-align: center;
+            border-style: solid;
+            border-width: 2px;
+            border-color: White;
+        }
+        .sottomenu_intestazione_categoria
+        {
+            height: 30px;
+			padding: 5px;
+            color:White;
+			font-size: 1rem;
+            background-color:#678bac;
+        }
+        .sottomenu_intestazione_img_categoria
+        {
+            height: 30px;
+            font-size: 8pt;
+        }
+        .box_background
+        {
+            background-color: #393939;
+			width: 280px;
+        }
+        .box_image
+        {
+            width: 280px;
+            height: 180px;
+        }
+        .box_coupon_header
+        {
+            position: relative;
+            width: 280px;
+            height: 76px;
+            background-image: url(  'Images/Coupon/coupon_1.png' );
+        }
+        .box_coupon_footer
+        {
+            position: relative;
+            width: 280px;
+            height: 94px;
+            background-image: url(  'Images/Coupon/coupon_2.png' );
+        }
+        .box_coupon_title
+        {
+            width: 95%;
+            margin: auto;
+            padding-top: 2px;
+            color: White;
+        }
+        .box_coupon_category
+        {
+        	width:96%;
+            
+            color:White;
+            padding:2%;
+            font-weight:bold;
+            background-color:rgba(0,0,0,0.5);
+        }
+        .box_coupon_clock
+        {
+            position: absolute;
+            bottom: 3px;
+            left: 68px;
+            font-size: 15pt;
+            font-weight: bold;
+            color: White;
+        }
+        .box_coupon_price
+        {
+            position: absolute;
+            top: 0px;
+            left: 54px;
+            font-size: 35pt;
+            font-weight: bold;
+            color: White;
+        }
+        .box_coupon_price_full
+        {
+            position: absolute;
+            top: 55px;
+            right: 90px;
+            
+            font-weight: bold;
+            color: White;
+        }
+        .box_coupon_price_discount
+        {
+            position: absolute;
+            top: 19px;
+            right: 4px;
+            font-size: 23pt;
+            font-weight: bold;
+            color: White;
+        }
+        
+        /* Stile relativo al formato lista Logo_Site_Verific */
+        #lista_site_verific
+        {
+            list-style-type:none;
+        }
+
+        #lista_site_verific li
+        {
+            float:left;
+            padding:10px;
+        }
+        
+        #footer_page a:link    {text-decoration: none; color: white;}
+        #footer_page a:visited {text-decoration: none; color: white;}
+        #footer_page a:hover   {color: white; text-decoration:underline;}
+
+
+/* ===== Estratto da: documenti.aspx ===== */
+/* KeepStore STEP22A - Tab tipo documento */
+        .ks-doc-typebar { margin: 0 0 18px 0; }
+        .ks-doc-typebar .selezionato,
+        .ks-doc-typebar .nonSelezionato {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(0,0,0,0.10);
+            text-decoration: none;
+            font-size: 14px;
+            line-height: 1;
+            user-select: none;
+            margin: 0;
+        }
+        .ks-doc-typebar .nonSelezionato { background: #ffffff; color: #111111; font-weight: 500; }
+        .ks-doc-typebar .selezionato { background: #111111; color: #ffffff; font-weight: 700; border-color: #111111; }
+        .ks-doc-typebar .nonSelezionato:hover { background: rgba(0,0,0,0.03); }
+
+        /* Fieldset (Panel GroupingText) in stile card */
+        .ks-fieldset {
+            border: 1px solid rgba(0,0,0,0.08) !important;
+            background: #ffffff;
+            padding: 16px 16px 14px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+            margin: 0;
+        }
+        .ks-fieldset legend {
+            width: auto !important;
+            padding: 0 10px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        /* Spinner pagina */
+        .ks-loading-panel {
+            border: 1px solid #ddd;
+            background-color: #fff;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+            border-radius: 16px;
+        }
+
+        .ks-spinner-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 3px solid #ccc;
+            border-top-color: #333;
+            animation: ks-spin 0.8s linear infinite;
+            margin: 0 auto 8px;
+        }
+
+        @keyframes ks-spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+
+        /* Sidebar sticky (desktop) */
+        .ks-myaccount .wrap-sidebar-account {
+            position: sticky;
+            top: 110px;
+        }
+        @media (max-width: 991px) {
+            .ks-myaccount .wrap-sidebar-account { position: static; top: auto; }
+        }
+
+        /* Form controls (minimo) */
+        .ks-doc-filters .form-select,
+        .ks-doc-filters input[type='text'] {
+            max-width: 100%;
+        }
+
+        /* KeepStore STEP22B - Tabella ordine/documenti */
+        .tf-order_history-table { margin-top: 12px; }
+        .ks-order-table { width: 100%; }
+        .ks-order-table th, .ks-order-table td { padding: 14px 12px; vertical-align: top; }
+        .ks-order-table .td-order-item td { border-bottom: 1px solid rgba(0,0,0,0.06); }
+        .ks-status-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(0,0,0,0.06);
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .ks-action-stack { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .ks-icon-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,0.12);
+            background: #ffffff;
+            padding: 0;
+        }
+        .ks-icon-btn img { max-width: 20px; max-height: 20px; }
+        .ks-order-details summary { cursor: pointer; }
+        .ks-order-details summary::-webkit-details-marker { display: none; }
+        .ks-order-details-body {
+            margin-top: 8px;
+            padding: 10px 12px;
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 14px;
+            background: rgba(0,0,0,0.02);
+        }
+
+
+/* ===== Estratto da: documentidettaglio.aspx ===== */
+/* STEP24 : tabella dettaglio ordine/documento */
+        .ks-order-detail .tf-table-order-detail {
+            width: 100%;
+        }
+
+        .ks-order-detail .tf-table-order-detail th,
+        .ks-order-detail .tf-table-order-detail td {
+            vertical-align: top;
+        }
+
+        .ks-order-detail .tf-table-order-detail .ks-muted {
+            opacity: 0.75;
+        }
+
+        .ks-order-detail .ks-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .ks-order-detail .ks-actions a,
+        .ks-order-detail .ks-actions input,
+        .ks-order-detail .ks-actions button {
+            white-space: nowrap;
+        }
+
+        .ks-order-detail .ks-link-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .ks-order-detail .ks-link-back i {
+            font-size: 14px;
+        }
+
+
+/* ===== Estratto da: myaccount.aspx ===== */
+/* KeepStore STEP20: spinner */
+        #spinner_myaccount {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.75);
+            text-align: center;
+            padding-top: 180px;
+        }
+
+        #spinner_myaccount .ks-spinner-box {
+            display: inline-block;
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 20px 26px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Sidebar sticky (desktop) */
+        .ks-myaccount .wrap-sidebar-account {
+            position: sticky;
+            top: 110px;
+        }
+
+        @media (max-width: 991px) {
+            .ks-myaccount .wrap-sidebar-account {
+                position: static;
+                top: auto;
+            }
+        }
+
+        /* Small polish for quick links */
+        .ks-myaccount .ks-quick-links .tf-btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+
+/* ============================ Default.aspx - inline styles moved here ============================ */
+/* ============================================================ Home (Sprint 2 - HOME 1) NOTE: solo stile minimo per integrare lo slideshow legacy ============================================================ */
+        #Slide_Show {
+            width: 100%;
+        }
+
+        #Slide_Show .slideshow-container {
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        #Slide_Show img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        /* I controlli prev/next e dots sono gestiti dal CSS esistente. Qui NON sovrascriviamo colori o layout del template. */
+
+
+/* ============================ Default_Copia.aspx - inline styles moved here ============================ */
+/* ============================================================ Home (Sprint 2 - HOME 1) NOTE: solo stile minimo per integrare lo slideshow legacy ============================================================ */
+        #Slide_Show {
+            width: 100%;
+        }
+
+        #Slide_Show .slideshow-container {
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        #Slide_Show img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        /* I controlli prev/next e dots sono gestiti dal CSS esistente. Qui NON sovrascriviamo colori o layout del template. */
+
+/* ========================================================== MyAccount: card + address widgets (allineati al tema) ========================================================== */
+.ks-card {
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 14px;
+    padding: 18px;
+}
+
+.list-account-address .account-address-item {
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 14px;
+    padding: 18px;
+    background: #fff;
+}
+
+.list-account-address .account-address-item .info-detail {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.list-account-address .account-address-item .box-infor {
+    min-width: 220px;
+}
+
+.list-account-address .account-address-item.ks-muted {
+    opacity: .9;
+}
+/* ============================================================ KeepStore - DataPager styled like template pagination (articoli.aspx ListView) ============================================================ */
+.ks-pager > span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ks-pager a,
+.ks-pager span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 999px;
+  text-decoration: none;
+}
+
+.ks-pager .ks-current {
+  font-weight: 600;
+  cursor: default;
+  pointer-events: none;
+}

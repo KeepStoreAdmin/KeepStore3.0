@@ -7,7 +7,7 @@
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
 <div class="ks-myaccount">
 
-        <!-- Breakcrumbs (ONUS) -->
+        <!-- Breadcrumb -->
         <div class="tf-sp-1 pb-0">
         <div class="container">
             <div class="tf-breadcrumb-wrap">
@@ -22,7 +22,7 @@
         </div>
     </div>
 
-        <!-- My Account (ONUS) -->
+        <!-- My Account -->
         <section class="tf-sp-2">
             <div class="container">
                 <div class="row">
