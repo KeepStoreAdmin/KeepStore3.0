@@ -2261,4 +2261,59 @@ strWhere = strWhere & " GROUP BY id"
         Next
     End Sub
 
+
+    ' =========================
+    ' WhatsApp share helpers
+    ' =========================
+
+    ' Ritorna la base URL del sito.
+    ' - priorità: Session("AziendaUrl") (accetta con o senza schema)
+    ' - fallback: Request.Url (authority della request corrente)
+    Private Function GetSiteBaseUrl() As String
+        Dim s As String = ""
+        Try
+            s = Convert.ToString(Session("AziendaUrl"))
+        Catch
+            s = ""
+        End Try
+
+        s = If(s, "").Trim()
+
+        If s <> "" Then
+            If Not (s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse
+                    s.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) Then
+                s = "https://" & s
+            End If
+
+            Return s.TrimEnd("/"c)
+        End If
+
+        Dim req As HttpRequest = HttpContext.Current.Request
+        Return req.Url.GetLeftPart(UriPartial.Authority).TrimEnd("/"c)
+    End Function
+
+    ' Usata dal markup (data-binding) per costruire il link di condivisione WhatsApp.
+    Protected Function GetWhatsAppShareUrl(descrizione As Object, id As Object, tcid As Object) As String
+        Dim descr As String = Convert.ToString(descrizione)
+        Dim idStr As String = Convert.ToString(id)
+        Dim tcidStr As String = Convert.ToString(tcid)
+
+        Dim baseUrl As String = GetSiteBaseUrl()
+        Dim articoloPath As String = Me.ResolveUrl("~/articolo.aspx")
+        Dim articoloUrl As String = baseUrl & articoloPath & "?id=" & idStr & "&TCid=" & tcidStr
+
+        Dim txt As String = descr & " - " & articoloUrl
+        Dim url As String = "https://wa.me/?text=" & HttpUtility.UrlEncode(txt)
+
+        ' Sicuro per attributo HTML (href)
+        Return HttpUtility.HtmlAttributeEncode(url)
+    End Function
+
+    ' Usata dal markup (data-binding) per la src dell'icona.
+    Protected Function GetWhatsAppIconUrl() As String
+        Dim url As String = Me.ResolveUrl("~/Public/Images/WhatsApp-Symbolo.png")
+        Return HttpUtility.HtmlAttributeEncode(url)
+    End Function
+
+
 End Class
