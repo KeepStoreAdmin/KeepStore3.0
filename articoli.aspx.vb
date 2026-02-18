@@ -862,6 +862,21 @@ strWhere = strWhere & " GROUP BY id"
         Dim item As ListViewDataItem = TryCast(img.NamingContainer, ListViewDataItem)
         If item Is Nothing Then Exit Sub
 
+        AddToCartFromItem(item)
+    End Sub
+    Protected Sub LB_AddToCart_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+        Dim lb As LinkButton = TryCast(sender, LinkButton)
+        If lb Is Nothing Then Exit Sub
+
+        Dim item As ListViewDataItem = TryCast(lb.NamingContainer, ListViewDataItem)
+        If item Is Nothing Then Exit Sub
+
+        AddToCartFromItem(item)
+    End Sub
+
+    Private Sub AddToCartFromItem(ByVal item As ListViewDataItem)
+        If item Is Nothing Then Exit Sub
+
         ' Listino corrente (default 1)
         Dim listino As Integer = 1
         Dim rawListino As String = Convert.ToString(Session("Listino"))
@@ -2198,6 +2213,42 @@ strWhere = strWhere & " GROUP BY id"
 
         Return "-" & pct.ToString() & "%"
     End Function
+    Protected Function HasPromo(ByVal inOffertaObj As Object, ByVal promoObj As Object) As Boolean
+        ' InOfferta può arrivare come Boolean, Integer o String
+        Dim inOff As Boolean = False
+        If inOffertaObj IsNot Nothing AndAlso Not IsDBNull(inOffertaObj) Then
+            Try
+                If TypeOf inOffertaObj Is Boolean Then
+                    inOff = CBool(inOffertaObj)
+                Else
+                    inOff = (Convert.ToInt32(inOffertaObj) <> 0)
+                End If
+            Catch
+                inOff = False
+            End Try
+        End If
+        If Not inOff Then Return False
+
+        If promoObj Is Nothing OrElse IsDBNull(promoObj) Then Return False
+        Dim promoVal As Decimal = KeepStoreSecurity.SqlCleanDecimal(promoObj, 0D)
+        Return (promoVal > 0D)
+    End Function
+
+    Protected Function GetPriceNewText(ByVal inOffertaObj As Object, ByVal promoObj As Object, ByVal standardObj As Object) As String
+        Dim valToShow As Object = standardObj
+        If HasPromo(inOffertaObj, promoObj) Then valToShow = promoObj
+        Dim d As Decimal = KeepStoreSecurity.SqlCleanDecimal(valToShow, 0D)
+        If d <= 0D Then Return ""
+        Return d.ToString("C")
+    End Function
+
+    Protected Function GetPriceOldText(ByVal inOffertaObj As Object, ByVal promoObj As Object, ByVal standardObj As Object) As String
+        If Not HasPromo(inOffertaObj, promoObj) Then Return ""
+        Dim d As Decimal = KeepStoreSecurity.SqlCleanDecimal(standardObj, 0D)
+        If d <= 0D Then Return ""
+        Return d.ToString("C")
+    End Function
+
 
     Private Shared Sub CopyParams(ByVal src As ParameterCollection, ByVal dst As ParameterCollection)
         dst.Clear()

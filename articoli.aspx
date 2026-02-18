@@ -350,10 +350,106 @@
     </LayoutTemplate>
 
     <ItemTemplate>
-        <asp:Label ID="lblSettore" runat="server" Text='<%# ucase(Eval("SettoriDescrizone")) %>' EnableViewState="False"></asp:Label>
-                    »
-                    <asp:Label ID="lblCategoria" runat="server" Text='<%# H(Eval("Descrizione")) %>' EnableViewState="False"></asp:Label>
+    <ItemTemplate>
+        <div class="card-product ks-card-product">
+            <div class="card-product-wrapper">
+                <a href='<%# ResolveUrl("~/articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCid")) %>' class="product-img">
+                    <asp:Image ID="imgProd" runat="server" CssClass="img-product lazyload"
+                        AlternateText='<%# H(Eval("Descrizione1")) %>'
+                        ImageUrl='<%# checkImg(Eval("Img1")) %>' />
+                    <asp:Image ID="imgHover" runat="server" CssClass="img-hover lazyload"
+                        AlternateText='<%# H(Eval("Descrizione1")) %>'
+                        ImageUrl='<%# checkImg(Eval("Img1")) %>' />
+                </a>
+
+                <ul class="list-product-btn top-0 end-0">
+                    <li>
+                        <asp:LinkButton ID="LB_addToCart" runat="server" CausesValidation="False"
+                            OnClick="LB_AddToCart_Click"
+                            CssClass="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left">
+                            <span class="icon icon-cart2"></span>
+                            <span class="tooltip">Aggiungi al carrello</span>
+                        </asp:LinkButton>
+                    </li>
+
+                    <li class="d-none d-sm-block wishlist">
+                        <asp:LinkButton ID="LB_wishlist" runat="server" CausesValidation="False"
+                            OnClick="BT_Aggiungi_wishlist_Click"
+                            CssClass="box-icon btn-icon-action hover-tooltip tooltip-left">
+                            <i class="icon icon-heart2"></i>
+                            <span class="tooltip">Wishlist</span>
+                        </asp:LinkButton>
+                    </li>
+
+                    <li>
+                        <a href='<%# ResolveUrl("~/articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCid")) %>'
+                            class="box-icon btn-icon-action hover-tooltip tooltip-left">
+                            <i class="icon icon-view"></i>
+                            <span class="tooltip">Scheda tecnica</span>
+                        </a>
+                    </li>
+
+                    <li class="d-none d-sm-block">
+                        <a href='<%# GetWhatsAppShareUrl(Eval("Descrizione1"), Eval("id"), Eval("TCid")) %>'
+                            class="box-icon btn-icon-action hover-tooltip tooltip-left">
+                            <img src='<%# GetWhatsAppIconUrl() %>' alt="WhatsApp" style="height:24px;" />
+                            <span class="tooltip">WhatsApp</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <asp:Panel ID="pnlSale" runat="server" Visible='<%# HasPromo(Eval("InOfferta"), Eval("PrezzoPromoIvato")) %>'>
+                    <div class="box-sale-wrap pst-default">
+                        <p class="small-text">Sale</p>
+                        <p class="title-sidebar-2"><%# GetDiscountPercent(Eval("PrezzoIvato"), Eval("PrezzoPromoIvato")) %></p>
+                    </div>
+                </asp:Panel>
+            </div>
+
+            <div class="card-product-info">
+                <div class="box-title">
+                    <div>
+                        <p class="product-tag caption text-main-2"><%# H(Eval("MarcheDescrizione")) %></p>
+                        <asp:HyperLink ID="hlTitolo" runat="server"
+                            CssClass="name-product body-md-2 fw-semibold text-secondary link"
+                            NavigateUrl='<%# ResolveUrl("~/articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCid")) %>'
+                            Text='<%# H(Eval("Descrizione1")) %>'></asp:HyperLink>
+                    </div>
+
+                    <p class="price-wrap fw-medium">
+                        <asp:Label ID="lblPrezzoNew" runat="server"
+                            CssClass="new-price price-text fw-medium"
+                            Text='<%# GetPriceNewText(Eval("InOfferta"), Eval("PrezzoPromoIvato"), Eval("PrezzoIvato")) %>'></asp:Label>
+
+                        <asp:Label ID="lblPrezzoOld" runat="server"
+                            CssClass="old-price body-md-2 text-main-2"
+                            Visible='<%# HasPromo(Eval("InOfferta"), Eval("PrezzoPromoIvato")) %>'
+                            Text='<%# GetPriceOldText(Eval("InOfferta"), Eval("PrezzoPromoIvato"), Eval("PrezzoIvato")) %>'></asp:Label>
+                    </p>
+                </div>
+            </div>
+
+            <div class="card-product-btn">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-10">
+                    <div class="wg-quantity">
+                        <span class="btn-quantity minus-btn"><i class="icon-minus"></i></span>
+                        <asp:TextBox ID="tbQuantita" runat="server" CssClass="quantity-product" Text="1" MaxLength="4"></asp:TextBox>
+                        <span class="btn-quantity plus-btn"><i class="icon-plus"></i></span>
+                    </div>
+
+                    <div class="ks-multi">
+                        <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" ToolTip="Seleziona per aggiunta multipla" />
+                        <span class="caption text-main-2">Multi</span>
+                    </div>
+                </div>
+
+                <!-- Campi per la logica esistente (ID/TCID/QTA) -->
+                <asp:HiddenField ID="hfIdArticolo" runat="server" Value='<%# Eval("id") %>' />
+                <asp:HiddenField ID="hfTCId" runat="server" Value='<%# Eval("TCid") %>' />
+            </div>
+        </div>
     </ItemTemplate>
+</ItemTemplate>
 
     <EmptyDataTemplate>
         <div class="tf-page-title py-5">
