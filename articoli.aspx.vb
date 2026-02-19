@@ -1194,7 +1194,7 @@ Dim idUtente As Integer = 0
             If ids.Length > 1 Then
                 Dim filterIdArray As String() = filterId.Split("|"c)
                 For Each id As String In ids
-                    If Not Array.IndexOf(filterIdArray, id) >= 0 Then
+                    If Array.IndexOf(filterIdArray, id) < 0 Then
                         parValue &= id & "|"
                     End If
                 Next
@@ -1204,27 +1204,32 @@ Dim idUtente As Integer = 0
             End If
         End If
 
-        Dim newUrl As String = changeUrlGetParam(Request.UrlReferrer.ToString, parName, parValue)
+        Dim baseUrl As String = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.ToString(), Request.Url.AbsoluteUri)
+        Dim newUrl As String = changeUrlGetParam(baseUrl, parName, parValue)
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub Drop_Ordinamento_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Ordinamento.SelectedIndexChanged
-        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.UrlReferrer.ToString, Drop_Ordinamento, "ordinamento")
+        Dim baseUrl As String = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.ToString(), Request.Url.AbsoluteUri)
+        Dim newUrl As String = changeUrlDependingFromDropDownList(baseUrl, Drop_Ordinamento, "ordinamento")
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub Drop_Filtra_Taglia_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Filtra_Taglia.SelectedIndexChanged
-        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.UrlReferrer.ToString, Drop_Filtra_Taglia, "taglia")
+        Dim baseUrl As String = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.ToString(), Request.Url.AbsoluteUri)
+        Dim newUrl As String = changeUrlDependingFromDropDownList(baseUrl, Drop_Filtra_Taglia, "taglia")
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub Drop_Filtra_Colore_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Filtra_Colore.SelectedIndexChanged
-        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.UrlReferrer.ToString, Drop_Filtra_Colore, "colore")
+        Dim baseUrl As String = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.ToString(), Request.Url.AbsoluteUri)
+        Dim newUrl As String = changeUrlDependingFromDropDownList(baseUrl, Drop_Filtra_Colore, "colore")
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub CheckBox_Disponibile_CheckedChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles CheckBox_Disponibile.CheckedChanged
-        Dim newUrl As String = changeUrlDependingFromCheckBox(Request.UrlReferrer.ToString, CheckBox_Disponibile, "disponibile", "1", "0")
+        Dim baseUrl As String = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.ToString(), Request.Url.AbsoluteUri)
+        Dim newUrl As String = changeUrlDependingFromCheckBox(baseUrl, CheckBox_Disponibile, "disponibile", "1", "0")
         Response.Redirect(newUrl)
     End Sub
     Sub changeCheckBoxDependingFromUrl(ByVal checkBox As CheckBox, ByVal parName As String, ByVal parValueIfChecked As String)
@@ -1779,7 +1784,7 @@ Dim idUtente As Integer = 0
         Dim filterIdsArray As String() = filterIds.Split("|"c)
         Dim idsToAddArray As String() = idsToAdd.Split("|"c)
         For Each id As String In idsToAddArray
-            If Not Array.IndexOf(filterIdsArray, id) >= 0 Then
+            If Array.IndexOf(filterIdsArray, id) < 0 Then
                 result = result & "|" & id
             End If
         Next
@@ -1787,23 +1792,19 @@ Dim idUtente As Integer = 0
     End Function
 
     Function filterIdsContains(ByVal parName As String, ByVal ids As String) As Boolean
-        If Not String.IsNullOrEmpty(Request.QueryString(parName)) Then
-            Dim queryStringIds = Request.QueryString(parName).Split("|"c)
-            Dim idsArray = ids.Split("|"c)
-            For Each id As String In idsArray
-                If Array.IndexOf(queryStringIds, id) >= 0 Then
-                    If filters.ContainsKey(parName) Then
-                        filters.Item(parName) = addIds(filters.Item(parName), ids)
-                    Else
-                        filters.Add(parName, ids)
-                    End If
-                    Return True
-                End If
-            Next
-            Return False
-        Else
+        Dim qsVal As String = Convert.ToString(Request.QueryString(parName))
+        If String.IsNullOrEmpty(qsVal) OrElse String.IsNullOrEmpty(ids) Then
             Return False
         End If
+
+        Dim queryStringIds = qsVal.Split("|"c)
+        Dim idsArray = ids.Split("|"c)
+        For Each id As String In idsArray
+            If Array.IndexOf(queryStringIds, id) >= 0 Then
+                Return True
+            End If
+        Next
+        Return False
     End Function
 
     Protected Function ExecuteQueryGetDataSet(ByVal fields As String,
