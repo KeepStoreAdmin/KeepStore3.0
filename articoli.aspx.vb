@@ -5,7 +5,6 @@ Imports System.Web
 Imports System.Text.RegularExpressions
 Imports System.Collections
 Imports System.Collections.Generic
-Imports System.Web.UI.WebControls
 
 Partial Class Articoli
     Inherits AntiCsrfPage
@@ -77,23 +76,9 @@ Partial Class Articoli
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         oldUrl = HttpContext.Current.Request.Url.AbsoluteUri
 
-        ' Rimozione filtro tramite querystring (es: ?rimuovi=mr)
-        ' - UrlReferrer può essere Nothing (accesso diretto / privacy browser): fallback su URL corrente
-        ' - accetta solo chiavi note per evitare manipolazioni dell'URL
-        Dim rawRimuovi As String = Request.QueryString("rimuovi")
-        If Not String.IsNullOrEmpty(rawRimuovi) Then
-            Dim allowed As String() = {"mr", "tp", "gr", "sg", "taglia", "colore"}
-            Dim key As String = rawRimuovi.Trim().ToLowerInvariant()
-            Dim baseUrl As String = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.ToString(), Request.Url.AbsoluteUri)
-
-            ' Prima rimuovo sempre il parametro rimuovi
-            Dim redirectUrl As String = changeUrlGetParam(baseUrl, "rimuovi", String.Empty)
-            ' Poi, se richiesto, rimuovo anche la chiave indicata (solo se ammessa)
-            If Array.IndexOf(allowed, key) >= 0 Then
-                redirectUrl = changeUrlGetParam(redirectUrl, key, String.Empty)
-            End If
-
-            Response.Redirect(redirectUrl)
+        If Request.QueryString("rimuovi") <> String.Empty Then
+            Dim filtersToRemove As String = Request.QueryString("rimuovi")
+            Response.Redirect(changeUrlGetParam(Request.UrlReferrer.ToString, filtersToRemove, String.Empty).Replace("rimuovi=" & filtersToRemove, String.Empty))
         End If
 
         
@@ -185,8 +170,7 @@ lblLinee.Text = ps.ToString()
     'FILTRI TAGLIA COLORE AGGIUNTI DA ANGELO IL 15/12/2017
     'INIZIO
     Public Sub showFilters(ByVal conn As MySqlConnection, ByVal articoliFiltrati As String)
-        Dim tc As Integer = 0
-        Integer.TryParse(Convert.ToString(Session("TC")), tc)
+        Dim tc As Integer = Session("TC")
         If tc = 1 Then
             filtritagliaecolore.Visible = True
             Dim TagliaIndex As Integer
@@ -227,114 +211,6 @@ lblLinee.Text = ps.ToString()
         End If
     End Sub
 
-	' =============================================================
-	' Helpers per FILTRI TAGLIA/COLORE (Template)
-	' - I filtri usano MySqlCommand, quindi non possono eseguire una
-	'   SelectCommand che contiene placeholder ?param.
-	' - Costruiamo una versione "inline" (parametri già risolti) e
-	'   ridotta a SELECT id per alleggerire le subquery.
-	' =============================================================
-	Private Function BuildInlineSqlForFilters(paramSql As String, parameters As ParameterCollection) As String
-	    If String.IsNullOrWhiteSpace(paramSql) OrElse parameters Is Nothing Then Return paramSql
-
-	    Dim sql As String = paramSql
-	    For Each p As Parameter In parameters
-	        If p Is Nothing OrElse String.IsNullOrEmpty(p.Name) Then Continue For
-
-	        Dim placeholder As String = "?" & p.Name
-	        If sql.IndexOf(placeholder, StringComparison.OrdinalIgnoreCase) < 0 Then Continue For
-
-	        Dim raw As Object = ResolveParameterValue(p)
-	        Dim literal As String = SqlLiteral(raw, p.Type)
-	        sql = System.Text.RegularExpressions.Regex.Replace(
-	            sql,
-	            "\?" & System.Text.RegularExpressions.Regex.Escape(p.Name) & "(?![A-Za-z0-9_])",
-	            literal,
-	            System.Text.RegularExpressions.RegexOptions.IgnoreCase)
-	    Next
-
-	    Return sql
-	End Function
-
-	Private Function ResolveParameterValue(p As Parameter) As Object
-	    Dim sp As SessionParameter = TryCast(p, SessionParameter)
-	    If sp IsNot Nothing AndAlso Not String.IsNullOrEmpty(sp.SessionField) Then
-	        Return Session(sp.SessionField)
-	    End If
-
-	    Dim qp As QueryStringParameter = TryCast(p, QueryStringParameter)
-	    If qp IsNot Nothing AndAlso Not String.IsNullOrEmpty(qp.QueryStringField) Then
-	        Return Request.QueryString(qp.QueryStringField)
-	    End If
-
-	    Return p.DefaultValue
-	End Function
-
-	Private Function SqlLiteral(value As Object, typeCode As TypeCode) As String
-	    If value Is Nothing Then Return "NULL"
-
-	    Dim s As String = Convert.ToString(value)
-	    If s Is Nothing Then Return "NULL"
-	    s = s.Trim()
-	    If s.Length = 0 Then Return "NULL"
-
-	    Select Case typeCode
-	        Case TypeCode.Int16, TypeCode.Int32, TypeCode.Int64
-	            Dim i As Long
-	            If Long.TryParse(s, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, i) Then
-	                Return i.ToString(System.Globalization.CultureInfo.InvariantCulture)
-	            End If
-
-	        Case TypeCode.Decimal, TypeCode.Double, TypeCode.Single
-	            Dim d As Decimal
-	            If Decimal.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, d) Then
-	                Return d.ToString(System.Globalization.CultureInfo.InvariantCulture)
-	            End If
-	            If Decimal.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.GetCultureInfo("it-IT"), d) Then
-	                Return d.ToString(System.Globalization.CultureInfo.InvariantCulture)
-	            End If
-
-	        Case TypeCode.Boolean
-	            Dim b As Boolean
-	            If Boolean.TryParse(s, b) Then
-	                Return If(b, "1", "0")
-	            End If
-	            If s = "1" Then Return "1"
-	            If s = "0" Then Return "0"
-	    End Select
-
-	    Return "'" & SqlEscape(s) & "'"
-	End Function
-
-	Private Function SqlEscape(input As String) As String
-	    If input Is Nothing Then Return String.Empty
-	    Dim safe As String = input.Replace(vbCr, String.Empty).Replace(vbLf, String.Empty)
-	    Return safe.Replace("'", "''")
-	End Function
-
-	Private Function ToIdOnlySelect(sql As String) As String
-	    If String.IsNullOrWhiteSpace(sql) Then Return sql
-
-	    Dim src As String = sql
-	    Dim mSel As System.Text.RegularExpressions.Match = System.Text.RegularExpressions.Regex.Match(
-	        src,
-	        "^\s*select\s+(distinct\s+)?",
-	        System.Text.RegularExpressions.RegexOptions.IgnoreCase)
-
-	    Dim mFrom As System.Text.RegularExpressions.Match = System.Text.RegularExpressions.Regex.Match(
-	        src,
-	        "\sfrom\s",
-	        System.Text.RegularExpressions.RegexOptions.IgnoreCase)
-
-	    If Not mSel.Success OrElse Not mFrom.Success OrElse mFrom.Index <= 0 Then
-	        Return sql
-	    End If
-
-	    Dim distinctPart As String = mSel.Groups(1).Value
-	    Dim fromPart As String = src.Substring(mFrom.Index)
-	    Return "SELECT " & distinctPart & " id " & fromPart
-	End Function
-
     Public Sub PopulateFilterTCDropdownlist(ByVal conn As MySqlConnection,
                                             ByVal tableName As String,
                                             ByVal idColumnName As String,
@@ -367,13 +243,8 @@ Else
     PopulateDropdownlist(conn, sqlString, list, "descrizione", "id")
 End If
 
-	list.Items.Insert(0, New ListItem(allValueString, "0"))
-	Dim it As ListItem = list.Items.FindByValue(dropdownlistValue)
-	If it IsNot Nothing Then
-	    list.SelectedValue = dropdownlistValue
-	Else
-	    list.SelectedIndex = 0
-	End If
+list.Items.Insert(0, New ListItem(allValueString, "0"))
+        list.SelectedValue = dropdownlistValue
     End Sub
 
     Public Sub PopulateDropdownlist(ByVal conn As MySqlConnection,
@@ -778,7 +649,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
             Me.Title = Me.Title & " > " & lblRicerca.Text & userCerca
         End If
 
-strWhere = strWhere & " GROUP BY id"
+Dim groupBy As String = " GROUP BY id"
 
         ' Ordinamento (whitelist)
         Select Case Drop_Ordinamento.SelectedValue
@@ -800,11 +671,11 @@ strWhere = strWhere & " GROUP BY id"
                 ' Default: rilevanza (stabile)
                 strWhere &= " ORDER BY (Giacenza-Impegnata) DESC, id DESC"
         End Select
-
         If TC = 1 Then
-            strWhere = strWhere & " ,articoli_tagliecolori.TagliaId, articoli_tagliecolori.ColoreId"
+            groupBy &= " ,articoli_tagliecolori.TagliaId, articoli_tagliecolori.ColoreId"
         End If
 
+        strWhere &= groupBy
         Me.sdsArticoli.SelectCommand = strSelect & " WHERE Nlistino=?NListino " & strWhere
 
         strWhere2 = " LEFT JOIN vsuperarticoli ON vsuperarticoli.Id = varticolibase.id " & strWhere2 & " AND Nlistino=?NListino"
@@ -908,18 +779,11 @@ strWhere = strWhere & " GROUP BY id"
                 " GROUP BY id) AS t1 GROUP BY marcheid"
         End If
 
-	    ' FILTRI TAGLIA/COLORE (template): serve una SelectCommand senza placeholder (?param)
-	    ' e, per performance, ridotta a SELECT id.
-	    Try
-	        Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
-	            conn.Open()
-	            Dim sqlForFilters As String = BuildInlineSqlForFilters(sdsArticoli.SelectCommand, sdsArticoli.SelectParameters)
-	            sqlForFilters = ToIdOnlySelect(sqlForFilters)
-	            showFilters(conn, sqlForFilters)
-	        End Using
-	    Catch
-	        filtritagliaecolore.Visible = False
-	    End Try
+        Dim conn As New MySqlConnection
+        conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+        conn.Open()
+        showFilters(conn, sdsArticoli.SelectCommand)
+        conn.Close()
 
         Dim sdsArticoliToShow = Me.sdsArticoli.SelectCommand.Replace("'", """").ToUpper
     End Sub
@@ -1777,7 +1641,9 @@ Dim idUtente As Integer = 0
                     url &= "?" & qs
                 End If
 
-                Response.Redirect(url, True)
+                Response.Redirect(url, False)
+                Context.ApplicationInstance.CompleteRequest()
+                Return
             End If
 
         Catch
