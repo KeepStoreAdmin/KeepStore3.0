@@ -2243,11 +2243,15 @@ Dim idUtente As Integer = 0
 ' =========================
 Protected Function HasPromo(inOffertaObj As Object, prezzoPromoObj As Object) As Boolean
     Dim inOfferta As Integer = 0
-    Dim raw As String = Convert.ToString(inOffertaObj)
-    If raw IsNot Nothing AndAlso raw.Trim().Equals("True", StringComparison.OrdinalIgnoreCase) Then
-        inOfferta = 1
-    Else
-        Integer.TryParse(raw, inOfferta)
+
+    If inOffertaObj IsNot Nothing AndAlso inOffertaObj IsNot DBNull.Value Then
+        Dim raw As String = Convert.ToString(inOffertaObj).Trim()
+
+        If raw.Equals("True", StringComparison.OrdinalIgnoreCase) Then
+            inOfferta = 1
+        Else
+            Integer.TryParse(raw, inOfferta)
+        End If
     End If
 
     Dim promo As Decimal = KeepStoreSecurity.SqlCleanDecimal(prezzoPromoObj, 0D)
@@ -2256,8 +2260,11 @@ End Function
 
 Private Function FormatPriceEUR(val As Decimal) As String
     If val <= 0D Then Return ""
-    Dim it As Globalization.CultureInfo = Globalization.CultureInfo.GetCultureInfo("it-IT")
-    Return "€ " & val.ToString("N2", it)
+
+    Dim it As System.Globalization.CultureInfo = System.Globalization.CultureInfo.GetCultureInfo("it-IT")
+
+    ' Evita problemi di encoding del simbolo € in deploy
+    Return ChrW(&H20AC) & " " & val.ToString("N2", it)
 End Function
 
 Protected Function GetPriceNewText(inOffertaObj As Object, prezzoPromoObj As Object, prezzoObj As Object) As String
