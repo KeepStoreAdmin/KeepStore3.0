@@ -44,6 +44,65 @@ Partial Class Articoli
         Return True
     End Function
 
+' Build a SQL string with SqlDataSource parameters inlined.
+' This is used ONLY for filter subqueries (dropdown Taglia/Colore),
+' because PopulateFilterTCDropdownlist expects a plain SQL string.
+Private Function BuildInlineSqlForFilters(ByVal sql As String,
+                                          ByVal parameters As System.Web.UI.WebControls.ParameterCollection) As String
+    If String.IsNullOrEmpty(sql) OrElse parameters Is Nothing OrElse parameters.Count = 0 Then
+        Return sql
+    End If
+
+    Dim res As String = sql
+
+    For Each p As System.Web.UI.WebControls.Parameter In parameters
+        Dim name As String = p.Name
+        If String.IsNullOrEmpty(name) Then Continue For
+
+        Dim raw As String = p.DefaultValue
+        If raw Is Nothing Then raw = ""
+        raw = raw.Replace(vbCr, "").Replace(vbLf, "").Trim()
+
+        Dim replacement As String = "NULL"
+
+        Select Case p.Type
+            Case TypeCode.Int16, TypeCode.Int32, TypeCode.Int64, TypeCode.UInt16, TypeCode.UInt32, TypeCode.UInt64
+                Dim n As Long
+                If Long.TryParse(raw, n) Then
+                    replacement = n.ToString()
+                Else
+                    replacement = "0"
+                End If
+
+            Case TypeCode.Decimal, TypeCode.Double, TypeCode.Single
+                Dim d As Decimal
+                If Decimal.TryParse(raw, System.Globalization.NumberStyles.Any,
+                                    System.Globalization.CultureInfo.InvariantCulture, d) Then
+                    replacement = d.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                Else
+                    replacement = "0"
+                End If
+
+            Case TypeCode.Boolean
+                Dim b As Boolean
+                If Boolean.TryParse(raw, b) Then
+                    replacement = If(b, "1", "0")
+                Else
+                    replacement = "0"
+                End If
+
+            Case Else
+                replacement = "'" & raw.Replace("'", "''") & "'"
+        End Select
+
+        Dim pattern As String = "\?" & Regex.Escape(name) & "(?![A-Za-z0-9_])"
+        res = Regex.Replace(res, pattern, replacement)
+    Next
+
+    Return res
+End Function
+
+
     Protected Sub Page_PreRenderComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRenderComplete
         Dim newUrl As String = oldUrl
         Dim mrAreEquals As Boolean = True
@@ -170,7 +229,10 @@ lblLinee.Text = ps.ToString()
     'FILTRI TAGLIA COLORE AGGIUNTI DA ANGELO IL 15/12/2017
     'INIZIO
     Public Sub showFilters(ByVal conn As MySqlConnection, ByVal articoliFiltrati As String)
-        Dim tc As Integer = Session("TC")
+        Dim tc As Integer = 0
+        If Session("TC") IsNot Nothing Then
+            Integer.TryParse(Session("TC").ToString(), tc)
+        End If
         If tc = 1 Then
             filtritagliaecolore.Visible = True
             Dim TagliaIndex As Integer
@@ -178,7 +240,7 @@ lblLinee.Text = ps.ToString()
             Dim TagliaValue As String = String.Empty
             Dim ColoreValue As String = String.Empty
 
-            If Me.IsPostBack = False And Request.QueryString("taglia") <> String.Empty Then
+            If Me.IsPostBack = False And Not String.IsNullOrEmpty(Request.QueryString("taglia")) Then
                 Dim rawTaglia As String = QS("taglia", 40)
                 If Not IsValidIndexAndValue(rawTaglia) Then rawTaglia = ""
                 Dim tagliaIndexAndValue As String() = If(String.IsNullOrEmpty(rawTaglia), New String() {}, rawTaglia.Split("|"c))
@@ -191,7 +253,7 @@ lblLinee.Text = ps.ToString()
                 TagliaValue = Drop_Filtra_Taglia.SelectedValue
             End If
 
-            If Me.IsPostBack = False And Request.QueryString("colore") <> String.Empty Then
+            If Me.IsPostBack = False And Not String.IsNullOrEmpty(Request.QueryString("colore")) Then
                 Dim rawColore As String = QS("colore", 40)
                 If Not IsValidIndexAndValue(rawColore) Then rawColore = ""
                 Dim coloreIndexAndValue As String() = If(String.IsNullOrEmpty(rawColore), New String() {}, rawColore.Split("|"c))
@@ -782,7 +844,13 @@ strWhere = strWhere & " GROUP BY id"
         Dim conn As New MySqlConnection
         conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
         conn.Open()
-        showFilters(conn, sdsArticoli.SelectCommand)
+        Try
+            Dim selectForFilters As String = BuildInlineSqlForFilters(Me.sdsArticoli.SelectCommand, Me.sdsArticoli.SelectParameters)
+            showFilters(conn, selectForFilters)
+        Catch ex As Exception
+            ' Fallback: never break page rendering due to filter dropdown queries.
+            filtritagliaecolore.Visible = False
+        End Try
         conn.Close()
 
         Dim sdsArticoliToShow = Me.sdsArticoli.SelectCommand.Replace("'", """").ToUpper
