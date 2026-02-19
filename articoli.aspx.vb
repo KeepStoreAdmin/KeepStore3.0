@@ -105,11 +105,18 @@ Partial Class Articoli
         End If
 
         '==========================================================
-        ' STEP 27 (SEO): policy indicizzazione (st/ct/tp/gr/sg/mr)
-        ' - Decide quali combinazioni possono essere indicizzate
-        ' - Imposta Canonical e Robots (meta + X-Robots-Tag)
+        ' SEO (DISABILITATO TEMPORANEAMENTE)
+        ' ---------------------------------------------------------
+        ' Su questo endpoint abbiamo un crash deterministico del worker IIS
+        ' (stack overflow 0xc00000fd dentro System.Web.Extensions) subito dopo
+        ' la richiesta GET di /articoli.aspx.
+        '
+        ' La sezione SEO di questa pagina modifica dinamicamente l'header
+        ' (meta/canonical + header X-Robots-Tag) durante il ciclo di vita.
+        ' Per ridurre al minimo le cause di ricorsione nel rendering/headers,
+        ' qui la disabilitiamo e lasciamo la gestione SEO al master.
         '==========================================================
-        ApplySeoIndexPolicy()
+        'ApplySeoIndexPolicy()
 
         Session.Item("Pagina_visitata_Articoli") = Me.Request.Url.ToString 'Aggiorno l'ultima pagina visitata in Articoli
         Me.Session("Carrello_Pagina") = "articoli.aspx"
@@ -1998,11 +2005,12 @@ Dim idUtente As Integer = 0
     ' SEO (Catalogo)
     ' ============================================================
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
-        Try
-            EnsureCatalogSeo()
-        Catch
-            ' no-op
-        End Try
+        ' Vedi nota sopra: disabilitiamo iniezione SEO dinamica su questa pagina
+        ' per evitare crash ricorsivi nel worker IIS.
+        'Try
+        '    EnsureCatalogSeo()
+        'Catch
+        'End Try
     End Sub
 
     Private Sub EnsureCatalogSeo()
