@@ -1,4 +1,4 @@
-<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="404.aspx.vb" Inherits="_404" %>
+<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" %>
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
     Pagina non trovata

@@ -1,7 +1,10 @@
 ﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Setup_Listino_Personalizzato.aspx.vb" Inherits="Setup_Listino_Personalizzato" title="Untitled Page" %>
 
-<%@ Register Assembly="Microsoft.ReportViewer.WebForms, Version=9.0.0.0, Culture=neutral, PublicKeyToken=B03F5F7F11D50A3A"
-    Namespace="Microsoft.Reporting.WebForms" TagPrefix="rsweb" %>
+<%--
+  RIMOSSO: Register di Microsoft.ReportViewer.WebForms (v9.0) perché l'assembly non è presente sul server
+  e causava errore ASPPARSE in fase di compilazione.
+  La pagina non usa controlli rsweb: il Register era inutile.
+--%>
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
 
     <asp:SqlDataSource ID="SqlData_Listino_Personalizzato" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"

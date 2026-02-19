@@ -1,5 +1,5 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false"  CodeFile="pay_your_orders.aspx.vb" Inherits="pay_your_orders" %>
-<%@ OutputCache Location="None" NoStore="true" Duration="0" VaryByParam="None" %>
+<%@ OutputCache Location="None" NoStore="true" Duration="1" VaryByParam="None" %>
 <asp:Content ID="cntTitle" ContentPlaceHolderID="TitleContent" runat="server">
     Pagamenti
 </asp:Content>
@@ -15,7 +15,7 @@
 <asp:Content ID="cntMain" ContentPlaceHolderID="MainContent" runat="server">
 </asp:Content>
 
-<!-- Legacy placeholders (presenti in Page.master) -->
+<%-- Legacy placeholders (presenti in Page.master) --%>
 <asp:Content ID="cntLegacy1" ContentPlaceHolderID="ContentPlaceHolder1" runat="server">
 </asp:Content>
 <asp:Content ID="cntLegacy2" ContentPlaceHolderID="cph" runat="server">

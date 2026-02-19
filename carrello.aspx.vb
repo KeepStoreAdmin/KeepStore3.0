@@ -7,10 +7,30 @@ Imports System.Web.UI
 Imports System.Web.UI.WebControls
 Imports System.Security.Cryptography
 Imports System.Web
+Imports System.Web.UI.HtmlControls
 
 
 Partial Class carrello
     Inherits AntiCsrfPage
+
+    ' === CONTROL DECLARATIONS (FIX COMPILAZIONE) ===
+    ' In questo progetto alcune pagine non hanno il file .designer.vb aggiornato.
+    ' Dichiarando qui i controlli usati dal code-behind evitiamo errori BC30451/BC30456 e Handles.
+    Protected WithEvents pnlFatturazione As Panel
+    Protected WithEvents PnlSpedizione As Panel
+    Protected WithEvents Repeater1 As Repeater
+    Protected WithEvents gvArticoliGratis As Repeater
+
+    Protected WithEvents canorder As HtmlGenericControl
+    Protected WithEvents tbShopIdGestPay As TextBox
+    Protected WithEvents lblBuonoScontoIVA As Label
+    Protected WithEvents LstScegliIndirizzo As DropDownList
+    Protected WithEvents ddlCitta2 As DropDownList
+    Protected WithEvents tbTelefono2 As TextBox
+    Protected WithEvents RFTelefono2 As RequiredFieldValidator
+    Protected WithEvents open1 As HtmlAnchor
+    Protected WithEvents open2 As HtmlAnchor
+    Protected WithEvents insOmod As HtmlInputHidden
 
 
 ' === HARDENING HELPERS (VB2012 safe) ===
