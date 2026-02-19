@@ -38,7 +38,7 @@ Partial Class Articoli
         If a.Length <> b.Length Then Return False
 
         For i As Integer = 0 To b.GetUpperBound(0)
-            If Not Array.IndexOf(a, b(i)) >= 0 Then Return False
+            If Array.IndexOf(a, b(i)) < 0 Then Return False
         Next
 
         Return True
@@ -1262,12 +1262,29 @@ Dim idUtente As Integer = 0
     End Function
 
     Function changeUrlGetParam(ByVal url As String, ByVal parName As String, ByVal parValue As String) As String
+        If String.IsNullOrEmpty(url) Then Return url
+
+        'Rimuove il parametro esistente (sia nella forma ?par= che &par=) e lo riaggiunge in coda se valorizzato.
         Dim newUrl As String = Regex.Replace(url, "&" & parName & "=([^&])+", String.Empty)
         newUrl = Regex.Replace(newUrl, "\?" & parName & "=([^&])+", "?")
-        If parValue <> String.Empty Then
-            newUrl = newUrl & "&" & parName & "=" & parValue
+
+        If Not String.IsNullOrEmpty(parValue) Then
+            'Encoding per evitare caratteri non validi nel Location header (HTTP/2) e preservare corretta lettura QueryString.
+            Dim safeValue As String = HttpUtility.UrlEncode(parValue)
+            safeValue = safeValue.Replace(vbCr, String.Empty).Replace(vbLf, String.Empty)
+
+            Dim sep As String = If(newUrl.Contains("?"), "&", "?")
+            If newUrl.EndsWith("?") OrElse newUrl.EndsWith("&") Then
+                sep = String.Empty
+            End If
+
+            newUrl = newUrl & sep & parName & "=" & safeValue
         End If
-        Return newUrl.Replace("?&", "?")
+
+        newUrl = newUrl.Replace("?&", "?")
+        newUrl = newUrl.Replace("??", "?")
+        newUrl = newUrl.Replace("&&", "&")
+        Return newUrl
     End Function
 
     Sub alert(ByVal message As String)
@@ -2243,15 +2260,11 @@ Dim idUtente As Integer = 0
 ' =========================
 Protected Function HasPromo(inOffertaObj As Object, prezzoPromoObj As Object) As Boolean
     Dim inOfferta As Integer = 0
-
-    If inOffertaObj IsNot Nothing AndAlso inOffertaObj IsNot DBNull.Value Then
-        Dim raw As String = Convert.ToString(inOffertaObj).Trim()
-
-        If raw.Equals("True", StringComparison.OrdinalIgnoreCase) Then
-            inOfferta = 1
-        Else
-            Integer.TryParse(raw, inOfferta)
-        End If
+    Dim raw As String = Convert.ToString(inOffertaObj)
+    If raw IsNot Nothing AndAlso raw.Trim().Equals("True", StringComparison.OrdinalIgnoreCase) Then
+        inOfferta = 1
+    Else
+        Integer.TryParse(raw, inOfferta)
     End If
 
     Dim promo As Decimal = KeepStoreSecurity.SqlCleanDecimal(prezzoPromoObj, 0D)
@@ -2260,10 +2273,7 @@ End Function
 
 Private Function FormatPriceEUR(val As Decimal) As String
     If val <= 0D Then Return ""
-
     Dim it As System.Globalization.CultureInfo = System.Globalization.CultureInfo.GetCultureInfo("it-IT")
-
-    ' Evita problemi di encoding del simbolo € in deploy
     Return ChrW(&H20AC) & " " & val.ToString("N2", it)
 End Function
 
