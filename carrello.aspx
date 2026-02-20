@@ -10,10 +10,7 @@
 
 </asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
-
-    <asp:ScriptManager ID="ScriptManager1" runat="server" />
-    
-        <asp:Panel ID="PanelDestinazione" runat="server" Style="display: none">
+<asp:Panel ID="PanelDestinazione" runat="server" Style="display: none">
             <div id="Div1" class="checkout_box_500">
                 <div id="Div2" style="margin: 0px 20px; padding-top: 15px; height: 500px;">
                     <h2>
