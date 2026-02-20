@@ -57,29 +57,24 @@
     <section class="s-shoping-cart tf-sp-2">
         <div class="container">
 
-        <div class="checkout-status tf-sp-2 pt-0">
-            <div class="checkout-wrap">
-                <span class="checkout-bar first"></span>
-                <div class="step-payment">
-                    <span class="icon">
-                        <i class="icon-shop-cart-1"></i>
-                    </span>
-                    <span class="text-secondary body-text-3">Carrello</span>
-                </div>
-                <div class="step-payment">
-                    <span class="icon">
-                        <i class="icon-shop-cart-2"></i>
-                    </span>
-                    <span class="link-secondary body-text-3">Checkout</span>
-                </div>
-                <div class="step-payment">
-                    <span class="icon">
-                        <i class="icon-shop-cart-3"></i>
-                    </span>
-                    <span class="link-secondary body-text-3">Conferma</span>
+            <div class="checkout-status tf-sp-2 pt-0">
+                <div class="checkout-status-wrap">
+                    <div class="checkout-status-list">
+                        <div class="checkout-status-item active">
+                            <span class="icon"><i class="icon icon-bag"></i></span>
+                            <span class="text">Carrello</span>
+                        </div>
+                        <div class="checkout-status-item">
+                            <span class="icon"><i class="icon icon-credit-card"></i></span>
+                            <span class="text">Checkout</span>
+                        </div>
+                        <div class="checkout-status-item">
+                            <span class="icon"><i class="icon icon-check"></i></span>
+                            <span class="text">Conferma</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
             <div class="heading-section mb-3">
                 <h3 class="heading">Il tuo carrello</h3>
@@ -103,7 +98,6 @@
                 DeleteCommand="delete from carrello where (Id = ?Id)"
                 UpdateCommand="update carrello set qnt = ?Qnt where (Id = ?Id)">
             </asp:SqlDataSource>
-<div class="form-discount">
 <div class="row g-4">
                 <div class="col-12">
                     <div class="overflow-x-auto">
@@ -123,7 +117,7 @@
                         <asp:Repeater ID="gvArticoliGratis" runat="server" DataSourceID="sdsArticoli_Spedizione_Gratis" OnItemCommand="gvArticoliGratis_ItemCommand">
                             <ItemTemplate>
                                 <tr class="tf-cart-item">
-                                    <td data-cart-title="Prodotto" class="tf-cart-item_product">
+                                    <td class="tf-cart-item_product">
                                         <asp:HyperLink ID="HyperLink3" runat="server" CssClass="img-box" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCid") %>'>
                                             <asp:Image ID="Image2" runat="server" ImageUrl='<%# checkImg(Eval("img1")) %>' AlternateText="" />
                                         </asp:HyperLink>
@@ -189,7 +183,7 @@
                                         </p>
                                     </td>
 
-                                    <td data-cart-title="Rimuovi" class="remove-cart text-xxl-end">
+                                    <td class="remove-cart">
                                         <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link" Text="<i class='icon icon-close'></i>"></asp:LinkButton>
                                     </td>
                                 </tr>
@@ -234,7 +228,7 @@
                         <asp:Repeater ID="Repeater1" runat="server" DataSourceID="sdsArticoli" OnItemCommand="Repeater1_ItemCommand">
                             <ItemTemplate>
                                 <tr class="tf-cart-item">
-                                    <td data-cart-title="Prodotto" class="tf-cart-item_product">
+                                    <td class="tf-cart-item_product">
                                         <asp:HyperLink ID="HyperLink3" runat="server" CssClass="img-box" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCid") %>'>
                                             <asp:Image ID="Image2" runat="server" ImageUrl='<%# checkImg(Eval("img1")) %>' AlternateText="" />
                                         </asp:HyperLink>
@@ -298,7 +292,7 @@
                                         </p>
                                     </td>
 
-                                    <td data-cart-title="Rimuovi" class="remove-cart text-xxl-end">
+                                    <td class="remove-cart">
                                         <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link" Text="<i class='icon icon-close'></i>"></asp:LinkButton>
                                     </td>
                                 </tr>
@@ -344,8 +338,6 @@
                     </div>
                 </div>
             </div>
-
-</div>
 
             <div id="Qnt_Errata" runat="server" class="ks-alert ks-alert-danger" visible="false">
                 E' stata impostata una quantità articolo minore o uguale a 0.<br />Eliminare l'articolo dal carrello o impostare una quantità maggiore di 0.
@@ -394,79 +386,77 @@
                 </Columns>
             </asp:GridView>
 
-            
-<div class="cart-bottom mt-4">
-    <div class="ip-discount-code">
-        <asp:Panel ID="Panel_BuoniSconto" runat="server">
-            <asp:TextBox ID="TB_BuonoSconto" runat="server"
-                CssClass="form-control"
-                placeholder="Inserisci il codice sconto"
-                Style="max-width: 340px; text-transform:uppercase; font-weight:bold; text-align:center;"></asp:TextBox>
-            <asp:Button ID="BT_ApplicaBuonoSconto" runat="server" CausesValidation="false"
-                Text="Applica coupon" CssClass="tf-btn btn-gray" />
-        </asp:Panel>
-    </div>
-    <span class="last-total-price main-title fw-semibold">
-        Totale:
-        <asp:Label ID="lblTotale" runat="server" Text="&#8364; 0,00" Font-Bold="true"
-            Style="color:rgb(205, 38, 44);"></asp:Label>
-    </span>
-</div>
+            <div class="row g-4 ks-cart-bottom">
+                <div class="col-12 col-lg-8">
+                    <asp:Panel ID="Panel_BuoniSconto" runat="server" HorizontalAlign="left" CssClass="ks-coupon-panel">
+                        <div class="mb-2"><b>CODICE SCONTO</b></div>
+                        <div class="d-flex gap-2 align-items-center flex-wrap">
+                            <asp:TextBox ID="TB_BuonoSconto" runat="server" CssClass="form-control" Style="max-width: 320px; text-transform:uppercase; font-weight:bold; text-align:center;"></asp:TextBox>
+                            <asp:Button ID="BT_ApplicaBuonoSconto" runat="server" CausesValidation="false" Text="Aggiungi" CssClass="tf-btn btn-gray" />
+                        </div>
+                        <div class="mt-2">
+                            <asp:Image ID="checkOKBuonoSconto" runat="server" ImageUrl="Public/Images/Ok.png" Height="30px" Visible="false" />
+                            <asp:Image ID="checkNOBuonoSconto" runat="server" ImageUrl="Public/Images/Remove.png" Height="30px" Visible="false" />
+                            <asp:Label ID="lblBuonoScontoConvalida" runat="server" Text=""></asp:Label>
+                            <asp:LinkButton ID="LB_CancelBuonoSconto" runat="server" CssClass="link" ForeColor="Red" Visible="false">Elimina codice</asp:LinkButton>
+                        </div>
+                    </asp:Panel>
 
-<div class="mt-2">
-    <asp:Image ID="checkOKBuonoSconto" runat="server" ImageUrl="Public/Images/Ok.png" Height="30px" Visible="false" />
-    <asp:Image ID="checkNOBuonoSconto" runat="server" ImageUrl="Public/Images/Remove.png" Height="30px" Visible="false" />
-    <asp:Label ID="lblBuonoScontoConvalida" runat="server" Text=""></asp:Label>
-    <asp:LinkButton ID="LB_CancelBuonoSconto" runat="server" CssClass="link" ForeColor="Red" Visible="false">Elimina codice</asp:LinkButton>
-</div>
+                    <!-- Hidden technical fields used by VB -->
+                    <asp:TextBox ID="tbVettoriId" runat="server" ToolTip="VettoriId" Style="display:none" Width="20px"></asp:TextBox>
+                    <asp:TextBox ID="tbPagamenti" runat="server" ToolTip="PagamentiId" Style="display:none" Width="20px"></asp:TextBox>
+                    <asp:TextBox ID="tbShopIdGestPay" runat="server" ToolTip="tShopIdGestPay" Style="display:none" Width="20px"></asp:TextBox>
+                    <asp:TextBox ID="tbContrPerc" runat="server" ToolTip="Contrassegno Percentuale" Style="display:none" Width="20px"></asp:TextBox>
+                    <asp:TextBox ID="tbContrFisso" runat="server" ToolTip="Contrassegno Fisso" Style="display:none" Width="20px"></asp:TextBox>
+                    <asp:TextBox ID="tbContrMinimo" runat="server" ToolTip="Contrassegno Minimo" Style="display:none" Width="20px"></asp:TextBox>
+                    <asp:TextBox ID="tbPeso" runat="server" Width="20px" Style="display:none" ToolTip="Peso"></asp:TextBox>
+                    <asp:TextBox ID="tbTotale" runat="server" Width="20px" Style="display:none" ToolTip="Totale"></asp:TextBox>
+                </div>
 
-<!-- Hidden technical fields used by VB -->
-<asp:TextBox ID="tbVettoriId" runat="server" ToolTip="VettoriId" Style="display:none" Width="20px"></asp:TextBox>
-<asp:TextBox ID="tbPagamenti" runat="server" ToolTip="PagamentiId" Style="display:none" Width="20px"></asp:TextBox>
-<asp:TextBox ID="tbShopIdGestPay" runat="server" ToolTip="tShopIdGestPay" Style="display:none" Width="20px"></asp:TextBox>
-<asp:TextBox ID="tbContrPerc" runat="server" ToolTip="Contrassegno Percentuale" Style="display:none" Width="20px"></asp:TextBox>
-<asp:TextBox ID="tbContrFisso" runat="server" ToolTip="Contrassegno Fisso" Style="display:none" Width="20px"></asp:TextBox>
-<asp:TextBox ID="tbContrMinimo" runat="server" ToolTip="Contrassegno Minimo" Style="display:none" Width="20px"></asp:TextBox>
-<asp:TextBox ID="tbPeso" runat="server" Width="20px" Style="display:none" ToolTip="Peso"></asp:TextBox>
-<asp:TextBox ID="tbTotale" runat="server" Width="20px" Style="display:none" ToolTip="Totale"></asp:TextBox>
+                <div class="col-12 col-lg-4">
+                    <div class="tf-page-cart-footer">
+                        <div class="tf-cart-summery">
+                            <h4 class="title">Riepilogo</h4>
+                        <table width="100%" id="TableConteggi" runat="server" visible="false" class="ks-summary-table">
+                            <tr>
+                                <td align="right" style="width:70%;">Imponibile:</td>
+                                <td align="right" style="width:30%;"><asp:Label ID="lblImponibile" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                            </tr>
+                            <tr>
+                                <td align="right">Spedizione:</td>
+                                <td align="right"><asp:Label ID="lblSpeseSped" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                            </tr>
+                            <tr>
+                                <td align="right">Assicurazione:</td>
+                                <td align="right"><asp:Label ID="lblSpeseAss" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                            </tr>
+                            <tr>
+                                <td align="right">IVA:</td>
+                                <td align="right"><asp:Label ID="lblIva" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                            </tr>
+                            <tr>
+                                <td align="right">Pagamento:</td>
+                                <td align="right"><asp:Label ID="lblPagamento" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                            </tr>
+                            <tr>
+                                <td align="right">Buono Sconto:</td>
+                                <td align="right"><asp:Label ID="lblBuonoSconto" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                            </tr>
+                            <tr>
+                                <td align="right">Buono Sconto IVA:</td>
+                                <td align="right"><asp:Label ID="lblBuonoScontoIVA" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                            </tr>
+                            <tr>
+                                <td align="right"><b>Totale:</b></td>
+                                <td align="right"><asp:Label ID="lblTotale" runat="server" Text="&#8364; 0,00" Font-Bold="true" Style="color:rgb(205, 38, 44);"></asp:Label></td>
+                            </tr>
+                        </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-<div class="tf-page-cart-footer mt-4">
-    <div class="tf-cart-summery">
-        <h4 class="title">Riepilogo</h4>
-        <table width="100%" id="TableConteggi" runat="server" visible="false" class="ks-summary-table">
-            <tr>
-                <td align="right" style="width:70%;">Imponibile:</td>
-                <td align="right" style="width:30%;"><asp:Label ID="lblImponibile" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
-            </tr>
-            <tr>
-                <td align="right">Spedizione:</td>
-                <td align="right"><asp:Label ID="lblSpeseSped" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
-            </tr>
-            <tr>
-                <td align="right">Assicurazione:</td>
-                <td align="right"><asp:Label ID="lblSpeseAss" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
-            </tr>
-            <tr>
-                <td align="right">IVA:</td>
-                <td align="right"><asp:Label ID="lblIva" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
-            </tr>
-            <tr>
-                <td align="right">Pagamento:</td>
-                <td align="right"><asp:Label ID="lblPagamento" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
-            </tr>
-            <tr>
-                <td align="right">Buono Sconto:</td>
-                <td align="right"><asp:Label ID="lblBuonoSconto" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
-            </tr>
-            <tr>
-                <td align="right">Buono Sconto IVA:</td>
-                <td align="right"><asp:Label ID="lblBuonoScontoIVA" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
-            </tr>
-        </table>
-    </div>
-</div>
-
-<div id="canorder" runat="server" class="ks-alert-warning">
+            <div ID="canorder" runat="server" class="ks-alert-warning">
                 Non sei un utente abilitato a procedere con l'ordine. Contattaci se desideri invece procedere
             </div>
 
@@ -489,7 +479,7 @@
     <tr><td style="width: 100%;" colspan="2" valign="top" >
     
     <div id="promo_vettori">
-    <asp:Panel ID="pSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;" CssClass="wrap">
+    <asp:Panel ID="pSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;" CssClass="wrap tf-checkout-box">
         
                 <h5 class="title fw-semibold">Spedizione</h5>
 <!--<div id="infobar" style="width:100%; color:White; font-weight:bold; height:50px; background-image:url('Public/Images/StepCarrello1.png'); background-size:100%; background-repeat:no-repeat;"></div>-->
@@ -780,7 +770,7 @@
 				</asp:Panel>   
 			</div>
 			<div class="col-12 col-md-6">
-			  <asp:Panel ID="pPagamento" runat="server" Width="99.5%" Visible="true" CssClass="wrap">
+			  <asp:Panel ID="pPagamento" runat="server" Width="99.5%" Visible="true" CssClass="wrap tf-checkout-box">
 					<h5 class="title fw-semibold">Pagamento</h5>
 
 					<asp:SqlDataSource ID="sdsPagamento" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
@@ -883,7 +873,7 @@
     <tr>
     
     <td colspan="2">
-    <asp:Panel ID="PnlFatturazione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap">
+    <asp:Panel ID="PnlFatturazione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap tf-checkout-box">
 							<h5 class="title fw-semibold">Dati fatturazione</h5>
 
 		
@@ -952,7 +942,7 @@
 	    <tr>
     
     <td colspan="2">
-    <asp:Panel ID="PnlSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap">
+    <asp:Panel ID="PnlSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap tf-checkout-box">
 							<h5 class="title fw-semibold">Indirizzo di spedizione</h5>
 
 		
@@ -1215,4 +1205,5 @@
     <br />
 	<!-- Controllo se esiste l'immagine -->
 </asp:Content>
+
 
