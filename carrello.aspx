@@ -123,7 +123,7 @@
                         <asp:Repeater ID="gvArticoliGratis" runat="server" DataSourceID="sdsArticoli_Spedizione_Gratis" OnItemCommand="gvArticoliGratis_ItemCommand">
                             <ItemTemplate>
                                 <tr class="tf-cart-item">
-                                    <td class="tf-cart-item_product">
+                                    <td data-cart-title="Prodotto" class="tf-cart-item_product">
                                         <asp:HyperLink ID="HyperLink3" runat="server" CssClass="img-box" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCid") %>'>
                                             <asp:Image ID="Image2" runat="server" ImageUrl='<%# checkImg(Eval("img1")) %>' AlternateText="" />
                                         </asp:HyperLink>
@@ -189,7 +189,7 @@
                                         </p>
                                     </td>
 
-                                    <td class="remove-cart">
+                                    <td data-cart-title="Rimuovi" class="remove-cart text-xxl-end">
                                         <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link" Text="<i class='icon icon-close'></i>"></asp:LinkButton>
                                     </td>
                                 </tr>
@@ -234,7 +234,7 @@
                         <asp:Repeater ID="Repeater1" runat="server" DataSourceID="sdsArticoli" OnItemCommand="Repeater1_ItemCommand">
                             <ItemTemplate>
                                 <tr class="tf-cart-item">
-                                    <td class="tf-cart-item_product">
+                                    <td data-cart-title="Prodotto" class="tf-cart-item_product">
                                         <asp:HyperLink ID="HyperLink3" runat="server" CssClass="img-box" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCid") %>'>
                                             <asp:Image ID="Image2" runat="server" ImageUrl='<%# checkImg(Eval("img1")) %>' AlternateText="" />
                                         </asp:HyperLink>
@@ -298,7 +298,7 @@
                                         </p>
                                     </td>
 
-                                    <td class="remove-cart">
+                                    <td data-cart-title="Rimuovi" class="remove-cart text-xxl-end">
                                         <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link" Text="<i class='icon icon-close'></i>"></asp:LinkButton>
                                     </td>
                                 </tr>
