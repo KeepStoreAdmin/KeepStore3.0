@@ -7,31 +7,10 @@ Imports System.Web.UI
 Imports System.Web.UI.WebControls
 Imports System.Security.Cryptography
 Imports System.Web
-Imports System.Web.UI.HtmlControls
-
 
 Partial Class carrello
+    ' NOTE: Controls are declared in the auto-generated .designer.vb; do not redeclare WithEvents here to avoid BC30260.
     Inherits AntiCsrfPage
-
-    ' === CONTROL DECLARATIONS (FIX COMPILAZIONE) ===
-    ' In questo progetto alcune pagine non hanno il file .designer.vb aggiornato.
-    ' Dichiarando qui i controlli usati dal code-behind evitiamo errori BC30451/BC30456 e Handles.
-    Protected WithEvents pnlFatturazione As Panel
-    Protected WithEvents PnlSpedizione As Panel
-    Protected WithEvents Repeater1 As Repeater
-    Protected WithEvents gvArticoliGratis As Repeater
-
-    Protected WithEvents canorder As HtmlGenericControl
-    Protected WithEvents tbShopIdGestPay As TextBox
-    Protected WithEvents lblBuonoScontoIVA As Label
-    Protected WithEvents LstScegliIndirizzo As DropDownList
-    Protected WithEvents ddlCitta2 As DropDownList
-    Protected WithEvents tbTelefono2 As TextBox
-    Protected WithEvents RFTelefono2 As RequiredFieldValidator
-    Protected WithEvents open1 As HtmlAnchor
-    Protected WithEvents open2 As HtmlAnchor
-    Protected WithEvents insOmod As HtmlInputHidden
-
 
 ' === HARDENING HELPERS (VB2012 safe) ===
 Private Const CHECKOUT_TOKEN_SESSION_KEY As String = "CheckoutToken"
@@ -81,7 +60,6 @@ Private Sub RedirectToOrdineWithQuery(ByVal extraQuery As String)
     Response.Redirect(url, True)
 End Sub
 
-
 Private Sub SafeRedirectLocal(ByVal url As String)
     If String.IsNullOrEmpty(url) Then
         Response.Redirect("default.aspx", True)
@@ -106,7 +84,6 @@ Private Function UrlIsLocal(ByVal url As String) As Boolean
     If url.StartsWith("~/") Then Return True
     Return False
 End Function
-
 
 Protected differenzaTrasportoGratis As Double = 0
 
@@ -269,7 +246,6 @@ Protected Function ExecuteInsert_Legacy(ByVal table As String, ByVal fieldAndVal
     Return Nothing
     End Function
 
-
 ' serve perché nel tuo Catch fai LogEx(..., sqlString) fuori scope
 Private lastSqlString As String = ""
 
@@ -377,7 +353,6 @@ Private Const SessLoginId_B As String = "LOGINID"
     Catch
     End Try
     End Sub
-
 
     Private Function ReadCartRowFromItem(ByVal item As RepeaterItem) As CartRowInfo
     Dim r As New CartRowInfo
@@ -677,7 +652,6 @@ Private Const SessLoginId_B As String = "LOGINID"
             Me.Session("Ordine_SpeseAss") = SafeDbl(Me.lblSpeseAss.Text, 0)
             Me.Session("Ordine_SpesePag") = SafeDbl(Me.lblPagamento.Text, 0)
             Me.Session("Ordine_Totale_Documento") = SafeDbl(Me.lblTotale.Text, 0)
-
 
             '// INIZIO BLOCCO BUONO SCONTO - FIX COMPILAZIONE (SendOrder)
 Dim buonoImp As Double = SafeMoney(lblBuonoSconto.Text, 0)
@@ -1103,7 +1077,6 @@ End Sub
 
 End Sub
 
-
     Public Sub BindLstDestinazioneLstScegliIndirizzo
 
         Dim conn As New MySqlConnection
@@ -1120,7 +1093,6 @@ End Sub
             cmd.CommandType = CommandType.Text
 			cmd.Parameters.AddWithValue("@id", GetUtentiIdSafe(0))
             cmd.CommandText = "SELECT ID, CONCAT(RAGIONESOCIALEA, ' - ', NOMEA, ' - ',INDIRIZZOA, ', CAP: ', CAPA, ' - ',CITTAA,' (', PROVINCIAA, ')') AS CAMPO FROM utentiindirizzi where UTENTEID = @id Order by Predefinito Desc"
-
 
             Dim sqlAdp As New MySqlDataAdapter(cmd)
             sqlAdp.Fill(dsData, "utentiindirizzi")
@@ -1175,7 +1147,6 @@ End Sub
             Return obj.ToString()
             End If
             Return ""
-
 
             cmd.Dispose()
 
@@ -1308,7 +1279,6 @@ End Sub
     Me.RFTelefono2.Enabled = False
 
     End Sub
-
 
 	Protected Sub clear_destinazione_alternativa()
 		BindLstDestinazioneLstScegliIndirizzo
@@ -1763,7 +1733,6 @@ End Sub
         Dim totaleDoc As Double = imponibileVal + ivaNuova + speseAssVal + speseSpedVal + pagamentoVal + buonoVal
         lblTotale.Text = "€ " & FormatNumber(totaleDoc, 2)
 
-
         'Aggiorno il valore del Buono Sconto
         If GV_BuoniSconti.Rows.Count > 0 Then
             Dim scontoPercentuale As Label = GV_BuoniSconti.Rows(0).Cells(0).FindControl("lbl_Percentuale_BuonoSconto")
@@ -1809,10 +1778,8 @@ Dim jsonLd As String = SeoBuilder.BuildSimplePageJsonLd(Me.Title,
                                                         "CheckoutPage")
 SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
 
-
             ' IVA per scorporare il buono: se l'utente ha IVA propria uso quella (percentuale), altrimenti default
             Dim ivaBuonoPerc As Double = If(ivaUtentePerc > -1, ivaUtentePerc, preleva_ValoreIva(-1))
-
 
             Dim buonoTot As Double = SafeMoney(lblBuonoSconto.Text, 0) ' totale sconto (negativo)
             Dim buonoImp As Double = Math.Round(buonoTot / (1 + (ivaBuonoPerc / 100)), 2, MidpointRounding.AwayFromZero)
@@ -1838,7 +1805,6 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
             SafeMoney(lblSpeseSped.Text, 0) +
             SafeMoney(lblPagamento.Text, 0) +
             SafeMoney(lblBuonoSconto.Text, 0)
-
 
             totaleTemp = Math.Round(totaleTemp, 2, MidpointRounding.AwayFromZero)
             lblTotale.Text = "€ " & FormatNumber(totaleTemp, 2)
@@ -2119,7 +2085,6 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
 
     End Sub
 
-
     Protected Sub btSvuota_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btSvuota.Click
         Dim LoginId As Integer = Me.Session("LoginId")
         Dim SessionID As String = Me.Session.SessionID
@@ -2160,7 +2125,6 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
             Me.btContinua.Enabled = True
             Me.btSvuota.Enabled = True
         End If
-
 
         FillTableInfo()
 
@@ -2435,7 +2399,6 @@ End Sub
             cmd.CommandText = "SELECT iva.Valore FROM iva WHERE iva.id=@idIva"
         End If
 
-
         dr = cmd.ExecuteReader()
         dr.Read()
 
@@ -2708,7 +2671,6 @@ End Sub
 
     End Sub
 
-
     Public Function listaArticoliInCarrello() As String
     Dim stringa As String = ""
 
@@ -2781,7 +2743,6 @@ End Sub
 
     Return stringa
 End Function
-
 
 Public Function VerificaBuonoSconto(ByVal articoli As String, ByVal buonosconto As String, ByVal azienda As Integer, ByVal listino As String, ByVal utenteid As Integer, ByVal totaleMerceCarrello As Double) As Integer
     Dim retval As Integer = 0
@@ -2876,7 +2837,6 @@ Public Function VerificaBuonoSconto(ByVal articoli As String, ByVal buonosconto 
 
     Return retval
 End Function
-
 
 Public Function controllaValiditaBuonoSconto(ByVal codiceBuono As String, Optional ByVal idAzienda As Integer = 0, Optional ByVal idArticolo As Integer = -1, Optional ByVal idUtente As Integer = -1, Optional ByVal idTipoUtente As Integer = -1, Optional ByVal idListinoUtente As Integer = -1) As Integer
     Dim operatoreLogico As String = ""
@@ -3081,7 +3041,6 @@ Public Function controllaValiditaBuonoSconto(ByVal codiceBuono As String, Option
     End Using
 End Function
 
-
 Protected Sub GV_BuoniSconti_RowCommand(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.GridViewCommandEventArgs) Handles GV_BuoniSconti.RowCommand
     If e.CommandName = "CancellaBuonoSconto" Then
         Session("BuonoSconto_id") = Nothing
@@ -3090,7 +3049,6 @@ Protected Sub GV_BuoniSconti_RowCommand(ByVal sender As Object, ByVal e As Syste
         BT_ApplicaBuonoSconto.Enabled = True
     End If
 End Sub
-
 
 'Funzione che restituisce 1 se il buono può essere utilizzato solo una volta, 0 nel caso il buono possa essere utilizzato più volte
 Function getUtilizzoBuonoSconto(ByVal codiceBuonoSconto As String, ByVal idAzienda As Integer) As Integer
@@ -3114,7 +3072,6 @@ Function getUtilizzoBuonoSconto(ByVal codiceBuonoSconto As String, ByVal idAzien
     Return UtilizzaSoloUnaVolta
 End Function
 
-
 Function getBuonoScontoCodice(ByVal idBuonoSconto As Integer) As String
     Dim codiceBuonoSconto As String = ""
     Dim paramsSelect As New Dictionary(Of String, String)
@@ -3135,7 +3092,6 @@ Function getBuonoScontoCodice(ByVal idBuonoSconto As Integer) As String
     Return codiceBuonoSconto
 End Function
 
-
 Protected Sub btContinua_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btContinua.Click
     If Session.Item("Pagina_visitata_Articoli") Is Nothing Then
         Response.Redirect("default.aspx")
@@ -3148,14 +3104,12 @@ Protected Sub btContinua_Click(ByVal sender As Object, ByVal e As System.EventAr
     End If
 End Sub
 
-
 Protected Sub btAggiorna_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btAggiorna.Click
     Aggiorna_Prezzi_Carrello()
 
     ' Session("Click_AggiornaCarrello") = 1 
     Response.Redirect("carrello.aspx")
 End Sub
-
 
 Protected Sub LB_CancelBuonoSconto_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles LB_CancelBuonoSconto.Click
     Session("BuonoSconto_id") = Nothing
@@ -3164,7 +3118,6 @@ Protected Sub LB_CancelBuonoSconto_Click(ByVal sender As Object, ByVal e As Syst
     BT_ApplicaBuonoSconto.Enabled = True
     LB_CancelBuonoSconto.Visible = False
 End Sub
-
 
 Protected Sub btSalvaPreventivo_click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btSalvaPreventivo.Click
     Me.PnlDestinazione.Visible = False
@@ -3187,7 +3140,6 @@ Protected Sub btSalvaPreventivo_click(ByVal sender As Object, ByVal e As System.
 
     RedirectToOrdine()
 End Sub
-
 
 Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btInviaOrdine.Click
     Me.PnlDestinazione.Visible = False
@@ -3691,8 +3643,6 @@ End Sub
 Private Function RbEnabled(ByVal rb As Control) As Boolean
     Return GetControlBool(rb, "Enabled", False)
 End Function
-
-
 
     ' ============================================================
     ' SEO helpers locali (compatibilità: SeoBuilder non disponibile)
