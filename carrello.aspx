@@ -11,7 +11,11 @@
 </asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
 
-    <asp:ScriptManager ID="ScriptManager1" runat="server" />
+    <%--
+        KEEPSTORE: rimosso ScriptManager (ASP.NET AJAX)
+        - Obiettivo progetto: migrazione nuovo template + eliminazione dipendenze AJAX/UpdatePanel.
+        - Evita dipendenze da System.Web.Extensions pipeline (storicamente coinvolta in crash/stack overflow).
+    --%>
     
         <asp:Panel ID="PanelDestinazione" runat="server" Style="display: none">
             <div id="Div1" class="checkout_box_500">
@@ -870,7 +874,7 @@
     <tr>
     
     <td colspan="2">
-    <asp:Panel ID="pnlFatturazione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap">
+    <asp:Panel ID="PnlFatturazione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap">
 							<h5 class="title fw-semibold">Dati fatturazione</h5>
 
 		
