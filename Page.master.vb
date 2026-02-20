@@ -5,6 +5,7 @@ Imports System.Web.UI.HtmlControls
 Imports System.Text.RegularExpressions
 Imports System.Web
 Imports System.Text
+Imports System.Collections.Generic
 
 Partial Class PageMaster
 '==========================================================
@@ -14,36 +15,36 @@ Partial Class PageMaster
     Inherits System.Web.UI.MasterPage
     Implements ISeoMaster
 
-'==========================================================
-' Helper: trova controlli SENZA ricorsione (evita StackOverflow)
-'==========================================================
-Private Function FindControlIterative(ByVal root As Control, ByVal id As String) As Control
-    If root Is Nothing OrElse String.IsNullOrEmpty(id) Then Return Nothing
+    '==========================================================
+    ' Helper: trova controlli SENZA ricorsione (evita StackOverflow)
+    '==========================================================
+    Private Function FindControlIterative(ByVal root As Control, ByVal id As String) As Control
+        If root Is Nothing OrElse String.IsNullOrEmpty(id) Then Return Nothing
 
-    Dim st As New System.Collections.Generic.Stack(Of Control)()
-    st.Push(root)
+        Dim st As New Stack(Of Control)()
+        st.Push(root)
 
-    While st.Count > 0
-        Dim cur As Control = st.Pop()
+        While st.Count > 0
+            Dim cur As Control = st.Pop()
 
-        If cur IsNot Nothing AndAlso String.Equals(cur.ID, id, StringComparison.Ordinal) Then
-            Return cur
-        End If
+            If cur IsNot Nothing AndAlso String.Equals(cur.ID, id, StringComparison.Ordinal) Then
+                Return cur
+            End If
 
-        If cur IsNot Nothing AndAlso cur.HasControls() Then
-            For i As Integer = cur.Controls.Count - 1 To 0 Step -1
-                st.Push(cur.Controls(i))
-            Next
-        End If
-    End While
+            If cur IsNot Nothing AndAlso cur.HasControls() Then
+                For i As Integer = cur.Controls.Count - 1 To 0 Step -1
+                    st.Push(cur.Controls(i))
+                Next
+            End If
+        End While
 
-    Return Nothing
-End Function
+        Return Nothing
+    End Function
 
-Private Function FindCtrl(Of T As Control)(ByVal id As String) As T
-    Dim c As Control = FindControlIterative(Me, id)
-    Return TryCast(c, T)
-End Function
+    Private Function FindCtrl(Of T As Control)(ByVal id As String) As T
+        Dim c As Control = FindControlIterative(Me, id)
+        Return TryCast(c, T)
+    End Function
 
 
 

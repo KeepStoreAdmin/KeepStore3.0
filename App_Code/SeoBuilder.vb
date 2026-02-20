@@ -372,27 +372,33 @@ Public NotInheritable Class SeoBuilder
 
     Private Shared Function FindControlRecursiveInternal(ByVal root As Control, ByVal id As String) As Control
         If root Is Nothing Then Return Nothing
+        If String.IsNullOrEmpty(id) Then Return Nothing
 
-        ' IMPORTANT:
-        ' Evitiamo root.FindControl(id) perché su controlli databound (GridView, Repeater, DataList, ecc.)
-        ' può forzare EnsureChildControls/DataBind ed eseguire query premature (parametri non ancora impostati).
-        ' Qui la ricerca è intenzionalmente "side-effect free".
-        Try
-            If Not String.IsNullOrEmpty(root.ID) AndAlso String.Equals(root.ID, id, StringComparison.Ordinal) Then
-                Return root
-            End If
-        Catch
-            ' ignore
-        End Try
+        ' Iterativa (NO ricorsione) per evitare StackOverflow su pagine con alberi di controllo molto grandi.
+        Dim st As New System.Collections.Generic.Stack(Of Control)()
+        st.Push(root)
 
-        Try
-            For Each child As Control In root.Controls
-                Dim found As Control = FindControlRecursiveInternal(child, id)
-                If found IsNot Nothing Then Return found
-            Next
-        Catch
-            ' ignore
-        End Try
+        While st.Count > 0
+            Dim cur As Control = st.Pop()
+
+            Try
+                If cur IsNot Nothing AndAlso Not String.IsNullOrEmpty(cur.ID) AndAlso String.Equals(cur.ID, id, StringComparison.Ordinal) Then
+                    Return cur
+                End If
+            Catch
+                ' ignore
+            End Try
+
+            Try
+                If cur IsNot Nothing AndAlso cur.HasControls() Then
+                    For i As Integer = cur.Controls.Count - 1 To 0 Step -1
+                        st.Push(cur.Controls(i))
+                    Next
+                End If
+            Catch
+                ' ignore
+            End Try
+        End While
 
         Return Nothing
     End Function

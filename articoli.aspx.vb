@@ -5,6 +5,7 @@ Imports System.Web
 Imports System.Text.RegularExpressions
 Imports System.Collections
 Imports System.Collections.Generic
+Imports System.Web.UI.WebControls
 
 Partial Class Articoli
     Inherits AntiCsrfPage
@@ -38,18 +39,13 @@ Partial Class Articoli
         If a.Length <> b.Length Then Return False
 
         For i As Integer = 0 To b.GetUpperBound(0)
-            If Array.IndexOf(a, b(i)) < 0 Then Return False
+            If Not Array.IndexOf(a, b(i)) >= 0 Then Return False
         Next
 
         Return True
     End Function
 
     Protected Sub Page_PreRenderComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRenderComplete
-        ' Normalizzazione URL filtri:
-        ' - viene eseguita SOLO dopo interazione utente (postback)
-        ' - evita loop/ricorsioni di redirect su GET iniziale (stabilità IIS/HTTP2)
-        If Not IsPostBack Then Exit Sub
-
         Dim newUrl As String = oldUrl
         Dim mrAreEquals As Boolean = True
         Dim tpAreEquals As Boolean = True
@@ -74,17 +70,14 @@ Partial Class Articoli
         End If
 
         If Not (mrAreEquals And tpAreEquals And grAreEquals And sgAreEquals) Then
-            ' Redirect soft (no ThreadAbortException) + CompleteRequest per stabilità
-            If Not String.Equals(newUrl, Request.Url.AbsoluteUri, StringComparison.OrdinalIgnoreCase) Then
-                Response.Redirect(newUrl, False)
-                If Context IsNot Nothing AndAlso Context.ApplicationInstance IsNot Nothing Then
-                    Context.ApplicationInstance.CompleteRequest()
-                End If
-            End If
+            Response.Redirect(newUrl)
         End If
     End Sub
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        ' Step 1: se presente ScriptManager, disabilita partial rendering (rimozione AJAX)
+        Dim sm = System.Web.UI.ScriptManager.GetCurrent(Me.Page)
+        If sm IsNot Nothing Then sm.EnablePartialRendering = False
         oldUrl = HttpContext.Current.Request.Url.AbsoluteUri
 
         If Request.QueryString("rimuovi") <> String.Empty Then
@@ -139,7 +132,41 @@ Partial Class Articoli
         End If
     End Sub
 
-    Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.LoadComplete
+    
+    ' ==========================================================
+    '  PAGER HELPERS (ListView + DataPager)
+    ' ==========================================================
+    Private Sub ApplyPagerSettings(ByVal doDataBind As Boolean)
+        Dim pageSize As Integer = 12
+        If Session("RigheArticoli") IsNot Nothing Then Integer.TryParse(Session("RigheArticoli").ToString(), pageSize)
+        If pageSize <= 0 Then pageSize = 12
+
+        If Me.dpProdotti IsNot Nothing Then
+            Me.dpProdotti.PageSize = pageSize
+
+            Dim pageIndex As Integer = 0
+            If Session("Articoli_PageIndex") IsNot Nothing Then Integer.TryParse(Session("Articoli_PageIndex").ToString(), pageIndex)
+            If pageIndex < 0 Then pageIndex = 0
+
+            Dim startRow As Integer = pageIndex * pageSize
+            Me.dpProdotti.SetPageProperties(startRow, pageSize, doDataBind)
+        End If
+
+        If Me.lblLinee IsNot Nothing Then Me.lblLinee.Text = pageSize.ToString()
+    End Sub
+
+    Protected Sub lvProdotti_PagePropertiesChanging(ByVal sender As Object, ByVal e As PagePropertiesChangingEventArgs)
+        ' Salvo la pagina corrente per mantenere lo stato tra postback/filtri
+        Dim pageIndex As Integer = 0
+        If e.MaximumRows > 0 Then pageIndex = CInt(Math.Floor(e.StartRowIndex / e.MaximumRows))
+        Session("Articoli_PageIndex") = pageIndex
+
+        If Me.dpProdotti IsNot Nothing Then
+            Me.dpProdotti.SetPageProperties(e.StartRowIndex, e.MaximumRows, False)
+        End If
+    End Sub
+
+Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.LoadComplete
         IvaTipo = Me.Session("IvaTipo")
 
         If IvaTipo = 1 Then
@@ -150,23 +177,7 @@ Partial Class Articoli
 
         CaricaArticoli()
 
-' Paging (ListView + DataPager)
-Dim ps As Integer = 12
-Dim tmpPs As Integer
-If Session("RigheArticoli") IsNot Nothing AndAlso Integer.TryParse(Session("RigheArticoli").ToString(), tmpPs) AndAlso tmpPs > 0 Then
-    ps = tmpPs
-End If
-dpProdotti.PageSize = ps
-
-Dim pageIndex As Integer = 0
-Dim tmpIdx As Integer
-If Session("Articoli_PageIndex") IsNot Nothing AndAlso Integer.TryParse(Session("Articoli_PageIndex").ToString(), tmpIdx) AndAlso tmpIdx >= 0 Then
-    pageIndex = tmpIdx
-End If
-
-' startRowIndex = pageIndex * pageSize
-dpProdotti.SetPageProperties(pageIndex * ps, ps, False)
-lblLinee.Text = ps.ToString()
+        ApplyPagerSettings(False)
 
         'Inserimento della stringa di ricerca nella tabella query_string, per l'indicizzazione
         If Session("q") IsNot Nothing Then
@@ -660,7 +671,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
             Me.Title = Me.Title & " > " & lblRicerca.Text & userCerca
         End If
 
-Dim groupBy As String = " GROUP BY id"
+strWhere = strWhere & " GROUP BY id"
 
         ' Ordinamento (whitelist)
         Select Case Drop_Ordinamento.SelectedValue
@@ -682,11 +693,11 @@ Dim groupBy As String = " GROUP BY id"
                 ' Default: rilevanza (stabile)
                 strWhere &= " ORDER BY (Giacenza-Impegnata) DESC, id DESC"
         End Select
+
         If TC = 1 Then
-            groupBy &= " ,articoli_tagliecolori.TagliaId, articoli_tagliecolori.ColoreId"
+            strWhere = strWhere & " ,articoli_tagliecolori.TagliaId, articoli_tagliecolori.ColoreId"
         End If
 
-        strWhere &= groupBy
         Me.sdsArticoli.SelectCommand = strSelect & " WHERE Nlistino=?NListino " & strWhere
 
         strWhere2 = " LEFT JOIN vsuperarticoli ON vsuperarticoli.Id = varticolibase.id " & strWhere2 & " AND Nlistino=?NListino"
@@ -817,7 +828,6 @@ Dim groupBy As String = " GROUP BY id"
     Protected Sub sdsArticoli_Selected(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.SqlDataSourceStatusEventArgs) Handles sdsArticoli.Selected
         Me.lblTrovati.Text = e.AffectedRows.ToString
     End Sub
-
     Function controlla_promo_articolo(ByVal cod_articolo As Integer, ByVal listino As Integer) As Integer
         Dim params As New Dictionary(Of String, Object)
         params.Add("@Listino", listino)
@@ -831,15 +841,44 @@ Dim groupBy As String = " GROUP BY id"
             Return 0
         End If
     End Function
+    ' *** LISTVIEW PreRender (UI adjustments) ***
+    Protected Sub lvProdotti_PreRender(ByVal sender As Object, ByVal e As System.EventArgs)
+        ' Nascondo il bottone Wishlist se l'utente non è loggato
+        Dim idUtente As Integer = 0
+        If Session.Item("UtentiId") IsNot Nothing Then Integer.TryParse(Session.Item("UtentiId").ToString(), idUtente)
+        For Each it As ListViewDataItem In Me.lvProdotti.Items
+            Dim lbWishlist As LinkButton = TryCast(it.FindControl("LB_wishlist"), LinkButton)
+            If lbWishlist IsNot Nothing AndAlso idUtente <= 0 Then lbWishlist.Visible = False
+        Next
 
-    ' *** VERSIONE RIPULITA: niente più sdsPromo/rPromo/img semaforo ***
+        ' Footer multi-selezione e pager: li mostro solo se ho risultati
+        Dim hasItems As Boolean = (Me.lvProdotti.Items.Count > 0)
+        If Me.ksMultiFooter IsNot Nothing Then Me.ksMultiFooter.Visible = hasItems
+        If Me.ksPagerWrap IsNot Nothing Then Me.ksPagerWrap.Visible = hasItems
+    End Sub
+
     ' CLICK SU ICONA "CARRELLO" PER SINGOLO ARTICOLO
     Protected Sub ImageButton1_Click(ByVal sender As Object, ByVal e As System.Web.UI.ImageClickEventArgs)
         Dim img As ImageButton = TryCast(sender, ImageButton)
         If img Is Nothing Then Exit Sub
 
-        Dim row As Control = TryCast(img.NamingContainer, Control)
-        If row Is Nothing Then Exit Sub
+        Dim item As ListViewDataItem = TryCast(img.NamingContainer, ListViewDataItem)
+        If item Is Nothing Then Exit Sub
+
+        AddToCartFromItem(item)
+    End Sub
+    Protected Sub LB_AddToCart_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+        Dim lb As LinkButton = TryCast(sender, LinkButton)
+        If lb Is Nothing Then Exit Sub
+
+        Dim item As ListViewDataItem = TryCast(lb.NamingContainer, ListViewDataItem)
+        If item Is Nothing Then Exit Sub
+
+        AddToCartFromItem(item)
+    End Sub
+
+    Private Sub AddToCartFromItem(ByVal item As ListViewDataItem)
+        If item Is Nothing Then Exit Sub
 
         ' Listino corrente (default 1)
         Dim listino As Integer = 1
@@ -850,7 +889,7 @@ Dim groupBy As String = " GROUP BY id"
         End If
 
         ' 1) ID ARTICOLO (usando gli helper)
-        Dim idVal As Integer = GetArticoloIdFromRow(row)
+        Dim idVal As Integer = GetArticoloIdFromContainer(item)
         If idVal <= 0 Then
             ' Non riesco a capire che articolo sia, torno semplicemente alla lista
             Response.Redirect("articoli.aspx")
@@ -858,10 +897,10 @@ Dim groupBy As String = " GROUP BY id"
         End If
 
         ' 2) QUANTITÀ
-        Dim qta As Integer = GetQuantitaFromRow(row)
+        Dim qta As Integer = GetQuantitaFromContainer(item)
 
         ' 3) TCID (Taglia/Colore) se presente, altrimenti -1
-        Dim tcIdVal As Integer = GetTCIdFromRow(row)
+        Dim tcIdVal As Integer = GetTCIdFromContainer(item)
 
         ' 4) PRODOTTO GRATIS (spedito gratis) calcolato da DB
         Session("ProdottoGratis") = spedito_gratis(idVal, listino)
@@ -919,93 +958,7 @@ Dim groupBy As String = " GROUP BY id"
         ' Se in futuro ripristini il repeater delle promo, questa logica andrà riallineata al layout.
     End Sub
 
-    
-
-' =========================
-' ListView paging / UI hooks
-' =========================
-Protected Sub lvProdotti_PagePropertiesChanging(ByVal sender As Object, ByVal e As PagePropertiesChangingEventArgs)
-    dpProdotti.SetPageProperties(e.StartRowIndex, e.MaximumRows, True)
-
-    ' Mantengo la compatibilità con la vecchia Session("Articoli_PageIndex")
-    If e.MaximumRows > 0 Then
-        Session("Articoli_PageIndex") = (e.StartRowIndex \ e.MaximumRows)
-    Else
-        Session("Articoli_PageIndex") = 0
-    End If
-End Sub
-
-Protected Sub lvProdotti_PreRender(ByVal sender As Object, ByVal e As System.EventArgs)
-    ' Allineo PageSize con la preferenza utente (se presente)
-    Dim ps As Integer = dpProdotti.PageSize
-    Dim tmpPs As Integer
-    If Session("RigheArticoli") IsNot Nothing AndAlso Integer.TryParse(Session("RigheArticoli").ToString(), tmpPs) AndAlso tmpPs > 0 Then
-        ps = tmpPs
-    End If
-    If dpProdotti.PageSize <> ps Then dpProdotti.PageSize = ps
-    lblLinee.Text = ps.ToString()
-
-    ' Wishlist visibile solo se loggato
-    Dim idUtente As Integer = 0
-    Integer.TryParse(Convert.ToString(Session.Item("UtentiId")), idUtente)
-    For Each item As ListViewDataItem In lvProdotti.Items
-        Dim lbWishlist As LinkButton = TryCast(item.FindControl("LB_wishlist"), LinkButton)
-        If lbWishlist IsNot Nothing Then
-            lbWishlist.Visible = (idUtente > 0)
-        End If
-    Next
-
-    ' Wrapper UI (pager / multi footer)
-    If ksMultiFooter IsNot Nothing Then ksMultiFooter.Visible = (lvProdotti.Items.Count > 0)
-    If ksPagerWrap IsNot Nothing Then ksPagerWrap.Visible = (lvProdotti.Items.Count > 0)
-End Sub
-
-' Click su icona "carrello" (nuovo template: LinkButton LB_addToCart)
-Protected Sub LB_AddToCart_Click(ByVal sender As Object, ByVal e As System.EventArgs)
-    Dim ctrl As Control = TryCast(sender, Control)
-    If ctrl Is Nothing Then Exit Sub
-
-    Dim row As Control = TryCast(ctrl.NamingContainer, Control)
-    If row Is Nothing Then Exit Sub
-
-    ' Listino corrente (default 1)
-    Dim listino As Integer = 1
-    Dim rawListino As String = Convert.ToString(Session("Listino"))
-    Dim tmpListino As Integer
-    If Integer.TryParse(rawListino, tmpListino) AndAlso tmpListino > 0 Then
-        listino = tmpListino
-    End If
-
-    ' 1) ID ARTICOLO
-    Dim idVal As Integer = GetArticoloIdFromRow(row)
-    If idVal <= 0 Then
-        Response.Redirect("articoli.aspx")
-        Return
-    End If
-
-    ' 2) QUANTITÀ
-    Dim qta As Integer = GetQuantitaFromRow(row)
-
-    ' 3) TCID (Taglia/Colore) se presente, altrimenti -1
-    Dim tcIdVal As Integer = GetTCIdFromRow(row)
-
-    ' 4) PRODOTTO GRATIS (spedito gratis) calcolato da DB
-    Session("ProdottoGratis") = spedito_gratis(idVal, listino)
-
-    ' 5) CONTROLLO SETTORE
-    If controlla_abilitazione_settore(idVal) = 1 Then
-        Session("Carrello_ArticoloId") = idVal.ToString()
-        Session("Carrello_TCId") = tcIdVal.ToString()
-        Session("Carrello_Quantita") = qta.ToString()
-        Session("Carrello_SelezioneMultipla") = Nothing
-
-        Response.Redirect("aggiungi.aspx")
-    Else
-        Response.Redirect("settore_disabilitato.aspx")
-    End If
-End Sub
-
-Protected Sub Selezione_Multipla_Click(ByVal sender As Object, ByVal e As System.Web.UI.ImageClickEventArgs)
+    Protected Sub Selezione_Multipla_Click(ByVal sender As Object, ByVal e As System.Web.UI.ImageClickEventArgs)
         Dim listaArticoli As New ArrayList()
 
         ' Listino corrente (default 1)
@@ -1016,11 +969,11 @@ Protected Sub Selezione_Multipla_Click(ByVal sender As Object, ByVal e As System
             listino = tmpList
         End If
 
-        For Each row As ListViewDataItem In Me.lvProdotti.Items
-            Dim temp_check As CheckBox = TryCast(row.FindControl("CheckBox_SelezioneMultipla"), CheckBox)
+        For Each it As ListViewDataItem In Me.lvProdotti.Items
+            Dim temp_check As CheckBox = TryCast(it.FindControl("CheckBox_SelezioneMultipla"), CheckBox)
             If temp_check IsNot Nothing AndAlso temp_check.Checked Then
 
-                Dim idVal As Integer = GetArticoloIdFromRow(row)
+                Dim idVal As Integer = GetArticoloIdFromContainer(it)
                 If idVal <= 0 Then Continue For
 
                 ' Controllo settore per ogni articolo selezionato
@@ -1029,8 +982,8 @@ Protected Sub Selezione_Multipla_Click(ByVal sender As Object, ByVal e As System
                     Return
                 End If
 
-                Dim tcIdVal As Integer = GetTCIdFromRow(row)
-                Dim qta As Integer = GetQuantitaFromRow(row)
+                Dim tcIdVal As Integer = GetTCIdFromContainer(it)
+                Dim qta As Integer = GetQuantitaFromContainer(it)
                 Dim prodottoGratisFlag As Integer = spedito_gratis(idVal, listino)
 
                 ' Stesso formato di sempre: id,tcid,qta,ProdottoGratis
@@ -1060,14 +1013,14 @@ Protected Sub Selezione_Multipla_Click(ByVal sender As Object, ByVal e As System
     ' ============================
     ' HELPER PER LETTURA DATI DAL ROW
     ' ============================
-    Private Function GetArticoloIdFromRow(ByVal row As Control) As Integer
+    Private Function GetArticoloIdFromContainer(ByVal container As Control) As Integer
         Dim idVal As Integer = 0
 
-        Dim lblId As Label = TryCast(row.FindControl("lblID"), Label)
-        Dim lblId2 As Label = TryCast(row.FindControl("ID"), Label)
-        Dim tbId As TextBox = TryCast(row.FindControl("tbID"), TextBox)
-        Dim hfId As HiddenField = TryCast(row.FindControl("hfID"), HiddenField)
-        Dim hfIdArt As HiddenField = TryCast(row.FindControl("hfIdArticolo"), HiddenField)
+        Dim lblId As Label = TryCast(container.FindControl("lblID"), Label)
+        Dim lblId2 As Label = TryCast(container.FindControl("ID"), Label)
+        Dim tbId As TextBox = TryCast(container.FindControl("tbID"), TextBox)
+        Dim hfId As HiddenField = TryCast(container.FindControl("hfID"), HiddenField)
+        Dim hfIdArt As HiddenField = TryCast(container.FindControl("hfIdArticolo"), HiddenField)
 
         If lblId IsNot Nothing Then
             Integer.TryParse(lblId.Text, idVal)
@@ -1084,9 +1037,9 @@ Protected Sub Selezione_Multipla_Click(ByVal sender As Object, ByVal e As System
         Return idVal
     End Function
 
-    Private Function GetQuantitaFromRow(ByVal row As Control) As Integer
+    Private Function GetQuantitaFromContainer(ByVal container As Control) As Integer
         Dim qta As Integer = 1
-        Dim qtaBox As TextBox = TryCast(row.FindControl("tbQuantita"), TextBox)
+        Dim qtaBox As TextBox = TryCast(container.FindControl("tbQuantita"), TextBox)
         If qtaBox IsNot Nothing Then
             If Not Integer.TryParse(qtaBox.Text, qta) OrElse qta <= 0 Then
                 qta = 1
@@ -1095,10 +1048,10 @@ Protected Sub Selezione_Multipla_Click(ByVal sender As Object, ByVal e As System
         Return qta
     End Function
 
-    Private Function GetTCIdFromRow(ByVal row As Control) As Integer
+    Private Function GetTCIdFromContainer(ByVal container As Control) As Integer
         Dim tcIdVal As Integer = -1
-        Dim lblTC As Label = TryCast(row.FindControl("lblTCId"), Label)
-        Dim hfTC As HiddenField = TryCast(row.FindControl("hfTCId"), HiddenField)
+        Dim lblTC As Label = TryCast(container.FindControl("lblTCId"), Label)
+        Dim hfTC As HiddenField = TryCast(container.FindControl("hfTCId"), HiddenField)
 
         If lblTC IsNot Nothing Then
             Integer.TryParse(lblTC.Text, tcIdVal)
@@ -1128,12 +1081,13 @@ Protected Sub Selezione_Multipla_Click(ByVal sender As Object, ByVal e As System
         Dim ctrl As Control = TryCast(sender, Control)
         If ctrl Is Nothing Then Return
 
-        Dim row As Control = TryCast(ctrl.NamingContainer, Control)
-        If row Is Nothing Then Return
+        Dim item As ListViewDataItem = TryCast(ctrl.NamingContainer, ListViewDataItem)
+        If item Is Nothing Then Return
 
-        Dim idVal As Integer = GetArticoloIdFromRow(row)
-        Dim tcIdVal As Integer = GetTCIdFromRow(row)
-Dim idUtente As Integer = 0
+        Dim idVal As Integer = GetArticoloIdFromContainer(item)
+        Dim tcIdVal As Integer = GetTCIdFromContainer(item)
+
+        Dim idUtente As Integer = 0
         Integer.TryParse(Convert.ToString(Session.Item("UtentiId")), idUtente)
 
         If idUtente <= 0 OrElse idVal <= 0 Then
@@ -1205,7 +1159,7 @@ Dim idUtente As Integer = 0
             If ids.Length > 1 Then
                 Dim filterIdArray As String() = filterId.Split("|"c)
                 For Each id As String In ids
-                    If Array.IndexOf(filterIdArray, id) < 0 Then
+                    If Not Array.IndexOf(filterIdArray, id) >= 0 Then
                         parValue &= id & "|"
                     End If
                 Next
@@ -1215,32 +1169,27 @@ Dim idUtente As Integer = 0
             End If
         End If
 
-        Dim baseUrl As String = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.ToString(), Request.Url.AbsoluteUri)
-        Dim newUrl As String = changeUrlGetParam(baseUrl, parName, parValue)
+        Dim newUrl As String = changeUrlGetParam(Request.UrlReferrer.ToString, parName, parValue)
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub Drop_Ordinamento_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Ordinamento.SelectedIndexChanged
-        Dim baseUrl As String = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.ToString(), Request.Url.AbsoluteUri)
-        Dim newUrl As String = changeUrlDependingFromDropDownList(baseUrl, Drop_Ordinamento, "ordinamento")
+        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.UrlReferrer.ToString, Drop_Ordinamento, "ordinamento")
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub Drop_Filtra_Taglia_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Filtra_Taglia.SelectedIndexChanged
-        Dim baseUrl As String = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.ToString(), Request.Url.AbsoluteUri)
-        Dim newUrl As String = changeUrlDependingFromDropDownList(baseUrl, Drop_Filtra_Taglia, "taglia")
+        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.UrlReferrer.ToString, Drop_Filtra_Taglia, "taglia")
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub Drop_Filtra_Colore_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Filtra_Colore.SelectedIndexChanged
-        Dim baseUrl As String = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.ToString(), Request.Url.AbsoluteUri)
-        Dim newUrl As String = changeUrlDependingFromDropDownList(baseUrl, Drop_Filtra_Colore, "colore")
+        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.UrlReferrer.ToString, Drop_Filtra_Colore, "colore")
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub CheckBox_Disponibile_CheckedChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles CheckBox_Disponibile.CheckedChanged
-        Dim baseUrl As String = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.ToString(), Request.Url.AbsoluteUri)
-        Dim newUrl As String = changeUrlDependingFromCheckBox(baseUrl, CheckBox_Disponibile, "disponibile", "1", "0")
+        Dim newUrl As String = changeUrlDependingFromCheckBox(Request.UrlReferrer.ToString, CheckBox_Disponibile, "disponibile", "1", "0")
         Response.Redirect(newUrl)
     End Sub
     Sub changeCheckBoxDependingFromUrl(ByVal checkBox As CheckBox, ByVal parName As String, ByVal parValueIfChecked As String)
@@ -1278,29 +1227,12 @@ Dim idUtente As Integer = 0
     End Function
 
     Function changeUrlGetParam(ByVal url As String, ByVal parName As String, ByVal parValue As String) As String
-        If String.IsNullOrEmpty(url) Then Return url
-
-        'Rimuove il parametro esistente (sia nella forma ?par= che &par=) e lo riaggiunge in coda se valorizzato.
         Dim newUrl As String = Regex.Replace(url, "&" & parName & "=([^&])+", String.Empty)
         newUrl = Regex.Replace(newUrl, "\?" & parName & "=([^&])+", "?")
-
-        If Not String.IsNullOrEmpty(parValue) Then
-            'Encoding per evitare caratteri non validi nel Location header (HTTP/2) e preservare corretta lettura QueryString.
-            Dim safeValue As String = HttpUtility.UrlEncode(parValue)
-            safeValue = safeValue.Replace(vbCr, String.Empty).Replace(vbLf, String.Empty)
-
-            Dim sep As String = If(newUrl.Contains("?"), "&", "?")
-            If newUrl.EndsWith("?") OrElse newUrl.EndsWith("&") Then
-                sep = String.Empty
-            End If
-
-            newUrl = newUrl & sep & parName & "=" & safeValue
+        If parValue <> String.Empty Then
+            newUrl = newUrl & "&" & parName & "=" & parValue
         End If
-
-        newUrl = newUrl.Replace("?&", "?")
-        newUrl = newUrl.Replace("??", "?")
-        newUrl = newUrl.Replace("&&", "&")
-        Return newUrl
+        Return newUrl.Replace("?&", "?")
     End Function
 
     Sub alert(ByVal message As String)
@@ -1652,9 +1584,7 @@ Dim idUtente As Integer = 0
                     url &= "?" & qs
                 End If
 
-                Response.Redirect(url, False)
-                Context.ApplicationInstance.CompleteRequest()
-                Return
+                Response.Redirect(url, True)
             End If
 
         Catch
@@ -1797,7 +1727,7 @@ Dim idUtente As Integer = 0
         Dim filterIdsArray As String() = filterIds.Split("|"c)
         Dim idsToAddArray As String() = idsToAdd.Split("|"c)
         For Each id As String In idsToAddArray
-            If Array.IndexOf(filterIdsArray, id) < 0 Then
+            If Not Array.IndexOf(filterIdsArray, id) >= 0 Then
                 result = result & "|" & id
             End If
         Next
@@ -1805,19 +1735,23 @@ Dim idUtente As Integer = 0
     End Function
 
     Function filterIdsContains(ByVal parName As String, ByVal ids As String) As Boolean
-        Dim qsVal As String = Convert.ToString(Request.QueryString(parName))
-        If String.IsNullOrEmpty(qsVal) OrElse String.IsNullOrEmpty(ids) Then
+        If Not String.IsNullOrEmpty(Request.QueryString(parName)) Then
+            Dim queryStringIds = Request.QueryString(parName).Split("|"c)
+            Dim idsArray = ids.Split("|"c)
+            For Each id As String In idsArray
+                If Array.IndexOf(queryStringIds, id) >= 0 Then
+                    If filters.ContainsKey(parName) Then
+                        filters.Item(parName) = addIds(filters.Item(parName), ids)
+                    Else
+                        filters.Add(parName, ids)
+                    End If
+                    Return True
+                End If
+            Next
+            Return False
+        Else
             Return False
         End If
-
-        Dim queryStringIds = qsVal.Split("|"c)
-        Dim idsArray = ids.Split("|"c)
-        For Each id As String In idsArray
-            If Array.IndexOf(queryStringIds, id) >= 0 Then
-                Return True
-            End If
-        Next
-        Return False
     End Function
 
     Protected Function ExecuteQueryGetDataSet(ByVal fields As String,
@@ -2269,48 +2203,7 @@ Dim idUtente As Integer = 0
         Return System.Text.RegularExpressions.Regex.IsMatch(raw, "^\d+\|[A-Za-z0-9\-\._% ]+$")
     End Function
 
-    ' =========================
-' UI helper: promo / prezzi (nuovo template)
-' =========================
-Protected Function HasPromo(inOffertaObj As Object, prezzoPromoObj As Object) As Boolean
-    Dim inOfferta As Integer = 0
-    Dim raw As String = Convert.ToString(inOffertaObj)
-    If raw IsNot Nothing AndAlso raw.Trim().Equals("True", StringComparison.OrdinalIgnoreCase) Then
-        inOfferta = 1
-    Else
-        Integer.TryParse(raw, inOfferta)
-    End If
-
-    Dim promo As Decimal = KeepStoreSecurity.SqlCleanDecimal(prezzoPromoObj, 0D)
-    Return (inOfferta = 1 AndAlso promo > 0D)
-End Function
-
-Private Function FormatPriceEUR(val As Decimal) As String
-    If val <= 0D Then Return ""
-    Dim it As System.Globalization.CultureInfo = System.Globalization.CultureInfo.GetCultureInfo("it-IT")
-    Return ChrW(&H20AC) & " " & val.ToString("N2", it)
-End Function
-
-Protected Function GetPriceNewText(inOffertaObj As Object, prezzoPromoObj As Object, prezzoObj As Object) As String
-    Dim prezzo As Decimal = KeepStoreSecurity.SqlCleanDecimal(prezzoObj, 0D)
-    Dim promo As Decimal = KeepStoreSecurity.SqlCleanDecimal(prezzoPromoObj, 0D)
-
-    If HasPromo(inOffertaObj, prezzoPromoObj) AndAlso promo > 0D Then
-        Return FormatPriceEUR(promo)
-    End If
-
-    Return FormatPriceEUR(prezzo)
-End Function
-
-Protected Function GetPriceOldText(inOffertaObj As Object, prezzoPromoObj As Object, prezzoObj As Object) As String
-    Dim prezzo As Decimal = KeepStoreSecurity.SqlCleanDecimal(prezzoObj, 0D)
-    If HasPromo(inOffertaObj, prezzoPromoObj) Then
-        Return FormatPriceEUR(prezzo)
-    End If
-    Return ""
-End Function
-
-' UI helper: percentuale sconto (es. "-25%") calcolata in modo robusto.
+    ' UI helper: percentuale sconto (es. "-25%") calcolata in modo robusto.
     Protected Function GetDiscountPercent(oldPriceObj As Object, newPriceObj As Object) As String
         Dim oldD As Decimal = KeepStoreSecurity.SqlCleanDecimal(oldPriceObj, 0D)
         Dim newD As Decimal = KeepStoreSecurity.SqlCleanDecimal(newPriceObj, 0D)
@@ -2323,6 +2216,54 @@ End Function
 
         Return "-" & pct.ToString() & "%"
     End Function
+    Protected Function HasPromo(ByVal inOffertaObj As Object, ByVal promoObj As Object) As Boolean
+        ' InOfferta può arrivare come Boolean, Integer o String
+        Dim inOff As Boolean = False
+        If inOffertaObj IsNot Nothing AndAlso Not IsDBNull(inOffertaObj) Then
+            Try
+                If TypeOf inOffertaObj Is Boolean Then
+                    inOff = CBool(inOffertaObj)
+                Else
+                    inOff = (Convert.ToInt32(inOffertaObj) <> 0)
+                End If
+            Catch
+                inOff = False
+            End Try
+        End If
+        If Not inOff Then Return False
+
+        If promoObj Is Nothing OrElse IsDBNull(promoObj) Then Return False
+        Dim promoVal As Decimal = KeepStoreSecurity.SqlCleanDecimal(promoObj, 0D)
+        Return (promoVal > 0D)
+    End Function
+
+    Protected Function GetPriceNewText(ByVal inOffertaObj As Object, ByVal promoObj As Object, ByVal standardObj As Object) As String
+        Dim valToShow As Object = standardObj
+        If HasPromo(inOffertaObj, promoObj) Then valToShow = promoObj
+        Dim d As Decimal = KeepStoreSecurity.SqlCleanDecimal(valToShow, 0D)
+        If d <= 0D Then Return ""
+        Return d.ToString("C")
+    End Function
+
+    Protected Function GetPriceOldText(ByVal inOffertaObj As Object, ByVal promoObj As Object, ByVal standardObj As Object) As String
+        If Not HasPromo(inOffertaObj, promoObj) Then Return ""
+        Dim d As Decimal = KeepStoreSecurity.SqlCleanDecimal(standardObj, 0D)
+        If d <= 0D Then Return ""
+        Return d.ToString("C")
+    End Function
+
+
+    Private Shared Sub CopyParams(ByVal src As ParameterCollection, ByVal dst As ParameterCollection)
+        dst.Clear()
+        For Each p As Parameter In src
+            Dim np As New Parameter(p.Name, p.Type)
+            np.DefaultValue = p.DefaultValue
+            np.Direction = p.Direction
+            np.ConvertEmptyStringToNull = p.ConvertEmptyStringToNull
+            dst.Add(np)
+        Next
+    End Sub
+
 
     ' =========================
     ' WhatsApp share helpers
@@ -2377,17 +2318,5 @@ End Function
         Return HttpUtility.HtmlAttributeEncode(url)
     End Function
 
-
-
-    Private Shared Sub CopyParams(ByVal src As ParameterCollection, ByVal dst As ParameterCollection)
-        dst.Clear()
-        For Each p As Parameter In src
-            Dim np As New Parameter(p.Name, p.Type)
-            np.DefaultValue = p.DefaultValue
-            np.Direction = p.Direction
-            np.ConvertEmptyStringToNull = p.ConvertEmptyStringToNull
-            dst.Add(np)
-        Next
-    End Sub
 
 End Class

@@ -870,7 +870,7 @@
     <tr>
     
     <td colspan="2">
-    <asp:Panel ID="PnlFatturazione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap">
+    <asp:Panel ID="pnlFatturazione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap">
 							<h5 class="title fw-semibold">Dati fatturazione</h5>
 
 		
@@ -939,9 +939,6 @@
 	    <tr>
     
     <td colspan="2">
-    <!-- Compatibilità con code-behind legacy: pannello fatturazione richiesto in alcune logiche -->
-    <asp:Panel ID="pnlFatturazione" runat="server" Visible="false" />
-
     <asp:Panel ID="PnlSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap">
 							<h5 class="title fw-semibold">Indirizzo di spedizione</h5>
 
