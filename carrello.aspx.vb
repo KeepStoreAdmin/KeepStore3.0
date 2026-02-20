@@ -11,6 +11,104 @@ Imports System.Web
 Partial Class carrello
     ' NOTE: Controls are declared in the auto-generated .designer.vb; do not redeclare WithEvents here to avoid BC30260.
     Inherits AntiCsrfPage
+    Protected Sub Page_Init(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Init
+        WireUpHandlers()
+    End Sub
+
+    ' Collega gli eventi dei controlli via AddHandler.
+    ' Vantaggi: evita dipendenze da WithEvents/Handles e riduce i problemi quando il template cambia.
+    Private Sub WireUpHandlers()
+        Try
+            If Repeater1 IsNot Nothing Then
+                AddHandler Repeater1.PreRender, AddressOf Repeater1_PreRender
+                AddHandler Repeater1.ItemCommand, AddressOf Repeater1_ItemCommand
+            End If
+
+            If gvVettori IsNot Nothing Then
+                AddHandler gvVettori.PreRender, AddressOf gvVettori_PreRender
+            End If
+
+            If gvPagamento IsNot Nothing Then
+                AddHandler gvPagamento.PreRender, AddressOf gvPagamento_PreRender
+            End If
+
+            If gvVettoriPromo IsNot Nothing Then
+                AddHandler gvVettoriPromo.PreRender, AddressOf gvVettoriPromo_PreRender
+                AddHandler gvVettoriPromo.RowDataBound, AddressOf gvVettoriPromo_RowDataBound
+            End If
+
+            If gvArticoliGratis IsNot Nothing Then
+                AddHandler gvArticoliGratis.PreRender, AddressOf gvArticoliGratis_PreRender
+                AddHandler gvArticoliGratis.ItemCommand, AddressOf gvArticoliGratis_ItemCommand
+            End If
+
+            If rbSpedizioneGratis IsNot Nothing Then
+                AddHandler rbSpedizioneGratis.PreRender, AddressOf rbSpedizioneGratis_PreRender
+            End If
+
+            If ImgBtnDestinazioneSi IsNot Nothing Then
+                AddHandler ImgBtnDestinazioneSi.Click, AddressOf ImgBtnDestinazioneSi_Click
+            End If
+            If ImgBtnDestinazioneNo IsNot Nothing Then
+                AddHandler ImgBtnDestinazioneNo.Click, AddressOf ImgBtnDestinazioneNo_Click
+            End If
+
+            If btnAnnullaDest IsNot Nothing Then
+                AddHandler btnAnnullaDest.Click, AddressOf btnAnnullaDest_Click
+            End If
+            If btnModDest IsNot Nothing Then
+                AddHandler btnModDest.Click, AddressOf btnModDest_Click
+            End If
+            If btnSalvaDest IsNot Nothing Then
+                AddHandler btnSalvaDest.Click, AddressOf btnSalvaDest_Click
+            End If
+            If btnElimDest IsNot Nothing Then
+                AddHandler btnElimDest.Click, AddressOf btnElimDest_Click
+            End If
+
+            If LstScegliIndirizzo IsNot Nothing Then
+                AddHandler LstScegliIndirizzo.PreRender, AddressOf LstScegliIndirizzo_PreRender
+            End If
+            If LstDestinazione IsNot Nothing Then
+                AddHandler LstDestinazione.PreRender, AddressOf LstDestinazione_PreRender
+                AddHandler LstDestinazione.SelectedIndexChanged, AddressOf LstDestinazione_SelectedIndexChanged
+            End If
+
+            If btSvuota IsNot Nothing Then
+                AddHandler btSvuota.Click, AddressOf btSvuota_Click
+            End If
+            If btCompleta IsNot Nothing Then
+                AddHandler btCompleta.Click, AddressOf btCompleta_Click
+            End If
+
+            If TB_BuonoSconto IsNot Nothing Then
+                AddHandler TB_BuonoSconto.TextChanged, AddressOf TB_BuonoSconto_TextChanged
+            End If
+            If GV_BuoniSconti IsNot Nothing Then
+                AddHandler GV_BuoniSconti.RowCommand, AddressOf GV_BuoniSconti_RowCommand
+            End If
+
+            If btContinua IsNot Nothing Then
+                AddHandler btContinua.Click, AddressOf btContinua_Click
+            End If
+            If btAggiorna IsNot Nothing Then
+                AddHandler btAggiorna.Click, AddressOf btAggiorna_Click
+            End If
+            If LB_CancelBuonoSconto IsNot Nothing Then
+                AddHandler LB_CancelBuonoSconto.Click, AddressOf LB_CancelBuonoSconto_Click
+            End If
+
+            If btSalvaPreventivo IsNot Nothing Then
+                AddHandler btSalvaPreventivo.Click, AddressOf btSalvaPreventivo_click
+            End If
+            If btInviaOrdine IsNot Nothing Then
+                AddHandler btInviaOrdine.Click, AddressOf btInviaOrdine_Click
+            End If
+
+        Catch
+            ' NOP: l'assenza di un controllo nel nuovo template non deve bloccare la compilazione o il bootstrap della pagina.
+        End Try
+    End Sub
 
 ' === HARDENING HELPERS (VB2012 safe) ===
 Private Const CHECKOUT_TOKEN_SESSION_KEY As String = "CheckoutToken"
@@ -505,7 +603,7 @@ Private Const SessLoginId_B As String = "LOGINID"
 		REM Me.Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "prova", "<script type='text/javascript'>document.body.onload=function(){alert('" & Me.sdsArticoli.SelectCommand.Replace("'", """").ToUpper & "')}</script>")
     End Sub
 
-    Protected Sub Repeater1_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Repeater1.PreRender
+    Protected Sub Repeater1_PreRender(ByVal sender As Object, ByVal e As System.EventArgs)
         Dim i As Integer
 
         'Carrello Normale
@@ -708,7 +806,7 @@ If buonoTot > 0 Then
 
     End Sub
 
-    Protected Sub gvVettori_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles gvVettori.PreRender
+    Protected Sub gvVettori_PreRender(ByVal sender As Object, ByVal e As System.EventArgs)
         LeggiVettori()
     End Sub
 
@@ -903,7 +1001,7 @@ End Sub
         End If
     End Sub
 
-    Protected Sub gvPagamento_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles gvPagamento.PreRender
+    Protected Sub gvPagamento_PreRender(ByVal sender As Object, ByVal e As System.EventArgs)
         LeggiPagamenti()
     End Sub
 
@@ -1024,7 +1122,7 @@ End Sub
 
 End Sub
 
-    Protected Sub gvVettoriPromo_RowDataBound(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.GridViewRowEventArgs) Handles gvVettoriPromo.RowDataBound
+    Protected Sub gvVettoriPromo_RowDataBound(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.GridViewRowEventArgs)
 
     Dim Soglia As Label
     Dim Peso As Label
@@ -1216,11 +1314,11 @@ End Sub
 
     End Sub
 
-    Protected Sub ImgBtnDestinazioneSi_Click(ByVal sender As Object, ByVal e As System.Web.UI.ImageClickEventArgs) Handles ImgBtnDestinazioneSi.Click
+    Protected Sub ImgBtnDestinazioneSi_Click(ByVal sender As Object, ByVal e As System.Web.UI.ImageClickEventArgs)
         AggiornaDestinazionePredefinita(True)
     End Sub
 
-    Protected Sub ImgBtnDestinazioneNo_Click(ByVal sender As Object, ByVal e As System.Web.UI.ImageClickEventArgs) Handles ImgBtnDestinazioneNo.Click
+    Protected Sub ImgBtnDestinazioneNo_Click(ByVal sender As Object, ByVal e As System.Web.UI.ImageClickEventArgs)
         AggiornaDestinazionePredefinita(False)
     End Sub
 
@@ -1293,13 +1391,13 @@ End Sub
 		Me.tbTelefono2.Text = ""
 	End Sub
 	
-    Protected Sub btnAnnullaDest_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btnAnnullaDest.Click
+    Protected Sub btnAnnullaDest_Click(ByVal sender As Object, ByVal e As System.EventArgs)
         'btInviaOrdine.Enabled = True
 		clear_destinazione_alternativa
 		Session("cityBinding") = 0
     End Sub
 
-    Protected Sub LstScegliIndirizzo_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles LstScegliIndirizzo.PreRender
+    Protected Sub LstScegliIndirizzo_PreRender(ByVal sender As Object, ByVal e As System.EventArgs)
 
     Dim selectedId As Integer = 0
 
@@ -1360,7 +1458,7 @@ End Sub
 
     End Sub
 	
-    Protected Sub LstDestinazione_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles LstDestinazione.PreRender
+    Protected Sub LstDestinazione_PreRender(ByVal sender As Object, ByVal e As System.EventArgs)
         'If LstDestinazione.SelectedValue <= 0 Then
         '    LstDestinazione.SelectedValue = calcola_predefinito_destinazione_alternativa()
         'End If
@@ -1391,7 +1489,7 @@ End Sub
 		REM End if
     End Sub
 
-    Protected Sub LstDestinazione_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles LstDestinazione.SelectedIndexChanged
+    Protected Sub LstDestinazione_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs)
 		Session("VECCHIADESTINAZIONEALTERNATIVA") = Session("DESTINAZIONEALTERNATIVA")
         'If LstDestinazione.SelectedItem.Value <> "0" Then
         '    Session("DESTINAZIONEALTERNATIVA") = LstDestinazione.SelectedItem.Value
@@ -1480,7 +1578,7 @@ End Sub
     Return 0
 End Function
 
-    Protected Sub gvArticoliGratis_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles gvArticoliGratis.PreRender
+    Protected Sub gvArticoliGratis_PreRender(ByVal sender As Object, ByVal e As System.EventArgs)
     Dim i As Integer
 
     For i = 0 To gvArticoliGratis.Items.Count - 1
@@ -1579,7 +1677,7 @@ End Function
     Next
     End Sub
 
-    Protected Sub gvVettoriPromo_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles gvVettoriPromo.PreRender
+    Protected Sub gvVettoriPromo_PreRender(ByVal sender As Object, ByVal e As System.EventArgs)
 
     Dim Selezione_Vettore As Control
 
@@ -1603,7 +1701,7 @@ End Function
 
 End Sub
 
-    Protected Sub rbSpedizioneGratis_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles rbSpedizioneGratis.PreRender
+    Protected Sub rbSpedizioneGratis_PreRender(ByVal sender As Object, ByVal e As System.EventArgs)
         Dim conn As New MySqlConnection
         Dim cmd As New MySqlCommand
 
@@ -2085,7 +2183,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
 
     End Sub
 
-    Protected Sub btSvuota_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btSvuota.Click
+    Protected Sub btSvuota_Click(ByVal sender As Object, ByVal e As System.EventArgs)
         Dim LoginId As Integer = Me.Session("LoginId")
         Dim SessionID As String = Me.Session.SessionID
         Me.sdsArticoli.DeleteParameters.Clear()
@@ -2100,7 +2198,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
         Me.sdsArticoli.Delete()
     End Sub
 
-    Protected Sub btCompleta_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btCompleta.Click
+    Protected Sub btCompleta_Click(ByVal sender As Object, ByVal e As System.EventArgs)
         'Aggiorno i prodotti e il prezzo
         Aggiorna_Prezzi_Carrello()
 
@@ -2134,7 +2232,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
 
     End Sub
 
-   Protected Sub btnModDest_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btnModDest.Click
+   Protected Sub btnModDest_Click(ByVal sender As Object, ByVal e As System.EventArgs)
 
     Dim utentiId As Integer = GetUtentiIdSafe(0)
     If utentiId <= 0 Then Exit Sub
@@ -2218,7 +2316,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
 
 End Sub
 	
-    Protected Sub btnSalvaDest_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btnSalvaDest.Click
+    Protected Sub btnSalvaDest_Click(ByVal sender As Object, ByVal e As System.EventArgs)
 
     Dim utentiId As Integer = GetUtentiIdSafe(0)
     If utentiId <= 0 Then Exit Sub
@@ -2289,7 +2387,7 @@ End Sub
 
 End Sub
 
-    Protected Sub btnElimDest_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btnElimDest.Click
+    Protected Sub btnElimDest_Click(ByVal sender As Object, ByVal e As System.EventArgs)
 
     If LstScegliIndirizzo Is Nothing OrElse LstScegliIndirizzo.Items.Count <= 1 Then Exit Sub
 
@@ -2533,7 +2631,7 @@ End Sub
     End Function
 
 	
-    Protected Sub Repeater1_ItemCommand(ByVal sender As Object, ByVal e As RepeaterCommandEventArgs) Handles Repeater1.ItemCommand
+    Protected Sub Repeater1_ItemCommand(ByVal sender As Object, ByVal e As RepeaterCommandEventArgs)
 		If e.CommandName = "Aggiorna" Then
             btAggiorna_Click(sender, e)
         End If
@@ -2543,7 +2641,7 @@ End Sub
         End If
     End Sub
 
-    Protected Sub gvArticoliGratis_ItemCommand(ByVal sender As Object, ByVal e As RepeaterCommandEventArgs) Handles gvArticoliGratis.ItemCommand
+    Protected Sub gvArticoliGratis_ItemCommand(ByVal sender As Object, ByVal e As RepeaterCommandEventArgs)
         If e.CommandName = "Aggiorna" Then
             btAggiorna_Click(sender, e)
         End If
@@ -2574,7 +2672,7 @@ End Sub
     End Try
     End Sub
 
-    Protected Sub TB_BuonoSconto_TextChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles TB_BuonoSconto.TextChanged
+    Protected Sub TB_BuonoSconto_TextChanged(ByVal sender As Object, ByVal e As System.EventArgs)
 
     Dim codice As String = If(TB_BuonoSconto.Text, "").Trim()
     If codice.Length <= 0 Then Exit Sub
@@ -3041,7 +3139,7 @@ Public Function controllaValiditaBuonoSconto(ByVal codiceBuono As String, Option
     End Using
 End Function
 
-Protected Sub GV_BuoniSconti_RowCommand(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.GridViewCommandEventArgs) Handles GV_BuoniSconti.RowCommand
+Protected Sub GV_BuoniSconti_RowCommand(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.GridViewCommandEventArgs)
     If e.CommandName = "CancellaBuonoSconto" Then
         Session("BuonoSconto_id") = Nothing
         TB_BuonoSconto.Text = ""
@@ -3092,7 +3190,7 @@ Function getBuonoScontoCodice(ByVal idBuonoSconto As Integer) As String
     Return codiceBuonoSconto
 End Function
 
-Protected Sub btContinua_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btContinua.Click
+Protected Sub btContinua_Click(ByVal sender As Object, ByVal e As System.EventArgs)
     If Session.Item("Pagina_visitata_Articoli") Is Nothing Then
         Response.Redirect("default.aspx")
     Else
@@ -3104,14 +3202,14 @@ Protected Sub btContinua_Click(ByVal sender As Object, ByVal e As System.EventAr
     End If
 End Sub
 
-Protected Sub btAggiorna_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btAggiorna.Click
+Protected Sub btAggiorna_Click(ByVal sender As Object, ByVal e As System.EventArgs)
     Aggiorna_Prezzi_Carrello()
 
     ' Session("Click_AggiornaCarrello") = 1 
     Response.Redirect("carrello.aspx")
 End Sub
 
-Protected Sub LB_CancelBuonoSconto_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles LB_CancelBuonoSconto.Click
+Protected Sub LB_CancelBuonoSconto_Click(ByVal sender As Object, ByVal e As System.EventArgs)
     Session("BuonoSconto_id") = Nothing
     TB_BuonoSconto.Text = ""
     lblBuonoScontoConvalida.Text = ""
@@ -3119,7 +3217,7 @@ Protected Sub LB_CancelBuonoSconto_Click(ByVal sender As Object, ByVal e As Syst
     LB_CancelBuonoSconto.Visible = False
 End Sub
 
-Protected Sub btSalvaPreventivo_click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btSalvaPreventivo.Click
+Protected Sub btSalvaPreventivo_click(ByVal sender As Object, ByVal e As System.EventArgs)
     Me.PnlDestinazione.Visible = False
 
     Me.Session("Ordine_TipoDoc") = 2
@@ -3141,7 +3239,7 @@ Protected Sub btSalvaPreventivo_click(ByVal sender As Object, ByVal e As System.
     RedirectToOrdine()
 End Sub
 
-Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btInviaOrdine.Click
+Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.EventArgs)
     Me.PnlDestinazione.Visible = False
 
     Try
