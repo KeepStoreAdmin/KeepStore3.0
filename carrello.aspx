@@ -1,4 +1,4 @@
-﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="carrello.aspx.vb" Inherits="carrello" Debug="false"%>
+<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="carrello.aspx.vb" Inherits="carrello" Debug="false"%>
 
 <%@ Register Assembly="ConwayControls" Namespace="ConwayControls.Web" TagPrefix="ccwc" %>
 
@@ -10,14 +10,7 @@
 
 </asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
-
-    <%--
-        KEEPSTORE: rimosso ScriptManager (ASP.NET AJAX)
-        - Obiettivo progetto: migrazione nuovo template + eliminazione dipendenze AJAX/UpdatePanel.
-        - Evita dipendenze da System.Web.Extensions pipeline (storicamente coinvolta in crash/stack overflow).
-    --%>
-    
-        <asp:Panel ID="PanelDestinazione" runat="server" Style="display: none">
+<asp:Panel ID="PanelDestinazione" runat="server" Style="display: none">
             <div id="Div1" class="checkout_box_500">
                 <div id="Div2" style="margin: 0px 20px; padding-top: 15px; height: 500px;">
                     <h2>
@@ -48,51 +41,58 @@
 
     <!-- NOTE: rimosso frammento di markup corrotto rimasto da una migrazione precedente (carattere di controllo). -->
 
-    <!-- Breadcrumb -->
-    <div class="tf-sp-3 pb-0">
-        <div class="container">
-            <div class="tf-breadcrumb-wrap">
-                <div class="tf-breadcrumb-list">
-                    <a href="/Default.aspx" class="text">Home</a>
-                    <i class="icon icon-arrow-right"></i>
-                    <span class="text">Carrello</span>
+    <!-- Breakcrumbs -->
+<div class="tf-sp-3 pb-0">
+    <div class="container">
+        <ul class="breakcrumbs">
+            <li><a href="/Default.aspx" class="body-small link">Home</a></li>
+            <li class="d-flex align-items-center">
+                <i class="icon icon-arrow-right"></i>
+            </li>
+            <li><span class="body-small">Carrello</span></li>
+        </ul>
+    </div>
+</div>
+<!-- /Breakcrumbs -->
+
+<!-- Shopping Cart -->
+<div class="s-shoping-cart tf-sp-2">
+    <div class="container">
+
+        <div class="checkout-status tf-sp-2 pt-0">
+            <div class="checkout-wrap">
+                <span class="checkout-bar first"></span>
+                <div class="step-payment">
+                    <span class="icon">
+                        <i class="icon-shop-cart-1"></i>
+                    </span>
+                    <span class="text-secondary body-text-3">Carrello</span>
+                </div>
+                <div class="step-payment">
+                    <span class="icon">
+                        <i class="icon-shop-cart-2"></i>
+                    </span>
+                    <span class="link-secondary body-text-3">Checkout</span>
+                </div>
+                <div class="step-payment">
+                    <span class="icon">
+                        <i class="icon-shop-cart-3"></i>
+                    </span>
+                    <span class="link-secondary body-text-3">Conferma</span>
                 </div>
             </div>
         </div>
-    </div>
 
-    <section class="s-shoping-cart tf-sp-2">
-        <div class="container">
-
-            <div class="checkout-status tf-sp-2 pt-0">
-                <div class="checkout-status-wrap">
-                    <div class="checkout-status-list">
-                        <div class="checkout-status-item active">
-                            <span class="icon"><i class="icon icon-bag"></i></span>
-                            <span class="text">Carrello</span>
-                        </div>
-                        <div class="checkout-status-item">
-                            <span class="icon"><i class="icon icon-credit-card"></i></span>
-                            <span class="text">Checkout</span>
-                        </div>
-                        <div class="checkout-status-item">
-                            <span class="icon"><i class="icon icon-check"></i></span>
-                            <span class="text">Conferma</span>
-                        </div>
-                    </div>
-                </div>
+        <div class="mb-3">
+            <h5 class="title fw-semibold mb-1">Il tuo carrello</h5>
+            <div class="body-text-3">
+                <asp:Label ID="lblArticoli" runat="server" Text="" Font-Bold="true" ForeColor="#E12825"></asp:Label>
+                <asp:Label ID="lblPresenti" runat="server" Text=""></asp:Label>
             </div>
+            <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" Font-Size="7pt" Font-Names="arial"></asp:Label>
+        </div>
 
-            <div class="heading-section mb-3">
-                <h3 class="heading">Il tuo carrello</h3>
-                <div class="body-text-3">
-                    <asp:Label ID="lblArticoli" runat="server" Text="" Font-Bold="true" ForeColor="#E12825"></asp:Label>
-                    <asp:Label ID="lblPresenti" runat="server" Text=""></asp:Label>
-                </div>
-                <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" Font-Size="7pt" Font-Names="arial"></asp:Label>
-            </div>
-
-            <asp:SqlDataSource ID="sdsArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+<asp:SqlDataSource ID="sdsArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                 EnableViewState="False" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
                 SelectCommand="SELECT vcarrello.id, vcarrello.LoginId, vcarrello.SessionId, vcarrello.DataOra, vcarrello.ArticoliId, vcarrello.Codice, vcarrello.Descrizione1, vcarrello.Qnt, vcarrello.NListino, vcarrello.OfferteDettaglioID, vcarrello.Ean, vcarrello.Descrizione2, vcarrello.UmID, vcarrello.MarcheId, vcarrello.MarcheDescrizione, vcarrello.MarcheOrdinamento, vcarrello.iva, vcarrello.Peso, vcarrello.PesoRiga, vcarrello.Img1, vcarrello.Giacenza, vcarrello.InOrdine, vcarrello.Disponibilita, vcarrello.Impegnata, vcarrello.ScortaMinima, vcarrello.Prezzo, vcarrello.PrezzoIvato, vcarrello.Importo, vcarrello.ImportoIvato, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine FROM vcarrello LEFT OUTER JOIN articoli ON vcarrello.ArticoliId = articoli.id WHERE (articoli.SpedizioneGratis_Listini IS NULL) ORDER BY vcarrello.id"
                 DeleteCommand="delete from carrello where (Id = ?Id)"
@@ -467,17 +467,17 @@
                 Non sei un utente abilitato a procedere con l'ordine. Contattaci se desideri invece procedere
             </div>
 
-            <div class="ks-cart-buttons">
-                <asp:LinkButton ID="btContinua" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Continua lo Shopping</asp:LinkButton>
-                <asp:LinkButton ID="btAggiorna" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Aggiorna Carrello</asp:LinkButton>
-                <asp:LinkButton ID="btSvuota" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Svuota Carrello</asp:LinkButton>
-                <div class="ks-right">
-                    <asp:LinkButton ID="btCompleta" runat="server" CssClass="tf-btn" CausesValidation="false">Procedi con l'ordine</asp:LinkButton>
-                </div>
-            </div>
-
+                    <div class="box-btn mt-4">
+            <asp:LinkButton ID="btContinua" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false"><span class="text-white">Continua lo Shopping</span></asp:LinkButton>
+            <asp:LinkButton ID="btAggiorna" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false"><span class="text-white">Aggiorna Carrello</span></asp:LinkButton>
+            <asp:LinkButton ID="btSvuota" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false"><span class="text-white">Svuota Carrello</span></asp:LinkButton>
+            <asp:LinkButton ID="btCompleta" runat="server" CssClass="tf-btn" CausesValidation="false"><span class="text-white">Procedi con l'ordine</span></asp:LinkButton>
         </div>
-    </section>
+
+    </div>
+</div>
+<!-- /Shopping Cart -->
+
 
 <asp:Panel ID="Panel_Unico" runat="server">   
     <table width="100%" border="0" runat="server" id="tOrdine" visible="false" class="ks-checkout">
