@@ -14,22 +14,34 @@ Partial Class PageMaster
     Inherits System.Web.UI.MasterPage
     Implements ISeoMaster
 
-Private Function FindControlRecursive(ByVal root As Control, ByVal id As String) As Control
+'==========================================================
+' Helper: trova controlli SENZA ricorsione (evita StackOverflow)
+'==========================================================
+Private Function FindControlIterative(ByVal root As Control, ByVal id As String) As Control
     If root Is Nothing OrElse String.IsNullOrEmpty(id) Then Return Nothing
 
-    Dim direct As Control = root.FindControl(id)
-    If direct IsNot Nothing Then Return direct
+    Dim st As New System.Collections.Generic.Stack(Of Control)()
+    st.Push(root)
 
-    For Each child As Control In root.Controls
-        Dim found As Control = FindControlRecursive(child, id)
-        If found IsNot Nothing Then Return found
-    Next
+    While st.Count > 0
+        Dim cur As Control = st.Pop()
+
+        If cur IsNot Nothing AndAlso String.Equals(cur.ID, id, StringComparison.Ordinal) Then
+            Return cur
+        End If
+
+        If cur IsNot Nothing AndAlso cur.HasControls() Then
+            For i As Integer = cur.Controls.Count - 1 To 0 Step -1
+                st.Push(cur.Controls(i))
+            Next
+        End If
+    End While
 
     Return Nothing
 End Function
 
 Private Function FindCtrl(Of T As Control)(ByVal id As String) As T
-    Dim c As Control = FindControlRecursive(Me, id)
+    Dim c As Control = FindControlIterative(Me, id)
     Return TryCast(c, T)
 End Function
 
@@ -588,8 +600,8 @@ End Sub
         Dim lbl4 As Label = FindCtrl(Of Label)("Label4")
         Dim hl14 As HyperLink = FindCtrl(Of HyperLink)("HyperLink14")
         Dim mv As MultiView = FindCtrl(Of MultiView)("mvLogin")
-        Dim payYourOrders As Control = FindControlRecursive(Me, "pay_your_orders")
-        Dim toPay As System.Web.UI.HtmlControls.HtmlGenericControl = TryCast(FindControlRecursive(Me, "to_pay"), System.Web.UI.HtmlControls.HtmlGenericControl)
+        Dim payYourOrders As Control = FindControlIterative(Me, "pay_your_orders")
+        Dim toPay As System.Web.UI.HtmlControls.HtmlGenericControl = TryCast(FindControlIterative(Me, "to_pay"), System.Web.UI.HtmlControls.HtmlGenericControl)
         ' STEP29: applica policy SEO globale (noindex/canonical su pagine non SEO)
         ApplyGlobalSeoPolicy()
 
