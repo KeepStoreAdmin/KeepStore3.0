@@ -493,9 +493,10 @@
         
                 <h5 class="title fw-semibold">Spedizione</h5>
 <!--<div id="infobar" style="width:100%; color:White; font-weight:bold; height:50px; background-image:url('Public/Images/StepCarrello1.png'); background-size:100%; background-repeat:no-repeat;"></div>-->
+<div class="overflow-x-auto">
 <asp:GridView ID="gvVettoriPromo" runat="server"
         AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsVettoriPromo"
-        Font-Size="8pt" GridLines="None" Width="100%" DataKeyNames="id" BorderColor="#383838" BorderStyle="Solid" BorderWidth="2px" CssClass="ks-checkout-grid">
+        Font-Size="8pt" GridLines="None" Width="100%" DataKeyNames="id" BorderColor="#383838" BorderStyle="Solid" BorderWidth="2px" CssClass="ks-checkout-grid tf-table-page-cart">
             <Columns>
                 <asp:TemplateField ShowHeader="False">
                     <ItemTemplate>
@@ -611,6 +612,7 @@
             <HeaderStyle Font-Bold="False" Font-Size="7pt" HorizontalAlign="Left" ForeColor="#2050AF" Font-Strikeout="False" />
             <AlternatingRowStyle BackColor="WhiteSmoke" BorderStyle="None" />
         </asp:GridView>
+</div>
         
         <%If differenzaTrasportoGratis > 0 Then%>
             <div style="width:100%; padding-top:2px; padding-bottom:2px; font-size:10px; text-align:center; background-color:#383838; color: white;">
@@ -621,7 +623,8 @@
         <br />
             
         <div id="gvVettori_tooltip">
-        <asp:GridView ID="gvVettori" runat="server" AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsVettori" Font-Size="8pt" GridLines="None" Width="100%" DataKeyNames="id" ShowHeader="False" CssClass="ks-checkout-grid">
+        <div class="overflow-x-auto">
+<asp:GridView ID="gvVettori" runat="server" AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsVettori" Font-Size="8pt" GridLines="None" Width="100%" DataKeyNames="id" ShowHeader="False" CssClass="ks-checkout-grid tf-table-page-cart">
             <HeaderStyle Font-Bold="False" Font-Size="8pt" HorizontalAlign="Left" ForeColor="#2050AF" />
             <AlternatingRowStyle BackColor="WhiteSmoke" BorderStyle="None" />
             <Columns>
@@ -716,6 +719,7 @@
             </Columns>
             <SelectedRowStyle BackColor="#FFFFC0" />
         </asp:GridView>
+</div>
         </div>
         
         <asp:Panel ID="Panel_SpedizioneGratis" runat="server" Height="10px" Visible="False"
@@ -790,7 +794,8 @@
 					</asp:SqlDataSource>
 					
 					<div id="gvPagamento_tooltip">
-					<asp:GridView ID="gvPagamento" runat="server" CssClass="ks-checkout-grid"
+					<div class="overflow-x-auto">
+<asp:GridView ID="gvPagamento" runat="server" CssClass="ks-checkout-grid tf-table-page-cart"
 					AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsPagamento"
 					Font-Size="8pt" GridLines="None" Width="100%" ShowHeader="False" DataKeyNames="id">
 						<Columns>
@@ -865,6 +870,7 @@
 						<HeaderStyle Font-Bold="False" Font-Size="8pt" HorizontalAlign="Left" ForeColor="#2050AF" />
 						<AlternatingRowStyle BackColor="WhiteSmoke" BorderStyle="None" />
 					</asp:GridView>
+</div>
 					</div>
 				</asp:Panel>   
 				<br />
