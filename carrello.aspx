@@ -36,7 +36,7 @@
                 </div>
             </div>
         </asp:Panel>
-        <asp:LinkButton ID="dummy2" runat="server"></asp:LinkButton>
+        <asp:LinkButton ID="dummy2" runat="server" CssClass="tf-btn"></asp:LinkButton>
 
 
     <!-- NOTE: rimosso frammento di markup corrotto rimasto da una migrazione precedente (carattere di controllo). -->
@@ -82,7 +82,7 @@
         </div>
 
             <div class="heading-section mb-3">
-                <h3 class="heading">Il tuo carrello</h3>
+                <h3 class="heading" class="tf-checkout-title">Il tuo carrello</h3>
                 <div class="body-text-3">
                     <asp:Label ID="lblArticoli" runat="server" Text="" Font-Bold="true" ForeColor="#E12825"></asp:Label>
                     <asp:Label ID="lblPresenti" runat="server" Text=""></asp:Label>
@@ -149,7 +149,7 @@
                                             <span class="ks-cart-badge-free mt-2">Spedizione gratis</span>
 
                                             <!-- Hidden / technical fields (used by VB code-behind) -->
-                                            <asp:TextBox ID="tbArtID" runat="server" Text='<%#: Eval("ArticoliID") %>' Visible="false"></asp:TextBox>
+                                            <asp:TextBox ID="tbArtID" runat="server" Text='<%#: Eval("ArticoliID") % CssClass="tf-input">' Visible="false"></asp:TextBox>
                                             <asp:Label ID="lblIvaReverseCharge" runat="server" Text='<%# stampa_iva_applicata(If(IsDBNull(Eval("DescrizioneEsenzioneIva")), "", Eval("DescrizioneEsenzioneIva")),If(IsDBNull(Eval("DescrizioneIvaRC")), "", Eval("DescrizioneIvaRC"))) %>' Visible="true" Font-Size="7pt"></asp:Label>
                                             <asp:Label ID="lblValoreIva" runat="server" Text='<%#: Eval("Valoreiva") %>' Visible="False"></asp:Label>
                                             <asp:Label ID="lblidIvaRC" runat="server" Text='<%#: Eval("IdIvaRC") %>' Visible="False"></asp:Label>
@@ -173,13 +173,13 @@
                                     <td data-cart-title="Q.tà" class="tf-cart-item_quantity">
                                         <div class="wg-quantity ks-wg-quantity">
                                             <span class="btn-quantity btn-decrease"><i class="icon icon-minus"></i></span>
-                                            <asp:TextBox ID="tbQta" runat="server" Text='<%#: Eval("qnt") %>' CssClass="quantity-product" MaxLength="4" />
+                                            <asp:TextBox ID="tbQta" runat="server" Text='<%#: Eval("qnt") % CssClass="tf-input">' CssClass="quantity-product" MaxLength="4" />
                                             <span class="btn-quantity btn-increase"><i class="icon icon-plus"></i></span>
                                         </div>
                                         <div class="mt-2">
-                                            <asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link body-text-3">Aggiorna</asp:LinkButton>
+                                            <asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link body-text-3 tf-btn">Aggiorna</asp:LinkButton>
                                         </div>
-                                        <asp:TextBox ID="tbID" runat="server" Text='<%#: Eval("id") %>' Visible="false" />
+                                        <asp:TextBox ID="tbID" runat="server" Text='<%#: Eval("id") % CssClass="tf-input">' Visible="false" />
                                     </td>
 
                                     <td data-cart-title="Totale" class="tf-cart-item_total">
@@ -190,7 +190,7 @@
                                     </td>
 
                                     <td data-cart-title="Rimuovi" class="remove-cart text-xxl-end">
-                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link" Text="<i class='icon icon-close'></i>"></asp:LinkButton>
+                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") % CssClass="tf-btn">' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link" Text="<i class='icon icon-close'></i>"></asp:LinkButton>
                                     </td>
                                 </tr>
 
@@ -258,7 +258,7 @@
                                             </div>
 
                                             <!-- Hidden / technical fields (used by VB code-behind) -->
-                                            <asp:TextBox ID="tbArtID" runat="server" Text='<%#: Eval("ArticoliID") %>' Visible="false"></asp:TextBox>
+                                            <asp:TextBox ID="tbArtID" runat="server" Text='<%#: Eval("ArticoliID") % CssClass="tf-input">' Visible="false"></asp:TextBox>
                                             <asp:Label ID="lblIvaReverseCharge" runat="server" Text='<%# stampa_iva_applicata(If(IsDBNull(Eval("DescrizioneEsenzioneIva")), "", Eval("DescrizioneEsenzioneIva")),If(IsDBNull(Eval("DescrizioneIvaRC")), "", Eval("DescrizioneIvaRC"))) %>' Visible="true" Font-Size="7pt"></asp:Label>
                                             <asp:Label ID="lblValoreIva" runat="server" Text='<%#: Eval("Valoreiva") %>' Visible="False"></asp:Label>
                                             <asp:Label ID="lblidIvaRC" runat="server" Text='<%#: Eval("IdIvaRC") %>' Visible="False"></asp:Label>
@@ -282,13 +282,13 @@
                                     <td data-cart-title="Q.tà" class="tf-cart-item_quantity">
                                         <div class="wg-quantity ks-wg-quantity">
                                             <span class="btn-quantity btn-decrease"><i class="icon icon-minus"></i></span>
-                                            <asp:TextBox ID="tbQta" runat="server" Text='<%#: Eval("qnt") %>' CssClass="quantity-product" MaxLength="4" />
+                                            <asp:TextBox ID="tbQta" runat="server" Text='<%#: Eval("qnt") % CssClass="tf-input">' CssClass="quantity-product" MaxLength="4" />
                                             <span class="btn-quantity btn-increase"><i class="icon icon-plus"></i></span>
                                         </div>
                                         <div class="mt-2">
-                                            <asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link body-text-3">Aggiorna</asp:LinkButton>
+                                            <asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link body-text-3 tf-btn">Aggiorna</asp:LinkButton>
                                         </div>
-                                        <asp:TextBox ID="tbID" runat="server" Text='<%#: Eval("id") %>' Visible="false" />
+                                        <asp:TextBox ID="tbID" runat="server" Text='<%#: Eval("id") % CssClass="tf-input">' Visible="false" />
                                     </td>
 
                                     <td data-cart-title="Totale" class="tf-cart-item_total">
@@ -299,7 +299,7 @@
                                     </td>
 
                                     <td data-cart-title="Rimuovi" class="remove-cart text-xxl-end">
-                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link" Text="<i class='icon icon-close'></i>"></asp:LinkButton>
+                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") % CssClass="tf-btn">' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link" Text="<i class='icon icon-close'></i>"></asp:LinkButton>
                                     </td>
                                 </tr>
 
@@ -386,7 +386,7 @@
                                     </div>
                                 </div>
                                 <div class="ks-discount-card__footer">
-                                    <asp:LinkButton ID="CancellaBuonoSconto" CommandName="CancellaBuonoSconto" runat="server" CssClass="link">Elimina buono sconto</asp:LinkButton>
+                                    <asp:LinkButton ID="CancellaBuonoSconto" CommandName="CancellaBuonoSconto" runat="server" CssClass="link tf-btn">Elimina buono sconto</asp:LinkButton>
                                 </div>
                             </div>
                         </ItemTemplate>
@@ -399,7 +399,7 @@
     <div class="ip-discount-code">
         <asp:Panel ID="Panel_BuoniSconto" runat="server">
             <asp:TextBox ID="TB_BuonoSconto" runat="server"
-                CssClass="form-control"
+                CssClass="form-control tf-input"
                 placeholder="Inserisci il codice sconto"
                 Style="max-width: 340px; text-transform:uppercase; font-weight:bold; text-align:center;"></asp:TextBox>
             <asp:Button ID="BT_ApplicaBuonoSconto" runat="server" CausesValidation="false"
@@ -417,18 +417,18 @@
     <asp:Image ID="checkOKBuonoSconto" runat="server" ImageUrl="Public/Images/Ok.png" Height="30px" Visible="false" />
     <asp:Image ID="checkNOBuonoSconto" runat="server" ImageUrl="Public/Images/Remove.png" Height="30px" Visible="false" />
     <asp:Label ID="lblBuonoScontoConvalida" runat="server" Text=""></asp:Label>
-    <asp:LinkButton ID="LB_CancelBuonoSconto" runat="server" CssClass="link" ForeColor="Red" Visible="false">Elimina codice</asp:LinkButton>
+    <asp:LinkButton ID="LB_CancelBuonoSconto" runat="server" CssClass="link tf-btn" ForeColor="Red" Visible="false">Elimina codice</asp:LinkButton>
 </div>
 
 <!-- Hidden technical fields used by VB -->
-<asp:TextBox ID="tbVettoriId" runat="server" ToolTip="VettoriId" Style="display:none" Width="20px"></asp:TextBox>
-<asp:TextBox ID="tbPagamenti" runat="server" ToolTip="PagamentiId" Style="display:none" Width="20px"></asp:TextBox>
-<asp:TextBox ID="tbShopIdGestPay" runat="server" ToolTip="tShopIdGestPay" Style="display:none" Width="20px"></asp:TextBox>
-<asp:TextBox ID="tbContrPerc" runat="server" ToolTip="Contrassegno Percentuale" Style="display:none" Width="20px"></asp:TextBox>
-<asp:TextBox ID="tbContrFisso" runat="server" ToolTip="Contrassegno Fisso" Style="display:none" Width="20px"></asp:TextBox>
-<asp:TextBox ID="tbContrMinimo" runat="server" ToolTip="Contrassegno Minimo" Style="display:none" Width="20px"></asp:TextBox>
-<asp:TextBox ID="tbPeso" runat="server" Width="20px" Style="display:none" ToolTip="Peso"></asp:TextBox>
-<asp:TextBox ID="tbTotale" runat="server" Width="20px" Style="display:none" ToolTip="Totale"></asp:TextBox>
+<asp:TextBox ID="tbVettoriId" runat="server" ToolTip="VettoriId" Style="display:none" Width="20px" CssClass="tf-input"></asp:TextBox>
+<asp:TextBox ID="tbPagamenti" runat="server" ToolTip="PagamentiId" Style="display:none" Width="20px" CssClass="tf-input"></asp:TextBox>
+<asp:TextBox ID="tbShopIdGestPay" runat="server" ToolTip="tShopIdGestPay" Style="display:none" Width="20px" CssClass="tf-input"></asp:TextBox>
+<asp:TextBox ID="tbContrPerc" runat="server" ToolTip="Contrassegno Percentuale" Style="display:none" Width="20px" CssClass="tf-input"></asp:TextBox>
+<asp:TextBox ID="tbContrFisso" runat="server" ToolTip="Contrassegno Fisso" Style="display:none" Width="20px" CssClass="tf-input"></asp:TextBox>
+<asp:TextBox ID="tbContrMinimo" runat="server" ToolTip="Contrassegno Minimo" Style="display:none" Width="20px" CssClass="tf-input"></asp:TextBox>
+<asp:TextBox ID="tbPeso" runat="server" Width="20px" Style="display:none" ToolTip="Peso" CssClass="tf-input"></asp:TextBox>
+<asp:TextBox ID="tbTotale" runat="server" Width="20px" Style="display:none" ToolTip="Totale" CssClass="tf-input"></asp:TextBox>
 
 <div class="tf-page-cart-footer mt-4">
     <div class="tf-cart-summery">
@@ -525,7 +525,7 @@
                 </asp:BoundField>
                 <asp:TemplateField SortExpression="AssicurazionePercentuale" ShowHeader="False">
                     <EditItemTemplate>
-                        <asp:TextBox ID="TextBox1" runat="server" Text='<%# Bind("AssicurazionePercentuale") %>'></asp:TextBox>
+                        <asp:TextBox ID="TextBox1" runat="server" Text='<%# Bind("AssicurazionePercentuale") % CssClass="tf-input">'></asp:TextBox>
                     </EditItemTemplate>
                     <ItemTemplate>
                         <asp:Label ID="lblAssPerc" runat="server" Text='<%# Bind("AssicurazionePercentuale", "{0:F}") %>'
@@ -536,7 +536,7 @@
                 </asp:TemplateField>
                 <asp:TemplateField SortExpression="AssicurazioneMinimo" Visible="False" ShowHeader="False">
                     <EditItemTemplate>
-                        <asp:TextBox ID="TextBox4" runat="server" Text='<%# Bind("AssicurazioneMinimo") %>'></asp:TextBox>
+                        <asp:TextBox ID="TextBox4" runat="server" Text='<%# Bind("AssicurazioneMinimo") % CssClass="tf-input">'></asp:TextBox>
                     </EditItemTemplate>
                     <ItemTemplate>
                         <asp:Label ID="lblAssicurazioneMinimo" runat="server" Text='<%# Bind("AssicurazioneMinimo") %>'></asp:Label>
@@ -544,7 +544,7 @@
                 </asp:TemplateField>
                 <asp:TemplateField SortExpression="ContrassegnoPercentuale" Visible="False" ShowHeader="False">
                     <EditItemTemplate>
-                        <asp:TextBox ID="TextBox2" runat="server" Text='<%# Bind("ContrassegnoPercentuale") %>'></asp:TextBox>
+                        <asp:TextBox ID="TextBox2" runat="server" Text='<%# Bind("ContrassegnoPercentuale") % CssClass="tf-input">'></asp:TextBox>
                     </EditItemTemplate>
                     <ItemTemplate>
                         <asp:Label ID="lblContrPerc" runat="server" Text='<%# Bind("ContrassegnoPercentuale", "{0:F}") %>'></asp:Label>
@@ -554,7 +554,7 @@
                 </asp:TemplateField>
                 <asp:TemplateField SortExpression="ContrassegnoFisso" Visible="False" ShowHeader="False">
                     <EditItemTemplate>
-                        <asp:TextBox ID="TextBox3" runat="server" Text='<%# Bind("ContrassegnoFisso") %>'></asp:TextBox>
+                        <asp:TextBox ID="TextBox3" runat="server" Text='<%# Bind("ContrassegnoFisso") % CssClass="tf-input">'></asp:TextBox>
                     </EditItemTemplate>
                     <ItemTemplate>
                         <asp:Label ID="lblContrFisso" runat="server" Text='<%# Bind("ContrassegnoFisso", "{0:F}") %>'></asp:Label>
@@ -564,7 +564,7 @@
                 </asp:TemplateField>
                 <asp:TemplateField SortExpression="ContrassegnoMinimo" Visible="False" ShowHeader="False">
                     <EditItemTemplate>
-                        <asp:TextBox ID="TextBox5" runat="server" Text='<%# Bind("ContrassegnoMinimo") %>'></asp:TextBox>
+                        <asp:TextBox ID="TextBox5" runat="server" Text='<%# Bind("ContrassegnoMinimo") % CssClass="tf-input">'></asp:TextBox>
                     </EditItemTemplate>
                     <ItemTemplate>
                         <asp:Label ID="lblContrMinimo" runat="server" Text='<%# Bind("ContrassegnoMinimo") %>'></asp:Label>
@@ -652,7 +652,7 @@
                 </asp:BoundField>
                 <asp:TemplateField HeaderText="Ass.P" SortExpression="AssicurazionePercentuale">
                     <EditItemTemplate>
-                        <asp:TextBox ID="TextBox1" runat="server" Text='<%# Bind("AssicurazionePercentuale") %>'></asp:TextBox>
+                        <asp:TextBox ID="TextBox1" runat="server" Text='<%# Bind("AssicurazionePercentuale") % CssClass="tf-input">'></asp:TextBox>
                     </EditItemTemplate>
                     <ItemTemplate>
                         <asp:Label ID="lblAssPerc" runat="server" Text='<%# Bind("AssicurazionePercentuale", "{0:F}") %>'
@@ -663,7 +663,7 @@
                 </asp:TemplateField>
                 <asp:TemplateField HeaderText="Ass.M" SortExpression="AssicurazioneMinimo" Visible="False">
                     <EditItemTemplate>
-                        <asp:TextBox ID="TextBox4" runat="server" Text='<%# Bind("AssicurazioneMinimo") %>'></asp:TextBox>
+                        <asp:TextBox ID="TextBox4" runat="server" Text='<%# Bind("AssicurazioneMinimo") % CssClass="tf-input">'></asp:TextBox>
                     </EditItemTemplate>
                     <ItemTemplate>
                         <asp:Label ID="lblAssicurazioneMinimo" runat="server" Text='<%# Bind("AssicurazioneMinimo") %>'></asp:Label>
@@ -671,7 +671,7 @@
                 </asp:TemplateField>
                 <asp:TemplateField HeaderText="Con.P" SortExpression="ContrassegnoPercentuale" Visible="False">
                     <EditItemTemplate>
-                        <asp:TextBox ID="TextBox2" runat="server" Text='<%# Bind("ContrassegnoPercentuale") %>'></asp:TextBox>
+                        <asp:TextBox ID="TextBox2" runat="server" Text='<%# Bind("ContrassegnoPercentuale") % CssClass="tf-input">'></asp:TextBox>
                     </EditItemTemplate>
                     <ItemTemplate>
                         <asp:Label ID="lblContrPerc" runat="server" Text='<%# Bind("ContrassegnoPercentuale", "{0:F}") %>'></asp:Label>
@@ -681,7 +681,7 @@
                 </asp:TemplateField>
                 <asp:TemplateField HeaderText="Con.F" SortExpression="ContrassegnoFisso" Visible="False">
                     <EditItemTemplate>
-                        <asp:TextBox ID="TextBox3" runat="server" Text='<%# Bind("ContrassegnoFisso") %>'></asp:TextBox>
+                        <asp:TextBox ID="TextBox3" runat="server" Text='<%# Bind("ContrassegnoFisso") % CssClass="tf-input">'></asp:TextBox>
                     </EditItemTemplate>
                     <ItemTemplate>
                         <asp:Label ID="lblContrFisso" runat="server" Text='<%# Bind("ContrassegnoFisso", "{0:F}") %>'></asp:Label>
@@ -691,7 +691,7 @@
                 </asp:TemplateField>
                 <asp:TemplateField HeaderText="Con.M" SortExpression="ContrassegnoMinimo" Visible="False">
                     <EditItemTemplate>
-                        <asp:TextBox ID="TextBox5" runat="server" Text='<%# Bind("ContrassegnoMinimo") %>'></asp:TextBox>
+                        <asp:TextBox ID="TextBox5" runat="server" Text='<%# Bind("ContrassegnoMinimo") % CssClass="tf-input">'></asp:TextBox>
                     </EditItemTemplate>
                     <ItemTemplate>
                         <asp:Label ID="lblContrMinimo" runat="server" Text='<%# Bind("ContrassegnoMinimo") %>'></asp:Label>
@@ -704,7 +704,7 @@
                 </asp:BoundField>
                 <asp:TemplateField HeaderText="Costo" SortExpression="CostoFisso">
                     <EditItemTemplate>
-                        <asp:TextBox ID="TextBox6" runat="server" Text='<%# Bind("CostoFisso") %>'></asp:TextBox>
+                        <asp:TextBox ID="TextBox6" runat="server" Text='<%# Bind("CostoFisso") % CssClass="tf-input">'></asp:TextBox>
                     </EditItemTemplate>
                     <ItemTemplate>
                     <% If (Me.Session("IvaTipo") = 1) Then%>
@@ -772,7 +772,7 @@
 
 					<table cellpadding="1" width="100%">
 						<tr>
-							<td><asp:CheckBox ID="cbAssicurazione" runat="server" AutoPostBack="True" /></td>
+							<td><asp:CheckBox ID="cbAssicurazione" runat="server" AutoPostBack="True" / CssClass="tf-check"></td>
 							<td width="100%"><span class="ml-2">Assicurazione merce (escluso IVA)</span></td>
 							<td align="right" nowrap><asp:Label ID="lblAssicurazione" runat="server" Text="&#8364; 0,00" Font-Size="8pt"></asp:Label></td>
 						</tr>
@@ -825,7 +825,7 @@
 								Visible="False" />
 							<asp:TemplateField HeaderText="CostoP" SortExpression="CostoPercentuale">
 								<EditItemTemplate>
-									<asp:TextBox ID="TextBox1" runat="server" Text='<%# Bind("CostoPercentuale") %>'></asp:TextBox>
+									<asp:TextBox ID="TextBox1" runat="server" Text='<%# Bind("CostoPercentuale") % CssClass="tf-input">'></asp:TextBox>
 								</EditItemTemplate>
 								<ItemTemplate>
 									<asp:Label ID="lblCostoP" runat="server" Text='<%# Bind("CostoPercentuale", "{0:F}") %>'
@@ -835,7 +835,7 @@
 							</asp:TemplateField>
 							<asp:TemplateField HeaderText="CostoF" SortExpression="CostoFisso">
 								<EditItemTemplate>
-									<asp:TextBox ID="TextBox2" runat="server" Text='<%# Bind("CostoFisso") %>'></asp:TextBox>
+									<asp:TextBox ID="TextBox2" runat="server" Text='<%# Bind("CostoFisso") % CssClass="tf-input">'></asp:TextBox>
 								</EditItemTemplate>
 								<ItemTemplate>
 									<asp:Label ID="lblCostoF" runat="server" Text='<%# Bind("CostoFisso", "{0:F}") %>'
@@ -845,7 +845,7 @@
 							</asp:TemplateField>
 							<asp:TemplateField HeaderText="Contrassegno" SortExpression="Contrassegno" Visible="False">
 								<EditItemTemplate>
-									<asp:TextBox ID="TextBox3" runat="server" Text='<%# Bind("Contrassegno") %>'></asp:TextBox>
+									<asp:TextBox ID="TextBox3" runat="server" Text='<%# Bind("Contrassegno") % CssClass="tf-input">'></asp:TextBox>
 								</EditItemTemplate>
 								<ItemTemplate>
 									<asp:Label ID="lblContrassegno" runat="server" Text='<%# Bind("Contrassegno") %>'></asp:Label>
@@ -853,7 +853,7 @@
 							</asp:TemplateField>
 							<asp:TemplateField HeaderText="ShopLogin" SortExpression="ShopLogin" Visible="False">
 								<EditItemTemplate>
-									<asp:TextBox ID="TextBox3" runat="server" Text='<%# Bind("ShopLogin") %>'></asp:TextBox>
+									<asp:TextBox ID="TextBox3" runat="server" Text='<%# Bind("ShopLogin") % CssClass="tf-input">'></asp:TextBox>
 								</EditItemTemplate>
 								<ItemTemplate>
 									<asp:Label ID="lblShopLogin" runat="server" Text='<%# Bind("ShopLogin") %>'></asp:Label>
@@ -883,7 +883,7 @@
     <tr>
     
     <td colspan="2">
-    <asp:Panel ID="PnlFatturazione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap">
+    <asp:Panel ID="PnlFatturazione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap tf-checkout-box">
 							<h5 class="title fw-semibold">Dati fatturazione</h5>
 
 		
@@ -952,7 +952,7 @@
 	    <tr>
     
     <td colspan="2">
-    <asp:Panel ID="PnlSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap">
+    <asp:Panel ID="PnlSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap tf-checkout-box">
 							<h5 class="title fw-semibold">Indirizzo di spedizione</h5>
 
 		
@@ -960,7 +960,7 @@
 		<% If LstScegliIndirizzo.items.count > 0 Then %>
             <tr>
                 <td style="text-align:left;" class="carrello-td1-step4"><b>Indirizzi registrati:</td>
-				<td style="text-align:left;" class="carrello-td2-step4"><asp:DropDownList runat="server" ID="LstScegliIndirizzo" AutoPostBack="True" Style="width: 99%;"></asp:DropDownList></td>
+				<td style="text-align:left;" class="carrello-td2-step4"><asp:DropDownList runat="server" ID="LstScegliIndirizzo" AutoPostBack="True" Style="width: 99%;" CssClass="tf-select"></asp:DropDownList></td>
             </tr>
 		<% end if %>
             <tr>
@@ -1025,7 +1025,7 @@
                 <br />
 				<% If LstScegliIndirizzo.items.count > 0 Then %>
                 Indirizzi esistenti (seleziona in caso di modifica):<br />
-                <asp:DropDownList runat="server" ID="LstDestinazione" AutoPostBack="True" Style="width:100%"></asp:DropDownList>
+                <asp:DropDownList runat="server" ID="LstDestinazione" AutoPostBack="True" Style="width:100%" CssClass="tf-select"></asp:DropDownList>
                 <br />
 				<% end if %>
                 <br />
@@ -1033,71 +1033,71 @@
                  <table id="tblDestAlter" bgcolor="whitesmoke" cellpadding="1" cellspacing="5" border="0" width="100%" runat="server" style="margin:auto;">
                     <tr>
                         <td style="padding: 0 5px;" width="155px">Ragione Sociale&nbsp;/&nbsp;Cognome: *</td>
-                        <td ><asp:TextBox ID="tbRagioneSocialeA" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
+                        <td ><asp:TextBox ID="tbRagioneSocialeA" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True" CssClass="tf-input"></asp:TextBox>
                             <asp:requiredfieldvalidator id="RFRagioneSocialeA" runat="server" Display="None" ControlToValidate="tbRagioneSocialeA"
 		                       ErrorMessage="Campo Obbligatorio (Ragione Sociale)"></asp:requiredfieldvalidator>
 		                </td>
                     </tr>
                     <tr>
                         <td style="padding: 0 5px;" width="155px">Nome:</td>
-                        <td ><asp:TextBox ID="tbNomeA" runat="server" Width="100%" MaxLength="50" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
+                        <td ><asp:TextBox ID="tbNomeA" runat="server" Width="100%" MaxLength="50" ValidationGroup="registrazione" CausesValidation="True" CssClass="tf-input"></asp:TextBox>
                         </td>
                     </tr>        
                     <tr>
                         <td style="padding: 0 5px;" width="155px">Indirizzo: *</td>
-                        <td ><asp:TextBox ID="tbIndirizzo2" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
+                        <td ><asp:TextBox ID="tbIndirizzo2" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True" CssClass="tf-input"></asp:TextBox>
                             <asp:requiredfieldvalidator id="RFIndirizzo2" runat="server" Display="None" ControlToValidate="tbIndirizzo2"
 		                       ErrorMessage="Campo Obbligatorio (Indirizzo)"></asp:requiredfieldvalidator>
                         </td>
                     </tr>
 					<tr>
                         <td style="padding: 0 5px;" width="155px">Cap *</td>
-                        <td ><asp:TextBox ID="tbCap2" runat="server" AutoPostBack="true" OnTextChanged="City_Bind_Data2" Width="100%" MaxLength="5" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
+                        <td ><asp:TextBox ID="tbCap2" runat="server" AutoPostBack="true" OnTextChanged="City_Bind_Data2" Width="100%" MaxLength="5" ValidationGroup="registrazione" CausesValidation="True" CssClass="tf-input"></asp:TextBox>
 							 <asp:requiredfieldvalidator id="RFCap2" runat="server" Display="None" ControlToValidate="tbCap2"
 		                       ErrorMessage="Campo Obbligatorio (CAP)"></asp:requiredfieldvalidator>
                         </td>
                     </tr>     
                     <tr>
                         <td style="padding: 0 5px;" width="155px">Città: *</td>
-                        <td ><asp:DropDownList ID="ddlCitta2" onSelectedIndexChanged="Province_Bind_Data2" AutoPostBack="true" runat="server" Width="100%" ValidationGroup="registrazione" CausesValidation="True"></asp:DropDownList>
+                        <td ><asp:DropDownList ID="ddlCitta2" onSelectedIndexChanged="Province_Bind_Data2" AutoPostBack="true" runat="server" Width="100%" ValidationGroup="registrazione" CausesValidation="True" CssClass="tf-select"></asp:DropDownList>
                              <asp:requiredfieldvalidator id="RFCitta2" runat="server" Display="None" ControlToValidate="ddlCitta2"
 		                       ErrorMessage="Campo Obbligatorio (Città)"></asp:requiredfieldvalidator>
                         </td>
                     </tr>
                     <tr>
                         <td style="padding: 0 5px;" width="155px">Provincia: *</td>
-                        <td ><asp:TextBox ID="tbProvincia2" ReadOnly="true" runat="server" Width="100%" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
+                        <td ><asp:TextBox ID="tbProvincia2" ReadOnly="true" runat="server" Width="100%" ValidationGroup="registrazione" CausesValidation="True" CssClass="tf-input"></asp:TextBox>
                              <asp:requiredfieldvalidator id="RFProvincia2" runat="server" Display="None" ControlToValidate="tbProvincia2"
 		                       ErrorMessage="Campo Obbligatorio (Provincia)"></asp:requiredfieldvalidator>
                         </td>
                     </tr>
                     <tr>
                         <td style="padding: 0 5px;" width="155px">Zona:</td>
-                        <td ><asp:TextBox ID="tbZona" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
+                        <td ><asp:TextBox ID="tbZona" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True" CssClass="tf-input"></asp:TextBox>
                         </td>
                     </tr>
                     <tr>
                         <td style="padding: 0 5px;" width="155px">Telefono: *</td>
-                        <td ><asp:TextBox ID="tbTelefono2" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
+                        <td ><asp:TextBox ID="tbTelefono2" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True" CssClass="tf-input"></asp:TextBox>
                             <asp:requiredfieldvalidator id="RFTelefono2" runat="server" Display="None" ControlToValidate="tbTelefono2"
 		                       ErrorMessage="Campo Obbligatorio (Telefono)"></asp:requiredfieldvalidator>
                         </td>
                     </tr>
                     <tr>
                         <td style="padding: 0 5px;" width="155px" valign="top">Nota destinazione:</td>
-                        <td ><asp:TextBox ID="tbNote" runat="server" Width="100%" MaxLength="255" ValidationGroup="registrazione" CausesValidation="True" TextMode="MultiLine" Rows="5"></asp:TextBox>
+                        <td ><asp:TextBox ID="tbNote" runat="server" Width="100%" MaxLength="255" ValidationGroup="registrazione" CausesValidation="True" TextMode="MultiLine" Rows="5" CssClass="tf-input"></asp:TextBox>
                         </td>
                     </tr>  
                     <tr>
-						<td colspan="2"><asp:CheckBox runat="server" ID="CHKPREDEFINITO" Text="Indirizzo predefinito" Checked="false" /><br />
+						<td colspan="2"><asp:CheckBox runat="server" ID="CHKPREDEFINITO" Text="Indirizzo predefinito" Checked="false" / CssClass="tf-check"><br />
 						</td>
 					</tr> 
                     <tr>
                         <td align="center" colspan="2">
-                            <asp:Button ID="btnSalvaDest" runat="server" Text="Inserisci nuova destinazione" Height="25px" CausesValidation="true" />
-                            <asp:Button ID="btnModDest" runat="server" Text="Salva modifiche destinazione" Height="25px" CausesValidation="true" />
-                            <asp:Button ID="btnElimDest" runat="server" Text="Elimina destinazione" Height="25px" CausesValidation="true" BackColor="#CC0000" ForeColor="White"/>
-                            <br /><br /><asp:Button ID="btnAnnullaDest" runat="server" Text="Annulla" Height="25px" CausesValidation="false" />
+                            <asp:Button ID="btnSalvaDest" runat="server" Text="Inserisci nuova destinazione" Height="25px" CausesValidation="true" / CssClass="tf-btn">
+                            <asp:Button ID="btnModDest" runat="server" Text="Salva modifiche destinazione" Height="25px" CausesValidation="true" / CssClass="tf-btn">
+                            <asp:Button ID="btnElimDest" runat="server" Text="Elimina destinazione" Height="25px" CausesValidation="true" BackColor="#CC0000" ForeColor="White"/ CssClass="tf-btn">
+                            <br /><br /><asp:Button ID="btnAnnullaDest" runat="server" Text="Annulla" Height="25px" CausesValidation="false" / CssClass="tf-btn">
                         </td>
                     </tr>
                 </table>
@@ -1114,7 +1114,7 @@
 
 			
 			
-				<br/><asp:TextBox ID="txtNoteSpedizione" TextMode="MultiLine" Rows="5" runat="server" Width="100%"></asp:TextBox>
+				<br/><asp:TextBox ID="txtNoteSpedizione" TextMode="MultiLine" Rows="5" runat="server" Width="100%" CssClass="tf-input"></asp:TextBox>
 			</asp:Panel>
 		</td>
 	</tr>
@@ -1126,7 +1126,7 @@
             <div class="ks-checkout-actions">
                 <asp:LinkButton Visible="False" CausesValidation="false" ID="btSalvaPreventivo" runat="server" CssClass="tf-btn btn-gray" OnClientClick="javascript:visualizza_spinner_caricamento();">SALVA PREVENTIVO</asp:LinkButton>
                 <%if Session("DESTINAZIONEALTERNATIVA")=0 then %>
-                    <asp:LinkButton CausesValidation="false" ID="btInviaOrdine" runat="server" OnClientClick="javascript:visualizza_spinner_caricamento();"><div id="confermaOrdinde" class="tf-btn">CONFERMA ORDINE</div></asp:LinkButton>
+                    <asp:LinkButton CausesValidation="false" ID="btInviaOrdine" runat="server" OnClientClick="javascript:visualizza_spinner_caricamento();" CssClass="tf-btn"><div id="confermaOrdinde" class="tf-btn">CONFERMA ORDINE</div></asp:LinkButton>
                 <%else%>
                     <div id="confermaOrdinde" class="tf-btn btn-gray" style="pointer-events:none;opacity:.6;">CONFERMA ORDINE</div>
                 <%end if%>
