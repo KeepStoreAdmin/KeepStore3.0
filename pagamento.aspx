@@ -42,7 +42,7 @@
             </div>
 
             <div class="text-center mt-5">
-                <a class="tf-btn btn-line" href="<%= ResolveUrl("~/carrello.aspx") %>">Torna al checkout</a>
+                <a class="tf-btn btn-line" href="<%= ResolveUrl("~/carrello.aspx") %>">Torna al carrello</a>
             </div>
         </div>
     </section>
