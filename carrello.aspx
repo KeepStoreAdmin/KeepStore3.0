@@ -350,6 +350,10 @@
             <div id="Qnt_Errata" runat="server" class="ks-alert ks-alert-danger" visible="false">
                 E' stata impostata una quantità articolo minore o uguale a 0.<br />Eliminare l'articolo dal carrello o impostare una quantità maggiore di 0.
             </div>
+            <div id="Checkout_Err" runat="server" class="ks-alert ks-alert-danger" visible="false">
+                <asp:Literal ID="litCheckoutErr" runat="server" />
+            </div>
+
 
             <!-- Buono Sconto (dati) -->
             <asp:SqlDataSource ID="SqlDataBuonoSconto" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"

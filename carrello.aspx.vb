@@ -442,7 +442,78 @@ Private Const SessLoginId_B As String = "LOGINID"
     Return s
     End Function
 
-    Private Sub LogEx(ByVal ex As Exception, Optional ByVal context As String = "", Optional ByVal sql As String = "")
+    
+
+' =========================
+' CHECKOUT HARDENING - UI error helper
+' =========================
+Private Sub ShowCheckoutError(ByVal msg As String)
+    Try
+        If Checkout_Err IsNot Nothing Then
+            Checkout_Err.Visible = True
+        End If
+        If litCheckoutErr IsNot Nothing Then
+            litCheckoutErr.Text = Server.HtmlEncode(msg)
+        End If
+    Catch
+    End Try
+End Sub
+
+Private Function IsCheckoutSelectionValid() As Boolean
+    ' Validate required selections before calling SendOrder (avoid FormatException in ordine/pagamento)
+    Try
+        ' Hide error by default
+        If Checkout_Err IsNot Nothing Then Checkout_Err.Visible = False
+        If litCheckoutErr IsNot Nothing Then litCheckoutErr.Text = ""
+
+        Dim loginId As Integer = GetSessionInt("LoginId", 0)
+        If loginId <= 0 Then
+            ShowCheckoutError("Sessione scaduta. Effettua di nuovo l'accesso.")
+            Return False
+        End If
+
+        ' Address selection
+        Dim idInd As Integer = 0
+        If LstScegliIndirizzo IsNot Nothing Then
+            Integer.TryParse(Convert.ToString(LstScegliIndirizzo.SelectedValue), idInd)
+        End If
+        If idInd <= 0 Then
+            ShowCheckoutError("Seleziona un indirizzo di destinazione per procedere.")
+            Return False
+        End If
+        Session("SCEGLIINDIRIZZO") = idInd
+
+        ' Shipping/payment selection (hidden fields)
+        Dim vettoreId As Integer = 0
+        Integer.TryParse(Convert.ToString(If(tbVettoriId IsNot Nothing, tbVettoriId.Text, "0")), vettoreId)
+        If vettoreId <= 0 Then
+            ShowCheckoutError("Seleziona un metodo di spedizione.")
+            Return False
+        End If
+
+        Dim pagamentoId As Integer = 0
+        Integer.TryParse(Convert.ToString(If(tbPagamenti IsNot Nothing, tbPagamenti.Text, "0")), pagamentoId)
+        If pagamentoId <= 0 Then
+            ShowCheckoutError("Seleziona un metodo di pagamento.")
+            Return False
+        End If
+
+        ' Totale (should be parseable)
+        Dim totale As Double = SafeDbl(If(lblTotale IsNot Nothing, lblTotale.Text, "0"), -1)
+        If totale < 0 Then
+            ShowCheckoutError("Totale non valido. Aggiorna il carrello e riprova.")
+            Return False
+        End If
+
+        Return True
+    Catch ex As Exception
+        LogEx(ex, "IsCheckoutSelectionValid")
+        ShowCheckoutError("Errore in validazione checkout. Riprova.")
+        Return False
+    End Try
+End Function
+
+Private Sub LogEx(ByVal ex As Exception, Optional ByVal context As String = "", Optional ByVal sql As String = "")
     Try
         Dim msg As String = "carrello.aspx.vb"
         If context <> "" Then msg &= " [" & context & "]"
@@ -3281,7 +3352,9 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
         If (controlla_articoli_quantita_zero() = 1) Then
             If (GetLoginIdSafe(0) > 0) Then
                 Cookie = "N"
-                SendOrder()
+                If IsCheckoutSelectionValid() Then
+                    SendOrder()
+                End If
             Else
                 Session.Item("StavonelCarrello") = 1
                 Response.Redirect("accessonegato.aspx")
