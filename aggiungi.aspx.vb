@@ -30,6 +30,8 @@ Partial Class aggiungi
         Dim articoliIdGlobali As String = String.Empty
 
         Dim idParam As String = Convert.ToString(Request.QueryString("id"))
+        If idParam Is Nothing Then idParam = ""
+        idParam = idParam.Trim()
 
         ' 1) GESTIONE COUPON
         If String.Equals(idParam, "Coupon", StringComparison.OrdinalIgnoreCase) Then
@@ -41,6 +43,24 @@ Partial Class aggiungi
         If String.Equals(idParam, "BuonoSconto", StringComparison.OrdinalIgnoreCase) Then
             ' Codice per il Buono Sconto (lasciato vuoto come nel codice originale)
         End If
+
+' 2b) GESTIONE GROUPON (coupon esterno)
+If String.Equals(idParam, "groupon", StringComparison.OrdinalIgnoreCase) Then
+    ' prende i dati salvati da carrello_groupon.aspx e li trasforma in input per la logica standard di aggiunta carrello
+    Dim idArt As String = Convert.ToString(Session("Groupon_idArticolo"))
+    If String.IsNullOrEmpty(idArt) Then
+        ' niente in sessione: torno al carrello_groupon
+        Me.ClientScript.RegisterStartupScript(Me.GetType(), "ks_redir", "window.location.href='carrello_groupon.aspx';", True)
+        Return
+    End If
+
+    Session("Carrello_ArticoloId") = idArt
+    Session("Carrello_Quantita") = 1
+    Session("Carrello_SelezioneMultipla") = Nothing
+
+    ' Nota: manteniamo in sessione Groupon_Codice ecc. per eventuali usi futuri (ordine/coupon), ma l'inserimento nel carrello resta standard.
+End If
+
 
         ' 3) Pagina di provenienza (non usata ora, la mantengo per compatibilità)
         Dim Pagina As String = TryCast(Me.Session("Carrello_Pagina"), String)
