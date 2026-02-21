@@ -483,12 +483,18 @@
     </section>
 
 <asp:Panel ID="Panel_Unico" runat="server">   
-    <table width="100%" border="0" runat="server" id="tOrdine" visible="false" class="ks-checkout">
+    
+<section class="tf-checkout tf-sp-2">
+  <div class="container">
+<table width="100%" border="0" runat="server" id="tOrdine" visible="false" class="ks-checkout tf-checkout">
     
     
     <tr><td style="width: 100%;" colspan="2" valign="top" >
+<div class="row">
+  <div class="col-lg-8">
+
     
-    <div id="promo_vettori">
+    <div id="promo_vettori" class="tf-checkout-box mb-4">
     <asp:Panel ID="pSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;" CssClass="wrap tf-checkout-box">
         
                 <h5 class="title fw-semibold">Spedizione</h5>
@@ -736,9 +742,23 @@
                     </td>
                     <td style="color:Red; font-weight:bold;">
                         Spedizione Gratis
-                    </td>
+                    
+  </div>
+  <div class="col-lg-4">
+    <div class="tf-checkout-box tf-cart-summery">
+      <h3 class="tf-checkout-title">Riepilogo ordine</h3>
+      <!-- Riutilizza gli stessi controlli server già presenti fuori dal checkout: qui mettiamo solo un messaggio.
+           Il riepilogo reale resta dove lo gestisce il code-behind (TableConteggi / lblTotale). -->
+      <div class="ks-note">Il riepilogo (totali, IVA, spedizione, sconti) resta gestito dal blocco riepilogo principale del carrello.</div>
+    </div>
+  </div>
+</div>
+</td>
                 </tr>
-            </table>        
+            </table>
+  </div>
+</section>
+        
         </asp:Panel>
         <br />
     </asp:Panel>   
