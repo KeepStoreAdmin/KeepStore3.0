@@ -6,6 +6,42 @@ Imports System.Web
 Partial Class aggiungi
     Inherits AntiCsrfPage
 
+
+' =========================
+' HELPERS (safe redirect + safe input)
+' =========================
+Private Sub SafeRedirect(ByVal url As String)
+    Try
+        Response.Redirect(url, False)
+        Context.ApplicationInstance.CompleteRequest()
+    Catch
+    End Try
+End Sub
+
+Private Function GetQueryString(ByVal key As String, Optional ByVal maxLen As Integer = 200) As String
+    Try
+        Dim v As String = Convert.ToString(Request.QueryString(key))
+        If v Is Nothing Then Return ""
+        v = v.Trim()
+        If v.Length > maxLen Then v = v.Substring(0, maxLen)
+        Return v
+    Catch
+        Return ""
+    End Try
+End Function
+
+Private Function GetSessionInt(ByVal key As String, Optional ByVal def As Integer = 0) As Integer
+    Try
+        Dim o As Object = Session(key)
+        If o Is Nothing OrElse o Is DBNull.Value Then Return def
+        Dim v As Integer
+        If Integer.TryParse(o.ToString(), v) Then Return v
+    Catch
+    End Try
+    Return def
+End Function
+
+
     ' Dati utente per Facebook Pixel
     Public firstName As String
     Public lastName As String
@@ -30,6 +66,7 @@ Partial Class aggiungi
         Dim articoliIdGlobali As String = String.Empty
 
         Dim idParam As String = Convert.ToString(Request.QueryString("id"))
+
         If idParam Is Nothing Then idParam = ""
         idParam = idParam.Trim()
 
@@ -46,19 +83,15 @@ Partial Class aggiungi
 
 ' 2b) GESTIONE GROUPON (coupon esterno)
 If String.Equals(idParam, "groupon", StringComparison.OrdinalIgnoreCase) Then
-    ' prende i dati salvati da carrello_groupon.aspx e li trasforma in input per la logica standard di aggiunta carrello
     Dim idArt As String = Convert.ToString(Session("Groupon_idArticolo"))
     If String.IsNullOrEmpty(idArt) Then
-        ' niente in sessione: torno al carrello_groupon
-        Me.ClientScript.RegisterStartupScript(Me.GetType(), "ks_redir", "window.location.href='carrello_groupon.aspx';", True)
+        SafeRedirect("carrello_groupon.aspx")
         Return
     End If
 
     Session("Carrello_ArticoloId") = idArt
     Session("Carrello_Quantita") = 1
     Session("Carrello_SelezioneMultipla") = Nothing
-
-    ' Nota: manteniamo in sessione Groupon_Codice ecc. per eventuali usi futuri (ordine/coupon), ma l'inserimento nel carrello resta standard.
 End If
 
 
@@ -68,9 +101,21 @@ End If
             Pagina = Request.UrlReferrer.ToString()
         End If
 
-        ' 4) LOGICA DI AGGIUNTA AL CARRELLO
+        
+' 3b) Se non c'è nessun articolo in sessione e non siamo in un flusso speciale, torno al carrello
+If String.IsNullOrEmpty(idParam) AndAlso Me.Session("Carrello_ArticoloId") Is Nothing Then
+    SafeRedirect("carrello.aspx")
+    Return
+End If
+
+' 4) LOGICA DI AGGIUNTA AL CARRELLO
+
         If Me.Session("Carrello_ArticoloId") IsNot Nothing Then
-            articoliIdGlobali = GestisciAggiuntaArticoli()
+            Try
+                articoliIdGlobali = GestisciAggiuntaArticoli()
+            Catch
+                articoliIdGlobali = String.Empty
+            End Try
         End If
 
         ' 5) Pulizia variabili di sessione carrello temporanee
@@ -85,8 +130,14 @@ End If
             facebook_pixel(articoliIdGlobali)
         End If
 
-        ' 7) Redirect al carrello
-        Me.ClientScript.RegisterStartupScript(Me.GetType(), "ks_redir", "window.location.href='carrello.aspx';", True)
+        
+' 7) Redirect al carrello
+If Not String.IsNullOrEmpty(articoliIdGlobali) Then
+    Me.ClientScript.RegisterStartupScript(Me.GetType(), "ks_redir", "window.location.href='carrello.aspx';", True)
+Else
+    SafeRedirect("carrello.aspx")
+End If
+, "ks_redir", "window.location.href='carrello.aspx';", True)
     End Sub
 
     ' =======================================
