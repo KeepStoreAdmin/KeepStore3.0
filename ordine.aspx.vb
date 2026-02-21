@@ -11,6 +11,19 @@ Imports System.Security.Cryptography
 Partial Class ordine
     Inherits AntiCsrfPage
 
+
+' =========================
+' REDIRECT SAFE (avoid ThreadAbortException)
+' =========================
+Private Sub SafeRedirect(ByVal url As String)
+    Try
+        Response.Redirect(url, False)
+        Context.ApplicationInstance.CompleteRequest()
+    Catch
+    End Try
+End Sub
+
+
     Const _Tls12 As SslProtocols = DirectCast(&HC00, SslProtocols)
     Const Tls12 As SecurityProtocolType = DirectCast(_Tls12, SecurityProtocolType)
 
@@ -161,13 +174,13 @@ End Function
             ' Mantengo la tua variabile originale (Page) e aggiungo anche Pagina_visitata (pattern standard)
             Me.Session("Page") = Me.Request.Url.ToString()
             Me.Session("Pagina_visitata") = Me.Request.Url.ToString()
-            Me.Response.Redirect("accessonegato.aspx", True)
+            Me.SafeRedirect("accessonegato.aspx")
             Exit Sub
         End If
 
 ' Hardening: require one-time token issued by carrello (anti-replay + block direct access)
 If Not ConsumeValidCheckoutToken() Then
-    Response.Redirect("carrello.aspx", True)
+    SafeRedirect("carrello.aspx")
     Exit Sub
 End If
 
@@ -190,7 +203,7 @@ End If
             Dim Note As String = If(TryCast(Me.Session("NoteDocumento"), String), "")
 
             If TipoDoc <= 0 Then
-                Me.Response.Redirect("documenti.aspx", True)
+                Me.SafeRedirect("documenti.aspx")
                 Exit Sub
             End If
 
@@ -221,7 +234,7 @@ End If
                     cmdCart.Parameters.AddWithValue("?LoginId", LoginId)
                     Using drCart As MySqlDataReader = cmdCart.ExecuteReader()
                         If Not drCart.HasRows Then
-                            Me.Response.Redirect("carrello.aspx", True)
+                            Me.SafeRedirect("carrello.aspx")
                             Exit Sub
                         End If
 

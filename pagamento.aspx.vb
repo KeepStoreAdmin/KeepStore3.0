@@ -8,6 +8,19 @@ Imports MySql.Data.MySqlClient
 Partial Class pagamento
     Inherits System.Web.UI.Page
 
+
+' =========================
+' REDIRECT SAFE (avoid ThreadAbortException)
+' =========================
+Private Sub SafeRedirect(ByVal url As String)
+    Try
+        Response.Redirect(url, False)
+        Context.ApplicationInstance.CompleteRequest()
+    Catch
+    End Try
+End Sub
+
+
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
 
         ' Pagina destinata a rientri pagamento / callback.
@@ -23,7 +36,7 @@ Partial Class pagamento
 
         If loginId <= 0 Then
             Session("Pagina_visitata") = Request.RawUrl
-            Response.Redirect("accessonegato.aspx", True)
+            SafeRedirect("accessonegato.aspx")
             Return
         End If
 
@@ -74,7 +87,7 @@ Partial Class pagamento
                 Session("Coupon_Codice_Controllo") = cod_controllo
                 Session("Coupon_NumeroOpzione") = 0
 
-                Response.Redirect("ordine_coupon.aspx?cod=" & Server.UrlEncode(cod_controllo), True)
+                SafeRedirect("ordine_coupon.aspx?cod=" & Server.UrlEncode(cod_controllo))
                 Return
             End If
 
@@ -133,7 +146,7 @@ Partial Class pagamento
                     Session("IdPagamento") = idPagamento
 
                     Session("GCR_ShowOptIn_DocId") = docId
-                    Response.Redirect("documentidettaglio.aspx?id=" & docId.ToString(), True)
+                    SafeRedirect("documentidettaglio.aspx?id=" & docId.ToString())
                     Return
                 End If
 
