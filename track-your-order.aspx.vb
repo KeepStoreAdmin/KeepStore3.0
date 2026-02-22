@@ -22,24 +22,7 @@ Partial Class track_your_order
 
                 Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
 
-                Dim sql As String = "
-    SELECT vdocumenti.id,
-           vdocumenti.NDocumento,
-           vdocumenti.DataDocumento,
-           vdocumenti.TotaleDocumento,
-           vdocumenti.StatiDescrizione1,
-           vdocumenti.Tracking,
-           vettori.Link_Tracking,
-           pagamentitipo.Descrizione AS PagamentiTipoDescrizione
-    FROM vdocumenti
-    LEFT JOIN utenti ON vdocumenti.UtentiId = utenti.Id
-    LEFT JOIN (SELECT id, Link_Tracking FROM vettori) AS vettori ON vdocumenti.VettoriId = vettori.id
-    LEFT JOIN pagamentitipo ON vdocumenti.PagamentiTipoId = pagamentitipo.id
-    WHERE vdocumenti.TipoDocumentiId = 4
-      AND vdocumenti.NDocumento = @n
-      AND LOWER(utenti.Email) = LOWER(@email)
-    ORDER BY vdocumenti.ID DESC
-    LIMIT 1;"
+                Dim sql As String = "SELECT vdocumenti.id," & vbCrLf & "vdocumenti.NDocumento," & vbCrLf & "vdocumenti.DataDocumento," & vbCrLf & "vdocumenti.TotaleDocumento," & vbCrLf & "vdocumenti.StatiDescrizione1," & vbCrLf & "vdocumenti.Tracking," & vbCrLf & "vettori.Link_Tracking," & vbCrLf & "pagamentitipo.Descrizione AS PagamentiTipoDescrizione" & vbCrLf & "FROM vdocumenti" & vbCrLf & "LEFT JOIN utenti ON vdocumenti.UtentiId = utenti.Id" & vbCrLf & "LEFT JOIN (SELECT id, Link_Tracking FROM vettori) AS vettori ON vdocumenti.VettoriId = vettori.id" & vbCrLf & "LEFT JOIN pagamentitipo ON vdocumenti.PagamentiTipoId = pagamentitipo.id" & vbCrLf & "WHERE vdocumenti.TipoDocumentiId = 4" & vbCrLf & "AND vdocumenti.NDocumento = @n" & vbCrLf & "AND LOWER(utenti.Email) = LOWER(@email)" & vbCrLf & "ORDER BY vdocumenti.ID DESC"
 
                 Try
                     Using c As New MySqlConnection(cs)
