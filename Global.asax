@@ -17,6 +17,34 @@
         'Scritta nel campo di ricerca
         Application.Add("Campo_Ricerca", "cosa cerchi? Monitor TV PC Karaoke etc ...")
     End Sub
+
+' =========================
+' STEP 27 - Legacy endpoints redirect map (SEO-safe)
+' =========================
+Sub Application_BeginRequest(ByVal sender As Object, ByVal e As EventArgs)
+    Try
+        Dim p As String = Request.Url.AbsolutePath
+        If String.IsNullOrEmpty(p) Then Exit Sub
+        p = p.ToLowerInvariant()
+
+        ' 1) Legacy payment return alias
+        If p.EndsWith("/pay_your_orders.aspx") Then
+            Response.Redirect("~/pagamento.aspx", False)
+            Context.ApplicationInstance.CompleteRequest()
+            Exit Sub
+        End If
+
+        ' 2) Deprecated test page -> home (avoid indexing)
+        If p.EndsWith("/test.aspx") Then
+            Response.Redirect("~/Default.aspx", False)
+            Context.ApplicationInstance.CompleteRequest()
+            Exit Sub
+        End If
+
+    Catch
+    End Try
+End Sub
+
     
     Sub Application_End(ByVal sender As Object, ByVal e As EventArgs)
         ' Codice eseguito alla chiusura dell&apos;applicazione
