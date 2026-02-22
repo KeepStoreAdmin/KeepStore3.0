@@ -7,7 +7,8 @@ Partial Class ordine_coupon
 
         ' Controllo se l'utente è loggato o meno, se non è loggato lo indirizzo alla registrazione
         If Session("LoginID") Is Nothing OrElse Convert.ToInt32(Session("LoginID")) <= 0 Then
-            Response.Redirect("accessonegato.aspx", True)
+            Response.Redirect("accessonegato.aspx", False)
+            Context.ApplicationInstance.CompleteRequest()
             Return
         End If
 
@@ -80,6 +81,7 @@ Partial Class ordine_coupon
             End Using
         End Using
 
-        Response.Redirect("aggiungi.aspx?id=Coupon", True)
+        Response.Redirect("aggiungi.aspx?id=Coupon", False)
+            Context.ApplicationInstance.CompleteRequest()
     End Sub
 End Class
