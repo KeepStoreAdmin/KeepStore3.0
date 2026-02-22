@@ -138,7 +138,7 @@ Partial Class coupon_utente
                     End Try
 
                     risultato &= "<img src=""Public/Images/interrogativo.png"" alt="""" title=""Clicca sul Numero Tracking"">" &
-                                 "<a href=""" & Server.HtmlAttributeEncode(href) & """ target=""_blank"">" &
+                                 "<a href=""" & System.Web.HttpUtility.HtmlAttributeEncode(href) & """ target=""_blank"">" &
                                  Server.HtmlEncode(id) & "</a>; "
                 End If
             Next
