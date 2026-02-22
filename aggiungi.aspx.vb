@@ -8,7 +8,7 @@ Partial Class aggiungi
 
 
 ' =========================
-' HELPERS (safe redirect + safe input)
+' HELPERS (safe redirect)
 ' =========================
 Private Sub SafeRedirect(ByVal url As String)
     Try
@@ -17,29 +17,6 @@ Private Sub SafeRedirect(ByVal url As String)
     Catch
     End Try
 End Sub
-
-Private Function GetQueryString(ByVal key As String, Optional ByVal maxLen As Integer = 200) As String
-    Try
-        Dim v As String = Convert.ToString(Request.QueryString(key))
-        If v Is Nothing Then Return ""
-        v = v.Trim()
-        If v.Length > maxLen Then v = v.Substring(0, maxLen)
-        Return v
-    Catch
-        Return ""
-    End Try
-End Function
-
-Private Function GetSessionInt(ByVal key As String, Optional ByVal def As Integer = 0) As Integer
-    Try
-        Dim o As Object = Session(key)
-        If o Is Nothing OrElse o Is DBNull.Value Then Return def
-        Dim v As Integer
-        If Integer.TryParse(o.ToString(), v) Then Return v
-    Catch
-    End Try
-    Return def
-End Function
 
 
     ' Dati utente per Facebook Pixel
@@ -131,14 +108,14 @@ End If
         End If
 
         
-' 7) Redirect al carrello
-If Not String.IsNullOrEmpty(articoliIdGlobali) Then
-    Me.ClientScript.RegisterStartupScript(Me.GetType(), "ks_redir", "window.location.href='carrello.aspx';", True)
-Else
-    SafeRedirect("carrello.aspx")
-End If
-, "ks_redir", "window.location.href='carrello.aspx';", True)
-    End Sub
+    ' 7) Redirect al carrello
+    If Not String.IsNullOrEmpty(articoliIdGlobali) Then
+        Me.ClientScript.RegisterStartupScript(Me.GetType(), "ks_redir", "window.location.href='carrello.aspx';", True)
+    Else
+        SafeRedirect("carrello.aspx")
+    End If
+End Sub
+
 
     ' =======================================
     '  COUPON
