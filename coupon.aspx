@@ -92,7 +92,7 @@
                 <div id="main-image-box">
                     <asp:Repeater ID="Repeater_SfondiSettori" DataSourceID="SqlDataSettori" runat="server">
                         <ItemTemplate>
-                            <div class="clip facets" style='<%# "background-image:url(\"public/coupon/sfondi_settori/" & Eval("imgSettore") & "\"); " & Maschera() %>'>
+                             <div class="clip facets" style='<%# "background-image:url(""public/coupon/sfondi_settori/" & Eval("imgSettore") & """); " & Maschera() %>'>
 						        <div class="container"></div>
                             </div>
                         </ItemTemplate>
@@ -230,5 +230,4 @@
         </SelectParameters>
     </asp:SqlDataSource>
 </asp:Content>
-
 
