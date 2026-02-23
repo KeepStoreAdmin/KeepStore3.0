@@ -21,7 +21,7 @@ Partial Class carrello
         Try
             If Repeater1 IsNot Nothing Then
                 AddHandler Repeater1.PreRender, AddressOf Repeater1_PreRender
-                AddHandler Repeater1.RowCommand, AddressOf Repeater1_ItemCommand
+                AddHandler Repeater1.ItemCommand, AddressOf Repeater1_ItemCommand
             End If
 
             If gvVettori IsNot Nothing Then
@@ -39,7 +39,7 @@ Partial Class carrello
 
             If gvArticoliGratis IsNot Nothing Then
                 AddHandler gvArticoliGratis.PreRender, AddressOf gvArticoliGratis_PreRender
-                AddHandler gvArticoliGratis.RowCommand, AddressOf gvArticoliGratis_ItemCommand
+                AddHandler gvArticoliGratis.ItemCommand, AddressOf gvArticoliGratis_ItemCommand
             End If
 
             If rbSpedizioneGratis IsNot Nothing Then
@@ -442,78 +442,7 @@ Private Const SessLoginId_B As String = "LOGINID"
     Return s
     End Function
 
-    
-
-' =========================
-' CHECKOUT HARDENING - UI error helper
-' =========================
-Private Sub ShowCheckoutError(ByVal msg As String)
-    Try
-        If Checkout_Err IsNot Nothing Then
-            Checkout_Err.Visible = True
-        End If
-        If litCheckoutErr IsNot Nothing Then
-            litCheckoutErr.Text = Server.HtmlEncode(msg)
-        End If
-    Catch
-    End Try
-End Sub
-
-Private Function IsCheckoutSelectionValid() As Boolean
-    ' Validate required selections before calling SendOrder (avoid FormatException in ordine/pagamento)
-    Try
-        ' Hide error by default
-        If Checkout_Err IsNot Nothing Then Checkout_Err.Visible = False
-        If litCheckoutErr IsNot Nothing Then litCheckoutErr.Text = ""
-
-        Dim loginId As Integer = GetSessionInt("LoginId", 0)
-        If loginId <= 0 Then
-            ShowCheckoutError("Sessione scaduta. Effettua di nuovo l'accesso.")
-            Return False
-        End If
-
-        ' Address selection
-        Dim idInd As Integer = 0
-        If LstScegliIndirizzo IsNot Nothing Then
-            Integer.TryParse(Convert.ToString(LstScegliIndirizzo.SelectedValue), idInd)
-        End If
-        If idInd <= 0 Then
-            ShowCheckoutError("Seleziona un indirizzo di destinazione per procedere.")
-            Return False
-        End If
-        Session("SCEGLIINDIRIZZO") = idInd
-
-        ' Shipping/payment selection (hidden fields)
-        Dim vettoreId As Integer = 0
-        Integer.TryParse(Convert.ToString(If(tbVettoriId IsNot Nothing, tbVettoriId.Text, "0")), vettoreId)
-        If vettoreId <= 0 Then
-            ShowCheckoutError("Seleziona un metodo di spedizione.")
-            Return False
-        End If
-
-        Dim pagamentoId As Integer = 0
-        Integer.TryParse(Convert.ToString(If(tbPagamenti IsNot Nothing, tbPagamenti.Text, "0")), pagamentoId)
-        If pagamentoId <= 0 Then
-            ShowCheckoutError("Seleziona un metodo di pagamento.")
-            Return False
-        End If
-
-        ' Totale (should be parseable)
-        Dim totale As Double = SafeDbl(If(lblTotale IsNot Nothing, lblTotale.Text, "0"), -1)
-        If totale < 0 Then
-            ShowCheckoutError("Totale non valido. Aggiorna il carrello e riprova.")
-            Return False
-        End If
-
-        Return True
-    Catch ex As Exception
-        LogEx(ex, "IsCheckoutSelectionValid")
-        ShowCheckoutError("Errore in validazione checkout. Riprova.")
-        Return False
-    End Try
-End Function
-
-Private Sub LogEx(ByVal ex As Exception, Optional ByVal context As String = "", Optional ByVal sql As String = "")
+    Private Sub LogEx(ByVal ex As Exception, Optional ByVal context As String = "", Optional ByVal sql As String = "")
     Try
         Dim msg As String = "carrello.aspx.vb"
         If context <> "" Then msg &= " [" & context & "]"
@@ -1652,15 +1581,15 @@ End Function
     Protected Sub gvArticoliGratis_PreRender(ByVal sender As Object, ByVal e As System.EventArgs)
     Dim i As Integer
 
-    For i = 0 To gvArticoliGratis.Rows.Count - 1
+    For i = 0 To gvArticoliGratis.Items.Count - 1
 
-        Dim img As Image = TryCast(gvArticoliGratis.Rows(i).FindControl("imgDispo"), Image)
-        Dim dispo As Label = TryCast(gvArticoliGratis.Rows(i).FindControl("lblDispo"), Label)
-        Dim arrivo As Label = TryCast(gvArticoliGratis.Rows(i).FindControl("lblArrivo"), Label)
-        Dim importo As Label = TryCast(gvArticoliGratis.Rows(i).FindControl("lblImporto"), Label)
-        Dim importoIvato As Label = TryCast(gvArticoliGratis.Rows(i).FindControl("lblImportoIvato"), Label)
-        Dim peso As Label = TryCast(gvArticoliGratis.Rows(i).FindControl("lblPeso"), Label)
-        Dim tbQta As TextBox = TryCast(gvArticoliGratis.Rows(i).FindControl("tbQta"), TextBox)
+        Dim img As Image = TryCast(gvArticoliGratis.Items(i).FindControl("imgDispo"), Image)
+        Dim dispo As Label = TryCast(gvArticoliGratis.Items(i).FindControl("lblDispo"), Label)
+        Dim arrivo As Label = TryCast(gvArticoliGratis.Items(i).FindControl("lblArrivo"), Label)
+        Dim importo As Label = TryCast(gvArticoliGratis.Items(i).FindControl("lblImporto"), Label)
+        Dim importoIvato As Label = TryCast(gvArticoliGratis.Items(i).FindControl("lblImportoIvato"), Label)
+        Dim peso As Label = TryCast(gvArticoliGratis.Items(i).FindControl("lblPeso"), Label)
+        Dim tbQta As TextBox = TryCast(gvArticoliGratis.Items(i).FindControl("tbQta"), TextBox)
 
         Dim qtaRiga As Integer = SafeIntFromText(If(tbQta IsNot Nothing, tbQta.Text, "0"), 0)
         qta += qtaRiga
@@ -1673,8 +1602,8 @@ End Function
         If IvaTipo = 1 Then
             If importo IsNot Nothing Then importo.Visible = True
             If importoIvato IsNot Nothing Then importoIvato.Visible = False
-            Dim lblPrezzo As Control = gvArticoliGratis.Rows(i).FindControl("lblprezzo")
-            Dim lblPrezzoIvato As Control = gvArticoliGratis.Rows(i).FindControl("lblprezzoivato")
+            Dim lblPrezzo As Control = gvArticoliGratis.Items(i).FindControl("lblprezzo")
+            Dim lblPrezzoIvato As Control = gvArticoliGratis.Items(i).FindControl("lblprezzoivato")
             If lblPrezzo IsNot Nothing Then lblPrezzo.Visible = True
             If lblPrezzoIvato IsNot Nothing Then lblPrezzoIvato.Visible = False
 
@@ -1683,8 +1612,8 @@ End Function
         ElseIf IvaTipo = 2 Then
             If importo IsNot Nothing Then importo.Visible = False
             If importoIvato IsNot Nothing Then importoIvato.Visible = True
-            Dim lblPrezzo As Control = gvArticoliGratis.Rows(i).FindControl("lblprezzo")
-            Dim lblPrezzoIvato As Control = gvArticoliGratis.Rows(i).FindControl("lblprezzoivato")
+            Dim lblPrezzo As Control = gvArticoliGratis.Items(i).FindControl("lblprezzo")
+            Dim lblPrezzoIvato As Control = gvArticoliGratis.Items(i).FindControl("lblprezzoivato")
             If lblPrezzo IsNot Nothing Then lblPrezzo.Visible = False
             If lblPrezzoIvato IsNot Nothing Then lblPrezzoIvato.Visible = True
 
@@ -1855,7 +1784,7 @@ End Sub
 
         
         'Nascondo i Pannelli quando non ci sono articoli nel carrello
-        If (Me.gvArticoliGratis.Rows.Count = 0) And (Me.Repeater1.items.Count = 0) Then
+        If (Me.gvArticoliGratis.Items.Count = 0) And (Me.Repeater1.items.Count = 0) Then
             Me.Panel_Unico.Visible = False
             Me.btContinua.Enabled = True
         Else
@@ -1884,7 +1813,7 @@ End Sub
             lblBuonoScontoIVA.Text = String.Format("{0:c}", 0)
         End If
 
-        If (gvArticoliGratis.Rows.Count > 0) Or (Repeater1.items.Count > 0) Then
+        If (gvArticoliGratis.Items.Count > 0) Or (Repeater1.items.Count > 0) Then
             TB_BuonoSconto_TextChanged(TB_BuonoSconto, New System.EventArgs)
             GV_BuoniSconti.DataBind()
         Else
@@ -2011,8 +1940,8 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
         End If
 
         'Controllo che non ci siano articoli con quantità zero
-        If Me.gvArticoliGratis.Rows.Count > 0 Then
-            For Each row In gvArticoliGratis.Rows
+        If Me.gvArticoliGratis.items.Count > 0 Then
+            For Each row In gvArticoliGratis.items
                 Dim Qta As TextBox = row.FindControl("tbQta")
                 If (SafeInt(Qta.Text, 0) <= 0) Then
                     Return 0
@@ -2043,8 +1972,8 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
         Next
     End If
 
-    If gvArticoliGratis IsNot Nothing AndAlso gvArticoliGratis.Rows IsNot Nothing AndAlso gvArticoliGratis.Rows.Count > 0 Then
-        For Each it As RepeaterItem In gvArticoliGratis.Rows
+    If gvArticoliGratis IsNot Nothing AndAlso gvArticoliGratis.Items IsNot Nothing AndAlso gvArticoliGratis.Items.Count > 0 Then
+        For Each it As RepeaterItem In gvArticoliGratis.Items
             Dim r As CartRowInfo = ReadCartRowFromItem(it)
             If r.Id > 0 AndAlso r.ArtId > 0 Then rows.Add(r)
         Next
@@ -2662,8 +2591,8 @@ End Sub
     End If
 
     ' -------------------- ARTICOLI GRATIS (gvArticoliGratis) --------------------
-    If gvArticoliGratis.Rows.Count > 0 Then
-        For Each row As RepeaterItem In gvArticoliGratis.Rows
+    If gvArticoliGratis.Items.Count > 0 Then
+        For Each row As RepeaterItem In gvArticoliGratis.Items
 
             Dim lblValoreIva As Label = CType(row.FindControl("lblValoreIva"), Label)
             Dim lblIdIvaRC As Label = CType(row.FindControl("lblidIvaRC"), Label)
@@ -2712,10 +2641,15 @@ End Sub
         End If
     End Sub
 
-    Protected Sub gvArticoliGratis_ItemCommand(sender As Object, e As System.Web.UI.WebControls.GridViewCommandEventArgs) Handles gvArticoliGratis.RowCommand
-    ' Handler legacy: mantenuto per compatibilità compilazione.
-    ' La logica operativa è gestita altrove nel progetto.
-End Sub
+    Protected Sub gvArticoliGratis_ItemCommand(ByVal sender As Object, ByVal e As RepeaterCommandEventArgs)
+        If e.CommandName = "Aggiorna" Then
+            btAggiorna_Click(sender, e)
+        End If
+
+        If e.CommandName = "Elimina" Then
+            eliminaRigaCarrello(e.CommandArgument)
+        End If
+    End Sub
 
     Public Sub eliminaRigaCarrello(ByVal id As Integer)
     Dim conn As New MySqlConnection
@@ -3347,9 +3281,7 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
         If (controlla_articoli_quantita_zero() = 1) Then
             If (GetLoginIdSafe(0) > 0) Then
                 Cookie = "N"
-                If IsCheckoutSelectionValid() Then
-                    SendOrder()
-                End If
+                SendOrder()
             Else
                 Session.Item("StavonelCarrello") = 1
                 Response.Redirect("accessonegato.aspx")
