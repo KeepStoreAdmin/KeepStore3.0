@@ -9,6 +9,170 @@ Imports System.Security.Cryptography
 Imports System.Web
 
 Partial Class carrello
+    ' === Control access layer (precompile-safe) ===
+    ' In alcune modalità di deploy/precompilazione, i campi dei controlli potrebbero non essere generati/visibili.
+    ' Per evitare BC30451 (controllo non dichiarato), accediamo ai controlli via FindControl ricorsivo.
+    Private _handlersWired As Boolean = False
+
+    Private Function FindControlRecursive(root As Control, id As String) As Control
+        If root Is Nothing OrElse String.IsNullOrEmpty(id) Then Return Nothing
+        Dim c As Control = root.FindControl(id)
+        If c IsNot Nothing Then Return c
+        For Each child As Control In root.Controls
+            c = FindControlRecursive(child, id)
+            If c IsNot Nothing Then Return c
+        Next
+        Return Nothing
+    End Function
+
+    Private Function Ctl(Of T As Control)(id As String) As T
+        Dim c As Control = FindControlRecursive(Me, id)
+        Return TryCast(c, T)
+    End Function
+
+    ' Controlli principali usati nel code-behind
+    Private ReadOnly Property Repeater1Ctl As Repeater
+        Get
+            Return Ctl(Of Repeater)("Repeater1Ctl")
+        End Get
+    End Property
+
+    Private ReadOnly Property gvArticoliGratisCtl As Repeater
+        Get
+            Return Ctl(Of Repeater)("gvArticoliGratisCtl")
+        End Get
+    End Property
+
+    Private ReadOnly Property LstScegliIndirizzoCtl As DropDownList
+        Get
+            Return Ctl(Of DropDownList)("LstScegliIndirizzoCtl")
+        End Get
+    End Property
+
+    Private ReadOnly Property pnlFatturazioneCtl As Panel
+        Get
+            Return Ctl(Of Panel)("pnlFatturazioneCtl")
+        End Get
+    End Property
+
+    Private ReadOnly Property PnlSpedizioneCtl As Panel
+        Get
+            Return Ctl(Of Panel)("PnlSpedizioneCtl")
+        End Get
+    End Property
+
+    Private ReadOnly Property canorderCtl As Control
+        Get
+            ' canorderCtl è un <div runat="server"> nel markup
+            Return Ctl(Of Control)("canorderCtl")
+        End Get
+    End Property
+
+    Private ReadOnly Property tbShopIdGestPayCtl As TextBox
+        Get
+            Return Ctl(Of TextBox)("tbShopIdGestPayCtl")
+        End Get
+    End Property
+
+    Private ReadOnly Property lblBuonoScontoIVACtl As Label
+        Get
+            Return Ctl(Of Label)("lblBuonoScontoIVACtl")
+        End Get
+    End Property
+
+    Private ReadOnly Property Checkout_ErrCtl As Panel
+        Get
+            Return Ctl(Of Panel)("Checkout_ErrCtl")
+        End Get
+    End Property
+
+    Private ReadOnly Property litCheckoutErrCtl As Literal
+        Get
+            Return Ctl(Of Literal)("litCheckoutErrCtl")
+        End Get
+    End Property
+
+    Private ReadOnly Property ddlCitta2Ctl As DropDownList
+        Get
+            Return Ctl(Of DropDownList)("ddlCitta2Ctl")
+        End Get
+    End Property
+
+    Private ReadOnly Property tbTelefono2Ctl As TextBox
+        Get
+            Return Ctl(Of TextBox)("tbTelefono2Ctl")
+        End Get
+    End Property
+
+    Private ReadOnly Property RFTelefono2Ctl As BaseValidator
+        Get
+            Return Ctl(Of BaseValidator)("RFTelefono2Ctl")
+        End Get
+    End Property
+
+    Private ReadOnly Property open1Ctl As Control
+        Get
+            Return Ctl(Of Control)("open1Ctl")
+        End Get
+    End Property
+
+    Private ReadOnly Property open2Ctl As Control
+        Get
+            Return Ctl(Of Control)("open2Ctl")
+        End Get
+    End Property
+
+    Private ReadOnly Property insOmodCtl As Control
+        Get
+            Return Ctl(Of Control)("insOmodCtl")
+        End Get
+    End Property
+
+    Private ReadOnly Property lblTab_RagioneSocialeSpedizioneCtl As Label
+        Get
+            Return Ctl(Of Label)("lblTab_RagioneSocialeSpedizioneCtl")
+        End Get
+    End Property
+    Private ReadOnly Property lblTab_NomeSpedizioneCtl As Label
+        Get
+            Return Ctl(Of Label)("lblTab_NomeSpedizioneCtl")
+        End Get
+    End Property
+    Private ReadOnly Property lblTab_IndirizzoSpedizioneCtl As Label
+        Get
+            Return Ctl(Of Label)("lblTab_IndirizzoSpedizioneCtl")
+        End Get
+    End Property
+    Private ReadOnly Property lblTab_CittaSpedizioneCtl As Label
+        Get
+            Return Ctl(Of Label)("lblTab_CittaSpedizioneCtl")
+        End Get
+    End Property
+    Private ReadOnly Property lblTab_CapSpedizioneCtl As Label
+        Get
+            Return Ctl(Of Label)("lblTab_CapSpedizioneCtl")
+        End Get
+    End Property
+    Private ReadOnly Property lblTab_ProvinciaSpedizioneCtl As Label
+        Get
+            Return Ctl(Of Label)("lblTab_ProvinciaSpedizioneCtl")
+        End Get
+    End Property
+    Private ReadOnly Property lblTab_ZonaSpedizioneCtl As Label
+        Get
+            Return Ctl(Of Label)("lblTab_ZonaSpedizioneCtl")
+        End Get
+    End Property
+    Private ReadOnly Property lblTab_TelSpedizioneCtl As Label
+        Get
+            Return Ctl(Of Label)("lblTab_TelSpedizioneCtl")
+        End Get
+    End Property
+    Private ReadOnly Property lblTab_NotaDestinazioneCtl As Label
+        Get
+            Return Ctl(Of Label)("lblTab_NotaDestinazioneCtl")
+        End Get
+    End Property
     ' NOTE: Controls are declared in the auto-generated .designer.vb; do not redeclare WithEvents here to avoid BC30260.
     Inherits AntiCsrfPage
     Protected Sub Page_Init(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Init
@@ -17,96 +181,25 @@ Partial Class carrello
 
     ' Collega gli eventi dei controlli via AddHandler.
     ' Vantaggi: evita dipendenze da WithEvents/Handles e riduce i problemi quando il template cambia.
-    Private Sub WireUpHandlers()
+        Private Sub WireUpHandlers()
+        If _handlersWired Then Exit Sub
+        _handlersWired = True
+
         Try
-            If Repeater1 IsNot Nothing Then
-                AddHandler Repeater1.PreRender, AddressOf Repeater1_PreRender
-                AddHandler Repeater1.ItemCommand, AddressOf Repeater1_ItemCommand
+            Dim r1 = Repeater1Ctl
+            If r1 IsNot Nothing Then
+                AddHandler r1.PreRender, AddressOf Repeater1_PreRender
+                AddHandler r1.ItemCommand, AddressOf Repeater1_ItemCommand
             End If
 
-            If gvVettori IsNot Nothing Then
-                AddHandler gvVettori.PreRender, AddressOf gvVettori_PreRender
+            Dim rg = gvArticoliGratisCtl
+            If rg IsNot Nothing Then
+                AddHandler rg.ItemCommand, AddressOf gvArticoliGratis_ItemCommand
             End If
 
-            If gvPagamento IsNot Nothing Then
-                AddHandler gvPagamento.PreRender, AddressOf gvPagamento_PreRender
-            End If
-
-            If gvVettoriPromo IsNot Nothing Then
-                AddHandler gvVettoriPromo.PreRender, AddressOf gvVettoriPromo_PreRender
-                AddHandler gvVettoriPromo.RowDataBound, AddressOf gvVettoriPromo_RowDataBound
-            End If
-
-            If gvArticoliGratis IsNot Nothing Then
-                AddHandler gvArticoliGratis.PreRender, AddressOf gvArticoliGratis_PreRender
-                AddHandler gvArticoliGratis.ItemCommand, AddressOf gvArticoliGratis_ItemCommand
-            End If
-
-            If rbSpedizioneGratis IsNot Nothing Then
-                AddHandler rbSpedizioneGratis.PreRender, AddressOf rbSpedizioneGratis_PreRender
-            End If
-
-            If ImgBtnDestinazioneSi IsNot Nothing Then
-                AddHandler ImgBtnDestinazioneSi.Click, AddressOf ImgBtnDestinazioneSi_Click
-            End If
-            If ImgBtnDestinazioneNo IsNot Nothing Then
-                AddHandler ImgBtnDestinazioneNo.Click, AddressOf ImgBtnDestinazioneNo_Click
-            End If
-
-            If btnAnnullaDest IsNot Nothing Then
-                AddHandler btnAnnullaDest.Click, AddressOf btnAnnullaDest_Click
-            End If
-            If btnModDest IsNot Nothing Then
-                AddHandler btnModDest.Click, AddressOf btnModDest_Click
-            End If
-            If btnSalvaDest IsNot Nothing Then
-                AddHandler btnSalvaDest.Click, AddressOf btnSalvaDest_Click
-            End If
-            If btnElimDest IsNot Nothing Then
-                AddHandler btnElimDest.Click, AddressOf btnElimDest_Click
-            End If
-
-            If LstScegliIndirizzo IsNot Nothing Then
-                AddHandler LstScegliIndirizzo.PreRender, AddressOf LstScegliIndirizzo_PreRender
-            End If
-            If LstDestinazione IsNot Nothing Then
-                AddHandler LstDestinazione.PreRender, AddressOf LstDestinazione_PreRender
-                AddHandler LstDestinazione.SelectedIndexChanged, AddressOf LstDestinazione_SelectedIndexChanged
-            End If
-
-            If btSvuota IsNot Nothing Then
-                AddHandler btSvuota.Click, AddressOf btSvuota_Click
-            End If
-            If btCompleta IsNot Nothing Then
-                AddHandler btCompleta.Click, AddressOf btCompleta_Click
-            End If
-
-            If TB_BuonoSconto IsNot Nothing Then
-                AddHandler TB_BuonoSconto.TextChanged, AddressOf TB_BuonoSconto_TextChanged
-            End If
-            If GV_BuoniSconti IsNot Nothing Then
-                AddHandler GV_BuoniSconti.RowCommand, AddressOf GV_BuoniSconti_RowCommand
-            End If
-
-            If btContinua IsNot Nothing Then
-                AddHandler btContinua.Click, AddressOf btContinua_Click
-            End If
-            If btAggiorna IsNot Nothing Then
-                AddHandler btAggiorna.Click, AddressOf btAggiorna_Click
-            End If
-            If LB_CancelBuonoSconto IsNot Nothing Then
-                AddHandler LB_CancelBuonoSconto.Click, AddressOf LB_CancelBuonoSconto_Click
-            End If
-
-            If btSalvaPreventivo IsNot Nothing Then
-                AddHandler btSalvaPreventivo.Click, AddressOf btSalvaPreventivo_click
-            End If
-            If btInviaOrdine IsNot Nothing Then
-                AddHandler btInviaOrdine.Click, AddressOf btInviaOrdine_Click
-            End If
-
+            ' Nota: alcuni handler in questa pagina sono già dichiarati con "Handles" e non richiedono wiring esplicito.
         Catch
-            ' NOP: l'assenza di un controllo nel nuovo template non deve bloccare la compilazione o il bootstrap della pagina.
+            ' non bloccare la pagina se l'handler non è agganciabile in questa configurazione
         End Try
     End Sub
 
@@ -487,8 +580,8 @@ Private Const SessLoginId_B As String = "LOGINID"
     ' Nascondo i pannelli dei dati anagrafici quando non sono loggato
     Dim isLogged As Boolean = (loginId > 0)
 
-    Me.pnlFatturazione.Visible = isLogged
-    Me.PnlSpedizione.Visible = isLogged
+    Me.pnlFatturazioneCtl.Visible = isLogged
+    Me.PnlSpedizioneCtl.Visible = isLogged
     Me.PnlDestinazione.Visible = isLogged
     Me.Panel_Note.Visible = isLogged
 
@@ -588,13 +681,13 @@ Private Const SessLoginId_B As String = "LOGINID"
 
         'Nascondo i pannelli dei dati anagrafici quando non sono loggato
         If Me.Session("LoginId") > 0 Then
-            Me.pnlFatturazione.Visible = True
-			Me.PnlSpedizione.Visible = True
+            Me.pnlFatturazioneCtl.Visible = True
+			Me.PnlSpedizioneCtl.Visible = True
 			Me.PnlDestinazione.Visible = True
             Me.Panel_Note.Visible = True
         Else
-            Me.pnlFatturazione.Visible = False
-			Me.PnlSpedizione.Visible = False
+            Me.pnlFatturazioneCtl.Visible = False
+			Me.PnlSpedizioneCtl.Visible = False
             Me.PnlDestinazione.Visible = False
             Me.Panel_Note.Visible = False
         End If
@@ -607,7 +700,7 @@ Private Const SessLoginId_B As String = "LOGINID"
         Dim i As Integer
 
         'Carrello Normale
-        For i = 0 To Repeater1.items.Count - 1
+        For i = 0 To Repeater1Ctl.Items.Count - 1
             Dim img As Image
             Dim dispo As Label
             Dim arrivo As Label
@@ -616,13 +709,13 @@ Private Const SessLoginId_B As String = "LOGINID"
             Dim peso As Label
             Dim tbQta As TextBox
 
-            tbQta = Repeater1.items(i).FindControl("tbQta")
-            img = Repeater1.items(i).FindControl("imgDispo")
-            dispo = Repeater1.items(i).FindControl("lblDispo")
-            arrivo = Repeater1.items(i).FindControl("lblArrivo")
-            importo = Repeater1.items(i).FindControl("lblImporto")
-            importoIvato = Repeater1.items(i).FindControl("lblImportoIvato")
-            peso = Repeater1.items(i).FindControl("lblPeso")
+            tbQta = Repeater1Ctl.Items(i).FindControl("tbQta")
+            img = Repeater1Ctl.Items(i).FindControl("imgDispo")
+            dispo = Repeater1Ctl.Items(i).FindControl("lblDispo")
+            arrivo = Repeater1Ctl.Items(i).FindControl("lblArrivo")
+            importo = Repeater1Ctl.Items(i).FindControl("lblImporto")
+            importoIvato = Repeater1Ctl.Items(i).FindControl("lblImportoIvato")
+            peso = Repeater1Ctl.Items(i).FindControl("lblPeso")
 
         Dim qtaRiga As Integer = SafeIntFromText(tbQta.Text, 0)
         qta = qta + qtaRiga
@@ -632,15 +725,15 @@ Private Const SessLoginId_B As String = "LOGINID"
     If IvaTipo = 1 Then
         importo.Visible = True
         importoIvato.Visible = False
-        Repeater1.items(i).FindControl("lblprezzo").Visible = True
-        Repeater1.items(i).FindControl("lblprezzoivato").Visible = False
+        Repeater1Ctl.Items(i).FindControl("lblprezzo").Visible = True
+        Repeater1Ctl.Items(i).FindControl("lblprezzoivato").Visible = False
 
         TotaleMerce += SafeDblFromText(importo.Text, 0)
     ElseIf IvaTipo = 2 Then
         importo.Visible = False
         importoIvato.Visible = True
-        Repeater1.items(i).FindControl("lblprezzo").Visible = False
-        Repeater1.items(i).FindControl("lblprezzoivato").Visible = True
+        Repeater1Ctl.Items(i).FindControl("lblprezzo").Visible = False
+        Repeater1Ctl.Items(i).FindControl("lblprezzoivato").Visible = True
 
         TotaleMerce += SafeDblFromText(importoIvato.Text, 0)
     End If
@@ -731,9 +824,9 @@ Private Const SessLoginId_B As String = "LOGINID"
         End If
 		if Me.Session("CanOrder") = 0 Then
 			Me.btCompleta.Visible = False
-			Me.canorder.Visible = True
+			Me.canorderCtl.Visible = True
 		else
-			Me.canorder.Visible = False
+			Me.canorderCtl.Visible = False
 		End If
     End Sub
 
@@ -744,7 +837,7 @@ Private Const SessLoginId_B As String = "LOGINID"
             Me.Session("Ordine_TipoDoc") = 4
             Me.Session("Ordine_Documento") = "Ordine"
             Me.Session("Ordine_Pagamento") = Me.tbPagamenti.Text
-            Me.Session("Ordine_BancaSellaGestPay_ShopId") = Me.tbShopIdGestPay.Text
+            Me.Session("Ordine_BancaSellaGestPay_ShopId") = Me.tbShopIdGestPayCtl.Text
             Me.Session("Ordine_Vettore") = Me.tbVettoriId.Text
             Me.Session("Ordine_SpeseSped") = SafeDbl(Me.lblSpeseSped.Text, 0)
             Me.Session("Ordine_SpeseAss") = SafeDbl(Me.lblSpeseAss.Text, 0)
@@ -753,7 +846,7 @@ Private Const SessLoginId_B As String = "LOGINID"
 
             '// INIZIO BLOCCO BUONO SCONTO - FIX COMPILAZIONE (SendOrder)
 Dim buonoImp As Double = SafeMoney(lblBuonoSconto.Text, 0)
-Dim buonoIva As Double = SafeMoney(lblBuonoScontoIVA.Text, 0)
+Dim buonoIva As Double = SafeMoney(lblBuonoScontoIVACtl.Text, 0)
 Dim buonoTot As Double = buonoImp + buonoIva
 
 ' Se buono applicato: nel markup il GridView GV_BuoniSconti esiste e contiene le descrizioni nel primo record
@@ -1090,7 +1183,7 @@ End Sub
             If lbl IsNot Nothing Then Me.tbPagamenti.Text = lbl.Text
 
             lbl = TryCast(gvPagamento.Rows(i).FindControl("lblShopLogin"), Label)
-            If lbl IsNot Nothing Then Me.tbShopIdGestPay.Text = lbl.Text
+            If lbl IsNot Nothing Then Me.tbShopIdGestPayCtl.Text = lbl.Text
 
             Me.lblPagamento.Text = String.Format("{0:c}", totPagamento)
         End If
@@ -1106,7 +1199,7 @@ End Sub
         If lbl IsNot Nothing Then Me.tbPagamenti.Text = lbl.Text
 
         lbl = TryCast(gvPagamento.Rows(firstSelectableIndex).FindControl("lblShopLogin"), Label)
-        If lbl IsNot Nothing Then Me.tbShopIdGestPay.Text = lbl.Text
+        If lbl IsNot Nothing Then Me.tbShopIdGestPayCtl.Text = lbl.Text
 
         lbl = TryCast(gvPagamento.Rows(firstSelectableIndex).FindControl("lblCosto"), Label)
         If lbl IsNot Nothing Then
@@ -1204,11 +1297,11 @@ End Sub
             LstDestinazione.DataBind()
 			LstDestinazione.Items.Insert(0, New ListItem("(Seleziona)", "0"))
 			
-			LstScegliIndirizzo.Items.Clear()
-            LstScegliIndirizzo.DataSource = dsData
-            LstScegliIndirizzo.DataValueField = "ID"
-            LstScegliIndirizzo.DataTextField = "CAMPO"
-            LstScegliIndirizzo.DataBind()
+			LstScegliIndirizzoCtl.Items.Clear()
+            LstScegliIndirizzoCtl.DataSource = dsData
+            LstScegliIndirizzoCtl.DataValueField = "ID"
+            LstScegliIndirizzoCtl.DataTextField = "CAMPO"
+            LstScegliIndirizzoCtl.DataBind()
 
         Catch ex As Exception
         LogEx(ex, "SendOrder")
@@ -1344,10 +1437,10 @@ End Sub
     paramsIns.Add("@NOMEA", Me.tbNomeA.Text.Replace("'", "''").ToUpper)
     paramsIns.Add("@INDIRIZZOA", Me.tbIndirizzo2.Text.Replace("'", "''").ToUpper)
     paramsIns.Add("@CAPA", Me.tbCap2.Text.Replace("'", "''").ToUpper)
-    paramsIns.Add("@CITTAA", getDdlCittaValue(Me.ddlCitta2).Replace("'", "''").ToUpper)
+    paramsIns.Add("@CITTAA", getDdlCittaValue(Me.ddlCitta2Ctl).Replace("'", "''").ToUpper)
     paramsIns.Add("@PROVINCIAA", Me.tbProvincia2.Text.Replace("'", "''").ToUpper)
     paramsIns.Add("@NOTE", Me.tbNote.Text.Replace("'", "''").ToUpper)
-    paramsIns.Add("@TELEFONOA", Me.tbTelefono2.Text.Replace("'", "''").ToUpper)
+    paramsIns.Add("@TELEFONOA", Me.tbTelefono2Ctl.Text.Replace("'", "''").ToUpper)
     paramsIns.Add("@ZONA", Me.tbZona.Text.Replace("'", "''").ToUpper)
     paramsIns.Add("@PREDEFINITO", predefinito.ToString())
 
@@ -1363,18 +1456,18 @@ End Sub
     Me.tbNomeA.Text = ""
     Me.tbIndirizzo2.Text = ""
     Me.tbCap2.Text = ""
-    riempi_ddl_citta(tbCap2.Text, ddlCitta2, tbProvincia2, "")
+    riempi_ddl_citta(tbCap2.Text, ddlCitta2Ctl, tbProvincia2, "")
     Me.tbProvincia2.Text = ""
     Me.tbNote.Text = ""
     Me.tbZona.Text = ""
-    Me.tbTelefono2.Text = ""
+    Me.tbTelefono2Ctl.Text = ""
 
     Me.RFRagioneSocialeA.Enabled = False
     Me.RFIndirizzo2.Enabled = False
     Me.RFCitta2.Enabled = False
     Me.RFProvincia2.Enabled = False
     Me.RFCap2.Enabled = False
-    Me.RFTelefono2.Enabled = False
+    Me.RFTelefono2Ctl.Enabled = False
 
     End Sub
 
@@ -1384,11 +1477,11 @@ End Sub
         Me.tbNomeA.Text = ""
         Me.tbIndirizzo2.Text = ""
         Me.tbCap2.Text = ""
-        riempi_ddl_citta(tbCap2.Text, ddlCitta2, tbProvincia2, "")
+        riempi_ddl_citta(tbCap2.Text, ddlCitta2Ctl, tbProvincia2, "")
         Me.tbProvincia2.Text = ""
         Me.tbNote.Text = ""
         Me.tbZona.Text = ""
-		Me.tbTelefono2.Text = ""
+		Me.tbTelefono2Ctl.Text = ""
 	End Sub
 	
     Protected Sub btnAnnullaDest_Click(ByVal sender As Object, ByVal e As System.EventArgs)
@@ -1401,19 +1494,19 @@ End Sub
 
     Dim selectedId As Integer = 0
 
-    If LstScegliIndirizzo.Items.Count > 0 Then
+    If LstScegliIndirizzoCtl.Items.Count > 0 Then
 
         ' Se non selezionato, provo a impostare il predefinito (senza generare eccezioni se non esiste in lista)
-        If Val(LstScegliIndirizzo.SelectedValue) <= 0 Then
+        If Val(LstScegliIndirizzoCtl.SelectedValue) <= 0 Then
             Dim prefId As Integer = calcola_indirizzo_spedizione_predefinito()
-            If prefId > 0 AndAlso LstScegliIndirizzo.Items.FindByValue(prefId.ToString()) IsNot Nothing Then
-                LstScegliIndirizzo.SelectedValue = prefId.ToString()
+            If prefId > 0 AndAlso LstScegliIndirizzoCtl.Items.FindByValue(prefId.ToString()) IsNot Nothing Then
+                LstScegliIndirizzoCtl.SelectedValue = prefId.ToString()
             Else
-                LstScegliIndirizzo.SelectedIndex = 0
+                LstScegliIndirizzoCtl.SelectedIndex = 0
             End If
         End If
 
-        Integer.TryParse(LstScegliIndirizzo.SelectedValue, selectedId)
+        Integer.TryParse(LstScegliIndirizzoCtl.SelectedValue, selectedId)
 
         ' Compilo tab spedizione (se ho un ID valido)
         If selectedId > 0 Then
@@ -1432,22 +1525,22 @@ End Sub
     If Session("cityBinding") IsNot Nothing Then Integer.TryParse(Session("cityBinding").ToString(), cityBinding)
 
     If cityBinding <> 1 Then
-        open1.Style.Item("display") = ""
-        open2.Style.Item("display") = ""
+        open1Ctl.Style.Item("display") = ""
+        open2Ctl.Style.Item("display") = ""
         panel.Style.Item("display") = "none"
 
         ' Mantengo la logica originale: aggiorno campi destinazione alternatica coerenti con selezione
         compila_campi_destinazione_alternativa_o_indirizzo_spedizione(selectedId, Lst.destinazioneAlternativa)
     Else
-        open1.Style.Item("display") = "none"
-        open2.Style.Item("display") = "none"
+        open1Ctl.Style.Item("display") = "none"
+        open2Ctl.Style.Item("display") = "none"
         panel.Style.Item("display") = ""
 
-        If insOmod.Value = "mod" Then
+        If insOmodCtl.Value = "mod" Then
             btnModDest.Style.Item("display") = ""
             btnElimDest.Style.Item("display") = "none"
             btnSalvaDest.Style.Item("display") = "none"
-        ElseIf insOmod.Value = "ins" Then
+        ElseIf insOmodCtl.Value = "ins" Then
             btnModDest.Style.Item("display") = "none"
             btnElimDest.Style.Item("display") = "none"
             btnSalvaDest.Style.Item("display") = ""
@@ -1471,12 +1564,12 @@ End Sub
 			REM if Session("DESTINAZIONEALTERNATIVA") > 0 then
 				REM LstDestinazione.Items.RemoveAt(0)
 				REM btnModDest.enabled = true
-				REM if LstDestinazione.items.count > 1 Then
+				REM if LstDestinazione.Items.count > 1 Then
 					REM btnElimDest.enabled = true
 				REM End If
 			REM End If
 		REM Else
-			REM if LstDestinazione.items.count > 1 Then
+			REM if LstDestinazione.Items.count > 1 Then
 				REM btnElimDest.enabled = true
 				REM btnModDest.enabled = true
 			REM End If
@@ -1542,12 +1635,12 @@ End Sub
                             Dim capA As String = If(IsDBNull(dr("CapA")), "", dr("CapA").ToString())
                             Dim cittaA As String = If(IsDBNull(dr("CittaA")), "", dr("CittaA").ToString())
 
-                            riempi_ddl_citta(capA, ddlCitta2, tbProvincia2, cittaA)
+                            riempi_ddl_citta(capA, ddlCitta2Ctl, tbProvincia2, cittaA)
 
                             tbCap2.Text = capA
                             tbProvincia2.Text = If(IsDBNull(dr("ProvinciaA")), "", dr("ProvinciaA").ToString())
                             tbZona.Text = If(IsDBNull(dr("Zona")), "", dr("Zona").ToString())
-                            tbTelefono2.Text = If(IsDBNull(dr("TelefonoA")), "", dr("TelefonoA").ToString())
+                            tbTelefono2Ctl.Text = If(IsDBNull(dr("TelefonoA")), "", dr("TelefonoA").ToString())
                             tbNote.Text = If(IsDBNull(dr("Note")), "", dr("Note").ToString())
 
                             Dim pref As Integer = 0
@@ -1555,15 +1648,15 @@ End Sub
                             CHKPREDEFINITO.Checked = (pref = 1)
 
                         Else
-                            lblTab_RagioneSocialeSpedizione.Text = If(IsDBNull(dr("RagioneSocialeA")), "", dr("RagioneSocialeA").ToString())
-                            lblTab_NomeSpedizione.Text = If(IsDBNull(dr("NomeA")), "", dr("NomeA").ToString())
-                            lblTab_IndirizzoSpedizione.Text = If(IsDBNull(dr("IndirizzoA")), "", dr("IndirizzoA").ToString())
-                            lblTab_CittaSpedizione.Text = If(IsDBNull(dr("CittaA")), "", dr("CittaA").ToString())
-                            lblTab_CapSpedizione.Text = If(IsDBNull(dr("CapA")), "", dr("CapA").ToString())
-                            lblTab_ProvinciaSpedizione.Text = If(IsDBNull(dr("ProvinciaA")), "", dr("ProvinciaA").ToString())
-                            lblTab_ZonaSpedizione.Text = If(IsDBNull(dr("Zona")), "", dr("Zona").ToString())
-                            lblTab_TelSpedizione.Text = If(IsDBNull(dr("TelefonoA")), "", dr("TelefonoA").ToString())
-                            lblTab_NotaDestinazione.Text = If(IsDBNull(dr("Note")), "", dr("Note").ToString())
+                            lblTab_RagioneSocialeSpedizioneCtl.Text = If(IsDBNull(dr("RagioneSocialeA")), "", dr("RagioneSocialeA").ToString())
+                            lblTab_NomeSpedizioneCtl.Text = If(IsDBNull(dr("NomeA")), "", dr("NomeA").ToString())
+                            lblTab_IndirizzoSpedizioneCtl.Text = If(IsDBNull(dr("IndirizzoA")), "", dr("IndirizzoA").ToString())
+                            lblTab_CittaSpedizioneCtl.Text = If(IsDBNull(dr("CittaA")), "", dr("CittaA").ToString())
+                            lblTab_CapSpedizioneCtl.Text = If(IsDBNull(dr("CapA")), "", dr("CapA").ToString())
+                            lblTab_ProvinciaSpedizioneCtl.Text = If(IsDBNull(dr("ProvinciaA")), "", dr("ProvinciaA").ToString())
+                            lblTab_ZonaSpedizioneCtl.Text = If(IsDBNull(dr("Zona")), "", dr("Zona").ToString())
+                            lblTab_TelSpedizioneCtl.Text = If(IsDBNull(dr("TelefonoA")), "", dr("TelefonoA").ToString())
+                            lblTab_NotaDestinazioneCtl.Text = If(IsDBNull(dr("Note")), "", dr("Note").ToString())
                         End If
 
                     End If
@@ -1581,15 +1674,15 @@ End Function
     Protected Sub gvArticoliGratis_PreRender(ByVal sender As Object, ByVal e As System.EventArgs)
     Dim i As Integer
 
-    For i = 0 To gvArticoliGratis.Items.Count - 1
+    For i = 0 To gvArticoliGratisCtl.Items.Count - 1
 
-        Dim img As Image = TryCast(gvArticoliGratis.Items(i).FindControl("imgDispo"), Image)
-        Dim dispo As Label = TryCast(gvArticoliGratis.Items(i).FindControl("lblDispo"), Label)
-        Dim arrivo As Label = TryCast(gvArticoliGratis.Items(i).FindControl("lblArrivo"), Label)
-        Dim importo As Label = TryCast(gvArticoliGratis.Items(i).FindControl("lblImporto"), Label)
-        Dim importoIvato As Label = TryCast(gvArticoliGratis.Items(i).FindControl("lblImportoIvato"), Label)
-        Dim peso As Label = TryCast(gvArticoliGratis.Items(i).FindControl("lblPeso"), Label)
-        Dim tbQta As TextBox = TryCast(gvArticoliGratis.Items(i).FindControl("tbQta"), TextBox)
+        Dim img As Image = TryCast(gvArticoliGratisCtl.Items(i).FindControl("imgDispo"), Image)
+        Dim dispo As Label = TryCast(gvArticoliGratisCtl.Items(i).FindControl("lblDispo"), Label)
+        Dim arrivo As Label = TryCast(gvArticoliGratisCtl.Items(i).FindControl("lblArrivo"), Label)
+        Dim importo As Label = TryCast(gvArticoliGratisCtl.Items(i).FindControl("lblImporto"), Label)
+        Dim importoIvato As Label = TryCast(gvArticoliGratisCtl.Items(i).FindControl("lblImportoIvato"), Label)
+        Dim peso As Label = TryCast(gvArticoliGratisCtl.Items(i).FindControl("lblPeso"), Label)
+        Dim tbQta As TextBox = TryCast(gvArticoliGratisCtl.Items(i).FindControl("tbQta"), TextBox)
 
         Dim qtaRiga As Integer = SafeIntFromText(If(tbQta IsNot Nothing, tbQta.Text, "0"), 0)
         qta += qtaRiga
@@ -1602,8 +1695,8 @@ End Function
         If IvaTipo = 1 Then
             If importo IsNot Nothing Then importo.Visible = True
             If importoIvato IsNot Nothing Then importoIvato.Visible = False
-            Dim lblPrezzo As Control = gvArticoliGratis.Items(i).FindControl("lblprezzo")
-            Dim lblPrezzoIvato As Control = gvArticoliGratis.Items(i).FindControl("lblprezzoivato")
+            Dim lblPrezzo As Control = gvArticoliGratisCtl.Items(i).FindControl("lblprezzo")
+            Dim lblPrezzoIvato As Control = gvArticoliGratisCtl.Items(i).FindControl("lblprezzoivato")
             If lblPrezzo IsNot Nothing Then lblPrezzo.Visible = True
             If lblPrezzoIvato IsNot Nothing Then lblPrezzoIvato.Visible = False
 
@@ -1612,8 +1705,8 @@ End Function
         ElseIf IvaTipo = 2 Then
             If importo IsNot Nothing Then importo.Visible = False
             If importoIvato IsNot Nothing Then importoIvato.Visible = True
-            Dim lblPrezzo As Control = gvArticoliGratis.Items(i).FindControl("lblprezzo")
-            Dim lblPrezzoIvato As Control = gvArticoliGratis.Items(i).FindControl("lblprezzoivato")
+            Dim lblPrezzo As Control = gvArticoliGratisCtl.Items(i).FindControl("lblprezzo")
+            Dim lblPrezzoIvato As Control = gvArticoliGratisCtl.Items(i).FindControl("lblprezzoivato")
             If lblPrezzo IsNot Nothing Then lblPrezzo.Visible = False
             If lblPrezzoIvato IsNot Nothing Then lblPrezzoIvato.Visible = True
 
@@ -1784,7 +1877,7 @@ End Sub
 
         
         'Nascondo i Pannelli quando non ci sono articoli nel carrello
-        If (Me.gvArticoliGratis.Items.Count = 0) And (Me.Repeater1.items.Count = 0) Then
+        If (Me.gvArticoliGratisCtl.Items.Count = 0) And (Me.Repeater1Ctl.Items.Count = 0) Then
             Me.Panel_Unico.Visible = False
             Me.btContinua.Enabled = True
         Else
@@ -1810,10 +1903,10 @@ End Sub
 
             checkOKBuonoSconto.Visible = False
             lblBuonoSconto.Text = String.Format("{0:c}", 0)
-            lblBuonoScontoIVA.Text = String.Format("{0:c}", 0)
+            lblBuonoScontoIVACtl.Text = String.Format("{0:c}", 0)
         End If
 
-        If (gvArticoliGratis.Items.Count > 0) Or (Repeater1.items.Count > 0) Then
+        If (gvArticoliGratisCtl.Items.Count > 0) Or (Repeater1Ctl.Items.Count > 0) Then
             TB_BuonoSconto_TextChanged(TB_BuonoSconto, New System.EventArgs)
             GV_BuoniSconti.DataBind()
         Else
@@ -1883,12 +1976,12 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
             Dim buonoImp As Double = Math.Round(buonoTot / (1 + (ivaBuonoPerc / 100)), 2, MidpointRounding.AwayFromZero)
             Dim buonoIva As Double = Math.Round(buonoTot - buonoImp, 2, MidpointRounding.AwayFromZero)
 
-            lblBuonoScontoIVA.Text = "€ " & FormatNumber(buonoIva, 2)
+            lblBuonoScontoIVACtl.Text = "€ " & FormatNumber(buonoIva, 2)
             lblBuonoSconto.Text = "€ " & FormatNumber(buonoImp, 2)
 
             lblIva.Text = "€ " & FormatNumber(SafeMoney(lblIva.Text, 0) + buonoIva, 2)
 
-            Dim totBuono As Double = SafeMoney(lblBuonoSconto.Text, 0) + SafeMoney(lblBuonoScontoIVA.Text, 0)
+            Dim totBuono As Double = SafeMoney(lblBuonoSconto.Text, 0) + SafeMoney(lblBuonoScontoIVACtl.Text, 0)
             totSconto.Text =
             IIf(SafeDblFromText(scontoPercentuale.Text, 0) > 0,
         "Sconto in percentuale " & SafeDblFromText(valoreBuonoSconto.Text, 0) & "%",
@@ -1930,8 +2023,8 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
         Dim row As RepeaterItem
 
         'Controllo che non ci siano articoli con quantità zero
-        If Repeater1.items.Count > 0 Then
-            For Each row In Repeater1.items
+        If Repeater1Ctl.Items.Count > 0 Then
+            For Each row In Repeater1Ctl.Items
                 Dim Qta As TextBox = row.FindControl("tbQta")
                 If (SafeInt(Qta.Text, 0) <= 0) Then
                     Return 0
@@ -1940,8 +2033,8 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
         End If
 
         'Controllo che non ci siano articoli con quantità zero
-        If Me.gvArticoliGratis.items.Count > 0 Then
-            For Each row In gvArticoliGratis.items
+        If Me.gvArticoliGratisCtl.Items.Count > 0 Then
+            For Each row In gvArticoliGratisCtl.Items
                 Dim Qta As TextBox = row.FindControl("tbQta")
                 If (SafeInt(Qta.Text, 0) <= 0) Then
                     Return 0
@@ -1965,15 +2058,15 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
     ' 1) Raccolgo righe dal Repeater (normali + gratis) UNA volta
     Dim rows As New List(Of CartRowInfo)
 
-    If Repeater1 IsNot Nothing AndAlso Repeater1.Items IsNot Nothing AndAlso Repeater1.Items.Count > 0 Then
-        For Each it As RepeaterItem In Repeater1.Items
+    If Repeater1Ctl IsNot Nothing AndAlso Repeater1Ctl.Items IsNot Nothing AndAlso Repeater1Ctl.Items.Count > 0 Then
+        For Each it As RepeaterItem In Repeater1Ctl.Items
             Dim r As CartRowInfo = ReadCartRowFromItem(it)
             If r.Id > 0 AndAlso r.ArtId > 0 Then rows.Add(r)
         Next
     End If
 
-    If gvArticoliGratis IsNot Nothing AndAlso gvArticoliGratis.Items IsNot Nothing AndAlso gvArticoliGratis.Items.Count > 0 Then
-        For Each it As RepeaterItem In gvArticoliGratis.Items
+    If gvArticoliGratisCtl IsNot Nothing AndAlso gvArticoliGratisCtl.Items IsNot Nothing AndAlso gvArticoliGratisCtl.Items.Count > 0 Then
+        For Each it As RepeaterItem In gvArticoliGratisCtl.Items
             Dim r As CartRowInfo = ReadCartRowFromItem(it)
             If r.Id > 0 AndAlso r.ArtId > 0 Then rows.Add(r)
         Next
@@ -2211,7 +2304,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
             Me.btAggiorna.Enabled = True
             Me.btContinua.Enabled = True
             Me.btSvuota.Enabled = True
-            'Me.Repeater1.DataBind()
+            'Me.Repeater1Ctl.DataBind()
             Me.lblPagamento.Text = String.Format("{0:c}", CDbl("0"))
             Me.lblSpeseSped.Text = String.Format("{0:c}", CDbl("0"))
             Me.lblSpeseAss.Text = String.Format("{0:c}", CDbl("0"))
@@ -2238,7 +2331,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
     If utentiId <= 0 Then Exit Sub
 
     Dim idSel As Integer = 0
-    Integer.TryParse(If(LstScegliIndirizzo IsNot Nothing, LstScegliIndirizzo.SelectedValue, "0"), idSel)
+    Integer.TryParse(If(LstScegliIndirizzoCtl IsNot Nothing, LstScegliIndirizzoCtl.SelectedValue, "0"), idSel)
     If idSel <= 0 Then Exit Sub
 
     Try
@@ -2281,10 +2374,10 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
                 cmd.Parameters.AddWithValue("@nomeA", (If(tbNomeA.Text, "")).ToUpperInvariant())
                 cmd.Parameters.AddWithValue("@indirizzo2", (If(tbIndirizzo2.Text, "")).ToUpperInvariant())
                 cmd.Parameters.AddWithValue("@cap2", (If(tbCap2.Text, "")).ToUpperInvariant())
-                cmd.Parameters.AddWithValue("@citta", (If(getDdlCittaValue(Me.ddlCitta2), "")).ToUpperInvariant())
+                cmd.Parameters.AddWithValue("@citta", (If(getDdlCittaValue(Me.ddlCitta2Ctl), "")).ToUpperInvariant())
                 cmd.Parameters.AddWithValue("@provincia", (If(tbProvincia2.Text, "")).ToUpperInvariant())
                 cmd.Parameters.AddWithValue("@note", (If(tbNote.Text, "")).ToUpperInvariant())
-                cmd.Parameters.AddWithValue("@telefono2", (If(tbTelefono2.Text, "")).ToUpperInvariant())
+                cmd.Parameters.AddWithValue("@telefono2", (If(tbTelefono2Ctl.Text, "")).ToUpperInvariant())
                 cmd.Parameters.AddWithValue("@zona", (If(tbZona.Text, "")).ToUpperInvariant())
                 cmd.Parameters.AddWithValue("@predefinito", If(CHKPREDEFINITO.Checked, 1, 0))
 
@@ -2308,7 +2401,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
         Me.RFCitta2.Enabled = False
         Me.RFProvincia2.Enabled = False
         Me.RFCap2.Enabled = False
-        Me.RFTelefono2.Enabled = False
+        Me.RFTelefono2Ctl.Enabled = False
 
     Catch ex As Exception
         LogEx(ex, "btnModDest_Click")
@@ -2328,7 +2421,7 @@ End Sub
         Dim setAsPredef As Boolean = False
         If CHKPREDEFINITO.Checked Then
             setAsPredef = True
-        ElseIf LstScegliIndirizzo Is Nothing OrElse LstScegliIndirizzo.Items.Count = 0 Then
+        ElseIf LstScegliIndirizzoCtl Is Nothing OrElse LstScegliIndirizzoCtl.Items.Count = 0 Then
             setAsPredef = True
         End If
 
@@ -2360,10 +2453,10 @@ End Sub
                 cmd.Parameters.AddWithValue("@nomeA", (If(tbNomeA.Text, "")).ToUpperInvariant())
                 cmd.Parameters.AddWithValue("@indirizzo2", (If(tbIndirizzo2.Text, "")).ToUpperInvariant())
                 cmd.Parameters.AddWithValue("@cap2", (If(tbCap2.Text, "")).ToUpperInvariant())
-                cmd.Parameters.AddWithValue("@citta", (If(getDdlCittaValue(Me.ddlCitta2), "")).ToUpperInvariant())
+                cmd.Parameters.AddWithValue("@citta", (If(getDdlCittaValue(Me.ddlCitta2Ctl), "")).ToUpperInvariant())
                 cmd.Parameters.AddWithValue("@provincia", (If(tbProvincia2.Text, "")).ToUpperInvariant())
                 cmd.Parameters.AddWithValue("@note", (If(tbNote.Text, "")).ToUpperInvariant())
-                cmd.Parameters.AddWithValue("@telefono2", (If(tbTelefono2.Text, "")).ToUpperInvariant())
+                cmd.Parameters.AddWithValue("@telefono2", (If(tbTelefono2Ctl.Text, "")).ToUpperInvariant())
                 cmd.Parameters.AddWithValue("@zona", (If(tbZona.Text, "")).ToUpperInvariant())
                 cmd.Parameters.AddWithValue("@predefinito", If(setAsPredef, 1, 0))
 
@@ -2379,7 +2472,7 @@ End Sub
         Me.RFCitta2.Enabled = False
         Me.RFProvincia2.Enabled = False
         Me.RFCap2.Enabled = False
-        Me.RFTelefono2.Enabled = False
+        Me.RFTelefono2Ctl.Enabled = False
 
     Catch ex As Exception
         LogEx(ex, "btnSalvaDest_Click")
@@ -2389,10 +2482,10 @@ End Sub
 
     Protected Sub btnElimDest_Click(ByVal sender As Object, ByVal e As System.EventArgs)
 
-    If LstScegliIndirizzo Is Nothing OrElse LstScegliIndirizzo.Items.Count <= 1 Then Exit Sub
+    If LstScegliIndirizzoCtl Is Nothing OrElse LstScegliIndirizzoCtl.Items.Count <= 1 Then Exit Sub
 
     Dim idSel As Integer = 0
-    Integer.TryParse(LstScegliIndirizzo.SelectedValue, idSel)
+    Integer.TryParse(LstScegliIndirizzoCtl.SelectedValue, idSel)
     If idSel <= 0 Then Exit Sub
 
     Dim utentiId As Integer = GetUtentiIdSafe(0)
@@ -2443,7 +2536,7 @@ End Sub
         Me.RFCitta2.Enabled = False
         Me.RFProvincia2.Enabled = False
         Me.RFCap2.Enabled = False
-        Me.RFTelefono2.Enabled = False
+        Me.RFTelefono2Ctl.Enabled = False
 
     Catch ex As Exception
         LogEx(ex, "btnElimDest_Click")
@@ -2553,9 +2646,9 @@ End Sub
 
     Dim rcEnabled As Boolean = (GetSessionInt("AbilitatoIvaReverseCharge", 0) = 1)
 
-    ' -------------------- ARTICOLI NORMALI (Repeater1) --------------------
-    If Repeater1.Items.Count > 0 Then
-        For Each row As RepeaterItem In Repeater1.Items
+    ' -------------------- ARTICOLI NORMALI (Repeater1Ctl) --------------------
+    If Repeater1Ctl.Items.Count > 0 Then
+        For Each row As RepeaterItem In Repeater1Ctl.Items
 
             Dim lblValoreIva As Label = CType(row.FindControl("lblValoreIva"), Label)
             Dim lblIdIvaRC As Label = CType(row.FindControl("lblidIvaRC"), Label)
@@ -2590,9 +2683,9 @@ End Sub
         Next
     End If
 
-    ' -------------------- ARTICOLI GRATIS (gvArticoliGratis) --------------------
-    If gvArticoliGratis.Items.Count > 0 Then
-        For Each row As RepeaterItem In gvArticoliGratis.Items
+    ' -------------------- ARTICOLI GRATIS (gvArticoliGratisCtl) --------------------
+    If gvArticoliGratisCtl.Items.Count > 0 Then
+        For Each row As RepeaterItem In gvArticoliGratisCtl.Items
 
             Dim lblValoreIva As Label = CType(row.FindControl("lblValoreIva"), Label)
             Dim lblIdIvaRC As Label = CType(row.FindControl("lblidIvaRC"), Label)
@@ -2736,7 +2829,7 @@ End Sub
 
             TB_BuonoSconto.Enabled = True
             lblBuonoSconto.Text = String.Format("{0:c}", 0)
-            lblBuonoScontoIVA.Text = String.Format("{0:c}", 0)
+            lblBuonoScontoIVACtl.Text = String.Format("{0:c}", 0)
 
             checkOKBuonoSconto.Visible = False
             checkNOBuonoSconto.Visible = True
@@ -2754,7 +2847,7 @@ End Sub
 
         TB_BuonoSconto.Enabled = True
         lblBuonoSconto.Text = String.Format("{0:c}", 0)
-        lblBuonoScontoIVA.Text = String.Format("{0:c}", 0)
+        lblBuonoScontoIVACtl.Text = String.Format("{0:c}", 0)
 
         checkOKBuonoSconto.Visible = False
         checkNOBuonoSconto.Visible = True
@@ -3295,7 +3388,7 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
 ' =========================
 
 Protected Sub City_Bind_Data2(ByVal sender As Object, ByVal e As System.EventArgs)
-    riempi_ddl_citta(tbCap2.Text, ddlCitta2, tbProvincia2)
+    riempi_ddl_citta(tbCap2.Text, ddlCitta2Ctl, tbProvincia2)
     Session("cityBinding") = 1
 End Sub
 
@@ -3365,7 +3458,7 @@ Protected Sub riempi_text_provincia(ByVal citta As String, ByVal provincia As Te
 End Sub
 
 Protected Sub Province_Bind_Data2(ByVal sender As Object, ByVal e As System.EventArgs)
-    riempi_text_provincia(getDdlCittaValue(ddlCitta2), tbProvincia2)
+    riempi_text_provincia(getDdlCittaValue(ddlCitta2Ctl), tbProvincia2)
     Session("cityBinding") = 1
 End Sub
 
