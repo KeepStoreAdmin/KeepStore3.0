@@ -1,86 +1,77 @@
 (function () {
     'use strict';
 
-    // Home page legacy slideshow (database-driven) integrated into the new UI.
-    // NOTE: kept isolated to avoid global functions / inline handlers.
+    // Home hero slider (database-driven) - switched to Swiper for full theme alignment.
+    // NOTE: kept isolated to Default.aspx (no globals, no inline handlers).
 
-    function initHomeSlideshow() {
+    function initHomeHeroSwiper() {
         var root = document.getElementById('Slide_Show');
         if (!root) return;
 
-        var container = root.querySelector('.slideshow-container');
+        // Swiper is loaded globally by Page.master (swiper-bundle.min.js)
+        if (typeof window.Swiper === 'undefined') return;
+
+        // NOTE: Slide_Show_Container is runat="server" and may have a generated ClientID.
+        // We rely on a stable class selector instead of the raw id.
+        var container = root.querySelector('.ks-home-hero-slider');
         if (!container) return;
 
-        var slides = container.getElementsByClassName('mySlides');
-        var dots = root.getElementsByClassName('dot');
+        // Avoid double-init (can happen with partial postbacks or repeated script injection)
+        if (container.swiper) return;
 
-        var prevBtn = container.querySelector('[data-slide-action="prev"]');
-        var nextBtn = container.querySelector('[data-slide-action="next"]');
+        var slides = container.querySelectorAll('.swiper-slide');
+        if (!slides || slides.length === 0) return;
 
-        var slideIndex = 1;
+        var prevEl = container.querySelector('.ks-hero-prev');
+        var nextEl = container.querySelector('.ks-hero-next');
+        var paginationEl = container.querySelector('.ks-hero-pagination');
 
-        function showSlides(n) {
-            if (!slides || slides.length === 0) return;
+        var hasMultipleSlides = slides.length > 1;
 
-            if (n > slides.length) slideIndex = 1;
-            if (n < 1) slideIndex = slides.length;
+        // Hide controls if there is only one slide
+        if (!hasMultipleSlides) {
+            if (prevEl) prevEl.style.display = 'none';
+            if (nextEl) nextEl.style.display = 'none';
+            if (paginationEl) paginationEl.style.display = 'none';
+        }
 
-            for (var i = 0; i < slides.length; i++) {
-                slides[i].style.display = 'none';
+        // eslint-disable-next-line no-new
+        new window.Swiper(container, {
+            slidesPerView: 1,
+            spaceBetween: 0,
+            speed: 800,
+            loop: hasMultipleSlides,
+            observer: true,
+            observeParents: true,
+            watchOverflow: true,
+            autoplay: hasMultipleSlides
+                ? {
+                    delay: 6500,
+                    disableOnInteraction: false,
+                    pauseOnMouseEnter: true
+                }
+                : false,
+            navigation: prevEl && nextEl
+                ? {
+                    prevEl: prevEl,
+                    nextEl: nextEl
+                }
+                : undefined,
+            pagination: paginationEl
+                ? {
+                    el: paginationEl,
+                    clickable: true
+                }
+                : undefined,
+            a11y: {
+                enabled: true
             }
-
-            for (var j = 0; j < dots.length; j++) {
-                dots[j].className = dots[j].className.replace(' active', '');
-            }
-
-            slides[slideIndex - 1].style.display = 'block';
-
-            if (dots.length >= slideIndex) {
-                dots[slideIndex - 1].className += ' active';
-            }
-        }
-
-        function plusSlides(delta) {
-            showSlides(slideIndex += delta);
-        }
-
-        function goToSlide(n) {
-            var parsed = parseInt(n, 10);
-            if (isNaN(parsed)) return;
-            showSlides(slideIndex = parsed);
-        }
-
-        if (prevBtn) {
-            prevBtn.addEventListener('click', function (e) {
-                e.preventDefault();
-                plusSlides(-1);
-            });
-        }
-
-        if (nextBtn) {
-            nextBtn.addEventListener('click', function (e) {
-                e.preventDefault();
-                plusSlides(1);
-            });
-        }
-
-        if (dots && dots.length > 0) {
-            for (var k = 0; k < dots.length; k++) {
-                (function (dot) {
-                    dot.addEventListener('click', function (e) {
-                        e.preventDefault();
-                        goToSlide(dot.getAttribute('data-slide'));
-                    });
-                })(dots[k]);
-            }
-        }
-
-        showSlides(slideIndex);
+        });
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initHomeSlideshow);
+        document.addEventListener('DOMContentLoaded', initHomeHeroSwiper);
     } else {
-        initHomeSlideshow();
+        initHomeHeroSwiper();
     }
 })();

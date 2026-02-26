@@ -9,7 +9,7 @@
 
     <!-- ============================================================
          HERO / BANNERS (FULL-WIDTH)
-         (Slideshow legacy integrato nella posizione "wrap-item-2")
+         (Slider database-driven su Swiper, integrato nella posizione "wrap-item-2")
          ============================================================ -->
 
     <section class="tf-sp-5">
@@ -71,7 +71,7 @@
                     <div class="banner-image-product-4 style-2 hover-img">
                         <div class="item-product">
 
-                            <!-- Slide Show (legacy) -->
+                            <!-- Hero Slider (database-driven) -->
                             <div id="Slide_Show">
 
                                 <asp:SqlDataSource 
@@ -112,30 +112,31 @@
                                     </SelectParameters>
                                 </asp:SqlDataSource>
 
-                                <div id="Slide_Show_Container" class="slideshow-container" runat="server">
-                                    <asp:Repeater ID="slideshowItems" runat="server" DataSourceID="slideShow">
-                                        <ItemTemplate>
-                                            <% incrementa_slides() %>
-                                            <div class="mySlides fade">
-                                                <%# SlideLinkStart(Eval("link")) %>
-                                                <img class="lazyload" src='<%# SafeSlideshowImageUrl(Eval("image")) %>' data-src='<%# SafeSlideshowImageUrl(Eval("image")) %>' alt="" />
-                                                <%# SlideLinkEnd(Eval("link")) %>
-                                                <div class="text"><%# SafeText(Eval("content")) %></div>
-                                            </div>
-                                        </ItemTemplate>
-                                    </asp:Repeater>
+                                <div id="Slide_Show_Container" class="swiper ks-home-hero-slider" runat="server" aria-label="Promozioni">
+                                    <div class="swiper-wrapper">
+                                        <asp:Repeater ID="slideshowItems" runat="server" DataSourceID="slideShow">
+                                            <ItemTemplate>
+                                                <% incrementa_slides() %>
+                                                <div class="swiper-slide">
+                                                    <%# SlideLinkStart(Eval("link")) %>
+                                                    <img class="lazyload" src='<%# SafeSlideshowImageUrl(Eval("image")) %>' data-src='<%# SafeSlideshowImageUrl(Eval("image")) %>' alt="" />
+                                                    <%# SlideLinkEnd(Eval("link")) %>
+                                                    <div class="ks-hero-caption"><%# SafeText(Eval("content")) %></div>
+                                                </div>
+                                            </ItemTemplate>
+                                        </asp:Repeater>
+                                    </div>
 
-                                    <a class="prev" href="#" data-slide-action="prev" aria-label="Precedente">&#10094;</a>
-                                    <a class="next" href="#" data-slide-action="next" aria-label="Successivo">&#10095;</a>
-                                </div>
-
-                                <div class="mt-2" style="text-align:center">
-                                    <% For i = 1 To slides %>
-                                        <span class="dot" data-slide="<%= i %>" aria-label="Vai alla slide <%= i %>"></span>
-                                    <% Next i %>
+                                    <div class="swiper-button-prev nav-swiper ks-hero-prev" aria-label="Precedente">
+                                        <i class="icon-arrow-left-lg"></i>
+                                    </div>
+                                    <div class="swiper-button-next nav-swiper ks-hero-next" aria-label="Successivo">
+                                        <i class="icon-arrow-right-lg"></i>
+                                    </div>
+                                    <div class="sw-dot-default swiper-pagination ks-hero-pagination" aria-label="Paginazione slideshow"></div>
                                 </div>
                             </div>
-                            <!-- /Slide Show -->
+                            <!-- /Hero Slider -->
 
                         </div>
                     </div>

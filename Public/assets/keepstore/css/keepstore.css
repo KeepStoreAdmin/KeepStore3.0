@@ -576,48 +576,44 @@ body
         }
 
 
-/* ============================ Default.aspx - inline styles moved here ============================ */
-/* ============================================================ Home (Sprint 2 - HOME 1) NOTE: solo stile minimo per integrare lo slideshow legacy ============================================================ */
-        #Slide_Show {
-            width: 100%;
-        }
+/* ============================================================ Home: hero slider (Swiper) ============================================================ */
+#Slide_Show {
+    width: 100%;
+}
 
-        #Slide_Show .slideshow-container {
-            width: 100%;
-            position: relative;
-            overflow: hidden;
-            border-radius: 12px;
-        }
+#Slide_Show .ks-home-hero-slider {
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+}
 
-        #Slide_Show img {
-            display: block;
-            width: 100%;
-            height: auto;
-        }
+#Slide_Show .ks-home-hero-slider .swiper-slide {
+    position: relative;
+}
 
-        /* I controlli prev/next e dots sono gestiti dal CSS esistente. Qui NON sovrascriviamo colori o layout del template. */
+#Slide_Show .ks-home-hero-slider img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
 
+/* Caption: semplice overlay per garantire leggibilità, senza stravolgere il tema */
+#Slide_Show .ks-home-hero-slider .ks-hero-caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 12px 14px;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    font-size: 14px;
+    line-height: 1.3;
+}
 
-/* ============================ Default_Copia.aspx - inline styles moved here ============================ */
-/* ============================================================ Home (Sprint 2 - HOME 1) NOTE: solo stile minimo per integrare lo slideshow legacy ============================================================ */
-        #Slide_Show {
-            width: 100%;
-        }
-
-        #Slide_Show .slideshow-container {
-            width: 100%;
-            position: relative;
-            overflow: hidden;
-            border-radius: 12px;
-        }
-
-        #Slide_Show img {
-            display: block;
-            width: 100%;
-            height: auto;
-        }
-
-        /* I controlli prev/next e dots sono gestiti dal CSS esistente. Qui NON sovrascriviamo colori o layout del template. */
+#Slide_Show .ks-home-hero-slider .ks-hero-caption:empty {
+    display: none;
+}
 
 /* ========================================================== MyAccount: card + address widgets (allineati al tema) ========================================================== */
 .ks-card {
