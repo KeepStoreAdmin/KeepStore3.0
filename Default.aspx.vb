@@ -29,43 +29,6 @@ Partial Class _Default
         nonQuerya
         scalar
     End Enum
-
-    Protected Function ExecuteQueryGetScalar(ByVal fields As String, ByVal table As String, Optional ByVal wherePart As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing) As Object
-        Dim sqlString As String = "SELECT " & fields & " FROM " & table & " " & wherePart
-
-        Dim conn As New MySqlConnection
-        Dim result As Object = Nothing
-
-        Try
-            Dim connectionString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            If Not String.IsNullOrEmpty(connectionString) Then
-                conn.ConnectionString = connectionString
-                conn.Open()
-
-                Dim cmd As New MySqlCommand With {
-                    .Connection = conn,
-                    .CommandText = sqlString,
-                    .CommandType = CommandType.Text
-                }
-
-                If params IsNot Nothing Then
-                    For Each paramName In params.Keys
-                        cmd.Parameters.AddWithValue(paramName, params(paramName))
-                    Next
-                End If
-
-                result = cmd.ExecuteScalar()
-                cmd.Dispose()
-            End If
-
-        Finally
-            If conn.State = ConnectionState.Open Then conn.Close()
-            conn.Dispose()
-        End Try
-
-        Return result
-    End Function
-
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
 
         Me.Session("InOfferta") = 0
@@ -181,7 +144,6 @@ Partial Class _Default
                 ' Gestione banner Home (posizione 4, ordinamento 1/2):
         ' spostata in UserControl: ~/Public/ui/controls/HomeSideBanner.ascx
 
-System.Diagnostics.Debug.WriteLine("end")
     End Sub
 
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
@@ -196,103 +158,13 @@ System.Diagnostics.Debug.WriteLine("end")
             Me.lblPrezzi.Text = "*Prezzi Iva Inclusa"
         End If
 
-        ' Gestione slideshow impression
-        Dim slideshowPage As String = "defaultPage"
-        Dim slideshowVisited As Boolean = True
-
-        Dim slideshowsVisited As List(Of String) = TryCast(Session("slideshows"), List(Of String))
-        If slideshowsVisited Is Nothing OrElse Not slideshowsVisited.Contains(slideshowPage) Then
-            slideshowVisited = False
-        End If
-
-        ' STEP6: placeholder parametrizzato (niente concatenazioni)
-        Dim wherePart As String = "where placeholder = @placeholder And aziendeId = @aziendaId And abilitato = 1 And dataInizioPubblicazione<=CURDATE() And dataFinePubblicazione>CURDATE()"
-        If Not slideshowVisited Then
-            wherePart &= " And numeroImpressioniAttuale < limiteImpressioni"
-        End If
-
-        Dim params As New Dictionary(Of String, String)
-        ' NOTA: uso la chiave di sessione coerente con il resto del sito
-        params.Add("@aziendaId", Convert.ToString(Session("AziendaID")))
-        params.Add("@placeholder", slideshowPage)
-
-        Dim slideshows As Object = ExecuteQueryGetScalar("COUNT(*)", "slideshows", wherePart, params)
-        Dim slideshowsCount As Integer = 0
-        If slideshows IsNot Nothing AndAlso Integer.TryParse(slideshows.ToString(), slideshowsCount) Then
-        End If
-
-        If slideshowsCount = 0 Then
-            Slide_Show_Container.Visible = False
-        Else
-            Slide_Show_Container.Visible = True
-
-            If slideshowsVisited Is Nothing Then
-                slideshowsVisited = New List(Of String) From {slideshowPage}
-            ElseIf Not slideshowsVisited.Contains(slideshowPage) Then
-                slideshowsVisited.Add(slideshowPage)
-            End If
-
-            Session("slideshows") = slideshowsVisited
-
-            ExecuteUpdate("slideshows", "numeroImpressioniAttuale = numeroImpressioniAttuale + 1", "where placeholder = @placeholder And aziendeId = @aziendaId", params)
-        End If
+        ' Gestione slideshow impression: spostata in UserControl (HomeHeroSlider)
 
         ' SEO (Home)
         EnsureHomeSeo()
 
 
     End Sub
-
-    Protected Function ExecuteUpdate(ByVal table As String, ByVal fieldAndValues As String, Optional ByVal wherePart As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing) As Object
-        Dim sqlString As String = "UPDATE " & table & " set " & fieldAndValues & " " & wherePart
-        Return ExecuteNonQuery(False, sqlString, params)
-    End Function
-
-    Protected Function ExecuteNonQuery(ByVal isStoredProcedure As Boolean, ByVal sqlString As String, Optional ByVal params As Dictionary(Of String, String) = Nothing) As Object
-
-        Dim conn As New MySqlConnection
-
-        Try
-            Dim connectionString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            If Not String.IsNullOrEmpty(connectionString) Then
-                conn.ConnectionString = connectionString
-                conn.Open()
-
-                Dim cmd As New MySqlCommand With {
-                    .Connection = conn,
-                    .CommandText = sqlString
-                }
-
-                If params IsNot Nothing Then
-                    For Each paramName In params.Keys
-                        If paramName = "?parPrezzo" OrElse paramName = "?parPrezzoIvato" Then
-                            cmd.Parameters.Add(paramName, MySqlDbType.Double).Value = Convert.ToDecimal(params(paramName), System.Globalization.CultureInfo.InvariantCulture)
-                        Else
-                            cmd.Parameters.AddWithValue(paramName, params(paramName))
-                        End If
-                    Next
-                End If
-
-                If isStoredProcedure Then
-                    cmd.CommandType = CommandType.StoredProcedure
-                    cmd.Parameters.AddWithValue("?parRetVal", "0")
-                    cmd.Parameters("?parRetVal").Direction = ParameterDirection.Output
-                Else
-                    cmd.CommandType = CommandType.Text
-                End If
-
-                cmd.ExecuteNonQuery()
-                cmd.Dispose()
-            End If
-
-        Finally
-            If conn.State = ConnectionState.Open Then conn.Close()
-            conn.Dispose()
-        End Try
-
-        Return Nothing
-    End Function
-
     ' ==========================================================
     ' SEO / AI-READINESS (HOME)
     ' ==========================================================
@@ -573,33 +445,6 @@ End Sub
     '==========================================================
     ' HOME - Settori (Dipartimenti): URL compatibile legacy (webaffare.it)
     '==========================================================
-    Protected Function BuildSettoreUrl(ByVal settoreIdObj As Object, ByVal defaultCtObj As Object, ByVal defaultTpObj As Object) As String
-        Dim settoreId As Integer = 0
-        Integer.TryParse(Convert.ToString(settoreIdObj), settoreId)
-
-        Dim ct As Integer = 0
-        Integer.TryParse(Convert.ToString(defaultCtObj), ct)
-
-        Dim tp As Integer = 0
-        Integer.TryParse(Convert.ToString(defaultTpObj), tp)
-
-        If settoreId <= 0 Then
-            Return ResolveUrl("~/articoli.aspx")
-        End If
-
-        Dim url As String = ResolveUrl("~/articoli.aspx") & "?st=" & settoreId.ToString()
-
-        If ct > 0 Then
-            url &= "&ct=" & ct.ToString()
-        End If
-
-        If tp > 0 Then
-            url &= "&tp=" & tp.ToString()
-        End If
-
-        Return url
-    End Function
-
 
 
 '==========================================================
@@ -614,10 +459,7 @@ End Sub
     ' ============================================================
 
     ' NOTE: referenced directly from Default.aspx markup (For i = 1 To slides)
-    ' so it must not be Private.
-    Protected slides As Integer = 0
-
-    ' ===========================
+    ' so it must not be Private.    ' ===========================
     ' HARDENING OUTPUT (XSS / URL)
     ' ===========================
 
@@ -653,37 +495,6 @@ End Sub
 
         Return ""
     End Function
-
-    Protected Function SlideLinkStart(ByVal linkObj As Object) As String
-        Dim u As String = ""
-
-        If linkObj IsNot Nothing AndAlso linkObj IsNot DBNull.Value Then
-            u = linkObj.ToString().Trim()
-        End If
-
-        u = SafeUrl(u)
-        If u = "" Then Return ""
-
-        If u.StartsWith("~/") Then
-            u = ResolveUrl(u)
-        End If
-
-        Return "<a href=""" & SafeAttr(u) & """>"
-    End Function
-
-    Protected Function SlideLinkEnd(ByVal linkObj As Object) As String
-        Dim u As String = ""
-
-        If linkObj IsNot Nothing AndAlso linkObj IsNot DBNull.Value Then
-            u = linkObj.ToString().Trim()
-        End If
-
-        u = SafeUrl(u)
-        If u = "" Then Return ""
-
-        Return "</a>"
-    End Function
-
     Function SafeFileNameOnly(ByVal fileObj As Object) As String
         If fileObj Is Nothing OrElse IsDBNull(fileObj) Then Return ""
         Dim s As String = Convert.ToString(fileObj).Trim()
@@ -702,15 +513,6 @@ End Sub
 
         Return s
     End Function
-
-    Function SafeSlideshowImageUrl(ByVal fileObj As Object) As String
-        Dim fileName As String = SafeFileNameOnly(fileObj)
-        If fileName = "" Then
-            Return ResolveUrl("~/Public/images/nofoto.gif")
-        End If
-        Return ResolveUrl("~/Public/Slideshows/" & fileName)
-    End Function
-
     Function SafeBannerImageUrl(ByVal fileObj As Object) As String
         Dim raw As String = Convert.ToString(fileObj)
         If raw Is Nothing Then raw = ""
@@ -745,13 +547,7 @@ End Sub
             Return ResolveUrl("~/Public/images/nofoto.gif")
         End If
         Return ResolveUrl("~/Public/Banner/" & fileName)
-    End Function
-
-    Protected Sub incrementa_slides()
-        slides += 1
-    End Sub
-
-    ' ============================================================
+    End Function    ' ============================================================
     ' Promo / prezzi / risparmio
     ' ============================================================
 

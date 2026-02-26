@@ -1,5 +1,7 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
 <%@ Register Src="~/Public/ui/controls/HomeSideBanners.ascx" TagPrefix="ks" TagName="HomeSideBanners" %>
+<%@ Register Src="~/Public/ui/controls/HomeDepartmentsMenu.ascx" TagPrefix="ks" TagName="HomeDepartmentsMenu" %>
+<%@ Register Src="~/Public/ui/controls/HomeHeroSlider.ascx" TagPrefix="ks" TagName="HomeHeroSlider" %>
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server"><%: Page.Title %></asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
@@ -17,134 +19,14 @@
         <div class="container">
             <div class="s-banner-wrapper">
 
-                <!-- LEFT: Department (Home 1) -->
-                <div class="wrap-item-1 d-none d-lg-block">
-                    <div class="tf-nav-menu">
-                        <div class="main-nav">
-                            <h6 class="fw-semibold title">
-                                <i class="icon-menu-dots"></i>
-                                Dipartimenti
-                            </h6>
+                <!-- LEFT: Departments -->
+                <ks:HomeDepartmentsMenu runat="server" ID="HomeDepartmentsMenu1" />
 
-                            <ul class="menu-category-list">
-                                <asp:Repeater ID="rptHeroCats" runat="server" DataSourceID="SdsHeroCats">
-                                    <ItemTemplate>
-                                        <li class="menu-item">
-                                            <a href='<%# BuildSettoreUrl(Eval("id"), Eval("DefaultCt"), Eval("DefaultTp")) %>' class="item-link body-text-3">
-                                                <span>
-                                                    <i class="icon icon-categories"></i>
-                                                    <%# SafeText(Eval("descrizione")) %>
-                                                </span>
-                                            </a>
-                                        </li>
-                                    </ItemTemplate>
-                                </asp:Repeater>
-                            </ul>
-
-                            <asp:SqlDataSource ID="SdsHeroCats" runat="server"
-                                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                                ProviderName="MySql.Data.MySqlClient"
-                                SelectCommand="SELECT s.id, s.Descrizione AS descrizione, s.Img, (SELECT c.id FROM categorie c WHERE c.SettoriId = s.id AND c.Abilitato = 1 ORDER BY c.Ordinamento, c.Descrizione, c.id LIMIT 1) AS DefaultCt, (SELECT t.id FROM tipologie t WHERE t.CategorieId = (SELECT c2.id FROM categorie c2 WHERE c2.SettoriId = s.id AND c2.Abilitato = 1 ORDER BY c2.Ordinamento, c2.Descrizione, c2.id LIMIT 1) AND t.Abilitato = 1 ORDER BY t.Ordinamento, t.Descrizione, t.id LIMIT 1) AS DefaultTp FROM settori s WHERE s.Abilitato = 1 ORDER BY s.Predefinito DESC, s.Ordinamento, s.Descrizione, s.id">
-                            </asp:SqlDataSource>
-
-                        </div>
-                    </div>
-
-                    <!-- Small promo banner -->
-                    <div class="banner-image-product-4 hover-img mb-20">
-                        <div class="item-product">
-                            <a href="articoli.aspx" class="box-link">
-                                <div class="box-content">
-                                    <span class="sub-title">Promo</span>
-                                    <h5 class="title">Offerte del momento</h5>
-                                    <p class="price fw-semibold">Scopri</p>
-                                </div>
-                                <div class="box-image">
-                                    <img src='<%= ThemeManager.Asset("images/banner/banner-12.jpg") %>' alt="" onerror="this.style.display='none'" />
-                                </div>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- CENTER: Slideshow (dinamico) -->
-                <div class="wrap-item-2">
-                    <div class="banner-image-product-4 style-2 hover-img">
-                        <div class="item-product">
-
-                            <!-- Hero Slider (database-driven) -->
-                            <div id="Slide_Show">
-
-                                <asp:SqlDataSource 
-                                    ID="slideShow" 
-                                    runat="server"
-                                    ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                                    ProviderName="MySql.Data.MySqlClient"
-                                    SelectCommand="
-                                        SELECT 
-                                            sp.id,
-                                            sp.slideshowId,
-                                            sp.orderPosition,
-                                            sp.image,
-                                            sp.link,
-                                            IFNULL(sp.caption,'') AS content,
-                                            '' AS target
-                                        FROM slideshows_parts sp
-                                        WHERE sp.slideshowId = (
-                                            SELECT MAX(id) 
-                                            FROM slideshows 
-                                            WHERE placeholder = 'defaultPage'
-                                              AND aziendeId = @AziendaID
-                                        )
-                                        AND (CASE 
-                                                WHEN sp.startDate IS NULL OR CAST(sp.startDate AS CHAR(10)) = '0000-00-00' 
-                                                THEN DATE('1900-01-01') 
-                                                ELSE sp.startDate 
-                                             END) <= CURDATE()
-                                        AND (CASE 
-                                                WHEN sp.stopDate IS NULL OR CAST(sp.stopDate AS CHAR(10)) = '0000-00-00' 
-                                                THEN DATE('2999-12-31') 
-                                                ELSE sp.stopDate 
-                                             END) > CURDATE()
-                                        ORDER BY sp.orderPosition
-                                    ">
-                                    <SelectParameters>
-                                        <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" DefaultValue="1" />
-                                    </SelectParameters>
-                                </asp:SqlDataSource>
-
-                                <div id="Slide_Show_Container" class="swiper ks-home-hero-slider" runat="server" aria-label="Promozioni">
-                                    <div class="swiper-wrapper">
-                                        <asp:Repeater ID="slideshowItems" runat="server" DataSourceID="slideShow">
-                                            <ItemTemplate>
-                                                <% incrementa_slides() %>
-                                                <div class="swiper-slide">
-                                                    <%# SlideLinkStart(Eval("link")) %>
-                                                    <img class="lazyload" src='<%# SafeSlideshowImageUrl(Eval("image")) %>' data-src='<%# SafeSlideshowImageUrl(Eval("image")) %>' alt="" />
-                                                    <%# SlideLinkEnd(Eval("link")) %>
-                                                    <div class="ks-hero-caption"><%# SafeText(Eval("content")) %></div>
-                                                </div>
-                                            </ItemTemplate>
-                                        </asp:Repeater>
-                                    </div>
-
-                                    <div class="swiper-button-prev nav-swiper ks-hero-prev" aria-label="Precedente">
-                                        <i class="icon-arrow-left-lg"></i>
-                                    </div>
-                                    <div class="swiper-button-next nav-swiper ks-hero-next" aria-label="Successivo">
-                                        <i class="icon-arrow-right-lg"></i>
-                                    </div>
-                                    <div class="sw-dot-default swiper-pagination ks-hero-pagination" aria-label="Paginazione slideshow"></div>
-                                </div>
-                            </div>
-                            <!-- /Hero Slider -->
-
-                        </div>
-                    </div>
-                </div>
+                <!-- CENTER: Hero Slider -->
+                <ks:HomeHeroSlider runat="server" ID="HomeHeroSlider1" />
 
                 <!-- RIGHT: 2 banners dinamici (pubblicità id_posizione_banner=4 ordinamento 1 e 2) -->
-                                <ks:HomeSideBanners runat="server" ID="HomeSideBanners1" />
+                <ks:HomeSideBanners runat="server" ID="HomeSideBanners1" />
 
 
             </div>
