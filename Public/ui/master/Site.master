@@ -1,0 +1,26 @@
+<%@ Master Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Site.master.vb" Inherits="SiteMaster" %>
+
+<asp:Content ID="TitleContent1" ContentPlaceHolderID="TitleContent" runat="server">
+    <asp:ContentPlaceHolder ID="TitleContent" runat="server" />
+</asp:Content>
+
+<asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
+</asp:Content>
+
+<asp:Content ID="MainContent1" ContentPlaceHolderID="MainContent" runat="server">
+    <asp:ContentPlaceHolder ID="MainContent" runat="server" />
+</asp:Content>
+
+<!-- Legacy aliases pass-through -->
+<asp:Content ID="ContentPlaceHolder1_1" ContentPlaceHolderID="ContentPlaceHolder1" runat="server">
+    <asp:ContentPlaceHolder ID="ContentPlaceHolder1" runat="server" />
+</asp:Content>
+
+<asp:Content ID="cph_1" ContentPlaceHolderID="cph" runat="server">
+    <asp:ContentPlaceHolder ID="cph" runat="server" />
+</asp:Content>
+
+<asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
+    <asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
+</asp:Content>

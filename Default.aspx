@@ -1,7 +1,8 @@
-<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
+<%@ Page Language="VB" MasterPageFile="~/Public/ui/master/Site.master" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
 <%@ Register Src="~/Public/ui/controls/HomeSideBanners.ascx" TagPrefix="ks" TagName="HomeSideBanners" %>
 <%@ Register Src="~/Public/ui/controls/HomeDepartmentsMenu.ascx" TagPrefix="ks" TagName="HomeDepartmentsMenu" %>
 <%@ Register Src="~/Public/ui/controls/HomeHeroSlider.ascx" TagPrefix="ks" TagName="HomeHeroSlider" %>
+<%@ Register Src="~/Public/ui/controls/HomeIconBoxes.ascx" TagPrefix="ks" TagName="HomeIconBoxes" %>
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server"><%: Page.Title %></asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
@@ -34,51 +35,7 @@
     </section>
 
     <!-- Icon boxes (template) -->
-    <div class="tf-sp-2 pt-0">
-        <div class="container">
-            <div class="swiper tf-sw-iconbox" data-preview="5" data-tablet="3" data-mobile-sm="2" data-mobile="1" data-space-lg="20" data-space-md="20" data-space="15" data-pagination="1" data-pagination-sm="1" data-pagination-md="1" data-pagination-lg="1">
-                <div class="swiper-wrapper">
-                    <div class="swiper-slide">
-                        <div class="tf-icon-box style-border-line">
-                            <div class="icon"><i class="icon-delivery-2"></i></div>
-                            <div class="content">
-                                <h5 class="title">Spedizione veloce</h5>
-                                <p>Ordini gestiti rapidamente</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="swiper-slide">
-                        <div class="tf-icon-box style-border-line">
-                            <div class="icon"><i class="icon-payment-2"></i></div>
-                            <div class="content">
-                                <h5 class="title">Pagamenti sicuri</h5>
-                                <p>Metodi di pagamento affidabili</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="swiper-slide">
-                        <div class="tf-icon-box style-border-line">
-                            <div class="icon"><i class="icon-return-2"></i></div>
-                            <div class="content">
-                                <h5 class="title">Assistenza</h5>
-                                <p>Supporto pre e post vendita</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="swiper-slide">
-                        <div class="tf-icon-box style-border-line">
-                            <div class="icon"><i class="icon-suport-3"></i></div>
-                            <div class="content">
-                                <h5 class="title">Contattaci</h5>
-                                <p>Telefono, WhatsApp e Email</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="d-flex sw-dot-default sw-pagination-iconbox justify-content-center"></div>
-            </div>
-        </div>
-    </div>
+    <ks:HomeIconBoxes runat="server" ID="HomeIconBoxes1" />
 
     <!-- ============================================================
          SCELTI PER TE (vetrina)
