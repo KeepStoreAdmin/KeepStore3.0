@@ -615,6 +615,23 @@ body
     display: none;
 }
 
+
+
+/* ============================================================ Home: side banners ============================================================ */
+.ks-home-side-banners .banner-image-product-4 {
+    overflow: hidden;
+    border-radius: 12px;
+}
+
+.ks-home-side-banners .banner-image-product-4 .box-link {
+    display: block;
+}
+
+.ks-home-side-banners .banner-image-product-4 .box-image img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
 /* ========================================================== MyAccount: card + address widgets (allineati al tema) ========================================================== */
 .ks-card {
     border: 1px solid rgba(0,0,0,.08);

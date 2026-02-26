@@ -178,33 +178,10 @@ Partial Class _Default
         ' -------------------------------
         ' NOTA SICUREZZA/BUGFIX:
         ' - Evito di concatenare la data dentro SQL (anche se è server-side) e uso un parametro @DataOdierna.
-        Dim DataOdierna_mod As String = Date.Today.ToString("yyyy-MM-dd")
+                ' Gestione banner Home (posizione 4, ordinamento 1/2):
+        ' spostata in UserControl: ~/Public/ui/controls/HomeSideBanner.ascx
 
-        SqlDataSource_Pubblicita_id4_pos1.SelectCommand =
-            "SELECT id, id_Azienda, data_inizio_pubblicazione, data_fine_pubblicazione, limite_click, limite_impressioni, id_posizione_banner, numero_click_attuale, numero_impressioni_attuale, link, img_path, titolo, descrizione, abilitato " &
-            "FROM pubblicitav2 WHERE (id_posizione_banner=4) AND (ordinamento=1) " &
-            "AND ((data_inizio_pubblicazione<=@DataOdierna) AND (data_fine_pubblicazione>=@DataOdierna)) " &
-            "AND ((numero_click_attuale<=limite_click) OR (limite_click=-1)) " &
-            "AND ((numero_impressioni_attuale<=limite_impressioni) OR (limite_impressioni=-1)) " &
-            "AND (abilitato=1) AND (id_Azienda=@AziendaID) ORDER BY id ASC LIMIT 1"
-
-        SqlDataSource_Pubblicita_id4_pos1.SelectParameters.Clear()
-        SqlDataSource_Pubblicita_id4_pos1.SelectParameters.Add("@AziendaID", Me.Session("AziendaID"))
-        SqlDataSource_Pubblicita_id4_pos1.SelectParameters.Add("@DataOdierna", DataOdierna_mod)
-
-        SqlDataSource_Pubblicita_id4_pos2.SelectCommand =
-            "SELECT id, id_Azienda, data_inizio_pubblicazione, data_fine_pubblicazione, limite_click, limite_impressioni, id_posizione_banner, numero_click_attuale, numero_impressioni_attuale, link, img_path, titolo, descrizione, abilitato " &
-            "FROM pubblicitav2 WHERE (id_posizione_banner=4) And (ordinamento=2) " &
-            "And ((data_inizio_pubblicazione<=@DataOdierna) AND (data_fine_pubblicazione>=@DataOdierna)) " &
-            "AND ((numero_click_attuale<=limite_click) OR (limite_click=-1)) " &
-            "AND ((numero_impressioni_attuale<=limite_impressioni) OR (limite_impressioni=-1)) " &
-            "AND (abilitato=1) AND (id_Azienda=@AziendaID) ORDER BY id ASC LIMIT 1"
-
-        SqlDataSource_Pubblicita_id4_pos2.SelectParameters.Clear()
-        SqlDataSource_Pubblicita_id4_pos2.SelectParameters.Add("@AziendaID", Me.Session("AziendaID"))
-        SqlDataSource_Pubblicita_id4_pos2.SelectParameters.Add("@DataOdierna", DataOdierna_mod)
-
-        System.Diagnostics.Debug.WriteLine("end")
+System.Diagnostics.Debug.WriteLine("end")
     End Sub
 
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender

@@ -1,4 +1,5 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
+<%@ Register Src="~/Public/ui/controls/HomeSideBanners.ascx" TagPrefix="ks" TagName="HomeSideBanners" %>
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server"><%: Page.Title %></asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
@@ -143,107 +144,8 @@
                 </div>
 
                 <!-- RIGHT: 2 banners dinamici (pubblicità id_posizione_banner=4 ordinamento 1 e 2) -->
-                <div class="wrap-item-3">
+                                <ks:HomeSideBanners runat="server" ID="HomeSideBanners1" />
 
-                    <!-- BANNER 1 -->
-                    <div class="banner-image-product-4 style-4 hover-img mb-20">
-                        <div class="item-product">
-
-                            <!-- ========================= -->
-                            <!-- INIZIO BLOCCO SPRINT2_HOME1_STEP5 SqlDataSource_Pubblicita_id4_pos1 (BANNERS POS4 ORD1) -->
-                            <!-- ========================= -->
-                            <asp:SqlDataSource 
-                                ID="SqlDataSource_Pubblicita_id4_pos1" 
-                                runat="server" 
-                                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
-                                ProviderName="MySql.Data.MySqlClient" 
-
-                                SelectCommand="SELECT p.titolo, p.immagine, p.link, '' AS target FROM pubblicitav2 p WHERE p.abilitato = 1 AND p.id_posizione = 4 AND (p.data_inizio_pubblicazione IS NULL OR CAST(p.data_inizio_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_inizio_pubblicazione <= NOW()) AND (p.data_fine_pubblicazione IS NULL OR CAST(p.data_fine_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_fine_pubblicazione >= NOW()) ORDER BY p.ordinamento ASC, p.id DESC LIMIT 0,1"
-
-                                UpdateCommand="
-                                    UPDATE pubblicitav2 
-                                    SET numero_impressioni_attuale = numero_impressioni_attuale + 1 
-                                    WHERE id = ?id">
-
-                                <SelectParameters>
-                                    <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" DefaultValue="0" />
-                                </SelectParameters>
-
-                                <UpdateParameters>
-                                    <asp:Parameter Name="id" Type="Int32" />
-                                </UpdateParameters>
-
-                            </asp:SqlDataSource>
-                            <!-- ========================= -->
-                            <!-- FINE BLOCCO SPRINT2_HOME1_STEP5 SqlDataSource_Pubblicita_id4_pos1 -->
-                            <!-- ========================= -->
-
-                            <asp:Repeater ID="RepeaterPubblicita_id4_pos1" runat="server" OnItemDataBound="RepeaterPubblicita_id4_pos1_ItemDataBound" DataSourceID="SqlDataSource_Pubblicita_id4_pos1" EnableViewState="False">
-                                <ItemTemplate>
-                                    <a href='<%# "click.aspx?id=" & Eval("id") %>' class="box-link" target="_blank" rel="noopener noreferrer">
-                                        <div class="box-image">
-                                            <img class="lazyload"
-                                                 src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
-                                                 data-src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
-                                                 alt='<%# SafeAttr(Eval("titolo")) %>' />
-                                        </div>
-                                    </a>
-                                </ItemTemplate>
-                            </asp:Repeater>
-
-                        </div>
-                    </div>
-
-                    <!-- BANNER 2 -->
-                    <div class="banner-image-product-4 style-4 hover-img">
-                        <div class="item-product">
-
-                            <!-- ========================= -->
-                            <!-- INIZIO BLOCCO SPRINT2_HOME1_STEP5 SqlDataSource_Pubblicita_id4_pos2 (BANNERS POS4 ORD2) -->
-                            <!-- ========================= -->
-                            <asp:SqlDataSource 
-                                ID="SqlDataSource_Pubblicita_id4_pos2" 
-                                runat="server" 
-                                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
-                                ProviderName="MySql.Data.MySqlClient" 
-
-                                SelectCommand="SELECT p.titolo, p.immagine, p.link, '' AS target FROM pubblicitav2 p WHERE p.abilitato = 1 AND p.id_posizione = 4 AND (p.data_inizio_pubblicazione IS NULL OR CAST(p.data_inizio_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_inizio_pubblicazione <= NOW()) AND (p.data_fine_pubblicazione IS NULL OR CAST(p.data_fine_pubblicazione AS CHAR(10)) = '0000-00-00' OR p.data_fine_pubblicazione >= NOW()) ORDER BY p.ordinamento ASC, p.id DESC LIMIT 1,1"
-
-                                UpdateCommand="
-                                    UPDATE pubblicitav2 
-                                    SET numero_impressioni_attuale = numero_impressioni_attuale + 1 
-                                    WHERE id = ?id">
-
-                                <SelectParameters>
-                                    <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" DefaultValue="0" />
-                                </SelectParameters>
-
-                                <UpdateParameters>
-                                    <asp:Parameter Name="id" Type="Int32" />
-                                </UpdateParameters>
-
-                            </asp:SqlDataSource>
-                            <!-- ========================= -->
-                            <!-- FINE BLOCCO SPRINT2_HOME1_STEP5 SqlDataSource_Pubblicita_id4_pos2 -->
-                            <!-- ========================= -->
-
-                            <asp:Repeater ID="RepeaterPubblicita_id4_pos2" runat="server" OnItemDataBound="RepeaterPubblicita_id4_pos2_ItemDataBound" DataSourceID="SqlDataSource_Pubblicita_id4_pos2" EnableViewState="False">
-                                <ItemTemplate>
-                                    <a href='<%# "click.aspx?id=" & Eval("id") %>' class="box-link" target="_blank" rel="noopener noreferrer">
-                                        <div class="box-image">
-                                            <img class="lazyload"
-                                                 src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
-                                                 data-src='<%# SafeBannerImageUrl(Eval("img_path")) %>'
-                                                 alt='<%# SafeAttr(Eval("titolo")) %>' />
-                                        </div>
-                                    </a>
-                                </ItemTemplate>
-                            </asp:Repeater>
-
-                        </div>
-                    </div>
-
-                </div>
 
             </div>
         </div>
