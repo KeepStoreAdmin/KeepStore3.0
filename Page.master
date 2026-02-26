@@ -32,8 +32,8 @@
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 
-    <!-- Override / bridge CSS (ordine: base -> override taikun -> bridge legacy -> custom per pagine) -->
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/taikun-keepstore-overrides.css") %>" />
+    <!-- Override / bridge CSS (ordine: base -> override tema -> bridge legacy -> custom per pagine) -->
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore-overrides.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore.css") %>" />
 
@@ -41,6 +41,20 @@
 
 <body id="PageBody" runat="server">
 <form id="form1" runat="server">
+
+        <!-- Scroll Top -->
+        <button id="goTop" type="button" aria-label="Torna su">
+            <span class="border-progress"></span>
+            <span class="icon icon-arrow-right"></span>
+        </button>
+
+        <!-- Preload -->
+        <div class="preload preload-container" id="preload" aria-hidden="true">
+            <div class="preload-logo">
+                <div class="spinner"></div>
+            </div>
+        </div>
+
 
         <!-- ============================================================
              Global: Facebook Like popup placeholder (legacy)

@@ -328,7 +328,7 @@ Private Sub EnsureHomeSeo()
         Dim canonical As String = baseUrl & ResolveUrl("~/")
         If Not canonical.EndsWith("/") Then canonical &= "/"
 
-        Dim azienda As String = SafeSessionString("AziendaNome", "TAIKUN.IT")
+        Dim azienda As String = SafeSessionString("AziendaNome", "KeepStore")
 
         Dim descr As String = SafeSessionString("AziendaDescrizione", "")
         If String.IsNullOrWhiteSpace(descr) Then

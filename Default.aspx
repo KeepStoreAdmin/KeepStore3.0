@@ -125,49 +125,15 @@
                                         </ItemTemplate>
                                     </asp:Repeater>
 
-                                    <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
-                                    <a class="next" onclick="plusSlides(1)">&#10095;</a>
+                                    <a class="prev" href="#" data-slide-action="prev" aria-label="Precedente">&#10094;</a>
+                                    <a class="next" href="#" data-slide-action="next" aria-label="Successivo">&#10095;</a>
                                 </div>
 
                                 <div class="mt-2" style="text-align:center">
                                     <% For i = 1 To slides %>
-                                        <span class="dot" onclick="currentSlide(<%=i%>)"></span>
+                                        <span class="dot" data-slide="<%= i %>" aria-label="Vai alla slide <%= i %>"></span>
                                     <% Next i %>
                                 </div>
-
-                                <script type="text/javascript">
-                                    var slideIndex = 1;
-                                    showSlides(slideIndex);
-
-                                    function plusSlides(n) {
-                                        showSlides(slideIndex += n);
-                                    }
-
-                                    function currentSlide(n) {
-                                        showSlides(slideIndex = n);
-                                    }
-
-                                    function showSlides(n) {
-                                        var i;
-                                        var slides = document.getElementsByClassName("mySlides");
-                                        var dots = document.getElementsByClassName("dot");
-                                        if (n > slides.length) { slideIndex = 1 }
-                                        if (n < 1) { slideIndex = slides.length }
-                                        for (i = 0; i < slides.length; i++) {
-                                            slides[i].style.display = "none";
-                                        }
-                                        for (i = 0; i < dots.length; i++) {
-                                            dots[i].className = dots[i].className.replace(" active", "");
-                                        }
-                                        if (slides.length > 0) {
-                                            slides[slideIndex - 1].style.display = "block";
-                                        }
-                                        if (dots.length > 0) {
-                                            dots[slideIndex - 1].className += " active";
-                                        }
-                                    }
-                                </script>
-
                             </div>
                             <!-- /Slide Show -->
 
@@ -598,4 +564,8 @@
 
     
 
+</asp:Content>
+
+<asp:Content ID="ScriptsHome" ContentPlaceHolderID="ScriptsContent" runat="server">
+    <script src="<%= ThemeManager.Asset("js/home-slideshow.js") %>"></script>
 </asp:Content>

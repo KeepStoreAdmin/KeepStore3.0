@@ -597,7 +597,7 @@ End Sub
     '==========================================================
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
 
-        ' dynamic controls (Onsus template does not expose all legacy IDs)
+        ' controlli dinamici (il tema non espone tutti gli ID legacy)
         Dim lbl4 As Label = FindCtrl(Of Label)("Label4")
         Dim hl14 As HyperLink = FindCtrl(Of HyperLink)("HyperLink14")
         Dim mv As MultiView = FindCtrl(Of MultiView)("mvLogin")
