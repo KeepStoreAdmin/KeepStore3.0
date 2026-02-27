@@ -7,6 +7,9 @@
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
         <!-- Tema: assets loaded in MasterPage -->
+    <link rel="stylesheet" href="/Public/assets/keepstore/css/cart-ui.css" />
+    <script src="/Public/assets/keepstore/js/cart-ui.js" defer></script>
+
 
 </asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
@@ -381,7 +384,7 @@
                     <asp:Panel ID="Panel_BuoniSconto" runat="server" HorizontalAlign="left" CssClass="ks-coupon-panel">
                         <div class="mb-2"><b>CODICE SCONTO</b></div>
                         <div class="d-flex gap-2 align-items-center flex-wrap">
-                            <asp:TextBox ID="TB_BuonoSconto" runat="server" CssClass="form-control" Style="max-width: 320px; text-transform:uppercase; font-weight:bold; text-align:center;"></asp:TextBox>
+                            <asp:TextBox ID="TB_BuonoSconto" runat="server" CssClass="form-control ks-coupon-input"></asp:TextBox>
                             <asp:Button ID="BT_ApplicaBuonoSconto" runat="server" CausesValidation="false" Text="Aggiungi" CssClass="tf-btn btn-gray" />
                         </div>
                         <div class="mt-2">
@@ -409,8 +412,8 @@
                             <h4 class="title">Riepilogo</h4>
                         <table width="100%" id="TableConteggi" runat="server" visible="false" class="ks-summary-table">
                             <tr>
-                                <td align="right" style="width:70%;">Imponibile:</td>
-                                <td align="right" style="width:30%;"><asp:Label ID="lblImponibile" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                                <td align="right">Imponibile:</td>
+                                <td align="right"><asp:Label ID="lblImponibile" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
                             </tr>
                             <tr>
                                 <td align="right">Spedizione:</td>
@@ -438,7 +441,7 @@
                             </tr>
                             <tr>
                                 <td align="right"><b>Totale:</b></td>
-                                <td align="right"><asp:Label ID="lblTotale" runat="server" Text="&#8364; 0,00" Font-Bold="true" Style="color:rgb(205, 38, 44);"></asp:Label></td>
+                                <td align="right"><asp:Label ID="lblTotale" runat="server" Text="&#8364; 0,00" Font-Bold="true" CssClass="ks-total" ></asp:Label></td>
                             </tr>
                         </table>
                         </div>
