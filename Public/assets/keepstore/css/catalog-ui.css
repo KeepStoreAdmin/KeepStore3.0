@@ -1,0 +1,88 @@
+/* ==========================================================
+   KeepStore - Catalog UI (filters + pager)
+   Naming neutro: nessun riferimento a template terzi
+   ========================================================== */
+
+/* Breadcrumb (UserControl) micro-allineamento */
+.ks-breadcrumb h1.h5{ line-height:1.2; }
+.ks-breadcrumb .tf-breadcrumb-wrap{ margin-bottom:0; }
+
+/* Filtri catalogo (articoli.aspx) - applicati via JS (catalog-ui.js)
+   Nessun cambio markup richiesto: lavora su ID noti (filtersMr/Tp/Gr/Sg)
+*/
+.ks-filter-box{
+  border:1px solid rgba(0,0,0,.08);
+  border-radius:12px;
+  background:#fff;
+  padding:10px 12px;
+  margin-bottom:12px;
+}
+
+.ks-filter-title{
+  font-weight:700;
+  font-size:12px;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  margin:0 0 8px 0;
+}
+
+.ks-filter-actions{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+
+.ks-filter-scroll{
+  max-height:240px;
+  overflow:auto;
+  padding-right:4px;
+}
+
+.ks-filter-checkbox{
+  display:block;
+  margin:2px 0;
+}
+
+.ks-filter-removeall{
+  font-size:12px;
+  text-decoration:none;
+}
+.ks-filter-removeall:hover{ text-decoration:underline; }
+
+/* Toolbar (ordinamento / contatori) */
+.ks-catalog-toolbar{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin:10px 0 16px 0;
+}
+.ks-catalog-toolbar .form-select{ min-width:220px; }
+
+/* Pager (GridView/DataPager) - best effort */
+.ks-pager{
+  display:flex;
+  justify-content:center;
+  margin:18px 0 10px 0;
+}
+
+.ks-pager a,
+.ks-pager span{
+  display:inline-block;
+  padding:8px 12px;
+  margin:0 3px;
+  border-radius:10px;
+  border:1px solid rgba(0,0,0,.12);
+  text-decoration:none;
+  font-weight:600;
+  font-size:13px;
+}
+
+.ks-pager .active,
+.ks-pager span[disabled]{
+  opacity:.55;
+  pointer-events:none;
+}
