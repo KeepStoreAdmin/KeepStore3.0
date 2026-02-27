@@ -1,0 +1,22 @@
+/* ============================================================
+   KeepStore 3.0 - Auth UI patches
+   Scopo: migliorare resa pagine login/registrazione/recupero legacy
+   Nota: CSS SCOPED (si attiva solo con classi body aggiunte via ks-page-flags.js)
+   ============================================================ */
+
+body.ks-page-auth main {
+  padding-top: 0;
+}
+
+body.ks-page-auth h1,
+body.ks-page-auth h2,
+body.ks-page-auth h3,
+body.ks-page-auth h4,
+body.ks-page-auth h5 {
+  margin-top: 0;
+  margin-bottom: .75rem;
+}
+
+body.ks-page-auth .ks-auth-shell {
+  padding: 18px 0;
+}

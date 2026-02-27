@@ -1,0 +1,72 @@
+/* ============================================================
+   KeepStore 3.0 - Account UI patches
+   Scopo: migliorare spacing e resa delle pagine account legacy
+   Nota: CSS SCOPED (si attiva solo con classi body aggiunte via ks-page-flags.js)
+   ============================================================ */
+
+body.ks-page-account main {
+  padding-top: 0;
+}
+
+/* Wrapper generico */
+body.ks-page-account .ks-account-shell {
+  padding: 16px 0;
+}
+
+body.ks-page-account h1,
+body.ks-page-account h2,
+body.ks-page-account h3,
+body.ks-page-account h4,
+body.ks-page-account h5 {
+  margin-top: 0;
+  margin-bottom: .75rem;
+}
+
+/* Navigation (aggiunta via JS quando possibile) */
+body.ks-page-account .ks-account-nav {
+  list-style: none;
+  padding-left: 0;
+  margin: 0 0 1rem 0;
+  display: grid;
+  gap: .35rem;
+}
+
+body.ks-page-account .ks-account-nav a {
+  display: block;
+  padding: .55rem .75rem;
+  border-radius: .6rem;
+  text-decoration: none;
+  background: rgba(0,0,0,.03);
+}
+
+body.ks-page-account .ks-account-nav a:hover {
+  background: rgba(0,0,0,.06);
+}
+
+/* Tabelle legacy */
+body.ks-page-account table {
+  width: 100%;
+}
+
+body.ks-page-account table th,
+body.ks-page-account table td {
+  padding: .65rem .75rem;
+  vertical-align: top;
+}
+
+/* Form controls (fallback se non già bootstrapizzati) */
+body.ks-page-account input[type="text"],
+body.ks-page-account input[type="email"],
+body.ks-page-account input[type="password"],
+body.ks-page-account input[type="tel"],
+body.ks-page-account input[type="number"],
+body.ks-page-account input[type="date"],
+body.ks-page-account select,
+body.ks-page-account textarea {
+  max-width: 100%;
+}
+
+/* Piccolo helper: label IVA nel prezzo */
+body.ks-page-account .ks-price-iva {
+  font-size: .875em;
+}
