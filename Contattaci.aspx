@@ -1,30 +1,15 @@
-<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Contattaci.aspx.vb" Inherits="Contattaci" %>
+<%@ Page Language="VB" MasterPageFile="~/Public/ui/master/Site.master" AutoEventWireup="false" CodeFile="Contattaci.aspx.vb" Inherits="Contattaci" %>
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
     Contattaci
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <%-- NOTE: stili Contattaci spostati in /Public/assets/keepstore/css/keepstore.css --%>
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
     <div class="ks-contact">
-
-        <!-- Breadcrumbs (template) -->
-        <div class="tf-sp-1 pb-0">
-        <div class="container">
-            <div class="tf-breadcrumb-wrap">
-                <div class="tf-breadcrumb-list">
-                    <a href="Default.aspx" class="text">Home</a>
-                    <i class="icon icon-arrow-right"></i>
-                    <span class="text">Contatti</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
         <section class="tf-sp-2">
             <div class="container">
 
@@ -101,19 +86,19 @@
                                 <ul class="info-list">
                                     <li>
                                         <span class="icon"><i class="icon-location"></i></span>
-                                        <a id="lnkMap" runat="server" class="link" target="_blank">
+                                        <a id="lnkMap" runat="server" class="link" target="_blank" rel="noopener noreferrer">
                                             <asp:Literal ID="litAddress" runat="server" />
                                         </a>
                                     </li>
                                     <li>
                                         <span class="icon"><i class="icon-phone"></i></span>
-                                        <a id="lnkPhone" runat="server" class="product-title fw-semibold link">
+                                        <a id="lnkPhone" runat="server" class="product-title fw-semibold link" rel="noopener noreferrer">
                                             <asp:Literal ID="litPhone" runat="server" />
                                         </a>
                                     </li>
                                     <li>
                                         <span class="icon"><i class="icon-direction"></i></span>
-                                        <a id="lnkEmail" runat="server" class="link">
+                                        <a id="lnkEmail" runat="server" class="link" rel="noopener noreferrer">
                                             <asp:Literal ID="litEmail" runat="server" />
                                         </a>
                                     </li>
