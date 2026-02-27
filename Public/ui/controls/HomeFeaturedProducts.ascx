@@ -23,7 +23,7 @@
                                     <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>
                                 </a>
                                 <div class="price-wrap fw-medium mt-1">
-                                    <%# controlla_prezzo( If(IsDBNull(Eval("prezzo")), 0, Eval("prezzo")), If(IsDBNull(Eval("prezzoIvato")), 0, Eval("prezzoIvato")), If(Eval("InOfferta") = 0, 0, Eval("prezzoPromo")), If(Eval("InOfferta") = 0, 0, Eval("PrezzoPromoIvato")), Session("IvaTipo") ) %>
+                                    <%# UiPriceFormatter.RenderPriceHtml( If(IsDBNull(Eval("prezzo")), 0, Eval("prezzo")), If(IsDBNull(Eval("prezzoIvato")), 0, Eval("prezzoIvato")), If(Eval("InOfferta") = 0, 0, Eval("prezzoPromo")), If(Eval("InOfferta") = 0, 0, Eval("PrezzoPromoIvato")), Session("IvaTipo") ) %>
                                 </div>
                             </div>
                         </div>
@@ -52,7 +52,7 @@
                                     <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>
                                 </a>
                                 <div class="price-wrap fw-medium mt-1">
-                                    <%# controlla_prezzo( If(IsDBNull(Eval("prezzo")), 0, Eval("prezzo")), If(IsDBNull(Eval("prezzoIvato")), 0, Eval("prezzoIvato")), If(Eval("InOfferta") = 0, 0, Eval("prezzoPromo")), If(Eval("InOfferta") = 0, 0, Eval("PrezzoPromoIvato")), Session("IvaTipo") ) %>
+                                    <%# UiPriceFormatter.RenderPriceHtml( If(IsDBNull(Eval("prezzo")), 0, Eval("prezzo")), If(IsDBNull(Eval("prezzoIvato")), 0, Eval("prezzoIvato")), If(Eval("InOfferta") = 0, 0, Eval("prezzoPromo")), If(Eval("InOfferta") = 0, 0, Eval("PrezzoPromoIvato")), Session("IvaTipo") ) %>
                                 </div>
                             </div>
                         </div>
@@ -81,7 +81,7 @@
                                     <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>
                                 </a>
                                 <div class="price-wrap fw-medium mt-1">
-                                    <%# controlla_prezzo( If(IsDBNull(Eval("prezzo")), 0, Eval("prezzo")), If(IsDBNull(Eval("prezzoIvato")), 0, Eval("prezzoIvato")), If(Eval("InOfferta") = 0, 0, Eval("prezzoPromo")), If(Eval("InOfferta") = 0, 0, Eval("PrezzoPromoIvato")), Session("IvaTipo") ) %>
+                                    <%# UiPriceFormatter.RenderPriceHtml( If(IsDBNull(Eval("prezzo")), 0, Eval("prezzo")), If(IsDBNull(Eval("prezzoIvato")), 0, Eval("prezzoIvato")), If(Eval("InOfferta") = 0, 0, Eval("prezzoPromo")), If(Eval("InOfferta") = 0, 0, Eval("PrezzoPromoIvato")), Session("IvaTipo") ) %>
                                 </div>
                             </div>
                         </div>

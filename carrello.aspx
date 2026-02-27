@@ -8,7 +8,9 @@
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
         <!-- Tema: assets loaded in MasterPage -->
     <link rel="stylesheet" href="/Public/assets/keepstore/css/cart-ui.css" />
+    <link rel="stylesheet" href="/Public/assets/keepstore/css/checkout-ui.css" />
     <script src="/Public/assets/keepstore/js/cart-ui.js" defer></script>
+    <script src="/Public/assets/keepstore/js/checkout-ui.js" defer></script>
 
 
 </asp:Content>
@@ -937,7 +939,7 @@
 		<% If LstScegliIndirizzo.items.count > 0 Then %>
             <tr>
                 <td style="text-align:left;" class="carrello-td1-step4"><b>Indirizzi registrati:</td>
-				<td style="text-align:left;" class="carrello-td2-step4"><asp:DropDownList runat="server" ID="LstScegliIndirizzo" AutoPostBack="True" Style="width: 99%;"></asp:DropDownList></td>
+				<td style="text-align:left;" class="carrello-td2-step4"><asp:DropDownList runat="server" ID="LstScegliIndirizzo" AutoPostBack="True" CssClass="form-select ks-form-select"></asp:DropDownList></td>
             </tr>
 		<% end if %>
             <tr>
@@ -980,10 +982,10 @@
 				<td>&nbsp;</td>
 			</tr>
             <tr>
-				<td colspan="2"><a id="open1" runat="server" href="#">Desideri modificare l'indirizzo selezionato? Clicca Qui</a></td>
+				<td colspan="2"><a id="open1" runat="server" ClientIDMode="Static" href="#">Desideri modificare l'indirizzo selezionato? Clicca Qui</a></td>
 			</tr>
 			<tr>
-				<td colspan="2"><a id="open2" runat="server" href="#">Desideri inserire un nuovo indirizzo di spedizione? Clicca Qui</a></td>
+				<td colspan="2"><a id="open2" runat="server" ClientIDMode="Static" href="#">Desideri inserire un nuovo indirizzo di spedizione? Clicca Qui</a></td>
 			</tr>
         </table>
         </asp:Panel>
@@ -992,11 +994,11 @@
  
     <tr>
         <td colspan="2">
-		<div id="panel" runat="server">
+		<div id="panel" runat="server" ClientIDMode="Static">
             <asp:Panel ID="PnlDestinazione" runat="server" Width="100%" Visible="True" GroupingText="Inserisci i dati"  CssClass="wrap">
 							<h5 class="title fw-semibold">Gestisci destinazione</h5>
 
-				<input type="hidden" runat="server" id="insOmod">
+				<input type="hidden" runat="server" id="insOmod" ClientIDMode="Static">
 				<!--
                 <asp:Label ID="LblDescrDest" runat="server" Text=""></asp:Label>
                 <br />
@@ -1007,62 +1009,62 @@
 				<% end if %>
                 <br />
 				-->
-                 <table id="tblDestAlter" bgcolor="whitesmoke" cellpadding="1" cellspacing="5" border="0" width="100%" runat="server" style="margin:auto;">
+                 <table id="tblDestAlter" class="ks-dest-form" cellpadding="1" cellspacing="5" border="0" width="100%" runat="server" style="margin:auto;">
                     <tr>
                         <td style="padding: 0 5px;" width="155px">Ragione Sociale&nbsp;/&nbsp;Cognome: *</td>
-                        <td ><asp:TextBox ID="tbRagioneSocialeA" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
+                        <td ><asp:TextBox ID="tbRagioneSocialeA" CssClass="form-control ks-form-control" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
                             <asp:requiredfieldvalidator id="RFRagioneSocialeA" runat="server" Display="None" ControlToValidate="tbRagioneSocialeA"
 		                       ErrorMessage="Campo Obbligatorio (Ragione Sociale)"></asp:requiredfieldvalidator>
 		                </td>
                     </tr>
                     <tr>
                         <td style="padding: 0 5px;" width="155px">Nome:</td>
-                        <td ><asp:TextBox ID="tbNomeA" runat="server" Width="100%" MaxLength="50" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
+                        <td ><asp:TextBox ID="tbNomeA" CssClass="form-control ks-form-control" runat="server" Width="100%" MaxLength="50" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
                         </td>
                     </tr>        
                     <tr>
                         <td style="padding: 0 5px;" width="155px">Indirizzo: *</td>
-                        <td ><asp:TextBox ID="tbIndirizzo2" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
+                        <td ><asp:TextBox ID="tbIndirizzo2" CssClass="form-control ks-form-control" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
                             <asp:requiredfieldvalidator id="RFIndirizzo2" runat="server" Display="None" ControlToValidate="tbIndirizzo2"
 		                       ErrorMessage="Campo Obbligatorio (Indirizzo)"></asp:requiredfieldvalidator>
                         </td>
                     </tr>
 					<tr>
                         <td style="padding: 0 5px;" width="155px">Cap *</td>
-                        <td ><asp:TextBox ID="tbCap2" runat="server" AutoPostBack="true" OnTextChanged="City_Bind_Data2" Width="100%" MaxLength="5" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
+                        <td ><asp:TextBox ID="tbCap2" CssClass="form-control ks-form-control" runat="server" AutoPostBack="true" OnTextChanged="City_Bind_Data2" Width="100%" MaxLength="5" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
 							 <asp:requiredfieldvalidator id="RFCap2" runat="server" Display="None" ControlToValidate="tbCap2"
 		                       ErrorMessage="Campo Obbligatorio (CAP)"></asp:requiredfieldvalidator>
                         </td>
                     </tr>     
                     <tr>
                         <td style="padding: 0 5px;" width="155px">Città: *</td>
-                        <td ><asp:DropDownList ID="ddlCitta2" onSelectedIndexChanged="Province_Bind_Data2" AutoPostBack="true" runat="server" Width="100%" ValidationGroup="registrazione" CausesValidation="True"></asp:DropDownList>
+                        <td ><asp:DropDownList ID="ddlCitta2" CssClass="form-select ks-form-select" onSelectedIndexChanged="Province_Bind_Data2" AutoPostBack="true" runat="server" Width="100%" ValidationGroup="registrazione" CausesValidation="True"></asp:DropDownList>
                              <asp:requiredfieldvalidator id="RFCitta2" runat="server" Display="None" ControlToValidate="ddlCitta2"
 		                       ErrorMessage="Campo Obbligatorio (Città)"></asp:requiredfieldvalidator>
                         </td>
                     </tr>
                     <tr>
                         <td style="padding: 0 5px;" width="155px">Provincia: *</td>
-                        <td ><asp:TextBox ID="tbProvincia2" ReadOnly="true" runat="server" Width="100%" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
+                        <td ><asp:TextBox ID="tbProvincia2" CssClass="form-control ks-form-control" ReadOnly="true" runat="server" Width="100%" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
                              <asp:requiredfieldvalidator id="RFProvincia2" runat="server" Display="None" ControlToValidate="tbProvincia2"
 		                       ErrorMessage="Campo Obbligatorio (Provincia)"></asp:requiredfieldvalidator>
                         </td>
                     </tr>
                     <tr>
                         <td style="padding: 0 5px;" width="155px">Zona:</td>
-                        <td ><asp:TextBox ID="tbZona" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
+                        <td ><asp:TextBox ID="tbZona" CssClass="form-control ks-form-control" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
                         </td>
                     </tr>
                     <tr>
                         <td style="padding: 0 5px;" width="155px">Telefono: *</td>
-                        <td ><asp:TextBox ID="tbTelefono2" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
+                        <td ><asp:TextBox ID="tbTelefono2" CssClass="form-control ks-form-control" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
                             <asp:requiredfieldvalidator id="RFTelefono2" runat="server" Display="None" ControlToValidate="tbTelefono2"
 		                       ErrorMessage="Campo Obbligatorio (Telefono)"></asp:requiredfieldvalidator>
                         </td>
                     </tr>
                     <tr>
                         <td style="padding: 0 5px;" width="155px" valign="top">Nota destinazione:</td>
-                        <td ><asp:TextBox ID="tbNote" runat="server" Width="100%" MaxLength="255" ValidationGroup="registrazione" CausesValidation="True" TextMode="MultiLine" Rows="5"></asp:TextBox>
+                        <td ><asp:TextBox ID="tbNote" CssClass="form-control ks-form-control" runat="server" Width="100%" MaxLength="255" ValidationGroup="registrazione" CausesValidation="True" TextMode="MultiLine" Rows="5"></asp:TextBox>
                         </td>
                     </tr>  
                     <tr>
@@ -1071,10 +1073,10 @@
 					</tr> 
                     <tr>
                         <td align="center" colspan="2">
-                            <asp:Button ID="btnSalvaDest" runat="server" Text="Inserisci nuova destinazione" Height="25px" CausesValidation="true" />
-                            <asp:Button ID="btnModDest" runat="server" Text="Salva modifiche destinazione" Height="25px" CausesValidation="true" />
-                            <asp:Button ID="btnElimDest" runat="server" Text="Elimina destinazione" Height="25px" CausesValidation="true" BackColor="#CC0000" ForeColor="White"/>
-                            <br /><br /><asp:Button ID="btnAnnullaDest" runat="server" Text="Annulla" Height="25px" CausesValidation="false" />
+                            <asp:Button ID="btnSalvaDest" CssClass="tf-btn btn-gray ks-btn" runat="server" Text="Inserisci nuova destinazione" Height="25px" CausesValidation="true" />
+                            <asp:Button ID="btnModDest" CssClass="tf-btn ks-btn" runat="server" Text="Salva modifiche destinazione" Height="25px" CausesValidation="true" />
+                            <asp:Button ID="btnElimDest" CssClass="tf-btn btn-danger ks-btn" runat="server" Text="Elimina destinazione" Height="25px" CausesValidation="true" BackColor="#CC0000" ForeColor="White"/>
+                            <br /><br /><asp:Button ID="btnAnnullaDest" CssClass="tf-btn btn-gray ks-btn" runat="server" Text="Annulla" Height="25px" CausesValidation="false" />
                         </td>
                     </tr>
                 </table>
@@ -1091,7 +1093,7 @@
 
 			
 			
-				<br/><asp:TextBox ID="txtNoteSpedizione" TextMode="MultiLine" Rows="5" runat="server" Width="100%"></asp:TextBox>
+				<br/><asp:TextBox ID="txtNoteSpedizione" CssClass="form-control ks-form-control" TextMode="MultiLine" Rows="5" runat="server" Width="100%"></asp:TextBox>
 			</asp:Panel>
 		</td>
 	</tr>
@@ -1115,80 +1117,12 @@
         </div>
     </td>
 </tr>
-   </table>   
-      <script type="text/javascript">
-        function visualizza_spinner_caricamento(){
-            document.getElementById('spinner_caricamento').style.display = "";
-            document.getElementById('ctl00_cph_btInviaOrdine').style.display="none";
-			document.getElementById('ctl00_cph_btSalvaPreventivo').style.display="none";
-        }
-      </script>
-	 
+   </table>
 </asp:Panel> 
 <asp:validationsummary id="ValidationSummary1" runat="server" HeaderText="Attenzione!" ShowMessageBox="True" ShowSummary="False"></asp:validationsummary>
 		                
     <!--<script type="text/javascript" language="Javascript" src="Public/script/slide.js"> </script> -->
-	<script type="text/javascript">
-		
-		function fnJqueryReady(){
-			//Tooltip
-			//$("#promo_vettori img[title]").tooltip({position: "center right"});
-			//$("#gvVettori_tooltip img[title]").tooltip({position: "center right"});
-			//$("#gvPagamento_tooltip img[title]").tooltip({position: "center right"});
-		
-			// Expand Panel
-			$("#cph_open1").click(function(e){
-				e.preventDefault();
-				$("#cph_panel").slideDown("slow");
-				$("#cph_open1").toggle();
-				$("#cph_open2").toggle();
-				$("#confermaOrdinde").css('background-color', 'lightgray');
-				$("#cph_btInviaOrdine").removeAttr('href');
-				$("#cph_btInviaOrdine").removeAttr('onclick');
-				$("#cph_btnModDest").show();
-				$("#cph_btnElimDest").hide();
-				$("#cph_btnSalvaDest").hide();
-				$("#cph_insOmod").val("mod");
-			});	
-			
-			// Expand Panel
-			$("#cph_open2").click(function(e){
-				e.preventDefault();
-				$("#cph_panel").slideDown("slow");
-				$("#cph_open1").toggle();
-				$("#cph_open2").toggle();
-				$("#confermaOrdinde").css('background-color', 'lightgray');
-				$("#cph_btInviaOrdine").removeAttr('href');
-				$("#cph_btInviaOrdine").removeAttr('onclick');
-				$("#cph_btnModDest").hide();
-				$("#cph_btnElimDest").hide();
-				$("#cph_btnSalvaDest").show();
-				$("#cph_tbRagioneSocialeA").val("");
-				$("#cph_tbIndirizzo2").val("");
-				$("#cph_tbCap2").val("");
-				$("#cph_ddlCitta2 option").remove("");
-				$("#cph_tbProvincia2").val("");
-				$("#cph_tbZona").val("");
-				$("#cph_tbTelefono2").val("");
-				$("#cph_tbNote").val("");
-				$("#cph_CHKPREDEFINITO").prop("checked", 1);
-				$("#cph_insOmod").val("ins");
-			});	
-			
-			// Collapse Panel
-			$("#close").click(function(){
-				$("#cph_panel").slideUp("slow");	
-				$("#cph_open1").toggle();
-				$("#cph_open2").toggle();
-			});		
-		}
-		
-		defer(fnJqueryReady)
-
-  
-
-	</script>
-    <br />
+<br />
     <br />
 	<!-- Controllo se esiste l'immagine -->
 </asp:Content>

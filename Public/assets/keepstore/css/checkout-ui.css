@@ -1,0 +1,117 @@
+/* KeepStore UI - Checkout enhancements (naming neutro)
+   NOTE: CSS additivo, non modifica logica server-side. */
+
+.ks-checkout {
+  width: 100%;
+}
+
+/* Card base per ogni sezione checkout */
+.ks-checkout .wrap {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 0 0 16px;
+}
+
+/* Header sezione (cliccabile via JS) */
+.ks-checkout .wrap > h5 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  cursor: pointer;
+}
+
+/* Icona accordion aggiunta da JS */
+.ks-checkout .wrap > h5 .ks-acc-icon {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.10);
+  font-size: 14px;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+/* Accordion: contenuto collassato */
+.ks-checkout .wrap.is-collapsed > :not(h5) {
+  display: none;
+}
+.ks-checkout .wrap.is-collapsed > h5 {
+  margin-bottom: 0;
+}
+
+/* Tabelle (GridView) di selezione spedizione/pagamento */
+.ks-checkout-grid {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 12px;
+}
+
+.ks-checkout-grid td,
+.ks-checkout-grid th {
+  padding: 10px 12px;
+  vertical-align: middle;
+}
+
+.ks-checkout-grid tr {
+  cursor: pointer;
+}
+
+.ks-checkout-grid tr.is-selected {
+  background: rgba(0,0,0,.03);
+  outline: 2px solid rgba(0,0,0,.10);
+  outline-offset: -2px;
+}
+
+.ks-checkout-grid img {
+  max-height: 34px;
+  width: auto;
+}
+
+/* Inputs */
+.ks-form-control,
+.ks-form-select {
+  max-width: 100%;
+}
+
+/* Form destinazione alternativa */
+.ks-dest-form {
+  width: 100%;
+  margin-top: 12px;
+  background: rgba(0,0,0,.02);
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 12px;
+}
+
+.ks-dest-form td {
+  padding: 8px;
+}
+
+/* Bottoni */
+.ks-btn {
+  padding: 10px 14px;
+  font-size: 14px;
+}
+
+/* Fallback per .btn-danger se il tema non lo definisce */
+.ks-btn.btn-danger {
+  background: #cc0000;
+  border-color: #cc0000;
+  color: #fff;
+}
+
+/* Responsive: evita overflow in mobile */
+@media (max-width: 991px) {
+  .ks-checkout-grid {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
