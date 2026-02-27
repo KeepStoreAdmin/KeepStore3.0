@@ -38,4 +38,30 @@ Partial Class UI_HomeDepartmentsMenu
         Return HttpUtility.HtmlEncode(Convert.ToString(obj))
     End Function
 
+    ' ============================================================
+' Prezzo: helper locale per databinding (fix compilazione)
+' NON cambia la logica: replica la funzione storica.
+' ============================================================
+Protected Function controlla_prezzo(ByVal prezzo As Double,
+                                   ByVal prezzo_ivato As Double,
+                                   ByVal prezzo_promo As Double,
+                                   ByVal prezzo_promo_ivato As Double,
+                                   ByVal iva_tipo As Integer) As String
+
+    If prezzo_promo > 0 Then
+        If iva_tipo = 1 Then
+            Return String.Format("{0:c}", prezzo_promo)
+        Else
+            Return String.Format("{0:c}", prezzo_promo_ivato)
+        End If
+    Else
+        If iva_tipo = 1 Then
+            Return String.Format("{0:c}", prezzo)
+        Else
+            Return String.Format("{0:c}", prezzo_ivato)
+        End If
+    End If
+
+    End Function
+
 End Class

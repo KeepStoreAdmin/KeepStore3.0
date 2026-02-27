@@ -1,4 +1,4 @@
-<%@ Page Language="VB" AutoEventWireup="false" CodeFile="articolo.aspx.vb" Inherits="articolo" MasterPageFile="~/Page.master" %>
+<%@ Page Language="VB" AutoEventWireup="false" CodeFile="articolo.aspx.vb" Inherits="articolo" MasterPageFile="~/Public/ui/master/Site.master" %>
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
     <asp:Literal ID="litJsonLdHead" runat="server" />
