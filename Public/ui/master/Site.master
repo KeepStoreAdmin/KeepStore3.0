@@ -1,4 +1,6 @@
 <%@ Master Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Site.master.vb" Inherits="SiteMaster" %>
+<%@ Register Src="~/Public/ui/controls/SiteHeader.ascx" TagPrefix="ks" TagName="SiteHeader" %>
+<%@ Register Src="~/Public/ui/controls/SiteFooter.ascx" TagPrefix="ks" TagName="SiteFooter" %>
 
 <asp:Content ID="TitleContent1" ContentPlaceHolderID="TitleContent" runat="server">
     <asp:ContentPlaceHolder ID="TitleContent" runat="server" />
@@ -6,6 +8,10 @@
 
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
+</asp:Content>
+
+<asp:Content ID="HeaderContent1" ContentPlaceHolderID="HeaderContent" runat="server">
+    <ks:SiteHeader ID="SiteHeader1" runat="server" />
 </asp:Content>
 
 <asp:Content ID="MainContent1" ContentPlaceHolderID="MainContent" runat="server">
@@ -19,6 +25,10 @@
 
 <asp:Content ID="cph_1" ContentPlaceHolderID="cph" runat="server">
     <asp:ContentPlaceHolder ID="cph" runat="server" />
+</asp:Content>
+
+<asp:Content ID="FooterContent1" ContentPlaceHolderID="FooterContent" runat="server">
+    <ks:SiteFooter ID="SiteFooter1" runat="server" />
 </asp:Content>
 
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">

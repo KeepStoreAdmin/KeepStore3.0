@@ -47,6 +47,37 @@ Partial Class PageMaster
     End Function
 
 
+    '==========================================================
+    ' UI wiring: header/menu events when header is in UserControl
+    '==========================================================
+    Private _headerEventsWired As Boolean = False
+
+    Private Sub WireHeaderEvents()
+        If _headerEventsWired Then Exit Sub
+        _headerEventsWired = True
+
+        Try
+            Dim btnSearchCtrl As HtmlButton = FindCtrl(Of HtmlButton)("btnSearch")
+            If btnSearchCtrl IsNot Nothing Then AddHandler btnSearchCtrl.ServerClick, AddressOf btnSearch_ServerClick
+
+            Dim btnSearchMobileCtrl As HtmlButton = FindCtrl(Of HtmlButton)("btnSearchMobile")
+            If btnSearchMobileCtrl IsNot Nothing Then AddHandler btnSearchMobileCtrl.ServerClick, AddressOf btnSearch_ServerClick
+
+            Dim tbCercaMobileCtrl As TextBox = FindCtrl(Of TextBox)("tbCercaMobile")
+            If tbCercaMobileCtrl IsNot Nothing Then AddHandler tbCercaMobileCtrl.TextChanged, AddressOf tbCercaMobile_TextChanged
+
+            Dim rptNavSettoriCtrl As Repeater = FindCtrl(Of Repeater)("rptNavSettori")
+            If rptNavSettoriCtrl IsNot Nothing Then AddHandler rptNavSettoriCtrl.ItemDataBound, AddressOf rptNavSettori_ItemDataBound
+
+            Dim rptNavSettoriMobileCtrl As Repeater = FindCtrl(Of Repeater)("rptNavSettoriMobile")
+            If rptNavSettoriMobileCtrl IsNot Nothing Then AddHandler rptNavSettoriMobileCtrl.ItemDataBound, AddressOf rptNavSettoriMobile_ItemDataBound
+        Catch
+            ' fail-safe
+        End Try
+    End Sub
+
+
+
 
     ' Helper: safely add controls to <head> (works even if Header is missing)
     Private Sub AddToHeader(ByVal c As Control)
@@ -388,6 +419,9 @@ Dim IvaTipo As Integer
         conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
         conn2.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
         cmd.Connection = conn
+
+        ' Wire header/menu events (header may be rendered via UserControl)
+        WireHeaderEvents()
 
 
 
@@ -894,10 +928,10 @@ End Sub
                 email = "info@" & host
             End If
 
-            Dim lit As Literal = TryCast(Me.FindControl("litSupportEmail"), Literal)
+            Dim lit As Literal = FindCtrl(Of Literal)("litSupportEmail")
             If lit IsNot Nothing Then lit.Text = HttpUtility.HtmlEncode(email)
 
-            Dim a As HtmlAnchor = TryCast(Me.FindControl("lnkSupportEmail"), HtmlAnchor)
+            Dim a As HtmlAnchor = FindCtrl(Of HtmlAnchor)("lnkSupportEmail")
             If a IsNot Nothing Then a.HRef = "mailto:" & email
         Catch
             ' no-op
@@ -2057,6 +2091,7 @@ Protected Sub rptNavSettori_ItemDataBound(ByVal sender As Object, ByVal e As Rep
 
         Dim rpt As Repeater = TryCast(e.Item.FindControl("rptNavCategorie"), Repeater)
         If rpt IsNot Nothing Then
+            AddHandler rpt.ItemDataBound, AddressOf rptNavCategorie_ItemDataBound
             rpt.DataSource = s.Categorie
             rpt.DataBind()
         End If
@@ -2086,6 +2121,7 @@ Protected Sub rptNavSettoriMobile_ItemDataBound(ByVal sender As Object, ByVal e 
 
         Dim rpt As Repeater = TryCast(e.Item.FindControl("rptNavCategorieMobile"), Repeater)
         If rpt IsNot Nothing Then
+            AddHandler rpt.ItemDataBound, AddressOf rptNavCategorieMobile_ItemDataBound
             rpt.DataSource = s.Categorie
             rpt.DataBind()
         End If
