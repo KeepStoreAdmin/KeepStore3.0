@@ -1,15 +1,14 @@
 <%@ Control Language="VB" AutoEventWireup="false" CodeFile="Breadcrumb.ascx.vb" Inherits="Breadcrumb" %>
+
 <asp:PlaceHolder ID="phBreadcrumb" runat="server" Visible="false">
-    <section class="ks-breadcrumb py-3">
+    <div class="tf-sp-1 pb-0 ks-breadcrumb">
         <div class="container">
-            <div class="d-flex flex-column gap-1">
-                <asp:Literal ID="litTitle" runat="server" EnableViewState="False" />
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb mb-0">
-                        <asp:Literal ID="litCrumbs" runat="server" EnableViewState="False" />
-                    </ol>
-                </nav>
+            <asp:Literal ID="litTitle" runat="server" EnableViewState="false" />
+            <div class="tf-breadcrumb-wrap">
+                <div class="tf-breadcrumb-list">
+                    <asp:Literal ID="litCrumbs" runat="server" EnableViewState="false" />
+                </div>
             </div>
         </div>
-    </section>
+    </div>
 </asp:PlaceHolder>

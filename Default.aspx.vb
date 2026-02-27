@@ -1,16 +1,32 @@
 Imports MySql.Data.MySqlClient
-
 Imports System.Data
+Imports System.Web.UI
+Imports System.Web.UI.WebControls
+
 Partial Class _Default
     Inherits System.Web.UI.Page
 
+    ' --- FindControl ricorsivo (VB2012-safe) ---
+    Private Function FindCtrl(Of T As Control)(ByVal id As String) As T
+        Return TryCast(FindCtrlRecursive(Me, id), T)
+    End Function
+
+    Private Function FindCtrlRecursive(ByVal root As Control, ByVal id As String) As Control
+        If root Is Nothing Then Return Nothing
+        Dim c As Control = root.FindControl(id)
+        If c IsNot Nothing Then Return c
+        For Each child As Control In root.Controls
+            Dim found As Control = FindCtrlRecursive(child, id)
+            If found IsNot Nothing Then Return found
+        Next
+        Return Nothing
+    End Function
+
     ' VB2012-safe helper: read integer session values with a default fallback.
-    ' Some installs don't set these session keys; without a default they produce LIMIT 0.
     Private Function GetSessionInt(ByVal key As String, ByVal defaultValue As Integer) As Integer
         Try
             Dim raw As Object = Session(key)
             If raw Is Nothing Then Return defaultValue
-
             Dim n As Integer
             If Integer.TryParse(Convert.ToString(raw), n) Then
                 If n > 0 Then Return n
@@ -29,9 +45,18 @@ Partial Class _Default
         nonQuerya
         scalar
     End Enum
-    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
 
+    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         Me.Session("InOfferta") = 0
+
+        Dim sdsNew As SqlDataSource = FindCtrl(Of SqlDataSource)("SdsNewArticoli")
+        Dim sdsVetrina As SqlDataSource = FindCtrl(Of SqlDataSource)("SdsArticoliInVetrina")
+        Dim sdsBest As SqlDataSource = FindCtrl(Of SqlDataSource)("sdsPiuAcquistati")
+
+        If sdsNew Is Nothing OrElse sdsVetrina Is Nothing OrElse sdsBest Is Nothing Then
+            ' Fail-safe: non bloccare la home se il controllo non è presente.
+            Return
+        End If
 
         Dim sqlString As String
         Dim sqlBaseTable As String
@@ -47,8 +72,11 @@ Partial Class _Default
         Dim vsuperarticoliFieldsAndIvaFromVsuperarticoli As String =
             "vsuperarticoli.id as Articoliid, vsuperarticoli.TCId, vsuperarticoli.Codice, vsuperarticoli.Ean, vsuperarticoli.Descrizione1, vsuperarticoli.Descrizione2, " &
             "vsuperarticoli.MarcheId, vsuperarticoli.Marche_img, vsuperarticoli.SettoriId, vsuperarticoli.CategorieId, vsuperarticoli.TipologieId, vsuperarticoli.GruppiId, vsuperarticoli.SottoGruppiId, " &
-            "vsuperarticoli.iva as ivaId, vsuperarticoli.UmId, vsuperarticoli.ListinoUfficiale, vsuperarticoli.img1, vsuperarticoli.Prezzo, " & prezzoIvato & ", " &
-            "vsuperarticoli.PrezzoPromo, " & prezzoPromoIvato & ", vsuperarticoli.InOfferta, vsuperarticoli.speditoGratis, " & iva & " " &
+            "vsuperarticoli.iva as ivaId, vsuperarticoli.UmId, vsuperarticoli.ListinoUfficiale, vsuperarticoli.img1, vsuperarticoli.Prezzo, " &
+            prezzoIvato & ", " &
+            "vsuperarticoli.PrezzoPromo, " &
+            prezzoPromoIvato & ", vsuperarticoli.InOfferta, vsuperarticoli.speditoGratis, " &
+            iva & " " &
             "FROM vsuperarticoli LEFT OUTER JOIN iva ON iva.id = vsuperarticoli.iva"
 
         Dim tagliecoloriJoin As String =
@@ -58,10 +86,9 @@ Partial Class _Default
 
         Dim id As String
         Dim vsuperarticoliId As String
-
         Dim TC As Integer = 0
-        If Session("TC") IsNot Nothing Then Integer.TryParse(Session("TC").ToString(), TC)
 
+        If Session("TC") IsNot Nothing Then Integer.TryParse(Session("TC").ToString(), TC)
         If TC = 1 Then
             id = "TCId"
             vsuperarticoliId = id
@@ -71,12 +98,11 @@ Partial Class _Default
         End If
 
         ' -------------------------------
-        ' Nuovi arrivi (Repeat_Lista_Nuovi_Arrivi)
+        ' Nuovi arrivi (SdsNewArticoli)
         ' -------------------------------
         sqlBaseTable = "(SELECT * FROM documenti WHERE tipoDocumentiid=11 OR tipoDocumentiid=22 ORDER BY id DESC LIMIT 20) AS documentibase"
         sqlBaseTable = "(SELECT articoliid, TCId FROM " & sqlBaseTable & " INNER JOIN documentirighe ON documentibase.id = documentirighe.DocumentiId GROUP BY " & id & " ORDER BY RAND()) AS articoliidTCIdTable"
         sqlBaseTable = "(SELECT " & vsuperarticoliFieldsAndIvaFromVsuperarticoli & " INNER JOIN " & sqlBaseTable & " ON articoliidTCIdTable." & id & " = vsuperarticoli." & vsuperarticoliId & " WHERE nlistino=@listino ORDER BY vsuperarticoli.PrezzoPromoIvato ASC) AS vsuperarticoliOrdered"
-
         table1 = "SELECT * FROM " & sqlBaseTable & " GROUP BY " & id
 
         If TC = 1 Then
@@ -86,16 +112,13 @@ Partial Class _Default
         End If
 
         table2 = "SELECT " & vsuperarticoliFieldsAndIvaFromVsuperarticoli & " INNER JOIN " & sqlBaseTable & " ON articolibase.id = vsuperarticoli." & vsuperarticoliId & " WHERE nlistino=@listino"
-
-        sqlString = "SELECT * FROM (" & table1 & " UNION ALL " & table2 & ") AS united ORDER BY RAND() LIMIT " &
-                    (GetSessionInt("VetrinaArticoliUltimiArriviPuntoVendita", 2) * 3).ToString()
-
+        sqlString = "SELECT * FROM (" & table1 & " UNION ALL " & table2 & ") AS united ORDER BY RAND() LIMIT " & (GetSessionInt("VetrinaArticoliUltimiArriviPuntoVendita", 2) * 3).ToString()
         sqlString = "SELECT *, taglie.descrizione AS taglia, colori.descrizione AS colore FROM (" & sqlString & ") " & tagliecoloriJoin
 
-        SdsNewArticoli.SelectCommand = sqlString
-        SdsNewArticoli.SelectParameters.Clear()
-        SdsNewArticoli.SelectParameters.Add("@listino", Session("listino"))
-        SdsNewArticoli.SelectParameters.Add("@ivaUtente", Session("Iva_Utente"))
+        sdsNew.SelectCommand = sqlString
+        sdsNew.SelectParameters.Clear()
+        sdsNew.SelectParameters.Add("@listino", Session("listino"))
+        sdsNew.SelectParameters.Add("@ivaUtente", Session("Iva_Utente"))
 
         ' -------------------------------
         ' Articoli in vetrina (SdsArticoliInVetrina)
@@ -105,15 +128,13 @@ Partial Class _Default
                        "WHERE articoli_listini.`NListino` = @listino AND articoli.vetrina = 1 ORDER BY id DESC LIMIT 50) AS vsuperarticoliids " &
                        "ON vsuperarticoliids.id = vsuperarticoli.`ArticoliListiniId` ORDER BY " & id & " DESC, PrezzoPromo ASC) AS vsuperarticoliOrdered"
 
-        sqlString = "SELECT * FROM " & sqlBaseTable & " GROUP BY " & id & " ORDER BY RAND() LIMIT " &
-                    (GetSessionInt("VetrinaArticoliImpatto", 2) * 3).ToString()
-
+        sqlString = "SELECT * FROM " & sqlBaseTable & " GROUP BY " & id & " ORDER BY RAND() LIMIT " & (GetSessionInt("VetrinaArticoliImpatto", 2) * 3).ToString()
         sqlString = "SELECT *, taglie.descrizione AS taglia, colori.descrizione AS colore FROM (" & sqlString & ") " & tagliecoloriJoin
 
-        SdsArticoliInVetrina.SelectCommand = sqlString
-        SdsArticoliInVetrina.SelectParameters.Clear()
-        SdsArticoliInVetrina.SelectParameters.Add("@listino", Session("listino"))
-        SdsArticoliInVetrina.SelectParameters.Add("@ivaUtente", Session("Iva_Utente"))
+        sdsVetrina.SelectCommand = sqlString
+        sdsVetrina.SelectParameters.Clear()
+        sdsVetrina.SelectParameters.Add("@listino", Session("listino"))
+        sdsVetrina.SelectParameters.Add("@ivaUtente", Session("Iva_Utente"))
 
         ' -------------------------------
         ' Più venduti (sdsPiuAcquistati)
@@ -124,557 +145,17 @@ Partial Class _Default
                        "WHERE articoliid>0 AND DATEDIFF(CURDATE(),documenti.DataDocumento)<15 " &
                        "GROUP BY " & id & " ORDER BY conteggio_vendite DESC LIMIT 50) AS documentiTable"
 
-        sqlBaseTable = "(SELECT Conteggio_Vendite, " & vsuperarticoliFieldsAndIvaFromVsuperarticoli & " INNER JOIN " & sqlBaseTable & " ON documentiTable." & id & "=vsuperarticoli." & vsuperarticoliId & " WHERE NListino=@listino ORDER BY Conteggio_vendite DESC, PrezzoPromoIvato ASC) as vsuperarticoliOrdered"
+        sqlBaseTable = "(SELECT Conteggio_Vendite, " & vsuperarticoliFieldsAndIvaFromVsuperarticoli &
+                       " INNER JOIN " & sqlBaseTable &
+                       " ON documentiTable." & id & "=vsuperarticoli." & vsuperarticoliId &
+                       " WHERE NListino=@listino ORDER BY Conteggio_vendite DESC, PrezzoPromoIvato ASC) as vsuperarticoliOrdered"
 
-        sqlString = "SELECT * FROM " & sqlBaseTable & " GROUP BY " & id & " ORDER BY conteggio_vendite DESC LIMIT " &
-                    (GetSessionInt("VetrinaArticoliPiuVenduti", 2) * 4).ToString()
-
+        sqlString = "SELECT * FROM " & sqlBaseTable & " GROUP BY " & id & " ORDER BY conteggio_vendite DESC LIMIT " & (GetSessionInt("VetrinaArticoliPiuVenduti", 2) * 4).ToString()
         sqlString = "SELECT *, taglie.descrizione AS taglia, colori.descrizione AS colore FROM (" & sqlString & ") " & tagliecoloriJoin
 
-        sdsPiuAcquistati.SelectCommand = sqlString
-        sdsPiuAcquistati.SelectParameters.Clear()
-        sdsPiuAcquistati.SelectParameters.Add("@listino", Session("listino"))
-        sdsPiuAcquistati.SelectParameters.Add("@ivaUtente", Session("Iva_Utente"))
-
-        ' -------------------------------
-        ' Pubblicità (banner)
-        ' -------------------------------
-        ' NOTA SICUREZZA/BUGFIX:
-        ' - Evito di concatenare la data dentro SQL (anche se è server-side) e uso un parametro @DataOdierna.
-                ' Gestione banner Home (posizione 4, ordinamento 1/2):
-        ' spostata in UserControl: ~/Public/ui/controls/HomeSideBanner.ascx
-
+        sdsBest.SelectCommand = sqlString
+        sdsBest.SelectParameters.Clear()
+        sdsBest.SelectParameters.Add("@listino", Session("listino"))
+        sdsBest.SelectParameters.Add("@ivaUtente", Session("Iva_Utente"))
     End Sub
-
-    Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
-
-
-        IvaTipo = 0
-        If Session("IvaTipo") IsNot Nothing Then Integer.TryParse(Session("IvaTipo").ToString(), IvaTipo)
-
-        If IvaTipo = 1 Then
-            Me.lblPrezzi.Text = "*Prezzi Iva Esclusa"
-        ElseIf IvaTipo = 2 Then
-            Me.lblPrezzi.Text = "*Prezzi Iva Inclusa"
-        End If
-
-        ' Gestione slideshow impression: spostata in UserControl (HomeHeroSlider)
-
-        ' SEO (Home)
-        EnsureHomeSeo()
-
-
-    End Sub
-    ' ==========================================================
-    ' SEO / AI-READINESS (HOME)
-    ' ==========================================================
-' ============================================================
-' SEO / JSON-LD (HOME)
-' ============================================================
-Private Sub EnsureHomeSeo()
-    Try
-        Dim baseUrl As String = Request.Url.GetLeftPart(UriPartial.Authority)
-        Dim canonical As String = baseUrl & ResolveUrl("~/")
-        If Not canonical.EndsWith("/") Then canonical &= "/"
-
-        Dim azienda As String = SafeSessionString("AziendaNome", "KeepStore")
-
-        Dim descr As String = SafeSessionString("AziendaDescrizione", "")
-        If String.IsNullOrWhiteSpace(descr) Then
-    descr = "E-commerce " & azienda & ": informatica, telefonia, periferiche, consumabili e accessori. Scopri offerte e nuovi arrivi con disponibilità aggiornata."
-End If
-        ' Versione breve per meta/OG/Twitter (evita descrizioni troppo lunghe)
-        Dim descrMeta As String = descr.Replace(ControlChars.Cr, " ").Replace(ControlChars.Lf, " ").Trim()
-        If descrMeta.Length > 170 Then descrMeta = descrMeta.Substring(0, 167) & "..."
-
-        Dim pageTitle As String = azienda & " | Informatica, Telefonia, Periferiche e Consumabili"
-        Me.Title = pageTitle
-
-        ' Meta standard
-        AddOrReplaceMeta("description", descrMeta)
-        AddOrReplaceMetaName("robots", "index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1")
-        AddOrReplaceCanonical(canonical)
-
-        ' Open Graph
-        AddOrReplaceMetaProperty("og:type", "website")
-        AddOrReplaceMetaProperty("og:locale", "it_IT")
-        AddOrReplaceMetaProperty("og:site_name", azienda)
-        AddOrReplaceMetaProperty("og:title", pageTitle)
-        AddOrReplaceMetaProperty("og:description", descrMeta)
-        AddOrReplaceMetaProperty("og:url", canonical)
-
-        ' Twitter
-        AddOrReplaceMetaName("twitter:title", pageTitle)
-        AddOrReplaceMetaName("twitter:description", descrMeta)
-
-        ' Immagine (logo/og)
-        Dim imageUrl As String = SafeSessionString("AziendaOgImage", "")
-        If String.IsNullOrWhiteSpace(imageUrl) Then
-            imageUrl = SafeSessionString("AziendaLogo", "")
-        End If
-
-        If Not String.IsNullOrWhiteSpace(imageUrl) Then
-            ' Normalizza URL assoluto
-            If Not (imageUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse imageUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) Then
-                If imageUrl.StartsWith("~/") OrElse imageUrl.StartsWith("/") Then
-                    imageUrl = baseUrl & ResolveUrl(imageUrl)
-                Else
-                    imageUrl = baseUrl & ResolveUrl("~/" & imageUrl.TrimStart("/"c))
-                End If
-            End If
-
-            AddOrReplaceMetaProperty("og:image", imageUrl)
-            AddOrReplaceMetaProperty("og:image:alt", azienda)
-            AddOrReplaceMetaName("twitter:card", "summary_large_image")
-            AddOrReplaceMetaName("twitter:image", imageUrl)
-        Else
-            AddOrReplaceMetaName("twitter:card", "summary")
-        End If
-
-        ' JSON-LD @graph (SeoBuilder avanzato)
-        Dim logoUrl As String = SafeSessionString("AziendaLogo", "")
-        If Not String.IsNullOrWhiteSpace(logoUrl) Then
-            If Not (logoUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse logoUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) Then
-                If logoUrl.StartsWith("~/") OrElse logoUrl.StartsWith("/") Then
-                    logoUrl = baseUrl & ResolveUrl(logoUrl)
-                Else
-                    logoUrl = baseUrl & ResolveUrl("~/" & logoUrl.TrimStart("/"c))
-                End If
-            End If
-        End If
-
-        Dim jsonLdScript As String = SeoBuilder.BuildHomeJsonLd(Me, pageTitle, descr, canonical, logoUrl)
-        SeoBuilder.SetJsonLdOnMaster(Me, jsonLdScript)
-
-    Catch
-        ' Fail-safe: non bloccare il rendering della home per errori SEO
-    End Try
-End Sub
-
-    Private Sub AddOrReplaceCanonical(ByVal href As String)
-        Dim toRemove As New System.Collections.Generic.List(Of System.Web.UI.Control)()
-
-        For Each c As System.Web.UI.Control In Page.Header.Controls
-            Dim lnk As System.Web.UI.HtmlControls.HtmlLink = TryCast(c, System.Web.UI.HtmlControls.HtmlLink)
-            If lnk IsNot Nothing Then
-                Dim rel As String = Convert.ToString(lnk.Attributes("rel"))
-                If Not String.IsNullOrEmpty(rel) AndAlso String.Equals(rel, "canonical", StringComparison.OrdinalIgnoreCase) Then
-                    toRemove.Add(c)
-                End If
-            End If
-        Next
-
-        For Each c As System.Web.UI.Control In toRemove
-            Page.Header.Controls.Remove(c)
-        Next
-
-        Dim hl As New System.Web.UI.HtmlControls.HtmlLink()
-        hl.Attributes("rel") = "canonical"
-        hl.Href = href
-        Page.Header.Controls.Add(hl)
-    End Sub
-
-    Private Sub AddOrReplaceMeta(ByVal name As String, ByVal content As String)
-        Dim toRemove As New System.Collections.Generic.List(Of System.Web.UI.Control)()
-
-        For Each c As System.Web.UI.Control In Page.Header.Controls
-            Dim m As System.Web.UI.HtmlControls.HtmlMeta = TryCast(c, System.Web.UI.HtmlControls.HtmlMeta)
-            If m IsNot Nothing AndAlso String.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase) Then
-                toRemove.Add(c)
-            End If
-        Next
-
-        For Each c As System.Web.UI.Control In toRemove
-            Page.Header.Controls.Remove(c)
-        Next
-
-        Dim meta As New System.Web.UI.HtmlControls.HtmlMeta()
-        meta.Name = name
-        meta.Content = content
-        Page.Header.Controls.Add(meta)
-    End Sub
-
-
-' ------------------------------------------------------------
-' Helpers
-' ------------------------------------------------------------
-Private Function SafeSessionString(ByVal key As String, ByVal fallback As String) As String
-    Try
-        If Session IsNot Nothing AndAlso Session(key) IsNot Nothing Then
-            Dim s As String = Convert.ToString(Session(key))
-            If Not String.IsNullOrEmpty(s) Then Return s
-        End If
-    Catch
-    End Try
-    Return fallback
-End Function
-
-Private Sub AddOrReplaceMetaName(ByVal metaName As String, ByVal content As String)
-    If Page Is Nothing OrElse Page.Header Is Nothing Then Return
-    If String.IsNullOrEmpty(metaName) Then Return
-
-    ' Remove existing <meta name="...">
-    For i As Integer = Page.Header.Controls.Count - 1 To 0 Step -1
-        Dim hm As HtmlMeta = TryCast(Page.Header.Controls(i), HtmlMeta)
-        If hm IsNot Nothing Then
-            If (Not String.IsNullOrEmpty(hm.Name)) AndAlso hm.Name.Equals(metaName, StringComparison.OrdinalIgnoreCase) Then
-                Page.Header.Controls.RemoveAt(i)
-            End If
-        End If
-    Next
-
-    Dim m As New HtmlMeta()
-    m.Name = metaName
-    m.Content = If(content, "")
-    Page.Header.Controls.Add(m)
-End Sub
-
-Private Sub AddOrReplaceMetaProperty(ByVal propertyName As String, ByVal content As String)
-    If Page Is Nothing OrElse Page.Header Is Nothing Then Return
-    If String.IsNullOrEmpty(propertyName) Then Return
-
-    ' Remove existing <meta property="...">
-    For i As Integer = Page.Header.Controls.Count - 1 To 0 Step -1
-        Dim hm As HtmlMeta = TryCast(Page.Header.Controls(i), HtmlMeta)
-        If hm IsNot Nothing Then
-            Dim prop As String = Nothing
-            If hm.Attributes IsNot Nothing Then prop = hm.Attributes("property")
-            If (Not String.IsNullOrEmpty(prop)) AndAlso prop.Equals(propertyName, StringComparison.OrdinalIgnoreCase) Then
-                Page.Header.Controls.RemoveAt(i)
-            End If
-        End If
-    Next
-
-    Dim m As New HtmlMeta()
-    m.Attributes("property") = propertyName
-    m.Content = If(content, "")
-    Page.Header.Controls.Add(m)
-End Sub
-
-
-    ' STEP6: JSON-LD realmente emesso in <head> (prima era vuoto)
-
-    ' ===========================
-    ' BANNER HOME: Impression tracking (sicuro, parametrizzato)
-    ' ===========================
-    Private ReadOnly _pubblicitaImpressionDedup As New System.Collections.Generic.HashSet(Of Integer)()
-
-    Protected Sub RepeaterPubblicita_id4_pos1_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
-        If e Is Nothing OrElse e.Item Is Nothing Then Exit Sub
-        If e.Item.ItemType <> ListItemType.Item AndAlso e.Item.ItemType <> ListItemType.AlternatingItem Then Exit Sub
-
-        Dim idPub As Integer = 0
-        Dim objId As Object = DataBinder.Eval(e.Item.DataItem, "id")
-        If objId IsNot Nothing Then Integer.TryParse(objId.ToString(), idPub)
-
-        If idPub > 0 Then IncrementPubblicitaImpression(idPub)
-    End Sub
-
-    Protected Sub RepeaterPubblicita_id4_pos2_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
-        If e Is Nothing OrElse e.Item Is Nothing Then Exit Sub
-        If e.Item.ItemType <> ListItemType.Item AndAlso e.Item.ItemType <> ListItemType.AlternatingItem Then Exit Sub
-
-        Dim idPub As Integer = 0
-        Dim objId As Object = DataBinder.Eval(e.Item.DataItem, "id")
-        If objId IsNot Nothing Then Integer.TryParse(objId.ToString(), idPub)
-
-        If idPub > 0 Then IncrementPubblicitaImpression(idPub)
-    End Sub
-
-    Private Sub IncrementPubblicitaImpression(ByVal idPubblicita As Integer)
-        Try
-            If idPubblicita <= 0 Then Exit Sub
-            If _pubblicitaImpressionDedup.Contains(idPubblicita) Then Exit Sub
-
-            _pubblicitaImpressionDedup.Add(idPubblicita)
-
-            Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-
-            Using conn As New MySqlConnection(cs)
-                conn.Open()
-
-                Dim sql As String =
-                    "UPDATE pubblicitaV2 SET numero_impressioni_attuale = numero_impressioni_attuale + 1 " &
-                    "WHERE (id=@id) AND (abilitato=1) " &
-                    "AND ((limite_impressioni IS NULL) OR (limite_impressioni=0) OR (numero_impressioni_attuale < limite_impressioni))"
-
-                Using cmd As New MySqlCommand(sql, conn)
-                    cmd.Parameters.AddWithValue("@id", idPubblicita)
-                    cmd.ExecuteNonQuery()
-                End Using
-            End Using
-
-        Catch
-            ' Non bloccare la pagina home per tracking impression
-        End Try
-    End Sub
-
-    ' Risolve in modo robusto i percorsi immagini provenienti dal DB
-    Protected Function ResolveMediaUrl(rawPath As Object, defaultFolderInPublic As String) As String
-        Dim p As String = If(rawPath Is Nothing, "", rawPath.ToString().Trim())
-
-        If String.IsNullOrEmpty(p) Then Return ""
-
-        ' URL assoluto
-        If p.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse p.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
-            Return p
-        End If
-
-        ' Già in formato ASP.NET
-        If p.StartsWith("~/") Then
-            Return ResolveUrl(p)
-        End If
-
-        ' Path assoluto sito (/Public/..., /Images/...)
-        If p.StartsWith("/") Then
-            Return ResolveUrl("~" & p)
-        End If
-
-        ' Path relativo già completo
-        If p.StartsWith("Public/", StringComparison.OrdinalIgnoreCase) OrElse p.StartsWith("Images/", StringComparison.OrdinalIgnoreCase) Then
-            Return ResolveUrl("~/" & p)
-        End If
-
-        ' Solo filename: lo metto nella cartella standard
-        Dim folder As String = defaultFolderInPublic.Trim("/"c)
-        Return ResolveUrl("~/Public/" & folder & "/" & p.TrimStart("/"c))
-    End Function
-
-
-
-    '==========================================================
-    ' HOME - Settori (Dipartimenti): URL compatibile legacy (webaffare.it)
-    '==========================================================
-
-
-'==========================================================
-' HOME: URL helper per Settori (st/ct/tp) - template-first
-'==========================================================
-
-
-
-
-    ' ============================================================
-    ' Helper generali / slideshow / prezzi
-    ' ============================================================
-
-    ' NOTE: referenced directly from Default.aspx markup (For i = 1 To slides)
-    ' so it must not be Private.    ' ===========================
-    ' HARDENING OUTPUT (XSS / URL)
-    ' ===========================
-
-    Function SafeText(ByVal obj As Object) As String
-        Return System.Web.HttpUtility.HtmlEncode(Convert.ToString(obj))
-    End Function
-
-    Function SafeAttr(ByVal obj As Object) As String
-        Return System.Web.HttpUtility.HtmlAttributeEncode(Convert.ToString(obj))
-    End Function
-
-    ' Consente: URL relativi (/, ~/), o assoluti http/https (solo per HREF)
-    Function SafeUrl(ByVal urlObj As Object) As String
-        If urlObj Is Nothing OrElse IsDBNull(urlObj) Then Return ""
-        Dim raw As String = Convert.ToString(urlObj).Trim()
-        If raw = "" Then Return ""
-
-        Dim lower As String = raw.ToLowerInvariant()
-        If lower.StartsWith("javascript:") OrElse lower.StartsWith("data:") OrElse lower.StartsWith("vbscript:") Then
-            Return ""
-        End If
-
-        If raw.StartsWith("/") OrElse raw.StartsWith("~/") Then
-            Return raw
-        End If
-
-        Dim uri As Uri = Nothing
-        If Uri.TryCreate(raw, UriKind.Absolute, uri) Then
-            If uri.Scheme = Uri.UriSchemeHttp OrElse uri.Scheme = Uri.UriSchemeHttps Then
-                Return uri.ToString()
-            End If
-        End If
-
-        Return ""
-    End Function
-    Function SafeFileNameOnly(ByVal fileObj As Object) As String
-        If fileObj Is Nothing OrElse IsDBNull(fileObj) Then Return ""
-        Dim s As String = Convert.ToString(fileObj).Trim()
-        If s = "" Then Return ""
-
-        s = s.Replace("\\", "/")
-        s = s.Replace("\", "/")
-
-        ' blocco path traversal / path assoluti
-        If s.Contains("..") OrElse s.Contains(":") Then Return ""
-
-        ' prendo solo l'ultimo segmento
-        If s.Contains("/") Then
-            s = s.Substring(s.LastIndexOf("/"c) + 1)
-        End If
-
-        Return s
-    End Function
-    Function SafeBannerImageUrl(ByVal fileObj As Object) As String
-        Dim raw As String = Convert.ToString(fileObj)
-        If raw Is Nothing Then raw = ""
-        raw = raw.Trim().Replace("\\", "/").Replace("\", "/")
-        Dim low As String = raw.ToLowerInvariant()
-
-        If low = "" Then
-            Return ResolveUrl("~/Public/images/nofoto.gif")
-        End If
-
-        ' blocca schemi non sicuri
-        If low.StartsWith("javascript:") OrElse low.StartsWith("data:") Then
-            Return ResolveUrl("~/Public/images/nofoto.gif")
-        End If
-
-        ' URL assoluti (http/https)
-        If low.StartsWith("http://") OrElse low.StartsWith("https://") Then
-            Return raw
-        End If
-
-        ' percorsi già assoluti / virtuali
-        If low.StartsWith("~/") Then
-            Return ResolveUrl(raw)
-        End If
-        If low.StartsWith("/") Then
-            Return raw
-        End If
-
-        ' pulizia: mantieni solo il nome file e ricostruisci nel folder banner
-        Dim fileName As String = SafeFileNameOnly(raw)
-        If fileName = "" Then
-            Return ResolveUrl("~/Public/images/nofoto.gif")
-        End If
-        Return ResolveUrl("~/Public/Banner/" & fileName)
-    End Function    ' ============================================================
-    ' Promo / prezzi / risparmio
-    ' ============================================================
-
-    Function controlla_promo(ByVal inpromo As Integer) As String
-        If inpromo = 1 Then
-            Return ""
-        Else
-            Return "none"
-        End If
-    End Function
-
-    Function calcola_risparmio(ByVal prezzo_listino As Double, ByVal prezzo1 As Object, ByVal prezzo2 As Object) As Double
-        Dim risparmio As Double
-        Dim prezzo As Double
-
-        If IsDBNull(prezzo2) OrElse prezzo2 Is Nothing OrElse CDbl(prezzo2) = 0 Then
-            If IsDBNull(prezzo1) OrElse prezzo1 Is Nothing Then
-                Return 0
-            End If
-            prezzo = Convert.ToDouble(prezzo1)
-        Else
-            prezzo = Convert.ToDouble(prezzo2)
-        End If
-
-        risparmio = Math.Round(prezzo_listino - prezzo, 2)
-        Return risparmio
-    End Function
-
-    Function controlla_risparmio(ByVal prezzo_listino As Double, ByVal prezzo1 As Object, ByVal prezzo2 As Object) As String
-        If prezzo_listino = 0 Then
-            Return "none"
-        ElseIf calcola_risparmio(prezzo_listino, prezzo1, prezzo2) < 0.01 Then
-            Return "none"
-        Else
-            Return ""
-        End If
-    End Function
-
-    Function controlla_prezzo(ByVal prezzo As Double,
-                              ByVal prezzo_ivato As Double,
-                              ByVal prezzo_promo As Double,
-                              ByVal prezzo_promo_ivato As Double,
-                              ByVal iva_tipo As Integer) As String
-
-        If prezzo_promo > 0 Then
-            If iva_tipo = 1 Then
-                Return String.Format("{0:c}", prezzo_promo)
-            Else
-                Return String.Format("{0:c}", prezzo_promo_ivato)
-            End If
-        Else
-            If iva_tipo = 1 Then
-                Return String.Format("{0:c}", prezzo)
-            Else
-                Return String.Format("{0:c}", prezzo_ivato)
-            End If
-        End If
-    End Function
-
-    Function compatta_testo(ByVal testo As String, ByVal lunghezza As Integer) As String
-        If String.IsNullOrEmpty(testo) Then
-            Return ""
-        End If
-
-        Dim testoFinale As String = Left(testo, lunghezza)
-        If testo.Length > lunghezza Then
-            testoFinale &= "..."
-        End If
-        Return testoFinale
-    End Function
-
-    Function sconto(ByVal listino_ufficiale As Double,
-                    ByVal prezzo_promo As Double,
-                    ByVal prezzo_promo_ivato As Double,
-                    ByVal iva_articolo As Double) As String
-
-        Dim percentuale As String = ""
-
-        If (prezzo_promo > 0 AndAlso prezzo_promo_ivato > 0 AndAlso listino_ufficiale > 0) Then
-            If Session("IvaTipo") = 1 Then
-                percentuale = String.Format("{0:0}", ((listino_ufficiale - prezzo_promo) * 100) / listino_ufficiale)
-            Else
-                Dim listino_ivato As Double = listino_ufficiale * ((iva_articolo / 100) + 1)
-                percentuale = String.Format("{0:0}", ((listino_ivato - prezzo_promo_ivato) * 100) / listino_ivato)
-            End If
-        End If
-
-        Return "- " & percentuale & "%"
-    End Function
-
-    ' ============================================================
-    ' Immagini articoli: path hardening
-    ' ============================================================
-
-    Function checkImg(ByVal imgname As Object) As String
-        ' nulla / DBNull
-        If imgname Is Nothing OrElse Convert.IsDBNull(imgname) Then
-            Return ResolveUrl("~/Public/images/nofoto.gif")
-        End If
-
-        Dim fileName As String = Convert.ToString(imgname).Trim()
-        If String.IsNullOrEmpty(fileName) Then
-            Return ResolveUrl("~/Public/images/nofoto.gif")
-        End If
-
-        fileName = fileName.Replace("\\", "/")
-        fileName = fileName.Replace("\", "/")
-
-        ' blocco traversal
-        If fileName.Contains("..") OrElse fileName.Contains(":") Then
-            Return ResolveUrl("~/Public/images/nofoto.gif")
-        End If
-
-        ' già path (relativo sito)
-        If fileName.StartsWith("~/") Then
-            Return ResolveUrl(fileName)
-        End If
-        If fileName.StartsWith("/") Then
-            Return fileName
-        End If
-
-        ' nome file semplice
-        If fileName.Contains("/") Then
-            fileName = fileName.Substring(fileName.LastIndexOf("/"c) + 1)
-        End If
-
-        Return ResolveUrl("~/Public/images/articoli/" & fileName)
-    End Function
-
 End Class

@@ -17,19 +17,21 @@ Partial Class Breadcrumb
     Protected Overrides Sub OnPreRender(ByVal e As EventArgs)
         MyBase.OnPreRender(e)
 
-        If Me.Page Is Nothing OrElse Me.Page.Request Is Nothing OrElse Me.Page.Request.Url Is Nothing Then
+        If Me.Page Is Nothing OrElse Me.Page.Request Is Nothing Then
             phBreadcrumb.Visible = False
             Return
         End If
 
-        Dim path As String = String.Empty
+        Dim pathLower As String = String.Empty
         Try
-            path = Me.Page.Request.Url.AbsolutePath
+            pathLower = Convert.ToString(Me.Page.Request.Url.AbsolutePath).ToLowerInvariant()
         Catch
-            path = Me.Page.Request.Path
+            Try
+                pathLower = Convert.ToString(Me.Page.Request.Path).ToLowerInvariant()
+            Catch
+                pathLower = String.Empty
+            End Try
         End Try
-
-        Dim pathLower As String = If(path, String.Empty).ToLowerInvariant()
 
         Dim isHome As Boolean = False
         If pathLower = "/" OrElse pathLower.EndsWith("/default.aspx") Then
@@ -51,27 +53,25 @@ Partial Class Breadcrumb
             Return
         End If
 
-        ' Title
+        ' Title (markup/spacing allineati al tema)
         If ShowTitle Then
-            litTitle.Text = "<h1 class=""h6 mb-0 fw-semibold"">" & HttpUtility.HtmlEncode(title) & "</h1>"
+            litTitle.Text = "<h1 class=""h5 mb-1 fw-semibold"">" & HttpUtility.HtmlEncode(title) & "</h1>"
         Else
             litTitle.Text = String.Empty
         End If
 
-        ' Trail
+        ' Trail: stile tema (con freccia)
         Dim sb As New StringBuilder()
-        sb.Append("<li class=""breadcrumb-item""><a href=""Default.aspx"">Home</a></li>")
-        sb.Append("<li class=""breadcrumb-item active"" aria-current=""page"">")
-        sb.Append(HttpUtility.HtmlEncode(title))
-        sb.Append("</li>")
-        litCrumbs.Text = sb.ToString()
+        sb.Append("<a href=""Default.aspx"" class=""text"">Home</a>")
+        sb.Append(" <i class=""icon icon-arrow-right""></i> ")
+        sb.Append("<span class=""text"">" & HttpUtility.HtmlEncode(title) & "</span>")
 
+        litCrumbs.Text = sb.ToString()
         phBreadcrumb.Visible = True
     End Sub
 
     Private Function GetTitleFromPageOrPath(ByVal pathLower As String) As String
         Dim t As String = String.Empty
-
         Try
             t = If(Me.Page IsNot Nothing, Me.Page.Title, String.Empty)
         Catch
@@ -84,7 +84,6 @@ Partial Class Breadcrumb
                 t = Regex.Replace(t, "\s*-\s*KeepStore\s*$", "", RegexOptions.IgnoreCase).Trim()
             Catch
             End Try
-
             If Not String.IsNullOrWhiteSpace(t) Then Return t
         End If
 
@@ -102,42 +101,27 @@ Partial Class Breadcrumb
         Dim f As String = If(file, String.Empty).ToLowerInvariant()
 
         Select Case f
-            Case "articoli.aspx"
-                Return "Catalogo"
-            Case "articolo.aspx"
-                Return "Prodotto"
-            Case "carrello.aspx"
-                Return "Carrello"
-            Case "checkout.aspx"
-                Return "Checkout"
-            Case "myaccount.aspx"
-                Return "Account"
-            Case "login.aspx"
-                Return "Accedi"
-            Case "register.aspx"
-                Return "Registrati"
-            Case "documenti.aspx"
-                Return "Ordini"
-            Case "documentidettaglio.aspx"
-                Return "Dettaglio ordine"
-            Case "contattaci.aspx", "contact.aspx"
-                Return "Contatti"
-            Case "faq.aspx"
-                Return "FAQ"
-            Case "about.aspx"
-                Return "Chi siamo"
+            Case "articoli.aspx" : Return "Catalogo"
+            Case "articolo.aspx" : Return "Prodotto"
+            Case "carrello.aspx" : Return "Carrello"
+            Case "checkout.aspx" : Return "Checkout"
+            Case "myaccount.aspx" : Return "Account"
+            Case "login.aspx" : Return "Accedi"
+            Case "register.aspx" : Return "Registrati"
+            Case "documenti.aspx" : Return "Ordini"
+            Case "documentidettaglio.aspx" : Return "Dettaglio ordine"
+            Case "contattaci.aspx", "contact.aspx" : Return "Contatti"
+            Case "faq.aspx" : Return "FAQ"
+            Case "about.aspx" : Return "Chi siamo"
         End Select
 
         If String.IsNullOrWhiteSpace(f) Then Return String.Empty
 
-        ' Fallback: nome file -> titolo leggibile
         Dim nameOnly As String = f
         If nameOnly.EndsWith(".aspx") Then nameOnly = nameOnly.Substring(0, nameOnly.Length - 5)
         nameOnly = nameOnly.Replace("-", " ").Replace("_", " ").Trim()
-
         If nameOnly.Length = 0 Then Return String.Empty
 
         Return Char.ToUpperInvariant(nameOnly(0)) & nameOnly.Substring(1)
     End Function
-
 End Class
