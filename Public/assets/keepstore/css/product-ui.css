@@ -1,0 +1,99 @@
+/* KeepStore UI contract (product detail)
+   - Naming neutro (ks-*)
+   - Nessun riferimento a template terzi
+*/
+
+.ks-product-page .ks-product-gallery-main {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ks-product-page .ks-product-gallery-main .swiper-button-prev,
+.ks-product-page .ks-product-gallery-main .swiper-button-next {
+  /* lasciamo al tema le icone; qui solo UX */
+  opacity: 0.95;
+}
+
+.ks-product-page .ks-product-gallery-thumbs .swiper-slide {
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.ks-product-page .ks-product-gallery-thumbs .swiper-slide-thumb-active {
+  opacity: 1;
+}
+
+.ks-product-thumb {
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Buy box sticky su desktop */
+@media (min-width: 992px) {
+  .ks-product-buy {
+    position: sticky;
+    top: 90px;
+  }
+}
+
+/* Prezzo: fallback robusto (non dipende dai nomi classe del VB) */
+.ks-product-price {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ks-product-price .price,
+.ks-product-price .new-price,
+.ks-product-price ins {
+  font-size: 1.6rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ks-product-price .old-price,
+.ks-product-price del,
+.ks-product-price s,
+.ks-product-price strike {
+  opacity: 0.65;
+  text-decoration: line-through;
+}
+
+.ks-product-meta li + li {
+  margin-top: 0.5rem;
+}
+
+/* Quantità */
+.ks-qty-stepper {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+}
+
+.ks-qty-stepper .ks-qty-btn {
+  width: 44px;
+}
+
+.ks-qty-stepper .ks-qty-input {
+  flex: 1;
+  min-width: 0;
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
+}
+
+/* Descrizione lunga: evita overflow immagini/tabelle */
+.ks-product-description img,
+.ks-product-description table {
+  max-width: 100%;
+}
+
+/* Card correlati */
+.ks-product-card-image img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
