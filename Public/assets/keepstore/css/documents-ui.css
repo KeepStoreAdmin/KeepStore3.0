@@ -1,0 +1,59 @@
+/* ============================================================
+   KeepStore 3.0 - Documents UI patches
+   Scopo: migliorare leggibilità/spacing delle pagine documenti (account)
+   Nota: CSS SCOPED (si attiva solo con classi body aggiunte via ks-page-flags.js)
+   ============================================================ */
+
+body.ks-page-documents main {
+  padding-top: 0;
+}
+
+/* Tabelle documenti: più leggibili e responsive */
+body.ks-page-documents .table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+body.ks-page-documents table.table {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+body.ks-page-documents table.table thead th {
+  font-weight: 600;
+  font-size: .875rem;
+  white-space: nowrap;
+}
+
+body.ks-page-documents table.table tbody td {
+  font-size: .925rem;
+}
+
+/* Pulsanti icona (azioni: dettaglio/paga/tracking) */
+body.ks-page-documents .ks-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: .6rem;
+  text-decoration: none;
+  border: 1px solid rgba(0,0,0,.12);
+  background: rgba(0,0,0,.02);
+}
+
+body.ks-page-documents .ks-icon-btn:hover {
+  background: rgba(0,0,0,.05);
+}
+
+/* Micro tipografia in info/note */
+body.ks-page-documents .ks-doc-meta,
+body.ks-page-documents .ks-doc-notes {
+  font-size: .925rem;
+}
+
+/* Migliora resa dei controlli data/filtri se legacy */
+body.ks-page-documents input[type="date"],
+body.ks-page-documents select {
+  max-width: 100%;
+}

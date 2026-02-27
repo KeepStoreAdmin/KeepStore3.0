@@ -50,15 +50,32 @@
   };
 
   if (accountPages[file]) addBodyClass('ks-page-account');
+
+  var documentsPages = {
+    'documenti.aspx': true,
+    'documentidettaglio.aspx': true
+  };
+
+  if (documentsPages[file]) addBodyClass('ks-page-documents');
   if (authPages[file]) addBodyClass('ks-page-auth');
 
   function enhanceTables(root) {
     var tables = root.querySelectorAll('table');
     for (var i = 0; i < tables.length; i++) {
       var t = tables[i];
+
       // Evita di "rompere" eventuali tabelle già custom
       if (!t.classList.contains('table')) {
         t.classList.add('table', 'table-sm', 'align-middle');
+      }
+
+      // Wrapper responsive: se già presente non fa nulla
+      var parent = t.parentElement;
+      if (parent && !parent.classList.contains('table-responsive')) {
+        var wrap = document.createElement('div');
+        wrap.className = 'table-responsive';
+        parent.insertBefore(wrap, t);
+        wrap.appendChild(t);
       }
     }
   }

@@ -93,7 +93,7 @@
     </asp:Panel>
 
     <!-- DataSources: restano qui per mantenere il contratto con Default.aspx.vb (FindCtrl). -->
-    <asp:SqlDataSource ID="SdsNewArticoli" runat="server"></asp:SqlDataSource>
-    <asp:SqlDataSource ID="SdsArticoliInVetrina" runat="server"></asp:SqlDataSource>
-    <asp:SqlDataSource ID="sdsPiuAcquistati" runat="server"></asp:SqlDataSource>
+    <asp:SqlDataSource ID="SdsNewArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"></asp:SqlDataSource>
+    <asp:SqlDataSource ID="SdsArticoliInVetrina" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"></asp:SqlDataSource>
+    <asp:SqlDataSource ID="sdsPiuAcquistati" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"></asp:SqlDataSource>
 </div>

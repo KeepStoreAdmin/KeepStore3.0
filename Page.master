@@ -39,6 +39,7 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore-overrides.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-ui.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/documents-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/auth-ui.css") %>" />
 
 </head>
