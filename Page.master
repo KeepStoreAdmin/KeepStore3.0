@@ -93,6 +93,8 @@
 
             <!-- Main Content -->
             <main>
+                <asp:ContentPlaceHolder ID="BreadcrumbContent" runat="server" />
+
                 <asp:ContentPlaceHolder ID="MainContent" runat="server" />
 
                 <!-- Legacy aliases -->

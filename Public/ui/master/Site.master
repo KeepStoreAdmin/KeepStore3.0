@@ -1,6 +1,7 @@
 <%@ Master Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Site.master.vb" Inherits="SiteMaster" %>
 <%@ Register Src="~/Public/ui/controls/SiteHeader.ascx" TagPrefix="ks" TagName="SiteHeader" %>
 <%@ Register Src="~/Public/ui/controls/SiteFooter.ascx" TagPrefix="ks" TagName="SiteFooter" %>
+<%@ Register Src="~/Public/ui/controls/Breadcrumb.ascx" TagPrefix="ks" TagName="Breadcrumb" %>
 
 <asp:Content ID="TitleContent1" ContentPlaceHolderID="TitleContent" runat="server">
     <asp:ContentPlaceHolder ID="TitleContent" runat="server" />
@@ -14,11 +15,16 @@
     <ks:SiteHeader ID="SiteHeader1" runat="server" />
 </asp:Content>
 
+<asp:Content ID="BreadcrumbContent1" ContentPlaceHolderID="BreadcrumbContent" runat="server">
+    <asp:ContentPlaceHolder ID="BreadcrumbContent" runat="server">
+        <ks:Breadcrumb ID="Breadcrumb1" runat="server" />
+    </asp:ContentPlaceHolder>
+</asp:Content>
+
 <asp:Content ID="MainContent1" ContentPlaceHolderID="MainContent" runat="server">
     <asp:ContentPlaceHolder ID="MainContent" runat="server" />
 </asp:Content>
 
-<!-- Legacy aliases pass-through -->
 <asp:Content ID="ContentPlaceHolder1_1" ContentPlaceHolderID="ContentPlaceHolder1" runat="server">
     <asp:ContentPlaceHolder ID="ContentPlaceHolder1" runat="server" />
 </asp:Content>
