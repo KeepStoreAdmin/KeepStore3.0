@@ -53,15 +53,15 @@ Partial Class Breadcrumb
 
         ' Title
         If ShowTitle Then
-            litTitle.Text = "<h1 class=\"h6 mb-0 fw-semibold\">" & HttpUtility.HtmlEncode(title) & "</h1>"
+            litTitle.Text = "<h1 class=""h6 mb-0 fw-semibold"">" & HttpUtility.HtmlEncode(title) & "</h1>"
         Else
             litTitle.Text = String.Empty
         End If
 
         ' Trail
         Dim sb As New StringBuilder()
-        sb.Append("<li class=\"breadcrumb-item\"><a href=\"Default.aspx\">Home</a></li>")
-        sb.Append("<li class=\"breadcrumb-item active\" aria-current=\"page\">")
+        sb.Append("<li class=""breadcrumb-item""><a href=""Default.aspx"">Home</a></li>")
+        sb.Append("<li class=""breadcrumb-item active"" aria-current=""page"">")
         sb.Append(HttpUtility.HtmlEncode(title))
         sb.Append("</li>")
         litCrumbs.Text = sb.ToString()

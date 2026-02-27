@@ -1,4 +1,4 @@
-﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="carrello.aspx.vb" Inherits="carrello" Debug="false"%>
+<%@ Page Language="VB" MasterPageFile="~/Public/ui/master/Site.master" AutoEventWireup="false" CodeFile="carrello.aspx.vb" Inherits="carrello" Debug="false"%>
 
 <%@ Register Assembly="ConwayControls" Namespace="ConwayControls.Web" TagPrefix="ccwc" %>
 
@@ -43,19 +43,6 @@
 
 
     <!-- NOTE: rimosso frammento di markup corrotto rimasto da una migrazione precedente (carattere di controllo). -->
-
-    <!-- Breadcrumb -->
-    <div class="tf-sp-3 pb-0">
-        <div class="container">
-            <div class="tf-breadcrumb-wrap">
-                <div class="tf-breadcrumb-list">
-                    <a href="/Default.aspx" class="text">Home</a>
-                    <i class="icon icon-arrow-right"></i>
-                    <span class="text">Carrello</span>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <section class="s-shoping-cart tf-sp-2">
         <div class="container">
