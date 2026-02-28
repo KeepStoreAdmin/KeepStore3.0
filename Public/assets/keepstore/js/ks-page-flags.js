@@ -331,7 +331,8 @@
     root.appendChild(shell);
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
+    function applyKsEnhancements() {
+    try {
     // Preferisci il contenitore interno della shell (evita di wrappare header/footer)
     var root = document.querySelector('.ks-account-main') || document.querySelector('main') || document.body;
 
@@ -362,5 +363,25 @@
     if (document.body.classList.contains('ks-page-account') || document.body.classList.contains('ks-page-auth')) {
       dedupeBreadcrumb(document.querySelector('main') || document.body);
     }
-  });
+    } catch (e) {
+      // noop
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', applyKsEnhancements);
+
+  // Supporto UpdatePanel (postback parziali): ri-applica le enhancement UI
+  if (window.Sys && Sys.WebForms && Sys.WebForms.PageRequestManager) {
+    try {
+      var prm = Sys.WebForms.PageRequestManager.getInstance();
+      if (prm && !prm._ksEnhancementsHooked) {
+        prm._ksEnhancementsHooked = true;
+        prm.add_endRequest(function () {
+          applyKsEnhancements();
+        });
+      }
+    } catch (e) {
+      // noop
+    }
+  }
 })();

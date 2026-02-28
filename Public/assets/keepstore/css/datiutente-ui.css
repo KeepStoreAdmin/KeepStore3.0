@@ -1,6 +1,9 @@
 /* KeepStore 3.0 — Dati utente UI (Step 19)
    Solo UI: layout/spacing/tabs. Nessuna logica VB/DB. */
 
+/* Messaggi esito (Label server). Nasconde automaticamente se vuoto. */
+.ks-esito:empty{display:none;}
+
 .ks-userdata-tabs {
   border-bottom: 1px solid rgba(0,0,0,.08);
 }

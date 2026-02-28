@@ -60,6 +60,8 @@
         <asp:UpdatePanel ID="updMain" runat="server" UpdateMode="Conditional">
             <ContentTemplate>
 
+                <asp:Label ID="lblEsito" runat="server" EnableViewState="false" CssClass="ks-esito alert alert-info py-2 px-3 mb-3" />
+
                 <%--
                     Compatibilità: in base alle versioni del progetto, il code-behind può
                     referenziare FormView con ID differenti.
