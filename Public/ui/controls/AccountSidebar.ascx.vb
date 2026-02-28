@@ -1,125 +1,107 @@
 Imports System
-Imports System.IO
+Imports System.Web
+Imports System.Web.UI
+Imports System.Web.UI.HtmlControls
 
-Partial Class AccountSidebar
+Partial Class Public_ui_controls_AccountSidebar
     Inherits System.Web.UI.UserControl
 
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
-        Dim file As String = ""
-        Try
-            file = Path.GetFileName(Request.Path).ToLowerInvariant()
-        Catch
-            file = ""
-        End Try
+        Dim currentKey As String = GetCurrentActiveKey()
+        Dim currentPage As String = GetCurrentPageName()
 
-        ' Renderizza la sidebar solo nell'area account (evita overhead su tutte le pagine)
-        Dim isAccountArea As Boolean =
-            (file = "myaccount.aspx") OrElse
-            (file = "datiutente.aspx") OrElse
-            (file = "documenti.aspx") OrElse
-            (file = "documentidettaglio.aspx") OrElse
-            (file = "wishlist.aspx") OrElse
-            (file = "password.aspx") OrElse
-            (file = "cambiapassword.aspx") OrElse
-            (file = "ordini.aspx") OrElse
-            (file = "indirizzi.aspx")
-
-        If Not isAccountArea Then
+        ' Se non siamo in un'area account, non mostriamo il menu (evita visualizzazioni fuori contesto)
+        If Not IsAccountArea(currentPage) Then
             Me.Visible = False
             Return
         End If
 
-        Try
-            NormalizeOptionalAliases()
-            HighlightActive(file)
-        Catch
-            ' No-op: UI enhancement only
-        End Try
+        SetActiveMenuCss(currentKey, currentPage)
     End Sub
 
-    Private Sub NormalizeOptionalAliases()
-        ' Password page: alcune installazioni usano password.aspx, altre cambiapassword.aspx
-        Dim pwd As String = ResolveExistingPage("password.aspx", "cambiapassword.aspx")
-        If Not String.IsNullOrEmpty(pwd) Then
-            lnkChangePassword.HRef = pwd
-        End If
-
-        ' Recover access: remind.aspx oppure recuperoaccesso.aspx
-        Dim rec As String = ResolveExistingPage("remind.aspx", "recuperoaccesso.aspx")
-        If Not String.IsNullOrEmpty(rec) Then
-            lnkRecoverAccess.HRef = rec
-        End If
-
-        ' Logout: se manca, fallback su login.aspx?logout=1 (se esiste)
-        Dim lo As String = ResolveExistingPage("logout.aspx", Nothing)
-        If String.IsNullOrEmpty(lo) Then
-            Dim login As String = ResolveExistingPage("login.aspx", Nothing)
-            If Not String.IsNullOrEmpty(login) Then
-                lnkLogout.HRef = "login.aspx?logout=1"
-            End If
-        End If
-    End Sub
-
-    Private Function ResolveExistingPage(preferred As String, alternate As String) As String
-        Try
-            If Not String.IsNullOrEmpty(preferred) Then
-                Dim p As String = Server.MapPath("~/" & preferred)
-                If File.Exists(p) Then Return preferred
-            End If
-
-            If Not String.IsNullOrEmpty(alternate) Then
-                Dim a As String = Server.MapPath("~/" & alternate)
-                If File.Exists(a) Then Return alternate
-            End If
-        Catch
-            ' ignore
-        End Try
-
-        Return preferred
+    Private Function GetCurrentPageName() As String
+        Dim path As String = (Request.Url.AbsolutePath & "").ToLowerInvariant()
+        Dim fileName As String = System.IO.Path.GetFileName(path)
+        Return fileName
     End Function
 
-    Private Sub HighlightActive(file As String)
-        Dim t As String = Convert.ToString(Request("t"))
-        Dim tab As String = Convert.ToString(Request("tab"))
-        Dim isAddr As Boolean = String.Equals(tab, "addr", StringComparison.OrdinalIgnoreCase)
+    Private Function GetCurrentActiveKey() As String
+        Dim pageName As String = GetCurrentPageName()
 
-        SetActive(lnkDashboard, String.Equals(file, "myaccount.aspx", StringComparison.OrdinalIgnoreCase))
-
-        SetActive(lnkAccountDetails,
-                  String.Equals(file, "datiutente.aspx", StringComparison.OrdinalIgnoreCase) AndAlso (Not isAddr))
-
-        SetActive(lnkAddresses,
-                  String.Equals(file, "datiutente.aspx", StringComparison.OrdinalIgnoreCase) AndAlso isAddr)
-
-        SetActive(lnkOrders,
-                  String.Equals(file, "documenti.aspx", StringComparison.OrdinalIgnoreCase) AndAlso String.Equals(t, "4", StringComparison.OrdinalIgnoreCase))
-
-        SetActive(lnkInvoices,
-                  String.Equals(file, "documenti.aspx", StringComparison.OrdinalIgnoreCase) AndAlso String.Equals(t, "2", StringComparison.OrdinalIgnoreCase))
-
-        SetActive(lnkDdt,
-                  String.Equals(file, "documenti.aspx", StringComparison.OrdinalIgnoreCase) AndAlso String.Equals(t, "1", StringComparison.OrdinalIgnoreCase))
-
-        SetActive(lnkWishlist, String.Equals(file, "wishlist.aspx", StringComparison.OrdinalIgnoreCase))
-
-        SetActive(lnkChangePassword,
-                  String.Equals(file, "password.aspx", StringComparison.OrdinalIgnoreCase) OrElse String.Equals(file, "cambiapassword.aspx", StringComparison.OrdinalIgnoreCase))
-
-        SetActive(lnkRecoverAccess,
-                  String.Equals(file, "remind.aspx", StringComparison.OrdinalIgnoreCase) OrElse String.Equals(file, "recuperoaccesso.aspx", StringComparison.OrdinalIgnoreCase))
-
-        SetActive(lnkLogout, String.Equals(file, "logout.aspx", StringComparison.OrdinalIgnoreCase))
-    End Sub
-
-    Private Sub SetActive(a As System.Web.UI.HtmlControls.HtmlAnchor, isActive As Boolean)
-        If a Is Nothing Then Return
-        If Not isActive Then Return
-
-        Dim cls As String = Convert.ToString(a.Attributes("class"))
-        If cls Is Nothing Then cls = String.Empty
-
-        If cls.IndexOf("is-active", StringComparison.OrdinalIgnoreCase) = -1 Then
-            a.Attributes("class") = (cls & " is-active").Trim()
+        If pageName = "datiutente.aspx" Then
+            Dim tab As String = (Request.QueryString("tab") & "").ToLowerInvariant()
+            If tab = "addr" OrElse tab = "addresses" OrElse tab = "indirizzi" Then
+                Return "datiutente.aspx?tab=addr"
+            End If
         End If
+
+        Return pageName
+    End Function
+
+    Private Sub SetActiveMenuCss(currentKey As String, currentPage As String)
+        For Each li As Control In ulMenu.Controls
+            Dim anchor As HtmlAnchor = TryCast(FindAnchor(li), HtmlAnchor)
+            If anchor Is Nothing Then Continue For
+
+            Dim activeKey As String = (anchor.Attributes("data-ks-active") & "").ToLowerInvariant().Trim()
+            If String.IsNullOrEmpty(activeKey) Then Continue For
+
+            Dim isActive As Boolean
+
+            ' se data-ks-active contiene querystring, confronta con currentKey
+            If activeKey.Contains("?") Then
+                isActive = (activeKey = currentKey)
+            Else
+                ' fallback: confronto solo pagina
+                isActive = (activeKey = currentPage)
+            End If
+
+            If isActive Then
+                If Not anchor.Attributes("class").Contains("active") Then
+                    anchor.Attributes("class") = (anchor.Attributes("class") & " active").Trim()
+                End If
+                anchor.Attributes("aria-current") = "page"
+            Else
+                ' rimuovi active se presente
+                Dim cls As String = (anchor.Attributes("class") & "").Replace(" active", "").Replace("active", "").Trim()
+                anchor.Attributes("class") = cls
+                anchor.Attributes.Remove("aria-current")
+            End If
+        Next
     End Sub
+
+    Private Function FindAnchor(parent As Control) As Control
+        If parent Is Nothing Then Return Nothing
+
+        ' In alcuni casi ulMenu contiene LiteralControls per whitespace
+        For Each c As Control In parent.Controls
+            Dim a As HtmlAnchor = TryCast(c, HtmlAnchor)
+            If a IsNot Nothing Then Return a
+
+            Dim nested As Control = FindAnchor(c)
+            If nested IsNot Nothing Then Return nested
+        Next
+
+        Return Nothing
+    End Function
+
+    Private Function IsAccountArea(pageName As String) As Boolean
+        Select Case (pageName & "").ToLowerInvariant()
+            Case "myaccount.aspx",
+                 "datiutente.aspx",
+                 "documenti.aspx",
+                 "wishlist.aspx",
+                 "password.aspx",
+                 "cambiapassword.aspx",
+                 "remind.aspx",
+                 "logout.aspx",
+                 "login.aspx",
+                 "registrazione.aspx",
+                 "accessonegato.aspx",
+                 "indirizzi.aspx"
+                Return True
+        End Select
+
+        Return False
+    End Function
 End Class

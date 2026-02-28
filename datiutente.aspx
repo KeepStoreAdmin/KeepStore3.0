@@ -1,665 +1,1170 @@
-<%@ Page Language="VB"
-    MasterPageFile="~/Page.master"
-    AutoEventWireup="false"
-    CodeFile="datiutente.aspx.vb"
-    Inherits="datiutente" %>
+<%@ Page Language="VB" MasterPageFile="~/Public/ui/master/Site.master" AutoEventWireup="false" CodeFile="datiutente.aspx.vb" Inherits="datiutente" %>
 
-<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
-    I miei dati
+<asp:Content ID="ContentTitle" ContentPlaceHolderID="TitleContent" runat="server">
+    I miei dati - KeepStore
 </asp:Content>
 
-<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-<script type="text/javascript">
-        function ksHideSpinnerAndShowContent() {
-            var spinner = document.getElementById('<%= pnlLoading.ClientID %>');
-            var content = document.getElementById('<%= pnlContent.ClientID %>');
-
-            if (spinner) {
-                spinner.style.display = 'none';
-            }
-            if (content) {
-                content.style.display = 'block';
-                content.style.opacity = '1';
-            }
-        }
-
-
-        function ksActivateAccountTabFromUrl() {
-            try {
-                var params = new URLSearchParams(window.location.search || "");
-                var tab = (params.get('tab') || '').toLowerCase();
-                if (!tab && window.location.hash) tab = window.location.hash.replace('#','').toLowerCase();
-
-                var targetId = '';
-                if (tab === 'addr' || tab === 'address' || tab === 'indirizzi') targetId = 'ks-tab-address';
-                if (tab === 'account' || tab === 'edit' || tab === 'dati') targetId = 'ks-tab-account';
-
-                if (!targetId) return;
-
-                var trigger = document.querySelector('a[data-bs-toggle="tab"][href="#' + targetId + '"]');
-                if (trigger && window.bootstrap && bootstrap.Tab) {
-                    var t = new bootstrap.Tab(trigger);
-                    t.show();
-                } else if (trigger) {
-                    trigger.click();
-                }
-            } catch (e) { }
-        }
-
-
-        // Prima apertura normale
-        document.addEventListener('DOMContentLoaded', function () {
-            ksHideSpinnerAndShowContent();
-            ksActivateAccountTabFromUrl();
-            ksActivateAccountTabFromUrl();
-        });
-
-        // Ritorno tramite "indietro" del browser / bfcache
-        window.addEventListener('pageshow', function (event) {
-            ksHideSpinnerAndShowContent();
-        });
-
-        function ksShowSpinnerOnSubmit() {
-            var spinner = document.getElementById('<%= pnlLoading.ClientID %>');
-            var content = document.getElementById('<%= pnlContent.ClientID %>');
-            if (spinner) spinner.style.display = 'block';
-            if (content) content.style.opacity = '0.5';
-        }
-    </script>
+<asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
+    <link rel="stylesheet" href="/Public/assets/keepstore/css/datiutente-ui.css" />
 </asp:Content>
 
-<asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
-<div class="ks-myaccount">
-
-        <!-- Breadcrumb -->
-        <div class="tf-sp-1 pb-0">
+<asp:Content ID="ContentBreadcrumb" ContentPlaceHolderID="BreadcrumbContent" runat="server">
+    <div class="tf-sp-1 pb-0 ks-breadcrumb">
         <div class="container">
+            <h1 class="h6 mb-0 fw-semibold">I miei dati</h1>
             <div class="tf-breadcrumb-wrap">
                 <div class="tf-breadcrumb-list">
-                    <a href="Default.aspx" class="text">Home</a>
-                    <i class="icon icon-arrow-right"></i>
-                    <a href="myaccount.aspx" class="text">Account</a>
-                    <i class="icon icon-arrow-right"></i>
-                    <span class="text">I miei dati</span>
+                    <li class="breadcrumb-item"><a href="Default.aspx">Home</a></li>
+                    <li class="breadcrumb-item"><a href="myaccount.aspx">Account</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">I miei dati</li>
                 </div>
             </div>
         </div>
     </div>
+</asp:Content>
 
-        <!-- My Account -->
-        <section class="tf-sp-2">
-            <div class="container">
-                <div class="row">
-                    <!-- Sidebar -->
-                    <div class="col-lg-3">
-                        <div class="wrap-sidebar-account">
-                            <ul class="myaccount-nav content-append">
-                                <li><a href="myaccount.aspx" class="myaccount-nav-item">Dashboard</a></li>
-                                <li><a href="datiutente.aspx?tab=account" class="myaccount-nav-item active">Dettagli account</a></li>
-                                <li><a href="datiutente.aspx?tab=addr" class="myaccount-nav-item">Indirizzi</a></li>
-                                <li><a href="documenti.aspx?t=4" class="myaccount-nav-item">I miei ordini</a></li>
-                                <li><a href="documenti.aspx?t=2" class="myaccount-nav-item">Le mie fatture</a></li>
-                                <li><a href="documenti.aspx?t=1" class="myaccount-nav-item">I miei DDT</a></li>
-                                <li><a href="wishlist.aspx" class="myaccount-nav-item">Wishlist</a></li>
-                                <li><a href="password.aspx" class="myaccount-nav-item">Cambia password</a></li>
-                                <li><a href="remind.aspx" class="myaccount-nav-item">Recupero accesso</a></li>
-                                <li><a href="logout.aspx" class="myaccount-nav-item">Logout</a></li>
-                            </ul>
+<asp:Content ID="ContentMain" ContentPlaceHolderID="MainContent" runat="server">
+
+    <asp:ScriptManager ID="ScriptManager1" runat="server" />
+
+    <div class="ks-userdata js-ks-userdata">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <div>
+                <h2 class="h5 mb-1">Dati di accesso / account</h2>
+                <div class="text-muted small">Gestisci i tuoi dati e l’indirizzo predefinito.</div>
+            </div>
+            <a class="btn btn-outline-secondary btn-sm" href="myaccount.aspx">
+                <i class="icon-arrow-left"></i>
+                Torna a My Account
+            </a>
+        </div>
+
+        <ul class="nav nav-tabs ks-userdata-tabs js-ks-userdata-tabs mb-3" role="tablist">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="datiutente.aspx">Dettagli account</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="datiutente.aspx?tab=addr">Indirizzi</a>
+            </li>
+        </ul>
+
+        <asp:UpdateProgress ID="updProgress" runat="server">
+            <ProgressTemplate>
+                <div class="alert alert-info py-2 px-3 d-inline-flex align-items-center gap-2 mb-3" role="status">
+                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                    <span>Caricamento dati in corso…</span>
+                </div>
+            </ProgressTemplate>
+        </asp:UpdateProgress>
+
+        <asp:UpdatePanel ID="updMain" runat="server" UpdateMode="Conditional">
+            <ContentTemplate>
+
+                <%--
+                    Compatibilità: in base alle versioni del progetto, il code-behind può
+                    referenziare FormView con ID differenti.
+
+                    - FormView1 (default comune)
+                    - fvDatiUtente (più descrittivo)
+                    - fvUtente (variante breve)
+
+                    Lo script /Public/assets/keepstore/js/datiutente-ui.js rende visibile
+                    automaticamente il FormView che risulta effettivamente popolato.
+                --%>
+
+                <div class="ks-userdata-formview js-ks-userdata-fv" data-fv-id="FormView1">
+                <asp:FormView ID="FormView1" runat="server" RenderOuterTable="false">
+
+                    <%-- TEMPLATE LETTURA --%>
+                    <ItemTemplate>
+
+                        <div class="ks-userdata-pane ks-userdata-pane-details">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                                <h3 class="h6 mb-0 fw-semibold">Dettagli account</h3>
+                                <asp:LinkButton ID="btnEdit" runat="server" CommandName="Edit" CssClass="btn btn-primary btn-sm">
+                                    Modifica dati
+                                </asp:LinkButton>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-12 col-lg-6">
+                                    <div class="card">
+                                        <div class="card-header py-3">
+                                            <span class="fw-semibold">Dati di accesso</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <dl class="row ks-kv mb-0">
+                                                <dt class="col-5">Username</dt>
+                                                <dd class="col-7"><%#: Eval("username") %></dd>
+
+                                                <dt class="col-5">Email</dt>
+                                                <dd class="col-7"><%#: Eval("email") %></dd>
+
+                                                <dt class="col-5">Password</dt>
+                                                <dd class="col-7">********</dd>
+
+                                                <dt class="col-5">Ultimo accesso</dt>
+                                                <dd class="col-7"><%#: Eval("ultimoaccesso") %></dd>
+                                            </dl>
+
+                                            <div class="mt-3">
+                                                <a class="btn btn-outline-secondary btn-sm" href="cambiapassword.aspx">Cambia password</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-lg-6">
+                                    <div class="card">
+                                        <div class="card-header py-3">
+                                            <span class="fw-semibold">Profilo commerciale</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <dl class="row ks-kv mb-0">
+                                                <dt class="col-5">Codice cliente</dt>
+                                                <dd class="col-7"><%#: Eval("Codice") %></dd>
+
+                                                <dt class="col-5">Listino</dt>
+                                                <dd class="col-7"><%#: Eval("listino") %></dd>
+
+                                                <dt class="col-5">Tipo utente</dt>
+                                                <dd class="col-7"><%#: Eval("UtenteTipoDescrizione") %></dd>
+
+                                                <dt class="col-5">Modalità IVA</dt>
+                                                <dd class="col-7">
+                                                    <%#: If(Convert.ToInt32(Eval("IvaTipo")) = 1, "Prezzi IVA esclusa", "Prezzi IVA inclusa") %>
+                                                </dd>
+
+                                                <dt class="col-5">Esenzione IVA</dt>
+                                                <dd class="col-7"><%#: Eval("DescrizioneEsenzioneIva") %></dd>
+
+                                                <dt class="col-5">Reverse charge</dt>
+                                                <dd class="col-7"><%#: If(Convert.ToBoolean(Eval("AbilitatoIvaReverseCharge")), "Si", "No") %></dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-lg-6">
+                                    <div class="card">
+                                        <div class="card-header py-3">
+                                            <span class="fw-semibold">Dati intestazione</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <dl class="row ks-kv mb-0">
+                                                <dt class="col-5">Ragione sociale</dt>
+                                                <dd class="col-7"><%#: Eval("RagioneSociale") %></dd>
+
+                                                <dt class="col-5">Nome / Cognome</dt>
+                                                <dd class="col-7"><%#: Eval("cognomenome") %></dd>
+
+                                                <dt class="col-5">Partita IVA</dt>
+                                                <dd class="col-7"><%#: Eval("Piva") %></dd>
+
+                                                <dt class="col-5">Codice fiscale</dt>
+                                                <dd class="col-7"><%#: Eval("CodiceFiscale") %></dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-lg-6">
+                                    <div class="card">
+                                        <div class="card-header py-3">
+                                            <span class="fw-semibold">Contatti</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <dl class="row ks-kv mb-0">
+                                                <dt class="col-5">Telefono</dt>
+                                                <dd class="col-7"><%#: Eval("Telefono") %></dd>
+
+                                                <dt class="col-5">Cellulare</dt>
+                                                <dd class="col-7"><%#: Eval("Cellulare") %></dd>
+
+                                                <dt class="col-5">Fax</dt>
+                                                <dd class="col-7"><%#: Eval("Fax") %></dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header py-3">
+                                            <span class="fw-semibold">Indirizzo di fatturazione</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row g-3">
+                                                <div class="col-12 col-md-6">
+                                                    <div class="text-muted small">Indirizzo</div>
+                                                    <div class="fw-medium"><%#: Eval("Indirizzo") %></div>
+                                                </div>
+                                                <div class="col-6 col-md-2">
+                                                    <div class="text-muted small">CAP</div>
+                                                    <div class="fw-medium"><%#: Eval("Cap") %></div>
+                                                </div>
+                                                <div class="col-6 col-md-4">
+                                                    <div class="text-muted small">Città</div>
+                                                    <div class="fw-medium"><%#: Eval("Citta") %></div>
+                                                </div>
+                                                <div class="col-6 col-md-2">
+                                                    <div class="text-muted small">Provincia</div>
+                                                    <div class="fw-medium"><%#: Eval("Provincia") %></div>
+                                                </div>
+                                                <div class="col-6 col-md-4">
+                                                    <div class="text-muted small">Nazione</div>
+                                                    <div class="fw-medium"><%#: Eval("Nazione") %></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Content -->
-                    <div class="col-lg-9">
-                        <div class="tf-section-heading mb-4">
-                            <h3 class="heading">I miei dati</h3>
+                        <div class="ks-userdata-pane ks-userdata-pane-addresses" id="addr">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                                <h3 class="h6 mb-0 fw-semibold">Indirizzi</h3>
+                                <a class="btn btn-outline-primary btn-sm" href="datiutente.aspx">Torna ai dettagli</a>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header py-3">
+                                    <span class="fw-semibold">Destinazione alternativa (predefinita)</span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="text-muted small mb-3">Se non impostata, verrà usato l’indirizzo di fatturazione.</div>
+
+                                    <dl class="row ks-kv mb-0">
+                                        <dt class="col-5">Ragione sociale</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestRagioneSociale" runat="server" /></dd>
+
+                                        <dt class="col-5">Nome</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestNome" runat="server" /></dd>
+
+                                        <dt class="col-5">Cognome</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestCognome" runat="server" /></dd>
+
+                                        <dt class="col-5">Indirizzo</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestIndirizzo" runat="server" /></dd>
+
+                                        <dt class="col-5">CAP</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestCap" runat="server" /></dd>
+
+                                        <dt class="col-5">Città</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestCitta" runat="server" /></dd>
+
+                                        <dt class="col-5">Provincia</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestProvincia" runat="server" /></dd>
+
+                                        <dt class="col-5">Nazione</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestNazione" runat="server" /></dd>
+
+                                        <dt class="col-5">Telefono</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestTelefono" runat="server" /></dd>
+                                    </dl>
+
+                                    <div class="mt-3">
+                                        <asp:LinkButton ID="btnEditAddr" runat="server" CommandName="Edit" CssClass="btn btn-primary btn-sm">
+                                            Gestisci indirizzi
+                                        </asp:LinkButton>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-    <div style="margin-bottom:20px;">
-        <asp:HyperLink 
-            ID="hlBackMyAccount" 
-            runat="server"
-            NavigateUrl="myaccount.aspx"
-            CssClass="tf-btn btn-line">
-            &laquo; Torna alla pagina My Account
-        </asp:HyperLink>
+                    </ItemTemplate>
+
+                    <%-- TEMPLATE MODIFICA --%>
+                    <EditItemTemplate>
+
+                        <div class="alert alert-warning py-2 px-3 mb-3" role="alert">
+                            <strong>Nota:</strong> dopo il salvataggio potrebbero essere necessari alcuni secondi perché i dati si aggiornino.
+                        </div>
+
+                        <div class="row g-3">
+
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header py-3">
+                                        <span class="fw-semibold">Dati di accesso</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label">Username</label>
+                                                <div class="form-control-plaintext fw-medium"><%#: Eval("username") %></div>
+                                            </div>
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label" for="txtEmail">Email</label>
+                                                <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" Text='<%# Bind("email") %>' />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header py-3">
+                                        <span class="fw-semibold">Indirizzo di fatturazione</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-12">
+                                                <label class="form-label" for="txtIndirizzo">Indirizzo</label>
+                                                <asp:TextBox ID="txtIndirizzo" runat="server" CssClass="form-control" Text='<%# Bind("Indirizzo") %>' />
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label" for="txtCap">CAP</label>
+                                                <asp:TextBox ID="txtCap" runat="server" CssClass="form-control" Text='<%# Bind("Cap") %>' />
+                                            </div>
+                                            <div class="col-12 col-md-5">
+                                                <label class="form-label" for="txtCitta">Città</label>
+                                                <asp:TextBox ID="txtCitta" runat="server" CssClass="form-control" Text='<%# Bind("Citta") %>' />
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label" for="txtProvincia">Provincia</label>
+                                                <asp:TextBox ID="txtProvincia" runat="server" CssClass="form-control" Text='<%# Bind("Provincia") %>' />
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label" for="txtNazione">Nazione</label>
+                                                <asp:TextBox ID="txtNazione" runat="server" CssClass="form-control" Text='<%# Bind("Nazione") %>' />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header py-3">
+                                        <span class="fw-semibold">Contatti</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-12 col-md-4">
+                                                <label class="form-label" for="txtTelefono">Telefono</label>
+                                                <asp:TextBox ID="txtTelefono" runat="server" CssClass="form-control" Text='<%# Bind("Telefono") %>' />
+                                            </div>
+                                            <div class="col-12 col-md-4">
+                                                <label class="form-label" for="txtCellulare">Cellulare</label>
+                                                <asp:TextBox ID="txtCellulare" runat="server" CssClass="form-control" Text='<%# Bind("Cellulare") %>' />
+                                            </div>
+                                            <div class="col-12 col-md-4">
+                                                <label class="form-label" for="txtFax">Fax</label>
+                                                <asp:TextBox ID="txtFax" runat="server" CssClass="form-control" Text='<%# Bind("Fax") %>' />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12" id="addrEdit">
+                                <div class="card">
+                                    <div class="card-header py-3">
+                                        <span class="fw-semibold">Destinazione alternativa</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label" for="ddlDestinazione">Seleziona destinazione</label>
+                                                <asp:DropDownList ID="ddlDestinazione" runat="server" CssClass="form-select" AutoPostBack="true" />
+                                            </div>
+                                            <div class="col-12"></div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label" for="tbDestRagioneSociale">Ragione sociale</label>
+                                                <asp:TextBox ID="tbDestRagioneSociale" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label" for="tbDestNome">Nome</label>
+                                                <asp:TextBox ID="tbDestNome" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label" for="tbDestCognome">Cognome</label>
+                                                <asp:TextBox ID="tbDestCognome" runat="server" CssClass="form-control" />
+                                            </div>
+
+                                            <div class="col-12">
+                                                <label class="form-label" for="tbDestIndirizzo">Indirizzo</label>
+                                                <asp:TextBox ID="tbDestIndirizzo" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label" for="tbDestCap">CAP</label>
+                                                <asp:TextBox ID="tbDestCap" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-12 col-md-5">
+                                                <label class="form-label" for="tbDestCitta">Città</label>
+                                                <asp:TextBox ID="tbDestCitta" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label" for="tbDestProvincia">Provincia</label>
+                                                <asp:TextBox ID="tbDestProvincia" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label" for="tbDestNazione">Nazione</label>
+                                                <asp:TextBox ID="tbDestNazione" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-12 col-md-4">
+                                                <label class="form-label" for="tbDestTelefono">Telefono</label>
+                                                <asp:TextBox ID="tbDestTelefono" runat="server" CssClass="form-control" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <asp:LinkButton ID="btnUpdate" runat="server" CommandName="Update" CssClass="btn btn-success">
+                                        Salva dati
+                                    </asp:LinkButton>
+                                    <asp:LinkButton ID="btnCancel" runat="server" CommandName="Cancel" CssClass="btn btn-outline-secondary">
+                                        Annulla
+                                    </asp:LinkButton>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </EditItemTemplate>
+
+                </asp:FormView>
+                </div>
+
+                <div class="ks-userdata-formview js-ks-userdata-fv" data-fv-id="fvDatiUtente">
+                <asp:FormView ID="fvDatiUtente" runat="server" RenderOuterTable="false">
+
+                    <%-- TEMPLATE LETTURA --%>
+                    <ItemTemplate>
+
+                        <div class="ks-userdata-pane ks-userdata-pane-details">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                                <h3 class="h6 mb-0 fw-semibold">Dettagli account</h3>
+                                <asp:LinkButton ID="btnEdit" runat="server" CommandName="Edit" CssClass="btn btn-primary btn-sm">
+                                    Modifica dati
+                                </asp:LinkButton>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-12 col-lg-6">
+                                    <div class="card">
+                                        <div class="card-header py-3">
+                                            <span class="fw-semibold">Dati di accesso</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <dl class="row ks-kv mb-0">
+                                                <dt class="col-5">Username</dt>
+                                                <dd class="col-7"><%#: Eval("username") %></dd>
+
+                                                <dt class="col-5">Email</dt>
+                                                <dd class="col-7"><%#: Eval("email") %></dd>
+
+                                                <dt class="col-5">Password</dt>
+                                                <dd class="col-7">********</dd>
+
+                                                <dt class="col-5">Ultimo accesso</dt>
+                                                <dd class="col-7"><%#: Eval("ultimoaccesso") %></dd>
+                                            </dl>
+
+                                            <div class="mt-3">
+                                                <a class="btn btn-outline-secondary btn-sm" href="cambiapassword.aspx">Cambia password</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-lg-6">
+                                    <div class="card">
+                                        <div class="card-header py-3">
+                                            <span class="fw-semibold">Profilo commerciale</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <dl class="row ks-kv mb-0">
+                                                <dt class="col-5">Codice cliente</dt>
+                                                <dd class="col-7"><%#: Eval("Codice") %></dd>
+
+                                                <dt class="col-5">Listino</dt>
+                                                <dd class="col-7"><%#: Eval("listino") %></dd>
+
+                                                <dt class="col-5">Tipo utente</dt>
+                                                <dd class="col-7"><%#: Eval("UtenteTipoDescrizione") %></dd>
+
+                                                <dt class="col-5">Modalità IVA</dt>
+                                                <dd class="col-7">
+                                                    <%#: If(Convert.ToInt32(Eval("IvaTipo")) = 1, "Prezzi IVA esclusa", "Prezzi IVA inclusa") %>
+                                                </dd>
+
+                                                <dt class="col-5">Esenzione IVA</dt>
+                                                <dd class="col-7"><%#: Eval("DescrizioneEsenzioneIva") %></dd>
+
+                                                <dt class="col-5">Reverse charge</dt>
+                                                <dd class="col-7"><%#: If(Convert.ToBoolean(Eval("AbilitatoIvaReverseCharge")), "Si", "No") %></dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-lg-6">
+                                    <div class="card">
+                                        <div class="card-header py-3">
+                                            <span class="fw-semibold">Dati intestazione</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <dl class="row ks-kv mb-0">
+                                                <dt class="col-5">Ragione sociale</dt>
+                                                <dd class="col-7"><%#: Eval("RagioneSociale") %></dd>
+
+                                                <dt class="col-5">Nome / Cognome</dt>
+                                                <dd class="col-7"><%#: Eval("cognomenome") %></dd>
+
+                                                <dt class="col-5">Partita IVA</dt>
+                                                <dd class="col-7"><%#: Eval("Piva") %></dd>
+
+                                                <dt class="col-5">Codice fiscale</dt>
+                                                <dd class="col-7"><%#: Eval("CodiceFiscale") %></dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-lg-6">
+                                    <div class="card">
+                                        <div class="card-header py-3">
+                                            <span class="fw-semibold">Contatti</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <dl class="row ks-kv mb-0">
+                                                <dt class="col-5">Telefono</dt>
+                                                <dd class="col-7"><%#: Eval("Telefono") %></dd>
+
+                                                <dt class="col-5">Cellulare</dt>
+                                                <dd class="col-7"><%#: Eval("Cellulare") %></dd>
+
+                                                <dt class="col-5">Fax</dt>
+                                                <dd class="col-7"><%#: Eval("Fax") %></dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header py-3">
+                                            <span class="fw-semibold">Indirizzo di fatturazione</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row g-3">
+                                                <div class="col-12 col-md-6">
+                                                    <div class="text-muted small">Indirizzo</div>
+                                                    <div class="fw-medium"><%#: Eval("Indirizzo") %></div>
+                                                </div>
+                                                <div class="col-6 col-md-2">
+                                                    <div class="text-muted small">CAP</div>
+                                                    <div class="fw-medium"><%#: Eval("Cap") %></div>
+                                                </div>
+                                                <div class="col-6 col-md-4">
+                                                    <div class="text-muted small">Città</div>
+                                                    <div class="fw-medium"><%#: Eval("Citta") %></div>
+                                                </div>
+                                                <div class="col-6 col-md-2">
+                                                    <div class="text-muted small">Provincia</div>
+                                                    <div class="fw-medium"><%#: Eval("Provincia") %></div>
+                                                </div>
+                                                <div class="col-6 col-md-4">
+                                                    <div class="text-muted small">Nazione</div>
+                                                    <div class="fw-medium"><%#: Eval("Nazione") %></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div class="ks-userdata-pane ks-userdata-pane-addresses" id="addr">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                                <h3 class="h6 mb-0 fw-semibold">Indirizzi</h3>
+                                <a class="btn btn-outline-primary btn-sm" href="datiutente.aspx">Torna ai dettagli</a>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header py-3">
+                                    <span class="fw-semibold">Destinazione alternativa (predefinita)</span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="text-muted small mb-3">Se non impostata, verrà usato l’indirizzo di fatturazione.</div>
+
+                                    <dl class="row ks-kv mb-0">
+                                        <dt class="col-5">Ragione sociale</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestRagioneSociale" runat="server" /></dd>
+
+                                        <dt class="col-5">Nome</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestNome" runat="server" /></dd>
+
+                                        <dt class="col-5">Cognome</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestCognome" runat="server" /></dd>
+
+                                        <dt class="col-5">Indirizzo</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestIndirizzo" runat="server" /></dd>
+
+                                        <dt class="col-5">CAP</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestCap" runat="server" /></dd>
+
+                                        <dt class="col-5">Città</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestCitta" runat="server" /></dd>
+
+                                        <dt class="col-5">Provincia</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestProvincia" runat="server" /></dd>
+
+                                        <dt class="col-5">Nazione</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestNazione" runat="server" /></dd>
+
+                                        <dt class="col-5">Telefono</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestTelefono" runat="server" /></dd>
+                                    </dl>
+
+                                    <div class="mt-3">
+                                        <asp:LinkButton ID="btnEditAddr" runat="server" CommandName="Edit" CssClass="btn btn-primary btn-sm">
+                                            Gestisci indirizzi
+                                        </asp:LinkButton>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </ItemTemplate>
+
+                    <%-- TEMPLATE MODIFICA --%>
+                    <EditItemTemplate>
+
+                        <div class="alert alert-warning py-2 px-3 mb-3" role="alert">
+                            <strong>Nota:</strong> dopo il salvataggio potrebbero essere necessari alcuni secondi perché i dati si aggiornino.
+                        </div>
+
+                        <div class="row g-3">
+
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header py-3">
+                                        <span class="fw-semibold">Dati di accesso</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label">Username</label>
+                                                <div class="form-control-plaintext fw-medium"><%#: Eval("username") %></div>
+                                            </div>
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label" for="txtEmail">Email</label>
+                                                <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" Text='<%# Bind("email") %>' />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header py-3">
+                                        <span class="fw-semibold">Indirizzo di fatturazione</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-12">
+                                                <label class="form-label" for="txtIndirizzo">Indirizzo</label>
+                                                <asp:TextBox ID="txtIndirizzo" runat="server" CssClass="form-control" Text='<%# Bind("Indirizzo") %>' />
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label" for="txtCap">CAP</label>
+                                                <asp:TextBox ID="txtCap" runat="server" CssClass="form-control" Text='<%# Bind("Cap") %>' />
+                                            </div>
+                                            <div class="col-12 col-md-5">
+                                                <label class="form-label" for="txtCitta">Città</label>
+                                                <asp:TextBox ID="txtCitta" runat="server" CssClass="form-control" Text='<%# Bind("Citta") %>' />
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label" for="txtProvincia">Provincia</label>
+                                                <asp:TextBox ID="txtProvincia" runat="server" CssClass="form-control" Text='<%# Bind("Provincia") %>' />
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label" for="txtNazione">Nazione</label>
+                                                <asp:TextBox ID="txtNazione" runat="server" CssClass="form-control" Text='<%# Bind("Nazione") %>' />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header py-3">
+                                        <span class="fw-semibold">Contatti</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-12 col-md-4">
+                                                <label class="form-label" for="txtTelefono">Telefono</label>
+                                                <asp:TextBox ID="txtTelefono" runat="server" CssClass="form-control" Text='<%# Bind("Telefono") %>' />
+                                            </div>
+                                            <div class="col-12 col-md-4">
+                                                <label class="form-label" for="txtCellulare">Cellulare</label>
+                                                <asp:TextBox ID="txtCellulare" runat="server" CssClass="form-control" Text='<%# Bind("Cellulare") %>' />
+                                            </div>
+                                            <div class="col-12 col-md-4">
+                                                <label class="form-label" for="txtFax">Fax</label>
+                                                <asp:TextBox ID="txtFax" runat="server" CssClass="form-control" Text='<%# Bind("Fax") %>' />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12" id="addrEdit">
+                                <div class="card">
+                                    <div class="card-header py-3">
+                                        <span class="fw-semibold">Destinazione alternativa</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label" for="ddlDestinazione">Seleziona destinazione</label>
+                                                <asp:DropDownList ID="ddlDestinazione" runat="server" CssClass="form-select" AutoPostBack="true" />
+                                            </div>
+                                            <div class="col-12"></div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label" for="tbDestRagioneSociale">Ragione sociale</label>
+                                                <asp:TextBox ID="tbDestRagioneSociale" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label" for="tbDestNome">Nome</label>
+                                                <asp:TextBox ID="tbDestNome" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label" for="tbDestCognome">Cognome</label>
+                                                <asp:TextBox ID="tbDestCognome" runat="server" CssClass="form-control" />
+                                            </div>
+
+                                            <div class="col-12">
+                                                <label class="form-label" for="tbDestIndirizzo">Indirizzo</label>
+                                                <asp:TextBox ID="tbDestIndirizzo" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label" for="tbDestCap">CAP</label>
+                                                <asp:TextBox ID="tbDestCap" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-12 col-md-5">
+                                                <label class="form-label" for="tbDestCitta">Città</label>
+                                                <asp:TextBox ID="tbDestCitta" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label" for="tbDestProvincia">Provincia</label>
+                                                <asp:TextBox ID="tbDestProvincia" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label" for="tbDestNazione">Nazione</label>
+                                                <asp:TextBox ID="tbDestNazione" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-12 col-md-4">
+                                                <label class="form-label" for="tbDestTelefono">Telefono</label>
+                                                <asp:TextBox ID="tbDestTelefono" runat="server" CssClass="form-control" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <asp:LinkButton ID="btnUpdate" runat="server" CommandName="Update" CssClass="btn btn-success">
+                                        Salva dati
+                                    </asp:LinkButton>
+                                    <asp:LinkButton ID="btnCancel" runat="server" CommandName="Cancel" CssClass="btn btn-outline-secondary">
+                                        Annulla
+                                    </asp:LinkButton>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </EditItemTemplate>
+
+                </asp:FormView>
+                </div>
+
+                <div class="ks-userdata-formview js-ks-userdata-fv" data-fv-id="fvUtente">
+                <asp:FormView ID="fvUtente" runat="server" RenderOuterTable="false">
+
+                    <%-- TEMPLATE LETTURA --%>
+                    <ItemTemplate>
+
+                        <div class="ks-userdata-pane ks-userdata-pane-details">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                                <h3 class="h6 mb-0 fw-semibold">Dettagli account</h3>
+                                <asp:LinkButton ID="btnEdit" runat="server" CommandName="Edit" CssClass="btn btn-primary btn-sm">
+                                    Modifica dati
+                                </asp:LinkButton>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-12 col-lg-6">
+                                    <div class="card">
+                                        <div class="card-header py-3">
+                                            <span class="fw-semibold">Dati di accesso</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <dl class="row ks-kv mb-0">
+                                                <dt class="col-5">Username</dt>
+                                                <dd class="col-7"><%#: Eval("username") %></dd>
+
+                                                <dt class="col-5">Email</dt>
+                                                <dd class="col-7"><%#: Eval("email") %></dd>
+
+                                                <dt class="col-5">Password</dt>
+                                                <dd class="col-7">********</dd>
+
+                                                <dt class="col-5">Ultimo accesso</dt>
+                                                <dd class="col-7"><%#: Eval("ultimoaccesso") %></dd>
+                                            </dl>
+
+                                            <div class="mt-3">
+                                                <a class="btn btn-outline-secondary btn-sm" href="cambiapassword.aspx">Cambia password</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-lg-6">
+                                    <div class="card">
+                                        <div class="card-header py-3">
+                                            <span class="fw-semibold">Profilo commerciale</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <dl class="row ks-kv mb-0">
+                                                <dt class="col-5">Codice cliente</dt>
+                                                <dd class="col-7"><%#: Eval("Codice") %></dd>
+
+                                                <dt class="col-5">Listino</dt>
+                                                <dd class="col-7"><%#: Eval("listino") %></dd>
+
+                                                <dt class="col-5">Tipo utente</dt>
+                                                <dd class="col-7"><%#: Eval("UtenteTipoDescrizione") %></dd>
+
+                                                <dt class="col-5">Modalità IVA</dt>
+                                                <dd class="col-7">
+                                                    <%#: If(Convert.ToInt32(Eval("IvaTipo")) = 1, "Prezzi IVA esclusa", "Prezzi IVA inclusa") %>
+                                                </dd>
+
+                                                <dt class="col-5">Esenzione IVA</dt>
+                                                <dd class="col-7"><%#: Eval("DescrizioneEsenzioneIva") %></dd>
+
+                                                <dt class="col-5">Reverse charge</dt>
+                                                <dd class="col-7"><%#: If(Convert.ToBoolean(Eval("AbilitatoIvaReverseCharge")), "Si", "No") %></dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-lg-6">
+                                    <div class="card">
+                                        <div class="card-header py-3">
+                                            <span class="fw-semibold">Dati intestazione</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <dl class="row ks-kv mb-0">
+                                                <dt class="col-5">Ragione sociale</dt>
+                                                <dd class="col-7"><%#: Eval("RagioneSociale") %></dd>
+
+                                                <dt class="col-5">Nome / Cognome</dt>
+                                                <dd class="col-7"><%#: Eval("cognomenome") %></dd>
+
+                                                <dt class="col-5">Partita IVA</dt>
+                                                <dd class="col-7"><%#: Eval("Piva") %></dd>
+
+                                                <dt class="col-5">Codice fiscale</dt>
+                                                <dd class="col-7"><%#: Eval("CodiceFiscale") %></dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-lg-6">
+                                    <div class="card">
+                                        <div class="card-header py-3">
+                                            <span class="fw-semibold">Contatti</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <dl class="row ks-kv mb-0">
+                                                <dt class="col-5">Telefono</dt>
+                                                <dd class="col-7"><%#: Eval("Telefono") %></dd>
+
+                                                <dt class="col-5">Cellulare</dt>
+                                                <dd class="col-7"><%#: Eval("Cellulare") %></dd>
+
+                                                <dt class="col-5">Fax</dt>
+                                                <dd class="col-7"><%#: Eval("Fax") %></dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header py-3">
+                                            <span class="fw-semibold">Indirizzo di fatturazione</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row g-3">
+                                                <div class="col-12 col-md-6">
+                                                    <div class="text-muted small">Indirizzo</div>
+                                                    <div class="fw-medium"><%#: Eval("Indirizzo") %></div>
+                                                </div>
+                                                <div class="col-6 col-md-2">
+                                                    <div class="text-muted small">CAP</div>
+                                                    <div class="fw-medium"><%#: Eval("Cap") %></div>
+                                                </div>
+                                                <div class="col-6 col-md-4">
+                                                    <div class="text-muted small">Città</div>
+                                                    <div class="fw-medium"><%#: Eval("Citta") %></div>
+                                                </div>
+                                                <div class="col-6 col-md-2">
+                                                    <div class="text-muted small">Provincia</div>
+                                                    <div class="fw-medium"><%#: Eval("Provincia") %></div>
+                                                </div>
+                                                <div class="col-6 col-md-4">
+                                                    <div class="text-muted small">Nazione</div>
+                                                    <div class="fw-medium"><%#: Eval("Nazione") %></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div class="ks-userdata-pane ks-userdata-pane-addresses" id="addr">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                                <h3 class="h6 mb-0 fw-semibold">Indirizzi</h3>
+                                <a class="btn btn-outline-primary btn-sm" href="datiutente.aspx">Torna ai dettagli</a>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header py-3">
+                                    <span class="fw-semibold">Destinazione alternativa (predefinita)</span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="text-muted small mb-3">Se non impostata, verrà usato l’indirizzo di fatturazione.</div>
+
+                                    <dl class="row ks-kv mb-0">
+                                        <dt class="col-5">Ragione sociale</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestRagioneSociale" runat="server" /></dd>
+
+                                        <dt class="col-5">Nome</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestNome" runat="server" /></dd>
+
+                                        <dt class="col-5">Cognome</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestCognome" runat="server" /></dd>
+
+                                        <dt class="col-5">Indirizzo</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestIndirizzo" runat="server" /></dd>
+
+                                        <dt class="col-5">CAP</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestCap" runat="server" /></dd>
+
+                                        <dt class="col-5">Città</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestCitta" runat="server" /></dd>
+
+                                        <dt class="col-5">Provincia</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestProvincia" runat="server" /></dd>
+
+                                        <dt class="col-5">Nazione</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestNazione" runat="server" /></dd>
+
+                                        <dt class="col-5">Telefono</dt>
+                                        <dd class="col-7"><asp:Label ID="lblDestTelefono" runat="server" /></dd>
+                                    </dl>
+
+                                    <div class="mt-3">
+                                        <asp:LinkButton ID="btnEditAddr" runat="server" CommandName="Edit" CssClass="btn btn-primary btn-sm">
+                                            Gestisci indirizzi
+                                        </asp:LinkButton>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </ItemTemplate>
+
+                    <%-- TEMPLATE MODIFICA --%>
+                    <EditItemTemplate>
+
+                        <div class="alert alert-warning py-2 px-3 mb-3" role="alert">
+                            <strong>Nota:</strong> dopo il salvataggio potrebbero essere necessari alcuni secondi perché i dati si aggiornino.
+                        </div>
+
+                        <div class="row g-3">
+
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header py-3">
+                                        <span class="fw-semibold">Dati di accesso</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label">Username</label>
+                                                <div class="form-control-plaintext fw-medium"><%#: Eval("username") %></div>
+                                            </div>
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label" for="txtEmail">Email</label>
+                                                <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" Text='<%# Bind("email") %>' />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header py-3">
+                                        <span class="fw-semibold">Indirizzo di fatturazione</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-12">
+                                                <label class="form-label" for="txtIndirizzo">Indirizzo</label>
+                                                <asp:TextBox ID="txtIndirizzo" runat="server" CssClass="form-control" Text='<%# Bind("Indirizzo") %>' />
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label" for="txtCap">CAP</label>
+                                                <asp:TextBox ID="txtCap" runat="server" CssClass="form-control" Text='<%# Bind("Cap") %>' />
+                                            </div>
+                                            <div class="col-12 col-md-5">
+                                                <label class="form-label" for="txtCitta">Città</label>
+                                                <asp:TextBox ID="txtCitta" runat="server" CssClass="form-control" Text='<%# Bind("Citta") %>' />
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label" for="txtProvincia">Provincia</label>
+                                                <asp:TextBox ID="txtProvincia" runat="server" CssClass="form-control" Text='<%# Bind("Provincia") %>' />
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label" for="txtNazione">Nazione</label>
+                                                <asp:TextBox ID="txtNazione" runat="server" CssClass="form-control" Text='<%# Bind("Nazione") %>' />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header py-3">
+                                        <span class="fw-semibold">Contatti</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-12 col-md-4">
+                                                <label class="form-label" for="txtTelefono">Telefono</label>
+                                                <asp:TextBox ID="txtTelefono" runat="server" CssClass="form-control" Text='<%# Bind("Telefono") %>' />
+                                            </div>
+                                            <div class="col-12 col-md-4">
+                                                <label class="form-label" for="txtCellulare">Cellulare</label>
+                                                <asp:TextBox ID="txtCellulare" runat="server" CssClass="form-control" Text='<%# Bind("Cellulare") %>' />
+                                            </div>
+                                            <div class="col-12 col-md-4">
+                                                <label class="form-label" for="txtFax">Fax</label>
+                                                <asp:TextBox ID="txtFax" runat="server" CssClass="form-control" Text='<%# Bind("Fax") %>' />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12" id="addrEdit">
+                                <div class="card">
+                                    <div class="card-header py-3">
+                                        <span class="fw-semibold">Destinazione alternativa</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label" for="ddlDestinazione">Seleziona destinazione</label>
+                                                <asp:DropDownList ID="ddlDestinazione" runat="server" CssClass="form-select" AutoPostBack="true" />
+                                            </div>
+                                            <div class="col-12"></div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label" for="tbDestRagioneSociale">Ragione sociale</label>
+                                                <asp:TextBox ID="tbDestRagioneSociale" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label" for="tbDestNome">Nome</label>
+                                                <asp:TextBox ID="tbDestNome" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label" for="tbDestCognome">Cognome</label>
+                                                <asp:TextBox ID="tbDestCognome" runat="server" CssClass="form-control" />
+                                            </div>
+
+                                            <div class="col-12">
+                                                <label class="form-label" for="tbDestIndirizzo">Indirizzo</label>
+                                                <asp:TextBox ID="tbDestIndirizzo" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-12 col-md-3">
+                                                <label class="form-label" for="tbDestCap">CAP</label>
+                                                <asp:TextBox ID="tbDestCap" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-12 col-md-5">
+                                                <label class="form-label" for="tbDestCitta">Città</label>
+                                                <asp:TextBox ID="tbDestCitta" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label" for="tbDestProvincia">Provincia</label>
+                                                <asp:TextBox ID="tbDestProvincia" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <label class="form-label" for="tbDestNazione">Nazione</label>
+                                                <asp:TextBox ID="tbDestNazione" runat="server" CssClass="form-control" />
+                                            </div>
+                                            <div class="col-12 col-md-4">
+                                                <label class="form-label" for="tbDestTelefono">Telefono</label>
+                                                <asp:TextBox ID="tbDestTelefono" runat="server" CssClass="form-control" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <asp:LinkButton ID="btnUpdate" runat="server" CommandName="Update" CssClass="btn btn-success">
+                                        Salva dati
+                                    </asp:LinkButton>
+                                    <asp:LinkButton ID="btnCancel" runat="server" CommandName="Cancel" CssClass="btn btn-outline-secondary">
+                                        Annulla
+                                    </asp:LinkButton>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </EditItemTemplate>
+
+                </asp:FormView>
+                </div>
+
+            </ContentTemplate>
+        </asp:UpdatePanel>
+
     </div>
 
-    <asp:Label ID="lblEsito" runat="server" CssClass="text-error" EnableViewState="false"></asp:Label>
+</asp:Content>
 
-    <!-- SPINNER CARICAMENTO -->
-    <asp:Panel ID="pnlLoading" runat="server" CssClass="ks-loading-panel">
-        <div class="ks-spinner-circle"></div>
-        <div>Caricamento dati in corso...</div>
-    </asp:Panel>
-
-    <!-- CONTENUTO PRINCIPALE -->
-    <asp:Panel ID="pnlContent" runat="server" Style="display:none;">
-
-        <asp:Panel ID="pnlDati" runat="server" CssClass="account-box">
-            <asp:FormView ID="fvUtente" runat="server"
-                DataSourceID="sdsUtente"
-                Width="100%"
-                DataKeyNames="id,UtentiId"
-                DefaultMode="ReadOnly"
-                OnModeChanging="fvUtente_ModeChanging"
-                OnItemUpdating="fvUtente_ItemUpdating"
-                OnDataBound="fvUtente_DataBound">
-
-                <%-- TEMPLATE LETTURA --%>
-                <ItemTemplate>
-
-                    <div class="flat-animate-tab ks-account-tabs">
-                        <ul class="nav nav-tabs menu-tab-line" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link active" data-bs-toggle="tab" href="#ks-tab-account" role="tab" aria-selected="true">Dettagli account</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link" data-bs-toggle="tab" href="#ks-tab-address" role="tab" aria-selected="false">Indirizzi</a>
-                            </li>
-                        </ul>
-
-                        <div class="tab-content pt-3">
-
-                            <!-- Account details -->
-                            <div class="tab-pane fade show active" id="ks-tab-account" role="tabpanel">
-                                <div class="row">
-                                    <div class="col-12 col-md-6">
-                                        <div class="account-section-title">Dati di accesso / account</div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Username: </span>
-                                            <%# Eval("Username") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Email: </span>
-                                            <%# Eval("email") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Ultimo accesso: </span>
-                                            <%# Eval("ultimoaccesso", "{0:dd/MM/yyyy HH:mm}") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Codice cliente: </span>
-                                            <%# Eval("Codice") %>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <div class="account-section-title">Dati anagrafici / fiscali</div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Ragione sociale: </span>
-                                            <%# Eval("RagioneSociale") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Cognome / Nome: </span>
-                                            <%# Eval("cognomenome") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Partita IVA: </span>
-                                            <%# Eval("Piva") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Codice fiscale: </span>
-                                            <%# Eval("CodiceFiscale") %>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <hr />
-
-                                <div class="row">
-                                    <div class="col-12 col-md-6">
-                                        <div class="account-section-title">Profilo commerciale</div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Listino attivo: </span>
-                                            <%# Eval("listino") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Tipo cliente: </span>
-                                            <%# Eval("UtenteTipoDescrizione") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Modalità prezzi: </span>
-                                            <%# IIf(Convert.ToInt32(Eval("IvaTipo")) = 1, "Prezzi IVA esclusa", "Prezzi IVA inclusa") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Esenzione IVA: </span>
-                                            <%# Eval("DescrizioneEsenzioneIva") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Reverse charge: </span>
-                                            <%# IIf(Convert.ToInt32(Eval("AbilitatoIvaReverseCharge")) = 1, "Attivo", "Non attivo") %>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <hr />
-
-                                <p class="text-muted-small">
-                                    Per modificare i dati anagrafici completi (ad es. intestazione fiscale, partita IVA, ecc.)
-                                    contatta il nostro servizio clienti.
-                                </p>
-                            </div>
-
-                            <!-- Address -->
-                            <div class="tab-pane fade" id="ks-tab-address" role="tabpanel">
-                                <div class="row">
-                                    <div class="col-12 col-md-6">
-                                        <div class="account-section-title">Indirizzo di fatturazione</div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Indirizzo: </span>
-                                            <%# Eval("Indirizzo") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">CAP: </span>
-                                            <%# Eval("Cap") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Città: </span>
-                                            <%# Eval("Citta") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Provincia: </span>
-                                            <%# Eval("Provincia") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Nazione: </span>
-                                            <%# Eval("Nazione") %>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <div class="account-section-title">Contatti</div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Telefono: </span>
-                                            <%# Eval("Telefono") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Cellulare: </span>
-                                            <%# Eval("Cellulare") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Fax: </span>
-                                            <%# Eval("Fax") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Email: </span>
-                                            <%# Eval("email") %>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <asp:Panel ID="pnlDestAltRead" runat="server" CssClass="mt-3" Visible="false">
-                                    <hr />
-                                    <div class="account-section-title">Destinazione alternativa (predefinita)</div>
-
-                                    <div class="account-field-value">
-                                        <span class="account-field-label">Ragione sociale: </span>
-                                        <asp:Label ID="lblDestAltRagioneSociale" runat="server" />
-                                    </div>
-
-                                    <div class="account-field-value">
-                                        <span class="account-field-label">Nome: </span>
-                                        <asp:Label ID="lblDestAltNome" runat="server" />
-                                    </div>
-
-                                    <div class="account-field-value">
-                                        <span class="account-field-label">Indirizzo: </span>
-                                        <asp:Label ID="lblDestAltIndirizzo" runat="server" />
-                                    </div>
-
-                                    <div class="account-field-value">
-                                        <span class="account-field-label">CAP: </span>
-                                        <asp:Label ID="lblDestAltCap" runat="server" />
-                                    </div>
-
-                                    <div class="account-field-value">
-                                        <span class="account-field-label">Città: </span>
-                                        <asp:Label ID="lblDestAltCitta" runat="server" />
-                                    </div>
-
-                                    <div class="account-field-value">
-                                        <span class="account-field-label">Provincia: </span>
-                                        <asp:Label ID="lblDestAltProvincia" runat="server" />
-                                    </div>
-
-                                    <div class="account-field-value">
-                                        <span class="account-field-label">Nazione: </span>
-                                        <asp:Label ID="lblDestAltNazione" runat="server" />
-                                    </div>
-                                </asp:Panel>
-                            </div>
-
-                        </div>
-
-                        <div class="ks-edit-buttons mt-3">
-                            <asp:Button ID="btnEdit" runat="server"
-                                Text="Modifica dati"
-                                CssClass="tf-btn btn-line"
-                                CommandName="Edit" />
-                        </div>
-                    </div>
-                    </ItemTemplate>
-                
-
-                <%-- TEMPLATE MODIFICA --%>
-                <EditItemTemplate>
-
-                    <div class="flat-animate-tab ks-account-tabs">
-                        <ul class="nav nav-tabs menu-tab-line" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link active" data-bs-toggle="tab" href="#ks-edit-account" role="tab" aria-selected="true">Dettagli account</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link" data-bs-toggle="tab" href="#ks-edit-address" role="tab" aria-selected="false">Indirizzi</a>
-                            </li>
-                        </ul>
-
-                        <div class="tab-content pt-3">
-
-                            <!-- Account details -->
-                            <div class="tab-pane fade show active" id="ks-edit-account" role="tabpanel">
-                                <div class="row">
-                                    <div class="col-12 col-md-6">
-                                        <div class="account-section-title">Dati di accesso / account</div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Username: </span>
-                                            <%# Eval("Username") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Email: </span>
-                                            <asp:TextBox ID="tbEmailEdit" runat="server"
-                                                CssClass="form-control"
-                                                Text='<%# Bind("email") %>' />
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <div class="account-section-title">Dati anagrafici / fiscali</div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Ragione sociale: </span>
-                                            <%# Eval("RagioneSociale") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Cognome / Nome: </span>
-                                            <%# Eval("cognomenome") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Partita IVA: </span>
-                                            <%# Eval("Piva") %>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Codice fiscale: </span>
-                                            <%# Eval("CodiceFiscale") %>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <hr />
-
-                                <p class="text-muted-small mb-0">
-                                    Per modificare i dati anagrafici completi (ad es. intestazione fiscale, partita IVA, ecc.)
-                                    contatta il nostro servizio clienti.
-                                </p>
-                            </div>
-
-                            <!-- Address -->
-                            <div class="tab-pane fade" id="ks-edit-address" role="tabpanel">
-                                <div class="row">
-                                    <div class="col-12 col-md-6">
-                                        <div class="account-section-title">Indirizzo di fatturazione</div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Indirizzo:</span><br />
-                                            <asp:TextBox ID="tbIndirizzoEdit" runat="server"
-                                                CssClass="form-control"
-                                                Text='<%# Bind("Indirizzo") %>' />
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">CAP:</span><br />
-                                            <asp:TextBox ID="tbCapEdit" runat="server"
-                                                CssClass="form-control"
-                                                Text='<%# Bind("Cap") %>'
-                                                AutoPostBack="True"
-                                                OnTextChanged="tbCapEdit_TextChanged" />
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Città:</span><br />
-                                            <asp:DropDownList ID="ddlCittaEdit" runat="server"
-                                                CssClass="form-control"
-                                                AutoPostBack="True"
-                                                Visible="False"
-                                                OnSelectedIndexChanged="ddlCittaEdit_SelectedIndexChanged">
-                                            </asp:DropDownList>
-                                            <asp:TextBox ID="tbCittaEdit" runat="server"
-                                                CssClass="form-control"
-                                                Text='<%# Bind("Citta") %>' />
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Provincia:</span><br />
-                                            <asp:TextBox ID="tbProvinciaEdit" runat="server"
-                                                CssClass="form-control"
-                                                Text='<%# Bind("Provincia") %>' />
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Nazione:</span><br />
-                                            <asp:TextBox ID="tbNazioneEdit" runat="server"
-                                                CssClass="form-control"
-                                                Text='<%# Bind("Nazione") %>'
-                                                ReadOnly="True" />
-                                        </div>
-
-                                        <asp:Label ID="lblCapMessage" runat="server"
-                                            CssClass="text-error"
-                                            EnableViewState="True"></asp:Label>
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <div class="account-section-title">Contatti</div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Telefono:</span><br />
-                                            <asp:TextBox ID="tbTelefonoEdit" runat="server"
-                                                CssClass="form-control"
-                                                Text='<%# Bind("Telefono") %>' />
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Cellulare:</span><br />
-                                            <asp:TextBox ID="tbCellulareEdit" runat="server"
-                                                CssClass="form-control"
-                                                Text='<%# Bind("Cellulare") %>' />
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Fax:</span><br />
-                                            <asp:TextBox ID="tbFaxEdit" runat="server"
-                                                CssClass="form-control"
-                                                Text='<%# Bind("Fax") %>' />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <hr />
-
-                                <div class="row">
-                                    <div class="col-12 col-md-6">
-                                        <div class="account-section-title">Destinazione alternativa</div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Seleziona destinazione:</span><br />
-                                            <asp:DropDownList ID="ddlDestAlt" runat="server"
-                                                CssClass="form-control"
-                                                AutoPostBack="True"
-                                                OnSelectedIndexChanged="ddlDestAlt_SelectedIndexChanged">
-                                            </asp:DropDownList>
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Ragione sociale:</span><br />
-                                            <asp:TextBox ID="tbRagioneSocialeAEdit" runat="server"
-                                                CssClass="form-control" />
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Nome:</span><br />
-                                            <asp:TextBox ID="tbNomeAEdit" runat="server"
-                                                CssClass="form-control" />
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Indirizzo:</span><br />
-                                            <asp:TextBox ID="tbIndirizzoAEdit" runat="server"
-                                                CssClass="form-control" />
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">CAP:</span><br />
-                                            <asp:TextBox ID="tbCapAEdit" runat="server"
-                                                CssClass="form-control"
-                                                AutoPostBack="True"
-                                                OnTextChanged="tbCapAEdit_TextChanged" />
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Città:</span><br />
-                                            <asp:DropDownList ID="ddlCittaAEdit" runat="server"
-                                                CssClass="form-control"
-                                                AutoPostBack="True"
-                                                Visible="False"
-                                                OnSelectedIndexChanged="ddlCittaAEdit_SelectedIndexChanged">
-                                            </asp:DropDownList>
-                                            <asp:TextBox ID="tbCittaAEdit" runat="server"
-                                                CssClass="form-control" />
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Provincia:</span><br />
-                                            <asp:TextBox ID="tbProvinciaAEdit" runat="server"
-                                                CssClass="form-control" />
-                                        </div>
-
-                                        <div class="account-field-value">
-                                            <span class="account-field-label">Nazione:</span><br />
-                                            <asp:TextBox ID="tbNazioneAEdit" runat="server"
-                                                CssClass="form-control"
-                                                ReadOnly="True" />
-                                        </div>
-
-                                        <asp:Label ID="lblCapAMessage" runat="server"
-                                            CssClass="text-error"
-                                            EnableViewState="True"></asp:Label>
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <p class="text-muted-small">
-                                            Puoi gestire qui le tue destinazioni alternative per la spedizione merce.<br />
-                                            Seleziona dall'elenco una destinazione esistente oppure scegli
-                                            "<strong>Nuova destinazione</strong>" per inserirne una nuova.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-
-                        <div class="ks-edit-buttons mt-3">
-                            <asp:Button ID="btnUpdate" runat="server"
-                                Text="Salva"
-                                CssClass="tf-btn btn-line"
-                                CommandName="Update"
-                                OnClientClick="ksShowSpinnerOnSubmit();" />
-                            <asp:Button ID="btnCancel" runat="server"
-                                Text="Annulla"
-                                CssClass="tf-btn btn-line"
-                                CommandName="Cancel" />
-                        </div>
-                    </div>
-
-                
-
-            </asp:FormView>
-        </asp:Panel>
-
-        <!-- DATASOURCE: join vlogin + utenti + utentitipo -->
-        <asp:SqlDataSource ID="sdsUtente" runat="server"
-            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-            SelectCommand="
-                SELECT 
-                    v.id,
-                    v.Username,
-                    v.email,
-                    v.cognomenome,
-                    v.ultimoaccesso,
-                    v.utentiid AS UtentiId,
-                    v.utentitipoid,
-                    v.listino,
-                    v.IvaTipo,
-                    v.Abilitato,
-                    v.UtentiAbilitato,
-                    v.IdEsenzioneIva,
-                    v.ValoreEsenzioneIva,
-                    v.DescrizioneEsenzioneIva,
-                    v.AbilitatoIvaReverseCharge,
-                    u.RagioneSociale,
-                    u.Indirizzo,
-                    u.Cap,
-                    u.Citta,
-                    u.Provincia,
-                    u.Nazione,
-                    u.Telefono,
-                    u.Cellulare,
-                    u.Fax,
-                    u.Piva,
-                    u.CodiceFiscale,
-                    u.Codice,
-                    t.Descrizione AS UtenteTipoDescrizione
-                FROM vlogin v
-                INNER JOIN utenti u ON v.utentiid = u.id
-                LEFT JOIN utentitipo t ON v.utentitipoid = t.id
-                WHERE v.id = ?LoginId">
-            <SelectParameters>
-                <asp:SessionParameter Name="LoginId" SessionField="LoginId" Type="Int32" />
-            </SelectParameters>
-        </asp:SqlDataSource>
-
-    </asp:Panel>
-
-                    </div>
-                </div>
-            </div>
-        </section>
-</div>
+<asp:Content ID="ContentScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
+    <script src="/Public/assets/keepstore/js/datiutente-ui.js" defer></script>
 </asp:Content>

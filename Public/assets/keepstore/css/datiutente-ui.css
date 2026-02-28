@@ -1,0 +1,57 @@
+/* KeepStore 3.0 — Dati utente UI (Step 19)
+   Solo UI: layout/spacing/tabs. Nessuna logica VB/DB. */
+
+.ks-userdata-tabs {
+  border-bottom: 1px solid rgba(0,0,0,.08);
+}
+
+.ks-userdata-tabs .nav-link {
+  font-weight: 600;
+}
+
+/*
+  Compatibilità: più FormView presenti (FormView1 / fvDatiUtente / fvUtente).
+  Mostriamo di default il primo; lo script seleziona quello effettivamente popolato.
+*/
+.ks-userdata-formview {
+  display: none;
+}
+
+.ks-userdata-formview:first-of-type {
+  display: block;
+}
+
+.ks-userdata-formview.is-active {
+  display: block;
+}
+
+.ks-userdata-pane {
+  display: none;
+}
+
+.ks-userdata.is-tab-details .ks-userdata-pane-details {
+  display: block;
+}
+
+.ks-userdata.is-tab-addr .ks-userdata-pane-addresses {
+  display: block;
+}
+
+/* Key/value list */
+.ks-kv dt {
+  font-weight: 600;
+  color: #6c757d;
+}
+
+.ks-kv dd {
+  margin-bottom: .4rem;
+}
+
+/* Make dl rows breathe a bit on small screens */
+@media (max-width: 575.98px) {
+  .ks-kv dt,
+  .ks-kv dd {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}

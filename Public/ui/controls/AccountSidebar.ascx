@@ -1,33 +1,64 @@
-<%@ Control Language="VB" AutoEventWireup="false" CodeFile="AccountSidebar.ascx.vb" Inherits="AccountSidebar" %>
-<!-- ============================================================
-     Account Sidebar (KeepStore 3.0)
-     - Menu area personale centralizzato
-     - Solo UI: nessuna logica business / DB
-     ============================================================ -->
+<%@ Control Language="VB" AutoEventWireup="false" CodeFile="AccountSidebar.ascx.vb" Inherits="Public_ui_controls_AccountSidebar" %>
 
-<div class="ks-account-sidebar card">
-    <div class="card-header py-3">
-        <div class="d-flex align-items-center gap-2">
-            <i class="icon icon-user"></i>
-            <span class="fw-semibold">Area personale</span>
+<div class="ks-account-card">
+    <div class="ks-account-card-head">
+        <div class="d-flex align-items-center gap-3">
+            <div class="ks-account-avatar" aria-hidden="true">
+                <i class="icon-user"></i>
+            </div>
+            <div>
+                <div class="fw-semibold">Area Cliente</div>
+                <div class="text-muted small">Gestisci il tuo account</div>
+            </div>
         </div>
     </div>
 
-    <div class="list-group list-group-flush">
-        <a id="lnkDashboard" runat="server" href="myaccount.aspx" class="list-group-item list-group-item-action">Dashboard</a>
-        <a id="lnkAccountDetails" runat="server" href="datiutente.aspx" class="list-group-item list-group-item-action">Dettagli account</a>
-        <a id="lnkAddresses" runat="server" href="datiutente.aspx?tab=addr" class="list-group-item list-group-item-action">Indirizzi</a>
-
-        <div class="list-group-item py-2 small text-muted">Ordini e documenti</div>
-        <a id="lnkOrders" runat="server" href="documenti.aspx?t=4" class="list-group-item list-group-item-action">I miei ordini</a>
-        <a id="lnkInvoices" runat="server" href="documenti.aspx?t=2" class="list-group-item list-group-item-action">Le mie fatture</a>
-        <a id="lnkDdt" runat="server" href="documenti.aspx?t=1" class="list-group-item list-group-item-action">I miei DDT</a>
-
-        <div class="list-group-item py-2 small text-muted">Strumenti</div>
-        <a id="lnkWishlist" runat="server" href="wishlist.aspx" class="list-group-item list-group-item-action">Wishlist</a>
-        <a id="lnkChangePassword" runat="server" href="password.aspx" class="list-group-item list-group-item-action">Cambia password</a>
-        <a id="lnkRecoverAccess" runat="server" href="remind.aspx" class="list-group-item list-group-item-action">Recupero accesso</a>
-
-        <a id="lnkLogout" runat="server" href="logout.aspx" class="list-group-item list-group-item-action text-danger">Logout</a>
+    <div class="ks-account-card-body">
+        <nav class="ks-account-nav" aria-label="Menu account">
+            <ul class="ks-account-nav-list" runat="server" id="ulMenu">
+                <li>
+                    <a href="myaccount.aspx" class="ks-account-nav-link" data-ks-active="myaccount.aspx" runat="server" id="lnkDashboard">
+                        <i class="icon-home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="datiutente.aspx" class="ks-account-nav-link" data-ks-active="datiutente.aspx" runat="server" id="lnkDati">
+                        <i class="icon-user"></i>
+                        <span>Dettagli account</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="datiutente.aspx?tab=addr" class="ks-account-nav-link" data-ks-active="datiutente.aspx?tab=addr" runat="server" id="lnkIndirizzi">
+                        <i class="icon-map-pin"></i>
+                        <span>Indirizzi</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="documenti.aspx" class="ks-account-nav-link" data-ks-active="documenti.aspx" runat="server" id="lnkOrdini">
+                        <i class="icon-file-text"></i>
+                        <span>Ordini / Documenti</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="wishlist.aspx" class="ks-account-nav-link" data-ks-active="wishlist.aspx" runat="server" id="lnkWishlist">
+                        <i class="icon-heart"></i>
+                        <span>Wishlist</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="cambiapassword.aspx" class="ks-account-nav-link" data-ks-active="cambiapassword.aspx" runat="server" id="lnkPassword">
+                        <i class="icon-lock"></i>
+                        <span>Password</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="logout.aspx" class="ks-account-nav-link" data-ks-active="logout.aspx" runat="server" id="lnkLogout">
+                        <i class="icon-log-out"></i>
+                        <span>Esci</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
     </div>
 </div>
