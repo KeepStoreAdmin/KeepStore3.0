@@ -1,6 +1,7 @@
 <%@ Master Language="VB" AutoEventWireup="false" CodeFile="Page.master.vb" Inherits="PageMaster" %>
 <%@ Register Src="~/Public/ui/controls/SiteHeader.ascx" TagPrefix="ks" TagName="SiteHeader" %>
 <%@ Register Src="~/Public/ui/controls/SiteFooter.ascx" TagPrefix="ks" TagName="SiteFooter" %>
+<%@ Register Src="~/Public/ui/controls/AccountSidebar.ascx" TagPrefix="ks" TagName="AccountSidebar" %>
 
 <!DOCTYPE html>
 <html lang="it">
@@ -98,11 +99,20 @@
             <main>
                 <asp:ContentPlaceHolder ID="BreadcrumbContent" runat="server" />
 
-                <asp:ContentPlaceHolder ID="MainContent" runat="server" />
+                <!-- Account shell (progressive): sidebar visibile solo su pagine account via CSS (body.ks-page-account) -->
+                <div class="ks-account-shell">
+                    <aside class="ks-account-aside" aria-label="Menu account">
+                        <ks:AccountSidebar ID="AccountSidebar1" runat="server" />
+                    </aside>
 
-                <!-- Legacy aliases -->
-                <asp:ContentPlaceHolder ID="ContentPlaceHolder1" runat="server" />
-                <asp:ContentPlaceHolder ID="cph" runat="server" />
+                    <div class="ks-account-main">
+                        <asp:ContentPlaceHolder ID="MainContent" runat="server" />
+
+                        <!-- Legacy aliases -->
+                        <asp:ContentPlaceHolder ID="ContentPlaceHolder1" runat="server" />
+                        <asp:ContentPlaceHolder ID="cph" runat="server" />
+                    </div>
+                </div>
             </main>
 
                         <!-- ============================================================

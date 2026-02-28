@@ -37,8 +37,9 @@
     'documentidettaglio.aspx': true,
     'wishlist.aspx': true,
     'cambiapassword.aspx': true,
-    'recuperoaccesso.aspx': true,
-    'indirizzi.aspx': true
+    'password.aspx': true,
+    'indirizzi.aspx': true,
+    'ordini.aspx': true
   };
 
   var authPages = {
@@ -46,7 +47,8 @@
     'registrazione.aspx': true,
     'registrati.aspx': true,
     'recuperoaccesso.aspx': true,
-    'passwordpersa.aspx': true
+    'passwordpersa.aspx': true,
+    'remind.aspx': true
   };
 
   if (accountPages[file]) addBodyClass('ks-page-account');
@@ -58,6 +60,7 @@
 
   if (documentsPages[file]) addBodyClass('ks-page-documents');
   if (authPages[file]) addBodyClass('ks-page-auth');
+  if (file === 'wishlist.aspx') addBodyClass('ks-page-wishlist');
 
   function enhanceTables(root) {
     var tables = root.querySelectorAll('table');
@@ -129,6 +132,16 @@
     }
   }
 
+function hideLegacyAccountNav(root) {
+  try {
+    var nav = root.querySelector('.ks-account-nav');
+    var aside = document.querySelector('.ks-account-aside');
+    if (nav && aside) {
+      nav.style.display = 'none';
+    }
+  } catch (e) { }
+}
+
   function dedupeBreadcrumb(root) {
     // Se esiste il breadcrumb del tema, nasconde breadcrumb legacy più comuni
     if (!root.querySelector('.ks-breadcrumb')) return;
@@ -160,6 +173,7 @@
 
     if (document.body.classList.contains('ks-page-account')) {
       tryMarkAccountNav(main);
+      hideLegacyAccountNav(main);
     }
 
     // Dedupe breadcrumb (principalmente per pagine legacy migrate a Site.master)
