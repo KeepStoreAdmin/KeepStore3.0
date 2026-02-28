@@ -69,9 +69,30 @@
     'accessonegato.aspx': true
   };
 
+  var successPages = {
+    'coupon_esito_acquisto.aspx': true,
+    'esito_acquisto.aspx': true,
+    'ordine_esito_acquisto.aspx': true,
+    'checkout_success.aspx': true,
+    'checkoutsuccess.aspx': true,
+    'success.aspx': true
+  };
+
+  function isLikelySuccessPage(fn) {
+    fn = (fn || '').toLowerCase();
+    if (!fn) return false;
+    // euristica: esito/success/conferma sono quasi sempre pagine transazionali
+    if (fn.indexOf('esito') !== -1) return true;
+    if (fn.indexOf('success') !== -1) return true;
+    if (fn.indexOf('conferma') !== -1) return true;
+    return false;
+  }
+
+
   if (accountPages[file]) addBodyClass('ks-page-account');
   if (documentsPages[file]) addBodyClass('ks-page-documents');
   if (authPages[file]) addBodyClass('ks-page-auth');
+  if (successPages[file] || isLikelySuccessPage(file)) addBodyClass('ks-page-success');
 
   function enhanceTables(root) {
     var tables = root.querySelectorAll('table');
@@ -595,7 +616,7 @@
     card.className = 'card ks-auth-card';
 
     var body = document.createElement('div');
-    body.className = 'card-body';
+    body.className = 'card-body ks-auth-body';
 
     // Move all children into card body
     var nodes = [];
@@ -613,13 +634,310 @@
     root.appendChild(shell);
   }
 
+  function getAuthTitleFallback() {
+    switch (file) {
+      case 'login.aspx': return 'Accedi';
+      case 'registrazione.aspx': return 'Crea account';
+      case 'remind.aspx':
+      case 'recuperoaccesso.aspx':
+      case 'passwordpersa.aspx': return 'Recupero accesso';
+      case 'accessonegato.aspx': return 'Accesso negato';
+      default: return 'Account';
+    }
+  }
+
+  function extractAndRemoveFirstHeading(scope) {
+    if (!scope) return '';
+    var h = scope.querySelector('h1, h2, h3, h4, h5');
+    if (!h) return '';
+
+    // evita heading dentro nav/breadcrumb o elementi di layout
+    if (h.closest('nav') || h.closest('.breadcrumb') || h.closest('.ks-breadcrumb')) return '';
+
+    var t = (h.textContent || '').trim();
+    if (t.length === 0) return '';
+
+    // rimuovi per evitare doppio titolo (verrà riposizionato in header)
+    try { h.parentNode.removeChild(h); } catch (e) { }
+    return t;
+  }
+
+  function buildAuthLinksFooter(scope) {
+    if (!scope) return;
+    if (scope.querySelector('.ks-auth-links')) return;
+
+    var anchors = scope.querySelectorAll('a[href]');
+    if (!anchors || anchors.length === 0) return;
+
+    var wanted = [];
+    var seen = {};
+
+    for (var i = 0; i < anchors.length; i++) {
+      var a = anchors[i];
+      if (!a || !a.getAttribute) continue;
+      var href = (a.getAttribute('href') || '').toLowerCase();
+      if (!href) continue;
+
+      var isAuthLink = (
+        href.indexOf('login.aspx') !== -1 ||
+        href.indexOf('registrazione') !== -1 ||
+        href.indexOf('register') !== -1 ||
+        href.indexOf('remind') !== -1 ||
+        href.indexOf('recupero') !== -1 ||
+        href.indexOf('passwordpersa') !== -1 ||
+        href.indexOf('cambiapassword') !== -1
+      );
+
+      if (!isAuthLink) continue;
+
+      // evita duplicati
+      if (seen[href]) continue;
+      seen[href] = true;
+
+      var txt = (a.textContent || '').trim();
+      if (!txt) txt = a.getAttribute('title') || '';
+      if (!txt) continue;
+
+      wanted.push({ href: a.href || a.getAttribute('href'), text: txt, original: a });
+    }
+
+    if (wanted.length === 0) return;
+
+    // nascondi originali (evita doppioni)
+    for (var k = 0; k < wanted.length; k++) {
+      try { wanted[k].original.classList.add('ks-auth-link-original'); } catch (e) { }
+    }
+
+    var wrap = document.createElement('div');
+    wrap.className = 'ks-auth-links';
+
+    for (var j = 0; j < wanted.length; j++) {
+      var l = document.createElement('a');
+      l.href = wanted[j].href;
+      l.textContent = wanted[j].text;
+      l.className = 'ks-auth-link';
+      wrap.appendChild(l);
+    }
+
+    scope.appendChild(wrap);
+  }
+
+  function addPasswordToggles(scope) {
+    if (!scope) return;
+    var pwds = scope.querySelectorAll('input[type="password"]');
+    for (var i = 0; i < pwds.length; i++) {
+      var inp = pwds[i];
+      if (!inp || inp.dataset.ksPwToggle === '1') continue;
+
+      // Preferisci aggiungere il bottone in una input-group, se possibile
+      var parent = inp.parentElement;
+      var group = null;
+
+      if (parent && parent.classList && parent.classList.contains('input-group')) {
+        group = parent;
+      } else {
+        group = document.createElement('div');
+        group.className = 'input-group ks-password-group';
+        if (parent) parent.insertBefore(group, inp);
+        group.appendChild(inp);
+      }
+
+      // Evita doppio toggle
+      if (group.querySelector('.ks-password-toggle')) {
+        inp.dataset.ksPwToggle = '1';
+        continue;
+      }
+
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-outline-secondary ks-password-toggle';
+      btn.textContent = 'Mostra';
+
+      btn.addEventListener('click', function () {
+        var input = this.parentElement ? this.parentElement.querySelector('input[type="password"], input[type="text"]') : null;
+        if (!input) return;
+        var isPwd = (input.getAttribute('type') || '').toLowerCase() === 'password';
+        input.setAttribute('type', isPwd ? 'text' : 'password');
+        this.textContent = isPwd ? 'Nascondi' : 'Mostra';
+      });
+
+      group.appendChild(btn);
+      inp.dataset.ksPwToggle = '1';
+    }
+  }
+
+  function applyInputHints(scope) {
+    if (!scope) return;
+    var inputs = scope.querySelectorAll('input');
+    for (var i = 0; i < inputs.length; i++) {
+      var el = inputs[i];
+      if (!el) continue;
+
+      var type = (el.getAttribute('type') || '').toLowerCase();
+      if (type === 'hidden') continue;
+
+      var id = (el.getAttribute('id') || '').toLowerCase();
+      var name = (el.getAttribute('name') || '').toLowerCase();
+      var key = id + ' ' + name;
+
+      // Email
+      if (key.indexOf('mail') !== -1) {
+        if (!el.getAttribute('autocomplete')) el.setAttribute('autocomplete', 'email');
+        el.setAttribute('inputmode', 'email');
+        el.setAttribute('autocapitalize', 'none');
+        el.setAttribute('spellcheck', 'false');
+      }
+
+      // Username
+      if (key.indexOf('user') !== -1 || key.indexOf('login') !== -1) {
+        if (!el.getAttribute('autocomplete')) el.setAttribute('autocomplete', 'username');
+        el.setAttribute('autocapitalize', 'none');
+        el.setAttribute('spellcheck', 'false');
+      }
+
+      // Password
+      if (type === 'password') {
+        if (!el.getAttribute('autocomplete')) {
+          var ac = (file === 'registrazione.aspx') ? 'new-password' : 'current-password';
+          el.setAttribute('autocomplete', ac);
+        }
+      }
+
+      // Telefono
+      if (key.indexOf('tel') !== -1 || key.indexOf('telefono') !== -1 || key.indexOf('cell') !== -1) {
+        if (!el.getAttribute('inputmode')) el.setAttribute('inputmode', 'tel');
+        if (!el.getAttribute('autocomplete')) el.setAttribute('autocomplete', 'tel');
+      }
+    }
+  }
+
+  function markPrimaryAuthButton(scope) {
+    if (!scope) return;
+
+    // Preferisci submit, fallback button/input
+    var btn = scope.querySelector('button[type="submit"], input[type="submit"], input[type="button"]');
+    if (!btn) return;
+
+    btn.classList.add('ks-auth-primary');
+    // assicurati stile base
+    if (!btn.classList.contains('btn')) btn.classList.add('btn');
+    if (!btn.classList.contains('btn-primary')) btn.classList.add('btn-primary');
+    btn.classList.add('btn-lg');
+  }
+
+  function enhanceAuthDeep(root) {
+    if (!root) return;
+    var card = root.querySelector('.ks-auth-card');
+    if (!card) return;
+
+    var body = card.querySelector('.ks-auth-body') || card.querySelector('.card-body');
+    if (!body) return;
+
+    // Header (solo una volta)
+    if (!card.querySelector('.ks-auth-header')) {
+      var header = document.createElement('div');
+      header.className = 'card-header ks-auth-header';
+
+      var wrap = document.createElement('div');
+      var title = extractAndRemoveFirstHeading(body) || getAuthTitleFallback();
+
+      var h = document.createElement('h1');
+      h.className = 'h5 ks-auth-title';
+      h.textContent = title;
+
+      wrap.appendChild(h);
+      header.appendChild(wrap);
+
+      card.insertBefore(header, body);
+    }
+
+    // ValidationSummary -> alert bootstrap
+    var vs = body.querySelector('.validation-summary-errors, .ValidationSummary');
+    if (vs && !vs.classList.contains('ks-auth-alert')) {
+      vs.classList.add('alert', 'alert-danger', 'ks-auth-alert');
+      vs.setAttribute('role', 'alert');
+    }
+
+    applyInputHints(body);
+    addPasswordToggles(body);
+    markPrimaryAuthButton(body);
+    buildAuthLinksFooter(body);
+  }
+
+  function enhanceSuccessLayout(root) {
+    if (!root) return;
+    if (root.querySelector('.ks-success-shell')) return;
+
+    var shell = document.createElement('div');
+    shell.className = 'ks-success-shell';
+
+    var card = document.createElement('div');
+    card.className = 'card ks-success-card';
+
+    var body = document.createElement('div');
+    body.className = 'card-body';
+
+    // Move children into card body
+    var nodes = [];
+    for (var i = 0; i < root.childNodes.length; i++) nodes.push(root.childNodes[i]);
+    for (var n = 0; n < nodes.length; n++) body.appendChild(nodes[n]);
+
+    // Hero (icon + title)
+    var hero = document.createElement('div');
+    hero.className = 'ks-success-hero';
+
+    var icon = document.createElement('div');
+    icon.className = 'ks-success-icon';
+    icon.textContent = '✓';
+
+    var txt = document.createElement('div');
+    var title = extractAndRemoveFirstHeading(body) || 'Operazione completata';
+
+    var h = document.createElement('h1');
+    h.className = 'h5 ks-success-title';
+    h.textContent = title;
+
+    txt.appendChild(h);
+
+    hero.appendChild(icon);
+    hero.appendChild(txt);
+
+    // Inserisci hero in cima al body
+    body.insertBefore(hero, body.firstChild);
+
+    // Actions
+    if (!body.querySelector('.ks-success-actions')) {
+      var acts = document.createElement('div');
+      acts.className = 'ks-success-actions';
+
+      var aHome = document.createElement('a');
+      aHome.href = 'Default.aspx';
+      aHome.className = 'btn btn-primary';
+      aHome.textContent = 'Torna alla home';
+
+      var aAcc = document.createElement('a');
+      aAcc.href = 'myaccount.aspx';
+      aAcc.className = 'btn btn-outline-secondary';
+      aAcc.textContent = 'Vai al tuo account';
+
+      acts.appendChild(aHome);
+      acts.appendChild(aAcc);
+      body.appendChild(acts);
+    }
+
+    card.appendChild(body);
+    shell.appendChild(card);
+    root.appendChild(shell);
+  }
+
+
     function applyKsEnhancements() {
     try {
     // Preferisci il contenitore interno della shell (evita di wrappare header/footer)
     var root = document.querySelector('.ks-account-main') || document.querySelector('main') || document.body;
 
     // Patches solo su pagine account/auth
-    if (document.body.classList.contains('ks-page-account') || document.body.classList.contains('ks-page-auth')) {
+    if (document.body.classList.contains('ks-page-account') || document.body.classList.contains('ks-page-auth') || document.body.classList.contains('ks-page-success')) {
       enhanceTables(root);
       enhanceForms(root);
     }
@@ -639,10 +957,15 @@
 
     if (document.body.classList.contains('ks-page-auth')) {
       enhanceAuthLayout(root);
+      enhanceAuthDeep(root);
+    }
+
+    if (document.body.classList.contains('ks-page-success')) {
+      enhanceSuccessLayout(root);
     }
 
     // Dedupe breadcrumb (principalmente per pagine legacy migrate a Site.master)
-    if (document.body.classList.contains('ks-page-account') || document.body.classList.contains('ks-page-auth')) {
+    if (document.body.classList.contains('ks-page-account') || document.body.classList.contains('ks-page-auth') || document.body.classList.contains('ks-page-success')) {
       dedupeBreadcrumb(document.querySelector('main') || document.body);
     }
     } catch (e) {

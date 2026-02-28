@@ -1,12 +1,18 @@
 /* ============================================================
-   KeepStore 3.0 - Auth UI
+   KeepStore 3.0 - Auth & Success UI (progressive)
    Scopo:
    - Uniformare Login / Registrazione / Recupero al tema
+   - Migliorare le pagine esito/successo pagamento/ordine
    - Solo UI: nessuna modifica a logica VB / DB
-   Note:
-   - CSS SCOPED: body.ks-page-auth (classi aggiunte via ks-page-flags.js)
-   - ks-page-flags.js può inserire un wrapper .ks-auth-shell in runtime
+
+   NOTE
+   - CSS SCOPED tramite classi su <body> aggiunte da ks-page-flags.js
+   - Nessun riferimento al nome del template originale (naming neutro)
    ============================================================ */
+
+/* ------------------------------------------------------------
+   AUTH (login / registrazione / recupero)
+   ------------------------------------------------------------ */
 
 /* Shell */
 body.ks-page-auth main {
@@ -14,13 +20,37 @@ body.ks-page-auth main {
 }
 
 body.ks-page-auth .ks-auth-shell {
-  max-width: 560px;
+  max-width: 620px;
   margin: 0 auto;
-  padding: 18px 12px;
+  padding: 20px 12px;
 }
 
 body.ks-page-auth .ks-auth-card {
-  border-radius: .9rem;
+  border-radius: .95rem;
+  overflow: hidden;
+}
+
+body.ks-page-auth .ks-auth-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+body.ks-page-auth .ks-auth-header .ks-auth-title {
+  margin: 0;
+  line-height: 1.2;
+}
+
+body.ks-page-auth .ks-auth-header .ks-auth-subtitle {
+  margin: 4px 0 0 0;
+  font-size: .9rem;
+  opacity: .85;
+}
+
+body.ks-page-auth .ks-auth-body {
+  padding: 16px;
 }
 
 /* Tipografia */
@@ -33,9 +63,51 @@ body.ks-page-auth h5 {
   margin-bottom: .75rem;
 }
 
+/* Form spacing */
+body.ks-page-auth .form-control,
+body.ks-page-auth .form-select {
+  border-radius: .75rem;
+}
+
+body.ks-page-auth .input-group > .form-control {
+  border-radius: .75rem 0 0 .75rem;
+}
+
+body.ks-page-auth .input-group > .btn {
+  border-radius: 0 .75rem .75rem 0;
+}
+
+body.ks-page-auth .ks-password-toggle {
+  white-space: nowrap;
+}
+
+body.ks-page-auth .ks-auth-primary {
+  width: 100%;
+  border-radius: .8rem;
+  padding-top: .7rem;
+  padding-bottom: .7rem;
+}
+
 /* Link secondari */
+body.ks-page-auth .ks-auth-links {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0,0,0,.08);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 body.ks-page-auth .ks-auth-links a {
   text-decoration: none;
+  font-weight: 500;
+}
+
+/* Nasconde i link legacy duplicati quando ricreati in footer */
+body.ks-page-auth a.ks-auth-link-original {
+  display: none !important;
 }
 
 /* Validation (legacy WebForms) */
@@ -52,6 +124,12 @@ body.ks-page-auth .validation-summary-errors ul {
   padding-left: 1.1rem;
 }
 
+/* Bootstrap-like alert wrapper (aggiunto via JS) */
+body.ks-page-auth .ks-auth-alert {
+  border-radius: .75rem;
+  padding: .75rem 1rem;
+}
+
 /* Fallback per validator classici (spesso sono <span style="color:Red">...) */
 body.ks-page-auth span[style*="color:Red"],
 body.ks-page-auth span[style*="color:red"] {
@@ -66,9 +144,74 @@ body.ks-page-auth .tf-btn {
 }
 
 /* ------------------------------------------------------------
-   Accesso negato (pagina)
+   ACCESSO NEGATO
    ------------------------------------------------------------ */
 body.ks-page-accessonegato .ks-access-denied {
   max-width: 640px;
   margin: 0 auto;
+}
+
+/* ------------------------------------------------------------
+   SUCCESS / ESITO (checkout/pagamento/ordine/coupon)
+   ------------------------------------------------------------ */
+
+body.ks-page-success main {
+  padding-top: 0;
+}
+
+body.ks-page-success .ks-success-shell {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 18px 12px;
+}
+
+body.ks-page-success .ks-success-card {
+  border-radius: .95rem;
+  overflow: hidden;
+}
+
+body.ks-page-success .ks-success-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+body.ks-page-success .ks-success-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  line-height: 1;
+  background: rgba(25,135,84,.12); /* green-ish */
+  color: #198754;
+  flex: 0 0 auto;
+}
+
+body.ks-page-success .ks-success-title {
+  margin: 0;
+}
+
+body.ks-page-success .ks-success-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+@media (max-width: 575.98px) {
+  body.ks-page-auth .ks-auth-shell {
+    padding: 14px 10px;
+  }
+
+  body.ks-page-success .ks-success-shell {
+    padding: 14px 10px;
+  }
+
+  body.ks-page-success .ks-success-actions .btn {
+    width: 100%;
+  }
 }
