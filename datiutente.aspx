@@ -360,7 +360,7 @@
                                 CommandName="Edit" />
                         </div>
                     </div>
-
+                    </ItemTemplate>
                 
 
                 <%-- TEMPLATE MODIFICA --%>

@@ -1,13 +1,29 @@
 /* ============================================================
-   KeepStore 3.0 - Auth UI patches
-   Scopo: migliorare resa pagine login/registrazione/recupero legacy
-   Nota: CSS SCOPED (si attiva solo con classi body aggiunte via ks-page-flags.js)
+   KeepStore 3.0 - Auth UI
+   Scopo:
+   - Uniformare Login / Registrazione / Recupero al tema
+   - Solo UI: nessuna modifica a logica VB / DB
+   Note:
+   - CSS SCOPED: body.ks-page-auth (classi aggiunte via ks-page-flags.js)
+   - ks-page-flags.js può inserire un wrapper .ks-auth-shell in runtime
    ============================================================ */
 
+/* Shell */
 body.ks-page-auth main {
   padding-top: 0;
 }
 
+body.ks-page-auth .ks-auth-shell {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 18px 12px;
+}
+
+body.ks-page-auth .ks-auth-card {
+  border-radius: .9rem;
+}
+
+/* Tipografia */
 body.ks-page-auth h1,
 body.ks-page-auth h2,
 body.ks-page-auth h3,
@@ -17,6 +33,42 @@ body.ks-page-auth h5 {
   margin-bottom: .75rem;
 }
 
-body.ks-page-auth .ks-auth-shell {
-  padding: 18px 0;
+/* Link secondari */
+body.ks-page-auth .ks-auth-links a {
+  text-decoration: none;
+}
+
+/* Validation (legacy WebForms) */
+body.ks-page-auth .validation-summary-errors,
+body.ks-page-auth .ValidationSummary,
+body.ks-page-auth .error,
+body.ks-page-auth .errore {
+  margin-top: .75rem;
+  margin-bottom: .75rem;
+}
+
+body.ks-page-auth .validation-summary-errors ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+/* Fallback per validator classici (spesso sono <span style="color:Red">...) */
+body.ks-page-auth span[style*="color:Red"],
+body.ks-page-auth span[style*="color:red"] {
+  color: #dc3545 !important;
+  font-size: .875rem;
+}
+
+/* Pulsanti */
+body.ks-page-auth .btn,
+body.ks-page-auth .tf-btn {
+  border-radius: .7rem;
+}
+
+/* ------------------------------------------------------------
+   Accesso negato (pagina)
+   ------------------------------------------------------------ */
+body.ks-page-accessonegato .ks-access-denied {
+  max-width: 640px;
+  margin: 0 auto;
 }

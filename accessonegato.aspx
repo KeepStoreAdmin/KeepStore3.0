@@ -1,55 +1,37 @@
-﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="accessonegato.aspx.vb" Inherits="accessonegato" %>
+<%@ Page Language="VB" MasterPageFile="~/Public/ui/master/Site.master" AutoEventWireup="false" %>
 
-<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
+<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
+    Accesso negato
+</asp:Content>
 
-    <h1>Accesso negato</h1>
-    <br />
+<asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
+    <section class="tf-sp-2 ks-access-denied">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-7 col-md-9">
+                    <div class="card p-4 p-md-5">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge bg-danger-subtle text-danger-emphasis">403</span>
+                            <h1 class="h5 mb-0 fw-semibold">Accesso negato</h1>
+                        </div>
 
-    <b>
-        Per eseguire l'operazione richiesta è necessario registrarsi al sito
-        <asp:Label ID="lblUrl" runat="server" Text="Url" Font-Bold="True"></asp:Label>
-    </b>
+                        <p class="mb-3">
+                            Non hai i permessi per visualizzare questa pagina oppure la sessione è scaduta.
+                        </p>
 
-    <br /><br />
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="login.aspx" class="btn btn-primary">Accedi</a>
+                            <a href="Default.aspx" class="btn btn-outline-secondary">Torna alla Home</a>
+                        </div>
 
-    Se sei già un utente registrato, clicca sul link
-    <b>“Accedi / Registrati”</b> in alto a destra, inserisci la tua
-    <i>Username</i> e la tua <i>Password</i> ed effettua il <b>Login</b>.
-    Dopo l’accesso potrai usare la voce <b>“My Account”</b> per gestire i tuoi dati e consultare ordini e documenti.
+                        <hr class="my-4" />
 
-    <br /><br />
-
-    <a href="remind.aspx">
-        <span style="text-decoration: underline">
-            Non ricordi i tuoi dati d'accesso al sito
-            <asp:Label ID="lblSito" runat="server" Text="sito" Font-Underline="True"></asp:Label>?
-        </span>
-    </a>
-
-    <br /><br /><br />
-
-    <b>
-        <asp:Label ID="Label1" ForeColor="#e12825" runat="server"
-            Text="Se non sei registrato, registrati subito! È gratis e potrai usufruire di tanti vantaggi:">
-        </asp:Label>
-        <br />
-        <ul>
-            <li>Assegnazione di scontistiche dei prodotti</li>
-            <li>Richiedere quotazioni per quantità</li>
-            <li>Inviare ordini e visualizzare il loro stato in tempo reale</li>
-            <li>Visualizzare in &quot;My Account&quot; tutte le tue movimentazioni</li>
-            <li>Ricevere promozioni ed offerte personalizzate</li>
-            <li>Effettuare richieste di resi merce direttamente online</li>
-            <li>Accumulare punti fedeltà per i premi</li>
-        </ul>
-    </b>
-
-    <p align="center">
-        <asp:Button ID="Button1" runat="server"
-            Text="REGISTRATI ADESSO"
-            PostBackUrl="registrazione.aspx" />
-    </p>
-
-    <hr />
-
+                        <p class="small text-muted mb-0">
+                            Se pensi sia un errore, contatta l'assistenza.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 </asp:Content>

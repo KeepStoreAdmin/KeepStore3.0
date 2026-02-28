@@ -57,3 +57,57 @@ body.ks-page-documents input[type="date"],
 body.ks-page-documents select {
   max-width: 100%;
 }
+
+
+/* ------------------------------------------------------------
+   Document detail / order summary (progressive enhancement via JS)
+   JS aggiunge:
+     - table.ks-table-cards
+     - td[data-label]
+   ------------------------------------------------------------ */
+
+body.ks-page-documentidettaglio h5 {
+  margin-top: 1.25rem;
+  margin-bottom: .75rem;
+}
+
+body.ks-page-documentidettaglio ul {
+  margin-bottom: 1rem;
+}
+
+/* Card layout su mobile per tabelle (righe articoli/totali) */
+@media (max-width: 767.98px) {
+  body.ks-page-documents table.ks-table-cards thead {
+    display: none;
+  }
+
+  body.ks-page-documents table.ks-table-cards,
+  body.ks-page-documents table.ks-table-cards tbody,
+  body.ks-page-documents table.ks-table-cards tr,
+  body.ks-page-documents table.ks-table-cards td {
+    display: block;
+    width: 100%;
+  }
+
+  body.ks-page-documents table.ks-table-cards tr {
+    border: 1px solid rgba(0,0,0,.1);
+    border-radius: .75rem;
+    padding: .5rem .75rem;
+    margin-bottom: .75rem;
+    background: #fff;
+  }
+
+  body.ks-page-documents table.ks-table-cards td {
+    border: 0 !important;
+    padding: .35rem 0 !important;
+  }
+
+  body.ks-page-documents table.ks-table-cards td:before {
+    content: attr(data-label);
+    display: block;
+    font-size: .75rem;
+    text-transform: uppercase;
+    opacity: .65;
+    margin-bottom: .1rem;
+  }
+}

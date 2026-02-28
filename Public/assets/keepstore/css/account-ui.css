@@ -1,71 +1,68 @@
 /* ============================================================
-   KeepStore 3.0 - Account UI patches + Account Shell
+   KeepStore 3.0 - Account UI
    Scopo:
-     - Rendere coerenti le pagine account legacy con il tema
-     - Aggiungere un layout "shell" (sidebar + contenuto) senza toccare la logica VB/DB
-   Nota:
-     - CSS SCOPED: l'impaginazione si attiva solo con body.ks-page-account
-     - L'aside (sidebar) è nascosto di default per non impattare le altre pagine
+   - Shell account (sidebar + content) gestito da Page.master
+   - Migliorare spacing e resa delle pagine account legacy
+   Note:
+   - CSS SCOPED: layout attivo solo con body.ks-page-account
+   - Sidebar nascosta di default (non impatta pagine non-account)
    ============================================================ */
 
-/* Sidebar (iniettata da Page.master): nascosta su pagine NON account */
-.ks-account-aside {
-  display: none;
+/* ------------------------------------------------------------
+   Base (vale per TUTTE le pagine che usano Page.master)
+   ------------------------------------------------------------ */
+.ks-account-shell {
+  width: 100%;
 }
 
-/* Pagine account: reset padding top (breadcrumb già gestito dal tema) */
+.ks-account-aside {
+  display: none; /* mostrata solo su pagine account (body.ks-page-account) */
+}
+
+.ks-account-main {
+  width: 100%;
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------
+   Account layout
+   ------------------------------------------------------------ */
 body.ks-page-account main {
   padding-top: 0;
 }
 
-/* Layout a due colonne (sidebar + contenuto) */
 body.ks-page-account .ks-account-shell {
-  max-width: 1320px;
-  margin: 0 auto;
-  padding: 20px 12px 32px 12px;
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
+  display: flex;
   gap: 24px;
-  align-items: start;
+  align-items: flex-start;
+
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+
+  padding: 18px 12px;
 }
 
 body.ks-page-account .ks-account-aside {
   display: block;
+  flex: 0 0 300px;
 }
 
 body.ks-page-account .ks-account-main {
-  min-width: 0; /* fix overflow in grid */
+  flex: 1 1 auto;
 }
 
-/* Sidebar: UI minimale e coerente */
-body.ks-page-account .ks-account-sidebar {
-  border-radius: .85rem;
-  overflow: hidden;
-}
-
-body.ks-page-account .ks-account-sidebar .card-header {
-  background: rgba(0,0,0,.02);
-}
-
-body.ks-page-account .ks-account-sidebar .list-group-item {
-  border-left: 0;
-  border-right: 0;
-}
-
-body.ks-page-account .ks-account-sidebar .list-group-item.is-active {
-  font-weight: 600;
-  background: rgba(0,0,0,.04);
-}
-
-/* Mobile: layout a colonna singola */
 @media (max-width: 991.98px) {
   body.ks-page-account .ks-account-shell {
-    grid-template-columns: 1fr;
-    padding-top: 12px;
+    flex-direction: column;
+  }
+  body.ks-page-account .ks-account-aside {
+    flex: 0 0 auto;
+    width: 100%;
   }
 }
 
-/* Titoli: spacing più "pulito" */
+/* Titoli */
 body.ks-page-account h1,
 body.ks-page-account h2,
 body.ks-page-account h3,
@@ -75,20 +72,9 @@ body.ks-page-account h5 {
   margin-bottom: .75rem;
 }
 
-/* Nav legacy (aggiunta via JS quando possibile): su account shell viene nascosta */
-body.ks-page-account .ks-account-nav {
-  display: none;
-}
-
 /* Tabelle legacy */
 body.ks-page-account table {
   width: 100%;
-}
-
-body.ks-page-account table th,
-body.ks-page-account table td {
-  padding: .65rem .75rem;
-  vertical-align: top;
 }
 
 /* Form controls (fallback se non già bootstrapizzati) */
@@ -103,23 +89,97 @@ body.ks-page-account textarea {
   max-width: 100%;
 }
 
-/* Helper: label IVA nel prezzo */
+/* Piccolo helper: label IVA nel prezzo */
 body.ks-page-account .ks-price-iva {
   font-size: .875em;
 }
 
-/* Wishlist: migliora la leggibilità di righe/azioni (senza toccare controlli) */
-body.ks-page-wishlist .table-responsive {
-  width: 100%;
-  overflow-x: auto;
+/* Sidebar (UserControl) */
+body.ks-page-account .ks-account-sidebar .list-group-item.is-active {
+  font-weight: 600;
 }
 
-body.ks-page-wishlist table.table thead th {
-  white-space: nowrap;
+/* Icon button (riuso) */
+.ks-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0,0,0,.12);
+  border-radius: .6rem;
+  padding: .35rem .5rem;
+  background: rgba(0,0,0,.02);
+  text-decoration: none;
 }
 
-body.ks-page-wishlist .btn,
-body.ks-page-wishlist button,
-body.ks-page-wishlist input[type="submit"] {
+
+/* ------------------------------------------------------------
+   Wishlist (senza toccare controlli: progressive enhancement via JS)
+   JS aggiunge:
+     - table.ks-table-wishlist
+     - td[data-label]
+     - td.ks-wl-actions
+   ------------------------------------------------------------ */
+body.ks-page-wishlist .ks-table-wishlist {
+  margin-top: 12px;
+}
+
+body.ks-page-wishlist .ks-table-wishlist td,
+body.ks-page-wishlist .ks-table-wishlist th {
+  vertical-align: middle;
+}
+
+body.ks-page-wishlist .ks-wl-actions {
+  width: 1%;
   white-space: nowrap;
+  text-align: center;
+}
+
+body.ks-page-wishlist .ks-wl-actions .btn,
+body.ks-page-wishlist .ks-wl-actions a,
+body.ks-page-wishlist .ks-wl-actions button,
+body.ks-page-wishlist .ks-wl-actions input {
+  margin-left: .25rem;
+  margin-right: .25rem;
+}
+
+/* Layout "card" su mobile (accessibilità: usa data-label) */
+@media (max-width: 767.98px) {
+  body.ks-page-wishlist table.ks-table-wishlist thead {
+    display: none;
+  }
+
+  body.ks-page-wishlist table.ks-table-wishlist,
+  body.ks-page-wishlist table.ks-table-wishlist tbody,
+  body.ks-page-wishlist table.ks-table-wishlist tr,
+  body.ks-page-wishlist table.ks-table-wishlist td {
+    display: block;
+    width: 100%;
+  }
+
+  body.ks-page-wishlist table.ks-table-wishlist tr {
+    border: 1px solid rgba(0,0,0,.1);
+    border-radius: .75rem;
+    padding: .5rem .75rem;
+    margin-bottom: .75rem;
+    background: #fff;
+  }
+
+  body.ks-page-wishlist table.ks-table-wishlist td {
+    border: 0 !important;
+    padding: .35rem 0 !important;
+  }
+
+  body.ks-page-wishlist table.ks-table-wishlist td:before {
+    content: attr(data-label);
+    display: block;
+    font-size: .75rem;
+    text-transform: uppercase;
+    opacity: .65;
+    margin-bottom: .1rem;
+  }
+
+  body.ks-page-wishlist .ks-wl-actions {
+    text-align: left;
+    margin-top: .25rem;
+  }
 }
