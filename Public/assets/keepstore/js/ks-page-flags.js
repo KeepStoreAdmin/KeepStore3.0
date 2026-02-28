@@ -18,6 +18,23 @@
     document.body.classList.add(cls);
   }
 
+function injectCssOnce(href, key) {
+  try {
+    if (!href) return;
+    key = key || href;
+    if (document.querySelector('link[data-ks-css="' + key.replace(/"/g, '') + '"]')) return;
+
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.setAttribute('data-ks-css', key);
+    document.head.appendChild(link);
+  } catch (e) {
+    // noop
+  }
+}
+
+
   function getFileName() {
     var path = (window.location.pathname || '').toLowerCase();
     var file = path.split('/').pop() || '';
@@ -93,6 +110,15 @@
   if (documentsPages[file]) addBodyClass('ks-page-documents');
   if (authPages[file]) addBodyClass('ks-page-auth');
   if (successPages[file] || isLikelySuccessPage(file)) addBodyClass('ks-page-success');
+
+// Extra flags
+if (file === 'documentidettaglio.aspx') addBodyClass('ks-page-order-detail');
+
+// Orders/Documents UI stylesheet (scoped)
+if (documentsPages[file]) {
+  injectCssOnce('/Public/assets/keepstore/css/order-ui.css', 'order-ui');
+}
+
 
   function enhanceTables(root) {
     var tables = root.querySelectorAll('table');
@@ -407,7 +433,85 @@
 
       // Tabelle dettaglio: card mobile + data-label
       enhanceDocumentsTableCards(root);
+      enhanceDocumentDetailDeep(root);
     }
+
+
+function wrapSectionByHeadingText(root, containsText, sectionClass) {
+  try {
+    containsText = (containsText || '').toLowerCase();
+    if (!containsText) return;
+
+    var headings = root.querySelectorAll('h1,h2,h3,h4,h5,h6');
+    for (var i = 0; i < headings.length; i++) {
+      var h = headings[i];
+      if (!h || !h.parentElement) continue;
+      if (h.dataset.ksSectionWrapped === '1') continue;
+
+      var ht = (h.textContent || '').toLowerCase().trim();
+      if (ht.indexOf(containsText) === -1) continue;
+
+      // Create wrapper section
+      var sec = document.createElement('section');
+      sec.className = sectionClass || 'ks-doc-section';
+      sec.dataset.ksDocSection = '1';
+
+      // Insert section before heading
+      h.parentElement.insertBefore(sec, h);
+
+      // Move heading and following nodes until next heading of same/higher level
+      var level = parseInt((h.tagName || 'H6').replace('H', ''), 10);
+      var node = h;
+
+      while (node) {
+        var next = node.nextSibling;
+        sec.appendChild(node);
+
+        if (next && next.nodeType === 1) {
+          var tag = (next.tagName || '').toUpperCase();
+          if (tag.length === 2 && tag[0] === 'H') {
+            var nextLevel = parseInt(tag[1], 10);
+            if (!isNaN(nextLevel) && nextLevel <= level) break;
+          }
+        }
+
+        node = next;
+      }
+
+      h.dataset.ksSectionWrapped = '1';
+      // Wrap only the first matching section (avoid double wrap on repeated headings)
+      break;
+    }
+  } catch (e) {
+    // noop
+  }
+}
+
+function enhanceDocumentDetailDeep(root) {
+  try {
+    if (file !== 'documentidettaglio.aspx') return;
+
+    // Wrap key blocks into themed cards (NO control changes)
+    wrapSectionByHeadingText(root, 'spedizione, pagamento e tracking', 'ks-doc-section ks-doc-section-shipping');
+    wrapSectionByHeadingText(root, 'indirizzo di fatturazione', 'ks-doc-section ks-doc-section-billing');
+    wrapSectionByHeadingText(root, 'indirizzo di spedizione', 'ks-doc-section ks-doc-section-delivery');
+    wrapSectionByHeadingText(root, 'paga adesso', 'ks-doc-section ks-doc-section-paynow');
+    wrapSectionByHeadingText(root, 'articoli', 'ks-doc-section ks-doc-section-items');
+    wrapSectionByHeadingText(root, 'riepilogo importi', 'ks-doc-section ks-doc-section-summary');
+
+    // Make sure tables inside the wrapped sections are still card-enabled
+    var sections = root.querySelectorAll('section[data-ks-doc-section="1"]');
+    for (var i = 0; i < sections.length; i++) {
+      var tbl = sections[i].querySelector('table.table');
+      if (tbl) {
+        tbl.classList.add('ks-table-cards');
+        addDataLabels(tbl);
+      }
+    }
+  } catch (e) {
+    // noop
+  }
+}
 
     function findPrimaryDocumentsTable(root) {
       // Cerca la prima tabella "seria": thead + almeno una riga nel tbody

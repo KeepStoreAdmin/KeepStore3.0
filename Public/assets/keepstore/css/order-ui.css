@@ -1,0 +1,183 @@
+/* ============================================================
+   KeepStore 3.0 - Orders/Documents Deep UI (CSS only)
+   - Si appoggia alle classi aggiunte da ks-page-flags.js
+   - Nessuna modifica VB / DB / controlli
+   ============================================================ */
+
+/* ------- Document list toolbar ------- */
+body.ks-page-documents .ks-doc-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0 12px 0;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(0,0,0,.08);
+}
+
+body.ks-page-documents .ks-doc-toolbar-left {
+  flex: 1 1 auto;
+  min-width: 220px;
+}
+
+body.ks-page-documents .ks-doc-toolbar-right {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  opacity: .85;
+  font-size: 14px;
+}
+
+body.ks-page-documents .ks-doc-search {
+  max-width: 420px;
+}
+
+/* Clickable rows (JS adds handlers) */
+body.ks-page-documents tbody tr {
+  cursor: pointer;
+}
+
+/* ------- Document detail header ------- */
+body.ks-page-order-detail .ks-doc-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0 14px 0;
+  border-bottom: 1px solid rgba(0,0,0,.08);
+  margin-bottom: 14px;
+}
+
+body.ks-page-order-detail .ks-doc-title {
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+body.ks-page-order-detail .ks-doc-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ------- Meta summary card ------- */
+body.ks-page-order-detail .ks-doc-summary {
+  padding: 14px;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 12px;
+  background: rgba(0,0,0,.02);
+  margin: 14px 0;
+}
+
+body.ks-page-order-detail .ks-doc-meta-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+
+body.ks-page-order-detail .ks-doc-meta-list li {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px dashed rgba(0,0,0,.08);
+  padding-bottom: 8px;
+}
+
+body.ks-page-order-detail .ks-doc-meta-list li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+body.ks-page-order-detail .ks-doc-meta-label {
+  opacity: .75;
+  font-size: 12px;
+}
+
+body.ks-page-order-detail .ks-doc-meta-value {
+  font-weight: 600;
+  text-align: right;
+}
+
+/* ------- Wrapped sections as cards ------- */
+body.ks-page-order-detail .ks-doc-section {
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 12px;
+  padding: 14px;
+  margin: 12px 0;
+  background: #fff;
+}
+
+body.ks-page-order-detail .ks-doc-section h1,
+body.ks-page-order-detail .ks-doc-section h2,
+body.ks-page-order-detail .ks-doc-section h3,
+body.ks-page-order-detail .ks-doc-section h4,
+body.ks-page-order-detail .ks-doc-section h5,
+body.ks-page-order-detail .ks-doc-section h6 {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+/* Tables inside docs sections */
+body.ks-page-order-detail .ks-doc-section table.table {
+  margin: 0;
+}
+
+body.ks-page-order-detail .ks-doc-section .table-responsive {
+  margin: 0;
+}
+
+/* ------- Mobile: table as cards (if data-label exists) ------- */
+@media (max-width: 768px) {
+  body.ks-page-order-detail table.ks-table-cards thead {
+    display: none;
+  }
+  body.ks-page-order-detail table.ks-table-cards tbody tr {
+    display: block;
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 12px;
+    padding: 10px;
+    margin-bottom: 10px;
+    cursor: pointer;
+  }
+  body.ks-page-order-detail table.ks-table-cards td {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 6px 0 !important;
+    border: 0 !important;
+  }
+  body.ks-page-order-detail table.ks-table-cards td::before {
+    content: attr(data-label);
+    opacity: .75;
+    font-size: 12px;
+    flex: 1 1 auto;
+    padding-right: 8px;
+  }
+}
+
+/* ------- Print rules ------- */
+@media print {
+  header, footer, nav,
+  .ks-account-aside,
+  .ks-doc-actions,
+  .ks-doc-toolbar {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  .ks-doc-header {
+    border: 0 !important;
+  }
+
+  .ks-doc-summary,
+  .ks-doc-section {
+    break-inside: avoid;
+  }
+}
