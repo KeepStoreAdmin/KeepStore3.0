@@ -1,17 +1,18 @@
-/* KeepStore UI - Checkout enhancements (naming neutro)
-   NOTE: CSS additivo, non modifica logica server-side. */
+/* KeepStore UI - Checkout enhancements (stabile)
+   NOTE: CSS additivo, non modifica logica server-side.
+   Naming neutro (no riferimenti a template terzi). */
 
 /* Base */
-.ks-checkout { width: 100%; }
+.ks-checkout{ width:100%; }
 
 /* Trasforma la table legacy in layout più “moderno” senza cambiare markup */
-.ks-checkout {
+.ks-checkout{
   border-collapse: separate;
   border-spacing: 0 14px;
 }
 
 /* Le celle del layout principale non devono avere padding tabellare */
-.ks-checkout > tbody > tr > td {
+.ks-checkout > tbody > tr > td{
   padding: 0;
   vertical-align: top;
 }
@@ -26,84 +27,22 @@
   box-shadow: 0 1px 0 rgba(0,0,0,.03);
 }
 
-/* Header sezione (cliccabile via JS) */
+/* Header sezione (non più accordion) */
 .ks-checkout .wrap > h5{
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:12px;
-  margin:0;
-  cursor:pointer;
+  margin:0 0 12px;
+  cursor: default;
 }
 
-/* Icona accordion aggiunta da JS */
-.ks-checkout .wrap > h5 .ks-acc-icon{
-  flex:0 0 auto;
-  width: 28px;
-  height: 28px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  border-radius: 999px;
-  border: 1px solid rgba(0,0,0,.10);
-  font-size: 14px;
-  line-height: 1;
-}
+/* In caso restino icone/flag da una vecchia UX, nascondile */
+.ks-checkout .wrap > h5 .ks-acc-icon{ display:none !important; }
 
-/* Stato collassato: mostra solo il titolo */
+/* In caso resti la classe is-collapsed (da vecchie versioni), NON collassare contenuti */
 .ks-checkout .wrap.is-collapsed > *:not(h5){
-  display:none !important;
-}
-.ks-checkout .wrap.is-collapsed > h5{
-  margin-bottom:0;
-}
-.ks-checkout .wrap.is-collapsed{
-  padding-bottom: 16px;
-}
-
-/* Navigazione step (iniettata da JS) */
-.ks-checkout-nav{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin: 0 0 14px;
-  padding: 0;
-  overflow-x:auto;
-  overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch;
-}
-.ks-checkout-nav__btn{
-  appearance:none;
-  border:1px solid rgba(0,0,0,.12);
-  background:#fff;
-  border-radius: 999px;
-  padding: 8px 12px;
-  font-size: 13px;
-  line-height: 1;
-  white-space: nowrap;
-  display:inline-flex;
-  align-items:center;
-  gap: 8px;
-  cursor:pointer;
-}
-.ks-checkout-nav__btn:focus{
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(0,0,0,.08);
-}
-.ks-checkout-nav__btn.is-active{
-  border-color: rgba(0,0,0,.35);
-  font-weight: 600;
-}
-.ks-checkout-nav__dot{
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(0,0,0,.20);
-  background: transparent;
-}
-.ks-checkout-nav__btn.is-done .ks-checkout-nav__dot{
-  background: rgba(0,0,0,.70);
-  border-color: rgba(0,0,0,.70);
+  display: block !important;
 }
 
 /* Tabelle di scelta (spedizione/pagamento) */
@@ -111,15 +50,20 @@ table.ks-checkout-grid{
   border-collapse: separate;
   border-spacing: 0 6px;
 }
+
 table.ks-checkout-grid tr{
   background:#fff;
   border:1px solid rgba(0,0,0,.08);
 }
+
 table.ks-checkout-grid tr td,
-table.ks-checkout-grid tr th{
+ table.ks-checkout-grid tr th{
   padding: 10px 10px;
   vertical-align: middle;
 }
+
+table.ks-checkout-grid tr{ cursor: pointer; }
+
 table.ks-checkout-grid tr.is-selected{
   border-color: rgba(0,0,0,.35);
   box-shadow: 0 0 0 2px rgba(0,0,0,.05);
@@ -141,12 +85,8 @@ table.ks-checkout-grid tr.is-selected{
 }
 
 @media (max-width: 767px){
-  .ks-checkout-actions{
-    justify-content: stretch;
-  }
-  .ks-checkout-actions > *{
-    flex: 1 1 auto;
-  }
+  .ks-checkout-actions{ justify-content: stretch; }
+  .ks-checkout-actions > *{ flex: 1 1 auto; }
 }
 
 /* Spinner area più coerente */

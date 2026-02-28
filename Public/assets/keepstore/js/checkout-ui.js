@@ -1,28 +1,30 @@
 (function () {
   'use strict';
 
+  // KeepStore UI - Checkout enhancements (stabili)
+  // Obiettivo: migliorare UX senza alterare markup/ID/server logic.
+
   function qs(sel, root) { return (root || document).querySelector(sel); }
   function qsa(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
 
   function isVisible(el) {
     if (!el) return false;
     if (el.offsetParent !== null) return true;
-    // fallback: some elements may be position:fixed
+    // fallback: alcuni elementi possono essere position:fixed
     var cs = window.getComputedStyle(el);
     return cs && cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0';
   }
 
-  function getCheckoutTable() {
-    return document.getElementById('tOrdine') || qs('[id$="_tOrdine"]');
-  }
-
   function setCheckoutStatus() {
-    var tbl = getCheckoutTable();
-    var inCheckout = !!tbl && isVisible(tbl);
-
     if (!document.body) return;
+
+    // Determinazione “robusta” dello stato: in checkout se il pulsante conferma ordine è visibile.
+    var confirmLink = qs('[id$="_btInviaOrdine"]') || document.getElementById('btInviaOrdine');
+    var inCheckout = !!confirmLink && isVisible(confirmLink);
+
     document.body.classList.toggle('ks-mode-checkout', inCheckout);
 
+    // Aggiorna eventuale progress bar legacy (se presente)
     var items = qsa('.checkout-status-item');
     if (!items.length) return;
 
@@ -38,137 +40,69 @@
     }
   }
 
-  function panelKey(panel) {
-    // usa il ClientID come chiave stabile nella singola request
-    return (panel && panel.id) ? panel.id : '';
-  }
-
-  function getPanelTitle(panel) {
-    var h = panel ? panel.querySelector('h5') : null;
-    if (!h) return '';
-    // rimuove eventuale icona accordion già appesa
-    var txt = h.textContent || '';
-    return txt.replace(/[▾▸]/g, '').trim();
-  }
-
-  function sectionIsDone(panel) {
-    if (!panel) return false;
-    // euristica “light”: se esiste un input selezionato, consideriamo la sezione completata
-    var checked = panel.querySelector('input[type="radio"]:checked, input[type="checkbox"]:checked');
-    if (checked) return true;
-
-    // per sezioni form: se c'è almeno un campo valorizzato
-    var tb = panel.querySelector('input[type="text"], input[type="email"], textarea');
-    if (tb && tb.value && String(tb.value).trim().length > 0) return true;
-
-    return false;
-  }
-
-  function ensureAccordion() {
-    var panels = qsa('.ks-checkout .wrap');
-    if (!panels.length) return;
-
-    var lastOpenKey = null;
-    try { lastOpenKey = sessionStorage.getItem('ksCheckoutOpen'); } catch (e) { /* ignore */ }
-
-    // init handlers
-    panels.forEach(function (panel) {
-      var h = panel.querySelector('h5');
-      if (!h || h.dataset.ksAcc === '1') return;
-      h.dataset.ksAcc = '1';
-
-      if (!h.querySelector('.ks-acc-icon')) {
-        var icon = document.createElement('span');
-        icon.className = 'ks-acc-icon';
-        icon.setAttribute('aria-hidden', 'true');
-        icon.textContent = '▾';
-        h.appendChild(icon);
-      }
-
-      h.setAttribute('role', 'button');
-      h.setAttribute('tabindex', '0');
-
-      function setIcon() {
-        var ic = h.querySelector('.ks-acc-icon');
-        if (!ic) return;
-        ic.textContent = panel.classList.contains('is-collapsed') ? '▸' : '▾';
-      }
-
-      function collapseOthers() {
-        if (!document.body.classList.contains('ks-mode-checkout')) return;
-        panels.forEach(function (p2) {
-          if (p2 !== panel) p2.classList.add('is-collapsed');
-        });
-      }
-
-      function openPanel() {
-        panel.classList.remove('is-collapsed');
-        collapseOthers();
-        setIcon();
-
-        var k = panelKey(panel);
-        if (k) {
-          try { sessionStorage.setItem('ksCheckoutOpen', k); } catch (e) { /* ignore */ }
-        }
-      }
-
-      function toggle() {
-        var isCollapsed = panel.classList.contains('is-collapsed');
-        if (isCollapsed) openPanel();
-        else {
-          panel.classList.add('is-collapsed');
-          setIcon();
-        }
-        refreshCheckoutNav();
-      }
-
-      h.addEventListener('click', function () { toggle(); });
-      h.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggle();
-        }
-      });
-
-      // expose helper for nav click
-      panel.__ksOpen = openPanel;
-
-      setIcon();
+  // Se in passato è stata abilitata una UX “accordion / chips”, la neutralizziamo.
+  // Questo rende il comportamento più prevedibile (nessun pannello che si chiude da solo).
+  function cleanupLegacyEnhancedUx() {
+    // Rimuovi eventuale nav iniettata
+    qsa('.ks-checkout-nav').forEach(function (el) {
+      if (el && el.parentNode) el.parentNode.removeChild(el);
     });
 
-    // initial open: prefer lastOpenKey
-    var opened = false;
-    if (lastOpenKey) {
-      panels.forEach(function (p) {
-        if (panelKey(p) === lastOpenKey && typeof p.__ksOpen === 'function') {
-          p.__ksOpen();
-          opened = true;
-        }
-      });
-    }
-    if (!opened && panels[0] && typeof panels[0].__ksOpen === 'function') {
-      panels[0].__ksOpen();
-    }
+    // Rimuovi eventuali icone accordion iniettate
+    qsa('.ks-acc-icon').forEach(function (el) {
+      if (el && el.parentNode) el.parentNode.removeChild(el);
+    });
+
+    // Rimuovi eventuali classi di collasso
+    qsa('.ks-checkout .wrap.is-collapsed').forEach(function (el) {
+      el.classList.remove('is-collapsed');
+    });
+
+    // Ripristina header (se era stato reso “button”)
+    qsa('.ks-checkout .wrap > h5').forEach(function (h) {
+      if (!h) return;
+      if (h.dataset && h.dataset.ksAcc) delete h.dataset.ksAcc;
+      h.removeAttribute('role');
+      h.removeAttribute('tabindex');
+    });
+  }
+
+  function decorateCheckoutTables() {
+    // Aggancia classi ai GridView più importanti (renderizzano come <table>)
+    // In questo modo non dipendiamo dal markup già “classato”.
+    var ids = ['gvVettori', 'gvVettoriPromo', 'gvPagamento'];
+    ids.forEach(function (id) {
+      var tbl = document.getElementById(id) || qs('[id$="_' + id + '"]');
+      if (tbl && tbl.tagName === 'TABLE') {
+        tbl.classList.add('ks-checkout-grid');
+      }
+    });
   }
 
   function enhanceGridRowSelection() {
+    // Rende l'intera riga cliccabile per selezionare il radio.
+    // IMPORTANTE: non deve “intercettare” click su input/link, altrimenti rompe AutoPostBack.
+
     qsa('table.ks-checkout-grid').forEach(function (tbl) {
       qsa('tr', tbl).forEach(function (tr) {
         // salta header
         if (tr.querySelector('th')) return;
+
+        // evita doppia bind
+        if (tr.dataset && tr.dataset.ksRow === '1') return;
+        tr.dataset.ksRow = '1';
 
         tr.addEventListener('click', function (ev) {
           var t = ev.target;
           if (!t) return;
 
           // non intercettare click su controlli interattivi
-          if (t.tagName === 'INPUT' || t.tagName === 'A' || t.closest('a') || t.closest('button') || t.closest('input')) {
-            return;
-          }
+          if (t.closest('a,button,input,select,textarea,label')) return;
 
-          var radio = tr.querySelector('input[type="radio"]');
-          if (radio && !radio.disabled) {
-            radio.click(); // AutoPostBack -> postback
+          var input = tr.querySelector('input[type="radio"], input[type="checkbox"]');
+          if (input && !input.disabled) {
+            // click reale -> se c'è AutoPostBack viene eseguito
+            input.click();
           }
         });
       });
@@ -176,7 +110,9 @@
 
     function refreshSelected() {
       qsa('table.ks-checkout-grid').forEach(function (tbl) {
-        qsa('tr', tbl).forEach(function (tr) { tr.classList.remove('is-selected'); });
+        qsa('tr', tbl).forEach(function (tr) {
+          tr.classList.remove('is-selected');
+        });
 
         qsa('input[type="radio"]:checked', tbl).forEach(function (r) {
           var row = r.closest('tr');
@@ -185,15 +121,16 @@
       });
     }
 
-    document.addEventListener('change', function (e) {
-      if (e.target && e.target.matches('input[type="radio"]')) {
-        refreshSelected();
-        refreshCheckoutNav();
-      }
-      if (e.target && e.target.matches('input[type="checkbox"], input[type="text"], textarea')) {
-        refreshCheckoutNav();
-      }
-    });
+    // handler globale una sola volta
+    if (!document.documentElement.dataset.ksCheckoutChangeBound) {
+      document.documentElement.dataset.ksCheckoutChangeBound = '1';
+      document.addEventListener('change', function (e) {
+        if (!e || !e.target) return;
+        if (e.target.matches('table.ks-checkout-grid input[type="radio"], table.ks-checkout-grid input[type="checkbox"]')) {
+          refreshSelected();
+        }
+      });
+    }
 
     refreshSelected();
   }
@@ -205,26 +142,18 @@
     var panel = document.getElementById('panel') || qs('[id$="_panel"]');
     if (!open1 || !open2 || !panel) return;
 
+    // evita doppio bind
+    if (open1.dataset && open1.dataset.ksToggle === '1') return;
+    open1.dataset.ksToggle = '1';
+
     var insOmod = document.getElementById('insOmod') || qs('[id$="_insOmod"]');
     var btnMod = qs('[id$="_btnModDest"]');
     var btnElim = qs('[id$="_btnElimDest"]');
     var btnSalva = qs('[id$="_btnSalvaDest"]');
 
-    var confirmLink = qs('[id$="_btInviaOrdine"]');
-    var confirmBox = document.getElementById('confermaOrdinde');
-
-    function disableConfirm() {
-      if (confirmLink) {
-        confirmLink.style.pointerEvents = 'none';
-        confirmLink.style.opacity = '0.6';
-      }
-      if (confirmBox) {
-        confirmBox.style.pointerEvents = 'none';
-        confirmBox.style.opacity = '0.6';
-      }
-    }
-
     function clearDestinationForm() {
+      // pulizia “soft”: svuota i principali campi, ma NON distrugge la DropDownList
+      // (evita UX strana se il postback non avviene immediatamente).
       var ids = ['tbRagioneSocialeA', 'tbNomeA', 'tbIndirizzo2', 'tbCap2', 'tbProvincia2', 'tbZona', 'tbTelefono2', 'tbNote'];
       ids.forEach(function (id) {
         var el = qs('[id$="_' + id + '"]') || document.getElementById(id);
@@ -232,8 +161,8 @@
       });
 
       var ddlCitta2 = qs('[id$="_ddlCitta2"]');
-      if (ddlCitta2 && ddlCitta2.options) {
-        while (ddlCitta2.options.length > 0) ddlCitta2.remove(0);
+      if (ddlCitta2 && ddlCitta2.options && ddlCitta2.options.length) {
+        ddlCitta2.selectedIndex = 0;
       }
 
       var chk = qs('[id$="_CHKPREDEFINITO"]');
@@ -247,15 +176,11 @@
 
       if (btnMod) btnMod.style.display = (mode === 'mod') ? '' : 'none';
       if (btnSalva) btnSalva.style.display = (mode === 'ins') ? '' : 'none';
-      if (btnElim) btnElim.style.display = 'none';
+      if (btnElim) btnElim.style.display = 'none'; // coerente con vecchio script
 
       if (insOmod) insOmod.value = (mode === 'mod') ? 'mod' : 'ins';
 
-      disableConfirm();
-
-      // Se la sezione che contiene il form è in accordion collassato, aprila e scrolla.
-      var wrap = panel.closest('.wrap');
-      if (wrap && typeof wrap.__ksOpen === 'function') wrap.__ksOpen();
+      // scroll: aiuta in mobile
       setTimeout(function () {
         try { panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* ignore */ }
       }, 50);
@@ -278,95 +203,28 @@
     if (!confirmLink || confirmLink.dataset.ksOnce === '1') return;
     confirmLink.dataset.ksOnce = '1';
 
-    var submitted = false;
+    var locked = false;
+
     confirmLink.addEventListener('click', function (e) {
-      if (submitted) {
+      if (locked) {
         e.preventDefault();
         e.stopPropagation();
         return false;
       }
-      submitted = true;
-      // OnClientClick già gestisce spinner; qui impediamo doppio click
-      setTimeout(function(){ submitted = false; }, 6000);
+
+      // Blocca SOLO se parte davvero la UI di invio (spinner).
+      // Se la validazione client impedisce il submit, lo spinner non appare e quindi non blocchiamo.
+      setTimeout(function () {
+        var sp = document.getElementById('spinner_caricamento');
+        if (sp && isVisible(sp)) {
+          locked = true;
+          // fail-safe: sblocco automatico
+          setTimeout(function () { locked = false; }, 12000);
+        }
+      }, 60);
+
       return true;
     }, true);
-  }
-
-  // Navigazione step (creata dinamicamente)
-  function buildCheckoutNav() {
-    // solo se siamo davvero in checkout
-    if (!document.body.classList.contains('ks-mode-checkout')) return;
-
-    var tbl = getCheckoutTable();
-    if (!tbl) return;
-
-    // evita duplicati
-    if (qs('.ks-checkout-nav')) return;
-
-    var panels = qsa('.ks-checkout .wrap');
-    if (!panels.length) return;
-
-    var host = qs('.checkout-status');
-    if (!host) return;
-
-    var nav = document.createElement('div');
-    nav.className = 'ks-checkout-nav';
-    nav.setAttribute('role', 'navigation');
-    nav.setAttribute('aria-label', 'Navigazione checkout');
-
-    panels.forEach(function (panel, idx) {
-      var title = getPanelTitle(panel);
-      if (!title) return;
-
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'ks-checkout-nav__btn';
-      btn.dataset.target = panelKey(panel) || String(idx);
-
-      var dot = document.createElement('span');
-      dot.className = 'ks-checkout-nav__dot';
-      dot.setAttribute('aria-hidden', 'true');
-
-      var lbl = document.createElement('span');
-      lbl.textContent = title;
-
-      btn.appendChild(dot);
-      btn.appendChild(lbl);
-
-      btn.addEventListener('click', function () {
-        if (typeof panel.__ksOpen === 'function') panel.__ksOpen();
-        setTimeout(function () {
-          try { panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* ignore */ }
-          refreshCheckoutNav();
-        }, 10);
-      });
-
-      nav.appendChild(btn);
-    });
-
-    // inserisci dopo lo status
-    host.parentNode.insertBefore(nav, host.nextSibling);
-
-    refreshCheckoutNav();
-  }
-
-  function refreshCheckoutNav() {
-    var nav = qs('.ks-checkout-nav');
-    if (!nav) return;
-
-    var panels = qsa('.ks-checkout .wrap');
-    var buttons = qsa('.ks-checkout-nav__btn', nav);
-
-    buttons.forEach(function (btn, idx) {
-      btn.classList.remove('is-active');
-      btn.classList.remove('is-done');
-
-      var panel = panels[idx];
-      if (!panel) return;
-
-      if (!panel.classList.contains('is-collapsed')) btn.classList.add('is-active');
-      if (sectionIsDone(panel)) btn.classList.add('is-done');
-    });
   }
 
   // Funzione richiamata da OnClientClick nel markup: deve essere globale.
@@ -383,22 +241,21 @@
 
   function boot() {
     setCheckoutStatus();
-    ensureAccordion();
+    cleanupLegacyEnhancedUx();
+    decorateCheckoutTables();
     enhanceGridRowSelection();
     setupDestinationToggles();
     preventDoubleSubmit();
-    buildCheckoutNav();
   }
 
   document.addEventListener('DOMContentLoaded', function () {
     boot();
   });
 
-  // se la pagina usa UpdatePanel, riapplica su endRequest
+  // Se la pagina usa UpdatePanel, riapplica su endRequest
   if (window.Sys && Sys.WebForms && Sys.WebForms.PageRequestManager) {
     try {
       Sys.WebForms.PageRequestManager.getInstance().add_endRequest(function () {
-        // re-init in modo idempotente
         boot();
       });
     } catch (e) { /* ignore */ }
