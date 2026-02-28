@@ -1,117 +1,173 @@
 /* KeepStore UI - Checkout enhancements (naming neutro)
    NOTE: CSS additivo, non modifica logica server-side. */
 
+/* Base */
+.ks-checkout { width: 100%; }
+
+/* Trasforma la table legacy in layout più “moderno” senza cambiare markup */
 .ks-checkout {
-  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 14px;
+}
+
+/* Le celle del layout principale non devono avere padding tabellare */
+.ks-checkout > tbody > tr > td {
+  padding: 0;
+  vertical-align: top;
 }
 
 /* Card base per ogni sezione checkout */
-.ks-checkout .wrap {
-  background: #fff;
-  border: 1px solid rgba(0,0,0,.08);
-  border-radius: 12px;
-  padding: 16px;
-  margin: 0 0 16px;
+.ks-checkout .wrap{
+  background:#fff;
+  border:1px solid rgba(0,0,0,.08);
+  border-radius:12px;
+  padding:16px;
+  margin:0;
+  box-shadow: 0 1px 0 rgba(0,0,0,.03);
 }
 
 /* Header sezione (cliccabile via JS) */
-.ks-checkout .wrap > h5 {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 0;
-  cursor: pointer;
+.ks-checkout .wrap > h5{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin:0;
+  cursor:pointer;
 }
 
 /* Icona accordion aggiunta da JS */
-.ks-checkout .wrap > h5 .ks-acc-icon {
+.ks-checkout .wrap > h5 .ks-acc-icon{
+  flex:0 0 auto;
   width: 28px;
   height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
   border-radius: 999px;
   border: 1px solid rgba(0,0,0,.10);
   font-size: 14px;
   line-height: 1;
-  flex: 0 0 auto;
 }
 
-/* Accordion: contenuto collassato */
-.ks-checkout .wrap.is-collapsed > :not(h5) {
-  display: none;
+/* Stato collassato: mostra solo il titolo */
+.ks-checkout .wrap.is-collapsed > *:not(h5){
+  display:none !important;
 }
-.ks-checkout .wrap.is-collapsed > h5 {
-  margin-bottom: 0;
+.ks-checkout .wrap.is-collapsed > h5{
+  margin-bottom:0;
+}
+.ks-checkout .wrap.is-collapsed{
+  padding-bottom: 16px;
 }
 
-/* Tabelle (GridView) di selezione spedizione/pagamento */
-.ks-checkout-grid {
-  width: 100%;
+/* Navigazione step (iniettata da JS) */
+.ks-checkout-nav{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin: 0 0 14px;
+  padding: 0;
+  overflow-x:auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.ks-checkout-nav__btn{
+  appearance:none;
+  border:1px solid rgba(0,0,0,.12);
+  background:#fff;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  cursor:pointer;
+}
+.ks-checkout-nav__btn:focus{
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0,0,0,.08);
+}
+.ks-checkout-nav__btn.is-active{
+  border-color: rgba(0,0,0,.35);
+  font-weight: 600;
+}
+.ks-checkout-nav__dot{
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.20);
+  background: transparent;
+}
+.ks-checkout-nav__btn.is-done .ks-checkout-nav__dot{
+  background: rgba(0,0,0,.70);
+  border-color: rgba(0,0,0,.70);
+}
+
+/* Tabelle di scelta (spedizione/pagamento) */
+table.ks-checkout-grid{
   border-collapse: separate;
-  border-spacing: 0;
-  margin-top: 12px;
+  border-spacing: 0 6px;
 }
-
-.ks-checkout-grid td,
-.ks-checkout-grid th {
-  padding: 10px 12px;
+table.ks-checkout-grid tr{
+  background:#fff;
+  border:1px solid rgba(0,0,0,.08);
+}
+table.ks-checkout-grid tr td,
+table.ks-checkout-grid tr th{
+  padding: 10px 10px;
   vertical-align: middle;
 }
-
-.ks-checkout-grid tr {
-  cursor: pointer;
+table.ks-checkout-grid tr.is-selected{
+  border-color: rgba(0,0,0,.35);
+  box-shadow: 0 0 0 2px rgba(0,0,0,.05);
 }
 
-.ks-checkout-grid tr.is-selected {
-  background: rgba(0,0,0,.03);
-  outline: 2px solid rgba(0,0,0,.10);
-  outline-offset: -2px;
+/* Azioni finali (conferma ordine / salva preventivo) */
+.ks-checkout-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ks-checkout-actions .tf-btn{
+  min-height: 44px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
 }
 
-.ks-checkout-grid img {
-  max-height: 34px;
-  width: auto;
+@media (max-width: 767px){
+  .ks-checkout-actions{
+    justify-content: stretch;
+  }
+  .ks-checkout-actions > *{
+    flex: 1 1 auto;
+  }
 }
 
-/* Inputs */
-.ks-form-control,
-.ks-form-select {
-  max-width: 100%;
-}
-
-/* Form destinazione alternativa */
-.ks-dest-form {
-  width: 100%;
-  margin-top: 12px;
-  background: rgba(0,0,0,.02);
-  border: 1px solid rgba(0,0,0,.06);
+/* Spinner area più coerente */
+#spinner_caricamento{
+  margin-top: 10px;
+  border: 1px dashed rgba(0,0,0,.18);
   border-radius: 12px;
+  background: rgba(0,0,0,.02);
 }
 
-.ks-dest-form td {
-  padding: 8px;
+/* Modal destinazione (PanelDestinazione) */
+.checkout_box_500{
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,.10);
+  background: #fff;
 }
 
-/* Bottoni */
-.ks-btn {
-  padding: 10px 14px;
-  font-size: 14px;
-}
-
-/* Fallback per .btn-danger se il tema non lo definisce */
-.ks-btn.btn-danger {
-  background: #cc0000;
-  border-color: #cc0000;
-  color: #fff;
-}
-
-/* Responsive: evita overflow in mobile */
-@media (max-width: 991px) {
-  .ks-checkout-grid {
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+/* Riepilogo sticky (cart summary) - solo desktop */
+@media (min-width: 992px){
+  .tf-cart-summery{
+    position: sticky;
+    top: 96px;
   }
 }
