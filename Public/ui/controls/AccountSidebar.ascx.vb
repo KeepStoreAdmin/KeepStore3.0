@@ -35,6 +35,11 @@ Partial Class Public_ui_controls_AccountSidebar
             End If
         End If
 
+
+        If pageName = "documentidettaglio.aspx" Then
+            Return "documenti.aspx"
+        End If
+
         Return pageName
     End Function
 

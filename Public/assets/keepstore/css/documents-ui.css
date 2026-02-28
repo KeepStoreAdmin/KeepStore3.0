@@ -111,3 +111,114 @@ body.ks-page-documentidettaglio ul {
     margin-bottom: .1rem;
   }
 }
+/* ------------------------------------------------------------
+   Documents "deep theme" enhancements (Step 21)
+   - toolbar search + count
+   - clickable rows
+   - detail header actions
+   ------------------------------------------------------------ */
+
+body.ks-page-documents .ks-doc-toolbar{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  gap:.75rem;
+  margin: .75rem 0 1rem 0;
+  padding:.75rem;
+  border:1px solid rgba(0,0,0,.08);
+  border-radius: .9rem;
+  background:#fff;
+}
+
+body.ks-page-documents .ks-doc-toolbar .ks-doc-search{
+  max-width: 360px;
+  width: 100%;
+}
+
+body.ks-page-documents .ks-doc-toolbar .ks-doc-count{
+  font-size:.9rem;
+  opacity:.8;
+  white-space:nowrap;
+}
+
+body.ks-page-documents .ks-row-link{
+  cursor:pointer;
+}
+
+body.ks-page-documents table.table tbody tr.ks-row-link:hover{
+  background: rgba(0,0,0,.03);
+}
+
+body.ks-page-documents .ks-doc-header{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  gap:.75rem;
+  margin: .25rem 0 1rem 0;
+}
+
+body.ks-page-documents .ks-doc-header .ks-doc-title{
+  font-weight:700;
+  font-size: 1.05rem;
+  margin:0;
+}
+
+body.ks-page-documents .ks-doc-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.5rem;
+}
+
+body.ks-page-documents .ks-doc-summary{
+  border:1px solid rgba(0,0,0,.08);
+  border-radius:.9rem;
+  background:#fff;
+  padding:.75rem;
+  margin-bottom: 1rem;
+}
+
+body.ks-page-documents .ks-doc-meta-list{
+  list-style:none;
+  margin:0;
+  padding:0;
+}
+
+body.ks-page-documents .ks-doc-meta-list li{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:.5rem;
+  padding:.35rem 0;
+  border-bottom:1px dashed rgba(0,0,0,.08);
+}
+
+body.ks-page-documents .ks-doc-meta-list li:last-child{
+  border-bottom:0;
+}
+
+body.ks-page-documents .ks-doc-meta-label{
+  font-size:.75rem;
+  text-transform:uppercase;
+  letter-spacing:.03em;
+  opacity:.7;
+}
+
+body.ks-page-documents .ks-doc-meta-value{
+  font-weight:600;
+}
+
+@media print{
+  body.ks-page-documents .ks-doc-toolbar,
+  body.ks-page-documents .ks-doc-actions,
+  body.ks-page-documents .ks-account-aside,
+  body.ks-page-documents header,
+  body.ks-page-documents footer{
+    display:none !important;
+  }
+  body.ks-page-documents .ks-account-main{
+    width:100% !important;
+  }
+}

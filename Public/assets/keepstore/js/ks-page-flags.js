@@ -211,17 +211,295 @@
     }
   }
 
-  function enhanceDocumentsTables(root) {
-    var tables = root.querySelectorAll('table.table');
-    for (var i = 0; i < tables.length; i++) {
-      var t = tables[i];
-      // Evita tabelle layout senza thead
-      if (!t.querySelector('thead')) continue;
+    function enhanceDocumentsTables(root) {
+      // 1) Mobile cards + data-label (già in uso)
+      enhanceDocumentsTableCards(root);
 
-      t.classList.add('ks-table-cards');
-      addDataLabels(t);
+      // 2) Lista documenti: toolbar + ricerca client-side + righe cliccabili
+      if (file === 'documenti.aspx') {
+        enhanceDocumentList(root);
+      }
+
+      // 3) Dettaglio documento: header azioni + summary meta
+      if (file === 'documentidettaglio.aspx') {
+        enhanceDocumentDetail(root);
+      }
     }
-  }
+
+    function enhanceDocumentsTableCards(root) {
+      var tables = root.querySelectorAll('table.table');
+      for (var i = 0; i < tables.length; i++) {
+        var t = tables[i];
+
+        // Evita tabelle layout senza thead
+        if (!t.querySelector('thead')) continue;
+
+        t.classList.add('ks-table-cards');
+        addDataLabels(t);
+      }
+    }
+
+    function enhanceDocumentList(root) {
+      var table = findPrimaryDocumentsTable(root);
+      if (!table) return;
+
+      // Toolbar: crea una sola volta
+      if (!root.querySelector('.ks-doc-toolbar')) {
+        var tb = document.createElement('div');
+        tb.className = 'ks-doc-toolbar';
+
+        var left = document.createElement('div');
+        left.className = 'ks-doc-toolbar-left';
+
+        var search = document.createElement('input');
+        search.type = 'search';
+        search.className = 'form-control form-control-sm ks-doc-search';
+        search.placeholder = 'Cerca documenti…';
+        search.setAttribute('aria-label', 'Cerca documenti');
+        search.autocomplete = 'off';
+
+        left.appendChild(search);
+
+        var right = document.createElement('div');
+        right.className = 'ks-doc-toolbar-right';
+
+        var count = document.createElement('div');
+        count.className = 'ks-doc-count';
+        count.textContent = '';
+        right.appendChild(count);
+
+        tb.appendChild(left);
+        tb.appendChild(right);
+
+        // Inserisci toolbar subito prima della tabella (o wrapper responsive)
+        var insertBefore = table;
+        if (table.parentElement && table.parentElement.classList.contains('table-responsive')) {
+          insertBefore = table.parentElement;
+        }
+        insertBefore.parentElement.insertBefore(tb, insertBefore);
+
+        // Bind ricerca (una sola volta)
+        if (!search.dataset.ksBound) {
+          search.dataset.ksBound = '1';
+          search.addEventListener('input', function () {
+            filterDocumentsTable(table, search.value || '', count);
+          });
+        }
+
+        // Prima applicazione conteggio
+        filterDocumentsTable(table, '', count);
+      }
+
+      // Righe cliccabili + icone azioni
+      makeRowsClickable(table);
+      upgradeActionLinks(table);
+
+      // Aggiorna conteggio (se toolbar già esiste)
+      var c = root.querySelector('.ks-doc-toolbar .ks-doc-count');
+      if (c) filterDocumentsTable(table, (root.querySelector('.ks-doc-toolbar input[type=search]') || {}).value || '', c);
+    }
+
+    function enhanceDocumentDetail(root) {
+      // Header con azioni (stampa / indietro) - una sola volta
+      if (!root.querySelector('.ks-doc-header')) {
+        var header = document.createElement('div');
+        header.className = 'ks-doc-header';
+
+        var title = document.createElement('div');
+        title.className = 'ks-doc-title';
+        title.textContent = extractDocTitle(root) || 'Dettaglio documento';
+
+        var actions = document.createElement('div');
+        actions.className = 'ks-doc-actions';
+
+        var btnBack = document.createElement('button');
+        btnBack.type = 'button';
+        btnBack.className = 'btn btn-outline-secondary btn-sm';
+        btnBack.textContent = 'Indietro';
+        btnBack.addEventListener('click', function () {
+          // Se troviamo un link a documenti.aspx, usalo; altrimenti history.back()
+          var backLink = root.querySelector('a[href*="documenti.aspx"]');
+          if (backLink && backLink.href) window.location.href = backLink.href;
+          else window.history.back();
+        });
+
+        var btnPrint = document.createElement('button');
+        btnPrint.type = 'button';
+        btnPrint.className = 'btn btn-outline-secondary btn-sm';
+        btnPrint.textContent = 'Stampa';
+        btnPrint.addEventListener('click', function () {
+          window.print();
+        });
+
+        actions.appendChild(btnBack);
+        actions.appendChild(btnPrint);
+
+        header.appendChild(title);
+        header.appendChild(actions);
+
+        // Inserisci sopra il primo contenuto visibile
+        var anchor = root.firstElementChild;
+        if (anchor) root.insertBefore(header, anchor);
+        else root.appendChild(header);
+      }
+
+      // Summary meta: wrap del primo UL "semplice"
+      var ul = findSimpleMetaList(root);
+      if (ul && !ul.dataset.ksWrapped) {
+        ul.dataset.ksWrapped = '1';
+        ul.classList.add('ks-doc-meta-list');
+
+        var wrap = document.createElement('div');
+        wrap.className = 'ks-doc-summary';
+
+        ul.parentElement.insertBefore(wrap, ul);
+        wrap.appendChild(ul);
+
+        // Split label/value solo se LI ha testo semplice
+        var lis = ul.querySelectorAll('li');
+        for (var i = 0; i < lis.length; i++) {
+          var li = lis[i];
+          if (li.dataset.ksSplit === '1') continue;
+          if (li.children && li.children.length > 0) continue;
+
+          var txt = (li.textContent || '').trim();
+          var idx = txt.indexOf(':');
+          if (idx > 0) {
+            var label = txt.substring(0, idx).trim();
+            var value = txt.substring(idx + 1).trim();
+
+            li.textContent = '';
+            var s1 = document.createElement('span');
+            s1.className = 'ks-doc-meta-label';
+            s1.textContent = label;
+
+            var s2 = document.createElement('span');
+            s2.className = 'ks-doc-meta-value';
+            s2.textContent = value;
+
+            li.appendChild(s1);
+            li.appendChild(s2);
+            li.dataset.ksSplit = '1';
+          }
+        }
+      }
+
+      // Tabelle dettaglio: card mobile + data-label
+      enhanceDocumentsTableCards(root);
+    }
+
+    function findPrimaryDocumentsTable(root) {
+      // Cerca la prima tabella "seria": thead + almeno una riga nel tbody
+      var tables = root.querySelectorAll('table.table');
+      for (var i = 0; i < tables.length; i++) {
+        var t = tables[i];
+        if (!t.querySelector('thead')) continue;
+        var rows = t.querySelectorAll('tbody tr');
+        if (rows && rows.length > 0) return t;
+      }
+      return null;
+    }
+
+    function filterDocumentsTable(table, term, countEl) {
+      if (!table) return;
+
+      var q = (term || '').toLowerCase().trim();
+      var rows = table.querySelectorAll('tbody tr');
+
+      var visible = 0;
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        var txt = (r.textContent || '').toLowerCase();
+
+        var ok = !q || txt.indexOf(q) !== -1;
+        r.style.display = ok ? '' : 'none';
+        if (ok) visible++;
+      }
+
+      if (countEl) {
+        countEl.textContent = visible + (visible === 1 ? ' documento' : ' documenti');
+      }
+    }
+
+    function makeRowsClickable(table) {
+      if (!table) return;
+
+      var rows = table.querySelectorAll('tbody tr');
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        if (r.dataset.ksRowBound === '1') continue;
+
+        // Link preferito: dettaglio documento
+        var a = r.querySelector('a[href*="documentidettaglio.aspx"], a[href*="documentidettaglio"]') || r.querySelector('a[href]');
+        if (!a || !a.href) continue;
+
+        r.dataset.ksHref = a.href;
+        r.classList.add('ks-row-link');
+
+        r.addEventListener('click', function (ev) {
+          var t = ev.target;
+          // Se click su elemento interattivo, lascia comportamento originale
+          if (t && (t.closest('a') || t.closest('button') || t.closest('input') || t.closest('select') || t.closest('textarea'))) return;
+
+          var href = this.dataset.ksHref;
+          if (href) window.location.href = href;
+        });
+
+        r.dataset.ksRowBound = '1';
+      }
+    }
+
+    function upgradeActionLinks(table) {
+      if (!table) return;
+
+      var links = table.querySelectorAll('a[href]');
+      for (var i = 0; i < links.length; i++) {
+        var a = links[i];
+        if (a.dataset.ksUpgraded === '1') continue;
+
+        // Heuristic: link con icona/immagine o testo molto corto -> bottone icona
+        var hasIcon = !!a.querySelector('i, img');
+        var txt = (a.textContent || '').trim();
+
+        if (hasIcon || (txt.length > 0 && txt.length <= 3)) {
+          a.classList.add('ks-icon-btn');
+          a.dataset.ksUpgraded = '1';
+        }
+      }
+    }
+
+    function extractDocTitle(root) {
+      var h = root.querySelector('h1, h2, h3');
+      if (h && (h.textContent || '').trim().length > 0) return (h.textContent || '').trim();
+
+      var bc = document.querySelector('.ks-breadcrumb h1, .ks-breadcrumb .h5, .ks-breadcrumb .h6');
+      if (bc && (bc.textContent || '').trim().length > 0) return (bc.textContent || '').trim();
+
+      return '';
+    }
+
+    function findSimpleMetaList(root) {
+      // Primo UL "semplice": pochi elementi, contenuto con ':' (label: value)
+      var uls = root.querySelectorAll('ul');
+      for (var i = 0; i < uls.length; i++) {
+        var ul = uls[i];
+        if (ul.closest('nav')) continue;
+        if (ul.classList.contains('breadcrumb') || ul.classList.contains('tf-breadcrumb-list')) continue;
+
+        var lis = ul.querySelectorAll('li');
+        if (!lis || lis.length < 2 || lis.length > 12) continue;
+
+        // deve contenere almeno 2 item con ":" e nessun elemento complesso
+        var score = 0;
+        for (var j = 0; j < lis.length; j++) {
+          var li = lis[j];
+          if (li.children && li.children.length > 0) continue;
+          if (((li.textContent || '').indexOf(':')) > 0) score++;
+        }
+        if (score >= 2) return ul;
+      }
+      return null;
+    }
 
   function activateAccountSidebar() {
     var sidebar = document.querySelector('.ks-account-sidebar');
@@ -233,6 +511,10 @@
     var current = normalizePath(window.location.href);
     var currentFile = (current.split('/').pop() || '').toLowerCase();
 
+    // Alias: alcune pagine dettaglio devono evidenziare la voce "Documenti"
+    var currentKey = currentFile;
+    if (currentKey === 'documentidettaglio.aspx') currentKey = 'documenti.aspx';
+
     for (var i = 0; i < links.length; i++) {
       var a = links[i];
       var href = a.getAttribute('href');
@@ -241,7 +523,7 @@
       var path = normalizePath(href);
       var file = (path.split('/').pop() || '').toLowerCase();
 
-      if (file && file === currentFile) {
+      if (file && file === currentKey) {
         a.classList.add('is-active');
       }
     }
