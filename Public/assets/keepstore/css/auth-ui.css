@@ -215,3 +215,67 @@ body.ks-page-success .ks-success-actions {
     width: 100%;
   }
 }
+
+
+/* ============================================================
+   Form layout tables (legacy WebForms) - avoid bootstrap table look
+   ============================================================ */
+
+/* Registration page needs more room */
+body.ks-page-registrazione .ks-auth-shell {
+  max-width: 980px;
+}
+
+/* Marked by ks-page-flags.js when a table contains form controls but no thead/th */
+body.ks-page-auth table.ks-form-table,
+body.ks-page-account table.ks-form-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 10px;
+}
+
+body.ks-page-auth table.ks-form-table td,
+body.ks-page-account table.ks-form-table td {
+  border: 0 !important;
+  padding: 0 !important;
+  vertical-align: top;
+}
+
+body.ks-page-auth table.ks-form-table td:first-child,
+body.ks-page-account table.ks-form-table td:first-child {
+  padding-right: 12px !important;
+  font-weight: 600;
+  color: #222;
+  width: 240px;
+  white-space: normal;
+}
+
+body.ks-page-auth table.ks-form-table input.form-control,
+body.ks-page-auth table.ks-form-table select.form-select,
+body.ks-page-auth table.ks-form-table textarea.form-control,
+body.ks-page-account table.ks-form-table input.form-control,
+body.ks-page-account table.ks-form-table select.form-select,
+body.ks-page-account table.ks-form-table textarea.form-control {
+  width: 100%;
+}
+
+/* Mobile: stack label + field */
+@media (max-width: 767.98px) {
+  body.ks-page-auth table.ks-form-table tr,
+  body.ks-page-account table.ks-form-table tr {
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  body.ks-page-auth table.ks-form-table td,
+  body.ks-page-account table.ks-form-table td {
+    display: block;
+    width: 100% !important;
+    padding-right: 0 !important;
+  }
+
+  body.ks-page-auth table.ks-form-table td:first-child,
+  body.ks-page-account table.ks-form-table td:first-child {
+    margin-bottom: 6px;
+  }
+}

@@ -34,6 +34,43 @@ function injectCssOnce(href, key) {
   }
 }
 
+function fixNewsletterValidation() {
+  try {
+    var footer = document.querySelector('footer');
+    if (!footer) return;
+
+    // Newsletter email field should NEVER block other postbacks (WebForms uses a single <form>)
+    var email = footer.querySelector('#ksNewsletterEmail, .form-newsletter input[type="email"], .form-newsletter input.subscribe-email');
+    if (email) {
+      email.removeAttribute('required');
+      email.removeAttribute('aria-required');
+      if (!email.getAttribute('autocomplete')) email.setAttribute('autocomplete', 'email');
+      email.setAttribute('inputmode', 'email');
+      email.setAttribute('autocapitalize', 'none');
+      email.setAttribute('spellcheck', 'false');
+    }
+
+    // Ensure the subscribe button does not submit the main WebForms form
+    var btn = footer.querySelector('#ksNewsletterSubmit, .form-newsletter button');
+    if (btn && btn.tagName && btn.tagName.toLowerCase() === 'button') {
+      btn.type = 'button';
+    }
+
+    // If a legacy nested <form> is still present, neuter it
+    var form = footer.querySelector('form.form-newsletter, .form-newsletter form');
+    if (form && !form.dataset.ksNoSubmit) {
+      form.dataset.ksNoSubmit = '1';
+      form.setAttribute('novalidate', 'novalidate');
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+      });
+    }
+  } catch (e) {
+    // noop
+  }
+}
+
+
 
   function getFileName() {
     var path = (window.location.pathname || '').toLowerCase();
@@ -121,27 +158,64 @@ if (documentsPages[file]) {
 
 
   function enhanceTables(root) {
-    var tables = root.querySelectorAll('table');
-    for (var i = 0; i < tables.length; i++) {
-      var t = tables[i];
+  if (!root) return;
 
-      // Evita di "rompere" eventuali tabelle già custom
-      if (!t.classList.contains('table')) {
-        t.classList.add('table', 'table-sm', 'align-middle');
-      }
+  var tables = root.querySelectorAll('table');
+  for (var i = 0; i < tables.length; i++) {
+    var t = tables[i];
 
-      // Wrapper responsive: se già presente non fa nulla
+    if (t.dataset.ksTableEnhanced === '1') continue;
+
+    var hasThead = !!t.querySelector('thead');
+    var hasTh = !!t.querySelector('th');
+    var hasFormControls = !!t.querySelector('input:not([type="hidden"]), select, textarea');
+
+    // Form/layout tables (no thead/th) -> do NOT apply bootstrap "table" UI
+    if (hasFormControls && !hasThead && !hasTh) {
+      t.classList.add('ks-form-table');
+      // Remove any previous table decorations
+      t.classList.remove('table', 'table-sm', 'table-hover', 'align-middle');
+
+      // If wrapped by a simple .table-responsive, unwrap (avoid weird scrolling on forms)
       var parent = t.parentElement;
-      if (parent && !parent.classList.contains('table-responsive')) {
-        var wrap = document.createElement('div');
-        wrap.className = 'table-responsive';
-        parent.insertBefore(wrap, t);
-        wrap.appendChild(t);
+      if (parent && parent.classList.contains('table-responsive')) {
+        var only = true;
+        for (var n = parent.firstChild; n; n = n.nextSibling) {
+          if (n === t) continue;
+          if (n.nodeType === 3 && ((n.textContent || '').trim() === '')) continue;
+          only = false;
+          break;
+        }
+        if (only && parent.parentElement) {
+          parent.parentElement.insertBefore(t, parent);
+          parent.parentElement.removeChild(parent);
+        }
       }
-    }
-  }
 
-  function enhanceForms(root) {
+      t.dataset.ksTableEnhanced = '1';
+      continue;
+    }
+
+    // Data tables -> enhance gently
+    if (!t.classList.contains('table')) {
+      t.classList.add('table', 'table-sm', 'align-middle');
+    }
+
+    // Wrapper responsive: se già presente non fa nulla
+    var p = t.parentElement;
+    if (p && !p.classList.contains('table-responsive')) {
+      var wrap = document.createElement('div');
+      wrap.className = 'table-responsive';
+      wrap.dataset.ksTableWrap = '1';
+      p.insertBefore(wrap, t);
+      wrap.appendChild(t);
+    }
+
+    t.dataset.ksTableEnhanced = '1';
+  }
+}
+
+function enhanceForms(root) {
     var inputs = root.querySelectorAll('input, select, textarea, button');
     for (var i = 0; i < inputs.length; i++) {
       var el = inputs[i];
@@ -936,6 +1010,54 @@ function enhanceDocumentDetailDeep(root) {
         if (!el.getAttribute('inputmode')) el.setAttribute('inputmode', 'tel');
         if (!el.getAttribute('autocomplete')) el.setAttribute('autocomplete', 'tel');
       }
+
+
+// Address / personal data (heuristics) - mainly for registration / addresses
+var isProfileForm = (file === 'registrazione.aspx' || file === 'indirizzi.aspx' || file === 'datiutente.aspx');
+if (isProfileForm) {
+  // Nome / Cognome (avoid nomeutente)
+  if ((key.indexOf('cognome') !== -1 || key.indexOf('surname') !== -1) && !el.getAttribute('autocomplete')) {
+    el.setAttribute('autocomplete', 'family-name');
+  } else if ((key.indexOf('nome') !== -1 || key.indexOf('name') !== -1) &&
+             key.indexOf('utente') === -1 &&
+             key.indexOf('user') === -1 &&
+             !el.getAttribute('autocomplete')) {
+    el.setAttribute('autocomplete', 'given-name');
+  }
+
+  // Azienda / Ragione sociale
+  if ((key.indexOf('azienda') !== -1 || key.indexOf('ragione') !== -1 || key.indexOf('societa') !== -1 || key.indexOf('company') !== -1) &&
+      !el.getAttribute('autocomplete')) {
+    el.setAttribute('autocomplete', 'organization');
+  }
+
+  // Indirizzo
+  if ((key.indexOf('indir') !== -1 || key.indexOf('address') !== -1) && !el.getAttribute('autocomplete')) {
+    el.setAttribute('autocomplete', 'street-address');
+  }
+
+  // CAP
+  if ((key.indexOf('cap') !== -1 || key.indexOf('postal') !== -1 || key.indexOf('zip') !== -1) && !el.getAttribute('autocomplete')) {
+    el.setAttribute('autocomplete', 'postal-code');
+    if (!el.getAttribute('inputmode')) el.setAttribute('inputmode', 'numeric');
+  }
+
+  // Città
+  if ((key.indexOf('citta') !== -1 || key.indexOf('città') !== -1 || key.indexOf('city') !== -1) && !el.getAttribute('autocomplete')) {
+    el.setAttribute('autocomplete', 'address-level2');
+  }
+
+  // Provincia / Regione
+  if ((key.indexOf('prov') !== -1 || key.indexOf('provincia') !== -1 || key.indexOf('region') !== -1 || key.indexOf('state') !== -1) &&
+      !el.getAttribute('autocomplete')) {
+    el.setAttribute('autocomplete', 'address-level1');
+  }
+
+  // Nazione
+  if ((key.indexOf('nazione') !== -1 || key.indexOf('country') !== -1) && !el.getAttribute('autocomplete')) {
+    el.setAttribute('autocomplete', 'country');
+  }
+}
     }
   }
 
@@ -1106,6 +1228,7 @@ function enhanceDocumentDetailDeep(root) {
 
   function applyKsEnhancements() {
     try {
+    fixNewsletterValidation();
     // Preferisci il contenitore interno della shell (evita di wrappare header/footer)
     var root = document.querySelector('.ks-account-main') || document.querySelector('main') || document.body;
 

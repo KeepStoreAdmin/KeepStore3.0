@@ -207,24 +207,24 @@ body.ks-page-order-detail .ks-doc-section .table-responsive {
 }
 
 /* Sezione righe documento: più “card” e meno tabellare */
-.ks-doc-section--items .ks-table-cards tr {
+.ks-doc-section--items, .ks-doc-section-items .ks-table-cards tr {
     padding: .85rem .9rem;
 }
 
-.ks-doc-section--items .ks-table-cards td {
+.ks-doc-section--items, .ks-doc-section-items .ks-table-cards td {
     gap: 1rem;
 }
 
-.ks-doc-section--items .ks-table-cards td:first-child {
+.ks-doc-section--items, .ks-doc-section-items .ks-table-cards td:first-child {
     font-weight: 700;
 }
 
 /* Sezione riepilogo: evidenzia totale finale */
-.ks-doc-section--summary .ks-table-cards tr:last-child {
+.ks-doc-section--summary, .ks-doc-section-summary .ks-table-cards tr:last-child {
     border-color: rgba(0,0,0,.14);
     box-shadow: 0 8px 20px rgba(0,0,0,.05);
 }
 
-.ks-doc-section--summary .ks-table-cards tr:last-child td {
+.ks-doc-section--summary, .ks-doc-section-summary .ks-table-cards tr:last-child td {
     font-weight: 800;
 }

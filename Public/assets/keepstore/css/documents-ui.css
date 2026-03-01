@@ -210,6 +210,42 @@ body.ks-page-documents .ks-doc-meta-value{
   font-weight:600;
 }
 
+/* Numeric cells (qty / price / totals) */
+body.ks-page-documents td.ks-cell-numeric{
+  text-align:right;
+  white-space:nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* JS-wrapped sections on document detail (documentidettaglio.aspx) */
+body.ks-page-documents .ks-doc-section{
+  border:1px solid rgba(0,0,0,.08);
+  border-radius:.9rem;
+  background:#fff;
+  padding:.75rem;
+  margin: .75rem 0 1rem 0;
+}
+
+body.ks-page-documents .ks-doc-section > h5{
+  margin-top:0;
+}
+
+body.ks-page-documents .ks-doc-section-items table.table tbody td{
+  padding-top:.6rem;
+  padding-bottom:.6rem;
+}
+
+body.ks-page-documents .ks-doc-section-summary table.table tbody tr:last-child td{
+  font-weight:700;
+  border-top:2px solid rgba(0,0,0,.08);
+}
+
+@media (max-width: 767.98px){
+  body.ks-page-documents table.ks-table-cards td.ks-cell-numeric{
+    text-align:right;
+  }
+}
+
 @media print{
   body.ks-page-documents .ks-doc-toolbar,
   body.ks-page-documents .ks-doc-actions,

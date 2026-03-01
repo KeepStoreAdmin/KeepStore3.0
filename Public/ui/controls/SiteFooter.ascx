@@ -119,20 +119,18 @@
                                     Be the first to know about offers, new products and discounted products
                                 </span>
 </p>
-<form accept-charset="utf-8" class="form-newsletter" data-mailchimp="true" method="post">
+<div class="form-newsletter" data-ks-newsletter="1">
 <div class="subscribe-content">
 <fieldset class="email">
-<input aria-required="true" class="subscribe-email type-fs-2" name="email-form" placeholder="Enter your email address" required="" tabindex="0" type="email"/>
+<input id="ksNewsletterEmail" class="subscribe-email type-fs-2" name="ksNewsletterEmail" placeholder="Inserisci la tua email" tabindex="0" type="email" autocomplete="email"/>
 </fieldset>
 <div class="button-submit">
-<button class="subscribe-button tf-btn btn-large hover-shine" type="submit">
-<span class="body-md-2 fw-semibold text-white">
-                                                Subscribe
-                                            </span>
+<button id="ksNewsletterSubmit" class="subscribe-button tf-btn btn-large hover-shine" type="button" aria-label="Iscriviti alla newsletter">
+<span class="body-md-2 fw-semibold text-white">Iscriviti</span>
 </button>
 </div>
 </div>
-</form>
+</div>
 </div>
 </div>
 </div>
