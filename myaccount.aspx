@@ -1,144 +1,117 @@
-<%@ Page Language="VB"
-    MasterPageFile="~/Page.master"
-    AutoEventWireup="false"
-    CodeFile="myaccount.aspx.vb"
-    Inherits="myaccount" %>
+<%@ Page Title="" Language="VB" MasterPageFile="~/Public/ui/master/Site.master" AutoEventWireup="false" CodeFile="myaccount.aspx.vb" Inherits="myaccount" %>
+<%@ Register Src="~/Public/ui/controls/Breadcrumb.ascx" TagPrefix="ks" TagName="Breadcrumb" %>
 
-<asp:Content ID="TitleContent1" ContentPlaceHolderID="TitleContent" runat="server">
+<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
     My Account
 </asp:Content>
 
-<asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
-<script type="text/javascript">
-        function showMyAccountSpinner() {
-            var sp = document.getElementById('spinner_myaccount');
-            if (sp) {
-                sp.style.display = 'block';
-            }
-        }
-
-        function attachMyAccountSpinner() {
-            try {
-                var links = document.querySelectorAll('.ks-myaccount a');
-                for (var i = 0; i < links.length; i++) {
-                    links[i].addEventListener('click', function () {
-                        showMyAccountSpinner();
-                    });
-                }
-            } catch (e) {
-            }
-        }
-
-        (function () {
-            if (document.readyState === "loading") {
-                document.addEventListener("DOMContentLoaded", attachMyAccountSpinner);
-            } else {
-                attachMyAccountSpinner();
-            }
-        })();
-
-        // Gestione ritorno da "indietro" del browser: se la pagina viene ripristinata dalla cache
-        window.addEventListener('pageshow', function (event) {
-            try {
-                if (event.persisted) {
-                    window.location.reload();
-                    return;
-                }
-
-                if (window.performance && window.performance.navigation) {
-                    if (window.performance.navigation.type === 2) {
-                        window.location.reload();
-                    }
-                }
-            } catch (e) {
-            }
-        });
-    </script>
+<asp:Content ID="BreadcrumbContent" ContentPlaceHolderID="BreadcrumbContent" runat="server">
+    <ks:Breadcrumb runat="server" ID="bcMyAccount" />
 </asp:Content>
 
-<asp:Content ID="MainContent1" ContentPlaceHolderID="MainContent" runat="server">
+<asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
-    <!-- Overlay spinner area MyAccount -->
-    <div id="spinner_myaccount" aria-hidden="true">
-        <div class="ks-spinner-box">
-            <div><b>Attendere, caricamento area personale...</b></div>
-            <br />
-            <img src="/Public/Images/spinner.gif" alt="Caricamento..." />
-        </div>
-    </div>
-
-    <div class="ks-myaccount">
-
-        <!-- Breadcrumb -->
-        <div class="tf-sp-1 pb-0">
+    <section class="tf-sp-2">
         <div class="container">
-            <div class="tf-breadcrumb-wrap">
-                <div class="tf-breadcrumb-list">
-                    <a href="Default.aspx" class="text">Home</a>
-                    <i class="icon icon-arrow-right"></i>
-                    <span class="text">Account</span>
-                </div>
+
+            <div class="tf-page-title style-2">
+                <div class="heading">My Account</div>
+                <p class="text-muted mb-0">Gestisci i tuoi dati, indirizzi, ordini e preferiti.</p>
             </div>
-        </div>
-    </div>
 
-        <!-- My Account -->
-        <section class="tf-sp-2">
-            <div class="container">
-                <div class="row">
+            <div class="row g-3 g-lg-4">
 
-                    <!-- Sidebar -->
-                    <div class="col-lg-3">
-                        <div class="wrap-sidebar-account">
-                            <ul class="myaccount-nav content-append">
-                                <li><span class="myaccount-nav-item active">Dashboard</span></li>
-                                <li><a href="datiutente.aspx?tab=account" class="myaccount-nav-item">Dettagli account</a></li>
-                                <li><a href="datiutente.aspx?tab=addr" class="myaccount-nav-item">Indirizzi</a></li>
-                                <li><a href="documenti.aspx?t=4" class="myaccount-nav-item">I miei ordini</a></li>
-                                <li><a href="documenti.aspx?t=2" class="myaccount-nav-item">Le mie fatture</a></li>
-                                <li><a href="documenti.aspx?t=1" class="myaccount-nav-item">I miei DDT</a></li>
-                                <li><a href="wishlist.aspx" class="myaccount-nav-item">Wishlist</a></li>
-                                <li><a href="password.aspx" class="myaccount-nav-item">Cambia password</a></li>
-                                <li><a href="remind.aspx" class="myaccount-nav-item">Recupero accesso</a></li>
-                                <li><a href="logout.aspx" class="myaccount-nav-item">Logout</a></li>
-                            </ul>
+                <div class="col-12 col-md-6 col-xl-4">
+                    <a class="card h-100 text-decoration-none" href="/datiutente.aspx">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start justify-content-between">
+                                <div>
+                                    <div class="fw-semibold">I miei dati</div>
+                                    <div class="text-muted small">Anagrafica e preferenze</div>
+                                </div>
+                                <span class="tf-icon-box"><i class="icon icon-user"></i></span>
+                            </div>
                         </div>
-                    </div>
-
-                    <!-- Content -->
-                    <div class="col-lg-9">
-                        <asp:Panel ID="pnlAccount" runat="server" CssClass="myaccount-content account-dashboard">
-
-                            <div class="mb_60">
-                                <h3 class="fw-semibold mb-20">Area personale</h3>
-                                <p>
-                                    Da qui puoi consultare i tuoi
-                                    <a class="text-secondary link fw-medium" href="documenti.aspx?t=4">ordini</a>,
-                                    gestire i tuoi
-                                    <a class="text-secondary link fw-medium" href="datiutente.aspx">dati</a>
-                                    e aggiornare le informazioni dell’account.
-                                </p>
-                            </div>
-
-                            <div class="row g-3 ks-quick-links">
-                                <div class="col-md-4">
-                                    <a href="documenti.aspx?t=4" class="tf-btn btn-line">I miei ordini</a>
-                                </div>
-                                <div class="col-md-4">
-                                    <a href="datiutente.aspx" class="tf-btn btn-line">I miei dati</a>
-                                </div>
-                                <div class="col-md-4">
-                                    <a href="password.aspx" class="tf-btn btn-line">Cambia password</a>
-                                </div>
-                            </div>
-
-                        </asp:Panel>
-                    </div>
-
+                    </a>
                 </div>
-            </div>
-        </section>
 
-    </div>
+                <div class="col-12 col-md-6 col-xl-4">
+                    <a class="card h-100 text-decoration-none" href="/indirizzi.aspx">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start justify-content-between">
+                                <div>
+                                    <div class="fw-semibold">Indirizzi</div>
+                                    <div class="text-muted small">Spedizione e fatturazione</div>
+                                </div>
+                                <span class="tf-icon-box"><i class="icon icon-map-pin"></i></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-12 col-md-6 col-xl-4">
+                    <a class="card h-100 text-decoration-none" href="/ordini.aspx">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start justify-content-between">
+                                <div>
+                                    <div class="fw-semibold">Ordini</div>
+                                    <div class="text-muted small">Storico ordini e dettagli</div>
+                                </div>
+                                <span class="tf-icon-box"><i class="icon icon-file-text"></i></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-12 col-md-6 col-xl-4">
+                    <a class="card h-100 text-decoration-none" href="/documenti.aspx?t=4">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start justify-content-between">
+                                <div>
+                                    <div class="fw-semibold">Documenti</div>
+                                    <div class="text-muted small">Fatture e documenti</div>
+                                </div>
+                                <span class="tf-icon-box"><i class="icon icon-download"></i></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-12 col-md-6 col-xl-4">
+                    <a class="card h-100 text-decoration-none" href="/wishlist.aspx">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start justify-content-between">
+                                <div>
+                                    <div class="fw-semibold">Wishlist</div>
+                                    <div class="text-muted small">I tuoi preferiti</div>
+                                </div>
+                                <span class="tf-icon-box"><i class="icon icon-heart"></i></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-12 col-md-6 col-xl-4">
+                    <a class="card h-100 text-decoration-none" href="/password.aspx">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start justify-content-between">
+                                <div>
+                                    <div class="fw-semibold">Password</div>
+                                    <div class="text-muted small">Cambia password</div>
+                                </div>
+                                <span class="tf-icon-box"><i class="icon icon-lock"></i></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+            </div>
+
+            <div class="mt-4">
+                <a class="btn btn-outline-danger" href="/logout.aspx">Logout</a>
+            </div>
+
+        </div>
+    </section>
 
 </asp:Content>
