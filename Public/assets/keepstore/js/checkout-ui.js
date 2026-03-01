@@ -15,6 +15,26 @@
     return cs && cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0';
   }
 
+  function triggerAutoPostBack(el) {
+    if (!el) return;
+    // In WebForms, AutoPostBack uses inline onchange -> el.onchange is usually a function.
+    try {
+      if (typeof el.onchange === 'function') {
+        el.onchange();
+        return;
+      }
+    } catch (e) { /* ignore */ }
+
+    // Fallback: dispatch change event
+    try {
+      var evt = document.createEvent('HTMLEvents');
+      evt.initEvent('change', true, false);
+      el.dispatchEvent(evt);
+    } catch (e2) {
+      // ignore
+    }
+  }
+
   function setCheckoutStatus() {
     if (!document.body) return;
 
@@ -108,6 +128,11 @@
         // salta header
         if (tr.querySelector('th')) return;
 
+        // Se la riga ha già un onclick (GridView spesso genera __doPostBack),
+        // evitare di aggiungere un secondo handler: potrebbe causare doppi postback.
+        if (tr.getAttribute && tr.getAttribute('onclick')) return;
+        if (typeof tr.onclick === 'function') return;
+
         // evita doppia bind
         if (tr.dataset && tr.dataset.ksRow === '1') return;
         tr.dataset.ksRow = '1';
@@ -155,6 +180,101 @@
     refreshSelected();
   }
 
+  // Indirizzi registrati (checkout) -> cards UI sopra la DropDownList
+  function enhanceShippingAddressPicker() {
+    // Cerca la DropDownList in carrello/checkout (AutoPostBack=True)
+    var ddl = qs('select[id$="LstScegliIndirizzo"]') || document.getElementById('LstScegliIndirizzo');
+    if (!ddl) return;
+
+    // Evita duplicati
+    if (ddl.dataset && ddl.dataset.ksAddrCards === '1') return;
+
+    // Solo se visibile e se ha almeno 2 scelte significative
+    if (!isVisible(ddl)) return;
+    var options = ddl.querySelectorAll('option');
+    if (!options || options.length < 2) return;
+
+    // Non ricostruire se già presente
+    var already = ddl.parentNode && ddl.parentNode.querySelector('.ks-addr-picker');
+    if (already) {
+      ddl.dataset.ksAddrCards = '1';
+      return;
+    }
+
+    ddl.classList.add('ks-addr-select');
+
+    function splitText(txt) {
+      txt = (txt || '').replace(/\s+/g, ' ').trim();
+      if (!txt) return { title: '', meta: '' };
+      // separatori tipici: " - ", " | ", " / "
+      var parts = txt.split(/\s*[-–|\/]\s*/);
+      if (parts.length <= 1) return { title: txt, meta: '' };
+      var title = (parts.shift() || '').trim();
+      var meta = parts.join(' • ').trim();
+      return { title: title || txt, meta: meta };
+    }
+
+    var wrap = document.createElement('div');
+    wrap.className = 'ks-addr-picker';
+    wrap.setAttribute('role', 'list');
+
+    for (var i = 0; i < options.length; i++) {
+      var opt = options[i];
+      if (!opt || opt.disabled) continue;
+      // spesso il primo option è placeholder ("-- seleziona --")
+      var label = (opt.textContent || '').trim();
+      if (!label) continue;
+
+      // Skip placeholder vuoti (manteniamo la select nativa come fallback)
+      if ((opt.value === '' || opt.value === null) && /seleziona/i.test(label)) continue;
+
+      var parts = splitText(label);
+
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'ks-addr-picker__btn';
+      btn.setAttribute('role', 'listitem');
+      btn.setAttribute('data-value', opt.value);
+      if (opt.selected) btn.classList.add('is-active');
+
+      btn.innerHTML =
+        '<div class="ks-addr-picker__title">' + parts.title.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>' +
+        (parts.meta ? '<div class="ks-addr-picker__meta">' + parts.meta.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>' : '');
+
+      btn.addEventListener('click', function () {
+        var val = this.getAttribute('data-value');
+        if (!val || ddl.value === val) return;
+
+        ddl.value = val;
+        // Aggiorna UI locale subito (prima del postback)
+        var all = wrap.querySelectorAll('.ks-addr-picker__btn');
+        for (var k = 0; k < all.length; k++) all[k].classList.remove('is-active');
+        this.classList.add('is-active');
+
+        triggerAutoPostBack(ddl);
+      });
+
+      wrap.appendChild(btn);
+    }
+
+    // Inserisci subito dopo la select
+    ddl.parentNode.insertBefore(wrap, ddl.nextSibling);
+
+    // Sync in caso di change (es. user usa select nativa)
+    if (!ddl.dataset.ksAddrChangeBound) {
+      ddl.dataset.ksAddrChangeBound = '1';
+      ddl.addEventListener('change', function () {
+        var v = ddl.value;
+        var btns = wrap.querySelectorAll('.ks-addr-picker__btn');
+        for (var b = 0; b < btns.length; b++) {
+          btns[b].classList.toggle('is-active', btns[b].getAttribute('data-value') === v);
+        }
+      });
+    }
+
+    ddl.dataset.ksAddrCards = '1';
+  }
+
   // Replacement per vecchia logica jQuery con ID hardcodati (cph_*).
   function setupDestinationToggles() {
     var open1 = document.getElementById('open1') || qs('[id$="_open1"]');
@@ -186,7 +306,8 @@
       }
 
       var chk = qs('[id$="_CHKPREDEFINITO"]');
-      if (chk) chk.checked = true;
+      // Non forzare "predefinito". Evita prompt/modali indesiderati.
+      if (chk) chk.checked = false;
     }
 
     function showPanel(mode) {
@@ -265,6 +386,7 @@
     decorateCheckoutTables();
     enhanceGridRowSelection();
     setupDestinationToggles();
+    enhanceShippingAddressPicker();
     preventDoubleSubmit();
   }
 

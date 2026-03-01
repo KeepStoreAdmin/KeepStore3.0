@@ -77,11 +77,15 @@
             ddl.value = value;
             // Trigger AutoPostBack (ASP.NET)
             try {
-              var evt = document.createEvent('HTMLEvents');
-              evt.initEvent('change', true, false);
-              ddl.dispatchEvent(evt);
+              if (typeof ddl.onchange === 'function') {
+                ddl.onchange();
+              } else {
+                var evt = document.createEvent('HTMLEvents');
+                evt.initEvent('change', true, false);
+                ddl.dispatchEvent(evt);
+              }
             } catch (e) {
-              if (typeof ddl.onchange === 'function') ddl.onchange();
+              // ignore
             }
           });
         })(opt.value);
