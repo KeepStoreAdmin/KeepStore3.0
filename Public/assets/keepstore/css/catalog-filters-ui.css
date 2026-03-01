@@ -130,6 +130,13 @@
   background:#fff;
   font-weight:800;
 }
+.ks-filter-panel-btn-link{
+  text-decoration:none;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:inherit;
+}
 .ks-filter-panel-btn-primary{
   background:#111;
   color:#fff;
@@ -157,4 +164,74 @@ body.ks-offcanvas-open .ks-filter-panel{ transform:translateX(0); }
 .ks-filter-inline-hint{
   font-size:12px;
   opacity:.75;
+}
+
+/* ==========================================================
+   Active filters (chips)
+   ========================================================== */
+.ks-active-filters{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 12px;
+  margin:0 0 14px 0;
+  border:1px solid rgba(0,0,0,.10);
+  border-radius:12px;
+  background:#fff;
+}
+.ks-active-filters-chips{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.ks-chip{
+  border:1px solid rgba(0,0,0,.16);
+  background:#fff;
+  border-radius:999px;
+  padding:6px 10px;
+  font-weight:800;
+  font-size:12px;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  cursor:pointer;
+}
+.ks-chip:active{ transform:translateY(1px); }
+.ks-chip-x{
+  font-size:14px;
+  line-height:1;
+  opacity:.75;
+}
+.ks-active-filters-actions{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:6px;
+  min-width:140px;
+}
+.ks-filter-reset{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:8px 10px;
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,.14);
+  text-decoration:none;
+  font-weight:900;
+  color:inherit;
+  background:#fff;
+  white-space:nowrap;
+}
+.ks-filter-reset:active{ transform:translateY(1px); }
+.ks-active-filters-meta{
+  font-size:12px;
+  opacity:.75;
+  text-align:right;
+}
+
+@media (max-width: 991px){
+  .ks-active-filters{ flex-direction:column; align-items:stretch; }
+  .ks-active-filters-actions{ flex-direction:row; align-items:center; justify-content:space-between; min-width:0; }
+  .ks-active-filters-meta{ text-align:left; }
 }

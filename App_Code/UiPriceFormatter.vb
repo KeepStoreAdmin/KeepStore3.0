@@ -14,7 +14,7 @@ Imports System.Web
 Public Module UiPriceFormatter
 
     ' Versione base (5 parametri) - compatibilità
-    Public Overloads Function RenderPriceHtml(ByVal prezzo As Object,
+    Public Function RenderPriceHtml(ByVal prezzo As Object,
                                               ByVal prezzoIvato As Object,
                                               ByVal prezzoPromo As Object,
                                               ByVal prezzoPromoIvato As Object,
@@ -23,7 +23,7 @@ Public Module UiPriceFormatter
     End Function
 
     ' Versione estesa (6 parametri) - per liste che passano anche InOfferta
-    Public Overloads Function RenderPriceHtml(ByVal prezzo As Object,
+    Public Function RenderPriceHtml(ByVal prezzo As Object,
                                               ByVal prezzoIvato As Object,
                                               ByVal prezzoPromo As Object,
                                               ByVal prezzoPromoIvato As Object,

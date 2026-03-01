@@ -8,6 +8,48 @@
     return /articoli\.aspx$/i.test(location.pathname || '');
   }
 
+  // ----------------------------------------------------------
+  // Query helpers (no URLSearchParams dependency)
+  // ----------------------------------------------------------
+  function parseQuery() {
+    var out = {};
+    var q = (location.search || '').replace(/^\?/, '');
+    if (!q) return out;
+    var parts = q.split('&');
+    for (var i = 0; i < parts.length; i++) {
+      var kv = parts[i].split('=');
+      var k = decodeURIComponent((kv[0] || '').replace(/\+/g, ' ')).trim();
+      if (!k) continue;
+      var v = decodeURIComponent((kv[1] || '').replace(/\+/g, ' '));
+      out[k] = v;
+    }
+    return out;
+  }
+
+  function buildQuery(obj) {
+    var parts = [];
+    for (var k in obj) {
+      if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+      if (obj[k] === null || typeof obj[k] === 'undefined' || obj[k] === '') continue;
+      parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(String(obj[k])));
+    }
+    return parts.join('&');
+  }
+
+  function buildResetUrl() {
+    // Manteniamo solo i parametri "categoria" osservati sui menu:
+    // es: ?ct=35&st=2&tp=249
+    var q = parseQuery();
+    var keep = {};
+    var keys = ['ct', 'st', 'tp'];
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      if (q[key]) keep[key] = q[key];
+    }
+    var qs = buildQuery(keep);
+    return (location.pathname || 'articoli.aspx') + (qs ? ('?' + qs) : '');
+  }
+
   function ensureCss(href) {
     try {
       var links = document.querySelectorAll('link[rel="stylesheet"]');
@@ -71,6 +113,209 @@
       scroll.className = 'ks-filter-scroll';
       for (var j = 0; j < elementChildren.length; j++) scroll.appendChild(elementChildren[j]);
       el.appendChild(scroll);
+    }
+  }
+
+  // ==========================================================
+  // Active filters (chips)
+  // ==========================================================
+  function ensureActiveFiltersHost() {
+    var host = document.getElementById('ksActiveFilters');
+    if (host) return host;
+
+    host = document.createElement('div');
+    host.id = 'ksActiveFilters';
+    host.className = 'ks-active-filters';
+
+    // Insert after toolbar when possible; otherwise before the products grid.
+    var toolbar = document.querySelector('.ks-catalog-toolbar');
+    if (toolbar && toolbar.parentNode) {
+      toolbar.insertAdjacentElement('afterend', host);
+      return host;
+    }
+
+    var grid = document.getElementById('GridView1');
+    if (grid && grid.parentNode) {
+      grid.parentNode.insertBefore(host, grid);
+      return host;
+    }
+
+    var main = document.querySelector('main') || document.body;
+    if (main.firstChild) main.insertBefore(host, main.firstChild);
+    else main.appendChild(host);
+    return host;
+  }
+
+  function getLabelForInput(input) {
+    if (!input) return '';
+
+    // Try explicit label[for]
+    var id = input.getAttribute('id');
+    if (id) {
+      var lbl = document.querySelector('label[for="' + id.replace(/"/g, '') + '"]');
+      if (lbl && lbl.textContent) return lbl.textContent.trim();
+    }
+
+    // Try parent label
+    var p = input.parentElement;
+    if (p && p.tagName && p.tagName.toLowerCase() === 'label') {
+      return (p.textContent || '').trim();
+    }
+
+    // Try closest label
+    if (input.closest) {
+      var cl = input.closest('label');
+      if (cl && cl.textContent) return cl.textContent.trim();
+    }
+
+    // Fallback: sibling text
+    if (input.nextSibling && input.nextSibling.nodeType === 3) {
+      var t = (input.nextSibling.nodeValue || '').trim();
+      if (t) return t;
+    }
+    return '';
+  }
+
+  function addChip(host, text, removeFn) {
+    if (!text) return;
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ks-chip';
+    btn.setAttribute('aria-label', 'Rimuovi filtro: ' + text);
+    btn.innerHTML = '<span class="ks-chip-label"></span><span class="ks-chip-x" aria-hidden="true">×</span>';
+    btn.querySelector('.ks-chip-label').textContent = text;
+
+    btn.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      try { if (typeof removeFn === 'function') removeFn(); } catch (e) { }
+    });
+
+    host.appendChild(btn);
+  }
+
+  function normalizeSelectValue(sel) {
+    if (!sel) return '';
+    var v = sel.value;
+    if (v === null || typeof v === 'undefined') return '';
+    v = String(v);
+    if (v === '' || v === '0' || v === '-1') return '';
+    // Some legacy selects use "" for default
+    if (sel.selectedIndex <= 0) return '';
+    return v;
+  }
+
+  function setSelectToDefault(sel) {
+    if (!sel) return;
+    try {
+      sel.selectedIndex = 0;
+      if (typeof sel.onchange === 'function') sel.onchange();
+      else triggerChange(sel);
+    } catch (e) {
+      try { sel.selectedIndex = 0; } catch (e2) { }
+    }
+  }
+
+  function triggerChange(el) {
+    if (!el) return;
+    try {
+      if (document.createEvent) {
+        var evt = document.createEvent('HTMLEvents');
+        evt.initEvent('change', true, false);
+        el.dispatchEvent(evt);
+        return;
+      }
+    } catch (e) { }
+
+    try {
+      if (el.fireEvent) {
+        el.fireEvent('onchange');
+      }
+    } catch (e2) { }
+  }
+
+  function renderActiveFilters() {
+    if (!isCatalogPage()) return;
+    var host = ensureActiveFiltersHost();
+    if (!host) return;
+
+    // Reset content
+    host.innerHTML = '';
+
+    // Left group: chips
+    var chipsWrap = document.createElement('div');
+    chipsWrap.className = 'ks-active-filters-chips';
+    host.appendChild(chipsWrap);
+
+    // Right group: actions
+    var actions = document.createElement('div');
+    actions.className = 'ks-active-filters-actions';
+    host.appendChild(actions);
+
+    // Build chips from known controls
+    var cbDisp = document.querySelector('#CheckBox_Disponibile, input[type=checkbox][id*="CheckBox_Disponibile"]');
+    if (cbDisp && cbDisp.checked) {
+      addChip(chipsWrap, 'Disponibili', function () { try { cbDisp.click(); } catch (e) { } });
+    }
+
+    var selTaglia = document.querySelector('#Drop_Filtra_Taglia, select[id*="Drop_Filtra_Taglia"]');
+    if (selTaglia && normalizeSelectValue(selTaglia)) {
+      var txtT = (selTaglia.options[selTaglia.selectedIndex] && selTaglia.options[selTaglia.selectedIndex].text) ? selTaglia.options[selTaglia.selectedIndex].text.trim() : 'Selezionato';
+      addChip(chipsWrap, 'Taglia: ' + txtT, function () { setSelectToDefault(selTaglia); });
+    }
+
+    var selColore = document.querySelector('#Drop_Filtra_Colore, select[id*="Drop_Filtra_Colore"]');
+    if (selColore && normalizeSelectValue(selColore)) {
+      var txtC = (selColore.options[selColore.selectedIndex] && selColore.options[selColore.selectedIndex].text) ? selColore.options[selColore.selectedIndex].text.trim() : 'Selezionato';
+      addChip(chipsWrap, 'Colore: ' + txtC, function () { setSelectToDefault(selColore); });
+    }
+
+    // Advanced filters: checked checkboxes within filter boxes
+    var boxes = ['filtersMr', 'filtersTp', 'filtersGr', 'filtersSg', 'filtritagliaecolore'];
+    for (var b = 0; b < boxes.length; b++) {
+      var box = document.getElementById(boxes[b]);
+      if (!box) continue;
+
+      var titleEl = box.querySelector('.ks-filter-title');
+      var title = titleEl ? (titleEl.textContent || '').trim() : '';
+
+      var checks = box.querySelectorAll('input[type=checkbox]:checked');
+      for (var c = 0; c < checks.length; c++) {
+        var chk = checks[c];
+        // Skip the main "solo disponibili" (it's outside these blocks usually, but just in case)
+        if (chk.id && chk.id.indexOf('CheckBox_Disponibile') !== -1) continue;
+
+        var lbl = getLabelForInput(chk);
+        if (!lbl) continue;
+        // Remove common noise from label text
+        lbl = lbl.replace(/\s{2,}/g, ' ').trim();
+        var chipText = title ? (title + ': ' + lbl) : lbl;
+
+        addChip(chipsWrap, chipText, (function (x) {
+          return function () { try { x.click(); } catch (e) { } };
+        })(chk));
+      }
+    }
+
+    // If no chips, hide the host entirely (but keep in DOM for updates)
+    var hasAny = chipsWrap.children && chipsWrap.children.length > 0;
+    host.style.display = hasAny ? '' : 'none';
+
+    // Actions: Reset filters
+    var reset = document.createElement('a');
+    reset.className = 'ks-filter-reset';
+    reset.href = buildResetUrl();
+    reset.textContent = 'Reset filtri';
+    actions.appendChild(reset);
+
+    // Optional: show results label if present
+    var lblRes = document.getElementById('lblRisultati');
+    if (lblRes && lblRes.textContent) {
+      var small = document.createElement('div');
+      small.className = 'ks-active-filters-meta';
+      small.textContent = lblRes.textContent.trim();
+      actions.appendChild(small);
     }
   }
 
@@ -180,6 +425,7 @@
       '</div>' +
       '<div class="ks-filter-panel-body" id="ksFilterBody"></div>' +
       '<div class="ks-filter-panel-footer">' +
+      '  <a class="ks-filter-panel-btn ks-filter-panel-btn-link" id="ksFilterReset" href="#">Reset</a>' +
       '  <button type="button" class="ks-filter-panel-btn" id="ksFilterClose2">Chiudi</button>' +
       '  <button type="button" class="ks-filter-panel-btn ks-filter-panel-btn-primary" id="ksFilterApply">Applica</button>' +
       '</div>';
@@ -231,6 +477,14 @@
       close();
     }
 
+    // Reset goes to base catalog URL preserving category params
+    try {
+      var r = panel.querySelector('#ksFilterReset');
+      if (r) {
+        r.href = buildResetUrl();
+      }
+    } catch (e) { }
+
     fab.addEventListener('click', open);
     overlay.addEventListener('click', close);
     panel.querySelector('#ksFilterClose').addEventListener('click', close);
@@ -265,6 +519,7 @@
     normalizeToolbar();
     normalizePager();
     setupMobileOffcanvasFilters();
+    renderActiveFilters();
   }
 
   function initAll() {
