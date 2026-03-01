@@ -477,6 +477,17 @@
       close();
     }
 
+    // Optional toolbar trigger (present in our themed markup)
+    try {
+      var toolbarBtn = document.getElementById('ksToolbarFiltersBtn');
+      if (toolbarBtn) {
+        toolbarBtn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          open();
+        });
+      }
+    } catch (e) { }
+
     // Reset goes to base catalog URL preserving category params
     try {
       var r = panel.querySelector('#ksFilterReset');

@@ -19,7 +19,7 @@
     <section class="tf-sp-2">
         <div class="container">
 
-            <div class="d-flex align-items-start align-items-md-center justify-content-between gap-2 flex-wrap mb-3">
+            <div class="d-flex align-items-start align-items-md-center justify-content-between gap-2 flex-wrap mb-3 ks-catalog-toolbar">
                 <div>
                     <h1 class="tf-title mb-1">Catalogo</h1>
                     <div class="text-muted small">
@@ -29,7 +29,7 @@
 
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <!-- Mobile filters trigger -->
-                    <button class="btn btn-outline-secondary d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#ksCatalogFilters" aria-controls="ksCatalogFilters">
+                    <button id="ksToolbarFiltersBtn" class="btn btn-outline-secondary d-lg-none" type="button">
                         <i class="icon icon-filter"></i>
                         Filtri
                     </button>
@@ -159,28 +159,19 @@
 
                     </asp:GridView>
 
+                    <%--
+                        Legacy compat: alcuni rami della logica VB (articoli.aspx.vb)
+                        si aspettano un DataPager con ID "dpProdotti" per gestire PageSize.
+                        Qui lo dichiariamo senza impattare la UI (il paging reale resta su GridView).
+                    --%>
+                    <asp:DataPager ID="dpProdotti" runat="server" PageSize="12" Visible="false" />
+
                 </div>
 
             </div>
 
         </div>
     </section>
-
-    <!-- Offcanvas filters (mobile) -->
-    <div class="offcanvas offcanvas-start" tabindex="-1" id="ksCatalogFilters" aria-labelledby="ksCatalogFiltersLabel">
-        <div class="offcanvas-header">
-            <h5 class="offcanvas-title" id="ksCatalogFiltersLabel">Filtri</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
-        <div class="offcanvas-body">
-
-            <div class="form-check mb-3">
-                <!-- Duplicate control IDs are NOT allowed: we use only info UI here -->
-                <span class="text-muted small">(Usa i filtri da desktop oppure abilita layout filtri avanzati.)</span>
-            </div>
-
-        </div>
-    </div>
 
 </asp:Content>
 
