@@ -183,3 +183,68 @@ body.ks-page-wishlist .ks-wl-actions input {
     margin-top: .25rem;
   }
 }
+
+
+/* =========================
+   Password / Change password
+   ========================= */
+
+.ks-password-card {
+    max-width: 720px;
+}
+
+.ks-password-card .card-header {
+    background: transparent;
+}
+
+/* Molte pagine legacy usano tabelle per form: miglioriamo solo su pagina password */
+body.ks-page-cambiapassword .ks-account-main > table,
+body.ks-page-password .ks-account-main > table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 .65rem;
+}
+
+body.ks-page-cambiapassword .ks-account-main > table td,
+body.ks-page-password .ks-account-main > table td {
+    padding: .15rem .35rem;
+    vertical-align: top;
+}
+
+body.ks-page-cambiapassword .ks-account-main > table td:first-child,
+body.ks-page-password .ks-account-main > table td:first-child {
+    width: 220px;
+    font-weight: 600;
+    color: #555;
+}
+
+@media (max-width: 767.98px) {
+    body.ks-page-cambiapassword .ks-account-main > table,
+    body.ks-page-password .ks-account-main > table {
+        border-spacing: 0;
+    }
+
+    body.ks-page-cambiapassword .ks-account-main > table tr,
+    body.ks-page-password .ks-account-main > table tr {
+        display: block;
+        padding: .6rem .75rem;
+        border: 1px solid rgba(0,0,0,.08);
+        border-radius: 12px;
+        background: #fff;
+        margin-bottom: .6rem;
+    }
+
+    body.ks-page-cambiapassword .ks-account-main > table td,
+    body.ks-page-password .ks-account-main > table td {
+        display: block;
+        width: 100%;
+        padding: 0;
+    }
+
+    body.ks-page-cambiapassword .ks-account-main > table td:first-child,
+    body.ks-page-password .ks-account-main > table td:first-child {
+        width: auto;
+        margin-bottom: .35rem;
+        font-size: .875rem;
+    }
+}

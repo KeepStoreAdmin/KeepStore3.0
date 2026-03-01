@@ -175,6 +175,22 @@ if (documentsPages[file]) {
     }
   }
 
+  function isNumericHeader(label) {
+    var t = (label || '').toLowerCase();
+    return (
+      t.indexOf('qta') !== -1 ||
+      t.indexOf('qtà') !== -1 ||
+      t.indexOf('quant') !== -1 ||
+      t.indexOf('prezzo') !== -1 ||
+      t.indexOf('importo') !== -1 ||
+      t.indexOf('tot') !== -1 ||
+      t.indexOf('iva') !== -1 ||
+      t.indexOf('sconto') !== -1 ||
+      t.indexOf('€') !== -1 ||
+      t.indexOf('eur') !== -1
+    );
+  }
+
   function addDataLabels(table) {
     var thead = table.querySelector('thead');
     if (!thead) return;
@@ -183,8 +199,13 @@ if (documentsPages[file]) {
     if (!headers || headers.length === 0) return;
 
     var headerTexts = [];
+    var numericCols = {};
     for (var i = 0; i < headers.length; i++) {
-      headerTexts.push((headers[i].textContent || '').trim());
+      var ht = (headers[i].textContent || '').trim();
+      headerTexts.push(ht);
+      if (isNumericHeader(ht)) {
+        numericCols[i] = true;
+      }
     }
 
     var rows = table.querySelectorAll('tbody tr');
@@ -194,6 +215,9 @@ if (documentsPages[file]) {
         var label = headerTexts[c] || '';
         if (!cells[c].hasAttribute('data-label')) {
           cells[c].setAttribute('data-label', label);
+        }
+        if (numericCols[c]) {
+          cells[c].classList.add('ks-cell-numeric');
         }
       }
     }
@@ -1035,7 +1059,52 @@ function enhanceDocumentDetailDeep(root) {
   }
 
 
-    function applyKsEnhancements() {
+    function enhanceChangePasswordPage() {
+    if (!document.body) return;
+
+    var isPwdPage = document.body.classList.contains('ks-page-cambiapassword') || document.body.classList.contains('ks-page-password');
+    if (!isPwdPage) return;
+
+    var main = document.querySelector('.ks-account-main') || document.querySelector('main') || document.body;
+    if (!main || main.querySelector('.ks-password-card')) return;
+
+    var pwd = main.querySelector('input[type="password"]');
+    if (!pwd) return;
+
+    var table = pwd.closest('table');
+    if (!table) return;
+
+    // se già in card, non fare nulla
+    if (table.closest('.card')) return;
+
+    var card = document.createElement('div');
+    card.className = 'card ks-password-card';
+
+    var hasTitle = !!(main.querySelector('h1') || main.querySelector('.ks-page-title') || main.querySelector('.page-title'));
+    if (!hasTitle) {
+      var header = document.createElement('div');
+      header.className = 'card-header';
+      header.innerHTML = '<div class="d-flex align-items-center justify-content-between">' +
+                         '<div class="fw-bold">Cambia password</div>' +
+                         '</div>';
+      card.appendChild(header);
+    }
+
+    var body = document.createElement('div');
+    body.className = 'card-body';
+    card.appendChild(body);
+
+    table.parentNode.insertBefore(card, table);
+    body.appendChild(table);
+
+    // Autocomplete hints (migliora UX password manager)
+    var pwds = card.querySelectorAll('input[type="password"]');
+    if (pwds[0]) pwds[0].setAttribute('autocomplete', 'current-password');
+    if (pwds[1]) pwds[1].setAttribute('autocomplete', 'new-password');
+    if (pwds[2]) pwds[2].setAttribute('autocomplete', 'new-password');
+  }
+
+  function applyKsEnhancements() {
     try {
     // Preferisci il contenitore interno della shell (evita di wrappare header/footer)
     var root = document.querySelector('.ks-account-main') || document.querySelector('main') || document.body;
@@ -1044,6 +1113,7 @@ function enhanceDocumentDetailDeep(root) {
     if (document.body.classList.contains('ks-page-account') || document.body.classList.contains('ks-page-auth') || document.body.classList.contains('ks-page-success')) {
       enhanceTables(root);
       enhanceForms(root);
+      enhanceChangePasswordPage();
     }
 
     if (document.body.classList.contains('ks-page-account')) {

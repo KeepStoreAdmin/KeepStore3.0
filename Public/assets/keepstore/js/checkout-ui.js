@@ -18,26 +18,46 @@
   function setCheckoutStatus() {
     if (!document.body) return;
 
-    // Determinazione “robusta” dello stato: in checkout se il pulsante conferma ordine è visibile.
-    var confirmLink = qs('[id$="_btInviaOrdine"]') || document.getElementById('btInviaOrdine');
-    var inCheckout = !!confirmLink && isVisible(confirmLink);
+    // Determinazione “robusta” dello stato: in checkout se la tabella ordine (tOrdine) è visibile
+    // oppure se il pulsante invio ordine è visibile.
+    var tOrdine = document.getElementById('tOrdine') || qs('[id$="tOrdine"]');
+    var btnInvia = qs('[id$="btInviaOrdine"]') || document.getElementById('btInviaOrdine');
+    var inCheckout = (!!tOrdine && isVisible(tOrdine)) || (!!btnInvia && isVisible(btnInvia));
+
+    // (opzionale) stato completato: se la pagina imposta una classe dedicata
+    var isDone = document.body.classList.contains('ks-mode-order-done');
 
     document.body.classList.toggle('ks-mode-checkout', inCheckout);
 
-    // Aggiorna eventuale progress bar legacy (se presente)
+    // Aggiorna progress bar / stepper (se presente)
     var items = qsa('.checkout-status-item');
     if (!items.length) return;
 
-    // Stato: 0=carrello, 1=checkout
-    if (inCheckout) {
-      if (items[0]) items[0].classList.remove('active');
-      if (items[1]) items[1].classList.add('active');
-      if (items[2]) items[2].classList.remove('active');
-    } else {
-      if (items[0]) items[0].classList.add('active');
-      if (items[1]) items[1].classList.remove('active');
-      if (items[2]) items[2].classList.remove('active');
+    // step: 0=carrello, 1=checkout, 2=done
+    var step = 0;
+    if (isDone) step = 2;
+    else if (inCheckout) step = 1;
+
+    // Reset
+    items.forEach(function (el) {
+      el.classList.remove('active');
+      el.classList.remove('completed');
+      el.removeAttribute('aria-current');
+    });
+
+    // Mark completed
+    for (var i = 0; i < step; i++) {
+      if (items[i]) items[i].classList.add('completed');
     }
+
+    // Active current
+    if (items[step]) {
+      items[step].classList.add('active');
+      items[step].setAttribute('aria-current', 'step');
+    }
+
+    // Expose state for CSS/hooks
+    document.body.dataset.ksCheckoutStep = (step === 0 ? 'cart' : (step === 1 ? 'checkout' : 'done'));
   }
 
   // Se in passato è stata abilitata una UX “accordion / chips”, la neutralizziamo.
@@ -199,7 +219,7 @@
   }
 
   function preventDoubleSubmit() {
-    var confirmLink = qs('[id$="_btInviaOrdine"]');
+    var confirmLink = qs('[id$="btInviaOrdine"]');
     if (!confirmLink || confirmLink.dataset.ksOnce === '1') return;
     confirmLink.dataset.ksOnce = '1';
 
@@ -232,7 +252,7 @@
     var sp = document.getElementById('spinner_caricamento');
     if (sp) sp.style.display = '';
 
-    var invia = qs('[id$="_btInviaOrdine"]');
+    var invia = qs('[id$="btInviaOrdine"]');
     if (invia) invia.style.display = 'none';
 
     var prev = qs('[id$="_btSalvaPreventivo"]');

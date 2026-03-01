@@ -19,6 +19,81 @@
     var root = document.querySelector('.js-ks-userdata');
     if (!root) return;
 
+
+    function isVisible(el) {
+      if (!el) return false;
+      return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+    }
+
+    // Costruisce un picker “a schede” a partire dalla DropDownList delle destinazioni
+    function buildDestinationPicker() {
+      var activeFv = root.querySelector('.js-ks-userdata-fv.is-active') || root.querySelector('.js-ks-userdata-fv') || root;
+      if (!activeFv) return;
+
+      // Solo se siamo in tab indirizzi e la sezione edit è presente/visibile
+      var paneAddr = activeFv.querySelector('.ks-userdata-pane-addresses');
+      if (!paneAddr) return;
+
+      var edit = paneAddr.querySelector('#addrEdit') || paneAddr.querySelector('[id$="addrEdit"]');
+      if (!edit || !isVisible(edit)) return;
+
+      var ddl = paneAddr.querySelector('select[id$="ddlDestinazione"]');
+      if (!ddl) return;
+      if (ddl.dataset && ddl.dataset.ksPickerBuilt === '1') return;
+
+      // Evita duplicati
+      var existing = paneAddr.querySelector('.ks-dest-picker');
+      if (existing) {
+        ddl.dataset.ksPickerBuilt = '1';
+        return;
+      }
+
+      var picker = document.createElement('div');
+      picker.className = 'ks-dest-picker';
+
+      var opts = ddl.querySelectorAll('option');
+      for (var i = 0; i < opts.length; i++) {
+        var opt = opts[i];
+        if (!opt || opt.disabled) continue;
+
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ks-dest-picker__btn';
+        if (opt.selected) btn.classList.add('is-active');
+
+        btn.innerHTML =
+          '<span class="ks-dest-picker__icon">' +
+            '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+              '<path d="M20 10c0 6-8 13-8 13S4 16 4 10a8 8 0 0 1 16 0Z"/>' +
+              '<circle cx="12" cy="10" r="3"/>' +
+            '</svg>' +
+          '</span>' +
+          '<span class="ks-dest-picker__text">' + (opt.textContent || '').trim() + '</span>';
+
+        (function(value) {
+          btn.addEventListener('click', function () {
+            if (ddl.value === value) return;
+
+            ddl.value = value;
+            // Trigger AutoPostBack (ASP.NET)
+            try {
+              var evt = document.createEvent('HTMLEvents');
+              evt.initEvent('change', true, false);
+              ddl.dispatchEvent(evt);
+            } catch (e) {
+              if (typeof ddl.onchange === 'function') ddl.onchange();
+            }
+          });
+        })(opt.value);
+
+        picker.appendChild(btn);
+      }
+
+      // Inserisci picker subito dopo la select
+      ddl.parentNode.insertBefore(picker, ddl.nextSibling);
+      ddl.dataset.ksPickerBuilt = '1';
+    }
+
     function applyUI(options) {
       options = options || {};
 
@@ -50,6 +125,9 @@
         }
         // fallback: lascia visibile il primo via CSS
       })();
+
+      // UI avanzata indirizzi (picker)
+      buildDestinationPicker();
 
       var params = new URLSearchParams(window.location.search || '');
       var tab = (params.get('tab') || '').toLowerCase();

@@ -58,3 +58,72 @@
     max-width: 100%;
   }
 }
+
+
+/* =========================
+   Indirizzi (tab addr)
+   ========================= */
+
+.ks-userdata-pane-addresses .card {
+    border-color: rgba(0,0,0,.10);
+}
+
+.ks-userdata-pane-addresses .ks-kv dt {
+    color: #555;
+}
+
+.ks-userdata-pane-addresses .ks-kv dd {
+    font-weight: 600;
+}
+
+/* Picker “a schede” costruito da JS a partire dalla DropDownList */
+.ks-dest-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: .6rem;
+    margin-top: .75rem;
+}
+
+.ks-dest-picker .ks-dest-picker__btn {
+    width: 100%;
+    text-align: left;
+    padding: .75rem .85rem;
+    border-radius: 14px;
+    border: 1px solid rgba(0,0,0,.10);
+    background: #fff;
+    display: flex;
+    gap: .6rem;
+    align-items: flex-start;
+}
+
+.ks-dest-picker .ks-dest-picker__btn:hover {
+    border-color: rgba(0,0,0,.18);
+    box-shadow: 0 10px 24px rgba(0,0,0,.06);
+}
+
+.ks-dest-picker .ks-dest-picker__btn.is-active {
+    border-color: rgba(13,110,253,.55);
+    box-shadow: 0 10px 24px rgba(13,110,253,.12);
+}
+
+.ks-dest-picker .ks-dest-picker__icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,.10);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+.ks-dest-picker .ks-dest-picker__text {
+    font-size: .95rem;
+    line-height: 1.2;
+}
+
+@media (max-width: 575.98px) {
+    .ks-dest-picker {
+        grid-template-columns: 1fr;
+    }
+}

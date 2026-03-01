@@ -1009,7 +1009,7 @@
 				<% end if %>
                 <br />
 				-->
-                 <table id="tblDestAlter" class="ks-dest-form" cellpadding="1" cellspacing="5" border="0" width="100%" runat="server" style="margin:auto;">
+                 <table id="tblDestAlter" class="ks-dest-form" cellpadding="1" cellspacing="5" border="0" width="100%" runat="server">
                     <tr>
                         <td style="padding: 0 5px;" width="155px">Ragione Sociale&nbsp;/&nbsp;Cognome: *</td>
                         <td ><asp:TextBox ID="tbRagioneSocialeA" CssClass="form-control ks-form-control" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>

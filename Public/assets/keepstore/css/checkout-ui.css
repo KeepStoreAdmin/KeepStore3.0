@@ -111,3 +111,111 @@ table.ks-checkout-grid tr.is-selected{
     top: 96px;
   }
 }
+
+
+/* =========================
+   Checkout step-by-step
+   ========================= */
+
+/* Numerazione automatica delle sezioni (Spedizione, Pagamento, ecc.) */
+.ks-checkout {
+    counter-reset: ksCheckoutStep;
+}
+
+.ks-checkout .wrap > .title {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    counter-increment: ksCheckoutStep;
+    margin-bottom: .75rem;
+}
+
+.ks-checkout .wrap > .title::before {
+    content: counter(ksCheckoutStep);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    border: 1px solid rgba(0,0,0,.12);
+    background: rgba(0,0,0,.03);
+    font-size: 0.875rem;
+    font-weight: 700;
+    flex: 0 0 auto;
+}
+
+/* Migliora la leggibilità dei blocchi in checkout */
+.ks-checkout .wrap {
+    background: #fff;
+}
+
+/* Form destinazioni: layout responsive (senza cambiare controlli) */
+.ks-dest-form {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 .5rem;
+}
+
+.ks-dest-form td {
+    vertical-align: top;
+}
+
+.ks-dest-form td:first-child {
+    color: #555;
+    font-weight: 600;
+}
+
+@media (max-width: 767.98px) {
+    .ks-dest-form {
+        display: block;
+        border-spacing: 0;
+    }
+
+    .ks-dest-form tbody,
+    .ks-dest-form tr,
+    .ks-dest-form td {
+        display: block;
+        width: 100% !important;
+    }
+
+    .ks-dest-form tr {
+        padding: .6rem .75rem;
+        border: 1px solid rgba(0,0,0,.08);
+        border-radius: 12px;
+        background: #fff;
+        margin-bottom: .6rem;
+    }
+
+    .ks-dest-form td:first-child {
+        padding: 0 0 .35rem 0 !important;
+        font-size: .875rem;
+    }
+
+    .ks-dest-form td:last-child {
+        padding: 0 !important;
+    }
+}
+
+/* Link di apertura gestione destinazione (open1/open2) */
+#open1,
+#open2 {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .25rem 0;
+}
+
+#open1:hover,
+#open2:hover {
+    text-decoration: underline;
+}
+
+/* Riepilogo ordine: leggibilità */
+.ks-summary-table td {
+    padding: .45rem .35rem;
+}
+
+.ks-summary-table tr:last-child td {
+    border-top: 1px solid rgba(0,0,0,.08);
+}

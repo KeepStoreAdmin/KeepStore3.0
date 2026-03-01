@@ -181,3 +181,50 @@ body.ks-page-order-detail .ks-doc-section .table-responsive {
     break-inside: avoid;
   }
 }
+
+
+/* =========================
+   Numeric alignment & line items
+   ========================= */
+
+/* Celle numeriche (quando ks-page-flags aggiunge la classe) */
+.ks-cell-numeric {
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* Fallback: se non abbiamo classi, usa data-label (GridView -> cards) */
+.ks-table-cards td[data-label*="Prezzo"],
+.ks-table-cards td[data-label*="Totale"],
+.ks-table-cards td[data-label*="Importo"],
+.ks-table-cards td[data-label*="IVA"],
+.ks-table-cards td[data-label*="Iva"],
+.ks-table-cards td[data-label*="Sconto"],
+.ks-table-cards td[data-label*="Qta"],
+.ks-table-cards td[data-label*="Qtà"],
+.ks-table-cards td[data-label*="Quant"] {
+    text-align: right;
+}
+
+/* Sezione righe documento: più “card” e meno tabellare */
+.ks-doc-section--items .ks-table-cards tr {
+    padding: .85rem .9rem;
+}
+
+.ks-doc-section--items .ks-table-cards td {
+    gap: 1rem;
+}
+
+.ks-doc-section--items .ks-table-cards td:first-child {
+    font-weight: 700;
+}
+
+/* Sezione riepilogo: evidenzia totale finale */
+.ks-doc-section--summary .ks-table-cards tr:last-child {
+    border-color: rgba(0,0,0,.14);
+    box-shadow: 0 8px 20px rgba(0,0,0,.05);
+}
+
+.ks-doc-section--summary .ks-table-cards tr:last-child td {
+    font-weight: 800;
+}
