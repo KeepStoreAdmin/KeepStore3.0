@@ -1,81 +1,119 @@
+Option Explicit On
+Option Strict Off
+
 Imports System
 Imports System.Globalization
+Imports System.Web
 
-' Centralizzazione rendering prezzo (solo HTML). Nessun accesso DB.
-' Usare da databinding: <%# UiPriceFormatter.RenderPriceHtml(...) %>
+' ============================================================
+' UI Price Formatter (centralizzato)
+' - WebForms Web Site (App_Code)
+' - Nessuna dipendenza DB
+' - Rende HTML prezzo coerente con il tema
+' ============================================================
 Public Module UiPriceFormatter
 
-    Public Function RenderPriceHtml(ByVal prezzo As Object,
-                                    ByVal prezzoIvato As Object,
-                                    ByVal prezzoPromo As Object,
-                                    ByVal prezzoPromoIvato As Object,
-                                    ByVal ivaTipo As Object) As String
-
-        Dim useIvato As Boolean = True
-        Try
-            ' Convenzione KeepStore: 1 = IVA esclusa, altrimenti IVA inclusa
-            useIvato = (Convert.ToInt32(ivaTipo) <> 1)
-        Catch
-            useIvato = True
-        End Try
-
-        Dim pBase As Decimal = ToDecimal(prezzo)
-        Dim pIvato As Decimal = ToDecimal(prezzoIvato)
-        Dim pPromoBase As Decimal = ToDecimal(prezzoPromo)
-        Dim pPromoIvato As Decimal = ToDecimal(prezzoPromoIvato)
-
-        Dim basePrice As Decimal = If(useIvato, pIvato, pBase)
-        Dim promoPrice As Decimal = If(useIvato, pPromoIvato, pPromoBase)
-
-        Dim hasPromo As Boolean = (promoPrice > 0D AndAlso basePrice > 0D AndAlso promoPrice < basePrice)
-
-        ' Se il prezzo è 0, non stampiamo importi non significativi.
-        If basePrice <= 0D AndAlso promoPrice <= 0D Then
-            Return "<span class=""price text-muted"">Prezzo su richiesta</span>"
-        End If
-
-        Dim ivaSuffix As String = If(useIvato,
-                                     String.Empty,
-                                     "<span class=""ks-price-iva text-muted ms-1"">+ IVA</span>")
-
-        If hasPromo Then
-            Return "<span class=""price text-primary"">" & FormatMoney(promoPrice) & "</span>" &
-                   "<span class=""old-price text-muted text-decoration-line-through ms-2"">" & FormatMoney(basePrice) & "</span>" &
-                   ivaSuffix
-        End If
-
-        Return "<span class=""price"">" & FormatMoney(basePrice) & "</span>" & ivaSuffix
+    ' Versione base (5 parametri) - compatibilità
+    Public Overloads Function RenderPriceHtml(ByVal prezzo As Object,
+                                              ByVal prezzoIvato As Object,
+                                              ByVal prezzoPromo As Object,
+                                              ByVal prezzoPromoIvato As Object,
+                                              ByVal ivaTipo As Object) As String
+        Return RenderPriceHtmlInternal(prezzo, prezzoIvato, prezzoPromo, prezzoPromoIvato, Nothing, ivaTipo)
     End Function
 
-    Private Function ToDecimal(ByVal value As Object) As Decimal
-        If value Is Nothing OrElse Convert.IsDBNull(value) Then
-            Return 0D
+    ' Versione estesa (6 parametri) - per liste che passano anche InOfferta
+    Public Overloads Function RenderPriceHtml(ByVal prezzo As Object,
+                                              ByVal prezzoIvato As Object,
+                                              ByVal prezzoPromo As Object,
+                                              ByVal prezzoPromoIvato As Object,
+                                              ByVal inOfferta As Object,
+                                              ByVal ivaTipo As Object) As String
+        Return RenderPriceHtmlInternal(prezzo, prezzoIvato, prezzoPromo, prezzoPromoIvato, inOfferta, ivaTipo)
+    End Function
+
+    ' ============================================================
+    ' Internals
+    ' ============================================================
+    Private Function RenderPriceHtmlInternal(ByVal prezzo As Object,
+                                             ByVal prezzoIvato As Object,
+                                             ByVal prezzoPromo As Object,
+                                             ByVal prezzoPromoIvato As Object,
+                                             ByVal inOfferta As Object,
+                                             ByVal ivaTipo As Object) As String
+
+        Dim pNet As Decimal = ToDec(prezzo)
+        Dim pIva As Decimal = ToDec(prezzoIvato)
+        Dim promoNet As Decimal = ToDec(prezzoPromo)
+        Dim promoIva As Decimal = ToDec(prezzoPromoIvato)
+
+        Dim ivaMode As Integer = ToInt(ivaTipo) ' 1 = IVA esclusa (storico KeepStore)
+        Dim promoFlag As Integer = ToInt(inOfferta)
+
+        Dim baseValue As Decimal = If(ivaMode = 1, pNet, pIva)
+        Dim promoValue As Decimal = If(ivaMode = 1, promoNet, promoIva)
+
+        Dim isPromo As Boolean
+        If inOfferta Is Nothing Then
+            isPromo = (promoValue > 0D)
+        Else
+            isPromo = (promoFlag <> 0 AndAlso promoValue > 0D)
         End If
 
-        Dim s As String = Convert.ToString(value)
-        If String.IsNullOrWhiteSpace(s) Then
-            Return 0D
+        If baseValue <= 0D AndAlso (Not isPromo OrElse promoValue <= 0D) Then
+            Return "<span class=""ks-price-ask"">Prezzo su richiesta</span>"
         End If
+
+        Dim cur As CultureInfo = CultureInfo.CurrentCulture
+
+        If isPromo Then
+            Dim oldHtml As String = If(baseValue > 0D, "<del class=""ks-price-old"">" & String.Format(cur, "{0:C}", baseValue) & "</del>", "")
+            Dim promoHtml As String = "<ins class=""ks-price-now"">" & String.Format(cur, "{0:C}", promoValue) & "</ins>"
+            Dim ivaSuffix As String = If(ivaMode = 1, "<span class=""ks-price-iva""> + IVA</span>", "")
+
+            Return "<span class=""ks-price"">" & promoHtml & oldHtml & ivaSuffix & "</span>"
+        Else
+            Dim priceHtml As String = "<span class=""ks-price-now"">" & String.Format(cur, "{0:C}", baseValue) & "</span>"
+            Dim ivaSuffix As String = If(ivaMode = 1, "<span class=""ks-price-iva""> + IVA</span>", "")
+
+            Return "<span class=""ks-price"">" & priceHtml & ivaSuffix & "</span>"
+        End If
+
+    End Function
+
+    Private Function ToDec(ByVal v As Object) As Decimal
+        If v Is Nothing OrElse Convert.IsDBNull(v) Then Return 0D
+
+        Try
+            ' Prova conversione diretta
+            Return Convert.ToDecimal(v, CultureInfo.CurrentCulture)
+        Catch
+        End Try
+
+        Dim s As String = Convert.ToString(v)
+        If String.IsNullOrWhiteSpace(s) Then Return 0D
 
         Dim d As Decimal
-        ' Prova con cultura corrente
-        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.CurrentCulture, d) Then
-            Return d
-        End If
-        ' Fallback invariant (es. valori con punto)
-        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then
-            Return d
-        End If
+        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.CurrentCulture, d) Then Return d
+        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then Return d
 
-        Try
-            Return Convert.ToDecimal(value)
-        Catch
-            Return 0D
-        End Try
+        Return 0D
     End Function
 
-    Private Function FormatMoney(ByVal amount As Decimal) As String
-        Return amount.ToString("C", CultureInfo.CurrentCulture)
+    Private Function ToInt(ByVal v As Object) As Integer
+        If v Is Nothing OrElse Convert.IsDBNull(v) Then Return 0
+
+        Try
+            Return Convert.ToInt32(v, CultureInfo.InvariantCulture)
+        Catch
+        End Try
+
+        Dim s As String = Convert.ToString(v)
+        Dim i As Integer
+        If Integer.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, i) Then Return i
+        If Integer.TryParse(s, NumberStyles.Any, CultureInfo.CurrentCulture, i) Then Return i
+
+        Return 0
     End Function
 
 End Module
