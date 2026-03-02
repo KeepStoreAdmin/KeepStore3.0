@@ -1,213 +1,206 @@
-<%@ Page Title="" Language="VB" MasterPageFile="~/Public/ui/master/Site.master" AutoEventWireup="false" CodeFile="articolo.aspx.vb" Inherits="Articolo" %>
-<%@ Import Namespace="System" %>
-<%@ Register Src="~/Public/ui/controls/Breadcrumb.ascx" TagPrefix="ks" TagName="Breadcrumb" %>
+<%@ Page Title="" Language="VB" MasterPageFile="~/Public/ui/master/Site.master" AutoEventWireup="false" CodeFile="articolo.aspx.vb" Inherits="articolo" %>
 
-<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
-    Articolo
-</asp:Content>
+<asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
+    <asp:Literal ID="litSeoHead" runat="server" EnableViewState="False" />
 
-<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/product-ui.css" />
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/catalog-product-flow.css" />
-    <script src="/Public/assets/keepstore/js/catalog-product-flow.js" defer></script>
-
-    <%-- SEO slot (meta/canonical/json-ld) injected by articolo.aspx.vb when needed --%>
-    <asp:Literal ID="litSeoHead" runat="server" />
-</asp:Content>
-
-<asp:Content ID="BreadcrumbContent" ContentPlaceHolderID="BreadcrumbContent" runat="server">
-    <ks:Breadcrumb runat="server" ID="bcArticolo" />
-</asp:Content>
-
-<asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
-
-    <!-- DataSource gestito dalla code-behind (SelectCommand impostata in Page_Load) -->
-    <asp:SqlDataSource ID="sdsArticolo" runat="server"
-        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>">
-    </asp:SqlDataSource>
-
-    <%-- Not found state controlled by articolo.aspx.vb (no logic changes) --%>
-    <asp:PlaceHolder ID="phNotFound" runat="server" Visible="false">
-        <section class="tf-sp-2">
-            <div class="container">
-                <div class="alert alert-warning mb-0" role="alert">
-                    Articolo non trovato oppure non disponibile.
-                    <a class="alert-link" href="/articoli.aspx">Torna al catalogo</a>
-                </div>
-            </div>
-        </section>
+    <%-- JSON-LD (riempito dal VB) --%>
+    <asp:PlaceHolder ID="phJsonLdHead" runat="server" EnableViewState="False">
+        <script type="application/ld+json"><asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="False" /></script>
     </asp:PlaceHolder>
 
-    <%-- Product shell controlled by articolo.aspx.vb (Visible True when product exists) --%>
-    <asp:Panel ID="pnlProduct" runat="server" Visible="false">
+    <%-- CSS di pagina (tema) --%>
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-page.css") %>" />
+</asp:Content>
 
-    <section class="tf-sp-2">
+<asp:Content ID="BreadcrumbContent1" ContentPlaceHolderID="BreadcrumbContent" runat="server">
+    <section class="tf-breadcrumb">
+        <div class="container">
+            <ul class="breadcrumb">
+                <li class="breadcrumb-item"><a href="Default.aspx">Home</a></li>
+                <li class="breadcrumb-item"><a href="articoli.aspx">Catalogo</a></li>
+                <li class="breadcrumb-item active" aria-current="page"><asp:Literal ID="litBreadcrumbCurrent" runat="server" /></li>
+            </ul>
+            <h1 class="h5 fw-semibold mb-0"><asp:Literal ID="litNome" runat="server" /></h1>
+        </div>
+    </section>
+</asp:Content>
+
+<asp:Content ID="MainContent1" ContentPlaceHolderID="MainContent" runat="server">
+
+    <%-- SHELL PRODOTTO (tutti gli ID richiesti dalla logica VB sono presenti) --%>
+    <asp:Panel ID="pnlProduct" runat="server" CssClass="tf-sp-2">
         <div class="container">
 
-            <asp:FormView ID="fvPage" runat="server" DataSourceID="sdsArticolo">
-                <ItemTemplate>
+            <div class="row g-4">
 
-                    <!-- Necessari per VB legacy -->
-                    <asp:TextBox ID="tbID" runat="server" Text='<%# Eval("id") %>' Style="display:none" />
+                <%-- GALLERY --%>
+                <div class="col-lg-6">
+                    <div class="ks-product-gallery">
 
-                    <!-- Promo datasource (gestito in VB) -->
-                    <asp:SqlDataSource ID="sdsPromo" runat="server"
-                        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>">
-                    </asp:SqlDataSource>
+                        <div class="swiper tf-product-view-main">
+                            <div class="swiper-wrapper">
+                                <asp:Repeater ID="rptMainImages" runat="server">
+                                    <ItemTemplate>
+                                        <div class="swiper-slide">
+                                            <a class="tf-image-view d-block" href='<%# Eval("Url") %>' target="_blank" rel="noopener">
+                                                <img class="lazyload" src='<%# Eval("Url") %>' data-src='<%# Eval("Url") %>' alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Alt"))) %>' />
+                                            </a>
+                                        </div>
+                                    </ItemTemplate>
+                                </asp:Repeater>
+                            </div>
 
-                    <div class="row g-4 align-items-start">
+                            <div class="swiper-button-prev nav-swiper-2 single-slide-prev" aria-label="Precedente"></div>
+                            <div class="swiper-button-next nav-swiper-2 single-slide-next" aria-label="Successivo"></div>
+                        </div>
 
-                        <div class="col-12 col-lg-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <img class="w-100" style="object-fit:contain; aspect-ratio:1/1;" alt='<%# Convert.ToString(Eval("Descrizione1")) %>'
-                                         src='<%# If(Eval("Img1") Is Nothing OrElse Convert.ToString(Eval("Img1")).Trim() = "", "/Public/assets/keepstore/images/keepstore/placeholder.png", Convert.ToString(Eval("Img1")) ) %>' />
-                                </div>
+                        <div class="swiper tf-product-view-thumbs" data-direction="horizontal">
+                            <div class="swiper-wrapper">
+                                <asp:Repeater ID="rptThumbs" runat="server">
+                                    <ItemTemplate>
+                                        <div class="swiper-slide">
+                                            <div class="item">
+                                                <img class="lazyload" src='<%# Eval("Url") %>' data-src='<%# Eval("Url") %>' alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Alt"))) %>' />
+                                            </div>
+                                        </div>
+                                    </ItemTemplate>
+                                </asp:Repeater>
                             </div>
                         </div>
 
-                        <div class="col-12 col-lg-6">
+                    </div>
+                </div>
 
-                            <div class="tf-page-title style-2">
-                                <div class="heading">
-                                    <asp:Label ID="lblDescrizione" runat="server" Text='<%# Eval("Descrizione1") %>'></asp:Label>
-                                </div>
-                                <div class="text-muted">
-                                    <asp:Label ID="Label13" runat="server" Text='<%# Eval("Descrizione2") %>'></asp:Label>
+                <%-- SUMMARY --%>
+                <div class="col-lg-6">
+                    <div class="ks-product-summary tf-product-info-content">
+
+                        <div class="infor-heading">
+                            <div class="d-flex flex-wrap gap-3 small text-muted">
+                                <span><strong>Codice:</strong> <asp:Literal ID="litCodice" runat="server" /></span>
+
+                                <asp:PlaceHolder ID="phBrand" runat="server" Visible="false">
+                                    <span><strong>Marca:</strong> <asp:HyperLink ID="lnkMarca" runat="server" CssClass="link text-secondary" /></span>
+                                </asp:PlaceHolder>
+
+                                <asp:PlaceHolder ID="phEan" runat="server" Visible="false">
+                                    <span><strong>EAN:</strong> <asp:Literal ID="litEan" runat="server" /></span>
+                                </asp:PlaceHolder>
+                            </div>
+                        </div>
+
+                        <div class="infor-center mt-3">
+
+                            <div class="product-info-price">
+                                <div class="price-wrap">
+                                    <asp:Literal ID="litPriceHtml" runat="server" EnableViewState="False" />
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <div class="d-flex flex-wrap gap-2">
-                                    <span class="badge bg-light text-dark">Codice: <asp:Label ID="Label15" runat="server" Text='<%# Eval("Codice") %>'></asp:Label></span>
-                                    <span class="badge bg-light text-dark">EAN: <span><%#: Eval("Ean") %></span></span>
-                                    <span class="badge bg-light text-dark">Marca: <span><%#: Eval("MarcheDescrizione") %></span></span>
+                            <asp:PlaceHolder ID="phAvailability" runat="server" Visible="false">
+                                <div class="mt-2">
+                                    <span class="badge bg-success-subtle text-success-emphasis">
+                                        <asp:Literal ID="litAvailability" runat="server" />
+                                    </span>
                                 </div>
+                            </asp:PlaceHolder>
+
+                            <div class="mt-3 ks-richtext">
+                                <asp:Literal ID="litShortDesc" runat="server" EnableViewState="False" />
                             </div>
 
-                            <!-- Prezzi (calcolati e impostati in VB: lblPrezzoDes/lblPrezzo/lblPrezzoIvato/lblPrezzoPromo) -->
-                            <div class="card mb-3">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-start justify-content-between gap-3">
-                                        <div>
-                                            <div class="text-muted small"><asp:Label ID="lblPrezzoDes" runat="server" Text=""></asp:Label></div>
-                                            <div class="d-flex align-items-baseline gap-2 flex-wrap">
-                                                <span class="fs-4 fw-semibold"><asp:Label ID="lblPrezzo" runat="server" Text=""></asp:Label></span>
-                                                <span class="text-muted"><asp:Label ID="lblPrezzoIvato" runat="server" Text=""></asp:Label></span>
-                                            </div>
-                                            <div class="mt-2">
-                                                <asp:Label ID="lblPrezzoPromo" runat="server" Text="" Visible="false" CssClass="text-danger fw-semibold"></asp:Label>
-                                            </div>
-                                        </div>
-                                        <div class="text-end">
-                                            <div class="text-muted small">Punti</div>
-                                            <div class="fw-semibold">
-                                                <asp:Label ID="lblPunti1" runat="server" Text="" />
-                                                <asp:Label ID="lblPunti2" runat="server" Text="" />
-                                                <asp:Label ID="lblPunti3" runat="server" Text="" />
-                                            </div>
-                                        </div>
-                                    </div>
+                            <asp:Panel ID="pnlVariants" runat="server" Visible="false" CssClass="mt-3">
+                                <label class="form-label fw-semibold mb-1">Variante</label>
+                                <asp:DropDownList ID="ddlTc" runat="server" CssClass="form-select" AutoPostBack="true" OnSelectedIndexChanged="ddlTc_SelectedIndexChanged" />
+                            </asp:Panel>
+
+                            <div class="box-quantity-wrap mt-4">
+                                <div class="wg-quantity">
+                                    <span class="btn-quantity minus-btn" role="button" aria-label="Diminuisci quantità"><i class="icon-minus"></i></span>
+                                    <asp:TextBox ID="txtQty" runat="server" CssClass="quantity-product" Text="1" />
+                                    <span class="btn-quantity plus-btn" role="button" aria-label="Aumenta quantità"><i class="icon-plus"></i></span>
                                 </div>
+
+                                <asp:LinkButton ID="btnAddToCart" runat="server" CssClass="tf-btn" CausesValidation="false" OnClick="btnAddToCart_Click">
+                                    <span class="text-white">Aggiungi al carrello</span>
+                                </asp:LinkButton>
                             </div>
 
-                            <!-- Disponibilità (impostata in VB) -->
-                            <div class="card mb-3">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <asp:Image ID="imgDispo" runat="server" />
-                                        <div>
-                                            <div class="fw-semibold"><asp:Label ID="lblDispo" runat="server" Text=""></asp:Label></div>
-                                            <div class="text-muted small">
-                                                <asp:Label ID="lblImpegnata" runat="server" Text=""></asp:Label>
-                                                <asp:Label ID="lblArrivo" runat="server" Text=""></asp:Label>
-                                                <asp:Label ID="lblArr" runat="server" Text="" />
-                                                <asp:Label ID="lblImp" runat="server" Text="" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Acquisto -->
-                            <div class="card">
-                                <div class="card-body">
-                                    <div class="row g-2 align-items-end">
-                                        <div class="col-12 col-sm-4">
-                                            <label class="form-label">Quantità</label>
-                                            <asp:TextBox ID="tbQuantita" runat="server" CssClass="form-control ks-qty" Text="1" />
-                                        </div>
-                                        <div class="col-12 col-sm-8">
-                                            <asp:LinkButton ID="btnCarrello" runat="server" CommandName="carrello" CssClass="btn btn-primary w-100">
-                                                Aggiungi al carrello
-                                            </asp:LinkButton>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="mt-2 small text-muted">
+                                <asp:Literal ID="litQtyHelp" runat="server" EnableViewState="False" />
                             </div>
 
                         </div>
 
                     </div>
+                </div>
 
-                    <div class="mt-4">
-                        <ul class="nav nav-tabs" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="tab-desc" data-bs-toggle="tab" data-bs-target="#pane-desc" type="button" role="tab" aria-controls="pane-desc" aria-selected="true">
-                                    Descrizione
-                                </button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="tab-info" data-bs-toggle="tab" data-bs-target="#pane-info" type="button" role="tab" aria-controls="pane-info" aria-selected="false">
-                                    Dettagli
-                                </button>
-                            </li>
-                        </ul>
+            </div>
 
-                        <div class="tab-content border border-top-0 rounded-bottom p-3">
-                            <div class="tab-pane fade show active" id="pane-desc" role="tabpanel" aria-labelledby="tab-desc">
-                                <asp:Label ID="lblDescrizioneArt" runat="server" Text=""></asp:Label>
-                                <asp:Label ID="lblDescrizioneHTMLArt" runat="server" Text=""></asp:Label>
-                            </div>
-                            <div class="tab-pane fade" id="pane-info" role="tabpanel" aria-labelledby="tab-info">
-                                <div class="text-muted small">
-                                    Settore: <%#: Eval("SettoriDescrizione") %><br />
-                                    Categoria: <%#: Eval("CategorieDescrizione") %><br />
-                                    Tipologia: <%#: Eval("TipologieDescrizione") %><br />
-                                    Gruppo: <%#: Eval("GruppiDescrizione") %><br />
-                                    Sottogruppo: <%#: Eval("SottogruppiDescrizione") %>
-                                </div>
+            <%-- TAB DETTAGLI / DESCRIZIONE --%>
+            <div class="mt-5">
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-desc" type="button" role="tab">Descrizione</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-details" type="button" role="tab">Dettagli</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content border border-top-0 p-3">
+
+                    <div class="tab-pane fade show active ks-richtext" id="tab-desc" role="tabpanel">
+                        <asp:Literal ID="litLongDesc" runat="server" EnableViewState="False" />
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-details" role="tabpanel">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled mb-0">
+                                    <li><strong>Codice:</strong> <asp:Literal ID="litCodice2" runat="server" /></li>
+
+                                    <asp:PlaceHolder ID="phBrand2" runat="server" Visible="false">
+                                        <li><strong>Marca:</strong> <asp:Literal ID="litMarca2" runat="server" /></li>
+                                    </asp:PlaceHolder>
+
+                                    <asp:PlaceHolder ID="phEan2" runat="server" Visible="false">
+                                        <li><strong>EAN:</strong> <asp:Literal ID="litEan2" runat="server" /></li>
+                                    </asp:PlaceHolder>
+                                </ul>
                             </div>
                         </div>
                     </div>
 
-                </ItemTemplate>
-            </asp:FormView>
+                </div>
+            </div>
 
-            <!-- Related products (loaded/bound in code-behind) -->
+            <%-- RELATED PRODUCTS --%>
             <asp:PlaceHolder ID="phRelated" runat="server" Visible="false">
-                <div class="mt-5">
+                <div class="tf-sp-2 ks-related-products">
                     <div class="d-flex align-items-center justify-content-between mb-3">
-                        <h3 class="h5 mb-0">Prodotti correlati</h3>
+                        <h4 class="fw-semibold mb-0">Prodotti correlati</h4>
+                        <a href="articoli.aspx" class="link text-secondary">Vedi catalogo</a>
                     </div>
 
                     <div class="row g-3">
                         <asp:Repeater ID="rptRelated" runat="server">
                             <ItemTemplate>
                                 <div class="col-6 col-md-4 col-lg-3">
-                                    <div class="card ks-product-card h-100">
-                                        <a class="d-block" href='<%# Eval("Url") %>'>
-                                            <img class="ks-product-img"
-                                                 src='<%# Eval("Img") %>'
-                                                 alt='<%#: Eval("Nome") %>'
-                                                 loading="lazy" />
-                                        </a>
-                                        <div class="card-body p-3 d-flex flex-column">
-                                            <a class="text-decoration-none fw-semibold mb-2" href='<%# Eval("Url") %>'><%#: Eval("Nome") %></a>
-                                            <div class="mt-auto price-wrap fw-medium">
-                                                <%# Eval("PrezzoHtml") %>
+                                    <div class="card-product">
+                                        <div class="card-product-wrapper">
+                                            <a class="product-img" href='<%# Eval("Url") %>'>
+                                                <img class="img-product lazyload" src='<%# Eval("Img") %>' data-src='<%# Eval("Img") %>' alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>' />
+                                            </a>
+                                        </div>
+                                        <div class="card-product-info">
+                                            <div class="box-title">
+                                                <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# Eval("Url") %>'>
+                                                    <%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>
+                                                </a>
+                                                <div class="price-wrap fw-medium mt-1">
+                                                    <%# Eval("PrezzoHtml") %>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -215,18 +208,28 @@
                             </ItemTemplate>
                         </asp:Repeater>
                     </div>
-
                 </div>
             </asp:PlaceHolder>
 
+            <%-- Campo non obbligatorio ma presente nella logica VB: seconda renderizzazione prezzo (es. sticky) --%>
+            <asp:Literal ID="litPriceHtml2" runat="server" Visible="false" EnableViewState="False" />
 
         </div>
-    </section>
-
     </asp:Panel>
+
+    <%-- NOT FOUND --%>
+    <asp:PlaceHolder ID="phNotFound" runat="server" Visible="false">
+        <section class="tf-sp-2">
+            <div class="container">
+                <div class="alert alert-warning mb-0">
+                    Articolo non trovato o non disponibile.
+                </div>
+            </div>
+        </section>
+    </asp:PlaceHolder>
 
 </asp:Content>
 
-<asp:Content ID="ScriptsContent" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script src="/Public/assets/keepstore/js/product-ui.js"></script>
+<asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
+    <script defer src="<%= ThemeManager.Asset("js/ks-product-gallery.js") %>"></script>
 </asp:Content>

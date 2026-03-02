@@ -1,0 +1,45 @@
+/*
+  KeepStore 3.0 - UI tweaks
+  File neutro (no riferimenti a template esterni)
+  Scopo: piccole correzioni di layout/UX trasversali senza toccare la logica VB.
+*/
+
+/* Home: lista dipartimenti lunga -> scroll interno per evitare pagine "infinite" */
+.ks-home-departments .menu-category-list{
+  max-height: 520px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+/* Home: immagini slider/banners - evitare deformazioni */
+.ks-home-hero-slider .swiper-slide img,
+.ks-home-banners img{
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Prodotto: gallery thumbs */
+.ks-product-gallery .tf-product-view-thumbs .item{
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+}
+
+.ks-product-gallery .tf-product-view-thumbs img,
+.ks-product-gallery .tf-product-view-main img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Prodotto: prezzi (quando PrezzoHtml contiene elementi multipli) */
+.ks-product-summary .price-wrap,
+.ks-related-products .price-wrap{
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+
+/* Utility: evitare che <p> vuoti creati da descrizioni HTML generino spazi eccessivi */
+.ks-richtext p:empty{ display:none; }
