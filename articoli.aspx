@@ -1,315 +1,302 @@
-<%@ Page Title="" Language="VB" MasterPageFile="~/Public/ui/master/Site.master" AutoEventWireup="false" CodeFile="articoli.aspx.vb" Inherits="Articoli" %>
-<%@ Import Namespace="System" %>
-<%@ Import Namespace="System.Web" %>
+<%@ Page Title="Catalogo" Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="articoli.aspx.vb" Inherits="Articoli" %>
+
 <%@ Register Src="~/Public/ui/controls/Breadcrumb.ascx" TagPrefix="ks" TagName="Breadcrumb" %>
 
-<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
+<asp:Content ID="TitleContent1" ContentPlaceHolderID="TitleContent" runat="server">
     Catalogo
 </asp:Content>
 
-<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/catalog-ui.css" />
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/catalog-filters-ui.css" />
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/catalog-product-flow.css" />
-    <script src="/Public/assets/keepstore/js/catalog-product-flow.js" defer></script>
-
-    <%-- SEO slot injected by articoli.aspx.vb (robots/canonical, etc.) --%>
-    <asp:Literal ID="litSeoHead" runat="server" />
+<asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
+    <asp:Literal ID="litSeoHead" runat="server" EnableViewState="false" />
+    <link rel="stylesheet" href="/Public/assets/keepstore/css/keepstore-catalog.css" />
 </asp:Content>
 
-<asp:Content ID="BreadcrumbContent" ContentPlaceHolderID="BreadcrumbContent" runat="server">
-    <ks:Breadcrumb runat="server" ID="bcCatalogo" />
+<asp:Content ID="BreadcrumbContent1" ContentPlaceHolderID="BreadcrumbContent" runat="server">
+    <ks:Breadcrumb ID="Breadcrumb1" runat="server" />
 </asp:Content>
 
-<asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
+<asp:Content ID="MainContent1" ContentPlaceHolderID="MainContent" runat="server">
 
-    <%-- Hidden helpers required by VB logic (no UI) --%>
-    <asp:Panel ID="tNavig" runat="server" CssClass="d-none" />
-    <asp:Label ID="lblRicerca" runat="server" CssClass="d-none" />
-    <asp:Label ID="lblTrovati" runat="server" CssClass="d-none" />
-
-    <%-- Categoria helper (Title/SEO) --%>
-    <asp:FormView ID="FormView1" runat="server" Visible="false">
-        <ItemTemplate>
-            <asp:Label ID="lblCategoria" runat="server" Text="" />
-        </ItemTemplate>
-    </asp:FormView>
-
-    <section class="tf-sp-2">
+    <!-- PAGE TITLE / SUMMARY (kept for VB codebehind compatibility) -->
+    <asp:Panel ID="ksPageTitle" runat="server" CssClass="tf-page-title">
         <div class="container">
-
-            <div class="d-flex align-items-start align-items-md-center justify-content-between gap-2 flex-wrap mb-3 ks-catalog-toolbar">
+            <div class="d-flex flex-wrap align-items-end justify-content-between gap-2">
                 <div>
-                    <h1 class="tf-title mb-1">Catalogo</h1>
+                    <h1 class="title">Catalogo</h1>
                     <div class="text-muted small">
-                        <asp:Label ID="lblRisultati" runat="server" Text=""></asp:Label>
+                        <asp:Label ID="lblRicerca" runat="server" Visible="false" Text="Risultati ricerca:" />
+                        <asp:Label ID="lblRisultati" runat="server" />
+                        <asp:Label ID="lblTrovati" runat="server" />
                     </div>
                 </div>
 
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-
-                    <!-- Mobile filters trigger -->
-                    <button id="ksToolbarFiltersBtn" class="btn btn-outline-secondary d-lg-none" type="button">
-                        <i class="icon icon-filter"></i>
-                        Filtri
-                    </button>
-
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="text-muted small mb-0" for="<%= Drop_Ordinamento.ClientID %>">Ordina</label>
-                        <asp:DropDownList ID="Drop_Ordinamento" runat="server" CssClass="form-select form-select-sm" AutoPostBack="true">
-                            <asp:ListItem Value="0" Text="Consigliati"></asp:ListItem>
-                            <asp:ListItem Value="1" Text="Prezzo: crescente"></asp:ListItem>
-                            <asp:ListItem Value="2" Text="Prezzo: decrescente"></asp:ListItem>
-                            <asp:ListItem Value="3" Text="Disponibilità"></asp:ListItem>
-                        </asp:DropDownList>
-                    </div>
-
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="text-muted small mb-0" for="<%= Drop_Righe.ClientID %>">Righe</label>
-                        <asp:DropDownList ID="Drop_Righe" runat="server" CssClass="form-select form-select-sm" AutoPostBack="true">
-                            <asp:ListItem Value="12" Text="12"></asp:ListItem>
-                            <asp:ListItem Value="24" Text="24"></asp:ListItem>
-                            <asp:ListItem Value="48" Text="48"></asp:ListItem>
-                            <asp:ListItem Value="96" Text="96"></asp:ListItem>
-                        </asp:DropDownList>
-                        <asp:Label ID="lblLinee" runat="server" Text="" CssClass="d-none" />
-                    </div>
-
+                <div class="text-muted small">
+                    <asp:Label ID="lblPrezzi" runat="server" />
                 </div>
             </div>
+        </div>
+    </asp:Panel>
 
-            <div class="row g-4">
+    <!-- SHOP DEFAULT LAYOUT -->
+    <section class="flat-spacing-2">
+        <div class="container">
 
-                <!-- Filters sidebar (desktop) -->
-                <div class="col-12 col-lg-3 d-none d-lg-block">
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between mb-3">
-                                <div class="fw-semibold">Filtri</div>
-                                <a class="small text-decoration-none js-ks-reset-filters" href="#">Reset</a>
-                            </div>
+            <!-- CONTROL BAR -->
+            <div class="tf-shop-control-wrapper mb-3">
+                <div class="tf-shop-control">
+                    <div class="tf-control-filter">
+                        <a class="tf-btn-filter" href="#filterShop" data-bs-toggle="offcanvas" role="button" aria-controls="filterShop">
+                            <i class="icon icon-filter"></i>
+                            Filtri
+                        </a>
+                    </div>
 
-                            <div class="form-check mb-3" id="filtersDisp">
+                    <div class="tf-control-layout">
+                        <div class="tf-control-show">
+                            <label class="text-muted small mb-0" for="<%= Drop_Righe.ClientID %>">Righe</label>
+                            <asp:DropDownList ID="Drop_Righe" runat="server" CssClass="form-select form-select-sm" AutoPostBack="true">
+                                <asp:ListItem Value="12" Text="12"></asp:ListItem>
+                                <asp:ListItem Value="24" Text="24"></asp:ListItem>
+                                <asp:ListItem Value="48" Text="48"></asp:ListItem>
+                                <asp:ListItem Value="96" Text="96"></asp:ListItem>
+                            </asp:DropDownList>
+                            <asp:Label ID="lblLinee" runat="server" Text="" CssClass="d-none" />
+                        </div>
+
+                        <div class="tf-control-sorting">
+                            <asp:DropDownList ID="Drop_Ordinamento" runat="server" CssClass="form-select form-select-sm" AutoPostBack="true">
+                                <asp:ListItem Value="0" Text="Consigliati"></asp:ListItem>
+                                <asp:ListItem Value="1" Text="Prezzo: crescente"></asp:ListItem>
+                                <asp:ListItem Value="2" Text="Prezzo: decrescente"></asp:ListItem>
+                                <asp:ListItem Value="3" Text="Disponibilità"></asp:ListItem>
+                            </asp:DropDownList>
+                        </div>
+
+                        <div class="tf-control-availability d-none d-md-flex align-items-center ms-2">
+                            <div class="form-check">
                                 <asp:CheckBox ID="CheckBox_Disponibile" runat="server" CssClass="form-check-input" AutoPostBack="true" />
                                 <label class="form-check-label" for="<%= CheckBox_Disponibile.ClientID %>">Solo disponibili</label>
                             </div>
-
-                            <asp:Panel ID="filtritagliaecolore" runat="server" CssClass="mb-3" Visible="false">
-                                <div class="mb-2">
-                                    <label class="form-label small text-muted" for="<%= Drop_Filtra_Taglia.ClientID %>">Taglia</label>
-                                    <asp:DropDownList ID="Drop_Filtra_Taglia" runat="server" CssClass="form-select" AutoPostBack="true" />
-                                </div>
-                                <div>
-                                    <label class="form-label small text-muted" for="<%= Drop_Filtra_Colore.ClientID %>">Colore</label>
-                                    <asp:DropDownList ID="Drop_Filtra_Colore" runat="server" CssClass="form-select" AutoPostBack="true" />
-                                </div>
-                            </asp:Panel>
-
-                            <!-- Advanced filters (server-driven, no VB changes) -->
-                            <div class="ks-filter-group" id="filtersMr">
-                                <asp:DataList ID="DataList1" runat="server" DataSourceID="sdsMarche" RepeatLayout="Flow">
-                                    <ItemTemplate>
-                                        <div class="form-check d-flex align-items-start gap-2 ks-filter-item">
-                                            <asp:CheckBox ID="CheckBoxMr" runat="server"
-                                                CssClass="form-check-input"
-                                                AutoPostBack="true"
-                                                OnCheckedChanged="CheckBoxMr_CheckedChanged"
-                                                filterId='<%# Eval("MarcheId") %>'
-                                                Checked='<%# (("|" & Convert.ToString(Request.QueryString("mr")) & "|").Contains("|" & Convert.ToString(Eval("MarcheId")) & "|")) %>' />
-                                            <div class="flex-grow-1">
-                                                <asp:Label ID="lblMr" runat="server" AssociatedControlID="CheckBoxMr" CssClass="form-check-label"
-                                                    Text='<%# HttpUtility.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>' />
-                                            </div>
-                                            <span class="badge bg-light text-muted"><%# Eval("Numero") %></span>
-                                        </div>
-                                    </ItemTemplate>
-                                </asp:DataList>
-                            </div>
-
-                            <div class="ks-filter-group" id="filtersTp">
-                                <asp:DataList ID="DataList2" runat="server" DataSourceID="sdsTipologie" RepeatLayout="Flow">
-                                    <ItemTemplate>
-                                        <div class="form-check d-flex align-items-start gap-2 ks-filter-item">
-                                            <asp:CheckBox ID="CheckBoxTp" runat="server"
-                                                CssClass="form-check-input"
-                                                AutoPostBack="true"
-                                                OnCheckedChanged="CheckBoxTp_CheckedChanged"
-                                                filterId='<%# Eval("TipologieId") %>'
-                                                Checked='<%# (("|" & Convert.ToString(Request.QueryString("tp")) & "|").Contains("|" & Convert.ToString(Eval("TipologieId")) & "|")) %>' />
-                                            <div class="flex-grow-1">
-                                                <asp:Label ID="lblTp" runat="server" AssociatedControlID="CheckBoxTp" CssClass="form-check-label"
-                                                    Text='<%# HttpUtility.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>' />
-                                            </div>
-                                            <span class="badge bg-light text-muted"><%# Eval("Numero") %></span>
-                                        </div>
-                                    </ItemTemplate>
-                                </asp:DataList>
-                            </div>
-
-                            <div class="ks-filter-group" id="filtersGr">
-                                <asp:DataList ID="DataList3" runat="server" DataSourceID="sdsGruppo" RepeatLayout="Flow">
-                                    <ItemTemplate>
-                                        <div class="form-check d-flex align-items-start gap-2 ks-filter-item">
-                                            <asp:CheckBox ID="CheckBoxGr" runat="server"
-                                                CssClass="form-check-input"
-                                                AutoPostBack="true"
-                                                OnCheckedChanged="CheckBoxGr_CheckedChanged"
-                                                filterId='<%# Eval("GruppiId") %>'
-                                                Checked='<%# (("|" & Convert.ToString(Request.QueryString("gr")) & "|").Contains("|" & Convert.ToString(Eval("GruppiId")) & "|")) %>' />
-                                            <div class="flex-grow-1">
-                                                <asp:Label ID="lblGr" runat="server" AssociatedControlID="CheckBoxGr" CssClass="form-check-label"
-                                                    Text='<%# HttpUtility.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>' />
-                                            </div>
-                                            <span class="badge bg-light text-muted"><%# Eval("Numero") %></span>
-                                        </div>
-                                    </ItemTemplate>
-                                </asp:DataList>
-                            </div>
-
-                            <div class="ks-filter-group" id="filtersSg">
-                                <asp:DataList ID="DataList4" runat="server" DataSourceID="sdsSottogruppo" RepeatLayout="Flow">
-                                    <ItemTemplate>
-                                        <div class="form-check d-flex align-items-start gap-2 ks-filter-item">
-                                            <asp:CheckBox ID="CheckBoxSg" runat="server"
-                                                CssClass="form-check-input"
-                                                AutoPostBack="true"
-                                                OnCheckedChanged="CheckBoxSg_CheckedChanged"
-                                                filterId='<%# Eval("SottogruppiId") %>'
-                                                Checked='<%# (("|" & Convert.ToString(Request.QueryString("sg")) & "|").Contains("|" & Convert.ToString(Eval("SottogruppiId")) & "|")) %>' />
-                                            <div class="flex-grow-1">
-                                                <asp:Label ID="lblSg" runat="server" AssociatedControlID="CheckBoxSg" CssClass="form-check-label"
-                                                    Text='<%# HttpUtility.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>' />
-                                            </div>
-                                            <span class="badge bg-light text-muted"><%# Eval("Numero") %></span>
-                                        </div>
-                                    </ItemTemplate>
-                                </asp:DataList>
-                            </div>
-
                         </div>
                     </div>
                 </div>
 
-                <!-- Products grid -->
-                <div class="col-12 col-lg-9">
-
-                    <div class="d-flex justify-content-end mb-2">
-                        <asp:Label ID="lblPrezzi" runat="server" CssClass="text-muted small" Text=""></asp:Label>
-                    </div>
-
-                    <asp:ListView ID="lvProdotti" runat="server" DataSourceID="sdsArticoli" OnPreRender="lvProdotti_PreRender">
-                        <LayoutTemplate>
-                            <div class="row g-3" id="ksProductsGrid">
-                                <asp:PlaceHolder ID="itemPlaceholder" runat="server" />
-                            </div>
-                        </LayoutTemplate>
-
-                        <ItemTemplate>
-                            <div class="col-6 col-md-4">
-                                <div class="card ks-product-card h-100">
-                                    <a class="d-block" href='<%# "/articolo.aspx?id=" & Eval("id") %>'>
-                                        <img class="ks-product-img"
-                                             alt='<%# HttpUtility.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>'
-                                             src='<%# ResolveUrl(checkImg(Eval("Img1"))) %>' />
-                                    </a>
-
-                                    <div class="card-body p-3 d-flex flex-column">
-                                        <a class="text-decoration-none" href='<%# "/articolo.aspx?id=" & Eval("id") %>'>
-                                            <div class="ks-product-title">
-                                                <%# HttpUtility.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>
-                                            </div>
-                                        </a>
-
-                                        <div class="price-wrap fw-medium mt-1">
-                                            <%# UiPriceFormatter.RenderPriceHtml(Eval("Prezzo"), Eval("PrezzoIvato"), Eval("PrezzoPromo"), Eval("PrezzoPromoIvato"), Eval("InOfferta"), Session("IvaTipo")) %>
-                                        </div>
-
-                                        <div class="mt-auto d-flex align-items-center gap-2 pt-2">
-                                            <asp:TextBox ID="tbQuantita" runat="server" Text="1" CssClass="form-control form-control-sm ks-qty" />
-
-                                            <asp:LinkButton ID="LB_AddToCart" runat="server"
-                                                CssClass="btn btn-primary btn-sm flex-grow-1"
-                                                CausesValidation="false"
-                                                OnClick="LB_AddToCart_Click">
-                                                Aggiungi
-                                            </asp:LinkButton>
-
-                                            <asp:LinkButton ID="LB_wishlist" runat="server"
-                                                CssClass="btn btn-outline-secondary btn-sm"
-                                                CausesValidation="false"
-                                                OnClick="BT_Aggiungi_wishlist_Click"
-                                                ToolTip="Aggiungi alla wishlist">
-                                                ♥
-                                            </asp:LinkButton>
-                                        </div>
-
-                                        <%-- helper fields used by VB helpers --%>
-                                        <asp:HiddenField ID="hfID" runat="server" Value='<%# Eval("id") %>' />
-                                        <asp:HiddenField ID="hfTCId" runat="server" Value='<%# If(Eval("TCid") Is Nothing OrElse Convert.IsDBNull(Eval("TCid")), "-1", Eval("TCid")) %>' />
-                                        <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" CssClass="d-none" />
-                                    </div>
-                                </div>
-                            </div>
-                        </ItemTemplate>
-
-                        <EmptyDataTemplate>
-                            <div class="alert alert-light border">
-                                Nessun prodotto trovato con i filtri selezionati.
-                            </div>
-                        </EmptyDataTemplate>
-
-                    </asp:ListView>
-
-                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-4" id="ksPagerWrap" runat="server">
-                        <asp:DataPager ID="dpProdotti" runat="server" PagedControlID="lvProdotti" PageSize="12" CssClass="pagination ks-pager">
-                            <Fields>
-                                <asp:NextPreviousPagerField ButtonType="Link" ShowPreviousPageButton="true" ShowNextPageButton="false" PreviousPageText="&laquo;" />
-                                <asp:NumericPagerField ButtonType="Link" ButtonCount="7" />
-                                <asp:NextPreviousPagerField ButtonType="Link" ShowPreviousPageButton="false" ShowNextPageButton="true" NextPageText="&raquo;" />
-                            </Fields>
-                        </asp:DataPager>
-
-                        <asp:Panel ID="ksMultiFooter" runat="server" CssClass="d-flex align-items-center gap-2" Visible="false">
-                            <asp:ImageButton ID="IB_SelezioneMultipla" runat="server"
-                                CssClass="btn btn-outline-primary btn-sm"
-                                ImageUrl="/Public/assets/keepstore/images/keepstore/placeholder.png"
-                                AlternateText="Aggiungi selezione al carrello"
-                                CausesValidation="false"
-                                OnClick="Selezione_Multipla_Click" />
-                        </asp:Panel>
-                    </div>
-
-
+                <div class="tf-shop-control-right">
+                    <!-- Placeholder: if you later want to add view toggles / layout switch, this is the right slot -->
                 </div>
-
             </div>
 
-            <%-- DataSources required by VB (commands/params set in VB) --%>
-            <asp:SqlDataSource ID="sdsArticoli" runat="server"
-                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+            <!-- ACTIVE FILTERS (from Step 31/32) -->
+            <div id="ksActiveFilters" class="mb-3" runat="server" Visible="false">
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <asp:Repeater ID="rptActiveFilters" runat="server">
+                        <ItemTemplate>
+                            <asp:LinkButton ID="lbRemove" runat="server" CssClass="badge rounded-pill text-bg-secondary" CommandName="remove" CommandArgument='<%# Eval("Key") %>'>
+                                <%# Eval("Label") %> <span class="ms-1">×</span>
+                            </asp:LinkButton>
+                        </ItemTemplate>
+                    </asp:Repeater>
 
-            <asp:SqlDataSource ID="sdsMarche" runat="server"
-                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+                    <asp:LinkButton ID="lbClearAllFilters" runat="server" CssClass="badge rounded-pill text-bg-dark" CommandName="clear" Visible="false">
+                        Pulisci tutto
+                    </asp:LinkButton>
+                </div>
+            </div>
 
-            <asp:SqlDataSource ID="sdsTipologie" runat="server"
-                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+            <!-- PRODUCT GRID -->
+            <div class="wrapper-control-shop">
+                <asp:ListView ID="lvProdotti" runat="server" DataSourceID="sdsArticoli">
+                    <LayoutTemplate>
+                        <div class="tf-grid-layout wrapper-shop" data-grid="grid-4">
+                            <asp:PlaceHolder ID="itemPlaceholder" runat="server" />
+                        </div>
+                    </LayoutTemplate>
 
-            <asp:SqlDataSource ID="sdsGruppo" runat="server"
-                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+                    <ItemTemplate>
+                        <div class="card-product style-1">
+                            <div class="card-product-wrapper">
+                                <a class="product-img" href='<%# "articolo.aspx?id=" & Eval("id") %>'>
+                                    <img class="lazyload img-product" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>'
+                                         src='<%# ThemeManager.ProductImageUrl(Eval("img1")) %>' />
+                                </a>
 
-            <asp:SqlDataSource ID="sdsSottogruppo" runat="server"
-                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+                                <%# If(Val(Eval("InOfferta")) = 1, "<div class='box-sale-wrap'><span class='sale-item'>Offerta</span></div>", "") %>
+
+                                <div class="list-product-btn absolute-2">
+                                    <asp:LinkButton ID="LB_wishlist" runat="server" CommandArgument='<%# Eval("id") %>' CssClass="box-icon bg_white wishlist" OnClick="LB_wishlist_Click" ToolTip="Aggiungi alla wishlist">
+                                        <i class="icon icon-heart"></i>
+                                        <span class="tooltip">Wishlist</span>
+                                    </asp:LinkButton>
+
+                                    <asp:LinkButton ID="btnAdd" runat="server" CssClass="box-icon bg_white" OnClick="LB_AddToCart_Click" ToolTip="Aggiungi al carrello">
+                                        <i class="icon icon-bag"></i>
+                                        <span class="tooltip">Carrello</span>
+                                    </asp:LinkButton>
+                                </div>
+
+                                <!-- Required by codebehind -->
+                                <asp:HiddenField ID="hfID" runat="server" Value='<%# Eval("id") %>' />
+                                <asp:HiddenField ID="hfTCId" runat="server" Value='<%# Eval("TCId") %>' />
+                            </div>
+
+                            <div class="card-product-info">
+                                <a class="name-product link" href='<%# "articolo.aspx?id=" & Eval("id") %>'>
+                                    <%# Server.HtmlEncode(compatta_testo(Convert.ToString(Eval("Descrizione1")), 70)) %>
+                                </a>
+
+                                <div class="price-wrap">
+                                    <%# UiPriceFormatter.RenderPriceHtml(
+                                            If(IsDBNull(Eval("Prezzo")), 0, Eval("Prezzo")),
+                                            If(IsDBNull(Eval("PrezzoIvato")), 0, Eval("PrezzoIvato")),
+                                            If(IsDBNull(Eval("PrezzoPromo")), 0, Eval("PrezzoPromo")),
+                                            If(IsDBNull(Eval("PrezzoPromoIvato")), 0, Eval("PrezzoPromoIvato")),
+                                            Val(Eval("InOfferta")),
+                                            Session("IvaTipo")
+                                        ) %>
+                                </div>
+
+                                <!-- Multi-select / quantity (kept, but visually compact) -->
+                                <div class="d-flex align-items-center gap-2 mt-2">
+                                    <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" CssClass="form-check-input" />
+                                    <asp:TextBox ID="tbQuantita" runat="server" CssClass="form-control form-control-sm" Text="1" Width="70" />
+                                </div>
+                            </div>
+                        </div>
+                    </ItemTemplate>
+
+                    <EmptyDataTemplate>
+                        <div class="alert alert-warning">Nessun prodotto trovato con i filtri selezionati.</div>
+                    </EmptyDataTemplate>
+                </asp:ListView>
+
+                <!-- PAGER (used by codebehind) -->
+                <asp:Panel ID="ksPagerWrap" runat="server" CssClass="d-flex justify-content-center mt-4">
+                    <asp:DataPager ID="dpProdotti" runat="server" PagedControlID="lvProdotti" PageSize="12">
+                        <Fields>
+                            <asp:NextPreviousPagerField ShowFirstPageButton="true" ShowPreviousPageButton="true" ShowNextPageButton="false" ShowLastPageButton="false" ButtonType="Button" />
+                            <asp:NumericPagerField ButtonCount="7" NumericButtonCssClass="btn btn-outline-secondary btn-sm" CurrentPageLabelCssClass="btn btn-secondary btn-sm" />
+                            <asp:NextPreviousPagerField ShowFirstPageButton="false" ShowPreviousPageButton="false" ShowNextPageButton="true" ShowLastPageButton="true" ButtonType="Button" />
+                        </Fields>
+                    </asp:DataPager>
+                </asp:Panel>
+
+                <!-- Optional multi-add footer used by codebehind -->
+                <asp:Panel ID="ksMultiFooter" runat="server" CssClass="mt-4" Visible="false">
+                    <div class="alert alert-info">Selezione multipla attiva: scegli le quantità e aggiungi al carrello.</div>
+                </asp:Panel>
+
+                <!-- Legacy navigation container referenced in codebehind -->
+                <asp:Panel ID="tNavig" runat="server" Visible="false" />
+            </div>
 
         </div>
     </section>
 
+    <!-- FILTER CANVAS (Shop Default) -->
+    <div class="offcanvas offcanvas-start canvas-filter-product sidebar-filter handle-canvas left" tabindex="-1" id="filterShop" aria-labelledby="filterShopLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="filterShopLabel">Filtri</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+
+        <div class="offcanvas-body">
+            <asp:Panel ID="ksFilters" runat="server">
+
+                <div class="mb-4">
+                    <h6 class="mb-2">Categorie</h6>
+                    <asp:FormView ID="FormView1" runat="server" DataSourceID="sdsGruppo">
+                        <ItemTemplate>
+                            <asp:Label ID="lblCategoria" runat="server" Text='<%# Eval("descrizione") %>' Visible="false" />
+                        </ItemTemplate>
+                    </asp:FormView>
+
+                    <asp:DataList ID="DataList1" runat="server" DataSourceID="sdsGruppo" RepeatLayout="Flow" CssClass="ks-filter-list">
+                        <ItemTemplate>
+                            <div class="form-check">
+                                <a class="form-check-label" href='<%# Eval("url") %>'><%# Eval("descrizione") %></a>
+                            </div>
+                        </ItemTemplate>
+                    </asp:DataList>
+                </div>
+
+                <div class="mb-4">
+                    <h6 class="mb-2">Sottocategorie</h6>
+                    <asp:DataList ID="DataList4" runat="server" DataSourceID="sdsSottogruppo" RepeatLayout="Flow" CssClass="ks-filter-list">
+                        <ItemTemplate>
+                            <div class="form-check">
+                                <a class="form-check-label" href='<%# Eval("url") %>'><%# Eval("descrizione") %></a>
+                            </div>
+                        </ItemTemplate>
+                    </asp:DataList>
+                </div>
+
+                <div class="mb-4">
+                    <h6 class="mb-2">Marche</h6>
+                    <asp:DataList ID="DataList2" runat="server" DataSourceID="sdsMarche" RepeatLayout="Flow" CssClass="ks-filter-list">
+                        <ItemTemplate>
+                            <div class="form-check">
+                                <a class="form-check-label" href='<%# Eval("url") %>'><%# Eval("descrizione") %></a>
+                            </div>
+                        </ItemTemplate>
+                    </asp:DataList>
+                </div>
+
+                <div class="mb-4">
+                    <h6 class="mb-2">Tipologie</h6>
+                    <asp:DataList ID="DataList3" runat="server" DataSourceID="sdsTipologie" RepeatLayout="Flow" CssClass="ks-filter-list">
+                        <ItemTemplate>
+                            <div class="form-check">
+                                <a class="form-check-label" href='<%# Eval("url") %>'><%# Eval("descrizione") %></a>
+                            </div>
+                        </ItemTemplate>
+                    </asp:DataList>
+                </div>
+
+                <!-- ADVANCED: size & color (kept, VB uses these IDs) -->
+                <asp:Panel ID="filtritagliaecolore" runat="server" Visible="false">
+                    <div class="mb-4">
+                        <h6 class="mb-2">Taglia</h6>
+                        <asp:DropDownList ID="Drop_Filtra_Taglia" runat="server" CssClass="form-select" AutoPostBack="true" />
+                    </div>
+
+                    <div class="mb-4">
+                        <h6 class="mb-2">Colore</h6>
+                        <asp:DropDownList ID="Drop_Filtra_Colore" runat="server" CssClass="form-select" AutoPostBack="true" />
+                    </div>
+                </asp:Panel>
+
+                </asp:Panel>
+        </div>
+    </div>
+
+    <!-- DATA SOURCES (IDs required by codebehind) -->
+    <asp:SqlDataSource ID="sdsArticoli" runat="server"
+        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+        SelectCommand="SELECT 0 as id, 0 as TCId, '' as Descrizione1, '' as img1, 0 as Prezzo, 0 as PrezzoIvato, 0 as InOfferta, 0 as PrezzoPromo, 0 as PrezzoPromoIvato WHERE 1=0" />
+
+    <asp:SqlDataSource ID="sdsMarche" runat="server"
+        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+        SelectCommand="SELECT 0 as id, '' as descrizione, '' as url WHERE 1=0" />
+
+    <asp:SqlDataSource ID="sdsTipologie" runat="server"
+        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+        SelectCommand="SELECT 0 as id, '' as descrizione, '' as url WHERE 1=0" />
+
+    <asp:SqlDataSource ID="sdsGruppo" runat="server"
+        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+        SelectCommand="SELECT 0 as id, '' as descrizione, '' as url WHERE 1=0" />
+
+    <asp:SqlDataSource ID="sdsSottogruppo" runat="server"
+        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+        SelectCommand="SELECT 0 as id, '' as descrizione, '' as url WHERE 1=0" />
+
 </asp:Content>
 
-<asp:Content ID="ScriptsContent" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script src="/Public/assets/keepstore/js/catalog-ui.js"></script>
+<asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
+    <script src="/Public/assets/keepstore/js/keepstore-catalog.js"></script>
 </asp:Content>
