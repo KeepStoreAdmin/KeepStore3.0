@@ -13,18 +13,15 @@ Imports System.Web
 '   /Public/assets/keepstore/
 '
 ' Configurazione (web.config / appSettings):
-'   KeepStore.Theme.AssetsBaseUrl  -> base url asset
-'   KeepStore.Theme.Name           -> nome tema (tagging / switch)
-'   KeepStore.Theme.Class.<key>    -> token classi (opzionale)
-'
-' Esempi (markup):
-'   <link rel="stylesheet" href="<%= ThemeManager.Asset("css/styles.css") %>" />
-'   <body class="<%= ThemeManager.Css("body", "preload-wrapper") %>">
+'   KeepStore.Theme.AssetsBaseUrl -> base url asset
+'   KeepStore.Theme.Name          -> nome tema (tagging / switch)
+'   KeepStore.Theme.Class.<key>   -> token classi (opzionale)
 '
 ' N.B.:
 ' - I valori sono URL-path (non file-system path).
-' - La funzione normalizza slash e previene path traversal.
+' - Le funzioni normalizzano slash e prevengono path traversal.
 ' ============================================================
+
 Public Module ThemeManager
 
     Private Const DefaultBaseUrl As String = "/Public/assets/keepstore/"
@@ -42,29 +39,26 @@ Public Module ThemeManager
                 v = Nothing
             End Try
 
-            If String.IsNullOrWhiteSpace(v) Then
-                v = "keepstore"
-            End If
+            If String.IsNullOrWhiteSpace(v) Then v = "keepstore"
 
             v = v.Trim().ToLowerInvariant()
             v = RegexSafeSlug(v)
+
             If String.IsNullOrWhiteSpace(v) Then v = "keepstore"
+
             Return v
         End Get
     End Property
 
     ''' <summary>
     ''' Base URL per gli asset del template corrente.
-    ''' Configurabile via appSettings: KeepStore.Theme.AssetsBaseUrl
+    '''
+    ''' Priorità (web.config / appSettings):
+    ''' 1) KeepStore.Theme.AssetsBaseUrl
+    ''' 2) KeepStore.Theme.BaseUrl (alias compatibilità)
+    ''' 3) /Public/assets/{ThemeName}/ (auto)
+    ''' 4) default: /Public/assets/keepstore/
     ''' </summary>
-    ' <summary>
-    ' Base URL per gli asset del template corrente.
-    ' Priorità (web.config / appSettings):
-    '  1) KeepStore.Theme.AssetsBaseUrl
-    '  2) KeepStore.Theme.BaseUrl (alias compatibilità)
-    '  3) /Public/assets/<ThemeName>/ (auto)
-    '  4) default: /Public/assets/keepstore/
-    ' </summary>
     Public ReadOnly Property AssetsBaseUrl As String
         Get
             Dim v As String = Nothing
@@ -108,31 +102,25 @@ Public Module ThemeManager
         End Get
     End Property
 
-    ' <summary>
-    ' Alias di AssetsBaseUrl (compatibilità semantica).
-    ' </summary>
+    ''' <summary>Alias di AssetsBaseUrl (compatibilità semantica).</summary>
     Public ReadOnly Property BaseUrl As String
         Get
             Return AssetsBaseUrl
         End Get
     End Property
 
-    ''' <summary>
-    ''' Costruisce un URL sicuro verso un asset del template.
-    ''' </summary>
+    ''' <summary>Costruisce un URL sicuro verso un asset del template.</summary>
     Public Function Asset(ByVal relativePath As String) As String
         If relativePath Is Nothing Then relativePath = String.Empty
 
         Dim p As String = relativePath.Trim()
 
         ' Evita absolute URL/paths esterni e traversal
-        p = p.Replace("\\", "/")
+        p = p.Replace("\", "/")
         While p.StartsWith("/", StringComparison.Ordinal)
             p = p.Substring(1)
         End While
-        If p.Contains("..") Then
-            p = p.Replace("..", String.Empty)
-        End If
+        If p.Contains("..") Then p = p.Replace("..", String.Empty)
 
         Dim url As String = AssetsBaseUrl & p
 
@@ -153,6 +141,7 @@ Public Module ThemeManager
         If k = "" Then Return fallbackClasses
 
         Dim cfgKey As String = "KeepStore.Theme.Class." & k
+
         Dim v As String = Nothing
         Try
             v = ConfigurationManager.AppSettings(cfgKey)
@@ -160,20 +149,133 @@ Public Module ThemeManager
             v = Nothing
         End Try
 
-        If String.IsNullOrWhiteSpace(v) Then
-            Return fallbackClasses
-        End If
+        If String.IsNullOrWhiteSpace(v) Then Return fallbackClasses
         Return v.Trim()
+    End Function
+
+    ''' <summary>
+    ''' URL immagine prodotto (catalogo/home/dettaglio).
+    ''' - Supporta: URL assoluti, path root-relative (/Images/...), path relativo (Images/..), o solo filename.
+    ''' - Configurazioni opzionali:
+    '''     KeepStore.Products.ImageBaseUrl         (default: /Images/articoli/)
+    '''     KeepStore.Products.PlaceholderImageUrl  (fallback: Asset("img/placeholder.png"))
+    ''' </summary>
+    Public Function ProductImageUrl(ByVal imgValue As Object) As String
+        Dim raw As String = ""
+
+        Try
+            If imgValue Is Nothing OrElse Convert.IsDBNull(imgValue) Then
+                raw = ""
+            Else
+                raw = Convert.ToString(imgValue)
+            End If
+        Catch
+            raw = ""
+        End Try
+
+        raw = If(raw, "").Trim()
+
+        If raw = "" Then
+            Dim ph As String = Nothing
+            Try
+                ph = ConfigurationManager.AppSettings("KeepStore.Products.PlaceholderImageUrl")
+            Catch
+                ph = Nothing
+            End Try
+
+            If String.IsNullOrWhiteSpace(ph) Then
+                ph = Asset("img/placeholder.png")
+            End If
+
+            Return ph
+        End If
+
+        raw = raw.Replace("\", "/")
+
+        ' URL assoluti / data uri
+        If raw.StartsWith("http://", StringComparison.OrdinalIgnoreCase) _
+            OrElse raw.StartsWith("https://", StringComparison.OrdinalIgnoreCase) _
+            OrElse raw.StartsWith("data:", StringComparison.OrdinalIgnoreCase) Then
+            Return raw
+        End If
+
+        ' previeni traversal
+        If raw.Contains("..") Then raw = raw.Replace("..", String.Empty)
+
+        ' path già root-relative
+        If raw.StartsWith("/", StringComparison.Ordinal) Then
+            Try
+                Return VirtualPathUtility.ToAbsolute(raw)
+            Catch
+                Return raw
+            End Try
+        End If
+
+        ' path relativo (es. "Images/Articoli/x.jpg")
+        If raw.IndexOf("/", StringComparison.Ordinal) >= 0 Then
+            Dim rp As String = "/" & raw.TrimStart("/"c)
+            Try
+                Return VirtualPathUtility.ToAbsolute(rp)
+            Catch
+                Return rp
+            End Try
+        End If
+
+        ' solo filename: compone usando base configurabile
+        Dim baseUrl As String = Nothing
+        Try
+            baseUrl = ConfigurationManager.AppSettings("KeepStore.Products.ImageBaseUrl")
+        Catch
+            baseUrl = Nothing
+        End Try
+
+        If String.IsNullOrWhiteSpace(baseUrl) Then
+            baseUrl = "/Images/articoli/"
+        End If
+
+        baseUrl = baseUrl.Trim().Replace("\", "/")
+        If Not baseUrl.EndsWith("/", StringComparison.Ordinal) Then baseUrl &= "/"
+        If Not baseUrl.StartsWith("/", StringComparison.Ordinal) AndAlso Not baseUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase) Then
+            baseUrl = "/" & baseUrl
+        End If
+
+        Dim fileName As String = EscapePathSegment(raw)
+
+        Dim url As String = baseUrl & fileName
+        Try
+            Return VirtualPathUtility.ToAbsolute(url)
+        Catch
+            Return url
+        End Try
+    End Function
+
+    Private Function EscapePathSegment(ByVal segment As String) As String
+        If String.IsNullOrEmpty(segment) Then Return String.Empty
+
+        ' Non permettere separatori (sicurezza)
+        Dim s As String = segment.Replace("/", "_").Replace("\", "_")
+
+        Try
+            Return Uri.EscapeDataString(s)
+        Catch
+            ' Fallback minimo (spazi)
+            Return s.Replace(" ", "%20")
+        End Try
     End Function
 
     Private Function RegexSafeSlug(ByVal s As String) As String
         If String.IsNullOrEmpty(s) Then Return String.Empty
+
         Dim r As New System.Text.StringBuilder(s.Length)
         For Each ch As Char In s
-            If (ch >= "a"c AndAlso ch <= "z"c) OrElse (ch >= "0"c AndAlso ch <= "9"c) OrElse ch = "-"c OrElse ch = "_"c Then
+            If (ch >= "a"c AndAlso ch <= "z"c) _
+                OrElse (ch >= "0"c AndAlso ch <= "9"c) _
+                OrElse ch = "-"c _
+                OrElse ch = "_"c Then
                 r.Append(ch)
             End If
         Next
+
         Return r.ToString()
     End Function
 
