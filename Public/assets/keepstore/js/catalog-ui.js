@@ -384,27 +384,62 @@
   // ==========================================================
   // Mobile offcanvas filters (no clone, no duplicate IDs)
   // ==========================================================
+  function bindFilterTriggers() {
+    var openFn = window.__ksFilterPanelOpen;
+    if (typeof openFn !== 'function') return;
+
+    // Prefer toolbar button if present
+    var tb = document.getElementById('ksToolbarFiltersBtn');
+    if (tb && tb.dataset && tb.dataset.ksBound !== '1') {
+      tb.dataset.ksBound = '1';
+      tb.addEventListener('click', function (ev) {
+        try { ev.preventDefault(); } catch (e) { }
+        openFn();
+      });
+    }
+
+    // Fallback floating FAB (created only if toolbar trigger is missing)
+    var fab = document.getElementById('ksFiltersFab');
+    if (fab && fab.dataset && fab.dataset.ksBound !== '1') {
+      fab.dataset.ksBound = '1';
+      fab.addEventListener('click', function (ev) {
+        try { ev.preventDefault(); } catch (e) { }
+        openFn();
+      });
+    }
+  }
+
   function setupMobileOffcanvasFilters() {
     if (!isCatalogPage()) return;
 
     var filterEls = [];
-    var ids = ['filtersMr', 'filtersTp', 'filtersGr', 'filtersSg', 'filtritagliaecolore'];
+    // Include also the main "Disponibili" checkbox block (mobile)
+    var ids = ['filtersDisp', 'filtersMr', 'filtersTp', 'filtersGr', 'filtersSg', 'filtritagliaecolore'];
     for (var i = 0; i < ids.length; i++) {
       var el = document.getElementById(ids[i]);
       if (el) filterEls.push(el);
     }
     if (filterEls.length === 0) return;
 
-    // Create DOM once
-    if (document.getElementById('ksFilterPanel')) return;
+    // Already created: just ensure triggers are wired
+    if (document.getElementById('ksFilterPanel')) {
+      bindFilterTriggers();
+      return;
+    }
 
-    // Floating button
-    var fab = document.createElement('button');
-    fab.type = 'button';
-    fab.className = 'ks-filter-fab';
-    fab.id = 'ksFiltersFab';
-    fab.innerHTML = '<span aria-hidden="true">☰</span><span>Filtri</span>';
-    document.body.appendChild(fab);
+    // If a toolbar trigger exists, don't render floating FAB
+    var toolbarBtn = document.getElementById('ksToolbarFiltersBtn');
+    var useFab = !toolbarBtn;
+
+    // Floating button (fallback)
+    if (useFab) {
+      var fab = document.createElement('button');
+      fab.type = 'button';
+      fab.className = 'ks-filter-fab';
+      fab.id = 'ksFiltersFab';
+      fab.innerHTML = '<span aria-hidden="true">☰</span><span>Filtri</span>';
+      document.body.appendChild(fab);
+    }
 
     // Overlay + panel
     var overlay = document.createElement('div');
@@ -477,32 +512,26 @@
       close();
     }
 
-    // Optional toolbar trigger (present in our themed markup)
-    try {
-      var toolbarBtn = document.getElementById('ksToolbarFiltersBtn');
-      if (toolbarBtn) {
-        toolbarBtn.addEventListener('click', function (ev) {
-          ev.preventDefault();
-          open();
-        });
-      }
-    } catch (e) { }
-
     // Reset goes to base catalog URL preserving category params
     try {
       var r = panel.querySelector('#ksFilterReset');
-      if (r) {
-        r.href = buildResetUrl();
-      }
+      if (r) r.href = buildResetUrl();
     } catch (e) { }
 
-    fab.addEventListener('click', open);
+    // Persist handlers
     overlay.addEventListener('click', close);
     panel.querySelector('#ksFilterClose').addEventListener('click', close);
     panel.querySelector('#ksFilterClose2').addEventListener('click', close);
     panel.querySelector('#ksFilterApply').addEventListener('click', apply);
 
-    // Restore if switching to desktop
+    // Expose for re-binding after UpdatePanel partial postback
+    window.__ksFilterPanelOpen = open;
+    window.__ksFilterPanelClose = close;
+
+    // Bind triggers now (toolbar button or FAB)
+    bindFilterTriggers();
+
+    // Restore if switching to desktop while open
     window.addEventListener('resize', function () {
       if (!document.body.classList.contains('ks-offcanvas-open')) return;
       if (window.matchMedia && window.matchMedia('(min-width: 992px)').matches) {
@@ -511,10 +540,38 @@
     });
   }
 
+  // ==========================================================
+  // Reset links already in markup (desktop sidebar)
+  // ==========================================================
+  function bindResetLinks() {
+    var links = document.querySelectorAll('.js-ks-reset-filters');
+    if (!links || links.length === 0) return;
+
+    var url = buildResetUrl();
+    for (var i = 0; i < links.length; i++) {
+      var a = links[i];
+      if (!a) continue;
+
+      // ensure correct href (preserve ct/st/tp)
+      try { a.setAttribute('href', url); } catch (e) { }
+
+      if (a.dataset && a.dataset.ksResetBound === '1') continue;
+      if (a.dataset) a.dataset.ksResetBound = '1';
+
+      a.addEventListener('click', function (ev) {
+        try { ev.preventDefault(); } catch (e) { }
+        location.href = buildResetUrl();
+      });
+    }
+  }
+
   function initCatalogUi() {
     if (!isCatalogPage()) return;
 
     ensureCss('/Public/assets/keepstore/css/catalog-filters-ui.css');
+
+    // Reset link in sidebar (preserve ct/st/tp)
+    bindResetLinks();
 
     // wrap & normalize known filter blocks (if present)
     wrapFilterBox(document.getElementById('filtersMr'), 'Marche');

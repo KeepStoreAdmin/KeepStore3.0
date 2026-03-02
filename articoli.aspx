@@ -8,6 +8,7 @@
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
     <link rel="stylesheet" href="/Public/assets/keepstore/css/catalog-ui.css" />
+    <link rel="stylesheet" href="/Public/assets/keepstore/css/catalog-filters-ui.css" />
 </asp:Content>
 
 <asp:Content ID="BreadcrumbContent" ContentPlaceHolderID="BreadcrumbContent" runat="server">
@@ -52,6 +53,7 @@
                             <asp:ListItem Value="48" Text="48"></asp:ListItem>
                             <asp:ListItem Value="96" Text="96"></asp:ListItem>
                         </asp:DropDownList>
+                        <asp:Label ID="lblLinee" runat="server" Text="" CssClass="d-none" />
                     </div>
 
                 </div>
@@ -65,10 +67,10 @@
                         <div class="card-body">
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <div class="fw-semibold">Filtri</div>
-                                <a class="small text-decoration-none" href="/articoli.aspx">Reset</a>
+                                <a class="small text-decoration-none js-ks-reset-filters" href="#">Reset</a>
                             </div>
 
-                            <div class="form-check mb-3">
+                            <div class="form-check mb-3" id="filtersDisp">
                                 <asp:CheckBox ID="CheckBox_Disponibile" runat="server" CssClass="form-check-input" AutoPostBack="true" />
                                 <label class="form-check-label" for="<%= CheckBox_Disponibile.ClientID %>">Solo disponibili</label>
                             </div>
