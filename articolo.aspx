@@ -8,6 +8,8 @@
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
     <link rel="stylesheet" href="/Public/assets/keepstore/css/product-ui.css" />
+    <link rel="stylesheet" href="/Public/assets/keepstore/css/catalog-product-flow.css" />
+    <script src="/Public/assets/keepstore/js/catalog-product-flow.js" defer></script>
 </asp:Content>
 
 <asp:Content ID="BreadcrumbContent" ContentPlaceHolderID="BreadcrumbContent" runat="server">
@@ -117,7 +119,7 @@
                                     <div class="row g-2 align-items-end">
                                         <div class="col-12 col-sm-4">
                                             <label class="form-label">Quantità</label>
-                                            <asp:TextBox ID="tbQuantita" runat="server" CssClass="form-control" Text="1" />
+                                            <asp:TextBox ID="tbQuantita" runat="server" CssClass="form-control ks-qty" Text="1" />
                                         </div>
                                         <div class="col-12 col-sm-8">
                                             <asp:LinkButton ID="btnCarrello" runat="server" CommandName="carrello" CssClass="btn btn-primary w-100">

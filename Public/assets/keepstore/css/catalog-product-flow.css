@@ -1,0 +1,102 @@
+/* Neutral UI helpers: catalog + product flow (KeepStore)
+   - No template naming
+   - Pure CSS: safe for WebForms
+*/
+
+.ks-qty-wrap{
+  display:flex;
+  align-items:stretch;
+  gap:0;
+  width:7.25rem;
+  max-width:100%;
+}
+
+.ks-qty-wrap .ks-qty{
+  text-align:center;
+  border-radius:0;
+  min-width:0;
+}
+
+.ks-qty-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:2.25rem;
+  padding:0;
+  border:1px solid rgba(0,0,0,.15);
+  background:#fff;
+  line-height:1;
+  user-select:none;
+}
+
+.ks-qty-btn:active{ transform:translateY(1px); }
+.ks-qty-btn:focus{ outline: none; box-shadow: 0 0 0 .2rem rgba(13,110,253,.25); }
+
+.ks-qty-wrap .ks-qty-btn:first-child{
+  border-top-left-radius:.375rem;
+  border-bottom-left-radius:.375rem;
+}
+.ks-qty-wrap .ks-qty-btn:last-child{
+  border-top-right-radius:.375rem;
+  border-bottom-right-radius:.375rem;
+}
+.ks-qty-wrap .ks-qty{
+  border-left:0;
+  border-right:0;
+}
+
+/* Product cards (catalog) */
+.ks-product-card{
+  border:1px solid rgba(0,0,0,.08);
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+.ks-product-card:hover{
+  transform:translateY(-1px);
+  box-shadow:0 .25rem .75rem rgba(0,0,0,.08);
+}
+
+.ks-product-img{
+  width:100%;
+  height:auto;
+  aspect-ratio: 1 / 1;
+  object-fit:contain;
+  background:#fff;
+}
+
+/* Price wrap */
+.price-wrap{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.35rem .5rem;
+  align-items:baseline;
+}
+.price-wrap .price-old{
+  text-decoration:line-through;
+  opacity:.65;
+}
+.price-wrap .price-new{
+  font-weight:700;
+}
+
+/* DataPager look & feel (generated markup) */
+.ks-pager{
+  gap:.25rem;
+  flex-wrap:wrap;
+  justify-content:center;
+  margin-top:1rem;
+}
+
+.ks-pager a,
+.ks-pager span{
+  display:inline-block;
+  padding:.35rem .6rem;
+  border:1px solid rgba(0,0,0,.15);
+  border-radius:.375rem;
+  text-decoration:none;
+}
+
+.ks-pager span{
+  background:rgba(13,110,253,.08);
+  border-color:rgba(13,110,253,.35);
+  font-weight:600;
+}

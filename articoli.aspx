@@ -10,6 +10,8 @@
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
     <link rel="stylesheet" href="/Public/assets/keepstore/css/catalog-ui.css" />
     <link rel="stylesheet" href="/Public/assets/keepstore/css/catalog-filters-ui.css" />
+    <link rel="stylesheet" href="/Public/assets/keepstore/css/catalog-product-flow.css" />
+    <script src="/Public/assets/keepstore/js/catalog-product-flow.js" defer></script>
 </asp:Content>
 
 <asp:Content ID="BreadcrumbContent" ContentPlaceHolderID="BreadcrumbContent" runat="server">
@@ -201,9 +203,9 @@
                             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-4" id="ksPagerWrap" runat="server">
                                 <asp:DataPager ID="dpProdotti" runat="server" PagedControlID="lvProdotti" PageSize="12" CssClass="pagination ks-pager">
                                     <Fields>
-                                        <asp:NextPreviousPagerField ButtonType="Link" ShowPreviousPageButton="true" ShowNextPageButton="false" PreviousPageText="«" />
-                                        <asp:NumericPagerField ButtonType="Link" NumericButtonCount="7" />
-                                        <asp:NextPreviousPagerField ButtonType="Link" ShowPreviousPageButton="false" ShowNextPageButton="true" NextPageText="»" />
+                                        <asp:NextPreviousPagerField ButtonType="Link" ShowPreviousPageButton="true" ShowNextPageButton="false" PreviousPageText="&laquo;" />
+                                        <asp:NumericPagerField ButtonType="Link" ButtonCount="7" />
+                                        <asp:NextPreviousPagerField ButtonType="Link" ShowPreviousPageButton="false" ShowNextPageButton="true" NextPageText="&raquo;" />
                                     </Fields>
                                 </asp:DataPager>
 
