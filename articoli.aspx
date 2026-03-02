@@ -12,6 +12,9 @@
     <link rel="stylesheet" href="/Public/assets/keepstore/css/catalog-filters-ui.css" />
     <link rel="stylesheet" href="/Public/assets/keepstore/css/catalog-product-flow.css" />
     <script src="/Public/assets/keepstore/js/catalog-product-flow.js" defer></script>
+
+    <%-- SEO slot injected by articoli.aspx.vb (robots/canonical, etc.) --%>
+    <asp:Literal ID="litSeoHead" runat="server" />
 </asp:Content>
 
 <asp:Content ID="BreadcrumbContent" ContentPlaceHolderID="BreadcrumbContent" runat="server">

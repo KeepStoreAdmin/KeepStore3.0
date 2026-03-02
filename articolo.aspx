@@ -10,6 +10,9 @@
     <link rel="stylesheet" href="/Public/assets/keepstore/css/product-ui.css" />
     <link rel="stylesheet" href="/Public/assets/keepstore/css/catalog-product-flow.css" />
     <script src="/Public/assets/keepstore/js/catalog-product-flow.js" defer></script>
+
+    <%-- SEO slot (meta/canonical/json-ld) injected by articolo.aspx.vb when needed --%>
+    <asp:Literal ID="litSeoHead" runat="server" />
 </asp:Content>
 
 <asp:Content ID="BreadcrumbContent" ContentPlaceHolderID="BreadcrumbContent" runat="server">
@@ -23,6 +26,21 @@
         ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
         ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>">
     </asp:SqlDataSource>
+
+    <%-- Not found state controlled by articolo.aspx.vb (no logic changes) --%>
+    <asp:PlaceHolder ID="phNotFound" runat="server" Visible="false">
+        <section class="tf-sp-2">
+            <div class="container">
+                <div class="alert alert-warning mb-0" role="alert">
+                    Articolo non trovato oppure non disponibile.
+                    <a class="alert-link" href="/articoli.aspx">Torna al catalogo</a>
+                </div>
+            </div>
+        </section>
+    </asp:PlaceHolder>
+
+    <%-- Product shell controlled by articolo.aspx.vb (Visible True when product exists) --%>
+    <asp:Panel ID="pnlProduct" runat="server" Visible="false">
 
     <section class="tf-sp-2">
         <div class="container">
@@ -204,6 +222,8 @@
 
         </div>
     </section>
+
+    </asp:Panel>
 
 </asp:Content>
 
