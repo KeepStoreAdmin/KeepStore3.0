@@ -169,7 +169,7 @@
 
 	                            <div class="card-product-info">
 	                                <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# "articolo.aspx?id=" & Eval("id") %>'>
-                                    <%# Server.HtmlEncode(compatta_testo(Convert.ToString(Eval("Descrizione1")), 70)) %>
+                                    <%# Server.HtmlEncode(ThemeManager.CompactText(Eval("Descrizione1"), 70)) %>
                                 </a>
 
 	                                <p class="price-wrap fw-medium mt-1">

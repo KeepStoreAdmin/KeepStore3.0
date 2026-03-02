@@ -1,4 +1,4 @@
-<%@ Page Title="Prodotto" Language="VB" MasterPageFile="~/Public/ui/master/Site.master" AutoEventWireup="false" CodeFile="articolo.aspx.vb" Inherits="articolo" %>
+<%@ Page Title="Prodotto" Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="articolo.aspx.vb" Inherits="articolo" %>
 
 <asp:Content ID="TitleContent1" ContentPlaceHolderID="TitleContent" runat="server">
     <%= If(litNome IsNot Nothing AndAlso Not String.IsNullOrEmpty(litNome.Text), Server.HtmlEncode(litNome.Text), "Prodotto") %>
@@ -7,7 +7,6 @@
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
     <asp:Literal ID="litSeoHead" runat="server" EnableViewState="false" />
 
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/vendor/swiper-bundle.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/vendor/photoswipe.css") %>" />
     <link rel="stylesheet" href="/Public/assets/keepstore/css/keepstore-product.css" />
 
@@ -221,7 +220,7 @@
 
                                 <div class="card-product-info">
                                     <a class="name-product link" href='<%# "articolo.aspx?id=" & Eval("id") %>'>
-                                        <%# Server.HtmlEncode(compatta_testo(Convert.ToString(Eval("Descrizione1")), 70)) %>
+                                        <%# Server.HtmlEncode(ThemeManager.CompactText(Eval("Descrizione1"), 70)) %>
                                     </a>
 
                                     <div class="price-wrap">
@@ -246,7 +245,6 @@
 </asp:Content>
 
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script src="<%= ThemeManager.Asset("js/vendor/swiper-bundle.min.js") %>"></script>
     <script src="<%= ThemeManager.Asset("js/vendor/photoswipe.umd.min.js") %>"></script>
     <script src="/Public/assets/keepstore/js/keepstore-product.js"></script>
 </asp:Content>

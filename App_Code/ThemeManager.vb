@@ -249,6 +249,37 @@ Public Module ThemeManager
         End Try
     End Function
 
+
+
+    ''' <summary>
+    ''' Compatta un testo a una lunghezza massima (utile per card/prodotti).
+    ''' - Ritorna stringa vuota per Nothing/DBNull.
+    ''' - Non esegue HtmlEncode (va fatto nel markup dove serve).
+    ''' </summary>
+    Public Function CompactText(ByVal value As Object, ByVal maxLen As Integer) As String
+        Dim s As String = String.Empty
+
+        Try
+            If value Is Nothing OrElse Convert.IsDBNull(value) Then
+                s = String.Empty
+            Else
+                s = Convert.ToString(value)
+            End If
+        Catch
+            s = String.Empty
+        End Try
+
+        s = If(s, String.Empty).Trim()
+        If s.Length = 0 Then Return String.Empty
+
+        If maxLen <= 0 Then Return s
+        If s.Length <= maxLen Then Return s
+
+        ' Evita eccezioni con maxLen piccolo
+        If maxLen = 1 Then Return s.Substring(0, 1)
+
+        Return s.Substring(0, maxLen - 1) & "..."
+    End Function
     Private Function EscapePathSegment(ByVal segment As String) As String
         If String.IsNullOrEmpty(segment) Then Return String.Empty
 
