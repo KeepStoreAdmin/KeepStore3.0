@@ -1,5 +1,6 @@
 <%@ Page Title="" Language="VB" MasterPageFile="~/Public/ui/master/Site.master" AutoEventWireup="false" CodeFile="articoli.aspx.vb" Inherits="Articoli" %>
 <%@ Import Namespace="System" %>
+<%@ Import Namespace="System.Web" %>
 <%@ Register Src="~/Public/ui/controls/Breadcrumb.ascx" TagPrefix="ks" TagName="Breadcrumb" %>
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
@@ -17,6 +18,18 @@
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
+    <%-- Hidden helpers required by VB logic (no UI) --%>
+    <asp:Panel ID="tNavig" runat="server" CssClass="d-none" />
+    <asp:Label ID="lblRicerca" runat="server" CssClass="d-none" />
+    <asp:Label ID="lblTrovati" runat="server" CssClass="d-none" />
+
+    <%-- Categoria helper (Title/SEO) --%>
+    <asp:FormView ID="FormView1" runat="server" Visible="false">
+        <ItemTemplate>
+            <asp:Label ID="lblCategoria" runat="server" Text="" />
+        </ItemTemplate>
+    </asp:FormView>
+
     <section class="tf-sp-2">
         <div class="container">
 
@@ -29,6 +42,7 @@
                 </div>
 
                 <div class="d-flex align-items-center gap-2 flex-wrap">
+
                     <!-- Mobile filters trigger -->
                     <button id="ksToolbarFiltersBtn" class="btn btn-outline-secondary d-lg-none" type="button">
                         <i class="icon icon-filter"></i>
@@ -86,22 +100,85 @@
                                 </div>
                             </asp:Panel>
 
-                            <!--
-                              Spazi riservati per filtri avanzati.
-                              IMPORTANT: Manteniamo invariati controlli/VB. Se in futuro verranno
-                              aggiunti repeater/checkbox server-side, inserirli qui senza cambiare ID.
-                            -->
+                            <!-- Advanced filters (server-driven, no VB changes) -->
                             <div class="ks-filter-group" id="filtersMr">
-                                <!-- Marche -->
+                                <asp:DataList ID="DataList1" runat="server" DataSourceID="sdsMarche" RepeatLayout="Flow">
+                                    <ItemTemplate>
+                                        <div class="form-check d-flex align-items-start gap-2 ks-filter-item">
+                                            <asp:CheckBox ID="CheckBoxMr" runat="server"
+                                                CssClass="form-check-input"
+                                                AutoPostBack="true"
+                                                OnCheckedChanged="CheckBoxMr_CheckedChanged"
+                                                filterId='<%# Eval("MarcheId") %>'
+                                                Checked='<%# (("|" & Convert.ToString(Request.QueryString("mr")) & "|").Contains("|" & Convert.ToString(Eval("MarcheId")) & "|")) %>' />
+                                            <div class="flex-grow-1">
+                                                <asp:Label ID="lblMr" runat="server" AssociatedControlID="CheckBoxMr" CssClass="form-check-label"
+                                                    Text='<%# HttpUtility.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>' />
+                                            </div>
+                                            <span class="badge bg-light text-muted"><%# Eval("Numero") %></span>
+                                        </div>
+                                    </ItemTemplate>
+                                </asp:DataList>
                             </div>
+
                             <div class="ks-filter-group" id="filtersTp">
-                                <!-- Tipologie -->
+                                <asp:DataList ID="DataList2" runat="server" DataSourceID="sdsTipologie" RepeatLayout="Flow">
+                                    <ItemTemplate>
+                                        <div class="form-check d-flex align-items-start gap-2 ks-filter-item">
+                                            <asp:CheckBox ID="CheckBoxTp" runat="server"
+                                                CssClass="form-check-input"
+                                                AutoPostBack="true"
+                                                OnCheckedChanged="CheckBoxTp_CheckedChanged"
+                                                filterId='<%# Eval("TipologieId") %>'
+                                                Checked='<%# (("|" & Convert.ToString(Request.QueryString("tp")) & "|").Contains("|" & Convert.ToString(Eval("TipologieId")) & "|")) %>' />
+                                            <div class="flex-grow-1">
+                                                <asp:Label ID="lblTp" runat="server" AssociatedControlID="CheckBoxTp" CssClass="form-check-label"
+                                                    Text='<%# HttpUtility.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>' />
+                                            </div>
+                                            <span class="badge bg-light text-muted"><%# Eval("Numero") %></span>
+                                        </div>
+                                    </ItemTemplate>
+                                </asp:DataList>
                             </div>
+
                             <div class="ks-filter-group" id="filtersGr">
-                                <!-- Gruppi -->
+                                <asp:DataList ID="DataList3" runat="server" DataSourceID="sdsGruppo" RepeatLayout="Flow">
+                                    <ItemTemplate>
+                                        <div class="form-check d-flex align-items-start gap-2 ks-filter-item">
+                                            <asp:CheckBox ID="CheckBoxGr" runat="server"
+                                                CssClass="form-check-input"
+                                                AutoPostBack="true"
+                                                OnCheckedChanged="CheckBoxGr_CheckedChanged"
+                                                filterId='<%# Eval("GruppiId") %>'
+                                                Checked='<%# (("|" & Convert.ToString(Request.QueryString("gr")) & "|").Contains("|" & Convert.ToString(Eval("GruppiId")) & "|")) %>' />
+                                            <div class="flex-grow-1">
+                                                <asp:Label ID="lblGr" runat="server" AssociatedControlID="CheckBoxGr" CssClass="form-check-label"
+                                                    Text='<%# HttpUtility.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>' />
+                                            </div>
+                                            <span class="badge bg-light text-muted"><%# Eval("Numero") %></span>
+                                        </div>
+                                    </ItemTemplate>
+                                </asp:DataList>
                             </div>
+
                             <div class="ks-filter-group" id="filtersSg">
-                                <!-- Sottogruppi -->
+                                <asp:DataList ID="DataList4" runat="server" DataSourceID="sdsSottogruppo" RepeatLayout="Flow">
+                                    <ItemTemplate>
+                                        <div class="form-check d-flex align-items-start gap-2 ks-filter-item">
+                                            <asp:CheckBox ID="CheckBoxSg" runat="server"
+                                                CssClass="form-check-input"
+                                                AutoPostBack="true"
+                                                OnCheckedChanged="CheckBoxSg_CheckedChanged"
+                                                filterId='<%# Eval("SottogruppiId") %>'
+                                                Checked='<%# (("|" & Convert.ToString(Request.QueryString("sg")) & "|").Contains("|" & Convert.ToString(Eval("SottogruppiId")) & "|")) %>' />
+                                            <div class="flex-grow-1">
+                                                <asp:Label ID="lblSg" runat="server" AssociatedControlID="CheckBoxSg" CssClass="form-check-label"
+                                                    Text='<%# HttpUtility.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>' />
+                                            </div>
+                                            <span class="badge bg-light text-muted"><%# Eval("Numero") %></span>
+                                        </div>
+                                    </ItemTemplate>
+                                </asp:DataList>
                             </div>
 
                         </div>
@@ -115,62 +192,112 @@
                         <asp:Label ID="lblPrezzi" runat="server" CssClass="text-muted small" Text=""></asp:Label>
                     </div>
 
-                    <asp:GridView ID="GridView1" runat="server"
-                        AutoGenerateColumns="False"
-                        ShowHeader="False"
-                        AllowPaging="True"
-                        CssClass="ks-gv-grid"
-                        PagerStyle-CssClass="ks-gv-pager"
-                        GridLines="None">
+                    <asp:ListView ID="lvProdotti" runat="server" DataSourceID="sdsArticoli" OnPreRender="lvProdotti_PreRender">
+                        <LayoutTemplate>
+                            <div class="row g-3" id="ksProductsGrid">
+                                <asp:PlaceHolder ID="itemPlaceholder" runat="server" />
+                            </div>
 
-                        <Columns>
-                            <asp:TemplateField>
-                                <ItemTemplate>
-                                    <div class="card ks-product-card">
-                                        <a class="d-block" href='<%# "/articolo.aspx?id=" & Eval("id") %>'>
-                                            <img class="ks-product-img" alt='<%# Convert.ToString(Eval("Descrizione1")) %>'
-                                                 src='<%# If(Eval("Img1") Is Nothing OrElse Convert.ToString(Eval("Img1")).Trim() = "", "/Public/assets/keepstore/images/keepstore/placeholder.png", Convert.ToString(Eval("Img1")) ) %>' />
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-4" id="ksPagerWrap" runat="server">
+                                <asp:DataPager ID="dpProdotti" runat="server" PagedControlID="lvProdotti" PageSize="12" CssClass="pagination ks-pager">
+                                    <Fields>
+                                        <asp:NextPreviousPagerField ButtonType="Link" ShowPreviousPageButton="true" ShowNextPageButton="false" PreviousPageText="«" />
+                                        <asp:NumericPagerField ButtonType="Link" NumericButtonCount="7" />
+                                        <asp:NextPreviousPagerField ButtonType="Link" ShowPreviousPageButton="false" ShowNextPageButton="true" NextPageText="»" />
+                                    </Fields>
+                                </asp:DataPager>
+
+                                <asp:Panel ID="ksMultiFooter" runat="server" CssClass="d-flex align-items-center gap-2" Visible="false">
+                                    <asp:ImageButton ID="IB_SelezioneMultipla" runat="server"
+                                        CssClass="btn btn-outline-primary btn-sm"
+                                        ImageUrl="/Public/assets/keepstore/images/keepstore/placeholder.png"
+                                        AlternateText="Aggiungi selezione al carrello"
+                                        CausesValidation="false"
+                                        OnClick="Selezione_Multipla_Click" />
+                                </asp:Panel>
+                            </div>
+                        </LayoutTemplate>
+
+                        <ItemTemplate>
+                            <div class="col-6 col-md-4">
+                                <div class="card ks-product-card h-100">
+                                    <a class="d-block" href='<%# "/articolo.aspx?id=" & Eval("id") %>'>
+                                        <img class="ks-product-img"
+                                             alt='<%# HttpUtility.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>'
+                                             src='<%# ResolveUrl(checkImg(Eval("Img1"))) %>' />
+                                    </a>
+
+                                    <div class="card-body p-3 d-flex flex-column">
+                                        <a class="text-decoration-none" href='<%# "/articolo.aspx?id=" & Eval("id") %>'>
+                                            <div class="ks-product-title">
+                                                <%# HttpUtility.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>
+                                            </div>
                                         </a>
-                                        <div class="card-body">
-                                            <div class="ks-product-meta mb-1"><%#: Eval("MarcheDescrizione") %></div>
-                                            <a class="ks-product-title text-decoration-none d-block" href='<%# "/articolo.aspx?id=" & Eval("id") %>'>
-                                                <%#: Eval("Descrizione1") %>
-                                            </a>
 
-                                            <div class="text-muted small mt-1"><%#: Eval("Descrizione2") %></div>
-
-                                            <div class="price-wrap">
-                                                <%# UiPriceFormatter.RenderPriceHtml(Eval("Prezzo"), Eval("PrezzoIvato"), Eval("PrezzoPromo"), Eval("PrezzoPromoIvato"), Eval("InOfferta"), Session("IvaTipo")) %>
-                                            </div>
-
-                                            <div class="text-muted small mt-2">
-                                                <span>Disponibilità:</span>
-                                                <span class="fw-semibold"><%#: Eval("Disponibilita") %></span>
-                                            </div>
+                                        <div class="price-wrap fw-medium mt-1">
+                                            <%# UiPriceFormatter.RenderPriceHtml(Eval("Prezzo"), Eval("PrezzoIvato"), Eval("PrezzoPromo"), Eval("PrezzoPromoIvato"), Eval("InOfferta"), Session("IvaTipo")) %>
                                         </div>
+
+                                        <div class="mt-auto d-flex align-items-center gap-2 pt-2">
+                                            <asp:TextBox ID="tbQuantita" runat="server" Text="1" CssClass="form-control form-control-sm ks-qty" />
+
+                                            <asp:LinkButton ID="LB_AddToCart" runat="server"
+                                                CssClass="btn btn-primary btn-sm flex-grow-1"
+                                                CausesValidation="false"
+                                                OnClick="LB_AddToCart_Click">
+                                                Aggiungi
+                                            </asp:LinkButton>
+
+                                            <asp:LinkButton ID="LB_wishlist" runat="server"
+                                                CssClass="btn btn-outline-secondary btn-sm"
+                                                CausesValidation="false"
+                                                OnClick="BT_Aggiungi_wishlist_Click"
+                                                ToolTip="Aggiungi alla wishlist">
+                                                ♥
+                                            </asp:LinkButton>
+                                        </div>
+
+                                        <%-- helper fields used by VB helpers --%>
+                                        <asp:HiddenField ID="hfID" runat="server" Value='<%# Eval("id") %>' />
+                                        <asp:HiddenField ID="hfTCId" runat="server" Value='<%# If(Eval("TCid") Is Nothing OrElse Convert.IsDBNull(Eval("TCid")), "-1", Eval("TCid")) %>' />
+                                        <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" CssClass="d-none" />
                                     </div>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                        </Columns>
+                                </div>
+                            </div>
+                        </ItemTemplate>
 
                         <EmptyDataTemplate>
-                            <div class="alert alert-light border mt-2">
-                                Nessun articolo trovato con i filtri selezionati.
+                            <div class="alert alert-light border">
+                                Nessun prodotto trovato con i filtri selezionati.
                             </div>
                         </EmptyDataTemplate>
 
-                    </asp:GridView>
-
-                    <%--
-                        Legacy compat: alcuni rami della logica VB (articoli.aspx.vb)
-                        si aspettano un DataPager con ID "dpProdotti" per gestire PageSize.
-                        Qui lo dichiariamo senza impattare la UI (il paging reale resta su GridView).
-                    --%>
-                    <asp:DataPager ID="dpProdotti" runat="server" PageSize="12" Visible="false" />
+                    </asp:ListView>
 
                 </div>
 
             </div>
+
+            <%-- DataSources required by VB (commands/params set in VB) --%>
+            <asp:SqlDataSource ID="sdsArticoli" runat="server"
+                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+            <asp:SqlDataSource ID="sdsMarche" runat="server"
+                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+            <asp:SqlDataSource ID="sdsTipologie" runat="server"
+                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+            <asp:SqlDataSource ID="sdsGruppo" runat="server"
+                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
+
+            <asp:SqlDataSource ID="sdsSottogruppo" runat="server"
+                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
 
         </div>
     </section>

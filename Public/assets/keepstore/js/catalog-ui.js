@@ -134,7 +134,7 @@
       return host;
     }
 
-    var grid = document.getElementById('GridView1');
+    var grid = document.getElementById('ksProductsGrid') || document.getElementById('GridView1');
     if (grid && grid.parentNode) {
       grid.parentNode.insertBefore(host, grid);
       return host;
@@ -427,6 +427,9 @@
       return;
     }
 
+    // Append panels inside ASP.NET form to keep server controls functional (WebForms)
+    var formHost = (document.forms && document.forms.length) ? document.forms[0] : document.body;
+
     // If a toolbar trigger exists, don't render floating FAB
     var toolbarBtn = document.getElementById('ksToolbarFiltersBtn');
     var useFab = !toolbarBtn;
@@ -438,14 +441,14 @@
       fab.className = 'ks-filter-fab';
       fab.id = 'ksFiltersFab';
       fab.innerHTML = '<span aria-hidden="true">☰</span><span>Filtri</span>';
-      document.body.appendChild(fab);
+      formHost.appendChild(fab);
     }
 
     // Overlay + panel
     var overlay = document.createElement('div');
     overlay.className = 'ks-filter-overlay';
     overlay.id = 'ksFilterOverlay';
-    document.body.appendChild(overlay);
+    formHost.appendChild(overlay);
 
     var panel = document.createElement('div');
     panel.className = 'ks-filter-panel';
@@ -464,7 +467,7 @@
       '  <button type="button" class="ks-filter-panel-btn" id="ksFilterClose2">Chiudi</button>' +
       '  <button type="button" class="ks-filter-panel-btn ks-filter-panel-btn-primary" id="ksFilterApply">Applica</button>' +
       '</div>';
-    document.body.appendChild(panel);
+    formHost.appendChild(panel);
 
     var body = panel.querySelector('#ksFilterBody');
 
