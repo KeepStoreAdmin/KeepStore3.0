@@ -8,7 +8,6 @@
 
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
     <asp:Literal ID="litSeoHead" runat="server" EnableViewState="false" />
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/keepstore-catalog.css" />
 </asp:Content>
 
 <asp:Content ID="BreadcrumbContent1" ContentPlaceHolderID="BreadcrumbContent" runat="server">
@@ -107,44 +106,73 @@
             <div class="wrapper-control-shop">
                 <asp:ListView ID="lvProdotti" runat="server" DataSourceID="sdsArticoli">
                     <LayoutTemplate>
-                        <div class="tf-grid-layout wrapper-shop" data-grid="grid-4">
+                        <div id="gridLayout" class="tf-grid-layout lg-col-4 md-col-3 sm-col-2 flat-grid-product wrapper-shop layout-tabgrid-1">
                             <asp:PlaceHolder ID="itemPlaceholder" runat="server" />
                         </div>
                     </LayoutTemplate>
 
                     <ItemTemplate>
-                        <div class="card-product style-1">
-                            <div class="card-product-wrapper">
-                                <a class="product-img" href='<%# "articolo.aspx?id=" & Eval("id") %>'>
-                                    <img class="lazyload img-product" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>'
-                                         src='<%# ThemeManager.ProductImageUrl(Eval("img1")) %>' />
-                                </a>
+	                        <div class="card-product style-1">
+	                            <div class="card-product-wrapper overflow-visible">
 
-                                <%# If(Val(Eval("InOfferta")) = 1, "<div class='box-sale-wrap'><span class='sale-item'>Offerta</span></div>", "") %>
+	                                <div class="product-thumb-image">
+	                                    <a href='<%# "articolo.aspx?id=" & Eval("id") %>' class="card-image">
+	                                        <img class="lazyload img-product" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>'
+	                                             src='<%# ThemeManager.ProductImageUrl(Eval("img1")) %>'
+	                                             data-src='<%# ThemeManager.ProductImageUrl(Eval("img1")) %>' />
+	                                    </a>
+	                                    <ul class="list-image-product">
+	                                        <li class="image-swap active">
+	                                            <img class="lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>'
+	                                                 src='<%# ThemeManager.ProductImageUrl(Eval("img1")) %>'
+	                                                 data-src='<%# ThemeManager.ProductImageUrl(Eval("img1")) %>' />
+	                                        </li>
+	                                        <li class="image-swap">
+	                                            <img class="lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>'
+	                                                 src='<%# ThemeManager.ProductImageUrl(Eval("img1")) %>'
+	                                                 data-src='<%# ThemeManager.ProductImageUrl(Eval("img1")) %>' />
+	                                        </li>
+	                                    </ul>
+	                                </div>
 
-                                <div class="list-product-btn absolute-2">
-                                    <asp:LinkButton ID="LB_wishlist" runat="server" CommandArgument='<%# Eval("id") %>' CssClass="box-icon bg_white wishlist" OnClick="LB_wishlist_Click" ToolTip="Aggiungi alla wishlist">
-                                        <i class="icon icon-heart"></i>
-                                        <span class="tooltip">Wishlist</span>
-                                    </asp:LinkButton>
+	                                <ul class="list-product-btn top-0 end-0">
+	                                    <li>
+	                                        <asp:LinkButton ID="btnAdd" runat="server" CommandArgument='<%# Eval("id") %>'
+	                                            CssClass="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left"
+	                                            OnClick="LB_AddToCart_Click" CausesValidation="False" ToolTip="Aggiungi al carrello">
+	                                            <i class="icon icon-cart2"></i>
+	                                            <span class="tooltip">Carrello</span>
+	                                        </asp:LinkButton>
+	                                    </li>
+	                                    <li class="wishlist">
+	                                        <asp:LinkButton ID="LB_wishlist" runat="server" CommandArgument='<%# Eval("id") %>'
+	                                            CssClass="box-icon btn-icon-action hover-tooltip tooltip-left"
+	                                            OnClick="BT_Aggiungi_wishlist_Click" CausesValidation="False" ToolTip="Aggiungi alla wishlist">
+	                                            <i class="icon icon-heart2"></i>
+	                                            <span class="tooltip">Wishlist</span>
+	                                        </asp:LinkButton>
+	                                    </li>
+	                                    <li>
+	                                        <a href='<%# "articolo.aspx?id=" & Eval("id") %>' class="box-icon btn-icon-action hover-tooltip tooltip-left">
+	                                            <i class="icon icon-view"></i>
+	                                            <span class="tooltip">Dettagli</span>
+	                                        </a>
+	                                    </li>
+	                                </ul>
 
-                                    <asp:LinkButton ID="btnAdd" runat="server" CssClass="box-icon bg_white" OnClick="LB_AddToCart_Click" ToolTip="Aggiungi al carrello">
-                                        <i class="icon icon-bag"></i>
-                                        <span class="tooltip">Carrello</span>
-                                    </asp:LinkButton>
-                                </div>
+	                                <%# If(Val(Eval("InOfferta")) = 1, "<div class='box-sale-wrap pst-default'><p class='small-text'>Sale</p></div>", "") %>
 
-                                <!-- Required by codebehind -->
-                                <asp:HiddenField ID="hfID" runat="server" Value='<%# Eval("id") %>' />
-                                <asp:HiddenField ID="hfTCId" runat="server" Value='<%# Eval("TCId") %>' />
-                            </div>
+	                                <!-- Required by codebehind -->
+	                                <asp:HiddenField ID="hfID" runat="server" Value='<%# Eval("id") %>' />
+	                                <asp:HiddenField ID="hfTCId" runat="server" Value='<%# Eval("TCId") %>' />
+	                            </div>
 
-                            <div class="card-product-info">
-                                <a class="name-product link" href='<%# "articolo.aspx?id=" & Eval("id") %>'>
+	                            <div class="card-product-info">
+	                                <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# "articolo.aspx?id=" & Eval("id") %>'>
                                     <%# Server.HtmlEncode(compatta_testo(Convert.ToString(Eval("Descrizione1")), 70)) %>
                                 </a>
 
-                                <div class="price-wrap">
+	                                <p class="price-wrap fw-medium mt-1">
                                     <%# UiPriceFormatter.RenderPriceHtml(
                                             If(IsDBNull(Eval("Prezzo")), 0, Eval("Prezzo")),
                                             If(IsDBNull(Eval("PrezzoIvato")), 0, Eval("PrezzoIvato")),
@@ -153,7 +181,7 @@
                                             Val(Eval("InOfferta")),
                                             Session("IvaTipo")
                                         ) %>
-                                </div>
+	                                </p>
 
                                 <!-- Multi-select / quantity (kept, but visually compact) -->
                                 <div class="d-flex align-items-center gap-2 mt-2">

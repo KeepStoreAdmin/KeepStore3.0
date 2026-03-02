@@ -167,3 +167,28 @@
   padding:14px;
 }
 
+/* =========================
+   Catalogo (Shop Default) - rifiniture mirate
+   ========================= */
+
+/* I LinkButton ASP.NET renderizzano come <a>: assicura coerenza con gli anchor del tema */
+.list-product-btn a{
+  text-decoration:none;
+  cursor:pointer;
+}
+
+/* Filtri catalogo (DataList) */
+.ks-filter-list .form-check{
+  margin-bottom:.25rem;
+}
+
+.ks-filter-list a.form-check-label,
+.ks-filter-list .form-check-label a{
+  text-decoration:none;
+}
+
+.ks-filter-list a.form-check-label:hover,
+.ks-filter-list .form-check-label a:hover{
+  text-decoration:underline;
+}
+

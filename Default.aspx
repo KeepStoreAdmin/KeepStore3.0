@@ -1,4 +1,4 @@
-<%@ Page Title="Home" Language="VB" MasterPageFile="~/Public/ui/master/Site.master" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
+<%@ Page Title="Home" Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
 
 <%@ Register Src="~/Public/ui/controls/HomeDepartmentsMenu.ascx" TagPrefix="ks" TagName="HomeDepartmentsMenu" %>
 <%@ Register Src="~/Public/ui/controls/HomeHeroSlider.ascx" TagPrefix="ks" TagName="HomeHeroSlider" %>
@@ -10,7 +10,6 @@
 </asp:Content>
 
 <asp:Content ID="Content2" ContentPlaceHolderID="HeadContent" runat="Server">
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/keepstore-home.css" />
 </asp:Content>
 
 <asp:Content ID="Content3" ContentPlaceHolderID="MainContent" runat="Server">
@@ -56,7 +55,7 @@
                             <div class="card-product-wrapper">
                                 <a class="product-img" href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>'>
                                     <img class="lazyload img-product" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>'
-                                         src='<%# If(Eval("img1") Is Nothing OrElse Convert.ToString(Eval("img1")).Trim() = "", "/Public/images/nofoto.gif", Convert.ToString(Eval("img1"))) %>' />
+                                         src='<%# ThemeManager.ProductImageUrl(Eval("img1")) %>' />
                                 </a>
 
                                 <%# If(Val(Eval("InOfferta")) = 1, "<div class='box-sale-wrap'><span class='sale-item'>Offerta</span></div>", "") %>
@@ -99,7 +98,7 @@
                             <div class="card-product-wrapper">
                                 <a class="product-img" href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>'>
                                     <img class="lazyload img-product" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>'
-                                         src='<%# If(Eval("img1") Is Nothing OrElse Convert.ToString(Eval("img1")).Trim() = "", "/Public/images/nofoto.gif", Convert.ToString(Eval("img1"))) %>' />
+                                         src='<%# ThemeManager.ProductImageUrl(Eval("img1")) %>' />
                                 </a>
 
                                 <%# If(Val(Eval("InOfferta")) = 1, "<div class='box-sale-wrap'><span class='sale-item'>Offerta</span></div>", "") %>
@@ -142,7 +141,7 @@
                             <div class="card-product-wrapper">
                                 <a class="product-img" href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>'>
                                     <img class="lazyload img-product" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>'
-                                         src='<%# If(Eval("img1") Is Nothing OrElse Convert.ToString(Eval("img1")).Trim() = "", "/Public/images/nofoto.gif", Convert.ToString(Eval("img1"))) %>' />
+                                         src='<%# ThemeManager.ProductImageUrl(Eval("img1")) %>' />
                                 </a>
 
                                 <%# If(Val(Eval("InOfferta")) = 1, "<div class='box-sale-wrap'><span class='sale-item'>Offerta</span></div>", "") %>
