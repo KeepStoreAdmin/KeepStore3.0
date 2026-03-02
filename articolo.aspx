@@ -168,6 +168,40 @@
                 </ItemTemplate>
             </asp:FormView>
 
+            <!-- Related products (loaded/bound in code-behind) -->
+            <asp:PlaceHolder ID="phRelated" runat="server" Visible="false">
+                <div class="mt-5">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h3 class="h5 mb-0">Prodotti correlati</h3>
+                    </div>
+
+                    <div class="row g-3">
+                        <asp:Repeater ID="rptRelated" runat="server">
+                            <ItemTemplate>
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <div class="card ks-product-card h-100">
+                                        <a class="d-block" href='<%# Eval("Url") %>'>
+                                            <img class="ks-product-img"
+                                                 src='<%# Eval("Img") %>'
+                                                 alt='<%#: Eval("Nome") %>'
+                                                 loading="lazy" />
+                                        </a>
+                                        <div class="card-body p-3 d-flex flex-column">
+                                            <a class="text-decoration-none fw-semibold mb-2" href='<%# Eval("Url") %>'><%#: Eval("Nome") %></a>
+                                            <div class="mt-auto price-wrap fw-medium">
+                                                <%# Eval("PrezzoHtml") %>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </ItemTemplate>
+                        </asp:Repeater>
+                    </div>
+
+                </div>
+            </asp:PlaceHolder>
+
+
         </div>
     </section>
 

@@ -199,25 +199,6 @@
                             <div class="row g-3" id="ksProductsGrid">
                                 <asp:PlaceHolder ID="itemPlaceholder" runat="server" />
                             </div>
-
-                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-4" id="ksPagerWrap" runat="server">
-                                <asp:DataPager ID="dpProdotti" runat="server" PagedControlID="lvProdotti" PageSize="12" CssClass="pagination ks-pager">
-                                    <Fields>
-                                        <asp:NextPreviousPagerField ButtonType="Link" ShowPreviousPageButton="true" ShowNextPageButton="false" PreviousPageText="&laquo;" />
-                                        <asp:NumericPagerField ButtonType="Link" ButtonCount="7" />
-                                        <asp:NextPreviousPagerField ButtonType="Link" ShowPreviousPageButton="false" ShowNextPageButton="true" NextPageText="&raquo;" />
-                                    </Fields>
-                                </asp:DataPager>
-
-                                <asp:Panel ID="ksMultiFooter" runat="server" CssClass="d-flex align-items-center gap-2" Visible="false">
-                                    <asp:ImageButton ID="IB_SelezioneMultipla" runat="server"
-                                        CssClass="btn btn-outline-primary btn-sm"
-                                        ImageUrl="/Public/assets/keepstore/images/keepstore/placeholder.png"
-                                        AlternateText="Aggiungi selezione al carrello"
-                                        CausesValidation="false"
-                                        OnClick="Selezione_Multipla_Click" />
-                                </asp:Panel>
-                            </div>
                         </LayoutTemplate>
 
                         <ItemTemplate>
@@ -275,6 +256,26 @@
                         </EmptyDataTemplate>
 
                     </asp:ListView>
+
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-4" id="ksPagerWrap" runat="server">
+                        <asp:DataPager ID="dpProdotti" runat="server" PagedControlID="lvProdotti" PageSize="12" CssClass="pagination ks-pager">
+                            <Fields>
+                                <asp:NextPreviousPagerField ButtonType="Link" ShowPreviousPageButton="true" ShowNextPageButton="false" PreviousPageText="&laquo;" />
+                                <asp:NumericPagerField ButtonType="Link" ButtonCount="7" />
+                                <asp:NextPreviousPagerField ButtonType="Link" ShowPreviousPageButton="false" ShowNextPageButton="true" NextPageText="&raquo;" />
+                            </Fields>
+                        </asp:DataPager>
+
+                        <asp:Panel ID="ksMultiFooter" runat="server" CssClass="d-flex align-items-center gap-2" Visible="false">
+                            <asp:ImageButton ID="IB_SelezioneMultipla" runat="server"
+                                CssClass="btn btn-outline-primary btn-sm"
+                                ImageUrl="/Public/assets/keepstore/images/keepstore/placeholder.png"
+                                AlternateText="Aggiungi selezione al carrello"
+                                CausesValidation="false"
+                                OnClick="Selezione_Multipla_Click" />
+                        </asp:Panel>
+                    </div>
+
 
                 </div>
 
