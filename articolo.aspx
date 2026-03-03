@@ -56,7 +56,7 @@
                                     <asp:Repeater ID="rptMainImages" runat="server">
                                         <ItemTemplate>
                                             <div class="swiper-slide">
-                                                <a class="item" href='<%# Eval("Url") %>' data-pswp-width='<%# Eval("W") %>' data-pswp-height='<%# Eval("H") %>' target="_blank" rel="noopener">
+                                                <a class="item" href='<%# Eval("Url") %>' data-pswp-width="800" data-pswp-height="800" target="_blank" rel="noopener">
                                                     <img class="tf-image-zoom lazyload"
                                                          alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Alt"))) %>'
                                                          data-src='<%# Eval("Url") %>' src='<%# Eval("Url") %>' />

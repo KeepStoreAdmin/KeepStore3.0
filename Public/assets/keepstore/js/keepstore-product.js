@@ -150,11 +150,13 @@
         mainTemplate = document.createElement('div');
         mainTemplate.className = 'swiper-slide';
         var a = document.createElement('a');
-        a.className = 'product-img';
+        a.className = 'item';
+        a.setAttribute('target', '_blank');
+        a.setAttribute('rel', 'noopener');
         a.setAttribute('data-pswp-width', '800');
         a.setAttribute('data-pswp-height', '800');
         var img = document.createElement('img');
-        img.className = 'lazyload';
+        img.className = 'tf-image-zoom lazyload';
         img.setAttribute('alt', 'Immagine prodotto');
         a.appendChild(img);
         mainTemplate.appendChild(a);
@@ -163,10 +165,13 @@
       if (!thumbTemplate) {
         thumbTemplate = document.createElement('div');
         thumbTemplate.className = 'swiper-slide';
+        var item = document.createElement('div');
+        item.className = 'item';
         var ti = document.createElement('img');
         ti.className = 'lazyload';
         ti.setAttribute('alt', 'Anteprima prodotto');
-        thumbTemplate.appendChild(ti);
+        item.appendChild(ti);
+        thumbTemplate.appendChild(item);
       }
 
       // rebuild wrappers

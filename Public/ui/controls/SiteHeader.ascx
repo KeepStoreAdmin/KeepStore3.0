@@ -11,7 +11,8 @@
                 <div class="col-xl-3 col-md-3 col-7 d-flex align-items-center">
                     <div class="logo-site">
                         <a href="Default.aspx" class="d-inline-block">
-                            <asp:Image ID="imgLogo" runat="server" AlternateText="KeepStore" CssClass="lazyload" ImageUrl="" />
+                            <asp:Image ID="imgLogo" runat="server" AlternateText="KeepStore" CssClass="lazyload d-none d-md-inline-block" ImageUrl="" />
+                            <asp:Image ID="imgLogoMobile" runat="server" AlternateText="KeepStore" CssClass="lazyload d-inline-block d-md-none" ImageUrl="" />
                         </a>
                     </div>
                 </div>
@@ -144,8 +145,13 @@
 <!-- Mobile Menu -->
 <div class="offcanvas offcanvas-start canvas-mb" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
     <div class="canvas-header">
-        <h5 class="offcanvas-title" id="mobileMenuLabel">Menu</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        <h5 class="offcanvas-title visually-hidden" id="mobileMenuLabel">Menu</h5>
+        <div class="d-flex align-items-center justify-content-between w-100">
+            <a href="Default.aspx" class="logo-site d-inline-block" aria-label="Home">
+                <asp:Image ID="imgLogoDrawer" runat="server" AlternateText="KeepStore" CssClass="lazyload" ImageUrl="" />
+            </a>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
     </div>
 
     <div class="canvas-body">
