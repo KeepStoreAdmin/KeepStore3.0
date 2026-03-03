@@ -192,3 +192,25 @@
   text-decoration:underline;
 }
 
+
+/* ============================================================
+   Catalogo: link filtri (DataList) - stabilità + stato attivo
+   Nota: qui i filtri NON dipendono da un campo "url" nel datasource.
+   ============================================================ */
+
+.ks-filter-list a.ks-filter-option{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.ks-filter-list a.ks-filter-option:hover{
+  text-decoration:none;
+}
+
+.ks-filter-list a.ks-filter-option.active{
+  font-weight:600;
+}
+
+

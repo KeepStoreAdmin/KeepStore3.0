@@ -310,4 +310,207 @@ Public Module ThemeManager
         Return r.ToString()
     End Function
 
+
+
+    ' ============================================================
+    ' Catalogo / Shop: helper URL per filtri (senza dipendere da campi "url" nel datasource)
+    ' ============================================================
+
+    
+    Public Function CatalogFilterId(ByVal key As String, ByVal dataItem As Object) As String
+        Dim n As Integer = ExtractCatalogFilterId(key, dataItem)
+        If n <= 0 Then Return String.Empty
+        Return n.ToString()
+    End Function
+
+    Public Function CatalogFilterSelected(ByVal key As String, ByVal dataItem As Object) As Boolean
+        Dim idStr As String = CatalogFilterId(key, dataItem)
+        If String.IsNullOrEmpty(idStr) Then Return False
+
+        Dim ctx As HttpContext = HttpContext.Current
+        If ctx Is Nothing OrElse ctx.Request Is Nothing Then Return False
+
+        Dim current As String = Convert.ToString(ctx.Request.QueryString(key))
+        If String.IsNullOrEmpty(current) Then Return False
+
+        For Each p As String In current.Split("|"c)
+            If String.Equals(CleanIdPart(p), idStr, StringComparison.Ordinal) Then Return True
+        Next
+
+        Return False
+    End Function
+
+    Public Function CatalogFilterUrl(ByVal key As String, ByVal dataItem As Object) As String
+        Dim idStr As String = CatalogFilterId(key, dataItem)
+        If String.IsNullOrEmpty(idStr) Then
+            Return HtmlAttr(SafeCurrentPathAndQuery())
+        End If
+        Return CatalogFilterUrlById(key, idStr)
+    End Function
+
+    Public Function CatalogFilterUrlById(ByVal key As String, ByVal idStr As String) As String
+        Dim ctx As HttpContext = HttpContext.Current
+        If ctx Is Nothing OrElse ctx.Request Is Nothing Then Return "#"
+
+        Dim path As String = ctx.Request.Url.AbsolutePath
+
+        Dim qs As System.Collections.Specialized.NameValueCollection
+        Try
+            qs = HttpUtility.ParseQueryString(ctx.Request.QueryString.ToString())
+        Catch
+            qs = New System.Collections.Specialized.NameValueCollection()
+        End Try
+
+        Dim cleanKey As String = CleanFilterKey(key)
+        If String.IsNullOrEmpty(cleanKey) Then Return HtmlAttr(SafeCurrentPathAndQuery())
+
+        Dim cleanId As String = CleanIdPart(idStr)
+        If String.IsNullOrEmpty(cleanId) Then Return HtmlAttr(SafeCurrentPathAndQuery())
+
+        Dim list As New System.Collections.Generic.List(Of String)()
+
+        Dim current As String = Convert.ToString(qs(cleanKey))
+        If Not String.IsNullOrEmpty(current) Then
+            For Each p As String In current.Split("|"c)
+                Dim cp As String = CleanIdPart(p)
+                If cp <> "" AndAlso Not list.Contains(cp) Then list.Add(cp)
+            Next
+        End If
+
+        If list.Contains(cleanId) Then
+            list.Remove(cleanId)
+        Else
+            list.Add(cleanId)
+        End If
+
+        If list.Count = 0 Then
+            qs.Remove(cleanKey)
+        Else
+            qs(cleanKey) = String.Join("|", list.ToArray())
+        End If
+
+        ' reset paging + transient params when filters change
+        qs.Remove("page") : qs.Remove("pg") : qs.Remove("p")
+        qs.Remove("rimuovi")
+
+        Dim newQuery As String = qs.ToString()
+        Dim url As String = If(String.IsNullOrEmpty(newQuery), path, path & "?" & newQuery)
+        Return HtmlAttr(url)
+    End Function
+
+    Private Function SafeCurrentPathAndQuery() As String
+        Dim ctx As HttpContext = HttpContext.Current
+        If ctx Is Nothing OrElse ctx.Request Is Nothing Then Return "#"
+
+        Dim u As String = ctx.Request.RawUrl
+        If String.IsNullOrEmpty(u) Then u = ctx.Request.Url.AbsolutePath
+        Return u
+    End Function
+
+    Private Function HtmlAttr(ByVal s As String) As String
+        If s Is Nothing Then s = String.Empty
+        Try
+            Return HttpUtility.HtmlAttributeEncode(s)
+        Catch
+            Return s
+        End Try
+    End Function
+
+    Private Function CleanFilterKey(ByVal key As String) As String
+        If String.IsNullOrEmpty(key) Then Return String.Empty
+        key = key.Trim()
+
+        Dim sb As New System.Text.StringBuilder(key.Length)
+        For Each ch As Char In key
+            If Char.IsLetterOrDigit(ch) OrElse ch = "_"c Then
+                sb.Append(Char.ToLowerInvariant(ch))
+            End If
+        Next
+
+        Return sb.ToString()
+    End Function
+
+    Private Function CleanIdPart(ByVal s As String) As String
+        If String.IsNullOrEmpty(s) Then Return String.Empty
+
+        Dim n As Integer = 0
+        Try
+            n = CInt(Val(s))
+        Catch
+            n = 0
+        End Try
+
+        If n <= 0 Then Return String.Empty
+        Return n.ToString()
+    End Function
+
+    Private Function ExtractCatalogFilterId(ByVal key As String, ByVal dataItem As Object) As Integer
+        Try
+            Dim drv As System.Data.DataRowView = TryCast(dataItem, System.Data.DataRowView)
+            If drv Is Nothing Then Return 0
+
+            For Each colName As String In GetCandidateIdColumns(key)
+                Dim v As String = TryGetDrvValue(drv, colName)
+                Dim n As Integer = 0
+                Try : n = CInt(Val(v)) : Catch : n = 0 : End Try
+                If n > 0 Then Return n
+            Next
+
+            ' Fallback: primo campo che contiene "id"
+            For Each c As System.Data.DataColumn In drv.Row.Table.Columns
+                Dim cn As String = Convert.ToString(c.ColumnName)
+                If String.IsNullOrEmpty(cn) Then Continue For
+                If cn.ToLowerInvariant().Contains("id") Then
+                    Dim v As String = TryGetDrvValue(drv, cn)
+                    Dim n As Integer = 0
+                    Try : n = CInt(Val(v)) : Catch : n = 0 : End Try
+                    If n > 0 Then Return n
+                End If
+            Next
+
+            ' Fallback 2: prima colonna numerica valida
+            For Each c As System.Data.DataColumn In drv.Row.Table.Columns
+                Dim v As String = TryGetDrvValue(drv, c.ColumnName)
+                Dim n As Integer = 0
+                Try : n = CInt(Val(v)) : Catch : n = 0 : End Try
+                If n > 0 Then Return n
+            Next
+
+        Catch
+            ' swallow
+        End Try
+
+        Return 0
+    End Function
+
+    Private Function GetCandidateIdColumns(ByVal key As String) As String()
+        If key Is Nothing Then key = ""
+        key = key.Trim().ToLowerInvariant()
+
+        Select Case key
+            Case "gr"
+                Return New String() {"id", "GruppiId", "GruppoId", "IDGruppo", "idgruppo"}
+            Case "sg"
+                Return New String() {"id", "SottogruppiId", "SottogruppoId", "IDSottogruppo", "idsottogruppo"}
+            Case "mr"
+                Return New String() {"id", "MarcheId", "MarcaId", "marcheid", "idmarca"}
+            Case "tp"
+                Return New String() {"id", "TipologieId", "TipologiaId", "tipologieid"}
+            Case Else
+                Return New String() {"id"}
+        End Select
+    End Function
+
+    Private Function TryGetDrvValue(ByVal drv As System.Data.DataRowView, ByVal colName As String) As String
+        If drv Is Nothing OrElse String.IsNullOrEmpty(colName) Then Return String.Empty
+        Try
+            Dim o As Object = drv(colName)
+            If o Is Nothing OrElse Convert.IsDBNull(o) Then Return String.Empty
+            Return Convert.ToString(o)
+        Catch
+            Return String.Empty
+        End Try
+    End Function
+
+
 End Module

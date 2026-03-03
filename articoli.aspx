@@ -241,7 +241,7 @@
                     <asp:DataList ID="DataList1" runat="server" DataSourceID="sdsGruppo" RepeatLayout="Flow" CssClass="ks-filter-list">
                         <ItemTemplate>
                             <div class="form-check">
-                                <a class="form-check-label" href='<%# Eval("url") %>'><%# Eval("descrizione") %></a>
+                                <a class='form-check-label ks-filter-option<%# If(ThemeManager.CatalogFilterSelected("gr", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("gr", Container.DataItem) %>'><%# Eval("descrizione") %></a>
                             </div>
                         </ItemTemplate>
                     </asp:DataList>
@@ -252,7 +252,7 @@
                     <asp:DataList ID="DataList4" runat="server" DataSourceID="sdsSottogruppo" RepeatLayout="Flow" CssClass="ks-filter-list">
                         <ItemTemplate>
                             <div class="form-check">
-                                <a class="form-check-label" href='<%# Eval("url") %>'><%# Eval("descrizione") %></a>
+                                <a class='form-check-label ks-filter-option<%# If(ThemeManager.CatalogFilterSelected("sg", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("sg", Container.DataItem) %>'><%# Eval("descrizione") %></a>
                             </div>
                         </ItemTemplate>
                     </asp:DataList>
@@ -263,7 +263,7 @@
                     <asp:DataList ID="DataList2" runat="server" DataSourceID="sdsMarche" RepeatLayout="Flow" CssClass="ks-filter-list">
                         <ItemTemplate>
                             <div class="form-check">
-                                <a class="form-check-label" href='<%# Eval("url") %>'><%# Eval("descrizione") %></a>
+                                <a class='form-check-label ks-filter-option<%# If(ThemeManager.CatalogFilterSelected("mr", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("mr", Container.DataItem) %>'><%# Eval("descrizione") %></a>
                             </div>
                         </ItemTemplate>
                     </asp:DataList>
@@ -274,7 +274,7 @@
                     <asp:DataList ID="DataList3" runat="server" DataSourceID="sdsTipologie" RepeatLayout="Flow" CssClass="ks-filter-list">
                         <ItemTemplate>
                             <div class="form-check">
-                                <a class="form-check-label" href='<%# Eval("url") %>'><%# Eval("descrizione") %></a>
+                                <a class='form-check-label ks-filter-option<%# If(ThemeManager.CatalogFilterSelected("tp", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("tp", Container.DataItem) %>'><%# Eval("descrizione") %></a>
                             </div>
                         </ItemTemplate>
                     </asp:DataList>
