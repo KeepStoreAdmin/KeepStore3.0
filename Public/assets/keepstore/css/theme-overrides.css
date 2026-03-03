@@ -309,3 +309,116 @@
 
 
 
+
+/* =============================================================
+   STEP 47 – Product Detail + Cart/Checkout (pixel-level pass)
+   Regola: ZERO nuovi CSS file, solo consolidamento su theme-overrides.css
+   ============================================================= */
+
+/* ---------- Product detail gallery (Swiper) ---------- */
+.tf-product-media-wrap .tf-product-media-main .swiper-slide a.item {
+  display: block;
+}
+
+.tf-product-media-wrap .tf-product-media-main img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  background: #fff;
+}
+
+#ks-product-thumbs-wrap {
+  margin-top: 12px;
+}
+
+#ks-product-thumbs-wrap .tf-product-media-thumbs .swiper-slide .item {
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+
+#ks-product-thumbs-wrap .tf-product-media-thumbs img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+/* ---------- Qty control (server TextBox inside template component) ---------- */
+.wg-quantity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wg-quantity .quantity-product__input {
+  width: 72px;
+  text-align: center;
+}
+
+.wg-quantity .btn-quantity {
+  cursor: pointer;
+}
+
+/* ---------- Refurbished badge (Ricondizionato) ---------- */
+.ks-badge-refurb {
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+.box-sale-wrap .ks-badge-refurb {
+  background: #111;
+  color: #fff;
+}
+
+/* ---------- Cart / Checkout: miglioramenti responsive & coerenza tema ---------- */
+.tf-page-cart .tf-table-page-cart {
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.tf-page-cart .tf-table-page-cart thead th {
+  white-space: nowrap;
+}
+
+/* Checkout blocks: rendi le tabelle legacy più simili ai box del template */
+.ks-checkout-panel {
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 14px;
+  padding: 18px;
+  background: #fff;
+}
+
+.ks-checkout-panel table {
+  width: 100%;
+}
+
+.ks-checkout-panel td,
+.ks-checkout-panel th {
+  vertical-align: top;
+}
+
+/* ---------- Mobile: canvas/sidebar catalogo scrollabile (menu filtri completo) ---------- */
+@media (max-width: 991.98px) {
+  .offcanvas.tf-shop-canvas .offcanvas-body,
+  .offcanvas.tf-shop-canvas .sidebar-content {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    max-height: calc(100vh - 110px);
+  }
+}
+
+.ks-badge-refurb-main {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}

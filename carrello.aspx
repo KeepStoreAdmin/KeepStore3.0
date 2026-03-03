@@ -7,9 +7,7 @@
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
         <!-- Tema: assets loaded in MasterPage -->
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/cart-ui.css" />
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/checkout-ui.css" />
-    <script src="/Public/assets/keepstore/js/cart-ui.js" defer></script>
+            <script src="/Public/assets/keepstore/js/cart-ui.js" defer></script>
     <script src="/Public/assets/keepstore/js/checkout-ui.js" defer></script>
 
 
@@ -467,7 +465,7 @@
         </div>
     </section>
 
-<asp:Panel ID="Panel_Unico" runat="server">   
+<asp:Panel ID="Panel_Unico" runat="server" CssClass="ks-checkout-panel">   
     <table width="100%" border="0" runat="server" id="tOrdine" visible="false" class="ks-checkout">
     
     

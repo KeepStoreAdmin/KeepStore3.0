@@ -13,17 +13,31 @@
     <title><asp:ContentPlaceHolder ID="TitleContent" runat="server" /></title>
 
     <!-- ============================================================
-         Core assets (tema grafico)
+         Core assets (tema grafico) - ONSUS
          Base path: /Public/assets/keepstore/
+         Regola: nessun nuovo CSS, consolidamento su styles.css + theme-overrides.css
          ============================================================ -->
     <link rel="stylesheet" href="<%= ThemeManager.Asset("fonts/font.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("iconsax/style.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("icons/icomoon/style.css") %>" />
 
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/bootstrap.min.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/nice-select.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/swiper-bundle.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/animate.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/spacing.css") %>" />
+
+    <!-- Plugin styles (usati dal template) -->
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/nice-select.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/bootstrap-select.min.css") %>" />
+
+    <!-- Legacy/compat (CARICATO PRIMA del tema per non alterare il look del template) -->
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore.css") %>" />
+
+    <!-- Tema principale -->
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/styles.css") %>" />
+
+    <!-- Override unificati -->
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") %>" />
 
     <!-- SEO / JSON-LD injection -->
     <asp:PlaceHolder ID="phSeoJsonLd" runat="server" Visible="false">
@@ -34,16 +48,6 @@
     <asp:Literal ID="litGlobalSeoHead" runat="server" EnableViewState="False" />
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
-
-    <!-- Override / bridge CSS (ordine: base -> override tema -> bridge legacy -> custom per pagine) -->
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore-overrides.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-ui.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/documents-ui.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/auth-ui.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/ks-ui.css") %>" />
-
 </head>
 
 <body id="PageBody" runat="server">
@@ -178,6 +182,37 @@
 		<!-- Script specifici pagina (es. zoom.js su articolo.aspx) -->
 		<asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
 
-    </form>
+    
+    <%-- WhatsApp widget (GetButton). Configure number in web.config appSettings key: WhatsAppNumber (e.g. +393331234567) --%>
+    <% 
+        Dim waNum As String = System.Configuration.ConfigurationManager.AppSettings("WhatsAppNumber")
+        If Not String.IsNullOrWhiteSpace(waNum) Then
+    %>
+    <script type="text/javascript">
+        (function () {
+            var options = {
+                whatsapp: "<%= waNum %>",
+                call_to_action: "Scrivici su WhatsApp",
+                position: "right"
+            };
+            var proto = document.location.protocol,
+                host = "getbutton.io",
+                url = proto + "//static." + host;
+            var s = document.createElement('script');
+            s.type = 'text/javascript';
+            s.async = true;
+            s.src = url + '/widget-send-button/js/init.js';
+            s.onload = function () {
+                if (window.WhWidgetSendButton) {
+                    window.WhWidgetSendButton.init(host, proto, options);
+                }
+            };
+            var x = document.getElementsByTagName('script')[0];
+            x.parentNode.insertBefore(s, x);
+        })();
+    </script>
+    <% End If %>
+
+</form>
 </body>
 </html>
