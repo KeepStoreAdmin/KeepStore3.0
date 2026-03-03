@@ -41,44 +41,45 @@
         <div class="container">
 
             <!-- CONTROL BAR -->
-            <div class="tf-shop-control-wrapper mb-3">
-                <div class="tf-shop-control">
-                    <div class="tf-control-filter">
-                        <a class="tf-btn-filter" href="#filterShop" data-bs-toggle="offcanvas" role="button" aria-controls="filterShop">
-                            <i class="icon icon-filter"></i>
-                            Filtri
-                        </a>
-                    </div>
-
-                    <div class="tf-control-layout">
-                        <div class="tf-control-show">
-                            <label class="text-muted small mb-0" for="<%= Drop_Righe.ClientID %>">Righe</label>
-                            <asp:DropDownList ID="Drop_Righe" runat="server" CssClass="form-select form-select-sm" AutoPostBack="true">
-                                <asp:ListItem Value="12" Text="12"></asp:ListItem>
-                                <asp:ListItem Value="24" Text="24"></asp:ListItem>
-                                <asp:ListItem Value="48" Text="48"></asp:ListItem>
-                                <asp:ListItem Value="96" Text="96"></asp:ListItem>
-                            </asp:DropDownList>
-                            <asp:Label ID="lblLinee" runat="server" Text="" CssClass="d-none" />
-                        </div>
-
-                        <div class="tf-control-sorting">
-                            <asp:DropDownList ID="Drop_Ordinamento" runat="server" CssClass="form-select form-select-sm" AutoPostBack="true">
-                                <asp:ListItem Value="0" Text="Consigliati"></asp:ListItem>
-                                <asp:ListItem Value="1" Text="Prezzo: crescente"></asp:ListItem>
-                                <asp:ListItem Value="2" Text="Prezzo: decrescente"></asp:ListItem>
-                                <asp:ListItem Value="3" Text="Disponibilità"></asp:ListItem>
-                            </asp:DropDownList>
-                        </div>
-
-                        <div class="tf-control-availability d-none d-md-flex align-items-center ms-2">
-                            <div class="form-check">
-                                <asp:CheckBox ID="CheckBox_Disponibile" runat="server" CssClass="form-check-input" AutoPostBack="true" />
-                                <label class="form-check-label" for="<%= CheckBox_Disponibile.ClientID %>">Solo disponibili</label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+	            <div class="tf-shop-control-wrapper mb-3">
+	                <div class="tf-shop-control">
+	                    <div class="tf-control-filter">
+	                        <a class="tf-btn-filter" href="#filterShop" data-bs-toggle="offcanvas" role="button" aria-controls="filterShop">
+	                            <span class="icon icon-filter"></span>
+	                            <span class="text">Filtri</span>
+	                        </a>
+	                    </div>
+	
+	                    <div class="tf-control-view">
+	                        <div class="tf-control-show">
+	                            <div class="text">Mostra</div>
+	                            <asp:DropDownList ID="Drop_Righe" runat="server" CssClass="select-show" AutoPostBack="true">
+	                                <asp:ListItem Value="12" Text="12"></asp:ListItem>
+	                                <asp:ListItem Value="24" Text="24"></asp:ListItem>
+	                                <asp:ListItem Value="48" Text="48"></asp:ListItem>
+	                                <asp:ListItem Value="96" Text="96"></asp:ListItem>
+	                            </asp:DropDownList>
+	                            <asp:Label ID="lblLinee" runat="server" Text="" CssClass="d-none" />
+	                        </div>
+	
+	                        <div class="tf-control-sorting">
+	                            <div class="text">Ordina</div>
+	                            <asp:DropDownList ID="Drop_Ordinamento" runat="server" CssClass="select-sorting" AutoPostBack="true">
+	                                <asp:ListItem Value="0" Text="Consigliati"></asp:ListItem>
+	                                <asp:ListItem Value="1" Text="Prezzo: crescente"></asp:ListItem>
+	                                <asp:ListItem Value="2" Text="Prezzo: decrescente"></asp:ListItem>
+	                                <asp:ListItem Value="3" Text="Disponibilità"></asp:ListItem>
+	                            </asp:DropDownList>
+	                        </div>
+	
+	                        <div class="tf-control-availability d-none d-xl-flex align-items-center">
+	                            <div class="text">Disponibilità</div>
+	                            <div class="tf-check">
+	                                <asp:CheckBox ID="CheckBox_Disponibile" runat="server" Text="Solo disponibili" AutoPostBack="true" />
+	                            </div>
+	                        </div>
+	                    </div>
+	                </div>
 
                 <div class="tf-shop-control-right">
                     <!-- Placeholder: if you later want to add view toggles / layout switch, this is the right slot -->
@@ -198,12 +199,12 @@
                 </asp:ListView>
 
                 <!-- PAGER (used by codebehind) -->
-                <asp:Panel ID="ksPagerWrap" runat="server" CssClass="d-flex justify-content-center mt-4">
+	                <asp:Panel ID="ksPagerWrap" runat="server" CssClass="wrap-pagination d-flex justify-content-center mt-4">
                     <asp:DataPager ID="dpProdotti" runat="server" PagedControlID="lvProdotti" PageSize="12">
                         <Fields>
-                            <asp:NextPreviousPagerField ShowFirstPageButton="true" ShowPreviousPageButton="true" ShowNextPageButton="false" ShowLastPageButton="false" ButtonType="Button" />
-                            <asp:NumericPagerField ButtonCount="7" NumericButtonCssClass="btn btn-outline-secondary btn-sm" CurrentPageLabelCssClass="btn btn-secondary btn-sm" />
-                            <asp:NextPreviousPagerField ShowFirstPageButton="false" ShowPreviousPageButton="false" ShowNextPageButton="true" ShowLastPageButton="true" ButtonType="Button" />
+	                            <asp:NextPreviousPagerField ShowFirstPageButton="false" ShowPreviousPageButton="true" ShowNextPageButton="false" ShowLastPageButton="false" ButtonType="Link" PreviousPageText="&laquo;" ButtonCssClass="pagination-link" />
+	                            <asp:NumericPagerField ButtonType="Link" ButtonCount="7" NumericButtonCssClass="pagination-link" CurrentPageLabelCssClass="pagination-link active" />
+	                            <asp:NextPreviousPagerField ShowFirstPageButton="false" ShowPreviousPageButton="false" ShowNextPageButton="true" ShowLastPageButton="false" ButtonType="Link" NextPageText="&raquo;" ButtonCssClass="pagination-link" />
                         </Fields>
                     </asp:DataPager>
                 </asp:Panel>
@@ -220,14 +221,15 @@
         </div>
     </section>
 
-    <!-- FILTER CANVAS (Shop Default) -->
-    <div class="offcanvas offcanvas-start canvas-filter-product sidebar-filter handle-canvas left" tabindex="-1" id="filterShop" aria-labelledby="filterShopLabel">
-        <div class="offcanvas-header">
-            <h5 class="offcanvas-title" id="filterShopLabel">Filtri</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
-
-        <div class="offcanvas-body">
+	    <!-- FILTER CANVAS (Shop Default) -->
+	    <div class="offcanvas offcanvas-start canvas-filter-product sidebar-filter handle-canvas left" tabindex="-1" id="filterShop" aria-labelledby="filterShopLabel">
+	        <div class="canvas-wrapper">
+	            <div class="canvas-header d-flex d-xl-none">
+	                <span class="title fw-semibold" id="filterShopLabel">Filtri</span>
+	                <span class="icon-close link" data-bs-dismiss="offcanvas" aria-label="Chiudi"></span>
+	            </div>
+	
+	            <div class="canvas-body">
             <asp:Panel ID="ksFilters" runat="server">
 
                 <div class="mb-4">
@@ -293,9 +295,10 @@
                     </div>
                 </asp:Panel>
 
-                </asp:Panel>
-        </div>
-    </div>
+	                </asp:Panel>
+	            </div>
+	        </div>
+	    </div>
 
     <!-- DATA SOURCES (IDs required by codebehind) -->
     <asp:SqlDataSource ID="sdsArticoli" runat="server"

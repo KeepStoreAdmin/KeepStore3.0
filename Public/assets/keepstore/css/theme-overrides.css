@@ -26,27 +26,25 @@
 }
 
 /* ---------- Home (Home 1) ---------- */
-#Slide_Show .ks-home-hero-slider{
+/* Home 1 banner wrapper + hero */
+.home-1 .s-banner-wrapper{
+  gap:20px;
+}
+.ks-home-hero .banner-image-product-4{
   border-radius:16px;
+  overflow:hidden;
 }
-#Slide_Show .ks-hero-caption{
-  position:absolute;
-  left:16px;
-  right:16px;
-  bottom:16px;
-  padding:12px 14px;
-  border-radius:14px;
-  background:rgba(0,0,0,.45);
-  color:#fff;
-  backdrop-filter:saturate(120%) blur(2px);
+.ks-home-hero .banner-image-product-4.has-bg-img{
+  background-image:url("../images/banner/banner-30.jpg");
+  background-size:cover;
+  background-position:center;
 }
+
+/* Departments list (desktop) */
 .home-1 .wrap-item-1 .list-nav-hero{
   max-height:420px;
   overflow:auto;
   padding-right:6px;
-}
-@media (max-width: 991px){
-  .home-1 .wrap-item-1{ display:none; }
 }
 
 /* Product cards on Home sliders */
@@ -120,8 +118,33 @@
 .ks-product-card .ks-product-title{
   font-weight:700;
 }
-.ks-pager a, .ks-pager span{
+/* Pager (DataPager) */
+.wrap-pagination{
+  gap:8px;
+}
+.wrap-pagination .pagination-link,
+.wrap-pagination a,
+.wrap-pagination span{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:40px;
+  height:40px;
+  padding:0 12px;
   border-radius:999px;
+  border:1px solid rgba(0,0,0,.12);
+  background:#fff;
+  color:inherit;
+  text-decoration:none;
+}
+.wrap-pagination .pagination-link:hover{
+  border-color:rgba(0,0,0,.25);
+}
+.wrap-pagination .pagination-link.active,
+.wrap-pagination span.pagination-link.active{
+  background:#111;
+  border-color:#111;
+  color:#fff;
 }
 
 /* ---------- Product Detail ---------- */
@@ -212,5 +235,77 @@
 .ks-filter-list a.ks-filter-option.active{
   font-weight:600;
 }
+
+/* ============================================================
+   Mobile: Offcanvas menu + filtri (fix overflow / scroll)
+   ============================================================ */
+
+/* Mobile main menu (catalog menu) */
+.canvas-mb .mb-canvas-content{
+  height:100%;
+}
+.canvas-mb .mb-body{
+  height:100%;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.canvas-mb .nav-ul-mb{
+  padding-bottom:24px;
+}
+.canvas-mb .sub-nav-menu{
+  margin-top:10px;
+  padding-left:0;
+  list-style:none;
+}
+.canvas-mb .sub-menu-level-2{
+  padding-left:14px;
+  list-style:none;
+}
+.canvas-mb a.sub-nav-link,
+.canvas-mb a.sub-nav-link-2{
+  text-decoration:none;
+}
+.canvas-mb a.sub-nav-link:hover,
+.canvas-mb a.sub-nav-link-2:hover{
+  text-decoration:underline;
+}
+
+/* Filter offcanvas: use template-like wrapper structure with a single scroll area */
+.offcanvas.canvas-filter-product{
+  padding:0;
+}
+.offcanvas.canvas-filter-product .canvas-wrapper{
+  height:100%;
+  display:flex;
+  flex-direction:column;
+}
+.offcanvas.canvas-filter-product .canvas-header{
+  padding:16px 20px;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid rgba(0,0,0,.08);
+}
+.offcanvas.canvas-filter-product .canvas-body{
+  flex:1 1 auto;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  padding:20px;
+}
+/* Avoid nested scroll inside the offcanvas on mobile */
+#filterShop .ks-filter-scroll{
+  max-height:none;
+}
+
+/* Shop control selects: keep template sizing even when rendered by ASP.NET */
+.tf-control-view .select-show,
+.tf-control-view .select-sorting{
+  min-width:92px;
+}
+.tf-control-view .tf-check{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
 
 

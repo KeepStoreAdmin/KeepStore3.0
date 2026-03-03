@@ -1,7 +1,7 @@
 <%@ Control Language="VB" AutoEventWireup="false" CodeFile="HomeDepartmentsMenu.ascx.vb" Inherits="UI_HomeDepartmentsMenu" %>
 
 <!-- LEFT: Departments (Home) -->
-<div class="wrap-item-1 d-none d-lg-block ks-home-departments">
+<div class="wrap-item-1 d-none d-xl-block ks-home-departments">
     <div class="tf-nav-menu">
         <div class="main-nav">
             <h6 class="fw-semibold title">
@@ -30,22 +30,6 @@
                 SelectCommand="SELECT s.id, s.Descrizione AS descrizione, s.Img, (SELECT c.id FROM categorie c WHERE c.SettoriId = s.id AND c.Abilitato = 1 ORDER BY c.Ordinamento, c.Descrizione, c.id LIMIT 1) AS DefaultCt, (SELECT t.id FROM tipologie t WHERE t.CategorieId = (SELECT c2.id FROM categorie c2 WHERE c2.SettoriId = s.id AND c2.Abilitato = 1 ORDER BY c2.Ordinamento, c2.Descrizione, c2.id LIMIT 1) AND t.Abilitato = 1 ORDER BY t.Ordinamento, t.Descrizione, t.id LIMIT 1) AS DefaultTp FROM settori s WHERE s.Abilitato = 1 ORDER BY s.Predefinito DESC, s.Ordinamento, s.Descrizione, s.id">
             </asp:SqlDataSource>
 
-        </div>
-    </div>
-
-    <!-- Small promo banner (static) -->
-    <div class="banner-image-product-4 hover-img mb-20">
-        <div class="item-product">
-            <a href="articoli.aspx" class="box-link">
-                <div class="box-content">
-                    <span class="sub-title">Promo</span>
-                    <h5 class="title">Offerte del momento</h5>
-                    <p class="price fw-semibold">Scopri</p>
-                </div>
-                <div class="box-image">
-                    <img src='<%= ThemeManager.Asset("images/banner/banner-12.jpg") %>' alt="" onerror="this.style.display='none'" />
-                </div>
-            </a>
         </div>
     </div>
 </div>

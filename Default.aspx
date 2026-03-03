@@ -13,23 +13,16 @@
 </asp:Content>
 
 <asp:Content ID="Content3" ContentPlaceHolderID="MainContent" runat="Server">
+	<div class="home-1">
 
     <!-- HERO (Home 1) -->
     <section class="tf-sp-5">
         <div class="container">
-            <div class="row">
-                <div class="col-lg-3 d-none d-lg-block">
-                    <ks:HomeDepartmentsMenu ID="HomeDepartmentsMenu1" runat="server" />
-                </div>
-
-                <div class="col-lg-6">
-                    <ks:HomeHeroSlider ID="HomeHeroSlider1" runat="server" />
-                </div>
-
-                <div class="col-lg-3 d-none d-lg-block">
-                    <ks:HomeSideBanners ID="HomeSideBanners1" runat="server" />
-                </div>
-            </div>
+	            <div class="s-banner-wrapper">
+	                <ks:HomeDepartmentsMenu ID="HomeDepartmentsMenu1" runat="server" />
+	                <ks:HomeHeroSlider ID="HomeHeroSlider1" runat="server" />
+	                <ks:HomeSideBanners ID="HomeSideBanners1" runat="server" />
+	            </div>
         </div>
     </section>
 
@@ -188,6 +181,8 @@
         ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
         ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
         SelectCommand="SELECT 0 as Articoliid, 0 as TCId, '' as Codice, '' as Ean, '' as Descrizione1, '' as img1, 0 as Conteggio_Vendite, 0 as Prezzo, 0 as PrezzoIvato, 0 as InOfferta, 0 as PrezzoPromo, 0 as PrezzoPromoIvato WHERE 1=0" />
+
+	</div>
 
 </asp:Content>
 

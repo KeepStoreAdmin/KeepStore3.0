@@ -1,11 +1,9 @@
 <%@ Control Language="VB" AutoEventWireup="false" CodeFile="HomeHeroSlider.ascx.vb" Inherits="UI_HomeHeroSlider" %>
 
 <div class="wrap-item-2 ks-home-hero" id="HeroWrap" runat="server">
-    <div class="banner-image-product-4 style-2 hover-img">
+    <!-- Home 1 hero (template-like, still database-driven) -->
+    <div class="banner-image-product-4 style-2 hover-img has-bg-img" data-bg-image='<%= ThemeManager.Asset("images/banner/banner-30.jpg") %>'>
         <div class="item-product">
-
-            <!-- Hero Slider (database-driven) -->
-            <div id="Slide_Show">
 
                 <asp:SqlDataSource
                     ID="slideShow"
@@ -39,40 +37,30 @@
                                 ELSE sp.stopDate 
                              END) > CURDATE()
                         ORDER BY sp.orderPosition
+                        LIMIT 1
                     ">
                     <SelectParameters>
                         <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" Type="Int32" DefaultValue="1" />
                     </SelectParameters>
                 </asp:SqlDataSource>
 
-                <div id="Slide_Show_Container" class="swiper ks-home-hero-slider" runat="server" aria-label="Promozioni">
-                    <div class="swiper-wrapper">
-                        <asp:Repeater ID="slideshowItems" runat="server" DataSourceID="slideShow" EnableViewState="False">
-                            <ItemTemplate>
-                                <div class="swiper-slide">
-                                    <%# SlideLinkStart(Eval("link")) %>
-                                    <img class="lazyload"
-                                         src='<%# SafeSlideshowImageUrl(Eval("image")) %>'
-                                         data-src='<%# SafeSlideshowImageUrl(Eval("image")) %>'
-                                         alt='<%# SafeAttr(Eval("content")) %>' />
-                                    <%# SlideLinkEnd(Eval("link")) %>
-                                    <div class="ks-hero-caption"><%# SafeText(Eval("content")) %></div>
-                                </div>
-                            </ItemTemplate>
-                        </asp:Repeater>
-                    </div>
-
-                    <div class="swiper-button-prev nav-swiper ks-hero-prev" aria-label="Precedente">
-                        <i class="icon-arrow-left-lg"></i>
-                    </div>
-                    <div class="swiper-button-next nav-swiper ks-hero-next" aria-label="Successivo">
-                        <i class="icon-arrow-right-lg"></i>
-                    </div>
-                    <div class="sw-dot-default swiper-pagination ks-hero-pagination" aria-label="Paginazione slideshow"></div>
-                </div>
-
-            </div>
-            <!-- /Hero Slider -->
+                <asp:Repeater ID="slideshowItems" runat="server" DataSourceID="slideShow" EnableViewState="False">
+                    <ItemTemplate>
+                        <%# SlideLinkStart(Eval("link")).Replace("<a ", "<a class=""box-link"" ") %>
+                            <div class="box-content">
+                                <span class="sub-title">Best seller</span>
+                                <h4 class="title"><%# SafeText(Eval("content")) %></h4>
+                                <p class="description">Scopri l'offerta del momento su KeepStore</p>
+                            </div>
+                            <div class="box-image">
+                                <img class="lazyload"
+                                     src='<%# SafeSlideshowImageUrl(Eval("image")) %>'
+                                     data-src='<%# SafeSlideshowImageUrl(Eval("image")) %>'
+                                     alt='<%# SafeAttr(Eval("content")) %>' />
+                            </div>
+                        <%# SlideLinkEnd(Eval("link")) %>
+                    </ItemTemplate>
+                </asp:Repeater>
 
         </div>
     </div>
