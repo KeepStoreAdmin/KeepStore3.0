@@ -422,3 +422,126 @@
   text-transform: uppercase;
   letter-spacing: .04em;
 }
+
+/* ------------------------------------------------------------
+   Step51 - Onsus pixel-alignment refinements
+   - Mobile menu scroll + tap-to-toggle
+   - Category mega menu structure support
+   - Checkout (carrello.aspx) tableless look
+   - Lazyload safety fallback for product images
+------------------------------------------------------------ */
+
+/* Safety: se per qualsiasi motivo lazyload non viene inizializzato,
+   non vogliamo immagini invisibili (taikun: pagine articoli/articolo). */
+img.lazyload,
+img.lazyloading {
+  opacity: 1 !important;
+}
+
+/* Mobile offcanvas: deve essere SEMPRE scrollabile */
+#mobileMenu .offcanvas-body,
+#mobileMenu .canvas-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile catalog (clonato dal menu desktop) */
+#ksMobileNavMount .ks-mobile-catalog {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+#ksMobileNavMount .ks-mobile-catalog > li {
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+#ksMobileNavMount .ks-mobile-catalog > li > a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 2px;
+}
+
+#ksMobileNavMount .ks-mobile-catalog li.has-sub > a::after {
+  content: "\e911"; /* icon-arrow-down (icomoon) */
+  font-family: "icomoon";
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+#ksMobileNavMount .ks-mobile-catalog li.open > a::after {
+  transform: rotate(180deg);
+}
+
+#ksMobileNavMount .ks-mobile-catalog .sub-menu {
+  padding: 10px 0 14px;
+  border-top: 1px solid rgba(0,0,0,0.05);
+}
+
+#ksMobileNavMount .ks-mobile-catalog .grid-sub-menu {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+#ksMobileNavMount .ks-mobile-catalog .sub-nav-link > .sub-menu-link {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+/* Checkout: rendere la macro-tabella "tOrdine" visualmente table-less
+   senza toccare la logica server-side */
+table.ks-checkout {
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+table.ks-checkout > tbody {
+  display: block;
+}
+
+table.ks-checkout > tbody > tr {
+  display: block;
+}
+
+table.ks-checkout > tbody > tr > td {
+  display: block;
+  width: 100% !important;
+}
+
+/* Checkout: GridView list-style (spedizioni / pagamenti) */
+.ks-checkout-grid {
+  width: 100% !important;
+  border: 0 !important;
+}
+
+.ks-checkout-grid thead,
+.ks-checkout-grid th {
+  display: none !important;
+}
+
+.ks-checkout-grid tr {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 14px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+
+.ks-checkout-grid td {
+  border: 0 !important;
+  padding: 0 !important;
+}
+
+.ks-checkout-grid input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}

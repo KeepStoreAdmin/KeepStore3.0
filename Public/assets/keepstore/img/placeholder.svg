@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800" role="img" aria-label="Immagine non disponibile">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f2f2f2"/>
+      <stop offset="1" stop-color="#e6e6e6"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="800" fill="url(#g)"/>
+  <rect x="140" y="220" width="520" height="360" rx="24" fill="#ffffff" opacity="0.7"/>
+  <path d="M260 520l110-120 90 95 70-75 110 100v60H260z" fill="#cfcfcf"/>
+  <circle cx="525" cy="350" r="38" fill="#cfcfcf"/>
+  <text x="400" y="650" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" fill="#888">
+    Immagine non disponibile
+  </text>
+</svg>

@@ -195,3 +195,102 @@
     // Silent
   }
 })();
+
+// ------------------------------------------------------------
+// KeepStore - mobile menu helpers (Onsus template alignment)
+// ------------------------------------------------------------
+// Obiettivi:
+// - Su mobile, il menu deve essere COMPLETAMENTE scrollabile.
+// - Le voci Catalogo (settori -> categorie -> tipologie) devono essere navigabili
+//   anche senza hover (tap to toggle).
+
+(function () {
+  'use strict';
+
+  function onReady(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+
+  function initMobileCatalogMenu() {
+    var mount = document.getElementById('ksMobileNavMount');
+    var desktop = document.getElementById('ksDesktopCategoriesMenu');
+    if (!mount || !desktop) return;
+
+    // Evita duplicazioni
+    if (mount.getAttribute('data-ks-mounted') === '1') return;
+
+    // Se lato server il menu mobile è già popolato, non clonare.
+    try {
+      if (mount.querySelector('li')) {
+        mount.setAttribute('data-ks-mounted', '1');
+        return;
+      }
+    } catch (e) {}
+
+    // Clona la struttura desktop dentro il drawer mobile
+    var clone = desktop.cloneNode(true);
+    clone.removeAttribute('id');
+    clone.classList.add('ks-mobile-catalog');
+
+    // Rimuove eventuali stili/attributi non necessari
+    try {
+      var hiddenInputs = clone.querySelectorAll('input, button');
+      for (var h = 0; h < hiddenInputs.length; h++) {
+        // non dovrebbe esserci nulla, ma in caso di future modifiche evitiamo elementi interattivi duplicati
+        hiddenInputs[h].setAttribute('tabindex', '-1');
+      }
+    } catch (e) {}
+
+    mount.appendChild(clone);
+    mount.setAttribute('data-ks-mounted', '1');
+
+    // Trasforma i submenu in toggle tap-friendly
+    var lis = mount.querySelectorAll('li');
+    for (var i = 0; i < lis.length; i++) {
+      (function (li) {
+        var sub = null;
+        for (var c = 0; c < li.children.length; c++) {
+          if (li.children[c] && li.children[c].classList && li.children[c].classList.contains('sub-menu')) {
+            sub = li.children[c];
+            break;
+          }
+        }
+        if (!sub) return;
+
+        li.classList.add('has-sub');
+        sub.style.display = 'none';
+
+        var a = null;
+        for (var k = 0; k < li.children.length; k++) {
+          if (li.children[k] && li.children[k].tagName === 'A') {
+            a = li.children[k];
+            break;
+          }
+        }
+        if (!a) return;
+
+        a.addEventListener('click', function (e) {
+          // Se ha submenu, il primo tap apre/chiude (non naviga)
+          e.preventDefault();
+          var isOpen = li.classList.contains('open');
+          if (isOpen) {
+            li.classList.remove('open');
+            sub.style.display = 'none';
+          } else {
+            li.classList.add('open');
+            sub.style.display = 'block';
+          }
+        });
+      })(lis[i]);
+    }
+  }
+
+  onReady(function () {
+    try {
+      initMobileCatalogMenu();
+    } catch (e) {
+      // silent
+    }
+  });
+})();

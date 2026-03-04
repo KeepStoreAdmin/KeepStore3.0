@@ -1,4 +1,5 @@
 Imports System
+Imports System.Collections.Generic
 Imports System.Configuration
 Imports System.Web
 
@@ -183,9 +184,9 @@ Public Module ThemeManager
                 ph = Nothing
             End Try
 
-            If String.IsNullOrWhiteSpace(ph) Then
-                ph = Asset("img/placeholder.png")
-            End If
+			If String.IsNullOrWhiteSpace(ph) Then
+				ph = PlaceholderProductImageUrl()
+			End If
 
             Return ph
         End If
@@ -221,32 +222,101 @@ Public Module ThemeManager
             End Try
         End If
 
-        ' solo filename: compone usando base configurabile
-        Dim baseUrl As String = Nothing
-        Try
-            baseUrl = ConfigurationManager.AppSettings("KeepStore.Products.ImageBaseUrl")
-        Catch
-            baseUrl = Nothing
-        End Try
+		Dim fileName As String = EscapePathSegment(raw)
+		Dim baseUrl As String = ResolveProductImageBaseUrl(fileName)
 
-        If String.IsNullOrWhiteSpace(baseUrl) Then
-            baseUrl = "/Images/articoli/"
-        End If
-
-        baseUrl = baseUrl.Trim().Replace("\", "/")
-        If Not baseUrl.EndsWith("/", StringComparison.Ordinal) Then baseUrl &= "/"
-        If Not baseUrl.StartsWith("/", StringComparison.Ordinal) AndAlso Not baseUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase) Then
-            baseUrl = "/" & baseUrl
-        End If
-
-        Dim fileName As String = EscapePathSegment(raw)
-
-        Dim url As String = baseUrl & fileName
+		Dim url As String = baseUrl & fileName
         Try
             Return VirtualPathUtility.ToAbsolute(url)
         Catch
             Return url
         End Try
+    End Function
+
+    ''' <summary>
+    ''' Placeholder standard per immagini prodotto mancanti.
+    ''' </summary>
+    Public Function PlaceholderProductImageUrl() As String
+        ' SVG leggero, stabile, senza dipendenze.
+        Return Asset("img/placeholder.svg")
+    End Function
+
+    ''' <summary>
+    ''' Risolve la base URL per le immagini prodotto.
+    ''' Evita 404 quando il deploy usa cartelle diverse (es. /Images/articoli/, /Public/images/articoli/...).
+    '''
+    ''' NOTE:
+    ''' - cache per-request in HttpContext.Items
+    ''' - se non riesce a verificare l'esistenza fisica, usa config o default
+    ''' </summary>
+    Private Function ResolveProductImageBaseUrl(ByVal fileName As String) As String
+        Dim configured As String = Nothing
+        Try
+            configured = ConfigurationManager.AppSettings("KeepStore.Products.ImageBaseUrl")
+        Catch
+            configured = Nothing
+        End Try
+
+        Dim fallback As String = If(String.IsNullOrWhiteSpace(configured), "/Images/articoli/", configured)
+
+        Dim NormalizeBase As Func(Of String, String) = Function(b As String) As String
+                                                           If String.IsNullOrWhiteSpace(b) Then Return ""
+                                                           Dim s As String = b.Trim().Replace("\", "/")
+                                                           If Not s.EndsWith("/", StringComparison.Ordinal) Then s &= "/"
+                                                           If Not s.StartsWith("/", StringComparison.Ordinal) AndAlso Not s.StartsWith("http", StringComparison.OrdinalIgnoreCase) Then
+                                                               s = "/" & s
+                                                           End If
+                                                           Return s
+                                                       End Function
+
+        configured = NormalizeBase(configured)
+        fallback = NormalizeBase(fallback)
+
+        Dim ctx As HttpContext = HttpContext.Current
+        If ctx Is Nothing OrElse ctx.Server Is Nothing Then
+            Return If(String.IsNullOrWhiteSpace(fallback), "/Images/articoli/", fallback)
+        End If
+
+        Dim cacheKey As String = "ks_product_img_base"
+        Dim cached As String = TryCast(ctx.Items(cacheKey), String)
+        If Not String.IsNullOrWhiteSpace(cached) Then
+            Return cached
+        End If
+
+        Dim candidates As New List(Of String)()
+        If Not String.IsNullOrWhiteSpace(configured) Then candidates.Add(configured)
+
+        candidates.Add("/Images/articoli/")
+        candidates.Add("/images/articoli/")
+        candidates.Add("/Public/Images/articoli/")
+        candidates.Add("/Public/images/articoli/")
+        candidates.Add("/Public/img/articoli/")
+        candidates.Add("/img/articoli/")
+
+        For Each b As String In candidates
+            Dim baseUrl As String = NormalizeBase(b)
+            If String.IsNullOrWhiteSpace(baseUrl) Then Continue For
+
+            ' se non è un virtual-path locale non possiamo MapPath
+            If Not baseUrl.StartsWith("/", StringComparison.Ordinal) OrElse baseUrl.StartsWith("//") Then
+                Continue For
+            End If
+
+            Try
+                Dim virtualPath As String = baseUrl & fileName
+                Dim physical As String = ctx.Server.MapPath(virtualPath)
+                If Not String.IsNullOrEmpty(physical) AndAlso System.IO.File.Exists(physical) Then
+                    ctx.Items(cacheKey) = baseUrl
+                    Return baseUrl
+                End If
+            Catch
+                ' ignora e prova il prossimo
+            End Try
+        Next
+
+        Dim chosen As String = If(String.IsNullOrWhiteSpace(fallback), "/Images/articoli/", fallback)
+        ctx.Items(cacheKey) = chosen
+        Return chosen
     End Function
 
 

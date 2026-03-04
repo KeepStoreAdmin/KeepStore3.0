@@ -79,65 +79,66 @@
         </div>
     </div>
 
-    <!-- NAV (desktop) -->
-    <div class="header-bottom bg-gray-5 d-none d-xl-block">
-        <div class="container relative">
-            <nav class="main-nav-menu">
-                <ul class="nav-list">
-                    <li class="nav-item active pst-unset">
-                        <a class="item-link link body-md-2 fw-semibold" href="Default.aspx"><span>Home</span></a>
-                    </li>
-
-                    <li class="nav-item pst-unset">
-                        <a class="item-link link body-md-2 fw-semibold" href="articoli.aspx"><span>Catalogo</span></a>
-                    </li>
-
-                    <asp:Repeater ID="rptNavSettori" runat="server">
-                        <ItemTemplate>
-                            <li class="nav-item pst-unset">
-                                <a class="item-link link body-md-2 fw-semibold" href='<%# Eval("DefaultUrl") %>'>
-                                    <span><%# Eval("Descrizione") %></span>
-                                    <i class="icon icon-arrow-down"></i>
-                                </a>
-
-                                <div class="sub-menu-container mega-menu">
-                                    <div class="container">
-                                        <div class="row">
-                                            <asp:Repeater ID="rptNavCategorie" runat="server">
-                                                <ItemTemplate>
-                                                    <div class="col-xl-3 col-lg-4 col-md-6">
-                                                        <div class="mega-menu-column">
-                                                            <h6 class="menu-title mb-10">
-                                                                <a class="link text-secondary fw-semibold" href='<%# Eval("DefaultUrl") %>'>
-                                                                    <%# Eval("Descrizione") %>
-                                                                </a>
-                                                            </h6>
-
-                                                            <ul class="sub-menu-list">
-                                                                <asp:Repeater ID="rptNavTipologie" runat="server">
-                                                                    <ItemTemplate>
-                                                                        <li>
-                                                                            <a class="link" href='<%# Eval("DefaultUrl") %>'><%# Eval("Descrizione") %></a>
-                                                                        </li>
-                                                                    </ItemTemplate>
-                                                                </asp:Repeater>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </ItemTemplate>
-                                            </asp:Repeater>
+    <!-- NAV (desktop) - Struttura coerente con Onsus (shop-default.html) -->
+    <div class="header-bottom bg_white d-none d-xl-block">
+        <div class="container">
+            <div class="header-bottom_wrap">
+                <!-- Category mega menu (settori -> categorie -> tipologie) -->
+                <div class="nav-category-wrap">
+                    <div class="nav-title btn-active">
+                        <span class="icon icon-menu"></span>
+                        <span class="body-text fw-semibold">Tutte le categorie</span>
+                    </div>
+                    <nav class="category-menu">
+                        <ul class="category-menu-list" id="ksDesktopCategoriesMenu">
+                            <asp:Repeater ID="rptNavSettori" runat="server">
+                                <ItemTemplate>
+                                    <li class="item">
+                                        <a href='<%# Eval("DefaultUrl") %>'><%# Eval("Descrizione") %></a>
+                                        <div class="sub-menu">
+                                            <div class="wrapper-sub-menu">
+                                                <div class="grid-sub-menu">
+                                                    <asp:Repeater ID="rptNavCategorie" runat="server">
+                                                        <ItemTemplate>
+                                                            <div class="sub-nav-link">
+                                                                <a class="sub-menu-link" href='<%# Eval("DefaultUrl") %>'><%# Eval("Descrizione") %></a>
+                                                                <ul class="list-unstyled">
+                                                                    <asp:Repeater ID="rptNavTipologie" runat="server">
+                                                                        <ItemTemplate>
+                                                                            <li>
+                                                                                <a class="sub-menu-link" href='<%# Eval("DefaultUrl") %>'><%# Eval("Descrizione") %></a>
+                                                                            </li>
+                                                                        </ItemTemplate>
+                                                                    </asp:Repeater>
+                                                                </ul>
+                                                            </div>
+                                                        </ItemTemplate>
+                                                    </asp:Repeater>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
-                            </li>
-                        </ItemTemplate>
-                    </asp:Repeater>
+                                    </li>
+                                </ItemTemplate>
+                            </asp:Repeater>
+                        </ul>
+                    </nav>
+                </div>
 
-                    <li class="nav-item pst-unset">
-                        <a class="item-link link body-md-2 fw-semibold" href="Contattaci.aspx"><span>Contatti</span></a>
-                    </li>
-                </ul>
-            </nav>
+                <!-- Main navigation -->
+                <nav class="box-navigation text-center">
+                    <ul class="box-nav-ul d-flex align-items-center justify-content-center">
+                        <li class="menu-item">
+                            <a href="Default.aspx" class="item-link">Home</a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="articoli.aspx" class="item-link">Catalogo</a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="Contattaci.aspx" class="item-link">Contatti</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
         </div>
     </div>
 </header>
@@ -154,7 +155,7 @@
         </div>
     </div>
 
-    <div class="canvas-body">
+    <div class="offcanvas-body canvas-body">
         <div class="mb-3">
             <div class="form-search-product style-2">
                 <fieldset>
@@ -181,7 +182,11 @@
             </ul>
         </div>
 
-        <div class="mt-4">
+        <!-- Mobile catalog menu mount:
+             - se i repeater mobile sono già bindati lato server, renderizzano qui.
+             - altrimenti, JS clona dal menu desktop (ks-page-flags.js) per mantenere coerenza 1:1 col template.
+        -->
+        <div class="mt-4" id="ksMobileNavMount">
             <div class="wrap-sidebar-account">
                 <ul class="myaccount-nav content-append">
                     <asp:Repeater ID="rptNavSettoriMobile" runat="server">
