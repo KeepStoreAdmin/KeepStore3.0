@@ -1,161 +1,313 @@
-Imports MySql.Data.MySqlClient
+Imports System
+Imports System.Collections.Generic
+Imports System.Configuration
 Imports System.Data
+Imports System.Globalization
+Imports System.Linq
+Imports System.Web
 Imports System.Web.UI
 Imports System.Web.UI.WebControls
 
 Partial Class _Default
     Inherits System.Web.UI.Page
 
-    ' --- FindControl ricorsivo (VB2012-safe) ---
-    Private Function FindCtrl(Of T As Control)(ByVal id As String) As T
-        Return TryCast(FindCtrlRecursive(Me, id), T)
-    End Function
+    Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
+        Dim ivaTipo As Integer = SafeInt(Session("IvaTipo"), 0)
+        Dim ordineChiuso As Integer = GetSettingInt("OrdineStatoChiuso", 3)
 
-    Private Function FindCtrlRecursive(ByVal root As Control, ByVal id As String) As Control
-        If root Is Nothing Then Return Nothing
-        Dim c As Control = root.FindControl(id)
-        If c IsNot Nothing Then Return c
-        For Each child As Control In root.Controls
-            Dim found As Control = FindCtrlRecursive(child, id)
-            If found IsNot Nothing Then Return found
+        ConfigureHomeDataSources(ivaTipo, ordineChiuso)
+
+        If Not IsPostBack Then
+            BindHomeGridTabs()
+            BindRecentlyViewed(ivaTipo)
+        End If
+    End Sub
+
+    Private Sub ConfigureHomeDataSources(ivaTipo As Integer, ordineChiuso As Integer)
+        Dim vsFields As String = BuildVsuperArticoliSelect(ivaTipo)
+
+        ' Occasione Imperdibile (Deal Of The Day): prodotti in offerta con scadenza più vicina
+        sdsDealOfDay.SelectCommand =
+            vsFields &
+            " WHERE COALESCE(vsuperarticoli.InOfferta,0)=1 " &
+            "   AND (COALESCE(vsuperarticoli.prezzoPromo,0)>0 OR COALESCE(vsuperarticoli.PrezzoPromoIvato,0)>0) " &
+            " ORDER BY (vsuperarticoli.OfferteDataFine IS NULL), vsuperarticoli.OfferteDataFine ASC " &
+            " LIMIT 8"
+
+        ' Best seller: top vendite da documenti chiusi
+        sdsBestSeller.SelectCommand = BuildTopSoldQuery(vsFields, ordineChiuso, 12)
+
+        ' Tabs (Feature / Toprate / On Sale)
+        sdsTabFeature.SelectCommand = BuildFeaturedQuery(vsFields, 8)
+        sdsTabToprate.SelectCommand = BuildTopSoldQuery(vsFields, ordineChiuso, 8)
+        sdsTabOnSale.SelectCommand =
+            vsFields &
+            " WHERE COALESCE(vsuperarticoli.InOfferta,0)=1 " &
+            "   AND (COALESCE(vsuperarticoli.prezzoPromo,0)>0 OR COALESCE(vsuperarticoli.PrezzoPromoIvato,0)>0) " &
+            " ORDER BY (vsuperarticoli.OfferteDataFine IS NULL), vsuperarticoli.OfferteDataFine ASC " &
+            " LIMIT 8"
+
+        ' Top Trend grid
+        sdsTop20.SelectCommand = BuildTopSoldQuery(vsFields, ordineChiuso, 5)
+        sdsFeaturedMini.SelectCommand = BuildFeaturedQuery(vsFields, 5)
+        sdsTopSellingMini.SelectCommand = BuildTopSoldQuery(vsFields, ordineChiuso, 5)
+        sdsOnSaleMini.SelectCommand =
+            vsFields &
+            " WHERE COALESCE(vsuperarticoli.InOfferta,0)=1 " &
+            "   AND (COALESCE(vsuperarticoli.prezzoPromo,0)>0 OR COALESCE(vsuperarticoli.PrezzoPromoIvato,0)>0) " &
+            " ORDER BY (vsuperarticoli.OfferteDataFine IS NULL), vsuperarticoli.OfferteDataFine ASC " &
+            " LIMIT 5"
+    End Sub
+
+    Private Sub BindHomeGridTabs()
+        ' Feature tab
+        BindGridTab(sdsTabFeature, rptFeatureLeft, rptFeatureCenter, rptFeatureRight, 3, 1, 4)
+
+        ' Toprate tab
+        BindGridTab(sdsTabToprate, rptToprateLeft, rptToprateCenter, rptToprateRight, 3, 1, 4)
+
+        ' On Sale tab
+        BindGridTab(sdsTabOnSale, rptOnSaleLeft, rptOnSaleCenter, rptOnSaleRight, 3, 1, 4)
+    End Sub
+
+    Private Sub BindGridTab(ds As SqlDataSource,
+                            rptLeft As Repeater,
+                            rptCenter As Repeater,
+                            rptRight As Repeater,
+                            leftCount As Integer,
+                            centerCount As Integer,
+                            rightCount As Integer)
+
+        Dim dv As DataView = TryCast(ds.Select(DataSourceSelectArguments.Empty), DataView)
+        If dv Is Nothing OrElse dv.Table Is Nothing Then
+            rptLeft.DataSource = Nothing : rptLeft.DataBind()
+            rptCenter.DataSource = Nothing : rptCenter.DataBind()
+            rptRight.DataSource = Nothing : rptRight.DataBind()
+            Return
+        End If
+
+        Dim dt As DataTable = dv.Table
+
+        rptLeft.DataSource = Slice(dt, 0, leftCount)
+        rptLeft.DataBind()
+
+        rptCenter.DataSource = Slice(dt, leftCount, centerCount)
+        rptCenter.DataBind()
+
+        rptRight.DataSource = Slice(dt, leftCount + centerCount, rightCount)
+        rptRight.DataBind()
+    End Sub
+
+    Private Function Slice(dt As DataTable, startIndex As Integer, count As Integer) As DataTable
+        Dim clone As DataTable = dt.Clone()
+        If dt Is Nothing OrElse dt.Rows.Count = 0 OrElse count <= 0 OrElse startIndex < 0 Then Return clone
+
+        Dim maxIndex As Integer = Math.Min(dt.Rows.Count - 1, startIndex + count - 1)
+        For i As Integer = startIndex To maxIndex
+            clone.ImportRow(dt.Rows(i))
         Next
-        Return Nothing
+        Return clone
     End Function
 
-    ' VB2012-safe helper: read integer session values with a default fallback.
-    Private Function GetSessionInt(ByVal key As String, ByVal defaultValue As Integer) As Integer
+    Private Sub BindRecentlyViewed(ivaTipo As Integer)
+        Dim ids As List(Of Integer) = ReadRecentIds(10)
+
+        If ids Is Nothing OrElse ids.Count = 0 Then
+            phRecentlyViewed.Visible = False
+            sdsRecentlyViewed.SelectCommand = BuildVsuperArticoliSelect(ivaTipo) & " WHERE 1=0"
+            Return
+        End If
+
+        phRecentlyViewed.Visible = True
+
+        Dim idsCsv As String = String.Join(",", ids.Select(Function(x) x.ToString(CultureInfo.InvariantCulture)))
+        Dim vsFields As String = BuildVsuperArticoliSelect(ivaTipo)
+
+        ' Manteniamo l'ordine di visita (MySQL: FIELD)
+        sdsRecentlyViewed.SelectCommand =
+            vsFields &
+            " WHERE vsuperarticoli.Articoliid IN (" & idsCsv & ") " &
+            " ORDER BY FIELD(vsuperarticoli.Articoliid," & idsCsv & ") " &
+            " LIMIT 10"
+    End Sub
+
+    Private Function ReadRecentIds(maxCount As Integer) As List(Of Integer)
+        Dim outList As New List(Of Integer)()
+
         Try
-            Dim raw As Object = Session(key)
-            If raw Is Nothing Then Return defaultValue
-            Dim n As Integer
-            If Integer.TryParse(Convert.ToString(raw), n) Then
-                If n > 0 Then Return n
-            End If
+            Dim c As HttpCookie = Request.Cookies("ks_recent")
+            If c Is Nothing OrElse String.IsNullOrWhiteSpace(c.Value) Then Return outList
+
+            Dim raw As String = HttpUtility.UrlDecode(c.Value)
+            If String.IsNullOrWhiteSpace(raw) Then Return outList
+
+            Dim parts As String() = raw.Split(New Char() {","c}, StringSplitOptions.RemoveEmptyEntries)
+            For Each p As String In parts
+                Dim n As Integer
+                If Integer.TryParse(p.Trim(), n) AndAlso n > 0 Then
+                    If Not outList.Contains(n) Then outList.Add(n)
+                    If outList.Count >= maxCount Then Exit For
+                End If
+            Next
         Catch
-            ' swallow and use default
+            ' ignore
+        End Try
+
+        Return outList
+    End Function
+
+    ' ----------------------------
+    ' Select builders
+    ' ----------------------------
+    Private Function BuildVsuperArticoliSelect(ivaTipo As Integer) As String
+        ' NB: manteniamo alias/nomi campo usati nelle pagine KeepStore
+        Return "SELECT " &
+               "vsuperarticoli.Articoliid, " &
+               "vsuperarticoli.Codice, " &
+               "vsuperarticoli.Descrizione1, " &
+               "vsuperarticoli.Img1, vsuperarticoli.Img2, vsuperarticoli.Img3, vsuperarticoli.Img4, " &
+               "vsuperarticoli.prezzo, " &
+               "(CASE WHEN " & ivaTipo & "=2 THEN vsuperarticoli.prezzoIvato ELSE vsuperarticoli.prezzo END) AS PrezzoMostrato, " &
+               "(CASE WHEN " & ivaTipo & "=2 THEN vsuperarticoli.PrezzoPromoIvato ELSE vsuperarticoli.prezzoPromo END) AS PrezzoPromoMostrato, " &
+               "vsuperarticoli.InOfferta, " &
+               "vsuperarticoli.prezzoIvato, vsuperarticoli.prezzoPromo, " &
+               "vsuperarticoli.PrezzoPromoIvato, " &
+               "vsuperarticoli.SpeditoGratis, " &
+               "COALESCE(vsuperarticoli.Disponibilita,0) AS Disponibilita, " &
+               "COALESCE(vsuperarticoli.Impegnata,0) AS Impegnata, " &
+               "vsuperarticoli.OfferteDataFine " &
+               "FROM vsuperarticoli"
+    End Function
+
+    Private Function BuildFeaturedQuery(vsFields As String, limit As Integer) As String
+        ' Feature = vetrina (articoli.vetrina)
+        Return vsFields &
+               " INNER JOIN articoli ON articoli.id = vsuperarticoli.Articoliid " &
+               " WHERE COALESCE(articoli.vetrina,0)=1 AND COALESCE(articoli.attivo,0)=1 " &
+               " ORDER BY articoli.data_modifica DESC " &
+               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
+    End Function
+
+    Private Function BuildTopSoldQuery(vsFields As String, ordineChiuso As Integer, limit As Integer) As String
+        Return vsFields &
+               " INNER JOIN ( " &
+               "   SELECT r_documenti_dettaglio.articoli_id, COUNT(*) AS Conteggio_Vendite " &
+               "   FROM r_documenti_dettaglio " &
+               "   INNER JOIN r_documenti ON r_documenti.id = r_documenti_dettaglio.r_documenti_id " &
+               "   WHERE r_documenti.stato = " & ordineChiuso.ToString(CultureInfo.InvariantCulture) & " " &
+               "   GROUP BY r_documenti_dettaglio.articoli_id " &
+               "   ORDER BY Conteggio_Vendite DESC " &
+               "   LIMIT " & limit.ToString(CultureInfo.InvariantCulture) &
+               " ) Vendite ON Vendite.articoli_id = vsuperarticoli.Articoliid " &
+               " ORDER BY Vendite.Conteggio_Vendite DESC"
+    End Function
+
+    Private Function GetSettingInt(key As String, defaultValue As Integer) As Integer
+        Try
+            Dim v As String = ConfigurationManager.AppSettings(key)
+            Dim n As Integer
+            If Integer.TryParse(v, n) Then Return n
+        Catch
+            ' ignore
         End Try
         Return defaultValue
     End Function
 
-    Dim IvaTipo As Integer
-    Public cont As Integer = 0
-    Dim valoreIva As Integer
+    Private Function SafeInt(value As Object, defaultValue As Integer) As Integer
+        Try
+            If value Is Nothing OrElse value Is DBNull.Value Then Return defaultValue
+            Dim n As Integer
+            If Integer.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), n) Then Return n
+        Catch
+            ' ignore
+        End Try
+        Return defaultValue
+    End Function
 
-    Enum SqlExecutionType
-        nonQuerya
-        scalar
-    End Enum
-
-    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
-        Me.Session("InOfferta") = 0
-
-        Dim sdsNew As SqlDataSource = FindCtrl(Of SqlDataSource)("SdsNewArticoli")
-        Dim sdsVetrina As SqlDataSource = FindCtrl(Of SqlDataSource)("SdsArticoliInVetrina")
-        Dim sdsBest As SqlDataSource = FindCtrl(Of SqlDataSource)("sdsPiuAcquistati")
-
-        If sdsNew Is Nothing OrElse sdsVetrina Is Nothing OrElse sdsBest Is Nothing Then
-            ' Fail-safe: non bloccare la home se il controllo non è presente.
-            Return
+    ' ----------------------------
+    ' Helpers used from ASPX
+    ' ----------------------------
+    Protected Function GetProductImage(primaryImg As Object, fallbackImg As Object) As String
+        Dim p As String = Convert.ToString(primaryImg)
+        If String.IsNullOrWhiteSpace(p) OrElse p = "0" Then
+            p = Convert.ToString(fallbackImg)
         End If
+        Return ThemeManager.ProductImageUrl(p)
+    End Function
 
-        Dim sqlString As String
-        Dim sqlBaseTable As String
-        Dim table1 As String
-        Dim table2 As String
+    Protected Function RenderDiscountBadge(prezzoMostrato As Object, prezzoPromoMostrato As Object, inOfferta As Object) As String
+        Dim flag As Integer = SafeInt(inOfferta, 0)
+        If flag <> 1 Then Return String.Empty
 
-        ' NOTA SICUREZZA/BUGFIX:
-        ' - Uso sempre lo stesso nome parametro @ivaUtente in tutte le espressioni (prima c'era @IvaUtente)
-        Dim prezzoIvato As String = "IF(@ivaUtente>0,((vsuperarticoli.Prezzo)*((@ivaUtente/100)+1)),vsuperarticoli.PrezzoIvato) AS PrezzoIvato"
-        Dim prezzoPromoIvato As String = "IF(@ivaUtente>0,((vsuperarticoli.PrezzoPromo)*((@ivaUtente/100)+1)),vsuperarticoli.PrezzoPromoIvato) AS PrezzoPromoIvato"
-        Dim iva As String = "IF(@ivaUtente>0,@ivaUtente,iva.valore) AS iva"
+        Dim p As Decimal = SafeDecimal(prezzoMostrato)
+        Dim promo As Decimal = SafeDecimal(prezzoPromoMostrato)
+        If p <= 0D OrElse promo <= 0D OrElse promo >= p Then Return String.Empty
 
-        Dim vsuperarticoliFieldsAndIvaFromVsuperarticoli As String =
-            "vsuperarticoli.id as Articoliid, vsuperarticoli.TCId, vsuperarticoli.Codice, vsuperarticoli.Ean, vsuperarticoli.Descrizione1, vsuperarticoli.Descrizione2, " &
-            "vsuperarticoli.MarcheId, vsuperarticoli.Marche_img, vsuperarticoli.SettoriId, vsuperarticoli.CategorieId, vsuperarticoli.TipologieId, vsuperarticoli.GruppiId, vsuperarticoli.SottoGruppiId, " &
-            "vsuperarticoli.iva as ivaId, vsuperarticoli.UmId, vsuperarticoli.ListinoUfficiale, vsuperarticoli.img1, vsuperarticoli.Prezzo, " &
-            prezzoIvato & ", " &
-            "vsuperarticoli.PrezzoPromo, " &
-            prezzoPromoIvato & ", vsuperarticoli.InOfferta, vsuperarticoli.speditoGratis, " &
-            iva & " " &
-            "FROM vsuperarticoli LEFT OUTER JOIN iva ON iva.id = vsuperarticoli.iva"
+        Dim perc As Integer = CInt(Math.Round((1D - (promo / p)) * 100D, 0, MidpointRounding.AwayFromZero))
+        If perc <= 0 Then Return String.Empty
 
-        Dim tagliecoloriJoin As String =
-            "AS finalTable LEFT OUTER JOIN articoli_tagliecolori ON finalTable.TCId = articoli_tagliecolori.id " &
-            "LEFT OUTER JOIN taglie ON articoli_tagliecolori.tagliaid = taglie.id " &
-            "LEFT OUTER JOIN colori ON articoli_tagliecolori.coloreid = colori.id"
+        Return "<span class=""on-sale fw-semibold"">-" & perc.ToString(CultureInfo.InvariantCulture) & "%</span>"
+    End Function
 
-        Dim id As String
-        Dim vsuperarticoliId As String
-        Dim TC As Integer = 0
+    Protected Function GetCountdownSeconds(endDate As Object) As Integer
+        Try
+            If endDate Is Nothing OrElse endDate Is DBNull.Value Then Return 0
+            Dim dt As DateTime
+            If TypeOf endDate Is DateTime Then
+                dt = DirectCast(endDate, DateTime)
+            Else
+                If Not DateTime.TryParse(Convert.ToString(endDate), dt) Then Return 0
+            End If
 
-        If Session("TC") IsNot Nothing Then Integer.TryParse(Session("TC").ToString(), TC)
-        If TC = 1 Then
-            id = "TCId"
-            vsuperarticoliId = id
-        Else
-            id = "Articoliid"
-            vsuperarticoliId = "id"
-        End If
+            Dim sec As Double = (dt.ToUniversalTime() - DateTime.UtcNow).TotalSeconds
+            If sec < 0 Then sec = 0
+            If sec > Integer.MaxValue Then sec = Integer.MaxValue
+            Return CInt(Math.Floor(sec))
+        Catch
+            Return 0
+        End Try
+    End Function
 
-        ' -------------------------------
-        ' Nuovi arrivi (SdsNewArticoli)
-        ' -------------------------------
-        sqlBaseTable = "(SELECT * FROM documenti WHERE tipoDocumentiid=11 OR tipoDocumentiid=22 ORDER BY id DESC LIMIT 20) AS documentibase"
-        sqlBaseTable = "(SELECT articoliid, TCId FROM " & sqlBaseTable & " INNER JOIN documentirighe ON documentibase.id = documentirighe.DocumentiId GROUP BY " & id & " ORDER BY RAND()) AS articoliidTCIdTable"
-        sqlBaseTable = "(SELECT " & vsuperarticoliFieldsAndIvaFromVsuperarticoli & " INNER JOIN " & sqlBaseTable & " ON articoliidTCIdTable." & id & " = vsuperarticoli." & vsuperarticoliId & " WHERE nlistino=@listino ORDER BY vsuperarticoli.PrezzoPromoIvato ASC) AS vsuperarticoliOrdered"
-        table1 = "SELECT * FROM " & sqlBaseTable & " GROUP BY " & id
+    Protected Function GetSoldQty(impegnata As Object) As Integer
+        Dim n As Integer = SafeInt(impegnata, 0)
+        If n < 0 Then n = 0
+        Return n
+    End Function
 
-        If TC = 1 Then
-            sqlBaseTable = "(SELECT * FROM articoli_tagliecolori ORDER BY id DESC LIMIT 20) As articolibase"
-        Else
-            sqlBaseTable = "(SELECT * FROM articoli ORDER BY id DESC LIMIT 20) As articolibase"
-        End If
+    Protected Function GetAvailableQty(disponibilita As Object) As Integer
+        Dim n As Integer = SafeInt(disponibilita, 0)
+        If n < 0 Then n = 0
+        Return n
+    End Function
 
-        table2 = "SELECT " & vsuperarticoliFieldsAndIvaFromVsuperarticoli & " INNER JOIN " & sqlBaseTable & " ON articolibase.id = vsuperarticoli." & vsuperarticoliId & " WHERE nlistino=@listino"
-        sqlString = "SELECT * FROM (" & table1 & " UNION ALL " & table2 & ") AS united ORDER BY RAND() LIMIT " & (GetSessionInt("VetrinaArticoliUltimiArriviPuntoVendita", 2) * 3).ToString()
-        sqlString = "SELECT *, taglie.descrizione AS taglia, colori.descrizione AS colore FROM (" & sqlString & ") " & tagliecoloriJoin
+    Protected Function GetSoldPercent(impegnata As Object, disponibilita As Object) As Integer
+        Dim sold As Integer = GetSoldQty(impegnata)
+        Dim avail As Integer = GetAvailableQty(disponibilita)
+        Dim total As Integer = sold + avail
+        If total <= 0 Then Return 0
+        Dim perc As Integer = CInt(Math.Round((sold * 100D) / total, 0, MidpointRounding.AwayFromZero))
+        If perc < 0 Then perc = 0
+        If perc > 100 Then perc = 100
+        Return perc
+    End Function
 
-        sdsNew.SelectCommand = sqlString
-        sdsNew.SelectParameters.Clear()
-        sdsNew.SelectParameters.Add("@listino", Session("listino"))
-        sdsNew.SelectParameters.Add("@ivaUtente", Session("Iva_Utente"))
+    Protected Function GetCaption(code As Object) As String
+        Dim s As String = Convert.ToString(code)
+        If String.IsNullOrWhiteSpace(s) Then Return "Prodotto"
+        Return s
+    End Function
 
-        ' -------------------------------
-        ' Articoli in vetrina (SdsArticoliInVetrina)
-        ' -------------------------------
-        sqlBaseTable = "(SELECT " & vsuperarticoliFieldsAndIvaFromVsuperarticoli &
-                       " INNER JOIN (SELECT articoli_listini.id FROM articoli_listini INNER JOIN articoli ON articoli_listini.`ArticoliId` = articoli.id " &
-                       "WHERE articoli_listini.`NListino` = @listino AND articoli.vetrina = 1 ORDER BY id DESC LIMIT 50) AS vsuperarticoliids " &
-                       "ON vsuperarticoliids.id = vsuperarticoli.`ArticoliListiniId` ORDER BY " & id & " DESC, PrezzoPromo ASC) AS vsuperarticoliOrdered"
+    Private Function SafeDecimal(value As Object) As Decimal
+        Try
+            If value Is Nothing OrElse value Is DBNull.Value Then Return 0D
+            Dim d As Decimal
+            If Decimal.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), NumberStyles.Any, CultureInfo.InvariantCulture, d) Then Return d
+            ' fallback per culture it-IT
+            If Decimal.TryParse(Convert.ToString(value), NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), d) Then Return d
+        Catch
+            ' ignore
+        End Try
+        Return 0D
+    End Function
 
-        sqlString = "SELECT * FROM " & sqlBaseTable & " GROUP BY " & id & " ORDER BY RAND() LIMIT " & (GetSessionInt("VetrinaArticoliImpatto", 2) * 3).ToString()
-        sqlString = "SELECT *, taglie.descrizione AS taglia, colori.descrizione AS colore FROM (" & sqlString & ") " & tagliecoloriJoin
-
-        sdsVetrina.SelectCommand = sqlString
-        sdsVetrina.SelectParameters.Clear()
-        sdsVetrina.SelectParameters.Add("@listino", Session("listino"))
-        sdsVetrina.SelectParameters.Add("@ivaUtente", Session("Iva_Utente"))
-
-        ' -------------------------------
-        ' Più venduti (sdsPiuAcquistati)
-        ' -------------------------------
-        sqlBaseTable = "(SELECT documentirighe.ArticoliId, documentirighe.TCId, COUNT(documentirighe.ArticoliId) AS Conteggio_Vendite, " &
-                       "DATEDIFF(CURDATE(),documenti.DataDocumento) AS Giorni " &
-                       "FROM documenti INNER JOIN documentirighe ON documentirighe.DocumentiId=documenti.id " &
-                       "WHERE articoliid>0 AND DATEDIFF(CURDATE(),documenti.DataDocumento)<15 " &
-                       "GROUP BY " & id & " ORDER BY conteggio_vendite DESC LIMIT 50) AS documentiTable"
-
-        sqlBaseTable = "(SELECT Conteggio_Vendite, " & vsuperarticoliFieldsAndIvaFromVsuperarticoli &
-                       " INNER JOIN " & sqlBaseTable &
-                       " ON documentiTable." & id & "=vsuperarticoli." & vsuperarticoliId &
-                       " WHERE NListino=@listino ORDER BY Conteggio_vendite DESC, PrezzoPromoIvato ASC) as vsuperarticoliOrdered"
-
-        sqlString = "SELECT * FROM " & sqlBaseTable & " GROUP BY " & id & " ORDER BY conteggio_vendite DESC LIMIT " & (GetSessionInt("VetrinaArticoliPiuVenduti", 2) * 4).ToString()
-        sqlString = "SELECT *, taglie.descrizione AS taglia, colori.descrizione AS colore FROM (" & sqlString & ") " & tagliecoloriJoin
-
-        sdsBest.SelectCommand = sqlString
-        sdsBest.SelectParameters.Clear()
-        sdsBest.SelectParameters.Add("@listino", Session("listino"))
-        sdsBest.SelectParameters.Add("@ivaUtente", Session("Iva_Utente"))
-    End Sub
 End Class
