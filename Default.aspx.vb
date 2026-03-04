@@ -145,8 +145,8 @@ Partial Class _Default
         ' Manteniamo l'ordine di visita (MySQL: FIELD)
         sdsRecentlyViewed.SelectCommand =
             vsFields &
-            " WHERE vsuperarticoli.Articoliid IN (" & idsCsv & ") " &
-            " ORDER BY FIELD(vsuperarticoli.Articoliid," & idsCsv & ") " &
+            " WHERE vsuperarticoli.id IN (" & idsCsv & ") " &
+            " ORDER BY FIELD(vsuperarticoli.id," & idsCsv & ") " &
             " LIMIT 10"
     End Sub
 
@@ -181,7 +181,7 @@ Partial Class _Default
     Private Function BuildVsuperArticoliSelect(ivaTipo As Integer) As String
         ' NB: manteniamo alias/nomi campo usati nelle pagine KeepStore
         Return "SELECT " &
-               "vsuperarticoli.Articoliid, " &
+               "vsuperarticoli.id AS Articoliid, " &
                "vsuperarticoli.Codice, " &
                "vsuperarticoli.Descrizione1, " &
                "vsuperarticoli.Img1, vsuperarticoli.Img2, vsuperarticoli.Img3, vsuperarticoli.Img4, " &
@@ -201,7 +201,7 @@ Partial Class _Default
     Private Function BuildFeaturedQuery(vsFields As String, limit As Integer) As String
         ' Feature = vetrina (articoli.vetrina)
         Return vsFields &
-               " INNER JOIN articoli ON articoli.id = vsuperarticoli.Articoliid " &
+               " INNER JOIN articoli ON articoli.id = vsuperarticoli.id " &
                " WHERE COALESCE(articoli.vetrina,0)=1 AND COALESCE(articoli.attivo,0)=1 " &
                " ORDER BY articoli.data_modifica DESC " &
                " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
@@ -217,7 +217,7 @@ Partial Class _Default
                "   GROUP BY r_documenti_dettaglio.articoli_id " &
                "   ORDER BY Conteggio_Vendite DESC " &
                "   LIMIT " & limit.ToString(CultureInfo.InvariantCulture) &
-               " ) Vendite ON Vendite.articoli_id = vsuperarticoli.Articoliid " &
+               " ) Vendite ON Vendite.articoli_id = vsuperarticoli.id " &
                " ORDER BY Vendite.Conteggio_Vendite DESC"
     End Function
 

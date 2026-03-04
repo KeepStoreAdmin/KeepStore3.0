@@ -466,7 +466,14 @@
     </section>
 
 <asp:Panel ID="Panel_Unico" runat="server" CssClass="ks-checkout-panel">   
-    <table width="100%" border="0" runat="server" id="tOrdine" visible="false" class="ks-checkout">
+    
+    <% If tOrdine IsNot Nothing AndAlso tOrdine.Visible Then %>
+    <section class="tf-page-checkout flat-spacing-11 ks-checkout-shell">
+        <div class="container">
+            <div class="tf-checkout-wrap flex-lg-nowrap">
+                <div class="page-checkout">
+    <% End If %>
+<table width="100%" border="0" runat="server" id="tOrdine" visible="false" class="ks-checkout">
     
     
     <tr><td style="width: 100%;" colspan="2" valign="top" >
@@ -1116,6 +1123,56 @@
     </td>
 </tr>
    </table>
+    <% If tOrdine IsNot Nothing AndAlso tOrdine.Visible Then %>
+                </div>
+                <div class="flat-sidebar-checkout">
+                    <div class="tf-sidebar-checkout">
+                        <div class="sidebar-checkout-content">
+                            <div class="sidebar-checkout-header">
+                                <h5 class="fw-semibold">Riepilogo ordine</h5>
+                            </div>
+
+                            <div class="d-flex justify-content-between mt-3">
+                                <span class="fw-medium">Imponibile</span>
+                                <span><%= lblImponibile.Text %></span>
+                            </div>
+                            <div class="d-flex justify-content-between mt-2">
+                                <span class="fw-medium">Spedizione</span>
+                                <span><%= lblSpeseSped.Text %></span>
+                            </div>
+                            <div class="d-flex justify-content-between mt-2">
+                                <span class="fw-medium">Assicurazione</span>
+                                <span><%= lblSpeseAss.Text %></span>
+                            </div>
+                            <div class="d-flex justify-content-between mt-2">
+                                <span class="fw-medium">IVA</span>
+                                <span><%= lblIva.Text %></span>
+                            </div>
+                            <div class="d-flex justify-content-between mt-2">
+                                <span class="fw-medium">Pagamento</span>
+                                <span><%= lblPagamento.Text %></span>
+                            </div>
+                            <div class="d-flex justify-content-between mt-2">
+                                <span class="fw-medium">Sconto</span>
+                                <span><%= lblBuonoSconto.Text %></span>
+                            </div>
+
+                            <div class="d-flex justify-content-between mt-3 pt-3 border-top">
+                                <span class="fw-semibold">Totale</span>
+                                <span class="fw-semibold"><%= lblTotale.Text %></span>
+                            </div>
+
+                            <div class="mt-3 body-text-3 text-secondary">
+                                Procedendo con l&#39;ordine confermi di aver letto e accettato le condizioni di vendita.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <% End If %>
+
 </asp:Panel> 
 <asp:validationsummary id="ValidationSummary1" runat="server" HeaderText="Attenzione!" ShowMessageBox="True" ShowSummary="False"></asp:validationsummary>
 		                
