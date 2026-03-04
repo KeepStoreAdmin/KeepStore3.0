@@ -199,13 +199,15 @@ Partial Class _Default
     End Function
 
     Private Function BuildFeaturedQuery(vsFields As String, limit As Integer) As String
-        ' Feature = vetrina (articoli.vetrina)
-        Return vsFields &
-               " INNER JOIN articoli ON articoli.id = vsuperarticoli.id " &
-               " WHERE COALESCE(articoli.vetrina,0)=1 AND COALESCE(articoli.attivo,0)=1 " &
-               " ORDER BY articoli.data_modifica DESC " &
-               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
-    End Function
+    ' Feature = Vetrina (colonna presente in articoli e quindi nella view vsuperarticoli)
+    If limit <= 0 Then limit = 8
+
+    Return vsFields &
+           " WHERE COALESCE(vsuperarticoli.Vetrina,0) <> 0 " &
+           " ORDER BY COALESCE(vsuperarticoli.DataCreazione, NOW()) DESC, vsuperarticoli.id DESC " &
+           " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
+End Function
+
 
     Private Function BuildTopSoldQuery(vsFields As String, ordineChiuso As Integer, limit As Integer) As String
         Return vsFields &
