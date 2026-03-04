@@ -78,6 +78,11 @@ Partial Class _Default
                             centerCount As Integer,
                             rightCount As Integer)
 
+        ' IMPORTANT:
+        ' KeepStore usa MySQL (connection string con keyword come "port").
+        ' Se ProviderName non è impostato, SqlDataSource usa di default SqlClient e va in errore.
+        EnsureMySqlProvider(ds)
+
         Dim dv As DataView = TryCast(ds.Select(DataSourceSelectArguments.Empty), DataView)
         If dv Is Nothing OrElse dv.Table Is Nothing Then
             rptLeft.DataSource = Nothing : rptLeft.DataBind()
@@ -96,6 +101,20 @@ Partial Class _Default
 
         rptRight.DataSource = Slice(dt, leftCount + centerCount, rightCount)
         rptRight.DataBind()
+    End Sub
+
+    Private Sub EnsureMySqlProvider(ds As SqlDataSource)
+        If ds Is Nothing Then Exit Sub
+
+        Try
+            Dim pn As String = Convert.ToString(ds.ProviderName)
+            If String.IsNullOrWhiteSpace(pn) OrElse pn.Equals("System.Data.SqlClient", StringComparison.OrdinalIgnoreCase) Then
+                ' fallback hard-coded (coerente con la configurazione KeepStore)
+                ds.ProviderName = "MySql.Data.MySqlClient"
+            End If
+        Catch
+            ' ignore (non bloccare la pagina)
+        End Try
     End Sub
 
     Private Function Slice(dt As DataTable, startIndex As Integer, count As Integer) As DataTable

@@ -651,18 +651,48 @@
     <asp:Label ID="lblPrezzi" runat="server" Visible="false" />
 
     <!-- DataSources -->
-    <asp:SqlDataSource ID="sdsDealOfDay" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" />
-    <asp:SqlDataSource ID="sdsBestSeller" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" />
+    <asp:SqlDataSource ID="sdsDealOfDay" runat="server"
+        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+        DataSourceMode="DataSet" />
+    <asp:SqlDataSource ID="sdsBestSeller" runat="server"
+        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+        DataSourceMode="DataSet" />
 
-    <asp:SqlDataSource ID="sdsTabFeature" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" />
-    <asp:SqlDataSource ID="sdsTabToprate" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" />
-    <asp:SqlDataSource ID="sdsTabOnSale" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" />
+    <asp:SqlDataSource ID="sdsTabFeature" runat="server"
+        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+        DataSourceMode="DataSet" />
+    <asp:SqlDataSource ID="sdsTabToprate" runat="server"
+        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+        DataSourceMode="DataSet" />
+    <asp:SqlDataSource ID="sdsTabOnSale" runat="server"
+        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+        DataSourceMode="DataSet" />
 
-    <asp:SqlDataSource ID="sdsTop20" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" />
-    <asp:SqlDataSource ID="sdsFeaturedMini" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" />
-    <asp:SqlDataSource ID="sdsTopSellingMini" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" />
-    <asp:SqlDataSource ID="sdsOnSaleMini" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" />
+    <asp:SqlDataSource ID="sdsTop20" runat="server"
+        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+        DataSourceMode="DataSet" />
+    <asp:SqlDataSource ID="sdsFeaturedMini" runat="server"
+        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+        DataSourceMode="DataSet" />
+    <asp:SqlDataSource ID="sdsTopSellingMini" runat="server"
+        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+        DataSourceMode="DataSet" />
+    <asp:SqlDataSource ID="sdsOnSaleMini" runat="server"
+        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+        DataSourceMode="DataSet" />
 
-    <asp:SqlDataSource ID="sdsRecentlyViewed" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" />
+    <asp:SqlDataSource ID="sdsRecentlyViewed" runat="server"
+        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+        DataSourceMode="DataSet" />
 
 </asp:Content>
