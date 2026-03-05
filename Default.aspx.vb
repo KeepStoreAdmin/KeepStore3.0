@@ -83,7 +83,13 @@ Partial Class _Default
         ' Se ProviderName non è impostato, SqlDataSource usa di default SqlClient e va in errore.
         EnsureMySqlProvider(ds)
 
-        Dim dv As DataView = TryCast(ds.Select(DataSourceSelectArguments.Empty), DataView)
+        Dim dv As DataView = Nothing
+        Try
+            dv = TryCast(ds.Select(DataSourceSelectArguments.Empty), DataView)
+        Catch
+            dv = Nothing
+        End Try
+
         If dv Is Nothing OrElse dv.Table Is Nothing Then
             rptLeft.DataSource = Nothing : rptLeft.DataBind()
             rptCenter.DataSource = Nothing : rptCenter.DataBind()
@@ -210,17 +216,27 @@ End Function
 
 
     Private Function BuildTopSoldQuery(vsFields As String, ordineChiuso As Integer, limit As Integer) As String
+        ' Top-selling basato su documenti/documentirighe (schema attuale KeepStore).
+        ' NB: NON usare r_documenti_dettaglio/r_documenti (non esistono nel DB attuale).
+        Dim whereParts As New List(Of String)()
+        whereParts.Add("dr.TipoRiga = 'A'")
+        If ordineChiuso > 0 Then
+            whereParts.Add("d.StatiId = " & ordineChiuso.ToString(CultureInfo.InvariantCulture))
+        End If
+
+        Dim wh As String = String.Join(" AND ", whereParts.ToArray())
+
         Return vsFields &
                " INNER JOIN ( " &
-               "   SELECT r_documenti_dettaglio.articoli_id, COUNT(*) AS Conteggio_Vendite " &
-               "   FROM r_documenti_dettaglio " &
-               "   INNER JOIN r_documenti ON r_documenti.id = r_documenti_dettaglio.r_documenti_id " &
-               "   WHERE r_documenti.stato = " & ordineChiuso.ToString(CultureInfo.InvariantCulture) & " " &
-               "   GROUP BY r_documenti_dettaglio.articoli_id " &
-               "   ORDER BY Conteggio_Vendite DESC " &
+               "   SELECT dr.ArticoliId AS articoli_id, SUM(IFNULL(dr.Qnt,0)) AS QntTot " &
+               "   FROM documentirighe dr " &
+               "   INNER JOIN documenti d ON d.id = dr.DocumentiId " &
+               "   WHERE " & wh & " " &
+               "   GROUP BY dr.ArticoliId " &
+               "   ORDER BY QntTot DESC " &
                "   LIMIT " & limit.ToString(CultureInfo.InvariantCulture) &
                " ) Vendite ON Vendite.articoli_id = vsuperarticoli.id " &
-               " ORDER BY Vendite.Conteggio_Vendite DESC"
+               " ORDER BY Vendite.QntTot DESC"
     End Function
 
     Private Function GetSettingInt(key As String, defaultValue As Integer) As Integer

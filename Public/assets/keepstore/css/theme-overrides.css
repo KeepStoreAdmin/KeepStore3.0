@@ -545,3 +545,66 @@ table.ks-checkout > tbody > tr > td {
   height: 18px;
   margin-top: 2px;
 }
+
+/* ---------- Checkout (Cart/Checkout) ---------- */
+/* Obiettivo: layout a blocchi (stile tema) senza introdurre nuovi file CSS.
+   NB: questa sezione “de-tablizza” progressivamente la struttura legacy (tabelle) del checkout,
+   mantenendo ID/controlli invariati. */
+
+/* Layout legacy: rendi le tabelle di form/ordine “block-like” per rispettare il layout a cards */
+.ks-checkout-shell table#tOrdine,
+.ks-checkout-shell table#tOrdine > tbody,
+.ks-checkout-shell table#tOrdine > tbody > tr,
+.ks-checkout-shell table#tOrdine > tbody > tr > td{
+  display:block;
+  width:100%;
+}
+.ks-checkout-shell table#tOrdine > tbody > tr > td{
+  padding:0 !important;
+  border:0 !important;
+}
+
+/* Totali ordine: TableConteggi come lista */
+.ks-checkout-shell table#TableConteggi,
+.ks-checkout-shell table#TableConteggi > tbody,
+.ks-checkout-shell table#TableConteggi > tbody > tr,
+.ks-checkout-shell table#TableConteggi > tbody > tr > td{
+  display:block;
+  width:100%;
+}
+.ks-checkout-shell table#TableConteggi > tbody > tr{
+  padding:10px 0;
+  border-bottom:1px solid rgba(0,0,0,.08);
+}
+.ks-checkout-shell table#TableConteggi > tbody > tr:last-child{
+  border-bottom:0;
+}
+.ks-checkout-shell table#TableConteggi > tbody > tr > td{
+  padding:0 !important;
+  border:0 !important;
+}
+
+/* Card wrapper legacy */
+.ks-checkout-shell .checkout_box_500,
+.ks-checkout-shell .checkout_box_600{
+  border:1px solid rgba(0,0,0,.10);
+  border-radius:16px;
+  background:#fff;
+  padding:18px;
+}
+
+/* Spaziature coerenti */
+.ks-checkout-shell .page-checkout .checkout_box_500 + .checkout_box_500,
+.ks-checkout-shell .page-checkout .checkout_box_600 + .checkout_box_600{
+  margin-top:18px;
+}
+
+@media (max-width: 991.98px){
+  .ks-checkout-shell .tf-checkout-wrap{
+    gap:20px;
+  }
+  .ks-checkout-shell .flat-sidebar-checkout{
+    position:static;
+  }
+}
+
