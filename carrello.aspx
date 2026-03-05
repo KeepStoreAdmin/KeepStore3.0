@@ -902,12 +902,14 @@
                 <br />
 				-->
                  <table id="tblDestAlter" class="ks-dest-form" cellpadding="1" cellspacing="5" border="0" width="100%" runat="server">
-                    <tr>
-                        <td style="padding: 0 5px;" width="155px">Ragione Sociale&nbsp;/&nbsp;Cognome: *</td>
-                        <td ><asp:TextBox ID="tbRagioneSocialeA" CssClass="form-control ks-form-control" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
-                            <asp:requiredfieldvalidator id="RFRagioneSocialeA" runat="server" Display="None" ControlToValidate="tbRagioneSocialeA"
+	                    <tr>
+	                        <td style="padding: 0 5px;" width="155px">Ragione Sociale&nbsp;/&nbsp;Cognome: *</td>
+	                        <td>
+	                            <asp:TextBox ID="tbRagioneSocialeA" CssClass="form-control ks-form-control" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
+	                            <asp:requiredfieldvalidator id="RFRagioneSocialeA" runat="server" Display="None" ControlToValidate="tbRagioneSocialeA"
 		                       ErrorMessage="Campo Obbligatorio (Ragione Sociale)"></asp:requiredfieldvalidator>
-                    </tr>
+	                        </td>
+	                    </tr>
                     <tr>
                         <td style="padding: 0 5px;" width="155px">Nome:</td>
                         <td ><asp:TextBox ID="tbNomeA" CssClass="form-control ks-form-control" runat="server" Width="100%" MaxLength="50" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
@@ -919,13 +921,15 @@
                             <asp:requiredfieldvalidator id="RFIndirizzo2" runat="server" Display="None" ControlToValidate="tbIndirizzo2"
 		                       ErrorMessage="Campo Obbligatorio (Indirizzo)"></asp:requiredfieldvalidator>
                         </td>
-                    </tr>
-                        <td style="padding: 0 5px;" width="155px">Cap *</td>
-                        <td ><asp:TextBox ID="tbCap2" CssClass="form-control ks-form-control" runat="server" AutoPostBack="true" OnTextChanged="City_Bind_Data2" Width="100%" MaxLength="5" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
-							 <asp:requiredfieldvalidator id="RFCap2" runat="server" Display="None" ControlToValidate="tbCap2"
-		                       ErrorMessage="Campo Obbligatorio (CAP)"></asp:requiredfieldvalidator>
-                        </td>
-                    </tr>     
+	                    </tr>
+	                    <tr>
+						<td style="padding: 0 5px;" width="155px">Cap *</td>
+						<td>
+							<asp:TextBox ID="tbCap2" CssClass="form-control ks-form-control" runat="server" AutoPostBack="true" OnTextChanged="City_Bind_Data2" Width="100%" MaxLength="5" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
+							<asp:requiredfieldvalidator id="RFCap2" runat="server" Display="None" ControlToValidate="tbCap2"
+						       ErrorMessage="Campo Obbligatorio (CAP)"></asp:requiredfieldvalidator>
+						</td>
+					</tr>
                     <tr>
                         <td style="padding: 0 5px;" width="155px">Città: *</td>
                         <td ><asp:DropDownList ID="ddlCitta2" CssClass="form-select ks-form-select" onSelectedIndexChanged="Province_Bind_Data2" AutoPostBack="true" runat="server" Width="100%" ValidationGroup="registrazione" CausesValidation="True"></asp:DropDownList>
@@ -957,8 +961,7 @@
                         <td ><asp:TextBox ID="tbNote" CssClass="form-control ks-form-control" runat="server" Width="100%" MaxLength="255" ValidationGroup="registrazione" CausesValidation="True" TextMode="MultiLine" Rows="5"></asp:TextBox>
                         </td>
                     </tr>  
-                    <tr>
-                    <tr>
+	                    <tr>
                         <td align="center" colspan="2">
                             <asp:Button ID="btnSalvaDest" CssClass="tf-btn btn-gray ks-btn" runat="server" Text="Inserisci nuova destinazione" Height="25px" CausesValidation="true" />
                             <asp:Button ID="btnModDest" CssClass="tf-btn ks-btn" runat="server" Text="Salva modifiche destinazione" Height="25px" CausesValidation="true" />

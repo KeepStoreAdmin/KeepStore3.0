@@ -1,0 +1,31 @@
+A) FIX VIEWSTATE MAC (OBBLIGATORIO)
+
+Dentro <configuration><system.web> aggiungi (o sostituisci) la riga <machineKey ... /> con una chiave FISSA.
+IMPORTANTE: se hai più server (web-farm) o più istanze, questa machineKey deve essere IDENTICA su tutti.
+
+<machineKey
+  validationKey="18703F94A9F4473BFDAC73680124E749CE6799B09BC87A5F37C4A73C397CD72DB23F78EECFE0A7469FDD2973A58117784BCFE8069F7E2536F3E2638F6412DD6B"
+  decryptionKey="3C9EC2681251D0B332745F8F32845F4A67E0CDBD889A4A662F533F932D7E74D2"
+  validation="HMACSHA256"
+  decryption="AES" />
+
+
+B) FORCE HTTPS (se vuoi che ogni richiesta HTTP venga sempre rediretta su HTTPS)
+
+Dentro <configuration><system.webServer> (se esiste già <rewrite>, NON duplicarlo: aggiungi solo la <rule>)
+
+<rewrite>
+  <rules>
+    <rule name="Redirect to HTTPS" stopProcessing="true">
+      <match url="(.*)" />
+      <conditions>
+        <add input="{HTTPS}" pattern="off" ignoreCase="true" />
+      </conditions>
+      <action type="Redirect" url="https://{HTTP_HOST}/{R:1}" redirectType="Permanent" />
+    </rule>
+  </rules>
+</rewrite>
+
+NOTE:
+- Questa regola richiede IIS URL Rewrite.
+- Se sei dietro reverse proxy/load balancer che termina SSL, potrebbe servire la condition su X-Forwarded-Proto.

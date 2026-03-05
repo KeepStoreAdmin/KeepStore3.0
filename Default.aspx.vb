@@ -149,13 +149,18 @@ Partial Class _Default
     Private Sub BindRecentlyViewed(ivaTipo As Integer)
         Dim ids As List(Of Integer) = ReadRecentIds(10)
 
-        If ids Is Nothing OrElse ids.Count = 0 Then
-            phRecentlyViewed.Visible = False
-            sdsRecentlyViewed.SelectCommand = BuildVsuperArticoliSelect(ivaTipo) & " WHERE 1=0"
-            Return
-        End If
+	    If ids Is Nothing OrElse ids.Count = 0 Then
+	        ' Primo accesso: manteniamo la sezione visibile (come nel template)
+	        ' popolandola con un set “fallback” finché l’utente non naviga prodotti.
+	        phRecentlyViewed.Visible = True
+	        Dim vsFields As String = BuildVsuperArticoliSelect(ivaTipo)
+	        sdsRecentlyViewed.SelectCommand =
+	            vsFields &
+	            " ORDER BY vsuperarticoli.DataIns DESC, vsuperarticoli.id DESC LIMIT 10"
+	        Return
+	    End If
 
-        phRecentlyViewed.Visible = True
+	    phRecentlyViewed.Visible = True
 
         Dim idsCsv As String = String.Join(",", ids.Select(Function(x) x.ToString(CultureInfo.InvariantCulture)))
         Dim vsFields As String = BuildVsuperArticoliSelect(ivaTipo)
@@ -222,7 +227,7 @@ Partial Class _Default
 
     Return vsFields &
            " WHERE COALESCE(vsuperarticoli.Vetrina,0) <> 0 " &
-           " ORDER BY COALESCE(vsuperarticoli.DataCreazione, NOW()) DESC, vsuperarticoli.id DESC " &
+	           " ORDER BY COALESCE(vsuperarticoli.DataIns, NOW()) DESC, vsuperarticoli.id DESC " &
            " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
 End Function
 

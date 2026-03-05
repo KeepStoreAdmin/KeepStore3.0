@@ -20,6 +20,12 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("icons/icomoon/style.css") %>" />
 
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/bootstrap.min.css") %>" />
+	<link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore.css") %>" />
+	<link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore-overrides.css") %>" />
+	<link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-ui.css") %>" />
+	<link rel="stylesheet" href="<%= ThemeManager.Asset("css/documents-ui.css") %>" />
+	<link rel="stylesheet" href="<%= ThemeManager.Asset("css/auth-ui.css") %>" />
+	<link rel="stylesheet" href="<%= ThemeManager.Asset("css/ks-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/nice-select.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/swiper-bundle.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/animate.css") %>" />
@@ -33,16 +39,10 @@
     <!-- SEO globale (robots/canonical) - injected by Page.master.vb -->
     <asp:Literal ID="litGlobalSeoHead" runat="server" EnableViewState="False" />
 
-    <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
+	<asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 
-    <!-- Override / bridge CSS (ordine: base -> override tema -> bridge legacy -> custom per pagine) -->
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore-overrides.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-ui.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/documents-ui.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/auth-ui.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/ks-ui.css") %>" />
+	<!-- Custom overrides (pixel alignment / bridging) -->
+	<link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") %>" />
 
 </head>
 
