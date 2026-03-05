@@ -51,9 +51,9 @@
 .ks-card-product .img-product,
 .card-product .img-product{
   width:100%;
-  aspect-ratio: 1 / 1;
+  height:100%;
   object-fit:cover;
-  border-radius:14px;
+  border-radius:0;
 }
 .card-product .card-product-info .title{
   margin-top:6px;

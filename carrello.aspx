@@ -473,14 +473,9 @@
             <div class="tf-checkout-wrap flex-lg-nowrap">
                 <div class="page-checkout">
     <% End If %>
-<table width="100%" border="0" runat="server" id="tOrdine" visible="false" class="ks-checkout">
-    
-    
-    <tr><td style="width: 100%;" colspan="2" valign="top" >
-    
+<asp:Panel ID="tOrdine" runat="server" Visible="false" CssClass="ks-checkout">
     <div id="promo_vettori">
     <asp:Panel ID="pSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;" CssClass="wrap">
-        
                 <h5 class="title fw-semibold">Spedizione</h5>
 <!--<div id="infobar" style="width:100%; color:White; font-weight:bold; height:50px; background-image:url('Public/Images/StepCarrello1.png'); background-size:100%; background-repeat:no-repeat;"></div>-->
 <asp:GridView ID="gvVettoriPromo" runat="server"
@@ -587,7 +582,6 @@
                         <asp:Label ID="Label2" runat="server" Text='<%# String.Format("{0:c}", Eval("Soglia_Minima")*((Session("Iva_Vettori")/100)+1)) %>'></asp:Label>
 <span style="display:none;"><%# mancano_ancora_number(Eval("Soglia_Minima"), imponibile, imponibile_gratis)%></span>
                         <img src="Public/Images/interrogativo.png" alt="" title="<%# mancano_ancora(Eval("Soglia_Minima"),imponibile, imponibile_gratis)%>" />
-                    
                     </ItemTemplate>
                     <HeaderStyle HorizontalAlign="Right" VerticalAlign="Middle" Wrap="True" />
                     <ItemStyle HorizontalAlign="Right" VerticalAlign="Middle" Width="130px" Wrap="False" Font-Size="7pt" />
@@ -601,15 +595,12 @@
             <HeaderStyle Font-Bold="False" Font-Size="7pt" HorizontalAlign="Left" ForeColor="#2050AF" Font-Strikeout="False" />
             <AlternatingRowStyle BackColor="WhiteSmoke" BorderStyle="None" />
         </asp:GridView>
-        
         <%If differenzaTrasportoGratis > 0 Then%>
             <div style="width:100%; padding-top:2px; padding-bottom:2px; font-size:10px; text-align:center; background-color:#383838; color: white;">
                 <%="TRASPORTO GRATUITO se spendi ancora <b>" & String.Format("{0:c}", differenzaTrasportoGratis) & "</b>"%>
             </div>
         <%End If%>    
-        
         <br />
-            
         <div id="gvVettori_tooltip">
         <asp:GridView ID="gvVettori" runat="server" AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsVettori" Font-Size="8pt" GridLines="None" Width="100%" DataKeyNames="id" ShowHeader="False" CssClass="ks-checkout-grid">
             <HeaderStyle Font-Bold="False" Font-Size="8pt" HorizontalAlign="Left" ForeColor="#2050AF" />
@@ -707,7 +698,6 @@
             <SelectedRowStyle BackColor="#FFFFC0" />
         </asp:GridView>
         </div>
-        
         <asp:Panel ID="Panel_SpedizioneGratis" runat="server" Height="10px" Visible="False"
             Width="100%" Font-Size="8pt">
             <table>
@@ -745,30 +735,17 @@
                 <asp:SessionParameter Name="AziendaId" SessionField="AziendaId" />
             </SelectParameters>
         </asp:SqlDataSource>
-       
-    </td>
-    </tr>
-
-<tr style="border-bottom:">
-		<td>
 		<div class="row">
 			<div class="col-12 col-md-6">
 				<asp:Panel ID="pAssicurazione" runat="server" Width="100%"  Visible="true" style="overflow:hidden; margin-bottom: 15px"  CssClass="wrap">
 					<h5 class="title fw-semibold">Assicurazione</h5>
-
 					<table cellpadding="1" width="100%">
-						<tr>
-							<td><asp:CheckBox ID="cbAssicurazione" runat="server" AutoPostBack="True" /></td>
-							<td width="100%"><span class="ml-2">Assicurazione merce (escluso IVA)</span></td>
-							<td align="right" nowrap><asp:Label ID="lblAssicurazione" runat="server" Text="&#8364; 0,00" Font-Size="8pt"></asp:Label></td>
-						</tr>
 					</table>
 				</asp:Panel>   
 			</div>
 			<div class="col-12 col-md-6">
 			  <asp:Panel ID="pPagamento" runat="server" Width="99.5%" Visible="true" CssClass="wrap">
 					<h5 class="title fw-semibold">Pagamento</h5>
-
 					<asp:SqlDataSource ID="sdsPagamento" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
 						ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
 						SelectCommand="SELECT * FROM vpagamentitipo WHERE Abilitato=1 AND CostoMassimo >= ?CostoMassimo AND (Web=1 OR UtenteID=?UtenteID) AND AziendeID=?AziendaID GROUP BY id ORDER BY Ordinamento, Descrizione">
@@ -778,7 +755,6 @@
 						   <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" />
 						</SelectParameters>    
 					</asp:SqlDataSource>
-					
 					<div id="gvPagamento_tooltip">
 					<asp:GridView ID="gvPagamento" runat="server" CssClass="ks-checkout-grid"
 					AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsPagamento"
@@ -861,148 +837,59 @@
 			</div>
 			<!--<td>&nbsp;</td>-->
 		</div>
-		</td>
-	</tr>
-    
-    <tr>
-    
-    <td colspan="2">
     <asp:Panel ID="PnlFatturazione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap">
 							<h5 class="title fw-semibold">Dati fatturazione</h5>
-
-		
         <table cellspacing="5" border="0" style="border-bottom-style:solid;" width="100%">
-            
             <tr>
-				<td style="text-align:left;" class="carrello-td1-step4"><b>Ragione Sociale / Cognome:&nbsp;</b></td>
-				<td style="text-align:left;" class="carrello-td2-step4"><asp:Label runat="server" ID="lblTab_RagioneSociale"></asp:Label></td>
             </tr>
-			<tr>
-				<td style="text-align:left;"><b>Nome:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_Nome"></asp:Label></td>
             </tr>  
             <tr>
-				<td style="text-align:left;"><b>P.IVA:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_pIva"></asp:Label></td>
             </tr> 
-			<tr>
-				<td style="text-align:left;"><b>Codice fiscale:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_CF"></asp:Label></td>
             </tr> 
             <tr>
-				<td style="text-align:left;"><b>Indirizzo:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_Indirizzo"></asp:Label></td>
-			</tr>
-			<tr>
-				<td style="text-align:left;"><b>Città:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_Citta"></asp:Label></td>
             </tr>
             <tr>
-				<td style="text-align:left;"><b>Provincia:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_Provincia"></asp:Label></td>
-			</tr>
-			<tr>
-				<td style="text-align:left;"><b>CAP&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_Cap"></asp:Label></td>
-			</tr>
             <tr>
-				<td style="text-align:left;"><b>Telefono:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_Tel"></asp:Label></td>
-			</tr>
             <tr>
-				<td style="text-align:left;"><b>Cellulare:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_Cell"></asp:Label></td>
             </tr> 
             <tr>
-				<td style="text-align:left;"><b>Fax:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_Fax"></asp:Label></td>
-			</tr>
             <tr>
-				<td style="text-align:left;"><b>E-mail:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_mail"></asp:Label></td>
             </tr>
             <tr>
-				<td>&nbsp;</td>
-			</tr>
             <tr>
-				<td colspan="2"><a href="registrazione.aspx">I tuoi dati sono errati? Clicca Qui per modificarli</a></td>
-			</tr>
-			
         </table>
         </asp:Panel>
-    </td>
-    </tr>
-	
-	    <tr>
-    
-    <td colspan="2">
     <asp:Panel ID="PnlSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap">
 							<h5 class="title fw-semibold">Indirizzo di spedizione</h5>
-
-		
         <table cellspacing="5" border="0" style="border-bottom-style:solid;" width="100%">
 		<% If LstScegliIndirizzo.items.count > 0 Then %>
             <tr>
                 <td style="text-align:left;" class="carrello-td1-step4"><b>Indirizzi registrati:</td>
-				<td style="text-align:left;" class="carrello-td2-step4"><asp:DropDownList runat="server" ID="LstScegliIndirizzo" AutoPostBack="True" CssClass="form-select ks-form-select"></asp:DropDownList></td>
             </tr>
 		<% end if %>
             <tr>
                 <td style="text-align:left;"><b>Ragione Sociale / Cognome:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_RagioneSocialeSpedizione"></asp:Label></td>
             </tr>
-			<tr>
                 <td style="text-align:left;"><b>Nome:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_NomeSpedizione"></asp:Label></td>
             </tr>  
             <tr>
                 <td style="text-align:left;"><b>Indirizzo:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_IndirizzoSpedizione"></asp:Label></td>
-			</tr>
-			<tr>
                 <td style="text-align:left;"><b>Città:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_CittaSpedizione"></asp:Label></td>
             </tr>
             <tr>
                 <td style="text-align:left;"><b>Provincia:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_ProvinciaSpedizione"></asp:Label></td>
-			</tr>
-			<tr>
                 <td style="text-align:left;"><b>CAP:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_CapSpedizione"></asp:Label></td>
-			</tr>
             <tr>
                 <td style="text-align:left;"><b>Zona:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_ZonaSpedizione"></asp:Label></td>
-			</tr>
-			<tr>
                 <td style="text-align:left;"><b>Telefono:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_TelSpedizione"></asp:Label></td>
-			</tr>
-			<tr>
                 <td style="text-align:left;"><b>Nota destinazione:&nbsp;</b></td>
-				<td style="text-align:left;"><asp:Label runat="server" ID="lblTab_NotaDestinazione"></asp:Label></td>
-			</tr>
             <tr>
-				<td>&nbsp;</td>
-			</tr>
             <tr>
-				<td colspan="2"><a id="open1" runat="server" ClientIDMode="Static" href="#">Desideri modificare l'indirizzo selezionato? Clicca Qui</a></td>
-			</tr>
-			<tr>
-				<td colspan="2"><a id="open2" runat="server" ClientIDMode="Static" href="#">Desideri inserire un nuovo indirizzo di spedizione? Clicca Qui</a></td>
-			</tr>
         </table>
         </asp:Panel>
-    </td>
-    </tr>
- 
-    <tr>
-        <td colspan="2">
 		<div id="panel" runat="server" ClientIDMode="Static">
             <asp:Panel ID="PnlDestinazione" runat="server" Width="100%" Visible="True" GroupingText="Inserisci i dati"  CssClass="wrap">
 							<h5 class="title fw-semibold">Gestisci destinazione</h5>
-
 				<input type="hidden" runat="server" id="insOmod" ClientIDMode="Static">
 				<!--
                 <asp:Label ID="LblDescrDest" runat="server" Text=""></asp:Label>
@@ -1020,7 +907,6 @@
                         <td ><asp:TextBox ID="tbRagioneSocialeA" CssClass="form-control ks-form-control" runat="server" Width="100%" MaxLength="100" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
                             <asp:requiredfieldvalidator id="RFRagioneSocialeA" runat="server" Display="None" ControlToValidate="tbRagioneSocialeA"
 		                       ErrorMessage="Campo Obbligatorio (Ragione Sociale)"></asp:requiredfieldvalidator>
-		                </td>
                     </tr>
                     <tr>
                         <td style="padding: 0 5px;" width="155px">Nome:</td>
@@ -1034,7 +920,6 @@
 		                       ErrorMessage="Campo Obbligatorio (Indirizzo)"></asp:requiredfieldvalidator>
                         </td>
                     </tr>
-					<tr>
                         <td style="padding: 0 5px;" width="155px">Cap *</td>
                         <td ><asp:TextBox ID="tbCap2" CssClass="form-control ks-form-control" runat="server" AutoPostBack="true" OnTextChanged="City_Bind_Data2" Width="100%" MaxLength="5" ValidationGroup="registrazione" CausesValidation="True"></asp:TextBox>
 							 <asp:requiredfieldvalidator id="RFCap2" runat="server" Display="None" ControlToValidate="tbCap2"
@@ -1073,9 +958,6 @@
                         </td>
                     </tr>  
                     <tr>
-						<td colspan="2"><asp:CheckBox runat="server" ID="CHKPREDEFINITO" Text="Indirizzo predefinito" Checked="false" /><br />
-						</td>
-					</tr> 
                     <tr>
                         <td align="center" colspan="2">
                             <asp:Button ID="btnSalvaDest" CssClass="tf-btn btn-gray ks-btn" runat="server" Text="Inserisci nuova destinazione" Height="25px" CausesValidation="true" />
@@ -1087,25 +969,11 @@
                 </table>
             </asp:Panel>
 			</div>
-        </td>
-        
-    </tr>
-	
-    <tr>
-		<td colspan="2">
 		<asp:Panel ID="Panel_Note" runat="server" Width="100%" Visible="False" CssClass="wrap">
 					<h5 class="title fw-semibold">Note</h5>
-
-			
-			
 				<br/><asp:TextBox ID="txtNoteSpedizione" CssClass="form-control ks-form-control" TextMode="MultiLine" Rows="5" runat="server" Width="100%"></asp:TextBox>
 			</asp:Panel>
-		</td>
-	</tr>
-    <tr><td colspan="2"><br/><hr size="1"/></td></tr>
-    
-     <tr>
-    <td colspan="2">
+    <div class="line"></div>
         <div class="wrap">
             <div class="ks-checkout-actions">
                 <asp:LinkButton Visible="False" CausesValidation="false" ID="btSalvaPreventivo" runat="server" CssClass="tf-btn btn-gray" OnClientClick="javascript:visualizza_spinner_caricamento();">SALVA PREVENTIVO</asp:LinkButton>
@@ -1120,9 +988,7 @@
                 <img src="Public/Images/spinner.gif" alt="" />
             </div>
         </div>
-    </td>
-</tr>
-   </table>
+</asp:Panel>
     <% If tOrdine IsNot Nothing AndAlso tOrdine.Visible Then %>
                 </div>
                 <div class="flat-sidebar-checkout">

@@ -297,56 +297,7 @@
     }
   }
 
-
-  // Track recently viewed products (cookie "ks_recent" used on Home)
-  function trackRecentlyViewed() {
-    try {
-      var params = new URLSearchParams(window.location.search || '');
-      var idStr = params.get('id');
-      if (!idStr) return;
-
-      var id = parseInt(idStr, 10);
-      if (!id || id <= 0) return;
-
-      var cookieName = 'ks_recent';
-      var maxItems = 12;
-
-      // Read cookie
-      var current = [];
-      var cookieVal = null;
-      var parts = document.cookie ? document.cookie.split(';') : [];
-      for (var i = 0; i < parts.length; i++) {
-        var p = parts[i].trim();
-        if (p.indexOf(cookieName + '=') === 0) {
-          cookieVal = decodeURIComponent(p.substring(cookieName.length + 1));
-          break;
-        }
-      }
-
-      if (cookieVal) {
-        var arr = cookieVal.split(',');
-        for (var j = 0; j < arr.length; j++) {
-          var n = parseInt(arr[j], 10);
-          if (n && n > 0 && current.indexOf(n) === -1) current.push(n);
-        }
-      }
-
-      // Move current id to front (unique), cap length
-      var next = [id];
-      for (var k = 0; k < current.length; k++) {
-        if (current[k] !== id) next.push(current[k]);
-        if (next.length >= maxItems) break;
-      }
-
-      var maxAge = 30 * 24 * 60 * 60; // 30 days
-      document.cookie = cookieName + '=' + encodeURIComponent(next.join(',')) + '; path=/; max-age=' + maxAge + '; samesite=Lax';
-    } catch (e) {
-      // ignore
-    }
-  }
-
   domReady(function () {
-    trackRecentlyViewed();
     initQtyButtons();
     initRefurbBadge();
     initSwiperGallery();

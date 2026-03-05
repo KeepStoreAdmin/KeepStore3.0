@@ -57,6 +57,18 @@ Partial Class _Default
             "   AND (COALESCE(vsuperarticoli.prezzoPromo,0)>0 OR COALESCE(vsuperarticoli.PrezzoPromoIvato,0)>0) " &
             " ORDER BY (vsuperarticoli.OfferteDataFine IS NULL), vsuperarticoli.OfferteDataFine ASC " &
             " LIMIT 5"
+
+        ' Ensure MySQL provider for all home SqlDataSource (prevents SqlClient parsing errors with MySQL connstring)
+        EnsureMySqlProvider(sdsDealOfDay)
+        EnsureMySqlProvider(sdsBestSeller)
+        EnsureMySqlProvider(sdsTabFeature)
+        EnsureMySqlProvider(sdsTabToprate)
+        EnsureMySqlProvider(sdsTabOnSale)
+        EnsureMySqlProvider(sdsTop20)
+        EnsureMySqlProvider(sdsFeaturedMini)
+        EnsureMySqlProvider(sdsTopSellingMini)
+        EnsureMySqlProvider(sdsOnSaleMini)
+        EnsureMySqlProvider(sdsRecentlyViewed)
     End Sub
 
     Private Sub BindHomeGridTabs()

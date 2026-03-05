@@ -70,7 +70,7 @@
 
                         <!-- Thumbs -->
                         <div class="container-swiper" id="ks-product-thumbs-wrap">
-                            <div class="swiper tf-product-media-thumbs other-image-zoom ks-product-thumbs" id="thumbs-swiper-started">
+                            <div class="swiper tf-product-media-thumbs other-image-zoom" id="thumbs-swiper-started">
                                 <div class="swiper-wrapper">
                                     <asp:Repeater ID="rptThumbs" runat="server">
                                         <ItemTemplate>
