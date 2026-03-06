@@ -35,9 +35,9 @@ Partial Class _Default
         sdsBestSeller.SelectCommand = BuildTopSoldQuery(vsFields, ordineChiuso, 12)
 
         ' Tabs (Onsus: Feature / Toprate / On Sale)
-        sdsTabFeature.SelectCommand = BuildFeaturedQuery(vsFields, 8)
-        sdsTabToprate.SelectCommand = BuildTopViewedQuery(vsFields, 8)
-        sdsTabOnSale.SelectCommand = BuildOnSaleQuery(vsFields, 8)
+        sdsTabFeature.SelectCommand = BuildFeaturedQuery(vsFields, 7)
+        sdsTabToprate.SelectCommand = BuildTopViewedQuery(vsFields, 7)
+        sdsTabOnSale.SelectCommand = BuildOnSaleQuery(vsFields, 7)
 
         ' Grid laterale home (Top 20 / Featured / Top Selling / On-sale)
         sdsTop20.SelectCommand = BuildTopViewedQuery(vsFields, 5)
@@ -60,13 +60,13 @@ Partial Class _Default
 
     Private Sub BindHomeGridTabs()
         ' Feature tab
-        BindGridTab(sdsTabFeature, rptFeatureLeft, rptFeatureCenter, rptFeatureRight, 3, 1, 4)
+        BindGridTab(sdsTabFeature, rptFeatureLeft, rptFeatureCenter, rptFeatureRight, 3, 1, 3)
 
         ' Toprate tab
-        BindGridTab(sdsTabToprate, rptToprateLeft, rptToprateCenter, rptToprateRight, 3, 1, 4)
+        BindGridTab(sdsTabToprate, rptToprateLeft, rptToprateCenter, rptToprateRight, 3, 1, 3)
 
         ' On Sale tab
-        BindGridTab(sdsTabOnSale, rptOnSaleLeft, rptOnSaleCenter, rptOnSaleRight, 3, 1, 4)
+        BindGridTab(sdsTabOnSale, rptOnSaleLeft, rptOnSaleCenter, rptOnSaleRight, 3, 1, 3)
     End Sub
 
     Private Sub BindGridTab(ds As SqlDataSource,
@@ -378,6 +378,143 @@ Partial Class _Default
             ' ignore
         End Try
         Return 0D
+    End Function
+
+
+    Protected Function RenderCaptionLabel(code As Object) As String
+        Dim s As String = Convert.ToString(code)
+        If String.IsNullOrWhiteSpace(s) Then Return "Prodotto"
+        Return "Cod. " & s.Trim()
+    End Function
+
+    Protected Function RenderPricePair(prezzoMostrato As Object,
+                                       prezzoPromoMostrato As Object,
+                                       inOfferta As Object,
+                                       newCss As String,
+                                       oldCss As String) As String
+        Dim currentPrice As Decimal = GetCurrentPrice(prezzoMostrato, prezzoPromoMostrato, inOfferta)
+        Dim regularPrice As Decimal = GetRegularPrice(prezzoMostrato)
+        Dim parts As New List(Of String)()
+
+        parts.Add("<span class=""" & newCss & """>" & HttpUtility.HtmlEncode(FormatMoney(currentPrice)) & "</span>")
+
+        If HasPromoPrice(prezzoMostrato, prezzoPromoMostrato, inOfferta) Then
+            parts.Add("<span class=""" & oldCss & """>" & HttpUtility.HtmlEncode(FormatMoney(regularPrice)) & "</span>")
+        End If
+
+        Return String.Join(String.Empty, parts.ToArray())
+    End Function
+
+    Protected Function RenderPriceWithSave(prezzoMostrato As Object,
+                                           prezzoPromoMostrato As Object,
+                                           inOfferta As Object,
+                                           newCss As String,
+                                           saveCss As String) As String
+        Dim currentPrice As Decimal = GetCurrentPrice(prezzoMostrato, prezzoPromoMostrato, inOfferta)
+        Dim saved As Decimal = GetSavedAmount(prezzoMostrato, prezzoPromoMostrato, inOfferta)
+        Dim parts As New List(Of String)()
+
+        parts.Add("<span class=""" & newCss & """>" & HttpUtility.HtmlEncode(FormatMoney(currentPrice)) & "</span>")
+
+        If saved > 0D Then
+            parts.Add("<span class=""" & saveCss & """>Risparmi: " & HttpUtility.HtmlEncode(FormatMoney(saved)) & "</span>")
+        End If
+
+        Return String.Join(String.Empty, parts.ToArray())
+    End Function
+
+    Protected Function RenderSaleWrap(prezzoMostrato As Object,
+                                      prezzoPromoMostrato As Object,
+                                      inOfferta As Object,
+                                      labelText As String,
+                                      valueCss As String,
+                                      Optional extraCss As String = "") As String
+        Dim perc As Integer = GetDiscountPercent(prezzoMostrato, prezzoPromoMostrato, inOfferta)
+        If perc <= 0 Then Return String.Empty
+
+        Dim cls As String = "box-sale-wrap"
+        If Not String.IsNullOrWhiteSpace(extraCss) Then
+            cls &= " " & extraCss.Trim()
+        End If
+
+        Return "<div class=""" & cls & """><p class=""small-text"">" & HttpUtility.HtmlEncode(labelText) & "</p><p class=""" & valueCss & """>" & perc.ToString(CultureInfo.InvariantCulture) & "%</p></div>"
+    End Function
+
+    Protected Function RenderSavedWrap(prezzoMostrato As Object,
+                                       prezzoPromoMostrato As Object,
+                                       inOfferta As Object,
+                                       labelText As String,
+                                       valueCss As String,
+                                       Optional extraCss As String = "") As String
+        Dim saved As Decimal = GetSavedAmount(prezzoMostrato, prezzoPromoMostrato, inOfferta)
+        If saved <= 0D Then Return String.Empty
+
+        Dim cls As String = "box-sale-wrap"
+        If Not String.IsNullOrWhiteSpace(extraCss) Then
+            cls &= " " & extraCss.Trim()
+        End If
+
+        Return "<div class=""" & cls & """><p class=""small-text"">" & HttpUtility.HtmlEncode(labelText) & "</p><p class=""" & valueCss & """>" & HttpUtility.HtmlEncode(FormatMoney(saved)) & "</p></div>"
+    End Function
+
+    Private Function HasPromoPrice(prezzoMostrato As Object,
+                                   prezzoPromoMostrato As Object,
+                                   inOfferta As Object) As Boolean
+        If SafeInt(inOfferta, 0) <> 1 Then Return False
+
+        Dim regularPrice As Decimal = GetRegularPrice(prezzoMostrato)
+        Dim promoPrice As Decimal = GetPromoPrice(prezzoPromoMostrato)
+
+        Return regularPrice > 0D AndAlso promoPrice > 0D AndAlso promoPrice < regularPrice
+    End Function
+
+    Private Function GetRegularPrice(prezzoMostrato As Object) As Decimal
+        Dim d As Decimal = SafeDecimal(prezzoMostrato)
+        If d < 0D Then d = 0D
+        Return d
+    End Function
+
+    Private Function GetPromoPrice(prezzoPromoMostrato As Object) As Decimal
+        Dim d As Decimal = SafeDecimal(prezzoPromoMostrato)
+        If d < 0D Then d = 0D
+        Return d
+    End Function
+
+    Private Function GetCurrentPrice(prezzoMostrato As Object,
+                                     prezzoPromoMostrato As Object,
+                                     inOfferta As Object) As Decimal
+        If HasPromoPrice(prezzoMostrato, prezzoPromoMostrato, inOfferta) Then
+            Return GetPromoPrice(prezzoPromoMostrato)
+        End If
+        Return GetRegularPrice(prezzoMostrato)
+    End Function
+
+    Private Function GetSavedAmount(prezzoMostrato As Object,
+                                    prezzoPromoMostrato As Object,
+                                    inOfferta As Object) As Decimal
+        If Not HasPromoPrice(prezzoMostrato, prezzoPromoMostrato, inOfferta) Then Return 0D
+
+        Dim saved As Decimal = GetRegularPrice(prezzoMostrato) - GetPromoPrice(prezzoPromoMostrato)
+        If saved < 0D Then saved = 0D
+        Return saved
+    End Function
+
+    Private Function GetDiscountPercent(prezzoMostrato As Object,
+                                        prezzoPromoMostrato As Object,
+                                        inOfferta As Object) As Integer
+        If Not HasPromoPrice(prezzoMostrato, prezzoPromoMostrato, inOfferta) Then Return 0
+
+        Dim regularPrice As Decimal = GetRegularPrice(prezzoMostrato)
+        Dim promoPrice As Decimal = GetPromoPrice(prezzoPromoMostrato)
+        If regularPrice <= 0D Then Return 0
+
+        Dim perc As Integer = CInt(Math.Round((1D - (promoPrice / regularPrice)) * 100D, 0, MidpointRounding.AwayFromZero))
+        If perc < 0 Then perc = 0
+        Return perc
+    End Function
+
+    Private Function FormatMoney(value As Decimal) As String
+        Return value.ToString("C", CultureInfo.GetCultureInfo("it-IT"))
     End Function
 
 End Class
