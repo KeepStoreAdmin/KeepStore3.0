@@ -26,39 +26,26 @@ Partial Class _Default
     Private Sub ConfigureHomeDataSources(ivaTipo As Integer, ordineChiuso As Integer)
         Dim vsFields As String = BuildVsuperArticoliSelect(ivaTipo)
 
-        ' Occasione Imperdibile (Deal Of The Day): prodotti in offerta con scadenza più vicina
-        sdsDealOfDay.SelectCommand =
-            vsFields &
-            " WHERE COALESCE(vsuperarticoli.InOfferta,0)=1 " &
-            "   AND (COALESCE(vsuperarticoli.prezzoPromo,0)>0 OR COALESCE(vsuperarticoli.PrezzoPromoIvato,0)>0) " &
-            " ORDER BY (vsuperarticoli.OfferteDataFine IS NULL), vsuperarticoli.OfferteDataFine ASC " &
-            " LIMIT 8"
-
-        ' Best seller: top vendite da documenti chiusi
+        ' Criteri automatici home (stabili e coerenti con il DB attuale):
+        ' - Occasione Imperdibile / On Sale: offerte attive ordinate per scadenza + popolarità
+        ' - Best Seller / Top Selling Product: vendite storiche da documenti chiusi
+        ' - Feature / Featured Products: articoli marcati Vetrina, più recenti e più cliccati
+        ' - Toprate / Top 20: articoli più visti / popolari
+        sdsDealOfDay.SelectCommand = BuildOnSaleQuery(vsFields, 8)
         sdsBestSeller.SelectCommand = BuildTopSoldQuery(vsFields, ordineChiuso, 12)
 
-        ' Tabs (Feature / Toprate / On Sale)
+        ' Tabs (Onsus: Feature / Toprate / On Sale)
         sdsTabFeature.SelectCommand = BuildFeaturedQuery(vsFields, 8)
-        sdsTabToprate.SelectCommand = BuildTopSoldQuery(vsFields, ordineChiuso, 8)
-        sdsTabOnSale.SelectCommand =
-            vsFields &
-            " WHERE COALESCE(vsuperarticoli.InOfferta,0)=1 " &
-            "   AND (COALESCE(vsuperarticoli.prezzoPromo,0)>0 OR COALESCE(vsuperarticoli.PrezzoPromoIvato,0)>0) " &
-            " ORDER BY (vsuperarticoli.OfferteDataFine IS NULL), vsuperarticoli.OfferteDataFine ASC " &
-            " LIMIT 8"
+        sdsTabToprate.SelectCommand = BuildTopViewedQuery(vsFields, 8)
+        sdsTabOnSale.SelectCommand = BuildOnSaleQuery(vsFields, 8)
 
-        ' Top Trend grid
-        sdsTop20.SelectCommand = BuildTopSoldQuery(vsFields, ordineChiuso, 5)
+        ' Grid laterale home (Top 20 / Featured / Top Selling / On-sale)
+        sdsTop20.SelectCommand = BuildTopViewedQuery(vsFields, 5)
         sdsFeaturedMini.SelectCommand = BuildFeaturedQuery(vsFields, 5)
         sdsTopSellingMini.SelectCommand = BuildTopSoldQuery(vsFields, ordineChiuso, 5)
-        sdsOnSaleMini.SelectCommand =
-            vsFields &
-            " WHERE COALESCE(vsuperarticoli.InOfferta,0)=1 " &
-            "   AND (COALESCE(vsuperarticoli.prezzoPromo,0)>0 OR COALESCE(vsuperarticoli.PrezzoPromoIvato,0)>0) " &
-            " ORDER BY (vsuperarticoli.OfferteDataFine IS NULL), vsuperarticoli.OfferteDataFine ASC " &
-            " LIMIT 5"
+        sdsOnSaleMini.SelectCommand = BuildOnSaleQuery(vsFields, 5)
 
-        ' Ensure MySQL provider for all home SqlDataSource (prevents SqlClient parsing errors with MySQL connstring)
+        ' MySQL provider esplicito per prevenire fallback a SqlClient
         EnsureMySqlProvider(sdsDealOfDay)
         EnsureMySqlProvider(sdsBestSeller)
         EnsureMySqlProvider(sdsTabFeature)
@@ -148,26 +135,22 @@ Partial Class _Default
 
     Private Sub BindRecentlyViewed(ivaTipo As Integer)
         Dim ids As List(Of Integer) = ReadRecentIds(10)
+        Dim vsSelectRecently As String = BuildVsuperArticoliSelect(ivaTipo)
 
-	    If ids Is Nothing OrElse ids.Count = 0 Then
-	        ' Primo accesso: manteniamo la sezione visibile (come nel template)
-	        ' popolandola con un set “fallback” finché l’utente non naviga prodotti.
-	        phRecentlyViewed.Visible = True
-	        Dim vsFields As String = BuildVsuperArticoliSelect(ivaTipo)
-	        sdsRecentlyViewed.SelectCommand =
-	            vsFields &
-	            " ORDER BY vsuperarticoli.DataIns DESC, vsuperarticoli.id DESC LIMIT 10"
-	        Return
-	    End If
+        ' Nel template Onsus la sezione rimane sempre presente.
+        ' Se l'utente non ha ancora visitato prodotti, mostriamo un fallback popolare.
+        phRecentlyViewed.Visible = True
 
-	    phRecentlyViewed.Visible = True
+        If ids Is Nothing OrElse ids.Count = 0 Then
+            sdsRecentlyViewed.SelectCommand = BuildTopViewedQuery(vsSelectRecently, 10)
+            Return
+        End If
 
         Dim idsCsv As String = String.Join(",", ids.Select(Function(x) x.ToString(CultureInfo.InvariantCulture)))
-        Dim vsFields As String = BuildVsuperArticoliSelect(ivaTipo)
 
         ' Manteniamo l'ordine di visita (MySQL: FIELD)
         sdsRecentlyViewed.SelectCommand =
-            vsFields &
+            vsSelectRecently &
             " WHERE vsuperarticoli.id IN (" & idsCsv & ") " &
             " ORDER BY FIELD(vsuperarticoli.id," & idsCsv & ") " &
             " LIMIT 10"
@@ -202,7 +185,7 @@ Partial Class _Default
     ' Select builders
     ' ----------------------------
     Private Function BuildVsuperArticoliSelect(ivaTipo As Integer) As String
-        ' NB: manteniamo alias/nomi campo usati nelle pagine KeepStore
+        ' NB: manteniamo alias/nomi campo già usati nelle pagine KeepStore.
         Return "SELECT " &
                "vsuperarticoli.id AS Articoliid, " &
                "vsuperarticoli.Codice, " &
@@ -217,24 +200,55 @@ Partial Class _Default
                "vsuperarticoli.SpeditoGratis, " &
                "COALESCE(vsuperarticoli.Disponibilita,0) AS Disponibilita, " &
                "COALESCE(vsuperarticoli.Impegnata,0) AS Impegnata, " &
+               "COALESCE(vsuperarticoli.visite,0) AS Visite, " &
+               "COALESCE(vsuperarticoli.Vetrina,0) AS Vetrina, " &
+               "vsuperarticoli.DataCreazione, " &
                "vsuperarticoli.OfferteDataFine " &
                "FROM vsuperarticoli"
     End Function
 
     Private Function BuildFeaturedQuery(vsFields As String, limit As Integer) As String
-    ' Feature = Vetrina (colonna presente in articoli e quindi nella view vsuperarticoli)
-    If limit <= 0 Then limit = 8
+        ' Feature / Featured Products = articoli marcati in Vetrina.
+        If limit <= 0 Then limit = 8
 
-    Return vsFields &
-           " WHERE COALESCE(vsuperarticoli.Vetrina,0) <> 0 " &
-	           " ORDER BY COALESCE(vsuperarticoli.DataIns, NOW()) DESC, vsuperarticoli.id DESC " &
-           " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
-End Function
+        Return vsFields &
+               " WHERE COALESCE(vsuperarticoli.Vetrina,0) <> 0 " &
+               " ORDER BY COALESCE(vsuperarticoli.DataCreazione, CURDATE()) DESC, " &
+               "          COALESCE(vsuperarticoli.visite,0) DESC, " &
+               "          vsuperarticoli.id DESC " &
+               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
+    End Function
 
+    Private Function BuildTopViewedQuery(vsFields As String, limit As Integer) As String
+        ' Toprate / Top 20 = popolarità: più visite, poi disponibilità e freschezza.
+        If limit <= 0 Then limit = 8
+
+        Return vsFields &
+               " ORDER BY COALESCE(vsuperarticoli.visite,0) DESC, " &
+               "          COALESCE(vsuperarticoli.Disponibilita,0) DESC, " &
+               "          COALESCE(vsuperarticoli.DataCreazione, CURDATE()) DESC, " &
+               "          vsuperarticoli.id DESC " &
+               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
+    End Function
+
+    Private Function BuildOnSaleQuery(vsFields As String, limit As Integer) As String
+        ' Deal Of The Day / On-sale = offerte attive in scadenza, con priorità agli articoli più cliccati.
+        If limit <= 0 Then limit = 8
+
+        Return vsFields &
+               " WHERE COALESCE(vsuperarticoli.InOfferta,0)=1 " &
+               "   AND (COALESCE(vsuperarticoli.prezzoPromo,0)>0 OR COALESCE(vsuperarticoli.PrezzoPromoIvato,0)>0) " &
+               " ORDER BY (vsuperarticoli.OfferteDataFine IS NULL), " &
+               "          vsuperarticoli.OfferteDataFine ASC, " &
+               "          COALESCE(vsuperarticoli.visite,0) DESC, " &
+               "          vsuperarticoli.id DESC " &
+               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
+    End Function
 
     Private Function BuildTopSoldQuery(vsFields As String, ordineChiuso As Integer, limit As Integer) As String
-        ' Top-selling basato su documenti/documentirighe (schema attuale KeepStore).
-        ' NB: NON usare r_documenti_dettaglio/r_documenti (non esistono nel DB attuale).
+        ' Best seller / Top Selling Product basato su documenti + righe documento dello schema attuale.
+        If limit <= 0 Then limit = 8
+
         Dim whereParts As New List(Of String)()
         whereParts.Add("dr.TipoRiga = 'A'")
         If ordineChiuso > 0 Then
@@ -244,16 +258,18 @@ End Function
         Dim wh As String = String.Join(" AND ", whereParts.ToArray())
 
         Return vsFields &
-               " INNER JOIN ( " &
+               " LEFT JOIN ( " &
                "   SELECT dr.ArticoliId AS articoli_id, SUM(IFNULL(dr.Qnt,0)) AS QntTot " &
                "   FROM documentirighe dr " &
                "   INNER JOIN documenti d ON d.id = dr.DocumentiId " &
                "   WHERE " & wh & " " &
                "   GROUP BY dr.ArticoliId " &
-               "   ORDER BY QntTot DESC " &
-               "   LIMIT " & limit.ToString(CultureInfo.InvariantCulture) &
                " ) Vendite ON Vendite.articoli_id = vsuperarticoli.id " &
-               " ORDER BY Vendite.QntTot DESC"
+               " ORDER BY COALESCE(Vendite.QntTot,0) DESC, " &
+               "          COALESCE(vsuperarticoli.visite,0) DESC, " &
+               "          COALESCE(vsuperarticoli.Disponibilita,0) DESC, " &
+               "          vsuperarticoli.id DESC " &
+               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
     End Function
 
     Private Function GetSettingInt(key As String, defaultValue As Integer) As Integer

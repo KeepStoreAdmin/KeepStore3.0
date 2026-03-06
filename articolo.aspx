@@ -7,7 +7,8 @@
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
     <asp:Literal ID="litSeoHead" runat="server" EnableViewState="false" />
 
-    <!-- Product gallery / lightbox -->
+    <!-- Product gallery / zoom -->
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/drift-basic.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/vendor/photoswipe.css") %>" />
 
     <script type="application/ld+json">
@@ -59,6 +60,7 @@
                                                 <a class="item" href='<%# Eval("Url") %>' data-pswp-width="800" data-pswp-height="800" target="_blank" rel="noopener">
                                                     <img class="tf-image-zoom lazyload"
                                                          alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Alt"))) %>'
+                                                         data-zoom='<%# Eval("Url") %>'
                                                          data-src='<%# Eval("Url") %>' src='<%# Eval("Url") %>' />
                                                 </a>
                                             </div>
@@ -78,6 +80,7 @@
                                                 <div class="item">
                                                     <img class="lazyload"
                                                          alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Alt"))) %>'
+                                                         data-zoom='<%# Eval("Url") %>'
                                                          data-src='<%# Eval("Url") %>' src='<%# Eval("Url") %>' />
                                                 </div>
                                             </div>
@@ -90,6 +93,7 @@
                     </div>
 
                     <!-- INFO (RIGHT) -->
+                    <div class="tf-zoom-main"></div>
                     <div class="tf-product-info-list other-image-zoom flex-xxl-nowrap">
 
                         <!-- Content -->
@@ -235,42 +239,28 @@
                     <a href="/articoli.aspx" class="link">Vedi tutto</a>
                 </div>
 
-                <div class="tf-grid-layout md-col-4">
-                    <asp:Repeater ID="rptRelated" runat="server">
+                <div class="tf-grid-layout md-col-4">                    <asp:Repeater ID="rptRelated" runat="server">
                         <ItemTemplate>
                             <div class="card-product style-1">
                                 <div class="card-product-wrapper">
 
-                                    <a class="product-img" href='<%# "articolo.aspx?id=" & Eval("id") %>'>
-                                        <img class="lazyload img-product" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>'
-                                             src='<%# ThemeManager.ProductImageUrl(Eval("img1")) %>' />
+                                    <a class="product-img" href='<%# Eval("Url") %>'>
+                                        <img class="lazyload img-product"
+                                             alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
+                                             src='<%# Eval("Img") %>' />
                                     </a>
 
-                                    <asp:PlaceHolder ID="phRefurbBadge" runat="server"
-                                        Visible='<%# UiData.Bool(Container.DataItem, "Ricondizionato") OrElse UiData.Int(Container.DataItem, "st") = 34 OrElse UiData.Int(Container.DataItem, "SettoriId") = 34 %>'>
-                                        <div class="box-sale-wrap">
-                                            <span class="sale-item ks-badge-refurb">Ricondizionato</span>
-                                        </div>
-                                    </asp:PlaceHolder>
-
-                                    <%# If(Val(Eval("InOfferta")) = 1, "<div class='box-sale-wrap'><span class='sale-item'>Offerta</span></div>", "") %>
+                                    <%# If(Convert.ToBoolean(Eval("InOfferta")), "<div class='box-sale-wrap'><span class='sale-item'>Offerta</span></div>", String.Empty) %>
 
                                 </div>
 
                                 <div class="card-product-info">
-                                    <a class="name-product link" href='<%# "articolo.aspx?id=" & Eval("id") %>'>
-                                        <%# Server.HtmlEncode(ThemeManager.CompactText(Eval("Descrizione1"), 70)) %>
+                                    <a class="name-product link" href='<%# Eval("Url") %>'>
+                                        <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 70)) %>
                                     </a>
 
                                     <div class="price-wrap">
-                                        <%# UiPriceFormatter.RenderPriceHtml(
-                                                If(IsDBNull(Eval("Prezzo")), 0, Eval("Prezzo")),
-                                                If(IsDBNull(Eval("PrezzoIvato")), 0, Eval("PrezzoIvato")),
-                                                If(IsDBNull(Eval("PrezzoPromo")), 0, Eval("PrezzoPromo")),
-                                                If(IsDBNull(Eval("PrezzoPromoIvato")), 0, Eval("PrezzoPromoIvato")),
-                                                Val(Eval("InOfferta")),
-                                                Session("IvaTipo")
-                                            ) %>
+                                        <%# Eval("PrezzoHtml") %>
                                     </div>
                                 </div>
 

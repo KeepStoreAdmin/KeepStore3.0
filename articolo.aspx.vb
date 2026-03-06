@@ -29,6 +29,7 @@ Partial Class articolo
         Public Property Img As String
         Public Property Url As String
         Public Property PrezzoHtml As String
+        Public Property InOfferta As Boolean
     End Class
 
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
@@ -98,6 +99,7 @@ Partial Class articolo
         End If
 
         BindProduct(row)
+        TrackRecentlyViewed(_id)
         ApplySeo(row)
         BindRelatedProducts(row)
     End Sub
@@ -216,6 +218,7 @@ Partial Class articolo
                 item.Img = imgVal
                 item.Url = BuildProductUrl(idVal, tcidVal, includeTcid:=(_tcEnabled AndAlso tcidVal <> -1))
                 item.PrezzoHtml = BuildPriceHtml(prezzoCorrente, prezzoBarrato, inOfferta)
+                item.InOfferta = (inOfferta = 1)
 
                 results.Add(item)
                 seen.Add(idVal)
@@ -1015,6 +1018,44 @@ Partial Class articolo
         Session("Carrello_Pagina") = Request.RawUrl
 
         Response.Redirect("aggiungi.aspx", True)
+    End Sub
+
+    Private Sub TrackRecentlyViewed(productId As Integer)
+        If productId <= 0 Then Exit Sub
+
+        Try
+            Dim ids As New List(Of Integer)()
+            Dim existing As HttpCookie = Request.Cookies("ks_recent")
+
+            If existing IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(existing.Value) Then
+                Dim raw As String = HttpUtility.UrlDecode(existing.Value)
+                If Not String.IsNullOrWhiteSpace(raw) Then
+                    Dim parts As String() = raw.Split(New Char() {","c}, StringSplitOptions.RemoveEmptyEntries)
+                    For Each part As String In parts
+                        Dim n As Integer
+                        If Integer.TryParse(part.Trim(), n) AndAlso n > 0 AndAlso n <> productId Then
+                            If Not ids.Contains(n) Then
+                                ids.Add(n)
+                            End If
+                        End If
+                    Next
+                End If
+            End If
+
+            ids.Insert(0, productId)
+            If ids.Count > 10 Then
+                ids.RemoveRange(10, ids.Count - 10)
+            End If
+
+            Dim cookie As New HttpCookie("ks_recent")
+            cookie.Value = HttpUtility.UrlEncode(String.Join(",", ids.ToArray()))
+            cookie.Path = "/"
+            cookie.Expires = DateTime.Now.AddDays(30)
+            cookie.HttpOnly = False
+            Response.Cookies.Add(cookie)
+        Catch
+            ' Best effort: la pagina prodotto non deve rompersi se la scrittura cookie fallisce.
+        End Try
     End Sub
 
     Private Function BuildProductUrl(id As Integer, tcid As Integer, includeTcid As Boolean) As String

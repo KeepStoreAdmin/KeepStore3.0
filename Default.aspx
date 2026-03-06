@@ -171,13 +171,13 @@
                         <div class="tab-product">
                             <ul class="nav-tab justify-content-start" role="tablist">
                                 <li class="nav-tab-item" role="presentation">
-                                    <a href="#homeTabFeature" class="active" data-bs-toggle="tab">In evidenza</a>
+                                    <a href="#homeTabFeature" class="active" data-bs-toggle="tab">Feature</a>
                                 </li>
                                 <li class="nav-tab-item" role="presentation">
-                                    <a href="#homeTabToprate" data-bs-toggle="tab">Più venduti</a>
+                                    <a href="#homeTabToprate" data-bs-toggle="tab">Toprate</a>
                                 </li>
                                 <li class="nav-tab-item" role="presentation">
-                                    <a href="#homeTabOnSale" data-bs-toggle="tab">In offerta</a>
+                                    <a href="#homeTabOnSale" data-bs-toggle="tab">On Sale</a>
                                 </li>
                             </ul>
                             <div class="tab-content">

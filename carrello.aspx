@@ -981,9 +981,9 @@
             <div class="ks-checkout-actions">
                 <asp:LinkButton Visible="False" CausesValidation="false" ID="btSalvaPreventivo" runat="server" CssClass="tf-btn btn-gray" OnClientClick="javascript:visualizza_spinner_caricamento();">SALVA PREVENTIVO</asp:LinkButton>
                 <%if Session("DESTINAZIONEALTERNATIVA")=0 then %>
-                    <asp:LinkButton CausesValidation="false" ID="btInviaOrdine" runat="server" OnClientClick="javascript:visualizza_spinner_caricamento();"><div id="confermaOrdinde" class="tf-btn">CONFERMA ORDINE</div></asp:LinkButton>
+                    <asp:LinkButton CausesValidation="false" ID="btInviaOrdine" runat="server" CssClass="tf-btn" OnClientClick="javascript:visualizza_spinner_caricamento();">CONFERMA ORDINE</asp:LinkButton>
                 <%else%>
-                    <div id="confermaOrdinde" class="tf-btn btn-gray" style="pointer-events:none;opacity:.6;">CONFERMA ORDINE</div>
+                    <span class="tf-btn btn-gray" style="pointer-events:none;opacity:.6;">CONFERMA ORDINE</span>
                 <%end if%>
             </div>
             <div id="spinner_caricamento" style="text-align:center;display:none;padding-top:5px;padding-bottom:5px;">
