@@ -35,7 +35,7 @@
                 <div class="col-xl-3 col-md-3 col-5 d-flex align-items-center justify-content-end">
                     <ul class="nav-icon justify-content-end">
                         <li class="nav-account">
-                            <a class="link nav-icon-item" href="myaccount.aspx" aria-label="Account">
+                            <a id="lnkAccount" runat="server" class="link nav-icon-item" href="myaccount.aspx" aria-label="Account">
                                 <span class="icon">
                                     <i class="icon icon-user"></i>
                                 </span>
@@ -67,6 +67,8 @@
                                 </span>
                             </a>
                         </li>
+
+                        <li class="d-none"><asp:Label ID="lblWishlistCount" runat="server" Text="0" Visible="false" /></li>
 
                         <li class="d-flex align-items-center d-xl-none">
                             <a class="mobile-button" data-bs-toggle="offcanvas" href="#mobileMenu" aria-controls="mobileMenu" aria-label="Menu">
@@ -168,7 +170,7 @@
         </div>
 
         <div class="mb-3">
-            <a class="tf-btn btn-line w-100" href="myaccount.aspx">Area personale</a>
+            <a id="lnkAccountMobile" runat="server" class="tf-btn btn-line w-100" href="myaccount.aspx">Area personale</a>
         </div>
 
         <div class="mb-3">

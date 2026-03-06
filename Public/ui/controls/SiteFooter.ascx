@@ -11,7 +11,7 @@
 </a>
 <div class="method-payment">
 <p>
-                                        We accept:
+                                        Pagamenti accettati:
                                     </p>
 <ul class="method-list">
 <li>
@@ -31,46 +31,46 @@
 </div>
 <ul class="ft-link-wrap w-100 tf-grid-layout md-col-2 lg-col-4">
 <li class="footer-col-block">
-<h6 class="ft-heading footer-heading-mobile fw-semibold">Get help</h6>
+<h6 class="ft-heading footer-heading-mobile fw-semibold">Supporto</h6>
 <div class="tf-collapse-content">
 <ul class="ft-menu-list">
-<li><a class="link" href="Contattaci.aspx">Delivery Information</a></li>
-<li><a class="link" href="Contattaci.aspx">Sale Terms &amp; Conditions</a></li>
-<li><a class="link" href="Contattaci.aspx">Returns &amp; Refunds</a></li>
-<li><a class="link" href="Contattaci.aspx">Privacy Notice</a></li>
-<li><a class="link" href="Contattaci.aspx">Shopping FAQs</a></li>
+<li><a class="link" href="Contattaci.aspx">Informazioni consegna</a></li>
+<li><a class="link" href="Contattaci.aspx">Condizioni di vendita</a></li>
+<li><a class="link" href="Contattaci.aspx">Resi e rimborsi</a></li>
+<li><a class="link" href="Contattaci.aspx">Privacy</a></li>
+<li><a class="link" href="Contattaci.aspx">Domande frequenti</a></li>
 </ul>
 </div>
 </li>
 <li class="footer-col-block">
-<h6 class="ft-heading footer-heading-mobile fw-semibold">Popular categories</h6>
+<h6 class="ft-heading footer-heading-mobile fw-semibold">Categorie popolari</h6>
 <div class="tf-collapse-content">
 <ul class="ft-menu-list">
-<li><a class="link" href="articoli.aspx">Laptops &amp; Computers</a></li>
-<li><a class="link" href="articoli.aspx">Cameras &amp; Photography</a></li>
-<li><a class="link" href="articoli.aspx">Smart Phones &amp; Tablets</a></li>
-<li><a class="link" href="articoli.aspx">Video Games &amp; Consoles</a></li>
-<li><a class="link" href="articoli.aspx">TV &amp; Audio</a></li>
-<li><a class="link" href="articoli.aspx">Gadgets</a></li>
-<li><a class="link" href="articoli.aspx">Waterproof Headphones</a></li>
+<li><a class="link" href="articoli.aspx">Notebook e computer</a></li>
+<li><a class="link" href="articoli.aspx">Fotografia e video</a></li>
+<li><a class="link" href="articoli.aspx">Smartphone e tablet</a></li>
+<li><a class="link" href="articoli.aspx">Gaming e console</a></li>
+<li><a class="link" href="articoli.aspx">TV e audio</a></li>
+<li><a class="link" href="articoli.aspx">Accessori tech</a></li>
+<li><a class="link" href="articoli.aspx">Audio e cuffie</a></li>
 </ul>
 </div>
 </li>
 <li class="footer-col-block">
-<h6 class="ft-heading footer-heading-mobile fw-semibold">Customer Care</h6>
+<h6 class="ft-heading footer-heading-mobile fw-semibold">Area cliente</h6>
 <div class="tf-collapse-content">
 <ul class="ft-menu-list">
-<li><a class="link" href="myaccount.aspx">My Account</a></li>
-<li><a class="link" href="pay_your_orders.aspx">Track your Order</a></li>
-<li><a class="link" href="contact.aspx">Customer Service</a></li>
-<li><a class="link" href="Contattaci.aspx">Returns/Exchange</a></li>
-<li><a class="link" href="Contattaci.aspx">FAQs</a></li>
-<li><a class="link" href="contact.aspx">Product Support</a></li>
+<li><a class="link" href="myaccount.aspx">Il mio account</a></li>
+<li><a class="link" href="pay_your_orders.aspx">Monitora il tuo ordine</a></li>
+<li><a class="link" href="Contattaci.aspx">Servizio clienti</a></li>
+<li><a class="link" href="Contattaci.aspx">Resi e cambi</a></li>
+<li><a class="link" href="Contattaci.aspx">FAQ</a></li>
+<li><a class="link" href="Contattaci.aspx">Supporto prodotti</a></li>
 </ul>
 </div>
 </li>
 <li class="footer-col-block type-sp-2">
-<h6 class="ft-heading footer-heading-mobile fw-semibold">Contact</h6>
+<h6 class="ft-heading footer-heading-mobile fw-semibold">Contatti</h6>
 <div class="tf-collapse-content">
 <ul class="ft-menu-list ft-contact-list">
 <li>
@@ -78,8 +78,8 @@
 <i class="icon-location"></i>
 </i>
 <a class="link" href="#">
-                                                    8500 Lorem Street
-                                                    Chicago, IL 55030 Dolor sit amet
+                                                    KeepStore
+                                                    Assistenza pre e post vendita
                                                 </a>
 </li>
 <li>
@@ -88,7 +88,7 @@
 </i>
 <a class="product-title" href="tel:88001234567">
 <span class="product-title text-primary">
-                                                        +8(800) 123 4567
+                                                        +39 000 000 0000
                                                     </span>
 </a>
 </li>
@@ -113,10 +113,10 @@
 <p class="notice text-white justify-content-xxl-between">
 <span class="main-title fw-semibold">
 <img alt="" src="<%= ThemeManager.Asset("images/mail.svg") %>"/>
-                                    10% Off Your First Order
+                                    Novita e promozioni KeepStore
                                 </span>
 <span class="body-text-3">
-                                    Be the first to know about offers, new products and discounted products
+                                    Ricevi aggiornamenti su offerte, nuovi arrivi e prodotti in promozione
                                 </span>
 </p>
 <div class="form-newsletter" data-ks-newsletter="1">
@@ -138,20 +138,20 @@
 <div class="container">
 <div class="ft-bottom">
 <ul class="social-list">
-<li><a href="https://www.facebook.com"><i class="icon-facebook"></i></a></li>
+<li><a href="https://www.facebook.com/taikun.it"><i class="icon-facebook"></i></a></li>
 <li><a href="https://x.com/"><i class="icon-x"></i></a></li>
-<li><a href="https://www.instagram.com/"><i class="icon-instagram"></i></a></li>
+<li><a href="https://www.instagram.com/taikun.it"><i class="icon-instagram"></i></a></li>
 <li><a href="https://www.linkedin.com/"><i class="icon-linkin"></i></a></li>
 <li><a href="https://web.whatsapp.com/"><i class="icon-whatapp"></i></a></li>
 </ul>
 <ul class="ft-menu-list-2 body-text-3">
-<li><a class="title-sidebar link fw-bold" href="Default.aspx">New arrivals</a></li>
-<li><a class="title-sidebar link fw-bold" href="Default.aspx">Best sale</a></li>
-<li><a class="title-sidebar link fw-bold" href="Default.aspx">Value of the day</a>
+<li><a class="title-sidebar link fw-bold" href="Default.aspx">Nuovi arrivi</a></li>
+<li><a class="title-sidebar link fw-bold" href="Default.aspx">Migliori offerte</a></li>
+<li><a class="title-sidebar link fw-bold" href="Default.aspx">Occasione del giorno</a>
 </li>
-<li><a class="title-sidebar link fw-bold" href="Default.aspx">Top 100 offers</a></li>
-<li><a class="title-sidebar link fw-bold" href="Default.aspx">Blog</a></li>
-<li><a class="title-sidebar link fw-bold" href="Default.aspx"><i class="icon-fire"></i> 50% OFF</a>
+<li><a class="title-sidebar link fw-bold" href="Default.aspx">Top offerte</a></li>
+<li><a class="title-sidebar link fw-bold" href="Contattaci.aspx">Contatti</a></li>
+<li><a class="title-sidebar link fw-bold" href="Default.aspx"><i class="icon-fire"></i> Promo</a>
 </li>
 </ul>
 <p class="nocopy caption text-center">

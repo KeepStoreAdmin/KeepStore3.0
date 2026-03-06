@@ -9,8 +9,8 @@
                     <div class="tf-icon-box style-border-line">
                         <div class="icon"><i class="icon-delivery-2"></i></div>
                         <div class="content">
-                            <h5 class="title">Spedizione veloce</h5>
-                            <p>Ordini gestiti rapidamente</p>
+                            <h5 class="title">Spedizione rapida</h5>
+                            <p>Evasione ordini veloce e tracciata</p>
                         </div>
                     </div>
                 </div>
@@ -19,7 +19,7 @@
                         <div class="icon"><i class="icon-payment-2"></i></div>
                         <div class="content">
                             <h5 class="title">Pagamenti sicuri</h5>
-                            <p>Metodi di pagamento affidabili</p>
+                            <p>Carte, bonifico e metodi affidabili</p>
                         </div>
                     </div>
                 </div>
@@ -27,8 +27,8 @@
                     <div class="tf-icon-box style-border-line">
                         <div class="icon"><i class="icon-return-2"></i></div>
                         <div class="content">
-                            <h5 class="title">Assistenza</h5>
-                            <p>Supporto pre e post vendita</p>
+                            <h5 class="title">Assistenza tecnica</h5>
+                            <p>Supporto prima e dopo l'acquisto</p>
                         </div>
                     </div>
                 </div>
@@ -36,8 +36,17 @@
                     <div class="tf-icon-box style-border-line">
                         <div class="icon"><i class="icon-suport-3"></i></div>
                         <div class="content">
-                            <h5 class="title">Contattaci</h5>
-                            <p>Telefono, WhatsApp e Email</p>
+                            <h5 class="title">Contatto diretto</h5>
+                            <p>Telefono, WhatsApp ed email</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="swiper-slide">
+                    <div class="tf-icon-box style-border-line">
+                        <div class="icon"><i class="icon-shield"></i></div>
+                        <div class="content">
+                            <h5 class="title">Affidabilità KeepStore</h5>
+                            <p>Prodotti selezionati e supporto reale</p>
                         </div>
                     </div>
                 </div>
