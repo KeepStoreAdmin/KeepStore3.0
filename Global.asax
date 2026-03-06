@@ -1,101 +1,69 @@
-﻿<%@ Application Language="VB" %>
+<%@ Application Language="VB" %>
 
 <script runat="server">
 
-    Sub Application_Start(ByVal sender As Object, ByVal e As EventArgs)
-        Application.Add("DataAggiornamentoOfferte", "01/01/1900")
-        'Codice per la gestione delle pubblicità
-        Application.Add("Last_Banner", "0")
-        Application.Add("Last_Banner_Posizione_Sinistra_1", "0")
-        Application.Add("Last_Banner_Posizione_Sinistra_2", "0")
-        Application.Add("Last_Banner_Posizione_Sinistra_3", "0")
-        Application.Add("Last_Banner_Posizione_Destra_1", "0")
-        Application.Add("Last_Banner_Posizione_Destra_2", "0")
-        Application.Add("Last_Banner_Posizione_Destra_3", "0")
-        'Semaforo di accesso
-        Application.Add("Semaforo", New Object)
-        'Scritta nel campo di ricerca
-        Application.Add("Campo_Ricerca", "cosa cerchi? Monitor TV PC Karaoke etc ...")
-    End Sub
+' NOTE:
+' - Questo Global.asax serve a forzare HTTPS senza dipendere da IIS URL Rewrite.
+' - Non richiede modifiche a web.config oltre alla tua machineKey già impostata.
+' - Per funzionare, IIS deve avere il binding HTTPS (certificato valido) sul sito.
 
-' =========================
-' STEP 27 - Legacy endpoints redirect map (SEO-safe)
-' =========================
 Sub Application_BeginRequest(ByVal sender As Object, ByVal e As EventArgs)
     Try
-        Dim p As String = Request.Url.AbsolutePath
-        If String.IsNullOrEmpty(p) Then Exit Sub
-        p = p.ToLowerInvariant()
+        If Context Is Nothing OrElse Request Is Nothing OrElse Request.Url Is Nothing Then Exit Sub
 
-        ' 1) Legacy payment return alias
-        If p.EndsWith("/pay_your_orders.aspx") Then
-            Response.Redirect("~/pagamento.aspx", False)
-            Context.ApplicationInstance.CompleteRequest()
-            Exit Sub
+        ' Evita redirect in locale
+        If Request.IsLocal Then Exit Sub
+
+        ' Determina se la richiesta è già HTTPS (o dietro proxy con header)
+        Dim isHttps As Boolean = Request.IsSecureConnection
+        Dim xfProto As String = Request.Headers("X-Forwarded-Proto")
+        If (Not String.IsNullOrEmpty(xfProto)) AndAlso xfProto.Equals("https", StringComparison.OrdinalIgnoreCase) Then
+            isHttps = True
         End If
 
-        ' 2) Deprecated test page -> home (avoid indexing)
-        If p.EndsWith("/test.aspx") Then
-            Response.Redirect("~/Default.aspx", False)
+        If Not isHttps Then
+            Dim u As Uri = Request.Url
+            Dim b As New UriBuilder(u)
+            b.Scheme = Uri.UriSchemeHttps
+            b.Port = -1 ' porta di default (443)
+
+            Response.StatusCode = 301
+            Response.RedirectLocation = b.Uri.ToString()
             Context.ApplicationInstance.CompleteRequest()
-            Exit Sub
+        End If
+
+    Catch
+        ' Non interrompere la request pipeline se qualcosa va storto.
+    End Try
+End Sub
+
+Sub Application_PreSendRequestHeaders(ByVal sender As Object, ByVal e As EventArgs)
+    Try
+        If Context Is Nothing OrElse Response Is Nothing Then Exit Sub
+
+        ' Hardening minimo (non distruttivo)
+        If Response.Headers("X-Content-Type-Options") Is Nothing Then Response.Headers("X-Content-Type-Options") = "nosniff"
+        If Response.Headers("X-Frame-Options") Is Nothing Then Response.Headers("X-Frame-Options") = "SAMEORIGIN"
+        If Response.Headers("Referrer-Policy") Is Nothing Then Response.Headers("Referrer-Policy") = "strict-origin-when-cross-origin"
+
+        ' HSTS solo se la richiesta è HTTPS (evita blocchi in caso di debug su HTTP)
+        Dim isHttps As Boolean = False
+        If Request IsNot Nothing Then
+            isHttps = Request.IsSecureConnection
+            Dim xfProto As String = Request.Headers("X-Forwarded-Proto")
+            If (Not String.IsNullOrEmpty(xfProto)) AndAlso xfProto.Equals("https", StringComparison.OrdinalIgnoreCase) Then
+                isHttps = True
+            End If
+        End If
+
+        If isHttps Then
+            If Response.Headers("Strict-Transport-Security") Is Nothing Then
+                Response.Headers("Strict-Transport-Security") = "max-age=31536000; includeSubDomains"
+            End If
         End If
 
     Catch
     End Try
 End Sub
 
-    
-    Sub Application_End(ByVal sender As Object, ByVal e As EventArgs)
-        ' Codice eseguito alla chiusura dell&apos;applicazione
-    End Sub
-        
-    Sub Application_Error(ByVal sender As Object, ByVal e As EventArgs)
-        ' Codice eseguito in caso di errore non gestito
-    End Sub
-
-    Sub Session_Start(ByVal sender As Object, ByVal e As EventArgs)
-        ' Codice eseguito all&apos;avvio di una nuova sessione
-        Session.Item("Pagina_visitata_Articoli") = ""
-        Session.Item("Prezzo_MIN")=""
-        Session.Item("Prezzo_MAX")=""
-        Session.Item("Inserimento_User") = ""
-        Session.Item("Inserimento_Password") = ""
-        Session("ID_Listino_Personalizzato")=0
-        Session.Item("Crea_Vista_Promo") = 0
-        Session("LoginUltimoAccesso") = "Primo Accesso"
-        Session("AbilitaListino") = 0
-        Session.Item("StavonelCarrello") = 0
-        Session.Item("Popup") = 1
-        
-        'Inizializzazione variabili per Esenzione Iva e Reverse Charge dell'Utente
-        Session("Iva_Utente") = -1
-        Session("IvaReverseCharge_Utente") = -1
-        Session("IdIvaReverseCharge_Utente") = -1
-        Session("DescrizioneEsenzioneIva") = ""
-        Session("IdEsenzioneIva") = -1
-        Session("AbilitatoIvaReverseCharge") = 0
-    End Sub
-
-    Sub Session_End(ByVal sender As Object, ByVal e As EventArgs)
-        ' Codice eseguito al termine di una sessione. 
-        ' Nota: l&apos;evento Session_End viene generato solo quando la modalità sessionstate
-        ' è impostata su InProc nel file Web.config. Se tale modalità è impostata su StateServer 
-        ' o su SQLServer, l&apos;evento non viene generato.
-        Session.Item("Prezzo_MIN")=""
-        Session.Item("Prezzo_MAX")=""
-        Session.Item("Inserimento_User") = ""
-        Session.Item("Inserimento_Password") = ""
-        Session("ID_Listino_Personalizzato")=0
-        Session.Item("Crea_Vista_Promo") = 0
-        Session("LoginUltimoAccesso") = "Primo Accesso"
-        Session("AbilitaListino") = 0
-        Session.Item("StavonelCarrello") = 0
-        
-        'Importante per impostare la prima pagina visitata
-        Session.Item("Pagina_visitata") = "default.aspx"
-        
-        Session.Item("UtentiId")=0
-    End Sub
-       
 </script>
