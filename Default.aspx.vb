@@ -3,6 +3,7 @@ Imports System.Collections.Generic
 Imports System.Configuration
 Imports System.Data
 Imports System.Globalization
+Imports System.IO
 Imports System.Linq
 Imports System.Web
 Imports System.Web.UI
@@ -11,41 +12,44 @@ Imports System.Web.UI.WebControls
 Partial Class _Default
     Inherits System.Web.UI.Page
 
+    Private Const RecentCookieName As String = "ks_recent"
+    Private Const RecentSessionKey As String = "ks_recent"
+
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
         Dim ivaTipo As Integer = SafeInt(Session("IvaTipo"), 0)
         Dim ordineChiuso As Integer = GetSettingInt("OrdineStatoChiuso", 3)
+        Dim currentListino As Integer = GetCurrentListino()
 
-        ConfigureHomeDataSources(ivaTipo, ordineChiuso)
+        ConfigureHomeDataSources(ivaTipo, ordineChiuso, currentListino)
 
         If Not IsPostBack Then
             BindHomeGridTabs()
-            BindRecentlyViewed(ivaTipo)
+            BindRecentlyViewed(ivaTipo, ordineChiuso, currentListino)
         End If
     End Sub
 
-    Private Sub ConfigureHomeDataSources(ivaTipo As Integer, ordineChiuso As Integer)
-        Dim vsFields As String = BuildVsuperArticoliSelect(ivaTipo)
+    Private Sub ConfigureHomeDataSources(ivaTipo As Integer, ordineChiuso As Integer, currentListino As Integer)
+        Dim baseSelect As String = BuildVsuperArticoliSelect(ivaTipo, ordineChiuso, currentListino)
 
-        ' Criteri automatici home (stabili e coerenti con il DB attuale):
-        ' - Occasione Imperdibile / On Sale: offerte attive ordinate per scadenza + popolarità
-        ' - Best Seller / Top Selling Product: vendite storiche da documenti chiusi
-        ' - Feature / Featured Products: articoli marcati Vetrina, più recenti e più cliccati
-        ' - Toprate / Top 20: articoli più visti / popolari
-        sdsDealOfDay.SelectCommand = BuildOnSaleQuery(vsFields, 8)
-        sdsBestSeller.SelectCommand = BuildTopSoldQuery(vsFields, ordineChiuso, 12)
+        ' Home KeepStore:
+        ' - Occasione Imperdibile: promo attive con giacenza reale > 0, rotazione casuale
+        ' - Best Seller: alimentato con la logica vetrina / nuovi arrivi del sito storico
+        ' - Feature / Featured Products: prodotti in vetrina e ad alta evidenza
+        ' - Toprate / Top 20: prodotti più visitati
+        ' - Top Selling Product: prodotti più venduti, privilegiando quelli non in promo
+        ' - On Sale / On-sale Product: promo attive, ordinate per convenienza
+        sdsDealOfDay.SelectCommand = BuildDealOfDayQuery(baseSelect, 8)
+        sdsBestSeller.SelectCommand = BuildBestSellerQuery(baseSelect, 12)
 
-        ' Tabs (Onsus: Feature / Toprate / On Sale)
-        sdsTabFeature.SelectCommand = BuildFeaturedQuery(vsFields, 7)
-        sdsTabToprate.SelectCommand = BuildTopViewedQuery(vsFields, 7)
-        sdsTabOnSale.SelectCommand = BuildOnSaleQuery(vsFields, 7)
+        sdsTabFeature.SelectCommand = BuildFeatureQuery(baseSelect, 7)
+        sdsTabToprate.SelectCommand = BuildTopViewedQuery(baseSelect, 7)
+        sdsTabOnSale.SelectCommand = BuildOnSaleQuery(baseSelect, 7)
 
-        ' Grid laterale home (Top 20 / Featured / Top Selling / On-sale)
-        sdsTop20.SelectCommand = BuildTopViewedQuery(vsFields, 5)
-        sdsFeaturedMini.SelectCommand = BuildFeaturedQuery(vsFields, 5)
-        sdsTopSellingMini.SelectCommand = BuildTopSoldQuery(vsFields, ordineChiuso, 5)
-        sdsOnSaleMini.SelectCommand = BuildOnSaleQuery(vsFields, 5)
+        sdsTop20.SelectCommand = BuildTop20Query(baseSelect, 5)
+        sdsFeaturedMini.SelectCommand = BuildFeaturedMiniQuery(baseSelect, 5)
+        sdsTopSellingMini.SelectCommand = BuildTopSellingMiniQuery(baseSelect, 5)
+        sdsOnSaleMini.SelectCommand = BuildOnSaleMiniQuery(baseSelect, 5)
 
-        ' MySQL provider esplicito per prevenire fallback a SqlClient
         EnsureMySqlProvider(sdsDealOfDay)
         EnsureMySqlProvider(sdsBestSeller)
         EnsureMySqlProvider(sdsTabFeature)
@@ -59,13 +63,8 @@ Partial Class _Default
     End Sub
 
     Private Sub BindHomeGridTabs()
-        ' Feature tab
         BindGridTab(sdsTabFeature, rptFeatureLeft, rptFeatureCenter, rptFeatureRight, 3, 1, 3)
-
-        ' Toprate tab
         BindGridTab(sdsTabToprate, rptToprateLeft, rptToprateCenter, rptToprateRight, 3, 1, 3)
-
-        ' On Sale tab
         BindGridTab(sdsTabOnSale, rptOnSaleLeft, rptOnSaleCenter, rptOnSaleRight, 3, 1, 3)
     End Sub
 
@@ -76,10 +75,6 @@ Partial Class _Default
                             leftCount As Integer,
                             centerCount As Integer,
                             rightCount As Integer)
-
-        ' IMPORTANT:
-        ' KeepStore usa MySQL (connection string con keyword come "port").
-        ' Se ProviderName non è impostato, SqlDataSource usa di default SqlClient e va in errore.
         EnsureMySqlProvider(ds)
 
         Dim dv As DataView = Nothing
@@ -112,13 +107,12 @@ Partial Class _Default
         If ds Is Nothing Then Exit Sub
 
         Try
-            Dim pn As String = Convert.ToString(ds.ProviderName)
-            If String.IsNullOrWhiteSpace(pn) OrElse pn.Equals("System.Data.SqlClient", StringComparison.OrdinalIgnoreCase) Then
-                ' fallback hard-coded (coerente con la configurazione KeepStore)
+            Dim provider As String = Convert.ToString(ds.ProviderName)
+            If String.IsNullOrWhiteSpace(provider) OrElse provider.Equals("System.Data.SqlClient", StringComparison.OrdinalIgnoreCase) Then
                 ds.ProviderName = "MySql.Data.MySqlClient"
             End If
         Catch
-            ' ignore (non bloccare la pagina)
+            ' Non bloccare la pagina se il datasource è già valorizzato diversamente.
         End Try
     End Sub
 
@@ -133,154 +127,312 @@ Partial Class _Default
         Return clone
     End Function
 
-    Private Sub BindRecentlyViewed(ivaTipo As Integer)
+    Private Sub BindRecentlyViewed(ivaTipo As Integer, ordineChiuso As Integer, currentListino As Integer)
         Dim ids As List(Of Integer) = ReadRecentIds(10)
-        Dim vsSelectRecently As String = BuildVsuperArticoliSelect(ivaTipo)
+        Dim baseSelect As String = BuildVsuperArticoliSelect(ivaTipo, ordineChiuso, currentListino)
 
-        ' Nel template Onsus la sezione rimane sempre presente.
-        ' Se l'utente non ha ancora visitato prodotti, mostriamo un fallback popolare.
         phRecentlyViewed.Visible = True
 
-        If ids Is Nothing OrElse ids.Count = 0 Then
-            sdsRecentlyViewed.SelectCommand = BuildTopViewedQuery(vsSelectRecently, 10)
+        If ids.Count = 0 Then
+            sdsRecentlyViewed.SelectCommand = BuildTopViewedQuery(baseSelect, 10)
             Return
         End If
 
-        Dim idsCsv As String = String.Join(",", ids.Select(Function(x) x.ToString(CultureInfo.InvariantCulture)))
-
-        ' Manteniamo l'ordine di visita (MySQL: FIELD)
-        sdsRecentlyViewed.SelectCommand =
-            vsSelectRecently &
-            " WHERE vsuperarticoli.id IN (" & idsCsv & ") " &
-            " ORDER BY FIELD(vsuperarticoli.id," & idsCsv & ") " &
-            " LIMIT 10"
+        sdsRecentlyViewed.SelectCommand = BuildRecentlyViewedQuery(baseSelect, ids, 10)
     End Sub
 
     Private Function ReadRecentIds(maxCount As Integer) As List(Of Integer)
-        Dim outList As New List(Of Integer)()
+        Dim items As New List(Of Integer)()
+
+        MergeRecentIds(items, Convert.ToString(Session(RecentSessionKey)), maxCount)
 
         Try
-            Dim c As HttpCookie = Request.Cookies("ks_recent")
-            If c Is Nothing OrElse String.IsNullOrWhiteSpace(c.Value) Then Return outList
-
-            Dim raw As String = HttpUtility.UrlDecode(c.Value)
-            If String.IsNullOrWhiteSpace(raw) Then Return outList
-
-            Dim parts As String() = raw.Split(New Char() {","c}, StringSplitOptions.RemoveEmptyEntries)
-            For Each p As String In parts
-                Dim n As Integer
-                If Integer.TryParse(p.Trim(), n) AndAlso n > 0 Then
-                    If Not outList.Contains(n) Then outList.Add(n)
-                    If outList.Count >= maxCount Then Exit For
-                End If
-            Next
+            Dim c As HttpCookie = Request.Cookies(RecentCookieName)
+            If c IsNot Nothing Then
+                MergeRecentIds(items, HttpUtility.UrlDecode(c.Value), maxCount)
+            End If
         Catch
             ' ignore
         End Try
 
-        Return outList
+        Return items
     End Function
 
-    ' ----------------------------
-    ' Select builders
-    ' ----------------------------
-    Private Function BuildVsuperArticoliSelect(ivaTipo As Integer) As String
-        ' NB: manteniamo alias/nomi campo già usati nelle pagine KeepStore.
+    Private Sub MergeRecentIds(target As List(Of Integer), raw As String, maxCount As Integer)
+        If target Is Nothing OrElse maxCount <= 0 Then Exit Sub
+        If String.IsNullOrWhiteSpace(raw) Then Exit Sub
+
+        Dim parts As String() = raw.Split(New Char() {","c}, StringSplitOptions.RemoveEmptyEntries)
+        For Each part As String In parts
+            Dim n As Integer
+            If Integer.TryParse(part.Trim(), n) AndAlso n > 0 Then
+                If Not target.Contains(n) Then
+                    target.Add(n)
+                    If target.Count >= maxCount Then Exit For
+                End If
+            End If
+        Next
+    End Sub
+
+    ' -------------------------------------------------
+    ' Query builders
+    ' -------------------------------------------------
+    Private Function BuildVsuperArticoliSelect(ivaTipo As Integer, ordineChiuso As Integer, currentListino As Integer) As String
         Return "SELECT " &
                "vsuperarticoli.id AS Articoliid, " &
                "vsuperarticoli.Codice, " &
                "vsuperarticoli.Descrizione1, " &
+               "vsuperarticoli.MarcheDescrizione, " &
+               "vsuperarticoli.CategorieDescrizione, " &
+               "vsuperarticoli.SettoriDescrizione, " &
+               "vsuperarticoli.TipologieDescrizione, " &
                "vsuperarticoli.Img1, vsuperarticoli.Img2, vsuperarticoli.Img3, vsuperarticoli.Img4, " &
-               "vsuperarticoli.prezzo, " &
-               "(CASE WHEN " & ivaTipo & "=2 THEN vsuperarticoli.prezzoIvato ELSE vsuperarticoli.prezzo END) AS PrezzoMostrato, " &
-               "(CASE WHEN " & ivaTipo & "=2 THEN vsuperarticoli.PrezzoPromoIvato ELSE vsuperarticoli.prezzoPromo END) AS PrezzoPromoMostrato, " &
+               "vsuperarticoli.Prezzo, " &
+               "(CASE WHEN " & ivaTipo.ToString(CultureInfo.InvariantCulture) & "=2 THEN vsuperarticoli.PrezzoIvato ELSE vsuperarticoli.Prezzo END) AS PrezzoMostrato, " &
+               "(CASE WHEN " & ivaTipo.ToString(CultureInfo.InvariantCulture) & "=2 THEN vsuperarticoli.PrezzoPromoIvato ELSE vsuperarticoli.PrezzoPromo END) AS PrezzoPromoMostrato, " &
                "vsuperarticoli.InOfferta, " &
-               "vsuperarticoli.prezzoIvato, vsuperarticoli.prezzoPromo, " &
-               "vsuperarticoli.PrezzoPromoIvato, " &
+               "vsuperarticoli.PrezzoIvato, vsuperarticoli.PrezzoPromo, vsuperarticoli.PrezzoPromoIvato, " &
                "vsuperarticoli.SpeditoGratis, " &
+               "COALESCE(vsuperarticoli.Giacenza,0) AS Giacenza, " &
                "COALESCE(vsuperarticoli.Disponibilita,0) AS Disponibilita, " &
                "COALESCE(vsuperarticoli.Impegnata,0) AS Impegnata, " &
-               "COALESCE(vsuperarticoli.visite,0) AS Visite, " &
+               "COALESCE(vsuperarticoli.VendutiTotali,0) AS VendutiTotali, " &
+               "COALESCE(vsuperarticoli.Visite,0) AS Visite, " &
                "COALESCE(vsuperarticoli.Vetrina,0) AS Vetrina, " &
+               "COALESCE(vsuperarticoli.NListino,0) AS NListino, " &
                "vsuperarticoli.DataCreazione, " &
                "vsuperarticoli.OfferteDataFine " &
-               "FROM vsuperarticoli"
+               "FROM (" & BuildScopedCatalogQuery(ordineChiuso, currentListino) & ") vsuperarticoli"
     End Function
 
-    Private Function BuildFeaturedQuery(vsFields As String, limit As Integer) As String
-        ' Feature / Featured Products = articoli marcati in Vetrina.
-        If limit <= 0 Then limit = 8
+    Private Function BuildScopedCatalogQuery(ordineChiuso As Integer, currentListino As Integer) As String
+        Dim listino As Integer = currentListino
+        If listino <= 0 Then listino = 1
 
-        Return vsFields &
-               " WHERE COALESCE(vsuperarticoli.Vetrina,0) <> 0 " &
-               " ORDER BY COALESCE(vsuperarticoli.DataCreazione, CURDATE()) DESC, " &
-               "          COALESCE(vsuperarticoli.visite,0) DESC, " &
-               "          vsuperarticoli.id DESC " &
-               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
-    End Function
-
-    Private Function BuildTopViewedQuery(vsFields As String, limit As Integer) As String
-        ' Toprate / Top 20 = popolarità: più visite, poi disponibilità e freschezza.
-        If limit <= 0 Then limit = 8
-
-        Return vsFields &
-               " ORDER BY COALESCE(vsuperarticoli.visite,0) DESC, " &
-               "          COALESCE(vsuperarticoli.Disponibilita,0) DESC, " &
-               "          COALESCE(vsuperarticoli.DataCreazione, CURDATE()) DESC, " &
-               "          vsuperarticoli.id DESC " &
-               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
-    End Function
-
-    Private Function BuildOnSaleQuery(vsFields As String, limit As Integer) As String
-        ' Deal Of The Day / On-sale = offerte attive in scadenza, con priorità agli articoli più cliccati.
-        If limit <= 0 Then limit = 8
-
-        Return vsFields &
-               " WHERE COALESCE(vsuperarticoli.InOfferta,0)=1 " &
-               "   AND (COALESCE(vsuperarticoli.prezzoPromo,0)>0 OR COALESCE(vsuperarticoli.PrezzoPromoIvato,0)>0) " &
-               " ORDER BY (vsuperarticoli.OfferteDataFine IS NULL), " &
-               "          vsuperarticoli.OfferteDataFine ASC, " &
-               "          COALESCE(vsuperarticoli.visite,0) DESC, " &
-               "          vsuperarticoli.id DESC " &
-               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
-    End Function
-
-    Private Function BuildTopSoldQuery(vsFields As String, ordineChiuso As Integer, limit As Integer) As String
-        ' Best seller / Top Selling Product basato su documenti + righe documento dello schema attuale.
-        If limit <= 0 Then limit = 8
-
-        Dim whereParts As New List(Of String)()
-        whereParts.Add("dr.TipoRiga = 'A'")
+        Dim wh As String = "dr.TipoRiga = 'A'"
         If ordineChiuso > 0 Then
-            whereParts.Add("d.StatiId = " & ordineChiuso.ToString(CultureInfo.InvariantCulture))
+            wh &= " AND d.StatiId = " & ordineChiuso.ToString(CultureInfo.InvariantCulture)
         End If
 
-        Dim wh As String = String.Join(" AND ", whereParts.ToArray())
-
-        Return vsFields &
-               " LEFT JOIN ( " &
+        ' La view vsuperarticoli può restituire più righe per lo stesso articolo
+        ' (es. varianti / giacenze / listini). In HOME servono card univoche per articolo.
+        ' Qui aggreghiamo a livello ArticoloId, mantenendo i campi descrittivi stabili
+        ' e sommando le disponibilità reali.
+        Return "SELECT " &
+               "v.id, " &
+               "MAX(v.Codice) AS Codice, " &
+               "MAX(v.Descrizione1) AS Descrizione1, " &
+               "MAX(v.MarcheDescrizione) AS MarcheDescrizione, " &
+               "MAX(v.CategorieDescrizione) AS CategorieDescrizione, " &
+               "MAX(v.SettoriDescrizione) AS SettoriDescrizione, " &
+               "MAX(v.TipologieDescrizione) AS TipologieDescrizione, " &
+               "MAX(v.Img1) AS Img1, " &
+               "MAX(v.Img2) AS Img2, " &
+               "MAX(v.Img3) AS Img3, " &
+               "MAX(v.Img4) AS Img4, " &
+               "MAX(v.Prezzo) AS Prezzo, " &
+               "MAX(v.PrezzoIvato) AS PrezzoIvato, " &
+               "MIN(CASE WHEN COALESCE(v.InOfferta,0)=1 AND COALESCE(v.PrezzoPromo,0)>0 THEN v.PrezzoPromo ELSE NULL END) AS PrezzoPromo, " &
+               "MIN(CASE WHEN COALESCE(v.InOfferta,0)=1 AND COALESCE(v.PrezzoPromoIvato,0)>0 THEN v.PrezzoPromoIvato ELSE NULL END) AS PrezzoPromoIvato, " &
+               "MAX(COALESCE(v.InOfferta,0)) AS InOfferta, " &
+               "MAX(COALESCE(v.SpeditoGratis,0)) AS SpeditoGratis, " &
+               "SUM(COALESCE(v.Giacenza,0)) AS Giacenza, " &
+               "SUM(COALESCE(v.Disponibilita,0)) AS Disponibilita, " &
+               "SUM(COALESCE(v.Impegnata,0)) AS Impegnata, " &
+               "MAX(COALESCE(Vendite.QntTot,0)) AS VendutiTotali, " &
+               "MAX(COALESCE(v.Visite,0)) AS Visite, " &
+               "MAX(COALESCE(v.Vetrina,0)) AS Vetrina, " &
+               "MAX(COALESCE(v.NListino,0)) AS NListino, " &
+               "MAX(v.DataCreazione) AS DataCreazione, " &
+               "MIN(CASE WHEN COALESCE(v.InOfferta,0)=1 THEN v.OfferteDataFine ELSE NULL END) AS OfferteDataFine " &
+               "FROM vsuperarticoli v " &
+               "LEFT JOIN ( " &
                "   SELECT dr.ArticoliId AS articoli_id, SUM(IFNULL(dr.Qnt,0)) AS QntTot " &
                "   FROM documentirighe dr " &
                "   INNER JOIN documenti d ON d.id = dr.DocumentiId " &
                "   WHERE " & wh & " " &
                "   GROUP BY dr.ArticoliId " &
-               " ) Vendite ON Vendite.articoli_id = vsuperarticoli.id " &
-               " ORDER BY COALESCE(Vendite.QntTot,0) DESC, " &
-               "          COALESCE(vsuperarticoli.visite,0) DESC, " &
-               "          COALESCE(vsuperarticoli.Disponibilita,0) DESC, " &
-               "          vsuperarticoli.id DESC " &
+               ") Vendite ON Vendite.articoli_id = v.id " &
+               "WHERE COALESCE(v.NListino,1) = " & listino.ToString(CultureInfo.InvariantCulture) & " " &
+               "GROUP BY v.id"
+    End Function
+
+    Private Function AvailableWhere(useStrictGiacenza As Boolean) As String
+        If useStrictGiacenza Then
+            Return "COALESCE(vsuperarticoli.Giacenza,0) >= 1"
+        End If
+
+        Return "(COALESCE(vsuperarticoli.Giacenza,0) >= 1 OR COALESCE(vsuperarticoli.Disponibilita,0) >= 1)"
+    End Function
+
+    Private Function PromoWhere() As String
+        Return "COALESCE(vsuperarticoli.InOfferta,0) = 1 AND (COALESCE(vsuperarticoli.PrezzoPromo,0) > 0 OR COALESCE(vsuperarticoli.PrezzoPromoIvato,0) > 0)"
+    End Function
+
+    Private Function BuildDealOfDayQuery(baseSelect As String, limit As Integer) As String
+        If limit <= 0 Then limit = 8
+
+        Return baseSelect &
+               " WHERE " & AvailableWhere(True) &
+               " AND " & PromoWhere() &
+               " ORDER BY RAND(), COALESCE(vsuperarticoli.OfferteDataFine,'9999-12-31') ASC " &
                " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
     End Function
 
+    Private Function BuildBestSellerQuery(baseSelect As String, limit As Integer) As String
+        If limit <= 0 Then limit = 12
+
+        ' Per richiesta: il blocco Best Seller eredita la logica visiva della vecchia vetrina / nuovi arrivi.
+        Return baseSelect &
+               " WHERE " & AvailableWhere(False) &
+               " ORDER BY COALESCE(vsuperarticoli.Vetrina,0) DESC, " &
+               "          COALESCE(vsuperarticoli.DataCreazione,CURDATE()) DESC, " &
+               "          COALESCE(vsuperarticoli.Visite,0) DESC, " &
+               "          RAND() " &
+               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
+    End Function
+
+    Private Function BuildFeatureQuery(baseSelect As String, limit As Integer) As String
+        If limit <= 0 Then limit = 8
+
+        Return baseSelect &
+               " WHERE " & AvailableWhere(False) &
+               " ORDER BY COALESCE(vsuperarticoli.Vetrina,0) DESC, " &
+               "          COALESCE(vsuperarticoli.Visite,0) DESC, " &
+               "          COALESCE(vsuperarticoli.DataCreazione,CURDATE()) DESC, " &
+               "          RAND() " &
+               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
+    End Function
+
+    Private Function BuildTopViewedQuery(baseSelect As String, limit As Integer) As String
+        If limit <= 0 Then limit = 8
+
+        Return baseSelect &
+               " WHERE " & AvailableWhere(False) &
+               " ORDER BY COALESCE(vsuperarticoli.Visite,0) DESC, " &
+               "          COALESCE(vsuperarticoli.Vetrina,0) DESC, " &
+               "          COALESCE(vsuperarticoli.DataCreazione,CURDATE()) DESC, " &
+               "          RAND() " &
+               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
+    End Function
+
+    Private Function BuildOnSaleQuery(baseSelect As String, limit As Integer) As String
+        If limit <= 0 Then limit = 8
+
+        Return baseSelect &
+               " WHERE " & AvailableWhere(True) &
+               " AND " & PromoWhere() &
+               " ORDER BY (COALESCE(vsuperarticoli.PrezzoMostrato,0) - COALESCE(vsuperarticoli.PrezzoPromoMostrato,0)) DESC, " &
+               "          COALESCE(vsuperarticoli.OfferteDataFine,'9999-12-31') ASC, " &
+               "          RAND() " &
+               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
+    End Function
+
+    Private Function BuildTop20Query(baseSelect As String, limit As Integer) As String
+        Return BuildTopViewedQuery(baseSelect, limit)
+    End Function
+
+    Private Function BuildFeaturedMiniQuery(baseSelect As String, limit As Integer) As String
+        Return BuildFeatureQuery(baseSelect, limit)
+    End Function
+
+    Private Function BuildTopSellingMiniQuery(baseSelect As String, limit As Integer) As String
+        If limit <= 0 Then limit = 5
+
+        Return baseSelect &
+               " WHERE " & AvailableWhere(False) &
+               " AND COALESCE(vsuperarticoli.InOfferta,0) = 0 " &
+               " ORDER BY COALESCE(vsuperarticoli.VendutiTotali,0) DESC, " &
+               "          COALESCE(vsuperarticoli.Visite,0) DESC, " &
+               "          RAND() " &
+               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
+    End Function
+
+    Private Function BuildOnSaleMiniQuery(baseSelect As String, limit As Integer) As String
+        Return BuildOnSaleQuery(baseSelect, limit)
+    End Function
+
+    Private Function BuildRecentlyViewedQuery(baseSelect As String, ids As IList(Of Integer), limit As Integer) As String
+        If ids Is Nothing OrElse ids.Count = 0 Then
+            Return BuildTopViewedQuery(baseSelect, limit)
+        End If
+
+        If limit <= 0 Then limit = 10
+
+        Dim safeIds As New List(Of Integer)()
+        For Each id As Integer In ids
+            If id > 0 AndAlso Not safeIds.Contains(id) Then
+                safeIds.Add(id)
+                If safeIds.Count >= limit Then Exit For
+            End If
+        Next
+
+        If safeIds.Count = 0 Then
+            Return BuildTopViewedQuery(baseSelect, limit)
+        End If
+
+        Dim idsCsv As String = String.Join(",", safeIds.Select(Function(x) x.ToString(CultureInfo.InvariantCulture)).ToArray())
+        Dim visitedLimit As Integer = Math.Min(limit, safeIds.Count)
+        Dim extraLimit As Integer = Math.Max(0, limit - visitedLimit)
+
+        Dim visitedSql As String =
+            "SELECT recent_items.*, 0 AS sort_group, FIELD(recent_items.Articoliid," & idsCsv & ") AS sort_pos FROM (" &
+            baseSelect &
+            " WHERE vsuperarticoli.id IN (" & idsCsv & ") " &
+            " ORDER BY FIELD(vsuperarticoli.id," & idsCsv & ") " &
+            " LIMIT " & visitedLimit.ToString(CultureInfo.InvariantCulture) &
+            ") recent_items"
+
+        If extraLimit <= 0 Then
+            Return "SELECT * FROM (" & visitedSql & ") recent_final ORDER BY sort_group ASC, sort_pos ASC"
+        End If
+
+        Dim fillerSql As String =
+            "SELECT filler_items.*, 1 AS sort_group, 999999 AS sort_pos FROM (" &
+            baseSelect &
+            " WHERE " & AvailableWhere(False) &
+            " AND vsuperarticoli.id NOT IN (" & idsCsv & ") " &
+            " ORDER BY COALESCE(vsuperarticoli.Visite,0) DESC, COALESCE(vsuperarticoli.DataCreazione,CURDATE()) DESC, RAND() " &
+            " LIMIT " & extraLimit.ToString(CultureInfo.InvariantCulture) &
+            ") filler_items"
+
+        Return "SELECT * FROM ((" & visitedSql & ") UNION ALL (" & fillerSql & ")) recent_union ORDER BY sort_group ASC, sort_pos ASC"
+    End Function
+
+    ' -------------------------------------------------
+    ' Lettura sessione / configurazione
+    ' -------------------------------------------------
     Private Function GetSettingInt(key As String, defaultValue As Integer) As Integer
         Try
-            Dim v As String = ConfigurationManager.AppSettings(key)
+            Dim value As String = ConfigurationManager.AppSettings(key)
             Dim n As Integer
-            If Integer.TryParse(v, n) Then Return n
+            If Integer.TryParse(value, n) Then Return n
         Catch
-            ' ignore
         End Try
         Return defaultValue
+    End Function
+
+    Private Function GetSessionInt(key As String, defaultValue As Integer) As Integer
+        Try
+            If Session(key) Is Nothing Then Return defaultValue
+            Dim tmp As Integer
+            If Integer.TryParse(Convert.ToString(Session(key), CultureInfo.InvariantCulture), tmp) Then
+                Return tmp
+            End If
+        Catch
+        End Try
+        Return defaultValue
+    End Function
+
+    Private Function GetCurrentListino() As Integer
+        Dim n As Integer = GetSessionInt("Listino", 0)
+        If n <= 0 Then n = GetSessionInt("listino", 0)
+        If n <= 0 Then n = 1
+
+        Session("Listino") = n
+        Session("listino") = n
+
+        Return n
     End Function
 
     Private Function SafeInt(value As Object, defaultValue As Integer) As Integer
@@ -289,102 +441,165 @@ Partial Class _Default
             Dim n As Integer
             If Integer.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), n) Then Return n
         Catch
-            ' ignore
         End Try
         Return defaultValue
-    End Function
-
-    ' ----------------------------
-    ' Helpers used from ASPX
-    ' ----------------------------
-    Protected Function GetProductImage(primaryImg As Object, fallbackImg As Object) As String
-        Dim p As String = Convert.ToString(primaryImg)
-        If String.IsNullOrWhiteSpace(p) OrElse p = "0" Then
-            p = Convert.ToString(fallbackImg)
-        End If
-        Return ThemeManager.ProductImageUrl(p)
-    End Function
-
-    Protected Function RenderDiscountBadge(prezzoMostrato As Object, prezzoPromoMostrato As Object, inOfferta As Object) As String
-        Dim flag As Integer = SafeInt(inOfferta, 0)
-        If flag <> 1 Then Return String.Empty
-
-        Dim p As Decimal = SafeDecimal(prezzoMostrato)
-        Dim promo As Decimal = SafeDecimal(prezzoPromoMostrato)
-        If p <= 0D OrElse promo <= 0D OrElse promo >= p Then Return String.Empty
-
-        Dim perc As Integer = CInt(Math.Round((1D - (promo / p)) * 100D, 0, MidpointRounding.AwayFromZero))
-        If perc <= 0 Then Return String.Empty
-
-        Return "<span class=""on-sale fw-semibold"">-" & perc.ToString(CultureInfo.InvariantCulture) & "%</span>"
-    End Function
-
-    Protected Function GetCountdownSeconds(endDate As Object) As Integer
-        Try
-            If endDate Is Nothing OrElse endDate Is DBNull.Value Then Return 0
-            Dim dt As DateTime
-            If TypeOf endDate Is DateTime Then
-                dt = DirectCast(endDate, DateTime)
-            Else
-                If Not DateTime.TryParse(Convert.ToString(endDate), dt) Then Return 0
-            End If
-
-            Dim sec As Double = (dt.ToUniversalTime() - DateTime.UtcNow).TotalSeconds
-            If sec < 0 Then sec = 0
-            If sec > Integer.MaxValue Then sec = Integer.MaxValue
-            Return CInt(Math.Floor(sec))
-        Catch
-            Return 0
-        End Try
-    End Function
-
-    Protected Function GetSoldQty(impegnata As Object) As Integer
-        Dim n As Integer = SafeInt(impegnata, 0)
-        If n < 0 Then n = 0
-        Return n
-    End Function
-
-    Protected Function GetAvailableQty(disponibilita As Object) As Integer
-        Dim n As Integer = SafeInt(disponibilita, 0)
-        If n < 0 Then n = 0
-        Return n
-    End Function
-
-    Protected Function GetSoldPercent(impegnata As Object, disponibilita As Object) As Integer
-        Dim sold As Integer = GetSoldQty(impegnata)
-        Dim avail As Integer = GetAvailableQty(disponibilita)
-        Dim total As Integer = sold + avail
-        If total <= 0 Then Return 0
-        Dim perc As Integer = CInt(Math.Round((sold * 100D) / total, 0, MidpointRounding.AwayFromZero))
-        If perc < 0 Then perc = 0
-        If perc > 100 Then perc = 100
-        Return perc
-    End Function
-
-    Protected Function GetCaption(code As Object) As String
-        Dim s As String = Convert.ToString(code)
-        If String.IsNullOrWhiteSpace(s) Then Return "Prodotto"
-        Return s
     End Function
 
     Private Function SafeDecimal(value As Object) As Decimal
         Try
             If value Is Nothing OrElse value Is DBNull.Value Then Return 0D
+
             Dim d As Decimal
-            If Decimal.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), NumberStyles.Any, CultureInfo.InvariantCulture, d) Then Return d
-            ' fallback per culture it-IT
-            If Decimal.TryParse(Convert.ToString(value), NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), d) Then Return d
+            If Decimal.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), NumberStyles.Any, CultureInfo.InvariantCulture, d) Then
+                Return d
+            End If
+
+            If Decimal.TryParse(Convert.ToString(value), NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), d) Then
+                Return d
+            End If
         Catch
-            ' ignore
         End Try
         Return 0D
     End Function
 
+    ' -------------------------------------------------
+    ' Helper immagini / output ASPX
+    ' -------------------------------------------------
+    Protected Function GetHomeProductImage(primaryImg As Object, fallbackImg As Object) As String
+        Dim fileName As String = ResolveImageFileName(primaryImg, fallbackImg)
+        If String.IsNullOrWhiteSpace(fileName) Then
+            Return ThemeManager.ProductImageUrl(String.Empty)
+        End If
 
-    Protected Function RenderCaptionLabel(code As Object) As String
-        Dim s As String = Convert.ToString(code)
-        If String.IsNullOrWhiteSpace(s) Then Return "Prodotto"
-        Return "Cod. " & s.Trim()
+        Dim lowFile As String = BuildLowResHomeFileName(fileName)
+        Dim lowPublicVirtual As String = "~/Public/images/articoli/" & HttpUtility.UrlPathEncode(lowFile)
+        Dim lowPublicPhysical As String = SafeMapPath("~/Public/images/articoli/" & lowFile)
+        If Not String.IsNullOrWhiteSpace(lowPublicPhysical) AndAlso File.Exists(lowPublicPhysical) Then
+            Return ResolveUrl(lowPublicVirtual)
+        End If
+
+        Dim publicOriginalVirtual As String = "~/Public/images/articoli/" & HttpUtility.UrlPathEncode(fileName)
+        Dim publicOriginalPhysical As String = SafeMapPath("~/Public/images/articoli/" & fileName)
+        If Not String.IsNullOrWhiteSpace(publicOriginalPhysical) AndAlso File.Exists(publicOriginalPhysical) Then
+            Return ResolveUrl(publicOriginalVirtual)
+        End If
+
+        Return ThemeManager.ProductImageUrl(fileName)
+    End Function
+
+    Private Function ResolveImageFileName(primaryImg As Object, fallbackImg As Object) As String
+        Dim p As String = CleanImageFileName(primaryImg)
+        If String.IsNullOrWhiteSpace(p) OrElse p = "0" Then
+            p = CleanImageFileName(fallbackImg)
+        End If
+        Return p
+    End Function
+
+    Private Function CleanImageFileName(value As Object) As String
+        Dim s As String = Convert.ToString(value)
+        If String.IsNullOrWhiteSpace(s) Then Return String.Empty
+
+        s = s.Trim().Replace("\", "/")
+        If s = "0" Then Return String.Empty
+
+        Try
+            s = Path.GetFileName(s)
+        Catch
+            ' fallback sul valore già pulito
+        End Try
+
+        Return If(s, String.Empty).Trim()
+    End Function
+
+    Private Function BuildLowResHomeFileName(fileName As String) As String
+        Dim cleanName As String = CleanImageFileName(fileName)
+        If String.IsNullOrWhiteSpace(cleanName) Then Return String.Empty
+        If cleanName.StartsWith("_", StringComparison.Ordinal) Then Return cleanName
+        Return "_" & cleanName
+    End Function
+
+    Private Function SafeMapPath(virtualPath As String) As String
+        Try
+            Return Server.MapPath(virtualPath)
+        Catch
+            Return String.Empty
+        End Try
+    End Function
+
+    Protected Function RenderCaptionLabel(ParamArray values() As Object) As String
+        If values IsNot Nothing Then
+            For Each value As Object In values
+                Dim s As String = Convert.ToString(value)
+                If Not String.IsNullOrWhiteSpace(s) Then
+                    s = s.Trim()
+                    If Not s.Equals("0", StringComparison.OrdinalIgnoreCase) Then
+                        Return s
+                    End If
+                End If
+            Next
+        End If
+        Return "Prodotto"
+    End Function
+
+    Protected Function GetCountdownSeconds(endDate As Object) As Integer
+        Dim dt As DateTime
+        If Not TryParseOfferEndDate(endDate, dt) Then Return 0
+
+        Dim sec As Double = (dt.ToUniversalTime() - DateTime.UtcNow).TotalSeconds
+        If sec < 0 Then sec = 0
+        If sec > Integer.MaxValue Then sec = Integer.MaxValue
+        Return CInt(Math.Floor(sec))
+    End Function
+
+    Private Function TryParseOfferEndDate(value As Object, ByRef result As DateTime) As Boolean
+        result = DateTime.MinValue
+        If value Is Nothing OrElse value Is DBNull.Value Then Return False
+
+        If TypeOf value Is DateTime Then
+            result = DirectCast(value, DateTime)
+        Else
+            Dim s As String = Convert.ToString(value).Trim()
+            If s.Length = 0 Then Return False
+
+            Dim formats As String() = {"yyyy-MM-dd", "yyyy-MM-dd HH:mm:ss", "dd/MM/yyyy", "dd/MM/yyyy HH:mm:ss", "yyyy/MM/dd", "MM/dd/yyyy"}
+            If Not DateTime.TryParseExact(s, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, result) Then
+                If Not DateTime.TryParseExact(s, formats, CultureInfo.GetCultureInfo("it-IT"), DateTimeStyles.None, result) Then
+                    If Not DateTime.TryParse(s, result) Then
+                        Return False
+                    End If
+                End If
+            End If
+        End If
+
+        If result.TimeOfDay = TimeSpan.Zero Then
+            result = result.Date.AddDays(1).AddSeconds(-1)
+        End If
+
+        Return True
+    End Function
+
+    Protected Function GetSoldQty(vendutiTotali As Object) As Integer
+        Dim n As Integer = SafeInt(vendutiTotali, 0)
+        If n < 0 Then n = 0
+        Return n
+    End Function
+
+    Protected Function GetAvailableQty(giacenza As Object) As Integer
+        Dim n As Integer = SafeInt(giacenza, 0)
+        If n < 0 Then n = 0
+        Return n
+    End Function
+
+    Protected Function GetSoldPercent(vendutiTotali As Object, giacenza As Object) As Integer
+        Dim sold As Integer = GetSoldQty(vendutiTotali)
+        Dim available As Integer = GetAvailableQty(giacenza)
+        Dim total As Integer = sold + available
+        If total <= 0 Then Return 0
+
+        Dim perc As Integer = CInt(Math.Round((sold * 100D) / total, 0, MidpointRounding.AwayFromZero))
+        If perc < 0 Then perc = 0
+        If perc > 100 Then perc = 100
+        Return perc
     End Function
 
     Protected Function RenderPricePair(prezzoMostrato As Object,
@@ -510,11 +725,11 @@ Partial Class _Default
 
         Dim perc As Integer = CInt(Math.Round((1D - (promoPrice / regularPrice)) * 100D, 0, MidpointRounding.AwayFromZero))
         If perc < 0 Then perc = 0
+        If perc > 100 Then perc = 100
         Return perc
     End Function
 
     Private Function FormatMoney(value As Decimal) As String
         Return value.ToString("C", CultureInfo.GetCultureInfo("it-IT"))
     End Function
-
 End Class

@@ -9,73 +9,73 @@
     <%-- SEO head (canonical, meta robots, etc) injected from code-behind if needed --%>
     <asp:Literal ID="litSeoHead" runat="server" />
     <style type="text/css">
-        .ks-home-onsus .card-product .product-img,
-        .ks-home-onsus .card-product .card-image,
-        .ks-home-onsus .card-product .tf-image-view,
-        .ks-home-onsus .card-product .product-thumb-image,
-        .ks-home-onsus .banner-image-product .image,
-        .ks-home-onsus .banner-image-product-2 .item-image {
+        .ks-home-ui .card-product .product-img,
+        .ks-home-ui .card-product .card-image,
+        .ks-home-ui .card-product .tf-image-view,
+        .ks-home-ui .card-product .product-thumb-image,
+        .ks-home-ui .banner-image-product .image,
+        .ks-home-ui .banner-image-product-2 .item-image {
             display: block;
         }
 
-        .ks-home-onsus .card-product .product-img img,
-        .ks-home-onsus .card-product .card-image img,
-        .ks-home-onsus .card-product .tf-image-view img,
-        .ks-home-onsus .banner-image-product .image img,
-        .ks-home-onsus .banner-image-product-2 .item-image img {
+        .ks-home-ui .card-product .product-img img,
+        .ks-home-ui .card-product .card-image img,
+        .ks-home-ui .card-product .tf-image-view img,
+        .ks-home-ui .banner-image-product .image img,
+        .ks-home-ui .banner-image-product-2 .item-image img {
             width: 100%;
             height: 100%;
             object-fit: contain;
             background: #fff;
         }
 
-        .ks-home-onsus .slider-thumb-deal .product-thumb-image .card-image {
+        .ks-home-ui .slider-thumb-deal .product-thumb-image .card-image {
             aspect-ratio: 1 / 1;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        .ks-home-onsus .slider-thumb-deal .list-image-product {
+        .ks-home-ui .slider-thumb-deal .list-image-product {
             overflow-x: auto;
             overflow-y: hidden;
         }
 
-        .ks-home-onsus .slider-thumb-deal .list-image-product .image-swap,
-        .ks-home-onsus .slider-thumb-deal .list-image-product .list-image-item {
+        .ks-home-ui .slider-thumb-deal .list-image-product .image-swap,
+        .ks-home-ui .slider-thumb-deal .list-image-product .list-image-item {
             flex: 0 0 auto;
         }
 
-        .ks-home-onsus .slider-thumb-deal .list-image-product img {
+        .ks-home-ui .slider-thumb-deal .list-image-product img {
             width: 74px;
             height: 74px;
             object-fit: contain;
             background: #fff;
         }
 
-        .ks-home-onsus .card-product.style-img-border .card-product-wrapper {
+        .ks-home-ui .card-product.style-img-border .card-product-wrapper {
             min-height: 250px;
         }
 
-        .ks-home-onsus .card-product.style-img-border .product-img {
+        .ks-home-ui .card-product.style-img-border .product-img {
             aspect-ratio: 1 / 1;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        .ks-home-onsus .product-thumb-slider .tf-product-view-main .swiper-slide {
+        .ks-home-ui .product-thumb-slider .tf-product-view-main .swiper-slide {
             height: auto;
         }
 
-        .ks-home-onsus .product-thumb-slider .tf-product-view-main img {
+        .ks-home-ui .product-thumb-slider .tf-product-view-main img {
             width: 100%;
             max-height: 380px;
             object-fit: contain;
             background: #fff;
         }
 
-        .ks-home-onsus .product-thumb-slider .tf-product-view-thumbs .item {
+        .ks-home-ui .product-thumb-slider .tf-product-view-thumbs .item {
             height: 92px;
             display: flex;
             align-items: center;
@@ -83,13 +83,13 @@
             background: #fff;
         }
 
-        .ks-home-onsus .product-thumb-slider .tf-product-view-thumbs img {
+        .ks-home-ui .product-thumb-slider .tf-product-view-thumbs img {
             width: 100%;
             height: 100%;
             object-fit: contain;
         }
 
-        .ks-home-onsus .product-list-wrap .card-product-wrapper .product-img {
+        .ks-home-ui .product-list-wrap .card-product-wrapper .product-img {
             width: 110px;
             min-width: 110px;
             aspect-ratio: 1 / 1;
@@ -99,16 +99,16 @@
             background: #fff;
         }
 
-        .ks-home-onsus .product-list-wrap .card-product-wrapper .product-img img {
+        .ks-home-ui .product-list-wrap .card-product-wrapper .product-img img {
             width: 100%;
             height: 100%;
             object-fit: contain;
         }
 
-        .ks-home-onsus .product-list-wrap .name-product,
-        .ks-home-onsus .card-product-info .name-product,
-        .ks-home-onsus .card-product-info .title,
-        .ks-home-onsus .card-product-info .link {
+        .ks-home-ui .product-list-wrap .name-product,
+        .ks-home-ui .card-product-info .name-product,
+        .ks-home-ui .card-product-info .title,
+        .ks-home-ui .card-product-info .link {
             word-break: break-word;
         }
     </style>
@@ -119,7 +119,7 @@
 </asp:Content>
 
 <asp:Content ID="ContentMain" ContentPlaceHolderID="MainContent" runat="server">
-    <div class="ks-home-onsus">
+    <div class="ks-home-ui">
 
         <!-- Hero / Departments + Slider + Side banners -->
         <div class="tf-slideshow slider-effect-fade position-relative">
@@ -167,20 +167,20 @@
                                             <div class="card-product-wrapper overflow-visible">
                                                 <div class="product-thumb-image">
                                                     <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="card-image">
-                                                        <img class="lazyload img-product" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetProductImage(Eval("Img1"), Nothing) %>' />
+                                                        <img class="lazyload img-product" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
                                                     </a>
                                                     <ul class="list-image-product">
                                                         <li class="image-swap active">
-                                                            <img class="lazyload" alt="thumb" src='<%# GetProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetProductImage(Eval("Img1"), Nothing) %>' />
+                                                            <img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
                                                         </li>
                                                         <li class="image-swap">
-                                                            <img class="lazyload" alt="thumb" src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' />
+                                                            <img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                         </li>
                                                         <li class="image-swap">
-                                                            <img class="lazyload" alt="thumb" src='<%# GetProductImage(Eval("Img3"), Eval("Img1")) %>' data-src='<%# GetProductImage(Eval("Img3"), Eval("Img1")) %>' />
+                                                            <img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' />
                                                         </li>
                                                         <li class="image-swap">
-                                                            <img class="lazyload" alt="thumb" src='<%# GetProductImage(Eval("Img4"), Eval("Img1")) %>' data-src='<%# GetProductImage(Eval("Img4"), Eval("Img1")) %>' />
+                                                            <img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' />
                                                         </li>
                                                     </ul>
                                                 </div>
@@ -213,11 +213,11 @@
                                                     </div>
                                                     <div class="product-progress-sale">
                                                         <div class="progress-sold progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                                                            <div class="progress-bar bg-primary" style='<%# "width:" & GetSoldPercent(Eval("Impegnata"), Eval("Disponibilita")) & "%" %>'></div>
+                                                            <div class="progress-bar bg-primary" style='<%# "width:" & GetSoldPercent(Eval("VendutiTotali"), Eval("Giacenza")) & "%" %>'></div>
                                                         </div>
                                                         <div class="box-quantity d-flex justify-content-between">
-                                                            <p class="text-avaiable caption">Venduti: <span class="fw-bold"><%# GetSoldQty(Eval("Impegnata")) %></span></p>
-                                                            <p class="text-avaiable caption">Disponibili: <span class="fw-bold"><%# GetAvailableQty(Eval("Disponibilita")) %></span></p>
+                                                            <p class="text-avaiable caption">Venduti: <span class="fw-bold"><%# GetSoldQty(Eval("VendutiTotali")) %></span></p>
+                                                            <p class="text-avaiable caption">Disponibili: <span class="fw-bold"><%# GetAvailableQty(Eval("Giacenza")) %></span></p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -303,14 +303,14 @@
                                                 <div class="card-product style-row row-small-2">
                                                     <div class="card-product-wrapper">
                                                         <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="product-img">
-                                                            <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetProductImage(Eval("Img1"), Nothing) %>' />
-                                                            <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' />
+                                                            <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
+                                                            <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                         </a>
                                                     </div>
                                                     <div class="card-product-info">
                                                         <div class="box-title">
                                                             <div class="bg-white relative z-5">
-                                                                <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("Codice"))) %></p>
+                                                                <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("MarcheDescrizione"), Eval("CategorieDescrizione"), Eval("SettoriDescrizione"), Eval("TipologieDescrizione"), Eval("Codice"))) %></p>
                                                                 <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="name-product body-md-2 fw-semibold text-secondary link"><%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Descrizione1")), 88)) %></a>
                                                             </div>
                                                             <div class="group-btn">
@@ -342,32 +342,32 @@
                                                         <div class="swiper-wrapper">
                                                             <div class="swiper-slide">
                                                                 <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view">
-                                                                    <img class="lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetProductImage(Eval("Img1"), Nothing) %>' />
+                                                                    <img class="lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
                                                                 </a>
                                                             </div>
                                                             <div class="swiper-slide">
                                                                 <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view">
-                                                                    <img class="lazyload" alt="thumb" src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' />
+                                                                    <img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                                 </a>
                                                             </div>
                                                             <div class="swiper-slide">
                                                                 <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view">
-                                                                    <img class="lazyload" alt="thumb" src='<%# GetProductImage(Eval("Img3"), Eval("Img1")) %>' data-src='<%# GetProductImage(Eval("Img3"), Eval("Img1")) %>' />
+                                                                    <img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' />
                                                                 </a>
                                                             </div>
                                                             <div class="swiper-slide">
                                                                 <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view">
-                                                                    <img class="lazyload" alt="thumb" src='<%# GetProductImage(Eval("Img4"), Eval("Img1")) %>' data-src='<%# GetProductImage(Eval("Img4"), Eval("Img1")) %>' />
+                                                                    <img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' />
                                                                 </a>
                                                             </div>
                                                         </div>
                                                     </div>
                                                     <div class="swiper tf-product-view-thumbs" data-direction="vertical">
                                                         <div class="swiper-wrapper">
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetProductImage(Eval("Img1"), Nothing) %>' /></div></div>
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' /></div></div>
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetProductImage(Eval("Img3"), Eval("Img1")) %>' /></div></div>
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetProductImage(Eval("Img4"), Eval("Img1")) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' /></div></div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -376,7 +376,7 @@
                                             <div class="card-product-info">
                                                 <div class="box-title gap-xl-12">
                                                     <div class="d-flex flex-column">
-                                                        <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("Codice"))) %></p>
+                                                        <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("MarcheDescrizione"), Eval("CategorieDescrizione"), Eval("SettoriDescrizione"), Eval("TipologieDescrizione"), Eval("Codice"))) %></p>
                                                         <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="name-product fw-semibold text-secondary link"><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %></a>
                                                     </div>
                                                     <p class="price-wrap fw-medium"><%# RenderPriceWithSave(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price h4 fw-normal text-primary mb-0", "box-sale-tag") %></p>
@@ -387,11 +387,11 @@
                                                     </div>
                                                     <div class="product-progress-sale">
                                                         <div class="progress-sold progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                                                            <div class="progress-bar bg-primary" style='<%# "width:" & GetSoldPercent(Eval("Impegnata"), Eval("Disponibilita")) & "%" %>'></div>
+                                                            <div class="progress-bar bg-primary" style='<%# "width:" & GetSoldPercent(Eval("VendutiTotali"), Eval("Giacenza")) & "%" %>'></div>
                                                         </div>
                                                         <div class="box-quantity d-flex justify-content-between">
-                                                            <p class="text-avaiable caption">Venduti: <span class="fw-bold"><%# GetSoldQty(Eval("Impegnata")) %></span></p>
-                                                            <p class="text-avaiable caption">Disponibili: <span class="fw-bold"><%# GetAvailableQty(Eval("Disponibilita")) %></span></p>
+                                                            <p class="text-avaiable caption">Venduti: <span class="fw-bold"><%# GetSoldQty(Eval("VendutiTotali")) %></span></p>
+                                                            <p class="text-avaiable caption">Disponibili: <span class="fw-bold"><%# GetAvailableQty(Eval("Giacenza")) %></span></p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -408,14 +408,14 @@
                                                 <div class="card-product style-row row-small-2">
                                                     <div class="card-product-wrapper">
                                                         <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="product-img">
-                                                            <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetProductImage(Eval("Img1"), Nothing) %>' />
-                                                            <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' />
+                                                            <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
+                                                            <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                         </a>
                                                     </div>
                                                     <div class="card-product-info">
                                                         <div class="box-title">
                                                             <div class="bg-white relative z-5">
-                                                                <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("Codice"))) %></p>
+                                                                <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("MarcheDescrizione"), Eval("CategorieDescrizione"), Eval("SettoriDescrizione"), Eval("TipologieDescrizione"), Eval("Codice"))) %></p>
                                                                 <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="name-product body-md-2 fw-semibold text-secondary link"><%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Descrizione1")), 88)) %></a>
                                                             </div>
                                                             <div class="group-btn">
@@ -451,14 +451,14 @@
                                                 <div class="card-product style-row row-small-2">
                                                     <div class="card-product-wrapper">
                                                         <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="product-img">
-                                                            <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetProductImage(Eval("Img1"), Nothing) %>' />
-                                                            <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' />
+                                                            <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
+                                                            <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                         </a>
                                                     </div>
                                                     <div class="card-product-info">
                                                         <div class="box-title">
                                                             <div class="bg-white relative z-5">
-                                                                <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("Codice"))) %></p>
+                                                                <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("MarcheDescrizione"), Eval("CategorieDescrizione"), Eval("SettoriDescrizione"), Eval("TipologieDescrizione"), Eval("Codice"))) %></p>
                                                                 <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="name-product body-md-2 fw-semibold text-secondary link"><%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Descrizione1")), 88)) %></a>
                                                             </div>
                                                             <div class="group-btn">
@@ -485,18 +485,18 @@
                                                 <div class="product-thumb-slider thumbs-right">
                                                     <div class="swiper tf-product-view-main">
                                                         <div class="swiper-wrapper">
-                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img1"), Nothing) %>' /></a></div>
-                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' /></a></div>
-                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetProductImage(Eval("Img3"), Eval("Img1")) %>' /></a></div>
-                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetProductImage(Eval("Img4"), Eval("Img1")) %>' /></a></div>
+                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' /></a></div>
+                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' /></a></div>
+                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' /></a></div>
+                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' /></a></div>
                                                         </div>
                                                     </div>
                                                     <div class="swiper tf-product-view-thumbs" data-direction="vertical">
                                                         <div class="swiper-wrapper">
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetProductImage(Eval("Img1"), Nothing) %>' /></div></div>
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' /></div></div>
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetProductImage(Eval("Img3"), Eval("Img1")) %>' /></div></div>
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetProductImage(Eval("Img4"), Eval("Img1")) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' /></div></div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -504,7 +504,7 @@
                                             <div class="card-product-info">
                                                 <div class="box-title gap-xl-12">
                                                     <div class="d-flex flex-column">
-                                                        <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("Codice"))) %></p>
+                                                        <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("MarcheDescrizione"), Eval("CategorieDescrizione"), Eval("SettoriDescrizione"), Eval("TipologieDescrizione"), Eval("Codice"))) %></p>
                                                         <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="name-product fw-semibold text-secondary link"><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %></a>
                                                     </div>
                                                     <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price h4 fw-normal text-primary mb-0", "old-price body-md-2 text-main-2") %></p>
@@ -528,14 +528,14 @@
                                                 <div class="card-product style-row row-small-2">
                                                     <div class="card-product-wrapper">
                                                         <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="product-img">
-                                                            <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetProductImage(Eval("Img1"), Nothing) %>' />
-                                                            <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' />
+                                                            <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
+                                                            <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                         </a>
                                                     </div>
                                                     <div class="card-product-info">
                                                         <div class="box-title">
                                                             <div class="bg-white relative z-5">
-                                                                <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("Codice"))) %></p>
+                                                                <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("MarcheDescrizione"), Eval("CategorieDescrizione"), Eval("SettoriDescrizione"), Eval("TipologieDescrizione"), Eval("Codice"))) %></p>
                                                                 <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="name-product body-md-2 fw-semibold text-secondary link"><%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Descrizione1")), 88)) %></a>
                                                             </div>
                                                             <div class="group-btn">
@@ -568,14 +568,14 @@
                                                 <div class="card-product style-row row-small-2">
                                                     <div class="card-product-wrapper">
                                                         <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="product-img">
-                                                            <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetProductImage(Eval("Img1"), Nothing) %>' />
-                                                            <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' />
+                                                            <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
+                                                            <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                         </a>
                                                     </div>
                                                     <div class="card-product-info">
                                                         <div class="box-title">
                                                             <div class="bg-white relative z-5">
-                                                                <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("Codice"))) %></p>
+                                                                <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("MarcheDescrizione"), Eval("CategorieDescrizione"), Eval("SettoriDescrizione"), Eval("TipologieDescrizione"), Eval("Codice"))) %></p>
                                                                 <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="name-product body-md-2 fw-semibold text-secondary link"><%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Descrizione1")), 88)) %></a>
                                                             </div>
                                                             <div class="group-btn">
@@ -602,18 +602,18 @@
                                                 <div class="product-thumb-slider thumbs-right">
                                                     <div class="swiper tf-product-view-main">
                                                         <div class="swiper-wrapper">
-                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img1"), Nothing) %>' /></a></div>
-                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' /></a></div>
-                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetProductImage(Eval("Img3"), Eval("Img1")) %>' /></a></div>
-                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetProductImage(Eval("Img4"), Eval("Img1")) %>' /></a></div>
+                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' /></a></div>
+                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' /></a></div>
+                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' /></a></div>
+                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' /></a></div>
                                                         </div>
                                                     </div>
                                                     <div class="swiper tf-product-view-thumbs" data-direction="vertical">
                                                         <div class="swiper-wrapper">
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetProductImage(Eval("Img1"), Nothing) %>' /></div></div>
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' /></div></div>
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetProductImage(Eval("Img3"), Eval("Img1")) %>' /></div></div>
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetProductImage(Eval("Img4"), Eval("Img1")) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' /></div></div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -622,7 +622,7 @@
                                             <div class="card-product-info">
                                                 <div class="box-title gap-xl-12">
                                                     <div class="d-flex flex-column">
-                                                        <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("Codice"))) %></p>
+                                                        <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("MarcheDescrizione"), Eval("CategorieDescrizione"), Eval("SettoriDescrizione"), Eval("TipologieDescrizione"), Eval("Codice"))) %></p>
                                                         <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="name-product fw-semibold text-secondary link"><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %></a>
                                                     </div>
                                                     <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price h4 fw-normal text-primary mb-0", "old-price body-md-2 text-main-2") %></p>
@@ -646,14 +646,14 @@
                                                 <div class="card-product style-row row-small-2">
                                                     <div class="card-product-wrapper">
                                                         <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="product-img">
-                                                            <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetProductImage(Eval("Img1"), Nothing) %>' />
-                                                            <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' />
+                                                            <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
+                                                            <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                         </a>
                                                     </div>
                                                     <div class="card-product-info">
                                                         <div class="box-title">
                                                             <div class="bg-white relative z-5">
-                                                                <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("Codice"))) %></p>
+                                                                <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("MarcheDescrizione"), Eval("CategorieDescrizione"), Eval("SettoriDescrizione"), Eval("TipologieDescrizione"), Eval("Codice"))) %></p>
                                                                 <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="name-product body-md-2 fw-semibold text-secondary link"><%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Descrizione1")), 88)) %></a>
                                                             </div>
                                                             <div class="group-btn">
@@ -700,8 +700,8 @@
                                     <div class="card-product style-img-border wow fadeInUp" data-wow-delay="0s">
                                         <div class="card-product-wrapper">
                                             <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="product-img">
-                                                <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetProductImage(Eval("Img1"), Nothing) %>' />
-                                                <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' />
+                                                <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
+                                                <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                             </a>
                                             <ul class="list-product-btn">
                                                 <li>
@@ -716,7 +716,7 @@
                                         <div class="card-product-info">
                                             <div class="box-title">
                                                 <div class="d-flex flex-column">
-                                                    <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("Codice"))) %></p>
+                                                    <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("MarcheDescrizione"), Eval("CategorieDescrizione"), Eval("SettoriDescrizione"), Eval("TipologieDescrizione"), Eval("Codice"))) %></p>
                                                     <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="name-product body-md-2 fw-semibold text-secondary link"><%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Descrizione1")), 80)) %></a>
                                                 </div>
                                                 <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
@@ -777,14 +777,14 @@
                                                     <div class="card-product style-row row-small-2">
                                                         <div class="card-product-wrapper">
                                                             <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="product-img">
-                                                                <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img1"), Nothing) %>' />
-                                                                <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' />
+                                                                <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
+                                                                <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                             </a>
                                                         </div>
                                                         <div class="card-product-info">
                                                             <div class="box-title">
                                                                 <div class="bg-white relative z-5">
-                                                                    <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("Codice"))) %></p>
+                                                                    <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("MarcheDescrizione"), Eval("CategorieDescrizione"), Eval("SettoriDescrizione"), Eval("TipologieDescrizione"), Eval("Codice"))) %></p>
                                                                     <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="name-product body-md-2 fw-semibold text-secondary link"><%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Descrizione1")), 70)) %></a>
                                                                 </div>
                                                                 <div class="group-btn">
@@ -822,14 +822,14 @@
                                                     <div class="card-product style-row row-small-2">
                                                         <div class="card-product-wrapper">
                                                             <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="product-img">
-                                                                <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img1"), Nothing) %>' />
-                                                                <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' />
+                                                                <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
+                                                                <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                             </a>
                                                         </div>
                                                         <div class="card-product-info">
                                                             <div class="box-title">
                                                                 <div class="bg-white relative z-5">
-                                                                    <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("Codice"))) %></p>
+                                                                    <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("MarcheDescrizione"), Eval("CategorieDescrizione"), Eval("SettoriDescrizione"), Eval("TipologieDescrizione"), Eval("Codice"))) %></p>
                                                                     <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="name-product body-md-2 fw-semibold text-secondary link"><%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Descrizione1")), 70)) %></a>
                                                                 </div>
                                                                 <div class="group-btn">
@@ -867,14 +867,14 @@
                                                     <div class="card-product style-row row-small-2">
                                                         <div class="card-product-wrapper">
                                                             <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="product-img">
-                                                                <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img1"), Nothing) %>' />
-                                                                <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' />
+                                                                <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
+                                                                <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                             </a>
                                                         </div>
                                                         <div class="card-product-info">
                                                             <div class="box-title">
                                                                 <div class="bg-white relative z-5">
-                                                                    <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("Codice"))) %></p>
+                                                                    <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("MarcheDescrizione"), Eval("CategorieDescrizione"), Eval("SettoriDescrizione"), Eval("TipologieDescrizione"), Eval("Codice"))) %></p>
                                                                     <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="name-product body-md-2 fw-semibold text-secondary link"><%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Descrizione1")), 70)) %></a>
                                                                 </div>
                                                                 <div class="group-btn">
@@ -912,14 +912,14 @@
                                                     <div class="card-product style-row row-small-2">
                                                         <div class="card-product-wrapper">
                                                             <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="product-img">
-                                                                <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img1"), Nothing) %>' />
-                                                                <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' />
+                                                                <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
+                                                                <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                             </a>
                                                         </div>
                                                         <div class="card-product-info">
                                                             <div class="box-title">
                                                                 <div class="bg-white relative z-5">
-                                                                    <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("Codice"))) %></p>
+                                                                    <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("MarcheDescrizione"), Eval("CategorieDescrizione"), Eval("SettoriDescrizione"), Eval("TipologieDescrizione"), Eval("Codice"))) %></p>
                                                                     <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="name-product body-md-2 fw-semibold text-secondary link"><%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Descrizione1")), 70)) %></a>
                                                                 </div>
                                                                 <div class="group-btn">
@@ -1004,8 +1004,8 @@
                                         <div class="card-product style-img-border wow fadeInLeft" data-wow-delay="0s">
                                             <div class="card-product-wrapper">
                                                 <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="product-img">
-                                                    <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetProductImage(Eval("Img1"), Nothing) %>' />
-                                                    <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetProductImage(Eval("Img2"), Eval("Img1")) %>' />
+                                                    <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
+                                                    <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                 </a>
                                                 <ul class="list-product-btn">
                                                     <li>
@@ -1020,7 +1020,7 @@
                                             <div class="card-product-info">
                                                 <div class="box-title">
                                                     <div class="d-flex flex-column">
-                                                        <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("Codice"))) %></p>
+                                                        <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(RenderCaptionLabel(Eval("MarcheDescrizione"), Eval("CategorieDescrizione"), Eval("SettoriDescrizione"), Eval("TipologieDescrizione"), Eval("Codice"))) %></p>
                                                         <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="name-product body-md-2 fw-semibold text-secondary link"><%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Descrizione1")), 80)) %></a>
                                                     </div>
                                                     <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
@@ -1036,7 +1036,7 @@
             </section>
         </asp:PlaceHolder>
 
-        <!-- legacy/debug label (kept for compatibility with existing code) -->
+        <!-- label compatibilità -->
         <asp:Label ID="lblPrezzi" runat="server" Visible="false" />
 
         <!-- DataSources -->

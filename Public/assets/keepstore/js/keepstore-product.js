@@ -1,6 +1,6 @@
 /* KeepStore – Product Detail helpers
  * Obiettivi:
- *  - gallery Swiper coerente con il markup Onsus reale
+ *  - gallery Swiper coerente con il markup del frontend KeepStore
  *  - zoom prodotto stabile (Drift già caricato dal master)
  *  - niente duplicazione artificiale delle immagini
  *  - qty +/- compatibile con input server WebForms
