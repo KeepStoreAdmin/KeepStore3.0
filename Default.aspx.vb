@@ -319,11 +319,16 @@ Partial Class _Default
     Private Function BuildOnSaleQuery(baseSelect As String, limit As Integer) As String
         If limit <= 0 Then limit = 8
 
-        Return baseSelect &
-               " WHERE " & AvailableWhere(True) &
-               " AND " & PromoWhere() &
-               " ORDER BY (COALESCE(vsuperarticoli.PrezzoMostrato,0) - COALESCE(vsuperarticoli.PrezzoPromoMostrato,0)) DESC, " &
-               "          COALESCE(vsuperarticoli.OfferteDataFine,'9999-12-31') ASC, " &
+        ' Nota: PrezzoMostrato e PrezzoPromoMostrato sono alias del SELECT esterno,
+        ' non colonne fisiche della view vsuperarticoli.
+        ' Per evitare errori MySQL nell'ORDER BY li esponiamo prima in una derived table.
+        Dim filteredSql As String = baseSelect &
+                                   " WHERE " & AvailableWhere(True) &
+                                   " AND " & PromoWhere()
+
+        Return "SELECT * FROM (" & filteredSql & ") home_onsale " &
+               " ORDER BY (COALESCE(home_onsale.PrezzoMostrato,0) - COALESCE(home_onsale.PrezzoPromoMostrato,0)) DESC, " &
+               "          COALESCE(home_onsale.OfferteDataFine,'9999-12-31') ASC, " &
                "          RAND() " &
                " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
     End Function
