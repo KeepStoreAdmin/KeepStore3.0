@@ -269,88 +269,105 @@ Partial Class _Default
         Return "COALESCE(vsuperarticoli.InOfferta,0) = 1 AND (COALESCE(vsuperarticoli.PrezzoPromo,0) > 0 OR COALESCE(vsuperarticoli.PrezzoPromoIvato,0) > 0)"
     End Function
 
-    Private Function BuildDealOfDayQuery(baseSelect As String, limit As Integer) As String
+    Private Function BuildPooledQuery(baseSelect As String,
+                                      whereClause As String,
+                                      innerOrderBy As String,
+                                      limit As Integer,
+                                      Optional poolMultiplier As Integer = 4,
+                                      Optional outerOrderBy As String = "RAND()") As String
         If limit <= 0 Then limit = 8
+        If poolMultiplier <= 0 Then poolMultiplier = 4
 
-        Return baseSelect &
-               " WHERE " & AvailableWhere(True) &
-               " AND " & PromoWhere() &
-               " ORDER BY RAND(), COALESCE(vsuperarticoli.OfferteDataFine,'9999-12-31') ASC " &
-               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
+        Dim poolSize As Integer = Math.Max(limit * poolMultiplier, limit)
+        Dim sql As String = "SELECT pool_items.* FROM (" & baseSelect
+
+        If Not String.IsNullOrWhiteSpace(whereClause) Then
+            sql &= " WHERE " & whereClause
+        End If
+
+        sql &= " ORDER BY " & innerOrderBy
+        sql &= " LIMIT " & poolSize.ToString(CultureInfo.InvariantCulture)
+        sql &= ") pool_items"
+
+        If Not String.IsNullOrWhiteSpace(outerOrderBy) Then
+            sql &= " ORDER BY " & outerOrderBy
+        End If
+
+        sql &= " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
+        Return sql
+    End Function
+
+    Private Function BuildDealOfDayQuery(baseSelect As String, limit As Integer) As String
+        Return BuildPooledQuery(baseSelect,
+                                AvailableWhere(True) & " AND " & PromoWhere(),
+                                "COALESCE(vsuperarticoli.OfferteDataFine,'9999-12-31') ASC, (COALESCE(PrezzoMostrato,0) - COALESCE(PrezzoPromoMostrato,0)) DESC, COALESCE(vsuperarticoli.VendutiTotali,0) DESC",
+                                limit,
+                                5,
+                                "RAND()")
     End Function
 
     Private Function BuildBestSellerQuery(baseSelect As String, limit As Integer) As String
-        If limit <= 0 Then limit = 12
-
         ' Per richiesta: il blocco Best Seller eredita la logica visiva della vecchia vetrina / nuovi arrivi.
-        Return baseSelect &
-               " WHERE " & AvailableWhere(False) &
-               " ORDER BY COALESCE(vsuperarticoli.Vetrina,0) DESC, " &
-               "          COALESCE(vsuperarticoli.DataCreazione,CURDATE()) DESC, " &
-               "          COALESCE(vsuperarticoli.Visite,0) DESC, " &
-               "          RAND() " &
-               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
+        Return BuildPooledQuery(baseSelect,
+                                AvailableWhere(False),
+                                "COALESCE(vsuperarticoli.Vetrina,0) DESC, COALESCE(vsuperarticoli.DataCreazione,DATE('1000-01-01')) DESC, COALESCE(vsuperarticoli.Visite,0) DESC",
+                                limit,
+                                4,
+                                "COALESCE(pool_items.Vetrina,0) DESC, RAND()")
     End Function
 
     Private Function BuildFeatureQuery(baseSelect As String, limit As Integer) As String
-        If limit <= 0 Then limit = 8
-
-        Return baseSelect &
-               " WHERE " & AvailableWhere(False) &
-               " ORDER BY COALESCE(vsuperarticoli.Vetrina,0) DESC, " &
-               "          COALESCE(vsuperarticoli.Visite,0) DESC, " &
-               "          COALESCE(vsuperarticoli.DataCreazione,CURDATE()) DESC, " &
-               "          RAND() " &
-               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
+        Return BuildPooledQuery(baseSelect,
+                                AvailableWhere(False),
+                                "COALESCE(vsuperarticoli.Vetrina,0) DESC, COALESCE(vsuperarticoli.InOfferta,0) DESC, COALESCE(vsuperarticoli.Visite,0) DESC, COALESCE(vsuperarticoli.DataCreazione,DATE('1000-01-01')) DESC",
+                                limit,
+                                4,
+                                "COALESCE(pool_items.Vetrina,0) DESC, RAND()")
     End Function
 
     Private Function BuildTopViewedQuery(baseSelect As String, limit As Integer) As String
-        If limit <= 0 Then limit = 8
-
-        Return baseSelect &
-               " WHERE " & AvailableWhere(False) &
-               " ORDER BY COALESCE(vsuperarticoli.Visite,0) DESC, " &
-               "          COALESCE(vsuperarticoli.Vetrina,0) DESC, " &
-               "          COALESCE(vsuperarticoli.DataCreazione,CURDATE()) DESC, " &
-               "          RAND() " &
-               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
+        Return BuildPooledQuery(baseSelect,
+                                AvailableWhere(False),
+                                "COALESCE(vsuperarticoli.Visite,0) DESC, COALESCE(vsuperarticoli.VendutiTotali,0) DESC, COALESCE(vsuperarticoli.DataCreazione,DATE('1000-01-01')) DESC",
+                                limit,
+                                5,
+                                "RAND()")
     End Function
 
     Private Function BuildOnSaleQuery(baseSelect As String, limit As Integer) As String
-        If limit <= 0 Then limit = 8
-
-        ' Nota: PrezzoMostrato e PrezzoPromoMostrato sono alias del SELECT esterno,
-        ' non colonne fisiche della view vsuperarticoli.
-        ' Per evitare errori MySQL nell'ORDER BY li esponiamo prima in una derived table.
-        Dim filteredSql As String = baseSelect &
-                                   " WHERE " & AvailableWhere(True) &
-                                   " AND " & PromoWhere()
-
-        Return "SELECT * FROM (" & filteredSql & ") home_onsale " &
-               " ORDER BY (COALESCE(home_onsale.PrezzoMostrato,0) - COALESCE(home_onsale.PrezzoPromoMostrato,0)) DESC, " &
-               "          COALESCE(home_onsale.OfferteDataFine,'9999-12-31') ASC, " &
-               "          RAND() " &
-               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
+        Return BuildPooledQuery(baseSelect,
+                                AvailableWhere(True) & " AND " & PromoWhere(),
+                                "(COALESCE(PrezzoMostrato,0) - COALESCE(PrezzoPromoMostrato,0)) DESC, COALESCE(vsuperarticoli.OfferteDataFine,'9999-12-31') ASC, COALESCE(vsuperarticoli.VendutiTotali,0) DESC",
+                                limit,
+                                5,
+                                "COALESCE(pool_items.OfferteDataFine,'9999-12-31') ASC, RAND()")
     End Function
 
     Private Function BuildTop20Query(baseSelect As String, limit As Integer) As String
-        Return BuildTopViewedQuery(baseSelect, limit)
+        Return BuildPooledQuery(baseSelect,
+                                AvailableWhere(False),
+                                "COALESCE(vsuperarticoli.Visite,0) DESC, COALESCE(vsuperarticoli.VendutiTotali,0) DESC, COALESCE(vsuperarticoli.InOfferta,0) DESC, COALESCE(vsuperarticoli.DataCreazione,DATE('1000-01-01')) DESC",
+                                limit,
+                                5,
+                                "RAND()")
     End Function
 
     Private Function BuildFeaturedMiniQuery(baseSelect As String, limit As Integer) As String
-        Return BuildFeatureQuery(baseSelect, limit)
+        Return BuildPooledQuery(baseSelect,
+                                AvailableWhere(False),
+                                "COALESCE(vsuperarticoli.Vetrina,0) DESC, COALESCE(vsuperarticoli.DataCreazione,DATE('1000-01-01')) DESC, COALESCE(vsuperarticoli.Visite,0) DESC",
+                                limit,
+                                5,
+                                "RAND()")
     End Function
 
     Private Function BuildTopSellingMiniQuery(baseSelect As String, limit As Integer) As String
-        If limit <= 0 Then limit = 5
-
-        Return baseSelect &
-               " WHERE " & AvailableWhere(False) &
-               " AND COALESCE(vsuperarticoli.InOfferta,0) = 0 " &
-               " ORDER BY COALESCE(vsuperarticoli.VendutiTotali,0) DESC, " &
-               "          COALESCE(vsuperarticoli.Visite,0) DESC, " &
-               "          RAND() " &
-               " LIMIT " & limit.ToString(CultureInfo.InvariantCulture)
+        Return BuildPooledQuery(baseSelect,
+                                AvailableWhere(False),
+                                "COALESCE(vsuperarticoli.VendutiTotali,0) DESC, COALESCE(vsuperarticoli.InOfferta,0) ASC, COALESCE(vsuperarticoli.Visite,0) DESC, COALESCE(vsuperarticoli.DataCreazione,DATE('1000-01-01')) DESC",
+                                limit,
+                                5,
+                                "RAND()")
     End Function
 
     Private Function BuildOnSaleMiniQuery(baseSelect As String, limit As Integer) As String

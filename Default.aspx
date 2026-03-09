@@ -111,6 +111,56 @@
         .ks-home-ui .card-product-info .link {
             word-break: break-word;
         }
+
+        .ks-home-ui .tf-icon-box {
+            height: 100%;
+            padding: 24px 20px;
+        }
+
+        .ks-home-ui .tf-icon-box .content {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .ks-home-ui .slider-thumb-deal .card-product-wrapper {
+            padding: 18px;
+        }
+
+        .ks-home-ui .slider-thumb-deal .card-product-info {
+            padding-top: 22px;
+        }
+
+        .ks-home-ui .slider-thumb-deal .product-thumb-image .card-image {
+            padding: 8px;
+            background: #fff;
+            border-radius: 16px;
+        }
+
+        .ks-home-ui .slider-thumb-deal .list-image-product {
+            margin-top: 12px;
+            gap: 10px;
+        }
+
+        .ks-home-ui .card-product.style-img-border .card-product-wrapper {
+            padding: 18px;
+        }
+
+        .ks-home-ui .product-list-wrap li + li {
+            margin-top: 20px;
+        }
+
+        .ks-home-ui .card-product.style-row.row-small-2 .card-product-wrapper {
+            padding-right: 14px;
+        }
+
+        .ks-home-ui .card-product.style-row.row-small-2 .box-title {
+            gap: 10px;
+        }
+
+        .ks-home-ui .js-countdown {
+            min-height: 54px;
+        }
     </style>
 </asp:Content>
 
@@ -265,7 +315,7 @@
                         <div class="box-btn">
                             <a href="articoli.aspx" class="tf-btn-icon type-2 style-white">
                                 <i class="icon-circle-chevron-right"></i>
-                                <span>Shop now</span>
+                                <span>Scopri</span>
                             </a>
                         </div>
                     </div>

@@ -1,6 +1,5 @@
 <%@ Control Language="VB" AutoEventWireup="false" CodeFile="HomeIconBoxes.ascx.vb" Inherits="UI_HomeIconBoxes" %>
 
-<!-- Iconbox -->
 <div class="tf-sp-2 pt-0">
     <div class="container">
         <div class="swiper tf-sw-iconbox" data-preview="5" data-tablet="3" data-mobile-sm="2" data-mobile="1" data-space-lg="20" data-space-md="20" data-space="15">
@@ -11,8 +10,8 @@
                             <i class="icon icon-delivery-2"></i>
                         </div>
                         <div class="content">
-                            <p class="body-text fw-semibold">Spedizione veloce</p>
-                            <p class="body-text-3">Evasione rapida e tracciata degli ordini</p>
+                            <p class="body-text fw-semibold">Spedizione rapida</p>
+                            <p class="body-text-3">Ordini evasi velocemente e con tracking</p>
                         </div>
                     </div>
                 </div>
@@ -23,7 +22,7 @@
                         </div>
                         <div class="content">
                             <p class="body-text fw-semibold">Supporto diretto</p>
-                            <p class="body-text-3">Assistenza prima e dopo l'acquisto</p>
+                            <p class="body-text-3">Assistenza pre e post vendita KeepStore</p>
                         </div>
                     </div>
                 </div>
@@ -44,8 +43,8 @@
                             <i class="icon icon-reliable"></i>
                         </div>
                         <div class="content">
-                            <p class="body-text fw-semibold">Affidabilità</p>
-                            <p class="body-text-3">Catalogo selezionato e disponibilità reali</p>
+                            <p class="body-text fw-semibold">Affidabilità KeepStore</p>
+                            <p class="body-text-3">Prodotti selezionati e disponibilità reali</p>
                         </div>
                     </div>
                 </div>
@@ -56,7 +55,7 @@
                         </div>
                         <div class="content">
                             <p class="body-text fw-semibold">Garanzia</p>
-                            <p class="body-text-3">Acquisti protetti e supporto continuativo</p>
+                            <p class="body-text-3">Acquisti protetti e supporto dedicato</p>
                         </div>
                     </div>
                 </div>
