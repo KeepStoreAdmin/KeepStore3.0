@@ -5,6 +5,7 @@ Imports System.Data
 Imports System.Globalization
 Imports System.IO
 Imports System.Linq
+Imports System.Text
 Imports System.Web
 Imports System.Web.UI
 Imports System.Web.UI.WebControls
@@ -197,6 +198,7 @@ Partial Class _Default
                "COALESCE(vsuperarticoli.Disponibilita,0) AS Disponibilita, " &
                "COALESCE(vsuperarticoli.Impegnata,0) AS Impegnata, " &
                "COALESCE(vsuperarticoli.VendutiTotali,0) AS VendutiTotali, " &
+               "COALESCE(vsuperarticoli.VendutiAnno,0) AS VendutiAnno, " &
                "COALESCE(vsuperarticoli.Visite,0) AS Visite, " &
                "COALESCE(vsuperarticoli.Vetrina,0) AS Vetrina, " &
                "COALESCE(vsuperarticoli.NListino,0) AS NListino, " &
@@ -240,6 +242,7 @@ Partial Class _Default
                "SUM(COALESCE(v.Disponibilita,0)) AS Disponibilita, " &
                "SUM(COALESCE(v.Impegnata,0)) AS Impegnata, " &
                "MAX(COALESCE(Vendite.QntTot,0)) AS VendutiTotali, " &
+               "MAX(COALESCE(Vendite.QntAnno,0)) AS VendutiAnno, " &
                "MAX(COALESCE(v.Visite,0)) AS Visite, " &
                "MAX(COALESCE(v.Vetrina,0)) AS Vetrina, " &
                "MAX(COALESCE(v.NListino,0)) AS NListino, " &
@@ -247,7 +250,8 @@ Partial Class _Default
                "MIN(CASE WHEN COALESCE(v.InOfferta,0)=1 THEN v.OfferteDataFine ELSE NULL END) AS OfferteDataFine " &
                "FROM vsuperarticoli v " &
                "LEFT JOIN ( " &
-               "   SELECT dr.ArticoliId AS articoli_id, SUM(IFNULL(dr.Qnt,0)) AS QntTot " &
+               "   SELECT dr.ArticoliId AS articoli_id, SUM(IFNULL(dr.Qnt,0)) AS QntTot, " &
+               "          SUM(CASE WHEN YEAR(COALESCE(d.DataDocumento,CURDATE())) = YEAR(CURDATE()) THEN IFNULL(dr.Qnt,0) ELSE 0 END) AS QntAnno " &
                "   FROM documentirighe dr " &
                "   INNER JOIN documenti d ON d.id = dr.DocumentiId " &
                "   WHERE " & wh & " " &
@@ -754,4 +758,91 @@ Partial Class _Default
     Private Function FormatMoney(value As Decimal) As String
         Return value.ToString("C", CultureInfo.GetCultureInfo("it-IT"))
     End Function
+
+
+    Private Function JsEscaped(value As String) As String
+        If String.IsNullOrEmpty(value) Then Return String.Empty
+        Return HttpUtility.JavaScriptStringEncode(value)
+    End Function
+
+    Protected Function RenderProductActions(articoloId As Object,
+                                            descrizione As Object,
+                                            img1 As Object,
+                                            prezzoMostrato As Object,
+                                            prezzoPromoMostrato As Object,
+                                            inOfferta As Object,
+                                            wrapperCss As String) As String
+        Dim id As Integer = SafeInt(articoloId, 0)
+        If id <= 0 Then Return String.Empty
+
+        Dim url As String = "articolo.aspx?id=" & id.ToString(CultureInfo.InvariantCulture)
+        Dim title As String = Convert.ToString(descrizione)
+        Dim imageUrl As String = GetHomeProductImage(img1, Nothing)
+        Dim priceText As String = FormatMoney(GetCurrentPrice(prezzoMostrato, prezzoPromoMostrato, inOfferta))
+        Dim tipCss As String = If(Not String.IsNullOrWhiteSpace(wrapperCss) AndAlso (wrapperCss.IndexOf("top-0", StringComparison.OrdinalIgnoreCase) >= 0 OrElse wrapperCss.IndexOf("end-0", StringComparison.OrdinalIgnoreCase) >= 0), " tooltip-left", String.Empty)
+
+        Dim sb As New StringBuilder()
+        sb.Append("<ul class=""").Append(HttpUtility.HtmlAttributeEncode(wrapperCss)).Append(""">")
+
+        sb.Append("<li><a href=""#"" class=""box-icon add-to-cart btn-icon-action hover-tooltip js-ks-add-cart")
+        sb.Append(tipCss)
+        sb.Append(""" data-ks-id=""").Append(id.ToString(CultureInfo.InvariantCulture))
+        sb.Append(""" onclick=""return ksHomeClientAction('cart',this);"">")
+        sb.Append("<i class=""icon icon-cart2""></i><span class=""tooltip"">Aggiungi al carrello</span></a></li>")
+
+        sb.Append("<li class=""wishlist""><a href=""#"" class=""box-icon btn-icon-action hover-tooltip js-ks-wishlist")
+        sb.Append(tipCss)
+        sb.Append(""" data-ks-id=""").Append(id.ToString(CultureInfo.InvariantCulture))
+        sb.Append(""" onclick=""return ksHomeWishlist(this);"">")
+        sb.Append("<i class=""icon icon-heart2""></i><span class=""tooltip"">Aggiungi ai preferiti</span></a></li>")
+
+        sb.Append("<li><a href=""").Append(HttpUtility.HtmlAttributeEncode(url))
+        sb.Append(""" class=""box-icon quickview btn-icon-action hover-tooltip")
+        sb.Append(tipCss)
+        sb.Append(""">")
+        sb.Append("<i class=""icon icon-view""></i><span class=""tooltip"">Vedi prodotto</span></a></li>")
+
+        sb.Append("<li><a href=""#ksCompareCanvas"" data-bs-toggle=""offcanvas"" class=""box-icon btn-icon-action hover-tooltip js-ks-compare")
+        sb.Append(tipCss)
+        sb.Append(""" data-ks-id=""").Append(id.ToString(CultureInfo.InvariantCulture))
+        sb.Append(""" data-ks-title=""").Append(HttpUtility.HtmlAttributeEncode(title))
+        sb.Append(""" data-ks-url=""").Append(HttpUtility.HtmlAttributeEncode(url))
+        sb.Append(""" data-ks-img=""").Append(HttpUtility.HtmlAttributeEncode(imageUrl))
+        sb.Append(""" data-ks-price=""").Append(HttpUtility.HtmlAttributeEncode(priceText))
+        sb.Append(""" onclick=""return ksHomeCompare(this);"">")
+        sb.Append("<i class=""icon icon-compare1""></i><span class=""tooltip"">Confronta</span></a></li>")
+
+        sb.Append("</ul>")
+        Return sb.ToString()
+    End Function
+
+    Protected Sub btnHomeAction_Click(sender As Object, e As EventArgs)
+        Dim actionType As String = String.Empty
+        Dim productId As Integer = 0
+
+        Try
+            actionType = If(hfHomeActionType.Value, String.Empty).Trim().ToLowerInvariant()
+        Catch
+            actionType = String.Empty
+        End Try
+
+        Try
+            productId = SafeInt(hfHomeActionProductId.Value, 0)
+        Catch
+            productId = 0
+        End Try
+
+        If productId <= 0 Then Exit Sub
+
+        Select Case actionType
+            Case "cart"
+                Session("Carrello_ArticoloId") = productId
+                Session("Carrello_TCId") = -1
+                Session("Carrello_Quantita") = 1
+                Session("Carrello_Pagina") = Request.RawUrl
+                Response.Redirect("aggiungi.aspx", False)
+                Context.ApplicationInstance.CompleteRequest()
+        End Select
+    End Sub
+
 End Class
