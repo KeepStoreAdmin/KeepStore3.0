@@ -1,5 +1,7 @@
 Imports System
+Imports System.Collections.Generic
 Imports System.IO
+Imports System.Text
 Imports System.Web
 Imports System.Web.UI
 Imports System.Web.UI.HtmlControls
@@ -8,16 +10,16 @@ Imports System.Web.UI.WebControls
 Partial Class SiteHeader
     Inherits System.Web.UI.UserControl
 
-    Private Const DefaultLogoVirtual As String = "~/Public/assets/images/logo/logo.webp"
-    Private Const DefaultMobileLogoVirtual As String = "~/Public/assets/images/logo/logo-mobile.webp"
-    Private Const DefaultFaviconVirtual As String = "~/Public/assets/images/logo/favicon.ico"
-    Private Const DefaultAppleTouchIconVirtual As String = "~/Public/assets/images/logo/apple-touch-icon.png"
-    Private Const DefaultFavicon32Virtual As String = "~/Public/assets/images/logo/favicon-32x32.png"
-    Private Const DefaultFavicon16Virtual As String = "~/Public/assets/images/logo/favicon-16x16.png"
+    Private Const DefaultLogoVirtual As String = "~/Public/assets/images/favicons/logo.webp"
+    Private Const DefaultMobileLogoVirtual As String = "~/Public/assets/images/favicons/logo-mobile.webp"
+    Private Const DefaultFaviconVirtual As String = "~/Public/assets/images/favicons/favicon.ico"
+    Private Const DefaultAppleTouchIconVirtual As String = "~/Public/assets/images/favicons/apple-touch-icon.png"
+    Private Const DefaultFavicon32Virtual As String = "~/Public/assets/images/favicons/favicon-32x32.png"
+    Private Const DefaultFavicon16Virtual As String = "~/Public/assets/images/favicons/favicon-16x16.png"
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         BindLogo()
-        EnsureHeadIcons()
+        RegisterHeadIconsScript()
     End Sub
 
     Private Sub BindLogo()
@@ -66,29 +68,39 @@ Partial Class SiteHeader
         Dim lower As String = u.ToLowerInvariant()
 
         If lower.Contains("/public/assets/keepstore/images/") Then
-            u = ReplaceInsensitive(u, "/Public/assets/keepstore/images/", "/Public/assets/images/")
+            u = ReplaceInsensitive(u, "/Public/assets/keepstore/images/", "/Public/assets/images/favicons/")
+            lower = u.ToLowerInvariant()
         End If
         If lower.Contains("/public/assets/keepstore/img/") Then
-            u = ReplaceInsensitive(u, "/Public/assets/keepstore/img/", "/Public/assets/images/")
+            u = ReplaceInsensitive(u, "/Public/assets/keepstore/img/", "/Public/assets/images/favicons/")
+            lower = u.ToLowerInvariant()
+        End If
+        If lower.Contains("/public/assets/images/logo/") Then
+            u = ReplaceInsensitive(u, "/Public/assets/images/logo/", "/Public/assets/images/favicons/")
+            lower = u.ToLowerInvariant()
         End If
         If lower.Contains("/public/images/") Then
-            u = ReplaceInsensitive(u, "/Public/images/", "/Public/assets/images/logo/")
+            u = ReplaceInsensitive(u, "/Public/images/", "/Public/assets/images/favicons/")
+            lower = u.ToLowerInvariant()
         End If
-        If lower.StartsWith("images/logo/", StringComparison.OrdinalIgnoreCase) OrElse lower.StartsWith("logo/", StringComparison.OrdinalIgnoreCase) Then
+        If lower.StartsWith("images/logo/", StringComparison.OrdinalIgnoreCase) OrElse
+           lower.StartsWith("logo/", StringComparison.OrdinalIgnoreCase) OrElse
+           lower.StartsWith("images/favicons/", StringComparison.OrdinalIgnoreCase) OrElse
+           lower.StartsWith("favicons/", StringComparison.OrdinalIgnoreCase) Then
             Dim logoFile As String = Path.GetFileName(u)
             If Not String.IsNullOrWhiteSpace(logoFile) Then
-                u = "/Public/assets/images/logo/" & logoFile
+                u = "/Public/assets/images/favicons/" & logoFile
             End If
         End If
-        If lower.Contains("/public/assets/images/") AndAlso Not lower.Contains("/public/assets/images/logo/") Then
+        If lower.Contains("/public/assets/images/") AndAlso Not lower.Contains("/public/assets/images/favicons/") Then
             Dim fileName As String = Path.GetFileName(u)
             If Not String.IsNullOrWhiteSpace(fileName) Then
-                u = "/Public/assets/images/logo/" & fileName
+                u = "/Public/assets/images/favicons/" & fileName
             End If
         End If
 
         If Not u.Contains("/") AndAlso Not u.Contains("~") Then
-            u = "/Public/assets/images/logo/" & u.TrimStart("/"c)
+            u = "/Public/assets/images/favicons/" & u.TrimStart("/"c)
         End If
 
         If u.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then
@@ -102,60 +114,77 @@ Partial Class SiteHeader
         Return u
     End Function
 
-    Private Sub EnsureHeadIcons()
-        If Page Is Nothing OrElse Page.Header Is Nothing Then Return
+    Private Sub RegisterHeadIconsScript()
+        If Page Is Nothing Then Return
 
-        EnsureLink("icon", ResolveUrl(DefaultFaviconVirtual))
-        EnsureLink("shortcut icon", ResolveUrl(DefaultFaviconVirtual))
+        Dim script As String = BuildHeadIconsScript()
+        If String.IsNullOrWhiteSpace(script) Then Return
+
+        Dim sm As ScriptManager = ScriptManager.GetCurrent(Page)
+        If sm IsNot Nothing Then
+            ScriptManager.RegisterStartupScript(Page, Page.GetType(), "ksHeadIcons", script, True)
+        Else
+            Page.ClientScript.RegisterStartupScript(Page.GetType(), "ksHeadIcons", script, True)
+        End If
+    End Sub
+
+    Private Function BuildHeadIconsScript() As String
+        Dim links As New List(Of String)()
+
+        links.Add(BuildHeadLinkScript("icon", ResolveUrl(DefaultFaviconVirtual), "", "image/x-icon"))
+        links.Add(BuildHeadLinkScript("shortcut icon", ResolveUrl(DefaultFaviconVirtual), "", "image/x-icon"))
 
         If FileExistsVirtual(DefaultAppleTouchIconVirtual) Then
-            EnsureLink("apple-touch-icon", ResolveUrl(DefaultAppleTouchIconVirtual))
+            links.Add(BuildHeadLinkScript("apple-touch-icon", ResolveUrl(DefaultAppleTouchIconVirtual), "", "image/png"))
         End If
         If FileExistsVirtual(DefaultFavicon32Virtual) Then
-            EnsureLink("icon", ResolveUrl(DefaultFavicon32Virtual), "32x32", "image/png")
+            links.Add(BuildHeadLinkScript("icon", ResolveUrl(DefaultFavicon32Virtual), "32x32", "image/png"))
         End If
         If FileExistsVirtual(DefaultFavicon16Virtual) Then
-            EnsureLink("icon", ResolveUrl(DefaultFavicon16Virtual), "16x16", "image/png")
+            links.Add(BuildHeadLinkScript("icon", ResolveUrl(DefaultFavicon16Virtual), "16x16", "image/png"))
         End If
-    End Sub
 
-    Private Sub EnsureLink(ByVal rel As String, ByVal href As String, Optional ByVal sizes As String = "", Optional ByVal mimeType As String = "")
-        If Page Is Nothing OrElse Page.Header Is Nothing Then Return
-
-        Dim existing As HtmlLink = Nothing
-        For Each ctrl As Control In Page.Header.Controls
-            Dim link As HtmlLink = TryCast(ctrl, HtmlLink)
-            If link Is Nothing Then Continue For
-            Dim currentRel As String = Convert.ToString(link.Attributes("rel"))
-            Dim currentSizes As String = Convert.ToString(link.Attributes("sizes"))
-            If String.Equals(currentRel, rel, StringComparison.OrdinalIgnoreCase) Then
-                If String.IsNullOrWhiteSpace(sizes) OrElse String.Equals(currentSizes, sizes, StringComparison.OrdinalIgnoreCase) Then
-                    existing = link
-                    Exit For
-                End If
+        Dim sb As New StringBuilder()
+        Dim hasCommands As Boolean = False
+        sb.AppendLine("(function(){")
+        sb.AppendLine("function ksUpsertHeadLink(rel, href, sizes, type){")
+        sb.AppendLine("if(!href){return;}")
+        sb.AppendLine("var head=document.head||document.getElementsByTagName('head')[0];")
+        sb.AppendLine("if(!head){return;}")
+        sb.AppendLine("var links=head.getElementsByTagName('link');")
+        sb.AppendLine("var match=null;")
+        sb.AppendLine("var desiredSizes=sizes||'';")
+        sb.AppendLine("for(var i=0;i<links.length;i++){")
+        sb.AppendLine("var current=links[i];")
+        sb.AppendLine("var currentRel=(current.getAttribute('rel')||'').toLowerCase();")
+        sb.AppendLine("var currentSizes=current.getAttribute('sizes')||'';")
+        sb.AppendLine("if(currentRel===String(rel||'').toLowerCase() && currentSizes===desiredSizes){match=current;break;}")
+        sb.AppendLine("}")
+        sb.AppendLine("if(!match){match=document.createElement('link');head.appendChild(match);}")
+        sb.AppendLine("match.setAttribute('rel', rel);")
+        sb.AppendLine("match.setAttribute('href', href);")
+        sb.AppendLine("if(desiredSizes){match.setAttribute('sizes', desiredSizes);}else{match.removeAttribute('sizes');}")
+        sb.AppendLine("if(type){match.setAttribute('type', type);}else{match.removeAttribute('type');}")
+        sb.AppendLine("}")
+        For Each cmd As String In links
+            If Not String.IsNullOrWhiteSpace(cmd) Then
+                sb.AppendLine(cmd)
+                hasCommands = True
             End If
         Next
+        If Not hasCommands Then Return String.Empty
+        sb.AppendLine("})();")
+        Return sb.ToString()
+    End Function
 
-        If existing Is Nothing Then
-            existing = New HtmlLink()
-            Page.Header.Controls.Add(existing)
-        End If
+    Private Function BuildHeadLinkScript(ByVal rel As String, ByVal href As String, ByVal sizes As String, ByVal mimeType As String) As String
+        If String.IsNullOrWhiteSpace(href) Then Return String.Empty
+        Return "ksUpsertHeadLink('" & Js(rel) & "','" & Js(href) & "','" & Js(sizes) & "','" & Js(mimeType) & "');"
+    End Function
 
-        existing.Attributes("rel") = rel
-        existing.Href = href
-
-        If String.IsNullOrWhiteSpace(sizes) Then
-            existing.Attributes.Remove("sizes")
-        Else
-            existing.Attributes("sizes") = sizes
-        End If
-
-        If String.IsNullOrWhiteSpace(mimeType) Then
-            existing.Attributes.Remove("type")
-        Else
-            existing.Attributes("type") = mimeType
-        End If
-    End Sub
+    Private Function Js(ByVal value As String) As String
+        Return HttpUtility.JavaScriptStringEncode(If(value, String.Empty))
+    End Function
 
     Private Function FileExistsVirtual(ByVal virtualPath As String) As Boolean
         Try
