@@ -318,6 +318,153 @@
             background: #fff;
         }
 
+        .ks-home-ui .offcanvas-compare {
+            height: auto !important;
+            border: 0;
+            background: transparent;
+        }
+
+        .ks-home-ui .offcanvas-compare .offcanvas-content {
+            background: #fff;
+            border-radius: 28px 28px 0 0;
+            box-shadow: 0 -20px 60px rgba(0,0,0,.18);
+            padding: 18px 0 28px;
+        }
+
+        .ks-home-ui .offcanvas-compare .header {
+            display: flex;
+            justify-content: flex-end;
+            padding: 0 18px 6px;
+        }
+
+        .ks-home-ui .offcanvas-compare .icon-close-popup {
+            cursor: pointer;
+        }
+
+        .ks-home-ui .offcanvas-compare .tf-compare-list {
+            display: flex;
+            align-items: flex-start;
+            gap: 24px;
+        }
+
+        .ks-home-ui .offcanvas-compare .title {
+            min-width: 128px;
+        }
+
+        .ks-home-ui .offcanvas-compare .tf-compare-wrap {
+            display: flex;
+            gap: 18px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            flex: 1 1 auto;
+            min-height: 120px;
+        }
+
+        .ks-home-ui .offcanvas-compare .tf-compare-item {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 280px;
+            max-width: 280px;
+            padding: 16px 18px;
+            border: 1px solid rgba(0,0,0,.08);
+            border-radius: 20px;
+            background: #fff;
+        }
+
+        .ks-home-ui .offcanvas-compare .tf-compare-item .image {
+            width: 88px;
+            min-width: 88px;
+            height: 88px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            border: 1px solid rgba(0,0,0,.08);
+            background: #fff;
+        }
+
+        .ks-home-ui .offcanvas-compare .tf-compare-item .image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .ks-home-ui .offcanvas-compare .tf-compare-item .remove,
+        .ks-home-ui .offcanvas-compare .tf-compare-item .btns-repeat {
+            position: absolute;
+            top: 10px;
+        }
+
+        .ks-home-ui .offcanvas-compare .tf-compare-item .remove {
+            right: 10px;
+            cursor: pointer;
+        }
+
+        .ks-home-ui .offcanvas-compare .tf-compare-item .btns-repeat {
+            right: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+        }
+
+        .ks-home-ui .offcanvas-compare .tf-compare-item .content {
+            min-width: 0;
+        }
+
+        .ks-home-ui .offcanvas-compare .tf-compare-item .text-line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .ks-home-ui .offcanvas-compare .mini-compare-empty {
+            display: none;
+            width: 100%;
+            padding: 22px;
+            border: 1px dashed rgba(0,0,0,.12);
+            border-radius: 20px;
+            background: #fff;
+        }
+
+        .ks-home-ui .offcanvas-compare .tf-compare-buttons {
+            min-width: 250px;
+            margin-left: auto;
+        }
+
+        .ks-home-ui .offcanvas-compare .tf-compare-btn {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        @media (max-width: 1199px) {
+            .ks-home-ui .offcanvas-compare .tf-compare-list {
+                flex-direction: column;
+            }
+
+            .ks-home-ui .offcanvas-compare .title,
+            .ks-home-ui .offcanvas-compare .tf-compare-buttons {
+                min-width: 0;
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .ks-home-ui .offcanvas-compare .offcanvas-content {
+                padding-bottom: 18px;
+            }
+
+            .ks-home-ui .offcanvas-compare .tf-compare-item {
+                min-width: 250px;
+                max-width: 250px;
+            }
+        }
+
         .ks-home-ui .tf-grid-product-item .flat-title,
         .ks-home-ui .flat-title.pb-8 {
             display: flex;
@@ -456,8 +603,8 @@
                                                         </li>
                                                     </ul>
                                                 </div>
-                                                <asp:Literal ID="litDealActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn top-0 end-0") %>' />
-                                                <asp:Literal ID="litDealSaleWrap" runat="server" Text='<%# RenderSaleWrap(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "Sale", "title-sidebar-2", "top-0 start-0 z-5") %>' />
+                                                <asp:Literal ID="litDealActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn top-0 end-0", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                                <asp:Literal ID="litDealSaleWrap" runat="server" Text='<%# RenderSaleWrap(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "Promo", "title-sidebar-2", "top-0 start-0 z-5") %>' />
                                             </div>
                                             <div class="card-product-info">
                                                 <div class="box-title gap-xl-12">
@@ -505,11 +652,11 @@
         </section>
 
         <!-- Banner Image Product -->
-        <section class="has-bg-img" data-bg-img="<%= ThemeManager.Asset("images/banner/banner-1.jpg") %>" data-bg-size="cover" data-bg-repeat="no-repeat" style='background-image:url(<%= ThemeManager.Asset("images/banner/banner-1.jpg") %>);background-size:cover;background-repeat:no-repeat;'>
+        <section class="has-bg-img" data-bg-img="<%= ResolveUrl("~/Public/assets/images/banner/banner-1.jpg") %>" data-bg-size="cover" data-bg-repeat="no-repeat" style='background-image:url(<%= ResolveUrl("~/Public/assets/images/banner/banner-1.jpg") %>);background-size:cover;background-repeat:no-repeat;'>
             <div class="container">
                 <div class="banner-image-product hover-img">
                     <a href="articoli.aspx" class="image img-2 img-style overflow-visible relative">
-                        <img class="lazyload" alt="banner" src="<%= ThemeManager.Asset("images/item/tivi.webp") %>" data-src="<%= ThemeManager.Asset("images/item/tivi.webp") %>" />
+                        <img class="lazyload" alt="banner" src="<%= ResolveUrl("~/Public/assets/images/item/tivi.webp") %>" data-src="<%= ResolveUrl("~/Public/assets/images/item/tivi.webp") %>" />
                         <div class="box-sale-wrap position1">
                             <p class="small-text">Promo</p>
                             <p class="title-sidebar-2">Tech</p>
@@ -580,7 +727,7 @@
                                                             </div>
                                                             <div class="group-btn">
                                                                 <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row") %>' />
+                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
                                                             </div>
                                                         </div>
                                                     </div>
@@ -654,7 +801,7 @@
                                                     </div>
                                                 </div>
                                                 <div class="ks-inline-actions">
-                                                    <asp:Literal ID="litFeatureCenterActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row") %>' />
+                                                    <asp:Literal ID="litFeatureCenterActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
                                                 </div>
                                             </div>
                                         </div>
@@ -681,7 +828,7 @@
                                                             </div>
                                                             <div class="group-btn">
                                                                 <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row") %>' />
+                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
                                                             </div>
                                                         </div>
                                                     </div>
@@ -717,7 +864,7 @@
                                                             </div>
                                                             <div class="group-btn">
                                                                 <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row") %>' />
+                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
                                                             </div>
                                                         </div>
                                                     </div>
@@ -766,7 +913,7 @@
                                                     </a>
                                                 </div>
                                                 <div class="ks-inline-actions">
-                                                    <asp:Literal ID="litToprateCenterActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row") %>' />
+                                                    <asp:Literal ID="litToprateCenterActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
                                                 </div>
                                             </div>
                                         </div>
@@ -793,7 +940,7 @@
                                                             </div>
                                                             <div class="group-btn">
                                                                 <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row") %>' />
+                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
                                                             </div>
                                                         </div>
                                                     </div>
@@ -829,7 +976,7 @@
                                                             </div>
                                                             <div class="group-btn">
                                                                 <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row") %>' />
+                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
                                                             </div>
                                                         </div>
                                                     </div>
@@ -862,7 +1009,7 @@
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <asp:Literal ID="litOnSaleSave" runat="server" Text='<%# RenderSaleWrap(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "Sale", "title-sidebar-2", "style-2 z-5") %>' />
+                                                <asp:Literal ID="litOnSaleSave" runat="server" Text='<%# RenderSaleWrap(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "Promo", "title-sidebar-2", "style-2 z-5") %>' />
                                             </div>
                                             <div class="card-product-info">
                                                 <div class="box-title gap-xl-12">
@@ -879,7 +1026,7 @@
                                                     </a>
                                                 </div>
                                                 <div class="ks-inline-actions">
-                                                    <asp:Literal ID="litOnSaleCenterActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row") %>' />
+                                                    <asp:Literal ID="litOnSaleCenterActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
                                                 </div>
                                             </div>
                                         </div>
@@ -906,7 +1053,7 @@
                                                             </div>
                                                             <div class="group-btn">
                                                                 <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row") %>' />
+                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
                                                             </div>
                                                         </div>
                                                     </div>
@@ -922,11 +1069,11 @@
             </div>
         </section>
 
-        <!-- Best Seller -->
+        <!-- Nuovi Arrivi -->
         <section class="tf-sp-2">
             <div class="container">
                 <div class="flat-title wow fadeInUp" data-wow-delay="0s">
-                    <h5 class="fw-semibold">Best Seller</h5>
+                    <h5 class="fw-semibold">Nuovi Arrivi</h5>
                     <div class="box-btn-slide relative">
                         <div class="swiper-button-prev nav-swiper nav-prev-products">
                             <i class="icon-arrow-left-lg"></i>
@@ -947,8 +1094,8 @@
                                                 <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
                                                 <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                             </a>
-                                            <asp:Literal ID="litBestActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn") %>' />
-                                            <asp:Literal ID="litBestSale" runat="server" Text='<%# RenderSaleWrap(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "Sale", "title-sidebar-2") %>' />
+                                            <asp:Literal ID="litBestActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                            <asp:Literal ID="litBestSale" runat="server" Text='<%# RenderSaleWrap(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "Promo", "title-sidebar-2") %>' />
                                         </div>
                                         <div class="card-product-info">
                                             <div class="box-title">
@@ -974,12 +1121,12 @@
             <div class="container">
                 <a href="articoli.aspx" class="banner-image-product-2 hover-img d-block">
                     <div class="item-image item-1 img-style overflow-visible">
-                        <img class="lazyload" alt="banner" src="<%= ThemeManager.Asset("images/item/camera-2.webp") %>" data-src="<%= ThemeManager.Asset("images/item/camera-2.webp") %>" />
+                        <img class="lazyload" alt="banner" src="<%= ResolveUrl("~/Public/assets/images/item/camera-2.webp") %>" data-src="<%= ResolveUrl("~/Public/assets/images/item/camera-2.webp") %>" />
                     </div>
                     <div class="item-image item-2 img-style overflow-visible d-none d-lg-block">
-                        <img class="lazyload" alt="banner" src="<%= ThemeManager.Asset("images/item/camera-3.webp") %>" data-src="<%= ThemeManager.Asset("images/item/camera-3.webp") %>" />
+                        <img class="lazyload" alt="banner" src="<%= ResolveUrl("~/Public/assets/images/item/camera-3.webp") %>" data-src="<%= ResolveUrl("~/Public/assets/images/item/camera-3.webp") %>" />
                     </div>
-                    <div class="item-banner has-bg-img" data-bg-img="<%= ThemeManager.Asset("images/banner/banner-2.jpg") %>" data-bg-size="cover" data-bg-repeat="no-repeat" style='background-image:url(<%= ThemeManager.Asset("images/banner/banner-2.jpg") %>);background-size:cover;background-repeat:no-repeat;'>
+                    <div class="item-banner has-bg-img" data-bg-img="<%= ResolveUrl("~/Public/assets/images/banner/banner-2.jpg") %>" data-bg-size="cover" data-bg-repeat="no-repeat" style='background-image:url(<%= ResolveUrl("~/Public/assets/images/banner/banner-2.jpg") %>);background-size:cover;background-repeat:no-repeat;'>
                         <div class="inner">
                             <h3 class="fw-normal text-white lh-lg-50 font-2">Scopri e <span class="fw-bold">risparmia</span><br />sui prodotti più richiesti</h3>
                             <div class="box-sale-wrap type-3 relative">
@@ -1026,7 +1173,7 @@
                                                                 </div>
                                                                 <div class="group-btn">
                                                                     <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                    <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row") %>' />
+                                                                    <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1071,7 +1218,7 @@
                                                                 </div>
                                                                 <div class="group-btn">
                                                                     <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                    <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row") %>' />
+                                                                    <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1116,7 +1263,7 @@
                                                                 </div>
                                                                 <div class="group-btn">
                                                                     <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                    <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row") %>' />
+                                                                    <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1161,7 +1308,7 @@
                                                                 </div>
                                                                 <div class="group-btn">
                                                                     <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                    <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row") %>' />
+                                                                    <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1187,9 +1334,9 @@
                         <div class="swiper-slide">
                             <a href="articoli.aspx" class="banner-image-product-2 type-sp-2 hover-img d-block">
                                 <div class="item-image img-style overflow-visible position2">
-                                    <img class="lazyload" alt="banner" src="<%= ThemeManager.Asset("images/item/laptop.webp") %>" data-src="<%= ThemeManager.Asset("images/item/laptop.webp") %>" />
+                                    <img class="lazyload" alt="banner" src="<%= ResolveUrl("~/Public/assets/images/item/laptop.webp") %>" data-src="<%= ResolveUrl("~/Public/assets/images/item/laptop.webp") %>" />
                                 </div>
-                                <div class="item-banner has-bg-img" data-bg-img="<%= ThemeManager.Asset("images/banner/banner-3.jpg") %>" data-bg-size="cover" data-bg-repeat="no-repeat" style='background-image:url(<%= ThemeManager.Asset("images/banner/banner-3.jpg") %>);background-size:cover;background-repeat:no-repeat;'>
+                                <div class="item-banner has-bg-img" data-bg-img="<%= ResolveUrl("~/Public/assets/images/banner/banner-3.jpg") %>" data-bg-size="cover" data-bg-repeat="no-repeat" style='background-image:url(<%= ResolveUrl("~/Public/assets/images/banner/banner-3.jpg") %>);background-size:cover;background-repeat:no-repeat;'>
                                     <div class="inner justify-content-xl-end">
                                         <div class="box-sale-wrap type-3 relative">
                                             <p class="small-text">Da</p>
@@ -1203,9 +1350,9 @@
                         <div class="swiper-slide">
                             <a href="articoli.aspx" class="banner-image-product-2 style-2 type-sp-2 hover-img d-block">
                                 <div class="item-image img-style overflow-visible position3">
-                                    <img class="lazyload" alt="banner" src="<%= ThemeManager.Asset("images/item/camera-1.webp") %>" data-src="<%= ThemeManager.Asset("images/item/camera-1.webp") %>" />
+                                    <img class="lazyload" alt="banner" src="<%= ResolveUrl("~/Public/assets/images/item/camera-1.webp") %>" data-src="<%= ResolveUrl("~/Public/assets/images/item/camera-1.webp") %>" />
                                 </div>
-                                <div class="item-banner has-bg-img" data-bg-img="<%= ThemeManager.Asset("images/banner/banner-4.jpg") %>" data-bg-size="cover" data-bg-repeat="no-repeat" style='background-image:url(<%= ThemeManager.Asset("images/banner/banner-4.jpg") %>);background-size:cover;background-repeat:no-repeat;'>
+                                <div class="item-banner has-bg-img" data-bg-img="<%= ResolveUrl("~/Public/assets/images/banner/banner-4.jpg") %>" data-bg-size="cover" data-bg-repeat="no-repeat" style='background-image:url(<%= ResolveUrl("~/Public/assets/images/banner/banner-4.jpg") %>);background-size:cover;background-repeat:no-repeat;'>
                                     <div class="inner">
                                         <div class="box-sale-wrap box-price type-3 relative">
                                             <p class="small-text sub-price">Promo</p>
@@ -1244,8 +1391,8 @@
                                                     <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
                                                     <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                 </a>
-                                                <asp:Literal ID="litRecentActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn") %>' />
-                                                <asp:Literal ID="litRecentSale" runat="server" Text='<%# RenderSaleWrap(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "Sale", "title-sidebar-2") %>' />
+                                                <asp:Literal ID="litRecentActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                                <asp:Literal ID="litRecentSale" runat="server" Text='<%# RenderSaleWrap(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "Promo", "title-sidebar-2") %>' />
                                             </div>
                                             <div class="card-product-info">
                                                 <div class="box-title">
@@ -1275,17 +1422,36 @@
         <asp:HiddenField ID="hfHomeActionProductId" runat="server" />
         <asp:LinkButton ID="btnHomeAction" runat="server" CssClass="d-none" CausesValidation="false" OnClick="btnHomeAction_Click">Azione Home</asp:LinkButton>
 
-        <div class="offcanvas offcanvas-end" tabindex="-1" id="ksCompareCanvas" aria-labelledby="ksCompareCanvasLabel">
-            <div class="offcanvas-header">
-                <h5 class="offcanvas-title" id="ksCompareCanvasLabel">Confronta prodotti</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Chiudi"></button>
-            </div>
-            <div class="offcanvas-body">
-                <div class="ks-compare-toolbar">
-                    <p class="mb-0 body-text-3 text-main-2">Seleziona fino a 4 prodotti dalla HOME.</p>
-                    <a href="#" class="tf-btn btn-line" id="ksCompareClear">Svuota</a>
+        <div class="offcanvas offcanvas-bottom offcanvas-compare" tabindex="-1" id="ksCompareCanvas" aria-labelledby="ksCompareCanvasLabel">
+            <div class="offcanvas-content">
+                <div class="header">
+                    <span class="icon-close icon-close-popup link" data-bs-dismiss="offcanvas" aria-label="Chiudi"></span>
                 </div>
-                <div id="ksCompareList" class="ks-compare-grid"></div>
+                <div class="wrap">
+                    <div class="container">
+                        <div class="tf-compare-list">
+                            <h5 class="title fw-semibold" id="ksCompareCanvasLabel">
+                                Confronta <br class="d-none d-md-block" />
+                                prodotti
+                            </h5>
+                            <div class="mini-compare-empty w-100 text-center" id="ksCompareEmptyState">
+                                <h6>Nessun prodotto selezionato</h6>
+                                <p class="body-text-3 text-main-2 mt-2 mb-0">Usa il tasto Confronta nelle card della HOME per riempire questa barra.</p>
+                            </div>
+                            <div class="tf-compare-wrap" id="ksCompareList"></div>
+                            <div class="tf-compare-buttons">
+                                <div class="tf-compare-btn">
+                                    <a href="#" class="tf-btn btn-gray btn-large-3" id="ksCompareRun">
+                                        <span class="text-white">Compara prodotti</span>
+                                    </a>
+                                    <a href="#" class="tf-btn btn-primary btn-large-3" id="ksCompareClear">
+                                        <span class="text-white">Svuota</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div id="ksHomeToast" class="ks-home-toast" aria-live="polite"></div>
@@ -1342,28 +1508,28 @@
 
                 function renderCompare() {
                     var host = document.getElementById('ksCompareList');
+                    var empty = document.getElementById('ksCompareEmptyState');
                     if (!host) return;
                     var items = readJson(COMPARE_KEY);
                     if (!items.length) {
-                        host.innerHTML = '<div class="ks-compare-empty"><strong>Nessun prodotto selezionato.</strong><div class="mt-2 body-text-3 text-main-2">Usa il tasto Confronta nelle card prodotto per riempire questo pannello.</div></div>';
+                        host.innerHTML = '';
+                        if (empty) empty.style.display = 'block';
                         return;
                     }
+                    if (empty) empty.style.display = 'none';
                     host.innerHTML = items.map(function (item) {
                         return '' +
-                            '<div class="card-product style-row row-small-2">' +
-                            '  <div class="card-product-wrapper">' +
-                            '    <a href="' + item.url + '" class="product-img"><img class="img-product" src="' + item.img + '" alt="' + item.title.replace(/"/g, '&quot;') + '"></a>' +
-                            '  </div>' +
-                            '  <div class="card-product-info">' +
-                            '    <div class="box-title">' +
-                            '      <div class="bg-white relative z-5">' +
-                            '        <a href="' + item.url + '" class="name-product body-md-2 fw-semibold text-secondary link">' + item.title + '</a>' +
-                            '      </div>' +
-                            '      <div class="group-btn">' +
-                            '        <p class="price-wrap fw-medium"><span class="new-price price-text fw-medium">' + item.price + '</span></p>' +
-                            '        <ul class="list-product-btn flex-row"><li><a href="#" class="box-icon btn-icon-action hover-tooltip js-ks-compare-remove" data-ks-id="' + item.id + '"><i class="icon icon-close"></i><span class="tooltip">Rimuovi</span></a></li></ul>' +
-                            '      </div>' +
-                            '    </div>' +
+                            '<div class="tf-compare-item">' +
+                            '  <span class="btns-repeat" aria-hidden="true">' +
+                            '    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11.334 1.33301L14.0007 3.99967L11.334 6.66634" stroke="#181818" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path><path d="M2 7.99951V6.66618C2 5.95893 2.28095 5.28066 2.78105 4.78056C3.28115 4.28046 3.95942 3.99951 4.66667 3.99951H14" stroke="#181818" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path><path d="M4.66667 15.9996L2 13.3329L4.66667 10.6663" stroke="#181818" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path><path d="M14 9.33301V10.6663C14 11.3736 13.719 12.0519 13.219 12.552C12.7189 13.0521 12.0406 13.333 11.3333 13.333H2" stroke="#181818" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>' +
+                            '  </span>' +
+                            '  <span class="icon-close remove js-ks-compare-remove" data-ks-id="' + item.id + '"></span>' +
+                            '  <a href="' + item.url + '" class="image">' +
+                            '    <img class="lazyload" src="' + item.img + '" alt="' + item.title.replace(/"/g, '&quot;') + '">' +
+                            '  </a>' +
+                            '  <div class="content">' +
+                            '    <a class="text-line-clamp-2 body-md-2 fw-semibold text-secondary link" href="' + item.url + '">' + item.title + '</a>' +
+                            '    <p class="price-wrap fw-medium mb-0"><span class="new-price price-text fw-medium">' + item.price + '</span></p>' +
                             '  </div>' +
                             '</div>';
                     }).join('');
@@ -1373,6 +1539,34 @@
                     var target = document.getElementById('ksCompareCanvas');
                     if (!target || !window.bootstrap || !window.bootstrap.Offcanvas) return;
                     window.bootstrap.Offcanvas.getOrCreateInstance(target).show();
+                }
+
+                function escapeHtml(value) {
+                    return (value || '').toString().replace(/[&<>"]/g, function (ch) {
+                        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch] || ch;
+                    });
+                }
+
+                function runCompareWindow(items) {
+                    if (!items || items.length < 2) {
+                        toast('Seleziona almeno 2 prodotti per il confronto');
+                        return false;
+                    }
+                    var win = window.open('', '_blank');
+                    if (!win) {
+                        toast("Consenti l'apertura del confronto in una nuova scheda");
+                        return false;
+                    }
+                    var rows = items.map(function (item) {
+                        return '<tr>' +
+                            '<td style="padding:16px;border-bottom:1px solid #eee;width:120px;"><img src="' + escapeHtml(item.img) + '" alt="' + escapeHtml(item.title) + '" style="width:96px;height:96px;object-fit:contain"></td>' +
+                            '<td style="padding:16px;border-bottom:1px solid #eee;"><a href="' + escapeHtml(item.url) + '" style="color:#111827;font-weight:600;text-decoration:none">' + escapeHtml(item.title) + '</a><div style="margin-top:6px;color:#6b7280;font-size:13px">' + escapeHtml([item.brand || '', item.code || '', item.ean || ''].filter(Boolean).join(' • ')) + '</div><div style="margin-top:10px;font-size:24px;color:#ef4444;font-weight:500">' + escapeHtml(item.price) + '</div><div style="margin-top:8px;color:#374151;font-size:14px">' + escapeHtml(item.desc || '') + '</div></td>' +
+                            '</tr>';
+                    }).join('');
+                    win.document.open();
+                    win.document.write('<!doctype html><html lang="it"><head><meta charset="utf-8"><title>Confronta prodotti - KeepStore</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Poppins,Arial,sans-serif;margin:0;padding:24px;background:#f8fafc;color:#111827}h1{margin:0 0 20px;font-size:32px}table{width:100%;border-collapse:collapse;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.08)}.toolbar{margin-bottom:18px;display:flex;gap:12px;justify-content:space-between;align-items:center}.badge{display:inline-flex;padding:8px 12px;border-radius:999px;background:#fee2e2;color:#b91c1c;font-weight:600;font-size:13px}</style></head><body><div class="toolbar"><h1>Confronta prodotti</h1><span class="badge">KeepStore</span></div><table><tbody>' + rows + '</tbody></table></body></html>');
+                    win.document.close();
+                    return false;
                 }
 
                 window.ksHomeClientAction = function (action, el) {
@@ -1414,7 +1608,11 @@
                         title: el.getAttribute('data-ks-title') || '',
                         url: el.getAttribute('data-ks-url') || '#',
                         img: el.getAttribute('data-ks-img') || '',
-                        price: el.getAttribute('data-ks-price') || ''
+                        price: el.getAttribute('data-ks-price') || '',
+                        ean: el.getAttribute('data-ks-ean') || '',
+                        brand: el.getAttribute('data-ks-brand') || '',
+                        desc: el.getAttribute('data-ks-desc') || '',
+                        code: el.getAttribute('data-ks-code') || ''
                     };
                     if (!item.id) return false;
                     var list = readJson(COMPARE_KEY).filter(function (x) { return toInt(x.id) !== item.id; });
@@ -1444,6 +1642,12 @@
                         saveJson(COMPARE_KEY, []);
                         renderCompare();
                         toast('Confronto svuotato');
+                        return;
+                    }
+                    var runBtn = ev.target.closest('#ksCompareRun');
+                    if (runBtn) {
+                        ev.preventDefault();
+                        runCompareWindow(readJson(COMPARE_KEY));
                     }
                 });
 

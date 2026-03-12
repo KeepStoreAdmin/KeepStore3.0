@@ -93,6 +93,15 @@
 }
 .ks-header-ui .tf-select-custom {
     min-width: 190px;
+    min-height: 54px;
+    display: inline-flex;
+    align-items: center;
+}
+.ks-header-ui select.hide-select {
+    display: none !important;
+}
+.ks-header-ui .select-options {
+    display: none;
 }
 .ks-header-ui .select-category {
     position: relative;
@@ -147,7 +156,7 @@
                             </div>
                             <span class="br-line type-vertical bg-line"></span>
                             <fieldset>
-                                <asp:TextBox ID="tbCerca" runat="server" CssClass="" placeholder="Cerca prodotti, codici, marchi..." AutoCompleteType="Disabled" />
+                                <asp:TextBox ID="tbCerca" runat="server" CssClass="" placeholder="Cerca prodotti, codici, EAN, marchi..." AutoCompleteType="Disabled" />
                                 <div id="ksSearchSuggestDesktop" class="ks-search-suggest"></div>
                             </fieldset>
                             <button id="btnSearch" runat="server" type="submit" class="btn-submit-form" aria-label="Cerca">
@@ -293,7 +302,7 @@
                 </div>
                 <span class="br-line type-vertical bg-line d-none d-sm-block"></span>
                 <fieldset>
-                    <asp:TextBox ID="tbCercaMobile" runat="server" CssClass="" placeholder="Cerca prodotti, codici, marchi..." AutoPostBack="true" AutoCompleteType="Disabled" />
+                    <asp:TextBox ID="tbCercaMobile" runat="server" CssClass="" placeholder="Cerca prodotti, codici, EAN, marchi..." AutoPostBack="true" AutoCompleteType="Disabled" />
                     <div id="ksSearchSuggestMobile" class="ks-search-suggest"></div>
                 </fieldset>
                 <button id="btnSearchMobile" runat="server" type="submit" class="btn-submit-form" aria-label="Cerca">
@@ -357,8 +366,17 @@
 
 <script type="text/javascript">
 (function () {
+    var RECENT_SEARCH_KEY = 'ks_recent_searches';
+    var RECENT_SEARCH_COOKIE = 'ks_recent_searches';
+
     function normalize(value) {
         return (value || '').toString().toLowerCase().trim().replace(/\s+/g, ' ');
+    }
+
+    function escapeHtml(value) {
+        return (value || '').toString().replace(/[&<>"]/g, function (ch) {
+            return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch] || ch;
+        });
     }
 
     function uniqBy(items, keyFn) {
@@ -369,6 +387,50 @@
             seen.add(key);
             return true;
         });
+    }
+
+    function readCookie(name) {
+        var match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[.$?*|{}()\[\]\/+^]/g, '\$&') + '=([^;]*)'));
+        return match ? decodeURIComponent(match[1]) : '';
+    }
+
+    function writeCookie(name, value, days) {
+        var expires = '';
+        if (typeof days === 'number') {
+            var dt = new Date();
+            dt.setTime(dt.getTime() + (days * 24 * 60 * 60 * 1000));
+            expires = '; expires=' + dt.toUTCString();
+        }
+        document.cookie = name + '=' + encodeURIComponent(value || '') + expires + '; path=/; SameSite=Lax';
+    }
+
+    function readRecentSearches() {
+        var local = [];
+        try {
+            var raw = JSON.parse(localStorage.getItem(RECENT_SEARCH_KEY) || '[]');
+            local = Array.isArray(raw) ? raw : [];
+        } catch (e) { }
+        var cookie = (readCookie(RECENT_SEARCH_COOKIE) || '').split('|').filter(Boolean);
+        return uniqBy(local.concat(cookie), function (item) { return normalize(item); }).slice(0, 8);
+    }
+
+    function storeRecentSearch(query) {
+        var q = (query || '').trim();
+        if (!q) return;
+        var arr = readRecentSearches().filter(function (item) { return normalize(item) !== normalize(q); });
+        arr.unshift(q);
+        arr = arr.slice(0, 8);
+        try {
+            localStorage.setItem(RECENT_SEARCH_KEY, JSON.stringify(arr));
+        } catch (e) { }
+        writeCookie(RECENT_SEARCH_COOKIE, arr.join('|'), 60);
+    }
+
+    function clearAdjacentCustomSelect(select) {
+        if (!select) return;
+        while (select.nextElementSibling && (select.nextElementSibling.classList.contains('tf-select-custom') || select.nextElementSibling.classList.contains('select-options'))) {
+            select.nextElementSibling.remove();
+        }
     }
 
     function buildSelectOptions(select) {
@@ -395,11 +457,13 @@
     }
 
     function buildCustomSelect(select) {
-        if (!select || select.nextElementSibling && select.nextElementSibling.classList.contains('tf-select-custom')) return;
+        if (!select) return;
+        clearAdjacentCustomSelect(select);
         select.classList.add('hide-select');
+
         var custom = document.createElement('div');
         custom.className = 'tf-select-custom';
-        custom.textContent = select.options[0] ? select.options[0].text : 'Tutte le categorie';
+        custom.textContent = select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : 'Tutte le categorie';
         select.insertAdjacentElement('afterend', custom);
 
         var list = document.createElement('ul');
@@ -409,7 +473,7 @@
             li.className = 'link';
             li.setAttribute('rel', option.value);
             li.setAttribute('data-url', option.getAttribute('data-url') || '');
-            li.innerHTML = '<span>' + option.text + '</span>';
+            li.innerHTML = '<span>' + escapeHtml(option.text) + '</span>';
             list.appendChild(li);
         });
         custom.insertAdjacentElement('afterend', list);
@@ -417,7 +481,10 @@
         custom.addEventListener('click', function (ev) {
             ev.stopPropagation();
             document.querySelectorAll('.tf-select-custom.active').forEach(function (item) {
-                if (item !== custom) { item.classList.remove('active'); if (item.nextElementSibling) item.nextElementSibling.style.display = 'none'; }
+                if (item !== custom) {
+                    item.classList.remove('active');
+                    if (item.nextElementSibling) item.nextElementSibling.style.display = 'none';
+                }
             });
             custom.classList.toggle('active');
             list.style.display = custom.classList.contains('active') ? 'block' : 'none';
@@ -428,6 +495,7 @@
                 ev.stopPropagation();
                 if (select.options[idx]) {
                     select.selectedIndex = idx;
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
                 }
                 custom.textContent = li.textContent.trim();
                 custom.classList.remove('active');
@@ -444,18 +512,40 @@
     function collectProducts() {
         var items = [];
         document.querySelectorAll('.card-product').forEach(function (card) {
+            var action = card.querySelector('.js-ks-compare');
             var link = card.querySelector('a[href*="articolo.aspx?id="]');
             var titleEl = card.querySelector('.name-product');
             if (!link || !titleEl) return;
-            var href = link.getAttribute('href') || '';
-            var idMatch = href.match(/id=(\d+)/i);
-            var id = idMatch ? idMatch[1] : '';
-            var title = (titleEl.textContent || '').trim();
+            var href = (action && action.getAttribute('data-ks-url')) || link.getAttribute('href') || '';
+            var id = (action && action.getAttribute('data-ks-id')) || ((href.match(/id=(\d+)/i) || [])[1] || '');
+            var title = (action && action.getAttribute('data-ks-title')) || (titleEl.textContent || '').trim();
             var caption = (card.querySelector('.caption') || {}).textContent || '';
-            var price = (card.querySelector('.new-price') || {}).textContent || '';
-            var img = (card.querySelector('img.img-product, .card-image img, .tf-image-view img') || {}).getAttribute ? (card.querySelector('img.img-product, .card-image img, .tf-image-view img').getAttribute('src') || '') : '';
+            var price = (action && action.getAttribute('data-ks-price')) || ((card.querySelector('.new-price') || {}).textContent || '');
+            var img = (action && action.getAttribute('data-ks-img')) || '';
+            if (!img) {
+                var imgNode = card.querySelector('img.img-product, .card-image img, .tf-image-view img');
+                img = imgNode ? (imgNode.getAttribute('src') || imgNode.getAttribute('data-src') || '') : '';
+            }
+            var ean = action ? (action.getAttribute('data-ks-ean') || '') : '';
+            var brand = action ? (action.getAttribute('data-ks-brand') || '') : '';
+            var desc = action ? (action.getAttribute('data-ks-desc') || '') : '';
+            var code = action ? (action.getAttribute('data-ks-code') || '') : '';
             if (!id || !title) return;
-            items.push({ type: 'product', key: 'p-' + id, id: id, title: title, subtitle: caption.trim() || 'Prodotto', price: price.trim(), url: href, image: img, search: normalize(title + ' ' + caption + ' ' + id) });
+            items.push({
+                type: 'product',
+                key: 'p-' + id,
+                id: id,
+                code: code,
+                ean: ean,
+                brand: brand,
+                desc: desc,
+                title: title,
+                subtitle: [brand, caption.trim() || 'Prodotto'].filter(Boolean).join(' • '),
+                price: (price || '').trim(),
+                url: href,
+                image: img,
+                search: normalize([title, caption, brand, desc, code, ean, id].join(' '))
+            });
         });
         return uniqBy(items, function (x) { return x.key; });
     }
@@ -471,54 +561,51 @@
         return uniqBy(items, function (x) { return x.url + '|' + x.title; });
     }
 
-    function recentSearches() {
-        try {
-            var arr = JSON.parse(localStorage.getItem('ks_recent_searches') || '[]');
-            return Array.isArray(arr) ? arr : [];
-        } catch (e) {
-            return [];
-        }
-    }
-
-    function storeRecentSearch(query) {
-        var q = (query || '').trim();
-        if (!q) return;
-        var arr = recentSearches().filter(function (item) { return normalize(item) !== normalize(q); });
-        arr.unshift(q);
-        localStorage.setItem('ks_recent_searches', JSON.stringify(arr.slice(0, 8)));
-    }
-
     function scoreItem(item, query) {
         if (!item || !query) return 0;
         var q = normalize(query);
         var text = normalize(item.search || item.title || '');
         if (!text) return 0;
-        if (text === q) return 120;
-        if ((item.id || '') === q) return 115;
-        if (text.indexOf(q + ' ') === 0 || text.startsWith(q)) return 100;
-        var tokens = text.split(' ');
-        if (tokens.some(function (token) { return token.startsWith(q); })) return 85;
-        if (text.indexOf(q) >= 0) return 65;
+        var ean = normalize(item.ean || '');
+        var code = normalize(item.code || '');
+        var brand = normalize(item.brand || '');
+        var desc = normalize(item.desc || '');
+        var title = normalize(item.title || '');
+        if (ean && ean === q) return 150;
+        if (code && code === q) return 145;
+        if (title === q) return 130;
+        if (brand && desc && normalize(brand + ' ' + desc).indexOf(q) >= 0) return 120;
+        if (title.indexOf(q) === 0) return 115;
+        if (text.indexOf(q + ' ') === 0 || text.startsWith(q)) return 105;
+        if (text.indexOf(q) >= 0) return 85;
         return 0;
     }
 
     function buildSuggestions(query) {
         var q = (query || '').trim();
         if (!q) {
-            return { products: [], categories: [], recents: recentSearches().map(function (value, idx) { return { type: 'recent', key: 'r-' + idx, title: value, subtitle: 'Ricerca recente', url: '', image: '', price: '', search: normalize(value) }; }).slice(0, 5) };
+            return {
+                products: [],
+                categories: [],
+                recents: readRecentSearches().map(function (value, idx) {
+                    return { type: 'recent', key: 'r-' + idx, title: value, subtitle: 'Ricerca recente', url: '', image: '', price: '', search: normalize(value) };
+                }).slice(0, 5)
+            };
         }
-        var products = collectProducts().map(function (item) { item._score = scoreItem(item, q); return item; }).filter(function (item) { return item._score > 0; }).sort(function (a, b) { return b._score - a._score; }).slice(0, 6);
+        var products = collectProducts().map(function (item) { item._score = scoreItem(item, q); return item; }).filter(function (item) { return item._score > 0; }).sort(function (a, b) { return b._score - a._score; }).slice(0, 8);
         var categories = collectCategories().map(function (item) { item._score = scoreItem(item, q); return item; }).filter(function (item) { return item._score > 0; }).sort(function (a, b) { return b._score - a._score; }).slice(0, 5);
-        var recents = recentSearches().filter(function (item) { return normalize(item).indexOf(normalize(q)) >= 0; }).slice(0, 4).map(function (value, idx) { return { type: 'recent', key: 'r-' + idx, title: value, subtitle: 'Ricerca recente', url: '', image: '', price: '', search: normalize(value) }; });
+        var recents = readRecentSearches().filter(function (item) { return normalize(item).indexOf(normalize(q)) >= 0; }).slice(0, 4).map(function (value, idx) {
+            return { type: 'recent', key: 'r-' + idx, title: value, subtitle: 'Ricerca recente', url: '', image: '', price: '', search: normalize(value) };
+        });
         return { products: products, categories: categories, recents: recents };
     }
 
     function renderGroup(label, items) {
         if (!items || !items.length) return '';
-        return '<div class="ks-search-group"><span class="ks-search-label">' + label + '</span>' + items.map(function (item) {
-            var image = item.image ? '<img src="' + item.image + '" alt="">' : '<span class="box-icon btn-icon-action"><i class="icon ' + (item.type === 'category' ? 'icon-menu' : 'icon-search') + '"></i></span>';
+        return '<div class="ks-search-group"><span class="ks-search-label">' + escapeHtml(label) + '</span>' + items.map(function (item) {
+            var image = item.image ? '<img src="' + escapeHtml(item.image) + '" alt="">' : '<span class="box-icon btn-icon-action"><i class="icon ' + (item.type === 'category' ? 'icon-menu' : 'icon-search') + '"></i></span>';
             var sub = [item.subtitle || '', item.price || ''].filter(Boolean).join(' • ');
-            return '<button type="button" class="ks-search-item" data-ks-type="' + item.type + '" data-ks-title="' + item.title.replace(/"/g, '&quot;') + '" data-ks-url="' + (item.url || '').replace(/"/g, '&quot;') + '">' + image + '<span class="ks-search-meta"><span class="ks-search-title">' + item.title + '</span><span class="ks-search-sub">' + sub + '</span></span></button>';
+            return '<button type="button" class="ks-search-item" data-ks-type="' + escapeHtml(item.type) + '" data-ks-title="' + escapeHtml(item.title) + '" data-ks-url="' + escapeHtml(item.url || '') + '">' + image + '<span class="ks-search-meta"><span class="ks-search-title">' + escapeHtml(item.title) + '</span><span class="ks-search-sub">' + escapeHtml(sub) + '</span></span></button>';
         }).join('') + '</div>';
     }
 
@@ -545,17 +632,19 @@
         var button = document.getElementById(opts.buttonId);
         var select = document.getElementById(opts.selectId);
         if (!input || !suggest || !button) return;
+        var timer = 0;
 
         function closeSuggest() { suggest.classList.remove('show'); }
-
         function openSuggest() { suggest.classList.add('show'); }
-
-        function render() {
+        function renderNow() {
             var groups = buildSuggestions(input.value);
             suggest.innerHTML = renderGroup('Prodotti', groups.products) + renderGroup('Categorie', groups.categories) + renderGroup('Ricerche recenti', groups.recents);
             if (suggest.innerHTML.trim()) openSuggest(); else closeSuggest();
         }
-
+        function render() {
+            clearTimeout(timer);
+            timer = setTimeout(renderNow, 120);
+        }
         function submitSearch(forceValue, forceUrl) {
             var value = typeof forceValue === 'string' ? forceValue : input.value;
             var url = forceUrl || buildSearchUrl(value, select);
@@ -568,13 +657,18 @@
         }
 
         input.addEventListener('input', render);
-        input.addEventListener('focus', render);
+        input.addEventListener('focus', renderNow);
         input.addEventListener('keydown', function (ev) {
             if (ev.key === 'Enter') {
                 ev.preventDefault();
                 submitSearch();
             }
         });
+        if (select) {
+            select.addEventListener('change', function () {
+                if ((input.value || '').trim()) renderNow();
+            });
+        }
         button.addEventListener('click', function (ev) {
             ev.preventDefault();
             submitSearch();
@@ -598,6 +692,42 @@
         });
     }
 
+    function wireDesktopCategories() {
+        var wrap = document.querySelector('.ks-header-ui .nav-category-wrap');
+        if (!wrap) return;
+        var title = wrap.querySelector('.nav-title.btn-active');
+        var menu = wrap.querySelector('.category-menu');
+        if (title && menu) {
+            title.addEventListener('click', function (ev) {
+                ev.preventDefault();
+                title.classList.toggle('active');
+                menu.classList.toggle('active-item');
+            });
+        }
+        var items = wrap.querySelectorAll('#ksDesktopCategoriesMenu > .item');
+        items.forEach(function (item) {
+            var link = item.querySelector(':scope > a');
+            var sub = item.querySelector(':scope > .sub-menu');
+            if (!link || !sub) return;
+            item.addEventListener('mouseenter', function () {
+                items.forEach(function (other) { if (other !== item) other.classList.remove('open'); });
+                item.classList.add('open');
+            });
+            link.addEventListener('click', function (ev) {
+                if (!item.classList.contains('open')) {
+                    ev.preventDefault();
+                    items.forEach(function (other) { if (other !== item) other.classList.remove('open'); });
+                    item.classList.add('open');
+                }
+            });
+        });
+        document.addEventListener('click', function (ev) {
+            if (!ev.target.closest('.ks-header-ui .nav-category-wrap')) {
+                items.forEach(function (item) { item.classList.remove('open'); });
+            }
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         var desktopSelect = document.getElementById('product_cat');
         var mobileSelect = document.getElementById('product_cat_mobile');
@@ -605,9 +735,9 @@
         buildSelectOptions(mobileSelect);
         buildCustomSelect(desktopSelect);
         buildCustomSelect(mobileSelect);
-
         wireForm({ formName: 'desktop', inputId: '<%= tbCerca.ClientID %>', suggestId: 'ksSearchSuggestDesktop', buttonId: '<%= btnSearch.ClientID %>', selectId: 'product_cat' });
         wireForm({ formName: 'mobile', inputId: '<%= tbCercaMobile.ClientID %>', suggestId: 'ksSearchSuggestMobile', buttonId: '<%= btnSearchMobile.ClientID %>', selectId: 'product_cat_mobile' });
+        wireDesktopCategories();
     });
 })();
 </script>

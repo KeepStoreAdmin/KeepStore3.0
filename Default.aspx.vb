@@ -182,7 +182,9 @@ Partial Class _Default
         Return "SELECT " &
                "vsuperarticoli.id AS Articoliid, " &
                "vsuperarticoli.Codice, " &
+               "vsuperarticoli.Ean, " &
                "vsuperarticoli.Descrizione1, " &
+               "vsuperarticoli.Descrizione2, " &
                "vsuperarticoli.MarcheDescrizione, " &
                "vsuperarticoli.CategorieDescrizione, " &
                "vsuperarticoli.SettoriDescrizione, " &
@@ -314,10 +316,10 @@ Partial Class _Default
         ' Per richiesta: il blocco Best Seller eredita la logica visiva della vecchia vetrina / nuovi arrivi.
         Return BuildPooledQuery(baseSelect,
                                 AvailableWhere(False),
-                                "COALESCE(vsuperarticoli.Vetrina,0) DESC, COALESCE(vsuperarticoli.DataCreazione,DATE('1000-01-01')) DESC, COALESCE(vsuperarticoli.Visite,0) DESC",
+                                "COALESCE(vsuperarticoli.Vetrina,0) DESC, COALESCE(vsuperarticoli.VendutiTotali,0) DESC, COALESCE(vsuperarticoli.DataCreazione,DATE('1000-01-01')) DESC, COALESCE(vsuperarticoli.Visite,0) DESC",
                                 limit,
                                 4,
-                                "COALESCE(pool_items.Vetrina,0) DESC, RAND()")
+                                "COALESCE(pool_items.Vetrina,0) DESC, COALESCE(pool_items.VendutiTotali,0) DESC, COALESCE(pool_items.DataCreazione,DATE('1000-01-01')) DESC, RAND()")
     End Function
 
     Private Function BuildFeatureQuery(baseSelect As String, limit As Integer) As String
@@ -488,6 +490,13 @@ Partial Class _Default
         Return 0D
     End Function
 
+    Private Function SafeWholeNumber(value As Object) As Integer
+        Dim d As Decimal = SafeDecimal(value)
+        If d <= 0D Then Return 0
+        If d > Integer.MaxValue Then Return Integer.MaxValue
+        Return CInt(Math.Round(d, 0, MidpointRounding.AwayFromZero))
+    End Function
+
     ' -------------------------------------------------
     ' Helper immagini / output ASPX
     ' -------------------------------------------------
@@ -498,16 +507,28 @@ Partial Class _Default
         End If
 
         Dim lowFile As String = BuildLowResHomeFileName(fileName)
-        Dim lowPublicVirtual As String = "~/Public/images/articoli/" & HttpUtility.UrlPathEncode(lowFile)
-        Dim lowPublicPhysical As String = SafeMapPath("~/Public/images/articoli/" & lowFile)
+        Dim lowPublicVirtual As String = "~/Public/assets/images/articoli/" & HttpUtility.UrlPathEncode(lowFile)
+        Dim lowPublicPhysical As String = SafeMapPath("~/Public/assets/images/articoli/" & lowFile)
         If Not String.IsNullOrWhiteSpace(lowPublicPhysical) AndAlso File.Exists(lowPublicPhysical) Then
             Return ResolveUrl(lowPublicVirtual)
         End If
 
-        Dim publicOriginalVirtual As String = "~/Public/images/articoli/" & HttpUtility.UrlPathEncode(fileName)
-        Dim publicOriginalPhysical As String = SafeMapPath("~/Public/images/articoli/" & fileName)
+        Dim publicOriginalVirtual As String = "~/Public/assets/images/articoli/" & HttpUtility.UrlPathEncode(fileName)
+        Dim publicOriginalPhysical As String = SafeMapPath("~/Public/assets/images/articoli/" & fileName)
         If Not String.IsNullOrWhiteSpace(publicOriginalPhysical) AndAlso File.Exists(publicOriginalPhysical) Then
             Return ResolveUrl(publicOriginalVirtual)
+        End If
+
+        Dim legacyLowVirtual As String = "~/Public/images/articoli/" & HttpUtility.UrlPathEncode(lowFile)
+        Dim legacyLowPhysical As String = SafeMapPath("~/Public/images/articoli/" & lowFile)
+        If Not String.IsNullOrWhiteSpace(legacyLowPhysical) AndAlso File.Exists(legacyLowPhysical) Then
+            Return ResolveUrl(legacyLowVirtual)
+        End If
+
+        Dim legacyOriginalVirtual As String = "~/Public/images/articoli/" & HttpUtility.UrlPathEncode(fileName)
+        Dim legacyOriginalPhysical As String = SafeMapPath("~/Public/images/articoli/" & fileName)
+        If Not String.IsNullOrWhiteSpace(legacyOriginalPhysical) AndAlso File.Exists(legacyOriginalPhysical) Then
+            Return ResolveUrl(legacyOriginalVirtual)
         End If
 
         Return ThemeManager.ProductImageUrl(fileName)
@@ -605,13 +626,13 @@ Partial Class _Default
     End Function
 
     Protected Function GetSoldQty(vendutiTotali As Object) As Integer
-        Dim n As Integer = SafeInt(vendutiTotali, 0)
+        Dim n As Integer = SafeWholeNumber(vendutiTotali)
         If n < 0 Then n = 0
         Return n
     End Function
 
     Protected Function GetAvailableQty(giacenza As Object) As Integer
-        Dim n As Integer = SafeInt(giacenza, 0)
+        Dim n As Integer = SafeWholeNumber(giacenza)
         If n < 0 Then n = 0
         Return n
     End Function
@@ -771,7 +792,11 @@ Partial Class _Default
                                             prezzoMostrato As Object,
                                             prezzoPromoMostrato As Object,
                                             inOfferta As Object,
-                                            wrapperCss As String) As String
+                                            wrapperCss As String,
+                                            Optional ean As Object = Nothing,
+                                            Optional brand As Object = Nothing,
+                                            Optional descrizioneBreve As Object = Nothing,
+                                            Optional codice As Object = Nothing) As String
         Dim id As Integer = SafeInt(articoloId, 0)
         If id <= 0 Then Return String.Empty
 
@@ -779,6 +804,10 @@ Partial Class _Default
         Dim title As String = Convert.ToString(descrizione)
         Dim imageUrl As String = GetHomeProductImage(img1, Nothing)
         Dim priceText As String = FormatMoney(GetCurrentPrice(prezzoMostrato, prezzoPromoMostrato, inOfferta))
+        Dim eanText As String = Convert.ToString(ean)
+        Dim brandText As String = Convert.ToString(brand)
+        Dim descText As String = Convert.ToString(descrizioneBreve)
+        Dim codeText As String = Convert.ToString(codice)
         Dim tipCss As String = If(Not String.IsNullOrWhiteSpace(wrapperCss) AndAlso (wrapperCss.IndexOf("top-0", StringComparison.OrdinalIgnoreCase) >= 0 OrElse wrapperCss.IndexOf("end-0", StringComparison.OrdinalIgnoreCase) >= 0), " tooltip-left", String.Empty)
 
         Dim sb As New StringBuilder()
@@ -809,6 +838,10 @@ Partial Class _Default
         sb.Append(""" data-ks-url=""").Append(HttpUtility.HtmlAttributeEncode(url))
         sb.Append(""" data-ks-img=""").Append(HttpUtility.HtmlAttributeEncode(imageUrl))
         sb.Append(""" data-ks-price=""").Append(HttpUtility.HtmlAttributeEncode(priceText))
+        sb.Append(""" data-ks-ean=""").Append(HttpUtility.HtmlAttributeEncode(eanText))
+        sb.Append(""" data-ks-brand=""").Append(HttpUtility.HtmlAttributeEncode(brandText))
+        sb.Append(""" data-ks-desc=""").Append(HttpUtility.HtmlAttributeEncode(descText))
+        sb.Append(""" data-ks-code=""").Append(HttpUtility.HtmlAttributeEncode(codeText))
         sb.Append(""" onclick=""return ksHomeCompare(this);"">")
         sb.Append("<i class=""icon icon-compare1""></i><span class=""tooltip"">Confronta</span></a></li>")
 
