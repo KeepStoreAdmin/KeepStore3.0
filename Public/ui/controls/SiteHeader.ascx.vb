@@ -10,8 +10,8 @@ Imports System.Web.UI.WebControls
 Partial Class SiteHeader
     Inherits System.Web.UI.UserControl
 
-    Private Const DefaultLogoVirtual As String = "~/Public/assets/images/favicons/logo.webp"
-    Private Const DefaultMobileLogoVirtual As String = "~/Public/assets/images/favicons/logo-mobile.webp"
+    Private Const DefaultLogoVirtual As String = "~/Public/assets/images/logo/logo.webp"
+    Private Const DefaultMobileLogoVirtual As String = "~/Public/assets/images/logo/logo-mobile.webp"
     Private Const DefaultFaviconVirtual As String = "~/Public/assets/images/favicons/favicon.ico"
     Private Const DefaultAppleTouchIconVirtual As String = "~/Public/assets/images/favicons/apple-touch-icon.png"
     Private Const DefaultFavicon32Virtual As String = "~/Public/assets/images/favicons/favicon-32x32.png"
@@ -68,19 +68,26 @@ Partial Class SiteHeader
         Dim lower As String = u.ToLowerInvariant()
 
         If lower.Contains("/public/assets/keepstore/images/") Then
-            u = ReplaceInsensitive(u, "/Public/assets/keepstore/images/", "/Public/assets/images/favicons/")
+            u = ReplaceInsensitive(u, "/Public/assets/keepstore/images/", "/Public/assets/images/logo/")
             lower = u.ToLowerInvariant()
         End If
         If lower.Contains("/public/assets/keepstore/img/") Then
-            u = ReplaceInsensitive(u, "/Public/assets/keepstore/img/", "/Public/assets/images/favicons/")
+            u = ReplaceInsensitive(u, "/Public/assets/keepstore/img/", "/Public/assets/images/logo/")
+            lower = u.ToLowerInvariant()
+        End If
+        If lower.Contains("/public/assets/images/favicons/") Then
+            Dim logoFile As String = Path.GetFileName(u)
+            If Not String.IsNullOrWhiteSpace(logoFile) Then
+                u = "/Public/assets/images/logo/" & logoFile
+            End If
             lower = u.ToLowerInvariant()
         End If
         If lower.Contains("/public/assets/images/logo/") Then
-            u = ReplaceInsensitive(u, "/Public/assets/images/logo/", "/Public/assets/images/favicons/")
+            u = ReplaceInsensitive(u, "/Public/assets/images/logo/", "/Public/assets/images/logo/")
             lower = u.ToLowerInvariant()
         End If
         If lower.Contains("/public/images/") Then
-            u = ReplaceInsensitive(u, "/Public/images/", "/Public/assets/images/favicons/")
+            u = ReplaceInsensitive(u, "/Public/images/", "/Public/assets/images/logo/")
             lower = u.ToLowerInvariant()
         End If
         If lower.StartsWith("images/logo/", StringComparison.OrdinalIgnoreCase) OrElse
@@ -89,18 +96,18 @@ Partial Class SiteHeader
            lower.StartsWith("favicons/", StringComparison.OrdinalIgnoreCase) Then
             Dim logoFile As String = Path.GetFileName(u)
             If Not String.IsNullOrWhiteSpace(logoFile) Then
-                u = "/Public/assets/images/favicons/" & logoFile
+                u = "/Public/assets/images/logo/" & logoFile
             End If
         End If
-        If lower.Contains("/public/assets/images/") AndAlso Not lower.Contains("/public/assets/images/favicons/") Then
+        If lower.Contains("/public/assets/images/") AndAlso Not lower.Contains("/public/assets/images/logo/") AndAlso Not lower.Contains("/public/assets/images/favicons/") Then
             Dim fileName As String = Path.GetFileName(u)
             If Not String.IsNullOrWhiteSpace(fileName) Then
-                u = "/Public/assets/images/favicons/" & fileName
+                u = "/Public/assets/images/logo/" & fileName
             End If
         End If
 
         If Not u.Contains("/") AndAlso Not u.Contains("~") Then
-            u = "/Public/assets/images/favicons/" & u.TrimStart("/"c)
+            u = "/Public/assets/images/logo/" & u.TrimStart("/"c)
         End If
 
         If u.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then
