@@ -225,7 +225,9 @@ Partial Class _Default
         Return "SELECT " &
                "v.id, " &
                "MAX(v.Codice) AS Codice, " &
+               "MAX(v.Ean) AS Ean, " &
                "MAX(v.Descrizione1) AS Descrizione1, " &
+               "MAX(v.Descrizione2) AS Descrizione2, " &
                "MAX(v.MarcheDescrizione) AS MarcheDescrizione, " &
                "MAX(v.CategorieDescrizione) AS CategorieDescrizione, " &
                "MAX(v.SettoriDescrizione) AS SettoriDescrizione, " &
