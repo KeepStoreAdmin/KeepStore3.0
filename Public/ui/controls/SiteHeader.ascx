@@ -92,21 +92,39 @@
     color: #6b7280;
 }
 .ks-header-ui .tf-select-custom {
-    min-width: 210px;
+    min-width: 280px;
     min-height: 54px;
     width: 100%;
-    max-width: 240px;
+    max-width: 360px;
     display: inline-flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 10px;
-    padding: 0 24px 0 18px;
+    padding: 0 38px 0 18px;
     position: relative;
+}
+.ks-header-ui .tf-select-custom::before {
+    display: none !important;
+    content: none !important;
+}
+.ks-header-ui .tf-select-custom::after {
+    content: "\e918";
+    font-family: "icomoon";
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    line-height: 1;
+    pointer-events: none;
 }
 .ks-header-ui .tf-select-custom .current {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    display: block;
+    width: 100%;
+    padding-right: 8px;
 }
 
 .ks-header-ui .tf-select-custom i,
@@ -158,18 +176,20 @@
     padding: 10px 12px;
     border-radius: 12px;
     cursor: pointer;
-    white-space: nowrap;
+    white-space: normal;
     line-height: 1.35;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    text-overflow: initial;
+    word-break: break-word;
+    min-width: 280px;
 }
 
 .ks-header-ui .select-options li span {
     display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    word-break: normal;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: initial;
+    word-break: break-word;
 }
 .ks-header-ui .select-options li:hover {
     background: rgba(0,0,0,.04);
@@ -177,7 +197,8 @@
 .ks-header-ui .select-category {
     position: relative;
     flex: 0 0 auto;
-    min-width: 210px;
+    min-width: 280px;
+    width: min(360px, 34vw);
 }
 .ks-header-ui .select-options {
     z-index: 1061;
@@ -303,7 +324,7 @@
                             <asp:Repeater ID="rptNavSettori" runat="server">
                                 <ItemTemplate>
                                     <li class="item">
-                                        <a href='<%# Eval("DefaultUrl") %>'><%# Eval("Descrizione") %></a>
+                                        <a class='ks-root-sector-link' href='<%# Eval("DefaultUrl") %>'><%# Eval("Descrizione") %></a>
                                         <div class="sub-menu">
                                             <div class="wrapper-sub-menu">
                                                 <div class="grid-sub-menu">
@@ -529,7 +550,7 @@
 
     function buildSelectOptions(select) {
         if (!select) return [];
-        var links = Array.from(document.querySelectorAll('#ksDesktopCategoriesMenu > .item > a, .ks-home-departments .menu-category-list > .menu-item > .item-link'));
+        var links = Array.from(document.querySelectorAll('.ks-root-sector-link'));
         var items = [{ label: 'Tutte le categorie', value: '', url: '' }];
         links.forEach(function (link) {
             var text = (link.textContent || '').trim();
@@ -558,7 +579,7 @@
         clearAdjacentCustomSelect(select);
         var parent = select.parentElement || select.closest('.select-category');
         if (parent) {
-            parent.querySelectorAll('.tf-select-custom, .select-options, .header-select-option, .nice-select').forEach(function (node) { if (node !== select) node.remove(); });
+            parent.querySelectorAll('.tf-select-custom, .select-options, .header-select-option, .nice-select, [data-ks-generated="1"]').forEach(function (node) { if (node !== select) node.remove(); });
         }
         select.classList.add('hide-select');
         select.style.display = 'none';
@@ -568,7 +589,7 @@
         custom.className = 'tf-select-custom';
         custom.setAttribute('data-ks-generated','1');
         custom.setAttribute('tabindex', '0');
-        custom.innerHTML = '<span class="current">' + escapeHtml(select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : 'Tutte le categorie') + '</span>'; 
+        custom.innerHTML = '<span class="current">' + escapeHtml(select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : 'Tutte le categorie') + '</span>';
         select.insertAdjacentElement('afterend', custom);
 
         var list = document.createElement('ul');
@@ -606,13 +627,14 @@
         });
 
         list.querySelectorAll('li').forEach(function (li, idx) {
+            li.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
             li.addEventListener('click', function (ev) {
                 ev.stopPropagation();
                 if (select.options[idx]) {
                     select.selectedIndex = idx;
                     select.dispatchEvent(new Event('change', { bubbles: true }));
                 }
-                var current = custom.querySelector('.current'); if (current) { current.textContent = li.textContent.trim(); } else { custom.textContent = li.textContent.trim(); }
+                var current = custom.querySelector('.current'); if (current) { current.textContent = (li.textContent || '').replace(/\s+/g,' ').trim(); } else { custom.textContent = (li.textContent || '').replace(/\s+/g,' ').trim(); }
                 custom.classList.remove('active');
                 list.style.display = 'none';
             });

@@ -513,18 +513,7 @@ Partial Class _Default
 
         Dim lowFile As String = BuildLowResHomeFileName(fileName)
         Dim lowPublicVirtual As String = "~/Public/assets/images/articoli/" & HttpUtility.UrlPathEncode(lowFile)
-        Dim lowPublicPhysical As String = SafeMapPath("~/Public/assets/images/articoli/" & lowFile)
-        If Not String.IsNullOrWhiteSpace(lowPublicPhysical) AndAlso File.Exists(lowPublicPhysical) Then
-            Return ResolveUrl(lowPublicVirtual)
-        End If
-
-        Dim publicOriginalVirtual As String = "~/Public/assets/images/articoli/" & HttpUtility.UrlPathEncode(fileName)
-        Dim publicOriginalPhysical As String = SafeMapPath("~/Public/assets/images/articoli/" & fileName)
-        If Not String.IsNullOrWhiteSpace(publicOriginalPhysical) AndAlso File.Exists(publicOriginalPhysical) Then
-            Return ResolveUrl(publicOriginalVirtual)
-        End If
-
-        Return ThemeManager.ProductImageUrl(fileName)
+        Return ResolveUrl(lowPublicVirtual)
     End Function
 
     Protected Function GetHomeProductImageFallback(primaryImg As Object, fallbackImg As Object) As String

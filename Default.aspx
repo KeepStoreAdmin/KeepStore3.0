@@ -320,6 +320,24 @@
             margin: 0 !important;
             padding: 0 !important;
             align-self: center !important;
+            vertical-align: middle !important;
+            line-height: 1 !important;
+        }
+
+        .ks-home-ui .list-product-btn.flex-row li > a,
+        .ks-home-ui .list-product-btn.flex-row li > button {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            vertical-align: middle !important;
+            line-height: 1 !important;
+            top: 0 !important;
+            margin-top: 0 !important;
+        }
+
+        .ks-home-ui .tf-grid-product-item.box-btn-slide-item .nav-swiper {
+            pointer-events: auto !important;
+            cursor: pointer !important;
         }
 
         .ks-home-ui .group-btn {
@@ -1949,6 +1967,11 @@
 
                 window.addEventListener('load', function () {
                     setTimeout(initMiniGridSwipers, 240);
+                    setTimeout(initMiniGridSwipers, 800);
+                });
+
+                window.addEventListener('resize', function () {
+                    setTimeout(initMiniGridSwipers, 180);
                 });
             })();
         </script>

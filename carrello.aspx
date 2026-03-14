@@ -808,7 +808,7 @@
 							</asp:TemplateField>
 							<asp:TemplateField>
 							<ItemTemplate>
-								<img class="ml-2" src='<%# "Public/Pagamenti/" & Eval("Img") %>' title='<%#: Eval("Informazioni") %>' alt="" />
+								<img class="ml-2" src='<%# "/Public/assets/images/pagamenti/" & Eval("Img") %>' title='<%#: Eval("Informazioni") %>' alt="" />
 							</ItemTemplate>
 							</asp:TemplateField>
 							<asp:TemplateField HeaderText="id" InsertVisible="False" SortExpression="id" Visible="False">
@@ -1105,6 +1105,10 @@
     <asp:Label ID="lblTab_Tel" runat="server" />
     <asp:Label ID="lblTab_Telefono" runat="server" />
     <asp:Label ID="lblTab_Utente" runat="server" />
+    <asp:Label ID="lblTab_mail" runat="server" />
+    <asp:Label ID="lblTab_pIva" runat="server" />
+    <asp:Label ID="lblTab_Email2" runat="server" />
+    <asp:Label ID="lblTab_PIVA" runat="server" />
 </asp:Panel>
 </asp:Content>
 

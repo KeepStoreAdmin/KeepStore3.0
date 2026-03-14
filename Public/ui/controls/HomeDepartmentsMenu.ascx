@@ -9,7 +9,7 @@
             <asp:Repeater ID="rptSettoriHome" runat="server" DataSourceID="sdsSettoriHome">
                 <ItemTemplate>
                     <li class="menu-item">
-                        <a href='<%# "articoli.aspx?st=" & Eval("id") %>' class="item-link body-text-3">
+                        <a href='<%# "articoli.aspx?st=" & Eval("id") %>' class="item-link body-text-3 ks-root-sector-link">
                             <span>
                                 <i class="icon icon-monitor"></i>
                                 <%# SafeText(Eval("Descrizione")) %>
@@ -40,7 +40,7 @@
                             </div>
                             <div class="cls-category style-abs abs-2 hover-img d-none d-xl-block">
                                 <a href='<%# "articoli.aspx?st=" & Eval("id") %>' class="img-box img-style d-block">
-                                    <img src='<%# GetSettoreImageUrl(Eval("Img")) %>' data-src='<%# GetSettoreImageUrl(Eval("Img")) %>' alt='<%# SafeText(Eval("Descrizione")) %>' class="lazyload">
+                                    <img src='<%# GetSettoreImageLowUrl(Eval("Img")) %>' data-src='<%# GetSettoreImageLowUrl(Eval("Img")) %>' data-ks-fallback='<%# GetSettoreImageNormalUrl(Eval("Img")) %>' alt='<%# SafeText(Eval("Descrizione")) %>' class="lazyload ks-settore-image">
                                 </a>
                                 <div class="content text-center">
                                     <div class="box-title">
@@ -98,6 +98,17 @@
 <script type="text/javascript">
 (function () {
     document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.ks-settore-image').forEach(function(img){
+            if (!img) return;
+            var fb = img.getAttribute('data-ks-fallback') || '';
+            img.onerror = function(){
+                if (fb && img.getAttribute('src') !== fb) {
+                    img.onerror = null;
+                    img.setAttribute('src', fb);
+                    img.setAttribute('data-src', fb);
+                }
+            };
+        });
         var root = document.querySelector('.ks-home-departments');
         if (!root) return;
         var title = root.querySelector('.title.btn-active');

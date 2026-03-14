@@ -7,7 +7,7 @@
 <div class="ft-inner flex-wrap flex-xl-nowrap">
 <div class="ft-logo">
 <a class="logo-site" href="Default.aspx">
-<img alt="Logo" class="lazyload" decoding="async" height="128" src="<%= ThemeManager.Asset("images/logo/logo.webp") %>" srcset="<%= ThemeManager.Asset("images/logo/logo.webp") %> 328w" width="185"/>
+<img alt="Logo" class="lazyload" decoding="async" height="128" src="/Public/assets/images/logo/logo.webp" srcset="/Public/assets/images/logo/logo.webp 328w" width="185"/>
 </a>
 <div class="method-payment">
 <p>
@@ -15,16 +15,16 @@
                                     </p>
 <ul class="method-list">
 <li>
-<img alt="Payment" src="<%= ThemeManager.Asset("images/payment/visa.svg") %>"/>
+<img alt="Payment" src="/Public/assets/images/pagamenti/visa.svg"/>
 </li>
 <li>
-<img alt="Payment" src="<%= ThemeManager.Asset("images/payment/paypal.svg") %>"/>
+<img alt="Payment" src="/Public/assets/images/pagamenti/paypal.svg"/>
 </li>
 <li>
-<img alt="Payment" src="<%= ThemeManager.Asset("images/payment/discover.svg") %>"/>
+<img alt="Payment" src="/Public/assets/images/pagamenti/discover.svg"/>
 </li>
 <li>
-<img alt="Payment" src="<%= ThemeManager.Asset("images/payment/master.svg") %>"/>
+<img alt="Payment" src="/Public/assets/images/pagamenti/master.svg"/>
 </li>
 </ul>
 </div>
@@ -112,7 +112,7 @@
 <div class="ft-center justify-content-xxl-between">
 <p class="notice text-white justify-content-xxl-between">
 <span class="main-title fw-semibold">
-<img alt="" src="<%= ThemeManager.Asset("images/mail.svg") %>"/>
+<img alt="" src="/Public/assets/images/img/mail.svg"/>
                                     Novita e promozioni KeepStore
                                 </span>
 <span class="body-text-3">
