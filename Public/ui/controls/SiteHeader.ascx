@@ -150,7 +150,7 @@
                     <div class="header-center">
                         <div class="form-search-product style-2 active-container" data-ks-search-form="desktop">
                             <div class="select-category">
-                                <select name="product_cat" id="product_cat" class="dropdown_product_cat">
+                                <select name="product_cat" id="product_cat" class="dropdown_product_cat hide-select" style="display:none !important;">
                                     <option value="">Tutte le categorie</option>
                                 </select>
                             </div>
@@ -170,7 +170,7 @@
                 <div class="col-xl-3 col-md-3 col-5 d-flex align-items-center justify-content-end">
                     <ul class="nav-icon justify-content-end">
                         <li class="nav-account">
-                            <a id="lnkAccount" runat="server" class="link nav-icon-item" href="myaccount.aspx" aria-label="Account">
+                            <a id="lnkAccount" runat="server" class="link nav-icon-item" href="/myaccount.aspx" aria-label="Account">
                                 <span class="icon">
                                     <i class="icon icon-user"></i>
                                 </span>
@@ -296,7 +296,7 @@
         <div class="mb-3">
             <div class="form-search-product style-2 active-container" data-ks-search-form="mobile">
                 <div class="select-category d-none d-sm-block">
-                    <select name="product_cat_mobile" id="product_cat_mobile" class="dropdown_product_cat">
+                    <select name="product_cat_mobile" id="product_cat_mobile" class="dropdown_product_cat hide-select" style="display:none !important;">
                         <option value="">Tutte le categorie</option>
                     </select>
                 </div>
@@ -312,7 +312,7 @@
         </div>
 
         <div class="mb-3">
-            <a id="lnkAccountMobile" runat="server" class="tf-btn btn-line w-100" href="myaccount.aspx">Area personale</a>
+            <a id="lnkAccountMobile" runat="server" class="tf-btn btn-line w-100" href="/myaccount.aspx">Area personale</a>
         </div>
 
         <div class="mb-3">
@@ -529,6 +529,8 @@
             var ean = action ? (action.getAttribute('data-ks-ean') || '') : '';
             var brand = action ? (action.getAttribute('data-ks-brand') || '') : '';
             var desc = action ? (action.getAttribute('data-ks-desc') || '') : '';
+            var longDesc = action ? (action.getAttribute('data-ks-desc-long') || '') : '';
+            var refurbished = action ? (action.getAttribute('data-ks-refurbished') || '0') : '0';
             var code = action ? (action.getAttribute('data-ks-code') || '') : '';
             if (!id || !title) return;
             items.push({
@@ -544,7 +546,8 @@
                 price: (price || '').trim(),
                 url: href,
                 image: img,
-                search: normalize([title, caption, brand, desc, code, ean, id].join(' '))
+                search: normalize([title, caption, brand, desc, longDesc, code, ean, id].join(' ')),
+                refurbished: refurbished
             });
         });
         return uniqBy(items, function (x) { return x.key; });
@@ -615,8 +618,24 @@
         return option ? (option.getAttribute('data-url') || '') : '';
     }
 
+    function findDirectProductMatch(query) {
+        var q = normalize(query);
+        if (!q) return null;
+        var matches = collectProducts().map(function (item) {
+            item._score = scoreItem(item, q);
+            return item;
+        }).filter(function (item) {
+            return item && item.url && item._score >= 130;
+        }).sort(function (a, b) {
+            return b._score - a._score;
+        });
+        return matches.length ? matches[0] : null;
+    }
+
     function buildSearchUrl(query, select) {
         var q = (query || '').trim();
+        var direct = findDirectProductMatch(q);
+        if (direct && direct.url) return direct.url;
         var categoryUrl = selectedCategoryUrl(select);
         if (categoryUrl) {
             if (!q) return categoryUrl;
@@ -624,6 +643,54 @@
             return categoryUrl + glue + 'q=' + encodeURIComponent(q);
         }
         return 'articoli.aspx?q=' + encodeURIComponent(q);
+    }
+
+    function buildProductImageCandidates(rawUrl) {
+        var src = (rawUrl || '').toString().trim();
+        if (!src) return [];
+        src = src.replace(/\\/g, '/');
+        var fileName = src.split('/').pop().split('?')[0].split('#')[0];
+        if (!fileName) return [];
+        var lowFile = fileName.charAt(0) === '_' ? fileName : '_' + fileName;
+        var pathName = (window.location.pathname || '').toLowerCase();
+        var preferLow = !pathName || pathName === '/' || pathName.indexOf('/default.aspx') >= 0 || pathName.indexOf('/carrello.aspx') >= 0;
+        var candidates = preferLow
+            ? ['/Public/assets/images/articoli/' + lowFile, '/Public/assets/images/articoli/' + fileName]
+            : ['/Public/assets/images/articoli/' + fileName, '/Public/assets/images/articoli/' + lowFile];
+        return uniqBy(candidates, function (item) { return item; });
+    }
+
+    function probeImage(url, onOk, onFail) {
+        var probe = new Image();
+        probe.onload = function () { onOk(); };
+        probe.onerror = function () { onFail(); };
+        probe.src = url;
+    }
+
+    function normalizeLegacyProductImages() {
+        var selector = [
+            'img[src*="/Public/images/articoli/"]',
+            'img[src*="/Images/articoli/"]',
+            'img[data-src*="/Public/images/articoli/"]',
+            'img[data-src*="/Images/articoli/"]'
+        ].join(',');
+
+        document.querySelectorAll(selector).forEach(function (img) {
+            if (!img || img.getAttribute('data-ks-normalized') === '1') return;
+            var current = img.getAttribute('data-src') || img.getAttribute('src') || '';
+            var candidates = buildProductImageCandidates(current);
+            if (!candidates.length) return;
+            img.setAttribute('data-ks-normalized', '1');
+            (function tryNext(index) {
+                if (index >= candidates.length) return;
+                probeImage(candidates[index], function () {
+                    if (img.hasAttribute('src')) img.setAttribute('src', candidates[index]);
+                    if (img.hasAttribute('data-src')) img.setAttribute('data-src', candidates[index]);
+                }, function () {
+                    tryNext(index + 1);
+                });
+            })(0);
+        });
     }
 
     function wireForm(opts) {
@@ -738,6 +805,7 @@
         wireForm({ formName: 'desktop', inputId: '<%= tbCerca.ClientID %>', suggestId: 'ksSearchSuggestDesktop', buttonId: '<%= btnSearch.ClientID %>', selectId: 'product_cat' });
         wireForm({ formName: 'mobile', inputId: '<%= tbCercaMobile.ClientID %>', suggestId: 'ksSearchSuggestMobile', buttonId: '<%= btnSearchMobile.ClientID %>', selectId: 'product_cat_mobile' });
         wireDesktopCategories();
+        normalizeLegacyProductImages();
     });
 })();
 </script>

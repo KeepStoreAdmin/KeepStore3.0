@@ -2,7 +2,6 @@ Imports System
 Imports System.Collections.Generic
 Imports System.Configuration
 Imports System.Data
-Imports System.Linq
 Imports System.Text
 Imports System.Web
 Imports System.Web.UI.WebControls
@@ -353,6 +352,19 @@ Partial Class articolo
         litPriceHtml.Text = BuildPriceHtml(prezzoCorrente, prezzoBarrato, inOfferta)
         ' Box prezzo sticky (stesso HTML del prezzo principale)
         litPriceHtml2.Text = litPriceHtml.Text
+
+        Dim isRefurbished As Boolean = (GetRowInt(row, "Ricondizionato", 0) = 1)
+        phRefurbished.Visible = isRefurbished
+        If isRefurbished Then
+            Dim noteRefurbished As String = GetRowString(row, "NoteRicondizionato")
+            If Not String.IsNullOrWhiteSpace(noteRefurbished) Then
+                litRefurbishedNote.Text = "<span class='body-text-3' style='font-weight:500;'>" & Server.HtmlEncode(noteRefurbished) & "</span>"
+            Else
+                litRefurbishedNote.Text = String.Empty
+            End If
+        Else
+            litRefurbishedNote.Text = String.Empty
+        End If
 
         ' Descrizione breve
         Dim shortDesc As String = FirstNonEmpty(GetRowString(row, "Descrizione2"), GetRowString(row, "Sottotitolo"))
@@ -967,21 +979,33 @@ Partial Class articolo
             Return ResolveUrl(s)
         End If
 
+        s = s.Replace("\", "/")
+
+        If s.StartsWith("/Public/images/articoli/", StringComparison.OrdinalIgnoreCase) Then
+            Return "/Public/assets/images/articoli/" & IO.Path.GetFileName(s)
+        End If
+
+        If s.StartsWith("/Images/articoli/", StringComparison.OrdinalIgnoreCase) Then
+            Return "/Public/assets/images/articoli/" & IO.Path.GetFileName(s)
+        End If
+
+        If s.StartsWith("/Public/assets/images/articoli/", StringComparison.OrdinalIgnoreCase) Then
+            Return s
+        End If
+
         If s.StartsWith("/", StringComparison.Ordinal) Then
             Return s
         End If
 
-        ' Path relativo (es. Public/foto/xxx.jpg)
-        If s.IndexOf("/"c) >= 0 OrElse s.IndexOf("\"c) >= 0 Then
-            s = s.Replace("\", "/")
-            If Not s.StartsWith("/", StringComparison.Ordinal) Then
-                s = "/" & s
+        If s.IndexOf("/"c) >= 0 Then
+            Dim fileOnly As String = IO.Path.GetFileName(s)
+            If Not String.IsNullOrWhiteSpace(fileOnly) Then
+                Return ResolveUrl("~/Public/assets/images/articoli/" & fileOnly)
             End If
-            Return s
+            Return "/" & s.TrimStart("/"c)
         End If
 
-        ' Solo filename
-        Return ResolveUrl("~/Public/images/articoli/" & s)
+        Return ResolveUrl("~/Public/assets/images/articoli/" & s)
     End Function
 
     Protected Sub ddlTc_SelectedIndexChanged(sender As Object, e As EventArgs)
@@ -1025,61 +1049,39 @@ Partial Class articolo
         If productId <= 0 Then Exit Sub
 
         Try
-            Dim ids As List(Of Integer) = ReadRecentProductIds(20)
+            Dim ids As New List(Of Integer)()
+            Dim existing As HttpCookie = Request.Cookies("ks_recent")
 
-            ids.RemoveAll(Function(x) x = productId)
-            ids.Insert(0, productId)
-
-            If ids.Count > 20 Then
-                ids.RemoveRange(20, ids.Count - 20)
+            If existing IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(existing.Value) Then
+                Dim raw As String = HttpUtility.UrlDecode(existing.Value)
+                If Not String.IsNullOrWhiteSpace(raw) Then
+                    Dim parts As String() = raw.Split(New Char() {","c}, StringSplitOptions.RemoveEmptyEntries)
+                    For Each part As String In parts
+                        Dim n As Integer
+                        If Integer.TryParse(part.Trim(), n) AndAlso n > 0 AndAlso n <> productId Then
+                            If Not ids.Contains(n) Then
+                                ids.Add(n)
+                            End If
+                        End If
+                    Next
+                End If
             End If
 
-            Dim raw As String = String.Join(",", ids.Select(Function(x) x.ToString()).ToArray())
-            Session("ks_recent") = raw
+            ids.Insert(0, productId)
+            If ids.Count > 10 Then
+                ids.RemoveRange(10, ids.Count - 10)
+            End If
 
             Dim cookie As New HttpCookie("ks_recent")
-            cookie.Value = HttpUtility.UrlEncode(raw)
+            cookie.Value = HttpUtility.UrlEncode(String.Join(",", ids.ToArray()))
             cookie.Path = "/"
             cookie.Expires = DateTime.Now.AddDays(30)
             cookie.HttpOnly = False
             Response.Cookies.Add(cookie)
         Catch
-            ' Best effort: la pagina prodotto non deve rompersi se la scrittura storico fallisce.
+            ' Best effort: la pagina prodotto non deve rompersi se la scrittura cookie fallisce.
         End Try
     End Sub
-
-    Private Function ReadRecentProductIds(maxCount As Integer) As List(Of Integer)
-        Dim ids As New List(Of Integer)()
-
-        MergeRecentProductIds(ids, Convert.ToString(Session("ks_recent")), maxCount)
-
-        Try
-            Dim existing As HttpCookie = Request.Cookies("ks_recent")
-            If existing IsNot Nothing Then
-                MergeRecentProductIds(ids, HttpUtility.UrlDecode(existing.Value), maxCount)
-            End If
-        Catch
-        End Try
-
-        Return ids
-    End Function
-
-    Private Sub MergeRecentProductIds(target As List(Of Integer), raw As String, maxCount As Integer)
-        If target Is Nothing OrElse maxCount <= 0 Then Exit Sub
-        If String.IsNullOrWhiteSpace(raw) Then Exit Sub
-
-        Dim parts As String() = raw.Split(New Char() {","c}, StringSplitOptions.RemoveEmptyEntries)
-        For Each part As String In parts
-            Dim n As Integer
-            If Integer.TryParse(part.Trim(), n) AndAlso n > 0 Then
-                If Not target.Contains(n) Then
-                    target.Add(n)
-                    If target.Count >= maxCount Then Exit For
-                End If
-            End If
-        Next
-    End Sub
-
 
     Private Function BuildProductUrl(id As Integer, tcid As Integer, includeTcid As Boolean) As String
         Dim rel As String = "~/articolo.aspx?id=" & id.ToString()

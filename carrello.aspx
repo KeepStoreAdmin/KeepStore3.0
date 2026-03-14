@@ -11,6 +11,32 @@
     <script src="/Public/assets/keepstore/js/checkout-ui.js" defer></script>
 
 
+<script type="text/javascript">
+        (function(){
+            function normalizeCartImage(img){
+                if(!img) return;
+                var original = img.getAttribute("src") || "";
+                if(!original) return;
+                var filename = original.split("?")[0].split("#")[0].split("/").pop();
+                if(!filename) return;
+                var clean = filename.replace(/^_+/, "");
+                var low = "/Public/assets/images/articoli/_" + clean;
+                var normal = "/Public/assets/images/articoli/" + clean;
+                var step = 0;
+                img.onerror = function(){
+                    step++;
+                    if(step === 1){ img.src = normal; return; }
+                    img.onerror = null;
+                    img.src = original;
+                };
+                img.src = low;
+            }
+            window.ksNormalizeCartProductImages = function(){
+                document.querySelectorAll('.tf-cart-item_product img, .cart-info img').forEach(normalizeCartImage);
+            };
+            document.addEventListener('DOMContentLoaded', window.ksNormalizeCartProductImages);
+        })();
+    </script>
 </asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
 
@@ -32,9 +58,9 @@
                         <div class="inputcontainer">
                             <p style="text-align: center">
                                 <br />
-                                <asp:ImageButton runat="server" ID="ImgBtnDestinazioneSi" ImageUrl="/Public/assets/keepstore/images/keepstore/modalok.svg" TITLE="SI" STYLE="cursor:pointer;" />
+                                <asp:ImageButton runat="server" ID="ImgBtnDestinazioneSi" ImageUrl="/Public/assets/images/keepstore/modalok.svg" TITLE="SI" STYLE="cursor:pointer;" />
                                 &nbsp;
-                                <asp:ImageButton runat="server" ID="ImgBtnDestinazioneNo" ImageUrl="/Public/assets/keepstore/images/keepstore/modalno.svg" TITLE="NO" STYLE="cursor:pointer;" />
+                                <asp:ImageButton runat="server" ID="ImgBtnDestinazioneNo" ImageUrl="/Public/assets/images/keepstore/modalno.svg" TITLE="NO" STYLE="cursor:pointer;" />
                             </p>
                         </div>
                     </div>
@@ -862,11 +888,9 @@
     <asp:Panel ID="PnlSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap">
 							<h5 class="title fw-semibold">Indirizzo di spedizione</h5>
         <table cellspacing="5" border="0" style="border-bottom-style:solid;" width="100%">
-		<% If LstScegliIndirizzo.items.count > 0 Then %>
             <tr>
                 <td style="text-align:left;" class="carrello-td1-step4"><b>Indirizzi registrati:</td>
             </tr>
-		<% end if %>
             <tr>
                 <td style="text-align:left;"><b>Ragione Sociale / Cognome:&nbsp;</b></td>
             </tr>
@@ -894,11 +918,7 @@
 				<!--
                 <asp:Label ID="LblDescrDest" runat="server" Text=""></asp:Label>
                 <br />
-				<% If LstScegliIndirizzo.items.count > 0 Then %>
-                Indirizzi esistenti (seleziona in caso di modifica):<br />
-                <asp:DropDownList runat="server" ID="LstDestinazione" AutoPostBack="True" Style="width:100%"></asp:DropDownList>
-                <br />
-				<% end if %>
+                <asp:DropDownList runat="server" ID="LstDestinazione" AutoPostBack="True" Style="width:100%; display:none;"></asp:DropDownList>
                 <br />
 				-->
                  <table id="tblDestAlter" class="ks-dest-form" cellpadding="1" cellspacing="5" border="0" width="100%" runat="server">

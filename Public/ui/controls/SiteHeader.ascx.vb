@@ -16,10 +16,33 @@ Partial Class SiteHeader
     Private Const DefaultAppleTouchIconVirtual As String = "~/Public/assets/images/favicons/apple-touch-icon.png"
     Private Const DefaultFavicon32Virtual As String = "~/Public/assets/images/favicons/favicon-32x32.png"
     Private Const DefaultFavicon16Virtual As String = "~/Public/assets/images/favicons/favicon-16x16.png"
+    Private Const LoginVirtual As String = "~/login.aspx"
+    Private Const MyAccountVirtual As String = "~/myaccount.aspx"
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         BindLogo()
+        BindAccountLinks()
         RegisterHeadIconsScript()
+    End Sub
+
+    Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As EventArgs) Handles Me.PreRender
+        BindAccountLinks()
+    End Sub
+
+    Private Sub BindAccountLinks()
+        Dim isLogged As Boolean = False
+        Dim loginIdVal As Integer = 0
+
+        If Session("LoginId") IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(Session("LoginId")), loginIdVal) AndAlso loginIdVal > 0 Then
+            isLogged = True
+        ElseIf Session("LoginID") IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(Session("LoginID")), loginIdVal) AndAlso loginIdVal > 0 Then
+            isLogged = True
+        End If
+
+        Dim accountUrl As String = ResolveUrl(If(isLogged, MyAccountVirtual, LoginVirtual))
+
+        If lnkAccount IsNot Nothing Then lnkAccount.HRef = accountUrl
+        If lnkAccountMobile IsNot Nothing Then lnkAccountMobile.HRef = accountUrl
     End Sub
 
     Private Sub BindLogo()

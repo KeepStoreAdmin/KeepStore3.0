@@ -234,6 +234,43 @@
             justify-content: center;
         }
 
+        .ks-home-ui .list-product-btn.flex-row {
+            justify-content: flex-start;
+            margin-left: auto;
+        }
+
+        .ks-home-ui .list-product-btn.flex-row li,
+        .ks-home-ui .list-product-btn li {
+            display: inline-flex;
+        }
+
+        .ks-home-ui .ks-refurbished-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.96);
+            border: 1px solid rgba(0,0,0,.08);
+            box-shadow: 0 10px 20px rgba(0,0,0,.08);
+            font-size: 12px;
+            font-weight: 700;
+            color: #1f2937;
+            z-index: 8;
+        }
+
+        .ks-home-ui .ks-refurbished-badge img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+        }
+
+        .ks-home-ui .ks-refurbished-badge.position-absolute {
+            position: absolute;
+            left: 12px;
+            bottom: 12px;
+        }
+
         .ks-home-ui .card-product .list-product-btn .wishlist.addwishlist .icon {
             color: inherit;
         }
@@ -603,8 +640,9 @@
                                                         </li>
                                                     </ul>
                                                 </div>
-                                                <asp:Literal ID="litDealActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn top-0 end-0", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                                <asp:Literal ID="litDealActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn top-0 end-0", Eval("Ean"), Eval("MarcheDescrizione"), ComposeSearchDescription(Eval("Descrizione2"), Eval("DescrizioneLunga")), Eval("Codice"), Eval("Ricondizionato")) %>' />
                                                 <asp:Literal ID="litDealSaleWrap" runat="server" Text='<%# RenderSaleWrap(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "Promo", "title-sidebar-2", "top-0 start-0 z-5") %>' />
+                                                <asp:Literal ID="litDealRefurb" runat="server" Text='<%# RenderRefurbishedBadge(Eval("Ricondizionato"), "position-absolute") %>' />
                                             </div>
                                             <div class="card-product-info">
                                                 <div class="box-title gap-xl-12">
@@ -727,7 +765,7 @@
                                                             </div>
                                                             <div class="group-btn">
                                                                 <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), ComposeSearchDescription(Eval("Descrizione2"), Eval("DescrizioneLunga")), Eval("Codice"), Eval("Ricondizionato")) %>' />
                                                             </div>
                                                         </div>
                                                     </div>
@@ -801,7 +839,7 @@
                                                     </div>
                                                 </div>
                                                 <div class="ks-inline-actions">
-                                                    <asp:Literal ID="litFeatureCenterActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                                    <asp:Literal ID="litFeatureCenterActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), ComposeSearchDescription(Eval("Descrizione2"), Eval("DescrizioneLunga")), Eval("Codice"), Eval("Ricondizionato")) %>' />
                                                 </div>
                                             </div>
                                         </div>
@@ -828,7 +866,7 @@
                                                             </div>
                                                             <div class="group-btn">
                                                                 <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), ComposeSearchDescription(Eval("Descrizione2"), Eval("DescrizioneLunga")), Eval("Codice"), Eval("Ricondizionato")) %>' />
                                                             </div>
                                                         </div>
                                                     </div>
@@ -864,7 +902,7 @@
                                                             </div>
                                                             <div class="group-btn">
                                                                 <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), ComposeSearchDescription(Eval("Descrizione2"), Eval("DescrizioneLunga")), Eval("Codice"), Eval("Ricondizionato")) %>' />
                                                             </div>
                                                         </div>
                                                     </div>
@@ -913,7 +951,7 @@
                                                     </a>
                                                 </div>
                                                 <div class="ks-inline-actions">
-                                                    <asp:Literal ID="litToprateCenterActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                                    <asp:Literal ID="litToprateCenterActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), ComposeSearchDescription(Eval("Descrizione2"), Eval("DescrizioneLunga")), Eval("Codice"), Eval("Ricondizionato")) %>' />
                                                 </div>
                                             </div>
                                         </div>
@@ -940,7 +978,7 @@
                                                             </div>
                                                             <div class="group-btn">
                                                                 <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), ComposeSearchDescription(Eval("Descrizione2"), Eval("DescrizioneLunga")), Eval("Codice"), Eval("Ricondizionato")) %>' />
                                                             </div>
                                                         </div>
                                                     </div>
@@ -976,7 +1014,7 @@
                                                             </div>
                                                             <div class="group-btn">
                                                                 <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), ComposeSearchDescription(Eval("Descrizione2"), Eval("DescrizioneLunga")), Eval("Codice"), Eval("Ricondizionato")) %>' />
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1026,7 +1064,7 @@
                                                     </a>
                                                 </div>
                                                 <div class="ks-inline-actions">
-                                                    <asp:Literal ID="litOnSaleCenterActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                                    <asp:Literal ID="litOnSaleCenterActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), ComposeSearchDescription(Eval("Descrizione2"), Eval("DescrizioneLunga")), Eval("Codice"), Eval("Ricondizionato")) %>' />
                                                 </div>
                                             </div>
                                         </div>
@@ -1053,7 +1091,7 @@
                                                             </div>
                                                             <div class="group-btn">
                                                                 <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                                                <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), ComposeSearchDescription(Eval("Descrizione2"), Eval("DescrizioneLunga")), Eval("Codice"), Eval("Ricondizionato")) %>' />
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1094,7 +1132,7 @@
                                                 <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
                                                 <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                             </a>
-                                            <asp:Literal ID="litBestActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                            <asp:Literal ID="litBestActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn", Eval("Ean"), Eval("MarcheDescrizione"), ComposeSearchDescription(Eval("Descrizione2"), Eval("DescrizioneLunga")), Eval("Codice"), Eval("Ricondizionato")) %>' />
                                             <asp:Literal ID="litBestSale" runat="server" Text='<%# RenderSaleWrap(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "Promo", "title-sidebar-2") %>' />
                                         </div>
                                         <div class="card-product-info">
@@ -1173,7 +1211,7 @@
                                                                 </div>
                                                                 <div class="group-btn">
                                                                     <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                    <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                                                    <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), ComposeSearchDescription(Eval("Descrizione2"), Eval("DescrizioneLunga")), Eval("Codice"), Eval("Ricondizionato")) %>' />
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1218,7 +1256,7 @@
                                                                 </div>
                                                                 <div class="group-btn">
                                                                     <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                    <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                                                    <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), ComposeSearchDescription(Eval("Descrizione2"), Eval("DescrizioneLunga")), Eval("Codice"), Eval("Ricondizionato")) %>' />
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1263,7 +1301,7 @@
                                                                 </div>
                                                                 <div class="group-btn">
                                                                     <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                    <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                                                    <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), ComposeSearchDescription(Eval("Descrizione2"), Eval("DescrizioneLunga")), Eval("Codice"), Eval("Ricondizionato")) %>' />
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1308,7 +1346,7 @@
                                                                 </div>
                                                                 <div class="group-btn">
                                                                     <p class="price-wrap fw-medium"><%# RenderPricePair(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price price-text fw-medium", "old-price body-md-2 text-main-2") %></p>
-                                                                    <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                                                    <asp:Literal ID="litCardActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn flex-row", Eval("Ean"), Eval("MarcheDescrizione"), ComposeSearchDescription(Eval("Descrizione2"), Eval("DescrizioneLunga")), Eval("Codice"), Eval("Ricondizionato")) %>' />
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1391,7 +1429,7 @@
                                                     <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
                                                     <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                 </a>
-                                                <asp:Literal ID="litRecentActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn", Eval("Ean"), Eval("MarcheDescrizione"), Eval("Descrizione2"), Eval("Codice")) %>' />
+                                                <asp:Literal ID="litRecentActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn", Eval("Ean"), Eval("MarcheDescrizione"), ComposeSearchDescription(Eval("Descrizione2"), Eval("DescrizioneLunga")), Eval("Codice"), Eval("Ricondizionato")) %>' />
                                                 <asp:Literal ID="litRecentSale" runat="server" Text='<%# RenderSaleWrap(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "Promo", "title-sidebar-2") %>' />
                                             </div>
                                             <div class="card-product-info">

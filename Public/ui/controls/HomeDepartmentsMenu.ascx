@@ -10,11 +10,10 @@
                 <ItemTemplate>
                     <li class="menu-item">
                         <a href='<%# "articoli.aspx?st=" & Eval("id") %>' class="item-link body-text-3">
-                            <span class="menu-item-label">
+                            <span>
                                 <i class="icon icon-monitor"></i>
                                 <%# SafeText(Eval("Descrizione")) %>
                             </span>
-                            <i class="icon icon-arrow-right"></i>
                         </a>
                         <div class="sub-menu-container d-flex">
                             <div class="wrapper-sub-menu flex-grow-1">
@@ -62,29 +61,17 @@
             </asp:Repeater>
         </ul>
     </div>
-    <asp:SqlDataSource ID="sdsSettoriHome" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="MySql.Data.MySqlClient" SelectCommand="SELECT id, Descrizione, COALESCE(Predefinito,0) AS Predefinito FROM settori WHERE COALESCE(Abilitato,1)=1 ORDER BY COALESCE(Predefinito,0) DESC, COALESCE(Ordinamento,0), Descrizione LIMIT 14" />
+    <asp:SqlDataSource ID="sdsSettoriHome" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="MySql.Data.MySqlClient" SelectCommand="SELECT id, Descrizione FROM settori WHERE COALESCE(Abilitato,1)=1 ORDER BY COALESCE(Predefinito,0) DESC, COALESCE(Ordinamento,0), Descrizione LIMIT 14" />
 </div>
 <style type="text/css">
 .ks-home-departments .main-nav > .title { cursor: pointer; }
+.ks-home-departments .menu-item { position: relative; }
+.ks-home-departments .menu-item > .sub-menu-container { display: none; }
+@media (min-width: 1200px) {
+    .ks-home-departments .menu-item:hover > .sub-menu-container,
+    .ks-home-departments .menu-item.open > .sub-menu-container { display: flex; }
+}
 .ks-home-departments .menu-category-list { max-height: 560px; overflow: auto; }
-.ks-home-departments .menu-item > .item-link {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-.ks-home-departments .menu-item > .item-link .menu-item-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-}
-.ks-home-departments .menu-item > .item-link > .icon-arrow-right {
-    font-size: 12px;
-}
-.ks-home-departments .menu-item:hover > .sub-menu-container,
-.ks-home-departments .menu-item.open > .sub-menu-container {
-    display: flex;
-}
 .ks-home-departments .grid-sub-menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 28px; }
 .ks-home-departments .sub-nav-link > ul { margin-top: 10px; }
 .ks-home-departments .sub-nav-link li + li { margin-top: 6px; }
@@ -104,8 +91,6 @@
         if (!root) return;
         var title = root.querySelector('.title.btn-active');
         var list = root.querySelector('.menu-category-list');
-        var items = Array.from(root.querySelectorAll('.menu-item'));
-
         if (title && list) {
             title.addEventListener('click', function (ev) {
                 if (window.innerWidth > 1199) return;
@@ -114,41 +99,26 @@
                 title.classList.toggle('active');
             });
         }
-
-        items.forEach(function (item) {
-            var link = item.querySelector(':scope > .item-link');
-            var sub = item.querySelector(':scope > .sub-menu-container');
-            if (!link || !sub) return;
-
+        root.querySelectorAll('.menu-item').forEach(function (item) {
             item.addEventListener('mouseenter', function () {
                 if (window.innerWidth <= 1199) return;
-                items.forEach(function (other) { if (other !== item) other.classList.remove('open'); });
+                root.querySelectorAll('.menu-item.open').forEach(function (other) { if (other !== item) other.classList.remove('open'); });
                 item.classList.add('open');
             });
-
-            link.addEventListener('click', function (ev) {
-                var isMobile = window.innerWidth <= 1199;
-                if (!item.classList.contains('open')) {
-                    ev.preventDefault();
-                    items.forEach(function (other) { if (other !== item) other.classList.remove('open'); });
-                    item.classList.add('open');
-                    if (isMobile) {
-                        title && title.classList.add('active');
-                        list && list.classList.add('active-item');
-                    }
-                    return;
-                }
-                if (isMobile) {
-                    ev.preventDefault();
-                    item.classList.remove('open');
-                }
+            item.addEventListener('mouseleave', function () {
+                if (window.innerWidth <= 1199) return;
+                item.classList.remove('open');
             });
         });
-
-        document.addEventListener('click', function (ev) {
-            if (!ev.target.closest('.ks-home-departments')) {
-                items.forEach(function (item) { item.classList.remove('open'); });
-            }
+        root.querySelectorAll('.menu-item > .item-link').forEach(function (link) {
+            link.addEventListener('click', function (ev) {
+                if (window.innerWidth > 1199) return;
+                var parent = link.closest('.menu-item');
+                var sub = parent ? parent.querySelector('.sub-menu-container') : null;
+                if (!sub) return;
+                ev.preventDefault();
+                parent.classList.toggle('open');
+            });
         });
     });
 })();

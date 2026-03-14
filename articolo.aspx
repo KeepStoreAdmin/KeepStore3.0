@@ -102,6 +102,14 @@
                                 <asp:Literal ID="litNome" runat="server" />
                             </h1>
 
+                            <asp:PlaceHolder ID="phRefurbished" runat="server" Visible="false">
+                                <div class="ks-refurbished-detail">
+                                    <img src="/Public/assets/images/ico/refurbished.png" alt="Ricondizionato" />
+                                    <span>Articolo ricondizionato</span>
+                                    <asp:Literal ID="litRefurbishedNote" runat="server" />
+                                </div>
+                            </asp:PlaceHolder>
+
                             <div class="tf-product-info-desc">
                                 <asp:Literal ID="litShortDesc" runat="server" />
                             </div>

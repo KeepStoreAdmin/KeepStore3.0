@@ -185,6 +185,7 @@ Partial Class _Default
                "vsuperarticoli.Ean, " &
                "vsuperarticoli.Descrizione1, " &
                "vsuperarticoli.Descrizione2, " &
+               "vsuperarticoli.DescrizioneLunga, " &
                "vsuperarticoli.MarcheDescrizione, " &
                "vsuperarticoli.CategorieDescrizione, " &
                "vsuperarticoli.SettoriDescrizione, " &
@@ -205,6 +206,8 @@ Partial Class _Default
                "COALESCE(vsuperarticoli.Vetrina,0) AS Vetrina, " &
                "COALESCE(vsuperarticoli.NListino,0) AS NListino, " &
                "vsuperarticoli.DataCreazione, " &
+               "COALESCE(vsuperarticoli.Ricondizionato,0) AS Ricondizionato, " &
+               "vsuperarticoli.NoteRicondizionato, " &
                "vsuperarticoli.OfferteDataFine " &
                "FROM (" & BuildScopedCatalogQuery(ordineChiuso, currentListino) & ") vsuperarticoli"
     End Function
@@ -228,6 +231,7 @@ Partial Class _Default
                "MAX(v.Ean) AS Ean, " &
                "MAX(v.Descrizione1) AS Descrizione1, " &
                "MAX(v.Descrizione2) AS Descrizione2, " &
+               "MAX(v.DescrizioneLunga) AS DescrizioneLunga, " &
                "MAX(v.MarcheDescrizione) AS MarcheDescrizione, " &
                "MAX(v.CategorieDescrizione) AS CategorieDescrizione, " &
                "MAX(v.SettoriDescrizione) AS SettoriDescrizione, " &
@@ -251,6 +255,8 @@ Partial Class _Default
                "MAX(COALESCE(v.Vetrina,0)) AS Vetrina, " &
                "MAX(COALESCE(v.NListino,0)) AS NListino, " &
                "MAX(v.DataCreazione) AS DataCreazione, " &
+               "MAX(COALESCE(v.Ricondizionato,0)) AS Ricondizionato, " &
+               "MAX(v.NoteRicondizionato) AS NoteRicondizionato, " &
                "MIN(CASE WHEN COALESCE(v.InOfferta,0)=1 THEN v.OfferteDataFine ELSE NULL END) AS OfferteDataFine " &
                "FROM vsuperarticoli v " &
                "LEFT JOIN ( " &
@@ -318,10 +324,10 @@ Partial Class _Default
         ' Per richiesta: il blocco Best Seller eredita la logica visiva della vecchia vetrina / nuovi arrivi.
         Return BuildPooledQuery(baseSelect,
                                 AvailableWhere(False),
-                                "COALESCE(vsuperarticoli.Vetrina,0) DESC, COALESCE(vsuperarticoli.VendutiTotali,0) DESC, COALESCE(vsuperarticoli.DataCreazione,DATE('1000-01-01')) DESC, COALESCE(vsuperarticoli.Visite,0) DESC",
+                                "COALESCE(vsuperarticoli.Vetrina,0) DESC, COALESCE(vsuperarticoli.DataCreazione,DATE('1000-01-01')) DESC, COALESCE(vsuperarticoli.VendutiTotali,0) DESC, COALESCE(vsuperarticoli.Visite,0) DESC",
                                 limit,
                                 4,
-                                "COALESCE(pool_items.Vetrina,0) DESC, COALESCE(pool_items.VendutiTotali,0) DESC, COALESCE(pool_items.DataCreazione,DATE('1000-01-01')) DESC, RAND()")
+                                "COALESCE(pool_items.Vetrina,0) DESC, COALESCE(pool_items.DataCreazione,DATE('1000-01-01')) DESC, COALESCE(pool_items.VendutiTotali,0) DESC, RAND()")
     End Function
 
     Private Function BuildFeatureQuery(baseSelect As String, limit As Integer) As String
@@ -521,18 +527,6 @@ Partial Class _Default
             Return ResolveUrl(publicOriginalVirtual)
         End If
 
-        Dim legacyLowVirtual As String = "~/Public/images/articoli/" & HttpUtility.UrlPathEncode(lowFile)
-        Dim legacyLowPhysical As String = SafeMapPath("~/Public/images/articoli/" & lowFile)
-        If Not String.IsNullOrWhiteSpace(legacyLowPhysical) AndAlso File.Exists(legacyLowPhysical) Then
-            Return ResolveUrl(legacyLowVirtual)
-        End If
-
-        Dim legacyOriginalVirtual As String = "~/Public/images/articoli/" & HttpUtility.UrlPathEncode(fileName)
-        Dim legacyOriginalPhysical As String = SafeMapPath("~/Public/images/articoli/" & fileName)
-        If Not String.IsNullOrWhiteSpace(legacyOriginalPhysical) AndAlso File.Exists(legacyOriginalPhysical) Then
-            Return ResolveUrl(legacyOriginalVirtual)
-        End If
-
         Return ThemeManager.ProductImageUrl(fileName)
     End Function
 
@@ -588,6 +582,25 @@ Partial Class _Default
             Next
         End If
         Return "Prodotto"
+    End Function
+
+    Protected Function ComposeSearchDescription(shortDesc As Object, longDesc As Object) As String
+        Dim s1 As String = Convert.ToString(shortDesc)
+        Dim s2 As String = Convert.ToString(longDesc)
+        If String.IsNullOrWhiteSpace(s1) Then Return If(s2, String.Empty)
+        If String.IsNullOrWhiteSpace(s2) Then Return s1
+        Return s1.Trim() & " " & s2.Trim()
+    End Function
+
+    Protected Function IsRefurbished(value As Object) As Boolean
+        Return SafeInt(value, 0) = 1
+    End Function
+
+    Protected Function RenderRefurbishedBadge(value As Object, Optional extraCss As String = "") As String
+        If Not IsRefurbished(value) Then Return String.Empty
+        Dim cls As String = "ks-refurbished-badge"
+        If Not String.IsNullOrWhiteSpace(extraCss) Then cls &= " " & extraCss.Trim()
+        Return "<span class=""" & HttpUtility.HtmlAttributeEncode(cls) & """><img src=""" & ResolveUrl("~/Public/assets/images/ico/refurbished.png") & """ alt=""Ricondizionato"" /><span>Ricondizionato</span></span>"
     End Function
 
     Protected Function GetCountdownSeconds(endDate As Object) As Integer
@@ -798,7 +811,8 @@ Partial Class _Default
                                             Optional ean As Object = Nothing,
                                             Optional brand As Object = Nothing,
                                             Optional descrizioneBreve As Object = Nothing,
-                                            Optional codice As Object = Nothing) As String
+                                            Optional codice As Object = Nothing,
+                                            Optional ricondizionato As Object = Nothing) As String
         Dim id As Integer = SafeInt(articoloId, 0)
         If id <= 0 Then Return String.Empty
 
@@ -810,6 +824,7 @@ Partial Class _Default
         Dim brandText As String = Convert.ToString(brand)
         Dim descText As String = Convert.ToString(descrizioneBreve)
         Dim codeText As String = Convert.ToString(codice)
+        Dim refurbishedText As String = If(IsRefurbished(ricondizionato), "1", "0")
         Dim tipCss As String = If(Not String.IsNullOrWhiteSpace(wrapperCss) AndAlso (wrapperCss.IndexOf("top-0", StringComparison.OrdinalIgnoreCase) >= 0 OrElse wrapperCss.IndexOf("end-0", StringComparison.OrdinalIgnoreCase) >= 0), " tooltip-left", String.Empty)
 
         Dim sb As New StringBuilder()
