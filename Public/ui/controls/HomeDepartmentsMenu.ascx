@@ -77,12 +77,12 @@
 .ks-home-departments .sub-menu-container { position: absolute; top: 0; left: calc(100% - 1px); min-width: 780px; width: min(980px, calc(100vw - 360px)); display: flex; box-shadow: 0 12px 36px rgba(0,0,0,.12); border: 1px solid var(--gray-5, #e5e7eb); border-radius: 10px; pointer-events: none; opacity: 0; visibility: hidden; transition: all .22s ease-in-out; transform: translateY(10px); z-index: 9999; background-color: #fff; }
 .ks-home-departments .menu-item:hover > .sub-menu-container,
 .ks-home-departments .menu-item.open > .sub-menu-container,
-.ks-home-departments .menu-item:focus-within > .sub-menu-container { transform: translateY(0); opacity: 1; visibility: visible; pointer-events: auto; }
+.ks-home-departments .menu-item:focus-within > .sub-menu-container { transform: translateY(0); opacity: 1; visibility: visible; pointer-events: auto; display: flex; }
 .ks-home-departments .wrapper-sub-menu { padding: 30px; }
 .ks-home-departments .grid-sub-menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 28px; }
 .ks-home-departments .sub-menu-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .ks-home-departments .cls-category .img-box { max-width: 230px; margin: 0 auto; }
-.ks-home-departments .cls-category .img-box img { width: 100%; height: auto; object-fit: contain; }
+.ks-home-departments .cls-category .img-box img { width: 100%; height: auto; object-fit: contain; display:block; }
 @media (max-width: 1399px) {
     .ks-home-departments .sub-menu-container { min-width: 680px; }
 }

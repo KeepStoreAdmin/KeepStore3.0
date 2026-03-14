@@ -4,10 +4,10 @@
                  - Mantiene ID/handler esistenti (imgLogo/imgLogoMobile, tbCerca, btnSearch, mvLogin, rptNavSettori, lblCarrelloCount/lblCarrelloTotale)
                  ============================================================ -->
 <style type="text/css">
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap");
 .ks-header-ui,
 .ks-header-ui * {
-    font-family: "Poppins", serif;
+    font-family: "Inter", serif;
 }
 .ks-header-ui .form-search-product.style-2 {
     position: relative;
@@ -100,12 +100,22 @@
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    padding: 0 18px;
+    padding: 0 24px 0 18px;
+    position: relative;
 }
 .ks-header-ui .tf-select-custom .current {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.ks-header-ui .tf-select-custom i,
+.ks-header-ui .select-category .nice-select {
+    display: none !important;
+}
+.ks-header-ui .tf-select-custom .current {
+    display: block;
+    max-width: 100%;
 }
 .ks-header-ui .tf-select-custom {
     cursor: pointer;
@@ -130,9 +140,9 @@
     position: absolute;
     top: calc(100% + 8px);
     left: 0;
-    min-width: 280px;
+    min-width: max(100%, 320px);
     width: max-content;
-    max-width: 420px;
+    max-width: min(620px, calc(100vw - 40px));
     max-height: 360px;
     overflow: auto;
     padding: 8px;
@@ -148,14 +158,18 @@
     padding: 10px 12px;
     border-radius: 12px;
     cursor: pointer;
-    white-space: normal;
+    white-space: nowrap;
     line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .ks-header-ui .select-options li span {
     display: block;
-    white-space: normal;
-    word-break: break-word;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: normal;
 }
 .ks-header-ui .select-options li:hover {
     background: rgba(0,0,0,.04);
@@ -515,7 +529,7 @@
 
     function buildSelectOptions(select) {
         if (!select) return [];
-        var links = Array.from(document.querySelectorAll('#ksDesktopCategoriesMenu a, .ks-home-departments .menu-category-list a'));
+        var links = Array.from(document.querySelectorAll('#ksDesktopCategoriesMenu > .item > a, .ks-home-departments .menu-category-list > .menu-item > .item-link'));
         var items = [{ label: 'Tutte le categorie', value: '', url: '' }];
         links.forEach(function (link) {
             var text = (link.textContent || '').trim();
@@ -534,6 +548,8 @@
             if (index === 0) option.selected = true;
             select.appendChild(option);
         });
+        select.selectedIndex = 0;
+        select.value = '';
         return items;
     }
 
@@ -542,7 +558,7 @@
         clearAdjacentCustomSelect(select);
         var parent = select.parentElement || select.closest('.select-category');
         if (parent) {
-            parent.querySelectorAll('.tf-select-custom, .select-options, .header-select-option').forEach(function (node) { if (node !== select) node.remove(); });
+            parent.querySelectorAll('.tf-select-custom, .select-options, .header-select-option, .nice-select').forEach(function (node) { if (node !== select) node.remove(); });
         }
         select.classList.add('hide-select');
         select.style.display = 'none';
@@ -552,7 +568,7 @@
         custom.className = 'tf-select-custom';
         custom.setAttribute('data-ks-generated','1');
         custom.setAttribute('tabindex', '0');
-        custom.innerHTML = '<span class="current">' + escapeHtml(select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : 'Tutte le categorie') + '</span><i class="icon-arrow-down"></i>';
+        custom.innerHTML = '<span class="current">' + escapeHtml(select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : 'Tutte le categorie') + '</span>'; 
         select.insertAdjacentElement('afterend', custom);
 
         var list = document.createElement('ul');
@@ -879,9 +895,10 @@
         var myAccountUrl = '<%= ResolveUrl("~/myaccount.aspx") %>';
         var account = document.getElementById('<%= lnkAccount.ClientID %>');
         var accountMobile = document.getElementById('<%= lnkAccountMobile.ClientID %>');
-        var resolvedAccountUrl = (account && account.getAttribute('href')) || loginUrl;
+        var rawHref = (account && account.getAttribute('href')) || '';
+        var resolvedAccountUrl = rawHref.toLowerCase().indexOf('/myaccount.aspx') >= 0 ? myAccountUrl : loginUrl;
         if (account) { account.setAttribute('href', resolvedAccountUrl); }
-        if (accountMobile) { accountMobile.setAttribute('href', (accountMobile.getAttribute('href') || resolvedAccountUrl)); }
+        if (accountMobile) { accountMobile.setAttribute('href', resolvedAccountUrl); }
         document.querySelectorAll('a[href$="Public/ui/controls/login.aspx"],a[href="login.aspx"],a[href="./login.aspx"],a[href="Public/ui/controls/login.aspx"]').forEach(function (link) {
             link.setAttribute('href', resolvedAccountUrl.indexOf('/myaccount.aspx') >= 0 ? myAccountUrl : loginUrl);
         });

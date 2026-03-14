@@ -38,6 +38,8 @@
             document.addEventListener('DOMContentLoaded', window.ksNormalizeCartProductImages);
         })();
     </script>
+
+
 </asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
 
@@ -1084,6 +1086,26 @@
 <br />
     <br />
 	<!-- Controllo se esiste l'immagine -->
+
+<asp:Panel ID="pLegacyCheckoutBindings" runat="server" Visible="false" style="display:none;">
+    <asp:Label ID="lblTab_Cap" runat="server" />
+    <asp:Label ID="lblTab_Cell" runat="server" />
+    <asp:Label ID="lblTab_CF" runat="server" />
+    <asp:Label ID="lblTab_Citta" runat="server" />
+    <asp:Label ID="lblTab_Cognome" runat="server" />
+    <asp:Label ID="lblTab_Email" runat="server" />
+    <asp:Label ID="lblTab_Fax" runat="server" />
+    <asp:Label ID="lblTab_Indirizzo" runat="server" />
+    <asp:Label ID="lblTab_Nazione" runat="server" />
+    <asp:Label ID="lblTab_Nome" runat="server" />
+    <asp:Label ID="lblTab_Piva" runat="server" />
+    <asp:Label ID="lblTab_Provincia" runat="server" />
+    <asp:Label ID="lblTab_RagioneSociale" runat="server" />
+    <asp:Label ID="lblTab_SedeLegale" runat="server" />
+    <asp:Label ID="lblTab_Tel" runat="server" />
+    <asp:Label ID="lblTab_Telefono" runat="server" />
+    <asp:Label ID="lblTab_Utente" runat="server" />
+</asp:Panel>
 </asp:Content>
 
 

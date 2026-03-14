@@ -46,10 +46,10 @@ Partial Class _Default
         sdsTabToprate.SelectCommand = BuildTopViewedQuery(baseSelect, 7)
         sdsTabOnSale.SelectCommand = BuildOnSaleQuery(baseSelect, 7)
 
-        sdsTop20.SelectCommand = BuildTop20Query(baseSelect, 5)
-        sdsFeaturedMini.SelectCommand = BuildFeaturedMiniQuery(baseSelect, 5)
-        sdsTopSellingMini.SelectCommand = BuildTopSellingMiniQuery(baseSelect, 5)
-        sdsOnSaleMini.SelectCommand = BuildOnSaleMiniQuery(baseSelect, 5)
+        sdsTop20.SelectCommand = BuildTop20Query(baseSelect, 10)
+        sdsFeaturedMini.SelectCommand = BuildFeaturedMiniQuery(baseSelect, 10)
+        sdsTopSellingMini.SelectCommand = BuildTopSellingMiniQuery(baseSelect, 10)
+        sdsOnSaleMini.SelectCommand = BuildOnSaleMiniQuery(baseSelect, 10)
 
         EnsureMySqlProvider(sdsDealOfDay)
         EnsureMySqlProvider(sdsBestSeller)
@@ -216,7 +216,7 @@ Partial Class _Default
         Dim listino As Integer = currentListino
         If listino <= 0 Then listino = 1
 
-        Dim wh As String = "dr.TipoRiga = 'A' AND IFNULL(dr.ArticoliId,0) > 0 AND ABS(IFNULL(dr.Qnt,0)) > 0 AND COALESCE(d.TipoDocumentiId,0) > 0"
+        Dim wh As String = "dr.TipoRiga = 'A' AND IFNULL(dr.ArticoliId,0) > 0 AND ABS(IFNULL(dr.Qnt,0)) > 0 AND COALESCE(d.TipoDocumentiId,0) > 0 AND (COALESCE(d.StatiId,0) >= " & ordineChiuso.ToString(CultureInfo.InvariantCulture) & " OR COALESCE(d.Pagato,0) = 1 OR COALESCE(d.Ordine_Web,0) = 1)"
 
         ' La view vsuperarticoli può restituire più righe per lo stesso articolo
         ' (es. varianti / giacenze / listini). In HOME servono card univoche per articolo.
@@ -513,7 +513,18 @@ Partial Class _Default
 
         Dim lowFile As String = BuildLowResHomeFileName(fileName)
         Dim lowPublicVirtual As String = "~/Public/assets/images/articoli/" & HttpUtility.UrlPathEncode(lowFile)
-        Return ResolveUrl(lowPublicVirtual)
+        Dim lowPublicPhysical As String = SafeMapPath("~/Public/assets/images/articoli/" & lowFile)
+        If Not String.IsNullOrWhiteSpace(lowPublicPhysical) AndAlso File.Exists(lowPublicPhysical) Then
+            Return ResolveUrl(lowPublicVirtual)
+        End If
+
+        Dim publicOriginalVirtual As String = "~/Public/assets/images/articoli/" & HttpUtility.UrlPathEncode(fileName)
+        Dim publicOriginalPhysical As String = SafeMapPath("~/Public/assets/images/articoli/" & fileName)
+        If Not String.IsNullOrWhiteSpace(publicOriginalPhysical) AndAlso File.Exists(publicOriginalPhysical) Then
+            Return ResolveUrl(publicOriginalVirtual)
+        End If
+
+        Return ThemeManager.ProductImageUrl(fileName)
     End Function
 
     Protected Function GetHomeProductImageFallback(primaryImg As Object, fallbackImg As Object) As String

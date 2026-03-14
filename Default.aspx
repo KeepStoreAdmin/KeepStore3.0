@@ -162,11 +162,11 @@
             min-height: 54px;
         }
 
-        @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap");
 
         .ks-home-ui,
         .ks-home-ui * {
-            font-family: "Poppins", serif;
+            font-family: "Inter", serif;
         }
 
         .ks-home-ui .flat-title,
@@ -175,11 +175,6 @@
             gap: 12px;
         }
 
-
-        .ks-home-ui,
-        .ks-home-ui * {
-            font-family: "Poppins", sans-serif;
-        }
 
         .ks-home-ui .flat-title h5,
         .ks-home-ui .flat-title .main-title,
@@ -193,7 +188,7 @@
         .ks-home-ui .body-small,
         .ks-home-ui .title-sidebar-2,
         .ks-home-ui .h4 {
-            font-family: "Poppins", sans-serif;
+            font-family: "Poppins", serif;
         }
 
         .ks-home-ui .box-btn-slide {
@@ -282,22 +277,31 @@
         .ks-home-ui .list-product-btn.flex-row {
             flex-wrap: nowrap;
             gap: 10px;
+            align-items: center;
+            justify-content: flex-start;
         }
 
         .ks-home-ui .list-product-btn.flex-row .box-icon,
         .ks-home-ui .list-product-btn.flex-row .add-to-cart,
         .ks-home-ui .list-product-btn.flex-row .btn-icon-action {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
             vertical-align: middle;
             width: 40px;
             height: 40px;
             min-width: 40px;
             min-height: 40px;
-            padding: 0;
-            margin: 0;
+            padding: 0 !important;
+            margin: 0 !important;
             flex: 0 0 40px;
+            position: static !important;
+            top: auto !important;
+            bottom: auto !important;
+            left: auto !important;
+            right: auto !important;
+            transform: none !important;
+            line-height: 1 !important;
         }
 
         .ks-home-ui .list-product-btn.flex-row .add-to-cart i,
@@ -313,6 +317,36 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            margin: 0 !important;
+            padding: 0 !important;
+            align-self: center !important;
+        }
+
+        .ks-home-ui .group-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: nowrap;
+        }
+
+        .ks-home-ui .group-btn > .price-wrap,
+        .ks-home-ui .group-btn > .list-product-btn,
+        .ks-home-ui .group-btn > ul {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            align-self: center !important;
+        }
+
+        .ks-home-ui .list-product-btn.flex-row .icon-cart2,
+        .ks-home-ui .list-product-btn.flex-row .icon-heart2,
+        .ks-home-ui .list-product-btn.flex-row .icon-view,
+        .ks-home-ui .list-product-btn.flex-row .icon-compare1 {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1 !important;
+            transform: none !important;
         }
 
         .ks-home-ui .ks-refurbished-badge {
@@ -349,10 +383,15 @@
 
         .ks-home-ui .ks-refurbished-badge.ks-refurbished-inline {
             position: static;
-            margin-bottom: 10px;
-            width: 30px;
-            height: 30px;
-            padding: 5px;
+            margin: 0 0 0 8px;
+            width: 28px;
+            height: 28px;
+            min-width: 28px;
+            padding: 4px;
+            box-shadow: none;
+            background: transparent;
+            border: 0;
+            vertical-align: middle;
         }
 
         .ks-home-ui .progress-sold.progress {
@@ -368,7 +407,9 @@
             border-radius: 999px;
             min-width: 0;
             min-height: 8px;
-            display: block;
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
         }
 
         .ks-home-ui .main-title,
@@ -785,7 +826,6 @@
                                             <div class="card-product-info">
                                                 <div class="box-title gap-xl-12">
                                                     <div class="d-flex flex-column">
-                                                        <asp:Literal ID="litDealRefurb" runat="server" Text='<%# RenderRefurbishedBadge(Eval("Ricondizionato"), "ks-refurbished-inline") %>' />
                                                         <h6>
                                                             <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="name-product fw-semibold text-secondary link">
                                                                 <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>
@@ -793,7 +833,7 @@
                                                         </h6>
                                                     </div>
                                                     <p class="price-wrap fw-medium">
-                                                        <%# RenderPriceWithSave(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price h4 fw-normal text-primary mb-0", "box-sale-tag") %>
+                                                        <%# RenderPriceWithSave(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "new-price h4 fw-normal text-primary mb-0", "box-sale-tag") %><asp:Literal ID="litDealRefurb" runat="server" Text='<%# RenderRefurbishedBadge(Eval("Ricondizionato"), "ks-refurbished-inline") %>' />
                                                     </p>
                                                 </div>
                                                 <div class="box-infor-detail gap-xl-20">
@@ -1367,7 +1407,7 @@
 
                     <div class="tf-grid-product-item box-btn-slide-item">
                         <div class="flat-title wow fadeInUp" data-wow-delay="0s">
-                            <h5 class="fw-semibold">Featured Products</h5>
+                            <h5 class="fw-semibold">In Evidenza</h5>
                             <div class="box-btn-slide relative">
                                 <div class="swiper-button-prev nav-swiper nav-prev-products"><i class="icon-arrow-left-lg"></i></div>
                                 <div class="swiper-button-next nav-swiper nav-next-products"><i class="icon-arrow-right-lg"></i></div>
@@ -1412,7 +1452,7 @@
 
                     <div class="tf-grid-product-item box-btn-slide-item">
                         <div class="flat-title wow fadeInUp" data-wow-delay="0s">
-                            <h5 class="fw-semibold">Top Selling Product</h5>
+                            <h5 class="fw-semibold">Più Venduti</h5>
                             <div class="box-btn-slide relative">
                                 <div class="swiper-button-prev nav-swiper nav-prev-products"><i class="icon-arrow-left-lg"></i></div>
                                 <div class="swiper-button-next nav-swiper nav-next-products"><i class="icon-arrow-right-lg"></i></div>
@@ -1457,7 +1497,7 @@
 
                     <div class="tf-grid-product-item box-btn-slide-item">
                         <div class="flat-title wow fadeInUp" data-wow-delay="0s">
-                            <h5 class="fw-semibold">On-sale Product</h5>
+                            <h5 class="fw-semibold">In Offerta</h5>
                             <div class="box-btn-slide relative">
                                 <div class="swiper-button-prev nav-swiper nav-prev-products"><i class="icon-arrow-left-lg"></i></div>
                                 <div class="swiper-button-next nav-swiper nav-next-products"><i class="icon-arrow-right-lg"></i></div>
@@ -1850,11 +1890,12 @@
                         var swiperEl = box.querySelector('.tf-sw-products');
                         var wrapper = swiperEl ? swiperEl.querySelector('.swiper-wrapper') : null;
                         if (!swiperEl || !wrapper || swiperEl.getAttribute('data-ks-grid-ready') === '1') return;
-                        var baseList = wrapper.querySelector(':scope > .swiper-slide > .product-list-wrap');
+                        var firstSlide = wrapper.firstElementChild;
+                        var baseList = firstSlide ? firstSlide.querySelector('.product-list-wrap') : null;
                         if (!baseList) return;
                         var items = Array.from(baseList.children || []);
                         if (!items.length) return;
-                        var pageSize = 3;
+                        var pageSize = 5;
                         wrapper.innerHTML = '';
                         for (var i = 0; i < items.length; i += pageSize) {
                             var slide = document.createElement('div');
@@ -1903,7 +1944,11 @@
                     syncWishlistButtons();
                     renderCompare();
                     normalizeHomeProductImages();
-                    initMiniGridSwipers();
+                    setTimeout(initMiniGridSwipers, 120);
+                });
+
+                window.addEventListener('load', function () {
+                    setTimeout(initMiniGridSwipers, 240);
                 });
             })();
         </script>
