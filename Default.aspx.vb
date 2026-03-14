@@ -216,9 +216,11 @@ Partial Class _Default
         Dim listino As Integer = currentListino
         If listino <= 0 Then listino = 1
 
-        Dim wh As String = "dr.TipoRiga = 'A'"
+        Dim wh As String = "dr.TipoRiga = 'A' AND IFNULL(dr.ArticoliId,0) > 0 AND IFNULL(dr.Qnt,0) > 0"
         If ordineChiuso > 0 Then
-            wh &= " AND d.StatiId = " & ordineChiuso.ToString(CultureInfo.InvariantCulture)
+            wh &= " AND (IFNULL(d.StatiId,0) = " & ordineChiuso.ToString(CultureInfo.InvariantCulture) & " OR IFNULL(d.Pagato,0) = 1)"
+        Else
+            wh &= " AND IFNULL(d.Pagato,0) = 1"
         End If
 
         ' La view vsuperarticoli può restituire più righe per lo stesso articolo
@@ -260,8 +262,8 @@ Partial Class _Default
                "MIN(CASE WHEN COALESCE(v.InOfferta,0)=1 THEN v.OfferteDataFine ELSE NULL END) AS OfferteDataFine " &
                "FROM vsuperarticoli v " &
                "LEFT JOIN ( " &
-               "   SELECT dr.ArticoliId AS articoli_id, SUM(IFNULL(dr.Qnt,0)) AS QntTot, " &
-               "          SUM(CASE WHEN YEAR(COALESCE(d.DataDocumento,CURDATE())) = YEAR(CURDATE()) THEN IFNULL(dr.Qnt,0) ELSE 0 END) AS QntAnno " &
+               "   SELECT dr.ArticoliId AS articoli_id, SUM(CASE WHEN IFNULL(dr.Qnt,0) > 0 THEN IFNULL(dr.Qnt,0) ELSE 0 END) AS QntTot, " &
+               "          SUM(CASE WHEN YEAR(COALESCE(d.DataDocumento,CURDATE())) = YEAR(CURDATE()) AND IFNULL(dr.Qnt,0) > 0 THEN IFNULL(dr.Qnt,0) ELSE 0 END) AS QntAnno " &
                "   FROM documentirighe dr " &
                "   INNER JOIN documenti d ON d.id = dr.DocumentiId " &
                "   WHERE " & wh & " " &
@@ -600,7 +602,7 @@ Partial Class _Default
         If Not IsRefurbished(value) Then Return String.Empty
         Dim cls As String = "ks-refurbished-badge"
         If Not String.IsNullOrWhiteSpace(extraCss) Then cls &= " " & extraCss.Trim()
-        Return "<span class=""" & HttpUtility.HtmlAttributeEncode(cls) & """><img src=""" & ResolveUrl("~/Public/assets/images/ico/refurbished.png") & """ alt=""Ricondizionato"" /><span>Ricondizionato</span></span>"
+        Return "<span class=""" & HttpUtility.HtmlAttributeEncode(cls) & """ title=""Ricondizionato""><img src=""" & ResolveUrl("~/Public/assets/images/ico/refurbished.png") & """ alt=""Ricondizionato"" /></span>"
     End Function
 
     Protected Function GetCountdownSeconds(endDate As Object) As Integer
@@ -823,7 +825,9 @@ Partial Class _Default
         Dim eanText As String = Convert.ToString(ean)
         Dim brandText As String = Convert.ToString(brand)
         Dim descText As String = Convert.ToString(descrizioneBreve)
+        If String.IsNullOrWhiteSpace(descText) Then descText = Convert.ToString(descrizione)
         Dim codeText As String = Convert.ToString(codice)
+        Dim descLongText As String = descText
         Dim refurbishedText As String = If(IsRefurbished(ricondizionato), "1", "0")
         Dim tipCss As String = If(Not String.IsNullOrWhiteSpace(wrapperCss) AndAlso (wrapperCss.IndexOf("top-0", StringComparison.OrdinalIgnoreCase) >= 0 OrElse wrapperCss.IndexOf("end-0", StringComparison.OrdinalIgnoreCase) >= 0), " tooltip-left", String.Empty)
 
@@ -858,6 +862,7 @@ Partial Class _Default
         sb.Append(""" data-ks-ean=""").Append(HttpUtility.HtmlAttributeEncode(eanText))
         sb.Append(""" data-ks-brand=""").Append(HttpUtility.HtmlAttributeEncode(brandText))
         sb.Append(""" data-ks-desc=""").Append(HttpUtility.HtmlAttributeEncode(descText))
+        sb.Append(""" data-ks-desc-long=""").Append(HttpUtility.HtmlAttributeEncode(descLongText))
         sb.Append(""" data-ks-code=""").Append(HttpUtility.HtmlAttributeEncode(codeText))
         sb.Append(""" onclick=""return ksHomeCompare(this);"">")
         sb.Append("<i class=""icon icon-compare1""></i><span class=""tooltip"">Confronta</span></a></li>")

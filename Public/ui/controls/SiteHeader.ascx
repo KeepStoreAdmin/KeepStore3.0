@@ -96,12 +96,19 @@
     min-height: 54px;
     display: inline-flex;
     align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+.ks-header-ui .tf-select-custom .current {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .ks-header-ui select.hide-select {
     display: none !important;
 }
 .ks-header-ui .select-options {
-    display: none;
+    display: none !important;
 }
 .ks-header-ui .select-category {
     position: relative;
@@ -150,7 +157,7 @@
                     <div class="header-center">
                         <div class="form-search-product style-2 active-container" data-ks-search-form="desktop">
                             <div class="select-category">
-                                <select name="product_cat" id="product_cat" class="dropdown_product_cat hide-select" style="display:none !important;">
+                                <select name="product_cat" id="product_cat" class="ks-category-native hide-select" style="display:none !important;">
                                     <option value="">Tutte le categorie</option>
                                 </select>
                             </div>
@@ -170,7 +177,7 @@
                 <div class="col-xl-3 col-md-3 col-5 d-flex align-items-center justify-content-end">
                     <ul class="nav-icon justify-content-end">
                         <li class="nav-account">
-                            <a id="lnkAccount" runat="server" class="link nav-icon-item" href="/myaccount.aspx" aria-label="Account">
+                            <a id="lnkAccount" runat="server" class="link nav-icon-item" href="/login.aspx" aria-label="Account">
                                 <span class="icon">
                                     <i class="icon icon-user"></i>
                                 </span>
@@ -296,7 +303,7 @@
         <div class="mb-3">
             <div class="form-search-product style-2 active-container" data-ks-search-form="mobile">
                 <div class="select-category d-none d-sm-block">
-                    <select name="product_cat_mobile" id="product_cat_mobile" class="dropdown_product_cat hide-select" style="display:none !important;">
+                    <select name="product_cat_mobile" id="product_cat_mobile" class="ks-category-native hide-select" style="display:none !important;">
                         <option value="">Tutte le categorie</option>
                     </select>
                 </div>
@@ -312,7 +319,7 @@
         </div>
 
         <div class="mb-3">
-            <a id="lnkAccountMobile" runat="server" class="tf-btn btn-line w-100" href="/myaccount.aspx">Area personale</a>
+            <a id="lnkAccountMobile" runat="server" class="tf-btn btn-line w-100" href="/login.aspx">Area personale</a>
         </div>
 
         <div class="mb-3">
@@ -428,7 +435,7 @@
 
     function clearAdjacentCustomSelect(select) {
         if (!select) return;
-        while (select.nextElementSibling && (select.nextElementSibling.classList.contains('tf-select-custom') || select.nextElementSibling.classList.contains('select-options'))) {
+        while (select.nextElementSibling && (select.nextElementSibling.classList.contains('tf-select-custom') || select.nextElementSibling.classList.contains('select-options') || select.nextElementSibling.hasAttribute('data-ks-generated'))) {
             select.nextElementSibling.remove();
         }
     }
@@ -463,11 +470,13 @@
 
         var custom = document.createElement('div');
         custom.className = 'tf-select-custom';
-        custom.textContent = select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : 'Tutte le categorie';
+        custom.setAttribute('data-ks-generated','1');
+        custom.innerHTML = '<span class="current">' + escapeHtml(select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : 'Tutte le categorie') + '</span><i class="icon icon-chevron-down"></i>' ;
         select.insertAdjacentElement('afterend', custom);
 
         var list = document.createElement('ul');
         list.className = 'select-options';
+        list.setAttribute('data-ks-generated','1');
         Array.from(select.options).forEach(function (option) {
             var li = document.createElement('li');
             li.className = 'link';
@@ -497,7 +506,7 @@
                     select.selectedIndex = idx;
                     select.dispatchEvent(new Event('change', { bubbles: true }));
                 }
-                custom.textContent = li.textContent.trim();
+                var current = custom.querySelector('.current'); if (current) { current.textContent = li.textContent.trim(); } else { custom.textContent = li.textContent.trim(); }
                 custom.classList.remove('active');
                 list.style.display = 'none';
             });
@@ -529,7 +538,7 @@
             var ean = action ? (action.getAttribute('data-ks-ean') || '') : '';
             var brand = action ? (action.getAttribute('data-ks-brand') || '') : '';
             var desc = action ? (action.getAttribute('data-ks-desc') || '') : '';
-            var longDesc = action ? (action.getAttribute('data-ks-desc-long') || '') : '';
+            var longDesc = action ? (action.getAttribute('data-ks-desc-long') || action.getAttribute('data-ks-desc') || '') : '';
             var refurbished = action ? (action.getAttribute('data-ks-refurbished') || '0') : '0';
             var code = action ? (action.getAttribute('data-ks-code') || '') : '';
             if (!id || !title) return;
@@ -546,7 +555,7 @@
                 price: (price || '').trim(),
                 url: href,
                 image: img,
-                search: normalize([title, caption, brand, desc, longDesc, code, ean, id].join(' ')),
+                search: normalize([title, caption, brand, desc, longDesc, code, ean, id, brand + ' ' + title, brand + ' ' + desc].join(' ')),
                 refurbished: refurbished
             });
         });
@@ -574,13 +583,19 @@
         var brand = normalize(item.brand || '');
         var desc = normalize(item.desc || '');
         var title = normalize(item.title || '');
-        if (ean && ean === q) return 150;
-        if (code && code === q) return 145;
-        if (title === q) return 130;
-        if (brand && desc && normalize(brand + ' ' + desc).indexOf(q) >= 0) return 120;
-        if (title.indexOf(q) === 0) return 115;
-        if (text.indexOf(q + ' ') === 0 || text.startsWith(q)) return 105;
-        if (text.indexOf(q) >= 0) return 85;
+        var longDesc = normalize(item.longDesc || '');
+        var brandTitle = normalize([brand, title].join(' '));
+        var brandDesc = normalize([brand, desc, longDesc].join(' '));
+        if (ean && ean === q) return 220;
+        if (code && code === q) return 210;
+        if (title === q) return 195;
+        if (brandTitle === q) return 190;
+        if (brand && desc && brandDesc.indexOf(q) >= 0) return 175;
+        if (brand && title && brandTitle.indexOf(q) >= 0) return 170;
+        if (title.indexOf(q) === 0) return 160;
+        if (desc.indexOf(q) >= 0 || longDesc.indexOf(q) >= 0) return 145;
+        if (text.indexOf(q + ' ') === 0 || text.startsWith(q)) return 135;
+        if (text.indexOf(q) >= 0) return 120;
         return 0;
     }
 
@@ -625,7 +640,7 @@
             item._score = scoreItem(item, q);
             return item;
         }).filter(function (item) {
-            return item && item.url && item._score >= 130;
+            return item && item.url && item._score >= 170;
         }).sort(function (a, b) {
             return b._score - a._score;
         });
@@ -759,6 +774,19 @@
         });
     }
 
+
+    function enforceAccountLinks() {
+        var accountUrl = '<%= ResolveUrl("~/login.aspx") %>';
+        var account = document.getElementById('<%= lnkAccount.ClientID %>');
+        var accountMobile = document.getElementById('<%= lnkAccountMobile.ClientID %>');
+        if (account && account.getAttribute('href') !== accountUrl && account.getAttribute('href') !== '<%= ResolveUrl("~/myaccount.aspx") %>') {
+            account.setAttribute('href', accountUrl);
+        }
+        if (accountMobile && accountMobile.getAttribute('href') !== accountUrl && accountMobile.getAttribute('href') !== '<%= ResolveUrl("~/myaccount.aspx") %>') {
+            accountMobile.setAttribute('href', accountUrl);
+        }
+    }
+
     function wireDesktopCategories() {
         var wrap = document.querySelector('.ks-header-ui .nav-category-wrap');
         if (!wrap) return;
@@ -805,6 +833,7 @@
         wireForm({ formName: 'desktop', inputId: '<%= tbCerca.ClientID %>', suggestId: 'ksSearchSuggestDesktop', buttonId: '<%= btnSearch.ClientID %>', selectId: 'product_cat' });
         wireForm({ formName: 'mobile', inputId: '<%= tbCercaMobile.ClientID %>', suggestId: 'ksSearchSuggestMobile', buttonId: '<%= btnSearchMobile.ClientID %>', selectId: 'product_cat_mobile' });
         wireDesktopCategories();
+        enforceAccountLinks();
         normalizeLegacyProductImages();
     });
 })();

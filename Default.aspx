@@ -226,49 +226,63 @@
             align-items: center;
             gap: 8px;
             flex-wrap: wrap;
+            margin: 0;
+            padding: 0;
         }
 
         .ks-home-ui .list-product-btn .box-icon {
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            padding: 0;
+            line-height: 1;
         }
 
         .ks-home-ui .list-product-btn.flex-row {
             justify-content: flex-start;
+            align-items: center;
             margin-left: auto;
         }
 
         .ks-home-ui .list-product-btn.flex-row li,
         .ks-home-ui .list-product-btn li {
             display: inline-flex;
+            align-items: center;
         }
 
         .ks-home-ui .ks-refurbished-badge {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 6px 10px;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            padding: 6px;
             border-radius: 999px;
-            background: rgba(255,255,255,.96);
+            background: rgba(255,255,255,.98);
             border: 1px solid rgba(0,0,0,.08);
             box-shadow: 0 10px 20px rgba(0,0,0,.08);
-            font-size: 12px;
-            font-weight: 700;
-            color: #1f2937;
             z-index: 8;
         }
 
         .ks-home-ui .ks-refurbished-badge img {
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             object-fit: contain;
+        }
+
+        .ks-home-ui .ks-refurbished-badge span {
+            display: none !important;
         }
 
         .ks-home-ui .ks-refurbished-badge.position-absolute {
             position: absolute;
-            left: 12px;
-            bottom: 12px;
+            top: 12px;
+            right: 12px;
+            left: auto;
+            bottom: auto;
         }
 
         .ks-home-ui .card-product .list-product-btn .wishlist.addwishlist .icon {

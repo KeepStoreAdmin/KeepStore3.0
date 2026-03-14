@@ -66,10 +66,12 @@
 <style type="text/css">
 .ks-home-departments .main-nav > .title { cursor: pointer; }
 .ks-home-departments .menu-item { position: relative; }
-.ks-home-departments .menu-item > .sub-menu-container { display: none; }
+.ks-home-departments .menu-item > .sub-menu-container { display: none; z-index: 30; }
 @media (min-width: 1200px) {
+    .ks-home-departments .menu-category-list { max-height: none !important; overflow: visible !important; }
     .ks-home-departments .menu-item:hover > .sub-menu-container,
-    .ks-home-departments .menu-item.open > .sub-menu-container { display: flex; }
+    .ks-home-departments .menu-item.open > .sub-menu-container,
+    .ks-home-departments .menu-item:focus-within > .sub-menu-container { display: flex !important; }
 }
 .ks-home-departments .menu-category-list { max-height: 560px; overflow: auto; }
 .ks-home-departments .grid-sub-menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 28px; }
@@ -99,17 +101,29 @@
                 title.classList.toggle('active');
             });
         }
+        function openDesktopItem(item) {
+            if (!item || window.innerWidth <= 1199) return;
+            root.querySelectorAll('.menu-item.open').forEach(function (other) { if (other !== item) other.classList.remove('open'); });
+            item.classList.add('open');
+        }
+        function closeDesktopItems() {
+            if (window.innerWidth <= 1199) return;
+            root.querySelectorAll('.menu-item.open').forEach(function (item) { item.classList.remove('open'); });
+        }
         root.querySelectorAll('.menu-item').forEach(function (item) {
-            item.addEventListener('mouseenter', function () {
-                if (window.innerWidth <= 1199) return;
-                root.querySelectorAll('.menu-item.open').forEach(function (other) { if (other !== item) other.classList.remove('open'); });
-                item.classList.add('open');
-            });
-            item.addEventListener('mouseleave', function () {
-                if (window.innerWidth <= 1199) return;
-                item.classList.remove('open');
-            });
+            item.addEventListener('mouseenter', function () { openDesktopItem(item); });
+            item.addEventListener('mouseover', function () { openDesktopItem(item); });
+            var trigger = item.querySelector('.item-link');
+            if (trigger) {
+                trigger.addEventListener('mousemove', function () { openDesktopItem(item); });
+                trigger.addEventListener('focus', function () { openDesktopItem(item); });
+            }
+            var sub = item.querySelector('.sub-menu-container');
+            if (sub) {
+                sub.addEventListener('mouseenter', function () { openDesktopItem(item); });
+            }
         });
+        root.addEventListener('mouseleave', function () { closeDesktopItems(); });
         root.querySelectorAll('.menu-item > .item-link').forEach(function (link) {
             link.addEventListener('click', function (ev) {
                 if (window.innerWidth > 1199) return;

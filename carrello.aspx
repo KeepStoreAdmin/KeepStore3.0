@@ -58,9 +58,9 @@
                         <div class="inputcontainer">
                             <p style="text-align: center">
                                 <br />
-                                <asp:ImageButton runat="server" ID="ImgBtnDestinazioneSi" ImageUrl="/Public/assets/images/keepstore/modalok.svg" TITLE="SI" STYLE="cursor:pointer;" />
+                                <asp:ImageButton runat="server" ID="ImgBtnDestinazioneSi" ImageUrl="/Public/assets/images/ico/modalok.svg" TITLE="SI" STYLE="cursor:pointer;" />
                                 &nbsp;
-                                <asp:ImageButton runat="server" ID="ImgBtnDestinazioneNo" ImageUrl="/Public/assets/images/keepstore/modalno.svg" TITLE="NO" STYLE="cursor:pointer;" />
+                                <asp:ImageButton runat="server" ID="ImgBtnDestinazioneNo" ImageUrl="/Public/assets/images/ico/modalno.svg" TITLE="NO" STYLE="cursor:pointer;" />
                             </p>
                         </div>
                     </div>
@@ -889,7 +889,10 @@
 							<h5 class="title fw-semibold">Indirizzo di spedizione</h5>
         <table cellspacing="5" border="0" style="border-bottom-style:solid;" width="100%">
             <tr>
-                <td style="text-align:left;" class="carrello-td1-step4"><b>Indirizzi registrati:</td>
+                <td style="text-align:left;" class="carrello-td1-step4"><b>Indirizzi registrati:</b></td>
+                <td colspan="2" style="text-align:left;">
+                    <asp:DropDownList ID="LstScegliIndirizzo" runat="server" CssClass="form-select ks-form-select" />
+                </td>
             </tr>
             <tr>
                 <td style="text-align:left;"><b>Ragione Sociale / Cognome:&nbsp;</b></td>

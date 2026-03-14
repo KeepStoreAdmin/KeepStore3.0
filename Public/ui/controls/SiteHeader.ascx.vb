@@ -16,8 +16,8 @@ Partial Class SiteHeader
     Private Const DefaultAppleTouchIconVirtual As String = "~/Public/assets/images/favicons/apple-touch-icon.png"
     Private Const DefaultFavicon32Virtual As String = "~/Public/assets/images/favicons/favicon-32x32.png"
     Private Const DefaultFavicon16Virtual As String = "~/Public/assets/images/favicons/favicon-16x16.png"
-    Private Const LoginVirtual As String = "~/login.aspx"
-    Private Const MyAccountVirtual As String = "~/myaccount.aspx"
+    Private Const LoginVirtual As String = "/login.aspx"
+    Private Const MyAccountVirtual As String = "/myaccount.aspx"
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         BindLogo()
@@ -39,10 +39,16 @@ Partial Class SiteHeader
             isLogged = True
         End If
 
-        Dim accountUrl As String = ResolveUrl(If(isLogged, MyAccountVirtual, LoginVirtual))
+        Dim accountUrl As String = If(isLogged, MyAccountVirtual, LoginVirtual)
 
-        If lnkAccount IsNot Nothing Then lnkAccount.HRef = accountUrl
-        If lnkAccountMobile IsNot Nothing Then lnkAccountMobile.HRef = accountUrl
+        If lnkAccount IsNot Nothing Then
+            lnkAccount.HRef = accountUrl
+            lnkAccount.Attributes("href") = accountUrl
+        End If
+        If lnkAccountMobile IsNot Nothing Then
+            lnkAccountMobile.HRef = accountUrl
+            lnkAccountMobile.Attributes("href") = accountUrl
+        End If
     End Sub
 
     Private Sub BindLogo()
@@ -90,14 +96,6 @@ Partial Class SiteHeader
 
         Dim lower As String = u.ToLowerInvariant()
 
-        If lower.Contains("/public/assets/keepstore/images/") Then
-            u = ReplaceInsensitive(u, "/Public/assets/keepstore/images/", "/Public/assets/images/logo/")
-            lower = u.ToLowerInvariant()
-        End If
-        If lower.Contains("/public/assets/keepstore/img/") Then
-            u = ReplaceInsensitive(u, "/Public/assets/keepstore/img/", "/Public/assets/images/logo/")
-            lower = u.ToLowerInvariant()
-        End If
         If lower.Contains("/public/assets/images/favicons/") Then
             Dim logoFile As String = Path.GetFileName(u)
             If Not String.IsNullOrWhiteSpace(logoFile) Then
