@@ -216,7 +216,7 @@ Partial Class _Default
         Dim listino As Integer = currentListino
         If listino <= 0 Then listino = 1
 
-        Dim wh As String = "dr.TipoRiga = 'A' AND IFNULL(dr.ArticoliId,0) > 0 AND IFNULL(dr.Qnt,0) > 0 AND IFNULL(d.UtentiId,0) > 0"
+        Dim wh As String = "dr.TipoRiga = 'A' AND IFNULL(dr.ArticoliId,0) > 0 AND ABS(IFNULL(dr.Qnt,0)) > 0 AND COALESCE(d.TipoDocumentiId,0) > 0"
 
         ' La view vsuperarticoli può restituire più righe per lo stesso articolo
         ' (es. varianti / giacenze / listini). In HOME servono card univoche per articolo.
@@ -257,8 +257,8 @@ Partial Class _Default
                "MIN(CASE WHEN COALESCE(v.InOfferta,0)=1 THEN v.OfferteDataFine ELSE NULL END) AS OfferteDataFine " &
                "FROM vsuperarticoli v " &
                "LEFT JOIN ( " &
-               "   SELECT dr.ArticoliId AS articoli_id, SUM(IFNULL(dr.Qnt,0)) AS QntTot, " &
-               "          SUM(CASE WHEN COALESCE(YEAR(d.DataDocumento), YEAR(STR_TO_DATE(CONCAT(d.Anno,'-12-31'), '%Y-%m-%d')), YEAR(CURDATE())) = YEAR(CURDATE()) THEN IFNULL(dr.Qnt,0) ELSE 0 END) AS QntAnno " &
+               "   SELECT dr.ArticoliId AS articoli_id, SUM(ABS(IFNULL(dr.Qnt,0))) AS QntTot, " &
+               "          SUM(CASE WHEN YEAR(COALESCE(d.DataDocumento, STR_TO_DATE(CONCAT(COALESCE(d.Anno, YEAR(CURDATE())),'-12-31'), '%Y-%m-%d'))) = YEAR(CURDATE()) THEN ABS(IFNULL(dr.Qnt,0)) ELSE 0 END) AS QntAnno " &
                "   FROM documentirighe dr " &
                "   INNER JOIN documenti d ON d.id = dr.DocumentiId " &
                "   WHERE " & wh & " " &
@@ -513,15 +513,26 @@ Partial Class _Default
 
         Dim lowFile As String = BuildLowResHomeFileName(fileName)
         Dim lowPublicVirtual As String = "~/Public/assets/images/articoli/" & HttpUtility.UrlPathEncode(lowFile)
-        Dim lowPublicPhysical As String = SafeMapPath("~/Public/assets/images/articoli/" & lowFile)
-        If Not String.IsNullOrWhiteSpace(lowPublicPhysical) AndAlso File.Exists(lowPublicPhysical) Then
-            Return ResolveUrl(lowPublicVirtual)
+        Return ResolveUrl(lowPublicVirtual)
+    End Function
+
+    Protected Function GetHomeProductImageFallback(primaryImg As Object, fallbackImg As Object) As String
+        Dim fileName As String = ResolveImageFileName(primaryImg, fallbackImg)
+        If String.IsNullOrWhiteSpace(fileName) Then
+            Return ThemeManager.ProductImageUrl(String.Empty)
         End If
 
         Dim publicOriginalVirtual As String = "~/Public/assets/images/articoli/" & HttpUtility.UrlPathEncode(fileName)
         Dim publicOriginalPhysical As String = SafeMapPath("~/Public/assets/images/articoli/" & fileName)
         If Not String.IsNullOrWhiteSpace(publicOriginalPhysical) AndAlso File.Exists(publicOriginalPhysical) Then
             Return ResolveUrl(publicOriginalVirtual)
+        End If
+
+        Dim lowFile As String = BuildLowResHomeFileName(fileName)
+        Dim lowPublicVirtual As String = "~/Public/assets/images/articoli/" & HttpUtility.UrlPathEncode(lowFile)
+        Dim lowPublicPhysical As String = SafeMapPath("~/Public/assets/images/articoli/" & lowFile)
+        If Not String.IsNullOrWhiteSpace(lowPublicPhysical) AndAlso File.Exists(lowPublicPhysical) Then
+            Return ResolveUrl(lowPublicVirtual)
         End If
 
         Return ThemeManager.ProductImageUrl(fileName)
@@ -656,6 +667,7 @@ Partial Class _Default
         If total <= 0 Then Return 0
 
         Dim perc As Integer = CInt(Math.Round((sold * 100D) / total, 0, MidpointRounding.AwayFromZero))
+        If sold > 0 AndAlso perc < 1 Then perc = 1
         If perc < 0 Then perc = 0
         If perc > 100 Then perc = 100
         Return perc
@@ -859,6 +871,7 @@ Partial Class _Default
         sb.Append(""" data-ks-desc=""").Append(HttpUtility.HtmlAttributeEncode(descText))
         sb.Append(""" data-ks-desc-long=""").Append(HttpUtility.HtmlAttributeEncode(descLongText))
         sb.Append(""" data-ks-code=""").Append(HttpUtility.HtmlAttributeEncode(codeText))
+        sb.Append(""" data-ks-refurbished=""").Append(HttpUtility.HtmlAttributeEncode(refurbishedText))
         sb.Append(""" onclick=""return ksHomeCompare(this);"">")
         sb.Append("<i class=""icon icon-compare1""></i><span class=""tooltip"">Confronta</span></a></li>")
 

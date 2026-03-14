@@ -766,9 +766,16 @@
 			<div class="col-12 col-md-6">
 				<asp:Panel ID="pAssicurazione" runat="server" Width="100%"  Visible="true" style="overflow:hidden; margin-bottom: 15px"  CssClass="wrap">
 					<h5 class="title fw-semibold">Assicurazione</h5>
-                        <div class="d-flex align-items-center justify-content-between gap-3 py-2">
-                            <span class="body-text-3">Copertura spedizione</span>
+                        <div class="d-flex align-items-center justify-content-between gap-3 py-2 flex-wrap">
+                            <label class="d-inline-flex align-items-center gap-2 m-0 body-text-3" for="<%= cbAssicurazione.ClientID %>">
+                                <asp:CheckBox ID="cbAssicurazione" runat="server" AutoPostBack="True" />
+                                <span>Aggiungi assicurazione spedizione</span>
+                            </label>
                             <span class="text-primary fw-semibold"><asp:Label ID="lblAssicurazione" runat="server" Text="€ 0,00" /></span>
+                        </div>
+                        <div class="d-none">
+                            <asp:CheckBox ID="cbContrassegno" runat="server" AutoPostBack="True" />
+                            <asp:Label ID="lblContrassegno" runat="server" Text="€ 0,00" />
                         </div>
 					<table cellpadding="1" width="100%">
 					</table>

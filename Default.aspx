@@ -175,6 +175,27 @@
             gap: 12px;
         }
 
+
+        .ks-home-ui,
+        .ks-home-ui * {
+            font-family: "Poppins", sans-serif;
+        }
+
+        .ks-home-ui .flat-title h5,
+        .ks-home-ui .flat-title .main-title,
+        .ks-home-ui .name-product,
+        .ks-home-ui .caption,
+        .ks-home-ui .price-text,
+        .ks-home-ui .price-text-2,
+        .ks-home-ui .text-avaiable,
+        .ks-home-ui .body-text-3,
+        .ks-home-ui .body-md-2,
+        .ks-home-ui .body-small,
+        .ks-home-ui .title-sidebar-2,
+        .ks-home-ui .h4 {
+            font-family: "Poppins", sans-serif;
+        }
+
         .ks-home-ui .box-btn-slide {
             display: flex;
             align-items: center;
@@ -205,6 +226,11 @@
 
         .ks-home-ui .box-btn-slide .nav-swiper i {
             font-size: 18px;
+        }
+
+        .ks-home-ui .box-btn-slide .nav-swiper {
+            cursor: pointer;
+            pointer-events: auto;
         }
 
         .ks-home-ui .card-product .price-wrap {
@@ -265,11 +291,28 @@
             align-items: center;
             justify-content: center;
             vertical-align: middle;
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            min-height: 40px;
+            padding: 0;
+            margin: 0;
+            flex: 0 0 40px;
         }
 
         .ks-home-ui .list-product-btn.flex-row .add-to-cart i,
         .ks-home-ui .list-product-btn.flex-row .btn-icon-action i {
             line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ks-home-ui .list-product-btn.flex-row li {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .ks-home-ui .ks-refurbished-badge {
@@ -304,6 +347,14 @@
             bottom: auto;
         }
 
+        .ks-home-ui .ks-refurbished-badge.ks-refurbished-inline {
+            position: static;
+            margin-bottom: 10px;
+            width: 30px;
+            height: 30px;
+            padding: 5px;
+        }
+
         .ks-home-ui .progress-sold.progress {
             height: 8px;
             border-radius: 999px;
@@ -313,7 +364,11 @@
 
         .ks-home-ui .progress-bar.bg-primary {
             background: #ff3d3d !important;
+            background-color: #ff3d3d !important;
             border-radius: 999px;
+            min-width: 0;
+            min-height: 8px;
+            display: block;
         }
 
         .ks-home-ui .main-title,
@@ -326,14 +381,33 @@
 
         .ks-home-ui .name-product {
             font-size: 17px;
-            line-height: 1.35;
+            line-height: 1.42;
             font-weight: 600;
+        }
+
+        .ks-home-ui .card-product.style-row .name-product {
+            font-size: 15px;
+            line-height: 1.45;
         }
 
         .ks-home-ui .caption,
         .ks-home-ui .text-avaiable.caption {
             font-size: 13px;
             line-height: 1.45;
+        }
+
+        .ks-home-ui .price-text,
+        .ks-home-ui .new-price.price-text,
+        .ks-home-ui .new-price.h4 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .ks-home-ui .box-sale-wrap .small-text {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
         }
 
         .ks-home-ui .card-product .list-product-btn .wishlist.addwishlist .icon {
@@ -707,11 +781,11 @@
                                                 </div>
                                                 <asp:Literal ID="litDealActions" runat="server" Text='<%# RenderProductActions(Eval("Articoliid"), Eval("Descrizione1"), Eval("Img1"), Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "list-product-btn top-0 end-0", Eval("Ean"), Eval("MarcheDescrizione"), ComposeSearchDescription(Eval("Descrizione2"), Eval("DescrizioneLunga")), Eval("Codice"), Eval("Ricondizionato")) %>' />
                                                 <asp:Literal ID="litDealSaleWrap" runat="server" Text='<%# RenderSaleWrap(Eval("PrezzoMostrato"), Eval("PrezzoPromoMostrato"), Eval("InOfferta"), "Promo", "title-sidebar-2", "top-0 start-0 z-5") %>' />
-                                                <asp:Literal ID="litDealRefurb" runat="server" Text='<%# RenderRefurbishedBadge(Eval("Ricondizionato"), "position-absolute") %>' />
-                                            </div>
+                                                                                            </div>
                                             <div class="card-product-info">
                                                 <div class="box-title gap-xl-12">
                                                     <div class="d-flex flex-column">
+                                                        <asp:Literal ID="litDealRefurb" runat="server" Text='<%# RenderRefurbishedBadge(Eval("Ricondizionato"), "ks-refurbished-inline") %>' />
                                                         <h6>
                                                             <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="name-product fw-semibold text-secondary link">
                                                                 <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>
@@ -1754,9 +1828,82 @@
                     }
                 });
 
+                function normalizeHomeProductImages() {
+                    document.querySelectorAll('.ks-home-ui img[src*="/Public/assets/images/articoli/_"], .ks-home-ui img[data-src*="/Public/assets/images/articoli/_"]').forEach(function (img) {
+                        if (!img || img.getAttribute('data-ks-home-lowres') === '1') return;
+                        img.setAttribute('data-ks-home-lowres', '1');
+                        var fallback = (img.getAttribute('data-src') || img.getAttribute('src') || '').replace('/Public/assets/images/articoli/_', '/Public/assets/images/articoli/');
+                        img.onerror = function () {
+                            if (!fallback || fallback === img.getAttribute('src')) {
+                                img.onerror = null;
+                                return;
+                            }
+                            img.onerror = null;
+                            img.setAttribute('src', fallback);
+                            img.setAttribute('data-src', fallback);
+                        };
+                    });
+                }
+
+                function initMiniGridSwipers() {
+                    document.querySelectorAll('.ks-home-ui .tf-grid-product-item.box-btn-slide-item').forEach(function (box) {
+                        var swiperEl = box.querySelector('.tf-sw-products');
+                        var wrapper = swiperEl ? swiperEl.querySelector('.swiper-wrapper') : null;
+                        if (!swiperEl || !wrapper || swiperEl.getAttribute('data-ks-grid-ready') === '1') return;
+                        var baseList = wrapper.querySelector(':scope > .swiper-slide > .product-list-wrap');
+                        if (!baseList) return;
+                        var items = Array.from(baseList.children || []);
+                        if (!items.length) return;
+                        var pageSize = 3;
+                        wrapper.innerHTML = '';
+                        for (var i = 0; i < items.length; i += pageSize) {
+                            var slide = document.createElement('div');
+                            slide.className = 'swiper-slide';
+                            var ul = document.createElement('ul');
+                            ul.className = 'product-list-wrap';
+                            items.slice(i, i + pageSize).forEach(function (node) { ul.appendChild(node); });
+                            slide.appendChild(ul);
+                            wrapper.appendChild(slide);
+                        }
+                        swiperEl.setAttribute('data-ks-grid-ready', '1');
+                        var prev = box.querySelector('.nav-prev-products');
+                        var next = box.querySelector('.nav-next-products');
+                        var pag = box.querySelector('.sw-pagination-products');
+                        if (window.Swiper) {
+                            if (swiperEl.swiper && typeof swiperEl.swiper.destroy === 'function') {
+                                try { swiperEl.swiper.destroy(true, true); } catch (e) { }
+                            }
+                            new Swiper(swiperEl, {
+                                slidesPerView: 1,
+                                spaceBetween: 20,
+                                watchOverflow: true,
+                                observer: true,
+                                observeParents: true,
+                                navigation: { prevEl: prev, nextEl: next },
+                                pagination: pag ? { el: pag, clickable: true } : undefined,
+                                breakpoints: {
+                                    0: { allowTouchMove: true },
+                                    992: { allowTouchMove: false }
+                                }
+                            });
+                        } else {
+                            var slides = Array.from(wrapper.children);
+                            var index = 0;
+                            function showSlide(idx) {
+                                slides.forEach(function (slide, i) { slide.style.display = i === idx ? '' : 'none'; });
+                            }
+                            showSlide(index);
+                            if (prev) prev.addEventListener('click', function (ev) { ev.preventDefault(); index = (index - 1 + slides.length) % slides.length; showSlide(index); });
+                            if (next) next.addEventListener('click', function (ev) { ev.preventDefault(); index = (index + 1) % slides.length; showSlide(index); });
+                        }
+                    });
+                }
+
                 document.addEventListener('DOMContentLoaded', function () {
                     syncWishlistButtons();
                     renderCompare();
+                    normalizeHomeProductImages();
+                    initMiniGridSwipers();
                 });
             })();
         </script>

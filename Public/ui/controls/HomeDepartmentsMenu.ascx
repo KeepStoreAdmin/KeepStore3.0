@@ -65,16 +65,16 @@
 </div>
 <style type="text/css">
 .ks-home-departments { position: relative; z-index: 35; }
-.ks-home-departments .main-nav { position: relative; }
+.ks-home-departments .main-nav { position: relative; overflow: visible !important; }
 .ks-home-departments .title { cursor: pointer; }
-.ks-home-departments .menu-category-list { border: 1px solid var(--gray-5, #e5e7eb); border-top: 0; border-radius: 0 0 10px 10px; position: relative; max-height: none; overflow: visible; background: #fff; }
+.ks-home-departments .menu-category-list { border: 1px solid var(--gray-5, #e5e7eb); border-top: 0; border-radius: 0 0 10px 10px; position: relative; max-height: none; overflow: visible !important; overflow-x: visible !important; overflow-y: visible !important; background: #fff; }
 .ks-home-departments .menu-item { position: relative; }
 .ks-home-departments .item-link { padding: 0 18px; position: relative; display: flex; }
 .ks-home-departments .item-link > span { padding: 15px 0 14px; display: flex; gap: 6px; align-items: center; width: 100%; position: relative; }
 .ks-home-departments .item-link::after { content: "\e919"; position: absolute; font-family: "icomoon"; right: 18px; top: 50%; transform: translateY(-50%); }
 .ks-home-departments .menu-item:not(:last-child) .item-link > span { border-bottom: 1px solid var(--line-2, #ececec); }
 .ks-home-departments .menu-item:hover .item-link { color: var(--primary); }
-.ks-home-departments .sub-menu-container { position: absolute; top: 0; left: calc(100% - 1px); min-width: 780px; width: min(980px, calc(100vw - 360px)); display: flex; box-shadow: 0 4px 8px rgba(0,0,0,.05); border: 1px solid var(--gray-5, #e5e7eb); border-radius: 10px; pointer-events: none; opacity: 0; visibility: hidden; transition: all .3s ease-in-out; transform: translateY(10px); z-index: 999; background-color: #fff; }
+.ks-home-departments .sub-menu-container { position: absolute; top: 0; left: calc(100% - 1px); min-width: 780px; width: min(980px, calc(100vw - 360px)); display: flex; box-shadow: 0 12px 36px rgba(0,0,0,.12); border: 1px solid var(--gray-5, #e5e7eb); border-radius: 10px; pointer-events: none; opacity: 0; visibility: hidden; transition: all .22s ease-in-out; transform: translateY(10px); z-index: 9999; background-color: #fff; }
 .ks-home-departments .menu-item:hover > .sub-menu-container,
 .ks-home-departments .menu-item.open > .sub-menu-container,
 .ks-home-departments .menu-item:focus-within > .sub-menu-container { transform: translateY(0); opacity: 1; visibility: visible; pointer-events: auto; }
@@ -111,14 +111,27 @@
                 title.classList.toggle('active');
             });
         }
+        var closeTimer = 0;
+        function openItem(item) {
+            clearTimeout(closeTimer);
+            root.querySelectorAll('.menu-item.open').forEach(function (other) { if (other !== item) other.classList.remove('open'); });
+            item.classList.add('open');
+        }
+        function closeItem(item) {
+            clearTimeout(closeTimer);
+            closeTimer = setTimeout(function () { item.classList.remove('open'); }, 120);
+        }
         root.querySelectorAll('.menu-item').forEach(function (item) {
             var trigger = item.querySelector(':scope > .item-link');
             var sub = item.querySelector(':scope > .sub-menu-container');
             if (!trigger || !sub) return;
-            item.addEventListener('pointerenter', function () { if (isDesktop()) item.classList.add('open'); });
-            item.addEventListener('mouseenter', function () { if (isDesktop()) item.classList.add('open'); });
-            item.addEventListener('mouseleave', function () { if (isDesktop()) item.classList.remove('open'); });
-            trigger.addEventListener('focus', function () { if (isDesktop()) item.classList.add('open'); });
+            item.addEventListener('pointerenter', function () { if (isDesktop()) openItem(item); });
+            item.addEventListener('mouseenter', function () { if (isDesktop()) openItem(item); });
+            item.addEventListener('mouseleave', function () { if (isDesktop()) closeItem(item); });
+            sub.addEventListener('mouseenter', function () { if (isDesktop()) openItem(item); });
+            sub.addEventListener('mouseleave', function () { if (isDesktop()) closeItem(item); });
+            trigger.addEventListener('focus', function () { if (isDesktop()) openItem(item); });
+            trigger.addEventListener('mouseover', function () { if (isDesktop()) openItem(item); });
             trigger.addEventListener('click', function (ev) {
                 if (isDesktop()) return;
                 ev.preventDefault();

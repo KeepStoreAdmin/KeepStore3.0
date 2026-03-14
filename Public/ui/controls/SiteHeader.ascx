@@ -92,12 +92,15 @@
     color: #6b7280;
 }
 .ks-header-ui .tf-select-custom {
-    min-width: 190px;
+    min-width: 210px;
     min-height: 54px;
+    width: 100%;
+    max-width: 240px;
     display: inline-flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
+    padding: 0 18px;
 }
 .ks-header-ui .tf-select-custom .current {
     overflow: hidden;
@@ -111,20 +114,25 @@
 .ks-header-ui .tf-select-custom.active {
     border-color: rgba(255,61,61,.35);
 }
-.ks-header-ui select.hide-select {
+.ks-header-ui select.hide-select,
+.ks-header-ui .ks-category-native.hide-select {
     position: absolute !important;
     left: -9999px !important;
     width: 1px !important;
     height: 1px !important;
     opacity: 0 !important;
     pointer-events: none !important;
+    visibility: hidden !important;
+    display: none !important;
 }
 .ks-header-ui .select-options {
     display: none;
     position: absolute;
     top: calc(100% + 8px);
     left: 0;
-    min-width: 220px;
+    min-width: 280px;
+    width: max-content;
+    max-width: 420px;
     max-height: 360px;
     overflow: auto;
     padding: 8px;
@@ -140,6 +148,14 @@
     padding: 10px 12px;
     border-radius: 12px;
     cursor: pointer;
+    white-space: normal;
+    line-height: 1.35;
+}
+
+.ks-header-ui .select-options li span {
+    display: block;
+    white-space: normal;
+    word-break: break-word;
 }
 .ks-header-ui .select-options li:hover {
     background: rgba(0,0,0,.04);
@@ -147,6 +163,7 @@
 .ks-header-ui .select-category {
     position: relative;
     flex: 0 0 auto;
+    min-width: 210px;
 }
 .ks-header-ui .select-options {
     z-index: 1061;
@@ -453,7 +470,7 @@
     }
 
     function readCookie(name) {
-        var match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[.$?*|{}()\[\]\/+^]/g, '\$&') + '=([^;]*)'));
+        var match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[.$?*|{}()\[\]\/+^]/g, '\\$&') + '=([^;]*)'));
         return match ? decodeURIComponent(match[1]) : '';
     }
 
@@ -528,11 +545,14 @@
             parent.querySelectorAll('.tf-select-custom, .select-options, .header-select-option').forEach(function (node) { if (node !== select) node.remove(); });
         }
         select.classList.add('hide-select');
+        select.style.display = 'none';
+        select.setAttribute('aria-hidden', 'true');
 
         var custom = document.createElement('div');
         custom.className = 'tf-select-custom';
         custom.setAttribute('data-ks-generated','1');
-        custom.innerHTML = '<span class="current">' + escapeHtml(select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : 'Tutte le categorie') + '</span>';
+        custom.setAttribute('tabindex', '0');
+        custom.innerHTML = '<span class="current">' + escapeHtml(select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : 'Tutte le categorie') + '</span><i class="icon-arrow-down"></i>';
         select.insertAdjacentElement('afterend', custom);
 
         var list = document.createElement('ul');
@@ -549,8 +569,8 @@
         });
         custom.insertAdjacentElement('afterend', list);
 
-        custom.addEventListener('click', function (ev) {
-            ev.stopPropagation();
+        function toggleList(ev) {
+            if (ev) ev.stopPropagation();
             document.querySelectorAll('.tf-select-custom.active').forEach(function (item) {
                 if (item !== custom) {
                     item.classList.remove('active');
@@ -559,6 +579,14 @@
             });
             custom.classList.toggle('active');
             list.style.display = custom.classList.contains('active') ? 'block' : 'none';
+        }
+
+        custom.addEventListener('click', toggleList);
+        custom.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Enter' || ev.key === ' ') {
+                ev.preventDefault();
+                toggleList(ev);
+            }
         });
 
         list.querySelectorAll('li').forEach(function (li, idx) {
@@ -649,6 +677,7 @@
         var longDesc = normalize(item.longDesc || '');
         var brandTitle = normalize([brand, title].join(' '));
         var brandDesc = normalize([brand, title, desc, longDesc].join(' '));
+        var titleDesc = normalize([title, desc, longDesc].join(' '));
 
         if (ean && ean === q) return 240;
         if (code && code === q) return 230;
@@ -660,6 +689,7 @@
         if (brand && desc && brandDesc.indexOf(q) >= 0) return 180;
         if (brand && title && brandTitle.indexOf(q) >= 0) return 176;
         if (title.indexOf(q) === 0) return 170;
+        if (titleDesc.indexOf(q) >= 0) return 164;
         if (desc.indexOf(q) >= 0 || longDesc.indexOf(q) >= 0) return 160;
         if (text.indexOf(q) >= 0) return 148;
         if (tokens.length > 1 && countTokenHits(text, tokens) >= Math.max(1, tokens.length - 1)) return 132;
