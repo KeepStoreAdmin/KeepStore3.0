@@ -15,14 +15,14 @@
                                 <%# SafeText(Eval("Descrizione")) %>
                             </span>
                         </a>
-                        <div class="sub-menu-container d-flex">
+                        <div class="sub-menu-container">
                             <div class="wrapper-sub-menu flex-grow-1">
                                 <div class="grid-sub-menu">
                                     <asp:Repeater ID="rptCategorieHome" runat="server" DataSourceID="sdsCategorieHome">
                                         <ItemTemplate>
                                             <div class="sub-nav-link">
                                                 <a class="sub-menu-link body-text-3 link fw-semibold" href='<%# "articoli.aspx?st=" & Eval("SettoriId") & "&ct=" & Eval("id") %>'><%# SafeText(Eval("Descrizione")) %></a>
-                                                <ul class="list-unstyled">
+                                                <ul class="list-unstyled sub-menu-list">
                                                     <asp:Repeater ID="rptTipologieHome" runat="server" DataSourceID="sdsTipologieHome">
                                                         <ItemTemplate>
                                                             <li class="sub-menu-item">
@@ -40,7 +40,7 @@
                             </div>
                             <div class="cls-category style-abs abs-2 hover-img d-none d-xl-block">
                                 <a href='<%# "articoli.aspx?st=" & Eval("id") %>' class="img-box img-style d-block">
-                                    <img src="<%= ResolveUrl("~/Public/assets/images/item/camera-3.webp") %>" data-src="<%= ResolveUrl("~/Public/assets/images/item/camera-3.webp") %>" alt="reparto" class="lazyload">
+                                    <img src='<%# GetSettoreImageUrl(Eval("Img")) %>' data-src='<%# GetSettoreImageUrl(Eval("Img")) %>' alt='<%# SafeText(Eval("Descrizione")) %>' class="lazyload">
                                 </a>
                                 <div class="content text-center">
                                     <div class="box-title">
@@ -61,28 +61,37 @@
             </asp:Repeater>
         </ul>
     </div>
-    <asp:SqlDataSource ID="sdsSettoriHome" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="MySql.Data.MySqlClient" SelectCommand="SELECT id, Descrizione FROM settori WHERE COALESCE(Abilitato,1)=1 ORDER BY COALESCE(Predefinito,0) DESC, COALESCE(Ordinamento,0), Descrizione LIMIT 14" />
+    <asp:SqlDataSource ID="sdsSettoriHome" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="MySql.Data.MySqlClient" SelectCommand="SELECT id, Descrizione, Img FROM settori WHERE COALESCE(Abilitato,1)=1 ORDER BY COALESCE(Predefinito,0) DESC, COALESCE(Ordinamento,0), Descrizione LIMIT 14" />
 </div>
 <style type="text/css">
-.ks-home-departments .main-nav > .title { cursor: pointer; }
+.ks-home-departments { position: relative; z-index: 35; }
+.ks-home-departments .main-nav { position: relative; }
+.ks-home-departments .title { cursor: pointer; }
+.ks-home-departments .menu-category-list { border: 1px solid var(--gray-5, #e5e7eb); border-top: 0; border-radius: 0 0 10px 10px; position: relative; max-height: none; overflow: visible; background: #fff; }
 .ks-home-departments .menu-item { position: relative; }
-.ks-home-departments .menu-item > .sub-menu-container { display: none; z-index: 30; }
-@media (min-width: 1200px) {
-    .ks-home-departments .menu-category-list { max-height: none !important; overflow: visible !important; }
-    .ks-home-departments .menu-item:hover > .sub-menu-container,
-    .ks-home-departments .menu-item.open > .sub-menu-container,
-    .ks-home-departments .menu-item:focus-within > .sub-menu-container { display: flex !important; }
-}
-.ks-home-departments .menu-category-list { max-height: 560px; overflow: auto; }
+.ks-home-departments .item-link { padding: 0 18px; position: relative; display: flex; }
+.ks-home-departments .item-link > span { padding: 15px 0 14px; display: flex; gap: 6px; align-items: center; width: 100%; position: relative; }
+.ks-home-departments .item-link::after { content: "\e919"; position: absolute; font-family: "icomoon"; right: 18px; top: 50%; transform: translateY(-50%); }
+.ks-home-departments .menu-item:not(:last-child) .item-link > span { border-bottom: 1px solid var(--line-2, #ececec); }
+.ks-home-departments .menu-item:hover .item-link { color: var(--primary); }
+.ks-home-departments .sub-menu-container { position: absolute; top: 0; left: calc(100% - 1px); min-width: 780px; width: min(980px, calc(100vw - 360px)); display: flex; box-shadow: 0 4px 8px rgba(0,0,0,.05); border: 1px solid var(--gray-5, #e5e7eb); border-radius: 10px; pointer-events: none; opacity: 0; visibility: hidden; transition: all .3s ease-in-out; transform: translateY(10px); z-index: 999; background-color: #fff; }
+.ks-home-departments .menu-item:hover > .sub-menu-container,
+.ks-home-departments .menu-item.open > .sub-menu-container,
+.ks-home-departments .menu-item:focus-within > .sub-menu-container { transform: translateY(0); opacity: 1; visibility: visible; pointer-events: auto; }
+.ks-home-departments .wrapper-sub-menu { padding: 30px; }
 .ks-home-departments .grid-sub-menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 28px; }
-.ks-home-departments .sub-nav-link > ul { margin-top: 10px; }
-.ks-home-departments .sub-nav-link li + li { margin-top: 6px; }
+.ks-home-departments .sub-menu-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .ks-home-departments .cls-category .img-box { max-width: 230px; margin: 0 auto; }
+.ks-home-departments .cls-category .img-box img { width: 100%; height: auto; object-fit: contain; }
+@media (max-width: 1399px) {
+    .ks-home-departments .sub-menu-container { min-width: 680px; }
+}
 @media (max-width: 1199px) {
-    .ks-home-departments .menu-category-list { display: none; max-height: none; }
+    .ks-home-departments .menu-category-list { display: none; max-height: none; overflow: visible; }
     .ks-home-departments .menu-category-list.active-item { display: block; }
-    .ks-home-departments .sub-menu-container { position: static; display: none; margin-top: 12px; padding: 16px; background: #fff; border-radius: 18px; box-shadow: 0 12px 30px rgba(0,0,0,.08); }
+    .ks-home-departments .sub-menu-container { position: static; min-width: 0; width: 100%; display: none; margin-top: 12px; padding: 0; opacity: 1; visibility: visible; pointer-events: auto; transform: none; box-shadow: 0 12px 30px rgba(0,0,0,.08); }
     .ks-home-departments .menu-item.open > .sub-menu-container { display: block; }
+    .ks-home-departments .wrapper-sub-menu { padding: 18px; }
     .ks-home-departments .grid-sub-menu { grid-template-columns: 1fr; }
 }
 </style>
@@ -93,45 +102,28 @@
         if (!root) return;
         var title = root.querySelector('.title.btn-active');
         var list = root.querySelector('.menu-category-list');
+        function isDesktop(){ return window.innerWidth > 1199; }
         if (title && list) {
             title.addEventListener('click', function (ev) {
-                if (window.innerWidth > 1199) return;
+                if (isDesktop()) return;
                 ev.preventDefault();
                 list.classList.toggle('active-item');
                 title.classList.toggle('active');
             });
         }
-        function openDesktopItem(item) {
-            if (!item || window.innerWidth <= 1199) return;
-            root.querySelectorAll('.menu-item.open').forEach(function (other) { if (other !== item) other.classList.remove('open'); });
-            item.classList.add('open');
-        }
-        function closeDesktopItems() {
-            if (window.innerWidth <= 1199) return;
-            root.querySelectorAll('.menu-item.open').forEach(function (item) { item.classList.remove('open'); });
-        }
         root.querySelectorAll('.menu-item').forEach(function (item) {
-            item.addEventListener('mouseenter', function () { openDesktopItem(item); });
-            item.addEventListener('mouseover', function () { openDesktopItem(item); });
-            var trigger = item.querySelector('.item-link');
-            if (trigger) {
-                trigger.addEventListener('mousemove', function () { openDesktopItem(item); });
-                trigger.addEventListener('focus', function () { openDesktopItem(item); });
-            }
-            var sub = item.querySelector('.sub-menu-container');
-            if (sub) {
-                sub.addEventListener('mouseenter', function () { openDesktopItem(item); });
-            }
-        });
-        root.addEventListener('mouseleave', function () { closeDesktopItems(); });
-        root.querySelectorAll('.menu-item > .item-link').forEach(function (link) {
-            link.addEventListener('click', function (ev) {
-                if (window.innerWidth > 1199) return;
-                var parent = link.closest('.menu-item');
-                var sub = parent ? parent.querySelector('.sub-menu-container') : null;
-                if (!sub) return;
+            var trigger = item.querySelector(':scope > .item-link');
+            var sub = item.querySelector(':scope > .sub-menu-container');
+            if (!trigger || !sub) return;
+            item.addEventListener('pointerenter', function () { if (isDesktop()) item.classList.add('open'); });
+            item.addEventListener('mouseenter', function () { if (isDesktop()) item.classList.add('open'); });
+            item.addEventListener('mouseleave', function () { if (isDesktop()) item.classList.remove('open'); });
+            trigger.addEventListener('focus', function () { if (isDesktop()) item.classList.add('open'); });
+            trigger.addEventListener('click', function (ev) {
+                if (isDesktop()) return;
                 ev.preventDefault();
-                parent.classList.toggle('open');
+                root.querySelectorAll('.menu-item.open').forEach(function (other) { if (other !== item) other.classList.remove('open'); });
+                item.classList.toggle('open');
             });
         });
     });

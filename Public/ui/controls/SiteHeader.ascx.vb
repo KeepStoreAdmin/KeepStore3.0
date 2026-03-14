@@ -39,7 +39,7 @@ Partial Class SiteHeader
             isLogged = True
         End If
 
-        Dim accountUrl As String = If(isLogged, MyAccountVirtual, LoginVirtual)
+        Dim accountUrl As String = If(isLogged, ResolveUrl("~/myaccount.aspx"), ResolveUrl("~/login.aspx"))
 
         If lnkAccount IsNot Nothing Then
             lnkAccount.HRef = accountUrl

@@ -25,10 +25,11 @@
                 var step = 0;
                 img.onerror = function(){
                     step++;
-                    if(step === 1){ img.src = normal; return; }
+                    if(step === 1){ img.src = normal; img.setAttribute("data-src", normal); return; }
                     img.onerror = null;
                     img.src = original;
                 };
+                img.setAttribute("data-src", low);
                 img.src = low;
             }
             window.ksNormalizeCartProductImages = function(){
@@ -765,6 +766,10 @@
 			<div class="col-12 col-md-6">
 				<asp:Panel ID="pAssicurazione" runat="server" Width="100%"  Visible="true" style="overflow:hidden; margin-bottom: 15px"  CssClass="wrap">
 					<h5 class="title fw-semibold">Assicurazione</h5>
+                        <div class="d-flex align-items-center justify-content-between gap-3 py-2">
+                            <span class="body-text-3">Copertura spedizione</span>
+                            <span class="text-primary fw-semibold"><asp:Label ID="lblAssicurazione" runat="server" Text="€ 0,00" /></span>
+                        </div>
 					<table cellpadding="1" width="100%">
 					</table>
 				</asp:Panel>   

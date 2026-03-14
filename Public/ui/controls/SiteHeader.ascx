@@ -104,11 +104,45 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+.ks-header-ui .tf-select-custom {
+    cursor: pointer;
+    user-select: none;
+}
+.ks-header-ui .tf-select-custom.active {
+    border-color: rgba(255,61,61,.35);
+}
 .ks-header-ui select.hide-select {
-    display: none !important;
+    position: absolute !important;
+    left: -9999px !important;
+    width: 1px !important;
+    height: 1px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 .ks-header-ui .select-options {
-    display: none !important;
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 220px;
+    max-height: 360px;
+    overflow: auto;
+    padding: 8px;
+    margin: 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 16px;
+    box-shadow: 0 18px 40px rgba(0,0,0,.12);
+}
+.ks-header-ui .select-options li {
+    display: block;
+    padding: 10px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+}
+.ks-header-ui .select-options li:hover {
+    background: rgba(0,0,0,.04);
 }
 .ks-header-ui .select-category {
     position: relative;
@@ -157,13 +191,13 @@
                     <div class="header-center">
                         <div class="form-search-product style-2 active-container" data-ks-search-form="desktop">
                             <div class="select-category">
-                                <select name="product_cat" id="product_cat" class="ks-category-native hide-select" style="display:none !important;">
+                                <select name="product_cat" id="ks_product_cat" class="ks-category-native hide-select">
                                     <option value="">Tutte le categorie</option>
                                 </select>
                             </div>
                             <span class="br-line type-vertical bg-line"></span>
                             <fieldset>
-                                <asp:TextBox ID="tbCerca" runat="server" CssClass="" placeholder="Cerca prodotti, codici, EAN, marchi..." AutoCompleteType="Disabled" />
+                                <asp:TextBox ID="tbCerca" runat="server" CssClass="" placeholder="Cerca prodotti, codici, EAN, marchi, descrizioni..." AutoCompleteType="Disabled" />
                                 <div id="ksSearchSuggestDesktop" class="ks-search-suggest"></div>
                             </fieldset>
                             <button id="btnSearch" runat="server" type="submit" class="btn-submit-form" aria-label="Cerca">
@@ -303,13 +337,13 @@
         <div class="mb-3">
             <div class="form-search-product style-2 active-container" data-ks-search-form="mobile">
                 <div class="select-category d-none d-sm-block">
-                    <select name="product_cat_mobile" id="product_cat_mobile" class="ks-category-native hide-select" style="display:none !important;">
+                    <select name="product_cat_mobile" id="ks_product_cat_mobile" class="ks-category-native hide-select">
                         <option value="">Tutte le categorie</option>
                     </select>
                 </div>
                 <span class="br-line type-vertical bg-line d-none d-sm-block"></span>
                 <fieldset>
-                    <asp:TextBox ID="tbCercaMobile" runat="server" CssClass="" placeholder="Cerca prodotti, codici, EAN, marchi..." AutoPostBack="true" AutoCompleteType="Disabled" />
+                    <asp:TextBox ID="tbCercaMobile" runat="server" CssClass="" placeholder="Cerca prodotti, codici, EAN, marchi, descrizioni..." AutoPostBack="true" AutoCompleteType="Disabled" />
                     <div id="ksSearchSuggestMobile" class="ks-search-suggest"></div>
                 </fieldset>
                 <button id="btnSearchMobile" runat="server" type="submit" class="btn-submit-form" aria-label="Cerca">
@@ -377,7 +411,29 @@
     var RECENT_SEARCH_COOKIE = 'ks_recent_searches';
 
     function normalize(value) {
-        return (value || '').toString().toLowerCase().trim().replace(/\s+/g, ' ');
+        return (value || '')
+            .toString()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .trim()
+            .replace(/\s+/g, ' ');
+    }
+
+    function tokenize(value) {
+        return normalize(value).split(' ').filter(Boolean);
+    }
+
+    function containsAllTokens(text, tokens) {
+        var hay = normalize(text);
+        if (!hay) return false;
+        return (tokens || []).every(function (token) { return hay.indexOf(token) >= 0; });
+    }
+
+    function countTokenHits(text, tokens) {
+        var hay = normalize(text);
+        return (tokens || []).filter(function (token) { return hay.indexOf(token) >= 0; }).length;
     }
 
     function escapeHtml(value) {
@@ -448,6 +504,7 @@
             var text = (link.textContent || '').trim();
             var href = link.getAttribute('href') || '';
             if (!text || !href || href === '#' || href.indexOf('javascript:') === 0) return;
+            if (normalize(text) === normalize('Tutte le categorie')) return;
             items.push({ label: text, value: text, url: href });
         });
         items = uniqBy(items, function (x) { return normalize(x.label) + '|' + normalize(x.url); });
@@ -466,17 +523,22 @@
     function buildCustomSelect(select) {
         if (!select) return;
         clearAdjacentCustomSelect(select);
+        var parent = select.parentElement || select.closest('.select-category');
+        if (parent) {
+            parent.querySelectorAll('.tf-select-custom, .select-options, .header-select-option').forEach(function (node) { if (node !== select) node.remove(); });
+        }
         select.classList.add('hide-select');
 
         var custom = document.createElement('div');
         custom.className = 'tf-select-custom';
         custom.setAttribute('data-ks-generated','1');
-        custom.innerHTML = '<span class="current">' + escapeHtml(select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : 'Tutte le categorie') + '</span><i class="icon icon-chevron-down"></i>' ;
+        custom.innerHTML = '<span class="current">' + escapeHtml(select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : 'Tutte le categorie') + '</span>';
         select.insertAdjacentElement('afterend', custom);
 
         var list = document.createElement('ul');
         list.className = 'select-options';
         list.setAttribute('data-ks-generated','1');
+        list.style.display = 'none';
         Array.from(select.options).forEach(function (option) {
             var li = document.createElement('li');
             li.className = 'link';
@@ -550,6 +612,7 @@
                 ean: ean,
                 brand: brand,
                 desc: desc,
+                longDesc: longDesc,
                 title: title,
                 subtitle: [brand, caption.trim() || 'Prodotto'].filter(Boolean).join(' • '),
                 price: (price || '').trim(),
@@ -574,10 +637,10 @@
     }
 
     function scoreItem(item, query) {
-        if (!item || !query) return 0;
         var q = normalize(query);
+        if (!q) return 0;
+        var tokens = tokenize(q);
         var text = normalize(item.search || item.title || '');
-        if (!text) return 0;
         var ean = normalize(item.ean || '');
         var code = normalize(item.code || '');
         var brand = normalize(item.brand || '');
@@ -585,17 +648,21 @@
         var title = normalize(item.title || '');
         var longDesc = normalize(item.longDesc || '');
         var brandTitle = normalize([brand, title].join(' '));
-        var brandDesc = normalize([brand, desc, longDesc].join(' '));
-        if (ean && ean === q) return 220;
-        if (code && code === q) return 210;
-        if (title === q) return 195;
-        if (brandTitle === q) return 190;
-        if (brand && desc && brandDesc.indexOf(q) >= 0) return 175;
-        if (brand && title && brandTitle.indexOf(q) >= 0) return 170;
-        if (title.indexOf(q) === 0) return 160;
-        if (desc.indexOf(q) >= 0 || longDesc.indexOf(q) >= 0) return 145;
-        if (text.indexOf(q + ' ') === 0 || text.startsWith(q)) return 135;
-        if (text.indexOf(q) >= 0) return 120;
+        var brandDesc = normalize([brand, title, desc, longDesc].join(' '));
+
+        if (ean && ean === q) return 240;
+        if (code && code === q) return 230;
+        if (title === q) return 220;
+        if (brandTitle === q) return 215;
+        if (brandDesc === q) return 210;
+        if (tokens.length > 1 && containsAllTokens(brandDesc, tokens)) return 196 + Math.min(3, countTokenHits(brandDesc, tokens));
+        if (tokens.length > 1 && containsAllTokens(text, tokens)) return 188 + Math.min(4, countTokenHits(text, tokens));
+        if (brand && desc && brandDesc.indexOf(q) >= 0) return 180;
+        if (brand && title && brandTitle.indexOf(q) >= 0) return 176;
+        if (title.indexOf(q) === 0) return 170;
+        if (desc.indexOf(q) >= 0 || longDesc.indexOf(q) >= 0) return 160;
+        if (text.indexOf(q) >= 0) return 148;
+        if (tokens.length > 1 && countTokenHits(text, tokens) >= Math.max(1, tokens.length - 1)) return 132;
         return 0;
     }
 
@@ -687,7 +754,9 @@
             'img[src*="/Public/images/articoli/"]',
             'img[src*="/Images/articoli/"]',
             'img[data-src*="/Public/images/articoli/"]',
-            'img[data-src*="/Images/articoli/"]'
+            'img[data-src*="/Images/articoli/"]',
+            'img[src*="/Public/assets/images/articoli/"]',
+            'img[data-src*="/Public/assets/images/articoli/"]'
         ].join(',');
 
         document.querySelectorAll(selector).forEach(function (img) {
@@ -699,8 +768,8 @@
             (function tryNext(index) {
                 if (index >= candidates.length) return;
                 probeImage(candidates[index], function () {
-                    if (img.hasAttribute('src')) img.setAttribute('src', candidates[index]);
-                    if (img.hasAttribute('data-src')) img.setAttribute('data-src', candidates[index]);
+                    img.setAttribute('src', candidates[index]);
+                    img.setAttribute('data-src', candidates[index]);
                 }, function () {
                     tryNext(index + 1);
                 });
@@ -776,15 +845,16 @@
 
 
     function enforceAccountLinks() {
-        var accountUrl = '<%= ResolveUrl("~/login.aspx") %>';
+        var loginUrl = '<%= ResolveUrl("~/login.aspx") %>';
+        var myAccountUrl = '<%= ResolveUrl("~/myaccount.aspx") %>';
         var account = document.getElementById('<%= lnkAccount.ClientID %>');
         var accountMobile = document.getElementById('<%= lnkAccountMobile.ClientID %>');
-        if (account && account.getAttribute('href') !== accountUrl && account.getAttribute('href') !== '<%= ResolveUrl("~/myaccount.aspx") %>') {
-            account.setAttribute('href', accountUrl);
-        }
-        if (accountMobile && accountMobile.getAttribute('href') !== accountUrl && accountMobile.getAttribute('href') !== '<%= ResolveUrl("~/myaccount.aspx") %>') {
-            accountMobile.setAttribute('href', accountUrl);
-        }
+        var resolvedAccountUrl = (account && account.getAttribute('href')) || loginUrl;
+        if (account) { account.setAttribute('href', resolvedAccountUrl); }
+        if (accountMobile) { accountMobile.setAttribute('href', (accountMobile.getAttribute('href') || resolvedAccountUrl)); }
+        document.querySelectorAll('a[href$="Public/ui/controls/login.aspx"],a[href="login.aspx"],a[href="./login.aspx"],a[href="Public/ui/controls/login.aspx"]').forEach(function (link) {
+            link.setAttribute('href', resolvedAccountUrl.indexOf('/myaccount.aspx') >= 0 ? myAccountUrl : loginUrl);
+        });
     }
 
     function wireDesktopCategories() {
@@ -824,14 +894,14 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        var desktopSelect = document.getElementById('product_cat');
-        var mobileSelect = document.getElementById('product_cat_mobile');
+        var desktopSelect = document.getElementById('ks_product_cat');
+        var mobileSelect = document.getElementById('ks_product_cat_mobile');
         buildSelectOptions(desktopSelect);
         buildSelectOptions(mobileSelect);
         buildCustomSelect(desktopSelect);
         buildCustomSelect(mobileSelect);
-        wireForm({ formName: 'desktop', inputId: '<%= tbCerca.ClientID %>', suggestId: 'ksSearchSuggestDesktop', buttonId: '<%= btnSearch.ClientID %>', selectId: 'product_cat' });
-        wireForm({ formName: 'mobile', inputId: '<%= tbCercaMobile.ClientID %>', suggestId: 'ksSearchSuggestMobile', buttonId: '<%= btnSearchMobile.ClientID %>', selectId: 'product_cat_mobile' });
+        wireForm({ formName: 'desktop', inputId: '<%= tbCerca.ClientID %>', suggestId: 'ksSearchSuggestDesktop', buttonId: '<%= btnSearch.ClientID %>', selectId: 'ks_product_cat' });
+        wireForm({ formName: 'mobile', inputId: '<%= tbCercaMobile.ClientID %>', suggestId: 'ksSearchSuggestMobile', buttonId: '<%= btnSearchMobile.ClientID %>', selectId: 'ks_product_cat_mobile' });
         wireDesktopCategories();
         enforceAccountLinks();
         normalizeLegacyProductImages();

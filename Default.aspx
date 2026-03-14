@@ -253,6 +253,25 @@
             align-items: center;
         }
 
+        .ks-home-ui .list-product-btn.flex-row {
+            flex-wrap: nowrap;
+            gap: 10px;
+        }
+
+        .ks-home-ui .list-product-btn.flex-row .box-icon,
+        .ks-home-ui .list-product-btn.flex-row .add-to-cart,
+        .ks-home-ui .list-product-btn.flex-row .btn-icon-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
+        }
+
+        .ks-home-ui .list-product-btn.flex-row .add-to-cart i,
+        .ks-home-ui .list-product-btn.flex-row .btn-icon-action i {
+            line-height: 1;
+        }
+
         .ks-home-ui .ks-refurbished-badge {
             display: inline-flex;
             align-items: center;
@@ -279,10 +298,42 @@
 
         .ks-home-ui .ks-refurbished-badge.position-absolute {
             position: absolute;
-            top: 12px;
+            top: 18px;
             right: 12px;
             left: auto;
             bottom: auto;
+        }
+
+        .ks-home-ui .progress-sold.progress {
+            height: 8px;
+            border-radius: 999px;
+            background: #ffe6e6;
+            overflow: hidden;
+        }
+
+        .ks-home-ui .progress-bar.bg-primary {
+            background: #ff3d3d !important;
+            border-radius: 999px;
+        }
+
+        .ks-home-ui .main-title,
+        .ks-home-ui .flat-title h5 {
+            font-size: 30px;
+            line-height: 1.12;
+            font-weight: 700;
+            letter-spacing: 0;
+        }
+
+        .ks-home-ui .name-product {
+            font-size: 17px;
+            line-height: 1.35;
+            font-weight: 600;
+        }
+
+        .ks-home-ui .caption,
+        .ks-home-ui .text-avaiable.caption {
+            font-size: 13px;
+            line-height: 1.45;
         }
 
         .ks-home-ui .card-product .list-product-btn .wishlist.addwishlist .icon {
@@ -677,7 +728,7 @@
                                                     </div>
                                                     <div class="product-progress-sale">
                                                         <div class="progress-sold progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                                                            <div class="progress-bar bg-primary" style='<%# "width:" & GetSoldPercent(Eval("VendutiAnno"), Eval("Giacenza")) & "%" %>'></div>
+                                                            <div class="progress-bar bg-primary" aria-valuenow='<%# GetSoldPercent(Eval("VendutiAnno"), Eval("Giacenza")) %>' style='<%# "width:" & GetSoldPercent(Eval("VendutiAnno"), Eval("Giacenza")) & "%" %>'></div>
                                                         </div>
                                                         <div class="box-quantity d-flex justify-content-between">
                                                             <p class="text-avaiable caption">Venduti: <span class="fw-bold"><%# GetSoldQty(Eval("VendutiAnno")) %></span></p>
@@ -821,10 +872,10 @@
                                                     </div>
                                                     <div class="swiper tf-product-view-thumbs" data-direction="vertical">
                                                         <div class="swiper-wrapper">
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' /></div></div>
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' /></div></div>
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' /></div></div>
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' /></div></div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -844,7 +895,7 @@
                                                     </div>
                                                     <div class="product-progress-sale">
                                                         <div class="progress-sold progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                                                            <div class="progress-bar bg-primary" style='<%# "width:" & GetSoldPercent(Eval("VendutiAnno"), Eval("Giacenza")) & "%" %>'></div>
+                                                            <div class="progress-bar bg-primary" aria-valuenow='<%# GetSoldPercent(Eval("VendutiAnno"), Eval("Giacenza")) %>' style='<%# "width:" & GetSoldPercent(Eval("VendutiAnno"), Eval("Giacenza")) & "%" %>'></div>
                                                         </div>
                                                         <div class="box-quantity d-flex justify-content-between">
                                                             <p class="text-avaiable caption">Venduti: <span class="fw-bold"><%# GetSoldQty(Eval("VendutiAnno")) %></span></p>
@@ -934,18 +985,18 @@
                                                 <div class="product-thumb-slider thumbs-right">
                                                     <div class="swiper tf-product-view-main">
                                                         <div class="swiper-wrapper">
-                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' /></a></div>
-                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' /></a></div>
-                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' /></a></div>
-                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' /></a></div>
+                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' /></a></div>
+                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' /></a></div>
+                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' /></a></div>
+                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' /></a></div>
                                                         </div>
                                                     </div>
                                                     <div class="swiper tf-product-view-thumbs" data-direction="vertical">
                                                         <div class="swiper-wrapper">
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' /></div></div>
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' /></div></div>
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' /></div></div>
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' /></div></div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1046,18 +1097,18 @@
                                                 <div class="product-thumb-slider thumbs-right">
                                                     <div class="swiper tf-product-view-main">
                                                         <div class="swiper-wrapper">
-                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' /></a></div>
-                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' /></a></div>
-                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' /></a></div>
-                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' /></a></div>
+                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' /></a></div>
+                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' /></a></div>
+                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' /></a></div>
+                                                            <div class="swiper-slide"><a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="d-block tf-image-view"><img class="lazyload" alt="thumb" src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' /></a></div>
                                                         </div>
                                                     </div>
                                                     <div class="swiper tf-product-view-thumbs" data-direction="vertical">
                                                         <div class="swiper-wrapper">
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' /></div></div>
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' /></div></div>
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' /></div></div>
-                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img3"), Eval("Img1")) %>' /></div></div>
+                                                            <div class="swiper-slide"><div class="item"><img alt="thumb" src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img4"), Eval("Img1")) %>' /></div></div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1213,8 +1264,8 @@
                                                     <div class="card-product style-row row-small-2">
                                                         <div class="card-product-wrapper">
                                                             <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="product-img">
-                                                                <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
-                                                                <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
+                                                                <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
+                                                                <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                             </a>
                                                         </div>
                                                         <div class="card-product-info">
@@ -1258,8 +1309,8 @@
                                                     <div class="card-product style-row row-small-2">
                                                         <div class="card-product-wrapper">
                                                             <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="product-img">
-                                                                <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
-                                                                <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
+                                                                <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
+                                                                <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                             </a>
                                                         </div>
                                                         <div class="card-product-info">
@@ -1303,8 +1354,8 @@
                                                     <div class="card-product style-row row-small-2">
                                                         <div class="card-product-wrapper">
                                                             <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="product-img">
-                                                                <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
-                                                                <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
+                                                                <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
+                                                                <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                             </a>
                                                         </div>
                                                         <div class="card-product-info">
@@ -1348,8 +1399,8 @@
                                                     <div class="card-product style-row row-small-2">
                                                         <div class="card-product-wrapper">
                                                             <a href='<%# "articolo.aspx?id=" & Eval("Articoliid") %>' class="product-img">
-                                                                <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
-                                                                <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
+                                                                <img class="img-product lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' data-src='<%# GetHomeProductImage(Eval("Img1"), Nothing) %>' />
+                                                                <img class="img-hover lazyload" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>' src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' data-src='<%# GetHomeProductImage(Eval("Img2"), Eval("Img1")) %>' />
                                                             </a>
                                                         </div>
                                                         <div class="card-product-info">
