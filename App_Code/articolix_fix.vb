@@ -25,7 +25,7 @@ Partial Class articolix
         End If
 
         ' Default: cartella immagini articolo
-        Return "~/Public/images/articoli/" & s
+        Return "~/Public/assets/images/articoli/" & s
     End Function
 
     Public Function sotto_stringa(val As Object) As String

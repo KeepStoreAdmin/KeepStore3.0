@@ -981,11 +981,11 @@ Partial Class articolo
 
         s = s.Replace("\", "/")
 
-        If s.StartsWith("/Public/images/articoli/", StringComparison.OrdinalIgnoreCase) Then
+        If s.StartsWith("/Public/assets/images/articoli/", StringComparison.OrdinalIgnoreCase) Then
             Return "/Public/assets/images/articoli/" & IO.Path.GetFileName(s)
         End If
 
-        If s.StartsWith("/Images/articoli/", StringComparison.OrdinalIgnoreCase) Then
+        If s.StartsWith("/assets/Images/articoli/", StringComparison.OrdinalIgnoreCase) Then
             Return "/Public/assets/images/articoli/" & IO.Path.GetFileName(s)
         End If
 

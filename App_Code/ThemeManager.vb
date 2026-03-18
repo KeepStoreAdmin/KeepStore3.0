@@ -158,8 +158,8 @@ Public Module ThemeManager
     ''' URL immagine prodotto (catalogo/home/dettaglio).
     ''' - Supporta: URL assoluti, path root-relative (/Images/...), path relativo (Images/..), o solo filename.
     ''' - Configurazioni opzionali:
-    '''     KeepStore.Products.ImageBaseUrl         (default: /Images/articoli/)
-    '''     KeepStore.Products.PlaceholderImageUrl  (fallback: Asset("img/placeholder.png"))
+    '''     KeepStore.Products.ImageBaseUrl         (default: /Public/assets/images/articoli/)
+    '''     KeepStore.Products.PlaceholderImageUrl  (fallback: Asset("images/img/placeholder.svg"))
     ''' </summary>
     Public Function ProductImageUrl(ByVal imgValue As Object) As String
         Dim raw As String = ""
@@ -238,7 +238,7 @@ Public Module ThemeManager
     ''' </summary>
     Public Function PlaceholderProductImageUrl() As String
         ' SVG leggero, stabile, senza dipendenze.
-        Return Asset("img/placeholder.svg")
+        Return Asset("images/img/placeholder.svg")
     End Function
 
     ''' <summary>
@@ -286,12 +286,7 @@ Public Module ThemeManager
         Dim candidates As New List(Of String)()
         If Not String.IsNullOrWhiteSpace(configured) Then candidates.Add(configured)
 
-        candidates.Add("/Images/articoli/")
-        candidates.Add("/images/articoli/")
-        candidates.Add("/Public/Images/articoli/")
-        candidates.Add("/Public/images/articoli/")
-        candidates.Add("/Public/img/articoli/")
-        candidates.Add("/img/articoli/")
+        candidates.Add("/Public/assets/images/articoli/")
 
         For Each b As String In candidates
             Dim baseUrl As String = NormalizeBase(b)
@@ -314,7 +309,7 @@ Public Module ThemeManager
             End Try
         Next
 
-        Dim chosen As String = If(String.IsNullOrWhiteSpace(fallback), "/Images/articoli/", fallback)
+        Dim chosen As String = If(String.IsNullOrWhiteSpace(fallback), "/Public/assets/images/articoli/", fallback)
         ctx.Items(cacheKey) = chosen
         Return chosen
     End Function
