@@ -92,55 +92,54 @@
     color: #6b7280;
 }
 .ks-header-ui .tf-select-custom {
-    min-width: 280px;
-    min-height: 54px;
-    width: 100%;
-    max-width: 360px;
     display: inline-flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: space-between;
     gap: 10px;
-    padding: 0 38px 0 18px;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    min-height: 54px;
+    padding: 0 0 0 0;
     position: relative;
+    font-size: 13px;
+    line-height: 25px;
+    color: var(--text-2, #515d66);
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
 }
-.ks-header-ui .tf-select-custom::before {
+.ks-header-ui .tf-select-custom::before,
+.ks-header-ui .tf-select-custom::after {
     display: none !important;
     content: none !important;
 }
-.ks-header-ui .tf-select-custom::after {
-    content: "\e918";
-    font-family: "icomoon";
-    position: absolute;
-    right: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 14px;
-    line-height: 1;
-    pointer-events: none;
-}
 .ks-header-ui .tf-select-custom .current {
+    flex: 1 1 auto;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     display: block;
-    width: 100%;
-    padding-right: 8px;
+    padding-right: 6px;
 }
-
+.ks-header-ui .tf-select-custom .ks-select-chevron {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "icomoon";
+    font-size: 12px;
+    line-height: 1;
+    color: inherit;
+    pointer-events: none;
+}
 .ks-header-ui .tf-select-custom i,
 .ks-header-ui .select-category .nice-select {
     display: none !important;
 }
-.ks-header-ui .tf-select-custom .current {
-    display: block;
-    max-width: 100%;
-}
-.ks-header-ui .tf-select-custom {
-    cursor: pointer;
-    user-select: none;
-}
 .ks-header-ui .tf-select-custom.active {
-    border-color: rgba(255,61,61,.35);
+    color: var(--primary, #ff3d3d);
 }
 .ks-header-ui select.hide-select,
 .ks-header-ui .ks-category-native.hide-select {
@@ -158,50 +157,65 @@
     position: absolute;
     top: calc(100% + 8px);
     left: 0;
-    min-width: max(100%, 320px);
+    min-width: max(var(--ks-select-width, 220px), 240px);
     width: max-content;
-    max-width: min(620px, calc(100vw - 40px));
+    max-width: min(520px, calc(100vw - 40px));
     max-height: 360px;
     overflow: auto;
-    padding: 8px;
+    padding: 12px;
     margin: 0;
     list-style: none;
     background: #fff;
     border: 1px solid rgba(0,0,0,.08);
     border-radius: 16px;
     box-shadow: 0 18px 40px rgba(0,0,0,.12);
+    z-index: 1061;
 }
 .ks-header-ui .select-options li {
     display: block;
-    padding: 10px 12px;
-    border-radius: 12px;
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 10px;
     cursor: pointer;
     white-space: normal;
-    line-height: 1.35;
+    line-height: 20px;
     overflow: visible;
     text-overflow: initial;
-    word-break: break-word;
-    min-width: 280px;
+    word-break: normal;
+    overflow-wrap: anywhere;
+    min-width: 220px;
+    font-size: 13px;
+    font-weight: 500;
 }
-
 .ks-header-ui .select-options li span {
     display: block;
     white-space: normal;
     overflow: visible;
     text-overflow: initial;
-    word-break: break-word;
+    word-break: normal;
+    overflow-wrap: anywhere;
 }
 .ks-header-ui .select-options li:hover {
     background: rgba(0,0,0,.04);
 }
 .ks-header-ui .select-category {
+    --ks-select-width: 220px;
     position: relative;
-    flex: 0 0 auto;
-    min-width: 280px;
-    width: min(360px, 34vw);
+    flex: 0 0 var(--ks-select-width, 220px);
+    width: var(--ks-select-width, 220px);
+    min-width: 160px;
+    max-width: 290px;
 }
-.ks-header-ui .select-options {
-    z-index: 1061;
+.ks-header-ui .form-search-product.style-2 {
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+.ks-header-ui .form-search-product.style-2 fieldset {
+    min-width: 0;
+}
+.ks-header-ui .br-line.type-vertical.bg-line {
+    margin-inline: 16px;
 }
 .ks-header-ui .tf-nav-menu .title.btn-active {
     cursor: pointer;
@@ -574,6 +588,36 @@
         return items;
     }
 
+    function measureTextWidth(text, font) {
+        var canvas = measureTextWidth._canvas || (measureTextWidth._canvas = document.createElement('canvas'));
+        var ctx = canvas.getContext('2d');
+        ctx.font = font;
+        return ctx.measureText(text || '').width;
+    }
+
+    function fitSelectWidth(select, custom, list) {
+        if (!select || !custom) return;
+        var labels = Array.from(select.options).map(function (option) {
+            return (option && option.textContent ? option.textContent : '').replace(/\s+/g, ' ').trim();
+        }).filter(Boolean);
+        var sample = labels.reduce(function (longest, value) {
+            return value.length > longest.length ? value : longest;
+        }, 'Tutte le categorie');
+        var style = window.getComputedStyle(custom);
+        var font = [style.fontStyle, style.fontVariant, style.fontWeight, style.fontSize + '/' + style.lineHeight, style.fontFamily].join(' ');
+        var width = Math.ceil(measureTextWidth(sample, font) + 42);
+        width = Math.max(168, Math.min(286, width));
+        var parent = select.parentElement || select.closest('.select-category');
+        if (parent) {
+            parent.style.setProperty('--ks-select-width', width + 'px');
+            parent.style.width = width + 'px';
+            parent.style.flexBasis = width + 'px';
+        }
+        if (list) {
+            list.style.minWidth = Math.max(240, Math.min(520, width + 84)) + 'px';
+        }
+    }
+
     function buildCustomSelect(select) {
         if (!select) return;
         clearAdjacentCustomSelect(select);
@@ -589,7 +633,7 @@
         custom.className = 'tf-select-custom';
         custom.setAttribute('data-ks-generated','1');
         custom.setAttribute('tabindex', '0');
-        custom.innerHTML = '<span class="current">' + escapeHtml(select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : 'Tutte le categorie') + '</span>';
+        custom.innerHTML = '<span class="current">' + escapeHtml(select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : 'Tutte le categorie') + '</span><span class="ks-select-chevron" aria-hidden="true">&#xe918;</span>';
         select.insertAdjacentElement('afterend', custom);
 
         var list = document.createElement('ul');
@@ -605,6 +649,7 @@
             list.appendChild(li);
         });
         custom.insertAdjacentElement('afterend', list);
+        fitSelectWidth(select, custom, list);
 
         function toggleList(ev) {
             if (ev) ev.stopPropagation();
@@ -634,7 +679,13 @@
                     select.selectedIndex = idx;
                     select.dispatchEvent(new Event('change', { bubbles: true }));
                 }
-                var current = custom.querySelector('.current'); if (current) { current.textContent = (li.textContent || '').replace(/\s+/g,' ').trim(); } else { custom.textContent = (li.textContent || '').replace(/\s+/g,' ').trim(); }
+                var current = custom.querySelector('.current');
+                if (current) {
+                    current.textContent = (li.textContent || '').replace(/\s+/g,' ').trim();
+                } else {
+                    custom.textContent = (li.textContent || '').replace(/\s+/g,' ').trim();
+                }
+                fitSelectWidth(select, custom, list);
                 custom.classList.remove('active');
                 list.style.display = 'none';
             });

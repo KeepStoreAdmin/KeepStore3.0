@@ -765,6 +765,266 @@
             }
         }
 
+        /* Rifinitura visiva HOME allineata ai valori della index del template base */
+        .ks-home-ui .flat-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--gray-5, #ededed);
+        }
+
+        .ks-home-ui .flat-title-has-icon {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .ks-home-ui .flat-title-has-icon .icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: var(--primary, #ff3d3d);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ks-home-ui .flat-title-has-icon .icon i {
+            font-size: 20px;
+        }
+
+        .ks-home-ui .main-title,
+        .ks-home-ui .flat-title h5,
+        .ks-home-ui .tab-link.main-title {
+            font-size: 22px;
+            line-height: 25px;
+            font-weight: 600;
+        }
+
+        .ks-home-ui .h4,
+        .ks-home-ui .new-price.h4 {
+            font-size: 30px;
+            line-height: 36px;
+            font-weight: 500;
+        }
+
+        .ks-home-ui .price-text,
+        .ks-home-ui .new-price.price-text {
+            font-size: 20px;
+            line-height: 22px;
+            font-weight: 600;
+        }
+
+        .ks-home-ui .price-text-2 {
+            font-size: 19px;
+            line-height: 29px;
+        }
+
+        .ks-home-ui .body-md-2 {
+            font-size: 14px;
+            line-height: 22px;
+        }
+
+        .ks-home-ui .body-text-3 {
+            font-size: 14px;
+            line-height: 20px;
+        }
+
+        .ks-home-ui .body-small {
+            font-size: 13px;
+            line-height: 25px;
+        }
+
+        .ks-home-ui .caption,
+        .ks-home-ui .text-avaiable.caption {
+            font-size: 12px;
+            line-height: 22px;
+        }
+
+        .ks-home-ui .name-product {
+            font-size: 14px;
+            line-height: 22px;
+            font-weight: 600;
+        }
+
+        .ks-home-ui .card-product .card-product-info {
+            display: grid;
+            gap: 20px;
+        }
+
+        .ks-home-ui .card-product .card-product-info .box-title,
+        .ks-home-ui .flat-title-2 .box-title {
+            display: grid;
+            gap: 10px;
+        }
+
+        .ks-home-ui .card-product .product-progress-sale {
+            display: grid;
+            gap: 4px;
+        }
+
+        .ks-home-ui .card-product .group-btn {
+            position: relative;
+            display: grid;
+            gap: 10px;
+        }
+
+        .ks-home-ui .card-product .group-btn .price-wrap {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .ks-home-ui .card-product .group-btn .list-product-btn {
+            position: relative;
+            z-index: 21;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            justify-content: flex-start;
+            gap: 10px;
+            transform: unset;
+        }
+
+        .ks-home-ui .card-product .group-btn .list-product-btn li {
+            transform: unset;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .ks-home-ui .box-btn-slide {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .ks-home-ui .box-btn-slide .nav-swiper {
+            position: relative;
+            color: var(--gray, #515d66);
+            width: auto;
+            height: auto;
+            top: auto;
+            right: auto;
+            bottom: auto;
+            left: auto;
+            margin-top: 0;
+            border: 0;
+            background: transparent;
+            box-shadow: none;
+            border-radius: 0;
+            padding: 0;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .ks-home-ui .box-btn-slide .nav-swiper:hover {
+            color: var(--primary, #ff3d3d);
+        }
+
+        .ks-home-ui .box-btn-slide .nav-swiper.swiper-button-disabled {
+            color: var(--gray-2, #c7cdd3);
+        }
+
+        .ks-home-ui .box-btn-slide .nav-swiper i {
+            font-size: 12px;
+        }
+
+        .ks-home-ui .card-product.style-img-border .card-product-wrapper {
+            border: 1px solid var(--gray-5, #ededed);
+            padding: 15px;
+        }
+
+        .ks-home-ui .slider-thumb-deal .card-product-wrapper,
+        .ks-home-ui .card-product.style-img-border .card-product-wrapper {
+            padding: 15px;
+        }
+
+        .ks-home-ui .tf-grid-product {
+            gap: 20px;
+        }
+
+        .ks-home-ui .menu-tab-line {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .ks-home-ui .tab-link.main-title.active {
+            color: var(--primary, #ff3d3d);
+        }
+
+        .ks-home-ui .list-product-btn .box-icon,
+        .ks-home-ui .list-product-btn .add-to-cart,
+        .ks-home-ui .list-product-btn .btn-icon-action,
+        .ks-home-ui .list-product-btn.flex-row .box-icon,
+        .ks-home-ui .list-product-btn.flex-row .add-to-cart,
+        .ks-home-ui .list-product-btn.flex-row .btn-icon-action {
+            width: 30px;
+            height: 30px;
+            min-width: 30px;
+            min-height: 30px;
+            padding: 0 !important;
+            margin: 0 !important;
+            flex: 0 0 30px;
+            border-radius: 50%;
+            background-color: var(--white, #fff);
+            color: var(--black, #111827);
+            box-shadow: 0 4px 16px rgba(0,0,0,.08);
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            line-height: 1 !important;
+        }
+
+        .ks-home-ui .list-product-btn .box-icon i,
+        .ks-home-ui .list-product-btn .add-to-cart i,
+        .ks-home-ui .list-product-btn .btn-icon-action i,
+        .ks-home-ui .list-product-btn .box-icon .icon,
+        .ks-home-ui .list-product-btn .add-to-cart .icon,
+        .ks-home-ui .list-product-btn .btn-icon-action .icon {
+            font-size: 12px;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ks-home-ui .list-product-btn .box-icon:hover,
+        .ks-home-ui .list-product-btn .add-to-cart:hover,
+        .ks-home-ui .list-product-btn .btn-icon-action:hover {
+            background-color: var(--black, #111827) !important;
+            color: var(--white, #fff);
+        }
+
+        .ks-home-ui .group-btn {
+            gap: 10px;
+            flex-wrap: nowrap;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .ks-home-ui .group-btn > .price-wrap,
+        .ks-home-ui .group-btn > .list-product-btn,
+        .ks-home-ui .group-btn > ul {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            align-self: center !important;
+        }
+
+        @media (max-width: 991px) {
+            .ks-home-ui .main-title,
+            .ks-home-ui .flat-title h5,
+            .ks-home-ui .tab-link.main-title {
+                font-size: 20px;
+                line-height: 23px;
+            }
+        }
+
     </style>
 </asp:Content>
 
