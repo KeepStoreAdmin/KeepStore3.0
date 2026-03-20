@@ -12,102 +12,67 @@
 
     <title><asp:ContentPlaceHolder ID="TitleContent" runat="server" /></title>
 
-    <!-- ============================================================
-         Core assets (tema grafico)
-         Base path: /Public/assets/keepstore/
-         ============================================================ -->
     <link rel="stylesheet" href="<%= ThemeManager.Asset("fonts/font.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("icons/icomoon/style.css") %>" />
-
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/bootstrap.min.css") %>" />
-	<link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore.css") %>" />
-	<link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore-overrides.css") %>" />
-	<link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-ui.css") %>" />
-	<link rel="stylesheet" href="<%= ThemeManager.Asset("css/documents-ui.css") %>" />
-	<link rel="stylesheet" href="<%= ThemeManager.Asset("css/auth-ui.css") %>" />
-	<link rel="stylesheet" href="<%= ThemeManager.Asset("css/ks-ui.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore-overrides.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-ui.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/documents-ui.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/auth-ui.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/ks-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/nice-select.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/swiper-bundle.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/animate.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/styles.css") %>" />
 
-    <!-- SEO / JSON-LD injection -->
     <asp:PlaceHolder ID="phSeoJsonLd" runat="server" Visible="false">
         <script type="application/ld+json"><asp:Literal ID="litSeoJsonLd" runat="server" EnableViewState="False" /></script>
     </asp:PlaceHolder>
 
-    <!-- SEO globale (robots/canonical) - injected by Page.master.vb -->
     <asp:Literal ID="litGlobalSeoHead" runat="server" EnableViewState="False" />
-
-	<asp:ContentPlaceHolder ID="HeadContent" runat="server" />
-
-	<!-- Custom overrides (pixel alignment / bridging) -->
-	<link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") %>" />
-
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") %>" />
 </head>
 
 <body id="PageBody" runat="server">
 <form id="form1" runat="server">
 
-        <!-- Scroll Top -->
         <button id="goTop" type="button" aria-label="Torna su">
             <span class="border-progress"></span>
             <span class="icon icon-arrow-right"></span>
         </button>
 
-        <!-- Preload -->
         <div class="preload preload-container" id="preload" aria-hidden="true">
             <div class="preload-logo">
                 <div class="spinner"></div>
             </div>
         </div>
 
-        <!-- Newsletter Modal -->
-<div class="modal fade ks-newsletter-modal" id="ksNewsletterModal" tabindex="-1" role="dialog"
-     aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <button type="button" class="btn-close position-absolute"
-                    style="right:12px;top:12px;" data-bs-dismiss="modal" aria-label="Chiudi"></button>
-            <div class="modal-body p-4 text-center">
-                <h5 class="modal-title fw-semibold mb-3">Iscriviti alla newsletter</h5>
-                <p class="body-text-2 mb-4">
-                    Registrati ora per ricevere promozioni e offerte. Non invieremo spam!
-                </p>
-                <div class="subscribe-content">
-                    <fieldset class="email">
-                        <input class="subscribe-email type-fs-2"
-                               id="ksNewsletterEmailModal"
-                               name="ksNewsletterEmailModal"
-                               type="email"
-                               placeholder="Inserisci la tua email"
-                               autocomplete="email" />
-                    </fieldset>
-                    <div class="button-submit mt-3">
-                        <button id="ksNewsletterSubmitModal"
-                                class="subscribe-button tf-btn btn-large hover-shine"
-                                type="button">
-                            <span class="body-md-2 fw-semibold text-white">Iscriviti</span>
-                        </button>
+        <div class="modal fade ks-newsletter-modal" id="ksNewsletterModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <button type="button" class="btn-close position-absolute" style="right:12px;top:12px;z-index:2;" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+                    <div class="modal-body text-center">
+                        <h5 class="fw-semibold mb-2">Join our newsletter for $10 offs</h5>
+                        <p class="body-text-3 mb-4">Register now to get latest updates on promotions and coupons. Don't worry, we not spam!</p>
+                        <div class="subscribe-content">
+                            <fieldset class="email">
+                                <input type="email" id="ksNewsletterEmailModal" class="subscribe-email type-fs-2" placeholder="Enter your email address" autocomplete="email" />
+                            </fieldset>
+                            <div class="button-submit">
+                                <button id="ksNewsletterSubmitModal" class="subscribe-button tf-btn btn-large hover-shine" type="button">
+                                    <span class="body-md-2 fw-semibold text-white">Subscribe</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="alert alert-danger d-none mt-3" id="ksNewsletterError">Your subscription could not be saved. Please try again.</div>
+                        <div class="alert alert-success d-none mt-3" id="ksNewsletterSuccess">Your subscription has been successful.</div>
                     </div>
-                </div>
-                <div class="alert alert-danger d-none mt-3"
-                     id="ksNewsletterError">
-                    Non è stato possibile salvare l'iscrizione. Riprova.
-                </div>
-                <div class="alert alert-success d-none mt-3"
-                     id="ksNewsletterSuccess">
-                    Iscrizione avvenuta con successo.
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
-        <!-- ============================================================
-             Global: Facebook Like popup placeholder (legacy)
-             NOTE: controllato dal code-behind (PopUpfacebook.Visible)
-             ============================================================ -->
         <asp:Panel ID="PopUpfacebook" runat="server" Visible="False">
             <div class="modal fade show" style="display:block; background: rgba(0,0,0,.55);" role="dialog" aria-modal="true">
                 <div class="modal-dialog modal-dialog-centered" role="document">
@@ -116,7 +81,7 @@
                             <h5 class="modal-title">Seguici su Facebook</h5>
                         </div>
                         <div class="modal-body">
-                            <p class="mb-0">Metti “Mi piace” alla nostra pagina per restare aggiornato su offerte e novità.</p>
+                            <p class="mb-0">Metti Mi piace alla nostra pagina per restare aggiornato su offerte e novita.</p>
                         </div>
                         <div class="modal-footer">
                             <asp:LinkButton ID="LB_CancelFacebook" runat="server" CssClass="btn btn-primary" Text="Chiudi" CausesValidation="False" />
@@ -127,109 +92,86 @@
         </asp:Panel>
 
         <div id="wrapper">
-
-                        <!-- ============================================================
-                 HEADER (UI contract)
-                 ============================================================ -->
             <asp:ContentPlaceHolder ID="HeaderContent" runat="server">
                 <ks:SiteHeader ID="SiteHeader1" runat="server" />
             </asp:ContentPlaceHolder>
 
-
-
-            <!-- Main Content -->
             <main>
                 <asp:ContentPlaceHolder ID="BreadcrumbContent" runat="server" />
-
-                <!-- Account shell (progressive): sidebar visibile solo su pagine account via CSS (body.ks-page-account) -->
                 <div class="ks-account-shell">
                     <aside class="ks-account-aside" aria-label="Menu account">
                         <ks:AccountSidebar ID="AccountSidebar1" runat="server" />
                     </aside>
-
                     <div class="ks-account-main">
                         <asp:ContentPlaceHolder ID="MainContent" runat="server" />
-
-                        <!-- Legacy aliases -->
                         <asp:ContentPlaceHolder ID="ContentPlaceHolder1" runat="server" />
                         <asp:ContentPlaceHolder ID="cph" runat="server" />
                     </div>
                 </div>
             </main>
 
-                        <!-- ============================================================
-                 FOOTER (UI contract)
-                 ============================================================ -->
             <asp:ContentPlaceHolder ID="FooterContent" runat="server">
                 <ks:SiteFooter ID="SiteFooter1" runat="server" />
             </asp:ContentPlaceHolder>
+        </div>
 
-
-        </div><!-- /#wrapper -->
-
-        <!-- DataSources (legacy, required by Page.master.vb) -->
         <asp:SqlDataSource ID="SqlData_Popup" runat="server"
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
-
         <asp:SqlDataSource ID="SqlData_TotOrdini" runat="server"
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
-
         <asp:SqlDataSource ID="Sql_Partners" runat="server"
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
-
         <asp:SqlDataSource ID="SqlDataFooterDIV1" runat="server"
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
-
         <asp:SqlDataSource ID="SqlDataFooterDIV2" runat="server"
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
-
         <asp:SqlDataSource ID="SqlDataFooterDIV3" runat="server"
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
-
         <asp:SqlDataSource ID="SqlDataFooterDIV4" runat="server"
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" />
 
-		<!-- JS (tutto da /Public/assets/keepstore/) -->
-		<script src="<%= ThemeManager.Asset("js/jquery.min.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/bootstrap.min.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/bootstrap-select.min.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/jquery.nice-select.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/swiper-bundle.min.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/carousel.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/wow.min.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/infinityslide.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/multiple-modal.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/lazysize.min.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/shop.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/count-down.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/main.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/sibforms.js") %>"></script>
-		<script src="<%= ThemeManager.Asset("js/drift.min.js") %>"></script>
-
-
-		<!-- Page flags + progressive UI enhancements -->
-		<script src="<%= ThemeManager.Asset("js/ks-page-flags.js") %>"></script>
-
-		<!-- Script specifici pagina (es. zoom.js su articolo.aspx) -->
-		<asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
+        <script src="<%= ThemeManager.Asset("js/jquery.min.js") %>"></script>
+        <script src="<%= ThemeManager.Asset("js/bootstrap.min.js") %>"></script>
+        <script src="<%= ThemeManager.Asset("js/bootstrap-select.min.js") %>"></script>
+        <script src="<%= ThemeManager.Asset("js/jquery.nice-select.js") %>"></script>
+        <script src="<%= ThemeManager.Asset("js/swiper-bundle.min.js") %>"></script>
+        <script src="<%= ThemeManager.Asset("js/carousel.js") %>"></script>
+        <script src="<%= ThemeManager.Asset("js/wow.min.js") %>"></script>
+        <script src="<%= ThemeManager.Asset("js/infinityslide.js") %>"></script>
+        <script src="<%= ThemeManager.Asset("js/multiple-modal.js") %>"></script>
+        <script src="<%= ThemeManager.Asset("js/lazysize.min.js") %>"></script>
+        <script src="<%= ThemeManager.Asset("js/shop.js") %>"></script>
+        <script src="<%= ThemeManager.Asset("js/count-down.js") %>"></script>
+        <script src="<%= ThemeManager.Asset("js/main.js") %>"></script>
+        <script src="<%= ThemeManager.Asset("js/sibforms.js") %>"></script>
+        <script src="<%= ThemeManager.Asset("js/drift.min.js") %>"></script>
+        <script src="<%= ThemeManager.Asset("js/ks-page-flags.js") %>"></script>
+        <asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
 
         <script type="text/javascript">
-    document.addEventListener('DOMContentLoaded', function () {
-        var el = document.getElementById('ksNewsletterModal');
-        if (el && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-            var modal = new bootstrap.Modal(el);
-            modal.show();
-        }
-    });
-</script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var modalEl = document.getElementById('ksNewsletterModal');
+            if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                try {
+                    var seen = window.sessionStorage ? sessionStorage.getItem('ks_newsletter_shown') : '1';
+                    if (!seen) {
+                        new bootstrap.Modal(modalEl).show();
+                        sessionStorage.setItem('ks_newsletter_shown', '1');
+                    }
+                } catch (e) {
+                    new bootstrap.Modal(modalEl).show();
+                }
+            }
+        });
+        </script>
 
-    </form>
+</form>
 </body>
 </html>
