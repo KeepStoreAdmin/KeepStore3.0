@@ -62,6 +62,47 @@
             </div>
         </div>
 
+        <!-- Newsletter Modal -->
+<div class="modal fade ks-newsletter-modal" id="ksNewsletterModal" tabindex="-1" role="dialog"
+     aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <button type="button" class="btn-close position-absolute"
+                    style="right:12px;top:12px;" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+            <div class="modal-body p-4 text-center">
+                <h5 class="modal-title fw-semibold mb-3">Iscriviti alla newsletter</h5>
+                <p class="body-text-2 mb-4">
+                    Registrati ora per ricevere promozioni e offerte. Non invieremo spam!
+                </p>
+                <div class="subscribe-content">
+                    <fieldset class="email">
+                        <input class="subscribe-email type-fs-2"
+                               id="ksNewsletterEmailModal"
+                               name="ksNewsletterEmailModal"
+                               type="email"
+                               placeholder="Inserisci la tua email"
+                               autocomplete="email" />
+                    </fieldset>
+                    <div class="button-submit mt-3">
+                        <button id="ksNewsletterSubmitModal"
+                                class="subscribe-button tf-btn btn-large hover-shine"
+                                type="button">
+                            <span class="body-md-2 fw-semibold text-white">Iscriviti</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="alert alert-danger d-none mt-3"
+                     id="ksNewsletterError">
+                    Non è stato possibile salvare l'iscrizione. Riprova.
+                </div>
+                <div class="alert alert-success d-none mt-3"
+                     id="ksNewsletterSuccess">
+                    Iscrizione avvenuta con successo.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
         <!-- ============================================================
              Global: Facebook Like popup placeholder (legacy)
@@ -178,6 +219,16 @@
 
 		<!-- Script specifici pagina (es. zoom.js su articolo.aspx) -->
 		<asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
+
+        <script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function () {
+        var el = document.getElementById('ksNewsletterModal');
+        if (el && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            var modal = new bootstrap.Modal(el);
+            modal.show();
+        }
+    });
+</script>
 
     </form>
 </body>
