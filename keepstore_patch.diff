@@ -1,0 +1,61 @@
+*** Begin Patch
+*** Update File: Public/ui/controls/SiteHeader.ascx
+@@
+ <header class="tf-header style-2 ks-header-ui">
+@@
+         <!-- Top Bar: replicato dal template Onsus -->
+        <!-- La barra superiore mostra informazioni di contatto, spedizione, valuta e lingua.  -->
+        <div class="tf-topbar line-bt d-none d-xl-block">
+            <div class="container">
+                <div class="row">
+                    <div class="col-xl-6 col-12">
+                        <div class="topbar-left justify-content-xl-start h-100">
+                            <p class="body-small text-main-2">
+                                <i class="icon-headphone"></i>
+                                Servizio clienti:
+                                <a href="tel:+390000000000" class="text-primary link-secondary fw-semibold">
+                                    +39&nbsp;000&nbsp;000&nbsp;0000
+                                </a>
+                            </p>
+                            <p class="body-small text-main-2">
+                                Spedizione gratuita sopra
+                                <span class="fw-semibold text-main">€50</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-xl-6 d-none d-xl-block">
+                        <div class="tf-cur justify-content-end bar-lang">
+                            <!-- Selettore valuta (statico) -->
+                            <div class="tf-cur-item tf-currencies gap-0">
+                                <i class="icon icon-budget"></i>
+                                <div class="tf-curs">
+                                    <select class="image-select center style-default type-cur" aria-label="Seleziona valuta">
+                                        <option value="EUR" selected>EUR | Italia (€)</option>
+                                        <option value="USD">USD | United States ($)</option>
+                                        <option value="GBP">GBP | Regno Unito (£)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Selettore lingua (statico) -->
+                            <div class="tf-cur-item tf-languages gap-0">
+                                <i class="icon icon-global"></i>
+                                <div class="tf-lans">
+                                    <select class="image-select center style-default type-lan" aria-label="Seleziona lingua">
+                                        <option value="it" selected>Italiano</option>
+                                        <option value="en">English</option>
+                                        <option value="fr">Français</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Collegamento area personale (riutilizza login/account esistente) -->
+                            <asp:HyperLink ID="hlTopAccount" runat="server" NavigateUrl="~/login.aspx" CssClass="tf-cur-item link">
+                                <i class="icon-user-3"></i>
+                                <span class="body-small">Area&nbsp;personale</span>
+                                <i class="icon-arrow-down"></i>
+                            </asp:HyperLink>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- /Top Bar -->
