@@ -49,13 +49,21 @@
             </div>
         </div>
 
+        <!-- Newsletter modal: safe, non-blocking, desktop-only autoopen -->
         <div class="modal fade ks-newsletter-modal" id="ksNewsletterModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
-                    <button type="button" class="btn-close position-absolute" style="right:12px;top:12px;z-index:2;" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+                    <button type="button"
+                            class="btn-close close position-absolute"
+                            style="right:12px;top:12px;z-index:3;"
+                            data-bs-dismiss="modal"
+                            data-dismiss="modal"
+                            aria-label="Chiudi">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                     <div class="modal-body text-center">
                         <h5 class="fw-semibold mb-2">Join our newsletter for $10 offs</h5>
-                        <p class="body-text-3 mb-4">Register now to get latest updates on promotions and coupons. Don't worry, we not spam!</p>
+                        <p class="body-text-3 mb-4">Register now to get latest updates on promotions and coupons. Don’t worry, we not spam!</p>
                         <div class="subscribe-content">
                             <fieldset class="email">
                                 <input type="email" id="ksNewsletterEmailModal" class="subscribe-email type-fs-2" placeholder="Enter your email address" autocomplete="email" />
@@ -156,20 +164,127 @@
         <asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
 
         <script type="text/javascript">
-        document.addEventListener('DOMContentLoaded', function () {
-            var modalEl = document.getElementById('ksNewsletterModal');
-            if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        (function () {
+            function isMobileViewport() {
                 try {
-                    var seen = window.sessionStorage ? sessionStorage.getItem('ks_newsletter_shown') : '1';
-                    if (!seen) {
-                        new bootstrap.Modal(modalEl).show();
-                        sessionStorage.setItem('ks_newsletter_shown', '1');
-                    }
+                    return window.matchMedia && window.matchMedia('(max-width: 991.98px)').matches;
                 } catch (e) {
-                    new bootstrap.Modal(modalEl).show();
+                    return window.innerWidth <= 991;
                 }
             }
-        });
+
+            function getBs5Modal(el) {
+                try {
+                    if (window.bootstrap && bootstrap.Modal) {
+                        return bootstrap.Modal.getOrCreateInstance(el, { backdrop: true, keyboard: true });
+                    }
+                } catch (e) { }
+                return null;
+            }
+
+            function showModal(el) {
+                var bs5 = getBs5Modal(el);
+                if (bs5) { bs5.show(); return true; }
+                try {
+                    if (window.jQuery && jQuery.fn && jQuery.fn.modal) {
+                        jQuery(el).modal({ backdrop: true, keyboard: true, show: true });
+                        return true;
+                    }
+                } catch (e) { }
+                return false;
+            }
+
+            function hideModal(el) {
+                var bs5 = getBs5Modal(el);
+                if (bs5) { bs5.hide(); }
+                try {
+                    if (window.jQuery && jQuery.fn && jQuery.fn.modal) {
+                        jQuery(el).modal('hide');
+                    }
+                } catch (e) { }
+                try {
+                    el.classList.remove('show');
+                    el.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                    Array.prototype.slice.call(document.querySelectorAll('.modal-backdrop')).forEach(function (backdrop) {
+                        if (backdrop && backdrop.parentNode) {
+                            backdrop.parentNode.removeChild(backdrop);
+                        }
+                    });
+                } catch (e) { }
+            }
+
+            function setNotice(idToShow, idToHide) {
+                var showEl = document.getElementById(idToShow);
+                var hideEl = document.getElementById(idToHide);
+                if (hideEl) hideEl.classList.add('d-none');
+                if (showEl) showEl.classList.remove('d-none');
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                var modalEl = document.getElementById('ksNewsletterModal');
+                if (!modalEl) return;
+
+                Array.prototype.slice.call(modalEl.querySelectorAll('[data-bs-dismiss="modal"], [data-dismiss="modal"], .btn-close, .close')).forEach(function (btn) {
+                    btn.addEventListener('click', function (ev) {
+                        ev.preventDefault();
+                        hideModal(modalEl);
+                    });
+                });
+
+                document.addEventListener('keydown', function (ev) {
+                    if (ev.key === 'Escape') {
+                        hideModal(modalEl);
+                    }
+                });
+
+                var submitBtn = document.getElementById('ksNewsletterSubmitModal');
+                var emailInput = document.getElementById('ksNewsletterEmailModal');
+                if (submitBtn && emailInput) {
+                    submitBtn.addEventListener('click', function () {
+                        var email = (emailInput.value || '').trim();
+                        var isValid = /^\S+@\S+\.\S+$/.test(email);
+                        if (!isValid) {
+                            setNotice('ksNewsletterError', 'ksNewsletterSuccess');
+                            return;
+                        }
+
+                        var footerInput = document.getElementById('ksNewsletterEmail');
+                        var footerSubmit = document.getElementById('ksNewsletterSubmit');
+                        if (footerInput) footerInput.value = email;
+
+                        if (footerSubmit) {
+                            try {
+                                footerSubmit.click();
+                                setNotice('ksNewsletterSuccess', 'ksNewsletterError');
+                                window.setTimeout(function () { hideModal(modalEl); }, 800);
+                                return;
+                            } catch (e) { }
+                        }
+
+                        setNotice('ksNewsletterSuccess', 'ksNewsletterError');
+                        window.setTimeout(function () { hideModal(modalEl); }, 800);
+                    });
+                }
+
+                var shouldAutoOpen = !isMobileViewport();
+                try {
+                    if (window.sessionStorage && sessionStorage.getItem('ks_newsletter_shown') === '1') {
+                        shouldAutoOpen = false;
+                    }
+                } catch (e) { }
+
+                if (shouldAutoOpen) {
+                    window.setTimeout(function () {
+                        if (showModal(modalEl)) {
+                            try {
+                                if (window.sessionStorage) sessionStorage.setItem('ks_newsletter_shown', '1');
+                            } catch (e) { }
+                        }
+                    }, 1200);
+                }
+            });
+        })();
         </script>
 
 </form>
