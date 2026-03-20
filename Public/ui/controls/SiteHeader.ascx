@@ -239,6 +239,38 @@
 </style>
 
             <header class="tf-header style-2 ks-header-ui">
+    <div class="tf-topbar">
+        <div class="container">
+          <div class="tf-topbar-content">
+            <ul class="tf-topbar-left">
+              <li class="tf-topbar-info">
+                <span class="tf-topbar-icon"><i class="fas fa-phone"></i></span>
+                <span class="tf-topbar-text">+39 123 456789</span>
+              </li>
+              <li class="tf-topbar-info">
+                Spedizione gratuita per ordini superiori a 99 € in Italia
+              </li>
+            </ul>
+            <ul class="tf-topbar-right">
+              <li class="tf-topbar-cur dropdown">
+                <a href="#" class="tf-topbar-toggle" data-bs-toggle="dropdown" aria-expanded="false">EUR</a>
+                <ul class="dropdown-menu">
+                  <li><a class="dropdown-item" href="#">USD</a></li>
+                  <li><a class="dropdown-item" href="#">GBP</a></li>
+                </ul>
+              </li>
+              <li class="tf-topbar-cur dropdown">
+                <a href="#" class="tf-topbar-toggle" data-bs-toggle="dropdown" aria-expanded="false">IT</a>
+                <ul class="dropdown-menu">
+                  <li><a class="dropdown-item" href="#">EN</a></li>
+                  <li><a class="dropdown-item" href="#">FR</a></li>
+                </ul>
+              </li>
+              <li class="tf-topbar-account"><a href="~/Account" id="lnkAccountTop">Area Personale</a></li>
+            </ul>
+          </div>
+        </div>
+    </div>
     <div class="inner-header">
         <div class="container">
             <div class="row align-items-center">
