@@ -269,7 +269,13 @@
 
                 var shouldAutoOpen = !isMobileViewport();
                 try {
+                    if (!document.body || document.body.className.indexOf('ks-page-home') < 0) {
+                        shouldAutoOpen = false;
+                    }
                     if (window.sessionStorage && sessionStorage.getItem('ks_newsletter_shown') === '1') {
+                        shouldAutoOpen = false;
+                    }
+                    if (document.querySelector('.modal.show:not(#ksNewsletterModal)')) {
                         shouldAutoOpen = false;
                     }
                 } catch (e) { }
@@ -281,7 +287,7 @@
                                 if (window.sessionStorage) sessionStorage.setItem('ks_newsletter_shown', '1');
                             } catch (e) { }
                         }
-                    }, 1200);
+                    }, 1600);
                 }
             });
         })();

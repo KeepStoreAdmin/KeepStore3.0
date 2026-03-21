@@ -185,6 +185,139 @@
         </div>
     </section>
 
+    
+    <section class="has-bg-img ks-home-wide-promo" style="background-image:url('/Public/assets/images/banner/banner-1.jpg'); background-size:cover; background-repeat:no-repeat;">
+        <div class="container">
+            <div class="banner-image-product hover-img">
+                <a href="articoli.aspx" class="image img-2 img-style overflow-visible relative">
+                    <img width="994" height="986" src="/Public/assets/images/item/tivi.webp" data-src="/Public/assets/images/item/tivi.webp" alt="" class="lazyload" />
+                    <div class="box-sale-wrap position1">
+                        <p class="small-text">Sale</p>
+                        <p class="title-sidebar-2">25%</p>
+                    </div>
+                </a>
+                <div class="content">
+                    <div class="box-title">
+                        <h1 class="fw-normal">
+                            <a href="articoli.aspx" class="link text-white">
+                                GameConsole <br class="d-none d-xl-block" />
+                                Destiny Special Edition
+                            </a>
+                        </h1>
+                        <div class="box-price">
+                            <p class="old-price style-white main-title-2 fw-light">€80,00</p>
+                            <h3 class="fw-semibold text-third">€60,00</h3>
+                        </div>
+                    </div>
+                    <div class="box-btn">
+                        <a href="articoli.aspx" class="tf-btn-icon type-2 style-white">
+                            <i class="icon-circle-chevron-right"></i>
+                            <span>Shop now</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="tf-sp-2 ks-home-collection-block">
+        <div class="container">
+            <div class="swiper ks-home-collection-swiper">
+                <div class="swiper-wrapper">
+                    <div class="swiper-slide">
+                        <div class="cls-category style-abs hover-img wow fadeInLeft" data-wow-delay="0s">
+                            <a href="articoli.aspx" class="img-box img-style d-block">
+                                <img src="/Public/assets/images/collection/cls-category-1.webp" data-src="/Public/assets/images/collection/cls-category-1.webp" alt="" class="lazyload" />
+                            </a>
+                            <div class="content">
+                                <div class="box-title font-2 text-white text-uppercase">
+                                    <p class="product-title-2">catch big</p>
+                                    <p class="main-title-2 fw-bold">deals</p>
+                                    <p class="product-title-2">on the headphones</p>
+                                </div>
+                                <a href="articoli.aspx" class="tf-btn-icon style-white">
+                                    <i class="icon-circle-chevron-right"></i>
+                                    <span class="font-2">Shop now</span>
+                                </a>
+                            </div>
+                            <div class="box-sale-wrap">
+                                <p class="small-text">Sale</p>
+                                <p class="title-sidebar-2">20%</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="cls-category style-abs hover-img wow fadeInLeft" data-wow-delay="0.1s">
+                            <a href="articoli.aspx" class="img-box img-style d-block">
+                                <img src="/Public/assets/images/collection/cls-category-2.webp" data-src="/Public/assets/images/collection/cls-category-2.webp" alt="" class="lazyload" />
+                            </a>
+                            <div class="content">
+                                <div class="box-title font-2 text-white text-uppercase">
+                                    <p class="product-title-2">catch big</p>
+                                    <p class="main-title-2 fw-bold">deals</p>
+                                    <p class="product-title-2">on the cameras</p>
+                                </div>
+                                <a href="articoli.aspx" class="tf-btn-icon style-white">
+                                    <i class="icon-circle-chevron-right"></i>
+                                    <span class="font-2">Shop now</span>
+                                </a>
+                            </div>
+                            <div class="box-sale-wrap">
+                                <p class="small-text">Sale</p>
+                                <p class="title-sidebar-2">15%</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="cls-category style-abs hover-img wow fadeInLeft" data-wow-delay="0.2s">
+                            <a href="articoli.aspx" class="img-box img-style d-block">
+                                <img src="/Public/assets/images/collection/cls-category-3.jpg" data-src="/Public/assets/images/collection/cls-category-3.jpg" alt="" class="lazyload" />
+                            </a>
+                            <div class="content">
+                                <div class="box-title font-2 text-white text-uppercase">
+                                    <p class="product-title-2">catch big</p>
+                                    <p class="main-title-2 fw-bold">deals</p>
+                                    <p class="product-title-2">on the laptops</p>
+                                </div>
+                                <a href="articoli.aspx" class="tf-btn-icon style-white">
+                                    <i class="icon-circle-chevron-right"></i>
+                                    <span class="font-2">Shop now</span>
+                                </a>
+                            </div>
+                            <div class="box-sale-wrap">
+                                <p class="small-text">Sale</p>
+                                <p class="title-sidebar-2">10%</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="cls-category style-abs hover-img wow fadeInLeft" data-wow-delay="0.3s">
+                            <a href="articoli.aspx" class="img-box img-style d-block">
+                                <img src="/Public/assets/images/collection/cls-category-4.webp" data-src="/Public/assets/images/collection/cls-category-4.webp" alt="" class="lazyload" />
+                            </a>
+                            <div class="content">
+                                <div class="box-title font-2 text-white text-uppercase">
+                                    <p class="product-title-2">catch big</p>
+                                    <p class="main-title-2 fw-bold">deals</p>
+                                    <p class="product-title-2">on the gaming</p>
+                                </div>
+                                <a href="articoli.aspx" class="tf-btn-icon style-white">
+                                    <i class="icon-circle-chevron-right"></i>
+                                    <span class="font-2">Shop now</span>
+                                </a>
+                            </div>
+                            <div class="box-sale-wrap">
+                                <p class="small-text">Sale</p>
+                                <p class="title-sidebar-2">18%</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sw-dot-default ks-home-collection-pagination justify-content-center"></div>
+            </div>
+        </div>
+    </section>
+
     <section class="tf-sp-2 flat-animate-tab">
         <div class="container">
             <div class="flat-title">
@@ -231,7 +364,7 @@
                     <div class="swiper-button-next nav-swiper nav-next-products"><i class="icon-arrow-right-lg"></i></div>
                 </div>
             </div>
-            <div class="swiper tf-sw-products" data-preview="5" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="15" data-space="15" data-pagination="2" data-pagination-sm="3" data-pagination-md="4" data-pagination-lg="5">
+            <div class="swiper tf-sw-products" data-preview="5" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="15" data-space="15" data-pagination="2" data-pagination-sm="3" data-pagination-md="4" data-pagination-lg="5" data-grid="2">
                 <div class="swiper-wrapper">
                     <asp:Repeater ID="rptBestSeller" runat="server">
                         <ItemTemplate>
@@ -246,30 +379,124 @@
         </div>
     </section>
 
+    
+    <section class="ks-home-banner-product">
+        <div class="container">
+            <a href="articoli.aspx" class="banner-image-product-2 hover-img d-block">
+                <div class="item-image item-1 img-style overflow-visible">
+                    <img src="/Public/assets/images/item/camera-2.webp" data-src="/Public/assets/images/item/camera-2.webp" alt="" class="lazyload" />
+                </div>
+                <div class="item-image item-2 img-style overflow-visible d-none d-lg-block">
+                    <img src="/Public/assets/images/item/camera-3.webp" data-src="/Public/assets/images/item/camera-3.webp" alt="" class="lazyload" />
+                </div>
+                <div class="item-banner" style="background-image:url('/Public/assets/images/banner/banner-2.jpg'); background-size:cover; background-repeat:no-repeat; background-position:center;">
+                    <div class="inner">
+                        <h3 class="fw-normal text-white lh-lg-50 font-2">Shop and <span class="fw-bold">SAVE BIG</span><br />on hottest camera</h3>
+                        <div class="box-sale-wrap type-3 relative">
+                            <p class="small-text">Save</p>
+                            <p class="price-text-2">€68,99</p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </section>
+
     <section class="tf-sp-2">
         <div class="container">
             <div class="tf-grid-product">
                 <div class="tf-grid-product-item box-btn-slide-item">
-                    <div class="flat-title wow fadeInUp" data-wow-delay="0s"><h5 class="fw-semibold">Top 20</h5></div>
-                    <ul class="product-list-wrap"><asp:Repeater ID="rptTop20" runat="server"><ItemTemplate><li><%# RenderRowCard(Container.DataItem) %></li></ItemTemplate></asp:Repeater></ul>
+                    <div class="flat-title wow fadeInUp" data-wow-delay="0s">
+                        <h5 class="fw-semibold">Top 20</h5>
+                        <div class="box-btn-slide relative">
+                            <div class="swiper-button-prev nav-swiper ks-col-prev"><i class="icon-arrow-left-lg"></i></div>
+                            <div class="swiper-button-next nav-swiper ks-col-next"><i class="icon-arrow-right-lg"></i></div>
+                        </div>
+                    </div>
+                    <div class="swiper ks-column-swiper">
+                        <div class="swiper-wrapper">
+                            <asp:Repeater ID="rptTop20Slides" runat="server">
+                                <ItemTemplate>
+                                    <div class="swiper-slide">
+                                        <asp:Literal ID="litTop20SlideHtml" runat="server" Text='<%# Eval("Html") %>' />
+                                    </div>
+                                </ItemTemplate>
+                            </asp:Repeater>
+                        </div>
+                        <div class="d-flex d-lg-none sw-dot-default ks-col-pagination justify-content-center"></div>
+                    </div>
                 </div>
+
                 <div class="tf-grid-product-item box-btn-slide-item">
-                    <div class="flat-title wow fadeInUp" data-wow-delay="0s"><h5 class="fw-semibold">Featured Products</h5></div>
-                    <ul class="product-list-wrap"><asp:Repeater ID="rptFeaturedProducts" runat="server"><ItemTemplate><li><%# RenderRowCard(Container.DataItem) %></li></ItemTemplate></asp:Repeater></ul>
+                    <div class="flat-title wow fadeInUp" data-wow-delay="0s">
+                        <h5 class="fw-semibold">Featured Products</h5>
+                        <div class="box-btn-slide relative">
+                            <div class="swiper-button-prev nav-swiper ks-col-prev"><i class="icon-arrow-left-lg"></i></div>
+                            <div class="swiper-button-next nav-swiper ks-col-next"><i class="icon-arrow-right-lg"></i></div>
+                        </div>
+                    </div>
+                    <div class="swiper ks-column-swiper">
+                        <div class="swiper-wrapper">
+                            <asp:Repeater ID="rptFeaturedProductsSlides" runat="server">
+                                <ItemTemplate>
+                                    <div class="swiper-slide">
+                                        <asp:Literal ID="litFeaturedProductsSlideHtml" runat="server" Text='<%# Eval("Html") %>' />
+                                    </div>
+                                </ItemTemplate>
+                            </asp:Repeater>
+                        </div>
+                        <div class="d-flex d-lg-none sw-dot-default ks-col-pagination justify-content-center"></div>
+                    </div>
                 </div>
+
                 <div class="tf-grid-product-item box-btn-slide-item">
-                    <div class="flat-title wow fadeInUp" data-wow-delay="0s"><h5 class="fw-semibold">Top Selling Product</h5></div>
-                    <ul class="product-list-wrap"><asp:Repeater ID="rptTopSellingProduct" runat="server"><ItemTemplate><li><%# RenderRowCard(Container.DataItem) %></li></ItemTemplate></asp:Repeater></ul>
+                    <div class="flat-title wow fadeInUp" data-wow-delay="0s">
+                        <h5 class="fw-semibold">Top Selling Product</h5>
+                        <div class="box-btn-slide relative">
+                            <div class="swiper-button-prev nav-swiper ks-col-prev"><i class="icon-arrow-left-lg"></i></div>
+                            <div class="swiper-button-next nav-swiper ks-col-next"><i class="icon-arrow-right-lg"></i></div>
+                        </div>
+                    </div>
+                    <div class="swiper ks-column-swiper">
+                        <div class="swiper-wrapper">
+                            <asp:Repeater ID="rptTopSellingProductSlides" runat="server">
+                                <ItemTemplate>
+                                    <div class="swiper-slide">
+                                        <asp:Literal ID="litTopSellingProductSlideHtml" runat="server" Text='<%# Eval("Html") %>' />
+                                    </div>
+                                </ItemTemplate>
+                            </asp:Repeater>
+                        </div>
+                        <div class="d-flex d-lg-none sw-dot-default ks-col-pagination justify-content-center"></div>
+                    </div>
                 </div>
+
                 <div class="tf-grid-product-item box-btn-slide-item">
-                    <div class="flat-title wow fadeInUp" data-wow-delay="0s"><h5 class="fw-semibold">On-sale Product</h5></div>
-                    <ul class="product-list-wrap"><asp:Repeater ID="rptOnSaleProduct" runat="server"><ItemTemplate><li><%# RenderRowCard(Container.DataItem) %></li></ItemTemplate></asp:Repeater></ul>
+                    <div class="flat-title wow fadeInUp" data-wow-delay="0s">
+                        <h5 class="fw-semibold">On-sale Product</h5>
+                        <div class="box-btn-slide relative">
+                            <div class="swiper-button-prev nav-swiper ks-col-prev"><i class="icon-arrow-left-lg"></i></div>
+                            <div class="swiper-button-next nav-swiper ks-col-next"><i class="icon-arrow-right-lg"></i></div>
+                        </div>
+                    </div>
+                    <div class="swiper ks-column-swiper">
+                        <div class="swiper-wrapper">
+                            <asp:Repeater ID="rptOnSaleProductSlides" runat="server">
+                                <ItemTemplate>
+                                    <div class="swiper-slide">
+                                        <asp:Literal ID="litOnSaleProductSlideHtml" runat="server" Text='<%# Eval("Html") %>' />
+                                    </div>
+                                </ItemTemplate>
+                            </asp:Repeater>
+                        </div>
+                        <div class="d-flex d-lg-none sw-dot-default ks-col-pagination justify-content-center"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="tf-sp-2 ks-home-brands-block">
+<section class="tf-sp-2 ks-home-brands-block">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s"><h5 class="fw-semibold">Brands</h5></div>
             <div class="swiper ks-home-brands" data-preview="6" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="20" data-space="15">

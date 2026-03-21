@@ -55,17 +55,17 @@ Partial Public Class _Default
         rptBestSeller.DataSource = GetBestSellerProducts(12)
         rptBestSeller.DataBind()
 
-        rptTop20.DataSource = SliceTable(GetTop20Products(10), 0, 5)
-        rptTop20.DataBind()
+        rptTop20Slides.DataSource = BuildSlidesTable(GetTop20Products(10), 5)
+        rptTop20Slides.DataBind()
 
-        rptFeaturedProducts.DataSource = SliceTable(GetFeaturedProductsList(10), 0, 5)
-        rptFeaturedProducts.DataBind()
+        rptFeaturedProductsSlides.DataSource = BuildSlidesTable(GetFeaturedProductsList(10), 5)
+        rptFeaturedProductsSlides.DataBind()
 
-        rptTopSellingProduct.DataSource = SliceTable(GetTopSellingProductsList(10), 0, 5)
-        rptTopSellingProduct.DataBind()
+        rptTopSellingProductSlides.DataSource = BuildSlidesTable(GetTopSellingProductsList(10), 5)
+        rptTopSellingProductSlides.DataBind()
 
-        rptOnSaleProduct.DataSource = SliceTable(GetOnSaleZoneProducts(10), 0, 5)
-        rptOnSaleProduct.DataBind()
+        rptOnSaleProductSlides.DataSource = BuildSlidesTable(GetOnSaleZoneProducts(10), 5)
+        rptOnSaleProductSlides.DataBind()
 
         rptBrands.DataSource = GetBrands(12)
         rptBrands.DataBind()
@@ -83,6 +83,58 @@ Partial Public Class _Default
         rightRepeater.DataSource = SliceTable(work, 4, 3)
         rightRepeater.DataBind()
     End Sub
+
+    Private Function BuildSlidesTable(ByVal source As DataTable, ByVal groupSize As Integer) As DataTable
+        Dim result As New DataTable()
+        result.Columns.Add("Html", GetType(String))
+
+        Dim work = source
+        If work Is Nothing OrElse work.Rows.Count = 0 Then
+            work = SampleProducts()
+        End If
+
+        Dim total As Integer = work.Rows.Count
+        Dim index As Integer = 0
+        While index < total
+            Dim sb As New StringBuilder()
+            sb.Append("<ul class='product-list-wrap'>")
+            Dim upper As Integer = Math.Min(index + groupSize - 1, total - 1)
+            For i As Integer = index To upper
+                sb.Append("<li class='wow fadeInUp' data-wow-delay='0s'>")
+                sb.Append(RenderRowCardFromRow(work.Rows(i)))
+                sb.Append("</li>")
+            Next
+            sb.Append("</ul>")
+            result.Rows.Add(sb.ToString())
+            index += groupSize
+        End While
+
+        If result.Rows.Count = 0 Then
+            result.Rows.Add("<ul class='product-list-wrap'></ul>")
+        End If
+
+        Return result
+    End Function
+
+    Private Function RenderRowCardFromRow(ByVal row As DataRow) As String
+        If row Is Nothing Then Return String.Empty
+        Dim sb As New StringBuilder()
+        sb.Append("<div class='card-product style-row row-small-2'>")
+        sb.Append("<div class='card-product-wrapper'>")
+        sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='product-img'>")
+        sb.Append("<img class='img-product lazyload' src='").Append(ProductImageThumb(row("Img1"))).Append("' data-src='").Append(ProductImageThumb(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
+        sb.Append("<img class='img-hover lazyload' src='").Append(ProductImageFull(row("Img1"))).Append("' data-src='").Append(ProductImageFull(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
+        sb.Append("</a></div>")
+        sb.Append("<div class='card-product-info'><div class='box-title'>")
+        sb.Append("<div class='bg-white relative z-5'><p class='caption text-main-2 font-2'>").Append(HttpUtility.HtmlEncode(Convert.ToString(row("Descrizione2")))).Append("</p>")
+        sb.Append("<h6><a href='").Append(ProductUrl(row("id"))).Append("' class='name-product fw-semibold text-secondary link'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></h6></div>")
+        sb.Append("<p class='price-wrap fw-medium'><span class='new-price h6 fw-normal text-primary mb-0'>").Append(FormatMoney(CurrentPrice(row("PrezzoIvato"), row("PrezzoPromoIvato"), row("InOfferta")))).Append("</span>")
+        If ShowDiscount(row("PrezzoIvato"), row("PrezzoPromoIvato"), row("InOfferta")) Then
+            sb.Append(" <span class='old-price'>").Append(FormatMoney(row("PrezzoIvato"))).Append("</span>")
+        End If
+        sb.Append("</p></div></div></div>")
+        Return sb.ToString()
+    End Function
 
     Private Function GetHeroSlides() As DataTable
         Dim sql As String = "SELECT id, caption AS Caption, image AS Image, link AS LinkUrl FROM slideshow_new WHERE (start_date IS NULL OR start_date <= CURDATE()) AND (stop_date IS NULL OR stop_date >= CURDATE()) ORDER BY id DESC LIMIT 5"
