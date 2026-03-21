@@ -125,7 +125,12 @@ Partial Public Class _Default
         sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='product-img'>")
         sb.Append("<img class='img-product lazyload' src='").Append(ProductImageThumb(row("Img1"))).Append("' data-src='").Append(ProductImageThumb(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
         sb.Append("<img class='img-hover lazyload' src='").Append(ProductImageFull(row("Img1"))).Append("' data-src='").Append(ProductImageFull(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
-        sb.Append("</a></div>")
+        sb.Append("</a>")
+        ' Add refurbished badge for DataRow
+        If IsRefurbished(row) Then
+            sb.Append("<div class='badge-refurbished'><img src='/Public/assets/images/ico/refurbished.png' alt='Ricondizionato'></div>")
+        End If
+        sb.Append("</div>")
         sb.Append("<div class='card-product-info'><div class='box-title'>")
         sb.Append("<div class='bg-white relative z-5'><p class='caption text-main-2 font-2'>").Append(HttpUtility.HtmlEncode(Convert.ToString(row("Descrizione2")))).Append("</p>")
         sb.Append("<h6><a href='").Append(ProductUrl(row("id"))).Append("' class='name-product fw-semibold text-secondary link'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></h6></div>")
@@ -250,7 +255,7 @@ Partial Public Class _Default
 
     Private Function BuildViewSql(ByVal whereClause As String, ByVal orderClause As String, ByVal limit As Integer) As String
         Dim sql As New StringBuilder()
-        sql.Append("SELECT v.id, v.Descrizione1, v.Descrizione2, v.Img1, v.PrezzoIvato, v.PrezzoPromoIvato, v.InOfferta, v.OfferteDataFine, v.Disponibilita, v.DataCreazione, v.visite, ")
+        sql.Append("SELECT v.id, v.Descrizione1, v.Descrizione2, v.Img1, v.PrezzoIvato, v.PrezzoPromoIvato, v.InOfferta, v.OfferteDataFine, v.Disponibilita, v.DataCreazione, v.visite, v.Stato, ")
         sql.Append("COALESCE(s.QtaVenduta,0) AS QtaVenduta ")
         sql.Append("FROM varticolilistinipromozioni_vetrina v ")
         sql.Append("LEFT JOIN (SELECT dr.ArticoliId, SUM(dr.Qnt) AS QtaVenduta FROM documentirighe dr INNER JOIN documenti d ON d.id = dr.DocumentiId WHERE COALESCE(d.Ordine_Web,0)=1 GROUP BY dr.ArticoliId) s ON s.ArticoliId = v.id ")
@@ -269,7 +274,7 @@ Partial Public Class _Default
     Private Function GetFallbackProducts(ByVal limit As Integer) As DataTable
         Dim sql As New StringBuilder()
         sql.Append("SELECT a.id, a.Descrizione1, a.Descrizione2, a.Img1, COALESCE(al.PrezzoIvato,0) AS PrezzoIvato, 0 AS PrezzoPromoIvato, 0 AS InOfferta, NULL AS OfferteDataFine, ")
-        sql.Append("COALESCE(g.Disponibilita,0) AS Disponibilita, a.DataCreazione, a.Visite AS visite, 0 AS QtaVenduta ")
+        sql.Append("COALESCE(g.Disponibilita,0) AS Disponibilita, a.DataCreazione, a.Visite AS visite, 0 AS Stato, 0 AS QtaVenduta ")
         sql.Append("FROM articoli a ")
         sql.Append("LEFT JOIN articoli_listini al ON al.ArticoliId = a.id AND al.NListino = 1 ")
         sql.Append("LEFT JOIN (SELECT ArticoliId, SUM(Disponibilita) AS Disponibilita FROM articoli_giacenze GROUP BY ArticoliId) g ON g.ArticoliId = a.id ")
@@ -291,13 +296,14 @@ Partial Public Class _Default
         dt.Columns.Add("Disponibilita", GetType(Integer))
         dt.Columns.Add("DataCreazione", GetType(Date))
         dt.Columns.Add("visite", GetType(Integer))
+        dt.Columns.Add("Stato", GetType(Integer))
         dt.Columns.Add("QtaVenduta", GetType(Integer))
         Dim sample = {
-            New Object() {1, "Notebook Gaming", "Top performance", "laptop.webp", 1499.9, 1299.9, 1, Date.Today.AddDays(5).ToString("yyyy-MM-dd"), 12, Date.Today.AddDays(-5), 120, 44},
-            New Object() {2, "Smart TV 4K", "Cinema experience", "tivi.webp", 799.9, 699.9, 1, Date.Today.AddDays(3).ToString("yyyy-MM-dd"), 25, Date.Today.AddDays(-10), 98, 31},
-            New Object() {3, "Mirrorless Camera", "Content creator", "camera-1.webp", 1099.9, 0, 0, Date.Today.AddDays(7).ToString("yyyy-MM-dd"), 8, Date.Today.AddDays(-20), 88, 18},
-            New Object() {4, "Wireless Mouse", "Everyday office", "camera-2.webp", 39.9, 29.9, 1, Date.Today.AddDays(2).ToString("yyyy-MM-dd"), 64, Date.Today.AddDays(-2), 40, 56},
-            New Object() {5, "Gaming Headset", "Surround audio", "camera-3.webp", 129.9, 99.9, 1, Date.Today.AddDays(4).ToString("yyyy-MM-dd"), 40, Date.Today.AddDays(-8), 75, 23}
+            New Object() {1, "Notebook Gaming", "Top performance", "laptop.webp", 1499.9, 1299.9, 1, Date.Today.AddDays(5).ToString("yyyy-MM-dd"), 12, Date.Today.AddDays(-5), 120, 0, 44},
+            New Object() {2, "Smart TV 4K", "Cinema experience", "tivi.webp", 799.9, 699.9, 1, Date.Today.AddDays(3).ToString("yyyy-MM-dd"), 25, Date.Today.AddDays(-10), 98, 0, 31},
+            New Object() {3, "Mirrorless Camera", "Content creator", "camera-1.webp", 1099.9, 0, 0, Date.Today.AddDays(7).ToString("yyyy-MM-dd"), 8, Date.Today.AddDays(-20), 88, 0, 18},
+            New Object() {4, "Wireless Mouse", "Everyday office", "camera-2.webp", 39.9, 29.9, 1, Date.Today.AddDays(2).ToString("yyyy-MM-dd"), 64, Date.Today.AddDays(-2), 40, 0, 56},
+            New Object() {5, "Gaming Headset", "Surround audio", "camera-3.webp", 129.9, 99.9, 1, Date.Today.AddDays(4).ToString("yyyy-MM-dd"), 40, Date.Today.AddDays(-8), 75, 0, 23}
         }
         For i As Integer = 0 To limit - 1
             Dim row = sample(i Mod sample.Length)
@@ -457,9 +463,10 @@ Partial Public Class _Default
 
     Protected Function AvailabilityPercent(ByVal disponibilita As Object, ByVal sold As Object) As Integer
         Dim available = Math.Max(0, SafeInt(disponibilita))
-        Dim soldCount = Math.Max(1, SafeInt(sold))
-        Dim total = Math.Max(1, soldCount + available)
-        Return Convert.ToInt32(Math.Round((soldCount / CDbl(total)) * 100D, MidpointRounding.AwayFromZero))
+        Dim soldCount = Math.Max(0, SafeInt(sold))
+        Dim total = soldCount + available
+        If total <= 0 Then Return 0
+        Return Convert.ToInt32(Math.Round(((CDbl(soldCount) / CDbl(total)) * 100D), MidpointRounding.AwayFromZero))
     End Function
 
     Protected Function CountdownSeconds(ByVal offerteDataFine As Object) As Integer
@@ -487,7 +494,12 @@ Partial Public Class _Default
         sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='product-img'>")
         sb.Append("<img class='img-product lazyload' src='").Append(ProductImageThumb(row("Img1"))).Append("' data-src='").Append(ProductImageThumb(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
         sb.Append("<img class='img-hover lazyload' src='").Append(ProductImageFull(row("Img1"))).Append("' data-src='").Append(ProductImageFull(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
-        sb.Append("</a></div>")
+        sb.Append("</a>")
+        ' Render refurbished badge if applicable
+        If IsRefurbished(row) Then
+            sb.Append("<div class='badge-refurbished'><img src='/Public/assets/images/ico/refurbished.png' alt='Ricondizionato'></div>")
+        End If
+        sb.Append("</div>")
         sb.Append("<div class='card-product-info'><div class='box-title'>")
         sb.Append("<div class='bg-white relative z-5'><p class='caption text-main-2 font-2'>").Append(HttpUtility.HtmlEncode(Convert.ToString(row("Descrizione2")))).Append("</p>")
         sb.Append("<h6><a href='").Append(ProductUrl(row("id"))).Append("' class='name-product fw-semibold text-secondary link'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></h6></div>")
@@ -508,6 +520,10 @@ Partial Public Class _Default
         sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='card-image product-img d-block'>")
         sb.Append("<img class='img-product lazyload' src='").Append(ProductImageFull(row("Img1"))).Append("' data-src='").Append(ProductImageFull(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
         sb.Append("</a>")
+        ' Refurbished badge for big card
+        If IsRefurbished(row) Then
+            sb.Append("<div class='badge-refurbished'><img src='/Public/assets/images/ico/refurbished.png' alt='Ricondizionato'></div>")
+        End If
         If ShowDiscount(row("PrezzoIvato"), row("PrezzoPromoIvato"), row("InOfferta")) Then
             sb.Append("<div class='box-sale-wrap top-0 start-0 z-5'><p class='small-text'>Sale</p><p class='title-sidebar-2'>").Append(DiscountPercent(row("PrezzoIvato"), row("PrezzoPromoIvato"), row("InOfferta"))).Append("%</p></div>")
         End If
@@ -529,6 +545,9 @@ Partial Public Class _Default
         sb.Append("<img class='img-product lazyload' src='").Append(ProductImageFull(row("Img1"))).Append("' data-src='").Append(ProductImageFull(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
         sb.Append("<img class='img-hover lazyload' src='").Append(ProductImageThumb(row("Img1"))).Append("' data-src='").Append(ProductImageThumb(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
         sb.Append("</a>")
+        If IsRefurbished(row) Then
+            sb.Append("<div class='badge-refurbished'><img src='/Public/assets/images/ico/refurbished.png' alt='Ricondizionato'></div>")
+        End If
         sb.Append("<ul class='list-product-btn'>")
         sb.Append("<li><a href='").Append(ProductUrl(row("id"))).Append("' class='box-icon btn-icon-action hover-tooltip tooltip-left'><i class='icon icon-cart2'></i><span class='tooltip'>Add to Cart</span></a></li>")
         sb.Append("<li><a href='compare.aspx?add=").Append(Convert.ToString(row("id"))).Append("' class='box-icon btn-icon-action hover-tooltip tooltip-left'><i class='icon icon-compare1'></i><span class='tooltip'>Compare</span></a></li>")
@@ -541,4 +560,36 @@ Partial Public Class _Default
         sb.Append("<p class='price-wrap fw-medium'><span class='new-price h6 fw-normal text-primary mb-0'>").Append(FormatMoney(CurrentPrice(row("PrezzoIvato"), row("PrezzoPromoIvato"), row("InOfferta")))).Append("</span></p></div></div></div>")
         Return sb.ToString()
     End Function
+
+    ' Determine if a product is refurbished. A product is considered refurbished if the Stato
+    ' column equals 34 or if its description contains the word "ricondizionato" (case-insensitive).
+    Protected Function IsRefurbished(ByVal row As DataRowView) As Boolean
+        Dim stato As Integer = 0
+        Try
+            If row.DataView.Table.Columns.Contains("Stato") Then
+                stato = SafeInt(row("Stato"))
+            End If
+        Catch
+        End Try
+        If stato = 34 Then Return True
+        Dim d1 As String = Convert.ToString(row("Descrizione1")).ToLowerInvariant()
+        Dim d2 As String = Convert.ToString(row("Descrizione2")).ToLowerInvariant()
+        Return (d1 & " " & d2).Contains("ricondizionato")
+    End Function
+
+    Protected Function IsRefurbished(ByVal row As DataRow) As Boolean
+        If row Is Nothing Then Return False
+        Dim stato As Integer = 0
+        Try
+            If row.Table.Columns.Contains("Stato") Then
+                stato = SafeInt(row("Stato"))
+            End If
+        Catch
+        End Try
+        If stato = 34 Then Return True
+        Dim d1 As String = Convert.ToString(row("Descrizione1")).ToLowerInvariant()
+        Dim d2 As String = Convert.ToString(row("Descrizione2")).ToLowerInvariant()
+        Return (d1 & " " & d2).Contains("ricondizionato")
+    End Function
+
 End Class
