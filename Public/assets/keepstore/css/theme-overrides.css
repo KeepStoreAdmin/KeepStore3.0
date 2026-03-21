@@ -114,3 +114,63 @@ h1, h2, h3, h4, h5, h6 {
         font-size: 1rem;
     }
 }
+
+/*
+ * Category menu styling
+ * These rules refine the appearance of the category dropdown used in the
+ * departments menu on the home page.  They mirror the Onsus template's
+ * nav-category-wrap component, giving the nav-title a bold red background
+ * and ensuring the menu container has rounded corners and a clean border.
+ */
+.nav-category-wrap {
+    position: relative;
+}
+
+.nav-category-wrap .nav-title {
+    background-color: var(--ks-color-primary);
+    color: #ffffff;
+    padding: 13px 18px;
+    border-radius: 10px 10px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.nav-category-wrap .nav-title i {
+    font-size: 1.2rem;
+    position: relative;
+    top: -1px;
+}
+
+.nav-category-wrap .nav-title h6.title {
+    margin: 0;
+    font-family: var(--ks-font-alt);
+}
+
+.nav-category-wrap .category-menu {
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    background-color: #ffffff;
+    width: 100%;
+    z-index: 100;
+}
+
+/* Ensure menu items use consistent padding and font */
+.nav-category-wrap .menu-category-list .menu-item > .item-link span {
+    font-weight: 500;
+    padding: 15px 0px;
+    display: flex;
+    align-items: center;
+}
+
+/* Override default pointer-events to allow hover to show submenus on desktop */
+.nav-category-wrap .menu-category-list .menu-item:hover .sub-menu-container {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: all;
+}
+
