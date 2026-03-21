@@ -1,30 +1,116 @@
+/*
+ * Theme overrides for KeepStore 3.0 to align with the Onsus template
+ * This file defines font families, color palette and component styling
+ * without modifying the core theme files. It will be loaded via Page.master.
+ */
+
+/* Import Inter and Poppins fonts from Google Fonts. These fonts match the
+   Onsus e‑commerce template and provide modern typography. The display=swap
+   directive allows the browser to render fallback fonts immediately and
+   replace them once the custom fonts have loaded. */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
 
-/* Override default fonts to match the Onsus template. */
+/* CSS custom properties for colors and fonts. Defining variables makes it
+   easy to update the palette or typography across the whole site. */
 :root {
-    --ks-font-primary: 'Inter', sans-serif;
-    --ks-font-secondary: 'Poppins', sans-serif;
+    /* Primary color used for call‑to‑action buttons, highlights and progress bars */
+    --ks-color-primary: #e30613; /* red inspired by Onsus template */
+    /* Secondary color for accents and hover states */
+    --ks-color-secondary: #ff7847;
+    /* Neutral colors for text and backgrounds */
+    --ks-color-dark: #1f1f1f;
+    --ks-color-light: #f8f9fa;
+    /* Font stacks */
+    --ks-font-base: 'Inter', sans-serif;
+    --ks-font-alt: 'Poppins', sans-serif;
 }
 
+/* Global typography */
 body {
-    font-family: var(--ks-font-primary);
+    font-family: var(--ks-font-base);
+    color: var(--ks-color-dark);
 }
 
 h1, h2, h3, h4, h5, h6 {
-    font-family: var(--ks-font-secondary);
+    font-family: var(--ks-font-alt);
 }
 
-/* Style for refurbished badge */
+/* Buttons */
+.tf-btn, .btn {
+    background-color: var(--ks-color-primary);
+    border-color: var(--ks-color-primary);
+    font-family: var(--ks-font-alt);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.tf-btn:hover, .btn:hover {
+    background-color: var(--ks-color-secondary);
+    border-color: var(--ks-color-secondary);
+}
+
+/* Progress bar override: ensure the bg-danger class uses the primary color */
+.progress-bar.bg-danger {
+    background-color: var(--ks-color-primary) !important;
+}
+
+/* Product card styling: adjust border radius and shadow to match Onsus */
+.ks-product-card,
+.product-card,
+.deal-product-card {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease;
+}
+
+.ks-product-card:hover,
+.product-card:hover,
+.deal-product-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Refurbished badge styling */
 .badge-refurbished {
     position: absolute;
-    top: 0.5rem;
-    left: 0.5rem;
+    top: 8px;
+    left: 8px;
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    background-color: var(--ks-color-primary);
+    color: #ffffff;
+    border-radius: 4px;
     z-index: 10;
-    width: 32px;
-    height: 32px;
 }
 
-.badge-refurbished img {
-    width: 100%;
-    height: auto;
+/* Header search bar: refine spacing and fonts */
+#ks_product_search,
+#ks_product_search_mobile {
+    font-family: var(--ks-font-base);
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    padding: 0.5rem 0.75rem;
+}
+
+/* Category dropdown styling */
+#ks_product_cat,
+#ks_product_cat_mobile {
+    font-family: var(--ks-font-base);
+    min-width: 160px;
+}
+
+/* Responsive adjustments for cards and promos */
+@media (max-width: 767.98px) {
+    .ks-home-hero-card .ks-home-hero-content h2 {
+        font-size: 1.5rem;
+    }
+    .ks-home-hero-card .ks-home-hero-content p {
+        font-size: 0.9rem;
+    }
+    .ks-home-mini-promo h5 {
+        font-size: 1rem;
+    }
 }
