@@ -88,9 +88,10 @@ Partial Public Class _Default
         Dim result As New DataTable()
         result.Columns.Add("Html", GetType(String))
 
+        Dim effectiveGroupSize As Integer = Math.Max(groupSize, 1)
         Dim work = source
         If work Is Nothing OrElse work.Rows.Count = 0 Then
-            work = SampleProducts()
+            work = SampleProducts(Math.Max(effectiveGroupSize * 2, 10))
         End If
 
         Dim total As Integer = work.Rows.Count
@@ -98,7 +99,7 @@ Partial Public Class _Default
         While index < total
             Dim sb As New StringBuilder()
             sb.Append("<ul class='product-list-wrap'>")
-            Dim upper As Integer = Math.Min(index + groupSize - 1, total - 1)
+            Dim upper As Integer = Math.Min(index + effectiveGroupSize - 1, total - 1)
             For i As Integer = index To upper
                 sb.Append("<li class='wow fadeInUp' data-wow-delay='0s'>")
                 sb.Append(RenderRowCardFromRow(work.Rows(i)))
@@ -106,7 +107,7 @@ Partial Public Class _Default
             Next
             sb.Append("</ul>")
             result.Rows.Add(sb.ToString())
-            index += groupSize
+            index += effectiveGroupSize
         End While
 
         If result.Rows.Count = 0 Then
