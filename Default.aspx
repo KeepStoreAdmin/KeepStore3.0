@@ -165,7 +165,8 @@
                                                 <div class="countdown-box"><div class="js-countdown" data-timer='<%# CountdownSeconds(Eval("OfferteDataFine")) %>' data-labels="Days,Hours,Mins,Secs"></div></div>
                                                 <div class="product-progress-sale">
                                                     <div class="progress-sold progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                                                        <div class="progress-bar bg-primary" style='<%# "width:" & AvailabilityPercent(Eval("Disponibilita"), Eval("QtaVenduta")) & "%" %>'></div>
+                                                        <!-- Adjusted color class to use bg-danger per template requirements -->
+                                                        <div class="progress-bar bg-danger" style='<%# "width:" & AvailabilityPercent(Eval("Disponibilita"), Eval("QtaVenduta")) & "%" %>'></div>
                                                     </div>
                                                     <div class="box-quantity d-flex justify-content-between">
                                                         <p class="text-avaiable caption">Sold: <span class="fw-bold"><%# SafeInt(Eval("QtaVenduta")) %></span></p>
