@@ -1050,6 +1050,19 @@ Partial Class articolo
 
         Try
             Dim ids As New List(Of Integer)()
+            Dim sessionRaw As String = Convert.ToString(Session("ks_recent_ids"))
+            If Not String.IsNullOrWhiteSpace(sessionRaw) Then
+                Dim sessionParts As String() = sessionRaw.Split(New Char() {","c}, StringSplitOptions.RemoveEmptyEntries)
+                For Each part As String In sessionParts
+                    Dim n As Integer
+                    If Integer.TryParse(part.Trim(), n) AndAlso n > 0 AndAlso n <> productId Then
+                        If Not ids.Contains(n) Then
+                            ids.Add(n)
+                        End If
+                    End If
+                Next
+            End If
+
             Dim existing As HttpCookie = Request.Cookies("ks_recent")
 
             If existing IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(existing.Value) Then
@@ -1078,6 +1091,8 @@ Partial Class articolo
             cookie.Expires = DateTime.Now.AddDays(30)
             cookie.HttpOnly = False
             Response.Cookies.Add(cookie)
+
+            Session("ks_recent_ids") = String.Join(",", ids.ToArray())
         Catch
             ' Best effort: la pagina prodotto non deve rompersi se la scrittura cookie fallisce.
         End Try

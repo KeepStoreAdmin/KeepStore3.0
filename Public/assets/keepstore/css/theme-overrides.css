@@ -1,176 +1,635 @@
-/*
- * Theme overrides for KeepStore 3.0 to align with the Onsus template
- * This file defines font families, color palette and component styling
- * without modifying the core theme files. It will be loaded via Page.master.
- */
-
-/* Import Inter and Poppins fonts from Google Fonts. These fonts match the
-   Onsus e‑commerce template and provide modern typography. The display=swap
-   directive allows the browser to render fallback fonts immediately and
-   replace them once the custom fonts have loaded. */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
-
-/* CSS custom properties for colors and fonts. Defining variables makes it
-   easy to update the palette or typography across the whole site. */
-:root {
-    /* Primary color used for call‑to‑action buttons, highlights and progress bars */
-    --ks-color-primary: #e30613; /* red inspired by Onsus template */
-    /* Secondary color for accents and hover states */
-    --ks-color-secondary: #ff7847;
-    /* Neutral colors for text and backgrounds */
-    --ks-color-dark: #1f1f1f;
-    --ks-color-light: #f8f9fa;
-    /* Font stacks */
-    --ks-font-base: 'Inter', sans-serif;
-    --ks-font-alt: 'Poppins', sans-serif;
+@font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../fonts/HelveticaNeueRoman.otf") format("opentype");
 }
 
-/* Global typography */
+@font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url("../fonts/HelveticaNeueMedium.otf") format("opentype");
+}
+
+@font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("../fonts/HelveticaNeueBold.otf") format("opentype");
+}
+
+@font-face {
+    font-family: "Poppins";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../fonts/outer-regular.otf") format("opentype");
+}
+
+@font-face {
+    font-family: "Poppins";
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url("../fonts/outer-medium.otf") format("opentype");
+}
+
+@font-face {
+    font-family: "Poppins";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("../fonts/outer-bold.otf") format("opentype");
+}
+
+:root {
+    --ks-font-base: "Inter", sans-serif;
+    --ks-font-heading: "Poppins", sans-serif;
+    --ks-red-strong: #ff3d40;
+    --ks-red-dark: #dd2226;
+    --ks-red-soft: #fff1f1;
+    --ks-ink: #1a2533;
+    --ks-muted: #64748b;
+    --ks-border: #e6e8ee;
+    --ks-surface: #ffffff;
+    --ks-surface-soft: #f7f8fb;
+    --ks-shadow: 0 18px 40px rgba(24, 36, 56, 0.08);
+    --primary: var(--ks-red-strong);
+}
+
 body {
     font-family: var(--ks-font-base);
-    color: var(--ks-color-dark);
+    color: var(--ks-ink);
+    background: #fff;
 }
 
-h1, h2, h3, h4, h5, h6 {
-    font-family: var(--ks-font-alt);
+h1, h2, h3, h4, h5, h6,
+.font-2,
+.tf-btn,
+.nav-title .title {
+    font-family: var(--ks-font-heading);
 }
 
-/* Buttons */
-.tf-btn, .btn {
-    background-color: var(--ks-color-primary);
-    border-color: var(--ks-color-primary);
-    font-family: var(--ks-font-alt);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+.tf-btn,
+.btn {
+    border-radius: 999px;
+    text-transform: none;
+    letter-spacing: 0;
 }
 
-.tf-btn:hover, .btn:hover {
-    background-color: var(--ks-color-secondary);
-    border-color: var(--ks-color-secondary);
+.tf-btn.btn-fill,
+.tf-btn:hover,
+.btn:hover,
+.btn-submit-form {
+    background: linear-gradient(135deg, var(--ks-red-strong), var(--ks-red-dark));
+    border-color: transparent;
 }
 
-/* Progress bar override: ensure the bg-danger class uses the primary color */
 .progress-bar.bg-danger {
-    background-color: var(--ks-color-primary) !important;
+    background: linear-gradient(90deg, var(--ks-red-strong), var(--ks-red-dark)) !important;
 }
 
-/* Product card styling: adjust border radius and shadow to match Onsus */
-.ks-product-card,
-.product-card,
-.deal-product-card {
-    border-radius: 8px;
+.tf-topbar .topbar-left,
+.tf-topbar .tf-cur {
+    min-height: 44px;
+}
+
+.ks-header-ui .logo-site img {
+    max-width: 100%;
+    height: auto;
+}
+
+.ks-search-shell {
+    position: relative;
+    box-shadow: 0 10px 22px rgba(26, 37, 51, 0.06);
+}
+
+.ks-search-shell.form-search-product.style-2 {
+    border: 1px solid var(--ks-border);
+    border-radius: 999px;
+    background: var(--ks-surface);
+    min-height: 60px;
+}
+
+.ks-search-shell .dropdown_product_cat,
+.ks-search-shell input[type="text"] {
+    font-family: var(--ks-font-base);
+    color: var(--ks-ink);
+}
+
+.ks-search-shell fieldset input::placeholder {
+    color: var(--ks-muted);
+}
+
+.ks-search-suggest {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    right: 0;
+    z-index: 35;
+    display: none;
+    padding: 14px;
+    background: var(--ks-surface);
+    border: 1px solid var(--ks-border);
+    border-radius: 18px;
+    box-shadow: var(--ks-shadow);
+}
+
+.ks-search-suggest.is-open {
+    display: block;
+}
+
+.ks-search-section + .ks-search-section {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--ks-border);
+}
+
+.ks-search-section-title {
+    margin: 0 0 8px;
+    font-size: 12px;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ks-muted);
+}
+
+.ks-search-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 10px;
+    border: 0;
+    background: transparent;
+    border-radius: 12px;
+    text-align: left;
+    color: var(--ks-ink);
+    transition: background-color .2s ease, color .2s ease;
+}
+
+.ks-search-item:hover {
+    background: var(--ks-red-soft);
+    color: var(--ks-red-dark);
+}
+
+.ks-search-item-main {
+    font-weight: 600;
+}
+
+.ks-search-item-meta,
+.ks-search-item.is-empty {
+    color: var(--ks-muted);
+    font-size: 13px;
+}
+
+.ks-mobile-shortcuts {
+    display: grid;
+    gap: 10px;
+}
+
+.ks-mobile-catalog-nav {
+    border-top: 1px solid var(--ks-border);
+    padding-top: 18px;
+}
+
+.ks-mobile-catalog-head {
+    margin-bottom: 12px;
+}
+
+.ks-mobile-menu-item + .ks-mobile-menu-item {
+    border-top: 1px solid var(--ks-border);
+}
+
+.ks-mobile-nav-toggle {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 0;
+    font-weight: 600;
+    color: var(--ks-ink);
+}
+
+.ks-mobile-nav-toggle i {
+    transition: transform .2s ease;
+}
+
+.ks-mobile-nav-toggle.is-open i {
+    transform: rotate(90deg);
+}
+
+.ks-mobile-nav-panel {
+    display: none;
+    padding: 0 0 12px 0;
+}
+
+.ks-mobile-nav-panel.is-open {
+    display: block;
+}
+
+.ks-mobile-view-all {
+    display: inline-flex;
+    margin-bottom: 10px;
+    color: var(--ks-red-dark);
+    font-weight: 600;
+}
+
+.ks-mobile-subgroup {
+    padding-left: 14px;
+}
+
+.ks-mobile-leaf-list {
+    padding-left: 12px;
+    display: grid;
+    gap: 8px;
+}
+
+.ks-mobile-leaf-list a {
+    color: var(--ks-muted);
+}
+
+.ks-home-departments .nav-title,
+.nav-category-wrap .nav-title {
+    background: linear-gradient(135deg, var(--ks-red-strong), var(--ks-red-dark));
+    border-radius: 14px 14px 0 0;
+}
+
+.ks-home-departments .category-menu,
+.nav-category-wrap .category-menu {
+    border: 1px solid var(--ks-border);
+    border-top: 0;
+    border-radius: 0 0 18px 18px;
+    overflow: visible;
+    background: var(--ks-surface);
+    box-shadow: var(--ks-shadow);
+}
+
+.ks-home-departments .menu-category-list {
+    max-height: 560px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.ks-home-departments .menu-item > .item-link {
+    padding-left: 18px;
+    padding-right: 18px;
+}
+
+.ks-menu-media {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border-radius: 10px;
     overflow: hidden;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
-    transition: transform 0.2s ease;
+    background: #f3f5f8;
 }
 
-.ks-product-card:hover,
-.product-card:hover,
-.deal-product-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+.ks-menu-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
-/* Refurbished badge styling */
+.ks-home-departments-panel {
+    display: grid;
+    grid-template-columns: minmax(320px, 1fr) 240px;
+    gap: 22px;
+    min-width: 760px;
+    padding: 24px;
+}
+
+.ks-home-departments-panel .grid-sub-menu {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.ks-home-departments-panel .sub-nav-link ul {
+    margin-top: 10px;
+    display: grid;
+    gap: 7px;
+}
+
+.ks-home-departments-panel .sub-menu-link {
+    color: var(--ks-ink);
+}
+
+.ks-home-departments-panel .sub-nav-link > .sub-menu-link {
+    font-weight: 700;
+}
+
+.ks-home-departments-panel .cls-category {
+    position: relative;
+    min-height: 260px;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #f6f8fb;
+}
+
+.ks-home-departments-panel .cls-category img,
+.ks-settore-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ks-home-hero-shell {
+    align-items: stretch;
+}
+
+.ks-home-hero-card,
+.ks-home-mini-promo,
+.ks-home-side-banners .banner-image-product,
+.ks-grid-card,
+.ks-big-card,
+.ks-deal-card,
+.ks-row-card {
+    background: var(--ks-surface);
+    border-radius: 20px;
+    box-shadow: var(--ks-shadow);
+}
+
+.ks-grid-card,
+.ks-big-card,
+.ks-deal-card {
+    border: 1px solid rgba(230, 232, 238, 0.92);
+}
+
+.ks-grid-card .card-product-wrapper,
+.ks-big-card .card-product-wrapper,
+.ks-deal-card .card-product-wrapper {
+    overflow: hidden;
+}
+
+.ks-grid-card .product-img,
+.ks-big-card .product-img,
+.ks-deal-card .card-image {
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, #fbfcfe, #f4f6fb);
+    padding: 16px;
+}
+
+.ks-grid-card .product-img img,
+.ks-big-card .product-img img,
+.ks-deal-card .card-image img,
+.ks-row-card .product-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
 .badge-refurbished {
     position: absolute;
-    top: 8px;
-    left: 8px;
-    padding: 2px 6px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    background-color: var(--ks-color-primary);
-    color: #ffffff;
-    border-radius: 4px;
-    z-index: 10;
+    top: 12px;
+    left: 12px;
+    z-index: 5;
+    width: 56px;
+    height: 56px;
 }
 
-/* Header search bar: refine spacing and fonts */
-#ks_product_search,
-#ks_product_search_mobile {
-    font-family: var(--ks-font-base);
-    border-radius: 4px;
-    border: 1px solid #dee2e6;
-    padding: 0.5rem 0.75rem;
-}
-
-/* Category dropdown styling */
-#ks_product_cat,
-#ks_product_cat_mobile {
-    font-family: var(--ks-font-base);
-    min-width: 160px;
-}
-
-/* Responsive adjustments for cards and promos */
-@media (max-width: 767.98px) {
-    .ks-home-hero-card .ks-home-hero-content h2 {
-        font-size: 1.5rem;
-    }
-    .ks-home-hero-card .ks-home-hero-content p {
-        font-size: 0.9rem;
-    }
-    .ks-home-mini-promo h5 {
-        font-size: 1rem;
-    }
-}
-
-/*
- * Category menu styling
- * These rules refine the appearance of the category dropdown used in the
- * departments menu on the home page.  They mirror the Onsus template's
- * nav-category-wrap component, giving the nav-title a bold red background
- * and ensuring the menu container has rounded corners and a clean border.
- */
-.nav-category-wrap {
-    position: relative;
-}
-
-.nav-category-wrap .nav-title {
-    background-color: var(--ks-color-primary);
-    color: #ffffff;
-    padding: 13px 18px;
-    border-radius: 10px 10px 0 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    user-select: none;
-}
-
-.nav-category-wrap .nav-title i {
-    font-size: 1.2rem;
-    position: relative;
-    top: -1px;
-}
-
-.nav-category-wrap .nav-title h6.title {
-    margin: 0;
-    font-family: var(--ks-font-alt);
-}
-
-.nav-category-wrap .category-menu {
-    border: 1px solid #dee2e6;
-    border-top: none;
-    border-radius: 0 0 10px 10px;
-    background-color: #ffffff;
+.badge-refurbished img {
     width: 100%;
-    z-index: 100;
+    height: 100%;
+    object-fit: contain;
 }
 
-/* Ensure menu items use consistent padding and font */
-.nav-category-wrap .menu-category-list .menu-item > .item-link span {
-    font-weight: 500;
-    padding: 15px 0px;
+.ks-card-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.ks-card-actions.is-compact {
+    grid-template-columns: 1fr;
+}
+
+.ks-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--ks-border);
+    background: var(--ks-surface-soft);
+    color: var(--ks-ink);
+    font-weight: 600;
+    text-align: center;
+    transition: transform .2s ease, background-color .2s ease, border-color .2s ease, color .2s ease;
+}
+
+.ks-action-btn:hover {
+    transform: translateY(-1px);
+}
+
+.ks-action-btn.is-cart,
+.ks-action-btn.is-view {
+    background: linear-gradient(135deg, var(--ks-red-strong), var(--ks-red-dark));
+    border-color: transparent;
+    color: #fff;
+}
+
+.ks-action-btn.is-wishlist:hover,
+.ks-action-btn.is-compare:hover {
+    background: var(--ks-red-soft);
+    border-color: rgba(255, 61, 64, 0.25);
+    color: var(--ks-red-dark);
+}
+
+.ks-grid-card .card-product-info,
+.ks-big-card .card-product-info,
+.ks-deal-card .card-product-info {
+    padding: 18px 18px 20px;
+}
+
+.ks-row-card {
+    padding: 12px;
+    border: 1px solid rgba(230, 232, 238, 0.92);
+}
+
+.ks-row-card .card-product-wrapper {
+    width: 112px;
+    min-width: 112px;
+}
+
+.ks-row-card .product-img {
+    aspect-ratio: 1 / 1;
+}
+
+.ks-row-card .card-product-info {
+    padding-left: 14px;
+}
+
+.ks-grid-card .price-wrap,
+.ks-big-card .price-wrap,
+.ks-row-card .price-wrap,
+.ks-deal-card .price-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.ks-grid-card .old-price,
+.ks-big-card .old-price,
+.ks-row-card .old-price,
+.ks-deal-card .old-price {
+    color: var(--ks-muted);
+    text-decoration: line-through;
+}
+
+.ks-home-brands-block .ks-home-brand-item {
+    min-height: 110px;
     display: flex;
     align-items: center;
+    justify-content: center;
+    border: 1px solid var(--ks-border);
+    border-radius: 18px;
+    background: var(--ks-surface);
 }
 
-/* Override default pointer-events to allow hover to show submenus on desktop */
-.nav-category-wrap .menu-category-list .menu-item:hover .sub-menu-container {
-    transform: translateY(0);
-    opacity: 1;
-    visibility: visible;
-    pointer-events: all;
+.ks-home-brands-block .ks-home-brand-item img {
+    max-width: 85%;
+    max-height: 58px;
+    object-fit: contain;
 }
 
+.ks-compare-shell {
+    display: grid;
+    gap: 20px;
+}
+
+.ks-compare-toolbar {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.ks-compare-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px;
+}
+
+.ks-compare-card {
+    position: relative;
+    padding: 18px;
+    border-radius: 20px;
+    border: 1px solid var(--ks-border);
+    background: var(--ks-surface);
+    box-shadow: var(--ks-shadow);
+}
+
+.ks-compare-remove {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: 0;
+    background: var(--ks-red-soft);
+    color: var(--ks-red-dark);
+    font-size: 20px;
+    line-height: 1;
+}
+
+.ks-compare-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1 / 1;
+    padding: 14px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #fbfcfe, #f4f6fb);
+}
+
+.ks-compare-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.ks-compare-card h3 {
+    margin: 16px 0 8px;
+    font-size: 18px;
+}
+
+.ks-compare-price {
+    color: var(--ks-red-dark);
+    font-weight: 700;
+}
+
+.ks-compare-actions {
+    display: grid;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+@media (max-width: 1199.98px) {
+    .ks-home-departments-panel {
+        min-width: 0;
+        grid-template-columns: 1fr;
+    }
+
+    .ks-home-departments-panel .cls-category {
+        display: none;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .ks-search-shell .select-category {
+        max-width: 180px;
+    }
+
+    .ks-grid-card .card-product-info,
+    .ks-big-card .card-product-info,
+    .ks-deal-card .card-product-info {
+        padding: 16px;
+    }
+
+    .ks-card-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .ks-home-hero-shell {
+        gap: 18px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .ks-search-shell.form-search-product.style-2 {
+        min-height: 54px;
+    }
+
+    .ks-row-card {
+        display: block;
+    }
+
+    .ks-row-card .card-product-wrapper,
+    .ks-row-card .card-product-info {
+        width: 100%;
+        min-width: 0;
+        padding-left: 0;
+    }
+
+    .ks-row-card .card-product-wrapper {
+        margin-bottom: 12px;
+    }
+
+    .ks-compare-grid {
+        grid-template-columns: 1fr;
+    }
+}

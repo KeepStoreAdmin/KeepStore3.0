@@ -163,10 +163,13 @@ Private Sub ApplyGlobalSeoPolicy()
             If lnkAcc IsNot Nothing Then lnkAcc.HRef = accountUrl
             If lnkAccMob IsNot Nothing Then lnkAccMob.HRef = accountUrl
 
-            ' Wishlist: nel progetto attuale non esiste ancora un conteggio persistente -> default 0 (fail-safe)
             If lblWish IsNot Nothing Then
-                lblWish.Text = "0"
-                lblWish.Visible = False
+                Dim wishCount As Integer = 0
+                If isLogged AndAlso loginIdVal > 0 Then
+                    wishCount = GetWishlistCountForHeader(loginIdVal)
+                End If
+                lblWish.Text = wishCount.ToString()
+                lblWish.Visible = True
             End If
         Catch ex As Exception
             ' fail-safe
@@ -715,6 +718,31 @@ End Sub
         End If
 
 End Sub
+
+Private Function GetWishlistCountForHeader(ByVal loginId As Integer) As Integer
+    If loginId <= 0 Then
+        Return 0
+    End If
+
+    Try
+        Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+            conn.Open()
+            Using cmd As New MySqlCommand("SELECT COUNT(*) FROM wishlist WHERE id_utente=@id", conn)
+                cmd.Parameters.AddWithValue("@id", loginId)
+                Dim raw As Object = cmd.ExecuteScalar()
+                If raw Is Nothing OrElse raw Is DBNull.Value Then
+                    Return 0
+                End If
+
+                Dim count As Integer = 0
+                Integer.TryParse(Convert.ToString(raw), count)
+                Return count
+            End Using
+        End Using
+    Catch
+        Return 0
+    End Try
+End Function
 
     '==========================================================
     ' SUPPORTO IVA DI DEFAULT

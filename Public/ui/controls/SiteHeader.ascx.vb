@@ -1,11 +1,15 @@
 Imports System
 Imports System.Collections.Generic
+Imports System.Configuration
+Imports System.Data
+Imports System.Globalization
 Imports System.IO
 Imports System.Text
 Imports System.Web
 Imports System.Web.UI
 Imports System.Web.UI.HtmlControls
 Imports System.Web.UI.WebControls
+Imports MySql.Data.MySqlClient
 
 Partial Class SiteHeader
     Inherits System.Web.UI.UserControl
@@ -16,17 +20,183 @@ Partial Class SiteHeader
     Private Const DefaultAppleTouchIconVirtual As String = "~/Public/assets/images/favicons/apple-touch-icon.png"
     Private Const DefaultFavicon32Virtual As String = "~/Public/assets/images/favicons/favicon-32x32.png"
     Private Const DefaultFavicon16Virtual As String = "~/Public/assets/images/favicons/favicon-16x16.png"
-    Private Const LoginVirtual As String = "/login.aspx"
-    Private Const MyAccountVirtual As String = "/myaccount.aspx"
+    Private Const DefaultPhoneText As String = "+39 000 000 0000"
+    Private Const DefaultEmailText As String = "support@keepstore.it"
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         BindLogo()
         BindAccountLinks()
         RegisterHeadIconsScript()
+
+        If Not IsPostBack Then
+            BindHeaderData()
+        End If
     End Sub
 
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As EventArgs) Handles Me.PreRender
         BindAccountLinks()
+    End Sub
+
+    Private Sub BindHeaderData()
+        Dim catalogMenu As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenu()
+
+        BindSearchCategories(catalogMenu)
+        BindMobileCatalog(catalogMenu)
+        BindCompanyContacts()
+        BindFreeShippingPromo()
+    End Sub
+
+    Private Sub BindSearchCategories(ByVal sectors As List(Of CatalogMenuSector))
+        If product_cat Is Nothing OrElse product_cat_mobile Is Nothing Then
+            Return
+        End If
+
+        product_cat.Items.Clear()
+        product_cat_mobile.Items.Clear()
+
+        product_cat.Items.Add(New ListItem("Tutti i reparti", String.Empty))
+        product_cat_mobile.Items.Add(New ListItem("Tutti i reparti", String.Empty))
+
+        For Each sector As CatalogMenuSector In sectors
+            Dim text As String = If(String.IsNullOrWhiteSpace(sector.Descrizione), "Settore " & sector.Id.ToString(), sector.Descrizione.Trim())
+            Dim value As String = sector.DefaultUrl
+
+            product_cat.Items.Add(New ListItem(text, value))
+            product_cat_mobile.Items.Add(New ListItem(text, value))
+        Next
+    End Sub
+
+    Private Sub BindMobileCatalog(ByVal sectors As List(Of CatalogMenuSector))
+        If rptNavSettoriMobile Is Nothing Then
+            Return
+        End If
+
+        rptNavSettoriMobile.DataSource = sectors
+        rptNavSettoriMobile.DataBind()
+    End Sub
+
+    Protected Sub rptNavSettoriMobile_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
+        If e.Item Is Nothing OrElse (e.Item.ItemType <> ListItemType.Item AndAlso e.Item.ItemType <> ListItemType.AlternatingItem) Then
+            Return
+        End If
+
+        Dim sector As CatalogMenuSector = TryCast(e.Item.DataItem, CatalogMenuSector)
+        Dim rpt As Repeater = TryCast(e.Item.FindControl("rptNavCategorieMobile"), Repeater)
+        If sector Is Nothing OrElse rpt Is Nothing Then
+            Return
+        End If
+
+        rpt.DataSource = sector.Categories
+        rpt.DataBind()
+    End Sub
+
+    Protected Sub rptNavCategorieMobile_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
+        If e.Item Is Nothing OrElse (e.Item.ItemType <> ListItemType.Item AndAlso e.Item.ItemType <> ListItemType.AlternatingItem) Then
+            Return
+        End If
+
+        Dim category As CatalogMenuCategory = TryCast(e.Item.DataItem, CatalogMenuCategory)
+        Dim rpt As Repeater = TryCast(e.Item.FindControl("rptNavTipologieMobile"), Repeater)
+        If category Is Nothing OrElse rpt Is Nothing Then
+            Return
+        End If
+
+        rpt.DataSource = category.Children
+        rpt.DataBind()
+    End Sub
+
+    Private Sub BindCompanyContacts()
+        Dim phone As String = DefaultPhoneText
+        Dim email As String = DefaultEmailText
+
+        Try
+            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                conn.Open()
+                Using cmd As New MySqlCommand("SELECT telefono, email FROM aziende ORDER BY id ASC LIMIT 1", conn)
+                    Using reader As MySqlDataReader = cmd.ExecuteReader()
+                        If reader.Read() Then
+                            Dim dbPhone As String = SafeString(reader, "telefono")
+                            Dim dbEmail As String = SafeString(reader, "email")
+
+                            If Not String.IsNullOrWhiteSpace(dbPhone) Then
+                                phone = dbPhone.Trim()
+                            End If
+                            If Not String.IsNullOrWhiteSpace(dbEmail) Then
+                                email = dbEmail.Trim()
+                            End If
+                        End If
+                    End Using
+                End Using
+            End Using
+        Catch
+        End Try
+
+        SetPhoneLink(hlSupportPhoneTop, litSupportPhoneTop, phone)
+        SetPhoneLink(hlSupportPhoneHeader, litSupportPhoneHeader, phone)
+        SetMailLink(hlSupportEmailHeader, litSupportEmailHeader, email)
+    End Sub
+
+    Private Sub BindFreeShippingPromo()
+        If phFreeShippingTop Is Nothing OrElse litFreeShippingTop Is Nothing Then
+            Return
+        End If
+
+        Dim minAmount As Decimal = 0D
+        Dim hasPromo As Boolean = False
+
+        Try
+            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                conn.Open()
+                Using cmd As New MySqlCommand("SELECT MIN(COALESCE(CostoMinimo,0)) AS CostoMinimo FROM vettori WHERE COALESCE(Promo,0)=1", conn)
+                    Dim raw As Object = cmd.ExecuteScalar()
+                    If raw IsNot Nothing AndAlso raw IsNot DBNull.Value Then
+                        Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.InvariantCulture, minAmount)
+                        If minAmount = 0D Then
+                            Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), minAmount)
+                        End If
+                        hasPromo = True
+                    End If
+                End Using
+            End Using
+        Catch
+            hasPromo = False
+        End Try
+
+        phFreeShippingTop.Visible = hasPromo
+        If hasPromo Then
+            litFreeShippingTop.Text = "Spedizione gratuita per ordini oltre <span class=""fw-semibold text-main"">" &
+                                     HttpUtility.HtmlEncode(minAmount.ToString("C0", CultureInfo.GetCultureInfo("it-IT"))) &
+                                     "</span>"
+        End If
+    End Sub
+
+    Private Sub SetPhoneLink(ByVal link As HyperLink, ByVal literal As Literal, ByVal phone As String)
+        If link Is Nothing OrElse literal Is Nothing Then
+            Return
+        End If
+
+        Dim cleanPhone As String = If(phone, String.Empty).Trim()
+        If String.IsNullOrWhiteSpace(cleanPhone) Then
+            cleanPhone = DefaultPhoneText
+        End If
+
+        Dim telTarget As String = cleanPhone.Replace(" ", String.Empty)
+        link.NavigateUrl = "tel:" & telTarget
+        literal.Text = HttpUtility.HtmlEncode(cleanPhone)
+    End Sub
+
+    Private Sub SetMailLink(ByVal link As HyperLink, ByVal literal As Literal, ByVal email As String)
+        If link Is Nothing OrElse literal Is Nothing Then
+            Return
+        End If
+
+        Dim cleanEmail As String = If(email, String.Empty).Trim()
+        If String.IsNullOrWhiteSpace(cleanEmail) Then
+            cleanEmail = DefaultEmailText
+        End If
+
+        link.NavigateUrl = "mailto:" & cleanEmail
+        literal.Text = HttpUtility.HtmlEncode(cleanEmail)
     End Sub
 
     Private Sub BindAccountLinks()
@@ -45,9 +215,15 @@ Partial Class SiteHeader
             lnkAccount.HRef = accountUrl
             lnkAccount.Attributes("href") = accountUrl
         End If
+
         If lnkAccountMobile IsNot Nothing Then
             lnkAccountMobile.HRef = accountUrl
             lnkAccountMobile.Attributes("href") = accountUrl
+        End If
+
+        If lnkAccountMobileButton IsNot Nothing Then
+            lnkAccountMobileButton.HRef = accountUrl
+            lnkAccountMobileButton.Attributes("href") = accountUrl
         End If
     End Sub
 
@@ -227,5 +403,15 @@ Partial Class SiteHeader
         Dim idx As Integer = input.IndexOf(search, StringComparison.OrdinalIgnoreCase)
         If idx < 0 Then Return input
         Return input.Substring(0, idx) & replacement & input.Substring(idx + search.Length)
+    End Function
+
+    Private Function SafeString(ByVal reader As IDataRecord, ByVal fieldName As String) As String
+        Try
+            Dim ordinal As Integer = reader.GetOrdinal(fieldName)
+            If reader.IsDBNull(ordinal) Then Return String.Empty
+            Return Convert.ToString(reader.GetValue(ordinal))
+        Catch
+            Return String.Empty
+        End Try
     End Function
 End Class
