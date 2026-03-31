@@ -1,0 +1,46 @@
+/* ---------------------------------------------------------
+    * Name: Onsus - Multipurpose eCommerce
+    * Version: 1.0.0
+    * Author: Themesflat
+    * Author URI: http://themesflat.com 
+
+	* Abstracts variable
+    
+    * Reset css styles
+
+    * Components
+
+        * header
+        * footer
+        * tabs
+        * button
+        * form
+        * drop down
+        * carousel
+        * box icon
+        * hover
+        * product
+        * blog
+        * accordion
+        * zoom
+        * shop
+        * nice select
+        
+    * section
+
+    * Responsive
+ ------------------------------------------------------------------------------ */
+
+/*--------- Abstracts variable ---------- */
+@import "./abstracts/index";
+
+/*---------- Reset css styles ----------- */
+@import "reset";
+
+/*------------ Components ---------------- */
+@import "./component/index";
+
+/*------------ sections ---------------- */
+@import "./sections";
+/*-------------- Responsive ----------------- */
+@import "./responsive";
