@@ -137,7 +137,26 @@
                         <nav class="main-nav-menu">
                             <ul class="nav-list">
                                 <li class="nav-item active pst-unset"><a href="Default.aspx" class="item-link link body-md-2"><span data-ks-i18n="nav.home">Home</span></a></li>
-                                <li class="nav-item"><a href="articoli.aspx" class="item-link body-md-2"><span data-ks-i18n="nav.catalog">Catalogo</span></a></li>
+                                <li class="nav-item ks-header-catalog-item">
+                                    <a href="articoli.aspx" class="item-link body-md-2">
+                                        <span data-ks-i18n="nav.catalog">Catalogo</span>
+                                        <i class="icon-arrow-down"></i>
+                                    </a>
+                                    <div class="ks-header-catalog-mega" aria-label="Catalogo completo">
+                                        <div class="ks-header-catalog-mega-inner">
+                                            <div class="ks-header-catalog-head">
+                                                <div>
+                                                    <span class="ks-header-catalog-kicker">KeepStore 3.0</span>
+                                                    <h5 class="ks-header-catalog-title">Esplora tutto il catalogo</h5>
+                                                </div>
+                                                <a href="articoli.aspx" class="ks-header-catalog-all">Vai al catalogo completo</a>
+                                            </div>
+                                            <div class="ks-header-catalog-grid">
+                                                <asp:Literal ID="litDesktopCatalogMegaMenu" runat="server" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
                                 <li class="nav-item"><a href="articoli.aspx?inpromo=1" class="item-link body-md-2"><span data-ks-i18n="nav.offers">Offerte</span></a></li>
                                 <li class="nav-item"><a href="Contattaci.aspx" class="item-link body-md-2"><span data-ks-i18n="nav.contact">Contatti</span></a></li>
                             </ul>
@@ -222,7 +241,12 @@
                         <ItemTemplate>
                             <li class="ks-mobile-menu-item">
                                 <button type="button" class="ks-mobile-nav-toggle" data-ks-nav-toggle="sector">
-                                    <span><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span>
+                                    <span class="ks-mobile-nav-entry">
+                                        <span class="ks-mobile-nav-media">
+                                            <img src='<%# Eval("ImgUrl") %>' alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>' onerror="this.style.display='none';this.parentNode.classList.add('is-empty');" />
+                                        </span>
+                                        <span class="ks-mobile-nav-label"><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span>
+                                    </span>
                                     <i class="icon-arrow-right"></i>
                                 </button>
                                 <div class="ks-mobile-nav-panel">

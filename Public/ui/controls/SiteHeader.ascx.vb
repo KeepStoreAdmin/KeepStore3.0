@@ -42,6 +42,7 @@ Partial Class SiteHeader
         Dim catalogMenu As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenu()
 
         BindSearchCategories(catalogMenu)
+        BindDesktopCatalog(catalogMenu)
         BindMobileCatalog(catalogMenu)
         BindCompanyContacts()
         BindFreeShippingPromo()
@@ -74,6 +75,14 @@ Partial Class SiteHeader
 
         rptNavSettoriMobile.DataSource = sectors
         rptNavSettoriMobile.DataBind()
+    End Sub
+
+    Private Sub BindDesktopCatalog(ByVal sectors As List(Of CatalogMenuSector))
+        If litDesktopCatalogMegaMenu Is Nothing Then
+            Return
+        End If
+
+        litDesktopCatalogMegaMenu.Text = BuildDesktopCatalogMegaMenuHtml(sectors)
     End Sub
 
     Protected Sub rptNavSettoriMobile_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
@@ -421,6 +430,129 @@ Partial Class SiteHeader
         Dim idx As Integer = input.IndexOf(search, StringComparison.OrdinalIgnoreCase)
         If idx < 0 Then Return input
         Return input.Substring(0, idx) & replacement & input.Substring(idx + search.Length)
+    End Function
+
+    Private Function BuildDesktopCatalogMegaMenuHtml(ByVal sectors As List(Of CatalogMenuSector)) As String
+        If sectors Is Nothing OrElse sectors.Count = 0 Then
+            Return "<div class='ks-header-catalog-empty'>Nessun reparto disponibile.</div>"
+        End If
+
+        Dim sb As New StringBuilder()
+
+        For Each sector As CatalogMenuSector In sectors
+            If sector Is Nothing Then
+                Continue For
+            End If
+
+            sb.Append("<article class='ks-header-catalog-sector'>")
+            sb.Append("<div class='ks-header-catalog-sector-head'>")
+
+            sb.Append("<a href='")
+            sb.Append(HttpUtility.HtmlAttributeEncode(sector.DefaultUrl))
+            sb.Append("' class='ks-header-catalog-media")
+            If String.IsNullOrWhiteSpace(sector.ImgUrl) Then
+                sb.Append(" is-empty")
+            End If
+            sb.Append("'>")
+            If Not String.IsNullOrWhiteSpace(sector.ImgUrl) Then
+                sb.Append("<img src='")
+                sb.Append(HttpUtility.HtmlAttributeEncode(sector.ImgUrl))
+                sb.Append("' alt='")
+                sb.Append(HttpUtility.HtmlAttributeEncode(If(sector.Descrizione, String.Empty)))
+                sb.Append("' onerror=""this.style.display='none';this.parentNode.classList.add('is-empty');"" />")
+            End If
+            sb.Append("</a>")
+
+            sb.Append("<div class='ks-header-catalog-sector-meta'>")
+            sb.Append("<a href='")
+            sb.Append(HttpUtility.HtmlAttributeEncode(sector.DefaultUrl))
+            sb.Append("' class='ks-header-catalog-sector-link'>")
+            sb.Append(HttpUtility.HtmlEncode(If(sector.Descrizione, String.Empty)))
+            sb.Append("</a>")
+            sb.Append("<span class='ks-header-catalog-sector-caption'>")
+            sb.Append(GetSectorCaption(sector))
+            sb.Append("</span>")
+            sb.Append("</div>")
+            sb.Append("</div>")
+
+            sb.Append("<div class='ks-header-catalog-sector-body'>")
+            If sector.Categories IsNot Nothing AndAlso sector.Categories.Count > 0 Then
+                For Each category As CatalogMenuCategory In sector.Categories
+                    If category Is Nothing Then
+                        Continue For
+                    End If
+
+                    sb.Append("<section class='ks-header-catalog-category'>")
+                    sb.Append("<a href='")
+                    sb.Append(HttpUtility.HtmlAttributeEncode(category.DefaultUrl))
+                    sb.Append("' class='ks-header-catalog-category-link'>")
+                    sb.Append(HttpUtility.HtmlEncode(If(category.Descrizione, String.Empty)))
+                    sb.Append("</a>")
+
+                    If category.Children IsNot Nothing AndAlso category.Children.Count > 0 Then
+                        sb.Append("<ul class='ks-header-catalog-tipology-list'>")
+                        For Each tipologia As CatalogMenuNode In category.Children
+                            If tipologia Is Nothing Then
+                                Continue For
+                            End If
+
+                            sb.Append("<li class='ks-header-catalog-tipology'>")
+                            sb.Append("<a href='")
+                            sb.Append(HttpUtility.HtmlAttributeEncode(tipologia.DefaultUrl))
+                            sb.Append("' class='ks-header-catalog-tipology-link'>")
+                            sb.Append(HttpUtility.HtmlEncode(If(tipologia.Descrizione, String.Empty)))
+                            sb.Append("</a>")
+
+                            If tipologia.Children IsNot Nothing AndAlso tipologia.Children.Count > 0 Then
+                                sb.Append("<ul class='ks-header-catalog-group-list'>")
+                                For Each groupNode As CatalogMenuNode In tipologia.Children
+                                    If groupNode Is Nothing Then
+                                        Continue For
+                                    End If
+
+                                    sb.Append("<li>")
+                                    sb.Append("<a href='")
+                                    sb.Append(HttpUtility.HtmlAttributeEncode(groupNode.DefaultUrl))
+                                    sb.Append("' class='ks-header-catalog-group-link'>")
+                                    sb.Append(HttpUtility.HtmlEncode(If(groupNode.Descrizione, String.Empty)))
+                                    sb.Append("</a>")
+                                    sb.Append("</li>")
+                                Next
+                                sb.Append("</ul>")
+                            End If
+
+                            sb.Append("</li>")
+                        Next
+                        sb.Append("</ul>")
+                    End If
+
+                    sb.Append("</section>")
+                Next
+            Else
+                sb.Append("<a href='")
+                sb.Append(HttpUtility.HtmlAttributeEncode(sector.DefaultUrl))
+                sb.Append("' class='ks-header-catalog-empty-link'>Vedi il reparto</a>")
+            End If
+            sb.Append("</div>")
+            sb.Append("</article>")
+        Next
+
+        Return sb.ToString()
+    End Function
+
+    Private Function GetSectorCaption(ByVal sector As CatalogMenuSector) As String
+        If sector Is Nothing OrElse sector.Categories Is Nothing OrElse sector.Categories.Count = 0 Then
+            Return "Selezione reparto"
+        End If
+
+        Dim tipologieCount As Integer = 0
+        For Each category As CatalogMenuCategory In sector.Categories
+            If category IsNot Nothing AndAlso category.Children IsNot Nothing Then
+                tipologieCount += category.Children.Count
+            End If
+        Next
+
+        Return HttpUtility.HtmlEncode(sector.Categories.Count.ToString() & " categorie, " & tipologieCount.ToString() & " tipologie")
     End Function
 
     Private Function SafeString(ByVal reader As IDataRecord, ByVal fieldName As String) As String
