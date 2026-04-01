@@ -444,12 +444,12 @@ Partial Class SiteHeader
                 Continue For
             End If
 
-            sb.Append("<article class='ks-header-catalog-sector'>")
-            sb.Append("<div class='ks-header-catalog-sector-head'>")
-
+            sb.Append("<div class='mega-menu-item ks-header-catalog-column'>")
+            sb.Append("<div class='menu-heading body-small ks-header-catalog-heading'>")
             sb.Append("<a href='")
             sb.Append(HttpUtility.HtmlAttributeEncode(sector.DefaultUrl))
-            sb.Append("' class='ks-header-catalog-media")
+            sb.Append("' class='ks-header-catalog-sector-link'>")
+            sb.Append("<span class='ks-header-catalog-media")
             If String.IsNullOrWhiteSpace(sector.ImgUrl) Then
                 sb.Append(" is-empty")
             End If
@@ -461,33 +461,26 @@ Partial Class SiteHeader
                 sb.Append(HttpUtility.HtmlAttributeEncode(If(sector.Descrizione, String.Empty)))
                 sb.Append("' onerror=""this.style.display='none';this.parentNode.classList.add('is-empty');"" />")
             End If
-            sb.Append("</a>")
-
-            sb.Append("<div class='ks-header-catalog-sector-meta'>")
-            sb.Append("<a href='")
-            sb.Append(HttpUtility.HtmlAttributeEncode(sector.DefaultUrl))
-            sb.Append("' class='ks-header-catalog-sector-link'>")
-            sb.Append(HttpUtility.HtmlEncode(If(sector.Descrizione, String.Empty)))
-            sb.Append("</a>")
-            sb.Append("<span class='ks-header-catalog-sector-caption'>")
-            sb.Append(GetSectorCaption(sector))
             sb.Append("</span>")
-            sb.Append("</div>")
+            sb.Append("<span>")
+            sb.Append(HttpUtility.HtmlEncode(If(sector.Descrizione, String.Empty)))
+            sb.Append("</span>")
+            sb.Append("</a>")
             sb.Append("</div>")
 
-            sb.Append("<div class='ks-header-catalog-sector-body'>")
+            sb.Append("<ul class='menu-list ks-header-catalog-menu-list'>")
             If sector.Categories IsNot Nothing AndAlso sector.Categories.Count > 0 Then
                 For Each category As CatalogMenuCategory In sector.Categories
                     If category Is Nothing Then
                         Continue For
                     End If
 
-                    sb.Append("<section class='ks-header-catalog-category'>")
+                    sb.Append("<li class='ks-header-catalog-category'>")
                     sb.Append("<a href='")
                     sb.Append(HttpUtility.HtmlAttributeEncode(category.DefaultUrl))
-                    sb.Append("' class='ks-header-catalog-category-link'>")
+                    sb.Append("' class='body-md-2 link ks-header-catalog-category-link'><span>")
                     sb.Append(HttpUtility.HtmlEncode(If(category.Descrizione, String.Empty)))
-                    sb.Append("</a>")
+                    sb.Append("</span></a>")
 
                     If category.Children IsNot Nothing AndAlso category.Children.Count > 0 Then
                         sb.Append("<ul class='ks-header-catalog-tipology-list'>")
@@ -499,26 +492,24 @@ Partial Class SiteHeader
                             sb.Append("<li class='ks-header-catalog-tipology'>")
                             sb.Append("<a href='")
                             sb.Append(HttpUtility.HtmlAttributeEncode(tipologia.DefaultUrl))
-                            sb.Append("' class='ks-header-catalog-tipology-link'>")
+                            sb.Append("' class='body-text-3 link ks-header-catalog-tipology-link'><span>")
                             sb.Append(HttpUtility.HtmlEncode(If(tipologia.Descrizione, String.Empty)))
-                            sb.Append("</a>")
+                            sb.Append("</span></a>")
 
                             If tipologia.Children IsNot Nothing AndAlso tipologia.Children.Count > 0 Then
-                                sb.Append("<ul class='ks-header-catalog-group-list'>")
+                                sb.Append("<div class='ks-header-catalog-group-list'>")
                                 For Each groupNode As CatalogMenuNode In tipologia.Children
                                     If groupNode Is Nothing Then
                                         Continue For
                                     End If
 
-                                    sb.Append("<li>")
                                     sb.Append("<a href='")
                                     sb.Append(HttpUtility.HtmlAttributeEncode(groupNode.DefaultUrl))
                                     sb.Append("' class='ks-header-catalog-group-link'>")
                                     sb.Append(HttpUtility.HtmlEncode(If(groupNode.Descrizione, String.Empty)))
                                     sb.Append("</a>")
-                                    sb.Append("</li>")
                                 Next
-                                sb.Append("</ul>")
+                                sb.Append("</div>")
                             End If
 
                             sb.Append("</li>")
@@ -526,33 +517,18 @@ Partial Class SiteHeader
                         sb.Append("</ul>")
                     End If
 
-                    sb.Append("</section>")
+                    sb.Append("</li>")
                 Next
             Else
-                sb.Append("<a href='")
+                sb.Append("<li><a href='")
                 sb.Append(HttpUtility.HtmlAttributeEncode(sector.DefaultUrl))
-                sb.Append("' class='ks-header-catalog-empty-link'>Vedi il reparto</a>")
+                sb.Append("' class='body-md-2 link ks-header-catalog-empty-link'><span>Vedi il reparto</span></a></li>")
             End If
+            sb.Append("</ul>")
             sb.Append("</div>")
-            sb.Append("</article>")
         Next
 
         Return sb.ToString()
-    End Function
-
-    Private Function GetSectorCaption(ByVal sector As CatalogMenuSector) As String
-        If sector Is Nothing OrElse sector.Categories Is Nothing OrElse sector.Categories.Count = 0 Then
-            Return "Selezione reparto"
-        End If
-
-        Dim tipologieCount As Integer = 0
-        For Each category As CatalogMenuCategory In sector.Categories
-            If category IsNot Nothing AndAlso category.Children IsNot Nothing Then
-                tipologieCount += category.Children.Count
-            End If
-        Next
-
-        Return HttpUtility.HtmlEncode(sector.Categories.Count.ToString() & " categorie, " & tipologieCount.ToString() & " tipologie")
     End Function
 
     Private Function SafeString(ByVal reader As IDataRecord, ByVal fieldName As String) As String

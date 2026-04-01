@@ -140,20 +140,11 @@
                                 <li class="nav-item ks-header-catalog-item">
                                     <a href="articoli.aspx" class="item-link body-md-2">
                                         <span data-ks-i18n="nav.catalog">Catalogo</span>
-                                        <i class="icon-arrow-down"></i>
+                                        <i class="icon icon-arrow-down"></i>
                                     </a>
-                                    <div class="ks-header-catalog-mega" aria-label="Catalogo completo">
-                                        <div class="ks-header-catalog-mega-inner">
-                                            <div class="ks-header-catalog-head">
-                                                <div>
-                                                    <span class="ks-header-catalog-kicker">KeepStore 3.0</span>
-                                                    <h5 class="ks-header-catalog-title">Esplora tutto il catalogo</h5>
-                                                </div>
-                                                <a href="articoli.aspx" class="ks-header-catalog-all">Vai al catalogo completo</a>
-                                            </div>
-                                            <div class="ks-header-catalog-grid">
-                                                <asp:Literal ID="litDesktopCatalogMegaMenu" runat="server" />
-                                            </div>
+                                    <div class="sub-menu-container mega-menu text-nowrap ks-header-catalog-mega" aria-label="Catalogo completo">
+                                        <div class="wrapper-sub-menu ks-header-catalog-wrapper">
+                                            <asp:Literal ID="litDesktopCatalogMegaMenu" runat="server" />
                                         </div>
                                     </div>
                                 </li>
@@ -236,55 +227,58 @@
                 <div class="ks-mobile-catalog-head">
                     <h6 class="mb-0" data-ks-i18n="nav.departments">Tutti i reparti</h6>
                 </div>
-                <ul class="myaccount-nav content-append">
+                <ul class="nav-ul-mb ks-mobile-catalog-list">
                     <asp:Repeater ID="rptNavSettoriMobile" runat="server" OnItemDataBound="rptNavSettoriMobile_ItemDataBound">
                         <ItemTemplate>
-                            <li class="ks-mobile-menu-item">
-                                <button type="button" class="ks-mobile-nav-toggle" data-ks-nav-toggle="sector">
+                            <li class="nav-mb-item ks-mobile-sector-item">
+                                <a href='#ks-mobile-sector-<%# Eval("Id") %>' class="collapsed mb-menu-link" data-bs-toggle="collapse" aria-expanded="false" aria-controls='ks-mobile-sector-<%# Eval("Id") %>'>
                                     <span class="ks-mobile-nav-entry">
                                         <span class="ks-mobile-nav-media">
                                             <img src='<%# Eval("ImgUrl") %>' alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>' onerror="this.style.display='none';this.parentNode.classList.add('is-empty');" />
                                         </span>
                                         <span class="ks-mobile-nav-label"><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span>
                                     </span>
-                                    <i class="icon-arrow-right"></i>
-                                </button>
-                                <div class="ks-mobile-nav-panel">
-                                    <a class="ks-mobile-view-all" href='<%# Eval("DefaultUrl") %>' data-ks-i18n="nav.viewSector">Vedi tutto il reparto</a>
-                                    <asp:Repeater ID="rptNavCategorieMobile" runat="server" OnItemDataBound="rptNavCategorieMobile_ItemDataBound">
-                                        <ItemTemplate>
-                                            <div class="ks-mobile-subgroup">
-                                                <button type="button" class="ks-mobile-nav-toggle is-sublevel" data-ks-nav-toggle="category">
-                                                    <span><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span>
-                                                    <i class="icon-arrow-right"></i>
-                                                </button>
-                                                <div class="ks-mobile-nav-panel">
-                                                    <a class="ks-mobile-view-all" href='<%# Eval("DefaultUrl") %>' data-ks-i18n="nav.viewCategory">Vedi tutta la categoria</a>
-                                                    <asp:Repeater ID="rptNavTipologieMobile" runat="server" OnItemDataBound="rptNavTipologieMobile_ItemDataBound">
-                                                        <ItemTemplate>
-                                                            <div class="ks-mobile-tipologia">
-                                                                <button type="button" class="ks-mobile-nav-toggle is-sublevel" data-ks-nav-toggle="tipology">
-                                                                    <span><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span>
-                                                                    <i class="icon-arrow-right"></i>
-                                                                </button>
-                                                                <div class="ks-mobile-nav-panel">
-                                                                    <a class="ks-mobile-view-all" href='<%# Eval("DefaultUrl") %>'>Vedi tutta la tipologia</a>
-                                                                    <span class="ks-mobile-tier-label">Gruppi</span>
-                                                                    <ul class="ks-mobile-leaf-list ks-mobile-group-list">
-                                                                        <asp:Repeater ID="rptNavGruppiMobile" runat="server">
-                                                                            <ItemTemplate>
-                                                                                <li><a href='<%# Eval("DefaultUrl") %>'><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></a></li>
-                                                                            </ItemTemplate>
-                                                                        </asp:Repeater>
-                                                                    </ul>
-                                                                </div>
-                                                            </div>
-                                                        </ItemTemplate>
-                                                    </asp:Repeater>
-                                                </div>
-                                            </div>
-                                        </ItemTemplate>
-                                    </asp:Repeater>
+                                    <span class="btn-open-sub"></span>
+                                </a>
+                                <div id='ks-mobile-sector-<%# Eval("Id") %>' class="collapse">
+                                    <ul class="sub-nav-menu">
+                                        <li><a class="sub-nav-link active" href='<%# Eval("DefaultUrl") %>' data-ks-i18n="nav.viewSector">Vedi tutto il reparto</a></li>
+                                        <asp:Repeater ID="rptNavCategorieMobile" runat="server" OnItemDataBound="rptNavCategorieMobile_ItemDataBound">
+                                            <ItemTemplate>
+                                                <li class="ks-mobile-sublevel-item">
+                                                    <a href='#ks-mobile-category-<%# Eval("Id") %>' class="sub-nav-link collapsed" data-bs-toggle="collapse" aria-expanded="false" aria-controls='ks-mobile-category-<%# Eval("Id") %>'>
+                                                        <span><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span>
+                                                        <span class="btn-open-sub"></span>
+                                                    </a>
+                                                    <div id='ks-mobile-category-<%# Eval("Id") %>' class="collapse">
+                                                        <ul class="sub-nav-menu sub-menu-level-2">
+                                                            <li><a class="sub-nav-link body-md-2" href='<%# Eval("DefaultUrl") %>' data-ks-i18n="nav.viewCategory">Vedi tutta la categoria</a></li>
+                                                            <asp:Repeater ID="rptNavTipologieMobile" runat="server" OnItemDataBound="rptNavTipologieMobile_ItemDataBound">
+                                                                <ItemTemplate>
+                                                                    <li>
+                                                                        <a href='#ks-mobile-tipology-<%# Eval("Id") %>' class="sub-nav-link collapsed body-md-2" data-bs-toggle="collapse" aria-expanded="false" aria-controls='ks-mobile-tipology-<%# Eval("Id") %>'>
+                                                                            <span><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span>
+                                                                            <span class="btn-open-sub"></span>
+                                                                        </a>
+                                                                        <div id='ks-mobile-tipology-<%# Eval("Id") %>' class="collapse">
+                                                                            <ul class="sub-nav-menu sub-menu-level-2 ks-mobile-group-level">
+                                                                                <li><a class="sub-nav-link body-md-2" href='<%# Eval("DefaultUrl") %>' data-ks-i18n="nav.viewTipology">Vedi tutta la tipologia</a></li>
+                                                                                <asp:Repeater ID="rptNavGruppiMobile" runat="server">
+                                                                                    <ItemTemplate>
+                                                                                        <li><a class="sub-nav-link body-md-2" href='<%# Eval("DefaultUrl") %>'><span><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span></a></li>
+                                                                                    </ItemTemplate>
+                                                                                </asp:Repeater>
+                                                                            </ul>
+                                                                        </div>
+                                                                    </li>
+                                                                </ItemTemplate>
+                                                            </asp:Repeater>
+                                                        </ul>
+                                                    </div>
+                                                </li>
+                                            </ItemTemplate>
+                                        </asp:Repeater>
+                                    </ul>
                                 </div>
                             </li>
                         </ItemTemplate>
