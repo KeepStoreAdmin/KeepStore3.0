@@ -8,20 +8,20 @@
 
 <asp:Content ID="cntMain" ContentPlaceHolderID="MainContent" runat="server">
 
-    <section class="tf-sp-5">
+    <section id="HomeHeroSection" runat="server" class="tf-sp-5 ks-home-hero-section">
         <div class="container">
             <div class="s-banner-wrapper ks-home-hero-shell">
                 <div class="wrap-item-1 d-none d-lg-block">
                     <uc:HomeDepartmentsMenu ID="HomeDepartmentsMenu1" runat="server" />
                 </div>
 
-                <div class="wrap-item-2">
+                <div id="HeroSliderWrap" runat="server" class="wrap-item-2">
                     <div id="Slide_Show_Container" runat="server" class="swiper ks-home-hero-slider wow fadeInUp" data-wow-delay="0s">
                         <div class="swiper-wrapper">
                             <asp:Repeater ID="rptHeroSlides" runat="server">
                                 <ItemTemplate>
                                     <div class="swiper-slide">
-                                        <div class="banner-image-product-4 style-2 hover-img has-bg-img ks-home-hero-banner" style="background-image:url('/Public/assets/images/banner/banner-1.jpg');">
+                                        <div class="banner-image-product-4 style-2 hover-img ks-home-hero-banner ks-home-hero-panel">
                                             <div class="content">
                                                 <div class="box-title">
                                                     <div class="d-grid gap-10">
@@ -39,7 +39,7 @@
                                                     </a>
                                                 </div>
                                             </div>
-                                            <a href='<%# ResolveLink(Eval("LinkUrl"), ProductUrl(Eval("ProductId"))) %>' class="img-style img-item overflow-visible">
+                                            <a href='<%# ResolveLink(Eval("LinkUrl"), ProductUrl(Eval("ProductId"))) %>' class="img-style img-item ks-home-hero-media">
                                                 <img width="800" height="794" class="lazyload" src='<%# ResolveHeroSlideImage(Eval("Image"), "/Public/assets/images/item/tivi.webp") %>' data-src='<%# ResolveHeroSlideImage(Eval("Image"), "/Public/assets/images/item/tivi.webp") %>' alt='<%# SafeText(Eval("Caption")) %>' />
                                             </a>
                                         </div>
@@ -53,7 +53,7 @@
                     </div>
                 </div>
 
-                <div class="wrap-item-3">
+                <div id="HeroSideWrap" runat="server" class="wrap-item-3">
                     <div class="ks-home-side-banners d-grid gap-3">
                         <asp:Repeater ID="rptSideBanners" runat="server">
                             <ItemTemplate>
@@ -114,8 +114,8 @@
     
     <section class="has-bg-img ks-home-wide-promo" style="background-image:url('/Public/assets/images/banner/banner-1.jpg'); background-size:cover; background-repeat:no-repeat;">
         <div class="container">
-            <div class="banner-image-product hover-img">
-                <a href="articoli.aspx" class="image img-2 img-style overflow-visible relative">
+            <div class="banner-image-product hover-img ks-home-wide-promo-card">
+                <a href="articoli.aspx" class="image img-2 img-style relative ks-home-wide-promo-media">
                     <img width="994" height="986" src="/Public/assets/images/item/tivi.webp" data-src="/Public/assets/images/item/tivi.webp" alt="" class="lazyload" />
                     <div class="box-sale-wrap position1">
                         <p class="small-text">Promo</p>
@@ -151,7 +151,7 @@
             <div class="swiper ks-home-collection-swiper">
                 <div class="swiper-wrapper">
                     <div class="swiper-slide">
-                        <div class="cls-category style-abs hover-img wow fadeInLeft" data-wow-delay="0s">
+                        <div class="cls-category style-abs hover-img ks-home-collection-card wow fadeInLeft" data-wow-delay="0s">
                             <a href="articoli.aspx" class="img-box img-style d-block">
                                 <img src="/Public/assets/images/collection/cls-category-1.webp" data-src="/Public/assets/images/collection/cls-category-1.webp" alt="" class="lazyload" />
                             </a>
@@ -173,7 +173,7 @@
                         </div>
                     </div>
                     <div class="swiper-slide">
-                        <div class="cls-category style-abs hover-img wow fadeInLeft" data-wow-delay="0.1s">
+                        <div class="cls-category style-abs hover-img ks-home-collection-card wow fadeInLeft" data-wow-delay="0.1s">
                             <a href="articoli.aspx" class="img-box img-style d-block">
                                 <img src="/Public/assets/images/collection/cls-category-2.webp" data-src="/Public/assets/images/collection/cls-category-2.webp" alt="" class="lazyload" />
                             </a>
@@ -195,7 +195,7 @@
                         </div>
                     </div>
                     <div class="swiper-slide">
-                        <div class="cls-category style-abs hover-img wow fadeInLeft" data-wow-delay="0.2s">
+                        <div class="cls-category style-abs hover-img ks-home-collection-card wow fadeInLeft" data-wow-delay="0.2s">
                             <a href="articoli.aspx" class="img-box img-style d-block">
                                 <img src="/Public/assets/images/collection/cls-category-3.jpg" data-src="/Public/assets/images/collection/cls-category-3.jpg" alt="" class="lazyload" />
                             </a>
@@ -217,7 +217,7 @@
                         </div>
                     </div>
                     <div class="swiper-slide">
-                        <div class="cls-category style-abs hover-img wow fadeInLeft" data-wow-delay="0.3s">
+                        <div class="cls-category style-abs hover-img ks-home-collection-card wow fadeInLeft" data-wow-delay="0.3s">
                             <a href="articoli.aspx" class="img-box img-style d-block">
                                 <img src="/Public/assets/images/collection/cls-category-4.webp" data-src="/Public/assets/images/collection/cls-category-4.webp" alt="" class="lazyload" />
                             </a>
@@ -308,11 +308,11 @@
     
     <section class="ks-home-banner-product">
         <div class="container">
-            <a href="articoli.aspx" class="banner-image-product-2 hover-img d-block">
-                <div class="item-image item-1 img-style overflow-visible">
+            <a href="articoli.aspx" class="banner-image-product-2 hover-img d-block ks-home-banner-product-card">
+                <div class="item-image item-1 img-style ks-home-banner-product-media">
                     <img src="/Public/assets/images/item/camera-2.webp" data-src="/Public/assets/images/item/camera-2.webp" alt="" class="lazyload" />
                 </div>
-                <div class="item-image item-2 img-style overflow-visible d-none d-lg-block">
+                <div class="item-image item-2 img-style ks-home-banner-product-media d-none d-lg-block">
                     <img src="/Public/assets/images/item/camera-3.webp" data-src="/Public/assets/images/item/camera-3.webp" alt="" class="lazyload" />
                 </div>
                 <div class="item-banner" style="background-image:url('/Public/assets/images/banner/banner-2.jpg'); background-size:cover; background-repeat:no-repeat; background-position:center;">

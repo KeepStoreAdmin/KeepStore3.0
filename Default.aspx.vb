@@ -42,10 +42,16 @@ Partial Public Class _Default
         Dim hero As DataTable = GetHeroSlides()
         rptHeroSlides.DataSource = hero
         rptHeroSlides.DataBind()
+        Dim hasHeroSlides As Boolean = hero IsNot Nothing AndAlso hero.Rows.Count > 0
+        Slide_Show_Container.Visible = hasHeroSlides
+        HeroSliderWrap.Visible = hasHeroSlides
 
         Dim sideBanners As DataTable = GetSideBanners()
         rptSideBanners.DataSource = sideBanners
         rptSideBanners.DataBind()
+        Dim hasSideBanners As Boolean = sideBanners IsNot Nothing AndAlso sideBanners.Rows.Count > 0
+        HeroSideWrap.Visible = hasSideBanners
+        HomeHeroSection.Visible = hasHeroSlides OrElse hasSideBanners
 
         Dim usedIds As New HashSet(Of Integer)()
 
@@ -165,7 +171,7 @@ Partial Public Class _Default
 
     Private Function GetHeroSlides() As DataTable
         Dim sql As String = "SELECT id, caption AS Caption, image AS Image, link AS LinkUrl FROM slideshow_new WHERE (start_date IS NULL OR start_date <= CURDATE()) AND (stop_date IS NULL OR stop_date >= CURDATE()) ORDER BY id DESC LIMIT 5"
-        Dim dt As DataTable = SafeTableQuery(sql, HeroSlidesFallback())
+        Dim dt As DataTable = SafeTableQuery(sql, HeroSlidesFallback(), "GetHeroSlides")
 
         If Not dt.Columns.Contains("Eyebrow") Then dt.Columns.Add("Eyebrow", GetType(String))
         If Not dt.Columns.Contains("Description") Then dt.Columns.Add("Description", GetType(String))
@@ -194,16 +200,12 @@ Partial Public Class _Default
         dt.Columns.Add("Eyebrow", GetType(String))
         dt.Columns.Add("Description", GetType(String))
         dt.Columns.Add("ProductId", GetType(Integer))
-
-        dt.Rows.Add("Le migliori occasioni tech", "/Public/assets/images/banner/banner-1.jpg", "articoli.aspx?inpromo=1", "KeepStore 3.0", "Una selezione dinamica di offerte, novita e prodotti in evidenza.", 0)
-        dt.Rows.Add("Nuovi arrivi e best seller", "/Public/assets/images/banner/banner-2.jpg", "articoli.aspx", "Catalogo aggiornato", "Disponibilita reale e focus sui prodotti piu cercati.", 0)
-        dt.Rows.Add("Scelti per te", "/Public/assets/images/banner/banner-3.jpg", "articoli.aspx", "In evidenza", "Una vetrina piu leggibile e coerente con il template Onsus.", 0)
         Return dt
     End Function
 
     Private Function GetSideBanners() As DataTable
         Dim sql As String = "SELECT titolo AS Title, descrizione AS Description, img_path AS Image, link AS LinkUrl, CASE WHEN COALESCE(ordinamento,0)=1 THEN 'Offerta' ELSE 'Promo' END AS Badge FROM pubblicita WHERE COALESCE(abilitato,0)=1 AND COALESCE(id_posizione_banner,0)=4 AND (data_inizio_pubblicazione IS NULL OR data_inizio_pubblicazione <= CURDATE()) AND (data_fine_pubblicazione IS NULL OR data_fine_pubblicazione >= CURDATE()) ORDER BY COALESCE(ordinamento,0), id DESC LIMIT 2"
-        Return SafeTableQuery(sql, SideBannersFallback())
+        Return SafeTableQuery(sql, SideBannersFallback(), "GetSideBanners")
     End Function
 
     Private Function SideBannersFallback() As DataTable
@@ -213,9 +215,6 @@ Partial Public Class _Default
         dt.Columns.Add("Image", GetType(String))
         dt.Columns.Add("LinkUrl", GetType(String))
         dt.Columns.Add("Badge", GetType(String))
-
-        dt.Rows.Add("Promozioni hardware", "Offerte selezionate su accessori e periferiche", "/Public/assets/images/banner/banner-3.jpg", "articoli.aspx?inpromo=1", "Offerta")
-        dt.Rows.Add("Prodotti scelti per te", "Vetrina dinamica aggiornata dal catalogo", "/Public/assets/images/banner/banner-4.jpg", "articoli.aspx", "Promo")
         Return dt
     End Function
 
@@ -644,11 +643,11 @@ Partial Public Class _Default
     End Function
 
     Protected Function ResolveHeroSlideImage(ByVal value As Object, ByVal fallback As String) As String
-        Return ResolveProjectImage(value, fallback, "/Public/assets/images/slideshows/", "/Images/Slide_Show/", "/Public/assets/images/banner/")
+        Return ResolveProjectImage(value, fallback, "/Public/assets/images/slideshows/")
     End Function
 
     Protected Function ResolveAdvertisingImage(ByVal value As Object, ByVal fallback As String) As String
-        Return ResolveProjectImage(value, fallback, "/Public/assets/images/banner/", "/Public/Banner/")
+        Return ResolveProjectImage(value, fallback, "/Public/assets/images/banner/")
     End Function
 
     Private Function ResolveProjectImage(ByVal value As Object, ByVal fallback As String, ParamArray ByVal candidateFolders() As String) As String

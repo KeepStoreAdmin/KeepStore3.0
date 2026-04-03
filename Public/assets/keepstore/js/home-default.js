@@ -18,6 +18,14 @@
     if (node) node.style.display = 'none';
   }
 
+  function updateAllSwipers() {
+    Array.prototype.slice.call(document.querySelectorAll('.swiper')).forEach(function (swiperEl) {
+      if (swiperEl.swiper && typeof swiperEl.swiper.update === 'function') {
+        swiperEl.swiper.update();
+      }
+    });
+  }
+
   function initHero() {
     var hero = document.querySelector('.ks-home-hero-slider');
     if (!hero) return;
@@ -136,8 +144,10 @@
   function syncHeroLayout() {
     var shell = document.querySelector('.ks-home-hero-shell');
     var menu = document.querySelector('.ks-home-departments .menu-category-list');
-    var hero = document.querySelector('.ks-home-hero-slider');
-    if (!shell || !menu || !hero) return;
+    if (!shell || !menu) return;
+
+    var sliderWrap = shell.querySelector('.wrap-item-2');
+    var sideWrap = shell.querySelector('.wrap-item-3');
 
     if (window.innerWidth < 1200) {
       menu.style.minHeight = '';
@@ -145,21 +155,42 @@
       return;
     }
 
-    var target = Math.max(hero.offsetHeight, 520);
     menu.style.maxHeight = 'none';
-    menu.style.minHeight = target + 'px';
+
+    var target = 0;
+    if (sliderWrap && sliderWrap.offsetParent !== null) {
+      target = Math.max(target, sliderWrap.offsetHeight || 0);
+    }
+    if (sideWrap && sideWrap.offsetParent !== null) {
+      target = Math.max(target, sideWrap.offsetHeight || 0);
+    }
+
+    if (target > 0) {
+      menu.style.minHeight = target + 'px';
+    } else {
+      menu.style.minHeight = '';
+    }
   }
 
   function refreshSwipersInTabs() {
     Array.prototype.slice.call(document.querySelectorAll('[data-bs-toggle="tab"]')).forEach(function (trigger) {
       trigger.addEventListener('shown.bs.tab', function () {
-        Array.prototype.slice.call(document.querySelectorAll('.swiper')).forEach(function (swiperEl) {
-          if (swiperEl.swiper && typeof swiperEl.swiper.update === 'function') {
-            swiperEl.swiper.update();
-          }
-        });
+        updateAllSwipers();
         window.setTimeout(normalizeCardHeights, 80);
       });
+    });
+  }
+
+  function bindImageDrivenRefresh() {
+    Array.prototype.slice.call(document.querySelectorAll('.ks-page-home img')).forEach(function (img) {
+      if (!img || img.complete) return;
+      img.addEventListener('load', function () {
+        window.setTimeout(function () {
+          updateAllSwipers();
+          normalizeCardHeights();
+          syncHeroLayout();
+        }, 60);
+      }, { once: true });
     });
   }
 
@@ -178,10 +209,12 @@
     normalizeCardHeights();
     syncHeroLayout();
     refreshSwipersInTabs();
+    bindImageDrivenRefresh();
 
     window.addEventListener('resize', function () {
       normalizeCardHeights();
       syncHeroLayout();
+      updateAllSwipers();
     });
   }
 

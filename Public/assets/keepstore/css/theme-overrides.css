@@ -601,7 +601,8 @@
     display: flex;
     gap: 20px;
     flex-wrap: wrap;
-    align-items: stretch;
+    align-items: flex-start;
+    overflow: hidden;
 }
 
 .ks-page-home .ks-home-hero-shell .wrap-item-1,
@@ -616,6 +617,11 @@
     gap: 20px;
     width: 100%;
     min-width: 0;
+}
+
+.ks-page-home .ks-home-hero-shell .wrap-item-2,
+.ks-page-home .ks-home-hero-shell .wrap-item-3 {
+    align-self: stretch;
 }
 
 .ks-page-home .ks-home-mini-promo,
@@ -652,27 +658,225 @@
 }
 
 .ks-page-home .ks-home-hero-banner {
-    min-height: 398px;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: cover;
+    min-height: 0;
+    height: 100%;
+    padding: 28px 30px;
+    background: linear-gradient(135deg, #101b43 0%, #172b68 50%, #ff5757 100%);
+    position: relative;
+    isolation: isolate;
+    align-items: stretch;
+    gap: 24px;
+}
+
+.ks-page-home .ks-home-hero-banner .content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: min(46%, 360px);
+    min-width: 0;
+}
+
+.ks-page-home .ks-home-hero-banner .box-title h2 {
+    margin-bottom: 0;
+}
+
+.ks-page-home .ks-home-hero-banner .img-item,
+.ks-page-home .ks-home-hero-media {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    width: min(52%, 540px);
+    min-width: 0;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
 }
 
 .ks-page-home .ks-home-hero-banner .img-item img {
     width: 100%;
-    height: auto;
-    max-height: 340px;
+    height: 100%;
+    max-height: 300px;
     object-fit: contain;
+    object-position: right bottom;
 }
 
 .ks-page-home .ks-home-side-banners .ks-side-promo-card {
-    min-height: 189px;
+    min-height: 0;
+    height: calc(50% - 10px);
+    position: relative;
+    isolation: isolate;
 }
 
 .ks-page-home .ks-home-side-banners .ks-side-promo-card .img-box img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.ks-page-home .ks-home-side-banners > :only-child {
+    height: 100%;
+}
+
+.ks-page-home .ks-home-side-banners .ks-side-promo-card .content,
+.ks-page-home .ks-home-collection-card .content,
+.ks-page-home .ks-home-collection-card .box-sale-wrap,
+.ks-page-home .ks-home-wide-promo-card .content,
+.ks-page-home .ks-home-banner-product .inner {
+    position: relative;
+    z-index: 2;
+}
+
+.ks-page-home .ks-home-wide-promo,
+.ks-page-home .ks-home-collection-block,
+.ks-page-home .ks-home-banner-product {
+    position: relative;
+    overflow: hidden;
+}
+
+.ks-page-home .ks-home-wide-promo-card {
+    min-height: 0;
+    padding: 28px 34px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    border-radius: 18px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: var(--ks-shadow);
+}
+
+.ks-page-home .ks-home-wide-promo-card .content {
+    flex: 1 1 0;
+    max-width: 460px;
+}
+
+.ks-page-home .ks-home-wide-promo-media {
+    flex: 0 0 min(38%, 340px);
+    max-width: 340px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+    overflow: hidden;
+}
+
+.ks-page-home .ks-home-wide-promo-media img {
+    width: 100%;
+    height: auto;
+    max-height: 250px;
+    object-fit: contain;
+    object-position: center bottom;
+}
+
+.ks-page-home .ks-home-collection-swiper,
+.ks-page-home .ks-home-collection-swiper .swiper-wrapper {
+    overflow: hidden;
+}
+
+.ks-page-home .ks-home-collection-swiper .swiper-slide {
+    height: auto;
+}
+
+.ks-page-home .ks-home-collection-card {
+    height: 100%;
+    min-height: 210px;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: var(--ks-shadow);
+    position: relative;
+    isolation: isolate;
+}
+
+.ks-page-home .ks-home-collection-card .img-box,
+.ks-page-home .ks-home-collection-card .img-box img {
+    width: 100%;
+    height: 100%;
+}
+
+.ks-page-home .ks-home-collection-card .img-box img {
+    object-fit: cover;
+}
+
+.ks-page-home .flat-animate-tab .grid-cls.grid-cls-v1 {
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) minmax(380px, 1.22fr) minmax(240px, 1fr);
+    gap: 24px;
+    align-items: stretch;
+}
+
+.ks-page-home .flat-animate-tab .grid-cls.grid-cls-v1 > div {
+    min-width: 0;
+}
+
+.ks-page-home .flat-animate-tab .grid-cls.grid-cls-v1 .grid-item2 {
+    display: flex;
+}
+
+.ks-page-home .flat-animate-tab .grid-cls.grid-cls-v1 .grid-item2 > * {
+    width: 100%;
+}
+
+.ks-page-home .flat-animate-tab .product-list-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+}
+
+.ks-page-home .flat-animate-tab .ks-big-card {
+    height: 100%;
+}
+
+.ks-page-home .ks-home-banner-product .banner-image-product-2,
+.ks-page-home .ks-home-banner-product-card {
+    display: block;
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    box-shadow: var(--ks-shadow);
+}
+
+.ks-page-home .ks-home-banner-product .item-banner {
+    min-height: 220px;
+    padding: 36px 34px;
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+.ks-page-home .ks-home-banner-product .inner {
+    max-width: 460px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    width: 100%;
+}
+
+.ks-page-home .ks-home-banner-product-media {
+    overflow: hidden;
+}
+
+.ks-page-home .ks-home-banner-product .item-image img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+.ks-page-home .tf-grid-product {
+    align-items: stretch;
+    gap: 24px;
+}
+
+.ks-page-home .tf-grid-product-item {
+    min-width: 0;
+}
+
+.ks-page-home .ks-column-swiper .product-list-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .ks-page-home .ks-grid-card .product-img,
@@ -1321,6 +1525,47 @@
         gap: 18px;
     }
 
+    .ks-page-home .ks-home-hero-banner,
+    .ks-page-home .ks-home-wide-promo-card {
+        padding: 24px;
+    }
+
+    .ks-page-home .ks-home-hero-banner {
+        min-height: 320px;
+    }
+
+    .ks-page-home .ks-home-hero-banner .content,
+    .ks-page-home .ks-home-hero-banner .img-item,
+    .ks-page-home .ks-home-hero-media,
+    .ks-page-home .ks-home-wide-promo-card .content,
+    .ks-page-home .ks-home-wide-promo-media {
+        width: 100%;
+        max-width: none;
+        flex-basis: 100%;
+    }
+
+    .ks-page-home .ks-home-wide-promo-card {
+        flex-direction: column-reverse;
+        align-items: flex-start;
+    }
+
+    .ks-page-home .flat-animate-tab .grid-cls.grid-cls-v1 {
+        grid-template-columns: 1fr;
+    }
+
+    .ks-page-home .flat-animate-tab .grid-cls.grid-cls-v1 .grid-item2 {
+        order: -1;
+    }
+
+    .ks-page-home .ks-home-banner-product .item-banner {
+        min-height: 200px;
+        padding: 28px 24px;
+    }
+
+    .ks-page-home .ks-home-banner-product .inner {
+        max-width: 380px;
+    }
+
     .ks-page-home .ks-big-card.style-thums-2 .product-thumb-slider {
         grid-template-columns: minmax(0, 1fr);
     }
@@ -1369,6 +1614,50 @@
 
     .ks-page-home .ks-row-card {
         display: block;
+    }
+
+    .ks-page-home .ks-home-hero-banner,
+    .ks-page-home .ks-home-wide-promo-card {
+        padding: 20px;
+    }
+
+    .ks-page-home .ks-home-hero-banner {
+        display: block;
+        min-height: 0;
+    }
+
+    .ks-page-home .ks-home-hero-banner .content {
+        width: 100%;
+        margin-bottom: 16px;
+    }
+
+    .ks-page-home .ks-home-hero-banner .img-item,
+    .ks-page-home .ks-home-hero-media,
+    .ks-page-home .ks-home-wide-promo-media {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .ks-page-home .ks-home-hero-banner .img-item img,
+    .ks-page-home .ks-home-wide-promo-media img {
+        max-height: 220px;
+    }
+
+    .ks-page-home .ks-home-collection-card {
+        min-height: 190px;
+    }
+
+    .ks-page-home .ks-home-banner-product .item-banner {
+        min-height: 160px;
+        padding: 22px 20px;
+    }
+
+    .ks-page-home .ks-home-banner-product .item-image {
+        max-width: 150px;
+    }
+
+    .ks-page-home .ks-home-banner-product .inner {
+        max-width: 280px;
     }
 
     .ks-page-home .ks-row-card .card-product-wrapper,
