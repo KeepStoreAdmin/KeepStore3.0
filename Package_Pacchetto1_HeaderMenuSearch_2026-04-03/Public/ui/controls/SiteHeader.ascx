@@ -226,11 +226,7 @@
                                 <li class="nav-mb-item ks-mobile-sector-item">
                                     <a href='#ks-mobile-sector-<%# Eval("Id") %>' class="collapsed mb-menu-link" data-bs-toggle="collapse" aria-expanded="false" aria-controls='ks-mobile-sector-<%# Eval("Id") %>'>
                                         <span class="ks-mobile-nav-entry">
-                                            <span class="ks-mobile-nav-media<%# If(String.IsNullOrWhiteSpace(Convert.ToString(Eval("ImgUrl"))), " is-empty", String.Empty) %>">
-                                                <asp:PlaceHolder runat="server" Visible="<%# Not String.IsNullOrWhiteSpace(Convert.ToString(Eval("ImgUrl"))) %>">
-                                                    <img src='<%# Eval("ImgUrl") %>' alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %>' onerror="this.style.display='none';this.parentNode.classList.add('is-empty');" />
-                                                </asp:PlaceHolder>
-                                            </span>
+                                            <span class='<%# MobileSectorMediaClass(Eval("ImgUrl")) %>'><%# RenderMobileSectorImage(Eval("ImgUrl"), Eval("Descrizione")) %></span>
                                             <span class="ks-mobile-nav-label"><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span>
                                         </span>
                                         <span class="btn-open-sub"></span>

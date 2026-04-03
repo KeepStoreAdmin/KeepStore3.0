@@ -100,6 +100,25 @@ Partial Class SiteHeader
         litDesktopCatalogMegaMenu.Text = BuildDesktopCatalogMegaMenuHtml(sectors)
     End Sub
 
+    Protected Function MobileSectorMediaClass(ByVal imgUrl As Object) As String
+        Dim value As String = Convert.ToString(imgUrl)
+        If String.IsNullOrWhiteSpace(value) Then
+            Return "ks-mobile-nav-media is-empty"
+        End If
+
+        Return "ks-mobile-nav-media"
+    End Function
+
+    Protected Function RenderMobileSectorImage(ByVal imgUrl As Object, ByVal descrizione As Object) As String
+        Dim src As String = Convert.ToString(imgUrl).Trim()
+        If String.IsNullOrWhiteSpace(src) Then
+            Return String.Empty
+        End If
+
+        Dim altText As String = HttpUtility.HtmlAttributeEncode(Convert.ToString(descrizione))
+        Return "<img src='" & HttpUtility.HtmlAttributeEncode(src) & "' alt='" & altText & "' onerror=""this.style.display='none';this.parentNode.classList.add('is-empty');"" />"
+    End Function
+
     Protected Sub rptNavSettoriMobile_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
         If e.Item Is Nothing OrElse (e.Item.ItemType <> ListItemType.Item AndAlso e.Item.ItemType <> ListItemType.AlternatingItem) Then
             Return
