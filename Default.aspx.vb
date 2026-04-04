@@ -897,7 +897,7 @@ Partial Public Class _Default
             candidate = "/Public/assets/images/marche/" & Path.GetFileName(fileName)
         End If
 
-        If VirtualFileExists(candidate) Then
+        If VirtualPathExists(candidate) Then
             Return candidate
         End If
 
