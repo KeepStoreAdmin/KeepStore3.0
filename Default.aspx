@@ -274,7 +274,7 @@
         </div>
     </section>
 
-    <section class="tf-sp-2 ks-home-brands-block">
+    <section id="HomeBrandsSection" runat="server" class="tf-sp-2 ks-home-brands-block">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s"><h5>Rivenditori Ufficiali - I migliori Brand</h5></div>
             <div class="swiper ks-home-brands" data-preview="6" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="20" data-space="15">
@@ -282,7 +282,7 @@
                     <asp:Repeater ID="rptBrands" runat="server">
                         <ItemTemplate>
                             <div class="swiper-slide">
-                                <a href='<%# BrandLink(Eval("id"), Eval("link")) %>' class="ks-home-brand-item" title='<%# SafeText(Eval("Descrizione")) %>'>
+                                <a href='<%# BrandLink(Eval("id"), Eval("link")) %>' class="brand-item ks-home-brand-item" title='<%# SafeText(Eval("Descrizione")) %>'>
                                     <img class="lazyload" src='<%# BrandImage(Eval("img")) %>' data-src='<%# BrandImage(Eval("img")) %>' alt='<%# SafeText(Eval("Descrizione")) %>' />
                                 </a>
                             </div>
@@ -294,7 +294,7 @@
         </div>
     </section>
 
-    <section class="tf-sp-2">
+    <section id="HomeRecentlyViewedSection" runat="server" class="tf-sp-2 ks-home-recent-section">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <h5 class="fw-semibold" data-ks-i18n="home.chosenByYou">Scelti Da Te</h5>

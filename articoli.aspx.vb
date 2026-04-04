@@ -754,7 +754,7 @@ strWhere = strWhere & " GROUP BY id"
             Case Else
                 ' Default: rilevanza (stabile)
                 If userCerca <> "" Then
-                    strWhere &= " ORDER BY SearchScore DESC, (Giacenza-Impegnata) DESC, id DESC"
+                    strWhere &= " ORDER BY SearchScore DESC, ((Giacenza-Impegnata)>0) DESC, InOfferta DESC, COALESCE(Vetrina,0) DESC, visite DESC, id DESC"
                 Else
                     strWhere &= " ORDER BY (Giacenza-Impegnata) DESC, id DESC"
                 End If

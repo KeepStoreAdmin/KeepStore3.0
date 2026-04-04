@@ -84,11 +84,19 @@ Partial Public Class _Default
         rptOnSaleProductSlides.DataSource = BuildSlidesTable(TakeDistinctRows(5, usedIds, offerPool), 5)
         rptOnSaleProductSlides.DataBind()
 
-        rptBrands.DataSource = GetBrands(12)
+        Dim brandRows As DataTable = FilterBrandRows(GetBrands(24), 12)
+        rptBrands.DataSource = brandRows
         rptBrands.DataBind()
+        If HomeBrandsSection IsNot Nothing Then
+            HomeBrandsSection.Visible = Not IsTableEmpty(brandRows)
+        End If
 
-        rptRecentlyViewed.DataSource = GetRecentlyViewedProducts(12)
+        Dim recentRows As DataTable = GetRecentlyViewedProducts(12)
+        rptRecentlyViewed.DataSource = recentRows
         rptRecentlyViewed.DataBind()
+        If HomeRecentlyViewedSection IsNot Nothing Then
+            HomeRecentlyViewedSection.Visible = Not IsTableEmpty(recentRows)
+        End If
     End Sub
 
     Private Sub BindThreeColumnZone(ByVal source As DataTable, ByVal leftRepeater As Repeater, ByVal centerRepeater As Repeater, ByVal rightRepeater As Repeater)
@@ -289,7 +297,6 @@ Partial Public Class _Default
             If id > 0 AndAlso Not orderedIds.Contains(id) Then
                 orderedIds.Add(id)
             End If
-            If orderedIds.Count >= limit Then Exit For
         Next
 
         If orderedIds.Count = 0 Then Return EmptyProductsTable()
@@ -302,12 +309,36 @@ Partial Public Class _Default
         Next
         orderSql.Append("ELSE 9999 END")
 
-        Dim dt As DataTable = TryLoadProducts("v.id IN (" & idsCsv & ") AND " & StockWhereClause() & ">=1", orderSql.ToString(), limit)
+        Dim dt As DataTable = TryLoadProducts("v.id IN (" & idsCsv & ") AND " & StockWhereClause() & ">=1", orderSql.ToString(), orderedIds.Count)
         If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
-            Return dt
+            dt = DistinctRowsByProductId(dt)
+            If dt.Rows.Count <= limit Then
+                Return dt
+            End If
+            Return SliceTable(dt, 0, limit)
         End If
 
         Return EmptyProductsTable()
+    End Function
+
+    Private Function DistinctRowsByProductId(ByVal source As DataTable) As DataTable
+        Dim result As DataTable = If(source IsNot Nothing, source.Clone(), EmptyProductsTable())
+        If source Is Nothing OrElse source.Rows.Count = 0 Then
+            Return result
+        End If
+
+        Dim seen As New HashSet(Of Integer)()
+        For Each row As DataRow In source.Rows
+            Dim id As Integer = SafeInt(row("id"))
+            If id <= 0 OrElse seen.Contains(id) Then
+                Continue For
+            End If
+
+            seen.Add(id)
+            result.ImportRow(row)
+        Next
+
+        Return result
     End Function
 
     Private Function TryLoadProducts(ByVal whereClause As String, ByVal orderClause As String, ByVal limit As Integer) As DataTable
@@ -640,6 +671,31 @@ Partial Public Class _Default
         Return SafeTableQuery(sql, New DataTable(), "GetBrands")
     End Function
 
+    Private Function FilterBrandRows(ByVal source As DataTable, ByVal limit As Integer) As DataTable
+        If source Is Nothing Then
+            Return New DataTable()
+        End If
+
+        Dim filtered As DataTable = source.Clone()
+        For Each row As DataRow In source.Rows
+            If Not row.Table.Columns.Contains("img") Then
+                Continue For
+            End If
+
+            Dim imageUrl As String = ResolveBrandImage(row("img"))
+            If String.IsNullOrWhiteSpace(imageUrl) Then
+                Continue For
+            End If
+
+            filtered.ImportRow(row)
+            If filtered.Rows.Count >= limit Then
+                Exit For
+            End If
+        Next
+
+        Return filtered
+    End Function
+
     Private Function IsTableEmpty(ByVal table As DataTable) As Boolean
         Return table Is Nothing OrElse table.Rows.Count = 0
     End Function
@@ -830,12 +886,26 @@ Partial Public Class _Default
         Return "/Public/assets/images/articoli/" & fileName
     End Function
 
-    Protected Function BrandImage(ByVal value As Object) As String
+    Private Function ResolveBrandImage(ByVal value As Object) As String
         Dim fileName As String = Convert.ToString(value).Trim()
-        If String.IsNullOrWhiteSpace(fileName) Then Return "/Public/assets/images/logo/short-logo.svg"
+        If String.IsNullOrWhiteSpace(fileName) Then Return String.Empty
         fileName = fileName.Replace("\", "/")
-        If fileName.StartsWith("/") OrElse fileName.StartsWith("http", StringComparison.OrdinalIgnoreCase) Then Return fileName
-        Return "/Public/assets/images/marche/" & Path.GetFileName(fileName)
+        Dim candidate As String = String.Empty
+        If fileName.StartsWith("/") OrElse fileName.StartsWith("http", StringComparison.OrdinalIgnoreCase) Then
+            candidate = fileName
+        Else
+            candidate = "/Public/assets/images/marche/" & Path.GetFileName(fileName)
+        End If
+
+        If VirtualFileExists(candidate) Then
+            Return candidate
+        End If
+
+        Return String.Empty
+    End Function
+
+    Protected Function BrandImage(ByVal value As Object) As String
+        Return ResolveBrandImage(value)
     End Function
 
     Protected Function BrandLink(ByVal brandId As Object, ByVal fallback As Object) As String
