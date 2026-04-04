@@ -74,14 +74,14 @@ Partial Class test
 
         If (Direzione <> 2) Then 'Controllo se devo arrotondare o meno
             Temp = Valore / Arrotondamento
-            If Int(Temp) = Temp Then
+            If Microsoft.VisualBasic.Conversion.Int(Temp) = Temp Then
                 Arrotonda = Valore
             Else
                 Select Case Direzione
                     Case TipoArrotonda.Difetto
-                        Temp = Int(Temp)
+                        Temp = Microsoft.VisualBasic.Conversion.Int(Temp)
                     Case TipoArrotonda.Eccesso
-                        Temp = Int(Temp) + 1
+                        Temp = Microsoft.VisualBasic.Conversion.Int(Temp) + 1
                     Case TipoArrotonda.Matematico
                         Temp = CDbl(Format(Temp, "0"))
                 End Select
