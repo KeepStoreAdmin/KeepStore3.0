@@ -279,15 +279,17 @@
             <div class="flat-title wow fadeInUp" data-wow-delay="0s"><h5>Rivenditori Ufficiali - I migliori Brand</h5></div>
             <div class="swiper ks-home-brands" data-preview="6" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="20" data-space="15">
                 <div class="swiper-wrapper">
-                    <asp:Repeater ID="rptBrands" runat="server">
-                        <ItemTemplate>
-                            <div class="swiper-slide">
-                                <a href='<%# BrandLink(Eval("id"), Eval("link")) %>' class="brand-item ks-home-brand-item" title='<%# SafeText(Eval("Descrizione")) %>'>
-                                    <img class="lazyload" src='<%# BrandImage(Eval("img")) %>' data-src='<%# BrandImage(Eval("img")) %>' alt='<%# SafeText(Eval("Descrizione")) %>' />
-                                </a>
-                            </div>
-                        </ItemTemplate>
-                    </asp:Repeater>
+                        <asp:Repeater ID="rptBrands" runat="server">
+                            <ItemTemplate>
+                                <div class="swiper-slide">
+                                    <a href='<%# BrandLink(Eval("id"), Eval("link")) %>' class="brand-item ks-home-brand-item" title='<%# SafeText(Eval("Descrizione")) %>'>
+                                        <span class="ks-home-brand-media">
+                                            <img class="lazyload" src='<%# BrandImage(Eval("img")) %>' data-src='<%# BrandImage(Eval("img")) %>' alt='<%# SafeText(Eval("Descrizione")) %>' />
+                                        </span>
+                                    </a>
+                                </div>
+                            </ItemTemplate>
+                        </asp:Repeater>
                 </div>
                 <div class="sw-dot-default ks-home-brands-pagination"></div>
             </div>

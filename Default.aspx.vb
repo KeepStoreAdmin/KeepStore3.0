@@ -42,14 +42,14 @@ Partial Public Class _Default
         Dim hero As DataTable = GetHeroSlides()
         rptHeroSlides.DataSource = hero
         rptHeroSlides.DataBind()
-        Dim hasHeroSlides As Boolean = hero IsNot Nothing AndAlso hero.Rows.Count > 0
+        Dim hasHeroSlides As Boolean = rptHeroSlides.Items.Count > 0
         Slide_Show_Container.Visible = hasHeroSlides
         HeroSliderWrap.Visible = hasHeroSlides
 
         Dim sideBanners As DataTable = GetSideBanners()
         rptSideBanners.DataSource = sideBanners
         rptSideBanners.DataBind()
-        Dim hasSideBanners As Boolean = sideBanners IsNot Nothing AndAlso sideBanners.Rows.Count > 0
+        Dim hasSideBanners As Boolean = rptSideBanners.Items.Count > 0
         HeroSideWrap.Visible = hasSideBanners
         HomeHeroSection.Visible = hasHeroSlides OrElse hasSideBanners
 
@@ -178,27 +178,17 @@ Partial Public Class _Default
     End Function
 
     Private Function GetHeroSlides() As DataTable
-        Dim sql As String = "SELECT id, caption AS Caption, image AS Image, link AS LinkUrl FROM slideshow_new WHERE (start_date IS NULL OR start_date <= CURDATE()) AND (stop_date IS NULL OR stop_date >= CURDATE()) ORDER BY id DESC LIMIT 5"
-        Dim dt As DataTable = SafeTableQuery(sql, HeroSlidesFallback(), "GetHeroSlides")
-        dt = FilterRowsByResolvedImage(dt, "Image", AddressOf ResolveHeroSlideImagePath)
+        Dim wideSource As DataTable = GetHeroWideBanners()
+        If wideSource IsNot Nothing AndAlso wideSource.Rows.Count > 0 Then
+            Return SliceTable(wideSource, 0, 1)
+        End If
 
-        If Not dt.Columns.Contains("Eyebrow") Then dt.Columns.Add("Eyebrow", GetType(String))
-        If Not dt.Columns.Contains("Description") Then dt.Columns.Add("Description", GetType(String))
-        If Not dt.Columns.Contains("ProductId") Then dt.Columns.Add("ProductId", GetType(Integer))
+        Dim sideSource As DataTable = GetHeroSideBannerSource()
+        If sideSource IsNot Nothing AndAlso sideSource.Rows.Count > 0 Then
+            Return ConvertSideRowsToHeroRows(SliceTable(sideSource, 0, 1))
+        End If
 
-        For i As Integer = 0 To dt.Rows.Count - 1
-            If String.IsNullOrWhiteSpace(Convert.ToString(dt.Rows(i)("Eyebrow"))) Then
-                dt.Rows(i)("Eyebrow") = If(i = 0, "KeepStore 3.0", "Selezione Onsus")
-            End If
-            If String.IsNullOrWhiteSpace(Convert.ToString(dt.Rows(i)("Description"))) Then
-                dt.Rows(i)("Description") = "Promozioni, novita e prodotti selezionati in evidenza."
-            End If
-            If dt.Rows(i)("ProductId") Is DBNull.Value Then
-                dt.Rows(i)("ProductId") = 0
-            End If
-        Next
-
-        Return dt
+        Return HeroSlidesFallback()
     End Function
 
     Private Function HeroSlidesFallback() As DataTable
@@ -213,8 +203,241 @@ Partial Public Class _Default
     End Function
 
     Private Function GetSideBanners() As DataTable
-        Dim sql As String = "SELECT titolo AS Title, descrizione AS Description, img_path AS Image, link AS LinkUrl, CASE WHEN COALESCE(ordinamento,0)=1 THEN 'Offerta' ELSE 'Promo' END AS Badge FROM pubblicita WHERE COALESCE(abilitato,0)=1 AND COALESCE(id_posizione_banner,0)=4 AND (data_inizio_pubblicazione IS NULL OR data_inizio_pubblicazione <= CURDATE()) AND (data_fine_pubblicazione IS NULL OR data_fine_pubblicazione >= CURDATE()) ORDER BY COALESCE(ordinamento,0), id DESC LIMIT 2"
-        Return FilterRowsByResolvedImage(SafeTableQuery(sql, SideBannersFallback(), "GetSideBanners"), "Image", AddressOf ResolveAdvertisingImagePath)
+        Dim sideSource As DataTable = GetHeroSideBannerSource()
+        If sideSource Is Nothing OrElse sideSource.Rows.Count = 0 Then
+            Dim wideSource As DataTable = GetHeroWideBanners()
+            If wideSource IsNot Nothing AndAlso wideSource.Rows.Count > 1 Then
+                Return ConvertHeroRowsToSideRows(SliceTable(wideSource, 1, 2))
+            End If
+            Return SideBannersFallback()
+        End If
+
+        Dim result As DataTable = SliceTable(sideSource, 0, 2)
+        If result.Rows.Count < 2 Then
+            Dim wideSource As DataTable = GetHeroWideBanners()
+            If wideSource IsNot Nothing AndAlso wideSource.Rows.Count > 1 Then
+                result = MergeSideBannerRows(result, ConvertHeroRowsToSideRows(SliceTable(wideSource, 1, 2)), 2)
+            End If
+        End If
+
+        Return result
+    End Function
+
+    Private Function GetHeroWideBanners() As DataTable
+        Dim sql As String = "SELECT id, COALESCE(NULLIF(Descrizione,''),'Promozioni KeepStore') AS Caption, Immagine AS Image, Link AS LinkUrl " &
+                            "FROM bannerv2 " &
+                            "WHERE COALESCE(AziendeId,1)=1 AND COALESCE(Posizione,0)=3 " &
+                            "ORDER BY COALESCE(Ordinamento,0), id DESC LIMIT 24"
+        Dim dt As DataTable = SafeTableQuery(sql, HeroSlidesFallback(), "GetHeroWideBanners")
+        dt = FilterRowsByResolvedImage(dt, "Image", AddressOf ResolveAdvertisingImagePath)
+        Return PrepareHeroRows(dt, "Promo KeepStore", "Selezione reale KeepStore")
+    End Function
+
+    Private Function GetHeroSideBannerSource() As DataTable
+        Dim sql As String = "SELECT p.id, " &
+                            "COALESCE(NULLIF(p.caption,''), NULLIF(s.titolo,''), NULLIF(s.descrizione,''), 'Selezione KeepStore') AS Title, " &
+                            "NULLIF(s.descrizione,'') AS Description, " &
+                            "p.image AS Image, p.link AS LinkUrl, 'Promo' AS Badge " &
+                            "FROM slideshows s " &
+                            "INNER JOIN slideshows_parts p ON p.slideshowid = s.id " &
+                            "WHERE COALESCE(s.abilitato,0)=1 AND LOWER(COALESCE(s.placeholder,''))='defaultpage' " &
+                            "AND (s.dataInizioPubblicazione IS NULL OR s.dataInizioPubblicazione <= CURDATE()) " &
+                            "AND (s.dataFinePubblicazione IS NULL OR s.dataFinePubblicazione >= CURDATE()) " &
+                            "ORDER BY CASE WHEN NULLIF(p.orderPosition,'') IS NULL THEN 999 ELSE CAST(p.orderPosition AS UNSIGNED) END, p.id DESC " &
+                            "LIMIT 12"
+        Dim dt As DataTable = SafeTableQuery(sql, SideBannersFallback(), "GetHeroSideBannerSource")
+        dt = FilterRowsByResolvedImage(dt, "Image", AddressOf ResolveHeroSlideImagePath)
+        Return PrepareSideBannerRows(dt)
+    End Function
+
+    Private Function PrepareHeroRows(ByVal source As DataTable, ByVal defaultEyebrow As String, ByVal defaultDescription As String) As DataTable
+        Dim result As DataTable = HeroSlidesFallback()
+        If source Is Nothing Then
+            Return result
+        End If
+
+        For Each row As DataRow In source.Rows
+            Dim newRow As DataRow = result.NewRow()
+            newRow("Caption") = CleanMarketingText(If(row.Table.Columns.Contains("Caption"), row("Caption"), String.Empty), "Promozioni KeepStore")
+            newRow("Image") = Convert.ToString(row("Image")).Trim()
+            newRow("LinkUrl") = NormalizeProjectLink(Convert.ToString(If(row.Table.Columns.Contains("LinkUrl"), row("LinkUrl"), String.Empty)), "articoli.aspx")
+            newRow("Eyebrow") = BuildHeroEyebrow(Convert.ToString(newRow("Caption")), defaultEyebrow)
+            newRow("Description") = defaultDescription
+            newRow("ProductId") = 0
+            result.Rows.Add(newRow)
+        Next
+
+        Return result
+    End Function
+
+    Private Function PrepareSideBannerRows(ByVal source As DataTable) As DataTable
+        Dim result As DataTable = SideBannersFallback()
+        If source Is Nothing Then
+            Return result
+        End If
+
+        For Each row As DataRow In source.Rows
+            Dim newRow As DataRow = result.NewRow()
+            Dim title As String = CleanMarketingText(If(row.Table.Columns.Contains("Title"), row("Title"), String.Empty), "Selezione KeepStore")
+            newRow("Title") = title
+            newRow("Description") = CleanMarketingText(If(row.Table.Columns.Contains("Description"), row("Description"), String.Empty), String.Empty)
+            newRow("Image") = Convert.ToString(row("Image")).Trim()
+            newRow("LinkUrl") = NormalizeProjectLink(Convert.ToString(If(row.Table.Columns.Contains("LinkUrl"), row("LinkUrl"), String.Empty)), "articoli.aspx")
+            newRow("Badge") = BuildSideBannerBadge(title, Convert.ToString(newRow("Description")))
+            result.Rows.Add(newRow)
+        Next
+
+        Return result
+    End Function
+
+    Private Function ConvertSideRowsToHeroRows(ByVal source As DataTable) As DataTable
+        Dim result As DataTable = HeroSlidesFallback()
+        If source Is Nothing Then
+            Return result
+        End If
+
+        For Each row As DataRow In source.Rows
+            Dim newRow As DataRow = result.NewRow()
+            newRow("Caption") = CleanMarketingText(If(row.Table.Columns.Contains("Title"), row("Title"), String.Empty), "Selezione KeepStore")
+            newRow("Image") = Convert.ToString(If(row.Table.Columns.Contains("Image"), row("Image"), String.Empty)).Trim()
+            newRow("LinkUrl") = NormalizeProjectLink(Convert.ToString(If(row.Table.Columns.Contains("LinkUrl"), row("LinkUrl"), String.Empty)), "articoli.aspx")
+            newRow("Eyebrow") = BuildHeroEyebrow(Convert.ToString(newRow("Caption")), "Selezione KeepStore")
+            newRow("Description") = CleanMarketingText(If(row.Table.Columns.Contains("Description"), row("Description"), String.Empty), "Prodotti e promozioni reali KeepStore.")
+            newRow("ProductId") = 0
+            result.Rows.Add(newRow)
+        Next
+
+        Return result
+    End Function
+
+    Private Function ConvertHeroRowsToSideRows(ByVal source As DataTable) As DataTable
+        Dim result As DataTable = SideBannersFallback()
+        If source Is Nothing Then
+            Return result
+        End If
+
+        For Each row As DataRow In source.Rows
+            Dim newRow As DataRow = result.NewRow()
+            Dim title As String = CleanMarketingText(If(row.Table.Columns.Contains("Caption"), row("Caption"), String.Empty), "Selezione KeepStore")
+            newRow("Title") = title
+            newRow("Description") = CleanMarketingText(If(row.Table.Columns.Contains("Description"), row("Description"), String.Empty), String.Empty)
+            newRow("Image") = Convert.ToString(If(row.Table.Columns.Contains("Image"), row("Image"), String.Empty)).Trim()
+            newRow("LinkUrl") = NormalizeProjectLink(Convert.ToString(If(row.Table.Columns.Contains("LinkUrl"), row("LinkUrl"), String.Empty)), "articoli.aspx")
+            newRow("Badge") = BuildSideBannerBadge(title, Convert.ToString(newRow("Description")))
+            result.Rows.Add(newRow)
+        Next
+
+        Return result
+    End Function
+
+    Private Function MergeSideBannerRows(ByVal primary As DataTable, ByVal secondary As DataTable, ByVal limit As Integer) As DataTable
+        Dim result As DataTable = SideBannersFallback()
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+        For Each source As DataTable In New DataTable() {primary, secondary}
+            If source Is Nothing Then
+                Continue For
+            End If
+
+            For Each row As DataRow In source.Rows
+                Dim imageKey As String = Convert.ToString(If(row.Table.Columns.Contains("Image"), row("Image"), String.Empty)).Trim()
+                If String.IsNullOrWhiteSpace(imageKey) OrElse seen.Contains(imageKey) Then
+                    Continue For
+                End If
+
+                seen.Add(imageKey)
+                result.ImportRow(row)
+                If result.Rows.Count >= limit Then
+                    Return result
+                End If
+            Next
+        Next
+
+        Return result
+    End Function
+
+    Private Function CleanMarketingText(ByVal value As Object, ByVal fallback As String) As String
+        Dim text As String = HttpUtility.HtmlDecode(Convert.ToString(value)).Trim()
+        text = System.Text.RegularExpressions.Regex.Replace(text, "\s+", " ").Trim()
+        If String.IsNullOrWhiteSpace(text) Then
+            Return fallback
+        End If
+
+        If text.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse
+           text.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+            Return fallback
+        End If
+
+        Return text
+    End Function
+
+    Private Function BuildHeroEyebrow(ByVal title As String, ByVal fallback As String) As String
+        Dim source As String = Convert.ToString(title).Trim().ToLowerInvariant()
+        If source.Contains("ricondizionat") Then Return "Ricondizionati"
+        If source.Contains("monitor") Then Return "Monitor"
+        If source.Contains("ssd") OrElse source.Contains("nvme") Then Return "Archiviazione"
+        If source.Contains("stamp") OrElse source.Contains("etichette") Then Return "Stampa"
+        If source.Contains("webcam") OrElse source.Contains("conferenza") Then Return "Videoconferenza"
+        Return If(String.IsNullOrWhiteSpace(fallback), "Promo KeepStore", fallback)
+    End Function
+
+    Private Function BuildSideBannerBadge(ByVal title As String, ByVal description As String) As String
+        Dim source As String = (Convert.ToString(title) & " " & Convert.ToString(description)).Trim().ToLowerInvariant()
+        If source.Contains("ricondizionat") Then Return "Ricondizionati"
+        If source.Contains("monitor") Then Return "Monitor"
+        If source.Contains("ssd") OrElse source.Contains("nvme") Then Return "SSD"
+        If source.Contains("webcam") OrElse source.Contains("conferenza") Then Return "Webcam"
+        If source.Contains("alimentatore") Then Return "Componenti"
+        Return "Promo"
+    End Function
+
+    Private Function NormalizeProjectLink(ByVal rawLink As String, ByVal fallback As String) As String
+        Dim defaultLink As String = Convert.ToString(fallback).Trim()
+        If String.IsNullOrWhiteSpace(defaultLink) Then
+            defaultLink = "articoli.aspx"
+        End If
+
+        Dim link As String = HttpUtility.HtmlDecode(Convert.ToString(rawLink)).Trim()
+        If String.IsNullOrWhiteSpace(link) Then
+            Return defaultLink
+        End If
+
+        link = link.Replace("\", "/")
+        If link.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) Then
+            Return defaultLink
+        End If
+
+        Dim hosts As String() = {
+            "https://www.taikun.it",
+            "http://www.taikun.it",
+            "https://taikun.it",
+            "http://taikun.it",
+            "https://www.webaffare.it",
+            "http://www.webaffare.it",
+            "https://webaffare.it",
+            "http://webaffare.it"
+        }
+
+        For Each host As String In hosts
+            If link.StartsWith(host, StringComparison.OrdinalIgnoreCase) Then
+                Try
+                    Dim uri As New Uri(link)
+                    Dim pathAndQuery As String = uri.PathAndQuery
+                    If String.IsNullOrWhiteSpace(pathAndQuery) Then
+                        Return defaultLink
+                    End If
+                    Return pathAndQuery
+                Catch
+                    Return defaultLink
+                End Try
+            End If
+        Next
+
+        If link.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then
+            Return ResolveUrl(link)
+        End If
+
+        Return link
     End Function
 
     Private Function SideBannersFallback() As DataTable
@@ -775,8 +998,7 @@ Partial Public Class _Default
 
     Protected Function ResolveLink(ByVal value As Object, ByVal fallback As String) As String
         Dim link As String = Convert.ToString(value).Trim()
-        If String.IsNullOrWhiteSpace(link) Then Return fallback
-        Return link
+        Return NormalizeProjectLink(link, fallback)
     End Function
 
     Protected Function ResolveBannerImage(ByVal value As Object, ByVal fallback As String) As String
@@ -1403,9 +1625,10 @@ Partial Public Class _Default
         End If
         sb.Append("<div class='box-infor-detail gap-xl-20'>")
         sb.Append(RenderCountdownBlock(row))
+        Dim progressValue As Decimal = AvailabilityPercent(row("Giacenza"), row("VendutiAnno"))
         sb.Append("<div class='product-progress-sale'>")
-        sb.Append("<div class='progress-sold progress' role='progressbar' aria-valuemin='0' aria-valuemax='100'>")
-        sb.Append("<div class='progress-bar bg-danger' style='width:").Append(AvailabilityPercent(row("Giacenza"), row("VendutiAnno")).ToString("0.##", CultureInfo.InvariantCulture)).Append("%'></div>")
+        sb.Append("<div class='progress-sold progress ks-home-progress' role='progressbar' aria-valuemin='0' aria-valuemax='100' aria-valuenow='").Append(progressValue.ToString("0.##", CultureInfo.InvariantCulture)).Append("'>")
+        sb.Append("<div class='progress-bar bg-danger ks-home-progress-bar' style='width:").Append(progressValue.ToString("0.##", CultureInfo.InvariantCulture)).Append("%'></div>")
         sb.Append("</div>")
         sb.Append("<div class='box-quantity d-flex justify-content-between'>")
         sb.Append("<p class='text-avaiable caption'>Venduti: <span class='fw-bold'>").Append(FormatQuantity(row("VendutiAnno"))).Append("</span></p>")

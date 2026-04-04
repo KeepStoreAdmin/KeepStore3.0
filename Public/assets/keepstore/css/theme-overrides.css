@@ -46,6 +46,17 @@
     background: var(--ks-red-strong) !important;
 }
 
+.ks-page-home .ks-deal-card .product-progress-sale .progress.ks-home-progress {
+    height: 6px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: #ffe5e7;
+}
+
+.ks-page-home .ks-deal-card .product-progress-sale .progress-bar.ks-home-progress-bar {
+    background: var(--ks-red-strong) !important;
+}
+
 .ks-header-ui .tf-topbar .topbar-left,
 .ks-header-ui .tf-topbar .tf-cur {
     min-height: 44px;
@@ -1481,9 +1492,10 @@
 }
 
 .ks-page-home .ks-home-brands-block .ks-home-brand-item {
-    min-height: 0;
+    min-height: 96px;
     height: 100%;
     aspect-ratio: 133 / 80;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1491,6 +1503,18 @@
     border: 1px solid var(--ks-border);
     border-radius: 18px;
     background: var(--ks-surface);
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.ks-page-home .ks-home-brands-block .ks-home-brand-media {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    line-height: 0;
 }
 
 .ks-page-home .ks-home-brands .swiper-wrapper,
@@ -1499,10 +1523,12 @@
 }
 
 .ks-page-home .ks-home-brands-block .swiper-slide {
+    display: flex;
     height: auto;
 }
 
 .ks-page-home .ks-home-brands-block .ks-home-brand-item img {
+    display: block;
     width: auto;
     height: auto;
     max-width: 100%;
