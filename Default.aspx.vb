@@ -311,6 +311,9 @@ Partial Public Class _Default
     End Function
 
     Private Function TryLoadProducts(ByVal whereClause As String, ByVal orderClause As String, ByVal limit As Integer) As DataTable
+        Dim prezzoIvatoSql As String = BuildPrezzoIvatoSql()
+        Dim prezzoPromoIvatoSql As String = BuildPrezzoPromoIvatoSql()
+
         Dim sql As New StringBuilder()
         sql.Append("SELECT ")
         sql.Append("v.id, v.Codice, v.Ean, v.Descrizione1, v.Descrizione2, IFNULL(v.DescrizioneLunga,'') AS DescrizioneLunga, ")
@@ -324,8 +327,16 @@ Partial Public Class _Default
         sql.Append(StockWhereClause()).Append(" AS Giacenza, ")
         sql.Append(AvailabilityWhereClause()).Append(" AS Disponibilita, ")
         sql.Append(ReservedWhereClause()).Append(" AS Impegnata, ")
-        sql.Append("COALESCE(v.PrezzoIvato,0) AS PrezzoIvato, COALESCE(v.PrezzoPromo,0) AS PrezzoPromo, COALESCE(v.PrezzoPromoIvato,0) AS PrezzoPromoIvato, ")
-        sql.Append("COALESCE(v.InOfferta,0) AS InOfferta, v.OfferteDataFine, ")
+        sql.Append("COALESCE(v.Prezzo,0) AS Prezzo, ")
+        sql.Append(prezzoIvatoSql).Append(" AS PrezzoIvato, ")
+        sql.Append("COALESCE(v.PrezzoPromo,0) AS PrezzoPromo, ")
+        sql.Append(prezzoPromoIvatoSql).Append(" AS PrezzoPromoIvato, ")
+        sql.Append("COALESCE(v.InOfferta,0) AS InOfferta, ")
+        sql.Append("v.OfferteDataInizio, v.OfferteDataFine, ")
+        sql.Append("COALESCE(v.OfferteDaListino,0) AS OfferteDaListino, COALESCE(v.OfferteAListino,0) AS OfferteAListino, ")
+        sql.Append("COALESCE(v.OfferteQntMinima,0) AS OfferteQntMinima, COALESCE(v.OfferteMultipli,0) AS OfferteMultipli, ")
+        sql.Append("COALESCE(v.OffertePrezzo,0) AS OffertePrezzo, COALESCE(v.OfferteSconto,0) AS OfferteSconto, ")
+        sql.Append("COALESCE(v.IdIvaRC,-1) AS IdIvaRC, COALESCE(v.ValoreIvaRC,-1) AS ValoreIvaRC, ")
         sql.Append("COALESCE(s.QtaVenduta,0) AS QtaVenduta, COALESCE(sy.VendutiAnno,0) AS VendutiAnno ")
         sql.Append("FROM vsuperarticoli v ")
         sql.Append("INNER JOIN articoli aBase ON aBase.id = v.id ")
@@ -351,7 +362,7 @@ Partial Public Class _Default
         sql.Append("WHERE COALESCE(v.NListino,1)=@listino AND COALESCE(v.id,0)>0 ")
         sql.Append("AND COALESCE(aBase.Abilitato,1)=1 ")
         sql.Append("AND ").Append(StockWhereClause()).Append(">=1 ")
-        sql.Append("AND (COALESCE(v.PrezzoIvato,0)>0 OR COALESCE(v.PrezzoPromoIvato,0)>0 OR COALESCE(v.PrezzoPromo,0)>0) ")
+        sql.Append("AND (COALESCE(v.Prezzo,0)>0 OR COALESCE(v.PrezzoIvato,0)>0 OR COALESCE(v.PrezzoPromo,0)>0 OR COALESCE(v.PrezzoPromoIvato,0)>0) ")
         If Not String.IsNullOrWhiteSpace(whereClause) Then
             sql.Append("AND ").Append(whereClause).Append(" ")
         End If
@@ -391,6 +402,48 @@ Partial Public Class _Default
         Return state
     End Function
 
+    Private Function GetReverseChargeEnabled() As Integer
+        Dim flag As Integer = 0
+        If Session("AbilitatoIvaReverseCharge") IsNot Nothing Then
+            Integer.TryParse(Convert.ToString(Session("AbilitatoIvaReverseCharge")), flag)
+        End If
+        If flag <> 1 Then
+            flag = 0
+        End If
+        Return flag
+    End Function
+
+    Private Function GetCurrentUserIva() As Integer
+        Dim ivaUtente As Integer = 0
+        If Session("Iva_Utente") IsNot Nothing Then
+            Integer.TryParse(Convert.ToString(Session("Iva_Utente")), ivaUtente)
+        End If
+        If ivaUtente < 0 Then
+            ivaUtente = 0
+        End If
+        Return ivaUtente
+    End Function
+
+    Private Function BuildPrezzoIvatoSql() As String
+        Dim abilRC As Integer = GetReverseChargeEnabled()
+        Dim ivaUtente As Integer = GetCurrentUserIva()
+
+        Return "IF((" & abilRC.ToString(CultureInfo.InvariantCulture) & "=1) AND (COALESCE(v.ValoreIvaRC,-1)>-1)," &
+               " (COALESCE(v.Prezzo,0)*((COALESCE(v.ValoreIvaRC,0)/100)+1))," &
+               " IF(" & ivaUtente.ToString(CultureInfo.InvariantCulture) & ">0,(COALESCE(v.Prezzo,0)*((" & ivaUtente.ToString(CultureInfo.InvariantCulture) & "/100)+1)),COALESCE(v.PrezzoIvato,0))" &
+               " )"
+    End Function
+
+    Private Function BuildPrezzoPromoIvatoSql() As String
+        Dim abilRC As Integer = GetReverseChargeEnabled()
+        Dim ivaUtente As Integer = GetCurrentUserIva()
+
+        Return "IF((" & abilRC.ToString(CultureInfo.InvariantCulture) & "=1) AND (COALESCE(v.ValoreIvaRC,-1)>-1)," &
+               " (COALESCE(v.PrezzoPromo,0)*((COALESCE(v.ValoreIvaRC,0)/100)+1))," &
+               " IF(" & ivaUtente.ToString(CultureInfo.InvariantCulture) & ">0,(COALESCE(v.PrezzoPromo,0)*((" & ivaUtente.ToString(CultureInfo.InvariantCulture) & "/100)+1)),COALESCE(v.PrezzoPromoIvato,0))" &
+               " )"
+    End Function
+
     Private Function StockWhereClause() As String
         Return "COALESCE(stk.Giacenza, COALESCE(v.Giacenza,0))"
     End Function
@@ -404,13 +457,18 @@ Partial Public Class _Default
     End Function
 
     Private Function OfferWhereClause() As String
+        Dim prezzoBaseSql As String = BuildPrezzoIvatoSql()
+        Dim prezzoPromoSql As String = BuildPrezzoPromoIvatoSql()
+
         Return "COALESCE(v.InOfferta,0)=1 AND " &
                "(v.OfferteDataInizio IS NULL OR CURDATE() >= v.OfferteDataInizio) AND " &
                "(v.OfferteDataFine IS NULL OR CURDATE() <= v.OfferteDataFine) AND " &
                "(v.OfferteDaListino IS NULL OR @listino >= v.OfferteDaListino) AND " &
                "(v.OfferteAListino IS NULL OR @listino <= v.OfferteAListino) AND " &
-               "((COALESCE(v.PrezzoPromoIvato,0)>0 AND COALESCE(v.PrezzoPromoIvato,0) < COALESCE(v.PrezzoIvato,0)) " &
-               "OR (COALESCE(v.PrezzoPromoIvato,0)=0 AND COALESCE(v.PrezzoPromo,0)>0 AND COALESCE(v.PrezzoPromo,0) < COALESCE(v.PrezzoIvato,0))) " &
+               "COALESCE(v.OfferteQntMinima,0) <= 1 AND " &
+               "(COALESCE(v.OfferteMultipli,0)=0 OR COALESCE(v.OfferteMultipli,0)=1) AND " &
+               "((" & prezzoPromoSql & ">0 AND " & prezzoPromoSql & " < " & prezzoBaseSql & ") " &
+               "OR (" & prezzoPromoSql & "=0 AND COALESCE(v.PrezzoPromo,0)>0 AND COALESCE(v.PrezzoPromo,0) < COALESCE(v.Prezzo,0))) " &
                "AND " & StockWhereClause() & ">=1"
     End Function
 
@@ -533,11 +591,21 @@ Partial Public Class _Default
         dt.Columns.Add("Giacenza", GetType(Decimal))
         dt.Columns.Add("Disponibilita", GetType(Decimal))
         dt.Columns.Add("Impegnata", GetType(Decimal))
+        dt.Columns.Add("Prezzo", GetType(Decimal))
         dt.Columns.Add("PrezzoIvato", GetType(Decimal))
         dt.Columns.Add("PrezzoPromo", GetType(Decimal))
         dt.Columns.Add("PrezzoPromoIvato", GetType(Decimal))
         dt.Columns.Add("InOfferta", GetType(Integer))
+        dt.Columns.Add("OfferteDataInizio", GetType(Date))
         dt.Columns.Add("OfferteDataFine", GetType(Date))
+        dt.Columns.Add("OfferteDaListino", GetType(Integer))
+        dt.Columns.Add("OfferteAListino", GetType(Integer))
+        dt.Columns.Add("OfferteQntMinima", GetType(Integer))
+        dt.Columns.Add("OfferteMultipli", GetType(Integer))
+        dt.Columns.Add("OffertePrezzo", GetType(Decimal))
+        dt.Columns.Add("OfferteSconto", GetType(Decimal))
+        dt.Columns.Add("IdIvaRC", GetType(Integer))
+        dt.Columns.Add("ValoreIvaRC", GetType(Decimal))
         dt.Columns.Add("QtaVenduta", GetType(Decimal))
         dt.Columns.Add("VendutiAnno", GetType(Decimal))
         Return dt
@@ -782,6 +850,19 @@ Partial Public Class _Default
         Return CurrentPrice(priceIvato, 0D, promoIvato, inOfferta)
     End Function
 
+    Private Function CurrentPrice(ByVal row As DataRow) As Decimal
+        If row Is Nothing Then
+            Return 0D
+        End If
+
+        Dim promoPrice As Decimal = 0D
+        If TryGetValidPromoPrice(row, promoPrice) Then
+            Return promoPrice
+        End If
+
+        Return ToDecimal(row("PrezzoIvato"))
+    End Function
+
     Protected Function CurrentPrice(ByVal priceIvato As Object, ByVal promo As Object, ByVal promoIvato As Object, ByVal inOfferta As Object) As Decimal
         Dim listino As Decimal = ToDecimal(priceIvato)
         Dim promoPrice As Decimal = 0D
@@ -793,6 +874,19 @@ Partial Public Class _Default
 
     Protected Function SavingsAmount(ByVal priceIvato As Object, ByVal promoIvato As Object, ByVal inOfferta As Object) As Decimal
         Return SavingsAmount(priceIvato, 0D, promoIvato, inOfferta)
+    End Function
+
+    Private Function SavingsAmount(ByVal row As DataRow) As Decimal
+        If row Is Nothing Then
+            Return 0D
+        End If
+
+        Dim listino As Decimal = ToDecimal(row("PrezzoIvato"))
+        Dim current As Decimal = CurrentPrice(row)
+        If listino > current AndAlso current > 0D Then
+            Return listino - current
+        End If
+        Return 0D
     End Function
 
     Protected Function SavingsAmount(ByVal priceIvato As Object, ByVal promo As Object, ByVal promoIvato As Object, ByVal inOfferta As Object) As Decimal
@@ -808,12 +902,29 @@ Partial Public Class _Default
         Return ShowDiscount(priceIvato, 0D, promoIvato, inOfferta)
     End Function
 
+    Private Function ShowDiscount(ByVal row As DataRow) As Boolean
+        Return SavingsAmount(row) > 0D
+    End Function
+
     Protected Function ShowDiscount(ByVal priceIvato As Object, ByVal promo As Object, ByVal promoIvato As Object, ByVal inOfferta As Object) As Boolean
         Return SavingsAmount(priceIvato, promo, promoIvato, inOfferta) > 0D
     End Function
 
     Protected Function DiscountPercent(ByVal priceIvato As Object, ByVal promoIvato As Object, ByVal inOfferta As Object) As Integer
         Return DiscountPercent(priceIvato, 0D, promoIvato, inOfferta)
+    End Function
+
+    Private Function DiscountPercent(ByVal row As DataRow) As Integer
+        If row Is Nothing Then
+            Return 0
+        End If
+
+        Dim listino As Decimal = ToDecimal(row("PrezzoIvato"))
+        Dim current As Decimal = CurrentPrice(row)
+        If listino <= 0D OrElse current <= 0D OrElse current >= listino Then
+            Return 0
+        End If
+        Return Convert.ToInt32(Math.Round(((listino - current) / listino) * 100D, MidpointRounding.AwayFromZero))
     End Function
 
     Protected Function DiscountPercent(ByVal priceIvato As Object, ByVal promo As Object, ByVal promoIvato As Object, ByVal inOfferta As Object) As Integer
@@ -842,9 +953,11 @@ Partial Public Class _Default
         Dim target As DateTime
         If DateTime.TryParse(Convert.ToString(offerteDataFine), target) Then
             Dim diff As TimeSpan = target.Date.AddDays(1).Subtract(DateTime.Now)
-            Return Math.Max(60, Convert.ToInt32(diff.TotalSeconds))
+            If diff.TotalSeconds > 0 Then
+                Return Math.Max(1, Convert.ToInt32(Math.Floor(diff.TotalSeconds)))
+            End If
         End If
-        Return 172800
+        Return 0
     End Function
 
     Protected Function FormatQuantity(ByVal value As Object) As String
@@ -882,17 +995,149 @@ Partial Public Class _Default
         Return True
     End Function
 
+    Private Function TryGetValidPromoPrice(ByVal row As DataRow, ByRef promoPrice As Decimal) As Boolean
+        promoPrice = 0D
+        If row Is Nothing OrElse Not IsPromoRowValid(row) Then
+            Return False
+        End If
+
+        Dim basePrice As Decimal = ToDecimal(row("PrezzoIvato"))
+        Dim promoGross As Decimal = ToDecimal(row("PrezzoPromoIvato"))
+        Dim promoNet As Decimal = ToDecimal(row("PrezzoPromo"))
+        Dim candidate As Decimal = If(promoGross > 0D, promoGross, promoNet)
+
+        If candidate <= 0D Then
+            Return False
+        End If
+
+        If basePrice > 0D AndAlso candidate >= basePrice Then
+            Return False
+        End If
+
+        promoPrice = candidate
+        Return True
+    End Function
+
+    Private Function IsPromoRowValid(ByVal row As DataRow) As Boolean
+        If row Is Nothing OrElse SafeInt(row("InOfferta")) <> 1 Then
+            Return False
+        End If
+
+        Dim currentListino As Integer = GetCurrentListino()
+        Dim daListino As Integer = SafeInt(If(row.Table.Columns.Contains("OfferteDaListino"), row("OfferteDaListino"), 0))
+        Dim aListino As Integer = SafeInt(If(row.Table.Columns.Contains("OfferteAListino"), row("OfferteAListino"), 0))
+        If daListino > 0 AndAlso currentListino < daListino Then
+            Return False
+        End If
+        If aListino > 0 AndAlso currentListino > aListino Then
+            Return False
+        End If
+
+        Dim qntMinima As Integer = SafeInt(If(row.Table.Columns.Contains("OfferteQntMinima"), row("OfferteQntMinima"), 0))
+        If qntMinima > 1 Then
+            Return False
+        End If
+
+        Dim multipli As Integer = SafeInt(If(row.Table.Columns.Contains("OfferteMultipli"), row("OfferteMultipli"), 0))
+        If multipli > 1 Then
+            Return False
+        End If
+
+        Dim startDate As DateTime
+        If row.Table.Columns.Contains("OfferteDataInizio") AndAlso DateTime.TryParse(Convert.ToString(row("OfferteDataInizio")), startDate) Then
+            If startDate.Date > Date.Today Then
+                Return False
+            End If
+        End If
+
+        Dim endDate As DateTime
+        If row.Table.Columns.Contains("OfferteDataFine") AndAlso DateTime.TryParse(Convert.ToString(row("OfferteDataFine")), endDate) Then
+            If endDate.Date < Date.Today Then
+                Return False
+            End If
+        Else
+            Return False
+        End If
+
+        Return True
+    End Function
+
+    Private Function TryGetPromoDeadline(ByVal row As DataRow, ByRef deadline As DateTime) As Boolean
+        deadline = DateTime.MinValue
+        If row Is Nothing OrElse Not IsPromoRowValid(row) Then
+            Return False
+        End If
+
+        Dim raw As Object = Nothing
+        If row.Table.Columns.Contains("OfferteDataFine") Then
+            raw = row("OfferteDataFine")
+        End If
+
+        If raw Is Nothing OrElse raw Is DBNull.Value Then
+            Return False
+        End If
+
+        Dim parsed As DateTime
+        If Not DateTime.TryParse(Convert.ToString(raw), parsed) Then
+            Return False
+        End If
+
+        deadline = parsed.Date.AddDays(1)
+        Return deadline > DateTime.Now
+    End Function
+
+    Private Function RenderCountdownBlock(ByVal row As DataRow) As String
+        If row Is Nothing Then
+            Return String.Empty
+        End If
+
+        Dim deadline As DateTime
+        If Not TryGetPromoDeadline(row, deadline) Then
+            Return String.Empty
+        End If
+
+        Dim seconds As Integer = CountdownSeconds(deadline.AddSeconds(-1))
+        If seconds <= 0 Then
+            Return String.Empty
+        End If
+
+        Return "<div class='countdown-box'><div class='js-countdown' data-timer='" &
+               seconds.ToString(ItCulture) &
+               "' data-labels='Giorni,Ore,Min,Sec'></div></div>"
+    End Function
+
     Private Function ToDecimal(ByVal value As Object) As Decimal
         If value Is Nothing OrElse value Is DBNull.Value Then
             Return 0D
         End If
 
-        Dim d As Decimal = 0D
-        Decimal.TryParse(Convert.ToString(value), NumberStyles.Any, CultureInfo.InvariantCulture, d)
-        If d = 0D Then
-            Decimal.TryParse(Convert.ToString(value), NumberStyles.Any, ItCulture, d)
+        Try
+            Return Convert.ToDecimal(value, ItCulture)
+        Catch
+        End Try
+
+        Dim s As String = Convert.ToString(value)
+        If String.IsNullOrWhiteSpace(s) Then
+            Return 0D
         End If
-        Return d
+
+        s = s.Trim().Replace("€", String.Empty).Replace("EUR", String.Empty).Trim()
+
+        Dim d As Decimal
+        If Decimal.TryParse(s, NumberStyles.Any, ItCulture, d) Then
+            Return d
+        End If
+
+        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then
+            Return d
+        End If
+
+        Dim normalized As String = s.Replace(".", String.Empty).Replace(",", ".")
+        If Decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then
+            Return d
+        End If
+
+        Return 0D
     End Function
 
     Private Function EncodeAttr(ByVal value As String) As String
@@ -946,7 +1191,7 @@ Partial Public Class _Default
         Dim brand As String = Convert.ToString(row("MarcheDescrizione")).Trim()
         Dim url As String = ProductUrl(row("id"))
         Dim img As String = ProductImageFull(row("Img1"))
-        Dim priceText As String = FormatMoney(CurrentPrice(row("PrezzoIvato"), row("PrezzoPromo"), row("PrezzoPromoIvato"), row("InOfferta")))
+        Dim priceText As String = FormatMoney(CurrentPrice(row))
         Dim soldText As String = FormatQuantity(row("VendutiAnno"))
         Dim availableText As String = FormatQuantity(row("Giacenza"))
         Dim description As String = QuickViewDescription(row)
@@ -1014,22 +1259,22 @@ Partial Public Class _Default
     End Function
 
     Private Function RenderSaleBadge(ByVal row As DataRow) As String
-        If row Is Nothing OrElse Not ShowDiscount(row("PrezzoIvato"), row("PrezzoPromo"), row("PrezzoPromoIvato"), row("InOfferta")) Then
+        If row Is Nothing OrElse Not ShowDiscount(row) Then
             Return String.Empty
         End If
 
         Return "<div class='box-sale-wrap top-0 start-0 pst-default z-5'><p class='small-text'>Promo</p><p class='title-sidebar-2'>" &
-               DiscountPercent(row("PrezzoIvato"), row("PrezzoPromo"), row("PrezzoPromoIvato"), row("InOfferta")).ToString(ItCulture) &
+               DiscountPercent(row).ToString(ItCulture) &
                "%</p></div>"
     End Function
 
     Private Function RenderCenterSaleBadge(ByVal row As DataRow) As String
-        If row Is Nothing OrElse Not ShowDiscount(row("PrezzoIvato"), row("PrezzoPromo"), row("PrezzoPromoIvato"), row("InOfferta")) Then
+        If row Is Nothing OrElse Not ShowDiscount(row) Then
             Return String.Empty
         End If
 
         Return "<div class='box-sale-wrap style-2 z-5'><p class='small-text'>Promo</p><p class='title-sidebar-2'>" &
-               HttpUtility.HtmlEncode(FormatMoney(SavingsAmount(row("PrezzoIvato"), row("PrezzoPromo"), row("PrezzoPromoIvato"), row("InOfferta")))) &
+               HttpUtility.HtmlEncode(FormatMoney(SavingsAmount(row))) &
                "</p></div>"
     End Function
 
@@ -1047,8 +1292,8 @@ Partial Public Class _Default
         Dim oldPriceClass As String = If(emphasize, "old-price price-text text-main-2", "old-price body-md-2 text-main-2")
 
         sb.Append("<p class='price-wrap fw-medium'>")
-        sb.Append("<span class='").Append(priceClass).Append("'>").Append(FormatMoney(CurrentPrice(row("PrezzoIvato"), row("PrezzoPromo"), row("PrezzoPromoIvato"), row("InOfferta")))).Append("</span>")
-        If ShowDiscount(row("PrezzoIvato"), row("PrezzoPromo"), row("PrezzoPromoIvato"), row("InOfferta")) Then
+        sb.Append("<span class='").Append(priceClass).Append("'>").Append(FormatMoney(CurrentPrice(row))).Append("</span>")
+        If ShowDiscount(row) Then
             sb.Append("<span class='").Append(oldPriceClass).Append("'>").Append(FormatMoney(row("PrezzoIvato"))).Append("</span>")
         End If
         sb.Append("</p>")
@@ -1083,11 +1328,11 @@ Partial Public Class _Default
         sb.Append("</div>")
         sb.Append(RenderPriceBlock(row, True))
         sb.Append("</div>")
-        If ShowDiscount(row("PrezzoIvato"), row("PrezzoPromo"), row("PrezzoPromoIvato"), row("InOfferta")) Then
-            sb.Append("<p class='box-sale-tag'>Risparmi ").Append(FormatMoney(SavingsAmount(row("PrezzoIvato"), row("PrezzoPromo"), row("PrezzoPromoIvato"), row("InOfferta")))).Append("</p>")
+        If ShowDiscount(row) Then
+            sb.Append("<p class='box-sale-tag'>Risparmi ").Append(FormatMoney(SavingsAmount(row))).Append("</p>")
         End If
         sb.Append("<div class='box-infor-detail gap-xl-20'>")
-        sb.Append("<div class='countdown-box'><div class='js-countdown' data-timer='").Append(CountdownSeconds(row("OfferteDataFine")).ToString(ItCulture)).Append("' data-labels='Giorni,Ore,Min,Sec'></div></div>")
+        sb.Append(RenderCountdownBlock(row))
         sb.Append("<div class='product-progress-sale'>")
         sb.Append("<div class='progress-sold progress' role='progressbar' aria-valuemin='0' aria-valuemax='100'>")
         sb.Append("<div class='progress-bar bg-danger' style='width:").Append(AvailabilityPercent(row("Giacenza"), row("VendutiAnno")).ToString("0.##", CultureInfo.InvariantCulture)).Append("%'></div>")
@@ -1143,7 +1388,7 @@ Partial Public Class _Default
         Dim row As DataRow = rowView.Row
         Dim images As List(Of String) = ProductGalleryImages(row)
         Dim caption As String = CardCaption(row)
-        Dim hasDiscount As Boolean = ShowDiscount(row("PrezzoIvato"), row("PrezzoPromo"), row("PrezzoPromoIvato"), row("InOfferta"))
+        Dim hasDiscount As Boolean = ShowDiscount(row)
 
         Dim sb As New StringBuilder()
         sb.Append("<div class='card-product style-border style-thums-2 p-lg-30 wow fadeInUp ks-big-card' data-wow-delay='0s'>")
@@ -1173,9 +1418,7 @@ Partial Public Class _Default
         End If
         sb.Append("<h6 class='bg-white relative z-5'><a href='").Append(ProductUrl(row("id"))).Append("' class='name-product fw-semibold text-secondary link'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></h6>")
         sb.Append("</div>")
-        If hasDiscount Then
-            sb.Append("<div class='countdown-box'><div class='js-countdown' data-timer='").Append(CountdownSeconds(row("OfferteDataFine")).ToString(ItCulture)).Append("' data-labels='Giorni,Ore,Min,Sec'></div></div>")
-        End If
+        If hasDiscount Then sb.Append(RenderCountdownBlock(row))
         sb.Append("<div class='group-btn'>")
         sb.Append(RenderPriceBlock(row, True))
         sb.Append(RenderActionButtons(row, True))

@@ -696,7 +696,7 @@
       var collapseId = nextId('ks-mobile-cloned-category-' + sectorId + '-');
       var html = [
         '<li class="nav-mb-item ks-mobile-category-item">',
-        '<a href="#', escapeHtml(collapseId), '" class="sub-nav-link collapsed" data-bs-toggle="collapse" aria-expanded="false" aria-controls="', escapeHtml(collapseId), '">',
+        '<a href="#" class="sub-nav-link collapsed" role="button" data-bs-toggle="collapse" data-bs-target="#', escapeHtml(collapseId), '" aria-expanded="false" aria-controls="', escapeHtml(collapseId), '">',
         '<span>', escapeHtml(categoryLabel), '</span>',
         '<span class="btn-open-sub"></span>',
         '</a>',
@@ -750,7 +750,7 @@
       var collapseId = nextId('ks-mobile-cloned-sector-' + sectorId + '-');
       var html = [
         '<li class="nav-mb-item ks-mobile-sector-item">',
-        '<a href="#', escapeHtml(collapseId), '" class="collapsed mb-menu-link" data-bs-toggle="collapse" aria-expanded="false" aria-controls="', escapeHtml(collapseId), '">',
+        '<a href="#" class="collapsed mb-menu-link" role="button" data-bs-toggle="collapse" data-bs-target="#', escapeHtml(collapseId), '" aria-expanded="false" aria-controls="', escapeHtml(collapseId), '">',
         '<span class="ks-mobile-nav-entry">',
         '<span class="ks-mobile-nav-media', sectorImage ? '' : ' is-empty', '">',
         sectorImage ? '<img src="' + escapeHtml(sectorImage.getAttribute('src') || '') + '" alt="' + escapeHtml(sectorLabel) + '" />' : '',
@@ -787,6 +787,73 @@
     } else if (mount) {
       mount.setAttribute('data-ks-mounted', 'server');
     }
+  }
+
+  function initMobileDrawerInteractions() {
+    var drawer = document.getElementById('mobileMenu');
+    if (!drawer) return;
+
+    function syncBackdropAndDrawer() {
+      var backdrop = document.querySelector('.offcanvas-backdrop.show:last-of-type');
+      if (backdrop) {
+        backdrop.style.zIndex = '1075';
+      }
+      drawer.style.zIndex = '1085';
+      drawer.classList.add('ks-drawer-ready');
+    }
+
+    function updateTriggerState(target, expanded) {
+      if (!target || !target.id) return;
+
+      var selector = '[data-bs-target="#' + target.id + '"], [aria-controls="' + target.id + '"]';
+      Array.prototype.slice.call(drawer.querySelectorAll(selector)).forEach(function (trigger) {
+        trigger.classList.toggle('is-open', !!expanded);
+        trigger.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        trigger.classList.toggle('collapsed', !expanded);
+      });
+    }
+
+    drawer.addEventListener('show.bs.offcanvas', function () {
+      window.requestAnimationFrame(syncBackdropAndDrawer);
+    });
+
+    drawer.addEventListener('shown.bs.offcanvas', function () {
+      syncBackdropAndDrawer();
+    });
+
+    drawer.addEventListener('hidden.bs.offcanvas', function () {
+      drawer.classList.remove('ks-drawer-ready');
+    });
+
+    drawer.addEventListener('click', function (event) {
+      var trigger = event.target.closest('[data-bs-toggle="collapse"]');
+      if (!trigger || !drawer.contains(trigger)) return;
+
+      var selector = trigger.getAttribute('data-bs-target') || trigger.getAttribute('href');
+      if (!selector || selector.charAt(0) !== '#') return;
+
+      var target = drawer.querySelector(selector);
+      if (!target) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (window.bootstrap && bootstrap.Collapse) {
+        bootstrap.Collapse.getOrCreateInstance(target, { toggle: false }).toggle();
+      } else {
+        var shouldOpen = !target.classList.contains('show');
+        target.classList.toggle('show', shouldOpen);
+        updateTriggerState(target, shouldOpen);
+      }
+    });
+
+    drawer.addEventListener('shown.bs.collapse', function (event) {
+      updateTriggerState(event.target, true);
+    });
+
+    drawer.addEventListener('hidden.bs.collapse', function (event) {
+      updateTriggerState(event.target, false);
+    });
   }
 
   function setQuickViewText(id, value) {
@@ -930,6 +997,7 @@
     initCompareButtons();
     initSearchForms();
     initMobileCatalogMenu();
+    initMobileDrawerInteractions();
     initQuickView();
     initLanguageSwitcher();
   });

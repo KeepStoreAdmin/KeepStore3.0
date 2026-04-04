@@ -120,7 +120,7 @@
                                 </a>
                             </li>
                             <li class="d-flex align-items-center d-xl-none">
-                                <a href="#mobileMenu" class="mobile-button" data-bs-toggle="offcanvas" aria-controls="mobileMenu"><span></span></a>
+                    <a href="#" class="mobile-button" role="button" data-bs-toggle="offcanvas" data-bs-target="#mobileMenu" aria-controls="mobileMenu"><span></span></a>
                             </li>
                         </ul>
                     </div>
@@ -224,7 +224,7 @@
                         <asp:Repeater ID="rptNavSettoriMobile" runat="server" OnItemDataBound="rptNavSettoriMobile_ItemDataBound">
                             <ItemTemplate>
                                 <li class="nav-mb-item ks-mobile-sector-item">
-                                    <a href='#ks-mobile-sector-<%# Eval("Id") %>' class="collapsed mb-menu-link" data-bs-toggle="collapse" aria-expanded="false" aria-controls='ks-mobile-sector-<%# Eval("Id") %>'>
+                                    <a href="#" class="collapsed mb-menu-link" role="button" data-bs-toggle="collapse" data-bs-target='#ks-mobile-sector-<%# Eval("Id") %>' aria-expanded="false" aria-controls='ks-mobile-sector-<%# Eval("Id") %>'>
                                         <span class="ks-mobile-nav-entry">
                                             <span class='<%# MobileSectorMediaClass(Eval("ImgUrl")) %>'><%# RenderMobileSectorImage(Eval("ImgUrl"), Eval("Descrizione")) %></span>
                                             <span class="ks-mobile-nav-label"><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span>
@@ -237,7 +237,7 @@
                                             <asp:Repeater ID="rptNavCategorieMobile" runat="server" OnItemDataBound="rptNavCategorieMobile_ItemDataBound">
                                                 <ItemTemplate>
                                                     <li class="nav-mb-item ks-mobile-category-item">
-                                                        <a href='#ks-mobile-category-<%# Eval("Id") %>' class="sub-nav-link collapsed" data-bs-toggle="collapse" aria-expanded="false" aria-controls='ks-mobile-category-<%# Eval("Id") %>'>
+                                                        <a href="#" class="sub-nav-link collapsed" role="button" data-bs-toggle="collapse" data-bs-target='#ks-mobile-category-<%# Eval("Id") %>' aria-expanded="false" aria-controls='ks-mobile-category-<%# Eval("Id") %>'>
                                                             <span><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span>
                                                             <span class="btn-open-sub"></span>
                                                         </a>
