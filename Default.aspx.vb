@@ -172,6 +172,7 @@ Partial Public Class _Default
     Private Function GetHeroSlides() As DataTable
         Dim sql As String = "SELECT id, caption AS Caption, image AS Image, link AS LinkUrl FROM slideshow_new WHERE (start_date IS NULL OR start_date <= CURDATE()) AND (stop_date IS NULL OR stop_date >= CURDATE()) ORDER BY id DESC LIMIT 5"
         Dim dt As DataTable = SafeTableQuery(sql, HeroSlidesFallback(), "GetHeroSlides")
+        dt = FilterRowsByResolvedImage(dt, "Image", AddressOf ResolveHeroSlideImagePath)
 
         If Not dt.Columns.Contains("Eyebrow") Then dt.Columns.Add("Eyebrow", GetType(String))
         If Not dt.Columns.Contains("Description") Then dt.Columns.Add("Description", GetType(String))
@@ -205,7 +206,7 @@ Partial Public Class _Default
 
     Private Function GetSideBanners() As DataTable
         Dim sql As String = "SELECT titolo AS Title, descrizione AS Description, img_path AS Image, link AS LinkUrl, CASE WHEN COALESCE(ordinamento,0)=1 THEN 'Offerta' ELSE 'Promo' END AS Badge FROM pubblicita WHERE COALESCE(abilitato,0)=1 AND COALESCE(id_posizione_banner,0)=4 AND (data_inizio_pubblicazione IS NULL OR data_inizio_pubblicazione <= CURDATE()) AND (data_fine_pubblicazione IS NULL OR data_fine_pubblicazione >= CURDATE()) ORDER BY COALESCE(ordinamento,0), id DESC LIMIT 2"
-        Return SafeTableQuery(sql, SideBannersFallback(), "GetSideBanners")
+        Return FilterRowsByResolvedImage(SafeTableQuery(sql, SideBannersFallback(), "GetSideBanners"), "Image", AddressOf ResolveAdvertisingImagePath)
     End Function
 
     Private Function SideBannersFallback() As DataTable
@@ -216,6 +217,27 @@ Partial Public Class _Default
         dt.Columns.Add("LinkUrl", GetType(String))
         dt.Columns.Add("Badge", GetType(String))
         Return dt
+    End Function
+
+    Private Function FilterRowsByResolvedImage(ByVal source As DataTable, ByVal fieldName As String, ByVal resolver As Func(Of Object, String)) As DataTable
+        If source Is Nothing OrElse source.Columns.Count = 0 OrElse String.IsNullOrWhiteSpace(fieldName) OrElse Not source.Columns.Contains(fieldName) OrElse resolver Is Nothing Then
+            Return source
+        End If
+
+        Dim filtered As DataTable = source.Clone()
+        For Each row As DataRow In source.Rows
+            Dim resolved As String = resolver(row(fieldName))
+            If String.IsNullOrWhiteSpace(resolved) Then
+                Continue For
+            End If
+
+            Dim clone As DataRow = filtered.NewRow()
+            clone.ItemArray = CType(row.ItemArray.Clone(), Object())
+            clone(fieldName) = resolved
+            filtered.Rows.Add(clone)
+        Next
+
+        Return filtered
     End Function
 
     Private Function GetOfferPool(ByVal limit As Integer) As DataTable
@@ -646,8 +668,16 @@ Partial Public Class _Default
         Return ResolveProjectImage(value, fallback, "/Public/assets/images/slideshows/")
     End Function
 
+    Private Function ResolveHeroSlideImagePath(ByVal value As Object) As String
+        Return ResolveHeroSlideImage(value, String.Empty)
+    End Function
+
     Protected Function ResolveAdvertisingImage(ByVal value As Object, ByVal fallback As String) As String
         Return ResolveProjectImage(value, fallback, "/Public/assets/images/banner/")
+    End Function
+
+    Private Function ResolveAdvertisingImagePath(ByVal value As Object) As String
+        Return ResolveAdvertisingImage(value, String.Empty)
     End Function
 
     Private Function ResolveProjectImage(ByVal value As Object, ByVal fallback As String, ParamArray ByVal candidateFolders() As String) As String
@@ -655,13 +685,19 @@ Partial Public Class _Default
         If String.IsNullOrWhiteSpace(fileName) Then Return fallback
 
         fileName = fileName.Replace("\", "/")
-        If fileName.StartsWith("/") OrElse fileName.StartsWith("http", StringComparison.OrdinalIgnoreCase) Then
+        If fileName.StartsWith("http", StringComparison.OrdinalIgnoreCase) Then
             Return fileName
+        End If
+        If fileName.StartsWith("/") Then
+            If VirtualPathExists(fileName) Then
+                Return fileName
+            End If
+            Return If(VirtualPathExists(fallback), fallback, String.Empty)
         End If
 
         fileName = Path.GetFileName(fileName)
         If String.IsNullOrWhiteSpace(fileName) Then
-            Return fallback
+            Return If(VirtualPathExists(fallback), fallback, String.Empty)
         End If
 
         If candidateFolders IsNot Nothing Then
@@ -671,17 +707,40 @@ Partial Public Class _Default
                 End If
 
                 Dim virtualPath As String = folder.TrimEnd("/"c) & "/" & fileName
-                Try
-                    Dim physicalPath As String = HostingEnvironment.MapPath("~" & virtualPath)
-                    If Not String.IsNullOrWhiteSpace(physicalPath) AndAlso File.Exists(physicalPath) Then
-                        Return virtualPath
-                    End If
-                Catch
-                End Try
+                If VirtualPathExists(virtualPath) Then
+                    Return virtualPath
+                End If
             Next
         End If
 
-        Return fallback
+        Return If(VirtualPathExists(fallback), fallback, String.Empty)
+    End Function
+
+    Private Function VirtualPathExists(ByVal virtualPath As String) As Boolean
+        If String.IsNullOrWhiteSpace(virtualPath) Then
+            Return False
+        End If
+
+        Try
+            Dim candidate As String = virtualPath
+            If candidate.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse
+               candidate.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse
+               candidate.StartsWith("//", StringComparison.OrdinalIgnoreCase) Then
+                Return True
+            End If
+
+            If candidate.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then
+                candidate = candidate.Substring(1)
+            End If
+            If Not candidate.StartsWith("/") Then
+                candidate = "/" & candidate.TrimStart("/"c)
+            End If
+
+            Dim physicalPath As String = HostingEnvironment.MapPath("~" & candidate)
+            Return Not String.IsNullOrWhiteSpace(physicalPath) AndAlso File.Exists(physicalPath)
+        Catch
+            Return False
+        End Try
     End Function
 
     Protected Function ProductImageThumb(ByVal value As Object) As String

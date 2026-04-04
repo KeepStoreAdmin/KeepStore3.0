@@ -65,8 +65,8 @@
                 <div class="col-md-3 col-7 d-flex align-items-center">
                     <div class="logo-site">
                         <a href="Default.aspx">
-                            <asp:Image ID="imgLogo" runat="server" AlternateText="KeepStore" CssClass="lazyload d-none d-md-inline-block" ImageUrl="" />
-                            <asp:Image ID="imgLogoMobile" runat="server" AlternateText="KeepStore" CssClass="lazyload d-inline-block d-md-none" ImageUrl="" />
+                            <asp:Image ID="imgLogo" runat="server" AlternateText="KeepStore" CssClass="d-none d-md-inline-block" ImageUrl="" />
+                            <asp:Image ID="imgLogoMobile" runat="server" AlternateText="KeepStore" CssClass="d-inline-block d-md-none" ImageUrl="" />
                         </a>
                     </div>
                 </div>
@@ -189,7 +189,7 @@
     <span class="icon-close btn-close-mb link" data-bs-dismiss="offcanvas" aria-label="Chiudi"></span>
     <div class="logo-site">
         <a href="Default.aspx" aria-label="Home">
-            <asp:Image ID="imgLogoDrawer" runat="server" AlternateText="KeepStore" CssClass="lazyload" ImageUrl="" />
+            <asp:Image ID="imgLogoDrawer" runat="server" AlternateText="KeepStore" CssClass="d-block" ImageUrl="" />
         </a>
     </div>
     <div class="mb-canvas-content">

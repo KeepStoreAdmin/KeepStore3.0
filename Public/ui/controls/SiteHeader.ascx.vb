@@ -6,6 +6,7 @@ Imports System.Globalization
 Imports System.IO
 Imports System.Text
 Imports System.Web
+Imports System.Web.Hosting
 Imports System.Web.UI
 Imports System.Web.UI.HtmlControls
 Imports System.Web.UI.WebControls
@@ -309,13 +310,27 @@ Partial Class SiteHeader
             End If
         End If
 
-        desktopLogo = NormalizeLogoUrl(desktopLogo)
-        mobileLogo = NormalizeLogoUrl(mobileLogo)
+        desktopLogo = EnsureExistingLogoUrl(desktopLogo, DefaultLogoVirtual)
+        mobileLogo = EnsureExistingLogoUrl(mobileLogo, desktopLogo)
 
         If imgLogo IsNot Nothing Then imgLogo.ImageUrl = desktopLogo
         If imgLogoMobile IsNot Nothing Then imgLogoMobile.ImageUrl = mobileLogo
         If imgLogoDrawer IsNot Nothing Then imgLogoDrawer.ImageUrl = mobileLogo
     End Sub
+
+    Private Function EnsureExistingLogoUrl(ByVal candidate As String, ByVal fallback As String) As String
+        Dim normalizedCandidate As String = NormalizeLogoUrl(candidate)
+        If LogoUrlExists(normalizedCandidate) Then
+            Return normalizedCandidate
+        End If
+
+        Dim normalizedFallback As String = NormalizeLogoUrl(fallback)
+        If LogoUrlExists(normalizedFallback) Then
+            Return normalizedFallback
+        End If
+
+        Return ResolveUrl(DefaultLogoVirtual)
+    End Function
 
     Private Function NormalizeLogoUrl(ByVal url As String) As String
         Dim u As String = If(url, String.Empty).Trim()
@@ -377,6 +392,33 @@ Partial Class SiteHeader
         End If
 
         Return u
+    End Function
+
+    Private Function LogoUrlExists(ByVal url As String) As Boolean
+        If String.IsNullOrWhiteSpace(url) Then
+            Return False
+        End If
+
+        If url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse
+           url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse
+           url.StartsWith("//", StringComparison.OrdinalIgnoreCase) Then
+            Return True
+        End If
+
+        Try
+            Dim candidate As String = url
+            If candidate.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then
+                candidate = ResolveUrl(candidate)
+            End If
+            If Not candidate.StartsWith("/", StringComparison.OrdinalIgnoreCase) Then
+                candidate = "/" & candidate.TrimStart("/"c)
+            End If
+
+            Dim physicalPath As String = HostingEnvironment.MapPath("~" & candidate)
+            Return Not String.IsNullOrWhiteSpace(physicalPath) AndAlso File.Exists(physicalPath)
+        Catch
+            Return False
+        End Try
     End Function
 
     Private Sub RegisterHeadIconsScript()

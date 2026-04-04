@@ -40,7 +40,7 @@
                                                 </div>
                                             </div>
                                             <a href='<%# ResolveLink(Eval("LinkUrl"), ProductUrl(Eval("ProductId"))) %>' class="img-style img-item ks-home-hero-media">
-                                                <img width="800" height="794" class="lazyload" src='<%# ResolveHeroSlideImage(Eval("Image"), "/Public/assets/images/item/tivi.webp") %>' data-src='<%# ResolveHeroSlideImage(Eval("Image"), "/Public/assets/images/item/tivi.webp") %>' alt='<%# SafeText(Eval("Caption")) %>' />
+                                                <img width="800" height="794" class="lazyload" src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' data-src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' alt='<%# SafeText(Eval("Caption")) %>' />
                                             </a>
                                         </div>
                                     </div>
@@ -59,7 +59,7 @@
                             <ItemTemplate>
                                 <div class="cls-category style-abs hover-img ks-side-promo-card wow fadeInRight" data-wow-delay="0s">
                                     <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx") %>' class="img-box img-style d-block">
-                                        <img class="lazyload" src='<%# ResolveAdvertisingImage(Eval("Image"), "/Public/assets/images/banner/banner-4.jpg") %>' data-src='<%# ResolveAdvertisingImage(Eval("Image"), "/Public/assets/images/banner/banner-4.jpg") %>' alt='<%# SafeText(Eval("Title")) %>' />
+                                        <img class="lazyload" src='<%# ResolveAdvertisingImage(Eval("Image"), String.Empty) %>' data-src='<%# ResolveAdvertisingImage(Eval("Image"), String.Empty) %>' alt='<%# SafeText(Eval("Title")) %>' />
                                     </a>
                                     <div class="content">
                                         <div class="box-title">
@@ -112,137 +112,9 @@
     </section>
 
     
-    <section class="has-bg-img ks-home-wide-promo" style="background-image:url('/Public/assets/images/banner/banner-1.jpg'); background-size:cover; background-repeat:no-repeat;">
-        <div class="container">
-            <div class="banner-image-product hover-img ks-home-wide-promo-card">
-                <a href="articoli.aspx" class="image img-2 img-style relative ks-home-wide-promo-media">
-                    <img width="994" height="986" src="/Public/assets/images/item/tivi.webp" data-src="/Public/assets/images/item/tivi.webp" alt="" class="lazyload" />
-                    <div class="box-sale-wrap position1">
-                        <p class="small-text">Promo</p>
-                        <p class="title-sidebar-2">25%</p>
-                    </div>
-                </a>
-                <div class="content">
-                    <div class="box-title">
-                        <h1 class="fw-normal">
-                            <a href="articoli.aspx" class="link text-white">
-                                Promo Tech <br class="d-none d-xl-block" />
-                                Selezione KeepStore
-                            </a>
-                        </h1>
-                        <div class="box-price">
-                            <p class="old-price style-white main-title-2 fw-light">&euro;80,00</p>
-                            <h3 class="fw-semibold text-third">&euro;60,00</h3>
-                        </div>
-                    </div>
-                    <div class="box-btn">
-                        <a href="articoli.aspx" class="tf-btn-icon type-2 style-white">
-                            <i class="icon-circle-chevron-right"></i>
-                            <span>Scopri ora</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+    <section id="HomeWidePromoSection" runat="server" visible="false" class="ks-home-wide-promo"></section>
 
-    <section class="tf-sp-2 ks-home-collection-block">
-        <div class="container">
-            <div class="swiper ks-home-collection-swiper">
-                <div class="swiper-wrapper">
-                    <div class="swiper-slide">
-                        <div class="cls-category style-abs hover-img ks-home-collection-card wow fadeInLeft" data-wow-delay="0s">
-                            <a href="articoli.aspx" class="img-box img-style d-block">
-                                <img src="/Public/assets/images/collection/cls-category-1.webp" data-src="/Public/assets/images/collection/cls-category-1.webp" alt="" class="lazyload" />
-                            </a>
-                            <div class="content">
-                                <div class="box-title font-2 text-white text-uppercase">
-                                    <p class="product-title-2">selezione</p>
-                                    <p class="main-title-2 fw-bold">audio</p>
-                                    <p class="product-title-2">cuffie e accessori</p>
-                                </div>
-                                <a href="articoli.aspx" class="tf-btn-icon style-white">
-                                    <i class="icon-circle-chevron-right"></i>
-                                    <span class="font-2">Scopri ora</span>
-                                </a>
-                            </div>
-                            <div class="box-sale-wrap">
-                                <p class="small-text">Promo</p>
-                                <p class="title-sidebar-2">20%</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="swiper-slide">
-                        <div class="cls-category style-abs hover-img ks-home-collection-card wow fadeInLeft" data-wow-delay="0.1s">
-                            <a href="articoli.aspx" class="img-box img-style d-block">
-                                <img src="/Public/assets/images/collection/cls-category-2.webp" data-src="/Public/assets/images/collection/cls-category-2.webp" alt="" class="lazyload" />
-                            </a>
-                            <div class="content">
-                                <div class="box-title font-2 text-white text-uppercase">
-                                    <p class="product-title-2">selezione</p>
-                                    <p class="main-title-2 fw-bold">foto</p>
-                                    <p class="product-title-2">camere e video</p>
-                                </div>
-                                <a href="articoli.aspx" class="tf-btn-icon style-white">
-                                    <i class="icon-circle-chevron-right"></i>
-                                    <span class="font-2">Scopri ora</span>
-                                </a>
-                            </div>
-                            <div class="box-sale-wrap">
-                                <p class="small-text">Promo</p>
-                                <p class="title-sidebar-2">15%</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="swiper-slide">
-                        <div class="cls-category style-abs hover-img ks-home-collection-card wow fadeInLeft" data-wow-delay="0.2s">
-                            <a href="articoli.aspx" class="img-box img-style d-block">
-                                <img src="/Public/assets/images/collection/cls-category-3.jpg" data-src="/Public/assets/images/collection/cls-category-3.jpg" alt="" class="lazyload" />
-                            </a>
-                            <div class="content">
-                                <div class="box-title font-2 text-white text-uppercase">
-                                    <p class="product-title-2">selezione</p>
-                                    <p class="main-title-2 fw-bold">notebook</p>
-                                    <p class="product-title-2">mobilita e lavoro</p>
-                                </div>
-                                <a href="articoli.aspx" class="tf-btn-icon style-white">
-                                    <i class="icon-circle-chevron-right"></i>
-                                    <span class="font-2">Scopri ora</span>
-                                </a>
-                            </div>
-                            <div class="box-sale-wrap">
-                                <p class="small-text">Promo</p>
-                                <p class="title-sidebar-2">10%</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="swiper-slide">
-                        <div class="cls-category style-abs hover-img ks-home-collection-card wow fadeInLeft" data-wow-delay="0.3s">
-                            <a href="articoli.aspx" class="img-box img-style d-block">
-                                <img src="/Public/assets/images/collection/cls-category-4.webp" data-src="/Public/assets/images/collection/cls-category-4.webp" alt="" class="lazyload" />
-                            </a>
-                            <div class="content">
-                                <div class="box-title font-2 text-white text-uppercase">
-                                    <p class="product-title-2">selezione</p>
-                                    <p class="main-title-2 fw-bold">gaming</p>
-                                    <p class="product-title-2">console e accessori</p>
-                                </div>
-                                <a href="articoli.aspx" class="tf-btn-icon style-white">
-                                    <i class="icon-circle-chevron-right"></i>
-                                    <span class="font-2">Scopri ora</span>
-                                </a>
-                            </div>
-                            <div class="box-sale-wrap">
-                                <p class="small-text">Promo</p>
-                                <p class="title-sidebar-2">18%</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="sw-dot-default ks-home-collection-pagination justify-content-center"></div>
-            </div>
-        </div>
-    </section>
+    <section id="HomeCollectionSection" runat="server" visible="false" class="tf-sp-2 ks-home-collection-block"></section>
 
     <section class="tf-sp-2 flat-animate-tab">
         <div class="container">
@@ -306,27 +178,7 @@
     </section>
 
     
-    <section class="ks-home-banner-product">
-        <div class="container">
-            <a href="articoli.aspx" class="banner-image-product-2 hover-img d-block ks-home-banner-product-card">
-                <div class="item-image item-1 img-style ks-home-banner-product-media">
-                    <img src="/Public/assets/images/item/camera-2.webp" data-src="/Public/assets/images/item/camera-2.webp" alt="" class="lazyload" />
-                </div>
-                <div class="item-image item-2 img-style ks-home-banner-product-media d-none d-lg-block">
-                    <img src="/Public/assets/images/item/camera-3.webp" data-src="/Public/assets/images/item/camera-3.webp" alt="" class="lazyload" />
-                </div>
-                <div class="item-banner" style="background-image:url('/Public/assets/images/banner/banner-2.jpg'); background-size:cover; background-repeat:no-repeat; background-position:center;">
-                    <div class="inner">
-                        <h3 class="fw-normal text-white lh-lg-50 font-2">Scopri e <span class="fw-bold">risparmia</span><br />sui prodotti piu richiesti</h3>
-                        <div class="box-sale-wrap type-3 relative">
-                            <p class="small-text">Risparmia</p>
-                            <p class="price-text-2">&euro;68,99</p>
-                        </div>
-                    </div>
-                </div>
-            </a>
-        </div>
-    </section>
+    <section id="HomeBottomPromoSection" runat="server" visible="false" class="ks-home-banner-product"></section>
 
     <section class="tf-sp-2">
         <div class="container">
