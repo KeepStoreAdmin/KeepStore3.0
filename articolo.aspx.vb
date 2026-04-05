@@ -1081,8 +1081,8 @@ Partial Class articolo
             End If
 
             ids.Insert(0, productId)
-            If ids.Count > 30 Then
-                ids.RemoveRange(30, ids.Count - 30)
+            If ids.Count > 100 Then
+                ids.RemoveRange(100, ids.Count - 100)
             End If
 
             Dim cookie As New HttpCookie("ks_recent")
