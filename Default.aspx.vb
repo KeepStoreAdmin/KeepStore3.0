@@ -4,6 +4,7 @@ Imports System.Configuration
 Imports System.Data
 Imports System.Globalization
 Imports System.IO
+Imports System.Net
 Imports System.Text
 Imports System.Web
 Imports System.Web.Hosting
@@ -17,6 +18,7 @@ Partial Public Class _Default
 
     Private Shared ReadOnly ItCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
     Private Shared ReadOnly Rng As New Random()
+    Private Const RuntimeSiteBaseUrl As String = "https://www.taikun.it"
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         MarkBodyAsHome()
@@ -43,17 +45,16 @@ Partial Public Class _Default
         rptHeroSlides.DataSource = hero
         rptHeroSlides.DataBind()
         Dim hasHeroSlides As Boolean = rptHeroSlides.Items.Count > 0
-        Slide_Show_Container.Visible = hasHeroSlides
-        HeroSliderWrap.Visible = hasHeroSlides
 
         Dim sideBanners As DataTable = GetSideBanners()
         rptSideBanners.DataSource = sideBanners
         rptSideBanners.DataBind()
-        Dim hasSideBanners As Boolean = rptSideBanners.Items.Count > 0
-        HeroSideWrap.Visible = hasSideBanners
-        HomeHeroSection.Visible = hasHeroSlides OrElse hasSideBanners
+        Dim sideBannerCount As Integer = rptSideBanners.Items.Count
 
-        Dim usedIds As New HashSet(Of Integer)()
+        Dim heroMode As String = ResolveHeroMode(hasHeroSlides, sideBannerCount)
+        ApplyHeroMode(heroMode)
+
+        Dim usedBusinessKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
 
         Dim offerPool As DataTable = GetOfferPool(120)
         Dim dealOfferPool As DataTable = GetDealOfferPool(120)
@@ -62,28 +63,35 @@ Partial Public Class _Default
         Dim bestSellerPool As DataTable = GetBestSellerPool(120)
         Dim topSellingPool As DataTable = GetPureTopSellingPool(120)
 
-        Dim dealPool As DataTable = TakeDistinctRows(12, usedIds, dealOfferPool)
+        Dim dealPool As DataTable = TakeDistinctRows(12, usedBusinessKeys, dealOfferPool)
         rptDealOfDay.DataSource = dealPool
         rptDealOfDay.DataBind()
 
-        BindThreeColumnZone(TakeDistinctRows(7, usedIds, offerPool), rptFeatureLeft, rptFeatureCenter, rptFeatureRight)
-        BindThreeColumnZone(TakeDistinctRows(7, usedIds, featuredPool), rptToprateLeft, rptToprateCenter, rptToprateRight)
-        BindThreeColumnZone(TakeDistinctRows(7, usedIds, newArrivalsPool), rptOnSaleLeft, rptOnSaleCenter, rptOnSaleRight)
+        BindThreeColumnZone(TakeDistinctRows(7, usedBusinessKeys, offerPool), rptFeatureLeft, rptFeatureCenter, rptFeatureRight)
+        BindThreeColumnZone(TakeDistinctRows(7, usedBusinessKeys, featuredPool), rptToprateLeft, rptToprateCenter, rptToprateRight)
+        BindThreeColumnZone(TakeDistinctRows(7, usedBusinessKeys, newArrivalsPool), rptOnSaleLeft, rptOnSaleCenter, rptOnSaleRight)
 
-        rptBestSeller.DataSource = TakeDistinctRows(10, usedIds, bestSellerPool)
+        rptBestSeller.DataSource = TakeDistinctRows(10, usedBusinessKeys, bestSellerPool)
         rptBestSeller.DataBind()
 
-        rptTop20Slides.DataSource = BuildSlidesTable(TakeDistinctRows(5, usedIds, topSellingPool), 5)
+        Dim recentRows As DataTable = GetRecentlyViewedProducts(12, usedBusinessKeys)
+        rptRecentlyViewed.DataSource = recentRows
+        rptRecentlyViewed.DataBind()
+        If HomeRecentlyViewedSection IsNot Nothing Then
+            HomeRecentlyViewedSection.Visible = Not IsTableEmpty(recentRows)
+        End If
+
+        rptTop20Slides.DataSource = BuildSlidesTable(TakeDistinctRows(5, usedBusinessKeys, topSellingPool), 5)
         rptTop20Slides.DataBind()
 
-        rptFeaturedProductsSlides.DataSource = BuildSlidesTable(TakeDistinctRows(5, usedIds, featuredPool), 5)
-        rptFeaturedProductsSlides.DataBind()
-
-        rptTopSellingProductSlides.DataSource = BuildSlidesTable(TakeDistinctRows(5, usedIds, topSellingPool), 5)
+        rptTopSellingProductSlides.DataSource = BuildSlidesTable(TakeDistinctRows(5, usedBusinessKeys, topSellingPool), 5)
         rptTopSellingProductSlides.DataBind()
 
-        rptOnSaleProductSlides.DataSource = BuildSlidesTable(TakeDistinctRows(5, usedIds, offerPool), 5)
+        rptOnSaleProductSlides.DataSource = BuildSlidesTable(TakeDistinctRows(5, usedBusinessKeys, offerPool), 5)
         rptOnSaleProductSlides.DataBind()
+
+        rptFeaturedProductsSlides.DataSource = BuildSlidesTable(TakeDistinctRows(5, usedBusinessKeys, featuredPool), 5)
+        rptFeaturedProductsSlides.DataBind()
 
         Dim brandRows As DataTable = FilterBrandRows(GetBrands(24), 12)
         rptBrands.DataSource = brandRows
@@ -91,12 +99,38 @@ Partial Public Class _Default
         If HomeBrandsSection IsNot Nothing Then
             HomeBrandsSection.Visible = Not IsTableEmpty(brandRows)
         End If
+    End Sub
 
-        Dim recentRows As DataTable = GetRecentlyViewedProducts(12, usedIds)
-        rptRecentlyViewed.DataSource = recentRows
-        rptRecentlyViewed.DataBind()
-        If HomeRecentlyViewedSection IsNot Nothing Then
-            HomeRecentlyViewedSection.Visible = Not IsTableEmpty(recentRows)
+    Private Function ResolveHeroMode(ByVal hasHeroSlides As Boolean, ByVal sideBannerCount As Integer) As String
+        If Not hasHeroSlides Then
+            Return "none"
+        End If
+
+        If sideBannerCount >= 2 Then
+            Return "full"
+        End If
+
+        Return "single"
+    End Function
+
+    Private Sub ApplyHeroMode(ByVal heroMode As String)
+        Dim normalizedMode As String = heroMode
+        If String.IsNullOrWhiteSpace(normalizedMode) Then
+            normalizedMode = "none"
+        End If
+        normalizedMode = normalizedMode.Trim().ToLowerInvariant()
+
+        Slide_Show_Container.Visible = (normalizedMode <> "none")
+        HeroSliderWrap.Visible = (normalizedMode <> "none")
+        HeroSideWrap.Visible = (normalizedMode = "full")
+        HomeHeroSection.Visible = (normalizedMode <> "none")
+
+        If HomeHeroShell IsNot Nothing Then
+            HomeHeroShell.Attributes("class") = "s-banner-wrapper ks-home-hero-shell ks-home-hero-mode-" & normalizedMode
+        End If
+
+        If HomeHeroSection IsNot Nothing Then
+            HomeHeroSection.Attributes("class") = "tf-sp-5 ks-home-hero-section ks-home-hero-mode-" & normalizedMode
         End If
     End Sub
 
@@ -182,11 +216,6 @@ Partial Public Class _Default
         Dim wideSource As DataTable = DistinctRowsByColumn(GetHeroWideBanners(), "Image")
         If wideSource IsNot Nothing AndAlso wideSource.Rows.Count > 0 Then
             Return SliceTable(wideSource, 0, 1)
-        End If
-
-        Dim sideSource As DataTable = DistinctRowsByColumn(GetHeroSideBannerSource(), "Image")
-        If sideSource IsNot Nothing AndAlso sideSource.Rows.Count > 0 Then
-            Return ConvertSideRowsToHeroRows(SliceTable(sideSource, 0, 1))
         End If
 
         Return HeroSlidesFallback()
@@ -503,7 +532,7 @@ Partial Public Class _Default
         Return EmptyProductsTable()
     End Function
 
-    Private Function GetRecentlyViewedProducts(ByVal limit As Integer, Optional ByVal excludeIds As HashSet(Of Integer) = Nothing) As DataTable
+    Private Function GetRecentlyViewedProducts(ByVal limit As Integer, Optional ByVal excludeBusinessKeys As HashSet(Of String) = Nothing) As DataTable
         Dim ids As List(Of Integer) = GetRecentlyViewedIds()
         If ids.Count = 0 Then
             Return EmptyProductsTable()
@@ -529,7 +558,8 @@ Partial Public Class _Default
         Dim dt As DataTable = TryLoadProducts("v.id IN (" & idsCsv & ") AND " & StockWhereClause() & ">=1", orderSql.ToString(), orderedIds.Count)
         If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
             dt = DistinctRowsByProductId(dt)
-            dt = ExcludeProductIds(dt, excludeIds)
+            dt = DistinctRowsByBusinessKey(dt)
+            dt = ExcludeBusinessKeys(dt, excludeBusinessKeys)
             If dt.Rows.Count <= limit Then
                 Return dt
             End If
@@ -559,20 +589,40 @@ Partial Public Class _Default
         Return result
     End Function
 
-    Private Function ExcludeProductIds(ByVal source As DataTable, ByVal excludeIds As HashSet(Of Integer)) As DataTable
-        If source Is Nothing OrElse source.Rows.Count = 0 OrElse excludeIds Is Nothing OrElse excludeIds.Count = 0 Then
+    Private Function DistinctRowsByBusinessKey(ByVal source As DataTable) As DataTable
+        Dim result As DataTable = If(source IsNot Nothing, source.Clone(), EmptyProductsTable())
+        If source Is Nothing OrElse source.Rows.Count = 0 Then
+            Return result
+        End If
+
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        For Each row As DataRow In source.Rows
+            Dim businessKey As String = GetBusinessKey(row)
+            If String.IsNullOrWhiteSpace(businessKey) OrElse seen.Contains(businessKey) Then
+                Continue For
+            End If
+
+            seen.Add(businessKey)
+            result.ImportRow(row)
+        Next
+
+        Return result
+    End Function
+
+    Private Function ExcludeBusinessKeys(ByVal source As DataTable, ByVal excludeBusinessKeys As HashSet(Of String)) As DataTable
+        If source Is Nothing OrElse source.Rows.Count = 0 OrElse excludeBusinessKeys Is Nothing Then
             Return source
         End If
 
         Dim filtered As DataTable = source.Clone()
         For Each row As DataRow In source.Rows
-            Dim id As Integer = SafeInt(row("id"))
-            If id <= 0 OrElse excludeIds.Contains(id) Then
+            Dim businessKey As String = GetBusinessKey(row)
+            If String.IsNullOrWhiteSpace(businessKey) OrElse excludeBusinessKeys.Contains(businessKey) Then
                 Continue For
             End If
 
             filtered.ImportRow(row)
-            excludeIds.Add(id)
+            excludeBusinessKeys.Add(businessKey)
         Next
 
         Return filtered
@@ -767,20 +817,61 @@ Partial Public Class _Default
         Next
     End Sub
 
-    Private Function TakeDistinctRows(ByVal count As Integer, ByVal used As HashSet(Of Integer), ParamArray ByVal sources() As DataTable) As DataTable
-        Dim result As DataTable = CloneFirstTable(sources)
-        Dim seen As New HashSet(Of Integer)()
+    Private Function GetBusinessKey(ByVal row As DataRow) As String
+        If row Is Nothing Then
+            Return String.Empty
+        End If
 
-        AddDistinctRows(result, count, used, seen, False, sources)
+        Dim ean As String = NormalizeBusinessIdentifier(If(row.Table.Columns.Contains("Ean"), row("Ean"), Nothing))
+        If Not String.IsNullOrWhiteSpace(ean) Then
+            Return "EAN:" & ean
+        End If
+
+        Dim codice As String = NormalizeBusinessIdentifier(If(row.Table.Columns.Contains("Codice"), row("Codice"), Nothing))
+        If Not String.IsNullOrWhiteSpace(codice) Then
+            Return "COD:" & codice
+        End If
+
+        Dim marca As String = NormalizeBusinessText(If(row.Table.Columns.Contains("MarcheDescrizione"), row("MarcheDescrizione"), Nothing))
+        Dim descrizione As String = NormalizeBusinessText(If(row.Table.Columns.Contains("Descrizione1"), row("Descrizione1"), Nothing))
+        Return "TXT:" & marca & "|" & descrizione
+    End Function
+
+    Private Function NormalizeBusinessIdentifier(ByVal value As Object) As String
+        Dim text As String = Convert.ToString(value).Trim()
+        If String.IsNullOrWhiteSpace(text) Then
+            Return String.Empty
+        End If
+
+        text = text.ToUpperInvariant()
+        text = text.Replace(" ", String.Empty)
+        Return text
+    End Function
+
+    Private Function NormalizeBusinessText(ByVal value As Object) As String
+        Dim text As String = Convert.ToString(value).Trim()
+        If String.IsNullOrWhiteSpace(text) Then
+            Return String.Empty
+        End If
+
+        text = text.ToUpperInvariant()
+        text = System.Text.RegularExpressions.Regex.Replace(text, "\s+", " ")
+        Return text
+    End Function
+
+    Private Function TakeDistinctRows(ByVal count As Integer, ByVal usedBusinessKeys As HashSet(Of String), ParamArray ByVal sources() As DataTable) As DataTable
+        Dim result As DataTable = CloneFirstTable(sources)
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+        AddDistinctRows(result, count, usedBusinessKeys, seen, sources)
 
         Return result
     End Function
 
     Private Sub AddDistinctRows(ByVal target As DataTable,
                                 ByVal count As Integer,
-                                ByVal used As HashSet(Of Integer),
-                                ByVal seen As HashSet(Of Integer),
-                                ByVal ignoreGlobalUsed As Boolean,
+                                ByVal usedBusinessKeys As HashSet(Of String),
+                                ByVal seenBusinessKeys As HashSet(Of String),
                                 ParamArray ByVal sources() As DataTable)
         If target Is Nothing OrElse sources Is Nothing Then
             Return
@@ -793,20 +884,21 @@ Partial Public Class _Default
 
             For Each row As DataRow In source.Rows
                 Dim id As Integer = SafeInt(row("id"))
-                If id <= 0 Then
+                Dim businessKey As String = GetBusinessKey(row)
+                If id <= 0 OrElse String.IsNullOrWhiteSpace(businessKey) Then
                     Continue For
                 End If
-                If seen.Contains(id) Then
+                If seenBusinessKeys.Contains(businessKey) Then
                     Continue For
                 End If
-                If used IsNot Nothing AndAlso Not ignoreGlobalUsed AndAlso used.Contains(id) Then
+                If usedBusinessKeys IsNot Nothing AndAlso usedBusinessKeys.Contains(businessKey) Then
                     Continue For
                 End If
 
                 target.ImportRow(row)
-                seen.Add(id)
-                If used IsNot Nothing AndAlso Not ignoreGlobalUsed Then
-                    used.Add(id)
+                seenBusinessKeys.Add(businessKey)
+                If usedBusinessKeys IsNot Nothing Then
+                    usedBusinessKeys.Add(businessKey)
                 End If
 
                 If target.Rows.Count >= count Then
@@ -1161,6 +1253,57 @@ Partial Public Class _Default
         End Try
     End Function
 
+    Private Function BuildRuntimeAssetUrl(ByVal virtualPath As String) As String
+        If String.IsNullOrWhiteSpace(virtualPath) Then
+            Return String.Empty
+        End If
+
+        Dim candidate As String = virtualPath.Trim()
+        If candidate.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse
+           candidate.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+            Return candidate
+        End If
+
+        If candidate.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then
+            candidate = candidate.Substring(1)
+        End If
+        If Not candidate.StartsWith("/") Then
+            candidate = "/" & candidate.TrimStart("/"c)
+        End If
+
+        Return RuntimeSiteBaseUrl.TrimEnd("/"c) & candidate
+    End Function
+
+    Private Function RuntimeUrlExistsCached(ByVal absoluteUrl As String) As Boolean
+        If String.IsNullOrWhiteSpace(absoluteUrl) Then
+            Return False
+        End If
+
+        Dim cacheKey As String = "ks-runtime-asset:" & absoluteUrl.ToLowerInvariant()
+        Dim cached As Object = HttpRuntime.Cache(cacheKey)
+        If cached IsNot Nothing Then
+            Return Convert.ToBoolean(cached)
+        End If
+
+        Dim exists As Boolean = False
+        Try
+            Dim request As HttpWebRequest = CType(WebRequest.Create(absoluteUrl), HttpWebRequest)
+            request.Method = "HEAD"
+            request.Timeout = 1500
+            request.ReadWriteTimeout = 1500
+            request.AllowAutoRedirect = True
+
+            Using response As HttpWebResponse = CType(request.GetResponse(), HttpWebResponse)
+                exists = (response.StatusCode = HttpStatusCode.OK)
+            End Using
+        Catch
+            exists = False
+        End Try
+
+        HttpRuntime.Cache.Insert(cacheKey, exists, Nothing, DateTime.UtcNow.AddMinutes(60), System.Web.Caching.Cache.NoSlidingExpiration)
+        Return exists
+    End Function
+
     Protected Function ProductImageThumb(ByVal value As Object) As String
         Dim fileName As String = Convert.ToString(value).Trim()
         If String.IsNullOrWhiteSpace(fileName) Then Return "/Public/assets/images/item/laptop.webp"
@@ -1193,6 +1336,13 @@ Partial Public Class _Default
 
         If VirtualPathExists(candidate) Then
             Return candidate
+        End If
+
+        If IsApprovedBrandAsset(fileName) Then
+            Dim runtimeUrl As String = BuildRuntimeAssetUrl(candidate)
+            If RuntimeUrlExistsCached(runtimeUrl) Then
+                Return runtimeUrl
+            End If
         End If
 
         Return String.Empty
