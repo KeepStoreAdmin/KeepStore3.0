@@ -10,7 +10,7 @@
 
     <section id="HomeHeroSection" runat="server" class="tf-sp-5 ks-home-hero-section">
         <div class="container">
-            <div class="s-banner-wrapper ks-home-hero-shell">
+            <div id="HomeHeroShell" runat="server" class="s-banner-wrapper ks-home-hero-shell">
                 <div class="wrap-item-1 d-none d-lg-block">
                     <uc:HomeDepartmentsMenu ID="HomeDepartmentsMenu1" runat="server" />
                 </div>
