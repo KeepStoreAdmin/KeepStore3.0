@@ -743,6 +743,35 @@
     object-position: right bottom;
 }
 
+.ks-page-home .ks-home-hero-banner--imageonly {
+    display: block;
+    padding: 0;
+    background: var(--ks-surface);
+    min-height: 0;
+    box-shadow: var(--ks-shadow);
+}
+
+.ks-page-home .ks-home-hero-banner--imageonly .ks-home-hero-media--only,
+.ks-page-home .ks-home-hero-banner--imageonly .img-item {
+    display: block;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    overflow: hidden;
+    border-radius: inherit;
+    background: #eff3f8;
+}
+
+.ks-page-home .ks-home-hero-banner--imageonly .ks-home-hero-media--only img,
+.ks-page-home .ks-home-hero-banner--imageonly .img-item img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    object-fit: cover;
+    object-position: center center;
+}
+
 .ks-page-home .ks-home-side-banners .ks-side-promo-card {
     min-height: 0;
     height: calc(50% - 10px);
@@ -754,6 +783,30 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.ks-page-home .ks-home-side-banners .ks-side-promo-card--imageonly {
+    display: block;
+    height: auto;
+    min-height: 0;
+    background: var(--ks-surface);
+}
+
+.ks-page-home .ks-home-side-banners .ks-side-promo-card--imageonly .ks-side-promo-media {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    overflow: hidden;
+    border-radius: inherit;
+    background: #eff3f8;
+}
+
+.ks-page-home .ks-home-side-banners .ks-side-promo-card--imageonly .ks-side-promo-media img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center center;
 }
 
 .ks-page-home .ks-home-side-banners > :only-child {
@@ -1496,6 +1549,7 @@
     height: 100%;
     aspect-ratio: 133 / 80;
     width: 100%;
+    flex: 1 1 auto;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1505,6 +1559,7 @@
     background: var(--ks-surface);
     overflow: hidden;
     box-sizing: border-box;
+    line-height: 0;
 }
 
 .ks-page-home .ks-home-brands-block .ks-home-brand-media {
@@ -1525,6 +1580,7 @@
 .ks-page-home .ks-home-brands-block .swiper-slide {
     display: flex;
     height: auto;
+    align-self: stretch;
 }
 
 .ks-page-home .ks-home-brands-block .ks-home-brand-item img {
@@ -1733,6 +1789,11 @@
         min-height: 320px;
     }
 
+    .ks-page-home .ks-home-hero-banner--imageonly {
+        min-height: 0;
+        padding: 0;
+    }
+
     .ks-page-home .ks-home-hero-banner .content,
     .ks-page-home .ks-home-hero-banner .img-item,
     .ks-page-home .ks-home-hero-media,
@@ -1823,6 +1884,10 @@
     .ks-page-home .ks-home-hero-banner {
         display: block;
         min-height: 0;
+    }
+
+    .ks-page-home .ks-home-hero-banner--imageonly {
+        padding: 0;
     }
 
     .ks-page-home .ks-home-hero-banner .content {

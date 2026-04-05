@@ -21,25 +21,8 @@
                             <asp:Repeater ID="rptHeroSlides" runat="server">
                                 <ItemTemplate>
                                     <div class="swiper-slide">
-                                        <div class="banner-image-product-4 style-2 hover-img ks-home-hero-banner ks-home-hero-panel">
-                                            <div class="content">
-                                                <div class="box-title">
-                                                    <div class="d-grid gap-10">
-                                                        <p class="title-sidebar-2 font-5 text-white text-uppercase"><%# SafeText(Eval("Eyebrow")) %></p>
-                                                        <h2 class="fw-normal">
-                                                            <a href='<%# ResolveLink(Eval("LinkUrl"), ProductUrl(Eval("ProductId"))) %>' class="link font-5 text-white"><%# SafeText(Eval("Caption")) %></a>
-                                                        </h2>
-                                                        <p class="title-sidebar-2 font-5 text-white"><%# SafeText(Eval("Description")) %></p>
-                                                    </div>
-                                                </div>
-                                                <div class="box-btn">
-                                                    <a href='<%# ResolveLink(Eval("LinkUrl"), ProductUrl(Eval("ProductId"))) %>' class="tf-btn-icon type-2 style-white">
-                                                        <i class="icon-circle-chevron-right"></i>
-                                                        <span>Scopri ora</span>
-                                                    </a>
-                                                </div>
-                                            </div>
-                                            <a href='<%# ResolveLink(Eval("LinkUrl"), ProductUrl(Eval("ProductId"))) %>' class="img-style img-item ks-home-hero-media">
+                                        <div class="banner-image-product-4 style-2 hover-img ks-home-hero-banner ks-home-hero-panel ks-home-hero-banner--imageonly">
+                                            <a href='<%# ResolveLink(Eval("LinkUrl"), ProductUrl(Eval("ProductId"))) %>' class="img-style img-item ks-home-hero-media ks-home-hero-media--only" aria-label='<%# SafeText(Eval("Caption")) %>'>
                                                 <img width="800" height="794" class="lazyload" src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' data-src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' alt='<%# SafeText(Eval("Caption")) %>' />
                                             </a>
                                         </div>
@@ -57,21 +40,10 @@
                     <div class="ks-home-side-banners d-grid gap-3">
                         <asp:Repeater ID="rptSideBanners" runat="server">
                             <ItemTemplate>
-                                <div class="cls-category style-abs hover-img ks-side-promo-card wow fadeInRight" data-wow-delay="0s">
-                                    <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx") %>' class="img-box img-style d-block">
+                                <div class="cls-category style-abs hover-img ks-side-promo-card ks-side-promo-card--imageonly wow fadeInRight" data-wow-delay="0s">
+                                    <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx") %>' class="img-box img-style d-block ks-side-promo-media" aria-label='<%# SafeText(Eval("Title")) %>'>
                                         <img class="lazyload" src='<%# ResolveAdvertisingImage(Eval("Image"), String.Empty) %>' data-src='<%# ResolveAdvertisingImage(Eval("Image"), String.Empty) %>' alt='<%# SafeText(Eval("Title")) %>' />
                                     </a>
-                                    <div class="content">
-                                        <div class="box-title">
-                                            <p class="text-white product-title-2 text-uppercase"><%# SafeText(Eval("Badge")) %></p>
-                                            <p class="text-white main-title-2 text-uppercase fw-bold"><%# SafeText(Eval("Title")) %></p>
-                                            <p class="text-white product-title-2"><%# SafeText(Eval("Description")) %></p>
-                                        </div>
-                                        <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx") %>' class="tf-btn-icon style-white">
-                                            <i class="icon-circle-chevron-right"></i>
-                                            <span>Scopri ora</span>
-                                        </a>
-                                    </div>
                                 </div>
                             </ItemTemplate>
                         </asp:Repeater>

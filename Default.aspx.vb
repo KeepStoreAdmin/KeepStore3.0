@@ -92,7 +92,7 @@ Partial Public Class _Default
             HomeBrandsSection.Visible = Not IsTableEmpty(brandRows)
         End If
 
-        Dim recentRows As DataTable = GetRecentlyViewedProducts(12)
+        Dim recentRows As DataTable = GetRecentlyViewedProducts(12, usedIds)
         rptRecentlyViewed.DataSource = recentRows
         rptRecentlyViewed.DataBind()
         If HomeRecentlyViewedSection IsNot Nothing Then
@@ -206,21 +206,10 @@ Partial Public Class _Default
     Private Function GetSideBanners() As DataTable
         Dim sideSource As DataTable = DistinctRowsByColumn(GetHeroSideBannerSource(), "Image")
         If sideSource Is Nothing OrElse sideSource.Rows.Count = 0 Then
-            Dim wideSource As DataTable = DistinctRowsByColumn(GetHeroWideBanners(), "Image")
-            If wideSource IsNot Nothing AndAlso wideSource.Rows.Count > 1 Then
-                Return ConvertHeroRowsToSideRows(SliceTable(wideSource, 1, 2))
-            End If
             Return SideBannersFallback()
         End If
 
         Dim result As DataTable = SliceTable(sideSource, 0, 2)
-        If result.Rows.Count < 2 Then
-            Dim wideSource As DataTable = DistinctRowsByColumn(GetHeroWideBanners(), "Image")
-            If wideSource IsNot Nothing AndAlso wideSource.Rows.Count > 1 Then
-                result = MergeSideBannerRows(result, ConvertHeroRowsToSideRows(SliceTable(wideSource, 1, 2)), 2)
-            End If
-        End If
-
         Return result
     End Function
 
@@ -514,7 +503,7 @@ Partial Public Class _Default
         Return EmptyProductsTable()
     End Function
 
-    Private Function GetRecentlyViewedProducts(ByVal limit As Integer) As DataTable
+    Private Function GetRecentlyViewedProducts(ByVal limit As Integer, Optional ByVal excludeIds As HashSet(Of Integer) = Nothing) As DataTable
         Dim ids As List(Of Integer) = GetRecentlyViewedIds()
         If ids.Count = 0 Then
             Return EmptyProductsTable()
@@ -540,6 +529,7 @@ Partial Public Class _Default
         Dim dt As DataTable = TryLoadProducts("v.id IN (" & idsCsv & ") AND " & StockWhereClause() & ">=1", orderSql.ToString(), orderedIds.Count)
         If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
             dt = DistinctRowsByProductId(dt)
+            dt = ExcludeProductIds(dt, excludeIds)
             If dt.Rows.Count <= limit Then
                 Return dt
             End If
@@ -567,6 +557,25 @@ Partial Public Class _Default
         Next
 
         Return result
+    End Function
+
+    Private Function ExcludeProductIds(ByVal source As DataTable, ByVal excludeIds As HashSet(Of Integer)) As DataTable
+        If source Is Nothing OrElse source.Rows.Count = 0 OrElse excludeIds Is Nothing OrElse excludeIds.Count = 0 Then
+            Return source
+        End If
+
+        Dim filtered As DataTable = source.Clone()
+        For Each row As DataRow In source.Rows
+            Dim id As Integer = SafeInt(row("id"))
+            If id <= 0 OrElse excludeIds.Contains(id) Then
+                Continue For
+            End If
+
+            filtered.ImportRow(row)
+            excludeIds.Add(id)
+        Next
+
+        Return filtered
     End Function
 
     Private Function TryLoadProducts(ByVal whereClause As String, ByVal orderClause As String, ByVal limit As Integer) As DataTable
@@ -763,9 +772,6 @@ Partial Public Class _Default
         Dim seen As New HashSet(Of Integer)()
 
         AddDistinctRows(result, count, used, seen, False, sources)
-        If result.Rows.Count < count AndAlso used IsNot Nothing Then
-            AddDistinctRows(result, count, used, seen, True, sources)
-        End If
 
         Return result
     End Function
@@ -910,6 +916,10 @@ Partial Public Class _Default
                 Continue For
             End If
 
+            If Not IsApprovedBrandAsset(row("img")) Then
+                Continue For
+            End If
+
             Dim imageUrl As String = ResolveBrandImage(row("img"))
             If String.IsNullOrWhiteSpace(imageUrl) Then
                 Continue For
@@ -922,6 +932,34 @@ Partial Public Class _Default
         Next
 
         Return filtered
+    End Function
+
+    Private Function IsApprovedBrandAsset(ByVal value As Object) As Boolean
+        Dim fileName As String = Path.GetFileName(Convert.ToString(value).Trim())
+        If String.IsNullOrWhiteSpace(fileName) Then
+            Return False
+        End If
+
+        Dim extension As String = Path.GetExtension(fileName).ToLowerInvariant()
+        Select Case extension
+            Case ".png", ".jpg", ".jpeg", ".webp", ".svg"
+            Case Else
+                Return False
+        End Select
+
+        Dim normalized As String = fileName.ToLowerInvariant()
+        Dim blockedTokens As String() = {
+            "banner", "slide", "slideshow", "promo", "collection",
+            "camera", "tivi", "tablet", "phone", "device", "desert"
+        }
+
+        For Each token As String In blockedTokens
+            If normalized.Contains(token) Then
+                Return False
+            End If
+        Next
+
+        Return True
     End Function
 
     Private Function DistinctRowsByColumn(ByVal source As DataTable, ByVal columnName As String) As DataTable
