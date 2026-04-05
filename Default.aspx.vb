@@ -56,12 +56,13 @@ Partial Public Class _Default
         Dim usedIds As New HashSet(Of Integer)()
 
         Dim offerPool As DataTable = GetOfferPool(120)
+        Dim dealOfferPool As DataTable = GetDealOfferPool(120)
         Dim featuredPool As DataTable = GetFeaturedPool(120)
         Dim newArrivalsPool As DataTable = GetNewArrivalsPool(120)
         Dim bestSellerPool As DataTable = GetBestSellerPool(120)
         Dim topSellingPool As DataTable = GetPureTopSellingPool(120)
 
-        Dim dealPool As DataTable = TakeDistinctRows(12, usedIds, offerPool)
+        Dim dealPool As DataTable = TakeDistinctRows(12, usedIds, dealOfferPool)
         rptDealOfDay.DataSource = dealPool
         rptDealOfDay.DataBind()
 
@@ -178,12 +179,12 @@ Partial Public Class _Default
     End Function
 
     Private Function GetHeroSlides() As DataTable
-        Dim wideSource As DataTable = GetHeroWideBanners()
+        Dim wideSource As DataTable = DistinctRowsByColumn(GetHeroWideBanners(), "Image")
         If wideSource IsNot Nothing AndAlso wideSource.Rows.Count > 0 Then
             Return SliceTable(wideSource, 0, 1)
         End If
 
-        Dim sideSource As DataTable = GetHeroSideBannerSource()
+        Dim sideSource As DataTable = DistinctRowsByColumn(GetHeroSideBannerSource(), "Image")
         If sideSource IsNot Nothing AndAlso sideSource.Rows.Count > 0 Then
             Return ConvertSideRowsToHeroRows(SliceTable(sideSource, 0, 1))
         End If
@@ -203,9 +204,9 @@ Partial Public Class _Default
     End Function
 
     Private Function GetSideBanners() As DataTable
-        Dim sideSource As DataTable = GetHeroSideBannerSource()
+        Dim sideSource As DataTable = DistinctRowsByColumn(GetHeroSideBannerSource(), "Image")
         If sideSource Is Nothing OrElse sideSource.Rows.Count = 0 Then
-            Dim wideSource As DataTable = GetHeroWideBanners()
+            Dim wideSource As DataTable = DistinctRowsByColumn(GetHeroWideBanners(), "Image")
             If wideSource IsNot Nothing AndAlso wideSource.Rows.Count > 1 Then
                 Return ConvertHeroRowsToSideRows(SliceTable(wideSource, 1, 2))
             End If
@@ -214,7 +215,7 @@ Partial Public Class _Default
 
         Dim result As DataTable = SliceTable(sideSource, 0, 2)
         If result.Rows.Count < 2 Then
-            Dim wideSource As DataTable = GetHeroWideBanners()
+            Dim wideSource As DataTable = DistinctRowsByColumn(GetHeroWideBanners(), "Image")
             If wideSource IsNot Nothing AndAlso wideSource.Rows.Count > 1 Then
                 result = MergeSideBannerRows(result, ConvertHeroRowsToSideRows(SliceTable(wideSource, 1, 2)), 2)
             End If
@@ -473,6 +474,10 @@ Partial Public Class _Default
 
     Private Function GetOfferPool(ByVal limit As Integer) As DataTable
         Return QueryProducts(OfferWhereClause(), "CASE WHEN v.OfferteDataFine IS NULL THEN 1 ELSE 0 END ASC, COALESCE(v.OfferteDataFine,'9999-12-31') ASC, COALESCE(sy.VendutiAnno,0) DESC, COALESCE(v.Visite,0) DESC, v.id DESC", limit)
+    End Function
+
+    Private Function GetDealOfferPool(ByVal limit As Integer) As DataTable
+        Return QueryProducts(OfferWhereClause(), "CASE WHEN COALESCE(sy.VendutiAnno,0) > 0 THEN 0 ELSE 1 END ASC, CASE WHEN v.OfferteDataFine IS NULL THEN 1 ELSE 0 END ASC, COALESCE(v.OfferteDataFine,'9999-12-31') ASC, COALESCE(sy.VendutiAnno,0) DESC, COALESCE(v.Visite,0) DESC, v.id DESC", limit)
     End Function
 
     Private Function GetFeaturedPool(ByVal limit As Integer) As DataTable
@@ -917,6 +922,35 @@ Partial Public Class _Default
         Next
 
         Return filtered
+    End Function
+
+    Private Function DistinctRowsByColumn(ByVal source As DataTable, ByVal columnName As String) As DataTable
+        If source Is Nothing Then
+            Return New DataTable()
+        End If
+
+        Dim result As DataTable = source.Clone()
+        If String.IsNullOrWhiteSpace(columnName) OrElse Not source.Columns.Contains(columnName) Then
+            For Each row As DataRow In source.Rows
+                result.ImportRow(row)
+            Next
+            Return result
+        End If
+
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        For Each row As DataRow In source.Rows
+            Dim key As String = Convert.ToString(row(columnName)).Trim()
+            If String.IsNullOrWhiteSpace(key) Then
+                Continue For
+            End If
+            If seen.Contains(key) Then
+                Continue For
+            End If
+            seen.Add(key)
+            result.ImportRow(row)
+        Next
+
+        Return result
     End Function
 
     Private Function IsTableEmpty(ByVal table As DataTable) As Boolean
