@@ -532,7 +532,7 @@ Partial Public Class _Default
         Return EmptyProductsTable()
     End Function
 
-    Private Function GetRecentlyViewedProducts(ByVal limit As Integer, Optional ByVal excludeBusinessKeys As HashSet(Of String) = Nothing) As DataTable
+    Private Function GetRecentlyViewedProducts(ByVal limit As Integer, Optional ByVal excludedBusinessKeys As HashSet(Of String) = Nothing) As DataTable
         Dim ids As List(Of Integer) = GetRecentlyViewedIds()
         If ids.Count = 0 Then
             Return EmptyProductsTable()
@@ -559,7 +559,7 @@ Partial Public Class _Default
         If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
             dt = DistinctRowsByProductId(dt)
             dt = DistinctRowsByBusinessKey(dt)
-            dt = ExcludeBusinessKeys(dt, excludeBusinessKeys)
+            dt = ExcludeBusinessKeys(dt, excludedBusinessKeys)
             If dt.Rows.Count <= limit Then
                 Return dt
             End If
@@ -609,20 +609,20 @@ Partial Public Class _Default
         Return result
     End Function
 
-    Private Function ExcludeBusinessKeys(ByVal source As DataTable, ByVal excludeBusinessKeys As HashSet(Of String)) As DataTable
-        If source Is Nothing OrElse source.Rows.Count = 0 OrElse excludeBusinessKeys Is Nothing Then
+    Private Function ExcludeBusinessKeys(ByVal source As DataTable, ByVal excludedBusinessKeys As HashSet(Of String)) As DataTable
+        If source Is Nothing OrElse source.Rows.Count = 0 OrElse excludedBusinessKeys Is Nothing Then
             Return source
         End If
 
         Dim filtered As DataTable = source.Clone()
         For Each row As DataRow In source.Rows
             Dim businessKey As String = GetBusinessKey(row)
-            If String.IsNullOrWhiteSpace(businessKey) OrElse excludeBusinessKeys.Contains(businessKey) Then
+            If String.IsNullOrWhiteSpace(businessKey) OrElse excludedBusinessKeys.Contains(businessKey) Then
                 Continue For
             End If
 
             filtered.ImportRow(row)
-            excludeBusinessKeys.Add(businessKey)
+            excludedBusinessKeys.Add(businessKey)
         Next
 
         Return filtered
