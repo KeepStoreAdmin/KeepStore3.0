@@ -152,10 +152,10 @@
     
     <section id="HomeBottomPromoSection" runat="server" visible="false" class="ks-home-banner-product"></section>
 
-    <section class="tf-sp-2">
+    <section id="HomeLowerColumnsSection" runat="server" class="tf-sp-2">
         <div class="container">
             <div class="tf-grid-product">
-                <div class="tf-grid-product-item box-btn-slide-item">
+                <div id="Top20Block" runat="server" class="tf-grid-product-item box-btn-slide-item">
                     <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                         <h5 class="fw-semibold">Top 20</h5>
                         <div class="box-btn-slide relative">
@@ -177,7 +177,7 @@
                     </div>
                 </div>
 
-                <div class="tf-grid-product-item box-btn-slide-item">
+                <div id="LowerFeaturedBlock" runat="server" class="tf-grid-product-item box-btn-slide-item">
                     <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                         <h5 class="fw-semibold" data-ks-i18n="home.featured">In Evidenza</h5>
                         <div class="box-btn-slide relative">
@@ -199,7 +199,7 @@
                     </div>
                 </div>
 
-                <div class="tf-grid-product-item box-btn-slide-item">
+                <div id="TopSellingBlock" runat="server" class="tf-grid-product-item box-btn-slide-item">
                     <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                         <h5 class="fw-semibold" data-ks-i18n="home.topSelling">I Piu' Venduti</h5>
                         <div class="box-btn-slide relative">
@@ -221,7 +221,7 @@
                     </div>
                 </div>
 
-                <div class="tf-grid-product-item box-btn-slide-item">
+                <div id="OnSaleBlock" runat="server" class="tf-grid-product-item box-btn-slide-item">
                     <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                         <h5 class="fw-semibold" data-ks-i18n="home.onSale">In Offerta</h5>
                         <div class="box-btn-slide relative">

@@ -8,20 +8,21 @@
         <ul class="menu-category-list">
             <asp:Repeater ID="rptSettoriHome" runat="server" OnItemDataBound="rptSettoriHome_ItemDataBound">
                 <ItemTemplate>
-                    <li class="menu-item">
+                    <li id="liMenuItem" runat="server" class="menu-item">
                         <a href='<%# Eval("DefaultUrl") %>' class="item-link body-text-3">
                             <span class="ks-home-menu-link">
                                 <span class="ks-menu-media">
                                     <img src='<%# Eval("ImgUrl") %>' alt='<%# SafeText(Eval("Descrizione")) %>' onerror="this.style.display='none';this.parentNode.classList.add('is-empty');" />
                                 </span>
                                 <span class="ks-menu-label"><%# SafeText(Eval("Descrizione")) %></span>
-                                </span>
+                                <span id="arrowIcon" runat="server" class="ks-menu-arrow" aria-hidden="true"><i class="icon-arrow-right-lg"></i></span>
+                            </span>
                         </a>
                         <div class="sub-menu-container d-flex text-nowrap">
                             <ul class="sub-menu-list ks-home-submenu-list">
                                 <asp:Literal ID="litDesktopSubmenu" runat="server" />
                             </ul>
-                            <div class="cls-category style-abs abs-2 hover-img d-none d-xl-block">
+                            <div id="promoCard" runat="server" class="cls-category style-abs abs-2 hover-img d-none d-xl-block">
                                 <a href='<%# Eval("DefaultUrl") %>' class="img-box img-style d-block">
                                     <img src='<%# Eval("ImgUrl") %>' data-src='<%# Eval("ImgUrl") %>' alt='<%# SafeText(Eval("Descrizione")) %>' class="lazyload ks-settore-image" onerror="this.style.display='none';" />
                                 </a>

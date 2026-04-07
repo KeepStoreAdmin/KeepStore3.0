@@ -2,6 +2,7 @@ Imports System
 Imports System.Text
 Imports System.Web
 Imports System.Web.UI
+Imports System.Web.UI.HtmlControls
 Imports System.Web.UI.WebControls
 
 Partial Public Class UI_HomeDepartmentsMenu
@@ -26,8 +27,25 @@ Partial Public Class UI_HomeDepartmentsMenu
 
         Dim sector As CatalogMenuSector = TryCast(e.Item.DataItem, CatalogMenuSector)
         Dim lit As Literal = TryCast(e.Item.FindControl("litDesktopSubmenu"), Literal)
+        Dim menuItem As HtmlGenericControl = TryCast(e.Item.FindControl("liMenuItem"), HtmlGenericControl)
+        Dim arrowIcon As HtmlGenericControl = TryCast(e.Item.FindControl("arrowIcon"), HtmlGenericControl)
+        Dim promoCard As HtmlGenericControl = TryCast(e.Item.FindControl("promoCard"), HtmlGenericControl)
+
         If sector Is Nothing OrElse lit Is Nothing Then
             Return
+        End If
+
+        Dim hasChildren As Boolean = (sector.Categories IsNot Nothing AndAlso sector.Categories.Count > 0)
+        If menuItem IsNot Nothing Then
+            menuItem.Attributes("class") = "menu-item " & If(hasChildren, "ks-home-menu-item--branch", "ks-home-menu-item--leaf")
+        End If
+
+        If arrowIcon IsNot Nothing Then
+            arrowIcon.Visible = hasChildren
+        End If
+
+        If promoCard IsNot Nothing Then
+            promoCard.Visible = Not String.IsNullOrWhiteSpace(sector.ImgUrl)
         End If
 
         lit.Text = BuildDesktopSubMenuHtml(sector)

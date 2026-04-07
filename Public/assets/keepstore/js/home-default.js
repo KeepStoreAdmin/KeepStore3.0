@@ -151,11 +151,10 @@
 
     if (window.innerWidth < 1200) {
       menu.style.minHeight = '';
+      menu.style.height = '';
       menu.style.maxHeight = '';
       return;
     }
-
-    menu.style.maxHeight = 'none';
 
     var target = 0;
     if (sliderWrap && sliderWrap.offsetParent !== null) {
@@ -166,9 +165,13 @@
     }
 
     if (target > 0) {
-      menu.style.minHeight = target + 'px';
+      menu.style.minHeight = '';
+      menu.style.height = target + 'px';
+      menu.style.maxHeight = target + 'px';
     } else {
       menu.style.minHeight = '';
+      menu.style.height = '';
+      menu.style.maxHeight = '';
     }
   }
 
