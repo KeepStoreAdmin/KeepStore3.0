@@ -55,8 +55,10 @@ Partial Public Class _Default
         ApplyHeroMode(heroMode)
 
         Dim usedBusinessKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim usedDisplayKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
         Const lowerBlockMinimumItems As Integer = 3
         Const recentReservedQuota As Integer = 6
+        Const recentReservedMinimum As Integer = 4
         Const recentMinimumItems As Integer = 2
 
         Dim offerPool As DataTable = GetOfferPool(120)
@@ -66,20 +68,25 @@ Partial Public Class _Default
         Dim bestSellerPool As DataTable = GetBestSellerPool(120)
         Dim topSellingPool As DataTable = GetPureTopSellingPool(120)
 
-        Dim dealPool As DataTable = TakeDistinctRows(12, usedBusinessKeys, dealOfferPool)
+        Dim dealPool As DataTable = TakeDiverseRows(12, usedBusinessKeys, Nothing, dealOfferPool)
         rptDealOfDay.DataSource = dealPool
         rptDealOfDay.DataBind()
+        CommitDisplayKeys(dealPool, usedDisplayKeys)
 
-        BindThreeColumnZone(TakeDistinctRows(7, usedBusinessKeys, offerPool), rptFeatureLeft, rptFeatureCenter, rptFeatureRight)
-        BindThreeColumnZone(TakeDistinctRows(7, usedBusinessKeys, featuredPool), rptToprateLeft, rptToprateCenter, rptToprateRight)
+        BindThreeColumnZone(TakeDiverseRows(7, usedBusinessKeys, Nothing, offerPool), rptFeatureLeft, rptFeatureCenter, rptFeatureRight)
+        BindThreeColumnZone(TakeDiverseRows(7, usedBusinessKeys, usedDisplayKeys, featuredPool), rptToprateLeft, rptToprateCenter, rptToprateRight)
         BindThreeColumnZone(TakeDistinctRows(7, usedBusinessKeys, newArrivalsPool), rptOnSaleLeft, rptOnSaleCenter, rptOnSaleRight)
 
         rptBestSeller.DataSource = TakeDistinctRows(10, usedBusinessKeys, bestSellerPool)
         rptBestSeller.DataBind()
 
-        Dim recentRows As DataTable = GetRecentlyViewedProducts(recentReservedQuota, usedBusinessKeys, False)
+        Dim recentRows As DataTable = GetRecentlyViewedProducts(recentReservedQuota, usedBusinessKeys, False, usedDisplayKeys, False)
+        If recentRows.Rows.Count >= recentReservedMinimum Then
+            recentRows = SliceTable(recentRows, 0, recentReservedQuota)
+        End If
         If recentRows.Rows.Count >= recentMinimumItems Then
             CommitBusinessKeys(recentRows, usedBusinessKeys)
+            CommitDisplayKeys(recentRows, usedDisplayKeys)
         Else
             recentRows = EmptyProductsTable()
         End If
@@ -89,17 +96,17 @@ Partial Public Class _Default
             HomeRecentlyViewedSection.Visible = (Not IsTableEmpty(recentRows) AndAlso recentRows.Rows.Count >= recentMinimumItems)
         End If
 
-        Dim top20Rows As DataTable = PreviewDistinctRows(5, usedBusinessKeys, topSellingPool)
-        BindLowerBlock(Top20Block, rptTop20Slides, top20Rows, lowerBlockMinimumItems, usedBusinessKeys)
+        Dim top20Rows As DataTable = PreviewDiverseRows(5, usedBusinessKeys, usedDisplayKeys, topSellingPool)
+        BindLowerBlock(Top20Block, rptTop20Slides, top20Rows, lowerBlockMinimumItems, usedBusinessKeys, usedDisplayKeys)
 
-        Dim lowerFeaturedRows As DataTable = PreviewDistinctRows(5, usedBusinessKeys, featuredPool)
-        BindLowerBlock(LowerFeaturedBlock, rptFeaturedProductsSlides, lowerFeaturedRows, lowerBlockMinimumItems, usedBusinessKeys)
+        Dim lowerFeaturedRows As DataTable = PreviewDiverseRows(5, usedBusinessKeys, usedDisplayKeys, featuredPool)
+        BindLowerBlock(LowerFeaturedBlock, rptFeaturedProductsSlides, lowerFeaturedRows, lowerBlockMinimumItems, usedBusinessKeys, usedDisplayKeys)
 
-        Dim topSellingRows As DataTable = PreviewDistinctRows(5, usedBusinessKeys, topSellingPool)
-        BindLowerBlock(TopSellingBlock, rptTopSellingProductSlides, topSellingRows, lowerBlockMinimumItems, usedBusinessKeys)
+        Dim topSellingRows As DataTable = PreviewDiverseRows(5, usedBusinessKeys, usedDisplayKeys, topSellingPool)
+        BindLowerBlock(TopSellingBlock, rptTopSellingProductSlides, topSellingRows, lowerBlockMinimumItems, usedBusinessKeys, usedDisplayKeys)
 
-        Dim onSaleRows As DataTable = PreviewDistinctRows(5, usedBusinessKeys, offerPool)
-        BindLowerBlock(OnSaleBlock, rptOnSaleProductSlides, onSaleRows, lowerBlockMinimumItems, usedBusinessKeys)
+        Dim onSaleRows As DataTable = PreviewDiverseRows(5, usedBusinessKeys, usedDisplayKeys, offerPool)
+        BindLowerBlock(OnSaleBlock, rptOnSaleProductSlides, onSaleRows, lowerBlockMinimumItems, usedBusinessKeys, usedDisplayKeys)
 
         Dim hasVisibleLowerBlocks As Boolean =
             ((Top20Block IsNot Nothing AndAlso Top20Block.Visible) OrElse
@@ -552,7 +559,9 @@ Partial Public Class _Default
 
     Private Function GetRecentlyViewedProducts(ByVal limit As Integer,
                                                Optional ByVal excludedBusinessKeys As HashSet(Of String) = Nothing,
-                                               Optional ByVal reserveExcludedKeys As Boolean = True) As DataTable
+                                               Optional ByVal reserveExcludedKeys As Boolean = True,
+                                               Optional ByVal excludedDisplayKeys As HashSet(Of String) = Nothing,
+                                               Optional ByVal reserveExcludedDisplayKeys As Boolean = True) As DataTable
         Dim ids As List(Of Integer) = GetRecentlyViewedIds()
         If ids.Count = 0 Then
             Return EmptyProductsTable()
@@ -579,7 +588,9 @@ Partial Public Class _Default
         If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
             dt = DistinctRowsByProductId(dt)
             dt = DistinctRowsByBusinessKey(dt)
+            dt = DistinctRowsByDisplayKey(dt)
             dt = ExcludeBusinessKeys(dt, excludedBusinessKeys, reserveExcludedKeys)
+            dt = ExcludeDisplayKeys(dt, excludedDisplayKeys, reserveExcludedDisplayKeys)
             If dt.Rows.Count <= limit Then
                 Return dt
             End If
@@ -629,6 +640,26 @@ Partial Public Class _Default
         Return result
     End Function
 
+    Private Function DistinctRowsByDisplayKey(ByVal source As DataTable) As DataTable
+        Dim result As DataTable = If(source IsNot Nothing, source.Clone(), EmptyProductsTable())
+        If source Is Nothing OrElse source.Rows.Count = 0 Then
+            Return result
+        End If
+
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        For Each row As DataRow In source.Rows
+            Dim displayKey As String = GetDisplayKey(row)
+            If String.IsNullOrWhiteSpace(displayKey) OrElse seen.Contains(displayKey) Then
+                Continue For
+            End If
+
+            seen.Add(displayKey)
+            result.ImportRow(row)
+        Next
+
+        Return result
+    End Function
+
     Private Function ExcludeBusinessKeys(ByVal source As DataTable,
                                          ByVal excludedBusinessKeys As HashSet(Of String),
                                          Optional ByVal reserveExcludedKeys As Boolean = True) As DataTable
@@ -646,6 +677,29 @@ Partial Public Class _Default
             filtered.ImportRow(row)
             If reserveExcludedKeys Then
                 excludedBusinessKeys.Add(businessKey)
+            End If
+        Next
+
+        Return filtered
+    End Function
+
+    Private Function ExcludeDisplayKeys(ByVal source As DataTable,
+                                        ByVal excludedDisplayKeys As HashSet(Of String),
+                                        Optional ByVal reserveExcludedKeys As Boolean = True) As DataTable
+        If source Is Nothing OrElse source.Rows.Count = 0 OrElse excludedDisplayKeys Is Nothing Then
+            Return source
+        End If
+
+        Dim filtered As DataTable = source.Clone()
+        For Each row As DataRow In source.Rows
+            Dim displayKey As String = GetDisplayKey(row)
+            If String.IsNullOrWhiteSpace(displayKey) OrElse excludedDisplayKeys.Contains(displayKey) Then
+                Continue For
+            End If
+
+            filtered.ImportRow(row)
+            If reserveExcludedKeys Then
+                excludedDisplayKeys.Add(displayKey)
             End If
         Next
 
@@ -861,6 +915,125 @@ Partial Public Class _Default
         Return "TXT:" & marca & "|" & descrizione
     End Function
 
+    Private Function GetDisplayKey(ByVal row As DataRow) As String
+        If row Is Nothing Then
+            Return String.Empty
+        End If
+
+        Dim categoryCaption As String = NormalizeDisplayText(GetDisplayCategoryCaption(row))
+        Dim brand As String = NormalizeDisplayText(If(row.Table.Columns.Contains("MarcheDescrizione"), row("MarcheDescrizione"), Nothing))
+        Dim stem As String = BuildDisplayStem(row, brand, categoryCaption)
+
+        If String.IsNullOrWhiteSpace(stem) Then
+            stem = NormalizeDisplayText(If(row.Table.Columns.Contains("Descrizione1"), row("Descrizione1"), Nothing))
+        End If
+        If String.IsNullOrWhiteSpace(stem) Then
+            stem = GetBusinessKey(row)
+        End If
+
+        Return ("DSP:" & categoryCaption & "|" & brand & "|" & stem).Trim("|"c)
+    End Function
+
+    Private Function GetDisplayCategoryCaption(ByVal row As DataRow) As String
+        If row Is Nothing Then
+            Return String.Empty
+        End If
+
+        Dim candidates As String() = {
+            Convert.ToString(If(row.Table.Columns.Contains("CategorieDescrizione"), row("CategorieDescrizione"), String.Empty)),
+            Convert.ToString(If(row.Table.Columns.Contains("TipologieDescrizione"), row("TipologieDescrizione"), String.Empty)),
+            Convert.ToString(If(row.Table.Columns.Contains("SettoriDescrizione"), row("SettoriDescrizione"), String.Empty)),
+            Convert.ToString(If(row.Table.Columns.Contains("GruppiDescrizione"), row("GruppiDescrizione"), String.Empty))
+        }
+
+        For Each candidate As String In candidates
+            If Not String.IsNullOrWhiteSpace(candidate) Then
+                Return candidate
+            End If
+        Next
+
+        Return String.Empty
+    End Function
+
+    Private Function BuildDisplayStem(ByVal row As DataRow, ByVal normalizedBrand As String, ByVal normalizedCategory As String) As String
+        Dim description As String = NormalizeDisplayText(If(row.Table.Columns.Contains("Descrizione1"), row("Descrizione1"), Nothing))
+        If String.IsNullOrWhiteSpace(description) Then
+            Return String.Empty
+        End If
+
+        Dim brandTokens As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        For Each token As String In normalizedBrand.Split(New Char() {" "c}, StringSplitOptions.RemoveEmptyEntries)
+            brandTokens.Add(token)
+        Next
+
+        Dim categoryTokens As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        For Each token As String In normalizedCategory.Split(New Char() {" "c}, StringSplitOptions.RemoveEmptyEntries)
+            categoryTokens.Add(token)
+        Next
+
+        Dim significant As New List(Of String)()
+        For Each token As String In description.Split(New Char() {" "c}, StringSplitOptions.RemoveEmptyEntries)
+            If token.Length <= 1 Then
+                Continue For
+            End If
+            If brandTokens.Contains(token) OrElse categoryTokens.Contains(token) Then
+                Continue For
+            End If
+            If IsDisplayVariantToken(token) Then
+                Continue For
+            End If
+            significant.Add(token)
+            If significant.Count >= 3 Then
+                Exit For
+            End If
+        Next
+
+        If significant.Count = 0 Then
+            For Each token As String In description.Split(New Char() {" "c}, StringSplitOptions.RemoveEmptyEntries)
+                If token.Length <= 1 Then
+                    Continue For
+                End If
+                significant.Add(token)
+                If significant.Count >= 3 Then
+                    Exit For
+                End If
+            Next
+        End If
+
+        Return String.Join(" ", significant.ToArray())
+    End Function
+
+    Private Function IsDisplayVariantToken(ByVal token As String) As Boolean
+        If String.IsNullOrWhiteSpace(token) Then
+            Return True
+        End If
+
+        Dim normalized As String = token.Trim().ToUpperInvariant()
+        Dim blocked As String() = {
+            "BLACK", "WHITE", "BLUE", "RED", "GREEN", "PINK", "ROSE", "GOLD", "SILVER", "GRAY", "GREY",
+            "CLEAR", "CASE", "COVER", "CUSTODIA", "SILICONE", "TPU", "TRASPARENTE", "SOFT", "SLIM", "ULTRA",
+            "NERO", "BIANCO", "BLU", "ROSSO", "VERDE", "ROSA", "ORO", "ARGENTO", "GRIGIO",
+            "PER", "CON", "DEL", "DELLA", "DELLO", "THE", "FOR", "WITH",
+            "2MM", "3MM", "TB31", "M11"
+        }
+
+        For Each candidate As String In blocked
+            If String.Equals(candidate, normalized, StringComparison.OrdinalIgnoreCase) Then
+                Return True
+            End If
+        Next
+
+        If System.Text.RegularExpressions.Regex.IsMatch(normalized, "^\d+(GB|TB|MM)$") Then
+            Return True
+        End If
+
+        If System.Text.RegularExpressions.Regex.IsMatch(normalized, "^(TB|M)\d+[A-Z0-9]*$") Then
+            Return True
+        End If
+
+        Return False
+    End Function
+
     Private Function NormalizeBusinessIdentifier(ByVal value As Object) As String
         Dim text As String = Convert.ToString(value).Trim()
         If String.IsNullOrWhiteSpace(text) Then
@@ -883,22 +1056,52 @@ Partial Public Class _Default
         Return text
     End Function
 
+    Private Function NormalizeDisplayText(ByVal value As Object) As String
+        Dim text As String = Convert.ToString(value).Trim()
+        If String.IsNullOrWhiteSpace(text) Then
+            Return String.Empty
+        End If
+
+        text = text.ToUpperInvariant()
+        text = System.Text.RegularExpressions.Regex.Replace(text, "[^A-Z0-9]+", " ")
+        text = System.Text.RegularExpressions.Regex.Replace(text, "\s+", " ").Trim()
+        Return text
+    End Function
+
     Private Function TakeDistinctRows(ByVal count As Integer, ByVal usedBusinessKeys As HashSet(Of String), ParamArray ByVal sources() As DataTable) As DataTable
-        Return CollectDistinctRows(count, usedBusinessKeys, True, sources)
+        Return CollectDistinctRows(count, usedBusinessKeys, Nothing, True, False, False, sources)
     End Function
 
     Private Function PreviewDistinctRows(ByVal count As Integer, ByVal usedBusinessKeys As HashSet(Of String), ParamArray ByVal sources() As DataTable) As DataTable
-        Return CollectDistinctRows(count, usedBusinessKeys, False, sources)
+        Return CollectDistinctRows(count, usedBusinessKeys, Nothing, False, False, False, sources)
+    End Function
+
+    Private Function TakeDiverseRows(ByVal count As Integer,
+                                     ByVal usedBusinessKeys As HashSet(Of String),
+                                     ByVal usedDisplayKeys As HashSet(Of String),
+                                     ParamArray ByVal sources() As DataTable) As DataTable
+        Return CollectDistinctRows(count, usedBusinessKeys, usedDisplayKeys, True, True, True, sources)
+    End Function
+
+    Private Function PreviewDiverseRows(ByVal count As Integer,
+                                        ByVal usedBusinessKeys As HashSet(Of String),
+                                        ByVal usedDisplayKeys As HashSet(Of String),
+                                        ParamArray ByVal sources() As DataTable) As DataTable
+        Return CollectDistinctRows(count, usedBusinessKeys, usedDisplayKeys, False, False, True, sources)
     End Function
 
     Private Function CollectDistinctRows(ByVal count As Integer,
                                          ByVal usedBusinessKeys As HashSet(Of String),
+                                         ByVal usedDisplayKeys As HashSet(Of String),
                                          ByVal reserveBusinessKeys As Boolean,
+                                         ByVal reserveDisplayKeys As Boolean,
+                                         ByVal enforceDisplayDiversity As Boolean,
                                          ParamArray ByVal sources() As DataTable) As DataTable
         Dim result As DataTable = CloneFirstTable(sources)
-        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim seenBusinessKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim seenDisplayKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
 
-        AddDistinctRows(result, count, usedBusinessKeys, seen, reserveBusinessKeys, sources)
+        AddDistinctRows(result, count, usedBusinessKeys, usedDisplayKeys, seenBusinessKeys, seenDisplayKeys, reserveBusinessKeys, reserveDisplayKeys, enforceDisplayDiversity, sources)
 
         Return result
     End Function
@@ -906,8 +1109,12 @@ Partial Public Class _Default
     Private Sub AddDistinctRows(ByVal target As DataTable,
                                 ByVal count As Integer,
                                 ByVal usedBusinessKeys As HashSet(Of String),
+                                ByVal usedDisplayKeys As HashSet(Of String),
                                 ByVal seenBusinessKeys As HashSet(Of String),
+                                ByVal seenDisplayKeys As HashSet(Of String),
                                 ByVal reserveBusinessKeys As Boolean,
+                                ByVal reserveDisplayKeys As Boolean,
+                                ByVal enforceDisplayDiversity As Boolean,
                                 ParamArray ByVal sources() As DataTable)
         If target Is Nothing OrElse sources Is Nothing Then
             Return
@@ -921,6 +1128,7 @@ Partial Public Class _Default
             For Each row As DataRow In source.Rows
                 Dim id As Integer = SafeInt(row("id"))
                 Dim businessKey As String = GetBusinessKey(row)
+                Dim displayKey As String = If(enforceDisplayDiversity, GetDisplayKey(row), String.Empty)
                 If id <= 0 OrElse String.IsNullOrWhiteSpace(businessKey) Then
                     Continue For
                 End If
@@ -930,11 +1138,28 @@ Partial Public Class _Default
                 If usedBusinessKeys IsNot Nothing AndAlso usedBusinessKeys.Contains(businessKey) Then
                     Continue For
                 End If
+                If enforceDisplayDiversity Then
+                    If String.IsNullOrWhiteSpace(displayKey) Then
+                        Continue For
+                    End If
+                    If seenDisplayKeys.Contains(displayKey) Then
+                        Continue For
+                    End If
+                    If usedDisplayKeys IsNot Nothing AndAlso usedDisplayKeys.Contains(displayKey) Then
+                        Continue For
+                    End If
+                End If
 
                 target.ImportRow(row)
                 seenBusinessKeys.Add(businessKey)
+                If enforceDisplayDiversity Then
+                    seenDisplayKeys.Add(displayKey)
+                End If
                 If reserveBusinessKeys AndAlso usedBusinessKeys IsNot Nothing Then
                     usedBusinessKeys.Add(businessKey)
+                End If
+                If enforceDisplayDiversity AndAlso reserveDisplayKeys AndAlso usedDisplayKeys IsNot Nothing Then
+                    usedDisplayKeys.Add(displayKey)
                 End If
 
                 If target.Rows.Count >= count Then
@@ -1043,11 +1268,27 @@ Partial Public Class _Default
         Next
     End Sub
 
+    Private Sub CommitDisplayKeys(ByVal source As DataTable, ByVal usedDisplayKeys As HashSet(Of String))
+        If source Is Nothing OrElse usedDisplayKeys Is Nothing Then
+            Return
+        End If
+
+        For Each row As DataRow In source.Rows
+            Dim displayKey As String = GetDisplayKey(row)
+            If String.IsNullOrWhiteSpace(displayKey) Then
+                Continue For
+            End If
+
+            usedDisplayKeys.Add(displayKey)
+        Next
+    End Sub
+
     Private Sub BindLowerBlock(ByVal wrapper As Control,
                                ByVal repeater As Repeater,
                                ByVal source As DataTable,
                                ByVal minItems As Integer,
-                               ByVal usedBusinessKeys As HashSet(Of String))
+                               ByVal usedBusinessKeys As HashSet(Of String),
+                               ByVal usedDisplayKeys As HashSet(Of String))
         Dim visible As Boolean = (source IsNot Nothing AndAlso source.Rows.Count >= minItems)
 
         If wrapper IsNot Nothing Then
@@ -1060,6 +1301,7 @@ Partial Public Class _Default
 
         If visible Then
             CommitBusinessKeys(source, usedBusinessKeys)
+            CommitDisplayKeys(source, usedDisplayKeys)
             repeater.DataSource = BuildSlidesTable(source, 5)
         Else
             repeater.DataSource = Nothing

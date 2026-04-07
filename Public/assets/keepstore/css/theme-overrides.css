@@ -783,6 +783,13 @@
     overflow: hidden;
     border-radius: inherit;
     background: #eff3f8;
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    transform: none !important;
 }
 
 .ks-page-home .ks-home-hero-banner--imageonly .ks-home-hero-media--only img,
@@ -800,6 +807,12 @@
 .ks-page-home .ks-side-promo-card--imageonly::before,
 .ks-page-home .ks-side-promo-card--imageonly::after {
     content: none !important;
+    display: none !important;
+}
+
+.ks-page-home .ks-home-hero-banner--imageonly .content,
+.ks-page-home .ks-side-promo-card--imageonly .content,
+.ks-page-home .ks-side-promo-card--imageonly .box-sale-wrap {
     display: none !important;
 }
 
@@ -830,6 +843,13 @@
     overflow: hidden;
     border-radius: inherit;
     background: #eff3f8;
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    transform: none !important;
 }
 
 .ks-page-home .ks-home-side-banners .ks-side-promo-card--imageonly .ks-side-promo-media img {
@@ -838,6 +858,13 @@
     height: 100%;
     object-fit: cover;
     object-position: center center;
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    transform: none !important;
 }
 
 .ks-page-home .ks-home-side-banners > :only-child {
