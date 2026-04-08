@@ -1,6 +1,10 @@
 (function () {
   'use strict';
 
+  var COOKIE_NAME = 'ks_recent';
+  var SESSION_KEY = 'ks_recent_session';
+  var MAX_RECENT = 100;
+
   function onReady(fn) {
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', fn);
@@ -59,26 +63,121 @@
       .filter(function (item) { return Number.isFinite(item) && item > 0; });
   }
 
-  function updateRecentCookie(id) {
-    var existing = parseRecentList(readCookie('ks_recent'));
-    var next = [id].concat(existing.filter(function (item) { return item !== id; })).slice(0, 100);
-    writeCookie('ks_recent', next.join(','), 365);
+  function readSessionRecent() {
+    try {
+      return parseRecentList(window.sessionStorage.getItem(SESSION_KEY) || '');
+    } catch (err) {
+      return [];
+    }
+  }
+
+  function writeSessionRecent(list) {
+    try {
+      window.sessionStorage.setItem(SESSION_KEY, list.join(','));
+    } catch (err) {
+      return;
+    }
+  }
+
+  function mergeRecentLists(primary, secondary) {
+    var seen = new Set();
+    var merged = [];
+
+    [primary || [], secondary || []].forEach(function (list) {
+      list.forEach(function (id) {
+        if (!Number.isFinite(id) || id <= 0 || seen.has(id)) return;
+        seen.add(id);
+        merged.push(id);
+      });
+    });
+
+    return merged.slice(0, MAX_RECENT);
+  }
+
+  function readMergedRecent() {
+    return mergeRecentLists(readSessionRecent(), parseRecentList(readCookie(COOKIE_NAME)));
+  }
+
+  function persistRecentList(list) {
+    var next = (list || []).filter(function (id) {
+      return Number.isFinite(id) && id > 0;
+    }).slice(0, MAX_RECENT);
+
+    writeCookie(COOKIE_NAME, next.join(','), 365);
+    writeSessionRecent(next);
+  }
+
+  function updateRecentList(id) {
+    var merged = readMergedRecent();
+    var next = [id].concat(merged.filter(function (item) { return item !== id; })).slice(0, MAX_RECENT);
+    persistRecentList(next);
+    try {
+      document.dispatchEvent(new CustomEvent('ks:recent-updated', { detail: { ids: next.slice() } }));
+    } catch (err) {
+      // ignore
+    }
+    return next;
+  }
+
+  function parseArticleIdFromHref(href) {
+    if (!href) return 0;
+    var match = String(href).match(/[?&]id=(\d+)/i);
+    return match ? parseInt(match[1], 10) : 0;
+  }
+
+  function detectArticleId() {
+    var direct = parseInt(getQueryParam('id'), 10);
+    if (Number.isFinite(direct) && direct > 0) return direct;
+
+    var canonical = document.querySelector('link[rel="canonical"]');
+    var fromCanonical = canonical ? parseArticleIdFromHref(canonical.getAttribute('href') || '') : 0;
+    if (fromCanonical > 0) return fromCanonical;
+
+    var ogUrl = document.querySelector('meta[property="og:url"]');
+    var fromOg = ogUrl ? parseArticleIdFromHref(ogUrl.getAttribute('content') || '') : 0;
+    if (fromOg > 0) return fromOg;
+
+    var anchors = Array.prototype.slice.call(document.querySelectorAll('a[href*="articolo.aspx?id="]'));
+    for (var i = 0; i < anchors.length; i += 1) {
+      var found = parseArticleIdFromHref(anchors[i].getAttribute('href') || '');
+      if (found > 0) return found;
+    }
+
+    var body = document.body;
+    if (body) {
+      var dataId = parseInt(body.getAttribute('data-article-id') || body.getAttribute('data-id') || '', 10);
+      if (Number.isFinite(dataId) && dataId > 0) return dataId;
+    }
+
+    return 0;
   }
 
   function trackArticleRecent() {
     if (!isArticlePage()) return;
-    var id = parseInt(getQueryParam('id'), 10);
+    var id = detectArticleId();
     if (!Number.isFinite(id) || id <= 0) return;
-    updateRecentCookie(id);
+    updateRecentList(id);
   }
 
-  onReady(function () {
-    if (isHomePage()) {
-      addBodyClass('ks-page-home');
+  function applyHomeFlags() {
+    if (!isHomePage()) return;
+    addBodyClass('ks-page-home');
+    var recent = readMergedRecent();
+    if (recent.length >= 2) {
+      addBodyClass('ks-has-recent-history');
     }
+  }
+
+  window.KSRecent = {
+    read: readMergedRecent,
+    add: updateRecentList
+  };
+
+  onReady(function () {
     if (isArticlePage()) {
       addBodyClass('ks-page-article');
       trackArticleRecent();
     }
+    applyHomeFlags();
   });
 })();
