@@ -1,4 +1,4 @@
-﻿Imports System
+Imports System
 Imports System.Collections.Generic
 Imports System.Text
 Imports System.Text.RegularExpressions
@@ -194,10 +194,11 @@ Partial Public Class UI_HomeDepartmentsMenu
         End If
 
         text = text.Replace(ChrW(160), " "c)
-        text = Regex.Replace(text, "\s+", " ").Trim()
         text = text.Replace(ChrW(&H2013), "-"c)
         text = text.Replace(ChrW(&H2014), "-"c)
-        text = Regex.Replace(text, "^[|,:;\s-]+|[|,:;\s-]+$", "").Trim()
+        text = text.Replace("|", " ")
+        text = Regex.Replace(text, "\s+", " ").Trim()
+        text = Regex.Replace(text, "^[\-,:;\s]+|[\-,:;\s]+$", "").Trim()
         Return text
     End Function
 

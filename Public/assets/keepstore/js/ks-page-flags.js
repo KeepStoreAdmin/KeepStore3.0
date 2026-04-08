@@ -30,6 +30,26 @@
     return /\/articolo\.aspx$/i.test(window.location.pathname || '');
   }
 
+  function disableTemplatePopupStorage() {
+    try {
+      if (!isHomePage()) return;
+      window.sessionStorage.setItem('showPopup', 'true');
+      window.localStorage.setItem('showPopup', 'true');
+    } catch (err) {
+      return;
+    }
+  }
+
+  function clearStaleUiLock() {
+    if (!isHomePage()) return;
+    if (document.querySelector('.modal.show, .offcanvas.show')) return;
+    if (document.body) {
+      document.body.classList.remove('modal-open');
+      document.body.style.removeProperty('overflow');
+      document.body.style.removeProperty('padding-right');
+    }
+  }
+
   function addBodyClass(name) {
     if (!name || !document.body) return;
     document.body.classList.add(name);
@@ -173,11 +193,14 @@
     add: updateRecentList
   };
 
+  disableTemplatePopupStorage();
+
   onReady(function () {
     if (isArticlePage()) {
       addBodyClass('ks-page-article');
       trackArticleRecent();
     }
     applyHomeFlags();
+    clearStaleUiLock();
   });
 })();

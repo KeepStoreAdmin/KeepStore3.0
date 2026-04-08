@@ -267,6 +267,55 @@ body.ks-page-home .ks-home-hero-section {
     pointer-events: auto;
 }
 
+.ks-page-home [data-ks-invalid="1"],
+.ks-page-home [data-ks-blocked-creative="1"],
+.ks-page-home .ks-orphan-overlay {
+    display: none !important;
+}
+
+.ks-page-home.ks-home-popup-disabled .auto-popup,
+.ks-page-home.ks-home-popup-disabled .modal-newleter,
+.ks-page-home.ks-home-popup-disabled .sib-form,
+.ks-page-home.ks-home-popup-disabled .sib-form-container,
+.ks-page-home.ks-home-popup-disabled #sib-form-container {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.ks-page-home .modal-backdrop.ks-orphan-overlay,
+.ks-page-home .offcanvas-backdrop.ks-orphan-overlay {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.ks-page-home .cls-category.style-abs,
+.ks-page-home .banner-image-product,
+.ks-page-home .banner-image-product-2,
+.ks-page-home .banner-image-product-4 {
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.ks-page-home .img-style.overflow-visible,
+.ks-page-home .product-thumb-image,
+.ks-page-home .card-product-wrapper,
+.ks-page-home .banner-image-product-4 .img-style {
+    overflow: hidden !important;
+}
+
+.ks-page-home .header-bottom .nav-item > .sub-menu-container[aria-hidden="true"],
+.ks-page-home .ks-home-departments .menu-item > .sub-menu-container[aria-hidden="true"] {
+    display: none !important;
+}
+
+.ks-page-home .header-bottom .nav-item > .sub-menu-container[aria-hidden="false"],
+.ks-page-home .ks-home-departments .menu-item.is-open > .sub-menu-container[aria-hidden="false"] {
+    display: flex;
+}
+
 .ks-page-home [data-ks-invalid="1"] {
     display: none !important;
 }

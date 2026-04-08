@@ -8,8 +8,8 @@
         <ul class="menu-category-list" role="menu">
             <asp:Repeater ID="rptSettoriHome" runat="server" OnItemDataBound="rptSettoriHome_ItemDataBound">
                 <ItemTemplate>
-                    <li id="liMenuItem" runat="server" class="menu-item" role="none">
-                        <div class="ks-home-menu-row">
+                    <li id="liMenuItem" runat="server" class="menu-item" role="none" data-ks-menu-item="1">
+                        <div class="ks-home-menu-row" data-ks-menu-row="1">
                             <a href='<%# Eval("DefaultUrl") %>' class="item-link body-text-3" role="menuitem">
                                 <span class="ks-home-menu-link">
                                     <span class='<%# MenuSectorMediaClass(Eval("ImgUrl")) %>'>
@@ -23,11 +23,11 @@
                                 <i class="icon-arrow-right-lg"></i>
                             </button>
                         </div>
-                        <div id="subMenuContainer" runat="server" class="sub-menu-container d-flex text-nowrap" aria-hidden="true">
+                        <div id="subMenuContainer" runat="server" class="sub-menu-container d-flex text-nowrap" aria-hidden="true" data-ks-submenu="1">
                             <ul class="sub-menu-list ks-home-submenu-list">
                                 <asp:Literal ID="litDesktopSubmenu" runat="server" />
                             </ul>
-                            <div id="promoCard" runat="server" class="cls-category style-abs abs-2 hover-img d-none d-xl-block ks-home-sector-promo">
+                            <div id="promoCard" runat="server" class="cls-category style-abs abs-2 hover-img d-none d-xl-block ks-home-sector-promo" data-ks-sector-promo="1">
                                 <a href='<%# Eval("DefaultUrl") %>' class="img-box img-style d-block">
                                     <img src='<%# ResolveSectorPromoImage(Eval("ImgUrl")) %>'
                                          data-src='<%# ResolveSectorPromoImage(Eval("ImgUrl")) %>'
