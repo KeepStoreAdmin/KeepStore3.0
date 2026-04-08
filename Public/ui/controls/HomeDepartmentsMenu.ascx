@@ -23,7 +23,7 @@
                                 <i class="icon-arrow-right-lg"></i>
                             </button>
                         </div>
-                        <div id="subMenuContainer" runat="server" class="sub-menu-container d-flex text-nowrap" aria-hidden="true" data-ks-submenu="1">
+                        <div id="subMenuContainer" runat="server" class="sub-menu-container text-nowrap ks-home-submenu-container" aria-hidden="true" data-ks-submenu="1">
                             <ul class="sub-menu-list ks-home-submenu-list">
                                 <asp:Literal ID="litDesktopSubmenu" runat="server" />
                             </ul>

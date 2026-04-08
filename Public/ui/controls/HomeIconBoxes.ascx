@@ -6,6 +6,16 @@ body.ks-page-home .ks-home-hero-section {
     padding-bottom: 0 !important;
 }
 
+.ks-page-home,
+body.ks-page-home {
+    overflow-x: hidden !important;
+}
+
+.ks-page-home #wrapper,
+body.ks-page-home #wrapper {
+    overflow-x: clip;
+}
+
 .ks-home-hero-shell {
     display: flex;
     align-items: stretch;
@@ -173,7 +183,7 @@ body.ks-page-home .ks-home-hero-section {
     background: #fafafa;
 }
 
-.ks-page-home .ks-home-departments .menu-item > .sub-menu-container {
+.ks-page-home .ks-home-departments .menu-item > .ks-home-submenu-container {
     display: none;
     position: absolute;
     top: 0;
@@ -189,13 +199,13 @@ body.ks-page-home .ks-home-hero-section {
     z-index: 80;
 }
 
-.ks-page-home .ks-home-departments .menu-item:hover > .sub-menu-container,
-.ks-page-home .ks-home-departments .menu-item:focus-within > .sub-menu-container {
+.ks-page-home .ks-home-departments .menu-item:hover > .ks-home-submenu-container,
+.ks-page-home .ks-home-departments .menu-item:focus-within > .ks-home-submenu-container {
     display: flex;
 }
 
-.ks-page-home .ks-home-departments .ks-home-menu-item--leaf > .sub-menu-container,
-.ks-page-home .ks-home-departments .menu-item[data-ks-has-children="0"] > .sub-menu-container {
+.ks-page-home .ks-home-departments .ks-home-menu-item--leaf > .ks-home-submenu-container,
+.ks-page-home .ks-home-departments .menu-item[data-ks-has-children="0"] > .ks-home-submenu-container {
     display: none !important;
 }
 
@@ -307,17 +317,50 @@ body.ks-page-home .ks-home-hero-section {
 }
 
 .ks-page-home .header-bottom .nav-item > .sub-menu-container[aria-hidden="true"],
-.ks-page-home .ks-home-departments .menu-item > .sub-menu-container[aria-hidden="true"] {
+.ks-page-home .ks-home-departments .menu-item > .ks-home-submenu-container[aria-hidden="true"] {
     display: none !important;
 }
 
 .ks-page-home .header-bottom .nav-item > .sub-menu-container[aria-hidden="false"],
-.ks-page-home .ks-home-departments .menu-item.is-open > .sub-menu-container[aria-hidden="false"] {
+.ks-page-home .ks-home-departments .menu-item.is-open > .ks-home-submenu-container[aria-hidden="false"] {
     display: flex;
 }
 
 .ks-page-home [data-ks-invalid="1"] {
     display: none !important;
+}
+
+
+.ks-page-home [data-ks-floating-creative="1"] {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+.ks-page-home .card-product,
+.ks-page-home .ks-grid-card,
+.ks-page-home .ks-row-card,
+.ks-page-home .ks-big-card,
+.ks-page-home .ks-deal-card {
+    height: auto;
+    min-height: 0;
+}
+
+.ks-page-home .card-product .card-product-info,
+.ks-page-home .ks-grid-card .card-product-info,
+.ks-page-home .ks-row-card .card-product-info,
+.ks-page-home .ks-big-card .card-product-info,
+.ks-page-home .ks-deal-card .card-product-info {
+    min-height: 0;
+}
+
+.ks-page-home .product-list-wrap > li,
+.ks-page-home .swiper-slide > .card-product,
+.ks-page-home .swiper-slide > .ks-grid-card,
+.ks-page-home .swiper-slide > .ks-row-card,
+.ks-page-home .swiper-slide > .ks-big-card,
+.ks-page-home .swiper-slide > .ks-deal-card {
+    height: 100%;
 }
 
 .ks-home-iconboxes {
@@ -384,7 +427,7 @@ body.ks-page-home .ks-home-hero-section {
         display: inline-flex;
     }
 
-    .ks-page-home .ks-home-departments .menu-item > .sub-menu-container {
+    .ks-page-home .ks-home-departments .menu-item > .ks-home-submenu-container {
         position: static;
         min-width: 0;
         max-width: none;
@@ -396,12 +439,12 @@ body.ks-page-home .ks-home-hero-section {
         border-radius: 0;
     }
 
-    .ks-page-home .ks-home-departments .menu-item:hover > .sub-menu-container,
-    .ks-page-home .ks-home-departments .menu-item:focus-within > .sub-menu-container {
+    .ks-page-home .ks-home-departments .menu-item:hover > .ks-home-submenu-container,
+    .ks-page-home .ks-home-departments .menu-item:focus-within > .ks-home-submenu-container {
         display: none;
     }
 
-    .ks-page-home .ks-home-departments .menu-item.is-open > .sub-menu-container {
+    .ks-page-home .ks-home-departments .menu-item.is-open > .ks-home-submenu-container {
         display: block;
     }
 
