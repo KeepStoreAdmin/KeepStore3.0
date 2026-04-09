@@ -57,7 +57,7 @@ Partial Public Class UI_HomeDepartmentsMenu
             menuItem.Attributes("class") = "menu-item " & If(hasChildren, "ks-home-menu-item--branch", "ks-home-menu-item--leaf")
             menuItem.Attributes("data-ks-has-children") = If(hasChildren, "1", "0")
             menuItem.Attributes("data-ks-has-promo") = If(hasPromoImage, "1", "0")
-            menuItem.Attributes("data-ks-submenu-mode") = If(hasPromoImage, "promo", "list")
+            menuItem.Attributes("data-ks-submenu-mode") = If(hasChildren AndAlso hasPromoImage, "promo", "list")
             menuItem.Attributes("data-ks-open") = "0"
         End If
 
@@ -83,7 +83,8 @@ Partial Public Class UI_HomeDepartmentsMenu
             subMenuContainer.Visible = hasChildren
             subMenuContainer.Attributes("aria-hidden") = If(hasChildren, "true", "false")
             subMenuContainer.Attributes("data-ks-inline-state") = "closed"
-            subMenuContainer.Attributes("style") = If(hasChildren, "display:none;", "display:none;")
+            subMenuContainer.Attributes("data-ks-hidden") = If(hasChildren, "0", "1")
+            subMenuContainer.Attributes("style") = If(hasChildren, "display:none!important;", "display:none!important;")
         End If
     End Sub
 

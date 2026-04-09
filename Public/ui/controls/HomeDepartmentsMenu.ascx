@@ -1,4 +1,24 @@
 <%@ Control Language="VB" AutoEventWireup="false" CodeFile="HomeDepartmentsMenu.ascx.vb" Inherits="UI_HomeDepartmentsMenu" %>
+<style id="ks-home-menu-runtime-style">
+.ks-home-departments{position:relative;z-index:5;}
+.ks-home-departments .menu-item{position:relative;}
+.ks-home-departments [data-ks-submenu="1"]{display:none!important;}
+.ks-home-departments .ks-home-sector-promo[data-ks-hidden="1"]{display:none!important;}
+@media (min-width:1200px){
+  .ks-home-departments .menu-item:hover > [data-ks-submenu="1"],
+  .ks-home-departments .menu-item:focus-within > [data-ks-submenu="1"],
+  .ks-home-departments .menu-item.is-hover > [data-ks-submenu="1"],
+  .ks-home-departments .menu-item.is-open > [data-ks-submenu="1"]{display:flex!important;}
+  .ks-home-departments .menu-item[data-ks-submenu-mode="list"]:hover > [data-ks-submenu="1"],
+  .ks-home-departments .menu-item[data-ks-submenu-mode="list"]:focus-within > [data-ks-submenu="1"],
+  .ks-home-departments .menu-item[data-ks-submenu-mode="list"].is-hover > [data-ks-submenu="1"],
+  .ks-home-departments .menu-item[data-ks-submenu-mode="list"].is-open > [data-ks-submenu="1"]{display:block!important;}
+}
+@media (max-width:1199.98px){
+  .ks-home-departments .menu-item[data-ks-open="1"] > [data-ks-submenu="1"]{display:flex!important;}
+  .ks-home-departments .menu-item[data-ks-submenu-mode="list"][data-ks-open="1"] > [data-ks-submenu="1"]{display:block!important;}
+}
+</style>
 <div class="tf-nav-menu ks-home-departments" data-ks-home-menu="1">
     <div class="main-nav">
         <div class="title">
@@ -23,7 +43,7 @@
                                 <i class="icon-arrow-right-lg"></i>
                             </button>
                         </div>
-                        <div id="subMenuContainer" runat="server" class="sub-menu-container text-nowrap ks-home-submenu-container" aria-hidden="true" data-ks-submenu="1" data-ks-inline-state="closed" style="display:none;">
+                        <div id="subMenuContainer" runat="server" class="sub-menu-container text-nowrap ks-home-submenu-container" aria-hidden="true" data-ks-submenu="1" data-ks-inline-state="closed" style="display:none!important;">
                             <ul class="sub-menu-list ks-home-submenu-list">
                                 <asp:Literal ID="litDesktopSubmenu" runat="server" />
                             </ul>
