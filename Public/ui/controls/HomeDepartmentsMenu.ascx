@@ -48,7 +48,7 @@
                                 <i class="icon-arrow-right-lg"></i>
                             </button>
                         </div>
-                        <div id="subMenuContainer" runat="server" class="sub-menu-container text-nowrap ks-home-submenu-container" aria-hidden="true" data-ks-submenu="1" data-ks-inline-state="closed" style="display:none!important;">
+                        <div id="subMenuContainer" runat="server" class="sub-menu-container text-nowrap ks-home-submenu-container" aria-hidden="true" data-ks-submenu="1" data-ks-inline-state="closed" style="display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;">
                             <ul class="sub-menu-list ks-home-submenu-list">
                                 <asp:Literal ID="litDesktopSubmenu" runat="server" />
                             </ul>

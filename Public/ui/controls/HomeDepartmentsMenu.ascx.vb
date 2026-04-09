@@ -10,7 +10,7 @@ Imports System.Web.UI.WebControls
 Partial Public Class UI_HomeDepartmentsMenu
     Inherits UserControl
 
-    Private Shared ReadOnly BlockedCreativeTokens As String() = {"welcome", "franchis", "onsus", "themesflat", "themeforest", "demo", "placeholder", "sample", "template", "default-banner"}
+    Private Shared ReadOnly BlockedCreativeTokens As String() = {"welcome", "franchis", "onsus", "themesflat", "themeforest", "demo", "placeholder", "sample", "template", "default-banner", "spacer", "blank", "noimage", "no-image", "pixel", "tracking", "sprite"}
     Private Const MaxVisibleCategories As Integer = 8
     Private Const MaxVisibleTipologies As Integer = 10
 
@@ -84,7 +84,7 @@ Partial Public Class UI_HomeDepartmentsMenu
             subMenuContainer.Attributes("aria-hidden") = If(hasChildren, "true", "false")
             subMenuContainer.Attributes("data-ks-inline-state") = "closed"
             subMenuContainer.Attributes("data-ks-hidden") = If(hasChildren, "0", "1")
-            subMenuContainer.Attributes("style") = If(hasChildren, "display:none!important;", "display:none!important;")
+            subMenuContainer.Attributes("style") = If(hasChildren, "display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;", "display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;")
         End If
     End Sub
 
@@ -226,7 +226,7 @@ Partial Public Class UI_HomeDepartmentsMenu
 
         Return "<img src='" & HttpUtility.HtmlAttributeEncode(resolved) &
                "' alt='" & HttpUtility.HtmlAttributeEncode(CleanMenuText(descrizione)) &
-               "' onerror=""this.style.display='none';this.parentNode.classList.add('is-empty');var fb=this.parentNode.querySelector('.ks-menu-media-fallback');if(fb){fb.style.display='inline-flex';}"" />" &
+               "' loading='lazy' decoding='async' onload=""if((this.naturalWidth||0)<12||(this.naturalHeight||0)<12){this.style.display='none';this.parentNode.classList.add('is-empty');var fb=this.parentNode.querySelector('.ks-menu-media-fallback');if(fb){fb.style.display='inline-flex';}}else{this.parentNode.classList.remove('is-empty');}"" onerror=""this.style.display='none';this.parentNode.classList.add('is-empty');var fb=this.parentNode.querySelector('.ks-menu-media-fallback');if(fb){fb.style.display='inline-flex';}"" />" &
                "<span class='ks-menu-media-fallback' aria-hidden='true' style='display:none;'>" & HttpUtility.HtmlEncode(fallbackText) & "</span>"
     End Function
 
