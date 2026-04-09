@@ -213,18 +213,37 @@ Partial Public Class UI_HomeDepartmentsMenu
         If String.IsNullOrWhiteSpace(resolved) Then
             Return "ks-menu-media is-empty"
         End If
-        Return "ks-menu-media"
+        Return "ks-menu-media has-image"
     End Function
 
     Protected Function RenderSectorMenuImage(ByVal imgUrl As Object, ByVal descrizione As Object) As String
         Dim resolved As String = ResolveSectorImageUrl(imgUrl)
+        Dim fallbackText As String = MenuSectorFallbackText(descrizione)
+
         If String.IsNullOrWhiteSpace(resolved) Then
-            Return "<span class='ks-menu-media-placeholder' aria-hidden='true'></span>"
+            Return "<span class='ks-menu-media-fallback' aria-hidden='true'>" & HttpUtility.HtmlEncode(fallbackText) & "</span>"
         End If
 
         Return "<img src='" & HttpUtility.HtmlAttributeEncode(resolved) &
                "' alt='" & HttpUtility.HtmlAttributeEncode(CleanMenuText(descrizione)) &
-               "' onerror=""this.style.display='none';this.parentNode.classList.add('is-empty');"" />"
+               "' onerror=""this.style.display='none';this.parentNode.classList.add('is-empty');var fb=this.parentNode.querySelector('.ks-menu-media-fallback');if(fb){fb.style.display='inline-flex';}"" />" &
+               "<span class='ks-menu-media-fallback' aria-hidden='true' style='display:none;'>" & HttpUtility.HtmlEncode(fallbackText) & "</span>"
+    End Function
+
+
+    Protected Function MenuSectorFallbackText(ByVal descrizione As Object) As String
+        Dim clean As String = CleanMenuText(descrizione)
+        If String.IsNullOrWhiteSpace(clean) Then
+            Return "•"
+        End If
+
+        For Each ch As Char In clean
+            If Char.IsLetterOrDigit(ch) Then
+                Return Char.ToUpperInvariant(ch)
+            End If
+        Next
+
+        Return "•"
     End Function
 
     Protected Function ResolveSectorPromoImage(ByVal imgUrl As Object) As String
