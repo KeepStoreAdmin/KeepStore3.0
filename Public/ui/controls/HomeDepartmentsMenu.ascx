@@ -2,7 +2,7 @@
 <style id="ks-home-menu-runtime-style">
 .ks-home-departments{position:relative;z-index:5;}
 .ks-home-departments .menu-item{position:relative;}
-.ks-home-departments [data-ks-submenu="1"],.ks-home-departments [data-ks-submenu="1"][hidden]{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}
+.ks-home-departments [data-ks-submenu="1"],.ks-home-departments [data-ks-submenu="1"][hidden]{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;max-height:0!important;overflow:hidden!important;}
 .ks-home-departments .ks-home-submenu-container{z-index:40;}
 .ks-home-departments .ks-menu-media{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;min-width:28px;overflow:hidden;border-radius:8px;background:#fff;}
 .ks-home-departments .ks-menu-media img{display:block;max-width:100%;max-height:100%;object-fit:contain;}
@@ -16,15 +16,15 @@
   .ks-home-departments .menu-item:hover > [data-ks-submenu="1"],
   .ks-home-departments .menu-item:focus-within > [data-ks-submenu="1"],
   .ks-home-departments .menu-item.is-hover > [data-ks-submenu="1"],
-  .ks-home-departments .menu-item.is-open > [data-ks-submenu="1"]{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;}
+  .ks-home-departments .menu-item.is-open > [data-ks-submenu="1"]{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;max-height:none!important;overflow:visible!important;}
   .ks-home-departments .menu-item[data-ks-submenu-mode="list"]:hover > [data-ks-submenu="1"],
   .ks-home-departments .menu-item[data-ks-submenu-mode="list"]:focus-within > [data-ks-submenu="1"],
   .ks-home-departments .menu-item[data-ks-submenu-mode="list"].is-hover > [data-ks-submenu="1"],
-  .ks-home-departments .menu-item[data-ks-submenu-mode="list"].is-open > [data-ks-submenu="1"]{display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;}
+  .ks-home-departments .menu-item[data-ks-submenu-mode="list"].is-open > [data-ks-submenu="1"]{display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;max-height:none!important;overflow:visible!important;}
 }
 @media (max-width:1199.98px){
-  .ks-home-departments .menu-item[data-ks-open="1"] > [data-ks-submenu="1"]{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;}
-  .ks-home-departments .menu-item[data-ks-submenu-mode="list"][data-ks-open="1"] > [data-ks-submenu="1"]{display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;}
+  .ks-home-departments .menu-item[data-ks-open="1"] > [data-ks-submenu="1"]{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;max-height:none!important;overflow:visible!important;}
+  .ks-home-departments .menu-item[data-ks-submenu-mode="list"][data-ks-open="1"] > [data-ks-submenu="1"]{display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;max-height:none!important;overflow:visible!important;}
 }
 </style>
 <div class="tf-nav-menu ks-home-departments" data-ks-home-menu="1">
@@ -51,7 +51,7 @@
                                 <i class="icon-arrow-right-lg"></i>
                             </button>
                         </div>
-                        <div id="subMenuContainer" runat="server" class="sub-menu-container text-nowrap ks-home-submenu-container" aria-hidden="true" data-ks-submenu="1" data-ks-inline-state="closed" hidden="hidden" inert="inert" style="display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;">
+                        <div id="subMenuContainer" runat="server" class="sub-menu-container text-nowrap ks-home-submenu-container" aria-hidden="true" data-ks-submenu="1" data-ks-inline-state="closed" hidden="hidden" inert="inert" style="display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;max-height:0!important;overflow:hidden!important;">
                             <ul class="sub-menu-list ks-home-submenu-list">
                                 <asp:Literal ID="litDesktopSubmenu" runat="server" />
                             </ul>
