@@ -57,6 +57,8 @@ Partial Public Class UI_HomeDepartmentsMenu
             menuItem.Attributes("class") = "menu-item " & If(hasChildren, "ks-home-menu-item--branch", "ks-home-menu-item--leaf")
             menuItem.Attributes("data-ks-has-children") = If(hasChildren, "1", "0")
             menuItem.Attributes("data-ks-has-promo") = If(hasPromoImage, "1", "0")
+            menuItem.Attributes("data-ks-submenu-mode") = If(hasPromoImage, "promo", "list")
+            menuItem.Attributes("data-ks-open") = "0"
         End If
 
         If arrowIcon IsNot Nothing Then
@@ -71,6 +73,7 @@ Partial Public Class UI_HomeDepartmentsMenu
 
         If promoCard IsNot Nothing Then
             promoCard.Visible = hasChildren AndAlso hasPromoImage
+            promoCard.Attributes("data-ks-hidden") = If(promoCard.Visible, "0", "1")
             If promoCard.Visible Then
                 promoCard.Attributes("data-ks-promo-image") = promoImageUrl
             End If
@@ -79,6 +82,8 @@ Partial Public Class UI_HomeDepartmentsMenu
         If subMenuContainer IsNot Nothing Then
             subMenuContainer.Visible = hasChildren
             subMenuContainer.Attributes("aria-hidden") = If(hasChildren, "true", "false")
+            subMenuContainer.Attributes("data-ks-inline-state") = "closed"
+            subMenuContainer.Attributes("style") = If(hasChildren, "display:none;", "display:none;")
         End If
     End Sub
 

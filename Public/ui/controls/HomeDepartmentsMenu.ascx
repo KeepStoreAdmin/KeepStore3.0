@@ -19,11 +19,11 @@
                                     <span id="arrowIcon" runat="server" class="ks-menu-arrow" aria-hidden="true"><i class="icon-arrow-right-lg"></i></span>
                                 </span>
                             </a>
-                            <button id="toggleButton" runat="server" type="button" class="ks-menu-toggle" aria-expanded="false" aria-label="Apri sottomenu">
+                            <button id="toggleButton" runat="server" type="button" class="ks-menu-toggle" aria-expanded="false" aria-label="Apri sottomenu" data-ks-toggle="1">
                                 <i class="icon-arrow-right-lg"></i>
                             </button>
                         </div>
-                        <div id="subMenuContainer" runat="server" class="sub-menu-container text-nowrap ks-home-submenu-container" aria-hidden="true" data-ks-submenu="1">
+                        <div id="subMenuContainer" runat="server" class="sub-menu-container text-nowrap ks-home-submenu-container" aria-hidden="true" data-ks-submenu="1" data-ks-inline-state="closed" style="display:none;">
                             <ul class="sub-menu-list ks-home-submenu-list">
                                 <asp:Literal ID="litDesktopSubmenu" runat="server" />
                             </ul>
