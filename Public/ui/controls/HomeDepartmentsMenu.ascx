@@ -2,12 +2,15 @@
 <style id="ks-home-menu-runtime-style">
 .ks-home-departments{position:relative;z-index:5;}
 .ks-home-departments .menu-item{position:relative;}
-.ks-home-departments [data-ks-submenu="1"]{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}
+.ks-home-departments [data-ks-submenu="1"],.ks-home-departments [data-ks-submenu="1"][hidden]{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}
+.ks-home-departments .ks-home-submenu-container{z-index:40;}
 .ks-home-departments .ks-menu-media{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;min-width:28px;overflow:hidden;border-radius:8px;background:#fff;}
 .ks-home-departments .ks-menu-media img{display:block;max-width:100%;max-height:100%;object-fit:contain;}
 .ks-home-departments .ks-menu-media.is-empty img{display:none!important;}
 .ks-home-departments .ks-menu-media-fallback,.ks-home-departments .ks-menu-media-placeholder{display:inline-flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:8px;background:#f4f6f8;color:#6b7785;font-size:11px;font-weight:700;text-transform:uppercase;}
 .ks-home-departments .ks-menu-media.has-image .ks-menu-media-fallback{display:none!important;}
+.ks-home-departments .ks-home-sector-promo{position:relative!important;inset:auto!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;transform:none!important;flex:0 0 260px;max-width:260px;overflow:hidden;margin-left:20px;}
+.ks-home-departments .ks-home-submenu-list{flex:1 1 auto;min-width:0;}
 .ks-home-departments .ks-home-sector-promo[data-ks-hidden="1"]{display:none!important;}
 @media (min-width:1200px){
   .ks-home-departments .menu-item:hover > [data-ks-submenu="1"],
@@ -48,11 +51,11 @@
                                 <i class="icon-arrow-right-lg"></i>
                             </button>
                         </div>
-                        <div id="subMenuContainer" runat="server" class="sub-menu-container text-nowrap ks-home-submenu-container" aria-hidden="true" data-ks-submenu="1" data-ks-inline-state="closed" style="display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;">
+                        <div id="subMenuContainer" runat="server" class="sub-menu-container text-nowrap ks-home-submenu-container" aria-hidden="true" data-ks-submenu="1" data-ks-inline-state="closed" hidden="hidden" inert="inert" style="display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;">
                             <ul class="sub-menu-list ks-home-submenu-list">
                                 <asp:Literal ID="litDesktopSubmenu" runat="server" />
                             </ul>
-                            <div id="promoCard" runat="server" class="cls-category style-abs abs-2 hover-img d-none d-xl-block ks-home-sector-promo" data-ks-sector-promo="1">
+                            <div id="promoCard" runat="server" class="cls-category hover-img d-none d-xl-block ks-home-sector-promo" data-ks-sector-promo="1">
                                 <a href='<%# Eval("DefaultUrl") %>' class="img-box img-style d-block">
                                     <img src='<%# ResolveSectorPromoImage(Eval("ImgUrl")) %>'
                                          data-src='<%# ResolveSectorPromoImage(Eval("ImgUrl")) %>'

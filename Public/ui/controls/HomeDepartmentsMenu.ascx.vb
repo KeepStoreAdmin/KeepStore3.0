@@ -74,6 +74,7 @@ Partial Public Class UI_HomeDepartmentsMenu
         If promoCard IsNot Nothing Then
             promoCard.Visible = hasChildren AndAlso hasPromoImage
             promoCard.Attributes("data-ks-hidden") = If(promoCard.Visible, "0", "1")
+            promoCard.Attributes("data-ks-layout") = "inline"
             If promoCard.Visible Then
                 promoCard.Attributes("data-ks-promo-image") = promoImageUrl
             End If
@@ -83,8 +84,10 @@ Partial Public Class UI_HomeDepartmentsMenu
             subMenuContainer.Visible = hasChildren
             subMenuContainer.Attributes("aria-hidden") = If(hasChildren, "true", "false")
             subMenuContainer.Attributes("data-ks-inline-state") = "closed"
-            subMenuContainer.Attributes("data-ks-hidden") = If(hasChildren, "0", "1")
-            subMenuContainer.Attributes("style") = If(hasChildren, "display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;", "display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;")
+            subMenuContainer.Attributes("data-ks-hidden") = "1"
+            subMenuContainer.Attributes("hidden") = "hidden"
+            subMenuContainer.Attributes("inert") = "inert"
+            subMenuContainer.Attributes("style") = "display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;"
         End If
     End Sub
 
@@ -273,6 +276,10 @@ Partial Public Class UI_HomeDepartmentsMenu
 
         If raw.StartsWith("/", StringComparison.OrdinalIgnoreCase) Then
             Return raw
+        End If
+
+        If Regex.IsMatch(raw, "(?i)(spacer|pixel|blank|placeholder|default|demo|sample|tracking|sprite)") Then
+            Return String.Empty
         End If
 
         If raw.IndexOf("/"c) >= 0 Then
