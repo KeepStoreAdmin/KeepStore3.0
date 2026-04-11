@@ -286,7 +286,7 @@ Partial Public Class UI_HomeDepartmentsMenu
             Return "/" & raw.TrimStart("/"c)
         End If
 
-        Return "/" & raw
+        Return "/Public/assets/images/settori/" & raw.TrimStart("/"c)
     End Function
 
     Private Function ContainsBlockedCreativeToken(ByVal raw As String) As Boolean
