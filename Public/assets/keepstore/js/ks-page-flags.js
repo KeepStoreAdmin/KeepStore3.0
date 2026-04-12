@@ -3007,6 +3007,108 @@
       railRoot(node).classList.add('ks-hidden-rail');
     });
   }
+
+  function ensureFinalHomeCss() {
+    if (!isHome()) return;
+    if (document.getElementById('ks-home-final-gutter-css')) return;
+    var style = document.createElement('style');
+    style.id = 'ks-home-final-gutter-css';
+    style.textContent = [
+      "body.ks-page-home{overflow-x:hidden!important;}",
+      "body.ks-page-home::before,body.ks-page-home::after{content:'';position:fixed;top:var(--ks-gutter-top,0px);bottom:0;width:0;background:var(--ks-gutter-bg,#f7f7f7);pointer-events:none;z-index:2147483647;display:block;}",
+      "body.ks-page-home::before{left:0;width:var(--ks-gutter-left,0px);}",
+      "body.ks-page-home::after{right:0;width:var(--ks-gutter-right,0px);}",
+      "body.ks-page-home [data-ks-orphan-fragment='1']{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}",
+      "body.ks-page-home .ks-hidden-rail{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}"
+    ].join('');
+    (document.head || document.documentElement).appendChild(style);
+  }
+  function updateFinalGutters() {
+    if (!isHome() || !document.body) return;
+    ensureFinalHomeCss();
+    if (!isDesktop()) {
+      document.body.style.setProperty('--ks-gutter-left', '0px');
+      document.body.style.setProperty('--ks-gutter-right', '0px');
+      return;
+    }
+    var laneNode = first(document, '.tf-sp-5 > .container') || first(document, '.header-bottom .container') || first(document, '.container');
+    var lane = rect(laneNode);
+    if (!lane || lane.width < 240) return;
+    var headerNode = first(document, '.header-bottom') || first(document, '.tf-header') || first(document, 'header');
+    var headerRect = rect(headerNode) || lane;
+    var bodyBg = '#f7f7f7';
+    try {
+      var b = getComputedStyle(document.body).backgroundColor || '';
+      var d = getComputedStyle(document.documentElement).backgroundColor || '';
+      bodyBg = (b && b !== 'rgba(0, 0, 0, 0)') ? b : ((d && d !== 'rgba(0, 0, 0, 0)') ? d : '#f7f7f7');
+    } catch (err) {}
+    var left = Math.max(0, Math.floor(lane.left));
+    var right = Math.max(0, Math.floor(window.innerWidth - lane.right));
+    document.body.style.setProperty('--ks-gutter-top', Math.max(0, Math.floor(headerRect.bottom) - 1) + 'px');
+    document.body.style.setProperty('--ks-gutter-left', left + 'px');
+    document.body.style.setProperty('--ks-gutter-right', right + 'px');
+    document.body.style.setProperty('--ks-gutter-bg', bodyBg);
+  }
+  function looksLikeOrphanFragment(node) {
+    if (!node || node === document.body) return false;
+    if (node.closest && node.closest('header,footer,.card-product,.ks-runtime-section,.ks-home-departments,.ks-home-hero-shell,.wrap-item-1,.wrap-item-2,.wrap-item-3,.tf-icon-box,.ks-top-catalog-mega,.ks-suggest,.modal,.offcanvas')) return false;
+    var r = rect(node); if (!r) return false;
+    if (r.width > 260 || r.height > 120) return false;
+    var t = text(node);
+    if (!t || t.length > 40) return false;
+    var n = norm(t);
+    if (!n) return false;
+    if (/^€?\s?\d+[\d\.,]*$/.test(t) || /^\d+[\d\.,]*\s?€$/.test(t) || /^\$?\s?\d+[\d\.,]*$/.test(t)) return true;
+    if (n in {'venduti':1,'disponibili':1,'giorni':1,'ore':1,'min':1,'sec':1}) return true;
+    return false;
+  }
+  function hideOrphanFragments() {
+    if (!isHome()) return;
+    all(document.body, 'div,span,p,strong,b,small').forEach(function (node) {
+      if (!looksLikeOrphanFragment(node)) return;
+      node.setAttribute('data-ks-orphan-fragment', '1');
+      node.style.setProperty('display', 'none', 'important');
+    });
+  }
+  function finalRailPrune() {
+    if (!isHome() || !document.body) return;
+    ensureFinalHomeCss();
+    updateFinalGutters();
+    var laneNode = first(document, '.tf-sp-5 > .container') || first(document, '.header-bottom .container') || first(document, '.container');
+    var lane = rect(laneNode);
+    all(document.body, 'div,section,aside,a,span,p,img,picture').forEach(function (node) {
+      if (!node || node === document.body) return;
+      if (protectedRailRoot(node) || (node.closest && node.closest('header,footer,.ks-top-catalog-mega,.ks-home-departments,.ks-home-hero-shell,.wrap-item-1,.wrap-item-2,.wrap-item-3,.tf-icon-box,.ks-runtime-section,.ks-runtime-deal-section,.ks-suggest,.modal,.offcanvas'))) return;
+      var r = rect(node); if (!r) return;
+      if (r.width < 14 || r.height < 24 || r.width > 280 || r.height > 2600) return;
+      var outside = lane ? (r.right <= lane.left || r.left >= lane.right) : (r.left <= 80 || r.right >= window.innerWidth - 80);
+      if (!outside) return;
+      var cs = window.getComputedStyle ? getComputedStyle(node) : null;
+      var media = all(node, 'img,iframe,object,embed,picture').length + ((/^(IMG|IFRAME|OBJECT|EMBED|PICTURE)$/.test(node.tagName || '')) ? 1 : 0);
+      var txt = norm(text(node));
+      var blocked = txt.indexOf('welcome') !== -1 || txt.indexOf('franchis') !== -1 || txt.indexOf('onsus') !== -1 || txt.indexOf('themesflat') !== -1;
+      var vertical = !!(cs && ((cs.writingMode && cs.writingMode !== 'horizontal-tb') || /rotate\(/i.test(cs.transform || ''))) || (r.height / Math.max(r.width,1) >= 1.8);
+      var fixedish = !!(cs && (cs.position === 'fixed' || cs.position === 'sticky' || cs.position === 'absolute'));
+      if (blocked || (vertical && (media > 0 || txt.length <= 160)) || (media >= 1 && r.width <= 220) || (fixedish && r.width <= 260)) {
+        railRoot(node).classList.add('ks-hidden-rail');
+      }
+    });
+    hideOrphanFragments();
+  }
+  function stripRogueRails() {
+    if (!isHome()) return;
+    ensureFinalHomeCss();
+    updateFinalGutters();
+    sweepBlockedTextRails();
+    sweepRepeatedPeripheralMedia();
+    sweepOutOfLaneArtifacts();
+    sweepUltraPeripheralRails();
+    finalRailPrune();
+  }
+  function sweepMarginRails() {
+    if (!isHome()) return;
+    finalRailPrune();
+  }
   function init() {
     ensureCss();
     ensureRuntimeSectionsCss();
