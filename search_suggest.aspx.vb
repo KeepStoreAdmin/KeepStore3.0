@@ -353,16 +353,7 @@ Partial Public Class search_suggest
     Private Function BuildPreviewVariant(ByVal raw As String) As String
         Dim url As String = NormalizeMediaUrl(raw)
         If String.IsNullOrWhiteSpace(url) Then Return String.Empty
-        Dim clean As String = url
-        Dim query As String = String.Empty
-        Dim qPos As Integer = clean.IndexOf("?"c)
-        If qPos >= 0 Then
-            query = clean.Substring(qPos)
-            clean = clean.Substring(0, qPos)
-        End If
-        Dim dotPos As Integer = clean.LastIndexOf("."c)
-        If dotPos <= clean.LastIndexOf("/"c) Then Return clean & query
-        Return clean.Substring(0, dotPos) & "_" & clean.Substring(dotPos) & query
+        Return url
     End Function
 
     Private Function NormalizeMediaUrl(ByVal raw As Object) As String
@@ -387,10 +378,14 @@ Partial Public Class search_suggest
     End Function
 
     Private Function ReadDec(ByVal raw As Object, ByVal fallback As Decimal) As Decimal
-        Dim text As String = Convert.ToString(raw)
+        Dim text As String = Convert.ToString(raw).Trim()
         Dim n As Decimal
-        If Decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, n) Then Return n
-        If Decimal.TryParse(text, NumberStyles.Any, ItCulture, n) Then Return n
+        If String.IsNullOrWhiteSpace(text) Then Return fallback
+        If text.Contains(",") AndAlso (Not text.Contains(".") OrElse text.LastIndexOf(","c) > text.LastIndexOf("."c)) Then
+            If Decimal.TryParse(text, NumberStyles.Any, ItCulture, n) Then Return Math.Round(n, 2, MidpointRounding.AwayFromZero)
+        End If
+        If Decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, n) Then Return Math.Round(n, 2, MidpointRounding.AwayFromZero)
+        If Decimal.TryParse(text, NumberStyles.Any, ItCulture, n) Then Return Math.Round(n, 2, MidpointRounding.AwayFromZero)
         Return fallback
     End Function
 

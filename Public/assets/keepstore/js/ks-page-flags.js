@@ -2483,10 +2483,9 @@
     tick(); if (end) setInterval(tick, 1000);
   }
   function buildDealCard(item, idx) {
-    var images = Array.isArray(item.images) ? item.images : [];
+    var images = Array.isArray(item.images) ? item.images.filter(Boolean) : [];
     var preview = item.preview || item.image || images[0] || '';
-    if (images.length && preview && images[0] !== preview) images = [preview].concat(images);
-    var thumbs = (images.length ? images : [preview]).slice(0,5);
+    var thumbs = (images.length ? images : (preview ? [preview] : [])).slice(0,5);
     var sold = parseInt(item.sold || 0, 10) || 0; var avail = parseInt(item.available || 0, 10) || 0; var pct = (sold + avail) > 0 ? Math.round((sold / (sold + avail)) * 100) : 0;
     return '<div class="ks-deal-runtime-card" data-idx="' + idx + '">' +
       '<a class="ks-deal-runtime-media" href="' + esc(item.url || '#') + '"><img src="' + esc(preview || '') + '" alt="' + esc(item.title || '') + '" data-main="1" data-fallback="' + esc(item.image || '') + '"/></a>' +
@@ -2519,6 +2518,7 @@
         else { section.appendChild(mount); }
       } else section.appendChild(mount);
       all(mount, 'img[data-fallback]').forEach(function (img) { img.addEventListener('error', function onErr() { img.removeEventListener('error', onErr); var fb = img.getAttribute('data-fallback') || ''; if (fb && img.src !== fb) img.src = fb; }); });
+      all(mount, '.ks-deal-runtime-thumb img').forEach(function (img) { img.addEventListener('error', function onThumbErr() { var btn = img.closest('.ks-deal-runtime-thumb'); if (btn) btn.style.display = 'none'; }); });
       all(mount, '.ks-deal-runtime-card').forEach(function (card) {
         var main = first(card, 'img[data-main="1"]');
         all(card, '.ks-deal-runtime-thumb').forEach(function (btn) { btn.addEventListener('click', function () { all(card, '.ks-deal-runtime-thumb').forEach(function (b) { b.classList.remove('is-active'); }); btn.classList.add('is-active'); if (main) main.src = btn.getAttribute('data-img') || main.src; }); });
@@ -2752,7 +2752,8 @@
       if ((pos === 'fixed' || pos === 'sticky') && r.width <= 260 && r.height >= 90) { node.classList.add('ks-hidden-rail'); return; }
       if (vertical && r.width <= 260) { railRoot(node).classList.add('ks-hidden-rail'); return; }
       if (media >= 1 && r.width <= 220 && r.height >= 90) { railRoot(node).classList.add('ks-hidden-rail'); return; }
-      if ((txt.indexOf('welcome') !== -1 || txt.indexOf('franchis') !== -1 || txt.indexOf('onsus') !== -1) && r.width <= 320) { railRoot(node).classList.add('ks-hidden-rail'); }
+      if ((txt.indexOf('welcome') !== -1 || txt.indexOf('franchis') !== -1 || txt.indexOf('onsus') !== -1 || txt.indexOf('themesflat') !== -1) && r.width <= 480) { railRoot(node).classList.add('ks-hidden-rail'); }
+      if ((txt.indexOf('welcome') !== -1 || txt.indexOf('franchis') !== -1) && media === 0 && r.width <= 520 && r.height >= 80) { railRoot(node).classList.add('ks-hidden-rail'); }
     });
     killBrokenSidebarWrap();
     updateViewportMasks();
@@ -2922,6 +2923,7 @@
       if (vertical && (outside || nearRightEdge) && (media > 0 || txt.length <= 180 || bg)) { railRoot(node).classList.add('ks-hidden-rail'); return; }
       if (media >= 1 && r.width <= 220 && r.height >= 70 && topArea && (outside || nearRightEdge || nearLeftEdge)) { railRoot(node).classList.add('ks-hidden-rail'); return; }
       if (bg && r.width <= 220 && r.height >= 90 && (outside || nearRightEdge || nearLeftEdge)) { railRoot(node).classList.add('ks-hidden-rail'); return; }
+      if (media >= 1 && r.width <= 190 && r.height <= 260 && (nearRightEdge || nearLeftEdge) && topArea) { railRoot(node).classList.add('ks-hidden-rail'); return; }
     });
   }
   function ensureViewportMasks() {
@@ -2936,7 +2938,7 @@
       mask.className = 'ks-home-runtime-mask ks-home-runtime-mask-' + side;
       mask.style.position = 'fixed';
       mask.style.pointerEvents = 'none';
-      mask.style.zIndex = '2147483000';
+      mask.style.zIndex = '2147483647';
       mask.style.display = 'none';
       mask.style.background = '#f7f7f7';
       mask.style.top = '0';
@@ -2967,7 +2969,7 @@
       bg = bodyBg && bodyBg !== 'rgba(0, 0, 0, 0)' ? bodyBg : (docBg && docBg !== 'rgba(0, 0, 0, 0)' ? docBg : '#f7f7f7');
     } catch (err) {}
     var leftOverhang = 8;
-    var rightOverhang = 56;
+    var rightOverhang = 180;
     var leftWidth = Math.max(0, Math.floor(lane.left + leftOverhang));
     var rightWidth = Math.max(0, Math.floor(window.innerWidth - lane.right + rightOverhang));
     var left = first(wrap, '.ks-home-runtime-mask-left');
@@ -2993,6 +2995,18 @@
     sweepUltraPeripheralRails();
     updateViewportMasks();
   }
+
+  function hideTokenTextArtifacts() {
+    if (!isHome()) return;
+    all(document.body, 'div,span,p,strong,b,i,a').forEach(function (node) {
+      if (!node || protectedRailRoot(node)) return;
+      var txt = norm(text(node));
+      if (!txt) return;
+      if (txt.indexOf('welcome') === -1 && txt.indexOf('franchis') === -1) return;
+      var r = rect(node); if (!r || r.width > 540) return;
+      railRoot(node).classList.add('ks-hidden-rail');
+    });
+  }
   function init() {
     ensureCss();
     ensureRuntimeSectionsCss();
@@ -3006,6 +3020,7 @@
     renderDeals();
     renderRuntimeCommercialSections();
     alignTabsAndFonts();
+    hideTokenTextArtifacts();
     stripRogueRails();
     sweepMarginRails();
     window.addEventListener('resize', function () { ensureCatalogMega(); ensureMobileCatalog(); stripRogueRails(); sweepMarginRails(); });
@@ -3013,7 +3028,7 @@
     window.addEventListener('scroll', function(){ stripRogueRails(); sweepMarginRails(); }, { passive:true });
     if (typeof MutationObserver !== 'undefined' && document.body) {
       var t = 0;
-      var mo = new MutationObserver(function(){ clearTimeout(t); t = setTimeout(function(){ stripRogueRails(); sweepMarginRails(); renderRuntimeCommercialSections(); }, 120); });
+      var mo = new MutationObserver(function(){ clearTimeout(t); t = setTimeout(function(){ stripRogueRails(); sweepMarginRails(); renderRuntimeCommercialSections(); hideTokenTextArtifacts(); }, 120); });
       mo.observe(document.body, { childList:true, subtree:true });
       setTimeout(function(){ try{ mo.disconnect(); }catch(err){} }, 30000);
     }

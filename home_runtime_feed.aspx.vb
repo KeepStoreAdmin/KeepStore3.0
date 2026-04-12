@@ -160,20 +160,20 @@ Partial Public Class home_runtime_feed
 
     Private Function BuildSectionsPayload() As Dictionary(Of String, Object)
         Dim payload As New Dictionary(Of String, Object)()
-        payload("offerte") = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.InOfferta,0)<>0", "ORDER BY RAND()", 12)
-        payload("evidenza") = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Vetrina,0)<>0", "ORDER BY RAND()", 12)
-        payload("nuovi") = LoadProductCards("WHERE v.NListino = 1 AND v.DataCreazione IS NOT NULL", "ORDER BY v.DataCreazione DESC, v.id DESC", 18)
-        payload("best") = LoadProductCards("WHERE v.NListino = 1", "ORDER BY COALESCE(v.visite,0) DESC, v.id DESC", 18)
+        payload("offerte") = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.InOfferta,0)<>0 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY RAND()", 12)
+        payload("evidenza") = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Vetrina,0)<>0 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY RAND()", 12)
+        payload("nuovi") = LoadProductCards("WHERE v.NListino = 1 AND v.DataCreazione IS NOT NULL AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY v.DataCreazione DESC, RAND()", 18)
+        payload("best") = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY COALESCE(v.visite,0) DESC, RAND()", 18)
         Return payload
     End Function
 
     Private Function LoadDeals(ByVal limit As Integer) As List(Of Dictionary(Of String, Object))
-        Return LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.InOfferta,0)<>0 AND COALESCE(NULLIF(v.PrezzoPromoIvato,0),0)>0", "ORDER BY RAND()", Math.Max(4, limit))
+        Return LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.InOfferta,0)<>0 AND COALESCE(NULLIF(v.PrezzoPromoIvato,0),0)>0 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY RAND()", Math.Max(4, limit))
     End Function
 
     Private Function LoadProductsByIds(ByVal ids As List(Of Integer)) As List(Of Dictionary(Of String, Object))
         If ids Is Nothing OrElse ids.Count = 0 Then Return New List(Of Dictionary(Of String, Object))()
-        Dim whereClause As String = "WHERE v.NListino = 1 AND v.id IN (" & String.Join(",", ids.Select(Function(n) n.ToString(CultureInfo.InvariantCulture))) & ")"
+        Dim whereClause As String = "WHERE v.NListino = 1 AND COALESCE(v.Disponibilita,0) > 0 AND v.id IN (" & String.Join(",", ids.Select(Function(n) n.ToString(CultureInfo.InvariantCulture))) & ")"
         Dim cards As List(Of Dictionary(Of String, Object)) = LoadProductCards(whereClause, "ORDER BY FIELD(v.id," & String.Join(",", ids.Select(Function(n) n.ToString(CultureInfo.InvariantCulture))) & ")", ids.Count)
         Return cards
     End Function
@@ -250,16 +250,7 @@ Partial Public Class home_runtime_feed
     Private Function BuildPreviewVariant(ByVal raw As String) As String
         Dim url As String = NormalizeBannerImage(raw)
         If String.IsNullOrWhiteSpace(url) Then Return String.Empty
-        Dim clean As String = url
-        Dim query As String = String.Empty
-        Dim qPos As Integer = clean.IndexOf("?"c)
-        If qPos >= 0 Then
-            query = clean.Substring(qPos)
-            clean = clean.Substring(0, qPos)
-        End If
-        Dim dotPos As Integer = clean.LastIndexOf("."c)
-        If dotPos <= clean.LastIndexOf("/"c) Then Return clean & query
-        Return clean.Substring(0, dotPos) & "_" & clean.Substring(dotPos) & query
+        Return url
     End Function
 
     Private Function ParseIds(ByVal raw As String) As List(Of Integer)
@@ -331,9 +322,13 @@ Partial Public Class home_runtime_feed
 
     Private Function ReadDec(ByVal raw As Object, ByVal fallback As Decimal) As Decimal
         Dim n As Decimal
-        Dim text As String = Convert.ToString(raw)
-        If Decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, n) Then Return n
-        If Decimal.TryParse(text, NumberStyles.Any, ItCulture, n) Then Return n
+        Dim text As String = Convert.ToString(raw).Trim()
+        If String.IsNullOrWhiteSpace(text) Then Return fallback
+        If text.Contains(",") AndAlso (Not text.Contains(".") OrElse text.LastIndexOf(","c) > text.LastIndexOf("."c)) Then
+            If Decimal.TryParse(text, NumberStyles.Any, ItCulture, n) Then Return Math.Round(n, 2, MidpointRounding.AwayFromZero)
+        End If
+        If Decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, n) Then Return Math.Round(n, 2, MidpointRounding.AwayFromZero)
+        If Decimal.TryParse(text, NumberStyles.Any, ItCulture, n) Then Return Math.Round(n, 2, MidpointRounding.AwayFromZero)
         Return fallback
     End Function
 
