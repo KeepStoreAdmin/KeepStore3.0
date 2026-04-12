@@ -253,9 +253,6 @@ Partial Public Class search_suggest
             item.ImageFallback = If(images.Count > 0, images(0), String.Empty)
             item.Image = BuildPreviewVariant(item.ImageFallback)
             If String.IsNullOrWhiteSpace(item.Image) Then item.Image = item.ImageFallback
-            If item.Id <= 0 Then Continue For
-            If String.IsNullOrWhiteSpace(item.Title) Then Continue For
-            If String.IsNullOrWhiteSpace(item.Image) Then Continue For
             results.Add(item)
         Next
 
