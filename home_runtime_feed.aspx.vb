@@ -193,8 +193,17 @@ Partial Public Class home_runtime_feed
 
         Dim table As DataTable = ExecuteQuery(sql.ToString())
         Dim output As New List(Of Dictionary(Of String, Object))()
+        Dim seen As New HashSet(Of Integer)()
         For Each row As DataRow In table.Rows
-            output.Add(MapProductRow(row))
+            Dim item As Dictionary(Of String, Object) = MapProductRow(row)
+            If item Is Nothing Then Continue For
+            Dim id As Integer = ReadInt(item("id"), 0)
+            If id <= 0 OrElse seen.Contains(id) Then Continue For
+            If String.IsNullOrWhiteSpace(Convert.ToString(item("title"))) Then Continue For
+            If String.IsNullOrWhiteSpace(Convert.ToString(item("image"))) Then Continue For
+            If String.IsNullOrWhiteSpace(Convert.ToString(item("price"))) Then Continue For
+            seen.Add(id)
+            output.Add(item)
         Next
         Return output
     End Function
@@ -211,6 +220,11 @@ Partial Public Class home_runtime_feed
         If priceOld > 0D AndAlso priceCurrent > 0D AndAlso priceOld > priceCurrent Then
             salePercent = CInt(Math.Round(((priceOld - priceCurrent) / priceOld) * 100D, MidpointRounding.AwayFromZero))
         End If
+
+        If id <= 0 Then Return Nothing
+        If String.IsNullOrWhiteSpace(CleanText(row("Descrizione1"))) Then Return Nothing
+        If imgs.Count = 0 Then Return Nothing
+        If priceCurrent <= 0D Then Return Nothing
 
         Dim item As New Dictionary(Of String, Object)()
         item("id") = id
