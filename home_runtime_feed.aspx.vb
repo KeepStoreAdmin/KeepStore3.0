@@ -292,7 +292,8 @@ Partial Public Class home_runtime_feed
         If value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse value.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse value.StartsWith("//", StringComparison.OrdinalIgnoreCase) Then Return value
         If value.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then Return ResolveUrl(value)
         If value.StartsWith("/", StringComparison.OrdinalIgnoreCase) Then Return value
-        Return "/" & value.TrimStart("/"c)
+        If value.IndexOf("/"c) >= 0 Then Return "/" & value.TrimStart("/"c)
+        Return ResolveUrl("~/Public/images/articoli/" & value)
     End Function
 
     Private Function CleanText(ByVal raw As Object) As String

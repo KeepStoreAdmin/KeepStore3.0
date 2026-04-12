@@ -2755,6 +2755,7 @@
       if ((txt.indexOf('welcome') !== -1 || txt.indexOf('franchis') !== -1 || txt.indexOf('onsus') !== -1) && r.width <= 320) { railRoot(node).classList.add('ks-hidden-rail'); }
     });
     killBrokenSidebarWrap();
+    updateViewportMasks();
   }
 
   function protectedRailRoot(node) {
@@ -2817,11 +2818,82 @@
       if ((tall && hasMedia) || (tall && t && t.length <= 160) || (hasMedia && !t && r.height > 110)) railRoot(node).classList.add('ks-hidden-rail');
     });
   }
+  function ensureViewportMasks() {
+    if (!isHome() || !document.body) return null;
+    var wrap = first(document.body, '.ks-home-runtime-masks');
+    if (wrap) return wrap;
+    wrap = document.createElement('div');
+    wrap.className = 'ks-home-runtime-masks';
+    wrap.setAttribute('aria-hidden', 'true');
+    var left = document.createElement('div');
+    left.className = 'ks-home-runtime-mask ks-home-runtime-mask-left';
+    var right = document.createElement('div');
+    right.className = 'ks-home-runtime-mask ks-home-runtime-mask-right';
+    [left, right].forEach(function (mask) {
+      mask.style.position = 'fixed';
+      mask.style.pointerEvents = 'none';
+      mask.style.zIndex = '45';
+      mask.style.display = 'none';
+      mask.style.background = '#f7f7f7';
+      mask.style.top = '0';
+      mask.style.bottom = '0';
+      mask.style.width = '0';
+    });
+    left.style.left = '0';
+    right.style.right = '0';
+    wrap.appendChild(left);
+    wrap.appendChild(right);
+    document.body.appendChild(wrap);
+    return wrap;
+  }
+  function updateViewportMasks() {
+    if (!isHome()) return;
+    var wrap = ensureViewportMasks();
+    if (!wrap) return;
+    var masks = all(wrap, '.ks-home-runtime-mask');
+    if (!isDesktop()) {
+      masks.forEach(function (mask) { mask.style.display = 'none'; });
+      return;
+    }
+    var laneNode = first(document, '.tf-sp-5 > .container') || first(document, '.header-bottom .container') || first(document, '.container');
+    var lane = rect(laneNode);
+    if (!lane || lane.width < 200) {
+      masks.forEach(function (mask) { mask.style.display = 'none'; });
+      return;
+    }
+    var hero = first(document, '.tf-sp-5') || first(document, '.ks-home-hero-shell') || laneNode;
+    var heroRect = rect(hero) || lane;
+    var top = Math.max(0, Math.floor(heroRect.top) - 2);
+    var bg = '#f7f7f7';
+    try {
+      var bodyBg = getComputedStyle(document.body).backgroundColor || '';
+      var docBg = getComputedStyle(document.documentElement).backgroundColor || '';
+      bg = bodyBg && bodyBg !== 'rgba(0, 0, 0, 0)' ? bodyBg : (docBg && docBg !== 'rgba(0, 0, 0, 0)' ? docBg : '#f7f7f7');
+    } catch (err) {}
+    var inset = 16;
+    var leftWidth = Math.max(0, Math.floor(lane.left + inset));
+    var rightWidth = Math.max(0, Math.floor(window.innerWidth - lane.right + inset));
+    var left = first(wrap, '.ks-home-runtime-mask-left');
+    var right = first(wrap, '.ks-home-runtime-mask-right');
+    if (left) {
+      left.style.display = leftWidth > 8 ? 'block' : 'none';
+      left.style.top = top + 'px';
+      left.style.width = leftWidth + 'px';
+      left.style.background = bg;
+    }
+    if (right) {
+      right.style.display = rightWidth > 8 ? 'block' : 'none';
+      right.style.top = top + 'px';
+      right.style.width = rightWidth + 'px';
+      right.style.background = bg;
+    }
+  }
   function stripRogueRails() {
     if (!isHome()) return;
     sweepBlockedTextRails();
     sweepRepeatedPeripheralMedia();
     sweepOutOfLaneArtifacts();
+    updateViewportMasks();
   }
   function init() {
     ensureCss();

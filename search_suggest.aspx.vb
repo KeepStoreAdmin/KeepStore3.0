@@ -371,7 +371,8 @@ Partial Public Class search_suggest
         If value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse value.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse value.StartsWith("//", StringComparison.OrdinalIgnoreCase) Then Return value
         If value.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then Return ResolveUrl(value)
         If value.StartsWith("/", StringComparison.OrdinalIgnoreCase) Then Return value
-        Return "/" & value.TrimStart("/"c)
+        If value.IndexOf("/"c) >= 0 Then Return "/" & value.TrimStart("/"c)
+        Return ResolveUrl("~/Public/images/articoli/" & value)
     End Function
 
     Private Function FormatPrice(ByVal value As Decimal) As String
