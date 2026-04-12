@@ -2895,6 +2895,104 @@
     sweepOutOfLaneArtifacts();
     updateViewportMasks();
   }
+
+  function sweepUltraPeripheralRails() {
+    if (!isHome()) return;
+    var laneNode = first(document, '.tf-sp-5 > .container') || first(document, '.ks-home-hero-shell') || first(document, '.container');
+    var lane = rect(laneNode);
+    var heroShell = rect(first(document, '.ks-home-hero-shell')) || lane;
+    all(document.body, 'div,section,aside,a,span,p,img').forEach(function (node) {
+      if (!node || node === document.body || protectedRailRoot(node)) return;
+      var r = rect(node); if (!r) return;
+      if (r.width < 16 || r.height < 24 || r.width > 420 || r.height > 2200) return;
+      var cs = window.getComputedStyle ? getComputedStyle(node) : null;
+      var pos = cs ? String(cs.position || '').toLowerCase() : '';
+      var txt = norm(text(node));
+      var media = all(node, 'img,iframe,object,embed').length + ((node.tagName === 'IMG' || node.tagName === 'IFRAME' || node.tagName === 'OBJECT' || node.tagName === 'EMBED') ? 1 : 0);
+      var bg = cs && cs.backgroundImage && cs.backgroundImage !== 'none';
+      var vertical = (r.height > r.width * 2.1) || (cs && ((cs.writingMode && cs.writingMode !== 'horizontal-tb') || /rotate\(/i.test(cs.transform || '')));
+      var cx = r.left + (r.width / 2);
+      var outside = lane ? (cx < lane.left - 8 || cx > lane.right + 8) : (cx < 90 || cx > window.innerWidth - 90);
+      var nearRightEdge = lane ? (cx > lane.right - 40) : (cx > window.innerWidth - 140);
+      var nearLeftEdge = lane ? (cx < lane.left + 40) : (cx < 140);
+      var topArea = heroShell ? (r.top < heroShell.bottom + 80) : (r.top < 720);
+      var blocked = txt.indexOf('welcome') !== -1 || txt.indexOf('franchis') !== -1 || txt.indexOf('onsus') !== -1 || txt.indexOf('themesflat') !== -1;
+      if (blocked && (vertical || nearRightEdge || nearLeftEdge)) { railRoot(node).classList.add('ks-hidden-rail'); return; }
+      if ((pos === 'fixed' || pos === 'sticky') && r.width <= 360 && r.height >= 50 && (outside || nearRightEdge || nearLeftEdge)) { railRoot(node).classList.add('ks-hidden-rail'); return; }
+      if (vertical && (outside || nearRightEdge) && (media > 0 || txt.length <= 180 || bg)) { railRoot(node).classList.add('ks-hidden-rail'); return; }
+      if (media >= 1 && r.width <= 220 && r.height >= 70 && topArea && (outside || nearRightEdge || nearLeftEdge)) { railRoot(node).classList.add('ks-hidden-rail'); return; }
+      if (bg && r.width <= 220 && r.height >= 90 && (outside || nearRightEdge || nearLeftEdge)) { railRoot(node).classList.add('ks-hidden-rail'); return; }
+    });
+  }
+  function ensureViewportMasks() {
+    if (!isHome() || !document.body) return null;
+    var wrap = first(document.body, '.ks-home-runtime-masks');
+    if (wrap) return wrap;
+    wrap = document.createElement('div');
+    wrap.className = 'ks-home-runtime-masks';
+    wrap.setAttribute('aria-hidden', 'true');
+    ['left','right'].forEach(function (side) {
+      var mask = document.createElement('div');
+      mask.className = 'ks-home-runtime-mask ks-home-runtime-mask-' + side;
+      mask.style.position = 'fixed';
+      mask.style.pointerEvents = 'none';
+      mask.style.zIndex = '2147483000';
+      mask.style.display = 'none';
+      mask.style.background = '#f7f7f7';
+      mask.style.top = '0';
+      mask.style.bottom = '0';
+      mask.style.width = '0';
+      if (side === 'left') mask.style.left = '0'; else mask.style.right = '0';
+      wrap.appendChild(mask);
+    });
+    document.body.appendChild(wrap);
+    return wrap;
+  }
+  function updateViewportMasks() {
+    if (!isHome()) return;
+    var wrap = ensureViewportMasks();
+    if (!wrap) return;
+    var masks = all(wrap, '.ks-home-runtime-mask');
+    if (!isDesktop()) { masks.forEach(function (mask) { mask.style.display = 'none'; }); return; }
+    var laneNode = first(document, '.tf-sp-5 > .container') || first(document, '.header-bottom .container') || first(document, '.container');
+    var lane = rect(laneNode);
+    if (!lane || lane.width < 200) { masks.forEach(function (mask) { mask.style.display = 'none'; }); return; }
+    var headerNode = first(document, '.header-bottom') || first(document, '.tf-header') || first(document, 'header');
+    var headerRect = rect(headerNode) || lane;
+    var top = Math.max(0, Math.floor(headerRect.bottom) - 1);
+    var bg = '#f7f7f7';
+    try {
+      var bodyBg = getComputedStyle(document.body).backgroundColor || '';
+      var docBg = getComputedStyle(document.documentElement).backgroundColor || '';
+      bg = bodyBg && bodyBg !== 'rgba(0, 0, 0, 0)' ? bodyBg : (docBg && docBg !== 'rgba(0, 0, 0, 0)' ? docBg : '#f7f7f7');
+    } catch (err) {}
+    var leftOverhang = 8;
+    var rightOverhang = 56;
+    var leftWidth = Math.max(0, Math.floor(lane.left + leftOverhang));
+    var rightWidth = Math.max(0, Math.floor(window.innerWidth - lane.right + rightOverhang));
+    var left = first(wrap, '.ks-home-runtime-mask-left');
+    var right = first(wrap, '.ks-home-runtime-mask-right');
+    if (left) {
+      left.style.display = leftWidth > 8 ? 'block' : 'none';
+      left.style.top = top + 'px';
+      left.style.width = leftWidth + 'px';
+      left.style.background = bg;
+    }
+    if (right) {
+      right.style.display = rightWidth > 8 ? 'block' : 'none';
+      right.style.top = top + 'px';
+      right.style.width = rightWidth + 'px';
+      right.style.background = bg;
+    }
+  }
+  function stripRogueRails() {
+    if (!isHome()) return;
+    sweepBlockedTextRails();
+    sweepRepeatedPeripheralMedia();
+    sweepOutOfLaneArtifacts();
+    sweepUltraPeripheralRails();
+    updateViewportMasks();
+  }
   function init() {
     ensureCss();
     ensureRuntimeSectionsCss();
