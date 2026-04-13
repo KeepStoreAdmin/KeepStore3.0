@@ -91,8 +91,13 @@
     var shell = first(document, '.ks-home-hero-shell') || first(document, '.s-banner-wrapper');
     var r = rect(shell);
     if (r && r.width > 640) return r;
-    var c = first(document, '.tf-sp-5 .container') || first(document, 'main .container') || first(document, '.container');
-    return rect(c);
+    var containers = all(document, '.container').map(rect).filter(function (box) { return box && box.width > 640; });
+    if (!containers.length) return rect(first(document, '.container'));
+    var best = containers[0];
+    containers.forEach(function (box) {
+      if (box.width > best.width) best = box;
+    });
+    return best;
   }
   function mediaCount(node) { return all(node, 'img,picture,svg,video,iframe,canvas').length; }
   function backgroundImage(node) { var s = styleOf(node); return s && s.backgroundImage && s.backgroundImage !== 'none' ? s.backgroundImage : ''; }
@@ -142,6 +147,31 @@
     if (!r) return false;
     if (!lane) return r.left < 40 || r.right > window.innerWidth - 40;
     return r.right <= lane.left - 8 || r.left >= lane.right + 8;
+  }
+
+  function applyGutterVars() {
+    if (!isHomePage()) return;
+    var lane = primaryLaneRect();
+    if (!lane || !document.documentElement) return;
+    var left = Math.max(0, Math.floor(lane.left - 12));
+    var right = Math.max(0, Math.floor(window.innerWidth - lane.right - 12));
+    var header = first(document, 'header.tf-header') || first(document, 'header');
+    var hr = rect(header);
+    var top = hr ? Math.max(0, Math.floor(hr.top + hr.height - 2)) : 0;
+    document.documentElement.style.setProperty('--ks-left-gutter', left + 'px');
+    document.documentElement.style.setProperty('--ks-right-gutter', right + 'px');
+    document.documentElement.style.setProperty('--ks-mask-top', top + 'px');
+  }
+
+  function hideTokenArtifacts() {
+    if (!isHomePage() || !document.body) return;
+    all(document.body, 'div,a,span,p,small,strong,em,img,picture').forEach(function (node) {
+      if (!node || isProtected(node)) return;
+      var r = rect(node);
+      if (!r || r.width < 8 || r.height < 12) return;
+      if (!hasBlockedToken(node) && !isVertical(node)) return;
+      hideNode(artifactRoot(node));
+    });
   }
   function sweepEdgeArtifacts() {
     if (!isHomePage() || !document.body || !isDesktop()) return;
@@ -488,7 +518,9 @@
     document.body.classList.add('ks-page-home');
     suppressPopup();
     syncHeroCompact();
+    applyGutterVars();
     hideHeaderClones();
+    hideTokenArtifacts();
     sweepEdgeArtifacts();
     hideOrphanFragments();
   }
