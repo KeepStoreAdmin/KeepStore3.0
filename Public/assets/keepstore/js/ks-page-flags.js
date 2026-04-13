@@ -91,13 +91,13 @@
     var shell = first(document, '.ks-home-hero-shell') || first(document, '.s-banner-wrapper');
     var r = rect(shell);
     if (r && r.width > 640) return r;
+    var topContainer = closest(shell, '.container') || first(document, 'header + section .container') || first(document, '.tf-sp-5 .container') || first(document, '.container');
+    var tr = rect(topContainer);
+    if (tr && tr.width > 640) return tr;
     var containers = all(document, '.container').map(rect).filter(function (box) { return box && box.width > 640; });
     if (!containers.length) return rect(first(document, '.container'));
-    var best = containers[0];
-    containers.forEach(function (box) {
-      if (box.width > best.width) best = box;
-    });
-    return best;
+    containers.sort(function (a, b) { return a.top - b.top; });
+    return containers[0];
   }
   function mediaCount(node) { return all(node, 'img,picture,svg,video,iframe,canvas').length; }
   function backgroundImage(node) { var s = styleOf(node); return s && s.backgroundImage && s.backgroundImage !== 'none' ? s.backgroundImage : ''; }
@@ -122,13 +122,13 @@
     var current = node;
     var best = node;
     var hops = 0;
-    while (current && current.parentElement && hops < 6) {
+    while (current && current.parentElement && hops < 10) {
       var parent = current.parentElement;
       if (!parent || parent === document.body || parent === document.documentElement) break;
       if (isProtected(parent)) break;
       var r = rect(parent);
       if (!r) break;
-      if (r.width > 320 || r.height > 1600) break;
+      if (r.width > 420 || r.height > 4200) break;
       best = parent;
       current = parent;
       hops += 1;
@@ -153,11 +153,11 @@
     if (!isHomePage()) return;
     var lane = primaryLaneRect();
     if (!lane || !document.documentElement) return;
-    var left = Math.max(0, Math.floor(lane.left - 12));
-    var right = Math.max(0, Math.floor(window.innerWidth - lane.right - 12));
+    var left = Math.max(0, Math.floor(lane.left - 10));
+    var right = Math.max(0, Math.floor(window.innerWidth - lane.right - 10));
     var header = first(document, 'header.tf-header') || first(document, 'header');
     var hr = rect(header);
-    var top = hr ? Math.max(0, Math.floor(hr.top + hr.height - 2)) : 0;
+    var top = hr ? Math.max(0, Math.floor(hr.bottom - 2)) : 0;
     document.documentElement.style.setProperty('--ks-left-gutter', left + 'px');
     document.documentElement.style.setProperty('--ks-right-gutter', right + 'px');
     document.documentElement.style.setProperty('--ks-mask-top', top + 'px');
@@ -165,11 +165,28 @@
 
   function hideTokenArtifacts() {
     if (!isHomePage() || !document.body) return;
-    all(document.body, 'div,a,span,p,small,strong,em,img,picture').forEach(function (node) {
+    all(document.body, 'div,section,aside,a,span,p,small,strong,em,img,picture').forEach(function (node) {
       if (!node || isProtected(node)) return;
       var r = rect(node);
       if (!r || r.width < 8 || r.height < 12) return;
       if (!hasBlockedToken(node) && !isVertical(node)) return;
+      hideNode(artifactRoot(node));
+    });
+  }
+
+  function hideRepeatedDeviceRails() {
+    if (!isHomePage() || !document.body || !isDesktop()) return;
+    var lane = primaryLaneRect();
+    all(document.body, 'div,section,aside').forEach(function (node) {
+      if (!node || isProtected(node)) return;
+      var r = rect(node);
+      if (!r || !outsideLane(r, lane)) return;
+      if (r.width < 40 || r.width > 260 || r.height < 160) return;
+      var imgs = all(node, 'img').filter(function (img) {
+        var ir = rect(img);
+        return ir && ir.width >= 28 && ir.width <= 180 && ir.height >= 28 && ir.height <= 260;
+      });
+      if (imgs.length < 2) return;
       hideNode(artifactRoot(node));
     });
   }
@@ -208,11 +225,13 @@
     var mainHeader = first(document, 'header.tf-header') || first(document, 'header');
     if (!mainHeader) return;
     var hr = rect(mainHeader);
-    var threshold = hr ? hr.bottom + 140 : 260;
-    all(document.body, 'header,.tf-header,.tf-topbar,.header-bottom,.inner-header,.logo-site,.support-wrap,.nav-icon').forEach(function (node) {
+    var threshold = hr ? hr.bottom + 80 : 220;
+    all(document.body, 'header,.tf-header,.tf-topbar,.header-bottom,.inner-header,.logo-site,.support-wrap,.nav-icon,.header-center,.header-right,.logo-site').forEach(function (node) {
       if (!node || node === mainHeader || closest(node, 'header') === mainHeader) return;
       var r = rect(node);
-      if (!r || r.top < threshold || r.width < window.innerWidth * 0.45 || r.height < 20) return;
+      if (!r || r.top < threshold) return;
+      var wideEnough = r.width >= window.innerWidth * 0.3 || hasBlockedToken(node);
+      if (!wideEnough) return;
       hideNode(artifactRoot(node));
     });
   }
@@ -521,6 +540,7 @@
     applyGutterVars();
     hideHeaderClones();
     hideTokenArtifacts();
+    hideRepeatedDeviceRails();
     sweepEdgeArtifacts();
     hideOrphanFragments();
   }
