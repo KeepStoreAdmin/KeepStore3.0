@@ -25,6 +25,10 @@ body.ks-page-home::after {
   width: var(--ks-right-gutter);
 }
 
+body.ks-page-home {
+  overflow-x: hidden !important;
+}
+
 body.ks-page-home [data-ks-edge-creative='1'],
 body.ks-page-home [data-ks-hidden-popup='1'],
 body.ks-page-home [data-ks-header-clone='1'],
@@ -76,3 +80,5 @@ body.ks-page-home .ks-home-departments .menu-category-list {
     overscroll-behavior: contain;
   }
 }
+
+body.ks-page-home [data-ks-home-artifact='1']{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}

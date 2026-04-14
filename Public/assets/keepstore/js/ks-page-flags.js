@@ -214,11 +214,11 @@
 
   function primaryLaneRect() {
     var preferred = [
+      '.ks-home-hero-shell',
+      '.s-banner-wrapper',
       '.tf-sp-5 > .container',
       '.page-content > .container',
-      '.main-content > .container',
-      '.ks-home-hero-shell',
-      '.s-banner-wrapper'
+      '.main-content > .container'
     ];
     for (var i = 0; i < preferred.length; i += 1) {
       var nodes = Array.prototype.slice.call(document.querySelectorAll(preferred[i]));
@@ -237,8 +237,8 @@
     if (!document.body) return;
     var lane = primaryLaneRect();
     var top = firstHeaderBottom();
-    var left = Math.max(0, Math.floor(lane.left - 10));
-    var right = Math.max(0, Math.floor(window.innerWidth - lane.right + 24));
+    var left = Math.max(0, Math.floor(lane.left - 12));
+    var right = Math.max(0, Math.floor(window.innerWidth - lane.right + 60));
     document.body.style.setProperty('--ks-mask-top', top + 'px');
     document.body.style.setProperty('--ks-left-gutter', left + 'px');
     document.body.style.setProperty('--ks-right-gutter', right + 'px');
@@ -312,13 +312,13 @@
   function artifactRoot(node) {
     var current = node;
     var hops = 0;
-    while (current && current.parentElement && hops < 8) {
+    while (current && current.parentElement && hops < 12) {
       var parent = current.parentElement;
       if (!parent || parent.tagName === 'BODY' || parent.tagName === 'MAIN') break;
       if (isProtected(parent)) break;
       var rect = rectOf(parent);
       if (!rect) break;
-      if (rect.width > 420 || rect.height > window.innerHeight * 1.6) break;
+      if (rect.width > Math.min(760, window.innerWidth * 0.62) || rect.height > window.innerHeight * 3.2) break;
       current = parent;
       hops += 1;
     }
@@ -362,6 +362,37 @@
       );
       if (!(hasHeaderText || (hasSearch && (hasLogo || rect.width > window.innerWidth * 0.6)))) return;
       hideNode(headerCloneRoot(node), 'data-ks-header-clone');
+    });
+    hideDuplicateHeaders();
+  }
+
+
+  function hideDuplicateHeaders() {
+    var headers = Array.prototype.slice.call(document.querySelectorAll('header, .tf-header, .tf-topbar, .header-bottom, .inner-header'));
+    if (headers.length < 2) return;
+    var baseline = firstHeaderBottom();
+    headers.forEach(function (node) {
+      if (!node) return;
+      var rect = rectOf(node);
+      if (!rect) return;
+      if (rect.top <= baseline + 40) return;
+      hideNode(headerCloneRoot(node), 'data-ks-header-clone');
+    });
+    hideDuplicateHeaders();
+  }
+
+  function hideVerticalTextRails() {
+    var lane = primaryLaneRect();
+    Array.prototype.slice.call(document.querySelectorAll('div,span,p,section,aside')).forEach(function (node) {
+      if (!node || isProtected(node)) return;
+      var rect = rectOf(node);
+      if (!rect) return;
+      var outsideLane = rect.right <= lane.left - 2 || rect.left >= lane.right + 2;
+      if (!outsideLane) return;
+      if (rect.width > 240 || rect.height < 160) return;
+      var raw = [node.id || '', node.className || '', textContentOf(node).slice(0, 260)].join(' ');
+      if (!containsToken(raw)) return;
+      hideNode(artifactRoot(node), 'data-ks-edge-creative');
     });
   }
 
@@ -455,6 +486,7 @@
     compactHero();
     setGutterVars();
     hideHeaderClones();
+    hideVerticalTextRails();
     hideTokenArtifacts();
     hideRepeatedDeviceRails();
     hideFixedEdgeArtifacts();
