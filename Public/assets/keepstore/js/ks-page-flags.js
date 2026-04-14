@@ -214,11 +214,11 @@
 
   function primaryLaneRect() {
     var preferred = [
-      '.ks-home-hero-shell',
-      '.s-banner-wrapper',
       '.tf-sp-5 > .container',
       '.page-content > .container',
-      '.main-content > .container'
+      '.main-content > .container',
+      '.s-banner-wrapper',
+      '.ks-home-hero-shell'
     ];
     for (var i = 0; i < preferred.length; i += 1) {
       var nodes = Array.prototype.slice.call(document.querySelectorAll(preferred[i]));
@@ -237,8 +237,8 @@
     if (!document.body) return;
     var lane = primaryLaneRect();
     var top = firstHeaderBottom();
-    var left = Math.max(0, Math.floor(lane.left - 12));
-    var right = Math.max(0, Math.floor(window.innerWidth - lane.right + 60));
+    var left = Math.max(0, Math.floor(lane.left));
+    var right = Math.max(0, Math.floor(window.innerWidth - lane.right));
     document.body.style.setProperty('--ks-mask-top', top + 'px');
     document.body.style.setProperty('--ks-left-gutter', left + 'px');
     document.body.style.setProperty('--ks-right-gutter', right + 'px');
@@ -318,7 +318,7 @@
       if (isProtected(parent)) break;
       var rect = rectOf(parent);
       if (!rect) break;
-      if (rect.width > Math.min(760, window.innerWidth * 0.62) || rect.height > window.innerHeight * 3.2) break;
+      if (rect.width > Math.min(560, window.innerWidth * 0.48) || rect.height > window.innerHeight * 3.2) break;
       current = parent;
       hops += 1;
     }
@@ -463,6 +463,36 @@
     });
   }
 
+
+  function hideTallEdgeRails() {
+    var lane = primaryLaneRect();
+    Array.prototype.slice.call(document.querySelectorAll('div,section,aside,a,span,p,img')).forEach(function (node) {
+      if (!node || isProtected(node)) return;
+      var rect = rectOf(node);
+      if (!rect) return;
+      var outsideLane = rect.right <= lane.left - 2 || rect.left >= lane.right + 2;
+      if (!outsideLane) return;
+      if (rect.width < 20 || rect.width > 180 || rect.height < 220) return;
+      if (rect.height < rect.width * 2.5) return;
+      hideNode(artifactRoot(node), 'data-ks-edge-creative');
+    });
+  }
+
+  function hideEdgeMediaColumns() {
+    var lane = primaryLaneRect();
+    Array.prototype.slice.call(document.querySelectorAll('div,section,aside')).forEach(function (node) {
+      if (!node || isProtected(node)) return;
+      var rect = rectOf(node);
+      if (!rect) return;
+      var outsideLane = rect.right <= lane.left - 2 || rect.left >= lane.right + 2;
+      if (!outsideLane) return;
+      if (rect.width < 40 || rect.width > 220 || rect.height < 260) return;
+      var media = node.querySelectorAll('img, [style*="background-image"]');
+      if (!media || media.length < 2) return;
+      hideNode(artifactRoot(node), 'data-ks-edge-creative');
+    });
+  }
+
   function hideOrphanFragments() {
     var lane = primaryLaneRect();
     Array.prototype.slice.call(document.querySelectorAll('p,span,small,div')).forEach(function (node) {
@@ -489,6 +519,8 @@
     hideVerticalTextRails();
     hideTokenArtifacts();
     hideRepeatedDeviceRails();
+    hideEdgeMediaColumns();
+    hideTallEdgeRails();
     hideFixedEdgeArtifacts();
     hideOrphanFragments();
   }
