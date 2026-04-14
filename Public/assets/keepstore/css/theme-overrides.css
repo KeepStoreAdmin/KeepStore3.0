@@ -10,9 +10,9 @@ body.ks-page-home::after {
   position: fixed;
   top: var(--ks-mask-top);
   bottom: 0;
-  z-index: 2147483000;
+  z-index: 2147483600;
   pointer-events: none;
-  background: #f6f6f6;
+  background: #f6f6f6; box-shadow: none !important;
 }
 
 body.ks-page-home::before {

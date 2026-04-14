@@ -214,26 +214,31 @@
 
   function primaryLaneRect() {
     var preferred = [
-      '.ks-home-hero-shell .wrap-item-2',
+      '.tf-sp-5 > .container',
+      '.page-content > .container',
+      '.main-content > .container',
       '.ks-home-hero-shell',
-      '.s-banner-wrapper',
-      '.tf-sp-5 .container',
-      '.page-content .container'
+      '.s-banner-wrapper'
     ];
     for (var i = 0; i < preferred.length; i += 1) {
-      var node = document.querySelector(preferred[i]);
-      var rect = rectOf(node);
-      if (rect && rect.width > 420 && rect.top < window.innerHeight * 0.8) return rect;
+      var nodes = Array.prototype.slice.call(document.querySelectorAll(preferred[i]));
+      for (var j = 0; j < nodes.length; j += 1) {
+        var rect = rectOf(nodes[j]);
+        if (!rect) continue;
+        if (rect.width < Math.min(620, window.innerWidth * 0.45)) continue;
+        if (rect.top > window.innerHeight * 1.2) continue;
+        return rect;
+      }
     }
-    return { left: 80, right: Math.max(980, window.innerWidth - 120), width: Math.max(900, window.innerWidth - 200) };
+    return { left: 72, right: Math.max(980, window.innerWidth - 88), width: Math.max(900, window.innerWidth - 160) };
   }
 
   function setGutterVars() {
     if (!document.body) return;
     var lane = primaryLaneRect();
     var top = firstHeaderBottom();
-    var left = Math.max(0, Math.floor(lane.left - 18));
-    var right = Math.max(0, Math.floor(window.innerWidth - lane.right + 64));
+    var left = Math.max(0, Math.floor(lane.left - 10));
+    var right = Math.max(0, Math.floor(window.innerWidth - lane.right + 24));
     document.body.style.setProperty('--ks-mask-top', top + 'px');
     document.body.style.setProperty('--ks-left-gutter', left + 'px');
     document.body.style.setProperty('--ks-right-gutter', right + 'px');
@@ -307,12 +312,13 @@
   function artifactRoot(node) {
     var current = node;
     var hops = 0;
-    while (current && current.parentElement && hops < 6) {
+    while (current && current.parentElement && hops < 8) {
       var parent = current.parentElement;
       if (!parent || parent.tagName === 'BODY' || parent.tagName === 'MAIN') break;
       if (isProtected(parent)) break;
       var rect = rectOf(parent);
-      if (!rect || rect.width > 260 || rect.height > window.innerHeight * 1.5) break;
+      if (!rect) break;
+      if (rect.width > 420 || rect.height > window.innerHeight * 1.6) break;
       current = parent;
       hops += 1;
     }
@@ -341,10 +347,12 @@
       if (mainHeader && mainHeader.contains(node)) return;
       var rect = rectOf(node);
       if (!rect || rect.top < mainBottom + 80) return;
-      if (rect.width < 420 || rect.height < 28 || rect.height > 220) return;
-      var raw = [node.className || '', textContentOf(node).slice(0, 260)].join(' ');
+      if (rect.width < Math.max(420, window.innerWidth * 0.45) || rect.height < 28 || rect.height > 240) return;
+      var raw = [node.className || '', textContentOf(node).slice(0, 300)].join(' ');
       var text = normalizeText(raw);
-      var looksLikeHeader = (
+      var hasSearch = !!node.querySelector('input[type="search"], input[name*="search" i], input[placeholder*="cerca" i], input[placeholder*="ean" i], .icon-search, .tf-btn-search, button[type="submit"]');
+      var hasLogo = !!node.querySelector('img[src*="logo" i], a[href*="default.aspx" i] img, .logo-site, .site-logo');
+      var hasHeaderText = (
         text.indexOf('chiamaci gratis') !== -1 ||
         text.indexOf('spedizione gratuita') !== -1 ||
         text.indexOf('tutti i settori') !== -1 ||
@@ -352,7 +360,7 @@
         text.indexOf('il mio account') !== -1 ||
         text.indexOf('assistenza') !== -1
       );
-      if (!looksLikeHeader) return;
+      if (!(hasHeaderText || (hasSearch && (hasLogo || rect.width > window.innerWidth * 0.6)))) return;
       hideNode(headerCloneRoot(node), 'data-ks-header-clone');
     });
   }
@@ -363,15 +371,18 @@
       if (!node || isProtected(node)) return;
       var rect = rectOf(node);
       if (!rect) return;
-      var outsideLane = rect.right <= lane.left - 4 || rect.left >= lane.right + 4;
+      var outsideLane = rect.right <= lane.left - 2 || rect.left >= lane.right + 2;
+      var st = styleOf(node);
+      var bg = st && st.backgroundImage && st.backgroundImage !== 'none' ? st.backgroundImage : '';
       var raw = [
         node.id || '',
         node.className || '',
-        textContentOf(node).slice(0, 220),
-        node.getAttribute ? (node.getAttribute('src') || node.getAttribute('data-src') || node.getAttribute('alt') || '') : ''
+        textContentOf(node).slice(0, 260),
+        node.getAttribute ? (node.getAttribute('src') || node.getAttribute('data-src') || node.getAttribute('alt') || '') : '',
+        bg
       ].join(' ');
       if (!containsToken(raw)) return;
-      if (outsideLane || rect.width < 220 || rect.height > rect.width * 1.2) {
+      if (outsideLane || rect.width < 260 || rect.height > rect.width) {
         hideNode(artifactRoot(node), 'data-ks-edge-creative');
       }
     });
@@ -380,20 +391,26 @@
   function hideRepeatedDeviceRails() {
     var lane = primaryLaneRect();
     var buckets = {};
-    Array.prototype.slice.call(document.querySelectorAll('img')).forEach(function (img) {
-      if (!img || isProtected(img)) return;
-      var rect = rectOf(img);
-      if (!rect || rect.width < 32 || rect.height < 40 || rect.width > 220 || rect.height > 260) return;
-      var outsideLane = rect.right <= lane.left - 4 || rect.left >= lane.right + 4;
-      if (!outsideLane) return;
-      var bucket = (rect.left < lane.left ? 'L:' : 'R:') + Math.round(rect.left / 40);
+    function push(bucket, node) {
       buckets[bucket] = buckets[bucket] || [];
-      buckets[bucket].push(img);
+      buckets[bucket].push(node);
+    }
+    Array.prototype.slice.call(document.querySelectorAll('img,div,section,aside')).forEach(function (node) {
+      if (!node || isProtected(node)) return;
+      var rect = rectOf(node);
+      if (!rect || rect.width < 28 || rect.height < 36 || rect.width > 240 || rect.height > 300) return;
+      var outsideLane = rect.right <= lane.left - 2 || rect.left >= lane.right + 2;
+      if (!outsideLane) return;
+      var st = styleOf(node);
+      var hasMedia = node.tagName === 'IMG' || (st && st.backgroundImage && st.backgroundImage !== 'none');
+      if (!hasMedia) return;
+      var bucket = (rect.left < lane.left ? 'L:' : 'R:') + Math.round(rect.left / 36) + ':' + Math.round(rect.width / 24);
+      push(bucket, node);
     });
     Object.keys(buckets).forEach(function (key) {
       if (buckets[key].length < 3) return;
-      buckets[key].forEach(function (img) {
-        hideNode(artifactRoot(img), 'data-ks-edge-creative');
+      buckets[key].forEach(function (node) {
+        hideNode(artifactRoot(node), 'data-ks-edge-creative');
       });
     });
   }
@@ -405,11 +422,12 @@
       var st = styleOf(node);
       var rect = rectOf(node);
       if (!st || !rect) return;
-      var outsideLane = rect.right <= lane.left - 4 || rect.left >= lane.right + 4;
+      var outsideLane = rect.right <= lane.left - 2 || rect.left >= lane.right + 2;
       if (!outsideLane) return;
-      var fixedLike = st.position === 'fixed' || st.position === 'sticky';
+      var z = parseInt(st.zIndex || '0', 10);
+      var fixedLike = st.position === 'fixed' || st.position === 'sticky' || (st.position === 'absolute' && z >= 10);
       if (!fixedLike) return;
-      if (rect.width > 240 || rect.height < 40) return;
+      if (rect.width > 280 || rect.height < 30) return;
       hideNode(artifactRoot(node), 'data-ks-edge-creative');
     });
   }
