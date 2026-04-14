@@ -64,7 +64,7 @@ body.ks-page-home::before,
 body.ks-page-home::after{
   content:''!important;
   position:fixed!important;
-  top:0!important;
+  top:var(--ks-mask-top,0px)!important;
   bottom:0!important;
   z-index:2147483000!important;
   pointer-events:none!important;
@@ -73,11 +73,11 @@ body.ks-page-home::after{
 }
 body.ks-page-home::before{
   left:0!important;
-  width:calc(var(--ks-left-gutter,0px) + 24px)!important;
+  width:calc(var(--ks-left-gutter,0px) + 18px)!important;
 }
 body.ks-page-home::after{
   right:0!important;
-  width:calc(var(--ks-right-gutter,0px) + 72px)!important;
+  width:calc(var(--ks-right-gutter,0px) + 48px)!important;
 }
 
 body.ks-page-home .tf-topbar[data-ks-edge-hidden='1'],
