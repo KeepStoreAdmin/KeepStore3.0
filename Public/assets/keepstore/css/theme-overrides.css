@@ -8,7 +8,7 @@ body.ks-page-home::before,
 body.ks-page-home::after {
   content: "";
   position: fixed;
-  top: 0;
+  top: var(--ks-mask-top);
   bottom: 0;
   z-index: 2147483600;
   pointer-events: none;
@@ -84,3 +84,5 @@ body.ks-page-home .ks-home-departments .menu-category-list {
 body.ks-page-home [data-ks-home-artifact='1']{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}
 
 body.ks-page-home::before, body.ks-page-home::after{background:#f6f6f6!important;z-index:2147483646!important;}
+
+body.ks-page-home [data-ks-hidden-clone='1']{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}

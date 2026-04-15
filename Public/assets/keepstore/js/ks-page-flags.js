@@ -378,7 +378,40 @@
       if (rect.top <= baseline + 40) return;
       hideNode(headerCloneRoot(node), 'data-ks-header-clone');
     });
-    hideDuplicateHeaders();
+  }
+
+
+  function hideDuplicateMediaBySource() {
+    var lane = primaryLaneRect();
+    var buckets = {};
+    function bgSrc(node) {
+      var st = styleOf(node);
+      var bg = st && st.backgroundImage && st.backgroundImage !== 'none' ? String(st.backgroundImage) : '';
+      var match = bg.match(/url\(["']?([^\)"']+)/i);
+      return match ? normalizeSrc(match[1]) : '';
+    }
+    function srcOf(node) {
+      if (!node) return '';
+      if (node.tagName === 'IMG') return normalizeSrc(node.getAttribute('src') || node.getAttribute('data-src') || '');
+      return bgSrc(node);
+    }
+    Array.prototype.slice.call(document.querySelectorAll('img,div,section,aside')).forEach(function (node) {
+      if (!node || isProtected(node)) return;
+      var rect = rectOf(node);
+      if (!rect || rect.width < 28 || rect.height < 36 || rect.width > 240 || rect.height > 320) return;
+      var outsideLane = rect.right <= lane.left - 2 || rect.left >= lane.right + 2;
+      if (!outsideLane) return;
+      var src = srcOf(node);
+      if (!src || src.length < 8) return;
+      buckets[src] = buckets[src] || [];
+      buckets[src].push(node);
+    });
+    Object.keys(buckets).forEach(function (src) {
+      if (!buckets[src] || buckets[src].length < 2) return;
+      buckets[src].forEach(function (node) {
+        hideNode(artifactRoot(node), 'data-ks-edge-creative');
+      });
+    });
   }
 
   function hideVerticalTextRails() {
@@ -413,7 +446,8 @@
         bg
       ].join(' ');
       if (!containsToken(raw)) return;
-      if (outsideLane || rect.width < 260 || rect.height > rect.width) {
+      var tallLike = rect.height > Math.max(120, rect.width * 1.5);
+      if (outsideLane || tallLike || rect.width < 260) {
         hideNode(artifactRoot(node), 'data-ks-edge-creative');
       }
     });
@@ -504,7 +538,8 @@
       var text = normalizeText(textContentOf(node));
       if (!text) return;
       var priceLike = /^\d+[\.,]?\d* ?e$/.test(text) || /^\d+[\.,]?\d*$/.test(text);
-      if (priceLike || text.length < 3 || containsToken(text)) {
+      var headerLike = text.indexOf('cerca prodotti') !== -1 || text.indexOf('tutti i settori') !== -1 || text.indexOf('il mio account') !== -1 || text.indexOf('assistenza') !== -1;
+      if (priceLike || text.length < 3 || containsToken(text) || headerLike) {
         hideNode(artifactRoot(node), 'data-ks-orphan');
       }
     });
@@ -519,6 +554,7 @@
     hideVerticalTextRails();
     hideTokenArtifacts();
     hideRepeatedDeviceRails();
+    hideDuplicateMediaBySource();
     hideEdgeMediaColumns();
     hideTallEdgeRails();
     hideFixedEdgeArtifacts();
