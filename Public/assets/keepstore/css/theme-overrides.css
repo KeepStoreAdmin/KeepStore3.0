@@ -1,94 +1,11 @@
-body.ks-page-home {
-  --ks-mask-top: 0px;
-  --ks-left-gutter: 0px;
-  --ks-right-gutter: 0px;
-}
-
-body.ks-page-home::before,
-body.ks-page-home::after {
-  content: "";
-  position: fixed;
-  top: var(--ks-mask-top);
-  bottom: 0;
-  z-index: 2147483600;
-  pointer-events: none;
-  background: #f6f6f6; box-shadow: none !important;
-}
-
-body.ks-page-home::before {
-  left: 0;
-  width: calc(var(--ks-left-gutter) + 32px);
-}
-
-body.ks-page-home::after {
-  right: 0;
-  width: calc(var(--ks-right-gutter) + 160px);
-}
-
-body.ks-page-home {
-  overflow-x: hidden !important;
-}
-
-body.ks-page-home [data-ks-edge-creative='1'],
-body.ks-page-home [data-ks-hidden-popup='1'],
-body.ks-page-home [data-ks-header-clone='1'],
-body.ks-page-home [data-ks-orphan='1'] {
+/* Home side-banner function removed permanently.
+   This is a hard stop so no legacy right-column creative can remain visible. */
+body.ks-page-home .ks-home-side-banners,
+body.ks-page-home .wrap-item-3.ks-home-side-banners,
+body.ks-page-home [data-ks-home-side-banner],
+body.ks-page-home [data-ks-home-side-banners] {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
   pointer-events: none !important;
-}
-
-body.ks-page-home .auto-popup,
-body.ks-page-home .modal-newleter,
-body.ks-page-home [class*='modal-newleter'] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-body.ks-page-home .ks-home-submenu-container[aria-hidden='true'] {
-  display: none !important;
-}
-
-body.ks-page-home .ks-home-departments .menu-category-list {
-  overflow-x: hidden !important;
-}
-
-@media (min-width: 1200px) {
-  body.ks-page-home .ks-home-hero-shell.ks-home-force-compact {
-    display: grid !important;
-    grid-template-columns: minmax(250px,270px) minmax(0,1fr) !important;
-    column-gap: 24px !important;
-    align-items: start !important;
-  }
-
-  body.ks-page-home .ks-home-hero-shell.ks-home-force-compact .wrap-item-3 {
-    display: none !important;
-  }
-
-  body.ks-page-home .ks-home-hero-shell.ks-home-force-compact .wrap-item-2 {
-    width: auto !important;
-    max-width: none !important;
-    min-width: 0 !important;
-    flex: 1 1 auto !important;
-  }
-
-  body.ks-page-home .ks-home-departments .menu-category-list[data-ks-menu-synced='1'] {
-    overflow-y: auto !important;
-    overscroll-behavior: contain;
-  }
-}
-
-body.ks-page-home [data-ks-home-artifact='1']{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}
-
-body.ks-page-home::before, body.ks-page-home::after{background:#f6f6f6!important;z-index:2147483646!important;}
-
-body.ks-page-home [data-ks-hidden-clone='1']{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}
-
-body.ks-page-home [data-ks-edge-creative='1'],
-body.ks-page-home [data-ks-header-clone='1'],
-body.ks-page-home [data-ks-orphan='1']{
-  display:none!important;
 }
