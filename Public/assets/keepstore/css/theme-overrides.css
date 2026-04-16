@@ -1,11 +1,34 @@
-/* Home side-banner function removed permanently.
-   This is a hard stop so no legacy right-column creative can remain visible. */
+/* Step41: disable legacy home side-banner/franchising surfaces at source */
 body.ks-page-home .ks-home-side-banners,
+body.ks-page-home .ks-home-side-banners *,
 body.ks-page-home .wrap-item-3.ks-home-side-banners,
-body.ks-page-home [data-ks-home-side-banner],
-body.ks-page-home [data-ks-home-side-banners] {
+body.ks-page-home [class*='ks-home-side-banners'],
+body.ks-page-home .banner-image-product-4.style-4.hover-img,
+body.ks-page-home .cls-category.style-abs.hover-img,
+body.ks-page-home [data-banner-position='4'],
+body.ks-page-home [data-posizione-banner='4'] {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
   pointer-events: none !important;
+}
+
+@media (min-width: 1200px) {
+  body.ks-page-home .ks-home-hero-shell,
+  body.ks-page-home .s-banner-wrapper {
+    align-items: start !important;
+  }
+
+  body.ks-page-home .ks-home-hero-shell .wrap-item-2,
+  body.ks-page-home .s-banner-wrapper .wrap-item-2 {
+    flex: 1 1 auto !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+
+  body.ks-page-home .ks-home-hero-shell .wrap-item-3,
+  body.ks-page-home .s-banner-wrapper .wrap-item-3 {
+    display: none !important;
+  }
 }
