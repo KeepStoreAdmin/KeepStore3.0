@@ -252,7 +252,6 @@
     if (!shell || !sliderWrap) return;
     if (window.innerWidth < 1200) {
       shell.classList.remove('ks-home-force-compact');
-      if (sideWrap) sideWrap.style.removeProperty('display');
       if (menuList) {
         menuList.style.maxHeight = '';
         menuList.style.height = '';
@@ -260,11 +259,11 @@
       }
       return;
     }
-    if (sideWrap && usefulSideItems(sideWrap).length < 2) {
-      shell.classList.add('ks-home-force-compact');
+    shell.classList.add('ks-home-force-compact');
+    shell.classList.remove('ks-home-hero-mode-full');
+    if (sideWrap) {
       sideWrap.style.setProperty('display', 'none', 'important');
-    } else {
-      shell.classList.remove('ks-home-force-compact');
+      sideWrap.setAttribute('data-ks-home-side-banners', '1');
     }
     if (menuList) {
       var rr = rectOf(sliderWrap);

@@ -1,4 +1,4 @@
-﻿<%@ Page Language="VB" AutoEventWireup="false" MasterPageFile="~/Page.master" CodeFile="Default.aspx.vb" Inherits="_Default" %>
+<%@ Page Language="VB" AutoEventWireup="false" MasterPageFile="~/Page.master" CodeFile="Default.aspx.vb" Inherits="_Default" %>
 <%@ Register Src="~/Public/ui/controls/HomeDepartmentsMenu.ascx" TagPrefix="uc" TagName="HomeDepartmentsMenu" %>
 <%@ Register Src="~/Public/ui/controls/HomeIconBoxes.ascx" TagPrefix="uc" TagName="HomeIconBoxes" %>
 
@@ -10,7 +10,7 @@
 
     <section id="HomeHeroSection" runat="server" class="tf-sp-5 ks-home-hero-section">
         <div class="container">
-            <div id="HomeHeroShell" runat="server" class="s-banner-wrapper ks-home-hero-shell">
+            <div id="HomeHeroShell" runat="server" class="s-banner-wrapper ks-home-hero-shell ks-home-hero-shell--no-side">
                 <div class="wrap-item-1 d-none d-lg-block">
                     <uc:HomeDepartmentsMenu ID="HomeDepartmentsMenu1" runat="server" />
                 </div>
@@ -36,19 +36,9 @@
                     </div>
                 </div>
 
-                <div id="HeroSideWrap" runat="server" class="wrap-item-3">
-                    <div class="ks-home-side-banners d-grid gap-3">
-                        <asp:Repeater ID="rptSideBanners" runat="server">
-                            <ItemTemplate>
-                                <div class="cls-category style-abs hover-img ks-side-promo-card ks-side-promo-card--imageonly wow fadeInRight" data-wow-delay="0s">
-                                    <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx") %>' class="img-box img-style d-block ks-side-promo-media" aria-label='<%# SafeText(Eval("Title")) %>'>
-                                        <img class="lazyload" src='<%# ResolveAdvertisingImage(Eval("Image"), String.Empty) %>' data-src='<%# ResolveAdvertisingImage(Eval("Image"), String.Empty) %>' alt='<%# SafeText(Eval("Title")) %>' />
-                                    </a>
-                                </div>
-                            </ItemTemplate>
-                        </asp:Repeater>
-                    </div>
-                </div>
+                <asp:Panel ID="HeroSideWrap" runat="server" CssClass="wrap-item-3 ks-home-side-banners-legacy-off d-none" Style="display:none;">
+                    <asp:Repeater ID="rptSideBanners" runat="server" Visible="false"></asp:Repeater>
+                </asp:Panel>
             </div>
         </div>
     </section>
@@ -297,4 +287,3 @@
 <asp:Content ID="cntScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/home-default.js") %>"></script>
 </asp:Content>
-

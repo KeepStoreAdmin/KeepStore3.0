@@ -1,8 +1,8 @@
-/* Step44: hard stop on legacy HOME side-banner/franchising lane */
+/* Step45: remove HOME side-banner lane at markup source and keep hero compact-only */
 body.ks-page-home {
   --ks-mask-top: 0px;
-  --ks-left-gutter: 96px;
-  --ks-right-gutter: 320px;
+  --ks-left-gutter: 84px;
+  --ks-right-gutter: 280px;
   --ks-mask-bg: #f4f4f4;
   overflow-x: hidden !important;
 }
@@ -11,12 +11,11 @@ body.ks-page-home #HeroSideWrap,
 body.ks-page-home #HeroSideWrap *,
 body.ks-page-home .ks-home-side-banners,
 body.ks-page-home .ks-home-side-banners *,
-body.ks-page-home .wrap-item-3.ks-home-side-banners,
-body.ks-page-home [class*='ks-home-side-banners'],
-body.ks-page-home .banner-image-product-4.style-4.hover-img,
-body.ks-page-home .cls-category.style-abs.hover-img,
-body.ks-page-home [data-banner-position='4'],
-body.ks-page-home [data-posizione-banner='4'],
+body.ks-page-home .ks-home-side-banners-legacy-off,
+body.ks-page-home .ks-home-side-banners-legacy-off *,
+body.ks-page-home .wrap-item-3,
+body.ks-page-home [data-ks-home-side-banner],
+body.ks-page-home [data-ks-home-side-banners],
 body.ks-page-home [data-ks-edge-creative='1'],
 body.ks-page-home [data-ks-header-clone='1'],
 body.ks-page-home [data-ks-hidden-popup='1'],
@@ -42,14 +41,12 @@ body.ks-page-home .ks-home-departments .menu-category-list {
 
 @media (min-width: 1200px) {
   body.ks-page-home .ks-home-hero-shell,
-  body.ks-page-home .s-banner-wrapper {
-    align-items: start !important;
-  }
-
+  body.ks-page-home .s-banner-wrapper,
+  body.ks-page-home .ks-home-hero-shell.ks-home-hero-mode-full,
   body.ks-page-home .ks-home-hero-shell.ks-home-force-compact,
   body.ks-page-home .s-banner-wrapper.ks-home-force-compact {
     display: grid !important;
-    grid-template-columns: minmax(250px, 270px) minmax(0, 1fr) !important;
+    grid-template-columns: minmax(250px,270px) minmax(0,1fr) !important;
     column-gap: 24px !important;
     align-items: start !important;
   }
@@ -61,11 +58,6 @@ body.ks-page-home .ks-home-departments .menu-category-list {
     max-width: none !important;
     min-width: 0 !important;
     align-self: stretch !important;
-  }
-
-  body.ks-page-home .ks-home-hero-shell .wrap-item-3,
-  body.ks-page-home .s-banner-wrapper .wrap-item-3 {
-    display: none !important;
   }
 
   body.ks-page-home::before,
@@ -82,12 +74,12 @@ body.ks-page-home .ks-home-departments .menu-category-list {
 
   body.ks-page-home::before {
     left: 0;
-    width: max(var(--ks-left-gutter, 96px), 96px);
+    width: max(var(--ks-left-gutter, 84px), 84px);
   }
 
   body.ks-page-home::after {
     right: 0;
-    width: max(var(--ks-right-gutter, 320px), 320px);
+    width: max(var(--ks-right-gutter, 280px), 280px);
   }
 
   body.ks-page-home .ks-home-departments .menu-category-list[data-ks-menu-synced='1'] {
