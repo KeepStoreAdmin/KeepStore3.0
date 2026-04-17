@@ -187,7 +187,8 @@
       'header', 'footer', '.footer', '.tf-header', '.tf-footer',
       '.ks-home-departments', '.ks-home-hero-shell', '.s-banner-wrapper',
       '.wrap-item-1', '.wrap-item-2', '.wrap-item-3', '.tf-icon-box',
-      '.ks-home-brands', '.ks-top-catalog-mega',
+      '.card-product', '.ks-home-brands', '.tf-grid-product-item',
+      '.product-list-wrap', '.ks-top-catalog-mega',
       '.modal.show', '.offcanvas.show'
     ].join(','));
   }
@@ -235,12 +236,18 @@
   function setGutterVars() {
     if (!document.body) return;
     var lane = primaryLaneRect();
-    var top = firstHeaderBottom();
-    var left = Math.max(0, Math.floor(lane.left));
-    var right = Math.max(0, Math.floor(window.innerWidth - lane.right));
+    var top = Math.max(0, firstHeaderBottom());
+    var left = Math.max(56, Math.floor(Math.max(0, lane.left) - 18));
+    var right = Math.max(220, Math.floor(Math.max(0, window.innerWidth - lane.right) + 36));
+    var bg = '';
+    try {
+      bg = window.getComputedStyle(document.body).backgroundColor || '';
+    } catch (err) {}
+    if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') bg = '#f4f4f4';
     document.body.style.setProperty('--ks-mask-top', top + 'px');
-    document.body.style.setProperty('--ks-left-gutter', Math.max(0, left + 6) + 'px');
-    document.body.style.setProperty('--ks-right-gutter', Math.max(0, right + 18) + 'px');
+    document.body.style.setProperty('--ks-left-gutter', left + 'px');
+    document.body.style.setProperty('--ks-right-gutter', right + 'px');
+    document.body.style.setProperty('--ks-mask-bg', bg);
   }
 
   function suppressNewsletterPopup() {
@@ -526,41 +533,6 @@
     });
   }
 
-
-
-  function hideLateGlobalBars() {
-    var threshold = firstHeaderBottom() + 160;
-    Array.prototype.slice.call(document.querySelectorAll('div,section,header')).forEach(function (node) {
-      if (!node) return;
-      var rect = rectOf(node);
-      if (!rect || rect.top < threshold) return;
-      if (rect.width < window.innerWidth * 0.58 || rect.height < 36 || rect.height > 240) return;
-      var hasSearch = !!node.querySelector('input[type="search"],input[type="text"],button[type="submit"],.icon-search,.tf-btn-search');
-      var text = normalizeText(textContentOf(node).slice(0, 300));
-      var headerLike = text.indexOf('home') !== -1 || text.indexOf('catalogo') !== -1 || text.indexOf('offerte') !== -1 || text.indexOf('contatti') !== -1 || text.indexOf('il mio account') !== -1 || text.indexOf('assistenza') !== -1 || text.indexOf('cerca prodotti') !== -1 || text.indexOf('tutti i settori') !== -1;
-      var hasLogo = !!node.querySelector('img[src*="logo" i], .logo-site, .site-logo');
-      if ((hasSearch && headerLike) || (hasSearch && hasLogo) || (headerLike && rect.width > window.innerWidth * 0.7)) {
-        hideNode(headerCloneRoot(node), 'data-ks-header-clone');
-      }
-    });
-  }
-
-  function nukeWelcomeFranchising() {
-    var lane = primaryLaneRect();
-    Array.prototype.slice.call(document.querySelectorAll('div,section,aside,span,p,a,img')).forEach(function (node) {
-      if (!node) return;
-      var rect = rectOf(node);
-      if (!rect) return;
-      var outsideLane = rect.right <= lane.left + 8 || rect.left >= lane.right - 8;
-      if (!outsideLane) return;
-      var st = styleOf(node);
-      var bg = st && st.backgroundImage && st.backgroundImage !== 'none' ? st.backgroundImage : '';
-      var raw = [node.className || '', node.id || '', textContentOf(node).slice(0, 300), node.getAttribute ? (node.getAttribute('src') || node.getAttribute('data-src') || node.getAttribute('alt') || '') : '', bg].join(' ');
-      if (!containsToken(raw)) return;
-      hideNode(artifactRoot(node), 'data-ks-edge-creative');
-    });
-  }
-
   function hideOrphanFragments() {
     var lane = primaryLaneRect();
     Array.prototype.slice.call(document.querySelectorAll('p,span,small,div')).forEach(function (node) {
@@ -585,8 +557,6 @@
     compactHero();
     setGutterVars();
     hideHeaderClones();
-    hideLateGlobalBars();
-    nukeWelcomeFranchising();
     hideVerticalTextRails();
     hideTokenArtifacts();
     hideRepeatedDeviceRails();
@@ -613,7 +583,7 @@
     applyHomeFlags();
     runHomeCleanup();
     if (isHomePage()) {
-      [300, 1400, 3400].forEach(function (delay) {
+      [300, 1400, 3400, 6200].forEach(function (delay) {
         window.setTimeout(runHomeCleanup, delay);
       });
       window.addEventListener('load', runHomeCleanup, { once: true });

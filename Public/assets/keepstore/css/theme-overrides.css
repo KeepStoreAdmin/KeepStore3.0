@@ -32,3 +32,45 @@ body.ks-page-home [data-posizione-banner='4'] {
     display: none !important;
   }
 }
+
+
+/* Step42: real gutter masks for residual off-lane creatives */
+body.ks-page-home {
+  --ks-mask-top: 0px;
+  --ks-left-gutter: 56px;
+  --ks-right-gutter: 220px;
+  --ks-mask-bg: #f4f4f4;
+}
+
+body.ks-page-home [data-ks-edge-creative="1"],
+body.ks-page-home [data-ks-orphan="1"],
+body.ks-page-home [data-ks-header-clone="1"],
+body.ks-page-home [data-ks-hidden-popup="1"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+@media (min-width: 1200px) {
+  body.ks-page-home::before,
+  body.ks-page-home::after {
+    content: "";
+    position: fixed;
+    top: var(--ks-mask-top, 0px);
+    bottom: 0;
+    z-index: 2147483000;
+    pointer-events: none;
+    background: var(--ks-mask-bg, #f4f4f4);
+  }
+
+  body.ks-page-home::before {
+    left: 0;
+    width: max(var(--ks-left-gutter, 56px), 56px);
+  }
+
+  body.ks-page-home::after {
+    right: 0;
+    width: max(var(--ks-right-gutter, 220px), 220px);
+  }
+}
