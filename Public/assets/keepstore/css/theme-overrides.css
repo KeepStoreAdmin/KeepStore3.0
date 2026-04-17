@@ -74,3 +74,42 @@ body.ks-page-home [data-ks-hidden-popup="1"] {
     width: max(var(--ks-right-gutter, 220px), 220px);
   }
 }
+
+/* Step43: hard gutters and late-clone cleanup */
+body.ks-page-home {
+  --ks-mask-top: 0px;
+  --ks-left-gutter: 96px;
+  --ks-right-gutter: 320px;
+  --ks-mask-bg: #f4f4f4;
+}
+
+body.ks-page-home::before,
+body.ks-page-home::after {
+  content: "";
+  position: fixed;
+  top: var(--ks-mask-top, 0px);
+  bottom: 0;
+  z-index: 2147483600;
+  pointer-events: none;
+  background: var(--ks-mask-bg, #f4f4f4);
+}
+
+body.ks-page-home::before {
+  left: 0;
+  width: calc(var(--ks-left-gutter, 96px) + 48px);
+}
+
+body.ks-page-home::after {
+  right: 0;
+  width: calc(var(--ks-right-gutter, 320px) + 140px);
+}
+
+body.ks-page-home [data-ks-edge-creative='1'],
+body.ks-page-home [data-ks-header-clone='1'],
+body.ks-page-home [data-ks-orphan='1'],
+body.ks-page-home [data-ks-hidden-popup='1'] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
