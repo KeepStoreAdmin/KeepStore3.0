@@ -203,9 +203,9 @@
   function setGutterVars() {
     if (!document.body) return;
     var lane = primaryLaneRect();
-    var top = Math.max(0, firstHeaderBottom());
-    var left = Math.max(96, Math.floor(Math.max(0, lane.left) - 20));
-    var right = Math.max(320, Math.floor(Math.max(0, window.innerWidth - lane.right) + 80));
+    var top = 0;
+    var left = Math.max(72, Math.floor(Math.max(0, lane.left) - 18));
+    var right = Math.max(260, Math.floor(Math.max(0, window.innerWidth - lane.right) + 120));
     var bg = '#f4f4f4';
     try {
       var computedBg = window.getComputedStyle(document.body).backgroundColor;
@@ -215,6 +215,36 @@
     document.body.style.setProperty('--ks-left-gutter', left + 'px');
     document.body.style.setProperty('--ks-right-gutter', right + 'px');
     document.body.style.setProperty('--ks-mask-bg', bg);
+  }
+
+  function ensureFixedGutterMasks() {
+    if (!document.body) return;
+    var left = document.getElementById('ks-home-mask-left');
+    if (!left) {
+      left = document.createElement('div');
+      left.id = 'ks-home-mask-left';
+      document.body.appendChild(left);
+    }
+    var right = document.getElementById('ks-home-mask-right');
+    if (!right) {
+      right = document.createElement('div');
+      right.id = 'ks-home-mask-right';
+      document.body.appendChild(right);
+    }
+    [left, right].forEach(function (node) {
+      node.setAttribute('aria-hidden', 'true');
+      node.style.position = 'fixed';
+      node.style.top = '0';
+      node.style.bottom = '0';
+      node.style.pointerEvents = 'none';
+      node.style.zIndex = '2147483646';
+      node.style.background = getComputedStyle(document.body).backgroundColor || '#f4f4f4';
+      node.style.display = 'block';
+    });
+    left.style.left = '0';
+    left.style.width = getComputedStyle(document.body).getPropertyValue('--ks-left-gutter').trim() || '72px';
+    right.style.right = '0';
+    right.style.width = getComputedStyle(document.body).getPropertyValue('--ks-right-gutter').trim() || '260px';
   }
 
   function suppressNewsletterPopup() {
@@ -415,6 +445,24 @@
     });
   }
 
+  function hideBodyHeaderClones() {
+    if (!document.body) return;
+    var mainBottom = firstHeaderBottom();
+    Array.prototype.slice.call(document.body.children).forEach(function (node) {
+      if (!node || /^(script|style|main|header|footer|form)$/i.test(node.tagName)) return;
+      var rect = rectOf(node);
+      if (!rect || rect.top < mainBottom + 120) return;
+      if (rect.width < window.innerWidth * 0.55 || rect.height < 30 || rect.height > 260) return;
+      var text = normalizeText(textContentOf(node).slice(0, 500));
+      var hasSearch = !!node.querySelector('input[type="search"], input[placeholder*="cerca" i], input[placeholder*="ean" i], .icon-search, button[type="submit"]');
+      var hasLogo = !!node.querySelector('img[src*="logo" i], .logo-site, .site-logo');
+      var hasHeaderTerms = text.indexOf('home') !== -1 && text.indexOf('catalog') !== -1 && text.indexOf('offerte') !== -1;
+      if (hasSearch || hasLogo || hasHeaderTerms || text.indexOf('cerca prodotti') !== -1 || text.indexOf('tutti i settori') !== -1) {
+        hideNode(node, 'data-ks-header-clone');
+      }
+    });
+  }
+
   function hideBodyLevelArtifacts() {
     if (!document.body) return;
     var lane = primaryLaneRect();
@@ -465,7 +513,9 @@
     suppressNewsletterPopup();
     compactHero();
     setGutterVars();
+    ensureFixedGutterMasks();
     hideHeaderClones();
+    hideBodyHeaderClones();
     hideBodyLevelArtifacts();
     hideDirectFranchising();
     hideTokenArtifacts();
@@ -491,7 +541,7 @@
     applyHomeFlags();
     runHomeCleanup();
     if (isHomePage()) {
-      [300, 1400, 3400, 6200, 9000].forEach(function (delay) {
+      [300, 1400, 3400, 6200, 9000, 12000].forEach(function (delay) {
         window.setTimeout(runHomeCleanup, delay);
       });
       window.addEventListener('load', runHomeCleanup, { once: true });

@@ -87,3 +87,22 @@ body.ks-page-home .ks-home-departments .menu-category-list {
     overscroll-behavior: contain;
   }
 }
+
+
+/* Step46: hard fixed gutter masks and last-pass lane cleanup */
+body.ks-page-home #ks-home-mask-left,
+body.ks-page-home #ks-home-mask-right {
+  position: fixed !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  pointer-events: none !important;
+  z-index: 2147483646 !important;
+  background: var(--ks-mask-bg, #f4f4f4) !important;
+  display: block !important;
+}
+body.ks-page-home #ks-home-mask-left { left: 0 !important; width: max(var(--ks-left-gutter, 72px), 72px) !important; }
+body.ks-page-home #ks-home-mask-right { right: 0 !important; width: max(var(--ks-right-gutter, 260px), 260px) !important; }
+@media (max-width: 1199.98px) {
+  body.ks-page-home #ks-home-mask-left,
+  body.ks-page-home #ks-home-mask-right { display:none !important; }
+}
