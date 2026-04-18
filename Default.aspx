@@ -36,7 +36,9 @@
                     </div>
                 </div>
 
-                <asp:Panel ID="HeroSideWrap" runat="server" CssClass="wrap-item-3 ks-home-side-banners-legacy-off d-none" Style="display:none;">
+                <%-- Legacy right side lane removed permanently from HOME.
+                     Keep repeater server-side hidden only to avoid breaking code-behind references. --%>
+                <asp:Panel ID="HeroSideWrap" runat="server" CssClass="ks-home-side-banners-legacy-off d-none" Visible="false" Style="display:none !important; width:0; max-width:0; overflow:hidden;">
                     <asp:Repeater ID="rptSideBanners" runat="server" Visible="false"></asp:Repeater>
                 </asp:Panel>
             </div>

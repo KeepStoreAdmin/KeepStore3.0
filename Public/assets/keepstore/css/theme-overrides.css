@@ -1,25 +1,12 @@
-/* Step45: remove HOME side-banner lane at markup source and keep hero compact-only */
+/* Step49: source-side home cleanup.
+   Goal: menu + hero only, with no legacy side lane and no body-level artifact siblings. */
 body.ks-page-home {
-  --ks-mask-top: 0px;
-  --ks-left-gutter: 84px;
-  --ks-right-gutter: 280px;
-  --ks-mask-bg: #f4f4f4;
   overflow-x: hidden !important;
 }
 
-body.ks-page-home #HeroSideWrap,
-body.ks-page-home #HeroSideWrap *,
-body.ks-page-home .ks-home-side-banners,
-body.ks-page-home .ks-home-side-banners *,
-body.ks-page-home .ks-home-side-banners-legacy-off,
-body.ks-page-home .ks-home-side-banners-legacy-off *,
-body.ks-page-home .wrap-item-3,
-body.ks-page-home [data-ks-home-side-banner],
-body.ks-page-home [data-ks-home-side-banners],
-body.ks-page-home [data-ks-edge-creative='1'],
-body.ks-page-home [data-ks-header-clone='1'],
-body.ks-page-home [data-ks-hidden-popup='1'],
-body.ks-page-home [data-ks-orphan='1'] {
+/* ASP.NET pages should render inside the main server form.
+   Any direct body sibling outside the form is treated as legacy artifact. */
+body.ks-page-home > :not(form):not(script):not(style):not(link) {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
@@ -28,126 +15,79 @@ body.ks-page-home [data-ks-orphan='1'] {
 
 body.ks-page-home .auto-popup,
 body.ks-page-home .modal-newleter,
-body.ks-page-home [class*='modal-newleter'] {
+body.ks-page-home [class*="modal-newleter"] {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
   pointer-events: none !important;
 }
 
-body.ks-page-home .ks-home-departments .menu-category-list {
-  overflow-x: hidden !important;
+body.ks-page-home [data-ks-home-artifact='1'],
+body.ks-page-home [data-ks-header-clone='1'],
+body.ks-page-home [data-ks-fixed-artifact='1'],
+body.ks-page-home [data-ks-hidden-popup='1'] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 @media (min-width: 1200px) {
   body.ks-page-home .ks-home-hero-shell,
-  body.ks-page-home .s-banner-wrapper,
-  body.ks-page-home .ks-home-hero-shell.ks-home-hero-mode-full,
-  body.ks-page-home .ks-home-hero-shell.ks-home-force-compact,
-  body.ks-page-home .s-banner-wrapper.ks-home-force-compact {
+  body.ks-page-home .s-banner-wrapper {
     display: grid !important;
-    grid-template-columns: minmax(250px,270px) minmax(0,1fr) !important;
+    grid-template-columns: minmax(250px, 270px) minmax(0, 1fr) !important;
     column-gap: 24px !important;
     align-items: start !important;
   }
 
+  body.ks-page-home .ks-home-hero-shell .wrap-item-1,
+  body.ks-page-home .s-banner-wrapper .wrap-item-1 {
+    min-width: 250px !important;
+    max-width: 270px !important;
+  }
+
   body.ks-page-home .ks-home-hero-shell .wrap-item-2,
-  body.ks-page-home .s-banner-wrapper .wrap-item-2 {
-    flex: 1 1 auto !important;
+  body.ks-page-home .s-banner-wrapper .wrap-item-2,
+  body.ks-page-home #HeroSliderWrap {
+    min-width: 0 !important;
     width: auto !important;
     max-width: none !important;
-    min-width: 0 !important;
-    align-self: stretch !important;
+    flex: 1 1 auto !important;
   }
 
-  body.ks-page-home::before,
-  body.ks-page-home::after {
-    content: "";
-    position: fixed;
-    top: var(--ks-mask-top, 0px);
-    bottom: 0;
-    z-index: 2147483000;
-    pointer-events: none;
-    background: var(--ks-mask-bg, #f4f4f4);
-    box-shadow: none !important;
-  }
-
-  body.ks-page-home::before {
-    left: 0;
-    width: max(var(--ks-left-gutter, 84px), 84px);
-  }
-
-  body.ks-page-home::after {
-    right: 0;
-    width: max(var(--ks-right-gutter, 280px), 280px);
-  }
-
-  body.ks-page-home .ks-home-departments .menu-category-list[data-ks-menu-synced='1'] {
-    overflow-y: auto !important;
-    overscroll-behavior: contain;
-  }
-}
-
-
-/* Step47: remove viewport masks and rely on hard artifact root cleanup */
-body.ks-page-home {
-  --ks-mask-top: 0px !important;
-  --ks-left-gutter: 0px !important;
-  --ks-right-gutter: 0px !important;
-}
-
-body.ks-page-home::before,
-body.ks-page-home::after,
-body.ks-page-home .ks-home-runtime-masks,
-body.ks-page-home #ks-home-mask-left,
-body.ks-page-home #ks-home-mask-right {
-  display: none !important;
-  content: none !important;
-}
-
-body.ks-page-home [data-ks-floating-creative='1'],
-body.ks-page-home [data-ks-body-artifact='1'],
-body.ks-page-home [data-ks-franchising-artifact='1'],
-body.ks-page-home [data-ks-edge-column='1'],
-body.ks-page-home [data-ks-media-rail='1'],
-body.ks-page-home [data-ks-header-clone='1'],
-body.ks-page-home [data-ks-edge-creative='1'],
-body.ks-page-home [data-ks-orphan='1'] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-
-/* Step48: hard-stop selectors for root artifacts */
-body.ks-page-home [data-ks-franchising-artifact="1"],
-body.ks-page-home [data-ks-body-artifact="1"],
-body.ks-page-home [data-ks-media-rail="1"],
-body.ks-page-home [data-ks-floating-creative="1"],
-body.ks-page-home [data-ks-edge-creative="1"],
-body.ks-page-home [data-ks-orphan="1"],
-body.ks-page-home [data-ks-header-clone="1"] {
-  display:none !important;
-  visibility:hidden !important;
-  opacity:0 !important;
-  pointer-events:none !important;
-}
-
-@media (min-width: 1200px) {
   body.ks-page-home #HeroSideWrap,
   body.ks-page-home .ks-home-side-banners,
+  body.ks-page-home .ks-home-side-banners *,
   body.ks-page-home .wrap-item-3 {
-    display:none !important;
-    visibility:hidden !important;
-    width:0 !important;
-    max-width:0 !important;
-    min-width:0 !important;
-    overflow:hidden !important;
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    overflow: hidden !important;
   }
-  body.ks-page-home .ks-home-hero-shell,
-  body.ks-page-home .s-banner-wrapper,
-  body.ks-page-home .ks-home-hero-shell.ks-home-force-compact {
-    grid-template-columns:minmax(250px,270px) minmax(0,1fr) !important;
+
+  body.ks-page-home .ks-home-hero-banner,
+  body.ks-page-home .ks-home-hero-banner--imageonly,
+  body.ks-page-home .ks-home-hero-slider,
+  body.ks-page-home .ks-home-hero-slider .swiper-slide,
+  body.ks-page-home .ks-home-hero-media,
+  body.ks-page-home .ks-home-hero-media--only {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  body.ks-page-home .ks-home-hero-banner img,
+  body.ks-page-home .ks-home-hero-banner--imageonly img,
+  body.ks-page-home .ks-home-hero-media img,
+  body.ks-page-home .ks-home-hero-media--only img {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    object-fit: cover !important;
   }
 }
