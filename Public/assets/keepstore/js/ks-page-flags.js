@@ -561,6 +561,136 @@
 
   window.KSRecent = { read: readMergedRecent, add: updateRecentList };
 
+
+  /* Step48: source-like hard cleanup for residual Welcome/Franchising and edge rails */
+  function artifactRoot(node) {
+    var lane = primaryLaneRect();
+    var current = node;
+    var hops = 0;
+    while (current && current.parentElement && hops < 28) {
+      var parent = current.parentElement;
+      if (!parent || parent.tagName === 'BODY' || parent.tagName === 'MAIN' || parent.tagName === 'FORM' || parent.tagName === 'HEADER' || parent.tagName === 'FOOTER') break;
+      var rect = rectOf(parent);
+      if (!rect) break;
+      var outsideLane = rect.right <= lane.left + 60 || rect.left >= lane.right - 60;
+      var narrowRail = rect.width <= Math.min(560, window.innerWidth * 0.42);
+      var tallEnough = rect.height >= 48;
+      if (outsideLane || (narrowRail && tallEnough)) {
+        current = parent;
+        hops += 1;
+        continue;
+      }
+      break;
+    }
+    return current || node;
+  }
+
+  function hasVisibleMedia(node) {
+    if (!node) return false;
+    if (node.tagName === 'IMG') return true;
+    if (node.querySelector && node.querySelector('img')) return true;
+    var st = styleOf(node);
+    return !!(st && st.backgroundImage && st.backgroundImage !== 'none');
+  }
+
+  function hideWelcomeFranchisingAnywhere() {
+    Array.prototype.slice.call(document.querySelectorAll('div,section,aside,span,p,a,img')).forEach(function (node) {
+      if (!node) return;
+      if (node.closest && node.closest('header, footer, main, .tf-header, .tf-footer, .ks-top-catalog-mega, .modal.show, .offcanvas.show')) return;
+      var rect = rectOf(node);
+      if (!rect || rect.width < 10 || rect.height < 10) return;
+      var st = styleOf(node);
+      var bg = st && st.backgroundImage && st.backgroundImage !== 'none' ? st.backgroundImage : '';
+      var raw = [node.id || '', node.className || '', textContentOf(node).slice(0, 400), node.getAttribute ? (node.getAttribute('src') || node.getAttribute('data-src') || node.getAttribute('alt') || '') : '', bg].join(' ');
+      if (!containsToken(raw)) return;
+      hideNode(artifactRoot(node), 'data-ks-franchising-artifact');
+    });
+  }
+
+  function hideDirectBodyArtifacts() {
+    if (!document.body) return;
+    var lane = primaryLaneRect();
+    var headerBottom = firstHeaderBottom();
+    Array.prototype.slice.call(document.body.children).forEach(function (node) {
+      if (!node || /^(script|style|form|main|header|footer)$/i.test(node.tagName)) return;
+      var rect = rectOf(node);
+      if (!rect) return;
+      var st = styleOf(node);
+      var pos = st ? st.position : '';
+      var raw = [node.id || '', node.className || '', textContentOf(node).slice(0, 400)].join(' ');
+      var outsideLane = rect.right <= lane.left + 40 || rect.left >= lane.right - 40;
+      var fixedLike = pos === 'fixed' || pos === 'sticky' || pos === 'absolute';
+      var headerLike = /cerca prodotti|tutti i settori|il mio account|assistenza|spedizione gratuita|chiamaci gratis/i.test(raw);
+      var mediaCount = node.querySelectorAll ? node.querySelectorAll('img').length : 0;
+      if (containsToken(raw) || (outsideLane && (fixedLike || mediaCount >= 1)) || (headerLike && rect.top > headerBottom + 20)) {
+        hideNode(node, 'data-ks-body-artifact');
+      }
+    });
+  }
+
+  function hideEdgeMediaColumns() {
+    var lane = primaryLaneRect();
+    var buckets = {};
+    Array.prototype.slice.call(document.querySelectorAll('div,section,aside')).forEach(function (node) {
+      if (!node || (node.closest && node.closest('header, footer, main, .tf-header, .tf-footer, .ks-top-catalog-mega'))) return;
+      var rect = rectOf(node);
+      if (!rect) return;
+      var outsideLane = rect.right <= lane.left + 30 || rect.left >= lane.right - 30;
+      if (!outsideLane) return;
+      if (rect.width > 360 || rect.height < 100) return;
+      var mediaCount = node.querySelectorAll ? node.querySelectorAll('img').length : 0;
+      var st = styleOf(node);
+      if (st && st.backgroundImage && st.backgroundImage !== 'none') mediaCount += 1;
+      if (mediaCount < 2) return;
+      var key = (rect.left < lane.left ? 'L:' : 'R:') + Math.round(rect.left/40) + ':' + Math.round(rect.width/20);
+      (buckets[key] = buckets[key] || []).push(node);
+    });
+    Object.keys(buckets).forEach(function (key) {
+      if (buckets[key].length < 2) return;
+      buckets[key].forEach(function (node) { hideNode(artifactRoot(node), 'data-ks-media-rail'); });
+    });
+  }
+
+  function hideFloatingEdgeCreatives() {
+    var lane = primaryLaneRect();
+    Array.prototype.slice.call(document.querySelectorAll('div,section,aside,a,span,p,img')).forEach(function (node) {
+      if (!node || (node.closest && node.closest('header, footer, main, .tf-header, .tf-footer, .ks-top-catalog-mega'))) return;
+      var rect = rectOf(node);
+      var st = styleOf(node);
+      if (!rect || !st) return;
+      var pos = st.position || '';
+      if (pos !== 'fixed' && pos !== 'sticky' && pos !== 'absolute') return;
+      var outsideLane = rect.right <= lane.left + 30 || rect.left >= lane.right - 30;
+      if (!outsideLane) return;
+      if (rect.width < 20 || rect.height < 24 || rect.width > 460) return;
+      if (containsToken([node.id || '', node.className || '', textContentOf(node)].join(' ')) || hasVisibleMedia(node) || rect.height >= 80) {
+        hideNode(artifactRoot(node), 'data-ks-floating-creative');
+      }
+    });
+  }
+
+  function runHomeCleanup() {
+    if (!isHomePage()) return;
+    removeRuntimeMasks();
+    suppressNewsletterPopup();
+    compactHero();
+    setGutterVars();
+    hideHeaderClones();
+    hideDirectBodyArtifacts();
+    hideWelcomeFranchisingAnywhere();
+    hideBodyLevelArtifacts();
+    hideDirectFranchising();
+    hideTokenArtifacts();
+    hideEdgeMediaColumns();
+    hideRepeatedDeviceRails();
+    hideDuplicateMediaBySource();
+    hideFloatingEdgeCreatives();
+    hideFixedEdgeArtifacts();
+    hideOrphanFragments();
+    hideWelcomeFranchisingAnywhere();
+    hideDirectBodyArtifacts();
+  }
+
   onReady(function () {
     if (isArticlePage()) {
       addBodyClass('ks-page-article');

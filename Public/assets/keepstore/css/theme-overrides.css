@@ -118,3 +118,36 @@ body.ks-page-home [data-ks-orphan='1'] {
   opacity: 0 !important;
   pointer-events: none !important;
 }
+
+
+/* Step48: hard-stop selectors for root artifacts */
+body.ks-page-home [data-ks-franchising-artifact="1"],
+body.ks-page-home [data-ks-body-artifact="1"],
+body.ks-page-home [data-ks-media-rail="1"],
+body.ks-page-home [data-ks-floating-creative="1"],
+body.ks-page-home [data-ks-edge-creative="1"],
+body.ks-page-home [data-ks-orphan="1"],
+body.ks-page-home [data-ks-header-clone="1"] {
+  display:none !important;
+  visibility:hidden !important;
+  opacity:0 !important;
+  pointer-events:none !important;
+}
+
+@media (min-width: 1200px) {
+  body.ks-page-home #HeroSideWrap,
+  body.ks-page-home .ks-home-side-banners,
+  body.ks-page-home .wrap-item-3 {
+    display:none !important;
+    visibility:hidden !important;
+    width:0 !important;
+    max-width:0 !important;
+    min-width:0 !important;
+    overflow:hidden !important;
+  }
+  body.ks-page-home .ks-home-hero-shell,
+  body.ks-page-home .s-banner-wrapper,
+  body.ks-page-home .ks-home-hero-shell.ks-home-force-compact {
+    grid-template-columns:minmax(250px,270px) minmax(0,1fr) !important;
+  }
+}
