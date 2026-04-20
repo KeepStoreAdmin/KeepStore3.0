@@ -160,10 +160,15 @@ Partial Public Class home_runtime_feed
 
     Private Function BuildSectionsPayload() As Dictionary(Of String, Object)
         Dim payload As New Dictionary(Of String, Object)()
-        payload("offerte") = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.InOfferta,0)<>0 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY RAND()", 12)
-        payload("evidenza") = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Vetrina,0)<>0 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY RAND()", 12)
-        payload("nuovi") = LoadProductCards("WHERE v.NListino = 1 AND v.DataCreazione IS NOT NULL AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY v.DataCreazione DESC, RAND()", 18)
-        payload("best") = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY COALESCE(v.visite,0) DESC, RAND()", 18)
+        Dim recentIds As List(Of Integer) = ParseIds(Request("recent"))
+
+        payload("offerte") = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.InOfferta,0)<>0 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY RAND()", 18)
+        payload("evidenza") = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Vetrina,0)<>0 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY RAND()", 18)
+        payload("nuovi") = LoadProductCards("WHERE v.NListino = 1 AND v.DataCreazione IS NOT NULL AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY v.DataCreazione DESC, RAND()", 24)
+        payload("best") = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY COALESCE(v.visite,0) DESC, RAND()", 20)
+        payload("top20") = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY COALESCE(v.visite,0) DESC, RAND()", 20)
+        payload("topselling") = LoadTopSellingCards(20)
+        payload("recent") = If(recentIds IsNot Nothing AndAlso recentIds.Count > 0, LoadProductsByIds(recentIds.Take(12).ToList()), New List(Of Dictionary(Of String, Object))())
         Return payload
     End Function
 
@@ -206,7 +211,7 @@ Partial Public Class home_runtime_feed
         If priceCurrent <= 0D Then priceCurrent = ReadDec(If(ReadDec(row("PrezzoPromo"), 0D) > 0D, row("PrezzoPromo"), row("Prezzo")), 0D)
         Dim priceOld As Decimal = ReadDec(If(ReadDec(row("PrezzoIvato"), 0D) > 0D, row("PrezzoIvato"), row("Prezzo")), 0D)
         Dim available As Integer = Math.Max(0, ReadInt(row("Disponibilita"), ReadInt(row("Giacenza"), 0)))
-        Dim sold As Integer = 0
+        Dim sold As Integer = Math.Max(0, ReadInt(If(row.Table.Columns.Contains("SoldQty"), row("SoldQty"), 0), 0))
         Dim salePercent As Integer = 0
         If priceOld > 0D AndAlso priceCurrent > 0D AndAlso priceOld > priceCurrent Then
             salePercent = CInt(Math.Round(((priceOld - priceCurrent) / priceOld) * 100D, MidpointRounding.AwayFromZero))
@@ -250,7 +255,37 @@ Partial Public Class home_runtime_feed
     Private Function BuildPreviewVariant(ByVal raw As String) As String
         Dim url As String = NormalizeBannerImage(raw)
         If String.IsNullOrWhiteSpace(url) Then Return String.Empty
+        Dim q As Integer = url.IndexOf("?"c)
+        Dim baseUrl As String = If(q >= 0, url.Substring(0, q), url)
+        Dim suffix As String = If(q >= 0, url.Substring(q), String.Empty)
+        Dim dot As Integer = baseUrl.LastIndexOf("."c)
+        If dot > 0 Then
+            Dim candidate As String = baseUrl.Substring(0, dot) & "_" & baseUrl.Substring(dot) & suffix
+            Return candidate
+        End If
         Return url
+    End Function
+
+
+    Private Function LoadTopSellingCards(ByVal limit As Integer) As List(Of Dictionary(Of String, Object))
+        Dim sql As New StringBuilder()
+        sql.Append("SELECT DISTINCT v.id, v.Codice, v.Ean, v.Descrizione1, v.DescrizioneLunga, v.MarcheDescrizione, v.CategorieDescrizione, v.SettoriDescrizione, ")
+        sql.Append("v.Img1, v.Img2, v.Img3, v.Img4, i.Immagine1, i.Immagine2, i.Immagine3, i.Immagine4, i.Immagine5, i.Immagine6, ")
+        sql.Append("v.Prezzo, v.PrezzoIvato, v.PrezzoPromo, v.PrezzoPromoIvato, COALESCE(v.InOfferta,0) AS InOfferta, COALESCE(v.Vetrina,0) AS Vetrina, COALESCE(v.visite,0) AS Visite, ")
+        sql.Append("COALESCE(v.Disponibilita,0) AS Disponibilita, COALESCE(v.Giacenza,0) AS Giacenza, v.OfferteDataFine, v.DataCreazione, COALESCE(s.QntTot,0) AS SoldQty ")
+        sql.Append("FROM vsuperarticoli v ")
+        sql.Append("LEFT JOIN immagini i ON i.id = v.id ")
+        sql.Append("LEFT JOIN (SELECT dr.ArticoliId AS articoli_id, SUM(IFNULL(dr.Qnt,0)) AS QntTot FROM documentirighe dr INNER JOIN documenti d ON d.id = dr.DocumentiId WHERE dr.TipoRiga = 'A' GROUP BY dr.ArticoliId) s ON s.articoli_id = v.id ")
+        sql.Append("WHERE v.NListino = 1 AND COALESCE(v.Disponibilita,0) > 0 ")
+        sql.Append("ORDER BY COALESCE(s.QntTot,0) DESC, COALESCE(v.visite,0) DESC, RAND() LIMIT ")
+        sql.Append(Math.Max(1, limit).ToString(CultureInfo.InvariantCulture))
+
+        Dim table As DataTable = ExecuteQuery(sql.ToString())
+        Dim output As New List(Of Dictionary(Of String, Object))()
+        For Each row As DataRow In table.Rows
+            output.Add(MapProductRow(row))
+        Next
+        Return output
     End Function
 
     Private Function ParseIds(ByVal raw As String) As List(Of Integer)
