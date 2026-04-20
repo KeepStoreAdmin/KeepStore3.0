@@ -1,5 +1,6 @@
-/* Step50: reset HOME cleanup to a stable compact layout without body-wide masks */
+/* Step54: stabilize HOME layout and use precise edge masks only on real gutters. */
 body.ks-page-home {
+  background: #f4f4f4 !important;
   overflow-x: hidden !important;
 }
 
@@ -36,17 +37,14 @@ body.ks-page-home .ks-home-departments .menu-category-list {
   overflow-x: hidden !important;
 }
 
-/* No viewport masks: remove the artificial blank gutters created in previous steps */
-body.ks-page-home::before,
-body.ks-page-home::after,
-body.ks-page-home .ks-home-runtime-masks,
-body.ks-page-home #ks-home-mask-left,
-body.ks-page-home #ks-home-mask-right {
+body.ks-page-home form#form1 > :not(#wrapper):not(script):not(style):not(link),
+body.ks-page-home > :not(form):not(script):not(style):not(link) {
   display: none !important;
-  content: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
-/* Prevent full-page screenshot duplication from fixed header clones */
 body.ks-page-home header,
 body.ks-page-home .tf-header,
 body.ks-page-home .header-fixed,
@@ -60,12 +58,30 @@ body.ks-page-home [class*='sticky-header'] {
   transform: none !important;
 }
 
+body.ks-page-home #ks-home-mask-left,
+body.ks-page-home #ks-home-mask-right {
+  position: fixed !important;
+  top: var(--ks-mask-top, 0px) !important;
+  bottom: 0 !important;
+  pointer-events: none !important;
+  z-index: 2147483000 !important;
+  background: var(--ks-mask-bg, #f4f4f4) !important;
+  display: none;
+}
+
+body.ks-page-home #ks-home-mask-left { left: 0 !important; width: 0 !important; }
+body.ks-page-home #ks-home-mask-right { right: 0 !important; width: 0 !important; }
+
 @media (min-width: 1200px) {
+  body.ks-page-home #ks-home-mask-left,
+  body.ks-page-home #ks-home-mask-right {
+    display: block !important;
+  }
+
   body.ks-page-home .ks-home-hero-shell,
   body.ks-page-home .s-banner-wrapper,
   body.ks-page-home .ks-home-hero-shell.ks-home-force-compact,
-  body.ks-page-home .ks-home-hero-shell.ks-home-hero-mode-full,
-  body.ks-page-home .ks-home-hero-shell.ks-home-hero-mode-compact-single {
+  body.ks-page-home .ks-home-hero-section .container > .s-banner-wrapper {
     display: grid !important;
     grid-template-columns: minmax(250px, 270px) minmax(0, 1fr) !important;
     column-gap: 24px !important;
@@ -107,31 +123,32 @@ body.ks-page-home [class*='sticky-header'] {
     max-height: none !important;
     object-fit: cover !important;
   }
-}
 
+  body.ks-page-home .grid-cls.grid-cls-v1 {
+    display: grid !important;
+    grid-template-columns: minmax(250px, 270px) minmax(0, 1fr) minmax(250px, 270px) !important;
+    gap: 24px !important;
+    align-items: start !important;
+  }
 
-/* Step53: home must render only inside main wrapper on desktop.
-   Everything else in form is legacy chrome/artifact for HOME only. */
-body.ks-page-home {
-  background: #f4f4f4 !important;
-}
+  body.ks-page-home .grid-cls.grid-cls-v1 > .grid-item1,
+  body.ks-page-home .grid-cls.grid-cls-v1 > .grid-item2,
+  body.ks-page-home .grid-cls.grid-cls-v1 > .grid-item3 {
+    min-width: 0 !important;
+  }
 
-body.ks-page-home form#form1 > :not(#wrapper):not(script):not(style):not(link),
-body.ks-page-home > :not(form):not(script):not(style):not(link) {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
+  body.ks-page-home .grid-cls.grid-cls-v1 > .grid-item2 {
+    overflow: visible !important;
+  }
 
-body.ks-page-home #wrapper,
-body.ks-page-home #wrapper > main,
-body.ks-page-home #wrapper > header,
-body.ks-page-home #wrapper > footer,
-body.ks-page-home .container,
-body.ks-page-home .tf-grid-product,
-body.ks-page-home .grid-cls,
-body.ks-page-home .ks-home-hero-shell,
-body.ks-page-home .s-banner-wrapper {
-  overflow: hidden !important;
+  body.ks-page-home .tf-grid-product {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 24px !important;
+    align-items: start !important;
+  }
+
+  body.ks-page-home .tf-grid-product > .tf-grid-product-item {
+    min-width: 0 !important;
+  }
 }
