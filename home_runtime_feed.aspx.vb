@@ -162,13 +162,23 @@ Partial Public Class home_runtime_feed
         Dim payload As New Dictionary(Of String, Object)()
         Dim recentIds As List(Of Integer) = ParseIds(Request("recent"))
 
-        payload("offerte") = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.InOfferta,0)<>0 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY RAND()", 18)
-        payload("evidenza") = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Vetrina,0)<>0 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY RAND()", 18)
-        payload("nuovi") = LoadProductCards("WHERE v.NListino = 1 AND v.DataCreazione IS NOT NULL AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY v.DataCreazione DESC, RAND()", 24)
-        payload("best") = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY COALESCE(v.visite,0) DESC, RAND()", 20)
-        payload("top20") = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY COALESCE(v.visite,0) DESC, RAND()", 20)
-        payload("topselling") = LoadTopSellingCards(20)
-        payload("recent") = If(recentIds IsNot Nothing AndAlso recentIds.Count > 0, LoadProductsByIds(recentIds.Take(12).ToList()), New List(Of Dictionary(Of String, Object))())
+        Dim offerte As List(Of Dictionary(Of String, Object)) = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.InOfferta,0)<>0 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY RAND()", 30)
+        Dim evidenza As List(Of Dictionary(Of String, Object)) = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Vetrina,0)<>0 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY RAND()", 30)
+        Dim nuovi As List(Of Dictionary(Of String, Object)) = LoadProductCards("WHERE v.NListino = 1 AND v.DataCreazione IS NOT NULL AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY v.DataCreazione DESC, RAND()", 36)
+        Dim best As List(Of Dictionary(Of String, Object)) = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY COALESCE(v.visite,0) DESC, RAND()", 36)
+        Dim top20 As List(Of Dictionary(Of String, Object)) = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY COALESCE(v.visite,0) DESC, RAND()", 36)
+        Dim topselling As List(Of Dictionary(Of String, Object)) = LoadTopSellingCards(36)
+        Dim recent As List(Of Dictionary(Of String, Object)) = If(recentIds IsNot Nothing AndAlso recentIds.Count > 0, LoadProductsByIds(recentIds.Take(12).ToList()), New List(Of Dictionary(Of String, Object))())
+        Dim combined As List(Of Dictionary(Of String, Object)) = MergeCardLists(offerte, evidenza, nuovi, best, top20, topselling, recent)
+
+        payload("offerte") = offerte
+        payload("evidenza") = evidenza
+        payload("nuovi") = nuovi
+        payload("best") = best
+        payload("top20") = top20
+        payload("topselling") = topselling
+        payload("recent") = recent
+        payload("combined") = combined
         Return payload
     End Function
 
@@ -198,8 +208,14 @@ Partial Public Class home_runtime_feed
 
         Dim table As DataTable = ExecuteQuery(sql.ToString())
         Dim output As New List(Of Dictionary(Of String, Object))()
+        Dim seen As New HashSet(Of Integer)()
         For Each row As DataRow In table.Rows
-            output.Add(MapProductRow(row))
+            Dim item As Dictionary(Of String, Object) = MapProductRow(row)
+            If item Is Nothing Then Continue For
+            Dim id As Integer = ReadInt(item("id"), 0)
+            If id <= 0 OrElse seen.Contains(id) Then Continue For
+            seen.Add(id)
+            output.Add(item)
         Next
         Return output
     End Function
@@ -216,6 +232,11 @@ Partial Public Class home_runtime_feed
         If priceOld > 0D AndAlso priceCurrent > 0D AndAlso priceOld > priceCurrent Then
             salePercent = CInt(Math.Round(((priceOld - priceCurrent) / priceOld) * 100D, MidpointRounding.AwayFromZero))
         End If
+
+        If id <= 0 Then Return Nothing
+        If String.IsNullOrWhiteSpace(CleanText(row("Descrizione1"))) Then Return Nothing
+        If imgs.Count = 0 Then Return Nothing
+        If priceCurrent <= 0D Then Return Nothing
 
         Dim item As New Dictionary(Of String, Object)()
         item("id") = id
@@ -284,6 +305,23 @@ Partial Public Class home_runtime_feed
         Dim output As New List(Of Dictionary(Of String, Object))()
         For Each row As DataRow In table.Rows
             output.Add(MapProductRow(row))
+        Next
+        Return output
+    End Function
+
+
+    Private Function MergeCardLists(ParamArray lists() As List(Of Dictionary(Of String, Object))) As List(Of Dictionary(Of String, Object))
+        Dim output As New List(Of Dictionary(Of String, Object))()
+        Dim seen As New HashSet(Of Integer)()
+        For Each list As List(Of Dictionary(Of String, Object)) In lists
+            If list Is Nothing Then Continue For
+            For Each item As Dictionary(Of String, Object) In list
+                If item Is Nothing Then Continue For
+                Dim id As Integer = ReadInt(item("id"), 0)
+                If id <= 0 OrElse seen.Contains(id) Then Continue For
+                seen.Add(id)
+                output.Add(item)
+            Next
         Next
         Return output
     End Function
