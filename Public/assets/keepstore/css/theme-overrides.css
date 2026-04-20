@@ -1,27 +1,11 @@
-/* Step49: source-side home cleanup.
-   Goal: menu + hero only, with no legacy side lane and no body-level artifact siblings. */
+/* Step50: reset HOME cleanup to a stable compact layout without body-wide masks */
 body.ks-page-home {
   overflow-x: hidden !important;
 }
 
-/* ASP.NET pages should render inside the main server form.
-   Any direct body sibling outside the form is treated as legacy artifact. */
-body.ks-page-home > :not(form):not(script):not(style):not(link) {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
 body.ks-page-home .auto-popup,
 body.ks-page-home .modal-newleter,
-body.ks-page-home [class*="modal-newleter"] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
+body.ks-page-home [class*="modal-newleter"],
 body.ks-page-home [data-ks-home-artifact='1'],
 body.ks-page-home [data-ks-header-clone='1'],
 body.ks-page-home [data-ks-fixed-artifact='1'],
@@ -32,9 +16,56 @@ body.ks-page-home [data-ks-hidden-popup='1'] {
   pointer-events: none !important;
 }
 
+body.ks-page-home #HeroSideWrap,
+body.ks-page-home .ks-home-side-banners,
+body.ks-page-home .ks-home-side-banners *,
+body.ks-page-home .ks-home-side-banners-legacy-off,
+body.ks-page-home .ks-home-side-banners-legacy-off *,
+body.ks-page-home .wrap-item-3 {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  overflow: hidden !important;
+}
+
+body.ks-page-home .ks-home-departments .menu-category-list {
+  overflow-x: hidden !important;
+}
+
+/* No viewport masks: remove the artificial blank gutters created in previous steps */
+body.ks-page-home::before,
+body.ks-page-home::after,
+body.ks-page-home .ks-home-runtime-masks,
+body.ks-page-home #ks-home-mask-left,
+body.ks-page-home #ks-home-mask-right {
+  display: none !important;
+  content: none !important;
+}
+
+/* Prevent full-page screenshot duplication from fixed header clones */
+body.ks-page-home header,
+body.ks-page-home .tf-header,
+body.ks-page-home .header-fixed,
+body.ks-page-home .header-sticky,
+body.ks-page-home [class*='header-fixed'],
+body.ks-page-home [class*='sticky-header'] {
+  position: static !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  transform: none !important;
+}
+
 @media (min-width: 1200px) {
   body.ks-page-home .ks-home-hero-shell,
-  body.ks-page-home .s-banner-wrapper {
+  body.ks-page-home .s-banner-wrapper,
+  body.ks-page-home .ks-home-hero-shell.ks-home-force-compact,
+  body.ks-page-home .ks-home-hero-shell.ks-home-hero-mode-full,
+  body.ks-page-home .ks-home-hero-shell.ks-home-hero-mode-compact-single {
     display: grid !important;
     grid-template-columns: minmax(250px, 270px) minmax(0, 1fr) !important;
     column-gap: 24px !important;
@@ -54,20 +85,6 @@ body.ks-page-home [data-ks-hidden-popup='1'] {
     width: auto !important;
     max-width: none !important;
     flex: 1 1 auto !important;
-  }
-
-  body.ks-page-home #HeroSideWrap,
-  body.ks-page-home .ks-home-side-banners,
-  body.ks-page-home .ks-home-side-banners *,
-  body.ks-page-home .wrap-item-3 {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    width: 0 !important;
-    min-width: 0 !important;
-    max-width: 0 !important;
-    overflow: hidden !important;
   }
 
   body.ks-page-home .ks-home-hero-banner,
