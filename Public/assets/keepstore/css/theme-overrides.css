@@ -1,4 +1,4 @@
-/* Step52: direct root cleanup only. No viewport masks, no body-wide hiding. */
+/* Step50: reset HOME cleanup to a stable compact layout without body-wide masks */
 body.ks-page-home {
   overflow-x: hidden !important;
 }
@@ -7,13 +7,8 @@ body.ks-page-home .auto-popup,
 body.ks-page-home .modal-newleter,
 body.ks-page-home [class*="modal-newleter"],
 body.ks-page-home [data-ks-home-artifact='1'],
-body.ks-page-home [data-ks-franchising-artifact='1'],
 body.ks-page-home [data-ks-header-clone='1'],
 body.ks-page-home [data-ks-fixed-artifact='1'],
-body.ks-page-home [data-ks-media-rail='1'],
-body.ks-page-home [data-ks-edge-column='1'],
-body.ks-page-home [data-ks-body-artifact='1'],
-body.ks-page-home [data-ks-orphan='1'],
 body.ks-page-home [data-ks-hidden-popup='1'] {
   display: none !important;
   visibility: hidden !important;
@@ -41,6 +36,7 @@ body.ks-page-home .ks-home-departments .menu-category-list {
   overflow-x: hidden !important;
 }
 
+/* No viewport masks: remove the artificial blank gutters created in previous steps */
 body.ks-page-home::before,
 body.ks-page-home::after,
 body.ks-page-home .ks-home-runtime-masks,
@@ -50,6 +46,7 @@ body.ks-page-home #ks-home-mask-right {
   content: none !important;
 }
 
+/* Prevent full-page screenshot duplication from fixed header clones */
 body.ks-page-home header,
 body.ks-page-home .tf-header,
 body.ks-page-home .header-fixed,
@@ -110,4 +107,31 @@ body.ks-page-home [class*='sticky-header'] {
     max-height: none !important;
     object-fit: cover !important;
   }
+}
+
+
+/* Step53: home must render only inside main wrapper on desktop.
+   Everything else in form is legacy chrome/artifact for HOME only. */
+body.ks-page-home {
+  background: #f4f4f4 !important;
+}
+
+body.ks-page-home form#form1 > :not(#wrapper):not(script):not(style):not(link),
+body.ks-page-home > :not(form):not(script):not(style):not(link) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+body.ks-page-home #wrapper,
+body.ks-page-home #wrapper > main,
+body.ks-page-home #wrapper > header,
+body.ks-page-home #wrapper > footer,
+body.ks-page-home .container,
+body.ks-page-home .tf-grid-product,
+body.ks-page-home .grid-cls,
+body.ks-page-home .ks-home-hero-shell,
+body.ks-page-home .s-banner-wrapper {
+  overflow: hidden !important;
 }
