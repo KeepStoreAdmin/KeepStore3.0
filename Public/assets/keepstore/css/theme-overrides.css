@@ -1,4 +1,4 @@
-/* Step51: keep Step50 stability, but hard-stop template demo/mega-home residues at source-like selectors */
+/* Step52: direct root cleanup only. No viewport masks, no body-wide hiding. */
 body.ks-page-home {
   overflow-x: hidden !important;
 }
@@ -7,11 +7,14 @@ body.ks-page-home .auto-popup,
 body.ks-page-home .modal-newleter,
 body.ks-page-home [class*="modal-newleter"],
 body.ks-page-home [data-ks-home-artifact='1'],
+body.ks-page-home [data-ks-franchising-artifact='1'],
 body.ks-page-home [data-ks-header-clone='1'],
 body.ks-page-home [data-ks-fixed-artifact='1'],
-body.ks-page-home [data-ks-hidden-popup='1'],
-body.ks-page-home [data-ks-template-demo='1'],
-body.ks-page-home [data-ks-body-artifact='1'] {
+body.ks-page-home [data-ks-media-rail='1'],
+body.ks-page-home [data-ks-edge-column='1'],
+body.ks-page-home [data-ks-body-artifact='1'],
+body.ks-page-home [data-ks-orphan='1'],
+body.ks-page-home [data-ks-hidden-popup='1'] {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
@@ -38,34 +41,6 @@ body.ks-page-home .ks-home-departments .menu-category-list {
   overflow-x: hidden !important;
 }
 
-/* Hard-stop for Onsus demo mega menu/template residues still bleeding into HOME */
-body.ks-page-home .sub-menu-container.mega-home,
-body.ks-page-home .mega-menu.mega-home,
-body.ks-page-home .mega-home .row-demo,
-body.ks-page-home .mega-home .demo-item,
-body.ks-page-home img[src*='/images/demo/home-'],
-body.ks-page-home img[data-src*='/images/demo/home-'],
-body.ks-page-home img[src*='/onsus/images/demo/home-'],
-body.ks-page-home img[data-src*='/onsus/images/demo/home-'],
-body.ks-page-home img[src*='/keepstore/images/demo/home-'],
-body.ks-page-home img[data-src*='/keepstore/images/demo/home-'],
-body.ks-page-home a[href$='home-2.html'],
-body.ks-page-home a[href$='home-3.html'],
-body.ks-page-home a[href$='home-4.html'],
-body.ks-page-home a[href$='home-5.html'],
-body.ks-page-home a[href$='home-6.html'],
-body.ks-page-home a[href$='home-7.html'],
-body.ks-page-home a[href$='home-8.html'],
-body.ks-page-home a[href$='home-9.html'],
-body.ks-page-home a[href$='home-10.html'],
-body.ks-page-home a[href$='home-11.html'] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-/* No viewport masks: remove the artificial blank gutters created in previous steps */
 body.ks-page-home::before,
 body.ks-page-home::after,
 body.ks-page-home .ks-home-runtime-masks,
@@ -75,7 +50,6 @@ body.ks-page-home #ks-home-mask-right {
   content: none !important;
 }
 
-/* Prevent full-page screenshot duplication from fixed header clones */
 body.ks-page-home header,
 body.ks-page-home .tf-header,
 body.ks-page-home .header-fixed,
