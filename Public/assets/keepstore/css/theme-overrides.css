@@ -140,3 +140,14 @@ body.ks-page-home .card-product .old-price{color:var(--gray-2,#73787d);text-deco
   .ks-runtime-big-media{height:280px;}
   .ks-runtime-tabs-head{gap:16px;}
 }
+
+
+body.ks-page-home .ksv2-home-root{display:block!important;}
+body.ks-page-home .ksv2-home-root [data-ks-hidden-section="1"]{display:none!important;}
+body.ks-page-home .ksv2-home-root .box-icon{display:inline-flex!important;align-items:center;justify-content:center;}
+body.ks-page-home [data-ks-hidden-section="1"]{display:none!important;}
+body.ks-page-home .ksv2 .ksv2-title-row h5,
+body.ks-page-home .ksv2 .ksv2-lower-col h5,
+body.ks-page-home .ksv2 .ksv2-head button,
+body.ks-page-home .ksv2 .title,
+body.ks-page-home .ksv2 .title-big{font-family:var(--ks-font-secondary)!important;}
