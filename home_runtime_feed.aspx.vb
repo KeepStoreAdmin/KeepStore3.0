@@ -162,13 +162,13 @@ Partial Public Class home_runtime_feed
         Dim payload As New Dictionary(Of String, Object)()
         Dim recentIds As List(Of Integer) = ParseIds(Request("recent"))
 
-        Dim offerte As List(Of Dictionary(Of String, Object)) = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.InOfferta,0)<>0 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY RAND()", 120)
-        Dim evidenza As List(Of Dictionary(Of String, Object)) = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Vetrina,0)<>0 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY RAND()", 120)
-        Dim nuovi As List(Of Dictionary(Of String, Object)) = LoadProductCards("WHERE v.NListino = 1 AND v.DataCreazione IS NOT NULL AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY v.DataCreazione DESC, RAND()", 120)
-        Dim best As List(Of Dictionary(Of String, Object)) = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY COALESCE(v.visite,0) DESC, RAND()", 120)
-        Dim top20 As List(Of Dictionary(Of String, Object)) = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY COALESCE(v.visite,0) DESC, RAND()", 120)
-        Dim topselling As List(Of Dictionary(Of String, Object)) = LoadTopSellingCards(120)
-        Dim recent As List(Of Dictionary(Of String, Object)) = If(recentIds IsNot Nothing AndAlso recentIds.Count > 0, LoadProductsByIds(recentIds.Take(32).ToList()), LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY COALESCE(v.visite,0) DESC, RAND()", 32))
+        Dim offerte As List(Of Dictionary(Of String, Object)) = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.InOfferta,0)<>0 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY RAND()", 160)
+        Dim evidenza As List(Of Dictionary(Of String, Object)) = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Vetrina,0)<>0 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY RAND()", 160)
+        Dim nuovi As List(Of Dictionary(Of String, Object)) = LoadProductCards("WHERE v.NListino = 1 AND v.DataCreazione IS NOT NULL AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY v.DataCreazione DESC, RAND()", 160)
+        Dim best As List(Of Dictionary(Of String, Object)) = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY COALESCE(v.visite,0) DESC, RAND()", 160)
+        Dim top20 As List(Of Dictionary(Of String, Object)) = LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY COALESCE(v.visite,0) DESC, RAND()", 160)
+        Dim topselling As List(Of Dictionary(Of String, Object)) = LoadTopSellingCards(160)
+        Dim recent As List(Of Dictionary(Of String, Object)) = If(recentIds IsNot Nothing AndAlso recentIds.Count > 0, LoadProductsByIds(recentIds.Take(32).ToList()), LoadProductCards("WHERE v.NListino = 1 AND COALESCE(v.Disponibilita,0) > 0", "ORDER BY COALESCE(v.visite,0) DESC, RAND()", 40))
         Dim combined As List(Of Dictionary(Of String, Object)) = MergeCardLists(offerte, evidenza, nuovi, best, top20, topselling, recent)
 
         payload("offerte") = offerte
