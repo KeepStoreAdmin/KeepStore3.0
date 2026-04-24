@@ -458,6 +458,34 @@
     }
   }
 
+
+  function collapseDormantOverlayArtifacts() {
+    var form = q('form#form1') || q('form');
+    if (!form) return;
+    qa('.modal,.offcanvas,.modal-backdrop', form).forEach(function (node) {
+      if (!node || node.classList.contains('show') || node.classList.contains('showing')) return;
+      node.setAttribute('data-ks-dormant-overlay', '1');
+      node.style.setProperty('display', 'none', 'important');
+      node.style.setProperty('visibility', 'hidden', 'important');
+      node.style.setProperty('opacity', '0', 'important');
+      node.style.setProperty('pointer-events', 'none', 'important');
+      node.style.setProperty('position', 'fixed', 'important');
+      node.style.setProperty('width', '0', 'important');
+      node.style.setProperty('height', '0', 'important');
+      node.style.setProperty('min-height', '0', 'important');
+      node.style.setProperty('max-height', '0', 'important');
+      node.style.setProperty('margin', '0', 'important');
+      node.style.setProperty('padding', '0', 'important');
+      node.style.setProperty('overflow', 'hidden', 'important');
+    });
+    [document.documentElement, document.body].forEach(function (node) {
+      if (!node || !node.style) return;
+      node.style.setProperty('height', 'auto', 'important');
+      node.style.setProperty('min-height', '0', 'important');
+      node.style.setProperty('max-height', 'none', 'important');
+    });
+  }
+
   function releaseHomePageHeight() {
     [document.documentElement, document.body, q("form#form1"), q("#wrapper"), q("main"), q(".ks-account-shell"), q(".ks-account-main")].forEach(function (node) {
       if (!node || !node.style) return;
@@ -909,6 +937,7 @@
     runSafe('compactEmptyTailBeforeFooter', compactEmptyTailBeforeFooter);
     runSafe('hideAfterFooterArtifacts', hideAfterFooterArtifacts);
     runSafe('releaseHomePageHeight', releaseHomePageHeight);
+    runSafe('collapseDormantOverlayArtifacts', collapseDormantOverlayArtifacts);
     runSafe('bindGeneratedImageFallbacks', function () { bindGeneratedImageFallbacks(document); });
     runSafe('updateAllSwipers', updateAllSwipers);
   }

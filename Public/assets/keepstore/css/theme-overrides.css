@@ -1260,3 +1260,38 @@ body.ks-page-home #KsHomeOnsusBridge img[data-ks-img-fallbacks]{background:trans
 body.ks-page-home #KsHomeOnsusBridge .ks-image-missing{display:none!important;}
 body.ks-page-home .ks-home-feed-section .ks-image-missing{display:none!important;}
 body.ks-page-home.ks-onsus-bridge-mounted #KsHomeOnsusBridge + section{margin-top:2px!important;}
+
+/* step86: hidden Bootstrap/modal/offcanvas fragments after #wrapper must not extend HOME scroll height. */
+body.ks-page-home form > .modal:not(.show),
+body.ks-page-home form > .offcanvas:not(.show),
+body.ks-page-home .modal.fade:not(.show),
+body.ks-page-home .offcanvas:not(.show),
+body.ks-page-home .modal-backdrop:not(.show){
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  position:fixed!important;
+  inset:auto!important;
+  width:0!important;
+  height:0!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-width:0!important;
+  max-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+body.ks-page-home:not(.modal-open) .modal-backdrop,
+body.ks-page-home:not(.modal-open) .modal:not(.show){
+  display:none!important;
+}
+body.ks-page-home #form1,
+body.ks-page-home #wrapper,
+body.ks-page-home main,
+body.ks-page-home .ks-account-shell,
+body.ks-page-home .ks-account-main{
+  padding-bottom:0!important;
+  margin-bottom:0!important;
+}
