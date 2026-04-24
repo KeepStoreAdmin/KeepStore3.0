@@ -31,6 +31,18 @@
   }
   function textOf(node) { return String(node && node.textContent || '').replace(/\s+/g, ' ').trim(); }
 
+  function directChildren(parent) {
+    if (!parent || !parent.children) return [];
+    return Array.prototype.slice.call(parent.children);
+  }
+  function directChild(parent, test) {
+    var children = directChildren(parent);
+    for (var i = 0; i < children.length; i++) {
+      try { if (test(children[i])) return children[i]; } catch (err) {}
+    }
+    return null;
+  }
+
   function buildSwiper(root, options) {
     if (!root || root.swiper || typeof Swiper === 'undefined') return null;
     return new Swiper(root, options);
@@ -46,8 +58,8 @@
     var wrapper = document.getElementById('wrapper');
     if (!wrapper) return;
 
-    var main = q(':scope > main', wrapper) || q('main', wrapper) || q('main');
-    var footer = q(':scope > footer.tf-footer', wrapper) || q('footer.tf-footer');
+    var main = directChild(wrapper, function (node) { return String(node.tagName || '').toLowerCase() === 'main'; }) || q('main', wrapper) || q('main');
+    var footer = directChild(wrapper, function (node) { return String(node.tagName || '').toLowerCase() === 'footer' && node.classList && node.classList.contains('tf-footer'); }) || q('footer.tf-footer');
     var headers = qa('header[data-ks-header], header.ks-header-ui, header.tf-header');
     var header = null;
 
@@ -82,12 +94,18 @@
     if (footer && main && footer.parentNode !== wrapper) {
       wrapper.appendChild(footer);
     }
-    var firstFooter = q(':scope > footer.tf-footer', wrapper) || footer;
+    var firstFooter = directChild(wrapper, function (node) { return String(node.tagName || '').toLowerCase() === 'footer' && node.classList && node.classList.contains('tf-footer'); }) || footer;
     qa('footer.tf-footer').forEach(function (f) {
       if (f !== firstFooter) {
         f.setAttribute('data-ks-duplicate-chrome', 'footer-clone');
         hide(f, 'footer-clone');
       }
+    });
+
+    qa('.tf-footer .tf-topbar, .tf-footer .inner-header, .tf-footer .header-bottom, .tf-footer .ks-header-ui, .tf-footer header.tf-header').forEach(function (node) {
+      if (header && header.contains(node)) return;
+      node.setAttribute('data-ks-duplicate-chrome', 'footer-header-fragment');
+      hide(node, 'footer-header-fragment');
     });
   }
 
@@ -95,7 +113,7 @@
     if (!isHome()) return;
     var form = document.getElementById('form1') || q('body > form');
     if (!form) return;
-    qa(':scope > *', form).forEach(function (node) {
+    directChildren(form).forEach(function (node) {
       var tag = String(node.tagName || '').toLowerCase();
       if (node.id === 'wrapper' || node.id === 'goTop' || node.id === 'preload') return;
       if (/^(script|style|link|input|select|textarea)$/.test(tag)) return;
@@ -644,29 +662,35 @@
     }
   }
 
+  function runSafe(name, fn) {
+    try { fn(); } catch (err) {
+      try { document.body.setAttribute('data-ks-last-home-error', name); } catch (e) {}
+    }
+  }
+
   function stabilizeHome() {
     if (!isHome()) return;
-    normalizeChromeOrder();
-    quarantineForeignDirectChildren();
-    forceHeroLayout();
-    closeEmptySections();
-    finalizeCommercialRuntime();
-    updateAllSwipers();
+    runSafe('chrome', normalizeChromeOrder);
+    runSafe('foreign', quarantineForeignDirectChildren);
+    runSafe('hero', forceHeroLayout);
+    runSafe('empty-sections', closeEmptySections);
+    runSafe('commercial-runtime', finalizeCommercialRuntime);
+    runSafe('swipers', updateAllSwipers);
   }
 
   function boot() {
     if (!isHome()) return;
     document.body.classList.add('ks-page-home');
-    normalizeChromeOrder();
-    quarantineForeignDirectChildren();
-    initHeroSwiper();
-    initBrandSlider();
-    initCollectionSlider();
-    initColumnSwipers();
-    normalizeImages();
-    bindImageRefresh();
+    runSafe('chrome', normalizeChromeOrder);
+    runSafe('foreign', quarantineForeignDirectChildren);
+    runSafe('hero-swiper', initHeroSwiper);
+    runSafe('brand-swiper', initBrandSlider);
+    runSafe('collection-swiper', initCollectionSlider);
+    runSafe('column-swipers', initColumnSwipers);
+    runSafe('images', normalizeImages);
+    runSafe('image-refresh', bindImageRefresh);
     stabilizeHome();
-    finalizeCommercialRuntime();
+    runSafe('commercial-runtime', finalizeCommercialRuntime);
 
     [80, 180, 420, 900, 1800, 3600].forEach(function (delay) {
       window.setTimeout(stabilizeHome, delay);
