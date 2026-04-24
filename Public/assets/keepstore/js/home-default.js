@@ -941,12 +941,97 @@
     }
   }
 
+
+  function normalizeClosingItemText(value) {
+    return String(value || '').replace(/\s+/g, ' ').replace(/^[\s:;,\.\-]+|[\s:;,\.\-]+$/g, '').trim();
+  }
+
+  function addUniqueClosingItem(list, seen, title, url, meta) {
+    title = normalizeClosingItemText(title);
+    url = normalizeClosingItemText(url || '');
+    if (!title || title.length < 3) return;
+    if (!url || /^#|javascript:/i.test(url)) url = 'articoli.aspx';
+    var key = title.toLowerCase();
+    if (seen[key]) return;
+    seen[key] = 1;
+    list.push({ title: title, url: url, meta: normalizeClosingItemText(meta || '') });
+  }
+
+  function collectClosingCategories() {
+    var out = [], seen = {};
+    qa('footer.tf-footer .ft-menu-list a[href*="articoli.aspx"], footer.tf-footer .ft-menu-list a[href]').forEach(function (a) {
+      if (out.length >= 12) return;
+      var title = textOf(a);
+      if (/privacy|condizioni|resi|rimbor|domande|consegna|account|ordine|clienti|faq|supporto/i.test(title)) return;
+      addUniqueClosingItem(out, seen, title, a.getAttribute('href') || 'articoli.aspx', 'Categoria');
+    });
+    if (out.length < 8) {
+      collectDepartmentItems().forEach(function (item) {
+        if (out.length >= 12) return;
+        addUniqueClosingItem(out, seen, item.title, item.url, 'Reparto');
+      });
+    }
+    return out.slice(0, 10);
+  }
+
+  function collectClosingServices() {
+    var out = [], seen = {};
+    qa('.tf-icon-box').forEach(function (box) {
+      if (out.length >= 5) return;
+      var titleNode = q('h6,h5,.title,.box-title,strong,b', box);
+      var bodyNode = q('p,.content,.text,.body-text-3', box);
+      var title = titleNode ? textOf(titleNode) : textOf(box).split('.')[0];
+      var desc = bodyNode ? textOf(bodyNode) : textOf(box).replace(title, '');
+      addUniqueClosingItem(out, seen, title, 'Contattaci.aspx', desc);
+    });
+    if (out.length < 4) {
+      [
+        ['Pagamenti sicuri', 'Checkout protetto e metodi di pagamento tracciabili'],
+        ['Supporto dedicato', 'Assistenza prima e dopo l\'acquisto'],
+        ['Catalogo aggiornato', 'Prodotti e reparti reali KeepStore'],
+        ['Garanzia e resi', 'Procedure chiare per acquisti sicuri']
+      ].forEach(function (row) { addUniqueClosingItem(out, seen, row[0], 'Contattaci.aspx', row[1]); });
+    }
+    return out.slice(0, 4);
+  }
+
+  function insertClosingLayer(section) {
+    if (!section) return;
+    var footer = q('footer.tf-footer');
+    var brand = q('#HomeBrandsSection');
+    if (brand && brand.parentNode) { brand.parentNode.insertBefore(section, brand.nextSibling); return; }
+    if (footer && footer.parentNode) footer.parentNode.insertBefore(section, footer);
+    else (q('main') || document.body).appendChild(section);
+  }
+
+  function buildHomeClosingLayer() {
+    if (!isHome()) return;
+    var existing = q('#KsHomeClosingLayer');
+    if (existing) { removeHardHide(existing); return; }
+    var categories = collectClosingCategories();
+    var services = collectClosingServices();
+    if (categories.length < 4 && services.length < 3) return;
+    var section = document.createElement('section');
+    section.id = 'KsHomeClosingLayer';
+    section.className = 'tf-sp-2 ks-home-closing-layer';
+    section.setAttribute('data-ks-generated', 'closing-layer');
+    section.innerHTML = '<div class="container"><div class="ks-home-closing-grid">' +
+      '<div class="ks-home-closing-panel ks-home-closing-categories"><div class="ks-home-closing-head"><div><p class="caption text-primary fw-semibold">Catalogo</p><h5 class="fw-semibold">Categorie popolari</h5></div></div><div class="ks-home-closing-chips">' +
+      categories.map(function (item) { return '<a class="ks-home-closing-chip" href="' + escHtml(item.url) + '"><span>' + escHtml(item.title) + '</span><small>' + escHtml(item.meta || 'Scopri') + '</small></a>'; }).join('') +
+      '</div></div><div class="ks-home-closing-panel ks-home-closing-services"><div class="ks-home-closing-head"><div><p class="caption text-primary fw-semibold">Acquisto sicuro</p><h5 class="fw-semibold">Servizi KeepStore</h5></div></div><div class="ks-home-service-grid">' +
+      services.map(function (item) { return '<a class="ks-home-service-card" href="' + escHtml(item.url) + '"><b>' + escHtml(initialFor(item.title)) + '</b><span>' + escHtml(item.title) + '</span><small>' + escHtml(item.meta || 'Scopri di piu') + '</small></a>'; }).join('') +
+      '</div></div></div></div>';
+    insertClosingLayer(section);
+    document.body.classList.add('ks-home-closing-mounted');
+  }
+
   function buildHomeCompositionLayer() {
     runSafe('buildDepartmentShowcase', buildDepartmentShowcase);
     runSafe('normalizeProductGridDensity', normalizeProductGridDensity);
     runSafe('mountOnsusBridgeFromServerProducts', mountOnsusBridgeFromServerProducts);
     runSafe('fetchAndMountFeedProducts', fetchAndMountFeedProducts);
     runSafe('moveBrandsAfterProducts', moveBrandsAfterProducts);
+    runSafe('buildHomeClosingLayer', buildHomeClosingLayer);
   }
 
   function stabilize() {
