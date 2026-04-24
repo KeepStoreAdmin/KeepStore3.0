@@ -1623,3 +1623,48 @@ body.ks-page-home section[data-ks-home-primary-products="1"] .card-product:hover
 body.ks-page-home section[data-ks-home-primary-products="1"] .card-product:focus-within .list-product-btn,
 body.ks-page-home section[data-ks-home-primary-products="1"] .card-product:focus-within .box-icon,
 body.ks-page-home section[data-ks-home-primary-products="1"] .card-product:focus-within .product-action{opacity:1!important;visibility:visible!important;}
+
+
+/* Step 95 - final desktop polish: compact ONSUS cadence without changing server data */
+body.ks-page-home.ks-home-step95-polish main{padding-bottom:0!important;}
+body.ks-page-home.ks-home-step95-polish .ks-home-section-title{margin-bottom:14px!important;}
+body.ks-page-home.ks-home-step95-polish #KsDepartmentShowcase,
+body.ks-page-home.ks-home-step95-polish #KsHomeOnsusBridge,
+body.ks-page-home.ks-home-step95-polish #HomeBrandsSection,
+body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer{position:relative!important;z-index:1!important;}
+body.ks-page-home.ks-home-step95-polish #KsDepartmentShowcase{margin-top:28px!important;margin-bottom:20px!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeOnsusBridge{margin-top:16px!important;margin-bottom:22px!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeOnsusBridge .ks-onsus-feature-grid{margin-bottom:18px!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeOnsusBridge .ks-onsus-product-strip{margin-top:0!important;margin-bottom:16px!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeOnsusBridge .ks-onsus-extra-grid{margin-top:0!important;margin-bottom:4px!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeOnsusBridge .ks-onsus-grid-card{transition:transform .18s ease,box-shadow .18s ease!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeOnsusBridge .ks-onsus-grid-card:not([hidden]):hover{transform:translateY(-3px)!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeOnsusBridge .ks-onsus-title{letter-spacing:.005em!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeOnsusBridge .ks-onsus-price{margin-top:auto!important;}
+body.ks-page-home.ks-home-step95-polish #HomeBrandsSection{margin-top:30px!important;padding-top:0!important;padding-bottom:18px!important;}
+body.ks-page-home.ks-home-step95-polish #HomeBrandsSection .flat-title,
+body.ks-page-home.ks-home-step95-polish #HomeBrandsSection .heading-section{margin-bottom:16px!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer{margin-top:0!important;padding-top:4px!important;padding-bottom:24px!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer .container{max-width:1180px!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer .ks-home-closing-grid{align-items:start!important;gap:18px!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer .ks-home-closing-panel{min-height:0!important;height:auto!important;padding:18px!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer .ks-home-closing-head{margin-bottom:12px!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer .ks-home-closing-head h5{font-size:18px!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer .ks-home-closing-chips{gap:10px!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer .ks-home-closing-chip{min-height:54px!important;padding:10px 12px!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer .ks-home-closing-chip span{font-size:12px!important;line-height:1.2!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer .ks-home-service-grid{gap:10px!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer .ks-home-service-card{min-height:92px!important;padding:12px!important;}
+body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer .ks-home-service-card b{width:28px!important;height:28px!important;min-width:28px!important;font-size:12px!important;}
+body.ks-page-home.ks-home-step95-polish footer.tf-footer{margin-top:0!important;}
+body.ks-page-home.ks-home-step95-polish .ft-body-wrap{margin-top:0!important;}
+body.ks-page-home.ks-home-step95-polish .ft-body-inner{padding-top:26px!important;padding-bottom:28px!important;}
+body.ks-page-home.ks-home-step95-polish .ft-body-bottom{padding-top:22px!important;padding-bottom:22px!important;}
+@media (max-width:1199.98px){
+  body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer .ks-home-closing-grid{grid-template-columns:1fr!important;}
+  body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer .ks-home-closing-chips{grid-template-columns:repeat(4,minmax(0,1fr))!important;}
+}
+@media (max-width:767.98px){
+  body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer .ks-home-closing-chips{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+  body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer .ks-home-service-grid{grid-template-columns:1fr!important;}
+}
