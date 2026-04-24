@@ -165,6 +165,43 @@
     });
   }
 
+  function normalizeDesktopCatalogMegaMenu() {
+    var item = q('.ks-header-catalog-item');
+    var mega = q('.ks-header-catalog-mega', item || document);
+    var wrapper = q('.ks-header-catalog-wrapper', mega || document);
+    if (!item || !mega || !wrapper) return;
+    item.classList.add('ks-header-catalog-normalized');
+    mega.classList.add('ks-header-catalog-mega-normalized');
+    wrapper.classList.add('ks-header-catalog-wrapper-normalized');
+    mega.removeAttribute('style');
+    wrapper.removeAttribute('style');
+    qa('.ks-header-catalog-column', wrapper).forEach(function (col) { col.removeAttribute('style'); });
+    var link = q('a.item-link,a[href]', item);
+    if (link) {
+      link.setAttribute('aria-haspopup', 'true');
+      link.setAttribute('aria-expanded', item.classList.contains('ks-menu-open') ? 'true' : 'false');
+    }
+    function open() {
+      item.classList.add('ks-menu-open');
+      if (link) link.setAttribute('aria-expanded', 'true');
+    }
+    function close() {
+      item.classList.remove('ks-menu-open');
+      if (link) link.setAttribute('aria-expanded', 'false');
+    }
+    if (!item.getAttribute('data-ks-mega-bound')) {
+      item.setAttribute('data-ks-mega-bound', '1');
+      item.addEventListener('mouseenter', open);
+      item.addEventListener('mouseleave', close);
+      item.addEventListener('focusin', open);
+      item.addEventListener('focusout', function () {
+        window.setTimeout(function () { if (!item.contains(document.activeElement)) close(); }, 80);
+      });
+      document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') close(); });
+      document.addEventListener('click', function (ev) { if (!item.contains(ev.target)) close(); });
+    }
+  }
+
   function forceHeroLayout() {
     var section = q('#HomeHeroSection') || q('.ks-home-hero-section');
     if (!section) return;
@@ -1125,6 +1162,7 @@
   function stabilize() {
     if (!isHome()) return;
     runSafe('ensureChromeOrder', ensureChromeOrder);
+    runSafe('normalizeDesktopCatalogMegaMenu', normalizeDesktopCatalogMegaMenu);
     runSafe('forceHeroLayout', forceHeroLayout);
     runSafe('restoreCommercialSections', restoreCommercialSections);
     runSafe('buildHomeCompositionLayer', buildHomeCompositionLayer);
