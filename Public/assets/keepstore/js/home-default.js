@@ -733,19 +733,40 @@
     return { id: productIdFromUrl(link.getAttribute('href') || ''), url: link.getAttribute('href') || '#', image: imageCandidates[0], imageCandidates: imageCandidates, title: title, price: normalizeHomeText(priceNode ? priceNode.textContent : ''), oldPrice: normalizeHomeText(oldNode ? oldNode.textContent : ''), meta: normalizeHomeText(metaNode ? metaNode.textContent : '') };
   }
 
+  function productSourceSectionTitle(node) {
+    var section = node && node.closest ? node.closest('section,.tf-sp-1,.tf-sp-2,.tf-sp-3,.tf-sp-4,.tf-sp-5,.flat-spacing') : null;
+    if (!section) return '';
+    var titleNode = q('h1,h2,h3,h4,h5,.flat-title,.heading-section,.title-sidebar,.main-title', section);
+    return normalizeHomeText(titleNode ? titleNode.textContent : section.getAttribute('aria-label') || '');
+  }
+
+  function productBridgeFamilyKey(data) {
+    var key = editorialFamilyKey({ title: data && data.title || '', brand: data && data.meta || '', category: data && data.meta || '' });
+    if (key) return key;
+    return normalizeHomeText(data && data.title || '').toLowerCase();
+  }
+
   function collectVisibleProductData(limit) {
-    var seen = {}, out = [];
+    var wanted = Math.max(0, limit || 16);
+    var seenId = {}, seenUrl = {}, seenFamily = {}, primary = [], fallback = [];
     qa('main .card-product,main .ks-grid-card,main .ks-row-card,main .swiper-slide,main li,main a[href*="articolo.aspx?id="]').forEach(function (node) {
-      if (out.length >= (limit || 16)) return;
-      if (!node || node.closest('header,footer,.modal,.offcanvas,#HomeBrandsSection,.ks-home-brands-block,.ks-onsus-bridge')) return;
+      if (!node || node.closest('header,footer,.modal,.offcanvas,#HomeBrandsSection,.ks-home-brands-block,.ks-onsus-bridge,#KsHomeOnsusBridge')) return;
       var data = productDataFromCard(node);
       if (!data) return;
-      var key = data.id || data.url || data.title.toLowerCase();
-      if (seen[key]) return;
-      seen[key] = 1;
-      out.push(data);
+      var id = parseInt(data.id, 10) || productIdFromUrl(data.url || '');
+      var urlKey = normalizeHomeText(data.url || '').toLowerCase();
+      var familyKey = productBridgeFamilyKey(data);
+      if (id > 0 && seenId[id]) return;
+      if (urlKey && seenUrl[urlKey]) return;
+      if (familyKey && seenFamily[familyKey]) return;
+      if (id > 0) seenId[id] = 1;
+      if (urlKey) seenUrl[urlKey] = 1;
+      if (familyKey) seenFamily[familyKey] = 1;
+      data.sourceTitle = productSourceSectionTitle(node);
+      if (/best\s*seller|rivenditori|brand/i.test(data.sourceTitle || '')) fallback.push(data);
+      else primary.push(data);
     });
-    return out;
+    return primary.concat(fallback).slice(0, wanted);
   }
 
   function bridgePriceHtml(item) {
@@ -814,7 +835,29 @@
     if (best && best.parentNode) best.parentNode.insertBefore(section, best);
     else insertAfterIconBoxesSection(section);
     bindGeneratedImageFallbacks(section);
-    if (document.body) document.body.classList.add('ks-onsus-bridge-mounted');
+    pruneDuplicateBridgeCards(section);
+    if (document.body) document.body.classList.add('ks-onsus-bridge-mounted', 'ks-onsus-bridge-deduped');
+  }
+
+  function pruneDuplicateBridgeCards(root) {
+    var seenUrl = {}, seenTitle = {};
+    qa('.ks-onsus-grid-card,.ks-onsus-side-card', root || document).forEach(function (card) {
+      var href = normalizeHomeText(card.getAttribute('href') || '').toLowerCase();
+      var titleNode = q('.ks-onsus-title', card);
+      var family = normalizeHomeText(titleNode ? titleNode.textContent : card.textContent).toLowerCase()
+        .replace(/\b(nero|bianco|rosso|blu|verde|giallo|rosa|oro|argento|grigio|black|white|red|blue|green|yellow|pink|gold|silver|grey|gray|case|cover|custodia|vetro|glass|temperato|tempered|protezione|protector|clear|trasparente|mm|cm|gb|tb|xl|xxl|per|con|the|for)\b/g, ' ')
+        .replace(/\b\d+[a-z]*\b/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if ((href && seenUrl[href]) || (family && seenTitle[family])) {
+        card.classList.add('ks-onsus-duplicate-removed');
+        card.setAttribute('hidden', 'hidden');
+        card.style.display = 'none';
+        return;
+      }
+      if (href) seenUrl[href] = 1;
+      if (family) seenTitle[family] = 1;
+    });
   }
 
 

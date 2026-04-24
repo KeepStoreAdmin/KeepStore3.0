@@ -1588,3 +1588,13 @@ body.ks-page-home footer.tf-footer{margin-top:0!important;}
   body.ks-page-home .ks-header-catalog-mega .ks-header-catalog-wrapper{grid-template-columns:repeat(5,minmax(0,1fr))!important;}
   body.ks-page-home .ks-header-catalog-item > .ks-header-catalog-mega{padding-left:22px!important;padding-right:22px!important;}
 }
+
+
+/* Step 93: keep ONSUS bridge commercially distinct and visually final. */
+body.ks-page-home.ks-onsus-bridge-deduped #KsHomeOnsusBridge .ks-onsus-duplicate-removed{display:none!important;}
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-product-strip,
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-extra-grid{align-items:stretch!important;}
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-grid-card:not([hidden]),
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-side-card:not([hidden]){will-change:transform;}
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-grid-card:not([hidden]):hover,
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-side-card:not([hidden]):hover{transform:translateY(-2px)!important;box-shadow:0 12px 28px rgba(15,23,42,.07)!important;}
