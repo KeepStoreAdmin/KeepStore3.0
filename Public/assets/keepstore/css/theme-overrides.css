@@ -1789,3 +1789,18 @@ body.ks-page-home.ks-home-step98-feature-normalized #KsHomeOnsusBridge .ks-onsus
 body.ks-page-home.ks-home-step98-feature-normalized #KsHomeOnsusBridge .ks-onsus-feature-grid[hidden]{
   display:none!important;
 }
+
+/* Step 99 - ONSUS phase 1/3: use one clean template product deck instead of a partial feature band. */
+body.ks-page-home.ks-home-step99-onsus-template-grid #KsHomeOnsusBridge{padding-top:12px!important;padding-bottom:22px!important;}
+body.ks-page-home #KsHomeOnsusBridge.ks-onsus-template-grid-mode .ks-onsus-feature-grid,
+body.ks-page-home #KsHomeOnsusBridge.ks-onsus-template-grid-mode .ks-onsus-product-strip,
+body.ks-page-home #KsHomeOnsusBridge.ks-onsus-template-grid-mode .ks-onsus-extra-grid{display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-main-grid-deck{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:18px!important;align-items:stretch!important;margin-top:14px!important;}
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-main-grid-deck .ks-onsus-grid-card{display:grid!important;grid-template-rows:158px auto auto auto!important;min-height:254px!important;padding:13px!important;border:1px solid #edf1f5!important;border-radius:14px!important;background:#fff!important;box-shadow:0 6px 18px rgba(15,23,42,.035)!important;text-decoration:none!important;color:#111827!important;overflow:hidden!important;}
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-main-grid-deck .ks-onsus-grid-media{height:158px!important;display:flex!important;align-items:center!important;justify-content:center!important;background:#f7f8fb!important;border-radius:12px!important;overflow:hidden!important;}
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-main-grid-deck img{max-width:100%!important;max-height:100%!important;width:auto!important;height:auto!important;object-fit:contain!important;}
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-main-grid-deck .ks-onsus-title{display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important;min-height:32px!important;font-size:12px!important;line-height:1.3!important;color:#0757a8!important;font-weight:700!important;text-transform:uppercase!important;}
+body.ks-page-home .ks-best-seller-overflow{display:none!important;visibility:hidden!important;}
+body.ks-page-home.ks-home-step99-best-row [data-ks-onsus-best-row="1"]{padding-bottom:6px!important;}
+@media (max-width:1199.98px){body.ks-page-home #KsHomeOnsusBridge .ks-onsus-main-grid-deck{grid-template-columns:repeat(3,minmax(0,1fr))!important;}}
+@media (max-width:767.98px){body.ks-page-home #KsHomeOnsusBridge .ks-onsus-main-grid-deck{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;}}
