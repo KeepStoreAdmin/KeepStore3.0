@@ -886,3 +886,68 @@ body.ks-page-home #wrapper > header[data-ks-primary-chrome="1"] + main{
   display:block!important;
   margin-top:0!important;
 }
+
+/* step76: recover server-rendered commercial sections. No client product replacement, no destructive hide on valid product blocks. */
+body.ks-page-home.ks-home-server-rendered #ksHomeRuntimeEditorial,
+body.ks-page-home.ks-home-server-rendered .ks-home-v6{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+body.ks-page-home section[data-ks-has-products="1"],
+body.ks-page-home .flat-animate-tab[data-ks-has-products="1"],
+body.ks-page-home #HomeRecentlyViewedSection[data-ks-has-products="1"],
+body.ks-page-home #HomeLowerColumnsSection[data-ks-has-products="1"]{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
+body.ks-page-home section[data-ks-has-products="1"] .swiper,
+body.ks-page-home section[data-ks-has-products="1"] .swiper-wrapper,
+body.ks-page-home section[data-ks-has-products="1"] .swiper-slide,
+body.ks-page-home section[data-ks-has-products="1"] .card-product,
+body.ks-page-home section[data-ks-has-products="1"] .ks-grid-card,
+body.ks-page-home section[data-ks-has-products="1"] .ks-row-card,
+body.ks-page-home section[data-ks-has-products="1"] .product-list-wrap,
+body.ks-page-home section[data-ks-has-products="1"] li{
+  visibility:visible!important;
+  opacity:1!important;
+  max-height:none!important;
+}
+body.ks-page-home [data-ks-hidden-reason="commercial-empty"],
+body.ks-page-home [data-ks-hidden-reason="commercial-empty-before-brand"],
+body.ks-page-home [data-ks-commercial-empty="1"]{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+body.ks-page-home #HomeBrandsSection{
+  margin-top:18px!important;
+}
+body.ks-page-home #wrapper > header[data-ks-primary-chrome="1"]{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
