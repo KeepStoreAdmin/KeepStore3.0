@@ -778,3 +778,74 @@ body.ks-page-home .ks-home-runtime-lower .ks-home-runtime-title{
   body.ks-page-home .ks-home-runtime-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;}
   body.ks-page-home .ks-home-runtime-image{height:128px!important;}
 }
+
+/* step74: server-rendered HOME finalizer. Stop runtime replacement, hide only duplicated chrome after footer. */
+body.ks-page-home.ks-home-server-rendered #ksHomeRuntimeEditorial{display:none!important;}
+body.ks-page-home footer.tf-footer ~ header,
+body.ks-page-home footer.tf-footer ~ .ks-header-ui,
+body.ks-page-home footer.tf-footer ~ .tf-topbar,
+body.ks-page-home footer.tf-footer ~ .inner-header,
+body.ks-page-home footer.tf-footer ~ .header-bottom,
+body.ks-page-home footer.tf-footer ~ .main-nav-menu,
+body.ks-page-home [data-ks-hidden-reason="chrome-after-footer"]{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+body.ks-page-home .ks-home-hero-shell,
+body.ks-page-home .ks-home-hero-shell.ks-home-hero-mode-compact-single,
+body.ks-page-home .ks-home-hero-section .container>.s-banner-wrapper{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+}
+@media (min-width:1200px){
+  body.ks-page-home .ks-home-hero-shell,
+  body.ks-page-home .ks-home-hero-shell.ks-home-hero-mode-compact-single,
+  body.ks-page-home .ks-home-hero-section .container>.s-banner-wrapper{
+    display:grid!important;
+    grid-template-columns:285px minmax(0,1fr)!important;
+    gap:18px!important;
+    align-items:stretch!important;
+  }
+  body.ks-page-home .ks-home-hero-shell .wrap-item-1{width:285px!important;min-width:285px!important;max-width:285px!important;}
+  body.ks-page-home .ks-home-hero-shell .wrap-item-2,
+  body.ks-page-home #HeroSliderWrap{width:auto!important;max-width:none!important;min-width:0!important;}
+}
+body.ks-page-home .ks-home-hero-slider,
+body.ks-page-home .ks-home-hero-banner,
+body.ks-page-home .ks-home-hero-media{
+  border-radius:8px!important;
+  overflow:hidden!important;
+  background:#fff!important;
+}
+body.ks-page-home .ks-home-hero-slider img{object-fit:cover!important;object-position:center center!important;}
+body.ks-page-home [data-ks-hidden-reason="deal-empty"],
+body.ks-page-home [data-ks-hidden-reason="tabs-empty"],
+body.ks-page-home [data-ks-hidden-reason="recent-under-threshold"],
+body.ks-page-home [data-ks-hidden-reason="lower-empty"],
+body.ks-page-home [data-ks-hidden-reason="lower-under-threshold"],
+body.ks-page-home [data-ks-hidden-reason="orphan-price"]{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="1"] .tf-grid-product{grid-template-columns:minmax(0,1fr)!important;}
+body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="1"] .product-list-wrap{grid-template-columns:repeat(5,minmax(0,1fr))!important;}
+@media (max-width:1199.98px){body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="1"] .product-list-wrap{grid-template-columns:repeat(3,minmax(0,1fr))!important;}}
+@media (max-width:767.98px){body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="1"] .product-list-wrap{grid-template-columns:1fr!important;}}
