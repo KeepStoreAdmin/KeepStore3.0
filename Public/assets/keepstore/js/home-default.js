@@ -1518,6 +1518,141 @@
     if (document.body) document.body.classList.add('ks-home-step99-best-row');
   }
 
+
+
+  function hideOnsusTemplateSourceGroups(bridge) {
+    if (!bridge) return;
+    qa('.ks-onsus-feature-grid,.ks-onsus-product-strip,.ks-onsus-extra-grid,.ks-onsus-side-col,.ks-onsus-center', bridge).forEach(function (node) {
+      if (!node || node.classList.contains('ks-onsus-main-grid-deck') || node.closest('.ks-onsus-main-grid-deck')) return;
+      node.classList.add('ks-onsus-source-hidden');
+      node.setAttribute('hidden', 'hidden');
+      node.style.setProperty('display', 'none', 'important');
+      node.style.setProperty('visibility', 'hidden', 'important');
+      node.style.setProperty('height', '0', 'important');
+      node.style.setProperty('min-height', '0', 'important');
+      node.style.setProperty('margin', '0', 'important');
+      node.style.setProperty('padding', '0', 'important');
+      node.style.setProperty('overflow', 'hidden', 'important');
+    });
+  }
+
+  function enforceOnsusTemplateDeckOrderV2() {
+    if (!isHome()) return;
+    var bridge = q('#KsHomeOnsusBridge');
+    if (!bridge) return;
+    var deck = q('.ks-onsus-main-grid-deck[data-ks-template-deck="1"]', bridge) || q('.ks-onsus-main-grid-deck', bridge);
+    if (!deck) return;
+
+    removeHardHide(deck);
+    deck.removeAttribute('hidden');
+    deck.style.removeProperty('display');
+    deck.style.removeProperty('visibility');
+    deck.style.removeProperty('height');
+    deck.style.removeProperty('min-height');
+    deck.style.removeProperty('margin');
+    deck.style.removeProperty('padding');
+
+    bridge.classList.add('ks-onsus-template-grid-mode');
+    bridge.classList.add('ks-onsus-template-grid-mode-v2');
+    bridge.setAttribute('data-ks-onsus-template-grid', '1');
+    bridge.setAttribute('data-ks-onsus-phase2', '1');
+    if (document.body) document.body.classList.add('ks-home-step100-onsus-phase2');
+
+    var container = q('.container', bridge) || bridge;
+    var header = q('.ks-home-section-title', bridge);
+    if (header && header.parentNode === container && header.nextElementSibling !== deck) {
+      container.insertBefore(deck, header.nextSibling);
+    } else if (deck.parentNode !== container) {
+      container.appendChild(deck);
+    }
+
+    hideOnsusTemplateSourceGroups(bridge);
+
+    var cards = [];
+    qa('.ks-onsus-grid-card', deck).forEach(function (card) {
+      if (!card || card.hidden || card.classList.contains('ks-onsus-overflow-removed')) return;
+      if (!q('img', card) || !q('.ks-onsus-title', card)) return;
+      cards.push(card);
+    });
+    cards.forEach(function (card, index) {
+      removeHardHide(card);
+      if (index >= 10) {
+        card.classList.add('ks-onsus-overflow-removed');
+        card.setAttribute('hidden', 'hidden');
+        card.style.setProperty('display', 'none', 'important');
+      }
+    });
+  }
+
+  function productCardRootFromLink(link) {
+    if (!link) return null;
+    var selectors = ['.swiper-slide', '.card-product', '.ks-grid-card', '.product-item', '.product-card', '.item', 'li', '.col', '[class*="col-"]'];
+    for (var i = 0; i < selectors.length; i += 1) {
+      var root = link.closest(selectors[i]);
+      if (root && q('img', root) && root !== document.body) return root;
+    }
+    return link;
+  }
+
+  function findBestSellerBlockV2() {
+    var headings = qa('main h1,main h2,main h3,main h4,main h5,main h6,main .heading,main .title,main .section-title');
+    for (var i = 0; i < headings.length; i += 1) {
+      var h = headings[i];
+      var label = textOf(h).replace(/\s+/g, ' ').trim().toLowerCase();
+      if (label !== 'best seller') continue;
+      var root = h.parentElement;
+      var guard = 0;
+      while (root && root !== document.body && guard < 8) {
+        if (countArticleLinks(root) >= 3) return root;
+        root = root.parentElement;
+        guard += 1;
+      }
+    }
+    var sections = qa('main section,main .tf-sp-2,main .tf-sp-3,main .tf-sp-4,main .tf-sp-5').filter(function (sec) {
+      return /best seller/i.test(textOf(sec)) && countArticleLinks(sec) >= 3;
+    });
+    return sections[0] || null;
+  }
+
+  function normalizeBestSellerAsOnsusCarouselRowV2() {
+    if (!isHome()) return;
+    var best = findBestSellerBlockV2();
+    if (!best) return;
+    var seen = {}, cards = [];
+    qa('a[href*="articolo.aspx?id="],a[href*="articolo.aspx?Id="],a[href*="articolo.aspx?ID="]', best).forEach(function (link) {
+      var href = link.getAttribute('href') || '';
+      var id = productIdFromUrl(href) || href.toLowerCase();
+      if (!id || seen[id]) return;
+      var card = productCardRootFromLink(link);
+      if (!card || !q('img', card)) return;
+      seen[id] = 1;
+      cards.push(card);
+    });
+    if (cards.length < 3) return;
+    cards.forEach(function (card, index) {
+      if (index < 5) {
+        removeHardHide(card);
+        card.classList.remove('ks-best-seller-overflow');
+        card.classList.add('ks-best-seller-visible');
+        card.removeAttribute('hidden');
+        card.style.removeProperty('display');
+        card.style.removeProperty('visibility');
+      } else {
+        card.classList.add('ks-best-seller-overflow');
+        card.setAttribute('hidden', 'hidden');
+        card.style.setProperty('display', 'none', 'important');
+        card.style.setProperty('visibility', 'hidden', 'important');
+        card.style.setProperty('height', '0', 'important');
+        card.style.setProperty('min-height', '0', 'important');
+        card.style.setProperty('margin', '0', 'important');
+        card.style.setProperty('padding', '0', 'important');
+      }
+    });
+    best.setAttribute('data-ks-onsus-best-row', '1');
+    best.setAttribute('data-ks-onsus-best-row-v2', '1');
+    if (document.body) document.body.classList.add('ks-home-step100-best-row-v2');
+  }
+
   function buildHomeCompositionLayer() {
     runSafe('buildDepartmentShowcase', buildDepartmentShowcase);
     runSafe('normalizeProductGridDensity', normalizeProductGridDensity);
@@ -1526,7 +1661,9 @@
     runSafe('normalizeOnsusBridgeDensity', normalizeOnsusBridgeDensity);
     runSafe('normalizeOnsusFeatureBand', normalizeOnsusFeatureBand);
     runSafe('enforceOnsusTemplateProductDeck', enforceOnsusTemplateProductDeck);
+    runSafe('enforceOnsusTemplateDeckOrderV2', enforceOnsusTemplateDeckOrderV2);
     runSafe('normalizeBestSellerAsOnsusCarouselRow', normalizeBestSellerAsOnsusCarouselRow);
+    runSafe('normalizeBestSellerAsOnsusCarouselRowV2', normalizeBestSellerAsOnsusCarouselRowV2);
     runSafe('moveBrandsAfterProducts', moveBrandsAfterProducts);
     runSafe('buildHomeClosingLayer', buildHomeClosingLayer);
     runSafe('ensureClosingLayerOrder', ensureClosingLayerOrder);
@@ -1554,7 +1691,9 @@
     runSafe('applyStep97OnsusFinalSeal', applyStep97OnsusFinalSeal);
     runSafe('normalizeOnsusFeatureBandFinal', normalizeOnsusFeatureBand);
     runSafe('enforceOnsusTemplateProductDeck', enforceOnsusTemplateProductDeck);
+    runSafe('enforceOnsusTemplateDeckOrderV2', enforceOnsusTemplateDeckOrderV2);
     runSafe('normalizeBestSellerAsOnsusCarouselRow', normalizeBestSellerAsOnsusCarouselRow);
+    runSafe('normalizeBestSellerAsOnsusCarouselRowV2', normalizeBestSellerAsOnsusCarouselRowV2);
     runSafe('bindGeneratedImageFallbacks', function () { bindGeneratedImageFallbacks(document); });
     runSafe('updateAllSwipers', updateAllSwipers);
   }

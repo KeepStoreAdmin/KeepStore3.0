@@ -1804,3 +1804,92 @@ body.ks-page-home .ks-best-seller-overflow{display:none!important;visibility:hid
 body.ks-page-home.ks-home-step99-best-row [data-ks-onsus-best-row="1"]{padding-bottom:6px!important;}
 @media (max-width:1199.98px){body.ks-page-home #KsHomeOnsusBridge .ks-onsus-main-grid-deck{grid-template-columns:repeat(3,minmax(0,1fr))!important;}}
 @media (max-width:767.98px){body.ks-page-home #KsHomeOnsusBridge .ks-onsus-main-grid-deck{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;}}
+
+
+/* Step 100 - ONSUS phase 2/3: remove residual mini feature band and lock product rows. */
+body.ks-page-home.ks-home-step100-onsus-phase2 #KsHomeOnsusBridge{
+  padding-top:10px!important;
+  padding-bottom:20px!important;
+}
+body.ks-page-home.ks-home-step100-onsus-phase2 #KsHomeOnsusBridge .ks-onsus-source-hidden,
+body.ks-page-home.ks-home-step100-onsus-phase2 #KsHomeOnsusBridge .ks-onsus-feature-grid,
+body.ks-page-home.ks-home-step100-onsus-phase2 #KsHomeOnsusBridge .ks-onsus-product-strip,
+body.ks-page-home.ks-home-step100-onsus-phase2 #KsHomeOnsusBridge .ks-onsus-extra-grid,
+body.ks-page-home.ks-home-step100-onsus-phase2 #KsHomeOnsusBridge .ks-onsus-side-col,
+body.ks-page-home.ks-home-step100-onsus-phase2 #KsHomeOnsusBridge .ks-onsus-center{
+  display:none!important;
+  visibility:hidden!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+body.ks-page-home.ks-home-step100-onsus-phase2 #KsHomeOnsusBridge .ks-onsus-main-grid-deck{
+  display:grid!important;
+  visibility:visible!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  margin:12px 0 0!important;
+  padding:0!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  gap:18px!important;
+}
+body.ks-page-home.ks-home-step100-onsus-phase2 #KsHomeOnsusBridge .ks-onsus-main-grid-deck .ks-onsus-grid-card{
+  display:grid!important;
+  grid-template-rows:154px 16px 34px 18px!important;
+  min-height:246px!important;
+  max-height:246px!important;
+  padding:12px!important;
+  border-radius:14px!important;
+  border:1px solid #edf1f5!important;
+  background:#fff!important;
+  box-shadow:0 8px 20px rgba(15,23,42,.035)!important;
+}
+body.ks-page-home.ks-home-step100-onsus-phase2 #KsHomeOnsusBridge .ks-onsus-main-grid-deck .ks-onsus-grid-media{
+  height:154px!important;
+  border-radius:12px!important;
+  background:#f7f8fb!important;
+}
+body.ks-page-home.ks-home-step100-onsus-phase2 #KsHomeOnsusBridge .ks-onsus-main-grid-deck .ks-onsus-meta{
+  font-size:10px!important;
+  line-height:1.1!important;
+  color:#7c8797!important;
+  overflow:hidden!important;
+  white-space:nowrap!important;
+  text-overflow:ellipsis!important;
+}
+body.ks-page-home.ks-home-step100-onsus-phase2 #KsHomeOnsusBridge .ks-onsus-main-grid-deck .ks-onsus-title{
+  min-height:32px!important;
+  max-height:32px!important;
+  font-size:11.5px!important;
+  line-height:1.35!important;
+  letter-spacing:-.01em!important;
+}
+body.ks-page-home.ks-home-step100-best-row-v2 [data-ks-onsus-best-row-v2="1"] .ks-best-seller-overflow,
+body.ks-page-home.ks-home-step100-best-row-v2 [data-ks-onsus-best-row-v2="1"] [hidden]{
+  display:none!important;
+  visibility:hidden!important;
+  height:0!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+body.ks-page-home.ks-home-step100-best-row-v2 [data-ks-onsus-best-row-v2="1"]{
+  padding-bottom:4px!important;
+  margin-bottom:36px!important;
+}
+body.ks-page-home.ks-home-step100-best-row-v2 [data-ks-onsus-best-row-v2="1"] .swiper-wrapper,
+body.ks-page-home.ks-home-step100-best-row-v2 [data-ks-onsus-best-row-v2="1"] .row,
+body.ks-page-home.ks-home-step100-best-row-v2 [data-ks-onsus-best-row-v2="1"] .tf-grid-layout{
+  align-items:stretch!important;
+}
+@media (max-width:1199.98px){
+  body.ks-page-home.ks-home-step100-onsus-phase2 #KsHomeOnsusBridge .ks-onsus-main-grid-deck{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+}
+@media (max-width:767.98px){
+  body.ks-page-home.ks-home-step100-onsus-phase2 #KsHomeOnsusBridge .ks-onsus-main-grid-deck{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;}
+}
