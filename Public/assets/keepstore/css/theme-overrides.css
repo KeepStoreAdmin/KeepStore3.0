@@ -1295,3 +1295,72 @@ body.ks-page-home .ks-account-main{
   padding-bottom:0!important;
   margin-bottom:0!important;
 }
+
+/* Step 87: strengthen ONSUS density with real catalog departments and additional server product rows. */
+body.ks-page-home #KsHomeDepartmentShowcase{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  clear:both!important;
+  padding:26px 0 12px!important;
+  margin:0!important;
+  background:transparent!important;
+}
+body.ks-page-home #KsHomeDepartmentShowcase .caption{
+  margin:0 0 4px!important;
+  font-size:12px!important;
+  line-height:1.2!important;
+  text-transform:uppercase!important;
+  letter-spacing:.02em!important;
+}
+body.ks-page-home #KsHomeDepartmentShowcase .ks-home-department-grid{
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  gap:16px!important;
+}
+body.ks-page-home #KsHomeDepartmentShowcase .ks-home-department-card{
+  grid-template-columns:1fr!important;
+  grid-template-areas:"media" "title" "cta"!important;
+  justify-items:center!important;
+  text-align:center!important;
+  min-height:150px!important;
+  padding:18px 12px!important;
+  border-radius:16px!important;
+  box-shadow:0 8px 20px rgba(15,23,42,.035)!important;
+}
+body.ks-page-home #KsHomeDepartmentShowcase .ks-home-department-media{
+  width:66px!important;
+  height:66px!important;
+  border-radius:18px!important;
+}
+body.ks-page-home #KsHomeDepartmentShowcase .ks-home-department-media img{
+  max-width:52px!important;
+  max-height:52px!important;
+}
+body.ks-page-home #KsHomeDepartmentShowcase .ks-home-department-title{
+  min-height:36px!important;
+  font-size:13px!important;
+  text-transform:uppercase!important;
+  color:#0f172a!important;
+}
+body.ks-page-home .ks-onsus-extra-grid{
+  display:grid!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  gap:18px!important;
+  align-items:stretch!important;
+  margin-top:18px!important;
+}
+body.ks-page-home .ks-onsus-extra-grid:empty{display:none!important;}
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-product-strip{
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+}
+body.ks-page-home.ks-department-showcase-mounted #KsHomeOnsusBridge{
+  padding-top:14px!important;
+}
+@media (max-width:1199.98px){
+  body.ks-page-home #KsHomeDepartmentShowcase .ks-home-department-grid,
+  body.ks-page-home .ks-onsus-extra-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+}
+@media (max-width:767.98px){
+  body.ks-page-home #KsHomeDepartmentShowcase .ks-home-department-grid,
+  body.ks-page-home .ks-onsus-extra-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+}

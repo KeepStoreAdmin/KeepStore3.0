@@ -527,23 +527,41 @@
 
   function collectDepartmentItems() {
     var seen = {}, out = [];
-    var roots = qa('.ks-home-departments .menu-item');
-    if (!roots.length) roots = qa('.ks-home-departments a[href],#ksDesktopCategoryMenu a[href],.ks-mobile-catalog-list a[href]');
-    roots.forEach(function (item) {
-      if (out.length >= 12) return;
-      var link = item.matches && item.matches('a[href]') ? item : q('.ks-home-menu-row a[href],a.item-link[href],a[href*="articoli.aspx"]', item);
-      if (!link) return;
-      var href = link.getAttribute('href') || '';
-      var labelNode = q('.ks-menu-label,.ks-mobile-nav-label,.ks-header-catalog-sector-link span:last-child', item) || link;
-      var title = normalizeHomeText(labelNode.textContent || link.textContent || '');
-      if (!href || !title || title.length < 3 || seen[title.toLowerCase()] || /javascript:|#$/i.test(href)) return;
-      if (!/articoli.aspx/i.test(href) && out.length >= 6) return;
-      var img = q('.ks-menu-media img[src],.ks-menu-media img[data-src],.ks-header-catalog-media img[src],img[src],img[data-src]', item);
-      var src = img ? (img.getAttribute('src') || img.getAttribute('data-src') || '') : '';
-      seen[title.toLowerCase()] = 1;
-      out.push({ title: title, url: href, image: src });
+    function add(title, url, image) {
+      title = normalizeHomeText(title);
+      url = normalizeHomeText(url || '');
+      image = normalizeProductImageUrl(image || '');
+      if (!url || !title || title.length < 3) return;
+      if (/javascript:|^#$/i.test(url)) return;
+      if (!/articoli\.aspx/i.test(url) && out.length >= 8) return;
+      var key = title.toLowerCase();
+      if (seen[key]) return;
+      seen[key] = 1;
+      out.push({ title: title, url: url, image: image });
+    }
+
+    qa('.ks-home-departments .menu-item').forEach(function (item) {
+      var link = q('.ks-home-menu-row a[href],a.item-link[href],a[href*="articoli.aspx"]', item);
+      var titleNode = q('.ks-menu-label', item) || link;
+      var img = q('.ks-menu-media img[src],.ks-menu-media img[data-src]', item);
+      add(titleNode ? titleNode.textContent : '', link ? link.getAttribute('href') : '', img ? (img.currentSrc || img.getAttribute('src') || img.getAttribute('data-src') || '') : '');
     });
-    return out;
+
+    qa('#ksDesktopCategoryMenu .ks-header-catalog-column,.ks-mobile-catalog-list .ks-mobile-sector-item').forEach(function (item) {
+      var link = q('a[href*="articoli.aspx"]', item);
+      var titleNode = q('.ks-header-catalog-sector-link span:last-child,.ks-mobile-nav-label', item) || link;
+      var img = q('.ks-header-catalog-media img[src],.ks-mobile-nav-media img[src],img[src],img[data-src]', item);
+      add(titleNode ? titleNode.textContent : '', link ? link.getAttribute('href') : '', img ? (img.currentSrc || img.getAttribute('src') || img.getAttribute('data-src') || '') : '');
+    });
+
+    if (out.length < 8) {
+      qa('footer.tf-footer .ft-menu-list a[href],footer.tf-footer a[href*="articoli.aspx"]').forEach(function (link) {
+        if (out.length >= 12) return;
+        add(link.textContent || '', link.getAttribute('href') || '', '');
+      });
+    }
+
+    return out.slice(0, 12);
   }
 
   function escHtml(value) {
@@ -565,7 +583,9 @@
   }
 
   function buildDepartmentShowcase() {
-    if (!isHome() || q('#KsHomeDepartmentShowcase')) return;
+    if (!isHome()) return;
+    var existing = q('#KsHomeDepartmentShowcase');
+    if (existing) { removeHardHide(existing); return; }
     var items = collectDepartmentItems();
     if (items.length < 3) return;
     var section = document.createElement('section');
@@ -573,15 +593,17 @@
     section.className = 'tf-sp-2 ks-home-department-showcase';
     section.setAttribute('data-ks-generated', 'catalog-showcase');
     section.innerHTML = '<div class="container">' +
-      '<div class="flat-title ks-home-section-title"><h5 class="fw-semibold">Reparti in evidenza</h5><a class="ks-home-section-link" href="articoli.aspx">Vai al catalogo</a></div>' +
+      '<div class="flat-title ks-home-section-title"><div><p class="caption text-primary fw-semibold">Catalogo KeepStore</p><h5 class="fw-semibold">Reparti in evidenza</h5></div><a class="ks-home-section-link" href="articoli.aspx">Vai al catalogo</a></div>' +
       '<div class="ks-home-department-grid">' +
-      items.slice(0, 10).map(function (item) {
-        var media = item.image ? '<span class="ks-home-department-media"><img src="' + escHtml(item.image) + '" alt="' + escHtml(item.title) + '" loading="lazy" decoding="async" onerror="this.style.display=\'none\';this.parentNode.classList.add(\'is-empty\');" /></span>' : '<span class="ks-home-department-media is-empty"><b>' + escHtml(initialFor(item.title)) + '</b></span>';
+      items.map(function (item) {
+        var media = item.image ? '<span class="ks-home-department-media"><img src="' + escHtml(item.image) + '" alt="' + escHtml(item.title) + '" loading="lazy" decoding="async" onerror="this.style.display=\'none\';this.parentNode.classList.add(\'is-empty\');var b=document.createElement(\'b\');b.textContent=\'' + escHtml(initialFor(item.title)) + '\';this.parentNode.appendChild(b);" /></span>' : '<span class="ks-home-department-media is-empty"><b>' + escHtml(initialFor(item.title)) + '</b></span>';
         return '<a class="ks-home-department-card" href="' + escHtml(item.url) + '">' + media + '<span class="ks-home-department-title">' + escHtml(item.title) + '</span><span class="ks-home-department-cta">Scopri</span></a>';
       }).join('') +
       '</div></div>';
-    var anchor = findInsertAfterIconBoxes();
-    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(section, anchor.nextSibling);
+    var bridge = q('#KsHomeOnsusBridge');
+    if (bridge && bridge.parentNode) bridge.parentNode.insertBefore(section, bridge);
+    else insertAfterIconBoxesSection(section);
+    if (document.body) document.body.classList.add('ks-department-showcase-mounted');
   }
 
 
@@ -717,7 +739,7 @@
 
   function mountOnsusBridgeFromServerProducts() {
     if (!isHome() || q('#KsHomeOnsusBridge')) return;
-    var items = collectVisibleProductData(12);
+    var items = collectVisibleProductData(28);
     if (items.length < 5) return;
     var section = document.createElement('section');
     section.id = 'KsHomeOnsusBridge';
@@ -726,8 +748,9 @@
     var left = items.slice(0, 2).map(bridgeSmallCard).join('');
     var center = bridgeGridCard(items[2]);
     var right = items.slice(3, 5).map(bridgeSmallCard).join('');
-    var lower = items.slice(5, 10).map(bridgeGridCard).join('');
-    section.innerHTML = '<div class="container"><div class="flat-title ks-home-section-title"><div class="flat-title-tab-default"><ul class="menu-tab-line"><li class="nav-tab-item d-flex"><span class="tab-link main-title link fw-semibold active">In Evidenza</span></li><li class="nav-tab-item d-flex"><span class="tab-link main-title link fw-semibold">Top prodotti</span></li><li class="nav-tab-item d-flex"><span class="tab-link main-title link fw-semibold">Scelti dal catalogo</span></li></ul></div><a class="ks-home-section-link" href="articoli.aspx">Vai al catalogo</a></div><div class="ks-onsus-feature-grid"><div class="ks-onsus-side-col">' + left + '</div><div class="ks-onsus-center">' + center + '</div><div class="ks-onsus-side-col">' + right + '</div></div>' + (lower ? '<div class="ks-onsus-product-strip">' + lower + '</div>' : '') + '</div>';
+    var lower = items.slice(5, 15).map(bridgeGridCard).join('');
+    var extra = items.slice(15, 25).map(bridgeGridCard).join('');
+    section.innerHTML = '<div class="container"><div class="flat-title ks-home-section-title"><div class="flat-title-tab-default"><ul class="menu-tab-line"><li class="nav-tab-item d-flex"><span class="tab-link main-title link fw-semibold active">In Evidenza</span></li><li class="nav-tab-item d-flex"><span class="tab-link main-title link fw-semibold">Top prodotti</span></li><li class="nav-tab-item d-flex"><span class="tab-link main-title link fw-semibold">Scelti dal catalogo</span></li></ul></div><a class="ks-home-section-link" href="articoli.aspx">Vai al catalogo</a></div><div class="ks-onsus-feature-grid"><div class="ks-onsus-side-col">' + left + '</div><div class="ks-onsus-center">' + center + '</div><div class="ks-onsus-side-col">' + right + '</div></div>' + (lower ? '<div class="ks-onsus-product-strip">' + lower + '</div>' : '') + (extra ? '<div class="ks-onsus-extra-grid">' + extra + '</div>' : '') + '</div>';
     var best = qa('main section').filter(function (sec) { return sec && /best seller/i.test(textOf(sec)) && validProductCardCount(sec) >= 3; })[0];
     if (best && best.parentNode) best.parentNode.insertBefore(section, best);
     else insertAfterIconBoxesSection(section);
