@@ -192,3 +192,57 @@ body.ks-page-home img[data-src*="onsus-package"]{
   body.ks-page-home main,
   body.ks-page-home .ks-account-main{position:relative;overflow:visible;}
 }
+
+/* step68: source-level quarantine for template residues outside the ASP.NET runtime wrapper.
+   This replaces geometry-based full-page hiding with direct-child containment only. */
+body.ks-page-home > :not(form):not(script):not(style):not(link),
+body.ks-page-home form > :not(#wrapper):not(script):not(style):not(link):not(input):not(select):not(textarea):not(#goTop):not(#preload):not(.modal):not(.offcanvas),
+body.ks-page-home #wrapper > :not(header):not(main):not(footer) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+body.ks-page-home #wrapper,
+body.ks-page-home #wrapper > header,
+body.ks-page-home #wrapper > main,
+body.ks-page-home #wrapper > footer,
+body.ks-page-home .ks-account-shell,
+body.ks-page-home .ks-account-main {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body.ks-page-home .ks-account-shell {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body.ks-page-home .ks-account-aside {
+  display: none !important;
+}
+
+body.ks-page-home .ks-account-main {
+  width: 100% !important;
+  max-width: none !important;
+  flex: 0 0 100% !important;
+  padding: 0 !important;
+}
+
+body.ks-page-home main {
+  min-height: 0 !important;
+}
+
+body.ks-page-home .ks-home-hero-section,
+body.ks-page-home #HomeHeroSection,
+body.ks-page-home #HomeRecentlyViewedSection,
+body.ks-page-home #HomeLowerColumnsSection,
+body.ks-page-home #HomeBrandsSection,
+body.ks-page-home .flat-animate-tab {
+  position: relative !important;
+  z-index: 2 !important;
+}
