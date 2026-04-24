@@ -951,3 +951,52 @@ body.ks-page-home #wrapper > header[data-ks-primary-chrome="1"]{
   max-height:none!important;
   overflow:visible!important;
 }
+
+
+/* step77: final server-commercial pruning. Hide malformed tabs/lower blocks; keep only real product cards. */
+body.ks-page-home .ks-home-hero-slider,
+body.ks-page-home .ks-home-hero-banner,
+body.ks-page-home .ks-home-hero-media,
+body.ks-page-home .ks-home-hero-slider .swiper-wrapper,
+body.ks-page-home .ks-home-hero-slider .swiper-slide{
+  background:#000!important;
+}
+body.ks-page-home .ks-home-hero-slider img{
+  object-fit:contain!important;
+  object-position:center center!important;
+  background:#000!important;
+}
+body.ks-page-home [data-ks-hidden-reason="tabs-under-threshold"],
+body.ks-page-home [data-ks-hidden-reason="commercial-under-threshold"],
+body.ks-page-home [data-ks-hidden-reason="lower-block-under-threshold"],
+body.ks-page-home [data-ks-hidden-reason="lower-empty"]{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+body.ks-page-home .flat-animate-tab[data-ks-commercial-empty="1"],
+body.ks-page-home #HomeLowerColumnsSection[data-ks-commercial-empty="1"]{
+  display:none!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+body.ks-page-home section[data-ks-has-products="1"]{
+  margin-bottom:26px!important;
+}
+body.ks-page-home section[data-ks-has-products="1"] + #HomeBrandsSection{
+  margin-top:4px!important;
+}
+body.ks-page-home #HomeBrandsSection{
+  padding-top:12px!important;
+}
