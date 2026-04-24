@@ -1051,3 +1051,31 @@ body.ks-page-home #HomeBrandsSection,
 body.ks-page-home .ks-home-brands-block{
   margin-top:18px!important;
 }
+
+/* step79: final footer/body closure. Remove residual account-template page height and ensure the HOME ends at the real footer. */
+body.ks-page-home,
+body.ks-page-home form,
+body.ks-page-home #wrapper,
+body.ks-page-home main,
+body.ks-page-home .ks-account-shell,
+body.ks-page-home .ks-account-main{
+  min-height:0!important;
+  height:auto!important;
+  max-height:none!important;
+}
+body.ks-page-home #wrapper{display:block!important;overflow:visible!important;}
+body.ks-page-home #wrapper > main{margin-bottom:0!important;padding-bottom:0!important;}
+body.ks-page-home #wrapper > footer.tf-footer{
+  display:block!important;visibility:visible!important;opacity:1!important;position:relative!important;z-index:5!important;margin-top:0!important;margin-bottom:0!important;
+}
+body.ks-page-home #wrapper > footer.tf-footer ~ *:not(script):not(style){
+  display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;
+}
+body.ks-page-home [data-ks-hidden-reason="after-footer-artifact"],
+body.ks-page-home [data-ks-hidden-reason="post-wrapper-artifact"],
+body.ks-page-home [data-ks-hidden-reason="empty-tail-spacer"]{
+  display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;
+}
+body.ks-page-home .tf-footer .ft-body-bottom,
+body.ks-page-home .tf-footer .ft-body-center,
+body.ks-page-home .tf-footer .ft-body-inner{min-height:0!important;}
