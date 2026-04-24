@@ -1198,3 +1198,24 @@ body.ks-page-home #HomeBrandsSection{
 @media (max-width:767.98px){
   body.ks-page-home #KsHomeDepartmentShowcase .ks-home-department-grid{grid-template-columns:1fr!important;}
 }
+
+/* Step 82: Onsus-like safe runtime density from existing KeepStore feed */
+body.ks-page-home #KsHomeDepartmentShowcase{display:block!important;visibility:visible!important;opacity:1!important;padding:24px 0 8px!important;margin:0!important;}
+body.ks-page-home .ks-home-feed-section{display:block!important;visibility:visible!important;opacity:1!important;padding:26px 0 10px!important;margin:0!important;background:transparent!important;}
+body.ks-page-home .ks-home-feed-section .ks-feed-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:18px!important;align-items:stretch!important;}
+body.ks-page-home .ks-home-feed-section--compact .ks-feed-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important;}
+body.ks-page-home .ks-feed-card{position:relative!important;display:grid!important;grid-template-rows:178px minmax(0,auto)!important;gap:12px!important;min-width:0!important;min-height:286px!important;padding:14px!important;border:1px solid #edf1f5!important;border-radius:14px!important;background:#fff!important;box-shadow:0 8px 22px rgba(15,23,42,.035)!important;text-decoration:none!important;color:#111827!important;overflow:hidden!important;}
+body.ks-page-home .ks-feed-card--compact{grid-template-rows:138px minmax(0,auto)!important;min-height:238px!important;}
+body.ks-page-home .ks-feed-media{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;height:100%!important;border-radius:12px!important;background:#f7f8fb!important;overflow:hidden!important;}
+body.ks-page-home .ks-feed-media img{max-width:100%!important;max-height:100%!important;width:auto!important;height:auto!important;object-fit:contain!important;display:block!important;}
+body.ks-page-home .ks-feed-body{display:grid!important;gap:7px!important;min-width:0!important;}
+body.ks-page-home .ks-feed-meta{font-size:11px!important;line-height:1.2!important;color:#6b7280!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+body.ks-page-home .ks-feed-title{display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important;min-height:34px!important;font-size:13px!important;line-height:1.3!important;font-weight:700!important;color:#0757a8!important;text-transform:uppercase!important;}
+body.ks-page-home .ks-feed-price{display:flex!important;gap:8px!important;align-items:baseline!important;flex-wrap:wrap!important;font-size:12px!important;line-height:1.2!important;font-weight:700!important;}
+body.ks-page-home .ks-feed-price .new{color:#ef4444!important;}
+body.ks-page-home .ks-feed-price .old{color:#8a94a6!important;text-decoration:line-through!important;}
+body.ks-page-home .ks-feed-badge{position:absolute!important;top:10px!important;left:10px!important;z-index:2!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:38px!important;height:28px!important;padding:0 8px!important;border-radius:999px!important;background:#ff3d3d!important;color:#fff!important;font-size:12px!important;font-weight:800!important;}
+body.ks-page-home #KsHomeFeedShowcase + section[data-ks-home-primary-products="1"],body.ks-page-home #KsHomeDepartmentShowcase + #KsHomeFeedShowcase{margin-top:0!important;}
+body.ks-page-home #HomeBrandsSection{margin-top:22px!important;}
+@media (max-width:1199.98px){body.ks-page-home .ks-home-feed-section .ks-feed-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;}}
+@media (max-width:767.98px){body.ks-page-home .ks-home-feed-section .ks-feed-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;}body.ks-page-home .ks-feed-card{grid-template-rows:136px minmax(0,auto)!important;min-height:236px!important;}}
