@@ -1721,3 +1721,45 @@ body.ks-page-home.ks-home-step96-onsus-final form#form1{min-height:0!important;h
 @media (max-width:767.98px){
   body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .ks-home-closing-chips{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
 }
+
+
+/* Step 97 - final ONSUS seal: curated editorial count, tighter cards, readable titles */
+body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .ks-onsus-overflow-removed,
+body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge [hidden]{display:none!important;}
+body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .menu-tab-line .tab-link{font-size:13px!important;}
+body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .menu-tab-line .tab-link.active,
+body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .menu-tab-line .tab-link:hover{color:#ff3d3d!important;}
+body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .ks-onsus-grid-card,
+body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .ks-onsus-side-card{overflow:hidden!important;}
+body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .ks-onsus-title,
+body.ks-page-home.ks-home-step97-final-seal section[data-ks-home-primary-products="1"] .product-title,
+body.ks-page-home.ks-home-step97-final-seal section[data-ks-home-primary-products="1"] .name-product,
+body.ks-page-home.ks-home-step97-final-seal section[data-ks-home-primary-products="1"] h6 a{
+  display:-webkit-box!important;
+  -webkit-box-orient:vertical!important;
+  -webkit-line-clamp:2!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .ks-onsus-grid-card .ks-onsus-thumb,
+body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .ks-onsus-grid-media{background:#f7f8fb!important;}
+body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .ks-onsus-grid-card img,
+body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .ks-onsus-side-card img,
+body.ks-page-home.ks-home-step97-final-seal section[data-ks-home-primary-products="1"] .card-product img{object-fit:contain!important;}
+body.ks-page-home.ks-home-step97-final-seal #KsHomeClosingLayer .ks-home-closing-panel{box-shadow:0 10px 30px rgba(15,23,42,.04)!important;}
+body.ks-page-home.ks-home-step97-final-seal footer.tf-footer .ft-body-inner{border-top:1px solid rgba(15,23,42,.04)!important;}
+@media (min-width:1200px){
+  body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .ks-onsus-extra-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important;}
+  body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge[data-ks-visible-cards="0"]{display:none!important;}
+}
+@media (max-width:991.98px){
+  body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .ks-onsus-feature-grid,
+  body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .ks-onsus-product-strip,
+  body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .ks-onsus-extra-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+  body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .ks-onsus-center{grid-column:auto!important;}
+}
+@media (max-width:575.98px){
+  body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .ks-onsus-feature-grid,
+  body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .ks-onsus-product-strip,
+  body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .ks-onsus-extra-grid{grid-template-columns:1fr!important;}
+}

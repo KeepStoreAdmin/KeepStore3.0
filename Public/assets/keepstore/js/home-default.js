@@ -844,7 +844,7 @@
     var right = items.slice(3, 5).map(bridgeSmallCard).join('');
     var lower = items.slice(5, 15).map(bridgeGridCard).join('');
     var extra = items.slice(15, 25).map(bridgeGridCard).join('');
-    section.innerHTML = '<div class="container"><div class="flat-title ks-home-section-title"><div class="flat-title-tab-default"><ul class="menu-tab-line"><li class="nav-tab-item d-flex"><span class="tab-link main-title link fw-semibold active">In Evidenza</span></li><li class="nav-tab-item d-flex"><span class="tab-link main-title link fw-semibold">Top prodotti</span></li><li class="nav-tab-item d-flex"><span class="tab-link main-title link fw-semibold">Scelti dal catalogo</span></li></ul></div><a class="ks-home-section-link" href="articoli.aspx">Vai al catalogo</a></div><div class="ks-onsus-feature-grid"><div class="ks-onsus-side-col">' + left + '</div><div class="ks-onsus-center">' + center + '</div><div class="ks-onsus-side-col">' + right + '</div></div>' + (lower ? '<div class="ks-onsus-product-strip">' + lower + '</div>' : '') + (extra ? '<div class="ks-onsus-extra-grid">' + extra + '</div>' : '') + '</div>';
+    section.innerHTML = '<div class="container"><div class="flat-title ks-home-section-title"><div class="flat-title-tab-default"><ul class="menu-tab-line"><li class="nav-tab-item d-flex"><span class="tab-link main-title link fw-semibold active">In Evidenza</span></li><li class="nav-tab-item d-flex"><span class="tab-link main-title link fw-semibold">Top prodotti</span></li><li class="nav-tab-item d-flex"><span class="tab-link main-title link fw-semibold">Scelti Da Te</span></li></ul></div><a class="ks-home-section-link" href="articoli.aspx">Vai al catalogo</a></div><div class="ks-onsus-feature-grid"><div class="ks-onsus-side-col">' + left + '</div><div class="ks-onsus-center">' + center + '</div><div class="ks-onsus-side-col">' + right + '</div></div>' + (lower ? '<div class="ks-onsus-product-strip">' + lower + '</div>' : '') + (extra ? '<div class="ks-onsus-extra-grid">' + extra + '</div>' : '') + '</div>';
     var best = qa('main section').filter(function (sec) { return sec && /best seller/i.test(textOf(sec)) && validProductCardCount(sec) >= 3; })[0];
     if (best && best.parentNode) best.parentNode.insertBefore(section, best);
     else insertAfterIconBoxesSection(section);
@@ -1318,6 +1318,44 @@
     }
   }
 
+
+  function applyStep97OnsusFinalSeal() {
+    if (!isHome() || !document.body) return;
+    document.body.classList.add('ks-home-step97-final-seal');
+
+    var bridge = q('#KsHomeOnsusBridge');
+    if (bridge) {
+      var tabs = qa('.menu-tab-line .tab-link', bridge);
+      if (tabs[2]) tabs[2].textContent = 'Scelti Da Te';
+      var visibleCards = qa('.ks-onsus-grid-card:not([hidden]),.ks-onsus-side-card:not([hidden])', bridge);
+      bridge.setAttribute('data-ks-visible-cards', String(visibleCards.length));
+
+      var maxEditorialCards = 18;
+      visibleCards.forEach(function (card, index) {
+        if (index >= maxEditorialCards) {
+          card.classList.add('ks-onsus-overflow-removed');
+          card.setAttribute('hidden', 'hidden');
+          card.style.setProperty('display', 'none', 'important');
+        }
+      });
+      ['.ks-onsus-product-strip', '.ks-onsus-extra-grid', '.ks-onsus-side-col'].forEach(function (sel) {
+        qa(sel, bridge).forEach(function (group) {
+          if (!qa('.ks-onsus-grid-card:not([hidden]),.ks-onsus-side-card:not([hidden])', group).length) group.setAttribute('hidden', 'hidden');
+        });
+      });
+    }
+
+    var brand = q('#HomeBrandsSection');
+    var closing = q('#KsHomeClosingLayer');
+    if (brand && closing && brand.parentNode) {
+      removeHardHide(closing);
+      if (closing.parentNode !== brand.parentNode || brand.nextElementSibling !== closing) {
+        if (brand.nextSibling) brand.parentNode.insertBefore(closing, brand.nextSibling);
+        else brand.parentNode.appendChild(closing);
+      }
+    }
+  }
+
   function buildHomeCompositionLayer() {
     runSafe('buildDepartmentShowcase', buildDepartmentShowcase);
     runSafe('normalizeProductGridDensity', normalizeProductGridDensity);
@@ -1348,6 +1386,7 @@
     runSafe('enforceFooterScrollClosure', enforceFooterScrollClosure);
     runSafe('applyFinalDesktopPolish', applyFinalDesktopPolish);
     runSafe('applyStep96OnsusFinal', applyStep96OnsusFinal);
+    runSafe('applyStep97OnsusFinalSeal', applyStep97OnsusFinalSeal);
     runSafe('bindGeneratedImageFallbacks', function () { bindGeneratedImageFallbacks(document); });
     runSafe('updateAllSwipers', updateAllSwipers);
   }
