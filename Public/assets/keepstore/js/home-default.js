@@ -498,6 +498,28 @@
     });
   }
 
+  function enforceFooterScrollClosure() {
+    if (!isHome() || document.body.classList.contains('modal-open')) return;
+    var footer = q('footer.tf-footer');
+    if (!footer) return;
+    var bottom = Math.ceil((footer.getBoundingClientRect ? footer.getBoundingClientRect().bottom : 0) + (window.pageYOffset || document.documentElement.scrollTop || 0));
+    if (!bottom || bottom < 600) return;
+    var finalHeight = bottom + 12;
+    [document.documentElement, document.body, q('form#form1'), q('#wrapper')].forEach(function (node) {
+      if (!node || !node.style) return;
+      node.style.setProperty('height', finalHeight + 'px', 'important');
+      node.style.setProperty('min-height', '0', 'important');
+      node.style.setProperty('max-height', finalHeight + 'px', 'important');
+    });
+    [document.body, q('form#form1'), q('#wrapper')].forEach(function (node) {
+      if (!node || !node.style) return;
+      node.style.setProperty('overflow-x', 'hidden', 'important');
+      node.style.setProperty('overflow-y', 'hidden', 'important');
+    });
+    document.documentElement.style.setProperty('overflow-x', 'hidden', 'important');
+    document.documentElement.style.setProperty('overflow-y', 'auto', 'important');
+  }
+
   function compactEmptyTailBeforeFooter() {
     var wrapper = q("#wrapper");
     var footer = q("footer.tf-footer", wrapper || document);
@@ -999,9 +1021,10 @@
     if (!section) return;
     var footer = q('footer.tf-footer');
     var brand = q('#HomeBrandsSection');
-    if (brand && brand.parentNode) { brand.parentNode.insertBefore(section, brand.nextSibling); return; }
-    if (footer && footer.parentNode) footer.parentNode.insertBefore(section, footer);
-    else (q('main') || document.body).appendChild(section);
+    var main = q('main') || document.body;
+    if (brand && brand.parentNode) { brand.parentNode.insertBefore(section, brand); return; }
+    if (footer && footer.parentNode) { footer.parentNode.insertBefore(section, footer); return; }
+    main.appendChild(section);
   }
 
   function buildHomeClosingLayer() {
@@ -1010,7 +1033,28 @@
     if (existing) { removeHardHide(existing); return; }
     var categories = collectClosingCategories();
     var services = collectClosingServices();
-    if (categories.length < 4 && services.length < 3) return;
+    if (categories.length < 4) {
+      [
+        ['Notebook e computer','articoli.aspx','Categoria'],
+        ['Fotografia e video','articoli.aspx','Categoria'],
+        ['Smartphone e tablet','articoli.aspx','Categoria'],
+        ['Gaming e console','articoli.aspx','Categoria'],
+        ['TV e audio','articoli.aspx','Categoria'],
+        ['Accessori tech','articoli.aspx','Categoria'],
+        ['Audio e cuffie','articoli.aspx','Categoria'],
+        ['Offerte','articoli.aspx?inpromo=1','Promo']
+      ].forEach(function (row) { addUniqueClosingItem(categories, {}, row[0], row[1], row[2]); });
+    }
+    if (services.length < 3) {
+      [
+        ['Spedizione veloce','Consegna gestita sugli ordini idonei'],
+        ['Pagamenti sicuri','Checkout protetto e metodi tracciabili'],
+        ['Supporto dedicato','Assistenza prima e dopo l\'acquisto'],
+        ['Garanzia e resi','Procedure chiare per acquisti sicuri']
+      ].forEach(function (row) { services.push({ title: row[0], url: 'Contattaci.aspx', meta: row[1] }); });
+    }
+    categories = categories.slice(0, 10);
+    services = services.slice(0, 4);
     var section = document.createElement('section');
     section.id = 'KsHomeClosingLayer';
     section.className = 'tf-sp-2 ks-home-closing-layer';
@@ -1046,6 +1090,8 @@
     runSafe('hideAfterFooterArtifacts', hideAfterFooterArtifacts);
     runSafe('releaseHomePageHeight', releaseHomePageHeight);
     runSafe('collapseDormantOverlayArtifacts', collapseDormantOverlayArtifacts);
+    runSafe('buildHomeClosingLayerFinal', buildHomeClosingLayer);
+    runSafe('enforceFooterScrollClosure', enforceFooterScrollClosure);
     runSafe('bindGeneratedImageFallbacks', function () { bindGeneratedImageFallbacks(document); });
     runSafe('updateAllSwipers', updateAllSwipers);
   }

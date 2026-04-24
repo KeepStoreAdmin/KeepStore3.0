@@ -1386,3 +1386,21 @@ body.ks-page-home .card-product .list-product-btn,body.ks-page-home .card-produc
 body.ks-page-home .card-product:hover .list-product-btn,body.ks-page-home .card-product:hover .product-action,body.ks-page-home .card-product:hover .list-btn-main,body.ks-page-home .card-product:hover .box-icon,body.ks-page-home .card-product:focus-within .list-product-btn,body.ks-page-home .card-product:focus-within .product-action,body.ks-page-home .card-product:focus-within .list-btn-main,body.ks-page-home .card-product:focus-within .box-icon{opacity:1!important;visibility:visible!important;pointer-events:auto!important;transform:translateX(0)!important;}
 @media (max-width:1199.98px){body.ks-page-home #KsHomeClosingLayer .ks-home-closing-grid{grid-template-columns:1fr!important;}body.ks-page-home #KsHomeClosingLayer .ks-home-closing-chips{grid-template-columns:repeat(3,minmax(0,1fr))!important;}}
 @media (max-width:767.98px){body.ks-page-home #KsHomeClosingLayer .ks-home-closing-panel{padding:16px!important;}body.ks-page-home #KsHomeClosingLayer .ks-home-closing-chips,body.ks-page-home #KsHomeClosingLayer .ks-home-service-grid{grid-template-columns:1fr!important;}}
+
+
+/* Step 90: visible final catalog/service panel and hard footer scroll closure. */
+body.ks-page-home #KsHomeClosingLayer{
+  display:block!important;visibility:visible!important;opacity:1!important;position:relative!important;z-index:3!important;
+  padding:26px 0 18px!important;margin:0!important;background:transparent!important;clear:both!important;
+}
+body.ks-page-home #KsHomeClosingLayer + #HomeBrandsSection{margin-top:6px!important;}
+body.ks-page-home #KsHomeClosingLayer .container{max-width:1320px!important;}
+body.ks-page-home #KsHomeClosingLayer .ks-home-closing-panel{min-height:170px!important;}
+body.ks-page-home #KsHomeClosingLayer .ks-home-closing-chip,
+body.ks-page-home #KsHomeClosingLayer .ks-home-service-card{transition:transform .16s ease, box-shadow .16s ease!important;}
+body.ks-page-home #KsHomeClosingLayer .ks-home-closing-chip:hover,
+body.ks-page-home #KsHomeClosingLayer .ks-home-service-card:hover{transform:translateY(-2px)!important;box-shadow:0 10px 24px rgba(15,23,42,.07)!important;}
+body.ks-page-home:not(.modal-open) form#form1,
+body.ks-page-home:not(.modal-open) #wrapper{overflow-x:hidden!important;}
+body.ks-page-home:not(.modal-open) footer.tf-footer{margin-bottom:0!important;}
+body.ks-page-home:not(.modal-open) footer.tf-footer ~ *:not(script):not(style){display:none!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}
