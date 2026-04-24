@@ -365,3 +365,83 @@ body.ks-page-home .ks-home-brand-media img{
   object-fit:contain!important;
 }
 
+
+
+/* step70: structural close - no duplicated header inside HOME content, no orphan lower columns */
+body.ks-page-home main header,
+body.ks-page-home main .tf-header,
+body.ks-page-home main .ks-header-ui,
+body.ks-page-home main .tf-topbar,
+body.ks-page-home main .inner-header,
+body.ks-page-home main .header-bottom,
+body.ks-page-home [data-ks-duplicate-chrome]{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  overflow:hidden!important;
+}
+body.ks-page-home #wrapper > header.tf-header,
+body.ks-page-home #wrapper > header.ks-header-ui,
+body.ks-page-home #wrapper > header[data-ks-header]{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
+
+@media (min-width:1200px){
+  body.ks-page-home #HomeHeroSection .ks-home-hero-shell,
+  body.ks-page-home #HomeHeroSection .s-banner-wrapper{
+    grid-template-columns:285px minmax(0,1fr)!important;
+  }
+}
+body.ks-page-home #HomeHeroSection .ks-home-hero-slider,
+body.ks-page-home #HomeHeroSection .ks-home-hero-slider .swiper-wrapper,
+body.ks-page-home #HomeHeroSection .ks-home-hero-slider .swiper-slide,
+body.ks-page-home #HomeHeroSection .ks-home-hero-banner,
+body.ks-page-home #HomeHeroSection .ks-home-hero-media,
+body.ks-page-home #HomeHeroSection .ks-home-hero-banner > a,
+body.ks-page-home #HomeHeroSection .ks-home-hero-slider a{
+  width:100%!important;
+  max-width:none!important;
+  height:100%!important;
+  min-height:420px!important;
+  display:block!important;
+  box-sizing:border-box!important;
+}
+body.ks-page-home #HomeHeroSection .ks-home-hero-slider img{
+  width:100%!important;
+  max-width:none!important;
+  height:100%!important;
+  min-height:420px!important;
+  object-fit:cover!important;
+  object-position:center center!important;
+  display:block!important;
+}
+
+body.ks-page-home #HomeLowerColumnsSection .tf-grid-product-item[data-ks-lower-valid="0"],
+body.ks-page-home [data-ks-empty-section]{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="1"] .tf-grid-product{
+  grid-template-columns:minmax(0,1fr)!important;
+}
+body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="1"] .tf-grid-product-item[data-ks-lower-valid="1"]{
+  max-width:760px!important;
+}
+body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="2"] .tf-grid-product{
+  grid-template-columns:repeat(2,minmax(260px,1fr))!important;
+}
+body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="3"] .tf-grid-product{
+  grid-template-columns:repeat(3,minmax(240px,1fr))!important;
+}
