@@ -1763,3 +1763,29 @@ body.ks-page-home.ks-home-step97-final-seal footer.tf-footer .ft-body-inner{bord
   body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .ks-onsus-product-strip,
   body.ks-page-home.ks-home-step97-final-seal #KsHomeOnsusBridge .ks-onsus-extra-grid{grid-template-columns:1fr!important;}
 }
+
+
+/* Step 98 - ONSUS editorial feature band normalization */
+body.ks-page-home #KsHomeOnsusBridge.ks-onsus-feature-collapsed .ks-onsus-feature-grid{
+  display:none!important;
+  margin:0!important;
+  padding:0!important;
+}
+body.ks-page-home #KsHomeOnsusBridge.ks-onsus-feature-collapsed .ks-onsus-product-strip{
+  margin-top:8px!important;
+}
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-promoted-card{
+  display:grid!important;
+  grid-template-rows:150px auto auto auto!important;
+  min-height:248px!important;
+}
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-promoted-card .ks-onsus-grid-media{
+  height:150px!important;
+}
+body.ks-page-home.ks-home-step98-feature-normalized #KsHomeOnsusBridge .ks-onsus-product-strip{
+  align-items:stretch!important;
+}
+body.ks-page-home.ks-home-step98-feature-normalized #KsHomeOnsusBridge .ks-onsus-side-col[hidden],
+body.ks-page-home.ks-home-step98-feature-normalized #KsHomeOnsusBridge .ks-onsus-feature-grid[hidden]{
+  display:none!important;
+}
