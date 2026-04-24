@@ -1598,3 +1598,28 @@ body.ks-page-home #KsHomeOnsusBridge .ks-onsus-grid-card:not([hidden]),
 body.ks-page-home #KsHomeOnsusBridge .ks-onsus-side-card:not([hidden]){will-change:transform;}
 body.ks-page-home #KsHomeOnsusBridge .ks-onsus-grid-card:not([hidden]):hover,
 body.ks-page-home #KsHomeOnsusBridge .ks-onsus-side-card:not([hidden]):hover{transform:translateY(-2px)!important;box-shadow:0 12px 28px rgba(15,23,42,.07)!important;}
+
+/* Step 94: cross-section commercial dedupe and tighter ONSUS product rhythm. */
+body.ks-page-home.ks-onsus-cross-deduped #KsHomeOnsusBridge .ks-onsus-best-duplicate,
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-duplicate-removed[hidden]{display:none!important;}
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-product-strip[hidden],
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-extra-grid[hidden],
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-side-col[hidden]{display:none!important;}
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-product-strip,
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-extra-grid{grid-auto-flow:row!important;}
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-product-strip:empty,
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-extra-grid:empty{display:none!important;}
+body.ks-page-home #KsHomeOnsusBridge{padding-bottom:14px!important;}
+body.ks-page-home #KsHomeOnsusBridge + section[data-ks-home-primary-products="1"]{padding-top:16px!important;}
+body.ks-page-home section[data-ks-home-primary-products="1"] .card-product .list-product-btn,
+body.ks-page-home section[data-ks-home-primary-products="1"] .card-product .box-icon,
+body.ks-page-home section[data-ks-home-primary-products="1"] .product-action,
+body.ks-page-home section[data-ks-home-primary-products="1"] .btn-quickview,
+body.ks-page-home section[data-ks-home-primary-products="1"] .compare,
+body.ks-page-home section[data-ks-home-primary-products="1"] .wishlist{opacity:0!important;visibility:hidden!important;transition:opacity .18s ease, visibility .18s ease!important;}
+body.ks-page-home section[data-ks-home-primary-products="1"] .card-product:hover .list-product-btn,
+body.ks-page-home section[data-ks-home-primary-products="1"] .card-product:hover .box-icon,
+body.ks-page-home section[data-ks-home-primary-products="1"] .card-product:hover .product-action,
+body.ks-page-home section[data-ks-home-primary-products="1"] .card-product:focus-within .list-product-btn,
+body.ks-page-home section[data-ks-home-primary-products="1"] .card-product:focus-within .box-icon,
+body.ks-page-home section[data-ks-home-primary-products="1"] .card-product:focus-within .product-action{opacity:1!important;visibility:visible!important;}
