@@ -1286,6 +1286,38 @@
     }
   }
 
+
+  function applyStep96OnsusFinal() {
+    if (!isHome() || !document.body) return;
+    document.body.classList.add("ks-home-step96-onsus-final");
+    ensureClosingLayerOrder();
+    var closing = q("#KsHomeClosingLayer");
+    var brand = q("#HomeBrandsSection");
+    var footer = q("footer.tf-footer");
+    if (closing) {
+      removeHardHide(closing);
+      closing.removeAttribute("hidden");
+      closing.style.removeProperty("display");
+      closing.style.removeProperty("height");
+      closing.style.removeProperty("min-height");
+      closing.style.removeProperty("max-height");
+    }
+    if (brand && closing && brand.parentNode && closing.parentNode === brand.parentNode && brand.nextElementSibling !== closing) {
+      if (brand.nextSibling) brand.parentNode.insertBefore(closing, brand.nextSibling);
+      else brand.parentNode.appendChild(closing);
+    }
+    if (footer) {
+      var n = footer.nextElementSibling;
+      while (n) {
+        var next = n.nextElementSibling;
+        if (!n.matches || !n.matches("#goTop,.modal,.offcanvas,.modal-backdrop,script,style")) {
+          hide(n, "after-footer-step96");
+        }
+        n = next;
+      }
+    }
+  }
+
   function buildHomeCompositionLayer() {
     runSafe('buildDepartmentShowcase', buildDepartmentShowcase);
     runSafe('normalizeProductGridDensity', normalizeProductGridDensity);
@@ -1315,6 +1347,7 @@
     runSafe('ensureClosingLayerOrder', ensureClosingLayerOrder);
     runSafe('enforceFooterScrollClosure', enforceFooterScrollClosure);
     runSafe('applyFinalDesktopPolish', applyFinalDesktopPolish);
+    runSafe('applyStep96OnsusFinal', applyStep96OnsusFinal);
     runSafe('bindGeneratedImageFallbacks', function () { bindGeneratedImageFallbacks(document); });
     runSafe('updateAllSwipers', updateAllSwipers);
   }

@@ -1668,3 +1668,56 @@ body.ks-page-home.ks-home-step95-polish .ft-body-bottom{padding-top:22px!importa
   body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer .ks-home-closing-chips{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
   body.ks-page-home.ks-home-step95-polish #KsHomeClosingLayer .ks-home-service-grid{grid-template-columns:1fr!important;}
 }
+
+/* Step 96 - ONSUS final compact cadence and footer-safe closure */
+body.ks-page-home.ks-home-step96-onsus-final{background:#f4f4f4!important;}
+body.ks-page-home.ks-home-step96-onsus-final #HomeHeroSection{padding-top:12px!important;padding-bottom:14px!important;}
+body.ks-page-home.ks-home-step96-onsus-final .tf-icon-box{min-height:76px!important;padding:0 16px!important;}
+body.ks-page-home.ks-home-step96-onsus-final .tf-icon-box .icon-box{width:42px!important;height:42px!important;flex-basis:42px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsDepartmentShowcase{margin-top:24px!important;margin-bottom:16px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsDepartmentShowcase .ks-dept-grid{gap:14px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsDepartmentShowcase .ks-dept-card{min-height:104px!important;padding:16px 12px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeOnsusBridge{margin-top:8px!important;margin-bottom:20px!important;padding-bottom:8px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeOnsusBridge .ks-onsus-feature-grid{gap:16px!important;margin-bottom:16px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeOnsusBridge .ks-onsus-product-strip,
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeOnsusBridge .ks-onsus-extra-grid{gap:16px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeOnsusBridge .ks-onsus-grid-card{padding:12px!important;border-radius:14px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeOnsusBridge .ks-onsus-grid-card .ks-onsus-thumb{height:148px!important;border-radius:12px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeOnsusBridge .ks-onsus-title{font-size:12px!important;line-height:1.25!important;min-height:31px!important;}
+body.ks-page-home.ks-home-step96-onsus-final section[data-ks-home-primary-products="1"]{padding-top:12px!important;padding-bottom:22px!important;}
+body.ks-page-home.ks-home-step96-onsus-final section[data-ks-home-primary-products="1"] .tf-grid-product,
+body.ks-page-home.ks-home-step96-onsus-final section[data-ks-home-primary-products="1"] .swiper-wrapper{align-items:stretch!important;}
+body.ks-page-home.ks-home-step96-onsus-final section[data-ks-home-primary-products="1"] .card-product{height:100%!important;}
+body.ks-page-home.ks-home-step96-onsus-final #HomeBrandsSection{margin-top:18px!important;padding-bottom:12px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #HomeBrandsSection .ks-home-brand-item{height:92px!important;min-height:92px!important;max-height:92px!important;border-radius:14px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #HomeBrandsSection .ks-home-brand-media{height:62px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #HomeBrandsSection .ks-home-brand-media img{max-height:62px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer{margin-top:2px!important;padding-top:0!important;padding-bottom:20px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .container{max-width:1040px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .ks-home-closing-grid{grid-template-columns:minmax(0,1.35fr) minmax(330px,.85fr)!important;gap:16px!important;align-items:start!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .ks-home-closing-panel{padding:16px!important;border-radius:16px!important;min-height:0!important;height:auto!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .ks-home-closing-head{margin-bottom:10px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .ks-home-closing-head .caption{margin-bottom:2px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .ks-home-closing-head h5{font-size:17px!important;line-height:1.15!important;margin:0!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .ks-home-closing-chips{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:8px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .ks-home-closing-chip{min-height:46px!important;padding:8px 10px!important;border-radius:10px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .ks-home-closing-chip span{font-size:11px!important;line-height:1.15!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .ks-home-closing-chip small{font-size:10px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .ks-home-service-grid{gap:8px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .ks-home-service-card{min-height:78px!important;padding:10px!important;border-radius:12px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .ks-home-service-card b{width:24px!important;height:24px!important;min-width:24px!important;font-size:11px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .ks-home-service-card span{font-size:11px!important;line-height:1.18!important;}
+body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .ks-home-service-card small{font-size:10px!important;line-height:1.25!important;}
+body.ks-page-home.ks-home-step96-onsus-final footer.tf-footer{margin-top:0!important;}
+body.ks-page-home.ks-home-step96-onsus-final .ft-body-inner{padding-top:22px!important;padding-bottom:24px!important;}
+body.ks-page-home.ks-home-step96-onsus-final .ft-body-center{min-height:58px!important;}
+body.ks-page-home.ks-home-step96-onsus-final .ft-body-bottom{padding-top:18px!important;padding-bottom:20px!important;}
+body.ks-page-home.ks-home-step96-onsus-final #wrapper,
+body.ks-page-home.ks-home-step96-onsus-final form#form1{min-height:0!important;height:auto!important;}
+@media (max-width:1199.98px){
+  body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .ks-home-closing-grid{grid-template-columns:1fr!important;}
+  body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .ks-home-closing-chips{grid-template-columns:repeat(4,minmax(0,1fr))!important;}
+}
+@media (max-width:767.98px){
+  body.ks-page-home.ks-home-step96-onsus-final #KsHomeClosingLayer .ks-home-closing-chips{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+}
