@@ -239,6 +239,104 @@
     });
   }
 
+
+
+  function hasProductContent(root) {
+    if (!root) return false;
+    if (q('a[href*="articolo.aspx?id="]', root)) return true;
+    if (q('.card-product,.ks-grid-card,.ks-row-card,.ks-big-card,.ks-deal-card,.ksh-side,.ksh-grid-card,.ksh-big,.ksh-deal', root)) return true;
+    return false;
+  }
+
+  function hideRuntimeNode(node, reason) {
+    if (!node) return;
+    node.setAttribute('data-ks-empty-section', reason || '1');
+    node.style.setProperty('display', 'none', 'important');
+    node.style.setProperty('visibility', 'hidden', 'important');
+    node.style.setProperty('opacity', '0', 'important');
+    node.style.setProperty('pointer-events', 'none', 'important');
+  }
+
+  function removeDuplicateChrome() {
+    if (!isHome()) return;
+    var headers = qa('header.tf-header,header.ks-header-ui,header[data-ks-header]');
+    headers.forEach(function (header, index) {
+      if (index === 0) return;
+      header.setAttribute('data-ks-duplicate-chrome', '1');
+      hideNode(header);
+    });
+
+    var footers = qa('footer.tf-footer');
+    footers.forEach(function (footer, index) {
+      if (index === 0) return;
+      footer.setAttribute('data-ks-duplicate-chrome', '1');
+      hideNode(footer);
+    });
+
+    var wrapper = document.getElementById('wrapper');
+    if (wrapper) {
+      var firstFooterSeen = false;
+      qa(':scope > *', wrapper).forEach(function (child) {
+        if (child.matches && child.matches('footer.tf-footer')) {
+          if (firstFooterSeen) {
+            child.setAttribute('data-ks-duplicate-chrome', '1');
+            hideNode(child);
+          }
+          firstFooterSeen = true;
+          return;
+        }
+        if (firstFooterSeen) {
+          child.setAttribute('data-ks-duplicate-chrome', '1');
+          hideNode(child);
+        }
+      });
+    }
+  }
+
+  function closeEmptyHomeSections() {
+    if (!isHome()) return;
+
+    qa('section.tf-sp-2.pt-0').forEach(function (section) {
+      var title = (section.textContent || '').toLowerCase();
+      if (title.indexOf('occasione') >= 0 && !hasProductContent(section)) {
+        hideRuntimeNode(section, 'deal-empty');
+      }
+    });
+
+    qa('.flat-animate-tab').forEach(function (section) {
+      if (!hasProductContent(section)) hideRuntimeNode(section, 'tabs-empty');
+    });
+
+    var recent = q('#HomeRecentlyViewedSection');
+    if (recent) {
+      var recentItems = qa('a[href*="articolo.aspx?id="],.card-product,.ks-grid-card,.ksh-grid-card', recent).filter(function (node, index, arr) {
+        return node && node.offsetParent !== null && arr.indexOf(node) === index;
+      });
+      if (recentItems.length > 0 && recentItems.length < 2) hideRuntimeNode(recent, 'recent-under-threshold');
+    }
+
+    var lower = q('#HomeLowerColumnsSection');
+    if (lower) {
+      var visibleBlocks = 0;
+      qa('.tf-grid-product-item', lower).forEach(function (block) {
+        if (!hasProductContent(block)) {
+          hideRuntimeNode(block, 'lower-block-empty');
+          return;
+        }
+        if (block.offsetParent !== null) visibleBlocks += 1;
+      });
+      lower.setAttribute('data-ks-visible-blocks', String(visibleBlocks));
+      if (visibleBlocks === 0) hideRuntimeNode(lower, 'lower-empty');
+    }
+  }
+
+  function stabilizeHomeRuntime() {
+    removeDuplicateChrome();
+    closeEmptyHomeSections();
+    syncHeroLayout();
+    updateAllSwipers();
+  }
+
   function normalizeImages() {
     qa('.ks-grid-card img,.ks-big-card img,.ks-deal-card img,.ksh-grid-card img,.ksh-big img,.ksh-deal img').forEach(function (img) {
       img.setAttribute('loading', 'lazy');
@@ -249,21 +347,22 @@
   function boot() {
     if (!isHome()) return;
     quarantineForeignDirectChildren();
+    removeDuplicateChrome();
     initHero();
     initBrandSlider();
     initCollectionSlider();
     initColumnSwipers();
     normalizeImages();
     normalizeCardHeights();
+    closeEmptyHomeSections();
     syncHeroLayout();
     refreshSwipersInTabs();
     bindImageDrivenRefresh();
 
-    [250, 900, 2500].forEach(function (delay) {
+    [120, 250, 900, 2500, 6000].forEach(function (delay) {
       window.setTimeout(function () {
         quarantineForeignDirectChildren();
-        syncHeroLayout();
-        updateAllSwipers();
+        stabilizeHomeRuntime();
       }, delay);
     });
 
