@@ -239,14 +239,112 @@
     return node.closest('header,.ks-header-ui') || node;
   }
 
+  function isBefore(a, b) {
+    if (!a || !b || a === b) return false;
+    return !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+  }
+
+  function isHeaderCandidate(node) {
+    if (!node || node.nodeType !== 1) return false;
+    if (node.closest('.modal,.offcanvas,footer')) return false;
+    return !!(node.matches('header.tf-header,header.ks-header-ui,header[data-ks-header],[data-ks-header]'));
+  }
+
+  function scoreHeader(node) {
+    if (!isHeaderCandidate(node)) return -1000;
+    var score = 0;
+    if (node.matches('header')) score += 20;
+    if (node.matches('.ks-header-ui')) score += 20;
+    if (node.hasAttribute('data-ks-header')) score += 20;
+    if (q('.logo-site', node)) score += 15;
+    if (q('.inner-header', node)) score += 15;
+    if (q('.header-bottom', node)) score += 10;
+    if (q('.ks-search-shell,.form-search-product', node)) score += 10;
+    if (q('.nav-icon,.nav-shop-cart', node)) score += 5;
+    return score;
+  }
+
+  function pickPrimaryHeader(headers) {
+    var best = null, bestScore = -1000;
+    (headers || []).forEach(function (node) {
+      var score = scoreHeader(node);
+      if (score > bestScore) { best = node; bestScore = score; }
+    });
+    return bestScore > 0 ? best : null;
+  }
+
+  function restoreNode(node) {
+    if (!node || node.nodeType !== 1) return;
+    node.removeAttribute('data-ks-hidden-reason');
+    node.removeAttribute('data-ks-duplicate-chrome');
+    node.removeAttribute('hidden');
+    node.style.removeProperty('display');
+    node.style.removeProperty('visibility');
+    node.style.removeProperty('opacity');
+    node.style.removeProperty('pointer-events');
+    node.style.removeProperty('height');
+    node.style.removeProperty('min-height');
+    node.style.removeProperty('max-height');
+    node.style.removeProperty('margin');
+    node.style.removeProperty('padding');
+    node.style.removeProperty('overflow');
+  }
+
+  function ensurePrimaryChromeOrder() {
+    var wrapper = q('#wrapper');
+    var main = null;
+    if (wrapper) {
+      for (var i = 0; i < wrapper.children.length; i++) {
+        if ((wrapper.children[i].tagName || '').toLowerCase() === 'main') { main = wrapper.children[i]; break; }
+      }
+    }
+    if (!main) main = q('main');
+    if (!wrapper || !main) return;
+
+    var headers = qa('header.tf-header,header.ks-header-ui,header[data-ks-header],[data-ks-header]').filter(isHeaderCandidate);
+    var primary = pickPrimaryHeader(headers);
+    if (!primary) return;
+
+    if (primary.parentNode !== wrapper || !isBefore(primary, main)) {
+      wrapper.insertBefore(primary, main);
+    }
+    primary.setAttribute('data-ks-primary-chrome', '1');
+    restoreNode(primary);
+
+    headers.forEach(function (node) {
+      if (!node || node === primary || primary.contains(node)) return;
+      node.setAttribute('data-ks-duplicate-chrome', '1');
+      hide(chromeRoot(node), 'chrome-duplicate');
+    });
+
+    qa('.tf-topbar,.inner-header,.header-bottom,.main-nav-menu').forEach(function (node) {
+      if (!node || primary.contains(node) || node.closest('footer,.modal,.offcanvas')) return;
+      var root = chromeRoot(node);
+      if (root && root !== primary) {
+        root.setAttribute('data-ks-duplicate-chrome', '1');
+        hide(root, 'chrome-fragment');
+      }
+    });
+
+    var footer = q('footer.tf-footer', wrapper) || q('footer.tf-footer');
+    if (footer && footer.parentNode !== wrapper) {
+      wrapper.appendChild(footer);
+    }
+    if (footer && isBefore(footer, main)) {
+      wrapper.appendChild(footer);
+    }
+  }
+
   function hideChromeAfterFooter() {
     var footer = q('footer.tf-footer');
     if (!footer) return;
     qa('header,.ks-header-ui,.tf-topbar,.inner-header,.header-bottom,.main-nav-menu').forEach(function (node) {
-      if (!node || footer.contains(node)) return;
+      if (!node || footer.contains(node) || node.getAttribute('data-ks-primary-chrome') === '1') return;
       var relation = footer.compareDocumentPosition(node);
       if (relation & Node.DOCUMENT_POSITION_FOLLOWING) {
-        hide(chromeRoot(node), 'chrome-after-footer');
+        var root = chromeRoot(node);
+        if (root) root.setAttribute('data-ks-duplicate-chrome', '1');
+        hide(root, 'chrome-after-footer');
       }
     });
   }
@@ -260,6 +358,7 @@
 
   function stabilize() {
     if (!isHome()) return;
+    ensurePrimaryChromeOrder();
     hideChromeAfterFooter();
     forceHeroLayout();
     normalizeCommercialSections();

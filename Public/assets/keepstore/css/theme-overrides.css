@@ -849,3 +849,40 @@ body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="1"] .tf-grid-
 body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="1"] .product-list-wrap{grid-template-columns:repeat(5,minmax(0,1fr))!important;}
 @media (max-width:1199.98px){body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="1"] .product-list-wrap{grid-template-columns:repeat(3,minmax(0,1fr))!important;}}
 @media (max-width:767.98px){body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="1"] .product-list-wrap{grid-template-columns:1fr!important;}}
+
+
+/* step75: canonical chrome order. The real SiteHeader must be the first child before main; any cloned/misplaced chrome is killed. */
+body.ks-page-home [data-ks-duplicate-chrome="1"],
+body.ks-page-home [data-ks-hidden-reason="chrome-duplicate"],
+body.ks-page-home [data-ks-hidden-reason="chrome-fragment"],
+body.ks-page-home [data-ks-hidden-reason="chrome-after-footer"]{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+body.ks-page-home #wrapper > header[data-ks-primary-chrome="1"],
+body.ks-page-home #wrapper > header.ks-header-ui[data-ks-primary-chrome="1"],
+body.ks-page-home #wrapper > header.tf-header[data-ks-primary-chrome="1"]{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:visible!important;
+  position:relative!important;
+  z-index:20!important;
+}
+body.ks-page-home #wrapper > header[data-ks-primary-chrome="1"] + main{
+  display:block!important;
+  margin-top:0!important;
+}
