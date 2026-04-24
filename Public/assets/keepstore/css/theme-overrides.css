@@ -1000,3 +1000,54 @@ body.ks-page-home section[data-ks-has-products="1"] + #HomeBrandsSection{
 body.ks-page-home #HomeBrandsSection{
   padding-top:12px!important;
 }
+
+/* step78: definitive prune of malformed server commercial groups.
+   KeepStore server data remains authoritative; empty tabbed/lower containers are removed from layout. */
+body.ks-page-home .flat-animate-tab,
+body.ks-page-home .flat-animate-tab.tf-sp-2{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+body.ks-page-home main section:has(.tf-grid-product),
+body.ks-page-home .ks-account-main section:has(.tf-grid-product),
+body.ks-page-home section[data-ks-pruned-commercial="1"]{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+body.ks-page-home .tf-grid-product[data-ks-pruned-commercial="1"],
+body.ks-page-home .tf-grid-product{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+body.ks-page-home .flat-animate-tab + section[data-ks-has-products="1"],
+body.ks-page-home .flat-animate-tab + .tf-sp-2[data-ks-has-products="1"]{
+  margin-top:10px!important;
+}
+body.ks-page-home #HomeBrandsSection,
+body.ks-page-home .ks-home-brands-block{
+  margin-top:18px!important;
+}

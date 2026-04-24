@@ -408,12 +408,33 @@
     }
   }
 
+  function finalPruneMalformedCommercialGroups() {
+    if (!isHome()) return;
+    qa('.flat-animate-tab').forEach(function (section) {
+      if (!section || section.closest('header,footer,.modal,.offcanvas')) return;
+      section.setAttribute('data-ks-pruned-commercial', '1');
+      hide(section, 'tabbed-group-disabled');
+    });
+    qa('.tf-grid-product').forEach(function (grid) {
+      if (!grid || grid.closest('header,footer,.modal,.offcanvas,#HomeBrandsSection,.ks-home-brands-block')) return;
+      grid.setAttribute('data-ks-pruned-commercial', '1');
+      var section = grid.closest('section,.tf-sp-2');
+      if (section && !section.closest('#HomeBrandsSection,.ks-home-brands-block')) {
+        section.setAttribute('data-ks-pruned-commercial', '1');
+        hide(section, 'lower-commercial-disabled');
+      } else {
+        hide(grid, 'lower-commercial-grid-disabled');
+      }
+    });
+  }
+
   function stabilize() {
     if (!isHome()) return;
     ensureChromeOrder();
     forceHeroLayout();
     restoreCommercialSections();
     compactBeforeBrands();
+    finalPruneMalformedCommercialGroups();
     updateAllSwipers();
   }
 
