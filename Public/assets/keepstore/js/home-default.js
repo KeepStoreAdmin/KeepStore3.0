@@ -557,20 +557,71 @@
   }
 
 
+  function isBadProductImageUrl(src) {
+    src = String(src || '').trim();
+    if (!src) return true;
+    if (/logo|brand|pagamenti|payment|mail\.svg|headphone|spinner|favicon|blank|spacer|pixel|loading/i.test(src)) return true;
+    if (/^data:/i.test(src) && !/^data:image\/(png|jpe?g|webp|gif);base64,/i.test(src)) return true;
+    return false;
+  }
+
+  function normalizeProductImageUrl(src) {
+    src = String(src || '').trim().replace(/\\/g, '/');
+    if (!src || isBadProductImageUrl(src)) return '';
+    if (/^(https?:)?\/\//i.test(src) || /^data:/i.test(src) || src.charAt(0) === '/') return src;
+    if (src.indexOf('~/') === 0) return '/' + src.substring(2);
+    if (/^(Public|public|images|upload|uploads|foto|articoli)\//.test(src)) return '/' + src.replace(/^\/+/, '');
+    return src;
+  }
+
+  function addImageCandidate(out, seen, src) {
+    var normalized = normalizeProductImageUrl(src);
+    if (!normalized || seen[normalized]) return;
+    seen[normalized] = 1;
+    out.push(normalized);
+    var qIndex = normalized.indexOf('?');
+    var noQuery = qIndex >= 0 ? normalized.substring(0, qIndex) : normalized;
+    var suffix = qIndex >= 0 ? normalized.substring(qIndex) : '';
+    var unPreview = noQuery.replace(/_\.(webp|jpe?g|png|gif)$/i, '.$1') + suffix;
+    if (unPreview !== normalized && !seen[unPreview] && !isBadProductImageUrl(unPreview)) {
+      seen[unPreview] = 1;
+      out.push(unPreview);
+    }
+  }
+
+  function imageCandidatesFrom(img) {
+    var out = [], seen = {};
+    if (!img) return out;
+    addImageCandidate(out, seen, img.currentSrc || '');
+    addImageCandidate(out, seen, img.getAttribute('src') || '');
+    addImageCandidate(out, seen, img.getAttribute('data-src') || '');
+    addImageCandidate(out, seen, img.getAttribute('data-original') || '');
+    addImageCandidate(out, seen, img.getAttribute('data-lazy-src') || '');
+    addImageCandidate(out, seen, img.getAttribute('data-ks-src') || '');
+    addImageCandidate(out, seen, img.getAttribute('data-preview') || '');
+    [img.getAttribute('srcset') || '', img.getAttribute('data-srcset') || ''].forEach(function (srcset) {
+      String(srcset || '').split(',').forEach(function (entry) { addImageCandidate(out, seen, entry.trim().split(/\s+/)[0] || ''); });
+    });
+    return out;
+  }
+
   function productDataFromCard(root) {
     if (!root || root.nodeType !== 1) return null;
     var link = q('a[href*="articolo.aspx?id="]', root) || (root.matches && root.matches('a[href*="articolo.aspx?id="]') ? root : null);
-    var img = q('img[src],img[data-src]', root);
-    if (!link || !img) return null;
-    var image = img.getAttribute('data-src') || img.getAttribute('src') || '';
-    if (!image || /logo|brand|pagamenti|payment|mail\.svg|headphone|spinner|favicon|blank|spacer/i.test(image)) return null;
+    if (!link) return null;
+    var imageCandidates = [];
+    qa('img[src],img[data-src],img[srcset],img[data-srcset]', root).some(function (candidate) {
+      imageCandidates = imageCandidatesFrom(candidate);
+      return imageCandidates.length > 0;
+    });
+    if (!imageCandidates.length) return null;
     var titleNode = q('.product-title,.name-product,.title,.card-product-info a,h6 a,h5 a', root) || link;
     var title = normalizeHomeText(titleNode.textContent || link.textContent || '');
     if (title.length < 6) return null;
     var priceNode = q('.new-price,.price-text,.price,.new,.card-product-info .price-new,.product-price,.text-primary', root);
     var oldNode = q('.old-price,.old,.price-old', root);
     var metaNode = q('.category,.caption,.ksh-meta,.card-product-info .caption', root);
-    return { id: productIdFromUrl(link.getAttribute('href') || ''), url: link.getAttribute('href') || '#', image: image, title: title, price: normalizeHomeText(priceNode ? priceNode.textContent : ''), oldPrice: normalizeHomeText(oldNode ? oldNode.textContent : ''), meta: normalizeHomeText(metaNode ? metaNode.textContent : '') };
+    return { id: productIdFromUrl(link.getAttribute('href') || ''), url: link.getAttribute('href') || '#', image: imageCandidates[0], imageCandidates: imageCandidates, title: title, price: normalizeHomeText(priceNode ? priceNode.textContent : ''), oldPrice: normalizeHomeText(oldNode ? oldNode.textContent : ''), meta: normalizeHomeText(metaNode ? metaNode.textContent : '') };
   }
 
   function collectVisibleProductData(limit) {
@@ -595,12 +646,45 @@
     return '<span class="ks-onsus-price">' + (p ? '<b>' + escHtml(p) + (p.indexOf('€') >= 0 ? '' : ' €') + '</b>' : '') + (o ? '<del>' + escHtml(o) + (o.indexOf('€') >= 0 ? '' : ' €') + '</del>' : '') + '</span>';
   }
 
+  function bridgeImgHtml(item) {
+    var candidates = (item && item.imageCandidates || []).filter(function (src) { return !isBadProductImageUrl(src); });
+    if (!candidates.length && item && item.image) candidates = [item.image];
+    var primary = candidates[0] || '';
+    var fallbacks = candidates.join('||');
+    return '<img src="' + escHtml(primary) + '" data-ks-img-fallbacks="' + escHtml(fallbacks) + '" data-ks-img-index="0" alt="' + escHtml(item && item.title || '') + '" loading="lazy" decoding="async">';
+  }
+
   function bridgeSmallCard(item) {
-    return '<a class="ks-onsus-side-card" href="' + escHtml(item.url || '#') + '"><span class="ks-onsus-side-media"><img src="' + escHtml(item.image || '') + '" alt="' + escHtml(item.title || '') + '" loading="lazy" decoding="async"></span><span class="ks-onsus-side-body"><span class="ks-onsus-meta">' + escHtml(item.meta || 'Prodotto') + '</span><span class="ks-onsus-title">' + escHtml(item.title || '') + '</span>' + bridgePriceHtml(item) + '</span></a>';
+    return '<a class="ks-onsus-side-card" href="' + escHtml(item.url || '#') + '"><span class="ks-onsus-side-media">' + bridgeImgHtml(item) + '</span><span class="ks-onsus-side-body"><span class="ks-onsus-meta">' + escHtml(item.meta || 'Prodotto') + '</span><span class="ks-onsus-title">' + escHtml(item.title || '') + '</span>' + bridgePriceHtml(item) + '</span></a>';
   }
 
   function bridgeGridCard(item) {
-    return '<a class="ks-onsus-grid-card" href="' + escHtml(item.url || '#') + '"><span class="ks-onsus-grid-media"><img src="' + escHtml(item.image || '') + '" alt="' + escHtml(item.title || '') + '" loading="lazy" decoding="async"></span><span class="ks-onsus-meta">' + escHtml(item.meta || 'Prodotto') + '</span><span class="ks-onsus-title">' + escHtml(item.title || '') + '</span>' + bridgePriceHtml(item) + '</a>';
+    return '<a class="ks-onsus-grid-card" href="' + escHtml(item.url || '#') + '"><span class="ks-onsus-grid-media">' + bridgeImgHtml(item) + '</span><span class="ks-onsus-meta">' + escHtml(item.meta || 'Prodotto') + '</span><span class="ks-onsus-title">' + escHtml(item.title || '') + '</span>' + bridgePriceHtml(item) + '</a>';
+  }
+
+  function bindGeneratedImageFallbacks(root) {
+    qa('img[data-ks-img-fallbacks]', root || document).forEach(function (img) {
+      if (img.getAttribute('data-ks-fallback-bound') === '1') return;
+      img.setAttribute('data-ks-fallback-bound', '1');
+      img.addEventListener('error', function () {
+        var list = String(img.getAttribute('data-ks-img-fallbacks') || '').split('||').filter(Boolean);
+        var idx = parseInt(img.getAttribute('data-ks-img-index') || '0', 10) || 0;
+        while (idx + 1 < list.length) {
+          idx += 1;
+          var next = list[idx];
+          if (next && next !== img.getAttribute('src')) {
+            img.setAttribute('data-ks-img-index', String(idx));
+            img.setAttribute('src', next);
+            return;
+          }
+        }
+        var card = img.closest ? img.closest('.ks-onsus-grid-card,.ks-onsus-side-card,.ks-feed-card') : null;
+        if (card) card.classList.add('ks-image-missing');
+      });
+      if (img.complete && img.naturalWidth === 0) {
+        try { img.dispatchEvent(new Event('error')); } catch (err) {}
+      }
+    });
   }
 
   function mountOnsusBridgeFromServerProducts() {
@@ -619,6 +703,8 @@
     var best = qa('main section').filter(function (sec) { return sec && /best seller/i.test(textOf(sec)) && validProductCardCount(sec) >= 3; })[0];
     if (best && best.parentNode) best.parentNode.insertBefore(section, best);
     else insertAfterIconBoxesSection(section);
+    bindGeneratedImageFallbacks(section);
+    if (document.body) document.body.classList.add('ks-onsus-bridge-mounted');
   }
 
 
@@ -681,12 +767,21 @@
     return html;
   }
 
+  function feedImageCandidates(item) {
+    var out = [], seen = {};
+    addImageCandidate(out, seen, item && item.image || '');
+    addImageCandidate(out, seen, item && item.preview || '');
+    (item && item.images || []).forEach(function (src) { addImageCandidate(out, seen, src); });
+    return out;
+  }
+
   function feedCard(item, variant) {
-    var img = item.preview || item.image || (item.images && item.images[0]) || '';
+    var candidates = feedImageCandidates(item);
+    var img = candidates[0] || '';
     var pct = parseInt(item.salePercent, 10) || 0;
     var badge = pct > 0 ? '<span class="ks-feed-badge">-' + pct + '%</span>' : '';
     var meta = normalizeHomeText(item.brand || item.category || '') ? '<div class="ks-feed-meta">' + escHtml(item.brand || item.category || '') + '</div>' : '';
-    return '<a class="ks-feed-card ks-feed-card--' + escHtml(variant || 'grid') + '" href="' + escHtml(item.url || '#') + '">' + badge + '<span class="ks-feed-media"><img src="' + escHtml(img) + '" alt="' + escHtml(item.title || '') + '" loading="lazy" decoding="async"></span><span class="ks-feed-body">' + meta + '<span class="ks-feed-title">' + escHtml(item.title || '') + '</span>' + priceHtml(item) + '</span></a>';
+    return '<a class="ks-feed-card ks-feed-card--' + escHtml(variant || 'grid') + '" href="' + escHtml(item.url || '#') + '">' + badge + '<span class="ks-feed-media"><img src="' + escHtml(img) + '" data-ks-img-fallbacks="' + escHtml(candidates.join('||')) + '" data-ks-img-index="0" alt="' + escHtml(item.title || '') + '" loading="lazy" decoding="async"></span><span class="ks-feed-body">' + meta + '<span class="ks-feed-title">' + escHtml(item.title || '') + '</span>' + priceHtml(item) + '</span></a>';
   }
 
   function mergedFeedSections(sections, keys) {
@@ -709,6 +804,7 @@
     section.className = 'tf-sp-2 ks-home-feed-section ks-home-feed-section--' + (variant || 'grid');
     section.setAttribute('data-ks-generated', 'feed-products');
     section.innerHTML = '<div class="container"><div class="flat-title ks-home-section-title"><h5 class="fw-semibold">' + escHtml(title) + '</h5><a class="ks-home-section-link" href="articoli.aspx">Vai al catalogo</a></div><div class="ks-feed-grid">' + items.map(function (item) { return feedCard(item, variant); }).join('') + '</div></div>';
+    bindGeneratedImageFallbacks(section);
     return section;
   }
 
@@ -813,6 +909,7 @@
     runSafe('compactEmptyTailBeforeFooter', compactEmptyTailBeforeFooter);
     runSafe('hideAfterFooterArtifacts', hideAfterFooterArtifacts);
     runSafe('releaseHomePageHeight', releaseHomePageHeight);
+    runSafe('bindGeneratedImageFallbacks', function () { bindGeneratedImageFallbacks(document); });
     runSafe('updateAllSwipers', updateAllSwipers);
   }
 

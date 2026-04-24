@@ -1248,3 +1248,15 @@ body.ks-page-home .ks-onsus-price del{color:#8a94a6!important;}
 body.ks-page-home #KsHomeOnsusBridge + section[data-ks-home-primary-products="1"]{padding-top:18px!important;}
 @media (max-width:1199.98px){body.ks-page-home .ks-onsus-feature-grid{grid-template-columns:1fr!important;}body.ks-page-home .ks-onsus-side-col{grid-template-columns:repeat(2,minmax(0,1fr))!important;}body.ks-page-home .ks-onsus-product-strip{grid-template-columns:repeat(3,minmax(0,1fr))!important;}}
 @media (max-width:767.98px){body.ks-page-home #KsHomeOnsusBridge .ks-home-section-title{align-items:flex-start!important;flex-direction:column!important;}body.ks-page-home .ks-onsus-side-col,body.ks-page-home .ks-onsus-product-strip{grid-template-columns:1fr!important;}body.ks-page-home .ks-onsus-feature-grid{gap:14px!important;}body.ks-page-home .ks-onsus-center .ks-onsus-grid-card{min-height:0!important;grid-template-rows:170px auto auto auto!important;}body.ks-page-home .ks-onsus-center .ks-onsus-grid-media{height:170px!important;}}
+
+/* step84: harden ONSUS bridge image resolution and remove broken generated cards */
+body.ks-page-home #KsHomeOnsusBridge{padding-top:22px!important;padding-bottom:18px!important;}
+body.ks-page-home #KsHomeOnsusBridge .ks-home-section-title{margin-bottom:16px!important;}
+body.ks-page-home #KsHomeOnsusBridge .menu-tab-line{gap:18px!important;}
+body.ks-page-home #KsHomeOnsusBridge .tab-link{font-size:14px!important;line-height:1.2!important;}
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-grid-media,
+body.ks-page-home #KsHomeOnsusBridge .ks-onsus-side-media{background:#f6f7fb!important;border:1px solid #eef2f7!important;}
+body.ks-page-home #KsHomeOnsusBridge img[data-ks-img-fallbacks]{background:transparent!important;}
+body.ks-page-home #KsHomeOnsusBridge .ks-image-missing{display:none!important;}
+body.ks-page-home .ks-home-feed-section .ks-image-missing{display:none!important;}
+body.ks-page-home.ks-onsus-bridge-mounted #KsHomeOnsusBridge + section{margin-top:2px!important;}
