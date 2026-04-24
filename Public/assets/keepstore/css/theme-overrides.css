@@ -445,3 +445,155 @@ body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="2"] .tf-grid-
 body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="3"] .tf-grid-product{
   grid-template-columns:repeat(3,minmax(240px,1fr))!important;
 }
+
+/* step71: structural HOME finalization - move chrome to its real slot, fill hero, expand remaining lower block */
+body.ks-page-home #wrapper > main ~ header.tf-header,
+body.ks-page-home #wrapper > main ~ header.ks-header-ui,
+body.ks-page-home #wrapper > main ~ header[data-ks-header],
+body.ks-page-home #wrapper > footer.tf-footer ~ header,
+body.ks-page-home #wrapper > footer.tf-footer ~ .tf-header,
+body.ks-page-home [data-ks-duplicate-chrome="1"],
+body.ks-page-home [data-ks-duplicate-chrome],
+body.ks-page-home [data-ks-hidden-reason="header-clone"],
+body.ks-page-home [data-ks-hidden-reason="header-piece"],
+body.ks-page-home [data-ks-hidden-reason="footer-clone"]{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  overflow:hidden!important;
+}
+
+body.ks-page-home #wrapper > header.tf-header,
+body.ks-page-home #wrapper > header.ks-header-ui,
+body.ks-page-home #wrapper > header[data-ks-header]{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
+
+body.ks-page-home #HomeHeroSection{
+  padding-top:18px!important;
+  padding-bottom:18px!important;
+}
+body.ks-page-home #HomeHeroSection .ks-home-hero-shell,
+body.ks-page-home #HomeHeroSection .s-banner-wrapper{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+}
+@media (min-width:1200px){
+  body.ks-page-home #HomeHeroSection .ks-home-hero-shell,
+  body.ks-page-home #HomeHeroSection .s-banner-wrapper{
+    display:grid!important;
+    grid-template-columns:285px minmax(0,1fr)!important;
+    gap:16px!important;
+    align-items:stretch!important;
+  }
+  body.ks-page-home #HomeHeroSection .wrap-item-1{
+    width:285px!important;
+    min-width:285px!important;
+    max-width:285px!important;
+  }
+  body.ks-page-home #HomeHeroSection #HeroSliderWrap,
+  body.ks-page-home #HomeHeroSection .wrap-item-2{
+    min-width:0!important;
+    width:100%!important;
+  }
+}
+body.ks-page-home #HomeHeroSection #HeroSliderWrap,
+body.ks-page-home #HomeHeroSection .ks-home-hero-slider,
+body.ks-page-home #HomeHeroSection .ks-home-hero-slider .swiper-wrapper,
+body.ks-page-home #HomeHeroSection .ks-home-hero-slider .swiper-slide,
+body.ks-page-home #HomeHeroSection .ks-home-hero-banner,
+body.ks-page-home #HomeHeroSection .ks-home-hero-media,
+body.ks-page-home #HomeHeroSection .ks-home-hero-banner > a,
+body.ks-page-home #HomeHeroSection .ks-home-hero-slider a{
+  width:100%!important;
+  max-width:none!important;
+  min-height:420px!important;
+  display:block!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+}
+body.ks-page-home #HomeHeroSection .ks-home-hero-slider{
+  background:#fff!important;
+  border:1px solid #ebebeb!important;
+  border-radius:10px!important;
+  box-shadow:none!important;
+}
+body.ks-page-home #HomeHeroSection .ks-home-hero-slider img{
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  height:100%!important;
+  min-height:420px!important;
+  object-fit:cover!important;
+  object-position:center center!important;
+}
+body.ks-page-home #HomeHeroSection.ks-hero-crop-left .ks-home-hero-slider img{
+  object-position:left center!important;
+  transform:scale(1.85)!important;
+  transform-origin:left center!important;
+}
+body.ks-page-home #HomeHeroSection.ks-home-hero-mode-none,
+body.ks-page-home [data-ks-hidden-reason="hero-without-valid-image"],
+body.ks-page-home [data-ks-empty-section],
+body.ks-page-home [data-ks-hidden-reason="tabs-empty"],
+body.ks-page-home [data-ks-hidden-reason="deal-empty"],
+body.ks-page-home [data-ks-hidden-reason="lower-empty"],
+body.ks-page-home [data-ks-hidden-reason="lower-under-threshold"]{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+
+body.ks-page-home #HomeLowerColumnsSection.ks-lower-single .tf-grid-product,
+body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="1"] .tf-grid-product{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:20px!important;
+}
+body.ks-page-home #HomeLowerColumnsSection.ks-lower-single .tf-grid-product-item[data-ks-lower-valid="1"],
+body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="1"] .tf-grid-product-item[data-ks-lower-valid="1"]{
+  width:100%!important;
+  max-width:none!important;
+}
+body.ks-page-home #HomeLowerColumnsSection.ks-lower-single .product-list-wrap,
+body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="1"] .product-list-wrap{
+  display:grid!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  gap:18px!important;
+}
+body.ks-page-home #HomeLowerColumnsSection.ks-lower-single .product-list-wrap > li,
+body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="1"] .product-list-wrap > li{
+  min-width:0!important;
+}
+body.ks-page-home #HomeLowerColumnsSection.ks-lower-single .ks-row-card,
+body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="1"] .ks-row-card{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:10px!important;
+  min-height:100%!important;
+}
+@media (max-width:1199.98px){
+  body.ks-page-home #HomeLowerColumnsSection.ks-lower-single .product-list-wrap,
+  body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="1"] .product-list-wrap{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  }
+}
+@media (max-width:767.98px){
+  body.ks-page-home #HomeLowerColumnsSection.ks-lower-single .product-list-wrap,
+  body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="1"] .product-list-wrap{
+    grid-template-columns:1fr!important;
+  }
+}
