@@ -597,3 +597,184 @@ body.ks-page-home #HomeLowerColumnsSection[data-ks-visible-blocks="1"] .ks-row-c
     grid-template-columns:1fr!important;
   }
 }
+
+
+/* step72: definitive commercial runtime layer. Replaces malformed server/product fragments only after valid feed data mounts. */
+body.ks-page-home #ksHomeRuntimeEditorial{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  position:relative!important;
+  z-index:2!important;
+}
+body.ks-page-home.ks-home-runtime-mounted .flat-animate-tab,
+body.ks-page-home.ks-home-runtime-mounted #HomeLowerColumnsSection,
+body.ks-page-home.ks-home-runtime-mounted #HomeRecentlyViewedSection,
+body.ks-page-home.ks-home-runtime-mounted #HomeWidePromoSection,
+body.ks-page-home.ks-home-runtime-mounted #HomeCollectionSection,
+body.ks-page-home.ks-home-runtime-mounted #HomeBottomPromoSection,
+body.ks-page-home [data-ks-hidden-reason="tabs-malformed-no-visible-products"],
+body.ks-page-home [data-ks-hidden-reason="commercial-malformed-no-visible-images"],
+body.ks-page-home [data-ks-hidden-reason="original-commercial-replaced"],
+body.ks-page-home [data-ks-hidden-reason="runtime-mounted"],
+body.ks-page-home [data-ks-hidden-reason="orphan-price-after-runtime-mount"]{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+body.ks-page-home .ks-home-runtime-editorial{
+  padding:4px 0 8px!important;
+}
+body.ks-page-home .ks-home-runtime-section{
+  padding:22px 0!important;
+  margin:0!important;
+}
+body.ks-page-home .ks-home-runtime-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin:0 0 16px!important;
+}
+body.ks-page-home .ks-home-runtime-title h5,
+body.ks-page-home .ks-home-runtime-lower-col h5{
+  margin:0!important;
+  font-size:18px!important;
+  line-height:1.25!important;
+  font-weight:700!important;
+  color:#111827!important;
+  font-family:var(--ks-font-secondary)!important;
+}
+body.ks-page-home .ks-home-runtime-grid{
+  display:grid!important;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  gap:18px!important;
+  align-items:stretch!important;
+}
+body.ks-page-home .ks-home-runtime-lower-grid{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:22px!important;
+  align-items:start!important;
+}
+body.ks-page-home .ks-home-runtime-list{
+  display:grid!important;
+  gap:14px!important;
+}
+body.ks-page-home .ks-home-runtime-card{
+  position:relative!important;
+  display:grid!important;
+  grid-template-rows:auto auto 1fr auto!important;
+  gap:8px!important;
+  min-width:0!important;
+  height:100%!important;
+  padding:13px!important;
+  background:#fff!important;
+  border:1px solid #edf1f5!important;
+  border-radius:14px!important;
+  box-shadow:0 8px 22px rgba(15,23,42,.04)!important;
+  overflow:hidden!important;
+}
+body.ks-page-home .ks-home-runtime-image{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  height:145px!important;
+  padding:8px!important;
+  background:#f8fafc!important;
+  border-radius:12px!important;
+  overflow:hidden!important;
+  text-decoration:none!important;
+}
+body.ks-page-home .ks-home-runtime-image img{
+  display:block!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  width:auto!important;
+  height:auto!important;
+  object-fit:contain!important;
+}
+body.ks-page-home .ks-home-runtime-meta{
+  display:flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  flex-wrap:wrap!important;
+  min-height:14px!important;
+  font-size:10px!important;
+  line-height:1.2!important;
+  color:#6b7280!important;
+}
+body.ks-page-home .ks-home-runtime-title,
+body.ks-page-home .ks-home-runtime-title:visited{
+  font-size:13px!important;
+  line-height:1.3!important;
+  font-weight:700!important;
+  color:#0f172a!important;
+  text-decoration:none!important;
+  display:-webkit-box!important;
+  -webkit-line-clamp:2!important;
+  -webkit-box-orient:vertical!important;
+  overflow:hidden!important;
+  min-height:34px!important;
+}
+body.ks-page-home .ks-home-runtime-price{
+  display:flex!important;
+  gap:8px!important;
+  align-items:baseline!important;
+  flex-wrap:wrap!important;
+  font-weight:700!important;
+}
+body.ks-page-home .ks-home-runtime-price-new{
+  font-size:14px!important;
+  color:#ef4444!important;
+}
+body.ks-page-home .ks-home-runtime-price-old{
+  font-size:12px!important;
+  color:#64748b!important;
+  text-decoration:line-through!important;
+}
+body.ks-page-home .ks-home-runtime-badge{
+  position:absolute!important;
+  top:10px!important;
+  left:10px!important;
+  z-index:2!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:38px!important;
+  height:28px!important;
+  padding:0 8px!important;
+  border-radius:999px!important;
+  background:#ef4444!important;
+  color:#fff!important;
+  font-size:12px!important;
+  font-weight:700!important;
+}
+body.ks-page-home .ks-home-runtime-lower .ks-home-runtime-card{
+  grid-template-columns:78px minmax(0,1fr)!important;
+  grid-template-rows:auto auto auto!important;
+  column-gap:12px!important;
+  align-items:center!important;
+}
+body.ks-page-home .ks-home-runtime-lower .ks-home-runtime-image{
+  grid-row:1 / span 3!important;
+  height:78px!important;
+  padding:6px!important;
+}
+body.ks-page-home .ks-home-runtime-lower .ks-home-runtime-title{
+  min-height:0!important;
+}
+@media (max-width:1199.98px){
+  body.ks-page-home .ks-home-runtime-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;}
+  body.ks-page-home .ks-home-runtime-lower-grid{grid-template-columns:1fr!important;}
+}
+@media (max-width:767.98px){
+  body.ks-page-home .ks-home-runtime-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;}
+  body.ks-page-home .ks-home-runtime-image{height:128px!important;}
+}
