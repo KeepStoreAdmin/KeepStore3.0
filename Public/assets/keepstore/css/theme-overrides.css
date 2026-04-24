@@ -1079,3 +1079,122 @@ body.ks-page-home [data-ks-hidden-reason="empty-tail-spacer"]{
 body.ks-page-home .tf-footer .ft-body-bottom,
 body.ks-page-home .tf-footer .ft-body-center,
 body.ks-page-home .tf-footer .ft-body-inner{min-height:0!important;}
+
+/* step81: fill the HOME with a real catalog section built from the server-rendered departments menu. */
+body.ks-page-home #KsHomeDepartmentShowcase{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  padding:24px 0 12px!important;
+  margin:0!important;
+  overflow:visible!important;
+}
+body.ks-page-home #KsHomeDepartmentShowcase .ks-home-section-title{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:18px!important;
+  margin:0 0 18px!important;
+  padding:0!important;
+  border:0!important;
+}
+body.ks-page-home #KsHomeDepartmentShowcase .ks-home-section-title h5{
+  margin:0!important;
+  font-size:22px!important;
+  line-height:1.2!important;
+  font-weight:700!important;
+  color:#111827!important;
+}
+body.ks-page-home #KsHomeDepartmentShowcase .ks-home-section-link{
+  font-size:13px!important;
+  line-height:1!important;
+  font-weight:700!important;
+  color:#ff3d3d!important;
+  text-decoration:none!important;
+}
+body.ks-page-home #KsHomeDepartmentShowcase .ks-home-department-grid{
+  display:grid!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  gap:16px!important;
+}
+body.ks-page-home #KsHomeDepartmentShowcase .ks-home-department-card{
+  display:grid!important;
+  grid-template-columns:58px minmax(0,1fr)!important;
+  grid-template-areas:"media title" "media cta"!important;
+  column-gap:14px!important;
+  row-gap:5px!important;
+  align-items:center!important;
+  min-height:94px!important;
+  padding:16px!important;
+  border:1px solid #eceff3!important;
+  border-radius:12px!important;
+  background:#fff!important;
+  text-decoration:none!important;
+  color:#111827!important;
+  box-shadow:none!important;
+  overflow:hidden!important;
+}
+body.ks-page-home #KsHomeDepartmentShowcase .ks-home-department-media{
+  grid-area:media!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:58px!important;
+  height:58px!important;
+  border-radius:14px!important;
+  background:#f6f7f9!important;
+  overflow:hidden!important;
+}
+body.ks-page-home #KsHomeDepartmentShowcase .ks-home-department-media img{
+  max-width:46px!important;
+  max-height:46px!important;
+  object-fit:contain!important;
+  display:block!important;
+}
+body.ks-page-home #KsHomeDepartmentShowcase .ks-home-department-media b{
+  font-size:20px!important;
+  line-height:1!important;
+  font-weight:800!important;
+  color:#ff3d3d!important;
+}
+body.ks-page-home #KsHomeDepartmentShowcase .ks-home-department-title{
+  grid-area:title!important;
+  display:-webkit-box!important;
+  -webkit-line-clamp:2!important;
+  -webkit-box-orient:vertical!important;
+  overflow:hidden!important;
+  font-size:14px!important;
+  line-height:1.25!important;
+  font-weight:700!important;
+  color:#111827!important;
+}
+body.ks-page-home #KsHomeDepartmentShowcase .ks-home-department-cta{
+  grid-area:cta!important;
+  font-size:12px!important;
+  line-height:1.2!important;
+  font-weight:700!important;
+  color:#ff3d3d!important;
+}
+body.ks-page-home section[data-ks-home-primary-products="1"]{
+  padding-top:22px!important;
+  margin-top:0!important;
+}
+body.ks-page-home section[data-ks-home-primary-products="1"] .flat-title{
+  margin-bottom:18px!important;
+}
+body.ks-page-home #KsHomeDepartmentShowcase + section[data-ks-home-primary-products="1"]{
+  padding-top:18px!important;
+}
+body.ks-page-home #HomeBrandsSection{
+  padding-top:22px!important;
+  margin-top:10px!important;
+}
+@media (max-width:1199.98px){
+  body.ks-page-home #KsHomeDepartmentShowcase .ks-home-department-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+}
+@media (max-width:767.98px){
+  body.ks-page-home #KsHomeDepartmentShowcase .ks-home-department-grid{grid-template-columns:1fr!important;}
+}
