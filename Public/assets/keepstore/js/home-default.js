@@ -961,6 +961,12 @@
     if (bestSection && bestSection.parentNode && bestSection.nextElementSibling !== brand) {
       bestSection.parentNode.insertBefore(brand, bestSection.nextSibling);
     }
+    var layer = q('#KsHomeClosingLayer');
+    if (layer && brand.parentNode) {
+      if (brand.nextSibling) brand.parentNode.insertBefore(layer, brand.nextSibling);
+      else brand.parentNode.appendChild(layer);
+      removeHardHide(layer);
+    }
   }
 
 
@@ -1022,9 +1028,46 @@
     var footer = q('footer.tf-footer');
     var brand = q('#HomeBrandsSection');
     var main = q('main') || document.body;
-    if (brand && brand.parentNode) { brand.parentNode.insertBefore(section, brand); return; }
+    if (brand && brand.parentNode) {
+      if (brand.nextSibling) brand.parentNode.insertBefore(section, brand.nextSibling);
+      else brand.parentNode.appendChild(section);
+      return;
+    }
     if (footer && footer.parentNode) { footer.parentNode.insertBefore(section, footer); return; }
     main.appendChild(section);
+  }
+
+  function ensureClosingLayerOrder() {
+    if (!isHome()) return;
+    var layer = q('#KsHomeClosingLayer');
+    if (!layer) {
+      buildHomeClosingLayer();
+      layer = q('#KsHomeClosingLayer');
+    }
+    if (!layer) return;
+    removeHardHide(layer);
+    layer.removeAttribute('data-ks-hidden-reason');
+    layer.style.removeProperty('display');
+    layer.style.removeProperty('visibility');
+    layer.style.removeProperty('opacity');
+    layer.style.removeProperty('height');
+    layer.style.removeProperty('min-height');
+    layer.style.removeProperty('max-height');
+    var footer = q('footer.tf-footer');
+    var brand = q('#HomeBrandsSection');
+    if (brand && brand.parentNode) {
+      var parent = brand.parentNode;
+      if (layer.parentNode !== parent || brand.nextElementSibling !== layer) {
+        if (brand.nextSibling) parent.insertBefore(layer, brand.nextSibling);
+        else parent.appendChild(layer);
+      }
+    } else if (footer && footer.parentNode && layer.nextElementSibling !== footer) {
+      footer.parentNode.insertBefore(layer, footer);
+    }
+    if (footer && layer.parentNode === footer.parentNode && layer.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_PRECEDING) {
+      footer.parentNode.insertBefore(layer, footer);
+    }
+    document.body.classList.add('ks-home-closing-mounted', 'ks-home-closing-ordered');
   }
 
   function buildHomeClosingLayer() {
@@ -1076,6 +1119,7 @@
     runSafe('fetchAndMountFeedProducts', fetchAndMountFeedProducts);
     runSafe('moveBrandsAfterProducts', moveBrandsAfterProducts);
     runSafe('buildHomeClosingLayer', buildHomeClosingLayer);
+    runSafe('ensureClosingLayerOrder', ensureClosingLayerOrder);
   }
 
   function stabilize() {
@@ -1091,6 +1135,7 @@
     runSafe('releaseHomePageHeight', releaseHomePageHeight);
     runSafe('collapseDormantOverlayArtifacts', collapseDormantOverlayArtifacts);
     runSafe('buildHomeClosingLayerFinal', buildHomeClosingLayer);
+    runSafe('ensureClosingLayerOrder', ensureClosingLayerOrder);
     runSafe('enforceFooterScrollClosure', enforceFooterScrollClosure);
     runSafe('bindGeneratedImageFallbacks', function () { bindGeneratedImageFallbacks(document); });
     runSafe('updateAllSwipers', updateAllSwipers);

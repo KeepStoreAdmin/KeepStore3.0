@@ -1404,3 +1404,28 @@ body.ks-page-home:not(.modal-open) form#form1,
 body.ks-page-home:not(.modal-open) #wrapper{overflow-x:hidden!important;}
 body.ks-page-home:not(.modal-open) footer.tf-footer{margin-bottom:0!important;}
 body.ks-page-home:not(.modal-open) footer.tf-footer ~ *:not(script):not(style){display:none!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}
+
+
+/* Step 91: order the final ONSUS closing panel after brand and before footer, then tighten final page rhythm. */
+body.ks-page-home.ks-home-closing-ordered #KsHomeClosingLayer{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  clear:both!important;
+  position:relative!important;
+  z-index:2!important;
+  padding:22px 0 28px!important;
+  margin:0!important;
+  background:transparent!important;
+}
+body.ks-page-home #HomeBrandsSection + #KsHomeClosingLayer{margin-top:-4px!important;}
+body.ks-page-home #KsHomeClosingLayer + footer.tf-footer{margin-top:0!important;}
+body.ks-page-home.ks-home-closing-ordered #KsHomeClosingLayer .ks-home-closing-grid{grid-template-columns:minmax(0,1.25fr) minmax(340px,.75fr)!important;}
+body.ks-page-home.ks-home-closing-ordered #KsHomeClosingLayer .ks-home-closing-panel{min-height:150px!important;padding:20px!important;}
+body.ks-page-home.ks-home-closing-ordered #KsHomeClosingLayer .ks-home-closing-chips{grid-template-columns:repeat(5,minmax(0,1fr))!important;}
+body.ks-page-home.ks-home-closing-ordered #KsHomeClosingLayer .ks-home-closing-chip{min-height:62px!important;padding:12px!important;}
+body.ks-page-home.ks-home-closing-ordered #KsHomeClosingLayer .ks-home-service-card{min-height:112px!important;padding:14px!important;}
+body.ks-page-home .ks-home-brands-block,body.ks-page-home #HomeBrandsSection{padding-bottom:18px!important;}
+body.ks-page-home footer.tf-footer{margin-top:0!important;}
+@media (max-width:1199.98px){body.ks-page-home.ks-home-closing-ordered #KsHomeClosingLayer .ks-home-closing-grid{grid-template-columns:1fr!important;}body.ks-page-home.ks-home-closing-ordered #KsHomeClosingLayer .ks-home-closing-chips{grid-template-columns:repeat(3,minmax(0,1fr))!important;}}
+@media (max-width:767.98px){body.ks-page-home.ks-home-closing-ordered #KsHomeClosingLayer .ks-home-closing-chips,body.ks-page-home.ks-home-closing-ordered #KsHomeClosingLayer .ks-home-service-grid{grid-template-columns:1fr!important;}}
