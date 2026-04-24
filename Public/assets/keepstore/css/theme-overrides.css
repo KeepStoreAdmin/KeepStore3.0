@@ -151,3 +151,44 @@ body.ks-page-home .ks-runtime-panel.is-active{display:block;}
   body.ks-page-home .ks-home-v6-brands,
   body.ks-page-home .tf-grid-product{grid-template-columns:1fr;}
 }
+
+/* step67: hard stop for HOME external/template rails without clipping valid content */
+body.ks-page-home [data-ks-artifact="edge"],
+body.ks-page-home [data-ks-artifact="demo"],
+body.ks-page-home [data-ks-artifact="franchising"],
+body.ks-page-home [data-ks-artifact="header-clone"],
+body.ks-page-home [data-ks-artifact="side-media"],
+body.ks-page-home [data-ks-hidden="1"]{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+body.ks-page-home .mega-home,
+body.ks-page-home .row-demo,
+body.ks-page-home .demo-item,
+body.ks-page-home .demo-image,
+body.ks-page-home a[href*="home-2.html"],
+body.ks-page-home a[href*="home-3.html"],
+body.ks-page-home a[href*="home-4.html"],
+body.ks-page-home a[href*="home-5.html"],
+body.ks-page-home a[href*="home-6.html"],
+body.ks-page-home a[href*="home-7.html"],
+body.ks-page-home a[href*="home-8.html"],
+body.ks-page-home a[href*="home-9.html"],
+body.ks-page-home a[href*="home-10.html"],
+body.ks-page-home a[href*="home-11.html"],
+body.ks-page-home img[src*="/images/demo/home-"],
+body.ks-page-home img[data-src*="/images/demo/home-"],
+body.ks-page-home img[src*="onsus-package"],
+body.ks-page-home img[data-src*="onsus-package"]{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+@media (min-width:1200px){
+  body.ks-page-home #wrapper,
+  body.ks-page-home main,
+  body.ks-page-home .ks-account-main{position:relative;overflow:visible;}
+}
