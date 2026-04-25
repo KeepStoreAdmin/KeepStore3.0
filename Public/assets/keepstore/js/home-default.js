@@ -125,6 +125,9 @@
   }
 
   function bindDepartmentsMenu() {
+    var root = document.querySelector('.ks-home-departments');
+    if (!root || root.getAttribute('data-ks-menu-bound') === '1') return;
+    root.setAttribute('data-ks-menu-bound', '1');
     var closeTimer = 0;
     function desktopMenu() {
       return !window.matchMedia || window.matchMedia('(min-width: 1200px)').matches;
@@ -155,10 +158,15 @@
         if (sibling !== item) setItemOpen(sibling, false);
       });
     }
+    function closeAll(except) {
+      qa('[data-ks-menu-item="1"]', root).forEach(function (item) {
+        if (item !== except) setItemOpen(item, false);
+      });
+    }
     function openItem(item) {
       if (!item || !item.querySelector('[data-ks-submenu="1"]')) return;
       clearCloseTimer();
-      closeSiblings(item);
+      closeAll(item);
       setItemOpen(item, true);
     }
     function closeItemSoon(item) {
@@ -170,10 +178,10 @@
     function toggleItem(item) {
       if (!item) return;
       var nextOpen = item.getAttribute('data-ks-open') !== '1';
-      closeSiblings(item);
+      closeAll(item);
       setItemOpen(item, nextOpen);
     }
-    qa('.ks-home-departments [data-ks-toggle="1"],.ks-home-departments [data-ks-menu-row="1"]').forEach(function (btn) {
+    qa('[data-ks-toggle="1"],[data-ks-menu-row="1"]', root).forEach(function (btn) {
       if (btn.getAttribute('data-ks-bound') === '1') return;
       btn.setAttribute('data-ks-bound', '1');
       btn.addEventListener('click', function (event) {
@@ -183,11 +191,18 @@
         event.stopPropagation();
         toggleItem(item);
       });
+      btn.addEventListener('focus', function () {
+        var item = btn.closest('[data-ks-menu-item="1"]');
+        if (desktopMenu()) openItem(item);
+      });
     });
-    qa('.ks-home-departments [data-ks-menu-item="1"]').forEach(function (item) {
+    qa('[data-ks-menu-item="1"]', root).forEach(function (item) {
       if (item.getAttribute('data-ks-hover-bound') === '1') return;
       item.setAttribute('data-ks-hover-bound', '1');
       item.addEventListener('mouseenter', function () {
+        if (desktopMenu()) openItem(item);
+      });
+      item.addEventListener('mouseover', function () {
         if (desktopMenu()) openItem(item);
       });
       item.addEventListener('mouseleave', function () {
@@ -202,6 +217,12 @@
           if (desktopMenu()) closeItemSoon(item);
         });
       }
+    });
+    document.addEventListener('click', function (event) {
+      if (!root.contains(event.target)) closeAll(null);
+    });
+    window.addEventListener('resize', function () {
+      closeAll(null);
     });
   }
 
@@ -281,6 +302,7 @@
     }
     var input = q('.ks-ai130-form input', root);
     var form = q('.ks-ai130-form', root);
+    var submitButton = q('.ks-ai130-form button', root);
     var answer = q('.ks-ai130-answer p', root);
     var lamp = q('.ks-ai130-answer i', root);
     var results = q('.ks-ai130-results', root);
@@ -330,10 +352,38 @@
         renderEmpty(value, 'Errore temporaneo durante la ricerca catalogo.', null);
       });
     }
-    if (form) form.addEventListener('submit', function (event) {
-      event.preventDefault();
-      runQuery(input ? input.value : '');
-    });
+    var inputTimer = 0;
+    function queueQuery() {
+      if (!input) return;
+      var value = String(input.value || '').replace(/\s+/g, ' ').trim();
+      if (inputTimer) window.clearTimeout(inputTimer);
+      if (value.length < 2) return;
+      inputTimer = window.setTimeout(function () {
+        runQuery(value);
+      }, 360);
+    }
+    if (form && String(form.tagName || '').toLowerCase() === 'form') {
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        runQuery(input ? input.value : '');
+      });
+    }
+    if (submitButton) {
+      submitButton.addEventListener('click', function (event) {
+        event.preventDefault();
+        runQuery(input ? input.value : '');
+      });
+    }
+    if (input) {
+      input.addEventListener('input', queueQuery);
+      input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          if (inputTimer) window.clearTimeout(inputTimer);
+          runQuery(input.value);
+        }
+      });
+    }
     qa('.ks-ai130-examples button', root).forEach(function (button) {
       button.addEventListener('click', function () {
         if (input) input.value = text(button);

@@ -17,7 +17,7 @@ Partial Class SiteHeader
 
     Private Const HeaderCompanyId As Integer = 1
     Private Const DefaultLogoVirtual As String = "~/Public/assets/images/logo/logo.webp"
-    Private Const DefaultMobileLogoVirtual As String = "~/Public/assets/images/logo/logo-mobile.webp"
+    Private Const DefaultMobileLogoVirtual As String = "~/Public/assets/images/logo/logo.webp"
     Private Const DefaultFaviconVirtual As String = "~/Public/assets/images/favicons/favicon.ico"
     Private Const DefaultAppleTouchIconVirtual As String = "~/Public/assets/images/favicons/apple-touch-icon.png"
     Private Const DefaultFavicon32Virtual As String = "~/Public/assets/images/favicons/favicon-32x32.png"
@@ -377,6 +377,12 @@ Partial Class SiteHeader
 
         Dim lower As String = u.ToLowerInvariant()
 
+        If lower.EndsWith("/logo-mobile.webp", StringComparison.OrdinalIgnoreCase) OrElse
+           lower.Equals("logo-mobile.webp", StringComparison.OrdinalIgnoreCase) Then
+            u = "/Public/assets/images/logo/logo.webp"
+            lower = u.ToLowerInvariant()
+        End If
+
         If lower.Contains("/public/assets/images/favicons/") Then
             Dim logoFile As String = Path.GetFileName(u)
             If Not String.IsNullOrWhiteSpace(logoFile) Then
@@ -467,8 +473,10 @@ Partial Class SiteHeader
     Private Function BuildHeadIconsScript() As String
         Dim links As New List(Of String)()
 
-        links.Add(BuildHeadLinkScript("icon", ResolveUrl(DefaultFaviconVirtual), "", "image/x-icon"))
-        links.Add(BuildHeadLinkScript("shortcut icon", ResolveUrl(DefaultFaviconVirtual), "", "image/x-icon"))
+        If FileExistsVirtual(DefaultFaviconVirtual) Then
+            links.Add(BuildHeadLinkScript("icon", ResolveUrl(DefaultFaviconVirtual), "", "image/x-icon"))
+            links.Add(BuildHeadLinkScript("shortcut icon", ResolveUrl(DefaultFaviconVirtual), "", "image/x-icon"))
+        End If
 
         If FileExistsVirtual(DefaultAppleTouchIconVirtual) Then
             links.Add(BuildHeadLinkScript("apple-touch-icon", ResolveUrl(DefaultAppleTouchIconVirtual), "", "image/png"))

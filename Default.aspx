@@ -100,10 +100,10 @@
                     <span class="ks-ai130-kicker">AI locale KeepStore</span>
                     <h5>Chiedimi cosa stai cercando</h5>
                     <p>Interpreta la richiesta e interroga il catalogo articoli KeepStore usando descrizioni, codice, EAN, marca, reparto e categoria.</p>
-                    <form class="ks-ai130-form">
+                    <div class="ks-ai130-form" role="search">
                         <input type="search" autocomplete="off" placeholder="Es. Cerco un toner compatibile sotto 50 euro" aria-label="Cerca con AI locale KeepStore" />
-                        <button type="submit">Ragiona</button>
-                    </form>
+                        <button type="button">Ragiona</button>
+                    </div>
                     <div class="ks-ai130-examples">
                         <button type="button">smartphone samsung</button>
                         <button type="button">monitor 27 pollici gaming</button>

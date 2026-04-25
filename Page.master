@@ -131,7 +131,7 @@
                     <div class="quickview-image">
                         <div class="product-thumb-slider">
                             <a href="articoli.aspx" class="d-block tf-image-view" id="ksQuickViewImageLink">
-                                <img id="ksQuickViewMainImage" src="/Public/assets/images/item/laptop.webp" alt="Anteprima prodotto" class="lazyload" />
+                                <img id="ksQuickViewMainImage" src="/Public/assets/images/logo/logo.webp" alt="Anteprima prodotto" class="lazyload" />
                             </a>
                         </div>
                     </div>
@@ -244,7 +244,17 @@
         <script src="<%= ThemeManager.Asset("js/shop.js") %>"></script>
         <script src="<%= ThemeManager.Asset("js/count-down.js") %>"></script>
         <script src="<%= ThemeManager.Asset("js/main.js") %>"></script>
-        <script src="<%= ThemeManager.Asset("js/sibforms.js") %>"></script>
+        <script>
+        (function () {
+            document.addEventListener('DOMContentLoaded', function () {
+                if (!document.getElementById('sib-form')) return;
+                var script = document.createElement('script');
+                script.src = '<%= ThemeManager.Asset("js/sibforms.js") %>';
+                script.defer = true;
+                document.body.appendChild(script);
+            });
+        })();
+        </script>
         <script src="<%= ThemeManager.Asset("js/drift.min.js") %>"></script>
         <script src="<%= ThemeManager.Asset("js/ks-page-flags.js") %>"></script>
         <asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
