@@ -237,7 +237,7 @@
       if (src && !img.getAttribute('src')) img.setAttribute('src', src);
       img.style.setProperty('width', '100%', 'important');
       img.style.setProperty('height', '100%', 'important');
-      img.style.setProperty('object-fit', 'cover', 'important');
+      img.style.setProperty('object-fit', 'contain', 'important');
       img.style.setProperty('object-position', 'center center', 'important');
       img.style.setProperty('background', '#050505', 'important');
     });
@@ -421,25 +421,28 @@
 
   function render() {
     if (!home()) return;
-    document.body.classList.add('ks-page-home', 'ks-home-final-onsus', 'ks-home-step110-webforms-fixed');
+    document.body.classList.add('ks-page-home', 'ks-home-final-onsus', 'ks-home-step110-webforms-fixed', 'ks-home-step111-onsus-stabilized');
     suppressNewsletter();
     normalizeCatalogMenu();
     forceHeroLayout();
 
     var r = roots();
+
+    // Read server-side pools first, then render ONSUS sections without letting Best Seller consume deal/editorial stock.
+    var deal = collectMany([r.deal], newState(), 5);
     var bestRaw = collectMany([r.best], newState(), 5);
     var used = newState();
+    deal.forEach(function (p) { markProduct(used, p); });
     bestRaw.forEach(function (p) { markProduct(used, p); });
 
-    var deal = collectMany([r.deal], used, 5);
-    var editorial = collectMany([r.editorial, r.lower, r.deal], used, 10);
+    var editorial = collectMany([r.editorial, r.lower], used, 10);
     var recent = collectMany([r.recent], used, 5);
     var lower = collectMany([r.lower, r.editorial], used, 12);
 
     hideNative(r);
 
-    var anchor = buildDepartmentsShowcase(findIconBoxes() || first(['.ks-home-hero-section','[id$=\"HomeHeroSection\"]']));
-    if (deal.length >= 4) anchor = buildProductDeck('KsHomeDealFinal', deal, 'Offerte reali', 'Occasione Imperdibile', anchor, 5);
+    var anchor = buildDepartmentsShowcase(findIconBoxes() || first(['.ks-home-hero-section','[id60\"HomeHeroSection\"]']));
+    if (deal.length >= 3) anchor = buildProductDeck('KsHomeDealFinal', deal, 'Offerte reali', 'Occasione Imperdibile', anchor, 5);
     anchor = buildProductDeck('KsHomeEditorialFinal', editorial, 'Prodotti KeepStore', 'In Evidenza', anchor, 10);
     anchor = buildProductDeck('KsHomeBestSellerFinal', bestRaw, 'Best Seller', 'Best Seller', anchor, 5);
     if (recent.length >= 2) anchor = buildProductDeck('KsHomeRecentFinal', recent, 'Recenti', 'Scelti Da Te', anchor, 5);

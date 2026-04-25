@@ -573,3 +573,32 @@ body.ks-page-home .ks-home-brand-media img{max-height:48px!important;object-fit:
   body.ks-page-home .ks-final-product-card{grid-template-rows:150px auto!important;min-height:250px!important;}
   body.ks-page-home .ks-final-product-media{height:150px!important;}
 }
+
+/* ==========================================================
+   KeepStore HOME - Step 111 final ONSUS stabilization
+   Purpose: keep composed hero artwork visible and restore real deal block when server emits it.
+   ========================================================== */
+body.ks-page-home.ks-home-step111-onsus-stabilized .ks-home-hero-slider img,
+body.ks-page-home.ks-home-step111-onsus-stabilized [id$="Slide_Show_Container"] img{
+  object-fit:contain!important;
+  object-position:center center!important;
+  background:#050505!important;
+}
+body.ks-page-home.ks-home-step111-onsus-stabilized .ks-home-hero-slider,
+body.ks-page-home.ks-home-step111-onsus-stabilized [id$="Slide_Show_Container"],
+body.ks-page-home.ks-home-step111-onsus-stabilized .ks-home-hero-banner,
+body.ks-page-home.ks-home-step111-onsus-stabilized .ks-home-hero-media{
+  background:#050505!important;
+}
+body.ks-page-home.ks-home-step111-onsus-stabilized #KsHomeDealFinal .ks-final-product-grid,
+body.ks-page-home.ks-home-step111-onsus-stabilized #KsHomeEditorialFinal .ks-final-product-grid,
+body.ks-page-home.ks-home-step111-onsus-stabilized #KsHomeBestSellerFinal .ks-final-product-grid{
+  grid-auto-flow:row!important;
+}
+body.ks-page-home.ks-home-step111-onsus-stabilized #KsHomeBestSellerFinal .ks-final-product-grid .ks-final-product-card:nth-child(n+6),
+body.ks-page-home.ks-home-step111-onsus-stabilized #KsHomeDealFinal .ks-final-product-grid .ks-final-product-card:nth-child(n+6){
+  display:none!important;
+}
+body.ks-page-home.ks-home-step111-onsus-stabilized .ks-final-title{margin-bottom:14px!important;}
+body.ks-page-home.ks-home-step111-onsus-stabilized .ks-section-kicker{display:block!important;color:#ff3b30!important;font-size:10px!important;line-height:1.1!important;font-weight:700!important;text-transform:uppercase!important;letter-spacing:.02em!important;margin-bottom:2px!important;}
+body.ks-page-home.ks-home-step111-onsus-stabilized .ks-home-section-link{color:#ff3b30!important;font-size:12px!important;font-weight:700!important;}
