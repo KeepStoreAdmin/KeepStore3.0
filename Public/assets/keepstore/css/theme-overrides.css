@@ -2017,3 +2017,248 @@ body.ks-page-home.ks-home-onsus-pass-127 #KsHomeBrandSection{padding-top:34px!im
   body.ks-page-home.ks-home-onsus-pass-127 .ks-onsus-mosaic-grid127{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important;}
   body.ks-page-home.ks-home-onsus-pass-127 .ks-onsus-mosaic-side127{grid-template-columns:1fr!important;}
 }
+
+/* Step 128 - AI KeepStore smart advisor + stronger ONSUS surface */
+body.ks-page-home.ks-home-onsus-pass-128 .ks-smart-advisor128{
+  padding-top:34px!important;
+  padding-bottom:18px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-smart-advisor128 .container,
+body.ks-page-home.ks-home-onsus-pass-128 #KsSmartAdvisor128 .container{
+  max-width:1320px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-shell128{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.05fr) minmax(0,1.45fr)!important;
+  gap:24px!important;
+  align-items:stretch!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-panel128,
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-products128{
+  background:#fff!important;
+  border:1px solid rgba(51,62,72,.05)!important;
+  border-radius:18px!important;
+  box-shadow:0 18px 48px rgba(51,62,72,.075)!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-panel128{
+  padding:26px 26px 24px!important;
+  background:linear-gradient(135deg,#111820 0%,#1e2832 54%,#ff3b3b 155%)!important;
+  color:#fff!important;
+  overflow:hidden!important;
+  position:relative!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-panel128:after{
+  content:""!important;
+  position:absolute!important;
+  width:190px!important;
+  height:190px!important;
+  right:-70px!important;
+  bottom:-80px!important;
+  border-radius:50%!important;
+  background:radial-gradient(circle,rgba(255,59,59,.32),rgba(255,59,59,0) 70%)!important;
+  pointer-events:none!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-kicker128{
+  display:inline-flex!important;
+  align-items:center!important;
+  min-height:24px!important;
+  padding:0 10px!important;
+  border-radius:999px!important;
+  background:#ff3b3b!important;
+  color:#fff!important;
+  font-size:11px!important;
+  font-weight:900!important;
+  letter-spacing:.06em!important;
+  text-transform:uppercase!important;
+  margin-bottom:13px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-panel128 h5{
+  color:#fff!important;
+  font-size:30px!important;
+  line-height:1.08!important;
+  font-weight:900!important;
+  margin:0 0 10px!important;
+  max-width:430px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-panel128 p{
+  color:rgba(255,255,255,.76)!important;
+  font-size:13px!important;
+  line-height:1.55!important;
+  margin:0 0 18px!important;
+  max-width:520px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-chips128{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:10px!important;
+  margin-bottom:17px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-chip128{
+  border:1px solid rgba(255,255,255,.13)!important;
+  background:rgba(255,255,255,.08)!important;
+  color:#fff!important;
+  min-height:44px!important;
+  border-radius:12px!important;
+  padding:8px 10px!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  text-align:left!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  cursor:pointer!important;
+  transition:background .18s ease, transform .18s ease, border-color .18s ease!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-chip128:hover,
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-chip128.is-active{
+  background:#fff!important;
+  color:#202833!important;
+  border-color:#fff!important;
+  transform:translateY(-1px)!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-chip128 span{
+  display:inline-flex!important;
+  width:24px!important;
+  height:24px!important;
+  align-items:center!important;
+  justify-content:center!important;
+  border-radius:50%!important;
+  background:rgba(255,59,59,.18)!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-summary128{
+  display:grid!important;
+  gap:4px!important;
+  background:rgba(255,255,255,.08)!important;
+  border-radius:14px!important;
+  padding:14px!important;
+  margin-bottom:14px!important;
+  position:relative!important;
+  z-index:1!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-summary128 strong{
+  color:#fff!important;
+  font-size:14px!important;
+  font-weight:900!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-summary128 span{
+  color:rgba(255,255,255,.72)!important;
+  font-size:12px!important;
+  line-height:1.45!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-actions128{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  gap:8px!important;
+  position:relative!important;
+  z-index:1!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-actions128 a{
+  display:inline-flex!important;
+  align-items:center!important;
+  min-height:30px!important;
+  padding:0 11px!important;
+  border-radius:999px!important;
+  background:#ff3b3b!important;
+  color:#fff!important;
+  font-size:11px!important;
+  font-weight:900!important;
+  text-decoration:none!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-products128{
+  padding:18px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-products-head128{
+  display:flex!important;
+  align-items:flex-end!important;
+  justify-content:space-between!important;
+  gap:15px!important;
+  margin-bottom:14px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-products-head128 span{
+  color:#202833!important;
+  font-size:18px!important;
+  font-weight:900!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-products-head128 small{
+  color:#ff3b3b!important;
+  font-size:11px!important;
+  font-weight:900!important;
+  text-transform:uppercase!important;
+  letter-spacing:.04em!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-results128{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:14px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-product128{
+  display:grid!important;
+  grid-template-columns:112px minmax(0,1fr)!important;
+  gap:13px!important;
+  align-items:center!important;
+  min-height:132px!important;
+  padding:12px!important;
+  background:#f8f9fb!important;
+  border-radius:14px!important;
+  text-decoration:none!important;
+  transition:transform .18s ease, box-shadow .18s ease, background .18s ease!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-product128:hover{
+  transform:translateY(-2px)!important;
+  background:#fff!important;
+  box-shadow:0 16px 38px rgba(51,62,72,.1)!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-product-img128{
+  height:108px!important;
+  border-radius:12px!important;
+  background:#fff!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  overflow:hidden!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-product-img128 img{
+  max-width:100%!important;
+  max-height:100px!important;
+  object-fit:contain!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-product-copy128 small{
+  display:block!important;
+  color:#7b8492!important;
+  font-size:11px!important;
+  font-weight:700!important;
+  margin-bottom:5px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-product-copy128 strong{
+  display:block!important;
+  color:#0068b7!important;
+  font-size:12px!important;
+  line-height:1.22!important;
+  font-weight:900!important;
+  text-transform:uppercase!important;
+  display:-webkit-box!important;
+  -webkit-line-clamp:3!important;
+  -webkit-box-orient:vertical!important;
+  overflow:hidden!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-product-copy128 b{
+  display:block!important;
+  color:#ff3b3b!important;
+  font-size:13px!important;
+  font-weight:900!important;
+  margin-top:8px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-128 #KsOnsusProductMosaic127{padding-top:18px!important;}
+body.ks-page-home.ks-home-onsus-pass-128 #KsHomeBestSellerFinal{padding-top:26px!important;}
+body.ks-page-home.ks-home-onsus-pass-128 #KsHomeLowerFinal{padding-top:24px!important;}
+body.ks-page-home.ks-home-onsus-pass-128 #KsHomeBrandSection{padding-top:34px!important;}
+@media(max-width:1199px){
+  body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-shell128{grid-template-columns:1fr!important;}
+  body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-panel128 h5{font-size:26px!important;}
+}
+@media(max-width:767px){
+  body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-chips128,
+  body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-results128{grid-template-columns:1fr!important;}
+  body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-product128{grid-template-columns:90px minmax(0,1fr)!important;}
+  body.ks-page-home.ks-home-onsus-pass-128 .ks-ai-panel128 h5{font-size:22px!important;}
+}

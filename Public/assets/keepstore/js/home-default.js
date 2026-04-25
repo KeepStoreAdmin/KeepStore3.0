@@ -2251,3 +2251,185 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   window.addEventListener('resize', function () { window.setTimeout(run, 150); });
 })();
+
+/* Step 128 - Smart Advisor layer: automatic product guidance for KeepStore HOME.
+   Uses only products and categories already rendered by ASP.NET/WebForms. No external AI/API. */
+(function () {
+  'use strict';
+  var STEP = '128';
+  function q(s, r) { return (r || document).querySelector(s); }
+  function qa(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  function text(n) { return String(n && n.textContent || '').replace(/\s+/g, ' ').trim(); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function normUrl(h) { return String(h || '').replace(/^https?:\/\/(www\.)?(taikun\.it|webaffare\.it)/i, '').replace(/&amp;/g, '&').replace(/#.*$/, ''); }
+  function imgFrom(root) {
+    var imgs = qa('img', root);
+    for (var i = 0; i < imgs.length; i++) {
+      var im = imgs[i];
+      var src = im.currentSrc || im.getAttribute('data-src') || im.getAttribute('src') || '';
+      if (!src && im.getAttribute('srcset')) src = String(im.getAttribute('srcset')).split(',')[0].trim().split(' ')[0];
+      if (!src || /logo|brand|payment|visa|mastercard|paypal|placeholder|loader|spinner|sprite|blank|nofoto/i.test(src)) continue;
+      return src;
+    }
+    return '';
+  }
+  function priceFrom(root) { var m = text(root).match(/\d{1,5}(?:[\.,]\d{2})\s*€/g); return m && m.length ? m[m.length - 1] : ''; }
+  function titleFrom(root) {
+    var nodes = qa('h6 a,.ks-final-product-info h6 a,.ks-deal123-title-product,.ks-final-lower-item a[href*="articolo.aspx"],.ks-onsus-mosaic-card127 strong,.ks-onsus-mosaic-mini127 strong,.ks-onsus-mosaic-feature127 strong,a[href*="articolo.aspx"]', root);
+    for (var i = 0; i < nodes.length; i++) {
+      var t = text(nodes[i]);
+      if (t && t.length > 6 && !/^(scopri|compra|categoria|vai al catalogo|dettaglio)$/i.test(t)) return t;
+    }
+    return '';
+  }
+  function categoryFrom(root) {
+    var c = text(q('.ks-final-product-cat,.ks-deal123-cat,.category,.cat,small', root));
+    return c && c.length < 38 ? c : 'KeepStore';
+  }
+  function productFrom(root) {
+    if (!root) return null;
+    var a = q('a[href*="articolo.aspx"]', root) || (root.matches && root.matches('a[href*="articolo.aspx"]') ? root : null);
+    var href = normUrl(a && a.getAttribute('href'));
+    var img = imgFrom(root);
+    var title = titleFrom(root);
+    if (!href || !img || !title) return null;
+    return { href: href, img: img, title: title, price: priceFrom(root), cat: categoryFrom(root), raw: text(root) };
+  }
+  function collectProducts(max) {
+    var roots = [];
+    [
+      '#KsOnsusDealToday123 .ks-deal123-card',
+      '#KsOnsusProductMosaic127 a',
+      '#KsHomeEditorialFinal .ks-final-product-card',
+      '#KsHomeBestSellerFinal .ks-final-product-card',
+      '#KsHomeLowerFinal .ks-final-lower-item',
+      '.ks-final-product-card', '.product-card', '.product-item', '.swiper-slide'
+    ].forEach(function (sel) { qa(sel).forEach(function (n) { roots.push(n); }); });
+    var out = [], seen = Object.create(null);
+    roots.forEach(function (r) {
+      if (max && out.length >= max) return;
+      var p = productFrom(r);
+      if (!p || seen[p.href]) return;
+      seen[p.href] = 1;
+      out.push(p);
+    });
+    return out;
+  }
+  var INTENTS = [
+    { key: 'telefono', label: 'Proteggere smartphone', icon: '📱', rx: /smartphone|samsung|galaxy|iphone|custodia|cover|pellicola|vetro|case|magsafe|tablet|telefono/i, terms: ['custodia smartphone', 'pellicola vetro', 'cover samsung'] },
+    { key: 'stampanti', label: 'Stampanti, toner e consumabili', icon: '🖨️', rx: /toner|cartucc|pantum|laser|stampant|ink|drum|inchiostro|compatibile/i, terms: ['toner compatibile', 'cartucce stampante', 'stampante'] },
+    { key: 'pc', label: 'PC, notebook e periferiche', icon: '💻', rx: /notebook|computer|desktop|pc |lenovo|dell|monitor|ssd|ram|tablet|windows|ricondizionato/i, terms: ['notebook ricondizionato', 'pc desktop', 'monitor'] },
+    { key: 'accessori', label: 'Cavi, USB e accessori', icon: '🔌', rx: /usb|type\-?c|cavo|adattatore|hub|hdmi|supporto|alimentatore|mouse|tastiera|card reader/i, terms: ['adattatore usb', 'cavo type-c', 'hub usb'] }
+  ];
+  function classify(p) {
+    var blob = [p.title, p.cat, p.raw].join(' ');
+    for (var i = 0; i < INTENTS.length; i++) if (INTENTS[i].rx.test(blob)) return INTENTS[i].key;
+    return 'generale';
+  }
+  function getIntent(key) { return INTENTS.filter(function (i) { return i.key === key; })[0] || INTENTS[0]; }
+  function rankProducts(products, key) {
+    var intent = getIntent(key);
+    return products.slice().sort(function (a, b) {
+      var aa = intent.rx.test([a.title, a.cat, a.raw].join(' ')) ? 0 : 1;
+      var bb = intent.rx.test([b.title, b.cat, b.raw].join(' ')) ? 0 : 1;
+      return aa - bb;
+    });
+  }
+  function detectDefaultIntent(products) {
+    var score = {}, i;
+    INTENTS.forEach(function (it) { score[it.key] = 0; });
+    products.forEach(function (p) { var k = classify(p); if (score[k] != null) score[k] += 1; });
+    var best = INTENTS[0].key, val = -1;
+    for (i in score) if (score[i] > val) { best = i; val = score[i]; }
+    try {
+      var stored = window.localStorage && window.localStorage.getItem('ks_ai_intent');
+      if (stored && getIntent(stored)) best = stored;
+    } catch (e) {}
+    return best;
+  }
+  function productCard(p) {
+    return '<a class="ks-ai-product128" href="' + esc(p.href) + '">' +
+      '<span class="ks-ai-product-img128"><img src="' + esc(p.img) + '" alt="' + esc(p.title) + '" loading="lazy" decoding="async"></span>' +
+      '<span class="ks-ai-product-copy128"><small>' + esc(p.cat) + '</small><strong>' + esc(p.title) + '</strong>' + (p.price ? '<b>' + esc(p.price) + '</b>' : '') + '</span>' +
+      '</a>';
+  }
+  function searchUrl(term) {
+    return 'articoli.aspx?search=' + encodeURIComponent(term || '');
+  }
+  function renderRecommendations(root, products, key) {
+    var intent = getIntent(key);
+    var ranked = rankProducts(products, key).slice(0, 4);
+    var box = q('.ks-ai-results128', root);
+    var summary = q('.ks-ai-summary128', root);
+    var actions = q('.ks-ai-actions128', root);
+    if (summary) summary.innerHTML = '<strong>' + esc(intent.label) + '</strong><span>Ho selezionato articoli coerenti con questa esigenza, usando solo prodotti gia presenti in questa HOME.</span>';
+    if (box) box.innerHTML = ranked.map(productCard).join('');
+    if (actions) actions.innerHTML = intent.terms.map(function (t) { return '<a href="' + esc(searchUrl(t)) + '">' + esc(t) + '</a>'; }).join('');
+    qa('.ks-ai-chip128', root).forEach(function (chip) { chip.classList.toggle('is-active', chip.getAttribute('data-intent') === key); });
+    try { window.localStorage && window.localStorage.setItem('ks_ai_intent', key); } catch (e) {}
+  }
+  function buildAdvisor() {
+    var products = collectProducts(40);
+    if (products.length < 4) return;
+    var existing = q('#KsSmartAdvisor128');
+    var defaultKey = detectDefaultIntent(products);
+    var html = '<section id="KsSmartAdvisor128" class="tf-sp-2 ks-smart-advisor128" data-ks-ai="local" data-ks-final-home="1"><div class="container">' +
+      '<div class="ks-ai-shell128">' +
+        '<div class="ks-ai-panel128">' +
+          '<span class="ks-ai-kicker128">AI KeepStore</span>' +
+          '<h5>Assistente automatico per scegliere piu velocemente</h5>' +
+          '<p>Analizza categorie e prodotti visibili nella HOME e propone percorsi di acquisto utili senza cambiare la logica del sito.</p>' +
+          '<div class="ks-ai-chips128">' + INTENTS.map(function (it) { return '<button type="button" class="ks-ai-chip128" data-intent="' + esc(it.key) + '"><span>' + esc(it.icon) + '</span>' + esc(it.label) + '</button>'; }).join('') + '</div>' +
+          '<div class="ks-ai-summary128"></div>' +
+          '<div class="ks-ai-actions128"></div>' +
+        '</div>' +
+        '<div class="ks-ai-products128"><div class="ks-ai-products-head128"><span>Consigli automatici</span><small>da prodotti reali KeepStore</small></div><div class="ks-ai-results128"></div></div>' +
+      '</div></div></section>';
+    var tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    var fresh = tmp.firstElementChild;
+    if (existing) existing.replaceWith(fresh);
+    else {
+      var dept = q('#KsHomeDepartmentShowcase');
+      var deal = q('#KsOnsusDealToday123');
+      var hero = q('.ks-home-hero-section,[id$="HomeHeroSection"]');
+      if (dept && dept.parentNode) dept.parentNode.insertBefore(fresh, dept.nextSibling);
+      else if (deal && deal.parentNode) deal.parentNode.insertBefore(fresh, deal.nextSibling);
+      else if (hero && hero.parentNode) hero.parentNode.insertBefore(fresh, hero.nextSibling);
+      else document.body.appendChild(fresh);
+    }
+    qa('.ks-ai-chip128', fresh).forEach(function (chip) {
+      chip.addEventListener('click', function () { renderRecommendations(fresh, products, chip.getAttribute('data-intent')); });
+    });
+    renderRecommendations(fresh, products, defaultKey);
+  }
+  function enforceOrder() {
+    var deal = q('#KsOnsusDealToday123');
+    var dept = q('#KsHomeDepartmentShowcase');
+    var ai = q('#KsSmartAdvisor128');
+    var mosaic = q('#KsOnsusProductMosaic127');
+    var best = q('#KsHomeBestSellerFinal');
+    var lower = q('#KsHomeLowerFinal');
+    var brand = q('#KsHomeBrandSection');
+    var closing = q('#KsHomeClosingLayer');
+    if (deal && dept && deal.parentNode === dept.parentNode && deal.nextElementSibling !== dept) deal.parentNode.insertBefore(dept, deal.nextSibling);
+    if (ai && dept && ai.parentNode === dept.parentNode && ai.previousElementSibling !== dept) dept.parentNode.insertBefore(ai, dept.nextSibling);
+    if (mosaic && ai && mosaic.parentNode === ai.parentNode && mosaic.previousElementSibling !== ai) ai.parentNode.insertBefore(mosaic, ai.nextSibling);
+    if (best && mosaic && best.parentNode === mosaic.parentNode && best.previousElementSibling !== mosaic) mosaic.parentNode.insertBefore(best, mosaic.nextSibling);
+    if (lower && best && lower.parentNode === best.parentNode && lower.previousElementSibling !== best) best.parentNode.insertBefore(lower, best.nextSibling);
+    if (brand && lower && brand.parentNode === lower.parentNode && brand.previousElementSibling !== lower) lower.parentNode.insertBefore(brand, lower.nextSibling);
+    if (closing && brand && closing.parentNode === brand.parentNode && closing.previousElementSibling !== brand) brand.parentNode.insertBefore(closing, brand.nextSibling);
+  }
+  function tightenLayout() {
+    if (!document.body) return;
+    document.body.classList.add('ks-page-home', 'ks-home-onsus-pass-128');
+    var h = q('#KsHomeBestSellerFinal .ks-final-title h5');
+    if (h) h.textContent = 'Best Seller';
+    var l = q('#KsHomeLowerFinal .ks-final-title h5');
+    if (l) l.textContent = 'Scelte dal catalogo';
+    qa('#KsOnsusPromoBand125,#KsOnsusWidePromo122,.ks-onsus-action-rail125').forEach(function (n) { n.remove(); });
+  }
+  function run() { tightenLayout(); buildAdvisor(); enforceOrder(); }
+  function boot() { run(); [120, 350, 800, 1600, 3200, 7000].forEach(function (d) { window.setTimeout(run, d); }); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
