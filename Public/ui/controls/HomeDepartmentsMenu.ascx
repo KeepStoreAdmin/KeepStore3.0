@@ -1,7 +1,8 @@
 <%@ Control Language="VB" AutoEventWireup="false" CodeFile="HomeDepartmentsMenu.ascx.vb" Inherits="UI_HomeDepartmentsMenu" %>
 <style id="ks-home-menu-runtime-style">
-.ks-home-departments{position:relative;z-index:300;}
-.ks-home-departments .menu-item{position:relative;}
+.ks-home-departments{position:relative;z-index:300;overflow:visible;}
+.ks-home-departments .main-nav,.ks-home-departments .menu-category-list{position:relative;overflow:visible;}
+.ks-home-departments .menu-item{position:static;}
 .ks-home-departments [data-ks-submenu="1"],.ks-home-departments [data-ks-submenu="1"][hidden]{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;max-height:0!important;overflow:hidden!important;}
 .ks-home-departments .ks-home-submenu-container{z-index:4000;}
 .ks-home-departments .ks-menu-media{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;min-width:28px;overflow:hidden;border-radius:8px;background:#fff;}
@@ -13,7 +14,7 @@
 .ks-home-departments .ks-home-submenu-list{flex:1 1 auto;min-width:0;}
 .ks-home-departments .ks-home-sector-promo[data-ks-hidden="1"]{display:none!important;}
 @media (min-width:1200px){
-  .ks-home-departments .ks-home-submenu-container{position:absolute!important;top:0!important;left:100%!important;min-width:700px!important;max-width:min(900px,calc(100vw - 620px))!important;width:max-content!important;background:#fff!important;white-space:normal!important;box-shadow:0 18px 45px rgba(17,24,39,.10)!important;border:1px solid #eef1f5!important;border-radius:0 10px 10px 10px!important;}
+  .ks-home-departments .ks-home-submenu-container{position:absolute!important;top:0!important;left:100%!important;min-width:760px!important;max-width:min(980px,calc(100vw - 620px))!important;width:max-content!important;background:#fff!important;white-space:normal!important;box-shadow:0 18px 45px rgba(17,24,39,.10)!important;border:1px solid #eef1f5!important;border-radius:0 10px 10px 10px!important;}
   .ks-home-departments .ks-home-submenu-list{display:grid!important;grid-template-columns:repeat(3,minmax(160px,1fr))!important;gap:18px 24px!important;padding:26px!important;align-items:start!important;}
   .ks-home-departments .ks-home-submenu-grouped,.ks-home-departments .ks-home-submenu-card{display:block!important;min-width:0!important;width:100%!important;}
   .ks-home-departments .ks-home-submenu-tipology-list{display:grid!important;gap:7px!important;margin-top:9px!important;padding-left:0!important;}

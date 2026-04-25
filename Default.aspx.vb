@@ -47,6 +47,10 @@ Partial Public Class _Default
                 End If
                 If current.IndexOf("ks-home-onsus-index-step139", StringComparison.OrdinalIgnoreCase) < 0 Then
                     body.Attributes("class") = (current & " ks-home-onsus-index-step139").Trim()
+                    current = Convert.ToString(body.Attributes("class"))
+                End If
+                If current.IndexOf("ks-home-onsus-index-step140", StringComparison.OrdinalIgnoreCase) < 0 Then
+                    body.Attributes("class") = (current & " ks-home-onsus-index-step140").Trim()
                 End If
             End If
         Catch
@@ -115,7 +119,7 @@ Partial Public Class _Default
         Dim usedBusinessKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
         Dim usedDisplayKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
 
-        Dim featuredRows As DataTable = TakeDistinctRows(8, usedBusinessKeys, GetFeaturedPool(40))
+        Dim featuredRows As DataTable = TakeDistinctRows(12, usedBusinessKeys, GetFeaturedPool(60), GetMostViewedPool(60), GetNewArrivalsPool(60))
         CommitDisplayKeys(featuredRows, usedDisplayKeys)
         rptHomeFeaturedProducts.DataSource = featuredRows
         rptHomeFeaturedProducts.DataBind()
@@ -123,7 +127,7 @@ Partial Public Class _Default
             HomeFeaturedProductsSection.Visible = Not IsTableEmpty(featuredRows)
         End If
 
-        Dim dealRows As DataTable = TakeDiverseRows(8, usedBusinessKeys, Nothing, GetDealOfferPool(40))
+        Dim dealRows As DataTable = TakeDiverseRows(8, Nothing, Nothing, GetDealOfferPool(60), GetFeaturedPool(60), GetMostViewedPool(60))
         rptDealOfDay.DataSource = dealRows
         rptDealOfDay.DataBind()
         If HomeOffersSection IsNot Nothing Then
@@ -140,9 +144,9 @@ Partial Public Class _Default
         If HomeCollectionSection IsNot Nothing Then HomeCollectionSection.Visible = True
         If HomeBottomPromoSection IsNot Nothing Then HomeBottomPromoSection.Visible = True
 
-        Dim featureTabRows As DataTable = TakeDiverseRows(7, usedBusinessKeys, usedDisplayKeys, GetDealOfferPool(36), GetFeaturedPool(36), GetMostViewedPool(36))
-        Dim topRateRows As DataTable = TakeDiverseRows(7, usedBusinessKeys, usedDisplayKeys, GetMostViewedPool(36), GetFeaturedPool(36), GetNewArrivalsPool(36))
-        Dim onSaleRows As DataTable = TakeDiverseRows(7, usedBusinessKeys, usedDisplayKeys, GetNewArrivalsPool(36), GetDealOfferPool(36), GetFeaturedPool(36))
+        Dim featureTabRows As DataTable = TakeDiverseRows(7, Nothing, Nothing, GetDealOfferPool(60), GetFeaturedPool(60), GetMostViewedPool(60))
+        Dim topRateRows As DataTable = TakeDiverseRows(7, Nothing, Nothing, GetMostViewedPool(60), GetFeaturedPool(60), GetNewArrivalsPool(60))
+        Dim onSaleRows As DataTable = TakeDiverseRows(7, Nothing, Nothing, GetNewArrivalsPool(60), GetDealOfferPool(60), GetFeaturedPool(60))
         BindThreeColumnZone(featureTabRows, rptFeatureLeft, rptFeatureCenter, rptFeatureRight)
         BindThreeColumnZone(topRateRows, rptToprateLeft, rptToprateCenter, rptToprateRight)
         BindThreeColumnZone(onSaleRows, rptOnSaleLeft, rptOnSaleCenter, rptOnSaleRight)
@@ -150,24 +154,27 @@ Partial Public Class _Default
             HomeLegacyEditorialSection.Visible = (Not IsTableEmpty(featureTabRows) OrElse Not IsTableEmpty(topRateRows) OrElse Not IsTableEmpty(onSaleRows))
         End If
 
-        Dim bestRows As DataTable = TakeDiverseRows(10, usedBusinessKeys, usedDisplayKeys, GetBestSellerPool(48), GetMostViewedPool(48), GetFeaturedPool(48))
+        Dim bestRows As DataTable = TakeDiverseRows(12, Nothing, Nothing, GetBestSellerPool(72), GetMostViewedPool(72), GetFeaturedPool(72), GetNewArrivalsPool(72))
         rptBestSeller.DataSource = bestRows
         rptBestSeller.DataBind()
         If HomeLegacyBestSection IsNot Nothing Then
             HomeLegacyBestSection.Visible = Not IsTableEmpty(bestRows)
         End If
 
-        Dim recentRows As DataTable = GetRecentlyViewedProducts(10, usedBusinessKeys, True, usedDisplayKeys, True)
+        Dim recentRows As DataTable = GetRecentlyViewedProducts(10, Nothing, False, Nothing, False)
+        If IsTableEmpty(recentRows) Then
+            recentRows = TakeDiverseRows(10, Nothing, Nothing, GetNewArrivalsPool(72), GetFeaturedPool(72), GetMostViewedPool(72))
+        End If
         rptRecentlyViewed.DataSource = recentRows
         rptRecentlyViewed.DataBind()
         If HomeRecentlyViewedSection IsNot Nothing Then
             HomeRecentlyViewedSection.Visible = Not IsTableEmpty(recentRows)
         End If
 
-        BindLowerBlock(Top20Block, rptTop20Slides, TakeDiverseRows(10, usedBusinessKeys, usedDisplayKeys, GetMostViewedPool(60), GetFeaturedPool(60)), 5, usedBusinessKeys, usedDisplayKeys)
-        BindLowerBlock(LowerFeaturedBlock, rptFeaturedProductsSlides, TakeDiverseRows(10, usedBusinessKeys, usedDisplayKeys, GetFeaturedPool(60), GetNewArrivalsPool(60)), 5, usedBusinessKeys, usedDisplayKeys)
-        BindLowerBlock(TopSellingBlock, rptTopSellingProductSlides, TakeDiverseRows(10, usedBusinessKeys, usedDisplayKeys, GetPureTopSellingPool(60), GetBestSellerPool(60), GetMostViewedPool(60)), 5, usedBusinessKeys, usedDisplayKeys)
-        BindLowerBlock(OnSaleBlock, rptOnSaleProductSlides, TakeDiverseRows(10, usedBusinessKeys, usedDisplayKeys, GetDealOfferPool(60), GetFeaturedPool(60)), 5, usedBusinessKeys, usedDisplayKeys)
+        BindLowerBlock(Top20Block, rptTop20Slides, TakeDiverseRows(10, Nothing, Nothing, GetMostViewedPool(80), GetFeaturedPool(80), GetNewArrivalsPool(80)), 4, Nothing, Nothing)
+        BindLowerBlock(LowerFeaturedBlock, rptFeaturedProductsSlides, TakeDiverseRows(10, Nothing, Nothing, GetFeaturedPool(80), GetNewArrivalsPool(80), GetMostViewedPool(80)), 4, Nothing, Nothing)
+        BindLowerBlock(TopSellingBlock, rptTopSellingProductSlides, TakeDiverseRows(10, Nothing, Nothing, GetPureTopSellingPool(80), GetBestSellerPool(80), GetMostViewedPool(80), GetFeaturedPool(80)), 4, Nothing, Nothing)
+        BindLowerBlock(OnSaleBlock, rptOnSaleProductSlides, TakeDiverseRows(10, Nothing, Nothing, GetDealOfferPool(80), GetFeaturedPool(80), GetMostViewedPool(80)), 4, Nothing, Nothing)
         If HomeLowerColumnsSection IsNot Nothing Then
             HomeLowerColumnsSection.Visible = (Top20Block IsNot Nothing AndAlso Top20Block.Visible) OrElse _
                                              (LowerFeaturedBlock IsNot Nothing AndAlso LowerFeaturedBlock.Visible) OrElse _
@@ -345,13 +352,40 @@ Partial Public Class _Default
 
     Private Function GetSideBanners() As DataTable
         Dim sideSource As DataTable = DistinctRowsByColumn(GetHeroSideBannerSource(), "Image")
-        If sideSource Is Nothing OrElse sideSource.Rows.Count = 0 Then
-            Return SideBannersFallback()
-        End If
+        Return EnsureTwoSideBanners(sideSource)
+    End Function
 
-        Dim result As DataTable = SliceTable(sideSource, 0, 2)
+    Private Function EnsureTwoSideBanners(ByVal source As DataTable) As DataTable
+        Dim fallback As DataTable = SideBannersFallback()
+        Dim result As DataTable = fallback.Clone()
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+        AddSideBannerRows(result, seen, source, 2)
+        AddSideBannerRows(result, seen, fallback, 2)
+
         Return result
     End Function
+
+    Private Sub AddSideBannerRows(ByVal target As DataTable, ByVal seen As HashSet(Of String), ByVal source As DataTable, ByVal limit As Integer)
+        If target Is Nothing OrElse source Is Nothing Then
+            Return
+        End If
+
+        For Each row As DataRow In source.Rows
+            Dim imageKey As String = Convert.ToString(If(row.Table.Columns.Contains("Image"), row("Image"), String.Empty)).Trim()
+            Dim titleKey As String = Convert.ToString(If(row.Table.Columns.Contains("Title"), row("Title"), String.Empty)).Trim()
+            Dim key As String = If(Not String.IsNullOrWhiteSpace(imageKey), imageKey, titleKey)
+            If String.IsNullOrWhiteSpace(key) OrElse seen.Contains(key) Then
+                Continue For
+            End If
+
+            seen.Add(key)
+            target.ImportRow(row)
+            If target.Rows.Count >= limit Then
+                Exit For
+            End If
+        Next
+    End Sub
 
     Private Function GetHeroWideBanners() As DataTable
         Dim sql As String = "SELECT id, COALESCE(NULLIF(Descrizione,''),'Promozioni KeepStore') AS Caption, Immagine AS Image, Link AS LinkUrl " &

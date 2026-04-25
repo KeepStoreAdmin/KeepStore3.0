@@ -125,10 +125,21 @@
   }
 
   function bindDepartmentsMenu() {
+    var closeTimer = 0;
+    function desktopMenu() {
+      return !window.matchMedia || window.matchMedia('(min-width: 1200px)').matches;
+    }
+    function clearCloseTimer() {
+      if (closeTimer) {
+        window.clearTimeout(closeTimer);
+        closeTimer = 0;
+      }
+    }
     function setItemOpen(item, open) {
       if (!item) return;
       item.setAttribute('data-ks-open', open ? '1' : '0');
       item.classList.toggle('is-open', open);
+      item.classList.toggle('is-hover', open);
       var toggle = item.querySelector('[data-ks-toggle="1"]');
       var submenu = item.querySelector('[data-ks-submenu="1"]');
       if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -137,13 +148,29 @@
         submenu.setAttribute('data-ks-inline-state', open ? 'open' : 'closed');
       }
     }
-    function toggleItem(item) {
-      if (!item) return;
-      var list = item.parentNode;
-      var nextOpen = item.getAttribute('data-ks-open') !== '1';
+    function closeSiblings(item) {
+      var list = item && item.parentNode;
+      if (!list) return;
       qa('[data-ks-menu-item="1"]', list).forEach(function (sibling) {
         if (sibling !== item) setItemOpen(sibling, false);
       });
+    }
+    function openItem(item) {
+      if (!item || !item.querySelector('[data-ks-submenu="1"]')) return;
+      clearCloseTimer();
+      closeSiblings(item);
+      setItemOpen(item, true);
+    }
+    function closeItemSoon(item) {
+      clearCloseTimer();
+      closeTimer = window.setTimeout(function () {
+        setItemOpen(item, false);
+      }, 120);
+    }
+    function toggleItem(item) {
+      if (!item) return;
+      var nextOpen = item.getAttribute('data-ks-open') !== '1';
+      closeSiblings(item);
       setItemOpen(item, nextOpen);
     }
     qa('.ks-home-departments [data-ks-toggle="1"],.ks-home-departments [data-ks-menu-row="1"]').forEach(function (btn) {
@@ -161,17 +188,20 @@
       if (item.getAttribute('data-ks-hover-bound') === '1') return;
       item.setAttribute('data-ks-hover-bound', '1');
       item.addEventListener('mouseenter', function () {
-        if (!window.matchMedia || window.matchMedia('(min-width: 1200px)').matches) {
-          var list = item.parentNode;
-          qa('[data-ks-menu-item="1"]', list).forEach(function (sibling) {
-            if (sibling !== item) setItemOpen(sibling, false);
-          });
-          setItemOpen(item, true);
-        }
+        if (desktopMenu()) openItem(item);
       });
       item.addEventListener('mouseleave', function () {
-        if (!window.matchMedia || window.matchMedia('(min-width: 1200px)').matches) setItemOpen(item, false);
+        if (desktopMenu()) closeItemSoon(item);
       });
+      var submenu = item.querySelector('[data-ks-submenu="1"]');
+      if (submenu) {
+        submenu.addEventListener('mouseenter', function () {
+          if (desktopMenu()) openItem(item);
+        });
+        submenu.addEventListener('mouseleave', function () {
+          if (desktopMenu()) closeItemSoon(item);
+        });
+      }
     });
   }
 

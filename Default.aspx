@@ -199,8 +199,8 @@
             <div class="ks-home-wide-promo-inner">
                 <div class="ks-home-wide-promo-copy">
                     <p class="caption text-primary fw-semibold mb-2">Catalogo e assistenza</p>
-                    <h5 class="fw-semibold mb-2">Tecnologia, accessori e supporto tecnico in un unico negozio</h5>
-                    <p class="body-text-3 text-main-2 mb-0">Computer, telefonia, stampa, consumabili e periferiche selezionate, con consulenza KeepStore quando serve.</p>
+                    <h5 class="fw-semibold mb-2">Computer, telefonia, stampanti e assistenza specializzata</h5>
+                    <p class="body-text-3 text-main-2 mb-0">Una fascia promozionale stile Onsus per guidare l'utente verso catalogo e supporto, senza prezzi o sconti inventati.</p>
                 </div>
                 <div class="ks-home-wide-promo-actions">
                     <a href="articoli.aspx" class="tf-btn btn-line"><span>Vai al catalogo</span></a>
@@ -226,6 +226,11 @@
                     <span>Stampa</span>
                     <strong>Toner, cartucce e consumabili</strong>
                     <em>Rifornisci casa e ufficio</em>
+                </a>
+                <a href="Contattaci.aspx" class="ks-home-collection-card ks-home-collection-card--service">
+                    <span>Assistenza</span>
+                    <strong>Riparazioni, reti e configurazioni</strong>
+                    <em>Parla con un tecnico KeepStore</em>
                 </a>
             </div>
         </div>
@@ -295,7 +300,7 @@
     <section id="HomeRecentlyViewedSection" runat="server" visible="false" class="tf-sp-2 ks-home-recent-section ks-home-chosen-section">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
-                <h5 class="fw-semibold" data-ks-i18n="home.chosenByYou">Scelti Da Te</h5>
+                <h5 class="fw-semibold" data-ks-i18n="home.chosenByYou">Prodotti recenti</h5>
                 <div class="box-btn-slide relative">
                     <div class="swiper-button-prev nav-swiper nav-prev-products"><i class="icon-arrow-left-lg"></i></div>
                     <div class="swiper-button-next nav-swiper nav-next-products"><i class="icon-arrow-right-lg"></i></div>
@@ -328,6 +333,11 @@
                     <span>Supporto tecnico</span>
                     <strong>Hai dubbi su compatibilita o configurazione?</strong>
                     <em>Parla con KeepStore prima dell'acquisto</em>
+                </a>
+                <a href="articoli.aspx?q=toner%20cartuccia%20stampante" class="ks-home-bottom-promo-card ks-home-bottom-promo-card--print">
+                    <span>Stampa e consumabili</span>
+                    <strong>Toner, cartucce e prodotti per ufficio</strong>
+                    <em>Apri il catalogo e filtra gli articoli reali</em>
                 </a>
             </div>
         </div>
