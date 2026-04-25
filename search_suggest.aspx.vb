@@ -4,10 +4,12 @@ Imports System.Configuration
 Imports System.Data
 Imports System.Data.Common
 Imports System.Globalization
+Imports System.IO
 Imports System.Linq
 Imports System.Text
 Imports System.Text.RegularExpressions
 Imports System.Web
+Imports System.Web.Hosting
 Imports System.Web.Script.Serialization
 Imports System.Web.UI
 
@@ -93,7 +95,6 @@ Partial Public Class search_suggest
             Dim filters As SearchFilters = ReadFilters()
             Dim limit As Integer = Math.Max(1, Math.Min(MaxLimit, ReadInt(Request("limit"), DefaultLimit)))
             Dim recentIds As List(Of Integer) = ParseIds(Request("recent"))
-            If recentIds.Count = 0 Then recentIds = ParseIds(ReadCookieValue("ks_recent"))
 
             Dim result As Dictionary(Of String, Object)
             If String.IsNullOrWhiteSpace(query) OrElse query.Length < 2 Then
@@ -187,6 +188,7 @@ Partial Public Class search_suggest
         sql.Append("LOWER(COALESCE(v.Codice,'')) = @qExact OR LOWER(COALESCE(v.Ean,'')) = @qExact OR LOWER(COALESCE(v.Descrizione1,'')) = @qExact OR ")
         sql.Append("LOWER(COALESCE(v.Codice,'')) LIKE @qPrefix OR LOWER(COALESCE(v.Ean,'')) LIKE @qPrefix OR LOWER(COALESCE(v.Descrizione1,'')) LIKE @qPrefix OR ")
         sql.Append("LOWER(CONCAT(' ', COALESCE(v.Codice,''))) LIKE @qWord OR LOWER(CONCAT(' ', COALESCE(v.Ean,''))) LIKE @qWord OR LOWER(CONCAT(' ', COALESCE(v.Descrizione1,''))) LIKE @qWord OR ")
+        sql.Append("LOWER(CONCAT(' ', COALESCE(v.MarcheDescrizione,''), ' ', COALESCE(v.Descrizione1,''))) LIKE @qWord OR ")
         sql.Append("LOWER(COALESCE(v.Descrizione1,'')) LIKE @qContains OR LOWER(COALESCE(v.Descrizione2,'')) LIKE @qContains OR LOWER(COALESCE(v.DescrizioneLunga,'')) LIKE @qContains OR LOWER(COALESCE(v.DescrizioneHTML,'')) LIKE @qContains OR ")
         sql.Append("LOWER(CONCAT(' ', COALESCE(v.MarcheDescrizione,''), ' ', COALESCE(v.SettoriDescrizione,''), ' ', COALESCE(v.CategorieDescrizione,''), ' ', COALESCE(v.TipologieDescrizione,''), ' ', COALESCE(v.GruppiDEscrizione,''), ' ', COALESCE(v.SottogruppiDescrIZione,''))) LIKE @qContains ")
         For i As Integer = 0 To tokens.Count - 1
@@ -256,30 +258,37 @@ Partial Public Class search_suggest
     Private Function BuildScoreExpression(ByVal tokens As List(Of String), ByVal intent As QueryIntent) As String
         Dim sb As New StringBuilder()
         sb.Append("(")
-        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Codice,''))) = @qExact THEN 100000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Ean,''))) = @qExact THEN 99000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Descrizione1,''))) = @qExact THEN 97000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Codice,''))) LIKE @qPrefix THEN 84000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Ean,''))) LIKE @qPrefix THEN 83000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Descrizione1,''))) LIKE @qPrefix THEN 81000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(COALESCE(v.Descrizione1,'')) LIKE @qContains THEN 34000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(COALESCE(v.Descrizione2,'')) LIKE @qContains THEN 25000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(COALESCE(v.DescrizioneLunga,'')) LIKE @qContains THEN 22000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(COALESCE(v.DescrizioneHTML,'')) LIKE @qContains THEN 16000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(COALESCE(v.MarcheDescrizione,'')) LIKE @qContains THEN 18000 ELSE 0 END) ")
+        ' Marketplace-grade rank bands. Keep these aligned with articoli.aspx.vb.
+        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Codice,''))) = @qExact THEN 10000000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Ean,''))) = @qExact THEN 9900000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Descrizione1,''))) = @qExact THEN 9800000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Codice,''))) LIKE @qPrefix OR LOWER(CONCAT(' ', COALESCE(v.Codice,''))) LIKE @qWord THEN 8800000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Ean,''))) LIKE @qPrefix OR LOWER(CONCAT(' ', COALESCE(v.Ean,''))) LIKE @qWord THEN 8700000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Descrizione1,''))) LIKE @qPrefix OR LOWER(CONCAT(' ', COALESCE(v.Descrizione1,''))) LIKE @qWord THEN 8600000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(CONCAT(' ', COALESCE(v.MarcheDescrizione,''), ' ', COALESCE(v.Descrizione1,''))) LIKE @qWord THEN 8200000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(COALESCE(v.Descrizione1,'')) LIKE @qContains THEN 3600000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(COALESCE(v.DescrizioneLunga,'')) LIKE @qContains THEN 2600000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(COALESCE(v.MarcheDescrizione,'')) LIKE @qContains THEN 2400000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(COALESCE(v.Descrizione2,'')) LIKE @qContains THEN 1800000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(COALESCE(v.DescrizioneHTML,'')) LIKE @qContains THEN 1200000 ELSE 0 END) ")
         For i As Integer = 0 To tokens.Count - 1
             Dim n As String = i.ToString(CultureInfo.InvariantCulture)
-            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Codice,'')) = @t").Append(n).Append(" THEN 10000 ELSE 0 END)")
-            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Ean,'')) = @t").Append(n).Append(" THEN 9800 ELSE 0 END)")
-            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Descrizione1,'')) LIKE @tp").Append(n).Append(" THEN 5200 ELSE 0 END)")
-            sb.Append(" + (CASE WHEN LOWER(CONCAT(' ',COALESCE(v.Descrizione1,''))) LIKE @tw").Append(n).Append(" THEN 4300 ELSE 0 END)")
-            sb.Append(" + (CASE WHEN LOWER(CONCAT(' ',COALESCE(v.MarcheDescrizione,''),' ',COALESCE(v.CategorieDescrizione,''),' ',COALESCE(v.TipologieDescrizione,''),' ',COALESCE(v.GruppiDEscrizione,''),' ',COALESCE(v.SottogruppiDescrIZione,''))) LIKE @tw").Append(n).Append(" THEN 3600 ELSE 0 END)")
-            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.DescrizioneLunga,'')) LIKE @tc").Append(n).Append(" THEN 1600 ELSE 0 END)")
+            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Codice,'')) = @t").Append(n).Append(" THEN 70000 ELSE 0 END)")
+            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Ean,'')) = @t").Append(n).Append(" THEN 69000 ELSE 0 END)")
+            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Descrizione1,'')) = @t").Append(n).Append(" THEN 68000 ELSE 0 END)")
+            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Codice,'')) LIKE @tp").Append(n).Append(" OR LOWER(CONCAT(' ',COALESCE(v.Codice,''))) LIKE @tw").Append(n).Append(" THEN 52000 ELSE 0 END)")
+            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Ean,'')) LIKE @tp").Append(n).Append(" OR LOWER(CONCAT(' ',COALESCE(v.Ean,''))) LIKE @tw").Append(n).Append(" THEN 51000 ELSE 0 END)")
+            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Descrizione1,'')) LIKE @tp").Append(n).Append(" OR LOWER(CONCAT(' ',COALESCE(v.Descrizione1,''))) LIKE @tw").Append(n).Append(" THEN 50000 ELSE 0 END)")
+            sb.Append(" + (CASE WHEN LOWER(CONCAT(' ',COALESCE(v.MarcheDescrizione,''),' ',COALESCE(v.Descrizione1,''))) LIKE @tw").Append(n).Append(" THEN 46000 ELSE 0 END)")
+            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Descrizione1,'')) LIKE @tc").Append(n).Append(" THEN 12000 ELSE 0 END)")
+            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.DescrizioneLunga,'')) LIKE @tc").Append(n).Append(" THEN 8000 ELSE 0 END)")
+            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.MarcheDescrizione,'')) LIKE @tc").Append(n).Append(" THEN 7000 ELSE 0 END)")
         Next
+        ' Tie-breaker only: never let commercial boosts outrank textual relevance bands.
         sb.Append(" + (CASE WHEN COALESCE(v.Disponibilita,0) > 0 THEN 600 ELSE 0 END)")
+        sb.Append(" + (CASE WHEN COALESCE(v.Export,1) <> 0 THEN 500 ELSE 0 END)")
         sb.Append(" + (CASE WHEN COALESCE(v.InOfferta,0) <> 0 THEN 450 ELSE 0 END)")
-        sb.Append(" + (CASE WHEN COALESCE(v.Ricondizionato,0) <> 0 THEN 120 ELSE 0 END)")
-        sb.Append(" + (CASE WHEN COALESCE(v.Vetrina,0) <> 0 THEN 70 ELSE 0 END)")
+        sb.Append(" + (CASE WHEN COALESCE(v.Vetrina,0) <> 0 THEN 250 ELSE 0 END)")
         sb.Append(" + LEAST(COALESCE(v.visite,0),999)")
         sb.Append(")")
         Return sb.ToString()
@@ -289,17 +298,17 @@ Partial Public Class search_suggest
         Dim sort As String = Convert.ToString(If(filters Is Nothing, String.Empty, filters.Sort)).ToLowerInvariant()
         Select Case sort
             Case "price-asc", "prezzo-asc"
-                Return " ORDER BY PrezzoFinale ASC, RankScore DESC, COALESCE(v.Disponibilita,0) DESC, v.id DESC"
+                Return " ORDER BY PrezzoFinale ASC, RankScore DESC, COALESCE(v.Disponibilita,0) DESC, COALESCE(v.Export,1) DESC, v.id DESC"
             Case "price-desc", "prezzo-desc"
-                Return " ORDER BY PrezzoFinale DESC, RankScore DESC, COALESCE(v.Disponibilita,0) DESC, v.id DESC"
+                Return " ORDER BY PrezzoFinale DESC, RankScore DESC, COALESCE(v.Disponibilita,0) DESC, COALESCE(v.Export,1) DESC, v.id DESC"
             Case "promo", "offerte"
-                Return " ORDER BY COALESCE(v.InOfferta,0) DESC, RankScore DESC, PrezzoFinale ASC, v.id DESC"
+                Return " ORDER BY COALESCE(v.InOfferta,0) DESC, RankScore DESC, PrezzoFinale ASC, COALESCE(v.Disponibilita,0) DESC, v.id DESC"
             Case "available", "disponibili"
-                Return " ORDER BY COALESCE(v.Disponibilita,0) DESC, RankScore DESC, PrezzoFinale ASC, v.id DESC"
+                Return " ORDER BY COALESCE(v.Disponibilita,0) DESC, RankScore DESC, PrezzoFinale ASC, COALESCE(v.InOfferta,0) DESC, v.id DESC"
             Case "new", "novita"
-                Return " ORDER BY v.DataCreazione DESC, RankScore DESC, v.id DESC"
+                Return " ORDER BY v.DataCreazione DESC, RankScore DESC, COALESCE(v.Disponibilita,0) DESC, v.id DESC"
             Case Else
-                Return " ORDER BY RankScore DESC, COALESCE(v.Disponibilita,0) DESC, COALESCE(v.InOfferta,0) DESC, COALESCE(v.Vetrina,0) DESC, PrezzoFinale ASC, v.id DESC"
+                Return " ORDER BY RankScore DESC, COALESCE(v.Disponibilita,0) DESC, COALESCE(v.Export,1) DESC, COALESCE(v.InOfferta,0) DESC, COALESCE(v.Vetrina,0) DESC, COALESCE(v.visite,0) DESC, PrezzoFinale ASC, v.id DESC"
         End Select
     End Function
 
@@ -501,16 +510,32 @@ Partial Public Class search_suggest
         Return normalized.Split(" "c).Select(Function(t) t.Trim()).Where(Function(t) t.Length >= 2 AndAlso Not stopWords.Contains(t)).Distinct(StringComparer.OrdinalIgnoreCase).Take(8).ToList()
     End Function
 
+    Private Function StartsWithWord(ByVal value As String, ByVal term As String) As Boolean
+        Dim v As String = NormalizeSearchText(value)
+        Dim t As String = NormalizeSearchText(term)
+        If String.IsNullOrWhiteSpace(v) OrElse String.IsNullOrWhiteSpace(t) Then Return False
+        Return v.StartsWith(t, StringComparison.OrdinalIgnoreCase) OrElse v.Contains(" " & t)
+    End Function
+
+    Private Function ContainsNormalized(ByVal value As String, ByVal term As String) As Boolean
+        Dim v As String = NormalizeSearchText(value)
+        Dim t As String = NormalizeSearchText(term)
+        If String.IsNullOrWhiteSpace(v) OrElse String.IsNullOrWhiteSpace(t) Then Return False
+        Return v.Contains(t)
+    End Function
+
     Private Function DetectMatchKind(ByVal code As String, ByVal ean As String, ByVal title As String, ByVal brand As String, ByVal query As String) As String
         Dim q As String = NormalizeSearchText(query)
         If String.IsNullOrWhiteSpace(q) Then Return "recent"
         If NormalizeSearchText(code) = q Then Return "exact-code"
         If NormalizeSearchText(ean) = q Then Return "exact-ean"
         If NormalizeSearchText(title) = q Then Return "exact-title"
-        If NormalizeSearchText(code).StartsWith(q) Then Return "prefix-code"
-        If NormalizeSearchText(ean).StartsWith(q) Then Return "prefix-ean"
-        If NormalizeSearchText(title).StartsWith(q) Then Return "prefix-title"
-        If NormalizeSearchText(brand & " " & title).Contains(q) Then Return "contains-brand-title"
+        If StartsWithWord(code, q) Then Return "prefix-code"
+        If StartsWithWord(ean, q) Then Return "prefix-ean"
+        If StartsWithWord(title, q) Then Return "prefix-title"
+        If StartsWithWord(brand & " " & title, q) Then Return "prefix-brand-title"
+        If ContainsNormalized(title, q) Then Return "contains-title"
+        If ContainsNormalized(brand, q) Then Return "contains-brand"
         Return "contains"
     End Function
 
@@ -588,7 +613,34 @@ Partial Public Class search_suggest
     End Function
 
     Private Function BuildPreviewVariant(ByVal raw As String) As String
-        Return NormalizeMediaUrl(raw)
+        Dim url As String = NormalizeMediaUrl(raw)
+        If String.IsNullOrWhiteSpace(url) Then Return String.Empty
+        If url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse url.StartsWith("//", StringComparison.OrdinalIgnoreCase) Then Return url
+
+        Dim fileName As String = Path.GetFileName(url)
+        If String.IsNullOrWhiteSpace(fileName) OrElse fileName.StartsWith("_", StringComparison.OrdinalIgnoreCase) Then Return url
+
+        Dim slash As Integer = url.LastIndexOf("/"c)
+        Dim dir As String = If(slash >= 0, url.Substring(0, slash), "/Public/images/articoli")
+        Dim candidate As String = dir.TrimEnd("/"c) & "/_" & fileName
+        If VirtualFileExists(candidate) Then Return candidate
+
+        Dim defaultCandidate As String = "/Public/images/articoli/_" & fileName
+        If Not String.Equals(defaultCandidate, candidate, StringComparison.OrdinalIgnoreCase) AndAlso VirtualFileExists(defaultCandidate) Then Return defaultCandidate
+
+        Return url
+    End Function
+
+    Private Function VirtualFileExists(ByVal virtualUrl As String) As Boolean
+        Try
+            If String.IsNullOrWhiteSpace(virtualUrl) Then Return False
+            Dim probe As String = virtualUrl
+            If probe.StartsWith("/", StringComparison.OrdinalIgnoreCase) Then probe = "~" & probe
+            Dim physical As String = HostingEnvironment.MapPath(probe)
+            Return Not String.IsNullOrWhiteSpace(physical) AndAlso File.Exists(physical)
+        Catch
+            Return False
+        End Try
     End Function
 
     Private Function NormalizeMediaUrl(ByVal raw As Object) As String

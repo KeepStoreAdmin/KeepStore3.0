@@ -6,9 +6,9 @@
   var MAX_RECENT = 100;
   var SEARCH_ENDPOINT = '/search_suggest.aspx';
   var RANK_PREFIX = 'ks_search_rank_';
-  var MARKET_KEY = 'ks_ai_marketplace_134_query';
+  var MARKET_KEY = 'ks_ai_marketplace_135_query';
   var COMPARE_KEY = 'ks_compare_products';
-  var STYLE_ID = 'ks-page-flags-step134-style';
+  var STYLE_ID = 'ks-page-flags-step135-style';
   var BOUND_ATTR = 'data-ks-suggest-bound';
 
   function onReady(fn) {
@@ -92,8 +92,10 @@
     var st = document.createElement('style');
     st.id = STYLE_ID;
     st.textContent = [
-      'body.ks-page-home.ks-home-step134-onsus-market{background:#f4f4f4!important;}',
+      'body.ks-page-home.ks-home-step135-onsus-market{background:#f4f4f4!important;}',
       '.ks-search-host{position:relative!important;}',
+      '.ks-header-ui .logo-site img,.tf-header .logo-site img{max-height:54px;max-width:176px;object-fit:contain;display:block;}',
+      '.ks-header-ui .logo-site{min-width:150px;display:flex;align-items:center;}',
       '.ks-search-host input[type="text"],.ks-search-host input[type="search"]{outline:none;}',
       '.ks-suggest{position:absolute;left:0;right:0;top:calc(100% + 9px);z-index:1200;background:#fff;border:1px solid #edf1f5;border-radius:18px;box-shadow:0 22px 54px rgba(15,23,42,.18);padding:8px;display:none;max-height:520px;overflow:auto;text-align:left;}',
       '.ks-suggest.is-open{display:block;}',
@@ -110,52 +112,54 @@
       '.ks-suggest-price{font-size:14px;font-weight:900;color:#ef4444;white-space:nowrap;}',
       '.ks-suggest-foot{display:flex;justify-content:space-between;gap:10px;padding:9px 12px 5px;border-top:1px solid #edf1f5;margin-top:6px;font-size:12px;color:#64748b;}',
       '.ks-suggest-empty{padding:14px;color:#64748b;font-size:13px;}',
-      '.ks-market134{margin:26px 0 34px;}',
-      '.ks-market134 .ks-market-wrap{display:grid;grid-template-columns:280px minmax(0,1fr);gap:18px;align-items:stretch;}',
-      '.ks-market134-panel{border-radius:18px;padding:18px;color:#fff;background:radial-gradient(circle at 0% 0%,rgba(239,68,68,.55),transparent 35%),linear-gradient(145deg,#111827 0%,#1f2937 55%,#5b1f2e 100%);box-shadow:0 18px 40px rgba(15,23,42,.14);}',
-      '.ks-market134-kicker{display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em;font-size:10px;font-weight:900;color:#fecaca;}',
-      '.ks-market134-panel h3{margin:0 0 7px;font-size:22px;line-height:1.08;color:#fff;}',
-      '.ks-market134-panel p{margin:0 0 14px;color:rgba(255,255,255,.76);font-size:12px;line-height:1.45;}',
-      '.ks-market134-search{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-bottom:10px;}',
-      '.ks-market134-search input,.ks-market134-budget input,.ks-market134-sort select{border:0;border-radius:999px;min-height:39px;padding:0 13px;background:rgba(255,255,255,.96);color:#111827;font-size:12px;}',
-      '.ks-market134-search button,.ks-market134-card .ks-market134-btn,.ks-market134-open{border:0;border-radius:999px;background:#ef4444;color:#fff;font-weight:900;min-height:38px;padding:0 14px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:12px;}',
-      '.ks-market134-tools{display:grid;gap:9px;margin:10px 0;}',
-      '.ks-market134-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}',
-      '.ks-market134-checks{display:flex;gap:8px;flex-wrap:wrap;}',
-      '.ks-market134-check{display:flex;gap:6px;align-items:center;font-size:11px;color:rgba(255,255,255,.86);}',
-      '.ks-market134-check input{accent-color:#ef4444;}',
-      '.ks-market134-chips{display:flex;gap:6px;flex-wrap:wrap;margin:11px 0;}',
-      '.ks-market134-chips button{border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;border-radius:999px;padding:6px 9px;font-size:11px;}',
-      '.ks-market134-ai{margin-top:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,.08);font-size:11px;line-height:1.45;color:rgba(255,255,255,.82);}',
-      '.ks-market134-results{border-radius:18px;padding:16px;background:#fff;box-shadow:0 16px 36px rgba(15,23,42,.07);}',
-      '.ks-market134-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px;}',
-      '.ks-market134-head h4{margin:0;font-size:18px;}',
-      '.ks-market134-count{font-size:11px;font-weight:900;color:#ef4444;text-transform:uppercase;white-space:nowrap;}',
-      '.ks-market134-facets{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:13px;}',
-      '.ks-market134-facets button{border:1px solid #edf1f5;background:#f8fafc;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800;color:#475569;}',
-      '.ks-market134-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}',
-      '.ks-market134-card{position:relative;display:grid;grid-template-rows:118px 18px minmax(44px,auto) 18px 28px;border:1px solid #edf1f5;border-radius:14px;padding:10px;background:#fff;min-width:0;}',
-      '.ks-market134-media{height:118px;border-radius:11px;background:#f7f8fb;display:flex;align-items:center;justify-content:center;overflow:hidden;}',
-      '.ks-market134-media img{max-width:100%;max-height:100%;object-fit:contain;display:block;}',
-      '.ks-market134-card h5{margin:0;font-size:12px;line-height:1.23;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-transform:uppercase;}',
-      '.ks-market134-card h5 a{color:#005aa7;text-decoration:none;}',
-      '.ks-market134-meta{font-size:10px;color:#64748b;display:flex;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
-      '.ks-market134-price{font-size:13px;font-weight:900;color:#ef4444;}',
-      '.ks-market134-badges{position:absolute;top:7px;left:7px;display:flex;gap:4px;flex-wrap:wrap;}',
-      '.ks-market134-badges span{background:#ef4444;color:#fff;border-radius:999px;font-size:9px;font-weight:900;padding:3px 5px;}',
-      '.ks-market134-card .ks-market134-btn{min-height:28px;padding:0 10px;}',
-      '.ks-market134-actions{display:flex;gap:7px;align-items:center;justify-content:space-between;}',
-      '.ks-market134-compare{border:1px solid #edf1f5;background:#f8fafc;border-radius:999px;min-height:28px;padding:0 9px;font-size:11px;font-weight:800;color:#475569;}',
-      '.ks-market134-reason{display:none;}',
-      '@media (max-width:1199.98px){.ks-market134 .ks-market-wrap{grid-template-columns:1fr}.ks-market134-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}',
-      '@media (max-width:767.98px){.ks-market134-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.ks-market134-row{grid-template-columns:1fr}.ks-market134-head{display:grid}.ks-suggest{left:-8px;right:-8px;}}',
-      '@media (max-width:480px){.ks-market134-grid{grid-template-columns:1fr}.ks-market134-card{grid-template-rows:150px auto auto auto auto}.ks-market134-media{height:150px;}}'
+      '.ks-market135{margin:26px 0 34px;}',
+      '.ks-market135 .ks-market-wrap{display:grid;grid-template-columns:280px minmax(0,1fr);gap:18px;align-items:stretch;}',
+      '.ks-market135-panel{border-radius:18px;padding:18px;color:#fff;background:radial-gradient(circle at 0% 0%,rgba(239,68,68,.55),transparent 35%),linear-gradient(145deg,#111827 0%,#1f2937 55%,#5b1f2e 100%);box-shadow:0 18px 40px rgba(15,23,42,.14);}',
+      '.ks-market135-kicker{display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em;font-size:10px;font-weight:900;color:#fecaca;}',
+      '.ks-market135-panel h3{margin:0 0 7px;font-size:22px;line-height:1.08;color:#fff;}',
+      '.ks-market135-panel p{margin:0 0 14px;color:rgba(255,255,255,.76);font-size:12px;line-height:1.45;}',
+      '.ks-market135-search{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-bottom:10px;}',
+      '.ks-market135-search input,.ks-market135-budget input,.ks-market135-sort select{border:0;border-radius:999px;min-height:39px;padding:0 13px;background:rgba(255,255,255,.96);color:#111827;font-size:12px;}',
+      '.ks-market135-search button,.ks-market135-card .ks-market135-btn,.ks-market135-open{border:0;border-radius:999px;background:#ef4444;color:#fff;font-weight:900;min-height:38px;padding:0 14px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:12px;}',
+      '.ks-market135-tools{display:grid;gap:9px;margin:10px 0;}',
+      '.ks-market135-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}',
+      '.ks-market135-checks{display:flex;gap:8px;flex-wrap:wrap;}',
+      '.ks-market135-check{display:flex;gap:6px;align-items:center;font-size:11px;color:rgba(255,255,255,.86);}',
+      '.ks-market135-check input{accent-color:#ef4444;}',
+      '.ks-market135-chips{display:flex;gap:6px;flex-wrap:wrap;margin:11px 0;}',
+      '.ks-market135-chips button{border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;border-radius:999px;padding:6px 9px;font-size:11px;}',
+      '.ks-market135-ai{margin-top:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,.08);font-size:11px;line-height:1.45;color:rgba(255,255,255,.82);}',
+      '.ks-market135-results{border-radius:18px;padding:16px;background:#fff;box-shadow:0 16px 36px rgba(15,23,42,.07);}',
+      '.ks-market135-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px;}',
+      '.ks-market135-head h4{margin:0;font-size:18px;}',
+      '.ks-market135-count{font-size:11px;font-weight:900;color:#ef4444;text-transform:uppercase;white-space:nowrap;}',
+      '.ks-market135-facets{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:13px;}',
+      '.ks-market135-facets button{border:1px solid #edf1f5;background:#f8fafc;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800;color:#475569;}',
+      '.ks-market135-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}',
+      '.ks-market135-card{position:relative;display:grid;grid-template-rows:118px 18px minmax(44px,auto) 18px 28px;border:1px solid #edf1f5;border-radius:14px;padding:10px;background:#fff;min-width:0;}',
+      '.ks-market135-media{height:118px;border-radius:11px;background:#f7f8fb;display:flex;align-items:center;justify-content:center;overflow:hidden;}',
+      '.ks-market135-media img{max-width:100%;max-height:100%;object-fit:contain;display:block;}',
+      '.ks-market135-card h5{margin:0;font-size:12px;line-height:1.23;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-transform:uppercase;}',
+      '.ks-market135-card h5 a{color:#005aa7;text-decoration:none;}',
+      '.ks-market135-meta{font-size:10px;color:#64748b;display:flex;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      '.ks-market135-price{font-size:13px;font-weight:900;color:#ef4444;}',
+      '.ks-market135-badges{position:absolute;top:7px;left:7px;display:flex;gap:4px;flex-wrap:wrap;}',
+      '.ks-market135-badges span{background:#ef4444;color:#fff;border-radius:999px;font-size:9px;font-weight:900;padding:3px 5px;}',
+      '.ks-market135-card .ks-market135-btn{min-height:28px;padding:0 10px;}',
+      '.ks-market135-actions{display:flex;gap:7px;align-items:center;justify-content:space-between;}',
+      '.ks-market135-compare{border:1px solid #edf1f5;background:#f8fafc;border-radius:999px;min-height:28px;padding:0 9px;font-size:11px;font-weight:800;color:#475569;}',
+      '.ks-market135-reason{display:none;}',
+      '@media (max-width:1199.98px){.ks-market135 .ks-market-wrap{grid-template-columns:1fr}.ks-market135-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}',
+      '@media (max-width:767.98px){.ks-market135-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.ks-market135-row{grid-template-columns:1fr}.ks-market135-head{display:grid}.ks-suggest{left:-8px;right:-8px;}}',
+      '@media (max-width:480px){.ks-market135-grid{grid-template-columns:1fr}.ks-market135-card{grid-template-rows:150px auto auto auto auto}.ks-market135-media{height:150px;}}'
     ].join('');
     (document.head || document.documentElement).appendChild(st);
   }
 
-  function fetchJson(url) {
-    return fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(function (r) {
+  function fetchJson(url, signal) {
+    var options = { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } };
+    if (signal) options.signal = signal;
+    return fetch(url, options).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     });
@@ -228,8 +232,8 @@
     return u;
   }
   function state(root) {
-    if (!root.__ksSearch134) root.__ksSearch134 = { box: null, items: [], active: -1, hideTimer: 0, token: '' };
-    return root.__ksSearch134;
+    if (!root.__ksSearch135) root.__ksSearch135 = { box: null, items: [], active: -1, hideTimer: 0, token: '', ctrl: null };
+    return root.__ksSearch135;
   }
   function ensureSuggest(root) {
     var s = state(root);
@@ -305,13 +309,18 @@
     showSuggest(root);
   }
   function requestSuggest(root, forceRecent) {
-    var query = searchValue(root), recent = forceRecent || query.length < 2, url = buildSuggestUrl(root, query, recent ? 8 : 10, recent), s = state(root);
+    var query = searchValue(root), recent = forceRecent || query.length < 2, url = buildSuggestUrl(root, query, recent ? 8 : 10, recent), s = state(root), signal = null;
     s.token = url;
-    return fetchJson(url).then(function (data) {
+    if (s.ctrl && s.ctrl.abort) { try { s.ctrl.abort(); } catch (err) {} }
+    if (window.AbortController) { s.ctrl = new AbortController(); signal = s.ctrl.signal; }
+    return fetchJson(url, signal).then(function (data) {
       if (s.token !== url) return;
       if (!data || data.ok === false) { hideSuggest(root); return; }
       renderSuggest(root, data);
-    }).catch(function () { hideSuggest(root); });
+    }).catch(function (err) {
+      if (err && err.name === 'AbortError') return;
+      hideSuggest(root);
+    });
   }
   function rankKey(seed) {
     var h = 0, i, chr;
@@ -332,6 +341,9 @@
         window.location.href = data.strong.redirectUrl;
         return;
       }
+      if (data && data.catalogUrl) {
+        try { fallback = new URL(data.catalogUrl, window.location.href); } catch (err) {}
+      }
       if (data && data.rank_ids && data.rank_ids.length) {
         var key = rankKey(fallback.toString());
         saveRank(key, data);
@@ -343,8 +355,8 @@
   function bindHeaderSearch() {
     ensureStepStyle();
     searchRoots().forEach(function (root) {
-      if (root.getAttribute(BOUND_ATTR) === '134') return;
-      root.setAttribute(BOUND_ATTR, '134');
+      if (root.getAttribute(BOUND_ATTR) === '135') return;
+      root.setAttribute(BOUND_ATTR, '135');
       ensureSuggest(root);
       var input = inputFromRoot(root), timer = 0;
       function queue(recent) {
@@ -363,9 +375,19 @@
         });
         input.addEventListener('keydown', function (e) {
           var s = state(root), open = s.box && s.box.classList.contains('is-open');
-          if (e.key === 'ArrowDown' && open) { e.preventDefault(); setActive(root, s.active + 1); return; }
-          if (e.key === 'ArrowUp' && open) { e.preventDefault(); setActive(root, s.active - 1); return; }
-          if (e.key === 'Escape') { hideSuggest(root); return; }
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (!open) requestSuggest(root, searchValue(root).length < 2).then(function () { setActive(root, 0); });
+            else setActive(root, s.active + 1);
+            return;
+          }
+          if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (!open) requestSuggest(root, searchValue(root).length < 2).then(function () { setActive(root, -1); });
+            else setActive(root, s.active - 1);
+            return;
+          }
+          if (e.key === 'Escape') { e.preventDefault(); hideSuggest(root); return; }
           if (e.key === 'Enter') {
             e.preventDefault();
             e.stopPropagation();
@@ -383,8 +405,8 @@
     });
   }
   function bindGlobalSubmitGuard() {
-    if (document.__ksSearchSubmitGuard134) return;
-    document.__ksSearchSubmitGuard134 = true;
+    if (document.__ksSearchSubmitGuard135) return;
+    document.__ksSearchSubmitGuard135 = true;
     document.addEventListener('submit', function (e) {
       var target = e.target;
       var active = document.activeElement;
@@ -428,7 +450,7 @@
     var out = [], seen = Object.create(null);
     all(document, 'a[href*="articolo.aspx?id="]').forEach(function (a) {
       if (out.length >= (limit || 12)) return;
-      if (a.closest('header,footer,#KsAiMarketplace134,#KsAiMarketplace133,#KsAiMarketplace132,#KsAiCatalogEngine131,#KsLocalAiSearch130,#KsSmartConsult129,.ks-home-brands-block')) return;
+      if (a.closest('header,footer,#KsAiMarketplace135,#KsAiMarketplace134,#KsAiMarketplace133,#KsAiMarketplace132,#KsAiCatalogEngine131,#KsLocalAiSearch130,#KsSmartConsult129,.ks-home-brands-block')) return;
       var href = a.getAttribute('href') || '', id = parseArticleId(href);
       if (!id || seen[id]) return;
       var card = a.closest('.card-product,.ks-final-product-card,.swiper-slide,article,li') || a.parentElement;
@@ -458,12 +480,12 @@
     saveCompare(list);
   }
   function marketplaceMarkup() {
-    return '<section id="KsAiMarketplace134" class="ks-market134 ks-home-final-rendered"><div class="container"><div class="ks-market-wrap">' +
-      '<aside class="ks-market134-panel"><span class="ks-market134-kicker">AI locale + ricerca catalogo</span><h3>Marketplace intelligente</h3><p>Stessa pagina esistente: usa search_suggest.aspx e il catalogo reale per esigenza, budget, codice, EAN e compatibilita.</p>' +
-      '<div class="ks-market134-search"><input id="ksMarket134Input" type="text" placeholder="es. custodia Samsung sotto 30 euro"><button id="ksMarket134Go" type="button">Ragiona</button></div>' +
-      '<div class="ks-market134-tools"><div class="ks-market134-row"><label class="ks-market134-budget"><input id="ksMarket134Budget" type="number" min="0" step="1" placeholder="Budget max EUR"></label><label class="ks-market134-sort"><select id="ksMarket134Sort"><option value="relevance">Pertinenza</option><option value="price-asc">Prezzo crescente</option><option value="price-desc">Prezzo decrescente</option><option value="promo">Prima offerte</option><option value="available">Prima disponibili</option><option value="new">Novita</option></select></label></div><div class="ks-market134-checks"><label class="ks-market134-check"><input id="ksMarket134Available" type="checkbox"> disponibili</label><label class="ks-market134-check"><input id="ksMarket134Promo" type="checkbox"> offerte</label><label class="ks-market134-check"><input id="ksMarket134Refurb" type="checkbox"> ricond.</label></div></div>' +
-      '<div class="ks-market134-chips"><button type="button" data-q="custodia Samsung sotto 30 euro">custodia Samsung</button><button type="button" data-q="toner compatibile Pantum disponibile">toner Pantum</button><button type="button" data-q="notebook ricondizionato disponibile">notebook ricond.</button><button type="button" data-q="adattatore USB-C economico">USB-C</button><button type="button" data-q="pen drive Kingston in offerta">Kingston promo</button></div><div id="ksMarket134Insight" class="ks-market134-ai">Scrivi una richiesta: il motore interpreta filtri, budget e pertinenza marketplace.</div></aside>' +
-      '<div class="ks-market134-results"><div class="ks-market134-head"><div><span class="ks-market134-kicker">Risposta e prodotti consigliati</span><h4>Prodotti dal catalogo reale</h4></div><span id="ksMarket134Count" class="ks-market134-count">0 articoli</span></div><div id="ksMarket134Facets" class="ks-market134-facets"></div><div id="ksMarket134Grid" class="ks-market134-grid"></div></div>' +
+    return '<section id="KsAiMarketplace135" class="ks-market135 ks-home-final-rendered"><div class="container"><div class="ks-market-wrap">' +
+      '<aside class="ks-market135-panel"><span class="ks-market135-kicker">AI locale + ricerca catalogo</span><h3>Marketplace intelligente</h3><p>Stessa pagina esistente: usa search_suggest.aspx e il catalogo reale per esigenza, budget, codice, EAN e compatibilita.</p>' +
+      '<div class="ks-market135-search"><input id="ksMarket135Input" type="text" placeholder="es. custodia Samsung sotto 30 euro"><button id="ksMarket135Go" type="button">Ragiona</button></div>' +
+      '<div class="ks-market135-tools"><div class="ks-market135-row"><label class="ks-market135-budget"><input id="ksMarket135Budget" type="number" min="0" step="1" placeholder="Budget max EUR"></label><label class="ks-market135-sort"><select id="ksMarket135Sort"><option value="relevance">Pertinenza</option><option value="price-asc">Prezzo crescente</option><option value="price-desc">Prezzo decrescente</option><option value="promo">Prima offerte</option><option value="available">Prima disponibili</option><option value="new">Novita</option></select></label></div><div class="ks-market135-checks"><label class="ks-market135-check"><input id="ksMarket135Available" type="checkbox"> disponibili</label><label class="ks-market135-check"><input id="ksMarket135Promo" type="checkbox"> offerte</label><label class="ks-market135-check"><input id="ksMarket135Refurb" type="checkbox"> ricond.</label></div></div>' +
+      '<div class="ks-market135-chips"><button type="button" data-q="custodia Samsung sotto 30 euro">custodia Samsung</button><button type="button" data-q="toner compatibile Pantum disponibile">toner Pantum</button><button type="button" data-q="notebook ricondizionato disponibile">notebook ricond.</button><button type="button" data-q="adattatore USB-C economico">USB-C</button><button type="button" data-q="pen drive Kingston in offerta">Kingston promo</button></div><div id="ksMarket135Insight" class="ks-market135-ai">Scrivi una richiesta: il motore interpreta filtri, budget e pertinenza marketplace.</div></aside>' +
+      '<div class="ks-market135-results"><div class="ks-market135-head"><div><span class="ks-market135-kicker">Risposta e prodotti consigliati</span><h4>Prodotti dal catalogo reale</h4></div><span id="ksMarket135Count" class="ks-market135-count">0 articoli</span></div><div id="ksMarket135Facets" class="ks-market135-facets"></div><div id="ksMarket135Grid" class="ks-market135-grid"></div></div>' +
       '</div></div></section>';
   }
   function itemBadges(item) {
@@ -476,7 +498,7 @@
     return badges.slice(0, 3);
   }
   function renderMarketItems(items) {
-    var grid = document.getElementById('ksMarket134Grid');
+    var grid = document.getElementById('ksMarket135Grid');
     if (!grid) return;
     if (!items || !items.length) {
       grid.innerHTML = '<div class="ks-suggest-empty">Nessun risultato trovato. Prova una ricerca piu generica.</div>';
@@ -485,13 +507,13 @@
     grid.innerHTML = items.map(function (item, idx) {
       var img = item.image || item.image_fallback || item.imageUrl || '';
       var badges = itemBadges(item).map(function (b) { return '<span>' + esc(b) + '</span>'; }).join('');
-      return '<article class="ks-market134-card" data-idx="' + idx + '"><div class="ks-market134-badges">' + badges + '</div>' +
-        '<a class="ks-market134-media" href="' + esc(item.url || '#') + '">' + (img ? '<img src="' + esc(img) + '" alt="' + esc(item.title || '') + '">' : '') + '</a>' +
-        '<div class="ks-market134-meta"><span>' + esc(item.brand || '') + '</span><span>' + esc(item.category || '') + '</span></div>' +
-        '<h5><a href="' + esc(item.url || '#') + '">' + esc(item.title || '') + '</a></h5><div class="ks-market134-price">' + priceText(item.price) + '</div>' +
-        '<div class="ks-market134-actions"><a class="ks-market134-btn" href="' + esc(item.url || '#') + '">Dettagli</a><button type="button" class="ks-market134-compare" data-idx="' + idx + '">Confronta</button></div><div class="ks-market134-reason">' + esc(item.reason || '') + '</div></article>';
+      return '<article class="ks-market135-card" data-idx="' + idx + '"><div class="ks-market135-badges">' + badges + '</div>' +
+        '<a class="ks-market135-media" href="' + esc(item.url || '#') + '">' + (img ? '<img src="' + esc(img) + '" alt="' + esc(item.title || '') + '">' : '') + '</a>' +
+        '<div class="ks-market135-meta"><span>' + esc(item.brand || '') + '</span><span>' + esc(item.category || '') + '</span></div>' +
+        '<h5><a href="' + esc(item.url || '#') + '">' + esc(item.title || '') + '</a></h5><div class="ks-market135-price">' + priceText(item.price) + '</div>' +
+        '<div class="ks-market135-actions"><a class="ks-market135-btn" href="' + esc(item.url || '#') + '">Dettagli</a><button type="button" class="ks-market135-compare" data-idx="' + idx + '">Confronta</button></div><div class="ks-market135-reason">' + esc(item.reason || '') + '</div></article>';
     }).join('');
-    all(grid, '.ks-market134-compare').forEach(function (btn) {
+    all(grid, '.ks-market135-compare').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var idx = parseInt(btn.getAttribute('data-idx') || '-1', 10);
         if (items[idx]) { addCompare(items[idx]); btn.textContent = 'Aggiunto'; }
@@ -499,7 +521,7 @@
     });
   }
   function renderFacets(data, runQuery) {
-    var box = document.getElementById('ksMarket134Facets');
+    var box = document.getElementById('ksMarket135Facets');
     if (!box) return;
     var chunks = [], facets = data && data.facets ? data.facets : {};
     ['brands', 'categories'].forEach(function (key) {
@@ -507,11 +529,11 @@
         chunks.push('<button type="button" data-q="' + esc(f.value || f.label || '') + '">' + esc(f.label || f.value || '') + ' <small>' + esc(f.count || '') + '</small></button>');
       });
     });
-    if (data && data.catalogUrl) chunks.push('<a class="ks-market134-open" href="' + esc(data.catalogUrl) + '">Apri catalogo</a>');
+    if (data && data.catalogUrl) chunks.push('<a class="ks-market135-open" href="' + esc(data.catalogUrl) + '">Apri catalogo</a>');
     box.innerHTML = chunks.join('');
     all(box, 'button').forEach(function (b) {
       b.addEventListener('click', function () {
-        var input = document.getElementById('ksMarket134Input');
+        var input = document.getElementById('ksMarket135Input');
         if (input) input.value = (input.value ? input.value + ' ' : '') + (b.getAttribute('data-q') || '');
         runQuery();
       });
@@ -520,22 +542,22 @@
   function initHomeMarketplace() {
     if (!pathIsHome()) return;
     ensureStepStyle();
-    document.body.classList.add('ks-home-step134-onsus-market');
-    ['KsSmartConsult129','KsLocalAiSearch130','KsAiCatalogEngine131','KsAiMarketplace132','KsAiMarketplace133'].forEach(function (id) {
+    document.body.classList.add('ks-home-step135-onsus-market');
+    ['KsSmartConsult129','KsLocalAiSearch130','KsAiCatalogEngine131','KsAiMarketplace132','KsAiMarketplace133','KsAiMarketplace134'].forEach(function (id) {
       var n = document.getElementById(id);
       if (n && n.parentNode) n.parentNode.removeChild(n);
     });
-    if (document.getElementById('KsAiMarketplace134')) return;
+    if (document.getElementById('KsAiMarketplace135')) return;
     var anchor = document.getElementById('KsHomeRecentFinal') || document.getElementById('KsHomeBestSellerFinal') || document.getElementById('KsHomeEditorialFinal') || document.getElementById('KsHomeDepartmentShowcase') || q(document, '.ks-home-best-section') || q(document, '.ks-home-deal-section');
     if (!anchor || !anchor.parentNode) return;
     var holder = document.createElement('div');
     holder.innerHTML = marketplaceMarkup();
     var sec = holder.firstChild;
     anchor.parentNode.insertBefore(sec, anchor.nextSibling);
-    var input = document.getElementById('ksMarket134Input'), budget = document.getElementById('ksMarket134Budget'), go = document.getElementById('ksMarket134Go'), sort = document.getElementById('ksMarket134Sort'), available = document.getElementById('ksMarket134Available'), promo = document.getElementById('ksMarket134Promo'), refurb = document.getElementById('ksMarket134Refurb'), insight = document.getElementById('ksMarket134Insight'), count = document.getElementById('ksMarket134Count');
+    var input = document.getElementById('ksMarket135Input'), budget = document.getElementById('ksMarket135Budget'), go = document.getElementById('ksMarket135Go'), sort = document.getElementById('ksMarket135Sort'), available = document.getElementById('ksMarket135Available'), promo = document.getElementById('ksMarket135Promo'), refurb = document.getElementById('ksMarket135Refurb'), insight = document.getElementById('ksMarket135Insight'), count = document.getElementById('ksMarket135Count');
     var last = '';
     try { last = localStorage.getItem(MARKET_KEY) || ''; } catch (err) {}
-    input.value = last || 'custodia Samsung sotto 30 euro';
+    input.value = last || '';
     function runQuery() {
       var query = String(input.value || '').replace(/\s+/g, ' ').trim();
       if (!query) return;
@@ -564,8 +586,15 @@
     go.addEventListener('click', runQuery);
     input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); runQuery(); } });
     [sort, budget, available, promo, refurb].forEach(function (el) { el.addEventListener('change', runQuery); });
-    all(sec, '.ks-market134-chips button').forEach(function (b) { b.addEventListener('click', function () { input.value = b.getAttribute('data-q') || ''; runQuery(); }); });
-    runQuery();
+    all(sec, '.ks-market135-chips button').forEach(function (b) { b.addEventListener('click', function () { input.value = b.getAttribute('data-q') || ''; runQuery(); }); });
+    if (last) runQuery();
+    else {
+      var initial = localHomeProducts(8);
+      if (count) count.textContent = initial.length + ' articoli HOME';
+      if (insight) insight.textContent = 'Scrivi una richiesta o usa i filtri: nessun suggerimento demo viene generato.';
+      renderFacets({}, runQuery);
+      renderMarketItems(initial);
+    }
   }
 
   function boot() {
