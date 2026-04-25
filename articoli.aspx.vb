@@ -412,34 +412,35 @@ End Sub
             Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("qPrefix", TypeCode.String, prefixTerm))
 
             scoreBuilder.Append("(CASE ")
-            scoreBuilder.Append("WHEN LOWER(Codice)=?qExact THEN 2200 ")
-            scoreBuilder.Append("WHEN LOWER(Ean)=?qExact THEN 2150 ")
-            scoreBuilder.Append("WHEN LOWER(Descrizione1)=?qExact THEN 1800 ")
-            scoreBuilder.Append("WHEN LOWER(CONCAT(IFNULL(MarcheDescrizione,''),' ',IFNULL(Descrizione1,'')))=?qExact THEN 1750 ")
-            scoreBuilder.Append("WHEN LOWER(Codice) LIKE ?qPrefix THEN 1600 ")
-            scoreBuilder.Append("WHEN LOWER(Ean) LIKE ?qPrefix THEN 1580 ")
-            scoreBuilder.Append("WHEN LOWER(Descrizione1) LIKE ?qPrefix THEN 1320 ")
-            scoreBuilder.Append("WHEN LOWER(CONCAT(IFNULL(MarcheDescrizione,''),' ',IFNULL(Descrizione1,''))) LIKE ?qPrefix THEN 1280 ")
-            scoreBuilder.Append("WHEN LOWER(Descrizione1) LIKE ?qLike THEN 980 ")
-            scoreBuilder.Append("WHEN LOWER(DescrizioneLunga) LIKE ?qLike THEN 860 ")
-            scoreBuilder.Append("WHEN LOWER(CONCAT(IFNULL(MarcheDescrizione,''),' ',IFNULL(Descrizione1,''))) LIKE ?qLike THEN 1120 ")
-            scoreBuilder.Append("WHEN LOWER(CONCAT(IFNULL(MarcheDescrizione,''),' ',IFNULL(Descrizione2,''))) LIKE ?qLike THEN 920 ")
+            scoreBuilder.Append("WHEN LOWER(TRIM(COALESCE(Codice,'')))=?qExact THEN 10000000 ")
+            scoreBuilder.Append("WHEN LOWER(TRIM(COALESCE(Ean,'')))=?qExact THEN 9900000 ")
+            scoreBuilder.Append("WHEN LOWER(TRIM(COALESCE(Descrizione1,'')))=?qExact THEN 9800000 ")
+            scoreBuilder.Append("WHEN LOWER(TRIM(COALESCE(Codice,''))) LIKE ?qPrefix OR LOWER(CONCAT(' ',COALESCE(Codice,''))) LIKE CONCAT('% ',?qExact,'%') THEN 8800000 ")
+            scoreBuilder.Append("WHEN LOWER(TRIM(COALESCE(Ean,''))) LIKE ?qPrefix OR LOWER(CONCAT(' ',COALESCE(Ean,''))) LIKE CONCAT('% ',?qExact,'%') THEN 8700000 ")
+            scoreBuilder.Append("WHEN LOWER(TRIM(COALESCE(Descrizione1,''))) LIKE ?qPrefix OR LOWER(CONCAT(' ',COALESCE(Descrizione1,''))) LIKE CONCAT('% ',?qExact,'%') THEN 8600000 ")
+            scoreBuilder.Append("WHEN LOWER(CONCAT(' ',COALESCE(MarcheDescrizione,''),' ',COALESCE(Descrizione1,''))) LIKE CONCAT('% ',?qExact,'%') THEN 8200000 ")
+            scoreBuilder.Append("WHEN LOWER(COALESCE(Descrizione1,'')) LIKE ?qLike THEN 3600000 ")
+            scoreBuilder.Append("WHEN LOWER(COALESCE(DescrizioneLunga,'')) LIKE ?qLike THEN 2600000 ")
+            scoreBuilder.Append("WHEN LOWER(COALESCE(MarcheDescrizione,'')) LIKE ?qLike THEN 2400000 ")
+            scoreBuilder.Append("WHEN LOWER(COALESCE(Descrizione2,'')) LIKE ?qLike THEN 1800000 ")
             scoreBuilder.Append("ELSE 0 END")
 
             mainWhereBuilder.Append(" AND (")
-            mainWhereBuilder.Append("LOWER(Codice) LIKE ?qLike ")
-            mainWhereBuilder.Append("OR LOWER(Ean) LIKE ?qLike ")
-            mainWhereBuilder.Append("OR LOWER(Descrizione1) LIKE ?qLike ")
-            mainWhereBuilder.Append("OR LOWER(Descrizione2) LIKE ?qLike ")
-            mainWhereBuilder.Append("OR LOWER(DescrizioneLunga) LIKE ?qLike ")
-            mainWhereBuilder.Append("OR LOWER(MarcheDescrizione) LIKE ?qLike ")
-            mainWhereBuilder.Append("OR LOWER(CONCAT(IFNULL(MarcheDescrizione,''),' ',IFNULL(Descrizione1,''))) LIKE ?qLike ")
-            mainWhereBuilder.Append("OR LOWER(CONCAT(IFNULL(MarcheDescrizione,''),' ',IFNULL(Descrizione2,''))) LIKE ?qLike ")
+            mainWhereBuilder.Append("LOWER(COALESCE(Codice,'')) LIKE ?qLike ")
+            mainWhereBuilder.Append("OR LOWER(COALESCE(Ean,'')) LIKE ?qLike ")
+            mainWhereBuilder.Append("OR LOWER(COALESCE(Descrizione1,'')) LIKE ?qLike ")
+            mainWhereBuilder.Append("OR LOWER(COALESCE(Descrizione2,'')) LIKE ?qLike ")
+            mainWhereBuilder.Append("OR LOWER(COALESCE(DescrizioneLunga,'')) LIKE ?qLike ")
+            mainWhereBuilder.Append("OR LOWER(COALESCE(MarcheDescrizione,'')) LIKE ?qLike ")
+            mainWhereBuilder.Append("OR LOWER(CONCAT(' ',COALESCE(MarcheDescrizione,''),' ',COALESCE(Descrizione1,''))) LIKE CONCAT('% ',?qExact,'%') ")
+            mainWhereBuilder.Append("OR LOWER(CONCAT(COALESCE(MarcheDescrizione,''),' ',COALESCE(Descrizione1,''))) LIKE ?qLike ")
+            mainWhereBuilder.Append("OR LOWER(CONCAT(COALESCE(MarcheDescrizione,''),' ',COALESCE(Descrizione2,''))) LIKE ?qLike ")
 
             filtersWhereBuilder.Append(" AND (")
-            filtersWhereBuilder.Append("LOWER(varticolibase.Codice) LIKE ?qLike ")
-            filtersWhereBuilder.Append("OR LOWER(varticolibase.Ean) LIKE ?qLike ")
-            filtersWhereBuilder.Append("OR LOWER(varticolibase.Descrizione1) LIKE ?qLike ")
+            filtersWhereBuilder.Append("LOWER(COALESCE(varticolibase.Codice,'')) LIKE ?qLike ")
+            filtersWhereBuilder.Append("OR LOWER(COALESCE(varticolibase.Ean,'')) LIKE ?qLike ")
+            filtersWhereBuilder.Append("OR LOWER(COALESCE(varticolibase.Descrizione1,'')) LIKE ?qLike ")
+
 
             For i As Integer = 0 To searchTokens.Count - 1
                 Dim token As String = searchTokens(i).ToLowerInvariant()
@@ -452,13 +453,16 @@ End Sub
                 Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter(tokenPrefixName, TypeCode.String, SqlEscapeLike(token) & "%"))
 
                 scoreBuilder.Append(" + (CASE ")
-                scoreBuilder.Append("WHEN LOWER(Codice)=?").Append(tokenName).Append(" THEN 300 ")
-                scoreBuilder.Append("WHEN LOWER(Ean)=?").Append(tokenName).Append(" THEN 280 ")
-                scoreBuilder.Append("WHEN LOWER(Codice) LIKE ?").Append(tokenPrefixName).Append(" THEN 220 ")
-                scoreBuilder.Append("WHEN LOWER(Ean) LIKE ?").Append(tokenPrefixName).Append(" THEN 200 ")
-                scoreBuilder.Append("WHEN LOWER(Descrizione1) LIKE ?").Append(tokenPrefixName).Append(" THEN 180 ")
-                scoreBuilder.Append("WHEN LOWER(CONCAT(IFNULL(MarcheDescrizione,''),' ',IFNULL(Descrizione1,''))) LIKE ?").Append(tokenLikeName).Append(" THEN 150 ")
-                scoreBuilder.Append("WHEN LOWER(DescrizioneLunga) LIKE ?").Append(tokenLikeName).Append(" THEN 90 ")
+                scoreBuilder.Append("WHEN LOWER(COALESCE(Codice,''))=?").Append(tokenName).Append(" THEN 70000 ")
+                scoreBuilder.Append("WHEN LOWER(COALESCE(Ean,''))=?").Append(tokenName).Append(" THEN 69000 ")
+                scoreBuilder.Append("WHEN LOWER(COALESCE(Descrizione1,''))=?").Append(tokenName).Append(" THEN 68000 ")
+                scoreBuilder.Append("WHEN LOWER(COALESCE(Codice,'')) LIKE ?").Append(tokenPrefixName).Append(" OR LOWER(CONCAT(' ',COALESCE(Codice,''))) LIKE CONCAT('% ',?").Append(tokenName).Append(",'%') THEN 52000 ")
+                scoreBuilder.Append("WHEN LOWER(COALESCE(Ean,'')) LIKE ?").Append(tokenPrefixName).Append(" OR LOWER(CONCAT(' ',COALESCE(Ean,''))) LIKE CONCAT('% ',?").Append(tokenName).Append(",'%') THEN 51000 ")
+                scoreBuilder.Append("WHEN LOWER(COALESCE(Descrizione1,'')) LIKE ?").Append(tokenPrefixName).Append(" OR LOWER(CONCAT(' ',COALESCE(Descrizione1,''))) LIKE CONCAT('% ',?").Append(tokenName).Append(",'%') THEN 50000 ")
+                scoreBuilder.Append("WHEN LOWER(CONCAT(' ',COALESCE(MarcheDescrizione,''),' ',COALESCE(Descrizione1,''))) LIKE CONCAT('% ',?").Append(tokenName).Append(",'%') THEN 46000 ")
+                scoreBuilder.Append("WHEN LOWER(COALESCE(Descrizione1,'')) LIKE ?").Append(tokenLikeName).Append(" THEN 12000 ")
+                scoreBuilder.Append("WHEN LOWER(COALESCE(DescrizioneLunga,'')) LIKE ?").Append(tokenLikeName).Append(" THEN 8000 ")
+                scoreBuilder.Append("WHEN LOWER(COALESCE(MarcheDescrizione,'')) LIKE ?").Append(tokenLikeName).Append(" THEN 7000 ")
                 scoreBuilder.Append("ELSE 0 END)")
 
                 mainWhereBuilder.Append("OR LOWER(Codice)=?").Append(tokenName).Append(" ")
@@ -479,6 +483,12 @@ End Sub
 
             mainWhereBuilder.Append(")")
             filtersWhereBuilder.Append(")")
+
+            scoreBuilder.Append(" + (CASE WHEN COALESCE(Disponibilita,0)>0 THEN 600 ELSE 0 END)")
+            scoreBuilder.Append(" + (CASE WHEN COALESCE(Export,1)<>0 THEN 500 ELSE 0 END)")
+            scoreBuilder.Append(" + (CASE WHEN COALESCE(InOfferta,0)<>0 THEN 450 ELSE 0 END)")
+            scoreBuilder.Append(" + (CASE WHEN COALESCE(Vetrina,0)<>0 THEN 250 ELSE 0 END)")
+            scoreBuilder.Append(" + LEAST(COALESCE(visite,0),999)")
 
             searchScoreSql = scoreBuilder.ToString() & " AS SearchScore"
             searchWhereMain = mainWhereBuilder.ToString()
@@ -754,7 +764,7 @@ strWhere = strWhere & " GROUP BY id"
             Case Else
                 ' Default: rilevanza (stabile)
                 If userCerca <> "" Then
-                    strWhere &= " ORDER BY SearchScore DESC, ((Giacenza-Impegnata)>0) DESC, InOfferta DESC, COALESCE(Vetrina,0) DESC, visite DESC, id DESC"
+                    strWhere &= " ORDER BY SearchScore DESC, ((Giacenza-Impegnata)>0) DESC, COALESCE(Export,1) DESC, InOfferta DESC, COALESCE(Vetrina,0) DESC, visite DESC, PrezzoOldIvato ASC, id DESC"
                 Else
                     strWhere &= " ORDER BY (Giacenza-Impegnata) DESC, id DESC"
                 End If
