@@ -1308,3 +1308,72 @@ body.ks-page-home.ks-home-onsus-pass-123 #KsHomeLowerFinal.ks-onsus-grid-collect
 body.ks-page-home.ks-home-onsus-pass-123 #KsHomeLowerFinal.ks-onsus-grid-collection-122 .ks-final-lower-column[data-ks-step122-hide="1"]{display:none!important;}
 @media (max-width:1199.98px){body.ks-page-home.ks-home-onsus-pass-123 #KsOnsusDealToday123 .ks-deal123-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;}}
 @media (max-width:767.98px){body.ks-page-home.ks-home-onsus-pass-123 #KsOnsusDealToday123 .ks-deal123-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important;}body.ks-page-home.ks-home-onsus-pass-123 #KsOnsusDealToday123 .ks-deal123-card{grid-template-rows:160px auto!important;min-height:300px!important;}body.ks-page-home.ks-home-onsus-pass-123 #KsOnsusDealToday123 .ks-deal123-media{height:160px!important;}body.ks-page-home.ks-home-onsus-pass-123 #KsHomeLowerFinal.ks-onsus-grid-collection-122 .ks-final-lower-grid{grid-template-columns:1fr!important;}}
+
+/* KeepStore HOME - Step 124: ONSUS real order / section rhythm */
+body.ks-page-home.ks-home-onsus-pass-124 #KsOnsusDealToday123{
+  padding-top:28px!important;
+  padding-bottom:22px!important;
+  margin:0!important;
+}
+body.ks-page-home.ks-home-onsus-pass-124 #KsOnsusDealToday123 + #KsHomeDepartmentShowcase,
+body.ks-page-home.ks-home-onsus-pass-124 #KsHomeDepartmentShowcase{
+  padding-top:18px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-124 #KsOnsusDealToday123 .ks-deal123-title{
+  margin-bottom:18px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-124 #KsOnsusDealToday123 .ks-deal123-title h5{
+  font-size:24px!important;
+  font-weight:900!important;
+  letter-spacing:-.015em!important;
+}
+body.ks-page-home.ks-home-onsus-pass-124 #KsOnsusDealToday123 .ks-deal123-grid{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:22px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-124 #KsOnsusDealToday123 .ks-deal123-card{
+  min-height:318px!important;
+  grid-template-rows:178px auto!important;
+  border-radius:14px!important;
+  border:1px solid rgba(51,62,72,.06)!important;
+  box-shadow:0 10px 28px rgba(51,62,72,.06)!important;
+}
+body.ks-page-home.ks-home-onsus-pass-124 #KsOnsusDealToday123 .ks-deal123-media{
+  height:178px!important;
+  padding:18px!important;
+  background:#f6f7fb!important;
+}
+body.ks-page-home.ks-home-onsus-pass-124 #KsOnsusDealToday123 .ks-deal123-title-product{
+  font-size:13px!important;
+  line-height:1.25!important;
+  min-height:33px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-124 #KsHomeEditorialFinal .ks-final-product-card[data-ks-step124-dupe="1"]{
+  display:none!important;
+}
+body.ks-page-home.ks-home-onsus-pass-124 #KsHomeEditorialFinal.ks-editorial-deduped-after-deal .ks-final-product-grid{
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+}
+body.ks-page-home.ks-home-onsus-pass-124 .ks-onsus-rhythm-124 .ks-final-title,
+body.ks-page-home.ks-home-onsus-pass-124 .ks-onsus-rhythm-124 .ks-home-section-title,
+body.ks-page-home.ks-home-onsus-pass-124 .ks-onsus-rhythm-124 .flat-title{
+  margin-bottom:16px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-124 .ks-final-product-card{
+  border-radius:12px!important;
+  box-shadow:0 8px 22px rgba(51,62,72,.052)!important;
+}
+body.ks-page-home.ks-home-onsus-pass-124 .ks-final-product-media{
+  border-radius:10px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-124 #KsHomeBrandSection{
+  padding-top:22px!important;
+}
+@media (max-width:1199.98px){
+  body.ks-page-home.ks-home-onsus-pass-124 #KsOnsusDealToday123 .ks-deal123-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+}
+@media (max-width:767.98px){
+  body.ks-page-home.ks-home-onsus-pass-124 #KsOnsusDealToday123 .ks-deal123-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important;}
+  body.ks-page-home.ks-home-onsus-pass-124 #KsOnsusDealToday123 .ks-deal123-card{min-height:290px!important;grid-template-rows:154px auto!important;}
+  body.ks-page-home.ks-home-onsus-pass-124 #KsOnsusDealToday123 .ks-deal123-media{height:154px!important;}
+}

@@ -1771,3 +1771,109 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   window.addEventListener('resize', function () { window.setTimeout(run, 180); });
 })();
+
+/* KeepStore HOME - Step 124: ONSUS real order pass.
+   Moves Deal Of The Day to the same semantic position as the ONSUS index
+   (right after icon boxes / before department tiles) and prevents the same
+   products from being repeated in the main editorial deck when possible. */
+(function () {
+  'use strict';
+  function q(s, r) { return (r || document).querySelector(s); }
+  function qa(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  function txt(n) { return String(n && n.textContent || '').replace(/\s+/g, ' ').trim(); }
+  function normHref(href) { return String(href || '').replace(/^https?:\/\/(www\.)?(taikun\.it|webaffare\.it)/i, '').replace(/&amp;/g, '&').replace(/#.*$/, ''); }
+
+  function section(id) { return q('#' + id); }
+
+  function getDealUrls() {
+    var urls = Object.create(null);
+    qa('#KsOnsusDealToday123 a[href*="articolo.aspx"]').forEach(function (a) {
+      var h = normHref(a.getAttribute('href'));
+      if (h) urls[h] = 1;
+    });
+    return urls;
+  }
+
+  function placeDealToday() {
+    var deal = section('KsOnsusDealToday123');
+    if (!deal) return;
+
+    var dept = section('KsHomeDepartmentShowcase');
+    var iconBoxes = q('.ks-home-iconboxes-section, [id$="HomeIconBoxesSection"], .home-icon-boxes, .tf-icon-box, .iconbox, .tf-iconbox');
+
+    if (dept && dept.parentNode) {
+      if (deal.nextElementSibling !== dept) dept.parentNode.insertBefore(deal, dept);
+      return;
+    }
+    if (iconBoxes && iconBoxes.parentNode && iconBoxes.nextSibling !== deal) {
+      iconBoxes.parentNode.insertBefore(deal, iconBoxes.nextSibling);
+    }
+  }
+
+  function preventEditorialDupes() {
+    var deal = section('KsOnsusDealToday123');
+    var editorial = section('KsHomeEditorialFinal');
+    if (!deal || !editorial) return;
+    var urls = getDealUrls();
+    var cards = qa('.ks-final-product-card', editorial);
+    var candidates = [];
+    cards.forEach(function (card) {
+      var a = q('a[href*="articolo.aspx"]', card);
+      var h = normHref(a && a.getAttribute('href'));
+      if (h && urls[h]) candidates.push(card);
+    });
+    var visibleBefore = cards.filter(function (card) { return card.getAttribute('data-ks-step124-dupe') !== '1'; }).length;
+    var remaining = cards.length - candidates.length;
+    if (candidates.length && remaining >= 5) {
+      candidates.forEach(function (card) { card.setAttribute('data-ks-step124-dupe', '1'); });
+      editorial.classList.add('ks-editorial-deduped-after-deal');
+    } else if (visibleBefore < 5) {
+      cards.forEach(function (card) { card.removeAttribute('data-ks-step124-dupe'); });
+      editorial.classList.remove('ks-editorial-deduped-after-deal');
+    }
+  }
+
+  function normalizeDealVisual() {
+    var deal = section('KsOnsusDealToday123');
+    if (!deal) return;
+    deal.classList.add('ks-onsus-deal-real-order-124');
+    var kicker = q('.ks-deal123-title h5', deal);
+    if (kicker && !/Occasione/i.test(txt(kicker))) kicker.innerHTML = '<span class="ks-deal123-fire">●</span>Occasione Imperdibile';
+    qa('.ks-deal123-card', deal).forEach(function (card) {
+      var title = q('.ks-deal123-title-product', card);
+      if (title && !title.getAttribute('title')) title.setAttribute('title', txt(title));
+      var img = q('img', card);
+      if (img) { img.setAttribute('loading', 'lazy'); img.setAttribute('decoding', 'async'); }
+    });
+  }
+
+  function tightenOnsusRhythm() {
+    qa('#KsHomeDepartmentShowcase,#KsHomeEditorialFinal,#KsHomeBestSellerFinal,#KsHomeLowerFinal,#KsHomeBrandSection,#KsHomeClosingLayer,#KsOnsusDealToday123').forEach(function (s) {
+      s.classList.add('ks-onsus-rhythm-124');
+    });
+    var editorialTitle = q('#KsHomeEditorialFinal .ks-final-title h5');
+    if (editorialTitle) editorialTitle.textContent = 'Prodotti in evidenza';
+    var editorialKicker = q('#KsHomeEditorialFinal .ks-section-kicker');
+    if (editorialKicker) editorialKicker.textContent = 'PRODOTTI KEEPSTORE';
+    var lowerTitle = q('#KsHomeLowerFinal .ks-final-title h5');
+    if (lowerTitle) lowerTitle.textContent = 'Scelte dal catalogo';
+    var brandTitle = q('#KsHomeBrandSection .ks-final-title h5, #KsHomeBrandSection h5, #KsHomeBrandSection h4');
+    if (brandTitle) brandTitle.textContent = 'Rivenditori ufficiali - I migliori Brand';
+  }
+
+  function run() {
+    if (!document.body) return;
+    document.body.classList.add('ks-page-home', 'ks-home-onsus-pass-124');
+    placeDealToday();
+    normalizeDealVisual();
+    preventEditorialDupes();
+    tightenOnsusRhythm();
+  }
+
+  function boot() {
+    run();
+    [120, 350, 800, 1500, 3000, 6000].forEach(function (d) { window.setTimeout(run, d); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  window.addEventListener('resize', function () { window.setTimeout(run, 160); });
+})();
