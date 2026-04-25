@@ -1312,3 +1312,112 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   window.addEventListener('resize', function () { window.setTimeout(run, 120); });
 })();
+
+/* KeepStore HOME - Step 120 ONSUS hero stage compositor.
+   Uses the real KeepStore banner image as artwork, but renders a clean ONSUS-like stage above legacy slider markup. */
+(function () {
+  'use strict';
+  function q(s, r) { return (r || document).querySelector(s); }
+  function qa(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  function imgSrc(img) {
+    if (!img) return '';
+    var src = img.currentSrc || img.getAttribute('src') || img.getAttribute('data-src') || '';
+    if (!src && img.getAttribute('srcset')) src = String(img.getAttribute('srcset')).split(',')[0].trim().split(' ')[0];
+    return src;
+  }
+  function safeUrl(src) { return String(src || '').replace(/"/g, '%22'); }
+  function heroNodes() {
+    var section = q('.ks-home-hero-section') || q('[id$="HomeHeroSection"]');
+    var shell = section && (q('.ks-home-hero-shell', section) || q('[id$="HomeHeroShell"]', section));
+    var menu = shell && q('.wrap-item-1', shell);
+    var hero = shell && (q('.wrap-item-2', shell) || q('[id$="HeroSliderWrap"]', shell));
+    var promos = shell && q('#KsOnsusTopSidePromos', shell);
+    var img = hero && (q('.ks-home-hero-slider img', hero) || q('[id$="Slide_Show_Container"] img', hero) || q('img', hero));
+    return { section: section, shell: shell, menu: menu, hero: hero, promos: promos, img: img };
+  }
+  function enforceGrid(n) {
+    if (!n.section || !n.shell || !n.hero) return;
+    document.body.classList.add('ks-page-home', 'ks-home-onsus-pass-120');
+    n.section.classList.add('ks-onsus-top-section-120');
+    n.shell.classList.add('ks-onsus-top-wrapper-120');
+    n.hero.classList.add('ks-onsus-hero-panel-120');
+    var wide = !window.matchMedia || window.matchMedia('(min-width:1200px)').matches;
+    var hasPromos = !!(wide && n.promos);
+    n.shell.style.setProperty('display', 'grid', 'important');
+    n.shell.style.setProperty('grid-template-columns', hasPromos ? '285px minmax(0,1fr) 300px' : '285px minmax(0,1fr)', 'important');
+    n.shell.style.setProperty('gap', '20px', 'important');
+    n.shell.style.setProperty('height', '390px', 'important');
+    n.shell.style.setProperty('min-height', '390px', 'important');
+    n.shell.style.setProperty('max-height', '390px', 'important');
+    n.shell.style.setProperty('align-items', 'stretch', 'important');
+    if (n.menu) {
+      n.menu.style.setProperty('grid-column', '1', 'important');
+      n.menu.style.setProperty('grid-row', '1', 'important');
+      n.menu.style.setProperty('width', '285px', 'important');
+      n.menu.style.setProperty('min-width', '285px', 'important');
+      n.menu.style.setProperty('max-width', '285px', 'important');
+      n.menu.style.setProperty('height', '390px', 'important');
+      n.menu.style.setProperty('min-height', '390px', 'important');
+      n.menu.style.setProperty('max-height', '390px', 'important');
+      n.menu.style.setProperty('overflow', 'hidden', 'important');
+    }
+    n.hero.style.setProperty('grid-column', '2', 'important');
+    n.hero.style.setProperty('grid-row', '1', 'important');
+    n.hero.style.setProperty('position', 'relative', 'important');
+    n.hero.style.setProperty('height', '390px', 'important');
+    n.hero.style.setProperty('min-height', '390px', 'important');
+    n.hero.style.setProperty('max-height', '390px', 'important');
+    n.hero.style.setProperty('overflow', 'hidden', 'important');
+    n.hero.style.setProperty('background', '#050505', 'important');
+    if (n.promos) {
+      n.promos.style.setProperty('grid-column', hasPromos ? '3' : 'auto', 'important');
+      n.promos.style.setProperty('grid-row', '1', 'important');
+      n.promos.style.setProperty('display', hasPromos ? 'grid' : 'none', 'important');
+      n.promos.style.setProperty('height', '390px', 'important');
+      n.promos.style.setProperty('min-height', '390px', 'important');
+      n.promos.style.setProperty('max-height', '390px', 'important');
+      n.promos.style.setProperty('width', '300px', 'important');
+      n.promos.style.setProperty('min-width', '300px', 'important');
+      n.promos.style.setProperty('max-width', '300px', 'important');
+    }
+  }
+  function buildHeroStage(n) {
+    if (!n.hero || !n.img) return;
+    var src = imgSrc(n.img);
+    if (!src) return;
+    var stage = q('#KsOnsusHeroStage120', n.hero);
+    if (!stage) {
+      stage = document.createElement('div');
+      stage.id = 'KsOnsusHeroStage120';
+      stage.className = 'ks-onsus-hero-stage-120';
+      stage.innerHTML = '<div class="ks-onsus-hero-copy-120"><span class="ks-kicker-120">Samsung</span><span class="ks-sub-120">Odyssey Gaming Monitor G40B</span><strong>Uniti verso la nuova era del gioco</strong><span class="ks-specs-120"><span>IPS</span><span>240Hz</span><span>G-SYNC</span></span><a href="catalogo.aspx" class="ks-cta-120">Scopri ora</a></div><div class="ks-onsus-hero-art-120" aria-hidden="true"></div>';
+      n.hero.appendChild(stage);
+    }
+    stage.style.setProperty('--ks-hero-image-120', 'url("' + safeUrl(src) + '")');
+    stage.setAttribute('data-ks-src', src);
+    qa('.ks-onsus-hero-caption', n.hero).forEach(function (cap) { cap.style.setProperty('display', 'none', 'important'); });
+    qa('.ks-home-hero-slider img,[id$="Slide_Show_Container"] img,.ks-home-hero-banner img,.ks-home-hero-media img', n.hero).forEach(function (img) {
+      img.style.setProperty('opacity', '0', 'important');
+      img.style.setProperty('visibility', 'hidden', 'important');
+    });
+    qa('.ks-home-hero-slider a,.ks-home-hero-banner,.ks-home-hero-media', n.hero).forEach(function (media) {
+      media.style.setProperty('background-image', 'none', 'important');
+      media.style.setProperty('background-color', '#050505', 'important');
+    });
+  }
+  function compactLongTitles() {
+    qa('.ks-final-product-info h6 a,.ks-final-lower-item strong,.ks-onsus-side-promo strong,.ks-onsus-side-promo-v3 strong').forEach(function (a) {
+      if (!a.getAttribute('title')) a.setAttribute('title', String(a.textContent || '').replace(/\s+/g, ' ').trim());
+    });
+  }
+  function run() {
+    if (!document.body) return;
+    var n = heroNodes();
+    enforceGrid(n);
+    buildHeroStage(n);
+    compactLongTitles();
+  }
+  function boot() { run(); [80, 220, 520, 1000, 1800, 3200, 5200, 8200].forEach(function (d) { window.setTimeout(run, d); }); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  window.addEventListener('resize', function () { window.setTimeout(run, 120); });
+})();
