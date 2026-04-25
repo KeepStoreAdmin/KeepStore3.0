@@ -46,10 +46,10 @@ Partial Public Class _Default
         rptHeroSlides.DataBind()
         Dim hasHeroSlides As Boolean = rptHeroSlides.Items.Count > 0
 
-        Dim sideBanners As DataTable = GetSideBanners()
+        Dim sideBanners As DataTable = SliceTable(GetSideBanners(), 0, 2)
         rptSideBanners.DataSource = sideBanners
         rptSideBanners.DataBind()
-        Dim sideBannerCount As Integer = rptSideBanners.Items.Count
+        Dim sideBannerCount As Integer = If(sideBanners Is Nothing, 0, sideBanners.Rows.Count)
 
         Dim heroMode As String = ResolveHeroMode(hasHeroSlides, sideBannerCount)
         ApplyHeroMode(heroMode)
@@ -148,14 +148,18 @@ Partial Public Class _Default
         Slide_Show_Container.Visible = (normalizedMode <> "none")
         HeroSliderWrap.Visible = (normalizedMode <> "none")
         HeroSideWrap.Visible = (normalizedMode = "full")
+        rptSideBanners.Visible = (normalizedMode = "full")
         HomeHeroSection.Visible = (normalizedMode <> "none")
 
         If HomeHeroShell IsNot Nothing Then
-            HomeHeroShell.Attributes("class") = "s-banner-wrapper ks-home-hero-shell ks-home-hero-mode-" & normalizedMode
+            Dim sideClass As String = If(normalizedMode = "full", " ks-home-hero-shell--with-side", " ks-home-hero-shell--no-side")
+            HomeHeroShell.Attributes("class") = "s-banner-wrapper ks-home-hero-shell ks-home-hero-mode-" & normalizedMode & sideClass
+            HomeHeroShell.Attributes("data-ks-hero-mode") = normalizedMode
         End If
 
         If HomeHeroSection IsNot Nothing Then
             HomeHeroSection.Attributes("class") = "tf-sp-5 ks-home-hero-section ks-home-hero-mode-" & normalizedMode
+            HomeHeroSection.Attributes("data-ks-hero-mode") = normalizedMode
         End If
     End Sub
 

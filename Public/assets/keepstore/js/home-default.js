@@ -2885,3 +2885,208 @@
   function boot() { run(); [140, 420, 900, 1800, 3600, 7000, 11000].forEach(function (d) { window.setTimeout(run, d); }); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
+
+/* KeepStore HOME - Step 138 final top-area authority.
+   The server chooses FULL / COMPACT_SINGLE / NONE from valid DB assets; this pass only removes older visual experiments. */
+(function () {
+  'use strict';
+
+  function q(sel, root) { return (root || document).querySelector(sel); }
+  function qa(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+  function home() {
+    return !!(document.body && (document.body.classList.contains('ks-page-home') || q('.ks-home-hero-section') || q('[id$="HomeHeroSection"]')));
+  }
+  function removeStyle(node, props) {
+    if (!node || !node.style) return;
+    props.forEach(function (prop) { node.style.removeProperty(prop); });
+  }
+  function show(node) {
+    if (!node) return;
+    node.removeAttribute('hidden');
+    node.removeAttribute('aria-hidden');
+    removeStyle(node, ['display', 'visibility', 'opacity', 'width', 'min-width', 'max-width', 'height', 'min-height', 'max-height', 'overflow']);
+  }
+  function hide(node, reason) {
+    if (!node) return;
+    node.setAttribute('data-ks-top-final-hidden', reason || 'hidden');
+    if (node.style) node.style.setProperty('display', 'none', 'important');
+  }
+  function imgSrc(img) {
+    if (!img) return '';
+    var src = img.currentSrc || img.getAttribute('src') || img.getAttribute('data-src') || '';
+    if (!src && img.getAttribute('srcset')) src = String(img.getAttribute('srcset')).split(',')[0].trim().split(' ')[0];
+    return String(src || '').trim();
+  }
+  function validImg(img) {
+    var src = imgSrc(img);
+    return !!(src && !/blank|loader|spinner|sprite|favicon|placeholder|nofoto/i.test(src));
+  }
+  function setBox(node, height) {
+    if (!node || !node.style) return;
+    node.style.setProperty('display', 'block', 'important');
+    node.style.setProperty('width', '100%', 'important');
+    node.style.setProperty('height', height + 'px', 'important');
+    node.style.setProperty('min-height', height + 'px', 'important');
+    node.style.setProperty('max-height', height + 'px', 'important');
+    node.style.setProperty('overflow', 'hidden', 'important');
+  }
+  function setModeClass(node, mode) {
+    if (!node || !node.classList) return;
+    ['full', 'compact-single', 'none'].forEach(function (name) { node.classList.remove('ks-home-hero-mode-' + name); });
+    node.classList.add('ks-home-hero-mode-' + mode);
+    node.setAttribute('data-ks-hero-mode', mode);
+  }
+  function removeGeneratedTop(section, shell) {
+    qa('#KsOnsusTopSidePromos,.ks-onsus-side-promos,#KsOnsusHeroStage120,.ks-onsus-hero-stage-120,.ks-onsus-hero-caption', shell || section).forEach(function (node) {
+      if (node.parentNode) node.parentNode.removeChild(node);
+    });
+    qa('.ks-onsus-hero-copy-120,.ks-onsus-hero-art-120', section).forEach(function (node) {
+      if (node.parentNode) node.parentNode.removeChild(node);
+    });
+    qa('.ks-home-hero-media,.ks-home-hero-banner,.ks-home-hero-slider a', section).forEach(function (node) {
+      removeStyle(node, ['background', 'background-color', 'background-image', 'background-repeat', 'background-size', 'background-position']);
+      if (node.classList) {
+        node.classList.remove('ks-onsus-hero-composed', 'ks-onsus-hero-composed-v3', 'ks-onsus-hero-composed-v4', 'ks-onsus-hero-art-118', 'ks-onsus-hero-art-119');
+      }
+    });
+  }
+  function realSideItems(side) {
+    if (!side) return [];
+    return qa('.ks-home-side-banner', side).filter(function (item) {
+      return validImg(q('img', item));
+    });
+  }
+  function normalize() {
+    if (!home()) return;
+    var section = q('.ks-home-hero-section') || q('[id$="HomeHeroSection"]');
+    if (!section) return;
+    var shell = q('.ks-home-hero-shell', section) || q('[id$="HomeHeroShell"]', section);
+    if (!shell) return;
+
+    var hero = q('.wrap-item-2', shell) || q('[id$="HeroSliderWrap"]', shell);
+    var menu = q('.wrap-item-1', shell);
+    var side = q('[id$="HeroSideWrap"]', shell) || q('.ks-home-side-banners', shell) || q('.wrap-item-3', shell);
+    if (!hero) {
+      hide(section, 'no-hero-wrap');
+      return;
+    }
+    var heroImg = q('.ks-home-hero-slider img', hero) || q('[id$="Slide_Show_Container"] img', hero) || q('img', hero);
+    var mode = String(shell.getAttribute('data-ks-hero-mode') || section.getAttribute('data-ks-hero-mode') || '').toLowerCase();
+    var sideItems = realSideItems(side);
+
+    if (!validImg(heroImg)) mode = 'none';
+    if (mode !== 'full' && mode !== 'compact-single' && mode !== 'none') mode = validImg(heroImg) ? 'compact-single' : 'none';
+    if (mode === 'full' && sideItems.length < 2) mode = 'compact-single';
+
+    document.body.classList.add('ks-page-home', 'ks-home-top-final-138');
+    setModeClass(section, mode);
+    setModeClass(shell, mode);
+
+    if (mode === 'none') {
+      hide(section, 'no-valid-hero');
+      return;
+    }
+
+    removeGeneratedTop(section, shell);
+    show(section);
+    show(shell);
+    show(hero);
+
+    var desktop = !window.matchMedia || window.matchMedia('(min-width:992px)').matches;
+    var wide = !window.matchMedia || window.matchMedia('(min-width:1200px)').matches;
+    var height = desktop ? (wide ? 390 : 350) : 245;
+    var menuWidth = wide ? 285 : 245;
+    var sideWidth = wide ? 300 : 220;
+
+    shell.style.setProperty('display', 'grid', 'important');
+    shell.style.setProperty('grid-template-columns', desktop ? (mode === 'full' ? menuWidth + 'px minmax(0,1fr) ' + sideWidth + 'px' : menuWidth + 'px minmax(0,1fr)') : '1fr', 'important');
+    shell.style.setProperty('gap', desktop ? '20px' : '0', 'important');
+    shell.style.setProperty('height', height + 'px', 'important');
+    shell.style.setProperty('min-height', height + 'px', 'important');
+    shell.style.setProperty('max-height', height + 'px', 'important');
+    shell.style.setProperty('align-items', 'stretch', 'important');
+    shell.style.setProperty('overflow', 'visible', 'important');
+
+    if (menu) {
+      if (desktop) {
+        show(menu);
+        menu.style.setProperty('display', 'block', 'important');
+        menu.style.setProperty('width', menuWidth + 'px', 'important');
+        menu.style.setProperty('min-width', menuWidth + 'px', 'important');
+        menu.style.setProperty('max-width', menuWidth + 'px', 'important');
+        menu.style.setProperty('height', height + 'px', 'important');
+        menu.style.setProperty('min-height', height + 'px', 'important');
+        menu.style.setProperty('max-height', height + 'px', 'important');
+        menu.style.setProperty('overflow', 'hidden', 'important');
+      } else {
+        hide(menu, 'mobile-template');
+      }
+    }
+
+    hero.style.setProperty('grid-column', desktop ? '2' : '1', 'important');
+    hero.style.setProperty('min-width', '0', 'important');
+    setBox(hero, height);
+    qa('.ks-home-hero-slider,[id$="Slide_Show_Container"],.ks-home-hero-slider .swiper-wrapper,.ks-home-hero-slider .swiper-slide,.ks-home-hero-banner,.ks-home-hero-media,.ks-home-hero-media--only,.ks-home-hero-slider a', section).forEach(function (node) {
+      show(node);
+      setBox(node, height);
+      if (node.style) {
+        node.style.setProperty('background-color', '#050505', 'important');
+        node.style.setProperty('border-radius', desktop ? '12px' : '10px', 'important');
+      }
+    });
+    qa('.ks-home-hero-slider img,[id$="Slide_Show_Container"] img', section).forEach(function (img) {
+      var src = imgSrc(img);
+      if (src && !img.getAttribute('src')) img.setAttribute('src', src);
+      show(img);
+      img.style.setProperty('display', 'block', 'important');
+      img.style.setProperty('width', '100%', 'important');
+      img.style.setProperty('height', '100%', 'important');
+      img.style.setProperty('object-fit', 'cover', 'important');
+      img.style.setProperty('object-position', 'center center', 'important');
+      img.style.setProperty('opacity', '1', 'important');
+      img.style.setProperty('visibility', 'visible', 'important');
+      img.style.setProperty('transform', 'none', 'important');
+    });
+
+    if (side) {
+      if (mode === 'full' && desktop) {
+        show(side);
+        side.classList.add('wrap-item-3', 'ks-home-side-banners');
+        side.style.setProperty('display', 'grid', 'important');
+        side.style.setProperty('grid-column', '3', 'important');
+        side.style.setProperty('grid-template-rows', '1fr 1fr', 'important');
+        side.style.setProperty('gap', '20px', 'important');
+        side.style.setProperty('width', sideWidth + 'px', 'important');
+        side.style.setProperty('min-width', sideWidth + 'px', 'important');
+        side.style.setProperty('max-width', sideWidth + 'px', 'important');
+        side.style.setProperty('height', height + 'px', 'important');
+        side.style.setProperty('min-height', height + 'px', 'important');
+        side.style.setProperty('max-height', height + 'px', 'important');
+        sideItems.forEach(function (item, index) {
+          if (index < 2) {
+            show(item);
+            item.style.setProperty('height', ((height - 20) / 2) + 'px', 'important');
+          } else {
+            hide(item, 'more-than-two-side-banners');
+          }
+        });
+      } else {
+        hide(side, 'compact-without-side');
+      }
+    }
+
+    qa('.ks-home-departments,.tf-nav-menu,.menu-category-list', shell).forEach(function (node) {
+      node.style.setProperty('height', height + 'px', 'important');
+      node.style.setProperty('max-height', height + 'px', 'important');
+      node.style.setProperty('overflow-y', 'auto', 'important');
+    });
+  }
+  function boot() {
+    normalize();
+    [60, 80, 90, 100, 120, 180, 240, 260, 300, 360, 420, 520, 700, 800, 900, 1000, 1100, 1300, 1600, 1800, 2000, 2400, 3000, 3200, 3800, 4200, 4800, 5000, 5200, 6000, 7200, 7600, 11000, 11800, 16000].forEach(function (delay) {
+      window.setTimeout(normalize, delay);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  window.addEventListener('resize', function () { window.setTimeout(normalize, 180); });
+})();

@@ -10,7 +10,7 @@
 
     <section id="HomeHeroSection" runat="server" class="tf-sp-5 ks-home-hero-section ks-home-hero-mode-compact-single">
         <div class="container">
-            <div id="HomeHeroShell" runat="server" class="s-banner-wrapper ks-home-hero-shell ks-home-hero-mode-compact-single ks-home-hero-shell--no-side ks-home-force-compact">
+            <div id="HomeHeroShell" runat="server" class="s-banner-wrapper ks-home-hero-shell ks-home-hero-mode-compact-single">
                 <div class="wrap-item-1 d-none d-lg-block">
                     <uc:HomeDepartmentsMenu ID="HomeDepartmentsMenu1" runat="server" />
                 </div>
@@ -36,9 +36,16 @@
                     </div>
                 </div>
 
-                <%-- HOME right-side legacy lane intentionally disabled. The hidden repeater remains only as a non-rendering code-behind anchor. --%>
-                <asp:Panel ID="HeroSideWrap" runat="server" CssClass="ks-home-side-banners-legacy-off d-none" Visible="false" Style="display:none !important; width:0; max-width:0; overflow:hidden;">
-                    <asp:Repeater ID="rptSideBanners" runat="server" Visible="false"></asp:Repeater>
+                <asp:Panel ID="HeroSideWrap" runat="server" CssClass="wrap-item-3 ks-home-side-banners" Visible="false">
+                    <asp:Repeater ID="rptSideBanners" runat="server">
+                        <ItemTemplate>
+                            <div class="cls-category style-abs hover-img ks-home-side-banner">
+                                <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx") %>' class="img-box img-style d-block" aria-label='<%# SafeText(Eval("Title")) %>'>
+                                    <img width="540" height="398" class="lazyload" src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' data-src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' alt='<%# SafeText(Eval("Title")) %>' />
+                                </a>
+                            </div>
+                        </ItemTemplate>
+                    </asp:Repeater>
                 </asp:Panel>
             </div>
         </div>

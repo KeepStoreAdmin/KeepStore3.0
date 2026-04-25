@@ -411,7 +411,7 @@ End Sub
             Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("qLike", TypeCode.String, likeTerm))
             Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("qPrefix", TypeCode.String, prefixTerm))
 
-            scoreBuilder.Append("(CASE ")
+            scoreBuilder.Append("((CASE ")
             scoreBuilder.Append("WHEN LOWER(TRIM(COALESCE(Codice,'')))=?qExact THEN 10000000 ")
             scoreBuilder.Append("WHEN LOWER(TRIM(COALESCE(Ean,'')))=?qExact THEN 9900000 ")
             scoreBuilder.Append("WHEN LOWER(TRIM(COALESCE(Descrizione1,'')))=?qExact THEN 9800000 ")
@@ -480,6 +480,13 @@ End Sub
 
             mainWhereBuilder.Append(")")
             filtersWhereBuilder.Append(")")
+
+            scoreBuilder.Append(" + (CASE WHEN COALESCE(Disponibilita,0)>0 THEN 600 ELSE 0 END)")
+            scoreBuilder.Append(" + (CASE WHEN COALESCE(Export,1)<>0 THEN 500 ELSE 0 END)")
+            scoreBuilder.Append(" + (CASE WHEN COALESCE(InOfferta,0)<>0 THEN 450 ELSE 0 END)")
+            scoreBuilder.Append(" + (CASE WHEN COALESCE(Vetrina,0)<>0 THEN 250 ELSE 0 END)")
+            scoreBuilder.Append(" + LEAST(COALESCE(visite,0),999)")
+            scoreBuilder.Append(")")
 
             searchScoreSql = scoreBuilder.ToString() & " AS SearchScore"
             searchWhereMain = mainWhereBuilder.ToString()
