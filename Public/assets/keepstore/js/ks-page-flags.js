@@ -6,6 +6,8 @@
   var SESSION_KEY = 'ks_recent_session';
   var MAX_RECENT = 100;
   var SEARCH_ENDPOINT = '/search_suggest.aspx';
+  var SUGGEST_TIMEOUT_MS = 4200;
+  var SUBMIT_LOOKUP_TIMEOUT_MS = 900;
   var RANK_PREFIX = 'ks_search_rank_';
   var MARKET_KEY = 'ks_ai_marketplace_135_query';
   var COMPARE_KEY = 'ks_compare_products';
@@ -162,6 +164,30 @@
       return r.json();
     });
   }
+  function fetchJsonTimed(url, timeoutMs, ctrl) {
+    var done = false, timer = 0, signal = null;
+    if (!ctrl && window.AbortController) ctrl = new AbortController();
+    if (ctrl && ctrl.signal) signal = ctrl.signal;
+    return new Promise(function (resolve, reject) {
+      timer = window.setTimeout(function () {
+        if (done) return;
+        done = true;
+        try { if (ctrl && ctrl.abort) ctrl.abort(); } catch (err) {}
+        reject(new Error('timeout'));
+      }, timeoutMs || SUGGEST_TIMEOUT_MS);
+      fetchJson(url, signal).then(function (data) {
+        if (done) return;
+        done = true;
+        window.clearTimeout(timer);
+        resolve(data);
+      }).catch(function (err) {
+        if (done) return;
+        done = true;
+        window.clearTimeout(timer);
+        reject(err);
+      });
+    });
+  }
   function buildQueryUrl(params) {
     var u = new URL(SEARCH_ENDPOINT, window.location.href);
     Object.keys(params || {}).forEach(function (k) {
@@ -228,6 +254,12 @@
     var val = searchValue(root);
     if (val) u.searchParams.set('q', val);
     return u;
+  }
+  function looksLikeDirectCode(query) {
+    var value = String(query || '').replace(/\s+/g, ' ').trim();
+    if (!value || value.length < 3 || value.length > 48) return false;
+    if (/^\d{8,14}$/.test(value)) return true;
+    return /^[a-z0-9][a-z0-9._\-\/]{2,47}$/i.test(value);
   }
   function state(root) {
     if (!root.__ksSearch135) root.__ksSearch135 = { box: null, items: [], active: -1, hideTimer: 0, token: '', ctrl: null };
@@ -307,11 +339,11 @@
     showSuggest(root);
   }
   function requestSuggest(root, forceRecent) {
-    var query = searchValue(root), recent = forceRecent || query.length < 2, url = buildSuggestUrl(root, query, recent ? 8 : 10, recent), s = state(root), signal = null;
+    var query = searchValue(root), recent = forceRecent || query.length < 2, url = buildSuggestUrl(root, query, recent ? 8 : 10, recent), s = state(root);
     s.token = url;
     if (s.ctrl && s.ctrl.abort) { try { s.ctrl.abort(); } catch (err) {} }
-    if (window.AbortController) { s.ctrl = new AbortController(); signal = s.ctrl.signal; }
-    return fetchJson(url, signal).then(function (data) {
+    if (window.AbortController) s.ctrl = new AbortController();
+    return fetchJsonTimed(url, SUGGEST_TIMEOUT_MS, s.ctrl).then(function (data) {
       if (s.token !== url) return;
       if (!data || data.ok === false) { hideSuggest(root); return; }
       renderSuggest(root, data);
@@ -333,19 +365,20 @@
     try { return JSON.parse(sessionStorage.getItem(RANK_PREFIX + key) || 'null'); } catch (err) { return null; }
   }
   function resolveSearch(root) {
-    var fallback = buildCatalogUrl(root), query = searchValue(root), url = buildSuggestUrl(root, query, 72, !query || query.length < 2);
-    fetchJson(url).then(function (data) {
+    var fallback = buildCatalogUrl(root), query = searchValue(root), url = '';
+    hideSuggest(root);
+    if (!query || !looksLikeDirectCode(query)) {
+      window.location.href = fallback.toString();
+      return;
+    }
+    url = buildSuggestUrl(root, query, 3, false);
+    fetchJsonTimed(url, SUBMIT_LOOKUP_TIMEOUT_MS).then(function (data) {
       if (data && data.strong && data.strong.canRedirect && data.strong.redirectUrl) {
         window.location.href = data.strong.redirectUrl;
         return;
       }
       if (data && data.catalogUrl) {
         try { fallback = new URL(data.catalogUrl, window.location.href); } catch (err) {}
-      }
-      if (data && data.rank_ids && data.rank_ids.length) {
-        var key = rankKey(fallback.toString());
-        saveRank(key, data);
-        fallback.searchParams.set('ksrk', key);
       }
       window.location.href = fallback.toString();
     }).catch(function () { window.location.href = fallback.toString(); });
