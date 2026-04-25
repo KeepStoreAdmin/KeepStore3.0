@@ -838,3 +838,123 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   window.addEventListener('resize', function () { window.setTimeout(run, 120); });
 })();
+
+/* KeepStore HOME - Step 116/4 Onsus index mix 3.
+   Structural top banner: real 3-column Onsus layout without changing VB/DB. */
+(function () {
+  'use strict';
+  function q(s, r) { return (r || document).querySelector(s); }
+  function qa(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  function txt(n) { return String(n && n.textContent || '').replace(/\s+/g, ' ').trim(); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+  function show(n) { if (!n) return; n.removeAttribute('hidden'); n.removeAttribute('aria-hidden'); if (n.style) { ['display','visibility','opacity','height','min-height','max-height','overflow'].forEach(function (p) { n.style.removeProperty(p); }); } }
+  function hide(n, why) { if (!n) return; n.setAttribute('data-ks-onsus-step116-hidden', why || 'hidden'); if (n.style) n.style.setProperty('display', 'none', 'important'); }
+  function normalizeUrl(url) { return String(url || '').replace(/^https?:\/\/(www\.)?(taikun\.it|webaffare\.it)/i, '').replace(/&amp;/g, '&'); }
+  function readImg(root) {
+    var imgs = qa('img', root);
+    for (var i = 0; i < imgs.length; i++) {
+      var img = imgs[i];
+      var src = img.currentSrc || img.getAttribute('src') || img.getAttribute('data-src') || '';
+      if (!src && img.getAttribute('srcset')) src = String(img.getAttribute('srcset')).split(',')[0].trim().split(' ')[0];
+      if (!src || /logo|brand|payment|visa|mastercard|paypal|placeholder|loader|spinner|sprite/i.test(src)) continue;
+      if (!img.getAttribute('src')) img.setAttribute('src', src);
+      return src;
+    }
+    return '';
+  }
+  function readPrice(root) { var m = txt(root).match(/\d{1,5}(?:[\.,]\d{2})\s*€/g); return m && m.length ? m[m.length - 1] : ''; }
+  function titleFrom(root) {
+    var nodes = [q('h6 a', root), q('.name-product', root), q('a[href*="articolo.aspx"]', root)];
+    for (var i = 0; i < nodes.length; i++) {
+      var t = txt(nodes[i]);
+      if (t && t.length > 5 && !/^(scopri|compra|categoria|vai al catalogo)$/i.test(t)) return t;
+    }
+    return '';
+  }
+  function productFromCard(card) {
+    if (!card) return null;
+    var a = q('a[href*="articolo.aspx"]', card);
+    var href = normalizeUrl(a && a.getAttribute('href'));
+    var img = readImg(card);
+    var title = titleFrom(card);
+    if (!href || !img || !title) return null;
+    return { href: href, img: img, title: title, price: readPrice(card) };
+  }
+  function productPool(limit) {
+    var out = [], seen = Object.create(null);
+    qa('#KsHomeEditorialFinal .ks-final-product-card,#KsHomeDealFinal .ks-final-product-card,#KsHomeBestSellerFinal .ks-final-product-card,#KsHomeLowerFinal .ks-final-product-card,.ks-final-product-card').forEach(function (card) {
+      if (out.length >= (limit || 2)) return;
+      var p = productFromCard(card);
+      if (!p || seen[p.href]) return;
+      seen[p.href] = 1;
+      out.push(p);
+    });
+    return out;
+  }
+  function promoHtml(p, i) {
+    return '<a class="ks-onsus-side-promo ks-onsus-side-promo-v3" href="' + esc(p.href) + '">' +
+      '<img src="' + esc(p.img) + '" alt="' + esc(p.title) + '" loading="lazy" decoding="async">' +
+      '<span class="ks-side-text"><span class="ks-side-kicker">' + (i === 0 ? 'Offerta' : 'Consigliato') + '</span><strong>' + esc(p.title) + '</strong>' +
+      (p.price ? '<em>' + esc(p.price) + '</em>' : '') + '</span></a>';
+  }
+  function ensureRightPromos(shell, hero) {
+    var box = q('#KsOnsusTopSidePromos', shell);
+    var pool = productPool(2);
+    if (pool.length < 2) { if (box) hide(box, 'not-enough-products'); return null; }
+    if (!box) { box = document.createElement('div'); box.id = 'KsOnsusTopSidePromos'; box.className = 'ks-onsus-side-promos'; }
+    box.innerHTML = promoHtml(pool[0], 0) + promoHtml(pool[1], 1);
+    if (hero.nextElementSibling !== box) shell.insertBefore(box, hero.nextSibling);
+    box.style.removeProperty('display');
+    return box;
+  }
+  function topGrid() {
+    var section = q('.ks-home-hero-section') || q('[id$="HomeHeroSection"]');
+    if (!section) return;
+    var shell = q('.ks-home-hero-shell', section) || q('[id$="HomeHeroShell"]', section);
+    var menu = shell ? q('.wrap-item-1', shell) : null;
+    var hero = shell ? (q('.wrap-item-2', shell) || q('[id$="HeroSliderWrap"]', shell)) : null;
+    if (!shell || !hero) return;
+    document.body.classList.add('ks-page-home', 'ks-home-template-mix-v3');
+    section.classList.add('ks-onsus-top-section-v3'); shell.classList.add('ks-onsus-top-wrapper-v3'); hero.classList.add('ks-onsus-hero-panel-v3');
+    [section, shell, menu, hero].forEach(show);
+    var promos = ensureRightPromos(shell, hero);
+    var wide = !window.matchMedia || window.matchMedia('(min-width: 1200px)').matches;
+    shell.style.setProperty('display', 'grid', 'important');
+    shell.style.setProperty('gap', '18px', 'important');
+    shell.style.setProperty('align-items', 'stretch', 'important');
+    shell.style.setProperty('grid-template-columns', (wide && promos) ? '252px minmax(0,1fr) 228px' : '252px minmax(0,1fr)', 'important');
+    shell.style.setProperty('height', '356px', 'important');
+    shell.style.setProperty('min-height', '356px', 'important');
+    if (menu) { menu.style.setProperty('grid-column', '1', 'important'); menu.style.setProperty('grid-row', '1', 'important'); menu.style.setProperty('width', '252px', 'important'); menu.style.setProperty('min-width', '252px', 'important'); menu.style.setProperty('height', '356px', 'important'); menu.style.setProperty('max-height', '356px', 'important'); menu.style.setProperty('overflow', 'hidden', 'important'); }
+    hero.style.setProperty('grid-column', '2', 'important'); hero.style.setProperty('grid-row', '1', 'important'); hero.style.setProperty('height', '356px', 'important'); hero.style.setProperty('min-height', '356px', 'important'); hero.style.setProperty('min-width', '0', 'important');
+    if (promos) { if (wide) { promos.style.setProperty('display', 'grid', 'important'); promos.style.setProperty('grid-column', '3', 'important'); promos.style.setProperty('grid-row', '1', 'important'); promos.style.setProperty('height', '356px', 'important'); } else { promos.style.setProperty('display', 'none', 'important'); } }
+    qa('.wrap-item-3,[id$="HeroSideWrap"],.ks-home-side-banners,.ks-home-side-banners-legacy-off', shell).forEach(function (n) { if (n !== promos) hide(n, 'legacy-side'); });
+  }
+  function heroArtwork() {
+    var section = q('.ks-home-hero-section') || q('[id$="HomeHeroSection"]');
+    var hero = section && (q('.wrap-item-2', section) || q('[id$="HeroSliderWrap"]', section));
+    var media = section && (q('.ks-home-hero-media', section) || q('.ks-home-hero-banner', section) || q('.ks-home-hero-slider a', section));
+    var img = section && (q('.ks-home-hero-slider img', section) || q('[id$="Slide_Show_Container"] img', section) || q('img', hero));
+    if (!media || !img) return;
+    var src = img.currentSrc || img.getAttribute('src') || img.getAttribute('data-src') || '';
+    if (src && !img.getAttribute('src')) img.setAttribute('src', src);
+    if (src) media.style.setProperty('background-image', 'linear-gradient(90deg, rgba(4,4,4,.98) 0%, rgba(4,4,4,.94) 34%, rgba(4,4,4,.58) 52%, rgba(4,4,4,.08) 76%, rgba(4,4,4,0) 100%), url("' + src.replace(/"/g, '%22') + '")', 'important');
+    media.style.setProperty('background-repeat', 'no-repeat,no-repeat', 'important');
+    media.style.setProperty('background-size', '100% 100%, auto 162%', 'important');
+    media.style.setProperty('background-position', 'center center, right center', 'important');
+    media.style.setProperty('height', '356px', 'important'); media.style.setProperty('min-height', '356px', 'important');
+    media.classList.add('ks-onsus-hero-composed-v3');
+    img.style.setProperty('opacity', '0', 'important'); img.style.setProperty('visibility', 'hidden', 'important');
+    var cap = q('.ks-onsus-hero-caption', media);
+    if (cap) { cap.style.setProperty('left', '44px', 'important'); cap.style.setProperty('width', '50%', 'important'); cap.style.setProperty('max-width', '360px', 'important'); }
+  }
+  function polishSections() {
+    ['KsHomeEditorialFinal','KsHomeBestSellerFinal','KsHomeLowerFinal','KsHomeDealFinal'].forEach(function (id) { var s = q('#' + id); if (s) s.classList.add('ks-onsus-polished-section'); });
+    var editorial = q('#KsHomeEditorialFinal');
+    if (editorial && !q('.ks-onsus-tabline', editorial)) { var title = q('.ks-final-title', editorial); if (title) { var tabs = document.createElement('div'); tabs.className = 'ks-onsus-tabline'; tabs.innerHTML = '<span class="is-active">In Evidenza</span><span>Top prodotti</span><span>Scelti da te</span>'; title.appendChild(tabs); } }
+  }
+  function run() { topGrid(); heroArtwork(); polishSections(); }
+  function boot() { run(); [80,180,360,800,1600,3000,5000].forEach(function (d) { window.setTimeout(run, d); }); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  window.addEventListener('resize', function () { window.setTimeout(run, 100); });
+})();
