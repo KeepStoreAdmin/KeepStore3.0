@@ -2433,3 +2433,181 @@
   function boot() { run(); [120, 350, 800, 1600, 3200, 7000].forEach(function (d) { window.setTimeout(run, d); }); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
+
+/* Step 129 - Smart consult layer: useful automatic advisor integrated in ONSUS/KeepStore home.
+   No external API, no fake products: it reads only products/categories already rendered by the server. */
+(function () {
+  'use strict';
+  var STEP = '129';
+  function q(s, r) { return (r || document).querySelector(s); }
+  function qa(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  function txt(n) { return String(n && n.textContent || '').replace(/\s+/g, ' ').trim(); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function normHref(h) { return String(h || '').replace(/^https?:\/\/(www\.)?(taikun\.it|webaffare\.it)/i, '').replace(/&amp;/g, '&').replace(/#.*$/, ''); }
+  function imgFrom(root) {
+    var imgs = qa('img', root);
+    for (var i = 0; i < imgs.length; i++) {
+      var im = imgs[i];
+      var src = im.currentSrc || im.getAttribute('data-src') || im.getAttribute('src') || '';
+      if (!src && im.getAttribute('srcset')) src = String(im.getAttribute('srcset')).split(',')[0].trim().split(' ')[0];
+      if (!src || /logo|brand|payment|paypal|visa|mastercard|placeholder|loader|spinner|sprite|blank|nofoto/i.test(src)) continue;
+      return src;
+    }
+    return '';
+  }
+  function priceFrom(root) { var m = txt(root).match(/\d{1,5}(?:[\.,]\d{2})\s*€/g); return m && m.length ? m[m.length - 1] : ''; }
+  function titleFrom(root) {
+    var nodes = qa('h6 a,.ks-deal123-title-product,.ks-final-product-info h6 a,.ks-final-lower-item a[href*="articolo.aspx"],.ks-onsus-mosaic-card127 strong,.ks-onsus-mosaic-mini127 strong,.ks-onsus-mosaic-feature127 strong,.ks-ai-product-copy128 strong,a[href*="articolo.aspx"]', root);
+    for (var i = 0; i < nodes.length; i++) {
+      var t = txt(nodes[i]);
+      if (t && t.length > 7 && !/^(scopri|compra|categoria|vai al catalogo|dettaglio|aggiungi)$/i.test(t)) return t;
+    }
+    return '';
+  }
+  function catFrom(root) {
+    var c = txt(q('.ks-final-product-cat,.ks-deal123-cat,.category,.cat,small', root));
+    if (!c || c.length > 42 || /scopri|compra|vai al catalogo/i.test(c)) c = 'KeepStore';
+    return c;
+  }
+  function productFrom(root) {
+    if (!root) return null;
+    var a = q('a[href*="articolo.aspx"]', root) || (root.matches && root.matches('a[href*="articolo.aspx"]') ? root : null);
+    var href = normHref(a && a.getAttribute('href'));
+    var img = imgFrom(root);
+    var title = titleFrom(root);
+    if (!href || !img || !title) return null;
+    return { href: href, img: img, title: title, price: priceFrom(root), cat: catFrom(root), raw: txt(root) };
+  }
+  function collectProducts(max) {
+    var selectors = [
+      '#KsOnsusDealToday123 .ks-deal123-card',
+      '#KsOnsusProductMosaic127 a',
+      '#KsHomeBestSellerFinal .ks-final-product-card',
+      '#KsHomeLowerFinal .ks-final-lower-item',
+      '#KsHomeEditorialFinal .ks-final-product-card',
+      '#KsSmartAdvisor128 .ks-ai-product128',
+      '.ks-final-product-card', '.product-card', '.product-item', '.swiper-slide'
+    ];
+    var roots = [];
+    selectors.forEach(function (sel) { qa(sel).forEach(function (n) { roots.push(n); }); });
+    var out = [], seen = Object.create(null);
+    roots.forEach(function (r) {
+      if (max && out.length >= max) return;
+      var p = productFrom(r);
+      if (!p || seen[p.href]) return;
+      seen[p.href] = 1;
+      out.push(p);
+    });
+    return out;
+  }
+  var intents = [
+    { key: 'phone', label: 'Proteggi smartphone', short: 'Smartphone', rx: /smartphone|samsung|galaxy|iphone|custodia|cover|pellicola|vetro|case|magsafe|tablet|telefono/i, search: ['custodia samsung', 'pellicola vetro', 'cover smartphone'] },
+    { key: 'print', label: 'Stampa e consumabili', short: 'Stampanti', rx: /toner|cartucc|pantum|laser|stampant|ink|drum|inchiostro|compatibile/i, search: ['toner compatibile', 'stampante laser', 'cartucce'] },
+    { key: 'pc', label: 'PC e notebook', short: 'PC', rx: /notebook|computer|desktop|pc |lenovo|dell|monitor|ssd|ram|windows|ricondizionato/i, search: ['notebook ricondizionato', 'pc desktop', 'monitor'] },
+    { key: 'cable', label: 'Cavi e accessori', short: 'Accessori', rx: /usb|type\-?c|cavo|adattatore|hub|hdmi|supporto|alimentatore|mouse|tastiera|card reader|lettore/i, search: ['adattatore usb', 'cavo type-c', 'hub usb'] }
+  ];
+  function intentByKey(k) { return intents.filter(function (x) { return x.key === k; })[0] || intents[0]; }
+  function classify(p) {
+    var blob = [p.title, p.cat, p.raw].join(' ');
+    for (var i = 0; i < intents.length; i++) if (intents[i].rx.test(blob)) return intents[i].key;
+    return 'all';
+  }
+  function tokens(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9àèéìòùç]+/gi, ' ').split(/\s+/).filter(function (x) { return x.length > 1; }); }
+  function scoreProduct(p, intentKey, query) {
+    var blob = [p.title, p.cat, p.raw].join(' ').toLowerCase();
+    var score = 0;
+    var intent = intentByKey(intentKey);
+    if (intent.rx.test(blob)) score += 12;
+    tokens(query).forEach(function (t) { if (blob.indexOf(t) >= 0) score += 8; });
+    if (/samsung|galaxy|lenovo|kingston|toner|pantum|usb|type/.test(blob)) score += 1;
+    return score;
+  }
+  function pick(products, intentKey, query, n) {
+    return products.slice().sort(function (a, b) { return scoreProduct(b, intentKey, query) - scoreProduct(a, intentKey, query); }).slice(0, n || 6);
+  }
+  function productMini(p) {
+    return '<a class="ks-ai129-product" href="' + esc(p.href) + '"><span><img src="' + esc(p.img) + '" alt="' + esc(p.title) + '" loading="lazy" decoding="async"></span><em>' + esc(p.cat) + '</em><strong>' + esc(p.title) + '</strong>' + (p.price ? '<b>' + esc(p.price) + '</b>' : '') + '</a>';
+  }
+  function searchLink(term) { return 'articoli.aspx?search=' + encodeURIComponent(term); }
+  function defaultIntent(products) {
+    var scores = { phone: 0, print: 0, pc: 0, cable: 0 };
+    products.forEach(function (p) { var k = classify(p); if (scores[k] != null) scores[k]++; });
+    var best = 'phone', max = -1;
+    Object.keys(scores).forEach(function (k) { if (scores[k] > max) { max = scores[k]; best = k; } });
+    try { var stored = localStorage.getItem('ks_ai_intent_129'); if (stored && intentByKey(stored)) best = stored; } catch (e) {}
+    return best;
+  }
+  function render(root, products, intentKey, query) {
+    var intent = intentByKey(intentKey);
+    var list = pick(products, intentKey, query, 6);
+    var matches = list.filter(function (p) { return scoreProduct(p, intentKey, query) > 0; }).length;
+    if (matches < 2 && query) list = pick(products, intentKey, '', 6);
+    var summary = q('.ks-ai129-summary', root);
+    var result = q('.ks-ai129-results', root);
+    var links = q('.ks-ai129-links', root);
+    if (summary) summary.innerHTML = '<strong>' + esc(intent.label) + '</strong><span>' + (query ? 'Ricerca guidata su "' + esc(query) + '" usando articoli reali della home.' : 'Percorso automatico basato sui prodotti visibili in questa pagina.') + '</span>';
+    if (result) result.innerHTML = list.map(productMini).join('');
+    if (links) links.innerHTML = intent.search.map(function (term) { return '<a href="' + esc(searchLink(term)) + '">' + esc(term) + '</a>'; }).join('');
+    qa('.ks-ai129-chip', root).forEach(function (c) { c.classList.toggle('is-active', c.getAttribute('data-intent') === intentKey); });
+    try { localStorage.setItem('ks_ai_intent_129', intentKey); } catch (e) {}
+  }
+  function build() {
+    var products = collectProducts(70);
+    if (products.length < 5) return;
+    qa('#KsSmartAdvisor128').forEach(function (n) { n.remove(); });
+    var existing = q('#KsSmartConsult129');
+    var start = defaultIntent(products);
+    var html = '<section id="KsSmartConsult129" class="tf-sp-2 ks-smart-consult129" data-ks-ai="local" data-ks-final-home="1"><div class="container"><div class="ks-ai129-shell">' +
+      '<div class="ks-ai129-side"><span class="ks-ai129-kicker">AI KeepStore</span><h5>Assistente automatico per scegliere meglio</h5><p>Analizza categorie e prodotti presenti nella HOME e ti propone il percorso piu utile, senza chiamate esterne e senza prodotti inventati.</p>' +
+      '<div class="ks-ai129-search"><input type="search" placeholder="Scrivi: toner, custodia, usb, notebook..." aria-label="Cerca con assistente KeepStore"><button type="button">Trova</button></div>' +
+      '<div class="ks-ai129-chips">' + intents.map(function (it) { return '<button type="button" class="ks-ai129-chip" data-intent="' + esc(it.key) + '">' + esc(it.short) + '</button>'; }).join('') + '</div><div class="ks-ai129-summary"></div><div class="ks-ai129-links"></div></div>' +
+      '<div class="ks-ai129-board"><div class="ks-ai129-board-head"><span>Consigli automatici</span><small>da articoli reali KeepStore</small></div><div class="ks-ai129-results"></div></div>' +
+      '</div></div></section>';
+    var tmp = document.createElement('div'); tmp.innerHTML = html;
+    var fresh = tmp.firstElementChild;
+    if (existing) existing.replaceWith(fresh);
+    else {
+      var dept = q('#KsHomeDepartmentShowcase');
+      var mosaic = q('#KsOnsusProductMosaic127');
+      var anchor = dept || mosaic || q('#KsHomeBestSellerFinal');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(fresh, anchor.nextSibling);
+      else document.body.appendChild(fresh);
+    }
+    var input = q('.ks-ai129-search input', fresh);
+    var button = q('.ks-ai129-search button', fresh);
+    var current = start;
+    function update() { render(fresh, products, current, input ? input.value : ''); }
+    qa('.ks-ai129-chip', fresh).forEach(function (chip) { chip.addEventListener('click', function () { current = chip.getAttribute('data-intent') || start; update(); }); });
+    if (button) button.addEventListener('click', update);
+    if (input) input.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); update(); } });
+    update();
+  }
+  function enforceOrder() {
+    var deal = q('#KsOnsusDealToday123');
+    var dept = q('#KsHomeDepartmentShowcase');
+    var ai = q('#KsSmartConsult129');
+    var mosaic = q('#KsOnsusProductMosaic127');
+    var best = q('#KsHomeBestSellerFinal');
+    var lower = q('#KsHomeLowerFinal');
+    var brand = q('#KsHomeBrandSection');
+    var closing = q('#KsHomeClosingLayer');
+    if (deal && dept && deal.parentNode === dept.parentNode && deal.nextElementSibling !== dept) deal.parentNode.insertBefore(dept, deal.nextSibling);
+    if (ai && dept && ai.parentNode === dept.parentNode && ai.previousElementSibling !== dept) dept.parentNode.insertBefore(ai, dept.nextSibling);
+    if (mosaic && ai && mosaic.parentNode === ai.parentNode && mosaic.previousElementSibling !== ai) ai.parentNode.insertBefore(mosaic, ai.nextSibling);
+    if (best && mosaic && best.parentNode === mosaic.parentNode && best.previousElementSibling !== mosaic) mosaic.parentNode.insertBefore(best, mosaic.nextSibling);
+    if (lower && best && lower.parentNode === best.parentNode && lower.previousElementSibling !== best) best.parentNode.insertBefore(lower, best.nextSibling);
+    if (brand && lower && brand.parentNode === lower.parentNode && brand.previousElementSibling !== lower) lower.parentNode.insertBefore(brand, lower.nextSibling);
+    if (closing && brand && closing.parentNode === brand.parentNode && closing.previousElementSibling !== brand) brand.parentNode.insertBefore(closing, brand.nextSibling);
+  }
+  function cleanup() {
+    if (!document.body) return;
+    document.body.classList.add('ks-page-home', 'ks-home-onsus-pass-129');
+    document.body.classList.remove('ks-home-onsus-pass-125');
+    qa('#KsSmartAdvisor128,#KsOnsusPromoBand125,#KsOnsusWidePromo122,.ks-onsus-action-rail125').forEach(function (n) { n.remove(); });
+    var scrollBox = q('.wrap-item-1 .canvas-sidebar,.wrap-item-1 .ks-home-departments-menu,.wrap-item-1');
+    if (scrollBox) scrollBox.scrollTop = 0;
+  }
+  function run() { cleanup(); build(); enforceOrder(); }
+  function boot() { run(); [100, 260, 600, 1200, 2600, 5200, 7600, 10500, 14000].forEach(function (d) { window.setTimeout(run, d); }); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
