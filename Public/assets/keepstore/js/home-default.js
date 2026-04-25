@@ -1952,6 +1952,99 @@
     if (document.body) document.body.classList.add('ks-home-step103-missing-blocks');
   }
 
+  function ksStep104DataFromOnsusCard(card) {
+    if (!card || card.nodeType !== 1) return null;
+    var link = (card.matches && card.matches('a[href*="articolo.aspx?id="]')) ? card : q('a[href*="articolo.aspx?id="]', card);
+    if (!link) return null;
+    var titleNode = q('.ks-onsus-title,.name-product,.product-title,.card-product-info a,h5 a,h6 a', card) || link;
+    var img = q('img[data-ks-img-fallbacks],img[src],img[data-src]', card);
+    if (!img) return null;
+    var candidates = imageCandidatesFrom(img);
+    var title = normalizeHomeText(titleNode ? titleNode.textContent : link.textContent || '');
+    if (title.length < 6) return null;
+    var priceNode = q('.ks-onsus-price,.price,.new-price,.product-price,.text-primary', card);
+    var metaNode = q('.ks-onsus-meta,.caption,.category,.card-product-info .caption', card);
+    return { id: productIdFromUrl(link.getAttribute('href') || ''), url: link.getAttribute('href') || '#', image: (candidates[0] || img.currentSrc || img.getAttribute('src') || img.getAttribute('data-src') || ''), imageCandidates: candidates, title: title, price: normalizeHomeText(priceNode ? priceNode.textContent : ''), oldPrice: '', meta: normalizeHomeText(metaNode ? metaNode.textContent : '') || 'Catalogo' };
+  }
+
+  function ksStep104CollectProducts(limit) {
+    var out = [], seen = {};
+    var selectors = ['#KsHomeOnsusBridge .ks-onsus-grid-card','#KsHomeOnsusBridge .ks-onsus-side-card','#KsHomeBestSellerOnsusV4 .ks-onsus-grid-card','main .ks-generated-product-card','main .card-product','main .ks-grid-card','main .ks-row-card'].join(',');
+    qa(selectors).forEach(function (node) {
+      if (!node || (node.closest && node.closest('header,footer,#HomeBrandsSection,.ks-home-brands-block,#KsHomeClosingLayer,#KsHomeCommercialMatrix104,#KsHomeDealStrip104'))) return;
+      var item = ksStep104DataFromOnsusCard(node) || productDataFromCard(node);
+      if (!item || !item.url || !item.title || !item.image) return;
+      var id = item.id || productIdFromUrl(item.url || '') || 0;
+      var urlKey = normalizeHomeText(item.url || '').toLowerCase();
+      var fam = productBridgeFamilyKey(item);
+      var key = id ? 'id:' + id : (urlKey ? 'url:' + urlKey : 'fam:' + fam);
+      if (seen[key]) return;
+      if (fam && seen['fam:' + fam] && out.length >= 12) return;
+      seen[key] = 1;
+      if (fam) seen['fam:' + fam] = 1;
+      out.push(item);
+    });
+    return out.slice(0, Math.max(1, limit || 24));
+  }
+
+  function ksStep104BuildDealStrip(items) {
+    if (!items || items.length < 4 || q('#KsHomeDealStrip104')) return null;
+    var section = document.createElement('section');
+    section.id = 'KsHomeDealStrip104';
+    section.className = 'tf-sp-2 ks-home-step104-section ks-home-deal-strip104';
+    section.setAttribute('data-ks-generated', 'step104-real-products');
+    section.innerHTML = '<div class="container"><div class="flat-title ks-step104-title"><div><span class="ks-generated-kicker">Selezione reale</span><h5 class="fw-semibold">Occasione Imperdibile</h5></div><a class="ks-home-section-link" href="articoli.aspx">Vai al catalogo</a></div><div class="ks-step104-deal-grid">' + items.slice(0, 5).map(function (item) { return bridgeGridCard(item).replace('class="ks-onsus-grid-card"', 'class="ks-onsus-grid-card ks-step104-deal-card"'); }).join('') + '</div></div>';
+    var bridge = q('#KsHomeOnsusBridge');
+    var departments = q('#KsHomeDepartmentsShowcase') || q('.ks-department-showcase');
+    if (bridge && bridge.parentNode) bridge.parentNode.insertBefore(section, bridge);
+    else if (departments && departments.parentNode) departments.parentNode.insertBefore(section, departments.nextSibling);
+    else insertBeforeBrandOrFooter(section);
+    removeHardHide(section);
+    bindGeneratedImageFallbacks(section);
+    return section;
+  }
+
+  function ksStep104BuildCommercialMatrix(items) {
+    if (!items || items.length < 9 || q('#KsHomeCommercialMatrix104')) return null;
+    var buckets = [
+      { title: 'Top 20', kicker: 'I piu richiesti', items: items.slice(0, 3) },
+      { title: 'I Piu Venduti', kicker: 'Storico vendite', items: items.slice(3, 6) },
+      { title: 'In Offerta', kicker: 'Prezzi selezionati', items: items.slice(6, 9) }
+    ].filter(function (b) { return b.items && b.items.length >= 2; });
+    if (!buckets.length) return null;
+    var section = document.createElement('section');
+    section.id = 'KsHomeCommercialMatrix104';
+    section.className = 'tf-sp-2 ks-home-step104-section ks-home-commercial-matrix104';
+    section.setAttribute('data-ks-generated', 'step104-real-products');
+    section.innerHTML = '<div class="container"><div class="flat-title ks-step104-title"><div><span class="ks-generated-kicker">Catalogo KeepStore</span><h5 class="fw-semibold">Altre proposte per te</h5></div><a class="ks-home-section-link" href="articoli.aspx">Vai al catalogo</a></div><div class="ks-step104-matrix-grid">' + buckets.map(function (bucket) { return '<div class="ks-step104-matrix-column"><span class="ks-step104-column-kicker">' + escHtml(bucket.kicker) + '</span><h6>' + escHtml(bucket.title) + '</h6><div class="ks-step104-small-list">' + bucket.items.map(bridgeSmallCard).join('') + '</div></div>'; }).join('') + '</div></div>';
+    var brand = q('#HomeBrandsSection') || q('.ks-home-brands-block');
+    var best = q('#KsHomeBestSellerOnsusV4') || qa('main section').filter(function (s) { return /best\s*seller/i.test(textOf(s)) && countArticleLinks(s) >= 3; })[0];
+    if (brand && brand.parentNode) brand.parentNode.insertBefore(section, brand);
+    else if (best && best.parentNode) best.parentNode.insertBefore(section, best.nextSibling);
+    else insertBeforeBrandOrFooter(section);
+    removeHardHide(section);
+    bindGeneratedImageFallbacks(section);
+    return section;
+  }
+
+  function ksStep104FinishMissingBlocks() {
+    if (!isHome()) return;
+    var items = ksStep104CollectProducts(24);
+    if (items.length >= 4 && !q('#KsHomeDealOnsusClean')) ksStep104BuildDealStrip(items.slice(0, 8));
+    if (items.length >= 9) ksStep104BuildCommercialMatrix(items.slice(0, 15));
+    var deal = q('#KsHomeDealStrip104');
+    var bridge = q('#KsHomeOnsusBridge');
+    var matrix = q('#KsHomeCommercialMatrix104');
+    var brand = q('#HomeBrandsSection') || q('.ks-home-brands-block');
+    var closing = q('#KsHomeClosingLayer');
+    function before(ref, node) { if (ref && node && ref.parentNode && node.parentNode && ref.previousElementSibling !== node) ref.parentNode.insertBefore(node, ref); }
+    if (bridge && deal) before(bridge, deal);
+    if (brand && matrix) before(brand, matrix);
+    if (brand && closing && brand.parentNode && brand.nextElementSibling !== closing) brand.parentNode.insertBefore(closing, brand.nextSibling);
+    if (document.body) document.body.classList.add('ks-home-step104-finished-blocks');
+  }
+
+
   function buildHomeCompositionLayer() {
     runSafe('buildDepartmentShowcase', buildDepartmentShowcase);
     runSafe('normalizeProductGridDensity', normalizeProductGridDensity);
@@ -1966,6 +2059,7 @@
     runSafe('rebuildBestSellerAsStableGridV3', rebuildBestSellerAsStableGridV3);
     runSafe('mountBestSellerOnsusSectionV4', mountBestSellerOnsusSectionV4);
     runSafe('ensureMissingCommercialBlocks', ensureMissingCommercialBlocks);
+    runSafe('ksStep104FinishMissingBlocks', ksStep104FinishMissingBlocks);
     runSafe('moveBrandsAfterProducts', moveBrandsAfterProducts);
     runSafe('ksEnsureSequence', ksEnsureSequence);
     runSafe('buildHomeClosingLayer', buildHomeClosingLayer);
@@ -1980,6 +2074,7 @@
     runSafe('restoreCommercialSections', restoreCommercialSections);
     runSafe('buildHomeCompositionLayer', buildHomeCompositionLayer);
     runSafe('ensureMissingCommercialBlocks', ensureMissingCommercialBlocks);
+    runSafe('ksStep104FinishMissingBlocks', ksStep104FinishMissingBlocks);
     runSafe('normalizeOnsusBridgeDensity', normalizeOnsusBridgeDensity);
     runSafe('compactBeforeBrands', compactBeforeBrands);
     runSafe('finalPruneMalformedCommercialGroups', finalPruneMalformedCommercialGroups);
@@ -2000,6 +2095,7 @@
     runSafe('normalizeBestSellerAsOnsusCarouselRowV2', normalizeBestSellerAsOnsusCarouselRowV2);
     runSafe('rebuildBestSellerAsStableGridV3', rebuildBestSellerAsStableGridV3);
     runSafe('mountBestSellerOnsusSectionV4', mountBestSellerOnsusSectionV4);
+    runSafe('ksStep104FinishMissingBlocks', ksStep104FinishMissingBlocks);
     runSafe('bindGeneratedImageFallbacks', function () { bindGeneratedImageFallbacks(document); });
     runSafe('updateAllSwipers', updateAllSwipers);
   }
