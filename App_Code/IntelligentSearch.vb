@@ -1,6 +1,7 @@
 Imports System
 Imports System.Collections.Generic
 Imports System.Data
+Imports System.Linq
 Imports System.Text
 Imports System.Text.RegularExpressions
 Imports MySql.Data.MySqlClient
@@ -23,16 +24,85 @@ Public Module IntelligentSearch
         Dim s As String = NormalizeQuery(q, 120)
         Dim out As New List(Of String)()
         If String.IsNullOrWhiteSpace(s) Then Return out
+        Dim stopWords As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {"il", "la", "lo", "le", "gli", "un", "una", "uno", "di", "da", "a", "e", "o", "in", "con", "per", "del", "della", "dello", "dei", "degli", "prodotto", "prodotti", "cerca", "cerco", "trova", "voglio", "serve", "servono", "mi", "buon", "buona"}
 
         Dim parts As String() = TokenRx.Split(s)
         For Each p As String In parts
             If out.Count >= maxTokens Then Exit For
             Dim t As String = If(p, "").Trim()
             If t.Length < 2 Then Continue For
+            If stopWords.Contains(t) Then Continue For
             out.Add(t)
         Next
 
         Return out
+    End Function
+
+    Public Function ExpandSearchTokens(ByVal q As String, Optional maxTokens As Integer = 10) As List(Of String)
+        Dim expanded As New List(Of String)()
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        For Each token As String In Tokenize(q, maxTokens)
+            AddExpandedToken(expanded, seen, token)
+            AddExpandedToken(expanded, seen, SingularizeToken(token))
+            For Each synonym As String In SynonymsFor(token)
+                AddExpandedToken(expanded, seen, synonym)
+            Next
+            If expanded.Count >= maxTokens Then Exit For
+        Next
+        Return expanded.Take(Math.Max(1, maxTokens)).ToList()
+    End Function
+
+    Private Sub AddExpandedToken(ByVal target As List(Of String), ByVal seen As HashSet(Of String), ByVal value As String)
+        If target Is Nothing OrElse seen Is Nothing Then Return
+        Dim token As String = If(value, String.Empty).Trim().ToLowerInvariant()
+        If token.Length < 2 Then Return
+        If seen.Contains(token) Then Return
+        seen.Add(token)
+        target.Add(token)
+    End Sub
+
+    Private Function SingularizeToken(ByVal value As String) As String
+        Dim token As String = If(value, String.Empty).Trim().ToLowerInvariant()
+        If token.Length > 4 AndAlso (token.EndsWith("i", StringComparison.OrdinalIgnoreCase) OrElse token.EndsWith("e", StringComparison.OrdinalIgnoreCase)) Then
+            Return token.Substring(0, token.Length - 1)
+        End If
+        Return token
+    End Function
+
+    Private Function SynonymsFor(ByVal value As String) As List(Of String)
+        Dim token As String = If(value, String.Empty).Trim().ToLowerInvariant()
+        Dim result As New List(Of String)()
+
+        Select Case token
+            Case "smartphone", "cellulare", "cellulari", "telefono", "telefoni", "telefonia"
+                result.AddRange(New String() {"smartphone", "cellulare", "telefono", "galaxy", "iphone"})
+            Case "pc", "computer", "desktop"
+                result.AddRange(New String() {"pc", "computer", "desktop"})
+            Case "portatile", "portatili", "notebook", "laptop"
+                result.AddRange(New String() {"notebook", "portatile", "laptop", "computer"})
+            Case "monitor", "schermo", "display"
+                result.AddRange(New String() {"monitor", "schermo", "display"})
+            Case "toner", "cartuccia", "cartucce", "inchiostro", "drum", "tamburo"
+                result.AddRange(New String() {"toner", "cartuccia", "inchiostro", "drum", "tamburo", "stampante"})
+            Case "stampante", "stampanti", "printer", "ufficio"
+                result.AddRange(New String() {"stampante", "printer", "toner", "cartuccia", "laser"})
+            Case "cavo", "cavi"
+                result.AddRange(New String() {"cavo", "hdmi", "usb", "adattatore"})
+            Case "usb", "typec"
+                result.AddRange(New String() {"usb", "usb c", "type c", "adattatore", "hub"})
+            Case "hdmi"
+                result.AddRange(New String() {"hdmi", "cavo", "adattatore"})
+            Case "alimentatore", "caricatore", "charger", "power"
+                result.AddRange(New String() {"alimentatore", "caricatore", "charger", "power", "usb c"})
+            Case "ricondizionato", "ricondizionati", "refurbished", "usato"
+                result.AddRange(New String() {"ricondizionato", "ricondizionati", "refurbished", "usato"})
+            Case "memoria", "ram", "storage", "archiviazione"
+                result.AddRange(New String() {"memoria", "ram", "gb", "storage", "ssd"})
+            Case "gaming", "gamer"
+                result.AddRange(New String() {"gaming", "gamer"})
+        End Select
+
+        Return result
     End Function
 
     ' Costruisce un comando parametricamente sicuro.

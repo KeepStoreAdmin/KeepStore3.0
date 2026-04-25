@@ -402,7 +402,7 @@ End Sub
             Dim exactTerm As String = userCerca.ToLowerInvariant()
             Dim likeTerm As String = "%" & SqlEscapeLike(userCerca).ToLowerInvariant() & "%"
             Dim prefixTerm As String = SqlEscapeLike(userCerca).ToLowerInvariant() & "%"
-            Dim searchTokens As List(Of String) = Tokenize(userCerca, 6)
+            Dim searchTokens As List(Of String) = IntelligentSearch.ExpandSearchTokens(userCerca, 10)
             Dim scoreBuilder As New StringBuilder()
             Dim mainWhereBuilder As New StringBuilder()
             Dim filtersWhereBuilder As New StringBuilder()
@@ -459,7 +459,9 @@ End Sub
                 scoreBuilder.Append("WHEN LOWER(Ean) LIKE ?").Append(tokenPrefixName).Append(" THEN 200 ")
                 scoreBuilder.Append("WHEN LOWER(Descrizione1) LIKE ?").Append(tokenPrefixName).Append(" THEN 180 ")
                 scoreBuilder.Append("WHEN LOWER(CONCAT(IFNULL(MarcheDescrizione,''),' ',IFNULL(Descrizione1,''))) LIKE ?").Append(tokenLikeName).Append(" THEN 150 ")
+                scoreBuilder.Append("WHEN LOWER(CONCAT(IFNULL(SettoriDescrizione,''),' ',IFNULL(CategorieDescrizione,''),' ',IFNULL(TipologieDescrizione,''),' ',IFNULL(GruppiDescrizione,''),' ',IFNULL(SottogruppiDescrizione,''))) LIKE ?").Append(tokenLikeName).Append(" THEN 130 ")
                 scoreBuilder.Append("WHEN LOWER(DescrizioneLunga) LIKE ?").Append(tokenLikeName).Append(" THEN 90 ")
+                scoreBuilder.Append("WHEN LOWER(Descrizione2) LIKE ?").Append(tokenLikeName).Append(" THEN 80 ")
                 scoreBuilder.Append("ELSE 0 END)")
 
                 mainWhereBuilder.Append("OR LOWER(Codice)=?").Append(tokenName).Append(" ")
@@ -467,9 +469,11 @@ End Sub
                 mainWhereBuilder.Append("OR LOWER(Codice) LIKE ?").Append(tokenPrefixName).Append(" ")
                 mainWhereBuilder.Append("OR LOWER(Ean) LIKE ?").Append(tokenPrefixName).Append(" ")
                 mainWhereBuilder.Append("OR LOWER(Descrizione1) LIKE ?").Append(tokenLikeName).Append(" ")
+                mainWhereBuilder.Append("OR LOWER(Descrizione2) LIKE ?").Append(tokenLikeName).Append(" ")
                 mainWhereBuilder.Append("OR LOWER(DescrizioneLunga) LIKE ?").Append(tokenLikeName).Append(" ")
                 mainWhereBuilder.Append("OR LOWER(CONCAT(IFNULL(MarcheDescrizione,''),' ',IFNULL(Descrizione1,''))) LIKE ?").Append(tokenLikeName).Append(" ")
                 mainWhereBuilder.Append("OR LOWER(CONCAT(IFNULL(MarcheDescrizione,''),' ',IFNULL(Descrizione2,''))) LIKE ?").Append(tokenLikeName).Append(" ")
+                mainWhereBuilder.Append("OR LOWER(CONCAT(IFNULL(SettoriDescrizione,''),' ',IFNULL(CategorieDescrizione,''),' ',IFNULL(TipologieDescrizione,''),' ',IFNULL(GruppiDescrizione,''),' ',IFNULL(SottogruppiDescrizione,''))) LIKE ?").Append(tokenLikeName).Append(" ")
 
                 filtersWhereBuilder.Append("OR LOWER(varticolibase.Codice)=?").Append(tokenName).Append(" ")
                 filtersWhereBuilder.Append("OR LOWER(varticolibase.Ean)=?").Append(tokenName).Append(" ")

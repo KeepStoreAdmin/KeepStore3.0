@@ -248,7 +248,7 @@
       if (ids.length) u.searchParams.set('recent', ids.slice(0, 24).join(','));
     }
     u.searchParams.set('limit', String(limit || 10));
-    u.searchParams.set('mode', 'header');
+    u.searchParams.set('mode', 'marketplace');
     return u.toString();
   }
   function buildCatalogUrl(root) {
@@ -312,6 +312,11 @@
     return true;
   }
   function priceText(value) { return value ? ('&euro;' + esc(value)) : ''; }
+  function renderSuggestMessage(root, message) {
+    var box = ensureSuggest(root);
+    box.innerHTML = '<div class="ks-suggest-empty">' + esc(message) + '</div>';
+    showSuggest(root);
+  }
   function renderSuggest(root, data) {
     var s = state(root), box = ensureSuggest(root), items = data && data.suggestions ? data.suggestions.slice(0, 10) : [];
     s.items = items;
@@ -328,6 +333,8 @@
       var meta = [];
       if (item.brand) meta.push('<span><b>' + esc(item.brand) + '</b></span>');
       if (item.category) meta.push('<span>' + esc(item.category) + '</span>');
+      if (item.code) meta.push('<span>Cod. ' + esc(item.code) + '</span>');
+      if (item.ean) meta.push('<span>EAN ' + esc(item.ean) + '</span>');
       if (item.matchKind) meta.push('<span>' + esc(item.matchKind) + '</span>');
       html.push('<li><a class="ks-suggest-item" href="' + esc(item.url || '#') + '" data-idx="' + i + '">' +
         '<span class="ks-suggest-thumb">' + (img ? '<img src="' + esc(img) + '" alt="' + esc(item.title || '') + '">' : '') + '</span>' +
@@ -349,11 +356,16 @@
     if (window.AbortController) s.ctrl = new AbortController();
     return fetchJsonTimed(url, SUGGEST_TIMEOUT_MS, s.ctrl).then(function (data) {
       if (s.token !== url) return;
-      if (!data || data.ok === false) { hideSuggest(root); return; }
+      if (!data || data.ok === false) {
+        if (window.console && data && data.error) console.warn('[KeepStore search]', data.error);
+        renderSuggestMessage(root, 'Suggerimenti non disponibili. Premi Invio per cercare nel catalogo.');
+        return;
+      }
       renderSuggest(root, data);
     }).catch(function (err) {
       if (err && err.name === 'AbortError') return;
-      hideSuggest(root);
+      if (window.console) console.warn('[KeepStore search]', err && err.message ? err.message : err);
+      renderSuggestMessage(root, 'Errore temporaneo nella suggest. Premi Invio per cercare nel catalogo.');
     });
   }
   function rankKey(seed) {

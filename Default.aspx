@@ -99,18 +99,19 @@
                 <div class="ks-ai130-brain">
                     <span class="ks-ai130-kicker">AI locale KeepStore</span>
                     <h5>Chiedimi cosa stai cercando</h5>
-                    <p>Interpreta la richiesta, valuta parole chiave e budget, poi propone opzioni usando solo prodotti reali caricati nella HOME.</p>
+                    <p>Interpreta la richiesta e interroga il catalogo articoli KeepStore usando descrizioni, codice, EAN, marca, reparto e categoria.</p>
                     <form class="ks-ai130-form">
                         <input type="search" autocomplete="off" placeholder="Es. Cerco un toner compatibile sotto 50 euro" aria-label="Cerca con AI locale KeepStore" />
                         <button type="submit">Ragiona</button>
                     </form>
                     <div class="ks-ai130-examples">
-                        <button type="button">Mi serve una custodia per Samsung sotto 30 euro</button>
+                        <button type="button">smartphone samsung</button>
+                        <button type="button">monitor 27 pollici gaming</button>
                         <button type="button">Cerco toner compatibile Pantum</button>
                         <button type="button">Voglio un notebook ricondizionato</button>
                         <button type="button">Mi serve un adattatore USB-C</button>
                     </div>
-                    <div class="ks-ai130-answer"><i></i><p>Scrivi cosa stai cercando: usero gli articoli reali visibili in home per proporti percorsi utili.</p></div>
+                    <div class="ks-ai130-answer"><i></i><p>Scrivi cosa stai cercando: usero il catalogo articoli reale per proporti prodotti pertinenti.</p></div>
                     <div class="ks-ai130-tools">
                         <a href="articoli.aspx?q=toner%20compatibile">Toner</a>
                         <a href="articoli.aspx?q=custodia%20samsung">Custodie</a>
@@ -119,9 +120,9 @@
                     </div>
                 </div>
                 <div class="ks-ai130-results-wrap">
-                    <div class="ks-ai130-head"><span>Risposta e prodotti consigliati</span><small data-ks-ai-count>Prodotti reali dalla HOME</small></div>
+                    <div class="ks-ai130-head"><span>Risposta e prodotti consigliati</span><small data-ks-ai-count>Catalogo articoli</small></div>
                     <div class="ks-ai130-results">
-                        <div class="ks-ai130-empty">Caricamento dei prodotti reali visibili in home...</div>
+                        <div class="ks-ai130-empty">Scrivi una richiesta o scegli un esempio: cerchero nel catalogo reale.</div>
                     </div>
                 </div>
             </div>
@@ -193,8 +194,42 @@
         </div>
     </section>
 
-    <section id="HomeWidePromoSection" runat="server" visible="false" class="ks-home-wide-promo"></section>
-    <section id="HomeCollectionSection" runat="server" visible="false" class="tf-sp-2 ks-home-collection-block"></section>
+    <section id="HomeWidePromoSection" runat="server" visible="false" class="tf-sp-2 pt-0 ks-home-wide-promo ks-home-full-width">
+        <div class="container">
+            <div class="ks-home-wide-promo-inner">
+                <div class="ks-home-wide-promo-copy">
+                    <p class="caption text-primary fw-semibold mb-2">Catalogo e assistenza</p>
+                    <h5 class="fw-semibold mb-2">Tecnologia, accessori e supporto tecnico in un unico negozio</h5>
+                    <p class="body-text-3 text-main-2 mb-0">Computer, telefonia, stampa, consumabili e periferiche selezionate, con consulenza KeepStore quando serve.</p>
+                </div>
+                <div class="ks-home-wide-promo-actions">
+                    <a href="articoli.aspx" class="tf-btn btn-line"><span>Vai al catalogo</span></a>
+                    <a href="Contattaci.aspx" class="tf-btn btn-line"><span>Richiedi assistenza</span></a>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section id="HomeCollectionSection" runat="server" visible="false" class="tf-sp-2 pt-0 ks-home-collection-block ks-home-full-width">
+        <div class="container">
+            <div class="ks-home-collection-grid">
+                <a href="articoli.aspx?q=computer%20notebook" class="ks-home-collection-card">
+                    <span>Informatica</span>
+                    <strong>PC, notebook, monitor e periferiche</strong>
+                    <em>Scopri prodotti per lavoro e casa</em>
+                </a>
+                <a href="articoli.aspx?q=smartphone%20accessori" class="ks-home-collection-card">
+                    <span>Telefonia</span>
+                    <strong>Smartphone, accessori e supporto</strong>
+                    <em>Trova ricambi, cover e dispositivi</em>
+                </a>
+                <a href="articoli.aspx?q=toner%20stampante" class="ks-home-collection-card">
+                    <span>Stampa</span>
+                    <strong>Toner, cartucce e consumabili</strong>
+                    <em>Rifornisci casa e ufficio</em>
+                </a>
+            </div>
+        </div>
+    </section>
 
     <section id="HomeLegacyEditorialSection" runat="server" visible="false" class="tf-sp-2 flat-animate-tab ks-home-editorial-section">
         <div class="container">
@@ -281,7 +316,22 @@
         </div>
     </section>
 
-    <section id="HomeBottomPromoSection" runat="server" visible="false" class="ks-home-banner-product"></section>
+    <section id="HomeBottomPromoSection" runat="server" visible="false" class="tf-sp-2 pt-0 ks-home-banner-product ks-home-full-width">
+        <div class="container">
+            <div class="ks-home-bottom-promo-grid">
+                <a href="articoli.aspx?q=ricondizionato" class="ks-home-bottom-promo-card">
+                    <span>Ricondizionati</span>
+                    <strong>Soluzioni controllate per spendere meglio</strong>
+                    <em>Consulta gli articoli disponibili a catalogo</em>
+                </a>
+                <a href="Contattaci.aspx" class="ks-home-bottom-promo-card ks-home-bottom-promo-card--service">
+                    <span>Supporto tecnico</span>
+                    <strong>Hai dubbi su compatibilita o configurazione?</strong>
+                    <em>Parla con KeepStore prima dell'acquisto</em>
+                </a>
+            </div>
+        </div>
+    </section>
 
     <section id="HomeLowerColumnsSection" runat="server" visible="false" class="tf-sp-2 ks-home-lower-columns-section">
         <div class="container">

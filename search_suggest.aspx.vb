@@ -18,6 +18,7 @@ Partial Public Class search_suggest
 
     Private Const DefaultLimit As Integer = 8
     Private Const MaxLimit As Integer = 96
+    Private Const AiScoreThreshold As Integer = 1800
     Private Shared ReadOnly ItCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
 
     Private Class SearchFilters
@@ -155,6 +156,7 @@ Partial Public Class search_suggest
 
     Private Function BuildSearchResult(ByVal query As String, ByVal filters As SearchFilters, ByVal limit As Integer) As Dictionary(Of String, Object)
         Dim intent As QueryIntent = InterpretQuery(query)
+        Dim aiMode As Boolean = String.Equals(Convert.ToString(filters.Mode), "ai", StringComparison.OrdinalIgnoreCase)
         If filters.MaxPrice <= 0D AndAlso intent.MaxPrice > 0D Then filters.MaxPrice = intent.MaxPrice
         If filters.MinPrice <= 0D AndAlso intent.MinPrice > 0D Then filters.MinPrice = intent.MinPrice
         If intent.WantsAvailable Then filters.SoloDisponibili = True
@@ -164,6 +166,8 @@ Partial Public Class search_suggest
         Dim tokens As List(Of String) = intent.Tokens
         If tokens.Count = 0 Then tokens = ExtractTokens(query)
         If tokens.Count = 0 Then tokens.Add(NormalizeSearchText(query))
+        Dim scoringTokens As List(Of String) = ExpandSearchTokens(tokens, query)
+        If scoringTokens.Count = 0 Then scoringTokens = tokens
 
         Dim parameters As New List(Of DbParameterSpec)()
         Dim normalizedQuery As String = NormalizeQuery(intent.SearchText).ToLowerInvariant()
@@ -175,8 +179,8 @@ Partial Public Class search_suggest
         parameters.Add(New DbParameterSpec("@qContains", "%" & likeQuery & "%"))
         parameters.Add(New DbParameterSpec("@qWord", "% " & likeQuery & "%"))
 
-        For i As Integer = 0 To tokens.Count - 1
-            Dim tokenValue As String = tokens(i)
+        For i As Integer = 0 To scoringTokens.Count - 1
+            Dim tokenValue As String = scoringTokens(i)
             Dim likeToken As String = EscapeLikeValue(tokenValue)
             parameters.Add(New DbParameterSpec("@t" & i.ToString(CultureInfo.InvariantCulture), tokenValue))
             parameters.Add(New DbParameterSpec("@tc" & i.ToString(CultureInfo.InvariantCulture), "%" & likeToken & "%"))
@@ -185,7 +189,7 @@ Partial Public Class search_suggest
         Next
 
         Dim sql As New StringBuilder()
-        AppendSelect(sql, True, BuildScoreExpression(tokens, intent))
+        AppendSelect(sql, True, BuildScoreExpression(scoringTokens, intent))
         sql.Append(" FROM vsuperarticoli v LEFT JOIN immagini i ON i.id = v.id WHERE COALESCE(v.NListino,1)=1 ")
         sql.Append(" AND (")
         sql.Append("LOWER(COALESCE(v.Codice,'')) = @qExact OR LOWER(COALESCE(v.Ean,'')) = @qExact OR LOWER(COALESCE(v.Descrizione1,'')) = @qExact OR ")
@@ -194,7 +198,7 @@ Partial Public Class search_suggest
         sql.Append("LOWER(CONCAT(' ', COALESCE(v.MarcheDescrizione,''), ' ', COALESCE(v.Descrizione1,''))) LIKE @qWord OR ")
         sql.Append("LOWER(COALESCE(v.Descrizione1,'')) LIKE @qContains OR LOWER(COALESCE(v.Descrizione2,'')) LIKE @qContains OR LOWER(COALESCE(v.DescrizioneLunga,'')) LIKE @qContains OR LOWER(COALESCE(v.DescrizioneHTML,'')) LIKE @qContains OR ")
         sql.Append("LOWER(CONCAT(' ', COALESCE(v.MarcheDescrizione,''), ' ', COALESCE(v.SettoriDescrizione,''), ' ', COALESCE(v.CategorieDescrizione,''), ' ', COALESCE(v.TipologieDescrizione,''), ' ', COALESCE(v.GruppiDEscrizione,''), ' ', COALESCE(v.SottogruppiDescrIZione,''))) LIKE @qContains ")
-        For i As Integer = 0 To tokens.Count - 1
+        For i As Integer = 0 To scoringTokens.Count - 1
             sql.Append(" OR LOWER(COALESCE(v.Codice,'')) LIKE @tc").Append(i.ToString(CultureInfo.InvariantCulture))
             sql.Append(" OR LOWER(COALESCE(v.Ean,'')) LIKE @tc").Append(i.ToString(CultureInfo.InvariantCulture))
             sql.Append(" OR LOWER(COALESCE(v.Descrizione1,'')) LIKE @tc").Append(i.ToString(CultureInfo.InvariantCulture))
@@ -207,10 +211,15 @@ Partial Public Class search_suggest
         AppendFilterClauses(sql, parameters, filters, "v")
         sql.Append(BuildOrderBy(filters))
         sql.Append(" LIMIT ")
-        sql.Append(Math.Max(limit, If(String.Equals(filters.Mode, "marketplace", StringComparison.OrdinalIgnoreCase), 36, 60)).ToString(CultureInfo.InvariantCulture))
+        sql.Append(Math.Max(limit, If(aiMode, 80, If(String.Equals(filters.Mode, "marketplace", StringComparison.OrdinalIgnoreCase), 36, 60))).ToString(CultureInfo.InvariantCulture))
 
         Dim table As DataTable = ExecuteQuery(sql.ToString(), parameters)
         Dim mapped As List(Of SuggestItem) = MapSuggestions(table, query, intent)
+        If aiMode Then
+            mapped = mapped.Where(Function(item) item.Score >= AiScoreThreshold OrElse _
+                                                item.MatchKind.StartsWith("exact", StringComparison.OrdinalIgnoreCase) OrElse _
+                                                item.MatchKind.StartsWith("prefix", StringComparison.OrdinalIgnoreCase)).ToList()
+        End If
         mapped = mapped.Take(limit).ToList()
 
         Dim strong As New Dictionary(Of String, Object) From {{"canRedirect", False}, {"redirectUrl", String.Empty}, {"articleId", 0}, {"matchKind", String.Empty}}
@@ -239,6 +248,9 @@ Partial Public Class search_suggest
             {"facets", BuildFacets(mapped)},
             {"strong", strong},
             {"intelligence", SerializeIntent(intent, filters, mapped.Count)},
+            {"mode", filters.Mode},
+            {"expanded_tokens", scoringTokens},
+            {"minimumScore", If(aiMode, AiScoreThreshold, 0)},
             {"total", mapped.Count},
             {"catalogUrl", BuildCatalogUrl(query, filters)}
         }
@@ -289,6 +301,7 @@ Partial Public Class search_suggest
             sb.Append("WHEN LOWER(COALESCE(v.Descrizione1,'')) LIKE @tc").Append(n).Append(" THEN 2600 ")
             sb.Append("WHEN LOWER(COALESCE(v.DescrizioneLunga,'')) LIKE @tc").Append(n).Append(" THEN 1800 ")
             sb.Append("WHEN LOWER(COALESCE(v.MarcheDescrizione,'')) LIKE @tc").Append(n).Append(" THEN 1600 ")
+            sb.Append("WHEN LOWER(CONCAT(' ',COALESCE(v.SettoriDescrizione,''),' ',COALESCE(v.CategorieDescrizione,''),' ',COALESCE(v.TipologieDescrizione,''),' ',COALESCE(v.GruppiDEscrizione,''),' ',COALESCE(v.SottogruppiDescrIZione,''))) LIKE @tc").Append(n).Append(" THEN 1500 ")
             sb.Append("ELSE 0 END)")
         Next
         ' Tie-breaker only: never let commercial boosts outrank textual relevance bands.
@@ -426,6 +439,9 @@ Partial Public Class search_suggest
         If item.IsRefurbished Then parts.Add("ricondizionato")
         If item.FreeShipping Then parts.Add("spedizione gratis")
         If intent IsNot Nothing AndAlso intent.MaxPrice > 0D AndAlso item.PriceValue > 0D AndAlso item.PriceValue <= intent.MaxPrice Then parts.Add("entro budget")
+        If intent IsNot Nothing AndAlso intent.Tokens IsNot Nothing AndAlso intent.Tokens.Count > 0 Then
+            parts.Add("termini: " & String.Join(", ", intent.Tokens.Take(3).ToArray()))
+        End If
         If parts.Count = 0 Then parts.Add("pertinente per descrizione, marca o categoria")
         Return "Consigliato per " & String.Join(", ", parts.Take(4)) & "."
     End Function
@@ -512,8 +528,80 @@ Partial Public Class search_suggest
 
     Private Function ExtractTokens(ByVal value As String) As List(Of String)
         Dim normalized As String = NormalizeSearchText(value)
-        Dim stopWords As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {"il", "la", "lo", "le", "gli", "un", "una", "uno", "di", "da", "a", "e", "o", "in", "con", "per", "del", "della", "dello", "dei", "degli", "prodotto", "prodotti", "cerca", "trova"}
+        Dim stopWords As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {"il", "la", "lo", "le", "gli", "un", "una", "uno", "di", "da", "a", "e", "o", "in", "con", "per", "del", "della", "dello", "dei", "degli", "prodotto", "prodotti", "cerca", "cerco", "trova", "voglio", "serve", "servono", "mi", "hai", "avete", "buon", "buona", "economico", "economica"}
         Return normalized.Split(" "c).Select(Function(t) t.Trim()).Where(Function(t) t.Length >= 2 AndAlso Not stopWords.Contains(t)).Distinct(StringComparer.OrdinalIgnoreCase).Take(8).ToList()
+    End Function
+
+    Private Function ExpandSearchTokens(ByVal tokens As List(Of String), ByVal raw As String) As List(Of String)
+        Dim expanded As New List(Of String)()
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim source As New List(Of String)()
+
+        If tokens IsNot Nothing Then source.AddRange(tokens)
+        source.AddRange(ExtractTokens(raw))
+
+        For Each token As String In source
+            AddExpandedToken(expanded, seen, token)
+            AddExpandedToken(expanded, seen, SingularizeToken(token))
+            For Each synonym As String In SearchSynonyms(token)
+                AddExpandedToken(expanded, seen, synonym)
+            Next
+        Next
+
+        Return expanded.Take(18).ToList()
+    End Function
+
+    Private Sub AddExpandedToken(ByVal target As List(Of String), ByVal seen As HashSet(Of String), ByVal value As String)
+        If target Is Nothing OrElse seen Is Nothing Then Return
+        Dim token As String = NormalizeSearchText(value)
+        If token.Length < 2 Then Return
+        If seen.Contains(token) Then Return
+        seen.Add(token)
+        target.Add(token)
+    End Sub
+
+    Private Function SingularizeToken(ByVal value As String) As String
+        Dim token As String = NormalizeSearchText(value)
+        If token.Length > 4 AndAlso (token.EndsWith("i", StringComparison.OrdinalIgnoreCase) OrElse token.EndsWith("e", StringComparison.OrdinalIgnoreCase)) Then
+            Return token.Substring(0, token.Length - 1)
+        End If
+        Return token
+    End Function
+
+    Private Function SearchSynonyms(ByVal value As String) As List(Of String)
+        Dim token As String = NormalizeSearchText(value)
+        Dim result As New List(Of String)()
+
+        Select Case token
+            Case "smartphone", "cellulare", "cellulari", "telefono", "telefoni", "telefonia"
+                result.AddRange(New String() {"smartphone", "cellulare", "telefono", "galaxy", "iphone", "android"})
+            Case "pc", "computer", "desktop"
+                result.AddRange(New String() {"pc", "computer", "desktop", "tower"})
+            Case "portatile", "portatili", "notebook", "laptop"
+                result.AddRange(New String() {"notebook", "portatile", "laptop", "computer"})
+            Case "monitor", "schermo", "display"
+                result.AddRange(New String() {"monitor", "schermo", "display"})
+            Case "gaming", "gamer"
+                result.AddRange(New String() {"gaming", "gamer", "game"})
+            Case "toner", "cartuccia", "cartucce", "inchiostro", "drum", "tamburo"
+                result.AddRange(New String() {"toner", "cartuccia", "inchiostro", "drum", "tamburo", "stampante"})
+            Case "stampante", "stampanti", "printer", "ufficio"
+                result.AddRange(New String() {"stampante", "printer", "toner", "cartuccia", "laser"})
+            Case "cavo", "cavi"
+                result.AddRange(New String() {"cavo", "hdmi", "usb", "type c", "usb c", "adattatore"})
+            Case "usb", "usb c", "type c", "typec"
+                result.AddRange(New String() {"usb", "usb c", "type c", "adattatore", "hub"})
+            Case "hdmi"
+                result.AddRange(New String() {"hdmi", "cavo", "adattatore"})
+            Case "alimentatore", "caricatore", "charger", "power"
+                result.AddRange(New String() {"alimentatore", "caricatore", "charger", "power", "usb c"})
+            Case "ricondizionato", "ricondizionati", "refurbished", "usato"
+                result.AddRange(New String() {"ricondizionato", "ricondizionati", "refurbished", "usato", "garantito"})
+            Case "memoria", "ram", "storage", "archiviazione"
+                result.AddRange(New String() {"memoria", "ram", "gb", "storage", "ssd", "archiviazione"})
+        End Select
+
+        Return result
     End Function
 
     Private Function StartsWithWord(ByVal value As String, ByVal term As String) As Boolean
