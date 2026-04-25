@@ -1834,6 +1834,124 @@
     if (document.body) document.body.classList.add('ks-home-step102-best-v4');
   }
 
+
+
+  function ksSrcProducts(source, limit) {
+    var out = [], seen = {};
+    if (!source) return out;
+    qa('a[href*="articolo.aspx?id="],a[href*="articolo.aspx?Id="],a[href*="articolo.aspx?ID="]', source).forEach(function (link) {
+      if (!link || (link.closest && link.closest('.ks-generated-missing-block,#KsHomeOnsusBridge,#KsHomeBestSellerOnsusV4,#HomeBrandsSection,#KsHomeClosingLayer'))) return;
+      var href = link.getAttribute('href') || '';
+      var id = productIdFromUrl(href) || href.toLowerCase();
+      if (!id || seen['id:' + id]) return;
+      var root = link.closest('.card-product,.ks-grid-card,.ks-row-card,.ks-deal-card,.box-product,.product-card,.swiper-slide,li,[class*="col-"]') || link;
+      var item = productDataFromCard(root || link);
+      if (!item || !item.url || !item.title || !item.image) return;
+      var fam = productBridgeFamilyKey(item);
+      if (fam && seen['fam:' + fam]) return;
+      seen['id:' + id] = 1;
+      if (fam) seen['fam:' + fam] = 1;
+      out.push(item);
+    });
+    return out.slice(0, Math.max(1, limit || 5));
+  }
+
+  function ksCleanHeader(title, kicker) {
+    return '<div class="flat-title ks-home-section-title ks-generated-block-title"><div><span class="ks-generated-kicker">' + escHtml(kicker || 'KeepStore') + '</span><h5 class="fw-semibold">' + escHtml(title || '') + '</h5></div><a class="ks-home-section-link" href="articoli.aspx">Vai al catalogo</a></div>';
+  }
+
+  function ksMountGrid(id, title, kicker, items, before, cssClass) {
+    if (!items || items.length < 2) return null;
+    var section = q('#' + id) || document.createElement('section');
+    section.id = id;
+    section.className = 'tf-sp-2 ks-generated-missing-block ' + (cssClass || '');
+    section.setAttribute('data-ks-generated', 'clean-missing-block');
+    section.innerHTML = '<div class="container">' + ksCleanHeader(title, kicker) + '<div class="ks-generated-product-grid">' + items.map(function (item) {
+      return bridgeGridCard(item).replace('class="ks-onsus-grid-card"', 'class="ks-onsus-grid-card ks-generated-product-card"');
+    }).join('') + '</div></div>';
+    if (before && before.parentNode) before.parentNode.insertBefore(section, before);
+    else insertBeforeBrandOrFooter(section);
+    removeHardHide(section);
+    bindGeneratedImageFallbacks(section);
+    return section;
+  }
+
+  function ksCleanLowerGroups(source, before) {
+    if (!source) return null;
+    var groups = [];
+    qa('.tf-grid-product-item,.box-btn-slide-item', source).forEach(function (block) {
+      var titleNode = q('.flat-title h5,h5,.fw-semibold', block);
+      var title = normalizeHomeText(titleNode ? titleNode.textContent : '');
+      var items = ksSrcProducts(block, 4);
+      if (title && items.length >= 2) groups.push({ title: title, items: items });
+    });
+    groups = groups.slice(0, 4);
+    if (!groups.length) return null;
+    var section = q('#KsHomeLowerOnsusClean') || document.createElement('section');
+    section.id = 'KsHomeLowerOnsusClean';
+    section.className = 'tf-sp-2 ks-generated-missing-block ks-lower-onsus-clean';
+    section.setAttribute('data-ks-generated', 'lower-clean');
+    section.innerHTML = '<div class="container">' + ksCleanHeader('Altre proposte per te', 'Catalogo KeepStore') + '<div class="ks-lower-onsus-grid">' + groups.map(function (g) {
+      return '<div class="ks-lower-onsus-column"><h6>' + escHtml(g.title) + '</h6><div class="ks-lower-onsus-list">' + g.items.map(bridgeSmallCard).join('') + '</div></div>';
+    }).join('') + '</div></div>';
+    if (before && before.parentNode) before.parentNode.insertBefore(section, before);
+    else insertBeforeBrandOrFooter(section);
+    removeHardHide(section);
+    bindGeneratedImageFallbacks(section);
+    return section;
+  }
+
+  function ksHideSource(source, reason) {
+    if (!source || source.classList.contains('ks-generated-missing-block')) return;
+    source.setAttribute('data-ks-source-replaced', reason || 'clean-block');
+    hide(source, reason || 'clean-source-replaced');
+  }
+
+  function ksEnsureSequence() {
+    var icons = q('.ks-home-icon-boxes,.ks-icon-boxes-section,.tf-icon-box,.icon-box-section') || (q('#HomeHeroSection') ? q('#HomeHeroSection').nextElementSibling : null);
+    var dept = q('#KsHomeDepartmentsShowcase') || q('.ks-department-showcase');
+    var deal = q('#KsHomeDealOnsusClean');
+    var bridge = q('#KsHomeOnsusBridge');
+    var best = q('#KsHomeBestSellerOnsusV4');
+    var recent = q('#KsHomeRecentOnsusClean');
+    var lower = q('#KsHomeLowerOnsusClean');
+    var brand = q('#HomeBrandsSection') || q('.ks-home-brands-block');
+    var closing = q('#KsHomeClosingLayer');
+    function after(ref, node) { if (ref && node && ref.parentNode && node.parentNode && ref.nextElementSibling !== node) ref.parentNode.insertBefore(node, ref.nextSibling); }
+    if (icons && dept) after(icons, dept);
+    if (dept && deal) after(dept, deal);
+    if ((deal || dept || icons) && bridge) after(deal || dept || icons, bridge);
+    if ((bridge || deal || dept) && best) after(bridge || deal || dept, best);
+    if (best && recent) after(best, recent);
+    if ((recent || best) && lower) after(recent || best, lower);
+    if ((lower || recent || best || bridge) && brand) after(lower || recent || best || bridge, brand);
+    if (brand && closing) after(brand, closing);
+  }
+
+  function ensureMissingCommercialBlocks() {
+    if (!isHome()) return;
+    var bridge = q('#KsHomeOnsusBridge');
+    var best = q('#KsHomeBestSellerOnsusV4') || qa('main section').filter(function (s) { return /best\s*seller/i.test(textOf(s)) && countArticleLinks(s) >= 3; })[0];
+    var brand = q('#HomeBrandsSection') || q('.ks-home-brands-block');
+    var dealSource = q('.ks-home-deal-section');
+    var dealItems = ksSrcProducts(dealSource, 5);
+    if (!q('#KsHomeDealOnsusClean') && dealItems.length >= 2) {
+      if (ksMountGrid('KsHomeDealOnsusClean', 'Occasione Imperdibile', 'Promo reali', dealItems, bridge || best || brand, 'ks-deal-onsus-clean')) ksHideSource(dealSource, 'deal-clean-replaced');
+    }
+    var recentSource = q('#HomeRecentlyViewedSection');
+    var recentItems = ksSrcProducts(recentSource, 5);
+    if (!q('#KsHomeRecentOnsusClean') && recentItems.length >= 2) {
+      if (ksMountGrid('KsHomeRecentOnsusClean', 'Scelti Da Te', 'Recenti', recentItems, brand || q('#KsHomeClosingLayer'), 'ks-recent-onsus-clean')) ksHideSource(recentSource, 'recent-clean-replaced');
+    }
+    var lowerSource = q('#HomeLowerColumnsSection');
+    if (!q('#KsHomeLowerOnsusClean') && lowerSource) {
+      var lower = ksCleanLowerGroups(lowerSource, brand || q('#KsHomeClosingLayer'));
+      if (lower) ksHideSource(lowerSource, 'lower-clean-replaced');
+    }
+    ksEnsureSequence();
+    if (document.body) document.body.classList.add('ks-home-step103-missing-blocks');
+  }
+
   function buildHomeCompositionLayer() {
     runSafe('buildDepartmentShowcase', buildDepartmentShowcase);
     runSafe('normalizeProductGridDensity', normalizeProductGridDensity);
@@ -1847,7 +1965,9 @@
     runSafe('normalizeBestSellerAsOnsusCarouselRowV2', normalizeBestSellerAsOnsusCarouselRowV2);
     runSafe('rebuildBestSellerAsStableGridV3', rebuildBestSellerAsStableGridV3);
     runSafe('mountBestSellerOnsusSectionV4', mountBestSellerOnsusSectionV4);
+    runSafe('ensureMissingCommercialBlocks', ensureMissingCommercialBlocks);
     runSafe('moveBrandsAfterProducts', moveBrandsAfterProducts);
+    runSafe('ksEnsureSequence', ksEnsureSequence);
     runSafe('buildHomeClosingLayer', buildHomeClosingLayer);
     runSafe('ensureClosingLayerOrder', ensureClosingLayerOrder);
   }
@@ -1859,6 +1979,7 @@
     runSafe('forceHeroLayout', forceHeroLayout);
     runSafe('restoreCommercialSections', restoreCommercialSections);
     runSafe('buildHomeCompositionLayer', buildHomeCompositionLayer);
+    runSafe('ensureMissingCommercialBlocks', ensureMissingCommercialBlocks);
     runSafe('normalizeOnsusBridgeDensity', normalizeOnsusBridgeDensity);
     runSafe('compactBeforeBrands', compactBeforeBrands);
     runSafe('finalPruneMalformedCommercialGroups', finalPruneMalformedCommercialGroups);
