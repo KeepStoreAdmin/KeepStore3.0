@@ -2128,3 +2128,126 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   window.addEventListener('resize', function () { window.setTimeout(run, 120); });
 })();
+
+/* KeepStore HOME - Step 127: ONSUS central product mosaic.
+   Uses real server-emitted products to replace the flat editorial deck with
+   a template-like feature mosaic. No demo products, no DB writes. */
+(function () {
+  'use strict';
+  function q(s, r) { return (r || document).querySelector(s); }
+  function qa(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  function txt(n) { return String(n && n.textContent || '').replace(/\s+/g, ' ').trim(); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function norm(h) { return String(h || '').replace(/^https?:\/\/(www\.)?(taikun\.it|webaffare\.it)/i, '').replace(/&amp;/g, '&').replace(/#.*$/, ''); }
+  function imgFrom(root) {
+    var imgs = qa('img', root);
+    for (var i = 0; i < imgs.length; i++) {
+      var im = imgs[i];
+      var src = im.currentSrc || im.getAttribute('src') || im.getAttribute('data-src') || '';
+      if (!src && im.getAttribute('srcset')) src = String(im.getAttribute('srcset')).split(',')[0].trim().split(' ')[0];
+      if (!src || /logo|brand|payment|visa|mastercard|paypal|placeholder|loader|spinner|sprite|blank|nofoto/i.test(src)) continue;
+      return src;
+    }
+    return '';
+  }
+  function priceFrom(root) { var m = txt(root).match(/\d{1,5}(?:[\.,]\d{2})\s*€/g); return m && m.length ? m[m.length - 1] : ''; }
+  function titleFrom(root) {
+    var nodes = qa('h6 a,.ks-final-product-info h6 a,.ks-deal123-title-product,.ks-final-lower-item a[href*="articolo.aspx"],a[href*="articolo.aspx"]', root);
+    for (var i = 0; i < nodes.length; i++) {
+      var t = txt(nodes[i]);
+      if (t && t.length > 6 && !/^(scopri|compra|categoria|vai al catalogo|dettaglio)$/i.test(t)) return t;
+    }
+    return '';
+  }
+  function catFrom(root) {
+    var c = txt(q('.ks-final-product-cat,.category,.cat,.ks-deal123-cat', root));
+    return c && c.length < 35 ? c : '';
+  }
+  function productFrom(root) {
+    if (!root) return null;
+    var a = q('a[href*="articolo.aspx"]', root);
+    var href = norm(a && a.getAttribute('href'));
+    var img = imgFrom(root);
+    var title = titleFrom(root);
+    if (!href || !img || !title) return null;
+    return { href: href, img: img, title: title, price: priceFrom(root), cat: catFrom(root) || 'KeepStore' };
+  }
+  function collectProducts(limit) {
+    var out = [], seen = Object.create(null);
+    var roots = [];
+    ['#KsHomeEditorialFinal .ks-final-product-card','#KsOnsusDealToday123 .ks-deal123-card','#KsHomeBestSellerFinal .ks-final-product-card','#KsHomeLowerFinal .ks-final-lower-item','.ks-final-product-card','.product-item,.swiper-slide'].forEach(function (sel) {
+      qa(sel).forEach(function (n) { roots.push(n); });
+    });
+    roots.forEach(function (r) {
+      if (limit && out.length >= limit) return;
+      var p = productFrom(r);
+      if (!p || seen[p.href]) return;
+      seen[p.href] = 1;
+      out.push(p);
+    });
+    return out;
+  }
+  function mini(p, label) {
+    if (!p) return '';
+    return '<a class="ks-onsus-mosaic-mini127" href="' + esc(p.href) + '"><small>' + esc(label || p.cat) + '</small><strong>' + esc(p.title) + '</strong>' + (p.price ? '<b>' + esc(p.price) + '</b>' : '') + '<img src="' + esc(p.img) + '" alt="' + esc(p.title) + '" loading="lazy" decoding="async"></a>';
+  }
+  function card(p) {
+    if (!p) return '';
+    return '<a class="ks-onsus-mosaic-card127" href="' + esc(p.href) + '"><span class="ks-card-media127"><img src="' + esc(p.img) + '" alt="' + esc(p.title) + '" loading="lazy" decoding="async"></span><small>' + esc(p.cat) + '</small><strong>' + esc(p.title) + '</strong>' + (p.price ? '<b>' + esc(p.price) + '</b>' : '') + '</a>';
+  }
+  function feature(p) {
+    if (!p) return '';
+    return '<a class="ks-onsus-mosaic-feature127" href="' + esc(p.href) + '"><span class="ks-feature-copy127"><em>Scelta KeepStore</em><small>' + esc(p.cat) + '</small><strong>' + esc(p.title) + '</strong>' + (p.price ? '<b>' + esc(p.price) + '</b>' : '') + '<span class="ks-feature-cta127">Scopri ora</span></span><span class="ks-feature-media127"><img src="' + esc(p.img) + '" alt="' + esc(p.title) + '" loading="lazy" decoding="async"></span></a>';
+  }
+  function buildMosaic() {
+    var dept = q('#KsHomeDepartmentShowcase');
+    var old = q('#KsHomeEditorialFinal');
+    if (!dept && !old) return;
+    var products = collectProducts(14);
+    var mosaic = q('#KsOnsusProductMosaic127');
+    if (products.length < 7) { if (mosaic) mosaic.remove(); return; }
+    var html = '<section id="KsOnsusProductMosaic127" class="tf-sp-2 ks-onsus-product-mosaic127" data-ks-final-home="1"><div class="container">' +
+      '<div class="ks-onsus-mosaic-title127"><div class="ks-title-main127"><div><span class="ks-kicker127">Prodotti KeepStore</span><h5>In evidenza</h5></div><div class="ks-onsus-tabs127"><span>In evidenza</span><span>Top prodotti</span><span>Scelti da te</span></div></div><a class="ks-home-section-link" href="articoli.aspx">Vai al catalogo</a></div>' +
+      '<div class="ks-onsus-mosaic127"><div class="ks-onsus-mosaic-side127">' + mini(products[1], 'Offerta') + mini(products[2], 'Novità') + '</div>' +
+      feature(products[0]) + '<div class="ks-onsus-mosaic-side127">' + mini(products[3], 'Consigliato') + mini(products[4], 'Top') + '</div></div>' +
+      '<div class="ks-onsus-mosaic-grid127">' + products.slice(5, 10).map(card).join('') + '</div></div></section>';
+    var tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    var fresh = tmp.firstElementChild;
+    if (mosaic) mosaic.replaceWith(fresh);
+    else if (dept && dept.parentNode) dept.parentNode.insertBefore(fresh, dept.nextSibling);
+    else if (old && old.parentNode) old.parentNode.insertBefore(fresh, old);
+    if (old) {
+      old.setAttribute('data-ks-step127-hidden', 'editorial-replaced-by-mosaic');
+      old.style.setProperty('display', 'none', 'important');
+    }
+  }
+  function enforceOrder() {
+    var dept = q('#KsHomeDepartmentShowcase');
+    var mosaic = q('#KsOnsusProductMosaic127');
+    var best = q('#KsHomeBestSellerFinal');
+    var lower = q('#KsHomeLowerFinal');
+    var brand = q('#KsHomeBrandSection');
+    var closing = q('#KsHomeClosingLayer');
+    if (mosaic && dept && mosaic.parentNode === dept.parentNode && mosaic.previousElementSibling !== dept) dept.parentNode.insertBefore(mosaic, dept.nextSibling);
+    if (best && mosaic && best.parentNode === mosaic.parentNode && best.previousElementSibling !== mosaic) mosaic.parentNode.insertBefore(best, mosaic.nextSibling);
+    if (lower && best && lower.parentNode === best.parentNode && lower.previousElementSibling !== best) best.parentNode.insertBefore(lower, best.nextSibling);
+    if (brand && lower && brand.parentNode === lower.parentNode && brand.previousElementSibling !== lower) lower.parentNode.insertBefore(brand, lower.nextSibling);
+    if (closing && brand && closing.parentNode === brand.parentNode && closing.previousElementSibling !== brand) brand.parentNode.insertBefore(closing, brand.nextSibling);
+  }
+  function fixTitlesAndBody() {
+    document.body.classList.add('ks-page-home', 'ks-home-onsus-pass-127');
+    document.body.classList.remove('ks-home-onsus-pass-125');
+    var h = q('#KsHomeEditorialFinal .ks-final-title h5');
+    if (h) h.textContent = 'In evidenza';
+    var b = q('#KsHomeBestSellerFinal .ks-final-title h5');
+    if (b) b.textContent = 'Best Seller';
+    var l = q('#KsHomeLowerFinal .ks-final-title h5');
+    if (l) l.textContent = 'Scelte dal catalogo';
+    qa('.ks-onsus-action-rail125,#KsOnsusPromoBand125,#KsOnsusWidePromo122').forEach(function (n) { if (n && n.parentNode) n.parentNode.removeChild(n); });
+  }
+  function run() { if (!document.body) return; fixTitlesAndBody(); buildMosaic(); enforceOrder(); }
+  function boot() { run(); [100, 260, 600, 1200, 2500, 5000, 9000].forEach(function (d) { window.setTimeout(run, d); }); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  window.addEventListener('resize', function () { window.setTimeout(run, 150); });
+})();
