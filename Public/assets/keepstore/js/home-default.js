@@ -1598,6 +1598,7 @@
     var headings = qa('main h1,main h2,main h3,main h4,main h5,main h6,main .heading,main .title,main .section-title');
     for (var i = 0; i < headings.length; i += 1) {
       var h = headings[i];
+      if (h.closest && h.closest('#KsHomeBestSellerOnsusV4')) continue;
       var label = textOf(h).replace(/\s+/g, ' ').trim().toLowerCase();
       if (label !== 'best seller') continue;
       var root = h.parentElement;
@@ -1609,7 +1610,7 @@
       }
     }
     var sections = qa('main section,main .tf-sp-2,main .tf-sp-3,main .tf-sp-4,main .tf-sp-5').filter(function (sec) {
-      return /best seller/i.test(textOf(sec)) && countArticleLinks(sec) >= 3;
+      return !(sec.id === 'KsHomeBestSellerOnsusV4' || (sec.closest && sec.closest('#KsHomeBestSellerOnsusV4'))) && /best seller/i.test(textOf(sec)) && countArticleLinks(sec) >= 3;
     });
     return sections[0] || null;
   }
@@ -1750,6 +1751,89 @@
     bindGeneratedImageFallbacks(deck);
   }
 
+
+
+  function findOriginalBestSellerSourceV4() {
+    var candidates = qa('main section,main .tf-sp-2,main .tf-sp-3,main .tf-sp-4,main .tf-sp-5').filter(function (sec) {
+      if (!sec || sec.id === 'KsHomeBestSellerOnsusV4' || (sec.closest && sec.closest('#KsHomeBestSellerOnsusV4'))) return false;
+      if (sec.id === 'KsHomeOnsusBridge' || (sec.closest && sec.closest('#KsHomeOnsusBridge'))) return false;
+      if (sec.id === 'HomeBrandsSection' || (sec.closest && sec.closest('#HomeBrandsSection'))) return false;
+      return /best\s*seller/i.test(textOf(sec)) && countArticleLinks(sec) >= 3;
+    });
+    return candidates[0] || null;
+  }
+
+  function bestSellerSourceDataV4(source) {
+    var result = [];
+    var seen = {};
+    if (!source) return result;
+    qa('a[href*="articolo.aspx?id="],a[href*="articolo.aspx?Id="],a[href*="articolo.aspx?ID="]', source).forEach(function (link) {
+      if (!link || (link.closest && link.closest('#KsHomeBestSellerOnsusV4'))) return;
+      var href = link.getAttribute('href') || '';
+      var id = productIdFromUrl(href) || href.toLowerCase();
+      if (!id || seen['id:' + id]) return;
+      var root = link.closest('.ks-onsus-grid-card,.ks-best-seller-grid-card,.card-product,.ks-grid-card,.product-item,.product-card,.swiper-slide,li,[class*="col-"]') || link;
+      var item = productDataFromCard(root || link);
+      if (!item || !item.title || !item.url || !item.image) return;
+      var family = productBridgeFamilyKey(item);
+      var familyKey = family ? 'family:' + family : '';
+      if (familyKey && seen[familyKey]) return;
+      seen['id:' + id] = 1;
+      if (familyKey) seen[familyKey] = 1;
+      result.push(item);
+    });
+    return result;
+  }
+
+  function hideOriginalBestSellerSourceV4(source) {
+    if (!source || source.id === 'KsHomeBestSellerOnsusV4') return;
+    source.classList.add('ks-best-seller-v4-source-hidden');
+    source.setAttribute('data-ks-best-source-replaced', 'v4');
+    source.setAttribute('aria-hidden', 'true');
+    source.style.setProperty('display', 'none', 'important');
+    source.style.setProperty('visibility', 'hidden', 'important');
+    source.style.setProperty('height', '0', 'important');
+    source.style.setProperty('min-height', '0', 'important');
+    source.style.setProperty('max-height', '0', 'important');
+    source.style.setProperty('margin', '0', 'important');
+    source.style.setProperty('padding', '0', 'important');
+    source.style.setProperty('overflow', 'hidden', 'important');
+  }
+
+  function mountBestSellerOnsusSectionV4() {
+    if (!isHome()) return;
+    var source = findOriginalBestSellerSourceV4();
+    var existing = q('#KsHomeBestSellerOnsusV4');
+    var data = bestSellerSourceDataV4(source);
+    if (data.length < 3 && existing) {
+      removeHardHide(existing);
+      if (document.body) document.body.classList.add('ks-home-step102-best-v4');
+      return;
+    }
+    if (data.length < 3) return;
+
+    var section = existing || document.createElement('section');
+    section.id = 'KsHomeBestSellerOnsusV4';
+    section.className = 'tf-sp-2 ks-best-seller-onsus-v4';
+    section.setAttribute('data-ks-generated', 'best-seller-onsus-v4');
+    section.innerHTML = '<div class="container"><div class="flat-title ks-best-seller-v4-title"><h5 class="fw-semibold">Best Seller</h5><a class="ks-home-section-link" href="articoli.aspx">Vai al catalogo</a></div><div class="ks-best-seller-v4-grid">' +
+      data.slice(0, 5).map(function (item) { return bridgeGridCard(item).replace('class="ks-onsus-grid-card"', 'class="ks-onsus-grid-card ks-best-seller-v4-card"'); }).join('') +
+      '</div></div>';
+
+    var bridge = q('#KsHomeOnsusBridge');
+    var brand = q('#HomeBrandsSection') || q('.ks-home-brands-block');
+    if (bridge && bridge.parentNode) {
+      bridge.parentNode.insertBefore(section, bridge.nextSibling);
+    } else if (brand && brand.parentNode) {
+      brand.parentNode.insertBefore(section, brand);
+    } else {
+      (q('main') || document.body).appendChild(section);
+    }
+    hideOriginalBestSellerSourceV4(source);
+    bindGeneratedImageFallbacks(section);
+    if (document.body) document.body.classList.add('ks-home-step102-best-v4');
+  }
+
   function buildHomeCompositionLayer() {
     runSafe('buildDepartmentShowcase', buildDepartmentShowcase);
     runSafe('normalizeProductGridDensity', normalizeProductGridDensity);
@@ -1762,6 +1846,7 @@
     runSafe('normalizeBestSellerAsOnsusCarouselRow', normalizeBestSellerAsOnsusCarouselRow);
     runSafe('normalizeBestSellerAsOnsusCarouselRowV2', normalizeBestSellerAsOnsusCarouselRowV2);
     runSafe('rebuildBestSellerAsStableGridV3', rebuildBestSellerAsStableGridV3);
+    runSafe('mountBestSellerOnsusSectionV4', mountBestSellerOnsusSectionV4);
     runSafe('moveBrandsAfterProducts', moveBrandsAfterProducts);
     runSafe('buildHomeClosingLayer', buildHomeClosingLayer);
     runSafe('ensureClosingLayerOrder', ensureClosingLayerOrder);
@@ -1793,6 +1878,7 @@
     runSafe('normalizeBestSellerAsOnsusCarouselRow', normalizeBestSellerAsOnsusCarouselRow);
     runSafe('normalizeBestSellerAsOnsusCarouselRowV2', normalizeBestSellerAsOnsusCarouselRowV2);
     runSafe('rebuildBestSellerAsStableGridV3', rebuildBestSellerAsStableGridV3);
+    runSafe('mountBestSellerOnsusSectionV4', mountBestSellerOnsusSectionV4);
     runSafe('bindGeneratedImageFallbacks', function () { bindGeneratedImageFallbacks(document); });
     runSafe('updateAllSwipers', updateAllSwipers);
   }

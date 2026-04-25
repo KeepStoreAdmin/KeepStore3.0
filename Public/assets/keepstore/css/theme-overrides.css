@@ -1986,3 +1986,26 @@ body.ks-page-home.ks-home-step101-best-grid-v3 .ks-best-seller-source-wrap-hidde
 @media (max-width:767.98px){
   body.ks-page-home.ks-home-step101-best-grid-v3 .ks-best-seller-grid-v3{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;}
 }
+
+
+/* KeepStore HOME step 102: ONSUS stable Best Seller section */
+body.ks-page-home.ks-home-step102-best-v4 .ks-best-seller-v4-source-hidden{
+  display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;
+}
+body.ks-page-home.ks-home-step102-best-v4 #KsHomeBestSellerOnsusV4{
+  margin-top:34px!important;margin-bottom:52px!important;padding-top:0!important;padding-bottom:0!important;
+}
+body.ks-page-home.ks-home-step102-best-v4 #KsHomeBestSellerOnsusV4 .ks-best-seller-v4-title{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;margin-bottom:18px!important;padding-bottom:10px!important;border-bottom:1px solid rgba(0,0,0,.055)!important;
+}
+body.ks-page-home.ks-home-step102-best-v4 #KsHomeBestSellerOnsusV4 .ks-best-seller-v4-title h5{margin:0!important;font-size:18px!important;line-height:1.2!important;font-weight:700!important;color:#1d2733!important;}
+body.ks-page-home.ks-home-step102-best-v4 #KsHomeBestSellerOnsusV4 .ks-best-seller-v4-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:18px!important;align-items:stretch!important;width:100%!important;}
+body.ks-page-home.ks-home-step102-best-v4 #KsHomeBestSellerOnsusV4 .ks-best-seller-v4-card{display:grid!important;grid-template-rows:178px 16px 38px 18px!important;min-height:278px!important;max-height:278px!important;padding:12px!important;border-radius:0!important;background:#fff!important;box-shadow:none!important;overflow:hidden!important;text-decoration:none!important;}
+body.ks-page-home.ks-home-step102-best-v4 #KsHomeBestSellerOnsusV4 .ks-onsus-grid-media{height:178px!important;min-height:178px!important;background:#fff!important;border-radius:0!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;}
+body.ks-page-home.ks-home-step102-best-v4 #KsHomeBestSellerOnsusV4 .ks-onsus-grid-media img{width:100%!important;height:100%!important;object-fit:contain!important;display:block!important;}
+body.ks-page-home.ks-home-step102-best-v4 #KsHomeBestSellerOnsusV4 .ks-onsus-meta{font-size:10px!important;line-height:1.1!important;color:#7d8794!important;overflow:hidden!important;white-space:nowrap!important;text-overflow:ellipsis!important;}
+body.ks-page-home.ks-home-step102-best-v4 #KsHomeBestSellerOnsusV4 .ks-onsus-title{font-size:12px!important;line-height:1.32!important;min-height:34px!important;max-height:34px!important;color:#005aa7!important;font-weight:700!important;text-transform:uppercase!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important;}
+body.ks-page-home.ks-home-step102-best-v4 #KsHomeBestSellerOnsusV4 .ks-onsus-price{display:flex!important;align-items:flex-end!important;gap:6px!important;color:#ff3b30!important;font-size:12px!important;line-height:1.1!important;}
+body.ks-page-home.ks-home-step102-best-v4 #HomeBrandsSection,body.ks-page-home.ks-home-step102-best-v4 .ks-home-brands-block{margin-top:0!important;}
+@media (max-width:1199.98px){body.ks-page-home.ks-home-step102-best-v4 #KsHomeBestSellerOnsusV4 .ks-best-seller-v4-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;}}
+@media (max-width:767.98px){body.ks-page-home.ks-home-step102-best-v4 #KsHomeBestSellerOnsusV4 .ks-best-seller-v4-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;}}
