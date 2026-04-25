@@ -131,7 +131,7 @@
                     <div class="quickview-image">
                         <div class="product-thumb-slider">
                             <a href="articoli.aspx" class="d-block tf-image-view" id="ksQuickViewImageLink">
-                                <img id="ksQuickViewMainImage" src="/Public/assets/images/logo/logo.webp" alt="Anteprima prodotto" class="lazyload" />
+                                <img id="ksQuickViewMainImage" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='480' viewBox='0 0 640 480'%3E%3Crect width='640' height='480' fill='%23f4f6f8'/%3E%3Cpath d='M160 150h320v210H160z' fill='%23ffffff' stroke='%23dce3eb' stroke-width='8'/%3E%3Cpath d='M205 305l70-72 50 48 44-34 66 58z' fill='%23dbeafe'/%3E%3Ccircle cx='420' cy='205' r='34' fill='%23bfdbfe'/%3E%3C/svg%3E" alt="Anteprima prodotto" class="lazyload" />
                             </a>
                         </div>
                     </div>

@@ -1240,7 +1240,7 @@ End Function
 	            If aziendaLogo <> "" Then
 	                imgLogoMobileCtrl.ImageUrl = aziendaLogo
 	            Else
-	                imgLogoMobileCtrl.ImageUrl = ThemeManager.Asset("images/logo/logo.webp")
+	                imgLogoMobileCtrl.ImageUrl = ThemeManager.Asset("images/logo/logo-mobile.webp")
 	            End If
 	            If altLogo <> "" Then imgLogoMobileCtrl.AlternateText = altLogo
 	        End If

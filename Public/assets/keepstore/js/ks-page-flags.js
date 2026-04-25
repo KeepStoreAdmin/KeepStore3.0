@@ -259,6 +259,17 @@
     if (val) u.searchParams.set('q', val);
     return u;
   }
+  function resizeSearchCategory(root) {
+    var sel = selectFromRoot(root);
+    if (!root || !sel) return;
+    var text = '';
+    try {
+      text = sel.options && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].text : '';
+    } catch (err) {}
+    text = String(text || 'Tutti i settori').replace(/\s+/g, ' ').trim();
+    var px = Math.max(128, Math.min(260, 42 + (text.length * 7.4)));
+    root.style.setProperty('--ks-search-category-width', Math.round(px) + 'px');
+  }
   function looksLikeDirectCode(query) {
     var value = String(query || '').replace(/\s+/g, ' ').trim();
     if (!value || value.length < 3 || value.length > 48) return false;
@@ -406,6 +417,9 @@
       root.setAttribute(BOUND_ATTR, '135');
       ensureSuggest(root);
       var input = inputFromRoot(root), timer = 0;
+      resizeSearchCategory(root);
+      var select = selectFromRoot(root);
+      if (select) select.addEventListener('change', function () { resizeSearchCategory(root); });
       function queue(recent) {
         clearTimeout(timer);
         timer = setTimeout(function () { requestSuggest(root, recent); }, 220);

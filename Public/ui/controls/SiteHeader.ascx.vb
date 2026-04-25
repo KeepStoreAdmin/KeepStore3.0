@@ -17,7 +17,7 @@ Partial Class SiteHeader
 
     Private Const HeaderCompanyId As Integer = 1
     Private Const DefaultLogoVirtual As String = "~/Public/assets/images/logo/logo.webp"
-    Private Const DefaultMobileLogoVirtual As String = "~/Public/assets/images/logo/logo.webp"
+    Private Const DefaultMobileLogoVirtual As String = "~/Public/assets/images/logo/logo-mobile.webp"
     Private Const DefaultFaviconVirtual As String = "~/Public/assets/images/favicons/favicon.ico"
     Private Const DefaultAppleTouchIconVirtual As String = "~/Public/assets/images/favicons/apple-touch-icon.png"
     Private Const DefaultFavicon32Virtual As String = "~/Public/assets/images/favicons/favicon-32x32.png"
@@ -342,9 +342,18 @@ Partial Class SiteHeader
         desktopLogo = EnsureExistingLogoUrl(desktopLogo, DefaultLogoVirtual)
         mobileLogo = EnsureExistingLogoUrl(mobileLogo, desktopLogo)
 
-        If imgLogo IsNot Nothing Then imgLogo.ImageUrl = desktopLogo
-        If imgLogoMobile IsNot Nothing Then imgLogoMobile.ImageUrl = mobileLogo
-        If imgLogoDrawer IsNot Nothing Then imgLogoDrawer.ImageUrl = mobileLogo
+        Dim desktopFallback As String = ResolveUrl(DefaultLogoVirtual)
+        If imgLogo IsNot Nothing Then
+            imgLogo.ImageUrl = desktopLogo
+        End If
+        If imgLogoMobile IsNot Nothing Then
+            imgLogoMobile.ImageUrl = mobileLogo
+            imgLogoMobile.Attributes("onerror") = "this.onerror=null;this.src='" & desktopFallback & "';"
+        End If
+        If imgLogoDrawer IsNot Nothing Then
+            imgLogoDrawer.ImageUrl = mobileLogo
+            imgLogoDrawer.Attributes("onerror") = "this.onerror=null;this.src='" & desktopFallback & "';"
+        End If
     End Sub
 
     Private Function EnsureExistingLogoUrl(ByVal candidate As String, ByVal fallback As String) As String
@@ -376,12 +385,6 @@ Partial Class SiteHeader
         End If
 
         Dim lower As String = u.ToLowerInvariant()
-
-        If lower.EndsWith("/logo-mobile.webp", StringComparison.OrdinalIgnoreCase) OrElse
-           lower.Equals("logo-mobile.webp", StringComparison.OrdinalIgnoreCase) Then
-            u = "/Public/assets/images/logo/logo.webp"
-            lower = u.ToLowerInvariant()
-        End If
 
         If lower.Contains("/public/assets/images/favicons/") Then
             Dim logoFile As String = Path.GetFileName(u)

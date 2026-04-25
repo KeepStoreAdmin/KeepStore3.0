@@ -119,7 +119,7 @@ Partial Public Class _Default
         Dim usedBusinessKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
         Dim usedDisplayKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
 
-        Dim featuredRows As DataTable = TakeDistinctRows(12, usedBusinessKeys, GetFeaturedPool(60), GetMostViewedPool(60), GetNewArrivalsPool(60))
+        Dim featuredRows As DataTable = TakeDistinctRows(12, usedBusinessKeys, GetFeaturedPool(60))
         CommitDisplayKeys(featuredRows, usedDisplayKeys)
         rptHomeFeaturedProducts.DataSource = featuredRows
         rptHomeFeaturedProducts.DataBind()
@@ -127,7 +127,7 @@ Partial Public Class _Default
             HomeFeaturedProductsSection.Visible = Not IsTableEmpty(featuredRows)
         End If
 
-        Dim dealRows As DataTable = TakeDiverseRows(8, Nothing, Nothing, GetDealOfferPool(60), GetFeaturedPool(60), GetMostViewedPool(60))
+        Dim dealRows As DataTable = TakeDiverseRows(8, Nothing, Nothing, GetDealOfferPool(60))
         rptDealOfDay.DataSource = dealRows
         rptDealOfDay.DataBind()
         If HomeOffersSection IsNot Nothing Then
@@ -144,9 +144,9 @@ Partial Public Class _Default
         If HomeCollectionSection IsNot Nothing Then HomeCollectionSection.Visible = True
         If HomeBottomPromoSection IsNot Nothing Then HomeBottomPromoSection.Visible = True
 
-        Dim featureTabRows As DataTable = TakeDiverseRows(7, Nothing, Nothing, GetDealOfferPool(60), GetFeaturedPool(60), GetMostViewedPool(60))
-        Dim topRateRows As DataTable = TakeDiverseRows(7, Nothing, Nothing, GetMostViewedPool(60), GetFeaturedPool(60), GetNewArrivalsPool(60))
-        Dim onSaleRows As DataTable = TakeDiverseRows(7, Nothing, Nothing, GetNewArrivalsPool(60), GetDealOfferPool(60), GetFeaturedPool(60))
+        Dim featureTabRows As DataTable = TakeDiverseRows(7, Nothing, Nothing, GetFeaturedPool(60))
+        Dim topRateRows As DataTable = TakeDiverseRows(7, Nothing, Nothing, GetPureTopSellingPool(60))
+        Dim onSaleRows As DataTable = TakeDiverseRows(7, Nothing, Nothing, GetDealOfferPool(60))
         BindThreeColumnZone(featureTabRows, rptFeatureLeft, rptFeatureCenter, rptFeatureRight)
         BindThreeColumnZone(topRateRows, rptToprateLeft, rptToprateCenter, rptToprateRight)
         BindThreeColumnZone(onSaleRows, rptOnSaleLeft, rptOnSaleCenter, rptOnSaleRight)
@@ -154,7 +154,7 @@ Partial Public Class _Default
             HomeLegacyEditorialSection.Visible = (Not IsTableEmpty(featureTabRows) OrElse Not IsTableEmpty(topRateRows) OrElse Not IsTableEmpty(onSaleRows))
         End If
 
-        Dim bestRows As DataTable = TakeDiverseRows(12, Nothing, Nothing, GetBestSellerPool(72), GetMostViewedPool(72), GetFeaturedPool(72), GetNewArrivalsPool(72))
+        Dim bestRows As DataTable = TakeDiverseRows(12, Nothing, Nothing, GetBestSellerPool(72))
         rptBestSeller.DataSource = bestRows
         rptBestSeller.DataBind()
         If HomeLegacyBestSection IsNot Nothing Then
@@ -163,7 +163,7 @@ Partial Public Class _Default
 
         Dim recentRows As DataTable = GetRecentlyViewedProducts(10, Nothing, False, Nothing, False)
         If IsTableEmpty(recentRows) Then
-            recentRows = TakeDiverseRows(10, Nothing, Nothing, GetNewArrivalsPool(72), GetFeaturedPool(72), GetMostViewedPool(72))
+            recentRows = TakeDiverseRows(10, Nothing, Nothing, GetNewArrivalsPool(72))
         End If
         rptRecentlyViewed.DataSource = recentRows
         rptRecentlyViewed.DataBind()
@@ -171,10 +171,10 @@ Partial Public Class _Default
             HomeRecentlyViewedSection.Visible = Not IsTableEmpty(recentRows)
         End If
 
-        BindLowerBlock(Top20Block, rptTop20Slides, TakeDiverseRows(10, Nothing, Nothing, GetMostViewedPool(80), GetFeaturedPool(80), GetNewArrivalsPool(80)), 4, Nothing, Nothing)
-        BindLowerBlock(LowerFeaturedBlock, rptFeaturedProductsSlides, TakeDiverseRows(10, Nothing, Nothing, GetFeaturedPool(80), GetNewArrivalsPool(80), GetMostViewedPool(80)), 4, Nothing, Nothing)
-        BindLowerBlock(TopSellingBlock, rptTopSellingProductSlides, TakeDiverseRows(10, Nothing, Nothing, GetPureTopSellingPool(80), GetBestSellerPool(80), GetMostViewedPool(80), GetFeaturedPool(80)), 4, Nothing, Nothing)
-        BindLowerBlock(OnSaleBlock, rptOnSaleProductSlides, TakeDiverseRows(10, Nothing, Nothing, GetDealOfferPool(80), GetFeaturedPool(80), GetMostViewedPool(80)), 4, Nothing, Nothing)
+        BindLowerBlock(Top20Block, rptTop20Slides, TakeDiverseRows(10, Nothing, Nothing, GetPureTopSellingPool(80)), 4, Nothing, Nothing)
+        BindLowerBlock(LowerFeaturedBlock, rptFeaturedProductsSlides, TakeDiverseRows(10, Nothing, Nothing, GetFeaturedPool(80)), 4, Nothing, Nothing)
+        BindLowerBlock(TopSellingBlock, rptTopSellingProductSlides, TakeDiverseRows(10, Nothing, Nothing, GetPureTopSellingPool(80)), 4, Nothing, Nothing)
+        BindLowerBlock(OnSaleBlock, rptOnSaleProductSlides, TakeDiverseRows(10, Nothing, Nothing, GetDealOfferPool(80)), 4, Nothing, Nothing)
         If HomeLowerColumnsSection IsNot Nothing Then
             HomeLowerColumnsSection.Visible = (Top20Block IsNot Nothing AndAlso Top20Block.Visible) OrElse _
                                              (LowerFeaturedBlock IsNot Nothing AndAlso LowerFeaturedBlock.Visible) OrElse _
@@ -1763,7 +1763,7 @@ Partial Public Class _Default
 
     Protected Function ProductImageThumb(ByVal value As Object) As String
         Dim fileName As String = Convert.ToString(value).Trim()
-        If String.IsNullOrWhiteSpace(fileName) Then Return "/Public/assets/images/item/laptop.webp"
+        If String.IsNullOrWhiteSpace(fileName) Then Return ProductImagePlaceholder()
         fileName = fileName.Replace("\", "/")
         fileName = Path.GetFileName(fileName)
         If fileName.StartsWith("_", StringComparison.OrdinalIgnoreCase) Then
@@ -1774,10 +1774,14 @@ Partial Public Class _Default
 
     Protected Function ProductImageFull(ByVal value As Object) As String
         Dim fileName As String = Convert.ToString(value).Trim()
-        If String.IsNullOrWhiteSpace(fileName) Then Return "/Public/assets/images/item/laptop.webp"
+        If String.IsNullOrWhiteSpace(fileName) Then Return ProductImagePlaceholder()
         fileName = fileName.Replace("\", "/")
         fileName = Path.GetFileName(fileName)
         Return "/Public/assets/images/articoli/" & fileName
+    End Function
+
+    Private Function ProductImagePlaceholder() As String
+        Return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='640' viewBox='0 0 640 640'%3E%3Crect width='640' height='640' rx='28' fill='%23f4f6f8'/%3E%3Crect x='138' y='166' width='364' height='278' rx='18' fill='%23ffffff' stroke='%23d8e0ea' stroke-width='10'/%3E%3Cpath d='M182 390l95-100 70 68 50-45 75 77z' fill='%23dbeafe'/%3E%3Ccircle cx='430' cy='235' r='40' fill='%23bfdbfe'/%3E%3C/svg%3E"
     End Function
 
     Private Function ResolveBrandImage(ByVal value As Object) As String

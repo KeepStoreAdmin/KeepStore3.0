@@ -14,20 +14,23 @@
 .ks-home-departments .ks-home-submenu-list{flex:1 1 auto;min-width:0;}
 .ks-home-departments .ks-home-sector-promo[data-ks-hidden="1"]{display:none!important;}
 @media (min-width:1200px){
-  .ks-home-departments .ks-home-submenu-container{position:absolute!important;top:0!important;left:100%!important;min-width:760px!important;max-width:min(980px,calc(100vw - 620px))!important;width:max-content!important;background:#fff!important;white-space:normal!important;box-shadow:0 18px 45px rgba(17,24,39,.10)!important;border:1px solid #eef1f5!important;border-radius:0 10px 10px 10px!important;}
-  .ks-home-departments .ks-home-submenu-list{display:grid!important;grid-template-columns:repeat(3,minmax(160px,1fr))!important;gap:18px 24px!important;padding:26px!important;align-items:start!important;}
+  .ks-home-departments .ks-home-submenu-container{position:absolute!important;top:0!important;left:100%!important;min-width:760px!important;max-width:min(980px,calc(100vw - 620px))!important;width:min(900px,calc(100vw - 620px))!important;max-height:430px!important;overflow:hidden!important;background:#fff!important;white-space:normal!important;box-shadow:0 18px 45px rgba(17,24,39,.10)!important;border:1px solid #eef1f5!important;border-radius:0 10px 10px 10px!important;}
+  .ks-home-departments .ks-home-submenu-list{display:grid!important;grid-template-columns:repeat(3,minmax(170px,1fr))!important;gap:18px 24px!important;padding:24px!important;align-items:start!important;align-content:start!important;max-height:390px!important;overflow:hidden!important;}
   .ks-home-departments .ks-home-submenu-grouped,.ks-home-departments .ks-home-submenu-card{display:block!important;min-width:0!important;width:100%!important;}
-  .ks-home-departments .ks-home-submenu-tipology-list{display:grid!important;gap:7px!important;margin-top:9px!important;padding-left:0!important;}
+  .ks-home-departments .ks-home-submenu-tipology-list{display:grid!important;gap:6px!important;margin-top:8px!important;padding-left:0!important;}
   .ks-home-departments .ks-home-submenu-tipology,.ks-home-departments .ks-home-submenu-tipology-link{display:block!important;min-width:0!important;white-space:normal!important;}
   .ks-home-departments .ks-home-submenu-category{display:block!important;white-space:normal!important;font-weight:800!important;line-height:1.25!important;}
+  .ks-home-departments .ks-home-submenu-more{display:inline-flex!important;margin-top:8px!important;font-size:12px!important;font-weight:800!important;color:#ef4444!important;}
+  .ks-home-departments .ks-home-submenu-view-all{border:1px solid #eef1f5!important;border-radius:10px!important;padding:14px!important;background:#f8fafc!important;}
+  .ks-home-departments .ks-home-submenu-view-all span{display:block!important;margin-top:6px!important;font-size:12px!important;color:#64748b!important;}
   .ks-home-departments .menu-item:hover > [data-ks-submenu="1"],
   .ks-home-departments .menu-item:focus-within > [data-ks-submenu="1"],
   .ks-home-departments .menu-item.is-hover > [data-ks-submenu="1"],
-  .ks-home-departments .menu-item.is-open > [data-ks-submenu="1"]{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;max-height:none!important;overflow:visible!important;}
+  .ks-home-departments .menu-item.is-open > [data-ks-submenu="1"]{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;max-height:430px!important;overflow:hidden!important;}
   .ks-home-departments .menu-item[data-ks-submenu-mode="list"]:hover > [data-ks-submenu="1"],
   .ks-home-departments .menu-item[data-ks-submenu-mode="list"]:focus-within > [data-ks-submenu="1"],
   .ks-home-departments .menu-item[data-ks-submenu-mode="list"].is-hover > [data-ks-submenu="1"],
-  .ks-home-departments .menu-item[data-ks-submenu-mode="list"].is-open > [data-ks-submenu="1"]{display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;max-height:none!important;overflow:visible!important;}
+  .ks-home-departments .menu-item[data-ks-submenu-mode="list"].is-open > [data-ks-submenu="1"]{display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;max-height:430px!important;overflow:hidden!important;}
 }
 @media (max-width:1199.98px){
   .ks-home-departments .menu-item[data-ks-open="1"] > [data-ks-submenu="1"]{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;max-height:none!important;overflow:visible!important;}
