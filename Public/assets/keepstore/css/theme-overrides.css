@@ -3446,7 +3446,8 @@ body.ks-page-home.ks-home-server-rendered .ks-home-departments .sub-menu-contain
 }
 body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item:hover>.sub-menu-container,
 body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item:focus-within>.sub-menu-container,
-body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item.is-open>.sub-menu-container{
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item.is-open>.sub-menu-container,
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item[data-ks-open="1"]>.sub-menu-container{
   display:flex!important;
   visibility:visible!important;
   opacity:1!important;
@@ -3456,6 +3457,33 @@ body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item.is-ope
 }
 body.ks-page-home.ks-home-server-rendered .ks-home-departments .sub-menu-list{
   overflow:visible!important;
+}
+body.ks-page-home.ks-home-server-rendered .tf-header,
+body.ks-page-home.ks-home-server-rendered .tf-header .inner-header,
+body.ks-page-home.ks-home-server-rendered .tf-header .header-center,
+body.ks-page-home.ks-home-server-rendered .ks-header-ui,
+body.ks-page-home.ks-home-server-rendered .ks-header-ui .container,
+body.ks-page-home.ks-home-server-rendered .ks-search-shell{
+  overflow:visible!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-header-ui{
+  position:relative!important;
+  z-index:1500!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-search-host .ks-suggest,
+body.ks-page-home.ks-home-server-rendered .ks-search-shell .ks-search-suggest.is-open{
+  z-index:6000!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-header-catalog-item.is-open>.sub-menu-container,
+body.ks-page-home.ks-home-server-rendered .ks-header-catalog-item:focus-within>.sub-menu-container{
+  transform:translateY(0)!important;
+  opacity:1!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+}
+body.ks-page-home.ks-home-server-rendered #KsLocalAiSearch130{
+  display:block!important;
+  width:100%!important;
 }
 body.ks-page-home.ks-home-server-rendered .ks-header-ui .nav-icon .nav-shop-cart>a,
 body.ks-page-home.ks-home-server-rendered .ks-header-ui .nav-icon .nav-compare>a,

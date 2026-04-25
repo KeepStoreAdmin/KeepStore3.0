@@ -91,10 +91,10 @@ Partial Public Class search_suggest
         Dim payload As New Dictionary(Of String, Object)()
 
         Try
-            Dim query As String = NormalizeQuery(Request("q"))
+            Dim query As String = NormalizeQuery(SafeRequestValue("q"))
             Dim filters As SearchFilters = ReadFilters()
-            Dim limit As Integer = Math.Max(1, Math.Min(MaxLimit, ReadInt(Request("limit"), DefaultLimit)))
-            Dim recentIds As List(Of Integer) = ParseIds(Request("recent"))
+            Dim limit As Integer = Math.Max(1, Math.Min(MaxLimit, ReadInt(SafeRequestValue("limit"), DefaultLimit)))
+            Dim recentIds As List(Of Integer) = ParseIds(SafeRequestValue("recent"))
 
             Dim result As Dictionary(Of String, Object)
             If String.IsNullOrWhiteSpace(query) OrElse query.Length < 2 Then
@@ -293,7 +293,6 @@ Partial Public Class search_suggest
         Next
         ' Tie-breaker only: never let commercial boosts outrank textual relevance bands.
         sb.Append(" + (CASE WHEN COALESCE(v.Disponibilita,0) > 0 THEN 600 ELSE 0 END)")
-        sb.Append(" + (CASE WHEN COALESCE(v.Export,1) <> 0 THEN 500 ELSE 0 END)")
         sb.Append(" + (CASE WHEN COALESCE(v.InOfferta,0) <> 0 THEN 450 ELSE 0 END)")
         sb.Append(" + (CASE WHEN COALESCE(v.Vetrina,0) <> 0 THEN 250 ELSE 0 END)")
         sb.Append(" + LEAST(COALESCE(v.visite,0),999)")
@@ -305,9 +304,9 @@ Partial Public Class search_suggest
         Dim sort As String = Convert.ToString(If(filters Is Nothing, String.Empty, filters.Sort)).ToLowerInvariant()
         Select Case sort
             Case "price-asc", "prezzo-asc"
-                Return " ORDER BY PrezzoFinale ASC, RankScore DESC, COALESCE(v.Disponibilita,0) DESC, COALESCE(v.Export,1) DESC, v.id DESC"
+                Return " ORDER BY PrezzoFinale ASC, RankScore DESC, COALESCE(v.Disponibilita,0) DESC, v.id DESC"
             Case "price-desc", "prezzo-desc"
-                Return " ORDER BY PrezzoFinale DESC, RankScore DESC, COALESCE(v.Disponibilita,0) DESC, COALESCE(v.Export,1) DESC, v.id DESC"
+                Return " ORDER BY PrezzoFinale DESC, RankScore DESC, COALESCE(v.Disponibilita,0) DESC, v.id DESC"
             Case "promo", "offerte"
                 Return " ORDER BY COALESCE(v.InOfferta,0) DESC, RankScore DESC, PrezzoFinale ASC, COALESCE(v.Disponibilita,0) DESC, v.id DESC"
             Case "available", "disponibili"
@@ -315,7 +314,7 @@ Partial Public Class search_suggest
             Case "new", "novita"
                 Return " ORDER BY v.DataCreazione DESC, RankScore DESC, COALESCE(v.Disponibilita,0) DESC, v.id DESC"
             Case Else
-                Return " ORDER BY RankScore DESC, COALESCE(v.Disponibilita,0) DESC, COALESCE(v.Export,1) DESC, COALESCE(v.InOfferta,0) DESC, COALESCE(v.Vetrina,0) DESC, COALESCE(v.visite,0) DESC, PrezzoFinale ASC, v.id DESC"
+                Return " ORDER BY RankScore DESC, COALESCE(v.Disponibilita,0) DESC, COALESCE(v.InOfferta,0) DESC, COALESCE(v.Vetrina,0) DESC, COALESCE(v.visite,0) DESC, PrezzoFinale ASC, v.id DESC"
         End Select
     End Function
 
@@ -548,27 +547,40 @@ Partial Public Class search_suggest
 
     Private Function ReadFilters() As SearchFilters
         Return New SearchFilters() With {
-            .SettoreId = ReadInt(Request("st"), 0),
-            .CategoriaId = ReadInt(Request("ct"), 0),
-            .TipologiaId = ReadInt(Request("tp"), 0),
-            .GruppoId = ReadInt(Request("gr"), 0),
-            .SottoGruppoId = ReadInt(Request("sg"), 0),
-            .MarcaId = ReadInt(Request("mr"), 0),
-            .ProdottoId = ReadInt(Request("pid"), 0),
-            .SoloPromo = (ReadInt(Request("inpromo"), 0) <> 0 OrElse ReadInt(Request("promo"), 0) <> 0),
-            .SoloDisponibili = (ReadInt(Request("available"), 0) <> 0 OrElse ReadInt(Request("disponibili"), 0) <> 0),
-            .SoloRicondizionati = (ReadInt(Request("refurbished"), 0) <> 0 OrElse ReadInt(Request("ricondizionato"), 0) <> 0),
-            .MinPrice = ReadDecParam(Request("min"), 0D),
-            .MaxPrice = ReadDecParam(Request("max"), 0D),
-            .Sort = Convert.ToString(Request("sort")),
-            .Mode = Convert.ToString(Request("mode"))
+            .SettoreId = ReadInt(SafeRequestValue("st"), 0),
+            .CategoriaId = ReadInt(SafeRequestValue("ct"), 0),
+            .TipologiaId = ReadInt(SafeRequestValue("tp"), 0),
+            .GruppoId = ReadInt(SafeRequestValue("gr"), 0),
+            .SottoGruppoId = ReadInt(SafeRequestValue("sg"), 0),
+            .MarcaId = ReadInt(SafeRequestValue("mr"), 0),
+            .ProdottoId = ReadInt(SafeRequestValue("pid"), 0),
+            .SoloPromo = (ReadInt(SafeRequestValue("inpromo"), 0) <> 0 OrElse ReadInt(SafeRequestValue("promo"), 0) <> 0),
+            .SoloDisponibili = (ReadInt(SafeRequestValue("available"), 0) <> 0 OrElse ReadInt(SafeRequestValue("disponibili"), 0) <> 0),
+            .SoloRicondizionati = (ReadInt(SafeRequestValue("refurbished"), 0) <> 0 OrElse ReadInt(SafeRequestValue("ricondizionato"), 0) <> 0),
+            .MinPrice = ReadDecParam(SafeRequestValue("min"), 0D),
+            .MaxPrice = ReadDecParam(SafeRequestValue("max"), 0D),
+            .Sort = SafeRequestValue("sort"),
+            .Mode = SafeRequestValue("mode")
         }
+    End Function
+
+    Private Function SafeRequestValue(ByVal key As String) As String
+        If String.IsNullOrWhiteSpace(key) OrElse Request Is Nothing Then Return String.Empty
+        Try
+            Dim value As String = Request.QueryString(key)
+            If value Is Nothing Then value = Request.Form(key)
+            If value Is Nothing Then value = Request(key)
+            Return If(value, String.Empty)
+        Catch
+            Return String.Empty
+        End Try
     End Function
 
     Private Function ParseIds(ByVal raw As String) As List(Of Integer)
         Dim result As New List(Of Integer)()
         Dim seen As New HashSet(Of Integer)()
-        For Each token As String In Convert.ToString(raw).Split(","c)
+        Dim text As String = If(raw, String.Empty)
+        For Each token As String In text.Split(","c)
             Dim value As Integer
             If Integer.TryParse(token.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, value) AndAlso value > 0 Then
                 If Not seen.Contains(value) Then seen.Add(value) : result.Add(value)
@@ -584,7 +596,9 @@ Partial Public Class search_suggest
     End Function
 
     Private Function NormalizeQuery(ByVal value As String) As String
-        Dim text As String = HttpUtility.HtmlDecode(Convert.ToString(value)).Trim()
+        If value Is Nothing Then Return String.Empty
+        Dim decoded As String = HttpUtility.HtmlDecode(value)
+        Dim text As String = If(decoded, String.Empty).Trim()
         text = Regex.Replace(text, "\s+", " ").Trim()
         Return text
     End Function
@@ -680,7 +694,8 @@ Partial Public Class search_suggest
     End Function
 
     Private Function ReadDecParam(ByVal raw As Object, ByVal fallback As Decimal) As Decimal
-        Dim text As String = Convert.ToString(raw).Trim()
+        Dim rawText As String = Convert.ToString(raw)
+        Dim text As String = If(rawText, String.Empty).Trim()
         Dim n As Decimal
         If String.IsNullOrWhiteSpace(text) Then Return fallback
         If text.Contains(",") AndAlso (Not text.Contains(".") OrElse text.LastIndexOf(","c) > text.LastIndexOf("."c)) Then
@@ -696,7 +711,8 @@ Partial Public Class search_suggest
     End Function
 
     Private Function SafeString(ByVal raw As Object) As String
-        Return Convert.ToString(raw).Trim()
+        Dim value As String = Convert.ToString(raw)
+        Return If(value, String.Empty).Trim()
     End Function
 
     Private Function ExecuteQuery(ByVal sql As String, ByVal parameters As List(Of DbParameterSpec)) As DataTable

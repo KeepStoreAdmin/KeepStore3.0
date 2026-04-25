@@ -93,6 +93,41 @@
         </div>
     </section>
 
+    <section id="KsLocalAiSearch130" class="ks-ai130-section tf-sp-2 ks-home-full-width" data-ks-ai="local-reasoning" data-ks-final-home="1">
+        <div class="container">
+            <div class="ks-ai130-shell">
+                <div class="ks-ai130-brain">
+                    <span class="ks-ai130-kicker">AI locale KeepStore</span>
+                    <h5>Chiedimi cosa stai cercando</h5>
+                    <p>Interpreta la richiesta, valuta parole chiave e budget, poi propone opzioni usando solo prodotti reali caricati nella HOME.</p>
+                    <form class="ks-ai130-form">
+                        <input type="search" autocomplete="off" placeholder="Es. Cerco un toner compatibile sotto 50 euro" aria-label="Cerca con AI locale KeepStore" />
+                        <button type="submit">Ragiona</button>
+                    </form>
+                    <div class="ks-ai130-examples">
+                        <button type="button">Mi serve una custodia per Samsung sotto 30 euro</button>
+                        <button type="button">Cerco toner compatibile Pantum</button>
+                        <button type="button">Voglio un notebook ricondizionato</button>
+                        <button type="button">Mi serve un adattatore USB-C</button>
+                    </div>
+                    <div class="ks-ai130-answer"><i></i><p>Scrivi cosa stai cercando: usero gli articoli reali visibili in home per proporti percorsi utili.</p></div>
+                    <div class="ks-ai130-tools">
+                        <a href="articoli.aspx?q=toner%20compatibile">Toner</a>
+                        <a href="articoli.aspx?q=custodia%20samsung">Custodie</a>
+                        <a href="articoli.aspx?q=notebook%20ricondizionato">Notebook</a>
+                        <a href="articoli.aspx?q=hub%20usb">USB</a>
+                    </div>
+                </div>
+                <div class="ks-ai130-results-wrap">
+                    <div class="ks-ai130-head"><span>Risposta e prodotti consigliati</span><small data-ks-ai-count>Prodotti reali dalla HOME</small></div>
+                    <div class="ks-ai130-results">
+                        <div class="ks-ai130-empty">Caricamento dei prodotti reali visibili in home...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <section id="HomeFeaturedProductsSection" runat="server" class="tf-sp-2 pt-0 ks-home-full-width ks-home-featured-section">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">

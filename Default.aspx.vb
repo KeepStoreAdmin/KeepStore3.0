@@ -39,6 +39,10 @@ Partial Public Class _Default
                 End If
                 If current.IndexOf("ks-home-server-rendered", StringComparison.OrdinalIgnoreCase) < 0 Then
                     body.Attributes("class") = (current & " ks-home-server-rendered").Trim()
+                    current = Convert.ToString(body.Attributes("class"))
+                End If
+                If current.IndexOf("ks-home-onsus-pass-130", StringComparison.OrdinalIgnoreCase) < 0 Then
+                    body.Attributes("class") = (current & " ks-home-onsus-pass-130").Trim()
                 End If
             End If
         Catch

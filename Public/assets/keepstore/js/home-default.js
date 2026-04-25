@@ -89,28 +89,191 @@
   }
 
   function bindDepartmentsMenu() {
-    qa('.ks-home-departments [data-ks-toggle="1"]').forEach(function (btn) {
+    function setItemOpen(item, open) {
+      if (!item) return;
+      item.setAttribute('data-ks-open', open ? '1' : '0');
+      item.classList.toggle('is-open', open);
+      var toggle = item.querySelector('[data-ks-toggle="1"]');
+      var submenu = item.querySelector('[data-ks-submenu="1"]');
+      if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (submenu) {
+        submenu.setAttribute('aria-hidden', open ? 'false' : 'true');
+        submenu.setAttribute('data-ks-inline-state', open ? 'open' : 'closed');
+      }
+    }
+    function toggleItem(item) {
+      if (!item) return;
+      var list = item.parentNode;
+      var nextOpen = item.getAttribute('data-ks-open') !== '1';
+      qa('[data-ks-menu-item="1"]', list).forEach(function (sibling) {
+        if (sibling !== item) setItemOpen(sibling, false);
+      });
+      setItemOpen(item, nextOpen);
+    }
+    qa('.ks-home-departments [data-ks-toggle="1"],.ks-home-departments [data-ks-menu-row="1"]').forEach(function (btn) {
       if (btn.getAttribute('data-ks-bound') === '1') return;
       btn.setAttribute('data-ks-bound', '1');
       btn.addEventListener('click', function (event) {
-        event.preventDefault();
         var item = btn.closest('[data-ks-menu-item="1"]');
-        if (!item) return;
-        var list = item.parentNode;
-        var nextOpen = item.getAttribute('data-ks-open') !== '1';
-        qa('[data-ks-menu-item="1"]', list).forEach(function (sibling) {
-          if (sibling !== item) {
-            sibling.setAttribute('data-ks-open', '0');
-            sibling.classList.remove('is-open');
-            var siblingBtn = sibling.querySelector('[data-ks-toggle="1"]');
-            if (siblingBtn) siblingBtn.setAttribute('aria-expanded', 'false');
-          }
-        });
-        item.setAttribute('data-ks-open', nextOpen ? '1' : '0');
-        item.classList.toggle('is-open', nextOpen);
-        btn.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+        if (!item || !item.querySelector('[data-ks-submenu="1"]')) return;
+        event.preventDefault();
+        event.stopPropagation();
+        toggleItem(item);
       });
     });
+    qa('.ks-home-departments [data-ks-menu-item="1"]').forEach(function (item) {
+      if (item.getAttribute('data-ks-hover-bound') === '1') return;
+      item.setAttribute('data-ks-hover-bound', '1');
+      item.addEventListener('mouseenter', function () {
+        if (!window.matchMedia || window.matchMedia('(min-width: 1200px)').matches) {
+          var list = item.parentNode;
+          qa('[data-ks-menu-item="1"]', list).forEach(function (sibling) {
+            if (sibling !== item) setItemOpen(sibling, false);
+          });
+          setItemOpen(item, true);
+        }
+      });
+      item.addEventListener('mouseleave', function () {
+        if (!window.matchMedia || window.matchMedia('(min-width: 1200px)').matches) setItemOpen(item, false);
+      });
+    });
+  }
+
+  function initLocalAiSearch() {
+    var root = document.getElementById('KsLocalAiSearch130');
+    if (!root || root.getAttribute('data-ks-ai-bound') === '1') return;
+    root.setAttribute('data-ks-ai-bound', '1');
+    if (document.body) document.body.classList.add('ks-home-onsus-pass-130');
+
+    function q(sel, ctx) { return (ctx || document).querySelector(sel); }
+    function text(node) { return String(node && node.textContent || '').replace(/\s+/g, ' ').trim(); }
+    function esc(value) {
+      return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+    function norm(value) {
+      var out = String(value || '').toLowerCase();
+      try { out = out.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (err) {}
+      return out;
+    }
+    function imageFrom(card) {
+      var imgs = qa('img', card);
+      for (var i = 0; i < imgs.length; i++) {
+        var img = imgs[i];
+        var src = img.currentSrc || img.getAttribute('data-src') || img.getAttribute('src') || '';
+        if (src && !/logo|brand|payment|placeholder|nofoto|spinner|sprite/i.test(src)) return src;
+      }
+      return '';
+    }
+    function priceFrom(card) {
+      var match = text(card).match(/\d{1,5}(?:[\.,]\d{2})\s*(?:\u20ac|EUR|euro)/ig);
+      return match && match.length ? match[match.length - 1] : '';
+    }
+    function productFrom(card) {
+      var link = q('a[href*="articolo.aspx?id="]', card);
+      if (!link) return null;
+      var href = link.getAttribute('href') || '';
+      var titleNode = q('.name-product, h6 a, h5 a, .product-title a, a[href*="articolo.aspx?id="]', card);
+      var title = text(titleNode || link);
+      var img = imageFrom(card);
+      if (!href || !title || title.length < 4 || !img) return null;
+      return {
+        href: href,
+        title: title,
+        img: img,
+        cat: text(q('.caption,.font-2,small,em', card)) || 'KeepStore',
+        price: priceFrom(card),
+        raw: text(card),
+        norm: norm([title, text(card)].join(' '))
+      };
+    }
+    function collectProducts() {
+      var out = [], seen = Object.create(null);
+      qa('.ks-home-product-grid .card-product,.ks-home-deal-section .card-product,.card-product').forEach(function (card) {
+        var product = productFrom(card);
+        if (!product || seen[product.href]) return;
+        seen[product.href] = 1;
+        out.push(product);
+      });
+      return out.slice(0, 80);
+    }
+    var intents = {
+      smartphone: { label: 'protezione smartphone e tablet', rx: /smartphone|telefono|samsung|galaxy|iphone|tablet|custodia|cover|pellicola|vetro|magsafe|case/i, terms: ['smartphone','samsung','custodia','cover','pellicola','vetro'] },
+      print: { label: 'stampanti, toner e consumabili', rx: /toner|cartucc|stampant|pantum|laser|drum|inchiostro|compatibile/i, terms: ['toner','cartuccia','stampante','pantum','compatibile'] },
+      pc: { label: 'PC, notebook e periferiche', rx: /notebook|computer|desktop|pc\b|lenovo|dell|monitor|ssd|ram|windows|ricondizionato/i, terms: ['notebook','computer','desktop','pc','monitor','ricondizionato'] },
+      cable: { label: 'cavi, USB e accessori', rx: /usb|type\s*c|type\-c|cavo|adattatore|hub|hdmi|supporto|alimentatore|mouse|tastiera|lettore/i, terms: ['usb','type c','cavo','adattatore','hub','hdmi'] }
+    };
+    function parseQuery(query) {
+      var clean = norm(query);
+      var max = null, match = clean.match(/(?:sotto|entro|max|massimo|meno di|fino a)\s*(\d{1,5})(?:[\.,](\d{2}))?/i);
+      if (match) max = parseFloat(match[1] + '.' + (match[2] || '00'));
+      var best = 'smartphone', bestScore = -1;
+      Object.keys(intents).forEach(function (key) {
+        var it = intents[key], score = it.rx.test(clean) ? 20 : 0;
+        it.terms.forEach(function (term) { if (clean.indexOf(norm(term)) >= 0) score += 5; });
+        if (score > bestScore) { best = key; bestScore = score; }
+      });
+      var words = clean.replace(/[^a-z0-9]+/g, ' ').split(/\s+/).filter(function (w) {
+        return w.length > 1 && !/^(per|con|una|uno|del|della|che|cosa|cerco|voglio|serve|sotto|entro|euro)$/i.test(w);
+      });
+      return { query: query, intent: best, words: words, maxPrice: max };
+    }
+    function priceNumber(price) {
+      var m = String(price || '').match(/(\d{1,5})(?:[\.,](\d{2}))?/);
+      return m ? parseFloat(m[1].replace(/\./g, '') + '.' + (m[2] || '00')) : null;
+    }
+    function score(product, parsed) {
+      var s = 0, it = intents[parsed.intent], blob = product.norm;
+      if (it.rx.test(blob)) s += 32;
+      parsed.words.forEach(function (w) { if (blob.indexOf(w) >= 0) s += 9; });
+      var p = priceNumber(product.price);
+      if (parsed.maxPrice != null && p != null) s += p <= parsed.maxPrice ? 20 : -10;
+      return s;
+    }
+    function renderCard(item, idx) {
+      var p = item.product;
+      return '<a class="ks-ai130-card" href="' + esc(p.href) + '">' +
+        '<span class="ks-ai130-rank">' + (idx + 1) + '</span>' +
+        '<span class="ks-ai130-img"><img src="' + esc(p.img) + '" alt="' + esc(p.title) + '" loading="lazy" decoding="async"></span>' +
+        '<span class="ks-ai130-copy"><em>' + esc(p.cat || 'KeepStore') + '</em><strong>' + esc(p.title) + '</strong><small>coerente con la richiesta</small>' + (p.price ? '<b>' + esc(p.price) + '</b>' : '') + '</span>' +
+        '</a>';
+    }
+    var products = collectProducts();
+    var input = q('.ks-ai130-form input', root);
+    var form = q('.ks-ai130-form', root);
+    var answer = q('.ks-ai130-answer p', root);
+    var lamp = q('.ks-ai130-answer i', root);
+    var results = q('.ks-ai130-results', root);
+    var count = q('[data-ks-ai-count]', root);
+    if (count) count.textContent = products.length + ' articoli analizzati';
+    function runQuery(queryText) {
+      var parsed = parseQuery(queryText || '');
+      var ranked = products.map(function (product) { return { product: product, score: score(product, parsed) }; })
+        .filter(function (item) { return item.score > 0 || !queryText; })
+        .sort(function (a, b) { return b.score - a.score; })
+        .slice(0, 6);
+      if (lamp) lamp.setAttribute('data-intent', parsed.intent);
+      if (answer) {
+        answer.textContent = ranked.length
+          ? 'Ho capito che cerchi ' + intents[parsed.intent].label + '. Ti mostro articoli reali ordinati per pertinenza.'
+          : 'Non ho trovato match forti tra i prodotti visibili in home. Prova una richiesta piu specifica o apri il catalogo.';
+      }
+      if (results) {
+        results.innerHTML = ranked.length ? ranked.map(renderCard).join('') : '<div class="ks-ai130-empty">Nessun match forte. Prova con toner, custodia, notebook, hub USB o consulta il catalogo.</div>';
+      }
+    }
+    if (form) form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      runQuery(input ? input.value : '');
+    });
+    qa('.ks-ai130-examples button', root).forEach(function (button) {
+      button.addEventListener('click', function () {
+        if (input) input.value = text(button);
+        runQuery(text(button));
+      });
+    });
+    runQuery((input && input.value) || 'custodia samsung');
   }
 
   ready(function () {
@@ -118,6 +281,9 @@
     document.body.classList.add('ks-home-server-rendered');
     initSwipers();
     bindDepartmentsMenu();
+    initLocalAiSearch();
+    window.setTimeout(initLocalAiSearch, 450);
+    window.setTimeout(initLocalAiSearch, 1200);
   });
 })();
 
