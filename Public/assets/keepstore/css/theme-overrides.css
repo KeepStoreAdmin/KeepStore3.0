@@ -230,3 +230,66 @@ body.ks-page-home .ks-catalog-mega-normalized a{white-space:normal!important;lin
   body.ks-page-home #HomeLowerColumnsSection .tf-grid-product{grid-template-columns:1fr!important;}
   body.ks-page-home .ks-home-section-title{align-items:flex-start!important;flex-direction:column!important;gap:6px!important;}
 }
+
+/* ==========================================================
+   KeepStore HOME - Step 106 structural ONSUS server normalizer
+   ========================================================== */
+body.ks-page-home.ks-home-structural-step2 .container{max-width:1180px!important;width:100%!important;}
+body.ks-page-home.ks-home-structural-step2 main{background:#f4f4f4!important;}
+body.ks-page-home.ks-home-structural-step2 .tf-sp-5{padding-top:24px!important;padding-bottom:18px!important;}
+body.ks-page-home.ks-home-structural-step2 .tf-sp-2{padding-top:22px!important;padding-bottom:22px!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-home-hero-shell{display:grid!important;grid-template-columns:250px minmax(0,1fr)!important;gap:16px!important;align-items:stretch!important;min-height:340px!important;background:transparent!important;border:0!important;box-shadow:none!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-home-hero-shell .wrap-item-1{width:250px!important;min-width:250px!important;max-width:250px!important;height:340px!important;display:block!important;overflow:hidden!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-home-hero-shell .wrap-item-2,
+body.ks-page-home.ks-home-structural-step2 #HeroSliderWrap,
+body.ks-page-home.ks-home-structural-step2 .ks-home-hero-slider,
+body.ks-page-home.ks-home-structural-step2 .ks-home-hero-slider .swiper-wrapper,
+body.ks-page-home.ks-home-structural-step2 .ks-home-hero-slider .swiper-slide,
+body.ks-page-home.ks-home-structural-step2 .ks-home-hero-banner,
+body.ks-page-home.ks-home-structural-step2 .ks-home-hero-media{height:340px!important;min-height:340px!important;max-height:340px!important;border-radius:6px!important;overflow:hidden!important;background:#050505!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-home-hero-slider img{width:100%!important;height:100%!important;object-fit:contain!important;background:#050505!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-home-departments,
+body.ks-page-home.ks-home-structural-step2 .menu-category-list{height:340px!important;max-height:340px!important;overflow-y:auto!important;background:#fff!important;border-radius:6px!important;}
+body.ks-page-home.ks-home-structural-step2 [data-ks-native-source]{display:none!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-native-section{display:block!important;background:transparent!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-section-title,
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-tabs-title{margin-bottom:14px!important;display:flex!important;align-items:flex-end!important;justify-content:space-between!important;gap:16px!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-tabs-title .menu-tab-line{display:flex!important;gap:18px!important;margin:0!important;padding:0!important;list-style:none!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-tabs-title .tab-link{font-size:13px!important;font-weight:700!important;color:#222!important;text-decoration:none!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-tabs-title .tab-link.active{color:#ff3b30!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-product-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:18px!important;align-items:stretch!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-product-card{background:#fff!important;border-radius:8px!important;padding:12px!important;min-height:268px!important;display:grid!important;grid-template-rows:156px auto!important;box-shadow:0 1px 0 rgba(0,0,0,.03)!important;overflow:hidden!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-product-media{height:156px!important;display:flex!important;align-items:center!important;justify-content:center!important;background:#f7f8fb!important;border-radius:6px!important;overflow:hidden!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-product-media img{width:100%!important;height:100%!important;object-fit:contain!important;display:block!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-product-info{min-width:0!important;padding-top:8px!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-product-cat{font-size:10px!important;line-height:1.15!important;color:#8a92a0!important;margin:0 0 3px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-product-card h6{font-size:12px!important;line-height:1.25!important;margin:0 0 6px!important;font-weight:700!important;text-transform:uppercase!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-product-card h6 a{color:#005aa7!important;text-decoration:none!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-product-price{font-size:12px!important;line-height:1.1!important;font-weight:700!important;color:#ff3b30!important;margin:0!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-product-card--compact{min-height:92px!important;padding:10px!important;grid-template-columns:72px minmax(0,1fr)!important;grid-template-rows:none!important;gap:10px!important;align-items:center!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-product-card--compact .ks-onsus-product-media{height:72px!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-lower-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:18px!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-lower-column{background:#fff!important;border-radius:8px!important;padding:14px!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-lower-column h6{font-size:15px!important;font-weight:700!important;margin:0 0 12px!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-lower-list{display:grid!important;gap:10px!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-best-native .tf-sw-products:not(.swiper-initialized) .swiper-wrapper,
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-best-native .swiper-wrapper{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:18px!important;transform:none!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-best-native .swiper-slide{width:auto!important;margin:0!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-onsus-best-native .swiper-slide:nth-child(n+6){display:none!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-home-closing-layer{padding-top:18px!important;padding-bottom:28px!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-home-closing-grid{display:grid!important;grid-template-columns:minmax(0,1.35fr) minmax(300px,.65fr)!important;gap:18px!important;max-width:760px!important;margin:0 auto!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-home-closing-card{background:#fff!important;border-radius:10px!important;padding:16px!important;box-shadow:0 1px 0 rgba(0,0,0,.03)!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-home-closing-card h5{font-size:16px!important;margin:0 0 12px!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-home-closing-tags{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-home-closing-tags a,
+body.ks-page-home.ks-home-structural-step2 .ks-home-service-grid div{background:#f7f8fb!important;border-radius:7px!important;padding:10px!important;text-decoration:none!important;color:#202020!important;min-height:58px!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-home-closing-tags b{display:block!important;font-size:10px!important;line-height:1.15!important;text-transform:uppercase!important;color:#111!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-home-closing-tags small{display:block!important;font-size:10px!important;color:#ff3b30!important;margin-top:3px!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-home-service-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-home-service-grid b{width:22px!important;height:22px!important;border-radius:50%!important;background:#fff0ef!important;color:#ff3b30!important;display:flex!important;align-items:center!important;justify-content:center!important;font-size:11px!important;margin-bottom:5px!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-home-service-grid strong{display:block!important;font-size:11px!important;line-height:1.2!important;}
+body.ks-page-home.ks-home-structural-step2 .ks-home-service-grid small{display:block!important;font-size:10px!important;line-height:1.25!important;color:#6c7380!important;margin-top:3px!important;}
+body.ks-page-home.ks-home-structural-step2 footer.tf-footer{margin-top:0!important;}
+@media (max-width:1199.98px){body.ks-page-home.ks-home-structural-step2 .ks-onsus-product-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;}body.ks-page-home.ks-home-structural-step2 .ks-onsus-best-native .tf-sw-products:not(.swiper-initialized) .swiper-wrapper,body.ks-page-home.ks-home-structural-step2 .ks-onsus-best-native .swiper-wrapper{grid-template-columns:repeat(4,minmax(0,1fr))!important;}}
+@media (max-width:991.98px){body.ks-page-home.ks-home-structural-step2 .ks-home-hero-shell{grid-template-columns:1fr!important;}body.ks-page-home.ks-home-structural-step2 .ks-home-hero-shell .wrap-item-1{display:none!important;}body.ks-page-home.ks-home-structural-step2 .ks-onsus-product-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;}body.ks-page-home.ks-home-structural-step2 .ks-onsus-lower-grid,body.ks-page-home.ks-home-structural-step2 .ks-home-closing-grid{grid-template-columns:1fr!important;}}
+@media (max-width:767.98px){body.ks-page-home.ks-home-structural-step2 .ks-onsus-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}body.ks-page-home.ks-home-structural-step2 .ks-home-closing-tags{grid-template-columns:repeat(2,minmax(0,1fr))!important;}}
