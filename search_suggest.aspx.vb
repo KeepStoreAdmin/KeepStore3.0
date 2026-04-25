@@ -15,7 +15,7 @@ Partial Public Class search_suggest
     Inherits Page
 
     Private Const DefaultLimit As Integer = 8
-    Private Const MaxLimit As Integer = 80
+    Private Const MaxLimit As Integer = 96
     Private Shared ReadOnly ItCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
 
     Private Class SearchFilters
@@ -67,6 +67,8 @@ Partial Public Class search_suggest
         Public Property Availability As Decimal
         Public Property IsOffer As Boolean
         Public Property IsRefurbished As Boolean
+        Public Property FreeShipping As Boolean
+        Public Property TcId As String
         Public Property Reason As String
         Public Property Badges As List(Of String)
     End Class
@@ -232,7 +234,8 @@ Partial Public Class search_suggest
             {"facets", BuildFacets(mapped)},
             {"strong", strong},
             {"intelligence", SerializeIntent(intent, filters, mapped.Count)},
-            {"total", mapped.Count}
+            {"total", mapped.Count},
+            {"catalogUrl", BuildCatalogUrl(query, filters)}
         }
     End Function
 
@@ -242,7 +245,7 @@ Partial Public Class search_suggest
         sql.Append("v.Img1, v.Img2, v.Img3, v.Img4, i.Immagine1, i.Immagine2, i.Immagine3, i.Immagine4, i.Immagine5, i.Immagine6, ")
         sql.Append("COALESCE(NULLIF(v.PrezzoPromoIvato,0), NULLIF(v.PrezzoIvato,0), NULLIF(v.PrezzoPromo,0), v.Prezzo, 0) AS PrezzoFinale, ")
         sql.Append("COALESCE(v.Disponibilita,0) AS Disponibilita, COALESCE(v.InOfferta,0) AS InOfferta, COALESCE(v.Vetrina,0) AS Vetrina, COALESCE(v.visite,0) AS Visite, ")
-        sql.Append("COALESCE(v.Ricondizionato,0) AS Ricondizionato, COALESCE(v.NoteRicondizionato,'') AS NoteRicondizionato, v.DataCreazione ")
+        sql.Append("COALESCE(v.Ricondizionato,0) AS Ricondizionato, COALESCE(v.NoteRicondizionato,'') AS NoteRicondizionato, COALESCE(v.SpeditoGratis,0) AS SpeditoGratis, COALESCE(v.TCid,'') AS TCid, v.DataCreazione ")
         If includeRank Then
             sql.Append(", ")
             sql.Append(If(String.IsNullOrWhiteSpace(rankExpr), "0", rankExpr))
@@ -365,6 +368,8 @@ Partial Public Class search_suggest
             item.Availability = ReadDec(row("Disponibilita"), 0D)
             item.IsOffer = ReadInt(row("InOfferta"), 0) <> 0
             item.IsRefurbished = ReadInt(row("Ricondizionato"), 0) <> 0
+            item.FreeShipping = If(row.Table.Columns.Contains("SpeditoGratis"), ReadInt(row("SpeditoGratis"), 0) <> 0, False)
+            item.TcId = If(row.Table.Columns.Contains("TCid"), SafeString(row("TCid")), String.Empty)
             Dim images As List(Of String) = CollectImages(row)
             item.ImageFallback = If(images.Count > 0, images(0), String.Empty)
             item.Image = BuildPreviewVariant(item.ImageFallback)
@@ -383,7 +388,7 @@ Partial Public Class search_suggest
             {"code", item.Code}, {"ean", item.Ean}, {"brand", item.Brand}, {"category", item.Category}, {"department", item.Department},
             {"price", item.Price}, {"priceValue", item.PriceValue}, {"image", item.Image}, {"image_fallback", item.ImageFallback},
             {"matchKind", item.MatchKind}, {"score", item.Score}, {"availability", item.Availability},
-            {"isOffer", item.IsOffer}, {"isRefurbished", item.IsRefurbished}, {"reason", item.Reason}, {"badges", item.Badges}
+            {"isOffer", item.IsOffer}, {"isRefurbished", item.IsRefurbished}, {"freeShipping", item.FreeShipping}, {"tcId", item.TcId}, {"reason", item.Reason}, {"badges", item.Badges}
         }
     End Function
 
@@ -392,6 +397,7 @@ Partial Public Class search_suggest
         If item.IsOffer Then badges.Add("Promo")
         If item.Availability > 0D Then badges.Add("Disponibile")
         If item.IsRefurbished Then badges.Add("Ricondizionato")
+        If item.FreeShipping Then badges.Add("Spedizione gratis")
         If intent IsNot Nothing AndAlso intent.MaxPrice > 0D AndAlso item.PriceValue > 0D AndAlso item.PriceValue <= intent.MaxPrice Then badges.Add("Budget ok")
         If badges.Count = 0 Then badges.Add("Catalogo")
         Return badges.Take(4).ToList()
@@ -403,6 +409,7 @@ Partial Public Class search_suggest
         If item.Availability > 0D Then parts.Add("disponibile")
         If item.IsOffer Then parts.Add("in offerta")
         If item.IsRefurbished Then parts.Add("ricondizionato")
+        If item.FreeShipping Then parts.Add("spedizione gratis")
         If intent IsNot Nothing AndAlso intent.MaxPrice > 0D AndAlso item.PriceValue > 0D AndAlso item.PriceValue <= intent.MaxPrice Then parts.Add("entro budget")
         If parts.Count = 0 Then parts.Add("pertinente per descrizione, marca o categoria")
         Return "Consigliato per " & String.Join(", ", parts.Take(4)) & "."
@@ -412,6 +419,28 @@ Partial Public Class search_suggest
         Dim brands = items.Where(Function(i) Not String.IsNullOrWhiteSpace(i.Brand)).GroupBy(Function(i) i.Brand).Select(Function(g) New Dictionary(Of String, Object) From {{"label", g.Key}, {"value", g.Key}, {"count", g.Count()}}).OrderByDescending(Function(x) CInt(x("count"))).Take(8).ToList()
         Dim categories = items.Where(Function(i) Not String.IsNullOrWhiteSpace(i.Category)).GroupBy(Function(i) i.Category).Select(Function(g) New Dictionary(Of String, Object) From {{"label", g.Key}, {"value", g.Key}, {"count", g.Count()}}).OrderByDescending(Function(x) CInt(x("count"))).Take(8).ToList()
         Return New Dictionary(Of String, Object) From {{"brands", brands}, {"categories", categories}}
+    End Function
+
+    Private Function BuildCatalogUrl(ByVal query As String, ByVal filters As SearchFilters) As String
+        Dim url As New StringBuilder("articoli.aspx")
+        Dim args As New List(Of String)()
+        If Not String.IsNullOrWhiteSpace(query) Then args.Add("q=" & HttpUtility.UrlEncode(query))
+        If filters IsNot Nothing Then
+            If filters.SettoreId > 0 Then args.Add("st=" & filters.SettoreId.ToString(CultureInfo.InvariantCulture))
+            If filters.CategoriaId > 0 Then args.Add("ct=" & filters.CategoriaId.ToString(CultureInfo.InvariantCulture))
+            If filters.TipologiaId > 0 Then args.Add("tp=" & filters.TipologiaId.ToString(CultureInfo.InvariantCulture))
+            If filters.GruppoId > 0 Then args.Add("gr=" & filters.GruppoId.ToString(CultureInfo.InvariantCulture))
+            If filters.SottoGruppoId > 0 Then args.Add("sg=" & filters.SottoGruppoId.ToString(CultureInfo.InvariantCulture))
+            If filters.MarcaId > 0 Then args.Add("mr=" & filters.MarcaId.ToString(CultureInfo.InvariantCulture))
+            If filters.SoloPromo Then args.Add("inpromo=1")
+            If filters.SoloDisponibili Then args.Add("available=1")
+            If filters.SoloRicondizionati Then args.Add("ricondizionato=1")
+            If filters.MinPrice > 0D Then args.Add("min=" & filters.MinPrice.ToString(CultureInfo.InvariantCulture))
+            If filters.MaxPrice > 0D Then args.Add("max=" & filters.MaxPrice.ToString(CultureInfo.InvariantCulture))
+            If Not String.IsNullOrWhiteSpace(filters.Sort) Then args.Add("sort=" & HttpUtility.UrlEncode(filters.Sort))
+        End If
+        If args.Count > 0 Then url.Append("?").Append(String.Join("&", args))
+        Return url.ToString()
     End Function
 
     Private Function EmptyFacets() As Dictionary(Of String, Object)
