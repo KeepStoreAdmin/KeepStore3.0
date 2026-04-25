@@ -469,3 +469,107 @@ body.ks-page-home.ks-home-step108-refined footer.tf-footer{margin-top:0!importan
   body.ks-page-home.ks-home-step108-refined .ks-final-product-card{min-height:238px!important;grid-template-rows:145px auto!important;}
   body.ks-page-home.ks-home-step108-refined .ks-final-product-media{height:145px!important;}
 }
+
+/* ==========================================================
+   KeepStore HOME - Step 110 WebForms hard layout fix
+   Purpose: target runtime ClientID suffixes and classes, not static IDs only.
+   ========================================================== */
+body.ks-page-home,
+body.ks-page-home main{background:#f4f4f4!important;}
+
+body.ks-page-home .ks-home-hero-section,
+body.ks-page-home [id$="HomeHeroSection"]{display:block!important;padding-top:26px!important;padding-bottom:18px!important;overflow:visible!important;}
+body.ks-page-home .ks-home-hero-section>.container,
+body.ks-page-home [id$="HomeHeroSection"]>.container{max-width:1180px!important;width:100%!important;margin-left:auto!important;margin-right:auto!important;padding-left:15px!important;padding-right:15px!important;}
+body.ks-page-home .ks-home-hero-shell,
+body.ks-page-home [id$="HomeHeroShell"]{display:grid!important;grid-template-columns:250px minmax(0,1fr)!important;gap:18px!important;align-items:stretch!important;min-height:340px!important;width:100%!important;background:transparent!important;border:0!important;box-shadow:none!important;overflow:visible!important;transform:none!important;}
+body.ks-page-home .ks-home-hero-shell>.wrap-item-1,
+body.ks-page-home [id$="HomeHeroShell"]>.wrap-item-1{display:block!important;width:250px!important;min-width:250px!important;max-width:250px!important;height:340px!important;min-height:340px!important;max-height:340px!important;overflow:hidden!important;transform:none!important;writing-mode:horizontal-tb!important;}
+body.ks-page-home .ks-home-hero-shell>.wrap-item-2,
+body.ks-page-home [id$="HomeHeroShell"]>.wrap-item-2,
+body.ks-page-home [id$="HeroSliderWrap"]{display:block!important;width:100%!important;min-width:0!important;height:340px!important;min-height:340px!important;max-height:340px!important;overflow:hidden!important;transform:none!important;}
+body.ks-page-home .ks-home-hero-slider,
+body.ks-page-home [id$="Slide_Show_Container"],
+body.ks-page-home .ks-home-hero-slider .swiper-wrapper,
+body.ks-page-home .ks-home-hero-slider .swiper-slide,
+body.ks-page-home .ks-home-hero-banner,
+body.ks-page-home .ks-home-hero-media,
+body.ks-page-home .ks-home-hero-media--only,
+body.ks-page-home .ks-home-hero-slider a{display:block!important;width:100%!important;height:340px!important;min-height:340px!important;max-height:340px!important;overflow:hidden!important;background:#050505!important;border-radius:6px!important;transform:none!important;}
+body.ks-page-home .ks-home-hero-slider img,
+body.ks-page-home [id$="Slide_Show_Container"] img{display:block!important;width:100%!important;height:100%!important;min-height:340px!important;object-fit:cover!important;object-position:center center!important;background:#050505!important;transform:none!important;opacity:1!important;visibility:visible!important;}
+body.ks-page-home .ks-home-side-banners-legacy-off,
+body.ks-page-home [id$="HeroSideWrap"],
+body.ks-page-home .ks-home-hero-shell>.wrap-item-3,
+body.ks-page-home [id$="HomeHeroShell"]>.wrap-item-3{display:none!important;width:0!important;max-width:0!important;height:0!important;overflow:hidden!important;}
+body.ks-page-home .ks-home-departments,
+body.ks-page-home .menu-category-list{height:340px!important;max-height:340px!important;overflow-y:auto!important;background:#fff!important;border-radius:6px!important;writing-mode:horizontal-tb!important;transform:none!important;}
+body.ks-page-home .ks-home-departments a,
+body.ks-page-home .menu-category-list a{white-space:normal!important;writing-mode:horizontal-tb!important;transform:none!important;}
+
+/* Native server sources are hidden only after the final renderer has copied real products. */
+body.ks-page-home [data-ks-final-source-hidden="final-rendered"],
+body.ks-page-home [data-ks-final-source-hidden="stray-native"]{display:none!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}
+
+body.ks-page-home .ks-home-final-rendered>.container{max-width:1180px!important;width:100%!important;margin-left:auto!important;margin-right:auto!important;padding-left:15px!important;padding-right:15px!important;}
+body.ks-page-home .ks-final-product-section{padding-top:24px!important;padding-bottom:24px!important;}
+body.ks-page-home .ks-final-product-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:18px!important;align-items:stretch!important;}
+body.ks-page-home .ks-final-product-card{display:grid!important;grid-template-rows:178px auto!important;background:#fff!important;border-radius:8px!important;padding:12px!important;min-height:292px!important;box-shadow:none!important;overflow:hidden!important;}
+body.ks-page-home .ks-final-product-media{height:178px!important;background:#f7f7f7!important;border-radius:6px!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;}
+body.ks-page-home .ks-final-product-media img{max-width:100%!important;max-height:100%!important;width:auto!important;height:auto!important;object-fit:contain!important;display:block!important;}
+body.ks-page-home .ks-final-product-info{padding-top:9px!important;min-width:0!important;}
+body.ks-page-home .ks-final-product-cat{font-size:10px!important;line-height:1.2!important;color:#777!important;margin:0 0 3px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+body.ks-page-home .ks-final-product-info h6{font-size:12px!important;line-height:1.25!important;min-height:32px!important;margin:0 0 5px!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important;}
+body.ks-page-home .ks-final-product-info h6 a{font-size:12px!important;line-height:1.25!important;color:#0068b5!important;text-transform:uppercase!important;text-decoration:none!important;}
+body.ks-page-home .ks-final-product-price{font-size:12px!important;line-height:1.2!important;color:#ff3b30!important;font-weight:700!important;margin:0!important;}
+
+body.ks-page-home .ks-final-lower-section{padding-top:24px!important;padding-bottom:24px!important;}
+body.ks-page-home .ks-final-lower-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:18px!important;}
+body.ks-page-home .ks-final-lower-column{background:#fff!important;border-radius:8px!important;padding:16px!important;min-width:0!important;}
+body.ks-page-home .ks-final-lower-list{display:grid!important;gap:10px!important;}
+body.ks-page-home .ks-final-product-card--compact{grid-template-columns:72px minmax(0,1fr)!important;grid-template-rows:auto!important;gap:10px!important;min-height:82px!important;padding:8px!important;}
+body.ks-page-home .ks-final-product-card--compact .ks-final-product-media{height:68px!important;}
+body.ks-page-home .ks-final-product-card--compact .ks-final-product-info{padding-top:0!important;}
+body.ks-page-home .ks-final-product-card--compact h6{min-height:0!important;font-size:11px!important;}
+body.ks-page-home .ks-final-product-card--compact h6 a{font-size:11px!important;}
+
+body.ks-page-home .ks-final-brands,
+body.ks-page-home .ks-home-brands-block,
+body.ks-page-home [id$="HomeBrandsSection"]{display:block!important;padding-top:28px!important;padding-bottom:22px!important;}
+body.ks-page-home .ks-home-brand-item{height:74px!important;background:#fff!important;border-radius:8px!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;padding:12px!important;}
+body.ks-page-home .ks-home-brand-media img{max-height:48px!important;object-fit:contain!important;}
+
+@media (max-width:1199.98px){
+  body.ks-page-home .ks-home-hero-shell,
+  body.ks-page-home [id$="HomeHeroShell"]{grid-template-columns:230px minmax(0,1fr)!important;min-height:300px!important;}
+  body.ks-page-home .ks-home-hero-shell>.wrap-item-1,
+  body.ks-page-home [id$="HomeHeroShell"]>.wrap-item-1{width:230px!important;min-width:230px!important;max-width:230px!important;height:300px!important;min-height:300px!important;max-height:300px!important;}
+  body.ks-page-home .ks-home-hero-shell>.wrap-item-2,
+  body.ks-page-home [id$="HomeHeroShell"]>.wrap-item-2,
+  body.ks-page-home [id$="HeroSliderWrap"],
+  body.ks-page-home .ks-home-hero-slider,
+  body.ks-page-home [id$="Slide_Show_Container"],
+  body.ks-page-home .ks-home-hero-slider .swiper-wrapper,
+  body.ks-page-home .ks-home-hero-slider .swiper-slide,
+  body.ks-page-home .ks-home-hero-banner,
+  body.ks-page-home .ks-home-hero-media,
+  body.ks-page-home .ks-home-hero-slider a{height:300px!important;min-height:300px!important;max-height:300px!important;}
+  body.ks-page-home .ks-home-hero-slider img,
+  body.ks-page-home [id$="Slide_Show_Container"] img{min-height:300px!important;}
+  body.ks-page-home .ks-home-departments,
+  body.ks-page-home .menu-category-list{height:300px!important;max-height:300px!important;}
+  body.ks-page-home .ks-final-product-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;}
+}
+@media (max-width:991.98px){
+  body.ks-page-home .ks-home-hero-shell,
+  body.ks-page-home [id$="HomeHeroShell"]{grid-template-columns:1fr!important;min-height:240px!important;}
+  body.ks-page-home .ks-home-hero-shell>.wrap-item-1,
+  body.ks-page-home [id$="HomeHeroShell"]>.wrap-item-1{display:none!important;}
+  body.ks-page-home .ks-final-product-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+  body.ks-page-home .ks-final-lower-grid{grid-template-columns:1fr!important;}
+}
+@media (max-width:767.98px){
+  body.ks-page-home .ks-final-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;}
+  body.ks-page-home .ks-final-product-card{grid-template-rows:150px auto!important;min-height:250px!important;}
+  body.ks-page-home .ks-final-product-media{height:150px!important;}
+}
