@@ -2611,3 +2611,277 @@
   function boot() { run(); [100, 260, 600, 1200, 2600, 5200, 7600, 10500, 14000].forEach(function (d) { window.setTimeout(run, d); }); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
+
+/* Step 130 - KeepStore Local Reasoning Search Engine.
+   A deterministic, client-side assistant: no external APIs, no fake products, no DB changes.
+   It reads real products already rendered in the page and answers natural-language shopping questions. */
+(function () {
+  'use strict';
+  var PASS = '130';
+  function q(s, r) { return (r || document).querySelector(s); }
+  function qa(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  function text(n) { return String(n && n.textContent || '').replace(/\s+/g, ' ').trim(); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function norm(s) {
+    return String(s || '').toLowerCase()
+      .normalize ? String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : String(s || '').toLowerCase();
+  }
+  function absHref(h) {
+    h = String(h || '').replace(/&amp;/g, '&').replace(/#.*$/, '');
+    if (!h) return '';
+    if (/^https?:\/\//i.test(h)) return h;
+    if (h.charAt(0) === '/') return h;
+    return h;
+  }
+  function priceNumber(s) {
+    var m = String(s || '').match(/(\d{1,5})(?:[\.,](\d{2}))?\s*€/);
+    if (!m) return null;
+    return parseFloat(m[1].replace(/\./g, '') + '.' + (m[2] || '00'));
+  }
+  function findImage(root) {
+    var imgs = qa('img', root);
+    for (var i = 0; i < imgs.length; i++) {
+      var im = imgs[i];
+      var src = im.currentSrc || im.getAttribute('data-src') || im.getAttribute('src') || '';
+      if (!src && im.getAttribute('srcset')) src = String(im.getAttribute('srcset')).split(',')[0].trim().split(' ')[0];
+      if (!src || /logo|brand|payment|paypal|visa|mastercard|placeholder|loader|spinner|sprite|blank|nofoto|favicon/i.test(src)) continue;
+      return src;
+    }
+    return '';
+  }
+  function findTitle(root) {
+    var sel = [
+      '.ks-onsus-mosaic-feature127 strong', '.ks-onsus-mosaic-card127 strong', '.ks-onsus-mosaic-mini127 strong',
+      '.ks-deal123-title-product', '.ks-final-product-info h6 a', '.ks-final-lower-item a[href*="articolo.aspx"]',
+      '.ks-ai129-product strong', 'h6 a', 'h5 a', 'a[href*="articolo.aspx"]'
+    ].join(',');
+    var nodes = qa(sel, root);
+    for (var i = 0; i < nodes.length; i++) {
+      var t = text(nodes[i]);
+      if (t && t.length > 7 && !/^(scopri|compra|categoria|vai al catalogo|dettaglio|aggiungi|home)$/i.test(t)) return t;
+    }
+    return '';
+  }
+  function findCategory(root) {
+    var c = text(q('.ks-final-product-cat,.ks-deal123-cat,.category,.cat,small,em', root));
+    if (!c || c.length > 45 || /scopri|compra|catalogo|offerta|consigli/i.test(c)) c = 'KeepStore';
+    return c;
+  }
+  function productFrom(root) {
+    if (!root) return null;
+    var a = q('a[href*="articolo.aspx"]', root) || (root.matches && root.matches('a[href*="articolo.aspx"]') ? root : null);
+    var href = absHref(a && a.getAttribute('href'));
+    var img = findImage(root);
+    var title = findTitle(root);
+    var blob = text(root);
+    var priceText = '';
+    var prices = blob.match(/\d{1,5}(?:[\.,]\d{2})\s*€/g);
+    if (prices && prices.length) priceText = prices[prices.length - 1];
+    if (!href || !img || !title) return null;
+    return {
+      href: href,
+      img: img,
+      title: title,
+      titleNorm: norm(title),
+      cat: findCategory(root),
+      raw: blob,
+      rawNorm: norm([title, blob, findCategory(root)].join(' ')),
+      price: priceText,
+      priceNum: priceNumber(priceText)
+    };
+  }
+  function collectProducts() {
+    var selectors = [
+      '#KsOnsusDealToday123 .ks-deal123-card', '#KsOnsusProductMosaic127 a', '#KsHomeBestSellerFinal .ks-final-product-card',
+      '#KsHomeLowerFinal .ks-final-lower-item', '#KsHomeEditorialFinal .ks-final-product-card', '#KsSmartConsult129 .ks-ai129-product',
+      '.ks-final-product-card', '.ks-deal123-card', '.ks-final-lower-item', '.product-card', '.product-item', '.swiper-slide'
+    ];
+    var roots = [];
+    selectors.forEach(function (sel) { qa(sel).forEach(function (n) { roots.push(n); }); });
+    var out = [], seen = Object.create(null);
+    roots.forEach(function (r) {
+      var p = productFrom(r);
+      if (!p) return;
+      var key = p.href.replace(/^https?:\/\/[^/]+/i, '').toLowerCase();
+      if (seen[key]) return;
+      seen[key] = 1;
+      out.push(p);
+    });
+    return out.slice(0, 90);
+  }
+  var intents = {
+    smartphone: {
+      label: 'Protezione smartphone e tablet', icon: '📱',
+      rx: /smartphone|telefono|samsung|galaxy|iphone|tablet|custodia|cover|pellicola|vetro|magsafe|silicone|fotocamera|case/i,
+      terms: ['smartphone','telefono','samsung','galaxy','tablet','custodia','cover','pellicola','vetro','case','magsafe'],
+      searches: ['custodia samsung', 'pellicola vetro smartphone', 'cover magsafe']
+    },
+    print: {
+      label: 'Stampanti, toner e consumabili', icon: '🖨',
+      rx: /toner|cartucc|stampant|pantum|laser|drum|inchiostro|compatibile|consumabil|cartridge/i,
+      terms: ['toner','cartuccia','stampante','pantum','laser','drum','inchiostro','compatibile'],
+      searches: ['toner compatibile', 'stampante laser', 'cartucce']
+    },
+    pc: {
+      label: 'PC, notebook e periferiche', icon: '💻',
+      rx: /notebook|computer|desktop|pc\b|lenovo|dell|monitor|ssd|ram|windows|ricondizionato|thinkpad|optiplex/i,
+      terms: ['notebook','computer','desktop','pc','lenovo','dell','monitor','windows','ricondizionato'],
+      searches: ['notebook ricondizionato', 'pc desktop', 'monitor']
+    },
+    cable: {
+      label: 'Cavi, USB e accessori', icon: '🔌',
+      rx: /usb|type\s*c|type\-c|cavo|adattatore|hub|hdmi|supporto|alimentatore|mouse|tastiera|card reader|lettore|splitter/i,
+      terms: ['usb','type c','cavo','adattatore','hub','hdmi','supporto','alimentatore','lettore'],
+      searches: ['adattatore usb', 'hub usb type-c', 'cavo hdmi']
+    }
+  };
+  var intentOrder = ['smartphone','print','pc','cable'];
+  function tokenize(s) {
+    return norm(s).replace(/[^a-z0-9]+/g, ' ').split(/\s+/).filter(function (x) { return x.length > 1 && !/^(per|con|una|uno|del|della|che|cosa|cerco|voglio|serve|mi|il|lo|la|gli|dei|dai|sotto)$/i.test(x); });
+  }
+  function parseQuery(query) {
+    var n = norm(query);
+    var max = null;
+    var budget = n.match(/(?:sotto|entro|max|massimo|meno di|fino a)\s*(\d{1,5})(?:[\.,](\d{2}))?\s*(?:euro|€)?/i);
+    if (budget) max = parseFloat(budget[1] + '.' + (budget[2] || '00'));
+    var min = null;
+    var intentsScore = {};
+    intentOrder.forEach(function (k) {
+      var it = intents[k], score = 0;
+      if (it.rx.test(query)) score += 20;
+      it.terms.forEach(function (term) { if (n.indexOf(norm(term)) >= 0) score += 6; });
+      intentsScore[k] = score;
+    });
+    var best = intentOrder.slice().sort(function (a, b) { return intentsScore[b] - intentsScore[a]; })[0];
+    if (!intentsScore[best]) best = 'smartphone';
+    return { query: query, norm: n, words: tokenize(query), intent: best, maxPrice: max, minPrice: min, wantsCheap: /econom|prezzo|basso|spendere poco|conveniente|offerta|risparm/i.test(n), wantsBest: /miglior|qualita|consigli|consigliami|top|buon/i.test(n) };
+  }
+  function productScore(p, parsed) {
+    var s = 0, blob = p.rawNorm || p.titleNorm;
+    var it = intents[parsed.intent];
+    if (it && it.rx.test(blob)) s += 36;
+    parsed.words.forEach(function (w) {
+      if (p.titleNorm.indexOf(w) >= 0) s += 12;
+      else if (blob.indexOf(w) >= 0) s += 7;
+    });
+    if (parsed.maxPrice != null && p.priceNum != null) {
+      if (p.priceNum <= parsed.maxPrice) s += 28;
+      else s -= Math.min(26, Math.round((p.priceNum - parsed.maxPrice) / Math.max(1, parsed.maxPrice) * 18));
+    }
+    if (parsed.wantsCheap && p.priceNum != null) s += Math.max(0, 14 - Math.min(14, p.priceNum / 20));
+    if (/compatibile|ricondizionato|garanzia|supporto|protezione|vetro|usb|type/.test(blob)) s += 4;
+    if (/test prova|scanner|kingston|samsung|lenovo|pantum|toner|devia|notebook/i.test(p.title)) s += 2;
+    return Math.round(s);
+  }
+  function reasonFor(p, parsed) {
+    var blob = p.rawNorm || '';
+    var out = [];
+    if (intents[parsed.intent] && intents[parsed.intent].rx.test(blob)) out.push('coerente con la richiesta');
+    if (parsed.maxPrice != null && p.priceNum != null && p.priceNum <= parsed.maxPrice) out.push('entro budget');
+    if (/compatibile/i.test(p.raw)) out.push('compatibile');
+    if (/ricondizionato/i.test(p.raw)) out.push('ricondizionato');
+    if (/vetro|custodia|cover|protezione/i.test(p.raw)) out.push('protezione');
+    if (!out.length) out.push('articolo reale disponibile in home');
+    return out.slice(0, 3).join(' · ');
+  }
+  function rankProducts(products, parsed) {
+    return products.map(function (p) { return { p: p, score: productScore(p, parsed) }; })
+      .filter(function (x) { return x.score > 0 || parsed.words.length === 0; })
+      .sort(function (a, b) { return b.score - a.score; })
+      .slice(0, 8);
+  }
+  function renderCard(item, parsed, idx) {
+    var p = item.p;
+    return '<a class="ks-ai130-card" href="' + esc(p.href) + '">' +
+      '<span class="ks-ai130-rank">' + (idx + 1) + '</span>' +
+      '<span class="ks-ai130-img"><img src="' + esc(p.img) + '" alt="' + esc(p.title) + '" loading="lazy" decoding="async"></span>' +
+      '<span class="ks-ai130-copy"><em>' + esc(p.cat) + '</em><strong>' + esc(p.title) + '</strong><small>' + esc(reasonFor(p, parsed)) + '</small>' + (p.price ? '<b>' + esc(p.price) + '</b>' : '') + '</span>' +
+      '</a>';
+  }
+  function answerText(parsed, ranked, total) {
+    var it = intents[parsed.intent] || intents.smartphone;
+    if (!parsed.query || parsed.query.length < 2) {
+      return 'Scrivi cosa stai cercando: analizzo gli articoli reali visibili in home, riconosco categoria, parole chiave e budget, poi ti propongo le opzioni piu sensate.';
+    }
+    if (!ranked.length) {
+      return 'Non ho trovato una corrispondenza forte tra i ' + total + ' articoli letti in home. Prova con parole piu concrete, ad esempio “toner Pantum”, “custodia Samsung”, “hub USB-C” o “notebook ricondizionato”.';
+    }
+    var first = ranked[0].p;
+    var budget = parsed.maxPrice != null ? ' Ho considerato anche il limite di prezzo indicato: massimo ' + parsed.maxPrice.toFixed(2).replace('.', ',') + ' €.' : '';
+    return 'Ho capito che cerchi ' + it.label.toLowerCase() + '. La scelta piu coerente e “' + first.title + '”' + (first.price ? ' a ' + first.price : '') + '. Ti mostro anche alternative ordinate per pertinenza, disponibilita visiva e prezzo.' + budget;
+  }
+  function queryLink(term) { return 'articoli.aspx?search=' + encodeURIComponent(term); }
+  function createEngine(products) {
+    qa('#KsSmartConsult129,#KsSmartAdvisor128').forEach(function (n) { n.remove(); });
+    var examples = ['Mi serve una custodia per Samsung sotto 30 euro', 'Cerco toner compatibile Pantum', 'Voglio un notebook ricondizionato', 'Mi serve un adattatore USB-C'];
+    var html = '<section id="KsLocalAiSearch130" class="ks-ai130-section tf-sp-2" data-ks-ai="local-reasoning" data-ks-final-home="1"><div class="container">' +
+      '<div class="ks-ai130-shell"><div class="ks-ai130-brain">' +
+      '<span class="ks-ai130-kicker">AI locale KeepStore</span><h5>Chiedimi cosa stai cercando</h5><p>Motore autonomo in pagina: interpreta la richiesta, valuta budget e parole chiave, poi risponde usando solo prodotti reali caricati nella HOME.</p>' +
+      '<form class="ks-ai130-form"><input type="search" autocomplete="off" placeholder="Es. Cerco un toner compatibile sotto 50 euro"><button type="submit">Ragiona</button></form>' +
+      '<div class="ks-ai130-examples">' + examples.map(function (e) { return '<button type="button">' + esc(e) + '</button>'; }).join('') + '</div>' +
+      '<div class="ks-ai130-answer"><i></i><p></p></div>' +
+      '<div class="ks-ai130-tools"><a href="' + esc(queryLink('toner compatibile')) + '">Toner</a><a href="' + esc(queryLink('custodia samsung')) + '">Custodie</a><a href="' + esc(queryLink('notebook ricondizionato')) + '">Notebook</a><a href="' + esc(queryLink('hub usb')) + '">USB</a></div>' +
+      '</div><div class="ks-ai130-results-wrap"><div class="ks-ai130-head"><span>Risposta e prodotti consigliati</span><small>' + products.length + ' articoli analizzati</small></div><div class="ks-ai130-results"></div></div></div></div></section>';
+    var tmp = document.createElement('div'); tmp.innerHTML = html;
+    var node = tmp.firstElementChild;
+    var dept = q('#KsHomeDepartmentShowcase');
+    var deal = q('#KsOnsusDealToday123');
+    var anchor = dept || deal || q('#KsOnsusProductMosaic127') || q('#KsHomeBestSellerFinal');
+    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(node, anchor.nextSibling);
+    else document.body.appendChild(node);
+    var input = q('.ks-ai130-form input', node);
+    var form = q('.ks-ai130-form', node);
+    var answer = q('.ks-ai130-answer p', node);
+    var lamp = q('.ks-ai130-answer i', node);
+    var results = q('.ks-ai130-results', node);
+    function runQuery(queryText) {
+      var parsed = parseQuery(queryText || '');
+      var ranked = rankProducts(products, parsed);
+      if (lamp) lamp.setAttribute('data-intent', parsed.intent);
+      if (answer) answer.textContent = answerText(parsed, ranked, products.length);
+      if (results) {
+        results.innerHTML = ranked.length ? ranked.slice(0, 6).map(function (item, idx) { return renderCard(item, parsed, idx); }).join('') : '<div class="ks-ai130-empty">Nessun match forte. Prova una richiesta piu specifica o usa uno dei percorsi rapidi.</div>';
+      }
+      try { localStorage.setItem('ks_ai_last_query_130', queryText || ''); } catch (e) {}
+    }
+    if (form) form.addEventListener('submit', function (ev) { ev.preventDefault(); runQuery(input && input.value || ''); });
+    qa('.ks-ai130-examples button', node).forEach(function (btn) { btn.addEventListener('click', function () { if (input) input.value = text(btn); runQuery(text(btn)); }); });
+    var initial = '';
+    try { initial = localStorage.getItem('ks_ai_last_query_130') || ''; } catch (e) {}
+    if (input && initial) input.value = initial;
+    runQuery(initial || 'custodia samsung');
+  }
+  function enforceOrder() {
+    var deal = q('#KsOnsusDealToday123');
+    var dept = q('#KsHomeDepartmentShowcase');
+    var ai = q('#KsLocalAiSearch130');
+    var mosaic = q('#KsOnsusProductMosaic127');
+    var best = q('#KsHomeBestSellerFinal');
+    var lower = q('#KsHomeLowerFinal');
+    var brand = q('#KsHomeBrandSection');
+    var closing = q('#KsHomeClosingLayer');
+    if (deal && dept && deal.parentNode === dept.parentNode && deal.nextElementSibling !== dept) deal.parentNode.insertBefore(dept, deal.nextSibling);
+    if (ai && dept && ai.parentNode === dept.parentNode && ai.previousElementSibling !== dept) dept.parentNode.insertBefore(ai, dept.nextSibling);
+    if (mosaic && ai && mosaic.parentNode === ai.parentNode && mosaic.previousElementSibling !== ai) ai.parentNode.insertBefore(mosaic, ai.nextSibling);
+    if (best && mosaic && best.parentNode === mosaic.parentNode && best.previousElementSibling !== mosaic) mosaic.parentNode.insertBefore(best, mosaic.nextSibling);
+    if (lower && best && lower.parentNode === best.parentNode && lower.previousElementSibling !== best) best.parentNode.insertBefore(lower, best.nextSibling);
+    if (brand && lower && brand.parentNode === lower.parentNode && brand.previousElementSibling !== lower) lower.parentNode.insertBefore(brand, lower.nextSibling);
+    if (closing && brand && closing.parentNode === brand.parentNode && closing.previousElementSibling !== brand) brand.parentNode.insertBefore(closing, brand.nextSibling);
+  }
+  function cleanup() {
+    if (!document.body) return;
+    document.body.classList.add('ks-page-home', 'ks-home-onsus-pass-130');
+    document.body.classList.remove('ks-home-onsus-pass-128');
+    qa('#KsSmartConsult129,#KsSmartAdvisor128,#KsOnsusPromoBand125,#KsOnsusWidePromo122,.ks-onsus-action-rail125').forEach(function (n) { n.remove(); });
+  }
+  function run() {
+    cleanup();
+    if (!q('#KsLocalAiSearch130')) {
+      var products = collectProducts();
+      if (products.length >= 4) createEngine(products);
+    }
+    enforceOrder();
+  }
+  function boot() { run(); [140, 420, 900, 1800, 3600, 7000, 11000].forEach(function (d) { window.setTimeout(run, d); }); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
