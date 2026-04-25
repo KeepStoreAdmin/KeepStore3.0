@@ -735,3 +735,145 @@ body.ks-page-home.ks-home-step113-onsus-hard [data-ks-final-source-hidden="side-
 body.ks-page-home.ks-home-step113-onsus-hard .ks-native-vertical-source-off{display:none!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}
 @media (max-width:1199.98px){body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-shell,body.ks-page-home.ks-home-step113-onsus-hard [id$="HomeHeroShell"]{grid-template-columns:230px minmax(0,1fr)!important;min-height:300px!important;}body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-shell>.wrap-item-1,body.ks-page-home.ks-home-step113-onsus-hard [id$="HomeHeroShell"]>.wrap-item-1{width:230px!important;min-width:230px!important;max-width:230px!important;height:300px!important;min-height:300px!important;max-height:300px!important;}body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-slider,body.ks-page-home.ks-home-step113-onsus-hard [id$="Slide_Show_Container"],body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-banner,body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-media,body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-slider a{height:300px!important;min-height:300px!important;max-height:300px!important;}body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-slider img,body.ks-page-home.ks-home-step113-onsus-hard [id$="Slide_Show_Container"] img{min-height:300px!important;}body.ks-page-home.ks-home-step113-onsus-hard .ks-home-departments,body.ks-page-home.ks-home-step113-onsus-hard .menu-category-list{height:300px!important;max-height:300px!important;}}
 @media (max-width:991.98px){body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-shell,body.ks-page-home.ks-home-step113-onsus-hard [id$="HomeHeroShell"]{grid-template-columns:1fr!important;min-height:240px!important;}body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-shell>.wrap-item-1,body.ks-page-home.ks-home-step113-onsus-hard [id$="HomeHeroShell"]>.wrap-item-1{display:none!important;}body.ks-page-home.ks-home-step113-onsus-hard .ks-final-product-grid,body.ks-page-home.ks-home-step113-onsus-hard .ks-home-best-grid,body.ks-page-home.ks-home-step113-onsus-hard .ks-onsus-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}}
+
+/* ==========================================================
+   KeepStore HOME - Step 114/4 Onsus index mix foundation
+   Goal: apply Onsus index cadence to the existing KeepStore runtime data.
+   ========================================================== */
+body.ks-page-home.ks-home-template-mix-v1{--ks-onsus-red:#ff3b30;--ks-onsus-bg:#f4f4f4;--ks-onsus-text:#333e48;--ks-onsus-muted:#7a7f86;background:var(--ks-onsus-bg)!important;color:var(--ks-onsus-text)!important;}
+body.ks-page-home.ks-home-template-mix-v1 main{background:var(--ks-onsus-bg)!important;}
+body.ks-page-home.ks-home-template-mix-v1 .container{max-width:1180px!important;width:100%!important;}
+body.ks-page-home.ks-home-template-mix-v1 .tf-sp-5{padding-top:28px!important;padding-bottom:16px!important;}
+body.ks-page-home.ks-home-template-mix-v1 .tf-sp-2{padding-top:26px!important;padding-bottom:26px!important;}
+
+/* Onsus banner index top: department menu + main hero, no fake side lane. */
+body.ks-page-home.ks-home-template-mix-v1 .ks-onsus-top-wrapper,
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-shell,
+body.ks-page-home.ks-home-template-mix-v1 [id$="HomeHeroShell"]{display:grid!important;grid-template-columns:258px minmax(0,1fr)!important;gap:20px!important;align-items:stretch!important;width:100%!important;min-height:345px!important;overflow:visible!important;background:transparent!important;border:0!important;box-shadow:none!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-onsus-dept-panel,
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-shell>.wrap-item-1,
+body.ks-page-home.ks-home-template-mix-v1 [id$="HomeHeroShell"]>.wrap-item-1{display:block!important;width:258px!important;min-width:258px!important;max-width:258px!important;height:345px!important;min-height:345px!important;max-height:345px!important;overflow:hidden!important;background:#fff!important;border-radius:8px!important;box-shadow:0 8px 24px rgba(51,62,72,.05)!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-onsus-hero-panel,
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-shell>.wrap-item-2,
+body.ks-page-home.ks-home-template-mix-v1 [id$="HomeHeroShell"]>.wrap-item-2,
+body.ks-page-home.ks-home-template-mix-v1 [id$="HeroSliderWrap"],
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-slider,
+body.ks-page-home.ks-home-template-mix-v1 [id$="Slide_Show_Container"],
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-slider .swiper-wrapper,
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-slider .swiper-slide,
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-banner,
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-media,
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-media--only,
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-slider a{display:block!important;width:100%!important;height:345px!important;min-height:345px!important;max-height:345px!important;overflow:hidden!important;background-color:#050505!important;border-radius:8px!important;position:relative!important;transform:none!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-onsus-hero-artwork-zoom{background-repeat:no-repeat!important;background-position:center center!important;background-size:178% auto!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-onsus-hero-artwork-zoom img,
+body.ks-page-home.ks-home-template-mix-v1 .ks-hero-artwork-square img{opacity:0!important;visibility:hidden!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-slider img,
+body.ks-page-home.ks-home-template-mix-v1 [id$="Slide_Show_Container"] img{display:block!important;width:100%!important;height:100%!important;max-width:none!important;object-fit:cover!important;object-position:center center!important;background:#050505!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-departments,
+body.ks-page-home.ks-home-template-mix-v1 .menu-category-list{height:345px!important;max-height:345px!important;overflow-y:auto!important;background:#fff!important;border-radius:8px!important;scrollbar-width:thin!important;}
+body.ks-page-home.ks-home-template-mix-v1 .menu-category-list::-webkit-scrollbar{width:6px!important;}
+body.ks-page-home.ks-home-template-mix-v1 .menu-category-list::-webkit-scrollbar-thumb{background:#c9ced3!important;border-radius:10px!important;}
+body.ks-page-home.ks-home-template-mix-v1 .menu-category-list a,
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-departments a{min-height:42px!important;padding:0 13px!important;display:flex!important;align-items:center!important;gap:10px!important;color:var(--ks-onsus-text)!important;font-size:13px!important;line-height:1.25!important;text-decoration:none!important;border-bottom:1px solid #f0f1f2!important;}
+body.ks-page-home.ks-home-template-mix-v1 .menu-category-list a:hover,
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-departments a:hover{color:var(--ks-onsus-red)!important;background:#fff7f6!important;}
+
+/* Icon boxes closer to Onsus index. */
+body.ks-page-home.ks-home-template-mix-v1 .tf-icon-box,
+body.ks-page-home.ks-home-template-mix-v1 .ks-icon-box,
+body.ks-page-home.ks-home-template-mix-v1 .home-icon-box{height:64px!important;background:#fff!important;border-radius:8px!important;box-shadow:0 8px 18px rgba(51,62,72,.04)!important;border:0!important;padding:12px 16px!important;display:flex!important;align-items:center!important;gap:12px!important;}
+
+/* Section titles: flat-title style from Onsus index. */
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-title,
+body.ks-page-home.ks-home-template-mix-v1 .flat-title{display:flex!important;align-items:flex-end!important;justify-content:space-between!important;gap:18px!important;margin-bottom:16px!important;border:0!important;padding:0!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-section-kicker{display:block!important;font-size:11px!important;text-transform:uppercase!important;letter-spacing:.04em!important;line-height:1.1!important;color:var(--ks-onsus-red)!important;font-weight:800!important;margin-bottom:3px!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-title h5,
+body.ks-page-home.ks-home-template-mix-v1 .flat-title h5{font-size:20px!important;line-height:1.2!important;color:var(--ks-onsus-text)!important;margin:0!important;font-weight:700!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-section-link{font-size:12px!important;font-weight:700!important;color:var(--ks-onsus-red)!important;text-decoration:none!important;}
+
+/* Department showcase as Onsus category tile strip. */
+body.ks-page-home.ks-home-template-mix-v1 .ks-department-grid{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:16px!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-department-card{min-height:112px!important;background:#fff!important;border-radius:10px!important;padding:16px 10px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:7px!important;text-align:center!important;text-decoration:none!important;box-shadow:0 8px 24px rgba(51,62,72,.05)!important;overflow:hidden!important;color:var(--ks-onsus-text)!important;border:0!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-department-media{width:46px!important;height:38px!important;border-radius:10px!important;background:#f7f8fa!important;display:flex!important;align-items:center!important;justify-content:center!important;color:var(--ks-onsus-red)!important;font-size:18px!important;font-weight:800!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-department-media img{width:100%!important;height:100%!important;object-fit:contain!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-department-card b{font-size:12px!important;line-height:1.25!important;text-transform:uppercase!important;color:var(--ks-onsus-text)!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-department-card small{font-size:11px!important;font-weight:700!important;color:var(--ks-onsus-red)!important;}
+
+/* Product decks: actual Onsus product card rhythm, no giant holes. */
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:18px!important;align-items:stretch!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-card{background:#fff!important;border-radius:10px!important;padding:12px!important;box-shadow:0 8px 24px rgba(51,62,72,.05)!important;display:grid!important;grid-template-rows:170px auto!important;gap:10px!important;min-width:0!important;min-height:272px!important;overflow:hidden!important;border:0!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-card:hover{box-shadow:0 12px 30px rgba(51,62,72,.08)!important;transform:translateY(-1px)!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-media{height:170px!important;min-height:170px!important;width:100%!important;background:#f7f8fa!important;border-radius:8px!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-media img{max-width:100%!important;max-height:100%!important;width:auto!important;height:auto!important;object-fit:contain!important;display:block!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-info{min-width:0!important;display:block!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-cat{font-size:10px!important;line-height:1.2!important;color:#8b9097!important;margin:0 0 4px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-card h6{margin:0 0 8px!important;min-height:34px!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-card h6 a{font-size:12px!important;line-height:1.35!important;color:#0068a8!important;font-weight:800!important;text-transform:uppercase!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important;text-decoration:none!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-price{font-size:12px!important;line-height:1.2!important;color:var(--ks-onsus-red)!important;font-weight:800!important;margin:0!important;}
+
+/* Deal Today should read as a dedicated Onsus carousel row. */
+body.ks-page-home.ks-home-template-mix-v1 .ks-onsus-deal-today .ks-final-product-card{border:1px solid rgba(255,59,48,.18)!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-onsus-fire{display:inline-flex!important;width:16px!important;height:16px!important;border-radius:50%!important;align-items:center!important;justify-content:center!important;background:var(--ks-onsus-red)!important;color:#fff!important;font-size:0!important;margin-right:6px!important;vertical-align:middle!important;box-shadow:0 0 0 4px rgba(255,59,48,.08)!important;}
+
+/* Lower Top Trend like Onsus index: 3 clean columns. */
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-lower-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:20px!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-lower-column{background:#fff!important;border-radius:10px!important;padding:16px!important;box-shadow:0 8px 24px rgba(51,62,72,.05)!important;min-width:0!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-lower-column h5{font-size:16px!important;margin:0 0 12px!important;font-weight:800!important;color:var(--ks-onsus-text)!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-lower-list{display:grid!important;gap:12px!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-card--compact{display:grid!important;grid-template-columns:74px minmax(0,1fr)!important;grid-template-rows:auto!important;min-height:82px!important;padding:0!important;background:transparent!important;box-shadow:none!important;border-radius:0!important;gap:10px!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-card--compact .ks-final-product-media{height:74px!important;min-height:74px!important;border-radius:8px!important;background:#f7f8fa!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-card--compact h6{min-height:0!important;margin-bottom:6px!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-card--compact h6 a{font-size:11px!important;line-height:1.28!important;-webkit-line-clamp:2!important;}
+
+/* Brands and closing panels. */
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-brands-block{padding-top:26px!important;padding-bottom:20px!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-brand-item{height:74px!important;background:#fff!important;border-radius:10px!important;box-shadow:0 8px 24px rgba(51,62,72,.05)!important;border:0!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-closing-grid{display:grid!important;grid-template-columns:minmax(0,1.45fr) minmax(0,.95fr)!important;gap:22px!important;max-width:740px!important;margin:0 auto!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-closing-card{background:#fff!important;border-radius:12px!important;padding:18px!important;box-shadow:0 8px 24px rgba(51,62,72,.05)!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-closing-tags{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important;}
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-closing-tags a,
+body.ks-page-home.ks-home-template-mix-v1 .ks-home-service-grid>div{background:#f7f8fa!important;border-radius:8px!important;padding:10px!important;min-height:58px!important;text-decoration:none!important;}
+
+/* Kill native columns that are already copied into final Onsus blocks. */
+body.ks-page-home.ks-home-template-mix-v1 [data-ks-onsus-mix-hidden],
+body.ks-page-home.ks-home-template-mix-v1 [data-ks-final-source-hidden="final-rendered"],
+body.ks-page-home.ks-home-template-mix-v1 [data-ks-final-source-hidden="stray-native"],
+body.ks-page-home.ks-home-template-mix-v1 [data-ks-final-source-hidden="side-off"],
+body.ks-page-home.ks-home-template-mix-v1 .ks-native-vertical-source-off{display:none!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}
+
+@media (max-width:1199.98px){
+  body.ks-page-home.ks-home-template-mix-v1 .container{max-width:960px!important;}
+  body.ks-page-home.ks-home-template-mix-v1 .ks-onsus-top-wrapper,
+  body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-shell,
+  body.ks-page-home.ks-home-template-mix-v1 [id$="HomeHeroShell"]{grid-template-columns:230px minmax(0,1fr)!important;min-height:300px!important;}
+  body.ks-page-home.ks-home-template-mix-v1 .ks-onsus-dept-panel,
+  body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-shell>.wrap-item-1,
+  body.ks-page-home.ks-home-template-mix-v1 [id$="HomeHeroShell"]>.wrap-item-1{width:230px!important;min-width:230px!important;max-width:230px!important;height:300px!important;max-height:300px!important;}
+  body.ks-page-home.ks-home-template-mix-v1 .ks-onsus-hero-panel,
+  body.ks-page-home.ks-home-template-mix-v1 [id$="HeroSliderWrap"],
+  body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-slider,
+  body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-banner,
+  body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-media,
+  body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-slider a{height:300px!important;min-height:300px!important;max-height:300px!important;}
+  body.ks-page-home.ks-home-template-mix-v1 .ks-home-departments,
+  body.ks-page-home.ks-home-template-mix-v1 .menu-category-list{height:300px!important;max-height:300px!important;}
+  body.ks-page-home.ks-home-template-mix-v1 .ks-department-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;}
+  body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;}
+}
+@media (max-width:991.98px){
+  body.ks-page-home.ks-home-template-mix-v1 .ks-onsus-top-wrapper,
+  body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-shell,
+  body.ks-page-home.ks-home-template-mix-v1 [id$="HomeHeroShell"]{grid-template-columns:1fr!important;min-height:245px!important;}
+  body.ks-page-home.ks-home-template-mix-v1 .ks-home-hero-shell>.wrap-item-1,
+  body.ks-page-home.ks-home-template-mix-v1 [id$="HomeHeroShell"]>.wrap-item-1{display:none!important;}
+  body.ks-page-home.ks-home-template-mix-v1 .ks-final-lower-grid,
+  body.ks-page-home.ks-home-template-mix-v1 .ks-home-closing-grid{grid-template-columns:1fr!important;max-width:100%!important;}
+}
+@media (max-width:767.98px){
+  body.ks-page-home.ks-home-template-mix-v1 .ks-department-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+  body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;}
+  body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-card{min-height:242px!important;grid-template-rows:145px auto!important;}
+  body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-media{height:145px!important;min-height:145px!important;}
+  body.ks-page-home.ks-home-template-mix-v1 .ks-home-closing-tags{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+}
