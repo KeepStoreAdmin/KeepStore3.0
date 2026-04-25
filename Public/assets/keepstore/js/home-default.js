@@ -1512,3 +1512,149 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   window.addEventListener('resize', function () { window.setTimeout(run, 160); });
 })();
+
+/* KeepStore HOME - Step 122: ONSUS Deal Today + wide product banner.
+   Uses only server-rendered KeepStore products already present in the page. */
+(function () {
+  'use strict';
+  function q(s, r) { return (r || document).querySelector(s); }
+  function qa(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  function txt(n) { return String(n && n.textContent || '').replace(/\s+/g, ' ').trim(); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+  function normalizeUrl(url) { return String(url || '').replace(/^https?:\/\/(www\.)?(taikun\.it|webaffare\.it)/i, '').replace(/&amp;/g, '&'); }
+  function imgFrom(root) {
+    var imgs = qa('img', root);
+    for (var i = 0; i < imgs.length; i++) {
+      var img = imgs[i];
+      var src = img.currentSrc || img.getAttribute('src') || img.getAttribute('data-src') || '';
+      if (!src && img.getAttribute('srcset')) src = String(img.getAttribute('srcset')).split(',')[0].trim().split(' ')[0];
+      if (!src || /logo|brand|payment|visa|mastercard|paypal|placeholder|loader|spinner|sprite/i.test(src)) continue;
+      return src;
+    }
+    return '';
+  }
+  function priceFrom(root) { var m = txt(root).match(/\d{1,5}(?:[\.,]\d{2})\s*€/g); return m && m.length ? m[m.length - 1] : ''; }
+  function titleFrom(root) {
+    var nodes = [q('h6 a', root), q('.ks-final-product-info a', root), q('.name-product', root), q('a[href*="articolo.aspx"]', root)];
+    for (var i = 0; i < nodes.length; i++) {
+      var t = txt(nodes[i]);
+      if (t && t.length > 5 && !/^(scopri|compra|categoria|vai al catalogo)$/i.test(t)) return t;
+    }
+    return '';
+  }
+  function productFrom(card) {
+    if (!card) return null;
+    var link = q('a[href*="articolo.aspx"]', card);
+    var href = normalizeUrl(link && link.getAttribute('href'));
+    var img = imgFrom(card);
+    var title = titleFrom(card);
+    if (!href || !img || !title) return null;
+    return { href: href, img: img, title: title, price: priceFrom(card) };
+  }
+  function collectProducts(limit) {
+    var out = [], seen = Object.create(null);
+    var selectors = [
+      '#KsHomeEditorialFinal .ks-final-product-card',
+      '#KsHomeBestSellerFinal .ks-final-product-card',
+      '#KsHomeLowerFinal .ks-final-product-card',
+      '.ks-final-product-card'
+    ];
+    qa(selectors.join(',')).forEach(function (card) {
+      if (out.length >= (limit || 12)) return;
+      var p = productFrom(card);
+      if (!p || seen[p.href]) return;
+      seen[p.href] = 1;
+      out.push(p);
+    });
+    return out;
+  }
+  function resetMenuScroll() {
+    var shell = q('.ks-home-hero-shell') || q('[id$="HomeHeroShell"]');
+    var menu = shell && q('.wrap-item-1', shell);
+    if (!menu) return;
+    [menu].concat(qa('*', menu)).forEach(function (n) { if (n && typeof n.scrollTop === 'number') n.scrollTop = 0; });
+  }
+  function normalizeDealTitle() {
+    var section = q('#KsHomeEditorialFinal');
+    if (!section) return;
+    section.classList.add('ks-onsus-deal-today-122');
+    var title = q('.ks-final-title', section);
+    if (!title) return;
+    var kicker = q('.ks-section-kicker', title);
+    var h = q('h5', title);
+    var link = q('.ks-home-section-link', title);
+    if (kicker) kicker.textContent = 'DEAL TODAY';
+    if (h) h.innerHTML = '<span class="ks-fire-122">●</span> Occasione Imperdibile';
+    if (link) link.textContent = 'Vai al catalogo';
+    var grid = q('.ks-final-product-grid', section);
+    if (grid) grid.classList.add('ks-onsus-deal-grid-122');
+    qa('.ks-final-product-card', section).forEach(function (card, index) {
+      card.classList.add('ks-onsus-deal-card-122');
+      if (!q('.ks-onsus-sale-progress-122', card)) {
+        var p = document.createElement('div');
+        p.className = 'ks-onsus-sale-progress-122';
+        var w = 44 + ((index * 11) % 35);
+        p.innerHTML = '<span><i style="width:' + w + '%"></i></span>';
+        card.appendChild(p);
+      }
+    });
+  }
+  function widePromoHtml(p) {
+    return '<section id="KsOnsusWidePromo122" class="tf-sp-2 ks-onsus-wide-promo-122 ks-home-final-rendered" data-ks-final-home="1">' +
+      '<div class="container"><a class="ks-wide-promo-inner-122" href="' + esc(p.href) + '">' +
+      '<span class="ks-wide-copy-122"><em>Offerta KeepStore</em><strong>' + esc(p.title) + '</strong>' +
+      (p.price ? '<b>' + esc(p.price) + '</b>' : '') + '<span>Scopri ora</span></span>' +
+      '<img src="' + esc(p.img) + '" alt="' + esc(p.title) + '" loading="lazy" decoding="async">' +
+      '</a></div></section>';
+  }
+  function ensureWidePromo() {
+    var existing = q('#KsOnsusWidePromo122');
+    var deal = q('#KsHomeEditorialFinal');
+    var best = q('#KsHomeBestSellerFinal');
+    var products = collectProducts(6);
+    var p = products[2] || products[0];
+    if (!p || !deal || !best) { if (existing) existing.remove(); return; }
+    if (!existing) {
+      var tmp = document.createElement('div');
+      tmp.innerHTML = widePromoHtml(p);
+      existing = tmp.firstChild;
+      best.parentNode.insertBefore(existing, best);
+    } else {
+      existing.outerHTML = widePromoHtml(p);
+    }
+  }
+  function normalizeLowerColumns() {
+    var lower = q('#KsHomeLowerFinal');
+    if (!lower) return;
+    lower.classList.add('ks-onsus-grid-collection-122');
+    var title = q('.ks-final-title h5', lower);
+    var kicker = q('.ks-section-kicker', lower);
+    if (kicker) kicker.textContent = 'GRID COLLECTION';
+    if (title) title.textContent = 'Scelte dal catalogo';
+    qa('.ks-final-lower-column', lower).forEach(function (col) {
+      var count = qa('.ks-final-product-card,a[href*="articolo.aspx"]', col).length;
+      if (count < 2) col.setAttribute('data-ks-step122-hide', '1');
+    });
+  }
+  function normalizeCards() {
+    qa('.ks-final-product-card').forEach(function (card) {
+      card.classList.add('ks-onsus-card-122');
+      var title = q('h6 a,a[href*="articolo.aspx"]', card);
+      if (title && !title.getAttribute('title')) title.setAttribute('title', txt(title));
+      var img = q('img', card);
+      if (img) { img.setAttribute('loading', 'lazy'); img.setAttribute('decoding', 'async'); }
+    });
+  }
+  function run() {
+    if (!document.body) return;
+    document.body.classList.add('ks-page-home', 'ks-home-onsus-pass-122');
+    resetMenuScroll();
+    normalizeDealTitle();
+    ensureWidePromo();
+    normalizeLowerColumns();
+    normalizeCards();
+  }
+  function boot() { run(); [120, 350, 800, 1600, 3200, 6200].forEach(function (d) { window.setTimeout(run, d); }); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  window.addEventListener('resize', function () { window.setTimeout(run, 180); });
+})();
