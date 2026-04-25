@@ -15,7 +15,7 @@ Partial Public Class search_suggest
     Inherits Page
 
     Private Const DefaultLimit As Integer = 8
-    Private Const MaxLimit As Integer = 60
+    Private Const MaxLimit As Integer = 80
     Private Shared ReadOnly ItCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
 
     Private Class SearchFilters
@@ -27,19 +27,54 @@ Partial Public Class search_suggest
         Public Property MarcaId As Integer
         Public Property ProdottoId As Integer
         Public Property SoloPromo As Boolean
+        Public Property SoloDisponibili As Boolean
+        Public Property SoloRicondizionati As Boolean
+        Public Property MinPrice As Decimal
+        Public Property MaxPrice As Decimal
+        Public Property Sort As String
+        Public Property Mode As String
+    End Class
+
+    Private Class QueryIntent
+        Public Property Original As String
+        Public Property SearchText As String
+        Public Property Tokens As List(Of String)
+        Public Property MaxPrice As Decimal
+        Public Property MinPrice As Decimal
+        Public Property WantsPromo As Boolean
+        Public Property WantsAvailable As Boolean
+        Public Property WantsRefurbished As Boolean
+        Public Property IntentName As String
+        Public Property Summary As String
     End Class
 
     Private Class SuggestItem
         Public Property Id As Integer
         Public Property Url As String
         Public Property Title As String
+        Public Property Description As String
+        Public Property Code As String
+        Public Property Ean As String
         Public Property Brand As String
         Public Property Category As String
+        Public Property Department As String
         Public Property Price As String
+        Public Property PriceValue As Decimal
         Public Property Score As Integer
         Public Property MatchKind As String
         Public Property Image As String
         Public Property ImageFallback As String
+        Public Property Availability As Decimal
+        Public Property IsOffer As Boolean
+        Public Property IsRefurbished As Boolean
+        Public Property Reason As String
+        Public Property Badges As List(Of String)
+    End Class
+
+    Private Class FacetItem
+        Public Property Label As String
+        Public Property Value As String
+        Public Property Count As Integer
     End Class
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
@@ -86,97 +121,92 @@ Partial Public Class search_suggest
         output("recent") = True
         output("suggestions") = New List(Of Dictionary(Of String, Object))()
         output("rank_ids") = New List(Of Integer)()
-        output("strong") = New Dictionary(Of String, Object) From {
-            {"canRedirect", False},
-            {"redirectUrl", String.Empty}
-        }
+        output("facets") = EmptyFacets()
+        output("strong") = New Dictionary(Of String, Object) From {{"canRedirect", False}, {"redirectUrl", String.Empty}}
+        output("intelligence") = New Dictionary(Of String, Object) From {{"summary", "Mostro gli ultimi articoli visitati o il fallback catalogo."}}
+        output("total") = 0
 
         If recentIds Is Nothing OrElse recentIds.Count = 0 Then Return output
 
+        Dim parameters As New List(Of DbParameterSpec)()
         Dim sql As New StringBuilder()
-        sql.Append("SELECT DISTINCT v.id, v.Codice, v.Ean, v.Descrizione1, v.DescrizioneLunga, v.MarcheDescrizione, v.CategorieDescrizione, v.SettoriDescrizione, ")
-        sql.Append("v.Img1, v.Img2, v.Img3, v.Img4, i.Immagine1, i.Immagine2, i.Immagine3, i.Immagine4, i.Immagine5, i.Immagine6, ")
-        sql.Append("COALESCE(NULLIF(v.PrezzoPromoIvato,0), NULLIF(v.PrezzoIvato,0), NULLIF(v.PrezzoPromo,0), v.Prezzo, 0) AS PrezzoFinale, ")
-        sql.Append("COALESCE(v.Disponibilita,0) AS Disponibilita, COALESCE(v.InOfferta,0) AS InOfferta, COALESCE(v.Vetrina,0) AS Vetrina, COALESCE(v.visite,0) AS Visite ")
-        sql.Append("FROM vsuperarticoli v LEFT JOIN immagini i ON i.id = v.id WHERE v.NListino = 1 AND v.id IN (")
+        AppendSelect(sql, False)
+        sql.Append(" FROM vsuperarticoli v LEFT JOIN immagini i ON i.id = v.id WHERE COALESCE(v.NListino,1)=1 AND v.id IN (")
         sql.Append(String.Join(",", recentIds.Select(Function(n) n.ToString(CultureInfo.InvariantCulture))))
         sql.Append(")")
-        AppendFilterClauses(sql, Nothing, filters, "v")
+        AppendFilterClauses(sql, parameters, filters, "v")
         sql.Append(" ORDER BY FIELD(v.id,")
         sql.Append(String.Join(",", recentIds.Select(Function(n) n.ToString(CultureInfo.InvariantCulture))))
         sql.Append(") LIMIT ")
         sql.Append(limit.ToString(CultureInfo.InvariantCulture))
 
-        Dim table As DataTable = ExecuteQuery(sql.ToString(), Nothing)
-        Dim mapped As List(Of SuggestItem) = MapSuggestions(table, String.Empty)
+        Dim table As DataTable = ExecuteQuery(sql.ToString(), parameters)
+        Dim mapped As List(Of SuggestItem) = MapSuggestions(table, String.Empty, Nothing).Take(limit).ToList()
 
         output("suggestions") = mapped.Select(Function(item) SerializeItem(item)).ToList()
         output("rank_ids") = mapped.Select(Function(item) item.Id).ToList()
+        output("facets") = BuildFacets(mapped)
+        output("total") = mapped.Count
         Return output
     End Function
 
     Private Function BuildSearchResult(ByVal query As String, ByVal filters As SearchFilters, ByVal limit As Integer) As Dictionary(Of String, Object)
-        Dim normalizedQuery As String = NormalizeSearchText(query)
-        Dim qExact As String = normalizedQuery
-        Dim qPrefix As String = normalizedQuery & "%"
-        Dim qContains As String = "%" & normalizedQuery & "%"
-        Dim qWord As String = "% " & normalizedQuery & "%"
+        Dim intent As QueryIntent = InterpretQuery(query)
+        If filters.MaxPrice <= 0D AndAlso intent.MaxPrice > 0D Then filters.MaxPrice = intent.MaxPrice
+        If filters.MinPrice <= 0D AndAlso intent.MinPrice > 0D Then filters.MinPrice = intent.MinPrice
+        If intent.WantsAvailable Then filters.SoloDisponibili = True
+        If intent.WantsPromo Then filters.SoloPromo = True
+        If intent.WantsRefurbished Then filters.SoloRicondizionati = True
 
-        Dim parameters As New List(Of DbParameterSpec) From {
-            New DbParameterSpec("@qExact", qExact),
-            New DbParameterSpec("@qPrefix", qPrefix),
-            New DbParameterSpec("@qContains", qContains),
-            New DbParameterSpec("@qWord", qWord)
-        }
+        Dim tokens As List(Of String) = intent.Tokens
+        If tokens.Count = 0 Then tokens = ExtractTokens(query)
+        If tokens.Count = 0 Then tokens.Add(NormalizeSearchText(query))
 
-        Dim scoreExpr As String = String.Join(" + ", New String() {
-            "(CASE WHEN LOWER(TRIM(COALESCE(v.Codice,''))) = @qExact THEN 100000 ELSE 0 END)",
-            "(CASE WHEN LOWER(TRIM(COALESCE(v.Ean,''))) = @qExact THEN 99000 ELSE 0 END)",
-            "(CASE WHEN LOWER(TRIM(COALESCE(v.Descrizione1,''))) = @qExact THEN 97000 ELSE 0 END)",
-            "(CASE WHEN LOWER(TRIM(COALESCE(v.Codice,''))) LIKE @qPrefix THEN 82000 ELSE 0 END)",
-            "(CASE WHEN LOWER(TRIM(COALESCE(v.Ean,''))) LIKE @qPrefix THEN 81000 ELSE 0 END)",
-            "(CASE WHEN LOWER(TRIM(COALESCE(v.Descrizione1,''))) LIKE @qPrefix THEN 80000 ELSE 0 END)",
-            "(CASE WHEN LOWER(CONCAT(' ', TRIM(COALESCE(v.Codice,'')))) LIKE @qWord THEN 76000 ELSE 0 END)",
-            "(CASE WHEN LOWER(CONCAT(' ', TRIM(COALESCE(v.Ean,'')))) LIKE @qWord THEN 75000 ELSE 0 END)",
-            "(CASE WHEN LOWER(CONCAT(' ', TRIM(COALESCE(v.Descrizione1,'')))) LIKE @qWord THEN 74000 ELSE 0 END)",
-            "(CASE WHEN LOWER(CONCAT(' ', TRIM(COALESCE(v.MarcheDescrizione,'')), ' ', TRIM(COALESCE(v.Descrizione1,'')))) LIKE @qWord THEN 70000 ELSE 0 END)",
-            "(CASE WHEN LOWER(COALESCE(v.Descrizione1,'')) LIKE @qContains THEN 35000 ELSE 0 END)",
-            "(CASE WHEN LOWER(COALESCE(v.DescrizioneLunga,'')) LIKE @qContains THEN 22000 ELSE 0 END)",
-            "(CASE WHEN LOWER(COALESCE(v.MarcheDescrizione,'')) LIKE @qContains THEN 18000 ELSE 0 END)",
-            "(CASE WHEN COALESCE(v.Disponibilita,0) > 0 THEN 300 ELSE 0 END)",
-            "(CASE WHEN COALESCE(v.InOfferta,0) <> 0 THEN 100 ELSE 0 END)",
-            "(CASE WHEN COALESCE(v.Vetrina,0) <> 0 THEN 35 ELSE 0 END)",
-            "LEAST(COALESCE(v.visite,0),999)"
-        })
+        Dim parameters As New List(Of DbParameterSpec)()
+        Dim normalizedQuery As String = NormalizeSearchText(intent.SearchText)
+        If String.IsNullOrWhiteSpace(normalizedQuery) Then normalizedQuery = NormalizeSearchText(query)
+
+        parameters.Add(New DbParameterSpec("@qExact", normalizedQuery))
+        parameters.Add(New DbParameterSpec("@qPrefix", normalizedQuery & "%"))
+        parameters.Add(New DbParameterSpec("@qContains", "%" & normalizedQuery & "%"))
+        parameters.Add(New DbParameterSpec("@qWord", "% " & normalizedQuery & "%"))
+
+        For i As Integer = 0 To tokens.Count - 1
+            parameters.Add(New DbParameterSpec("@t" & i.ToString(CultureInfo.InvariantCulture), tokens(i)))
+            parameters.Add(New DbParameterSpec("@tc" & i.ToString(CultureInfo.InvariantCulture), "%" & tokens(i) & "%"))
+            parameters.Add(New DbParameterSpec("@tp" & i.ToString(CultureInfo.InvariantCulture), tokens(i) & "%"))
+            parameters.Add(New DbParameterSpec("@tw" & i.ToString(CultureInfo.InvariantCulture), "% " & tokens(i) & "%"))
+        Next
 
         Dim sql As New StringBuilder()
-        sql.Append("SELECT DISTINCT v.id, v.Codice, v.Ean, v.Descrizione1, v.DescrizioneLunga, v.MarcheDescrizione, v.CategorieDescrizione, v.SettoriDescrizione, ")
-        sql.Append("v.Img1, v.Img2, v.Img3, v.Img4, i.Immagine1, i.Immagine2, i.Immagine3, i.Immagine4, i.Immagine5, i.Immagine6, ")
-        sql.Append("COALESCE(NULLIF(v.PrezzoPromoIvato,0), NULLIF(v.PrezzoIvato,0), NULLIF(v.PrezzoPromo,0), v.Prezzo, 0) AS PrezzoFinale, ")
-        sql.Append("COALESCE(v.Disponibilita,0) AS Disponibilita, COALESCE(v.InOfferta,0) AS InOfferta, COALESCE(v.Vetrina,0) AS Vetrina, COALESCE(v.visite,0) AS Visite, ")
-        sql.Append(scoreExpr)
-        sql.Append(" AS RankScore FROM vsuperarticoli v LEFT JOIN immagini i ON i.id = v.id WHERE v.NListino = 1 AND (")
+        AppendSelect(sql, True, BuildScoreExpression(tokens, intent))
+        sql.Append(" FROM vsuperarticoli v LEFT JOIN immagini i ON i.id = v.id WHERE COALESCE(v.NListino,1)=1 ")
+        sql.Append(" AND (")
         sql.Append("LOWER(COALESCE(v.Codice,'')) = @qExact OR LOWER(COALESCE(v.Ean,'')) = @qExact OR LOWER(COALESCE(v.Descrizione1,'')) = @qExact OR ")
         sql.Append("LOWER(COALESCE(v.Codice,'')) LIKE @qPrefix OR LOWER(COALESCE(v.Ean,'')) LIKE @qPrefix OR LOWER(COALESCE(v.Descrizione1,'')) LIKE @qPrefix OR ")
         sql.Append("LOWER(CONCAT(' ', COALESCE(v.Codice,''))) LIKE @qWord OR LOWER(CONCAT(' ', COALESCE(v.Ean,''))) LIKE @qWord OR LOWER(CONCAT(' ', COALESCE(v.Descrizione1,''))) LIKE @qWord OR ")
-        sql.Append("LOWER(CONCAT(' ', COALESCE(v.MarcheDescrizione,''), ' ', COALESCE(v.Descrizione1,''))) LIKE @qWord OR ")
-        sql.Append("LOWER(COALESCE(v.Descrizione1,'')) LIKE @qContains OR LOWER(COALESCE(v.DescrizioneLunga,'')) LIKE @qContains OR LOWER(COALESCE(v.MarcheDescrizione,'')) LIKE @qContains")
+        sql.Append("LOWER(COALESCE(v.Descrizione1,'')) LIKE @qContains OR LOWER(COALESCE(v.Descrizione2,'')) LIKE @qContains OR LOWER(COALESCE(v.DescrizioneLunga,'')) LIKE @qContains OR LOWER(COALESCE(v.DescrizioneHTML,'')) LIKE @qContains OR ")
+        sql.Append("LOWER(CONCAT(' ', COALESCE(v.MarcheDescrizione,''), ' ', COALESCE(v.SettoriDescrizione,''), ' ', COALESCE(v.CategorieDescrizione,''), ' ', COALESCE(v.TipologieDescrizione,''), ' ', COALESCE(v.GruppiDEscrizione,''), ' ', COALESCE(v.SottogruppiDescrIZione,''))) LIKE @qContains ")
+        For i As Integer = 0 To tokens.Count - 1
+            sql.Append(" OR LOWER(COALESCE(v.Codice,'')) LIKE @tc").Append(i.ToString(CultureInfo.InvariantCulture))
+            sql.Append(" OR LOWER(COALESCE(v.Ean,'')) LIKE @tc").Append(i.ToString(CultureInfo.InvariantCulture))
+            sql.Append(" OR LOWER(COALESCE(v.Descrizione1,'')) LIKE @tc").Append(i.ToString(CultureInfo.InvariantCulture))
+            sql.Append(" OR LOWER(COALESCE(v.Descrizione2,'')) LIKE @tc").Append(i.ToString(CultureInfo.InvariantCulture))
+            sql.Append(" OR LOWER(COALESCE(v.DescrizioneLunga,'')) LIKE @tc").Append(i.ToString(CultureInfo.InvariantCulture))
+            sql.Append(" OR LOWER(COALESCE(v.DescrizioneHTML,'')) LIKE @tc").Append(i.ToString(CultureInfo.InvariantCulture))
+            sql.Append(" OR LOWER(CONCAT(' ', COALESCE(v.MarcheDescrizione,''), ' ', COALESCE(v.SettoriDescrizione,''), ' ', COALESCE(v.CategorieDescrizione,''), ' ', COALESCE(v.TipologieDescrizione,''), ' ', COALESCE(v.GruppiDEscrizione,''), ' ', COALESCE(v.SottogruppiDescrIZione,''))) LIKE @tc").Append(i.ToString(CultureInfo.InvariantCulture))
+        Next
         sql.Append(")")
         AppendFilterClauses(sql, parameters, filters, "v")
-        sql.Append(" ORDER BY RankScore DESC, COALESCE(v.Disponibilita,0) DESC, COALESCE(v.InOfferta,0) DESC, COALESCE(v.Vetrina,0) DESC, v.id DESC LIMIT ")
-        sql.Append(Math.Max(limit, 60).ToString(CultureInfo.InvariantCulture))
+        sql.Append(BuildOrderBy(filters))
+        sql.Append(" LIMIT ")
+        sql.Append(Math.Max(limit, If(String.Equals(filters.Mode, "marketplace", StringComparison.OrdinalIgnoreCase), 36, 60)).ToString(CultureInfo.InvariantCulture))
 
         Dim table As DataTable = ExecuteQuery(sql.ToString(), parameters)
-        Dim mapped As List(Of SuggestItem) = MapSuggestions(table, query)
+        Dim mapped As List(Of SuggestItem) = MapSuggestions(table, query, intent)
         mapped = mapped.Take(limit).ToList()
 
-        Dim strong As New Dictionary(Of String, Object) From {
-            {"canRedirect", False},
-            {"redirectUrl", String.Empty},
-            {"articleId", 0},
-            {"matchKind", String.Empty}
-        }
-
+        Dim strong As New Dictionary(Of String, Object) From {{"canRedirect", False}, {"redirectUrl", String.Empty}, {"articleId", 0}, {"matchKind", String.Empty}}
         If mapped.Count = 1 Then
             If mapped(0).MatchKind = "exact-code" OrElse mapped(0).MatchKind = "exact-ean" Then
                 strong("canRedirect") = True
@@ -195,11 +225,79 @@ Partial Public Class search_suggest
 
         Return New Dictionary(Of String, Object) From {
             {"query", query},
+            {"normalized_query", intent.SearchText},
             {"recent", False},
             {"suggestions", mapped.Select(Function(item) SerializeItem(item)).ToList()},
             {"rank_ids", mapped.Select(Function(item) item.Id).ToList()},
-            {"strong", strong}
+            {"facets", BuildFacets(mapped)},
+            {"strong", strong},
+            {"intelligence", SerializeIntent(intent, filters, mapped.Count)},
+            {"total", mapped.Count}
         }
+    End Function
+
+    Private Sub AppendSelect(ByVal sql As StringBuilder, ByVal includeRank As Boolean, Optional ByVal rankExpr As String = "")
+        sql.Append("SELECT DISTINCT v.id, v.Codice, v.Ean, v.Descrizione1, v.Descrizione2, v.DescrizioneLunga, v.DescrizioneHTML, ")
+        sql.Append("v.MarcheDescrizione, v.SettoriDescrizione, v.CategorieDescrizione, v.TipologieDescrizione, v.GruppiDEscrizione, v.SottogruppiDescrIZione, ")
+        sql.Append("v.Img1, v.Img2, v.Img3, v.Img4, i.Immagine1, i.Immagine2, i.Immagine3, i.Immagine4, i.Immagine5, i.Immagine6, ")
+        sql.Append("COALESCE(NULLIF(v.PrezzoPromoIvato,0), NULLIF(v.PrezzoIvato,0), NULLIF(v.PrezzoPromo,0), v.Prezzo, 0) AS PrezzoFinale, ")
+        sql.Append("COALESCE(v.Disponibilita,0) AS Disponibilita, COALESCE(v.InOfferta,0) AS InOfferta, COALESCE(v.Vetrina,0) AS Vetrina, COALESCE(v.visite,0) AS Visite, ")
+        sql.Append("COALESCE(v.Ricondizionato,0) AS Ricondizionato, COALESCE(v.NoteRicondizionato,'') AS NoteRicondizionato, v.DataCreazione ")
+        If includeRank Then
+            sql.Append(", ")
+            sql.Append(If(String.IsNullOrWhiteSpace(rankExpr), "0", rankExpr))
+            sql.Append(" AS RankScore ")
+        End If
+    End Sub
+
+    Private Function BuildScoreExpression(ByVal tokens As List(Of String), ByVal intent As QueryIntent) As String
+        Dim sb As New StringBuilder()
+        sb.Append("(")
+        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Codice,''))) = @qExact THEN 100000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Ean,''))) = @qExact THEN 99000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Descrizione1,''))) = @qExact THEN 97000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Codice,''))) LIKE @qPrefix THEN 84000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Ean,''))) LIKE @qPrefix THEN 83000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Descrizione1,''))) LIKE @qPrefix THEN 81000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(COALESCE(v.Descrizione1,'')) LIKE @qContains THEN 34000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(COALESCE(v.Descrizione2,'')) LIKE @qContains THEN 25000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(COALESCE(v.DescrizioneLunga,'')) LIKE @qContains THEN 22000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(COALESCE(v.DescrizioneHTML,'')) LIKE @qContains THEN 16000 ELSE 0 END) + ")
+        sb.Append("(CASE WHEN LOWER(COALESCE(v.MarcheDescrizione,'')) LIKE @qContains THEN 18000 ELSE 0 END) ")
+        For i As Integer = 0 To tokens.Count - 1
+            Dim n As String = i.ToString(CultureInfo.InvariantCulture)
+            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Codice,'')) = @t").Append(n).Append(" THEN 10000 ELSE 0 END)")
+            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Ean,'')) = @t").Append(n).Append(" THEN 9800 ELSE 0 END)")
+            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Descrizione1,'')) LIKE @tp").Append(n).Append(" THEN 5200 ELSE 0 END)")
+            sb.Append(" + (CASE WHEN LOWER(CONCAT(' ',COALESCE(v.Descrizione1,''))) LIKE @tw").Append(n).Append(" THEN 4300 ELSE 0 END)")
+            sb.Append(" + (CASE WHEN LOWER(CONCAT(' ',COALESCE(v.MarcheDescrizione,''),' ',COALESCE(v.CategorieDescrizione,''),' ',COALESCE(v.TipologieDescrizione,''),' ',COALESCE(v.GruppiDEscrizione,''),' ',COALESCE(v.SottogruppiDescrIZione,''))) LIKE @tw").Append(n).Append(" THEN 3600 ELSE 0 END)")
+            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.DescrizioneLunga,'')) LIKE @tc").Append(n).Append(" THEN 1600 ELSE 0 END)")
+        Next
+        sb.Append(" + (CASE WHEN COALESCE(v.Disponibilita,0) > 0 THEN 600 ELSE 0 END)")
+        sb.Append(" + (CASE WHEN COALESCE(v.InOfferta,0) <> 0 THEN 450 ELSE 0 END)")
+        sb.Append(" + (CASE WHEN COALESCE(v.Ricondizionato,0) <> 0 THEN 120 ELSE 0 END)")
+        sb.Append(" + (CASE WHEN COALESCE(v.Vetrina,0) <> 0 THEN 70 ELSE 0 END)")
+        sb.Append(" + LEAST(COALESCE(v.visite,0),999)")
+        sb.Append(")")
+        Return sb.ToString()
+    End Function
+
+    Private Function BuildOrderBy(ByVal filters As SearchFilters) As String
+        Dim sort As String = Convert.ToString(If(filters Is Nothing, String.Empty, filters.Sort)).ToLowerInvariant()
+        Select Case sort
+            Case "price-asc", "prezzo-asc"
+                Return " ORDER BY PrezzoFinale ASC, RankScore DESC, COALESCE(v.Disponibilita,0) DESC, v.id DESC"
+            Case "price-desc", "prezzo-desc"
+                Return " ORDER BY PrezzoFinale DESC, RankScore DESC, COALESCE(v.Disponibilita,0) DESC, v.id DESC"
+            Case "promo", "offerte"
+                Return " ORDER BY COALESCE(v.InOfferta,0) DESC, RankScore DESC, PrezzoFinale ASC, v.id DESC"
+            Case "available", "disponibili"
+                Return " ORDER BY COALESCE(v.Disponibilita,0) DESC, RankScore DESC, PrezzoFinale ASC, v.id DESC"
+            Case "new", "novita"
+                Return " ORDER BY v.DataCreazione DESC, RankScore DESC, v.id DESC"
+            Case Else
+                Return " ORDER BY RankScore DESC, COALESCE(v.Disponibilita,0) DESC, COALESCE(v.InOfferta,0) DESC, COALESCE(v.Vetrina,0) DESC, PrezzoFinale ASC, v.id DESC"
+        End Select
     End Function
 
     Private Sub AppendFilterClauses(ByVal sql As StringBuilder, ByVal parameters As List(Of DbParameterSpec), ByVal filters As SearchFilters, ByVal aliasName As String)
@@ -208,14 +306,23 @@ Partial Public Class search_suggest
 
         AppendIntFilter(sql, parameters, filters.SettoreId, a & "SettoriId", "@st")
         AppendIntFilter(sql, parameters, filters.CategoriaId, a & "CategorieId", "@ct")
-        AppendIntFilter(sql, parameters, filters.TipologiaId, a & "TipologieId", "@tp")
+        AppendIntFilter(sql, parameters, filters.TipologiaId, a & "TipologieId", "@tpfilter")
         AppendIntFilter(sql, parameters, filters.GruppoId, a & "GruppiId", "@gr")
-        AppendIntFilter(sql, parameters, filters.SottoGruppoId, a & "SottoGruppiId", "@sg")
+        AppendIntFilter(sql, parameters, filters.SottoGruppoId, a & "SottoGrupPIId", "@sg")
         AppendIntFilter(sql, parameters, filters.MarcaId, a & "MarcheId", "@mr")
         AppendIntFilter(sql, parameters, filters.ProdottoId, a & "id", "@pid")
 
-        If filters.SoloPromo Then
-            sql.Append(" AND COALESCE(" & a & "InOfferta,0) <> 0")
+        If filters.SoloPromo Then sql.Append(" AND COALESCE(" & a & "InOfferta,0) <> 0")
+        If filters.SoloDisponibili Then sql.Append(" AND COALESCE(" & a & "Disponibilita,0) > 0")
+        If filters.SoloRicondizionati Then sql.Append(" AND COALESCE(" & a & "Ricondizionato,0) <> 0")
+
+        If filters.MinPrice > 0D Then
+            sql.Append(" AND COALESCE(NULLIF(" & a & "PrezzoPromoIvato,0), NULLIF(" & a & "PrezzoIvato,0), NULLIF(" & a & "PrezzoPromo,0), " & a & "Prezzo, 0) >= @minPrice")
+            If parameters IsNot Nothing Then parameters.Add(New DbParameterSpec("@minPrice", filters.MinPrice))
+        End If
+        If filters.MaxPrice > 0D Then
+            sql.Append(" AND COALESCE(NULLIF(" & a & "PrezzoPromoIvato,0), NULLIF(" & a & "PrezzoIvato,0), NULLIF(" & a & "PrezzoPromo,0), " & a & "Prezzo, 0) <= @maxPrice")
+            If parameters IsNot Nothing Then parameters.Add(New DbParameterSpec("@maxPrice", filters.MaxPrice))
         End If
     End Sub
 
@@ -228,7 +335,7 @@ Partial Public Class search_suggest
         If parameters IsNot Nothing Then parameters.Add(New DbParameterSpec(paramName, value))
     End Sub
 
-    Private Function MapSuggestions(ByVal table As DataTable, ByVal query As String) As List(Of SuggestItem)
+    Private Function MapSuggestions(ByVal table As DataTable, ByVal query As String, ByVal intent As QueryIntent) As List(Of SuggestItem)
         Dim results As New List(Of SuggestItem)()
         If table Is Nothing Then Return results
 
@@ -238,21 +345,32 @@ Partial Public Class search_suggest
             Dim title As String = SafeString(row("Descrizione1"))
             Dim brand As String = SafeString(row("MarcheDescrizione"))
             Dim cat As String = SafeString(row("CategorieDescrizione"))
+            If String.IsNullOrWhiteSpace(cat) Then cat = SafeString(row("TipologieDescrizione"))
             If String.IsNullOrWhiteSpace(cat) Then cat = SafeString(row("SettoriDescrizione"))
 
             Dim item As New SuggestItem()
             item.Id = ReadInt(row("id"), 0)
             item.Url = "articolo.aspx?id=" & item.Id.ToString(CultureInfo.InvariantCulture)
             item.Title = title
+            item.Description = MakeShortDescription(SafeString(row("Descrizione2")), SafeString(row("DescrizioneLunga")), SafeString(row("DescrizioneHTML")))
+            item.Code = code
+            item.Ean = ean
             item.Brand = brand
             item.Category = cat
-            item.Price = FormatPrice(ReadDec(row("PrezzoFinale"), 0D))
+            item.Department = SafeString(row("SettoriDescrizione"))
+            item.PriceValue = ReadDec(row("PrezzoFinale"), 0D)
+            item.Price = FormatPrice(item.PriceValue)
             item.Score = If(row.Table.Columns.Contains("RankScore"), ReadInt(row("RankScore"), 0), 0)
             item.MatchKind = DetectMatchKind(code, ean, title, brand, query)
+            item.Availability = ReadDec(row("Disponibilita"), 0D)
+            item.IsOffer = ReadInt(row("InOfferta"), 0) <> 0
+            item.IsRefurbished = ReadInt(row("Ricondizionato"), 0) <> 0
             Dim images As List(Of String) = CollectImages(row)
             item.ImageFallback = If(images.Count > 0, images(0), String.Empty)
             item.Image = BuildPreviewVariant(item.ImageFallback)
             If String.IsNullOrWhiteSpace(item.Image) Then item.Image = item.ImageFallback
+            item.Badges = BuildBadges(item, intent)
+            item.Reason = BuildReason(item, intent)
             results.Add(item)
         Next
 
@@ -261,17 +379,97 @@ Partial Public Class search_suggest
 
     Private Function SerializeItem(ByVal item As SuggestItem) As Dictionary(Of String, Object)
         Return New Dictionary(Of String, Object) From {
-            {"id", item.Id},
-            {"url", item.Url},
-            {"title", item.Title},
-            {"brand", item.Brand},
-            {"category", item.Category},
-            {"price", item.Price},
-            {"image", item.Image},
-            {"image_fallback", item.ImageFallback},
-            {"matchKind", item.MatchKind},
-            {"score", item.Score}
+            {"id", item.Id}, {"url", item.Url}, {"title", item.Title}, {"description", item.Description},
+            {"code", item.Code}, {"ean", item.Ean}, {"brand", item.Brand}, {"category", item.Category}, {"department", item.Department},
+            {"price", item.Price}, {"priceValue", item.PriceValue}, {"image", item.Image}, {"image_fallback", item.ImageFallback},
+            {"matchKind", item.MatchKind}, {"score", item.Score}, {"availability", item.Availability},
+            {"isOffer", item.IsOffer}, {"isRefurbished", item.IsRefurbished}, {"reason", item.Reason}, {"badges", item.Badges}
         }
+    End Function
+
+    Private Function BuildBadges(ByVal item As SuggestItem, ByVal intent As QueryIntent) As List(Of String)
+        Dim badges As New List(Of String)()
+        If item.IsOffer Then badges.Add("Promo")
+        If item.Availability > 0D Then badges.Add("Disponibile")
+        If item.IsRefurbished Then badges.Add("Ricondizionato")
+        If intent IsNot Nothing AndAlso intent.MaxPrice > 0D AndAlso item.PriceValue > 0D AndAlso item.PriceValue <= intent.MaxPrice Then badges.Add("Budget ok")
+        If badges.Count = 0 Then badges.Add("Catalogo")
+        Return badges.Take(4).ToList()
+    End Function
+
+    Private Function BuildReason(ByVal item As SuggestItem, ByVal intent As QueryIntent) As String
+        Dim parts As New List(Of String)()
+        If item.MatchKind.StartsWith("exact", StringComparison.OrdinalIgnoreCase) Then parts.Add("corrispondenza esatta")
+        If item.Availability > 0D Then parts.Add("disponibile")
+        If item.IsOffer Then parts.Add("in offerta")
+        If item.IsRefurbished Then parts.Add("ricondizionato")
+        If intent IsNot Nothing AndAlso intent.MaxPrice > 0D AndAlso item.PriceValue > 0D AndAlso item.PriceValue <= intent.MaxPrice Then parts.Add("entro budget")
+        If parts.Count = 0 Then parts.Add("pertinente per descrizione, marca o categoria")
+        Return "Consigliato per " & String.Join(", ", parts.Take(4)) & "."
+    End Function
+
+    Private Function BuildFacets(ByVal items As List(Of SuggestItem)) As Dictionary(Of String, Object)
+        Dim brands = items.Where(Function(i) Not String.IsNullOrWhiteSpace(i.Brand)).GroupBy(Function(i) i.Brand).Select(Function(g) New Dictionary(Of String, Object) From {{"label", g.Key}, {"value", g.Key}, {"count", g.Count()}}).OrderByDescending(Function(x) CInt(x("count"))).Take(8).ToList()
+        Dim categories = items.Where(Function(i) Not String.IsNullOrWhiteSpace(i.Category)).GroupBy(Function(i) i.Category).Select(Function(g) New Dictionary(Of String, Object) From {{"label", g.Key}, {"value", g.Key}, {"count", g.Count()}}).OrderByDescending(Function(x) CInt(x("count"))).Take(8).ToList()
+        Return New Dictionary(Of String, Object) From {{"brands", brands}, {"categories", categories}}
+    End Function
+
+    Private Function EmptyFacets() As Dictionary(Of String, Object)
+        Return New Dictionary(Of String, Object) From {{"brands", New List(Of Object)()}, {"categories", New List(Of Object)()}}
+    End Function
+
+    Private Function SerializeIntent(ByVal intent As QueryIntent, ByVal filters As SearchFilters, ByVal count As Integer) As Dictionary(Of String, Object)
+        Dim summary As String = "Ho interpretato la richiesta come ricerca " & intent.IntentName & "."
+        If intent.MaxPrice > 0D OrElse filters.MaxPrice > 0D Then summary &= " Budget massimo: " & If(filters.MaxPrice > 0D, filters.MaxPrice, intent.MaxPrice).ToString("C0", ItCulture) & "."
+        If filters.SoloDisponibili Then summary &= " Priorita ai prodotti disponibili."
+        If filters.SoloPromo Then summary &= " Priorita alle offerte."
+        If filters.SoloRicondizionati Then summary &= " Filtro ricondizionati attivo."
+        summary &= " Articoli coerenti analizzati: " & count.ToString(CultureInfo.InvariantCulture) & "."
+        Return New Dictionary(Of String, Object) From {{"intent", intent.IntentName}, {"tokens", intent.Tokens}, {"summary", summary}, {"maxPrice", If(filters.MaxPrice > 0D, filters.MaxPrice, intent.MaxPrice)}, {"minPrice", If(filters.MinPrice > 0D, filters.MinPrice, intent.MinPrice)}}
+    End Function
+
+    Private Function InterpretQuery(ByVal raw As String) As QueryIntent
+        Dim original As String = NormalizeQuery(raw)
+        Dim text As String = original.ToLowerInvariant()
+        Dim intent As New QueryIntent()
+        intent.Original = original
+        intent.SearchText = original
+        intent.Tokens = New List(Of String)()
+        intent.IntentName = "catalogo"
+
+        Dim maxMatch As Match = Regex.Match(text, "(?:sotto|entro|max|massimo|fino a|meno di|non oltre)\s*(?:€|euro)?\s*(\d+(?:[\.,]\d+)?)", RegexOptions.IgnoreCase)
+        If Not maxMatch.Success Then maxMatch = Regex.Match(text, "(\d+(?:[\.,]\d+)?)\s*(?:€|euro)\s*(?:max|massimo|entro)?", RegexOptions.IgnoreCase)
+        If maxMatch.Success Then
+            intent.MaxPrice = ParseDecimal(maxMatch.Groups(1).Value, 0D)
+            text = text.Replace(maxMatch.Value.ToLowerInvariant(), " ")
+        End If
+
+        Dim minMatch As Match = Regex.Match(text, "(?:da|oltre|min|minimo)\s*(?:€|euro)?\s*(\d+(?:[\.,]\d+)?)", RegexOptions.IgnoreCase)
+        If minMatch.Success Then
+            intent.MinPrice = ParseDecimal(minMatch.Groups(1).Value, 0D)
+            text = text.Replace(minMatch.Value.ToLowerInvariant(), " ")
+        End If
+
+        intent.WantsPromo = Regex.IsMatch(text, "\b(offerta|offerte|promo|sconto|scontato|occasion[ei])\b", RegexOptions.IgnoreCase)
+        intent.WantsAvailable = Regex.IsMatch(text, "\b(disponibile|disponibili|subito|pronta consegna|magazzino)\b", RegexOptions.IgnoreCase)
+        intent.WantsRefurbished = Regex.IsMatch(text, "\b(ricondizionato|ricondizionati|refurbished|usato garantito)\b", RegexOptions.IgnoreCase)
+
+        If Regex.IsMatch(text, "\b(custodia|cover|pellicola|vetro|proteggi|protezione|smartphone|samsung|iphone)\b", RegexOptions.IgnoreCase) Then intent.IntentName = "protezione smartphone"
+        If Regex.IsMatch(text, "\b(toner|cartuccia|inchiostro|stampante|pantum|hp|brother|canon|epson)\b", RegexOptions.IgnoreCase) Then intent.IntentName = "stampa e consumabili"
+        If Regex.IsMatch(text, "\b(notebook|computer|pc|desktop|ssd|ram|monitor|windows)\b", RegexOptions.IgnoreCase) Then intent.IntentName = "pc e notebook"
+        If Regex.IsMatch(text, "\b(cavo|adattatore|hub|usb|usb-c|hdmi|alimentatore|caricatore)\b", RegexOptions.IgnoreCase) Then intent.IntentName = "cavi e accessori"
+
+        text = Regex.Replace(text, "\b(sotto|entro|max|massimo|fino|meno|oltre|euro|eur|con|per|il|la|lo|le|gli|un|una|uno|di|da|a|e|o|in|solo|cerca|cerco|trova|voglio|prodotto|prodotti|disponibile|disponibili|offerta|offerte|promo|ricondizionato|ricondizionati)\b", " ", RegexOptions.IgnoreCase)
+        intent.SearchText = Regex.Replace(text, "\s+", " ").Trim()
+        If String.IsNullOrWhiteSpace(intent.SearchText) Then intent.SearchText = original
+        intent.Tokens = ExtractTokens(intent.SearchText)
+        Return intent
+    End Function
+
+    Private Function ExtractTokens(ByVal value As String) As List(Of String)
+        Dim normalized As String = NormalizeSearchText(value)
+        Dim stopWords As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {"il", "la", "lo", "le", "gli", "un", "una", "uno", "di", "da", "a", "e", "o", "in", "con", "per", "del", "della", "dello", "dei", "degli", "prodotto", "prodotti", "cerca", "trova"}
+        Return normalized.Split(" "c).Select(Function(t) t.Trim()).Where(Function(t) t.Length >= 2 AndAlso Not stopWords.Contains(t)).Distinct(StringComparer.OrdinalIgnoreCase).Take(8).ToList()
     End Function
 
     Private Function DetectMatchKind(ByVal code As String, ByVal ean As String, ByVal title As String, ByVal brand As String, ByVal query As String) As String
@@ -296,7 +494,13 @@ Partial Public Class search_suggest
             .SottoGruppoId = ReadInt(Request("sg"), 0),
             .MarcaId = ReadInt(Request("mr"), 0),
             .ProdottoId = ReadInt(Request("pid"), 0),
-            .SoloPromo = (ReadInt(Request("inpromo"), 0) <> 0)
+            .SoloPromo = (ReadInt(Request("inpromo"), 0) <> 0 OrElse ReadInt(Request("promo"), 0) <> 0),
+            .SoloDisponibili = (ReadInt(Request("available"), 0) <> 0 OrElse ReadInt(Request("disponibili"), 0) <> 0),
+            .SoloRicondizionati = (ReadInt(Request("refurbished"), 0) <> 0 OrElse ReadInt(Request("ricondizionato"), 0) <> 0),
+            .MinPrice = ReadDecParam(Request("min"), 0D),
+            .MaxPrice = ReadDecParam(Request("max"), 0D),
+            .Sort = Convert.ToString(Request("sort")),
+            .Mode = Convert.ToString(Request("mode"))
         }
     End Function
 
@@ -306,10 +510,7 @@ Partial Public Class search_suggest
         For Each token As String In Convert.ToString(raw).Split(","c)
             Dim value As Integer
             If Integer.TryParse(token.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, value) AndAlso value > 0 Then
-                If Not seen.Contains(value) Then
-                    seen.Add(value)
-                    result.Add(value)
-                End If
+                If Not seen.Contains(value) Then seen.Add(value) : result.Add(value)
             End If
         Next
         Return result
@@ -336,6 +537,13 @@ Partial Public Class search_suggest
         Return text
     End Function
 
+    Private Function MakeShortDescription(ByVal d2 As String, ByVal lunga As String, ByVal html As String) As String
+        Dim value As String = If(Not String.IsNullOrWhiteSpace(d2), d2, If(Not String.IsNullOrWhiteSpace(lunga), lunga, html))
+        value = Regex.Replace(HttpUtility.HtmlDecode(Regex.Replace(value, "<[^>]+>", " ")), "\s+", " ").Trim()
+        If value.Length > 180 Then value = value.Substring(0, 177).Trim() & "..."
+        Return value
+    End Function
+
     Private Function CollectImages(ByVal row As DataRow) As List(Of String)
         Dim output As New List(Of String)()
         Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
@@ -351,9 +559,7 @@ Partial Public Class search_suggest
     End Function
 
     Private Function BuildPreviewVariant(ByVal raw As String) As String
-        Dim url As String = NormalizeMediaUrl(raw)
-        If String.IsNullOrWhiteSpace(url) Then Return String.Empty
-        Return url
+        Return NormalizeMediaUrl(raw)
     End Function
 
     Private Function NormalizeMediaUrl(ByVal raw As Object) As String
@@ -377,7 +583,11 @@ Partial Public Class search_suggest
         Return fallback
     End Function
 
-    Private Function ReadDec(ByVal raw As Object, ByVal fallback As Decimal) As Decimal
+    Private Function ParseDecimal(ByVal raw As String, ByVal fallback As Decimal) As Decimal
+        Return ReadDecParam(raw, fallback)
+    End Function
+
+    Private Function ReadDecParam(ByVal raw As Object, ByVal fallback As Decimal) As Decimal
         Dim text As String = Convert.ToString(raw).Trim()
         Dim n As Decimal
         If String.IsNullOrWhiteSpace(text) Then Return fallback
@@ -387,6 +597,10 @@ Partial Public Class search_suggest
         If Decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, n) Then Return Math.Round(n, 2, MidpointRounding.AwayFromZero)
         If Decimal.TryParse(text, NumberStyles.Any, ItCulture, n) Then Return Math.Round(n, 2, MidpointRounding.AwayFromZero)
         Return fallback
+    End Function
+
+    Private Function ReadDec(ByVal raw As Object, ByVal fallback As Decimal) As Decimal
+        Return ReadDecParam(raw, fallback)
     End Function
 
     Private Function SafeString(ByVal raw As Object) As String
@@ -440,9 +654,7 @@ Partial Public Class search_suggest
             If String.Equals(name, "LocalSqlServer", StringComparison.OrdinalIgnoreCase) Then Continue For
             Dim probe As String = conn.ToLowerInvariant()
             If probe.Contains("server=") AndAlso probe.Contains("database=") Then
-                If probe.Contains("uid=") OrElse probe.Contains("user id=") OrElse probe.Contains("port=") OrElse Convert.ToString(cs.ProviderName).ToLowerInvariant().Contains("mysql") Then
-                    Return cs
-                End If
+                If probe.Contains("uid=") OrElse probe.Contains("user id=") OrElse probe.Contains("port=") OrElse Convert.ToString(cs.ProviderName).ToLowerInvariant().Contains("mysql") Then Return cs
                 If preferred Is Nothing Then preferred = cs
             End If
         Next
@@ -455,12 +667,10 @@ Partial Public Class search_suggest
             Dim probe As String = Convert.ToString(cs.ConnectionString).ToLowerInvariant()
             provider = If(probe.Contains("uid=") OrElse probe.Contains("user id=") OrElse probe.Contains("port="), "MySql.Data.MySqlClient", "System.Data.SqlClient")
         End If
-
         Try
             Return DbProviderFactories.GetFactory(provider)
         Catch
         End Try
-
         If String.Equals(provider, "MySql.Data.MySqlClient", StringComparison.OrdinalIgnoreCase) Then
             Dim t As Type = Type.GetType("MySql.Data.MySqlClient.MySqlClientFactory, MySql.Data")
             If t IsNot Nothing Then
@@ -468,7 +678,6 @@ Partial Public Class search_suggest
                 If fld IsNot Nothing Then Return TryCast(fld.GetValue(Nothing), DbProviderFactory)
             End If
         End If
-
         Return Nothing
     End Function
 
