@@ -100,6 +100,10 @@ Partial Class Articoli
 
         If Me.IsPostBack = False Then
             changeCheckBoxDependingFromUrl(CheckBox_Disponibile, "disponibile", "1")
+            If String.Equals(QS("available", 8), "1", StringComparison.OrdinalIgnoreCase) OrElse
+               String.Equals(QS("disponibili", 8), "1", StringComparison.OrdinalIgnoreCase) Then
+                CheckBox_Disponibile.Checked = True
+            End If
             changeDropDownListDependingFromUrl(Drop_Ordinamento, "ordinamento")
         End If
 
@@ -360,6 +364,13 @@ End Sub
             Integer.TryParse(rawSped, SpedizioneGratis)
         End If
 
+        Dim queryAvailable As Boolean =
+            String.Equals(QS("available", 8), "1", StringComparison.OrdinalIgnoreCase) OrElse
+            String.Equals(QS("disponibili", 8), "1", StringComparison.OrdinalIgnoreCase)
+        Dim queryRefurbished As Boolean =
+            String.Equals(QS("ricondizionato", 8), "1", StringComparison.OrdinalIgnoreCase) OrElse
+            String.Equals(QS("refurbished", 8), "1", StringComparison.OrdinalIgnoreCase)
+
         Me.sdsArticoli.SelectParameters.Clear()
         Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("NListino", TypeCode.Int32, NListino.ToString()))
 
@@ -371,6 +382,8 @@ End Sub
 
         If QS("q", 80) <> "" Then
             strCerca = QS("q", 80).Replace("%23up", "").Replace("#up", "")
+        ElseIf QS("search", 80) <> "" Then
+            strCerca = QS("search", 80).Replace("%23up", "").Replace("#up", "")
         Else
             If Session("q") IsNot Nothing Then
                 strCerca = sostituisci_caratteri_speciali(Session("q").Replace("%23up", "").Replace("#up", ""))
@@ -410,19 +423,22 @@ End Sub
             Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("qExact", TypeCode.String, exactTerm))
             Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("qLike", TypeCode.String, likeTerm))
             Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("qPrefix", TypeCode.String, prefixTerm))
+            Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("qWord", TypeCode.String, "% " & SqlEscapeLike(userCerca).ToLowerInvariant() & "%"))
 
+            ' Marketplace-grade rank bands. Keep these aligned with search_suggest.aspx.vb.
             scoreBuilder.Append("(CASE ")
             scoreBuilder.Append("WHEN LOWER(TRIM(COALESCE(Codice,'')))=?qExact THEN 10000000 ")
             scoreBuilder.Append("WHEN LOWER(TRIM(COALESCE(Ean,'')))=?qExact THEN 9900000 ")
             scoreBuilder.Append("WHEN LOWER(TRIM(COALESCE(Descrizione1,'')))=?qExact THEN 9800000 ")
-            scoreBuilder.Append("WHEN LOWER(TRIM(COALESCE(Codice,''))) LIKE ?qPrefix OR LOWER(CONCAT(' ',COALESCE(Codice,''))) LIKE CONCAT('% ',?qExact,'%') THEN 8800000 ")
-            scoreBuilder.Append("WHEN LOWER(TRIM(COALESCE(Ean,''))) LIKE ?qPrefix OR LOWER(CONCAT(' ',COALESCE(Ean,''))) LIKE CONCAT('% ',?qExact,'%') THEN 8700000 ")
-            scoreBuilder.Append("WHEN LOWER(TRIM(COALESCE(Descrizione1,''))) LIKE ?qPrefix OR LOWER(CONCAT(' ',COALESCE(Descrizione1,''))) LIKE CONCAT('% ',?qExact,'%') THEN 8600000 ")
-            scoreBuilder.Append("WHEN LOWER(CONCAT(' ',COALESCE(MarcheDescrizione,''),' ',COALESCE(Descrizione1,''))) LIKE CONCAT('% ',?qExact,'%') THEN 8200000 ")
+            scoreBuilder.Append("WHEN LOWER(TRIM(COALESCE(Codice,''))) LIKE ?qPrefix OR LOWER(CONCAT(' ',COALESCE(Codice,''))) LIKE ?qWord THEN 8800000 ")
+            scoreBuilder.Append("WHEN LOWER(TRIM(COALESCE(Ean,''))) LIKE ?qPrefix OR LOWER(CONCAT(' ',COALESCE(Ean,''))) LIKE ?qWord THEN 8700000 ")
+            scoreBuilder.Append("WHEN LOWER(TRIM(COALESCE(Descrizione1,''))) LIKE ?qPrefix OR LOWER(CONCAT(' ',COALESCE(Descrizione1,''))) LIKE ?qWord THEN 8600000 ")
+            scoreBuilder.Append("WHEN LOWER(CONCAT(' ',COALESCE(MarcheDescrizione,''),' ',COALESCE(Descrizione1,''))) LIKE ?qWord THEN 8200000 ")
             scoreBuilder.Append("WHEN LOWER(COALESCE(Descrizione1,'')) LIKE ?qLike THEN 3600000 ")
             scoreBuilder.Append("WHEN LOWER(COALESCE(DescrizioneLunga,'')) LIKE ?qLike THEN 2600000 ")
             scoreBuilder.Append("WHEN LOWER(COALESCE(MarcheDescrizione,'')) LIKE ?qLike THEN 2400000 ")
             scoreBuilder.Append("WHEN LOWER(COALESCE(Descrizione2,'')) LIKE ?qLike THEN 1800000 ")
+            scoreBuilder.Append("WHEN LOWER(COALESCE(DescrizioneHTML,'')) LIKE ?qLike THEN 1200000 ")
             scoreBuilder.Append("ELSE 0 END")
 
             mainWhereBuilder.Append(" AND (")
@@ -432,7 +448,7 @@ End Sub
             mainWhereBuilder.Append("OR LOWER(COALESCE(Descrizione2,'')) LIKE ?qLike ")
             mainWhereBuilder.Append("OR LOWER(COALESCE(DescrizioneLunga,'')) LIKE ?qLike ")
             mainWhereBuilder.Append("OR LOWER(COALESCE(MarcheDescrizione,'')) LIKE ?qLike ")
-            mainWhereBuilder.Append("OR LOWER(CONCAT(' ',COALESCE(MarcheDescrizione,''),' ',COALESCE(Descrizione1,''))) LIKE CONCAT('% ',?qExact,'%') ")
+            mainWhereBuilder.Append("OR LOWER(CONCAT(' ',COALESCE(MarcheDescrizione,''),' ',COALESCE(Descrizione1,''))) LIKE ?qWord ")
             mainWhereBuilder.Append("OR LOWER(CONCAT(COALESCE(MarcheDescrizione,''),' ',COALESCE(Descrizione1,''))) LIKE ?qLike ")
             mainWhereBuilder.Append("OR LOWER(CONCAT(COALESCE(MarcheDescrizione,''),' ',COALESCE(Descrizione2,''))) LIKE ?qLike ")
 
@@ -453,16 +469,16 @@ End Sub
                 Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter(tokenPrefixName, TypeCode.String, SqlEscapeLike(token) & "%"))
 
                 scoreBuilder.Append(" + (CASE ")
-                scoreBuilder.Append("WHEN LOWER(COALESCE(Codice,''))=?").Append(tokenName).Append(" THEN 70000 ")
-                scoreBuilder.Append("WHEN LOWER(COALESCE(Ean,''))=?").Append(tokenName).Append(" THEN 69000 ")
-                scoreBuilder.Append("WHEN LOWER(COALESCE(Descrizione1,''))=?").Append(tokenName).Append(" THEN 68000 ")
-                scoreBuilder.Append("WHEN LOWER(COALESCE(Codice,'')) LIKE ?").Append(tokenPrefixName).Append(" OR LOWER(CONCAT(' ',COALESCE(Codice,''))) LIKE CONCAT('% ',?").Append(tokenName).Append(",'%') THEN 52000 ")
-                scoreBuilder.Append("WHEN LOWER(COALESCE(Ean,'')) LIKE ?").Append(tokenPrefixName).Append(" OR LOWER(CONCAT(' ',COALESCE(Ean,''))) LIKE CONCAT('% ',?").Append(tokenName).Append(",'%') THEN 51000 ")
-                scoreBuilder.Append("WHEN LOWER(COALESCE(Descrizione1,'')) LIKE ?").Append(tokenPrefixName).Append(" OR LOWER(CONCAT(' ',COALESCE(Descrizione1,''))) LIKE CONCAT('% ',?").Append(tokenName).Append(",'%') THEN 50000 ")
-                scoreBuilder.Append("WHEN LOWER(CONCAT(' ',COALESCE(MarcheDescrizione,''),' ',COALESCE(Descrizione1,''))) LIKE CONCAT('% ',?").Append(tokenName).Append(",'%') THEN 46000 ")
-                scoreBuilder.Append("WHEN LOWER(COALESCE(Descrizione1,'')) LIKE ?").Append(tokenLikeName).Append(" THEN 12000 ")
-                scoreBuilder.Append("WHEN LOWER(COALESCE(DescrizioneLunga,'')) LIKE ?").Append(tokenLikeName).Append(" THEN 8000 ")
-                scoreBuilder.Append("WHEN LOWER(COALESCE(MarcheDescrizione,'')) LIKE ?").Append(tokenLikeName).Append(" THEN 7000 ")
+                scoreBuilder.Append("WHEN LOWER(COALESCE(Codice,''))=?").Append(tokenName).Append(" THEN 9000 ")
+                scoreBuilder.Append("WHEN LOWER(COALESCE(Ean,''))=?").Append(tokenName).Append(" THEN 8800 ")
+                scoreBuilder.Append("WHEN LOWER(COALESCE(Descrizione1,''))=?").Append(tokenName).Append(" THEN 8600 ")
+                scoreBuilder.Append("WHEN LOWER(COALESCE(Codice,'')) LIKE ?").Append(tokenPrefixName).Append(" OR LOWER(CONCAT(' ',COALESCE(Codice,''))) LIKE CONCAT('% ',?").Append(tokenName).Append(",'%') THEN 6200 ")
+                scoreBuilder.Append("WHEN LOWER(COALESCE(Ean,'')) LIKE ?").Append(tokenPrefixName).Append(" OR LOWER(CONCAT(' ',COALESCE(Ean,''))) LIKE CONCAT('% ',?").Append(tokenName).Append(",'%') THEN 6000 ")
+                scoreBuilder.Append("WHEN LOWER(COALESCE(Descrizione1,'')) LIKE ?").Append(tokenPrefixName).Append(" OR LOWER(CONCAT(' ',COALESCE(Descrizione1,''))) LIKE CONCAT('% ',?").Append(tokenName).Append(",'%') THEN 5800 ")
+                scoreBuilder.Append("WHEN LOWER(CONCAT(' ',COALESCE(MarcheDescrizione,''),' ',COALESCE(Descrizione1,''))) LIKE CONCAT('% ',?").Append(tokenName).Append(",'%') THEN 5200 ")
+                scoreBuilder.Append("WHEN LOWER(COALESCE(Descrizione1,'')) LIKE ?").Append(tokenLikeName).Append(" THEN 2600 ")
+                scoreBuilder.Append("WHEN LOWER(COALESCE(DescrizioneLunga,'')) LIKE ?").Append(tokenLikeName).Append(" THEN 1800 ")
+                scoreBuilder.Append("WHEN LOWER(COALESCE(MarcheDescrizione,'')) LIKE ?").Append(tokenLikeName).Append(" THEN 1600 ")
                 scoreBuilder.Append("ELSE 0 END)")
 
                 mainWhereBuilder.Append("OR LOWER(Codice)=?").Append(tokenName).Append(" ")
@@ -636,10 +652,15 @@ If promoActive Then
     strWhere2 &= " AND (varticolibase.InOfferta = 1) "
 End If
 
-        If CheckBox_Disponibile.Checked = True Then
+        If CheckBox_Disponibile.Checked = True OrElse queryAvailable Then
             Session.Item("Disp") = 0
             strWhere = strWhere & " AND (Giacenza>0)"
             strWhere2 = strWhere2 & " AND (Giacenza>0)"
+        End If
+
+        If queryRefurbished Then
+            strWhere &= " AND (Ricondizionato=1) "
+            strWhere2 &= " AND (varticolibase.Ricondizionato=1) "
         End If
 
         If Me.Page.IsPostBack = False Then
@@ -654,6 +675,11 @@ If Page.IsPostBack = False Then
     Session("Valore_Prezzo_MAX") = ""
     Session("Controllo_Variabile_PrezzoMinMax") = 0
 End If
+
+Dim qsMinPrice As String = QS("min", 24)
+Dim qsMaxPrice As String = QS("max", 24)
+If qsMinPrice <> "" Then Session.Item("Prezzo_MIN") = qsMinPrice
+If qsMaxPrice <> "" Then Session.Item("Prezzo_MAX") = qsMaxPrice
 
 ' Se arrivano valori dai controlli/Query (Prezzo_MIN/Prezzo_MAX) li congeliamo in Valore_* una sola volta
 If (Session.Item("Controllo_Variabile_PrezzoMinMax") = 0) AndAlso
@@ -2248,8 +2274,10 @@ strWhere = strWhere & " GROUP BY id"
         If value Is Nothing Then Return ""
         Dim v As String = value.Trim()
         If v.Length > maxLen Then v = v.Substring(0, maxLen)
-        ' MySqlHelper.EscapeString escapes quotes and backslashes for use inside string literals.
-        Return MySql.Data.MySqlClient.MySqlHelper.EscapeString(v)
+        ' MySqlHelper.EscapeString escapes quotes/backslashes; the replaces keep LIKE wildcards literal.
+        v = MySql.Data.MySqlClient.MySqlHelper.EscapeString(v)
+        v = v.Replace("%", "\%").Replace("_", "\_")
+        Return v
     End Function
 
     Private Function QS(key As String, Optional maxLen As Integer = 200) As String

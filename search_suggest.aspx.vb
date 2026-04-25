@@ -166,19 +166,22 @@ Partial Public Class search_suggest
         If tokens.Count = 0 Then tokens.Add(NormalizeSearchText(query))
 
         Dim parameters As New List(Of DbParameterSpec)()
-        Dim normalizedQuery As String = NormalizeSearchText(intent.SearchText)
-        If String.IsNullOrWhiteSpace(normalizedQuery) Then normalizedQuery = NormalizeSearchText(query)
+        Dim normalizedQuery As String = NormalizeQuery(intent.SearchText).ToLowerInvariant()
+        If String.IsNullOrWhiteSpace(normalizedQuery) Then normalizedQuery = NormalizeQuery(query).ToLowerInvariant()
 
+        Dim likeQuery As String = EscapeLikeValue(normalizedQuery)
         parameters.Add(New DbParameterSpec("@qExact", normalizedQuery))
-        parameters.Add(New DbParameterSpec("@qPrefix", normalizedQuery & "%"))
-        parameters.Add(New DbParameterSpec("@qContains", "%" & normalizedQuery & "%"))
-        parameters.Add(New DbParameterSpec("@qWord", "% " & normalizedQuery & "%"))
+        parameters.Add(New DbParameterSpec("@qPrefix", likeQuery & "%"))
+        parameters.Add(New DbParameterSpec("@qContains", "%" & likeQuery & "%"))
+        parameters.Add(New DbParameterSpec("@qWord", "% " & likeQuery & "%"))
 
         For i As Integer = 0 To tokens.Count - 1
-            parameters.Add(New DbParameterSpec("@t" & i.ToString(CultureInfo.InvariantCulture), tokens(i)))
-            parameters.Add(New DbParameterSpec("@tc" & i.ToString(CultureInfo.InvariantCulture), "%" & tokens(i) & "%"))
-            parameters.Add(New DbParameterSpec("@tp" & i.ToString(CultureInfo.InvariantCulture), tokens(i) & "%"))
-            parameters.Add(New DbParameterSpec("@tw" & i.ToString(CultureInfo.InvariantCulture), "% " & tokens(i) & "%"))
+            Dim tokenValue As String = tokens(i)
+            Dim likeToken As String = EscapeLikeValue(tokenValue)
+            parameters.Add(New DbParameterSpec("@t" & i.ToString(CultureInfo.InvariantCulture), tokenValue))
+            parameters.Add(New DbParameterSpec("@tc" & i.ToString(CultureInfo.InvariantCulture), "%" & likeToken & "%"))
+            parameters.Add(New DbParameterSpec("@tp" & i.ToString(CultureInfo.InvariantCulture), likeToken & "%"))
+            parameters.Add(New DbParameterSpec("@tw" & i.ToString(CultureInfo.InvariantCulture), "% " & likeToken & "%"))
         Next
 
         Dim sql As New StringBuilder()
@@ -259,30 +262,34 @@ Partial Public Class search_suggest
         Dim sb As New StringBuilder()
         sb.Append("(")
         ' Marketplace-grade rank bands. Keep these aligned with articoli.aspx.vb.
-        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Codice,''))) = @qExact THEN 10000000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Ean,''))) = @qExact THEN 9900000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Descrizione1,''))) = @qExact THEN 9800000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Codice,''))) LIKE @qPrefix OR LOWER(CONCAT(' ', COALESCE(v.Codice,''))) LIKE @qWord THEN 8800000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Ean,''))) LIKE @qPrefix OR LOWER(CONCAT(' ', COALESCE(v.Ean,''))) LIKE @qWord THEN 8700000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(TRIM(COALESCE(v.Descrizione1,''))) LIKE @qPrefix OR LOWER(CONCAT(' ', COALESCE(v.Descrizione1,''))) LIKE @qWord THEN 8600000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(CONCAT(' ', COALESCE(v.MarcheDescrizione,''), ' ', COALESCE(v.Descrizione1,''))) LIKE @qWord THEN 8200000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(COALESCE(v.Descrizione1,'')) LIKE @qContains THEN 3600000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(COALESCE(v.DescrizioneLunga,'')) LIKE @qContains THEN 2600000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(COALESCE(v.MarcheDescrizione,'')) LIKE @qContains THEN 2400000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(COALESCE(v.Descrizione2,'')) LIKE @qContains THEN 1800000 ELSE 0 END) + ")
-        sb.Append("(CASE WHEN LOWER(COALESCE(v.DescrizioneHTML,'')) LIKE @qContains THEN 1200000 ELSE 0 END) ")
+        sb.Append("(CASE ")
+        sb.Append("WHEN LOWER(TRIM(COALESCE(v.Codice,''))) = @qExact THEN 10000000 ")
+        sb.Append("WHEN LOWER(TRIM(COALESCE(v.Ean,''))) = @qExact THEN 9900000 ")
+        sb.Append("WHEN LOWER(TRIM(COALESCE(v.Descrizione1,''))) = @qExact THEN 9800000 ")
+        sb.Append("WHEN LOWER(TRIM(COALESCE(v.Codice,''))) LIKE @qPrefix OR LOWER(CONCAT(' ', COALESCE(v.Codice,''))) LIKE @qWord THEN 8800000 ")
+        sb.Append("WHEN LOWER(TRIM(COALESCE(v.Ean,''))) LIKE @qPrefix OR LOWER(CONCAT(' ', COALESCE(v.Ean,''))) LIKE @qWord THEN 8700000 ")
+        sb.Append("WHEN LOWER(TRIM(COALESCE(v.Descrizione1,''))) LIKE @qPrefix OR LOWER(CONCAT(' ', COALESCE(v.Descrizione1,''))) LIKE @qWord THEN 8600000 ")
+        sb.Append("WHEN LOWER(CONCAT(' ', COALESCE(v.MarcheDescrizione,''), ' ', COALESCE(v.Descrizione1,''))) LIKE @qWord THEN 8200000 ")
+        sb.Append("WHEN LOWER(COALESCE(v.Descrizione1,'')) LIKE @qContains THEN 3600000 ")
+        sb.Append("WHEN LOWER(COALESCE(v.DescrizioneLunga,'')) LIKE @qContains THEN 2600000 ")
+        sb.Append("WHEN LOWER(COALESCE(v.MarcheDescrizione,'')) LIKE @qContains THEN 2400000 ")
+        sb.Append("WHEN LOWER(COALESCE(v.Descrizione2,'')) LIKE @qContains THEN 1800000 ")
+        sb.Append("WHEN LOWER(COALESCE(v.DescrizioneHTML,'')) LIKE @qContains THEN 1200000 ")
+        sb.Append("ELSE 0 END) ")
         For i As Integer = 0 To tokens.Count - 1
             Dim n As String = i.ToString(CultureInfo.InvariantCulture)
-            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Codice,'')) = @t").Append(n).Append(" THEN 70000 ELSE 0 END)")
-            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Ean,'')) = @t").Append(n).Append(" THEN 69000 ELSE 0 END)")
-            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Descrizione1,'')) = @t").Append(n).Append(" THEN 68000 ELSE 0 END)")
-            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Codice,'')) LIKE @tp").Append(n).Append(" OR LOWER(CONCAT(' ',COALESCE(v.Codice,''))) LIKE @tw").Append(n).Append(" THEN 52000 ELSE 0 END)")
-            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Ean,'')) LIKE @tp").Append(n).Append(" OR LOWER(CONCAT(' ',COALESCE(v.Ean,''))) LIKE @tw").Append(n).Append(" THEN 51000 ELSE 0 END)")
-            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Descrizione1,'')) LIKE @tp").Append(n).Append(" OR LOWER(CONCAT(' ',COALESCE(v.Descrizione1,''))) LIKE @tw").Append(n).Append(" THEN 50000 ELSE 0 END)")
-            sb.Append(" + (CASE WHEN LOWER(CONCAT(' ',COALESCE(v.MarcheDescrizione,''),' ',COALESCE(v.Descrizione1,''))) LIKE @tw").Append(n).Append(" THEN 46000 ELSE 0 END)")
-            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.Descrizione1,'')) LIKE @tc").Append(n).Append(" THEN 12000 ELSE 0 END)")
-            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.DescrizioneLunga,'')) LIKE @tc").Append(n).Append(" THEN 8000 ELSE 0 END)")
-            sb.Append(" + (CASE WHEN LOWER(COALESCE(v.MarcheDescrizione,'')) LIKE @tc").Append(n).Append(" THEN 7000 ELSE 0 END)")
+            sb.Append(" + (CASE ")
+            sb.Append("WHEN LOWER(COALESCE(v.Codice,'')) = @t").Append(n).Append(" THEN 9000 ")
+            sb.Append("WHEN LOWER(COALESCE(v.Ean,'')) = @t").Append(n).Append(" THEN 8800 ")
+            sb.Append("WHEN LOWER(COALESCE(v.Descrizione1,'')) = @t").Append(n).Append(" THEN 8600 ")
+            sb.Append("WHEN LOWER(COALESCE(v.Codice,'')) LIKE @tp").Append(n).Append(" OR LOWER(CONCAT(' ',COALESCE(v.Codice,''))) LIKE @tw").Append(n).Append(" THEN 6200 ")
+            sb.Append("WHEN LOWER(COALESCE(v.Ean,'')) LIKE @tp").Append(n).Append(" OR LOWER(CONCAT(' ',COALESCE(v.Ean,''))) LIKE @tw").Append(n).Append(" THEN 6000 ")
+            sb.Append("WHEN LOWER(COALESCE(v.Descrizione1,'')) LIKE @tp").Append(n).Append(" OR LOWER(CONCAT(' ',COALESCE(v.Descrizione1,''))) LIKE @tw").Append(n).Append(" THEN 5800 ")
+            sb.Append("WHEN LOWER(CONCAT(' ',COALESCE(v.MarcheDescrizione,''),' ',COALESCE(v.Descrizione1,''))) LIKE @tw").Append(n).Append(" THEN 5200 ")
+            sb.Append("WHEN LOWER(COALESCE(v.Descrizione1,'')) LIKE @tc").Append(n).Append(" THEN 2600 ")
+            sb.Append("WHEN LOWER(COALESCE(v.DescrizioneLunga,'')) LIKE @tc").Append(n).Append(" THEN 1800 ")
+            sb.Append("WHEN LOWER(COALESCE(v.MarcheDescrizione,'')) LIKE @tc").Append(n).Append(" THEN 1600 ")
+            sb.Append("ELSE 0 END)")
         Next
         ' Tie-breaker only: never let commercial boosts outrank textual relevance bands.
         sb.Append(" + (CASE WHEN COALESCE(v.Disponibilita,0) > 0 THEN 600 ELSE 0 END)")
@@ -589,6 +596,10 @@ Partial Public Class search_suggest
         text = Regex.Replace(text, "[^a-z0-9]+", " ").Trim()
         text = Regex.Replace(text, "\s+", " ").Trim()
         Return text
+    End Function
+
+    Private Function EscapeLikeValue(ByVal value As String) As String
+        Return Convert.ToString(value).Replace("\", "\\").Replace("%", "\%").Replace("_", "\_")
     End Function
 
     Private Function MakeShortDescription(ByVal d2 As String, ByVal lunga As String, ByVal html As String) As String

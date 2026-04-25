@@ -55,7 +55,9 @@ Partial Class SiteHeader
         End If
 
         Dim selectedSectorId As Integer = 0
+        Dim selectedCategoryId As Integer = 0
         Integer.TryParse(Convert.ToString(Request.QueryString("st")), selectedSectorId)
+        Integer.TryParse(Convert.ToString(Request.QueryString("ct")), selectedCategoryId)
 
         product_cat.Items.Clear()
         product_cat_mobile.Items.Clear()
@@ -63,7 +65,7 @@ Partial Class SiteHeader
         product_cat.Items.Add(New ListItem("Tutti i settori", String.Empty))
         product_cat_mobile.Items.Add(New ListItem("Tutti i settori", String.Empty))
 
-        If selectedSectorId > 0 Then
+        If selectedSectorId > 0 OrElse selectedCategoryId > 0 Then
             product_cat.ClearSelection()
             product_cat_mobile.ClearSelection()
         End If
@@ -74,13 +76,34 @@ Partial Class SiteHeader
 
             Dim desktopItem As New ListItem(text, value)
             Dim mobileItem As New ListItem(text, value)
-            If selectedSectorId > 0 AndAlso sector.Id = selectedSectorId Then
+            If selectedCategoryId <= 0 AndAlso selectedSectorId > 0 AndAlso sector.Id = selectedSectorId Then
                 desktopItem.Selected = True
                 mobileItem.Selected = True
             End If
 
             product_cat.Items.Add(desktopItem)
             product_cat_mobile.Items.Add(mobileItem)
+
+            If sector.Categories Is Nothing Then
+                Continue For
+            End If
+
+            For Each category As CatalogMenuCategory In sector.Categories
+                If category Is Nothing Then
+                    Continue For
+                End If
+
+                Dim categoryText As String = " - " & If(String.IsNullOrWhiteSpace(category.Descrizione), "Categoria " & category.Id.ToString(), category.Descrizione.Trim())
+                Dim categoryDesktopItem As New ListItem(categoryText, category.DefaultUrl)
+                Dim categoryMobileItem As New ListItem(categoryText, category.DefaultUrl)
+                If selectedCategoryId > 0 AndAlso category.Id = selectedCategoryId Then
+                    categoryDesktopItem.Selected = True
+                    categoryMobileItem.Selected = True
+                End If
+
+                product_cat.Items.Add(categoryDesktopItem)
+                product_cat_mobile.Items.Add(categoryMobileItem)
+            Next
         Next
     End Sub
 

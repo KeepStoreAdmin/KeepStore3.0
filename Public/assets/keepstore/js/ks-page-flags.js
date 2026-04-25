@@ -2,6 +2,7 @@
   'use strict';
 
   var COOKIE_NAME = 'ks_recent';
+  var LOCAL_KEY = 'ks_recent_items';
   var SESSION_KEY = 'ks_recent_session';
   var MAX_RECENT = 100;
   var SEARCH_ENDPOINT = '/search_suggest.aspx';
@@ -28,15 +29,6 @@
     var match = document.cookie.match(new RegExp('(?:^|; )' + escaped + '=([^;]*)'));
     return match ? decodeURIComponent(match[1]) : '';
   }
-  function writeCookie(name, value, days) {
-    var expires = '';
-    if (typeof days === 'number' && days > 0) {
-      var d = new Date();
-      d.setTime(d.getTime() + days * 86400000);
-      expires = '; expires=' + d.toUTCString();
-    }
-    document.cookie = String(name || '') + '=' + encodeURIComponent(String(value || '')) + expires + '; path=/; SameSite=Lax';
-  }
   function parseIds(raw) {
     return String(raw || '').split(',').map(function (item) { return parseInt(item, 10); }).filter(function (id) {
       return Number.isFinite(id) && id > 0;
@@ -48,9 +40,15 @@
   function writeSessionRecent(list) {
     try { window.sessionStorage.setItem(SESSION_KEY, (list || []).join(',')); } catch (err) {}
   }
+  function readLocalRecent() {
+    try { return parseIds(window.localStorage.getItem(LOCAL_KEY) || ''); } catch (err) { return []; }
+  }
+  function writeLocalRecent(list) {
+    try { window.localStorage.setItem(LOCAL_KEY, (list || []).join(',')); } catch (err) {}
+  }
   function readMergedRecent() {
     var seen = Object.create(null), out = [];
-    [readSessionRecent(), parseIds(readCookie(COOKIE_NAME))].forEach(function (list) {
+    [readSessionRecent(), readLocalRecent(), parseIds(readCookie(COOKIE_NAME))].forEach(function (list) {
       (list || []).forEach(function (id) {
         if (!id || seen[id]) return;
         seen[id] = 1;
@@ -62,7 +60,7 @@
   function updateRecent(id) {
     if (!id || id <= 0) return;
     var next = [id].concat(readMergedRecent().filter(function (n) { return n !== id; })).slice(0, MAX_RECENT);
-    writeCookie(COOKIE_NAME, next.join(','), 365);
+    writeLocalRecent(next);
     writeSessionRecent(next);
   }
   function pathIsHome() {
@@ -361,7 +359,7 @@
       var input = inputFromRoot(root), timer = 0;
       function queue(recent) {
         clearTimeout(timer);
-        timer = setTimeout(function () { requestSuggest(root, recent); }, 160);
+        timer = setTimeout(function () { requestSuggest(root, recent); }, 220);
       }
       if (input) {
         input.setAttribute('autocomplete', 'off');
