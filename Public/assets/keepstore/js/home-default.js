@@ -1658,3 +1658,116 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   window.addEventListener('resize', function () { window.setTimeout(run, 180); });
 })();
+
+
+/* KeepStore HOME - Step 123: restore ONSUS order.
+   Deal Of The Day is separate; the normal product deck returns to In Evidenza. */
+(function () {
+  'use strict';
+  function q(s, r) { return (r || document).querySelector(s); }
+  function qa(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  function txt(n) { return String(n && n.textContent || '').replace(/\s+/g, ' ').trim(); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+  function normalizeUrl(url) { return String(url || '').replace(/^https?:\/\/(www\.)?(taikun\.it|webaffare\.it)/i, '').replace(/&amp;/g, '&'); }
+  function imgFrom(root) {
+    var imgs = qa('img', root);
+    for (var i = 0; i < imgs.length; i++) {
+      var img = imgs[i];
+      var src = img.currentSrc || img.getAttribute('src') || img.getAttribute('data-src') || '';
+      if (!src && img.getAttribute('srcset')) src = String(img.getAttribute('srcset')).split(',')[0].trim().split(' ')[0];
+      if (!src || /logo|brand|payment|visa|mastercard|paypal|placeholder|loader|spinner|sprite/i.test(src)) continue;
+      return src;
+    }
+    return '';
+  }
+  function priceFrom(root) { var m = txt(root).match(/\d{1,5}(?:[\.,]\d{2})\s*€/g); return m && m.length ? m[m.length - 1] : ''; }
+  function titleFrom(root) {
+    var nodes = [q('h6 a', root), q('.ks-final-product-info a', root), q('.name-product', root), q('a[href*="articolo.aspx"]', root)];
+    for (var i = 0; i < nodes.length; i++) {
+      var t = txt(nodes[i]);
+      if (t && t.length > 5 && !/^(scopri|compra|categoria|vai al catalogo)$/i.test(t)) return t;
+    }
+    return '';
+  }
+  function productFrom(card) {
+    if (!card) return null;
+    var link = q('a[href*="articolo.aspx"]', card);
+    var href = normalizeUrl(link && link.getAttribute('href'));
+    var img = imgFrom(card);
+    var title = titleFrom(card);
+    if (!href || !img || !title) return null;
+    return { href: href, img: img, title: title, price: priceFrom(card) };
+  }
+  function getProducts(limit) {
+    var out = [], seen = Object.create(null);
+    qa('#KsHomeEditorialFinal .ks-final-product-card,#KsHomeBestSellerFinal .ks-final-product-card,.ks-final-product-card').forEach(function (card) {
+      if (out.length >= (limit || 8)) return;
+      var p = productFrom(card);
+      if (!p || seen[p.href]) return;
+      seen[p.href] = 1;
+      out.push(p);
+    });
+    return out;
+  }
+  function dealHtml(products) {
+    return '<section id="KsOnsusDealToday123" class="ks-onsus-deal123 tf-sp-2 pt-0" data-ks-final-home="1"><div class="container">' +
+      '<div class="ks-deal123-title"><h5><span class="ks-deal123-fire">●</span>Deal Of The Day</h5><span></span><div class="ks-deal123-nav"><span>‹</span><span>›</span></div></div>' +
+      '<div class="ks-deal123-grid">' + products.map(function (p, index) {
+        var w = 48 + ((index * 13) % 34);
+        return '<a class="ks-deal123-card" href="' + esc(p.href) + '">' +
+          '<span class="ks-deal123-media"><img src="' + esc(p.img) + '" alt="' + esc(p.title) + '" loading="lazy" decoding="async"></span>' +
+          '<span class="ks-deal123-info"><span class="ks-deal123-title-product">' + esc(p.title) + '</span>' +
+          (p.price ? '<span class="ks-deal123-price">' + esc(p.price) + '</span>' : '') +
+          '<span class="ks-deal123-progress"><i style="width:' + w + '%"></i></span></span></a>';
+      }).join('') + '</div></div></section>';
+  }
+  function ensureDealStrip() {
+    var editorial = q('#KsHomeEditorialFinal');
+    if (!editorial) return;
+    var products = getProducts(4);
+    var existing = q('#KsOnsusDealToday123');
+    if (products.length < 4) { if (existing) existing.remove(); return; }
+    if (!existing) {
+      var tmp = document.createElement('div');
+      tmp.innerHTML = dealHtml(products);
+      existing = tmp.firstChild;
+      editorial.parentNode.insertBefore(existing, editorial);
+    } else {
+      existing.outerHTML = dealHtml(products);
+    }
+  }
+  function restoreEditorialDeck() {
+    var section = q('#KsHomeEditorialFinal');
+    if (!section) return;
+    section.classList.remove('ks-onsus-deal-today-122');
+    var kicker = q('.ks-section-kicker', section);
+    var h = q('.ks-final-title h5', section);
+    var link = q('.ks-home-section-link', section);
+    if (kicker) kicker.textContent = 'PRODOTTI KEEPSTORE';
+    if (h) h.textContent = 'In Evidenza';
+    if (link) link.textContent = 'Vai al catalogo';
+    qa('.ks-onsus-sale-progress-122', section).forEach(function (n) { n.remove(); });
+  }
+  function removeBrokenWidePromo() { qa('#KsOnsusWidePromo122,.ks-onsus-wide-promo-122').forEach(function (n) { n.remove(); }); }
+  function lowerGridNoEmptyPanels() {
+    var lower = q('#KsHomeLowerFinal');
+    if (!lower) return;
+    var visible = 0;
+    qa('.ks-final-lower-column', lower).forEach(function (col) {
+      var count = qa('a[href*="articolo.aspx"]', col).length;
+      if (count < 2) col.setAttribute('data-ks-step122-hide', '1'); else { col.removeAttribute('data-ks-step122-hide'); visible += 1; }
+    });
+    if (visible < 2) lower.setAttribute('data-ks-step123-hide', '1'); else lower.removeAttribute('data-ks-step123-hide');
+  }
+  function run() {
+    if (!document.body) return;
+    document.body.classList.add('ks-page-home', 'ks-home-onsus-pass-123');
+    removeBrokenWidePromo();
+    restoreEditorialDeck();
+    ensureDealStrip();
+    lowerGridNoEmptyPanels();
+  }
+  function boot() { run(); [150, 400, 900, 1800, 3400, 6400].forEach(function (d) { window.setTimeout(run, d); }); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  window.addEventListener('resize', function () { window.setTimeout(run, 180); });
+})();
