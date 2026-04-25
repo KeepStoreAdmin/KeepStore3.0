@@ -877,3 +877,63 @@ body.ks-page-home.ks-home-template-mix-v1 .ks-native-vertical-source-off{display
   body.ks-page-home.ks-home-template-mix-v1 .ks-final-product-media{height:145px!important;min-height:145px!important;}
   body.ks-page-home.ks-home-template-mix-v1 .ks-home-closing-tags{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
 }
+
+/* ==========================================================
+   KeepStore HOME - Step 115/4 Onsus index mix 2
+   ========================================================== */
+body.ks-page-home.ks-home-template-mix-v2{--ks-onsus-red:#ff3b30;--ks-onsus-text:#333e48;--ks-onsus-bg:#f3f3f3;}
+body.ks-page-home.ks-home-template-mix-v2 main,
+body.ks-page-home.ks-home-template-mix-v2 .page-content{background:#f3f3f3!important;}
+body.ks-page-home.ks-home-template-mix-v2 .container{max-width:1280px!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-top-wrapper,
+body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-shell,
+body.ks-page-home.ks-home-template-mix-v2 [id$="HomeHeroShell"]{display:grid!important;grid-template-columns:252px minmax(0,1fr) 244px!important;gap:20px!important;align-items:stretch!important;min-height:356px!important;width:100%!important;background:transparent!important;overflow:visible!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-dept-panel,
+body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-shell>.wrap-item-1,
+body.ks-page-home.ks-home-template-mix-v2 [id$="HomeHeroShell"]>.wrap-item-1{width:252px!important;min-width:252px!important;max-width:252px!important;height:356px!important;min-height:356px!important;max-height:356px!important;background:#fff!important;border-radius:8px!important;box-shadow:0 8px 22px rgba(51,62,72,.06)!important;overflow:hidden!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-hero-panel,
+body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-shell>.wrap-item-2,
+body.ks-page-home.ks-home-template-mix-v2 [id$="HomeHeroShell"]>.wrap-item-2,
+body.ks-page-home.ks-home-template-mix-v2 [id$="HeroSliderWrap"]{height:356px!important;min-height:356px!important;max-height:356px!important;min-width:0!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-slider,
+body.ks-page-home.ks-home-template-mix-v2 [id$="Slide_Show_Container"],
+body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-slider .swiper-wrapper,
+body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-slider .swiper-slide,
+body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-banner,
+body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-media,
+body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-media--only,
+body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-slider a{display:block!important;width:100%!important;height:356px!important;min-height:356px!important;max-height:356px!important;overflow:hidden!important;background-color:#050505!important;border-radius:8px!important;position:relative!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-hero-composed{background-repeat:no-repeat,no-repeat!important;background-size:100% 100%,auto 108%!important;background-position:center center,right center!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-hero-composed img{opacity:0!important;visibility:hidden!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-hero-caption{position:absolute!important;z-index:4!important;left:46px!important;top:50%!important;transform:translateY(-50%)!important;width:48%!important;max-width:410px!important;color:#fff!important;pointer-events:none!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-hero-caption .ks-hero-brand{display:block!important;font-size:34px!important;line-height:1!important;letter-spacing:.05em!important;text-transform:uppercase!important;font-weight:900!important;color:#fff!important;margin-bottom:26px!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-hero-caption .ks-hero-sub{display:block!important;font-size:13px!important;line-height:1.2!important;font-weight:700!important;color:#dfe3e8!important;margin-bottom:12px!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-hero-caption .ks-hero-title{display:block!important;font-size:32px!important;line-height:1.08!important;font-weight:800!important;color:#fff!important;max-width:330px!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-hero-caption .ks-hero-specs{display:flex!important;gap:16px!important;align-items:center!important;margin-top:30px!important;flex-wrap:wrap!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-hero-caption .ks-hero-specs span{display:inline-flex!important;align-items:center!important;min-height:24px!important;border-left:2px solid rgba(255,255,255,.35)!important;padding-left:10px!important;font-size:12px!important;font-weight:800!important;color:#fff!important;text-transform:uppercase!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-side-promos{display:grid!important;grid-template-rows:1fr 1fr!important;gap:16px!important;height:356px!important;min-height:356px!important;max-height:356px!important;min-width:0!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-side-promo{position:relative!important;display:block!important;overflow:hidden!important;border-radius:8px!important;background:#fff!important;box-shadow:0 8px 22px rgba(51,62,72,.06)!important;text-decoration:none!important;color:#333e48!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-side-promo:before{content:""!important;position:absolute!important;inset:0!important;background:linear-gradient(90deg,rgba(5,5,5,.72),rgba(5,5,5,.08) 58%,rgba(5,5,5,0))!important;z-index:1!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-side-promo img{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:contain!important;object-position:75% center!important;padding:12px!important;background:#f7f8fa!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-side-promo .ks-side-text{position:absolute!important;z-index:2!important;left:18px!important;right:76px!important;bottom:18px!important;color:#fff!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-side-promo .ks-side-kicker{display:block!important;font-size:10px!important;text-transform:uppercase!important;font-weight:800!important;letter-spacing:.04em!important;margin-bottom:4px!important;color:#fff!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-side-promo strong{display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important;font-size:14px!important;line-height:1.18!important;font-weight:800!important;color:#fff!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-side-promo em{display:block!important;margin-top:7px!important;font-style:normal!important;font-size:12px!important;font-weight:800!important;color:#ffdbd8!important;}
+body.ks-page-home.ks-home-template-mix-v2 .tf-sw-iconbox,
+body.ks-page-home.ks-home-template-mix-v2 .ks-home-iconboxes,
+body.ks-page-home.ks-home-template-mix-v2 [id$="HomeIconBoxes"]{margin-top:22px!important;}
+body.ks-page-home.ks-home-template-mix-v2 .tf-icon-box,
+body.ks-page-home.ks-home-template-mix-v2 .ks-icon-box,
+body.ks-page-home.ks-home-template-mix-v2 .home-icon-box{height:68px!important;padding:13px 18px!important;border-radius:8px!important;background:#fff!important;box-shadow:0 8px 20px rgba(51,62,72,.045)!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-index-section{padding-top:30px!important;padding-bottom:0!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-deal-today .ks-final-product-grid,
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-feature-grid .ks-final-product-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:18px!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-final-product-card{border-radius:10px!important;background:#fff!important;border:1px solid transparent!important;box-shadow:0 8px 20px rgba(51,62,72,.045)!important;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-final-product-card:hover{transform:translateY(-2px)!important;box-shadow:0 12px 28px rgba(51,62,72,.08)!important;border-color:rgba(255,59,48,.15)!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-best-seller .ks-final-product-card{box-shadow:none!important;border-radius:0!important;background:transparent!important;padding:0!important;min-height:0!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-best-seller .ks-final-product-media{background:#fff!important;border-radius:0!important;height:210px!important;min-height:210px!important;box-shadow:none!important;}
+body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-best-seller .ks-final-product-card h6 a{font-size:12px!important;line-height:1.35!important;}
+body.ks-page-home.ks-home-template-mix-v2 [data-ks-onsus-step115-hidden],
+body.ks-page-home.ks-home-template-mix-v2 .ks-native-vertical-source-off{display:none!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}
+@media (max-width:1199.98px){body.ks-page-home.ks-home-template-mix-v2 .container{max-width:1120px!important;}body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-top-wrapper,body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-shell,body.ks-page-home.ks-home-template-mix-v2 [id$="HomeHeroShell"]{grid-template-columns:240px minmax(0,1fr)!important;min-height:326px!important;}body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-side-promos{display:none!important;}body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-dept-panel,body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-shell>.wrap-item-1,body.ks-page-home.ks-home-template-mix-v2 [id$="HomeHeroShell"]>.wrap-item-1{width:240px!important;min-width:240px!important;max-width:240px!important;height:326px!important;min-height:326px!important;max-height:326px!important;}body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-hero-panel,body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-shell>.wrap-item-2,body.ks-page-home.ks-home-template-mix-v2 [id$="HomeHeroShell"]>.wrap-item-2,body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-slider,body.ks-page-home.ks-home-template-mix-v2 [id$="Slide_Show_Container"],body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-slider .swiper-wrapper,body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-slider .swiper-slide,body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-banner,body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-media,body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-slider a{height:326px!important;min-height:326px!important;max-height:326px!important;}}
+@media (max-width:991.98px){body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-top-wrapper,body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-shell,body.ks-page-home.ks-home-template-mix-v2 [id$="HomeHeroShell"]{grid-template-columns:1fr!important;min-height:245px!important;}body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-dept-panel,body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-shell>.wrap-item-1,body.ks-page-home.ks-home-template-mix-v2 [id$="HomeHeroShell"]>.wrap-item-1{display:none!important;}body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-hero-panel,body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-shell>.wrap-item-2,body.ks-page-home.ks-home-template-mix-v2 [id$="HomeHeroShell"]>.wrap-item-2,body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-slider,body.ks-page-home.ks-home-template-mix-v2 [id$="Slide_Show_Container"],body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-slider .swiper-wrapper,body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-slider .swiper-slide,body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-banner,body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-media,body.ks-page-home.ks-home-template-mix-v2 .ks-home-hero-slider a{height:245px!important;min-height:245px!important;max-height:245px!important;}body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-hero-caption{left:24px!important;width:62%!important;}body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-hero-caption .ks-hero-brand{font-size:24px!important;margin-bottom:16px!important;}body.ks-page-home.ks-home-template-mix-v2 .ks-onsus-hero-caption .ks-hero-title{font-size:24px!important;}}
