@@ -226,4 +226,5 @@
 
 <asp:Content ID="cntScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/home-default.js") %>"></script>
+    <script src="<%= ThemeManager.Asset("js/ks-ai-catalog-engine.js") %>"></script>
 </asp:Content>
