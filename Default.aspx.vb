@@ -35,6 +35,10 @@ Partial Public Class _Default
                 Dim current = Convert.ToString(body.Attributes("class"))
                 If current.IndexOf("ks-page-home", StringComparison.OrdinalIgnoreCase) < 0 Then
                     body.Attributes("class") = (current & " ks-page-home").Trim()
+                    current = Convert.ToString(body.Attributes("class"))
+                End If
+                If current.IndexOf("ks-home-server-rendered", StringComparison.OrdinalIgnoreCase) < 0 Then
+                    body.Attributes("class") = (current & " ks-home-server-rendered").Trim()
                 End If
             End If
         Catch
@@ -90,6 +94,9 @@ Partial Public Class _Default
         If sectors Is Nothing Then
             sectors = New List(Of CatalogMenuSector)()
         End If
+        If sectors.Count = 0 Then
+            sectors = BuildHomeFallbackSectors()
+        End If
         Dim sectorRows As List(Of CatalogMenuSector) = If(sectors.Count > 12, sectors.GetRange(0, 12), sectors)
         rptHomeMainCategories.DataSource = sectorRows
         rptHomeMainCategories.DataBind()
@@ -110,7 +117,13 @@ Partial Public Class _Default
         rptDealOfDay.DataSource = dealRows
         rptDealOfDay.DataBind()
         If HomeOffersSection IsNot Nothing Then
-            HomeOffersSection.Visible = Not IsTableEmpty(dealRows)
+            HomeOffersSection.Visible = True
+        End If
+        If HomeOffersFallback IsNot Nothing Then
+            HomeOffersFallback.Visible = IsTableEmpty(dealRows)
+        End If
+        If HomeOffersSliderWrap IsNot Nothing Then
+            HomeOffersSliderWrap.Visible = Not IsTableEmpty(dealRows)
         End If
 
         Dim brandRows As DataTable = FilterBrandRows(GetBrands(24), 12)
@@ -120,6 +133,25 @@ Partial Public Class _Default
             HomeBrandsSection.Visible = Not IsTableEmpty(brandRows)
         End If
     End Sub
+
+    Private Function BuildHomeFallbackSectors() As List(Of CatalogMenuSector)
+        Dim result As New List(Of CatalogMenuSector)()
+        result.Add(BuildHomeFallbackSector("Computer e notebook", "articoli.aspx?q=computer"))
+        result.Add(BuildHomeFallbackSector("Telefonia e accessori", "articoli.aspx?q=telefonia"))
+        result.Add(BuildHomeFallbackSector("Stampanti e consumabili", "articoli.aspx?q=stampanti"))
+        result.Add(BuildHomeFallbackSector("Periferiche e reti", "articoli.aspx?q=periferiche"))
+        Return result
+    End Function
+
+    Private Function BuildHomeFallbackSector(ByVal description As String, ByVal url As String) As CatalogMenuSector
+        Dim sector As New CatalogMenuSector()
+        sector.Id = 0
+        sector.Descrizione = description
+        sector.Img = String.Empty
+        sector.ImgUrl = String.Empty
+        sector.DefaultUrl = url
+        Return sector
+    End Function
 
     Private Function ResolveHeroMode(ByVal hasHeroSlides As Boolean, ByVal sideBannerCount As Integer) As String
         If Not hasHeroSlides Then

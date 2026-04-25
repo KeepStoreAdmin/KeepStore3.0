@@ -8,7 +8,7 @@
 
 <asp:Content ID="cntMain" ContentPlaceHolderID="MainContent" runat="server">
 
-    <section id="HomeHeroSection" runat="server" class="tf-sp-5 ks-home-hero-section ks-home-hero-mode-compact-single">
+    <section id="HomeHeroSection" runat="server" class="tf-sp-5 ks-home-full-width ks-home-hero-section ks-home-hero-mode-compact-single">
         <div class="container">
             <div id="HomeHeroShell" runat="server" class="s-banner-wrapper ks-home-hero-shell ks-home-hero-mode-compact-single">
                 <div class="wrap-item-1 d-none d-lg-block">
@@ -66,7 +66,7 @@
 
     <uc:HomeIconBoxes ID="HomeIconBoxes1" runat="server" />
 
-    <section id="HomeMainCategoriesSection" runat="server" class="tf-sp-2 pt-0 ks-home-categories-section">
+    <section id="HomeMainCategoriesSection" runat="server" class="tf-sp-2 pt-0 ks-home-full-width ks-home-categories-section">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <div>
@@ -93,7 +93,7 @@
         </div>
     </section>
 
-    <section id="HomeFeaturedProductsSection" runat="server" class="tf-sp-2 pt-0 ks-home-featured-section">
+    <section id="HomeFeaturedProductsSection" runat="server" class="tf-sp-2 pt-0 ks-home-full-width ks-home-featured-section">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <div>
@@ -114,7 +114,7 @@
         </div>
     </section>
 
-    <section id="HomeOffersSection" runat="server" class="tf-sp-2 pt-0 ks-home-deal-section">
+    <section id="HomeOffersSection" runat="server" class="tf-sp-2 pt-0 ks-home-full-width ks-home-deal-section">
         <div class="container">
             <div class="flat-title pb-8 wow fadeInUp" data-wow-delay="0s">
                 <div>
@@ -128,7 +128,20 @@
                     <div class="swiper-button-next nav-swiper nav-next-products"><i class="icon-arrow-right-lg"></i></div>
                 </div>
             </div>
-            <div class="box-btn-slide-2 sw-nav-effect">
+            <asp:Panel ID="HomeOffersFallback" runat="server" CssClass="ks-home-offers-fallback" Visible="false">
+                <div class="ks-home-promo-institutional">
+                    <div>
+                        <p class="caption text-primary fw-semibold mb-2">Promozioni KeepStore</p>
+                        <h5 class="fw-semibold mb-2">Tecnologia, accessori e assistenza in un unico negozio</h5>
+                        <p class="body-text-3 text-main-2 mb-0">Le offerte reali vengono mostrate quando disponibili a catalogo. Nel frattempo puoi consultare i reparti o richiedere supporto tecnico.</p>
+                    </div>
+                    <div class="ks-home-promo-actions">
+                        <a href="articoli.aspx" class="tf-btn btn-line"><span>Vai al catalogo</span></a>
+                        <a href="Contattaci.aspx" class="tf-btn btn-line"><span>Richiedi assistenza</span></a>
+                    </div>
+                </div>
+            </asp:Panel>
+            <asp:Panel ID="HomeOffersSliderWrap" runat="server" CssClass="box-btn-slide-2 sw-nav-effect">
                 <div class="swiper tf-sw-products slider-thumb-deal" data-preview="4" data-tablet="3" data-mobile-sm="2" data-mobile="1" data-space-lg="30" data-space-md="20" data-space="15" data-pagination="1" data-pagination-sm="2" data-pagination-md="3" data-pagination-lg="4">
                     <div class="swiper-wrapper">
                         <asp:Repeater ID="rptDealOfDay" runat="server">
@@ -141,7 +154,7 @@
                     </div>
                     <div class="d-flex d-lg-none sw-dot-default sw-pagination-products justify-content-center"></div>
                 </div>
-            </div>
+            </asp:Panel>
         </div>
     </section>
 
@@ -273,7 +286,7 @@
         </div>
     </section>
 
-    <section id="HomeServicesSection" runat="server" class="tf-sp-2 ks-home-services-section">
+    <section id="HomeServicesSection" runat="server" class="tf-sp-2 ks-home-full-width ks-home-services-section">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <div>
@@ -319,7 +332,7 @@
         </div>
     </section>
 
-    <section id="HomeTrustSection" runat="server" class="tf-sp-2 pt-0 ks-home-trust-section">
+    <section id="HomeTrustSection" runat="server" class="tf-sp-2 pt-0 ks-home-full-width ks-home-trust-section">
         <div class="container">
             <div class="ks-home-trust-panel">
                 <div class="ks-home-trust-copy">
@@ -337,7 +350,7 @@
         </div>
     </section>
 
-    <section id="HomeBrandsSection" runat="server" class="tf-sp-2 ks-home-brands-block">
+    <section id="HomeBrandsSection" runat="server" class="tf-sp-2 ks-home-full-width ks-home-brands-block">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s"><h5>Rivenditori Ufficiali - I migliori Brand</h5></div>
             <div class="swiper ks-home-brands" data-preview="6" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="20" data-space="15">

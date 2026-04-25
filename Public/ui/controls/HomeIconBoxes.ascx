@@ -1,5 +1,5 @@
 <%@ Control Language="VB" AutoEventWireup="false" CodeFile="HomeIconBoxes.ascx.vb" Inherits="UI_HomeIconBoxes" %>
-<div class="tf-sp-2 pt-0">
+<div class="tf-sp-2 pt-0 ks-home-full-width ks-home-benefits-section">
     <div class="container">
         <div class="swiper tf-sw-iconbox" data-preview="4" data-tablet="2" data-mobile-sm="2" data-mobile="1" data-space-lg="20" data-space-md="20" data-space="15">
             <div class="swiper-wrapper">
