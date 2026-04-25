@@ -237,7 +237,7 @@
       if (src && !img.getAttribute('src')) img.setAttribute('src', src);
       img.style.setProperty('width', '100%', 'important');
       img.style.setProperty('height', '100%', 'important');
-      img.style.setProperty('object-fit', 'contain', 'important');
+      img.style.setProperty('object-fit', 'cover', 'important');
       img.style.setProperty('object-position', 'center center', 'important');
       img.style.setProperty('background', '#050505', 'important');
     });
@@ -421,7 +421,7 @@
 
   function render() {
     if (!home()) return;
-    document.body.classList.add('ks-page-home', 'ks-home-final-onsus', 'ks-home-step110-webforms-fixed', 'ks-home-step111-onsus-stabilized');
+    document.body.classList.add('ks-page-home', 'ks-home-final-onsus', 'ks-home-step110-webforms-fixed', 'ks-home-step111-onsus-stabilized', 'ks-home-step112-hero-fill');
     suppressNewsletter();
     normalizeCatalogMenu();
     forceHeroLayout();
