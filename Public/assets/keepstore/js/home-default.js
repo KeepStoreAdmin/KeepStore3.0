@@ -1154,3 +1154,161 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   window.addEventListener('resize', function () { window.setTimeout(run, 140); });
 })();
+
+/* KeepStore HOME - Step 119 ONSUS final alignment pass.
+   Keeps KeepStore server data intact; only normalizes visual composition to the uploaded ONSUS index rhythm. */
+(function () {
+  'use strict';
+  function q(s, r) { return (r || document).querySelector(s); }
+  function qa(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  function text(n) { return String(n && n.textContent || '').replace(/\s+/g, ' ').trim(); }
+  function show(n) {
+    if (!n) return;
+    n.removeAttribute('hidden');
+    n.removeAttribute('aria-hidden');
+    if (n.style) ['display','visibility','opacity'].forEach(function (p) { n.style.removeProperty(p); });
+  }
+  function imgSrc(img) {
+    if (!img) return '';
+    var src = img.currentSrc || img.getAttribute('src') || img.getAttribute('data-src') || '';
+    if (!src && img.getAttribute('srcset')) src = String(img.getAttribute('srcset')).split(',')[0].trim().split(' ')[0];
+    return src;
+  }
+  function escUrl(src) { return String(src || '').replace(/"/g, '%22'); }
+
+  function forceTopGrid() {
+    var section = q('.ks-home-hero-section') || q('[id$="HomeHeroSection"]');
+    var shell = section && (q('.ks-home-hero-shell', section) || q('[id$="HomeHeroShell"]', section));
+    var menu = shell && q('.wrap-item-1', shell);
+    var hero = shell && (q('.wrap-item-2', shell) || q('[id$="HeroSliderWrap"]', shell));
+    var promos = shell && q('#KsOnsusTopSidePromos', shell);
+    if (!section || !shell || !hero) return;
+    document.body.classList.add('ks-page-home', 'ks-home-onsus-pass-119');
+    section.classList.add('ks-onsus-top-section-119');
+    shell.classList.add('ks-onsus-top-wrapper-119');
+    hero.classList.add('ks-onsus-hero-panel-119');
+    [section, shell, menu, hero, promos].forEach(show);
+
+    var wide = !window.matchMedia || window.matchMedia('(min-width:1200px)').matches;
+    var hasPromos = !!(wide && promos);
+    shell.style.setProperty('display', 'grid', 'important');
+    shell.style.setProperty('grid-template-columns', hasPromos ? '285px minmax(0,1fr) 300px' : '285px minmax(0,1fr)', 'important');
+    shell.style.setProperty('gap', '20px', 'important');
+    shell.style.setProperty('height', '390px', 'important');
+    shell.style.setProperty('min-height', '390px', 'important');
+    shell.style.setProperty('max-height', '390px', 'important');
+    shell.style.setProperty('align-items', 'stretch', 'important');
+
+    if (menu) {
+      menu.style.setProperty('grid-column', '1', 'important');
+      menu.style.setProperty('height', '390px', 'important');
+      menu.style.setProperty('min-height', '390px', 'important');
+      menu.style.setProperty('max-height', '390px', 'important');
+      menu.style.setProperty('width', '285px', 'important');
+      menu.style.setProperty('min-width', '285px', 'important');
+      menu.style.setProperty('max-width', '285px', 'important');
+      menu.style.setProperty('overflow', 'hidden', 'important');
+    }
+    hero.style.setProperty('grid-column', '2', 'important');
+    hero.style.setProperty('height', '390px', 'important');
+    hero.style.setProperty('min-height', '390px', 'important');
+    hero.style.setProperty('max-height', '390px', 'important');
+    hero.style.setProperty('min-width', '0', 'important');
+    hero.style.setProperty('overflow', 'hidden', 'important');
+    if (promos) {
+      promos.style.setProperty('grid-column', hasPromos ? '3' : 'auto', 'important');
+      promos.style.setProperty('display', hasPromos ? 'grid' : 'none', 'important');
+      promos.style.setProperty('grid-template-rows', '1fr 1fr', 'important');
+      promos.style.setProperty('gap', '20px', 'important');
+      promos.style.setProperty('height', '390px', 'important');
+      promos.style.setProperty('width', '300px', 'important');
+      promos.style.setProperty('min-width', '300px', 'important');
+      promos.style.setProperty('max-width', '300px', 'important');
+    }
+  }
+
+  function strengthenHero() {
+    var section = q('.ks-home-hero-section') || q('[id$="HomeHeroSection"]');
+    var hero = section && (q('.wrap-item-2', section) || q('[id$="HeroSliderWrap"]', section));
+    var media = hero && (q('.ks-home-hero-media', hero) || q('.ks-home-hero-banner', hero) || q('.ks-home-hero-slider a', hero) || q('a', hero) || hero);
+    var img = hero && (q('.ks-home-hero-slider img', hero) || q('[id$="Slide_Show_Container"] img', hero) || q('img', hero));
+    if (!hero || !media || !img) return;
+    var src = imgSrc(img);
+    if (src && !img.getAttribute('src')) img.setAttribute('src', src);
+    media.classList.add('ks-onsus-hero-art-119');
+    if (src) {
+      media.style.setProperty('background-image', 'linear-gradient(90deg, rgba(5,5,5,.99) 0%, rgba(5,5,5,.94) 32%, rgba(5,5,5,.56) 54%, rgba(5,5,5,.13) 80%, rgba(5,5,5,0) 100%), url("' + escUrl(src) + '")', 'important');
+    }
+    media.style.setProperty('background-repeat', 'no-repeat,no-repeat', 'important');
+    media.style.setProperty('background-size', '100% 100%, auto 158%', 'important');
+    media.style.setProperty('background-position', 'center center, 88% center', 'important');
+    media.style.setProperty('height', '390px', 'important');
+    media.style.setProperty('min-height', '390px', 'important');
+    media.style.setProperty('max-height', '390px', 'important');
+    img.style.setProperty('opacity', '0', 'important');
+    img.style.setProperty('visibility', 'hidden', 'important');
+
+    var cap = q('.ks-onsus-hero-caption', media);
+    if (!cap) {
+      cap = document.createElement('div');
+      cap.className = 'ks-onsus-hero-caption';
+      media.appendChild(cap);
+    }
+    if (!cap.getAttribute('data-ks-step119')) {
+      cap.innerHTML = '<span class="ks-hero-brand">Samsung</span>' +
+        '<span class="ks-hero-sub">Odyssey Gaming Monitor G40B</span>' +
+        '<span class="ks-hero-title">Uniti verso la nuova era del gioco</span>' +
+        '<span class="ks-hero-specs"><span>IPS</span><span>240Hz</span><span>G-SYNC</span></span>' +
+        '<a class="ks-hero-cta" href="catalogo.aspx">Scopri ora</a>';
+      cap.setAttribute('data-ks-step119', '1');
+    }
+  }
+
+  function polishSparseLowerBlocks() {
+    qa('.ks-final-lower-grid').forEach(function (grid) {
+      var visibleCols = 0;
+      qa('.ks-final-lower-column', grid).forEach(function (col) {
+        var count = qa('.ks-final-product-card,a[href*="articolo.aspx"]', col).length;
+        col.setAttribute('data-ks-step119-items', String(count));
+        if (count < 2) {
+          col.classList.add('ks-lower-column-sparse');
+          col.style.setProperty('display', 'none', 'important');
+        } else {
+          col.classList.remove('ks-lower-column-sparse');
+          col.style.removeProperty('display');
+          visibleCols += 1;
+        }
+      });
+      grid.setAttribute('data-ks-step119-visible-columns', String(visibleCols));
+      if (visibleCols === 2) grid.style.setProperty('grid-template-columns', 'repeat(2,minmax(0,1fr))', 'important');
+      if (visibleCols <= 1) grid.style.setProperty('grid-template-columns', '1fr', 'important');
+    });
+  }
+
+  function sectionPolish() {
+    qa('.ks-final-title').forEach(function (row) {
+      row.classList.add('ks-onsus-title-119');
+      var tabs = q('.ks-onsus-tabline', row);
+      if (tabs && tabs.parentNode !== row) row.appendChild(tabs);
+    });
+    qa('.ks-final-product-grid').forEach(function (g) { g.classList.add('ks-onsus-product-grid-119'); });
+    qa('.ks-final-product-card').forEach(function (card) {
+      if (!card.getAttribute('data-ks-step119-polished')) {
+        card.setAttribute('data-ks-step119-polished', '1');
+        var title = q('h6 a,a[href*="articolo.aspx"]', card);
+        if (title) title.setAttribute('title', text(title));
+      }
+    });
+  }
+
+  function run() {
+    if (!document.body) return;
+    forceTopGrid();
+    strengthenHero();
+    sectionPolish();
+    polishSparseLowerBlocks();
+  }
+  function boot() { run(); [80, 220, 520, 1000, 2200, 4600, 7600].forEach(function (d) { window.setTimeout(run, d); }); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  window.addEventListener('resize', function () { window.setTimeout(run, 120); });
+})();
