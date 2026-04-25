@@ -393,3 +393,79 @@ body.ks-page-home .ks-catalog-mega-normalized *{white-space:normal!important;wor
   body.ks-page-home.ks-home-final-onsus .ks-department-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
   body.ks-page-home.ks-home-final-onsus .ks-home-closing-tags{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
 }
+
+/* ==========================================================
+   KeepStore HOME - Step 108 focused ONSUS refinement
+   - no duplicated deal/editorial products
+   - no native broken sections after brand
+   - hero restored to full ONSUS panel
+   ========================================================== */
+body.ks-page-home.ks-home-step108-refined .container{max-width:1180px!important;width:100%!important;}
+body.ks-page-home.ks-home-step108-refined main{background:#f4f4f4!important;}
+body.ks-page-home.ks-home-step108-refined #HomeHeroSection{padding-top:26px!important;padding-bottom:16px!important;}
+body.ks-page-home.ks-home-step108-refined .ks-final-hero-shell{display:grid!important;grid-template-columns:250px minmax(0,1fr)!important;gap:18px!important;align-items:stretch!important;min-height:340px!important;width:100%!important;background:transparent!important;border:0!important;box-shadow:none!important;}
+body.ks-page-home.ks-home-step108-refined .ks-final-hero-shell .wrap-item-1{display:block!important;width:250px!important;min-width:250px!important;max-width:250px!important;height:340px!important;overflow:hidden!important;}
+body.ks-page-home.ks-home-step108-refined .ks-final-hero-shell .wrap-item-2,
+body.ks-page-home.ks-home-step108-refined #HeroSliderWrap,
+body.ks-page-home.ks-home-step108-refined .ks-home-hero-slider,
+body.ks-page-home.ks-home-step108-refined .ks-home-hero-slider .swiper-wrapper,
+body.ks-page-home.ks-home-step108-refined .ks-home-hero-slider .swiper-slide,
+body.ks-page-home.ks-home-step108-refined .ks-home-hero-banner,
+body.ks-page-home.ks-home-step108-refined .ks-home-hero-media,
+body.ks-page-home.ks-home-step108-refined .ks-home-hero-media a{height:340px!important;min-height:340px!important;max-height:340px!important;width:100%!important;}
+body.ks-page-home.ks-home-step108-refined .ks-home-hero-banner,
+body.ks-page-home.ks-home-step108-refined .ks-home-hero-media{background:#050505!important;border-radius:6px!important;overflow:hidden!important;}
+body.ks-page-home.ks-home-step108-refined .ks-home-hero-slider img{width:100%!important;height:100%!important;max-width:none!important;object-fit:cover!important;object-position:center center!important;background:#050505!important;display:block!important;}
+body.ks-page-home.ks-home-step108-refined .ks-home-departments,
+body.ks-page-home.ks-home-step108-refined .menu-category-list{height:340px!important;max-height:340px!important;overflow-y:auto!important;background:#fff!important;border-radius:6px!important;}
+
+/* The final renderer owns the commercial flow. Native sources remain readable by JS but never visible. */
+body.ks-page-home.ks-home-step108-refined .ks-home-deal-section,
+body.ks-page-home.ks-home-step108-refined .ks-home-editorial-section,
+body.ks-page-home.ks-home-step108-refined .ks-home-best-section,
+body.ks-page-home.ks-home-step108-refined #HomeRecentlyViewedSection,
+body.ks-page-home.ks-home-step108-refined #HomeLowerColumnsSection{display:none!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}
+body.ks-page-home.ks-home-step108-refined #KsHomeDealFinal,
+body.ks-page-home.ks-home-step108-refined #KsHomeEditorialFinal,
+body.ks-page-home.ks-home-step108-refined #KsHomeBestSellerFinal,
+body.ks-page-home.ks-home-step108-refined #KsHomeRecentFinal,
+body.ks-page-home.ks-home-step108-refined #KsHomeLowerFinal{display:block!important;height:auto!important;min-height:0!important;max-height:none!important;margin:0!important;padding-top:20px!important;padding-bottom:20px!important;overflow:visible!important;}
+body.ks-page-home.ks-home-step108-refined .ks-final-product-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:18px!important;align-items:stretch!important;}
+body.ks-page-home.ks-home-step108-refined .ks-final-product-card{background:#fff!important;border-radius:10px!important;padding:12px!important;min-height:268px!important;display:grid!important;grid-template-rows:156px auto!important;overflow:hidden!important;box-shadow:0 1px 0 rgba(0,0,0,.035)!important;}
+body.ks-page-home.ks-home-step108-refined .ks-final-product-media{height:156px!important;background:#f7f8fb!important;border-radius:8px!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;}
+body.ks-page-home.ks-home-step108-refined .ks-final-product-media img{width:100%!important;height:100%!important;object-fit:contain!important;display:block!important;}
+body.ks-page-home.ks-home-step108-refined .ks-final-product-card h6{font-size:12px!important;line-height:1.25!important;font-weight:700!important;text-transform:uppercase!important;margin:0 0 6px!important;}
+body.ks-page-home.ks-home-step108-refined .ks-final-product-card h6 a{display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important;color:#005aa7!important;text-decoration:none!important;}
+body.ks-page-home.ks-home-step108-refined .ks-final-product-cat{font-size:10px!important;color:#7a8291!important;margin:0 0 3px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+body.ks-page-home.ks-home-step108-refined .ks-final-product-price{font-size:12px!important;font-weight:700!important;color:#ff3b30!important;margin:0!important;line-height:1.1!important;}
+body.ks-page-home.ks-home-step108-refined .ks-final-product-card--compact{min-height:92px!important;padding:10px!important;display:grid!important;grid-template-columns:72px minmax(0,1fr)!important;grid-template-rows:none!important;gap:10px!important;align-items:center!important;}
+body.ks-page-home.ks-home-step108-refined .ks-final-product-card--compact .ks-final-product-media{height:72px!important;}
+body.ks-page-home.ks-home-step108-refined .ks-final-product-card--compact h6{font-size:11px!important;}
+body.ks-page-home.ks-home-step108-refined .ks-final-lower-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:18px!important;}
+body.ks-page-home.ks-home-step108-refined .ks-final-lower-column{background:#fff!important;border-radius:10px!important;padding:14px!important;}
+body.ks-page-home.ks-home-step108-refined .ks-final-lower-column h5{font-size:16px!important;margin:0 0 12px!important;font-weight:700!important;}
+body.ks-page-home.ks-home-step108-refined .ks-final-lower-list{display:grid!important;gap:10px!important;}
+body.ks-page-home.ks-home-step108-refined #HomeBrandsSection{display:block!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;padding-top:24px!important;padding-bottom:18px!important;}
+body.ks-page-home.ks-home-step108-refined #HomeBrandsSection .container{display:block!important;}
+body.ks-page-home.ks-home-step108-refined .ks-home-closing-layer{display:block!important;padding-top:16px!important;padding-bottom:28px!important;}
+body.ks-page-home.ks-home-step108-refined footer.tf-footer{margin-top:0!important;}
+
+@media (max-width:1199.98px){
+  body.ks-page-home.ks-home-step108-refined .ks-final-product-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;}
+}
+@media (max-width:991.98px){
+  body.ks-page-home.ks-home-step108-refined .ks-final-hero-shell{grid-template-columns:1fr!important;min-height:0!important;}
+  body.ks-page-home.ks-home-step108-refined .ks-final-hero-shell .wrap-item-1{display:none!important;}
+  body.ks-page-home.ks-home-step108-refined .ks-home-hero-slider,
+  body.ks-page-home.ks-home-step108-refined .ks-home-hero-slider .swiper-wrapper,
+  body.ks-page-home.ks-home-step108-refined .ks-home-hero-slider .swiper-slide,
+  body.ks-page-home.ks-home-step108-refined .ks-home-hero-banner,
+  body.ks-page-home.ks-home-step108-refined .ks-home-hero-media{height:250px!important;min-height:250px!important;}
+  body.ks-page-home.ks-home-step108-refined .ks-final-product-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+  body.ks-page-home.ks-home-step108-refined .ks-final-lower-grid{grid-template-columns:1fr!important;}
+}
+@media (max-width:767.98px){
+  body.ks-page-home.ks-home-step108-refined .ks-final-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;}
+  body.ks-page-home.ks-home-step108-refined .ks-final-product-card{min-height:238px!important;grid-template-rows:145px auto!important;}
+  body.ks-page-home.ks-home-step108-refined .ks-final-product-media{height:145px!important;}
+}
