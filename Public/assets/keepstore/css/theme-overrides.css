@@ -697,3 +697,41 @@ body.ks-page-home.ks-home-step112-hero-fill [data-ks-final-source-hidden="side-o
   body.ks-page-home.ks-home-step112-hero-fill .ks-home-hero-shell>.wrap-item-1,
   body.ks-page-home.ks-home-step112-hero-fill [id$="HomeHeroShell"]>.wrap-item-1{display:none!important;}
 }
+
+/* KeepStore HOME - Step 113 ONSUS hero hardening and final cleanup */
+body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-section,
+body.ks-page-home.ks-home-step113-onsus-hard [id$="HomeHeroSection"]{padding-top:22px!important;padding-bottom:12px!important;}
+body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-shell,
+body.ks-page-home.ks-home-step113-onsus-hard [id$="HomeHeroShell"]{display:grid!important;grid-template-columns:250px minmax(0,1fr)!important;gap:18px!important;align-items:stretch!important;width:100%!important;max-width:100%!important;min-height:340px!important;background:transparent!important;overflow:visible!important;}
+body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-shell>.wrap-item-1,
+body.ks-page-home.ks-home-step113-onsus-hard [id$="HomeHeroShell"]>.wrap-item-1{width:250px!important;min-width:250px!important;max-width:250px!important;height:340px!important;min-height:340px!important;max-height:340px!important;display:block!important;overflow:hidden!important;}
+body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-shell>.wrap-item-2,
+body.ks-page-home.ks-home-step113-onsus-hard [id$="HomeHeroShell"]>.wrap-item-2,
+body.ks-page-home.ks-home-step113-onsus-hard [id$="HeroSliderWrap"],
+body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-slider,
+body.ks-page-home.ks-home-step113-onsus-hard [id$="Slide_Show_Container"],
+body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-slider .swiper-wrapper,
+body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-slider .swiper-slide,
+body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-banner,
+body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-media,
+body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-media--only,
+body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-slider a{display:block!important;width:100%!important;height:340px!important;min-height:340px!important;max-height:340px!important;overflow:hidden!important;background:#050505!important;border-radius:7px!important;transform:none!important;position:relative!important;}
+body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-slider img,
+body.ks-page-home.ks-home-step113-onsus-hard [id$="Slide_Show_Container"] img{display:block!important;width:100%!important;height:100%!important;min-height:340px!important;max-width:none!important;object-fit:cover!important;object-position:center center!important;background:#050505!important;opacity:1!important;visibility:visible!important;}
+body.ks-page-home.ks-home-step113-onsus-hard .ks-hero-artwork-square{background-repeat:no-repeat!important;background-position:center center!important;background-size:150% auto!important;}
+body.ks-page-home.ks-home-step113-onsus-hard .ks-hero-artwork-square>img,
+body.ks-page-home.ks-home-step113-onsus-hard .ks-hero-artwork-square img{opacity:0!important;visibility:hidden!important;}
+body.ks-page-home.ks-home-step113-onsus-hard .ks-home-departments,
+body.ks-page-home.ks-home-step113-onsus-hard .menu-category-list{height:340px!important;max-height:340px!important;overflow-y:auto!important;}
+body.ks-page-home.ks-home-step113-onsus-hard .ks-final-product-grid,
+body.ks-page-home.ks-home-step113-onsus-hard .ks-home-best-grid,
+body.ks-page-home.ks-home-step113-onsus-hard .ks-onsus-product-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:18px!important;}
+body.ks-page-home.ks-home-step113-onsus-hard .ks-final-product-card{min-width:0!important;height:auto!important;overflow:hidden!important;}
+body.ks-page-home.ks-home-step113-onsus-hard .ks-final-product-media{height:156px!important;}
+body.ks-page-home.ks-home-step113-onsus-hard .ks-final-product-title{min-height:34px!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important;}
+body.ks-page-home.ks-home-step113-onsus-hard [data-ks-final-source-hidden="final-rendered"],
+body.ks-page-home.ks-home-step113-onsus-hard [data-ks-final-source-hidden="stray-native"],
+body.ks-page-home.ks-home-step113-onsus-hard [data-ks-final-source-hidden="side-off"],
+body.ks-page-home.ks-home-step113-onsus-hard .ks-native-vertical-source-off{display:none!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}
+@media (max-width:1199.98px){body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-shell,body.ks-page-home.ks-home-step113-onsus-hard [id$="HomeHeroShell"]{grid-template-columns:230px minmax(0,1fr)!important;min-height:300px!important;}body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-shell>.wrap-item-1,body.ks-page-home.ks-home-step113-onsus-hard [id$="HomeHeroShell"]>.wrap-item-1{width:230px!important;min-width:230px!important;max-width:230px!important;height:300px!important;min-height:300px!important;max-height:300px!important;}body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-slider,body.ks-page-home.ks-home-step113-onsus-hard [id$="Slide_Show_Container"],body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-banner,body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-media,body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-slider a{height:300px!important;min-height:300px!important;max-height:300px!important;}body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-slider img,body.ks-page-home.ks-home-step113-onsus-hard [id$="Slide_Show_Container"] img{min-height:300px!important;}body.ks-page-home.ks-home-step113-onsus-hard .ks-home-departments,body.ks-page-home.ks-home-step113-onsus-hard .menu-category-list{height:300px!important;max-height:300px!important;}}
+@media (max-width:991.98px){body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-shell,body.ks-page-home.ks-home-step113-onsus-hard [id$="HomeHeroShell"]{grid-template-columns:1fr!important;min-height:240px!important;}body.ks-page-home.ks-home-step113-onsus-hard .ks-home-hero-shell>.wrap-item-1,body.ks-page-home.ks-home-step113-onsus-hard [id$="HomeHeroShell"]>.wrap-item-1{display:none!important;}body.ks-page-home.ks-home-step113-onsus-hard .ks-final-product-grid,body.ks-page-home.ks-home-step113-onsus-hard .ks-home-best-grid,body.ks-page-home.ks-home-step113-onsus-hard .ks-onsus-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}}
