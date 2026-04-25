@@ -119,15 +119,29 @@ Private _seoJsonLd As String = String.Empty
 
 
 Private Function HeaderHasMeta(ByVal metaName As String) As Boolean
-    If Me.Page Is Nothing OrElse Me.Page.Header Is Nothing Then Return False
-    For Each c As Control In Me.Page.Header.Controls
-        Dim hm As HtmlMeta = TryCast(c, HtmlMeta)
+    If Me.Page Is Nothing OrElse Me.Page.Header Is Nothing OrElse String.IsNullOrWhiteSpace(metaName) Then Return False
+
+    Dim stack As New Stack(Of Control)()
+    stack.Push(Me.Page.Header)
+
+    While stack.Count > 0
+        Dim current As Control = stack.Pop()
+        If current Is Nothing Then Continue While
+
+        Dim hm As HtmlMeta = TryCast(current, HtmlMeta)
         If hm IsNot Nothing AndAlso Not String.IsNullOrEmpty(hm.Name) Then
             If String.Equals(hm.Name, metaName, StringComparison.OrdinalIgnoreCase) Then
                 Return True
             End If
         End If
-    Next
+
+        If current.HasControls() Then
+            For i As Integer = current.Controls.Count - 1 To 0 Step -1
+                stack.Push(current.Controls(i))
+            Next
+        End If
+    End While
+
     Return False
 End Function
 

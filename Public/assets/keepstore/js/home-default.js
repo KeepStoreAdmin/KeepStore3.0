@@ -1,6 +1,130 @@
 (function () {
   'use strict';
 
+  window.KS_HOME_SERVER_RENDERED = true;
+
+  function ready(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
+    else fn();
+  }
+
+  function qa(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+
+  function isHome() {
+    return !!document.body && (document.body.classList.contains('ks-page-home') || !!document.querySelector('.ks-home-hero-section'));
+  }
+
+  function initSwiper(el, options) {
+    if (!el || !window.Swiper || el.swiper) return;
+    try { new window.Swiper(el, options || {}); } catch (err) {}
+  }
+
+  function initSwipers() {
+    qa('.ks-home-hero-slider').forEach(function (el) {
+      initSwiper(el, {
+        slidesPerView: 1,
+        loop: el.querySelectorAll('.swiper-slide').length > 1,
+        speed: 600,
+        navigation: {
+          nextEl: el.querySelector('.ks-hero-next'),
+          prevEl: el.querySelector('.ks-hero-prev')
+        },
+        pagination: {
+          el: el.querySelector('.ks-hero-pagination'),
+          clickable: true
+        }
+      });
+    });
+
+    qa('.tf-sw-iconbox').forEach(function (el) {
+      initSwiper(el, {
+        slidesPerView: 1,
+        spaceBetween: 15,
+        breakpoints: {
+          576: { slidesPerView: 2, spaceBetween: 15 },
+          992: { slidesPerView: 4, spaceBetween: 20 }
+        },
+        pagination: {
+          el: el.querySelector('.sw-pagination-iconbox'),
+          clickable: true
+        }
+      });
+    });
+
+    qa('.ks-home-deal-section .tf-sw-products').forEach(function (el) {
+      initSwiper(el, {
+        slidesPerView: 1,
+        spaceBetween: 15,
+        breakpoints: {
+          576: { slidesPerView: 2, spaceBetween: 15 },
+          992: { slidesPerView: 3, spaceBetween: 20 },
+          1200: { slidesPerView: 4, spaceBetween: 30 }
+        },
+        navigation: {
+          nextEl: document.querySelector('.ks-home-deal-section .nav-next-products'),
+          prevEl: document.querySelector('.ks-home-deal-section .nav-prev-products')
+        },
+        pagination: {
+          el: el.querySelector('.sw-pagination-products'),
+          clickable: true
+        }
+      });
+    });
+
+    qa('.ks-home-brands').forEach(function (el) {
+      initSwiper(el, {
+        slidesPerView: 2,
+        spaceBetween: 15,
+        breakpoints: {
+          576: { slidesPerView: 3, spaceBetween: 15 },
+          992: { slidesPerView: 4, spaceBetween: 20 },
+          1200: { slidesPerView: 6, spaceBetween: 30 }
+        },
+        pagination: {
+          el: el.querySelector('.ks-home-brands-pagination'),
+          clickable: true
+        }
+      });
+    });
+  }
+
+  function bindDepartmentsMenu() {
+    qa('.ks-home-departments [data-ks-toggle="1"]').forEach(function (btn) {
+      if (btn.getAttribute('data-ks-bound') === '1') return;
+      btn.setAttribute('data-ks-bound', '1');
+      btn.addEventListener('click', function (event) {
+        event.preventDefault();
+        var item = btn.closest('[data-ks-menu-item="1"]');
+        if (!item) return;
+        var list = item.parentNode;
+        var nextOpen = item.getAttribute('data-ks-open') !== '1';
+        qa('[data-ks-menu-item="1"]', list).forEach(function (sibling) {
+          if (sibling !== item) {
+            sibling.setAttribute('data-ks-open', '0');
+            sibling.classList.remove('is-open');
+            var siblingBtn = sibling.querySelector('[data-ks-toggle="1"]');
+            if (siblingBtn) siblingBtn.setAttribute('aria-expanded', 'false');
+          }
+        });
+        item.setAttribute('data-ks-open', nextOpen ? '1' : '0');
+        item.classList.toggle('is-open', nextOpen);
+        btn.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+      });
+    });
+  }
+
+  ready(function () {
+    if (!isHome()) return;
+    document.body.classList.add('ks-home-server-rendered');
+    initSwipers();
+    bindDepartmentsMenu();
+  });
+})();
+
+if (!window.KS_HOME_SERVER_RENDERED) {
+(function () {
+  'use strict';
+
   function ready(fn) {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
     else fn();
@@ -3090,3 +3214,4 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   window.addEventListener('resize', function () { window.setTimeout(normalize, 180); });
 })();
+}

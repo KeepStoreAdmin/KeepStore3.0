@@ -22,6 +22,7 @@ Partial Public Class _Default
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         MarkBodyAsHome()
+        ApplyHomeSeo()
         If Not IsPostBack Then
             BindHome()
         End If
@@ -40,82 +41,76 @@ Partial Public Class _Default
         End Try
     End Sub
 
+    Private Sub ApplyHomeSeo()
+        Const pageTitle As String = "KeepStore - Informatica, telefonia, assistenza e accessori"
+        Const description As String = "Tecnologia, assistenza e accessori per lavoro e casa: computer, telefonia, stampanti, consumabili, periferiche e supporto tecnico KeepStore."
+        Dim canonical As String = HomeCanonicalUrl()
+        Dim heroImage As String = BuildRuntimeAssetUrl("/Public/assets/images/banner/Banner_PC_ricondizionati_1200x560.png")
+        Dim logoUrl As String = BuildRuntimeAssetUrl("/Public/assets/images/logo/logo.webp")
+
+        Page.Title = pageTitle
+        SeoBuilder.AddOrReplaceMeta(Me, "description", description)
+        SeoBuilder.AddOrReplaceMeta(Me, "keywords", "KeepStore,informatica,telefonia,assistenza tecnica,computer,stampanti,consumabili,periferiche,accessori")
+        SeoBuilder.AddOrReplaceMeta(Me, "robots", "index,follow")
+        SeoBuilder.SetCanonical(Me, canonical)
+        SeoBuilder.ApplyOpenGraph(Me, pageTitle, description, canonical, heroImage)
+        SeoBuilder.AddOrReplaceMeta(Me, "twitter:card", "summary_large_image")
+        SeoBuilder.AddOrReplaceMeta(Me, "twitter:title", pageTitle)
+        SeoBuilder.AddOrReplaceMeta(Me, "twitter:description", description)
+        SeoBuilder.AddOrReplaceMeta(Me, "twitter:image", heroImage)
+        SeoBuilder.ApplyJsonLd(Me, SeoBuilder.BuildHomeJsonLd(Me, pageTitle, description, canonical, logoUrl))
+    End Sub
+
+    Private Function HomeCanonicalUrl() As String
+        Try
+            Dim root As String = ResolveUrl("~/")
+            If String.IsNullOrWhiteSpace(root) Then
+                root = "/"
+            End If
+            If Not root.StartsWith("/", StringComparison.Ordinal) Then
+                root = "/" & root.TrimStart("/"c)
+            End If
+            Return RuntimeSiteBaseUrl.TrimEnd("/"c) & root.TrimEnd("/"c) & "/"
+        Catch
+            Return RuntimeSiteBaseUrl.TrimEnd("/"c) & "/"
+        End Try
+    End Function
+
     Private Sub BindHome()
         Dim hero As DataTable = GetHeroSlides()
         rptHeroSlides.DataSource = hero
         rptHeroSlides.DataBind()
-        Dim hasHeroSlides As Boolean = rptHeroSlides.Items.Count > 0
+        ApplyHeroMode(If(rptHeroSlides.Items.Count > 0, "compact-single", "none"))
 
-        Dim sideBanners As DataTable = SliceTable(GetSideBanners(), 0, 2)
-        rptSideBanners.DataSource = sideBanners
+        HeroSideWrap.Visible = False
+        rptSideBanners.DataSource = SideBannersFallback()
         rptSideBanners.DataBind()
-        Dim sideBannerCount As Integer = If(sideBanners Is Nothing, 0, sideBanners.Rows.Count)
 
-        Dim heroMode As String = ResolveHeroMode(hasHeroSlides, sideBannerCount)
-        ApplyHeroMode(heroMode)
+        Dim sectors As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenu()
+        If sectors Is Nothing Then
+            sectors = New List(Of CatalogMenuSector)()
+        End If
+        Dim sectorRows As List(Of CatalogMenuSector) = If(sectors.Count > 12, sectors.GetRange(0, 12), sectors)
+        rptHomeMainCategories.DataSource = sectorRows
+        rptHomeMainCategories.DataBind()
+        If HomeMainCategoriesSection IsNot Nothing Then
+            HomeMainCategoriesSection.Visible = (sectorRows.Count > 0)
+        End If
 
         Dim usedBusinessKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-        Dim usedDisplayKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-        Const lowerBlockMinimumItems As Integer = 3
-        Const recentReservedQuota As Integer = 6
-        Const recentReservedMinimum As Integer = 4
-        Const recentMinimumItems As Integer = 2
 
-        Dim offerPool As DataTable = GetOfferPool(120)
-        Dim dealOfferPool As DataTable = GetDealOfferPool(120)
-        Dim featuredPool As DataTable = GetFeaturedPool(120)
-        Dim newArrivalsPool As DataTable = GetNewArrivalsPool(120)
-        Dim bestSellerPool As DataTable = GetBestSellerPool(120)
-        Dim topSellingPool As DataTable = GetPureTopSellingPool(120)
+        Dim featuredRows As DataTable = TakeDistinctRows(8, usedBusinessKeys, GetFeaturedPool(40))
+        rptHomeFeaturedProducts.DataSource = featuredRows
+        rptHomeFeaturedProducts.DataBind()
+        If HomeFeaturedProductsSection IsNot Nothing Then
+            HomeFeaturedProductsSection.Visible = Not IsTableEmpty(featuredRows)
+        End If
 
-        Dim dealPool As DataTable = TakeDiverseRows(12, usedBusinessKeys, Nothing, dealOfferPool)
-        rptDealOfDay.DataSource = dealPool
+        Dim dealRows As DataTable = TakeDiverseRows(8, usedBusinessKeys, Nothing, GetDealOfferPool(40))
+        rptDealOfDay.DataSource = dealRows
         rptDealOfDay.DataBind()
-        CommitDisplayKeys(dealPool, usedDisplayKeys)
-
-        BindThreeColumnZone(TakeDiverseRows(7, usedBusinessKeys, Nothing, offerPool), rptFeatureLeft, rptFeatureCenter, rptFeatureRight)
-        BindThreeColumnZone(TakeDiverseRows(7, usedBusinessKeys, usedDisplayKeys, featuredPool), rptToprateLeft, rptToprateCenter, rptToprateRight)
-        BindThreeColumnZone(TakeDistinctRows(7, usedBusinessKeys, newArrivalsPool), rptOnSaleLeft, rptOnSaleCenter, rptOnSaleRight)
-
-        rptBestSeller.DataSource = TakeDistinctRows(10, usedBusinessKeys, bestSellerPool)
-        rptBestSeller.DataBind()
-
-        Dim recentRows As DataTable = GetRecentlyViewedProducts(recentReservedQuota, usedBusinessKeys, False, usedDisplayKeys, False)
-        If recentRows.Rows.Count >= recentReservedMinimum Then
-            recentRows = SliceTable(recentRows, 0, recentReservedQuota)
-        End If
-        If recentRows.Rows.Count >= recentMinimumItems Then
-            CommitBusinessKeys(recentRows, usedBusinessKeys)
-            CommitDisplayKeys(recentRows, usedDisplayKeys)
-        Else
-            recentRows = EmptyProductsTable()
-        End If
-        rptRecentlyViewed.DataSource = recentRows
-        rptRecentlyViewed.DataBind()
-        If HomeRecentlyViewedSection IsNot Nothing Then
-            HomeRecentlyViewedSection.Visible = (Not IsTableEmpty(recentRows) AndAlso recentRows.Rows.Count >= recentMinimumItems)
-        End If
-
-        Dim top20Rows As DataTable = PreviewDiverseRows(5, usedBusinessKeys, usedDisplayKeys, topSellingPool)
-        BindLowerBlock(Top20Block, rptTop20Slides, top20Rows, lowerBlockMinimumItems, usedBusinessKeys, usedDisplayKeys)
-
-        Dim lowerFeaturedRows As DataTable = PreviewDiverseRows(5, usedBusinessKeys, usedDisplayKeys, featuredPool)
-        BindLowerBlock(LowerFeaturedBlock, rptFeaturedProductsSlides, lowerFeaturedRows, lowerBlockMinimumItems, usedBusinessKeys, usedDisplayKeys)
-
-        Dim topSellingRows As DataTable = PreviewDiverseRows(5, usedBusinessKeys, usedDisplayKeys, topSellingPool)
-        BindLowerBlock(TopSellingBlock, rptTopSellingProductSlides, topSellingRows, lowerBlockMinimumItems, usedBusinessKeys, usedDisplayKeys)
-
-        Dim onSaleRows As DataTable = PreviewDiverseRows(5, usedBusinessKeys, usedDisplayKeys, offerPool)
-        BindLowerBlock(OnSaleBlock, rptOnSaleProductSlides, onSaleRows, lowerBlockMinimumItems, usedBusinessKeys, usedDisplayKeys)
-
-        Dim hasVisibleLowerBlocks As Boolean =
-            ((Top20Block IsNot Nothing AndAlso Top20Block.Visible) OrElse
-             (LowerFeaturedBlock IsNot Nothing AndAlso LowerFeaturedBlock.Visible) OrElse
-             (TopSellingBlock IsNot Nothing AndAlso TopSellingBlock.Visible) OrElse
-             (OnSaleBlock IsNot Nothing AndAlso OnSaleBlock.Visible))
-
-        If HomeLowerColumnsSection IsNot Nothing Then
-            HomeLowerColumnsSection.Visible = hasVisibleLowerBlocks
+        If HomeOffersSection IsNot Nothing Then
+            HomeOffersSection.Visible = Not IsTableEmpty(dealRows)
         End If
 
         Dim brandRows As DataTable = FilterBrandRows(GetBrands(24), 12)
@@ -258,6 +253,12 @@ Partial Public Class _Default
         dt.Columns.Add("Eyebrow", GetType(String))
         dt.Columns.Add("Description", GetType(String))
         dt.Columns.Add("ProductId", GetType(Integer))
+        dt.Rows.Add(New Object() {"Tecnologia, assistenza e accessori per il tuo lavoro e la tua casa",
+                                  "/Public/assets/images/banner/Banner_PC_ricondizionati_1200x560.png",
+                                  "articoli.aspx?inpromo=1",
+                                  "KeepStore tech",
+                                  "Computer, telefonia, stampanti, consumabili e periferiche selezionate, con supporto tecnico diretto.",
+                                  0})
         Return dt
     End Function
 
@@ -299,7 +300,7 @@ Partial Public Class _Default
     End Function
 
     Private Function PrepareHeroRows(ByVal source As DataTable, ByVal defaultEyebrow As String, ByVal defaultDescription As String) As DataTable
-        Dim result As DataTable = HeroSlidesFallback()
+        Dim result As DataTable = HeroSlidesFallback().Clone()
         If source Is Nothing Then
             Return result
         End If
@@ -310,7 +311,7 @@ Partial Public Class _Default
             newRow("Image") = Convert.ToString(row("Image")).Trim()
             newRow("LinkUrl") = NormalizeProjectLink(Convert.ToString(If(row.Table.Columns.Contains("LinkUrl"), row("LinkUrl"), String.Empty)), "articoli.aspx")
             newRow("Eyebrow") = BuildHeroEyebrow(Convert.ToString(newRow("Caption")), defaultEyebrow)
-            newRow("Description") = defaultDescription
+            newRow("Description") = CleanMarketingText(If(row.Table.Columns.Contains("Description"), row("Description"), String.Empty), defaultDescription)
             newRow("ProductId") = 0
             result.Rows.Add(newRow)
         Next
@@ -339,7 +340,7 @@ Partial Public Class _Default
     End Function
 
     Private Function ConvertSideRowsToHeroRows(ByVal source As DataTable) As DataTable
-        Dim result As DataTable = HeroSlidesFallback()
+        Dim result As DataTable = HeroSlidesFallback().Clone()
         If source Is Nothing Then
             Return result
         End If
@@ -528,7 +529,7 @@ Partial Public Class _Default
     End Function
 
     Private Function GetFeaturedPool(ByVal limit As Integer) As DataTable
-        Return QueryProducts("COALESCE(v.Vetrina,0)=1 AND " & StockWhereClause() & ">=1",
+        Return QueryProducts("COALESCE(v.Vetrina,0)=1 AND COALESCE(NULLIF(v.Img1,''),'')<>'' AND " & StockWhereClause() & ">=1",
                              "COALESCE(v.DataCreazione,CURDATE()) DESC, COALESCE(v.Visite,0) DESC, v.id DESC",
                              limit)
     End Function
@@ -1456,6 +1457,23 @@ Partial Public Class _Default
         Return HttpUtility.HtmlEncode(Convert.ToString(value))
     End Function
 
+    Protected Function RenderHomeSectorMedia(ByVal imgUrl As Object, ByVal description As Object) As String
+        Dim resolved As String = Convert.ToString(imgUrl).Trim()
+        Dim alt As String = SafeText(description)
+        If Not String.IsNullOrWhiteSpace(resolved) Then
+            Return "<img class='lazyload' src='" & SafeText(resolved) & "' data-src='" & SafeText(resolved) & "' alt='" & alt & "' loading='lazy' />"
+        End If
+        Return "<span class='ks-home-category-initial' aria-hidden='true'>" & HomeSectorInitial(description) & "</span>"
+    End Function
+
+    Private Function HomeSectorInitial(ByVal value As Object) As String
+        Dim text As String = Convert.ToString(value).Trim()
+        If String.IsNullOrWhiteSpace(text) Then
+            Return "K"
+        End If
+        Return SafeText(text.Substring(0, 1).ToUpperInvariant())
+    End Function
+
     Protected Function SafeInt(ByVal value As Object) As Integer
         Dim n As Integer = 0
         Integer.TryParse(Convert.ToString(value), n)
@@ -1497,7 +1515,7 @@ Partial Public Class _Default
     End Function
 
     Protected Function ResolveHeroSlideImage(ByVal value As Object, ByVal fallback As String) As String
-        Return ResolveProjectImage(value, fallback, "/Public/assets/images/slideshows/")
+        Return ResolveProjectImage(value, fallback, "/Public/assets/images/slideshows/", "/Public/assets/images/banner/")
     End Function
 
     Private Function ResolveHeroSlideImagePath(ByVal value As Object) As String

@@ -3,7 +3,7 @@
 <%@ Register Src="~/Public/ui/controls/HomeIconBoxes.ascx" TagPrefix="uc" TagName="HomeIconBoxes" %>
 
 <asp:Content ID="cntTitle" ContentPlaceHolderID="TitleContent" runat="server">
-    KeepStore - Home
+    KeepStore - Informatica, telefonia, assistenza e accessori
 </asp:Content>
 
 <asp:Content ID="cntMain" ContentPlaceHolderID="MainContent" runat="server">
@@ -21,10 +21,23 @@
                             <asp:Repeater ID="rptHeroSlides" runat="server">
                                 <ItemTemplate>
                                     <div class="swiper-slide">
-                                        <div class="banner-image-product-4 style-2 hover-img ks-home-hero-banner ks-home-hero-panel ks-home-hero-banner--imageonly">
-                                            <a href='<%# ResolveLink(Eval("LinkUrl"), ProductUrl(Eval("ProductId"))) %>' class="img-style img-item ks-home-hero-media ks-home-hero-media--only" aria-label='<%# SafeText(Eval("Caption")) %>'>
+                                        <div class="banner-image-product-4 style-2 hover-img ks-home-hero-banner ks-home-hero-panel">
+                                            <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx?inpromo=1") %>' class="img-style img-item ks-home-hero-media" aria-label='<%# SafeText(Eval("Caption")) %>'>
                                                 <img width="800" height="794" class="lazyload" src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' data-src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' alt='<%# SafeText(Eval("Caption")) %>' />
                                             </a>
+                                            <div class="content ks-home-hero-content">
+                                                <p class="caption fw-semibold ks-home-hero-eyebrow"><%# SafeText(Eval("Eyebrow")) %></p>
+                                                <h1 class="fw-semibold ks-home-hero-title"><%# SafeText(Eval("Caption")) %></h1>
+                                                <p class="body-text ks-home-hero-copy"><%# SafeText(Eval("Description")) %></p>
+                                                <div class="ks-home-hero-actions">
+                                                    <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx?inpromo=1") %>' class="tf-btn btn-large animate-btn bg-primary text-white">
+                                                        <span>Scopri le offerte</span>
+                                                    </a>
+                                                    <a href="Contattaci.aspx" class="tf-btn btn-line-white btn-large">
+                                                        <span>Richiedi assistenza</span>
+                                                    </a>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </ItemTemplate>
@@ -53,12 +66,63 @@
 
     <uc:HomeIconBoxes ID="HomeIconBoxes1" runat="server" />
 
-    <section class="tf-sp-2 pt-0 ks-home-deal-section">
+    <section id="HomeMainCategoriesSection" runat="server" class="tf-sp-2 pt-0 ks-home-categories-section">
+        <div class="container">
+            <div class="flat-title wow fadeInUp" data-wow-delay="0s">
+                <div>
+                    <h5 class="fw-semibold">Categorie principali</h5>
+                    <p class="body-text-3 text-main-2 mb-0">Naviga i reparti KeepStore e trova rapidamente prodotti, ricambi e accessori tech.</p>
+                </div>
+                <a href="articoli.aspx" class="tf-btn btn-line">
+                    <span>Vai al catalogo</span>
+                </a>
+            </div>
+            <div class="ks-home-category-grid">
+                <asp:Repeater ID="rptHomeMainCategories" runat="server">
+                    <ItemTemplate>
+                        <a href='<%# Eval("DefaultUrl") %>' class="ks-home-category-card">
+                            <span class="ks-home-category-media">
+                                <%# RenderHomeSectorMedia(Eval("ImgUrl"), Eval("Descrizione")) %>
+                            </span>
+                            <span class="ks-home-category-title"><%# SafeText(Eval("Descrizione")) %></span>
+                            <span class="ks-home-category-link">Scopri reparto</span>
+                        </a>
+                    </ItemTemplate>
+                </asp:Repeater>
+            </div>
+        </div>
+    </section>
+
+    <section id="HomeFeaturedProductsSection" runat="server" class="tf-sp-2 pt-0 ks-home-featured-section">
+        <div class="container">
+            <div class="flat-title wow fadeInUp" data-wow-delay="0s">
+                <div>
+                    <h5 class="fw-semibold">Prodotti in evidenza</h5>
+                    <p class="body-text-3 text-main-2 mb-0">Articoli selezionati disponibili a catalogo, con immagini e schede pronte per l'acquisto.</p>
+                </div>
+                <a href="articoli.aspx" class="tf-btn btn-line">
+                    <span>Vedi tutti</span>
+                </a>
+            </div>
+            <div class="ks-home-product-grid">
+                <asp:Repeater ID="rptHomeFeaturedProducts" runat="server">
+                    <ItemTemplate>
+                        <%# RenderGridCard(Container.DataItem) %>
+                    </ItemTemplate>
+                </asp:Repeater>
+            </div>
+        </div>
+    </section>
+
+    <section id="HomeOffersSection" runat="server" class="tf-sp-2 pt-0 ks-home-deal-section">
         <div class="container">
             <div class="flat-title pb-8 wow fadeInUp" data-wow-delay="0s">
-                <h5 class="fw-semibold text-primary flat-title-has-icon">
-                    <span class="icon"><i class="icon-fire tf-ani-tada"></i></span><span data-ks-i18n="home.deal">Occasione Imperdibile</span>
-                </h5>
+                <div>
+                    <h5 class="fw-semibold text-primary flat-title-has-icon">
+                        <span class="icon"><i class="icon-fire tf-ani-tada"></i></span><span data-ks-i18n="home.deal">Offerte del momento</span>
+                    </h5>
+                    <p class="body-text-3 text-main-2 mb-0">Promozioni e occasioni caricate dal catalogo KeepStore.</p>
+                </div>
                 <div class="box-btn-slide relative">
                     <div class="swiper-button-prev nav-swiper nav-prev-products"><i class="icon-arrow-left-lg"></i></div>
                     <div class="swiper-button-next nav-swiper nav-next-products"><i class="icon-arrow-right-lg"></i></div>
@@ -84,7 +148,7 @@
     <section id="HomeWidePromoSection" runat="server" visible="false" class="ks-home-wide-promo"></section>
     <section id="HomeCollectionSection" runat="server" visible="false" class="tf-sp-2 ks-home-collection-block"></section>
 
-    <section class="tf-sp-2 flat-animate-tab ks-home-editorial-section">
+    <section id="HomeLegacyEditorialSection" runat="server" visible="false" class="tf-sp-2 flat-animate-tab ks-home-editorial-section">
         <div class="container">
             <div class="flat-title">
                 <div class="flat-title-tab-default">
@@ -121,7 +185,7 @@
         </div>
     </section>
 
-    <section class="tf-sp-2 ks-home-best-section">
+    <section id="HomeLegacyBestSection" runat="server" visible="false" class="tf-sp-2 ks-home-best-section">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <h5 class="fw-semibold">Best Seller</h5>
@@ -145,7 +209,7 @@
         </div>
     </section>
 
-    <section id="HomeRecentlyViewedSection" runat="server" class="tf-sp-2 ks-home-recent-section ks-home-chosen-section">
+    <section id="HomeRecentlyViewedSection" runat="server" visible="false" class="tf-sp-2 ks-home-recent-section ks-home-chosen-section">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <h5 class="fw-semibold" data-ks-i18n="home.chosenByYou">Scelti Da Te</h5>
@@ -171,7 +235,7 @@
 
     <section id="HomeBottomPromoSection" runat="server" visible="false" class="ks-home-banner-product"></section>
 
-    <section id="HomeLowerColumnsSection" runat="server" class="tf-sp-2 ks-home-lower-columns-section">
+    <section id="HomeLowerColumnsSection" runat="server" visible="false" class="tf-sp-2 ks-home-lower-columns-section">
         <div class="container">
             <div class="tf-grid-product">
                 <div id="Top20Block" runat="server" class="tf-grid-product-item box-btn-slide-item">
@@ -204,6 +268,70 @@
                         <div class="box-btn-slide relative"><div class="swiper-button-prev nav-swiper ks-col-prev"><i class="icon-arrow-left-lg"></i></div><div class="swiper-button-next nav-swiper ks-col-next"><i class="icon-arrow-right-lg"></i></div></div>
                     </div>
                     <div class="swiper ks-column-swiper"><div class="swiper-wrapper"><asp:Repeater ID="rptOnSaleProductSlides" runat="server"><ItemTemplate><div class="swiper-slide"><asp:Literal ID="litOnSaleProductSlideHtml" runat="server" Text='<%# Eval("Html") %>' /></div></ItemTemplate></asp:Repeater></div><div class="d-flex d-lg-none sw-dot-default ks-col-pagination justify-content-center"></div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="HomeServicesSection" runat="server" class="tf-sp-2 ks-home-services-section">
+        <div class="container">
+            <div class="flat-title wow fadeInUp" data-wow-delay="0s">
+                <div>
+                    <h5 class="fw-semibold">Servizi KeepStore</h5>
+                    <p class="body-text-3 text-main-2 mb-0">Tecnici e consulenti per gestire dispositivi, software, reti e acquisti senza complicazioni.</p>
+                </div>
+                <a href="Contattaci.aspx" class="tf-btn btn-line">
+                    <span>Parla con noi</span>
+                </a>
+            </div>
+            <div class="ks-home-services-grid">
+                <article class="ks-home-service-item">
+                    <span class="ks-home-service-icon"><i class="icon-computer"></i></span>
+                    <h6>Riparazione PC e notebook</h6>
+                    <p>Diagnosi, upgrade, sostituzione componenti e ottimizzazione dei tuoi dispositivi.</p>
+                </article>
+                <article class="ks-home-service-item">
+                    <span class="ks-home-service-icon"><i class="icon-phone"></i></span>
+                    <h6>Assistenza smartphone</h6>
+                    <p>Supporto per configurazione, trasferimento dati e problemi ricorrenti.</p>
+                </article>
+                <article class="ks-home-service-item">
+                    <span class="ks-home-service-icon"><i class="icon-tool"></i></span>
+                    <h6>Installazione software</h6>
+                    <p>Setup sistemi, applicativi, sicurezza e strumenti per lavoro o casa.</p>
+                </article>
+                <article class="ks-home-service-item">
+                    <span class="ks-home-service-icon"><i class="icon-computer-wifi"></i></span>
+                    <h6>Configurazione reti e periferiche</h6>
+                    <p>Router, stampanti, periferiche e postazioni pronte all'uso.</p>
+                </article>
+                <article class="ks-home-service-item">
+                    <span class="ks-home-service-icon"><i class="icon-shield"></i></span>
+                    <h6>Recupero dati</h6>
+                    <p>Valutazione e supporto per recuperare file importanti quando possibile.</p>
+                </article>
+                <article class="ks-home-service-item">
+                    <span class="ks-home-service-icon"><i class="icon-headphone-2"></i></span>
+                    <h6>Consulenza acquisto</h6>
+                    <p>Scelta guidata di computer, telefonia, consumabili e accessori compatibili.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section id="HomeTrustSection" runat="server" class="tf-sp-2 pt-0 ks-home-trust-section">
+        <div class="container">
+            <div class="ks-home-trust-panel">
+                <div class="ks-home-trust-copy">
+                    <p class="caption text-primary fw-semibold mb-2">Fiducia e conversione</p>
+                    <h5 class="fw-semibold">Un negozio tech con assistenza reale prima e dopo l'acquisto</h5>
+                    <p class="body-text-3 text-main-2 mb-0">KeepStore unisce catalogo ecommerce, disponibilita controllate e contatto diretto con il negozio per aiutarti a scegliere meglio.</p>
+                </div>
+                <div class="ks-home-trust-list">
+                    <div><i class="icon-check-3"></i><span>Esperienza tecnica su informatica e periferiche</span></div>
+                    <div><i class="icon-support-2"></i><span>Assistenza diretta e supporto post-vendita</span></div>
+                    <div><i class="icon-payment"></i><span>Pagamenti e checkout tramite flusso ecommerce esistente</span></div>
+                    <div><i class="icon-phone"></i><span>Contatto rapido con il negozio</span></div>
                 </div>
             </div>
         </div>

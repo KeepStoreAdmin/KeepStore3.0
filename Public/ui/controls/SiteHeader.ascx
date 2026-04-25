@@ -8,7 +8,7 @@
                         <p class="body-small text-main-2">
                             <i class="icon-headphone"></i>
                             <span data-ks-i18n="header.callUsFree">Chiamaci gratis:</span>
-                            <asp:HyperLink ID="hlSupportPhoneTop" runat="server" NavigateUrl="tel:+390000000000" CssClass="text-primary link-secondary fw-semibold">
+                            <asp:HyperLink ID="hlSupportPhoneTop" runat="server" NavigateUrl="" CssClass="text-primary link-secondary fw-semibold">
                                 <asp:Literal ID="litSupportPhoneTop" runat="server" />
                             </asp:HyperLink>
                         </p>
@@ -34,7 +34,6 @@
                             <div class="tf-lans">
                                 <select class="image-select center style-default type-lan" aria-label="Lingua" id="ksLanguageSelect" data-ks-language>
                                     <option value="it" selected>Italiano</option>
-                                    <option value="en">English</option>
                                 </select>
                             </div>
                         </div>
@@ -94,13 +93,13 @@
                             <div class="content">
                                 <p class="call-us body-text-3">
                                     <span data-ks-i18n="header.callNow">Assistenza:</span>
-                                    <asp:HyperLink ID="hlSupportPhoneHeader" runat="server" NavigateUrl="tel:+390000000000" CssClass="text-primary link-main body-md-2">
+                                    <asp:HyperLink ID="hlSupportPhoneHeader" runat="server" NavigateUrl="" CssClass="text-primary link-main body-md-2">
                                         <asp:Literal ID="litSupportPhoneHeader" runat="server" />
                                     </asp:HyperLink>
                                 </p>
                                 <p class="mail-us body-text-3">
                                     Email:
-                                    <asp:HyperLink ID="hlSupportEmailHeader" runat="server" NavigateUrl="mailto:support@example.com" CssClass="text-secondary link-main">
+                                    <asp:HyperLink ID="hlSupportEmailHeader" runat="server" NavigateUrl="" CssClass="text-secondary link-main">
                                         <asp:Literal ID="litSupportEmailHeader" runat="server" />
                                     </asp:HyperLink>
                                 </p>
@@ -282,7 +281,6 @@
                 <div class="tf-lans">
                     <select class="image-select center style-default type-lan" aria-label="Lingua" id="ksLanguageSelectMobile" data-ks-language>
                         <option value="it" selected>Italiano</option>
-                        <option value="en">English</option>
                     </select>
                 </div>
             </div>

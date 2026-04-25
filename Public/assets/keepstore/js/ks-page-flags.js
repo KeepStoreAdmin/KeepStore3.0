@@ -317,7 +317,7 @@
       showSuggest(root);
       return;
     }
-    var head = data && data.recent ? 'Articoli recenti' : 'Suggerimenti marketplace';
+    var head = data && data.recent ? 'Articoli recenti' : 'Suggerimenti catalogo';
     var html = ['<div class="ks-suggest-head"><span>' + esc(head) + '</span><span>Invio: catalogo</span></div><ul class="ks-suggest-list">'];
     items.forEach(function (item, i) {
       var img = item.image || item.image_fallback || item.imageUrl || '';
@@ -511,13 +511,7 @@
     saveCompare(list);
   }
   function marketplaceMarkup() {
-    return '<section id="KsAiMarketplace135" class="ks-market135 ks-home-final-rendered"><div class="container"><div class="ks-market-wrap">' +
-      '<aside class="ks-market135-panel"><span class="ks-market135-kicker">AI locale + ricerca catalogo</span><h3>Marketplace intelligente</h3><p>Stessa pagina esistente: usa search_suggest.aspx e il catalogo reale per esigenza, budget, codice, EAN e compatibilita.</p>' +
-      '<div class="ks-market135-search"><input id="ksMarket135Input" type="text" placeholder="es. custodia Samsung sotto 30 euro"><button id="ksMarket135Go" type="button">Ragiona</button></div>' +
-      '<div class="ks-market135-tools"><div class="ks-market135-row"><label class="ks-market135-budget"><input id="ksMarket135Budget" type="number" min="0" step="1" placeholder="Budget max EUR"></label><label class="ks-market135-sort"><select id="ksMarket135Sort"><option value="relevance">Pertinenza</option><option value="price-asc">Prezzo crescente</option><option value="price-desc">Prezzo decrescente</option><option value="promo">Prima offerte</option><option value="available">Prima disponibili</option><option value="new">Novita</option></select></label></div><div class="ks-market135-checks"><label class="ks-market135-check"><input id="ksMarket135Available" type="checkbox"> disponibili</label><label class="ks-market135-check"><input id="ksMarket135Promo" type="checkbox"> offerte</label><label class="ks-market135-check"><input id="ksMarket135Refurb" type="checkbox"> ricond.</label></div></div>' +
-      '<div class="ks-market135-chips"><button type="button" data-q="custodia Samsung sotto 30 euro">custodia Samsung</button><button type="button" data-q="toner compatibile Pantum disponibile">toner Pantum</button><button type="button" data-q="notebook ricondizionato disponibile">notebook ricond.</button><button type="button" data-q="adattatore USB-C economico">USB-C</button><button type="button" data-q="pen drive Kingston in offerta">Kingston promo</button></div><div id="ksMarket135Insight" class="ks-market135-ai">Scrivi una richiesta: il motore interpreta filtri, budget e pertinenza marketplace.</div></aside>' +
-      '<div class="ks-market135-results"><div class="ks-market135-head"><div><span class="ks-market135-kicker">Risposta e prodotti consigliati</span><h4>Prodotti dal catalogo reale</h4></div><span id="ksMarket135Count" class="ks-market135-count">0 articoli</span></div><div id="ksMarket135Facets" class="ks-market135-facets"></div><div id="ksMarket135Grid" class="ks-market135-grid"></div></div>' +
-      '</div></div></section>';
+    return '';
   }
   function itemBadges(item) {
     var badges = item.badges || [];
@@ -571,61 +565,7 @@
     });
   }
   function initHomeMarketplace() {
-    if (!pathIsHome()) return;
-    ensureStepStyle();
-    document.body.classList.add('ks-home-step135-onsus-market');
-    ['KsSmartConsult129','KsLocalAiSearch130','KsAiCatalogEngine131','KsAiMarketplace132','KsAiMarketplace133','KsAiMarketplace134'].forEach(function (id) {
-      var n = document.getElementById(id);
-      if (n && n.parentNode) n.parentNode.removeChild(n);
-    });
-    if (document.getElementById('KsAiMarketplace135')) return;
-    var anchor = document.getElementById('KsHomeRecentFinal') || document.getElementById('KsHomeBestSellerFinal') || document.getElementById('KsHomeEditorialFinal') || document.getElementById('KsHomeDepartmentShowcase') || q(document, '.ks-home-best-section') || q(document, '.ks-home-deal-section');
-    if (!anchor || !anchor.parentNode) return;
-    var holder = document.createElement('div');
-    holder.innerHTML = marketplaceMarkup();
-    var sec = holder.firstChild;
-    anchor.parentNode.insertBefore(sec, anchor.nextSibling);
-    var input = document.getElementById('ksMarket135Input'), budget = document.getElementById('ksMarket135Budget'), go = document.getElementById('ksMarket135Go'), sort = document.getElementById('ksMarket135Sort'), available = document.getElementById('ksMarket135Available'), promo = document.getElementById('ksMarket135Promo'), refurb = document.getElementById('ksMarket135Refurb'), insight = document.getElementById('ksMarket135Insight'), count = document.getElementById('ksMarket135Count');
-    var last = '';
-    try { last = localStorage.getItem(MARKET_KEY) || ''; } catch (err) {}
-    input.value = last || '';
-    function runQuery() {
-      var query = String(input.value || '').replace(/\s+/g, ' ').trim();
-      if (!query) return;
-      try { localStorage.setItem(MARKET_KEY, query); } catch (err) {}
-      if (insight) insight.textContent = 'Analizzo: "' + query + '". Uso search_suggest.aspx con filtri marketplace, budget e pertinenza catalogo.';
-      var params = { mode: 'marketplace', q: query, limit: 12, sort: sort.value || 'relevance' };
-      if (budget.value) params.max = budget.value;
-      if (available.checked) params.available = 1;
-      if (promo.checked) params.inpromo = 1;
-      if (refurb.checked) params.refurbished = 1;
-      fetchJson(buildQueryUrl(params)).then(function (data) {
-        var items = data && data.suggestions ? data.suggestions : [];
-        if (!items.length) items = localHomeProducts(8);
-        if (count) count.textContent = (data && data.total ? data.total : items.length) + ' articoli';
-        if (insight && data && data.intelligence && data.intelligence.summary) insight.textContent = data.intelligence.summary;
-        renderFacets(data || {}, runQuery);
-        renderMarketItems(items);
-      }).catch(function () {
-        var items = localHomeProducts(8);
-        if (count) count.textContent = items.length + ' articoli HOME';
-        if (insight) insight.textContent = 'Endpoint non disponibile: fallback sui prodotti gia renderizzati nella HOME.';
-        renderFacets({}, runQuery);
-        renderMarketItems(items);
-      });
-    }
-    go.addEventListener('click', runQuery);
-    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); runQuery(); } });
-    [sort, budget, available, promo, refurb].forEach(function (el) { el.addEventListener('change', runQuery); });
-    all(sec, '.ks-market135-chips button').forEach(function (b) { b.addEventListener('click', function () { input.value = b.getAttribute('data-q') || ''; runQuery(); }); });
-    if (last) runQuery();
-    else {
-      var initial = localHomeProducts(8);
-      if (count) count.textContent = initial.length + ' articoli HOME';
-      if (insight) insight.textContent = 'Scrivi una richiesta o usa i filtri: nessun suggerimento demo viene generato.';
-      renderFacets({}, runQuery);
-      renderMarketItems(initial);
-    }
+    return;
   }
 
   function boot() {

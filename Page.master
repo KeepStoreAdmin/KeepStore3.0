@@ -31,6 +31,7 @@
     </asp:PlaceHolder>
 
     <asp:Literal ID="litGlobalSeoHead" runat="server" EnableViewState="False" />
+    <asp:PlaceHolder ID="phHeadDynamic" runat="server" />
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") %>" />
 </head>
@@ -62,20 +63,20 @@
                         <span aria-hidden="true">&times;</span>
                     </button>
                     <div class="modal-body text-center">
-                        <h5 class="fw-semibold mb-2">Join our newsletter for $10 offs</h5>
-                        <p class="body-text-3 mb-4">Register now to get latest updates on promotions and coupons. Don’t worry, we not spam!</p>
+                        <h5 class="fw-semibold mb-2">Resta aggiornato sulle offerte KeepStore</h5>
+                        <p class="body-text-3 mb-4">Ricevi novita su prodotti, promozioni e servizi tecnici. Solo comunicazioni utili, niente spam.</p>
                         <div class="subscribe-content">
                             <fieldset class="email">
-                                <input type="email" id="ksNewsletterEmailModal" class="subscribe-email type-fs-2" placeholder="Enter your email address" autocomplete="email" />
+                                <input type="email" id="ksNewsletterEmailModal" class="subscribe-email type-fs-2" placeholder="Inserisci la tua email" autocomplete="email" />
                             </fieldset>
                             <div class="button-submit">
                                 <button id="ksNewsletterSubmitModal" class="subscribe-button tf-btn btn-large hover-shine" type="button">
-                                    <span class="body-md-2 fw-semibold text-white">Subscribe</span>
+                                    <span class="body-md-2 fw-semibold text-white">Iscriviti</span>
                                 </button>
                             </div>
                         </div>
-                        <div class="alert alert-danger d-none mt-3" id="ksNewsletterError">Your subscription could not be saved. Please try again.</div>
-                        <div class="alert alert-success d-none mt-3" id="ksNewsletterSuccess">Your subscription has been successful.</div>
+                        <div class="alert alert-danger d-none mt-3" id="ksNewsletterError">Non e stato possibile salvare l'iscrizione. Riprova.</div>
+                        <div class="alert alert-success d-none mt-3" id="ksNewsletterSuccess">Iscrizione completata correttamente.</div>
                     </div>
                 </div>
             </div>

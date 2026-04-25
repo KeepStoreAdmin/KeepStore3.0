@@ -29,10 +29,10 @@
 </style>
 <div class="tf-nav-menu ks-home-departments" data-ks-home-menu="1">
     <div class="main-nav">
-        <div class="title">
+        <h6 class="fw-semibold title">
             <i class="icon-menu-dots"></i>
             <span data-ks-i18n="nav.departments">Tutti i settori</span>
-        </div>
+        </h6>
         <ul class="menu-category-list" role="menu">
             <asp:Repeater ID="rptSettoriHome" runat="server" OnItemDataBound="rptSettoriHome_ItemDataBound">
                 <ItemTemplate>
@@ -51,7 +51,7 @@
                                 <i class="icon-arrow-right-lg"></i>
                             </button>
                         </div>
-                        <div id="subMenuContainer" runat="server" class="sub-menu-container text-nowrap ks-home-submenu-container" aria-hidden="true" data-ks-submenu="1" data-ks-inline-state="closed" hidden="hidden" inert="inert" style="display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;max-height:0!important;overflow:hidden!important;">
+                        <div id="subMenuContainer" runat="server" class="sub-menu-container d-flex text-nowrap ks-home-submenu-container" aria-hidden="true" data-ks-submenu="1" data-ks-inline-state="closed">
                             <ul class="sub-menu-list ks-home-submenu-list">
                                 <asp:Literal ID="litDesktopSubmenu" runat="server" />
                             </ul>

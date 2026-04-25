@@ -22,8 +22,8 @@ Partial Class SiteHeader
     Private Const DefaultAppleTouchIconVirtual As String = "~/Public/assets/images/favicons/apple-touch-icon.png"
     Private Const DefaultFavicon32Virtual As String = "~/Public/assets/images/favicons/favicon-32x32.png"
     Private Const DefaultFavicon16Virtual As String = "~/Public/assets/images/favicons/favicon-16x16.png"
-    Private Const DefaultPhoneText As String = "+39 000 000 0000"
-    Private Const DefaultEmailText As String = "support@keepstore.it"
+    Private Const DefaultPhoneText As String = ""
+    Private Const DefaultEmailText As String = ""
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         BindLogo()
@@ -262,10 +262,13 @@ Partial Class SiteHeader
 
         Dim cleanPhone As String = If(phone, String.Empty).Trim()
         If String.IsNullOrWhiteSpace(cleanPhone) Then
-            cleanPhone = DefaultPhoneText
+            link.Visible = False
+            literal.Text = String.Empty
+            Return
         End If
 
         Dim telTarget As String = cleanPhone.Replace(" ", String.Empty)
+        link.Visible = True
         link.NavigateUrl = "tel:" & telTarget
         literal.Text = HttpUtility.HtmlEncode(cleanPhone)
     End Sub
@@ -277,9 +280,12 @@ Partial Class SiteHeader
 
         Dim cleanEmail As String = If(email, String.Empty).Trim()
         If String.IsNullOrWhiteSpace(cleanEmail) Then
-            cleanEmail = DefaultEmailText
+            link.Visible = False
+            literal.Text = String.Empty
+            Return
         End If
 
+        link.Visible = True
         link.NavigateUrl = "mailto:" & cleanEmail
         literal.Text = HttpUtility.HtmlEncode(cleanEmail)
     End Sub

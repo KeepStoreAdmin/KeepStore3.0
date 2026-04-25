@@ -55,7 +55,6 @@ Public Module CatalogMenuProvider
 
                 Dim categorySectorColumn As String = ResolveColumnName(conn, "categorie", "SettoriId", "Id_settore")
                 Dim tipologiaCategoryColumn As String = ResolveColumnName(conn, "tipologie", "CategorieId", "Id_categoria")
-                Dim gruppoTipologiaColumn As String = ResolveColumnName(conn, "gruppi", "TipologieId", "Id_tipologia")
 
                 Dim sectorsMap As New Dictionary(Of Integer, CatalogMenuSector)()
                 Using cmd As New MySqlCommand("SELECT id, Descrizione, Img FROM settori WHERE COALESCE(Abilitato,0)=1 ORDER BY COALESCE(Predefinito,0) DESC, COALESCE(Ordinamento,0) ASC, Descrizione ASC", conn)
@@ -113,7 +112,6 @@ Public Module CatalogMenuProvider
                             "WHERE COALESCE(Abilitato,0)=1 " &
                             "ORDER BY COALESCE(Ordinamento,0) ASC, Descrizione ASC"
 
-                        Dim tipologieMap As New Dictionary(Of Integer, CatalogMenuNode)()
                         Using cmd As New MySqlCommand(tipologieSql, conn)
                             Using reader As MySqlDataReader = cmd.ExecuteReader()
                                 While reader.Read()
@@ -131,37 +129,9 @@ Public Module CatalogMenuProvider
                                                       "&tp=" & node.Id.ToString()
 
                                     categoriesMap(categoryId).Children.Add(node)
-                                    tipologieMap(node.Id) = node
                                 End While
                             End Using
                         End Using
-
-                        If tipologieMap.Count > 0 AndAlso Not String.IsNullOrWhiteSpace(gruppoTipologiaColumn) Then
-                            Dim gruppiSql As String =
-                                "SELECT id, " & gruppoTipologiaColumn & " AS TipologieId, Descrizione " &
-                                "FROM gruppi " &
-                                "WHERE COALESCE(Abilitato,0)=1 " &
-                                "ORDER BY COALESCE(Ordinamento,0) ASC, Descrizione ASC"
-
-                            Using cmd As New MySqlCommand(gruppiSql, conn)
-                                Using reader As MySqlDataReader = cmd.ExecuteReader()
-                                    While reader.Read()
-                                        Dim tipologiaId As Integer = SafeInt(reader, "TipologieId")
-                                        If Not tipologieMap.ContainsKey(tipologiaId) Then
-                                            Continue While
-                                        End If
-
-                                        Dim groupNode As New CatalogMenuNode()
-                                        groupNode.Id = SafeInt(reader, "id")
-                                        groupNode.ParentId = tipologiaId
-                                        groupNode.Descrizione = SafeString(reader, "Descrizione")
-                                        groupNode.DefaultUrl = tipologieMap(tipologiaId).DefaultUrl & "&gr=" & groupNode.Id.ToString()
-
-                                        tipologieMap(tipologiaId).Children.Add(groupNode)
-                                    End While
-                                End Using
-                            End Using
-                        End If
                     End If
                 End If
             End Using

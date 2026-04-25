@@ -85,9 +85,6 @@ Partial Public Class UI_HomeDepartmentsMenu
             subMenuContainer.Attributes("aria-hidden") = If(hasChildren, "true", "false")
             subMenuContainer.Attributes("data-ks-inline-state") = "closed"
             subMenuContainer.Attributes("data-ks-hidden") = "1"
-            subMenuContainer.Attributes("hidden") = "hidden"
-            subMenuContainer.Attributes("inert") = "inert"
-            subMenuContainer.Attributes("style") = "display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;max-height:0!important;overflow:hidden!important;"
         End If
     End Sub
 
