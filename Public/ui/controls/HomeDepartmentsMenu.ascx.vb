@@ -11,8 +11,7 @@ Partial Public Class UI_HomeDepartmentsMenu
     Inherits UserControl
 
     Private Shared ReadOnly BlockedCreativeTokens As String() = {"welcome", "franchis", "onsus", "themesflat", "themeforest", "demo", "placeholder", "sample", "template", "default-banner", "spacer", "blank", "noimage", "no-image", "pixel", "tracking", "sprite"}
-    Private Const MaxVisibleCategories As Integer = 6
-    Private Const MaxVisibleTipologies As Integer = 5
+    Private Const MaxVisibleTipologies As Integer = 2147483647
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         If Not IsPostBack Then
@@ -138,8 +137,7 @@ Partial Public Class UI_HomeDepartmentsMenu
                     Next
                 End If
 
-                sb.Append("<li class='sub-menu-item ks-home-submenu-grouped'>")
-                sb.Append("<div class='ks-home-submenu-card'>")
+                sb.Append("<div class='sub-menu-col ks-home-submenu-col'>")
                 sb.Append("<a href='")
                 sb.Append(HttpUtility.HtmlAttributeEncode(categoryUrl))
                 sb.Append("' class='menu-heading body-small ks-home-submenu-category link'>")
@@ -150,39 +148,21 @@ Partial Public Class UI_HomeDepartmentsMenu
                     sb.Append("<ul class='ks-home-submenu-tipology-list menu-list'>")
                     sb.Append(tipologyHtml.ToString())
                     sb.Append("</ul>")
-                    If category.Children IsNot Nothing AndAlso category.Children.Count > validTipologies Then
-                        sb.Append("<a href='")
-                        sb.Append(HttpUtility.HtmlAttributeEncode(categoryUrl))
-                        sb.Append("' class='ks-home-submenu-more link'>Vedi tutte</a>")
-                    End If
                 Else
                     sb.Append("<a href='")
                     sb.Append(HttpUtility.HtmlAttributeEncode(categoryUrl))
                     sb.Append("' class='ks-home-submenu-tipology-link link'>Vedi la categoria</a>")
                 End If
 
-                sb.Append("</div></li>")
+                sb.Append("</div>")
                 renderedCategories += 1
-
-                If renderedCategories >= MaxVisibleCategories Then
-                    Exit For
-                End If
             Next
-
-            If sector.Categories.Count > renderedCategories Then
-                sb.Append("<li class='sub-menu-item ks-home-submenu-grouped ks-home-submenu-view-all'>")
-                sb.Append("<a href='")
-                sb.Append(HttpUtility.HtmlAttributeEncode(sectorUrl))
-                sb.Append("' class='menu-heading body-small ks-home-submenu-category link'>Vedi tutto il reparto</a>")
-                sb.Append("<span>Altre categorie disponibili nel catalogo.</span>")
-                sb.Append("</li>")
-            End If
         End If
 
         If renderedCategories = 0 Then
-            sb.Append("<li class='sub-menu-item'><a href='")
+            sb.Append("<div class='sub-menu-col ks-home-submenu-col'><a href='")
             sb.Append(HttpUtility.HtmlAttributeEncode(sectorUrl))
-            sb.Append("' class='body-md-2 link'>Vedi il settore</a></li>")
+            sb.Append("' class='body-md-2 link'>Vedi il settore</a></div>")
         End If
 
         Return sb.ToString()

@@ -1222,26 +1222,23 @@ End Function
 	        Dim aziendaNome As String = If(Me.Session("AziendaNome") Is Nothing, "", Me.Session("AziendaNome").ToString())
 	        Dim aziendaDescrizione As String = If(Me.Session("AziendaDescrizione") Is Nothing, "", Me.Session("AziendaDescrizione").ToString())
 	        Dim aziendaLogo As String = If(Me.Session("AziendaLogo") Is Nothing, "", Me.Session("AziendaLogo").ToString())
+	        Dim aziendaLogoMobile As String = If(Me.Session("AziendaLogoMobile") Is Nothing, "", Me.Session("AziendaLogoMobile").ToString())
 	        Dim credits As String = If(Me.Session("Credits") Is Nothing, "", Me.Session("Credits").ToString())
+	        Dim desktopLogoUrl As String = ResolveExistingLogoAsset(aziendaLogo, ThemeManager.Asset("images/logo/logo.webp"))
+	        Dim mobileLogoUrl As String = ResolveExistingLogoAsset(aziendaLogoMobile, ThemeManager.Asset("images/logo/logo-mobile.webp"))
+	        If mobileLogoUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase) Then mobileLogoUrl = desktopLogoUrl
 
         If aziendaNome <> "" Then Me.Page.Title = aziendaNome
 	        Dim altLogo As String = (aziendaNome & " - " & aziendaDescrizione).Trim()
 
 	        If imgLogoCtrl IsNot Nothing Then
-	            If aziendaLogo <> "" Then
-	                imgLogoCtrl.ImageUrl = aziendaLogo
-	            Else
-	                imgLogoCtrl.ImageUrl = ThemeManager.Asset("images/logo/logo.webp")
-	            End If
+	            imgLogoCtrl.ImageUrl = desktopLogoUrl
 	            If altLogo <> "" Then imgLogoCtrl.AlternateText = altLogo
 	        End If
 
 	        If imgLogoMobileCtrl IsNot Nothing Then
-	            If aziendaLogo <> "" Then
-	                imgLogoMobileCtrl.ImageUrl = aziendaLogo
-	            Else
-	                imgLogoMobileCtrl.ImageUrl = ThemeManager.Asset("images/logo/logo-mobile.webp")
-	            End If
+	            imgLogoMobileCtrl.ImageUrl = mobileLogoUrl
+	            imgLogoMobileCtrl.Attributes("onerror") = "this.onerror=null;this.src='" & desktopLogoUrl & "';"
 	            If altLogo <> "" Then imgLogoMobileCtrl.AlternateText = altLogo
 	        End If
 
@@ -1261,6 +1258,58 @@ End Function
         If headC IsNot Nothing Then headC.Controls.Add(objcss)
         If headC IsNot Nothing Then headC.Controls.Add(obj3)
     End Sub
+
+    Private Function ResolveExistingLogoAsset(ByVal candidate As String, ByVal fallback As String) As String
+        Dim normalized As String = NormalizeLogoAssetUrl(candidate)
+        If Not String.IsNullOrWhiteSpace(normalized) AndAlso LogoAssetExists(normalized) Then Return normalized
+
+        normalized = NormalizeLogoAssetUrl(fallback)
+        If Not String.IsNullOrWhiteSpace(normalized) AndAlso LogoAssetExists(normalized) Then Return normalized
+
+        Return InlineLogoPlaceholder()
+    End Function
+
+    Private Function NormalizeLogoAssetUrl(ByVal value As String) As String
+        Dim url As String = If(value, String.Empty).Trim()
+        If url = "" Then Return String.Empty
+        url = url.Replace("\", "/").Replace("images../", "images/")
+        If url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse
+           url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse
+           url.StartsWith("//", StringComparison.OrdinalIgnoreCase) OrElse
+           url.StartsWith("data:", StringComparison.OrdinalIgnoreCase) Then
+            Return url
+        End If
+        If url.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then
+            Return ResolveUrl(url)
+        End If
+        If Not url.StartsWith("/", StringComparison.Ordinal) Then
+            url = "/" & url.TrimStart("/"c)
+        End If
+        Return url
+    End Function
+
+    Private Function LogoAssetExists(ByVal url As String) As Boolean
+        If String.IsNullOrWhiteSpace(url) Then Return False
+        If url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse
+           url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse
+           url.StartsWith("//", StringComparison.OrdinalIgnoreCase) OrElse
+           url.StartsWith("data:", StringComparison.OrdinalIgnoreCase) Then
+            Return True
+        End If
+        Try
+            Dim path As String = url
+            If path.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then path = ResolveUrl(path)
+            If Not path.StartsWith("/", StringComparison.Ordinal) Then path = "/" & path.TrimStart("/"c)
+            Dim physical As String = Server.MapPath("~" & path)
+            Return Not String.IsNullOrWhiteSpace(physical) AndAlso IO.File.Exists(physical)
+        Catch
+            Return False
+        End Try
+    End Function
+
+    Private Function InlineLogoPlaceholder() As String
+        Return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='80' viewBox='0 0 240 80'%3E%3Crect width='240' height='80' rx='10' fill='%23ffffff'/%3E%3Ctext x='20' y='48' font-family='Arial,sans-serif' font-size='30' font-weight='700' fill='%23111827'%3EKeepStore%3C/text%3E%3C/svg%3E"
+    End Function
 
     Public Sub SettoreDefault()
         If IsNothing(Me.Session("st")) Then

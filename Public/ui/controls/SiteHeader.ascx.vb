@@ -367,7 +367,7 @@ Partial Class SiteHeader
             Return normalizedFallback
         End If
 
-        Return ResolveUrl(DefaultLogoVirtual)
+        Return InlineLogoPlaceholder()
     End Function
 
     Private Function NormalizeLogoUrl(ByVal url As String) As String
@@ -457,6 +457,10 @@ Partial Class SiteHeader
         Catch
             Return False
         End Try
+    End Function
+
+    Private Function InlineLogoPlaceholder() As String
+        Return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='80' viewBox='0 0 240 80'%3E%3Crect width='240' height='80' rx='10' fill='%23ffffff'/%3E%3Ctext x='20' y='48' font-family='Arial,sans-serif' font-size='30' font-weight='700' fill='%23111827'%3EKeepStore%3C/text%3E%3C/svg%3E"
     End Function
 
     Private Sub RegisterHeadIconsScript()
