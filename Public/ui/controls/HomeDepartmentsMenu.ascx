@@ -14,6 +14,10 @@
 .ks-home-departments .ks-home-submenu-grid{flex:1 1 auto;min-width:0;}
 .ks-home-departments .ks-home-sector-promo[data-ks-hidden="1"]{display:none!important;}
 @media (min-width:1200px){
+  .ks-home-departments .main-nav{max-height:520px!important;overflow:visible!important;}
+  .ks-home-departments .menu-category-list{max-height:468px!important;overflow-y:auto!important;overflow-x:hidden!important;}
+  .ks-home-departments .menu-category-list::-webkit-scrollbar,.ks-home-departments .ks-home-submenu-container::-webkit-scrollbar{width:6px!important;}
+  .ks-home-departments .menu-category-list::-webkit-scrollbar-thumb,.ks-home-departments .ks-home-submenu-container::-webkit-scrollbar-thumb{background:#b8c0cc!important;border-radius:999px!important;}
   .ks-home-departments .ks-home-submenu-container{position:absolute!important;top:0!important;left:100%!important;min-width:760px!important;max-width:min(980px,calc(100vw - 620px))!important;width:min(900px,calc(100vw - 620px))!important;max-height:430px!important;overflow:auto!important;background:#fff!important;white-space:normal!important;box-shadow:0 18px 45px rgba(17,24,39,.10)!important;border:1px solid #eef1f5!important;border-radius:0 10px 10px 10px!important;}
   .ks-home-departments .ks-home-submenu-grid{display:grid!important;grid-template-columns:repeat(4,minmax(145px,1fr))!important;gap:18px 24px!important;padding:24px!important;align-items:start!important;align-content:start!important;min-width:0!important;}
   .ks-home-departments .ks-home-submenu-col{display:block!important;min-width:0!important;width:100%!important;}

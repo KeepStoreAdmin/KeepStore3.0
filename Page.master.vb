@@ -1272,7 +1272,8 @@ End Function
     Private Function NormalizeLogoAssetUrl(ByVal value As String) As String
         Dim url As String = If(value, String.Empty).Trim()
         If url = "" Then Return String.Empty
-        url = url.Replace("\", "/").Replace("images../", "images/")
+        url = url.Replace("\", "/").Replace("images../", "images/").Replace("image../", "images/").Replace("images.../", "images/").Replace("image.../", "images/")
+        url = url.Replace("/Public/assets/image/", "/Public/assets/images/").Replace("/public/assets/image/", "/public/assets/images/")
         If url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse
            url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse
            url.StartsWith("//", StringComparison.OrdinalIgnoreCase) OrElse

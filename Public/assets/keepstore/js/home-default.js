@@ -149,7 +149,31 @@
       if (submenu) {
         submenu.setAttribute('aria-hidden', open ? 'false' : 'true');
         submenu.setAttribute('data-ks-inline-state', open ? 'open' : 'closed');
+        if (open && desktopMenu()) positionDesktopSubmenu(item, submenu);
+        if (!open) clearDesktopSubmenuPosition(submenu);
       }
+    }
+    function clearDesktopSubmenuPosition(submenu) {
+      if (!submenu) return;
+      submenu.style.position = '';
+      submenu.style.left = '';
+      submenu.style.top = '';
+      submenu.style.width = '';
+      submenu.style.maxHeight = '';
+    }
+    function positionDesktopSubmenu(item, submenu) {
+      var nav = root.querySelector('.main-nav') || root;
+      var rect = nav.getBoundingClientRect();
+      var gap = 0;
+      var left = Math.round(rect.right + gap);
+      var top = Math.max(12, Math.round(rect.top));
+      var width = Math.min(920, Math.max(680, window.innerWidth - left - 24));
+      var maxHeight = Math.min(520, Math.max(320, window.innerHeight - top - 24));
+      submenu.style.position = 'fixed';
+      submenu.style.left = left + 'px';
+      submenu.style.top = top + 'px';
+      submenu.style.width = width + 'px';
+      submenu.style.maxHeight = maxHeight + 'px';
     }
     function closeSiblings(item) {
       var list = item && item.parentNode;

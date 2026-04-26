@@ -377,6 +377,12 @@ Partial Class SiteHeader
         End If
 
         u = u.Replace("\", "/")
+        u = u.Replace("images../", "images/")
+        u = u.Replace("image../", "images/")
+        u = u.Replace("images.../", "images/")
+        u = u.Replace("image.../", "images/")
+        u = u.Replace("/Public/assets/image/", "/Public/assets/images/")
+        u = u.Replace("/public/assets/image/", "/public/assets/images/")
 
         If u.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse
            u.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse
