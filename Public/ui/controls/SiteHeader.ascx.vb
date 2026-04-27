@@ -404,7 +404,7 @@ Partial Class SiteHeader
             lower = u.ToLowerInvariant()
         End If
         If lower.Contains("/public/images/") Then
-            u = ReplaceInsensitive(u, "/Public/images/", "/Public/assets/images/logo/")
+            u = ReplaceInsensitive(u, "/Public/images/", "/public/images/")
             lower = u.ToLowerInvariant()
         End If
         If lower.StartsWith("images/logo/", StringComparison.OrdinalIgnoreCase) OrElse

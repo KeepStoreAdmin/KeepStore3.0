@@ -136,13 +136,13 @@
                         <nav class="main-nav-menu">
                             <ul class="nav-list">
                                 <li class="nav-item active pst-unset"><a href="Default.aspx" class="item-link link body-md-2"><span data-ks-i18n="nav.home">Home</span></a></li>
-                                <li class="nav-item ks-header-catalog-item">
-                                    <a href="articoli.aspx" class="item-link body-md-2">
+                                <li class="nav-item pst-unset ks-header-catalog-item">
+                                    <a href="articoli.aspx" class="item-link link body-md-2 fw-semibold">
                                         <span data-ks-i18n="nav.catalog">Catalogo</span>
                                         <i class="icon icon-arrow-down"></i>
                                     </a>
                                     <div class="sub-menu-container mega-menu text-nowrap ks-header-catalog-mega" aria-label="Catalogo completo">
-                                        <div id="ksDesktopCategoryMenu" class="wrapper-sub-menu ks-header-catalog-wrapper">
+                                        <div id="ksDesktopCategoryMenu" class="wrapper-sub-menu ks-header-catalog-wrapper ks-header-catalog-grid">
                                             <asp:Literal ID="litDesktopCatalogMegaMenu" runat="server" />
                                         </div>
                                     </div>

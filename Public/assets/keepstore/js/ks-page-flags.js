@@ -499,8 +499,11 @@
         item.classList.toggle('is-open', open);
         trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
       }
+      item.addEventListener('mouseenter', function () {
+        desktopItems.forEach(function (other) { if (other !== item) other.classList.remove('is-open'); });
+        setOpen(true);
+      });
       trigger.addEventListener('click', function (e) {
-        if (item.classList.contains('is-open')) return;
         e.preventDefault();
         e.stopPropagation();
         desktopItems.forEach(function (other) { if (other !== item) other.classList.remove('is-open'); });

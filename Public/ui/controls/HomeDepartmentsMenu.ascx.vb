@@ -125,7 +125,7 @@ Partial Public Class UI_HomeDepartmentsMenu
                         tipologyHtml.Append("<li class='ks-home-submenu-tipology'>")
                         tipologyHtml.Append("<a href='")
                         tipologyHtml.Append(HttpUtility.HtmlAttributeEncode(SafeUrl(tipologia.DefaultUrl, categoryUrl)))
-                        tipologyHtml.Append("' class='ks-home-submenu-tipology-link link'>")
+                        tipologyHtml.Append("' class='ks-home-submenu-tipology-link body-md-2 link'>")
                         tipologyHtml.Append(HttpUtility.HtmlEncode(tipologyLabel))
                         tipologyHtml.Append("</a>")
                         tipologyHtml.Append("</li>")
@@ -137,7 +137,7 @@ Partial Public Class UI_HomeDepartmentsMenu
                     Next
                 End If
 
-                sb.Append("<div class='sub-menu-col ks-home-submenu-col'>")
+                sb.Append("<div class='sub-menu-col mega-menu-item ks-home-submenu-col'>")
                 sb.Append("<a href='")
                 sb.Append(HttpUtility.HtmlAttributeEncode(categoryUrl))
                 sb.Append("' class='menu-heading body-small ks-home-submenu-category link'>")
@@ -151,7 +151,7 @@ Partial Public Class UI_HomeDepartmentsMenu
                 Else
                     sb.Append("<a href='")
                     sb.Append(HttpUtility.HtmlAttributeEncode(categoryUrl))
-                    sb.Append("' class='ks-home-submenu-tipology-link link'>Vedi la categoria</a>")
+                    sb.Append("' class='ks-home-submenu-tipology-link body-md-2 link'>Vedi la categoria</a>")
                 End If
 
                 sb.Append("</div>")
@@ -160,7 +160,7 @@ Partial Public Class UI_HomeDepartmentsMenu
         End If
 
         If renderedCategories = 0 Then
-            sb.Append("<div class='sub-menu-col ks-home-submenu-col'><a href='")
+            sb.Append("<div class='sub-menu-col mega-menu-item ks-home-submenu-col'><a href='")
             sb.Append(HttpUtility.HtmlAttributeEncode(sectorUrl))
             sb.Append("' class='body-md-2 link'>Vedi il settore</a></div>")
         End If

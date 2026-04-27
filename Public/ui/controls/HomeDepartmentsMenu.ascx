@@ -18,8 +18,14 @@
   .ks-home-departments .menu-category-list{max-height:468px!important;overflow-y:auto!important;overflow-x:hidden!important;}
   .ks-home-departments .menu-category-list::-webkit-scrollbar,.ks-home-departments .ks-home-submenu-container::-webkit-scrollbar{width:6px!important;}
   .ks-home-departments .menu-category-list::-webkit-scrollbar-thumb,.ks-home-departments .ks-home-submenu-container::-webkit-scrollbar-thumb{background:#b8c0cc!important;border-radius:999px!important;}
-  .ks-home-departments .ks-home-submenu-container{position:absolute!important;top:0!important;left:100%!important;min-width:760px!important;max-width:min(980px,calc(100vw - 620px))!important;width:min(900px,calc(100vw - 620px))!important;max-height:430px!important;overflow:auto!important;background:#fff!important;white-space:normal!important;box-shadow:0 18px 45px rgba(17,24,39,.10)!important;border:1px solid #eef1f5!important;border-radius:0 10px 10px 10px!important;}
-  .ks-home-departments .ks-home-submenu-grid{display:grid!important;grid-template-columns:repeat(4,minmax(145px,1fr))!important;gap:18px 24px!important;padding:24px!important;align-items:start!important;align-content:start!important;min-width:0!important;}
+  .ks-home-departments .ks-menu-toggle{display:none!important;}
+  .ks-home-departments .ks-home-menu-row{min-height:56px!important;display:flex!important;align-items:center!important;}
+  .ks-home-departments .item-link{flex:1 1 auto!important;min-width:0!important;}
+  .ks-home-departments .ks-home-menu-link{display:flex!important;align-items:center!important;gap:12px!important;width:100%!important;min-width:0!important;}
+  .ks-home-departments .ks-menu-label{flex:1 1 auto!important;min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;}
+  .ks-home-departments .ks-menu-arrow{margin-left:auto!important;display:inline-flex!important;align-items:center!important;color:#303846!important;}
+  .ks-home-departments .ks-home-submenu-container{position:absolute!important;top:0!important;left:100%!important;min-width:820px!important;max-width:min(1040px,calc(100vw - 520px))!important;width:min(960px,calc(100vw - 520px))!important;max-height:min(560px,calc(100vh - 140px))!important;overflow:auto!important;background:#fff!important;white-space:normal!important;box-shadow:0 22px 54px rgba(15,23,42,.14)!important;border:1px solid #edf1f6!important;border-radius:0 12px 12px 12px!important;}
+  .ks-home-departments .ks-home-submenu-grid{display:grid!important;grid-template-columns:repeat(4,minmax(175px,1fr))!important;gap:28px 30px!important;padding:32px!important;align-items:start!important;align-content:start!important;min-width:0!important;}
   .ks-home-departments .ks-home-submenu-col{display:block!important;min-width:0!important;width:100%!important;}
   .ks-home-departments .ks-home-submenu-tipology-list{display:grid!important;gap:6px!important;margin-top:8px!important;padding-left:0!important;}
   .ks-home-departments .ks-home-submenu-tipology,.ks-home-departments .ks-home-submenu-tipology-link{display:block!important;min-width:0!important;white-space:normal!important;}
@@ -41,13 +47,13 @@
   .ks-home-departments .menu-item[data-ks-submenu-mode="list"][data-ks-open="1"] > [data-ks-submenu="1"]{display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;max-height:none!important;overflow:visible!important;}
 }
 </style>
-<div class="tf-nav-menu ks-home-departments" data-ks-home-menu="1">
-    <div class="main-nav">
-        <h6 class="fw-semibold title">
+<div class="nav-category-wrap tf-nav-menu ks-home-departments" data-ks-home-menu="1">
+    <div class="main-nav category-menu active-item">
+        <h6 class="fw-semibold title nav-title btn-active">
             <i class="icon-menu-dots"></i>
             <span data-ks-i18n="nav.departments">Tutti i settori</span>
         </h6>
-        <ul class="menu-category-list" role="menu">
+        <ul class="menu-category-list megamenu" role="menu">
             <asp:Repeater ID="rptSettoriHome" runat="server" OnItemDataBound="rptSettoriHome_ItemDataBound">
                 <ItemTemplate>
                     <li id="liMenuItem" runat="server" class="menu-item" role="none" data-ks-menu-item="1">
