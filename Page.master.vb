@@ -1224,8 +1224,8 @@ End Function
 	        Dim aziendaLogo As String = If(Me.Session("AziendaLogo") Is Nothing, "", Me.Session("AziendaLogo").ToString())
 	        Dim aziendaLogoMobile As String = If(Me.Session("AziendaLogoMobile") Is Nothing, "", Me.Session("AziendaLogoMobile").ToString())
 	        Dim credits As String = If(Me.Session("Credits") Is Nothing, "", Me.Session("Credits").ToString())
-	        Dim desktopLogoUrl As String = ResolveExistingLogoAsset(aziendaLogo, ThemeManager.Asset("images/logo/logo.webp"))
-	        Dim mobileLogoUrl As String = ResolveExistingLogoAsset(aziendaLogoMobile, ThemeManager.Asset("images/logo/logo-mobile.webp"))
+	        Dim desktopLogoUrl As String = ResolveExistingLogoAsset(aziendaLogo, ThemeManager.Asset("images/logo/logo.svg"))
+	        Dim mobileLogoUrl As String = ResolveExistingLogoAsset(aziendaLogoMobile, desktopLogoUrl)
 	        If mobileLogoUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase) Then mobileLogoUrl = desktopLogoUrl
 
         If aziendaNome <> "" Then Me.Page.Title = aziendaNome

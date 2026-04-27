@@ -204,25 +204,12 @@ Public Module ThemeManager
         If raw.Contains("..") Then raw = raw.Replace("..", String.Empty)
 
         ' path già root-relative
-        If raw.StartsWith("/", StringComparison.Ordinal) Then
-            Try
-                Return VirtualPathUtility.ToAbsolute(raw)
-            Catch
-                Return raw
-            End Try
-        End If
-
-        ' path relativo (es. "Images/Articoli/x.jpg")
-        If raw.IndexOf("/", StringComparison.Ordinal) >= 0 Then
-            Dim rp As String = "/" & raw.TrimStart("/"c)
-            Try
-                Return VirtualPathUtility.ToAbsolute(rp)
-            Catch
-                Return rp
-            End Try
+        If raw.StartsWith("/", StringComparison.Ordinal) OrElse raw.IndexOf("/", StringComparison.Ordinal) >= 0 Then
+            raw = System.IO.Path.GetFileName(raw)
         End If
 
 		Dim fileName As String = EscapePathSegment(raw)
+        If String.IsNullOrWhiteSpace(fileName) Then Return PlaceholderProductImageUrl()
 		Dim baseUrl As String = ResolveProductImageBaseUrl(fileName)
 
 		Dim url As String = baseUrl & fileName
@@ -257,7 +244,7 @@ Public Module ThemeManager
             configured = Nothing
         End Try
 
-        Dim fallback As String = If(String.IsNullOrWhiteSpace(configured), "/Images/articoli/", configured)
+        Dim fallback As String = "/Public/assets/images/articoli/"
 
         Dim NormalizeBase As Func(Of String, String) = Function(b As String) As String
                                                            If String.IsNullOrWhiteSpace(b) Then Return ""
@@ -270,11 +257,14 @@ Public Module ThemeManager
                                                        End Function
 
         configured = NormalizeBase(configured)
+        If String.IsNullOrWhiteSpace(configured) OrElse Not configured.Equals("/Public/assets/images/articoli/", StringComparison.OrdinalIgnoreCase) Then
+            configured = "/Public/assets/images/articoli/"
+        End If
         fallback = NormalizeBase(fallback)
 
         Dim ctx As HttpContext = HttpContext.Current
         If ctx Is Nothing OrElse ctx.Server Is Nothing Then
-            Return If(String.IsNullOrWhiteSpace(fallback), "/Images/articoli/", fallback)
+            Return fallback
         End If
 
         Dim cacheKey As String = "ks_product_img_base"
@@ -284,9 +274,7 @@ Public Module ThemeManager
         End If
 
         Dim candidates As New List(Of String)()
-        If Not String.IsNullOrWhiteSpace(configured) Then candidates.Add(configured)
-
-        candidates.Add("/Public/assets/images/articoli/")
+        candidates.Add(configured)
 
         For Each b As String In candidates
             Dim baseUrl As String = NormalizeBase(b)
@@ -309,7 +297,7 @@ Public Module ThemeManager
             End Try
         Next
 
-        Dim chosen As String = If(String.IsNullOrWhiteSpace(fallback), "/Public/assets/images/articoli/", fallback)
+        Dim chosen As String = "/Public/assets/images/articoli/"
         ctx.Items(cacheKey) = chosen
         Return chosen
     End Function

@@ -260,23 +260,13 @@ Partial Public Class UI_HomeDepartmentsMenu
             Return raw
         End If
 
-        If raw.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then
-            Return ResolveUrl(raw)
-        End If
-
-        If raw.StartsWith("/", StringComparison.OrdinalIgnoreCase) Then
-            Return raw
-        End If
-
         If Regex.IsMatch(raw, "(?i)(spacer|pixel|blank|placeholder|default|demo|sample|tracking|sprite)") Then
             Return String.Empty
         End If
 
-        If raw.IndexOf("/"c) >= 0 Then
-            Return "/" & raw.TrimStart("/"c)
-        End If
-
-        Return "/Public/assets/images/settori/" & raw.TrimStart("/"c)
+        Dim fileName As String = IO.Path.GetFileName(raw)
+        If String.IsNullOrWhiteSpace(fileName) Then Return String.Empty
+        Return "/Public/assets/images/settori/" & fileName
     End Function
 
     Private Function ContainsBlockedCreativeToken(ByVal raw As String) As Boolean

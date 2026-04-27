@@ -206,10 +206,14 @@ Partial Class MiniCart
         s = If(s, "").Trim()
 
         If Not String.IsNullOrEmpty(s) Then
-            Return ResolveUrl("~/public/foto/_" & s)
+            s = s.Replace("\", "/")
+            Dim fileName As String = IO.Path.GetFileName(s)
+            If Not String.IsNullOrWhiteSpace(fileName) Then
+                Return ResolveUrl("~/Public/assets/images/articoli/" & fileName)
+            End If
         End If
 
-        Return ResolveUrl("~/Public/Foto/img_non_disponibile.png")
+        Return ThemeManager.PlaceholderProductImageUrl()
     End Function
 
     Public Function GetLineTotalText(ByVal importoObj As Object, ByVal importoIvatoObj As Object) As String

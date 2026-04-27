@@ -994,7 +994,11 @@ Partial Class articolo
         End If
 
         If s.StartsWith("/", StringComparison.Ordinal) Then
-            Return s
+            Dim fileOnly As String = IO.Path.GetFileName(s)
+            If Not String.IsNullOrWhiteSpace(fileOnly) Then
+                Return "/Public/assets/images/articoli/" & fileOnly
+            End If
+            Return ""
         End If
 
         If s.IndexOf("/"c) >= 0 Then

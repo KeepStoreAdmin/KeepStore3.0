@@ -16,8 +16,8 @@ Partial Class SiteHeader
     Inherits System.Web.UI.UserControl
 
     Private Const HeaderCompanyId As Integer = 1
-    Private Const DefaultLogoVirtual As String = "~/Public/assets/images/logo/logo.webp"
-    Private Const DefaultMobileLogoVirtual As String = "~/Public/assets/images/logo/logo-mobile.webp"
+    Private Const DefaultLogoVirtual As String = "~/Public/assets/images/logo/logo.svg"
+    Private Const DefaultMobileLogoVirtual As String = "~/Public/assets/images/logo/logo.svg"
     Private Const DefaultFaviconVirtual As String = "~/Public/assets/images/favicons/webaffare.ico"
     Private Const DefaultAppleTouchIconVirtual As String = "~/Public/assets/images/favicons/apple-touch-icon.png"
     Private Const DefaultFavicon32Virtual As String = "~/Public/assets/images/favicons/favicon-32x32.png"

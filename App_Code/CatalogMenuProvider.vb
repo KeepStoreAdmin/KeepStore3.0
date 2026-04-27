@@ -57,7 +57,7 @@ Public Module CatalogMenuProvider
                 Dim tipologiaCategoryColumn As String = ResolveColumnName(conn, "tipologie", "CategorieId", "Id_categoria")
 
                 Dim sectorsMap As New Dictionary(Of Integer, CatalogMenuSector)()
-                Using cmd As New MySqlCommand("SELECT id, Descrizione, Img FROM settori WHERE COALESCE(Abilitato,0)=1 ORDER BY COALESCE(Predefinito,0) DESC, COALESCE(Ordinamento,0) ASC, Descrizione ASC", conn)
+                Using cmd As New MySqlCommand("SELECT id, Descrizione, Img FROM settori WHERE COALESCE(Abilitato,0)=1 ORDER BY COALESCE(Predefinito,0) DESC, COALESCE(Ordinamento,999999) ASC, Descrizione ASC", conn)
                     Using reader As MySqlDataReader = cmd.ExecuteReader()
                         While reader.Read()
                             Dim sector As New CatalogMenuSector()
@@ -151,8 +151,7 @@ Public Module CatalogMenuProvider
         fileName = fileName.Replace("\", "/")
 
         If fileName.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse
-           fileName.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse
-           fileName.StartsWith("/", StringComparison.OrdinalIgnoreCase) Then
+           fileName.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
             Return fileName
         End If
 

@@ -1769,7 +1769,11 @@ Partial Public Class _Default
         If fileName.StartsWith("_", StringComparison.OrdinalIgnoreCase) Then
             Return "/Public/assets/images/articoli/" & fileName
         End If
-        Return "/Public/assets/images/articoli/_" & fileName
+        Dim thumb As String = "/Public/assets/images/articoli/_" & fileName
+        If VirtualPathExists(thumb) Then
+            Return thumb
+        End If
+        Return "/Public/assets/images/articoli/" & fileName
     End Function
 
     Protected Function ProductImageFull(ByVal value As Object) As String

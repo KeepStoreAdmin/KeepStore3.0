@@ -100,8 +100,8 @@
     
     <asp:GridView ID="GridView1" runat="server" AutoGenerateColumns="False" DataKeyNames="id" Width="100%" DataSourceID="sdsArticoli" AllowPaging="True" AllowSorting="True" Font-Size="8pt" GridLines="None" CellPadding="3">
         <Columns>
-            <asp:ImageField DataAlternateTextField="Descrizione1" DataImageUrlField="img1" DataImageUrlFormatString="~/Public/foto/test.jpg"
-                HeaderText="Ordina &gt;&gt;" NullImageUrl="~/Public/foto/nofoto.gif">
+            <asp:ImageField DataAlternateTextField="Descrizione1" DataImageUrlField="img1" DataImageUrlFormatString="~/Public/assets/images/articoli/{0}"
+                HeaderText="Ordina &gt;&gt;" NullImageUrl="~/Public/assets/keepstore/images/img/placeholder.svg">
                 <HeaderStyle ForeColor="#E12825" />
                 <ItemStyle Height="60px" HorizontalAlign="Center" VerticalAlign="Middle"
                     Width="80px" />

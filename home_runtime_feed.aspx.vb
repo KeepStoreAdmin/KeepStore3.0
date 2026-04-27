@@ -63,7 +63,7 @@ Partial Public Class home_runtime_feed
     End Sub
 
     Private Function BuildMenuPayload() As List(Of Dictionary(Of String, Object))
-        Dim sectors As DataTable = ExecuteQuery("SELECT id, Descrizione, Img, Ordinamento FROM settori WHERE COALESCE(Abilitato,1)=1 ORDER BY Ordinamento ASC, Descrizione ASC")
+        Dim sectors As DataTable = ExecuteQuery("SELECT id, Descrizione, Img, Ordinamento, Predefinito FROM settori WHERE COALESCE(Abilitato,0)=1 ORDER BY COALESCE(Predefinito,0) DESC, COALESCE(Ordinamento,999999) ASC, Descrizione ASC")
         Dim categories As DataTable = ExecuteQuery("SELECT id, SettoriId, Descrizione, Ordinamento FROM categorie WHERE COALESCE(Abilitato,1)=1 ORDER BY SettoriId ASC, Ordinamento ASC, Descrizione ASC")
         Dim tipologies As DataTable = ExecuteQuery("SELECT id, CategorieId, Descrizione, Ordinamento FROM tipologie WHERE COALESCE(Abilitato,1)=1 ORDER BY CategorieId ASC, Ordinamento ASC, Descrizione ASC")
 
@@ -126,9 +126,9 @@ Partial Public Class home_runtime_feed
         Dim result As New List(Of Dictionary(Of String, Object))()
         Dim table As DataTable = Nothing
         Dim queries As String() = {
-            "SELECT ID, Posizione, Ordinamento, Descrizione, Immagine, Link, Target FROM bannerv2 WHERE COALESCE(Immagine,'')<>'' ORDER BY Posizione ASC, Ordinamento ASC LIMIT 30",
-            "SELECT ID, Posizione, Ordinamento, Descrizione, Immagine, Link, Target FROM banner WHERE COALESCE(Immagine,'')<>'' ORDER BY Posizione ASC, Ordinamento ASC LIMIT 30",
-            "SELECT id AS ID, 0 AS Posizione, id AS Ordinamento, caption AS Descrizione, image AS Immagine, link AS Link, '' AS Target FROM slideshow_new WHERE COALESCE(image,'')<>'' ORDER BY id DESC LIMIT 20"
+            "SELECT ID, Posizione, Ordinamento, Descrizione, Immagine, Link, Target, 'banner' AS SourceKind FROM bannerv2 WHERE COALESCE(Immagine,'')<>'' ORDER BY Posizione ASC, Ordinamento ASC LIMIT 30",
+            "SELECT ID, Posizione, Ordinamento, Descrizione, Immagine, Link, Target, 'banner' AS SourceKind FROM banner WHERE COALESCE(Immagine,'')<>'' ORDER BY Posizione ASC, Ordinamento ASC LIMIT 30",
+            "SELECT id AS ID, 0 AS Posizione, id AS Ordinamento, caption AS Descrizione, image AS Immagine, link AS Link, '' AS Target, 'slideshow' AS SourceKind FROM slideshow_new WHERE COALESCE(image,'')<>'' ORDER BY id DESC LIMIT 20"
         }
 
         For Each sql As String In queries
@@ -143,7 +143,9 @@ Partial Public Class home_runtime_feed
         If table Is Nothing Then Return result
 
         For Each row As DataRow In table.Rows
-            Dim image As String = NormalizeBannerImage(row("Immagine"))
+            Dim image As String = If(String.Equals(SafeString(row("SourceKind")), "slideshow", StringComparison.OrdinalIgnoreCase),
+                                     NormalizeSlideshowImage(row("Immagine")),
+                                     NormalizeBannerImage(row("Immagine")))
             If String.IsNullOrWhiteSpace(image) Then Continue For
             result.Add(New Dictionary(Of String, Object) From {
                 {"id", ReadInt(row("ID"), 0)},
@@ -268,7 +270,7 @@ Partial Public Class home_runtime_feed
         Dim names As String() = {"Img1", "Img2", "Img3", "Img4", "Immagine1", "Immagine2", "Immagine3", "Immagine4", "Immagine5", "Immagine6"}
         For Each name As String In names
             If Not row.Table.Columns.Contains(name) Then Continue For
-            Dim url As String = NormalizeBannerImage(row(name))
+            Dim url As String = NormalizeArticleImage(row(name))
             If String.IsNullOrWhiteSpace(url) Then Continue For
             If seen.Add(url) Then output.Add(url)
             If output.Count >= 5 Then Exit For
@@ -277,7 +279,7 @@ Partial Public Class home_runtime_feed
     End Function
 
     Private Function BuildPreviewVariant(ByVal raw As String) As String
-        Dim url As String = NormalizeBannerImage(raw)
+        Dim url As String = NormalizeArticleImage(raw)
         If String.IsNullOrWhiteSpace(url) Then Return String.Empty
         Dim q As Integer = url.IndexOf("?"c)
         Dim baseUrl As String = If(q >= 0, url.Substring(0, q), url)
@@ -348,9 +350,9 @@ Partial Public Class home_runtime_feed
         Dim value As String = SafeString(raw).Replace("\", "/")
         If String.IsNullOrWhiteSpace(value) Then Return String.Empty
         If value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse value.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse value.StartsWith("//", StringComparison.OrdinalIgnoreCase) Then Return value
-        If value.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then Return ResolveUrl(value)
-        If value.StartsWith("/", StringComparison.OrdinalIgnoreCase) Then Return value
-        Return "/Public/assets/images/settori/" & value.TrimStart("/"c)
+        Dim fileName As String = IO.Path.GetFileName(value)
+        If String.IsNullOrWhiteSpace(fileName) Then Return String.Empty
+        Return "/Public/assets/images/settori/" & fileName
     End Function
 
     Private Function NormalizeBannerImage(ByVal raw As Object) As String
@@ -358,9 +360,29 @@ Partial Public Class home_runtime_feed
         If String.IsNullOrWhiteSpace(value) Then Return String.Empty
         If value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse value.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse value.StartsWith("//", StringComparison.OrdinalIgnoreCase) Then Return value
         If value.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then Return ResolveUrl(value)
-        If value.StartsWith("/", StringComparison.OrdinalIgnoreCase) Then Return value
-        If value.IndexOf("/"c) >= 0 Then Return "/" & value.TrimStart("/"c)
-        Return ResolveUrl("~/Public/images/articoli/" & value)
+        Dim fileName As String = IO.Path.GetFileName(value)
+        If String.IsNullOrWhiteSpace(fileName) Then Return String.Empty
+        Return ResolveUrl("~/Public/assets/images/banner/" & fileName)
+    End Function
+
+    Private Function NormalizeSlideshowImage(ByVal raw As Object) As String
+        Dim value As String = SafeString(raw).Replace("\", "/")
+        If String.IsNullOrWhiteSpace(value) Then Return String.Empty
+        If value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse value.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse value.StartsWith("//", StringComparison.OrdinalIgnoreCase) Then Return value
+        If value.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then Return ResolveUrl(value)
+        Dim fileName As String = IO.Path.GetFileName(value)
+        If String.IsNullOrWhiteSpace(fileName) Then Return String.Empty
+        Return ResolveUrl("~/Public/assets/images/slideshows/" & fileName)
+    End Function
+
+    Private Function NormalizeArticleImage(ByVal raw As Object) As String
+        Dim value As String = SafeString(raw).Replace("\", "/")
+        If String.IsNullOrWhiteSpace(value) Then Return String.Empty
+        If value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse value.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse value.StartsWith("//", StringComparison.OrdinalIgnoreCase) Then Return value
+        If value.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then value = ResolveUrl(value)
+        Dim fileName As String = IO.Path.GetFileName(value)
+        If String.IsNullOrWhiteSpace(fileName) Then Return String.Empty
+        Return ResolveUrl("~/Public/assets/images/articoli/" & fileName)
     End Function
 
     Private Function CleanText(ByVal raw As Object) As String

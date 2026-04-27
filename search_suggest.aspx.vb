@@ -96,6 +96,7 @@ Partial Public Class search_suggest
             Dim filters As SearchFilters = ReadFilters()
             Dim limit As Integer = Math.Max(1, Math.Min(MaxLimit, ReadInt(SafeRequestValue("limit"), DefaultLimit)))
             Dim recentIds As List(Of Integer) = ParseIds(SafeRequestValue("recent"))
+            If recentIds.Count = 0 Then recentIds = ParseIds(ReadCookieValue("ks_recent"))
 
             Dim result As Dictionary(Of String, Object)
             If String.IsNullOrWhiteSpace(query) OrElse query.Length < 2 Then
@@ -129,13 +130,14 @@ Partial Public Class search_suggest
         output("strong") = New Dictionary(Of String, Object) From {{"canRedirect", False}, {"redirectUrl", String.Empty}}
         output("intelligence") = New Dictionary(Of String, Object) From {{"summary", "Mostro gli ultimi articoli visitati o il fallback catalogo."}}
         output("total") = 0
+        output("quickLinks") = BuildQuickLinks(String.Empty, New List(Of SuggestItem)(), Nothing)
 
         If recentIds Is Nothing OrElse recentIds.Count = 0 Then Return output
 
         Dim parameters As New List(Of DbParameterSpec)()
         Dim sql As New StringBuilder()
         AppendSelect(sql, False)
-        sql.Append(" FROM vsuperarticoli v LEFT JOIN immagini i ON i.id = v.id WHERE COALESCE(v.NListino,1)=1 AND v.id IN (")
+        sql.Append(" FROM vsuperarticoli v LEFT JOIN immagini i ON i.id = v.id WHERE COALESCE(v.NListino,1)=1 AND COALESCE(v.Abilitato,1)=1 AND v.id IN (")
         sql.Append(String.Join(",", recentIds.Select(Function(n) n.ToString(CultureInfo.InvariantCulture))))
         sql.Append(")")
         AppendFilterClauses(sql, parameters, filters, "v")
@@ -151,6 +153,7 @@ Partial Public Class search_suggest
         output("rank_ids") = mapped.Select(Function(item) item.Id).ToList()
         output("facets") = BuildFacets(mapped)
         output("total") = mapped.Count
+        output("quickLinks") = BuildQuickLinks(String.Empty, mapped, Nothing)
         Return output
     End Function
 
@@ -190,7 +193,7 @@ Partial Public Class search_suggest
 
         Dim sql As New StringBuilder()
         AppendSelect(sql, True, BuildScoreExpression(scoringTokens, intent))
-        sql.Append(" FROM vsuperarticoli v LEFT JOIN immagini i ON i.id = v.id WHERE COALESCE(v.NListino,1)=1 ")
+        sql.Append(" FROM vsuperarticoli v LEFT JOIN immagini i ON i.id = v.id WHERE COALESCE(v.NListino,1)=1 AND COALESCE(v.Abilitato,1)=1 ")
         sql.Append(" AND (")
         sql.Append("LOWER(COALESCE(v.Codice,'')) = @qExact OR LOWER(COALESCE(v.Ean,'')) = @qExact OR LOWER(COALESCE(v.Descrizione1,'')) = @qExact OR ")
         sql.Append("LOWER(COALESCE(v.Codice,'')) LIKE @qPrefix OR LOWER(COALESCE(v.Ean,'')) LIKE @qPrefix OR LOWER(COALESCE(v.Descrizione1,'')) LIKE @qPrefix OR ")
@@ -252,7 +255,8 @@ Partial Public Class search_suggest
             {"expanded_tokens", scoringTokens},
             {"minimumScore", If(aiMode, AiScoreThreshold, 0)},
             {"total", mapped.Count},
-            {"catalogUrl", BuildCatalogUrl(query, filters)}
+            {"catalogUrl", BuildCatalogUrl(query, filters)},
+            {"quickLinks", BuildQuickLinks(query, mapped, intent)}
         }
     End Function
 
@@ -738,11 +742,11 @@ Partial Public Class search_suggest
         If String.IsNullOrWhiteSpace(fileName) OrElse fileName.StartsWith("_", StringComparison.OrdinalIgnoreCase) Then Return url
 
         Dim slash As Integer = url.LastIndexOf("/"c)
-        Dim dir As String = If(slash >= 0, url.Substring(0, slash), "/Public/images/articoli")
+        Dim dir As String = If(slash >= 0, url.Substring(0, slash), "/Public/assets/images/articoli")
         Dim candidate As String = dir.TrimEnd("/"c) & "/_" & fileName
         If VirtualFileExists(candidate) Then Return candidate
 
-        Dim defaultCandidate As String = "/Public/images/articoli/_" & fileName
+        Dim defaultCandidate As String = "/Public/assets/images/articoli/_" & fileName
         If Not String.Equals(defaultCandidate, candidate, StringComparison.OrdinalIgnoreCase) AndAlso VirtualFileExists(defaultCandidate) Then Return defaultCandidate
 
         Return url
@@ -765,9 +769,87 @@ Partial Public Class search_suggest
         If String.IsNullOrWhiteSpace(value) Then Return String.Empty
         If value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse value.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse value.StartsWith("//", StringComparison.OrdinalIgnoreCase) Then Return value
         If value.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then Return ResolveUrl(value)
-        If value.StartsWith("/", StringComparison.OrdinalIgnoreCase) Then Return value
-        If value.IndexOf("/"c) >= 0 Then Return "/" & value.TrimStart("/"c)
-        Return ResolveUrl("~/Public/images/articoli/" & value)
+        Dim fileName As String = Path.GetFileName(value)
+        If String.IsNullOrWhiteSpace(fileName) Then Return String.Empty
+        Return ResolveUrl("~/Public/assets/images/articoli/" & fileName)
+    End Function
+
+    Private Function BuildQuickLinks(ByVal query As String, ByVal items As List(Of SuggestItem), ByVal intent As QueryIntent) As List(Of Dictionary(Of String, Object))
+        Dim output As New List(Of Dictionary(Of String, Object))()
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+        If intent IsNot Nothing AndAlso intent.Tokens IsNot Nothing Then
+            For Each token As String In intent.Tokens.Take(4)
+                AddQuickLink(output, seen, token, "articoli.aspx?q=" & HttpUtility.UrlEncode(token))
+            Next
+        End If
+
+        If items IsNot Nothing Then
+            For Each item As SuggestItem In items
+                If item Is Nothing Then Continue For
+                If Not String.IsNullOrWhiteSpace(item.Brand) AndAlso Not String.IsNullOrWhiteSpace(item.Category) Then
+                    AddQuickLink(output, seen, item.Brand & " " & item.Category, "articoli.aspx?q=" & HttpUtility.UrlEncode(item.Brand & " " & item.Category))
+                End If
+                If Not String.IsNullOrWhiteSpace(item.Department) Then
+                    AddQuickLink(output, seen, item.Department, "articoli.aspx?q=" & HttpUtility.UrlEncode(item.Department))
+                End If
+                If Not String.IsNullOrWhiteSpace(item.Category) Then
+                    AddQuickLink(output, seen, item.Category, "articoli.aspx?q=" & HttpUtility.UrlEncode(item.Category))
+                End If
+                If output.Count >= 8 Then Exit For
+            Next
+        End If
+
+        If output.Count < 6 Then
+            For Each item As Dictionary(Of String, String) In LoadPopularQuickLinks(8 - output.Count)
+                AddQuickLink(output, seen, item("label"), item("url"))
+            Next
+        End If
+
+        Return output.Take(8).ToList()
+    End Function
+
+    Private Sub AddQuickLink(ByVal output As List(Of Dictionary(Of String, Object)), ByVal seen As HashSet(Of String), ByVal label As String, ByVal url As String)
+        Dim text As String = NormalizeQuery(label)
+        If String.IsNullOrWhiteSpace(text) OrElse text.Length < 2 Then Return
+        If seen.Contains(text) Then Return
+        seen.Add(text)
+        output.Add(New Dictionary(Of String, Object) From {
+            {"label", text},
+            {"url", If(String.IsNullOrWhiteSpace(url), "articoli.aspx?q=" & HttpUtility.UrlEncode(text), url)}
+        })
+    End Sub
+
+    Private Function LoadPopularQuickLinks(ByVal limit As Integer) As List(Of Dictionary(Of String, String))
+        Dim result As New List(Of Dictionary(Of String, String))()
+        If limit <= 0 Then Return result
+
+        Try
+            Dim sql As String = "SELECT DISTINCT v.Descrizione1, v.MarcheDescrizione, v.CategorieDescrizione, v.SettoriDescrizione " &
+                                "FROM vsuperarticoli v WHERE COALESCE(v.NListino,1)=1 AND COALESCE(v.Visite,0)>0 " &
+                                "ORDER BY COALESCE(v.Visite,0) DESC, COALESCE(v.DataCreazione,'1900-01-01') DESC LIMIT " & Math.Max(1, Math.Min(limit * 2, 20)).ToString(CultureInfo.InvariantCulture)
+            Dim table As DataTable = ExecuteQuery(sql, New List(Of DbParameterSpec)())
+            For Each row As DataRow In table.Rows
+                Dim label As String = SafeString(row("MarcheDescrizione")) & " " & SafeString(row("CategorieDescrizione"))
+                If String.IsNullOrWhiteSpace(label.Trim()) Then label = SafeString(row("SettoriDescrizione"))
+                If String.IsNullOrWhiteSpace(label.Trim()) Then label = SafeString(row("Descrizione1"))
+                label = NormalizeQuery(label)
+                If String.IsNullOrWhiteSpace(label) Then Continue For
+                result.Add(New Dictionary(Of String, String) From {
+                    {"label", label},
+                    {"url", "articoli.aspx?q=" & HttpUtility.UrlEncode(label)}
+                })
+                If result.Count >= limit Then Exit For
+            Next
+        Catch
+        End Try
+
+        If result.Count = 0 Then
+            result.Add(New Dictionary(Of String, String) From {{"label", "smartphone samsung"}, {"url", "articoli.aspx?q=smartphone+samsung"}})
+            result.Add(New Dictionary(Of String, String) From {{"label", "toner stampante"}, {"url", "articoli.aspx?q=toner+stampante"}})
+            result.Add(New Dictionary(Of String, String) From {{"label", "cavo hdmi"}, {"url", "articoli.aspx?q=cavo+hdmi"}})
+        End If
+        Return result
     End Function
 
     Private Function FormatPrice(ByVal value As Decimal) As String

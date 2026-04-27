@@ -267,11 +267,63 @@
       });
     }
     var currentController = null;
+    function readStorageJson(key) {
+      try {
+        var raw = window.localStorage ? window.localStorage.getItem(key) : '';
+        return raw ? JSON.parse(raw) : null;
+      } catch (err) {
+        return null;
+      }
+    }
+    function readRecentIds() {
+      var seen = {};
+      var ids = [];
+      function add(value) {
+        var n = parseInt(value, 10);
+        if (!n || seen[n]) return;
+        seen[n] = true;
+        ids.push(n);
+      }
+      try {
+        String(document.cookie || '').split(';').forEach(function (part) {
+          var bits = part.split('=');
+          if (bits.length < 2 || bits[0].trim() !== 'ks_recent') return;
+          decodeURIComponent(bits.slice(1).join('=')).split(',').forEach(add);
+        });
+      } catch (err) {}
+      var localItems = readStorageJson('ks_recent_items') || [];
+      if (Array.isArray(localItems)) {
+        localItems.forEach(function (item) { add(item && (item.id || item.productId || item.pid)); });
+      }
+      try {
+        String(window.sessionStorage ? window.sessionStorage.getItem('ks_recent_session') || '' : '').split(',').forEach(add);
+      } catch (err) {}
+      return ids.slice(0, 24);
+    }
+    function rememberSearch(value) {
+      var query = String(value || '').replace(/\s+/g, ' ').trim();
+      if (query.length < 2) return;
+      try {
+        var list = readStorageJson('ks_ai_recent_searches') || [];
+        if (!Array.isArray(list)) list = [];
+        list = list.filter(function (item) { return String(item || '').toLowerCase() !== query.toLowerCase(); });
+        list.unshift(query);
+        window.localStorage.setItem('ks_ai_recent_searches', JSON.stringify(list.slice(0, 12)));
+      } catch (err) {}
+    }
+    function readRecentSearches() {
+      var list = readStorageJson('ks_ai_recent_searches') || [];
+      return Array.isArray(list) ? list.filter(Boolean).slice(0, 8) : [];
+    }
     function endpointUrl(queryText) {
       var u = new URL('/search_suggest.aspx', window.location.href);
       u.searchParams.set('mode', 'ai');
       u.searchParams.set('limit', '8');
       u.searchParams.set('q', queryText || '');
+      var recentIds = readRecentIds();
+      var searches = readRecentSearches();
+      if (recentIds.length) u.searchParams.set('recent', recentIds.join(','));
+      if (searches.length) u.searchParams.set('context', searches.join('|'));
       return u.toString();
     }
     function fetchJsonTimed(url, timeoutMs) {
@@ -327,6 +379,28 @@
         '</span>' +
         '</a>';
     }
+    function quickLinksHtml(data) {
+      var links = data && data.quickLinks ? data.quickLinks : [];
+      var recent = readRecentSearches().map(function (label) {
+        return { label: label, url: 'articoli.aspx?q=' + encodeURIComponent(label) };
+      });
+      links = links.concat(recent);
+      var seen = {};
+      links = links.filter(function (link) {
+        var label = String(link && link.label || '').replace(/\s+/g, ' ').trim();
+        if (!label || seen[label.toLowerCase()]) return false;
+        seen[label.toLowerCase()] = true;
+        link.label = label;
+        return true;
+      }).slice(0, 8);
+      if (!links.length) return '';
+      return '<div class="ks-ai130-quicklinks">' +
+        links.map(function (link) {
+          var url = link.url || ('articoli.aspx?q=' + encodeURIComponent(link.label || ''));
+          return '<a href="' + esc(url) + '">' + esc(link.label) + '</a>';
+        }).join('') +
+        '</div>';
+    }
     var input = q('.ks-ai130-form input', root);
     var form = q('.ks-ai130-form', root);
     var submitButton = q('.ks-ai130-form button', root);
@@ -341,7 +415,7 @@
     }
     function renderEmpty(queryText, message, data) {
       if (results) {
-        results.innerHTML = '<div class="ks-ai130-empty">' + esc(message) + '<br><small>Prova con codice, marca, reparto o caratteristica tecnica.</small>' + catalogLink(queryText, data) + '</div>';
+        results.innerHTML = '<div class="ks-ai130-empty">' + esc(message) + '<br><small>Prova con codice, marca, reparto o caratteristica tecnica.</small>' + catalogLink(queryText, data) + quickLinksHtml(data) + '</div>';
       }
     }
     function runQuery(queryText) {
@@ -352,6 +426,7 @@
         renderEmpty(value, 'Inserisci almeno 2 caratteri per cercare nel catalogo.', null);
         return;
       }
+      rememberSearch(value);
       if (count) count.textContent = 'Ricerca catalogo...';
       if (answer) answer.textContent = 'Sto confrontando la richiesta con codice, EAN, descrizioni, marca, reparto e categoria.';
       if (results) results.innerHTML = '<div class="ks-ai130-empty">Analisi catalogo in corso...</div>';
@@ -367,7 +442,7 @@
         if (answer) answer.textContent = data.intelligence && data.intelligence.summary ? data.intelligence.summary : 'Risultati ordinati per compatibilita con la richiesta.';
         if (count) count.textContent = items.length ? (items.length + ' risultati dal catalogo') : 'Nessun articolo compatibile';
         if (items.length) {
-          results.innerHTML = items.map(renderCard).join('') + '<div class="ks-ai130-catalog-row">' + catalogLink(value, data) + '</div>';
+          results.innerHTML = items.map(renderCard).join('') + '<div class="ks-ai130-catalog-row">' + catalogLink(value, data) + quickLinksHtml(data) + '</div>';
         } else {
           renderEmpty(value, 'Nessun articolo supera la soglia di pertinenza per questa richiesta.', data);
         }

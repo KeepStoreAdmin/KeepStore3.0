@@ -2770,9 +2770,9 @@ body.ks-page-home.ks-home-onsus-pass-130 .ks-ai130-copy b{
   margin-top:7px!important;
 }
 body.ks-page-home.ks-home-onsus-pass-130 .ks-ai130-empty{
-  grid-column:1/-1!important;
-  min-height:130px!important;
-  border:1px dashed #d9dee7!important;
+    grid-column:1/-1!important;
+    min-height:130px!important;
+    border:1px dashed #d9dee7!important;
   border-radius:16px!important;
   display:flex!important;
   align-items:center!important;
@@ -4790,4 +4790,27 @@ body.ks-page-home.ks-home-server-rendered #ksDesktopCategoryMenu.ks-header-catal
   max-height:calc(100vh - 190px)!important;
   overflow:auto!important;
   padding:30px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-130 .ks-ai130-quicklinks{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  gap:7px!important;
+  margin-top:12px!important;
+}
+body.ks-page-home.ks-home-onsus-pass-130 .ks-ai130-quicklinks a{
+  display:inline-flex!important;
+  align-items:center!important;
+  min-height:28px!important;
+  padding:5px 10px!important;
+  border-radius:999px!important;
+  background:#fff!important;
+  border:1px solid #e6ebf1!important;
+  color:#243142!important;
+  font-size:11px!important;
+  font-weight:800!important;
+  text-decoration:none!important;
+}
+body.ks-page-home.ks-home-onsus-pass-130 .ks-ai130-quicklinks a:hover{
+  border-color:#ff3b3b!important;
+  color:#ff3b3b!important;
 }

@@ -1341,16 +1341,20 @@ strWhere = strWhere & " GROUP BY id"
 
         ' Nessun valore: uso la nofoto
         If String.IsNullOrEmpty(fileName) Then
-            Return "~/Public/images/nofoto.gif"
+            Return ThemeManager.PlaceholderProductImageUrl()
         End If
 
         ' Se è già un path completo, non lo tocchiamo
         If fileName.StartsWith("~") OrElse fileName.StartsWith("/") Then
-            Return fileName
+            Dim resolvedFileName As String = IO.Path.GetFileName(fileName.Replace("\", "/"))
+            If String.IsNullOrWhiteSpace(resolvedFileName) Then Return ThemeManager.PlaceholderProductImageUrl()
+            Return "~/Public/assets/images/articoli/" & resolvedFileName
         End If
 
         ' Nome file "nudo": lo mettiamo nella cartella pubblica articoli
-        Return "~/Public/images/articoli/" & fileName
+        Dim finalFileName As String = IO.Path.GetFileName(fileName.Replace("\", "/"))
+        If String.IsNullOrWhiteSpace(finalFileName) Then Return ThemeManager.PlaceholderProductImageUrl()
+        Return "~/Public/assets/images/articoli/" & finalFileName
     End Function
 
     ' Lista sicura di ID da QueryString (mr / tp / gr / sg)

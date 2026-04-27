@@ -389,21 +389,17 @@ Partial Class documentidettaglio
         imgname = imgname.Trim()
 
         If imgname = "" Then
-            Return ResolveUrl("~/Public/images/nofoto.gif")
+            Return ThemeManager.PlaceholderProductImageUrl()
         End If
 
         If imgname.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse imgname.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
             Return imgname
         End If
 
-        ' Se il DB contiene gia' un percorso (es. Public/foto/xxx.jpg)
-        If imgname.IndexOf("/") >= 0 OrElse imgname.IndexOf("\\") >= 0 Then
-            imgname = imgname.Replace("\\", "/")
-            imgname = imgname.TrimStart("/"c)
-            Return ResolveUrl("~/" & imgname)
-        End If
-
-        Return ResolveUrl("~/Public/foto/" & imgname)
+        imgname = imgname.Replace("\\", "/").Replace("\", "/")
+        imgname = IO.Path.GetFileName(imgname)
+        If String.IsNullOrWhiteSpace(imgname) Then Return ThemeManager.PlaceholderProductImageUrl()
+        Return ResolveUrl("~/Public/assets/images/articoli/" & imgname)
     End Function
 
 End Class
