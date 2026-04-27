@@ -168,8 +168,8 @@
       var gap = 0;
       var left = Math.round(rect.right + gap);
       var top = Math.max(12, Math.round(rect.top));
-      var width = Math.min(920, Math.max(680, window.innerWidth - left - 24));
-      var maxHeight = Math.min(520, Math.max(320, window.innerHeight - top - 24));
+      var width = Math.min(960, Math.max(820, window.innerWidth - left - 32));
+      var maxHeight = Math.min(560, Math.max(360, window.innerHeight - top - 32));
       submenu.style.setProperty('position', 'fixed', 'important');
       submenu.style.setProperty('left', left + 'px', 'important');
       submenu.style.setProperty('top', top + 'px', 'important');
@@ -215,7 +215,8 @@
         if (!item || !item.querySelector('[data-ks-submenu="1"]')) return;
         event.preventDefault();
         event.stopPropagation();
-        toggleItem(item);
+        if (desktopMenu()) openItem(item);
+        else toggleItem(item);
       });
       btn.addEventListener('focus', function () {
         var item = btn.closest('[data-ks-menu-item="1"]');
@@ -435,15 +436,31 @@
     document.body.style.setProperty('overflow', 'auto', 'important');
   }
 
+  function watchHomeNewsletterBackdrop() {
+    if (!isHome() || !document.body || !window.MutationObserver || window.KS_HOME_BACKDROP_WATCHING) return;
+    window.KS_HOME_BACKDROP_WATCHING = true;
+    var scheduled = 0;
+    var observer = new MutationObserver(function () {
+      if (scheduled) return;
+      scheduled = window.setTimeout(function () {
+        scheduled = 0;
+        suppressHomeNewsletterBackdrop();
+      }, 30);
+    });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+  }
+
   ready(function () {
     if (!isHome()) return;
     document.body.classList.add('ks-home-server-rendered');
     suppressHomeNewsletterBackdrop();
+    watchHomeNewsletterBackdrop();
     initSwipers();
     bindDepartmentsMenu();
     initLocalAiSearch();
     window.setTimeout(suppressHomeNewsletterBackdrop, 200);
     window.setTimeout(suppressHomeNewsletterBackdrop, 900);
+    window.setTimeout(suppressHomeNewsletterBackdrop, 1800);
     window.setTimeout(initLocalAiSearch, 450);
     window.setTimeout(initLocalAiSearch, 1200);
   });
