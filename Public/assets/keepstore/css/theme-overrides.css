@@ -25,6 +25,16 @@ body.ks-page-home .modal:not(.show),
 body.ks-page-home .offcanvas:not(.show){display:none!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;}
 body.ks-page-home:not(.modal-open) .modal-backdrop{display:none!important;}
 body.ks-page-home:not(.modal-open){overflow:auto!important;padding-right:0!important;}
+body.ks-page-home #ksNewsletterModal,
+body.ks-page-home .ks-newsletter-modal,
+body.ks-page-home .modal-backdrop{
+  display:none!important;
+  pointer-events:none!important;
+}
+body.ks-page-home.modal-open{
+  overflow:auto!important;
+  padding-right:0!important;
+}
 
 /* HOME spacing cadence */
 body.ks-page-home .tf-sp-5{padding-top:24px!important;padding-bottom:18px!important;}
@@ -4435,6 +4445,12 @@ body.ks-page-home.ks-home-server-rendered .ks-home-departments .main-nav{
   position:relative!important;
   overflow:visible!important;
   z-index:9990!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-hero-section,
+body.ks-page-home.ks-home-server-rendered .ks-home-hero-section > .container,
+body.ks-page-home.ks-home-server-rendered .ks-home-hero-shell,
+body.ks-page-home.ks-home-server-rendered .ks-home-hero-shell > .wrap-item-1{
+  overflow:visible!important;
 }
 body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-category-list{
   position:relative!important;

@@ -342,7 +342,7 @@ Partial Class SiteHeader
         desktopLogo = EnsureExistingLogoUrl(desktopLogo, DefaultLogoVirtual)
         mobileLogo = EnsureExistingLogoUrl(mobileLogo, desktopLogo)
 
-        Dim desktopFallback As String = ResolveUrl(DefaultLogoVirtual)
+        Dim desktopFallback As String = desktopLogo
         If imgLogo IsNot Nothing Then
             imgLogo.ImageUrl = desktopLogo
         End If
