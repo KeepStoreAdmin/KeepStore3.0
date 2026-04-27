@@ -1,4 +1,4 @@
-/* KeepStore UI - Base theme styles */
+/* KeepStore UI - Base theme styles. External font imports intentionally disabled for the active CSP. */
 /*--------- Abstracts variable ---------- */
 @import url(./../css/bootstrap-select.min.css);
 :root {

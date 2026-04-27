@@ -4427,3 +4427,78 @@ body.ks-page-home.ks-home-server-rendered .card-product img{
     display:none!important;
   }
 }
+
+/* KeepStore step146: home departments mega-menu must stay a column grid, not a page-long list */
+body.ks-page-home.ks-home-server-rendered .ks-home-departments,
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .tf-nav-menu,
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .main-nav{
+  position:relative!important;
+  overflow:visible!important;
+  z-index:9990!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-category-list{
+  position:relative!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  z-index:9991!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item{
+  position:static!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .ks-home-submenu-container{
+  background:#fff!important;
+  border:1px solid #eef1f5!important;
+  border-radius:0 12px 12px 12px!important;
+  box-shadow:0 20px 48px rgba(15,23,42,.14)!important;
+  overflow:auto!important;
+  z-index:99999!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item:hover > .ks-home-submenu-container,
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item:focus-within > .ks-home-submenu-container,
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item.is-open > .ks-home-submenu-container,
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item.is-hover > .ks-home-submenu-container{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .ks-home-submenu-grid{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(160px,1fr))!important;
+  gap:24px!important;
+  align-items:start!important;
+  align-content:start!important;
+  padding:28px!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .ks-home-submenu-col{
+  display:block!important;
+  min-width:0!important;
+  width:auto!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .ks-home-sector-promo{
+  display:none!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .ks-home-submenu-tipology-list{
+  list-style:none!important;
+}
+@media(min-width:1200px){
+  body.ks-page-home.ks-home-server-rendered .ks-home-departments .ks-home-submenu-container{
+    width:min(900px,calc(100vw - 620px))!important;
+    max-height:520px!important;
+  }
+}
+@media(max-width:1199.98px){
+  body.ks-page-home.ks-home-server-rendered .ks-home-departments{
+    display:none!important;
+  }
+  body.ks-page-home.ks-home-server-rendered .ks-home-hero-shell{
+    grid-template-columns:1fr!important;
+  }
+  body.ks-page-home.ks-home-server-rendered .ks-home-best-section,
+  body.ks-page-home.ks-home-server-rendered .ks-home-recent-section,
+  body.ks-page-home.ks-home-server-rendered .ks-home-lower-columns-section,
+  body.ks-page-home.ks-home-server-rendered .ks-home-editorial-section{
+    padding-top:24px!important;
+    padding-bottom:24px!important;
+  }
+}

@@ -3506,10 +3506,33 @@ if (!window.KS_HOME_SERVER_RENDERED) {
       }
     }
 
-    qa('.ks-home-departments,.tf-nav-menu,.menu-category-list', shell).forEach(function (node) {
+    qa('.ks-home-departments,.ks-home-departments .tf-nav-menu', shell).forEach(function (node) {
       node.style.setProperty('height', height + 'px', 'important');
       node.style.setProperty('max-height', height + 'px', 'important');
+      node.style.setProperty('overflow', 'visible', 'important');
+    });
+    qa('.ks-home-departments .main-nav', shell).forEach(function (node) {
+      node.style.setProperty('height', height + 'px', 'important');
+      node.style.setProperty('max-height', height + 'px', 'important');
+      node.style.setProperty('overflow', 'visible', 'important');
+    });
+    qa('.ks-home-departments .menu-category-list', shell).forEach(function (node) {
+      var listHeight = Math.max(240, height - 52);
+      node.style.setProperty('height', listHeight + 'px', 'important');
+      node.style.setProperty('max-height', listHeight + 'px', 'important');
       node.style.setProperty('overflow-y', 'auto', 'important');
+      node.style.setProperty('overflow-x', 'hidden', 'important');
+      node.style.setProperty('position', 'relative', 'important');
+    });
+    qa('.ks-home-departments [data-ks-submenu="1"]', shell).forEach(function (node) {
+      node.style.removeProperty('height');
+      if (node.getAttribute('data-ks-inline-state') !== 'open') {
+        node.style.removeProperty('position');
+        node.style.removeProperty('left');
+        node.style.removeProperty('top');
+        node.style.removeProperty('width');
+        node.style.removeProperty('max-height');
+      }
     });
   }
   function boot() {

@@ -65,7 +65,7 @@
                                 <i class="icon-arrow-right-lg"></i>
                             </button>
                         </div>
-                        <div id="subMenuContainer" runat="server" class="sub-menu-container ks-home-submenu-container" aria-hidden="true" data-ks-submenu="1" data-ks-inline-state="closed">
+                        <div id="subMenuContainer" runat="server" class="sub-menu-container d-flex ks-home-submenu-container" aria-hidden="true" data-ks-submenu="1" data-ks-inline-state="closed">
                             <div class="sub-menu-grid ks-home-submenu-grid">
                                 <asp:Literal ID="litDesktopSubmenu" runat="server" />
                             </div>
