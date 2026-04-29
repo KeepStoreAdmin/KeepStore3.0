@@ -4781,6 +4781,142 @@ body.ks-page-home.ks-home-server-rendered .ks-home-departments .ks-menu-label{
     padding:32px!important;
   }
 }
+
+/* KeepStore step151: restore visible Onsus-style home departments menu */
+body.ks-page-home.ks-home-server-rendered .ks-home-departments,
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .main-nav,
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .nav-title,
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-category-list,
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item,
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .ks-home-menu-row,
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .item-link,
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .ks-home-menu-link,
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .ks-menu-label,
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .ks-menu-arrow{
+  visibility:visible!important;
+  opacity:1!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .main-nav.category-menu{
+  background:#fff!important;
+  border-radius:10px!important;
+  box-shadow:0 8px 24px rgba(51,62,72,.06)!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .nav-title{
+  min-height:54px!important;
+  margin:0!important;
+  padding:0 18px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+  background:#ff3b3b!important;
+  color:#fff!important;
+  border-radius:10px 10px 0 0!important;
+  font-size:17px!important;
+  line-height:1.1!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-category-list{
+  list-style:none!important;
+  margin:0!important;
+  padding:0 14px!important;
+  background:#fff!important;
+  border-radius:0 0 10px 10px!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item{
+  border-bottom:1px solid #edf1f6!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item:last-child{
+  border-bottom:0!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .item-link{
+  color:#202633!important;
+  text-decoration:none!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item:hover .item-link,
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item.is-open .item-link{
+  color:#ff3b3b!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .ks-home-submenu-container{
+  background:#fff!important;
+  color:#202633!important;
+  border:1px solid #edf1f6!important;
+  box-shadow:0 24px 70px rgba(15,23,42,.18)!important;
+  border-radius:0 14px 14px 14px!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .ks-home-submenu-category{
+  color:#202633!important;
+  font-size:13px!important;
+  line-height:1.25!important;
+  font-weight:800!important;
+  text-transform:uppercase!important;
+  text-decoration:none!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .ks-home-submenu-tipology-list{
+  margin:8px 0 0!important;
+  padding:0!important;
+  list-style:none!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .ks-home-submenu-tipology-link{
+  color:#586575!important;
+  font-size:13px!important;
+  line-height:1.35!important;
+  text-decoration:none!important;
+}
+body.ks-page-home.ks-home-server-rendered .ks-home-departments .ks-home-submenu-tipology-link:hover{
+  color:#ff3b3b!important;
+}
+.ks-floating-home-submenu{
+  display:flex!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  background:#fff!important;
+  color:#202633!important;
+  border:1px solid #edf1f6!important;
+  box-shadow:0 24px 70px rgba(15,23,42,.18)!important;
+  border-radius:0 14px 14px 14px!important;
+  padding:0!important;
+}
+.ks-floating-home-submenu .ks-home-submenu-grid,
+.ks-floating-home-submenu .sub-menu-grid{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(175px,1fr))!important;
+  gap:28px 30px!important;
+  padding:32px!important;
+  align-items:start!important;
+  align-content:start!important;
+  min-width:0!important;
+  width:100%!important;
+}
+.ks-floating-home-submenu .ks-home-submenu-col{
+  min-width:0!important;
+}
+.ks-floating-home-submenu .ks-home-submenu-category{
+  display:block!important;
+  margin:0 0 8px!important;
+  color:#202633!important;
+  font-size:13px!important;
+  line-height:1.25!important;
+  font-weight:800!important;
+  text-transform:uppercase!important;
+  text-decoration:none!important;
+}
+.ks-floating-home-submenu .ks-home-submenu-tipology-list{
+  display:grid!important;
+  gap:6px!important;
+  margin:8px 0 0!important;
+  padding:0!important;
+  list-style:none!important;
+}
+.ks-floating-home-submenu .ks-home-submenu-tipology-link{
+  display:block!important;
+  color:#586575!important;
+  font-size:13px!important;
+  line-height:1.35!important;
+  text-decoration:none!important;
+}
+.ks-floating-home-submenu .ks-home-sector-promo{
+  display:none!important;
+}
 body.ks-page-home.ks-home-server-rendered #ksDesktopCategoryMenu,
 body.ks-page-home.ks-home-server-rendered #ksDesktopCategoryMenu.ks-header-catalog-grid{
   display:grid!important;
