@@ -137,7 +137,7 @@ Partial Public Class search_suggest
         Dim parameters As New List(Of DbParameterSpec)()
         Dim sql As New StringBuilder()
         AppendSelect(sql, False)
-        sql.Append(" FROM vsuperarticoli v LEFT JOIN immagini i ON i.id = v.id WHERE COALESCE(v.NListino,1)=1 AND COALESCE(v.Abilitato,1)=1 AND v.id IN (")
+        sql.Append(" FROM vsuperarticoli v INNER JOIN articoli a ON a.id = v.id AND COALESCE(a.Abilitato,0)=1 LEFT JOIN immagini i ON i.id = v.id WHERE COALESCE(v.NListino,1)=1 AND v.id IN (")
         sql.Append(String.Join(",", recentIds.Select(Function(n) n.ToString(CultureInfo.InvariantCulture))))
         sql.Append(")")
         AppendFilterClauses(sql, parameters, filters, "v")
@@ -193,7 +193,7 @@ Partial Public Class search_suggest
 
         Dim sql As New StringBuilder()
         AppendSelect(sql, True, BuildScoreExpression(scoringTokens, intent))
-        sql.Append(" FROM vsuperarticoli v LEFT JOIN immagini i ON i.id = v.id WHERE COALESCE(v.NListino,1)=1 AND COALESCE(v.Abilitato,1)=1 ")
+        sql.Append(" FROM vsuperarticoli v INNER JOIN articoli a ON a.id = v.id AND COALESCE(a.Abilitato,0)=1 LEFT JOIN immagini i ON i.id = v.id WHERE COALESCE(v.NListino,1)=1 ")
         sql.Append(" AND (")
         sql.Append("LOWER(COALESCE(v.Codice,'')) = @qExact OR LOWER(COALESCE(v.Ean,'')) = @qExact OR LOWER(COALESCE(v.Descrizione1,'')) = @qExact OR ")
         sql.Append("LOWER(COALESCE(v.Codice,'')) LIKE @qPrefix OR LOWER(COALESCE(v.Ean,'')) LIKE @qPrefix OR LOWER(COALESCE(v.Descrizione1,'')) LIKE @qPrefix OR ")
@@ -826,7 +826,7 @@ Partial Public Class search_suggest
 
         Try
             Dim sql As String = "SELECT DISTINCT v.Descrizione1, v.MarcheDescrizione, v.CategorieDescrizione, v.SettoriDescrizione " &
-                                "FROM vsuperarticoli v WHERE COALESCE(v.NListino,1)=1 AND COALESCE(v.Visite,0)>0 " &
+                                "FROM vsuperarticoli v INNER JOIN articoli a ON a.id = v.id AND COALESCE(a.Abilitato,0)=1 WHERE COALESCE(v.NListino,1)=1 AND COALESCE(v.Visite,0)>0 " &
                                 "ORDER BY COALESCE(v.Visite,0) DESC, COALESCE(v.DataCreazione,'1900-01-01') DESC LIMIT " & Math.Max(1, Math.Min(limit * 2, 20)).ToString(CultureInfo.InvariantCulture)
             Dim table As DataTable = ExecuteQuery(sql, New List(Of DbParameterSpec)())
             For Each row As DataRow In table.Rows

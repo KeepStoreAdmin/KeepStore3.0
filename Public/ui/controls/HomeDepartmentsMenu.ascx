@@ -36,7 +36,7 @@
   .ks-home-departments .menu-item:hover > [data-ks-submenu="1"],
   .ks-home-departments .menu-item:focus-within > [data-ks-submenu="1"],
   .ks-home-departments .menu-item.is-hover > [data-ks-submenu="1"],
-  .ks-home-departments .menu-item.is-open > [data-ks-submenu="1"]{display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;max-height:430px!important;overflow:auto!important;}
+  .ks-home-departments .menu-item.is-open > [data-ks-submenu="1"]{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;max-height:min(560px,calc(100vh - 140px))!important;overflow:auto!important;}
   .ks-home-departments .menu-item[data-ks-submenu-mode="list"]:hover > [data-ks-submenu="1"],
   .ks-home-departments .menu-item[data-ks-submenu-mode="list"]:focus-within > [data-ks-submenu="1"],
   .ks-home-departments .menu-item[data-ks-submenu-mode="list"].is-hover > [data-ks-submenu="1"],

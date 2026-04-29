@@ -4683,7 +4683,7 @@ body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item:hover 
 body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item:focus-within > .ks-home-submenu-container,
 body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item.is-open > .ks-home-submenu-container,
 body.ks-page-home.ks-home-server-rendered .ks-home-departments .menu-item.is-hover > .ks-home-submenu-container{
-  display:block!important;
+  display:flex!important;
   visibility:visible!important;
   opacity:1!important;
   pointer-events:auto!important;

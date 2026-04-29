@@ -149,8 +149,22 @@
       if (submenu) {
         submenu.setAttribute('aria-hidden', open ? 'false' : 'true');
         submenu.setAttribute('data-ks-inline-state', open ? 'open' : 'closed');
-        if (open && desktopMenu()) positionDesktopSubmenu(item, submenu);
-        if (!open) clearDesktopSubmenuPosition(submenu);
+        if (open) {
+          submenu.hidden = false;
+          submenu.style.setProperty('display', desktopMenu() ? 'flex' : 'block', 'important');
+          submenu.style.setProperty('visibility', 'visible', 'important');
+          submenu.style.setProperty('opacity', '1', 'important');
+          submenu.style.setProperty('pointer-events', 'auto', 'important');
+          submenu.style.setProperty('overflow', desktopMenu() ? 'auto' : 'visible', 'important');
+          if (desktopMenu()) positionDesktopSubmenu(item, submenu);
+        } else {
+          submenu.style.setProperty('display', 'none', 'important');
+          submenu.style.setProperty('visibility', 'hidden', 'important');
+          submenu.style.setProperty('opacity', '0', 'important');
+          submenu.style.setProperty('pointer-events', 'none', 'important');
+          submenu.style.removeProperty('overflow');
+          clearDesktopSubmenuPosition(submenu);
+        }
       }
     }
     function clearDesktopSubmenuPosition(submenu) {
@@ -176,6 +190,10 @@
       submenu.style.setProperty('width', width + 'px', 'important');
       submenu.style.setProperty('max-height', maxHeight + 'px', 'important');
       submenu.style.setProperty('z-index', '99999', 'important');
+      submenu.style.setProperty('background', '#fff', 'important');
+      submenu.style.setProperty('box-shadow', '0 24px 70px rgba(15,23,42,.18)', 'important');
+      submenu.style.setProperty('border', '1px solid #edf1f6', 'important');
+      submenu.style.setProperty('border-radius', '0 14px 14px 14px', 'important');
     }
     function closeSiblings(item) {
       var list = item && item.parentNode;
