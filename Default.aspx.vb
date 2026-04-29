@@ -118,16 +118,18 @@ Partial Public Class _Default
 
         Dim usedBusinessKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
         Dim usedDisplayKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim offerPool As DataTable = GetOfferPool(96)
+        Dim dealPool As DataTable = ShuffleTable(GetDealOfferPool(96))
+        Dim featuredPool As DataTable = GetFeaturedPool(96)
+        Dim newArrivalsPool As DataTable = GetNewArrivalsPool(120)
+        Dim topRatedPool As DataTable = GetTopRatedPool(120)
+        Dim bestSellerPool As DataTable = GetBestSellerPool(120)
+        Dim currentYearSellingPool As DataTable = GetCurrentYearSellingPool(120)
+        Dim topSellingPool As DataTable = GetPureTopSellingPool(120)
+        Dim fallbackCatalogPool As DataTable = GetCatalogFallbackPool(160)
 
-        Dim featuredRows As DataTable = TakeDistinctRows(12, usedBusinessKeys, GetFeaturedPool(60))
-        CommitDisplayKeys(featuredRows, usedDisplayKeys)
-        rptHomeFeaturedProducts.DataSource = featuredRows
-        rptHomeFeaturedProducts.DataBind()
-        If HomeFeaturedProductsSection IsNot Nothing Then
-            HomeFeaturedProductsSection.Visible = Not IsTableEmpty(featuredRows)
-        End If
-
-        Dim dealRows As DataTable = TakeDiverseRows(8, Nothing, Nothing, GetDealOfferPool(60))
+        Dim dealRows As DataTable = TakeDistinctRows(8, usedBusinessKeys, dealPool, offerPool, featuredPool, fallbackCatalogPool)
+        CommitDisplayKeys(dealRows, usedDisplayKeys)
         rptDealOfDay.DataSource = dealRows
         rptDealOfDay.DataBind()
         If HomeOffersSection IsNot Nothing Then
@@ -140,13 +142,21 @@ Partial Public Class _Default
             HomeOffersSliderWrap.Visible = Not IsTableEmpty(dealRows)
         End If
 
+        Dim featuredRows As DataTable = TakeDistinctRows(12, usedBusinessKeys, featuredPool, newArrivalsPool, fallbackCatalogPool)
+        CommitDisplayKeys(featuredRows, usedDisplayKeys)
+        rptHomeFeaturedProducts.DataSource = featuredRows
+        rptHomeFeaturedProducts.DataBind()
+        If HomeFeaturedProductsSection IsNot Nothing Then
+            HomeFeaturedProductsSection.Visible = Not IsTableEmpty(featuredRows)
+        End If
+
         If HomeWidePromoSection IsNot Nothing Then HomeWidePromoSection.Visible = True
         If HomeCollectionSection IsNot Nothing Then HomeCollectionSection.Visible = True
         If HomeBottomPromoSection IsNot Nothing Then HomeBottomPromoSection.Visible = True
 
-        Dim featureTabRows As DataTable = TakeDiverseRows(7, Nothing, Nothing, GetFeaturedPool(60))
-        Dim topRateRows As DataTable = TakeDiverseRows(7, Nothing, Nothing, GetPureTopSellingPool(60))
-        Dim onSaleRows As DataTable = TakeDiverseRows(7, Nothing, Nothing, GetDealOfferPool(60))
+        Dim featureTabRows As DataTable = TakeDistinctRows(7, usedBusinessKeys, offerPool, dealPool, fallbackCatalogPool)
+        Dim topRateRows As DataTable = TakeDistinctRows(7, usedBusinessKeys, topRatedPool, featuredPool, fallbackCatalogPool)
+        Dim onSaleRows As DataTable = TakeDistinctRows(7, usedBusinessKeys, newArrivalsPool, fallbackCatalogPool)
         BindThreeColumnZone(featureTabRows, rptFeatureLeft, rptFeatureCenter, rptFeatureRight)
         BindThreeColumnZone(topRateRows, rptToprateLeft, rptToprateCenter, rptToprateRight)
         BindThreeColumnZone(onSaleRows, rptOnSaleLeft, rptOnSaleCenter, rptOnSaleRight)
@@ -154,16 +164,16 @@ Partial Public Class _Default
             HomeLegacyEditorialSection.Visible = (Not IsTableEmpty(featureTabRows) OrElse Not IsTableEmpty(topRateRows) OrElse Not IsTableEmpty(onSaleRows))
         End If
 
-        Dim bestRows As DataTable = TakeDiverseRows(12, Nothing, Nothing, GetBestSellerPool(72))
+        Dim bestRows As DataTable = TakeDistinctRows(12, usedBusinessKeys, bestSellerPool, currentYearSellingPool, topSellingPool, topRatedPool, fallbackCatalogPool)
         rptBestSeller.DataSource = bestRows
         rptBestSeller.DataBind()
         If HomeLegacyBestSection IsNot Nothing Then
             HomeLegacyBestSection.Visible = Not IsTableEmpty(bestRows)
         End If
 
-        Dim recentRows As DataTable = GetRecentlyViewedProducts(10, Nothing, False, Nothing, False)
+        Dim recentRows As DataTable = GetRecentlyViewedProducts(10, usedBusinessKeys, True, Nothing, False)
         If IsTableEmpty(recentRows) Then
-            recentRows = TakeDiverseRows(10, Nothing, Nothing, GetNewArrivalsPool(72))
+            recentRows = TakeDistinctRows(10, usedBusinessKeys, newArrivalsPool, fallbackCatalogPool)
         End If
         rptRecentlyViewed.DataSource = recentRows
         rptRecentlyViewed.DataBind()
@@ -171,10 +181,10 @@ Partial Public Class _Default
             HomeRecentlyViewedSection.Visible = Not IsTableEmpty(recentRows)
         End If
 
-        BindLowerBlock(Top20Block, rptTop20Slides, TakeDiverseRows(10, Nothing, Nothing, GetPureTopSellingPool(80)), 4, Nothing, Nothing)
-        BindLowerBlock(LowerFeaturedBlock, rptFeaturedProductsSlides, TakeDiverseRows(10, Nothing, Nothing, GetFeaturedPool(80)), 4, Nothing, Nothing)
-        BindLowerBlock(TopSellingBlock, rptTopSellingProductSlides, TakeDiverseRows(10, Nothing, Nothing, GetPureTopSellingPool(80)), 4, Nothing, Nothing)
-        BindLowerBlock(OnSaleBlock, rptOnSaleProductSlides, TakeDiverseRows(10, Nothing, Nothing, GetDealOfferPool(80)), 4, Nothing, Nothing)
+        BindLowerBlock(Top20Block, rptTop20Slides, TakeDistinctRows(10, usedBusinessKeys, currentYearSellingPool, topSellingPool, topRatedPool, fallbackCatalogPool), 1, Nothing, Nothing)
+        BindLowerBlock(LowerFeaturedBlock, rptFeaturedProductsSlides, TakeDistinctRows(10, usedBusinessKeys, featuredPool, newArrivalsPool, fallbackCatalogPool), 1, Nothing, Nothing)
+        BindLowerBlock(TopSellingBlock, rptTopSellingProductSlides, TakeDistinctRows(10, usedBusinessKeys, currentYearSellingPool, topSellingPool, fallbackCatalogPool), 1, Nothing, Nothing)
+        BindLowerBlock(OnSaleBlock, rptOnSaleProductSlides, TakeDistinctRows(10, usedBusinessKeys, offerPool, dealPool, fallbackCatalogPool), 1, Nothing, Nothing)
         If HomeLowerColumnsSection IsNot Nothing Then
             HomeLowerColumnsSection.Visible = (Top20Block IsNot Nothing AndAlso Top20Block.Visible) OrElse _
                                              (LowerFeaturedBlock IsNot Nothing AndAlso LowerFeaturedBlock.Visible) OrElse _
@@ -657,6 +667,10 @@ Partial Public Class _Default
                              limit)
     End Function
 
+    Private Function GetTopRatedPool(ByVal limit As Integer) As DataTable
+        Return GetMostViewedPool(limit)
+    End Function
+
     Private Function GetNewArrivalsPool(ByVal limit As Integer) As DataTable
         Return QueryProducts(StockWhereClause() & ">=1 AND COALESCE(v.DataCreazione,'1900-01-01') >= DATE_SUB(CURDATE(), INTERVAL 365 DAY)",
                              "COALESCE(v.DataCreazione,CURDATE()) DESC, COALESCE(v.Visite,0) DESC, v.id DESC",
@@ -669,6 +683,18 @@ Partial Public Class _Default
 
     Private Function GetPureTopSellingPool(ByVal limit As Integer) As DataTable
         Return QueryProducts(StockWhereClause() & ">=1 AND COALESCE(s.QtaVenduta,0)>0", "COALESCE(s.QtaVenduta,0) DESC, COALESCE(v.Visite,0) DESC, COALESCE(v.DataCreazione,CURDATE()) DESC, v.id DESC", limit)
+    End Function
+
+    Private Function GetCurrentYearSellingPool(ByVal limit As Integer) As DataTable
+        Return QueryProducts(StockWhereClause() & ">=1 AND COALESCE(sy.VendutiAnno,0)>0",
+                             "COALESCE(sy.VendutiAnno,0) DESC, COALESCE(s.QtaVenduta,0) DESC, COALESCE(v.Visite,0) DESC, v.id DESC",
+                             limit)
+    End Function
+
+    Private Function GetCatalogFallbackPool(ByVal limit As Integer) As DataTable
+        Return QueryProducts(StockWhereClause() & ">=1 AND COALESCE(NULLIF(v.Img1,''),'')<>''",
+                             "COALESCE(v.DataCreazione,CURDATE()) DESC, COALESCE(v.Visite,0) DESC, v.id DESC",
+                             limit)
     End Function
 
     Private Function QueryProducts(ByVal whereClause As String, ByVal orderClause As String, ByVal limit As Integer) As DataTable
@@ -1040,7 +1066,11 @@ Partial Public Class _Default
 
         Dim marca As String = NormalizeBusinessText(If(row.Table.Columns.Contains("MarcheDescrizione"), row("MarcheDescrizione"), Nothing))
         Dim descrizione As String = NormalizeBusinessText(If(row.Table.Columns.Contains("Descrizione1"), row("Descrizione1"), Nothing))
-        Return "TXT:" & marca & "|" & descrizione
+        If Not String.IsNullOrWhiteSpace(marca & descrizione) Then
+            Return "TXT:" & marca & "|" & descrizione
+        End If
+
+        Return "ID:" & SafeInt(row("id")).ToString(CultureInfo.InvariantCulture)
     End Function
 
     Private Function GetDisplayKey(ByVal row As DataRow) As String

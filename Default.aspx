@@ -133,7 +133,7 @@
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <div>
-                    <h5 class="fw-semibold">Prodotti in evidenza</h5>
+                    <h5 class="fw-semibold" data-ks-i18n="home.featured">In Evidenza</h5>
                     <p class="body-text-3 text-main-2 mb-0">Articoli selezionati disponibili a catalogo, con immagini e schede pronte per l'acquisto.</p>
                 </div>
                 <a href="articoli.aspx" class="tf-btn btn-line">
@@ -155,7 +155,7 @@
             <div class="flat-title pb-8 wow fadeInUp" data-wow-delay="0s">
                 <div>
                     <h5 class="fw-semibold text-primary flat-title-has-icon">
-                        <span class="icon"><i class="icon-fire tf-ani-tada"></i></span><span data-ks-i18n="home.deal">Offerte del momento</span>
+                        <span class="icon"><i class="icon-fire tf-ani-tada"></i></span><span data-ks-i18n="home.deal">Occasione Imperdibile</span>
                     </h5>
                     <p class="body-text-3 text-main-2 mb-0">Promozioni e occasioni caricate dal catalogo KeepStore.</p>
                 </div>
@@ -242,7 +242,7 @@
                 <div class="flat-title-tab-default">
                     <ul class="menu-tab-line" role="tablist">
                         <li class="nav-tab-item d-flex" role="presentation"><a href="#feature" class="tab-link main-title link fw-semibold active" data-bs-toggle="tab" data-ks-i18n="home.offers">Offerte</a></li>
-                        <li class="nav-tab-item d-flex" role="presentation"><a href="#toprate" class="tab-link main-title link fw-semibold" data-bs-toggle="tab" data-ks-i18n="home.featured">In Evidenza</a></li>
+                        <li class="nav-tab-item d-flex" role="presentation"><a href="#toprate" class="tab-link main-title link fw-semibold" data-bs-toggle="tab" data-ks-i18n="home.topRated">Top Rated</a></li>
                         <li class="nav-tab-item d-flex" role="presentation"><a href="#on-sale" class="tab-link main-title link fw-semibold" data-bs-toggle="tab" data-ks-i18n="home.newArrivals">Nuovi Arrivi</a></li>
                     </ul>
                 </div>
