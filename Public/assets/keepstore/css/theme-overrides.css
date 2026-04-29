@@ -4932,16 +4932,6 @@ body.ks-page-home.ks-home-server-rendered .ks-home-chosen-section .flat-title *{
   visibility:visible!important;
   opacity:1!important;
 }
-body.ks-page-home.ks-home-server-rendered #ksDesktopCategoryMenu,
-body.ks-page-home.ks-home-server-rendered #ksDesktopCategoryMenu.ks-header-catalog-grid{
-  display:grid!important;
-  grid-template-columns:repeat(5,minmax(170px,1fr))!important;
-  gap:26px 30px!important;
-  max-width:min(1280px,calc(100vw - 90px))!important;
-  max-height:calc(100vh - 190px)!important;
-  overflow:auto!important;
-  padding:30px!important;
-}
 body.ks-page-home.ks-home-onsus-pass-130 .ks-ai130-quicklinks{
   display:flex!important;
   flex-wrap:wrap!important;
@@ -4964,4 +4954,156 @@ body.ks-page-home.ks-home-onsus-pass-130 .ks-ai130-quicklinks a{
 body.ks-page-home.ks-home-onsus-pass-130 .ks-ai130-quicklinks a:hover{
   border-color:#ff3b3b!important;
   color:#ff3b3b!important;
+}
+/* KeepStore step153: restore header catalog to the real Onsus mega-menu flow */
+body .main-nav-menu .ks-header-catalog-item,
+body.ks-page-home.ks-home-server-rendered .ks-header-catalog-item{
+  position:static!important;
+}
+body .main-nav-menu .ks-header-catalog-item>.sub-menu-container.mega-menu,
+body.ks-page-home.ks-home-server-rendered .ks-header-catalog-item>.sub-menu-container.mega-menu{
+  left:0!important;
+  right:0!important;
+  width:100%!important;
+  padding:30px!important;
+  border:0!important;
+  border-radius:5px!important;
+  box-shadow:0 4px 9px rgba(0,64,193,.2)!important;
+  background:var(--white)!important;
+  max-height:calc(100vh - 170px)!important;
+  overflow:auto!important;
+  z-index:7000!important;
+}
+body .main-nav-menu .ks-header-catalog-item:hover>.sub-menu-container,
+body .main-nav-menu .ks-header-catalog-item:focus-within>.sub-menu-container,
+body .main-nav-menu .ks-header-catalog-item.is-open>.sub-menu-container,
+body.ks-page-home.ks-home-server-rendered .ks-header-catalog-item:hover>.sub-menu-container,
+body.ks-page-home.ks-home-server-rendered .ks-header-catalog-item:focus-within>.sub-menu-container,
+body.ks-page-home.ks-home-server-rendered .ks-header-catalog-item.is-open>.sub-menu-container{
+  transform:translateY(0)!important;
+  opacity:1!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+}
+body #ksDesktopCategoryMenu,
+body #ksDesktopCategoryMenu.ks-header-catalog-grid,
+body.ks-page-home.ks-home-server-rendered #ksDesktopCategoryMenu,
+body.ks-page-home.ks-home-server-rendered #ksDesktopCategoryMenu.ks-header-catalog-grid{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  justify-content:flex-start!important;
+  align-items:flex-start!important;
+  gap:30px!important;
+  max-width:1490px!important;
+  margin:0 auto!important;
+  padding:0!important;
+  overflow:visible!important;
+}
+body .ks-header-catalog-column,
+body.ks-page-home.ks-home-server-rendered .ks-header-catalog-column{
+  flex:0 1 190px!important;
+  min-width:190px!important;
+  max-width:220px!important;
+}
+body .ks-header-catalog-media{
+  display:none!important;
+}
+body .ks-header-catalog-heading{
+  margin-bottom:15px!important;
+}
+body .ks-header-catalog-heading .ks-header-catalog-sector-link,
+body .ks-header-catalog-category-link,
+body .ks-header-catalog-tipology-link,
+body .ks-header-catalog-empty-link{
+  text-decoration:none!important;
+}
+body .ks-header-catalog-heading .ks-header-catalog-sector-link{
+  display:block!important;
+  color:var(--text-main,var(--black))!important;
+}
+body .ks-header-catalog-menu-list{
+  display:grid!important;
+  gap:16px!important;
+  margin:0!important;
+  padding:0!important;
+}
+body .ks-header-catalog-category-link{
+  display:block!important;
+  margin:0 0 8px!important;
+  color:var(--text-main,var(--black))!important;
+  font-size:14px!important;
+  font-weight:600!important;
+  line-height:20px!important;
+}
+body .ks-header-catalog-tipology-list{
+  display:grid!important;
+  gap:6px!important;
+  margin:0!important;
+  padding:0!important;
+  list-style:none!important;
+}
+body .ks-header-catalog-tipology-link,
+body .ks-header-catalog-empty-link{
+  display:block!important;
+  color:var(--dark)!important;
+  white-space:normal!important;
+  line-height:20px!important;
+}
+body .ks-header-catalog-sector-link:hover,
+body .ks-header-catalog-category-link:hover,
+body .ks-header-catalog-tipology-link:hover,
+body .ks-header-catalog-empty-link:hover{
+  color:var(--primary)!important;
+}
+/* KeepStore step153: keep Onsus mobile nav structure while preserving sector images */
+body .ks-mobile-catalog-root>.collapse{
+  padding-top:6px!important;
+}
+body .ks-mobile-catalog-list{
+  padding-left:10px!important;
+  margin:8px 0 0!important;
+}
+body .ks-mobile-catalog-list>.nav-mb-item:not(:last-child){
+  border-bottom:1px solid var(--line)!important;
+}
+body .ks-mobile-catalog-list>.nav-mb-item>.sub-nav-link{
+  min-height:40px!important;
+  padding:4px 0!important;
+  font-weight:600!important;
+  color:var(--black)!important;
+}
+body .ks-mobile-catalog-list .sub-nav-menu{
+  margin-bottom:12px!important;
+}
+body .ks-mobile-nav-entry{
+  display:flex!important;
+  align-items:center!important;
+  gap:12px!important;
+  min-width:0!important;
+  flex:1 1 auto!important;
+}
+body .ks-mobile-nav-media{
+  width:28px!important;
+  height:28px!important;
+  border-radius:6px!important;
+  background:#f7f7f7!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  flex:0 0 28px!important;
+  overflow:hidden!important;
+}
+body .ks-mobile-nav-media img{
+  width:100%!important;
+  height:100%!important;
+  object-fit:contain!important;
+  display:block!important;
+}
+body .ks-mobile-nav-media.is-empty{
+  display:none!important;
+}
+body .ks-mobile-nav-label{
+  min-width:0!important;
+  white-space:normal!important;
+  line-height:20px!important;
 }
