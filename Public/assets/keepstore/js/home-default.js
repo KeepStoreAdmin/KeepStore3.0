@@ -1036,7 +1036,7 @@ if (!window.KS_HOME_SERVER_RENDERED) {
     if (deal.length >= 3) anchor = buildProductDeck('KsHomeDealFinal', deal, 'Offerte reali', 'Occasione Imperdibile', anchor, 5);
     anchor = buildProductDeck('KsHomeEditorialFinal', editorial, 'Prodotti KeepStore', 'In Evidenza', anchor, 10);
     anchor = buildProductDeck('KsHomeBestSellerFinal', bestRaw, 'Best Seller', 'Best Seller', anchor, 5);
-    if (recent.length >= 2) anchor = buildProductDeck('KsHomeRecentFinal', recent, 'Recenti', 'Scelti Da Te', anchor, 5);
+    if (recent.length >= 2) anchor = buildProductDeck('KsHomeRecentFinal', recent, 'Scelti Da Te', 'Scelti Da Te', anchor, 5);
     anchor = buildLowerMatrix(lower, anchor);
     anchor = placeBrands(anchor, r.brands);
     buildClosingLayer(anchor);

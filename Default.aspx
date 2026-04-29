@@ -300,7 +300,7 @@
     <section id="HomeRecentlyViewedSection" runat="server" visible="false" class="tf-sp-2 ks-home-recent-section ks-home-chosen-section">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
-                <h5 class="fw-semibold" data-ks-i18n="home.chosenByYou">Prodotti recenti</h5>
+                <h5 class="fw-semibold" data-ks-i18n="home.chosenByYou">Scelti Da Te</h5>
                 <div class="box-btn-slide relative">
                     <div class="swiper-button-prev nav-swiper nav-prev-products"><i class="icon-arrow-left-lg"></i></div>
                     <div class="swiper-button-next nav-swiper nav-next-products"><i class="icon-arrow-right-lg"></i></div>

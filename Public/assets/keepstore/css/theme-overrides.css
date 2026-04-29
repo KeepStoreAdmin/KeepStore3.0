@@ -4917,6 +4917,21 @@ body.ks-page-home.ks-home-server-rendered .ks-home-departments .ks-home-submenu-
 .ks-floating-home-submenu .ks-home-sector-promo{
   display:none!important;
 }
+
+/* KeepStore step152: restore "Scelti Da Te" visibility */
+body.ks-page-home.ks-home-server-rendered #HomeRecentlyViewedSection,
+body.ks-page-home.ks-home-server-rendered .ks-home-chosen-section{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+body.ks-page-home.ks-home-server-rendered #HomeRecentlyViewedSection .flat-title,
+body.ks-page-home.ks-home-server-rendered #HomeRecentlyViewedSection .flat-title *,
+body.ks-page-home.ks-home-server-rendered .ks-home-chosen-section .flat-title,
+body.ks-page-home.ks-home-server-rendered .ks-home-chosen-section .flat-title *{
+  visibility:visible!important;
+  opacity:1!important;
+}
 body.ks-page-home.ks-home-server-rendered #ksDesktopCategoryMenu,
 body.ks-page-home.ks-home-server-rendered #ksDesktopCategoryMenu.ks-header-catalog-grid{
   display:grid!important;

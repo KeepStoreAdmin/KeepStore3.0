@@ -1096,7 +1096,15 @@ Partial Class articolo
             cookie.HttpOnly = False
             Response.Cookies.Add(cookie)
 
-            Session("ks_recent_ids") = String.Join(",", ids.ToArray())
+            Dim orderedRecentIds As String = String.Join(",", ids.ToArray())
+            Session("ks_recent_ids") = orderedRecentIds
+            Session("ks_recent_session") = orderedRecentIds
+
+            Dim sessionCookie As New HttpCookie("ks_recent_session")
+            sessionCookie.Value = HttpUtility.UrlEncode(orderedRecentIds)
+            sessionCookie.Path = "/"
+            sessionCookie.HttpOnly = False
+            Response.Cookies.Add(sessionCookie)
         Catch
             ' Best effort: la pagina prodotto non deve rompersi se la scrittura cookie fallisce.
         End Try

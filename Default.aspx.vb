@@ -994,10 +994,16 @@ Partial Public Class _Default
         Dim result As New List(Of Integer)()
 
         MergeRecentIds(result, Convert.ToString(Session("ks_recent_ids")))
+        MergeRecentIds(result, Convert.ToString(Session("ks_recent_session")))
 
         Dim cookie As HttpCookie = Request.Cookies("ks_recent")
         If cookie IsNot Nothing Then
             MergeRecentIds(result, HttpUtility.UrlDecode(cookie.Value))
+        End If
+
+        Dim sessionCookie As HttpCookie = Request.Cookies("ks_recent_session")
+        If sessionCookie IsNot Nothing Then
+            MergeRecentIds(result, HttpUtility.UrlDecode(sessionCookie.Value))
         End If
 
         Return result
