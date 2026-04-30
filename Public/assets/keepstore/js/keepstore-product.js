@@ -178,22 +178,49 @@
     });
   }
 
-  function initPhotoSwipe() {
-    if (typeof window.PhotoSwipeLightbox === 'undefined' || typeof window.PhotoSwipe === 'undefined') return;
-
+  function setupPhotoSwipe(LightboxCtor, PhotoSwipeModule) {
+    if (typeof LightboxCtor === 'undefined' || typeof PhotoSwipeModule === 'undefined') return;
     try {
       if (window._ksProductLightbox && typeof window._ksProductLightbox.destroy === 'function') {
         window._ksProductLightbox.destroy();
       }
 
-      window._ksProductLightbox = new window.PhotoSwipeLightbox({
+      window._ksProductLightbox = new LightboxCtor({
         gallery: '#gallery-swiper-started',
         children: 'a',
-        pswpModule: window.PhotoSwipe
+        pswpModule: PhotoSwipeModule
       });
       window._ksProductLightbox.init();
     } catch (e) {
       if (window.console && console.warn) console.warn('keepstore-product PhotoSwipe init error', e);
+    }
+  }
+
+  function initPhotoSwipe() {
+    if (typeof window.PhotoSwipeLightbox !== 'undefined' && typeof window.PhotoSwipe !== 'undefined') {
+      setupPhotoSwipe(window.PhotoSwipeLightbox, window.PhotoSwipe);
+      return;
+    }
+
+    if (typeof window.Promise === 'undefined') return;
+
+    try {
+      if (!window._ksPhotoSwipeModulesPromise) {
+        window._ksPhotoSwipeModulesPromise = Promise.all([
+          import('./photoswipe-lightbox.esm.min.js'),
+          import('./photoswipe.esm.min.js')
+        ]);
+      }
+
+      window._ksPhotoSwipeModulesPromise.then(function (mods) {
+        var LightboxCtor = mods && mods[0] ? (mods[0].default || mods[0].PhotoSwipeLightbox) : null;
+        var PhotoSwipeModule = mods && mods[1] ? (mods[1].default || mods[1].PhotoSwipe) : null;
+        setupPhotoSwipe(LightboxCtor, PhotoSwipeModule);
+      }).catch(function (e) {
+        if (window.console && console.warn) console.warn('keepstore-product PhotoSwipe module load error', e);
+      });
+    } catch (e2) {
+      if (window.console && console.warn) console.warn('keepstore-product PhotoSwipe import error', e2);
     }
   }
 

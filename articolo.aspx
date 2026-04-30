@@ -9,7 +9,7 @@
 
     <!-- Product gallery / zoom -->
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/drift-basic.min.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/vendor/photoswipe.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/photoswipe.css") %>" />
 
     <script type="application/ld+json">
         <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
@@ -283,6 +283,5 @@
 </asp:Content>
 
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script src="<%= ThemeManager.Asset("js/vendor/photoswipe.umd.min.js") %>"></script>
     <script src="/Public/assets/keepstore/js/keepstore-product.js"></script>
 </asp:Content>
