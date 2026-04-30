@@ -188,10 +188,15 @@
                             <div class="tf-control-sorting d-flex align-items-center gap-2">
                                 <span class="body-text-3">Ordina</span>
                                 <asp:DropDownList ID="Drop_Ordinamento" runat="server" CssClass="select-sorting form-select" AutoPostBack="true">
-                                    <asp:ListItem Value="0" Text="Consigliati"></asp:ListItem>
-                                    <asp:ListItem Value="1" Text="Prezzo: crescente"></asp:ListItem>
-                                    <asp:ListItem Value="2" Text="Prezzo: decrescente"></asp:ListItem>
-                                    <asp:ListItem Value="3" Text="Disponibilita"></asp:ListItem>
+                                    <asp:ListItem Value="" Text="Consigliati"></asp:ListItem>
+                                    <asp:ListItem Value="P_basso" Text="Prezzo: crescente"></asp:ListItem>
+                                    <asp:ListItem Value="P_alto" Text="Prezzo: decrescente"></asp:ListItem>
+                                    <asp:ListItem Value="P_offerta" Text="Offerte"></asp:ListItem>
+                                    <asp:ListItem Value="P_disponibilita" Text="Disponibilita"></asp:ListItem>
+                                    <asp:ListItem Value="P_recenti" Text="Novita"></asp:ListItem>
+                                    <asp:ListItem Value="P_popolarita" Text="Popolarita"></asp:ListItem>
+                                    <asp:ListItem Value="P_codice" Text="Codice"></asp:ListItem>
+                                    <asp:ListItem Value="P_descrizione" Text="Nome"></asp:ListItem>
                                 </asp:DropDownList>
                             </div>
                         </div>
@@ -199,7 +204,7 @@
 
                     <div id="ksActiveFilters" class="ks-active-filters mb-3" runat="server" Visible="false">
                         <div class="d-flex flex-wrap gap-2 align-items-center">
-                            <asp:Repeater ID="rptActiveFilters" runat="server">
+                            <asp:Repeater ID="rptActiveFilters" runat="server" OnItemCommand="rptActiveFilters_ItemCommand">
                                 <ItemTemplate>
                                     <asp:LinkButton ID="lbRemove" runat="server" CssClass="badge rounded-pill text-bg-secondary" CommandName="remove" CommandArgument='<%# Eval("Key") %>'>
                                         <%# Eval("Label") %> <span class="ms-1">x</span>
@@ -207,7 +212,7 @@
                                 </ItemTemplate>
                             </asp:Repeater>
 
-                            <asp:LinkButton ID="lbClearAllFilters" runat="server" CssClass="badge rounded-pill text-bg-dark" CommandName="clear" Visible="false">
+                            <asp:LinkButton ID="lbClearAllFilters" runat="server" CssClass="badge rounded-pill text-bg-dark" CommandName="clear" OnClick="lbClearAllFilters_Click" Visible="false">
                                 Pulisci tutto
                             </asp:LinkButton>
                         </div>

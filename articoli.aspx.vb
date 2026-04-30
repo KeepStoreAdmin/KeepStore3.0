@@ -17,6 +17,11 @@ Partial Class Articoli
     Dim filters As New Dictionary(Of String, String)
     Dim oldUrl As String
 
+    Private Class ActiveFilterItem
+        Public Property Key As String
+        Public Property Label As String
+    End Class
+
     Function sostituisci_caratteri_speciali(ByRef stringa As String) As String
         stringa = Server.HtmlEncode(stringa)
 
@@ -80,9 +85,9 @@ Partial Class Articoli
         If sm IsNot Nothing Then sm.EnablePartialRendering = False
         oldUrl = HttpContext.Current.Request.Url.AbsoluteUri
 
-        If Request.QueryString("rimuovi") <> String.Empty Then
+        If Not String.IsNullOrEmpty(Request.QueryString("rimuovi")) Then
             Dim filtersToRemove As String = Request.QueryString("rimuovi")
-            Response.Redirect(changeUrlGetParam(Request.UrlReferrer.ToString, filtersToRemove, String.Empty).Replace("rimuovi=" & filtersToRemove, String.Empty))
+            Response.Redirect(RemoveActiveFilterFromUrl(GetSafeReturnUrl(), filtersToRemove))
         End If
 
         
@@ -99,8 +104,7 @@ Partial Class Articoli
         SyncCatalogSessionFromQuery()
 
         If Me.IsPostBack = False Then
-            changeCheckBoxDependingFromUrl(CheckBox_Disponibile, "disponibile", "1")
-            changeDropDownListDependingFromUrl(Drop_Ordinamento, "ordinamento")
+            InitializeCatalogControlsFromRequest()
         End If
 
         'Redirect nel caso c'è la presenza di #up
@@ -153,6 +157,7 @@ Partial Class Articoli
         End If
 
         If Me.lblLinee IsNot Nothing Then Me.lblLinee.Text = pageSize.ToString()
+        SelectDropDownValueSafe(Me.Drop_Righe, pageSize.ToString())
     End Sub
 
     Protected Sub lvProdotti_PagePropertiesChanging(ByVal sender As Object, ByVal e As PagePropertiesChangingEventArgs)
@@ -176,6 +181,7 @@ Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventA
         End If
 
         CaricaArticoli()
+        BindActiveFilters()
 
         ApplyPagerSettings(False)
 
@@ -266,7 +272,7 @@ Else
 End If
 
 list.Items.Insert(0, New ListItem(allValueString, "0"))
-        list.SelectedValue = dropdownlistValue
+        SelectDropDownValueSafe(list, dropdownlistValue)
     End Sub
 
     Public Sub PopulateDropdownlist(ByVal conn As MySqlConnection,
@@ -748,21 +754,25 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
 strWhere = strWhere & " GROUP BY id"
 
         ' Ordinamento (whitelist)
-        Select Case Drop_Ordinamento.SelectedValue
-            Case "P_offerta"
+        Dim sortValue As String = Convert.ToString(Drop_Ordinamento.SelectedValue).ToLowerInvariant()
+        If sortValue.StartsWith("p_popolar") Then sortValue = "p_popolarita"
+        Select Case sortValue
+            Case "p_offerta"
                 strWhere &= " ORDER BY InOfferta DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
-            Case "P_basso"
+            Case "p_basso"
                 strWhere &= " ORDER BY PrezzoIvato ASC, Prezzo ASC, Ord_PrezzoPromo ASC, Ord_PrezzoPromoIvato ASC, (Giacenza-Impegnata) DESC"
-            Case "P_alto"
+            Case "p_alto"
                 strWhere &= " ORDER BY PrezzoIvato DESC, Prezzo DESC, Ord_PrezzoPromo ASC, Ord_PrezzoPromoIvato ASC, (Giacenza-Impegnata) DESC"
-            Case "P_popolarità"
+            Case "p_popolarita"
                 strWhere &= " ORDER BY visite DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
-            Case "P_recenti"
+            Case "p_recenti"
                 strWhere &= " ORDER BY id DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
-            Case "P_codice"
+            Case "p_codice"
                 strWhere &= " ORDER BY Codice ASC, (Giacenza-Impegnata) DESC"
-            Case "P_descrizione"
+            Case "p_descrizione"
                 strWhere &= " ORDER BY Descrizione1 ASC, (Giacenza-Impegnata) DESC"
+            Case "p_disponibilita"
+                strWhere &= " ORDER BY ((Giacenza-Impegnata)>0) DESC, Disponibilita DESC, InOfferta DESC, id DESC"
             Case Else
                 ' Default: rilevanza (stabile)
                 If userCerca <> "" Then
@@ -1008,27 +1018,19 @@ strWhere = strWhere & " GROUP BY id"
     End Sub
 
     Protected Sub DataList1_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles DataList1.PreRender
-        If Me.DataList1.Items.Count = 0 Then
-            Me.DataList1.Visible = False
-        End If
+        Me.DataList1.Visible = (Me.DataList1.Items.Count > 0)
     End Sub
 
     Protected Sub DataList2_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles DataList2.PreRender
-        If Me.DataList2.Items.Count = 0 Then
-            Me.DataList2.Visible = False
-        End If
+        Me.DataList2.Visible = (Me.DataList2.Items.Count > 0)
     End Sub
 
     Protected Sub DataList3_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles DataList3.PreRender
-        If Me.DataList3.Items.Count = 0 Then
-            Me.DataList3.Visible = False
-        End If
+        Me.DataList3.Visible = (Me.DataList3.Items.Count > 0)
     End Sub
 
     Protected Sub DataList4_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles DataList4.PreRender
-        If Me.DataList4.Items.Count = 0 Then
-            Me.DataList4.Visible = False
-        End If
+        Me.DataList4.Visible = (Me.DataList4.Items.Count > 0)
     End Sub
 
     Protected Sub rPromo_ItemDataBound(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.RepeaterItemEventArgs)
@@ -1247,27 +1249,42 @@ strWhere = strWhere & " GROUP BY id"
             End If
         End If
 
-        Dim newUrl As String = changeUrlGetParam(Request.UrlReferrer.ToString, parName, parValue)
+        Dim newUrl As String = changeUrlGetParam(GetSafeReturnUrl(), parName, parValue)
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub Drop_Ordinamento_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Ordinamento.SelectedIndexChanged
-        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.UrlReferrer.ToString, Drop_Ordinamento, "ordinamento")
+        Session("Articoli_PageIndex") = 0
+        Dim newUrl As String = changeUrlDependingFromDropDownList(GetSafeReturnUrl(), Drop_Ordinamento, "ordinamento")
         Response.Redirect(newUrl)
     End Sub
 
+    Protected Sub Drop_Righe_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Righe.SelectedIndexChanged
+        Dim pageSize As Integer = 12
+        If Integer.TryParse(Drop_Righe.SelectedValue, pageSize) = False OrElse pageSize <= 0 Then
+            pageSize = 12
+        End If
+
+        Session("RigheArticoli") = pageSize
+        Session("Articoli_PageIndex") = 0
+        ApplyPagerSettings(False)
+    End Sub
+
     Protected Sub Drop_Filtra_Taglia_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Filtra_Taglia.SelectedIndexChanged
-        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.UrlReferrer.ToString, Drop_Filtra_Taglia, "taglia")
+        Session("Articoli_PageIndex") = 0
+        Dim newUrl As String = changeUrlDependingFromDropDownList(GetSafeReturnUrl(), Drop_Filtra_Taglia, "taglia")
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub Drop_Filtra_Colore_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Filtra_Colore.SelectedIndexChanged
-        Dim newUrl As String = changeUrlDependingFromDropDownList(Request.UrlReferrer.ToString, Drop_Filtra_Colore, "colore")
+        Session("Articoli_PageIndex") = 0
+        Dim newUrl As String = changeUrlDependingFromDropDownList(GetSafeReturnUrl(), Drop_Filtra_Colore, "colore")
         Response.Redirect(newUrl)
     End Sub
 
     Protected Sub CheckBox_Disponibile_CheckedChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles CheckBox_Disponibile.CheckedChanged
-        Dim newUrl As String = changeUrlDependingFromCheckBox(Request.UrlReferrer.ToString, CheckBox_Disponibile, "disponibile", "1", "0")
+        Session("Articoli_PageIndex") = 0
+        Dim newUrl As String = changeUrlDependingFromCheckBox(GetSafeReturnUrl(), CheckBox_Disponibile, "disponibile", "1", "")
         Response.Redirect(newUrl)
     End Sub
     Sub changeCheckBoxDependingFromUrl(ByVal checkBox As CheckBox, ByVal parName As String, ByVal parValueIfChecked As String)
@@ -1276,6 +1293,18 @@ strWhere = strWhere & " GROUP BY id"
         Else
             checkBox.Checked = False
         End If
+    End Sub
+
+    Private Sub InitializeCatalogControlsFromRequest()
+        changeCheckBoxDependingFromUrl(CheckBox_Disponibile, "disponibile", "1")
+        changeDropDownListDependingFromUrl(Drop_Ordinamento, "ordinamento")
+
+        Dim pageSize As Integer = 12
+        If Session("RigheArticoli") IsNot Nothing Then
+            Integer.TryParse(Convert.ToString(Session("RigheArticoli")), pageSize)
+        End If
+        If pageSize <= 0 Then pageSize = 12
+        SelectDropDownValueSafe(Drop_Righe, pageSize.ToString())
     End Sub
 
     Function changeUrlDependingFromCheckBox(ByVal url As String,
@@ -1293,24 +1322,307 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     Sub changeDropDownListDependingFromUrl(ByVal dropDownList As DropDownList, ByVal parName As String)
-        If Request.QueryString(parName) <> String.Empty Then
-            dropDownList.SelectedValue = Request.QueryString(parName).Split("|"c)(1)
-        End If
+        If dropDownList Is Nothing Then Exit Sub
+
+        Dim raw As String = Convert.ToString(Request.QueryString(parName))
+        If String.IsNullOrEmpty(raw) Then Exit Sub
+
+        Dim value As String = raw
+        Dim parts As String() = raw.Split("|"c)
+        If parts.Length > 1 Then value = parts(1)
+
+        SelectDropDownValueSafe(dropDownList, value)
     End Sub
 
     Function changeUrlDependingFromDropDownList(ByVal url As String,
                                                 ByVal dropDownList As DropDownList,
                                                 ByVal parName As String) As String
+        If dropDownList Is Nothing OrElse String.IsNullOrEmpty(dropDownList.SelectedValue) Then
+            Return changeUrlGetParam(url, parName, String.Empty)
+        End If
         Return changeUrlGetParam(url, parName, dropDownList.SelectedIndex & "|" & dropDownList.SelectedValue)
     End Function
 
     Function changeUrlGetParam(ByVal url As String, ByVal parName As String, ByVal parValue As String) As String
-        Dim newUrl As String = Regex.Replace(url, "&" & parName & "=([^&])+", String.Empty)
-        newUrl = Regex.Replace(newUrl, "\?" & parName & "=([^&])+", "?")
-        If parValue <> String.Empty Then
-            newUrl = newUrl & "&" & parName & "=" & parValue
+        If String.IsNullOrEmpty(url) Then url = GetSafeReturnUrl()
+        If String.IsNullOrEmpty(parName) Then Return url
+
+        Dim anchor As String = String.Empty
+        Dim hashIndex As Integer = url.IndexOf("#"c)
+        If hashIndex >= 0 Then
+            anchor = url.Substring(hashIndex)
+            url = url.Substring(0, hashIndex)
         End If
-        Return newUrl.Replace("?&", "?")
+
+        Dim baseUrl As String = url
+        Dim rawQuery As String = String.Empty
+        Dim queryIndex As Integer = url.IndexOf("?"c)
+        If queryIndex >= 0 Then
+            baseUrl = url.Substring(0, queryIndex)
+            rawQuery = url.Substring(queryIndex + 1)
+        End If
+
+        Dim qs = HttpUtility.ParseQueryString(rawQuery)
+        If String.IsNullOrEmpty(parValue) Then
+            qs.Remove(parName)
+        Else
+            qs(parName) = parValue
+        End If
+
+        qs.Remove("page")
+        qs.Remove("pg")
+        qs.Remove("p")
+        qs.Remove("rimuovi")
+
+        Dim newQuery As String = qs.ToString()
+        If String.IsNullOrEmpty(newQuery) Then Return baseUrl & anchor
+        Return baseUrl & "?" & newQuery & anchor
+    End Function
+
+    Private Sub SelectDropDownValueSafe(ByVal list As DropDownList, ByVal value As String)
+        If list Is Nothing Then Exit Sub
+        If value Is Nothing Then value = String.Empty
+
+        Dim item As ListItem = list.Items.FindByValue(value)
+        If item Is Nothing AndAlso value <> String.Empty Then
+            item = list.Items.FindByValue(String.Empty)
+        End If
+        If item Is Nothing AndAlso list.Items.Count > 0 Then
+            item = list.Items(0)
+        End If
+
+        If item IsNot Nothing Then
+            list.ClearSelection()
+            item.Selected = True
+        End If
+    End Sub
+
+    Private Function GetSafeReturnUrl() As String
+        If Request Is Nothing OrElse Request.Url Is Nothing Then Return "articoli.aspx"
+        Return Request.Url.AbsoluteUri
+    End Function
+
+    Protected Sub rptActiveFilters_ItemCommand(ByVal source As Object, ByVal e As RepeaterCommandEventArgs)
+        If String.Equals(e.CommandName, "remove", StringComparison.OrdinalIgnoreCase) Then
+            Session("Articoli_PageIndex") = 0
+            Response.Redirect(RemoveActiveFilterFromUrl(GetSafeReturnUrl(), Convert.ToString(e.CommandArgument)))
+        End If
+    End Sub
+
+    Protected Sub lbClearAllFilters_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+        Session("Articoli_PageIndex") = 0
+        Response.Redirect(ClearCatalogFiltersFromUrl(GetSafeReturnUrl()))
+    End Sub
+
+    Private Sub BindActiveFilters()
+        Dim active As New List(Of ActiveFilterItem)()
+
+        Dim q As String = QS("q", 80)
+        If q <> "" Then AddActiveFilter(active, "q=", "Ricerca: " & q)
+
+        If Request.QueryString("disponibile") = "1" Then
+            AddActiveFilter(active, "disponibile=", "Solo disponibili")
+        End If
+
+        If Request.QueryString("inpromo") = "1" Then
+            AddActiveFilter(active, "inpromo=", "In offerta")
+        End If
+
+        If Request.QueryString("spedgratis") = "1" Then
+            AddActiveFilter(active, "spedgratis=", "Spedizione gratis")
+        End If
+
+        AddFacetActiveFilters(active, "tp", "Tipologia", "tipologie")
+        AddFacetActiveFilters(active, "gr", "Categoria", "Gruppi")
+        AddFacetActiveFilters(active, "sg", "Sottocategoria", "SottoGruppi")
+        AddFacetActiveFilters(active, "mr", "Marca", "Marche")
+
+        Dim rawSort As String = Convert.ToString(Request.QueryString("ordinamento"))
+        If rawSort <> "" AndAlso Drop_Ordinamento IsNot Nothing AndAlso Drop_Ordinamento.SelectedItem IsNot Nothing AndAlso Drop_Ordinamento.SelectedValue <> "" Then
+            AddActiveFilter(active, "ordinamento=", "Ordina: " & Drop_Ordinamento.SelectedItem.Text)
+        End If
+
+        AddVariantActiveFilter(active, "taglia", "Taglia", Drop_Filtra_Taglia)
+        AddVariantActiveFilter(active, "colore", "Colore", Drop_Filtra_Colore)
+
+        If rptActiveFilters IsNot Nothing Then
+            rptActiveFilters.DataSource = active
+            rptActiveFilters.DataBind()
+        End If
+
+        If ksActiveFilters IsNot Nothing Then ksActiveFilters.Visible = (active.Count > 0)
+        If lbClearAllFilters IsNot Nothing Then lbClearAllFilters.Visible = (active.Count > 1)
+    End Sub
+
+    Private Sub AddActiveFilter(ByVal list As List(Of ActiveFilterItem), ByVal key As String, ByVal label As String)
+        If list Is Nothing OrElse String.IsNullOrEmpty(label) Then Exit Sub
+        Dim item As New ActiveFilterItem()
+        item.Key = key
+        item.Label = ThemeManager.CompactText(label, 70)
+        list.Add(item)
+    End Sub
+
+    Private Sub AddFacetActiveFilters(ByVal active As List(Of ActiveFilterItem), ByVal parName As String, ByVal title As String, ByVal tableName As String)
+        Dim csv As String = SafeIdListFromQuery(parName)
+        If String.IsNullOrEmpty(csv) Then Exit Sub
+
+        Dim labels As Dictionary(Of Integer, String) = LookupCatalogDescriptions(tableName, csv)
+        For Each rawId As String In csv.Split(","c)
+            Dim id As Integer = 0
+            If Not Integer.TryParse(rawId, id) OrElse id <= 0 Then Continue For
+
+            Dim text As String = id.ToString()
+            If labels IsNot Nothing AndAlso labels.ContainsKey(id) Then text = labels(id)
+            AddActiveFilter(active, parName & "=" & id.ToString(), title & ": " & text)
+        Next
+    End Sub
+
+    Private Sub AddVariantActiveFilter(ByVal active As List(Of ActiveFilterItem), ByVal parName As String, ByVal title As String, ByVal list As DropDownList)
+        Dim raw As String = Convert.ToString(Request.QueryString(parName))
+        If String.IsNullOrEmpty(raw) Then Exit Sub
+
+        Dim text As String = ""
+        If list IsNot Nothing AndAlso list.SelectedItem IsNot Nothing AndAlso list.SelectedValue <> "0" Then
+            text = list.SelectedItem.Text
+        End If
+
+        If text = "" Then
+            Dim parts As String() = raw.Split("|"c)
+            If parts.Length > 1 Then text = parts(1) Else text = raw
+        End If
+
+        If text <> "" Then AddActiveFilter(active, parName & "=", title & ": " & text)
+    End Sub
+
+    Private Function LookupCatalogDescriptions(ByVal tableName As String, ByVal idsCsv As String) As Dictionary(Of Integer, String)
+        Dim result As New Dictionary(Of Integer, String)()
+        If String.IsNullOrEmpty(idsCsv) Then Return result
+
+        Dim safeTable As String = ""
+        Select Case tableName
+            Case "tipologie"
+                safeTable = "tipologie"
+            Case "Gruppi"
+                safeTable = "Gruppi"
+            Case "SottoGruppi"
+                safeTable = "SottoGruppi"
+            Case "Marche"
+                safeTable = "Marche"
+            Case Else
+                Return result
+        End Select
+
+        Dim placeholders As New List(Of String)()
+        Dim params As New Dictionary(Of String, Object)()
+        Dim i As Integer = 0
+        For Each rawId As String In idsCsv.Split(","c)
+            Dim id As Integer = 0
+            If Not Integer.TryParse(rawId, id) OrElse id <= 0 Then Continue For
+            Dim pName As String = "@id" & i.ToString()
+            placeholders.Add(pName)
+            params.Add(pName, id)
+            i += 1
+        Next
+
+        If placeholders.Count = 0 Then Return result
+
+        Try
+            Dim rows = ExecuteQueryGetDataReader("id, Descrizione", safeTable, "WHERE id IN (" & String.Join(",", placeholders.ToArray()) & ")", params)
+            For Each row As Dictionary(Of String, Object) In rows
+                Dim id As Integer = 0
+                If row.ContainsKey("id") Then Integer.TryParse(Convert.ToString(row("id")), id)
+                If id <= 0 Then Continue For
+
+                Dim descrizione As String = ""
+                If row.ContainsKey("Descrizione") Then descrizione = Convert.ToString(row("Descrizione"))
+                If descrizione <> "" AndAlso Not result.ContainsKey(id) Then result.Add(id, descrizione)
+            Next
+        Catch
+            ' I badge dei filtri non devono mai bloccare il catalogo.
+        End Try
+
+        Return result
+    End Function
+
+    Private Function RemoveActiveFilterFromUrl(ByVal url As String, ByVal filterKey As String) As String
+        If String.IsNullOrEmpty(url) Then url = GetSafeReturnUrl()
+        If String.IsNullOrEmpty(filterKey) Then Return url
+
+        Dim paramName As String = filterKey
+        Dim paramValue As String = ""
+        Dim sepIndex As Integer = filterKey.IndexOf("="c)
+        If sepIndex >= 0 Then
+            paramName = filterKey.Substring(0, sepIndex)
+            paramValue = filterKey.Substring(sepIndex + 1)
+        End If
+
+        Dim qs = ParseUrlQuery(url)
+        If String.IsNullOrEmpty(paramName) Then Return url
+
+        If String.IsNullOrEmpty(paramValue) Then
+            qs.Remove(paramName)
+        Else
+            Dim current As String = Convert.ToString(qs(paramName))
+            Dim remaining As New List(Of String)()
+            For Each part As String In current.Split("|"c)
+                If part <> "" AndAlso Not String.Equals(part, paramValue, StringComparison.OrdinalIgnoreCase) Then
+                    remaining.Add(part)
+                End If
+            Next
+
+            If remaining.Count = 0 Then
+                qs.Remove(paramName)
+            Else
+                qs(paramName) = String.Join("|", remaining.ToArray())
+            End If
+        End If
+
+        qs.Remove("rimuovi")
+        qs.Remove("page")
+        qs.Remove("pg")
+        qs.Remove("p")
+        Return BuildUrlWithQuery(url, qs)
+    End Function
+
+    Private Function ClearCatalogFiltersFromUrl(ByVal url As String) As String
+        Dim qs = ParseUrlQuery(url)
+        Dim keysToRemove As String() = New String() {"q", "tp", "gr", "sg", "mr", "disponibile", "inpromo", "spedgratis", "ordinamento", "taglia", "colore", "rimuovi", "page", "pg", "p"}
+        For Each key As String In keysToRemove
+            qs.Remove(key)
+        Next
+        Return BuildUrlWithQuery(url, qs)
+    End Function
+
+    Private Function ParseUrlQuery(ByVal url As String) As System.Collections.Specialized.NameValueCollection
+        If String.IsNullOrEmpty(url) Then url = GetSafeReturnUrl()
+
+        Dim rawQuery As String = ""
+        Dim hashIndex As Integer = url.IndexOf("#"c)
+        If hashIndex >= 0 Then url = url.Substring(0, hashIndex)
+
+        Dim queryIndex As Integer = url.IndexOf("?"c)
+        If queryIndex >= 0 Then rawQuery = url.Substring(queryIndex + 1)
+        Return HttpUtility.ParseQueryString(rawQuery)
+    End Function
+
+    Private Function BuildUrlWithQuery(ByVal url As String, ByVal qs As System.Collections.Specialized.NameValueCollection) As String
+        If String.IsNullOrEmpty(url) Then url = GetSafeReturnUrl()
+
+        Dim anchor As String = ""
+        Dim hashIndex As Integer = url.IndexOf("#"c)
+        If hashIndex >= 0 Then
+            anchor = url.Substring(hashIndex)
+            url = url.Substring(0, hashIndex)
+        End If
+
+        Dim baseUrl As String = url
+        Dim queryIndex As Integer = url.IndexOf("?"c)
+        If queryIndex >= 0 Then baseUrl = url.Substring(0, queryIndex)
+
+        Dim newQuery As String = ""
+        If qs IsNot Nothing Then newQuery = qs.ToString()
+        If String.IsNullOrEmpty(newQuery) Then Return baseUrl & anchor
+        Return baseUrl & "?" & newQuery & anchor
     End Function
 
     Sub alert(ByVal message As String)
