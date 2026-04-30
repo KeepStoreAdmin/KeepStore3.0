@@ -937,6 +937,10 @@ Partial Class articolo
     End Function
 
     Private Function BuildPriceHtml(prezzo As Nullable(Of Decimal), prezzoOld As Nullable(Of Decimal), inOfferta As Boolean) As String
+        If Not prezzo.HasValue OrElse prezzo.Value <= 0D Then
+            Return "<div class=""price""><span class=""sale-price"">Prezzo su richiesta</span></div>"
+        End If
+
         Dim priceText As String = ""
         If prezzo.HasValue Then
             priceText = prezzo.Value.ToString("C")
@@ -1098,11 +1102,8 @@ Partial Class articolo
     End Sub
 
     Protected Sub btnAddToCart_Click(sender As Object, e As EventArgs)
-        Dim qty As Integer
-        If Not Integer.TryParse(txtQty.Text, qty) OrElse qty <= 0 Then
-            qty = 1
-        End If
-        If qty > 9999 Then qty = 9999
+        Dim qty As Integer = NormalizeCartQuantity(txtQty.Text, 1, 9999)
+        txtQty.Text = qty.ToString()
 
         ' Nel progetto il default "senza varianti" è TCid=-1 (vedi aggiungi.aspx.vb).
         Dim tcidToUse As Integer = -1
@@ -1124,6 +1125,18 @@ Partial Class articolo
 
         Response.Redirect("aggiungi.aspx", True)
     End Sub
+
+    Private Function NormalizeCartQuantity(ByVal rawValue As String, ByVal fallbackValue As Integer, ByVal maxValue As Integer) As Integer
+        Dim qty As Integer = fallbackValue
+        If Not Integer.TryParse(Convert.ToString(rawValue), qty) Then
+            qty = fallbackValue
+        End If
+
+        If qty <= 0 Then qty = fallbackValue
+        If qty > maxValue Then qty = maxValue
+
+        Return qty
+    End Function
 
     Private Sub TrackRecentlyViewed(productId As Integer)
         If productId <= 0 Then Exit Sub

@@ -645,8 +645,8 @@ End If
 
         If CheckBox_Disponibile.Checked = True Then
             Session.Item("Disp") = 0
-            strWhere = strWhere & " AND (Giacenza>0)"
-            strWhere2 = strWhere2 & " AND (Giacenza>0)"
+            strWhere = strWhere & " AND ((Giacenza-Impegnata)>0)"
+            strWhere2 = strWhere2 & " AND ((varticolibase.Giacenza-varticolibase.Impegnata)>0)"
         End If
 
         If Me.Page.IsPostBack = False Then
@@ -1011,6 +1011,7 @@ strWhere = strWhere & " GROUP BY id"
             Session("Carrello_ArticoloId") = idVal.ToString()
             Session("Carrello_TCId") = tcIdVal.ToString()
             Session("Carrello_Quantita") = qta.ToString()
+            Session("Carrello_Pagina") = Request.RawUrl
             Session("Carrello_SelezioneMultipla") = Nothing
 
             Response.Redirect("aggiungi.aspx")
@@ -1098,6 +1099,7 @@ strWhere = strWhere & " GROUP BY id"
         End If
 
         Session("Carrello_SelezioneMultipla") = listaArticoli
+        Session("Carrello_Pagina") = Request.RawUrl
         Session("ProdottoGratis") = 0 ' la logica puntuale è comunque nella lista
         Me.Response.Redirect("aggiungi.aspx")
     End Sub
@@ -1130,13 +1132,23 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     Private Function GetQuantitaFromContainer(ByVal container As Control) As Integer
-        Dim qta As Integer = 1
         Dim qtaBox As TextBox = TryCast(container.FindControl("tbQuantita"), TextBox)
+        Dim qta As Integer = NormalizeCartQuantity(If(qtaBox Is Nothing, "", qtaBox.Text), 1, 9999)
         If qtaBox IsNot Nothing Then
-            If Not Integer.TryParse(qtaBox.Text, qta) OrElse qta <= 0 Then
-                qta = 1
-            End If
+            qtaBox.Text = qta.ToString()
         End If
+        Return qta
+    End Function
+
+    Private Function NormalizeCartQuantity(ByVal rawValue As String, ByVal fallbackValue As Integer, ByVal maxValue As Integer) As Integer
+        Dim qta As Integer = fallbackValue
+        If Not Integer.TryParse(Convert.ToString(rawValue), qta) Then
+            qta = fallbackValue
+        End If
+
+        If qta <= 0 Then qta = fallbackValue
+        If qta > maxValue Then qta = maxValue
+
         Return qta
     End Function
 
@@ -2693,6 +2705,16 @@ strWhere = strWhere & " GROUP BY id"
         Dim d As Decimal = KeepStoreSecurity.SqlCleanDecimal(standardObj, 0D)
         If d <= 0D Then Return ""
         Return d.ToString("C")
+    End Function
+
+    Protected Function CatalogAvailabilityText(ByVal dataItem As Object) As String
+        Dim disponibile As Integer = UiData.Int(dataItem, "Giacenza") - UiData.Int(dataItem, "Impegnata")
+        If disponibile > 0 Then Return "Disponibile"
+
+        If UiData.Int(dataItem, "Disponibilita") > 0 Then Return "In arrivo"
+        If UiData.Int(dataItem, "InOrdine") > 0 Then Return "In ordine"
+
+        Return "Verifica disponibilita"
     End Function
 
 

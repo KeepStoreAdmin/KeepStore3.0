@@ -304,7 +304,7 @@
                                         </div>
 
                                         <div class="ks-catalog-card-meta body-small mt-1">
-                                            <%# If((UiData.Int(Container.DataItem, "Giacenza") - UiData.Int(Container.DataItem, "Impegnata")) > 0, "Disponibile", If(UiData.Int(Container.DataItem, "Disponibilita") > 0, "In arrivo", "Verifica disponibilita")) %>
+                                            <%# Server.HtmlEncode(CatalogAvailabilityText(Container.DataItem)) %>
                                         </div>
 
                                         <div class="d-flex align-items-center gap-2 mt-2 ks-catalog-card-actions">

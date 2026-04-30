@@ -29,6 +29,17 @@
   }
 
   function initQtyButtons() {
+    qsa('.wg-quantity input').forEach(function (input) {
+      input.setAttribute('inputmode', 'numeric');
+      input.setAttribute('pattern', '[0-9]*');
+      input.addEventListener('blur', function () {
+        var value = parseInt((input.value || '1').toString().replace(/\D/g, ''), 10);
+        if (!isFinite(value) || value <= 0) value = 1;
+        if (value > 9999) value = 9999;
+        input.value = String(value);
+      });
+    });
+
     document.addEventListener('click', function (ev) {
       var btn = ev.target && ev.target.closest ? ev.target.closest('[data-ks-qty]') : null;
       if (!btn) return;
@@ -45,6 +56,7 @@
       var mode = btn.getAttribute('data-ks-qty');
       if (mode === 'plus') value += 1;
       if (mode === 'minus') value = Math.max(1, value - 1);
+      if (value > 9999) value = 9999;
 
       input.value = String(value);
     });
