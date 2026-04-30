@@ -45,6 +45,11 @@
   border-right:0;
 }
 
+.ks-qty-wrap .ks-qty,
+.ks-qty-wrap .ks-qty-btn{
+  min-height: 34px;
+}
+
 /* Product cards (catalog) */
 .ks-product-card{
   border:1px solid rgba(0,0,0,.08);
@@ -99,4 +104,14 @@
   background:rgba(13,110,253,.08);
   border-color:rgba(13,110,253,.35);
   font-weight:600;
+}
+
+@media (max-width: 767.98px){
+  .ks-qty-wrap{
+    width: 6.5rem;
+  }
+
+  .ks-qty-btn{
+    width: 2rem;
+  }
 }

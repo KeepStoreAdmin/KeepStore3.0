@@ -6,6 +6,21 @@
 .ks-product-page .ks-product-gallery-main {
   border-radius: 12px;
   overflow: hidden;
+  background: #fff;
+  aspect-ratio: 1 / 1;
+}
+
+.ks-product-page .ks-product-gallery-main .swiper-wrapper,
+.ks-product-page .ks-product-gallery-main .swiper-slide,
+.ks-product-page .ks-product-gallery-main .item {
+  height: 100%;
+}
+
+.ks-product-page .ks-product-gallery-main img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .ks-product-page .ks-product-gallery-main .swiper-button-prev,
@@ -25,9 +40,12 @@
 
 .ks-product-thumb {
   width: 100%;
-  height: auto;
+  height: 84px;
+  object-fit: contain;
   border-radius: 10px;
   border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #fff;
+  display: block;
 }
 
 /* Buy box sticky su desktop */
@@ -44,6 +62,7 @@
   align-items: baseline;
   flex-wrap: wrap;
   gap: 0.5rem;
+  min-width: 0;
 }
 
 .ks-product-price .price,
@@ -91,9 +110,185 @@
   max-width: 100%;
 }
 
+.ks-product-description {
+  overflow-wrap: anywhere;
+}
+
+.ks-product-description table {
+  display: block;
+  overflow-x: auto;
+}
+
 /* Card correlati */
 .ks-product-card-image img {
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: contain;
   display: block;
+}
+
+.ks-product-page .tf-product-info-list {
+  align-items: flex-start;
+}
+
+.ks-product-page .tf-product-info-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ks-product-page .ks-product-buy {
+  flex: 0 0 min(340px, 100%);
+  max-width: 340px;
+  background: #fff;
+}
+
+.ks-product-page .product-info-name {
+  overflow-wrap: anywhere;
+}
+
+.ks-product-page .product-info-rate-wrap,
+.ks-product-page .product-fearture-list {
+  flex-wrap: wrap;
+}
+
+.ks-product-page .product-box-btn .tf-btn,
+.ks-product-page .product-box-btn input.tf-btn {
+  width: 100%;
+}
+
+.ks-product-page .wg-quantity {
+  max-width: 180px;
+}
+
+.ks-product-page .wg-quantity input {
+  text-align: center;
+}
+
+.ks-product-relation-section {
+  padding-top: 28px;
+  padding-bottom: 28px;
+}
+
+.ks-product-relation-section .tf-section-heading {
+  margin-bottom: 18px;
+}
+
+.ks-product-relation-section .tf-grid-layout {
+  column-gap: 18px;
+  row-gap: 26px;
+}
+
+.ks-product-relation-section .card-product {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.ks-product-relation-section .card-product-wrapper,
+.ks-product-relation-section .product-img {
+  aspect-ratio: 1 / 1;
+  background: #fff;
+}
+
+.ks-product-relation-section .card-product-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+
+.ks-product-relation-section .name-product {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.7em;
+}
+
+@media (max-width: 1199.98px) {
+  .ks-product-page .tf-product-info-list {
+    flex-direction: column;
+  }
+
+  .ks-product-page .ks-product-buy {
+    width: 100%;
+    max-width: none;
+    position: static;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .ks-product-page .tf-sp-2,
+  .ks-product-page .tf-sp-4,
+  .ks-product-relation-section {
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  .ks-product-page .tf-product-media-wrap {
+    position: static !important;
+    margin-bottom: 18px;
+  }
+
+  .ks-product-page .ks-product-gallery-main {
+    border-radius: 8px;
+  }
+
+  .ks-product-thumb {
+    height: 64px;
+    border-radius: 8px;
+  }
+
+  .ks-product-page .product-info-name {
+    font-size: 24px;
+    line-height: 1.18;
+  }
+
+  .ks-product-price .price,
+  .ks-product-price .new-price,
+  .ks-product-price ins {
+    font-size: 1.35rem;
+  }
+
+  .ks-product-page .infor-center,
+  .ks-product-page .infor-bottom {
+    gap: 14px;
+  }
+
+  .ks-product-page .ks-product-buy {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    padding: 14px;
+  }
+
+  .ks-product-page .product-box-btn {
+    grid-template-columns: 1fr;
+  }
+
+  .ks-product-page .flat-title-tab .menu-tab-line {
+    overflow-x: auto;
+    justify-content: flex-start;
+    padding-bottom: 4px;
+  }
+
+  .ks-product-relation-section .tf-grid-layout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 12px;
+    row-gap: 20px;
+  }
+
+  .ks-product-relation-section .tf-section-heading .heading {
+    font-size: 20px;
+    line-height: 1.2;
+  }
+}
+
+@media (max-width: 420px) {
+  .ks-product-relation-section .tf-grid-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ks-product-relation-section .card-product {
+    max-width: 330px;
+    margin-inline: auto;
+  }
 }

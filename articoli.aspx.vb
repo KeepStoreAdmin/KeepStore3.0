@@ -74,7 +74,7 @@ Partial Class Articoli
             newUrl = changeUrlGetParam(newUrl, "sg", filters.Item("sg"))
         End If
 
-        If Not (mrAreEquals And tpAreEquals And grAreEquals And sgAreEquals) Then
+        If Not (mrAreEquals And tpAreEquals And grAreEquals And sgAreEquals) AndAlso Not IsSameRequestUrl(newUrl) Then
             Response.Redirect(newUrl)
         End If
     End Sub
@@ -87,7 +87,8 @@ Partial Class Articoli
 
         If Not String.IsNullOrEmpty(Request.QueryString("rimuovi")) Then
             Dim filtersToRemove As String = Request.QueryString("rimuovi")
-            Response.Redirect(RemoveActiveFilterFromUrl(GetSafeReturnUrl(), filtersToRemove))
+            Dim cleanFilterUrl As String = RemoveActiveFilterFromUrl(GetSafeReturnUrl(), filtersToRemove)
+            If Not IsSameRequestUrl(cleanFilterUrl) Then Response.Redirect(cleanFilterUrl)
         End If
 
         
@@ -109,7 +110,8 @@ Partial Class Articoli
 
         'Redirect nel caso c'è la presenza di #up
         If Request.Url.AbsoluteUri.Contains("%23up") Or (Request.Url.AbsoluteUri.Contains("#23up")) Then
-            Response.Redirect(Request.Url.AbsoluteUri.Replace("%23up", "").Replace("#23up", ""))
+            Dim cleanAnchorUrl As String = Request.Url.AbsoluteUri.Replace("%23up", "").Replace("#23up", "")
+            If Not IsSameRequestUrl(cleanAnchorUrl) Then Response.Redirect(cleanAnchorUrl)
         End If
 
         '==========================================================
@@ -572,8 +574,6 @@ If SettoriId > 0 And OfferteId = 0 Then
             Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("OfferteId", TypeCode.Int32, OfferteId.ToString()))
             strWhere2 = strWhere2 & " AND (varticolibase.OfferteId=?OfferteId) "
             Me.tNavig.Visible = False
-        ElseIf strCerca = "" OrElse strCerca Is Nothing Then
-            Response.Redirect("default.aspx")
         End If
 
         If Not String.IsNullOrEmpty(MarcheId) Then
@@ -709,15 +709,18 @@ If Session.Item("Controllo_Variabile_PrezzoMinMax") = 1 Then
         colPromo = "PrezzoPromo"
     End If
 
+    Dim colPriceFilters As String = "vsuperarticoli." & colPrice
+    Dim colPromoFilters As String = "vsuperarticoli." & colPromo
+
     If hasPmin AndAlso hasPmax Then
         strWhere &= " AND ((" & colPromo & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromo & " IS NULL AND " & colPrice & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromo & " IS NOT NULL AND " & colPromo & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromo & " IS NULL AND " & colPrice & " BETWEEN ?Pmin AND ?Pmax))"
-        strWhere2 &= " AND ((" & colPromo & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromo & " IS NULL AND " & colPrice & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromo & " IS NOT NULL AND " & colPromo & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromo & " IS NULL AND " & colPrice & " BETWEEN ?Pmin AND ?Pmax))"
+        strWhere2 &= " AND ((" & colPromoFilters & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromoFilters & " IS NULL AND " & colPriceFilters & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromoFilters & " IS NOT NULL AND " & colPromoFilters & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromoFilters & " IS NULL AND " & colPriceFilters & " BETWEEN ?Pmin AND ?Pmax))"
     ElseIf hasPmin Then
         strWhere &= " AND ((" & colPromo & " >= ?Pmin) OR (" & colPromo & " IS NULL AND " & colPrice & " >= ?Pmin))"
-        strWhere2 &= " AND ((" & colPromo & " >= ?Pmin) OR (" & colPromo & " IS NULL AND " & colPrice & " >= ?Pmin))"
+        strWhere2 &= " AND ((" & colPromoFilters & " >= ?Pmin) OR (" & colPromoFilters & " IS NULL AND " & colPriceFilters & " >= ?Pmin))"
     ElseIf hasPmax Then
         strWhere &= " AND ((" & colPromo & " <= ?Pmax) OR (" & colPromo & " IS NULL AND " & colPrice & " <= ?Pmax))"
-        strWhere2 &= " AND ((" & colPromo & " <= ?Pmax) OR (" & colPromo & " IS NULL AND " & colPrice & " <= ?Pmax))"
+        strWhere2 &= " AND ((" & colPromoFilters & " <= ?Pmax) OR (" & colPromoFilters & " IS NULL AND " & colPriceFilters & " <= ?Pmax))"
     End If
 End If
 
@@ -790,21 +793,21 @@ strWhere = strWhere & " GROUP BY id"
         strWhere2 = " LEFT JOIN vsuperarticoli ON vsuperarticoli.Id = varticolibase.id " & strWhere2 & " AND Nlistino=?NListino"
 
         Me.sdsMarche.SelectCommand =
-            "select Giacenza, `varticolibase`.`MarcheId` AS `MarcheId`,`Marche`.`Descrizione` AS `Descrizione`," &
+            "select `varticolibase`.`MarcheId` AS `MarcheId`,`Marche`.`Descrizione` AS `Descrizione`," &
             "`Marche`.`Ordinamento` AS `Ordinamento`,count(DISTINCT `varticolibase`.`id`) AS `Numero`" &
             " from `varticolibase` join `Marche` on(`varticolibase`.`MarcheId` = `Marche`.`id`) " &
             Regex.Replace(strWhere2, " AND varticolibase.MarcheId in \(([^\)])+\) ", String.Empty) &
             " group by `Marche`.`Descrizione` order by `Marche`.`Ordinamento`, `Marche`.`Descrizione`"
 
         Me.sdsTipologie.SelectCommand =
-            "select Giacenza,`varticolibase`.`TipologieId` AS `TipologieId`,`tipologie`.`Descrizione` AS `Descrizione`," &
+            "select `varticolibase`.`TipologieId` AS `TipologieId`,`tipologie`.`Descrizione` AS `Descrizione`," &
             "`tipologie`.`Ordinamento` AS `Ordinamento`,count(DISTINCT `varticolibase`.`id`) AS `Numero`" &
             " from `varticolibase` join `tipologie` on(`varticolibase`.`TipologieId` = `tipologie`.`id`) " &
             Regex.Replace(strWhere2, " AND varticolibase.TipologieId in \(([^\)])+\) ", String.Empty) &
             " group by `tipologie`.`Descrizione` order by `tipologie`.`Ordinamento`, `tipologie`.`Descrizione`"
 
         Me.sdsGruppo.SelectCommand =
-            "select Giacenza,GROUP_CONCAT(DISTINCT `varticolibase`.`GruppiId` SEPARATOR '|') AS `GruppiId`," &
+            "select GROUP_CONCAT(DISTINCT `varticolibase`.`GruppiId` SEPARATOR '|') AS `GruppiId`," &
             "`Gruppi`.`Descrizione` AS `Descrizione`,`Gruppi`.`Ordinamento` AS `Ordinamento`," &
             "count(DISTINCT `varticolibase`.`id`) AS `Numero`" &
             " from `varticolibase` join `Gruppi` on(`varticolibase`.`GruppiId` = `Gruppi`.`id`) " &
@@ -812,7 +815,7 @@ strWhere = strWhere & " GROUP BY id"
             " group by `Gruppi`.`Descrizione` order by `Gruppi`.`Ordinamento`, `Gruppi`.`Descrizione`"
 
         Me.sdsSottogruppo.SelectCommand =
-            "select Giacenza,`varticolibase`.`SottoGruppiId` AS `SottoGruppiId`," &
+            "select `varticolibase`.`SottoGruppiId` AS `SottoGruppiId`," &
             "`SottoGruppi`.`Descrizione` AS `Descrizione`,`SottoGruppi`.`Ordinamento` AS `Ordinamento`," &
             "count(DISTINCT `varticolibase`.`id`) AS `Numero`" &
             " from `varticolibase` join `SottoGruppi` on(`varticolibase`.`SottoGruppiId` = `SottoGruppi`.`id`) " &
@@ -951,8 +954,11 @@ strWhere = strWhere & " GROUP BY id"
             Dim pageIndex As Integer = GetCatalogPageIndex(Me.dpProdotti.PageSize)
             If Not hasItems AndAlso Me.dpProdotti.TotalRowCount > 0 AndAlso pageIndex > 0 Then
                 Session("Articoli_PageIndex") = 0
-                Response.Redirect(BuildCatalogPageUrl(0), False)
-                Context.ApplicationInstance.CompleteRequest()
+                Dim resetPageUrl As String = BuildCatalogPageUrl(0)
+                If Not IsSameRequestUrl(resetPageUrl) Then
+                    Response.Redirect(resetPageUrl, False)
+                    Context.ApplicationInstance.CompleteRequest()
+                End If
             End If
         End If
     End Sub
@@ -1425,6 +1431,18 @@ strWhere = strWhere & " GROUP BY id"
     Private Function GetSafeReturnUrl() As String
         If Request Is Nothing OrElse Request.Url Is Nothing Then Return "articoli.aspx"
         Return Request.Url.AbsoluteUri
+    End Function
+
+    Private Function IsSameRequestUrl(ByVal newUrl As String) As Boolean
+        If Request Is Nothing OrElse Request.Url Is Nothing OrElse String.IsNullOrEmpty(newUrl) Then Return False
+
+        Try
+            Dim currentUrl As Uri = Request.Url
+            Dim targetUrl As New Uri(currentUrl, newUrl)
+            Return String.Equals(currentUrl.AbsoluteUri.TrimEnd("#"c), targetUrl.AbsoluteUri.TrimEnd("#"c), StringComparison.OrdinalIgnoreCase)
+        Catch
+            Return String.Equals(GetSafeReturnUrl().TrimEnd("#"c), newUrl.TrimEnd("#"c), StringComparison.OrdinalIgnoreCase)
+        End Try
     End Function
 
     Private Function GetCatalogPageIndex(ByVal pageSize As Integer) As Integer
@@ -2039,7 +2057,7 @@ strWhere = strWhere & " GROUP BY id"
                     url &= "?" & qs
                 End If
 
-                Response.Redirect(url, True)
+                If Not IsSameRequestUrl(url) Then Response.Redirect(url, True)
             End If
 
         Catch
