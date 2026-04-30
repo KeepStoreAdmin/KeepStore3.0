@@ -32,6 +32,13 @@ Partial Class articolo
         Public Property InOfferta As Boolean
     End Class
 
+    Private Class PriceContext
+        Public Property CurrentPrice As Nullable(Of Decimal)
+        Public Property OldPrice As Nullable(Of Decimal)
+        Public Property IsPromo As Boolean
+        Public Property IvaLabel As String
+    End Class
+
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
         If Not TryParseParams() Then
             Return
@@ -191,25 +198,11 @@ Partial Class articolo
                 Dim imgVal As String = NormalizeImageUrl(Convert.ToString(rdr("Img1")))
                 Dim inOfferta As Integer = SafeInt(rdr("InOfferta"), 0)
 
-                Dim prezzoIvato As Decimal = SafeDec(rdr("PrezzoIvato"), 0D)
-                Dim prezzoPromoIvato As Decimal = SafeDec(rdr("PrezzoPromoIvato"), 0D)
-                Dim prezzo As Decimal = SafeDec(rdr("Prezzo"), 0D)
-                Dim prezzoPromo As Decimal = SafeDec(rdr("PrezzoPromo"), 0D)
-
-                Dim prezzoCorrente As Decimal = prezzoIvato
-                Dim prezzoBarrato As Decimal = 0D
-                If (GetSessionInt("IvaTipo", 2) = 2) Then
-                    If inOfferta = 1 AndAlso prezzoPromoIvato > 0D Then
-                        prezzoCorrente = prezzoPromoIvato
-                        prezzoBarrato = prezzoIvato
-                    End If
-                Else
-                    prezzoCorrente = prezzo
-                    If inOfferta = 1 AndAlso prezzoPromo > 0D Then
-                        prezzoCorrente = prezzoPromo
-                        prezzoBarrato = prezzo
-                    End If
-                End If
+                Dim price As PriceContext = BuildPriceContext(SafeDec(rdr("Prezzo"), 0D),
+                                                               SafeDec(rdr("PrezzoIvato"), 0D),
+                                                               SafeDec(rdr("PrezzoPromo"), 0D),
+                                                               SafeDec(rdr("PrezzoPromoIvato"), 0D),
+                                                               inOfferta)
 
                 Dim item As New RelatedItem()
                 item.Id = idVal
@@ -217,7 +210,7 @@ Partial Class articolo
                 item.Nome = nameVal
                 item.Img = imgVal
                 item.Url = BuildProductUrl(idVal, tcidVal, includeTcid:=(_tcEnabled AndAlso tcidVal <> -1))
-                item.PrezzoHtml = BuildPriceHtml(prezzoCorrente, prezzoBarrato, inOfferta)
+                item.PrezzoHtml = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo)
                 item.InOfferta = (inOfferta = 1)
 
                 results.Add(item)
@@ -340,7 +333,7 @@ Partial Class articolo
             phBrand2.Visible = True
 
             lnkMarca.Text = Server.HtmlEncode(brandName)
-            lnkMarca.NavigateUrl = ResolveUrl("~/articoli.aspx?mr=" & brandId.ToString())
+            lnkMarca.NavigateUrl = BuildBrandCatalogUrl(row, brandId)
 
             litMarca2.Text = Server.HtmlEncode(brandName)
         Else
@@ -349,15 +342,13 @@ Partial Class articolo
         End If
 
         ' Prezzi
-        Dim prezzoListino As Nullable(Of Decimal) = GetRowDecimal(row, "PrezzoIvato")
-        Dim prezzoPromo As Nullable(Of Decimal) = GetRowDecimal(row, "PrezzoPromoIvato")
+        Dim price As PriceContext = BuildPriceContext(GetRowDecimal(row, "Prezzo"),
+                                                      GetRowDecimal(row, "PrezzoIvato"),
+                                                      GetRowDecimal(row, "PrezzoPromo"),
+                                                      GetRowDecimal(row, "PrezzoPromoIvato"),
+                                                      GetRowInt(row, "InOfferta", 0))
 
-        Dim inOfferta As Boolean = (GetRowInt(row, "InOfferta", 0) = 1) AndAlso prezzoPromo.HasValue AndAlso prezzoPromo.Value > 0D
-
-        Dim prezzoCorrente As Nullable(Of Decimal) = If(inOfferta, prezzoPromo, prezzoListino)
-        Dim prezzoBarrato As Nullable(Of Decimal) = If(inOfferta, prezzoListino, CType(Nothing, Nullable(Of Decimal)))
-
-        litPriceHtml.Text = BuildPriceHtml(prezzoCorrente, prezzoBarrato, inOfferta)
+        litPriceHtml.Text = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo)
         ' Box prezzo sticky (stesso HTML del prezzo principale)
         litPriceHtml2.Text = litPriceHtml.Text
 
@@ -387,13 +378,10 @@ Partial Class articolo
         litLongDesc.Text = NormalizeDescriptionHtml(longValue)
 
         ' Disponibilità (Arrivo)
-        Dim arrivo As String = GetRowString(row, "Arrivo")
-        If Not String.IsNullOrEmpty(arrivo) Then
-            phAvailability.Visible = True
-            litAvailability.Text = Server.HtmlEncode(arrivo)
-        Else
-            phAvailability.Visible = False
-        End If
+        Dim availabilityText As String = BuildAvailabilityText(row)
+        phAvailability.Visible = Not String.IsNullOrEmpty(availabilityText)
+        litAvailability.Text = Server.HtmlEncode(availabilityText)
+        litBuyBoxAvailability.Text = Server.HtmlEncode(availabilityText)
 
         ' Varianti (Taglia/Colore)
         Dim currentTcid As Integer = GetRowInt(row, "TCid", _tcid)
@@ -445,7 +433,7 @@ Partial Class articolo
                 Dim sql As String = "SELECT tcid, TRIM(CONCAT(nomecolore, ' ', nometaglia, ' ', descrizione)) AS descrizione " &
                                     "FROM varticolitc " &
                                     "WHERE idarticolo=@idarticolo " &
-                                    "  AND id IN (SELECT id FROM vlistini WHERE idListino=@idlistino AND idArticolo=@idarticolo AND InOfferta=0) " &
+                                    "  AND id IN (SELECT id FROM vlistini WHERE idListino=@idlistino AND idArticolo=@idarticolo) " &
                                     "ORDER BY nomecolore, nometaglia"
 
                 Using cmd As New MySqlCommand(sql, cn)
@@ -497,9 +485,7 @@ Partial Class articolo
         Next
 
         If imgs.Count = 0 Then
-            ' Placeholder trasparente (evita layout rotto)
-            Dim transparentGif As String = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
-            imgs.Add(New ImgItem() With {.Url = transparentGif, .Alt = productName})
+            imgs.Add(New ImgItem() With {.Url = ThemeManager.PlaceholderProductImageUrl(), .Alt = productName})
         End If
 
         rptMainImages.DataSource = imgs
@@ -595,9 +581,11 @@ Partial Class articolo
                 img = MakeAbsoluteUrl(img)
             End If
 
-            Dim prezzoListino As Nullable(Of Decimal) = GetRowDecimal(row, "PrezzoIvato")
-            Dim prezzoPromo As Nullable(Of Decimal) = GetRowDecimal(row, "PrezzoPromoIvato")
-            Dim prezzo As Nullable(Of Decimal) = If(prezzoPromo.HasValue AndAlso prezzoPromo.Value > 0D, prezzoPromo, prezzoListino)
+            Dim price As PriceContext = BuildPriceContext(GetRowDecimal(row, "Prezzo"),
+                                                          GetRowDecimal(row, "PrezzoIvato"),
+                                                          GetRowDecimal(row, "PrezzoPromo"),
+                                                          GetRowDecimal(row, "PrezzoPromoIvato"),
+                                                          GetRowInt(row, "InOfferta", 0))
 
             ' --- Base entity ids
             Dim baseUrl As String = canonical.TrimEnd("/"c)
@@ -684,29 +672,18 @@ Partial Class articolo
             End If
 
             ' Offer
-            If prezzo.HasValue AndAlso prezzo.Value > 0D Then
+            If price.CurrentPrice.HasValue AndAlso price.CurrentPrice.Value > 0D Then
                 Dim offer As New Dictionary(Of String, Object)()
                 offer("@type") = "Offer"
-                offer("price") = prezzo.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+                offer("price") = price.CurrentPrice.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
                 offer("priceCurrency") = "EUR"
                 offer("url") = canonical
 
-                ' availability: best-effort se esiste un campo stock/giacenza
-                Dim availability As String = ""
-                Dim stock As Integer = 0
-                Dim stockFound As Boolean = False
-                For Each col As String In New String() {"Giacenza", "Disponibilita", "Disponibile", "Quantita", "Qta"}
-                    If row IsNot Nothing AndAlso row.Table IsNot Nothing AndAlso row.Table.Columns.Contains(col) Then
-                        Dim v As String = Convert.ToString(row(col))
-                        If Integer.TryParse(v, stock) Then
-                            stockFound = True
-                            Exit For
-                        End If
-                    End If
-                Next
-                If stockFound Then
-                    availability = If(stock > 0, "https://schema.org/InStock", "https://schema.org/OutOfStock")
-                    offer("availability") = availability
+                Dim stockAvailable As Integer = GetRowInt(row, "Giacenza", 0) - GetRowInt(row, "Impegnata", 0)
+                If stockAvailable > 0 OrElse GetRowInt(row, "Disponibilita", 0) > 0 OrElse GetRowInt(row, "InOrdine", 0) > 0 Then
+                    offer("availability") = "https://schema.org/InStock"
+                Else
+                    offer("availability") = "https://schema.org/OutOfStock"
                 End If
 
                 offer("itemCondition") = "https://schema.org/NewCondition"
@@ -971,6 +948,97 @@ Partial Class articolo
         End If
 
         Return "<div class=""price""><span class=""sale-price"">" & Server.HtmlEncode(priceText) & "</span></div>"
+    End Function
+
+    Private Function BuildPriceContext(prezzo As Nullable(Of Decimal),
+                                       prezzoIvato As Nullable(Of Decimal),
+                                       prezzoPromo As Nullable(Of Decimal),
+                                       prezzoPromoIvato As Nullable(Of Decimal),
+                                       inOfferta As Integer) As PriceContext
+        Dim ctx As New PriceContext()
+        Dim ivaTipo As Integer = GetSessionInt("IvaTipo", 2)
+
+        If ivaTipo = 1 Then
+            ctx.CurrentPrice = prezzo
+            ctx.OldPrice = Nothing
+            ctx.IvaLabel = "IVA esclusa"
+            If inOfferta = 1 AndAlso prezzoPromo.HasValue AndAlso prezzoPromo.Value > 0D Then
+                ctx.CurrentPrice = prezzoPromo
+                If prezzo.HasValue AndAlso prezzo.Value > prezzoPromo.Value Then
+                    ctx.OldPrice = prezzo
+                End If
+                ctx.IsPromo = True
+            End If
+        Else
+            ctx.CurrentPrice = prezzoIvato
+            ctx.OldPrice = Nothing
+            ctx.IvaLabel = "IVA inclusa"
+            If inOfferta = 1 AndAlso prezzoPromoIvato.HasValue AndAlso prezzoPromoIvato.Value > 0D Then
+                ctx.CurrentPrice = prezzoPromoIvato
+                If prezzoIvato.HasValue AndAlso prezzoIvato.Value > prezzoPromoIvato.Value Then
+                    ctx.OldPrice = prezzoIvato
+                End If
+                ctx.IsPromo = True
+            End If
+        End If
+
+        If Not ctx.CurrentPrice.HasValue OrElse ctx.CurrentPrice.Value <= 0D Then
+            ctx.CurrentPrice = FirstPositiveDecimal(prezzoIvato, prezzo, prezzoPromoIvato, prezzoPromo)
+        End If
+
+        Return ctx
+    End Function
+
+    Private Function FirstPositiveDecimal(ParamArray values() As Nullable(Of Decimal)) As Nullable(Of Decimal)
+        If values Is Nothing Then Return Nothing
+        For Each v As Nullable(Of Decimal) In values
+            If v.HasValue AndAlso v.Value > 0D Then Return v
+        Next
+        Return Nothing
+    End Function
+
+    Private Function BuildAvailabilityText(row As DataRow) As String
+        Dim giacenza As Integer = GetRowInt(row, "Giacenza", 0)
+        Dim impegnata As Integer = GetRowInt(row, "Impegnata", 0)
+        Dim disponibile As Integer = giacenza - impegnata
+        Dim disponibilita As Integer = GetRowInt(row, "Disponibilita", 0)
+        Dim inOrdine As Integer = GetRowInt(row, "InOrdine", 0)
+
+        If disponibile > 0 Then
+            Return "Disponibile"
+        End If
+
+        Dim arrivo As String = FirstNonEmpty(GetRowString(row, "Arrivo"), StripHtml(GetRowString(row, "arrivi")))
+        If Not String.IsNullOrEmpty(arrivo) Then
+            Return "In arrivo: " & ThemeManager.CompactText(arrivo, 90)
+        End If
+
+        If disponibilita > 0 Then
+            Return "Disponibile su ordinazione"
+        End If
+
+        If inOrdine > 0 Then
+            Return "In ordine"
+        End If
+
+        Return "Verifica disponibilita"
+    End Function
+
+    Private Function BuildBrandCatalogUrl(row As DataRow, brandId As Integer) As String
+        Dim rel As String = "~/articoli.aspx"
+        Dim parts As New List(Of String)()
+
+        Dim stId As Integer = GetRowInt(row, "SettoriId", 0)
+        Dim ctId As Integer = GetRowInt(row, "CategorieId", 0)
+        Dim tpId As Integer = GetRowInt(row, "TipologieId", 0)
+
+        If stId > 0 Then parts.Add("st=" & stId.ToString())
+        If ctId > 0 Then parts.Add("ct=" & ctId.ToString())
+        If tpId > 0 Then parts.Add("tp=" & tpId.ToString())
+        If brandId > 0 Then parts.Add("mr=" & brandId.ToString())
+
+        If parts.Count > 0 Then rel &= "?" & String.Join("&", parts.ToArray())
+        Return ResolveUrl(rel)
     End Function
 
     Private Function NormalizeImageUrl(raw As String) As String

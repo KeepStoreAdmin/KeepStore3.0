@@ -174,7 +174,7 @@
                                             </div>
                                             <p>
                                                 <i class="icon-delivery-2"></i>
-                                                Disponibilita aggiornata dal catalogo
+                                                <asp:Literal ID="litBuyBoxAvailability" runat="server" />
                                             </p>
                                             <div class="shipping-to">
                                                 <p class="body-md-2">Riferimenti</p>
