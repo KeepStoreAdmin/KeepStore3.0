@@ -312,16 +312,24 @@ Partial Class articolo
         Dim codice As String = FirstNonEmpty(GetRowString(row, "Codice"), GetRowString(row, "SKU"))
         litCodice.Text = Server.HtmlEncode(codice)
         litCodice2.Text = Server.HtmlEncode(codice)
+        litCodice3.Text = Server.HtmlEncode(codice)
+        litCodice4.Text = Server.HtmlEncode(codice)
 
         Dim ean As String = FirstNonEmpty(GetRowString(row, "Ean"), GetRowString(row, "EAN"))
         If Not String.IsNullOrEmpty(ean) Then
             phEan.Visible = True
             phEan2.Visible = True
+            phEan3.Visible = True
             litEan.Text = Server.HtmlEncode(ean)
             litEan2.Text = Server.HtmlEncode(ean)
+            litEan3.Text = Server.HtmlEncode(ean)
+            litEan4.Text = Server.HtmlEncode(ean)
         Else
             phEan.Visible = False
             phEan2.Visible = False
+            phEan3.Visible = False
+            litEan3.Text = String.Empty
+            litEan4.Text = String.Empty
         End If
 
         ' Marca
