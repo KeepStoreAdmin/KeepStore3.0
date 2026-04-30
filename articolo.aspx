@@ -276,11 +276,10 @@
     </asp:Panel>
 
     <asp:PlaceHolder ID="phRelated" runat="server" Visible="false">
-        <section class="flat-spacing-2">
+        <section class="flat-spacing-2 ks-product-relation-section">
             <div class="container">
                 <div class="tf-section-heading">
                     <h3 class="heading">Prodotti correlati</h3>
-                    <a href="/articoli.aspx" class="link">Vedi tutto</a>
                 </div>
 
                 <div class="tf-grid-layout md-col-4 sm-col-2">
@@ -305,6 +304,108 @@
 
                                     <div class="price-wrap">
                                         <%# Eval("PrezzoHtml") %>
+                                    </div>
+
+                                    <div class="body-small text-main-2 mt-1">
+                                        <%# If(String.IsNullOrEmpty(Convert.ToString(Eval("Codice"))), String.Empty, "Cod. " & Server.HtmlEncode(Convert.ToString(Eval("Codice")))) %>
+                                    </div>
+
+                                    <div class="body-small text-main-2 mt-1">
+                                        <%# Server.HtmlEncode(Convert.ToString(Eval("AvailabilityText"))) %>
+                                    </div>
+                                </div>
+                            </div>
+                        </ItemTemplate>
+                    </asp:Repeater>
+                </div>
+            </div>
+        </section>
+    </asp:PlaceHolder>
+
+    <asp:PlaceHolder ID="phCompatible" runat="server" Visible="false">
+        <section class="flat-spacing-2 ks-product-relation-section">
+            <div class="container">
+                <div class="tf-section-heading">
+                    <h3 class="heading">Compatibili con questo articolo</h3>
+                </div>
+
+                <div class="tf-grid-layout md-col-4 sm-col-2">
+                    <asp:Repeater ID="rptCompatible" runat="server">
+                        <ItemTemplate>
+                            <div class="card-product style-1">
+                                <div class="card-product-wrapper">
+                                    <a class="product-img ks-product-card-image" href='<%# Eval("Url") %>'>
+                                        <img class="lazyload img-product"
+                                             alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
+                                             data-src='<%# Eval("Img") %>'
+                                             src='<%# Eval("Img") %>' />
+                                    </a>
+
+                                    <%# If(Convert.ToBoolean(Eval("InOfferta")), "<div class='box-sale-wrap'><span class='sale-item'>Offerta</span></div>", String.Empty) %>
+                                </div>
+
+                                <div class="card-product-info">
+                                    <a class="name-product link" href='<%# Eval("Url") %>'>
+                                        <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 70)) %>
+                                    </a>
+
+                                    <div class="price-wrap">
+                                        <%# Eval("PrezzoHtml") %>
+                                    </div>
+
+                                    <div class="body-small text-main-2 mt-1">
+                                        <%# If(String.IsNullOrEmpty(Convert.ToString(Eval("Codice"))), String.Empty, "Cod. " & Server.HtmlEncode(Convert.ToString(Eval("Codice")))) %>
+                                    </div>
+
+                                    <div class="body-small text-main-2 mt-1">
+                                        <%# Server.HtmlEncode(Convert.ToString(Eval("AvailabilityText"))) %>
+                                    </div>
+                                </div>
+                            </div>
+                        </ItemTemplate>
+                    </asp:Repeater>
+                </div>
+            </div>
+        </section>
+    </asp:PlaceHolder>
+
+    <asp:PlaceHolder ID="phLinked" runat="server" Visible="false">
+        <section class="flat-spacing-2 ks-product-relation-section">
+            <div class="container">
+                <div class="tf-section-heading">
+                    <h3 class="heading">Articoli collegati</h3>
+                </div>
+
+                <div class="tf-grid-layout md-col-4 sm-col-2">
+                    <asp:Repeater ID="rptLinked" runat="server">
+                        <ItemTemplate>
+                            <div class="card-product style-1">
+                                <div class="card-product-wrapper">
+                                    <a class="product-img ks-product-card-image" href='<%# Eval("Url") %>'>
+                                        <img class="lazyload img-product"
+                                             alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
+                                             data-src='<%# Eval("Img") %>'
+                                             src='<%# Eval("Img") %>' />
+                                    </a>
+
+                                    <%# If(Convert.ToBoolean(Eval("InOfferta")), "<div class='box-sale-wrap'><span class='sale-item'>Offerta</span></div>", String.Empty) %>
+                                </div>
+
+                                <div class="card-product-info">
+                                    <a class="name-product link" href='<%# Eval("Url") %>'>
+                                        <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 70)) %>
+                                    </a>
+
+                                    <div class="price-wrap">
+                                        <%# Eval("PrezzoHtml") %>
+                                    </div>
+
+                                    <div class="body-small text-main-2 mt-1">
+                                        <%# If(String.IsNullOrEmpty(Convert.ToString(Eval("Codice"))), String.Empty, "Cod. " & Server.HtmlEncode(Convert.ToString(Eval("Codice")))) %>
+                                    </div>
+
+                                    <div class="body-small text-main-2 mt-1">
+                                        <%# Server.HtmlEncode(Convert.ToString(Eval("AvailabilityText"))) %>
                                     </div>
                                 </div>
                             </div>

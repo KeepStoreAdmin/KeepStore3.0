@@ -30,6 +30,8 @@ Partial Class articolo
         Public Property Url As String
         Public Property PrezzoHtml As String
         Public Property InOfferta As Boolean
+        Public Property Codice As String
+        Public Property AvailabilityText As String
     End Class
 
     Private Class PriceContext
@@ -108,7 +110,13 @@ Partial Class articolo
         BindProduct(row)
         TrackRecentlyViewed(_id)
         ApplySeo(row)
+        BindProductRelations(row)
+    End Sub
+
+    Private Sub BindProductRelations(row As DataRow)
         BindRelatedProducts(row)
+        BindPairRelationSection(phCompatible, rptCompatible, "articoli_compatibili", "ArticoliCompatibiliId", "compatibili")
+        BindPairRelationSection(phLinked, rptLinked, "articoli_collegati", "ArticoliCollegatiId", "collegati")
     End Sub
 
     Private Sub BindRelatedProducts(row As DataRow)
@@ -121,7 +129,10 @@ Partial Class articolo
             Dim catId As Integer = GetRowInt(row, "CategorieId", 0)
             Dim marcaId As Integer = GetRowInt(row, "MarcheId", 0)
 
-            Dim items As List(Of RelatedItem) = LoadRelatedInternal(catId, marcaId, 8)
+            Dim items As List(Of RelatedItem) = LoadManualRelated(8)
+            If items.Count < 8 Then
+                AddUniqueRelatedItems(items, LoadRelatedInternal(catId, marcaId, 8), 8)
+            End If
             If items Is Nothing OrElse items.Count = 0 Then
                 phRelated.Visible = False
                 Return
@@ -137,6 +148,106 @@ Partial Class articolo
         End Try
     End Sub
 
+    Private Sub BindPairRelationSection(holder As PlaceHolder, repeater As Repeater, tableName As String, relationColumn As String, logLabel As String)
+        Try
+            Dim items As List(Of RelatedItem) = LoadPairRelation(tableName, relationColumn, 8)
+            If items Is Nothing OrElse items.Count = 0 Then
+                holder.Visible = False
+                Return
+            End If
+
+            holder.Visible = True
+            repeater.DataSource = items
+            repeater.DataBind()
+        Catch ex As Exception
+            holder.Visible = False
+            KeepStoreLog.Error("articolo.aspx", "Errore BindPairRelationSection " & logLabel & " (id=" & _id.ToString() & ")", ex, HttpContext.Current)
+        End Try
+    End Sub
+
+    Private Sub AddUniqueRelatedItems(target As List(Of RelatedItem), source As List(Of RelatedItem), maxItems As Integer)
+        If target Is Nothing OrElse source Is Nothing Then Exit Sub
+
+        Dim seen As New HashSet(Of Integer)()
+        For Each it As RelatedItem In target
+            seen.Add(it.Id)
+        Next
+
+        For Each it As RelatedItem In source
+            If target.Count >= maxItems Then Exit For
+            If it Is Nothing OrElse it.Id <= 0 Then Continue For
+            If seen.Contains(it.Id) Then Continue For
+            target.Add(it)
+            seen.Add(it.Id)
+        Next
+    End Sub
+
+    Private Function LoadManualRelated(maxItems As Integer) As List(Of RelatedItem)
+        Dim results As New List(Of RelatedItem)()
+        Dim connString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+
+        Using conn As New MySqlConnection(connString)
+            conn.Open()
+            Using cmd As New MySqlCommand()
+                cmd.Connection = conn
+                cmd.CommandText = RelatedSelectSql("articoli_correlati rel JOIN vsuperarticoli v ON v.id = rel.ArticoloFiglioId",
+                                                   "WHERE v.NListino=?n AND rel.ArticoloPadreId=?idParent AND rel.ArticoloFiglioId<>?idChild AND rel.ArticoloFiglioId>0 " &
+                                                   "ORDER BY rel.id ASC, v.InOfferta DESC, (v.Giacenza-v.Impegnata) DESC, v.visite DESC, v.id DESC " &
+                                                   "LIMIT " & SafeLimit(maxItems * 2))
+                cmd.Parameters.AddWithValue("?n", _listino)
+                cmd.Parameters.AddWithValue("?idParent", _id)
+                cmd.Parameters.AddWithValue("?idChild", _id)
+                AppendRelated(cmd, results, maxItems)
+            End Using
+        End Using
+
+        Return results
+    End Function
+
+    Private Function LoadPairRelation(tableName As String, relationColumn As String, maxItems As Integer) As List(Of RelatedItem)
+        Dim results As New List(Of RelatedItem)()
+
+        If Not ((tableName = "articoli_compatibili" AndAlso relationColumn = "ArticoliCompatibiliId") OrElse
+                (tableName = "articoli_collegati" AndAlso relationColumn = "ArticoliCollegatiId")) Then
+            Return results
+        End If
+
+        Dim connString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+
+        Using conn As New MySqlConnection(connString)
+            conn.Open()
+            Using cmd As New MySqlCommand()
+                cmd.Connection = conn
+                Dim joinSql As String = tableName & " rel JOIN vsuperarticoli v ON v.id = CASE WHEN rel.ArticoliId=?idJoin THEN rel." & relationColumn & " ELSE rel.ArticoliId END"
+                Dim whereSql As String = "WHERE v.NListino=?n AND (rel.ArticoliId=?idA OR rel." & relationColumn & "=?idB) AND v.id<>?idCurrent " &
+                                         "ORDER BY rel.id ASC, v.InOfferta DESC, (v.Giacenza-v.Impegnata) DESC, v.visite DESC, v.id DESC " &
+                                         "LIMIT " & SafeLimit(maxItems * 2)
+                cmd.CommandText = RelatedSelectSql(joinSql, whereSql)
+                cmd.Parameters.AddWithValue("?idJoin", _id)
+                cmd.Parameters.AddWithValue("?n", _listino)
+                cmd.Parameters.AddWithValue("?idA", _id)
+                cmd.Parameters.AddWithValue("?idB", _id)
+                cmd.Parameters.AddWithValue("?idCurrent", _id)
+                AppendRelated(cmd, results, maxItems)
+            End Using
+        End Using
+
+        Return results
+    End Function
+
+    Private Function RelatedSelectSql(fromSql As String, tailSql As String) As String
+        Return "SELECT v.id, v.TCid, v.Codice, v.Descrizione1, v.Img1, v.InOfferta, " &
+               "v.Prezzo, v.PrezzoIvato, v.PrezzoPromo, v.PrezzoPromoIvato, " &
+               "v.Giacenza, v.Impegnata, v.Disponibilita, v.InOrdine " &
+               "FROM " & fromSql & " " & tailSql
+    End Function
+
+    Private Function SafeLimit(value As Integer) As String
+        If value <= 0 Then value = 8
+        If value > 24 Then value = 24
+        Return value.ToString()
+    End Function
+
     Private Function LoadRelatedInternal(catId As Integer, marcaId As Integer, maxItems As Integer) As List(Of RelatedItem)
         Dim results As New List(Of RelatedItem)()
 
@@ -149,11 +260,10 @@ Partial Class articolo
             If catId > 0 Then
                 Using cmd As New MySqlCommand()
                     cmd.Connection = conn
-                    cmd.CommandText = "SELECT id, TCid, Descrizione1, Img1, InOfferta, Prezzo, PrezzoIvato, PrezzoPromo, PrezzoPromoIvato " &
-                                      "FROM vsuperarticoli " &
-                                      "WHERE NListino=?n AND id<>?id AND CategorieId=?cat " &
-                                      "ORDER BY InOfferta DESC, (Giacenza-Impegnata) DESC, visite DESC, id DESC " &
-                                      "LIMIT " & maxItems.ToString()
+                    cmd.CommandText = RelatedSelectSql("vsuperarticoli v",
+                                                       "WHERE v.NListino=?n AND v.id<>?id AND v.CategorieId=?cat " &
+                                                       "ORDER BY v.InOfferta DESC, (v.Giacenza-v.Impegnata) DESC, v.visite DESC, v.id DESC " &
+                                                       "LIMIT " & SafeLimit(maxItems))
                     cmd.Parameters.AddWithValue("?n", _listino)
                     cmd.Parameters.AddWithValue("?id", _id)
                     cmd.Parameters.AddWithValue("?cat", catId)
@@ -165,11 +275,10 @@ Partial Class articolo
             If (results.Count < maxItems) AndAlso (marcaId > 0) Then
                 Using cmd2 As New MySqlCommand()
                     cmd2.Connection = conn
-                    cmd2.CommandText = "SELECT id, TCid, Descrizione1, Img1, InOfferta, Prezzo, PrezzoIvato, PrezzoPromo, PrezzoPromoIvato " &
-                                       "FROM vsuperarticoli " &
-                                       "WHERE NListino=?n AND id<>?id AND MarcheId=?mr " &
-                                       "ORDER BY InOfferta DESC, (Giacenza-Impegnata) DESC, visite DESC, id DESC " &
-                                       "LIMIT " & maxItems.ToString()
+                    cmd2.CommandText = RelatedSelectSql("vsuperarticoli v",
+                                                        "WHERE v.NListino=?n AND v.id<>?id AND v.MarcheId=?mr " &
+                                                        "ORDER BY v.InOfferta DESC, (v.Giacenza-v.Impegnata) DESC, v.visite DESC, v.id DESC " &
+                                                        "LIMIT " & SafeLimit(maxItems))
                     cmd2.Parameters.AddWithValue("?n", _listino)
                     cmd2.Parameters.AddWithValue("?id", _id)
                     cmd2.Parameters.AddWithValue("?mr", marcaId)
@@ -194,6 +303,7 @@ Partial Class articolo
                 If seen.Contains(idVal) Then Continue While
 
                 Dim tcidVal As Integer = SafeInt(rdr("TCid"), -1)
+                Dim codiceVal As String = Convert.ToString(rdr("Codice"))
                 Dim nameVal As String = Convert.ToString(rdr("Descrizione1"))
                 Dim imgVal As String = NormalizeImageUrl(Convert.ToString(rdr("Img1")))
                 Dim inOfferta As Integer = SafeInt(rdr("InOfferta"), 0)
@@ -212,12 +322,24 @@ Partial Class articolo
                 item.Url = BuildProductUrl(idVal, tcidVal, includeTcid:=(_tcEnabled AndAlso tcidVal <> -1))
                 item.PrezzoHtml = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo)
                 item.InOfferta = (inOfferta = 1)
+                item.Codice = codiceVal
+                item.AvailabilityText = BuildRelatedAvailabilityText(SafeInt(rdr("Giacenza"), 0),
+                                                                     SafeInt(rdr("Impegnata"), 0),
+                                                                     SafeInt(rdr("Disponibilita"), 0),
+                                                                     SafeInt(rdr("InOrdine"), 0))
 
                 results.Add(item)
                 seen.Add(idVal)
             End While
         End Using
     End Sub
+
+    Private Function BuildRelatedAvailabilityText(giacenza As Integer, impegnata As Integer, disponibilita As Integer, inOrdine As Integer) As String
+        If (giacenza - impegnata) > 0 Then Return "Disponibile"
+        If disponibilita > 0 Then Return "In arrivo"
+        If inOrdine > 0 Then Return "In ordine"
+        Return "Verifica disponibilita"
+    End Function
 
     Private Function SafeInt(v As Object, fallback As Integer) As Integer
         If v Is Nothing OrElse v Is DBNull.Value Then Return fallback
