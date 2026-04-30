@@ -148,9 +148,8 @@ Partial Class Articoli
         If Me.dpProdotti IsNot Nothing Then
             Me.dpProdotti.PageSize = pageSize
 
-            Dim pageIndex As Integer = 0
-            If Session("Articoli_PageIndex") IsNot Nothing Then Integer.TryParse(Session("Articoli_PageIndex").ToString(), pageIndex)
-            If pageIndex < 0 Then pageIndex = 0
+            Dim pageIndex As Integer = GetCatalogPageIndex(pageSize)
+            Session("Articoli_PageIndex") = pageIndex
 
             Dim startRow As Integer = pageIndex * pageSize
             Me.dpProdotti.SetPageProperties(startRow, pageSize, doDataBind)
@@ -166,9 +165,9 @@ Partial Class Articoli
         If e.MaximumRows > 0 Then pageIndex = CInt(Math.Floor(e.StartRowIndex / e.MaximumRows))
         Session("Articoli_PageIndex") = pageIndex
 
-        If Me.dpProdotti IsNot Nothing Then
-            Me.dpProdotti.SetPageProperties(e.StartRowIndex, e.MaximumRows, False)
-        End If
+        Dim newUrl As String = BuildCatalogPageUrl(pageIndex)
+        Response.Redirect(newUrl, False)
+        Context.ApplicationInstance.CompleteRequest()
     End Sub
 
 Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.LoadComplete
@@ -914,7 +913,9 @@ strWhere = strWhere & " GROUP BY id"
     End Sub
 
     Protected Sub sdsArticoli_Selected(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.SqlDataSourceStatusEventArgs) Handles sdsArticoli.Selected
-        Me.lblTrovati.Text = e.AffectedRows.ToString
+        If e IsNot Nothing AndAlso e.AffectedRows >= 0 Then
+            SetCatalogCountText(e.AffectedRows)
+        End If
     End Sub
     Function controlla_promo_articolo(ByVal cod_articolo As Integer, ByVal listino As Integer) As Integer
         Dim params As New Dictionary(Of String, Object)
@@ -943,6 +944,17 @@ strWhere = strWhere & " GROUP BY id"
         Dim hasItems As Boolean = (Me.lvProdotti.Items.Count > 0)
         If Me.ksMultiFooter IsNot Nothing Then Me.ksMultiFooter.Visible = hasItems
         If Me.ksPagerWrap IsNot Nothing Then Me.ksPagerWrap.Visible = hasItems
+
+        If Me.dpProdotti IsNot Nothing AndAlso Me.dpProdotti.TotalRowCount >= 0 Then
+            SetCatalogCountText(Me.dpProdotti.TotalRowCount)
+
+            Dim pageIndex As Integer = GetCatalogPageIndex(Me.dpProdotti.PageSize)
+            If Not hasItems AndAlso Me.dpProdotti.TotalRowCount > 0 AndAlso pageIndex > 0 Then
+                Session("Articoli_PageIndex") = 0
+                Response.Redirect(BuildCatalogPageUrl(0), False)
+                Context.ApplicationInstance.CompleteRequest()
+            End If
+        End If
     End Sub
 
     ' CLICK SU ICONA "CARRELLO" PER SINGOLO ARTICOLO
@@ -1267,7 +1279,8 @@ strWhere = strWhere & " GROUP BY id"
 
         Session("RigheArticoli") = pageSize
         Session("Articoli_PageIndex") = 0
-        ApplyPagerSettings(False)
+        Response.Redirect(BuildCatalogPageUrl(0), False)
+        Context.ApplicationInstance.CompleteRequest()
     End Sub
 
     Protected Sub Drop_Filtra_Taglia_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Filtra_Taglia.SelectedIndexChanged
@@ -1370,7 +1383,7 @@ strWhere = strWhere & " GROUP BY id"
         End If
 
         qs.Remove("page")
-        qs.Remove("pg")
+        If Not String.Equals(parName, "pg", StringComparison.OrdinalIgnoreCase) Then qs.Remove("pg")
         qs.Remove("p")
         qs.Remove("rimuovi")
 
@@ -1401,6 +1414,42 @@ strWhere = strWhere & " GROUP BY id"
         If Request Is Nothing OrElse Request.Url Is Nothing Then Return "articoli.aspx"
         Return Request.Url.AbsoluteUri
     End Function
+
+    Private Function GetCatalogPageIndex(ByVal pageSize As Integer) As Integer
+        Dim pageIndex As Integer = 0
+        Dim rawPg As String = Convert.ToString(Request.QueryString("pg"))
+        Dim pg As Integer = 0
+
+        If Integer.TryParse(rawPg, pg) AndAlso pg > 0 Then
+            pageIndex = pg - 1
+        ElseIf Session("Articoli_PageIndex") IsNot Nothing Then
+            Integer.TryParse(Convert.ToString(Session("Articoli_PageIndex")), pageIndex)
+        End If
+
+        If pageIndex < 0 Then pageIndex = 0
+        Return pageIndex
+    End Function
+
+    Private Function BuildCatalogPageUrl(ByVal pageIndex As Integer) As String
+        If pageIndex <= 0 Then
+            Return changeUrlGetParam(GetSafeReturnUrl(), "pg", String.Empty)
+        End If
+        Return changeUrlGetParam(GetSafeReturnUrl(), "pg", (pageIndex + 1).ToString())
+    End Function
+
+    Private Sub SetCatalogCountText(ByVal total As Integer)
+        If total < 0 Then total = 0
+
+        Dim label As String = If(total = 1, "1 prodotto trovato", total.ToString() & " prodotti trovati")
+        If Me.lblTrovati IsNot Nothing Then
+            Dim titleLabel As String = label
+            If (Me.lblRicerca IsNot Nothing AndAlso Me.lblRicerca.Visible) OrElse (Me.lblRisultati IsNot Nothing AndAlso Not String.IsNullOrEmpty(Me.lblRisultati.Text)) Then
+                titleLabel = " - " & label
+            End If
+            Me.lblTrovati.Text = titleLabel
+        End If
+        If Me.lblCatalogSummary IsNot Nothing Then Me.lblCatalogSummary.Text = label
+    End Sub
 
     Protected Sub rptActiveFilters_ItemCommand(ByVal source As Object, ByVal e As RepeaterCommandEventArgs)
         If String.Equals(e.CommandName, "remove", StringComparison.OrdinalIgnoreCase) Then

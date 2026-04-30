@@ -170,7 +170,7 @@
                             </button>
                             <p class="body-text-3 mb-0 d-none d-lg-block">
                                 <asp:Label ID="lblLinee" runat="server" Text="" CssClass="d-none" />
-                                <span class="title-sidebar fw-bold">Sfoglia il catalogo</span>
+                                <asp:Label ID="lblCatalogSummary" runat="server" CssClass="title-sidebar fw-bold" Text="Sfoglia il catalogo" />
                             </p>
                         </div>
 
