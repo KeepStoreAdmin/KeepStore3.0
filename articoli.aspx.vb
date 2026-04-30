@@ -74,9 +74,7 @@ Partial Class Articoli
             newUrl = changeUrlGetParam(newUrl, "sg", filters.Item("sg"))
         End If
 
-        If Not (mrAreEquals And tpAreEquals And grAreEquals And sgAreEquals) AndAlso Not IsSameRequestUrl(newUrl) Then
-            Response.Redirect(newUrl)
-        End If
+        If Not (mrAreEquals And tpAreEquals And grAreEquals And sgAreEquals) Then RedirectIfChanged(newUrl)
     End Sub
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
@@ -88,7 +86,7 @@ Partial Class Articoli
         If Not String.IsNullOrEmpty(Request.QueryString("rimuovi")) Then
             Dim filtersToRemove As String = Request.QueryString("rimuovi")
             Dim cleanFilterUrl As String = RemoveActiveFilterFromUrl(GetSafeReturnUrl(), filtersToRemove)
-            If Not IsSameRequestUrl(cleanFilterUrl) Then Response.Redirect(cleanFilterUrl)
+            RedirectIfChanged(cleanFilterUrl)
         End If
 
         
@@ -111,7 +109,7 @@ Partial Class Articoli
         'Redirect nel caso c'è la presenza di #up
         If Request.Url.AbsoluteUri.Contains("%23up") Or (Request.Url.AbsoluteUri.Contains("#23up")) Then
             Dim cleanAnchorUrl As String = Request.Url.AbsoluteUri.Replace("%23up", "").Replace("#23up", "")
-            If Not IsSameRequestUrl(cleanAnchorUrl) Then Response.Redirect(cleanAnchorUrl)
+            RedirectIfChanged(cleanAnchorUrl)
         End If
 
         '==========================================================
@@ -168,8 +166,7 @@ Partial Class Articoli
         Session("Articoli_PageIndex") = pageIndex
 
         Dim newUrl As String = BuildCatalogPageUrl(pageIndex)
-        Response.Redirect(newUrl, False)
-        Context.ApplicationInstance.CompleteRequest()
+        RedirectIfChanged(newUrl, False)
     End Sub
 
 Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.LoadComplete
@@ -955,10 +952,7 @@ strWhere = strWhere & " GROUP BY id"
             If Not hasItems AndAlso Me.dpProdotti.TotalRowCount > 0 AndAlso pageIndex > 0 Then
                 Session("Articoli_PageIndex") = 0
                 Dim resetPageUrl As String = BuildCatalogPageUrl(0)
-                If Not IsSameRequestUrl(resetPageUrl) Then
-                    Response.Redirect(resetPageUrl, False)
-                    Context.ApplicationInstance.CompleteRequest()
-                End If
+                RedirectIfChanged(resetPageUrl, False)
             End If
         End If
     End Sub
@@ -1280,13 +1274,13 @@ strWhere = strWhere & " GROUP BY id"
         End If
 
         Dim newUrl As String = changeUrlGetParam(GetSafeReturnUrl(), parName, parValue)
-        Response.Redirect(newUrl)
+        RedirectIfChanged(newUrl)
     End Sub
 
     Protected Sub Drop_Ordinamento_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Ordinamento.SelectedIndexChanged
         Session("Articoli_PageIndex") = 0
         Dim newUrl As String = changeUrlDependingFromDropDownList(GetSafeReturnUrl(), Drop_Ordinamento, "ordinamento")
-        Response.Redirect(newUrl)
+        RedirectIfChanged(newUrl)
     End Sub
 
     Protected Sub Drop_Righe_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Righe.SelectedIndexChanged
@@ -1297,26 +1291,25 @@ strWhere = strWhere & " GROUP BY id"
 
         Session("RigheArticoli") = pageSize
         Session("Articoli_PageIndex") = 0
-        Response.Redirect(BuildCatalogPageUrl(0), False)
-        Context.ApplicationInstance.CompleteRequest()
+        RedirectIfChanged(BuildCatalogPageUrl(0), False)
     End Sub
 
     Protected Sub Drop_Filtra_Taglia_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Filtra_Taglia.SelectedIndexChanged
         Session("Articoli_PageIndex") = 0
         Dim newUrl As String = changeUrlDependingFromDropDownList(GetSafeReturnUrl(), Drop_Filtra_Taglia, "taglia")
-        Response.Redirect(newUrl)
+        RedirectIfChanged(newUrl)
     End Sub
 
     Protected Sub Drop_Filtra_Colore_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Filtra_Colore.SelectedIndexChanged
         Session("Articoli_PageIndex") = 0
         Dim newUrl As String = changeUrlDependingFromDropDownList(GetSafeReturnUrl(), Drop_Filtra_Colore, "colore")
-        Response.Redirect(newUrl)
+        RedirectIfChanged(newUrl)
     End Sub
 
     Protected Sub CheckBox_Disponibile_CheckedChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles CheckBox_Disponibile.CheckedChanged
         Session("Articoli_PageIndex") = 0
         Dim newUrl As String = changeUrlDependingFromCheckBox(GetSafeReturnUrl(), CheckBox_Disponibile, "disponibile", "1", "")
-        Response.Redirect(newUrl)
+        RedirectIfChanged(newUrl)
     End Sub
     Sub changeCheckBoxDependingFromUrl(ByVal checkBox As CheckBox, ByVal parName As String, ByVal parValueIfChecked As String)
         If Request.QueryString(parName) = parValueIfChecked Then
@@ -1445,6 +1438,15 @@ strWhere = strWhere & " GROUP BY id"
         End Try
     End Function
 
+    Private Sub RedirectIfChanged(ByVal targetUrl As String, Optional ByVal endResponse As Boolean = True)
+        If String.IsNullOrEmpty(targetUrl) OrElse IsSameRequestUrl(targetUrl) Then Exit Sub
+
+        Response.Redirect(targetUrl, endResponse)
+        If Not endResponse AndAlso Context IsNot Nothing AndAlso Context.ApplicationInstance IsNot Nothing Then
+            Context.ApplicationInstance.CompleteRequest()
+        End If
+    End Sub
+
     Private Function GetCatalogPageIndex(ByVal pageSize As Integer) As Integer
         Dim pageIndex As Integer = 0
         Dim rawPg As String = Convert.ToString(Request.QueryString("pg"))
@@ -1484,13 +1486,13 @@ strWhere = strWhere & " GROUP BY id"
     Protected Sub rptActiveFilters_ItemCommand(ByVal source As Object, ByVal e As RepeaterCommandEventArgs)
         If String.Equals(e.CommandName, "remove", StringComparison.OrdinalIgnoreCase) Then
             Session("Articoli_PageIndex") = 0
-            Response.Redirect(RemoveActiveFilterFromUrl(GetSafeReturnUrl(), Convert.ToString(e.CommandArgument)))
+            RedirectIfChanged(RemoveActiveFilterFromUrl(GetSafeReturnUrl(), Convert.ToString(e.CommandArgument)))
         End If
     End Sub
 
     Protected Sub lbClearAllFilters_Click(ByVal sender As Object, ByVal e As System.EventArgs)
         Session("Articoli_PageIndex") = 0
-        Response.Redirect(ClearCatalogFiltersFromUrl(GetSafeReturnUrl()))
+        RedirectIfChanged(ClearCatalogFiltersFromUrl(GetSafeReturnUrl()))
     End Sub
 
     Private Sub BindActiveFilters()
@@ -2057,7 +2059,7 @@ strWhere = strWhere & " GROUP BY id"
                     url &= "?" & qs
                 End If
 
-                If Not IsSameRequestUrl(url) Then Response.Redirect(url, True)
+                RedirectIfChanged(url, True)
             End If
 
         Catch
@@ -2170,7 +2172,7 @@ strWhere = strWhere & " GROUP BY id"
             Dim connStr As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             Using conn As New MySqlConnection(connStr)
                 conn.Open()
-                Using cmd As New MySqlCommand("SELECT id FROM tipologie WHERE Abilitato=1 AND Id_categoria=@ct ORDER BY Ordinamento, Descrizione, id LIMIT 1", conn)
+                Using cmd As New MySqlCommand("SELECT id FROM tipologie WHERE Abilitato=1 AND CategorieId=@ct ORDER BY Ordinamento, Descrizione, id LIMIT 1", conn)
                     cmd.Parameters.Add("@ct", MySqlDbType.Int32).Value = categoriaId
                     Dim obj As Object = cmd.ExecuteScalar()
                     If obj Is Nothing OrElse obj Is DBNull.Value Then Return 0
