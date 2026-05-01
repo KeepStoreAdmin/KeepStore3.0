@@ -497,6 +497,13 @@
     visibility: visible;
   }
 
+  #ksCatalogPage .ks-catalog-card .list-product-btn li,
+  .ks-recently-viewed-block .ks-recent-card .list-product-btn li {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+
   #ksCatalogPage .ks-active-filters .d-flex {
     gap: 6px !important;
   }

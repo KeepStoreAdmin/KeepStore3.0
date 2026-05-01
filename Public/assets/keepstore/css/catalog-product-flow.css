@@ -65,6 +65,20 @@
   z-index:3;
 }
 
+.ks-catalog-card .list-product-btn .box-icon .icon,
+.ks-recent-card .list-product-btn .box-icon .icon{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  color:currentColor;
+  line-height:1;
+}
+
+.ks-catalog-card .list-product-btn .box-icon:hover .icon,
+.ks-recent-card .list-product-btn .box-icon:hover .icon{
+  color:#fff;
+}
+
 .ks-catalog-card .ks-card-brand-code{
   margin-top:.25rem;
   min-height:1.15em;
@@ -125,6 +139,21 @@
   opacity:.65;
 }
 .price-wrap .price-new{
+  font-weight:700;
+}
+
+.ks-availability-ok{
+  color:#15803d !important;
+  font-weight:700;
+}
+
+.ks-availability-wait{
+  color:#b45309 !important;
+  font-weight:700;
+}
+
+.ks-availability-check{
+  color:#64748b !important;
   font-weight:700;
 }
 

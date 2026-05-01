@@ -1309,11 +1309,12 @@ Partial Class articolo
 
         ' Disponibilità (Arrivo)
         Dim availabilityText As String = BuildAvailabilityText(row)
+        Dim availabilityHtml As String = BuildAvailabilityHtml(availabilityText)
         phAvailability.Visible = Not String.IsNullOrEmpty(availabilityText)
         phAvailabilityInfo.Visible = phAvailability.Visible
-        litAvailability.Text = Server.HtmlEncode(availabilityText)
-        litBuyBoxAvailability.Text = Server.HtmlEncode(availabilityText)
-        litAvailabilityInfo.Text = Server.HtmlEncode(availabilityText)
+        litAvailability.Text = availabilityHtml
+        litBuyBoxAvailability.Text = availabilityHtml
+        litAvailabilityInfo.Text = availabilityHtml
 
         ' Varianti (Taglia/Colore)
         Dim currentTcid As Integer = GetRowInt(row, "TCid", _tcid)
@@ -2025,6 +2026,19 @@ Partial Class articolo
         End If
 
         Return "Verifica disponibilita"
+    End Function
+
+    Private Function BuildAvailabilityHtml(text As String) As String
+        If String.IsNullOrWhiteSpace(text) Then Return ""
+
+        Dim css As String = "ks-availability-check"
+        If text.IndexOf("Disponibile", StringComparison.OrdinalIgnoreCase) >= 0 Then
+            css = "ks-availability-ok"
+        ElseIf text.IndexOf("arrivo", StringComparison.OrdinalIgnoreCase) >= 0 OrElse text.IndexOf("ordine", StringComparison.OrdinalIgnoreCase) >= 0 Then
+            css = "ks-availability-wait"
+        End If
+
+        Return "<span class=""" & css & """>" & Server.HtmlEncode(text) & "</span>"
     End Function
 
     Private Sub EmitRecentlyViewedClientScript(row As DataRow,

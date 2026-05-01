@@ -142,22 +142,27 @@
 
   function rememberClickedCart(link) {
     var product = productFromNode(link);
+    var qs = {};
     if (!product || !product.id) {
-      var qs = parseUrlParams(link.getAttribute('href'));
+      qs = parseUrlParams(link.getAttribute('href'));
       product = { id: qs.id, tcid: qs.tcid || '-1' };
+    } else {
+      qs = parseUrlParams(link.getAttribute('href'));
     }
     if (!product.id) return;
 
     var list = normalizeItems(readStorage());
     var key = itemKey(product.id, product.tcid || '-1');
+    var qty = parseFloat(String(qs.qty || '1').replace(',', '.'));
+    if (!isFinite(qty) || qty <= 0) qty = 1;
     var found = false;
     list.forEach(function (item) {
       if (item.key === key) {
-        item.qty = Math.max(1, item.qty || 1);
+        item.qty = Math.max(1, (item.qty || 0) + qty);
         found = true;
       }
     });
-    if (!found) list.unshift({ id: normalizeId(product.id), tcid: normalizeId(product.tcid || '-1') || '-1', qty: 1, key: key });
+    if (!found) list.unshift({ id: normalizeId(product.id), tcid: normalizeId(product.tcid || '-1') || '-1', qty: qty, key: key });
     writeStorage(list.slice(0, 80));
   }
 

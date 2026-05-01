@@ -273,6 +273,7 @@
       title: link.getAttribute('data-ks-title') || '',
       brand: link.getAttribute('data-ks-brand') || '',
       category: link.getAttribute('data-ks-category') || '',
+      code: link.getAttribute('data-ks-code') || '',
       url: link.getAttribute('data-ks-url') || link.getAttribute('href') || '',
       image: link.getAttribute('data-ks-img') || '',
       price: link.getAttribute('data-ks-price') || '',

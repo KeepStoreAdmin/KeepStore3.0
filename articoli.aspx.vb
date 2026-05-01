@@ -2771,6 +2771,17 @@ strWhere = strWhere & " GROUP BY id"
         Return "Verifica disponibilita"
     End Function
 
+    Protected Function CatalogAvailabilityCss(ByVal dataItem As Object) As String
+        Dim disponibile As Integer = UiData.Int(dataItem, "Giacenza") - UiData.Int(dataItem, "Impegnata")
+        If disponibile > 0 Then Return "ks-availability-ok"
+
+        If UiData.Int(dataItem, "Disponibilita") > 0 OrElse UiData.Int(dataItem, "InOrdine") > 0 Then
+            Return "ks-availability-wait"
+        End If
+
+        Return "ks-availability-check"
+    End Function
+
     Protected Function CatalogProductUrl(ByVal dataItem As Object) As String
         Dim id As Integer = UiData.Int(dataItem, "id")
         Dim tcId As Integer = CatalogTcId(dataItem, False)

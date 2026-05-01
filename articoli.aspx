@@ -256,32 +256,36 @@
                                             <li>
                                                 <a href='<%# CatalogCartAddUrl(Container.DataItem) %>'
                                                     class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link"
+                                                    aria-label="Aggiungi al carrello"
                                                     <%# CatalogActionDataAttributes(Container.DataItem) %>>
-                                                    <i class="icon icon-cart2"></i>
+                                                    <span class="icon icon-cart2"></span>
                                                     <span class="tooltip">Carrello</span>
                                                 </a>
                                             </li>
                                             <li class="wishlist">
                                                 <a href='<%# CatalogWishlistAddUrl(Container.DataItem) %>'
                                                     class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-wishlist-link"
+                                                    aria-label="Aggiungi a wishlist"
                                                     <%# CatalogActionDataAttributes(Container.DataItem) %>>
-                                                    <i class="icon icon-heart2"></i>
+                                                    <span class="icon icon-heart2"></span>
                                                     <span class="tooltip">Wishlist</span>
                                                 </a>
                                             </li>
                                             <li>
                                                 <a href="#quickView" data-bs-toggle="modal"
                                                     class="box-icon quickview btn-icon-action hover-tooltip tooltip-left js-ks-quickview"
+                                                    aria-label="Vista rapida"
                                                     <%# CatalogActionDataAttributes(Container.DataItem) %>>
-                                                    <i class="icon icon-view"></i>
+                                                    <span class="icon icon-view"></span>
                                                     <span class="tooltip">Vista rapida</span>
                                                 </a>
                                             </li>
                                             <li>
                                                 <a href="#compare" data-bs-toggle="offcanvas"
                                                     class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-compare"
+                                                    aria-label="Confronta articolo"
                                                     <%# CatalogActionDataAttributes(Container.DataItem) %>>
-                                                    <i class="icon icon-compare1"></i>
+                                                    <span class="icon icon-compare1"></span>
                                                     <span class="tooltip">Confronta</span>
                                                 </a>
                                             </li>
@@ -335,7 +339,7 @@
                                                 </li>
                                                 <li>
                                                     <p class="caption name-feature">Disponibilita:</p>
-                                                    <p class="caption property text-secondary"><%# Server.HtmlEncode(CatalogAvailabilityText(Container.DataItem)) %></p>
+                                                    <p class='caption property <%# CatalogAvailabilityCss(Container.DataItem) %>'><%# Server.HtmlEncode(CatalogAvailabilityText(Container.DataItem)) %></p>
                                                 </li>
                                             </ul>
 
@@ -349,12 +353,13 @@
                                     <div class="card-product-btn">
                                         <a href='<%# CatalogCartAddUrl(Container.DataItem) %>'
                                             class="tf-btn btn-line w-100 js-ks-cart-link"
+                                            aria-label="Aggiungi al carrello"
                                             <%# CatalogActionDataAttributes(Container.DataItem) %>>
                                             <span>Aggiungi al carrello</span>
                                             <i class="icon-cart-2"></i>
                                         </a>
                                         <div class="box-btn">
-                                            <a href='<%# CatalogProductUrl(Container.DataItem) %>' class="tf-btn-icon style-2 type-black">
+                                            <a href='<%# CatalogProductUrl(Container.DataItem) %>' class="tf-btn-icon style-2 type-black" aria-label="Apri dettagli prodotto">
                                                 <i class="icon-view"></i>
                                                 <span class="body-text-3 fw-normal">Dettagli</span>
                                             </a>
