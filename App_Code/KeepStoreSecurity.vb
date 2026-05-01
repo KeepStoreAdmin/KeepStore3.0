@@ -66,7 +66,39 @@ Public Module KeepStoreSecurity
             Dim builder As New UriBuilder(url)
             builder.Scheme = Uri.UriSchemeHttps
             builder.Port = -1
-            resp.Redirect(builder.Uri.ToString(), True)
+            Dim target As String = builder.Uri.ToString()
+
+            Try
+                resp.Clear()
+            Catch
+            End Try
+
+            Dim method As String = Convert.ToString(req.HttpMethod)
+            If method.Equals("POST", StringComparison.OrdinalIgnoreCase) Then
+                resp.StatusCode = 303
+                resp.StatusDescription = "See Other"
+            Else
+                resp.StatusCode = 301
+                resp.StatusDescription = "Moved Permanently"
+            End If
+
+            resp.RedirectLocation = target
+            SafeSetHeader(resp, "Location", target)
+
+            Try
+                resp.SuppressContent = True
+            Catch
+            End Try
+
+            Try
+                resp.TrySkipIisCustomErrors = True
+            Catch
+            End Try
+
+            Dim ctx As HttpContext = HttpContext.Current
+            If ctx IsNot Nothing AndAlso ctx.ApplicationInstance IsNot Nothing Then
+                ctx.ApplicationInstance.CompleteRequest()
+            End If
             Return
         End If
 

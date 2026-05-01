@@ -41,7 +41,7 @@
     </asp:PlaceHolder>
 
     <asp:Panel ID="pnlProduct" runat="server" CssClass="ks-product-page">
-        <section class="tf-sp-2">
+        <section class="ks-product-main-section">
             <div class="tf-main-product section-image-zoom">
                 <div class="container">
                     <div class="row">
@@ -278,14 +278,14 @@
     <asp:PlaceHolder ID="phRelated" runat="server" Visible="false">
         <section class="flat-spacing-2 ks-product-relation-section">
             <div class="container">
-                <div class="tf-section-heading">
-                    <h3 class="heading">Prodotti correlati</h3>
+                <div class="flat-title">
+                    <h5 class="fw-semibold">Prodotti correlati</h5>
                 </div>
 
-                <div class="tf-grid-layout md-col-4 sm-col-2">
+                <div class="tf-grid-layout lg-col-5 md-col-4 sm-col-2">
                     <asp:Repeater ID="rptRelated" runat="server">
                         <ItemTemplate>
-                            <div class="card-product style-1 style-img-border">
+                            <div class="card-product style-img-border">
                                 <div class="card-product-wrapper">
                                     <a class="product-img ks-product-card-image" href='<%# Eval("Url") %>'>
                                         <img class="lazyload img-product"
@@ -339,14 +339,14 @@
     <asp:PlaceHolder ID="phCompatible" runat="server" Visible="false">
         <section class="flat-spacing-2 ks-product-relation-section">
             <div class="container">
-                <div class="tf-section-heading">
-                    <h3 class="heading">Compatibili con questo articolo</h3>
+                <div class="flat-title">
+                    <h5 class="fw-semibold">Compatibili con questo articolo</h5>
                 </div>
 
-                <div class="tf-grid-layout md-col-4 sm-col-2">
+                <div class="tf-grid-layout lg-col-5 md-col-4 sm-col-2">
                     <asp:Repeater ID="rptCompatible" runat="server">
                         <ItemTemplate>
-                            <div class="card-product style-1 style-img-border">
+                            <div class="card-product style-img-border">
                                 <div class="card-product-wrapper">
                                     <a class="product-img ks-product-card-image" href='<%# Eval("Url") %>'>
                                         <img class="lazyload img-product"
@@ -400,14 +400,14 @@
     <asp:PlaceHolder ID="phLinked" runat="server" Visible="false">
         <section class="flat-spacing-2 ks-product-relation-section">
             <div class="container">
-                <div class="tf-section-heading">
-                    <h3 class="heading">Articoli collegati</h3>
+                <div class="flat-title">
+                    <h5 class="fw-semibold">Articoli collegati</h5>
                 </div>
 
-                <div class="tf-grid-layout md-col-4 sm-col-2">
+                <div class="tf-grid-layout lg-col-5 md-col-4 sm-col-2">
                     <asp:Repeater ID="rptLinked" runat="server">
                         <ItemTemplate>
-                            <div class="card-product style-1 style-img-border">
+                            <div class="card-product style-img-border">
                                 <div class="card-product-wrapper">
                                     <a class="product-img ks-product-card-image" href='<%# Eval("Url") %>'>
                                         <img class="lazyload img-product"

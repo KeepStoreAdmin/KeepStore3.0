@@ -211,6 +211,10 @@
   align-items: flex-start;
 }
 
+#ksCatalogPage.flat-content {
+  padding-top: 0;
+}
+
 #ksCatalogPage .content-area {
   min-width: 0;
 }
@@ -251,11 +255,16 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 #ksCatalogPage .ks-catalog-card .card-product-wrapper {
   aspect-ratio: 1 / 1;
   min-height: 0;
+  background: #f4f4f4;
+  border-radius: 4px;
 }
 
 #ksCatalogPage .ks-catalog-card .product-img,
@@ -272,6 +281,7 @@
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
+  padding-top: 14px;
 }
 
 #ksCatalogPage .ks-filter-option {
@@ -305,6 +315,25 @@
 
 #ksCatalogPage .ks-catalog-card .price-wrap {
   min-height: 30px;
+}
+
+#ksCatalogPage .ks-catalog-card .price-wrap .price,
+#ksCatalogPage .ks-catalog-card .price-wrap .new-price,
+#ksCatalogPage .ks-catalog-card .price-wrap ins {
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--black, #121212);
+  text-decoration: none;
+}
+
+#ksCatalogPage .ks-catalog-card .price-wrap .old-price,
+#ksCatalogPage .ks-catalog-card .price-wrap del,
+#ksCatalogPage .ks-catalog-card .price-wrap s,
+#ksCatalogPage .ks-catalog-card .price-wrap strike {
+  color: var(--text-main-2, #666);
+  text-decoration: line-through;
+  font-size: 13px;
 }
 
 #ksCatalogPage .ks-catalog-card .product-tag {
@@ -402,7 +431,7 @@
 
 @media (max-width: 767.98px) {
   #ksCatalogPage.flat-content {
-    padding-top: 18px;
+    padding-top: 0;
   }
 
   #ksCatalogPage .tf-shop-control {

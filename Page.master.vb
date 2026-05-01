@@ -442,14 +442,24 @@ Dim IvaTipo As Integer
 
         ' ============================================================
         ' STEP-Sec: Anti-CSRF (ViewStateUserKey)
-        ' - Lega il ViewState alla sessione per ridurre CSRF/replay cross-user
-        ' - Fail-safe: non blocca mai la pagina
+        ' - Non sovrascrive il token impostato dalle pagine AntiCsrfPage
+        ' - Fallback legacy su SessionID solo quando nessuna pagina ha gia'
+        '   scelto una chiave stabile prima del caricamento ViewState.
         ' ============================================================
         Try
             If Me.Page IsNot Nothing AndAlso Me.Session IsNot Nothing Then
-                Dim sid As String = Convert.ToString(Me.Session.SessionID)
-                If Not String.IsNullOrEmpty(sid) Then
-                    Me.Page.ViewStateUserKey = sid
+                Dim currentKey As String = String.Empty
+                Try
+                    currentKey = Convert.ToString(Me.Page.ViewStateUserKey)
+                Catch
+                    currentKey = String.Empty
+                End Try
+
+                If String.IsNullOrEmpty(currentKey) Then
+                    Dim sid As String = Convert.ToString(Me.Session.SessionID)
+                    If Not String.IsNullOrEmpty(sid) Then
+                        Me.Page.ViewStateUserKey = sid
+                    End If
                 End If
             End If
         Catch

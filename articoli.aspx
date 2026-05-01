@@ -19,7 +19,7 @@
 
 <asp:Content ID="MainContent1" ContentPlaceHolderID="MainContent" runat="server">
 
-    <asp:Panel ID="ksPageTitle" runat="server" CssClass="tf-page-title">
+    <asp:Panel ID="ksPageTitle" runat="server" CssClass="tf-page-title d-none">
         <div class="container">
             <div class="d-flex flex-wrap align-items-end justify-content-between gap-2">
                 <div>
@@ -224,7 +224,7 @@
                             </LayoutTemplate>
 
                             <ItemTemplate>
-                                <div class="card-product style-1 ks-catalog-card">
+                                <div class="card-product ks-catalog-card">
                                     <div class="card-product-wrapper">
                                         <a href='<%# "articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCId") %>' class="product-img">
                                             <img class="lazyload img-product" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>'

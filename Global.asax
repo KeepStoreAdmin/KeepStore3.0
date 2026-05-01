@@ -27,15 +27,64 @@ Sub Application_BeginRequest(ByVal sender As Object, ByVal e As EventArgs)
             b.Scheme = Uri.UriSchemeHttps
             b.Port = -1 ' porta di default (443)
 
-            Response.StatusCode = 301
-            Response.RedirectLocation = b.Uri.ToString()
+            Dim target As String = b.Uri.ToString()
+            Response.Clear()
+            If String.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase) Then
+                Response.StatusCode = 303
+                Response.StatusDescription = "See Other"
+            Else
+                Response.StatusCode = 301
+                Response.StatusDescription = "Moved Permanently"
+            End If
+            Response.RedirectLocation = target
+            Response.Headers("Location") = target
+            Response.SuppressContent = True
+            Response.TrySkipIisCustomErrors = True
             Context.ApplicationInstance.CompleteRequest()
+            Exit Sub
         End If
 
     Catch
         ' Non interrompere la request pipeline se qualcosa va storto.
     End Try
 End Sub
+
+Sub Application_Error(ByVal sender As Object, ByVal e As EventArgs)
+    Try
+        If Context Is Nothing OrElse Request Is Nothing OrElse Response Is Nothing Then Exit Sub
+        If Not String.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase) Then Exit Sub
+
+        Dim ex As Exception = Server.GetLastError()
+        If Not IsViewStateMacError(ex) Then Exit Sub
+
+        Server.ClearError()
+        Response.Clear()
+        Response.StatusCode = 303
+        Response.StatusDescription = "See Other"
+        Response.RedirectLocation = Request.RawUrl
+        Response.Headers("Location") = Request.RawUrl
+        Response.SuppressContent = True
+        Response.TrySkipIisCustomErrors = True
+        Context.ApplicationInstance.CompleteRequest()
+    Catch
+    End Try
+End Sub
+
+Private Function IsViewStateMacError(ByVal ex As Exception) As Boolean
+    Dim cur As Exception = ex
+    While cur IsNot Nothing
+        Dim typeName As String = cur.GetType().FullName
+        Dim msg As String = If(cur.Message, String.Empty)
+
+        If String.Equals(typeName, "System.Web.UI.ViewStateException", StringComparison.Ordinal) Then Return True
+        If msg.IndexOf("viewstate", StringComparison.OrdinalIgnoreCase) >= 0 AndAlso msg.IndexOf("MAC", StringComparison.OrdinalIgnoreCase) >= 0 Then Return True
+        If msg.IndexOf("Viewstate non valido", StringComparison.OrdinalIgnoreCase) >= 0 Then Return True
+
+        cur = cur.InnerException
+    End While
+
+    Return False
+End Function
 
 Sub Application_PreSendRequestHeaders(ByVal sender As Object, ByVal e As EventArgs)
     Try
