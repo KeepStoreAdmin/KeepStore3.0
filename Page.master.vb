@@ -1817,6 +1817,7 @@ End Function
                     End Using
                 End Using
             End Using
+            PublishCartProductState(LoginId, SessionID)
         Catch
             ' In caso di errore DB: lascio i valori a 0
             If lblCarrelloCountCtrl IsNot Nothing Then
@@ -1827,6 +1828,66 @@ End Function
             End If
             Session("Carrello_Quantita") = 0
             Session("Carrello_Totale_Merce") = 0D
+            PublishEmptyCartProductState()
+        End Try
+    End Sub
+
+    Private Sub PublishEmptyCartProductState()
+        Try
+            Dim lit As Literal = FindCtrl(Of Literal)("litCartStateScript")
+            If lit IsNot Nothing Then
+                lit.Text = "<script>window.KeepStoreCartState={items:[]};</script>"
+            End If
+        Catch
+        End Try
+    End Sub
+
+    Private Sub PublishCartProductState(ByVal loginId As Integer, ByVal sessionId As String)
+        Try
+            Dim items As New List(Of Dictionary(Of String, Object))()
+            Dim connString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+
+            Using conn As New MySqlConnection(connString)
+                conn.Open()
+                Using cmd As New MySqlCommand()
+                    cmd.Connection = conn
+                    cmd.CommandType = CommandType.Text
+                    If loginId > 0 Then
+                        cmd.CommandText = "SELECT ArticoliId, COALESCE(TCid,-1) AS TCid, SUM(COALESCE(Qnt,0)) AS Qty FROM carrello WHERE LoginId=?loginId GROUP BY ArticoliId, COALESCE(TCid,-1)"
+                        cmd.Parameters.AddWithValue("?loginId", loginId)
+                    Else
+                        cmd.CommandText = "SELECT ArticoliId, COALESCE(TCid,-1) AS TCid, SUM(COALESCE(Qnt,0)) AS Qty FROM carrello WHERE SessionId=?sessionId GROUP BY ArticoliId, COALESCE(TCid,-1)"
+                        cmd.Parameters.AddWithValue("?sessionId", sessionId)
+                    End If
+
+                    Using rdr As MySqlDataReader = cmd.ExecuteReader()
+                        While rdr.Read()
+                            Dim idVal As Integer = 0
+                            Dim tcVal As Integer = -1
+                            Dim qtyVal As Decimal = 0D
+                            Integer.TryParse(Convert.ToString(rdr("ArticoliId")), idVal)
+                            Integer.TryParse(Convert.ToString(rdr("TCid")), tcVal)
+                            Decimal.TryParse(Convert.ToString(rdr("Qty")), qtyVal)
+                            If idVal <= 0 OrElse qtyVal <= 0D Then Continue While
+
+                            Dim item As New Dictionary(Of String, Object)()
+                            item("id") = idVal.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                            item("tcid") = tcVal.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                            item("qty") = qtyVal
+                            item("key") = idVal.ToString(System.Globalization.CultureInfo.InvariantCulture) & ":" & tcVal.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                            items.Add(item)
+                        End While
+                    End Using
+                End Using
+            End Using
+
+            Dim lit As Literal = FindCtrl(Of Literal)("litCartStateScript")
+            If lit IsNot Nothing Then
+                Dim js As New System.Web.Script.Serialization.JavaScriptSerializer()
+                lit.Text = "<script>window.KeepStoreCartState={items:" & js.Serialize(items) & "};</script>"
+            End If
+        Catch
+            PublishEmptyCartProductState()
         End Try
     End Sub
 

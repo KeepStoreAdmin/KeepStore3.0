@@ -297,17 +297,19 @@
         </div>
     </section>
 
-    <section id="HomeRecentlyViewedSection" runat="server" visible="false" class="tf-sp-2 ks-home-recent-section ks-home-chosen-section">
+    <section id="HomeRecentlyViewedSection" runat="server" visible="false" class="tf-sp-2 ks-home-recent-section ks-home-chosen-section d-none"
+             data-ks-limit="10"
+             data-ks-placeholder="<%= ThemeManager.PlaceholderProductImageUrl() %>">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
-                <h5 class="fw-semibold" data-ks-i18n="home.chosenByYou">Scelti Da Te</h5>
+                <h5 class="fw-semibold" data-ks-i18n="home.recentlyViewed">Visti di recente</h5>
                 <div class="box-btn-slide relative">
-                    <div class="swiper-button-prev nav-swiper nav-prev-products"><i class="icon-arrow-left-lg"></i></div>
-                    <div class="swiper-button-next nav-swiper nav-next-products"><i class="icon-arrow-right-lg"></i></div>
+                    <div class="swiper-button-prev nav-swiper nav-prev-products ks-rv-prev"><i class="icon-arrow-left-lg"></i></div>
+                    <div class="swiper-button-next nav-swiper nav-next-products ks-rv-next"><i class="icon-arrow-right-lg"></i></div>
                 </div>
             </div>
-            <div class="swiper tf-sw-products" data-preview="5" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="20" data-space="15" data-pagination="2" data-pagination-sm="3" data-pagination-md="4" data-pagination-lg="5">
-                <div class="swiper-wrapper">
+            <div class="swiper tf-sw-products ks-recently-viewed-swiper" data-preview="5" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="20" data-space="15" data-pagination="2" data-pagination-sm="3" data-pagination-md="4" data-pagination-lg="5">
+                <div class="swiper-wrapper" data-ks-recent-items>
                     <asp:Repeater ID="rptRecentlyViewed" runat="server">
                         <ItemTemplate>
                             <div class="swiper-slide">
@@ -468,5 +470,7 @@
 </asp:Content>
 
 <asp:Content ID="cntScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>"></script>
     <script src="<%= ThemeManager.Asset("js/home-default.js") %>"></script>
 </asp:Content>

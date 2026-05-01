@@ -1,4 +1,5 @@
 Imports System
+Imports System.Collections
 Imports System.Collections.Generic
 Imports System.Configuration
 Imports System.Data
@@ -260,6 +261,20 @@ Partial Class articolo
 
         phBundleEmpty.Visible = (bundleItems.Count <= 1)
         litBundleTotal.Text = Server.HtmlEncode(FormatBundleTotal(bundleItems))
+        StoreBundleCartItems(bundleItems)
+    End Sub
+
+    Private Sub StoreBundleCartItems(items As List(Of RelatedItem))
+        Dim cartItems As New ArrayList()
+        If items IsNot Nothing Then
+            For Each item As RelatedItem In items
+                If item Is Nothing OrElse item.Id <= 0 Then Continue For
+                Dim tcid As Integer = If(item.Tcid > 0, item.Tcid, -1)
+                cartItems.Add(item.Id.ToString(CultureInfo.InvariantCulture) & "," &
+                              tcid.ToString(CultureInfo.InvariantCulture) & ",1,0")
+            Next
+        End If
+        Session("ks_product_bundle_cart_items") = cartItems
     End Sub
 
     Private Sub BindProductCarousel(holder As PlaceHolder, repeater As Repeater, items As List(Of RelatedItem))
@@ -2344,6 +2359,24 @@ Partial Class articolo
         Session("Carrello_Quantita") = qty.ToString()
         Session("Carrello_Pagina") = Request.RawUrl
         Session("Carrello_SelezioneMultipla") = Nothing
+
+        Response.Redirect("aggiungi.aspx", False)
+        Context.ApplicationInstance.CompleteRequest()
+    End Sub
+
+    Protected Sub btnBundleAddToCart_Click(sender As Object, e As EventArgs)
+        Dim bundleItems As ArrayList = TryCast(Session("ks_product_bundle_cart_items"), ArrayList)
+        If bundleItems Is Nothing OrElse bundleItems.Count = 0 Then
+            btnAddToCart_Click(sender, e)
+            Return
+        End If
+
+        Session("ProdottoGratis") = 0
+        Session("Carrello_ArticoloId") = "0"
+        Session("Carrello_TCId") = Nothing
+        Session("Carrello_Quantita") = "1"
+        Session("Carrello_Pagina") = Request.RawUrl
+        Session("Carrello_SelezioneMultipla") = bundleItems
 
         Response.Redirect("aggiungi.aspx", False)
         Context.ApplicationInstance.CompleteRequest()

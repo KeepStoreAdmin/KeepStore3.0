@@ -171,14 +171,11 @@ Partial Public Class _Default
             HomeLegacyBestSection.Visible = Not IsTableEmpty(bestRows)
         End If
 
-        Dim recentRows As DataTable = GetRecentlyViewedProducts(10, usedBusinessKeys, True, Nothing, False)
-        If IsTableEmpty(recentRows) Then
-            recentRows = TakeDistinctRows(10, usedBusinessKeys, newArrivalsPool, fallbackCatalogPool)
-        End If
+        Dim recentRows As DataTable = EmptyProductsTable()
         rptRecentlyViewed.DataSource = recentRows
         rptRecentlyViewed.DataBind()
         If HomeRecentlyViewedSection IsNot Nothing Then
-            HomeRecentlyViewedSection.Visible = Not IsTableEmpty(recentRows)
+            HomeRecentlyViewedSection.Visible = True
         End If
 
         BindLowerBlock(Top20Block, rptTop20Slides, TakeDistinctRows(10, usedBusinessKeys, currentYearSellingPool, topSellingPool, topRatedPool, fallbackCatalogPool), 1, Nothing, Nothing)
@@ -860,7 +857,7 @@ Partial Public Class _Default
 
         Dim sql As New StringBuilder()
         sql.Append("SELECT ")
-        sql.Append("v.id, v.Codice, v.Ean, v.Descrizione1, v.Descrizione2, IFNULL(v.DescrizioneLunga,'') AS DescrizioneLunga, ")
+        sql.Append("v.id, COALESCE(v.TCid,-1) AS TCid, v.Codice, v.Ean, v.Descrizione1, v.Descrizione2, IFNULL(v.DescrizioneLunga,'') AS DescrizioneLunga, ")
         sql.Append("COALESCE(v.MarcheId,0) AS MarcheId, IFNULL(v.MarcheDescrizione,'') AS MarcheDescrizione, ")
         sql.Append("IFNULL(v.SettoriDescrizione,'') AS SettoriDescrizione, IFNULL(v.CategorieDescrizione,'') AS CategorieDescrizione, ")
         sql.Append("IFNULL(v.TipologieDescrizione,'') AS TipologieDescrizione, IFNULL(v.GruppiDescrizione,'') AS GruppiDescrizione, ")
@@ -1646,7 +1643,19 @@ Partial Public Class _Default
     End Function
 
     Protected Function CartAddUrl(ByVal id As Object) As String
-        Return "aggiungi.aspx?id=" & HttpUtility.UrlEncode(Convert.ToString(id))
+        Return "cart_add.aspx?id=" & HttpUtility.UrlEncode(Convert.ToString(id)) & "&TCid=-1&qty=1"
+    End Function
+
+    Protected Function CartAddUrl(ByVal row As DataRow) As String
+        If row Is Nothing Then Return CartAddUrl(0)
+        Dim tcid As String = "-1"
+        If row.Table.Columns.Contains("TCid") Then
+            tcid = Convert.ToString(row("TCid"))
+            If String.IsNullOrWhiteSpace(tcid) Then tcid = "-1"
+        End If
+        Return "cart_add.aspx?id=" & HttpUtility.UrlEncode(Convert.ToString(row("id"))) &
+               "&TCid=" & HttpUtility.UrlEncode(tcid) &
+               "&qty=1"
     End Function
 
     Protected Function WishlistAddUrl(ByVal id As Object) As String
@@ -2202,8 +2211,12 @@ Partial Public Class _Default
         If row Is Nothing Then Return String.Empty
 
         Dim idText As String = Convert.ToString(row("id"))
+        Dim tcidText As String = If(row.Table.Columns.Contains("TCid"), Convert.ToString(row("TCid")), "-1")
+        If String.IsNullOrWhiteSpace(tcidText) Then tcidText = "-1"
         Dim title As String = HttpUtility.HtmlDecode(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id")))
         Dim brand As String = Convert.ToString(row("MarcheDescrizione")).Trim()
+        Dim category As String = CardCaption(row)
+        Dim code As String = Convert.ToString(row("Codice")).Trim()
         Dim url As String = ProductUrl(row("id"))
         Dim img As String = ProductImageFull(row("Img1"))
         Dim priceText As String = FormatMoney(CurrentPrice(row))
@@ -2214,14 +2227,18 @@ Partial Public Class _Default
 
         Dim sb As New StringBuilder()
         sb.Append(" data-ks-id='").Append(EncodeAttr(idText)).Append("'")
+        sb.Append(" data-ks-tcid='").Append(EncodeAttr(tcidText)).Append("'")
         sb.Append(" data-ks-title='").Append(EncodeAttr(title)).Append("'")
         sb.Append(" data-ks-brand='").Append(EncodeAttr(brand)).Append("'")
+        sb.Append(" data-ks-category='").Append(EncodeAttr(category)).Append("'")
+        sb.Append(" data-ks-code='").Append(EncodeAttr(code)).Append("'")
         sb.Append(" data-ks-url='").Append(EncodeAttr(url)).Append("'")
         sb.Append(" data-ks-img='").Append(EncodeAttr(img)).Append("'")
         sb.Append(" data-ks-price='").Append(EncodeAttr(priceText)).Append("'")
         sb.Append(" data-ks-sold='").Append(EncodeAttr(soldText)).Append("'")
         sb.Append(" data-ks-available='").Append(EncodeAttr(availableText)).Append("'")
         sb.Append(" data-ks-progress='").Append(EncodeAttr(progress)).Append("'")
+        sb.Append(" data-ks-cart-url='").Append(EncodeAttr(CartAddUrl(row))).Append("'")
         sb.Append(" data-ks-description='").Append(EncodeAttr(description)).Append("'")
         Return sb.ToString()
     End Function
@@ -2265,8 +2282,8 @@ Partial Public Class _Default
 
         Dim sb As New StringBuilder()
         sb.Append("<ul class='").Append(buttonClass).Append("'>")
-        sb.Append("<li><a href='").Append(CartAddUrl(row("id"))).Append("' class='box-icon add-to-cart btn-icon-action ").Append(tooltipClass).Append("' aria-label='Aggiungi al carrello'><i class='icon icon-cart2'></i><span class='tooltip'>Aggiungi al carrello</span></a></li>")
-        sb.Append("<li class='wishlist'><a href='").Append(WishlistAddUrl(row("id"))).Append("' class='box-icon btn-icon-action ").Append(tooltipClass).Append("' aria-label='Wishlist'><i class='icon icon-heart2'></i><span class='tooltip'>Wishlist</span></a></li>")
+        sb.Append("<li><a href='").Append(CartAddUrl(row)).Append("' class='box-icon add-to-cart btn-icon-action ").Append(tooltipClass).Append(" js-ks-cart-link'").Append(quickViewAttrs).Append(" aria-label='Aggiungi al carrello'><i class='icon icon-cart2'></i><span class='tooltip'>Aggiungi al carrello</span></a></li>")
+        sb.Append("<li class='wishlist'><a href='").Append(WishlistAddUrl(row("id"))).Append("' class='box-icon btn-icon-action ").Append(tooltipClass).Append(" js-ks-wishlist-link'").Append(quickViewAttrs).Append(" aria-label='Wishlist'><i class='icon icon-heart2'></i><span class='tooltip'>Wishlist</span></a></li>")
         sb.Append("<li><a href='#quickView' data-bs-toggle='modal' class='box-icon quickview btn-icon-action ").Append(tooltipClass).Append(" js-ks-quickview'").Append(quickViewAttrs).Append(" aria-label='Vedi prodotto'><i class='icon icon-view'></i><span class='tooltip'>Vedi prodotto</span></a></li>")
         sb.Append("<li><a href='#compare' data-bs-toggle='offcanvas' class='box-icon btn-icon-action ").Append(tooltipClass).Append(" js-ks-compare'").Append(compareAttrs).Append(" aria-label='Confronta'><i class='icon icon-compare1'></i><span class='tooltip'>Confronta</span></a></li>")
         sb.Append("</ul>")

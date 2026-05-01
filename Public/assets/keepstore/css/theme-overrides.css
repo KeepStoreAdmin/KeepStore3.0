@@ -5107,3 +5107,31 @@ body .ks-mobile-nav-label{
   white-space:normal!important;
   line-height:20px!important;
 }
+.ks-cart-state-badge,
+.ks-product-cart-state-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:max-content;
+  max-width:calc(100% - 16px);
+  min-height:26px;
+  padding:4px 10px;
+  border-radius:4px;
+  background:#2f3a44;
+  color:#fff;
+  font-size:13px;
+  font-weight:700;
+  line-height:1.15;
+  box-shadow:0 6px 18px rgba(15,23,42,.16);
+  z-index:8;
+}
+
+.card-product .ks-cart-state-badge{
+  position:absolute;
+  top:8px;
+  left:8px;
+}
+
+.ks-product-cart-state-badge{
+  margin:8px 0 12px;
+}

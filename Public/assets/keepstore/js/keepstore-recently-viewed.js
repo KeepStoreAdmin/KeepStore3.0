@@ -233,5 +233,6 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     render('ksRecentlyViewedBlock');
+    render('HomeRecentlyViewedSection');
   });
 })();

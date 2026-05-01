@@ -313,7 +313,7 @@
                                 </asp:PlaceHolder>
                                 <div class="box-total-btn">
                                     <p class="body-text-3 text-center">Totale selezione: <span class="text-primary"><asp:Literal ID="litBundleTotal" runat="server" /></span></p>
-                                    <asp:LinkButton ID="btnBundleAddToCart" runat="server" CssClass="tf-btn btn-line" OnClick="btnAddToCart_Click" CausesValidation="false">
+                                    <asp:LinkButton ID="btnBundleAddToCart" runat="server" CssClass="tf-btn btn-line" OnClick="btnBundleAddToCart_Click" CausesValidation="false">
                                         Aggiungi al carrello
                                         <i class="icon-cart-2"></i>
                                     </asp:LinkButton>
@@ -382,12 +382,28 @@
                                             <li><i class="icon-star text-main-4"></i></li>
                                             <li><i class="icon-star text-main-4"></i></li>
                                         </ul>
-                                        <p class="text-cl-3">Non ci sono ancora recensioni per questo prodotto.</p>
+                                        <p class="text-cl-3">Ancora nessuna valutazione verificata.</p>
                                     </div>
+                                    <ul class="rating-progress-list">
+                                        <li><p class="start-number body-text-3">5<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:0%;"></div></div></div><p class="count-review body-text-3">0</p></li>
+                                        <li><p class="start-number body-text-3">4<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:0%;"></div></div></div><p class="count-review body-text-3">0</p></li>
+                                        <li><p class="start-number body-text-3">3<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:0%;"></div></div></div><p class="count-review body-text-3">0</p></li>
+                                        <li><p class="start-number body-text-3">2<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:0%;"></div></div></div><p class="count-review body-text-3">0</p></li>
+                                        <li><p class="start-number body-text-3">1<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:0%;"></div></div></div><p class="count-review body-text-3">0</p></li>
+                                    </ul>
                                 </div>
                                 <div class="tab-review-wrap">
-                                    <div class="alert alert-light mb-0">
-                                        Le recensioni non sono ancora disponibili. Per dubbi tecnici o informazioni prima dell'acquisto puoi contattare l'assistenza.
+                                    <div class="review-list-wrap">
+                                        <div class="alert alert-light mb-3">
+                                            Non ci sono ancora recensioni pubblicate per questo prodotto. Le valutazioni mostrate qui saranno solo recensioni verificate quando il sistema recensioni sara disponibile.
+                                        </div>
+                                        <div class="reply-comment style-1">
+                                            <h6 class="mb-2">Vuoi informazioni prima dell'acquisto?</h6>
+                                            <p class="body-text-3 text-main-2 mb-3">Contatta l'assistenza indicando codice articolo ed eventuale compatibilita richiesta.</p>
+                                            <a class="tf-btn btn-line" href="Contattaci.aspx">
+                                                <span>Contatta l'assistenza</span>
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
