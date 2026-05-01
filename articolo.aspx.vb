@@ -419,8 +419,12 @@ Partial Class articolo
                "v.SettoriDescrizione, v.CategorieDescrizione, v.TipologieDescrizione, v.MarcheDescrizione, " &
                "v.Prezzo, v.PrezzoIvato, v.PrezzoPromo, v.PrezzoPromoIvato, " &
                "v.Giacenza, v.Impegnata, v.Disponibilita, v.InOrdine, " &
-               "IFNULL(vt.nometaglia,'') AS TCTaglia, IFNULL(vt.nomecolore,'') AS TCColore, IFNULL(vt.descrizione,'') AS TCDescrizione " &
-               "FROM " & fromSql & " LEFT JOIN varticolitc vt ON vt.idarticolo=v.id AND vt.tcid=v.TCid " & tailSql
+               "IFNULL(tg.Descrizione,'') AS TCTaglia, IFNULL(cl.Descrizione,'') AS TCColore, " &
+               "TRIM(CONCAT(IFNULL(tg.Descrizione,''), ' ', IFNULL(cl.Descrizione,''), ' ', IFNULL(atc.Barcode,''))) AS TCDescrizione " &
+               "FROM " & fromSql & " " &
+               "LEFT JOIN articoli_tagliecolori atc ON atc.id=v.TCid " &
+               "LEFT JOIN taglie tg ON tg.id=atc.TagliaId " &
+               "LEFT JOIN colori cl ON cl.id=atc.ColoreId " & tailSql
     End Function
 
     Private Function SafeLimit(value As Integer) As String
@@ -666,12 +670,12 @@ Partial Class articolo
                 Dim taglia As String = NormalizeAffinityText(profile.Taglia)
                 If taglia.Length < 2 Then Return ""
                 cmd.Parameters.AddWithValue("?taglia", "%" & taglia & "%")
-                Return "(UPPER(COALESCE(vt.nometaglia,'')) LIKE ?taglia OR UPPER(COALESCE(vt.descrizione,'')) LIKE ?taglia)"
+                Return "(UPPER(COALESCE(tg.Descrizione,'')) LIKE ?taglia OR UPPER(COALESCE(atc.Barcode,'')) LIKE ?taglia)"
             Case "colore"
                 Dim colore As String = NormalizeAffinityText(profile.Colore)
                 If colore.Length < 3 Then Return ""
                 cmd.Parameters.AddWithValue("?colore", "%" & colore & "%")
-                Return "(UPPER(COALESCE(vt.nomecolore,'')) LIKE ?colore OR UPPER(COALESCE(vt.descrizione,'')) LIKE ?colore OR UPPER(COALESCE(v.Descrizione1,'')) LIKE ?colore OR UPPER(COALESCE(v.Descrizione2,'')) LIKE ?colore)"
+                Return "(UPPER(COALESCE(cl.Descrizione,'')) LIKE ?colore OR UPPER(COALESCE(v.Descrizione1,'')) LIKE ?colore OR UPPER(COALESCE(v.Descrizione2,'')) LIKE ?colore)"
         End Select
 
         Return ""
@@ -707,10 +711,10 @@ Partial Class articolo
                 clauses.Add("REPLACE(REPLACE(UPPER(COALESCE(v.Descrizione2,'')),'-',''),' ','') LIKE " & paramName)
             End If
             If includeVariant Then
-                clauses.Add("UPPER(COALESCE(vt.nomecolore,'')) LIKE " & paramName)
-                clauses.Add("UPPER(COALESCE(vt.nometaglia,'')) LIKE " & paramName)
-                clauses.Add("UPPER(COALESCE(vt.descrizione,'')) LIKE " & paramName)
-                clauses.Add("REPLACE(REPLACE(UPPER(COALESCE(vt.descrizione,'')),'-',''),' ','') LIKE " & paramName)
+                clauses.Add("UPPER(COALESCE(cl.Descrizione,'')) LIKE " & paramName)
+                clauses.Add("UPPER(COALESCE(tg.Descrizione,'')) LIKE " & paramName)
+                clauses.Add("UPPER(COALESCE(atc.Barcode,'')) LIKE " & paramName)
+                clauses.Add("REPLACE(REPLACE(UPPER(COALESCE(atc.Barcode,'')),'-',''),' ','') LIKE " & paramName)
             End If
 
             If clauses.Count > 0 Then
@@ -1330,15 +1334,15 @@ Partial Class articolo
             Using cn As New MySqlConnection(GetConnectionString())
                 cn.Open()
 
-                Dim sql As String = "SELECT tcid, TRIM(CONCAT(nomecolore, ' ', nometaglia, ' ', descrizione)) AS descrizione " &
-                                    "FROM varticolitc " &
-                                    "WHERE idarticolo=@idarticolo " &
-                                    "  AND id IN (SELECT id FROM vlistini WHERE idListino=@idlistino AND idArticolo=@idarticolo) " &
-                                    "ORDER BY nomecolore, nometaglia"
+                Dim sql As String = "SELECT atc.id AS tcid, TRIM(CONCAT(IFNULL(c.Descrizione,''), ' ', IFNULL(t.Descrizione,''), ' ', IFNULL(atc.Barcode,''))) AS descrizione " &
+                                    "FROM articoli_tagliecolori atc " &
+                                    "LEFT JOIN colori c ON c.id=atc.ColoreId " &
+                                    "LEFT JOIN taglie t ON t.id=atc.TagliaId " &
+                                    "WHERE atc.ArticoliId=@idarticolo " &
+                                    "ORDER BY c.Descrizione, t.Descrizione, atc.id"
 
                 Using cmd As New MySqlCommand(sql, cn)
                     cmd.Parameters.AddWithValue("@idarticolo", id)
-                    cmd.Parameters.AddWithValue("@idlistino", listino)
 
                     Using r As MySqlDataReader = cmd.ExecuteReader()
                         While r.Read()
@@ -1371,11 +1375,13 @@ Partial Class articolo
             Using cn As New MySqlConnection(GetConnectionString())
                 cn.Open()
 
-                Dim sql As String = "SELECT nomecolore, nometaglia, descrizione " &
-                                    "FROM varticolitc " &
-                                    "WHERE idarticolo=@idarticolo " &
-                                    "  AND (@tcid=-1 OR tcid=@tcid) " &
-                                    "ORDER BY CASE WHEN tcid=@tcid THEN 0 ELSE 1 END, nomecolore, nometaglia " &
+                Dim sql As String = "SELECT c.Descrizione AS colore, t.Descrizione AS taglia, atc.Barcode AS descrizione " &
+                                    "FROM articoli_tagliecolori atc " &
+                                    "LEFT JOIN colori c ON c.id=atc.ColoreId " &
+                                    "LEFT JOIN taglie t ON t.id=atc.TagliaId " &
+                                    "WHERE atc.ArticoliId=@idarticolo " &
+                                    "  AND (@tcid=-1 OR atc.id=@tcid) " &
+                                    "ORDER BY CASE WHEN atc.id=@tcid THEN 0 ELSE 1 END, c.Descrizione, t.Descrizione " &
                                     "LIMIT 1"
 
                 Using cmd As New MySqlCommand(sql, cn)
@@ -1385,8 +1391,8 @@ Partial Class articolo
                     Using r As MySqlDataReader = cmd.ExecuteReader()
                         If r.Read() Then
                             Return New VariantInfo() With {
-                                .Colore = Convert.ToString(r("nomecolore")),
-                                .Taglia = Convert.ToString(r("nometaglia")),
+                                .Colore = Convert.ToString(r("colore")),
+                                .Taglia = Convert.ToString(r("taglia")),
                                 .Descrizione = Convert.ToString(r("descrizione"))
                             }
                         End If
