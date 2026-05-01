@@ -47,3 +47,7 @@
         </div>
     </section>
 </asp:Content>
+
+<asp:Content ID="ScriptsContent" ContentPlaceHolderID="ScriptsContent" runat="server">
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>"></script>
+</asp:Content>

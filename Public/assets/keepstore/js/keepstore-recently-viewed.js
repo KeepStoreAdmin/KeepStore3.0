@@ -161,7 +161,7 @@
             '<li><a href="' + attr(deriveCartUrl(item)) + '" class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link"' + actionAttrs(item, img) + '><i class="icon icon-cart2"></i><span class="tooltip">Carrello</span></a></li>' +
             '<li class="wishlist"><a href="' + attr(deriveWishlistUrl(item)) + '" class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-wishlist-link"' + actionAttrs(item, img) + '><i class="icon icon-heart2"></i><span class="tooltip">Wishlist</span></a></li>' +
             '<li><a href="#quickView" data-bs-toggle="modal" class="box-icon quickview btn-icon-action hover-tooltip tooltip-left js-ks-quickview"' + actionAttrs(item, img) + '><i class="icon icon-view"></i><span class="tooltip">Vista rapida</span></a></li>' +
-            '<li><a href="#compare" data-bs-toggle="offcanvas" class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-compare"' + actionAttrs(item, img) + '><i class="icon icon-compare"></i><span class="tooltip">Confronta</span></a></li>' +
+            '<li><a href="#compare" data-bs-toggle="offcanvas" class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-compare"' + actionAttrs(item, img) + '><i class="icon icon-compare1"></i><span class="tooltip">Confronta</span></a></li>' +
           '</ul>' +
         '</div>' +
         '<div class="card-product-info">' +

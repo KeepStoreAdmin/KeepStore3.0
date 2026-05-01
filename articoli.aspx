@@ -281,7 +281,7 @@
                                                 <a href="#compare" data-bs-toggle="offcanvas"
                                                     class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-compare"
                                                     <%# CatalogActionDataAttributes(Container.DataItem) %>>
-                                                    <i class="icon icon-compare"></i>
+                                                    <i class="icon icon-compare1"></i>
                                                     <span class="tooltip">Confronta</span>
                                                 </a>
                                             </li>

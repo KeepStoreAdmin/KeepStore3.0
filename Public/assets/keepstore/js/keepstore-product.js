@@ -416,6 +416,7 @@
     try { localStorage.setItem('ks_compare_products', JSON.stringify((list || []).slice(0, 12))); } catch (err) {}
     var count = document.getElementById('ksCompareCount');
     if (count) count.textContent = String((list || []).length);
+    renderComparePage();
   }
 
   function renderCompareDrawer() {
@@ -441,6 +442,49 @@
     wrap.style.display = list.length ? '' : 'none';
   }
 
+  function renderComparePage() {
+    var grid = document.getElementById('ksCompareGrid');
+    if (!grid) return;
+
+    var shell = document.getElementById('ksCompareShell');
+    var empty = document.getElementById('ksCompareEmptyState');
+    var list = compareList().filter(function (item) { return item && item.id; }).slice(0, 12);
+
+    if (!list.length) {
+      grid.innerHTML = '';
+      if (shell) shell.classList.add('d-none');
+      if (empty) empty.classList.remove('d-none');
+      return;
+    }
+
+    if (empty) empty.classList.add('d-none');
+    if (shell) shell.classList.remove('d-none');
+
+    grid.innerHTML = list.map(function (item, idx) {
+      var title = item.title || item.name || 'Prodotto';
+      var meta = [item.brand, item.code ? 'Cod. ' + item.code : ''].filter(Boolean).join(' - ');
+      var availability = item.available || item.availability || '';
+      var cartUrl = item.cartUrl || ('cart_add.aspx?id=' + encodeURIComponent(item.id) + '&TCid=' + encodeURIComponent(item.tcid || '-1') + '&qty=1');
+      return '<div class="tf-compare-item ks-compare-page-card" data-idx="' + idx + '">' +
+        '<a class="image" href="' + escapeHtml(item.url || '#') + '">' +
+          (item.image ? '<img src="' + escapeHtml(item.image) + '" alt="' + escapeHtml(title) + '">' : '') +
+        '</a>' +
+        '<div class="content">' +
+          '<p class="caption text-main-2 mb-1">' + escapeHtml(item.category || 'Prodotto') + '</p>' +
+          '<a class="link text-secondary body-md-2 fw-semibold" href="' + escapeHtml(item.url || '#') + '">' + escapeHtml(title) + '</a>' +
+          (meta ? '<p class="caption text-main-2 mt-1">' + escapeHtml(meta) + '</p>' : '') +
+          '<p class="price-wrap fw-medium mt-2">' + escapeHtml(item.price || 'Prezzo su richiesta') + '</p>' +
+          (availability ? '<p class="caption text-main-2">' + escapeHtml(availability) + '</p>' : '') +
+          '<div class="d-flex gap-2 mt-3 flex-wrap">' +
+            '<a class="tf-btn btn-line" href="' + escapeHtml(item.url || '#') + '"><span>Vedi prodotto</span></a>' +
+            '<a class="tf-btn btn-fill js-ks-cart-link" href="' + escapeHtml(cartUrl) + '" data-ks-id="' + escapeHtml(item.id) + '" data-ks-tcid="' + escapeHtml(item.tcid || '-1') + '"><span>Aggiungi</span></a>' +
+          '</div>' +
+        '</div>' +
+        '<button type="button" class="remove link" data-ks-remove-compare="' + idx + '" aria-label="Rimuovi"><i class="icon icon-close"></i></button>' +
+      '</div>';
+    }).join('');
+  }
+
   function escapeHtml(value) {
     return String(value || '').replace(/[&<>"']/g, function (ch) {
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
@@ -458,6 +502,11 @@
         id: item.id,
         tcid: item.tcid,
         title: item.title,
+        brand: item.brand,
+        category: item.category,
+        code: item.code,
+        available: item.available,
+        cartUrl: item.cartUrl,
         url: item.url,
         image: item.image,
         price: item.price
@@ -465,10 +514,12 @@
     }
     saveCompare(list);
     renderCompareDrawer();
+    renderComparePage();
   }
 
   function initCompareActions() {
     renderCompareDrawer();
+    renderComparePage();
 
     document.addEventListener('click', function (ev) {
       var compareLink = ev.target && ev.target.closest ? ev.target.closest('.js-ks-compare') : null;
@@ -489,6 +540,7 @@
           list.splice(idx, 1);
           saveCompare(list);
           renderCompareDrawer();
+          renderComparePage();
         }
       }
     }, true);
@@ -499,6 +551,7 @@
       btn.addEventListener('click', function () {
         saveCompare([]);
         renderCompareDrawer();
+        renderComparePage();
       }, true);
     });
   }
