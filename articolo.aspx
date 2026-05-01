@@ -130,7 +130,7 @@
                                                         <li><i class="icon-star text-main-4"></i></li>
                                                         <li><i class="icon-star text-main-4"></i></li>
                                                     </ul>
-                                                    <p class="caption text-main-2">Nessuna recensione</p>
+                                                    <p class="caption text-main-2"><asp:Literal ID="litHeaderReviewText" runat="server" Text="Nessuna recensione" /></p>
                                                 </li>
                                             </ul>
                                         </div>
@@ -371,11 +371,11 @@
                         </div>
 
                         <div class="tab-pane" id="prd-review" role="tabpanel">
-                            <div class="ks-review-widget" data-ks-product-id="<%= Server.HtmlEncode(Convert.ToString(Request.QueryString("id"))) %>">
+                            <div class="ks-review-widget">
                             <div class="tab-main tab-review flex-lg-nowrap">
                                 <div class="tab-rating-wrap">
                                     <div class="rating-percent">
-                                        <p class="rate-percent"><span data-ks-review-average>0</span> <span>/ 5</span></p>
+                                        <p class="rate-percent"><asp:Literal ID="litReviewAverage" runat="server" Text="0" /> <span>/ 5</span></p>
                                         <ul class="list-star justify-content-center">
                                             <li><i class="icon-star text-main-4"></i></li>
                                             <li><i class="icon-star text-main-4"></i></li>
@@ -383,39 +383,62 @@
                                             <li><i class="icon-star text-main-4"></i></li>
                                             <li><i class="icon-star text-main-4"></i></li>
                                         </ul>
-                                        <p class="text-cl-3" data-ks-review-count-text>Ancora nessuna valutazione.</p>
+                                        <p class="text-cl-3"><asp:Literal ID="litReviewCountText" runat="server" Text="Ancora nessuna valutazione." /></p>
                                     </div>
                                     <ul class="rating-progress-list">
-                                        <li data-ks-star-row="5"><p class="start-number body-text-3">5<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" data-ks-review-bar style="width:0%;"></div></div></div><p class="count-review body-text-3" data-ks-review-count>0</p></li>
-                                        <li data-ks-star-row="4"><p class="start-number body-text-3">4<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" data-ks-review-bar style="width:0%;"></div></div></div><p class="count-review body-text-3" data-ks-review-count>0</p></li>
-                                        <li data-ks-star-row="3"><p class="start-number body-text-3">3<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" data-ks-review-bar style="width:0%;"></div></div></div><p class="count-review body-text-3" data-ks-review-count>0</p></li>
-                                        <li data-ks-star-row="2"><p class="start-number body-text-3">2<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" data-ks-review-bar style="width:0%;"></div></div></div><p class="count-review body-text-3" data-ks-review-count>0</p></li>
-                                        <li data-ks-star-row="1"><p class="start-number body-text-3">1<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" data-ks-review-bar style="width:0%;"></div></div></div><p class="count-review body-text-3" data-ks-review-count>0</p></li>
+                                        <asp:Literal ID="litReviewDistribution" runat="server" />
                                     </ul>
                                 </div>
                                 <div class="tab-review-wrap">
                                     <div class="review-list-wrap">
-                                        <div class="alert alert-light mb-3" data-ks-review-empty>
-                                            Non ci sono ancora recensioni per questo prodotto. Puoi lasciare una valutazione locale: resta salvata su questo dispositivo e non viene inviata a servizi esterni.
-                                        </div>
-                                        <div data-ks-review-list></div>
+                                        <asp:Literal ID="litReviewMessage" runat="server" EnableViewState="false" />
+                                        <asp:PlaceHolder ID="phReviewEmpty" runat="server" Visible="false">
+                                            <div class="alert alert-light mb-3">
+                                                Non ci sono ancora recensioni per questo prodotto. Puoi essere il primo a lasciare una valutazione utile agli altri clienti.
+                                            </div>
+                                        </asp:PlaceHolder>
+                                        <asp:Repeater ID="rptProductReviews" runat="server">
+                                            <ItemTemplate>
+                                                <div class="ks-review-item">
+                                                    <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <strong><%# Eval("RatingText") %></strong>
+                                                            <ul class="list-star ks-review-stars mb-0"><%# Eval("StarsHtml") %></ul>
+                                                        </div>
+                                                        <span class="caption text-main-2"><%# Eval("DateText") %></span>
+                                                    </div>
+                                                    <p class="body-md-2 fw-semibold mb-1"><%# Eval("TitleText") %></p>
+                                                    <p class="body-text-3 mb-1"><%# Eval("BodyText") %></p>
+                                                    <p class="caption text-main-2 mb-0">
+                                                        <%# Eval("AuthorText") %>
+                                                        <%# If(Convert.ToBoolean(Eval("Verified")), " - Acquisto verificato", String.Empty) %>
+                                                    </p>
+                                                </div>
+                                            </ItemTemplate>
+                                        </asp:Repeater>
                                         <div class="reply-comment style-1 ks-review-form-wrap">
                                             <h6 class="mb-2">Lascia una recensione</h6>
-                                            <p class="body-text-3 text-main-2 mb-3">Il template Onsus prevede riepilogo, distribuzione stelle, elenco recensioni e form. In assenza di tabella DB, questa versione salva la tua recensione localmente nel browser.</p>
-                                            <div class="ks-review-form" data-ks-review-form>
-                                                <label class="body-text-3 fw-semibold" for="ksReviewRating">Valutazione</label>
-                                                <select id="ksReviewRating" class="form-select" data-ks-review-rating>
-                                                    <option value="5">5 stelle</option>
-                                                    <option value="4">4 stelle</option>
-                                                    <option value="3">3 stelle</option>
-                                                    <option value="2">2 stelle</option>
-                                                    <option value="1">1 stella</option>
-                                                </select>
-                                                <label class="body-text-3 fw-semibold" for="ksReviewText">Commento</label>
-                                                <textarea id="ksReviewText" class="form-control" rows="4" maxlength="600" data-ks-review-text placeholder="Scrivi una nota utile sul prodotto"></textarea>
-                                                <button type="button" class="tf-btn btn-line" data-ks-review-submit>
+                                            <p class="body-text-3 text-main-2 mb-3">La recensione viene salvata su KeepStore, verificata con controlli anti-spam e pubblicata nella scheda prodotto.</p>
+                                            <div class="ks-review-form">
+                                                <label class="body-text-3 fw-semibold" for="<%= ddlReviewRating.ClientID %>">Valutazione</label>
+                                                <asp:DropDownList ID="ddlReviewRating" runat="server" CssClass="form-select">
+                                                    <asp:ListItem Value="5" Text="5 stelle" />
+                                                    <asp:ListItem Value="4" Text="4 stelle" />
+                                                    <asp:ListItem Value="3" Text="3 stelle" />
+                                                    <asp:ListItem Value="2" Text="2 stelle" />
+                                                    <asp:ListItem Value="1" Text="1 stella" />
+                                                </asp:DropDownList>
+                                                <label class="body-text-3 fw-semibold" for="<%= txtReviewName.ClientID %>">Nome</label>
+                                                <asp:TextBox ID="txtReviewName" runat="server" CssClass="form-control" MaxLength="120" placeholder="Il tuo nome" />
+                                                <label class="body-text-3 fw-semibold" for="<%= txtReviewEmail.ClientID %>">Email</label>
+                                                <asp:TextBox ID="txtReviewEmail" runat="server" CssClass="form-control" MaxLength="180" TextMode="Email" placeholder="Email non visibile pubblicamente" />
+                                                <label class="body-text-3 fw-semibold" for="<%= txtReviewTitle.ClientID %>">Titolo</label>
+                                                <asp:TextBox ID="txtReviewTitle" runat="server" CssClass="form-control" MaxLength="160" placeholder="Sintesi della recensione" />
+                                                <label class="body-text-3 fw-semibold" for="<%= txtReviewText.ClientID %>">Commento</label>
+                                                <asp:TextBox ID="txtReviewText" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="4" MaxLength="1000" placeholder="Scrivi una nota utile sul prodotto" />
+                                                <asp:LinkButton ID="btnReviewSubmit" runat="server" CssClass="tf-btn btn-line" OnClick="btnReviewSubmit_Click" CausesValidation="false">
                                                     <span>Salva recensione</span>
-                                                </button>
+                                                </asp:LinkButton>
                                             </div>
                                             <a class="link text-secondary d-inline-flex mt-3" href="Contattaci.aspx">Hai dubbi prima dell'acquisto? Contatta l'assistenza</a>
                                         </div>

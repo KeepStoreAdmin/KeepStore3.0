@@ -5149,13 +5149,24 @@ body .ks-mobile-nav-label{
   min-height:42px;
 }
 
+.ks-review-item,
 .ks-local-review-item{
   padding:14px 0;
   border-bottom:1px solid #edf0f3;
 }
 
+.ks-review-item:last-child,
 .ks-local-review-item:last-child{
   border-bottom:0;
+}
+
+.ks-review-stars{
+  display:flex;
+  gap:2px;
+}
+
+.ks-review-message{
+  margin-bottom:16px;
 }
 
 .ks-compare-page-grid{

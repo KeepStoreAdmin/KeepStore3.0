@@ -60,6 +60,17 @@ Partial Class articolo
         Public Property LogoHtml As String
     End Class
 
+    Private Class ReviewItem
+        Public Property Rating As Integer
+        Public Property RatingText As String
+        Public Property StarsHtml As String
+        Public Property TitleText As String
+        Public Property BodyText As String
+        Public Property AuthorText As String
+        Public Property DateText As String
+        Public Property Verified As Boolean
+    End Class
+
     Private Class PriceContext
         Public Property CurrentPrice As Nullable(Of Decimal)
         Public Property OldPrice As Nullable(Of Decimal)
@@ -160,6 +171,7 @@ Partial Class articolo
         BindProduct(row)
         TrackRecentlyViewed(_id)
         ApplySeo(row)
+        BindProductReviews()
         BindProductRelations(row)
     End Sub
 
@@ -2393,6 +2405,359 @@ Partial Class articolo
         If qty > maxValue Then qty = maxValue
 
         Return qty
+    End Function
+
+    Private Sub BindProductReviews()
+        SetReviewDefaults()
+
+        Try
+            EnsureReviewsTable()
+
+            Dim reviews As List(Of ReviewItem) = LoadProductReviews(_id)
+            Dim counts As Integer() = New Integer(5) {}
+            Dim totalRating As Integer = 0
+
+            For Each item As ReviewItem In reviews
+                If item.Rating >= 1 AndAlso item.Rating <= 5 Then
+                    counts(item.Rating) += 1
+                    totalRating += item.Rating
+                End If
+            Next
+
+            Dim reviewCount As Integer = reviews.Count
+            If reviewCount > 0 Then
+                Dim average As Decimal = Convert.ToDecimal(totalRating) / Convert.ToDecimal(reviewCount)
+                litReviewAverage.Text = average.ToString("0.0", ItCulture)
+                litReviewCountText.Text = If(reviewCount = 1, "1 recensione verificata da KeepStore.", reviewCount.ToString(ItCulture) & " recensioni verificate da KeepStore.")
+                litHeaderReviewText.Text = litReviewCountText.Text
+            Else
+                litReviewAverage.Text = "0"
+                litReviewCountText.Text = "Ancora nessuna valutazione."
+                litHeaderReviewText.Text = "Nessuna recensione"
+            End If
+
+            litReviewDistribution.Text = BuildReviewDistributionHtml(counts, reviewCount)
+            phReviewEmpty.Visible = (reviewCount = 0)
+            rptProductReviews.DataSource = reviews
+            rptProductReviews.DataBind()
+
+            Dim flash As String = Convert.ToString(Session("ks_review_flash"))
+            If Not String.IsNullOrWhiteSpace(flash) Then
+                litReviewMessage.Text = BuildReviewMessage("success", flash)
+                Session("ks_review_flash") = Nothing
+            End If
+        Catch ex As Exception
+            KeepStoreLog.Error("articolo.aspx", "Errore BindProductReviews (id=" & _id.ToString() & ")", ex, HttpContext.Current)
+            litReviewMessage.Text = BuildReviewMessage("warning", "Le recensioni non sono temporaneamente disponibili. Puoi continuare la navigazione e riprovare piu tardi.")
+            phReviewEmpty.Visible = False
+            rptProductReviews.DataSource = New List(Of ReviewItem)()
+            rptProductReviews.DataBind()
+        End Try
+    End Sub
+
+    Private Sub SetReviewDefaults()
+        litReviewAverage.Text = "0"
+        litReviewCountText.Text = "Ancora nessuna valutazione."
+        litReviewDistribution.Text = BuildReviewDistributionHtml(New Integer(5) {}, 0)
+        litHeaderReviewText.Text = "Nessuna recensione"
+        litReviewMessage.Text = String.Empty
+        phReviewEmpty.Visible = True
+
+        If Not IsPostBack Then
+            txtReviewName.Text = FirstNonEmpty(Convert.ToString(Session("Nome")), Convert.ToString(Session("NomeCliente")), Convert.ToString(Session("RagioneSociale")))
+            txtReviewEmail.Text = FirstNonEmpty(Convert.ToString(Session("Email")), Convert.ToString(Session("EmailCliente")), Convert.ToString(Session("UserName")))
+        End If
+    End Sub
+
+    Private Sub EnsureReviewsTable()
+        Dim sql As String =
+            "CREATE TABLE IF NOT EXISTS articoli_recensioni (" &
+            "id INT NOT NULL AUTO_INCREMENT," &
+            "ArticoliId INT NOT NULL," &
+            "TCid INT NOT NULL DEFAULT -1," &
+            "UtentiId INT NOT NULL DEFAULT 0," &
+            "Nome VARCHAR(120) NOT NULL DEFAULT ''," &
+            "Email VARCHAR(180) NOT NULL DEFAULT ''," &
+            "Rating TINYINT NOT NULL," &
+            "Titolo VARCHAR(160) NOT NULL DEFAULT ''," &
+            "Testo TEXT NOT NULL," &
+            "Approvata TINYINT NOT NULL DEFAULT 1," &
+            "Verificata TINYINT NOT NULL DEFAULT 0," &
+            "Fonte VARCHAR(30) NOT NULL DEFAULT 'articolo.aspx'," &
+            "Ip VARCHAR(45) NOT NULL DEFAULT ''," &
+            "UserAgent VARCHAR(255) NOT NULL DEFAULT ''," &
+            "DataCreazione DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP," &
+            "DataAggiornamento DATETIME NULL," &
+            "PRIMARY KEY(id)," &
+            "KEY idx_articolo_app (ArticoliId, Approvata, DataCreazione)," &
+            "KEY idx_articolo_tcid (ArticoliId, TCid)," &
+            "KEY idx_utente (UtentiId)" &
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8"
+
+        Using cn As New MySqlConnection(GetConnectionString())
+            cn.Open()
+
+            Try
+                Using checkCmd As New MySqlCommand("SELECT 1 FROM articoli_recensioni LIMIT 1", cn)
+                    checkCmd.ExecuteScalar()
+                    Return
+                End Using
+            Catch ex As MySqlException
+                If ex.Number <> 1146 Then
+                    Throw
+                End If
+            End Try
+
+            Using cmd As New MySqlCommand(sql, cn)
+                cmd.ExecuteNonQuery()
+            End Using
+        End Using
+    End Sub
+
+    Private Function LoadProductReviews(productId As Integer) As List(Of ReviewItem)
+        Dim results As New List(Of ReviewItem)()
+        If productId <= 0 Then Return results
+
+        Using cn As New MySqlConnection(GetConnectionString())
+            cn.Open()
+            Using cmd As New MySqlCommand("SELECT Rating, Titolo, Testo, Nome, Verificata, DataCreazione FROM articoli_recensioni WHERE ArticoliId=@id AND Approvata=1 ORDER BY DataCreazione DESC, id DESC LIMIT 50", cn)
+                cmd.Parameters.AddWithValue("@id", productId)
+                Using rdr As MySqlDataReader = cmd.ExecuteReader()
+                    While rdr.Read()
+                        Dim rating As Integer = SafeInt(rdr("Rating"), 0)
+                        If rating < 1 OrElse rating > 5 Then Continue While
+
+                        Dim item As New ReviewItem()
+                        item.Rating = rating
+                        item.RatingText = rating.ToString(ItCulture) & "/5"
+                        item.StarsHtml = BuildReviewStarsHtml(rating)
+                        item.TitleText = Server.HtmlEncode(FirstNonEmpty(Convert.ToString(rdr("Titolo")), "Recensione prodotto"))
+                        item.BodyText = Server.HtmlEncode(Convert.ToString(rdr("Testo")))
+                        item.AuthorText = Server.HtmlEncode(FirstNonEmpty(Convert.ToString(rdr("Nome")), "Cliente KeepStore"))
+                        item.Verified = (SafeInt(rdr("Verificata"), 0) = 1)
+
+                        Dim reviewDate As DateTime
+                        If rdr("DataCreazione") IsNot DBNull.Value AndAlso DateTime.TryParse(Convert.ToString(rdr("DataCreazione")), reviewDate) Then
+                            item.DateText = reviewDate.ToString("dd MMM yyyy", ItCulture)
+                        Else
+                            item.DateText = ""
+                        End If
+
+                        results.Add(item)
+                    End While
+                End Using
+            End Using
+        End Using
+
+        Return results
+    End Function
+
+    Protected Sub btnReviewSubmit_Click(sender As Object, e As EventArgs)
+        Dim message As String = ""
+        Dim rating As Integer = 0
+        Dim reviewerName As String = ""
+        Dim reviewerEmail As String = ""
+        Dim title As String = ""
+        Dim body As String = ""
+
+        Try
+            If Not ValidateReviewInput(rating, reviewerName, reviewerEmail, title, body, message) Then
+                LoadPage()
+                litReviewMessage.Text = BuildReviewMessage("danger", message)
+                Return
+            End If
+
+            EnsureReviewsTable()
+
+            If IsDuplicateReview(_id, reviewerEmail, body) Then
+                LoadPage()
+                litReviewMessage.Text = BuildReviewMessage("warning", "Questa recensione risulta gia inserita di recente.")
+                Return
+            End If
+
+            Using cn As New MySqlConnection(GetConnectionString())
+                cn.Open()
+                Using cmd As New MySqlCommand("INSERT INTO articoli_recensioni (ArticoliId, TCid, UtentiId, Nome, Email, Rating, Titolo, Testo, Approvata, Verificata, Fonte, Ip, UserAgent, DataCreazione) VALUES (@articolo, @tcid, @utente, @nome, @email, @rating, @titolo, @testo, @approvata, @verificata, @fonte, @ip, @ua, NOW())", cn)
+                    cmd.Parameters.AddWithValue("@articolo", _id)
+                    cmd.Parameters.AddWithValue("@tcid", _tcid)
+                    cmd.Parameters.AddWithValue("@utente", GetCurrentUserId())
+                    cmd.Parameters.AddWithValue("@nome", reviewerName)
+                    cmd.Parameters.AddWithValue("@email", reviewerEmail)
+                    cmd.Parameters.AddWithValue("@rating", rating)
+                    cmd.Parameters.AddWithValue("@titolo", title)
+                    cmd.Parameters.AddWithValue("@testo", body)
+                    cmd.Parameters.AddWithValue("@approvata", 1)
+                    cmd.Parameters.AddWithValue("@verificata", 0)
+                    cmd.Parameters.AddWithValue("@fonte", "articolo.aspx")
+                    cmd.Parameters.AddWithValue("@ip", GetClientIp())
+                    cmd.Parameters.AddWithValue("@ua", LimitText(Convert.ToString(Request.UserAgent), 255))
+                    cmd.ExecuteNonQuery()
+                End Using
+            End Using
+
+            Session("ks_review_last_submit") = DateTime.UtcNow
+            Session("ks_review_flash") = "Grazie, la recensione e stata salvata su KeepStore."
+
+            Dim redirectUrl As String = Request.RawUrl
+            If redirectUrl.IndexOf("#", StringComparison.Ordinal) >= 0 Then
+                redirectUrl = redirectUrl.Substring(0, redirectUrl.IndexOf("#", StringComparison.Ordinal))
+            End If
+            Response.Redirect(redirectUrl & "#prd-review", False)
+            Context.ApplicationInstance.CompleteRequest()
+        Catch ex As Exception
+            KeepStoreLog.Error("articolo.aspx", "Errore salvataggio recensione (id=" & _id.ToString() & ")", ex, HttpContext.Current)
+            LoadPage()
+            litReviewMessage.Text = BuildReviewMessage("danger", "Non e stato possibile salvare la recensione. Riprova tra qualche minuto.")
+        End Try
+    End Sub
+
+    Private Function ValidateReviewInput(ByRef rating As Integer, ByRef reviewerName As String, ByRef reviewerEmail As String, ByRef title As String, ByRef body As String, ByRef message As String) As Boolean
+        If Not Integer.TryParse(Convert.ToString(ddlReviewRating.SelectedValue), rating) OrElse rating < 1 OrElse rating > 5 Then
+            message = "Seleziona una valutazione valida."
+            Return False
+        End If
+
+        reviewerName = CleanReviewText(txtReviewName.Text, 120)
+        reviewerEmail = CleanReviewText(txtReviewEmail.Text, 180)
+        title = CleanReviewText(txtReviewTitle.Text, 160)
+        body = CleanReviewText(txtReviewText.Text, 1000)
+
+        If reviewerName.Length < 2 Then
+            message = "Inserisci il tuo nome."
+            Return False
+        End If
+
+        If Not IsValidEmail(reviewerEmail) Then
+            message = "Inserisci un indirizzo email valido. L'email non viene mostrata pubblicamente."
+            Return False
+        End If
+
+        If title.Length = 0 Then
+            title = "Recensione prodotto"
+        End If
+
+        If body.Length < 20 Then
+            message = "Scrivi un commento di almeno 20 caratteri, utile agli altri clienti."
+            Return False
+        End If
+
+        If LooksLikeSpam(title & " " & body) Then
+            message = "La recensione contiene elementi non ammessi. Rimuovi link, testo ripetuto o contenuti promozionali."
+            Return False
+        End If
+
+        Dim lastSubmit As Object = Session("ks_review_last_submit")
+        If lastSubmit IsNot Nothing Then
+            Dim lastDate As DateTime
+            If DateTime.TryParse(Convert.ToString(lastSubmit), lastDate) AndAlso DateTime.UtcNow.Subtract(lastDate).TotalSeconds < 20 Then
+                message = "Attendi qualche secondo prima di inviare una nuova recensione."
+                Return False
+            End If
+        End If
+
+        Return True
+    End Function
+
+    Private Function IsDuplicateReview(productId As Integer, email As String, body As String) As Boolean
+        Try
+            Using cn As New MySqlConnection(GetConnectionString())
+                cn.Open()
+                Using cmd As New MySqlCommand("SELECT COUNT(*) FROM articoli_recensioni WHERE ArticoliId=@id AND (Email=@email OR Ip=@ip) AND Testo=@testo AND DataCreazione >= DATE_SUB(NOW(), INTERVAL 1 DAY)", cn)
+                    cmd.Parameters.AddWithValue("@id", productId)
+                    cmd.Parameters.AddWithValue("@email", email)
+                    cmd.Parameters.AddWithValue("@ip", GetClientIp())
+                    cmd.Parameters.AddWithValue("@testo", body)
+                    Return SafeInt(cmd.ExecuteScalar(), 0) > 0
+                End Using
+            End Using
+        Catch
+            Return False
+        End Try
+    End Function
+
+    Private Function BuildReviewDistributionHtml(counts As Integer(), total As Integer) As String
+        Dim sb As New StringBuilder()
+        For star As Integer = 5 To 1 Step -1
+            Dim starCount As Integer = 0
+            If counts IsNot Nothing AndAlso counts.Length > star Then starCount = counts(star)
+            Dim pct As Integer = If(total > 0, CInt(Math.Round((Convert.ToDecimal(starCount) / Convert.ToDecimal(total)) * 100D)), 0)
+            sb.Append("<li>")
+            sb.Append("<p class=""start-number body-text-3"">").Append(star.ToString(ItCulture)).Append("<i class=""icon-star text-third""></i></p>")
+            sb.Append("<div class=""rating-progress""><div class=""progress style-2"" role=""progressbar"" aria-valuenow=""").Append(pct.ToString(ItCulture)).Append(""" aria-valuemin=""0"" aria-valuemax=""100""><div class=""progress-bar"" style=""width:").Append(pct.ToString(ItCulture)).Append("%;""></div></div></div>")
+            sb.Append("<p class=""count-review body-text-3"">").Append(starCount.ToString(ItCulture)).Append("</p>")
+            sb.Append("</li>")
+        Next
+        Return sb.ToString()
+    End Function
+
+    Private Function BuildReviewStarsHtml(rating As Integer) As String
+        Dim sb As New StringBuilder()
+        For i As Integer = 1 To 5
+            Dim css As String = If(i <= rating, "text-main-4", "text-main-3")
+            sb.Append("<li><i class=""icon-star ").Append(css).Append("""></i></li>")
+        Next
+        Return sb.ToString()
+    End Function
+
+    Private Function BuildReviewMessage(cssName As String, text As String) As String
+        If String.IsNullOrWhiteSpace(text) Then Return ""
+        Return "<div class=""alert alert-" & Server.HtmlEncode(cssName) & " ks-review-message"">" & Server.HtmlEncode(text) & "</div>"
+    End Function
+
+    Private Function CleanReviewText(value As String, maxLength As Integer) As String
+        Dim cleaned As String = HttpUtility.HtmlDecode(StripHtml(Convert.ToString(value)))
+        cleaned = NormalizeWhitespace(cleaned)
+        Return LimitText(cleaned, maxLength)
+    End Function
+
+    Private Function LimitText(value As String, maxLength As Integer) As String
+        Dim text As String = Convert.ToString(value)
+        If String.IsNullOrEmpty(text) Then Return ""
+        If maxLength > 0 AndAlso text.Length > maxLength Then
+            text = text.Substring(0, maxLength).Trim()
+        End If
+        Return text
+    End Function
+
+    Private Function LooksLikeSpam(value As String) As Boolean
+        Dim text As String = Convert.ToString(value).ToLowerInvariant()
+        If Regex.Matches(text, "https?://|www\.").Count > 0 Then Return True
+        If Regex.IsMatch(text, "(.)\1{12,}") Then Return True
+        If Regex.Matches(text, "\b(casino|crypto|bitcoin|forex|viagra|loan|escort|telegram|whatsapp)\b").Count > 0 Then Return True
+        If text.Length > 0 Then
+            Dim letters As MatchCollection = Regex.Matches(text, "[a-z0-9]")
+            If letters.Count > 30 Then
+                Dim unique As New HashSet(Of Char)()
+                For Each ch As Char In text
+                    If Char.IsLetterOrDigit(ch) Then unique.Add(ch)
+                Next
+                If unique.Count <= 4 Then Return True
+            End If
+        End If
+        Return False
+    End Function
+
+    Private Function IsValidEmail(value As String) As Boolean
+        If String.IsNullOrWhiteSpace(value) OrElse value.Length > 180 Then Return False
+        Return Regex.IsMatch(value, "^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    End Function
+
+    Private Function GetCurrentUserId() As Integer
+        Return FirstPositiveInt(GetSessionInt("UtenteId", 0),
+                                GetSessionInt("UserId", 0),
+                                GetSessionInt("ClienteId", 0),
+                                GetSessionInt("ClientiId", 0),
+                                GetSessionInt("IdUtente", 0),
+                                GetSessionInt("IDUtente", 0))
+    End Function
+
+    Private Function GetClientIp() As String
+        Dim forwarded As String = Convert.ToString(Request.ServerVariables("HTTP_X_FORWARDED_FOR"))
+        If Not String.IsNullOrWhiteSpace(forwarded) Then
+            Dim parts As String() = forwarded.Split(","c)
+            If parts.Length > 0 Then Return LimitText(parts(0).Trim(), 45)
+        End If
+        Return LimitText(Convert.ToString(Request.UserHostAddress), 45)
     End Function
 
     Private Sub TrackRecentlyViewed(productId As Integer)

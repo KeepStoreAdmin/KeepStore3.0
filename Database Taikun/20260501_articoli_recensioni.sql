@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS articoli_recensioni (
+  id INT NOT NULL AUTO_INCREMENT,
+  ArticoliId INT NOT NULL,
+  TCid INT NOT NULL DEFAULT -1,
+  UtentiId INT NOT NULL DEFAULT 0,
+  Nome VARCHAR(120) NOT NULL DEFAULT '',
+  Email VARCHAR(180) NOT NULL DEFAULT '',
+  Rating TINYINT NOT NULL,
+  Titolo VARCHAR(160) NOT NULL DEFAULT '',
+  Testo TEXT NOT NULL,
+  Approvata TINYINT NOT NULL DEFAULT 1,
+  Verificata TINYINT NOT NULL DEFAULT 0,
+  Fonte VARCHAR(30) NOT NULL DEFAULT 'articolo.aspx',
+  Ip VARCHAR(45) NOT NULL DEFAULT '',
+  UserAgent VARCHAR(255) NOT NULL DEFAULT '',
+  DataCreazione DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  DataAggiornamento DATETIME NULL,
+  PRIMARY KEY (id),
+  KEY idx_articolo_app (ArticoliId, Approvata, DataCreazione),
+  KEY idx_articolo_tcid (ArticoliId, TCid),
+  KEY idx_utente (UtentiId)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
