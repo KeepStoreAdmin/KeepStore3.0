@@ -196,8 +196,8 @@ Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventA
     'FILTRI TAGLIA COLORE AGGIUNTI DA ANGELO IL 15/12/2017
     'INIZIO
     Public Sub showFilters(ByVal conn As MySqlConnection, ByVal articoliFiltrati As String)
-        Dim tc As Integer = Session("TC")
-        If tc = 1 Then
+        If IsTcEnabled() Then
+            Try
             filtritagliaecolore.Visible = True
             Dim TagliaIndex As Integer
             Dim ColoreIndex As Integer
@@ -232,6 +232,12 @@ Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventA
 
             PopulateFilterTCDropdownlist(conn, "taglie", "tagliaid", "coloreid", ColoreIndex, TagliaValue, ColoreValue, Drop_Filtra_Taglia, "Tutte", articoliFiltrati)
             PopulateFilterTCDropdownlist(conn, "colori", "coloreid", "tagliaid", TagliaIndex, ColoreValue, TagliaValue, Drop_Filtra_Colore, "Tutti", articoliFiltrati)
+            filtritagliaecolore.Visible = (Drop_Filtra_Taglia.Items.Count > 1 OrElse Drop_Filtra_Colore.Items.Count > 1)
+            Catch
+                Drop_Filtra_Taglia.Items.Clear()
+                Drop_Filtra_Colore.Items.Clear()
+                filtritagliaecolore.Visible = False
+            End Try
         Else
             filtritagliaecolore.Visible = False
         End If
@@ -248,18 +254,35 @@ Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventA
                                             ByVal allValueString As String,
                                             ByVal articoliFiltrati As String)
 
+        list.Items.Clear()
+        If conn Is Nothing OrElse String.IsNullOrWhiteSpace(articoliFiltrati) Then
+            list.Items.Insert(0, New ListItem(allValueString, "0"))
+            Return
+        End If
+
+        Dim safeTable As String = ""
+        If String.Equals(tableName, "taglie", StringComparison.OrdinalIgnoreCase) Then
+            safeTable = "taglie"
+        ElseIf String.Equals(tableName, "colori", StringComparison.OrdinalIgnoreCase) Then
+            safeTable = "colori"
+        Else
+            list.Items.Insert(0, New ListItem(allValueString, "0"))
+            Return
+        End If
+
         Dim sqlString As String
-        sqlString = "select * from " & tableName & " inner join articoli_tagliecolori where " & tableName & ".id = articoli_tagliecolori." & idColumnName
+        sqlString = "SELECT DISTINCT tc_ref.id, tc_ref.descrizione FROM " & safeTable & " tc_ref WHERE COALESCE(tc_ref.abilitato,1)=1" &
+                    " AND EXISTS (SELECT 1 FROM articoli_tagliecolori atc WHERE atc." & idColumnName & "=tc_ref.id"
         Dim otherIdParam As Integer = 0
 Dim useOtherParam As Boolean = False
 If otherDropdownlistIndex > 0 Then
     If Integer.TryParse(otherDropdownlistValue, otherIdParam) AndAlso otherIdParam > 0 Then
         useOtherParam = True
-        sqlString = sqlString & " And articoli_tagliecolori." & otherIdColumnName & " = ?OtherId"
+        sqlString = sqlString & " AND atc." & otherIdColumnName & " = ?OtherId"
     End If
 End If
-sqlString = sqlString & " And articoli_tagliecolori.ArticoliId in (SELECT id FROM (" & articoliFiltrati & ") AS articoliFiltrati)"
-sqlString = sqlString & " And " & tableName & ".abilitato = 1 Group by " & tableName & ".id order by " & tableName & ".id"
+sqlString = sqlString & " AND atc.ArticoliId IN (SELECT id FROM (" & articoliFiltrati & ") AS articoliFiltrati))"
+sqlString = sqlString & " ORDER BY tc_ref.id"
 
 If useOtherParam Then
     Dim cmdDrop As New MySqlCommand(sqlString, conn)
@@ -271,6 +294,7 @@ End If
 
 list.Items.Insert(0, New ListItem(allValueString, "0"))
         SelectDropDownValueSafe(list, dropdownlistValue)
+        If list.SelectedIndex < 0 Then list.SelectedIndex = 0
     End Sub
 
     Public Sub PopulateDropdownlist(ByVal conn As MySqlConnection,
@@ -294,7 +318,7 @@ list.Items.Insert(0, New ListItem(allValueString, "0"))
 	End Sub
 
 ' Overload: usa MySqlCommand già parametrizzato (VB2012-safe)
-Public Sub PopulateDropdownlist(ByVal conn As MySqlConnection,
+    Public Sub PopulateDropdownlist(ByVal conn As MySqlConnection,
                                 ByVal cmd As MySqlCommand,
                                 ByVal list As DropDownList,
                                 ByVal textField As String,
@@ -310,6 +334,14 @@ Public Sub PopulateDropdownlist(ByVal conn As MySqlConnection,
     list.DataValueField = valueField
     list.DataBind()
 End Sub
+
+    Private Function IsTcEnabled() As Boolean
+        Dim tc As Integer = 0
+        If Session("TC") IsNot Nothing Then
+            Integer.TryParse(Convert.ToString(Session("TC")), tc)
+        End If
+        Return tc = 1
+    End Function
 
     'FILTRI TAGLIA COLORE - FINE
 
@@ -532,17 +564,18 @@ End Sub
             "         IF(" & ivaUtente & ">0,(PrezzoPromo*((" & ivaUtente & "/100)+1)),PrezzoPromoIvato)" &
             "     )" &
             " ) AS Ord_PrezzoPromoIvato," &
-            " TCid, IF(Ricondizionato = 1, 'visible', 'hidden') as refurbished," &
-            " taglie.descrizione as taglia," &
+            " COALESCE(NULLIF(vsuperarticoli.TCid,0), atc_default.DefaultTCid, -1) AS TCid, IF(Ricondizionato = 1, 'visible', 'hidden') as refurbished," &
+            " IFNULL(taglie.descrizione,'') as taglia," &
             " CONVERT(CONCAT('<table style=""width:100%;"" border=""1""><tr style=""background-color:#00FF99;""><td>Data di arrivo</td><td>Quantit&agrave;</td></tr><tr style=""background-color:#00FFFF;""><td>'," &
             "       GROUP_CONCAT(arrivi SEPARATOR '</td></tr><tr style=""background-color:#00FFFF;""><td>'),'</td></tr></table>'),CHAR) as arrivi," &
-            " colori.descrizione as colore," &
+            " IFNULL(colori.descrizione,'') as colore," &
             " IF(PrezzoPromoIvato IS NULL, PrezzoIvato, PrezzoPromoIvato) AS PrezzoOldIvato," &
             " " & searchScoreSql &
             " FROM vsuperarticoli " &
-            " LEFT OUTER JOIN articoli_tagliecolori On vsuperarticoli.TCid=articoli_tagliecolori.id" &
-            " LEFT OUTER JOIN taglie ON articoli_tagliecolori.tagliaid = taglie.id" &
-            " LEFT OUTER JOIN colori ON articoli_tagliecolori.coloreid = colori.id" &
+            " LEFT OUTER JOIN (SELECT ArticoliId, MIN(id) AS DefaultTCid FROM articoli_tagliecolori GROUP BY ArticoliId) atc_default ON atc_default.ArticoliId=vsuperarticoli.id" &
+            " LEFT OUTER JOIN articoli_tagliecolori tc_lookup ON tc_lookup.id=COALESCE(NULLIF(vsuperarticoli.TCid,0), atc_default.DefaultTCid)" &
+            " LEFT OUTER JOIN taglie ON tc_lookup.tagliaid = taglie.id" &
+            " LEFT OUTER JOIN colori ON tc_lookup.coloreid = colori.id" &
             " LEFT OUTER JOIN (SELECT articoliid, CONCAT(DATE_FORMAT(dataArrivo, '%d/%m/%Y'),'</td><td>', (TRIM(TRAILING '.' FROM(CAST(TRIM(TRAILING '0' FROM SUM(arrivi)) AS CHAR))))) AS arrivi" &
             "                 FROM articoli_arrivi WHERE dataArrivo>NOW() and arrivi > 0 GROUP BY dataArrivo) arrivi ON arrivi.articoliid = vsuperarticoli.id"
 
@@ -725,19 +758,19 @@ End If
 If hasPmin Then sdsArticoli.SelectParameters.Add(New Parameter("Pmin", TypeCode.Decimal, pminVal.ToString(System.Globalization.CultureInfo.InvariantCulture)))
 If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.Decimal, pmaxVal.ToString(System.Globalization.CultureInfo.InvariantCulture)))
 
-        Dim TC As Integer = Session("TC")
+        Dim TC As Integer = If(IsTcEnabled(), 1, 0)
         If TC = 1 Then
             ' Filtro Taglia/Colore: applicato sia alla query principale (join già presente)
             ' sia a strWhere2 (usato per i conteggi filtri laterali) tramite EXISTS su TCid.
             If Drop_Filtra_Taglia.SelectedIndex > 0 Then
-                strWhere &= " AND articoli_tagliecolori.TagliaId=?TagliaId"
-                strWhere2 &= " AND EXISTS (SELECT 1 FROM articoli_tagliecolori atc WHERE atc.id = vsuperarticoli.TCid AND atc.TagliaId=?TagliaId)"
+                strWhere &= " AND tc_lookup.TagliaId=?TagliaId"
+                strWhere2 &= " AND EXISTS (SELECT 1 FROM articoli_tagliecolori atc WHERE atc.ArticoliId = vsuperarticoli.id AND atc.TagliaId=?TagliaId)"
                 Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("TagliaId", TypeCode.Int32, Drop_Filtra_Taglia.SelectedValue))
             End If
 
             If Drop_Filtra_Colore.SelectedIndex > 0 Then
-                strWhere &= " AND articoli_tagliecolori.ColoreId=?ColoreId"
-                strWhere2 &= " AND EXISTS (SELECT 1 FROM articoli_tagliecolori atc WHERE atc.id = vsuperarticoli.TCid AND atc.ColoreId=?ColoreId)"
+                strWhere &= " AND tc_lookup.ColoreId=?ColoreId"
+                strWhere2 &= " AND EXISTS (SELECT 1 FROM articoli_tagliecolori atc WHERE atc.ArticoliId = vsuperarticoli.id AND atc.ColoreId=?ColoreId)"
                 Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("ColoreId", TypeCode.Int32, Drop_Filtra_Colore.SelectedValue))
             End If
         End If
@@ -782,7 +815,7 @@ strWhere = strWhere & " GROUP BY id"
         End Select
 
         If TC = 1 Then
-            strWhere = strWhere & " ,articoli_tagliecolori.TagliaId, articoli_tagliecolori.ColoreId"
+            strWhere = strWhere & " ,tc_lookup.TagliaId, tc_lookup.ColoreId"
         End If
 
         Me.sdsArticoli.SelectCommand = strSelect & " WHERE Nlistino=?NListino " & strWhere
@@ -1162,6 +1195,7 @@ strWhere = strWhere & " GROUP BY id"
         ElseIf hfTC IsNot Nothing Then
             Integer.TryParse(hfTC.Value, tcIdVal)
         End If
+        If tcIdVal <= 0 Then tcIdVal = -1
 
         Return tcIdVal
     End Function
@@ -2739,8 +2773,7 @@ strWhere = strWhere & " GROUP BY id"
 
     Protected Function CatalogProductUrl(ByVal dataItem As Object) As String
         Dim id As Integer = UiData.Int(dataItem, "id")
-        Dim tcId As Integer = UiData.Int(dataItem, "TCid")
-        If tcId <= 0 Then tcId = UiData.Int(dataItem, "TCId")
+        Dim tcId As Integer = CatalogTcId(dataItem, False)
 
         Dim url As String = "articolo.aspx?id=" & HttpUtility.UrlEncode(id.ToString())
         If tcId > 0 Then url &= "&TCid=" & HttpUtility.UrlEncode(tcId.ToString())
@@ -2749,9 +2782,7 @@ strWhere = strWhere & " GROUP BY id"
 
     Protected Function CatalogCartAddUrl(ByVal dataItem As Object) As String
         Dim id As Integer = UiData.Int(dataItem, "id")
-        Dim tcId As Integer = UiData.Int(dataItem, "TCid")
-        If tcId <= 0 Then tcId = UiData.Int(dataItem, "TCId")
-        If tcId <= 0 Then tcId = -1
+        Dim tcId As Integer = CatalogTcId(dataItem, True)
 
         Dim url As String = "~/cart_add.aspx?id=" & HttpUtility.UrlEncode(id.ToString()) &
                             "&TCid=" & HttpUtility.UrlEncode(tcId.ToString()) &
@@ -2761,8 +2792,7 @@ strWhere = strWhere & " GROUP BY id"
 
     Protected Function CatalogWishlistAddUrl(ByVal dataItem As Object) As String
         Dim id As Integer = UiData.Int(dataItem, "id")
-        Dim tcId As Integer = UiData.Int(dataItem, "TCid")
-        If tcId <= 0 Then tcId = UiData.Int(dataItem, "TCId")
+        Dim tcId As Integer = CatalogTcId(dataItem, False)
 
         Dim url As String = "~/wishlist_add.aspx?id=" & HttpUtility.UrlEncode(id.ToString())
         If tcId > 0 Then url &= "&TCid=" & HttpUtility.UrlEncode(tcId.ToString())
@@ -2775,6 +2805,14 @@ strWhere = strWhere & " GROUP BY id"
         If String.IsNullOrWhiteSpace(label) Then label = UiData.Str(dataItem, "SettoriDescrizione")
         If String.IsNullOrWhiteSpace(label) Then label = "Catalogo"
         Return ThemeManager.CompactText(label, 42)
+    End Function
+
+    Private Function CatalogTcId(ByVal dataItem As Object, ByVal fallbackMinusOne As Boolean) As Integer
+        Dim tcId As Integer = UiData.Int(dataItem, "TCid")
+        If tcId <= 0 Then tcId = UiData.Int(dataItem, "TCId")
+        If tcId <= 0 AndAlso fallbackMinusOne Then Return -1
+        If tcId <= 0 Then Return 0
+        Return tcId
     End Function
 
     Protected Function CatalogBrandCodeLabel(ByVal dataItem As Object) As String
@@ -2814,7 +2852,7 @@ strWhere = strWhere & " GROUP BY id"
 
         Dim attrs As New StringBuilder()
         attrs.Append(" data-ks-id=""").Append(HA(UiData.Int(dataItem, "id"))).Append("""")
-        attrs.Append(" data-ks-tcid=""").Append(HA(If(UiData.Int(dataItem, "TCid") > 0, UiData.Int(dataItem, "TCid"), UiData.Int(dataItem, "TCId")))).Append("""")
+        attrs.Append(" data-ks-tcid=""").Append(HA(CatalogTcId(dataItem, True))).Append("""")
         attrs.Append(" data-ks-title=""").Append(HA(title)).Append("""")
         attrs.Append(" data-ks-brand=""").Append(HA(UiData.Str(dataItem, "MarcheDescrizione"))).Append("""")
         attrs.Append(" data-ks-category=""").Append(HA(CatalogCategoryLabel(dataItem))).Append("""")
