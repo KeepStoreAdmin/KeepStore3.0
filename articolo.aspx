@@ -11,9 +11,7 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/photoswipe.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>" />
 
-    <script type="application/ld+json">
-        <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
-    </script>
+    <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
 </asp:Content>
 
 <asp:Content ID="BreadcrumbContent1" ContentPlaceHolderID="BreadcrumbContent" runat="server">
@@ -96,7 +94,8 @@
                                     <div class="tf-product-info-content">
                                         <div class="infor-heading">
                                             <p class="caption">
-                                                <a href="/articoli.aspx" class="link text-secondary">Catalogo</a>
+                                                Categoria:
+                                                <asp:HyperLink ID="lnkCategory" runat="server" CssClass="link text-secondary" NavigateUrl="/articoli.aspx" Text="Catalogo" />
                                             </p>
                                             <h1 class="product-info-name fw-semibold">
                                                 <asp:Literal ID="litNome" runat="server" />
@@ -132,6 +131,18 @@
                                             </div>
 
                                             <ul class="product-fearture-list">
+                                                <asp:PlaceHolder ID="phCategoryFeature" runat="server" Visible="false">
+                                                    <li>
+                                                        <p class="body-md-2 fw-semibold">Categoria</p>
+                                                        <span class="body-text-3"><asp:Literal ID="litCategory2" runat="server" /></span>
+                                                    </li>
+                                                </asp:PlaceHolder>
+                                                <asp:PlaceHolder ID="phBrandFeature" runat="server" Visible="false">
+                                                    <li>
+                                                        <p class="body-md-2 fw-semibold">Marca</p>
+                                                        <span class="body-text-3"><asp:Literal ID="litMarcaFeature" runat="server" /></span>
+                                                    </li>
+                                                </asp:PlaceHolder>
                                                 <li>
                                                     <p class="body-md-2 fw-semibold">Codice</p>
                                                     <span class="body-text-3"><asp:Literal ID="litCodice3" runat="server" /></span>
@@ -161,9 +172,9 @@
 
                                         <div class="infor-bottom">
                                             <h6 class="fw-semibold">In breve</h6>
-                                            <div class="product-about-list">
+                                            <ul class="product-about-list">
                                                 <asp:Literal ID="litShortDesc" runat="server" />
-                                            </div>
+                                            </ul>
                                         </div>
                                     </div>
 
@@ -214,7 +225,10 @@
                                         </div>
 
                                         <div class="product-box-btn">
-                                            <asp:Button ID="btnAddToCart" runat="server" CssClass="tf-btn text-white" Text="Aggiungi al carrello" OnClick="btnAddToCart_Click" />
+                                            <asp:LinkButton ID="btnAddToCart" runat="server" CssClass="tf-btn text-white" OnClick="btnAddToCart_Click" CausesValidation="false">
+                                                <span>Aggiungi al carrello</span>
+                                                <i class="icon-cart-2"></i>
+                                            </asp:LinkButton>
                                             <a class="tf-btn text-white btn-gray" href="/carrello.aspx">Vai al carrello</a>
                                         </div>
 
@@ -258,14 +272,34 @@
                         <div class="tab-pane" id="prd-infor" role="tabpanel">
                             <div class="tab-main tab-info">
                                 <ul class="list-feature">
+                                    <asp:PlaceHolder ID="phCategoryInfo" runat="server" Visible="false">
+                                        <li>
+                                            <p class="name-feature">Categoria</p>
+                                            <p class="property"><asp:Literal ID="litCategoryInfo" runat="server" /></p>
+                                        </li>
+                                    </asp:PlaceHolder>
+                                    <asp:PlaceHolder ID="phBrandInfo" runat="server" Visible="false">
+                                        <li>
+                                            <p class="name-feature">Marca</p>
+                                            <p class="property"><asp:Literal ID="litMarcaInfo" runat="server" /></p>
+                                        </li>
+                                    </asp:PlaceHolder>
                                     <li>
                                         <p class="name-feature">Codice</p>
                                         <p class="property"><asp:Literal ID="litCodice4" runat="server" /></p>
                                     </li>
-                                    <li>
-                                        <p class="name-feature">EAN</p>
-                                        <p class="property"><asp:Literal ID="litEan4" runat="server" /></p>
-                                    </li>
+                                    <asp:PlaceHolder ID="phEanInfo" runat="server" Visible="false">
+                                        <li>
+                                            <p class="name-feature">EAN</p>
+                                            <p class="property"><asp:Literal ID="litEan4" runat="server" /></p>
+                                        </li>
+                                    </asp:PlaceHolder>
+                                    <asp:PlaceHolder ID="phAvailabilityInfo" runat="server" Visible="false">
+                                        <li>
+                                            <p class="name-feature">Disponibilita</p>
+                                            <p class="property"><asp:Literal ID="litAvailabilityInfo" runat="server" /></p>
+                                        </li>
+                                    </asp:PlaceHolder>
                                 </ul>
                             </div>
                         </div>
@@ -280,11 +314,21 @@
             <div class="container">
                 <div class="flat-title">
                     <h5 class="fw-semibold">Prodotti correlati</h5>
+                    <div class="box-btn-slide relative">
+                        <div class="swiper-button-prev nav-swiper nav-prev-products">
+                            <i class="icon-arrow-left-lg"></i>
+                        </div>
+                        <div class="swiper-button-next nav-swiper nav-next-products">
+                            <i class="icon-arrow-right-lg"></i>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="tf-grid-layout lg-col-5 md-col-4 sm-col-2">
+                <div class="swiper tf-sw-products ks-product-relation-swiper" data-preview="5" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="20" data-space="15" data-pagination="2" data-pagination-sm="3" data-pagination-md="4" data-pagination-lg="5">
+                    <div class="swiper-wrapper">
                     <asp:Repeater ID="rptRelated" runat="server">
                         <ItemTemplate>
+                            <div class="swiper-slide">
                             <div class="card-product style-img-border">
                                 <div class="card-product-wrapper">
                                     <a class="product-img ks-product-card-image" href='<%# Eval("Url") %>'>
@@ -329,8 +373,10 @@
                                     </div>
                                 </div>
                             </div>
+                            </div>
                         </ItemTemplate>
                     </asp:Repeater>
+                    </div>
                 </div>
             </div>
         </section>
@@ -341,11 +387,21 @@
             <div class="container">
                 <div class="flat-title">
                     <h5 class="fw-semibold">Compatibili con questo articolo</h5>
+                    <div class="box-btn-slide relative">
+                        <div class="swiper-button-prev nav-swiper nav-prev-products">
+                            <i class="icon-arrow-left-lg"></i>
+                        </div>
+                        <div class="swiper-button-next nav-swiper nav-next-products">
+                            <i class="icon-arrow-right-lg"></i>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="tf-grid-layout lg-col-5 md-col-4 sm-col-2">
+                <div class="swiper tf-sw-products ks-product-relation-swiper" data-preview="5" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="20" data-space="15" data-pagination="2" data-pagination-sm="3" data-pagination-md="4" data-pagination-lg="5">
+                    <div class="swiper-wrapper">
                     <asp:Repeater ID="rptCompatible" runat="server">
                         <ItemTemplate>
+                            <div class="swiper-slide">
                             <div class="card-product style-img-border">
                                 <div class="card-product-wrapper">
                                     <a class="product-img ks-product-card-image" href='<%# Eval("Url") %>'>
@@ -390,8 +446,10 @@
                                     </div>
                                 </div>
                             </div>
+                            </div>
                         </ItemTemplate>
                     </asp:Repeater>
+                    </div>
                 </div>
             </div>
         </section>
@@ -402,11 +460,21 @@
             <div class="container">
                 <div class="flat-title">
                     <h5 class="fw-semibold">Articoli collegati</h5>
+                    <div class="box-btn-slide relative">
+                        <div class="swiper-button-prev nav-swiper nav-prev-products">
+                            <i class="icon-arrow-left-lg"></i>
+                        </div>
+                        <div class="swiper-button-next nav-swiper nav-next-products">
+                            <i class="icon-arrow-right-lg"></i>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="tf-grid-layout lg-col-5 md-col-4 sm-col-2">
+                <div class="swiper tf-sw-products ks-product-relation-swiper" data-preview="5" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="20" data-space="15" data-pagination="2" data-pagination-sm="3" data-pagination-md="4" data-pagination-lg="5">
+                    <div class="swiper-wrapper">
                     <asp:Repeater ID="rptLinked" runat="server">
                         <ItemTemplate>
+                            <div class="swiper-slide">
                             <div class="card-product style-img-border">
                                 <div class="card-product-wrapper">
                                     <a class="product-img ks-product-card-image" href='<%# Eval("Url") %>'>
@@ -451,8 +519,10 @@
                                     </div>
                                 </div>
                             </div>
+                            </div>
                         </ItemTemplate>
                     </asp:Repeater>
+                    </div>
                 </div>
             </div>
         </section>

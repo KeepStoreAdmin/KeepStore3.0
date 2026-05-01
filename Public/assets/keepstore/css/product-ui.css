@@ -149,6 +149,42 @@
 
 .ks-product-page .product-info-name {
   overflow-wrap: anywhere;
+  background: transparent !important;
+  color: var(--main) !important;
+  font-family: inherit !important;
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.28 !important;
+  margin: 0 0 4px !important;
+  padding: 0 !important;
+  text-transform: none !important;
+}
+
+.ks-product-page .infor-heading .caption,
+.ks-product-page .product-info-rate-wrap .caption {
+  background: transparent !important;
+  color: var(--main-2) !important;
+  font-family: inherit !important;
+  letter-spacing: 0 !important;
+  line-height: 1.4 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-transform: none !important;
+}
+
+.ks-product-page .ks-product-price .new-price {
+  color: var(--primary) !important;
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+.ks-product-page .ks-product-buy .ks-product-price .new-price {
+  font-size: 18px;
+}
+
+.ks-product-page .ks-product-price .old-price {
+  text-decoration: line-through;
 }
 
 .ks-product-page .product-info-rate-wrap,
@@ -181,6 +217,18 @@
 .ks-product-relation-section .tf-grid-layout {
   column-gap: 18px;
   row-gap: 26px;
+}
+
+.ks-product-relation-section .ks-product-relation-swiper {
+  overflow: hidden;
+}
+
+.ks-product-relation-section .ks-product-relation-swiper .swiper-slide {
+  height: auto;
+}
+
+.ks-product-relation-section .ks-product-relation-swiper .card-product {
+  height: 100%;
 }
 
 .ks-product-relation-section .card-product {
@@ -247,6 +295,47 @@
 
 .ks-product-page .product-detail .body-text-3 span {
   display: block;
+}
+
+.ks-product-description h1,
+.ks-product-description h2,
+.ks-product-description h3,
+.ks-product-description h4,
+.ks-product-description h5,
+.ks-product-description h6 {
+  background: transparent !important;
+  color: var(--main) !important;
+  font-family: inherit !important;
+  letter-spacing: 0 !important;
+  line-height: 1.3 !important;
+  margin: 0 0 12px !important;
+  padding: 0 !important;
+  text-transform: none !important;
+}
+
+.ks-product-description h1,
+.ks-product-description h2 {
+  font-size: 24px !important;
+}
+
+.ks-product-description h3,
+.ks-product-description h4 {
+  font-size: 20px !important;
+}
+
+.ks-product-description p,
+.ks-product-description li,
+.ks-product-description td,
+.ks-product-description th {
+  color: var(--main);
+  font-family: inherit;
+  line-height: 1.55;
+}
+
+.ks-product-description img {
+  height: auto;
+  max-height: 420px;
+  object-fit: contain;
 }
 
 @media (max-width: 1199.98px) {

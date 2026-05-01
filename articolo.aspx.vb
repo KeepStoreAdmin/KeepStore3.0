@@ -115,8 +115,8 @@ Partial Class articolo
 
     Private Sub BindProductRelations(row As DataRow)
         BindRelatedProducts(row)
-        BindPairRelationSection(phCompatible, rptCompatible, "articoli_compatibili", "ArticoliCompatibiliId", "compatibili")
-        BindPairRelationSection(phLinked, rptLinked, "articoli_collegati", "ArticoliCollegatiId", "collegati")
+        BindPairRelationSection(phCompatible, rptCompatible, "articoli_compatibili", "ArticoliCompatibiliId", "compatibili", row)
+        BindPairRelationSection(phLinked, rptLinked, "articoli_collegati", "ArticoliCollegatiId", "collegati", row)
     End Sub
 
     Private Sub BindRelatedProducts(row As DataRow)
@@ -148,9 +148,13 @@ Partial Class articolo
         End Try
     End Sub
 
-    Private Sub BindPairRelationSection(holder As PlaceHolder, repeater As Repeater, tableName As String, relationColumn As String, logLabel As String)
+    Private Sub BindPairRelationSection(holder As PlaceHolder, repeater As Repeater, tableName As String, relationColumn As String, logLabel As String, currentRow As DataRow)
         Try
             Dim items As List(Of RelatedItem) = LoadPairRelation(tableName, relationColumn, 8)
+            If (items Is Nothing OrElse items.Count = 0) AndAlso currentRow IsNot Nothing Then
+                items = LoadSmartRelationFallback(currentRow, logLabel, 8)
+            End If
+
             If items Is Nothing OrElse items.Count = 0 Then
                 holder.Visible = False
                 Return
@@ -290,6 +294,67 @@ Partial Class articolo
         Return results
     End Function
 
+    Private Function LoadSmartRelationFallback(row As DataRow, relationMode As String, maxItems As Integer) As List(Of RelatedItem)
+        Dim results As New List(Of RelatedItem)()
+        If row Is Nothing Then Return results
+
+        Dim catId As Integer = GetRowInt(row, "CategorieId", 0)
+        Dim tipologiaId As Integer = GetRowInt(row, "TipologieId", 0)
+        Dim marcaId As Integer = FirstPositiveInt(GetRowInt(row, "MarcaId", 0), GetRowInt(row, "IdMarca", 0), GetRowInt(row, "MarcheId", 0))
+
+        Try
+            Using conn As New MySqlConnection(GetConnectionString())
+                conn.Open()
+
+                If relationMode = "compatibili" AndAlso tipologiaId > 0 Then
+                    Using cmd As New MySqlCommand()
+                        cmd.Connection = conn
+                        cmd.CommandText = RelatedSelectSql("vsuperarticoli v",
+                                                           "WHERE v.NListino=?n AND v.id<>?id AND v.TipologieId=?tp " &
+                                                           "ORDER BY ((v.Giacenza-v.Impegnata)>0) DESC, v.InOfferta DESC, v.visite DESC, v.id DESC " &
+                                                           "LIMIT " & SafeLimit(maxItems))
+                        cmd.Parameters.AddWithValue("?n", _listino)
+                        cmd.Parameters.AddWithValue("?id", _id)
+                        cmd.Parameters.AddWithValue("?tp", tipologiaId)
+                        AppendRelated(cmd, results, maxItems)
+                    End Using
+                End If
+
+                If results.Count < maxItems AndAlso relationMode = "collegati" AndAlso marcaId > 0 Then
+                    Using cmdBrand As New MySqlCommand()
+                        cmdBrand.Connection = conn
+                        cmdBrand.CommandText = RelatedSelectSql("vsuperarticoli v",
+                                                                "WHERE v.NListino=?n AND v.id<>?id AND v.MarcheId=?mr " &
+                                                                "ORDER BY ((v.Giacenza-v.Impegnata)>0) DESC, v.InOfferta DESC, v.visite DESC, v.id DESC " &
+                                                                "LIMIT " & SafeLimit(maxItems))
+                        cmdBrand.Parameters.AddWithValue("?n", _listino)
+                        cmdBrand.Parameters.AddWithValue("?id", _id)
+                        cmdBrand.Parameters.AddWithValue("?mr", marcaId)
+                        AppendRelated(cmdBrand, results, maxItems)
+                    End Using
+                End If
+
+                If results.Count < maxItems AndAlso catId > 0 Then
+                    Using cmdCat As New MySqlCommand()
+                        cmdCat.Connection = conn
+                        cmdCat.CommandText = RelatedSelectSql("vsuperarticoli v",
+                                                              "WHERE v.NListino=?n AND v.id<>?id AND v.CategorieId=?cat " &
+                                                              "ORDER BY ((v.Giacenza-v.Impegnata)>0) DESC, v.InOfferta DESC, v.visite DESC, v.id DESC " &
+                                                              "LIMIT " & SafeLimit(maxItems))
+                        cmdCat.Parameters.AddWithValue("?n", _listino)
+                        cmdCat.Parameters.AddWithValue("?id", _id)
+                        cmdCat.Parameters.AddWithValue("?cat", catId)
+                        AppendRelated(cmdCat, results, maxItems)
+                    End Using
+                End If
+            End Using
+        Catch ex As Exception
+            KeepStoreLog.Error("articolo.aspx", "Errore LoadSmartRelationFallback " & relationMode & " (id=" & _id.ToString() & ")", ex, HttpContext.Current)
+        End Try
+
+        Return results
+    End Function
+
     Private Sub AppendRelated(cmd As MySqlCommand, results As List(Of RelatedItem), maxItems As Integer)
         Dim seen As New HashSet(Of Integer)()
         For Each it As RelatedItem In results
@@ -424,6 +489,17 @@ Partial Class articolo
         litBreadcrumbCurrent.Text = Server.HtmlEncode(nome)
         litNome.Text = Server.HtmlEncode(nome)
 
+        Dim categoryName As String = FirstNonEmpty(GetRowString(row, "TipologieDescrizione"), GetRowString(row, "CategorieDescrizione"), GetRowString(row, "SettoriDescrizione"))
+        If String.IsNullOrEmpty(categoryName) Then
+            categoryName = "Catalogo"
+        End If
+        lnkCategory.Text = Server.HtmlEncode(categoryName)
+        lnkCategory.NavigateUrl = BuildCategoryCatalogUrl(row)
+        phCategoryFeature.Visible = (Not String.IsNullOrEmpty(categoryName))
+        phCategoryInfo.Visible = phCategoryFeature.Visible
+        litCategory2.Text = Server.HtmlEncode(categoryName)
+        litCategoryInfo.Text = Server.HtmlEncode(categoryName)
+
         Dim codice As String = FirstNonEmpty(GetRowString(row, "Codice"), GetRowString(row, "SKU"))
         litCodice.Text = Server.HtmlEncode(codice)
         litCodice2.Text = Server.HtmlEncode(codice)
@@ -435,6 +511,7 @@ Partial Class articolo
             phEan.Visible = True
             phEan2.Visible = True
             phEan3.Visible = True
+            phEanInfo.Visible = True
             litEan.Text = Server.HtmlEncode(ean)
             litEan2.Text = Server.HtmlEncode(ean)
             litEan3.Text = Server.HtmlEncode(ean)
@@ -443,6 +520,7 @@ Partial Class articolo
             phEan.Visible = False
             phEan2.Visible = False
             phEan3.Visible = False
+            phEanInfo.Visible = False
             litEan3.Text = String.Empty
             litEan4.Text = String.Empty
         End If
@@ -453,14 +531,22 @@ Partial Class articolo
         If brandId > 0 AndAlso Not String.IsNullOrEmpty(brandName) Then
             phBrand.Visible = True
             phBrand2.Visible = True
+            phBrandFeature.Visible = True
+            phBrandInfo.Visible = True
 
             lnkMarca.Text = Server.HtmlEncode(brandName)
             lnkMarca.NavigateUrl = BuildBrandCatalogUrl(row, brandId)
 
             litMarca2.Text = Server.HtmlEncode(brandName)
+            litMarcaFeature.Text = Server.HtmlEncode(brandName)
+            litMarcaInfo.Text = Server.HtmlEncode(brandName)
         Else
             phBrand.Visible = False
             phBrand2.Visible = False
+            phBrandFeature.Visible = False
+            phBrandInfo.Visible = False
+            litMarcaFeature.Text = String.Empty
+            litMarcaInfo.Text = String.Empty
         End If
 
         ' Prezzi
@@ -492,7 +578,7 @@ Partial Class articolo
         If String.IsNullOrEmpty(shortDesc) Then
             litShortDesc.Text = ""
         Else
-            litShortDesc.Text = "<p>" & Server.HtmlEncode(shortDesc) & "</p>"
+            litShortDesc.Text = "<li><p class=""body-text-3"">" & Server.HtmlEncode(shortDesc) & "</p></li>"
         End If
 
         ' Descrizione lunga (preferisco HTML)
@@ -502,8 +588,10 @@ Partial Class articolo
         ' Disponibilità (Arrivo)
         Dim availabilityText As String = BuildAvailabilityText(row)
         phAvailability.Visible = Not String.IsNullOrEmpty(availabilityText)
+        phAvailabilityInfo.Visible = phAvailability.Visible
         litAvailability.Text = Server.HtmlEncode(availabilityText)
         litBuyBoxAvailability.Text = Server.HtmlEncode(availabilityText)
+        litAvailabilityInfo.Text = Server.HtmlEncode(availabilityText)
 
         ' Varianti (Taglia/Colore)
         Dim currentTcid As Integer = GetRowInt(row, "TCid", _tcid)
@@ -1060,20 +1148,17 @@ Partial Class articolo
 
     Private Function BuildPriceHtml(prezzo As Nullable(Of Decimal), prezzoOld As Nullable(Of Decimal), inOfferta As Boolean) As String
         If Not prezzo.HasValue OrElse prezzo.Value <= 0D Then
-            Return "<div class=""price""><span class=""sale-price"">Prezzo su richiesta</span></div>"
+            Return "<span class=""new-price price-text fw-medium mb-0"">Prezzo su richiesta</span>"
         End If
 
-        Dim priceText As String = ""
-        If prezzo.HasValue Then
-            priceText = prezzo.Value.ToString("C")
-        End If
+        Dim priceText As String = prezzo.Value.ToString("C")
 
         If inOfferta AndAlso prezzoOld.HasValue AndAlso prezzoOld.Value > 0D AndAlso prezzo.HasValue AndAlso prezzoOld.Value > prezzo.Value Then
             Dim oldText As String = prezzoOld.Value.ToString("C")
-            Return "<div class=""price-on-sale""><span class=""sale-price"">" & Server.HtmlEncode(priceText) & "</span><span class=""compare-at-price"">" & Server.HtmlEncode(oldText) & "</span></div>"
+            Return "<span class=""new-price price-text fw-medium mb-0"">" & Server.HtmlEncode(priceText) & "</span><span class=""old-price body-md-2 text-main-2 fw-normal"">" & Server.HtmlEncode(oldText) & "</span>"
         End If
 
-        Return "<div class=""price""><span class=""sale-price"">" & Server.HtmlEncode(priceText) & "</span></div>"
+        Return "<span class=""new-price price-text fw-medium mb-0"">" & Server.HtmlEncode(priceText) & "</span>"
     End Function
 
     Private Function BuildPriceContext(prezzo As Nullable(Of Decimal),
@@ -1148,6 +1233,22 @@ Partial Class articolo
         End If
 
         Return "Verifica disponibilita"
+    End Function
+
+    Private Function BuildCategoryCatalogUrl(row As DataRow) As String
+        Dim rel As String = "~/articoli.aspx"
+        Dim parts As New List(Of String)()
+
+        Dim stId As Integer = GetRowInt(row, "SettoriId", 0)
+        Dim ctId As Integer = GetRowInt(row, "CategorieId", 0)
+        Dim tpId As Integer = GetRowInt(row, "TipologieId", 0)
+
+        If stId > 0 Then parts.Add("st=" & stId.ToString())
+        If ctId > 0 Then parts.Add("ct=" & ctId.ToString())
+        If tpId > 0 Then parts.Add("tp=" & tpId.ToString())
+
+        If parts.Count > 0 Then rel &= "?" & String.Join("&", parts.ToArray())
+        Return ResolveUrl(rel)
     End Function
 
     Private Function BuildBrandCatalogUrl(row As DataRow, brandId As Integer) As String
@@ -1227,8 +1328,8 @@ Partial Class articolo
         Dim qty As Integer = NormalizeCartQuantity(txtQty.Text, 1, 9999)
         txtQty.Text = qty.ToString()
 
-        ' Nel progetto il default "senza varianti" è TCid=-1 (vedi aggiungi.aspx.vb).
-        Dim tcidToUse As Integer = -1
+        ' Risolve il TCid effettivo prima del redirect legacy verso aggiungi.aspx.
+        Dim tcidToUse As Integer = _tcid
         If _tcEnabled Then
             tcidToUse = _tcid
 
@@ -1240,12 +1341,27 @@ Partial Class articolo
             End If
         End If
 
-        Session("Carrello_ArticoloId") = _id
-        Session("Carrello_TCId") = tcidToUse
-        Session("Carrello_Quantita") = qty
-        Session("Carrello_Pagina") = Request.RawUrl
+        Dim cartRow As DataRow = GetProductRow(_id, tcidToUse, includeTcidFilter:=(_tcEnabled AndAlso tcidToUse > 0))
+        If cartRow Is Nothing Then
+            cartRow = GetProductRow(_id, -1, includeTcidFilter:=False)
+        End If
 
-        Response.Redirect("aggiungi.aspx", True)
+        If cartRow Is Nothing Then
+            litQtyHelp.Text = "Articolo non disponibile per l'aggiunta al carrello."
+            Return
+        End If
+
+        tcidToUse = GetRowInt(cartRow, "TCid", tcidToUse)
+
+        Session("ProdottoGratis") = GetRowInt(cartRow, "SpeditoGratis", 0)
+        Session("Carrello_ArticoloId") = _id.ToString()
+        Session("Carrello_TCId") = tcidToUse.ToString()
+        Session("Carrello_Quantita") = qty.ToString()
+        Session("Carrello_Pagina") = Request.RawUrl
+        Session("Carrello_SelezioneMultipla") = Nothing
+
+        Response.Redirect("aggiungi.aspx", False)
+        Context.ApplicationInstance.CompleteRequest()
     End Sub
 
     Private Function NormalizeCartQuantity(ByVal rawValue As String, ByVal fallbackValue As Integer, ByVal maxValue As Integer) As Integer
