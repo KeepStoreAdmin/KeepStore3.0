@@ -60,7 +60,7 @@ End Sub
         End If
 
 ' 2b) GESTIONE GROUPON (coupon esterno)
-If String.Equals(idParam, "groupon", StringComparison.OrdinalIgnoreCase) Then
+        If String.Equals(idParam, "groupon", StringComparison.OrdinalIgnoreCase) Then
     Dim idArt As String = Convert.ToString(Session("Groupon_idArticolo"))
     If String.IsNullOrEmpty(idArt) Then
         SafeRedirect("carrello_groupon.aspx")
@@ -71,6 +71,27 @@ If String.Equals(idParam, "groupon", StringComparison.OrdinalIgnoreCase) Then
     Session("Carrello_Quantita") = 1
     Session("Carrello_SelezioneMultipla") = Nothing
 End If
+
+        ' 2c) Compatibilita legacy: alcuni punti storici chiamano ancora
+        ' aggiungi.aspx?id=123&TCid=-1&qty=1 senza passare da cart_add.aspx.
+        If Me.Session("Carrello_ArticoloId") Is Nothing Then
+            Dim directId As Integer = 0
+            If Integer.TryParse(idParam, directId) AndAlso directId > 0 Then
+                Dim directTc As Integer = -1
+                Integer.TryParse(Convert.ToString(Request.QueryString("TCid")), directTc)
+                If directTc <= 0 Then directTc = -1
+
+                Dim directQty As Double = 1
+                TryParseDouble(Request.QueryString("qty"), directQty)
+                If directQty <= 0 Then directQty = 1
+
+                Session("Carrello_ArticoloId") = directId.ToString(CultureInfo.InvariantCulture)
+                Session("Carrello_TCId") = directTc.ToString(CultureInfo.InvariantCulture)
+                Session("Carrello_Quantita") = directQty.ToString(CultureInfo.InvariantCulture)
+                Session("Carrello_Pagina") = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.PathAndQuery, "Default.aspx")
+                Session("Carrello_SelezioneMultipla") = Nothing
+            End If
+        End If
 
 
         ' 3) Pagina di provenienza (non usata ora, la mantengo per compatibilità)
@@ -269,15 +290,26 @@ End Sub
 
             For i = 0 To SelezioneMultipla.Count - 1
                 Dim parts = SelezioneMultipla(i).ToString().Split(","c)
-                If parts.Length < 4 Then
+                If parts.Length < 3 Then
                     Continue For
                 End If
 
                 Dim selezionamultipla_ID As String = parts(0)
-                Dim selezionamultipla_TCID As String = parts(1)
+                Dim selezionamultipla_TCID As String = "-1"
+                Dim selezionamultipla_Qta As String = "1"
+                Dim selezionamultipla_SpedGRATIS As String = "0"
+
+                If parts.Length >= 4 Then
+                    selezionamultipla_TCID = parts(1)
+                    selezionamultipla_Qta = parts(2)
+                    selezionamultipla_SpedGRATIS = parts(3)
+                Else
+                    ' Formato storico wishlist: id,qta,ProdottoGratis
+                    selezionamultipla_Qta = parts(1)
+                    selezionamultipla_SpedGRATIS = parts(2)
+                End If
+
                 selezionamultipla_TCID = NormalizeTcidText(selezionamultipla_TCID)
-                Dim selezionamultipla_Qta As String = parts(2)
-                Dim selezionamultipla_SpedGRATIS As String = parts(3)
 
                 ' SpedizioneGratis: deve essere 0/1 (evita '' che rompe MySQL)
                 Dim _pgTmp As Integer = 0
@@ -356,18 +388,19 @@ End Sub
                 Next
 
                 ' Inserisco articolo
-                InsertCartRow(LoginId,
-                              SessionID,
-                              selezionamultipla_ID,
-                              selezionamultipla_TCID,
-                              Codice,
-                              Descrizione,
-                              quantitaRiga,
-                              NListino,
-                              Prezzo,
-                              PrezzoIvato,
-                              OfferteDettagliID,
-                              _pgTmp)
+                Dim addId As Integer = 0
+                Dim addTc As Integer = -1
+                Integer.TryParse(selezionamultipla_ID, addId)
+                Integer.TryParse(selezionamultipla_TCID, addTc)
+
+                Dim addResult As CartAddResult = CartAddService.AddProduct(HttpContext.Current, addId, addTc, quantitaRiga, _pgTmp, "aggiungi.aspx:multipla")
+                If Not addResult.Success Then
+                    Try
+                        KeepStoreLog.Info("aggiungi.aspx", "Aggiunta multipla non riuscita id=" & selezionamultipla_ID & " tcid=" & selezionamultipla_TCID & " msg=" & Convert.ToString(addResult.Message), HttpContext.Current)
+                    Catch
+                    End Try
+                    Continue For
+                End If
 
                 AggiornaVisite(CInt(selezionamultipla_ID))
 
@@ -456,18 +489,19 @@ End Sub
                 If Session("ProdottoGratis") IsNot Nothing Then
                     Integer.TryParse(Session("ProdottoGratis").ToString(), prodottoGratis)
                 End If
-                InsertCartRow(LoginId,
-                              SessionID,
-                              ListaArticoli(i).ToString(),
-                              tcidRiga,
-                              Codice,
-                              Descrizione,
-                              quantitaRiga,
-                              NListino,
-                              Prezzo,
-                              PrezzoIvato,
-                              OfferteDettagliID,
-                              prodottoGratis)
+                Dim addId As Integer = 0
+                Dim addTc As Integer = -1
+                Integer.TryParse(ListaArticoli(i).ToString(), addId)
+                Integer.TryParse(tcidRiga, addTc)
+
+                Dim addResult As CartAddResult = CartAddService.AddProduct(HttpContext.Current, addId, addTc, quantitaRiga, prodottoGratis, "aggiungi.aspx:singolo")
+                If Not addResult.Success Then
+                    Try
+                        KeepStoreLog.Info("aggiungi.aspx", "Aggiunta singola non riuscita id=" & ListaArticoli(i).ToString() & " tcid=" & tcidRiga & " msg=" & Convert.ToString(addResult.Message), HttpContext.Current)
+                    Catch
+                    End Try
+                    Continue For
+                End If
 
                 AggiornaVisite(CInt(ListaArticoli(i)))
                 If articoliIdGlobali <> String.Empty Then

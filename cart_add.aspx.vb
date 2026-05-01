@@ -26,14 +26,24 @@ Partial Class cart_add
         End If
         If qty <= 0D Then qty = 1D
 
-        Session("Carrello_ArticoloId") = articleId.ToString()
-        Session("Carrello_TCId") = tcId.ToString()
-        Session("Carrello_Quantita") = qty.ToString(System.Globalization.CultureInfo.InvariantCulture)
-        Session("Carrello_Pagina") = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.PathAndQuery, "Default.aspx")
-        Session("Carrello_SelezioneMultipla") = Nothing
-        Session("Carrello_ListaArticoloId") = Nothing
+        Dim freeShipping As Integer = 0
+        Integer.TryParse(Convert.ToString(Request.QueryString("pg")), freeShipping)
 
-        Response.Redirect("aggiungi.aspx", False)
+        Dim result As CartAddResult = CartAddService.AddProduct(HttpContext.Current,
+                                                                articleId,
+                                                                tcId,
+                                                                Convert.ToDouble(qty),
+                                                                freeShipping,
+                                                                "cart_add.aspx")
+
+        If Not result.Success Then
+            Try
+                KeepStoreLog.Info("cart_add.aspx", "Aggiunta carrello non riuscita id=" & articleId.ToString(CultureInfo.InvariantCulture) & " tcid=" & tcId.ToString(CultureInfo.InvariantCulture) & " msg=" & Convert.ToString(result.Message), HttpContext.Current)
+            Catch
+            End Try
+        End If
+
+        Response.Redirect("carrello.aspx", False)
         Context.ApplicationInstance.CompleteRequest()
     End Sub
 End Class
