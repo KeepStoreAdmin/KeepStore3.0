@@ -371,10 +371,11 @@
                         </div>
 
                         <div class="tab-pane" id="prd-review" role="tabpanel">
+                            <div class="ks-review-widget" data-ks-product-id="<%= Server.HtmlEncode(Convert.ToString(Request.QueryString("id"))) %>">
                             <div class="tab-main tab-review flex-lg-nowrap">
                                 <div class="tab-rating-wrap">
                                     <div class="rating-percent">
-                                        <p class="rate-percent">0 <span>/ 5</span></p>
+                                        <p class="rate-percent"><span data-ks-review-average>0</span> <span>/ 5</span></p>
                                         <ul class="list-star justify-content-center">
                                             <li><i class="icon-star text-main-4"></i></li>
                                             <li><i class="icon-star text-main-4"></i></li>
@@ -382,30 +383,45 @@
                                             <li><i class="icon-star text-main-4"></i></li>
                                             <li><i class="icon-star text-main-4"></i></li>
                                         </ul>
-                                        <p class="text-cl-3">Ancora nessuna valutazione verificata.</p>
+                                        <p class="text-cl-3" data-ks-review-count-text>Ancora nessuna valutazione.</p>
                                     </div>
                                     <ul class="rating-progress-list">
-                                        <li><p class="start-number body-text-3">5<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:0%;"></div></div></div><p class="count-review body-text-3">0</p></li>
-                                        <li><p class="start-number body-text-3">4<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:0%;"></div></div></div><p class="count-review body-text-3">0</p></li>
-                                        <li><p class="start-number body-text-3">3<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:0%;"></div></div></div><p class="count-review body-text-3">0</p></li>
-                                        <li><p class="start-number body-text-3">2<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:0%;"></div></div></div><p class="count-review body-text-3">0</p></li>
-                                        <li><p class="start-number body-text-3">1<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:0%;"></div></div></div><p class="count-review body-text-3">0</p></li>
+                                        <li data-ks-star-row="5"><p class="start-number body-text-3">5<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" data-ks-review-bar style="width:0%;"></div></div></div><p class="count-review body-text-3" data-ks-review-count>0</p></li>
+                                        <li data-ks-star-row="4"><p class="start-number body-text-3">4<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" data-ks-review-bar style="width:0%;"></div></div></div><p class="count-review body-text-3" data-ks-review-count>0</p></li>
+                                        <li data-ks-star-row="3"><p class="start-number body-text-3">3<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" data-ks-review-bar style="width:0%;"></div></div></div><p class="count-review body-text-3" data-ks-review-count>0</p></li>
+                                        <li data-ks-star-row="2"><p class="start-number body-text-3">2<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" data-ks-review-bar style="width:0%;"></div></div></div><p class="count-review body-text-3" data-ks-review-count>0</p></li>
+                                        <li data-ks-star-row="1"><p class="start-number body-text-3">1<i class="icon-star text-third"></i></p><div class="rating-progress"><div class="progress style-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" data-ks-review-bar style="width:0%;"></div></div></div><p class="count-review body-text-3" data-ks-review-count>0</p></li>
                                     </ul>
                                 </div>
                                 <div class="tab-review-wrap">
                                     <div class="review-list-wrap">
-                                        <div class="alert alert-light mb-3">
-                                            Non ci sono ancora recensioni pubblicate per questo prodotto. Le valutazioni mostrate qui saranno solo recensioni verificate quando il sistema recensioni sara disponibile.
+                                        <div class="alert alert-light mb-3" data-ks-review-empty>
+                                            Non ci sono ancora recensioni per questo prodotto. Puoi lasciare una valutazione locale: resta salvata su questo dispositivo e non viene inviata a servizi esterni.
                                         </div>
-                                        <div class="reply-comment style-1">
-                                            <h6 class="mb-2">Vuoi informazioni prima dell'acquisto?</h6>
-                                            <p class="body-text-3 text-main-2 mb-3">Contatta l'assistenza indicando codice articolo ed eventuale compatibilita richiesta.</p>
-                                            <a class="tf-btn btn-line" href="Contattaci.aspx">
-                                                <span>Contatta l'assistenza</span>
-                                            </a>
+                                        <div data-ks-review-list></div>
+                                        <div class="reply-comment style-1 ks-review-form-wrap">
+                                            <h6 class="mb-2">Lascia una recensione</h6>
+                                            <p class="body-text-3 text-main-2 mb-3">Il template Onsus prevede riepilogo, distribuzione stelle, elenco recensioni e form. In assenza di tabella DB, questa versione salva la tua recensione localmente nel browser.</p>
+                                            <div class="ks-review-form" data-ks-review-form>
+                                                <label class="body-text-3 fw-semibold" for="ksReviewRating">Valutazione</label>
+                                                <select id="ksReviewRating" class="form-select" data-ks-review-rating>
+                                                    <option value="5">5 stelle</option>
+                                                    <option value="4">4 stelle</option>
+                                                    <option value="3">3 stelle</option>
+                                                    <option value="2">2 stelle</option>
+                                                    <option value="1">1 stella</option>
+                                                </select>
+                                                <label class="body-text-3 fw-semibold" for="ksReviewText">Commento</label>
+                                                <textarea id="ksReviewText" class="form-control" rows="4" maxlength="600" data-ks-review-text placeholder="Scrivi una nota utile sul prodotto"></textarea>
+                                                <button type="button" class="tf-btn btn-line" data-ks-review-submit>
+                                                    <span>Salva recensione</span>
+                                                </button>
+                                            </div>
+                                            <a class="link text-secondary d-inline-flex mt-3" href="Contattaci.aspx">Hai dubbi prima dell'acquisto? Contatta l'assistenza</a>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
                             </div>
                         </div>
                     </div>

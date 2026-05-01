@@ -2751,6 +2751,7 @@ strWhere = strWhere & " GROUP BY id"
         Dim id As Integer = UiData.Int(dataItem, "id")
         Dim tcId As Integer = UiData.Int(dataItem, "TCid")
         If tcId <= 0 Then tcId = UiData.Int(dataItem, "TCId")
+        If tcId <= 0 Then tcId = -1
 
         Dim url As String = "~/cart_add.aspx?id=" & HttpUtility.UrlEncode(id.ToString()) &
                             "&TCid=" & HttpUtility.UrlEncode(tcId.ToString()) &

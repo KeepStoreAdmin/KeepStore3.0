@@ -60,12 +60,17 @@
     return String(item.id || '') + ':' + String(item.tcid || '');
   }
 
+  function normalizedTcid(value) {
+    var n = parseInt(String(value || '-1').replace(/[^\d-]/g, ''), 10);
+    return (!isFinite(n) || n <= 0) ? '-1' : String(n);
+  }
+
   function normalizeProduct(input) {
     if (!input) return null;
 
     var item = {
       id: cleanText(input.id, ''),
-      tcid: cleanText(input.tcid, ''),
+      tcid: normalizedTcid(input.tcid),
       name: cleanText(input.name || input.title, ''),
       code: cleanText(input.code, ''),
       brand: cleanText(input.brand, ''),
@@ -118,7 +123,7 @@
 
   function deriveCartUrl(item) {
     if (item.cartUrl) return item.cartUrl;
-    return '/cart_add.aspx?id=' + encodeURIComponent(item.id) + '&TCid=' + encodeURIComponent(item.tcid || '-1') + '&qty=1';
+    return '/cart_add.aspx?id=' + encodeURIComponent(item.id) + '&TCid=' + encodeURIComponent(normalizedTcid(item.tcid)) + '&qty=1';
   }
 
   function deriveWishlistUrl(item) {
@@ -215,6 +220,11 @@
     list = list.slice(0, limit);
 
     if (!list.length) {
+      if (block.getAttribute('data-ks-server-fallback') === '1' && target.children.length) {
+        block.classList.remove('d-none');
+        initSwiper(block);
+        return;
+      }
       block.classList.add('d-none');
       target.innerHTML = '';
       return;

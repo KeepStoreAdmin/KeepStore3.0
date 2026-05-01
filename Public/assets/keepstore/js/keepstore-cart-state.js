@@ -26,8 +26,14 @@
     return s || '';
   }
 
+  function normalizeTcid(value) {
+    var s = normalizeId(value || '-1') || '-1';
+    var n = parseInt(s, 10);
+    return (!isFinite(n) || n <= 0) ? '-1' : String(n);
+  }
+
   function itemKey(id, tcid) {
-    return normalizeId(id) + ':' + normalizeId(tcid || '-1');
+    return normalizeId(id) + ':' + normalizeTcid(tcid);
   }
 
   function normalizeItems(items) {
@@ -36,7 +42,7 @@
       if (!item) return;
       var id = normalizeId(item.id);
       if (!id || id === '0') return;
-      var tcid = normalizeId(item.tcid || '-1') || '-1';
+      var tcid = normalizeTcid(item.tcid);
       var qty = parseFloat(String(item.qty || '1').replace(',', '.'));
       if (!isFinite(qty) || qty <= 0) qty = 1;
       map[itemKey(id, tcid)] = { id: id, tcid: tcid, qty: qty, key: itemKey(id, tcid) };
@@ -59,7 +65,7 @@
 
   function findCartItem(id, tcid) {
     var idVal = normalizeId(id);
-    var tcVal = normalizeId(tcid || '-1') || '-1';
+    var tcVal = normalizeTcid(tcid);
     if (!idVal) return null;
     var items = currentItems();
     var exact = itemKey(idVal, tcVal);

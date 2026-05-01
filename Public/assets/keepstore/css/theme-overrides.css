@@ -5135,3 +5135,25 @@ body .ks-mobile-nav-label{
 .ks-product-cart-state-badge{
   margin:8px 0 12px;
 }
+
+.ks-review-form{
+  display:grid;
+  gap:10px;
+  max-width:520px;
+}
+
+.ks-review-form .form-select,
+.ks-review-form .form-control{
+  border:1px solid #e5e7eb;
+  border-radius:6px;
+  min-height:42px;
+}
+
+.ks-local-review-item{
+  padding:14px 0;
+  border-bottom:1px solid #edf0f3;
+}
+
+.ks-local-review-item:last-child{
+  border-bottom:0;
+}

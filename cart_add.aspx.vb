@@ -1,4 +1,5 @@
 Imports System
+Imports System.Globalization
 Imports System.Web
 
 Partial Class cart_add
@@ -16,15 +17,21 @@ Partial Class cart_add
 
         Dim tcId As Integer = -1
         Integer.TryParse(Convert.ToString(Request.QueryString("TCid")), tcId)
+        If tcId <= 0 Then tcId = -1
 
         Dim qty As Decimal = 1D
-        Decimal.TryParse(Convert.ToString(Request.QueryString("qty")), qty)
+        Dim qtyRaw As String = Convert.ToString(Request.QueryString("qty"))
+        If Not Decimal.TryParse(qtyRaw, NumberStyles.Any, CultureInfo.InvariantCulture, qty) Then
+            Decimal.TryParse(qtyRaw, NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), qty)
+        End If
         If qty <= 0D Then qty = 1D
 
         Session("Carrello_ArticoloId") = articleId.ToString()
         Session("Carrello_TCId") = tcId.ToString()
         Session("Carrello_Quantita") = qty.ToString(System.Globalization.CultureInfo.InvariantCulture)
         Session("Carrello_Pagina") = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.PathAndQuery, "Default.aspx")
+        Session("Carrello_SelezioneMultipla") = Nothing
+        Session("Carrello_ListaArticoloId") = Nothing
 
         Response.Redirect("aggiungi.aspx", False)
         Context.ApplicationInstance.CompleteRequest()

@@ -528,12 +528,110 @@
     };
   }
 
+  function initLocalReviews() {
+    var widget = document.querySelector('.ks-review-widget[data-ks-product-id]');
+    if (!widget) return;
+
+    var KEY = 'ks_product_reviews';
+    var productId = String(widget.getAttribute('data-ks-product-id') || '').replace(/\D/g, '');
+    if (!productId) return;
+
+    function readStore() {
+      try {
+        var parsed = JSON.parse(localStorage.getItem(KEY) || '{}');
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch (e) {
+        try { localStorage.removeItem(KEY); } catch (ignore) {}
+        return {};
+      }
+    }
+
+    function writeStore(store) {
+      try { localStorage.setItem(KEY, JSON.stringify(store || {})); } catch (e) {}
+    }
+
+    function reviews() {
+      var store = readStore();
+      var list = store[productId];
+      return Array.isArray(list) ? list.filter(function (x) {
+        var rating = parseInt(x.rating, 10);
+        return rating >= 1 && rating <= 5;
+      }) : [];
+    }
+
+    function setText(selector, value) {
+      var el = widget.querySelector(selector);
+      if (el) el.textContent = value;
+    }
+
+    function escape(value) {
+      return String(value || '').replace(/[&<>"']/g, function (ch) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+      });
+    }
+
+    function render() {
+      var list = reviews();
+      var count = list.length;
+      var total = list.reduce(function (sum, item) { return sum + parseInt(item.rating, 10); }, 0);
+      var avg = count ? (total / count) : 0;
+      setText('[data-ks-review-average]', count ? avg.toFixed(1).replace('.', ',') : '0');
+      setText('[data-ks-review-count-text]', count === 1 ? '1 valutazione salvata su questo dispositivo.' : (count ? count + ' valutazioni salvate su questo dispositivo.' : 'Ancora nessuna valutazione.'));
+
+      [1, 2, 3, 4, 5].forEach(function (star) {
+        var row = widget.querySelector('[data-ks-star-row="' + star + '"]');
+        if (!row) return;
+        var starCount = list.filter(function (item) { return parseInt(item.rating, 10) === star; }).length;
+        var pct = count ? Math.round((starCount / count) * 100) : 0;
+        var bar = row.querySelector('[data-ks-review-bar]');
+        var label = row.querySelector('[data-ks-review-count]');
+        if (bar) bar.style.width = pct + '%';
+        if (label) label.textContent = String(starCount);
+      });
+
+      var empty = widget.querySelector('[data-ks-review-empty]');
+      var wrap = widget.querySelector('[data-ks-review-list]');
+      if (empty) empty.style.display = count ? 'none' : '';
+      if (wrap) {
+        wrap.innerHTML = list.map(function (item) {
+          var date = item.createdAt ? new Date(item.createdAt) : null;
+          var dateText = date && !isNaN(date.getTime()) ? date.toLocaleDateString('it-IT') : '';
+          return '<div class="ks-local-review-item">' +
+            '<div class="d-flex align-items-center gap-2 mb-1"><strong>' + escape(item.rating) + '/5</strong><span class="caption text-main-2">' + escape(dateText) + '</span></div>' +
+            '<p class="body-text-3 mb-0">' + escape(item.text || 'Valutazione senza commento.') + '</p>' +
+          '</div>';
+        }).join('');
+      }
+    }
+
+    var submit = widget.querySelector('[data-ks-review-submit]');
+    if (submit) {
+      submit.addEventListener('click', function () {
+        var ratingEl = widget.querySelector('[data-ks-review-rating]');
+        var textEl = widget.querySelector('[data-ks-review-text]');
+        var rating = parseInt(ratingEl ? ratingEl.value : '5', 10);
+        if (!isFinite(rating) || rating < 1 || rating > 5) rating = 5;
+        var text = textEl ? String(textEl.value || '').replace(/\s+/g, ' ').trim().substring(0, 600) : '';
+        var store = readStore();
+        var list = Array.isArray(store[productId]) ? store[productId] : [];
+        list.unshift({ rating: rating, text: text, createdAt: new Date().toISOString() });
+        store[productId] = list.slice(0, 20);
+        writeStore(store);
+        if (textEl) textEl.value = '';
+        render();
+      });
+    }
+
+    render();
+  }
+
   domReady(function () {
     initQtyButtons();
     initRefurbBadge();
     initCardActionLinks();
     initQuickViewActions();
     initCompareActions();
+    initLocalReviews();
     initSwiperGallery();
     initPhotoSwipe();
 

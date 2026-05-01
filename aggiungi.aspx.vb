@@ -1,5 +1,6 @@
 ﻿Imports MySql.Data.MySqlClient
 Imports System.Data
+Imports System.Globalization
 Imports System.Text.RegularExpressions
 Imports System.Web
 
@@ -90,8 +91,12 @@ End If
         If Me.Session("Carrello_ArticoloId") IsNot Nothing Then
             Try
                 articoliIdGlobali = GestisciAggiuntaArticoli()
-            Catch
+            Catch ex As Exception
                 articoliIdGlobali = String.Empty
+                Try
+                    KeepStoreLog.Error("aggiungi.aspx", "Errore aggiunta carrello ArticoloId=" & Convert.ToString(Me.Session("Carrello_ArticoloId")) & " TCid=" & Convert.ToString(Me.Session("Carrello_TCId")), ex, HttpContext.Current)
+                Catch
+                End Try
             End Try
         End If
 
@@ -199,7 +204,7 @@ End Sub
         Dim QuantitaBase As Double = 1
         If Me.Session("Carrello_Quantita") IsNot Nothing Then
             Dim tmpQ As Double
-            If Double.TryParse(Me.Session("Carrello_Quantita").ToString(), tmpQ) AndAlso tmpQ > 0 Then
+            If TryParseDouble(Me.Session("Carrello_Quantita"), tmpQ) AndAlso tmpQ > 0 Then
                 QuantitaBase = tmpQ
             End If
         End If
@@ -265,9 +270,7 @@ End Sub
 
                 Dim selezionamultipla_ID As String = parts(0)
                 Dim selezionamultipla_TCID As String = parts(1)
-                If String.IsNullOrWhiteSpace(selezionamultipla_TCID) Then
-                    selezionamultipla_TCID = "-1"
-                End If
+                selezionamultipla_TCID = NormalizeTcidText(selezionamultipla_TCID)
                 Dim selezionamultipla_Qta As String = parts(2)
                 Dim selezionamultipla_SpedGRATIS As String = parts(3)
 
@@ -298,21 +301,20 @@ End Sub
                 If dr.Count > 0 Then
                     Dim row = dr(0)
                     Dim oldQ As Double = 0
-                    Double.TryParse(row("qnt").ToString(), oldQ)
+                    TryParseDouble(row("qnt"), oldQ)
                     Dim newQ As Double = 0
-                    Double.TryParse(selezionamultipla_Qta, newQ)
+                    TryParseDouble(selezionamultipla_Qta, newQ)
                     quantitaRiga = newQ + oldQ
 
                     IdRiga = CInt(row("id"))
                     params.Add("@idRiga", IdRiga.ToString())
                     ExecuteDelete("carrello", "where id=@idRiga", params)
                 Else
-                    Double.TryParse(selezionamultipla_Qta, quantitaRiga)
+                    TryParseDouble(selezionamultipla_Qta, quantitaRiga)
                 End If
 
                 ' Leggo prezzi e promozioni
-                params.Add("@NListino", NListino.ToString())
-                dr = ExecuteQueryGetDataReader("*", "vsuperarticoli", "where id=@ArticoliId and TCId=@TCId AND NListino=@NListino ORDER BY PrezzoPromo DESC", params)
+                dr = LoadCartProductRows(selezionamultipla_ID, selezionamultipla_TCID, NListino)
 
                 OfferteDettagliID = 0
                 Prezzo = 0
@@ -324,26 +326,26 @@ End Sub
                     OfferteDettagliID = 0
 
                     If Prezzo = 0 Then
-                        Double.TryParse(row("Prezzo").ToString(), Prezzo)
+                        TryParseDouble(row("Prezzo"), Prezzo)
                     End If
                     If PrezzoIvato = 0 Then
-                        Double.TryParse(row("PrezzoIvato").ToString(), PrezzoIvato)
+                        TryParseDouble(row("PrezzoIvato"), PrezzoIvato)
                     End If
 
                     If CInt(row("InOfferta")) = 1 Then
                         Dim qmin As Double = 0
                         Dim multipli As Double = 0
-                        Double.TryParse(row("OfferteQntMinima").ToString(), qmin)
-                        Double.TryParse(row("OfferteMultipli").ToString(), multipli)
+                        TryParseDouble(row("OfferteQntMinima"), qmin)
+                        TryParseDouble(row("OfferteMultipli"), multipli)
 
                         If quantitaRiga >= qmin AndAlso qmin > 0 Then
                             OfferteDettagliID = CInt(row("OfferteDettagliId"))
-                            Double.TryParse(row("PrezzoPromo").ToString(), Prezzo)
-                            Double.TryParse(row("PrezzoPromoIvato").ToString(), PrezzoIvato)
+                            TryParseDouble(row("PrezzoPromo"), Prezzo)
+                            TryParseDouble(row("PrezzoPromoIvato"), PrezzoIvato)
                         ElseIf multipli > 0 AndAlso quantitaRiga Mod multipli = 0 Then
                             OfferteDettagliID = CInt(row("OfferteDettagliId"))
-                            Double.TryParse(row("PrezzoPromo").ToString(), Prezzo)
-                            Double.TryParse(row("PrezzoPromoIvato").ToString(), PrezzoIvato)
+                            TryParseDouble(row("PrezzoPromo"), Prezzo)
+                            TryParseDouble(row("PrezzoPromoIvato"), PrezzoIvato)
                         End If
                     End If
                 Next
@@ -355,11 +357,11 @@ End Sub
                 paramsProcedure.Add("?parArticoliId", selezionamultipla_ID)
                 paramsProcedure.Add("?parCodice", Codice)
                 paramsProcedure.Add("?parDescrizione1", Descrizione)
-                paramsProcedure.Add("?parQnt", quantitaRiga.ToString().Replace(","c, "."c))
+                paramsProcedure.Add("?parQnt", FormatDbNumber(quantitaRiga))
                 paramsProcedure.Add("?parNListino", NListino.ToString())
-                paramsProcedure.Add("?parTCId", selezionamultipla_TCID)
-                paramsProcedure.Add("?parPrezzo", Prezzo.ToString().Replace(","c, "."c))
-                paramsProcedure.Add("?parPrezzoIvato", PrezzoIvato.ToString().Replace(","c, "."c))
+                paramsProcedure.Add("?parTCid", selezionamultipla_TCID)
+                paramsProcedure.Add("?parPrezzo", FormatDbNumber(Prezzo))
+                paramsProcedure.Add("?parPrezzoIvato", FormatDbNumber(PrezzoIvato))
                 paramsProcedure.Add("?parOfferteDettaglioID", OfferteDettagliID.ToString())
                 paramsProcedure.Add("?parProdottoGratis", selezionamultipla_SpedGRATIS)
                 ExecuteStoredProcedure("Newcarrello", paramsProcedure)
@@ -378,6 +380,7 @@ End Sub
             ' -------------------------
             For i = 0 To ListaArticoli.Count - 1
                 Dim quantitaRiga As Double = QuantitaBase
+                Dim tcidRiga As String = NormalizeTcidText(ListaTCs(i).ToString())
 
                 Dim wherePart As String
                 If LoginId = 0 Then
@@ -391,7 +394,7 @@ End Sub
 
                 Dim params As New Dictionary(Of String, String)
                 params.Add("@ArticoliId", ListaArticoli(i).ToString())
-                params.Add("@TCId", ListaTCs(i).ToString())
+                params.Add("@TCId", tcidRiga)
                 params.Add("@SessionID", SessionID)
                 params.Add("@LoginId", LoginId.ToString())
 
@@ -401,7 +404,7 @@ End Sub
                 If dr.Count > 0 Then
                     Dim row = dr(0)
                     Dim oldQ As Double = 0
-                    Double.TryParse(row("qnt").ToString(), oldQ)
+                    TryParseDouble(row("qnt"), oldQ)
                     quantitaRiga = quantitaRiga + oldQ
                     IdRiga = CInt(row("id"))
                     params.Add("@idRiga", IdRiga.ToString())
@@ -409,8 +412,7 @@ End Sub
                 End If
 
                 ' Leggo prezzi e promozioni
-                params.Add("@NListino", NListino.ToString())
-                dr = ExecuteQueryGetDataReader("*", "vsuperarticoli", "where id=@ArticoliId and TCId=@TCId AND NListino=@NListino ORDER BY PrezzoPromo DESC", params)
+                dr = LoadCartProductRows(ListaArticoli(i).ToString(), tcidRiga, NListino)
 
                 OfferteDettagliID = 0
                 Prezzo = 0
@@ -422,26 +424,26 @@ End Sub
                     OfferteDettagliID = 0
 
                     If Prezzo = 0 Then
-                        Double.TryParse(row("Prezzo").ToString(), Prezzo)
+                        TryParseDouble(row("Prezzo"), Prezzo)
                     End If
                     If PrezzoIvato = 0 Then
-                        Double.TryParse(row("PrezzoIvato").ToString(), PrezzoIvato)
+                        TryParseDouble(row("PrezzoIvato"), PrezzoIvato)
                     End If
 
                     If CInt(row("InOfferta")) = 1 Then
                         Dim qmin As Double = 0
                         Dim multipli As Double = 0
-                        Double.TryParse(row("OfferteQntMinima").ToString(), qmin)
-                        Double.TryParse(row("OfferteMultipli").ToString(), multipli)
+                        TryParseDouble(row("OfferteQntMinima"), qmin)
+                        TryParseDouble(row("OfferteMultipli"), multipli)
 
                         If quantitaRiga >= qmin AndAlso qmin > 0 Then
                             OfferteDettagliID = CInt(row("OfferteDettagliId"))
-                            Double.TryParse(row("PrezzoPromo").ToString(), Prezzo)
-                            Double.TryParse(row("PrezzoPromoIvato").ToString(), PrezzoIvato)
+                            TryParseDouble(row("PrezzoPromo"), Prezzo)
+                            TryParseDouble(row("PrezzoPromoIvato"), PrezzoIvato)
                         ElseIf multipli > 0 AndAlso quantitaRiga Mod multipli = 0 Then
                             OfferteDettagliID = CInt(row("OfferteDettagliId"))
-                            Double.TryParse(row("PrezzoPromo").ToString(), Prezzo)
-                            Double.TryParse(row("PrezzoPromoIvato").ToString(), PrezzoIvato)
+                            TryParseDouble(row("PrezzoPromo"), Prezzo)
+                            TryParseDouble(row("PrezzoPromoIvato"), PrezzoIvato)
                         End If
                     End If
                 Next
@@ -451,13 +453,13 @@ End Sub
                 paramsProcedure.Add("?parLoginId", LoginId.ToString())
                 paramsProcedure.Add("?parSessionId", SessionID)
                 paramsProcedure.Add("?parArticoliId", ListaArticoli(i).ToString())
-                paramsProcedure.Add("?parTCId", ListaTCs(i).ToString())
+                paramsProcedure.Add("?parTCid", tcidRiga)
                 paramsProcedure.Add("?parCodice", Codice)
                 paramsProcedure.Add("?parDescrizione1", Descrizione)
-                paramsProcedure.Add("?parQnt", quantitaRiga.ToString().Replace(","c, "."c))
+                paramsProcedure.Add("?parQnt", FormatDbNumber(quantitaRiga))
                 paramsProcedure.Add("?parNListino", NListino.ToString())
-                paramsProcedure.Add("?parPrezzo", Prezzo.ToString().Replace(","c, "."c))
-                paramsProcedure.Add("?parPrezzoIvato", PrezzoIvato.ToString().Replace(","c, "."c))
+                paramsProcedure.Add("?parPrezzo", FormatDbNumber(Prezzo))
+                paramsProcedure.Add("?parPrezzoIvato", FormatDbNumber(PrezzoIvato))
                 paramsProcedure.Add("?parOfferteDettaglioID", OfferteDettagliID.ToString())
                 Dim prodottoGratis As Integer = 0
                 If Session("ProdottoGratis") IsNot Nothing Then
@@ -475,6 +477,50 @@ End Sub
         End If
 
         Return articoliIdGlobali
+    End Function
+
+    Private Function LoadCartProductRows(ByVal articoloId As String, ByVal tcid As String, ByVal nListino As Integer) As List(Of Dictionary(Of String, Object))
+        Dim params As New Dictionary(Of String, String)
+        params.Add("@ArticoliId", articoloId)
+        params.Add("@TCId", NormalizeTcidText(tcid))
+        params.Add("@NListino", nListino.ToString(CultureInfo.InvariantCulture))
+
+        Dim rows = ExecuteQueryGetDataReader("*", "vsuperarticoli", "where id=@ArticoliId and TCId=@TCId AND NListino=@NListino ORDER BY PrezzoPromo DESC", params)
+        If rows.Count > 0 Then Return rows
+
+        Dim fallbackParams As New Dictionary(Of String, String)
+        fallbackParams.Add("@ArticoliId", articoloId)
+        fallbackParams.Add("@NListino", nListino.ToString(CultureInfo.InvariantCulture))
+        rows = ExecuteQueryGetDataReader("*", "vsuperarticoli", "where id=@ArticoliId AND NListino=@NListino ORDER BY CASE WHEN COALESCE(TCid,-1) IN (-1,0) THEN 0 ELSE 1 END, PrezzoPromo DESC LIMIT 1", fallbackParams)
+        If rows.Count > 0 Then Return rows
+
+        Dim articleParams As New Dictionary(Of String, String)
+        articleParams.Add("@ArticoliId", articoloId)
+        Return ExecuteQueryGetDataReader("id, -1 AS TCId, Codice, Descrizione1, 0 AS Prezzo, 0 AS PrezzoIvato, 0 AS InOfferta, 0 AS PrezzoPromo, 0 AS PrezzoPromoIvato, 0 AS OfferteQntMinima, 0 AS OfferteMultipli, 0 AS OfferteDettagliId", "articoli", "where id=@ArticoliId LIMIT 1", articleParams)
+    End Function
+
+    Private Function NormalizeTcidText(ByVal raw As String) As String
+        Dim tcid As Integer = -1
+        Integer.TryParse(Convert.ToString(raw), tcid)
+        If tcid <= 0 Then tcid = -1
+        Return tcid.ToString(CultureInfo.InvariantCulture)
+    End Function
+
+    Private Function TryParseDouble(ByVal raw As Object, ByRef result As Double) As Boolean
+        result = 0
+        If raw Is Nothing OrElse raw Is DBNull.Value Then Return False
+        Dim text As String = Convert.ToString(raw).Trim()
+        If String.IsNullOrEmpty(text) Then Return False
+        If Double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, result) Then Return True
+        If Double.TryParse(text, NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), result) Then Return True
+        Dim normalized As String = text.Replace("."c, ","c)
+        If Double.TryParse(normalized, NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), result) Then Return True
+        normalized = text.Replace(","c, "."c)
+        Return Double.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, result)
+    End Function
+
+    Private Function FormatDbNumber(ByVal value As Double) As String
+        Return value.ToString("0.############", CultureInfo.InvariantCulture)
     End Function
 
     ' =======================================
@@ -623,8 +669,9 @@ End Sub
                 If params IsNot Nothing Then
                     For Each paramName In params.Keys
                         If paramName = "?parPrezzo" OrElse paramName = "?parPrezzoIvato" Then
-                            cmd.Parameters.Add(paramName, MySqlDbType.Double).Value =
-                                Convert.ToDecimal(params(paramName), System.Globalization.CultureInfo.GetCultureInfo("it-IT"))
+                            Dim decValue As Double = 0
+                            TryParseDouble(params(paramName), decValue)
+                            cmd.Parameters.Add(paramName, MySqlDbType.Double).Value = decValue
                         Else
                             cmd.Parameters.AddWithValue(paramName, params(paramName))
                         End If

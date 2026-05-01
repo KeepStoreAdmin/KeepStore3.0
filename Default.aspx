@@ -299,6 +299,7 @@
 
     <section id="HomeRecentlyViewedSection" runat="server" visible="false" class="tf-sp-2 ks-home-recent-section ks-home-chosen-section d-none"
              data-ks-limit="10"
+             data-ks-server-fallback="1"
              data-ks-placeholder="<%= ThemeManager.PlaceholderProductImageUrl() %>">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">

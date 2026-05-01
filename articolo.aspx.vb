@@ -1061,6 +1061,7 @@ Partial Class articolo
     End Function
 
     Private Function BuildCartAddUrl(id As Integer, tcid As Integer) As String
+        If tcid <= 0 Then tcid = -1
         Return ResolveUrl("~/cart_add.aspx?id=" & HttpUtility.UrlEncode(id.ToString(CultureInfo.InvariantCulture)) &
                           "&TCid=" & HttpUtility.UrlEncode(tcid.ToString(CultureInfo.InvariantCulture)) &
                           "&qty=1")

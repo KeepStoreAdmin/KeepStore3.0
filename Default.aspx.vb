@@ -171,7 +171,7 @@ Partial Public Class _Default
             HomeLegacyBestSection.Visible = Not IsTableEmpty(bestRows)
         End If
 
-        Dim recentRows As DataTable = EmptyProductsTable()
+        Dim recentRows As DataTable = GetRecentlyViewedProducts(10, New HashSet(Of String)(StringComparer.OrdinalIgnoreCase), True, Nothing, False)
         rptRecentlyViewed.DataSource = recentRows
         rptRecentlyViewed.DataBind()
         If HomeRecentlyViewedSection IsNot Nothing Then
@@ -1653,6 +1653,9 @@ Partial Public Class _Default
             tcid = Convert.ToString(row("TCid"))
             If String.IsNullOrWhiteSpace(tcid) Then tcid = "-1"
         End If
+        Dim tcidInt As Integer = -1
+        Integer.TryParse(tcid, tcidInt)
+        If tcidInt <= 0 Then tcid = "-1"
         Return "cart_add.aspx?id=" & HttpUtility.UrlEncode(Convert.ToString(row("id"))) &
                "&TCid=" & HttpUtility.UrlEncode(tcid) &
                "&qty=1"
