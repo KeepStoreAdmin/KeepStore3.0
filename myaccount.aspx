@@ -1,8 +1,8 @@
-<%@ Page Title="" Language="VB" MasterPageFile="~/Public/ui/master/Site.master" AutoEventWireup="false" CodeFile="myaccount.aspx.vb" Inherits="myaccount" %>
+<%@ Page Title="" Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="myaccount.aspx.vb" Inherits="myaccount" %>
 <%@ Register Src="~/Public/ui/controls/Breadcrumb.ascx" TagPrefix="ks" TagName="Breadcrumb" %>
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
-    My Account
+    Area personale
 </asp:Content>
 
 <asp:Content ID="BreadcrumbContent" ContentPlaceHolderID="BreadcrumbContent" runat="server">
@@ -15,7 +15,7 @@
         <div class="container">
 
             <div class="tf-page-title style-2">
-                <div class="heading">My Account</div>
+                <div class="heading">Area personale</div>
                 <p class="text-muted mb-0">Gestisci i tuoi dati, indirizzi, ordini e preferiti.</p>
             </div>
 
@@ -36,7 +36,7 @@
                 </div>
 
                 <div class="col-12 col-md-6 col-xl-4">
-                    <a class="card h-100 text-decoration-none" href="/indirizzi.aspx">
+                    <a class="card h-100 text-decoration-none" href="/my-account-address.aspx">
                         <div class="card-body">
                             <div class="d-flex align-items-start justify-content-between">
                                 <div>
@@ -50,7 +50,7 @@
                 </div>
 
                 <div class="col-12 col-md-6 col-xl-4">
-                    <a class="card h-100 text-decoration-none" href="/ordini.aspx">
+                    <a class="card h-100 text-decoration-none" href="/documenti.aspx?t=4">
                         <div class="card-body">
                             <div class="d-flex align-items-start justify-content-between">
                                 <div>

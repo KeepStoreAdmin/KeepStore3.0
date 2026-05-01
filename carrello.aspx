@@ -1,4 +1,4 @@
-<%@ Page Language="VB" MasterPageFile="~/Public/ui/master/Site.master" AutoEventWireup="false" CodeFile="carrello.aspx.vb" Inherits="carrello" Debug="false"%>
+<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="carrello.aspx.vb" Inherits="carrello" Debug="false"%>
 
 <%@ Register Assembly="ConwayControls" Namespace="ConwayControls.Web" TagPrefix="ccwc" %>
 
@@ -6,9 +6,8 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-        <!-- Tema: assets loaded in MasterPage -->
-            <script src="/Public/assets/keepstore/js/cart-ui.js" defer></script>
-    <script src="/Public/assets/keepstore/js/checkout-ui.js" defer></script>
+            <script src="<%= ThemeManager.Asset("js/cart-ui.js") %>" defer></script>
+    <script src="<%= ThemeManager.Asset("js/checkout-ui.js") %>" defer></script>
 
 
 <script type="text/javascript">
@@ -1088,6 +1087,9 @@
 	<!-- Controllo se esiste l'immagine -->
 
 <asp:Panel ID="pLegacyCheckoutBindings" runat="server" Visible="false" style="display:none;">
+    <div id="open1" runat="server"></div>
+    <div id="open2" runat="server"></div>
+    <asp:CheckBox ID="CHKPREDEFINITO" runat="server" />
     <asp:Label ID="lblTab_Cap" runat="server" />
     <asp:Label ID="lblTab_Cell" runat="server" />
     <asp:Label ID="lblTab_CF" runat="server" />
@@ -1098,7 +1100,7 @@
     <asp:Label ID="lblTab_Indirizzo" runat="server" />
     <asp:Label ID="lblTab_Nazione" runat="server" />
     <asp:Label ID="lblTab_Nome" runat="server" />
-    <asp:Label ID="lblTab_Piva" runat="server" />
+    <asp:Label ID="lblTab_PivaLegacyOld" runat="server" />
     <asp:Label ID="lblTab_Provincia" runat="server" />
     <asp:Label ID="lblTab_RagioneSociale" runat="server" />
     <asp:Label ID="lblTab_SedeLegale" runat="server" />
@@ -1108,8 +1110,15 @@
     <asp:Label ID="lblTab_mail" runat="server" />
     <asp:Label ID="lblTab_pIva" runat="server" />
     <asp:Label ID="lblTab_Email2" runat="server" />
-    <asp:Label ID="lblTab_PIVA" runat="server" />
+    <asp:Label ID="lblTab_PivaLegacyUpper" runat="server" />
+    <asp:Label ID="lblTab_RagioneSocialeSpedizione" runat="server" />
+    <asp:Label ID="lblTab_NomeSpedizione" runat="server" />
+    <asp:Label ID="lblTab_IndirizzoSpedizione" runat="server" />
+    <asp:Label ID="lblTab_CittaSpedizione" runat="server" />
+    <asp:Label ID="lblTab_CapSpedizione" runat="server" />
+    <asp:Label ID="lblTab_ProvinciaSpedizione" runat="server" />
+    <asp:Label ID="lblTab_ZonaSpedizione" runat="server" />
+    <asp:Label ID="lblTab_TelSpedizione" runat="server" />
+    <asp:Label ID="lblTab_NotaDestinazione" runat="server" />
 </asp:Panel>
 </asp:Content>
-
-

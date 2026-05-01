@@ -20,7 +20,7 @@ Partial Class myaccount
     ' - Completo il title della pagina in modo coerente
     '========================================================
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
-        Me.Title = Me.Title & " - My Account"
+        Me.Title = Me.Title & " - Area personale"
     End Sub
 
 End Class

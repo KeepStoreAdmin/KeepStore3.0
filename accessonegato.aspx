@@ -1,4 +1,4 @@
-<%@ Page Language="VB" MasterPageFile="~/Public/ui/master/Site.master" AutoEventWireup="false" %>
+<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" %>
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
     Accesso negato

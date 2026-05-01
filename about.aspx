@@ -20,7 +20,7 @@
             <div class="row align-items-center">
                 <div class="col-lg-6">
                     <div class="tf-section-title mb_30">
-                        <h2 class="title">KeepStore</h2>
+                        <h2 class="title">Il nostro negozio</h2>
                         <p class="text-main-2 mt-2">E-commerce e assistenza: hardware, telefonia, consumabili e accessori con focus su consulenza e post-vendita.</p>
                     </div>
                     <ul class="text-main-2">
@@ -35,7 +35,7 @@
                 </div>
                 <div class="col-lg-6">
                     <div class="tf-img-with-text">
-                        <img class="lazyload" data-src='<%= ThemeManager.Asset("images/banner/banner-11.jpg") %>' src='<%= ThemeManager.Asset("images/banner/banner-11.jpg") %>' alt="KeepStore" />
+                        <img class="lazyload" data-src='<%= ThemeManager.Asset("images/banner/banner-11.jpg") %>' src='<%= ThemeManager.Asset("images/banner/banner-11.jpg") %>' alt="E-commerce e assistenza" />
                     </div>
                 </div>
             </div>

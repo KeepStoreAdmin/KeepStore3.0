@@ -11,15 +11,6 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>" />
-    <style>
-        #ksCatalogPage .ks-filter-option{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;font-size:14px;line-height:1.35;color:inherit}
-        #ksCatalogPage .ks-filter-option.active{color:var(--primary,#ff3b30);font-weight:600}
-        #ksCatalogPage .ks-filter-option small{color:var(--text-main-2,#666);font-size:12px}
-        #ksCatalogPage .ks-catalog-card .product-tag{min-height:18px}
-        #ksCatalogPage .ks-catalog-card-meta{color:#198754;font-weight:600}
-        #ksCatalogPage .ks-catalog-card-actions{min-height:34px}
-        #ksCatalogPage .ks-catalog-card-actions .ks-qty{max-width:70px;text-align:center}
-    </style>
 </asp:Content>
 
 <asp:Content ID="BreadcrumbContent1" ContentPlaceHolderID="BreadcrumbContent" runat="server">
@@ -280,43 +271,72 @@
                                     </div>
 
                                     <div class="card-product-info">
-                                        <p class="product-tag caption text-main-2">
-                                            <%# Server.HtmlEncode(ThemeManager.CompactText(UiData.Str(Container.DataItem, "MarcheDescrizione"), 32)) %>
-                                        </p>
+                                        <div class="box-title">
+                                            <div>
+                                                <p class="product-tag caption text-main-2">
+                                                    <%# Server.HtmlEncode(ThemeManager.CompactText(UiData.Str(Container.DataItem, "MarcheDescrizione"), 32)) %>
+                                                </p>
 
-                                        <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# "articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCId") %>'>
-                                            <%# Server.HtmlEncode(ThemeManager.CompactText(Eval("Descrizione1"), 72)) %>
-                                        </a>
+                                                <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# "articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCId") %>'>
+                                                    <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Descrizione1")), 72)) %>
+                                                </a>
+                                            </div>
 
-                                        <div class="body-small text-main-2 mt-1">
-                                            Cod. <%# Server.HtmlEncode(UiData.Str(Container.DataItem, "Codice")) %>
+                                            <div class="price-wrap fw-medium mt-1">
+                                                <%# UiPriceFormatter.RenderPriceHtml(
+                                                        If(IsDBNull(Eval("Prezzo")), 0, Eval("Prezzo")),
+                                                        If(IsDBNull(Eval("PrezzoIvato")), 0, Eval("PrezzoIvato")),
+                                                        If(IsDBNull(Eval("PrezzoPromo")), 0, Eval("PrezzoPromo")),
+                                                        If(IsDBNull(Eval("PrezzoPromoIvato")), 0, Eval("PrezzoPromoIvato")),
+                                                        Val(Eval("InOfferta")),
+                                                        Session("IvaTipo")
+                                                    ) %>
+                                            </div>
                                         </div>
 
-                                        <div class="price-wrap fw-medium mt-1">
-                                            <%# UiPriceFormatter.RenderPriceHtml(
-                                                    If(IsDBNull(Eval("Prezzo")), 0, Eval("Prezzo")),
-                                                    If(IsDBNull(Eval("PrezzoIvato")), 0, Eval("PrezzoIvato")),
-                                                    If(IsDBNull(Eval("PrezzoPromo")), 0, Eval("PrezzoPromo")),
-                                                    If(IsDBNull(Eval("PrezzoPromoIvato")), 0, Eval("PrezzoPromoIvato")),
-                                                    Val(Eval("InOfferta")),
-                                                    Session("IvaTipo")
-                                                ) %>
-                                        </div>
+                                        <div class="box-infor-detail">
+                                            <ul class="list-infor-fearture">
+                                                <li>
+                                                    <p class="caption name-feature">Codice:</p>
+                                                    <p class="caption property"><%# Server.HtmlEncode(UiData.Str(Container.DataItem, "Codice")) %></p>
+                                                </li>
+                                                <li>
+                                                    <p class="caption name-feature">Disponibilita:</p>
+                                                    <p class="caption property text-secondary"><%# Server.HtmlEncode(CatalogAvailabilityText(Container.DataItem)) %></p>
+                                                </li>
+                                            </ul>
 
-                                        <div class="ks-catalog-card-meta body-small mt-1">
-                                            <%# Server.HtmlEncode(CatalogAvailabilityText(Container.DataItem)) %>
+                                            <div class="d-flex align-items-center gap-2 mt-2 ks-catalog-card-actions">
+                                                <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" CssClass="form-check-input" />
+                                                <asp:TextBox ID="tbQuantita" runat="server" CssClass="form-control form-control-sm ks-qty" Text="1" Width="70" />
+                                            </div>
                                         </div>
+                                    </div>
 
-                                        <div class="d-flex align-items-center gap-2 mt-2 ks-catalog-card-actions">
-                                            <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" CssClass="form-check-input" />
-                                            <asp:TextBox ID="tbQuantita" runat="server" CssClass="form-control form-control-sm ks-qty" Text="1" Width="70" />
+                                    <div class="card-product-btn">
+                                        <asp:LinkButton ID="btnAddCard" runat="server" CommandArgument='<%# Eval("id") %>'
+                                            CssClass="tf-btn btn-line w-100" OnClick="LB_AddToCart_Click" CausesValidation="False">
+                                            <span>Aggiungi al carrello</span>
+                                            <i class="icon-cart-2"></i>
+                                        </asp:LinkButton>
+                                        <div class="box-btn">
+                                            <a href='<%# "articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCId") %>' class="tf-btn-icon style-2 type-black">
+                                                <i class="icon-view"></i>
+                                                <span class="body-text-3 fw-normal">Dettagli</span>
+                                            </a>
                                         </div>
                                     </div>
                                 </div>
                             </ItemTemplate>
 
                             <EmptyDataTemplate>
-                                <div class="alert alert-warning">Nessun prodotto trovato con i filtri selezionati.</div>
+                                <div class="tf-empty-state text-center py-5">
+                                    <div class="heading">Nessun prodotto trovato</div>
+                                    <p class="text-main-2 mt-2">Modifica i filtri o torna al catalogo completo.</p>
+                                    <div class="mt-4">
+                                        <a class="tf-btn btn-fill" href="articoli.aspx">Reset filtri</a>
+                                    </div>
+                                </div>
                             </EmptyDataTemplate>
                         </asp:ListView>
                     </div>

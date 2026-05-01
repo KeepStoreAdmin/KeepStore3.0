@@ -1,11 +1,11 @@
-<%@ Page Language="VB" MasterPageFile="~/Public/ui/master/Site.master" AutoEventWireup="false" CodeFile="datiutente.aspx.vb" Inherits="datiutente" %>
+<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="datiutente.aspx.vb" Inherits="datiutente" %>
 
 <asp:Content ID="ContentTitle" ContentPlaceHolderID="TitleContent" runat="server">
-    I miei dati - KeepStore
+    I miei dati
 </asp:Content>
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="/Public/assets/keepstore/css/datiutente-ui.css" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/datiutente-ui.css") %>" />
 </asp:Content>
 
 <asp:Content ID="ContentBreadcrumb" ContentPlaceHolderID="BreadcrumbContent" runat="server">
@@ -35,7 +35,7 @@
             </div>
             <a class="btn btn-outline-secondary btn-sm" href="myaccount.aspx">
                 <i class="icon-arrow-left"></i>
-                Torna a My Account
+                Torna all'area personale
             </a>
         </div>
 
@@ -70,7 +70,7 @@
                     - fvDatiUtente (più descrittivo)
                     - fvUtente (variante breve)
 
-                    Lo script /Public/assets/keepstore/js/datiutente-ui.js rende visibile
+                    Lo script UI rende visibile
                     automaticamente il FormView che risulta effettivamente popolato.
                 --%>
 
@@ -1168,5 +1168,5 @@
 </asp:Content>
 
 <asp:Content ID="ContentScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script src="/Public/assets/keepstore/js/datiutente-ui.js" defer></script>
+    <script src="<%= ThemeManager.Asset("js/datiutente-ui.js") %>" defer></script>
 </asp:Content>

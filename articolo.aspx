@@ -222,7 +222,7 @@
                                             <p class="caption">Acquisto</p>
                                             <p class="body-text-3">
                                                 <span>Prezzi e disponibilita sono calcolati con il listino corrente.</span>
-                                                <span>Il carrello usa il flusso server-side KeepStore.</span>
+                                                <span>Puoi modificare la quantita prima di aggiungere il prodotto al carrello.</span>
                                             </p>
                                         </div>
                                     </div>
@@ -285,7 +285,7 @@
                 <div class="tf-grid-layout md-col-4 sm-col-2">
                     <asp:Repeater ID="rptRelated" runat="server">
                         <ItemTemplate>
-                            <div class="card-product style-1">
+                            <div class="card-product style-1 style-img-border">
                                 <div class="card-product-wrapper">
                                     <a class="product-img ks-product-card-image" href='<%# Eval("Url") %>'>
                                         <img class="lazyload img-product"
@@ -298,20 +298,34 @@
                                 </div>
 
                                 <div class="card-product-info">
-                                    <a class="name-product link" href='<%# Eval("Url") %>'>
-                                        <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 70)) %>
-                                    </a>
+                                    <div class="box-title">
+                                        <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# Eval("Url") %>'>
+                                            <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 70)) %>
+                                        </a>
 
-                                    <div class="price-wrap">
-                                        <%# Eval("PrezzoHtml") %>
+                                        <div class="price-wrap fw-medium">
+                                            <%# Eval("PrezzoHtml") %>
+                                        </div>
                                     </div>
 
-                                    <div class="body-small text-main-2 mt-1">
-                                        <%# If(String.IsNullOrEmpty(Convert.ToString(Eval("Codice"))), String.Empty, "Cod. " & Server.HtmlEncode(Convert.ToString(Eval("Codice")))) %>
+                                    <div class="box-infor-detail">
+                                        <ul class="list-infor-fearture">
+                                            <li>
+                                                <p class="caption name-feature">Codice:</p>
+                                                <p class="caption property"><%# If(String.IsNullOrEmpty(Convert.ToString(Eval("Codice"))), "-", Server.HtmlEncode(Convert.ToString(Eval("Codice")))) %></p>
+                                            </li>
+                                            <li>
+                                                <p class="caption name-feature">Disponibilita:</p>
+                                                <p class="caption property text-secondary"><%# Server.HtmlEncode(Convert.ToString(Eval("AvailabilityText"))) %></p>
+                                            </li>
+                                        </ul>
                                     </div>
 
-                                    <div class="body-small text-main-2 mt-1">
-                                        <%# Server.HtmlEncode(Convert.ToString(Eval("AvailabilityText"))) %>
+                                    <div class="card-product-btn">
+                                        <a class="tf-btn btn-line w-100" href='<%# Eval("Url") %>'>
+                                            <span>Vedi prodotto</span>
+                                            <i class="icon-view"></i>
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -332,7 +346,7 @@
                 <div class="tf-grid-layout md-col-4 sm-col-2">
                     <asp:Repeater ID="rptCompatible" runat="server">
                         <ItemTemplate>
-                            <div class="card-product style-1">
+                            <div class="card-product style-1 style-img-border">
                                 <div class="card-product-wrapper">
                                     <a class="product-img ks-product-card-image" href='<%# Eval("Url") %>'>
                                         <img class="lazyload img-product"
@@ -345,20 +359,34 @@
                                 </div>
 
                                 <div class="card-product-info">
-                                    <a class="name-product link" href='<%# Eval("Url") %>'>
-                                        <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 70)) %>
-                                    </a>
+                                    <div class="box-title">
+                                        <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# Eval("Url") %>'>
+                                            <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 70)) %>
+                                        </a>
 
-                                    <div class="price-wrap">
-                                        <%# Eval("PrezzoHtml") %>
+                                        <div class="price-wrap fw-medium">
+                                            <%# Eval("PrezzoHtml") %>
+                                        </div>
                                     </div>
 
-                                    <div class="body-small text-main-2 mt-1">
-                                        <%# If(String.IsNullOrEmpty(Convert.ToString(Eval("Codice"))), String.Empty, "Cod. " & Server.HtmlEncode(Convert.ToString(Eval("Codice")))) %>
+                                    <div class="box-infor-detail">
+                                        <ul class="list-infor-fearture">
+                                            <li>
+                                                <p class="caption name-feature">Codice:</p>
+                                                <p class="caption property"><%# If(String.IsNullOrEmpty(Convert.ToString(Eval("Codice"))), "-", Server.HtmlEncode(Convert.ToString(Eval("Codice")))) %></p>
+                                            </li>
+                                            <li>
+                                                <p class="caption name-feature">Disponibilita:</p>
+                                                <p class="caption property text-secondary"><%# Server.HtmlEncode(Convert.ToString(Eval("AvailabilityText"))) %></p>
+                                            </li>
+                                        </ul>
                                     </div>
 
-                                    <div class="body-small text-main-2 mt-1">
-                                        <%# Server.HtmlEncode(Convert.ToString(Eval("AvailabilityText"))) %>
+                                    <div class="card-product-btn">
+                                        <a class="tf-btn btn-line w-100" href='<%# Eval("Url") %>'>
+                                            <span>Vedi prodotto</span>
+                                            <i class="icon-view"></i>
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -379,7 +407,7 @@
                 <div class="tf-grid-layout md-col-4 sm-col-2">
                     <asp:Repeater ID="rptLinked" runat="server">
                         <ItemTemplate>
-                            <div class="card-product style-1">
+                            <div class="card-product style-1 style-img-border">
                                 <div class="card-product-wrapper">
                                     <a class="product-img ks-product-card-image" href='<%# Eval("Url") %>'>
                                         <img class="lazyload img-product"
@@ -392,20 +420,34 @@
                                 </div>
 
                                 <div class="card-product-info">
-                                    <a class="name-product link" href='<%# Eval("Url") %>'>
-                                        <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 70)) %>
-                                    </a>
+                                    <div class="box-title">
+                                        <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# Eval("Url") %>'>
+                                            <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 70)) %>
+                                        </a>
 
-                                    <div class="price-wrap">
-                                        <%# Eval("PrezzoHtml") %>
+                                        <div class="price-wrap fw-medium">
+                                            <%# Eval("PrezzoHtml") %>
+                                        </div>
                                     </div>
 
-                                    <div class="body-small text-main-2 mt-1">
-                                        <%# If(String.IsNullOrEmpty(Convert.ToString(Eval("Codice"))), String.Empty, "Cod. " & Server.HtmlEncode(Convert.ToString(Eval("Codice")))) %>
+                                    <div class="box-infor-detail">
+                                        <ul class="list-infor-fearture">
+                                            <li>
+                                                <p class="caption name-feature">Codice:</p>
+                                                <p class="caption property"><%# If(String.IsNullOrEmpty(Convert.ToString(Eval("Codice"))), "-", Server.HtmlEncode(Convert.ToString(Eval("Codice")))) %></p>
+                                            </li>
+                                            <li>
+                                                <p class="caption name-feature">Disponibilita:</p>
+                                                <p class="caption property text-secondary"><%# Server.HtmlEncode(Convert.ToString(Eval("AvailabilityText"))) %></p>
+                                            </li>
+                                        </ul>
                                     </div>
 
-                                    <div class="body-small text-main-2 mt-1">
-                                        <%# Server.HtmlEncode(Convert.ToString(Eval("AvailabilityText"))) %>
+                                    <div class="card-product-btn">
+                                        <a class="tf-btn btn-line w-100" href='<%# Eval("Url") %>'>
+                                            <span>Vedi prodotto</span>
+                                            <i class="icon-view"></i>
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -419,5 +461,5 @@
 </asp:Content>
 
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script src="/Public/assets/keepstore/js/keepstore-product.js"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>"></script>
 </asp:Content>

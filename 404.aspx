@@ -9,7 +9,6 @@
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
-    <!-- Breadcrumbs (template) -->
     <div class="tf-sp-1 pb-0">
         <div class="container">
             <div class="tf-breadcrumb-wrap">
@@ -22,7 +21,6 @@
         </div>
     </div>
 
-    <!-- 404 (template) -->
     <section class="flat-spacing">
         <div class="container">
             <div class="tf-page-title">

@@ -1,6 +1,6 @@
 /* ==========================================================
-   KeepStore - Catalog UI (filters + pager)
-   Naming neutro: nessun riferimento a template terzi
+   Catalog UI (filters + pager)
+   Naming neutro e scoped
    ========================================================== */
 
 /* Breadcrumb (UserControl) micro-allineamento */
@@ -90,7 +90,7 @@
 /* ------------------------------------------------------------
    Catalogo - GridView cards
    ------------------------------------------------------------
-   Alcune installazioni KeepStore usano ancora GridView per la lista articoli.
+   Alcune pagine legacy usano ancora GridView per la lista articoli.
    Qui trasformiamo la tabella in una griglia di card, senza cambiare controlli/ID.
 */
 
@@ -274,6 +274,27 @@
   flex: 1 1 auto;
 }
 
+#ksCatalogPage .ks-filter-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  font-size: 14px;
+  line-height: 1.35;
+  color: inherit;
+}
+
+#ksCatalogPage .ks-filter-option.active {
+  color: var(--primary, #ff3b30);
+  font-weight: 600;
+}
+
+#ksCatalogPage .ks-filter-option small {
+  color: var(--text-main-2, #666);
+  font-size: 12px;
+}
+
 #ksCatalogPage .ks-catalog-card .name-product {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -286,12 +307,54 @@
   min-height: 30px;
 }
 
+#ksCatalogPage .ks-catalog-card .product-tag {
+  min-height: 18px;
+}
+
+#ksCatalogPage .ks-catalog-card .box-infor-detail {
+  padding-top: 10px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+#ksCatalogPage .ks-catalog-card .list-infor-fearture {
+  display: grid;
+  gap: 4px;
+}
+
+#ksCatalogPage .ks-catalog-card .list-infor-fearture li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+#ksCatalogPage .ks-catalog-card .list-infor-fearture p {
+  margin: 0;
+}
+
+#ksCatalogPage .ks-catalog-card .list-infor-fearture .property {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+#ksCatalogPage .ks-catalog-card .card-product-btn {
+  padding-top: 12px;
+  margin-top: auto;
+}
+
 #ksCatalogPage .ks-catalog-card-actions {
+  min-height: 34px;
   margin-top: auto;
 }
 
 #ksCatalogPage .ks-catalog-card-actions .form-check-input {
   flex: 0 0 auto;
+}
+
+#ksCatalogPage .ks-catalog-card-actions .ks-qty {
+  max-width: 70px;
+  text-align: center;
 }
 
 #ksCatalogPage .ks-catalog-card-actions .ks-qty-wrap {

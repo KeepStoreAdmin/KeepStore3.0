@@ -161,7 +161,7 @@ Partial Class Contattaci
             If smtpHost = "" Then Throw New Exception("SMTP host non configurato (Session(smtp) vuota).")
 
             Using oMsg As New MailMessage()
-                oMsg.From = New MailAddress(aziendaEmail, If(String.IsNullOrWhiteSpace(aziendaNome), "KeepStore", aziendaNome))
+                oMsg.From = New MailAddress(aziendaEmail, If(String.IsNullOrWhiteSpace(aziendaNome), "Sito web", aziendaNome))
                 oMsg.To.Add(New MailAddress(aziendaEmail))
                 oMsg.ReplyToList.Add(New MailAddress(fromEmailUser, nome))
 

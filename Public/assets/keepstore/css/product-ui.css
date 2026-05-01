@@ -1,6 +1,6 @@
-/* KeepStore UI contract (product detail)
+/* Product detail UI contract
    - Naming neutro (ks-*)
-   - Nessun riferimento a template terzi
+   - Regole scoped
 */
 
 .ks-product-page .ks-product-gallery-main {
@@ -196,12 +196,48 @@
   flex: 1 1 auto;
 }
 
+.ks-product-relation-section .box-title {
+  display: grid;
+  gap: 8px;
+}
+
 .ks-product-relation-section .name-product {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   min-height: 2.7em;
+}
+
+.ks-product-relation-section .box-infor-detail {
+  padding-top: 10px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.ks-product-relation-section .list-infor-fearture {
+  display: grid;
+  gap: 4px;
+}
+
+.ks-product-relation-section .list-infor-fearture li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ks-product-relation-section .list-infor-fearture p {
+  margin: 0;
+}
+
+.ks-product-relation-section .card-product-btn {
+  padding-top: 12px;
+  margin-top: auto;
+}
+
+.ks-product-page .product-detail .body-text-3 span {
+  display: block;
 }
 
 @media (max-width: 1199.98px) {

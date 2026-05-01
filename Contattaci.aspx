@@ -1,4 +1,4 @@
-<%@ Page Language="VB" MasterPageFile="~/Public/ui/master/Site.master" AutoEventWireup="false" CodeFile="Contattaci.aspx.vb" Inherits="Contattaci" %>
+<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="Contattaci.aspx.vb" Inherits="Contattaci" %>
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
     Contattaci
@@ -10,6 +10,18 @@
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
     <div class="ks-contact">
+        <div class="tf-sp-1 pb-0">
+            <div class="container">
+                <div class="tf-breadcrumb-wrap">
+                    <div class="tf-breadcrumb-list">
+                        <a href="Default.aspx" class="text">Home</a>
+                        <i class="icon icon-arrow-right"></i>
+                        <span class="text">Contattaci</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <section class="tf-sp-2">
             <div class="container">
 
@@ -23,7 +35,6 @@
                 <div class="bottom">
                     <div class="row g-3">
 
-                        <!-- Form -->
                         <div class="col-lg-7">
                             <div class="contact-wrap">
                                 <div class="box-title mb-3">
@@ -79,7 +90,6 @@
                             </div>
                         </div>
 
-                        <!-- Info -->
                         <div class="col-lg-5">
                             <div class="contact-info">
                                 <h5 class="fw-semibold mb-10">Informazioni</h5>
