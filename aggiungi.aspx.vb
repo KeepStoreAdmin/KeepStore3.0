@@ -140,20 +140,25 @@ End Sub
         ExecuteDelete("carrello", "WHERE LoginId=@LoginId OR SessionId=@SessionId", params)
 
         ' Inserisco l'articolo coupon
-        Dim paramsProcedure As New Dictionary(Of String, String)
-        paramsProcedure.Add("?parLoginId", loginId.ToString())
-        paramsProcedure.Add("?parSessionId", Session.SessionID)
-        paramsProcedure.Add("?parArticoliId", Convert.ToString(Session("Coupon_idArticolo")))
-        paramsProcedure.Add("?parCodice", Convert.ToString(Session("Coupon_codArticolo")))
-        paramsProcedure.Add("?parDescrizione1", Convert.ToString(Session("Coupon_DescrizioneArticolo")))
-        paramsProcedure.Add("?parQnt", Convert.ToString(Session("Coupon_Qnt_Pezzi")))
-        paramsProcedure.Add("?parNListino", "1")
-        paramsProcedure.Add("?parTCid", "-1")
-        paramsProcedure.Add("?parPrezzo", Convert.ToString(Session("Coupon_Prezzo")))
-        paramsProcedure.Add("?parPrezzoIvato", Convert.ToString(Session("Coupon_PrezzoIvato")))
-        paramsProcedure.Add("?parOfferteDettaglioID", "0")
-        paramsProcedure.Add("?parProdottoGratis", "0")
-        ExecuteStoredProcedure("Newcarrello", paramsProcedure)
+        Dim couponQnt As Double = 1
+        TryParseDouble(Session("Coupon_Qnt_Pezzi"), couponQnt)
+        Dim couponPrezzo As Double = 0
+        TryParseDouble(Session("Coupon_Prezzo"), couponPrezzo)
+        Dim couponPrezzoIvato As Double = 0
+        TryParseDouble(Session("Coupon_PrezzoIvato"), couponPrezzoIvato)
+
+        InsertCartRow(loginId,
+                      Session.SessionID,
+                      Convert.ToString(Session("Coupon_idArticolo")),
+                      "-1",
+                      Convert.ToString(Session("Coupon_codArticolo")),
+                      Convert.ToString(Session("Coupon_DescrizioneArticolo")),
+                      couponQnt,
+                      1,
+                      couponPrezzo,
+                      couponPrezzoIvato,
+                      0,
+                      0)
 
         ' Set vari ordine
         Me.Session("Ordine_TipoDoc") = Session("IdDocumentoCoupon")
@@ -351,20 +356,18 @@ End Sub
                 Next
 
                 ' Inserisco articolo
-                Dim paramsProcedure As New Dictionary(Of String, String)
-                paramsProcedure.Add("?parLoginId", LoginId.ToString())
-                paramsProcedure.Add("?parSessionId", SessionID)
-                paramsProcedure.Add("?parArticoliId", selezionamultipla_ID)
-                paramsProcedure.Add("?parCodice", Codice)
-                paramsProcedure.Add("?parDescrizione1", Descrizione)
-                paramsProcedure.Add("?parQnt", FormatDbNumber(quantitaRiga))
-                paramsProcedure.Add("?parNListino", NListino.ToString())
-                paramsProcedure.Add("?parTCid", selezionamultipla_TCID)
-                paramsProcedure.Add("?parPrezzo", FormatDbNumber(Prezzo))
-                paramsProcedure.Add("?parPrezzoIvato", FormatDbNumber(PrezzoIvato))
-                paramsProcedure.Add("?parOfferteDettaglioID", OfferteDettagliID.ToString())
-                paramsProcedure.Add("?parProdottoGratis", selezionamultipla_SpedGRATIS)
-                ExecuteStoredProcedure("Newcarrello", paramsProcedure)
+                InsertCartRow(LoginId,
+                              SessionID,
+                              selezionamultipla_ID,
+                              selezionamultipla_TCID,
+                              Codice,
+                              Descrizione,
+                              quantitaRiga,
+                              NListino,
+                              Prezzo,
+                              PrezzoIvato,
+                              OfferteDettagliID,
+                              _pgTmp)
 
                 AggiornaVisite(CInt(selezionamultipla_ID))
 
@@ -449,24 +452,22 @@ End Sub
                 Next
 
                 ' Inserisco articolo
-                Dim paramsProcedure As New Dictionary(Of String, String)
-                paramsProcedure.Add("?parLoginId", LoginId.ToString())
-                paramsProcedure.Add("?parSessionId", SessionID)
-                paramsProcedure.Add("?parArticoliId", ListaArticoli(i).ToString())
-                paramsProcedure.Add("?parTCid", tcidRiga)
-                paramsProcedure.Add("?parCodice", Codice)
-                paramsProcedure.Add("?parDescrizione1", Descrizione)
-                paramsProcedure.Add("?parQnt", FormatDbNumber(quantitaRiga))
-                paramsProcedure.Add("?parNListino", NListino.ToString())
-                paramsProcedure.Add("?parPrezzo", FormatDbNumber(Prezzo))
-                paramsProcedure.Add("?parPrezzoIvato", FormatDbNumber(PrezzoIvato))
-                paramsProcedure.Add("?parOfferteDettaglioID", OfferteDettagliID.ToString())
                 Dim prodottoGratis As Integer = 0
                 If Session("ProdottoGratis") IsNot Nothing Then
                     Integer.TryParse(Session("ProdottoGratis").ToString(), prodottoGratis)
                 End If
-                paramsProcedure.Add("?parProdottoGratis", prodottoGratis.ToString())
-                ExecuteStoredProcedure("Newcarrello", paramsProcedure)
+                InsertCartRow(LoginId,
+                              SessionID,
+                              ListaArticoli(i).ToString(),
+                              tcidRiga,
+                              Codice,
+                              Descrizione,
+                              quantitaRiga,
+                              NListino,
+                              Prezzo,
+                              PrezzoIvato,
+                              OfferteDettagliID,
+                              prodottoGratis)
 
                 AggiornaVisite(CInt(ListaArticoli(i)))
                 If articoliIdGlobali <> String.Empty Then
@@ -522,6 +523,50 @@ End Sub
     Private Function FormatDbNumber(ByVal value As Double) As String
         Return value.ToString("0.############", CultureInfo.InvariantCulture)
     End Function
+
+    Private Sub InsertCartRow(ByVal loginId As Integer,
+                              ByVal sessionId As String,
+                              ByVal articoloId As String,
+                              ByVal tcId As String,
+                              ByVal codice As String,
+                              ByVal descrizione As String,
+                              ByVal qnt As Double,
+                              ByVal nListino As Integer,
+                              ByVal prezzo As Double,
+                              ByVal prezzoIvato As Double,
+                              ByVal offerteDettaglioId As Integer,
+                              ByVal prodottoGratis As Integer)
+        Dim articoloIdInt As Integer = 0
+        Integer.TryParse(Convert.ToString(articoloId), articoloIdInt)
+        If articoloIdInt <= 0 Then Return
+
+        Dim tcIdInt As Integer = -1
+        Integer.TryParse(NormalizeTcidText(tcId), tcIdInt)
+        If tcIdInt <= 0 Then tcIdInt = -1
+
+        If qnt <= 0 Then qnt = 1
+        If String.IsNullOrEmpty(sessionId) AndAlso loginId <= 0 Then sessionId = Me.Session.SessionID
+
+        Dim sql As String = "INSERT INTO carrello " &
+                            "(LoginId, SessionId, ArticoliId, TCId, Codice, Descrizione1, Qnt, NListino, Prezzo, PrezzoIvato, OfferteDettaglioId, Prodotto_Gratis) " &
+                            "VALUES (@LoginId, @SessionId, @ArticoliId, @TCId, @Codice, @Descrizione1, @Qnt, @NListino, @Prezzo, @PrezzoIvato, @OfferteDettaglioId, @ProdottoGratis)"
+
+        Dim params As New Dictionary(Of String, String)
+        params.Add("@LoginId", loginId.ToString(CultureInfo.InvariantCulture))
+        params.Add("@SessionId", Convert.ToString(sessionId))
+        params.Add("@ArticoliId", articoloIdInt.ToString(CultureInfo.InvariantCulture))
+        params.Add("@TCId", tcIdInt.ToString(CultureInfo.InvariantCulture))
+        params.Add("@Codice", Convert.ToString(codice))
+        params.Add("@Descrizione1", Convert.ToString(descrizione))
+        params.Add("@Qnt", FormatDbNumber(qnt))
+        params.Add("@NListino", nListino.ToString(CultureInfo.InvariantCulture))
+        params.Add("@Prezzo", FormatDbNumber(prezzo))
+        params.Add("@PrezzoIvato", FormatDbNumber(prezzoIvato))
+        params.Add("@OfferteDettaglioId", offerteDettaglioId.ToString(CultureInfo.InvariantCulture))
+        params.Add("@ProdottoGratis", prodottoGratis.ToString(CultureInfo.InvariantCulture))
+
+        ExecuteNonQuery(False, sql, params)
+    End Sub
 
     ' =======================================
     '  FACEBOOK PIXEL (AddToCart)
@@ -668,10 +713,16 @@ End Sub
 
                 If params IsNot Nothing Then
                     For Each paramName In params.Keys
-                        If paramName = "?parPrezzo" OrElse paramName = "?parPrezzoIvato" Then
+                        If paramName = "?parPrezzo" OrElse paramName = "?parPrezzoIvato" OrElse
+                           paramName = "@Prezzo" OrElse paramName = "@PrezzoIvato" OrElse paramName = "@Qnt" Then
                             Dim decValue As Double = 0
                             TryParseDouble(params(paramName), decValue)
                             cmd.Parameters.Add(paramName, MySqlDbType.Double).Value = decValue
+                        ElseIf paramName = "@LoginId" OrElse paramName = "@ArticoliId" OrElse paramName = "@TCId" OrElse
+                               paramName = "@NListino" OrElse paramName = "@OfferteDettaglioId" OrElse paramName = "@ProdottoGratis" Then
+                            Dim intValue As Integer = 0
+                            Integer.TryParse(params(paramName), intValue)
+                            cmd.Parameters.Add(paramName, MySqlDbType.Int32).Value = intValue
                         Else
                             cmd.Parameters.AddWithValue(paramName, params(paramName))
                         End If
