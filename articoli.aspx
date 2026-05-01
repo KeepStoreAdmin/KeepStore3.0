@@ -226,7 +226,7 @@
                             <ItemTemplate>
                                 <div class="card-product ks-catalog-card">
                                     <div class="card-product-wrapper">
-                                        <a href='<%# "articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCId") %>' class="product-img">
+                                        <a href='<%# CatalogProductUrl(Container.DataItem) %>' class="product-img">
                                             <img class="lazyload img-product" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>'
                                                  src='<%# ThemeManager.ProductImageUrl(Eval("img1")) %>'
                                                  data-src='<%# ThemeManager.ProductImageUrl(Eval("img1")) %>' />
@@ -234,25 +234,35 @@
 
                                         <ul class="list-product-btn top-0 end-0">
                                             <li>
-                                                <asp:LinkButton ID="btnAdd" runat="server" CommandArgument='<%# Eval("id") %>'
-                                                    CssClass="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left"
-                                                    OnClick="LB_AddToCart_Click" CausesValidation="False" ToolTip="Aggiungi al carrello">
+                                                <a href='<%# CatalogCartAddUrl(Container.DataItem) %>'
+                                                    class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link"
+                                                    <%# CatalogActionDataAttributes(Container.DataItem) %>>
                                                     <i class="icon icon-cart2"></i>
                                                     <span class="tooltip">Carrello</span>
-                                                </asp:LinkButton>
+                                                </a>
                                             </li>
                                             <li class="wishlist">
-                                                <asp:LinkButton ID="LB_wishlist" runat="server" CommandArgument='<%# Eval("id") %>'
-                                                    CssClass="box-icon btn-icon-action hover-tooltip tooltip-left"
-                                                    OnClick="BT_Aggiungi_wishlist_Click" CausesValidation="False" ToolTip="Aggiungi alla wishlist">
+                                                <a href='<%# CatalogWishlistAddUrl(Container.DataItem) %>'
+                                                    class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-wishlist-link"
+                                                    <%# CatalogActionDataAttributes(Container.DataItem) %>>
                                                     <i class="icon icon-heart2"></i>
                                                     <span class="tooltip">Wishlist</span>
-                                                </asp:LinkButton>
+                                                </a>
                                             </li>
                                             <li>
-                                                <a href='<%# "articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCId") %>' class="box-icon quickview btn-icon-action hover-tooltip tooltip-left">
+                                                <a href="#quickView" data-bs-toggle="modal"
+                                                    class="box-icon quickview btn-icon-action hover-tooltip tooltip-left js-ks-quickview"
+                                                    <%# CatalogActionDataAttributes(Container.DataItem) %>>
                                                     <i class="icon icon-view"></i>
-                                                    <span class="tooltip">Dettagli</span>
+                                                    <span class="tooltip">Vista rapida</span>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="#compare" data-bs-toggle="offcanvas"
+                                                    class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-compare"
+                                                    <%# CatalogActionDataAttributes(Container.DataItem) %>>
+                                                    <i class="icon icon-compare"></i>
+                                                    <span class="tooltip">Confronta</span>
                                                 </a>
                                             </li>
                                         </ul>
@@ -264,7 +274,7 @@
                                             </div>
                                         </asp:PlaceHolder>
 
-                                        <%# If(Val(Eval("InOfferta")) = 1, "<div class='box-sale-wrap pst-default'><p class='small-text'>Offerta</p></div>", "") %>
+                                        <%# CatalogPromoBadgeHtml(Container.DataItem) %>
 
                                         <asp:HiddenField ID="hfID" runat="server" Value='<%# Eval("id") %>' />
                                         <asp:HiddenField ID="hfTCId" runat="server" Value='<%# Eval("TCId") %>' />
@@ -274,12 +284,15 @@
                                         <div class="box-title">
                                             <div>
                                                 <p class="product-tag caption text-main-2">
-                                                    <%# Server.HtmlEncode(ThemeManager.CompactText(UiData.Str(Container.DataItem, "MarcheDescrizione"), 32)) %>
+                                                    <%# Server.HtmlEncode(CatalogCategoryLabel(Container.DataItem)) %>
                                                 </p>
 
-                                                <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# "articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCId") %>'>
+                                                <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# CatalogProductUrl(Container.DataItem) %>'>
                                                     <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Descrizione1")), 72)) %>
                                                 </a>
+                                                <p class="caption text-main-2 ks-card-brand-code">
+                                                    <%# Server.HtmlEncode(CatalogBrandCodeLabel(Container.DataItem)) %>
+                                                </p>
                                             </div>
 
                                             <div class="price-wrap fw-medium mt-1">
@@ -314,13 +327,14 @@
                                     </div>
 
                                     <div class="card-product-btn">
-                                        <asp:LinkButton ID="btnAddCard" runat="server" CommandArgument='<%# Eval("id") %>'
-                                            CssClass="tf-btn btn-line w-100" OnClick="LB_AddToCart_Click" CausesValidation="False">
+                                        <a href='<%# CatalogCartAddUrl(Container.DataItem) %>'
+                                            class="tf-btn btn-line w-100 js-ks-cart-link"
+                                            <%# CatalogActionDataAttributes(Container.DataItem) %>>
                                             <span>Aggiungi al carrello</span>
                                             <i class="icon-cart-2"></i>
-                                        </asp:LinkButton>
+                                        </a>
                                         <div class="box-btn">
-                                            <a href='<%# "articolo.aspx?id=" & Eval("id") & "&TCid=" & Eval("TCId") %>' class="tf-btn-icon style-2 type-black">
+                                            <a href='<%# CatalogProductUrl(Container.DataItem) %>' class="tf-btn-icon style-2 type-black">
                                                 <i class="icon-view"></i>
                                                 <span class="body-text-3 fw-normal">Dettagli</span>
                                             </a>
@@ -393,4 +407,5 @@
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>"></script>
     <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>"></script>
 </asp:Content>

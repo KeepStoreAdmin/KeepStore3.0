@@ -178,14 +178,37 @@ Public Module KeepStoreSecurity
 
     Public Function SqlCleanDecimal(value As Object, Optional defaultValue As Decimal = 0D) As Decimal
         If value Is Nothing Then Return defaultValue
+
+        Try
+            If TypeOf value Is Decimal OrElse TypeOf value Is Double OrElse TypeOf value Is Single OrElse
+               TypeOf value Is Integer OrElse TypeOf value Is Long OrElse TypeOf value Is Short Then
+                Return Convert.ToDecimal(value, CultureInfo.InvariantCulture)
+            End If
+        Catch
+        End Try
+
         Dim s As String = Convert.ToString(value)
         If String.IsNullOrWhiteSpace(s) Then Return defaultValue
 
-        s = s.Trim()
+        s = s.Trim().Replace("€", "").Replace(" ", "")
 
         Dim dec As Decimal
-        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, dec) Then Return dec
         If Decimal.TryParse(s, NumberStyles.Any, New CultureInfo("it-IT"), dec) Then Return dec
+        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, dec) Then Return dec
+
+        Dim comma As Integer = s.LastIndexOf(","c)
+        Dim dot As Integer = s.LastIndexOf("."c)
+        If comma >= 0 AndAlso dot >= 0 Then
+            If comma > dot Then
+                s = s.Replace(".", "").Replace(","c, "."c)
+            Else
+                s = s.Replace(",", "")
+            End If
+        ElseIf comma >= 0 Then
+            s = s.Replace(","c, "."c)
+        End If
+
+        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, dec) Then Return dec
 
         Return defaultValue
     End Function

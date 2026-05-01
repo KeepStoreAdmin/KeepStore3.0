@@ -2737,6 +2737,131 @@ strWhere = strWhere & " GROUP BY id"
         Return "Verifica disponibilita"
     End Function
 
+    Protected Function CatalogProductUrl(ByVal dataItem As Object) As String
+        Dim id As Integer = UiData.Int(dataItem, "id")
+        Dim tcId As Integer = UiData.Int(dataItem, "TCid")
+        If tcId <= 0 Then tcId = UiData.Int(dataItem, "TCId")
+
+        Dim url As String = "articolo.aspx?id=" & HttpUtility.UrlEncode(id.ToString())
+        If tcId > 0 Then url &= "&TCid=" & HttpUtility.UrlEncode(tcId.ToString())
+        Return ResolveUrl("~/" & url)
+    End Function
+
+    Protected Function CatalogCartAddUrl(ByVal dataItem As Object) As String
+        Dim id As Integer = UiData.Int(dataItem, "id")
+        Dim tcId As Integer = UiData.Int(dataItem, "TCid")
+        If tcId <= 0 Then tcId = UiData.Int(dataItem, "TCId")
+
+        Dim url As String = "~/cart_add.aspx?id=" & HttpUtility.UrlEncode(id.ToString()) &
+                            "&TCid=" & HttpUtility.UrlEncode(tcId.ToString()) &
+                            "&qty=1"
+        Return ResolveUrl(url)
+    End Function
+
+    Protected Function CatalogWishlistAddUrl(ByVal dataItem As Object) As String
+        Dim id As Integer = UiData.Int(dataItem, "id")
+        Dim tcId As Integer = UiData.Int(dataItem, "TCid")
+        If tcId <= 0 Then tcId = UiData.Int(dataItem, "TCId")
+
+        Dim url As String = "~/wishlist_add.aspx?id=" & HttpUtility.UrlEncode(id.ToString())
+        If tcId > 0 Then url &= "&TCid=" & HttpUtility.UrlEncode(tcId.ToString())
+        Return ResolveUrl(url)
+    End Function
+
+    Protected Function CatalogCategoryLabel(ByVal dataItem As Object) As String
+        Dim label As String = UiData.Str(dataItem, "TipologieDescrizione")
+        If String.IsNullOrWhiteSpace(label) Then label = UiData.Str(dataItem, "CategorieDescrizione")
+        If String.IsNullOrWhiteSpace(label) Then label = UiData.Str(dataItem, "SettoriDescrizione")
+        If String.IsNullOrWhiteSpace(label) Then label = "Catalogo"
+        Return ThemeManager.CompactText(label, 42)
+    End Function
+
+    Protected Function CatalogBrandCodeLabel(ByVal dataItem As Object) As String
+        Dim parts As New List(Of String)()
+        Dim brand As String = UiData.Str(dataItem, "MarcheDescrizione")
+        Dim code As String = UiData.Str(dataItem, "Codice")
+        If Not String.IsNullOrWhiteSpace(brand) Then parts.Add(ThemeManager.CompactText(brand, 28))
+        If Not String.IsNullOrWhiteSpace(code) Then parts.Add("Cod. " & ThemeManager.CompactText(code, 24))
+        Return String.Join(" - ", parts.ToArray())
+    End Function
+
+    Protected Function CatalogPriceText(ByVal dataItem As Object) As String
+        Return UiPriceFormatter.RenderPriceText(
+            UiData.Get(dataItem, "Prezzo"),
+            UiData.Get(dataItem, "PrezzoIvato"),
+            UiData.Get(dataItem, "PrezzoPromo"),
+            UiData.Get(dataItem, "PrezzoPromoIvato"),
+            UiData.Get(dataItem, "InOfferta"),
+            Session("IvaTipo")
+        )
+    End Function
+
+    Protected Function CatalogPromoBadgeHtml(ByVal dataItem As Object) As String
+        If Not CatalogHasValidPromo(dataItem) Then Return ""
+
+        Dim oldPrice As Decimal = CatalogBasePrice(dataItem)
+        Dim newPrice As Decimal = CatalogPromoPrice(dataItem)
+        Dim pct As String = GetDiscountPercent(oldPrice, newPrice)
+        Dim text As String = If(String.IsNullOrWhiteSpace(pct), "Offerta", pct)
+        Return "<div class='box-sale-wrap pst-default'><p class='small-text'>" & Server.HtmlEncode(text) & "</p></div>"
+    End Function
+
+    Protected Function CatalogActionDataAttributes(ByVal dataItem As Object) As String
+        Dim title As String = UiData.Str(dataItem, "Descrizione1")
+        Dim descr As String = UiData.Str(dataItem, "Descrizione2")
+        If String.IsNullOrWhiteSpace(descr) Then descr = UiData.Str(dataItem, "DescrizioneLunga")
+
+        Dim attrs As New StringBuilder()
+        attrs.Append(" data-ks-id=""").Append(HA(UiData.Int(dataItem, "id"))).Append("""")
+        attrs.Append(" data-ks-tcid=""").Append(HA(If(UiData.Int(dataItem, "TCid") > 0, UiData.Int(dataItem, "TCid"), UiData.Int(dataItem, "TCId")))).Append("""")
+        attrs.Append(" data-ks-title=""").Append(HA(title)).Append("""")
+        attrs.Append(" data-ks-brand=""").Append(HA(UiData.Str(dataItem, "MarcheDescrizione"))).Append("""")
+        attrs.Append(" data-ks-category=""").Append(HA(CatalogCategoryLabel(dataItem))).Append("""")
+        attrs.Append(" data-ks-code=""").Append(HA(UiData.Str(dataItem, "Codice"))).Append("""")
+        attrs.Append(" data-ks-url=""").Append(HA(CatalogProductUrl(dataItem))).Append("""")
+        attrs.Append(" data-ks-img=""").Append(HA(ThemeManager.ProductImageUrl(UiData.Get(dataItem, "Img1")))).Append("""")
+        attrs.Append(" data-ks-price=""").Append(HA(CatalogPriceText(dataItem))).Append("""")
+        attrs.Append(" data-ks-available=""").Append(HA(CatalogAvailabilityText(dataItem))).Append("""")
+        attrs.Append(" data-ks-cart-url=""").Append(HA(CatalogCartAddUrl(dataItem))).Append("""")
+        attrs.Append(" data-ks-description=""").Append(HA(ThemeManager.CompactText(descr, 180))).Append("""")
+        Return attrs.ToString()
+    End Function
+
+    Private Function CatalogHasValidPromo(ByVal dataItem As Object) As Boolean
+        Dim promoFlag As Integer = UiData.Int(dataItem, "InOfferta")
+        If promoFlag = 0 Then Return False
+
+        Dim oldPrice As Decimal = CatalogBasePrice(dataItem)
+        Dim newPrice As Decimal = CatalogPromoPrice(dataItem)
+        Return oldPrice > 0D AndAlso newPrice > 0D AndAlso newPrice < oldPrice
+    End Function
+
+    Private Function CatalogBasePrice(ByVal dataItem As Object) As Decimal
+        Dim ivaMode As Integer = 0
+        Integer.TryParse(Convert.ToString(Session("IvaTipo")), ivaMode)
+        Dim value As Decimal = If(ivaMode = 1,
+                                  KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "Prezzo"), 0D),
+                                  KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoIvato"), 0D))
+        If value <= 0D Then
+            value = KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoIvato"), 0D)
+            If value <= 0D Then value = KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "Prezzo"), 0D)
+        End If
+        Return value
+    End Function
+
+    Private Function CatalogPromoPrice(ByVal dataItem As Object) As Decimal
+        Dim ivaMode As Integer = 0
+        Integer.TryParse(Convert.ToString(Session("IvaTipo")), ivaMode)
+        Dim value As Decimal = If(ivaMode = 1,
+                                  KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoPromo"), 0D),
+                                  KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoPromoIvato"), 0D))
+        If value <= 0D Then
+            value = KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoPromoIvato"), 0D)
+            If value <= 0D Then value = KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoPromo"), 0D)
+        End If
+        Return value
+    End Function
+
 
     Private Shared Sub CopyParams(ByVal src As ParameterCollection, ByVal dst As ParameterCollection)
         dst.Clear()

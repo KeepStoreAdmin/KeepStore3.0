@@ -50,6 +50,30 @@
   min-height: 34px;
 }
 
+.ks-catalog-card .product-img{
+  background:#fff;
+  aspect-ratio:1 / 1;
+}
+
+.ks-catalog-card .img-product{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+
+.ks-catalog-card .list-product-btn{
+  z-index:3;
+}
+
+.ks-catalog-card .ks-card-brand-code{
+  margin-top:.25rem;
+  min-height:1.15em;
+}
+
+.ks-catalog-card .product-tag{
+  text-transform:none;
+}
+
 /* Product cards (catalog) */
 .ks-product-card{
   border:1px solid rgba(0,0,0,.08);
