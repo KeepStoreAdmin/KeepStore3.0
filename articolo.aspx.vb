@@ -32,6 +32,14 @@ Partial Class articolo
         Public Property InOfferta As Boolean
         Public Property Codice As String
         Public Property AvailabilityText As String
+        Public Property PriceValue As Nullable(Of Decimal)
+        Public Property IsCurrent As Boolean
+    End Class
+
+    Private Class BrandItem
+        Public Property Nome As String
+        Public Property Url As String
+        Public Property LogoHtml As String
     End Class
 
     Private Class PriceContext
@@ -114,9 +122,31 @@ Partial Class articolo
     End Sub
 
     Private Sub BindProductRelations(row As DataRow)
-        BindRelatedProducts(row)
-        BindPairRelationSection(phCompatible, rptCompatible, "articoli_compatibili", "ArticoliCompatibiliId", "compatibili", row)
-        BindPairRelationSection(phLinked, rptLinked, "articoli_collegati", "ArticoliCollegatiId", "collegati", row)
+        Dim compatibleItems As List(Of RelatedItem) = LoadPairRelation("articoli_compatibili", "ArticoliCompatibiliId", 10)
+        If compatibleItems.Count = 0 Then
+            compatibleItems = LoadSmartRelationFallback(row, "compatibili", 10)
+        End If
+
+        Dim linkedItems As List(Of RelatedItem) = LoadPairRelation("articoli_collegati", "ArticoliCollegatiId", 10)
+        If linkedItems.Count = 0 Then
+            linkedItems = LoadSmartRelationFallback(row, "collegati", 10)
+        End If
+
+        Dim manualRelated As List(Of RelatedItem) = LoadManualRelated(10)
+        Dim similarItems As List(Of RelatedItem) = LoadSimilarProducts(row, 10)
+
+        BindBundleProducts(row, compatibleItems, linkedItems, manualRelated, similarItems)
+
+        BindProductCarousel(phSimilar, rptSimilar, similarItems)
+
+        Dim relatedItems As New List(Of RelatedItem)()
+        AddUniqueRelatedItems(relatedItems, manualRelated, 10)
+        AddUniqueRelatedItems(relatedItems, linkedItems, 10)
+        AddUniqueRelatedItems(relatedItems, compatibleItems, 10)
+        AddUniqueRelatedItems(relatedItems, similarItems, 10)
+        BindProductCarousel(phRelated, rptRelated, relatedItems)
+
+        BindBrandCarousel(row)
     End Sub
 
     Private Sub BindRelatedProducts(row As DataRow)
@@ -168,6 +198,85 @@ Partial Class articolo
             KeepStoreLog.Error("articolo.aspx", "Errore BindPairRelationSection " & logLabel & " (id=" & _id.ToString() & ")", ex, HttpContext.Current)
         End Try
     End Sub
+
+    Private Sub BindBundleProducts(row As DataRow, compatibleItems As List(Of RelatedItem), linkedItems As List(Of RelatedItem), manualRelated As List(Of RelatedItem), similarItems As List(Of RelatedItem))
+        Dim bundleItems As New List(Of RelatedItem)()
+        Dim currentItem As RelatedItem = BuildCurrentRelatedItem(row)
+        If currentItem IsNot Nothing Then
+            bundleItems.Add(currentItem)
+        End If
+
+        AddUniqueRelatedItems(bundleItems, compatibleItems, 3)
+        AddUniqueRelatedItems(bundleItems, linkedItems, 3)
+        AddUniqueRelatedItems(bundleItems, manualRelated, 3)
+        AddUniqueRelatedItems(bundleItems, similarItems, 3)
+
+        rptBundle.DataSource = bundleItems
+        rptBundle.DataBind()
+
+        phBundleEmpty.Visible = (bundleItems.Count <= 1)
+        litBundleTotal.Text = Server.HtmlEncode(FormatBundleTotal(bundleItems))
+    End Sub
+
+    Private Sub BindProductCarousel(holder As PlaceHolder, repeater As Repeater, items As List(Of RelatedItem))
+        If items Is Nothing OrElse items.Count = 0 Then
+            holder.Visible = False
+            Return
+        End If
+
+        holder.Visible = True
+        repeater.DataSource = items
+        repeater.DataBind()
+    End Sub
+
+    Private Function BuildCurrentRelatedItem(row As DataRow) As RelatedItem
+        If row Is Nothing Then Return Nothing
+
+        Dim nameVal As String = FirstNonEmpty(GetRowString(row, "Descrizione1"), GetRowString(row, "Nome"), "Articolo")
+        Dim imgVal As String = NormalizeImageUrl(GetRowString(row, "Img1"))
+        If String.IsNullOrEmpty(imgVal) Then
+            imgVal = ThemeManager.PlaceholderProductImageUrl()
+        End If
+
+        Dim inOfferta As Integer = GetRowInt(row, "InOfferta", 0)
+        Dim price As PriceContext = BuildPriceContext(GetRowDecimal(row, "Prezzo"),
+                                                      GetRowDecimal(row, "PrezzoIvato"),
+                                                      GetRowDecimal(row, "PrezzoPromo"),
+                                                      GetRowDecimal(row, "PrezzoPromoIvato"),
+                                                      inOfferta)
+
+        Return New RelatedItem() With {
+            .Id = _id,
+            .Tcid = GetRowInt(row, "TCid", _tcid),
+            .Nome = nameVal,
+            .Img = imgVal,
+            .Url = BuildProductUrl(_id, GetRowInt(row, "TCid", _tcid), includeTcid:=(Request.QueryString("TCid") IsNot Nothing)),
+            .PrezzoHtml = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo),
+            .InOfferta = (inOfferta = 1),
+            .Codice = FirstNonEmpty(GetRowString(row, "Codice"), GetRowString(row, "SKU")),
+            .AvailabilityText = BuildAvailabilityText(row),
+            .PriceValue = price.CurrentPrice,
+            .IsCurrent = True
+        }
+    End Function
+
+    Private Function FormatBundleTotal(items As List(Of RelatedItem)) As String
+        If items Is Nothing OrElse items.Count = 0 Then
+            Return "Prezzo su richiesta"
+        End If
+
+        Dim total As Decimal = 0D
+        Dim hasPrice As Boolean = False
+        For Each it As RelatedItem In items
+            If it IsNot Nothing AndAlso it.PriceValue.HasValue AndAlso it.PriceValue.Value > 0D Then
+                total += it.PriceValue.Value
+                hasPrice = True
+            End If
+        Next
+
+        If Not hasPrice Then Return "Prezzo su richiesta"
+        Return total.ToString("C")
+    End Function
 
     Private Sub AddUniqueRelatedItems(target As List(Of RelatedItem), source As List(Of RelatedItem), maxItems As Integer)
         If target Is Nothing OrElse source Is Nothing Then Exit Sub
@@ -294,6 +403,67 @@ Partial Class articolo
         Return results
     End Function
 
+    Private Function LoadSimilarProducts(row As DataRow, maxItems As Integer) As List(Of RelatedItem)
+        Dim results As New List(Of RelatedItem)()
+        If row Is Nothing Then Return results
+
+        Dim catId As Integer = GetRowInt(row, "CategorieId", 0)
+        Dim tipologiaId As Integer = GetRowInt(row, "TipologieId", 0)
+        Dim marcaId As Integer = FirstPositiveInt(GetRowInt(row, "MarcaId", 0), GetRowInt(row, "IdMarca", 0), GetRowInt(row, "MarcheId", 0))
+
+        Try
+            Using conn As New MySqlConnection(GetConnectionString())
+                conn.Open()
+
+                If catId > 0 Then
+                    Using cmdCat As New MySqlCommand()
+                        cmdCat.Connection = conn
+                        cmdCat.CommandText = RelatedSelectSql("vsuperarticoli v",
+                                                              "WHERE v.NListino=?n AND v.id<>?id AND v.CategorieId=?cat " &
+                                                              "ORDER BY ((v.Giacenza-v.Impegnata)>0) DESC, v.InOfferta DESC, v.visite DESC, v.id DESC " &
+                                                              "LIMIT " & SafeLimit(maxItems))
+                        cmdCat.Parameters.AddWithValue("?n", _listino)
+                        cmdCat.Parameters.AddWithValue("?id", _id)
+                        cmdCat.Parameters.AddWithValue("?cat", catId)
+                        AppendRelated(cmdCat, results, maxItems)
+                    End Using
+                End If
+
+                If results.Count < maxItems AndAlso tipologiaId > 0 Then
+                    Using cmdTp As New MySqlCommand()
+                        cmdTp.Connection = conn
+                        cmdTp.CommandText = RelatedSelectSql("vsuperarticoli v",
+                                                             "WHERE v.NListino=?n AND v.id<>?id AND v.TipologieId=?tp " &
+                                                             "ORDER BY ((v.Giacenza-v.Impegnata)>0) DESC, v.InOfferta DESC, v.visite DESC, v.id DESC " &
+                                                             "LIMIT " & SafeLimit(maxItems))
+                        cmdTp.Parameters.AddWithValue("?n", _listino)
+                        cmdTp.Parameters.AddWithValue("?id", _id)
+                        cmdTp.Parameters.AddWithValue("?tp", tipologiaId)
+                        AppendRelated(cmdTp, results, maxItems)
+                    End Using
+                End If
+
+                If results.Count < maxItems AndAlso marcaId > 0 Then
+                    Using cmdBrand As New MySqlCommand()
+                        cmdBrand.Connection = conn
+                        cmdBrand.CommandText = RelatedSelectSql("vsuperarticoli v",
+                                                                "WHERE v.NListino=?n AND v.id<>?id AND v.MarcheId=?mr " &
+                                                                "ORDER BY ((v.Giacenza-v.Impegnata)>0) DESC, v.InOfferta DESC, v.visite DESC, v.id DESC " &
+                                                                "LIMIT " & SafeLimit(maxItems))
+                        cmdBrand.Parameters.AddWithValue("?n", _listino)
+                        cmdBrand.Parameters.AddWithValue("?id", _id)
+                        cmdBrand.Parameters.AddWithValue("?mr", marcaId)
+                        AppendRelated(cmdBrand, results, maxItems)
+                    End Using
+                End If
+            End Using
+        Catch ex As Exception
+            KeepStoreLog.Error("articolo.aspx", "Errore LoadSimilarProducts (id=" & _id.ToString() & ")", ex, HttpContext.Current)
+        End Try
+
+        Return results
+    End Function
+
     Private Function LoadSmartRelationFallback(row As DataRow, relationMode As String, maxItems As Integer) As List(Of RelatedItem)
         Dim results As New List(Of RelatedItem)()
         If row Is Nothing Then Return results
@@ -388,6 +558,8 @@ Partial Class articolo
                 item.PrezzoHtml = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo)
                 item.InOfferta = (inOfferta = 1)
                 item.Codice = codiceVal
+                item.PriceValue = price.CurrentPrice
+                item.IsCurrent = False
                 item.AvailabilityText = BuildRelatedAvailabilityText(SafeInt(rdr("Giacenza"), 0),
                                                                      SafeInt(rdr("Impegnata"), 0),
                                                                      SafeInt(rdr("Disponibilita"), 0),
@@ -559,6 +731,8 @@ Partial Class articolo
         litPriceHtml.Text = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo)
         ' Box prezzo sticky (stesso HTML del prezzo principale)
         litPriceHtml2.Text = litPriceHtml.Text
+        litPriceInfo.Text = BuildPriceText(price.CurrentPrice)
+        litIvaInfo.Text = Server.HtmlEncode(price.IvaLabel)
 
         Dim isRefurbished As Boolean = (GetRowInt(row, "Ricondizionato", 0) = 1)
         phRefurbished.Visible = isRefurbished
@@ -696,6 +870,19 @@ Partial Class articolo
 
         If imgs.Count = 0 Then
             imgs.Add(New ImgItem() With {.Url = ThemeManager.PlaceholderProductImageUrl(), .Alt = productName})
+        End If
+
+        Dim fillUrl As String = imgs(0).Url
+        If String.IsNullOrEmpty(fillUrl) Then
+            fillUrl = ThemeManager.PlaceholderProductImageUrl()
+        End If
+
+        While imgs.Count < 6
+            imgs.Add(New ImgItem() With {.Url = fillUrl, .Alt = productName})
+        End While
+
+        If imgs.Count > 6 Then
+            imgs.RemoveRange(6, imgs.Count - 6)
         End If
 
         rptMainImages.DataSource = imgs
@@ -1161,6 +1348,13 @@ Partial Class articolo
         Return "<span class=""new-price price-text fw-medium mb-0"">" & Server.HtmlEncode(priceText) & "</span>"
     End Function
 
+    Private Function BuildPriceText(prezzo As Nullable(Of Decimal)) As String
+        If prezzo.HasValue AndAlso prezzo.Value > 0D Then
+            Return Server.HtmlEncode(prezzo.Value.ToString("C"))
+        End If
+        Return "Prezzo su richiesta"
+    End Function
+
     Private Function BuildPriceContext(prezzo As Nullable(Of Decimal),
                                        prezzoIvato As Nullable(Of Decimal),
                                        prezzoPromo As Nullable(Of Decimal),
@@ -1233,6 +1427,93 @@ Partial Class articolo
         End If
 
         Return "Verifica disponibilita"
+    End Function
+
+    Private Sub BindBrandCarousel(row As DataRow)
+        Try
+            Dim items As List(Of BrandItem) = LoadBrandItems(row, 12)
+            If items Is Nothing OrElse items.Count = 0 Then
+                phBrands.Visible = False
+                Return
+            End If
+
+            phBrands.Visible = True
+            rptBrands.DataSource = items
+            rptBrands.DataBind()
+        Catch ex As Exception
+            phBrands.Visible = False
+            KeepStoreLog.Error("articolo.aspx", "Errore BindBrandCarousel (id=" & _id.ToString() & ")", ex, HttpContext.Current)
+        End Try
+    End Sub
+
+    Private Function LoadBrandItems(row As DataRow, maxItems As Integer) As List(Of BrandItem)
+        Dim results As New List(Of BrandItem)()
+        Dim catId As Integer = GetRowInt(row, "CategorieId", 0)
+
+        Using conn As New MySqlConnection(GetConnectionString())
+            conn.Open()
+            Using cmd As New MySqlCommand()
+                cmd.Connection = conn
+                cmd.CommandText = "SELECT MarcheId, MarcheDescrizione, Marche_img, COUNT(*) AS Numero " &
+                                  "FROM vsuperarticoli " &
+                                  "WHERE NListino=?n AND MarcheId IS NOT NULL AND MarcheId>0 " &
+                                  "  AND MarcheDescrizione IS NOT NULL AND TRIM(MarcheDescrizione)<>'' " &
+                                  If(catId > 0, " AND CategorieId=?cat ", " ") &
+                                  "GROUP BY MarcheId, MarcheDescrizione, Marche_img " &
+                                  "ORDER BY Numero DESC, MarcheDescrizione ASC " &
+                                  "LIMIT " & SafeLimit(maxItems)
+                cmd.Parameters.AddWithValue("?n", _listino)
+                If catId > 0 Then cmd.Parameters.AddWithValue("?cat", catId)
+
+                Using rdr As MySqlDataReader = cmd.ExecuteReader()
+                    While rdr.Read()
+                        Dim brandId As Integer = SafeInt(rdr("MarcheId"), 0)
+                        Dim brandName As String = Convert.ToString(rdr("MarcheDescrizione"))
+                        If brandId <= 0 OrElse String.IsNullOrWhiteSpace(brandName) Then Continue While
+
+                        Dim logoUrl As String = NormalizeBrandLogoUrl(Convert.ToString(rdr("Marche_img")))
+                        Dim item As New BrandItem()
+                        item.Nome = brandName
+                        item.Url = ResolveUrl("~/articoli.aspx?mr=" & brandId.ToString())
+                        item.LogoHtml = BuildBrandLogoHtml(brandName, logoUrl)
+                        results.Add(item)
+                    End While
+                End Using
+            End Using
+        End Using
+
+        Return results
+    End Function
+
+    Private Function NormalizeBrandLogoUrl(raw As String) As String
+        If String.IsNullOrWhiteSpace(raw) Then Return ""
+
+        Dim s As String = raw.Trim().Replace("\", "/")
+        If s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse s.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+            Return s
+        End If
+
+        Dim fileOnly As String = IO.Path.GetFileName(s)
+        If String.IsNullOrWhiteSpace(fileOnly) Then Return ""
+
+        Dim rel As String = "~/Public/assets/images/marche/" & fileOnly
+        Try
+            If IO.File.Exists(Server.MapPath(rel)) Then
+                Return ResolveUrl(rel)
+            End If
+        Catch
+        End Try
+
+        Return ""
+    End Function
+
+    Private Function BuildBrandLogoHtml(brandName As String, logoUrl As String) As String
+        Dim safeName As String = Server.HtmlEncode(brandName)
+        If Not String.IsNullOrEmpty(logoUrl) Then
+            Return "<img src=""" & Server.HtmlEncode(logoUrl) & """ alt=""" & safeName & """ />"
+        End If
+
+        Return "<span class=""ks-brand-text"">" & safeName & "</span>"
     End Function
 
     Private Function BuildCategoryCatalogUrl(row As DataRow) As String

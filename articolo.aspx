@@ -122,6 +122,16 @@
                                                         <asp:HyperLink ID="lnkMarca" runat="server" CssClass="caption text-secondary link" />
                                                     </li>
                                                 </asp:PlaceHolder>
+                                                <li class="star-review">
+                                                    <ul class="list-star">
+                                                        <li><i class="icon-star text-main-4"></i></li>
+                                                        <li><i class="icon-star text-main-4"></i></li>
+                                                        <li><i class="icon-star text-main-4"></i></li>
+                                                        <li><i class="icon-star text-main-4"></i></li>
+                                                        <li><i class="icon-star text-main-4"></i></li>
+                                                    </ul>
+                                                    <p class="caption text-main-2">Nessuna recensione</p>
+                                                </li>
                                             </ul>
                                         </div>
 
@@ -254,16 +264,63 @@
                     <div class="flat-title-tab text-center">
                         <ul class="menu-tab-line" role="tablist">
                             <li class="nav-tab-item" role="presentation">
-                                <a href="#prd-des" class="tab-link product-title fw-semibold active" data-bs-toggle="tab" role="tab">Descrizione</a>
+                                <a href="#prd-usually" class="tab-link product-title fw-semibold active" data-bs-toggle="tab" role="tab">Spesso acquistati insieme</a>
                             </li>
                             <li class="nav-tab-item" role="presentation">
-                                <a href="#prd-infor" class="tab-link product-title fw-semibold" data-bs-toggle="tab" role="tab">Informazioni</a>
+                                <a href="#prd-des" class="tab-link product-title fw-semibold" data-bs-toggle="tab" role="tab">Descrizione</a>
+                            </li>
+                            <li class="nav-tab-item" role="presentation">
+                                <a href="#prd-infor" class="tab-link product-title fw-semibold" data-bs-toggle="tab" role="tab">Informazioni prodotto</a>
+                            </li>
+                            <li class="nav-tab-item" role="presentation">
+                                <a href="#prd-review" class="tab-link product-title fw-semibold" data-bs-toggle="tab" role="tab">Recensioni</a>
                             </li>
                         </ul>
                     </div>
 
                     <div class="tab-content">
-                        <div class="tab-pane active show" id="prd-des" role="tabpanel">
+                        <div class="tab-pane active show" id="prd-usually" role="tabpanel">
+                            <div class="tab-main tab-usually flex-md-wrap">
+                                <asp:Repeater ID="rptBundle" runat="server">
+                                    <ItemTemplate>
+                                        <div class="card-usually hover-img">
+                                            <a href='<%# Eval("Url") %>' class="image img-style">
+                                                <img src='<%# Eval("Img") %>' data-src='<%# Eval("Img") %>' alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>' class="lazyload" />
+                                            </a>
+                                            <div class="content">
+                                                <div class="checkbox-item-wrap">
+                                                    <label>
+                                                        <input type="checkbox" class="checkbox-item" checked="checked" disabled="disabled" />
+                                                        <span class="btn-checkbox"></span>
+                                                    </label>
+                                                </div>
+                                                <div class="box-name">
+                                                    <a href='<%# Eval("Url") %>' class="prd-name body-md-2 text-main link-secondary fw-semibold">
+                                                        <%# If(Convert.ToBoolean(Eval("IsCurrent")), "Questo articolo: ", String.Empty) & Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 88)) %>
+                                                    </a>
+                                                    <p class="price-text fw-medium"><%# Eval("PrezzoHtml") %></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </ItemTemplate>
+                                    <SeparatorTemplate>
+                                        <span class="icon"><i class="icon-plus fs-28"></i></span>
+                                    </SeparatorTemplate>
+                                </asp:Repeater>
+                                <asp:PlaceHolder ID="phBundleEmpty" runat="server" Visible="false">
+                                    <p class="body-text-3 text-main-2">Non ci sono ancora articoli abbinabili per questo prodotto.</p>
+                                </asp:PlaceHolder>
+                                <div class="box-total-btn">
+                                    <p class="body-text-3 text-center">Totale selezione: <span class="text-primary"><asp:Literal ID="litBundleTotal" runat="server" /></span></p>
+                                    <asp:LinkButton ID="btnBundleAddToCart" runat="server" CssClass="tf-btn btn-line" OnClick="btnAddToCart_Click" CausesValidation="false">
+                                        Aggiungi al carrello
+                                        <i class="icon-cart-2"></i>
+                                    </asp:LinkButton>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane" id="prd-des" role="tabpanel">
                             <div class="tab-main tab-des ks-product-description">
                                 <asp:Literal ID="litLongDesc" runat="server" />
                             </div>
@@ -300,7 +357,38 @@
                                             <p class="property"><asp:Literal ID="litAvailabilityInfo" runat="server" /></p>
                                         </li>
                                     </asp:PlaceHolder>
+                                    <li>
+                                        <p class="name-feature">Prezzo</p>
+                                        <p class="property"><asp:Literal ID="litPriceInfo" runat="server" /></p>
+                                    </li>
+                                    <li>
+                                        <p class="name-feature">IVA</p>
+                                        <p class="property"><asp:Literal ID="litIvaInfo" runat="server" /></p>
+                                    </li>
                                 </ul>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane" id="prd-review" role="tabpanel">
+                            <div class="tab-main tab-review flex-lg-nowrap">
+                                <div class="tab-rating-wrap">
+                                    <div class="rating-percent">
+                                        <p class="rate-percent">0 <span>/ 5</span></p>
+                                        <ul class="list-star justify-content-center">
+                                            <li><i class="icon-star text-main-4"></i></li>
+                                            <li><i class="icon-star text-main-4"></i></li>
+                                            <li><i class="icon-star text-main-4"></i></li>
+                                            <li><i class="icon-star text-main-4"></i></li>
+                                            <li><i class="icon-star text-main-4"></i></li>
+                                        </ul>
+                                        <p class="text-cl-3">Non ci sono ancora recensioni per questo prodotto.</p>
+                                    </div>
+                                </div>
+                                <div class="tab-review-wrap">
+                                    <div class="alert alert-light mb-0">
+                                        Le recensioni non sono ancora disponibili. Per dubbi tecnici o informazioni prima dell'acquisto puoi contattare l'assistenza.
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -309,11 +397,71 @@
         </section>
     </asp:Panel>
 
-    <asp:PlaceHolder ID="phRelated" runat="server" Visible="false">
-        <section class="flat-spacing-2 ks-product-relation-section">
+    <asp:PlaceHolder ID="phSimilar" runat="server" Visible="false">
+        <section class="tf-sp-2 pt-0 ks-product-relation-section">
             <div class="container">
                 <div class="flat-title">
-                    <h5 class="fw-semibold">Prodotti correlati</h5>
+                    <h5 class="fw-semibold">Scopri articoli simili</h5>
+                    <div class="box-btn-slide relative">
+                        <div class="swiper-button-prev nav-swiper nav-prev-products">
+                            <i class="icon-arrow-left-lg"></i>
+                        </div>
+                        <div class="swiper-button-next nav-swiper nav-next-products">
+                            <i class="icon-arrow-right-lg"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="swiper tf-sw-products ks-product-relation-swiper" data-preview="5" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="20" data-space="15" data-pagination="2" data-pagination-sm="3" data-pagination-md="4" data-pagination-lg="5">
+                    <div class="swiper-wrapper">
+                    <asp:Repeater ID="rptSimilar" runat="server">
+                        <ItemTemplate>
+                            <div class="swiper-slide">
+                            <div class="card-product style-img-border">
+                                <div class="card-product-wrapper">
+                                    <a class="product-img ks-product-card-image" href='<%# Eval("Url") %>'>
+                                        <img class="lazyload img-product"
+                                             alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
+                                             data-src='<%# Eval("Img") %>'
+                                             src='<%# Eval("Img") %>' />
+                                    </a>
+
+                                    <%# If(Convert.ToBoolean(Eval("InOfferta")), "<div class='box-sale-wrap'><span class='sale-item'>Offerta</span></div>", String.Empty) %>
+                                </div>
+
+                                <div class="card-product-info">
+                                    <div class="box-title">
+                                        <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# Eval("Url") %>'>
+                                            <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 70)) %>
+                                        </a>
+
+                                        <div class="price-wrap fw-medium">
+                                            <%# Eval("PrezzoHtml") %>
+                                        </div>
+                                    </div>
+
+                                    <div class="card-product-btn">
+                                        <a class="tf-btn btn-line w-100" href='<%# Eval("Url") %>'>
+                                            <span>Vedi prodotto</span>
+                                            <i class="icon-view"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            </div>
+                        </ItemTemplate>
+                    </asp:Repeater>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </asp:PlaceHolder>
+
+    <asp:PlaceHolder ID="phRelated" runat="server" Visible="false">
+        <section class="tf-sp-2 pt-0 ks-product-relation-section">
+            <div class="container">
+                <div class="flat-title">
+                    <h5 class="fw-semibold">Prodotti correlati a questo articolo</h5>
                     <div class="box-btn-slide relative">
                         <div class="swiper-button-prev nav-swiper nav-prev-products">
                             <i class="icon-arrow-left-lg"></i>
@@ -352,19 +500,6 @@
                                         </div>
                                     </div>
 
-                                    <div class="box-infor-detail">
-                                        <ul class="list-infor-fearture">
-                                            <li>
-                                                <p class="caption name-feature">Codice:</p>
-                                                <p class="caption property"><%# If(String.IsNullOrEmpty(Convert.ToString(Eval("Codice"))), "-", Server.HtmlEncode(Convert.ToString(Eval("Codice")))) %></p>
-                                            </li>
-                                            <li>
-                                                <p class="caption name-feature">Disponibilita:</p>
-                                                <p class="caption property text-secondary"><%# Server.HtmlEncode(Convert.ToString(Eval("AvailabilityText"))) %></p>
-                                            </li>
-                                        </ul>
-                                    </div>
-
                                     <div class="card-product-btn">
                                         <a class="tf-btn btn-line w-100" href='<%# Eval("Url") %>'>
                                             <span>Vedi prodotto</span>
@@ -382,150 +517,24 @@
         </section>
     </asp:PlaceHolder>
 
-    <asp:PlaceHolder ID="phCompatible" runat="server" Visible="false">
-        <section class="flat-spacing-2 ks-product-relation-section">
+    <asp:PlaceHolder ID="phBrands" runat="server" Visible="false">
+        <div class="themesFlat ks-brand-strip">
             <div class="container">
-                <div class="flat-title">
-                    <h5 class="fw-semibold">Compatibili con questo articolo</h5>
-                    <div class="box-btn-slide relative">
-                        <div class="swiper-button-prev nav-swiper nav-prev-products">
-                            <i class="icon-arrow-left-lg"></i>
-                        </div>
-                        <div class="swiper-button-next nav-swiper nav-next-products">
-                            <i class="icon-arrow-right-lg"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="swiper tf-sw-products ks-product-relation-swiper" data-preview="5" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="20" data-space="15" data-pagination="2" data-pagination-sm="3" data-pagination-md="4" data-pagination-lg="5">
-                    <div class="swiper-wrapper">
-                    <asp:Repeater ID="rptCompatible" runat="server">
-                        <ItemTemplate>
-                            <div class="swiper-slide">
-                            <div class="card-product style-img-border">
-                                <div class="card-product-wrapper">
-                                    <a class="product-img ks-product-card-image" href='<%# Eval("Url") %>'>
-                                        <img class="lazyload img-product"
-                                             alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
-                                             data-src='<%# Eval("Img") %>'
-                                             src='<%# Eval("Img") %>' />
+                <div class="line-bt line-tp">
+                    <div class="infiniteslide tf-brand">
+                        <asp:Repeater ID="rptBrands" runat="server">
+                            <ItemTemplate>
+                                <div class="brand-item">
+                                    <a href='<%# Eval("Url") %>' class="link">
+                                        <%# Eval("LogoHtml") %>
                                     </a>
-
-                                    <%# If(Convert.ToBoolean(Eval("InOfferta")), "<div class='box-sale-wrap'><span class='sale-item'>Offerta</span></div>", String.Empty) %>
                                 </div>
-
-                                <div class="card-product-info">
-                                    <div class="box-title">
-                                        <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# Eval("Url") %>'>
-                                            <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 70)) %>
-                                        </a>
-
-                                        <div class="price-wrap fw-medium">
-                                            <%# Eval("PrezzoHtml") %>
-                                        </div>
-                                    </div>
-
-                                    <div class="box-infor-detail">
-                                        <ul class="list-infor-fearture">
-                                            <li>
-                                                <p class="caption name-feature">Codice:</p>
-                                                <p class="caption property"><%# If(String.IsNullOrEmpty(Convert.ToString(Eval("Codice"))), "-", Server.HtmlEncode(Convert.ToString(Eval("Codice")))) %></p>
-                                            </li>
-                                            <li>
-                                                <p class="caption name-feature">Disponibilita:</p>
-                                                <p class="caption property text-secondary"><%# Server.HtmlEncode(Convert.ToString(Eval("AvailabilityText"))) %></p>
-                                            </li>
-                                        </ul>
-                                    </div>
-
-                                    <div class="card-product-btn">
-                                        <a class="tf-btn btn-line w-100" href='<%# Eval("Url") %>'>
-                                            <span>Vedi prodotto</span>
-                                            <i class="icon-view"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                            </div>
-                        </ItemTemplate>
-                    </asp:Repeater>
+                            </ItemTemplate>
+                        </asp:Repeater>
                     </div>
                 </div>
             </div>
-        </section>
-    </asp:PlaceHolder>
-
-    <asp:PlaceHolder ID="phLinked" runat="server" Visible="false">
-        <section class="flat-spacing-2 ks-product-relation-section">
-            <div class="container">
-                <div class="flat-title">
-                    <h5 class="fw-semibold">Articoli collegati</h5>
-                    <div class="box-btn-slide relative">
-                        <div class="swiper-button-prev nav-swiper nav-prev-products">
-                            <i class="icon-arrow-left-lg"></i>
-                        </div>
-                        <div class="swiper-button-next nav-swiper nav-next-products">
-                            <i class="icon-arrow-right-lg"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="swiper tf-sw-products ks-product-relation-swiper" data-preview="5" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="20" data-space="15" data-pagination="2" data-pagination-sm="3" data-pagination-md="4" data-pagination-lg="5">
-                    <div class="swiper-wrapper">
-                    <asp:Repeater ID="rptLinked" runat="server">
-                        <ItemTemplate>
-                            <div class="swiper-slide">
-                            <div class="card-product style-img-border">
-                                <div class="card-product-wrapper">
-                                    <a class="product-img ks-product-card-image" href='<%# Eval("Url") %>'>
-                                        <img class="lazyload img-product"
-                                             alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
-                                             data-src='<%# Eval("Img") %>'
-                                             src='<%# Eval("Img") %>' />
-                                    </a>
-
-                                    <%# If(Convert.ToBoolean(Eval("InOfferta")), "<div class='box-sale-wrap'><span class='sale-item'>Offerta</span></div>", String.Empty) %>
-                                </div>
-
-                                <div class="card-product-info">
-                                    <div class="box-title">
-                                        <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# Eval("Url") %>'>
-                                            <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 70)) %>
-                                        </a>
-
-                                        <div class="price-wrap fw-medium">
-                                            <%# Eval("PrezzoHtml") %>
-                                        </div>
-                                    </div>
-
-                                    <div class="box-infor-detail">
-                                        <ul class="list-infor-fearture">
-                                            <li>
-                                                <p class="caption name-feature">Codice:</p>
-                                                <p class="caption property"><%# If(String.IsNullOrEmpty(Convert.ToString(Eval("Codice"))), "-", Server.HtmlEncode(Convert.ToString(Eval("Codice")))) %></p>
-                                            </li>
-                                            <li>
-                                                <p class="caption name-feature">Disponibilita:</p>
-                                                <p class="caption property text-secondary"><%# Server.HtmlEncode(Convert.ToString(Eval("AvailabilityText"))) %></p>
-                                            </li>
-                                        </ul>
-                                    </div>
-
-                                    <div class="card-product-btn">
-                                        <a class="tf-btn btn-line w-100" href='<%# Eval("Url") %>'>
-                                            <span>Vedi prodotto</span>
-                                            <i class="icon-view"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                            </div>
-                        </ItemTemplate>
-                    </asp:Repeater>
-                    </div>
-                </div>
-            </div>
-        </section>
+        </div>
     </asp:PlaceHolder>
 
 </asp:Content>

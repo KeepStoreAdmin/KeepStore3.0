@@ -297,6 +297,47 @@
   display: block;
 }
 
+.ks-product-page .tab-usually .card-usually .image {
+  background: #f4f4f4;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ks-product-page .tab-usually .card-usually .image img {
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  width: 100%;
+}
+
+.ks-product-page .tab-usually .price-text .new-price {
+  font-size: inherit;
+}
+
+.ks-brand-strip .brand-item {
+  min-width: 150px;
+  text-align: center;
+}
+
+.ks-brand-strip .brand-item img {
+  max-height: 40px;
+  max-width: 150px;
+  object-fit: contain;
+}
+
+.ks-brand-text {
+  align-items: center;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 4px;
+  color: var(--main);
+  display: inline-flex;
+  font-size: 16px;
+  font-weight: 600;
+  justify-content: center;
+  min-height: 40px;
+  min-width: 140px;
+  padding: 6px 14px;
+}
+
 .ks-product-description h1,
 .ks-product-description h2,
 .ks-product-description h3,
