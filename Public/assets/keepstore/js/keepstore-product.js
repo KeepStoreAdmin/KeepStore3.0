@@ -269,6 +269,7 @@
     if (!link) return null;
     return {
       id: link.getAttribute('data-ks-id') || '',
+      tcid: link.getAttribute('data-ks-tcid') || '',
       title: link.getAttribute('data-ks-title') || '',
       brand: link.getAttribute('data-ks-brand') || '',
       category: link.getAttribute('data-ks-category') || '',
@@ -279,6 +280,35 @@
       cartUrl: link.getAttribute('data-ks-cart-url') || '',
       description: link.getAttribute('data-ks-description') || ''
     };
+  }
+
+  function stopTemplateDemoHandlers(ev) {
+    if (!ev) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+  }
+
+  function navigateKeepStore(url) {
+    if (!url || url === '#') return;
+    window.location.assign(url);
+  }
+
+  function initCardActionLinks() {
+    document.addEventListener('click', function (ev) {
+      var cartLink = ev.target && ev.target.closest ? ev.target.closest('.js-ks-cart-link') : null;
+      if (cartLink) {
+        stopTemplateDemoHandlers(ev);
+        navigateKeepStore(cartLink.getAttribute('href'));
+        return;
+      }
+
+      var wishlistLink = ev.target && ev.target.closest ? ev.target.closest('.js-ks-wishlist-link') : null;
+      if (wishlistLink) {
+        stopTemplateDemoHandlers(ev);
+        navigateKeepStore(wishlistLink.getAttribute('href'));
+      }
+    }, true);
   }
 
   function setText(id, value) {
@@ -304,6 +334,7 @@
       var link = ev.target && ev.target.closest ? ev.target.closest('.js-ks-quickview') : null;
       if (!link) return;
 
+      stopTemplateDemoHandlers(ev);
       var item = readActionItem(link);
       if (!item) return;
 
@@ -321,7 +352,24 @@
       setHref('ksQuickViewImageLink', item.url);
       setHref('ksQuickViewOpenLink', item.url);
       setHref('ksQuickViewCartLink', item.cartUrl || item.url);
+      showQuickViewModal();
     }, true);
+  }
+
+  function showQuickViewModal() {
+    var modal = document.getElementById('quickView');
+    if (!modal) return;
+
+    if (window.bootstrap && bootstrap.Modal) {
+      bootstrap.Modal.getOrCreateInstance(modal).show();
+      return;
+    }
+
+    modal.classList.add('show');
+    modal.style.display = 'block';
+    modal.removeAttribute('aria-hidden');
+    modal.setAttribute('aria-modal', 'true');
+    document.body.classList.add('modal-open');
   }
 
   function compareList() {
@@ -366,10 +414,13 @@
   function addCompareItem(item) {
     if (!item || !item.id) return;
     var list = compareList();
-    var exists = list.some(function (x) { return String(x.id) === String(item.id); });
+    var key = String(item.id) + ':' + String(item.tcid || '');
+    var exists = list.some(function (x) { return String(x.key || (String(x.id) + ':' + String(x.tcid || ''))) === key; });
     if (!exists) {
       list.unshift({
+        key: key,
         id: item.id,
+        tcid: item.tcid,
         title: item.title,
         url: item.url,
         image: item.image,
@@ -386,13 +437,10 @@
     document.addEventListener('click', function (ev) {
       var compareLink = ev.target && ev.target.closest ? ev.target.closest('.js-ks-compare') : null;
       if (compareLink) {
-        ev.preventDefault();
+        stopTemplateDemoHandlers(ev);
         var item = readActionItem(compareLink);
         addCompareItem(item);
-        var canvas = document.getElementById('compare');
-        if (canvas && window.bootstrap && bootstrap.Offcanvas) {
-          bootstrap.Offcanvas.getOrCreateInstance(canvas).show();
-        }
+        openCompareDrawer();
         return;
       }
 
@@ -419,6 +467,20 @@
     });
   }
 
+  function openCompareDrawer() {
+    var canvas = document.getElementById('compare');
+    if (!canvas) return;
+
+    if (window.bootstrap && bootstrap.Offcanvas) {
+      bootstrap.Offcanvas.getOrCreateInstance(canvas).show();
+      return;
+    }
+
+    canvas.classList.add('show');
+    canvas.style.visibility = 'visible';
+    document.body.classList.add('offcanvas-open');
+  }
+
   function debounce(fn, wait) {
     var timer = null;
     return function () {
@@ -433,6 +495,7 @@
   domReady(function () {
     initQtyButtons();
     initRefurbBadge();
+    initCardActionLinks();
     initQuickViewActions();
     initCompareActions();
     initSwiperGallery();

@@ -432,13 +432,13 @@
                                     </a>
                                     <ul class="list-product-btn">
                                         <li>
-                                            <a href='<%# Eval("AddToCartUrl") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left" aria-label="Aggiungi al carrello">
+                                            <a href='<%# Eval("AddToCartUrl") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link" aria-label="Aggiungi al carrello">
                                                 <span class="icon icon-cart2"></span>
                                                 <span class="tooltip">Aggiungi al carrello</span>
                                             </a>
                                         </li>
                                         <li class="d-none d-sm-block wishlist">
-                                            <a href='<%# Eval("WishlistUrl") %>' class="box-icon btn-icon-action hover-tooltip tooltip-left" aria-label="Aggiungi a wishlist">
+                                            <a href='<%# Eval("WishlistUrl") %>' class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-wishlist-link" aria-label="Aggiungi a wishlist">
                                                 <span class="icon icon-heart2"></span>
                                                 <span class="tooltip">Wishlist</span>
                                             </a>
@@ -523,13 +523,13 @@
                                     </a>
                                     <ul class="list-product-btn">
                                         <li>
-                                            <a href='<%# Eval("AddToCartUrl") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left" aria-label="Aggiungi al carrello">
+                                            <a href='<%# Eval("AddToCartUrl") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link" aria-label="Aggiungi al carrello">
                                                 <span class="icon icon-cart2"></span>
                                                 <span class="tooltip">Aggiungi al carrello</span>
                                             </a>
                                         </li>
                                         <li class="d-none d-sm-block wishlist">
-                                            <a href='<%# Eval("WishlistUrl") %>' class="box-icon btn-icon-action hover-tooltip tooltip-left" aria-label="Aggiungi a wishlist">
+                                            <a href='<%# Eval("WishlistUrl") %>' class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-wishlist-link" aria-label="Aggiungi a wishlist">
                                                 <span class="icon icon-heart2"></span>
                                                 <span class="tooltip">Wishlist</span>
                                             </a>
@@ -634,13 +634,13 @@
                                     </a>
                                     <ul class="list-product-btn">
                                         <li>
-                                            <a href='<%# Eval("AddToCartUrl") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left" aria-label="Aggiungi al carrello">
+                                            <a href='<%# Eval("AddToCartUrl") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link" aria-label="Aggiungi al carrello">
                                                 <span class="icon icon-cart2"></span>
                                                 <span class="tooltip">Aggiungi al carrello</span>
                                             </a>
                                         </li>
                                         <li class="d-none d-sm-block wishlist">
-                                            <a href='<%# Eval("WishlistUrl") %>' class="box-icon btn-icon-action hover-tooltip tooltip-left" aria-label="Aggiungi a wishlist">
+                                            <a href='<%# Eval("WishlistUrl") %>' class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-wishlist-link" aria-label="Aggiungi a wishlist">
                                                 <span class="icon icon-heart2"></span>
                                                 <span class="tooltip">Wishlist</span>
                                             </a>

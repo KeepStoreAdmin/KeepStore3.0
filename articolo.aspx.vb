@@ -41,6 +41,8 @@ Partial Class articolo
         Public Property CategoryId As Integer
         Public Property TipologiaId As Integer
         Public Property BrandId As Integer
+        Public Property TagliaName As String
+        Public Property ColoreName As String
         Public Property AvailabilityText As String
         Public Property PriceValue As Nullable(Of Decimal)
         Public Property IsCurrent As Boolean
@@ -62,6 +64,30 @@ Partial Class articolo
         Public Property OldPrice As Nullable(Of Decimal)
         Public Property IsPromo As Boolean
         Public Property IvaLabel As String
+    End Class
+
+    Private Class VariantInfo
+        Public Property Taglia As String
+        Public Property Colore As String
+        Public Property Descrizione As String
+    End Class
+
+    Private Class AffinityProfile
+        Public Property CodeTokens As List(Of String)
+        Public Property DescriptionTokens As List(Of String)
+        Public Property BrandId As Integer
+        Public Property CategoryId As Integer
+        Public Property TipologiaId As Integer
+        Public Property BrandName As String
+        Public Property CategoryName As String
+        Public Property TipologiaName As String
+        Public Property Taglia As String
+        Public Property Colore As String
+
+        Public Sub New()
+            CodeTokens = New List(Of String)()
+            DescriptionTokens = New List(Of String)()
+        End Sub
     End Class
 
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
@@ -264,6 +290,7 @@ Partial Class articolo
         Dim eanVal As String = FirstNonEmpty(GetRowString(row, "Ean"), GetRowString(row, "EAN"))
         Dim brandName As String = FirstNonEmpty(GetRowString(row, "MarcheDescrizione"), GetRowString(row, "Marca"))
         Dim categoryName As String = BuildCategoryCaption(row)
+        Dim variantInfo As VariantInfo = LoadVariantInfo(_id, tcidVal)
         Dim price As PriceContext = BuildPriceContext(GetRowDecimal(row, "Prezzo"),
                                                       GetRowDecimal(row, "PrezzoIvato"),
                                                       GetRowDecimal(row, "PrezzoPromo"),
@@ -286,6 +313,8 @@ Partial Class articolo
             .CategoryId = GetRowInt(row, "CategorieId", 0),
             .TipologiaId = GetRowInt(row, "TipologieId", 0),
             .BrandId = FirstPositiveInt(GetRowInt(row, "MarcaId", 0), GetRowInt(row, "IdMarca", 0), GetRowInt(row, "MarcheId", 0)),
+            .TagliaName = If(variantInfo IsNot Nothing, variantInfo.Taglia, String.Empty),
+            .ColoreName = If(variantInfo IsNot Nothing, variantInfo.Colore, String.Empty),
             .AvailabilityText = BuildAvailabilityText(row),
             .PriceValue = price.CurrentPrice,
             .IsCurrent = True
@@ -389,8 +418,9 @@ Partial Class articolo
                "v.CategorieId, v.TipologieId, v.MarcheId, " &
                "v.SettoriDescrizione, v.CategorieDescrizione, v.TipologieDescrizione, v.MarcheDescrizione, " &
                "v.Prezzo, v.PrezzoIvato, v.PrezzoPromo, v.PrezzoPromoIvato, " &
-               "v.Giacenza, v.Impegnata, v.Disponibilita, v.InOrdine " &
-               "FROM " & fromSql & " " & tailSql
+               "v.Giacenza, v.Impegnata, v.Disponibilita, v.InOrdine, " &
+               "IFNULL(vt.nometaglia,'') AS TCTaglia, IFNULL(vt.nomecolore,'') AS TCColore, IFNULL(vt.descrizione,'') AS TCDescrizione " &
+               "FROM " & fromSql & " LEFT JOIN varticolitc vt ON vt.idarticolo=v.id AND vt.tcid=v.TCid " & tailSql
     End Function
 
     Private Function SafeLimit(value As Integer) As String
@@ -506,58 +536,32 @@ Partial Class articolo
         Dim results As New List(Of RelatedItem)()
         If row Is Nothing OrElse maxItems <= 0 Then Return results
 
-        Dim tokens As List(Of String) = ExtractProductAffinityTokens(row)
-        Dim currentColor As String = ExtractColorKey(NormalizeAffinityText(FirstNonEmpty(GetRowString(row, "Descrizione1"), GetRowString(row, "Descrizione2"), GetRowString(row, "DescrizioneLunga"), GetRowString(row, "Codice"))))
-        Dim catId As Integer = GetRowInt(row, "CategorieId", 0)
-        Dim tipologiaId As Integer = GetRowInt(row, "TipologieId", 0)
-        Dim marcaId As Integer = FirstPositiveInt(GetRowInt(row, "MarcaId", 0), GetRowInt(row, "IdMarca", 0), GetRowInt(row, "MarcheId", 0))
+        Dim profile As AffinityProfile = BuildAffinityProfile(row)
+        Dim candidateLimit As Integer = Math.Max(maxItems * 5, 20)
 
         Try
             Using conn As New MySqlConnection(GetConnectionString())
                 conn.Open()
-                Using cmd As New MySqlCommand()
-                    cmd.Connection = conn
-                    Dim filters As New List(Of String)()
 
-                    If tipologiaId > 0 Then
-                        filters.Add("v.TipologieId=?tp")
-                        cmd.Parameters.AddWithValue("?tp", tipologiaId)
-                    End If
-                    If catId > 0 Then
-                        filters.Add("v.CategorieId=?cat")
-                        cmd.Parameters.AddWithValue("?cat", catId)
-                    End If
-                    If marcaId > 0 Then
-                        filters.Add("v.MarcheId=?mr")
-                        cmd.Parameters.AddWithValue("?mr", marcaId)
-                    End If
+                ' Ordine richiesto: codice, descrizione, marca, categoria, tipologia, taglia TC, colore TC.
+                AddCompanionCandidates(conn, results, profile, "code", candidateLimit)
+                AddCompanionCandidates(conn, results, profile, "description", candidateLimit)
 
-                    Dim tokenIndex As Integer = 0
-                    For Each token As String In tokens
-                        If tokenIndex >= 8 Then Exit For
-                        filters.Add("(UPPER(v.Descrizione1) LIKE ?tk" & tokenIndex.ToString() &
-                                    " OR UPPER(v.Descrizione2) LIKE ?tk" & tokenIndex.ToString() &
-                                    " OR UPPER(v.Codice) LIKE ?tk" & tokenIndex.ToString() & ")")
-                        cmd.Parameters.AddWithValue("?tk" & tokenIndex.ToString(), "%" & token & "%")
-                        tokenIndex += 1
-                    Next
-
-                    If filters.Count = 0 Then Return results
-
-                    cmd.CommandText = RelatedSelectSql("vsuperarticoli v",
-                                                       "WHERE v.NListino=?n AND v.id<>?id AND (" & String.Join(" OR ", filters.ToArray()) & ") " &
-                                                       "ORDER BY ((v.Giacenza-v.Impegnata)>0) DESC, v.InOfferta DESC, v.visite DESC, v.id DESC " &
-                                                       "LIMIT " & SafeLimit(Math.Max(maxItems * 4, 16)))
-                    cmd.Parameters.AddWithValue("?n", _listino)
-                    cmd.Parameters.AddWithValue("?id", _id)
-                    AppendRelated(cmd, results, Math.Max(maxItems * 4, 16))
-                End Using
+                If results.Count < candidateLimit Then AddCompanionCandidates(conn, results, profile, "brand", candidateLimit)
+                If results.Count < candidateLimit Then AddCompanionCandidates(conn, results, profile, "category", candidateLimit)
+                If results.Count < candidateLimit Then AddCompanionCandidates(conn, results, profile, "tipologia", candidateLimit)
+                If results.Count < candidateLimit Then AddCompanionCandidates(conn, results, profile, "taglia", candidateLimit)
+                If results.Count < candidateLimit Then AddCompanionCandidates(conn, results, profile, "colore", candidateLimit)
             End Using
 
             results.Sort(Function(a As RelatedItem, b As RelatedItem)
-                             Dim scoreA As Integer = ScoreCompanion(row, a, tokens, currentColor)
-                             Dim scoreB As Integer = ScoreCompanion(row, b, tokens, currentColor)
+                             Dim scoreA As Integer = ScoreCompanion(profile, a)
+                             Dim scoreB As Integer = ScoreCompanion(profile, b)
                              Dim cmp As Integer = scoreB.CompareTo(scoreA)
+                             If cmp <> 0 Then Return cmp
+                             Dim distanceA As Integer = Math.Abs(a.Id - _id)
+                             Dim distanceB As Integer = Math.Abs(b.Id - _id)
+                             cmp = distanceA.CompareTo(distanceB)
                              If cmp <> 0 Then Return cmp
                              Return StringComparer.OrdinalIgnoreCase.Compare(a.Nome, b.Nome)
                          End Function)
@@ -566,7 +570,7 @@ Partial Class articolo
             Dim seenFiltered As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
             For Each item As RelatedItem In results
                 If filtered.Count >= maxItems Then Exit For
-                If ScoreCompanion(row, item, tokens, currentColor) <= 0 Then Continue For
+                If ScoreCompanion(profile, item) <= 0 Then Continue For
                 Dim key As String = RelatedBusinessKey(item)
                 If String.IsNullOrEmpty(key) OrElse seenFiltered.Contains(key) Then Continue For
                 filtered.Add(item)
@@ -580,38 +584,183 @@ Partial Class articolo
         Return results
     End Function
 
-    Private Function ExtractProductAffinityTokens(row As DataRow) As List(Of String)
-        Dim tokens As New List(Of String)()
-        If row Is Nothing Then Return tokens
+    Private Function BuildAffinityProfile(row As DataRow) As AffinityProfile
+        Dim profile As New AffinityProfile()
+        If row Is Nothing Then Return profile
 
-        Dim text As String = NormalizeAffinityText(String.Join(" ", New String() {
+        profile.BrandId = FirstPositiveInt(GetRowInt(row, "MarcaId", 0), GetRowInt(row, "IdMarca", 0), GetRowInt(row, "MarcheId", 0))
+        profile.CategoryId = GetRowInt(row, "CategorieId", 0)
+        profile.TipologiaId = GetRowInt(row, "TipologieId", 0)
+        profile.BrandName = FirstNonEmpty(GetRowString(row, "MarcheDescrizione"), GetRowString(row, "Marca"))
+        profile.CategoryName = FirstNonEmpty(GetRowString(row, "CategorieDescrizione"), GetRowString(row, "SettoriDescrizione"))
+        profile.TipologiaName = GetRowString(row, "TipologieDescrizione")
+
+        Dim variantInfo As VariantInfo = LoadVariantInfo(_id, GetRowInt(row, "TCid", _tcid))
+        If variantInfo IsNot Nothing Then
+            profile.Taglia = variantInfo.Taglia
+            profile.Colore = variantInfo.Colore
+        End If
+
+        Dim codeSeen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        AddCodeAffinityTokens(profile.CodeTokens, codeSeen, GetRowString(row, "Codice"))
+        AddCodeAffinityTokens(profile.CodeTokens, codeSeen, GetRowString(row, "Ean"))
+
+        Dim textSeen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim descriptionText As String = String.Join(" ", New String() {
             GetRowString(row, "Descrizione1"),
             GetRowString(row, "Descrizione2"),
             GetRowString(row, "DescrizioneLunga"),
-            GetRowString(row, "Codice"),
-            GetRowString(row, "Ean")
-        }))
+            GetRowString(row, "DescrizioneHTML")
+        })
+        AddDescriptionAffinityTokens(profile.DescriptionTokens, textSeen, descriptionText)
 
-        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        If String.IsNullOrWhiteSpace(profile.Colore) Then
+            profile.Colore = ExtractColorKey(NormalizeAffinityText(descriptionText & " " & GetRowString(row, "Codice")))
+        End If
+
+        Return profile
+    End Function
+
+    Private Sub AddCompanionCandidates(conn As MySqlConnection,
+                                       results As List(Of RelatedItem),
+                                       profile As AffinityProfile,
+                                       mode As String,
+                                       candidateLimit As Integer)
+        If conn Is Nothing OrElse results Is Nothing OrElse profile Is Nothing Then Exit Sub
+
+        Using cmd As New MySqlCommand()
+            cmd.Connection = conn
+            Dim whereClause As String = BuildCompanionWhere(cmd, profile, mode)
+            If String.IsNullOrWhiteSpace(whereClause) Then Exit Sub
+
+            cmd.CommandText = RelatedSelectSql("vsuperarticoli v",
+                                               "WHERE v.NListino=?n AND NOT (v.id=?id AND v.TCid=?currentTcid) AND (" & whereClause & ") " &
+                                               "ORDER BY ((v.Giacenza-v.Impegnata)>0) DESC, v.InOfferta DESC, v.visite DESC, v.id DESC " &
+                                               "LIMIT " & SafeLimit(candidateLimit))
+            cmd.Parameters.AddWithValue("?n", _listino)
+            cmd.Parameters.AddWithValue("?id", _id)
+            cmd.Parameters.AddWithValue("?currentTcid", _tcid)
+            AppendRelated(cmd, results, candidateLimit)
+        End Using
+    End Sub
+
+    Private Function BuildCompanionWhere(cmd As MySqlCommand, profile As AffinityProfile, mode As String) As String
+        Select Case (If(mode, String.Empty).ToLowerInvariant())
+            Case "code"
+                Return BuildTokenWhere(cmd, profile.CodeTokens, "cd", True, True, False)
+            Case "description"
+                Return BuildTokenWhere(cmd, profile.DescriptionTokens, "ds", True, True, True)
+            Case "brand"
+                If profile.BrandId <= 0 Then Return ""
+                cmd.Parameters.AddWithValue("?brand", profile.BrandId)
+                Return "v.MarcheId=?brand"
+            Case "category"
+                If profile.CategoryId <= 0 Then Return ""
+                cmd.Parameters.AddWithValue("?cat", profile.CategoryId)
+                Return "v.CategorieId=?cat"
+            Case "tipologia"
+                If profile.TipologiaId <= 0 Then Return ""
+                cmd.Parameters.AddWithValue("?tp", profile.TipologiaId)
+                Return "v.TipologieId=?tp"
+            Case "taglia"
+                Dim taglia As String = NormalizeAffinityText(profile.Taglia)
+                If taglia.Length < 2 Then Return ""
+                cmd.Parameters.AddWithValue("?taglia", "%" & taglia & "%")
+                Return "(UPPER(COALESCE(vt.nometaglia,'')) LIKE ?taglia OR UPPER(COALESCE(vt.descrizione,'')) LIKE ?taglia)"
+            Case "colore"
+                Dim colore As String = NormalizeAffinityText(profile.Colore)
+                If colore.Length < 3 Then Return ""
+                cmd.Parameters.AddWithValue("?colore", "%" & colore & "%")
+                Return "(UPPER(COALESCE(vt.nomecolore,'')) LIKE ?colore OR UPPER(COALESCE(vt.descrizione,'')) LIKE ?colore OR UPPER(COALESCE(v.Descrizione1,'')) LIKE ?colore OR UPPER(COALESCE(v.Descrizione2,'')) LIKE ?colore)"
+        End Select
+
+        Return ""
+    End Function
+
+    Private Function BuildTokenWhere(cmd As MySqlCommand,
+                                     tokens As List(Of String),
+                                     prefix As String,
+                                     includeCode As Boolean,
+                                     includeDescription As Boolean,
+                                     includeVariant As Boolean) As String
+        If cmd Is Nothing OrElse tokens Is Nothing OrElse tokens.Count = 0 Then Return ""
+
+        Dim filters As New List(Of String)()
+        Dim idx As Integer = 0
+
+        For Each rawToken As String In tokens
+            If idx >= 10 Then Exit For
+            Dim token As String = NormalizeAffinityText(rawToken).Replace(" ", "")
+            If token.Length < 3 Then Continue For
+
+            Dim paramName As String = "?" & prefix & idx.ToString(CultureInfo.InvariantCulture)
+            Dim clauses As New List(Of String)()
+
+            If includeCode Then
+                clauses.Add("UPPER(COALESCE(v.Codice,'')) LIKE " & paramName)
+                clauses.Add("REPLACE(REPLACE(UPPER(COALESCE(v.Codice,'')),'-',''),' ','') LIKE " & paramName)
+            End If
+            If includeDescription Then
+                clauses.Add("UPPER(COALESCE(v.Descrizione1,'')) LIKE " & paramName)
+                clauses.Add("UPPER(COALESCE(v.Descrizione2,'')) LIKE " & paramName)
+                clauses.Add("REPLACE(REPLACE(UPPER(COALESCE(v.Descrizione1,'')),'-',''),' ','') LIKE " & paramName)
+                clauses.Add("REPLACE(REPLACE(UPPER(COALESCE(v.Descrizione2,'')),'-',''),' ','') LIKE " & paramName)
+            End If
+            If includeVariant Then
+                clauses.Add("UPPER(COALESCE(vt.nomecolore,'')) LIKE " & paramName)
+                clauses.Add("UPPER(COALESCE(vt.nometaglia,'')) LIKE " & paramName)
+                clauses.Add("UPPER(COALESCE(vt.descrizione,'')) LIKE " & paramName)
+                clauses.Add("REPLACE(REPLACE(UPPER(COALESCE(vt.descrizione,'')),'-',''),' ','') LIKE " & paramName)
+            End If
+
+            If clauses.Count > 0 Then
+                filters.Add("(" & String.Join(" OR ", clauses.ToArray()) & ")")
+                cmd.Parameters.AddWithValue(paramName, "%" & token & "%")
+                idx += 1
+            End If
+        Next
+
+        If filters.Count = 0 Then Return ""
+        Return "(" & String.Join(" OR ", filters.ToArray()) & ")"
+    End Function
+
+    Private Sub AddCodeAffinityTokens(tokens As List(Of String), seen As HashSet(Of String), rawValue As String)
+        If String.IsNullOrWhiteSpace(rawValue) Then Exit Sub
+
+        Dim compact As String = NormalizeAffinityText(rawValue).Replace(" ", "")
+        AddAffinityToken(tokens, seen, compact)
+
+        For Each m As Match In Regex.Matches(compact, "[A-Z]{1,6}\d{2,8}[A-Z0-9]*")
+            Dim value As String = m.Value
+            AddAffinityToken(tokens, seen, value)
+            If value.Length >= 5 AndAlso Regex.IsMatch(value, "\d$") Then
+                AddAffinityToken(tokens, seen, value.Substring(0, value.Length - 1))
+            End If
+        Next
+    End Sub
+
+    Private Sub AddDescriptionAffinityTokens(tokens As List(Of String), seen As HashSet(Of String), rawText As String)
+        If String.IsNullOrWhiteSpace(rawText) Then Exit Sub
+
+        Dim text As String = NormalizeAffinityText(rawText)
         Dim patterns As String() = {
-            "\b[A-Z]{1,5}[- ]?\d{2,6}[A-Z0-9]*\b",
+            "\b[A-Z]{1,6}\d{2,8}[A-Z0-9]*\b",
+            "\b[A-Z]{1,6}[- ]?\d{2,8}[A-Z0-9]*\b",
             "\b\d{2,4}XL\b",
-            "\bT\d{3,5}\b",
+            "\bT\d{3,6}\b",
             "\bXP[- ]?\d{2,5}\b"
         }
 
         For Each pattern As String In patterns
             For Each m As Match In Regex.Matches(text, pattern)
-                AddAffinityToken(tokens, seen, m.Value.Replace(" ", ""))
-                Dim compact As String = m.Value.Replace(" ", "").Replace("-", "")
-                If Regex.IsMatch(compact, "^[A-Z]+\d{4,}$") Then
-                    AddAffinityToken(tokens, seen, compact.Substring(0, compact.Length - 1))
+                Dim token As String = m.Value.Replace(" ", "").Replace("-", "")
+                AddAffinityToken(tokens, seen, token)
+                If Regex.IsMatch(token, "^[A-Z]+\d{4,}$") Then
+                    AddAffinityToken(tokens, seen, token.Substring(0, token.Length - 1))
                 End If
             Next
         Next
-
-        Return tokens
-    End Function
+    End Sub
 
     Private Sub AddAffinityToken(tokens As List(Of String), seen As HashSet(Of String), rawToken As String)
         If tokens Is Nothing OrElse seen Is Nothing OrElse String.IsNullOrWhiteSpace(rawToken) Then Exit Sub
@@ -623,38 +772,60 @@ Partial Class articolo
         seen.Add(token)
     End Sub
 
-    Private Function ScoreCompanion(row As DataRow, item As RelatedItem, tokens As List(Of String), currentColor As String) As Integer
-        If row Is Nothing OrElse item Is Nothing Then Return 0
+    Private Function ScoreCompanion(profile As AffinityProfile, item As RelatedItem) As Integer
+        If profile Is Nothing OrElse item Is Nothing Then Return 0
 
         Dim score As Integer = 0
-        Dim candidateText As String = NormalizeAffinityText(item.Nome & " " & item.Codice)
+        Dim candidateText As String = NormalizeAffinityText(item.Nome & " " & item.Codice & " " & item.TagliaName & " " & item.ColoreName)
+        Dim candidateCode As String = NormalizeAffinityText(item.Codice).Replace(" ", "")
+        Dim candidateCompact As String = candidateText.Replace(" ", "")
 
-        If item.TipologiaId > 0 AndAlso item.TipologiaId = GetRowInt(row, "TipologieId", 0) Then score += 80
-        If item.CategoryId > 0 AndAlso item.CategoryId = GetRowInt(row, "CategorieId", 0) Then score += 55
-        Dim currentBrandId As Integer = FirstPositiveInt(GetRowInt(row, "MarcaId", 0), GetRowInt(row, "IdMarca", 0), GetRowInt(row, "MarcheId", 0))
-        If item.BrandId > 0 AndAlso item.BrandId = currentBrandId Then score += 35
+        score += CountTokenMatches(candidateCode & " " & candidateCompact, profile.CodeTokens) * 1000
+        score += CountTokenMatches(candidateCompact & " " & candidateText, profile.DescriptionTokens) * 700
 
-        If tokens IsNot Nothing Then
-            For Each token As String In tokens
-                If String.IsNullOrEmpty(token) Then Continue For
-                If candidateText.Contains(token) Then
-                    score += If(token.Length >= 5, 90, 55)
-                End If
-            Next
-        End If
+        If profile.BrandId > 0 AndAlso item.BrandId = profile.BrandId Then score += 420
+        If profile.CategoryId > 0 AndAlso item.CategoryId = profile.CategoryId Then score += 260
+        If profile.TipologiaId > 0 AndAlso item.TipologiaId = profile.TipologiaId Then score += 180
 
-        Dim candidateColor As String = ExtractColorKey(candidateText)
+        If SameAffinityValue(profile.Taglia, item.TagliaName) OrElse TextContainsAffinity(candidateText, profile.Taglia) Then score += 90
+
+        Dim currentColor As String = FirstNonEmpty(ExtractColorKey(profile.Colore), NormalizeAffinityText(profile.Colore))
+        Dim candidateColor As String = FirstNonEmpty(ExtractColorKey(item.ColoreName), ExtractColorKey(candidateText), NormalizeAffinityText(item.ColoreName))
         If Not String.IsNullOrEmpty(currentColor) AndAlso Not String.IsNullOrEmpty(candidateColor) Then
             If String.Equals(currentColor, candidateColor, StringComparison.OrdinalIgnoreCase) Then
-                score -= 80
+                score += 10
             Else
-                score += 180
+                score += 80
             End If
         End If
 
         If String.Equals(item.AvailabilityText, "Disponibile", StringComparison.OrdinalIgnoreCase) Then score += 20
 
         Return score
+    End Function
+
+    Private Function CountTokenMatches(candidateText As String, tokens As List(Of String)) As Integer
+        If String.IsNullOrWhiteSpace(candidateText) OrElse tokens Is Nothing Then Return 0
+        Dim count As Integer = 0
+        For Each token As String In tokens
+            Dim normalizedToken As String = NormalizeAffinityText(token).Replace(" ", "")
+            If normalizedToken.Length >= 3 AndAlso candidateText.Contains(normalizedToken) Then
+                count += 1
+            End If
+        Next
+        Return count
+    End Function
+
+    Private Function SameAffinityValue(a As String, b As String) As Boolean
+        Dim leftValue As String = NormalizeAffinityText(a)
+        Dim rightValue As String = NormalizeAffinityText(b)
+        Return leftValue.Length > 0 AndAlso String.Equals(leftValue, rightValue, StringComparison.OrdinalIgnoreCase)
+    End Function
+
+    Private Function TextContainsAffinity(text As String, value As String) As Boolean
+        Dim normalizedValue As String = NormalizeAffinityText(value)
+        If normalizedValue.Length < 2 Then Return False
+        Return (" " & NormalizeAffinityText(text) & " ").Contains(" " & normalizedValue & " ")
     End Function
 
     Private Function NormalizeAffinityText(value As String) As String
@@ -793,6 +964,8 @@ Partial Class articolo
                 item.CategoryId = SafeInt(rdr("CategorieId"), 0)
                 item.TipologiaId = SafeInt(rdr("TipologieId"), 0)
                 item.BrandId = SafeInt(rdr("MarcheId"), 0)
+                item.TagliaName = SafeReaderString(rdr, "TCTaglia")
+                item.ColoreName = FirstNonEmpty(SafeReaderString(rdr, "TCColore"), ExtractColorKey(nameVal & " " & codiceVal))
                 item.PriceValue = price.CurrentPrice
                 item.IsCurrent = False
                 item.AvailabilityText = BuildRelatedAvailabilityText(SafeInt(rdr("Giacenza"), 0),
@@ -830,14 +1003,19 @@ Partial Class articolo
         If item Is Nothing Then Return ""
         If Not String.IsNullOrWhiteSpace(item.BusinessKey) Then Return item.BusinessKey
 
+        Dim variantSuffix As String = ""
+        If item.Tcid >= 0 Then
+            variantSuffix = ":TC:" & item.Tcid.ToString(CultureInfo.InvariantCulture)
+        End If
+
         Dim eanKey As String = NormalizeBusinessIdentifier(item.Ean)
-        If Not String.IsNullOrWhiteSpace(eanKey) Then Return "EAN:" & eanKey
+        If Not String.IsNullOrWhiteSpace(eanKey) Then Return "EAN:" & eanKey & variantSuffix
 
         Dim codiceKey As String = NormalizeBusinessIdentifier(item.Codice)
-        If Not String.IsNullOrWhiteSpace(codiceKey) Then Return "COD:" & codiceKey
+        If Not String.IsNullOrWhiteSpace(codiceKey) Then Return "COD:" & codiceKey & variantSuffix
 
         Dim textKey As String = NormalizeBusinessText(item.BrandName & "|" & item.Nome)
-        If Not String.IsNullOrWhiteSpace(textKey) Then Return "TXT:" & textKey
+        If Not String.IsNullOrWhiteSpace(textKey) Then Return "TXT:" & textKey & variantSuffix
 
         Return "ID:" & item.Id.ToString(CultureInfo.InvariantCulture) & ":" & item.Tcid.ToString(CultureInfo.InvariantCulture)
     End Function
@@ -850,6 +1028,7 @@ Partial Class articolo
 
         Dim sb As New StringBuilder()
         sb.Append("data-ks-id='").Append(EncodeAttr(item.Id.ToString(CultureInfo.InvariantCulture))).Append("' ")
+        sb.Append("data-ks-tcid='").Append(EncodeAttr(item.Tcid.ToString(CultureInfo.InvariantCulture))).Append("' ")
         sb.Append("data-ks-title='").Append(EncodeAttr(item.Nome)).Append("' ")
         sb.Append("data-ks-brand='").Append(EncodeAttr(item.BrandName)).Append("' ")
         sb.Append("data-ks-category='").Append(EncodeAttr(item.CategoryName)).Append("' ")
@@ -1183,6 +1362,42 @@ Partial Class articolo
         End Try
 
         Return results
+    End Function
+
+    Private Function LoadVariantInfo(id As Integer, tcid As Integer) As VariantInfo
+        If id <= 0 Then Return Nothing
+
+        Try
+            Using cn As New MySqlConnection(GetConnectionString())
+                cn.Open()
+
+                Dim sql As String = "SELECT nomecolore, nometaglia, descrizione " &
+                                    "FROM varticolitc " &
+                                    "WHERE idarticolo=@idarticolo " &
+                                    "  AND (@tcid=-1 OR tcid=@tcid) " &
+                                    "ORDER BY CASE WHEN tcid=@tcid THEN 0 ELSE 1 END, nomecolore, nometaglia " &
+                                    "LIMIT 1"
+
+                Using cmd As New MySqlCommand(sql, cn)
+                    cmd.Parameters.AddWithValue("@idarticolo", id)
+                    cmd.Parameters.AddWithValue("@tcid", tcid)
+
+                    Using r As MySqlDataReader = cmd.ExecuteReader()
+                        If r.Read() Then
+                            Return New VariantInfo() With {
+                                .Colore = Convert.ToString(r("nomecolore")),
+                                .Taglia = Convert.ToString(r("nometaglia")),
+                                .Descrizione = Convert.ToString(r("descrizione"))
+                            }
+                        End If
+                    End Using
+                End Using
+            End Using
+        Catch
+            ' best-effort: l'affinita' resta basata su codice/descrizione.
+        End Try
+
+        Return Nothing
     End Function
 
     Private Sub BindImages(row As DataRow, productName As String)
@@ -2215,23 +2430,29 @@ Partial Class articolo
         result = 0D
         If value Is Nothing OrElse value Is DBNull.Value Then Return False
 
-        Try
-            result = Convert.ToDecimal(value, ItCulture)
-            Return True
-        Catch
-        End Try
+        If TypeOf value Is Decimal OrElse
+           TypeOf value Is Double OrElse
+           TypeOf value Is Single OrElse
+           TypeOf value Is Integer OrElse
+           TypeOf value Is Long OrElse
+           TypeOf value Is Short OrElse
+           TypeOf value Is Byte Then
+            Try
+                result = Convert.ToDecimal(value, CultureInfo.InvariantCulture)
+                Return True
+            Catch
+            End Try
+        End If
 
         Dim s As String = Convert.ToString(value)
         If String.IsNullOrWhiteSpace(s) Then Return False
 
         s = s.Trim().Replace(ChrW(8364), String.Empty).Replace("EUR", String.Empty).Trim()
 
-        If Decimal.TryParse(s, NumberStyles.Any, ItCulture, result) Then Return True
-        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.CurrentCulture, result) Then Return True
-
         Dim commaIndex As Integer = s.LastIndexOf(","c)
         Dim dotIndex As Integer = s.LastIndexOf("."c)
         Dim normalized As String = s
+
         If commaIndex >= 0 AndAlso dotIndex >= 0 Then
             If commaIndex > dotIndex Then
                 normalized = s.Replace(".", String.Empty).Replace(",", ".")
@@ -2246,7 +2467,20 @@ Partial Class articolo
             If Decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, result) Then Return True
         End If
 
+        If dotIndex >= 0 AndAlso commaIndex < 0 Then
+            If Regex.IsMatch(s, "^\s*\d+\.\d{1,4}\s*$") Then
+                If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, result) Then Return True
+            End If
+
+            If Regex.IsMatch(s, "^\s*\d{1,3}(\.\d{3})+(\.\d{1,4})?\s*$") Then
+                normalized = s.Replace(".", String.Empty)
+                If Decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, result) Then Return True
+            End If
+        End If
+
         If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, result) Then Return True
+        If Decimal.TryParse(s, NumberStyles.Any, ItCulture, result) Then Return True
+        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.CurrentCulture, result) Then Return True
         Return False
     End Function
 
