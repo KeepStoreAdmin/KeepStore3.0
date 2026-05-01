@@ -1509,9 +1509,11 @@ End Function
                 comm.Parameters.AddWithValue("?SessionId", Session.SessionID)
                 comm.ExecuteNonQuery()
 
-                ' Pulisco SessionId e imposto NListino = 1 su tutte le righe (logica originale)
-                comm.CommandText = "UPDATE carrello SET SessionId = '', NListino = 1"
+                ' Pulisco SessionId e imposto NListino = 1 solo sulle righe dell'utente appena loggato.
+                ' La versione senza WHERE alterava anche carrelli di altre sessioni.
+                comm.CommandText = "UPDATE carrello SET SessionId = '', NListino = 1 WHERE LoginID = ?LoginID"
                 comm.Parameters.Clear()
+                comm.Parameters.AddWithValue("?LoginID", loginId)
                 comm.ExecuteNonQuery()
             End Using
         End Using

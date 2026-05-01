@@ -399,13 +399,56 @@ Private Const SessLoginId_B As String = "LOGINID"
     Me.PnlDestinazione.Visible = isLogged
     Me.Panel_Note.Visible = isLogged
 
-    ' FillTableInfo SOLO se loggato e UTENTIID valido
+    ' Il carrello deve essere bindato anche per utenti anonimi.
+    ConfigureCartDataSources()
+
+    ' I dati anagrafici restano invece riservati all'utente loggato.
     If isLogged Then
-    Dim utentiId As Integer = GetUtentiIdSafe(0)
-    If utentiId > 0 Then
-        FillTableInfo()
+        Dim utentiId As Integer = GetUtentiIdSafe(0)
+        If utentiId > 0 Then
+            FillTableInfo()
+        End If
     End If
-    End If
+    End Sub
+
+    Private Sub ConfigureCartDataSources()
+        Dim LoginId As Integer = GetSessionInt("LoginId", 0)
+        Dim SessionID As String = If(Me.Session IsNot Nothing, Me.Session.SessionID, "")
+        Dim WhereUserId As String
+
+        Dim Sqlstring As String = "SELECT vcarrello.*, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine, taglie.descrizione as taglia, colori.descrizione as colore FROM vcarrello"
+        Sqlstring = Sqlstring + " LEFT OUTER JOIN articoli ON vcarrello.ArticoliId = articoli.id"
+        Sqlstring = Sqlstring + " LEFT OUTER JOIN articoli_tagliecolori ON vcarrello.TCid = articoli_tagliecolori.id"
+        Sqlstring = Sqlstring + " LEFT OUTER JOIN taglie ON articoli_tagliecolori.tagliaid = taglie.id"
+        Sqlstring = Sqlstring + " LEFT OUTER JOIN colori ON articoli_tagliecolori.coloreid = colori.id"
+
+        If LoginId = 0 Then
+            WhereUserId = "(SessionId=@SessionId)"
+        Else
+            WhereUserId = "(LoginId=@LoginId)"
+        End If
+
+        Me.sdsArticoli.SelectCommand = Sqlstring & " WHERE (" & WhereUserId & " ) ORDER BY id"
+        sdsArticoli.SelectParameters.Clear()
+        sdsArticoli.SelectParameters.Add("@SessionId", SessionID)
+        sdsArticoli.SelectParameters.Add("@LoginId", LoginId.ToString())
+
+        Me.sdsArticoli_Spedizione_Gratis.SelectCommand = Sqlstring & " WHERE " & WhereUserId & " AND (articoli.SpedizioneGratis_Listini != '') AND (SpedizioneGratis_Listini LIKE CONCAT('%', @listino, ';%')) AND ((SpedizioneGratis_Data_Inizio <= CURDATE()) AND (SpedizioneGratis_Data_Fine >= CURDATE() OR SpedizioneGratis_Data_Fine Is NULL)) ORDER BY id"
+        sdsArticoli_Spedizione_Gratis.SelectParameters.Clear()
+        sdsArticoli_Spedizione_Gratis.SelectParameters.Add("@SessionId", SessionID)
+        sdsArticoli_Spedizione_Gratis.SelectParameters.Add("@LoginId", LoginId.ToString())
+        sdsArticoli_Spedizione_Gratis.SelectParameters.Add("@listino", GetListinoSafeString())
+
+        IvaTipo = GetSessionInt("IvaTipo", 0)
+        If IvaTipo = 1 Then
+            Me.lblPrezzi.Text = "*Prezzi Iva Esclusa"
+        ElseIf IvaTipo = 2 Then
+            If SafeDbl(Session("Iva_Utente"), -1) > -1 Then
+                Me.lblPrezzi.Text = "*Prezzi Iva Inclusa - (IVA Utente al " & Convert.ToString(Session("Iva_Utente")) & "%)"
+            Else
+                Me.lblPrezzi.Text = "*Prezzi Iva Inclusa"
+            End If
+        End If
     End Sub
 
     ' forgotten code?
@@ -455,46 +498,13 @@ Private Const SessLoginId_B As String = "LOGINID"
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
         Me.Title = Me.Title & " - Il tuo Carrello"
 		
-        Dim LoginId As Integer = Me.Session("LoginId")
-        Dim SessionID As String = Me.Session.SessionID
-        Dim WhereUserId As String
+        Dim LoginId As Integer = GetSessionInt("LoginId", 0)
 
 		'cancella_campi_destinazione_alternativa_o_indirizzo_spedizione()
-		
-        Dim Sqlstring As String = "SELECT vcarrello.*, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine, taglie.descrizione as taglia, colori.descrizione as colore FROM vcarrello"
-        Sqlstring = Sqlstring + " LEFT OUTER JOIN articoli ON vcarrello.ArticoliId = articoli.id"
-        Sqlstring = Sqlstring + " LEFT OUTER JOIN articoli_tagliecolori ON vcarrello.TCid = articoli_tagliecolori.id"
-        Sqlstring = Sqlstring + " LEFT OUTER JOIN taglie ON articoli_tagliecolori.tagliaid = taglie.id"
-        Sqlstring = Sqlstring + " LEFT OUTER JOIN colori ON articoli_tagliecolori.coloreid = colori.id"
-        If LoginId = 0 Then
-            WhereUserId = "(SessionId=@SessionId)"
-        Else
-            WhereUserId = "(LoginId=@LoginId)"
-        End If
-        Me.sdsArticoli.SelectCommand = Sqlstring & " WHERE (" & WhereUserId & " ) ORDER BY id"
-        sdsArticoli.SelectParameters.Clear()
-        sdsArticoli.SelectParameters.Add("@SessionId", SessionID)
-        sdsArticoli.SelectParameters.Add("@LoginId", LoginId)
-
-        Me.sdsArticoli_Spedizione_Gratis.SelectCommand = Sqlstring & " WHERE " & WhereUserId & " AND (articoli.SpedizioneGratis_Listini != '') AND (SpedizioneGratis_Listini LIKE CONCAT('%', @listino, ';%')) AND ((SpedizioneGratis_Data_Inizio <= CURDATE()) AND (SpedizioneGratis_Data_Fine >= CURDATE() OR SpedizioneGratis_Data_Fine Is NULL)) ORDER BY id"
-        sdsArticoli_Spedizione_Gratis.SelectParameters.Clear()
-        sdsArticoli_Spedizione_Gratis.SelectParameters.Add("@SessionId", SessionID)
-        sdsArticoli_Spedizione_Gratis.SelectParameters.Add("@LoginId", LoginId)
-        sdsArticoli_Spedizione_Gratis.SelectParameters.Add("@listino", GetListinoSafeString())
-
-        IvaTipo = Me.Session("IvaTipo")
-        If IvaTipo = 1 Then
-            Me.lblPrezzi.Text = "*Prezzi Iva Esclusa"
-        ElseIf IvaTipo = 2 Then
-            If Session("Iva_Utente") > -1 Then
-                Me.lblPrezzi.Text = "*Prezzi Iva Inclusa - (IVA Utente al " & Session("Iva_Utente") & "%)"
-            Else
-                Me.lblPrezzi.Text = "*Prezzi Iva Inclusa"
-            End If
-        End If
+        ConfigureCartDataSources()
 
         'Nascondo i pannelli dei dati anagrafici quando non sono loggato
-        If Me.Session("LoginId") > 0 Then
+        If LoginId > 0 Then
             Me.pnlFatturazione.Visible = True
 			Me.PnlSpedizione.Visible = True
 			Me.PnlDestinazione.Visible = True

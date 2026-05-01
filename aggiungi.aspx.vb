@@ -140,12 +140,9 @@ End If
         End If
 
         
-    ' 7) Redirect al carrello
-    If Not String.IsNullOrEmpty(articoliIdGlobali) Then
-        Me.ClientScript.RegisterStartupScript(Me.GetType(), "ks_redir", "window.location.href='carrello.aspx';", True)
-    Else
-        SafeRedirect("carrello.aspx")
-    End If
+    ' 7) Redirect server-side al carrello: questa è una pagina tecnica di inserimento,
+    ' non deve dipendere dal rendering client per completare il flusso.
+    SafeRedirect("carrello.aspx")
 End Sub
 
 
@@ -360,6 +357,30 @@ End Sub
 
                 ' Leggo prezzi e promozioni
                 dr = LoadCartProductRows(selezionamultipla_ID, selezionamultipla_TCID, NListino)
+                Dim effectiveTCID As String = ResolveEffectiveTcidText(dr, selezionamultipla_TCID)
+                If effectiveTCID <> selezionamultipla_TCID Then
+                    selezionamultipla_TCID = effectiveTCID
+                    Dim effectiveWhere As String
+                    If LoginId = 0 Then
+                        effectiveWhere = "where SessionID=@SessionID"
+                    Else
+                        effectiveWhere = "where LoginID=@LoginId"
+                    End If
+                    effectiveWhere &= " and ArticoliId=@ArticoliId and TCId=@TCId"
+                    Dim effectiveParams As New Dictionary(Of String, String)
+                    effectiveParams.Add("@ArticoliId", selezionamultipla_ID)
+                    effectiveParams.Add("@TCId", selezionamultipla_TCID)
+                    effectiveParams.Add("@SessionID", SessionID)
+                    effectiveParams.Add("@LoginId", LoginId.ToString())
+                    Dim effectiveExisting = ExecuteQueryGetDataReader("id, qnt", "carrello", effectiveWhere, effectiveParams)
+                    If effectiveExisting.Count > 0 Then
+                        Dim oldQEffective As Double = 0
+                        TryParseDouble(effectiveExisting(0)("qnt"), oldQEffective)
+                        quantitaRiga += oldQEffective
+                        effectiveParams.Add("@idRiga", Convert.ToString(effectiveExisting(0)("id")))
+                        ExecuteDelete("carrello", "where id=@idRiga", effectiveParams)
+                    End If
+                End If
 
                 OfferteDettagliID = 0
                 Prezzo = 0
@@ -402,9 +423,9 @@ End Sub
                 Integer.TryParse(selezionamultipla_TCID, addTc)
 
                 Dim cartRowId As Integer = AddCartRowWithNewcarrello(LoginId, SessionID, addId, addTc, Codice, Descrizione, quantitaRiga, NListino, Prezzo, PrezzoIvato, OfferteDettagliID, _pgTmp)
-                If cartRowId <= 0 OrElse Not VerifyCartRow(LoginId, SessionID, addId, addTc) Then
+                If cartRowId <= 0 OrElse Not VerifyCartRow(LoginId, SessionID, addId, addTc) OrElse Not VerifyVCarrelloRow(LoginId, SessionID, addId, addTc) Then
                     Try
-                        KeepStoreLog.Info("aggiungi.aspx", "Aggiunta multipla non verificata id=" & selezionamultipla_ID & " tcid=" & selezionamultipla_TCID & " sessionId=" & SessionID, HttpContext.Current)
+                        KeepStoreLog.Info("aggiungi.aspx", "Aggiunta multipla non verificata in carrello/vcarrello id=" & selezionamultipla_ID & " tcid=" & selezionamultipla_TCID & " sessionId=" & SessionID & " nListino=" & NListino.ToString(CultureInfo.InvariantCulture), HttpContext.Current)
                     Catch
                     End Try
                     Continue For
@@ -457,6 +478,30 @@ End Sub
 
                 ' Leggo prezzi e promozioni
                 dr = LoadCartProductRows(ListaArticoli(i).ToString(), tcidRiga, NListino)
+                Dim effectiveTcidRiga As String = ResolveEffectiveTcidText(dr, tcidRiga)
+                If effectiveTcidRiga <> tcidRiga Then
+                    tcidRiga = effectiveTcidRiga
+                    Dim effectiveWhere As String
+                    If LoginId = 0 Then
+                        effectiveWhere = "where SessionID=@SessionID"
+                    Else
+                        effectiveWhere = "where LoginID=@LoginId"
+                    End If
+                    effectiveWhere &= " and ArticoliId=@ArticoliId and TCId=@TCId"
+                    Dim effectiveParams As New Dictionary(Of String, String)
+                    effectiveParams.Add("@ArticoliId", ListaArticoli(i).ToString())
+                    effectiveParams.Add("@TCId", tcidRiga)
+                    effectiveParams.Add("@SessionID", SessionID)
+                    effectiveParams.Add("@LoginId", LoginId.ToString())
+                    Dim effectiveExisting = ExecuteQueryGetDataReader("id, qnt", "carrello", effectiveWhere, effectiveParams)
+                    If effectiveExisting.Count > 0 Then
+                        Dim oldQEffective As Double = 0
+                        TryParseDouble(effectiveExisting(0)("qnt"), oldQEffective)
+                        quantitaRiga += oldQEffective
+                        effectiveParams.Add("@idRiga", Convert.ToString(effectiveExisting(0)("id")))
+                        ExecuteDelete("carrello", "where id=@idRiga", effectiveParams)
+                    End If
+                End If
 
                 OfferteDettagliID = 0
                 Prezzo = 0
@@ -503,9 +548,9 @@ End Sub
                 Integer.TryParse(tcidRiga, addTc)
 
                 Dim cartRowId As Integer = AddCartRowWithNewcarrello(LoginId, SessionID, addId, addTc, Codice, Descrizione, quantitaRiga, NListino, Prezzo, PrezzoIvato, OfferteDettagliID, prodottoGratis)
-                If cartRowId <= 0 OrElse Not VerifyCartRow(LoginId, SessionID, addId, addTc) Then
+                If cartRowId <= 0 OrElse Not VerifyCartRow(LoginId, SessionID, addId, addTc) OrElse Not VerifyVCarrelloRow(LoginId, SessionID, addId, addTc) Then
                     Try
-                        KeepStoreLog.Info("aggiungi.aspx", "Aggiunta singola non verificata id=" & ListaArticoli(i).ToString() & " tcid=" & tcidRiga & " sessionId=" & SessionID, HttpContext.Current)
+                        KeepStoreLog.Info("aggiungi.aspx", "Aggiunta singola non verificata in carrello/vcarrello id=" & ListaArticoli(i).ToString() & " tcid=" & tcidRiga & " sessionId=" & SessionID & " nListino=" & NListino.ToString(CultureInfo.InvariantCulture), HttpContext.Current)
                     Catch
                     End Try
                     Continue For
@@ -540,6 +585,31 @@ End Sub
         Dim articleParams As New Dictionary(Of String, String)
         articleParams.Add("@ArticoliId", articoloId)
         Return ExecuteQueryGetDataReader("id, -1 AS TCId, Codice, Descrizione1, 0 AS Prezzo, 0 AS PrezzoIvato, 0 AS InOfferta, 0 AS PrezzoPromo, 0 AS PrezzoPromoIvato, 0 AS OfferteQntMinima, 0 AS OfferteMultipli, 0 AS OfferteDettagliId", "articoli", "where id=@ArticoliId LIMIT 1", articleParams)
+    End Function
+
+    Private Function ResolveEffectiveTcidText(ByVal rows As List(Of Dictionary(Of String, Object)), ByVal requestedTcid As String) As String
+        Dim fallback As String = NormalizeTcidText(requestedTcid)
+        If rows Is Nothing OrElse rows.Count = 0 Then Return fallback
+
+        Dim raw As Object = Nothing
+        If TryGetRowValue(rows(0), raw, "TCId", "TCid", "tcid", "TCID") Then
+            Dim effective As Integer = -1
+            Integer.TryParse(Convert.ToString(raw), effective)
+            If effective > 0 Then Return effective.ToString(CultureInfo.InvariantCulture)
+        End If
+
+        Return fallback
+    End Function
+
+    Private Function TryGetRowValue(ByVal row As Dictionary(Of String, Object), ByRef value As Object, ParamArray keys() As String) As Boolean
+        If row Is Nothing OrElse keys Is Nothing Then Return False
+        For Each key As String In keys
+            If key IsNot Nothing AndAlso row.ContainsKey(key) Then
+                value = row(key)
+                Return True
+            End If
+        Next
+        Return False
     End Function
 
     Private Function NormalizeTcidText(ByVal raw As String) As String
@@ -630,6 +700,28 @@ End Sub
         End If
 
         Dim rows = ExecuteQueryGetDataReader("id", "carrello", wherePart & " ORDER BY id DESC LIMIT 1", params)
+        Return rows.Count > 0
+    End Function
+
+    Private Function VerifyVCarrelloRow(ByVal loginId As Integer, ByVal sessionId As String, ByVal articoloId As Integer, ByVal tcId As Integer) As Boolean
+        If articoloId <= 0 Then Return False
+        If tcId <= 0 Then tcId = -1
+        If String.IsNullOrEmpty(sessionId) AndAlso loginId <= 0 Then sessionId = Me.Session.SessionID
+
+        Dim wherePart As String
+        Dim params As New Dictionary(Of String, String)
+        params.Add("@ArticoliId", articoloId.ToString(CultureInfo.InvariantCulture))
+        params.Add("@TCId", tcId.ToString(CultureInfo.InvariantCulture))
+
+        If loginId > 0 Then
+            wherePart = "where LoginId=@LoginId and ArticoliId=@ArticoliId and TCId=@TCId and Qnt>0"
+            params.Add("@LoginId", loginId.ToString(CultureInfo.InvariantCulture))
+        Else
+            wherePart = "where SessionId=@SessionId and ArticoliId=@ArticoliId and TCId=@TCId and Qnt>0"
+            params.Add("@SessionId", Convert.ToString(sessionId))
+        End If
+
+        Dim rows = ExecuteQueryGetDataReader("id", "vcarrello", wherePart & " ORDER BY id DESC LIMIT 1", params)
         Return rows.Count > 0
     End Function
 
