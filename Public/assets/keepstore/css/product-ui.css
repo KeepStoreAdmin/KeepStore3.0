@@ -293,6 +293,19 @@
   margin-top: auto;
 }
 
+.ks-product-relation-section .list-product-btn {
+  z-index: 30;
+}
+
+.ks-product-relation-section .card-product-info .caption,
+.ks-product-page .tab-usually .caption {
+  min-height: 1.25em;
+}
+
+.ks-product-iconbox-section .tf-icon-box {
+  height: 100%;
+}
+
 .ks-product-page .product-detail .body-text-3 span {
   display: block;
 }

@@ -2,7 +2,9 @@ Imports System
 Imports System.Collections.Generic
 Imports System.Configuration
 Imports System.Data
+Imports System.Globalization
 Imports System.Text
+Imports System.Text.RegularExpressions
 Imports System.Web
 Imports System.Web.UI.WebControls
 Imports HtmlAgilityPack
@@ -16,6 +18,7 @@ Partial Class articolo
     Private _tcidPresent As Boolean
     Private _listino As Integer
     Private _tcEnabled As Boolean
+    Private Shared ReadOnly ItCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
 
     Private Class ImgItem
         Public Property Url As String
@@ -27,13 +30,25 @@ Partial Class articolo
         Public Property Tcid As Integer
         Public Property Nome As String
         Public Property Img As String
+        Public Property ImgHover As String
         Public Property Url As String
         Public Property PrezzoHtml As String
         Public Property InOfferta As Boolean
         Public Property Codice As String
+        Public Property Ean As String
+        Public Property BrandName As String
+        Public Property CategoryName As String
+        Public Property CategoryId As Integer
+        Public Property TipologiaId As Integer
+        Public Property BrandId As Integer
         Public Property AvailabilityText As String
         Public Property PriceValue As Nullable(Of Decimal)
         Public Property IsCurrent As Boolean
+        Public Property BusinessKey As String
+        Public Property AddToCartUrl As String
+        Public Property WishlistUrl As String
+        Public Property QuickViewAttrs As String
+        Public Property CompareAttrs As String
     End Class
 
     Private Class BrandItem
@@ -134,8 +149,9 @@ Partial Class articolo
 
         Dim manualRelated As List(Of RelatedItem) = LoadManualRelated(10)
         Dim similarItems As List(Of RelatedItem) = LoadSimilarProducts(row, 10)
+        Dim companionItems As List(Of RelatedItem) = LoadCompanionProducts(row, 10)
 
-        BindBundleProducts(row, compatibleItems, linkedItems, manualRelated, similarItems)
+        BindBundleProducts(row, companionItems, compatibleItems, linkedItems, manualRelated, similarItems)
 
         BindProductCarousel(phSimilar, rptSimilar, similarItems)
 
@@ -147,6 +163,7 @@ Partial Class articolo
         BindProductCarousel(phRelated, rptRelated, relatedItems)
 
         BindBrandCarousel(row)
+        BindRecentlyViewed(row)
     End Sub
 
     Private Sub BindRelatedProducts(row As DataRow)
@@ -199,13 +216,14 @@ Partial Class articolo
         End Try
     End Sub
 
-    Private Sub BindBundleProducts(row As DataRow, compatibleItems As List(Of RelatedItem), linkedItems As List(Of RelatedItem), manualRelated As List(Of RelatedItem), similarItems As List(Of RelatedItem))
+    Private Sub BindBundleProducts(row As DataRow, companionItems As List(Of RelatedItem), compatibleItems As List(Of RelatedItem), linkedItems As List(Of RelatedItem), manualRelated As List(Of RelatedItem), similarItems As List(Of RelatedItem))
         Dim bundleItems As New List(Of RelatedItem)()
         Dim currentItem As RelatedItem = BuildCurrentRelatedItem(row)
         If currentItem IsNot Nothing Then
             bundleItems.Add(currentItem)
         End If
 
+        AddUniqueRelatedItems(bundleItems, companionItems, 4)
         AddUniqueRelatedItems(bundleItems, compatibleItems, 3)
         AddUniqueRelatedItems(bundleItems, linkedItems, 3)
         AddUniqueRelatedItems(bundleItems, manualRelated, 3)
@@ -237,27 +255,43 @@ Partial Class articolo
         If String.IsNullOrEmpty(imgVal) Then
             imgVal = ThemeManager.PlaceholderProductImageUrl()
         End If
+        Dim imgHover As String = NormalizeImageUrl(GetRowString(row, "Img2"))
+        If String.IsNullOrEmpty(imgHover) Then imgHover = imgVal
 
         Dim inOfferta As Integer = GetRowInt(row, "InOfferta", 0)
+        Dim tcidVal As Integer = GetRowInt(row, "TCid", _tcid)
+        Dim codiceVal As String = FirstNonEmpty(GetRowString(row, "Codice"), GetRowString(row, "SKU"))
+        Dim eanVal As String = FirstNonEmpty(GetRowString(row, "Ean"), GetRowString(row, "EAN"))
+        Dim brandName As String = FirstNonEmpty(GetRowString(row, "MarcheDescrizione"), GetRowString(row, "Marca"))
+        Dim categoryName As String = BuildCategoryCaption(row)
         Dim price As PriceContext = BuildPriceContext(GetRowDecimal(row, "Prezzo"),
                                                       GetRowDecimal(row, "PrezzoIvato"),
                                                       GetRowDecimal(row, "PrezzoPromo"),
                                                       GetRowDecimal(row, "PrezzoPromoIvato"),
                                                       inOfferta)
 
-        Return New RelatedItem() With {
+        Dim item As New RelatedItem() With {
             .Id = _id,
-            .Tcid = GetRowInt(row, "TCid", _tcid),
+            .Tcid = tcidVal,
             .Nome = nameVal,
             .Img = imgVal,
-            .Url = BuildProductUrl(_id, GetRowInt(row, "TCid", _tcid), includeTcid:=(Request.QueryString("TCid") IsNot Nothing)),
+            .ImgHover = imgHover,
+            .Url = BuildProductUrl(_id, tcidVal, includeTcid:=(Request.QueryString("TCid") IsNot Nothing)),
             .PrezzoHtml = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo),
             .InOfferta = (inOfferta = 1),
-            .Codice = FirstNonEmpty(GetRowString(row, "Codice"), GetRowString(row, "SKU")),
+            .Codice = codiceVal,
+            .Ean = eanVal,
+            .BrandName = brandName,
+            .CategoryName = categoryName,
+            .CategoryId = GetRowInt(row, "CategorieId", 0),
+            .TipologiaId = GetRowInt(row, "TipologieId", 0),
+            .BrandId = FirstPositiveInt(GetRowInt(row, "MarcaId", 0), GetRowInt(row, "IdMarca", 0), GetRowInt(row, "MarcheId", 0)),
             .AvailabilityText = BuildAvailabilityText(row),
             .PriceValue = price.CurrentPrice,
             .IsCurrent = True
         }
+        FinalizeRelatedItem(item)
+        Return item
     End Function
 
     Private Function FormatBundleTotal(items As List(Of RelatedItem)) As String
@@ -275,23 +309,25 @@ Partial Class articolo
         Next
 
         If Not hasPrice Then Return "Prezzo su richiesta"
-        Return total.ToString("C")
+        Return FormatMoney(total)
     End Function
 
     Private Sub AddUniqueRelatedItems(target As List(Of RelatedItem), source As List(Of RelatedItem), maxItems As Integer)
         If target Is Nothing OrElse source Is Nothing Then Exit Sub
 
-        Dim seen As New HashSet(Of Integer)()
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
         For Each it As RelatedItem In target
-            seen.Add(it.Id)
+            Dim key As String = RelatedBusinessKey(it)
+            If Not String.IsNullOrEmpty(key) Then seen.Add(key)
         Next
 
         For Each it As RelatedItem In source
             If target.Count >= maxItems Then Exit For
             If it Is Nothing OrElse it.Id <= 0 Then Continue For
-            If seen.Contains(it.Id) Then Continue For
+            Dim key As String = RelatedBusinessKey(it)
+            If String.IsNullOrEmpty(key) OrElse seen.Contains(key) Then Continue For
             target.Add(it)
-            seen.Add(it.Id)
+            seen.Add(key)
         Next
     End Sub
 
@@ -349,7 +385,9 @@ Partial Class articolo
     End Function
 
     Private Function RelatedSelectSql(fromSql As String, tailSql As String) As String
-        Return "SELECT v.id, v.TCid, v.Codice, v.Descrizione1, v.Img1, v.InOfferta, " &
+        Return "SELECT v.id, v.TCid, v.Codice, v.Ean, v.Descrizione1, v.Descrizione2, v.Img1, v.Img2, v.InOfferta, " &
+               "v.CategorieId, v.TipologieId, v.MarcheId, " &
+               "v.SettoriDescrizione, v.CategorieDescrizione, v.TipologieDescrizione, v.MarcheDescrizione, " &
                "v.Prezzo, v.PrezzoIvato, v.PrezzoPromo, v.PrezzoPromoIvato, " &
                "v.Giacenza, v.Impegnata, v.Disponibilita, v.InOrdine " &
                "FROM " & fromSql & " " & tailSql
@@ -464,6 +502,191 @@ Partial Class articolo
         Return results
     End Function
 
+    Private Function LoadCompanionProducts(row As DataRow, maxItems As Integer) As List(Of RelatedItem)
+        Dim results As New List(Of RelatedItem)()
+        If row Is Nothing OrElse maxItems <= 0 Then Return results
+
+        Dim tokens As List(Of String) = ExtractProductAffinityTokens(row)
+        Dim currentColor As String = ExtractColorKey(NormalizeAffinityText(FirstNonEmpty(GetRowString(row, "Descrizione1"), GetRowString(row, "Descrizione2"), GetRowString(row, "DescrizioneLunga"), GetRowString(row, "Codice"))))
+        Dim catId As Integer = GetRowInt(row, "CategorieId", 0)
+        Dim tipologiaId As Integer = GetRowInt(row, "TipologieId", 0)
+        Dim marcaId As Integer = FirstPositiveInt(GetRowInt(row, "MarcaId", 0), GetRowInt(row, "IdMarca", 0), GetRowInt(row, "MarcheId", 0))
+
+        Try
+            Using conn As New MySqlConnection(GetConnectionString())
+                conn.Open()
+                Using cmd As New MySqlCommand()
+                    cmd.Connection = conn
+                    Dim filters As New List(Of String)()
+
+                    If tipologiaId > 0 Then
+                        filters.Add("v.TipologieId=?tp")
+                        cmd.Parameters.AddWithValue("?tp", tipologiaId)
+                    End If
+                    If catId > 0 Then
+                        filters.Add("v.CategorieId=?cat")
+                        cmd.Parameters.AddWithValue("?cat", catId)
+                    End If
+                    If marcaId > 0 Then
+                        filters.Add("v.MarcheId=?mr")
+                        cmd.Parameters.AddWithValue("?mr", marcaId)
+                    End If
+
+                    Dim tokenIndex As Integer = 0
+                    For Each token As String In tokens
+                        If tokenIndex >= 8 Then Exit For
+                        filters.Add("(UPPER(v.Descrizione1) LIKE ?tk" & tokenIndex.ToString() &
+                                    " OR UPPER(v.Descrizione2) LIKE ?tk" & tokenIndex.ToString() &
+                                    " OR UPPER(v.Codice) LIKE ?tk" & tokenIndex.ToString() & ")")
+                        cmd.Parameters.AddWithValue("?tk" & tokenIndex.ToString(), "%" & token & "%")
+                        tokenIndex += 1
+                    Next
+
+                    If filters.Count = 0 Then Return results
+
+                    cmd.CommandText = RelatedSelectSql("vsuperarticoli v",
+                                                       "WHERE v.NListino=?n AND v.id<>?id AND (" & String.Join(" OR ", filters.ToArray()) & ") " &
+                                                       "ORDER BY ((v.Giacenza-v.Impegnata)>0) DESC, v.InOfferta DESC, v.visite DESC, v.id DESC " &
+                                                       "LIMIT " & SafeLimit(Math.Max(maxItems * 4, 16)))
+                    cmd.Parameters.AddWithValue("?n", _listino)
+                    cmd.Parameters.AddWithValue("?id", _id)
+                    AppendRelated(cmd, results, Math.Max(maxItems * 4, 16))
+                End Using
+            End Using
+
+            results.Sort(Function(a As RelatedItem, b As RelatedItem)
+                             Dim scoreA As Integer = ScoreCompanion(row, a, tokens, currentColor)
+                             Dim scoreB As Integer = ScoreCompanion(row, b, tokens, currentColor)
+                             Dim cmp As Integer = scoreB.CompareTo(scoreA)
+                             If cmp <> 0 Then Return cmp
+                             Return StringComparer.OrdinalIgnoreCase.Compare(a.Nome, b.Nome)
+                         End Function)
+
+            Dim filtered As New List(Of RelatedItem)()
+            Dim seenFiltered As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            For Each item As RelatedItem In results
+                If filtered.Count >= maxItems Then Exit For
+                If ScoreCompanion(row, item, tokens, currentColor) <= 0 Then Continue For
+                Dim key As String = RelatedBusinessKey(item)
+                If String.IsNullOrEmpty(key) OrElse seenFiltered.Contains(key) Then Continue For
+                filtered.Add(item)
+                seenFiltered.Add(key)
+            Next
+            Return filtered
+        Catch ex As Exception
+            KeepStoreLog.Error("articolo.aspx", "Errore LoadCompanionProducts (id=" & _id.ToString() & ")", ex, HttpContext.Current)
+        End Try
+
+        Return results
+    End Function
+
+    Private Function ExtractProductAffinityTokens(row As DataRow) As List(Of String)
+        Dim tokens As New List(Of String)()
+        If row Is Nothing Then Return tokens
+
+        Dim text As String = NormalizeAffinityText(String.Join(" ", New String() {
+            GetRowString(row, "Descrizione1"),
+            GetRowString(row, "Descrizione2"),
+            GetRowString(row, "DescrizioneLunga"),
+            GetRowString(row, "Codice"),
+            GetRowString(row, "Ean")
+        }))
+
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim patterns As String() = {
+            "\b[A-Z]{1,5}[- ]?\d{2,6}[A-Z0-9]*\b",
+            "\b\d{2,4}XL\b",
+            "\bT\d{3,5}\b",
+            "\bXP[- ]?\d{2,5}\b"
+        }
+
+        For Each pattern As String In patterns
+            For Each m As Match In Regex.Matches(text, pattern)
+                AddAffinityToken(tokens, seen, m.Value.Replace(" ", ""))
+                Dim compact As String = m.Value.Replace(" ", "").Replace("-", "")
+                If Regex.IsMatch(compact, "^[A-Z]+\d{4,}$") Then
+                    AddAffinityToken(tokens, seen, compact.Substring(0, compact.Length - 1))
+                End If
+            Next
+        Next
+
+        Return tokens
+    End Function
+
+    Private Sub AddAffinityToken(tokens As List(Of String), seen As HashSet(Of String), rawToken As String)
+        If tokens Is Nothing OrElse seen Is Nothing OrElse String.IsNullOrWhiteSpace(rawToken) Then Exit Sub
+        Dim token As String = NormalizeAffinityText(rawToken).Replace(" ", "")
+        If token.Length < 3 Then Exit Sub
+        If Not Regex.IsMatch(token, "\d") Then Exit Sub
+        If seen.Contains(token) Then Exit Sub
+        tokens.Add(token)
+        seen.Add(token)
+    End Sub
+
+    Private Function ScoreCompanion(row As DataRow, item As RelatedItem, tokens As List(Of String), currentColor As String) As Integer
+        If row Is Nothing OrElse item Is Nothing Then Return 0
+
+        Dim score As Integer = 0
+        Dim candidateText As String = NormalizeAffinityText(item.Nome & " " & item.Codice)
+
+        If item.TipologiaId > 0 AndAlso item.TipologiaId = GetRowInt(row, "TipologieId", 0) Then score += 80
+        If item.CategoryId > 0 AndAlso item.CategoryId = GetRowInt(row, "CategorieId", 0) Then score += 55
+        Dim currentBrandId As Integer = FirstPositiveInt(GetRowInt(row, "MarcaId", 0), GetRowInt(row, "IdMarca", 0), GetRowInt(row, "MarcheId", 0))
+        If item.BrandId > 0 AndAlso item.BrandId = currentBrandId Then score += 35
+
+        If tokens IsNot Nothing Then
+            For Each token As String In tokens
+                If String.IsNullOrEmpty(token) Then Continue For
+                If candidateText.Contains(token) Then
+                    score += If(token.Length >= 5, 90, 55)
+                End If
+            Next
+        End If
+
+        Dim candidateColor As String = ExtractColorKey(candidateText)
+        If Not String.IsNullOrEmpty(currentColor) AndAlso Not String.IsNullOrEmpty(candidateColor) Then
+            If String.Equals(currentColor, candidateColor, StringComparison.OrdinalIgnoreCase) Then
+                score -= 80
+            Else
+                score += 180
+            End If
+        End If
+
+        If String.Equals(item.AvailabilityText, "Disponibile", StringComparison.OrdinalIgnoreCase) Then score += 20
+
+        Return score
+    End Function
+
+    Private Function NormalizeAffinityText(value As String) As String
+        If String.IsNullOrWhiteSpace(value) Then Return ""
+        Dim text As String = HttpUtility.HtmlDecode(StripHtml(value)).ToUpperInvariant()
+        text = Regex.Replace(text, "[^A-Z0-9]+", " ")
+        text = Regex.Replace(text, "\s+", " ").Trim()
+        Return text
+    End Function
+
+    Private Function ExtractColorKey(normalizedText As String) As String
+        If String.IsNullOrWhiteSpace(normalizedText) Then Return ""
+        Dim text As String = " " & NormalizeAffinityText(normalizedText) & " "
+
+        Dim colorMap As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase) From {
+            {" GIALLO ", "YELLOW"}, {" YELLOW ", "YELLOW"},
+            {" NERO ", "BLACK"}, {" BLACK ", "BLACK"},
+            {" CIANO ", "CYAN"}, {" CYAN ", "CYAN"}, {" AZZURRO ", "CYAN"},
+            {" MAGENTA ", "MAGENTA"},
+            {" ROSSO ", "RED"}, {" RED ", "RED"},
+            {" BLU ", "BLUE"}, {" BLUE ", "BLUE"},
+            {" BIANCO ", "WHITE"}, {" WHITE ", "WHITE"},
+            {" GRIGIO ", "GREY"}, {" GREY ", "GREY"}, {" GRAY ", "GREY"}
+        }
+
+        For Each kvp As KeyValuePair(Of String, String) In colorMap
+            If text.Contains(kvp.Key) Then Return kvp.Value
+        Next
+
+        Return ""
+    End Function
+
     Private Function LoadSmartRelationFallback(row As DataRow, relationMode As String, maxItems As Integer) As List(Of RelatedItem)
         Dim results As New List(Of RelatedItem)()
         If row Is Nothing Then Return results
@@ -526,21 +749,26 @@ Partial Class articolo
     End Function
 
     Private Sub AppendRelated(cmd As MySqlCommand, results As List(Of RelatedItem), maxItems As Integer)
-        Dim seen As New HashSet(Of Integer)()
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
         For Each it As RelatedItem In results
-            seen.Add(it.Id)
+            Dim key As String = RelatedBusinessKey(it)
+            If Not String.IsNullOrEmpty(key) Then seen.Add(key)
         Next
 
         Using rdr As MySqlDataReader = cmd.ExecuteReader()
             While rdr.Read() AndAlso results.Count < maxItems
                 Dim idVal As Integer = SafeInt(rdr("id"), 0)
                 If idVal <= 0 Then Continue While
-                If seen.Contains(idVal) Then Continue While
 
                 Dim tcidVal As Integer = SafeInt(rdr("TCid"), -1)
                 Dim codiceVal As String = Convert.ToString(rdr("Codice"))
+                Dim eanVal As String = SafeReaderString(rdr, "Ean")
                 Dim nameVal As String = Convert.ToString(rdr("Descrizione1"))
                 Dim imgVal As String = NormalizeImageUrl(Convert.ToString(rdr("Img1")))
+                Dim imgHover As String = NormalizeImageUrl(SafeReaderString(rdr, "Img2"))
+                If String.IsNullOrEmpty(imgHover) Then imgHover = imgVal
+                If String.IsNullOrEmpty(imgVal) Then imgVal = ThemeManager.PlaceholderProductImageUrl()
+                If String.IsNullOrEmpty(imgHover) Then imgHover = imgVal
                 Dim inOfferta As Integer = SafeInt(rdr("InOfferta"), 0)
 
                 Dim price As PriceContext = BuildPriceContext(SafeDec(rdr("Prezzo"), 0D),
@@ -554,22 +782,132 @@ Partial Class articolo
                 item.Tcid = tcidVal
                 item.Nome = nameVal
                 item.Img = imgVal
+                item.ImgHover = imgHover
                 item.Url = BuildProductUrl(idVal, tcidVal, includeTcid:=(_tcEnabled AndAlso tcidVal <> -1))
                 item.PrezzoHtml = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo)
                 item.InOfferta = (inOfferta = 1)
                 item.Codice = codiceVal
+                item.Ean = eanVal
+                item.BrandName = SafeReaderString(rdr, "MarcheDescrizione")
+                item.CategoryName = FirstNonEmpty(SafeReaderString(rdr, "TipologieDescrizione"), SafeReaderString(rdr, "CategorieDescrizione"), SafeReaderString(rdr, "SettoriDescrizione"), item.BrandName)
+                item.CategoryId = SafeInt(rdr("CategorieId"), 0)
+                item.TipologiaId = SafeInt(rdr("TipologieId"), 0)
+                item.BrandId = SafeInt(rdr("MarcheId"), 0)
                 item.PriceValue = price.CurrentPrice
                 item.IsCurrent = False
                 item.AvailabilityText = BuildRelatedAvailabilityText(SafeInt(rdr("Giacenza"), 0),
                                                                      SafeInt(rdr("Impegnata"), 0),
                                                                      SafeInt(rdr("Disponibilita"), 0),
                                                                      SafeInt(rdr("InOrdine"), 0))
+                FinalizeRelatedItem(item)
+
+                Dim businessKey As String = RelatedBusinessKey(item)
+                If String.IsNullOrEmpty(businessKey) OrElse seen.Contains(businessKey) Then Continue While
 
                 results.Add(item)
-                seen.Add(idVal)
+                seen.Add(businessKey)
             End While
         End Using
     End Sub
+
+    Private Sub FinalizeRelatedItem(item As RelatedItem)
+        If item Is Nothing Then Exit Sub
+
+        If String.IsNullOrWhiteSpace(item.Img) Then item.Img = ThemeManager.PlaceholderProductImageUrl()
+        If String.IsNullOrWhiteSpace(item.ImgHover) Then item.ImgHover = item.Img
+        If String.IsNullOrWhiteSpace(item.CategoryName) Then item.CategoryName = "Catalogo"
+        If String.IsNullOrWhiteSpace(item.BrandName) Then item.BrandName = ""
+        If String.IsNullOrWhiteSpace(item.Url) Then item.Url = BuildProductUrl(item.Id, item.Tcid, includeTcid:=(_tcEnabled AndAlso item.Tcid <> -1))
+
+        item.BusinessKey = RelatedBusinessKey(item)
+        item.AddToCartUrl = BuildCartAddUrl(item.Id, item.Tcid)
+        item.WishlistUrl = BuildWishlistAddUrl(item.Id, item.Tcid)
+        item.QuickViewAttrs = BuildActionDataAttributes(item)
+        item.CompareAttrs = item.QuickViewAttrs
+    End Sub
+
+    Private Function RelatedBusinessKey(item As RelatedItem) As String
+        If item Is Nothing Then Return ""
+        If Not String.IsNullOrWhiteSpace(item.BusinessKey) Then Return item.BusinessKey
+
+        Dim eanKey As String = NormalizeBusinessIdentifier(item.Ean)
+        If Not String.IsNullOrWhiteSpace(eanKey) Then Return "EAN:" & eanKey
+
+        Dim codiceKey As String = NormalizeBusinessIdentifier(item.Codice)
+        If Not String.IsNullOrWhiteSpace(codiceKey) Then Return "COD:" & codiceKey
+
+        Dim textKey As String = NormalizeBusinessText(item.BrandName & "|" & item.Nome)
+        If Not String.IsNullOrWhiteSpace(textKey) Then Return "TXT:" & textKey
+
+        Return "ID:" & item.Id.ToString(CultureInfo.InvariantCulture) & ":" & item.Tcid.ToString(CultureInfo.InvariantCulture)
+    End Function
+
+    Private Function BuildActionDataAttributes(item As RelatedItem) As String
+        If item Is Nothing Then Return ""
+
+        Dim priceText As String = BuildPriceText(item.PriceValue)
+        Dim descriptionText As String = FirstNonEmpty(item.CategoryName, item.BrandName, item.AvailabilityText, "Prodotto")
+
+        Dim sb As New StringBuilder()
+        sb.Append("data-ks-id='").Append(EncodeAttr(item.Id.ToString(CultureInfo.InvariantCulture))).Append("' ")
+        sb.Append("data-ks-title='").Append(EncodeAttr(item.Nome)).Append("' ")
+        sb.Append("data-ks-brand='").Append(EncodeAttr(item.BrandName)).Append("' ")
+        sb.Append("data-ks-category='").Append(EncodeAttr(item.CategoryName)).Append("' ")
+        sb.Append("data-ks-url='").Append(EncodeAttr(item.Url)).Append("' ")
+        sb.Append("data-ks-img='").Append(EncodeAttr(item.Img)).Append("' ")
+        sb.Append("data-ks-price='").Append(EncodeAttr(priceText)).Append("' ")
+        sb.Append("data-ks-available='").Append(EncodeAttr(item.AvailabilityText)).Append("' ")
+        sb.Append("data-ks-cart-url='").Append(EncodeAttr(item.AddToCartUrl)).Append("' ")
+        sb.Append("data-ks-description='").Append(EncodeAttr(ThemeManager.CompactText(descriptionText, 140))).Append("'")
+        Return sb.ToString()
+    End Function
+
+    Private Function BuildCartAddUrl(id As Integer, tcid As Integer) As String
+        Return ResolveUrl("~/cart_add.aspx?id=" & HttpUtility.UrlEncode(id.ToString(CultureInfo.InvariantCulture)) &
+                          "&TCid=" & HttpUtility.UrlEncode(tcid.ToString(CultureInfo.InvariantCulture)) &
+                          "&qty=1")
+    End Function
+
+    Private Function BuildWishlistAddUrl(id As Integer, tcid As Integer) As String
+        Return ResolveUrl("~/wishlist_add.aspx?id=" & HttpUtility.UrlEncode(id.ToString(CultureInfo.InvariantCulture)) &
+                          "&TCid=" & HttpUtility.UrlEncode(tcid.ToString(CultureInfo.InvariantCulture)))
+    End Function
+
+    Private Function EncodeAttr(value As String) As String
+        Return HttpUtility.HtmlAttributeEncode(If(value, String.Empty))
+    End Function
+
+    Private Function SafeReaderString(rdr As MySqlDataReader, columnName As String) As String
+        If rdr Is Nothing OrElse String.IsNullOrWhiteSpace(columnName) Then Return ""
+        Try
+            Dim ordinal As Integer = rdr.GetOrdinal(columnName)
+            If ordinal < 0 OrElse rdr.IsDBNull(ordinal) Then Return ""
+            Return Convert.ToString(rdr.GetValue(ordinal))
+        Catch
+            Return ""
+        End Try
+    End Function
+
+    Private Function BuildCategoryCaption(row As DataRow) As String
+        If row Is Nothing Then Return "Catalogo"
+        Return FirstNonEmpty(GetRowString(row, "TipologieDescrizione"),
+                             GetRowString(row, "CategorieDescrizione"),
+                             GetRowString(row, "SettoriDescrizione"),
+                             GetRowString(row, "MarcheDescrizione"),
+                             "Catalogo")
+    End Function
+
+    Private Function NormalizeBusinessIdentifier(value As String) As String
+        If String.IsNullOrWhiteSpace(value) Then Return ""
+        Return value.Trim().ToUpperInvariant().Replace(" ", String.Empty)
+    End Function
+
+    Private Function NormalizeBusinessText(value As String) As String
+        If String.IsNullOrWhiteSpace(value) Then Return ""
+        Dim text As String = value.Trim().ToUpperInvariant()
+        text = Regex.Replace(text, "\s+", " ")
+        Return text
+    End Function
 
     Private Function BuildRelatedAvailabilityText(giacenza As Integer, impegnata As Integer, disponibilita As Integer, inOrdine As Integer) As String
         If (giacenza - impegnata) > 0 Then Return "Disponibile"
@@ -588,8 +926,7 @@ Partial Class articolo
     Private Function SafeDec(v As Object, fallback As Decimal) As Decimal
         If v Is Nothing OrElse v Is DBNull.Value Then Return fallback
         Dim d As Decimal
-        If Decimal.TryParse(Convert.ToString(v), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, d) Then Return d
-        If Decimal.TryParse(Convert.ToString(v), d) Then Return d
+        If TryParseKeepStoreDecimal(v, d) Then Return d
         Return fallback
     End Function
 
@@ -1338,10 +1675,10 @@ Partial Class articolo
             Return "<span class=""new-price price-text fw-medium mb-0"">Prezzo su richiesta</span>"
         End If
 
-        Dim priceText As String = prezzo.Value.ToString("C")
+        Dim priceText As String = FormatMoney(prezzo.Value)
 
         If inOfferta AndAlso prezzoOld.HasValue AndAlso prezzoOld.Value > 0D AndAlso prezzo.HasValue AndAlso prezzoOld.Value > prezzo.Value Then
-            Dim oldText As String = prezzoOld.Value.ToString("C")
+            Dim oldText As String = FormatMoney(prezzoOld.Value)
             Return "<span class=""new-price price-text fw-medium mb-0"">" & Server.HtmlEncode(priceText) & "</span><span class=""old-price body-md-2 text-main-2 fw-normal"">" & Server.HtmlEncode(oldText) & "</span>"
         End If
 
@@ -1350,7 +1687,7 @@ Partial Class articolo
 
     Private Function BuildPriceText(prezzo As Nullable(Of Decimal)) As String
         If prezzo.HasValue AndAlso prezzo.Value > 0D Then
-            Return Server.HtmlEncode(prezzo.Value.ToString("C"))
+            Return Server.HtmlEncode(FormatMoney(prezzo.Value))
         End If
         Return "Prezzo su richiesta"
     End Function
@@ -1367,7 +1704,7 @@ Partial Class articolo
             ctx.CurrentPrice = prezzo
             ctx.OldPrice = Nothing
             ctx.IvaLabel = "IVA esclusa"
-            If inOfferta = 1 AndAlso prezzoPromo.HasValue AndAlso prezzoPromo.Value > 0D Then
+            If IsValidPromoPrice(prezzo, prezzoPromo, inOfferta) Then
                 ctx.CurrentPrice = prezzoPromo
                 If prezzo.HasValue AndAlso prezzo.Value > prezzoPromo.Value Then
                     ctx.OldPrice = prezzo
@@ -1378,7 +1715,7 @@ Partial Class articolo
             ctx.CurrentPrice = prezzoIvato
             ctx.OldPrice = Nothing
             ctx.IvaLabel = "IVA inclusa"
-            If inOfferta = 1 AndAlso prezzoPromoIvato.HasValue AndAlso prezzoPromoIvato.Value > 0D Then
+            If IsValidPromoPrice(prezzoIvato, prezzoPromoIvato, inOfferta) Then
                 ctx.CurrentPrice = prezzoPromoIvato
                 If prezzoIvato.HasValue AndAlso prezzoIvato.Value > prezzoPromoIvato.Value Then
                     ctx.OldPrice = prezzoIvato
@@ -1392,6 +1729,17 @@ Partial Class articolo
         End If
 
         Return ctx
+    End Function
+
+    Private Function IsValidPromoPrice(basePrice As Nullable(Of Decimal), promoPrice As Nullable(Of Decimal), inOfferta As Integer) As Boolean
+        If inOfferta <> 1 Then Return False
+        If Not promoPrice.HasValue OrElse promoPrice.Value <= 0D Then Return False
+        If basePrice.HasValue AndAlso basePrice.Value > 0D AndAlso promoPrice.Value >= basePrice.Value Then Return False
+        Return True
+    End Function
+
+    Private Function FormatMoney(value As Decimal) As String
+        Return value.ToString("C2", ItCulture)
     End Function
 
     Private Function FirstPositiveDecimal(ParamArray values() As Nullable(Of Decimal)) As Nullable(Of Decimal)
@@ -1444,6 +1792,101 @@ Partial Class articolo
             phBrands.Visible = False
             KeepStoreLog.Error("articolo.aspx", "Errore BindBrandCarousel (id=" & _id.ToString() & ")", ex, HttpContext.Current)
         End Try
+    End Sub
+
+    Private Sub BindRecentlyViewed(row As DataRow)
+        Try
+            Dim items As List(Of RelatedItem) = LoadRecentlyViewedProducts(row, 10)
+            If items Is Nothing OrElse items.Count = 0 Then
+                phRecentlyViewed.Visible = False
+                Return
+            End If
+
+            phRecentlyViewed.Visible = True
+            rptRecentlyViewed.DataSource = items
+            rptRecentlyViewed.DataBind()
+        Catch ex As Exception
+            phRecentlyViewed.Visible = False
+            KeepStoreLog.Error("articolo.aspx", "Errore BindRecentlyViewed (id=" & _id.ToString() & ")", ex, HttpContext.Current)
+        End Try
+    End Sub
+
+    Private Function LoadRecentlyViewedProducts(row As DataRow, maxItems As Integer) As List(Of RelatedItem)
+        Dim results As New List(Of RelatedItem)()
+        Dim orderedIds As List(Of Integer) = GetMergedRecentlyViewedIds(100)
+        If Not orderedIds.Contains(_id) Then orderedIds.Insert(0, _id)
+
+        Dim safeIds As New List(Of Integer)()
+        For Each idVal As Integer In orderedIds
+            If idVal > 0 AndAlso Not safeIds.Contains(idVal) Then safeIds.Add(idVal)
+        Next
+
+        If safeIds.Count > 0 Then
+            Try
+                Dim idsCsv As String = String.Join(",", safeIds.ToArray())
+                Dim orderSql As New StringBuilder()
+                orderSql.Append("CASE v.id ")
+                For i As Integer = 0 To safeIds.Count - 1
+                    orderSql.Append("WHEN ").Append(safeIds(i).ToString(CultureInfo.InvariantCulture)).Append(" THEN ").Append(i.ToString(CultureInfo.InvariantCulture)).Append(" ")
+                Next
+                orderSql.Append("ELSE 9999 END")
+
+                Using conn As New MySqlConnection(GetConnectionString())
+                    conn.Open()
+                    Using cmd As New MySqlCommand()
+                        cmd.Connection = conn
+                        cmd.CommandText = RelatedSelectSql("vsuperarticoli v",
+                                                           "WHERE v.NListino=?n AND v.id IN (" & idsCsv & ") " &
+                                                           "ORDER BY " & orderSql.ToString() & " " &
+                                                           "LIMIT " & SafeLimit(Math.Max(maxItems * 3, maxItems)))
+                        cmd.Parameters.AddWithValue("?n", _listino)
+                        AppendRelated(cmd, results, Math.Max(maxItems * 3, maxItems))
+                    End Using
+                End Using
+            Catch ex As Exception
+                KeepStoreLog.Error("articolo.aspx", "Errore LoadRecentlyViewedProducts query (id=" & _id.ToString() & ")", ex, HttpContext.Current)
+            End Try
+        End If
+
+        Dim deduped As New List(Of RelatedItem)()
+        AddUniqueRelatedItems(deduped, results, maxItems)
+
+        If deduped.Count = 0 AndAlso row IsNot Nothing Then
+            Dim currentItem As RelatedItem = BuildCurrentRelatedItem(row)
+            If currentItem IsNot Nothing Then deduped.Add(currentItem)
+        End If
+
+        Return deduped
+    End Function
+
+    Private Function GetMergedRecentlyViewedIds(maxCount As Integer) As List(Of Integer)
+        Dim result As New List(Of Integer)()
+        MergeRecentIdsDeep(result, Convert.ToString(Session("ks_recent_ids")), maxCount)
+        MergeRecentIdsDeep(result, Convert.ToString(Session("ks_recent_session")), maxCount)
+
+        Dim cookie As HttpCookie = Request.Cookies("ks_recent")
+        If cookie IsNot Nothing Then
+            MergeRecentIdsDeep(result, HttpUtility.UrlDecode(cookie.Value), maxCount)
+        End If
+
+        Dim sessionCookie As HttpCookie = Request.Cookies("ks_recent_session")
+        If sessionCookie IsNot Nothing Then
+            MergeRecentIdsDeep(result, HttpUtility.UrlDecode(sessionCookie.Value), maxCount)
+        End If
+
+        Return result
+    End Function
+
+    Private Sub MergeRecentIdsDeep(target As List(Of Integer), raw As String, maxCount As Integer)
+        If target Is Nothing OrElse String.IsNullOrWhiteSpace(raw) Then Exit Sub
+        Dim parts As String() = raw.Split(New Char() {","c}, StringSplitOptions.RemoveEmptyEntries)
+        For Each part As String In parts
+            If target.Count >= maxCount Then Exit For
+            Dim n As Integer
+            If Integer.TryParse(part.Trim(), n) AndAlso n > 0 AndAlso Not target.Contains(n) Then
+                target.Add(n)
+            End If
+        Next
     End Sub
 
     Private Function LoadBrandItems(row As DataRow, maxItems As Integer) As List(Of BrandItem)
@@ -1762,10 +2205,49 @@ Partial Class articolo
             Return Nothing
         End If
         Dim tmp As Decimal
-        If Decimal.TryParse(Convert.ToString(row(col)), tmp) Then
+        If TryParseKeepStoreDecimal(row(col), tmp) Then
             Return tmp
         End If
         Return Nothing
+    End Function
+
+    Private Function TryParseKeepStoreDecimal(value As Object, ByRef result As Decimal) As Boolean
+        result = 0D
+        If value Is Nothing OrElse value Is DBNull.Value Then Return False
+
+        Try
+            result = Convert.ToDecimal(value, ItCulture)
+            Return True
+        Catch
+        End Try
+
+        Dim s As String = Convert.ToString(value)
+        If String.IsNullOrWhiteSpace(s) Then Return False
+
+        s = s.Trim().Replace(ChrW(8364), String.Empty).Replace("EUR", String.Empty).Trim()
+
+        If Decimal.TryParse(s, NumberStyles.Any, ItCulture, result) Then Return True
+        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.CurrentCulture, result) Then Return True
+
+        Dim commaIndex As Integer = s.LastIndexOf(","c)
+        Dim dotIndex As Integer = s.LastIndexOf("."c)
+        Dim normalized As String = s
+        If commaIndex >= 0 AndAlso dotIndex >= 0 Then
+            If commaIndex > dotIndex Then
+                normalized = s.Replace(".", String.Empty).Replace(",", ".")
+            Else
+                normalized = s.Replace(",", String.Empty)
+            End If
+            If Decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, result) Then Return True
+        End If
+
+        If commaIndex >= 0 AndAlso dotIndex < 0 Then
+            normalized = s.Replace(",", ".")
+            If Decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, result) Then Return True
+        End If
+
+        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, result) Then Return True
+        Return False
     End Function
 
     Private Function GetSessionInt(key As String, defaultValue As Integer) As Integer

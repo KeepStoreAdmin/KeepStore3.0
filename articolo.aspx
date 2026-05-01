@@ -295,6 +295,7 @@
                                                     </label>
                                                 </div>
                                                 <div class="box-name">
+                                                    <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
                                                     <a href='<%# Eval("Url") %>' class="prd-name body-md-2 text-main link-secondary fw-semibold">
                                                         <%# If(Convert.ToBoolean(Eval("IsCurrent")), "Questo articolo: ", String.Empty) & Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 88)) %>
                                                     </a>
@@ -424,13 +425,44 @@
                                              alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
                                              data-src='<%# Eval("Img") %>'
                                              src='<%# Eval("Img") %>' />
+                                        <img class="lazyload img-hover"
+                                             alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
+                                             data-src='<%# Eval("ImgHover") %>'
+                                             src='<%# Eval("ImgHover") %>' />
                                     </a>
+                                    <ul class="list-product-btn">
+                                        <li>
+                                            <a href='<%# Eval("AddToCartUrl") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left" aria-label="Aggiungi al carrello">
+                                                <span class="icon icon-cart2"></span>
+                                                <span class="tooltip">Aggiungi al carrello</span>
+                                            </a>
+                                        </li>
+                                        <li class="d-none d-sm-block wishlist">
+                                            <a href='<%# Eval("WishlistUrl") %>' class="box-icon btn-icon-action hover-tooltip tooltip-left" aria-label="Aggiungi a wishlist">
+                                                <span class="icon icon-heart2"></span>
+                                                <span class="tooltip">Wishlist</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="#quickView" data-bs-toggle="modal" class="box-icon quickview btn-icon-action hover-tooltip tooltip-left js-ks-quickview" <%# Eval("QuickViewAttrs") %> aria-label="Vista rapida">
+                                                <span class="icon icon-view"></span>
+                                                <span class="tooltip">Vista rapida</span>
+                                            </a>
+                                        </li>
+                                        <li class="d-none d-sm-block">
+                                            <a href="#compare" data-bs-toggle="offcanvas" class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-compare" <%# Eval("CompareAttrs") %> aria-label="Confronta">
+                                                <span class="icon icon-compare1"></span>
+                                                <span class="tooltip">Confronta</span>
+                                            </a>
+                                        </li>
+                                    </ul>
 
                                     <%# If(Convert.ToBoolean(Eval("InOfferta")), "<div class='box-sale-wrap'><span class='sale-item'>Offerta</span></div>", String.Empty) %>
                                 </div>
 
                                 <div class="card-product-info">
                                     <div class="box-title">
+                                        <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
                                         <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# Eval("Url") %>'>
                                             <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 70)) %>
                                         </a>
@@ -484,13 +516,44 @@
                                              alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
                                              data-src='<%# Eval("Img") %>'
                                              src='<%# Eval("Img") %>' />
+                                        <img class="lazyload img-hover"
+                                             alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
+                                             data-src='<%# Eval("ImgHover") %>'
+                                             src='<%# Eval("ImgHover") %>' />
                                     </a>
+                                    <ul class="list-product-btn">
+                                        <li>
+                                            <a href='<%# Eval("AddToCartUrl") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left" aria-label="Aggiungi al carrello">
+                                                <span class="icon icon-cart2"></span>
+                                                <span class="tooltip">Aggiungi al carrello</span>
+                                            </a>
+                                        </li>
+                                        <li class="d-none d-sm-block wishlist">
+                                            <a href='<%# Eval("WishlistUrl") %>' class="box-icon btn-icon-action hover-tooltip tooltip-left" aria-label="Aggiungi a wishlist">
+                                                <span class="icon icon-heart2"></span>
+                                                <span class="tooltip">Wishlist</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="#quickView" data-bs-toggle="modal" class="box-icon quickview btn-icon-action hover-tooltip tooltip-left js-ks-quickview" <%# Eval("QuickViewAttrs") %> aria-label="Vista rapida">
+                                                <span class="icon icon-view"></span>
+                                                <span class="tooltip">Vista rapida</span>
+                                            </a>
+                                        </li>
+                                        <li class="d-none d-sm-block">
+                                            <a href="#compare" data-bs-toggle="offcanvas" class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-compare" <%# Eval("CompareAttrs") %> aria-label="Confronta">
+                                                <span class="icon icon-compare1"></span>
+                                                <span class="tooltip">Confronta</span>
+                                            </a>
+                                        </li>
+                                    </ul>
 
                                     <%# If(Convert.ToBoolean(Eval("InOfferta")), "<div class='box-sale-wrap'><span class='sale-item'>Offerta</span></div>", String.Empty) %>
                                 </div>
 
                                 <div class="card-product-info">
                                     <div class="box-title">
+                                        <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
                                         <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# Eval("Url") %>'>
                                             <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 70)) %>
                                         </a>
@@ -536,6 +599,145 @@
             </div>
         </div>
     </asp:PlaceHolder>
+
+    <asp:PlaceHolder ID="phRecentlyViewed" runat="server" Visible="false">
+        <section class="tf-sp-2 ks-product-relation-section ks-product-recent-section">
+            <div class="container">
+                <div class="flat-title">
+                    <h5 class="fw-semibold">Visti di recente</h5>
+                    <div class="box-btn-slide relative">
+                        <div class="swiper-button-prev nav-swiper nav-prev-products">
+                            <i class="icon-arrow-left-lg"></i>
+                        </div>
+                        <div class="swiper-button-next nav-swiper nav-next-products">
+                            <i class="icon-arrow-right-lg"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="swiper tf-sw-products ks-product-relation-swiper" data-preview="5" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="20" data-space="15" data-pagination="2" data-pagination-sm="3" data-pagination-md="4" data-pagination-lg="5">
+                    <div class="swiper-wrapper">
+                    <asp:Repeater ID="rptRecentlyViewed" runat="server">
+                        <ItemTemplate>
+                            <div class="swiper-slide">
+                            <div class="card-product style-img-border">
+                                <div class="card-product-wrapper">
+                                    <a class="product-img ks-product-card-image" href='<%# Eval("Url") %>'>
+                                        <img class="lazyload img-product"
+                                             alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
+                                             data-src='<%# Eval("Img") %>'
+                                             src='<%# Eval("Img") %>' />
+                                        <img class="lazyload img-hover"
+                                             alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
+                                             data-src='<%# Eval("ImgHover") %>'
+                                             src='<%# Eval("ImgHover") %>' />
+                                    </a>
+                                    <ul class="list-product-btn">
+                                        <li>
+                                            <a href='<%# Eval("AddToCartUrl") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left" aria-label="Aggiungi al carrello">
+                                                <span class="icon icon-cart2"></span>
+                                                <span class="tooltip">Aggiungi al carrello</span>
+                                            </a>
+                                        </li>
+                                        <li class="d-none d-sm-block wishlist">
+                                            <a href='<%# Eval("WishlistUrl") %>' class="box-icon btn-icon-action hover-tooltip tooltip-left" aria-label="Aggiungi a wishlist">
+                                                <span class="icon icon-heart2"></span>
+                                                <span class="tooltip">Wishlist</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="#quickView" data-bs-toggle="modal" class="box-icon quickview btn-icon-action hover-tooltip tooltip-left js-ks-quickview" <%# Eval("QuickViewAttrs") %> aria-label="Vista rapida">
+                                                <span class="icon icon-view"></span>
+                                                <span class="tooltip">Vista rapida</span>
+                                            </a>
+                                        </li>
+                                        <li class="d-none d-sm-block">
+                                            <a href="#compare" data-bs-toggle="offcanvas" class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-compare" <%# Eval("CompareAttrs") %> aria-label="Confronta">
+                                                <span class="icon icon-compare1"></span>
+                                                <span class="tooltip">Confronta</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+
+                                    <%# If(Convert.ToBoolean(Eval("InOfferta")), "<div class='box-sale-wrap'><span class='sale-item'>Offerta</span></div>", String.Empty) %>
+                                </div>
+
+                                <div class="card-product-info">
+                                    <div class="box-title">
+                                        <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
+                                        <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# Eval("Url") %>'>
+                                            <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 70)) %>
+                                        </a>
+
+                                        <div class="price-wrap fw-medium">
+                                            <%# Eval("PrezzoHtml") %>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            </div>
+                        </ItemTemplate>
+                    </asp:Repeater>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </asp:PlaceHolder>
+
+    <section class="tf-sp-2 pt-0 ks-product-iconbox-section">
+        <div class="container">
+            <div class="swiper tf-sw-iconbox" data-preview="5" data-tablet="3.5" data-mobile-sm="2.5" data-mobile="1" data-space-lg="20" data-space-md="20" data-space="15" data-pagination="1" data-pagination-sm="2" data-pagination-md="3" data-pagination-lg="4">
+                <div class="swiper-wrapper">
+                    <div class="swiper-slide">
+                        <div class="tf-icon-box">
+                            <div class="icon-box"><i class="icon icon-delivery"></i></div>
+                            <div class="content">
+                                <p class="body-text fw-semibold">Spedizione</p>
+                                <p class="body-text-3">Consegna e ritiro secondo disponibilita.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="tf-icon-box">
+                            <div class="icon-box"><i class="icon icon-check-2"></i></div>
+                            <div class="content">
+                                <p class="body-text fw-semibold">Supporto clienti</p>
+                                <p class="body-text-3">Assistenza prima e dopo l'acquisto.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="tf-icon-box">
+                            <div class="icon-box"><i class="icon icon-money-bag"></i></div>
+                            <div class="content">
+                                <p class="body-text fw-semibold">Pagamenti</p>
+                                <p class="body-text-3">Flusso ecommerce KeepStore sicuro.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="tf-icon-box">
+                            <div class="icon-box"><i class="icon icon-shield"></i></div>
+                            <div class="content">
+                                <p class="body-text fw-semibold">Affidabilita</p>
+                                <p class="body-text-3">Disponibilita e listini aggiornati.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="tf-icon-box">
+                            <div class="icon-box"><i class="icon icon-accept"></i></div>
+                            <div class="content">
+                                <p class="body-text fw-semibold">Garanzia</p>
+                                <p class="body-text-3">Prodotti gestiti dal flusso negozio.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sw-pagination-iconbox sw-dot-default justify-content-center"></div>
+            </div>
+        </div>
+    </section>
 
 </asp:Content>
 

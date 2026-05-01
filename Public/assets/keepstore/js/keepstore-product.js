@@ -265,6 +265,160 @@
     }
   }
 
+  function readActionItem(link) {
+    if (!link) return null;
+    return {
+      id: link.getAttribute('data-ks-id') || '',
+      title: link.getAttribute('data-ks-title') || '',
+      brand: link.getAttribute('data-ks-brand') || '',
+      category: link.getAttribute('data-ks-category') || '',
+      url: link.getAttribute('data-ks-url') || link.getAttribute('href') || '',
+      image: link.getAttribute('data-ks-img') || '',
+      price: link.getAttribute('data-ks-price') || '',
+      available: link.getAttribute('data-ks-available') || '',
+      cartUrl: link.getAttribute('data-ks-cart-url') || '',
+      description: link.getAttribute('data-ks-description') || ''
+    };
+  }
+
+  function setText(id, value) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = value || '';
+  }
+
+  function setHref(id, value) {
+    var el = document.getElementById(id);
+    if (el && value) el.setAttribute('href', value);
+  }
+
+  function setQuickViewImage(item) {
+    var img = document.getElementById('ksQuickViewMainImage');
+    if (!img || !item || !item.image) return;
+    img.setAttribute('src', item.image);
+    img.setAttribute('data-src', item.image);
+    img.setAttribute('alt', item.title || 'Prodotto');
+  }
+
+  function initQuickViewActions() {
+    document.addEventListener('click', function (ev) {
+      var link = ev.target && ev.target.closest ? ev.target.closest('.js-ks-quickview') : null;
+      if (!link) return;
+
+      var item = readActionItem(link);
+      if (!item) return;
+
+      setText('ksQuickViewMeta', item.category || item.brand || 'Prodotto');
+      var title = document.getElementById('ksQuickViewTitle');
+      if (title) {
+        title.textContent = item.title || 'Prodotto';
+        if (item.url) title.setAttribute('href', item.url);
+      }
+      setText('ksQuickViewSold', item.brand ? 'Marca: ' + item.brand : 'Scheda prodotto');
+      setText('ksQuickViewAvailable', item.available || '');
+      setText('ksQuickViewPrice', item.price || 'Prezzo su richiesta');
+      setText('ksQuickViewDescription', item.description || item.category || '');
+      setQuickViewImage(item);
+      setHref('ksQuickViewImageLink', item.url);
+      setHref('ksQuickViewOpenLink', item.url);
+      setHref('ksQuickViewCartLink', item.cartUrl || item.url);
+    }, true);
+  }
+
+  function compareList() {
+    try { return JSON.parse(localStorage.getItem('ks_compare_products') || '[]') || []; } catch (err) { return []; }
+  }
+
+  function saveCompare(list) {
+    try { localStorage.setItem('ks_compare_products', JSON.stringify((list || []).slice(0, 12))); } catch (err) {}
+    var count = document.getElementById('ksCompareCount');
+    if (count) count.textContent = String((list || []).length);
+  }
+
+  function renderCompareDrawer() {
+    var wrap = document.getElementById('ksCompareDrawerWrap');
+    if (!wrap) return;
+
+    var list = compareList();
+    var empty = document.querySelector('.mini-compare-empty');
+    wrap.innerHTML = list.map(function (item, idx) {
+      return '<div class="tf-compare-item" data-idx="' + idx + '">' +
+        '<a class="image" href="' + escapeHtml(item.url || '#') + '">' +
+        (item.image ? '<img src="' + escapeHtml(item.image) + '" alt="' + escapeHtml(item.title || '') + '">' : '') +
+        '</a>' +
+        '<div class="content">' +
+        '<a class="link text-secondary body-md-2 fw-semibold" href="' + escapeHtml(item.url || '#') + '">' + escapeHtml(item.title || '') + '</a>' +
+        '<p class="price-wrap fw-medium">' + escapeHtml(item.price || '') + '</p>' +
+        '</div>' +
+        '<button type="button" class="remove link" data-ks-remove-compare="' + idx + '"><i class="icon icon-close"></i></button>' +
+        '</div>';
+    }).join('');
+
+    if (empty) empty.style.display = list.length ? 'none' : '';
+    wrap.style.display = list.length ? '' : 'none';
+  }
+
+  function escapeHtml(value) {
+    return String(value || '').replace(/[&<>"']/g, function (ch) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+    });
+  }
+
+  function addCompareItem(item) {
+    if (!item || !item.id) return;
+    var list = compareList();
+    var exists = list.some(function (x) { return String(x.id) === String(item.id); });
+    if (!exists) {
+      list.unshift({
+        id: item.id,
+        title: item.title,
+        url: item.url,
+        image: item.image,
+        price: item.price
+      });
+    }
+    saveCompare(list);
+    renderCompareDrawer();
+  }
+
+  function initCompareActions() {
+    renderCompareDrawer();
+
+    document.addEventListener('click', function (ev) {
+      var compareLink = ev.target && ev.target.closest ? ev.target.closest('.js-ks-compare') : null;
+      if (compareLink) {
+        ev.preventDefault();
+        var item = readActionItem(compareLink);
+        addCompareItem(item);
+        var canvas = document.getElementById('compare');
+        if (canvas && window.bootstrap && bootstrap.Offcanvas) {
+          bootstrap.Offcanvas.getOrCreateInstance(canvas).show();
+        }
+        return;
+      }
+
+      var removeBtn = ev.target && ev.target.closest ? ev.target.closest('[data-ks-remove-compare]') : null;
+      if (removeBtn) {
+        ev.preventDefault();
+        var idx = parseInt(removeBtn.getAttribute('data-ks-remove-compare') || '-1', 10);
+        var list = compareList();
+        if (idx >= 0 && idx < list.length) {
+          list.splice(idx, 1);
+          saveCompare(list);
+          renderCompareDrawer();
+        }
+      }
+    }, true);
+
+    qsa('#ksCompareClearDrawer,.tf-compapre-button-clear-all').forEach(function (btn) {
+      if (btn.getAttribute('data-ks-compare-clear-bound') === '1') return;
+      btn.setAttribute('data-ks-compare-clear-bound', '1');
+      btn.addEventListener('click', function () {
+        saveCompare([]);
+        renderCompareDrawer();
+      }, true);
+    });
+  }
+
   function debounce(fn, wait) {
     var timer = null;
     return function () {
@@ -279,6 +433,8 @@
   domReady(function () {
     initQtyButtons();
     initRefurbBadge();
+    initQuickViewActions();
+    initCompareActions();
     initSwiperGallery();
     initPhotoSwipe();
 
