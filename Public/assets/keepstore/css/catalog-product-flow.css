@@ -74,6 +74,27 @@
   text-transform:none;
 }
 
+.ks-recently-viewed-block{
+  margin:0 0 28px;
+  padding:0 0 22px;
+  border-bottom:1px solid rgba(0,0,0,.08);
+}
+
+.ks-recently-viewed-block .flat-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+}
+
+.ks-recent-card .name-product{
+  min-height:2.8em;
+}
+
+.ks-recent-card .card-product-info{
+  padding-top:12px;
+}
+
 /* Product cards (catalog) */
 .ks-product-card{
   border:1px solid rgba(0,0,0,.08);

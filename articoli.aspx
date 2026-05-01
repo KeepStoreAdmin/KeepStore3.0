@@ -209,6 +209,26 @@
                         </div>
                     </div>
 
+                    <section id="ksRecentlyViewedBlock"
+                             class="ks-recently-viewed-block d-none"
+                             data-ks-limit="8"
+                             data-ks-placeholder="<%= ThemeManager.PlaceholderProductImageUrl() %>">
+                        <div class="flat-title mb-3">
+                            <h5 class="fw-semibold">Visti di recente</h5>
+                            <div class="box-btn-slide relative">
+                                <div class="swiper-button-prev nav-swiper nav-prev-products ks-rv-prev">
+                                    <i class="icon-arrow-left-lg"></i>
+                                </div>
+                                <div class="swiper-button-next nav-swiper nav-next-products ks-rv-next">
+                                    <i class="icon-arrow-right-lg"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="swiper tf-sw-products ks-recently-viewed-swiper">
+                            <div class="swiper-wrapper" data-ks-recent-items></div>
+                        </div>
+                    </section>
+
                     <div class="meta-filter-shop d-none">
                         <div id="product-count-grid" class="count-text"></div>
                         <div id="product-count-list" class="count-text"></div>
@@ -408,4 +428,5 @@
     <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>"></script>
     <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>"></script>
 </asp:Content>

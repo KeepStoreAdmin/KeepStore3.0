@@ -1295,6 +1295,7 @@ Partial Class articolo
 
         ' Immagini
         BindImages(row, nome)
+        EmitRecentlyViewedClientScript(row, price, categoryName, brandName, codice, availabilityText, currentTcid)
 
         ' Quantità
         txtQty.Text = "1"
@@ -1997,6 +1998,45 @@ Partial Class articolo
 
         Return "Verifica disponibilita"
     End Function
+
+    Private Sub EmitRecentlyViewedClientScript(row As DataRow,
+                                               price As PriceContext,
+                                               categoryName As String,
+                                               brandName As String,
+                                               codice As String,
+                                               availabilityText As String,
+                                               currentTcid As Integer)
+        Try
+            If row Is Nothing OrElse _id <= 0 Then
+                litRecentlyViewedScript.Text = String.Empty
+                Return
+            End If
+
+            Dim name As String = FirstNonEmpty(GetRowString(row, "Descrizione1"), GetRowString(row, "Nome"), "Prodotto")
+            Dim img As String = NormalizeImageUrl(GetRowString(row, "Img1"))
+            If String.IsNullOrWhiteSpace(img) Then img = ThemeManager.PlaceholderProductImageUrl()
+
+            Dim item As New Dictionary(Of String, Object)()
+            item("id") = _id.ToString()
+            item("tcid") = If(currentTcid > 0, currentTcid.ToString(), "")
+            item("name") = name
+            item("code") = codice
+            item("brand") = brandName
+            item("category") = categoryName
+            item("image") = img
+            item("price") = BuildPriceText(price.CurrentPrice)
+            item("availability") = availabilityText
+            item("url") = BuildProductUrl(_id, currentTcid, includeTcid:=(currentTcid > 0))
+            item("cartUrl") = BuildCartAddUrl(_id, currentTcid)
+            item("wishlistUrl") = BuildWishlistAddUrl(_id, currentTcid)
+
+            Dim js As New System.Web.Script.Serialization.JavaScriptSerializer()
+            litRecentlyViewedScript.Text = "<script>(function(){try{if(window.KeepStoreRecentlyViewed&&window.KeepStoreRecentlyViewed.add){window.KeepStoreRecentlyViewed.add(" & js.Serialize(item) & ");}}catch(e){}})();</script>"
+        Catch ex As Exception
+            litRecentlyViewedScript.Text = String.Empty
+            KeepStoreLog.Error("articolo.aspx", "Errore EmitRecentlyViewedClientScript (id=" & _id.ToString() & ")", ex, HttpContext.Current)
+        End Try
+    End Sub
 
     Private Sub BindBrandCarousel(row As DataRow)
         Try
