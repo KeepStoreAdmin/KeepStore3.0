@@ -1,4 +1,5 @@
 ﻿Imports MySql.Data.MySqlClient
+Imports System.Configuration
 Imports System.Data
 Imports System.Globalization
 Imports System.Text.RegularExpressions
@@ -85,9 +86,13 @@ End If
                 TryParseDouble(Request.QueryString("qty"), directQty)
                 If directQty <= 0 Then directQty = 1
 
+                Dim directProdottoGratis As Integer = 0
+                Integer.TryParse(Convert.ToString(Request.QueryString("pg")), directProdottoGratis)
+
                 Session("Carrello_ArticoloId") = directId.ToString(CultureInfo.InvariantCulture)
                 Session("Carrello_TCId") = directTc.ToString(CultureInfo.InvariantCulture)
                 Session("Carrello_Quantita") = directQty.ToString(CultureInfo.InvariantCulture)
+                Session("ProdottoGratis") = directProdottoGratis.ToString(CultureInfo.InvariantCulture)
                 Session("Carrello_Pagina") = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.PathAndQuery, "Default.aspx")
                 Session("Carrello_SelezioneMultipla") = Nothing
             End If
@@ -127,6 +132,7 @@ End If
         Me.Session("Carrello_Quantita") = Nothing
         Me.Session("Carrello_Pagina") = Nothing
         Me.Session("Carrello_SelezioneMultipla") = Nothing
+        Me.Session("ProdottoGratis") = Nothing
 
         ' 6) Facebook Pixel (solo se abbiamo effettivamente aggiunto qualcosa)
         If Not String.IsNullOrEmpty(articoliIdGlobali) Then
@@ -168,18 +174,20 @@ End Sub
         Dim couponPrezzoIvato As Double = 0
         TryParseDouble(Session("Coupon_PrezzoIvato"), couponPrezzoIvato)
 
-        InsertCartRow(loginId,
-                      Session.SessionID,
-                      Convert.ToString(Session("Coupon_idArticolo")),
-                      "-1",
-                      Convert.ToString(Session("Coupon_codArticolo")),
-                      Convert.ToString(Session("Coupon_DescrizioneArticolo")),
-                      couponQnt,
-                      1,
-                      couponPrezzo,
-                      couponPrezzoIvato,
-                      0,
-                      0)
+        Dim couponArticleId As Integer = 0
+        Integer.TryParse(Convert.ToString(Session("Coupon_idArticolo")), couponArticleId)
+        AddCartRowWithNewcarrello(loginId,
+                                  Session.SessionID,
+                                  couponArticleId,
+                                  -1,
+                                  Convert.ToString(Session("Coupon_codArticolo")),
+                                  Convert.ToString(Session("Coupon_DescrizioneArticolo")),
+                                  couponQnt,
+                                  1,
+                                  couponPrezzo,
+                                  couponPrezzoIvato,
+                                  0,
+                                  0)
 
         ' Set vari ordine
         Me.Session("Ordine_TipoDoc") = Session("IdDocumentoCoupon")
@@ -393,10 +401,10 @@ End Sub
                 Integer.TryParse(selezionamultipla_ID, addId)
                 Integer.TryParse(selezionamultipla_TCID, addTc)
 
-                Dim addResult As CartAddResult = CartAddService.AddProduct(HttpContext.Current, addId, addTc, quantitaRiga, _pgTmp, "aggiungi.aspx:multipla")
-                If Not addResult.Success Then
+                Dim cartRowId As Integer = AddCartRowWithNewcarrello(LoginId, SessionID, addId, addTc, Codice, Descrizione, quantitaRiga, NListino, Prezzo, PrezzoIvato, OfferteDettagliID, _pgTmp)
+                If cartRowId <= 0 OrElse Not VerifyCartRow(LoginId, SessionID, addId, addTc) Then
                     Try
-                        KeepStoreLog.Info("aggiungi.aspx", "Aggiunta multipla non riuscita id=" & selezionamultipla_ID & " tcid=" & selezionamultipla_TCID & " msg=" & Convert.ToString(addResult.Message), HttpContext.Current)
+                        KeepStoreLog.Info("aggiungi.aspx", "Aggiunta multipla non verificata id=" & selezionamultipla_ID & " tcid=" & selezionamultipla_TCID & " sessionId=" & SessionID, HttpContext.Current)
                     Catch
                     End Try
                     Continue For
@@ -494,10 +502,10 @@ End Sub
                 Integer.TryParse(ListaArticoli(i).ToString(), addId)
                 Integer.TryParse(tcidRiga, addTc)
 
-                Dim addResult As CartAddResult = CartAddService.AddProduct(HttpContext.Current, addId, addTc, quantitaRiga, prodottoGratis, "aggiungi.aspx:singolo")
-                If Not addResult.Success Then
+                Dim cartRowId As Integer = AddCartRowWithNewcarrello(LoginId, SessionID, addId, addTc, Codice, Descrizione, quantitaRiga, NListino, Prezzo, PrezzoIvato, OfferteDettagliID, prodottoGratis)
+                If cartRowId <= 0 OrElse Not VerifyCartRow(LoginId, SessionID, addId, addTc) Then
                     Try
-                        KeepStoreLog.Info("aggiungi.aspx", "Aggiunta singola non riuscita id=" & ListaArticoli(i).ToString() & " tcid=" & tcidRiga & " msg=" & Convert.ToString(addResult.Message), HttpContext.Current)
+                        KeepStoreLog.Info("aggiungi.aspx", "Aggiunta singola non verificata id=" & ListaArticoli(i).ToString() & " tcid=" & tcidRiga & " sessionId=" & SessionID, HttpContext.Current)
                     Catch
                     End Try
                     Continue For
@@ -554,53 +562,76 @@ End Sub
         Return Double.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, result)
     End Function
 
-    Private Function FormatDbNumber(ByVal value As Double) As String
-        Return value.ToString("0.############", CultureInfo.InvariantCulture)
-    End Function
-
-    Private Sub InsertCartRow(ByVal loginId As Integer,
-                              ByVal sessionId As String,
-                              ByVal articoloId As String,
-                              ByVal tcId As String,
-                              ByVal codice As String,
-                              ByVal descrizione As String,
-                              ByVal qnt As Double,
-                              ByVal nListino As Integer,
-                              ByVal prezzo As Double,
-                              ByVal prezzoIvato As Double,
-                              ByVal offerteDettaglioId As Integer,
-                              ByVal prodottoGratis As Integer)
-        Dim articoloIdInt As Integer = 0
-        Integer.TryParse(Convert.ToString(articoloId), articoloIdInt)
-        If articoloIdInt <= 0 Then Return
-
-        Dim tcIdInt As Integer = -1
-        Integer.TryParse(NormalizeTcidText(tcId), tcIdInt)
-        If tcIdInt <= 0 Then tcIdInt = -1
-
+    Private Function AddCartRowWithNewcarrello(ByVal loginId As Integer,
+                                               ByVal sessionId As String,
+                                               ByVal articoloId As Integer,
+                                               ByVal tcId As Integer,
+                                               ByVal codice As String,
+                                               ByVal descrizione As String,
+                                               ByVal qnt As Double,
+                                               ByVal nListino As Integer,
+                                               ByVal prezzo As Double,
+                                               ByVal prezzoIvato As Double,
+                                               ByVal offerteDettaglioId As Integer,
+                                               ByVal prodottoGratis As Integer) As Integer
+        If articoloId <= 0 Then Return 0
+        If tcId <= 0 Then tcId = -1
         If qnt <= 0 Then qnt = 1
+        If nListino <= 0 Then nListino = 1
         If String.IsNullOrEmpty(sessionId) AndAlso loginId <= 0 Then sessionId = Me.Session.SessionID
 
-        Dim sql As String = "INSERT INTO carrello " &
-                            "(LoginId, SessionId, ArticoliId, TCId, Codice, Descrizione1, Qnt, NListino, Prezzo, PrezzoIvato, OfferteDettaglioId, Prodotto_Gratis) " &
-                            "VALUES (@LoginId, @SessionId, @ArticoliId, @TCId, @Codice, @Descrizione1, @Qnt, @NListino, @Prezzo, @PrezzoIvato, @OfferteDettaglioId, @ProdottoGratis)"
+        Dim connectionSettings As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
+        If connectionSettings Is Nothing OrElse String.IsNullOrEmpty(connectionSettings.ConnectionString) Then Return 0
 
+        Using conn As New MySqlConnection(connectionSettings.ConnectionString)
+            conn.Open()
+            Using cmd As New MySqlCommand("Newcarrello", conn)
+                cmd.CommandType = CommandType.StoredProcedure
+                cmd.Parameters.Add("?parLoginId", MySqlDbType.Int32).Value = loginId
+                cmd.Parameters.Add("?parSessionId", MySqlDbType.VarChar, 50).Value = If(sessionId, String.Empty)
+                cmd.Parameters.Add("?parArticoliId", MySqlDbType.Int32).Value = articoloId
+                cmd.Parameters.Add("?parTCId", MySqlDbType.Int32).Value = tcId
+                cmd.Parameters.Add("?parCodice", MySqlDbType.VarChar, 50).Value = If(codice, String.Empty)
+                cmd.Parameters.Add("?parDescrizione1", MySqlDbType.VarChar, 255).Value = If(descrizione, String.Empty)
+                cmd.Parameters.Add("?parQnt", MySqlDbType.Double).Value = qnt
+                cmd.Parameters.Add("?parNListino", MySqlDbType.Int32).Value = nListino
+                cmd.Parameters.Add("?parPrezzo", MySqlDbType.Double).Value = prezzo
+                cmd.Parameters.Add("?parPrezzoIvato", MySqlDbType.Double).Value = prezzoIvato
+                cmd.Parameters.Add("?parOfferteDettaglioID", MySqlDbType.Int32).Value = offerteDettaglioId
+                cmd.Parameters.Add("?parProdottoGratis", MySqlDbType.Int32).Value = prodottoGratis
+                Dim ret = cmd.Parameters.Add("?parRetVal", MySqlDbType.Int32)
+                ret.Direction = ParameterDirection.Output
+
+                cmd.ExecuteNonQuery()
+
+                Dim insertedId As Integer = 0
+                Integer.TryParse(Convert.ToString(ret.Value), insertedId)
+                Return insertedId
+            End Using
+        End Using
+    End Function
+
+    Private Function VerifyCartRow(ByVal loginId As Integer, ByVal sessionId As String, ByVal articoloId As Integer, ByVal tcId As Integer) As Boolean
+        If articoloId <= 0 Then Return False
+        If tcId <= 0 Then tcId = -1
+        If String.IsNullOrEmpty(sessionId) AndAlso loginId <= 0 Then sessionId = Me.Session.SessionID
+
+        Dim wherePart As String
         Dim params As New Dictionary(Of String, String)
-        params.Add("@LoginId", loginId.ToString(CultureInfo.InvariantCulture))
-        params.Add("@SessionId", Convert.ToString(sessionId))
-        params.Add("@ArticoliId", articoloIdInt.ToString(CultureInfo.InvariantCulture))
-        params.Add("@TCId", tcIdInt.ToString(CultureInfo.InvariantCulture))
-        params.Add("@Codice", Convert.ToString(codice))
-        params.Add("@Descrizione1", Convert.ToString(descrizione))
-        params.Add("@Qnt", FormatDbNumber(qnt))
-        params.Add("@NListino", nListino.ToString(CultureInfo.InvariantCulture))
-        params.Add("@Prezzo", FormatDbNumber(prezzo))
-        params.Add("@PrezzoIvato", FormatDbNumber(prezzoIvato))
-        params.Add("@OfferteDettaglioId", offerteDettaglioId.ToString(CultureInfo.InvariantCulture))
-        params.Add("@ProdottoGratis", prodottoGratis.ToString(CultureInfo.InvariantCulture))
+        params.Add("@ArticoliId", articoloId.ToString(CultureInfo.InvariantCulture))
+        params.Add("@TCId", tcId.ToString(CultureInfo.InvariantCulture))
 
-        ExecuteNonQuery(False, sql, params)
-    End Sub
+        If loginId > 0 Then
+            wherePart = "where LoginId=@LoginId and ArticoliId=@ArticoliId and TCId=@TCId and Qnt>0"
+            params.Add("@LoginId", loginId.ToString(CultureInfo.InvariantCulture))
+        Else
+            wherePart = "where SessionId=@SessionId and ArticoliId=@ArticoliId and TCId=@TCId and Qnt>0"
+            params.Add("@SessionId", Convert.ToString(sessionId))
+        End If
+
+        Dim rows = ExecuteQueryGetDataReader("id", "carrello", wherePart & " ORDER BY id DESC LIMIT 1", params)
+        Return rows.Count > 0
+    End Function
 
     ' =======================================
     '  FACEBOOK PIXEL (AddToCart)

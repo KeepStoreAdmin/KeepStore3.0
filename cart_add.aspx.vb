@@ -29,21 +29,22 @@ Partial Class cart_add
         Dim freeShipping As Integer = 0
         Integer.TryParse(Convert.ToString(Request.QueryString("pg")), freeShipping)
 
-        Dim result As CartAddResult = CartAddService.AddProduct(HttpContext.Current,
-                                                                articleId,
-                                                                tcId,
-                                                                Convert.ToDouble(qty),
-                                                                freeShipping,
-                                                                "cart_add.aspx")
+        ' Endpoint quick-add: normalizza i parametri e rientra nel flusso storico
+        ' di aggiungi.aspx, che gestisce listino, offerte, merge quantità e Newcarrello.
+        Session("Carrello_ArticoloId") = articleId.ToString(CultureInfo.InvariantCulture)
+        Session("Carrello_TCId") = tcId.ToString(CultureInfo.InvariantCulture)
+        Session("Carrello_Quantita") = qty.ToString(CultureInfo.InvariantCulture)
+        Session("ProdottoGratis") = freeShipping.ToString(CultureInfo.InvariantCulture)
+        Session("Carrello_Pagina") = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.PathAndQuery, "Default.aspx")
 
-        If Not result.Success Then
-            Try
-                KeepStoreLog.Info("cart_add.aspx", "Aggiunta carrello non riuscita id=" & articleId.ToString(CultureInfo.InvariantCulture) & " tcid=" & tcId.ToString(CultureInfo.InvariantCulture) & " msg=" & Convert.ToString(result.Message), HttpContext.Current)
-            Catch
-            End Try
+        Dim redirectUrl As String = "aggiungi.aspx?id=" & articleId.ToString(CultureInfo.InvariantCulture) &
+                                    "&TCid=" & tcId.ToString(CultureInfo.InvariantCulture) &
+                                    "&qty=" & qty.ToString(CultureInfo.InvariantCulture)
+        If freeShipping <> 0 Then
+            redirectUrl &= "&pg=" & freeShipping.ToString(CultureInfo.InvariantCulture)
         End If
 
-        Response.Redirect("carrello.aspx", False)
+        Response.Redirect(redirectUrl, False)
         Context.ApplicationInstance.CompleteRequest()
     End Sub
 End Class
