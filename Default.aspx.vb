@@ -214,11 +214,7 @@ Partial Public Class _Default
             Return "none"
         End If
 
-        If sideBannerCount >= 2 Then
-            Return "full"
-        End If
-
-        Return "compact-single"
+        Return "full"
     End Function
 
     Private Sub ApplyHeroMode(ByVal heroMode As String)
@@ -241,7 +237,7 @@ Partial Public Class _Default
         End If
 
         If HomeHeroSection IsNot Nothing Then
-            HomeHeroSection.Attributes("class") = "tf-sp-5 ks-home-hero-section ks-home-hero-mode-" & normalizedMode
+            HomeHeroSection.Attributes("class") = "tf-sp-5 ks-home-layout-section ks-home-hero-section ks-home-hero-mode-" & normalizedMode
             HomeHeroSection.Attributes("data-ks-hero-mode") = normalizedMode
         End If
     End Sub

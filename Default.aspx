@@ -8,9 +8,9 @@
 
 <asp:Content ID="cntMain" ContentPlaceHolderID="MainContent" runat="server">
 
-    <section id="HomeHeroSection" runat="server" class="tf-sp-5 ks-home-layout-section ks-home-hero-section ks-home-hero-mode-compact-single">
+    <section id="HomeHeroSection" runat="server" class="tf-sp-5 ks-home-layout-section ks-home-hero-section ks-home-hero-mode-full">
         <div class="container">
-            <div id="HomeHeroShell" runat="server" class="s-banner-wrapper ks-home-hero-shell ks-home-hero-mode-compact-single">
+            <div id="HomeHeroShell" runat="server" class="s-banner-wrapper ks-home-hero-shell ks-home-hero-mode-full ks-home-hero-shell--with-side">
                 <div class="wrap-item-1 d-none d-lg-block">
                     <uc:HomeDepartmentsMenu ID="HomeDepartmentsMenu1" runat="server" />
                 </div>
@@ -56,6 +56,14 @@
                                 <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx") %>' class="img-box img-style d-block" aria-label='<%# SafeText(Eval("Title")) %>'>
                                     <img width="540" height="398" class="lazyload" src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' data-src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' alt='<%# SafeText(Eval("Title")) %>' />
                                 </a>
+                                <div class="content">
+                                    <span class="box-sale-wrap"><span class="small-text"><%# SafeText(Eval("Badge")) %></span></span>
+                                    <div class="box-title">
+                                        <p class="caption text-white"><%# SafeText(Eval("Description")) %></p>
+                                        <h6 class="text-white"><%# SafeText(Eval("Title")) %></h6>
+                                    </div>
+                                    <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx") %>' class="tf-btn btn-line-white"><span>Scopri ora</span></a>
+                                </div>
                             </div>
                         </ItemTemplate>
                     </asp:Repeater>
