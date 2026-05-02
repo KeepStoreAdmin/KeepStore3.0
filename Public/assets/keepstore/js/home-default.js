@@ -110,8 +110,8 @@
 
   function initDepartmentsMenu() {
     var root = qs('.ks-home-departments');
-    if (!root || root.getAttribute('data-ks-final-menu-bound') === '1') return;
-    root.setAttribute('data-ks-final-menu-bound', '1');
+    if (!root || root.getAttribute('data-ks-home-menu-bound') === '1') return;
+    root.setAttribute('data-ks-home-menu-bound', '1');
 
     function isDesktop() {
       return !window.matchMedia || window.matchMedia('(min-width: 1200px)').matches;
@@ -316,7 +316,7 @@
   function initHome() {
     if (!isHome()) return;
     if (document.body) {
-      document.body.classList.add('ks-home-onsus-final');
+      document.body.classList.add('ks-home-layout');
     }
     initHomeSwipers();
     initDepartmentsMenu();

@@ -41,8 +41,8 @@ Partial Public Class _Default
                     body.Attributes("class") = (current & " ks-home-server-rendered").Trim()
                     current = Convert.ToString(body.Attributes("class"))
                 End If
-                If current.IndexOf("ks-home-onsus-final", StringComparison.OrdinalIgnoreCase) < 0 Then
-                    body.Attributes("class") = (current & " ks-home-onsus-final").Trim()
+                If current.IndexOf("ks-home-layout", StringComparison.OrdinalIgnoreCase) < 0 Then
+                    body.Attributes("class") = (current & " ks-home-layout").Trim()
                 End If
             End If
         Catch
@@ -143,7 +143,7 @@ Partial Public Class _Default
         End If
 
         If HomeWidePromoSection IsNot Nothing Then HomeWidePromoSection.Visible = True
-        If HomeCollectionSection IsNot Nothing Then HomeCollectionSection.Visible = False
+        If HomeCollectionSection IsNot Nothing Then HomeCollectionSection.Visible = True
         If HomeBottomPromoSection IsNot Nothing Then HomeBottomPromoSection.Visible = True
 
         Dim featureTabRows As DataTable = TakeDistinctRows(7, usedBusinessKeys, offerPool, dealPool, fallbackCatalogPool)
@@ -153,7 +153,7 @@ Partial Public Class _Default
         BindThreeColumnZone(topRateRows, rptToprateLeft, rptToprateCenter, rptToprateRight)
         BindThreeColumnZone(onSaleRows, rptOnSaleLeft, rptOnSaleCenter, rptOnSaleRight)
         If HomeLegacyEditorialSection IsNot Nothing Then
-            HomeLegacyEditorialSection.Visible = False
+            HomeLegacyEditorialSection.Visible = Not (IsTableEmpty(featureTabRows) AndAlso IsTableEmpty(topRateRows) AndAlso IsTableEmpty(onSaleRows))
         End If
 
         Dim bestRows As DataTable = TakeDistinctRows(12, usedBusinessKeys, bestSellerPool, currentYearSellingPool, topSellingPool, topRatedPool, fallbackCatalogPool)
@@ -170,12 +170,16 @@ Partial Public Class _Default
             HomeRecentlyViewedSection.Visible = True
         End If
 
-        BindLowerBlock(Top20Block, rptTop20Slides, TakeDistinctRows(10, usedBusinessKeys, currentYearSellingPool, topSellingPool, topRatedPool, fallbackCatalogPool), 1, Nothing, Nothing)
-        BindLowerBlock(LowerFeaturedBlock, rptFeaturedProductsSlides, TakeDistinctRows(10, usedBusinessKeys, featuredPool, newArrivalsPool, fallbackCatalogPool), 1, Nothing, Nothing)
-        BindLowerBlock(TopSellingBlock, rptTopSellingProductSlides, TakeDistinctRows(10, usedBusinessKeys, currentYearSellingPool, topSellingPool, fallbackCatalogPool), 1, Nothing, Nothing)
-        BindLowerBlock(OnSaleBlock, rptOnSaleProductSlides, TakeDistinctRows(10, usedBusinessKeys, offerPool, dealPool, fallbackCatalogPool), 1, Nothing, Nothing)
+        Dim top20Rows As DataTable = TakeDistinctRows(10, usedBusinessKeys, currentYearSellingPool, topSellingPool, topRatedPool, fallbackCatalogPool)
+        Dim featuredSlideRows As DataTable = TakeDistinctRows(10, usedBusinessKeys, featuredPool, newArrivalsPool, fallbackCatalogPool)
+        Dim topSellingSlideRows As DataTable = TakeDistinctRows(10, usedBusinessKeys, currentYearSellingPool, topSellingPool, fallbackCatalogPool)
+        Dim onSaleSlideRows As DataTable = TakeDistinctRows(10, usedBusinessKeys, offerPool, dealPool, fallbackCatalogPool)
+        BindLowerBlock(Top20Block, rptTop20Slides, top20Rows, 1, Nothing, Nothing)
+        BindLowerBlock(LowerFeaturedBlock, rptFeaturedProductsSlides, featuredSlideRows, 1, Nothing, Nothing)
+        BindLowerBlock(TopSellingBlock, rptTopSellingProductSlides, topSellingSlideRows, 1, Nothing, Nothing)
+        BindLowerBlock(OnSaleBlock, rptOnSaleProductSlides, onSaleSlideRows, 1, Nothing, Nothing)
         If HomeLowerColumnsSection IsNot Nothing Then
-            HomeLowerColumnsSection.Visible = False
+            HomeLowerColumnsSection.Visible = (Not IsTableEmpty(top20Rows)) OrElse (Not IsTableEmpty(featuredSlideRows)) OrElse (Not IsTableEmpty(topSellingSlideRows)) OrElse (Not IsTableEmpty(onSaleSlideRows))
         End If
 
         Dim brandRows As DataTable = FilterBrandRows(GetBrands(24), 12)

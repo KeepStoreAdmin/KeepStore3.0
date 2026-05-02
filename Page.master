@@ -34,7 +34,6 @@
     <asp:PlaceHolder ID="phHeadDynamic" runat="server" />
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/home-onsus-final.css") %>" />
 </head>
 
 <body id="PageBody" runat="server">
