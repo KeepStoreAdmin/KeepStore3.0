@@ -364,6 +364,11 @@
                 E' stata impostata una quantità articolo minore o uguale a 0.<br />Eliminare l'articolo dal carrello o impostare una quantità maggiore di 0.
             </div>
 
+            <asp:Panel ID="pnlLoginRequired" runat="server" CssClass="ks-alert ks-alert-warning" Visible="false">
+                Devi effettuare il login per inviare l'ordine. Puoi continuare a navigare e aggiungere prodotti al carrello; quando sei pronto
+                <a href="login.aspx?ReturnUrl=carrello.aspx">accedi o registrati</a> per completare l'acquisto.
+            </asp:Panel>
+
             <!-- Buono Sconto (dati) -->
             <asp:SqlDataSource ID="SqlDataBuonoSconto" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                 EnableViewState="False" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"

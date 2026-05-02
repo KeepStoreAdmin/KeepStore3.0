@@ -393,6 +393,9 @@ Private Const SessLoginId_B As String = "LOGINID"
 
     ' Nascondo i pannelli dei dati anagrafici quando non sono loggato
     Dim isLogged As Boolean = (loginId > 0)
+    If pnlLoginRequired IsNot Nothing Then
+        pnlLoginRequired.Visible = (Not isLogged AndAlso String.Equals(Request.QueryString("loginrequired"), "1", StringComparison.OrdinalIgnoreCase))
+    End If
 
     Me.pnlFatturazione.Visible = isLogged
     Me.PnlSpedizione.Visible = isLogged
@@ -2126,6 +2129,19 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
     End Sub
 
     Protected Sub btCompleta_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btCompleta.Click
+        If GetLoginIdSafe(0) <= 0 Then
+            ConfigureCartDataSources()
+            If pnlLoginRequired IsNot Nothing Then pnlLoginRequired.Visible = True
+            Me.tOrdine.Visible = False
+            Me.TableConteggi.Visible = False
+            Me.btCompleta.Visible = True
+            Me.btAggiorna.Enabled = True
+            Me.btContinua.Enabled = True
+            Me.btSvuota.Enabled = True
+            Session.Item("StavonelCarrello") = 1
+            Return
+        End If
+
         'Aggiorno i prodotti e il prezzo
         Aggiorna_Prezzi_Carrello()
 
