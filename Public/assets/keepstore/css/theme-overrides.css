@@ -6257,3 +6257,231 @@ body.ks-page-home.ks-home-layout .ks-home-bottom-promo-grid{
     top:8px !important;
   }
 }
+
+/* KeepStore home layout correction */
+body.ks-page-home.ks-home-layout{
+  --ks-home-shell-width:1440px;
+  --ks-home-hero-height:420px;
+}
+body.ks-page-home.ks-home-layout #HomeHeroSection>.container,
+body.ks-page-home.ks-home-layout .ks-home-benefits-section>.container,
+body.ks-page-home.ks-home-layout #HomeMainCategoriesSection>.container,
+body.ks-page-home.ks-home-layout #KsLocalAiSearch130>.container,
+body.ks-page-home.ks-home-layout #HomeFeaturedProductsSection>.container,
+body.ks-page-home.ks-home-layout #HomeOffersSection>.container,
+body.ks-page-home.ks-home-layout #HomeLegacyBestSection>.container,
+body.ks-page-home.ks-home-layout #HomeRecentlyViewedSection>.container,
+body.ks-page-home.ks-home-layout #HomeWidePromoSection>.container,
+body.ks-page-home.ks-home-layout #HomeBottomPromoSection>.container,
+body.ks-page-home.ks-home-layout #HomeServicesSection>.container,
+body.ks-page-home.ks-home-layout #HomeTrustSection>.container,
+body.ks-page-home.ks-home-layout #HomeBrandsSection>.container{
+  max-width:var(--ks-home-shell-width) !important;
+}
+body.ks-page-home.ks-home-layout #HomeHeroSection{
+  padding-top:26px !important;
+  padding-bottom:14px !important;
+}
+body.ks-page-home.ks-home-layout #HomeHeroShell{
+  grid-template-columns:270px minmax(0,1fr) 290px !important;
+  gap:18px !important;
+  min-height:var(--ks-home-hero-height) !important;
+}
+body.ks-page-home.ks-home-layout #HomeHeroShell>.wrap-item-1,
+body.ks-page-home.ks-home-layout #HomeHeroShell>.wrap-item-2,
+body.ks-page-home.ks-home-layout #HomeHeroShell>.wrap-item-3{
+  min-height:var(--ks-home-hero-height) !important;
+}
+body.ks-page-home.ks-home-layout #HeroSliderWrap,
+body.ks-page-home.ks-home-layout .ks-home-hero-slider,
+body.ks-page-home.ks-home-layout .ks-home-hero-slider .swiper-wrapper,
+body.ks-page-home.ks-home-layout .ks-home-hero-slider .swiper-slide,
+body.ks-page-home.ks-home-layout .ks-home-hero-banner,
+body.ks-page-home.ks-home-layout .ks-home-hero-media,
+body.ks-page-home.ks-home-layout .ks-home-hero-media img{
+  height:var(--ks-home-hero-height) !important;
+  min-height:var(--ks-home-hero-height) !important;
+  max-height:var(--ks-home-hero-height) !important;
+}
+body.ks-page-home.ks-home-layout .ks-home-departments{
+  min-height:var(--ks-home-hero-height) !important;
+  height:var(--ks-home-hero-height) !important;
+}
+body.ks-page-home.ks-home-layout .ks-home-departments .menu-category-list{
+  max-height:364px !important;
+}
+body.ks-page-home.ks-home-layout .ks-home-departments .item-link{
+  min-height:44px !important;
+  font-size:13px !important;
+}
+body.ks-page-home.ks-home-layout .ks-home-side-banners{
+  grid-template-rows:1fr 1fr !important;
+  min-height:var(--ks-home-hero-height) !important;
+}
+body.ks-page-home.ks-home-layout .ks-home-side-banner{
+  height:201px !important;
+  min-height:201px !important;
+}
+body.ks-page-home.ks-home-layout .ks-home-benefits-section{
+  padding-top:2px !important;
+  padding-bottom:30px !important;
+}
+body.ks-page-home.ks-home-layout .ks-home-benefits-section .tf-icon-box{
+  min-height:96px !important;
+  padding:20px 22px !important;
+}
+body.ks-page-home.ks-home-layout .ks-home-benefits-section .tf-icon-box .title,
+body.ks-page-home.ks-home-layout .ks-home-benefits-section .tf-icon-box h6{
+  font-size:15px !important;
+}
+body.ks-page-home.ks-home-layout .tf-sp-2{
+  padding-top:34px !important;
+  padding-bottom:34px !important;
+}
+body.ks-page-home.ks-home-layout .flat-title{
+  margin-bottom:20px !important;
+}
+body.ks-page-home.ks-home-layout .flat-title h5,
+body.ks-page-home.ks-home-layout .flat-title .main-title{
+  font-size:22px !important;
+  line-height:1.2 !important;
+}
+body.ks-page-home.ks-home-layout .ks-home-product-grid{
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:30px 22px !important;
+}
+body.ks-page-home.ks-home-layout .ks-home-deal-section .tf-sw-products:not(.swiper-initialized) .swiper-wrapper,
+body.ks-page-home.ks-home-layout .ks-home-best-section .tf-sw-products:not(.swiper-initialized) .swiper-wrapper,
+body.ks-page-home.ks-home-layout #HomeRecentlyViewedSection .tf-sw-products:not(.swiper-initialized) .swiper-wrapper{
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:24px !important;
+}
+body.ks-page-home.ks-home-layout .ks-home-deal-section .swiper-slide,
+body.ks-page-home.ks-home-layout .ks-home-best-section .swiper-slide,
+body.ks-page-home.ks-home-layout #HomeRecentlyViewedSection .swiper-slide{
+  height:auto !important;
+}
+body.ks-page-home.ks-home-layout .card-product,
+body.ks-page-home.ks-home-layout .ks-grid-card,
+body.ks-page-home.ks-home-layout .ks-deal-card{
+  min-height:360px !important;
+}
+body.ks-page-home.ks-home-layout .card-product-wrapper{
+  aspect-ratio:1 / .88 !important;
+}
+body.ks-page-home.ks-home-layout .ks-deal-card .card-product-wrapper{
+  aspect-ratio:1 / .82 !important;
+}
+body.ks-page-home.ks-home-layout .card-product img,
+body.ks-page-home.ks-home-layout .ks-grid-card img,
+body.ks-page-home.ks-home-layout .ks-deal-card img{
+  padding:14px !important;
+}
+body.ks-page-home.ks-home-layout .card-product-info{
+  padding-top:14px !important;
+}
+body.ks-page-home.ks-home-layout .card-product .caption{
+  font-size:12px !important;
+  margin-bottom:7px !important;
+}
+body.ks-page-home.ks-home-layout .card-product .name-product{
+  min-height:46px !important;
+  font-size:14px !important;
+  line-height:1.32 !important;
+  margin-bottom:10px !important;
+}
+body.ks-page-home.ks-home-layout .card-product .new-price{
+  font-size:17px !important;
+}
+body.ks-page-home.ks-home-layout .card-product .old-price{
+  font-size:13px !important;
+}
+body.ks-page-home.ks-home-layout .card-product .box-icon{
+  width:38px !important;
+  height:38px !important;
+}
+body.ks-page-home.ks-home-layout #HomeLegacyEditorialSection,
+body.ks-page-home.ks-home-layout #HomeLowerColumnsSection{
+  display:none !important;
+}
+body.ks-page-home.ks-home-layout #HomeWidePromoSection .ks-home-wide-promo-inner,
+body.ks-page-home.ks-home-layout #HomeBottomPromoSection .ks-home-bottom-promo-grid{
+  gap:18px !important;
+}
+body.ks-page-home.ks-home-layout .ks-home-wide-promo-inner,
+body.ks-page-home.ks-home-layout .ks-home-bottom-promo-card{
+  border-radius:8px !important;
+}
+@media (max-width:1399.98px){
+  body.ks-page-home.ks-home-layout{
+    --ks-home-shell-width:1320px;
+  }
+  body.ks-page-home.ks-home-layout #HomeHeroShell{
+    grid-template-columns:250px minmax(0,1fr) 250px !important;
+  }
+}
+@media (max-width:1199.98px){
+  body.ks-page-home.ks-home-layout{
+    --ks-home-hero-height:380px;
+  }
+  body.ks-page-home.ks-home-layout #HomeHeroShell{
+    grid-template-columns:minmax(0,1fr) 260px !important;
+  }
+  body.ks-page-home.ks-home-layout .ks-home-product-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+}
+@media (max-width:991.98px){
+  body.ks-page-home.ks-home-layout{
+    --ks-home-hero-height:360px;
+  }
+  body.ks-page-home.ks-home-layout #HomeHeroShell{
+    grid-template-columns:1fr !important;
+  }
+  body.ks-page-home.ks-home-layout #HomeHeroShell>.wrap-item-3,
+  body.ks-page-home.ks-home-layout .ks-home-side-banners{
+    grid-template-columns:1fr 1fr !important;
+  }
+  body.ks-page-home.ks-home-layout .ks-home-side-banner{
+    height:180px !important;
+    min-height:180px !important;
+  }
+  body.ks-page-home.ks-home-layout .ks-home-product-grid,
+  body.ks-page-home.ks-home-layout .ks-home-deal-section .tf-sw-products:not(.swiper-initialized) .swiper-wrapper,
+  body.ks-page-home.ks-home-layout .ks-home-best-section .tf-sw-products:not(.swiper-initialized) .swiper-wrapper,
+  body.ks-page-home.ks-home-layout #HomeRecentlyViewedSection .tf-sw-products:not(.swiper-initialized) .swiper-wrapper{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+}
+@media (max-width:575.98px){
+  body.ks-page-home.ks-home-layout{
+    --ks-home-hero-height:330px;
+  }
+  body.ks-page-home.ks-home-layout #HomeHeroSection>.container,
+  body.ks-page-home.ks-home-layout .ks-home-benefits-section>.container,
+  body.ks-page-home.ks-home-layout #HomeMainCategoriesSection>.container,
+  body.ks-page-home.ks-home-layout #HomeFeaturedProductsSection>.container,
+  body.ks-page-home.ks-home-layout #HomeOffersSection>.container,
+  body.ks-page-home.ks-home-layout #HomeLegacyBestSection>.container,
+  body.ks-page-home.ks-home-layout #HomeRecentlyViewedSection>.container,
+  body.ks-page-home.ks-home-layout #HomeBrandsSection>.container{
+    padding-left:14px !important;
+    padding-right:14px !important;
+  }
+  body.ks-page-home.ks-home-layout #HomeHeroShell>.wrap-item-3,
+  body.ks-page-home.ks-home-layout .ks-home-side-banners{
+    grid-template-columns:1fr !important;
+  }
+  body.ks-page-home.ks-home-layout .card-product,
+  body.ks-page-home.ks-home-layout .ks-grid-card,
+  body.ks-page-home.ks-home-layout .ks-deal-card{
+    min-height:310px !important;
+  }
+  body.ks-page-home.ks-home-layout .card-product .name-product{
+    min-height:42px !important;
+    font-size:12px !important;
+  }
+  body.ks-page-home.ks-home-layout .card-product .new-price{
+    font-size:15px !important;
+  }
+}

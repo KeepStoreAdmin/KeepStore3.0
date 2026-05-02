@@ -146,14 +146,8 @@ Partial Public Class _Default
         If HomeCollectionSection IsNot Nothing Then HomeCollectionSection.Visible = True
         If HomeBottomPromoSection IsNot Nothing Then HomeBottomPromoSection.Visible = True
 
-        Dim featureTabRows As DataTable = TakeDistinctRows(7, usedBusinessKeys, offerPool, dealPool, fallbackCatalogPool)
-        Dim topRateRows As DataTable = TakeDistinctRows(7, usedBusinessKeys, topRatedPool, featuredPool, fallbackCatalogPool)
-        Dim onSaleRows As DataTable = TakeDistinctRows(7, usedBusinessKeys, newArrivalsPool, fallbackCatalogPool)
-        BindThreeColumnZone(featureTabRows, rptFeatureLeft, rptFeatureCenter, rptFeatureRight)
-        BindThreeColumnZone(topRateRows, rptToprateLeft, rptToprateCenter, rptToprateRight)
-        BindThreeColumnZone(onSaleRows, rptOnSaleLeft, rptOnSaleCenter, rptOnSaleRight)
         If HomeLegacyEditorialSection IsNot Nothing Then
-            HomeLegacyEditorialSection.Visible = Not (IsTableEmpty(featureTabRows) AndAlso IsTableEmpty(topRateRows) AndAlso IsTableEmpty(onSaleRows))
+            HomeLegacyEditorialSection.Visible = False
         End If
 
         Dim bestRows As DataTable = TakeDistinctRows(12, usedBusinessKeys, bestSellerPool, currentYearSellingPool, topSellingPool, topRatedPool, fallbackCatalogPool)
@@ -170,16 +164,8 @@ Partial Public Class _Default
             HomeRecentlyViewedSection.Visible = True
         End If
 
-        Dim top20Rows As DataTable = TakeDistinctRows(10, usedBusinessKeys, currentYearSellingPool, topSellingPool, topRatedPool, fallbackCatalogPool)
-        Dim featuredSlideRows As DataTable = TakeDistinctRows(10, usedBusinessKeys, featuredPool, newArrivalsPool, fallbackCatalogPool)
-        Dim topSellingSlideRows As DataTable = TakeDistinctRows(10, usedBusinessKeys, currentYearSellingPool, topSellingPool, fallbackCatalogPool)
-        Dim onSaleSlideRows As DataTable = TakeDistinctRows(10, usedBusinessKeys, offerPool, dealPool, fallbackCatalogPool)
-        BindLowerBlock(Top20Block, rptTop20Slides, top20Rows, 1, Nothing, Nothing)
-        BindLowerBlock(LowerFeaturedBlock, rptFeaturedProductsSlides, featuredSlideRows, 1, Nothing, Nothing)
-        BindLowerBlock(TopSellingBlock, rptTopSellingProductSlides, topSellingSlideRows, 1, Nothing, Nothing)
-        BindLowerBlock(OnSaleBlock, rptOnSaleProductSlides, onSaleSlideRows, 1, Nothing, Nothing)
         If HomeLowerColumnsSection IsNot Nothing Then
-            HomeLowerColumnsSection.Visible = (Not IsTableEmpty(top20Rows)) OrElse (Not IsTableEmpty(featuredSlideRows)) OrElse (Not IsTableEmpty(topSellingSlideRows)) OrElse (Not IsTableEmpty(onSaleSlideRows))
+            HomeLowerColumnsSection.Visible = False
         End If
 
         Dim brandRows As DataTable = FilterBrandRows(GetBrands(24), 12)
