@@ -41,16 +41,8 @@ Partial Public Class _Default
                     body.Attributes("class") = (current & " ks-home-server-rendered").Trim()
                     current = Convert.ToString(body.Attributes("class"))
                 End If
-                If current.IndexOf("ks-home-onsus-pass-130", StringComparison.OrdinalIgnoreCase) < 0 Then
-                    body.Attributes("class") = (current & " ks-home-onsus-pass-130").Trim()
-                    current = Convert.ToString(body.Attributes("class"))
-                End If
-                If current.IndexOf("ks-home-onsus-index-step139", StringComparison.OrdinalIgnoreCase) < 0 Then
-                    body.Attributes("class") = (current & " ks-home-onsus-index-step139").Trim()
-                    current = Convert.ToString(body.Attributes("class"))
-                End If
-                If current.IndexOf("ks-home-onsus-index-step140", StringComparison.OrdinalIgnoreCase) < 0 Then
-                    body.Attributes("class") = (current & " ks-home-onsus-index-step140").Trim()
+                If current.IndexOf("ks-home-onsus-final", StringComparison.OrdinalIgnoreCase) < 0 Then
+                    body.Attributes("class") = (current & " ks-home-onsus-final").Trim()
                 End If
             End If
         Catch
@@ -151,7 +143,7 @@ Partial Public Class _Default
         End If
 
         If HomeWidePromoSection IsNot Nothing Then HomeWidePromoSection.Visible = True
-        If HomeCollectionSection IsNot Nothing Then HomeCollectionSection.Visible = True
+        If HomeCollectionSection IsNot Nothing Then HomeCollectionSection.Visible = False
         If HomeBottomPromoSection IsNot Nothing Then HomeBottomPromoSection.Visible = True
 
         Dim featureTabRows As DataTable = TakeDistinctRows(7, usedBusinessKeys, offerPool, dealPool, fallbackCatalogPool)
@@ -161,7 +153,7 @@ Partial Public Class _Default
         BindThreeColumnZone(topRateRows, rptToprateLeft, rptToprateCenter, rptToprateRight)
         BindThreeColumnZone(onSaleRows, rptOnSaleLeft, rptOnSaleCenter, rptOnSaleRight)
         If HomeLegacyEditorialSection IsNot Nothing Then
-            HomeLegacyEditorialSection.Visible = (Not IsTableEmpty(featureTabRows) OrElse Not IsTableEmpty(topRateRows) OrElse Not IsTableEmpty(onSaleRows))
+            HomeLegacyEditorialSection.Visible = False
         End If
 
         Dim bestRows As DataTable = TakeDistinctRows(12, usedBusinessKeys, bestSellerPool, currentYearSellingPool, topSellingPool, topRatedPool, fallbackCatalogPool)
@@ -183,10 +175,7 @@ Partial Public Class _Default
         BindLowerBlock(TopSellingBlock, rptTopSellingProductSlides, TakeDistinctRows(10, usedBusinessKeys, currentYearSellingPool, topSellingPool, fallbackCatalogPool), 1, Nothing, Nothing)
         BindLowerBlock(OnSaleBlock, rptOnSaleProductSlides, TakeDistinctRows(10, usedBusinessKeys, offerPool, dealPool, fallbackCatalogPool), 1, Nothing, Nothing)
         If HomeLowerColumnsSection IsNot Nothing Then
-            HomeLowerColumnsSection.Visible = (Top20Block IsNot Nothing AndAlso Top20Block.Visible) OrElse _
-                                             (LowerFeaturedBlock IsNot Nothing AndAlso LowerFeaturedBlock.Visible) OrElse _
-                                             (TopSellingBlock IsNot Nothing AndAlso TopSellingBlock.Visible) OrElse _
-                                             (OnSaleBlock IsNot Nothing AndAlso OnSaleBlock.Visible)
+            HomeLowerColumnsSection.Visible = False
         End If
 
         Dim brandRows As DataTable = FilterBrandRows(GetBrands(24), 12)

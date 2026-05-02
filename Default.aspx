@@ -8,7 +8,7 @@
 
 <asp:Content ID="cntMain" ContentPlaceHolderID="MainContent" runat="server">
 
-    <section id="HomeHeroSection" runat="server" class="tf-sp-5 ks-home-full-width ks-home-hero-section ks-home-hero-mode-compact-single">
+    <section id="HomeHeroSection" runat="server" class="tf-sp-5 ks-home-onsus-final-section ks-home-hero-section ks-home-hero-mode-compact-single">
         <div class="container">
             <div id="HomeHeroShell" runat="server" class="s-banner-wrapper ks-home-hero-shell ks-home-hero-mode-compact-single">
                 <div class="wrap-item-1 d-none d-lg-block">
@@ -66,7 +66,7 @@
 
     <uc:HomeIconBoxes ID="HomeIconBoxes1" runat="server" />
 
-    <section id="HomeMainCategoriesSection" runat="server" class="tf-sp-2 pt-0 ks-home-full-width ks-home-categories-section">
+    <section id="HomeMainCategoriesSection" runat="server" class="tf-sp-2 pt-0 ks-home-onsus-final-section ks-home-categories-section">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <div>
@@ -93,7 +93,7 @@
         </div>
     </section>
 
-    <section id="KsLocalAiSearch130" class="ks-ai130-section tf-sp-2 ks-home-full-width" data-ks-ai="local-reasoning" data-ks-final-home="1">
+    <section id="KsLocalAiSearch130" class="ks-ai130-section tf-sp-2 ks-home-onsus-final-section" data-ks-ai="local-reasoning" data-ks-final-home="1">
         <div class="container">
             <div class="ks-ai130-shell">
                 <div class="ks-ai130-brain">
@@ -129,7 +129,7 @@
         </div>
     </section>
 
-    <section id="HomeFeaturedProductsSection" runat="server" class="tf-sp-2 pt-0 ks-home-full-width ks-home-featured-section">
+    <section id="HomeFeaturedProductsSection" runat="server" class="tf-sp-2 pt-0 ks-home-onsus-final-section ks-home-featured-section">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <div>
@@ -150,7 +150,7 @@
         </div>
     </section>
 
-    <section id="HomeOffersSection" runat="server" class="tf-sp-2 pt-0 ks-home-full-width ks-home-deal-section">
+    <section id="HomeOffersSection" runat="server" class="tf-sp-2 pt-0 ks-home-onsus-final-section ks-home-deal-section">
         <div class="container">
             <div class="flat-title pb-8 wow fadeInUp" data-wow-delay="0s">
                 <div>
@@ -194,7 +194,7 @@
         </div>
     </section>
 
-    <section id="HomeWidePromoSection" runat="server" visible="false" class="tf-sp-2 pt-0 ks-home-wide-promo ks-home-full-width">
+    <section id="HomeWidePromoSection" runat="server" visible="false" class="tf-sp-2 pt-0 ks-home-wide-promo ks-home-onsus-final-section">
         <div class="container">
             <div class="ks-home-wide-promo-inner">
                 <div class="ks-home-wide-promo-copy">
@@ -324,7 +324,7 @@
         </div>
     </section>
 
-    <section id="HomeBottomPromoSection" runat="server" visible="false" class="tf-sp-2 pt-0 ks-home-banner-product ks-home-full-width">
+    <section id="HomeBottomPromoSection" runat="server" visible="false" class="tf-sp-2 pt-0 ks-home-banner-product ks-home-onsus-final-section">
         <div class="container">
             <div class="ks-home-bottom-promo-grid">
                 <a href="articoli.aspx?q=ricondizionato" class="ks-home-bottom-promo-card">
@@ -384,7 +384,7 @@
         </div>
     </section>
 
-    <section id="HomeServicesSection" runat="server" class="tf-sp-2 ks-home-full-width ks-home-services-section">
+    <section id="HomeServicesSection" runat="server" class="tf-sp-2 ks-home-onsus-final-section ks-home-services-section">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <div>
@@ -430,7 +430,7 @@
         </div>
     </section>
 
-    <section id="HomeTrustSection" runat="server" class="tf-sp-2 pt-0 ks-home-full-width ks-home-trust-section">
+    <section id="HomeTrustSection" runat="server" class="tf-sp-2 pt-0 ks-home-onsus-final-section ks-home-trust-section">
         <div class="container">
             <div class="ks-home-trust-panel">
                 <div class="ks-home-trust-copy">
@@ -448,7 +448,7 @@
         </div>
     </section>
 
-    <section id="HomeBrandsSection" runat="server" class="tf-sp-2 ks-home-full-width ks-home-brands-block">
+    <section id="HomeBrandsSection" runat="server" class="tf-sp-2 ks-home-onsus-final-section ks-home-brands-block">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s"><h5>Rivenditori Ufficiali - I migliori Brand</h5></div>
             <div class="swiper ks-home-brands" data-preview="6" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="20" data-space="15">
