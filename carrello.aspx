@@ -124,8 +124,9 @@
                 DeleteCommand="delete from carrello where (Id = ?Id)"
                 UpdateCommand="update carrello set qnt = ?Qnt where (Id = ?Id)">
             </asp:SqlDataSource>
-<div class="row g-4">
+            <div class="row g-4">
                 <div class="col-12">
+                    <div class="form-discount ks-cart-form">
                     <div class="overflow-x-auto">
                         <table class="tf-table-page-cart">
                     <thead>
@@ -160,7 +161,7 @@
                                                 <asp:Label ID="tagliecolori" runat="server" CssClass="body-text-3" Text='<%#: Eval("taglia") & " " & Eval("colore") %>'></asp:Label>
                                             </div>
 
-                                            <div class="body-text-3 mt-1">
+                                            <div class="ks-cart-meta body-text-3 mt-1">
                                                 <span>Codice: <asp:Label ID="Label3" runat="server" Text='<%#: Eval("Codice") %>' Font-Bold="true"></asp:Label></span>
                                                 <span class="mx-2">|</span>
                                                 <span>Disponibilità: <asp:Label ID="lblDispo" runat="server" Text='<%#: Eval("giacenza") %>' Font-Bold="true"></asp:Label></span>
@@ -209,8 +210,8 @@
                                         </p>
                                     </td>
 
-                                    <td class="remove-cart">
-                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link" Text="<i class='icon icon-close'></i>"></asp:LinkButton>
+                                    <td data-cart-title="Rimuovi" class="remove-cart text-xxl-end">
+                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="remove icon icon-close link" ToolTip="Rimuovi articolo" Text="<span class='visually-hidden'>Rimuovi articolo</span>"></asp:LinkButton>
                                     </td>
                                 </tr>
 
@@ -271,7 +272,7 @@
                                                 <asp:Label ID="tagliecolori" runat="server" CssClass="body-text-3" Text='<%#: Eval("taglia") & " " & Eval("colore") %>'></asp:Label>
                                             </div>
 
-                                            <div class="body-text-3 mt-1">
+                                            <div class="ks-cart-meta body-text-3 mt-1">
                                                 <span>Codice: <asp:Label ID="Label3" runat="server" Text='<%#: Eval("Codice") %>' Font-Bold="true"></asp:Label></span>
                                                 <span class="mx-2">|</span>
                                                 <span>Disponibilità: <asp:Label ID="lblDispo" runat="server" Text='<%#: Eval("giacenza") %>' Font-Bold="true"></asp:Label></span>
@@ -318,8 +319,8 @@
                                         </p>
                                     </td>
 
-                                    <td class="remove-cart">
-                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link" Text="<i class='icon icon-close'></i>"></asp:LinkButton>
+                                    <td data-cart-title="Rimuovi" class="remove-cart text-xxl-end">
+                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="remove icon icon-close link" ToolTip="Rimuovi articolo" Text="<span class='visually-hidden'>Rimuovi articolo</span>"></asp:LinkButton>
                                     </td>
                                 </tr>
 
@@ -361,6 +362,7 @@
 
                     </tbody>
                         </table>
+                    </div>
                     </div>
                 </div>
             </div>
