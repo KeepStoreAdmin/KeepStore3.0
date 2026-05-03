@@ -21,7 +21,7 @@ Protected Overrides Sub InitializeCulture()
 End Sub
 
 Private Shared Function FormatCurrencyIt(ByVal value As Double) As String
-    Return value.ToString("C", CartCulture)
+    Return value.ToString("N2", CartCulture) & " " & ChrW(8364)
 End Function
 
 Private Shared Function ParseDecimalForDb(ByVal value As Object, Optional ByVal def As Decimal = 0D) As Decimal
@@ -30,22 +30,76 @@ Private Shared Function ParseDecimalForDb(ByVal value As Object, Optional ByVal 
     Dim s As String = value.ToString().Trim()
     If s = "" Then Return def
 
-    s = s.Replace(ChrW(8364), "").Replace("&euro;", "").Replace("&#8364;", "").Trim()
-    s = s.Replace(ChrW(8722), "-")
-
     Dim d As Decimal
+    Dim t As String = NormalizeDecimalForDb(s)
+    If Decimal.TryParse(t, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then Return d
     If Decimal.TryParse(s, NumberStyles.Any, CartCulture, d) Then Return d
     If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then Return d
-
-    Dim t As String = s.Replace(".", "").Replace(",", ".")
-    If Decimal.TryParse(t, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then Return d
 
     Return def
 End Function
 
 Private Shared Function NormalizeMoneyText(ByVal value As String) As String
     If value Is Nothing Then Return ""
-    Return value.Replace(ChrW(8364), "").Replace("&euro;", "").Replace("&#8364;", "").Replace(ChrW(8722), "-").Trim()
+    Return value.Replace(ChrW(8364), "").Replace(ChrW(226) & ChrW(8218) & ChrW(172), "").Replace("&euro;", "").Replace("&#8364;", "").Replace(ChrW(8722), "-").Trim()
+End Function
+
+Private Shared Function NormalizeDecimalForDb(ByVal value As String) As String
+    Dim s As String = NormalizeMoneyText(value)
+    If s = "" Then Return ""
+
+    s = s.Replace("EUR", "").Replace("eur", "").Replace("Euro", "").Replace("euro", "")
+    s = s.Replace(ChrW(160), "").Replace(ChrW(8239), "").Replace(" ", "").Replace("'", "")
+
+    Dim comma As Integer = s.LastIndexOf(","c)
+    Dim dot As Integer = s.LastIndexOf("."c)
+
+    If comma >= 0 AndAlso dot >= 0 Then
+        If comma > dot Then
+            s = s.Replace(".", "").Replace(","c, "."c)
+        Else
+            s = s.Replace(",", "")
+        End If
+    ElseIf dot >= 0 Then
+        s = NormalizeSingleDecimalSeparator(s, "."c)
+    ElseIf comma >= 0 Then
+        s = NormalizeSingleDecimalSeparator(s, ","c)
+    End If
+
+    Return s
+End Function
+
+Private Shared Function NormalizeSingleDecimalSeparator(ByVal value As String, ByVal separator As Char) As String
+    Dim parts() As String = value.Split(separator)
+    If parts.Length <= 1 Then Return value
+
+    Dim last As String = parts(parts.Length - 1)
+
+    If parts.Length > 2 Then
+        If last.Length > 0 AndAlso last.Length <= 2 Then
+            Return JoinAllButLast(parts) & "." & last
+        End If
+
+        Return String.Join("", parts)
+    End If
+
+    If last.Length = 3 Then
+        Return parts(0) & last
+    End If
+
+    If separator = ","c Then
+        Return parts(0) & "." & last
+    End If
+
+    Return value
+End Function
+
+Private Shared Function JoinAllButLast(ByVal parts() As String) As String
+    Dim output As String = ""
+    For i As Integer = 0 To parts.Length - 2
+        output &= parts(i)
+    Next
+    Return output
 End Function
 
 Protected Function IsCheckoutStepVisible() As Boolean

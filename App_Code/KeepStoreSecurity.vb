@@ -193,24 +193,83 @@ Public Module KeepStoreSecurity
         s = s.Trim().Replace("€", "").Replace(" ", "")
 
         Dim dec As Decimal
-        If Decimal.TryParse(s, NumberStyles.Any, New CultureInfo("it-IT"), dec) Then Return dec
+        Dim normalized As String = NormalizeDecimalString(s)
+        If Decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, dec) Then Return dec
+        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), dec) Then Return dec
         If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, dec) Then Return dec
+
+        Return defaultValue
+    End Function
+
+    Private Function NormalizeDecimalString(value As String) As String
+        Dim s As String = StripMoneyText(value)
+        If String.IsNullOrWhiteSpace(s) Then Return ""
 
         Dim comma As Integer = s.LastIndexOf(","c)
         Dim dot As Integer = s.LastIndexOf("."c)
+
         If comma >= 0 AndAlso dot >= 0 Then
             If comma > dot Then
                 s = s.Replace(".", "").Replace(","c, "."c)
             Else
                 s = s.Replace(",", "")
             End If
+        ElseIf dot >= 0 Then
+            s = NormalizeSingleSeparator(s, "."c)
         ElseIf comma >= 0 Then
-            s = s.Replace(","c, "."c)
+            s = NormalizeSingleSeparator(s, ","c)
         End If
 
-        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, dec) Then Return dec
+        Return s
+    End Function
 
-        Return defaultValue
+    Private Function StripMoneyText(value As String) As String
+        Dim s As String = Convert.ToString(value)
+        If String.IsNullOrWhiteSpace(s) Then Return ""
+
+        s = s.Trim()
+        s = s.Replace(ChrW(8364), "")
+        s = s.Replace(ChrW(226) & ChrW(8218) & ChrW(172), "")
+        s = s.Replace("&euro;", "").Replace("&#8364;", "")
+        s = s.Replace("EUR", "").Replace("eur", "").Replace("Euro", "").Replace("euro", "")
+        s = s.Replace(ChrW(8722), "-")
+        s = s.Replace(ChrW(160), "").Replace(ChrW(8239), "")
+        s = s.Replace(" ", "").Replace("'", "")
+
+        Return s
+    End Function
+
+    Private Function NormalizeSingleSeparator(value As String, separator As Char) As String
+        Dim parts() As String = value.Split(separator)
+        If parts.Length <= 1 Then Return value
+
+        Dim last As String = parts(parts.Length - 1)
+
+        If parts.Length > 2 Then
+            If last.Length > 0 AndAlso last.Length <= 2 Then
+                Return JoinAllButLast(parts) & "." & last
+            End If
+
+            Return String.Join("", parts)
+        End If
+
+        If last.Length = 3 Then
+            Return parts(0) & last
+        End If
+
+        If separator = ","c Then
+            Return parts(0) & "." & last
+        End If
+
+        Return value
+    End Function
+
+    Private Function JoinAllButLast(parts() As String) As String
+        Dim output As String = ""
+        For i As Integer = 0 To parts.Length - 2
+            output &= parts(i)
+        Next
+        Return output
     End Function
 
     Public Function SafeCsvIds(csv As String) As String

@@ -126,11 +126,10 @@ Public Module UiPriceFormatter
         s = s.Trim()
 
         Dim d As Decimal
-        If Decimal.TryParse(s, NumberStyles.Any, PriceCulture, d) Then Return d
-        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then Return d
-
         Dim normalized As String = NormalizeDecimalString(s)
         If Decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then Return d
+        If Decimal.TryParse(s, NumberStyles.Any, PriceCulture, d) Then Return d
+        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then Return d
 
         Return 0D
     End Function
@@ -143,11 +142,11 @@ Public Module UiPriceFormatter
     End Function
 
     Private Function FormatPrice(ByVal value As Decimal) As String
-        Return value.ToString("C2", PriceCulture)
+        Return value.ToString("N2", PriceCulture) & " " & ChrW(8364)
     End Function
 
     Private Function NormalizeDecimalString(ByVal value As String) As String
-        Dim s As String = Convert.ToString(value)
+        Dim s As String = StripMoneyText(value)
         If String.IsNullOrWhiteSpace(s) Then Return ""
 
         s = s.Trim().Replace("€", "").Replace(" ", "")
@@ -160,11 +159,62 @@ Public Module UiPriceFormatter
             Else
                 s = s.Replace(",", "")
             End If
+        ElseIf dot >= 0 Then
+            s = NormalizeSingleSeparator(s, "."c)
         ElseIf comma >= 0 Then
-            s = s.Replace("."c, ChrW(0)).Replace(","c, "."c).Replace(ChrW(0), "."c)
+            s = NormalizeSingleSeparator(s, ","c)
         End If
 
         Return s
+    End Function
+
+    Private Function StripMoneyText(ByVal value As String) As String
+        Dim s As String = Convert.ToString(value)
+        If String.IsNullOrWhiteSpace(s) Then Return ""
+
+        s = s.Trim()
+        s = s.Replace(ChrW(8364), "")
+        s = s.Replace(ChrW(226) & ChrW(8218) & ChrW(172), "")
+        s = s.Replace("&euro;", "").Replace("&#8364;", "")
+        s = s.Replace("EUR", "").Replace("eur", "").Replace("Euro", "").Replace("euro", "")
+        s = s.Replace(ChrW(8722), "-")
+        s = s.Replace(ChrW(160), "").Replace(ChrW(8239), "")
+        s = s.Replace(" ", "").Replace("'", "")
+
+        Return s
+    End Function
+
+    Private Function NormalizeSingleSeparator(ByVal value As String, ByVal separator As Char) As String
+        Dim parts() As String = value.Split(separator)
+        If parts.Length <= 1 Then Return value
+
+        Dim last As String = parts(parts.Length - 1)
+
+        If parts.Length > 2 Then
+            If last.Length > 0 AndAlso last.Length <= 2 Then
+                Return JoinAllButLast(parts) & "." & last
+            End If
+
+            Return String.Join("", parts)
+        End If
+
+        If last.Length = 3 Then
+            Return parts(0) & last
+        End If
+
+        If separator = ","c Then
+            Return parts(0) & "." & last
+        End If
+
+        Return value
+    End Function
+
+    Private Function JoinAllButLast(ByVal parts() As String) As String
+        Dim output As String = ""
+        For i As Integer = 0 To parts.Length - 2
+            output &= parts(i)
+        Next
+        Return output
     End Function
 
     Private Function ToInt(ByVal v As Object) As Integer

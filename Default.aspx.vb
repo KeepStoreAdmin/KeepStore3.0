@@ -1951,7 +1951,7 @@ Partial Public Class _Default
 
     Protected Function FormatMoney(ByVal value As Object) As String
         Dim amount As Decimal = ToDecimal(value)
-        Return amount.ToString("C2", ItCulture)
+        Return amount.ToString("N2", ItCulture) & " " & ChrW(8364)
     End Function
 
     Protected Function AvailabilityPercent(ByVal giacenza As Object, ByVal sold As Object) As Decimal
@@ -2146,7 +2146,10 @@ Partial Public Class _Default
         End If
 
         Try
-            Return Convert.ToDecimal(value, ItCulture)
+            If TypeOf value Is Decimal OrElse TypeOf value Is Double OrElse TypeOf value Is Single OrElse
+               TypeOf value Is Integer OrElse TypeOf value Is Long OrElse TypeOf value Is Short Then
+                Return Convert.ToDecimal(value, CultureInfo.InvariantCulture)
+            End If
         Catch
         End Try
 
@@ -2158,6 +2161,11 @@ Partial Public Class _Default
         s = s.Trim().Replace("€", String.Empty).Replace("EUR", String.Empty).Trim()
 
         Dim d As Decimal
+        Dim normalized As String = NormalizeDecimalText(s)
+        If Decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then
+            Return d
+        End If
+
         If Decimal.TryParse(s, NumberStyles.Any, ItCulture, d) Then
             Return d
         End If
@@ -2166,12 +2174,78 @@ Partial Public Class _Default
             Return d
         End If
 
-        Dim normalized As String = s.Replace(".", String.Empty).Replace(",", ".")
-        If Decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then
-            Return d
+        Return 0D
+    End Function
+
+    Private Function NormalizeDecimalText(ByVal value As String) As String
+        Dim s As String = CleanMoneyText(value)
+        If String.IsNullOrWhiteSpace(s) Then Return ""
+
+        Dim comma As Integer = s.LastIndexOf(","c)
+        Dim dot As Integer = s.LastIndexOf("."c)
+
+        If comma >= 0 AndAlso dot >= 0 Then
+            If comma > dot Then
+                s = s.Replace(".", "").Replace(","c, "."c)
+            Else
+                s = s.Replace(",", "")
+            End If
+        ElseIf dot >= 0 Then
+            s = NormalizeSingleDecimalSeparator(s, "."c)
+        ElseIf comma >= 0 Then
+            s = NormalizeSingleDecimalSeparator(s, ","c)
         End If
 
-        Return 0D
+        Return s
+    End Function
+
+    Private Function CleanMoneyText(ByVal value As String) As String
+        Dim s As String = Convert.ToString(value)
+        If String.IsNullOrWhiteSpace(s) Then Return ""
+
+        s = s.Trim()
+        s = s.Replace(ChrW(8364), "")
+        s = s.Replace(ChrW(226) & ChrW(8218) & ChrW(172), "")
+        s = s.Replace("&euro;", "").Replace("&#8364;", "")
+        s = s.Replace("EUR", "").Replace("eur", "").Replace("Euro", "").Replace("euro", "")
+        s = s.Replace(ChrW(8722), "-")
+        s = s.Replace(ChrW(160), "").Replace(ChrW(8239), "")
+        s = s.Replace(" ", "").Replace("'", "")
+
+        Return s
+    End Function
+
+    Private Function NormalizeSingleDecimalSeparator(ByVal value As String, ByVal separator As Char) As String
+        Dim parts() As String = value.Split(separator)
+        If parts.Length <= 1 Then Return value
+
+        Dim last As String = parts(parts.Length - 1)
+
+        If parts.Length > 2 Then
+            If last.Length > 0 AndAlso last.Length <= 2 Then
+                Return JoinAllButLast(parts) & "." & last
+            End If
+
+            Return String.Join("", parts)
+        End If
+
+        If last.Length = 3 Then
+            Return parts(0) & last
+        End If
+
+        If separator = ","c Then
+            Return parts(0) & "." & last
+        End If
+
+        Return value
+    End Function
+
+    Private Function JoinAllButLast(ByVal parts() As String) As String
+        Dim output As String = ""
+        For i As Integer = 0 To parts.Length - 2
+            output &= parts(i)
+        Next
+        Return output
     End Function
 
     Private Function EncodeAttr(ByVal value As String) As String
