@@ -638,14 +638,90 @@ End Sub
     Private Function TryParseDouble(ByVal raw As Object, ByRef result As Double) As Boolean
         result = 0
         If raw Is Nothing OrElse raw Is DBNull.Value Then Return False
+
+        Try
+            If TypeOf raw Is Decimal OrElse TypeOf raw Is Double OrElse TypeOf raw Is Single OrElse
+               TypeOf raw Is Integer OrElse TypeOf raw Is Long OrElse TypeOf raw Is Short Then
+                result = Convert.ToDouble(raw, CultureInfo.InvariantCulture)
+                Return True
+            End If
+        Catch
+        End Try
+
         Dim text As String = Convert.ToString(raw).Trim()
         If String.IsNullOrEmpty(text) Then Return False
-        If Double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, result) Then Return True
+
+        Dim normalized As String = NormalizeCartDecimalText(text)
+        If Double.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, result) Then Return True
         If Double.TryParse(text, NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), result) Then Return True
-        Dim normalized As String = text.Replace("."c, ","c)
-        If Double.TryParse(normalized, NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), result) Then Return True
-        normalized = text.Replace(","c, "."c)
-        Return Double.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, result)
+        Return Double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, result)
+    End Function
+
+    Private Function NormalizeCartDecimalText(ByVal value As String) As String
+        Dim s As String = Convert.ToString(value)
+        If String.IsNullOrWhiteSpace(s) Then Return ""
+
+        s = s.Trim()
+        s = s.Replace(ChrW(8364), "")
+        s = s.Replace("&euro;", "").Replace("&#8364;", "")
+        s = s.Replace("EUR", "").Replace("eur", "").Replace("Euro", "").Replace("euro", "")
+        s = s.Replace(ChrW(8722), "-")
+        s = s.Replace(ChrW(160), "").Replace(ChrW(8239), "")
+        s = s.Replace(" ", "").Replace("'", "")
+
+        Dim comma As Integer = s.LastIndexOf(","c)
+        Dim dot As Integer = s.LastIndexOf("."c)
+
+        If comma >= 0 AndAlso dot >= 0 Then
+            If comma > dot Then
+                Return s.Replace(".", "").Replace(","c, "."c)
+            End If
+
+            Return s.Replace(",", "")
+        End If
+
+        If comma >= 0 Then
+            Return NormalizeCartSingleSeparator(s, ","c)
+        End If
+
+        If dot >= 0 Then
+            Return NormalizeCartSingleSeparator(s, "."c)
+        End If
+
+        Return s
+    End Function
+
+    Private Function NormalizeCartSingleSeparator(ByVal value As String, ByVal separator As Char) As String
+        Dim parts() As String = value.Split(separator)
+        If parts.Length <= 1 Then Return value
+
+        Dim last As String = parts(parts.Length - 1)
+
+        If parts.Length > 2 Then
+            If last.Length > 0 AndAlso last.Length <= 2 Then
+                Return JoinCartDecimalParts(parts) & "." & last
+            End If
+
+            Return String.Join("", parts)
+        End If
+
+        If last.Length = 3 Then
+            Return parts(0) & last
+        End If
+
+        If separator = ","c Then
+            Return parts(0) & "." & last
+        End If
+
+        Return value
+    End Function
+
+    Private Function JoinCartDecimalParts(ByVal parts() As String) As String
+        Dim output As String = ""
+        For i As Integer = 0 To parts.Length - 2
+            output &= parts(i)
+        Next
+        Return output
     End Function
 
     Private Function AddCartRowWithNewcarrello(ByVal loginId As Integer,
