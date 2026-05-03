@@ -395,6 +395,55 @@ table.ks-checkout-grid input[type="checkbox"]{
   color:#ff3d3d;
 }
 
+.ks-checkout-shell .sidebar-checkout-content>.d-flex{
+  padding:3px 0;
+}
+
+.ks-checkout-shell .sidebar-checkout-content>.border-top{
+  align-items:center;
+  margin-top:14px !important;
+  padding-top:16px !important;
+  border-top-color:rgba(0,0,0,.10) !important;
+}
+
+.ks-checkout-shell .sidebar-checkout-content>.border-top span{
+  font-size:18px;
+}
+
+.ks-checkout-shell .sidebar-checkout-content>.border-top span:last-child{
+  font-size:20px;
+}
+
+.ks-checkout-shell .ks-checkout-trust-list{
+  display:grid;
+  gap:8px;
+  margin-top:16px;
+  padding-top:14px;
+  border-top:1px solid rgba(0,0,0,.08);
+}
+
+.ks-checkout-shell .ks-checkout-trust-item{
+  display:grid;
+  grid-template-columns:24px minmax(0, 1fr);
+  gap:9px;
+  align-items:center;
+  color:#5d646b;
+  font-size:13px;
+  line-height:1.35;
+}
+
+.ks-checkout-shell .ks-checkout-trust-item i{
+  width:24px;
+  height:24px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  background:#fff5f5;
+  color:#ff3d3d;
+  font-size:14px;
+}
+
 .ks-checkout-shell .ks-checkout-grid img{
   max-width:58px;
   max-height:36px;
@@ -743,6 +792,18 @@ table.ks-checkout-grid input[type="checkbox"]{
 
   .ks-checkout-shell .flat-sidebar-checkout{
     min-width:0;
+  }
+
+  .ks-checkout-shell .sidebar-checkout-content{
+    padding:16px;
+  }
+
+  .ks-checkout-shell .sidebar-checkout-content>.border-top span{
+    font-size:16px;
+  }
+
+  .ks-checkout-shell .sidebar-checkout-content>.border-top span:last-child{
+    font-size:18px;
   }
 }
 

@@ -1207,6 +1207,20 @@
                             <div class="mt-3 body-text-3 text-secondary">
                                 Procedendo con l&#39;ordine confermi di aver letto e accettato le condizioni di vendita.
                             </div>
+                            <div class="ks-checkout-trust-list">
+                                <div class="ks-checkout-trust-item">
+                                    <i class="icon-shield"></i>
+                                    <span>Pagamento gestito in ambiente sicuro</span>
+                                </div>
+                                <div class="ks-checkout-trust-item">
+                                    <i class="icon-headphone-2"></i>
+                                    <span>Assistenza pre e post vendita</span>
+                                </div>
+                                <div class="ks-checkout-trust-item">
+                                    <i class="icon-delivery-2"></i>
+                                    <span>Spese aggiornate in base a vettore e destinazione</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
