@@ -287,6 +287,11 @@ table.ks-checkout-grid input[type="checkbox"]{
   line-height:1.25;
 }
 
+.ks-checkout-shell .ks-section-help{
+  margin:-4px 0 14px;
+  color:#5d646b;
+}
+
 .ks-checkout-shell .tf-sidebar-checkout{
   position:sticky;
   top:92px;
@@ -393,6 +398,107 @@ table.ks-checkout-grid input[type="checkbox"]{
 .ks-checkout-shell .ks-checkout-grid img{
   max-width:58px;
   max-height:36px;
+  object-fit:contain;
+}
+
+.ks-checkout-shell .ks-shipping-section .ks-checkout-grid,
+.ks-checkout-shell .ks-payment-section .ks-checkout-grid{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0 10px;
+}
+
+.ks-checkout-shell .ks-shipping-section .ks-checkout-grid tr,
+.ks-checkout-shell .ks-payment-section .ks-checkout-grid tr{
+  background:#fff;
+}
+
+.ks-checkout-shell .ks-shipping-section .ks-checkout-grid td,
+.ks-checkout-shell .ks-payment-section .ks-checkout-grid td{
+  padding:12px 14px !important;
+  border-top:1px solid rgba(0,0,0,.08);
+  border-bottom:1px solid rgba(0,0,0,.08);
+  vertical-align:middle;
+  color:#394047;
+  font-size:13px;
+}
+
+.ks-checkout-shell .ks-shipping-section .ks-checkout-grid td:first-child,
+.ks-checkout-shell .ks-payment-section .ks-checkout-grid td:first-child{
+  width:48px;
+  border-left:1px solid rgba(0,0,0,.08);
+  border-radius:8px 0 0 8px;
+}
+
+.ks-checkout-shell .ks-shipping-section .ks-checkout-grid td:last-child,
+.ks-checkout-shell .ks-payment-section .ks-checkout-grid td:last-child{
+  border-right:1px solid rgba(0,0,0,.08);
+  border-radius:0 8px 8px 0;
+}
+
+.ks-checkout-shell .ks-shipping-section .ks-checkout-grid tr.is-selected td,
+.ks-checkout-shell .ks-payment-section .ks-checkout-grid tr.is-selected td{
+  border-color:#ff3d3d;
+  background:#fffafa;
+}
+
+.ks-checkout-shell .ks-shipping-section .ks-checkout-grid input[type="radio"],
+.ks-checkout-shell .ks-payment-section .ks-checkout-grid input[type="radio"]{
+  width:18px;
+  height:18px;
+  accent-color:#ff3d3d;
+}
+
+.ks-checkout-shell .ks-shipping-section .ks-checkout-grid td:nth-child(3),
+.ks-checkout-shell .ks-payment-section .ks-checkout-grid td:nth-child(2){
+  width:82px;
+}
+
+.ks-checkout-shell .ks-shipping-section .ks-checkout-grid img,
+.ks-checkout-shell .ks-payment-section .ks-checkout-grid img{
+  max-width:64px;
+  max-height:42px;
+  padding:4px;
+  border:1px solid rgba(0,0,0,.08);
+  border-radius:8px;
+  background:#fff;
+}
+
+.ks-checkout-shell .ks-shipping-section .ks-checkout-grid td:nth-last-child(3),
+.ks-checkout-shell .ks-shipping-section .ks-checkout-grid td:nth-last-child(2),
+.ks-checkout-shell .ks-shipping-section .ks-checkout-grid td:last-child,
+.ks-checkout-shell .ks-payment-section .ks-checkout-grid td:last-child{
+  font-weight:600;
+}
+
+.ks-checkout-shell .ks-free-shipping-progress{
+  margin:10px 0 4px;
+  padding:10px 12px;
+  border:1px solid rgba(25,135,84,.20);
+  border-radius:8px;
+  background:#f0fff7;
+  color:#146c43;
+  font-size:13px;
+  text-align:center;
+}
+
+.ks-checkout-shell .ks-free-shipping-card{
+  height:auto !important;
+  margin-top:10px;
+  padding:12px;
+  border:1px solid rgba(25,135,84,.22);
+  border-radius:8px;
+  background:#f0fff7;
+  color:#146c43;
+}
+
+.ks-checkout-shell .ks-free-shipping-card table{
+  width:100%;
+}
+
+.ks-checkout-shell .ks-free-shipping-card img{
+  max-width:64px;
+  max-height:42px;
   object-fit:contain;
 }
 

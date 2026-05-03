@@ -545,6 +545,7 @@
     <div id="promo_vettori">
     <asp:Panel ID="pSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;" CssClass="wrap ks-checkout-section ks-shipping-section">
                 <h5 class="title fw-semibold">Spedizione</h5>
+                <p class="body-text-3 text-main-2 ks-section-help">Scegli il metodo di consegna disponibile per peso, listino e destinazione corrente.</p>
 <!--<div id="infobar" style="width:100%; color:White; font-weight:bold; height:50px; background-image:url('Public/Images/StepCarrello1.png'); background-size:100%; background-repeat:no-repeat;"></div>-->
 <asp:GridView ID="gvVettoriPromo" runat="server"
         AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsVettoriPromo"
@@ -630,9 +631,9 @@
                 <asp:TemplateField HeaderText="Costo">
                     <ItemTemplate>
                     <% If (Me.Session("IvaTipo") = 1) Then%>
-                        <asp:Label ID="lblCosto" runat="server" Text='<%# String.Format("{0:c}", Eval("CostoFisso")) %>'></asp:Label>
+                        <asp:Label ID="lblCosto" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("CostoFisso")) & " " & ChrW(8364) %>'></asp:Label>
                     <%Else%>
-                        <asp:Label ID="Label10" runat="server" Text='<%# String.Format("{0:c}", (Eval("CostoFisso")*((Session("Iva_Vettori")/100)+1))) %>'></asp:Label>
+                        <asp:Label ID="Label10" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", (Convert.ToDecimal(Eval("CostoFisso"), System.Globalization.CultureInfo.InvariantCulture)*((Convert.ToDecimal(Session("Iva_Vettori"), System.Globalization.CultureInfo.InvariantCulture)/100D)+1D))) & " " & ChrW(8364) %>'></asp:Label>
                     <%End If%>
                     </ItemTemplate>
                     <ItemStyle Width="130px" Wrap="False" Font-Size="7pt" HorizontalAlign="Right" VerticalAlign="Middle" />
@@ -647,7 +648,7 @@
                 </asp:TemplateField>
                 <asp:TemplateField HeaderText="Spesa Minima (IVA incl)">
                     <ItemTemplate>
-                        <asp:Label ID="Label2" runat="server" Text='<%# String.Format("{0:c}", Eval("Soglia_Minima")*((Session("Iva_Vettori")/100)+1)) %>'></asp:Label>
+                        <asp:Label ID="Label2" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", (Convert.ToDecimal(Eval("Soglia_Minima"), System.Globalization.CultureInfo.InvariantCulture)*((Convert.ToDecimal(Session("Iva_Vettori"), System.Globalization.CultureInfo.InvariantCulture)/100D)+1D))) & " " & ChrW(8364) %>'></asp:Label>
 <span style="display:none;"><%# mancano_ancora_number(Eval("Soglia_Minima"), imponibile, imponibile_gratis)%></span>
                         <img src="Public/Images/interrogativo.png" alt="" title="<%# mancano_ancora(Eval("Soglia_Minima"),imponibile, imponibile_gratis)%>" />
                     </ItemTemplate>
@@ -664,8 +665,8 @@
             <AlternatingRowStyle BackColor="WhiteSmoke" BorderStyle="None" />
         </asp:GridView>
         <%If differenzaTrasportoGratis > 0 Then%>
-            <div style="width:100%; padding-top:2px; padding-bottom:2px; font-size:10px; text-align:center; background-color:#383838; color: white;">
-                <%="TRASPORTO GRATUITO se spendi ancora <b>" & String.Format("{0:c}", differenzaTrasportoGratis) & "</b>"%>
+            <div class="ks-free-shipping-progress">
+                <%="Trasporto gratuito se spendi ancora <b>" & String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", differenzaTrasportoGratis) & " " & ChrW(8364) & "</b>"%>
             </div>
         <%End If%>    
         <br />
@@ -754,9 +755,9 @@
                     </EditItemTemplate>
                     <ItemTemplate>
                     <% If (Me.Session("IvaTipo") = 1) Then%>
-                        <asp:Label ID="lblCosto" runat="server" Text='<%# Bind("CostoFisso", "{0:c}") %>'></asp:Label>
+                        <asp:Label ID="lblCosto" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("CostoFisso")) & " " & ChrW(8364) %>'></asp:Label>
                     <%else %>
-                        <asp:Label ID="Label9" runat="server" Text='<%# String.Format("{0:c}", Eval("CostoFisso")*((Session("Iva_Vettori")/100)+1)) %>'></asp:Label>
+                        <asp:Label ID="Label9" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", (Convert.ToDecimal(Eval("CostoFisso"), System.Globalization.CultureInfo.InvariantCulture)*((Convert.ToDecimal(Session("Iva_Vettori"), System.Globalization.CultureInfo.InvariantCulture)/100D)+1D))) & " " & ChrW(8364) %>'></asp:Label>
                     <%End If%>
                     </ItemTemplate>
                     <HeaderStyle HorizontalAlign="Right" />
@@ -766,8 +767,8 @@
             <SelectedRowStyle BackColor="#FFFFC0" />
         </asp:GridView>
         </div>
-        <asp:Panel ID="Panel_SpedizioneGratis" runat="server" Height="10px" Visible="False"
-            Width="100%" Font-Size="8pt">
+        <asp:Panel ID="Panel_SpedizioneGratis" runat="server" Visible="False"
+            Width="100%" Font-Size="8pt" CssClass="ks-free-shipping-card">
             <table>
                 <tr>
                     <td style=" text-align:left; vertical-align:middle;">
@@ -825,6 +826,7 @@
 			<div class="col-12 col-md-6">
 			  <asp:Panel ID="pPagamento" runat="server" Width="99.5%" Visible="true" CssClass="wrap ks-checkout-section ks-payment-section">
 					<h5 class="title fw-semibold">Pagamento</h5>
+                    <p class="body-text-3 text-main-2 ks-section-help">Seleziona un metodo di pagamento abilitato per il tuo listino e totale ordine.</p>
 					<asp:SqlDataSource ID="sdsPagamento" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
 						ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
 						SelectCommand="SELECT * FROM vpagamentitipo WHERE Abilitato=1 AND CostoMassimo >= ?CostoMassimo AND (Web=1 OR UtenteID=?UtenteID) AND AziendeID=?AziendaID GROUP BY id ORDER BY Ordinamento, Descrizione">
