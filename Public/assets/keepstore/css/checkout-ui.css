@@ -624,6 +624,75 @@ table.ks-checkout-grid input[type="checkbox"]{
   color:#394047;
 }
 
+.ks-checkout-shell .ks-validation-summary{
+  margin:0 0 14px;
+  padding:12px 14px;
+  border:1px solid rgba(255,61,61,.22);
+  border-radius:8px;
+  background:#fff5f5;
+  color:#b42318;
+}
+
+.ks-checkout-shell .ks-validation-summary ul{
+  margin:6px 0 0 18px;
+  padding:0;
+}
+
+.ks-checkout-shell .ks-destination-section .ks-dest-form{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0 10px;
+}
+
+.ks-checkout-shell .ks-destination-section .ks-dest-form tr{
+  display:grid;
+  grid-template-columns:190px minmax(0, 1fr);
+  gap:12px;
+  align-items:start;
+}
+
+.ks-checkout-shell .ks-destination-section .ks-dest-form td{
+  padding:0 !important;
+  width:auto !important;
+  vertical-align:top;
+}
+
+.ks-checkout-shell .ks-destination-section .ks-dest-form td:first-child{
+  padding-top:10px !important;
+  color:#5d646b;
+  font-weight:600;
+}
+
+.ks-checkout-shell .ks-destination-section .ks-dest-form td:last-child .ks-form-control,
+.ks-checkout-shell .ks-destination-section .ks-dest-form td:last-child .ks-form-select{
+  width:100% !important;
+}
+
+.ks-checkout-shell .ks-destination-section .ks-dest-form .ks-dest-actions-cell{
+  grid-column:1 / -1;
+  padding-top:4px !important;
+}
+
+.ks-checkout-shell .ks-dest-actions{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  gap:10px;
+}
+
+.ks-checkout-shell .ks-dest-actions .tf-btn{
+  min-height:42px;
+  border-radius:8px;
+  padding:10px 18px;
+  white-space:normal;
+}
+
+.ks-checkout-shell .ks-dest-actions .btn-danger{
+  background:#b42318;
+  border-color:#b42318;
+  color:#fff;
+}
+
 .ks-checkout-shell .ks-dest-form .tf-btn,
 .ks-checkout-shell .ks-confirm-section .tf-btn{
   min-height:42px;
@@ -636,8 +705,21 @@ table.ks-checkout-grid input[type="checkbox"]{
   background:#fff;
 }
 
+.ks-checkout-shell .ks-confirm-copy{
+  margin-bottom:14px;
+}
+
+.ks-checkout-shell .ks-confirm-copy .title{
+  margin-bottom:6px;
+}
+
 .ks-checkout-shell .ks-confirm-section .ks-checkout-actions{
   justify-content:space-between;
+}
+
+.ks-checkout-shell .ks-note-section textarea{
+  min-height:132px;
+  resize:vertical;
 }
 
 .ks-checkout-shell .ks-insurance-section .d-flex{
@@ -688,6 +770,32 @@ table.ks-checkout-grid input[type="checkbox"]{
 
   .ks-checkout-shell .ks-address-actions>*+*{
     margin-top:8px;
+  }
+
+  .ks-checkout-shell .ks-destination-section .ks-dest-form,
+  .ks-checkout-shell .ks-destination-section .ks-dest-form tbody,
+  .ks-checkout-shell .ks-destination-section .ks-dest-form tr,
+  .ks-checkout-shell .ks-destination-section .ks-dest-form td{
+    display:block;
+    width:100% !important;
+  }
+
+  .ks-checkout-shell .ks-destination-section .ks-dest-form tr{
+    padding:12px;
+    border:1px solid rgba(0,0,0,.08);
+    border-radius:8px;
+    background:#fff;
+    margin-bottom:10px;
+  }
+
+  .ks-checkout-shell .ks-destination-section .ks-dest-form td:first-child{
+    padding-top:0 !important;
+    margin-bottom:6px;
+  }
+
+  .ks-checkout-shell .ks-dest-actions{
+    display:grid;
+    grid-template-columns:1fr;
   }
 
   table.ks-checkout-grid,

@@ -1009,6 +1009,8 @@
 		<div id="panel" runat="server" ClientIDMode="Static">
             <asp:Panel ID="PnlDestinazione" runat="server" Width="100%" Visible="True" GroupingText="Inserisci i dati"  CssClass="wrap ks-checkout-section ks-destination-section">
 							<h5 class="title fw-semibold">Gestisci destinazione</h5>
+                <p class="body-text-3 text-main-2 ks-section-help">Aggiungi o modifica l'indirizzo di consegna mantenendo i dati reali già salvati nel tuo account.</p>
+                <asp:ValidationSummary ID="vsDestinazione" runat="server" ValidationGroup="registrazione" CssClass="ks-validation-summary" HeaderText="Controlla i campi richiesti:" />
 				<input type="hidden" runat="server" id="insOmod" ClientIDMode="Static">
                 <div class="ks-preferred-destination">
                     <asp:CheckBox ID="CHKPREDEFINITO" runat="server" />
@@ -1081,11 +1083,13 @@
                         </td>
                     </tr>  
 	                    <tr>
-                        <td align="center" colspan="2">
-                            <asp:Button ID="btnSalvaDest" CssClass="tf-btn btn-gray ks-btn" runat="server" Text="Inserisci nuova destinazione" Height="25px" CausesValidation="true" />
-                            <asp:Button ID="btnModDest" CssClass="tf-btn ks-btn" runat="server" Text="Salva modifiche destinazione" Height="25px" CausesValidation="true" />
-                            <asp:Button ID="btnElimDest" CssClass="tf-btn btn-danger ks-btn" runat="server" Text="Elimina destinazione" Height="25px" CausesValidation="true" BackColor="#CC0000" ForeColor="White"/>
-                            <br /><br /><asp:Button ID="btnAnnullaDest" CssClass="tf-btn btn-gray ks-btn" runat="server" Text="Annulla" Height="25px" CausesValidation="false" />
+                        <td align="center" colspan="2" class="ks-dest-actions-cell">
+                            <div class="ks-dest-actions">
+                                <asp:Button ID="btnSalvaDest" CssClass="tf-btn ks-btn" runat="server" Text="Inserisci nuova destinazione" CausesValidation="true" ValidationGroup="registrazione" />
+                                <asp:Button ID="btnModDest" CssClass="tf-btn ks-btn" runat="server" Text="Salva modifiche destinazione" CausesValidation="true" ValidationGroup="registrazione" />
+                                <asp:Button ID="btnElimDest" CssClass="tf-btn btn-danger ks-btn" runat="server" Text="Elimina destinazione" CausesValidation="true" />
+                                <asp:Button ID="btnAnnullaDest" CssClass="tf-btn btn-gray ks-btn" runat="server" Text="Annulla" CausesValidation="false" />
+                            </div>
                         </td>
                     </tr>
                 </table>
@@ -1093,10 +1097,15 @@
 			</div>
 		<asp:Panel ID="Panel_Note" runat="server" Width="100%" Visible="False" CssClass="wrap ks-checkout-section ks-note-section">
 					<h5 class="title fw-semibold">Note</h5>
-				<br/><asp:TextBox ID="txtNoteSpedizione" CssClass="form-control ks-form-control" TextMode="MultiLine" Rows="5" runat="server" Width="100%"></asp:TextBox>
+                <p class="body-text-3 text-main-2 ks-section-help">Aggiungi eventuali indicazioni utili per evasione, consegna o amministrazione ordine.</p>
+				<asp:TextBox ID="txtNoteSpedizione" CssClass="form-control ks-form-control" TextMode="MultiLine" Rows="5" runat="server" Width="100%"></asp:TextBox>
 			</asp:Panel>
     <div class="line"></div>
         <div class="wrap ks-checkout-section ks-confirm-section">
+            <div class="ks-confirm-copy">
+                <h5 class="title fw-semibold">Conferma ordine</h5>
+                <p class="body-text-3 text-main-2">Controlla spedizione, pagamento e riepilogo prima di inviare l'ordine. Se non hai effettuato l'accesso, potrai preparare il carrello ma dovrai accedere per completare l'invio.</p>
+            </div>
             <div class="ks-checkout-actions">
                 <asp:LinkButton Visible="False" CausesValidation="false" ID="btSalvaPreventivo" runat="server" CssClass="tf-btn btn-gray" OnClientClick="javascript:visualizza_spinner_caricamento();">SALVA PREVENTIVO</asp:LinkButton>
                 <%if Session("DESTINAZIONEALTERNATIVA")=0 then %>
