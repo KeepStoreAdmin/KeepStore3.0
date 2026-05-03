@@ -918,25 +918,34 @@
 		</div>
     <asp:Panel ID="PnlFatturazione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap ks-checkout-section ks-billing-section">
 							<h5 class="title fw-semibold">Dati fatturazione</h5>
-        <table class="ks-info-table" cellspacing="5" border="0" style="border-bottom-style:solid;" width="100%">
-            <tr>
-            </tr>
-            </tr>  
-            <tr>
-            </tr> 
-            </tr> 
-            <tr>
-            </tr>
-            <tr>
-            <tr>
-            <tr>
-            </tr> 
-            <tr>
-            <tr>
-            </tr>
-            <tr>
-            <tr>
-        </table>
+        <div class="ks-info-card-grid">
+            <div class="ks-info-card ks-info-card-wide">
+                <span class="ks-info-label">Intestatario</span>
+                <strong><asp:Label ID="lblTab_RagioneSociale" runat="server" /></strong>
+                <span><asp:Label ID="lblTab_Nome" runat="server" /></span>
+            </div>
+            <div class="ks-info-card">
+                <span class="ks-info-label">Partita IVA</span>
+                <strong><asp:Label ID="lblTab_pIva" runat="server" /></strong>
+            </div>
+            <div class="ks-info-card">
+                <span class="ks-info-label">Codice fiscale</span>
+                <strong><asp:Label ID="lblTab_CF" runat="server" /></strong>
+            </div>
+            <div class="ks-info-card ks-info-card-wide">
+                <span class="ks-info-label">Indirizzo</span>
+                <strong><asp:Label ID="lblTab_Indirizzo" runat="server" /></strong>
+                <span><asp:Label ID="lblTab_Cap" runat="server" /> <asp:Label ID="lblTab_Citta" runat="server" /> (<asp:Label ID="lblTab_Provincia" runat="server" />)</span>
+            </div>
+            <div class="ks-info-card">
+                <span class="ks-info-label">Email</span>
+                <strong><asp:Label ID="lblTab_mail" runat="server" /></strong>
+            </div>
+            <div class="ks-info-card">
+                <span class="ks-info-label">Telefono</span>
+                <strong><asp:Label ID="lblTab_Tel" runat="server" /></strong>
+            </div>
+        </div>
         </asp:Panel>
     <asp:Panel ID="PnlSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap ks-checkout-section ks-delivery-address-section">
 							<h5 class="title fw-semibold">Indirizzo di spedizione</h5>
@@ -966,11 +975,43 @@
             <tr>
             <tr>
         </table>
+        <div class="ks-info-card-grid ks-address-summary">
+            <div class="ks-info-card ks-info-card-wide">
+                <span class="ks-info-label">Destinatario</span>
+                <strong><asp:Label ID="lblTab_RagioneSocialeSpedizione" runat="server" /></strong>
+                <span><asp:Label ID="lblTab_NomeSpedizione" runat="server" /></span>
+            </div>
+            <div class="ks-info-card ks-info-card-wide">
+                <span class="ks-info-label">Indirizzo</span>
+                <strong><asp:Label ID="lblTab_IndirizzoSpedizione" runat="server" /></strong>
+                <span><asp:Label ID="lblTab_CapSpedizione" runat="server" /> <asp:Label ID="lblTab_CittaSpedizione" runat="server" /> (<asp:Label ID="lblTab_ProvinciaSpedizione" runat="server" />)</span>
+            </div>
+            <div class="ks-info-card">
+                <span class="ks-info-label">Zona</span>
+                <strong><asp:Label ID="lblTab_ZonaSpedizione" runat="server" /></strong>
+            </div>
+            <div class="ks-info-card">
+                <span class="ks-info-label">Telefono</span>
+                <strong><asp:Label ID="lblTab_TelSpedizione" runat="server" /></strong>
+            </div>
+            <div class="ks-info-card ks-info-card-wide">
+                <span class="ks-info-label">Note destinazione</span>
+                <strong><asp:Label ID="lblTab_NotaDestinazione" runat="server" /></strong>
+            </div>
+        </div>
+        <div class="ks-address-actions">
+            <div id="open1" runat="server"><a href="#" class="tf-btn btn-gray">Modifica indirizzo</a></div>
+            <div id="open2" runat="server"><a href="#" class="tf-btn">Nuova destinazione</a></div>
+        </div>
         </asp:Panel>
 		<div id="panel" runat="server" ClientIDMode="Static">
             <asp:Panel ID="PnlDestinazione" runat="server" Width="100%" Visible="True" GroupingText="Inserisci i dati"  CssClass="wrap ks-checkout-section ks-destination-section">
 							<h5 class="title fw-semibold">Gestisci destinazione</h5>
 				<input type="hidden" runat="server" id="insOmod" ClientIDMode="Static">
+                <div class="ks-preferred-destination">
+                    <asp:CheckBox ID="CHKPREDEFINITO" runat="server" />
+                    <span>Usa questa destinazione come predefinita</span>
+                </div>
 				<!--
                 <asp:Label ID="LblDescrDest" runat="server" Text=""></asp:Label>
                 <br />
@@ -1172,38 +1213,16 @@
 	<!-- Controllo se esiste l'immagine -->
 
 <asp:Panel ID="pLegacyCheckoutBindings" runat="server" Visible="false" style="display:none;">
-    <div id="open1" runat="server"></div>
-    <div id="open2" runat="server"></div>
-    <asp:CheckBox ID="CHKPREDEFINITO" runat="server" />
-    <asp:Label ID="lblTab_Cap" runat="server" />
     <asp:Label ID="lblTab_Cell" runat="server" />
-    <asp:Label ID="lblTab_CF" runat="server" />
-    <asp:Label ID="lblTab_Citta" runat="server" />
     <asp:Label ID="lblTab_Cognome" runat="server" />
     <asp:Label ID="lblTab_Email" runat="server" />
     <asp:Label ID="lblTab_Fax" runat="server" />
-    <asp:Label ID="lblTab_Indirizzo" runat="server" />
     <asp:Label ID="lblTab_Nazione" runat="server" />
-    <asp:Label ID="lblTab_Nome" runat="server" />
     <asp:Label ID="lblTab_PivaLegacyOld" runat="server" />
-    <asp:Label ID="lblTab_Provincia" runat="server" />
-    <asp:Label ID="lblTab_RagioneSociale" runat="server" />
     <asp:Label ID="lblTab_SedeLegale" runat="server" />
-    <asp:Label ID="lblTab_Tel" runat="server" />
     <asp:Label ID="lblTab_Telefono" runat="server" />
     <asp:Label ID="lblTab_Utente" runat="server" />
-    <asp:Label ID="lblTab_mail" runat="server" />
-    <asp:Label ID="lblTab_pIva" runat="server" />
     <asp:Label ID="lblTab_Email2" runat="server" />
     <asp:Label ID="lblTab_PivaLegacyUpper" runat="server" />
-    <asp:Label ID="lblTab_RagioneSocialeSpedizione" runat="server" />
-    <asp:Label ID="lblTab_NomeSpedizione" runat="server" />
-    <asp:Label ID="lblTab_IndirizzoSpedizione" runat="server" />
-    <asp:Label ID="lblTab_CittaSpedizione" runat="server" />
-    <asp:Label ID="lblTab_CapSpedizione" runat="server" />
-    <asp:Label ID="lblTab_ProvinciaSpedizione" runat="server" />
-    <asp:Label ID="lblTab_ZonaSpedizione" runat="server" />
-    <asp:Label ID="lblTab_TelSpedizione" runat="server" />
-    <asp:Label ID="lblTab_NotaDestinazione" runat="server" />
 </asp:Panel>
 </asp:Content>

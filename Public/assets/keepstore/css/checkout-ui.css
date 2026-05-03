@@ -433,6 +433,91 @@ table.ks-checkout-grid input[type="checkbox"]{
   border-radius:0 8px 8px 0;
 }
 
+.ks-checkout-shell .ks-delivery-address-section .ks-info-table tr:not(:first-child){
+  display:none;
+}
+
+.ks-checkout-shell .ks-delivery-address-section .ks-info-table tr:first-child{
+  display:grid;
+  grid-template-columns:minmax(160px, .35fr) minmax(0, 1fr);
+  gap:10px;
+  align-items:center;
+}
+
+.ks-checkout-shell .ks-delivery-address-section .ks-info-table tr:first-child td{
+  display:flex;
+  align-items:center;
+  min-height:48px;
+  border-radius:8px;
+}
+
+.ks-checkout-shell .ks-info-card-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:12px;
+}
+
+.ks-checkout-shell .ks-info-card{
+  min-width:0;
+  padding:14px;
+  border:1px solid rgba(0,0,0,.08);
+  border-radius:8px;
+  background:#fff;
+}
+
+.ks-checkout-shell .ks-info-card-wide{
+  grid-column:1 / -1;
+}
+
+.ks-checkout-shell .ks-info-label{
+  display:block;
+  margin-bottom:5px;
+  color:#5d646b;
+  font-size:12px;
+  font-weight:600;
+  text-transform:uppercase;
+}
+
+.ks-checkout-shell .ks-info-card strong,
+.ks-checkout-shell .ks-info-card span:not(.ks-info-label){
+  display:block;
+  min-height:18px;
+  overflow-wrap:anywhere;
+}
+
+.ks-checkout-shell .ks-address-summary{
+  margin-top:12px;
+}
+
+.ks-checkout-shell .ks-address-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:12px;
+}
+
+.ks-checkout-shell .ks-address-actions a,
+.ks-checkout-shell .ks-address-actions input,
+.ks-checkout-shell .ks-address-actions button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:38px;
+  border-radius:8px;
+}
+
+.ks-checkout-shell .ks-preferred-destination{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:4px 0 14px;
+  padding:10px 12px;
+  border:1px solid rgba(0,0,0,.08);
+  border-radius:8px;
+  background:#fff;
+  color:#394047;
+}
+
 .ks-checkout-shell .ks-dest-form .tf-btn,
 .ks-checkout-shell .ks-confirm-section .tf-btn{
   min-height:42px;
@@ -484,6 +569,19 @@ table.ks-checkout-grid input[type="checkbox"]{
 
   .ks-checkout-shell .ks-checkout-section .title{
     font-size:16px;
+  }
+
+  .ks-checkout-shell .ks-delivery-address-section .ks-info-table tr:first-child,
+  .ks-checkout-shell .ks-info-card-grid{
+    grid-template-columns:1fr;
+  }
+
+  .ks-checkout-shell .ks-address-actions{
+    display:block;
+  }
+
+  .ks-checkout-shell .ks-address-actions>*+*{
+    margin-top:8px;
   }
 
   table.ks-checkout-grid,
