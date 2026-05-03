@@ -1077,6 +1077,51 @@
                                 <h5 class="fw-semibold">Riepilogo ordine</h5>
                             </div>
 
+                            <div class="ks-sidebar-products">
+                                <h6 class="fw-semibold">Prodotti</h6>
+                                <ul class="list-product">
+                                    <asp:Repeater ID="rpCheckoutSummaryGratis" runat="server" DataSourceID="sdsArticoli_Spedizione_Gratis">
+                                        <ItemTemplate>
+                                            <li class="item-product">
+                                                <asp:HyperLink ID="lnkSummaryImg" runat="server" CssClass="img-product" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("ArticoliId") & "&TCid=" & Eval("TCid") %>'>
+                                                    <asp:Image ID="imgSummary" runat="server" ImageUrl='<%# checkImg(Eval("Img1")) %>' AlternateText='<%# Convert.ToString(Eval("Descrizione1")) %>' />
+                                                </asp:HyperLink>
+                                                <div class="content-box">
+                                                    <asp:HyperLink ID="lnkSummaryName" runat="server" CssClass="link-secondary body-md-2 fw-semibold" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("ArticoliId") & "&TCid=" & Eval("TCid") %>'>
+                                                        <%# controllaLunghezzaTesto(Eval("Descrizione1"), 58) %>
+                                                    </asp:HyperLink>
+                                                    <div class="ks-summary-product-meta body-text-3">
+                                                        <span>Q.tà <strong><%# Eval("Qnt") %></strong></span>
+                                                        <span class="ks-summary-free">Spedizione gratis</span>
+                                                    </div>
+                                                    <span class="price-text fw-semibold"><%# IIf(Me.Session("IvaTipo") = 1, String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Importo")) & " " & ChrW(8364), String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("ImportoIvato")) & " " & ChrW(8364)) %></span>
+                                                </div>
+                                            </li>
+                                        </ItemTemplate>
+                                    </asp:Repeater>
+
+                                    <asp:Repeater ID="rpCheckoutSummaryStandard" runat="server" DataSourceID="sdsArticoli">
+                                        <ItemTemplate>
+                                            <li class="item-product">
+                                                <asp:HyperLink ID="lnkSummaryImg" runat="server" CssClass="img-product" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("ArticoliId") & "&TCid=" & Eval("TCid") %>'>
+                                                    <asp:Image ID="imgSummary" runat="server" ImageUrl='<%# checkImg(Eval("Img1")) %>' AlternateText='<%# Convert.ToString(Eval("Descrizione1")) %>' />
+                                                </asp:HyperLink>
+                                                <div class="content-box">
+                                                    <asp:HyperLink ID="lnkSummaryName" runat="server" CssClass="link-secondary body-md-2 fw-semibold" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("ArticoliId") & "&TCid=" & Eval("TCid") %>'>
+                                                        <%# controllaLunghezzaTesto(Eval("Descrizione1"), 58) %>
+                                                    </asp:HyperLink>
+                                                    <div class="ks-summary-product-meta body-text-3">
+                                                        <span>Q.tà <strong><%# Eval("Qnt") %></strong></span>
+                                                        <span><%# Eval("Codice") %></span>
+                                                    </div>
+                                                    <span class="price-text fw-semibold"><%# IIf(Me.Session("IvaTipo") = 1, String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Importo")) & " " & ChrW(8364), String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("ImportoIvato")) & " " & ChrW(8364)) %></span>
+                                                </div>
+                                            </li>
+                                        </ItemTemplate>
+                                    </asp:Repeater>
+                                </ul>
+                            </div>
+
                             <div class="d-flex justify-content-between mt-3">
                                 <span class="fw-medium">Imponibile</span>
                                 <span><%= lblImponibile.Text %></span>
