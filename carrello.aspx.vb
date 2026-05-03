@@ -514,6 +514,10 @@ Private Const SessLoginId_B As String = "LOGINID"
     Me.PnlDestinazione.Visible = isLogged
     Me.Panel_Note.Visible = isLogged
 
+    If Not Page.IsPostBack Then
+        Aggiorna_Prezzi_Carrello()
+    End If
+
     ' Il carrello deve essere bindato anche per utenti anonimi.
     ConfigureCartDataSources()
 
