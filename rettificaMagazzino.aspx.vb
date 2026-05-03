@@ -796,7 +796,7 @@ End Function
         Dim ParentPrezzo As Label = e.Item.Parent.Parent.FindControl("lblPrezzo")
         Dim ParentPrezzoIvato As Label = e.Item.Parent.Parent.FindControl("lblPrezzoIvato")
 
-        Dim temp As String
+        Dim temp As String = "0"
 
         If InOfferta.Text = 1 Then
             Panel_offerta.Visible = True

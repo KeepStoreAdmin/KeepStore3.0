@@ -917,18 +917,19 @@ End Sub
     ' =======================================
     '  DB HELPERS
     ' =======================================
-    Protected Function ExecuteDelete(ByVal table As String, Optional ByVal wherePart As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing)
+    Protected Function ExecuteDelete(ByVal table As String, Optional ByVal wherePart As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing) As Integer
         Dim sqlString As String = "DELETE FROM " & table & " " & wherePart
-        ExecuteNonQuery(False, sqlString, params)
+        Return ExecuteNonQuery(False, sqlString, params)
     End Function
 
-    Protected Function ExecuteUpdate(ByVal table As String, ByVal fieldAndValues As String, Optional ByVal wherePart As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing)
+    Protected Function ExecuteUpdate(ByVal table As String, ByVal fieldAndValues As String, Optional ByVal wherePart As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing) As Integer
         Dim sqlString As String = "UPDATE " & table & " set " & fieldAndValues & " " & wherePart
-        ExecuteNonQuery(False, sqlString, params)
+        Return ExecuteNonQuery(False, sqlString, params)
     End Function
 
-    Protected Function ExecuteNonQuery(ByVal isStoredProcedure As Boolean, ByVal sqlString As String, Optional ByVal params As Dictionary(Of String, String) = Nothing)
+    Protected Function ExecuteNonQuery(ByVal isStoredProcedure As Boolean, ByVal sqlString As String, Optional ByVal params As Dictionary(Of String, String) = Nothing) As Integer
         Dim conn As New MySqlConnection
+        Dim affectedRows As Integer = 0
         Try
             Dim connectionString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             If Not String.IsNullOrEmpty(connectionString) Then
@@ -964,7 +965,7 @@ End Sub
                     cmd.CommandType = CommandType.Text
                 End If
 
-                cmd.ExecuteNonQuery()
+                affectedRows = cmd.ExecuteNonQuery()
                 cmd.Dispose()
             End If
         Finally
@@ -973,6 +974,7 @@ End Sub
                 conn.Dispose()
             End If
         End Try
+        Return affectedRows
     End Function
 
     Protected Sub ExecuteStoredProcedure(ByVal storedProcedure As String, Optional ByVal params As Dictionary(Of String, String) = Nothing)

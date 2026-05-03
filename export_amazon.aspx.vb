@@ -381,13 +381,13 @@ Partial Class export_amazon
                     checkAndReplaceStrLine(strLine, "#DescrizioneLunga#", TrasformaTestoXHtml(DescrizioneLunga))
                     checkAndReplaceStrLine(strLine, "#DescrizioneHtml#", TrasformaTestoXHtml(DescrizioneHTML))
                     If strLine.Contains("#Prezzo#") Then
-                        Dim prezzoFinale As String
+                        Dim prezzoFinale As String = Format_prezzofinale(CDbl(Prezzo.Replace(".", ",")))
                         Select Case mode
                             Case Modes.SoloPrezzo
-                                Format_prezzofinale(CDbl(Prezzo.Replace(".", ",")))
+                                prezzoFinale = Format_prezzofinale(CDbl(Prezzo.Replace(".", ",")))
                             Case Modes.PrezzoESpedizione
                                 If NoVettoreSuGratis = 1 AndAlso verifica_spedizione_gratis(connSecondoPrezzoSpedizioneGratis, ArtID, Listino) = 1 Then
-                                    Format_prezzofinale(CDbl(Prezzo.Replace(".", ",")))
+                                    prezzoFinale = Format_prezzofinale(CDbl(Prezzo.Replace(".", ",")))
                                 Else
                                     Dim speseSpedizioneDaAggiungere As Double
                                     If IvaTipo = 1 Then

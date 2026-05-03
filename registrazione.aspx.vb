@@ -2135,10 +2135,11 @@ REM next
 		riempi_text_provincia(citta, provincia)
     End Sub
 	
-	Protected Function ConvertDataSetColumnToUpper(ByRef ds As DataSet, ByVal columnName As String)
+	Protected Function ConvertDataSetColumnToUpper(ByRef ds As DataSet, ByVal columnName As String) As DataSet
 		For Each row As DataRow In ds.Tables(0).Rows
 			row(columnName) = row(columnName).ToString().ToUpper()
 		Next
+		Return ds
 	End Function	
 		
     Protected Sub Button_genera_codice_fiscale_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles Button_genera_codice_fiscale.Click

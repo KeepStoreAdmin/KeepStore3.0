@@ -152,23 +152,24 @@ Partial Class coupon_opzioni
         '-----------------------------------------------------------------------------------------------------------
     End Sub
 
-    Protected Function ExecuteInsert(ByVal table As String, ByVal fields As String, Optional ByVal values As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing)
+    Protected Function ExecuteInsert(ByVal table As String, ByVal fields As String, Optional ByVal values As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing) As Integer
         Dim sqlString As String = "INSERT INTO " & table & " (" & fields & ") VALUES (" & values & ")"
-        ExecuteNonQuery(False, sqlString, params)
+        Return ExecuteNonQuery(False, sqlString, params)
     End Function
 
-    Protected Function ExecuteDelete(ByVal table As String, Optional ByVal wherePart As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing)
+    Protected Function ExecuteDelete(ByVal table As String, Optional ByVal wherePart As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing) As Integer
         Dim sqlString As String = "DELETE FROM " & table & " " & wherePart
-        ExecuteNonQuery(False, sqlString, params)
+        Return ExecuteNonQuery(False, sqlString, params)
     End Function
 
-    Protected Function ExecuteUpdate(ByVal table As String, ByVal fieldAndValues As String, Optional ByVal wherePart As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing)
+    Protected Function ExecuteUpdate(ByVal table As String, ByVal fieldAndValues As String, Optional ByVal wherePart As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing) As Integer
         Dim sqlString As String = "UPDATE " & table & " set " & fieldAndValues & " " & wherePart
-        ExecuteNonQuery(False, sqlString, params)
+        Return ExecuteNonQuery(False, sqlString, params)
     End Function
 
-    Protected Function ExecuteNonQuery(ByVal isStoredProcedure As Boolean, ByVal sqlString As String, Optional ByVal params As Dictionary(Of String, String) = Nothing)
+    Protected Function ExecuteNonQuery(ByVal isStoredProcedure As Boolean, ByVal sqlString As String, Optional ByVal params As Dictionary(Of String, String) = Nothing) As Integer
         Dim conn As New MySqlConnection
+        Dim affectedRows As Integer = 0
         Try
             Dim connectionString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             If Not connectionString Is Nothing Then
@@ -191,7 +192,7 @@ Partial Class coupon_opzioni
                 Else
                     cmd.CommandType = CommandType.Text
                 End If
-                cmd.ExecuteNonQuery()
+                affectedRows = cmd.ExecuteNonQuery()
                 cmd.Dispose()
             End If
         Finally
@@ -200,6 +201,7 @@ Partial Class coupon_opzioni
                 conn.Dispose()
             End If
         End Try
+        Return affectedRows
     End Function
 
     Protected Function ExecuteQueryGetDataReader(ByVal fields As String, ByVal table As String, Optional ByVal wherePart As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing) As List(Of Dictionary(Of String, Object))

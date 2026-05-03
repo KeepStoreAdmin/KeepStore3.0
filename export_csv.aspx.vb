@@ -135,7 +135,7 @@ Partial Class export
         Dim Ordine As Integer = 0
         Dim conn As New MySqlConnection
         Dim cmd As New MySqlCommand
-        Dim dr As MySqlDataReader
+        Dim dr As MySqlDataReader = Nothing
 
         Dim calcola_spedizione_reale As Integer = 0
 
@@ -558,7 +558,9 @@ Partial Class export
             dr.Close()
         End If
 
-        dr.Dispose()
+        If dr IsNot Nothing Then
+            dr.Dispose()
+        End If
 
         cmd.Dispose()
 
