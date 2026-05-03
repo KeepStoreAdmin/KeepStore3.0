@@ -12,6 +12,42 @@ Imports System.Web
 Public Partial Class carrello
     Inherits System.Web.UI.Page
 
+Private Shared ReadOnly CartCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
+
+Protected Overrides Sub InitializeCulture()
+    System.Threading.Thread.CurrentThread.CurrentCulture = CartCulture
+    System.Threading.Thread.CurrentThread.CurrentUICulture = CartCulture
+    MyBase.InitializeCulture()
+End Sub
+
+Private Shared Function FormatCurrencyIt(ByVal value As Double) As String
+    Return value.ToString("C", CartCulture)
+End Function
+
+Private Shared Function ParseDecimalForDb(ByVal value As Object, Optional ByVal def As Decimal = 0D) As Decimal
+    If value Is Nothing OrElse value Is DBNull.Value Then Return def
+
+    Dim s As String = value.ToString().Trim()
+    If s = "" Then Return def
+
+    s = s.Replace(ChrW(8364), "").Replace("&euro;", "").Replace("&#8364;", "").Trim()
+    s = s.Replace(ChrW(8722), "-")
+
+    Dim d As Decimal
+    If Decimal.TryParse(s, NumberStyles.Any, CartCulture, d) Then Return d
+    If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then Return d
+
+    Dim t As String = s.Replace(".", "").Replace(",", ".")
+    If Decimal.TryParse(t, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then Return d
+
+    Return def
+End Function
+
+Private Shared Function NormalizeMoneyText(ByVal value As String) As String
+    If value Is Nothing Then Return ""
+    Return value.Replace(ChrW(8364), "").Replace("&euro;", "").Replace("&#8364;", "").Replace(ChrW(8722), "-").Trim()
+End Function
+
 
 ' === HARDENING HELPERS (VB2012 safe) ===
 Private Const CHECKOUT_TOKEN_SESSION_KEY As String = "CheckoutToken"
@@ -121,7 +157,7 @@ Protected Function mancano_ancora(ByVal soglia As Double, ByVal imponibileLocal 
     End If
 
     Dim diffIvato As Double = diff * ((ivaVettori / 100) + 1)
-    Return "Per usufruire della PROMO mancano ancora " & String.Format("{0:c}", diffIvato) & " - Non vengono conteggiati gli articoli con SPEDIZIONE GRATIS"
+    Return "Per usufruire della PROMO mancano ancora " & FormatCurrencyIt(diffIvato) & " - Non vengono conteggiati gli articoli con SPEDIZIONE GRATIS"
 End Function
 
 Protected Function mancano_ancora_number(ByVal soglia As Double, ByVal imponibileLocal As Double, ByVal imponibileGratisLocal As Double) As Integer
@@ -610,7 +646,7 @@ Private Const SessLoginId_B As String = "LOGINID"
         'Salvataggio per l'SQLData relativo ai vettori in PROMO
         Session.Item("Imponibile") = imponibile - imponibile_gratis
 
-        Me.lblImponibile.Text = "€ " & FormatNumber(imponibile, 2)
+        Me.lblImponibile.Text = FormatCurrencyIt(imponibile)
         'Session("Calcolo_Iva") = calcolo_iva
         Me.tbPeso.Text = pesoTotale
 
@@ -693,7 +729,7 @@ If buonoTot > 0 Then
 
     Me.Session("Ordine_DescrizioneBuonoSconto") =
         (desc1 & " " & desc2).Trim() &
-        " per un valore di " & String.Format("{0:c}", buonoTot) &
+        " per un valore di " & FormatCurrencyIt(buonoTot) &
         " Codice Applicato: " & TB_BuonoSconto.Text
 
             Me.Session("Ordine_TotaleBuonoSconto") = buonoTot
@@ -746,7 +782,7 @@ If buonoTot > 0 Then
     Dim sel As Boolean = False
 
     ' Resetto il prezzo relativo al metodo di pagamento
-    lblPagamento.Text = String.Format("{0:c}", 0D)
+    lblPagamento.Text = FormatCurrencyIt(0D)
 
     ' Base imponibile (la Label contiene spesso "€ ...", quindi la leggo in modo safe)
     Dim imponibileBase As Double = SafeMoney(Me.lblImponibile.Text, 0)
@@ -783,7 +819,7 @@ If buonoTot > 0 Then
                 'Spedizione
                 lblCosto = TryCast(gvVettori.Rows(i).FindControl("lblCosto"), Label)
                 Dim costoSped As Double = SafeMoney(If(lblCosto IsNot Nothing, lblCosto.Text, "0"), 0)
-                Me.lblSpeseSped.Text = String.Format("{0:c}", costoSped)
+                Me.lblSpeseSped.Text = FormatCurrencyIt(costoSped)
 
                 lbl = TryCast(gvVettori.Rows(i).FindControl("lblId"), Label)
                 If lbl IsNot Nothing Then Me.tbVettoriId.Text = lbl.Text
@@ -801,7 +837,7 @@ If buonoTot > 0 Then
                 If TotAssicurazione < AssicurazioneMinimo Then
                     TotAssicurazione = AssicurazioneMinimo
                 End If
-                Me.lblAssicurazione.Text = String.Format("{0:c}", TotAssicurazione)
+                Me.lblAssicurazione.Text = FormatCurrencyIt(TotAssicurazione)
 
                 'Contrassegno
                 lblContrPerc = TryCast(gvVettori.Rows(i).FindControl("lblContrPerc"), Label)
@@ -858,7 +894,7 @@ If buonoTot > 0 Then
                 'Spedizione
                 lblCosto = TryCast(gvVettoriPromo.Rows(i).FindControl("lblCosto"), Label)
                 Dim costoSped As Double = SafeMoney(If(lblCosto IsNot Nothing, lblCosto.Text, "0"), 0)
-                Me.lblSpeseSped.Text = String.Format("{0:c}", costoSped)
+                Me.lblSpeseSped.Text = FormatCurrencyIt(costoSped)
 
                 lbl = TryCast(gvVettoriPromo.Rows(i).FindControl("lblId"), Label)
                 If lbl IsNot Nothing Then Me.tbVettoriId.Text = lbl.Text
@@ -876,7 +912,7 @@ If buonoTot > 0 Then
                     TotAssicurazione = AssicurazioneMinimo
                 End If
 
-                Me.lblAssicurazione.Text = String.Format("{0:c}", TotAssicurazione)
+                Me.lblAssicurazione.Text = FormatCurrencyIt(TotAssicurazione)
 
                 'Contrassegno
                 lblContrPerc = TryCast(gvVettoriPromo.Rows(i).FindControl("lblContrPerc"), Label)
@@ -952,7 +988,7 @@ End Sub
 
     Dim ivaCalcolata As Double = calcola_iva(spedD, ivaVett) + assD * (ivaAssPerc / 100)
 
-    Me.lblIva.Text = "€ " & FormatNumber(ivaCalcolata, 2)
+    Me.lblIva.Text = FormatCurrencyIt(ivaCalcolata)
 
     Dim totBase As Double = impD + spedD + assD + ivaCalcolata
 
@@ -999,7 +1035,7 @@ End Sub
 
         lbl = TryCast(gvPagamento.Rows(i).FindControl("lblCosto"), Label)
         Try
-            If lbl IsNot Nothing Then lbl.Text = String.Format("{0:c}", totPagamento)
+            If lbl IsNot Nothing Then lbl.Text = FormatCurrencyIt(totPagamento)
         Catch
             If lbl IsNot Nothing Then lbl.Text = "€ 0,00"
         End Try
@@ -1013,7 +1049,7 @@ End Sub
             lbl = TryCast(gvPagamento.Rows(i).FindControl("lblShopLogin"), Label)
             If lbl IsNot Nothing Then Me.tbShopIdGestPay.Text = lbl.Text
 
-            Me.lblPagamento.Text = String.Format("{0:c}", totPagamento)
+            Me.lblPagamento.Text = FormatCurrencyIt(totPagamento)
         End If
 
     Next
@@ -1033,13 +1069,13 @@ End Sub
         If lbl IsNot Nothing Then
             Me.lblPagamento.Text = lbl.Text
         Else
-            Me.lblPagamento.Text = String.Format("{0:c}", 0D)
+            Me.lblPagamento.Text = FormatCurrencyIt(0D)
         End If
 
     End If
 
     Dim pagD As Double = SafeMoney(Me.lblPagamento.Text, 0)
-    Me.lblTotale.Text = "€ " & FormatNumber(impD + ivaCalcolata + assD + spedD + pagD + buonoD, 2)
+    Me.lblTotale.Text = FormatCurrencyIt(impD + ivaCalcolata + assD + spedD + pagD + buonoD)
 
 End Sub
 
@@ -1074,7 +1110,7 @@ End Sub
             Try
                 Dim percVal As Double = SafeDblFromText(If(Percentuale IsNot Nothing, Percentuale.Text, "0"), 0)
                 If percVal > 0 AndAlso Costo IsNot Nothing Then
-                    Costo.Text = String.Format("{0:c}", ((imponibile - imponibile_gratis) / 100) * percVal)
+                    Costo.Text = FormatCurrencyIt(((imponibile - imponibile_gratis) / 100) * percVal)
                 End If
             Catch
                 If Percentuale IsNot Nothing Then Percentuale.Text = "0"
@@ -1652,7 +1688,7 @@ End Sub
 
             If dr.HasRows Then
                 'Spedizione
-                Me.lblSpeseSped.Text = String.Format("{0:c}", 0)
+                Me.lblSpeseSped.Text = FormatCurrencyIt(0D)
 
                 If Session("AziendaID") = 1 Then
                     Me.tbVettoriId.Text = "-1"
@@ -1670,7 +1706,7 @@ End Sub
                     TotAssicurazione = AssicurazioneMinimo
                 End If
 
-                Me.lblAssicurazione.Text = String.Format("{0:c}", TotAssicurazione)
+                Me.lblAssicurazione.Text = FormatCurrencyIt(TotAssicurazione)
 
                 'Contrassegno
                 Me.tbContrFisso.Text = dr.Item("ContrassegnoFisso")
@@ -1734,8 +1770,8 @@ End Sub
             TB_BuonoSconto.Enabled = True
 
             checkOKBuonoSconto.Visible = False
-            lblBuonoSconto.Text = String.Format("{0:c}", 0)
-            lblBuonoScontoIVA.Text = String.Format("{0:c}", 0)
+            lblBuonoSconto.Text = FormatCurrencyIt(0D)
+            lblBuonoScontoIVA.Text = FormatCurrencyIt(0D)
         End If
 
         If (gvArticoliGratis.Items.Count > 0) Or (Repeater1.items.Count > 0) Then
@@ -1751,10 +1787,10 @@ End Sub
 
         'Conteggi dell'iva
         Dim ivaNuova As Double = calcola_iva(speseSpedVal, ivaVettoreVal) + (speseAssVal * (ivaAssPerc / 100))
-        lblIva.Text = "€ " & FormatNumber(ivaNuova, 2)
+        lblIva.Text = FormatCurrencyIt(ivaNuova)
 
         Dim totaleDoc As Double = imponibileVal + ivaNuova + speseAssVal + speseSpedVal + pagamentoVal + buonoVal
-        lblTotale.Text = "€ " & FormatNumber(totaleDoc, 2)
+        lblTotale.Text = FormatCurrencyIt(totaleDoc)
 
 
         'Aggiorno il valore del Buono Sconto
@@ -1772,7 +1808,7 @@ End Sub
     Dim ivaVettTmp As Double = SafeDblFromText(If(Session("Iva_Vettori"), "0").ToString(), 0)
 
     Dim scontoSped As Double = -(spedTmp + (spedTmp * (ivaVettTmp / 100)))
-    lblBuonoSconto.Text = "€ " & FormatNumber(scontoSped, 2)
+    lblBuonoSconto.Text = FormatCurrencyIt(scontoSped)
 
     Else
 
@@ -1786,7 +1822,7 @@ End Sub
         scontoCalc = valore
     End If
 
-    lblBuonoSconto.Text = "€ " & FormatNumber(-scontoCalc, 2)
+    lblBuonoSconto.Text = FormatCurrencyIt(-scontoCalc)
 
     End If
 
@@ -1811,17 +1847,17 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
             Dim buonoImp As Double = Math.Round(buonoTot / (1 + (ivaBuonoPerc / 100)), 2, MidpointRounding.AwayFromZero)
             Dim buonoIva As Double = Math.Round(buonoTot - buonoImp, 2, MidpointRounding.AwayFromZero)
 
-            lblBuonoScontoIVA.Text = "€ " & FormatNumber(buonoIva, 2)
-            lblBuonoSconto.Text = "€ " & FormatNumber(buonoImp, 2)
+            lblBuonoScontoIVA.Text = FormatCurrencyIt(buonoIva)
+            lblBuonoSconto.Text = FormatCurrencyIt(buonoImp)
 
-            lblIva.Text = "€ " & FormatNumber(SafeMoney(lblIva.Text, 0) + buonoIva, 2)
+            lblIva.Text = FormatCurrencyIt(SafeMoney(lblIva.Text, 0) + buonoIva)
 
             Dim totBuono As Double = SafeMoney(lblBuonoSconto.Text, 0) + SafeMoney(lblBuonoScontoIVA.Text, 0)
             totSconto.Text =
             IIf(SafeDblFromText(scontoPercentuale.Text, 0) > 0,
         "Sconto in percentuale " & SafeDblFromText(valoreBuonoSconto.Text, 0) & "%",
         IIf(Val(scontoVettore.Text) > 0, "SPEDIZIONE OMAGGIO", "Sconto fisso euro " & SafeDblFromText(valoreBuonoSconto.Text, 0))) &
-        "<br/>" & String.Format("{0:c}", totBuono)
+        "<br/>" & FormatCurrencyIt(totBuono)
         End If
 
 		Dim totaleTemp As Double =
@@ -1834,7 +1870,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
 
 
             totaleTemp = Math.Round(totaleTemp, 2, MidpointRounding.AwayFromZero)
-            lblTotale.Text = "€ " & FormatNumber(totaleTemp, 2)
+            lblTotale.Text = FormatCurrencyIt(totaleTemp)
  
 
         Session("Calcolo_Iva") = lblIva.Text
@@ -2155,10 +2191,10 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
             Me.btContinua.Enabled = True
             Me.btSvuota.Enabled = True
             'Me.Repeater1.DataBind()
-            Me.lblPagamento.Text = String.Format("{0:c}", CDbl("0"))
-            Me.lblSpeseSped.Text = String.Format("{0:c}", CDbl("0"))
-            Me.lblSpeseAss.Text = String.Format("{0:c}", CDbl("0"))
-            Me.lblPagamento.Text = String.Format("{0:c}", CDbl("0"))
+            Me.lblPagamento.Text = FormatCurrencyIt(0D)
+            Me.lblSpeseSped.Text = FormatCurrencyIt(0D)
+            Me.lblSpeseAss.Text = FormatCurrencyIt(0D)
+            Me.lblPagamento.Text = FormatCurrencyIt(0D)
         Else
             Me.TableConteggi.Visible = True
             Me.tOrdine.Visible = True
@@ -2680,8 +2716,8 @@ End Sub
             Session("BuonoSconto_id") = Nothing
 
             TB_BuonoSconto.Enabled = True
-            lblBuonoSconto.Text = String.Format("{0:c}", 0)
-            lblBuonoScontoIVA.Text = String.Format("{0:c}", 0)
+            lblBuonoSconto.Text = FormatCurrencyIt(0D)
+            lblBuonoScontoIVA.Text = FormatCurrencyIt(0D)
 
             checkOKBuonoSconto.Visible = False
             checkNOBuonoSconto.Visible = True
@@ -2698,8 +2734,8 @@ End Sub
         Session("BuonoSconto_id") = Nothing
 
         TB_BuonoSconto.Enabled = True
-        lblBuonoSconto.Text = String.Format("{0:c}", 0)
-        lblBuonoScontoIVA.Text = String.Format("{0:c}", 0)
+        lblBuonoSconto.Text = FormatCurrencyIt(0D)
+        lblBuonoScontoIVA.Text = FormatCurrencyIt(0D)
 
         checkOKBuonoSconto.Visible = False
         checkNOBuonoSconto.Visible = True
@@ -3504,8 +3540,7 @@ Protected Function ExecuteNonQuery(ByVal isStoredProcedure As Boolean, ByVal sql
                         End If
 
                         If p = "?parPrezzo" OrElse p = "?parPrezzoIvato" OrElse p = "@parPrezzo" OrElse p = "@parPrezzoIvato" Then
-                            cmd.Parameters.Add(p, MySqlDbType.Double).Value =
-                                Convert.ToDecimal(params(paramName), CultureInfo.GetCultureInfo("it-IT"))
+                            cmd.Parameters.Add(p, MySqlDbType.Decimal).Value = ParseDecimalForDb(params(paramName), 0D)
                         Else
                             cmd.Parameters.AddWithValue(p, params(paramName))
                         End If

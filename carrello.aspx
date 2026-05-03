@@ -1,4 +1,4 @@
-<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="carrello.aspx.vb" Inherits="carrello" Debug="false"%>
+<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="carrello.aspx.vb" Inherits="carrello" Debug="false" Culture="it-IT" UICulture="it-IT"%>
 
 <%@ Register Assembly="ConwayControls" Namespace="ConwayControls.Web" TagPrefix="ccwc" %>
 
@@ -294,7 +294,7 @@
 
                                     <td data-cart-title="Prezzo" class="tf-cart-item_price">
                                         <p class="cart-price price-text fw-medium">
-                                            <asp:Label ID="lblPrezzoIvato" runat="server" Text='<%#: Eval("PrezzoIvato") %>'></asp:Label>
+                                            <asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# Bind("PrezzoIvato", "{0:C}") %>'></asp:Label>
                                             <asp:Label ID="lblPrezzo" runat="server" Text='<%# Bind("Prezzo", "{0:C}") %>'></asp:Label>
                                         </p>
                                         <p class="body-text-3 text-secondary"><%= IIf(Me.Session("IvaTipo") = 1, "+", "")%>IVA. <%#: Eval("ValoreIva")%>%</p>
