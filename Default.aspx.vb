@@ -37,12 +37,8 @@ Partial Public Class _Default
                     body.Attributes("class") = (current & " ks-page-home").Trim()
                     current = Convert.ToString(body.Attributes("class"))
                 End If
-                If current.IndexOf("ks-home-server-rendered", StringComparison.OrdinalIgnoreCase) < 0 Then
-                    body.Attributes("class") = (current & " ks-home-server-rendered").Trim()
-                    current = Convert.ToString(body.Attributes("class"))
-                End If
-                If current.IndexOf("ks-home-layout", StringComparison.OrdinalIgnoreCase) < 0 Then
-                    body.Attributes("class") = (current & " ks-home-layout").Trim()
+                If current.IndexOf("ks-home-main", StringComparison.OrdinalIgnoreCase) < 0 Then
+                    body.Attributes("class") = (current & " ks-home-main").Trim()
                 End If
             End If
         Catch
@@ -223,13 +219,13 @@ Partial Public Class _Default
         HomeHeroSection.Visible = (normalizedMode <> "none")
 
         If HomeHeroShell IsNot Nothing Then
-            Dim sideClass As String = If(normalizedMode = "full", " ks-home-hero-shell--with-side", " ks-home-hero-shell--no-side")
-            HomeHeroShell.Attributes("class") = "s-banner-wrapper ks-home-hero-shell ks-home-hero-mode-" & normalizedMode & sideClass
+            Dim sideClass As String = If(normalizedMode = "full", " ks-home-has-promos", " ks-home-no-promos")
+            HomeHeroShell.Attributes("class") = "ks-home-hero-grid ks-home-hero-mode-" & normalizedMode & sideClass
             HomeHeroShell.Attributes("data-ks-hero-mode") = normalizedMode
         End If
 
         If HomeHeroSection IsNot Nothing Then
-            HomeHeroSection.Attributes("class") = "tf-sp-5 ks-home-layout-section ks-home-hero-section ks-home-hero-mode-" & normalizedMode
+            HomeHeroSection.Attributes("class") = "ks-home-hero-area ks-home-hero-mode-" & normalizedMode
             HomeHeroSection.Attributes("data-ks-hero-mode") = normalizedMode
         End If
     End Sub

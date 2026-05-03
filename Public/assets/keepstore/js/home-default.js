@@ -316,7 +316,7 @@
   function initHome() {
     if (!isHome()) return;
     if (document.body) {
-      document.body.classList.add('ks-home-layout');
+      document.body.classList.add('ks-home-main');
     }
     initHomeSwipers();
     initDepartmentsMenu();

@@ -1,5 +1,4 @@
 <%@ Page Language="VB" AutoEventWireup="false" MasterPageFile="~/Page.master" CodeFile="Default.aspx.vb" Inherits="_Default" %>
-<%@ Register Src="~/Public/ui/controls/HomeDepartmentsMenu.ascx" TagPrefix="uc" TagName="HomeDepartmentsMenu" %>
 <%@ Register Src="~/Public/ui/controls/HomeIconBoxes.ascx" TagPrefix="uc" TagName="HomeIconBoxes" %>
 
 <asp:Content ID="cntTitle" ContentPlaceHolderID="TitleContent" runat="server">
@@ -8,13 +7,12 @@
 
 <asp:Content ID="cntMain" ContentPlaceHolderID="MainContent" runat="server">
 
-    <section id="HomeHeroSection" runat="server" class="tf-sp-5 ks-home-layout-section ks-home-hero-section ks-home-hero-mode-full">
+    <section class="ks-home-main">
+
+    <section id="HomeHeroSection" runat="server" class="ks-home-hero-area ks-home-hero-mode-full">
         <div class="container">
-            <div id="HomeHeroShell" runat="server" class="s-banner-wrapper ks-home-hero-shell ks-home-hero-mode-full ks-home-hero-shell--with-side">
-                <div class="wrap-item-1 d-none d-lg-block">
-                    <div class="ks-home-menu-source">
-                        <uc:HomeDepartmentsMenu ID="HomeDepartmentsMenu1" runat="server" />
-                    </div>
+            <div id="HomeHeroShell" runat="server" class="ks-home-hero-grid ks-home-hero-mode-full ks-home-has-promos">
+                <div class="wrap-item-1 ks-home-departments-panel">
                     <asp:Panel ID="HomeHeroDepartmentsPanel" runat="server" CssClass="nav-category-wrap tf-nav-menu ks-home-departments-list">
                         <div class="main-nav category-menu active-item">
                             <h6 class="fw-semibold title nav-title btn-active">
@@ -42,7 +40,7 @@
                     </asp:Panel>
                 </div>
 
-                <div id="HeroSliderWrap" runat="server" class="wrap-item-2">
+                <div id="HeroSliderWrap" runat="server" class="wrap-item-2 ks-home-main-hero">
                     <div id="Slide_Show_Container" runat="server" class="swiper ks-home-hero-slider wow fadeInUp" data-wow-delay="0s">
                         <div class="swiper-wrapper">
                             <asp:Repeater ID="rptHeroSlides" runat="server">
@@ -76,7 +74,7 @@
                     </div>
                 </div>
 
-                <asp:Panel ID="HeroSideWrap" runat="server" CssClass="wrap-item-3 ks-home-side-banners" Visible="false">
+                <asp:Panel ID="HeroSideWrap" runat="server" CssClass="wrap-item-3 ks-home-side-promos" Visible="false">
                     <asp:Repeater ID="rptSideBanners" runat="server">
                         <ItemTemplate>
                             <div class="cls-category style-abs hover-img ks-home-side-banner">
@@ -101,7 +99,7 @@
 
     <uc:HomeIconBoxes ID="HomeIconBoxes1" runat="server" />
 
-    <section id="HomeMainCategoriesSection" runat="server" class="tf-sp-2 pt-0 ks-home-layout-section ks-home-categories-section">
+    <section id="HomeMainCategoriesSection" runat="server" class="ks-home-section ks-home-categories">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <div>
@@ -128,7 +126,7 @@
         </div>
     </section>
 
-    <section id="KsLocalAiSearch130" class="ks-ai130-section tf-sp-2 ks-home-layout-section" data-ks-ai="local-reasoning" data-ks-home-layout="1">
+    <section id="KsLocalAiSearch130" class="ks-ai130-section ks-home-section ks-home-ai-search" data-ks-ai="local-reasoning">
         <div class="container">
             <div class="ks-ai130-shell">
                 <div class="ks-ai130-brain">
@@ -164,7 +162,7 @@
         </div>
     </section>
 
-    <section id="HomeFeaturedProductsSection" runat="server" class="tf-sp-2 pt-0 ks-home-layout-section ks-home-featured-section">
+    <section id="HomeFeaturedProductsSection" runat="server" class="ks-home-section ks-home-featured">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <div>
@@ -185,7 +183,7 @@
         </div>
     </section>
 
-    <section id="HomeOffersSection" runat="server" class="tf-sp-2 pt-0 ks-home-layout-section ks-home-deal-section">
+    <section id="HomeOffersSection" runat="server" class="ks-home-section ks-home-deals">
         <div class="container">
             <div class="flat-title pb-8 wow fadeInUp" data-wow-delay="0s">
                 <div>
@@ -229,7 +227,7 @@
         </div>
     </section>
 
-    <section id="HomeWidePromoSection" runat="server" visible="false" class="tf-sp-2 pt-0 ks-home-wide-promo ks-home-layout-section">
+    <section id="HomeWidePromoSection" runat="server" visible="false" class="ks-home-section ks-home-wide-promo">
         <div class="container">
             <div class="ks-home-wide-promo-inner">
                 <div class="ks-home-wide-promo-copy">
@@ -359,7 +357,7 @@
         </div>
     </section>
 
-    <section id="HomeBottomPromoSection" runat="server" visible="false" class="tf-sp-2 pt-0 ks-home-banner-product ks-home-layout-section">
+    <section id="HomeBottomPromoSection" runat="server" visible="false" class="ks-home-section ks-home-banner-product">
         <div class="container">
             <div class="ks-home-bottom-promo-grid">
                 <a href="articoli.aspx?q=ricondizionato" class="ks-home-bottom-promo-card">
@@ -419,7 +417,7 @@
         </div>
     </section>
 
-    <section id="HomeServicesSection" runat="server" class="tf-sp-2 ks-home-layout-section ks-home-services-section">
+    <section id="HomeServicesSection" runat="server" class="ks-home-section ks-home-services-section">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <div>
@@ -465,7 +463,7 @@
         </div>
     </section>
 
-    <section id="HomeTrustSection" runat="server" class="tf-sp-2 pt-0 ks-home-layout-section ks-home-trust-section">
+    <section id="HomeTrustSection" runat="server" class="ks-home-section ks-home-trust-section">
         <div class="container">
             <div class="ks-home-trust-panel">
                 <div class="ks-home-trust-copy">
@@ -483,7 +481,7 @@
         </div>
     </section>
 
-    <section id="HomeBrandsSection" runat="server" class="tf-sp-2 ks-home-layout-section ks-home-brands-block">
+    <section id="HomeBrandsSection" runat="server" class="ks-home-section ks-home-brands">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s"><h5>Rivenditori Ufficiali - I migliori Brand</h5></div>
             <div class="swiper ks-home-brands" data-preview="6" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="20" data-space="15">
@@ -501,6 +499,8 @@
                 <div class="sw-dot-default ks-home-brands-pagination"></div>
             </div>
         </div>
+    </section>
+
     </section>
 
 </asp:Content>
