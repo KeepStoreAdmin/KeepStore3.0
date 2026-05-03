@@ -419,15 +419,15 @@
                 </Columns>
             </asp:GridView>
 
-            <div class="row g-4 ks-cart-bottom">
+            <div class="cart-bottom ks-cart-bottom">
                 <div class="col-12 col-lg-8">
-                    <asp:Panel ID="Panel_BuoniSconto" runat="server" HorizontalAlign="left" CssClass="ks-coupon-panel">
-                        <div class="mb-2"><b>CODICE SCONTO</b></div>
-                        <div class="d-flex gap-2 align-items-center flex-wrap">
+                    <asp:Panel ID="Panel_BuoniSconto" runat="server" HorizontalAlign="left" CssClass="ip-discount-code ks-coupon-panel">
+                        <div class="ks-coupon-title body-md-2 fw-semibold">Codice sconto</div>
+                        <div class="ks-coupon-controls">
                             <asp:TextBox ID="TB_BuonoSconto" runat="server" CssClass="form-control ks-coupon-input"></asp:TextBox>
-                            <asp:Button ID="BT_ApplicaBuonoSconto" runat="server" CausesValidation="false" Text="Aggiungi" CssClass="tf-btn btn-gray" />
+                            <asp:Button ID="BT_ApplicaBuonoSconto" runat="server" CausesValidation="false" Text="Applica coupon" CssClass="tf-btn btn-gray" />
                         </div>
-                        <div class="mt-2">
+                        <div class="ks-coupon-feedback body-text-3">
                             <asp:Image ID="checkOKBuonoSconto" runat="server" ImageUrl="Public/Images/Ok.png" Height="30px" Visible="false" />
                             <asp:Image ID="checkNOBuonoSconto" runat="server" ImageUrl="Public/Images/Remove.png" Height="30px" Visible="false" />
                             <asp:Label ID="lblBuonoScontoConvalida" runat="server" Text=""></asp:Label>
@@ -448,7 +448,7 @@
 
                 <div class="col-12 col-lg-4">
                     <div class="tf-page-cart-footer">
-                        <div class="tf-cart-summery">
+                        <div class="tf-cart-summery ks-summary-card">
                             <h4 class="title">Riepilogo</h4>
                         <table width="100%" id="TableConteggi" runat="server" visible="false" class="ks-summary-table">
                             <tr>
@@ -479,7 +479,7 @@
                                 <td align="right">Buono Sconto IVA:</td>
                                 <td align="right"><asp:Label ID="lblBuonoScontoIVA" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
                             </tr>
-                            <tr>
+                            <tr class="ks-summary-total-row">
                                 <td align="right"><b>Totale:</b></td>
                                 <td align="right"><asp:Label ID="lblTotale" runat="server" Text="&#8364; 0,00" Font-Bold="true" CssClass="ks-total" ></asp:Label></td>
                             </tr>
@@ -493,7 +493,7 @@
                 Non sei un utente abilitato a procedere con l'ordine. Contattaci se desideri invece procedere
             </div>
 
-            <div class="ks-cart-buttons">
+            <div class="box-btn ks-cart-buttons">
                 <asp:LinkButton ID="btContinua" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Continua lo Shopping</asp:LinkButton>
                 <asp:LinkButton ID="btAggiorna" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Aggiorna Carrello</asp:LinkButton>
                 <asp:LinkButton ID="btSvuota" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Svuota Carrello</asp:LinkButton>
