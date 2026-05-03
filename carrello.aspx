@@ -543,7 +543,7 @@
     <% End If %>
 <asp:Panel ID="tOrdine" runat="server" Visible="false" CssClass="ks-checkout">
     <div id="promo_vettori">
-    <asp:Panel ID="pSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;" CssClass="wrap">
+    <asp:Panel ID="pSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;" CssClass="wrap ks-checkout-section ks-shipping-section">
                 <h5 class="title fw-semibold">Spedizione</h5>
 <!--<div id="infobar" style="width:100%; color:White; font-weight:bold; height:50px; background-image:url('Public/Images/StepCarrello1.png'); background-size:100%; background-repeat:no-repeat;"></div>-->
 <asp:GridView ID="gvVettoriPromo" runat="server"
@@ -805,7 +805,7 @@
         </asp:SqlDataSource>
 		<div class="row">
 			<div class="col-12 col-md-6">
-				<asp:Panel ID="pAssicurazione" runat="server" Width="100%"  Visible="true" style="overflow:hidden; margin-bottom: 15px"  CssClass="wrap">
+				<asp:Panel ID="pAssicurazione" runat="server" Width="100%"  Visible="true" style="overflow:hidden; margin-bottom: 15px"  CssClass="wrap ks-checkout-section ks-insurance-section">
 					<h5 class="title fw-semibold">Assicurazione</h5>
                         <div class="d-flex align-items-center justify-content-between gap-3 py-2 flex-wrap">
                             <label class="d-inline-flex align-items-center gap-2 m-0 body-text-3" for="<%= cbAssicurazione.ClientID %>">
@@ -823,7 +823,7 @@
 				</asp:Panel>   
 			</div>
 			<div class="col-12 col-md-6">
-			  <asp:Panel ID="pPagamento" runat="server" Width="99.5%" Visible="true" CssClass="wrap">
+			  <asp:Panel ID="pPagamento" runat="server" Width="99.5%" Visible="true" CssClass="wrap ks-checkout-section ks-payment-section">
 					<h5 class="title fw-semibold">Pagamento</h5>
 					<asp:SqlDataSource ID="sdsPagamento" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
 						ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
@@ -916,9 +916,9 @@
 			</div>
 			<!--<td>&nbsp;</td>-->
 		</div>
-    <asp:Panel ID="PnlFatturazione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap">
+    <asp:Panel ID="PnlFatturazione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap ks-checkout-section ks-billing-section">
 							<h5 class="title fw-semibold">Dati fatturazione</h5>
-        <table cellspacing="5" border="0" style="border-bottom-style:solid;" width="100%">
+        <table class="ks-info-table" cellspacing="5" border="0" style="border-bottom-style:solid;" width="100%">
             <tr>
             </tr>
             </tr>  
@@ -938,9 +938,9 @@
             <tr>
         </table>
         </asp:Panel>
-    <asp:Panel ID="PnlSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap">
+    <asp:Panel ID="PnlSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap ks-checkout-section ks-delivery-address-section">
 							<h5 class="title fw-semibold">Indirizzo di spedizione</h5>
-        <table cellspacing="5" border="0" style="border-bottom-style:solid;" width="100%">
+        <table class="ks-info-table" cellspacing="5" border="0" style="border-bottom-style:solid;" width="100%">
             <tr>
                 <td style="text-align:left;" class="carrello-td1-step4"><b>Indirizzi registrati:</b></td>
                 <td colspan="2" style="text-align:left;">
@@ -968,7 +968,7 @@
         </table>
         </asp:Panel>
 		<div id="panel" runat="server" ClientIDMode="Static">
-            <asp:Panel ID="PnlDestinazione" runat="server" Width="100%" Visible="True" GroupingText="Inserisci i dati"  CssClass="wrap">
+            <asp:Panel ID="PnlDestinazione" runat="server" Width="100%" Visible="True" GroupingText="Inserisci i dati"  CssClass="wrap ks-checkout-section ks-destination-section">
 							<h5 class="title fw-semibold">Gestisci destinazione</h5>
 				<input type="hidden" runat="server" id="insOmod" ClientIDMode="Static">
 				<!--
@@ -1048,12 +1048,12 @@
                 </table>
             </asp:Panel>
 			</div>
-		<asp:Panel ID="Panel_Note" runat="server" Width="100%" Visible="False" CssClass="wrap">
+		<asp:Panel ID="Panel_Note" runat="server" Width="100%" Visible="False" CssClass="wrap ks-checkout-section ks-note-section">
 					<h5 class="title fw-semibold">Note</h5>
 				<br/><asp:TextBox ID="txtNoteSpedizione" CssClass="form-control ks-form-control" TextMode="MultiLine" Rows="5" runat="server" Width="100%"></asp:TextBox>
 			</asp:Panel>
     <div class="line"></div>
-        <div class="wrap">
+        <div class="wrap ks-checkout-section ks-confirm-section">
             <div class="ks-checkout-actions">
                 <asp:LinkButton Visible="False" CausesValidation="false" ID="btSalvaPreventivo" runat="server" CssClass="tf-btn btn-gray" OnClientClick="javascript:visualizza_spinner_caricamento();">SALVA PREVENTIVO</asp:LinkButton>
                 <%if Session("DESTINAZIONEALTERNATIVA")=0 then %>
