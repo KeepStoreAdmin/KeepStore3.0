@@ -66,6 +66,54 @@
     color: rgba(0,0,0,.8);
 }
 
+.ks-cart-empty,
+.ks-cart-message{
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-top: 1.25rem;
+    padding: 1.5rem;
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 8px;
+    background: #fff;
+}
+
+.ks-cart-empty{
+    justify-content: center;
+    text-align: left;
+}
+
+.ks-cart-message-icon{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+    border-radius: 999px;
+    background: rgba(255,58,58,.1);
+    color: #ff3b3b;
+    font-size: 24px;
+}
+
+.ks-cart-message-content h4{
+    margin-bottom: .35rem;
+}
+
+.ks-cart-message-content p{
+    margin-bottom: .9rem;
+    color: rgba(0,0,0,.68);
+}
+
+.ks-cart-message-actions{
+    justify-content: flex-start;
+}
+
+.ks-cart-message-warning .ks-cart-message-icon{
+    background: rgba(255,193,7,.18);
+    color: #9a6a00;
+}
+
 .ks-cart-buttons{
     display: flex;
     flex-wrap: wrap;
@@ -196,6 +244,18 @@
 }
 
 @media (max-width: 767.98px) {
+    .ks-cart-empty,
+    .ks-cart-message{
+        flex-direction: column;
+        align-items: stretch;
+        padding: 1.1rem;
+    }
+
+    .ks-cart-message-actions{
+        flex-direction: column;
+        align-items: stretch;
+    }
+
     .s-shoping-cart .cart-bottom.ks-cart-bottom {
         display: block;
     }

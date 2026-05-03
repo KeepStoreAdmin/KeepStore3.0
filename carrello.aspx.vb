@@ -661,6 +661,11 @@ Private Const SessLoginId_B As String = "LOGINID"
 
     Public Sub ArticoliCarrello(ByVal numero As Integer)
         Me.lblArticoli.Text = numero
+        Dim hasItems As Boolean = (numero > 0)
+        If CartItemsWrap IsNot Nothing Then CartItemsWrap.Visible = hasItems
+        If CartEmptyPanel IsNot Nothing Then CartEmptyPanel.Visible = Not hasItems
+        If CartActionsWrap IsNot Nothing Then CartActionsWrap.Visible = hasItems
+        If pnlLoginRequired IsNot Nothing AndAlso Not hasItems Then pnlLoginRequired.Visible = False
         If numero = 0 Then
             Me.lblPresenti.Text = "articoli nel carrello"
             Me.btSvuota.Visible = False

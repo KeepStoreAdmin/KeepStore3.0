@@ -124,7 +124,7 @@
                 DeleteCommand="delete from carrello where (Id = ?Id)"
                 UpdateCommand="update carrello set qnt = ?Qnt where (Id = ?Id)">
             </asp:SqlDataSource>
-            <div class="row g-4">
+            <div id="CartItemsWrap" runat="server" class="row g-4">
                 <div class="col-12">
                     <div class="form-discount ks-cart-form">
                     <div class="overflow-x-auto">
@@ -367,16 +367,37 @@
                 </div>
             </div>
 
+            <asp:Panel ID="CartEmptyPanel" runat="server" CssClass="ks-cart-empty" Visible="false">
+                <div class="ks-cart-message-icon">
+                    <i class="icon-shop-cart-1"></i>
+                </div>
+                <div class="ks-cart-message-content">
+                    <h4>Il carrello è vuoto</h4>
+                    <p class="body-text-3">Aggiungi prodotti dal catalogo e torna qui quando vuoi completare l'acquisto.</p>
+                    <div class="box-btn ks-cart-message-actions">
+                        <a href="articoli.aspx" class="tf-btn">Sfoglia il catalogo</a>
+                        <a href="Default.aspx" class="tf-btn btn-gray">Torna alla home</a>
+                    </div>
+                </div>
+            </asp:Panel>
+
             <div id="Qnt_Errata" runat="server" class="ks-alert ks-alert-danger" visible="false">
                 E' stata impostata una quantità articolo minore o uguale a 0.<br />Eliminare l'articolo dal carrello o impostare una quantità maggiore di 0.
             </div>
 
-            <asp:Panel ID="pnlLoginRequired" runat="server" CssClass="ks-alert ks-alert-warning" Visible="false">
-                Devi effettuare il login per inviare l'ordine. Puoi continuare a navigare e aggiungere prodotti al carrello; quando sei pronto
-                <a href="login.aspx?ReturnUrl=carrello.aspx">accedi o registrati</a> per completare l'acquisto.
+            <asp:Panel ID="pnlLoginRequired" runat="server" CssClass="ks-cart-message ks-cart-message-login" Visible="false">
+                <div class="ks-cart-message-icon">
+                    <i class="icon-user"></i>
+                </div>
+                <div class="ks-cart-message-content">
+                    <h4>Accedi per inviare l'ordine</h4>
+                    <p class="body-text-3">Puoi continuare a navigare e aggiungere prodotti al carrello. Per confermare l'ordine devi accedere o registrarti.</p>
+                    <a href="login.aspx?ReturnUrl=carrello.aspx" class="tf-btn">Accedi o registrati</a>
+                </div>
             </asp:Panel>
 
             <!-- Buono Sconto (dati) -->
+            <div id="CartActionsWrap" runat="server">
             <asp:SqlDataSource ID="SqlDataBuonoSconto" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                 EnableViewState="False" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
                 SelectCommand="SELECT * FROM buoni_sconti WHERE id=@idBuonoSconto">
@@ -489,8 +510,14 @@
                 </div>
             </div>
 
-            <div ID="canorder" runat="server" class="ks-alert-warning">
-                Non sei un utente abilitato a procedere con l'ordine. Contattaci se desideri invece procedere
+            <div ID="canorder" runat="server" class="ks-cart-message ks-cart-message-warning">
+                <div class="ks-cart-message-icon">
+                    <i class="icon-info"></i>
+                </div>
+                <div class="ks-cart-message-content">
+                    <h4>Ordine non disponibile per il tuo profilo</h4>
+                    <p class="body-text-3">Non sei un utente abilitato a procedere con l'ordine. Contattaci se desideri procedere comunque.</p>
+                </div>
             </div>
 
             <div class="box-btn ks-cart-buttons">
@@ -500,6 +527,7 @@
                 <div class="ks-right">
                     <asp:LinkButton ID="btCompleta" runat="server" CssClass="tf-btn" CausesValidation="false">Procedi con l'ordine</asp:LinkButton>
                 </div>
+            </div>
             </div>
 
         </div>
