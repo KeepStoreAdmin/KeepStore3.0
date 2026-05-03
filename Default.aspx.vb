@@ -102,6 +102,12 @@ Partial Public Class _Default
             sectors = BuildHomeFallbackSectors()
         End If
         Dim sectorRows As List(Of CatalogMenuSector) = If(sectors.Count > 12, sectors.GetRange(0, 12), sectors)
+        Dim heroSectorRows As List(Of CatalogMenuSector) = If(sectors.Count > 9, sectors.GetRange(0, 9), sectors)
+        rptHeroDepartments.DataSource = heroSectorRows
+        rptHeroDepartments.DataBind()
+        If HomeHeroDepartmentsPanel IsNot Nothing Then
+            HomeHeroDepartmentsPanel.Visible = (heroSectorRows.Count > 0)
+        End If
         rptHomeMainCategories.DataSource = sectorRows
         rptHomeMainCategories.DataBind()
         If HomeMainCategoriesSection IsNot Nothing Then
@@ -120,7 +126,7 @@ Partial Public Class _Default
         Dim topSellingPool As DataTable = GetPureTopSellingPool(120)
         Dim fallbackCatalogPool As DataTable = GetCatalogFallbackPool(160)
 
-        Dim dealRows As DataTable = TakeDistinctRows(8, usedBusinessKeys, dealPool, offerPool, featuredPool, fallbackCatalogPool)
+        Dim dealRows As DataTable = TakeDistinctRows(6, usedBusinessKeys, dealPool, offerPool, featuredPool, fallbackCatalogPool)
         CommitDisplayKeys(dealRows, usedDisplayKeys)
         rptDealOfDay.DataSource = dealRows
         rptDealOfDay.DataBind()
@@ -134,7 +140,7 @@ Partial Public Class _Default
             HomeOffersSliderWrap.Visible = Not IsTableEmpty(dealRows)
         End If
 
-        Dim featuredRows As DataTable = TakeDistinctRows(12, usedBusinessKeys, featuredPool, newArrivalsPool, fallbackCatalogPool)
+        Dim featuredRows As DataTable = TakeDistinctRows(8, usedBusinessKeys, featuredPool, newArrivalsPool, fallbackCatalogPool)
         CommitDisplayKeys(featuredRows, usedDisplayKeys)
         rptHomeFeaturedProducts.DataSource = featuredRows
         rptHomeFeaturedProducts.DataBind()
@@ -150,14 +156,14 @@ Partial Public Class _Default
             HomeLegacyEditorialSection.Visible = False
         End If
 
-        Dim bestRows As DataTable = TakeDistinctRows(12, usedBusinessKeys, bestSellerPool, currentYearSellingPool, topSellingPool, topRatedPool, fallbackCatalogPool)
+        Dim bestRows As DataTable = TakeDistinctRows(8, usedBusinessKeys, bestSellerPool, currentYearSellingPool, topSellingPool, topRatedPool, fallbackCatalogPool)
         rptBestSeller.DataSource = bestRows
         rptBestSeller.DataBind()
         If HomeLegacyBestSection IsNot Nothing Then
             HomeLegacyBestSection.Visible = Not IsTableEmpty(bestRows)
         End If
 
-        Dim recentRows As DataTable = GetRecentlyViewedProducts(10, New HashSet(Of String)(StringComparer.OrdinalIgnoreCase), True, Nothing, False)
+        Dim recentRows As DataTable = GetRecentlyViewedProducts(8, New HashSet(Of String)(StringComparer.OrdinalIgnoreCase), True, Nothing, False)
         rptRecentlyViewed.DataSource = recentRows
         rptRecentlyViewed.DataBind()
         If HomeRecentlyViewedSection IsNot Nothing Then

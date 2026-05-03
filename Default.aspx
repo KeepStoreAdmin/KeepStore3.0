@@ -12,7 +12,34 @@
         <div class="container">
             <div id="HomeHeroShell" runat="server" class="s-banner-wrapper ks-home-hero-shell ks-home-hero-mode-full ks-home-hero-shell--with-side">
                 <div class="wrap-item-1 d-none d-lg-block">
-                    <uc:HomeDepartmentsMenu ID="HomeDepartmentsMenu1" runat="server" />
+                    <div class="ks-home-menu-source">
+                        <uc:HomeDepartmentsMenu ID="HomeDepartmentsMenu1" runat="server" />
+                    </div>
+                    <asp:Panel ID="HomeHeroDepartmentsPanel" runat="server" CssClass="nav-category-wrap tf-nav-menu ks-home-departments-list">
+                        <div class="main-nav category-menu active-item">
+                            <h6 class="fw-semibold title nav-title btn-active">
+                                <i class="icon-menu-dots"></i>
+                                <span>Tutti i settori</span>
+                            </h6>
+                            <ul class="menu-category-list" role="menu">
+                                <asp:Repeater ID="rptHeroDepartments" runat="server">
+                                    <ItemTemplate>
+                                        <li class="menu-item" role="none">
+                                            <a href='<%# Eval("DefaultUrl") %>' class="item-link body-text-3" role="menuitem">
+                                                <span class="ks-home-menu-link">
+                                                    <span class="ks-home-menu-thumb">
+                                                        <%# RenderHomeSectorMedia(Eval("ImgUrl"), Eval("Descrizione")) %>
+                                                    </span>
+                                                    <span class="ks-home-menu-title"><%# SafeText(Eval("Descrizione")) %></span>
+                                                    <span class="ks-home-menu-arrow"><i class="icon-arrow-right-lg"></i></span>
+                                                </span>
+                                            </a>
+                                        </li>
+                                    </ItemTemplate>
+                                </asp:Repeater>
+                            </ul>
+                        </div>
+                    </asp:Panel>
                 </div>
 
                 <div id="HeroSliderWrap" runat="server" class="wrap-item-2">
