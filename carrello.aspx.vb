@@ -1,4 +1,4 @@
-Imports System
+﻿Imports System
 Imports System.Data
 Imports System.Configuration
 Imports System.Globalization
@@ -355,14 +355,14 @@ Protected Function ExecuteInsert(ByVal table As String, ByVal fields As String, 
     Return Nothing
     End Function
 
-    'ExecuteInsert_Legacy (NON è un overload: serve solo se nel progetto esistono vecchie chiamate “strane”)
+    'ExecuteInsert_Legacy (NON Ã¨ un overload: serve solo se nel progetto esistono vecchie chiamate â€œstraneâ€)
     'ATTENZIONE: non fa niente. Se qualche punto del codice la usa davvero, va corretto quel punto.
 Protected Function ExecuteInsert_Legacy(ByVal table As String, ByVal fieldAndValues As String, Optional ByVal wherePart As String = "", Optional ByVal params As Dictionary(Of String, String) = Nothing) As Object
     Return Nothing
     End Function
 
 
-' serve perché nel tuo Catch fai LogEx(..., sqlString) fuori scope
+' serve perchÃ© nel tuo Catch fai LogEx(..., sqlString) fuori scope
 Private lastSqlString As String = ""
 
     ' Evita doppi aggiornamenti nella stessa request (es. click evento + altra chiamata indiretta)
@@ -689,7 +689,7 @@ Private Const SessLoginId_B As String = "LOGINID"
 
     If DispoTipo = 1 Then
         Dim dispoDouble As Double = 0
-        Dim dispoTxt As String = If(dispo.Text, "").Replace("−", "-").Replace(">", "").Trim()
+        Dim dispoTxt As String = If(dispo.Text, "").Replace("âˆ’", "-").Replace(">", "").Trim()
         Double.TryParse(dispoTxt.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, dispoDouble)
 
         If dispoDouble > DispoMinima Then
@@ -697,7 +697,7 @@ Private Const SessLoginId_B As String = "LOGINID"
             img.AlternateText = "Disponibile"
         ElseIf dispoDouble > 0 Then
             img.ImageUrl = "~/images/giallo.gif"
-            img.AlternateText = "Disponibilità Scarsa"
+            img.AlternateText = "DisponibilitÃ  Scarsa"
         Else
             Dim arrivoDouble As Double = 0
             Double.TryParse(If(arrivo.Text, "0").Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, arrivoDouble)
@@ -865,10 +865,10 @@ If buonoTot > 0 Then
     ' Resetto il prezzo relativo al metodo di pagamento
     lblPagamento.Text = FormatCurrencyIt(0D)
 
-    ' Base imponibile (la Label contiene spesso "€ ...", quindi la leggo in modo safe)
+    ' Base imponibile (la Label contiene spesso "â‚¬ ...", quindi la leggo in modo safe)
     Dim imponibileBase As Double = SafeMoney(Me.lblImponibile.Text, 0)
 
-    'Controllo se Esiste ed è abilitato un Vettore PROMO
+    'Controllo se Esiste ed Ã¨ abilitato un Vettore PROMO
     Dim Vettore_Promo_Abilitato As Integer = 0
     For i = 0 To (Me.gvVettoriPromo.Rows.Count - 1)
         rb = TryCast(gvVettoriPromo.Rows(i).FindControl("rbSpedizione"), Control)
@@ -878,7 +878,7 @@ If buonoTot > 0 Then
         End If
     Next
 
-    'Controllo se è selezionato un vettore NORMALE
+    'Controllo se Ã¨ selezionato un vettore NORMALE
     Dim Vettore_NoNPromo_Selezionato As Integer = 0
     For i = 0 To (Me.gvVettori.Rows.Count - 1)
         rb = TryCast(gvVettori.Rows(i).FindControl("rbSpedizione"), Control)
@@ -1035,7 +1035,7 @@ End Sub
         If Me.cbAssicurazione.Checked Then
             Me.lblSpeseAss.Text = Me.lblAssicurazione.Text
         Else
-            Me.lblSpeseAss.Text = "€ 0,00"
+            Me.lblSpeseAss.Text = "â‚¬ 0,00"
         End If
     End Sub
 
@@ -1056,7 +1056,7 @@ End Sub
     Dim sel As Boolean = False
     Dim firstSelectableIndex As Integer = -1
 
-    ' Leggo importi in modo safe (le Label contengono spesso "€ ...")
+    ' Leggo importi in modo safe (le Label contengono spesso "â‚¬ ...")
     Dim impD As Double = SafeMoney(Me.lblImponibile.Text, 0)
     Dim spedD As Double = SafeMoney(Me.lblSpeseSped.Text, 0)
     Dim assD As Double = SafeMoney(Me.lblSpeseAss.Text, 0)
@@ -1118,7 +1118,7 @@ End Sub
         Try
             If lbl IsNot Nothing Then lbl.Text = FormatCurrencyIt(totPagamento)
         Catch
-            If lbl IsNot Nothing Then lbl.Text = "€ 0,00"
+            If lbl IsNot Nothing Then lbl.Text = "â‚¬ 0,00"
         End Try
 
         If rb IsNot Nothing AndAlso RbGetChecked(rb) = True AndAlso RbGetEnabled(rb) = True Then
@@ -1467,7 +1467,7 @@ End Sub
         Me.CHKPREDEFINITO.Visible = False
     End If
 
-    ' FIX: SelectedItem può essere Nothing se Items.Count=0
+    ' FIX: SelectedItem puÃ² essere Nothing se Items.Count=0
     Session("SCEGLIINDIRIZZO") = selectedId
 
     Dim cityBinding As Integer = 0
@@ -1640,7 +1640,7 @@ End Function
             Continue For
         End If
 
-        ' visibilità prezzi e totale merce
+        ' visibilitÃ  prezzi e totale merce
         If IvaTipo = 1 Then
             If importo IsNot Nothing Then importo.Visible = True
             If importoIvato IsNot Nothing Then importoIvato.Visible = False
@@ -1678,10 +1678,10 @@ End Function
             pesoTotale += pesoVal
         End If
 
-        ' disponibilità
+        ' disponibilitÃ 
         If DispoTipo = 1 Then
             Dim dispoDouble As Double = 0
-            Dim dispoTxt As String = If(If(dispo IsNot Nothing, dispo.Text, ""), "").Replace("−", "-").Replace(">", "").Trim()
+            Dim dispoTxt As String = If(If(dispo IsNot Nothing, dispo.Text, ""), "").Replace("âˆ’", "-").Replace(">", "").Trim()
             Double.TryParse(dispoTxt.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, dispoDouble)
 
             If dispoDouble > DispoMinima Then
@@ -1692,7 +1692,7 @@ End Function
             ElseIf dispoDouble > 0 Then
                 If img IsNot Nothing Then
                     img.ImageUrl = "~/images/giallo.gif"
-                    img.AlternateText = "Disponibilità Scarsa"
+                    img.AlternateText = "DisponibilitÃ  Scarsa"
                 End If
             Else
                 Dim arrivoDouble As Double = 0
@@ -1724,7 +1724,7 @@ End Function
     Dim Selezione_Vettore As Control
 
     If indice_riga_da_selezionare > -1 Then
-        ' (indice_riga_da_selezionare - 2) e non (indice_riga_da_selezionare - 1) perchè il DataRowBound viene fatto una volta in più
+        ' (indice_riga_da_selezionare - 2) e non (indice_riga_da_selezionare - 1) perchÃ¨ il DataRowBound viene fatto una volta in piÃ¹
         Selezione_Vettore = TryCast(Me.gvVettoriPromo.Rows(indice_riga_da_selezionare - 2).FindControl("rbSpedizione"), Control)
         If Selezione_Vettore IsNot Nothing Then
             RbSetEnabled(Selezione_Vettore, True)
@@ -1819,7 +1819,7 @@ End Sub
         Dim pagamentoVal As Double = SafeDbl(lblPagamento.Text, 0)
         Dim buonoVal As Double = SafeDbl(lblBuonoSconto.Text, 0)
         Dim ivaVettoreVal As Double = SafeDbl(Session("Iva_Vettori"), 0)
-        ' IVA utente: nel carrello è trattata come PERCENTUALE (es. 22) quando > -1
+        ' IVA utente: nel carrello Ã¨ trattata come PERCENTUALE (es. 22) quando > -1
         Dim ivaUtentePerc As Double = SafeDblFromText(If(Session("Iva_Utente"), "-1").ToString(), -1)
         ' Per l'assicurazione: se l'utente non ha IVA propria, uso la default (preleva_ValoreIva(-1))
         Dim ivaAssPerc As Double = If(ivaUtentePerc > -1, ivaUtentePerc, preleva_ValoreIva(-1))
@@ -1971,11 +1971,11 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
         End If
     End Sub
 
-    'Restituisce 1, se il controllo è andato a buon fine, altrimenti 0
+    'Restituisce 1, se il controllo Ã¨ andato a buon fine, altrimenti 0
     Function controlla_articoli_quantita_zero() As Integer
         Dim row As RepeaterItem
 
-        'Controllo che non ci siano articoli con quantità zero
+        'Controllo che non ci siano articoli con quantitÃ  zero
         If Repeater1.items.Count > 0 Then
             For Each row In Repeater1.items
                 Dim Qta As TextBox = row.FindControl("tbQta")
@@ -1985,7 +1985,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
             Next
         End If
 
-        'Controllo che non ci siano articoli con quantità zero
+        'Controllo che non ci siano articoli con quantitÃ  zero
         If Me.gvArticoliGratis.items.Count > 0 Then
             For Each row In gvArticoliGratis.items
                 Dim Qta As TextBox = row.FindControl("tbQta")
@@ -2038,7 +2038,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
     Next
 
     Dim listino As Integer = SafeInt(GetListinoSafe(0), 0)
-    Dim ivaUtentePct As Double = SafeDbl(Session("Iva_Utente"), -1) ' qui è “%” (o id=valore, come nel tuo impianto)
+    Dim ivaUtentePct As Double = SafeDbl(Session("Iva_Utente"), -1) ' qui Ã¨ â€œ%â€ (o id=valore, come nel tuo impianto)
     Dim abRC As Boolean = (SafeInt(Session("AbilitatoIvaReverseCharge"), 0) = 1)
 
     Dim idEsenzioneIva As Integer = SafeInt(Session("IdEsenzioneIva"), -1)
@@ -2132,7 +2132,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
             For Each r As CartRowInfo In rows
 
                 If Not vsup.ContainsKey(r.ArtId) OrElse vsup(r.ArtId).Count = 0 Then
-                    ' niente record vsuperarticoli -> aggiorno solo quantità e pulisco offerta
+                    ' niente record vsuperarticoli -> aggiorno solo quantitÃ  e pulisco offerta
                     cmdU.Parameters("@Qnt").Value = r.Qnt
                     cmdU.Parameters("@OfferteDettaglioId").Value = 0
                     cmdU.Parameters("@Prezzo").Value = 0
@@ -2158,7 +2158,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
                 Dim chosenPromoRow As VsuperInfo = Nothing
 
                 ' Replica logica originale: scorro tutte le righe (ordinate per PrezzoPromo DESC)
-                ' e tengo l’ULTIMA promo valida che matcha (quindi, di fatto, il prezzo promo più basso)
+                ' e tengo lâ€™ULTIMA promo valida che matcha (quindi, di fatto, il prezzo promo piÃ¹ basso)
                 For Each info As VsuperInfo In lst
                     If info.InOfferta = 1 AndAlso info.OfferteDataInizio.HasValue AndAlso info.OfferteDataFine.HasValue Then
                         If info.OfferteDataInizio.Value.Date <= today AndAlso info.OfferteDataFine.Value.Date >= today Then
@@ -2198,7 +2198,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
                     End If
                 End If
 
-                ' Reverse charge: replico logica “abilitato + idIvaRC valido”
+                ' Reverse charge: replico logica â€œabilitato + idIvaRC validoâ€
                 Dim idIvaRC As Integer = -1
                 Dim valoreIvaRC As Double = -1
                 Dim descIvaRC As String = ""
@@ -2262,7 +2262,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
         'Aggiorno i prodotti e il prezzo
         Aggiorna_Prezzi_Carrello()
 
-        'Disabilito il completa ordine, quando già cliccato
+        'Disabilito il completa ordine, quando giÃ  cliccato
         Me.btCompleta.Visible = False
 
         If Me.tOrdine.Visible = True Then
@@ -2351,7 +2351,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
 
                 cmd.ExecuteNonQuery()
 
-                ' Se non è predefinito, garantisco che esista almeno 1 predefinito
+                ' Se non Ã¨ predefinito, garantisco che esista almeno 1 predefinito
                 If Not CHKPREDEFINITO.Checked Then
                     cmd.CommandText = "UPDATE utentiindirizzi SET Predefinito=1 WHERE UtenteId=@UtentiId ORDER BY Id DESC LIMIT 1"
                     cmd.Parameters.Clear()
@@ -2467,7 +2467,7 @@ End Sub
                 cmd.Connection = conn
                 cmd.CommandType = CommandType.Text
 
-                ' 1) Leggo se l'indirizzo è predefinito
+                ' 1) Leggo se l'indirizzo Ã¨ predefinito
                 cmd.CommandText = "SELECT Predefinito FROM utentiindirizzi WHERE Id=@id AND UtenteId=@UtentiId LIMIT 1"
                 cmd.Parameters.Clear()
                 cmd.Parameters.AddWithValue("@id", idSel)
@@ -2607,7 +2607,7 @@ End Sub
 
     Dim tot_iva As Double = 0
 
-    ' Iva utente: qui è trattata come PERCENTUALE (es. 22) quando > -1
+    ' Iva utente: qui Ã¨ trattata come PERCENTUALE (es. 22) quando > -1
     Dim ivaUtentePerc As Double = -1
     If Session("Iva_Utente") IsNot Nothing Then
         ivaUtentePerc = SafeDblFromText(Session("Iva_Utente").ToString(), -1)
@@ -2753,7 +2753,7 @@ End Sub
         Double.TryParse(Session("TotaleMerce").ToString(), NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), totaleMerce)
     End If
 
-    ' Verifica applicabilità
+    ' Verifica applicabilitÃ 
     Dim ok As Integer = VerificaBuonoSconto(listaArticoliInCarrello(), codice, aziendaId, listino, utenteId, totaleMerce)
 
     If ok <> 0 Then
@@ -2915,7 +2915,7 @@ Public Function VerificaBuonoSconto(ByVal articoli As String, ByVal buonosconto 
         cmd.Connection = conn
         conn.Open()
 
-        ' 1) Verifica utilizzo già avvenuto (documenti)
+        ' 1) Verifica utilizzo giÃ  avvenuto (documenti)
         cmd.Parameters.Clear()
         cmd.CommandText = "SELECT id FROM documenti WHERE codicebuonosconto=@buonoSconto AND utentiid=@utenteid LIMIT 1"
         cmd.Parameters.AddWithValue("@buonoSconto", buonosconto)
@@ -2931,7 +2931,7 @@ Public Function VerificaBuonoSconto(ByVal articoli As String, ByVal buonosconto 
             Return 0
         End If
 
-        ' 2) Recupero sSql da buoni_sconti (ATTENZIONE: è SQL salvato nel DB; lo uso come da logica esistente)
+        ' 2) Recupero sSql da buoni_sconti (ATTENZIONE: Ã¨ SQL salvato nel DB; lo uso come da logica esistente)
         cmd.Parameters.Clear()
         cmd.CommandText =
             "SELECT sSql FROM Buoni_Sconti " &
@@ -2979,7 +2979,7 @@ Public Function VerificaBuonoSconto(ByVal articoli As String, ByVal buonosconto 
                 cmd.Parameters.AddWithValue(pName, ids(i))
             Next
 
-            ' tQuery è una subquery SQL salvata nel DB (logica originale)
+            ' tQuery Ã¨ una subquery SQL salvata nel DB (logica originale)
             cmd.CommandText =
                 "SELECT CASE WHEN COUNT(articoli.id)>0 THEN 1 ELSE 0 END AS Trovato " &
                 "FROM articoli INNER JOIN (" & tQuery & ") AS Test ON articoli.id=Test.id " &
@@ -3215,7 +3215,7 @@ Protected Sub GV_BuoniSconti_RowCommand(ByVal sender As Object, ByVal e As Syste
 End Sub
 
 
-'Funzione che restituisce 1 se il buono può essere utilizzato solo una volta, 0 nel caso il buono possa essere utilizzato più volte
+'Funzione che restituisce 1 se il buono puÃ² essere utilizzato solo una volta, 0 nel caso il buono possa essere utilizzato piÃ¹ volte
 Function getUtilizzoBuonoSconto(ByVal codiceBuonoSconto As String, ByVal idAzienda As Integer) As Integer
     Dim UtilizzaSoloUnaVolta As Integer = 0
     Dim paramsSelect As New Dictionary(Of String, String)
@@ -3658,8 +3658,8 @@ Private Function SafeIntFromText(ByVal value As Object, Optional ByVal def As In
         Dim s As String = value.ToString().Trim()
         If s = "" Then Return def
 
-        s = s.Replace("€", "").Replace("%", "").Trim()
-        s = s.Replace("−", "-")
+        s = s.Replace("â‚¬", "").Replace("%", "").Trim()
+        s = s.Replace("âˆ’", "-")
 
         ' rimuovo separatori comuni
         s = s.Replace(".", "").Replace(",", "").Replace(" ", "")
@@ -3675,38 +3675,11 @@ End Function
 
 Private Function SafeDblFromText(ByVal value As Object, Optional ByVal def As Double = 0) As Double
     Try
-        If value Is Nothing OrElse value Is DBNull.Value Then Return def
-
-        Dim s As String = value.ToString().Trim()
-        If s = "" Then Return def
-
-        s = s.Replace("€", "").Replace("%", "").Trim()
-        s = s.Replace("−", "-")
-
-        Dim d As Double
-
-        ' prova formato italiano
-        If Double.TryParse(s, NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), d) Then
-            Return d
-        End If
-
-        ' prova invariant
-        If Double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then
-            Return d
-        End If
-
-        ' fallback: tipico caso "1.234,56"
-        Dim t As String = s.Replace(".", "").Replace(",", ".")
-        If Double.TryParse(t, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then
-            Return d
-        End If
-
-        Return def
+        Return Convert.ToDouble(ParseDecimalForDb(value, CDec(def)), CultureInfo.InvariantCulture)
     Catch
         Return def
     End Try
 End Function
-
 Private Function SafeInt(ByVal value As Object, Optional ByVal def As Integer = 0) As Integer
     Return SafeIntFromText(value, def)
 End Function
@@ -3716,36 +3689,13 @@ Private Function SafeDbl(ByVal value As Object, Optional ByVal def As Double = 0
 End Function
 
 ' SafeMoney: per importi in euro (Label spesso tipo "€ 1.234,56")
-    Private Function SafeMoney(ByVal value As Object, Optional ByVal def As Double = 0) As Double
+Private Function SafeMoney(ByVal value As Object, Optional ByVal def As Double = 0) As Double
     Try
-        If value Is Nothing OrElse value Is DBNull.Value Then Return def
-
-        Dim s As String = value.ToString().Trim()
-        If s = "" Then Return def
-
-        s = s.Replace("€", "").Trim()
-        s = s.Replace("−", "-")
-
-        ' "1.234,56" -> tolgo i punti migliaia
-        s = s.Replace(".", "")
-
-        Dim d As Double
-        If Double.TryParse(s, NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), d) Then
-            Return d
-        End If
-
-        ' fallback invariant
-        s = s.Replace(",", ".")
-        If Double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then
-            Return d
-        End If
-
-        Return def
+        Return Convert.ToDouble(ParseDecimalForDb(value, CDec(def)), CultureInfo.InvariantCulture)
     Catch
         Return def
     End Try
-    End Function
-    
+End Function
     ' Gestisce OnItemDataBound="rPromo_ItemDataBound" dei repeater rPromo nei template
     Protected Sub rPromo_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
 
@@ -3817,7 +3767,7 @@ End Function
 
 
     ' ============================================================
-    ' SEO helpers locali (compatibilità: SeoBuilder non disponibile)
+    ' SEO helpers locali (compatibilitÃ : SeoBuilder non disponibile)
     ' ============================================================
 
     Private Shared Sub AddOrReplaceMeta(ByVal page As System.Web.UI.Page, ByVal metaName As String, ByVal metaContent As String)
@@ -3938,3 +3888,4 @@ End Function
         Return sb.ToString()
     End Function
 End Class
+
