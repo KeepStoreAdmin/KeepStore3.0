@@ -18,7 +18,7 @@ body.ks-page-home .ks-home-main .container {
 }
 
 body.ks-page-home .ks-home-section {
-  padding: 28px 0;
+  padding: 34px 0;
 }
 
 body.ks-page-home .ks-home-section.pt-0,
@@ -31,14 +31,16 @@ body.ks-page-home .ks-home-main .flat-title {
   align-items: flex-end;
   justify-content: space-between;
   gap: 18px;
-  margin-bottom: 18px;
+  margin-bottom: 22px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eceff3;
 }
 
 body.ks-page-home .ks-home-main .flat-title h5,
 body.ks-page-home .ks-home-main .flat-title .main-title {
   margin: 0;
   color: #222a35;
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1.2;
   font-weight: 700;
 }
@@ -74,7 +76,7 @@ body.ks-page-home:not(.modal-open) {
 
 /* Hero */
 body.ks-page-home .ks-home-hero-area {
-  padding: 24px 0 12px;
+  padding: 22px 0 10px;
 }
 
 body.ks-page-home .ks-home-hero-grid {
@@ -88,19 +90,20 @@ body.ks-page-home .ks-home-departments-panel,
 body.ks-page-home .ks-home-main-hero,
 body.ks-page-home .ks-home-side-promos {
   min-width: 0;
-  height: 400px;
+  height: 410px;
 }
 
 body.ks-page-home .ks-home-departments-list {
   height: 100%;
   background: #fff;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
-  box-shadow: 0 1px 0 rgba(15, 23, 42, .06);
+  border: 1px solid #e7ebf0;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, .04);
 }
 
 body.ks-page-home .ks-home-departments-list .nav-title {
-  height: 48px;
+  height: 52px;
   margin: 0;
   padding: 0 16px;
   display: flex;
@@ -113,7 +116,7 @@ body.ks-page-home .ks-home-departments-list .nav-title {
 }
 
 body.ks-page-home .ks-home-departments-list .menu-category-list {
-  height: calc(100% - 48px);
+  height: calc(100% - 52px);
   margin: 0;
   padding: 8px 0;
   overflow-y: auto;
@@ -125,7 +128,7 @@ body.ks-page-home .ks-home-departments-list .menu-item {
 }
 
 body.ks-page-home .ks-home-departments-list .item-link {
-  min-height: 38px;
+  min-height: 39px;
   padding: 0 12px;
   color: #28313d;
   text-decoration: none;
@@ -172,6 +175,7 @@ body.ks-page-home .ks-home-menu-title {
   text-overflow: ellipsis;
   font-size: 13px;
   line-height: 1.2;
+  font-weight: 600;
 }
 
 body.ks-page-home #HeroSliderWrap,
@@ -186,7 +190,7 @@ body.ks-page-home .ks-home-hero-media {
 
 body.ks-page-home .ks-home-hero-banner {
   position: relative;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   background: #070707;
 }
@@ -227,7 +231,7 @@ body.ks-page-home .ks-home-hero-copy {
 body.ks-page-home .ks-home-hero-title {
   margin: 8px 0 10px;
   color: #fff;
-  font-size: 42px;
+  font-size: 46px;
   line-height: 1.05;
   font-weight: 700;
 }
@@ -241,12 +245,13 @@ body.ks-page-home .ks-home-hero-actions {
 
 body.ks-page-home .ks-home-side-promos {
   display: grid;
+  grid-template-rows: 1fr 1fr;
   gap: 18px;
 }
 
 body.ks-page-home .ks-home-side-banner {
   min-height: 0;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   background: #171923;
 }
@@ -259,14 +264,19 @@ body.ks-page-home .ks-home-side-banner img {
 }
 
 body.ks-page-home .ks-home-side-banner .content {
-  inset: 16px;
+  inset: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
 }
 
 body.ks-page-home .ks-home-side-banner h6 {
-  max-width: 190px;
+  max-width: 220px;
   color: #fff;
   font-size: 18px;
   line-height: 1.15;
+  margin-bottom: 12px;
 }
 
 body.ks-page-home .ks-home-side-banner .caption {
@@ -276,14 +286,14 @@ body.ks-page-home .ks-home-side-banner .caption {
 
 /* Benefits */
 body.ks-page-home .ks-home-benefits-section {
-  padding: 12px 0 22px;
+  padding: 14px 0 30px;
 }
 
 body.ks-page-home .ks-home-benefits-section .tf-icon-box {
-  min-height: 86px;
+  min-height: 92px;
   padding: 18px 20px;
   border: 1px solid #eceff3;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #fff;
   box-shadow: none;
 }
@@ -319,7 +329,7 @@ body.ks-page-home .ks-home-category-grid {
 body.ks-page-home .ks-home-category-card {
   min-height: 138px;
   padding: 18px 12px;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #fff;
   text-align: center;
   text-decoration: none;
@@ -329,7 +339,8 @@ body.ks-page-home .ks-home-category-card {
   align-items: center;
   justify-content: center;
   gap: 9px;
-  box-shadow: 0 1px 0 rgba(15, 23, 42, .04);
+  border: 1px solid #edf0f3;
+  box-shadow: none;
 }
 
 body.ks-page-home .ks-home-category-card:hover {
@@ -381,7 +392,7 @@ body.ks-page-home .ks-ai130-shell {
   grid-template-columns: minmax(0, .95fr) minmax(360px, 1.05fr);
   gap: 22px;
   padding: 24px;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #fff;
   border: 1px solid #eceff3;
 }
@@ -462,17 +473,17 @@ body.ks-page-home .ks-ai130-head {
 body.ks-page-home .ks-home-product-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 20px;
+  gap: 24px;
 }
 
 body.ks-page-home .ks-home-main .card-product,
 body.ks-page-home .ks-home-main .ks-grid-card,
 body.ks-page-home .ks-home-main .ks-deal-card {
   height: 100%;
-  min-height: 352px;
-  padding: 14px;
+  min-height: 372px;
+  padding: 16px;
   border: 1px solid #edf0f3;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #fff;
   box-shadow: none;
   display: flex;
@@ -482,7 +493,7 @@ body.ks-page-home .ks-home-main .ks-deal-card {
 
 body.ks-page-home .ks-home-main .card-product-wrapper {
   position: relative;
-  min-height: 210px;
+  min-height: 220px;
   background: #fff;
   border-radius: 6px;
   overflow: hidden;
@@ -491,7 +502,7 @@ body.ks-page-home .ks-home-main .card-product-wrapper {
 body.ks-page-home .ks-home-main .product-img,
 body.ks-page-home .ks-home-main .card-image,
 body.ks-page-home .ks-home-main .product-thumb-image {
-  height: 210px;
+  height: 220px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -506,6 +517,7 @@ body.ks-page-home .ks-home-main .ks-deal-card img {
   max-width: 100%;
   object-fit: contain;
   display: block;
+  padding: 10px;
 }
 
 body.ks-page-home .ks-home-main .card-product-info {
@@ -519,7 +531,7 @@ body.ks-page-home .ks-home-main .card-product-info {
 body.ks-page-home .ks-home-main .caption {
   margin-bottom: 5px;
   color: #7d8793;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -527,10 +539,10 @@ body.ks-page-home .ks-home-main .caption {
 }
 
 body.ks-page-home .ks-home-main .name-product {
-  min-height: 42px;
-  margin-bottom: 8px;
+  min-height: 48px;
+  margin-bottom: 10px;
   color: #005aa7;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.3;
   font-weight: 700;
   text-decoration: none;
@@ -551,7 +563,7 @@ body.ks-page-home .ks-home-main .price-wrap {
 
 body.ks-page-home .ks-home-main .new-price {
   color: #ff3b30;
-  font-size: 15px;
+  font-size: 17px;
   line-height: 1.15;
   font-weight: 700;
 }
@@ -569,8 +581,8 @@ body.ks-page-home .ks-home-main .list-product-btn {
 }
 
 body.ks-page-home .ks-home-main .box-icon {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: #fff;
   color: #2d3742;
@@ -587,8 +599,13 @@ body.ks-page-home .ks-home-best-section .tf-sw-products:not(.swiper-initialized)
 body.ks-page-home #HomeRecentlyViewedSection .tf-sw-products:not(.swiper-initialized) .swiper-wrapper {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 20px;
+  gap: 24px;
   transform: none;
+}
+
+body.ks-page-home .ks-home-best-section .tf-sw-products:not(.swiper-initialized) .swiper-wrapper,
+body.ks-page-home #HomeRecentlyViewedSection .tf-sw-products:not(.swiper-initialized) .swiper-wrapper {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 body.ks-page-home .ks-home-deals .tf-sw-products:not(.swiper-initialized) .swiper-slide,
@@ -604,7 +621,7 @@ body.ks-page-home .ks-home-wide-promo-inner,
 body.ks-page-home .ks-home-bottom-promo-grid,
 body.ks-page-home .ks-home-trust-panel {
   border: 1px solid #eceff3;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #fff;
 }
 
@@ -633,10 +650,10 @@ body.ks-page-home .ks-home-collection-grid {
 body.ks-page-home .ks-home-bottom-promo-card,
 body.ks-page-home .ks-home-collection-card,
 body.ks-page-home .ks-home-service-item {
-  min-height: 124px;
-  padding: 22px;
+  min-height: 136px;
+  padding: 24px;
   border: 1px solid #eceff3;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #fff;
   text-decoration: none;
   color: #26313d;
@@ -682,6 +699,21 @@ body.ks-page-home .ks-home-service-icon {
   background: #fff0ef;
 }
 
+body.ks-page-home .ks-home-service-item h6 {
+  margin: 0 0 8px;
+  color: #27313d;
+  font-size: 16px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+body.ks-page-home .ks-home-service-item p {
+  margin: 0;
+  color: #667280;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 body.ks-page-home .ks-home-trust-list {
   min-width: 320px;
   display: grid;
@@ -692,6 +724,19 @@ body.ks-page-home .ks-home-trust-list div {
   display: flex;
   align-items: center;
   gap: 10px;
+  color: #3b4652;
+  font-size: 13px;
+}
+
+body.ks-page-home .ks-home-trust-list i {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #ff3b30;
+  background: #fff0ef;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 body.ks-page-home .ks-home-brands {
@@ -699,10 +744,10 @@ body.ks-page-home .ks-home-brands {
 }
 
 body.ks-page-home .ks-home-brand-item {
-  height: 76px;
+  height: 82px;
   padding: 12px;
   border: 1px solid #eceff3;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #fff;
   display: flex;
   align-items: center;
@@ -730,6 +775,52 @@ body.ks-page-home #HomeLowerColumnsSection {
   display: none;
 }
 
+body.ks-page-home .ks-home-main .box-sale-wrap {
+  border-radius: 50%;
+  background: #ff3b30;
+  color: #fff;
+}
+
+body.ks-page-home .ks-home-main .box-sale-wrap p {
+  color: #fff;
+}
+
+body.ks-page-home .ks-home-main .box-sale-tag {
+  display: inline-flex;
+  align-self: flex-start;
+  margin: 8px 0 0;
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: #ff3b30;
+  background: #fff0ef;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+body.ks-page-home .ks-home-main .product-progress-sale {
+  margin-top: 12px;
+}
+
+body.ks-page-home .ks-home-main .product-progress-sale .progress {
+  height: 5px;
+  border-radius: 999px;
+  background: #eef1f4;
+}
+
+body.ks-page-home .ks-home-main .box-quantity {
+  margin-top: 8px;
+}
+
+body.ks-page-home .ks-home-main .text-avaiable {
+  margin: 0;
+  color: #687382;
+  font-size: 11px;
+}
+
+body.ks-page-home .ks-home-main .sw-dot-default {
+  margin-top: 16px;
+}
+
 @media (max-width: 1399.98px) {
   body.ks-page-home .ks-home-main .container {
     max-width: 1180px;
@@ -755,7 +846,14 @@ body.ks-page-home #HomeLowerColumnsSection {
   }
 
   body.ks-page-home .ks-home-side-promos {
-    display: none;
+    grid-column: 1 / -1;
+    height: auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.ks-page-home .ks-home-side-banner {
+    min-height: 180px;
   }
 
   body.ks-page-home #HeroSliderWrap,
@@ -781,8 +879,17 @@ body.ks-page-home #HomeLowerColumnsSection {
     grid-template-columns: 1fr;
   }
 
+  body.ks-page-home .ks-home-main-hero {
+    order: 1;
+  }
+
   body.ks-page-home .ks-home-departments-panel {
+    order: 2;
     height: auto;
+  }
+
+  body.ks-page-home .ks-home-side-promos {
+    order: 3;
   }
 
   body.ks-page-home .ks-home-departments-list {
@@ -796,6 +903,10 @@ body.ks-page-home #HomeLowerColumnsSection {
 
   body.ks-page-home .ks-home-main-hero {
     height: 300px;
+  }
+
+  body.ks-page-home .ks-home-side-banner {
+    min-height: 170px;
   }
 
   body.ks-page-home #HeroSliderWrap,
@@ -856,6 +967,14 @@ body.ks-page-home #HomeLowerColumnsSection {
 
   body.ks-page-home .ks-home-main-hero {
     height: 260px;
+  }
+
+  body.ks-page-home .ks-home-side-promos {
+    grid-template-columns: 1fr;
+  }
+
+  body.ks-page-home .ks-home-side-banner {
+    min-height: 150px;
   }
 
   body.ks-page-home #HeroSliderWrap,

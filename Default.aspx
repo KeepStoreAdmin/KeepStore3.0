@@ -242,7 +242,7 @@
             </div>
         </div>
     </section>
-    <section id="HomeCollectionSection" runat="server" visible="false" class="tf-sp-2 pt-0 ks-home-collection-block ks-home-full-width">
+    <section id="HomeCollectionSection" runat="server" visible="false" class="ks-home-section ks-home-collection-block">
         <div class="container">
             <div class="ks-home-collection-grid">
                 <a href="articoli.aspx?q=computer%20notebook" class="ks-home-collection-card">
@@ -306,7 +306,7 @@
         </div>
     </section>
 
-    <section id="HomeLegacyBestSection" runat="server" visible="false" class="tf-sp-2 ks-home-best-section">
+    <section id="HomeLegacyBestSection" runat="server" visible="false" class="ks-home-section ks-home-best-section">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <h5 class="fw-semibold">Best Seller</h5>
@@ -330,7 +330,7 @@
         </div>
     </section>
 
-    <section id="HomeRecentlyViewedSection" runat="server" visible="false" class="tf-sp-2 ks-home-recent-section ks-home-chosen-section d-none"
+    <section id="HomeRecentlyViewedSection" runat="server" visible="false" class="ks-home-section ks-home-recent-section ks-home-chosen-section d-none"
              data-ks-limit="10"
              data-ks-server-fallback="1"
              data-ks-placeholder="<%= ThemeManager.PlaceholderProductImageUrl() %>">
