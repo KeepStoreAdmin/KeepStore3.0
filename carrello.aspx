@@ -79,20 +79,25 @@
         <div class="container">
 
             <div class="checkout-status tf-sp-2 pt-0">
-                <div class="checkout-status-wrap">
-                    <div class="checkout-status-list">
-                        <div class="checkout-status-item active">
-                            <span class="icon"><i class="icon icon-bag"></i></span>
-                            <span class="text">Carrello</span>
-                        </div>
-                        <div class="checkout-status-item">
-                            <span class="icon"><i class="icon icon-credit-card"></i></span>
-                            <span class="text">Checkout</span>
-                        </div>
-                        <div class="checkout-status-item">
-                            <span class="icon"><i class="icon icon-check"></i></span>
-                            <span class="text">Conferma</span>
-                        </div>
+                <div class="checkout-wrap">
+                    <span class="checkout-bar first"></span>
+                    <div class="step-payment">
+                        <span class="icon">
+                            <i class="icon-shop-cart-1"></i>
+                        </span>
+                        <a href="carrello.aspx" class="text-secondary body-text-3" aria-current="step">Carrello</a>
+                    </div>
+                    <div class="step-payment">
+                        <span class="icon">
+                            <i class="icon-shop-cart-2"></i>
+                        </span>
+                        <span class="link-secondary body-text-3">Spedizione e checkout</span>
+                    </div>
+                    <div class="step-payment">
+                        <span class="icon">
+                            <i class="icon-shop-cart-3"></i>
+                        </span>
+                        <span class="link-secondary body-text-3">Conferma</span>
                     </div>
                 </div>
             </div>

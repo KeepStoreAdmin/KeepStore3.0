@@ -65,51 +65,14 @@
 /* =========================
    Checkout status (Carrello)
    ========================= */
-
-/* Normalizzazione stile stepper (senza cambiare markup/controlli) */
 .s-shoping-cart .checkout-status {
-    margin-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
 }
 
-.s-shoping-cart .checkout-status-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: .75rem;
-}
-
-.s-shoping-cart .checkout-status-item {
-    display: inline-flex;
-    align-items: center;
-    gap: .5rem;
-    padding: .5rem .9rem;
-    border-radius: 999px;
-    border: 1px solid rgba(0,0,0,.10);
-    background: #fff;
-    color: #555;
-}
-
-.s-shoping-cart .checkout-status-item .icon {
-    display: inline-flex;
-    width: 32px;
-    height: 32px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    border: 1px solid currentColor;
-}
-
-.s-shoping-cart .checkout-status-item .text {
-    font-weight: 600;
-}
-
-.s-shoping-cart .checkout-status-item.active {
-    border-color: rgba(0,0,0,.18);
-    color: #111;
-    box-shadow: 0 2px 10px rgba(0,0,0,.05);
-}
-
-.s-shoping-cart .checkout-status-item.completed {
-    background: rgba(0,0,0,.06);
+.s-shoping-cart .checkout-status .checkout-wrap {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* Fine-tuning cart layout */
