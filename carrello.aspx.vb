@@ -48,6 +48,28 @@ Private Shared Function NormalizeMoneyText(ByVal value As String) As String
     Return value.Replace(ChrW(8364), "").Replace("&euro;", "").Replace("&#8364;", "").Replace(ChrW(8722), "-").Trim()
 End Function
 
+Protected Function IsCheckoutStepVisible() As Boolean
+    Return tOrdine IsNot Nothing AndAlso tOrdine.Visible
+End Function
+
+Protected Function CheckoutStatusBarClass() As String
+    Return If(IsCheckoutStepVisible(), "next", "first")
+End Function
+
+Protected Function CheckoutStepTextClass(ByVal stepNumber As Integer) As String
+    If IsCheckoutStepVisible() Then
+        Return If(stepNumber = 2, "text-secondary link body-text-3", "link body-text-3")
+    End If
+    Return If(stepNumber = 1, "text-secondary body-text-3", "link-secondary body-text-3")
+End Function
+
+Protected Function CheckoutStepAria(ByVal stepNumber As Integer) As String
+    If (Not IsCheckoutStepVisible() AndAlso stepNumber = 1) OrElse (IsCheckoutStepVisible() AndAlso stepNumber = 2) Then
+        Return "aria-current=""step"""
+    End If
+    Return ""
+End Function
+
 
 ' === HARDENING HELPERS (VB2012 safe) ===
 Private Const CHECKOUT_TOKEN_SESSION_KEY As String = "CheckoutToken"

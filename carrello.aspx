@@ -80,18 +80,18 @@
 
             <div class="checkout-status tf-sp-2 pt-0">
                 <div class="checkout-wrap">
-                    <span class="checkout-bar first"></span>
+                    <span class="checkout-bar <%= CheckoutStatusBarClass() %>"></span>
                     <div class="step-payment">
                         <span class="icon">
                             <i class="icon-shop-cart-1"></i>
                         </span>
-                        <a href="carrello.aspx" class="text-secondary body-text-3" aria-current="step">Carrello</a>
+                        <a href="carrello.aspx" class="<%= CheckoutStepTextClass(1) %>" <%= CheckoutStepAria(1) %>>Carrello</a>
                     </div>
                     <div class="step-payment">
                         <span class="icon">
                             <i class="icon-shop-cart-2"></i>
                         </span>
-                        <span class="link-secondary body-text-3">Spedizione e checkout</span>
+                        <span class="<%= CheckoutStepTextClass(2) %>" <%= CheckoutStepAria(2) %>>Spedizione e checkout</span>
                     </div>
                     <div class="step-payment">
                         <span class="icon">
