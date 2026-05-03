@@ -185,8 +185,8 @@
 
                                     <td data-cart-title="Prezzo" class="tf-cart-item_price">
                                         <p class="cart-price price-text fw-medium">
-                                            <asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# Bind("PrezzoIvato", "{0:C}") %>'></asp:Label>
-                                            <asp:Label ID="lblPrezzo" runat="server" Text='<%# Bind("Prezzo", "{0:C}") %>'></asp:Label>
+                                            <asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("PrezzoIvato")) & " " & ChrW(8364) %>'></asp:Label>
+                                            <asp:Label ID="lblPrezzo" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Prezzo")) & " " & ChrW(8364) %>'></asp:Label>
                                         </p>
                                         <p class="body-text-3 text-secondary"><%= IIf(Me.Session("IvaTipo") = 1, "+", "")%>IVA. <%#: Eval("ValoreIva")%>%</p>
                                     </td>
@@ -205,8 +205,8 @@
 
                                     <td data-cart-title="Totale" class="tf-cart-item_total">
                                         <p class="cart-total total-price price-text fw-medium">
-                                            <asp:Label ID="lblImportoIvato" runat="server" Text='<%# Bind("ImportoIvato", "{0:C}") %>'></asp:Label>
-                                            <asp:Label ID="lblImporto" runat="server" Text='<%# Bind("Importo", "{0:C}") %>' Visible="false"></asp:Label>
+                                            <asp:Label ID="lblImportoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("ImportoIvato")) & " " & ChrW(8364) %>'></asp:Label>
+                                            <asp:Label ID="lblImporto" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Importo")) & " " & ChrW(8364) %>' Visible="false"></asp:Label>
                                         </p>
                                     </td>
 
@@ -294,8 +294,8 @@
 
                                     <td data-cart-title="Prezzo" class="tf-cart-item_price">
                                         <p class="cart-price price-text fw-medium">
-                                            <asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# Bind("PrezzoIvato", "{0:C}") %>'></asp:Label>
-                                            <asp:Label ID="lblPrezzo" runat="server" Text='<%# Bind("Prezzo", "{0:C}") %>'></asp:Label>
+                                            <asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("PrezzoIvato")) & " " & ChrW(8364) %>'></asp:Label>
+                                            <asp:Label ID="lblPrezzo" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Prezzo")) & " " & ChrW(8364) %>'></asp:Label>
                                         </p>
                                         <p class="body-text-3 text-secondary"><%= IIf(Me.Session("IvaTipo") = 1, "+", "")%>IVA. <%#: Eval("ValoreIva")%>%</p>
                                     </td>
@@ -314,8 +314,8 @@
 
                                     <td data-cart-title="Totale" class="tf-cart-item_total">
                                         <p class="cart-total total-price price-text fw-medium">
-                                            <asp:Label ID="lblImportoIvato" runat="server" Text='<%# Bind("ImportoIvato", "{0:C}") %>'></asp:Label>
-                                            <asp:Label ID="lblImporto" runat="server" Text='<%# Bind("Importo", "{0:C}") %>' Visible="false"></asp:Label>
+                                            <asp:Label ID="lblImportoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("ImportoIvato")) & " " & ChrW(8364) %>'></asp:Label>
+                                            <asp:Label ID="lblImporto" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Importo")) & " " & ChrW(8364) %>' Visible="false"></asp:Label>
                                         </p>
                                     </td>
 
