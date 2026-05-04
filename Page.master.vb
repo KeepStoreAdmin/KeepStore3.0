@@ -728,13 +728,20 @@ End Sub
         '---------------------------
         ' MINI LOGIN HEADER
         '---------------------------
-        If Not Me.Session("LoginId") Is Nothing Then
+        If CurrentLoginIdSafe() > 0 Then
             ' Utente loggato → mostra view 1 (Ciao, Nome + Esci)
             If mv IsNot Nothing Then If mv IsNot Nothing Then mv.ActiveViewIndex = 1
 
             Dim lblUser As Label = If(mv Is Nothing, Nothing, TryCast(mv.FindControl("lblUtente"), Label))
-            If lblUser IsNot Nothing AndAlso Session("LoginNomeCognome") IsNot Nothing Then
-                lblUser.Text = Session("LoginNomeCognome").ToString()
+            If lblUser IsNot Nothing Then
+                Dim displayName As String = Convert.ToString(Session("LoginNomeCognome")).Trim()
+                If String.IsNullOrWhiteSpace(displayName) Then
+                    displayName = Convert.ToString(Session("LoginEmail")).Trim()
+                End If
+                If String.IsNullOrWhiteSpace(displayName) Then
+                    displayName = "cliente"
+                End If
+                lblUser.Text = displayName
             End If
 
             ' *** CORRETTO QUI: niente "Is Not Nothing" su Session("LoginUltimoAccesso") ***
@@ -1429,6 +1436,7 @@ End Function
                     Me.Session("AbilitaListino") = 0
                 End Try
                 Me.Session("LoginId") = dr.Item("id")
+                Me.Session("LoginID") = dr.Item("id")
                 Me.Session("LoginEmail") = dr.Item("email")
                 Me.Session("LoginNomeCognome") = dr.Item("cognomenome")
 
@@ -1507,7 +1515,7 @@ End Function
 
         cmd.Dispose()
 
-        If Not Me.Session("LoginId") Is Nothing Then
+        If CurrentLoginIdSafe() > 0 Then
             AggiornaDati()
         End If
 
@@ -1525,12 +1533,14 @@ End Function
     Public Sub AggiornaDati()
         Dim connString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
 
-        ' Se per qualche motivo non c'è LoginID, esco
-        If Session("LoginID") Is Nothing Then
+        ' Se per qualche motivo non c'è LoginID/LoginId valido, esco
+        Dim loginId As Integer = CurrentLoginIdSafe()
+        If loginId <= 0 Then
             Exit Sub
         End If
 
-        Dim loginId As Integer = CInt(Session("LoginID"))
+        Session("LoginID") = loginId
+        Session("LoginId") = loginId
 
         '==========================================================
         ' 1) Aggiorno ultimo accesso e sistemo il carrello/sessione

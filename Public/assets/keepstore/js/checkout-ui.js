@@ -368,6 +368,103 @@
     }, true);
   }
 
+  function parseItMoney(text) {
+    var value = (text || '').toString();
+    var match = value.match(/\d{1,3}(?:\.\d{3})*(?:,\d{1,4})|\d+(?:,\d{1,4})|\d+(?:\.\d{1,4})/);
+    if (!match) return 0;
+    var raw = match[0].replace(/\s/g, '');
+    if (raw.indexOf(',') >= 0) {
+      raw = raw.replace(/\./g, '').replace(',', '.');
+    }
+    var n = parseFloat(raw);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function formatItMoney(value) {
+    var n = parseFloat(value);
+    if (isNaN(n)) n = 0;
+    try {
+      return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    } catch (e) {
+      return n.toFixed(2).replace('.', ',') + ' €';
+    }
+  }
+
+  function restoreCartServerTotals() {
+    qsa('.tf-table-page-cart .tf-cart-item').forEach(function (row) {
+      var total = qs('.tf-cart-item_total .cart-total', row);
+      if (total) {
+        if (!total.dataset.ksServerText) total.dataset.ksServerText = (total.textContent || '').trim();
+        if (/\$?NaN/i.test(total.textContent || '')) total.textContent = total.dataset.ksServerText || formatItMoney(0);
+      }
+
+      var price = qs('.tf-cart-item_price .cart-price', row);
+      if (price) {
+        if (!price.dataset.ksServerText) price.dataset.ksServerText = (price.textContent || '').trim();
+        if (/\$?NaN/i.test(price.textContent || '')) price.textContent = price.dataset.ksServerText || formatItMoney(0);
+      }
+    });
+  }
+
+  function updateCartRowClientTotal(row) {
+    if (!row) return;
+    var qtyInput = qs('.quantity-product', row);
+    var priceBox = qs('.tf-cart-item_price .cart-price', row);
+    var totalBox = qs('.tf-cart-item_total .cart-total', row);
+    if (!qtyInput || !priceBox || !totalBox) return;
+
+    var qty = parseInt(qtyInput.value, 10);
+    if (isNaN(qty) || qty < 1) qty = 1;
+    var price = parseItMoney(priceBox.dataset.ksServerText || priceBox.textContent);
+    totalBox.textContent = formatItMoney(price * qty);
+  }
+
+  function setupCartQuantityControls() {
+    qsa('.tf-table-page-cart .ks-wg-quantity').forEach(function (wrap) {
+      if (!wrap || wrap.dataset.ksQtyBound === '1') return;
+      wrap.dataset.ksQtyBound = '1';
+
+      var input = qs('.quantity-product', wrap);
+      if (!input) return;
+
+      function setQty(delta) {
+        var current = parseInt(input.value, 10);
+        if (isNaN(current) || current < 1) current = 1;
+        var next = Math.max(1, current + delta);
+        input.value = String(next);
+        updateCartRowClientTotal(wrap.closest('.tf-cart-item'));
+      }
+
+      var minus = qs('.btn-decrease', wrap);
+      var plus = qs('.btn-increase', wrap);
+
+      if (minus) {
+        minus.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          ev.stopImmediatePropagation();
+          setQty(-1);
+        }, true);
+      }
+
+      if (plus) {
+        plus.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          ev.stopImmediatePropagation();
+          setQty(1);
+        }, true);
+      }
+
+      input.addEventListener('change', function () {
+        var value = parseInt(input.value, 10);
+        if (isNaN(value) || value < 1) value = 1;
+        input.value = String(value);
+        updateCartRowClientTotal(wrap.closest('.tf-cart-item'));
+      });
+    });
+  }
+
   // Funzione richiamata da OnClientClick nel markup: deve essere globale.
   window.visualizza_spinner_caricamento = function () {
     var sp = document.getElementById('spinner_caricamento');
@@ -388,6 +485,9 @@
     setupDestinationToggles();
     enhanceShippingAddressPicker();
     preventDoubleSubmit();
+    restoreCartServerTotals();
+    setupCartQuantityControls();
+    window.setTimeout(restoreCartServerTotals, 120);
   }
 
   document.addEventListener('DOMContentLoaded', function () {

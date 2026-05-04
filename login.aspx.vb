@@ -51,6 +51,30 @@ Partial Class Login
         Return fallback
     End Function
 
+    Private Function CurrentLoginIdSafe() As Integer
+        Dim loginId As Integer = 0
+        Try
+            Integer.TryParse(Convert.ToString(Session("LoginId")), loginId)
+            If loginId <= 0 Then
+                Integer.TryParse(Convert.ToString(Session("LoginID")), loginId)
+            End If
+        Catch
+            loginId = 0
+        End Try
+        Return loginId
+    End Function
+
+    Private Sub ClearInvalidLoginSession()
+        Session.Remove("LoginId")
+        Session.Remove("LoginID")
+        Session.Remove("LoginEmail")
+        Session.Remove("LoginNomeCognome")
+        Session.Remove("LoginUltimoAccesso")
+        Session.Remove("UtentiId")
+        Session.Remove("UtentiID")
+        Session.Remove("UtentiTipoId")
+    End Sub
+
     '================================================================
     ' PAGE_LOAD
     ' - Se l'utente è già loggato, lo mando in home
@@ -61,8 +85,10 @@ Partial Class Login
         If Not IsPostBack Then
 
             ' Se è già loggato, non ha senso stare sulla pagina di login
-            If Session("LoginId") IsNot Nothing Then
+            If CurrentLoginIdSafe() > 0 Then
                 Response.Redirect(ResolvePostLoginTarget("default.aspx"), True)
+            Else
+                ClearInvalidLoginSession()
             End If
 
             ' Prefill da cookie (solo username, se presente)
@@ -105,7 +131,7 @@ Partial Class Login
         Dim ok As Boolean = EseguiLogin(user, pass)
 
         ' Se il login è andato a buon fine, Session("LoginId") è valorizzata
-        If ok AndAlso Session("LoginId") IsNot Nothing Then
+        If ok AndAlso CurrentLoginIdSafe() > 0 Then
 
             ' Chiamo AggiornaDati della master (aggiorna carrello, prezzi, ecc.)
             Try
@@ -181,6 +207,7 @@ Partial Class Login
                     End Try
 
                     Session("LoginId") = dr.Item("id")
+                    Session("LoginID") = dr.Item("id")
                     Session("LoginEmail") = dr.Item("email")
                     Session("LoginNomeCognome") = dr.Item("cognomenome")
 

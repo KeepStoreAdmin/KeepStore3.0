@@ -301,6 +301,19 @@ Partial Class SiteHeader
         End If
 
         Dim accountUrl As String = If(isLogged, ResolveUrl("~/myaccount.aspx"), ResolveUrl("~/login.aspx"))
+        If mvLogin IsNot Nothing Then
+            mvLogin.ActiveViewIndex = If(isLogged, 1, 0)
+        End If
+        If lblUtente IsNot Nothing Then
+            Dim displayName As String = Convert.ToString(Session("LoginNomeCognome")).Trim()
+            If String.IsNullOrWhiteSpace(displayName) Then
+                displayName = Convert.ToString(Session("LoginEmail")).Trim()
+            End If
+            If String.IsNullOrWhiteSpace(displayName) Then
+                displayName = "cliente"
+            End If
+            lblUtente.Text = If(isLogged, displayName, String.Empty)
+        End If
 
         If lnkAccount IsNot Nothing Then
             lnkAccount.HRef = accountUrl

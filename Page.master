@@ -365,7 +365,7 @@
                     });
                 }
 
-                var shouldAutoOpen = !isMobileViewport();
+                var shouldAutoOpen = false;
                 try {
                     if (!document.body || document.body.className.indexOf('ks-page-home') < 0) {
                         shouldAutoOpen = false;
