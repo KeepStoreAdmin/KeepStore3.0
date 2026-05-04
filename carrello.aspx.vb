@@ -2235,7 +2235,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
 
 
     Protected Sub btSvuota_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btSvuota.Click
-        Dim LoginId As Integer = Me.Session("LoginId")
+        Dim LoginId As Integer = GetLoginIdSafe(0)
         Dim SessionID As String = Me.Session.SessionID
         Me.sdsArticoli.DeleteParameters.Clear()
         If LoginId = 0 Then
