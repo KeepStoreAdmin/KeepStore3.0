@@ -392,7 +392,7 @@
                 <div class="ks-cart-message-content">
                     <h4>Accedi per inviare l'ordine</h4>
                     <p class="body-text-3">Puoi continuare a navigare e aggiungere prodotti al carrello. Per confermare l'ordine devi accedere o registrarti.</p>
-                    <a href="login.aspx?ReturnUrl=carrello.aspx" class="tf-btn">Accedi o registrati</a>
+                    <a id="ksCartLoginRequiredLink" href="login.aspx?ReturnUrl=%2Fcarrello.aspx" class="tf-btn">Accedi o registrati</a>
                 </div>
             </asp:Panel>
 

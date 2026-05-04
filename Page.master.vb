@@ -15,6 +15,35 @@ Partial Class PageMaster
     Inherits System.Web.UI.MasterPage
     Implements ISeoMaster
 
+    Private Function IsTechnicalNavigationPath(ByVal absolutePath As String) As Boolean
+        Dim path As String = Convert.ToString(absolutePath).ToLowerInvariant()
+        Return path.EndsWith("/accessonegato.aspx") OrElse
+               path.EndsWith("/login.aspx") OrElse
+               path.EndsWith("/cambiapassword.aspx") OrElse
+               path.EndsWith("/logout.aspx")
+    End Function
+
+    Private Function CurrentScriptPathLower() As String
+        Try
+            Return Convert.ToString(Me.Request.ServerVariables("SCRIPT_NAME")).ToLowerInvariant()
+        Catch
+            Return Convert.ToString(Me.Request.Url.AbsolutePath).ToLowerInvariant()
+        End Try
+    End Function
+
+    Private Function CurrentLoginIdSafe() As Integer
+        Dim loginId As Integer = 0
+        Try
+            Integer.TryParse(Convert.ToString(Me.Session("LoginId")), loginId)
+            If loginId <= 0 Then
+                Integer.TryParse(Convert.ToString(Me.Session("LoginID")), loginId)
+            End If
+        Catch
+            loginId = 0
+        End Try
+        Return loginId
+    End Function
+
     '==========================================================
     ' Helper: trova controlli SENZA ricorsione (evita StackOverflow)
     '==========================================================
@@ -567,7 +596,8 @@ Dim IvaTipo As Integer
         ' Footer: email supporto configurabile (fallback safe)
         ApplySupportEmail()
 
-        If Not Me.Request.Url.ToString.Contains("accessonegato.aspx") Then
+        Dim currentPathLower As String = Convert.ToString(Me.Request.Url.AbsolutePath).ToLowerInvariant()
+        If Not IsTechnicalNavigationPath(currentPathLower) Then
             Session.Item("Pagina_visitata") = Me.Request.Url
         End If
 
@@ -608,11 +638,22 @@ End If
             End If
         End If
 
-        'Scadenza password
-        If Not Me.Session("LoginId") Is Nothing AndAlso Not Me.Request.ServerVariables("script_name").Contains("cambiapassword.aspx") Then
+        'Scadenza password: redirect robusto e non ciclico.
+        Dim currentScript As String = CurrentScriptPathLower()
+        Dim loginIdPassword As Integer = CurrentLoginIdSafe()
+        If loginIdPassword > 0 AndAlso Not currentScript.EndsWith("/cambiapassword.aspx") Then
             Try
-                If System.DateTime.Compare(System.DateTime.Today, CDate(Me.Session("DataPassword")).AddMonths(CInt(Me.Session("ScadenzaPassword")))) = 1 Then
-                    Me.Response.Redirect("cambiapassword.aspx")
+                Dim dataPassword As DateTime
+                Dim mesiScadenza As Integer
+                If DateTime.TryParse(Convert.ToString(Me.Session("DataPassword")), dataPassword) AndAlso
+                   Integer.TryParse(Convert.ToString(Me.Session("ScadenzaPassword")), mesiScadenza) AndAlso
+                   mesiScadenza > 0 Then
+
+                    If DateTime.Today > dataPassword.AddMonths(mesiScadenza).Date Then
+                        Me.Response.Redirect("cambiapassword.aspx", False)
+                        Context.ApplicationInstance.CompleteRequest()
+                        Return
+                    End If
                 End If
             Catch
                 ' se DataPassword/ScadenzaPassword non sono coerenti, non butto fuori l'utente
@@ -1471,7 +1512,13 @@ End Function
         End If
 
         If Not Session.Item("Pagina_visitata") Is Nothing Then
-            Response.Redirect(Session.Item("Pagina_visitata").AbsoluteUri)
+            Try
+                Dim lastUrl As Uri = TryCast(Session.Item("Pagina_visitata"), Uri)
+                If lastUrl IsNot Nothing AndAlso Not IsTechnicalNavigationPath(lastUrl.AbsolutePath) Then
+                    Response.Redirect(lastUrl.AbsoluteUri)
+                End If
+            Catch
+            End Try
         End If
     End Sub
 
