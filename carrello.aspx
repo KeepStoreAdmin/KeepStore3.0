@@ -199,7 +199,7 @@
                                             <span class="btn-quantity btn-increase"><i class="icon icon-plus"></i></span>
                                         </div>
                                         <div class="mt-2">
-                                            <asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link body-text-3">Aggiorna</asp:LinkButton>
+                                            <asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" CssClass="link body-text-3">Aggiorna</asp:LinkButton>
                                         </div>
                                         <asp:TextBox ID="tbID" runat="server" Text='<%#: Eval("id") %>' Visible="false" />
                                     </td>
@@ -212,7 +212,7 @@
                                     </td>
 
                                     <td data-cart-title="Rimuovi" class="remove-cart text-xxl-end">
-                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="remove icon icon-close link" ToolTip="Rimuovi articolo" Text="<span class='visually-hidden'>Rimuovi articolo</span>"></asp:LinkButton>
+                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") %>' runat="server" CausesValidation="false" CssClass="remove icon icon-close link" ToolTip="Rimuovi articolo" Text="<span class='visually-hidden'>Rimuovi articolo</span>"></asp:LinkButton>
                                     </td>
                                 </tr>
 
@@ -309,7 +309,7 @@
                                             <span class="btn-quantity btn-increase"><i class="icon icon-plus"></i></span>
                                         </div>
                                         <div class="mt-2">
-                                            <asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="link body-text-3">Aggiorna</asp:LinkButton>
+                                            <asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" CssClass="link body-text-3">Aggiorna</asp:LinkButton>
                                         </div>
                                         <asp:TextBox ID="tbID" runat="server" Text='<%#: Eval("id") %>' Visible="false" />
                                     </td>
@@ -322,7 +322,7 @@
                                     </td>
 
                                     <td data-cart-title="Rimuovi" class="remove-cart text-xxl-end">
-                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") %>' runat="server" CausesValidation="false" PostBackUrl="carrello.aspx" CssClass="remove icon icon-close link" ToolTip="Rimuovi articolo" Text="<span class='visually-hidden'>Rimuovi articolo</span>"></asp:LinkButton>
+                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") %>' runat="server" CausesValidation="false" CssClass="remove icon icon-close link" ToolTip="Rimuovi articolo" Text="<span class='visually-hidden'>Rimuovi articolo</span>"></asp:LinkButton>
                                     </td>
                                 </tr>
 

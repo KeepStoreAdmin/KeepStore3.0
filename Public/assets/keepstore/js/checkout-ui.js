@@ -465,6 +465,16 @@
     });
   }
 
+  function protectServerCartCommands() {
+    qsa('.tf-table-page-cart .remove-cart a, .tf-table-page-cart a[id*="LB_Aggiorna"]').forEach(function (link) {
+      if (!link || link.dataset.ksServerCommandBound === '1') return;
+      link.dataset.ksServerCommandBound = '1';
+      link.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+      }, false);
+    });
+  }
+
   // Funzione richiamata da OnClientClick nel markup: deve essere globale.
   window.visualizza_spinner_caricamento = function () {
     var sp = document.getElementById('spinner_caricamento');
@@ -487,6 +497,7 @@
     preventDoubleSubmit();
     restoreCartServerTotals();
     setupCartQuantityControls();
+    protectServerCartCommands();
     window.setTimeout(restoreCartServerTotals, 120);
   }
 

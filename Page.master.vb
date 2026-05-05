@@ -1566,14 +1566,25 @@ End Function
                 comm.Parameters.AddWithValue("?SessionId", Session.SessionID)
                 comm.ExecuteNonQuery()
 
-                ' Pulisco SessionId e imposto NListino = 1 solo sulle righe dell'utente appena loggato.
-                ' La versione senza WHERE alterava anche carrelli di altre sessioni.
-                comm.CommandText = "UPDATE carrello SET SessionId = '', NListino = 1 WHERE LoginID = ?LoginID"
+                ' Pulisco SessionId e imposto il listino reale dell'utente appena loggato.
+                Dim listinoLogin As Integer = 1
+                Integer.TryParse(Convert.ToString(Session("Listino")), listinoLogin)
+                If listinoLogin <= 0 Then Integer.TryParse(Convert.ToString(Session("listino")), listinoLogin)
+                If listinoLogin <= 0 Then listinoLogin = 1
+
+                comm.CommandText = "UPDATE carrello SET SessionId = '', NListino = ?NListino WHERE LoginID = ?LoginID"
                 comm.Parameters.Clear()
+                comm.Parameters.AddWithValue("?NListino", listinoLogin)
                 comm.Parameters.AddWithValue("?LoginID", loginId)
                 comm.ExecuteNonQuery()
             End Using
         End Using
+
+        ' Il ricalcolo prezzi storico qui sotto non Ã¨ TC-aware e puÃ² alterare
+        ' prezzi corretti appena inseriti. Il carrello aggiorna prezzi/quantitÃ 
+        ' nel proprio flusso, usando TCId e listino correnti.
+        Dim skipLegacyCartPriceRecalc As Boolean = True
+        If skipLegacyCartPriceRecalc Then Exit Sub
 
         '==========================================================
         ' 2) Aggiorno prezzi base del carrello e accorpo duplicati

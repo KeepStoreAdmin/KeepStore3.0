@@ -2209,6 +2209,15 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
                     End If
                 End If
 
+                If prezzo <= 0 OrElse prezzoIvato <= 0 Then
+                    ' Protezione anti-azzeramento: se il lookup non restituisce un
+                    ' prezzo valido, salvo solo la quantitÃ  e mantengo i prezzi DB.
+                    cmdQtyOnly.Parameters("@Qnt").Value = r.Qnt
+                    cmdQtyOnly.Parameters("@id").Value = r.Id
+                    cmdQtyOnly.ExecuteNonQuery()
+                    Continue For
+                End If
+
                 ' Reverse charge: replico logica â€œabilitato + idIvaRC validoâ€
                 Dim idIvaRC As Integer = -1
                 Dim valoreIvaRC As Double = -1
