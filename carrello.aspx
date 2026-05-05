@@ -171,6 +171,7 @@
 
                                             <!-- Hidden / technical fields (used by VB code-behind) -->
                                             <asp:TextBox ID="tbArtID" runat="server" Text='<%#: Eval("ArticoliID") %>' Visible="false"></asp:TextBox>
+                                            <asp:TextBox ID="tbTCID" runat="server" Text='<%#: Eval("TCid") %>' Visible="false"></asp:TextBox>
                                             <asp:Label ID="lblIvaReverseCharge" runat="server" Text='<%# stampa_iva_applicata(If(IsDBNull(Eval("DescrizioneEsenzioneIva")), "", Eval("DescrizioneEsenzioneIva")),If(IsDBNull(Eval("DescrizioneIvaRC")), "", Eval("DescrizioneIvaRC"))) %>' Visible="true" Font-Size="7pt"></asp:Label>
                                             <asp:Label ID="lblValoreIva" runat="server" Text='<%#: Eval("Valoreiva") %>' Visible="False"></asp:Label>
                                             <asp:Label ID="lblidIvaRC" runat="server" Text='<%#: Eval("IdIvaRC") %>' Visible="False"></asp:Label>
@@ -280,6 +281,7 @@
 
                                             <!-- Hidden / technical fields (used by VB code-behind) -->
                                             <asp:TextBox ID="tbArtID" runat="server" Text='<%#: Eval("ArticoliID") %>' Visible="false"></asp:TextBox>
+                                            <asp:TextBox ID="tbTCID" runat="server" Text='<%#: Eval("TCid") %>' Visible="false"></asp:TextBox>
                                             <asp:Label ID="lblIvaReverseCharge" runat="server" Text='<%# stampa_iva_applicata(If(IsDBNull(Eval("DescrizioneEsenzioneIva")), "", Eval("DescrizioneEsenzioneIva")),If(IsDBNull(Eval("DescrizioneIvaRC")), "", Eval("DescrizioneIvaRC"))) %>' Visible="true" Font-Size="7pt"></asp:Label>
                                             <asp:Label ID="lblValoreIva" runat="server" Text='<%#: Eval("Valoreiva") %>' Visible="False"></asp:Label>
                                             <asp:Label ID="lblidIvaRC" runat="server" Text='<%#: Eval("IdIvaRC") %>' Visible="False"></asp:Label>

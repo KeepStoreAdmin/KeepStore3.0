@@ -220,7 +220,7 @@
 
                                         <div class="product-quantity">
                                             <p class="title body-text-3">Quantita</p>
-                                            <div class="wg-quantity">
+                                            <div class="wg-quantity ks-qty-stepper">
                                                 <button class="btn-quantity btn-decrease" type="button" data-ks-qty="minus">
                                                     <i class="icon-minus"></i>
                                                 </button>

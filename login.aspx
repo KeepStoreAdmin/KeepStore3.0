@@ -43,7 +43,8 @@
                                         <asp:RequiredFieldValidator ID="RequiredFieldValidatorUser" runat="server"
                                             ControlToValidate="tbUsername"
                                             Display="Dynamic"
-                                            ErrorMessage="Inserire Username"></asp:RequiredFieldValidator>
+                                            ErrorMessage="Inserire Username"
+                                            ValidationGroup="LoginAccesso"></asp:RequiredFieldValidator>
                                     </div>
                                 </fieldset>
 
@@ -56,7 +57,8 @@
                                         <asp:RequiredFieldValidator ID="RequiredFieldValidatorPass" runat="server"
                                             ControlToValidate="tbPassword"
                                             Display="Dynamic"
-                                            ErrorMessage="Inserire Password"></asp:RequiredFieldValidator>
+                                            ErrorMessage="Inserire Password"
+                                            ValidationGroup="LoginAccesso"></asp:RequiredFieldValidator>
                                     </div>
                                 </fieldset>
 
@@ -73,6 +75,8 @@
                                 CssClass="tf-btn w-100 text-white"
                                 OnClick="btnLogin_Click"
                                 CausesValidation="True"
+                                ValidationGroup="LoginAccesso"
+                                UseSubmitBehavior="false"
                                 Visible="True" />
 
                             <div class="mt-3 text-center">

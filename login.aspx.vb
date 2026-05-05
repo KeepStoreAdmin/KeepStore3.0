@@ -86,7 +86,9 @@ Partial Class Login
 
             ' Se è già loggato, non ha senso stare sulla pagina di login
             If CurrentLoginIdSafe() > 0 Then
-                Response.Redirect(ResolvePostLoginTarget("default.aspx"), True)
+                Response.Redirect(ResolvePostLoginTarget("default.aspx"), False)
+                Context.ApplicationInstance.CompleteRequest()
+                Return
             Else
                 ClearInvalidLoginSession()
             End If
@@ -146,10 +148,15 @@ Partial Class Login
             ' Decido dove reindirizzare senza tornare su pagine tecniche.
             Dim targetUrl As String = ResolvePostLoginTarget("default.aspx")
 
-            Response.Redirect(targetUrl, True)
+            Response.Redirect(targetUrl, False)
+            Context.ApplicationInstance.CompleteRequest()
+            Return
         End If
 
         ' Se EseguiLogin restituisce False, lblLogin contiene già il messaggio
+        If String.IsNullOrWhiteSpace(lblLogin.Text) Then
+            lblLogin.Text = "Accesso non riuscito. Controlla username e password."
+        End If
     End Sub
 
     '================================================================
@@ -168,8 +175,16 @@ Partial Class Login
                 cmd.Connection = conn
                 cmd.CommandType = CommandType.Text
 
-                ' Query parametrizzata su vlogin (no concatenazioni stringa)
-                cmd.CommandText = "SELECT * FROM vlogin WHERE UPPER(Username) = ?username LIMIT 0, 1"
+                ' Query parametrizzata su vlogin (no concatenazioni stringa).
+                ' Se l'azienda Ã¨ giÃ  in sessione, filtro come nel flusso storico della master.
+                Dim aziendaId As Integer = 0
+                Integer.TryParse(Convert.ToString(Session("AziendaID")), aziendaId)
+                If aziendaId > 0 Then
+                    cmd.CommandText = "SELECT * FROM vlogin WHERE AziendeID=?aziendaId AND UPPER(Username) = ?username LIMIT 0, 1"
+                    cmd.Parameters.AddWithValue("?aziendaId", aziendaId)
+                Else
+                    cmd.CommandText = "SELECT * FROM vlogin WHERE UPPER(Username) = ?username LIMIT 0, 1"
+                End If
                 cmd.Parameters.AddWithValue("?username", user.ToUpper())
 
                 Using dr As MySqlDataReader = cmd.ExecuteReader()
@@ -216,6 +231,7 @@ Partial Class Login
                     End If
 
                     Session("UtentiId") = dr.Item("utentiid")
+                    Session("UtentiID") = dr.Item("utentiid")
                     Session("UtentiTipoId") = dr.Item("utentitipoid")
 
                     'Indica se l'utente può o meno creare l'html per le promo mailing
@@ -238,8 +254,18 @@ Partial Class Login
                     Session("AbilitatoIvaReverseCharge") = dr.Item("AbilitatoIvaReverseCharge")
 
                     Session("Listino") = dr.Item("listino")
+                    Session("listino") = dr.Item("listino")
                     Session("IvaTipo") = dr.Item("IvaTipo")
                     Session("DataPassword") = dr.Item("DataPassword")
+                    Try
+                        Session("CanOrder") = dr.Item("CanOrder")
+                    Catch
+                        Session("CanOrder") = 1
+                    End Try
+                    Try
+                        Session("ScadenzaPassword") = dr.Item("ScadenzaPassword")
+                    Catch
+                    End Try
 
                 End Using
             End Using

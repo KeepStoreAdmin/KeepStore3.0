@@ -371,10 +371,12 @@ Private lastSqlString As String = ""
     Private Structure CartRowInfo
     Public Id As Integer
     Public ArtId As Integer
+    Public TCId As Integer
     Public Qnt As Long
     End Structure
 
     Private Class VsuperInfo
+    Public TCId As Integer
     Public Prezzo As Double
     Public PrezzoIvato As Double
     Public InOfferta As Integer
@@ -477,9 +479,11 @@ Private Const SessLoginId_B As String = "LOGINID"
     Dim tbQta As TextBox = TryCast(item.FindControl("tbQta"), TextBox)
     Dim tbID As TextBox = TryCast(item.FindControl("tbID"), TextBox)
     Dim tbArtID As TextBox = TryCast(item.FindControl("tbArtID"), TextBox)
+    Dim tbTCID As TextBox = TryCast(item.FindControl("tbTCID"), TextBox)
 
     r.Id = SafeInt(If(tbID IsNot Nothing, tbID.Text, 0), 0)
     r.ArtId = SafeInt(If(tbArtID IsNot Nothing, tbArtID.Text, 0), 0)
+    r.TCId = SafeInt(If(tbTCID IsNot Nothing, tbTCID.Text, -1), -1)
 
     Dim q As Integer = SafeInt(If(tbQta IsNot Nothing, tbQta.Text, 0), 0)
     If q < 0 Then q = 0
@@ -2069,12 +2073,12 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
             cmdV.Parameters.AddWithValue("@listino", listino)
 
             cmdV.CommandText =
-                "SELECT ID, prezzo, prezzoIvato, InOfferta, OfferteDataInizio, OfferteDataFine, " &
+                "SELECT ID, TCid, prezzo, prezzoIvato, InOfferta, OfferteDataInizio, OfferteDataFine, " &
                 "OfferteQntMinima, OfferteMultipli, OfferteDettagliId, prezzopromo, prezzopromoIvato, " &
                 "IdIvaRC, ValoreIvaRC, DescrizioneIvaRC " &
                 "FROM vsuperarticoli " &
                 "WHERE NListino=@listino AND ID IN (" & String.Join(",", inNames) & ") " &
-                "ORDER BY ID, PrezzoPromo DESC"
+                "ORDER BY ID, CASE WHEN COALESCE(TCid,-1) IN (-1,0) THEN 0 ELSE 1 END, PrezzoPromo DESC"
 
             Using dr As MySqlDataReader = cmdV.ExecuteReader()
                 While dr.Read()
@@ -2082,6 +2086,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
                     If id <= 0 Then Continue While
 
                     Dim info As New VsuperInfo()
+                    info.TCId = SafeInt(dr("TCid"), -1)
                     info.Prezzo = SafeDbl(dr("prezzo"), 0)
                     info.PrezzoIvato = SafeDbl(dr("prezzoIvato"), 0)
                     info.InOfferta = SafeInt(dr("InOfferta"), 0)
@@ -2131,28 +2136,30 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
             cmdU.Parameters.Add("@DescrizioneEsenzioneIva", MySqlDbType.VarChar)
             cmdU.Parameters.Add("@id", MySqlDbType.Int32)
 
+            Dim cmdQtyOnly As New MySqlCommand("UPDATE carrello SET Qnt=@Qnt WHERE ID=@id", conn)
+            cmdQtyOnly.CommandType = CommandType.Text
+            cmdQtyOnly.Parameters.Add("@Qnt", MySqlDbType.Int64)
+            cmdQtyOnly.Parameters.Add("@id", MySqlDbType.Int32)
+
             Dim today As Date = Date.Today
 
             For Each r As CartRowInfo In rows
 
                 If Not vsup.ContainsKey(r.ArtId) OrElse vsup(r.ArtId).Count = 0 Then
-                    ' niente record vsuperarticoli -> aggiorno solo quantitÃ  e pulisco offerta
-                    cmdU.Parameters("@Qnt").Value = r.Qnt
-                    cmdU.Parameters("@OfferteDettaglioId").Value = 0
-                    cmdU.Parameters("@Prezzo").Value = 0
-                    cmdU.Parameters("@PrezzoIvato").Value = 0
-                    cmdU.Parameters("@IdIvaRC").Value = -1
-                    cmdU.Parameters("@ValoreIvaRC").Value = -1
-                    cmdU.Parameters("@DescrizioneIvaRC").Value = ""
-                    cmdU.Parameters("@IdEsenzioneIva").Value = idEsenzioneIva
-                    cmdU.Parameters("@ValoreEsenzioneIva").Value = valoreEsenzioneIva
-                    cmdU.Parameters("@DescrizioneEsenzioneIva").Value = descrEsenzioneIva
-                    cmdU.Parameters("@id").Value = r.Id
-                    cmdU.ExecuteNonQuery()
+                    ' Se il listino non torna righe, non azzero i prezzi giÃ  validi: salvo solo la quantitÃ .
+                    cmdQtyOnly.Parameters("@Qnt").Value = r.Qnt
+                    cmdQtyOnly.Parameters("@id").Value = r.Id
+                    cmdQtyOnly.ExecuteNonQuery()
                     Continue For
                 End If
 
                 Dim lst As List(Of VsuperInfo) = vsup(r.ArtId)
+                Dim exactRows As List(Of VsuperInfo) = lst.FindAll(Function(x) x.TCId = r.TCId)
+                If exactRows.Count = 0 AndAlso r.TCId <= 0 Then
+                    exactRows = lst.FindAll(Function(x) x.TCId <= 0)
+                End If
+                If exactRows.Count > 0 Then lst = exactRows
+
                 Dim baseRow As VsuperInfo = lst(0)
 
                 Dim prezzo As Double = baseRow.Prezzo
@@ -2171,7 +2178,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
                             If info.OfferteQntMinima > 0 AndAlso r.Qnt >= info.OfferteQntMinima Then match = True
                             If (Not match) AndAlso info.OfferteMultipli > 0 AndAlso (r.Qnt Mod info.OfferteMultipli = 0) Then match = True
 
-                            If match Then
+                            If match AndAlso info.PrezzoPromo > 0 AndAlso info.Prezzo > 0 AndAlso info.PrezzoPromo < info.Prezzo Then
                                 promoApplied = True
                                 offId = info.OfferteDettagliId
                                 prezzo = info.PrezzoPromo

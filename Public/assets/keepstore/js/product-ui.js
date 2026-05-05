@@ -12,11 +12,14 @@
   }
 
   function initQtySteppers() {
-    var steppers = document.querySelectorAll('.ks-qty-stepper');
+    var steppers = document.querySelectorAll('.ks-qty-stepper, .product-quantity .wg-quantity');
     if (!steppers || steppers.length === 0) return;
 
     for (var i = 0; i < steppers.length; i++) {
       (function (wrap) {
+        if (wrap.getAttribute('data-ks-qty-bound') === '1') return;
+        wrap.setAttribute('data-ks-qty-bound', '1');
+
         var input = wrap.querySelector('input');
         if (!input) return;
 
@@ -29,17 +32,27 @@
         }
 
         if (btnMinus) {
-          btnMinus.addEventListener('click', function () {
+          btnMinus.addEventListener('click', function (ev) {
+            if (ev) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+            }
             var cur = toInt(input.value, 1);
             clampAndSet(cur - 1);
-          });
+          }, true);
         }
 
         if (btnPlus) {
-          btnPlus.addEventListener('click', function () {
+          btnPlus.addEventListener('click', function (ev) {
+            if (ev) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+            }
             var cur = toInt(input.value, 1);
             clampAndSet(cur + 1);
-          });
+          }, true);
         }
 
         // Hardening: se l'utente digita, normalizza
