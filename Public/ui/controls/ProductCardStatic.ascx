@@ -1,27 +1,63 @@
 <%@ Control Language="VB" AutoEventWireup="false" CodeFile="ProductCardStatic.ascx.vb" Inherits="Public_ui_controls_ProductCardStatic" %>
 
-<article class="ks-product-card" aria-labelledby="staticProductName">
-    <a class="ks-product-card__media" href="#" aria-label="Scheda prodotto dimostrativa">
-        <span class="ks-product-card__badge">Demo</span>
-        <span class="ks-product-card__image" aria-hidden="true">
-            <span class="ks-product-card__device"></span>
-        </span>
-    </a>
-    <div class="ks-product-card__body">
-        <p class="ks-product-card__meta">Categoria dimostrativa</p>
-        <h3 id="staticProductName">
-            <a href="#">Prodotto statico per test tema</a>
-        </h3>
-        <p class="ks-product-card__description">
-            Card isolata senza query, sessioni o collegamenti al carrello reale.
-        </p>
-        <div class="ks-product-card__price" aria-label="Prezzo dimostrativo">74,90 &euro;</div>
-        <div class="ks-product-card__actions" aria-label="Azioni dimostrative">
-            <button class="ks-product-card__button" type="button" disabled="disabled">
-                Azione demo
-            </button>
-            <button class="ks-product-card__icon" type="button" disabled="disabled" aria-label="Wishlist dimostrativa">
-                <span aria-hidden="true">&#9825;</span>
+<article class="card-product" aria-labelledby="staticProductName">
+    <div class="card-product-wrapper">
+        <a href="#" class="product-img" aria-label="Scheda prodotto dimostrativa">
+            <img class="img-product" src="/Public/assets/images/product/product-1.jpg" alt="Prodotto statico dimostrativo" />
+            <img class="img-hover" src="/Public/assets/images/product/product-2.jpg" alt="" aria-hidden="true" />
+        </a>
+        <ul class="list-product-btn top-0 end-0" aria-label="Azioni dimostrative">
+            <li>
+                <button class="box-icon btn-icon-action hover-tooltip tooltip-left" type="button" disabled="disabled" aria-label="Carrello dimostrativo">
+                    <span class="icon" aria-hidden="true">C</span>
+                    <span class="tooltip">Demo carrello</span>
+                </button>
+            </li>
+            <li>
+                <button class="box-icon btn-icon-action hover-tooltip tooltip-left" type="button" disabled="disabled" aria-label="Wishlist dimostrativa">
+                    <span class="icon" aria-hidden="true">&#9825;</span>
+                    <span class="tooltip">Demo wishlist</span>
+                </button>
+            </li>
+            <li>
+                <button class="box-icon btn-icon-action hover-tooltip tooltip-left" type="button" disabled="disabled" aria-label="Vista rapida dimostrativa">
+                    <span class="icon" aria-hidden="true">&#9673;</span>
+                    <span class="tooltip">Demo vista rapida</span>
+                </button>
+            </li>
+        </ul>
+        <div class="box-sale-wrap pst-default">
+            <p class="small-text">Promo</p>
+            <p class="title-sidebar-2">20%</p>
+        </div>
+    </div>
+    <div class="card-product-info">
+        <div class="box-title">
+            <div>
+                <p class="product-tag caption text-main-2">Categoria demo</p>
+                <a id="staticProductName" href="#" class="name-product body-md-2 fw-semibold text-secondary link">
+                    Prodotto statico per test visuale della card
+                </a>
+            </div>
+            <p class="price-wrap fw-medium" aria-label="Prezzo dimostrativo">
+                <span class="new-price price-text fw-medium">74,90 &euro;</span>
+                <span class="old-price body-md-2 text-main-2">92,90 &euro;</span>
+            </p>
+        </div>
+        <div class="box-infor-detail">
+            <ul class="list-computer-memory">
+                <li><p class="caption">Demo</p></li>
+                <li><p class="caption">Statico</p></li>
+            </ul>
+        </div>
+    </div>
+    <div class="card-product-btn">
+        <button class="tf-btn btn-line w-100" type="button" disabled="disabled">
+            <span>Azione dimostrativa</span>
+        </button>
+        <div class="box-btn">
+            <button class="tf-btn-icon style-2 type-black" type="button" disabled="disabled">
+                <span>Confronta</span>
             </button>
         </div>
     </div>
