@@ -235,6 +235,8 @@
                         <div id="applied-filters"></div>
                     </div>
 
+                    <asp:PlaceHolder ID="phProductCardPreview" runat="server" Visible="false" />
+
                     <div class="gridLayout-wrapper">
                         <asp:ListView ID="lvProdotti" runat="server" DataSourceID="sdsArticoli" OnPagePropertiesChanging="lvProdotti_PagePropertiesChanging" OnPreRender="lvProdotti_PreRender">
                             <LayoutTemplate>
