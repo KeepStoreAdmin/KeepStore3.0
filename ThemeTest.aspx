@@ -1,5 +1,6 @@
 <%@ Page Language="VB" AutoEventWireup="false" CodeFile="ThemeTest.aspx.vb" Inherits="ThemeTest" %>
 <%@ Register Src="~/Public/ui/controls/ProductCardStatic.ascx" TagPrefix="ks" TagName="ProductCardStatic" %>
+<%@ Register Src="~/Public/ui/controls/ProductCard.ascx" TagPrefix="ks" TagName="ProductCard" %>
 
 <!DOCTYPE html>
 <html lang="it">
@@ -34,6 +35,17 @@
                 </div>
                 <div class="ks-theme-product-grid">
                     <ks:ProductCardStatic ID="ProductCardStatic1" runat="server" />
+                </div>
+            </section>
+
+            <section class="ks-theme-section" aria-labelledby="dynamicProductTitle">
+                <div class="ks-theme-section__heading">
+                    <p class="ks-theme-eyebrow">Componente dinamico</p>
+                    <h2 id="dynamicProductTitle">Product card con proprieta WebForms</h2>
+                </div>
+                <div class="ks-theme-product-grid">
+                    <ks:ProductCard ID="DemoProductCardSale" runat="server" />
+                    <ks:ProductCard ID="DemoProductCardUnavailable" runat="server" />
                 </div>
             </section>
         </main>
