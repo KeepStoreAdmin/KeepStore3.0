@@ -2720,6 +2720,7 @@ End Sub
 
         If e.CommandName = "Elimina" Then
             eliminaRigaCarrello(e.CommandArgument)
+            RedirectToCartPage()
         End If
     End Sub
 
@@ -2730,10 +2731,19 @@ End Sub
 
         If e.CommandName = "Elimina" Then
             eliminaRigaCarrello(e.CommandArgument)
+            RedirectToCartPage()
         End If
     End Sub
 
-    Public Sub eliminaRigaCarrello(ByVal id As Integer)
+    Private Sub RedirectToCartPage()
+        Response.Redirect("carrello.aspx", False)
+        Context.ApplicationInstance.CompleteRequest()
+    End Sub
+
+    Public Sub eliminaRigaCarrello(ByVal id As Object)
+    Dim rowId As Integer = SafeInt(id, 0)
+    If rowId <= 0 Then Exit Sub
+
     Dim conn As New MySqlConnection
     Dim cmd As New MySqlCommand
 
@@ -2742,13 +2752,31 @@ End Sub
         cmd.Connection = conn
         conn.Open()
 
-        cmd.CommandText = "DELETE FROM carrello WHERE (Id = @Id)"
-        cmd.Parameters.Clear()
-        cmd.Parameters.AddWithValue("@Id", id)
+        Dim loginId As Integer = GetLoginIdSafe(0)
+        If loginId > 0 Then
+            cmd.CommandText = "DELETE FROM carrello WHERE Id=@Id AND LoginId=@LoginId"
+            cmd.Parameters.Clear()
+            cmd.Parameters.Add("@Id", MySqlDbType.Int32).Value = rowId
+            cmd.Parameters.Add("@LoginId", MySqlDbType.Int32).Value = loginId
+        Else
+            cmd.CommandText = "DELETE FROM carrello WHERE Id=@Id AND SessionId=@SessionId"
+            cmd.Parameters.Clear()
+            cmd.Parameters.Add("@Id", MySqlDbType.Int32).Value = rowId
+            cmd.Parameters.Add("@SessionId", MySqlDbType.VarChar, 50).Value = If(Me.Session IsNot Nothing, Me.Session.SessionID, "")
+        End If
 
-        cmd.ExecuteNonQuery()
-    Catch
-        ' (mantengo comportamento originale: nessun messaggio)
+        Dim affected As Integer = cmd.ExecuteNonQuery()
+        If affected <= 0 Then
+            Try
+                KeepStoreLog.Info("carrello.aspx", "Rimozione articolo non applicata id=" & rowId.ToString(CultureInfo.InvariantCulture) & " loginId=" & loginId.ToString(CultureInfo.InvariantCulture), HttpContext.Current)
+            Catch
+            End Try
+        End If
+    Catch ex As Exception
+        Try
+            KeepStoreLog.Error("carrello.aspx", "Errore rimozione articolo carrello id=" & rowId.ToString(CultureInfo.InvariantCulture), ex, HttpContext.Current)
+        Catch
+        End Try
     Finally
         Try : conn.Close() : Catch : End Try
     End Try

@@ -382,39 +382,7 @@ End Sub
                     End If
                 End If
 
-                OfferteDettagliID = 0
-                Prezzo = 0
-                PrezzoIvato = 0
-
-                For Each row As Dictionary(Of String, Object) In dr
-                    Codice = CStr(row("Codice"))
-                    Descrizione = CStr(row("Descrizione1"))
-                    OfferteDettagliID = 0
-
-                    If Prezzo = 0 Then
-                        TryParseDouble(row("Prezzo"), Prezzo)
-                    End If
-                    If PrezzoIvato = 0 Then
-                        TryParseDouble(row("PrezzoIvato"), PrezzoIvato)
-                    End If
-
-                    If CInt(row("InOfferta")) = 1 Then
-                        Dim qmin As Double = 0
-                        Dim multipli As Double = 0
-                        TryParseDouble(row("OfferteQntMinima"), qmin)
-                        TryParseDouble(row("OfferteMultipli"), multipli)
-
-                        If quantitaRiga >= qmin AndAlso qmin > 0 Then
-                            OfferteDettagliID = CInt(row("OfferteDettagliId"))
-                            TryParseDouble(row("PrezzoPromo"), Prezzo)
-                            TryParseDouble(row("PrezzoPromoIvato"), PrezzoIvato)
-                        ElseIf multipli > 0 AndAlso quantitaRiga Mod multipli = 0 Then
-                            OfferteDettagliID = CInt(row("OfferteDettagliId"))
-                            TryParseDouble(row("PrezzoPromo"), Prezzo)
-                            TryParseDouble(row("PrezzoPromoIvato"), PrezzoIvato)
-                        End If
-                    End If
-                Next
+                ResolveCartPriceFromRows(dr, quantitaRiga, Codice, Descrizione, Prezzo, PrezzoIvato, OfferteDettagliID)
 
                 ' Inserisco articolo
                 Dim addId As Integer = 0
@@ -511,39 +479,7 @@ End Sub
                     End If
                 End If
 
-                OfferteDettagliID = 0
-                Prezzo = 0
-                PrezzoIvato = 0
-
-                For Each row As Dictionary(Of String, Object) In dr
-                    Codice = CStr(row("Codice"))
-                    Descrizione = CStr(row("Descrizione1"))
-                    OfferteDettagliID = 0
-
-                    If Prezzo = 0 Then
-                        TryParseDouble(row("Prezzo"), Prezzo)
-                    End If
-                    If PrezzoIvato = 0 Then
-                        TryParseDouble(row("PrezzoIvato"), PrezzoIvato)
-                    End If
-
-                    If CInt(row("InOfferta")) = 1 Then
-                        Dim qmin As Double = 0
-                        Dim multipli As Double = 0
-                        TryParseDouble(row("OfferteQntMinima"), qmin)
-                        TryParseDouble(row("OfferteMultipli"), multipli)
-
-                        If quantitaRiga >= qmin AndAlso qmin > 0 Then
-                            OfferteDettagliID = CInt(row("OfferteDettagliId"))
-                            TryParseDouble(row("PrezzoPromo"), Prezzo)
-                            TryParseDouble(row("PrezzoPromoIvato"), PrezzoIvato)
-                        ElseIf multipli > 0 AndAlso quantitaRiga Mod multipli = 0 Then
-                            OfferteDettagliID = CInt(row("OfferteDettagliId"))
-                            TryParseDouble(row("PrezzoPromo"), Prezzo)
-                            TryParseDouble(row("PrezzoPromoIvato"), PrezzoIvato)
-                        End If
-                    End If
-                Next
+                ResolveCartPriceFromRows(dr, quantitaRiga, Codice, Descrizione, Prezzo, PrezzoIvato, OfferteDettagliID)
 
                 ' Inserisco articolo
                 Dim prodottoGratis As Integer = 0
@@ -615,6 +551,133 @@ End Sub
         End If
 
         Return fallback
+    End Function
+
+    Private Sub ResolveCartPriceFromRows(ByVal rows As List(Of Dictionary(Of String, Object)),
+                                         ByVal quantity As Double,
+                                         ByRef codice As String,
+                                         ByRef descrizione As String,
+                                         ByRef prezzo As Double,
+                                         ByRef prezzoIvato As Double,
+                                         ByRef offerteDettaglioId As Integer)
+        codice = ""
+        descrizione = ""
+        prezzo = 0
+        prezzoIvato = 0
+        offerteDettaglioId = 0
+
+        If rows Is Nothing OrElse rows.Count = 0 Then Exit Sub
+
+        Dim baseRow As Dictionary(Of String, Object) = rows(0)
+        codice = RowString(baseRow, "Codice")
+        descrizione = RowString(baseRow, "Descrizione1")
+        prezzo = RowDouble(baseRow, "Prezzo", 0)
+        prezzoIvato = ResolveCartPrezzoIvato(baseRow, prezzo, RowDouble(baseRow, "PrezzoIvato", 0))
+
+        Dim today As Date = Date.Today
+
+        For Each row As Dictionary(Of String, Object) In rows
+            If String.IsNullOrEmpty(codice) Then codice = RowString(row, "Codice")
+            If String.IsNullOrEmpty(descrizione) Then descrizione = RowString(row, "Descrizione1")
+
+            If RowInt(row, "InOfferta", 0) <> 1 Then Continue For
+            If Not CartOfferIsActive(row, today) Then Continue For
+
+            Dim qmin As Double = RowDouble(row, "OfferteQntMinima", 0)
+            Dim multipli As Double = RowDouble(row, "OfferteMultipli", 0)
+            Dim promo As Double = RowDouble(row, "PrezzoPromo", 0)
+            Dim rowBase As Double = RowDouble(row, "Prezzo", 0)
+
+            Dim match As Boolean = False
+            If qmin > 0 AndAlso quantity >= qmin Then match = True
+            If (Not match) AndAlso multipli > 0 AndAlso QuantityMatchesMultiple(quantity, multipli) Then match = True
+
+            If match AndAlso promo > 0 AndAlso rowBase > 0 AndAlso promo < rowBase Then
+                prezzo = promo
+                prezzoIvato = ResolveCartPrezzoIvato(row, promo, RowDouble(row, "PrezzoPromoIvato", 0))
+                offerteDettaglioId = RowInt(row, "OfferteDettagliId", 0)
+            End If
+        Next
+    End Sub
+
+    Private Function ResolveCartPrezzoIvato(ByVal row As Dictionary(Of String, Object),
+                                            ByVal prezzoNetto As Double,
+                                            ByVal fallbackIvato As Double) As Double
+        Dim abRC As Boolean = False
+        Dim abRaw As Object = Me.Session("AbilitatoIvaReverseCharge")
+        If abRaw IsNot Nothing Then
+            Dim abInt As Integer = 0
+            Integer.TryParse(Convert.ToString(abRaw), abInt)
+            abRC = (abInt = 1)
+        End If
+
+        Dim idIvaRC As Integer = RowInt(row, "IdIvaRC", -1)
+        Dim valoreIvaRC As Double = RowDouble(row, "ValoreIvaRC", -1)
+        If abRC AndAlso idIvaRC > -1 AndAlso valoreIvaRC > -1 Then
+            Return prezzoNetto * ((valoreIvaRC / 100) + 1)
+        End If
+
+        Dim ivaUtente As Double = -1
+        Dim parsedIvaUtente As Double = -1
+        If TryParseDouble(Me.Session("Iva_Utente"), parsedIvaUtente) Then ivaUtente = parsedIvaUtente
+        If ivaUtente > -1 Then
+            Return prezzoNetto * ((ivaUtente / 100) + 1)
+        End If
+
+        Return fallbackIvato
+    End Function
+
+    Private Function CartOfferIsActive(ByVal row As Dictionary(Of String, Object), ByVal today As Date) As Boolean
+        Dim dataInizio As Nullable(Of Date) = RowDate(row, "OfferteDataInizio")
+        Dim dataFine As Nullable(Of Date) = RowDate(row, "OfferteDataFine")
+        If dataInizio.HasValue AndAlso dataInizio.Value.Date > today Then Return False
+        If dataFine.HasValue AndAlso dataFine.Value.Date < today Then Return False
+        Return True
+    End Function
+
+    Private Function QuantityMatchesMultiple(ByVal quantity As Double, ByVal multiple As Double) As Boolean
+        If multiple <= 0 Then Return False
+        Dim quotient As Double = quantity / multiple
+        Return Math.Abs(quotient - Math.Round(quotient, 0, MidpointRounding.AwayFromZero)) < 0.000001
+    End Function
+
+    Private Function RowString(ByVal row As Dictionary(Of String, Object), ByVal key As String, Optional ByVal defaultValue As String = "") As String
+        Dim raw As Object = Nothing
+        If TryGetRowValue(row, raw, key) AndAlso raw IsNot Nothing AndAlso raw IsNot DBNull.Value Then
+            Return Convert.ToString(raw)
+        End If
+        Return defaultValue
+    End Function
+
+    Private Function RowInt(ByVal row As Dictionary(Of String, Object), ByVal key As String, Optional ByVal defaultValue As Integer = 0) As Integer
+        Dim raw As Object = Nothing
+        If TryGetRowValue(row, raw, key) Then
+            Dim output As Integer = defaultValue
+            If Integer.TryParse(Convert.ToString(raw), output) Then Return output
+        End If
+        Return defaultValue
+    End Function
+
+    Private Function RowDouble(ByVal row As Dictionary(Of String, Object), ByVal key As String, Optional ByVal defaultValue As Double = 0) As Double
+        Dim raw As Object = Nothing
+        If TryGetRowValue(row, raw, key) Then
+            Dim output As Double = defaultValue
+            If TryParseDouble(raw, output) Then Return output
+        End If
+        Return defaultValue
+    End Function
+
+    Private Function RowDate(ByVal row As Dictionary(Of String, Object), ByVal key As String) As Nullable(Of Date)
+        Dim raw As Object = Nothing
+        If Not TryGetRowValue(row, raw, key) OrElse raw Is Nothing OrElse raw Is DBNull.Value Then Return Nothing
+        Try
+            Return CDate(raw)
+        Catch
+            Dim parsed As Date
+            If Date.TryParse(Convert.ToString(raw), CultureInfo.GetCultureInfo("it-IT"), DateTimeStyles.None, parsed) Then Return parsed
+            If Date.TryParse(Convert.ToString(raw), CultureInfo.InvariantCulture, DateTimeStyles.None, parsed) Then Return parsed
+        End Try
+        Return Nothing
     End Function
 
     Private Function TryGetRowValue(ByVal row As Dictionary(Of String, Object), ByRef value As Object, ParamArray keys() As String) As Boolean

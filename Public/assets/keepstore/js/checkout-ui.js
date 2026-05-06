@@ -408,15 +408,16 @@
 
   function updateCartRowClientTotal(row) {
     if (!row) return;
-    var qtyInput = qs('.quantity-product', row);
-    var priceBox = qs('.tf-cart-item_price .cart-price', row);
     var totalBox = qs('.tf-cart-item_total .cart-total', row);
-    if (!qtyInput || !priceBox || !totalBox) return;
+    if (!totalBox) return;
 
-    var qty = parseInt(qtyInput.value, 10);
-    if (isNaN(qty) || qty < 1) qty = 1;
-    var price = parseItMoney(priceBox.dataset.ksServerText || priceBox.textContent);
-    totalBox.textContent = formatItMoney(price * qty);
+    // Il totale vero del carrello è calcolato da vcarrello usando i prezzi DB
+    // a 8 decimali. Evito anteprime client-side con prezzo già arrotondato,
+    // che generavano $NaN o differenze di centesimi prima del postback.
+    if (!totalBox.dataset.ksServerText) {
+      totalBox.dataset.ksServerText = (totalBox.textContent || '').trim();
+    }
+    totalBox.textContent = totalBox.dataset.ksServerText || formatItMoney(0);
   }
 
   function setupCartQuantityControls() {
@@ -470,8 +471,9 @@
       if (!link || link.dataset.ksServerCommandBound === '1') return;
       link.dataset.ksServerCommandBound = '1';
       link.addEventListener('click', function (ev) {
+        ev.stopImmediatePropagation();
         ev.stopPropagation();
-      }, false);
+      }, true);
     });
   }
 
