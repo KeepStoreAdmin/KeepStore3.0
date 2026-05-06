@@ -16,10 +16,30 @@ Partial Class Articoli
     Dim InOfferta As Integer
     Dim filters As New Dictionary(Of String, String)
     Dim oldUrl As String
+    Private productCardPreviewRendered As Boolean = False
 
     Private Class ActiveFilterItem
         Public Property Key As String
         Public Property Label As String
+    End Class
+
+    Private Class ProductCardModel
+        Public Property ProductId As Integer
+        Public Property TCId As Integer
+        Public Property ProductName As String
+        Public Property ProductCode As String
+        Public Property ProductUrl As String
+        Public Property ImageUrl As String
+        Public Property HoverImageUrl As String
+        Public Property BrandName As String
+        Public Property CategoryName As String
+        Public Property PriceText As String
+        Public Property OldPriceText As String
+        Public Property BadgeText As String
+        Public Property IsOnSale As Boolean
+        Public Property IsAvailable As Boolean
+        Public Property AvailabilityText As String
+        Public Property IsDemoMode As Boolean
     End Class
 
     Function sostituisci_caratteri_speciali(ByRef stringa As String) As String
@@ -82,6 +102,7 @@ Partial Class Articoli
         Dim sm = System.Web.UI.ScriptManager.GetCurrent(Me.Page)
         If sm IsNot Nothing Then sm.EnablePartialRendering = False
         oldUrl = HttpContext.Current.Request.Url.AbsoluteUri
+        If IsProductCardPreviewEnabled() Then AddHandler Me.lvProdotti.ItemDataBound, AddressOf lvProdotti_ItemDataBound
 
         If Not String.IsNullOrEmpty(Request.QueryString("rimuovi")) Then
             Dim filtersToRemove As String = Request.QueryString("rimuovi")
@@ -988,6 +1009,46 @@ strWhere = strWhere & " GROUP BY id"
                 RedirectIfChanged(resetPageUrl, False)
             End If
         End If
+    End Sub
+
+    Private Function IsProductCardPreviewEnabled() As Boolean
+        Return String.Equals(Convert.ToString(Request.QueryString("ksCardPreview")), "1", StringComparison.Ordinal)
+    End Function
+
+    Private Sub lvProdotti_ItemDataBound(ByVal sender As Object, ByVal e As ListViewItemEventArgs)
+        If Not IsProductCardPreviewEnabled() Then Exit Sub
+        If productCardPreviewRendered Then Exit Sub
+        If e Is Nothing OrElse e.Item Is Nothing Then Exit Sub
+        If e.Item.ItemType <> ListViewItemType.DataItem Then Exit Sub
+
+        Dim dataItem As ListViewDataItem = TryCast(e.Item, ListViewDataItem)
+        If dataItem Is Nothing OrElse dataItem.DataItem Is Nothing Then Exit Sub
+        If Me.phProductCardPreview Is Nothing Then Exit Sub
+
+        Dim model As ProductCardModel = BuildProductCardModel(dataItem.DataItem)
+        Dim card As Public_ui_controls_ProductCard = TryCast(LoadControl("~/Public/ui/controls/ProductCard.ascx"), Public_ui_controls_ProductCard)
+        If card Is Nothing Then Exit Sub
+
+        card.ProductId = model.ProductId
+        card.TCId = model.TCId
+        card.ProductName = model.ProductName
+        card.ProductCode = model.ProductCode
+        card.ProductUrl = model.ProductUrl
+        card.ImageUrl = model.ImageUrl
+        card.HoverImageUrl = model.HoverImageUrl
+        card.BrandName = model.BrandName
+        card.CategoryName = model.CategoryName
+        card.PriceText = model.PriceText
+        card.OldPriceText = model.OldPriceText
+        card.BadgeText = model.BadgeText
+        card.IsOnSale = model.IsOnSale
+        card.IsAvailable = model.IsAvailable
+        card.AvailabilityText = model.AvailabilityText
+        card.IsDemoMode = True
+
+        Me.phProductCardPreview.Controls.Add(card)
+        Me.phProductCardPreview.Visible = True
+        productCardPreviewRendered = True
     End Sub
 
     ' CLICK SU ICONA "CARRELLO" PER SINGOLO ARTICOLO
@@ -2844,6 +2905,45 @@ strWhere = strWhere & " GROUP BY id"
             UiData.Get(dataItem, "InOfferta"),
             Session("IvaTipo")
         )
+    End Function
+
+    Private Function BuildProductCardModel(ByVal dataItem As Object) As ProductCardModel
+        Dim imageUrl As String = ThemeManager.ProductImageUrl(UiData.Get(dataItem, "Img1"))
+        If String.IsNullOrWhiteSpace(imageUrl) Then imageUrl = ThemeManager.PlaceholderProductImageUrl()
+
+        Dim hasValidPromo As Boolean = CatalogHasValidPromo(dataItem)
+        Dim basePrice As Decimal = CatalogBasePrice(dataItem)
+        Dim promoPrice As Decimal = CatalogPromoPrice(dataItem)
+        Dim oldPriceText As String = ""
+        Dim badgeText As String = ""
+
+        If hasValidPromo Then
+            If basePrice > 0D Then
+                oldPriceText = basePrice.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) & " " & ChrW(8364)
+            End If
+
+            badgeText = GetDiscountPercent(basePrice, promoPrice)
+            If String.IsNullOrWhiteSpace(badgeText) Then badgeText = "Offerta"
+        End If
+
+        Dim model As New ProductCardModel()
+        model.ProductId = UiData.Int(dataItem, "id")
+        model.TCId = CatalogTcId(dataItem, True)
+        model.ProductName = UiData.Str(dataItem, "Descrizione1")
+        model.ProductCode = UiData.Str(dataItem, "Codice")
+        model.ProductUrl = CatalogProductUrl(dataItem)
+        model.ImageUrl = imageUrl
+        model.HoverImageUrl = imageUrl
+        model.BrandName = UiData.Str(dataItem, "MarcheDescrizione")
+        model.CategoryName = CatalogCategoryLabel(dataItem)
+        model.PriceText = CatalogPriceText(dataItem)
+        model.OldPriceText = oldPriceText
+        model.BadgeText = badgeText
+        model.IsOnSale = hasValidPromo
+        model.IsAvailable = ((UiData.Int(dataItem, "Giacenza") - UiData.Int(dataItem, "Impegnata")) > 0)
+        model.AvailabilityText = CatalogAvailabilityText(dataItem)
+        model.IsDemoMode = True
+        Return model
     End Function
 
     Protected Function CatalogPromoBadgeHtml(ByVal dataItem As Object) As String
