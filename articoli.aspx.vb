@@ -22,6 +22,25 @@ Partial Class Articoli
         Public Property Label As String
     End Class
 
+    Private Class ProductCardModel
+        Public Property ProductId As Integer
+        Public Property TCId As Integer
+        Public Property ProductName As String
+        Public Property ProductCode As String
+        Public Property ProductUrl As String
+        Public Property ImageUrl As String
+        Public Property HoverImageUrl As String
+        Public Property BrandName As String
+        Public Property CategoryName As String
+        Public Property PriceText As String
+        Public Property OldPriceText As String
+        Public Property BadgeText As String
+        Public Property IsOnSale As Boolean
+        Public Property IsAvailable As Boolean
+        Public Property AvailabilityText As String
+        Public Property IsDemoMode As Boolean
+    End Class
+
     Function sostituisci_caratteri_speciali(ByRef stringa As String) As String
         stringa = Server.HtmlEncode(stringa)
 
@@ -2844,6 +2863,45 @@ strWhere = strWhere & " GROUP BY id"
             UiData.Get(dataItem, "InOfferta"),
             Session("IvaTipo")
         )
+    End Function
+
+    Private Function BuildProductCardModel(ByVal dataItem As Object) As ProductCardModel
+        Dim imageUrl As String = ThemeManager.ProductImageUrl(UiData.Get(dataItem, "Img1"))
+        If String.IsNullOrWhiteSpace(imageUrl) Then imageUrl = ThemeManager.PlaceholderProductImageUrl()
+
+        Dim hasValidPromo As Boolean = CatalogHasValidPromo(dataItem)
+        Dim basePrice As Decimal = CatalogBasePrice(dataItem)
+        Dim promoPrice As Decimal = CatalogPromoPrice(dataItem)
+        Dim oldPriceText As String = ""
+        Dim badgeText As String = ""
+
+        If hasValidPromo Then
+            If basePrice > 0D Then
+                oldPriceText = basePrice.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) & " " & ChrW(8364)
+            End If
+
+            badgeText = GetDiscountPercent(basePrice, promoPrice)
+            If String.IsNullOrWhiteSpace(badgeText) Then badgeText = "Offerta"
+        End If
+
+        Dim model As New ProductCardModel()
+        model.ProductId = UiData.Int(dataItem, "id")
+        model.TCId = CatalogTcId(dataItem, True)
+        model.ProductName = UiData.Str(dataItem, "Descrizione1")
+        model.ProductCode = UiData.Str(dataItem, "Codice")
+        model.ProductUrl = CatalogProductUrl(dataItem)
+        model.ImageUrl = imageUrl
+        model.HoverImageUrl = imageUrl
+        model.BrandName = UiData.Str(dataItem, "MarcheDescrizione")
+        model.CategoryName = CatalogCategoryLabel(dataItem)
+        model.PriceText = CatalogPriceText(dataItem)
+        model.OldPriceText = oldPriceText
+        model.BadgeText = badgeText
+        model.IsOnSale = hasValidPromo
+        model.IsAvailable = ((UiData.Int(dataItem, "Giacenza") - UiData.Int(dataItem, "Impegnata")) > 0)
+        model.AvailabilityText = CatalogAvailabilityText(dataItem)
+        model.IsDemoMode = True
+        Return model
     End Function
 
     Protected Function CatalogPromoBadgeHtml(ByVal dataItem As Object) As String
