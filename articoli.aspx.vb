@@ -18,6 +18,7 @@ Partial Class Articoli
     Dim oldUrl As String
     Private productCardPreviewRendered As Boolean = False
     Private productCardReplaceRenderedCount As Integer = 0
+    Private Const UseNewCatalogProductCard As Boolean = False
     Private Const ProductCardReplaceMaxCount As Integer = 3
 
     Private Class ActiveFilterItem
@@ -120,7 +121,7 @@ Partial Class Articoli
         Dim sm = System.Web.UI.ScriptManager.GetCurrent(Me.Page)
         If sm IsNot Nothing Then sm.EnablePartialRendering = False
         oldUrl = HttpContext.Current.Request.Url.AbsoluteUri
-        If IsProductCardPreviewEnabled() OrElse IsProductCardPreviewRealEnabled() OrElse IsProductCardReplaceAllEnabled() OrElse GetProductCardReplaceCount() > 0 Then AddHandler Me.lvProdotti.ItemDataBound, AddressOf lvProdotti_ItemDataBound
+        If IsProductCardPreviewEnabled() OrElse IsProductCardPreviewRealEnabled() OrElse IsProductCardReplaceAllEnabled() OrElse GetProductCardReplaceCount() > 0 OrElse IsProductCardFeatureEnabled() Then AddHandler Me.lvProdotti.ItemDataBound, AddressOf lvProdotti_ItemDataBound
 
         If Not String.IsNullOrEmpty(Request.QueryString("rimuovi")) Then
             Dim filtersToRemove As String = Request.QueryString("rimuovi")
@@ -1045,6 +1046,10 @@ strWhere = strWhere & " GROUP BY id"
         Return String.Equals(Convert.ToString(Request.QueryString("ksCardReplaceAll")), "1", StringComparison.Ordinal)
     End Function
 
+    Private Function IsProductCardFeatureEnabled() As Boolean
+        Return UseNewCatalogProductCard
+    End Function
+
     Private Function GetProductCardReplaceCount() As Integer
         Dim rawCount As String = Convert.ToString(Request.QueryString("ksCardReplaceCount"))
         If Not String.IsNullOrEmpty(rawCount) Then
@@ -1065,7 +1070,9 @@ strWhere = strWhere & " GROUP BY id"
     Private Sub lvProdotti_ItemDataBound(ByVal sender As Object, ByVal e As ListViewItemEventArgs)
         Dim isPreview As Boolean = IsProductCardPreviewEnabled()
         Dim isRealPreview As Boolean = IsProductCardPreviewRealEnabled()
-        Dim isReplaceAll As Boolean = IsProductCardReplaceAllEnabled() AndAlso Not (isPreview OrElse isRealPreview)
+        Dim debugReplaceCount As Integer = If(isPreview OrElse isRealPreview, 0, GetProductCardReplaceCount())
+        Dim isDebugReplace As Boolean = (IsProductCardReplaceAllEnabled() OrElse debugReplaceCount > 0)
+        Dim isReplaceAll As Boolean = Not (isPreview OrElse isRealPreview) AndAlso (IsProductCardReplaceAllEnabled() OrElse (Not isDebugReplace AndAlso IsProductCardFeatureEnabled()))
         Dim replaceCount As Integer = If(isPreview OrElse isRealPreview OrElse isReplaceAll, 0, GetProductCardReplaceCount())
         Dim isReplaceEnabled As Boolean = (isReplaceAll OrElse replaceCount > 0)
         If Not (isPreview OrElse isRealPreview OrElse isReplaceEnabled) Then Exit Sub
