@@ -1060,6 +1060,22 @@ strWhere = strWhere & " GROUP BY id"
         card.IsOnSale = model.IsOnSale
         card.IsAvailable = model.IsAvailable
         card.AvailabilityText = model.AvailabilityText
+        card.CartUrl = model.CartUrl
+        card.WishlistUrl = model.WishlistUrl
+        card.QuickViewTarget = model.QuickViewTarget
+        card.CompareTarget = model.CompareTarget
+        card.DescriptionText = model.DescriptionText
+        card.AvailabilityCss = model.AvailabilityCss
+        card.IsRefurbished = model.IsRefurbished
+        card.RefurbishedText = model.RefurbishedText
+        card.ShowQuickActions = model.ShowQuickActions
+        card.ShowWishlist = model.ShowWishlist
+        card.ShowCompare = model.ShowCompare
+        card.ShowQuickView = model.ShowQuickView
+        card.ShowAddToCart = model.ShowAddToCart
+        card.ShowMultiSelect = model.ShowMultiSelect
+        card.QuantityText = model.QuantityText
+        card.ActionDataAttributes = model.ActionDataAttributes
         card.IsDemoMode = True
 
         Me.phProductCardPreview.Controls.Add(card)
