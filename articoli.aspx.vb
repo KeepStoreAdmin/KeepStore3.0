@@ -120,7 +120,7 @@ Partial Class Articoli
         Dim sm = System.Web.UI.ScriptManager.GetCurrent(Me.Page)
         If sm IsNot Nothing Then sm.EnablePartialRendering = False
         oldUrl = HttpContext.Current.Request.Url.AbsoluteUri
-        If IsProductCardPreviewEnabled() OrElse IsProductCardPreviewRealEnabled() OrElse GetProductCardReplaceCount() > 0 Then AddHandler Me.lvProdotti.ItemDataBound, AddressOf lvProdotti_ItemDataBound
+        If IsProductCardPreviewEnabled() OrElse IsProductCardPreviewRealEnabled() OrElse IsProductCardReplaceAllEnabled() OrElse GetProductCardReplaceCount() > 0 Then AddHandler Me.lvProdotti.ItemDataBound, AddressOf lvProdotti_ItemDataBound
 
         If Not String.IsNullOrEmpty(Request.QueryString("rimuovi")) Then
             Dim filtersToRemove As String = Request.QueryString("rimuovi")
@@ -1041,6 +1041,10 @@ strWhere = strWhere & " GROUP BY id"
         Return String.Equals(Convert.ToString(Request.QueryString("ksCardReplaceOne")), "1", StringComparison.Ordinal)
     End Function
 
+    Private Function IsProductCardReplaceAllEnabled() As Boolean
+        Return String.Equals(Convert.ToString(Request.QueryString("ksCardReplaceAll")), "1", StringComparison.Ordinal)
+    End Function
+
     Private Function GetProductCardReplaceCount() As Integer
         Dim rawCount As String = Convert.ToString(Request.QueryString("ksCardReplaceCount"))
         If Not String.IsNullOrEmpty(rawCount) Then
@@ -1061,11 +1065,12 @@ strWhere = strWhere & " GROUP BY id"
     Private Sub lvProdotti_ItemDataBound(ByVal sender As Object, ByVal e As ListViewItemEventArgs)
         Dim isPreview As Boolean = IsProductCardPreviewEnabled()
         Dim isRealPreview As Boolean = IsProductCardPreviewRealEnabled()
-        Dim replaceCount As Integer = If(isPreview OrElse isRealPreview, 0, GetProductCardReplaceCount())
-        Dim isReplaceEnabled As Boolean = (replaceCount > 0)
+        Dim isReplaceAll As Boolean = IsProductCardReplaceAllEnabled() AndAlso Not (isPreview OrElse isRealPreview)
+        Dim replaceCount As Integer = If(isPreview OrElse isRealPreview OrElse isReplaceAll, 0, GetProductCardReplaceCount())
+        Dim isReplaceEnabled As Boolean = (isReplaceAll OrElse replaceCount > 0)
         If Not (isPreview OrElse isRealPreview OrElse isReplaceEnabled) Then Exit Sub
         If (isPreview OrElse isRealPreview) AndAlso productCardPreviewRendered Then Exit Sub
-        If isReplaceEnabled AndAlso productCardReplaceRenderedCount >= replaceCount Then Exit Sub
+        If Not isReplaceAll AndAlso isReplaceEnabled AndAlso productCardReplaceRenderedCount >= replaceCount Then Exit Sub
         If e Is Nothing OrElse e.Item Is Nothing Then Exit Sub
         If e.Item.ItemType <> ListViewItemType.DataItem Then Exit Sub
 
