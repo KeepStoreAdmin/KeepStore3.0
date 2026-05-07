@@ -118,7 +118,7 @@ Partial Class Articoli
         Dim sm = System.Web.UI.ScriptManager.GetCurrent(Me.Page)
         If sm IsNot Nothing Then sm.EnablePartialRendering = False
         oldUrl = HttpContext.Current.Request.Url.AbsoluteUri
-        If IsProductCardPreviewEnabled() Then AddHandler Me.lvProdotti.ItemDataBound, AddressOf lvProdotti_ItemDataBound
+        If IsProductCardPreviewEnabled() OrElse IsProductCardPreviewRealEnabled() Then AddHandler Me.lvProdotti.ItemDataBound, AddressOf lvProdotti_ItemDataBound
 
         If Not String.IsNullOrEmpty(Request.QueryString("rimuovi")) Then
             Dim filtersToRemove As String = Request.QueryString("rimuovi")
@@ -1031,8 +1031,13 @@ strWhere = strWhere & " GROUP BY id"
         Return String.Equals(Convert.ToString(Request.QueryString("ksCardPreview")), "1", StringComparison.Ordinal)
     End Function
 
+    Private Function IsProductCardPreviewRealEnabled() As Boolean
+        Return String.Equals(Convert.ToString(Request.QueryString("ksCardPreviewReal")), "1", StringComparison.Ordinal)
+    End Function
+
     Private Sub lvProdotti_ItemDataBound(ByVal sender As Object, ByVal e As ListViewItemEventArgs)
-        If Not IsProductCardPreviewEnabled() Then Exit Sub
+        Dim isRealPreview As Boolean = IsProductCardPreviewRealEnabled()
+        If Not (IsProductCardPreviewEnabled() OrElse isRealPreview) Then Exit Sub
         If productCardPreviewRendered Then Exit Sub
         If e Is Nothing OrElse e.Item Is Nothing Then Exit Sub
         If e.Item.ItemType <> ListViewItemType.DataItem Then Exit Sub
@@ -1076,7 +1081,7 @@ strWhere = strWhere & " GROUP BY id"
         card.ShowMultiSelect = model.ShowMultiSelect
         card.QuantityText = model.QuantityText
         card.ActionDataAttributes = model.ActionDataAttributes
-        card.IsDemoMode = True
+        card.IsDemoMode = Not isRealPreview
 
         Me.phProductCardPreview.Controls.Add(card)
         Me.phProductCardPreview.Visible = True
