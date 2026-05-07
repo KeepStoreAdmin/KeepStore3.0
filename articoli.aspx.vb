@@ -1101,6 +1101,7 @@ strWhere = strWhere & " GROUP BY id"
             If replacement Is Nothing OrElse inlineCard Is Nothing Then Exit Sub
 
             card.IsDemoMode = False
+            card.EnableLegacyServerControls = True
             replacement.Controls.Add(card)
             inlineCard.Visible = False
             productCardReplaceOneRendered = True
@@ -1214,7 +1215,13 @@ strWhere = strWhere & " GROUP BY id"
 
         For Each it As ListViewDataItem In Me.lvProdotti.Items
             Dim temp_check As CheckBox = TryCast(it.FindControl("CheckBox_SelezioneMultipla"), CheckBox)
-            If temp_check IsNot Nothing AndAlso temp_check.Checked Then
+            Dim isSelected As Boolean = (temp_check IsNot Nothing AndAlso temp_check.Checked)
+            If temp_check Is Nothing Then
+                Dim replacementCard As Public_ui_controls_ProductCard = FindReplacementProductCard(it)
+                isSelected = (replacementCard IsNot Nothing AndAlso replacementCard.SelectedForMultiAdd)
+            End If
+
+            If isSelected Then
 
                 Dim idVal As Integer = GetArticoloIdFromContainer(it)
                 If idVal <= 0 Then Continue For
@@ -1257,6 +1264,29 @@ strWhere = strWhere & " GROUP BY id"
     ' ============================
     ' HELPER PER LETTURA DATI DAL ROW
     ' ============================
+    Private Function FindReplacementProductCard(ByVal container As Control) As Public_ui_controls_ProductCard
+        If container Is Nothing Then Return Nothing
+
+        Dim replacement As PlaceHolder = TryCast(container.FindControl("phReplacementProductCard"), PlaceHolder)
+        If replacement Is Nothing Then Return Nothing
+
+        Return FindProductCardControl(replacement)
+    End Function
+
+    Private Function FindProductCardControl(ByVal container As Control) As Public_ui_controls_ProductCard
+        If container Is Nothing Then Return Nothing
+
+        Dim card As Public_ui_controls_ProductCard = TryCast(container, Public_ui_controls_ProductCard)
+        If card IsNot Nothing Then Return card
+
+        For Each child As Control In container.Controls
+            card = FindProductCardControl(child)
+            If card IsNot Nothing Then Return card
+        Next
+
+        Return Nothing
+    End Function
+
     Private Function GetArticoloIdFromContainer(ByVal container As Control) As Integer
         Dim idVal As Integer = 0
 
@@ -1278,16 +1308,30 @@ strWhere = strWhere & " GROUP BY id"
             Integer.TryParse(hfIdArt.Value, idVal)
         End If
 
+        If idVal <= 0 Then
+            Dim replacementCard As Public_ui_controls_ProductCard = FindReplacementProductCard(container)
+            If replacementCard IsNot Nothing AndAlso replacementCard.LegacyProductId > 0 Then
+                idVal = replacementCard.LegacyProductId
+            End If
+        End If
+
         Return idVal
     End Function
 
     Private Function GetQuantitaFromContainer(ByVal container As Control) As Integer
         Dim qtaBox As TextBox = TryCast(container.FindControl("tbQuantita"), TextBox)
-        Dim qta As Integer = NormalizeCartQuantity(If(qtaBox Is Nothing, "", qtaBox.Text), 1, 9999)
         If qtaBox IsNot Nothing Then
+            Dim qta As Integer = NormalizeCartQuantity(qtaBox.Text, 1, 9999)
             qtaBox.Text = qta.ToString()
+            Return qta
         End If
-        Return qta
+
+        Dim replacementCard As Public_ui_controls_ProductCard = FindReplacementProductCard(container)
+        If replacementCard IsNot Nothing Then
+            Return NormalizeCartQuantity(replacementCard.LegacyQuantityText, 1, 9999)
+        End If
+
+        Return 1
     End Function
 
     Private Function NormalizeCartQuantity(ByVal rawValue As String, ByVal fallbackValue As Integer, ByVal maxValue As Integer) As Integer
@@ -1312,6 +1356,14 @@ strWhere = strWhere & " GROUP BY id"
         ElseIf hfTC IsNot Nothing Then
             Integer.TryParse(hfTC.Value, tcIdVal)
         End If
+
+        If tcIdVal <= 0 Then
+            Dim replacementCard As Public_ui_controls_ProductCard = FindReplacementProductCard(container)
+            If replacementCard IsNot Nothing AndAlso replacementCard.LegacyTCId > 0 Then
+                tcIdVal = replacementCard.LegacyTCId
+            End If
+        End If
+
         If tcIdVal <= 0 Then tcIdVal = -1
 
         Return tcIdVal
