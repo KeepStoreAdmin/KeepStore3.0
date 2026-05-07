@@ -17,6 +17,22 @@ Partial Class Public_ui_controls_ProductCard
     Public Property IsAvailable As Boolean = True
     Public Property AvailabilityText As String
     Public Property IsDemoMode As Boolean = True
+    Public Property CartUrl As String
+    Public Property WishlistUrl As String
+    Public Property QuickViewTarget As String
+    Public Property CompareTarget As String
+    Public Property DescriptionText As String
+    Public Property AvailabilityCss As String
+    Public Property IsRefurbished As Boolean
+    Public Property RefurbishedText As String
+    Public Property ShowQuickActions As Boolean = True
+    Public Property ShowWishlist As Boolean = True
+    Public Property ShowCompare As Boolean = True
+    Public Property ShowQuickView As Boolean = True
+    Public Property ShowAddToCart As Boolean = True
+    Public Property ShowMultiSelect As Boolean
+    Public Property QuantityText As String = "1"
+    Public Property ActionDataAttributes As String
 
     Protected Overrides Sub OnPreRender(ByVal e As EventArgs)
         MyBase.OnPreRender(e)
@@ -108,7 +124,142 @@ Partial Class Public_ui_controls_ProductCard
     Protected ReadOnly Property CartButtonText As String
         Get
             If IsDemoMode Then Return "Azione demo"
-            Return "Azione non attiva"
+            Return "Aggiungi al carrello"
+        End Get
+    End Property
+
+    Protected ReadOnly Property RenderQuickActions As Boolean
+        Get
+            Return ShowQuickActions AndAlso (ShowAddToCart OrElse ShowWishlist OrElse ShowQuickView OrElse ShowCompare)
+        End Get
+    End Property
+
+    Protected ReadOnly Property RenderAddToCart As Boolean
+        Get
+            Return ShowAddToCart
+        End Get
+    End Property
+
+    Protected ReadOnly Property RenderWishlist As Boolean
+        Get
+            Return ShowWishlist
+        End Get
+    End Property
+
+    Protected ReadOnly Property RenderQuickView As Boolean
+        Get
+            Return ShowQuickView
+        End Get
+    End Property
+
+    Protected ReadOnly Property RenderCompare As Boolean
+        Get
+            Return ShowCompare
+        End Get
+    End Property
+
+    Protected ReadOnly Property SafeCartUrl As String
+        Get
+            If IsDemoMode Then Return "#"
+            Return CleanUrl(CartUrl)
+        End Get
+    End Property
+
+    Protected ReadOnly Property SafeWishlistUrl As String
+        Get
+            If IsDemoMode Then Return "#"
+            Return CleanUrl(WishlistUrl)
+        End Get
+    End Property
+
+    Protected ReadOnly Property SafeQuickViewTarget As String
+        Get
+            If IsDemoMode Then Return "#"
+            Dim target As String = If(String.IsNullOrWhiteSpace(QuickViewTarget), "#quickView", QuickViewTarget)
+            Return CleanUrl(target)
+        End Get
+    End Property
+
+    Protected ReadOnly Property SafeCompareTarget As String
+        Get
+            If IsDemoMode Then Return "#"
+            Dim target As String = If(String.IsNullOrWhiteSpace(CompareTarget), "#compare", CompareTarget)
+            Return CleanUrl(target)
+        End Get
+    End Property
+
+    Protected ReadOnly Property AddToCartActionClass As String
+        Get
+            Return "box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left" & If(IsDemoMode, "", " js-ks-cart-link")
+        End Get
+    End Property
+
+    Protected ReadOnly Property WishlistActionClass As String
+        Get
+            Return "box-icon btn-icon-action hover-tooltip tooltip-left" & If(IsDemoMode, "", " js-ks-wishlist-link")
+        End Get
+    End Property
+
+    Protected ReadOnly Property QuickViewActionClass As String
+        Get
+            Return "box-icon quickview btn-icon-action hover-tooltip tooltip-left" & If(IsDemoMode, "", " js-ks-quickview")
+        End Get
+    End Property
+
+    Protected ReadOnly Property CompareActionClass As String
+        Get
+            Return "box-icon btn-icon-action hover-tooltip tooltip-left" & If(IsDemoMode, "", " js-ks-compare")
+        End Get
+    End Property
+
+    Protected ReadOnly Property PrimaryButtonClass As String
+        Get
+            Return "tf-btn btn-line w-100" & If(IsDemoMode, "", " js-ks-cart-link")
+        End Get
+    End Property
+
+    Protected ReadOnly Property QuickViewToggleAttribute As String
+        Get
+            If IsDemoMode Then Return ""
+            Return " data-bs-toggle=""modal"""
+        End Get
+    End Property
+
+    Protected ReadOnly Property CompareToggleAttribute As String
+        Get
+            If IsDemoMode Then Return ""
+            Return " data-bs-toggle=""offcanvas"""
+        End Get
+    End Property
+
+    Protected ReadOnly Property SafeActionDataAttributes As String
+        Get
+            If IsDemoMode OrElse String.IsNullOrWhiteSpace(ActionDataAttributes) Then Return ""
+            Return " " & ActionDataAttributes.Trim()
+        End Get
+    End Property
+
+    Protected ReadOnly Property SafeAvailabilityCss As String
+        Get
+            Dim css As String = If(AvailabilityCss, String.Empty)
+            css = System.Text.RegularExpressions.Regex.Replace(css, "[^A-Za-z0-9_\- ]", String.Empty)
+            Return EncodeAttribute(css.Trim())
+        End Get
+    End Property
+
+    Protected ReadOnly Property SafeRefurbishedText As String
+        Get
+            Return EncodeText(If(String.IsNullOrWhiteSpace(RefurbishedText), "Ricondizionato", RefurbishedText))
+        End Get
+    End Property
+
+    Protected ReadOnly Property SafeQuantityText As String
+        Get
+            Dim qta As Integer = 1
+            If Not Integer.TryParse(Convert.ToString(QuantityText), qta) Then qta = 1
+            If qta <= 0 Then qta = 1
+            If qta > 9999 Then qta = 9999
+            Return qta.ToString()
         End Get
     End Property
 

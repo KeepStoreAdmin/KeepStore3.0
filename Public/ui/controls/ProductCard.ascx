@@ -6,32 +6,81 @@
             <img class="img-product" src="<%= SafeImageUrl %>" alt="<%= SafeProductNameAttribute %>" />
             <img class="img-hover" src="<%= SafeHoverImageUrl %>" alt="" aria-hidden="true" />
         </a>
-        <ul class="list-product-btn top-0 end-0" aria-label="Azioni dimostrative">
+        <% If RenderQuickActions Then %>
+        <ul class="list-product-btn top-0 end-0" aria-label="Azioni prodotto">
+            <% If RenderAddToCart Then %>
             <li>
+                <% If IsDemoMode Then %>
                 <button class="box-icon btn-icon-action hover-tooltip tooltip-left" type="button" disabled="disabled" aria-label="Carrello dimostrativo">
                     <span class="icon" aria-hidden="true">C</span>
                     <span class="tooltip"><%= CartButtonText %></span>
                 </button>
+                <% Else %>
+                <a href="<%= SafeCartUrl %>" class="<%= AddToCartActionClass %>" aria-label="Aggiungi al carrello"<%= SafeActionDataAttributes %>>
+                    <span class="icon icon-cart2"></span>
+                    <span class="tooltip">Carrello</span>
+                </a>
+                <% End If %>
             </li>
+            <% End If %>
+            <% If RenderWishlist Then %>
             <li>
+                <% If IsDemoMode Then %>
                 <button class="box-icon btn-icon-action hover-tooltip tooltip-left" type="button" disabled="disabled" aria-label="Wishlist dimostrativa">
                     <span class="icon" aria-hidden="true">&#9825;</span>
                     <span class="tooltip">Demo wishlist</span>
                 </button>
+                <% Else %>
+                <a href="<%= SafeWishlistUrl %>" class="<%= WishlistActionClass %>" aria-label="Aggiungi a wishlist"<%= SafeActionDataAttributes %>>
+                    <span class="icon icon-heart2"></span>
+                    <span class="tooltip">Wishlist</span>
+                </a>
+                <% End If %>
             </li>
+            <% End If %>
+            <% If RenderQuickView Then %>
             <li>
+                <% If IsDemoMode Then %>
                 <button class="box-icon btn-icon-action hover-tooltip tooltip-left" type="button" disabled="disabled" aria-label="Vista rapida dimostrativa">
                     <span class="icon" aria-hidden="true">&#9673;</span>
                     <span class="tooltip">Demo vista rapida</span>
                 </button>
+                <% Else %>
+                <a href="<%= SafeQuickViewTarget %>"<%= QuickViewToggleAttribute %> class="<%= QuickViewActionClass %>" aria-label="Vista rapida"<%= SafeActionDataAttributes %>>
+                    <span class="icon icon-view"></span>
+                    <span class="tooltip">Vista rapida</span>
+                </a>
+                <% End If %>
             </li>
+            <% End If %>
+            <% If RenderCompare Then %>
+            <li>
+                <% If IsDemoMode Then %>
+                <button class="box-icon btn-icon-action hover-tooltip tooltip-left" type="button" disabled="disabled" aria-label="Confronto dimostrativo">
+                    <span class="icon" aria-hidden="true">&#8644;</span>
+                    <span class="tooltip">Demo confronto</span>
+                </button>
+                <% Else %>
+                <a href="<%= SafeCompareTarget %>"<%= CompareToggleAttribute %> class="<%= CompareActionClass %>" aria-label="Confronta articolo"<%= SafeActionDataAttributes %>>
+                    <span class="icon icon-compare1"></span>
+                    <span class="tooltip">Confronta</span>
+                </a>
+                <% End If %>
+            </li>
+            <% End If %>
         </ul>
+        <% End If %>
         <asp:PlaceHolder ID="phBadge" runat="server">
             <div class="box-sale-wrap pst-default">
                 <p class="small-text"><%= SafeBadgeText %></p>
                 <p class="title-sidebar-2">Demo</p>
             </div>
         </asp:PlaceHolder>
+        <% If IsRefurbished Then %>
+        <div class="box-sale-wrap pst-default">
+            <p class="small-text ks-badge-refurb"><%= SafeRefurbishedText %></p>
+        </div>
+        <% End If %>
     </div>
     <div class="card-product-info">
         <div class="box-title">
@@ -50,19 +99,37 @@
         </div>
         <div class="box-infor-detail">
             <ul class="list-computer-memory">
-                <li><p class="caption"><%= SafeAvailabilityText %></p></li>
+                <li><p class="caption <%= SafeAvailabilityCss %>"><%= SafeAvailabilityText %></p></li>
                 <li><p class="caption"><%= SafeProductCodeText %></p></li>
             </ul>
+            <% If ShowMultiSelect Then %>
+            <div class="d-flex align-items-center gap-2 mt-2">
+                <input type="checkbox" class="form-check-input" disabled="disabled" aria-label="Selezione multipla dimostrativa" />
+                <input type="text" class="form-control form-control-sm" value="<%= SafeQuantityText %>" disabled="disabled" inputmode="numeric" aria-label="Quantita dimostrativa" />
+            </div>
+            <% End If %>
         </div>
     </div>
     <div class="card-product-btn">
+        <% If IsDemoMode Then %>
         <button class="tf-btn btn-line w-100" type="button" disabled="disabled">
             <span><%= CartButtonText %></span>
         </button>
+        <% ElseIf RenderAddToCart Then %>
+        <a href="<%= SafeCartUrl %>" class="<%= PrimaryButtonClass %>" aria-label="Aggiungi al carrello"<%= SafeActionDataAttributes %>>
+            <span><%= CartButtonText %></span>
+        </a>
+        <% End If %>
         <div class="box-btn">
+            <% If IsDemoMode Then %>
             <button class="tf-btn-icon style-2 type-black" type="button" disabled="disabled">
                 <span>Confronta</span>
             </button>
+            <% ElseIf RenderCompare Then %>
+            <a href="<%= SafeCompareTarget %>"<%= CompareToggleAttribute %> class="tf-btn-icon style-2 type-black js-ks-compare" aria-label="Confronta articolo"<%= SafeActionDataAttributes %>>
+                <span>Confronta</span>
+            </a>
+            <% End If %>
         </div>
     </div>
 </article>
