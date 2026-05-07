@@ -40,6 +40,22 @@ Partial Class Articoli
         Public Property IsAvailable As Boolean
         Public Property AvailabilityText As String
         Public Property IsDemoMode As Boolean
+        Public Property CartUrl As String
+        Public Property WishlistUrl As String
+        Public Property QuickViewTarget As String
+        Public Property CompareTarget As String
+        Public Property DescriptionText As String
+        Public Property AvailabilityCss As String
+        Public Property IsRefurbished As Boolean
+        Public Property RefurbishedText As String
+        Public Property ShowQuickActions As Boolean
+        Public Property ShowWishlist As Boolean
+        Public Property ShowCompare As Boolean
+        Public Property ShowQuickView As Boolean
+        Public Property ShowAddToCart As Boolean
+        Public Property ShowMultiSelect As Boolean
+        Public Property QuantityText As String
+        Public Property ActionDataAttributes As String
     End Class
 
     Function sostituisci_caratteri_speciali(ByRef stringa As String) As String
@@ -2911,6 +2927,10 @@ strWhere = strWhere & " GROUP BY id"
         Dim imageUrl As String = ThemeManager.ProductImageUrl(UiData.Get(dataItem, "Img1"))
         If String.IsNullOrWhiteSpace(imageUrl) Then imageUrl = ThemeManager.PlaceholderProductImageUrl()
 
+        Dim descriptionText As String = UiData.Str(dataItem, "Descrizione2")
+        If String.IsNullOrWhiteSpace(descriptionText) Then descriptionText = UiData.Str(dataItem, "DescrizioneLunga")
+        descriptionText = ThemeManager.CompactText(descriptionText, 180)
+
         Dim hasValidPromo As Boolean = CatalogHasValidPromo(dataItem)
         Dim basePrice As Decimal = CatalogBasePrice(dataItem)
         Dim promoPrice As Decimal = CatalogPromoPrice(dataItem)
@@ -2924,6 +2944,14 @@ strWhere = strWhere & " GROUP BY id"
 
             badgeText = GetDiscountPercent(basePrice, promoPrice)
             If String.IsNullOrWhiteSpace(badgeText) Then badgeText = "Offerta"
+        End If
+
+        Dim isRefurbished As Boolean = False
+        If UiData.HasColumn(dataItem, "Ricondizionato") Then
+            isRefurbished = UiData.Bool(dataItem, "Ricondizionato")
+        ElseIf UiData.HasColumn(dataItem, "refurbished") Then
+            Dim refurbishedValue As String = UiData.Str(dataItem, "refurbished").Trim()
+            isRefurbished = String.Equals(refurbishedValue, "visible", StringComparison.OrdinalIgnoreCase) OrElse UiData.Bool(dataItem, "refurbished")
         End If
 
         Dim model As New ProductCardModel()
@@ -2943,6 +2971,22 @@ strWhere = strWhere & " GROUP BY id"
         model.IsAvailable = ((UiData.Int(dataItem, "Giacenza") - UiData.Int(dataItem, "Impegnata")) > 0)
         model.AvailabilityText = CatalogAvailabilityText(dataItem)
         model.IsDemoMode = True
+        model.CartUrl = CatalogCartAddUrl(dataItem)
+        model.WishlistUrl = CatalogWishlistAddUrl(dataItem)
+        model.QuickViewTarget = "#quickView"
+        model.CompareTarget = "#compare"
+        model.DescriptionText = descriptionText
+        model.AvailabilityCss = CatalogAvailabilityCss(dataItem)
+        model.IsRefurbished = isRefurbished
+        model.RefurbishedText = If(isRefurbished, "Ricondizionato", "")
+        model.ShowQuickActions = True
+        model.ShowWishlist = True
+        model.ShowCompare = True
+        model.ShowQuickView = True
+        model.ShowAddToCart = True
+        model.ShowMultiSelect = False
+        model.QuantityText = "1"
+        model.ActionDataAttributes = CatalogActionDataAttributes(dataItem)
         Return model
     End Function
 
