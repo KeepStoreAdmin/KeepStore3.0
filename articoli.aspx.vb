@@ -17,6 +17,7 @@ Partial Class Articoli
     Dim filters As New Dictionary(Of String, String)
     Dim oldUrl As String
     Private productCardPreviewRendered As Boolean = False
+    Private productCardReplaceOneRendered As Boolean = False
 
     Private Class ActiveFilterItem
         Public Property Key As String
@@ -118,7 +119,7 @@ Partial Class Articoli
         Dim sm = System.Web.UI.ScriptManager.GetCurrent(Me.Page)
         If sm IsNot Nothing Then sm.EnablePartialRendering = False
         oldUrl = HttpContext.Current.Request.Url.AbsoluteUri
-        If IsProductCardPreviewEnabled() OrElse IsProductCardPreviewRealEnabled() Then AddHandler Me.lvProdotti.ItemDataBound, AddressOf lvProdotti_ItemDataBound
+        If IsProductCardPreviewEnabled() OrElse IsProductCardPreviewRealEnabled() OrElse IsProductCardReplaceOneEnabled() Then AddHandler Me.lvProdotti.ItemDataBound, AddressOf lvProdotti_ItemDataBound
 
         If Not String.IsNullOrEmpty(Request.QueryString("rimuovi")) Then
             Dim filtersToRemove As String = Request.QueryString("rimuovi")
@@ -1035,16 +1036,23 @@ strWhere = strWhere & " GROUP BY id"
         Return String.Equals(Convert.ToString(Request.QueryString("ksCardPreviewReal")), "1", StringComparison.Ordinal)
     End Function
 
+    Private Function IsProductCardReplaceOneEnabled() As Boolean
+        Return String.Equals(Convert.ToString(Request.QueryString("ksCardReplaceOne")), "1", StringComparison.Ordinal)
+    End Function
+
     Private Sub lvProdotti_ItemDataBound(ByVal sender As Object, ByVal e As ListViewItemEventArgs)
+        Dim isPreview As Boolean = IsProductCardPreviewEnabled()
         Dim isRealPreview As Boolean = IsProductCardPreviewRealEnabled()
-        If Not (IsProductCardPreviewEnabled() OrElse isRealPreview) Then Exit Sub
-        If productCardPreviewRendered Then Exit Sub
+        Dim isReplaceOne As Boolean = IsProductCardReplaceOneEnabled() AndAlso Not (isPreview OrElse isRealPreview)
+        If Not (isPreview OrElse isRealPreview OrElse isReplaceOne) Then Exit Sub
+        If (isPreview OrElse isRealPreview) AndAlso productCardPreviewRendered Then Exit Sub
+        If isReplaceOne AndAlso productCardReplaceOneRendered Then Exit Sub
         If e Is Nothing OrElse e.Item Is Nothing Then Exit Sub
         If e.Item.ItemType <> ListViewItemType.DataItem Then Exit Sub
 
         Dim dataItem As ListViewDataItem = TryCast(e.Item, ListViewDataItem)
         If dataItem Is Nothing OrElse dataItem.DataItem Is Nothing Then Exit Sub
-        If Me.phProductCardPreview Is Nothing Then Exit Sub
+        If (isPreview OrElse isRealPreview) AndAlso Me.phProductCardPreview Is Nothing Then Exit Sub
 
         Dim model As ProductCardModel = BuildProductCardModel(dataItem.DataItem)
         Dim card As Public_ui_controls_ProductCard = TryCast(LoadControl("~/Public/ui/controls/ProductCard.ascx"), Public_ui_controls_ProductCard)
@@ -1083,9 +1091,20 @@ strWhere = strWhere & " GROUP BY id"
         card.ActionDataAttributes = model.ActionDataAttributes
         card.IsDemoMode = Not isRealPreview
 
-        Me.phProductCardPreview.Controls.Add(card)
-        Me.phProductCardPreview.Visible = True
-        productCardPreviewRendered = True
+        If isPreview OrElse isRealPreview Then
+            Me.phProductCardPreview.Controls.Add(card)
+            Me.phProductCardPreview.Visible = True
+            productCardPreviewRendered = True
+        ElseIf isReplaceOne Then
+            Dim replacement As PlaceHolder = TryCast(dataItem.FindControl("phReplacementProductCard"), PlaceHolder)
+            Dim inlineCard As PlaceHolder = TryCast(dataItem.FindControl("phInlineProductCard"), PlaceHolder)
+            If replacement Is Nothing OrElse inlineCard Is Nothing Then Exit Sub
+
+            card.IsDemoMode = False
+            replacement.Controls.Add(card)
+            inlineCard.Visible = False
+            productCardReplaceOneRendered = True
+        End If
     End Sub
 
     ' CLICK SU ICONA "CARRELLO" PER SINGOLO ARTICOLO

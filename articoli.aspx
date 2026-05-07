@@ -246,6 +246,8 @@
                             </LayoutTemplate>
 
                             <ItemTemplate>
+                                <asp:PlaceHolder ID="phReplacementProductCard" runat="server" />
+                                <asp:PlaceHolder ID="phInlineProductCard" runat="server">
                                 <div class="card-product ks-catalog-card">
                                     <div class="card-product-wrapper">
                                         <a href='<%# CatalogProductUrl(Container.DataItem) %>' class="product-img">
@@ -368,6 +370,7 @@
                                         </div>
                                     </div>
                                 </div>
+                                </asp:PlaceHolder>
                             </ItemTemplate>
 
                             <EmptyDataTemplate>
