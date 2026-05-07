@@ -108,6 +108,14 @@
                 <input type="text" class="form-control form-control-sm" value="<%= SafeQuantityText %>" disabled="disabled" inputmode="numeric" aria-label="Quantita dimostrativa" />
             </div>
             <% End If %>
+            <asp:PlaceHolder ID="phLegacyServerControls" runat="server" Visible="false">
+                <asp:HiddenField ID="hfID" runat="server" />
+                <asp:HiddenField ID="hfTCId" runat="server" />
+                <div class="d-flex align-items-center gap-2 mt-2">
+                    <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" CssClass="form-check-input" />
+                    <asp:TextBox ID="tbQuantita" runat="server" CssClass="form-control form-control-sm ks-qty" Width="70" />
+                </div>
+            </asp:PlaceHolder>
         </div>
     </div>
     <div class="card-product-btn">

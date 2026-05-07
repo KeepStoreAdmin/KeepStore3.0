@@ -31,14 +31,48 @@ Partial Class Public_ui_controls_ProductCard
     Public Property ShowQuickView As Boolean = True
     Public Property ShowAddToCart As Boolean = True
     Public Property ShowMultiSelect As Boolean
+    Public Property EnableLegacyServerControls As Boolean = False
     Public Property QuantityText As String = "1"
     Public Property ActionDataAttributes As String
+
+    Public ReadOnly Property SelectedForMultiAdd As Boolean
+        Get
+            Return EnableLegacyServerControls AndAlso CheckBox_SelezioneMultipla IsNot Nothing AndAlso CheckBox_SelezioneMultipla.Checked
+        End Get
+    End Property
+
+    Public ReadOnly Property LegacyQuantityText As String
+        Get
+            If EnableLegacyServerControls AndAlso tbQuantita IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(tbQuantita.Text) Then
+                Return NormalizeQuantityText(tbQuantita.Text)
+            End If
+
+            Return NormalizeQuantityText(QuantityText)
+        End Get
+    End Property
+
+    Public ReadOnly Property LegacyProductId As Integer
+        Get
+            Dim id As Integer = ProductId
+            If EnableLegacyServerControls AndAlso hfID IsNot Nothing Then Integer.TryParse(hfID.Value, id)
+            Return id
+        End Get
+    End Property
+
+    Public ReadOnly Property LegacyTCId As Integer
+        Get
+            Dim id As Integer = TCId
+            If EnableLegacyServerControls AndAlso hfTCId IsNot Nothing Then Integer.TryParse(hfTCId.Value, id)
+            Return id
+        End Get
+    End Property
 
     Protected Overrides Sub OnPreRender(ByVal e As EventArgs)
         MyBase.OnPreRender(e)
 
         phBadge.Visible = IsOnSale AndAlso Not String.IsNullOrWhiteSpace(BadgeText)
         phOldPrice.Visible = IsOnSale AndAlso Not String.IsNullOrWhiteSpace(OldPriceText)
+        SyncLegacyServerControls()
     End Sub
 
     Protected ReadOnly Property ProductTitleClientId As String
@@ -255,13 +289,26 @@ Partial Class Public_ui_controls_ProductCard
 
     Protected ReadOnly Property SafeQuantityText As String
         Get
-            Dim qta As Integer = 1
-            If Not Integer.TryParse(Convert.ToString(QuantityText), qta) Then qta = 1
-            If qta <= 0 Then qta = 1
-            If qta > 9999 Then qta = 9999
-            Return qta.ToString()
+            Return NormalizeQuantityText(QuantityText)
         End Get
     End Property
+
+    Private Sub SyncLegacyServerControls()
+        phLegacyServerControls.Visible = EnableLegacyServerControls
+        If Not EnableLegacyServerControls Then Exit Sub
+
+        hfID.Value = ProductId.ToString()
+        hfTCId.Value = TCId.ToString()
+        tbQuantita.Text = NormalizeQuantityText(QuantityText)
+    End Sub
+
+    Private Function NormalizeQuantityText(ByVal value As String) As String
+        Dim qta As Integer = 1
+        If Not Integer.TryParse(Convert.ToString(value), qta) Then qta = 1
+        If qta <= 0 Then qta = 1
+        If qta > 9999 Then qta = 9999
+        Return qta.ToString()
+    End Function
 
     Private Function EncodeText(ByVal value As String) As String
         Return Server.HtmlEncode(If(value, String.Empty))
