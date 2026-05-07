@@ -17,7 +17,8 @@ Partial Class Articoli
     Dim filters As New Dictionary(Of String, String)
     Dim oldUrl As String
     Private productCardPreviewRendered As Boolean = False
-    Private productCardReplaceOneRendered As Boolean = False
+    Private productCardReplaceRenderedCount As Integer = 0
+    Private Const ProductCardReplaceMaxCount As Integer = 3
 
     Private Class ActiveFilterItem
         Public Property Key As String
@@ -119,7 +120,7 @@ Partial Class Articoli
         Dim sm = System.Web.UI.ScriptManager.GetCurrent(Me.Page)
         If sm IsNot Nothing Then sm.EnablePartialRendering = False
         oldUrl = HttpContext.Current.Request.Url.AbsoluteUri
-        If IsProductCardPreviewEnabled() OrElse IsProductCardPreviewRealEnabled() OrElse IsProductCardReplaceOneEnabled() Then AddHandler Me.lvProdotti.ItemDataBound, AddressOf lvProdotti_ItemDataBound
+        If IsProductCardPreviewEnabled() OrElse IsProductCardPreviewRealEnabled() OrElse GetProductCardReplaceCount() > 0 Then AddHandler Me.lvProdotti.ItemDataBound, AddressOf lvProdotti_ItemDataBound
 
         If Not String.IsNullOrEmpty(Request.QueryString("rimuovi")) Then
             Dim filtersToRemove As String = Request.QueryString("rimuovi")
@@ -1040,13 +1041,31 @@ strWhere = strWhere & " GROUP BY id"
         Return String.Equals(Convert.ToString(Request.QueryString("ksCardReplaceOne")), "1", StringComparison.Ordinal)
     End Function
 
+    Private Function GetProductCardReplaceCount() As Integer
+        Dim rawCount As String = Convert.ToString(Request.QueryString("ksCardReplaceCount"))
+        If Not String.IsNullOrEmpty(rawCount) Then
+            Dim count As Integer
+            If Integer.TryParse(rawCount, count) AndAlso count > 0 Then
+                If count > ProductCardReplaceMaxCount Then Return ProductCardReplaceMaxCount
+                Return count
+            End If
+
+            Return 0
+        End If
+
+        If IsProductCardReplaceOneEnabled() Then Return 1
+
+        Return 0
+    End Function
+
     Private Sub lvProdotti_ItemDataBound(ByVal sender As Object, ByVal e As ListViewItemEventArgs)
         Dim isPreview As Boolean = IsProductCardPreviewEnabled()
         Dim isRealPreview As Boolean = IsProductCardPreviewRealEnabled()
-        Dim isReplaceOne As Boolean = IsProductCardReplaceOneEnabled() AndAlso Not (isPreview OrElse isRealPreview)
-        If Not (isPreview OrElse isRealPreview OrElse isReplaceOne) Then Exit Sub
+        Dim replaceCount As Integer = If(isPreview OrElse isRealPreview, 0, GetProductCardReplaceCount())
+        Dim isReplaceEnabled As Boolean = (replaceCount > 0)
+        If Not (isPreview OrElse isRealPreview OrElse isReplaceEnabled) Then Exit Sub
         If (isPreview OrElse isRealPreview) AndAlso productCardPreviewRendered Then Exit Sub
-        If isReplaceOne AndAlso productCardReplaceOneRendered Then Exit Sub
+        If isReplaceEnabled AndAlso productCardReplaceRenderedCount >= replaceCount Then Exit Sub
         If e Is Nothing OrElse e.Item Is Nothing Then Exit Sub
         If e.Item.ItemType <> ListViewItemType.DataItem Then Exit Sub
 
@@ -1095,7 +1114,7 @@ strWhere = strWhere & " GROUP BY id"
             Me.phProductCardPreview.Controls.Add(card)
             Me.phProductCardPreview.Visible = True
             productCardPreviewRendered = True
-        ElseIf isReplaceOne Then
+        ElseIf isReplaceEnabled Then
             Dim replacement As PlaceHolder = TryCast(dataItem.FindControl("phReplacementProductCard"), PlaceHolder)
             Dim inlineCard As PlaceHolder = TryCast(dataItem.FindControl("phInlineProductCard"), PlaceHolder)
             If replacement Is Nothing OrElse inlineCard Is Nothing Then Exit Sub
@@ -1104,7 +1123,7 @@ strWhere = strWhere & " GROUP BY id"
             card.EnableLegacyServerControls = True
             replacement.Controls.Add(card)
             inlineCard.Visible = False
-            productCardReplaceOneRendered = True
+            productCardReplaceRenderedCount += 1
         End If
     End Sub
 
