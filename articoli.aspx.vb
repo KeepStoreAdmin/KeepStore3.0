@@ -1030,19 +1030,33 @@ strWhere = strWhere & " GROUP BY id"
         End If
     End Sub
 
+    Private Function IsProductCardDebugModeAllowed() As Boolean
+        Try
+            Dim context As System.Web.HttpContext = System.Web.HttpContext.Current
+            If context Is Nothing OrElse context.Request Is Nothing Then Return False
+            Return context.Request.IsLocal
+        Catch
+            Return False
+        End Try
+    End Function
+
     Private Function IsProductCardPreviewEnabled() As Boolean
+        If Not IsProductCardDebugModeAllowed() Then Return False
         Return String.Equals(Convert.ToString(Request.QueryString("ksCardPreview")), "1", StringComparison.Ordinal)
     End Function
 
     Private Function IsProductCardPreviewRealEnabled() As Boolean
+        If Not IsProductCardDebugModeAllowed() Then Return False
         Return String.Equals(Convert.ToString(Request.QueryString("ksCardPreviewReal")), "1", StringComparison.Ordinal)
     End Function
 
     Private Function IsProductCardReplaceOneEnabled() As Boolean
+        If Not IsProductCardDebugModeAllowed() Then Return False
         Return String.Equals(Convert.ToString(Request.QueryString("ksCardReplaceOne")), "1", StringComparison.Ordinal)
     End Function
 
     Private Function IsProductCardReplaceAllEnabled() As Boolean
+        If Not IsProductCardDebugModeAllowed() Then Return False
         Return String.Equals(Convert.ToString(Request.QueryString("ksCardReplaceAll")), "1", StringComparison.Ordinal)
     End Function
 
@@ -1051,6 +1065,8 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     Private Function GetProductCardReplaceCount() As Integer
+        If Not IsProductCardDebugModeAllowed() Then Return 0
+
         Dim rawCount As String = Convert.ToString(Request.QueryString("ksCardReplaceCount"))
         If Not String.IsNullOrEmpty(rawCount) Then
             Dim count As Integer
