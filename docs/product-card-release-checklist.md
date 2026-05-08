@@ -42,12 +42,24 @@ Stato intenzionale:
 - [x] Replace all gated tramite parametro debug.
 - [x] Feature flag `True` testata su branch separato.
 - [x] Catalogo normale con flag `False` invariato.
+- [x] Test anonimo finale validato.
+- [x] Test login con listino cliente validato.
+- [x] Test cambio listino dopo login validato.
+- [x] Test promo/offerte validato.
+- [x] Test IVA standard validato.
+- [x] Test reverse charge validato.
+- [x] Test esenzione IVA validato.
+- [x] Test disponibilita' validato.
+- [x] Test TCId reale validato.
+- [x] Test TCId fallback `-1` validato.
 - [x] Carrello rapido validato.
 - [x] Wishlist validata.
 - [x] Quick view validata.
 - [x] Compare validato.
 - [x] Quantita' validata.
 - [x] Multiselezione validata.
+- [x] Checkout validato.
+- [x] Ordine letto dal gestionale validato.
 - [x] Filtri validati.
 - [x] Ordinamento validato.
 - [x] Paginazione validata.
@@ -87,69 +99,70 @@ Stato intenzionale:
 - [x] Verificare link dettaglio.
 - [x] Verificare carrello rapido da anonimo.
 - [x] Verificare nessun errore JavaScript in console.
+- [x] Test anonimo finale completato.
 
 ## 7. Checklist catalogo utente loggato
 
-- [ ] Eseguire login con utente cliente.
-- [ ] Aprire `articoli.aspx`.
-- [ ] Verificare lista prodotti.
-- [ ] Verificare prezzi coerenti con utente.
-- [ ] Verificare carrello rapido.
-- [ ] Verificare wishlist.
-- [ ] Verificare logout e ritorno a comportamento anonimo.
+- [x] Eseguire login con utente cliente.
+- [x] Aprire `articoli.aspx`.
+- [x] Verificare lista prodotti.
+- [x] Verificare prezzi coerenti con utente.
+- [x] Verificare carrello rapido.
+- [x] Verificare wishlist.
+- [x] Verificare logout e ritorno a comportamento anonimo.
 
 ## 8. Checklist listini cliente
 
 - [x] Verificare listino default.
-- [ ] Verificare listino utente loggato.
-- [ ] Verificare listino cliente speciale, se disponibile.
-- [ ] Verificare cambio listino dopo login.
-- [ ] Verificare prodotto con prezzo normale.
-- [ ] Verificare prodotto con prezzo promozionale.
-- [ ] Verificare assenza di prezzi in formato non coerente.
+- [x] Verificare listino utente loggato.
+- [x] Verificare listino cliente speciale, se disponibile.
+- [x] Verificare cambio listino dopo login.
+- [x] Verificare prodotto con prezzo normale.
+- [x] Verificare prodotto con prezzo promozionale.
+- [x] Verificare assenza di prezzi in formato non coerente.
 
 ## 9. Checklist promo/offerte
 
 - [x] Verificare prodotto non in offerta.
 - [x] Verificare prodotto in offerta valida in scenario base.
-- [ ] Verificare prodotto con offerta scaduta.
-- [ ] Verificare prezzo barrato solo se promo reale.
-- [ ] Verificare badge promo solo se coerente.
-- [ ] Verificare nessuna promo duplicata o inventata.
-- [ ] Verificare promo con data inizio/fine.
-- [ ] Verificare promo con quantita' minima.
-- [ ] Verificare promo con multipli.
+- [x] Verificare prodotto con offerta scaduta.
+- [x] Verificare prezzo barrato solo se promo reale.
+- [x] Verificare badge promo solo se coerente.
+- [x] Verificare nessuna promo duplicata o inventata.
+- [x] Verificare promo con data inizio/fine.
+- [x] Verificare promo con quantita' minima.
+- [x] Verificare promo con multipli.
 
 ## 10. Checklist IVA, reverse charge, esenzione
 
 - [x] Verificare prezzo ivato standard in scenario base.
-- [ ] Verificare cliente con IVA diversa.
-- [ ] Verificare utente con reverse charge, se disponibile.
-- [ ] Verificare utente con esenzione IVA, se disponibile.
-- [ ] Verificare coerenza tra catalogo, dettaglio e carrello.
-- [ ] Verificare nessun formato prezzo anomalo.
+- [x] Verificare cliente con IVA diversa.
+- [x] Verificare utente con reverse charge, se disponibile.
+- [x] Verificare utente con esenzione IVA, se disponibile.
+- [x] Verificare coerenza tra catalogo, dettaglio e carrello.
+- [x] Verificare nessun formato prezzo anomalo.
 
 ## 11. Checklist disponibilita', giacenza, impegnato, arrivi
 
 - [x] Verificare visualizzazione disponibilita' base.
-- [ ] Verificare prodotto disponibile con disponibilita' numerica.
-- [ ] Verificare prodotto non disponibile con disponibilita' numerica.
-- [ ] Verificare disponibilita' con solo logo disponibile/non disponibile.
+- [x] Verificare prodotto disponibile con disponibilita' numerica.
+- [x] Verificare prodotto non disponibile con disponibilita' numerica.
+- [x] Verificare disponibilita' con solo logo disponibile/non disponibile.
 - [ ] Verificare prodotto con giacenza bassa.
 - [ ] Verificare prodotto impegnato.
 - [ ] Verificare prodotto in ordine.
 - [ ] Verificare prodotto in arrivo.
-- [ ] Verificare testo disponibilita' nella card.
-- [ ] Verificare CSS disponibilita' nella card.
+- [x] Verificare testo disponibilita' nella card.
+- [x] Verificare CSS disponibilita' nella card.
 
 ## 12. Checklist TCId, taglie, colori
 
 - [x] Verificare prodotto senza variante in scenario base.
-- [ ] Verificare prodotto con `TCId` reale.
-- [ ] Verificare fallback `TCId=-1` dove previsto.
-- [ ] Verificare link carrello con TCId corretto.
-- [ ] Verificare wishlist con TCId corretto.
-- [ ] Verificare nessun duplicato causato da varianti.
+- [x] Verificare prodotto con `TCId` reale.
+- [x] Verificare fallback `TCId=-1` dove previsto.
+- [x] Verificare link carrello con TCId corretto.
+- [x] Verificare wishlist con TCId corretto.
+- [x] Verificare nessun duplicato causato da varianti.
 
 ## 13. Checklist carrello rapido
 
@@ -160,7 +173,7 @@ Stato intenzionale:
 - [x] Verificare quantita' corretta nello scenario testato.
 - [x] Verificare prodotto visibile in carrello nello scenario testato.
 - [x] Verificare MiniCart/header count nello scenario testato.
-- [ ] Ripetere carrello rapido con utente loggato e listino cliente.
+- [x] Ripetere carrello rapido con utente loggato e listino cliente.
 
 ## 14. Checklist quantita'
 
@@ -178,13 +191,13 @@ Stato intenzionale:
 - [x] Verificare quantita' per ogni prodotto selezionato nello scenario testato.
 - [x] Verificare TCId per ogni prodotto selezionato nello scenario testato.
 - [x] Verificare nessun prodotto non selezionato nel carrello nello scenario testato.
-- [ ] Ripetere multiselezione con TCId reale e listino cliente.
+- [x] Ripetere multiselezione con TCId reale e listino cliente.
 
 ## 16. Checklist wishlist
 
 - [x] Verificare wishlist nello scenario testato.
-- [ ] Verificare wishlist da anonimo, se prevista.
-- [ ] Verificare wishlist da loggato.
+- [x] Verificare wishlist da anonimo, se prevista.
+- [x] Verificare wishlist da loggato.
 - [x] Verificare `ArticoliId` corretto nello scenario testato.
 - [x] Verificare `TCId` corretto nello scenario testato.
 - [x] Verificare nessun doppio inserimento non previsto nello scenario testato.
@@ -271,6 +284,14 @@ Stato intenzionale:
 - [x] Verificare console JavaScript pulita.
 - [ ] Test performance con molte righe per pagina.
 
+## 24A. Checklist checkout, ordine e gestionale
+
+- [x] Verificare checkout completo con ProductCard attiva nello scenario testato.
+- [x] Verificare generazione ordine.
+- [x] Verificare ordine letto dal gestionale collegato al database.
+- [x] Verificare coerenza articoli, quantita', prezzi e TCId nell'ordine.
+- [x] Verificare nessun errore JavaScript durante il percorso catalogo-carrello-checkout.
+
 ## 25. Piano rollback
 
 - [x] Rollback immediato: mantenere o riportare `UseNewCatalogProductCard=False`.
@@ -283,15 +304,17 @@ Stato intenzionale:
 ## 26. Criteri per attivare ProductCard
 
 - [x] Test catalogo anonimo superati nello scenario validato.
-- [ ] Tutti i test catalogo loggato superati.
-- [ ] Prezzi/listini/IVA verificati.
-- [ ] Disponibilita' e TCId verificati.
+- [x] Tutti i test catalogo loggato superati.
+- [x] Prezzi/listini/IVA verificati.
+- [x] Disponibilita' e TCId verificati.
 - [x] Carrello rapido verificato nello scenario validato.
 - [x] Wishlist, quick view e compare verificati nello scenario validato.
 - [x] Filtri, ordinamento e paginazione verificati nello scenario validato.
 - [x] Mobile/responsive approvato nello scenario validato.
 - [ ] Performance accettabile su dataset esteso.
 - [ ] Approvazione finale ricevuta.
+- [x] Checkout e ordine verificati.
+- [x] Lettura ordine nel gestionale verificata.
 
 ## 27. Criteri per NON attivare ProductCard
 
@@ -300,27 +323,29 @@ Stato intenzionale:
 - [x] Quantita' o multiselezione instabili: criterio bloccante da mantenere.
 - [x] Wishlist/quick view/compare con regressioni: criterio bloccante da mantenere.
 - [x] Filtri o paginazione alterati: criterio bloccante da mantenere.
-- [ ] Problemi con listini cliente.
-- [ ] Problemi con IVA/reverse charge/esenzione.
+- [x] Problemi con listini cliente: criterio bloccante da mantenere.
+- [x] Problemi con IVA/reverse charge/esenzione: criterio bloccante da mantenere.
 - [ ] Layout mobile non approvato.
 - [ ] Performance peggiorata in modo significativo.
 - [ ] Mancanza di approvazione finale.
 
 ## 28. Esito finale e approvazione
 
-- [ ] Checklist completata.
-- [ ] Esito tecnico approvato.
-- [ ] Esito UX approvato.
-- [ ] Esito commerciale approvato.
-- [ ] Piano rollback confermato.
+- [x] Checklist tecnica completata.
+- [x] Esito tecnico approvato.
+- [x] Esito UX approvato nello scenario validato.
+- [x] Esito commerciale approvato.
+- [x] Piano rollback confermato.
 - [ ] Decisione finale: attivare `UseNewCatalogProductCard=True`.
 - [ ] Decisione finale: mantenere `UseNewCatalogProductCard=False`.
 
 ## 29. Decisione attuale
 
 - [x] ProductCard tecnicamente validata.
+- [x] ProductCard commercialmente validata.
+- [x] ProductCard validata con carrello, checkout, ordine e gestionale.
 - [x] Attivazione globale non ancora approvata.
-- [x] `UseNewCatalogProductCard` deve restare `False` su `frontend-rebuild`.
-- [x] Prossimo passo: test finale con utente loggato, listino, IVA, promo, disponibilita' e ordine.
-- [x] Rollback: mantenere o riportare `UseNewCatalogProductCard=False`.
+- [x] `UseNewCatalogProductCard` resta `False` finche' non viene creato e approvato il branch di attivazione.
+- [x] L'attivazione richiede una modifica separata e controllata della flag a `True`.
+- [x] Rollback immediato: riportare `UseNewCatalogProductCard=False`.
 
