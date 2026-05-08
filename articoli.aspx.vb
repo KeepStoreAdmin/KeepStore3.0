@@ -18,7 +18,7 @@ Partial Class Articoli
     Dim oldUrl As String
     Private productCardPreviewRendered As Boolean = False
     Private productCardReplaceRenderedCount As Integer = 0
-    Private Const UseNewCatalogProductCard As Boolean = False
+    Private Const UseNewCatalogProductCard As Boolean = True
     Private Const ProductCardReplaceMaxCount As Integer = 3
 
     Private Class ActiveFilterItem
