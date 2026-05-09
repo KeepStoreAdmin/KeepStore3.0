@@ -214,12 +214,20 @@ Partial Class articolo
         If IsProductDetailPreviewEnabled() Then
             Dim previewModel As ProductDetailViewModel = BuildProductDetailViewModel(row)
             If previewModel IsNot Nothing Then
-                litProductDetailPreviewName.Text = Server.HtmlEncode(previewModel.ProductName)
-                litProductDetailPreviewCode.Text = Server.HtmlEncode(previewModel.ProductCode)
-                litProductDetailPreviewPrice.Text = previewModel.PriceHtml
-                litProductDetailPreviewAvailability.Text = previewModel.AvailabilityHtml
-                litProductDetailPreviewTCId.Text = Server.HtmlEncode(previewModel.TCId.ToString(CultureInfo.InvariantCulture))
-                phProductDetailPreview.Visible = True
+                Dim previewControl As System.Web.UI.Control = LoadControl("~/Public/ui/controls/ProductDetailView.ascx")
+                If previewControl IsNot Nothing Then
+                    CallByName(previewControl, "ProductName", CallType.Let, previewModel.ProductName)
+                    CallByName(previewControl, "ProductCode", CallType.Let, previewModel.ProductCode)
+                    CallByName(previewControl, "PriceHtml", CallType.Let, previewModel.PriceHtml)
+                    CallByName(previewControl, "AvailabilityHtml", CallType.Let, previewModel.AvailabilityHtml)
+                    CallByName(previewControl, "TCId", CallType.Let, previewModel.TCId)
+                    CallByName(previewControl, "ShortDescriptionHtml", CallType.Let, previewModel.ShortDescriptionHtml)
+                    phProductDetailPreview.Controls.Clear()
+                    phProductDetailPreview.Controls.Add(previewControl)
+                    phProductDetailPreview.Visible = True
+                Else
+                    phProductDetailPreview.Visible = False
+                End If
             Else
                 phProductDetailPreview.Visible = False
             End If
