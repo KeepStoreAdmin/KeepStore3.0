@@ -3,6 +3,8 @@
 ## 1. Stato branch e perimetro
 
 - Branch di lavoro: `task/product-detail-ui-plan`.
+- Validazione documentale: `task/product-detail-preview-validation`.
+- La preview `ProductDetailView` e' stata mergiata in `frontend-rebuild`.
 - La fase iniziale era solo pianificazione tecnica; ora esiste anche una preview demo locale e gated.
 - La scheda reale `pnlProduct` non e' stata sostituita.
 - Nessun flusso applicativo reale viene cambiato dalla preview.
@@ -422,7 +424,7 @@ Primo step consigliato dopo lo stato attuale:
 1. Consolidare la mappa dati scheda prodotto. Stato: completato a livello documentale.
 2. Definire un modello UI server-side per il dettaglio prodotto, senza usarlo in produzione. Stato: `ProductDetailViewModel` preparatorio creato.
 3. Creare preview gated locale della nuova UI. Stato: completato con `ksProductDetailPreview=1` e `Request.IsLocal`.
-4. Portare nella preview solo layout, gallery, buy box e blocchi informativi, mantenendo funzioni server-side esistenti. Stato: avviato con `ProductDetailView.ascx` demo, gallery statica, mini buy-box non operativa e blocchi descrizione/info demo.
+4. Portare nella preview solo layout, gallery, buy box e blocchi informativi, mantenendo funzioni server-side esistenti. Stato: avviato e validato su `frontend-rebuild` con `ProductDetailView.ascx` demo, gallery statica, mini buy-box non operativa e blocchi descrizione/info demo.
 5. Validare prezzo, listino, IVA, promo, disponibilita' e TCId.
 6. Validare carrello da scheda prodotto.
 7. Validare gallery reale, zoom e lightbox.
@@ -479,6 +481,8 @@ Primo step consigliato dopo lo stato attuale:
 
 La preview `ProductDetailView` e' stata introdotta come strato demo sopra la scheda reale, senza sostituire `pnlProduct`.
 
+La preview e' stata mergiata in `frontend-rebuild` ed e' pronta come preview tecnica su quel branch. Non e' pronta come sostituzione reale della scheda prodotto.
+
 Stato micro-task:
 
 - [x] PD-4: aggiunta preview shell gated locale con `phProductDetailPreview`.
@@ -512,7 +516,7 @@ Conferme di perimetro:
 - [x] Il carrello reale resta nella scheda originale sotto la preview.
 - [x] `btnAddToCart_Click` non e' stato modificato.
 - [x] Query e datasource non sono stati modificati.
-- [x] SEO, `ApplySeo`, gallery reale e `BindImages` non sono stati modificati.
+- [x] SEO, `ApplySeo`, gallery reale, `BindImages` e tab reali non sono stati modificati.
 - [x] Non sono stati aggiunti JavaScript o CSS.
 
 Test browser eseguiti e OK:
@@ -532,6 +536,24 @@ Test browser eseguiti e OK:
 - [x] Varianti/TCId reali funzionanti dalla scheda originale.
 - [x] Console browser senza errori.
 - [ ] Recensioni reali non testate in PD-15.
+
+Validazione finale su `frontend-rebuild`:
+
+- [x] Scheda normale OK.
+- [x] Preview locale OK.
+- [x] Scheda reale ancora visibile OK.
+- [x] Carrello OK.
+- [x] Quantita' OK.
+- [x] Varianti/TCId OK.
+- [x] Gallery reale OK.
+- [x] Tab reali OK.
+- [x] Console OK.
+
+Stato attuale:
+
+- [x] Pronta come preview tecnica su `frontend-rebuild`.
+- [ ] Non pronta come sostituzione reale della scheda.
+- [ ] Eventuale replace futuro solo con parametro gated e rollback rapido.
 
 Rischi residui:
 
