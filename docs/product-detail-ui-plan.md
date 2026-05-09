@@ -549,6 +549,28 @@ Validazione finale su `frontend-rebuild`:
 - [x] Tab reali OK.
 - [x] Console OK.
 
+Validazione recensioni reali PD-18 su `frontend-rebuild`:
+
+- [x] Branch testato: `frontend-rebuild`.
+- [x] Working tree pulito.
+- [x] Scheda normale OK.
+- [x] Tab recensioni reale visibile OK.
+- [x] Recensioni esistenti non presenti.
+- [x] Form recensione visibile OK.
+- [ ] Invio recensione test non eseguito.
+- [x] Console scheda normale OK.
+- [x] Preview locale OK.
+- [x] Scheda reale sotto preview OK.
+- [x] Tab recensioni sotto preview OK.
+- [x] Form recensione sotto preview OK.
+- [x] Console preview OK.
+- [x] Carrello dopo test recensioni OK.
+- [x] Quantita' OK.
+- [x] Varianti/TCId OK.
+- [x] Gallery reale OK.
+- [x] Tab reali OK.
+- [x] `main` non toccato.
+
 Stato attuale:
 
 - [x] Pronta come preview tecnica su `frontend-rebuild`.
@@ -561,7 +583,7 @@ Rischi residui:
 - [ ] Mini buy-box non operativa.
 - [ ] Gallery statica non finale.
 - [ ] Nessuna sostituzione della scheda reale ancora eseguita.
-- [ ] Recensioni reali non testate in questo micro-task.
+- [ ] Invio recensione non ancora testato.
 - [ ] Futuro replace da fare solo con parametro gated e rollback rapido.
 
 Prossimi step consigliati:
