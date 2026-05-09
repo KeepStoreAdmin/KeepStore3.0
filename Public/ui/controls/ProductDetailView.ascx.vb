@@ -4,25 +4,26 @@ Imports System.Web
 
 Partial Class Public_ui_controls_ProductDetailView
     Inherits System.Web.UI.UserControl
+    Implements IProductDetailView
 
-    Public Property ProductName As String
-    Public Property ProductCode As String
-    Public Property PriceHtml As String
-    Public Property AvailabilityHtml As String
-    Public Property TCId As Integer
-    Public Property ShortDescriptionHtml As String
-    Public Property MainImageUrl As String
-    Public Property BrandName As String
-    Public Property CategoryName As String
-    Public Property OldPriceText As String
-    Public Property IvaLabel As String
-    Public Property IsPromo As Boolean
-    Public Property IsRefurbished As Boolean
-    Public Property RefurbishedText As String
-    Public Property ProductUrl As String
-    Public Property AddToCartEnabled As Boolean
-    Public Property ShowVariants As Boolean
-    Public Property SelectedVariantTCId As Integer
+    Public Property ProductName As String Implements IProductDetailView.ProductName
+    Public Property ProductCode As String Implements IProductDetailView.ProductCode
+    Public Property PriceHtml As String Implements IProductDetailView.PriceHtml
+    Public Property AvailabilityHtml As String Implements IProductDetailView.AvailabilityHtml
+    Public Property TCId As Integer Implements IProductDetailView.TCId
+    Public Property ShortDescriptionHtml As String Implements IProductDetailView.ShortDescriptionHtml
+    Public Property MainImageUrl As String Implements IProductDetailView.MainImageUrl
+    Public Property BrandName As String Implements IProductDetailView.BrandName
+    Public Property CategoryName As String Implements IProductDetailView.CategoryName
+    Public Property OldPriceText As String Implements IProductDetailView.OldPriceText
+    Public Property IvaLabel As String Implements IProductDetailView.IvaLabel
+    Public Property IsPromo As Boolean Implements IProductDetailView.IsPromo
+    Public Property IsRefurbished As Boolean Implements IProductDetailView.IsRefurbished
+    Public Property RefurbishedText As String Implements IProductDetailView.RefurbishedText
+    Public Property ProductUrl As String Implements IProductDetailView.ProductUrl
+    Public Property AddToCartEnabled As Boolean Implements IProductDetailView.AddToCartEnabled
+    Public Property ShowVariants As Boolean Implements IProductDetailView.ShowVariants
+    Public Property SelectedVariantTCId As Integer Implements IProductDetailView.SelectedVariantTCId
 
     Protected Overrides Sub OnPreRender(ByVal e As EventArgs)
         MyBase.OnPreRender(e)

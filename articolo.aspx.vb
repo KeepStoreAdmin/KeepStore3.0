@@ -216,25 +216,26 @@ Partial Class articolo
             Dim previewModel As ProductDetailViewModel = BuildProductDetailViewModel(row)
             If previewModel IsNot Nothing Then
                 Dim previewControl As System.Web.UI.Control = LoadControl("~/Public/ui/controls/ProductDetailView.ascx")
-                If previewControl IsNot Nothing Then
-                    CallByName(previewControl, "ProductName", CallType.Let, previewModel.ProductName)
-                    CallByName(previewControl, "ProductCode", CallType.Let, previewModel.ProductCode)
-                    CallByName(previewControl, "MainImageUrl", CallType.Let, previewModel.MainImageUrl)
-                    CallByName(previewControl, "BrandName", CallType.Let, previewModel.BrandName)
-                    CallByName(previewControl, "CategoryName", CallType.Let, previewModel.CategoryName)
-                    CallByName(previewControl, "PriceHtml", CallType.Let, previewModel.PriceHtml)
-                    CallByName(previewControl, "OldPriceText", CallType.Let, previewModel.OldPriceText)
-                    CallByName(previewControl, "IvaLabel", CallType.Let, previewModel.IvaLabel)
-                    CallByName(previewControl, "IsPromo", CallType.Let, previewModel.IsPromo)
-                    CallByName(previewControl, "AvailabilityHtml", CallType.Let, previewModel.AvailabilityHtml)
-                    CallByName(previewControl, "TCId", CallType.Let, previewModel.TCId)
-                    CallByName(previewControl, "ShortDescriptionHtml", CallType.Let, previewModel.ShortDescriptionHtml)
-                    CallByName(previewControl, "IsRefurbished", CallType.Let, previewModel.IsRefurbished)
-                    CallByName(previewControl, "RefurbishedText", CallType.Let, previewModel.RefurbishedText)
-                    CallByName(previewControl, "ProductUrl", CallType.Let, previewModel.ProductUrl)
-                    CallByName(previewControl, "AddToCartEnabled", CallType.Let, previewModel.AddToCartEnabled)
-                    CallByName(previewControl, "ShowVariants", CallType.Let, previewModel.ShowVariants)
-                    CallByName(previewControl, "SelectedVariantTCId", CallType.Let, previewModel.SelectedVariantTCId)
+                Dim detailView As IProductDetailView = TryCast(previewControl, IProductDetailView)
+                If detailView IsNot Nothing Then
+                    detailView.ProductName = previewModel.ProductName
+                    detailView.ProductCode = previewModel.ProductCode
+                    detailView.MainImageUrl = previewModel.MainImageUrl
+                    detailView.BrandName = previewModel.BrandName
+                    detailView.CategoryName = previewModel.CategoryName
+                    detailView.PriceHtml = previewModel.PriceHtml
+                    detailView.OldPriceText = previewModel.OldPriceText
+                    detailView.IvaLabel = previewModel.IvaLabel
+                    detailView.IsPromo = previewModel.IsPromo
+                    detailView.AvailabilityHtml = previewModel.AvailabilityHtml
+                    detailView.TCId = previewModel.TCId
+                    detailView.ShortDescriptionHtml = previewModel.ShortDescriptionHtml
+                    detailView.IsRefurbished = previewModel.IsRefurbished
+                    detailView.RefurbishedText = previewModel.RefurbishedText
+                    detailView.ProductUrl = previewModel.ProductUrl
+                    detailView.AddToCartEnabled = previewModel.AddToCartEnabled
+                    detailView.ShowVariants = previewModel.ShowVariants
+                    detailView.SelectedVariantTCId = previewModel.SelectedVariantTCId
                     phProductDetailPreview.Controls.Clear()
                     phProductDetailPreview.Controls.Add(previewControl)
                     phProductDetailPreview.Visible = True
