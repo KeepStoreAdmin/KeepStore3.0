@@ -422,12 +422,12 @@ Primo step consigliato dopo lo stato attuale:
 1. Consolidare la mappa dati scheda prodotto. Stato: completato a livello documentale.
 2. Definire un modello UI server-side per il dettaglio prodotto, senza usarlo in produzione. Stato: `ProductDetailViewModel` preparatorio creato.
 3. Creare preview gated locale della nuova UI. Stato: completato con `ksProductDetailPreview=1` e `Request.IsLocal`.
-4. Portare nella preview solo layout, gallery e buy box, mantenendo funzioni server-side esistenti. Stato: avviato con `ProductDetailView.ascx` demo, gallery statica e mini buy-box non operativa.
+4. Portare nella preview solo layout, gallery, buy box e blocchi informativi, mantenendo funzioni server-side esistenti. Stato: avviato con `ProductDetailView.ascx` demo, gallery statica, mini buy-box non operativa e blocchi descrizione/info demo.
 5. Validare prezzo, listino, IVA, promo, disponibilita' e TCId.
 6. Validare carrello da scheda prodotto.
 7. Validare gallery reale, zoom e lightbox.
 8. Validare SEO e JSON-LD.
-9. Estendere preview a tab descrizione/info e layout piu' vicino alla UI finale.
+9. Rifinire blocchi descrizione/info demo e layout piu' vicino alla UI finale.
 10. Valutare una preview replace gated, senza attivazione produzione.
 11. Introdurre eventuale feature flag separata, disattivata di default.
 12. Attivare solo dopo test commerciale e gestionale.
@@ -493,6 +493,8 @@ Stato micro-task:
 - [x] PD-11: rimosso `CallByName` e sostituito con contratto tipizzato.
 - [x] PD-12: aggiunta gallery demo statica.
 - [x] PD-13: aggiunta mini buy-box demo non operativa.
+- [x] PD-15: aggiunti blocchi descrizione/info demo alla preview.
+- [x] PD-15: i blocchi descrizione/info demo mostrano descrizione breve, descrizione lunga, codice, EAN, marca, categoria, TCId e stato varianti.
 
 Conferme di perimetro:
 
@@ -504,6 +506,9 @@ Conferme di perimetro:
 - [x] La gallery demo e' statica.
 - [x] La gallery demo non usa Swiper, Drift o PhotoSwipe.
 - [x] La mini buy-box e' non operativa.
+- [x] I blocchi descrizione/info demo non usano tab JavaScript.
+- [x] I tab reali di `articolo.aspx` non sono stati modificati.
+- [x] Le recensioni reali non sono state modificate.
 - [x] Il carrello reale resta nella scheda originale sotto la preview.
 - [x] `btnAddToCart_Click` non e' stato modificato.
 - [x] Query e datasource non sono stati modificati.
@@ -518,10 +523,15 @@ Test browser eseguiti e OK:
 - [x] Gallery demo statica visibile.
 - [x] Gallery reale visibile e invariata.
 - [x] Mini buy-box demo visibile e non operativa.
+- [x] Preview descrizione/info demo visibile.
+- [x] Descrizione breve/lunga visibile.
+- [x] Codice, EAN, marca, categoria e TCId visibili.
+- [x] Tab reali della scheda originale funzionanti.
 - [x] Carrello reale funzionante dalla scheda originale.
 - [x] Quantita' reale funzionante dalla scheda originale.
 - [x] Varianti/TCId reali funzionanti dalla scheda originale.
 - [x] Console browser senza errori.
+- [ ] Recensioni reali non testate in PD-15.
 
 Rischi residui:
 
@@ -529,11 +539,12 @@ Rischi residui:
 - [ ] Mini buy-box non operativa.
 - [ ] Gallery statica non finale.
 - [ ] Nessuna sostituzione della scheda reale ancora eseguita.
-- [ ] Futuro replace da fare solo gated, locale o feature-flagged e reversibile.
+- [ ] Recensioni reali non testate in questo micro-task.
+- [ ] Futuro replace da fare solo con parametro gated e rollback rapido.
 
 Prossimi step consigliati:
 
-- [ ] Aggiungere tab descrizione/info demo.
 - [ ] Rifinire layout preview.
 - [ ] Valutare eventuale preview replace gated.
+- [ ] Testare recensioni reali.
 - [ ] Introdurre feature flag separata solo dopo validazione completa.
