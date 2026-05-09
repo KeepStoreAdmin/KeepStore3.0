@@ -35,6 +35,7 @@ Partial Class articolo
         Public Property BrandName As String
         Public Property CategoryName As String
         Public Property ProductUrl As String
+        Public Property MainImageUrl As String
         Public Property ShortDescriptionHtml As String
         Public Property LongDescriptionHtml As String
         Public Property PriceHtml As String
@@ -218,10 +219,22 @@ Partial Class articolo
                 If previewControl IsNot Nothing Then
                     CallByName(previewControl, "ProductName", CallType.Let, previewModel.ProductName)
                     CallByName(previewControl, "ProductCode", CallType.Let, previewModel.ProductCode)
+                    CallByName(previewControl, "MainImageUrl", CallType.Let, previewModel.MainImageUrl)
+                    CallByName(previewControl, "BrandName", CallType.Let, previewModel.BrandName)
+                    CallByName(previewControl, "CategoryName", CallType.Let, previewModel.CategoryName)
                     CallByName(previewControl, "PriceHtml", CallType.Let, previewModel.PriceHtml)
+                    CallByName(previewControl, "OldPriceText", CallType.Let, previewModel.OldPriceText)
+                    CallByName(previewControl, "IvaLabel", CallType.Let, previewModel.IvaLabel)
+                    CallByName(previewControl, "IsPromo", CallType.Let, previewModel.IsPromo)
                     CallByName(previewControl, "AvailabilityHtml", CallType.Let, previewModel.AvailabilityHtml)
                     CallByName(previewControl, "TCId", CallType.Let, previewModel.TCId)
                     CallByName(previewControl, "ShortDescriptionHtml", CallType.Let, previewModel.ShortDescriptionHtml)
+                    CallByName(previewControl, "IsRefurbished", CallType.Let, previewModel.IsRefurbished)
+                    CallByName(previewControl, "RefurbishedText", CallType.Let, previewModel.RefurbishedText)
+                    CallByName(previewControl, "ProductUrl", CallType.Let, previewModel.ProductUrl)
+                    CallByName(previewControl, "AddToCartEnabled", CallType.Let, previewModel.AddToCartEnabled)
+                    CallByName(previewControl, "ShowVariants", CallType.Let, previewModel.ShowVariants)
+                    CallByName(previewControl, "SelectedVariantTCId", CallType.Let, previewModel.SelectedVariantTCId)
                     phProductDetailPreview.Controls.Clear()
                     phProductDetailPreview.Controls.Add(previewControl)
                     phProductDetailPreview.Visible = True
@@ -1285,6 +1298,7 @@ Partial Class articolo
             shortDescHtml = "<li><p class=""body-text-3"">" & Server.HtmlEncode(shortDesc) & "</p></li>"
         End If
 
+        Dim mainImageUrl As String = NormalizeImageUrl(GetRowString(row, "Img1"))
         Dim longValue As String = FirstNonEmpty(GetRowString(row, "DescrizioneHTML"), GetRowString(row, "DescrizioneLunga"), GetRowString(row, "Descrizione2"))
         Dim availabilityText As String = BuildAvailabilityText(row)
         Dim availabilityCss As String = "ks-availability-check"
@@ -1312,6 +1326,7 @@ Partial Class articolo
             .BrandName = brandName,
             .CategoryName = categoryName,
             .ProductUrl = BuildProductUrl(productId, selectedTcid, includeTcid),
+            .MainImageUrl = mainImageUrl,
             .ShortDescriptionHtml = shortDescHtml,
             .LongDescriptionHtml = NormalizeDescriptionHtml(longValue),
             .PriceHtml = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo),
