@@ -3,10 +3,10 @@
 ## 1. Stato branch e perimetro
 
 - Branch di lavoro: `task/product-detail-ui-plan`.
-- Questa fase e' solo pianificazione tecnica.
-- Nessuna UI viene ancora modificata.
-- Nessun flusso applicativo viene cambiato.
-- Il primo step operativo futuro dovra' essere gated, reversibile e disattivato di default.
+- La fase iniziale era solo pianificazione tecnica; ora esiste anche una preview demo locale e gated.
+- La scheda reale `pnlProduct` non e' stata sostituita.
+- Nessun flusso applicativo reale viene cambiato dalla preview.
+- Ogni step operativo futuro dovra' restare gated, reversibile e disattivato di default.
 
 ## 2. File coinvolti nella scheda prodotto
 
@@ -398,29 +398,39 @@ Non vanno rotti:
 
 ## 24. Primo micro-task sicuro successivo
 
-Primo step consigliato:
+Stato aggiornato:
 
-- creare una preview gated e locale della nuova struttura dettaglio prodotto;
-- non sostituire la UI normale;
+- la preview gated locale e' stata introdotta;
+- la preview e' visibile solo con `ksProductDetailPreview=1` in ambiente locale;
+- la protezione usa `Request.IsLocal`;
+- la UI normale non e' stata sostituita;
 - non cambiare query;
 - non cambiare add-to-cart;
 - non cambiare prezzi/listino/IVA/promo/disponibilita'/TCId;
 - usare dati gia' bindati dal server;
 - mantenere rollback immediato rimuovendo o disattivando il parametro debug.
 
+Primo step consigliato dopo lo stato attuale:
+
+- aggiungere tab descrizione/info demo dentro la preview;
+- rifinire il layout preview senza sostituire `pnlProduct`;
+- valutare solo dopo una preview replace gated;
+- introdurre eventuale feature flag separata solo dopo validazione completa.
+
 ## 25. Piano a fasi
 
-1. Consolidare la mappa dati scheda prodotto.
-2. Definire un modello UI server-side per il dettaglio prodotto, senza usarlo in produzione.
-3. Creare preview gated locale della nuova UI.
-4. Portare nella preview solo layout, gallery e buy box, mantenendo funzioni server-side esistenti.
+1. Consolidare la mappa dati scheda prodotto. Stato: completato a livello documentale.
+2. Definire un modello UI server-side per il dettaglio prodotto, senza usarlo in produzione. Stato: `ProductDetailViewModel` preparatorio creato.
+3. Creare preview gated locale della nuova UI. Stato: completato con `ksProductDetailPreview=1` e `Request.IsLocal`.
+4. Portare nella preview solo layout, gallery e buy box, mantenendo funzioni server-side esistenti. Stato: avviato con `ProductDetailView.ascx` demo, gallery statica e mini buy-box non operativa.
 5. Validare prezzo, listino, IVA, promo, disponibilita' e TCId.
 6. Validare carrello da scheda prodotto.
-7. Validare gallery, zoom e lightbox.
+7. Validare gallery reale, zoom e lightbox.
 8. Validare SEO e JSON-LD.
-9. Estendere preview a correlati/recenti.
-10. Introdurre eventuale feature flag disattivata di default.
-11. Attivare solo dopo test commerciale e gestionale.
+9. Estendere preview a tab descrizione/info e layout piu' vicino alla UI finale.
+10. Valutare una preview replace gated, senza attivazione produzione.
+11. Introdurre eventuale feature flag separata, disattivata di default.
+12. Attivare solo dopo test commerciale e gestionale.
 
 ## 26. Checklist test obbligatoria prima dell'attivazione
 
@@ -465,3 +475,65 @@ Primo step consigliato:
 - [ ] Checkout successivo al carrello.
 - [ ] Ordine leggibile dal gestionale.
 
+## 27. Stato reale preview ProductDetailView
+
+La preview `ProductDetailView` e' stata introdotta come strato demo sopra la scheda reale, senza sostituire `pnlProduct`.
+
+Stato micro-task:
+
+- [x] PD-4: aggiunta preview shell gated locale con `phProductDetailPreview`.
+- [x] PD-4: parametro debug `ksProductDetailPreview=1` protetto da `Request.IsLocal`.
+- [x] PD-6: aggiunto `ProductDetailViewModel` preparatorio in `articolo.aspx.vb`.
+- [x] PD-6: il model legge solo dati gia' caricati dalla pagina prodotto.
+- [x] PD-7: preview alimentata con dati reali minimi.
+- [x] PD-8: creato `ProductDetailView.ascx` demo.
+- [x] PD-8: creato `ProductDetailView.ascx.vb` con proprieta' pubbliche.
+- [x] PD-9: preview arricchita con immagine, marca, categoria, promo, IVA, disponibilita' e ricondizionato.
+- [x] PD-11: introdotto `IProductDetailView` in `App_Code`.
+- [x] PD-11: rimosso `CallByName` e sostituito con contratto tipizzato.
+- [x] PD-12: aggiunta gallery demo statica.
+- [x] PD-13: aggiunta mini buy-box demo non operativa.
+
+Conferme di perimetro:
+
+- [x] `pnlProduct` non e' stato sostituito.
+- [x] La preview e' visibile solo con `ksProductDetailPreview=1` in ambiente locale.
+- [x] La preview usa `Request.IsLocal`.
+- [x] `ProductDetailViewModel` resta preparatorio.
+- [x] `ProductDetailView.ascx` resta demo.
+- [x] La gallery demo e' statica.
+- [x] La gallery demo non usa Swiper, Drift o PhotoSwipe.
+- [x] La mini buy-box e' non operativa.
+- [x] Il carrello reale resta nella scheda originale sotto la preview.
+- [x] `btnAddToCart_Click` non e' stato modificato.
+- [x] Query e datasource non sono stati modificati.
+- [x] SEO, `ApplySeo`, gallery reale e `BindImages` non sono stati modificati.
+- [x] Non sono stati aggiunti JavaScript o CSS.
+
+Test browser eseguiti e OK:
+
+- [x] Articolo normale senza parametro.
+- [x] Preview locale con `ksProductDetailPreview=1`.
+- [x] Dati prodotto visibili nella preview.
+- [x] Gallery demo statica visibile.
+- [x] Gallery reale visibile e invariata.
+- [x] Mini buy-box demo visibile e non operativa.
+- [x] Carrello reale funzionante dalla scheda originale.
+- [x] Quantita' reale funzionante dalla scheda originale.
+- [x] Varianti/TCId reali funzionanti dalla scheda originale.
+- [x] Console browser senza errori.
+
+Rischi residui:
+
+- [ ] Preview ancora demo.
+- [ ] Mini buy-box non operativa.
+- [ ] Gallery statica non finale.
+- [ ] Nessuna sostituzione della scheda reale ancora eseguita.
+- [ ] Futuro replace da fare solo gated, locale o feature-flagged e reversibile.
+
+Prossimi step consigliati:
+
+- [ ] Aggiungere tab descrizione/info demo.
+- [ ] Rifinire layout preview.
+- [ ] Valutare eventuale preview replace gated.
+- [ ] Introdurre feature flag separata solo dopo validazione completa.
