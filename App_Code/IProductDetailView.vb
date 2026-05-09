@@ -16,6 +16,7 @@ Public Interface IProductDetailView
     Property IsRefurbished As Boolean
     Property RefurbishedText As String
     Property ProductUrl As String
+    Property QuantityText As String
     Property AddToCartEnabled As Boolean
     Property ShowVariants As Boolean
     Property SelectedVariantTCId As Integer

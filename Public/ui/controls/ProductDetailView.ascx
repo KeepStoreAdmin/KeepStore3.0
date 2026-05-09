@@ -44,8 +44,13 @@
     <asp:PlaceHolder ID="phRefurbished" runat="server" Visible="false">
         <p class="mb-1">Ricondizionato: <asp:Literal ID="litRefurbished" runat="server" /></p>
     </asp:PlaceHolder>
-    <p class="mb-1">Varianti: <asp:Literal ID="litVariants" runat="server" /></p>
-    <p class="mb-1">Add-to-cart: <asp:Literal ID="litAddToCartStatus" runat="server" /></p>
+    <div>
+        <p class="mb-1"><strong>Mini buy-box demo</strong></p>
+        <p class="mb-1">Quantita demo: <asp:Literal ID="litQuantity" runat="server" /></p>
+        <p class="mb-1">Varianti: <asp:Literal ID="litVariants" runat="server" /></p>
+        <p class="mb-1">Add-to-cart: <asp:Literal ID="litAddToCartStatus" runat="server" /></p>
+        <p class="mb-1">Il carrello reale resta gestito dalla scheda originale sotto la preview.</p>
+    </div>
     <asp:PlaceHolder ID="phProductUrl" runat="server" Visible="false">
         <p class="mb-1">Link prodotto: <asp:Literal ID="litProductUrl" runat="server" /></p>
     </asp:PlaceHolder>

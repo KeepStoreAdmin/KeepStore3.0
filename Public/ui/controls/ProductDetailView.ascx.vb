@@ -22,6 +22,7 @@ Partial Class Public_ui_controls_ProductDetailView
     Public Property IsRefurbished As Boolean Implements IProductDetailView.IsRefurbished
     Public Property RefurbishedText As String Implements IProductDetailView.RefurbishedText
     Public Property ProductUrl As String Implements IProductDetailView.ProductUrl
+    Public Property QuantityText As String Implements IProductDetailView.QuantityText
     Public Property AddToCartEnabled As Boolean Implements IProductDetailView.AddToCartEnabled
     Public Property ShowVariants As Boolean Implements IProductDetailView.ShowVariants
     Public Property SelectedVariantTCId As Integer Implements IProductDetailView.SelectedVariantTCId
@@ -75,6 +76,7 @@ Partial Class Public_ui_controls_ProductDetailView
         litAvailability.Text = If(AvailabilityHtml, String.Empty)
         litRefurbished.Text = HttpUtility.HtmlEncode(If(RefurbishedText, "Articolo ricondizionato"))
         phRefurbished.Visible = IsRefurbished OrElse Not String.IsNullOrWhiteSpace(RefurbishedText)
+        litQuantity.Text = HttpUtility.HtmlEncode(BuildQuantityText())
         litVariants.Text = HttpUtility.HtmlEncode(BuildVariantText())
         litAddToCartStatus.Text = HttpUtility.HtmlEncode(BuildAddToCartText())
         litProductUrl.Text = HttpUtility.HtmlEncode(If(ProductUrl, String.Empty))
@@ -97,5 +99,13 @@ Partial Class Public_ui_controls_ProductDetailView
         End If
 
         Return "demo non operativo"
+    End Function
+
+    Private Function BuildQuantityText() As String
+        If Not String.IsNullOrWhiteSpace(QuantityText) Then
+            Return QuantityText.Trim()
+        End If
+
+        Return "1"
     End Function
 End Class

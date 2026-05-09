@@ -234,6 +234,7 @@ Partial Class articolo
                     detailView.IsRefurbished = previewModel.IsRefurbished
                     detailView.RefurbishedText = previewModel.RefurbishedText
                     detailView.ProductUrl = previewModel.ProductUrl
+                    detailView.QuantityText = previewModel.QuantityText
                     detailView.AddToCartEnabled = previewModel.AddToCartEnabled
                     detailView.ShowVariants = previewModel.ShowVariants
                     detailView.SelectedVariantTCId = previewModel.SelectedVariantTCId
