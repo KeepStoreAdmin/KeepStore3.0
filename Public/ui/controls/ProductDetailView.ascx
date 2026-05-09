@@ -9,6 +9,19 @@
         </p>
     </asp:PlaceHolder>
 
+    <asp:PlaceHolder ID="phDemoGallery" runat="server" Visible="false">
+        <p class="mb-1">Gallery demo statica:</p>
+        <div>
+            <asp:Repeater ID="rptDemoGalleryImages" runat="server">
+                <ItemTemplate>
+                    <span class="d-inline-block me-2 mb-2">
+                        <asp:Image ID="imgDemoGalleryThumb" runat="server" ImageUrl='<%# Container.DataItem %>' AlternateText="Miniatura prodotto" Width="72" Height="72" />
+                    </span>
+                </ItemTemplate>
+            </asp:Repeater>
+        </div>
+    </asp:PlaceHolder>
+
     <p class="mb-1">Prodotto: <asp:Literal ID="litProductName" runat="server" /></p>
     <p class="mb-1">Codice: <asp:Literal ID="litProductCode" runat="server" /></p>
     <asp:PlaceHolder ID="phBrand" runat="server" Visible="false">

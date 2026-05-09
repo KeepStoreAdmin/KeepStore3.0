@@ -52,6 +52,7 @@ Partial Class articolo
         Public Property AddToCartEnabled As Boolean
         Public Property ShowVariants As Boolean
         Public Property SelectedVariantTCId As Integer
+        Public Property GalleryImageUrls As IEnumerable(Of String)
     End Class
 
     Private Class RelatedItem
@@ -236,6 +237,7 @@ Partial Class articolo
                     detailView.AddToCartEnabled = previewModel.AddToCartEnabled
                     detailView.ShowVariants = previewModel.ShowVariants
                     detailView.SelectedVariantTCId = previewModel.SelectedVariantTCId
+                    detailView.GalleryImageUrls = previewModel.GalleryImageUrls
                     phProductDetailPreview.Controls.Clear()
                     phProductDetailPreview.Controls.Add(previewControl)
                     phProductDetailPreview.Visible = True
@@ -1300,6 +1302,7 @@ Partial Class articolo
         End If
 
         Dim mainImageUrl As String = NormalizeImageUrl(GetRowString(row, "Img1"))
+        Dim galleryImageUrls As List(Of String) = BuildProductDetailGalleryImageUrls(row)
         Dim longValue As String = FirstNonEmpty(GetRowString(row, "DescrizioneHTML"), GetRowString(row, "DescrizioneLunga"), GetRowString(row, "Descrizione2"))
         Dim availabilityText As String = BuildAvailabilityText(row)
         Dim availabilityCss As String = "ks-availability-check"
@@ -1343,8 +1346,23 @@ Partial Class articolo
             .QuantityText = "1",
             .AddToCartEnabled = (productId > 0),
             .ShowVariants = _tcEnabled,
-            .SelectedVariantTCId = selectedTcid
+            .SelectedVariantTCId = selectedTcid,
+            .GalleryImageUrls = galleryImageUrls
         }
+    End Function
+
+    Private Function BuildProductDetailGalleryImageUrls(row As DataRow) As List(Of String)
+        Dim images As New List(Of String)()
+        If row Is Nothing Then Return images
+
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        For i As Integer = 1 To 6
+            Dim imageUrl As String = NormalizeImageUrl(GetRowString(row, "Img" & i.ToString(CultureInfo.InvariantCulture)))
+            If String.IsNullOrWhiteSpace(imageUrl) Then Continue For
+            If seen.Add(imageUrl) Then images.Add(imageUrl)
+        Next
+
+        Return images
     End Function
 
     Private Sub BindProduct(row As DataRow)

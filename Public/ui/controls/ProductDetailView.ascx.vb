@@ -1,4 +1,5 @@
 Imports System
+Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.Web
 
@@ -24,6 +25,24 @@ Partial Class Public_ui_controls_ProductDetailView
     Public Property AddToCartEnabled As Boolean Implements IProductDetailView.AddToCartEnabled
     Public Property ShowVariants As Boolean Implements IProductDetailView.ShowVariants
     Public Property SelectedVariantTCId As Integer Implements IProductDetailView.SelectedVariantTCId
+    Private _galleryImageUrls As New List(Of String)()
+
+    Public Property GalleryImageUrls As IEnumerable(Of String) Implements IProductDetailView.GalleryImageUrls
+        Get
+            Return _galleryImageUrls
+        End Get
+        Set(value As IEnumerable(Of String))
+            _galleryImageUrls = New List(Of String)()
+            If value Is Nothing Then Return
+
+            Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            For Each imageUrl As String In value
+                Dim safeUrl As String = If(imageUrl, String.Empty).Trim()
+                If safeUrl.Length = 0 Then Continue For
+                If seen.Add(safeUrl) Then _galleryImageUrls.Add(safeUrl)
+            Next
+        End Set
+    End Property
 
     Protected Overrides Sub OnPreRender(ByVal e As EventArgs)
         MyBase.OnPreRender(e)
@@ -32,6 +51,12 @@ Partial Class Public_ui_controls_ProductDetailView
         If phMainImage.Visible Then
             imgMain.ImageUrl = MainImageUrl
             imgMain.AlternateText = If(String.IsNullOrWhiteSpace(ProductName), "Prodotto", ProductName)
+        End If
+
+        phDemoGallery.Visible = (_galleryImageUrls.Count > 0)
+        If phDemoGallery.Visible Then
+            rptDemoGalleryImages.DataSource = _galleryImageUrls
+            rptDemoGalleryImages.DataBind()
         End If
 
         litProductName.Text = HttpUtility.HtmlEncode(If(ProductName, String.Empty))

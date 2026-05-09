@@ -1,3 +1,5 @@
+Imports System.Collections.Generic
+
 Public Interface IProductDetailView
     Property ProductName As String
     Property ProductCode As String
@@ -17,4 +19,5 @@ Public Interface IProductDetailView
     Property AddToCartEnabled As Boolean
     Property ShowVariants As Boolean
     Property SelectedVariantTCId As Integer
+    Property GalleryImageUrls As IEnumerable(Of String)
 End Interface
