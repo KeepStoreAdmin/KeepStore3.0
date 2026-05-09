@@ -211,7 +211,21 @@ Partial Class articolo
         End If
 
         BindProduct(row)
-        phProductDetailPreview.Visible = IsProductDetailPreviewEnabled()
+        If IsProductDetailPreviewEnabled() Then
+            Dim previewModel As ProductDetailViewModel = BuildProductDetailViewModel(row)
+            If previewModel IsNot Nothing Then
+                litProductDetailPreviewName.Text = Server.HtmlEncode(previewModel.ProductName)
+                litProductDetailPreviewCode.Text = Server.HtmlEncode(previewModel.ProductCode)
+                litProductDetailPreviewPrice.Text = previewModel.PriceHtml
+                litProductDetailPreviewAvailability.Text = previewModel.AvailabilityHtml
+                litProductDetailPreviewTCId.Text = Server.HtmlEncode(previewModel.TCId.ToString(CultureInfo.InvariantCulture))
+                phProductDetailPreview.Visible = True
+            Else
+                phProductDetailPreview.Visible = False
+            End If
+        Else
+            phProductDetailPreview.Visible = False
+        End If
         TrackRecentlyViewed(_id)
         ApplySeo(row)
         BindProductReviews()
