@@ -38,6 +38,21 @@
         </section>
     </asp:PlaceHolder>
 
+    <asp:PlaceHolder ID="phProductDetailPreview" runat="server" Visible="false">
+        <section class="flat-spacing-2 pt-0">
+            <div class="container">
+                <div class="alert alert-info mb-4">
+                    <p class="mb-1"><strong>Preview nuova scheda prodotto attiva solo in locale</strong></p>
+                    <p class="mb-1">Prodotto: <asp:Literal ID="litProductDetailPreviewName" runat="server" /></p>
+                    <p class="mb-1">Codice: <asp:Literal ID="litProductDetailPreviewCode" runat="server" /></p>
+                    <p class="mb-1">Prezzo: <asp:Literal ID="litProductDetailPreviewPrice" runat="server" /></p>
+                    <p class="mb-1">Disponibilita: <asp:Literal ID="litProductDetailPreviewAvailability" runat="server" /></p>
+                    <p class="mb-0">TCId: <asp:Literal ID="litProductDetailPreviewTCId" runat="server" /></p>
+                </div>
+            </div>
+        </section>
+    </asp:PlaceHolder>
+
     <asp:Panel ID="pnlProduct" runat="server" CssClass="ks-product-page">
         <section class="ks-product-main-section">
             <div class="tf-main-product section-image-zoom">
