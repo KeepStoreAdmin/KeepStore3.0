@@ -38,6 +38,14 @@
         </section>
     </asp:PlaceHolder>
 
+    <asp:PlaceHolder ID="phProductDetailPreview" runat="server" Visible="false">
+        <section class="flat-spacing-2 pt-0">
+            <div class="container">
+                <div class="alert alert-info mb-4">Preview nuova scheda prodotto attiva solo in locale</div>
+            </div>
+        </section>
+    </asp:PlaceHolder>
+
     <asp:Panel ID="pnlProduct" runat="server" CssClass="ks-product-page">
         <section class="ks-product-main-section">
             <div class="tf-main-product section-image-zoom">

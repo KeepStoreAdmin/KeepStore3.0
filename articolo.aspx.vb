@@ -149,6 +149,21 @@ Partial Class articolo
         Return True
     End Function
 
+    Private Function IsProductDetailDebugModeAllowed() As Boolean
+        Try
+            Dim context As System.Web.HttpContext = System.Web.HttpContext.Current
+            If context Is Nothing OrElse context.Request Is Nothing Then Return False
+            Return context.Request.IsLocal
+        Catch
+            Return False
+        End Try
+    End Function
+
+    Private Function IsProductDetailPreviewEnabled() As Boolean
+        If Not IsProductDetailDebugModeAllowed() Then Return False
+        Return String.Equals(Convert.ToString(Request.QueryString("ksProductDetailPreview")), "1", StringComparison.Ordinal)
+    End Function
+
     Private Sub LoadPage()
         Dim row As DataRow = GetProductRow(_id, _tcid, includeTcidFilter:=(_tcidPresent AndAlso _tcEnabled AndAlso _tcid > 0))
 
@@ -169,6 +184,7 @@ Partial Class articolo
         End If
 
         BindProduct(row)
+        phProductDetailPreview.Visible = IsProductDetailPreviewEnabled()
         TrackRecentlyViewed(_id)
         ApplySeo(row)
         BindProductReviews()
