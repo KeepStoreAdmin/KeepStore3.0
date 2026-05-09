@@ -24,6 +24,9 @@
 
     <p class="mb-1">Prodotto: <asp:Literal ID="litProductName" runat="server" /></p>
     <p class="mb-1">Codice: <asp:Literal ID="litProductCode" runat="server" /></p>
+    <asp:PlaceHolder ID="phEan" runat="server" Visible="false">
+        <p class="mb-1">EAN: <asp:Literal ID="litEan" runat="server" /></p>
+    </asp:PlaceHolder>
     <asp:PlaceHolder ID="phBrand" runat="server" Visible="false">
         <p class="mb-1">Marca: <asp:Literal ID="litBrandName" runat="server" /></p>
     </asp:PlaceHolder>
@@ -55,5 +58,30 @@
         <p class="mb-1">Link prodotto: <asp:Literal ID="litProductUrl" runat="server" /></p>
     </asp:PlaceHolder>
     <p class="mb-1">TCId: <asp:Literal ID="litTCId" runat="server" /></p>
-    <div class="mb-0"><asp:Literal ID="litShortDescription" runat="server" /></div>
+
+    <div>
+        <p class="mb-1"><strong>Descrizione demo</strong></p>
+        <asp:PlaceHolder ID="phShortDescription" runat="server" Visible="false">
+            <div class="mb-1"><asp:Literal ID="litShortDescription" runat="server" /></div>
+        </asp:PlaceHolder>
+        <asp:PlaceHolder ID="phLongDescription" runat="server" Visible="false">
+            <div class="mb-1"><asp:Literal ID="litLongDescription" runat="server" /></div>
+        </asp:PlaceHolder>
+    </div>
+
+    <div>
+        <p class="mb-1"><strong>Informazioni prodotto demo</strong></p>
+        <p class="mb-1">Codice: <asp:Literal ID="litInfoProductCode" runat="server" /></p>
+        <asp:PlaceHolder ID="phInfoEan" runat="server" Visible="false">
+            <p class="mb-1">EAN: <asp:Literal ID="litInfoEan" runat="server" /></p>
+        </asp:PlaceHolder>
+        <asp:PlaceHolder ID="phInfoBrand" runat="server" Visible="false">
+            <p class="mb-1">Marca: <asp:Literal ID="litInfoBrandName" runat="server" /></p>
+        </asp:PlaceHolder>
+        <asp:PlaceHolder ID="phInfoCategory" runat="server" Visible="false">
+            <p class="mb-1">Categoria: <asp:Literal ID="litInfoCategoryName" runat="server" /></p>
+        </asp:PlaceHolder>
+        <p class="mb-1">TCId: <asp:Literal ID="litInfoTCId" runat="server" /></p>
+        <p class="mb-0">Varianti: <asp:Literal ID="litInfoVariants" runat="server" /></p>
+    </div>
 </div>

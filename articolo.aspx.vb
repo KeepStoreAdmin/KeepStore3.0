@@ -221,6 +221,7 @@ Partial Class articolo
                 If detailView IsNot Nothing Then
                     detailView.ProductName = previewModel.ProductName
                     detailView.ProductCode = previewModel.ProductCode
+                    detailView.Ean = previewModel.Ean
                     detailView.MainImageUrl = previewModel.MainImageUrl
                     detailView.BrandName = previewModel.BrandName
                     detailView.CategoryName = previewModel.CategoryName
@@ -231,6 +232,7 @@ Partial Class articolo
                     detailView.AvailabilityHtml = previewModel.AvailabilityHtml
                     detailView.TCId = previewModel.TCId
                     detailView.ShortDescriptionHtml = previewModel.ShortDescriptionHtml
+                    detailView.LongDescriptionHtml = previewModel.LongDescriptionHtml
                     detailView.IsRefurbished = previewModel.IsRefurbished
                     detailView.RefurbishedText = previewModel.RefurbishedText
                     detailView.ProductUrl = previewModel.ProductUrl

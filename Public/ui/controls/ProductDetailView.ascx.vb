@@ -9,10 +9,12 @@ Partial Class Public_ui_controls_ProductDetailView
 
     Public Property ProductName As String Implements IProductDetailView.ProductName
     Public Property ProductCode As String Implements IProductDetailView.ProductCode
+    Public Property Ean As String Implements IProductDetailView.Ean
     Public Property PriceHtml As String Implements IProductDetailView.PriceHtml
     Public Property AvailabilityHtml As String Implements IProductDetailView.AvailabilityHtml
     Public Property TCId As Integer Implements IProductDetailView.TCId
     Public Property ShortDescriptionHtml As String Implements IProductDetailView.ShortDescriptionHtml
+    Public Property LongDescriptionHtml As String Implements IProductDetailView.LongDescriptionHtml
     Public Property MainImageUrl As String Implements IProductDetailView.MainImageUrl
     Public Property BrandName As String Implements IProductDetailView.BrandName
     Public Property CategoryName As String Implements IProductDetailView.CategoryName
@@ -62,6 +64,8 @@ Partial Class Public_ui_controls_ProductDetailView
 
         litProductName.Text = HttpUtility.HtmlEncode(If(ProductName, String.Empty))
         litProductCode.Text = HttpUtility.HtmlEncode(If(ProductCode, String.Empty))
+        litEan.Text = HttpUtility.HtmlEncode(If(Ean, String.Empty))
+        phEan.Visible = Not String.IsNullOrWhiteSpace(Ean)
         litBrandName.Text = HttpUtility.HtmlEncode(If(BrandName, String.Empty))
         phBrand.Visible = Not String.IsNullOrWhiteSpace(BrandName)
         litCategoryName.Text = HttpUtility.HtmlEncode(If(CategoryName, String.Empty))
@@ -83,6 +87,18 @@ Partial Class Public_ui_controls_ProductDetailView
         phProductUrl.Visible = Not String.IsNullOrWhiteSpace(ProductUrl)
         litTCId.Text = HttpUtility.HtmlEncode(TCId.ToString(CultureInfo.InvariantCulture))
         litShortDescription.Text = If(ShortDescriptionHtml, String.Empty)
+        phShortDescription.Visible = Not String.IsNullOrWhiteSpace(ShortDescriptionHtml)
+        litLongDescription.Text = If(LongDescriptionHtml, String.Empty)
+        phLongDescription.Visible = Not String.IsNullOrWhiteSpace(LongDescriptionHtml)
+        litInfoProductCode.Text = HttpUtility.HtmlEncode(If(ProductCode, String.Empty))
+        litInfoEan.Text = HttpUtility.HtmlEncode(If(Ean, String.Empty))
+        phInfoEan.Visible = Not String.IsNullOrWhiteSpace(Ean)
+        litInfoBrandName.Text = HttpUtility.HtmlEncode(If(BrandName, String.Empty))
+        phInfoBrand.Visible = Not String.IsNullOrWhiteSpace(BrandName)
+        litInfoCategoryName.Text = HttpUtility.HtmlEncode(If(CategoryName, String.Empty))
+        phInfoCategory.Visible = Not String.IsNullOrWhiteSpace(CategoryName)
+        litInfoTCId.Text = HttpUtility.HtmlEncode(TCId.ToString(CultureInfo.InvariantCulture))
+        litInfoVariants.Text = HttpUtility.HtmlEncode(BuildVariantText())
     End Sub
 
     Private Function BuildVariantText() As String
