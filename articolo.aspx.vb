@@ -26,6 +26,33 @@ Partial Class articolo
         Public Property Alt As String
     End Class
 
+    Private Class ProductDetailViewModel
+        Public Property ProductId As Integer
+        Public Property TCId As Integer
+        Public Property ProductName As String
+        Public Property ProductCode As String
+        Public Property Ean As String
+        Public Property BrandName As String
+        Public Property CategoryName As String
+        Public Property ProductUrl As String
+        Public Property ShortDescriptionHtml As String
+        Public Property LongDescriptionHtml As String
+        Public Property PriceHtml As String
+        Public Property PriceText As String
+        Public Property OldPriceText As String
+        Public Property IvaLabel As String
+        Public Property IsPromo As Boolean
+        Public Property AvailabilityHtml As String
+        Public Property AvailabilityText As String
+        Public Property AvailabilityCss As String
+        Public Property IsRefurbished As Boolean
+        Public Property RefurbishedText As String
+        Public Property QuantityText As String
+        Public Property AddToCartEnabled As Boolean
+        Public Property ShowVariants As Boolean
+        Public Property SelectedVariantTCId As Integer
+    End Class
+
     Private Class RelatedItem
         Public Property Id As Integer
         Public Property Tcid As Integer
@@ -1211,6 +1238,75 @@ Partial Class articolo
 
         sb.AppendLine("LIMIT 1")
         Return sb.ToString()
+    End Function
+
+    Private Function BuildProductDetailViewModel(row As DataRow) As ProductDetailViewModel
+        If row Is Nothing Then Return Nothing
+
+        Dim productId As Integer = FirstPositiveInt(GetRowInt(row, "ID", 0), GetRowInt(row, "id", 0), _id)
+        Dim selectedTcid As Integer = GetRowInt(row, "TCid", _tcid)
+        Dim productName As String = FirstNonEmpty(GetRowString(row, "Descrizione1"), GetRowString(row, "Nome"), GetRowString(row, "Descrizione"), "Articolo")
+        Dim productCode As String = FirstNonEmpty(GetRowString(row, "Codice"), GetRowString(row, "SKU"))
+        Dim ean As String = FirstNonEmpty(GetRowString(row, "Ean"), GetRowString(row, "EAN"))
+        Dim brandName As String = FirstNonEmpty(GetRowString(row, "MarcheDescrizione"), GetRowString(row, "Marca"))
+        Dim categoryName As String = FirstNonEmpty(GetRowString(row, "TipologieDescrizione"), GetRowString(row, "CategorieDescrizione"), GetRowString(row, "SettoriDescrizione"), "Catalogo")
+
+        Dim price As PriceContext = BuildPriceContext(GetRowDecimal(row, "Prezzo"),
+                                                      GetRowDecimal(row, "PrezzoIvato"),
+                                                      GetRowDecimal(row, "PrezzoPromo"),
+                                                      GetRowDecimal(row, "PrezzoPromoIvato"),
+                                                      GetRowInt(row, "InOfferta", 0))
+
+        Dim shortDesc As String = FirstNonEmpty(GetRowString(row, "Descrizione2"), GetRowString(row, "Sottotitolo"))
+        Dim shortDescHtml As String = String.Empty
+        If Not String.IsNullOrEmpty(shortDesc) Then
+            shortDescHtml = "<li><p class=""body-text-3"">" & Server.HtmlEncode(shortDesc) & "</p></li>"
+        End If
+
+        Dim longValue As String = FirstNonEmpty(GetRowString(row, "DescrizioneHTML"), GetRowString(row, "DescrizioneLunga"), GetRowString(row, "Descrizione2"))
+        Dim availabilityText As String = BuildAvailabilityText(row)
+        Dim availabilityCss As String = "ks-availability-check"
+        If availabilityText.IndexOf("Disponibile", StringComparison.OrdinalIgnoreCase) >= 0 Then
+            availabilityCss = "ks-availability-ok"
+        ElseIf availabilityText.IndexOf("arrivo", StringComparison.OrdinalIgnoreCase) >= 0 OrElse availabilityText.IndexOf("ordine", StringComparison.OrdinalIgnoreCase) >= 0 Then
+            availabilityCss = "ks-availability-wait"
+        End If
+
+        Dim isRefurbished As Boolean = (GetRowInt(row, "Ricondizionato", 0) = 1)
+        Dim refurbishedNote As String = GetRowString(row, "NoteRicondizionato")
+        Dim refurbishedText As String = String.Empty
+        If isRefurbished Then
+            refurbishedText = FirstNonEmpty(refurbishedNote, "Articolo ricondizionato")
+        End If
+
+        Dim includeTcid As Boolean = (_tcEnabled AndAlso selectedTcid <> -1)
+
+        Return New ProductDetailViewModel() With {
+            .ProductId = productId,
+            .TCId = selectedTcid,
+            .ProductName = productName,
+            .ProductCode = productCode,
+            .Ean = ean,
+            .BrandName = brandName,
+            .CategoryName = categoryName,
+            .ProductUrl = BuildProductUrl(productId, selectedTcid, includeTcid),
+            .ShortDescriptionHtml = shortDescHtml,
+            .LongDescriptionHtml = NormalizeDescriptionHtml(longValue),
+            .PriceHtml = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo),
+            .PriceText = BuildPriceText(price.CurrentPrice),
+            .OldPriceText = BuildPriceText(price.OldPrice),
+            .IvaLabel = price.IvaLabel,
+            .IsPromo = price.IsPromo,
+            .AvailabilityHtml = BuildAvailabilityHtml(availabilityText),
+            .AvailabilityText = availabilityText,
+            .AvailabilityCss = availabilityCss,
+            .IsRefurbished = isRefurbished,
+            .RefurbishedText = refurbishedText,
+            .QuantityText = "1",
+            .AddToCartEnabled = (productId > 0),
+            .ShowVariants = _tcEnabled,
+            .SelectedVariantTCId = selectedTcid
+        }
     End Function
 
     Private Sub BindProduct(row As DataRow)
