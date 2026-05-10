@@ -232,10 +232,12 @@
             <div class="ks-home-wide-promo-inner">
                 <div class="ks-home-wide-promo-copy">
                     <p class="caption text-primary fw-semibold mb-2">Catalogo e assistenza</p>
-                    <h5 class="fw-semibold mb-2">Computer, telefonia, stampanti e assistenza specializzata</h5>
-                    <p class="body-text-3 text-main-2 mb-0">Una fascia promozionale pulita per guidare l'utente verso catalogo e supporto, senza prezzi o sconti inventati.</p>
+                    <div class="mb-0">
+                        <h5 class="fw-semibold mb-2">Computer, telefonia, stampanti e assistenza specializzata</h5>
+                        <p class="body-text-3 text-main-2 mb-0">Una fascia promozionale pulita per guidare l'utente verso catalogo e supporto, senza prezzi o sconti inventati.</p>
+                    </div>
                 </div>
-                <div class="ks-home-wide-promo-actions">
+                <div class="ks-home-wide-promo-actions d-flex align-items-center gap-2">
                     <a href="articoli.aspx" class="tf-btn btn-line"><span>Vai al catalogo</span></a>
                     <a href="Contattaci.aspx" class="tf-btn btn-line"><span>Richiedi assistenza</span></a>
                 </div>
