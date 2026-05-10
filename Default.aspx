@@ -15,8 +15,8 @@
                 <div class="wrap-item-1 ks-home-departments-panel">
                     <asp:Panel ID="HomeHeroDepartmentsPanel" runat="server" CssClass="nav-category-wrap tf-nav-menu ks-home-departments-list">
                         <div class="main-nav category-menu active-item">
-                            <h6 class="fw-semibold title nav-title btn-active">
-                                <i class="icon-menu-dots"></i>
+                            <h6 class="fw-semibold title nav-title btn-active d-flex align-items-center gap-2 mb-0">
+                                <i class="icon-menu-dots" aria-hidden="true"></i>
                                 <span>Tutti i settori</span>
                             </h6>
                             <ul class="menu-category-list" role="menu">
@@ -29,7 +29,7 @@
                                                         <%# RenderHomeSectorMedia(Eval("ImgUrl"), Eval("Descrizione")) %>
                                                     </span>
                                                     <span class="ks-home-menu-title"><%# SafeText(Eval("Descrizione")) %></span>
-                                                    <span class="ks-home-menu-arrow"><i class="icon-arrow-right-lg"></i></span>
+                                                    <span class="ks-home-menu-arrow"><i class="icon-arrow-right-lg" aria-hidden="true"></i></span>
                                                 </span>
                                             </a>
                                         </li>
@@ -50,11 +50,11 @@
                                             <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx?inpromo=1") %>' class="img-style img-item ks-home-hero-media" aria-label='<%# SafeText(Eval("Caption")) %>'>
                                                 <img width="800" height="794" class="lazyload" src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' data-src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' alt='<%# SafeText(Eval("Caption")) %>' />
                                             </a>
-                                            <div class="content ks-home-hero-content">
-                                                <p class="caption fw-semibold ks-home-hero-eyebrow"><%# SafeText(Eval("Eyebrow")) %></p>
-                                                <h1 class="fw-semibold ks-home-hero-title"><%# SafeText(Eval("Caption")) %></h1>
-                                                <p class="body-text ks-home-hero-copy"><%# SafeText(Eval("Description")) %></p>
-                                                <div class="ks-home-hero-actions">
+                                            <div class="content ks-home-hero-content d-flex flex-column gap-2">
+                                                <p class="caption fw-semibold ks-home-hero-eyebrow mb-0"><%# SafeText(Eval("Eyebrow")) %></p>
+                                                <h1 class="fw-semibold ks-home-hero-title mb-0"><%# SafeText(Eval("Caption")) %></h1>
+                                                <p class="body-text ks-home-hero-copy mb-0"><%# SafeText(Eval("Description")) %></p>
+                                                <div class="ks-home-hero-actions d-flex align-items-center gap-2 mt-2">
                                                     <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx?inpromo=1") %>' class="tf-btn btn-large animate-btn bg-primary text-white">
                                                         <span>Scopri le offerte</span>
                                                     </a>
@@ -68,8 +68,8 @@
                                 </ItemTemplate>
                             </asp:Repeater>
                         </div>
-                        <div class="swiper-button-prev nav-swiper ks-hero-prev"><i class="icon-arrow-left-lg"></i></div>
-                        <div class="swiper-button-next nav-swiper ks-hero-next"><i class="icon-arrow-right-lg"></i></div>
+                        <div class="swiper-button-prev nav-swiper ks-hero-prev"><i class="icon-arrow-left-lg" aria-hidden="true"></i></div>
+                        <div class="swiper-button-next nav-swiper ks-hero-next"><i class="icon-arrow-right-lg" aria-hidden="true"></i></div>
                         <div class="sw-dot-default ks-hero-pagination"></div>
                     </div>
                 </div>
@@ -81,13 +81,13 @@
                                 <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx") %>' class="img-box img-style d-block" aria-label='<%# SafeText(Eval("Title")) %>'>
                                     <img width="540" height="398" class="lazyload" src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' data-src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' alt='<%# SafeText(Eval("Title")) %>' />
                                 </a>
-                                <div class="content">
+                                <div class="content d-flex flex-column gap-2">
                                     <span class="box-sale-wrap"><span class="small-text"><%# SafeText(Eval("Badge")) %></span></span>
-                                    <div class="box-title">
-                                        <p class="caption text-white"><%# SafeText(Eval("Description")) %></p>
-                                        <h6 class="text-white"><%# SafeText(Eval("Title")) %></h6>
+                                    <div class="box-title mb-1">
+                                        <p class="caption text-white mb-1"><%# SafeText(Eval("Description")) %></p>
+                                        <h6 class="text-white mb-0"><%# SafeText(Eval("Title")) %></h6>
                                     </div>
-                                    <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx") %>' class="tf-btn btn-line-white"><span>Scopri ora</span></a>
+                                    <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx") %>' class="tf-btn btn-line-white mt-1"><span>Scopri ora</span></a>
                                 </div>
                             </div>
                         </ItemTemplate>
