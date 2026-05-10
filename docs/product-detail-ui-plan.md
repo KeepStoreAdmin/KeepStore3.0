@@ -4,7 +4,11 @@
 
 - Branch di lavoro: `task/product-detail-ui-plan`.
 - Validazione documentale: `task/product-detail-preview-validation`.
+- Validazione finale: `task/product-detail-final-validation`.
 - La preview `ProductDetailView` e' stata mergiata in `frontend-rebuild`.
+- I branch task Product Detail gia' mergiati sono stati puliti.
+- Nessuna PR verso `main` e' stata aperta.
+- `main` non e' stato toccato.
 - La fase iniziale era solo pianificazione tecnica; ora esiste anche una preview demo locale e gated.
 - La scheda reale `pnlProduct` non e' stata sostituita.
 - Nessun flusso applicativo reale viene cambiato dalla preview.
@@ -433,6 +437,7 @@ Primo step consigliato dopo lo stato attuale:
 10. Valutare una preview replace gated, senza attivazione produzione.
 11. Introdurre eventuale feature flag separata, disattivata di default.
 12. Attivare solo dopo test commerciale e gestionale.
+13. Stato finale post-merge: `frontend-rebuild` e' checkpoint stabile con preview tecnica validata; ogni eventuale replace futuro deve restare gated e reversibile.
 
 ## 26. Checklist test obbligatoria prima dell'attivazione
 
@@ -549,6 +554,46 @@ Validazione finale su `frontend-rebuild`:
 - [x] Tab reali OK.
 - [x] Console OK.
 
+Validazione finale post-merge, post-pulizia branch e test rapido:
+
+- [x] Branch testato: `frontend-rebuild`.
+- [x] Working tree pulito.
+- [x] Branch task Product Detail gia' mergiati puliti.
+- [x] Nessuna PR verso `main`.
+- [x] `main` non toccato.
+
+Test scheda normale:
+
+- [x] Scheda normale OK.
+- [x] Preview non visibile senza parametro OK.
+- [x] Gallery reale OK.
+- [x] Prezzo/disponibilita' OK.
+- [x] Quantita' OK.
+- [x] Varianti/TCId OK.
+- [x] Carrello OK.
+- [x] Tab reali OK.
+- [x] Recensioni/tab recensioni OK.
+- [x] Console scheda normale OK.
+
+Test preview rifinita:
+
+- [x] Preview rifinita OK.
+- [x] Layout preview rifinito OK.
+- [x] Gallery demo OK.
+- [x] Dati principali OK.
+- [x] Prezzo/disponibilita' preview OK.
+- [x] Mini buy-box demo non operativa OK.
+- [x] Messaggio carrello reale originale OK.
+- [x] Descrizione/info OK.
+- [x] Scheda reale sotto preview OK.
+- [x] Carrello reale sotto preview OK.
+- [x] Quantita' reale sotto preview OK.
+- [x] Varianti/TCId sotto preview OK.
+- [x] Gallery reale sotto preview OK.
+- [x] Tab reali sotto preview OK.
+- [x] Recensioni sotto preview OK.
+- [x] Console preview OK.
+
 Validazione recensioni reali PD-18 su `frontend-rebuild`:
 
 - [x] Branch testato: `frontend-rebuild`.
@@ -576,6 +621,12 @@ Stato attuale:
 - [x] Pronta come preview tecnica su `frontend-rebuild`.
 - [ ] Non pronta come sostituzione reale della scheda.
 - [ ] Eventuale replace futuro solo con parametro gated e rollback rapido.
+- [x] `ProductDetailView` resta una preview demo.
+- [x] Preview visibile solo in locale con `ksProductDetailPreview=1` e `Request.IsLocal`.
+- [x] `pnlProduct` non e' stato sostituito.
+- [x] Carrello reale resta nella scheda originale.
+- [x] Nessuna modifica a query, SEO, `ApplySeo`, `BindImages`, gallery reale o tab reali.
+- [x] Nessun JavaScript o CSS aggiunto.
 
 Rischi residui:
 
@@ -585,10 +636,11 @@ Rischi residui:
 - [ ] Nessuna sostituzione della scheda reale ancora eseguita.
 - [ ] Invio recensione non ancora testato.
 - [ ] Futuro replace da fare solo con parametro gated e rollback rapido.
+- [ ] Eventuale feature flag separata solo dopo validazione completa.
 
 Prossimi step consigliati:
 
-- [ ] Rifinire layout preview.
+- [ ] Lasciare `frontend-rebuild` come checkpoint stabile.
 - [ ] Valutare eventuale preview replace gated.
-- [ ] Testare recensioni reali.
-- [ ] Introdurre feature flag separata solo dopo validazione completa.
+- [ ] Valutare eventuale feature flag Product Detail separata.
+- [ ] Eseguire test commerciale/gestionale completo prima di qualsiasi attivazione reale.
