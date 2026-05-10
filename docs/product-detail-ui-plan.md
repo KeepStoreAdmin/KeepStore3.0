@@ -434,7 +434,7 @@ Primo step consigliato dopo lo stato attuale:
 7. Validare gallery reale, zoom e lightbox.
 8. Validare SEO e JSON-LD.
 9. Rifinire blocchi descrizione/info demo e layout piu' vicino alla UI finale.
-10. Valutare una preview replace gated, senza attivazione produzione.
+10. Non introdurre ancora `ksProductDetailReplace=1`: prima serve una `ProductDetailView` non piu' demo, con flusso operativo server-side o strategia equivalente sicura.
 11. Introdurre eventuale feature flag separata, disattivata di default.
 12. Attivare solo dopo test commerciale e gestionale.
 13. Stato finale post-merge: `frontend-rebuild` e' checkpoint stabile con preview tecnica validata; ogni eventuale replace futuro deve restare gated e reversibile.
@@ -616,11 +616,46 @@ Validazione recensioni reali PD-18 su `frontend-rebuild`:
 - [x] Tab reali OK.
 - [x] `main` non toccato.
 
+Decisione tecnica PD-22/PD-23 sulla futura modalita' replace gated:
+
+- [x] Non introdurre ancora `ksProductDetailReplace=1`.
+- [x] Mantenere la modalita' attuale preview/compare sopra la scheda reale.
+- [x] `pnlProduct` deve restare visibile.
+- [x] `ProductDetailView` resta demo.
+- [x] La mini buy-box resta non operativa.
+- [x] Il carrello reale resta nella scheda originale.
+- [x] Nascondere `pnlProduct` oggi sarebbe rischioso perche' nasconderebbe o renderebbe non accessibili carrello reale, quantita' reale, varianti/TCId reali, gallery reale, tab reali, recensioni reali e postback WebForms.
+- [x] Evitare bridge fragili verso controlli nascosti.
+
+Requisiti minimi per un futuro replace:
+
+- [ ] `ProductDetailView` non deve essere piu' solo demo.
+- [ ] Deve avere un flusso operativo server-side per carrello, quantita' e varianti oppure una strategia equivalente sicura.
+- [ ] L'eventuale parametro futuro deve restare locale/gated con `Request.IsLocal`.
+- [ ] Deve essere previsto rollback rapido.
+- [ ] Nessuna sostituzione globale senza feature flag separata e validazione completa.
+
+Test obbligatori per un eventuale futuro `ksProductDetailReplace=1`:
+
+- [ ] Scheda normale senza parametro.
+- [ ] Preview sopra con `ksProductDetailPreview=1`.
+- [ ] Replace locale con `ksProductDetailReplace=1`.
+- [ ] Parametro replace ignorato fuori locale.
+- [ ] Carrello.
+- [ ] Quantita'.
+- [ ] Varianti/TCId.
+- [ ] Gallery.
+- [ ] Tab.
+- [ ] Recensioni.
+- [ ] Console browser.
+- [ ] Rollback.
+
 Stato attuale:
 
 - [x] Pronta come preview tecnica su `frontend-rebuild`.
 - [ ] Non pronta come sostituzione reale della scheda.
-- [ ] Eventuale replace futuro solo con parametro gated e rollback rapido.
+- [x] Decisione corrente: no replace per ora.
+- [ ] Eventuale replace futuro solo dopo i requisiti minimi PD-23, con parametro gated e rollback rapido.
 - [x] `ProductDetailView` resta una preview demo.
 - [x] Preview visibile solo in locale con `ksProductDetailPreview=1` e `Request.IsLocal`.
 - [x] `pnlProduct` non e' stato sostituito.
@@ -635,12 +670,15 @@ Rischi residui:
 - [ ] Gallery statica non finale.
 - [ ] Nessuna sostituzione della scheda reale ancora eseguita.
 - [ ] Invio recensione non ancora testato.
-- [ ] Futuro replace da fare solo con parametro gated e rollback rapido.
+- [ ] Nascondere `pnlProduct` oggi renderebbe non accessibili flussi reali ancora necessari.
+- [ ] Futuro replace da fare solo quando la `ProductDetailView` non sara' piu' demo e con parametro gated e rollback rapido.
 - [ ] Eventuale feature flag separata solo dopo validazione completa.
 
 Prossimi step consigliati:
 
 - [ ] Lasciare `frontend-rebuild` come checkpoint stabile.
-- [ ] Valutare eventuale preview replace gated.
+- [ ] Non implementare `ksProductDetailReplace=1` nel prossimo step.
+- [ ] Prima rendere operativa la `ProductDetailView` oppure definire una strategia server-side equivalente sicura.
+- [ ] Valutare eventuale preview replace gated solo dopo i requisiti minimi PD-23.
 - [ ] Valutare eventuale feature flag Product Detail separata.
 - [ ] Eseguire test commerciale/gestionale completo prima di qualsiasi attivazione reale.
