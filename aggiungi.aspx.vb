@@ -390,6 +390,11 @@ End Sub
                 Integer.TryParse(selezionamultipla_ID, addId)
                 Integer.TryParse(selezionamultipla_TCID, addTc)
 
+                If ShouldSkipZeroPriceCartInsert(Prezzo, PrezzoIvato, _pgTmp) Then
+                    LogCartPriceLookupFailed(selezionamultipla_ID, selezionamultipla_TCID, NListino, LoginId, SessionID, "multipla")
+                    Continue For
+                End If
+
                 Dim cartRowId As Integer = AddCartRowWithNewcarrello(LoginId, SessionID, addId, addTc, Codice, Descrizione, quantitaRiga, NListino, Prezzo, PrezzoIvato, OfferteDettagliID, _pgTmp)
                 Dim rawCartOk As Boolean = VerifyCartRow(LoginId, SessionID, addId, addTc)
                 Dim visualCartOk As Boolean = VerifyVCarrelloRow(LoginId, SessionID, addId, addTc)
@@ -490,6 +495,11 @@ End Sub
                 Dim addTc As Integer = -1
                 Integer.TryParse(ListaArticoli(i).ToString(), addId)
                 Integer.TryParse(tcidRiga, addTc)
+
+                If ShouldSkipZeroPriceCartInsert(Prezzo, PrezzoIvato, prodottoGratis) Then
+                    LogCartPriceLookupFailed(ListaArticoli(i).ToString(), tcidRiga, NListino, LoginId, SessionID, "singola")
+                    Continue For
+                End If
 
                 Dim cartRowId As Integer = AddCartRowWithNewcarrello(LoginId, SessionID, addId, addTc, Codice, Descrizione, quantitaRiga, NListino, Prezzo, PrezzoIvato, OfferteDettagliID, prodottoGratis)
                 Dim rawCartOk As Boolean = VerifyCartRow(LoginId, SessionID, addId, addTc)
@@ -786,6 +796,25 @@ End Sub
         Next
         Return output
     End Function
+
+    Private Function ShouldSkipZeroPriceCartInsert(ByVal prezzo As Double,
+                                                   ByVal prezzoIvato As Double,
+                                                   ByVal prodottoGratis As Integer) As Boolean
+        If prodottoGratis <> 0 Then Return False
+        Return prezzo <= 0 AndAlso prezzoIvato <= 0
+    End Function
+
+    Private Sub LogCartPriceLookupFailed(ByVal articoloId As String,
+                                         ByVal tcId As String,
+                                         ByVal nListino As Integer,
+                                         ByVal loginId As Integer,
+                                         ByVal sessionId As String,
+                                         ByVal source As String)
+        Try
+            KeepStoreLog.Info("aggiungi.aspx", "Price lookup failed: skip cart insert source=" & source & " id=" & articoloId & " tcid=" & tcId & " nListino=" & nListino.ToString(CultureInfo.InvariantCulture) & " loginId=" & loginId.ToString(CultureInfo.InvariantCulture) & " sessionId=" & sessionId, HttpContext.Current)
+        Catch
+        End Try
+    End Sub
 
     Private Function AddCartRowWithNewcarrello(ByVal loginId As Integer,
                                                ByVal sessionId As String,
