@@ -496,14 +496,28 @@
             <div class="ks-home-trust-panel">
                 <div class="ks-home-trust-copy">
                     <p class="caption text-primary fw-semibold mb-2">Fiducia e conversione</p>
-                    <h5 class="fw-semibold">Un negozio tech con assistenza reale prima e dopo l'acquisto</h5>
-                    <p class="body-text-3 text-main-2 mb-0">KeepStore unisce catalogo ecommerce, disponibilita controllate e contatto diretto con il negozio per aiutarti a scegliere meglio.</p>
+                    <div class="mb-0">
+                        <h5 class="fw-semibold mb-2">Un negozio tech con assistenza reale prima e dopo l'acquisto</h5>
+                        <p class="body-text-3 text-main-2 mb-0">KeepStore unisce catalogo ecommerce, disponibilita controllate e contatto diretto con il negozio per aiutarti a scegliere meglio.</p>
+                    </div>
                 </div>
                 <div class="ks-home-trust-list">
-                    <div><i class="icon-check-3"></i><span>Esperienza tecnica su informatica e periferiche</span></div>
-                    <div><i class="icon-support-2"></i><span>Assistenza diretta e supporto post-vendita</span></div>
-                    <div><i class="icon-payment"></i><span>Pagamenti e checkout tramite flusso ecommerce esistente</span></div>
-                    <div><i class="icon-phone"></i><span>Contatto rapido con il negozio</span></div>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="icon-check-3"></i>
+                        <span>Esperienza tecnica su informatica e periferiche</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="icon-support-2"></i>
+                        <span>Assistenza diretta e supporto post-vendita</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="icon-payment"></i>
+                        <span>Pagamenti e checkout tramite flusso ecommerce esistente</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="icon-phone"></i>
+                        <span>Contatto rapido con il negozio</span>
+                    </div>
                 </div>
             </div>
         </div>
