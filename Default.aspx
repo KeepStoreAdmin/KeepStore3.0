@@ -370,20 +370,26 @@
     <section id="HomeBottomPromoSection" runat="server" visible="false" class="ks-home-section ks-home-banner-product">
         <div class="container">
             <div class="ks-home-bottom-promo-grid">
-                <a href="articoli.aspx?q=ricondizionato" class="ks-home-bottom-promo-card">
-                    <span>Ricondizionati</span>
-                    <strong>Soluzioni controllate per spendere meglio</strong>
-                    <em>Consulta gli articoli disponibili a catalogo</em>
+                <a href="articoli.aspx?q=ricondizionato" class="ks-home-bottom-promo-card d-flex flex-column gap-2">
+                    <span class="mb-0">Ricondizionati</span>
+                    <div class="mb-0">
+                        <strong>Soluzioni controllate per spendere meglio</strong>
+                        <em>Consulta gli articoli disponibili a catalogo</em>
+                    </div>
                 </a>
-                <a href="Contattaci.aspx" class="ks-home-bottom-promo-card ks-home-bottom-promo-card--service">
-                    <span>Supporto tecnico</span>
-                    <strong>Hai dubbi su compatibilita o configurazione?</strong>
-                    <em>Parla con KeepStore prima dell'acquisto</em>
+                <a href="Contattaci.aspx" class="ks-home-bottom-promo-card ks-home-bottom-promo-card--service d-flex flex-column gap-2">
+                    <span class="mb-0">Supporto tecnico</span>
+                    <div class="mb-0">
+                        <strong>Hai dubbi su compatibilita o configurazione?</strong>
+                        <em>Parla con KeepStore prima dell'acquisto</em>
+                    </div>
                 </a>
-                <a href="articoli.aspx?q=toner%20cartuccia%20stampante" class="ks-home-bottom-promo-card ks-home-bottom-promo-card--print">
-                    <span>Stampa e consumabili</span>
-                    <strong>Toner, cartucce e prodotti per ufficio</strong>
-                    <em>Apri il catalogo e filtra gli articoli reali</em>
+                <a href="articoli.aspx?q=toner%20cartuccia%20stampante" class="ks-home-bottom-promo-card ks-home-bottom-promo-card--print d-flex flex-column gap-2">
+                    <span class="mb-0">Stampa e consumabili</span>
+                    <div class="mb-0">
+                        <strong>Toner, cartucce e prodotti per ufficio</strong>
+                        <em>Apri il catalogo e filtra gli articoli reali</em>
+                    </div>
                 </a>
             </div>
         </div>
