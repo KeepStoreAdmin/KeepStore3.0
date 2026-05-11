@@ -445,35 +445,47 @@
                 </a>
             </div>
             <div class="ks-home-services-grid">
-                <article class="ks-home-service-item">
+                <article class="ks-home-service-item d-flex flex-column gap-2">
                     <span class="ks-home-service-icon"><i class="icon-computer"></i></span>
-                    <h6>Riparazione PC e notebook</h6>
-                    <p>Diagnosi, upgrade, sostituzione componenti e ottimizzazione dei tuoi dispositivi.</p>
+                    <div class="mb-0">
+                        <h6>Riparazione PC e notebook</h6>
+                        <p>Diagnosi, upgrade, sostituzione componenti e ottimizzazione dei tuoi dispositivi.</p>
+                    </div>
                 </article>
-                <article class="ks-home-service-item">
+                <article class="ks-home-service-item d-flex flex-column gap-2">
                     <span class="ks-home-service-icon"><i class="icon-phone"></i></span>
-                    <h6>Assistenza smartphone</h6>
-                    <p>Supporto per configurazione, trasferimento dati e problemi ricorrenti.</p>
+                    <div class="mb-0">
+                        <h6>Assistenza smartphone</h6>
+                        <p>Supporto per configurazione, trasferimento dati e problemi ricorrenti.</p>
+                    </div>
                 </article>
-                <article class="ks-home-service-item">
+                <article class="ks-home-service-item d-flex flex-column gap-2">
                     <span class="ks-home-service-icon"><i class="icon-tool"></i></span>
-                    <h6>Installazione software</h6>
-                    <p>Setup sistemi, applicativi, sicurezza e strumenti per lavoro o casa.</p>
+                    <div class="mb-0">
+                        <h6>Installazione software</h6>
+                        <p>Setup sistemi, applicativi, sicurezza e strumenti per lavoro o casa.</p>
+                    </div>
                 </article>
-                <article class="ks-home-service-item">
+                <article class="ks-home-service-item d-flex flex-column gap-2">
                     <span class="ks-home-service-icon"><i class="icon-computer-wifi"></i></span>
-                    <h6>Configurazione reti e periferiche</h6>
-                    <p>Router, stampanti, periferiche e postazioni pronte all'uso.</p>
+                    <div class="mb-0">
+                        <h6>Configurazione reti e periferiche</h6>
+                        <p>Router, stampanti, periferiche e postazioni pronte all'uso.</p>
+                    </div>
                 </article>
-                <article class="ks-home-service-item">
+                <article class="ks-home-service-item d-flex flex-column gap-2">
                     <span class="ks-home-service-icon"><i class="icon-shield"></i></span>
-                    <h6>Recupero dati</h6>
-                    <p>Valutazione e supporto per recuperare file importanti quando possibile.</p>
+                    <div class="mb-0">
+                        <h6>Recupero dati</h6>
+                        <p>Valutazione e supporto per recuperare file importanti quando possibile.</p>
+                    </div>
                 </article>
-                <article class="ks-home-service-item">
+                <article class="ks-home-service-item d-flex flex-column gap-2">
                     <span class="ks-home-service-icon"><i class="icon-headphone-2"></i></span>
-                    <h6>Consulenza acquisto</h6>
-                    <p>Scelta guidata di computer, telefonia, consumabili e accessori compatibili.</p>
+                    <div class="mb-0">
+                        <h6>Consulenza acquisto</h6>
+                        <p>Scelta guidata di computer, telefonia, consumabili e accessori compatibili.</p>
+                    </div>
                 </article>
             </div>
         </div>
