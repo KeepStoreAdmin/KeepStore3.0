@@ -338,6 +338,8 @@ End Sub
                 params.Add("@LoginId", LoginId.ToString())
 
                 Dim dr = ExecuteQueryGetDataReader("id, qnt", "carrello", wherePart, params)
+                Dim existingCartRowId As Integer = 0
+                Dim effectiveExistingCartRowId As Integer = 0
 
                 ' Se l'articolo è già presente nel carrello sommo la quantità
                 If dr.Count > 0 Then
@@ -348,9 +350,7 @@ End Sub
                     TryParseDouble(selezionamultipla_Qta, newQ)
                     quantitaRiga = newQ + oldQ
 
-                    IdRiga = CInt(row("id"))
-                    params.Add("@idRiga", IdRiga.ToString())
-                    ExecuteDelete("carrello", "where id=@idRiga", params)
+                    Integer.TryParse(Convert.ToString(row("id")), existingCartRowId)
                 Else
                     TryParseDouble(selezionamultipla_Qta, quantitaRiga)
                 End If
@@ -377,8 +377,7 @@ End Sub
                         Dim oldQEffective As Double = 0
                         TryParseDouble(effectiveExisting(0)("qnt"), oldQEffective)
                         quantitaRiga += oldQEffective
-                        effectiveParams.Add("@idRiga", Convert.ToString(effectiveExisting(0)("id")))
-                        ExecuteDelete("carrello", "where id=@idRiga", effectiveParams)
+                        Integer.TryParse(Convert.ToString(effectiveExisting(0)("id")), effectiveExistingCartRowId)
                     End If
                 End If
 
@@ -391,10 +390,12 @@ End Sub
                 Integer.TryParse(selezionamultipla_TCID, addTc)
 
                 If ShouldSkipZeroPriceCartInsert(Prezzo, PrezzoIvato, _pgTmp) Then
+                    SetCartAddPriceLookupMessage()
                     LogCartPriceLookupFailed(selezionamultipla_ID, selezionamultipla_TCID, NListino, LoginId, SessionID, "multipla")
                     Continue For
                 End If
 
+                DeleteDeferredCartRows(existingCartRowId, effectiveExistingCartRowId)
                 Dim cartRowId As Integer = AddCartRowWithNewcarrello(LoginId, SessionID, addId, addTc, Codice, Descrizione, quantitaRiga, NListino, Prezzo, PrezzoIvato, OfferteDettagliID, _pgTmp)
                 Dim rawCartOk As Boolean = VerifyCartRow(LoginId, SessionID, addId, addTc)
                 Dim visualCartOk As Boolean = VerifyVCarrelloRow(LoginId, SessionID, addId, addTc)
@@ -445,6 +446,8 @@ End Sub
                 params.Add("@LoginId", LoginId.ToString())
 
                 Dim dr = ExecuteQueryGetDataReader("id, qnt", "carrello", wherePart, params)
+                Dim existingCartRowId As Integer = 0
+                Dim effectiveExistingCartRowId As Integer = 0
 
                 ' Se l'articolo è già presente nel carrello sommo la quantità
                 If dr.Count > 0 Then
@@ -452,9 +455,7 @@ End Sub
                     Dim oldQ As Double = 0
                     TryParseDouble(row("qnt"), oldQ)
                     quantitaRiga = quantitaRiga + oldQ
-                    IdRiga = CInt(row("id"))
-                    params.Add("@idRiga", IdRiga.ToString())
-                    ExecuteDelete("carrello", "where id=@idRiga", params)
+                    Integer.TryParse(Convert.ToString(row("id")), existingCartRowId)
                 End If
 
                 ' Leggo prezzi e promozioni
@@ -479,8 +480,7 @@ End Sub
                         Dim oldQEffective As Double = 0
                         TryParseDouble(effectiveExisting(0)("qnt"), oldQEffective)
                         quantitaRiga += oldQEffective
-                        effectiveParams.Add("@idRiga", Convert.ToString(effectiveExisting(0)("id")))
-                        ExecuteDelete("carrello", "where id=@idRiga", effectiveParams)
+                        Integer.TryParse(Convert.ToString(effectiveExisting(0)("id")), effectiveExistingCartRowId)
                     End If
                 End If
 
@@ -497,10 +497,12 @@ End Sub
                 Integer.TryParse(tcidRiga, addTc)
 
                 If ShouldSkipZeroPriceCartInsert(Prezzo, PrezzoIvato, prodottoGratis) Then
+                    SetCartAddPriceLookupMessage()
                     LogCartPriceLookupFailed(ListaArticoli(i).ToString(), tcidRiga, NListino, LoginId, SessionID, "singola")
                     Continue For
                 End If
 
+                DeleteDeferredCartRows(existingCartRowId, effectiveExistingCartRowId)
                 Dim cartRowId As Integer = AddCartRowWithNewcarrello(LoginId, SessionID, addId, addTc, Codice, Descrizione, quantitaRiga, NListino, Prezzo, PrezzoIvato, OfferteDettagliID, prodottoGratis)
                 Dim rawCartOk As Boolean = VerifyCartRow(LoginId, SessionID, addId, addTc)
                 Dim visualCartOk As Boolean = VerifyVCarrelloRow(LoginId, SessionID, addId, addTc)
@@ -803,6 +805,28 @@ End Sub
         If prodottoGratis <> 0 Then Return False
         Return prezzo <= 0 AndAlso prezzoIvato <= 0
     End Function
+
+    Private Sub SetCartAddPriceLookupMessage()
+        Try
+            Session("CartAddMessage") = "Prezzo prodotto non disponibile. Articolo non aggiunto al carrello."
+        Catch
+        End Try
+    End Sub
+
+    Private Sub DeleteDeferredCartRows(ByVal firstRowId As Integer, ByVal secondRowId As Integer)
+        DeleteDeferredCartRow(firstRowId)
+        If secondRowId <> firstRowId Then
+            DeleteDeferredCartRow(secondRowId)
+        End If
+    End Sub
+
+    Private Sub DeleteDeferredCartRow(ByVal rowId As Integer)
+        If rowId <= 0 Then Exit Sub
+
+        Dim params As New Dictionary(Of String, String)
+        params.Add("@idRiga", rowId.ToString(CultureInfo.InvariantCulture))
+        ExecuteDelete("carrello", "where id=@idRiga", params)
+    End Sub
 
     Private Sub LogCartPriceLookupFailed(ByVal articoloId As String,
                                          ByVal tcId As String,
