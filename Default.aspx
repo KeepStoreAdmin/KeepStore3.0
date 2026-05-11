@@ -201,10 +201,12 @@
                 <div class="ks-home-promo-institutional">
                     <div>
                         <p class="caption text-primary fw-semibold mb-2">Promozioni KeepStore</p>
-                        <h5 class="fw-semibold mb-2">Tecnologia, accessori e assistenza in un unico negozio</h5>
-                        <p class="body-text-3 text-main-2 mb-0">Le offerte reali vengono mostrate quando disponibili a catalogo. Nel frattempo puoi consultare i reparti o richiedere supporto tecnico.</p>
+                        <div class="mb-0">
+                            <h5 class="fw-semibold mb-2">Tecnologia, accessori e assistenza in un unico negozio</h5>
+                            <p class="body-text-3 text-main-2 mb-0">Le offerte reali vengono mostrate quando disponibili a catalogo. Nel frattempo puoi consultare i reparti o richiedere supporto tecnico.</p>
+                        </div>
                     </div>
-                    <div class="ks-home-promo-actions">
+                    <div class="ks-home-promo-actions d-flex align-items-center gap-2">
                         <a href="articoli.aspx" class="tf-btn btn-line"><span>Vai al catalogo</span></a>
                         <a href="Contattaci.aspx" class="tf-btn btn-line"><span>Richiedi assistenza</span></a>
                     </div>
