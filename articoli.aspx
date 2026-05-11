@@ -21,10 +21,10 @@
 
     <asp:Panel ID="ksPageTitle" runat="server" CssClass="tf-page-title d-none">
         <div class="container">
-            <div class="d-flex flex-wrap align-items-end justify-content-between gap-2">
-                <div>
+            <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-end justify-content-between gap-3">
+                <div class="d-flex flex-column gap-2">
                     <h1 class="title">Catalogo</h1>
-                    <div class="text-muted small">
+                    <div class="d-flex flex-wrap align-items-center gap-2 text-muted small">
                         <asp:Label ID="lblRicerca" runat="server" Visible="false" Text="Risultati ricerca:" />
                         <asp:Label ID="lblRisultati" runat="server" />
                         <asp:Label ID="lblTrovati" runat="server" />
