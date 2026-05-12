@@ -716,7 +716,7 @@ End If
         If CheckBox_Disponibile.Checked = True Then
             Session.Item("Disp") = 0
             strWhere = strWhere & " AND ((Giacenza-Impegnata)>0)"
-            strWhere2 = strWhere2 & " AND ((varticolibase.Giacenza-varticolibase.Impegnata)>0)"
+            strWhere2 = strWhere2 & " AND ((COALESCE(vsuperarticoli.Giacenza,0)-COALESCE(vsuperarticoli.Impegnata,0))>0)"
         End If
 
         If Me.Page.IsPostBack = False Then
