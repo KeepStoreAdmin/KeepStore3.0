@@ -2523,7 +2523,7 @@ Partial Class articolo
     End Sub
 
     Protected Sub btnAddToCart_Click(sender As Object, e As EventArgs)
-        Dim qty As Integer = NormalizeCartQuantity(txtQty.Text, 1, 9999)
+        Dim qty As Integer = ReadPostedCartQuantity()
         txtQty.Text = qty.ToString()
 
         ' Risolve il TCid effettivo prima del redirect legacy verso aggiungi.aspx.
@@ -2579,6 +2579,24 @@ Partial Class articolo
         Response.Redirect("aggiungi.aspx", False)
         Context.ApplicationInstance.CompleteRequest()
     End Sub
+
+    Private Function ReadPostedCartQuantity() As Integer
+        Dim rawQty As String = ""
+
+        Try
+            If txtQty IsNot Nothing AndAlso Request IsNot Nothing AndAlso Request.Form IsNot Nothing Then
+                rawQty = Convert.ToString(Request.Form(txtQty.UniqueID))
+            End If
+        Catch
+            rawQty = ""
+        End Try
+
+        If String.IsNullOrWhiteSpace(rawQty) AndAlso txtQty IsNot Nothing Then
+            rawQty = txtQty.Text
+        End If
+
+        Return NormalizeCartQuantity(rawQty, 1, 9999)
+    End Function
 
     Private Function NormalizeCartQuantity(ByVal rawValue As String, ByVal fallbackValue As Integer, ByVal maxValue As Integer) As Integer
         Dim qty As Integer = fallbackValue
