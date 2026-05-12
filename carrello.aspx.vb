@@ -873,7 +873,7 @@ If buonoTot > 0 Then
     ' Resetto il prezzo relativo al metodo di pagamento
     lblPagamento.Text = FormatCurrencyIt(0D)
 
-    ' Base imponibile (la Label contiene spesso "â‚¬ ...", quindi la leggo in modo safe)
+    ' Base imponibile (la Label contiene spesso il simbolo euro, quindi la leggo in modo safe)
     Dim imponibileBase As Double = SafeMoney(Me.lblImponibile.Text, 0)
 
     'Controllo se Esiste ed Ã¨ abilitato un Vettore PROMO
@@ -1043,7 +1043,7 @@ End Sub
         If Me.cbAssicurazione.Checked Then
             Me.lblSpeseAss.Text = Me.lblAssicurazione.Text
         Else
-            Me.lblSpeseAss.Text = "â‚¬ 0,00"
+            Me.lblSpeseAss.Text = ChrW(8364) & " 0,00"
         End If
     End Sub
 
@@ -1064,7 +1064,7 @@ End Sub
     Dim sel As Boolean = False
     Dim firstSelectableIndex As Integer = -1
 
-    ' Leggo importi in modo safe (le Label contengono spesso "â‚¬ ...")
+    ' Leggo importi in modo safe (le Label contengono spesso il simbolo euro)
     Dim impD As Double = SafeMoney(Me.lblImponibile.Text, 0)
     Dim spedD As Double = SafeMoney(Me.lblSpeseSped.Text, 0)
     Dim assD As Double = SafeMoney(Me.lblSpeseAss.Text, 0)
@@ -1126,7 +1126,7 @@ End Sub
         Try
             If lbl IsNot Nothing Then lbl.Text = FormatCurrencyIt(totPagamento)
         Catch
-            If lbl IsNot Nothing Then lbl.Text = "â‚¬ 0,00"
+            If lbl IsNot Nothing Then lbl.Text = ChrW(8364) & " 0,00"
         End Try
 
         If rb IsNot Nothing AndAlso RbGetChecked(rb) = True AndAlso RbGetEnabled(rb) = True Then
@@ -3706,7 +3706,7 @@ Private Function SafeIntFromText(ByVal value As Object, Optional ByVal def As In
         Dim s As String = value.ToString().Trim()
         If s = "" Then Return def
 
-        s = s.Replace("â‚¬", "").Replace("%", "").Trim()
+        s = s.Replace(ChrW(8364), "").Replace("%", "").Trim()
         s = s.Replace("âˆ’", "-")
 
         ' rimuovo separatori comuni
