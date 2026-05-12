@@ -1,4 +1,4 @@
-﻿Imports MySql.Data.MySqlClient
+Imports MySql.Data.MySqlClient
 Imports System.Configuration
 Imports System.Data
 Imports System.Globalization
@@ -320,66 +320,26 @@ End Sub
                 Dim _pgTmp As Integer = 0
                 If Not Integer.TryParse(selezionamultipla_SpedGRATIS, _pgTmp) Then _pgTmp = 0
                 selezionamultipla_SpedGRATIS = _pgTmp.ToString()
-                Dim quantitaRiga As Double = 0
-
-                Dim wherePart As String
-                If LoginId = 0 Then
-                    wherePart = "where SessionID=@SessionID"
-                Else
-                    wherePart = "where LoginID=@LoginId"
-                    SessionID = ""
+                Dim QuantitaRichiesta As Double = 1
+                If Not TryParseDouble(selezionamultipla_Qta, QuantitaRichiesta) OrElse QuantitaRichiesta <= 0 Then
+                    QuantitaRichiesta = 1
                 End If
-                wherePart &= " and ArticoliId=@ArticoliId and TCId=@TCId"
+                Dim quantitaRiga As Double = QuantitaRichiesta
 
-                Dim params As New Dictionary(Of String, String)
-                params.Add("@ArticoliId", selezionamultipla_ID)
-                params.Add("@TCId", selezionamultipla_TCID)
-                params.Add("@SessionID", SessionID)
-                params.Add("@LoginId", LoginId.ToString())
-
-                Dim dr = ExecuteQueryGetDataReader("id, qnt", "carrello", wherePart, params)
-                Dim existingCartRowId As Integer = 0
-                Dim effectiveExistingCartRowId As Integer = 0
-
-                ' Se l'articolo è già presente nel carrello sommo la quantità
-                If dr.Count > 0 Then
-                    Dim row = dr(0)
-                    Dim oldQ As Double = 0
-                    TryParseDouble(row("qnt"), oldQ)
-                    Dim newQ As Double = 0
-                    TryParseDouble(selezionamultipla_Qta, newQ)
-                    quantitaRiga = newQ + oldQ
-
-                    Integer.TryParse(Convert.ToString(row("id")), existingCartRowId)
-                Else
-                    TryParseDouble(selezionamultipla_Qta, quantitaRiga)
+                If LoginId <> 0 Then
+                    SessionID = ""
                 End If
 
                 ' Leggo prezzi e promozioni
-                dr = LoadCartProductRows(selezionamultipla_ID, selezionamultipla_TCID, NListino)
+                Dim dr = LoadCartProductRows(selezionamultipla_ID, selezionamultipla_TCID, NListino)
                 Dim effectiveTCID As String = ResolveEffectiveTcidText(dr, selezionamultipla_TCID)
                 If effectiveTCID <> selezionamultipla_TCID Then
                     selezionamultipla_TCID = effectiveTCID
-                    Dim effectiveWhere As String
-                    If LoginId = 0 Then
-                        effectiveWhere = "where SessionID=@SessionID"
-                    Else
-                        effectiveWhere = "where LoginID=@LoginId"
-                    End If
-                    effectiveWhere &= " and ArticoliId=@ArticoliId and TCId=@TCId"
-                    Dim effectiveParams As New Dictionary(Of String, String)
-                    effectiveParams.Add("@ArticoliId", selezionamultipla_ID)
-                    effectiveParams.Add("@TCId", selezionamultipla_TCID)
-                    effectiveParams.Add("@SessionID", SessionID)
-                    effectiveParams.Add("@LoginId", LoginId.ToString())
-                    Dim effectiveExisting = ExecuteQueryGetDataReader("id, qnt", "carrello", effectiveWhere, effectiveParams)
-                    If effectiveExisting.Count > 0 Then
-                        Dim oldQEffective As Double = 0
-                        TryParseDouble(effectiveExisting(0)("qnt"), oldQEffective)
-                        quantitaRiga += oldQEffective
-                        Integer.TryParse(Convert.ToString(effectiveExisting(0)("id")), effectiveExistingCartRowId)
-                    End If
                 End If
+
+                Dim equivalentCartRows = LoadEquivalentCartRows(LoginId, SessionID, selezionamultipla_ID, selezionamultipla_TCID, NListino, _pgTmp)
+                Dim equivalentCartRowIds = CollectCartRowIds(equivalentCartRows)
+                quantitaRiga = QuantitaRichiesta + SumCartRowQuantities(equivalentCartRows)
 
                 ResolveCartPriceFromRows(dr, quantitaRiga, Codice, Descrizione, Prezzo, PrezzoIvato, OfferteDettagliID)
 
@@ -395,7 +355,7 @@ End Sub
                     Continue For
                 End If
 
-                DeleteDeferredCartRows(existingCartRowId, effectiveExistingCartRowId)
+                DeleteDeferredCartRows(equivalentCartRowIds)
                 Dim cartRowId As Integer = AddCartRowWithNewcarrello(LoginId, SessionID, addId, addTc, Codice, Descrizione, quantitaRiga, NListino, Prezzo, PrezzoIvato, OfferteDettagliID, _pgTmp)
                 Dim rawCartOk As Boolean = VerifyCartRow(LoginId, SessionID, addId, addTc)
                 Dim visualCartOk As Boolean = VerifyVCarrelloRow(LoginId, SessionID, addId, addTc)
@@ -426,71 +386,33 @@ End Sub
             ' CASO 2: Articolo/i singolo/i
             ' -------------------------
             For i = 0 To ListaArticoli.Count - 1
-                Dim quantitaRiga As Double = QuantitaBase
+                Dim QuantitaRichiesta As Double = QuantitaBase
+                If QuantitaRichiesta <= 0 Then QuantitaRichiesta = 1
+                Dim quantitaRiga As Double = QuantitaRichiesta
                 Dim tcidRiga As String = NormalizeTcidText(ListaTCs(i).ToString())
-
-                Dim wherePart As String
-                If LoginId = 0 Then
-                    wherePart = "where SessionID=@SessionID"
-                Else
-                    wherePart = "where LoginID=@LoginId"
-                    SessionID = ""
-                End If
-
-                wherePart &= " and ArticoliId=@ArticoliId and TCId=@TCId"
-
-                Dim params As New Dictionary(Of String, String)
-                params.Add("@ArticoliId", ListaArticoli(i).ToString())
-                params.Add("@TCId", tcidRiga)
-                params.Add("@SessionID", SessionID)
-                params.Add("@LoginId", LoginId.ToString())
-
-                Dim dr = ExecuteQueryGetDataReader("id, qnt", "carrello", wherePart, params)
-                Dim existingCartRowId As Integer = 0
-                Dim effectiveExistingCartRowId As Integer = 0
-
-                ' Se l'articolo è già presente nel carrello sommo la quantità
-                If dr.Count > 0 Then
-                    Dim row = dr(0)
-                    Dim oldQ As Double = 0
-                    TryParseDouble(row("qnt"), oldQ)
-                    quantitaRiga = quantitaRiga + oldQ
-                    Integer.TryParse(Convert.ToString(row("id")), existingCartRowId)
-                End If
-
-                ' Leggo prezzi e promozioni
-                dr = LoadCartProductRows(ListaArticoli(i).ToString(), tcidRiga, NListino)
-                Dim effectiveTcidRiga As String = ResolveEffectiveTcidText(dr, tcidRiga)
-                If effectiveTcidRiga <> tcidRiga Then
-                    tcidRiga = effectiveTcidRiga
-                    Dim effectiveWhere As String
-                    If LoginId = 0 Then
-                        effectiveWhere = "where SessionID=@SessionID"
-                    Else
-                        effectiveWhere = "where LoginID=@LoginId"
-                    End If
-                    effectiveWhere &= " and ArticoliId=@ArticoliId and TCId=@TCId"
-                    Dim effectiveParams As New Dictionary(Of String, String)
-                    effectiveParams.Add("@ArticoliId", ListaArticoli(i).ToString())
-                    effectiveParams.Add("@TCId", tcidRiga)
-                    effectiveParams.Add("@SessionID", SessionID)
-                    effectiveParams.Add("@LoginId", LoginId.ToString())
-                    Dim effectiveExisting = ExecuteQueryGetDataReader("id, qnt", "carrello", effectiveWhere, effectiveParams)
-                    If effectiveExisting.Count > 0 Then
-                        Dim oldQEffective As Double = 0
-                        TryParseDouble(effectiveExisting(0)("qnt"), oldQEffective)
-                        quantitaRiga += oldQEffective
-                        Integer.TryParse(Convert.ToString(effectiveExisting(0)("id")), effectiveExistingCartRowId)
-                    End If
-                End If
-
-                ResolveCartPriceFromRows(dr, quantitaRiga, Codice, Descrizione, Prezzo, PrezzoIvato, OfferteDettagliID)
-
-                ' Inserisco articolo
                 Dim prodottoGratis As Integer = 0
                 If Session("ProdottoGratis") IsNot Nothing Then
                     Integer.TryParse(Session("ProdottoGratis").ToString(), prodottoGratis)
                 End If
+
+                If LoginId <> 0 Then
+                    SessionID = ""
+                End If
+
+                ' Leggo prezzi e promozioni
+                Dim dr = LoadCartProductRows(ListaArticoli(i).ToString(), tcidRiga, NListino)
+                Dim effectiveTcidRiga As String = ResolveEffectiveTcidText(dr, tcidRiga)
+                If effectiveTcidRiga <> tcidRiga Then
+                    tcidRiga = effectiveTcidRiga
+                End If
+
+                Dim equivalentCartRows = LoadEquivalentCartRows(LoginId, SessionID, ListaArticoli(i).ToString(), tcidRiga, NListino, prodottoGratis)
+                Dim equivalentCartRowIds = CollectCartRowIds(equivalentCartRows)
+                quantitaRiga = QuantitaRichiesta + SumCartRowQuantities(equivalentCartRows)
+
+                ResolveCartPriceFromRows(dr, quantitaRiga, Codice, Descrizione, Prezzo, PrezzoIvato, OfferteDettagliID)
+
+                ' Inserisco articolo
                 Dim addId As Integer = 0
                 Dim addTc As Integer = -1
                 Integer.TryParse(ListaArticoli(i).ToString(), addId)
@@ -502,7 +424,7 @@ End Sub
                     Continue For
                 End If
 
-                DeleteDeferredCartRows(existingCartRowId, effectiveExistingCartRowId)
+                DeleteDeferredCartRows(equivalentCartRowIds)
                 Dim cartRowId As Integer = AddCartRowWithNewcarrello(LoginId, SessionID, addId, addTc, Codice, Descrizione, quantitaRiga, NListino, Prezzo, PrezzoIvato, OfferteDettagliID, prodottoGratis)
                 Dim rawCartOk As Boolean = VerifyCartRow(LoginId, SessionID, addId, addTc)
                 Dim visualCartOk As Boolean = VerifyVCarrelloRow(LoginId, SessionID, addId, addTc)
@@ -818,6 +740,72 @@ End Sub
         If secondRowId <> firstRowId Then
             DeleteDeferredCartRow(secondRowId)
         End If
+    End Sub
+
+    Private Function LoadEquivalentCartRows(ByVal loginId As Integer,
+                                            ByVal sessionId As String,
+                                            ByVal articoloId As String,
+                                            ByVal tcId As String,
+                                            ByVal nListino As Integer,
+                                            ByVal prodottoGratis As Integer) As List(Of Dictionary(Of String, Object))
+        Dim wherePart As String
+        If loginId = 0 Then
+            wherePart = "where SessionID=@SessionID"
+        Else
+            wherePart = "where LoginID=@LoginId"
+        End If
+
+        wherePart &= " and ArticoliId=@ArticoliId and TCId=@TCId and NListino=@NListino and Prodotto_Gratis=@ProdottoGratis"
+
+        Dim params As New Dictionary(Of String, String)
+        params.Add("@ArticoliId", articoloId)
+        params.Add("@TCId", NormalizeTcidText(tcId))
+        params.Add("@NListino", nListino.ToString(CultureInfo.InvariantCulture))
+        params.Add("@ProdottoGratis", prodottoGratis.ToString(CultureInfo.InvariantCulture))
+        params.Add("@SessionID", Convert.ToString(sessionId))
+        params.Add("@LoginId", loginId.ToString(CultureInfo.InvariantCulture))
+
+        Return ExecuteQueryGetDataReader("id, qnt", "carrello", wherePart, params)
+    End Function
+
+    Private Function SumCartRowQuantities(ByVal rows As List(Of Dictionary(Of String, Object))) As Double
+        Dim total As Double = 0
+        If rows Is Nothing Then Return total
+
+        For Each row As Dictionary(Of String, Object) In rows
+            Dim raw As Object = Nothing
+            Dim qnt As Double = 0
+            If TryGetRowValue(row, raw, "qnt", "Qnt", "QNT") AndAlso TryParseDouble(raw, qnt) Then
+                total += qnt
+            End If
+        Next
+
+        Return total
+    End Function
+
+    Private Function CollectCartRowIds(ByVal rows As List(Of Dictionary(Of String, Object))) As List(Of Integer)
+        Dim rowIds As New List(Of Integer)()
+        If rows Is Nothing Then Return rowIds
+
+        For Each row As Dictionary(Of String, Object) In rows
+            Dim raw As Object = Nothing
+            Dim rowId As Integer = 0
+            If TryGetRowValue(row, raw, "id", "ID") AndAlso Integer.TryParse(Convert.ToString(raw), rowId) AndAlso rowId > 0 Then
+                If Not rowIds.Contains(rowId) Then
+                    rowIds.Add(rowId)
+                End If
+            End If
+        Next
+
+        Return rowIds
+    End Function
+
+    Private Sub DeleteDeferredCartRows(ByVal rowIds As List(Of Integer))
+        If rowIds Is Nothing Then Exit Sub
+
+        For Each rowId As Integer In rowIds
+            DeleteDeferredCartRow(rowId)
+        Next
     End Sub
 
     Private Sub DeleteDeferredCartRow(ByVal rowId As Integer)
