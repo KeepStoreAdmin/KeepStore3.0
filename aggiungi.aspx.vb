@@ -82,9 +82,7 @@ End If
                 Integer.TryParse(Convert.ToString(Request.QueryString("TCid")), directTc)
                 If directTc <= 0 Then directTc = -1
 
-                Dim directQty As Double = 1
-                TryParseDouble(Request.QueryString("qty"), directQty)
-                If directQty <= 0 Then directQty = 1
+                Dim directQty As Double = ResolveRequestedCartQuantity()
 
                 Dim directProdottoGratis As Integer = 0
                 Integer.TryParse(Convert.ToString(Request.QueryString("pg")), directProdottoGratis)
@@ -95,6 +93,11 @@ End If
                 Session("ProdottoGratis") = directProdottoGratis.ToString(CultureInfo.InvariantCulture)
                 Session("Carrello_Pagina") = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.PathAndQuery, "Default.aspx")
                 Session("Carrello_SelezioneMultipla") = Nothing
+            End If
+        Else
+            Dim requestedQty As Double
+            If TryGetValidQueryStringQuantity(requestedQty) Then
+                Session("Carrello_Quantita") = requestedQty.ToString(CultureInfo.InvariantCulture)
             End If
         End If
 
@@ -232,13 +235,7 @@ End Sub
         End If
 
         ' Quantità base richiesta (se manca qualcosa, almeno 1)
-        Dim QuantitaBase As Double = 1
-        If Me.Session("Carrello_Quantita") IsNot Nothing Then
-            Dim tmpQ As Double
-            If TryParseDouble(Me.Session("Carrello_Quantita"), tmpQ) AndAlso tmpQ > 0 Then
-                QuantitaBase = tmpQ
-            End If
-        End If
+        Dim QuantitaBase As Double = ResolveRequestedCartQuantity()
 
         ' Listino
         Dim NListino As Integer = 1
@@ -730,6 +727,27 @@ End Sub
         If Double.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, result) Then Return True
         If Double.TryParse(text, NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), result) Then Return True
         Return Double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, result)
+    End Function
+
+    Private Function ResolveRequestedCartQuantity() As Double
+        Dim queryQty As Double
+        If TryGetValidQueryStringQuantity(queryQty) Then
+            Session("Carrello_Quantita") = queryQty.ToString(CultureInfo.InvariantCulture)
+            Return queryQty
+        End If
+
+        Dim sessionQty As Double
+        If TryParseDouble(Session("Carrello_Quantita"), sessionQty) AndAlso sessionQty > 0 Then
+            Return sessionQty
+        End If
+
+        Return 1
+    End Function
+
+    Private Function TryGetValidQueryStringQuantity(ByRef quantity As Double) As Boolean
+        quantity = 0
+        If Request Is Nothing OrElse Request.QueryString("qty") Is Nothing Then Return False
+        Return TryParseDouble(Request.QueryString("qty"), quantity) AndAlso quantity > 0
     End Function
 
     Private Function NormalizeCartDecimalText(ByVal value As String) As String
