@@ -2558,7 +2558,11 @@ Partial Class articolo
         Session("Carrello_Pagina") = Request.RawUrl
         Session("Carrello_SelezioneMultipla") = Nothing
 
-        Response.Redirect("aggiungi.aspx", False)
+        Dim addToCartUrl As String = "aggiungi.aspx?id=" & HttpUtility.UrlEncode(_id.ToString(CultureInfo.InvariantCulture)) &
+                                      "&TCid=" & HttpUtility.UrlEncode(tcidToUse.ToString(CultureInfo.InvariantCulture)) &
+                                      "&qty=" & HttpUtility.UrlEncode(qty.ToString(CultureInfo.InvariantCulture))
+
+        Response.Redirect(addToCartUrl, False)
         Context.ApplicationInstance.CompleteRequest()
     End Sub
 
