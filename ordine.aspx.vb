@@ -153,6 +153,45 @@ End Function
         Return o
     End Function
 
+    Private Sub InitializeWebPaymentStatus(ByVal conn As MySqlConnection,
+                                           ByVal trns As MySqlTransaction,
+                                           ByVal documentiId As Integer,
+                                           ByVal pagamentoOnline As Integer,
+                                           ByVal confermaOrdinePrimaPagamento As Integer,
+                                           ByVal permettiPagamentoSuccessivo As Integer)
+        If documentiId <= 0 Then Return
+
+        Dim statoPagamentoWeb As Integer = 0
+        Dim ultimoEsito As String = "Pagamento non online/non richiesto"
+
+        If pagamentoOnline <> 0 Then
+            If confermaOrdinePrimaPagamento = 0 Then
+                statoPagamentoWeb = 1
+                ultimoEsito = "Policy bloccante configurata; enforcement non ancora attivo"
+            ElseIf permettiPagamentoSuccessivo = 1 Then
+                statoPagamentoWeb = 5
+                ultimoEsito = "Pagamento online successivo disponibile"
+            Else
+                statoPagamentoWeb = 1
+                ultimoEsito = "In attesa pagamento online"
+            End If
+        End If
+
+        Try
+            Using cmdStatus As New MySqlCommand("UPDATE documenti SET StatoPagamentoWeb=@stato, DataStatoPagamentoWeb=CURRENT_TIMESTAMP, UltimoEsitoPagamentoWeb=@esito WHERE id=@id", conn, trns)
+                cmdStatus.Parameters.Add("@stato", MySqlDbType.Int16).Value = statoPagamentoWeb
+                cmdStatus.Parameters.Add("@esito", MySqlDbType.VarChar, 255).Value = ultimoEsito
+                cmdStatus.Parameters.Add("@id", MySqlDbType.Int32).Value = documentiId
+                cmdStatus.ExecuteNonQuery()
+            End Using
+        Catch ex As Exception
+            Try
+                System.Diagnostics.Trace.TraceError("ordine.aspx.vb [InitializeWebPaymentStatus] - " & ex.ToString())
+            Catch
+            End Try
+        End Try
+    End Sub
+
     Private Function NormalizeCsvIds(ByVal csv As String) As String
         If String.IsNullOrWhiteSpace(csv) Then Return ""
         Dim parts As String() = csv.Split(","c)
@@ -196,6 +235,10 @@ End If
             Dim SpeseSped As Double = GetSessionDouble("Ordine_SpeseSped", 0)
             Dim SpeseAss As Double = GetSessionDouble("Ordine_SpeseAss", 0)
             Dim SpesePag As Double = GetSessionDouble("Ordine_SpesePag", 0)
+            Dim PagamentoOnLine As Integer = GetSessionInt("Ordine_Pagamento_OnLine", 0)
+            Dim ConfermaOrdinePrimaPagamento As Integer = GetSessionInt("Ordine_ConfermaOrdinePrimaPagamento", 1)
+            Dim PermettiPagamentoSuccessivo As Integer = GetSessionInt("Ordine_PermettiPagamentoSuccessivo", 1)
+            Dim InviaEmailOrdinePrimaPagamento As Integer = GetSessionInt("Ordine_InviaEmailOrdinePrimaPagamento", 1)
 
             Dim documento_memorizzato As Long = 0
             Dim id As Integer = 0
@@ -329,6 +372,8 @@ End If
                     End Using
                 End Using
 
+                InitializeWebPaymentStatus(conn, trns, id, PagamentoOnLine, ConfermaOrdinePrimaPagamento, PermettiPagamentoSuccessivo)
+
                 Me.Label1.Text = NumDoc.ToString()
                 Me.Label2.Text = Documento
                 Me.Label3.Text = DataDoc
@@ -351,6 +396,10 @@ End If
                 Me.Session("Ordine_SpeseSped") = Nothing
                 Me.Session("Ordine_SpeseAss") = Nothing
                 Me.Session("Ordine_SpesePag") = Nothing
+                Me.Session("Ordine_Pagamento_OnLine") = Nothing
+                Me.Session("Ordine_ConfermaOrdinePrimaPagamento") = Nothing
+                Me.Session("Ordine_PermettiPagamentoSuccessivo") = Nothing
+                Me.Session("Ordine_InviaEmailOrdinePrimaPagamento") = Nothing
 
                 ' Imposto i check nel DocumentoPie
                 set_check_documento_pie(id)
