@@ -462,6 +462,69 @@ Private Const SessLoginId_B As String = "LOGINID"
     Return s
     End Function
 
+    Private Class PaymentPolicyInfo
+        Public OnLine As Integer
+        Public ConfermaOrdinePrimaPagamento As Integer
+        Public PermettiPagamentoSuccessivo As Integer
+        Public InviaEmailOrdinePrimaPagamento As Integer
+
+        Public Sub New()
+            OnLine = 0
+            ConfermaOrdinePrimaPagamento = 1
+            PermettiPagamentoSuccessivo = 1
+            InviaEmailOrdinePrimaPagamento = 1
+        End Sub
+    End Class
+
+    Private Function DefaultPaymentPolicyInfo() As PaymentPolicyInfo
+        Return New PaymentPolicyInfo()
+    End Function
+
+    Private Function ReadPaymentPolicyInfo(ByVal pagamentoId As Integer) As PaymentPolicyInfo
+        Dim info As PaymentPolicyInfo = DefaultPaymentPolicyInfo()
+        If pagamentoId <= 0 Then Return info
+
+        Try
+            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                conn.Open()
+                Using cmd As New MySqlCommand("SELECT COALESCE(OnLine,0) AS OnLine, COALESCE(ConfermaOrdinePrimaPagamento,1) AS ConfermaOrdinePrimaPagamento, COALESCE(PermettiPagamentoSuccessivo,1) AS PermettiPagamentoSuccessivo, COALESCE(InviaEmailOrdinePrimaPagamento,1) AS InviaEmailOrdinePrimaPagamento FROM pagamentitipo WHERE id=@id LIMIT 1", conn)
+                    cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = pagamentoId
+
+                    Using dr As MySqlDataReader = cmd.ExecuteReader()
+                        If dr.Read() Then
+                            info.OnLine = SafeIntFromDb(dr("OnLine"), 0)
+                            info.ConfermaOrdinePrimaPagamento = SafeIntFromDb(dr("ConfermaOrdinePrimaPagamento"), 1)
+                            info.PermettiPagamentoSuccessivo = SafeIntFromDb(dr("PermettiPagamentoSuccessivo"), 1)
+                            info.InviaEmailOrdinePrimaPagamento = SafeIntFromDb(dr("InviaEmailOrdinePrimaPagamento"), 1)
+                        End If
+                    End Using
+                End Using
+            End Using
+        Catch ex As Exception
+            LogEx(ex, "ReadPaymentPolicyInfo")
+        End Try
+
+        Return info
+    End Function
+
+    Private Function SafeIntFromDb(ByVal value As Object, ByVal defaultValue As Integer) As Integer
+        Try
+            If value Is Nothing OrElse value Is DBNull.Value Then Return defaultValue
+            Dim result As Integer
+            If Integer.TryParse(value.ToString(), result) Then Return result
+        Catch
+        End Try
+        Return defaultValue
+    End Function
+
+    Private Sub StorePaymentPolicySession(ByVal pagamentoId As Integer)
+        Dim info As PaymentPolicyInfo = ReadPaymentPolicyInfo(pagamentoId)
+        Session("Ordine_Pagamento_OnLine") = info.OnLine
+        Session("Ordine_ConfermaOrdinePrimaPagamento") = info.ConfermaOrdinePrimaPagamento
+        Session("Ordine_PermettiPagamentoSuccessivo") = info.PermettiPagamentoSuccessivo
+        Session("Ordine_InviaEmailOrdinePrimaPagamento") = info.InviaEmailOrdinePrimaPagamento
+    End Sub
+
     Private Sub LogEx(ByVal ex As Exception, Optional ByVal context As String = "", Optional ByVal sql As String = "")
     Try
         Dim msg As String = "carrello.aspx.vb"
@@ -789,6 +852,7 @@ Private Const SessLoginId_B As String = "LOGINID"
             Me.Session("Ordine_TipoDoc") = 4
             Me.Session("Ordine_Documento") = "Ordine"
             Me.Session("Ordine_Pagamento") = Me.tbPagamenti.Text
+            StorePaymentPolicySession(SafeIntFromDb(Me.tbPagamenti.Text, 0))
             Me.Session("Ordine_BancaSellaGestPay_ShopId") = Me.tbShopIdGestPay.Text
             Me.Session("Ordine_Vettore") = Me.tbVettoriId.Text
             Me.Session("Ordine_SpeseSped") = SafeDbl(Me.lblSpeseSped.Text, 0)
