@@ -4,7 +4,7 @@
 
 Questo documento definisce la policy proposta per la gestione parametrica degli ordini con pagamento online. L'obiettivo e' separare in modo esplicito la conferma dell'ordine dall'esito del pagamento, lasciando configurabile il comportamento per ogni modalita' di pagamento.
 
-Il documento e' solo una proposta tecnica e funzionale. Non introduce modifiche al codice applicativo, al database o alle stored procedure.
+Il documento e' solo una proposta tecnica e funzionale. PAY-2 non introduce modifiche al codice applicativo, al database o alle stored procedure. Il database operativo e' gia' stato aggiornato manualmente con i campi descritti in questo documento; i task successivi dovranno leggere i campi reali.
 
 ## 2. Stato attuale
 
@@ -49,36 +49,52 @@ Definire un comportamento parametrico per ogni modalita' di pagamento:
 
 - ordine immediato anche se non pagato;
 - ordine creato in attesa pagamento con possibilita' di "Paga ora";
-- ordine non confermato finche' il pagamento online non risulta riuscito.
+- ordine non confermato finche' il pagamento online non risulta riuscito;
+- invio email ordine configurabile rispetto all'esito del pagamento.
 
 La policy deve essere configurabile per metodo di pagamento, senza affidarsi a regole implicite basate solo sulla descrizione o sul gateway.
 
-## 6. Campo DB proposto
+## 6. Campi DB gia' creati
 
-Campo proposto su `pagamentitipo`:
+I campi seguenti risultano gia' creati sul database operativo. Il file SQL aggiornato non e' ancora stato fornito al repository; appena disponibile, andra' aggiornato e allineato in un task separato.
 
-`PoliticaConfermaOrdineOnline`
+### 6.1 `pagamentitipo`
 
-Valori proposti:
+| Campo | Tipo | Default | Valori ammessi | Significato operativo |
+| --- | --- | --- | --- | --- |
+| `ConfermaOrdinePrimaPagamento` | `TINYINT(1) NOT NULL` | `1` | `0`, `1` | `1` crea/conferma ordine prima del pagamento; `0` mantiene l'ordine in attesa finche' il pagamento non risulta riuscito. |
+| `PermettiPagamentoSuccessivo` | `TINYINT(1) NOT NULL` | `1` | `0`, `1` | `1` mostra/consente "Paga ora" da My Account se l'ordine online non e' pagato; `0` non consente pagamento successivo. |
+| `InviaEmailOrdinePrimaPagamento` | `TINYINT(1) NOT NULL` | `1` | `0`, `1` | `1` invia email ordine subito; `0` rinvia l'email di conferma fino a pagamento riuscito o a una policy email dedicata. |
 
-- `0` = conferma ordine subito, comportamento attuale;
-- `1` = crea ordine in attesa pagamento, abilita "Paga ora";
-- `2` = non confermare ordine finche' il pagamento non riuscito.
+### 6.2 `documenti`
 
-Questa e' solo una proposta di design. Nessuna migrazione e' stata eseguita.
+| Campo | Tipo | Default | Valori ammessi | Significato operativo |
+| --- | --- | --- | --- | --- |
+| `StatoPagamentoWeb` | `TINYINT NOT NULL` | `0` | `0`, `1`, `2`, `3`, `4`, `5` | Stato logico del pagamento web associato al documento. |
+| `DataStatoPagamentoWeb` | `DATETIME` | `NULL` | data/ora o `NULL` | Data ultimo aggiornamento dello stato pagamento web. |
+| `UltimoEsitoPagamentoWeb` | `VARCHAR(255)` UTF-8 | `NULL` | testo esito o `NULL` | Ultimo esito tecnico/funzionale ricevuto dal gateway o dal flusso pagamento. |
+
+Valori di `documenti.StatoPagamentoWeb`:
+
+- `0` = non richiesto/non online;
+- `1` = in attesa pagamento;
+- `2` = pagato;
+- `3` = fallito;
+- `4` = annullato;
+- `5` = pagamento successivo disponibile.
 
 ## 7. Matrice comportamenti
 
-| Metodo pagamento | Crea ordine subito | Invia email subito | Svuota carrello | Stato iniziale ordine | `Pagato` | "Paga ora" | Se pagamento fallisce |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Bonifico/manuale | Si | Si | Si | Confermato/manuale | `0` o gestione manuale | No | Non applicabile |
-| Contrassegno | Si | Si | Si | Confermato/manuale | `0` o gestione manuale | No | Non applicabile |
-| Carta policy `0` | Si | Si | Si | Confermato | `0` fino a OK gateway | Si | Ordine resta creato e pagabile da My Account |
-| Carta policy `1` | Si | No, oppure email "in attesa pagamento" | Si | In attesa pagamento | `0` | Si | Ordine resta in attesa e pagabile da My Account |
-| Carta policy `2` | No, oppure bozza tecnica non evadibile | No | No, salvo scelta esplicita | Non confermato | `0` | No | Utente torna al checkout/carrello recuperabile |
-| PayPal policy `0` | Si | Si | Si | Confermato | `0` fino a OK gateway | Si | Ordine resta creato e pagabile da My Account |
-| PayPal policy `1` | Si | No, oppure email "in attesa pagamento" | Si | In attesa pagamento | `0` | Si | Ordine resta in attesa e pagabile da My Account |
-| PayPal policy `2` | No, oppure bozza tecnica non evadibile | No | No, salvo scelta esplicita | Non confermato | `0` | No | Utente torna al checkout/carrello recuperabile |
+| Metodo pagamento | `ConfermaOrdinePrimaPagamento` | `PermettiPagamentoSuccessivo` | `InviaEmailOrdinePrimaPagamento` | Crea ordine subito | Stato iniziale ordine | `StatoPagamentoWeb` | "Paga ora" | Se pagamento fallisce |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Bonifico/manuale | `1` | `0` o `1` secondo scelta gestionale | `1` | Si | Confermato/manuale | `0` | Di norma no, salvo scelta gestionale | Non applicabile |
+| Contrassegno | `1` | `0` | `1` | Si | Confermato/manuale | `0` | No | Non applicabile |
+| Carta comportamento attuale | `1` | `1` | `1` | Si | Confermato | `1` fino a OK gateway, poi `2` | Si se non pagato | Ordine resta creato e pagabile da My Account |
+| PayPal comportamento attuale | `1` | `1` | `1` | Si | Confermato | `1` fino a OK gateway, poi `2` | Si se non pagato | Ordine resta creato e pagabile da My Account |
+| Carta in attesa pagamento | `1` | `1` | `0` | Si | In attesa pagamento | `1` o `5` | Si | Ordine resta in attesa e pagabile da My Account |
+| PayPal in attesa pagamento | `1` | `1` | `0` | Si | In attesa pagamento | `1` o `5` | Si | Ordine resta in attesa e pagabile da My Account |
+| Carta bloccante | `0` | `0` | `0` | No, salvo bozza tecnica non evadibile | Non confermato | `1`, `3` o `4` secondo esito | No | Utente torna al checkout/carrello recuperabile |
+| PayPal bloccante | `0` | `0` | `0` | No, salvo bozza tecnica non evadibile | Non confermato | `1`, `3` o `4` secondo esito | No | Utente torna al checkout/carrello recuperabile |
 
 ## 8. Stati ordine/pagamento suggeriti
 
@@ -86,12 +102,13 @@ Stati logici da formalizzare prima di modifiche applicative:
 
 - confermato/manuale;
 - in attesa pagamento;
+- pagamento successivo disponibile;
 - pagamento fallito;
 - pagato;
 - annullato;
 - confermato manualmente.
 
-Questi stati possono essere mappati su campi esistenti o su nuove configurazioni, ma la mappatura va definita in un task dedicato prima di qualsiasi migrazione o modifica codice.
+La mappatura applicativa dovra' usare i campi reali `documenti.StatoPagamentoWeb`, `documenti.DataStatoPagamentoWeb` e `documenti.UltimoEsitoPagamentoWeb`, senza introdurre stati impliciti basati solo su testo o descrizione pagamento.
 
 ## 9. My Account / Paga ora
 
@@ -100,9 +117,10 @@ Questi stati possono essere mappati su campi esistenti o su nuove configurazioni
 - non pagati;
 - non annullati;
 - senza autorizzazione pagamento gia' registrata;
-- configurati per consentire pagamento successivo.
+- con `pagamentitipo.PermettiPagamentoSuccessivo=1`;
+- con `documenti.StatoPagamentoWeb` coerente con pagamento in attesa, fallito o successivo disponibile.
 
-Il flusso deve funzionare sia per ordini creati dal checkout sia per ordini creati da gestionale. Deve rigenerare il gateway in sicurezza usando l'id documento lato server e deve evitare doppi pagamenti se `Pagato=1` o se esiste gia' un'autorizzazione valida.
+Il flusso deve funzionare sia per ordini creati dal checkout sia per ordini creati da gestionale. Deve rigenerare il gateway in sicurezza usando l'id documento lato server e deve evitare doppi pagamenti se `documenti.Pagato=1`, se `StatoPagamentoWeb=2` o se esiste gia' un'autorizzazione valida.
 
 ## 10. Gateway
 
@@ -114,17 +132,20 @@ Punti da verificare nei task successivi:
 - retry pagamento da My Account;
 - passaggio sicuro dell'id documento;
 - tracciamento transazione;
-- aggiornamento di `Pagato`;
+- aggiornamento di `documenti.Pagato`;
+- aggiornamento di `documenti.StatoPagamentoWeb`;
+- aggiornamento di `documenti.DataStatoPagamentoWeb`;
+- aggiornamento di `documenti.UltimoEsitoPagamentoWeb`;
 - email pagamento riuscito;
 - email pagamento fallito o ordine in attesa.
 
 ## 11. Roadmap proposta
 
-- PAY-3: proposta migrazione DB per la policy pagamento.
-- PAY-4: adattamento checkout/ordine alla policy.
-- PAY-5: verifica e correzione My Account "Paga ora".
-- PAY-6: test gateway BancaSella/PayPal.
-- PAY-7: policy email ordine/pagamento.
+- PAY-3: audit schema DB aggiornato e allineamento codice-database.
+- PAY-4: leggere i nuovi flag in checkout/ordine.
+- PAY-5: aggiornare My Account "Paga ora" usando `PermettiPagamentoSuccessivo` e `StatoPagamentoWeb`.
+- PAY-6: far aggiornare a BancaSella/PayPal `StatoPagamentoWeb`, `DataStatoPagamentoWeb` e `UltimoEsitoPagamentoWeb`.
+- PAY-7: definire policy email ordine/pagamento basata su `InviaEmailOrdinePrimaPagamento`.
 
 ## 12. Test obbligatori futuri
 
@@ -140,3 +161,12 @@ Punti da verificare nei task successivi:
 - Refresh ritorno gateway.
 - My Account ordine pagato.
 - My Account ordine non pagato.
+- Verifica `StatoPagamentoWeb` per ordini online.
+- Verifica `DataStatoPagamentoWeb` dopo callback gateway.
+- Verifica `UltimoEsitoPagamentoWeb` per esiti OK/KO.
+
+## 13. Nota repository e migrazioni
+
+PAY-2 documenta la policy e i campi gia' creati sul database operativo, ma non esegue migrazioni e non modifica dump SQL.
+
+Il file SQL aggiornato non e' ancora stato fornito al repository. Quando sara' disponibile, dovra' essere integrato in un task separato con verifica dedicata, evitando modifiche miste tra schema, codice applicativo e policy documentale.
