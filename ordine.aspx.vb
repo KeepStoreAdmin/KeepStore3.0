@@ -182,15 +182,55 @@ End Function
                 cmdStatus.Parameters.Add("@stato", MySqlDbType.Int16).Value = statoPagamentoWeb
                 cmdStatus.Parameters.Add("@esito", MySqlDbType.VarChar, 255).Value = ultimoEsito
                 cmdStatus.Parameters.Add("@id", MySqlDbType.Int32).Value = documentiId
-                cmdStatus.ExecuteNonQuery()
+                Dim rowsAffected As Integer = cmdStatus.ExecuteNonQuery()
+                If rowsAffected <> 1 Then
+                    KeepStoreLog.Error("ordine.aspx",
+                                       "InitializeWebPaymentStatus rowsAffected anomalo: " &
+                                       BuildWebPaymentStatusLogContext(documentiId,
+                                                                       statoPagamentoWeb,
+                                                                       ultimoEsito,
+                                                                       rowsAffected,
+                                                                       pagamentoOnline,
+                                                                       confermaOrdinePrimaPagamento,
+                                                                       permettiPagamentoSuccessivo),
+                                       Nothing,
+                                       HttpContext.Current)
+                End If
             End Using
         Catch ex As Exception
             Try
-                System.Diagnostics.Trace.TraceError("ordine.aspx.vb [InitializeWebPaymentStatus] - " & ex.ToString())
+                Dim context As String = BuildWebPaymentStatusLogContext(documentiId,
+                                                                        statoPagamentoWeb,
+                                                                        ultimoEsito,
+                                                                        -1,
+                                                                        pagamentoOnline,
+                                                                        confermaOrdinePrimaPagamento,
+                                                                        permettiPagamentoSuccessivo)
+                KeepStoreLog.Error("ordine.aspx",
+                                   "InitializeWebPaymentStatus exception: " & context & " | " & ex.ToString(),
+                                   ex,
+                                   HttpContext.Current)
+                System.Diagnostics.Trace.TraceError("ordine.aspx.vb [InitializeWebPaymentStatus] - " & context & " - " & ex.ToString())
             Catch
             End Try
         End Try
     End Sub
+
+    Private Function BuildWebPaymentStatusLogContext(ByVal documentiId As Integer,
+                                                     ByVal statoPagamentoWeb As Integer,
+                                                     ByVal ultimoEsito As String,
+                                                     ByVal rowsAffected As Integer,
+                                                     ByVal pagamentoOnline As Integer,
+                                                     ByVal confermaOrdinePrimaPagamento As Integer,
+                                                     ByVal permettiPagamentoSuccessivo As Integer) As String
+        Return "documentId=" & documentiId.ToString(CultureInfo.InvariantCulture) &
+               " stato=" & statoPagamentoWeb.ToString(CultureInfo.InvariantCulture) &
+               " esito=" & If(ultimoEsito, "") &
+               " rowsAffected=" & rowsAffected.ToString(CultureInfo.InvariantCulture) &
+               " pagamentoOnline=" & pagamentoOnline.ToString(CultureInfo.InvariantCulture) &
+               " confermaPrimaPagamento=" & confermaOrdinePrimaPagamento.ToString(CultureInfo.InvariantCulture) &
+               " permettiPagamentoSuccessivo=" & permettiPagamentoSuccessivo.ToString(CultureInfo.InvariantCulture)
+    End Function
 
     Private Function NormalizeCsvIds(ByVal csv As String) As String
         If String.IsNullOrWhiteSpace(csv) Then Return ""
