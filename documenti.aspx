@@ -382,7 +382,7 @@
                             </a>
                             <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>"
                                class="ks-icon-btn"
-                               style="display:<%# MostraPagaOra(Eval("Pagato"), Eval("CodiceAutorizzazione"), Eval("StatiId"), Eval("PagamentiTipoOnline")) %>;">
+                               style="display:<%# MostraPagaOra(Eval("id"), Eval("Pagato"), Eval("CodiceAutorizzazione"), Eval("StatiId"), Eval("PagamentiTipoOnline"), Eval("TotaleDocumento")) %>;">
                                 <img src="/Public/Images/Paga_Ora.png" alt="Paga ora" />
                             </a>
                         <% End If %>

@@ -11,6 +11,20 @@ Partial Class documentidettaglio
 
     Private _fallbackTipoDocumentoId As Integer = -1
 
+    Private Class PayNowDocumentInfo
+        Public DocumentId As Integer
+        Public NDocumento As Integer
+        Public DataDocumento As DateTime
+        Public Pagato As Integer
+        Public StatiId As Integer
+        Public StatoPagamentoWeb As Integer
+        Public PagamentiTipoOnline As Integer
+        Public PermettiPagamentoSuccessivo As Integer
+        Public TotaleDocumento As Decimal
+        Public CodiceAutorizzazione As String = ""
+        Public PagamentiTipoDescrizione As String = ""
+    End Class
+
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         ' Richiede login
         If Session("LoginId") Is Nothing OrElse Convert.ToString(Session("LoginId")) = "" Then
@@ -183,7 +197,7 @@ Partial Class documentidettaglio
     End Function
 
     Protected Sub FormView1_DataBound(sender As Object, e As EventArgs) Handles FormView1.DataBound
-        ' Mostra i pulsanti di pagamento online solo quando: PagamentiTipoOnline=1 e documento non risulta gia' autorizzato.
+        ' Mostra i pulsanti di pagamento online solo quando la policy "Paga ora" lo consente.
         ' Logica volutamente conservativa per evitare regressioni: in dubbio, lascia nascosto.
         Try
             If FormView1 Is Nothing OrElse FormView1.DataItem Is Nothing Then
@@ -195,40 +209,6 @@ Partial Class documentidettaglio
                 Return
             End If
 
-            Dim online As Integer = 0
-            Dim authCode As String = ""
-            Dim stato1 As String = ""
-            Dim pagDescr As String = ""
-
-            Try
-                online = Convert.ToInt32(drv("PagamentiTipoOnline"))
-            Catch
-                online = 0
-            End Try
-
-            Try
-                authCode = Convert.ToString(drv("CodiceAutorizzazione"))
-            Catch
-                authCode = ""
-            End Try
-
-            Try
-                stato1 = Convert.ToString(drv("StatiDescrizione1"))
-            Catch
-                stato1 = ""
-            End Try
-
-            Try
-                pagDescr = Convert.ToString(drv("PagamentiTipoDescrizione"))
-            Catch
-                pagDescr = ""
-            End Try
-
-            Dim show As Boolean = (online = 1 AndAlso String.IsNullOrEmpty(authCode))
-            If stato1 IsNot Nothing AndAlso stato1.Trim().ToLowerInvariant() = "annullato" Then
-                show = False
-            End If
-
             Dim btSella As Control = FormView1.FindControl("btBancaSella")
             Dim btIw As Control = FormView1.FindControl("btIwBank")
             Dim btPP As Control = FormView1.FindControl("btPayPal")
@@ -238,25 +218,47 @@ Partial Class documentidettaglio
             SetVisible(btIw, False)
             SetVisible(btPP, False)
 
-            If Not show Then
+            Dim documentId As Integer = SafeInt(drv("id"), 0)
+            Dim info As PayNowDocumentInfo = LoadPayNowDocumentInfo(documentId)
+            If Not CanShowPayNow(info) Then
                 Return
             End If
 
-            ' Se PayPal e' il metodo selezionato, prova a mostrare PayPal; altrimenti mostra BancaSella.
-            If pagDescr IsNot Nothing AndAlso pagDescr.Trim().ToLowerInvariant().Contains("paypal") Then
-                SetVisible(btPP, True)
-            Else
+            ' BancaSella usa OnLine=3. PayPal resta nascosto finche' il flusso documento non e' verificato.
+            If info.PagamentiTipoOnline = 3 Then
                 SetVisible(btSella, True)
-            End If
-
-            ' IwBank: abilita solo se la sessione e' configurata.
-            Dim acc As String = Convert.ToString(Me.Session("AccountIwBank"))
-            If Not String.IsNullOrEmpty(acc) Then
-                SetVisible(btIw, True)
             End If
 
         Catch
             ' Fail-safe: non interrompere la pagina.
+        End Try
+    End Sub
+
+    Protected Sub FormView1_ItemCommand(ByVal sender As Object, ByVal e As FormViewCommandEventArgs) Handles FormView1.ItemCommand
+        If e Is Nothing OrElse e.CommandName <> "PagamentoBancaSella" Then
+            Return
+        End If
+
+        Try
+            Dim idDocumento As Integer = 0
+            If Not Integer.TryParse(Convert.ToString(Request.QueryString("id")), idDocumento) OrElse idDocumento <= 0 Then
+                Return
+            End If
+
+            Dim info As PayNowDocumentInfo = LoadPayNowDocumentInfo(idDocumento)
+            If Not CanShowPayNow(info) OrElse info.PagamentiTipoOnline <> 3 Then
+                Return
+            End If
+
+            Dim redirectUrl As String = BuildBancaSellaPayNowUrl(info)
+            If String.IsNullOrEmpty(redirectUrl) Then
+                Return
+            End If
+
+            Response.Redirect(redirectUrl, False)
+            Context.ApplicationInstance.CompleteRequest()
+        Catch
+            ' Fail-safe: non interrompere la pagina dettaglio.
         End Try
     End Sub
 
@@ -268,6 +270,133 @@ Partial Class documentidettaglio
             ' ignore
         End Try
     End Sub
+
+    Private Function LoadPayNowDocumentInfo(ByVal documentId As Integer) As PayNowDocumentInfo
+        If documentId <= 0 Then Return Nothing
+
+        Try
+            Dim utentiId As Integer = SafeInt(Session("UtentiID"), 0)
+            If utentiId <= 0 Then Return Nothing
+
+            Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+            Using c As New MySqlConnection(cs)
+                Dim sql As String = ""
+                sql &= "SELECT "
+                sql &= "  d.id, d.NDocumento, d.DataDocumento, "
+                sql &= "  COALESCE(d.Pagato,0) AS Pagato, "
+                sql &= "  COALESCE(d.StatiId,0) AS StatiId, "
+                sql &= "  COALESCE(d.StatoPagamentoWeb,0) AS StatoPagamentoWeb, "
+                sql &= "  COALESCE(p.OnLine,0) AS PagamentiTipoOnline, "
+                sql &= "  COALESCE(p.PermettiPagamentoSuccessivo,0) AS PermettiPagamentoSuccessivo, "
+                sql &= "  COALESCE(p.Descrizione,'') AS PagamentiTipoDescrizione, "
+                sql &= "  COALESCE(pie.TotaleDocumento,0) AS TotaleDocumento, "
+                sql &= "  COALESCE(b.codiceAutorizzazione,'') AS CodiceAutorizzazione "
+                sql &= "FROM documenti d "
+                sql &= "LEFT JOIN pagamentitipo p ON p.id = d.PagamentiTipoId "
+                sql &= "LEFT JOIN documentipie pie ON pie.DocumentiId = d.id "
+                sql &= "LEFT JOIN bancasella_ordini_pagati b ON b.DocumentiId = d.id "
+                sql &= "WHERE d.id=@id AND d.UtentiId=@uid "
+                sql &= "LIMIT 1"
+
+                Using cmd As New MySqlCommand(sql, c)
+                    cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = documentId
+                    cmd.Parameters.Add("@uid", MySqlDbType.Int32).Value = utentiId
+                    c.Open()
+
+                    Using dr As MySqlDataReader = cmd.ExecuteReader()
+                        If Not dr.Read() Then Return Nothing
+
+                        Dim info As New PayNowDocumentInfo()
+                        info.DocumentId = SafeInt(dr("id"), 0)
+                        info.NDocumento = SafeInt(dr("NDocumento"), 0)
+                        info.DataDocumento = SafeDate(dr("DataDocumento"), DateTime.Today)
+                        info.Pagato = SafeInt(dr("Pagato"), 0)
+                        info.StatiId = SafeInt(dr("StatiId"), 0)
+                        info.StatoPagamentoWeb = SafeInt(dr("StatoPagamentoWeb"), 0)
+                        info.PagamentiTipoOnline = SafeInt(dr("PagamentiTipoOnline"), 0)
+                        info.PermettiPagamentoSuccessivo = SafeInt(dr("PermettiPagamentoSuccessivo"), 0)
+                        info.TotaleDocumento = SafeDecimal(dr("TotaleDocumento"), 0D)
+                        info.CodiceAutorizzazione = Convert.ToString(dr("CodiceAutorizzazione")).Trim()
+                        info.PagamentiTipoDescrizione = Convert.ToString(dr("PagamentiTipoDescrizione")).Trim()
+                        Return info
+                    End Using
+                End Using
+            End Using
+        Catch
+            Return Nothing
+        End Try
+    End Function
+
+    Private Function CanShowPayNow(ByVal info As PayNowDocumentInfo) As Boolean
+        If info Is Nothing Then Return False
+
+        Return info.Pagato = 0 AndAlso
+               info.PagamentiTipoOnline <> 0 AndAlso
+               info.PermettiPagamentoSuccessivo = 1 AndAlso
+               (info.StatoPagamentoWeb = 1 OrElse info.StatoPagamentoWeb = 3 OrElse info.StatoPagamentoWeb = 5) AndAlso
+               String.IsNullOrEmpty(info.CodiceAutorizzazione) AndAlso
+               info.StatiId <> 0 AndAlso
+               info.StatiId <> 3 AndAlso
+               info.TotaleDocumento > 0D
+    End Function
+
+    Private Function BuildBancaSellaPayNowUrl(ByVal info As PayNowDocumentInfo) As String
+        If info Is Nothing OrElse info.DocumentId <= 0 OrElse info.NDocumento <= 0 OrElse info.TotaleDocumento <= 0D Then
+            Return ""
+        End If
+
+        Dim baseUrl As String = Convert.ToString(Session("AziendaUrl")).Trim()
+        If String.IsNullOrEmpty(baseUrl) Then
+            baseUrl = Request.Url.GetLeftPart(UriPartial.Authority)
+        End If
+
+        Dim amount As String = HttpUtility.UrlEncode(info.TotaleDocumento.ToString("0.00", CultureInfo.InvariantCulture))
+        Dim shopTransactionId As String = HttpUtility.UrlEncode(info.NDocumento.ToString() & "/" & info.DataDocumento.Year.ToString())
+        Dim idDocumento As String = HttpUtility.UrlEncode(info.DocumentId.ToString())
+        Dim sitoWeb As String = HttpUtility.UrlEncode(baseUrl)
+
+        Return "/bancasella.aspx?currency=242" &
+               "&amount=" & amount &
+               "&shopTransactionId=" & shopTransactionId &
+               "&idDocumento=" & idDocumento &
+               "&sitoWeb=" & sitoWeb
+    End Function
+
+    Private Function SafeInt(ByVal value As Object, ByVal fallback As Integer) As Integer
+        Try
+            If value Is Nothing OrElse IsDBNull(value) Then Return fallback
+            Dim parsed As Integer = fallback
+            If Integer.TryParse(Convert.ToString(value), parsed) Then Return parsed
+        Catch
+        End Try
+
+        Return fallback
+    End Function
+
+    Private Function SafeDecimal(ByVal value As Object, ByVal fallback As Decimal) As Decimal
+        Try
+            If value Is Nothing OrElse IsDBNull(value) Then Return fallback
+            Dim parsed As Decimal = fallback
+            If Decimal.TryParse(Convert.ToString(value), NumberStyles.Any, CultureInfo.InvariantCulture, parsed) Then Return parsed
+            If Decimal.TryParse(Convert.ToString(value), NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), parsed) Then Return parsed
+        Catch
+        End Try
+
+        Return fallback
+    End Function
+
+    Private Function SafeDate(ByVal value As Object, ByVal fallback As DateTime) As DateTime
+        Try
+            If value Is Nothing OrElse IsDBNull(value) Then Return fallback
+            If TypeOf value Is DateTime Then Return CType(value, DateTime)
+
+            Dim parsed As DateTime = fallback
+            If DateTime.TryParse(Convert.ToString(value), parsed) Then Return parsed
+        Catch
+        End Try
+
+        Return fallback
+    End Function
 
 
     Private Sub TryRenderGoogleCustomerReviewsOptIn(ByVal idDocumento As Integer)
