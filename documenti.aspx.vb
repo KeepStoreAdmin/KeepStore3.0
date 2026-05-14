@@ -515,7 +515,7 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
                         Return pagato = 0 AndAlso
                                online <> 0 AndAlso
                                permettePagamentoSuccessivo = 1 AndAlso
-                               (statoPagamentoWeb = 1 OrElse statoPagamentoWeb = 3 OrElse statoPagamentoWeb = 5) AndAlso
+                               (statoPagamentoWeb = 0 OrElse statoPagamentoWeb = 1 OrElse statoPagamentoWeb = 3 OrElse statoPagamentoWeb = 5) AndAlso
                                Not haAutorizzazione AndAlso
                                statiId <> 0 AndAlso
                                statiId <> 3 AndAlso
