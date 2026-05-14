@@ -32,8 +32,8 @@ Partial Class documentidettaglio
             Return
         End If
 
-        Dim idDocumento As Integer = -1
-        If Not Integer.TryParse(Convert.ToString(Request.QueryString("id")), idDocumento) OrElse idDocumento <= 0 Then
+        Dim idDocumento As Integer = GetRequestedDocumentId()
+        If idDocumento <= 0 Then
             Response.Redirect("documenti.aspx?t=" & GetFallbackTipoDocumentoId().ToString(), True)
             Return
         End If
@@ -213,8 +213,8 @@ Partial Class documentidettaglio
             SetVisible(btIw, False)
             SetVisible(btPP, False)
 
-            Dim documentId As Integer = 0
-            If Not Integer.TryParse(Convert.ToString(Request.QueryString("id")), documentId) OrElse documentId <= 0 Then
+            Dim documentId As Integer = GetRequestedDocumentId()
+            If documentId <= 0 Then
                 Return
             End If
 
@@ -255,8 +255,12 @@ Partial Class documentidettaglio
         End If
 
         Try
-            Dim idDocumento As Integer = 0
-            If Not Integer.TryParse(Convert.ToString(Request.QueryString("id")), idDocumento) OrElse idDocumento <= 0 Then
+            Dim idDocumento As Integer = SafeInt(e.CommandArgument, 0)
+            If idDocumento <= 0 Then
+                idDocumento = GetRequestedDocumentId()
+            End If
+
+            If idDocumento <= 0 Then
                 Return
             End If
 
@@ -276,6 +280,35 @@ Partial Class documentidettaglio
             ' Fail-safe: non interrompere la pagina dettaglio.
         End Try
     End Sub
+
+    Private Function GetRequestedDocumentId() As Integer
+        Dim idDocumento As Integer = 0
+        If Integer.TryParse(Convert.ToString(Request.QueryString("id")), idDocumento) AndAlso idDocumento > 0 Then
+            Return idDocumento
+        End If
+
+        If IsPostBack Then
+            Return GetPostedDocumentId()
+        End If
+
+        Return -1
+    End Function
+
+    Private Function GetPostedDocumentId() As Integer
+        Try
+            For Each key As String In Request.Form.AllKeys
+                If key IsNot Nothing AndAlso key.EndsWith("$hfPayNowDocumentId", StringComparison.OrdinalIgnoreCase) Then
+                    Dim postedId As Integer = 0
+                    If Integer.TryParse(Convert.ToString(Request.Form(key)), postedId) AndAlso postedId > 0 Then
+                        Return postedId
+                    End If
+                End If
+            Next
+        Catch
+        End Try
+
+        Return -1
+    End Function
 
     Private Sub SetVisible(ByVal ctrl As Control, ByVal value As Boolean)
         If ctrl Is Nothing Then Return
