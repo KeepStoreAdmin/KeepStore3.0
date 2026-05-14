@@ -200,25 +200,24 @@ Partial Class documentidettaglio
         ' Mostra i pulsanti di pagamento online solo quando la policy "Paga ora" lo consente.
         ' Logica volutamente conservativa per evitare regressioni: in dubbio, lascia nascosto.
         Try
-            If FormView1 Is Nothing OrElse FormView1.DataItem Is Nothing Then
+            If FormView1 Is Nothing Then
                 Return
             End If
 
-            Dim drv As DataRowView = TryCast(FormView1.DataItem, DataRowView)
-            If drv Is Nothing Then
-                Return
-            End If
-
-            Dim btSella As Control = FormView1.FindControl("btBancaSella")
-            Dim btIw As Control = FormView1.FindControl("btIwBank")
-            Dim btPP As Control = FormView1.FindControl("btPayPal")
+            Dim btSella As Control = FindFormViewControl("btBancaSella")
+            Dim btIw As Control = FindFormViewControl("btIwBank")
+            Dim btPP As Control = FindFormViewControl("btPayPal")
 
             ' Default: nascondi
             SetVisible(btSella, False)
             SetVisible(btIw, False)
             SetVisible(btPP, False)
 
-            Dim documentId As Integer = SafeInt(drv("id"), 0)
+            Dim documentId As Integer = 0
+            If Not Integer.TryParse(Convert.ToString(Request.QueryString("id")), documentId) OrElse documentId <= 0 Then
+                Return
+            End If
+
             Dim info As PayNowDocumentInfo = LoadPayNowDocumentInfo(documentId)
             If Not CanShowPayNow(info) Then
                 Return
@@ -233,6 +232,22 @@ Partial Class documentidettaglio
             ' Fail-safe: non interrompere la pagina.
         End Try
     End Sub
+
+    Private Function FindFormViewControl(ByVal controlId As String) As Control
+        If FormView1 Is Nothing OrElse String.IsNullOrEmpty(controlId) Then Return Nothing
+
+        Dim ctrl As Control = FormView1.FindControl(controlId)
+        If ctrl IsNot Nothing Then Return ctrl
+
+        Try
+            If FormView1.Row IsNot Nothing Then
+                Return FormView1.Row.FindControl(controlId)
+            End If
+        Catch
+        End Try
+
+        Return Nothing
+    End Function
 
     Protected Sub FormView1_ItemCommand(ByVal sender As Object, ByVal e As FormViewCommandEventArgs) Handles FormView1.ItemCommand
         If e Is Nothing OrElse e.CommandName <> "PagamentoBancaSella" Then
