@@ -426,44 +426,34 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
     '==============================================================
     ' MostraPagaOra → usato nel markup per il bottone "Paga Ora"
     '==============================================================
-    Public Function MostraPagaOra(ByVal pagatoObj As Object,
+    Public Function MostraPagaOra(ByVal documentIdObj As Object,
+                                  ByVal pagatoObj As Object,
                                   ByVal codAutObj As Object,
                                   ByVal statiIdObj As Object,
-                                  ByVal pagamentiTipoOnlineObj As Object) As String
+                                  ByVal pagamentiTipoOnlineObj As Object,
+                                  ByVal totaleDocumentoObj As Object) As String
 
         Try
-            Dim pagato As Integer = 0
-            Dim statiId As Integer = 0
-            Dim pagOnline As Integer = 0
-            Dim haAutorizzazione As Boolean = False
-
-            If pagatoObj IsNot Nothing AndAlso Not IsDBNull(pagatoObj) Then
-                Integer.TryParse(pagatoObj.ToString(), pagato)
+            Dim documentId As Integer = SafeInt(documentIdObj, 0)
+            If documentId > 0 Then
+                Return If(CanShowPayNow(documentId), "", "none")
             End If
 
-            If statiIdObj IsNot Nothing AndAlso Not IsDBNull(statiIdObj) Then
-                Integer.TryParse(statiIdObj.ToString(), statiId)
-            End If
+            Dim pagato As Integer = SafeInt(pagatoObj, 0)
+            Dim statiId As Integer = SafeInt(statiIdObj, 0)
+            Dim pagOnline As Integer = SafeInt(pagamentiTipoOnlineObj, 0)
+            Dim totaleDocumento As Decimal = SafeDecimal(totaleDocumentoObj, 0D)
+            Dim haAutorizzazione As Boolean = HasValue(codAutObj)
 
-            If pagamentiTipoOnlineObj IsNot Nothing AndAlso Not IsDBNull(pagamentiTipoOnlineObj) Then
-                Integer.TryParse(pagamentiTipoOnlineObj.ToString(), pagOnline)
-            End If
-
-            If codAutObj IsNot Nothing AndAlso Not IsDBNull(codAutObj) Then
-                haAutorizzazione = (codAutObj.ToString().Trim() <> "")
-            End If
-
-            ' Stessa logica del badge "ordini da saldare"
             If pagato = 0 AndAlso
                Not haAutorizzazione AndAlso
                statiId <> 0 AndAlso
                statiId <> 3 AndAlso
-               pagOnline <> 0 Then
+               pagOnline <> 0 AndAlso
+               totaleDocumento > 0D Then
 
-                ' Mostra il bottone
                 Return ""
             Else
-                ' Nascondi il bottone
                 Return "none"
             End If
 
@@ -472,6 +462,98 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
             Return "none"
         End Try
 
+    End Function
+
+    Public Function MostraPagaOra(ByVal pagatoObj As Object,
+                                  ByVal codAutObj As Object,
+                                  ByVal statiIdObj As Object,
+                                  ByVal pagamentiTipoOnlineObj As Object) As String
+        Return MostraPagaOra(Nothing, pagatoObj, codAutObj, statiIdObj, pagamentiTipoOnlineObj, Nothing)
+    End Function
+
+    Private Function CanShowPayNow(ByVal documentId As Integer) As Boolean
+        If documentId <= 0 Then Return False
+
+        Try
+            Dim utentiId As Integer = SafeInt(Session("UtentiID"), 0)
+            If utentiId <= 0 Then Return False
+
+            Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+            Using c As New MySql.Data.MySqlClient.MySqlConnection(cs)
+                Dim sql As String = ""
+                sql &= "SELECT "
+                sql &= "  COALESCE(d.Pagato,0) AS Pagato, "
+                sql &= "  COALESCE(d.StatiId,0) AS StatiId, "
+                sql &= "  COALESCE(d.StatoPagamentoWeb,0) AS StatoPagamentoWeb, "
+                sql &= "  COALESCE(p.OnLine,0) AS PagamentiTipoOnline, "
+                sql &= "  COALESCE(p.PermettiPagamentoSuccessivo,0) AS PermettiPagamentoSuccessivo, "
+                sql &= "  COALESCE(pie.TotaleDocumento,0) AS TotaleDocumento, "
+                sql &= "  COALESCE(b.codiceAutorizzazione,'') AS CodiceAutorizzazione "
+                sql &= "FROM documenti d "
+                sql &= "LEFT JOIN pagamentitipo p ON p.id = d.PagamentiTipoId "
+                sql &= "LEFT JOIN documentipie pie ON pie.DocumentiId = d.id "
+                sql &= "LEFT JOIN bancasella_ordini_pagati b ON b.DocumentiId = d.id "
+                sql &= "WHERE d.id=@id AND d.UtentiId=@uid "
+                sql &= "LIMIT 1"
+
+                Using cmd As New MySql.Data.MySqlClient.MySqlCommand(sql, c)
+                    cmd.Parameters.Add("@id", MySql.Data.MySqlClient.MySqlDbType.Int32).Value = documentId
+                    cmd.Parameters.Add("@uid", MySql.Data.MySqlClient.MySqlDbType.Int32).Value = utentiId
+                    c.Open()
+
+                    Using dr As MySql.Data.MySqlClient.MySqlDataReader = cmd.ExecuteReader()
+                        If Not dr.Read() Then Return False
+
+                        Dim pagato As Integer = SafeInt(dr("Pagato"), 0)
+                        Dim statiId As Integer = SafeInt(dr("StatiId"), 0)
+                        Dim statoPagamentoWeb As Integer = SafeInt(dr("StatoPagamentoWeb"), 0)
+                        Dim online As Integer = SafeInt(dr("PagamentiTipoOnline"), 0)
+                        Dim permettePagamentoSuccessivo As Integer = SafeInt(dr("PermettiPagamentoSuccessivo"), 0)
+                        Dim totaleDocumento As Decimal = SafeDecimal(dr("TotaleDocumento"), 0D)
+                        Dim haAutorizzazione As Boolean = HasValue(dr("CodiceAutorizzazione"))
+
+                        Return pagato = 0 AndAlso
+                               online <> 0 AndAlso
+                               permettePagamentoSuccessivo = 1 AndAlso
+                               (statoPagamentoWeb = 1 OrElse statoPagamentoWeb = 3 OrElse statoPagamentoWeb = 5) AndAlso
+                               Not haAutorizzazione AndAlso
+                               statiId <> 0 AndAlso
+                               statiId <> 3 AndAlso
+                               totaleDocumento > 0D
+                    End Using
+                End Using
+            End Using
+        Catch
+            Return False
+        End Try
+    End Function
+
+    Private Function SafeInt(ByVal value As Object, ByVal fallback As Integer) As Integer
+        Try
+            If value Is Nothing OrElse IsDBNull(value) Then Return fallback
+            Dim parsed As Integer = fallback
+            If Integer.TryParse(Convert.ToString(value), parsed) Then Return parsed
+        Catch
+        End Try
+
+        Return fallback
+    End Function
+
+    Private Function SafeDecimal(ByVal value As Object, ByVal fallback As Decimal) As Decimal
+        Try
+            If value Is Nothing OrElse IsDBNull(value) Then Return fallback
+            Dim parsed As Decimal = fallback
+            If Decimal.TryParse(Convert.ToString(value), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, parsed) Then Return parsed
+            If Decimal.TryParse(Convert.ToString(value), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.GetCultureInfo("it-IT"), parsed) Then Return parsed
+        Catch
+        End Try
+
+        Return fallback
+    End Function
+
+    Private Function HasValue(ByVal value As Object) As Boolean
+        If value Is Nothing OrElse IsDBNull(value) Then Return False
+        Return Convert.ToString(value).Trim() <> ""
     End Function
 
     '==============================================================
