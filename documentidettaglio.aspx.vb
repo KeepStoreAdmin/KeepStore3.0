@@ -39,7 +39,10 @@ Partial Class documentidettaglio
         End If
 
         If IsPostBack AndAlso IsBancaSellaPayNowPostBack() Then
-            If Not RedirectToBancaSellaPayNow(idDocumento) Then
+            KeepStoreLog.Info("documentidettaglio-paynow", "Page_Load BancaSellaPostBackDetected documentId=" & idDocumento.ToString(CultureInfo.InvariantCulture) & " " & GetPayNowSessionContext(), HttpContext.Current)
+
+            If Not RedirectToBancaSellaPayNow(idDocumento, "Page_Load") Then
+                KeepStoreLog.Error("documentidettaglio-paynow", "Page_Load BancaSella fallback to detail documentId=" & idDocumento.ToString(CultureInfo.InvariantCulture) & " " & GetPayNowSessionContext(), Nothing, HttpContext.Current)
                 Response.Redirect("documentidettaglio.aspx?id=" & HttpUtility.UrlEncode(idDocumento.ToString()), False)
                 Context.ApplicationInstance.CompleteRequest()
             End If
@@ -272,28 +275,46 @@ Partial Class documentidettaglio
                 Return
             End If
 
-            RedirectToBancaSellaPayNow(idDocumento)
-        Catch
+            KeepStoreLog.Info("documentidettaglio-paynow", "FormView1_ItemCommand commandName=" & SafeLogValue(e.CommandName) & " documentId=" & idDocumento.ToString(CultureInfo.InvariantCulture) & " " & GetPayNowSessionContext(), HttpContext.Current)
+            RedirectToBancaSellaPayNow(idDocumento, "FormView1_ItemCommand")
+        Catch ex As Exception
             ' Fail-safe: non interrompere la pagina dettaglio.
+            KeepStoreLog.Error("documentidettaglio-paynow", "FormView1_ItemCommand exception " & GetPayNowSessionContext(), ex, HttpContext.Current)
         End Try
     End Sub
 
-    Private Function RedirectToBancaSellaPayNow(ByVal idDocumento As Integer) As Boolean
-        If idDocumento <= 0 Then Return False
-
-        Dim info As PayNowDocumentInfo = LoadPayNowDocumentInfo(idDocumento)
-        If Not CanShowPayNow(info) OrElse info.PagamentiTipoOnline <> 3 Then
+    Private Function RedirectToBancaSellaPayNow(ByVal idDocumento As Integer, Optional ByVal source As String = "") As Boolean
+        If idDocumento <= 0 Then
+            KeepStoreLog.Error("documentidettaglio-paynow", "RedirectToBancaSellaPayNow blocked reason=InvalidDocumentId source=" & SafeLogValue(source) & " documentId=" & idDocumento.ToString(CultureInfo.InvariantCulture) & " " & GetPayNowSessionContext(), Nothing, HttpContext.Current)
             Return False
         End If
 
-        Dim redirectUrl As String = BuildBancaSellaPayNowUrl(info)
-        If String.IsNullOrEmpty(redirectUrl) Then
-            Return False
-        End If
+        Try
+            Dim info As PayNowDocumentInfo = LoadPayNowDocumentInfo(idDocumento)
+            Dim blockReason As String = GetPayNowBlockReason(info, True)
+            Dim canShow As Boolean = String.IsNullOrEmpty(blockReason)
 
-        Response.Redirect(redirectUrl, False)
-        Context.ApplicationInstance.CompleteRequest()
-        Return True
+            LogPayNowDiagnostics("RedirectToBancaSellaPayNow validation", idDocumento, info, blockReason, canShow, False, "", source, Nothing)
+
+            If Not canShow Then
+                Return False
+            End If
+
+            Dim redirectUrl As String = BuildBancaSellaPayNowUrl(info)
+            If String.IsNullOrEmpty(redirectUrl) Then
+                LogPayNowDiagnostics("RedirectToBancaSellaPayNow blocked", idDocumento, info, "EmptyBancaSellaUrl", True, True, "", source, Nothing)
+                Return False
+            End If
+
+            LogPayNowDiagnostics("RedirectToBancaSellaPayNow redirect", idDocumento, info, "", True, True, GetRedirectPathOnly(redirectUrl), source, Nothing)
+            Response.Redirect(redirectUrl, False)
+            Context.ApplicationInstance.CompleteRequest()
+            Return True
+
+        Catch ex As Exception
+            KeepStoreLog.Error("documentidettaglio-paynow", "RedirectToBancaSellaPayNow exception source=" & SafeLogValue(source) & " documentId=" & idDocumento.ToString(CultureInfo.InvariantCulture) & " " & GetPayNowSessionContext(), ex, HttpContext.Current)
+            Return False
+        End Try
     End Function
 
     Private Function GetRequestedDocumentId() As Integer
@@ -424,7 +445,8 @@ Partial Class documentidettaglio
                     End Using
                 End Using
             End Using
-        Catch
+        Catch ex As Exception
+            KeepStoreLog.Error("documentidettaglio-paynow", "LoadPayNowDocumentInfo exception documentId=" & documentId.ToString(CultureInfo.InvariantCulture) & " " & GetPayNowSessionContext(), ex, HttpContext.Current)
             Return Nothing
         End Try
     End Function
@@ -440,6 +462,99 @@ Partial Class documentidettaglio
                info.StatiId <> 0 AndAlso
                info.StatiId <> 3 AndAlso
                info.TotaleDocumento > 0D
+    End Function
+
+    Private Function GetPayNowBlockReason(ByVal info As PayNowDocumentInfo, ByVal requireBancaSella As Boolean) As String
+        If info Is Nothing Then Return "DocumentNotFound"
+        If info.Pagato <> 0 Then Return "AlreadyPaid"
+        If info.PagamentiTipoOnline = 0 Then Return "NotOnlinePayment"
+        If info.PermettiPagamentoSuccessivo <> 1 Then Return "PaymentSuccessiveDisabled"
+        If Not (info.StatoPagamentoWeb = 0 OrElse info.StatoPagamentoWeb = 1 OrElse info.StatoPagamentoWeb = 3 OrElse info.StatoPagamentoWeb = 5) Then Return "InvalidStatoPagamentoWeb"
+        If Not String.IsNullOrEmpty(info.CodiceAutorizzazione) Then Return "HasAuthorization"
+        If info.StatiId = 0 OrElse info.StatiId = 3 Then Return "InvalidStatiId"
+        If info.TotaleDocumento <= 0D Then Return "InvalidAmount"
+        If requireBancaSella AndAlso info.PagamentiTipoOnline <> 3 Then Return "NotBancaSella"
+        Return ""
+    End Function
+
+    Private Sub LogPayNowDiagnostics(ByVal action As String,
+                                     ByVal documentId As Integer,
+                                     ByVal info As PayNowDocumentInfo,
+                                     ByVal blockReason As String,
+                                     ByVal canShowPayNow As Boolean,
+                                     ByVal buildUrlCalled As Boolean,
+                                     ByVal targetPath As String,
+                                     ByVal source As String,
+                                     ByVal ex As Exception)
+        Dim msg As String = SafeLogValue(action) &
+            " source=" & SafeLogValue(source) &
+            " documentId=" & documentId.ToString(CultureInfo.InvariantCulture) &
+            " " & GetPayNowSessionContext() &
+            " infoFound=" & BoolLog(info IsNot Nothing) &
+            " canShowPayNow=" & BoolLog(canShowPayNow) &
+            " blockReason=" & BlockReasonLog(blockReason) &
+            " buildUrlCalled=" & BoolLog(buildUrlCalled)
+
+        If info IsNot Nothing Then
+            msg &= " pagamentiTipoOnline=" & info.PagamentiTipoOnline.ToString(CultureInfo.InvariantCulture) &
+                   " permettiPagamentoSuccessivo=" & info.PermettiPagamentoSuccessivo.ToString(CultureInfo.InvariantCulture) &
+                   " pagato=" & info.Pagato.ToString(CultureInfo.InvariantCulture) &
+                   " codiceAutorizzazionePresent=" & BoolLog(Not String.IsNullOrEmpty(info.CodiceAutorizzazione)) &
+                   " statiId=" & info.StatiId.ToString(CultureInfo.InvariantCulture) &
+                   " totaleDocumento=" & info.TotaleDocumento.ToString("0.00", CultureInfo.InvariantCulture) &
+                   " statoPagamentoWeb=" & info.StatoPagamentoWeb.ToString(CultureInfo.InvariantCulture)
+        End If
+
+        If Not String.IsNullOrEmpty(targetPath) Then
+            msg &= " targetPath=" & SafeLogValue(targetPath)
+        End If
+
+        If ex IsNot Nothing OrElse Not String.IsNullOrEmpty(blockReason) Then
+            KeepStoreLog.Error("documentidettaglio-paynow", msg, ex, HttpContext.Current)
+        Else
+            KeepStoreLog.Info("documentidettaglio-paynow", msg, HttpContext.Current)
+        End If
+    End Sub
+
+    Private Function BoolLog(ByVal value As Boolean) As String
+        If value Then Return "1"
+        Return "0"
+    End Function
+
+    Private Function BlockReasonLog(ByVal blockReason As String) As String
+        If String.IsNullOrEmpty(blockReason) Then Return "Allowed"
+        Return SafeLogValue(blockReason)
+    End Function
+
+    Private Function GetPayNowSessionContext() As String
+        Return "loginId=" & SafeLogValue(Session("LoginId")) &
+               " utentiId=" & SafeLogValue(Session("UtentiID"))
+    End Function
+
+    Private Function SafeLogValue(ByVal value As Object) As String
+        Try
+            Dim s As String = Convert.ToString(value)
+            If String.IsNullOrEmpty(s) Then Return ""
+            s = s.Replace(vbCr, " ").Replace(vbLf, " ").Replace("|", "/").Trim()
+            If s.Length > 80 Then s = s.Substring(0, 80)
+            Return s
+        Catch
+            Return ""
+        End Try
+    End Function
+
+    Private Function GetRedirectPathOnly(ByVal redirectUrl As String) As String
+        If String.IsNullOrEmpty(redirectUrl) Then Return ""
+
+        Try
+            Dim idx As Integer = redirectUrl.IndexOf("?"c)
+            If idx >= 0 Then
+                Return redirectUrl.Substring(0, idx)
+            End If
+        Catch
+        End Try
+
+        Return redirectUrl
     End Function
 
     Private Function BuildBancaSellaPayNowUrl(ByVal info As PayNowDocumentInfo) As String
