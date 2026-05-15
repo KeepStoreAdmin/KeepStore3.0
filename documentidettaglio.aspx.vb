@@ -38,6 +38,14 @@ Partial Class documentidettaglio
             Return
         End If
 
+        If IsPostBack AndAlso IsBancaSellaPayNowPostBack() Then
+            If Not RedirectToBancaSellaPayNow(idDocumento) Then
+                Response.Redirect("documentidettaglio.aspx?id=" & HttpUtility.UrlEncode(idDocumento.ToString()), False)
+                Context.ApplicationInstance.CompleteRequest()
+            End If
+            Return
+        End If
+
         If Not IsPostBack Then
             Dim tipoDocId As Integer = -1
             If Not DocumentoAppartieneAUtente(idDocumento, tipoDocId) Then
@@ -264,22 +272,29 @@ Partial Class documentidettaglio
                 Return
             End If
 
-            Dim info As PayNowDocumentInfo = LoadPayNowDocumentInfo(idDocumento)
-            If Not CanShowPayNow(info) OrElse info.PagamentiTipoOnline <> 3 Then
-                Return
-            End If
-
-            Dim redirectUrl As String = BuildBancaSellaPayNowUrl(info)
-            If String.IsNullOrEmpty(redirectUrl) Then
-                Return
-            End If
-
-            Response.Redirect(redirectUrl, False)
-            Context.ApplicationInstance.CompleteRequest()
+            RedirectToBancaSellaPayNow(idDocumento)
         Catch
             ' Fail-safe: non interrompere la pagina dettaglio.
         End Try
     End Sub
+
+    Private Function RedirectToBancaSellaPayNow(ByVal idDocumento As Integer) As Boolean
+        If idDocumento <= 0 Then Return False
+
+        Dim info As PayNowDocumentInfo = LoadPayNowDocumentInfo(idDocumento)
+        If Not CanShowPayNow(info) OrElse info.PagamentiTipoOnline <> 3 Then
+            Return False
+        End If
+
+        Dim redirectUrl As String = BuildBancaSellaPayNowUrl(info)
+        If String.IsNullOrEmpty(redirectUrl) Then
+            Return False
+        End If
+
+        Response.Redirect(redirectUrl, False)
+        Context.ApplicationInstance.CompleteRequest()
+        Return True
+    End Function
 
     Private Function GetRequestedDocumentId() As Integer
         Dim idDocumento As Integer = 0
@@ -308,6 +323,45 @@ Partial Class documentidettaglio
         End Try
 
         Return -1
+    End Function
+
+    Private Function IsBancaSellaPayNowPostBack() As Boolean
+        Try
+            Dim eventTarget As String = Convert.ToString(Request.Form("__EVENTTARGET"))
+            If EndsWithBancaSellaControl(eventTarget) Then
+                Return True
+            End If
+
+            For Each key As String In Request.Form.AllKeys
+                If EndsWithBancaSellaControl(key) OrElse
+                   EndsWithBancaSellaControl(RemoveImageButtonCoordinateSuffix(key)) Then
+                    Return True
+                End If
+            Next
+        Catch
+            Return False
+        End Try
+
+        Return False
+    End Function
+
+    Private Function EndsWithBancaSellaControl(ByVal value As String) As Boolean
+        If String.IsNullOrEmpty(value) Then Return False
+
+        Return value.EndsWith("$btBancaSella", StringComparison.OrdinalIgnoreCase) OrElse
+               value.EndsWith("_btBancaSella", StringComparison.OrdinalIgnoreCase) OrElse
+               value.Equals("btBancaSella", StringComparison.OrdinalIgnoreCase)
+    End Function
+
+    Private Function RemoveImageButtonCoordinateSuffix(ByVal value As String) As String
+        If String.IsNullOrEmpty(value) Then Return value
+
+        If value.EndsWith(".x", StringComparison.OrdinalIgnoreCase) OrElse
+           value.EndsWith(".y", StringComparison.OrdinalIgnoreCase) Then
+            Return value.Substring(0, value.Length - 2)
+        End If
+
+        Return value
     End Function
 
     Private Sub SetVisible(ByVal ctrl As Control, ByVal value As Boolean)
