@@ -102,7 +102,7 @@
                                 <asp:TextBox ID="tbOnline" runat="server" Visible="false" Text='<%# Eval("PagamentiTipoOnline") %>' Width="10"></asp:TextBox>
                                 <asp:HiddenField ID="hfPayNowDocumentId" runat="server" Value='<%# Eval("id") %>' />
 
-                                <asp:ImageButton ID="btBancaSella" runat="server" Visible="false" CommandName="PagamentoBancaSella" CommandArgument='<%# Eval("id") %>' codiceAutorizzazione='<%# Eval("CodiceAutorizzazione")%>' idDocumento='<%# Eval("id") %>' nDocumento='<%# Eval("NDocumento") %>' totaleDocumento='<%# Eval("TotaleDocumento") %>' ToolTip="Paga Adesso" ImageUrl="/Public/Images/paga_adesso.gif" Style="height:42px;" />
+                                <asp:HyperLink ID="hlBancaSella" runat="server" Visible="false" ToolTip="Paga Adesso" ImageUrl="/Public/Images/paga_adesso.gif" Style="height:42px;" />
 
                                 <asp:ImageButton ID="btIwBank" runat="server" Visible="false" PostBackUrl='<%# "https://checkout.iwsmile.it/Pagamenti/?ACCOUNT=" & Me.Session("AccountIwBank") & "&ITEM_NAME=Ordine+n.+" & Eval("NDocumento") & "+del+" & Eval("DataDocumento") & "&ITEM_NUMBER=" & Eval("NDocumento") & "&QUANTITY=1&FLAG_ONLY_IWS=0&AMOUNT=" & Replace(Replace(Eval("TotaleDocumento", "{0:N}"), ".", ""), ",", ".") & "&NOTE=0&URL_OK=" & Request.Url.Scheme & "://" & Request.Url.Host & "/pagamento.aspx?id=" & Eval("id") & "&URL_BAD=" & Request.Url.Scheme & "://" & Request.Url.Host & "/documentidettaglio.aspx?id=" & Eval("id") %>' ToolTip="Paga con IwBank" ImageUrl="/Public/Images/paga_adesso.gif" Style="height:42px;" />
 
