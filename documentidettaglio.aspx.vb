@@ -39,30 +39,6 @@ Partial Class documentidettaglio
             Return
         End If
 
-        If IsBancaSellaPayNowActionRequest() Then
-            KeepStoreLog.Info("documentidettaglio-paynow", "Page_Load BancaSellaActionRequest documentId=" & idDocumento.ToString(CultureInfo.InvariantCulture) & " " & GetPayNowSessionContext(), HttpContext.Current)
-
-            If Not RedirectToBancaSellaPayNow(idDocumento, "Page_LoadAction") Then
-                KeepStoreLog.Error("documentidettaglio-paynow", "Page_Load BancaSella action fallback to detail documentId=" & idDocumento.ToString(CultureInfo.InvariantCulture) & " " & GetPayNowSessionContext(), Nothing, HttpContext.Current)
-                PersistPayNowDebugForRedirect(idDocumento)
-                Response.Redirect(BuildPayNowDetailFallbackUrl(idDocumento, True), False)
-                Context.ApplicationInstance.CompleteRequest()
-            End If
-            Return
-        End If
-
-        If IsPostBack AndAlso IsBancaSellaPayNowPostBack() Then
-            KeepStoreLog.Info("documentidettaglio-paynow", "Page_Load BancaSellaPostBackDetected documentId=" & idDocumento.ToString(CultureInfo.InvariantCulture) & " " & GetPayNowSessionContext(), HttpContext.Current)
-
-            If Not RedirectToBancaSellaPayNow(idDocumento, "Page_Load") Then
-                KeepStoreLog.Error("documentidettaglio-paynow", "Page_Load BancaSella fallback to detail documentId=" & idDocumento.ToString(CultureInfo.InvariantCulture) & " " & GetPayNowSessionContext(), Nothing, HttpContext.Current)
-                PersistPayNowDebugForRedirect(idDocumento)
-                Response.Redirect(BuildPayNowDetailFallbackUrl(idDocumento, True), False)
-                Context.ApplicationInstance.CompleteRequest()
-            End If
-            Return
-        End If
-
         If Not IsPostBack Then
             Dim tipoDocId As Integer = -1
             If Not DocumentoAppartieneAUtente(idDocumento, tipoDocId) Then
@@ -231,12 +207,12 @@ Partial Class documentidettaglio
                 Return
             End If
 
-            Dim btSella As Control = FindFormViewControl("btBancaSella")
+            Dim hlSella As Control = FindFormViewControl("hlBancaSella")
             Dim btIw As Control = FindFormViewControl("btIwBank")
             Dim btPP As Control = FindFormViewControl("btPayPal")
 
             ' Default: nascondi
-            SetVisible(btSella, False)
+            SetVisible(hlSella, False)
             SetVisible(btIw, False)
             SetVisible(btPP, False)
 
@@ -252,8 +228,14 @@ Partial Class documentidettaglio
 
             ' BancaSella usa OnLine=3. PayPal resta nascosto finche' il flusso documento non e' verificato.
             If info.PagamentiTipoOnline = 3 Then
-                SetVisible(btSella, True)
-                ConfigureBancaSellaPayNowAction(btSella, documentId)
+                Dim bancaSellaUrl As String = BuildBancaSellaPayNowUrl(info)
+                If Not String.IsNullOrEmpty(bancaSellaUrl) Then
+                    ConfigureBancaSellaPayNowLink(hlSella, bancaSellaUrl)
+                    SetVisible(hlSella, True)
+                    LogPayNowDiagnostics("FormView1_DataBound direct link", documentId, info, "", True, True, GetRedirectPathOnly(bancaSellaUrl), "FormView1_DataBound", Nothing)
+                Else
+                    LogPayNowDiagnostics("FormView1_DataBound blocked", documentId, info, "EmptyBancaSellaUrl", True, True, "", "FormView1_DataBound", Nothing)
+                End If
             End If
 
         Catch
@@ -261,13 +243,13 @@ Partial Class documentidettaglio
         End Try
     End Sub
 
-    Private Sub ConfigureBancaSellaPayNowAction(ByVal btSella As Control, ByVal documentId As Integer)
-        If btSella Is Nothing OrElse documentId <= 0 Then Return
+    Private Sub ConfigureBancaSellaPayNowLink(ByVal hlSella As Control, ByVal navigateUrl As String)
+        If hlSella Is Nothing OrElse String.IsNullOrEmpty(navigateUrl) Then Return
 
-        Dim imageButton As ImageButton = TryCast(btSella, ImageButton)
-        If imageButton Is Nothing Then Return
+        Dim link As HyperLink = TryCast(hlSella, HyperLink)
+        If link Is Nothing Then Return
 
-        imageButton.PostBackUrl = BuildPayNowActionUrl(documentId)
+        link.NavigateUrl = navigateUrl
     End Sub
 
     Private Function FindFormViewControl(ByVal controlId As String) As Control
@@ -284,63 +266,6 @@ Partial Class documentidettaglio
         End Try
 
         Return Nothing
-    End Function
-
-    Protected Sub FormView1_ItemCommand(ByVal sender As Object, ByVal e As FormViewCommandEventArgs) Handles FormView1.ItemCommand
-        If e Is Nothing OrElse e.CommandName <> "PagamentoBancaSella" Then
-            Return
-        End If
-
-        Try
-            Dim idDocumento As Integer = SafeInt(e.CommandArgument, 0)
-            If idDocumento <= 0 Then
-                idDocumento = GetRequestedDocumentId()
-            End If
-
-            If idDocumento <= 0 Then
-                Return
-            End If
-
-            KeepStoreLog.Info("documentidettaglio-paynow", "FormView1_ItemCommand commandName=" & SafeLogValue(e.CommandName) & " documentId=" & idDocumento.ToString(CultureInfo.InvariantCulture) & " " & GetPayNowSessionContext(), HttpContext.Current)
-            RedirectToBancaSellaPayNow(idDocumento, "FormView1_ItemCommand")
-        Catch ex As Exception
-            ' Fail-safe: non interrompere la pagina dettaglio.
-            KeepStoreLog.Error("documentidettaglio-paynow", "FormView1_ItemCommand exception " & GetPayNowSessionContext(), ex, HttpContext.Current)
-        End Try
-    End Sub
-
-    Private Function RedirectToBancaSellaPayNow(ByVal idDocumento As Integer, Optional ByVal source As String = "") As Boolean
-        If idDocumento <= 0 Then
-            KeepStoreLog.Error("documentidettaglio-paynow", "RedirectToBancaSellaPayNow blocked reason=InvalidDocumentId source=" & SafeLogValue(source) & " documentId=" & idDocumento.ToString(CultureInfo.InvariantCulture) & " " & GetPayNowSessionContext(), Nothing, HttpContext.Current)
-            Return False
-        End If
-
-        Try
-            Dim info As PayNowDocumentInfo = LoadPayNowDocumentInfo(idDocumento)
-            Dim blockReason As String = GetPayNowBlockReason(info, True)
-            Dim canShow As Boolean = String.IsNullOrEmpty(blockReason)
-
-            LogPayNowDiagnostics("RedirectToBancaSellaPayNow validation", idDocumento, info, blockReason, canShow, False, "", source, Nothing)
-
-            If Not canShow Then
-                Return False
-            End If
-
-            Dim redirectUrl As String = BuildBancaSellaPayNowUrl(info)
-            If String.IsNullOrEmpty(redirectUrl) Then
-                LogPayNowDiagnostics("RedirectToBancaSellaPayNow blocked", idDocumento, info, "EmptyBancaSellaUrl", True, True, "", source, Nothing)
-                Return False
-            End If
-
-            LogPayNowDiagnostics("RedirectToBancaSellaPayNow redirect", idDocumento, info, "", True, True, GetRedirectPathOnly(redirectUrl), source, Nothing)
-            Response.Redirect(redirectUrl, False)
-            Context.ApplicationInstance.CompleteRequest()
-            Return True
-
-        Catch ex As Exception
-            KeepStoreLog.Error("documentidettaglio-paynow", "RedirectToBancaSellaPayNow exception source=" & SafeLogValue(source) & " documentId=" & idDocumento.ToString(CultureInfo.InvariantCulture) & " " & GetPayNowSessionContext(), ex, HttpContext.Current)
-            Return False
-        End Try
     End Function
 
     Private Function GetRequestedDocumentId() As Integer
@@ -370,49 +295,6 @@ Partial Class documentidettaglio
         End Try
 
         Return -1
-    End Function
-
-    Private Function IsBancaSellaPayNowPostBack() As Boolean
-        Try
-            Dim eventTarget As String = Convert.ToString(Request.Form("__EVENTTARGET"))
-            If EndsWithBancaSellaControl(eventTarget) Then
-                Return True
-            End If
-
-            For Each key As String In Request.Form.AllKeys
-                If EndsWithBancaSellaControl(key) OrElse
-                   EndsWithBancaSellaControl(RemoveImageButtonCoordinateSuffix(key)) Then
-                    Return True
-                End If
-            Next
-        Catch
-            Return False
-        End Try
-
-        Return False
-    End Function
-
-    Private Function IsBancaSellaPayNowActionRequest() As Boolean
-        Return String.Equals(Convert.ToString(Request.QueryString("paynowaction")), "bancasella", StringComparison.OrdinalIgnoreCase)
-    End Function
-
-    Private Function EndsWithBancaSellaControl(ByVal value As String) As Boolean
-        If String.IsNullOrEmpty(value) Then Return False
-
-        Return value.EndsWith("$btBancaSella", StringComparison.OrdinalIgnoreCase) OrElse
-               value.EndsWith("_btBancaSella", StringComparison.OrdinalIgnoreCase) OrElse
-               value.Equals("btBancaSella", StringComparison.OrdinalIgnoreCase)
-    End Function
-
-    Private Function RemoveImageButtonCoordinateSuffix(ByVal value As String) As String
-        If String.IsNullOrEmpty(value) Then Return value
-
-        If value.EndsWith(".x", StringComparison.OrdinalIgnoreCase) OrElse
-           value.EndsWith(".y", StringComparison.OrdinalIgnoreCase) Then
-            Return value.Substring(0, value.Length - 2)
-        End If
-
-        Return value
     End Function
 
     Private Sub SetVisible(ByVal ctrl As Control, ByVal value As Boolean)
@@ -611,7 +493,19 @@ Partial Class documentidettaglio
                 Dim info As PayNowDocumentInfo = LoadPayNowDocumentInfo(documentId)
                 Dim blockReason As String = GetPayNowBlockReason(info, True)
                 Dim canShow As Boolean = String.IsNullOrEmpty(blockReason)
-                debugText = BuildPayNowDebugText("PayNowDebugRender", documentId, info, blockReason, canShow, False, "", source)
+                Dim buildUrlCalled As Boolean = False
+                Dim targetPath As String = ""
+
+                If canShow AndAlso info IsNot Nothing AndAlso info.PagamentiTipoOnline = 3 Then
+                    buildUrlCalled = True
+                    targetPath = GetRedirectPathOnly(BuildBancaSellaPayNowUrl(info))
+                    If String.IsNullOrEmpty(targetPath) Then
+                        blockReason = "EmptyBancaSellaUrl"
+                        canShow = False
+                    End If
+                End If
+
+                debugText = BuildPayNowDebugText("PayNowDebugRender", documentId, info, blockReason, canShow, buildUrlCalled, targetPath, source)
             End If
 
             pnlPayNowDebug.Visible = True
@@ -658,17 +552,6 @@ Partial Class documentidettaglio
         If IsPayNowDebugEnabled() Then
             url &= "&paynowdebug=1"
             If blocked Then url &= "&paynowresult=blocked"
-        End If
-
-        Return url
-    End Function
-
-    Private Function BuildPayNowActionUrl(ByVal documentId As Integer) As String
-        Dim url As String = "documentidettaglio.aspx?id=" & HttpUtility.UrlEncode(documentId.ToString(CultureInfo.InvariantCulture)) &
-                            "&paynowaction=bancasella"
-
-        If IsPayNowDebugEnabled() Then
-            url &= "&paynowdebug=1"
         End If
 
         Return url
