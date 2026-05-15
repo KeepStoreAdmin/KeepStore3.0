@@ -299,8 +299,14 @@
     
     <script type="text/javascript">
         //check if the browser support HTML5 postmessage
+        if (typeof BrowserEnabled === "undefined") {
+            var BrowserEnabled = true;
+        }
         if (!BrowserEnabled) {
-            document.getElementById("bsButton").innerHTML = "HTML5 is not suported by your browser!";
+            var bsButton = document.getElementById("bsButton");
+            if (bsButton) {
+                bsButton.innerHTML = "HTML5 is not suported by your browser!";
+            }
         }
     </script>
 
