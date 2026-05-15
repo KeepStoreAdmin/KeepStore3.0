@@ -114,6 +114,11 @@
                     </ItemTemplate>
                 </asp:FormView>
 
+                <asp:Panel ID="pnlPayNowDebug" runat="server" Visible="false" CssClass="order-detail-wrap" Style="border:1px solid #d9a441; background:#fff8e5;">
+                    <h5 class="fw-bold">PAYNOW DEBUG</h5>
+                    <pre style="white-space:pre-wrap; margin:0;"><asp:Literal ID="litPayNowDebug" runat="server" /></pre>
+                </asp:Panel>
+
                 <div class="order-detail-wrap">
                     <h5 class="fw-bold">Articoli</h5>
 
