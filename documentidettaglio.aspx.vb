@@ -39,6 +39,18 @@ Partial Class documentidettaglio
             Return
         End If
 
+        If IsBancaSellaPayNowActionRequest() Then
+            KeepStoreLog.Info("documentidettaglio-paynow", "Page_Load BancaSellaActionRequest documentId=" & idDocumento.ToString(CultureInfo.InvariantCulture) & " " & GetPayNowSessionContext(), HttpContext.Current)
+
+            If Not RedirectToBancaSellaPayNow(idDocumento, "Page_LoadAction") Then
+                KeepStoreLog.Error("documentidettaglio-paynow", "Page_Load BancaSella action fallback to detail documentId=" & idDocumento.ToString(CultureInfo.InvariantCulture) & " " & GetPayNowSessionContext(), Nothing, HttpContext.Current)
+                PersistPayNowDebugForRedirect(idDocumento)
+                Response.Redirect(BuildPayNowDetailFallbackUrl(idDocumento, True), False)
+                Context.ApplicationInstance.CompleteRequest()
+            End If
+            Return
+        End If
+
         If IsPostBack AndAlso IsBancaSellaPayNowPostBack() Then
             KeepStoreLog.Info("documentidettaglio-paynow", "Page_Load BancaSellaPostBackDetected documentId=" & idDocumento.ToString(CultureInfo.InvariantCulture) & " " & GetPayNowSessionContext(), HttpContext.Current)
 
@@ -241,11 +253,21 @@ Partial Class documentidettaglio
             ' BancaSella usa OnLine=3. PayPal resta nascosto finche' il flusso documento non e' verificato.
             If info.PagamentiTipoOnline = 3 Then
                 SetVisible(btSella, True)
+                ConfigureBancaSellaPayNowAction(btSella, documentId)
             End If
 
         Catch
             ' Fail-safe: non interrompere la pagina.
         End Try
+    End Sub
+
+    Private Sub ConfigureBancaSellaPayNowAction(ByVal btSella As Control, ByVal documentId As Integer)
+        If btSella Is Nothing OrElse documentId <= 0 Then Return
+
+        Dim imageButton As ImageButton = TryCast(btSella, ImageButton)
+        If imageButton Is Nothing Then Return
+
+        imageButton.PostBackUrl = BuildPayNowActionUrl(documentId)
     End Sub
 
     Private Function FindFormViewControl(ByVal controlId As String) As Control
@@ -368,6 +390,10 @@ Partial Class documentidettaglio
         End Try
 
         Return False
+    End Function
+
+    Private Function IsBancaSellaPayNowActionRequest() As Boolean
+        Return String.Equals(Convert.ToString(Request.QueryString("paynowaction")), "bancasella", StringComparison.OrdinalIgnoreCase)
     End Function
 
     Private Function EndsWithBancaSellaControl(ByVal value As String) As Boolean
@@ -632,6 +658,17 @@ Partial Class documentidettaglio
         If IsPayNowDebugEnabled() Then
             url &= "&paynowdebug=1"
             If blocked Then url &= "&paynowresult=blocked"
+        End If
+
+        Return url
+    End Function
+
+    Private Function BuildPayNowActionUrl(ByVal documentId As Integer) As String
+        Dim url As String = "documentidettaglio.aspx?id=" & HttpUtility.UrlEncode(documentId.ToString(CultureInfo.InvariantCulture)) &
+                            "&paynowaction=bancasella"
+
+        If IsPayNowDebugEnabled() Then
+            url &= "&paynowdebug=1"
         End If
 
         Return url
