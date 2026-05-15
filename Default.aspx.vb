@@ -2399,7 +2399,7 @@ Partial Public Class _Default
             Return String.Empty
         End If
 
-        Return "<div class='badge-refurbished'><img src='/Public/assets/images/ico/refurbished.png' alt='Ricondizionato'></div>"
+        Return "<div class='badge-refurbished'><img src='/Public/assets/images/img/refurbished.png' alt='Ricondizionato'></div>"
     End Function
 
     Private Function RenderPriceBlock(ByVal row As DataRow, ByVal emphasize As Boolean) As String
