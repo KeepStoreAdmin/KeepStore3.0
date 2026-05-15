@@ -189,7 +189,7 @@
 
                                         <asp:PlaceHolder ID="phRefurbished" runat="server" Visible="false">
                                             <div class="ks-refurbished-detail">
-                                                <img src="/Public/assets/images/ico/refurbished.png" alt="Ricondizionato" />
+                                                <img src="/Public/assets/images/img/refurbished.png" alt="Ricondizionato" />
                                                 <span>Articolo ricondizionato</span>
                                                 <asp:Literal ID="litRefurbishedNote" runat="server" />
                                             </div>
