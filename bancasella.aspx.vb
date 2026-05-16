@@ -93,6 +93,8 @@ Partial Class BancaSella
             '    L'errore 1142 "indirizzo IP non valido" arriva da qui
             '    se l'IP pubblico NON è autorizzato nel pannello Axerve.
             '=========================================================
+            EnsureBancaSellaTls12()
+
             Dim xmlOut As String = objCrypt.Encrypt(
                 shopLogin,
                 currency,
@@ -255,6 +257,15 @@ result = "Errore Banca Sella. Codice: " & errorCode &
         If s.Length <= maxLen Then Return s
         Return s.Substring(0, maxLen)
     End Function
+
+    Private Sub EnsureBancaSellaTls12()
+        ' TLS 1.2 is required by modern Axerve/GestPay endpoints. The numeric
+        ' value keeps this compatible with older target-framework references.
+        Const Tls12Value As Integer = 3072
+        System.Net.ServicePointManager.SecurityProtocol =
+            System.Net.ServicePointManager.SecurityProtocol Or
+            CType(Tls12Value, System.Net.SecurityProtocolType)
+    End Sub
 
     Private Sub SafeWriteBancaSellaLog(ByVal stepName As String,
                                       ByVal iddocumento As String,
