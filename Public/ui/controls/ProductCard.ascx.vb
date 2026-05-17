@@ -262,7 +262,9 @@ Partial Class Public_ui_controls_ProductCard
     Protected ReadOnly Property CompareToggleAttribute As String
         Get
             If IsDemoMode Then Return ""
-            Return " data-bs-toggle=""offcanvas"""
+            Dim target As String = SafeCompareTarget
+            Dim controls As String = target.TrimStart("#"c)
+            Return " data-bs-toggle=""offcanvas"" data-bs-target=""" & EncodeAttribute(target) & """ aria-controls=""" & EncodeAttribute(controls) & """"
         End Get
     End Property
 

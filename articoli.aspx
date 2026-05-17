@@ -286,7 +286,7 @@
                                                 </a>
                                             </li>
                                             <li>
-                                                <a href="#compare" data-bs-toggle="offcanvas"
+                                                <a href="#compare" data-bs-toggle="offcanvas" data-bs-target="#compare" aria-controls="compare"
                                                     class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-compare"
                                                     aria-label="Confronta articolo"
                                                     <%# CatalogActionDataAttributes(Container.DataItem) %>>
