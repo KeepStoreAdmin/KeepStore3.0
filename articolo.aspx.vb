@@ -36,22 +36,46 @@ Partial Class articolo
         Public Property CategoryName As String
         Public Property ProductUrl As String
         Public Property MainImageUrl As String
+        Public Property PlaceholderImageUrl As String
         Public Property ShortDescriptionHtml As String
         Public Property LongDescriptionHtml As String
+        Public Property TechnicalInfoHtml As String
         Public Property PriceHtml As String
         Public Property PriceText As String
         Public Property OldPriceText As String
         Public Property IvaLabel As String
+        Public Property PromoText As String
         Public Property IsPromo As Boolean
         Public Property AvailabilityHtml As String
         Public Property AvailabilityText As String
         Public Property AvailabilityCss As String
+        Public Property IsAvailable As Boolean
         Public Property IsRefurbished As Boolean
         Public Property RefurbishedText As String
+        Public Property RefurbishedBadgeUrl As String
         Public Property QuantityText As String
         Public Property AddToCartEnabled As Boolean
+        Public Property CanAddToCart As Boolean
+        Public Property AddToCartPlaceholderText As String
         Public Property ShowVariants As Boolean
+        Public Property HasVariants As Boolean
         Public Property SelectedVariantTCId As Integer
+        Public Property VariantSummaryText As String
+        Public Property ReviewsSummaryText As String
+        Public Property RelatedProductsTitle As String
+        Public Property HasRelatedProducts As Boolean
+        Public Property HasRecentProducts As Boolean
+        Public Property SeoTitle As String
+        Public Property SeoMetaDescription As String
+        Public Property CanonicalUrl As String
+        Public Property OpenGraphImageUrl As String
+        Public Property JsonLdHtml As String
+        Public Property GalleryDomId As String
+        Public Property GalleryThumbsDomId As String
+        Public Property SupportsSwiperGallery As Boolean
+        Public Property SupportsPhotoSwipe As Boolean
+        Public Property SupportsDriftZoom As Boolean
+        Public Property SupportsQuantityStepper As Boolean
         Public Property GalleryImageUrls As IEnumerable(Of String)
     End Class
 
@@ -213,50 +237,86 @@ Partial Class articolo
         End If
 
         BindProduct(row)
-        If IsProductDetailPreviewEnabled() Then
-            Dim previewModel As ProductDetailViewModel = BuildProductDetailViewModel(row)
-            If previewModel IsNot Nothing Then
-                Dim previewControl As System.Web.UI.Control = LoadControl("~/Public/ui/controls/ProductDetailView.ascx")
-                Dim detailView As IProductDetailView = TryCast(previewControl, IProductDetailView)
-                If detailView IsNot Nothing Then
-                    detailView.ProductName = previewModel.ProductName
-                    detailView.ProductCode = previewModel.ProductCode
-                    detailView.Ean = previewModel.Ean
-                    detailView.MainImageUrl = previewModel.MainImageUrl
-                    detailView.BrandName = previewModel.BrandName
-                    detailView.CategoryName = previewModel.CategoryName
-                    detailView.PriceHtml = previewModel.PriceHtml
-                    detailView.OldPriceText = previewModel.OldPriceText
-                    detailView.IvaLabel = previewModel.IvaLabel
-                    detailView.IsPromo = previewModel.IsPromo
-                    detailView.AvailabilityHtml = previewModel.AvailabilityHtml
-                    detailView.TCId = previewModel.TCId
-                    detailView.ShortDescriptionHtml = previewModel.ShortDescriptionHtml
-                    detailView.LongDescriptionHtml = previewModel.LongDescriptionHtml
-                    detailView.IsRefurbished = previewModel.IsRefurbished
-                    detailView.RefurbishedText = previewModel.RefurbishedText
-                    detailView.ProductUrl = previewModel.ProductUrl
-                    detailView.QuantityText = previewModel.QuantityText
-                    detailView.AddToCartEnabled = previewModel.AddToCartEnabled
-                    detailView.ShowVariants = previewModel.ShowVariants
-                    detailView.SelectedVariantTCId = previewModel.SelectedVariantTCId
-                    detailView.GalleryImageUrls = previewModel.GalleryImageUrls
-                    phProductDetailPreview.Controls.Clear()
-                    phProductDetailPreview.Controls.Add(previewControl)
-                    phProductDetailPreview.Visible = True
-                Else
-                    phProductDetailPreview.Visible = False
-                End If
-            Else
-                phProductDetailPreview.Visible = False
-            End If
-        Else
-            phProductDetailPreview.Visible = False
-        End If
+        BindProductDetailPreview(row)
         TrackRecentlyViewed(_id)
         ApplySeo(row)
         BindProductReviews()
         BindProductRelations(row)
+    End Sub
+
+    Private Sub BindProductDetailPreview(row As DataRow)
+        phProductDetailPreview.Controls.Clear()
+        phProductDetailPreview.Visible = False
+
+        If Not IsProductDetailPreviewEnabled() Then Return
+
+        Dim previewModel As ProductDetailViewModel = BuildProductDetailViewModel(row)
+        If previewModel Is Nothing Then Return
+
+        Dim previewControl As System.Web.UI.Control = LoadControl("~/Public/ui/controls/ProductDetailView.ascx")
+        Dim detailView As IProductDetailView = TryCast(previewControl, IProductDetailView)
+        If detailView Is Nothing Then Return
+
+        ConfigureProductDetailPreview(detailView, previewModel)
+        phProductDetailPreview.Controls.Add(previewControl)
+        phProductDetailPreview.Visible = True
+    End Sub
+
+    Private Sub ConfigureProductDetailPreview(detailView As IProductDetailView, previewModel As ProductDetailViewModel)
+        If detailView Is Nothing OrElse previewModel Is Nothing Then Return
+
+        detailView.ArticleId = previewModel.ProductId
+        detailView.TCId = previewModel.TCId
+        detailView.ProductName = previewModel.ProductName
+        detailView.ProductCode = previewModel.ProductCode
+        detailView.Ean = previewModel.Ean
+        detailView.BrandName = previewModel.BrandName
+        detailView.CategoryName = previewModel.CategoryName
+        detailView.ProductUrl = previewModel.ProductUrl
+        detailView.MainImageUrl = previewModel.MainImageUrl
+        detailView.PlaceholderImageUrl = previewModel.PlaceholderImageUrl
+        detailView.GalleryImageUrls = previewModel.GalleryImageUrls
+        detailView.PriceHtml = previewModel.PriceHtml
+        detailView.CurrentPriceText = previewModel.PriceText
+        detailView.OldPriceText = previewModel.OldPriceText
+        detailView.IvaLabel = previewModel.IvaLabel
+        detailView.VatText = previewModel.IvaLabel
+        detailView.IsPromo = previewModel.IsPromo
+        detailView.PromoText = previewModel.PromoText
+        detailView.AvailabilityHtml = previewModel.AvailabilityHtml
+        detailView.AvailabilityText = previewModel.AvailabilityText
+        detailView.AvailabilityCssClass = previewModel.AvailabilityCss
+        detailView.IsAvailable = previewModel.IsAvailable
+        detailView.QuantityText = previewModel.QuantityText
+        detailView.AddToCartEnabled = previewModel.AddToCartEnabled
+        detailView.CanAddToCart = previewModel.CanAddToCart
+        detailView.AddToCartPlaceholderText = previewModel.AddToCartPlaceholderText
+        detailView.ShowVariants = previewModel.ShowVariants
+        detailView.HasVariants = previewModel.HasVariants
+        detailView.SelectedVariantTCId = previewModel.SelectedVariantTCId
+        detailView.VariantSummaryText = previewModel.VariantSummaryText
+        detailView.IsRefurbished = previewModel.IsRefurbished
+        detailView.RefurbishedText = previewModel.RefurbishedText
+        detailView.RefurbishedBadgeUrl = previewModel.RefurbishedBadgeUrl
+        detailView.ShortDescriptionHtml = previewModel.ShortDescriptionHtml
+        detailView.LongDescriptionHtml = previewModel.LongDescriptionHtml
+        detailView.DescriptionHtml = previewModel.LongDescriptionHtml
+        detailView.TechnicalInfoHtml = previewModel.TechnicalInfoHtml
+        detailView.ReviewsSummaryText = previewModel.ReviewsSummaryText
+        detailView.RelatedProductsTitle = previewModel.RelatedProductsTitle
+        detailView.HasRelatedProducts = previewModel.HasRelatedProducts
+        detailView.HasRecentProducts = previewModel.HasRecentProducts
+        detailView.SeoTitle = previewModel.SeoTitle
+        detailView.SeoMetaDescription = previewModel.SeoMetaDescription
+        detailView.CanonicalUrl = previewModel.CanonicalUrl
+        detailView.OpenGraphImageUrl = previewModel.OpenGraphImageUrl
+        detailView.JsonLdHtml = previewModel.JsonLdHtml
+        detailView.GalleryDomId = previewModel.GalleryDomId
+        detailView.GalleryThumbsDomId = previewModel.GalleryThumbsDomId
+        detailView.SupportsSwiperGallery = previewModel.SupportsSwiperGallery
+        detailView.SupportsPhotoSwipe = previewModel.SupportsPhotoSwipe
+        detailView.SupportsDriftZoom = previewModel.SupportsDriftZoom
+        detailView.SupportsQuantityStepper = previewModel.SupportsQuantityStepper
     End Sub
 
     Private Sub BindProductRelations(row As DataRow)
@@ -1305,7 +1365,16 @@ Partial Class articolo
         End If
 
         Dim mainImageUrl As String = NormalizeImageUrl(GetRowString(row, "Img1"))
+        Dim placeholderImageUrl As String = ThemeManager.PlaceholderProductImageUrl()
+        If String.IsNullOrWhiteSpace(mainImageUrl) Then
+            mainImageUrl = placeholderImageUrl
+        End If
+
         Dim galleryImageUrls As List(Of String) = BuildProductDetailGalleryImageUrls(row)
+        If galleryImageUrls.Count = 0 AndAlso Not String.IsNullOrWhiteSpace(mainImageUrl) Then
+            galleryImageUrls.Add(mainImageUrl)
+        End If
+
         Dim longValue As String = FirstNonEmpty(GetRowString(row, "DescrizioneHTML"), GetRowString(row, "DescrizioneLunga"), GetRowString(row, "Descrizione2"))
         Dim availabilityText As String = BuildAvailabilityText(row)
         Dim availabilityCss As String = "ks-availability-check"
@@ -1315,6 +1384,8 @@ Partial Class articolo
             availabilityCss = "ks-availability-wait"
         End If
 
+        Dim stockAvailable As Integer = GetRowInt(row, "Giacenza", 0) - GetRowInt(row, "Impegnata", 0)
+
         Dim isRefurbished As Boolean = (GetRowInt(row, "Ricondizionato", 0) = 1)
         Dim refurbishedNote As String = GetRowString(row, "NoteRicondizionato")
         Dim refurbishedText As String = String.Empty
@@ -1323,6 +1394,23 @@ Partial Class articolo
         End If
 
         Dim includeTcid As Boolean = (_tcEnabled AndAlso selectedTcid <> -1)
+        Dim hasVariants As Boolean = (_tcEnabled AndAlso pnlVariants.Visible AndAlso ddlTc.Items.Count > 1)
+        Dim variantSummary As String = "non abilitate"
+        If hasVariants Then
+            variantSummary = ddlTc.Items.Count.ToString(CultureInfo.InvariantCulture) & " varianti, TCId selezionato " & selectedTcid.ToString(CultureInfo.InvariantCulture)
+        End If
+
+        Dim seoTitle As String = productName
+        If Not String.IsNullOrWhiteSpace(brandName) Then
+            seoTitle &= " | " & brandName
+        End If
+
+        Dim canonicalUrl As String = BuildCanonicalUrl()
+        Dim metaDescription As String = BuildMetaDescription(row, productName)
+        Dim openGraphImageUrl As String = String.Empty
+        If Not String.IsNullOrWhiteSpace(mainImageUrl) Then
+            openGraphImageUrl = MakeAbsoluteUrl(mainImageUrl)
+        End If
 
         Return New ProductDetailViewModel() With {
             .ProductId = productId,
@@ -1334,22 +1422,46 @@ Partial Class articolo
             .CategoryName = categoryName,
             .ProductUrl = BuildProductUrl(productId, selectedTcid, includeTcid),
             .MainImageUrl = mainImageUrl,
+            .PlaceholderImageUrl = placeholderImageUrl,
             .ShortDescriptionHtml = shortDescHtml,
             .LongDescriptionHtml = NormalizeDescriptionHtml(longValue),
+            .TechnicalInfoHtml = String.Empty,
             .PriceHtml = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo),
             .PriceText = BuildPriceText(price.CurrentPrice),
             .OldPriceText = BuildPriceText(price.OldPrice),
             .IvaLabel = price.IvaLabel,
+            .PromoText = If(price.IsPromo, "In offerta", String.Empty),
             .IsPromo = price.IsPromo,
             .AvailabilityHtml = BuildAvailabilityHtml(availabilityText),
             .AvailabilityText = availabilityText,
             .AvailabilityCss = availabilityCss,
+            .IsAvailable = (stockAvailable > 0),
             .IsRefurbished = isRefurbished,
             .RefurbishedText = refurbishedText,
+            .RefurbishedBadgeUrl = "/Public/assets/images/img/refurbished.png",
             .QuantityText = "1",
-            .AddToCartEnabled = (productId > 0),
-            .ShowVariants = _tcEnabled,
+            .AddToCartEnabled = False,
+            .CanAddToCart = False,
+            .AddToCartPlaceholderText = "preview locale: carrello reale non collegato",
+            .ShowVariants = hasVariants,
+            .HasVariants = hasVariants,
             .SelectedVariantTCId = selectedTcid,
+            .VariantSummaryText = variantSummary,
+            .ReviewsSummaryText = String.Empty,
+            .RelatedProductsTitle = String.Empty,
+            .HasRelatedProducts = False,
+            .HasRecentProducts = False,
+            .SeoTitle = seoTitle,
+            .SeoMetaDescription = metaDescription,
+            .CanonicalUrl = canonicalUrl,
+            .OpenGraphImageUrl = openGraphImageUrl,
+            .JsonLdHtml = BuildProductJsonLd(row, canonicalUrl, metaDescription),
+            .GalleryDomId = String.Empty,
+            .GalleryThumbsDomId = String.Empty,
+            .SupportsSwiperGallery = False,
+            .SupportsPhotoSwipe = False,
+            .SupportsDriftZoom = False,
+            .SupportsQuantityStepper = False,
             .GalleryImageUrls = galleryImageUrls
         }
     End Function
