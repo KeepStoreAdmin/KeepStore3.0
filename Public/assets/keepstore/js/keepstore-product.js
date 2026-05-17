@@ -562,12 +562,19 @@
     if (!canvas) return;
 
     if (window.bootstrap && bootstrap.Offcanvas) {
-      bootstrap.Offcanvas.getOrCreateInstance(canvas).show();
-      return;
+      try {
+        bootstrap.Offcanvas.getOrCreateInstance(canvas).show();
+        return;
+      } catch (err) {
+        // Fallback to the theme's CSS-driven drawer if Bootstrap cannot own this element.
+      }
     }
 
     canvas.classList.add('show');
     canvas.style.visibility = 'visible';
+    canvas.removeAttribute('aria-hidden');
+    canvas.setAttribute('aria-modal', 'true');
+    canvas.setAttribute('role', 'dialog');
     document.body.classList.add('offcanvas-open');
   }
 
