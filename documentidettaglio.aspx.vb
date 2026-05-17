@@ -52,9 +52,29 @@ Partial Class documentidettaglio
                 hlDocumenti.NavigateUrl = "documenti.aspx?t=" & GetFallbackTipoDocumentoId().ToString()
             End If
 
+            ConfigurePayReturnMessage()
+
             ' Google Customer Reviews - Survey Opt-in (mostra solo al rientro dal checkout)
             TryRenderGoogleCustomerReviewsOptIn(idDocumento)
 
+        End If
+    End Sub
+
+    Private Sub ConfigurePayReturnMessage()
+        If pnlPayReturnMessage Is Nothing OrElse litPayReturnMessage Is Nothing Then Return
+
+        pnlPayReturnMessage.Visible = False
+        litPayReturnMessage.Text = ""
+
+        Dim payReturn As String = Convert.ToString(Request.QueryString("payreturn")).Trim().ToLowerInvariant()
+        If payReturn = "ok" Then
+            pnlPayReturnMessage.CssClass = "alert alert-info"
+            litPayReturnMessage.Text = "Pagamento ricevuto dal gateway. Stiamo verificando la conferma automatica: lo stato dell'ordine verra' aggiornato a breve."
+            pnlPayReturnMessage.Visible = True
+        ElseIf payReturn = "ko" Then
+            pnlPayReturnMessage.CssClass = "alert alert-warning"
+            litPayReturnMessage.Text = "Pagamento non completato. Puoi riprovare da questo ordine o scegliere un altro metodo, se disponibile."
+            pnlPayReturnMessage.Visible = True
         End If
     End Sub
 
