@@ -18,6 +18,7 @@ Partial Class Articoli
     Dim oldUrl As String
     Private productCardPreviewRendered As Boolean = False
     Private productCardReplaceRenderedCount As Integer = 0
+    Private catalogItemDataBoundLogged As Boolean = False
     Private Const UseNewCatalogProductCard As Boolean = True
     Private Const ProductCardReplaceMaxCount As Integer = 3
 
@@ -60,6 +61,112 @@ Partial Class Articoli
         Public Property QuantityText As String
         Public Property ActionDataAttributes As String
     End Class
+
+    Private Sub LogCatalogDiagnostic(ByVal stepName As String, Optional ByVal details As String = "", Optional ByVal ex As Exception = Nothing)
+        Try
+            Dim msg As String = "step=" & SanitizeCatalogLogValue(stepName, 80) &
+                                " | " & BuildCatalogLogContext()
+            If Not String.IsNullOrEmpty(details) Then
+                msg &= " | " & SanitizeCatalogLogValue(details, 1200)
+            End If
+
+            If ex IsNot Nothing Then
+                KeepStoreLog.Error("articoli-live-diagnostics", msg & " | exception=" & SanitizeCatalogLogValue(ex.ToString(), 4000), ex, HttpContext.Current)
+            Else
+                KeepStoreLog.Info("articoli-live-diagnostics", msg, HttpContext.Current)
+            End If
+        Catch
+            ' Diagnostic logging must never change catalog behavior.
+        End Try
+    End Sub
+
+    Private Function BuildCatalogLogContext() As String
+        Try
+            Dim q As String = Convert.ToString(Request.QueryString("q"))
+            Dim parts As New List(Of String)()
+            parts.Add("path=" & SanitizeCatalogLogValue(If(Request IsNot Nothing, Request.Path, ""), 120))
+            parts.Add("qs=" & SafeCatalogQueryString())
+            parts.Add("isLocal=" & If(Request IsNot Nothing AndAlso Request.IsLocal, "true", "false"))
+            parts.Add("isPostBack=" & If(Me.IsPostBack, "true", "false"))
+            parts.Add("loginPresent=" & If(Session IsNot Nothing AndAlso Session("LoginId") IsNot Nothing, "true", "false"))
+            parts.Add("listinoPresent=" & If(Session IsNot Nothing AndAlso Session("Listino") IsNot Nothing, "true", "false"))
+            parts.Add("sort=" & SanitizeCatalogLogValue(Convert.ToString(Request.QueryString("ordinamento")), 80))
+            parts.Add("disponibileRequested=" & If(String.Equals(Convert.ToString(Request.QueryString("disponibile")), "1", StringComparison.Ordinal), "true", "false"))
+            parts.Add("qPresent=" & If(String.IsNullOrEmpty(q), "false", "true"))
+            parts.Add("qLength=" & If(q Is Nothing, "0", q.Length.ToString()))
+            parts.Add("productCardFeature=" & If(IsProductCardFeatureEnabled(), "true", "false"))
+            Return String.Join(" | ", parts.ToArray())
+        Catch ex As Exception
+            Return "contextError=" & SanitizeCatalogLogValue(ex.GetType().Name & ": " & ex.Message, 200)
+        End Try
+    End Function
+
+    Private Function SafeCatalogQueryString() As String
+        Try
+            If Request Is Nothing OrElse Request.QueryString Is Nothing Then Return ""
+
+            Dim parts As New List(Of String)()
+            For Each rawKey As String In Request.QueryString.AllKeys
+                Dim key As String = If(rawKey, "")
+                Dim safeKey As String = SanitizeCatalogLogValue(key, 60)
+                If IsSensitiveCatalogLogKey(safeKey) Then
+                    parts.Add(safeKey & "=<redacted>")
+                ElseIf String.Equals(safeKey, "q", StringComparison.OrdinalIgnoreCase) Then
+                    Dim v As String = Convert.ToString(Request.QueryString(rawKey))
+                    parts.Add("q=<len:" & If(v Is Nothing, "0", v.Length.ToString()) & ">")
+                Else
+                    parts.Add(safeKey & "=" & SanitizeCatalogLogValue(Convert.ToString(Request.QueryString(rawKey)), 120))
+                End If
+            Next
+
+            Return SanitizeCatalogLogValue(String.Join("&", parts.ToArray()), 500)
+        Catch ex As Exception
+            Return "queryStringError=" & SanitizeCatalogLogValue(ex.GetType().Name & ": " & ex.Message, 160)
+        End Try
+    End Function
+
+    Private Function IsSensitiveCatalogLogKey(ByVal key As String) As Boolean
+        If String.IsNullOrEmpty(key) Then Return False
+        Dim k As String = key.ToLowerInvariant()
+        Return k.Contains("password") OrElse
+               k.Contains("pwd") OrElse
+               k.Contains("token") OrElse
+               k.Contains("secret") OrElse
+               k.Contains("cookie") OrElse
+               k.Contains("session") OrElse
+               k.Contains("email") OrElse
+               k.Contains("card")
+    End Function
+
+    Private Function SanitizeCatalogLogValue(ByVal value As String, ByVal maxLength As Integer) As String
+        Try
+            If value Is Nothing Then Return ""
+            Dim safe As String = value.Replace(vbCr, " ").Replace(vbLf, " ").Replace(vbTab, " ")
+            safe = Regex.Replace(safe, "\s+", " ").Trim()
+            If maxLength > 0 AndAlso safe.Length > maxLength Then safe = safe.Substring(0, maxLength) & "...<truncated>"
+            Return safe
+        Catch
+            Return ""
+        End Try
+    End Function
+
+    Private Function CatalogSqlSummary(ByVal sql As String) As String
+        Try
+            If String.IsNullOrEmpty(sql) Then Return "sqlLen=0"
+            Return "sqlLen=" & sql.Length.ToString() & " sqlStart=" & SanitizeCatalogLogValue(sql, 600)
+        Catch ex As Exception
+            Return "sqlSummaryError=" & SanitizeCatalogLogValue(ex.GetType().Name & ": " & ex.Message, 160)
+        End Try
+    End Function
+
+    Private Function CatalogParameterCount(ByVal parameters As ParameterCollection) As Integer
+        Try
+            If parameters Is Nothing Then Return 0
+            Return parameters.Count
+        Catch
+            Return -1
+        End Try
+    End Function
 
     Function sostituisci_caratteri_speciali(ByRef stringa As String) As String
         stringa = Server.HtmlEncode(stringa)
@@ -117,6 +224,8 @@ Partial Class Articoli
     End Sub
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        LogCatalogDiagnostic("articoli.Page_Load.start")
+        Try
         ' Step 1: se presente ScriptManager, disabilita partial rendering (rimozione AJAX)
         Dim sm = System.Web.UI.ScriptManager.GetCurrent(Me.Page)
         If sm IsNot Nothing Then sm.EnablePartialRendering = False
@@ -174,6 +283,11 @@ Partial Class Articoli
                 InOfferta = tmpInOfferta
             End If
         End If
+        LogCatalogDiagnostic("articoli.Page_Load.end")
+        Catch ex As Exception
+            LogCatalogDiagnostic("articoli.Page_Load.exception", "", ex)
+            Throw
+        End Try
     End Sub
 
     
@@ -210,6 +324,8 @@ Partial Class Articoli
     End Sub
 
 Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.LoadComplete
+        LogCatalogDiagnostic("articoli.Page_LoadComplete.start")
+        Try
         IvaTipo = Me.Session("IvaTipo")
 
         If IvaTipo = 1 Then
@@ -231,6 +347,11 @@ Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventA
             paramsQS.Add("@Data", DateTime.Now)
             ExecuteInsert("QString, Data", "query_string", "@QString, @Data", paramsQS)
         End If
+        LogCatalogDiagnostic("articoli.Page_LoadComplete.end")
+        Catch ex As Exception
+            LogCatalogDiagnostic("articoli.Page_LoadComplete.exception", "", ex)
+            Throw
+        End Try
     End Sub
 
     'FILTRI TAGLIA COLORE AGGIUNTI DA ANGELO IL 15/12/2017
@@ -386,6 +507,8 @@ End Sub
     'FILTRI TAGLIA COLORE - FINE
 
     Public Sub CaricaArticoli()
+        LogCatalogDiagnostic("articoli.CaricaArticoli.start")
+        Try
         ' ============================
         ' LISTINO: GESTIONE ROBUSTA
         ' ============================
@@ -859,6 +982,12 @@ strWhere = strWhere & " GROUP BY id"
         End If
 
         Me.sdsArticoli.SelectCommand = strSelect & " WHERE Nlistino=?NListino " & strWhere
+        LogCatalogDiagnostic("articoli.CaricaArticoli.select-built",
+                             CatalogSqlSummary(Me.sdsArticoli.SelectCommand) &
+                             " | paramCount=" & CatalogParameterCount(Me.sdsArticoli.SelectParameters).ToString() &
+                             " | sort=" & SanitizeCatalogLogValue(sortValue, 80) &
+                             " | searchPresent=" & If(userCerca <> "", "true", "false") &
+                             " | availableFilter=" & If(CheckBox_Disponibile.Checked, "true", "false"))
 
         strWhere2 = " LEFT JOIN vsuperarticoli ON vsuperarticoli.Id = varticolibase.id " & strWhere2 & " AND Nlistino=?NListino"
 
@@ -963,11 +1092,25 @@ strWhere = strWhere & " GROUP BY id"
 
         Dim conn As New MySqlConnection
         conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+        LogCatalogDiagnostic("articoli.CaricaArticoli.showFilters.start",
+                             "select=" & CatalogSqlSummary(Me.sdsArticoli.SelectCommand) &
+                             " | paramCount=" & CatalogParameterCount(Me.sdsArticoli.SelectParameters).ToString())
         conn.Open()
         showFilters(conn, sdsArticoli.SelectCommand)
         conn.Close()
+        LogCatalogDiagnostic("articoli.CaricaArticoli.showFilters.end")
 
         Dim sdsArticoliToShow = Me.sdsArticoli.SelectCommand.Replace("'", """").ToUpper
+        LogCatalogDiagnostic("articoli.CaricaArticoli.end",
+                             "paramCount=" & CatalogParameterCount(Me.sdsArticoli.SelectParameters).ToString() &
+                             " | filterParamCount=" & CatalogParameterCount(Me.sdsMarche.SelectParameters).ToString())
+        Catch ex As Exception
+            LogCatalogDiagnostic("articoli.CaricaArticoli.exception",
+                                 "select=" & CatalogSqlSummary(Me.sdsArticoli.SelectCommand) &
+                                 " | paramCount=" & CatalogParameterCount(Me.sdsArticoli.SelectParameters).ToString(),
+                                 ex)
+            Throw
+        End Try
     End Sub
 
     Public Sub SetSelectedIndex(ByVal dl As DataList, ByVal val As Integer)
@@ -986,6 +1129,18 @@ strWhere = strWhere & " GROUP BY id"
     End Sub
 
     Protected Sub sdsArticoli_Selected(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.SqlDataSourceStatusEventArgs) Handles sdsArticoli.Selected
+        If e IsNot Nothing AndAlso e.Exception IsNot Nothing Then
+            LogCatalogDiagnostic("articoli.sdsArticoli.Selected.exception",
+                                 "affectedRows=" & e.AffectedRows.ToString() &
+                                 " | select=" & CatalogSqlSummary(Me.sdsArticoli.SelectCommand) &
+                                 " | paramCount=" & CatalogParameterCount(Me.sdsArticoli.SelectParameters).ToString(),
+                                 e.Exception)
+        ElseIf e IsNot Nothing Then
+            LogCatalogDiagnostic("articoli.sdsArticoli.Selected",
+                                 "affectedRows=" & e.AffectedRows.ToString() &
+                                 " | paramCount=" & CatalogParameterCount(Me.sdsArticoli.SelectParameters).ToString())
+        End If
+
         If e IsNot Nothing AndAlso e.AffectedRows >= 0 Then
             SetCatalogCountText(e.AffectedRows)
         End If
@@ -1084,6 +1239,7 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     Private Sub lvProdotti_ItemDataBound(ByVal sender As Object, ByVal e As ListViewItemEventArgs)
+        Try
         Dim isPreview As Boolean = IsProductCardPreviewEnabled()
         Dim isRealPreview As Boolean = IsProductCardPreviewRealEnabled()
         Dim debugReplaceCount As Integer = If(isPreview OrElse isRealPreview, 0, GetProductCardReplaceCount())
@@ -1100,6 +1256,15 @@ strWhere = strWhere & " GROUP BY id"
         Dim dataItem As ListViewDataItem = TryCast(e.Item, ListViewDataItem)
         If dataItem Is Nothing OrElse dataItem.DataItem Is Nothing Then Exit Sub
         If (isPreview OrElse isRealPreview) AndAlso Me.phProductCardPreview Is Nothing Then Exit Sub
+
+        If Not catalogItemDataBoundLogged Then
+            LogCatalogDiagnostic("articoli.lvProdotti_ItemDataBound.first-item",
+                                 "isPreview=" & If(isPreview, "true", "false") &
+                                 " | isRealPreview=" & If(isRealPreview, "true", "false") &
+                                 " | isReplaceAll=" & If(isReplaceAll, "true", "false") &
+                                 " | replaceCount=" & replaceCount.ToString())
+            catalogItemDataBoundLogged = True
+        End If
 
         Dim model As ProductCardModel = BuildProductCardModel(dataItem.DataItem)
         Dim card As Public_ui_controls_ProductCard = TryCast(LoadControl("~/Public/ui/controls/ProductCard.ascx"), Public_ui_controls_ProductCard)
@@ -1153,6 +1318,12 @@ strWhere = strWhere & " GROUP BY id"
             inlineCard.Visible = False
             productCardReplaceRenderedCount += 1
         End If
+        Catch ex As Exception
+            LogCatalogDiagnostic("articoli.lvProdotti_ItemDataBound.exception",
+                                 "replaceRenderedCount=" & productCardReplaceRenderedCount.ToString(),
+                                 ex)
+            Throw
+        End Try
     End Sub
 
     ' CLICK SU ICONA "CARRELLO" PER SINGOLO ARTICOLO
@@ -3063,6 +3234,7 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     Private Function BuildProductCardModel(ByVal dataItem As Object) As ProductCardModel
+        Try
         Dim imageUrl As String = ThemeManager.ProductImageUrl(UiData.Get(dataItem, "Img1"))
         If String.IsNullOrWhiteSpace(imageUrl) Then imageUrl = ThemeManager.PlaceholderProductImageUrl()
 
@@ -3127,6 +3299,12 @@ strWhere = strWhere & " GROUP BY id"
         model.QuantityText = "1"
         model.ActionDataAttributes = CatalogActionDataAttributes(dataItem)
         Return model
+        Catch ex As Exception
+            LogCatalogDiagnostic("articoli.BuildProductCardModel.exception",
+                                 "dataItemType=" & SanitizeCatalogLogValue(If(dataItem Is Nothing, "", dataItem.GetType().FullName), 200),
+                                 ex)
+            Throw
+        End Try
     End Function
 
     Protected Function CatalogPromoBadgeHtml(ByVal dataItem As Object) As String
