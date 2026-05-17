@@ -19,12 +19,20 @@
     return Array.prototype.slice.call((root || document).querySelectorAll(sel));
   }
 
+  function isElement(value) {
+    return !!value && value.nodeType === 1;
+  }
+
+  function hasSwiperStructure(el) {
+    return isElement(el) && !!qs('.swiper-wrapper', el) && qsa('.swiper-slide', el).length > 0;
+  }
+
   function isHome() {
     return !!document.body && (document.body.classList.contains('ks-page-home') || !!qs('.ks-home-hero-section'));
   }
 
   function initSwiper(el, options) {
-    if (!el || typeof window.Swiper === 'undefined') return null;
+    if (!hasSwiperStructure(el) || typeof window.Swiper === 'undefined') return null;
     if (el.swiper) {
       try { el.swiper.update(); } catch (ignore) {}
       return el.swiper;
@@ -39,11 +47,12 @@
 
   function initHomeSwipers() {
     qsa('.ks-home-hero-slider').forEach(function (el) {
+      var hasMultipleSlides = qsa('.swiper-slide', el).length > 1;
       initSwiper(el, {
         slidesPerView: 1,
-        loop: qsa('.swiper-slide', el).length > 1,
+        loop: hasMultipleSlides,
         speed: 650,
-        autoplay: qsa('.swiper-slide', el).length > 1 ? { delay: 5200, disableOnInteraction: false } : false,
+        autoplay: hasMultipleSlides ? { delay: 5200, disableOnInteraction: false } : false,
         navigation: {
           nextEl: qs('.ks-hero-next', el),
           prevEl: qs('.ks-hero-prev', el)
@@ -68,7 +77,7 @@
       });
     });
 
-    qsa('.ks-home-deal-section .tf-sw-products').forEach(function (el) {
+    qsa('.ks-home-deals .tf-sw-products').forEach(function (el) {
       var section = el.closest('section');
       initSwiper(el, {
         slidesPerView: 1,
@@ -87,7 +96,7 @@
       });
     });
 
-    qsa('.ks-home-best-section .tf-sw-products,.ks-home-recent-section .tf-sw-products,.ks-home-brands').forEach(function (el) {
+    qsa('.ks-home-best-section .tf-sw-products,.ks-home-recent-section .tf-sw-products,.ks-home-brands.swiper').forEach(function (el) {
       var section = el.closest('section') || document;
       var isBrand = el.classList.contains('ks-home-brands');
       initSwiper(el, {
