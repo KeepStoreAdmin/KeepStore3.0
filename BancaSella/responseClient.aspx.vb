@@ -6,7 +6,7 @@ Imports System.Xml
 Partial Class BancaSella_responseClient
     Inherits System.Web.UI.Page
     Public shopTransactionID As String
-    Public errore As String
+    Public errore As String = "Pagamento non completato. Puoi riprovare dall'ordine o contattare l'assistenza."
 
     Private Sub BancaSella_responseClientError_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         Dim idDocumento As String = ""
@@ -34,25 +34,35 @@ Partial Class BancaSella_responseClient
                     risultato = "Transazione eseguita con successo"
                 Else
                     codiceErrore = decryptedData.SelectSingleNode("ErrorCode").InnerText
-                    errore = decryptedData.SelectSingleNode("ErrorDescription").InnerText
+                    errore = "Pagamento non completato. Puoi riprovare dall'ordine o contattare l'assistenza."
                     risultato = errore
                 End If
                 writeDBLog(risultato, decryptedData)
             End If
         Catch ex As Exception
             writeDBLog("Errore ResponseClient -> " & ex.Message)
+            errore = "Non e' stato possibile completare la verifica del pagamento. Puoi riprovare dall'ordine o contattare l'assistenza."
         End Try
-        If esitoTransizione = "OK" OrElse codiceErrore = "1143" Then
+        If Not IsValidDocumentId(idDocumento) Then
+            shopTransactionID = ""
+        End If
+        If IsValidDocumentId(idDocumento) Then
             If (Not sitoWeb.Contains("http://")) Then
                 sitoWeb = "http://" & sitoWeb
             End If
 			if coupon then
 				Response.Redirect(sitoWeb & "/pagamento.aspx?cod_controllo=" & shopTransactionID & "&bancasella=true")
 			else
-				Response.Redirect(sitoWeb & "/documentidettaglio.aspx?id=" & idDocumento & "&ndoc=" & shopTransactionID.Replace("/", "|"))
+                Dim payReturn As String = If(esitoTransizione = "OK", "ok", "ko")
+                Response.Redirect(sitoWeb & "/documentidettaglio.aspx?id=" & System.Web.HttpUtility.UrlEncode(idDocumento) & "&payreturn=" & payReturn)
 			end if
         End If
     End Sub
+
+    Private Function IsValidDocumentId(ByVal idDocumento As String) As Boolean
+        Dim parsed As Integer = 0
+        Return Integer.TryParse((idDocumento & "").Trim(), parsed) AndAlso parsed > 0
+    End Function
 
         Private Function TruncValue(ByVal s As String, ByVal maxLen As Integer) As String
         If s Is Nothing Then Return ""

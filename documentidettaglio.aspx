@@ -35,6 +35,9 @@
             </asp:SqlDataSource>
 
             <div class="tf-order-detail">
+                <asp:Panel ID="pnlPayReturnMessage" runat="server" Visible="false" CssClass="alert alert-info" role="alert">
+                    <asp:Literal ID="litPayReturnMessage" runat="server" />
+                </asp:Panel>
 
                 <asp:FormView ID="FormView1" runat="server" DataSourceID="sdsTestata" Width="100%">
                     <ItemTemplate>
