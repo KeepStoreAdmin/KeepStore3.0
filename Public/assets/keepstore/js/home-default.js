@@ -27,6 +27,30 @@
     return isElement(el) && !!qs('.swiper-wrapper', el) && qsa('.swiper-slide', el).length > 0;
   }
 
+  function removeEmptySwiperControls(options) {
+    if (!options) return {};
+
+    if (options.navigation) {
+      if (!isElement(options.navigation.nextEl) || !isElement(options.navigation.prevEl)) {
+        delete options.navigation;
+      }
+    }
+
+    if (options.pagination && !isElement(options.pagination.el)) {
+      delete options.pagination;
+    }
+
+    if (options.scrollbar && !isElement(options.scrollbar.el)) {
+      delete options.scrollbar;
+    }
+
+    if (options.thumbs && !options.thumbs.swiper) {
+      delete options.thumbs;
+    }
+
+    return options;
+  }
+
   function isHome() {
     return !!document.body && (document.body.classList.contains('ks-page-home') || !!qs('.ks-home-hero-section'));
   }
@@ -38,7 +62,7 @@
       return el.swiper;
     }
     try {
-      return new window.Swiper(el, options || {});
+      return new window.Swiper(el, removeEmptySwiperControls(options || {}));
     } catch (err) {
       if (window.console && console.warn) console.warn('[KeepStore home] Swiper init error', err);
       return null;
@@ -107,7 +131,7 @@
           nextEl: qs('.nav-next-products', section),
           prevEl: qs('.nav-prev-products', section)
         },
-        pagination: { el: qs('.sw-pagination-products,.ks-home-brands-pagination', el), clickable: true },
+        pagination: { el: qs('.sw-pagination-products,.ks-home-brands-pagination', section), clickable: true },
         breakpoints: {
           576: { slidesPerView: isBrand ? 3 : 3, spaceBetween: 15 },
           992: { slidesPerView: isBrand ? 4 : 4, spaceBetween: 20 },
