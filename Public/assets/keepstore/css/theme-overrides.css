@@ -195,6 +195,11 @@ body.ks-page-home .ks-home-hero-banner {
   background: #070707;
 }
 
+body.ks-page-home .ks-home-hero-banner,
+body.ks-page-home .ks-home-side-banner {
+  isolation: isolate;
+}
+
 body.ks-page-home .ks-home-hero-media {
   display: block;
 }
@@ -203,7 +208,8 @@ body.ks-page-home .ks-home-hero-media:after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(0, 0, 0, .72), rgba(0, 0, 0, .2) 48%, rgba(0, 0, 0, 0));
+  z-index: 1;
+  background: linear-gradient(90deg, rgba(0, 0, 0, .74), rgba(0, 0, 0, .36) 58%, rgba(0, 0, 0, .1));
   pointer-events: none;
 }
 
@@ -219,7 +225,7 @@ body.ks-page-home .ks-home-hero-content {
   left: 38px;
   top: 50%;
   z-index: 2;
-  max-width: 420px;
+  max-width: min(420px, calc(100% - 76px));
   transform: translateY(-50%);
 }
 
@@ -231,9 +237,14 @@ body.ks-page-home .ks-home-hero-copy {
 body.ks-page-home .ks-home-hero-title {
   margin: 8px 0 10px;
   color: #fff;
-  font-size: 46px;
-  line-height: 1.05;
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1.08;
   font-weight: 700;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
 }
 
 body.ks-page-home .ks-home-hero-actions {
@@ -269,6 +280,11 @@ body.ks-page-home .ks-home-side-banner .content {
   flex-direction: column;
   align-items: flex-start;
   justify-content: flex-end;
+  z-index: 2;
+  max-width: calc(100% - 36px);
+  padding: 12px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, .52));
 }
 
 body.ks-page-home .ks-home-side-banner h6 {
@@ -277,11 +293,20 @@ body.ks-page-home .ks-home-side-banner h6 {
   font-size: 18px;
   line-height: 1.15;
   margin-bottom: 12px;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 body.ks-page-home .ks-home-side-banner .caption {
   font-size: 11px;
   line-height: 1.2;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 /* Benefits */
@@ -1034,7 +1059,8 @@ body.ks-page-home .ks-home-main .sw-dot-default {
   }
 
   body.ks-page-home .ks-home-hero-title {
-    font-size: 34px;
+    font-size: clamp(24px, 5vw, 32px);
+    -webkit-line-clamp: 3;
   }
 
   body.ks-page-home .ks-home-category-grid,
@@ -1075,7 +1101,7 @@ body.ks-page-home .ks-home-main .sw-dot-default {
   }
 
   body.ks-page-home .ks-home-main-hero {
-    height: 260px;
+    height: 300px;
   }
 
   body.ks-page-home .ks-home-side-promos {
@@ -1092,15 +1118,33 @@ body.ks-page-home .ks-home-main .sw-dot-default {
   body.ks-page-home .ks-home-hero-slider .swiper-slide,
   body.ks-page-home .ks-home-hero-banner,
   body.ks-page-home .ks-home-hero-media {
-    min-height: 260px;
+    min-height: 300px;
+  }
+
+  body.ks-page-home .ks-home-hero-content {
+    left: 18px;
+    right: 18px;
+    max-width: calc(100% - 36px);
   }
 
   body.ks-page-home .ks-home-hero-title {
-    font-size: 28px;
+    font-size: clamp(22px, 7vw, 28px);
+    line-height: 1.12;
+    -webkit-line-clamp: 4;
   }
 
   body.ks-page-home .ks-home-hero-copy {
     display: none;
+  }
+
+  body.ks-page-home .ks-home-hero-actions {
+    gap: 8px;
+  }
+
+  body.ks-page-home .ks-home-hero-actions .tf-btn {
+    min-height: 42px;
+    padding: 0 14px;
+    font-size: 13px;
   }
 
   body.ks-page-home .ks-home-category-grid {
