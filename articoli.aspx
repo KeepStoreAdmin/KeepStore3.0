@@ -1,4 +1,5 @@
 <%@ Page Title="Catalogo" Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="articoli.aspx.vb" Inherits="Articoli" %>
+<%@ Reference Control="~/Public/ui/controls/ProductCard.ascx" %>
 
 <%@ Register Src="~/Public/ui/controls/Breadcrumb.ascx" TagPrefix="ks" TagName="Breadcrumb" %>
 
