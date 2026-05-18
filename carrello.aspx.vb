@@ -2183,15 +2183,12 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
             cmdU.CommandType = CommandType.Text
             cmdU.CommandText =
                 "UPDATE carrello SET " &
-                "Qnt=@Qnt, OfferteDettaglioId=@OfferteDettaglioId, Prezzo=@Prezzo, PrezzoIvato=@PrezzoIvato, " &
+                "Qnt=@Qnt, " &
                 "IdIvaRC=@IdIvaRC, ValoreIvaRC=@ValoreIvaRC, DescrizioneIvaRC=@DescrizioneIvaRC, " &
                 "IdEsenzioneIva=@IdEsenzioneIva, ValoreEsenzioneIva=@ValoreEsenzioneIva, DescrizioneEsenzioneIva=@DescrizioneEsenzioneIva " &
                 "WHERE ID=@id"
 
             cmdU.Parameters.Add("@Qnt", MySqlDbType.Int64)
-            cmdU.Parameters.Add("@OfferteDettaglioId", MySqlDbType.Int64)
-            cmdU.Parameters.Add("@Prezzo", MySqlDbType.Double)
-            cmdU.Parameters.Add("@PrezzoIvato", MySqlDbType.Double)
             cmdU.Parameters.Add("@IdIvaRC", MySqlDbType.Int32)
             cmdU.Parameters.Add("@ValoreIvaRC", MySqlDbType.Double)
             cmdU.Parameters.Add("@DescrizioneIvaRC", MySqlDbType.VarChar)
@@ -2294,9 +2291,8 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
                 End If
 
                 cmdU.Parameters("@Qnt").Value = r.Qnt
-                cmdU.Parameters("@OfferteDettaglioId").Value = offId
-                cmdU.Parameters("@Prezzo").Value = prezzo
-                cmdU.Parameters("@PrezzoIvato").Value = prezzoIvato
+                ' CART-2: cambiare quantita' dal carrello non deve sostituire
+                ' il prezzo unitario salvato al momento dell'add-to-cart.
                 cmdU.Parameters("@IdIvaRC").Value = idIvaRC
                 cmdU.Parameters("@ValoreIvaRC").Value = valoreIvaRC
                 cmdU.Parameters("@DescrizioneIvaRC").Value = descIvaRC

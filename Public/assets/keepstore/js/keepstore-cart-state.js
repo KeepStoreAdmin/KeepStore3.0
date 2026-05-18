@@ -54,9 +54,13 @@
     return normalizeItems(window.KeepStoreCartState && window.KeepStoreCartState.items ? window.KeepStoreCartState.items : []);
   }
 
+  function hasServerState() {
+    return !!(window.KeepStoreCartState && Array.isArray(window.KeepStoreCartState.items));
+  }
+
   function currentItems() {
-    var fromServer = serverItems();
-    if (fromServer.length) {
+    if (hasServerState()) {
+      var fromServer = serverItems();
       writeStorage(fromServer);
       return fromServer;
     }
@@ -117,7 +121,15 @@
     target.insertBefore(badge, target.firstChild || null);
   }
 
+  function clearBadges() {
+    Array.prototype.slice.call(document.querySelectorAll('.ks-cart-state-badge,.ks-product-cart-state-badge')).forEach(function (badge) {
+      if (badge && badge.parentNode) badge.parentNode.removeChild(badge);
+    });
+  }
+
   function decorateCards() {
+    clearBadges();
+
     Array.prototype.slice.call(document.querySelectorAll('.card-product')).forEach(function (card) {
       var product = productFromNode(card);
       if (!product) return;
