@@ -67,11 +67,10 @@
     return normalizeItems(readStorage());
   }
 
-  function findCartItem(id, tcid) {
+  function findCartItemInItems(items, id, tcid) {
     var idVal = normalizeId(id);
     var tcVal = normalizeTcid(tcid);
     if (!idVal) return null;
-    var items = currentItems();
     var exact = itemKey(idVal, tcVal);
     for (var i = 0; i < items.length; i += 1) {
       if (items[i].key === exact) return items[i];
@@ -128,12 +127,15 @@
   }
 
   function decorateCards() {
+    var items = currentItems();
     clearBadges();
+
+    if (!items.length) return;
 
     Array.prototype.slice.call(document.querySelectorAll('.card-product')).forEach(function (card) {
       var product = productFromNode(card);
       if (!product) return;
-      var item = findCartItem(product.id, product.tcid);
+      var item = findCartItemInItems(items, product.id, product.tcid);
       if (!item) return;
       var wrapper = card.querySelector('.card-product-wrapper') || card;
       ensureBadge(wrapper, item);
@@ -142,7 +144,7 @@
     var title = document.querySelector('.tf-product-info-name');
     if (title) {
       var qs = parseUrlParams(window.location.href);
-      var current = findCartItem(qs.id, qs.tcid || '-1');
+      var current = findCartItemInItems(items, qs.id, qs.tcid || '-1');
       if (current && !document.querySelector('.ks-product-cart-state-badge')) {
         var b = document.createElement('span');
         b.className = 'ks-product-cart-state-badge';
@@ -150,6 +152,12 @@
         title.insertAdjacentElement('afterend', b);
       }
     }
+  }
+
+  function refreshBadges() {
+    decorateCards();
+    window.setTimeout(decorateCards, 50);
+    window.setTimeout(decorateCards, 300);
   }
 
   function rememberClickedCart(link) {
@@ -183,6 +191,12 @@
     if (link) rememberClickedCart(link);
   }, true);
 
-  document.addEventListener('DOMContentLoaded', decorateCards);
-  window.KeepStoreCartBadges = { refresh: decorateCards };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', refreshBadges);
+  } else {
+    refreshBadges();
+  }
+  window.addEventListener('pageshow', refreshBadges);
+  window.addEventListener('load', refreshBadges);
+  window.KeepStoreCartBadges = { refresh: refreshBadges };
 })();
