@@ -113,7 +113,7 @@
                                 </a>
                             </li>
                             <li class="nav-cart">
-                                <a href="carrello.aspx" class="link nav-icon-item">
+                                <a href="carrello.aspx" class="link nav-icon-item" data-bs-toggle="offcanvas" data-bs-target="#ksMiniCartCanvas" aria-controls="ksMiniCartCanvas">
                                     <span><i class="icon icon-cart"></i></span>
                                     <p class="body-small" data-ks-i18n="header.cart">Carrello</p>
                                 </a>
@@ -169,7 +169,7 @@
                                 </a>
                             </li>
                             <li class="nav-shop-cart">
-                                <a href="carrello.aspx" class="link link-fill nav-icon-item relative">
+                                <a href="carrello.aspx" class="link link-fill nav-icon-item relative" data-bs-toggle="offcanvas" data-bs-target="#ksMiniCartCanvas" aria-controls="ksMiniCartCanvas" aria-label="Apri carrello">
                                     <i class="icon-cart text-main fs-26 link"></i>
                                     <span class="count-box style-pst-2 d-none d-xxl-flex"><asp:Label ID="lblCarrelloCount" runat="server" Text="0" /></span>
                                 </a>
