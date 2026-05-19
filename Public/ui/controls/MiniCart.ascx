@@ -33,6 +33,7 @@
                             </a>
 
                             <div class="small text-muted">Q.ta: <%# Eval("Qnt") %></div>
+                            <div class="small">Prezzo: <%# GetUnitPriceText(Eval("Prezzo"), Eval("PrezzoIvato")) %></div>
                             <div class="small">Totale riga: <%# GetLineTotalText(Eval("Importo"), Eval("ImportoIvato")) %></div>
                         </div>
 
