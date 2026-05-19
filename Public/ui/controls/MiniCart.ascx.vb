@@ -35,8 +35,6 @@ Partial Class MiniCart
         Catch
             ' Fail-safe: non bloccare mai il rendering dell'header
             Try
-                lblCarrelloCount.Text = "0"
-                lblCarrelloTotale.Text = "0,00"
                 lblMiniCartTotale.Text = "0,00"
                 phMiniCartEmpty.Visible = True
                 phMiniCartList.Visible = False
@@ -62,8 +60,6 @@ Partial Class MiniCart
             Next
         End If
 
-        lblCarrelloCount.Text = qty.ToString()
-        lblCarrelloTotale.Text = total.ToString("N2")
         lblMiniCartTotale.Text = total.ToString("N2")
 
         If qty <= 0 OrElse dt Is Nothing OrElse dt.Rows.Count = 0 Then
