@@ -2,6 +2,7 @@ Imports System
 Imports System.Configuration
 Imports System.Data
 Imports System.Globalization
+Imports System.Web
 Imports MySql.Data.MySqlClient
 Imports System.Web.UI.WebControls
 
@@ -60,7 +61,7 @@ Partial Class MiniCart
             Next
         End If
 
-        lblMiniCartTotale.Text = total.ToString("N2")
+        lblMiniCartTotale.Text = FormatCurrency(total)
 
         If qty <= 0 OrElse dt Is Nothing OrElse dt.Rows.Count = 0 Then
             phMiniCartEmpty.Visible = True
@@ -183,15 +184,15 @@ Partial Class MiniCart
     ' ------------------------------------------------------------
     Public Function GetProductUrl(ByVal articoliIdObj As Object, ByVal tcIdObj As Object) As String
         Dim id As Integer = SafeInt(articoliIdObj, 0)
-        Dim tc As Integer = SafeInt(tcIdObj, -1)
+        Dim tcText As String = SafeString(tcIdObj)
 
         If id <= 0 Then
             Return ResolveUrl("~/articoli.aspx")
         End If
 
         Dim url As String = "~/articolo.aspx?id=" & id.ToString()
-        If tc >= 0 Then
-            url &= "&TCid=" & tc.ToString()
+        If Not String.IsNullOrWhiteSpace(tcText) Then
+            url &= "&TCid=" & HttpUtility.UrlEncode(tcText)
         End If
 
         Return ResolveUrl(url)
@@ -217,11 +218,16 @@ Partial Class MiniCart
         Return FormatCurrency(v)
     End Function
 
+    Public Function GetUnitPriceText(ByVal prezzoObj As Object, ByVal prezzoIvatoObj As Object) As String
+        Dim v As Decimal = If(_ivaTipo = 1, SafeDec(prezzoObj, 0D), SafeDec(prezzoIvatoObj, 0D))
+        Return FormatCurrency(v)
+    End Function
+
     Private Function FormatCurrency(ByVal amount As Decimal) As String
         Try
-            Return String.Format(CultureInfo.GetCultureInfo("it-IT"), "{0:C}", amount)
+            Return amount.ToString("N2", CultureInfo.GetCultureInfo("it-IT")) & " " & ChrW(8364)
         Catch
-            Return amount.ToString("N2")
+            Return amount.ToString("N2") & " " & ChrW(8364)
         End Try
     End Function
 
@@ -291,19 +297,93 @@ Partial Class MiniCart
         Return defaultValue
     End Function
 
+    Private Function SafeString(ByVal o As Object) As String
+        If o Is Nothing OrElse o Is DBNull.Value Then Return String.Empty
+        Return Convert.ToString(o, CultureInfo.InvariantCulture).Trim()
+    End Function
+
     Private Function SafeDec(ByVal o As Object, Optional ByVal defaultValue As Decimal = 0D) As Decimal
         If o Is Nothing OrElse o Is DBNull.Value Then Return defaultValue
 
-        Dim d As Decimal
-        If Decimal.TryParse(o.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, d) Then
-            Return d
-        End If
+        Try
+            If TypeOf o Is Decimal OrElse TypeOf o Is Double OrElse TypeOf o Is Single OrElse
+               TypeOf o Is Integer OrElse TypeOf o Is Long OrElse TypeOf o Is Short Then
+                Return Convert.ToDecimal(o, CultureInfo.InvariantCulture)
+            End If
+        Catch
+        End Try
 
-        If Decimal.TryParse(o.ToString(), NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), d) Then
-            Return d
-        End If
+        Dim s As String = Convert.ToString(o)
+        If String.IsNullOrWhiteSpace(s) Then Return defaultValue
+        s = s.Trim()
+
+        Dim d As Decimal
+        Dim normalized As String = NormalizeDecimalString(s)
+        If Decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then Return d
+
+        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), d) Then Return d
+
+        If Decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, d) Then Return d
 
         Return defaultValue
+    End Function
+
+    Private Function NormalizeDecimalString(ByVal value As String) As String
+        Dim s As String = If(value, "").Trim()
+        If String.IsNullOrWhiteSpace(s) Then Return ""
+
+        s = s.Replace(ChrW(8364), "")
+        s = s.Replace("&euro;", "").Replace("&#8364;", "")
+        s = s.Replace("EUR", "").Replace("eur", "").Replace("Euro", "").Replace("euro", "")
+        s = s.Replace(ChrW(8722), "-")
+        s = s.Replace(ChrW(160), "").Replace(ChrW(8239), "")
+        s = s.Replace(" ", "").Replace("'", "")
+
+        Dim comma As Integer = s.LastIndexOf(","c)
+        Dim dot As Integer = s.LastIndexOf("."c)
+
+        If comma >= 0 AndAlso dot >= 0 Then
+            If comma > dot Then
+                s = s.Replace(".", "").Replace(","c, "."c)
+            Else
+                s = s.Replace(",", "")
+            End If
+        ElseIf dot >= 0 Then
+            s = NormalizeSingleDecimalSeparator(s, "."c)
+        ElseIf comma >= 0 Then
+            s = NormalizeSingleDecimalSeparator(s, ","c)
+        End If
+
+        Return s
+    End Function
+
+    Private Function NormalizeSingleDecimalSeparator(ByVal value As String, ByVal separator As Char) As String
+        Dim parts() As String = value.Split(separator)
+        If parts.Length <= 1 Then Return value
+
+        Dim last As String = parts(parts.Length - 1)
+
+        If parts.Length > 2 Then
+            If last.Length > 0 AndAlso last.Length <= 2 Then
+                Return JoinAllButLast(parts) & "." & last
+            End If
+
+            Return String.Join("", parts)
+        End If
+
+        If last.Length = 3 Then Return parts(0) & last
+
+        If separator = ","c Then Return parts(0) & "." & last
+
+        Return value
+    End Function
+
+    Private Function JoinAllButLast(ByVal parts() As String) As String
+        Dim output As String = ""
+        For i As Integer = 0 To parts.Length - 2
+            output &= parts(i)
+        Next
+        Return output
     End Function
 
 End Class
