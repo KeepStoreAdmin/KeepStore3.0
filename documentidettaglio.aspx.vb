@@ -66,12 +66,15 @@ Partial Class documentidettaglio
         pnlPayReturnMessage.Visible = False
         litPayReturnMessage.Text = ""
 
-        Dim payReturn As String = Convert.ToString(Request.QueryString("payreturn")).Trim().ToLowerInvariant()
-        If payReturn = "ok" Then
+        Dim rawPayReturn As String = Request.QueryString("payreturn")
+        If String.IsNullOrWhiteSpace(rawPayReturn) Then Return
+
+        Dim payReturn As String = rawPayReturn.Trim()
+        If String.Equals(payReturn, "ok", StringComparison.OrdinalIgnoreCase) Then
             pnlPayReturnMessage.CssClass = "alert alert-info"
             litPayReturnMessage.Text = "Pagamento ricevuto dal gateway. Stiamo verificando la conferma automatica: lo stato dell'ordine verra' aggiornato a breve."
             pnlPayReturnMessage.Visible = True
-        ElseIf payReturn = "ko" Then
+        ElseIf String.Equals(payReturn, "ko", StringComparison.OrdinalIgnoreCase) Then
             pnlPayReturnMessage.CssClass = "alert alert-warning"
             litPayReturnMessage.Text = "Pagamento non completato. Puoi riprovare da questo ordine o scegliere un altro metodo, se disponibile."
             pnlPayReturnMessage.Visible = True
