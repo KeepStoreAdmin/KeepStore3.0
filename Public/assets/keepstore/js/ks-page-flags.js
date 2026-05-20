@@ -471,8 +471,10 @@
     document.addEventListener('submit', function (e) {
       var target = e.target;
       var active = document.activeElement;
-      var root = active ? active.closest('.ks-search-shell,.form-search-product') : null;
-      if (!root && target) root = q(target, '.ks-search-shell,.form-search-product');
+      var submitter = e.submitter || null;
+      var root = submitter && submitter.closest ? submitter.closest('.ks-search-shell,.form-search-product') : null;
+      if (!root && active && active.closest) root = active.closest('.ks-search-shell,.form-search-product');
+      if (!root && target && target.matches && target.matches('.ks-search-shell,.form-search-product')) root = target;
       if (!root || !inputFromRoot(root)) return;
       e.preventDefault();
       e.stopPropagation();

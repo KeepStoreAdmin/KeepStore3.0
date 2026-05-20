@@ -259,7 +259,7 @@
         })();
         </script>
         <script src="<%= ThemeManager.Asset("js/drift.min.js") %>"></script>
-        <script src="<%= ThemeManager.Asset("js/ks-page-flags.js") %>"></script>
+        <script src="<%= ThemeManager.Asset("js/ks-page-flags.js") %>?v=20260520-checkout4"></script>
         <asp:Literal ID="litCartStateScript" runat="server" EnableViewState="false" />
         <script src="<%= ThemeManager.Asset("js/keepstore-cart-state.js") %>?v=20260518-cart3"></script>
         <asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
