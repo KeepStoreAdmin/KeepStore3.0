@@ -2350,7 +2350,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
     Protected Sub btCompleta_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btCompleta.Click
         If GetLoginIdSafe(0) <= 0 Then
             Session.Item("StavonelCarrello") = 1
-            SafeRedirectLocal("carrello.aspx?loginrequired=1#ksCartLoginRequired")
+            SafeRedirectLocal("/carrello.aspx?loginrequired=1#ksCartLoginRequired")
             Return
         End If
 
