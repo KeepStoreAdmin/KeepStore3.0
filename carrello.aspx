@@ -387,13 +387,13 @@
                 E' stata impostata una quantità articolo minore o uguale a 0.<br />Eliminare l'articolo dal carrello o impostare una quantità maggiore di 0.
             </div>
 
-            <asp:Panel ID="pnlLoginRequired" runat="server" CssClass="ks-cart-message ks-cart-message-login" Visible="false">
+            <asp:Panel ID="pnlLoginRequired" runat="server" ClientIDMode="Static" CssClass="ks-cart-message ks-cart-message-login" Visible="false" tabindex="-1">
                 <div class="ks-cart-message-icon">
                     <i class="icon-user"></i>
                 </div>
                 <div class="ks-cart-message-content">
                     <h4>Accedi per inviare l'ordine</h4>
-                    <p class="body-text-3">Puoi continuare a navigare e aggiungere prodotti al carrello. Per confermare l'ordine devi accedere o registrarti.</p>
+                    <p class="body-text-3">Per completare l'ordine devi accedere o registrarti. Il carrello e' stato mantenuto.</p>
                     <a id="ksCartLoginRequiredLink" href="login.aspx?ReturnUrl=%2Fcarrello.aspx" class="tf-btn">Accedi o registrati</a>
                 </div>
             </asp:Panel>
@@ -831,7 +831,7 @@
                     <p class="body-text-3 text-main-2 ks-section-help">Seleziona un metodo di pagamento abilitato per il tuo listino e totale ordine.</p>
 					<asp:SqlDataSource ID="sdsPagamento" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
 						ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-						SelectCommand="SELECT * FROM vpagamentitipo WHERE Abilitato=1 AND CostoMassimo >= ?CostoMassimo AND (Web=1 OR UtenteID=?UtenteID) AND AziendeID=?AziendaID GROUP BY id ORDER BY Ordinamento, Descrizione">
+						SelectCommand="SELECT * FROM vpagamentitipo WHERE Abilitato=1 AND CostoMassimo >= ?CostoMassimo AND (Web=1 OR UtenteID=?UtenteID) AND AziendeID=?AziendaID AND UPPER(Descrizione) NOT LIKE '%PAYPAL%' GROUP BY id ORDER BY Ordinamento, Descrizione">
 					   <SelectParameters>
 						   <asp:ControlParameter ControlID="tbTotale" Name="CostoMassimo" PropertyName="Text" />
 						   <asp:SessionParameter Name="UtenteID" SessionField="UtentiID" />
