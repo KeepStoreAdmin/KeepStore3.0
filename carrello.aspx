@@ -527,7 +527,7 @@
                 <asp:LinkButton ID="btAggiorna" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Aggiorna Carrello</asp:LinkButton>
                 <asp:LinkButton ID="btSvuota" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Svuota Carrello</asp:LinkButton>
                 <div class="ks-right">
-                    <asp:LinkButton ID="btCompleta" runat="server" CssClass="tf-btn" CausesValidation="false">Procedi con l'ordine</asp:LinkButton>
+                    <asp:Button ID="btCompleta" runat="server" CssClass="tf-btn" CausesValidation="false" Text="Procedi con l'ordine" />
                 </div>
             </div>
             </div>
