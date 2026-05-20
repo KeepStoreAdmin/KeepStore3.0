@@ -1115,6 +1115,19 @@ End Sub
         LeggiPagamenti()
     End Sub
 
+    Private Shared Function IsUnsupportedCheckoutPaymentRow(ByVal row As GridViewRow) As Boolean
+        If row Is Nothing Then Return False
+
+        For Each cell As TableCell In row.Cells
+            Dim text As String = HttpUtility.HtmlDecode(If(cell Is Nothing, "", cell.Text))
+            If text IsNot Nothing AndAlso text.IndexOf("paypal", StringComparison.OrdinalIgnoreCase) >= 0 Then
+                Return True
+            End If
+        Next
+
+        Return False
+    End Function
+
     Public Sub LeggiPagamenti()
 
     Dim i As Integer
@@ -1148,6 +1161,15 @@ End Sub
     For i = 0 To gvPagamento.Rows.Count - 1
 
         rb = TryCast(gvPagamento.Rows(i).FindControl("rbPagamento"), Control)
+        If IsUnsupportedCheckoutPaymentRow(gvPagamento.Rows(i)) Then
+            If rb IsNot Nothing Then
+                RbSetChecked(rb, False)
+                RbSetEnabled(rb, False)
+            End If
+            gvPagamento.Rows(i).Visible = False
+            Continue For
+        End If
+
         If firstSelectableIndex = -1 AndAlso rb IsNot Nothing AndAlso RbGetEnabled(rb) Then
             firstSelectableIndex = i
         End If
@@ -2327,15 +2349,8 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
 
     Protected Sub btCompleta_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btCompleta.Click
         If GetLoginIdSafe(0) <= 0 Then
-            ConfigureCartDataSources()
-            If pnlLoginRequired IsNot Nothing Then pnlLoginRequired.Visible = True
-            Me.tOrdine.Visible = False
-            Me.TableConteggi.Visible = False
-            Me.btCompleta.Visible = True
-            Me.btAggiorna.Enabled = True
-            Me.btContinua.Enabled = True
-            Me.btSvuota.Enabled = True
             Session.Item("StavonelCarrello") = 1
+            SafeRedirectLocal("carrello.aspx?loginrequired=1#ksCartLoginRequired")
             Return
         End If
 
