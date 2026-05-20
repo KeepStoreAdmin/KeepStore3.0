@@ -25,6 +25,12 @@ Partial Class SiteHeader
     Private Const DefaultPhoneText As String = ""
     Private Const DefaultEmailText As String = ""
 
+    Private Class HeaderLogoInfo
+        Public Property DesktopLogoFile As String = String.Empty
+        Public Property MobileLogoFile As String = String.Empty
+        Public Property CompanyName As String = String.Empty
+    End Class
+
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         BindLogo()
         BindAccountLinks()
@@ -332,42 +338,119 @@ Partial Class SiteHeader
     End Sub
 
     Private Sub BindLogo()
-        Dim desktopLogo As String = TryCast(Session("AziendaLogo"), String)
-        If String.IsNullOrWhiteSpace(desktopLogo) Then
-            desktopLogo = TryCast(Session("LogoWeb"), String)
-        End If
+        Dim logoInfo As HeaderLogoInfo = LoadHeaderLogoInfo()
+        Dim desktopLogo As String = BuildLogoAssetUrlFromFileName(logoInfo.DesktopLogoFile)
         If String.IsNullOrWhiteSpace(desktopLogo) Then
             desktopLogo = DefaultLogoVirtual
         End If
 
-        Dim mobileLogo As String = TryCast(Session("AziendaLogoMobile"), String)
-        If String.IsNullOrWhiteSpace(mobileLogo) Then
-            mobileLogo = TryCast(Session("LogoWebMobile"), String)
-        End If
-        If String.IsNullOrWhiteSpace(mobileLogo) Then
-            If FileExistsVirtual(DefaultMobileLogoVirtual) Then
-                mobileLogo = DefaultMobileLogoVirtual
-            Else
-                mobileLogo = desktopLogo
-            End If
-        End If
-
         desktopLogo = EnsureExistingLogoUrl(desktopLogo, DefaultLogoVirtual)
+
+        Dim mobileLogo As String = BuildLogoAssetUrlFromFileName(logoInfo.MobileLogoFile)
+        If String.IsNullOrWhiteSpace(mobileLogo) Then
+            mobileLogo = desktopLogo
+        End If
         mobileLogo = EnsureExistingLogoUrl(mobileLogo, desktopLogo)
 
         Dim desktopFallback As String = desktopLogo
+        Dim desktopFallbackJs As String = HttpUtility.JavaScriptStringEncode(desktopFallback)
+        Dim altText As String = If(String.IsNullOrWhiteSpace(logoInfo.CompanyName), "KeepStore", logoInfo.CompanyName.Trim())
         If imgLogo IsNot Nothing Then
+            imgLogo.AlternateText = altText
             imgLogo.ImageUrl = desktopLogo
         End If
         If imgLogoMobile IsNot Nothing Then
+            imgLogoMobile.AlternateText = altText
             imgLogoMobile.ImageUrl = mobileLogo
-            imgLogoMobile.Attributes("onerror") = "this.onerror=null;this.src='" & desktopFallback & "';"
+            imgLogoMobile.Attributes("onerror") = "this.onerror=null;this.src='" & desktopFallbackJs & "';"
         End If
         If imgLogoDrawer IsNot Nothing Then
+            imgLogoDrawer.AlternateText = altText
             imgLogoDrawer.ImageUrl = mobileLogo
-            imgLogoDrawer.Attributes("onerror") = "this.onerror=null;this.src='" & desktopFallback & "';"
+            imgLogoDrawer.Attributes("onerror") = "this.onerror=null;this.src='" & desktopFallbackJs & "';"
         End If
     End Sub
+
+    Private Function LoadHeaderLogoInfo() As HeaderLogoInfo
+        Dim info As New HeaderLogoInfo()
+
+        Try
+            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                conn.Open()
+                Using cmd As New MySqlCommand("SELECT Logo, LogoWeb, nome AS CompanyName FROM aziende WHERE id=@companyId LIMIT 1", conn)
+                    cmd.Parameters.AddWithValue("@companyId", ResolveHeaderCompanyId(conn))
+                    Using reader As MySqlDataReader = cmd.ExecuteReader()
+                        If reader.Read() Then
+                            info.DesktopLogoFile = SafeString(reader, "Logo")
+                            info.MobileLogoFile = SafeString(reader, "LogoWeb")
+                            info.CompanyName = SafeString(reader, "CompanyName")
+                        End If
+                    End Using
+                End Using
+            End Using
+        Catch
+        End Try
+
+        If String.IsNullOrWhiteSpace(info.CompanyName) AndAlso Session IsNot Nothing Then
+            info.CompanyName = Convert.ToString(Session("AziendaNome"))
+        End If
+
+        Return info
+    End Function
+
+    Private Function ResolveHeaderCompanyId(ByVal conn As MySqlConnection) As Integer
+        Dim companyId As Integer = 0
+
+        If Session IsNot Nothing Then
+            Integer.TryParse(Convert.ToString(Session("AziendaID")), companyId)
+            If companyId > 0 Then
+                Return companyId
+            End If
+        End If
+
+        Try
+            Dim host As String = If(Request Is Nothing OrElse Request.Url Is Nothing, String.Empty, Request.Url.Host)
+            If Not String.IsNullOrWhiteSpace(host) Then
+                Using cmd As New MySqlCommand("SELECT aziende.Id FROM aziende LEFT JOIN pagine ON aziende.Id=Aziendeid WHERE (url1 LIKE @dominio OR url2 LIKE @dominio) LIMIT 1", conn)
+                    cmd.Parameters.AddWithValue("@dominio", "%" & host.Trim() & "%")
+                    Dim raw As Object = cmd.ExecuteScalar()
+                    If raw IsNot Nothing AndAlso raw IsNot DBNull.Value AndAlso Integer.TryParse(Convert.ToString(raw), companyId) AndAlso companyId > 0 Then
+                        Return companyId
+                    End If
+                End Using
+            End If
+        Catch
+        End Try
+
+        Return HeaderCompanyId
+    End Function
+
+    Private Function BuildLogoAssetUrlFromFileName(ByVal rawFileName As String) As String
+        Dim fileName As String = SafeLogoFileName(rawFileName)
+        If String.IsNullOrWhiteSpace(fileName) Then
+            Return String.Empty
+        End If
+
+        Return "/Public/assets/images/logo/" & fileName
+    End Function
+
+    Private Function SafeLogoFileName(ByVal rawFileName As String) As String
+        Dim value As String = If(rawFileName, String.Empty).Trim()
+        If String.IsNullOrWhiteSpace(value) Then
+            Return String.Empty
+        End If
+
+        value = value.Replace("\"c, "/"c)
+        Dim fileName As String = Path.GetFileName(value)
+        If String.IsNullOrWhiteSpace(fileName) Then
+            Return String.Empty
+        End If
+        If fileName.Contains("..") OrElse fileName.Contains("/") OrElse fileName.Contains("\") Then
+            Return String.Empty
+        End If
+
+        Return fileName
+    End Function
 
     Private Function EnsureExistingLogoUrl(ByVal candidate As String, ByVal fallback As String) As String
         Dim normalizedCandidate As String = NormalizeLogoUrl(candidate)
