@@ -831,7 +831,7 @@
                     <p class="body-text-3 text-main-2 ks-section-help">Seleziona un metodo di pagamento abilitato per il tuo listino e totale ordine.</p>
 					<asp:SqlDataSource ID="sdsPagamento" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
 						ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-						SelectCommand="SELECT * FROM vpagamentitipo WHERE Abilitato=1 AND CostoMassimo >= ?CostoMassimo AND (Web=1 OR UtenteID=?UtenteID) AND AziendeID=?AziendaID AND UPPER(Descrizione) NOT LIKE '%PAYPAL%' GROUP BY id ORDER BY Ordinamento, Descrizione">
+						SelectCommand="SELECT * FROM vpagamentitipo WHERE Abilitato=1 AND CostoMassimo >= ?CostoMassimo AND (Web=1 OR UtenteID=?UtenteID) AND AziendeID=?AziendaID GROUP BY id ORDER BY Ordinamento, Descrizione">
 					   <SelectParameters>
 						   <asp:ControlParameter ControlID="tbTotale" Name="CostoMassimo" PropertyName="Text" />
 						   <asp:SessionParameter Name="UtenteID" SessionField="UtentiID" />
