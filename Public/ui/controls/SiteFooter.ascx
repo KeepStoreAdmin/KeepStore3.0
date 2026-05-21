@@ -6,7 +6,7 @@
                 <div class="ft-inner flex-wrap flex-xl-nowrap">
                     <div class="ft-logo">
                         <a class="logo-site" href="Default.aspx">
-                            <asp:Image ID="imgFooterLogo" runat="server" AlternateText="KeepStore" CssClass="lazyload" Height="128" Width="185" />
+                            <asp:Image ID="imgFooterLogo" runat="server" AlternateText="KeepStore" CssClass="lazyload ks-footer-logo-img" />
                         </a>
                         <div class="method-payment">
                             <p>Pagamenti accettati:</p>
