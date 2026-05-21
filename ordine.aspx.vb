@@ -11,6 +11,7 @@ Imports System.Security.Cryptography
 Partial Class ordine
     Inherits AntiCsrfPage
 
+    Private Const PAYMENT_ONLINE_PAYPAL As Integer = 2
 
 ' =========================
 ' REDIRECT SAFE (avoid ThreadAbortException)
@@ -413,6 +414,9 @@ End If
                 End Using
 
                 InitializeWebPaymentStatus(conn, trns, id, PagamentoOnLine, ConfermaOrdinePrimaPagamento, PermettiPagamentoSuccessivo)
+                If PagamentoOnLine = PAYMENT_ONLINE_PAYPAL Then
+                    PayPalPaymentState.MarkPending(id, "PayPal: in attesa di avvio pagamento", conn, trns)
+                End If
 
                 Me.Label1.Text = NumDoc.ToString()
                 Me.Label2.Text = Documento
@@ -483,7 +487,7 @@ End If
                     redirect = "coupon_esito_acquisto.aspx?id=" & idCoupon & "&cod=" & HttpUtility.UrlEncode(codice_controllo)
 
                 Else
-                    ' Ordine normale: banca sella o dettaglio documento
+                    ' Ordine normale: banca sella, PayPal o dettaglio documento
                     If (If(TryCast(Me.Session("Ordine_BancaSellaGestPay_ShopId"), String), "")) <> "" Then
                         ServicePointManager.SecurityProtocol = Tls12
 
@@ -542,6 +546,8 @@ End If
                                    "&sitoweb=" & sitoWeb &
                                    "&buyername=" & buyerName &
                                    "&buyeremail=" & buyerEmail
+                    ElseIf PagamentoOnLine = PAYMENT_ONLINE_PAYPAL Then
+                        redirect = "paypalcheckout.aspx?id=" & id.ToString(CultureInfo.InvariantCulture)
                     Else
                         redirect = "documentidettaglio.aspx?id=" & id & "&ndoc=" & NumDoc
                     End If
