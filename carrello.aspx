@@ -1117,8 +1117,8 @@
                 <%end if%>
             </div>
             <div id="spinner_caricamento" style="text-align:center;display:none;padding-top:5px;padding-bottom:5px;">
-                <div><b>ATTENDERE L'INVIO AI NOSTRI SERVER</b></div><br />
-                <img src="Public/Images/spinner.gif" alt="" />
+                <div class="ks-inline-loader-text"><b>ATTENDERE L'INVIO AI NOSTRI SERVER</b></div>
+                <span class="ks-inline-loader" role="status" aria-label="Invio in corso"></span>
             </div>
         </div>
 </asp:Panel>
