@@ -39,7 +39,6 @@ Partial Class SiteFooter
         imgFooterLogo.ImageUrl = logoUrl
         imgFooterLogo.AlternateText = If(String.IsNullOrWhiteSpace(companyName), "KeepStore", companyName.Trim())
         imgFooterLogo.Attributes("decoding") = "async"
-        imgFooterLogo.Attributes("srcset") = logoUrl & " 328w"
     End Sub
 
     Private Function LoadFooterLogoFileName(ByRef companyName As String) As String
