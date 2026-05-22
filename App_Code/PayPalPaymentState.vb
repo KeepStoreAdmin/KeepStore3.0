@@ -8,13 +8,19 @@ Public Class PayPalPaymentDocumentInfo
     Public Property Exists As Boolean
     Public Property DocumentId As Integer
     Public Property UtentiId As Integer
+    Public Property DocumentNumber As Integer
+    Public Property DocumentDate As DateTime
     Public Property Pagato As Integer
+    Public Property PaymentState As Integer
     Public Property PaymentOnline As Integer
     Public Property TotalDocument As Decimal
+    Public Property TransactionId As String
 End Class
 
 Public Module PayPalPaymentState
     Public Const PAYPAL_ONLINE_VALUE As Integer = 2
+    Public Const EXPRESS_TOKEN_PREFIX As String = "EC-TOKEN:"
+    Public Const EXPRESS_TRANSACTION_PREFIX As String = "TXN:"
 
     Public Function LoadDocumentForUser(ByVal documentId As Integer, ByVal utentiId As Integer) As PayPalPaymentDocumentInfo
         Dim info As New PayPalPaymentDocumentInfo()
@@ -23,7 +29,7 @@ Public Module PayPalPaymentState
         Try
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 conn.Open()
-                Using cmd As New MySqlCommand("SELECT d.id, d.UtentiId, COALESCE(d.Pagato,0) AS Pagato, COALESCE(p.OnLine,0) AS PaymentOnline, COALESCE(pie.TotaleDocumento,0) AS TotaleDocumento FROM documenti d LEFT JOIN pagamentitipo p ON p.id=d.PagamentiTipoId LEFT JOIN documentipie pie ON pie.DocumentiId=d.id WHERE d.id=@id AND d.UtentiId=@uid LIMIT 1", conn)
+                Using cmd As New MySqlCommand("SELECT d.id, d.UtentiId, COALESCE(d.NDocumento,0) AS NDocumento, d.DataDocumento, COALESCE(d.Pagato,0) AS Pagato, COALESCE(d.StatoPagamentoWeb,0) AS StatoPagamentoWeb, COALESCE(p.OnLine,0) AS PaymentOnline, COALESCE(pie.TotaleDocumento,0) AS TotaleDocumento, COALESCE(d.IdTransazione,'') AS IdTransazione FROM documenti d LEFT JOIN pagamentitipo p ON p.id=d.PagamentiTipoId LEFT JOIN documentipie pie ON pie.DocumentiId=d.id WHERE d.id=@id AND d.UtentiId=@uid LIMIT 1", conn)
                     cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = documentId
                     cmd.Parameters.Add("@uid", MySqlDbType.Int32).Value = utentiId
 
@@ -32,9 +38,13 @@ Public Module PayPalPaymentState
                             info.Exists = True
                             info.DocumentId = SafeInt(dr("id"), 0)
                             info.UtentiId = SafeInt(dr("UtentiId"), 0)
+                            info.DocumentNumber = SafeInt(dr("NDocumento"), 0)
+                            info.DocumentDate = SafeDate(dr("DataDocumento"), DateTime.MinValue)
                             info.Pagato = SafeInt(dr("Pagato"), 0)
+                            info.PaymentState = SafeInt(dr("StatoPagamentoWeb"), 0)
                             info.PaymentOnline = SafeInt(dr("PaymentOnline"), 0)
                             info.TotalDocument = SafeDecimal(dr("TotaleDocumento"), 0D)
+                            info.TransactionId = Convert.ToString(dr("IdTransazione"))
                         End If
                     End Using
                 End Using
@@ -58,7 +68,43 @@ Public Module PayPalPaymentState
         Return UpdatePaymentState(documentId, 4, message, True, Nothing, Nothing)
     End Function
 
+    Public Function MarkPendingWithTransaction(ByVal documentId As Integer, ByVal message As String, ByVal transactionId As String) As Integer
+        Return UpdatePaymentState(documentId, 1, message, True, Nothing, Nothing, transactionId)
+    End Function
+
+    Public Function MarkPendingWithExpressToken(ByVal documentId As Integer, ByVal message As String, ByVal token As String) As Integer
+        Return MarkPendingWithTransaction(documentId, message, BuildExpressTokenValue(token))
+    End Function
+
+    Public Function MarkPendingWithExpressTransaction(ByVal documentId As Integer, ByVal message As String, ByVal transactionId As String) As Integer
+        Return MarkPendingWithTransaction(documentId, message, BuildExpressTransactionValue(transactionId))
+    End Function
+
+    Public Function MarkCompleted(ByVal documentId As Integer, ByVal transactionId As String, ByVal message As String) As Integer
+        If documentId <= 0 Then Return 0
+
+        Try
+            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                conn.Open()
+                Using cmd As New MySqlCommand("UPDATE documenti SET Pagato=1, IdTransazione=@transazione, StatoPagamentoWeb=2, DataStatoPagamentoWeb=CURRENT_TIMESTAMP, UltimoEsitoPagamentoWeb=@esito WHERE id=@id AND COALESCE(Pagato,0)<>1", conn)
+                    cmd.Parameters.Add("@transazione", MySqlDbType.VarChar, 100).Value = BuildExpressTransactionValue(transactionId)
+                    cmd.Parameters.Add("@esito", MySqlDbType.VarChar, 255).Value = SanitizeOutcome(message)
+                    cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = documentId
+                    Return cmd.ExecuteNonQuery()
+                End Using
+            End Using
+        Catch ex As Exception
+            KeepStoreLog.Error("paypal-payment-state", "MarkCompleted documentId=" & documentId.ToString(CultureInfo.InvariantCulture), ex, HttpContext.Current)
+        End Try
+
+        Return 0
+    End Function
+
     Private Function UpdatePaymentState(ByVal documentId As Integer, ByVal stateValue As Integer, ByVal message As String, ByVal forceUnpaid As Boolean, ByVal existingConn As MySqlConnection, ByVal trns As MySqlTransaction) As Integer
+        Return UpdatePaymentState(documentId, stateValue, message, forceUnpaid, existingConn, trns, Nothing)
+    End Function
+
+    Private Function UpdatePaymentState(ByVal documentId As Integer, ByVal stateValue As Integer, ByVal message As String, ByVal forceUnpaid As Boolean, ByVal existingConn As MySqlConnection, ByVal trns As MySqlTransaction, ByVal transactionId As String) As Integer
         If documentId <= 0 Then Return 0
 
         Dim ownsConnection As Boolean = False
@@ -73,10 +119,12 @@ Public Module PayPalPaymentState
 
             Dim sql As String = "UPDATE documenti SET "
             If forceUnpaid Then sql &= "Pagato=0, "
+            If transactionId IsNot Nothing Then sql &= "IdTransazione=@transazione, "
             sql &= "StatoPagamentoWeb=@stato, DataStatoPagamentoWeb=CURRENT_TIMESTAMP, UltimoEsitoPagamentoWeb=@esito WHERE id=@id AND COALESCE(Pagato,0)<>1"
 
             Using cmd As New MySqlCommand(sql, conn)
                 If trns IsNot Nothing Then cmd.Transaction = trns
+                If transactionId IsNot Nothing Then cmd.Parameters.Add("@transazione", MySqlDbType.VarChar, 100).Value = SanitizeTransactionId(transactionId)
                 cmd.Parameters.Add("@stato", MySqlDbType.Int16).Value = stateValue
                 cmd.Parameters.Add("@esito", MySqlDbType.VarChar, 255).Value = SanitizeOutcome(message)
                 cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = documentId
@@ -105,6 +153,36 @@ Public Module PayPalPaymentState
         End While
         If sanitized.Length > 255 Then sanitized = sanitized.Substring(0, 255)
         Return sanitized
+    End Function
+
+    Public Function SanitizeTransactionId(ByVal value As String) As String
+        If value Is Nothing Then Return ""
+        Dim sanitized As String = value.Replace(vbCr, "").Replace(vbLf, "").Replace(vbTab, "").Trim()
+        If sanitized.Length > 100 Then sanitized = sanitized.Substring(0, 100)
+        Return sanitized
+    End Function
+
+    Public Function BuildExpressTokenValue(ByVal token As String) As String
+        Return SanitizeTransactionId(EXPRESS_TOKEN_PREFIX & If(token, ""))
+    End Function
+
+    Public Function BuildExpressTransactionValue(ByVal transactionId As String) As String
+        Return SanitizeTransactionId(EXPRESS_TRANSACTION_PREFIX & If(transactionId, ""))
+    End Function
+
+    Public Function ExtractExpressToken(ByVal value As String) As String
+        Dim clean As String = SanitizeTransactionId(value)
+        If clean.StartsWith(EXPRESS_TOKEN_PREFIX, StringComparison.Ordinal) Then
+            Return clean.Substring(EXPRESS_TOKEN_PREFIX.Length)
+        End If
+
+        Return ""
+    End Function
+
+    Public Function IsExpressInProgressMarker(ByVal value As String) As Boolean
+        Dim clean As String = SanitizeTransactionId(value)
+        Return clean.StartsWith(EXPRESS_TOKEN_PREFIX, StringComparison.Ordinal) OrElse
+               clean.StartsWith(EXPRESS_TRANSACTION_PREFIX, StringComparison.Ordinal)
     End Function
 
     Public Function GetSessionInt(ByVal key As String, Optional ByVal defaultValue As Integer = 0) As Integer
@@ -136,6 +214,17 @@ Public Module PayPalPaymentState
             Dim parsed As Decimal
             If Decimal.TryParse(Convert.ToString(value), NumberStyles.Any, CultureInfo.CurrentCulture, parsed) Then Return parsed
             If Decimal.TryParse(Convert.ToString(value), NumberStyles.Any, CultureInfo.InvariantCulture, parsed) Then Return parsed
+        Catch
+        End Try
+
+        Return defaultValue
+    End Function
+
+    Private Function SafeDate(ByVal value As Object, ByVal defaultValue As DateTime) As DateTime
+        Try
+            If value Is Nothing OrElse value Is DBNull.Value Then Return defaultValue
+            Dim parsed As DateTime
+            If DateTime.TryParse(Convert.ToString(value), parsed) Then Return parsed
         Catch
         End Try
 

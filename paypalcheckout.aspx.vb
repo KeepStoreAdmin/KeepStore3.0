@@ -28,6 +28,11 @@ Partial Class paypalcheckout
             Return
         End If
 
+        If doc.PaymentState = 1 AndAlso PayPalPaymentState.IsExpressInProgressMarker(doc.TransactionId) Then
+            SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
+            Return
+        End If
+
         If doc.PaymentOnline <> PayPalPaymentState.PAYPAL_ONLINE_VALUE Then
             SafeKo(documentId, "PayPal: pagamento non coerente con il documento")
             Return
@@ -39,19 +44,32 @@ Partial Class paypalcheckout
         End If
 
         Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.Load()
-        If cfg Is Nothing OrElse Not cfg.HasClientId OrElse Not cfg.HasClientSecret Then
-            SafeKo(documentId, "PayPal: configurazione REST assente")
+        If cfg Is Nothing OrElse Not cfg.IsExpressConfigured Then
+            SafeKo(documentId, "PayPal Express: configurazione assente")
             Return
         End If
 
-        If Not cfg.IsSandbox Then
-            SafeKo(documentId, "PayPal: ambiente REST sandbox non configurato")
+        If cfg.IsLive AndAlso Not cfg.AllowLive Then
+            SafeKo(documentId, "PayPal Express: ambiente live non autorizzato")
             Return
         End If
 
-        ' PAYPAL-FLOW-4B is a sandbox-safe launcher skeleton only.
-        ' No REST order is created here until capture/return handling is implemented.
-        SafeKo(documentId, "PayPal: creazione ordine REST non ancora implementata")
+        If Not cfg.CanCallApi Then
+            SafeKo(documentId, "PayPal Express: configurazione non pronta")
+            Return
+        End If
+
+        PayPalPaymentState.MarkPending(documentId, "PayPal Express: richiesta avvio pagamento")
+
+        Dim client As New PayPalExpressClient(cfg)
+        Dim setResult As PayPalExpressResponse = client.SetExpressCheckout(doc, BuildPayPalReturnUrl(documentId, "return"), BuildPayPalReturnUrl(documentId, "cancel"))
+        If setResult Is Nothing OrElse Not setResult.IsSuccess OrElse String.IsNullOrWhiteSpace(setResult.Token) Then
+            SafeKo(documentId, BuildApiFailureMessage("PayPal Express Set", setResult))
+            Return
+        End If
+
+        PayPalPaymentState.MarkPendingWithExpressToken(documentId, "PayPal Express: token avvio pagamento creato", setResult.Token)
+        SafeRedirect(client.BuildApprovalUrl(setResult.Token))
     End Sub
 
     Private Sub SafeKo(ByVal documentId As Integer, ByVal message As String)
@@ -67,6 +85,31 @@ Partial Class paypalcheckout
         End Try
 
         Return 0
+    End Function
+
+    Private Function BuildPayPalReturnUrl(ByVal documentId As Integer, ByVal actionName As String) As String
+        Dim baseUrl As String = "https://www.taikun.it"
+        Try
+            If Request IsNot Nothing AndAlso Request.Url IsNot Nothing Then
+                baseUrl = Request.Url.GetLeftPart(UriPartial.Authority)
+            End If
+        Catch
+        End Try
+
+        Return baseUrl.TrimEnd("/"c) &
+               "/paypalreturn.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) &
+               "&action=" & HttpUtility.UrlEncode(actionName)
+    End Function
+
+    Private Function BuildApiFailureMessage(ByVal prefix As String, ByVal result As PayPalExpressResponse) As String
+        If result Is Nothing Then Return prefix & ": risposta assente"
+
+        Dim code As String = If(result.ErrorCode, "").Trim()
+        Dim shortMessage As String = If(result.ShortMessage, "").Trim()
+        If code <> "" AndAlso shortMessage <> "" Then Return prefix & " KO " & code & " " & shortMessage
+        If code <> "" Then Return prefix & " KO " & code
+        If shortMessage <> "" Then Return prefix & " KO " & shortMessage
+        Return prefix & " KO"
     End Function
 
     Private Sub SafeRedirect(ByVal url As String)
