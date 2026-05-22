@@ -13,7 +13,7 @@ Public Module PayPalExpressRepository
                 conn.Open()
                 Dim sql As String = ""
                 sql &= "SELECT v.id, v.AziendeId, v.PagamentiTipoId, v.Environment, v.ApiUsername, v.ApiPasswordProtetta, v.ApiSignatureProtetta, "
-                sql &= "v.BusinessAccount, v.VersioneApi, v.CurrencyCode, v.AllowLive "
+                sql &= "v.BusinessAccount, v.CurrencyCode, v.AllowLive "
                 sql &= "FROM documenti d "
                 sql &= "INNER JOIN vpaypal_express_azienda v ON v.AziendeId=d.AziendeId AND v.PagamentiTipoId=d.PagamentiTipoId "
                 sql &= "WHERE d.id=@id AND v.Attivo=1 AND v.OnLine=@online "
@@ -35,8 +35,6 @@ Public Module PayPalExpressRepository
                             cfg.ApiPassword = Convert.ToString(dr("ApiPasswordProtetta")).Trim()
                             cfg.ApiSignature = Convert.ToString(dr("ApiSignatureProtetta")).Trim()
                             cfg.BusinessAccount = Convert.ToString(dr("BusinessAccount")).Trim()
-                            cfg.Version = Convert.ToString(dr("VersioneApi")).Trim()
-                            If String.IsNullOrWhiteSpace(cfg.Version) Then cfg.Version = "204.0"
                             cfg.CurrencyCode = Convert.ToString(dr("CurrencyCode")).Trim().ToUpperInvariant()
                             If String.IsNullOrWhiteSpace(cfg.CurrencyCode) Then cfg.CurrencyCode = "EUR"
                             cfg.AllowLive = (SafeInt(dr("AllowLive"), 0) = 1)

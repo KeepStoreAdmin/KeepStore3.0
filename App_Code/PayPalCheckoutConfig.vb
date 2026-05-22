@@ -2,6 +2,8 @@ Imports System
 Imports System.Configuration
 
 Public Class PayPalCheckoutConfig
+    Private Const DEFAULT_PAYPAL_NVP_VERSION As String = "204.0"
+
     Public Property ConfigId As Integer
     Public Property AziendeId As Integer
     Public Property PagamentiTipoId As Integer
@@ -11,9 +13,14 @@ Public Class PayPalCheckoutConfig
     Public Property ApiPassword As String
     Public Property ApiSignature As String
     Public Property BusinessAccount As String
-    Public Property Version As String
     Public Property CurrencyCode As String
     Public Property AllowLive As Boolean
+
+    Public ReadOnly Property Version As String
+        Get
+            Return DEFAULT_PAYPAL_NVP_VERSION
+        End Get
+    End Property
 
     Public ReadOnly Property IsSandbox As Boolean
         Get
@@ -70,9 +77,6 @@ Public Class PayPalCheckoutConfig
         cfg.ApiPassword = ReadSetting("PAYPAL_EXPRESS_API_PASSWORD")
         cfg.ApiSignature = ReadSetting("PAYPAL_EXPRESS_API_SIGNATURE")
         cfg.BusinessAccount = ReadSetting("PAYPAL_EXPRESS_BUSINESS_ACCOUNT")
-
-        cfg.Version = ReadSetting("PAYPAL_EXPRESS_VERSION")
-        If String.IsNullOrWhiteSpace(cfg.Version) Then cfg.Version = "204.0"
 
         cfg.CurrencyCode = ReadSetting("PAYPAL_EXPRESS_CURRENCY")
         If String.IsNullOrWhiteSpace(cfg.CurrencyCode) Then cfg.CurrencyCode = "EUR"
