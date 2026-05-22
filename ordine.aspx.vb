@@ -488,7 +488,10 @@ End If
 
                 Else
                     ' Ordine normale: banca sella, PayPal o dettaglio documento
-                    If (If(TryCast(Me.Session("Ordine_BancaSellaGestPay_ShopId"), String), "")) <> "" Then
+                    If PagamentoOnLine = PAYMENT_ONLINE_PAYPAL Then
+                        Me.SafeRedirect("/paypalcheckout.aspx?id=" & id.ToString(CultureInfo.InvariantCulture))
+                        Exit Sub
+                    ElseIf (If(TryCast(Me.Session("Ordine_BancaSellaGestPay_ShopId"), String), "")) <> "" Then
                         ServicePointManager.SecurityProtocol = Tls12
 
                         Dim totaleDocumento As Double = GetSessionDouble("Ordine_Totale_Documento", 0)
@@ -546,8 +549,6 @@ End If
                                    "&sitoweb=" & sitoWeb &
                                    "&buyername=" & buyerName &
                                    "&buyeremail=" & buyerEmail
-                    ElseIf PagamentoOnLine = PAYMENT_ONLINE_PAYPAL Then
-                        redirect = "paypalcheckout.aspx?id=" & id.ToString(CultureInfo.InvariantCulture)
                     Else
                         redirect = "documentidettaglio.aspx?id=" & id & "&ndoc=" & NumDoc
                     End If
