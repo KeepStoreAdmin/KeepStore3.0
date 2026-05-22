@@ -8,6 +8,8 @@ Public Class PayPalPaymentDocumentInfo
     Public Property Exists As Boolean
     Public Property DocumentId As Integer
     Public Property UtentiId As Integer
+    Public Property AziendeId As Integer
+    Public Property PagamentiTipoId As Integer
     Public Property DocumentNumber As Integer
     Public Property DocumentDate As DateTime
     Public Property Pagato As Integer
@@ -29,7 +31,7 @@ Public Module PayPalPaymentState
         Try
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 conn.Open()
-                Using cmd As New MySqlCommand("SELECT d.id, d.UtentiId, COALESCE(d.NDocumento,0) AS NDocumento, d.DataDocumento, COALESCE(d.Pagato,0) AS Pagato, COALESCE(d.StatoPagamentoWeb,0) AS StatoPagamentoWeb, COALESCE(p.OnLine,0) AS PaymentOnline, COALESCE(pie.TotaleDocumento,0) AS TotaleDocumento, COALESCE(d.IdTransazione,'') AS IdTransazione FROM documenti d LEFT JOIN pagamentitipo p ON p.id=d.PagamentiTipoId LEFT JOIN documentipie pie ON pie.DocumentiId=d.id WHERE d.id=@id AND d.UtentiId=@uid LIMIT 1", conn)
+                Using cmd As New MySqlCommand("SELECT d.id, d.UtentiId, COALESCE(d.AziendeId,0) AS AziendeId, COALESCE(d.PagamentiTipoId,0) AS PagamentiTipoId, COALESCE(d.NDocumento,0) AS NDocumento, d.DataDocumento, COALESCE(d.Pagato,0) AS Pagato, COALESCE(d.StatoPagamentoWeb,0) AS StatoPagamentoWeb, COALESCE(p.OnLine,0) AS PaymentOnline, COALESCE(pie.TotaleDocumento,0) AS TotaleDocumento, COALESCE(d.IdTransazione,'') AS IdTransazione FROM documenti d LEFT JOIN pagamentitipo p ON p.id=d.PagamentiTipoId LEFT JOIN documentipie pie ON pie.DocumentiId=d.id WHERE d.id=@id AND d.UtentiId=@uid LIMIT 1", conn)
                     cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = documentId
                     cmd.Parameters.Add("@uid", MySqlDbType.Int32).Value = utentiId
 
@@ -38,6 +40,8 @@ Public Module PayPalPaymentState
                             info.Exists = True
                             info.DocumentId = SafeInt(dr("id"), 0)
                             info.UtentiId = SafeInt(dr("UtentiId"), 0)
+                            info.AziendeId = SafeInt(dr("AziendeId"), 0)
+                            info.PagamentiTipoId = SafeInt(dr("PagamentiTipoId"), 0)
                             info.DocumentNumber = SafeInt(dr("NDocumento"), 0)
                             info.DocumentDate = SafeDate(dr("DataDocumento"), DateTime.MinValue)
                             info.Pagato = SafeInt(dr("Pagato"), 0)

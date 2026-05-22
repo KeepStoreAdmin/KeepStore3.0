@@ -33,12 +33,14 @@ Partial Class paypalreturn
 
         If doc.PaymentOnline <> PayPalPaymentState.PAYPAL_ONLINE_VALUE Then
             PayPalPaymentState.MarkFailed(documentId, "PayPal: pagamento non coerente con il documento")
+            PayPalExpressRepository.RecordOutcome(doc, "PayPalReturn", "KO", "PayPal: pagamento non coerente con il documento")
             SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
             Return
         End If
 
         If String.Equals(actionName, "cancel", StringComparison.OrdinalIgnoreCase) Then
             PayPalPaymentState.MarkCanceled(documentId, "PayPal Express: pagamento annullato dall'utente")
+            PayPalExpressRepository.RecordOutcome(doc, "PayPalReturnCancel", "CANCELED", "PayPal Express: pagamento annullato dall'utente", doc.TransactionId)
             SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
             Return
         End If
@@ -49,6 +51,7 @@ Partial Class paypalreturn
         End If
 
         PayPalPaymentState.MarkFailed(documentId, "PayPal Express: rientro pagamento non valido")
+        PayPalExpressRepository.RecordOutcome(doc, "PayPalReturn", "KO", "PayPal Express: rientro pagamento non valido")
         SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
     End Sub
 
@@ -58,6 +61,7 @@ Partial Class paypalreturn
 
         If token = "" OrElse payerId = "" Then
             PayPalPaymentState.MarkFailed(documentId, "PayPal Express: token o PayerID assente")
+            PayPalExpressRepository.RecordOutcome(doc, "PayPalReturn", "KO", "PayPal Express: token o PayerID assente", token)
             SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
             Return
         End If
@@ -65,19 +69,22 @@ Partial Class paypalreturn
         Dim expectedToken As String = PayPalPaymentState.ExtractExpressToken(doc.TransactionId)
         If expectedToken = "" OrElse Not String.Equals(expectedToken, token, StringComparison.Ordinal) Then
             PayPalPaymentState.MarkFailed(documentId, "PayPal Express: token non coerente con il documento")
+            PayPalExpressRepository.RecordOutcome(doc, "PayPalReturn", "KO", "PayPal Express: token non coerente con il documento", token)
             SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
             Return
         End If
 
-        Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.Load()
+        Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForDocument(documentId)
         If cfg Is Nothing OrElse Not cfg.IsExpressConfigured Then
             PayPalPaymentState.MarkFailed(documentId, "PayPal Express: configurazione assente")
+            PayPalExpressRepository.RecordOutcome(doc, "PayPalReturn", "KO", "PayPal Express: configurazione assente", token)
             SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
             Return
         End If
 
         If cfg.IsLive AndAlso Not cfg.AllowLive Then
             PayPalPaymentState.MarkFailed(documentId, "PayPal Express: ambiente live non autorizzato")
+            PayPalExpressRepository.RecordOutcome(doc, "PayPalReturn", "KO", "PayPal Express: ambiente live non autorizzato", token)
             SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
             Return
         End If
@@ -86,12 +93,14 @@ Partial Class paypalreturn
         Dim details As PayPalExpressResponse = client.GetExpressCheckoutDetails(token)
         If details Is Nothing OrElse Not details.IsSuccess Then
             PayPalPaymentState.MarkFailed(documentId, BuildApiFailureMessage("PayPal Express Get", details))
+            PayPalExpressRepository.RecordOutcome(doc, "GetExpressCheckoutDetails", "KO", BuildApiFailureMessage("PayPal Express Get", details), token, If(details Is Nothing, Nothing, details.ErrorCode))
             SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
             Return
         End If
 
         If Not ValidateDetails(documentId, doc, cfg, token, payerId, details) Then
             PayPalPaymentState.MarkFailed(documentId, "PayPal Express: dettagli pagamento non coerenti")
+            PayPalExpressRepository.RecordOutcome(doc, "GetExpressCheckoutDetails", "KO", "PayPal Express: dettagli pagamento non coerenti", token)
             SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
             Return
         End If
@@ -99,12 +108,14 @@ Partial Class paypalreturn
         Dim payment As PayPalExpressResponse = client.DoExpressCheckoutPayment(doc, token, payerId)
         If payment Is Nothing OrElse Not payment.IsSuccess Then
             PayPalPaymentState.MarkFailed(documentId, BuildApiFailureMessage("PayPal Express Do", payment))
+            PayPalExpressRepository.RecordPaymentResult(doc, "FAILED", token, payerId, payment)
             SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
             Return
         End If
 
         If payment.IsCompletedPayment AndAlso Not String.IsNullOrWhiteSpace(payment.TransactionId) Then
             PayPalPaymentState.MarkCompleted(documentId, payment.TransactionId, "PayPal Express OK: " & ShortTransaction(payment.TransactionId))
+            PayPalExpressRepository.RecordPaymentResult(doc, "COMPLETED", token, payerId, payment)
             SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ok")
             Return
         End If
@@ -112,11 +123,13 @@ Partial Class paypalreturn
         If payment.IsPendingPayment Then
             Dim pendingId As String = If(String.IsNullOrWhiteSpace(payment.TransactionId), token, payment.TransactionId)
             PayPalPaymentState.MarkPendingWithExpressTransaction(documentId, "PayPal Express: pagamento pending", pendingId)
+            PayPalExpressRepository.RecordPaymentResult(doc, "PENDING", token, payerId, payment)
             SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ok")
             Return
         End If
 
         PayPalPaymentState.MarkFailed(documentId, "PayPal Express: pagamento non completato")
+        PayPalExpressRepository.RecordPaymentResult(doc, "FAILED", token, payerId, payment)
         SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
     End Sub
 

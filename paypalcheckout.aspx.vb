@@ -43,7 +43,7 @@ Partial Class paypalcheckout
             Return
         End If
 
-        Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.Load()
+        Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForDocument(documentId)
         If cfg Is Nothing OrElse Not cfg.IsExpressConfigured Then
             SafeKo(documentId, "PayPal Express: configurazione assente")
             Return
@@ -69,11 +69,13 @@ Partial Class paypalcheckout
         End If
 
         PayPalPaymentState.MarkPendingWithExpressToken(documentId, "PayPal Express: token avvio pagamento creato", setResult.Token)
+        PayPalExpressRepository.RecordSetExpressToken(doc, setResult.Token, setResult)
         SafeRedirect(client.BuildApprovalUrl(setResult.Token))
     End Sub
 
     Private Sub SafeKo(ByVal documentId As Integer, ByVal message As String)
         PayPalPaymentState.MarkFailed(documentId, message)
+        PayPalExpressRepository.RecordOutcome(documentId, "PayPalCheckout", "KO", message)
         SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
     End Sub
 
