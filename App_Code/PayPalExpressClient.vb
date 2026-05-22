@@ -88,6 +88,10 @@ Public Class PayPalExpressClient
         Return CallApi("DoExpressCheckoutPayment", fields)
     End Function
 
+    Public Shared Function ExpectedInvoiceNumber(ByVal doc As PayPalPaymentDocumentInfo) As String
+        Return BuildInvoiceNumber(doc)
+    End Function
+
     Public Function BuildApprovalUrl(ByVal token As String) As String
         Return _config.RedirectBaseUrl & "?cmd=_express-checkout&token=" & HttpUtility.UrlEncode(token)
     End Function

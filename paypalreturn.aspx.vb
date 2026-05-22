@@ -62,7 +62,8 @@ Partial Class paypalreturn
             Return
         End If
 
-        If String.IsNullOrWhiteSpace(doc.TransactionId) OrElse Not String.Equals(doc.TransactionId.Trim(), token, StringComparison.Ordinal) Then
+        Dim expectedToken As String = PayPalPaymentState.ExtractExpressToken(doc.TransactionId)
+        If expectedToken = "" OrElse Not String.Equals(expectedToken, token, StringComparison.Ordinal) Then
             PayPalPaymentState.MarkFailed(documentId, "PayPal Express: token non coerente con il documento")
             SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
             Return
@@ -110,7 +111,7 @@ Partial Class paypalreturn
 
         If payment.IsPendingPayment Then
             Dim pendingId As String = If(String.IsNullOrWhiteSpace(payment.TransactionId), token, payment.TransactionId)
-            PayPalPaymentState.MarkPendingWithTransaction(documentId, "PayPal Express: pagamento pending", pendingId)
+            PayPalPaymentState.MarkPendingWithExpressTransaction(documentId, "PayPal Express: pagamento pending", pendingId)
             SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ok")
             Return
         End If
@@ -122,10 +123,11 @@ Partial Class paypalreturn
     Private Function ValidateDetails(ByVal documentId As Integer, ByVal doc As PayPalPaymentDocumentInfo, ByVal cfg As PayPalCheckoutConfig, ByVal token As String, ByVal payerId As String, ByVal details As PayPalExpressResponse) As Boolean
         If details Is Nothing Then Return False
         If Not String.IsNullOrWhiteSpace(details.Token) AndAlso Not String.Equals(details.Token.Trim(), token, StringComparison.Ordinal) Then Return False
-        If Not String.IsNullOrWhiteSpace(details.PayerId) AndAlso Not String.Equals(details.PayerId.Trim(), payerId, StringComparison.Ordinal) Then Return False
+        If String.IsNullOrWhiteSpace(details.PayerId) OrElse Not String.Equals(details.PayerId.Trim(), payerId, StringComparison.Ordinal) Then Return False
         If Not String.Equals(details.CurrencyCode, cfg.CurrencyCode, StringComparison.OrdinalIgnoreCase) Then Return False
         If details.Amount <> Math.Round(doc.TotalDocument, 2, MidpointRounding.AwayFromZero) Then Return False
         If Not String.Equals(details.Custom, documentId.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal) Then Return False
+        If Not String.Equals(details.InvoiceNumber, PayPalExpressClient.ExpectedInvoiceNumber(doc), StringComparison.OrdinalIgnoreCase) Then Return False
         Return True
     End Function
 
@@ -166,6 +168,9 @@ Partial Class paypalreturn
     Private Function ShortTransaction(ByVal transactionId As String) As String
         If transactionId Is Nothing Then Return ""
         Dim clean As String = PayPalPaymentState.SanitizeTransactionId(transactionId)
+        If clean.StartsWith(PayPalPaymentState.EXPRESS_TRANSACTION_PREFIX, StringComparison.Ordinal) Then
+            clean = clean.Substring(PayPalPaymentState.EXPRESS_TRANSACTION_PREFIX.Length)
+        End If
         If clean.Length <= 12 Then Return clean
         Return clean.Substring(0, 12)
     End Function

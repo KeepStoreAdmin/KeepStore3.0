@@ -28,6 +28,11 @@ Partial Class paypalcheckout
             Return
         End If
 
+        If doc.PaymentState = 1 AndAlso PayPalPaymentState.IsExpressInProgressMarker(doc.TransactionId) Then
+            SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
+            Return
+        End If
+
         If doc.PaymentOnline <> PayPalPaymentState.PAYPAL_ONLINE_VALUE Then
             SafeKo(documentId, "PayPal: pagamento non coerente con il documento")
             Return
@@ -63,7 +68,7 @@ Partial Class paypalcheckout
             Return
         End If
 
-        PayPalPaymentState.MarkPendingWithTransaction(documentId, "PayPal Express: token avvio pagamento creato", setResult.Token)
+        PayPalPaymentState.MarkPendingWithExpressToken(documentId, "PayPal Express: token avvio pagamento creato", setResult.Token)
         SafeRedirect(client.BuildApprovalUrl(setResult.Token))
     End Sub
 

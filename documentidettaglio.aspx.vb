@@ -386,7 +386,7 @@ Partial Class documentidettaglio
         Return info.Pagato = 0 AndAlso
                info.PagamentiTipoOnline <> 0 AndAlso
                info.PermettiPagamentoSuccessivo = 1 AndAlso
-               (info.StatoPagamentoWeb = 0 OrElse info.StatoPagamentoWeb = 1 OrElse info.StatoPagamentoWeb = 3 OrElse info.StatoPagamentoWeb = 5) AndAlso
+               (info.StatoPagamentoWeb = 0 OrElse info.StatoPagamentoWeb = 1 OrElse info.StatoPagamentoWeb = 3 OrElse info.StatoPagamentoWeb = 4 OrElse info.StatoPagamentoWeb = 5) AndAlso
                String.IsNullOrEmpty(info.CodiceAutorizzazione) AndAlso
                info.StatiId <> 0 AndAlso
                info.StatiId <> 3 AndAlso
