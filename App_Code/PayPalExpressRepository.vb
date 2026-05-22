@@ -12,11 +12,11 @@ Public Module PayPalExpressRepository
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 conn.Open()
                 Dim sql As String = ""
-                sql &= "SELECT v.ConfigId, v.AziendeId, v.PagamentiTipoId, v.Environment, v.ApiUsername, v.ApiPassword, v.ApiSignature, "
-                sql &= "v.BusinessAccount, v.Version, v.CurrencyCode, v.AllowLive "
+                sql &= "SELECT v.id, v.AziendeId, v.PagamentiTipoId, v.Environment, v.ApiUsername, v.ApiPasswordProtetta, v.ApiSignatureProtetta, "
+                sql &= "v.BusinessAccount, v.VersioneApi, v.CurrencyCode, v.AllowLive "
                 sql &= "FROM documenti d "
                 sql &= "INNER JOIN vpaypal_express_azienda v ON v.AziendeId=d.AziendeId AND v.PagamentiTipoId=d.PagamentiTipoId "
-                sql &= "WHERE d.id=@id AND v.Attivo=1 AND v.Abilitato=1 AND v.Web=1 AND v.OnLine=@online "
+                sql &= "WHERE d.id=@id AND v.Attivo=1 AND v.OnLine=@online "
                 sql &= "LIMIT 1"
 
                 Using cmd As New MySqlCommand(sql, conn)
@@ -26,16 +26,16 @@ Public Module PayPalExpressRepository
                         If dr.Read() Then
                             Dim cfg As New PayPalCheckoutConfig()
                             cfg.Source = "database"
-                            cfg.ConfigId = SafeInt(dr("ConfigId"), 0)
+                            cfg.ConfigId = SafeInt(dr("id"), 0)
                             cfg.AziendeId = SafeInt(dr("AziendeId"), 0)
                             cfg.PagamentiTipoId = SafeInt(dr("PagamentiTipoId"), 0)
                             cfg.EnvironmentName = Convert.ToString(dr("Environment")).Trim()
                             If String.IsNullOrWhiteSpace(cfg.EnvironmentName) Then cfg.EnvironmentName = "sandbox"
                             cfg.ApiUsername = Convert.ToString(dr("ApiUsername")).Trim()
-                            cfg.ApiPassword = Convert.ToString(dr("ApiPassword")).Trim()
-                            cfg.ApiSignature = Convert.ToString(dr("ApiSignature")).Trim()
+                            cfg.ApiPassword = Convert.ToString(dr("ApiPasswordProtetta")).Trim()
+                            cfg.ApiSignature = Convert.ToString(dr("ApiSignatureProtetta")).Trim()
                             cfg.BusinessAccount = Convert.ToString(dr("BusinessAccount")).Trim()
-                            cfg.Version = Convert.ToString(dr("Version")).Trim()
+                            cfg.Version = Convert.ToString(dr("VersioneApi")).Trim()
                             If String.IsNullOrWhiteSpace(cfg.Version) Then cfg.Version = "204.0"
                             cfg.CurrencyCode = Convert.ToString(dr("CurrencyCode")).Trim().ToUpperInvariant()
                             If String.IsNullOrWhiteSpace(cfg.CurrencyCode) Then cfg.CurrencyCode = "EUR"
