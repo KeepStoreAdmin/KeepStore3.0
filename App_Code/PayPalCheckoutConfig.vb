@@ -2,6 +2,10 @@ Imports System
 Imports System.Configuration
 
 Public Class PayPalCheckoutConfig
+    Public Property ConfigId As Integer
+    Public Property AziendeId As Integer
+    Public Property PagamentiTipoId As Integer
+    Public Property Source As String
     Public Property EnvironmentName As String
     Public Property ApiUsername As String
     Public Property ApiPassword As String
@@ -57,6 +61,7 @@ Public Class PayPalCheckoutConfig
 
     Public Shared Function Load() As PayPalCheckoutConfig
         Dim cfg As New PayPalCheckoutConfig()
+        cfg.Source = "environment"
         cfg.EnvironmentName = ReadSetting("PAYPAL_EXPRESS_ENVIRONMENT")
         If String.IsNullOrWhiteSpace(cfg.EnvironmentName) Then cfg.EnvironmentName = "sandbox"
         cfg.EnvironmentName = cfg.EnvironmentName.Trim()
@@ -76,6 +81,15 @@ Public Class PayPalCheckoutConfig
         cfg.AllowLive = String.Equals(ReadSetting("PAYPAL_EXPRESS_ALLOW_LIVE"), "true", StringComparison.OrdinalIgnoreCase)
 
         Return cfg
+    End Function
+
+    Public Shared Function LoadForDocument(ByVal documentId As Integer) As PayPalCheckoutConfig
+        If documentId > 0 Then
+            Dim dbConfig As PayPalCheckoutConfig = PayPalExpressRepository.LoadConfigForDocument(documentId)
+            If dbConfig IsNot Nothing Then Return dbConfig
+        End If
+
+        Return Load()
     End Function
 
     Private Shared Function ReadSetting(ByVal key As String) As String
