@@ -39,8 +39,11 @@ Partial Class paypalreturn
         End If
 
         If String.Equals(actionName, "cancel", StringComparison.OrdinalIgnoreCase) Then
+            Dim cancelToken As String = GetQueryString("token", 100)
+            If cancelToken = "" Then cancelToken = PayPalPaymentState.ExtractExpressToken(doc.TransactionId)
             PayPalPaymentState.MarkCanceled(documentId, "PayPal Express: pagamento annullato dall'utente")
-            PayPalExpressRepository.RecordOutcome(doc, "PayPalReturnCancel", "CANCELED", "PayPal Express: pagamento annullato dall'utente", doc.TransactionId)
+            PayPalExpressRepository.MarkTransactionCanceled(doc, cancelToken, "PayPal Express: pagamento annullato dall'utente")
+            PayPalExpressRepository.RecordOutcome(doc, "PayPalReturnCancel", "CANCELED", "PayPal Express: pagamento annullato dall'utente", cancelToken)
             SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
             Return
         End If
