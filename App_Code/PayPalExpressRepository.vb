@@ -50,7 +50,7 @@ Public Module PayPalExpressRepository
         Return Nothing
     End Function
 
-    Public Sub RecordSetExpressToken(ByVal doc As PayPalPaymentDocumentInfo, ByVal token As String, ByVal response As PayPalExpressResponse)
+    Public Sub RecordSetExpressToken(ByVal doc As PayPalPaymentDocumentInfo, ByVal token As String, ByVal response As PayPalExpressResponse, Optional ByVal currencyCode As String = Nothing)
         If doc Is Nothing OrElse doc.DocumentId <= 0 Then Return
 
         Try
@@ -64,7 +64,7 @@ Public Module PayPalExpressRepository
                     cmd.Parameters.Add("@stato", MySqlDbType.VarChar, 40).Value = "SET"
                     cmd.Parameters.Add("@ack", MySqlDbType.VarChar, 40).Value = SafeResponse(response, "ACK")
                     cmd.Parameters.Add("@importo", MySqlDbType.Decimal).Value = Math.Round(doc.TotalDocument, 2, MidpointRounding.AwayFromZero)
-                    cmd.Parameters.Add("@valuta", MySqlDbType.VarChar, 3).Value = SafeResponse(response, "CURRENCY")
+                    cmd.Parameters.Add("@valuta", MySqlDbType.VarChar, 3).Value = SafeCurrency(currencyCode, response)
                     cmd.Parameters.Add("@errore", MySqlDbType.VarChar, 40).Value = SafeResponse(response, "ERROR")
                     cmd.Parameters.Add("@msg", MySqlDbType.VarChar, 255).Value = SafeResponse(response, "MESSAGE")
                     cmd.ExecuteNonQuery()
@@ -98,12 +98,13 @@ Public Module PayPalExpressRepository
         Try
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 conn.Open()
-                Using cmd As New MySqlCommand("UPDATE paypal_express_transazioni SET PayerId=@payer, TransactionId=@txn, Stato=@stato, Ack=@ack, PaymentStatus=@paymentStatus, ErrorCode=@errore, ShortMessage=@msg, DataAggiornamento=CURRENT_TIMESTAMP WHERE DocumentiId=@doc AND Token=@token", conn)
+                Using cmd As New MySqlCommand("UPDATE paypal_express_transazioni SET PayerId=@payer, TransactionId=@txn, Stato=@stato, Ack=@ack, PaymentStatus=@paymentStatus, Valuta=COALESCE(NULLIF(@valuta, ''), Valuta), ErrorCode=@errore, ShortMessage=@msg, DataAggiornamento=CURRENT_TIMESTAMP WHERE DocumentiId=@doc AND Token=@token", conn)
                     cmd.Parameters.Add("@payer", MySqlDbType.VarChar, 120).Value = SafeText(payerId, 120)
                     cmd.Parameters.Add("@txn", MySqlDbType.VarChar, 120).Value = SafeText(If(response Is Nothing, "", response.TransactionId), 120)
                     cmd.Parameters.Add("@stato", MySqlDbType.VarChar, 40).Value = SafeText(stateValue, 40)
                     cmd.Parameters.Add("@ack", MySqlDbType.VarChar, 40).Value = SafeResponse(response, "ACK")
                     cmd.Parameters.Add("@paymentStatus", MySqlDbType.VarChar, 60).Value = SafeText(If(response Is Nothing, "", response.PaymentStatus), 60)
+                    cmd.Parameters.Add("@valuta", MySqlDbType.VarChar, 3).Value = SafeResponse(response, "CURRENCY")
                     cmd.Parameters.Add("@errore", MySqlDbType.VarChar, 40).Value = SafeResponse(response, "ERROR")
                     cmd.Parameters.Add("@msg", MySqlDbType.VarChar, 255).Value = SafeResponse(response, "MESSAGE")
                     cmd.Parameters.Add("@doc", MySqlDbType.Int32).Value = doc.DocumentId
@@ -152,6 +153,13 @@ Public Module PayPalExpressRepository
         End Select
 
         Return ""
+    End Function
+
+    Private Function SafeCurrency(ByVal preferredCurrency As String, ByVal response As PayPalExpressResponse) As String
+        Dim clean As String = SafeText(If(preferredCurrency, ""), 3).ToUpperInvariant()
+        If clean = "" Then clean = SafeResponse(response, "CURRENCY").ToUpperInvariant()
+        If clean = "" Then clean = "EUR"
+        Return clean
     End Function
 
     Private Function MaskToken(ByVal token As String) As String
