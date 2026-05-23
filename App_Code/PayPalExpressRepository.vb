@@ -119,6 +119,31 @@ Public Module PayPalExpressRepository
         WriteLog(doc.DocumentId, doc.AziendeId, "DoExpressCheckoutPayment", stateValue, SafeResponse(response, "MESSAGE"), token, SafeResponse(response, "ERROR"))
     End Sub
 
+    Public Sub MarkTransactionCanceled(ByVal doc As PayPalPaymentDocumentInfo, ByVal token As String, ByVal message As String)
+        If doc Is Nothing OrElse doc.DocumentId <= 0 Then Return
+
+        Dim cleanToken As String = PayPalPaymentState.SanitizeTransactionId(token)
+        If cleanToken = "" Then cleanToken = PayPalPaymentState.ExtractExpressToken(doc.TransactionId)
+
+        Try
+            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                conn.Open()
+                Using cmd As New MySqlCommand("UPDATE paypal_express_transazioni SET Stato=@stato, ShortMessage=@msg, DataAggiornamento=CURRENT_TIMESTAMP WHERE DocumentiId=@doc AND Token=@token", conn)
+                    cmd.Parameters.Add("@stato", MySqlDbType.VarChar, 40).Value = "CANCELED"
+                    cmd.Parameters.Add("@msg", MySqlDbType.VarChar, 255).Value = PayPalPaymentState.SanitizeOutcome(message)
+                    cmd.Parameters.Add("@doc", MySqlDbType.Int32).Value = doc.DocumentId
+                    cmd.Parameters.Add("@token", MySqlDbType.VarChar, 120).Value = cleanToken
+
+                    If cmd.ExecuteNonQuery() = 0 Then
+                        WriteLog(doc.DocumentId, doc.AziendeId, "PayPalReturnCancel", "WARN", "Transazione PayPal non trovata per cancel", cleanToken, Nothing)
+                    End If
+                End Using
+            End Using
+        Catch ex As Exception
+            KeepStoreLog.Error("paypal-express-repository", "MarkTransactionCanceled documentId=" & doc.DocumentId.ToString(CultureInfo.InvariantCulture), ex, HttpContext.Current)
+        End Try
+    End Sub
+
     Private Sub WriteLog(ByVal documentId As Integer, ByVal aziendaId As Integer, ByVal eventName As String, ByVal outcome As String, ByVal message As String, ByVal token As String, ByVal errorCode As String)
         Try
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
