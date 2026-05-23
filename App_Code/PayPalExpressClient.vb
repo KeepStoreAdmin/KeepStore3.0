@@ -16,6 +16,8 @@ Public Class PayPalExpressResponse
     Public Property InvoiceNumber As String
     Public Property PaymentStatus As String
     Public Property TransactionId As String
+    Public Property PendingReason As String
+    Public Property ReasonCode As String
     Public Property ErrorCode As String
     Public Property ShortMessage As String
 
@@ -148,6 +150,8 @@ Public Class PayPalExpressClient
         result.InvoiceNumber = Convert.ToString(values("PAYMENTREQUEST_0_INVNUM"))
         result.PaymentStatus = Convert.ToString(values("PAYMENTINFO_0_PAYMENTSTATUS"))
         result.TransactionId = Convert.ToString(values("PAYMENTINFO_0_TRANSACTIONID"))
+        result.PendingReason = PayPalPaymentState.SanitizeOutcome(Convert.ToString(values("PAYMENTINFO_0_PENDINGREASON")))
+        result.ReasonCode = PayPalPaymentState.SanitizeOutcome(Convert.ToString(values("PAYMENTINFO_0_REASONCODE")))
         result.ErrorCode = Convert.ToString(values("L_ERRORCODE0"))
         result.ShortMessage = PayPalPaymentState.SanitizeOutcome(Convert.ToString(values("L_SHORTMESSAGE0")))
 

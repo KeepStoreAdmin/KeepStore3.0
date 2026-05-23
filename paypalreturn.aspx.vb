@@ -125,7 +125,7 @@ Partial Class paypalreturn
 
         If payment.IsPendingPayment Then
             Dim pendingId As String = If(String.IsNullOrWhiteSpace(payment.TransactionId), token, payment.TransactionId)
-            PayPalPaymentState.MarkPendingWithExpressTransaction(documentId, "PayPal Express: pagamento pending", pendingId)
+            PayPalPaymentState.MarkPendingWithExpressTransaction(documentId, BuildPendingPaymentMessage(payment), pendingId)
             PayPalExpressRepository.RecordPaymentResult(doc, "PENDING", token, payerId, payment)
             SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ok")
             Return
@@ -145,6 +145,14 @@ Partial Class paypalreturn
         If Not String.Equals(details.Custom, documentId.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal) Then Return False
         If Not String.Equals(details.InvoiceNumber, PayPalExpressClient.ExpectedInvoiceNumber(doc), StringComparison.OrdinalIgnoreCase) Then Return False
         Return True
+    End Function
+
+    Private Function BuildPendingPaymentMessage(ByVal response As PayPalExpressResponse) As String
+        If response IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(response.PendingReason) Then
+            Return "PayPal Express: pagamento pending (" & PayPalPaymentState.SanitizeOutcome(response.PendingReason) & ")"
+        End If
+
+        Return "PayPal Express: pagamento pending"
     End Function
 
     Private Function GetQueryInt(ByVal key As String) As Integer
