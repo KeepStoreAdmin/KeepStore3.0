@@ -69,7 +69,7 @@ Partial Class paypalcheckout
         End If
 
         PayPalPaymentState.MarkPendingWithExpressToken(documentId, "PayPal Express: token avvio pagamento creato", setResult.Token)
-        PayPalExpressRepository.RecordSetExpressToken(doc, setResult.Token, setResult)
+        PayPalExpressRepository.RecordSetExpressToken(doc, setResult.Token, setResult, cfg.CurrencyCode)
         SafeRedirect(client.BuildApprovalUrl(setResult.Token))
     End Sub
 
