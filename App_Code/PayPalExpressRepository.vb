@@ -1,5 +1,6 @@
 Imports System
 Imports System.Configuration
+Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.Web
 Imports MySql.Data.MySqlClient
@@ -98,12 +99,14 @@ Public Module PayPalExpressRepository
         Try
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 conn.Open()
-                Using cmd As New MySqlCommand("UPDATE paypal_express_transazioni SET PayerId=@payer, TransactionId=@txn, Stato=@stato, Ack=@ack, PaymentStatus=@paymentStatus, Valuta=COALESCE(NULLIF(@valuta, ''), Valuta), ErrorCode=@errore, ShortMessage=@msg, DataAggiornamento=CURRENT_TIMESTAMP WHERE DocumentiId=@doc AND Token=@token", conn)
+                Using cmd As New MySqlCommand("UPDATE paypal_express_transazioni SET PayerId=@payer, TransactionId=@txn, Stato=@stato, Ack=@ack, PaymentStatus=@paymentStatus, PendingReason=@pendingReason, ReasonCode=@reasonCode, Valuta=COALESCE(NULLIF(@valuta, ''), Valuta), ErrorCode=@errore, ShortMessage=@msg, DataAggiornamento=CURRENT_TIMESTAMP WHERE DocumentiId=@doc AND Token=@token", conn)
                     cmd.Parameters.Add("@payer", MySqlDbType.VarChar, 120).Value = SafeText(payerId, 120)
                     cmd.Parameters.Add("@txn", MySqlDbType.VarChar, 120).Value = SafeText(If(response Is Nothing, "", response.TransactionId), 120)
                     cmd.Parameters.Add("@stato", MySqlDbType.VarChar, 40).Value = SafeText(stateValue, 40)
                     cmd.Parameters.Add("@ack", MySqlDbType.VarChar, 40).Value = SafeResponse(response, "ACK")
                     cmd.Parameters.Add("@paymentStatus", MySqlDbType.VarChar, 60).Value = SafeText(If(response Is Nothing, "", response.PaymentStatus), 60)
+                    cmd.Parameters.Add("@pendingReason", MySqlDbType.VarChar, 100).Value = SafeResponse(response, "PENDING_REASON")
+                    cmd.Parameters.Add("@reasonCode", MySqlDbType.VarChar, 100).Value = SafeResponse(response, "REASON_CODE")
                     cmd.Parameters.Add("@valuta", MySqlDbType.VarChar, 3).Value = SafeResponse(response, "CURRENCY")
                     cmd.Parameters.Add("@errore", MySqlDbType.VarChar, 40).Value = SafeResponse(response, "ERROR")
                     cmd.Parameters.Add("@msg", MySqlDbType.VarChar, 255).Value = SafeResponse(response, "MESSAGE")
@@ -116,7 +119,7 @@ Public Module PayPalExpressRepository
             KeepStoreLog.Error("paypal-express-repository", "RecordPaymentResult documentId=" & doc.DocumentId.ToString(CultureInfo.InvariantCulture), ex, HttpContext.Current)
         End Try
 
-        WriteLog(doc.DocumentId, doc.AziendeId, "DoExpressCheckoutPayment", stateValue, SafeResponse(response, "MESSAGE"), token, SafeResponse(response, "ERROR"))
+        WriteLog(doc.DocumentId, doc.AziendeId, "DoExpressCheckoutPayment", stateValue, BuildPaymentResultLogMessage(response), token, SafeResponse(response, "ERROR"))
     End Sub
 
     Public Sub MarkTransactionCanceled(ByVal doc As PayPalPaymentDocumentInfo, ByVal token As String, ByVal message As String)
@@ -175,9 +178,27 @@ Public Module PayPalExpressRepository
                 Return SafeText(response.ErrorCode, 40)
             Case "MESSAGE"
                 Return PayPalPaymentState.SanitizeOutcome(response.ShortMessage)
+            Case "PENDING_REASON"
+                Return SafeText(PayPalPaymentState.SanitizeOutcome(response.PendingReason), 100)
+            Case "REASON_CODE"
+                Return SafeText(PayPalPaymentState.SanitizeOutcome(response.ReasonCode), 100)
         End Select
 
         Return ""
+    End Function
+
+    Private Function BuildPaymentResultLogMessage(ByVal response As PayPalExpressResponse) As String
+        Dim parts As New List(Of String)()
+        Dim message As String = SafeResponse(response, "MESSAGE")
+        Dim pendingReason As String = SafeResponse(response, "PENDING_REASON")
+        Dim reasonCode As String = SafeResponse(response, "REASON_CODE")
+
+        If Not String.IsNullOrWhiteSpace(message) Then parts.Add(message)
+        If Not String.IsNullOrWhiteSpace(pendingReason) Then parts.Add("PendingReason=" & pendingReason)
+        If Not String.IsNullOrWhiteSpace(reasonCode) Then parts.Add("ReasonCode=" & reasonCode)
+
+        If parts.Count = 0 Then Return ""
+        Return SafeText(String.Join("; ", parts.ToArray()), 255)
     End Function
 
     Private Function SafeCurrency(ByVal preferredCurrency As String, ByVal response As PayPalExpressResponse) As String
