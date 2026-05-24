@@ -6,6 +6,21 @@ Imports System.Web
 Imports MySql.Data.MySqlClient
 
 Public Module PayPalExpressRepository
+    Public Class PayPalExpressTransactionInfo
+        Public Property Exists As Boolean
+        Public Property DocumentId As Integer
+        Public Property Token As String
+        Public Property PayerId As String
+        Public Property TransactionId As String
+        Public Property Stato As String
+        Public Property Ack As String
+        Public Property PaymentStatus As String
+        Public Property PendingReason As String
+        Public Property ReasonCode As String
+        Public Property Importo As Decimal
+        Public Property Valuta As String
+    End Class
+
     Public Function LoadConfigForDocument(ByVal documentId As Integer) As PayPalCheckoutConfig
         If documentId <= 0 Then Return Nothing
 
@@ -122,6 +137,73 @@ Public Module PayPalExpressRepository
         WriteLog(doc.DocumentId, doc.AziendeId, "DoExpressCheckoutPayment", stateValue, BuildPaymentResultLogMessage(response), token, SafeResponse(response, "ERROR"))
     End Sub
 
+    Public Function LoadPendingTransactionForDocument(ByVal documentId As Integer) As PayPalExpressTransactionInfo
+        Dim info As New PayPalExpressTransactionInfo()
+        If documentId <= 0 Then Return info
+
+        Try
+            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                conn.Open()
+                Using cmd As New MySqlCommand("SELECT DocumentiId, Token, PayerId, TransactionId, Stato, Ack, PaymentStatus, PendingReason, ReasonCode, Importo, Valuta FROM paypal_express_transazioni WHERE DocumentiId=@doc AND Stato=@stato ORDER BY id DESC LIMIT 1", conn)
+                    cmd.Parameters.Add("@doc", MySqlDbType.Int32).Value = documentId
+                    cmd.Parameters.Add("@stato", MySqlDbType.VarChar, 40).Value = "PENDING"
+
+                    Using dr As MySqlDataReader = cmd.ExecuteReader()
+                        If dr.Read() Then
+                            info.Exists = True
+                            info.DocumentId = SafeInt(dr("DocumentiId"), 0)
+                            info.Token = Convert.ToString(dr("Token"))
+                            info.PayerId = Convert.ToString(dr("PayerId"))
+                            info.TransactionId = Convert.ToString(dr("TransactionId"))
+                            info.Stato = Convert.ToString(dr("Stato"))
+                            info.Ack = Convert.ToString(dr("Ack"))
+                            info.PaymentStatus = Convert.ToString(dr("PaymentStatus"))
+                            info.PendingReason = Convert.ToString(dr("PendingReason"))
+                            info.ReasonCode = Convert.ToString(dr("ReasonCode"))
+                            info.Importo = SafeDecimal(dr("Importo"), 0D)
+                            info.Valuta = Convert.ToString(dr("Valuta")).Trim().ToUpperInvariant()
+                        End If
+                    End Using
+                End Using
+            End Using
+        Catch ex As Exception
+            KeepStoreLog.Error("paypal-express-repository", "LoadPendingTransactionForDocument documentId=" & documentId.ToString(CultureInfo.InvariantCulture), ex, HttpContext.Current)
+        End Try
+
+        Return info
+    End Function
+
+    Public Sub RecordRecheckResult(ByVal doc As PayPalPaymentDocumentInfo, ByVal transaction As PayPalExpressTransactionInfo, ByVal stateValue As String, ByVal response As PayPalExpressResponse)
+        If doc Is Nothing OrElse doc.DocumentId <= 0 Then Return
+
+        Dim token As String = If(transaction Is Nothing, "", transaction.Token)
+        Dim existingTransactionId As String = If(transaction Is Nothing, "", transaction.TransactionId)
+
+        Try
+            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                conn.Open()
+                Using cmd As New MySqlCommand("UPDATE paypal_express_transazioni SET TransactionId=COALESCE(NULLIF(@txn, ''), TransactionId), Stato=@stato, Ack=@ack, PaymentStatus=COALESCE(NULLIF(@paymentStatus, ''), PaymentStatus), PendingReason=COALESCE(NULLIF(@pendingReason, ''), PendingReason), ReasonCode=COALESCE(NULLIF(@reasonCode, ''), ReasonCode), Valuta=COALESCE(NULLIF(@valuta, ''), Valuta), ErrorCode=@errore, ShortMessage=@msg, DataAggiornamento=CURRENT_TIMESTAMP WHERE DocumentiId=@doc AND TransactionId=@currentTxn", conn)
+                    cmd.Parameters.Add("@txn", MySqlDbType.VarChar, 120).Value = SafeText(If(response Is Nothing, "", response.TransactionId), 120)
+                    cmd.Parameters.Add("@stato", MySqlDbType.VarChar, 40).Value = SafeText(stateValue, 40)
+                    cmd.Parameters.Add("@ack", MySqlDbType.VarChar, 40).Value = SafeResponse(response, "ACK")
+                    cmd.Parameters.Add("@paymentStatus", MySqlDbType.VarChar, 60).Value = SafeText(If(response Is Nothing, "", response.PaymentStatus), 60)
+                    cmd.Parameters.Add("@pendingReason", MySqlDbType.VarChar, 100).Value = SafeResponse(response, "PENDING_REASON")
+                    cmd.Parameters.Add("@reasonCode", MySqlDbType.VarChar, 100).Value = SafeResponse(response, "REASON_CODE")
+                    cmd.Parameters.Add("@valuta", MySqlDbType.VarChar, 3).Value = SafeResponse(response, "CURRENCY")
+                    cmd.Parameters.Add("@errore", MySqlDbType.VarChar, 40).Value = SafeResponse(response, "ERROR")
+                    cmd.Parameters.Add("@msg", MySqlDbType.VarChar, 255).Value = SafeResponse(response, "MESSAGE")
+                    cmd.Parameters.Add("@doc", MySqlDbType.Int32).Value = doc.DocumentId
+                    cmd.Parameters.Add("@currentTxn", MySqlDbType.VarChar, 120).Value = SafeText(existingTransactionId, 120)
+                    cmd.ExecuteNonQuery()
+                End Using
+            End Using
+        Catch ex As Exception
+            KeepStoreLog.Error("paypal-express-repository", "RecordRecheckResult documentId=" & doc.DocumentId.ToString(CultureInfo.InvariantCulture), ex, HttpContext.Current)
+        End Try
+
+        WriteLog(doc.DocumentId, doc.AziendeId, "GetTransactionDetails", stateValue, BuildPaymentResultLogMessage(response), token, SafeResponse(response, "ERROR"))
+    End Sub
+
     Public Sub MarkTransactionCanceled(ByVal doc As PayPalPaymentDocumentInfo, ByVal token As String, ByVal message As String)
         If doc Is Nothing OrElse doc.DocumentId <= 0 Then Return
 
@@ -232,6 +314,18 @@ Public Module PayPalExpressRepository
             If value Is Nothing OrElse value Is DBNull.Value Then Return defaultValue
             Dim parsed As Integer
             If Integer.TryParse(Convert.ToString(value), parsed) Then Return parsed
+        Catch
+        End Try
+
+        Return defaultValue
+    End Function
+
+    Private Function SafeDecimal(ByVal value As Object, ByVal defaultValue As Decimal) As Decimal
+        Try
+            If value Is Nothing OrElse value Is DBNull.Value Then Return defaultValue
+            Dim parsed As Decimal
+            If Decimal.TryParse(Convert.ToString(value), NumberStyles.Any, CultureInfo.CurrentCulture, parsed) Then Return parsed
+            If Decimal.TryParse(Convert.ToString(value), NumberStyles.Any, CultureInfo.InvariantCulture, parsed) Then Return parsed
         Catch
         End Try
 

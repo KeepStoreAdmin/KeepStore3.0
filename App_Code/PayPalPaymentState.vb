@@ -19,6 +19,18 @@ Public Class PayPalPaymentDocumentInfo
     Public Property TransactionId As String
 End Class
 
+Public Class PayPalPendingRecheckResult
+    Public Property Success As Boolean
+    Public Property DocumentId As Integer
+    Public Property Outcome As String
+    Public Property Message As String
+    Public Property PaymentStatus As String
+    Public Property PendingReason As String
+    Public Property ReasonCode As String
+    Public Property TransactionId As String
+    Public Property PayReturn As String = "ko"
+End Class
+
 Public Module PayPalPaymentState
     Public Const PAYPAL_ONLINE_VALUE As Integer = 2
     Public Const EXPRESS_TOKEN_PREFIX As String = "EC-TOKEN:"
@@ -82,6 +94,115 @@ Public Module PayPalPaymentState
 
     Public Function MarkPendingWithExpressTransaction(ByVal documentId As Integer, ByVal message As String, ByVal transactionId As String) As Integer
         Return MarkPendingWithTransaction(documentId, message, BuildExpressTransactionValue(transactionId))
+    End Function
+
+    Public Function RecheckPendingPayment(ByVal documentId As Integer, ByVal utentiId As Integer) As PayPalPendingRecheckResult
+        Dim result As New PayPalPendingRecheckResult()
+        result.DocumentId = documentId
+
+        If documentId <= 0 OrElse utentiId <= 0 Then
+            result.Message = "PayPal Express: richiesta recheck non valida"
+            Return result
+        End If
+
+        Dim doc As PayPalPaymentDocumentInfo = LoadDocumentForUser(documentId, utentiId)
+        If doc Is Nothing OrElse Not doc.Exists Then
+            result.Message = "PayPal Express: documento non trovato"
+            Return result
+        End If
+
+        If doc.Pagato = 1 Then
+            result.Success = True
+            result.Outcome = "ALREADY_COMPLETED"
+            result.PayReturn = "ok"
+            result.Message = "PayPal Express: documento gia pagato"
+            Return result
+        End If
+
+        If doc.PaymentOnline <> PAYPAL_ONLINE_VALUE Then
+            result.Message = "PayPal: pagamento non coerente con il documento"
+            Return result
+        End If
+
+        If doc.PaymentState <> 1 Then
+            result.Message = "PayPal Express: documento non in attesa pagamento"
+            Return result
+        End If
+
+        Dim transaction As PayPalExpressRepository.PayPalExpressTransactionInfo = PayPalExpressRepository.LoadPendingTransactionForDocument(documentId)
+        If transaction Is Nothing OrElse Not transaction.Exists Then
+            result.Message = "PayPal Express: transazione pending non trovata"
+            Return result
+        End If
+
+        Dim transactionId As String = SanitizeTransactionId(transaction.TransactionId)
+        If transactionId = "" Then transactionId = ExtractExpressTransaction(doc.TransactionId)
+        If transactionId = "" Then
+            result.Message = "PayPal Express: TransactionID assente"
+            Return result
+        End If
+
+        Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForDocument(documentId)
+        If cfg Is Nothing OrElse Not cfg.IsExpressConfigured OrElse Not cfg.CanCallApi Then
+            result.Message = "PayPal Express: configurazione non pronta"
+            Return result
+        End If
+
+        Dim response As PayPalExpressResponse = New PayPalExpressClient(cfg).GetTransactionDetails(transactionId)
+        result.TransactionId = transactionId
+        result.PaymentStatus = If(response Is Nothing, "", response.PaymentStatus)
+        result.PendingReason = If(response Is Nothing, "", response.PendingReason)
+        result.ReasonCode = If(response Is Nothing, "", response.ReasonCode)
+
+        If response Is Nothing OrElse Not response.IsSuccess Then
+            PayPalExpressRepository.RecordRecheckResult(doc, transaction, "PENDING", response)
+            result.Message = BuildRecheckFailureMessage(response)
+            result.Outcome = "RECHECK_FAILED"
+            result.PayReturn = "ok"
+            Return result
+        End If
+
+        If Not ValidateRecheckResponse(doc, transaction, cfg, response) Then
+            MarkFailed(documentId, "PayPal Express: recheck transazione non coerente")
+            PayPalExpressRepository.RecordRecheckResult(doc, transaction, "FAILED", response)
+            result.Outcome = "FAILED"
+            result.Message = "PayPal Express: recheck transazione non coerente"
+            Return result
+        End If
+
+        If response.IsCompletedPayment AndAlso Not String.IsNullOrWhiteSpace(response.TransactionId) Then
+            MarkCompleted(documentId, response.TransactionId, "PayPal Express OK: " & ShortTransaction(response.TransactionId))
+            PayPalExpressRepository.RecordRecheckResult(doc, transaction, "COMPLETED", response)
+            result.Success = True
+            result.Outcome = "COMPLETED"
+            result.PayReturn = "ok"
+            result.Message = "PayPal Express: pagamento completato"
+            Return result
+        End If
+
+        If response.IsPendingPayment Then
+            MarkPendingWithExpressTransaction(documentId, BuildPendingPaymentMessage(response), transactionId)
+            PayPalExpressRepository.RecordRecheckResult(doc, transaction, "PENDING", response)
+            result.Success = True
+            result.Outcome = "PENDING"
+            result.PayReturn = "ok"
+            result.Message = BuildPendingPaymentMessage(response)
+            Return result
+        End If
+
+        If response.IsFailedPayment Then
+            MarkFailed(documentId, "PayPal Express: pagamento " & SanitizeOutcome(response.PaymentStatus))
+            PayPalExpressRepository.RecordRecheckResult(doc, transaction, "FAILED", response)
+            result.Outcome = "FAILED"
+            result.Message = "PayPal Express: pagamento " & SanitizeOutcome(response.PaymentStatus)
+            Return result
+        End If
+
+        MarkFailed(documentId, "PayPal Express: stato pagamento non completato")
+        PayPalExpressRepository.RecordRecheckResult(doc, transaction, "FAILED", response)
+        result.Outcome = "FAILED"
+        result.Message = "PayPal Express: stato pagamento non completato"
+        Return result
     End Function
 
     Public Function MarkCompleted(ByVal documentId As Integer, ByVal transactionId As String, ByVal message As String) As Integer
@@ -183,6 +304,15 @@ Public Module PayPalPaymentState
         Return ""
     End Function
 
+    Public Function ExtractExpressTransaction(ByVal value As String) As String
+        Dim clean As String = SanitizeTransactionId(value)
+        If clean.StartsWith(EXPRESS_TRANSACTION_PREFIX, StringComparison.Ordinal) Then
+            Return clean.Substring(EXPRESS_TRANSACTION_PREFIX.Length)
+        End If
+
+        Return ""
+    End Function
+
     Public Function IsExpressInProgressMarker(ByVal value As String) As Boolean
         Dim clean As String = SanitizeTransactionId(value)
         Return clean.StartsWith(EXPRESS_TOKEN_PREFIX, StringComparison.Ordinal) OrElse
@@ -233,5 +363,40 @@ Public Module PayPalPaymentState
         End Try
 
         Return defaultValue
+    End Function
+
+    Private Function ValidateRecheckResponse(ByVal doc As PayPalPaymentDocumentInfo, ByVal transaction As PayPalExpressRepository.PayPalExpressTransactionInfo, ByVal cfg As PayPalCheckoutConfig, ByVal response As PayPalExpressResponse) As Boolean
+        If doc Is Nothing OrElse transaction Is Nothing OrElse response Is Nothing Then Return False
+        If Not String.IsNullOrWhiteSpace(response.TransactionId) AndAlso Not String.Equals(SanitizeTransactionId(response.TransactionId), SanitizeTransactionId(transaction.TransactionId), StringComparison.Ordinal) Then Return False
+        If Not String.IsNullOrWhiteSpace(response.CurrencyCode) AndAlso Not String.Equals(response.CurrencyCode.Trim(), cfg.CurrencyCode, StringComparison.OrdinalIgnoreCase) Then Return False
+        If response.Amount > 0D AndAlso Math.Round(response.Amount, 2, MidpointRounding.AwayFromZero) <> Math.Round(transaction.Importo, 2, MidpointRounding.AwayFromZero) Then Return False
+        Return True
+    End Function
+
+    Private Function BuildPendingPaymentMessage(ByVal response As PayPalExpressResponse) As String
+        If response IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(response.PendingReason) Then
+            Return "PayPal Express: pagamento pending (" & SanitizeOutcome(response.PendingReason) & ")"
+        End If
+
+        Return "PayPal Express: pagamento pending"
+    End Function
+
+    Private Function BuildRecheckFailureMessage(ByVal response As PayPalExpressResponse) As String
+        If response Is Nothing Then Return "PayPal Express: recheck risposta assente"
+        Dim code As String = SanitizeOutcome(response.ErrorCode)
+        Dim message As String = SanitizeOutcome(response.ShortMessage)
+        If code <> "" AndAlso message <> "" Then Return "PayPal Express recheck KO " & code & " " & message
+        If code <> "" Then Return "PayPal Express recheck KO " & code
+        If message <> "" Then Return "PayPal Express recheck KO " & message
+        Return "PayPal Express recheck KO"
+    End Function
+
+    Private Function ShortTransaction(ByVal transactionId As String) As String
+        Dim clean As String = SanitizeTransactionId(transactionId)
+        If clean.StartsWith(EXPRESS_TRANSACTION_PREFIX, StringComparison.Ordinal) Then
+            clean = clean.Substring(EXPRESS_TRANSACTION_PREFIX.Length)
+        End If
+        If clean.Length <= 12 Then Return clean
+        Return clean.Substring(0, 12)
     End Function
 End Module

@@ -1,4 +1,5 @@
 Imports System
+Imports System.Collections.Specialized
 Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.IO
@@ -40,6 +41,16 @@ Public Class PayPalExpressResponse
         Get
             Return String.Equals(PaymentStatus, "Pending", StringComparison.OrdinalIgnoreCase) OrElse
                    String.Equals(PaymentStatus, "In-Progress", StringComparison.OrdinalIgnoreCase)
+        End Get
+    End Property
+
+    Public ReadOnly Property IsFailedPayment As Boolean
+        Get
+            Return String.Equals(PaymentStatus, "Denied", StringComparison.OrdinalIgnoreCase) OrElse
+                   String.Equals(PaymentStatus, "Failed", StringComparison.OrdinalIgnoreCase) OrElse
+                   String.Equals(PaymentStatus, "Reversed", StringComparison.OrdinalIgnoreCase) OrElse
+                   String.Equals(PaymentStatus, "Voided", StringComparison.OrdinalIgnoreCase) OrElse
+                   String.Equals(PaymentStatus, "Expired", StringComparison.OrdinalIgnoreCase)
         End Get
     End Property
 End Class
@@ -88,6 +99,12 @@ Public Class PayPalExpressClient
         fields("PAYMENTREQUEST_0_CUSTOM") = doc.DocumentId.ToString(CultureInfo.InvariantCulture)
         fields("PAYMENTREQUEST_0_DESC") = BuildDescription(doc)
         Return CallApi("DoExpressCheckoutPayment", fields)
+    End Function
+
+    Public Function GetTransactionDetails(ByVal transactionId As String) As PayPalExpressResponse
+        Dim fields As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+        fields("TRANSACTIONID") = PayPalPaymentState.SanitizeTransactionId(transactionId)
+        Return CallApi("GetTransactionDetails", fields)
     End Function
 
     Public Shared Function ExpectedInvoiceNumber(ByVal doc As PayPalPaymentDocumentInfo) As String
@@ -145,23 +162,35 @@ Public Class PayPalExpressClient
         result.Ack = Convert.ToString(values("ACK"))
         result.Token = Convert.ToString(values("TOKEN"))
         result.PayerId = Convert.ToString(values("PAYERID"))
-        result.CurrencyCode = Convert.ToString(values("PAYMENTREQUEST_0_CURRENCYCODE"))
-        result.Custom = Convert.ToString(values("PAYMENTREQUEST_0_CUSTOM"))
-        result.InvoiceNumber = Convert.ToString(values("PAYMENTREQUEST_0_INVNUM"))
-        result.PaymentStatus = Convert.ToString(values("PAYMENTINFO_0_PAYMENTSTATUS"))
-        result.TransactionId = Convert.ToString(values("PAYMENTINFO_0_TRANSACTIONID"))
-        result.PendingReason = PayPalPaymentState.SanitizeOutcome(Convert.ToString(values("PAYMENTINFO_0_PENDINGREASON")))
-        result.ReasonCode = PayPalPaymentState.SanitizeOutcome(Convert.ToString(values("PAYMENTINFO_0_REASONCODE")))
+        result.CurrencyCode = FirstValue(values, "PAYMENTREQUEST_0_CURRENCYCODE", "CURRENCYCODE")
+        result.Custom = FirstValue(values, "PAYMENTREQUEST_0_CUSTOM", "CUSTOM")
+        result.InvoiceNumber = FirstValue(values, "PAYMENTREQUEST_0_INVNUM", "INVNUM")
+        result.PaymentStatus = FirstValue(values, "PAYMENTINFO_0_PAYMENTSTATUS", "PAYMENTSTATUS")
+        result.TransactionId = FirstValue(values, "PAYMENTINFO_0_TRANSACTIONID", "TRANSACTIONID")
+        result.PendingReason = PayPalPaymentState.SanitizeOutcome(FirstValue(values, "PAYMENTINFO_0_PENDINGREASON", "PENDINGREASON"))
+        result.ReasonCode = PayPalPaymentState.SanitizeOutcome(FirstValue(values, "PAYMENTINFO_0_REASONCODE", "REASONCODE"))
         result.ErrorCode = Convert.ToString(values("L_ERRORCODE0"))
         result.ShortMessage = PayPalPaymentState.SanitizeOutcome(Convert.ToString(values("L_SHORTMESSAGE0")))
 
-        Dim amountText As String = Convert.ToString(values("PAYMENTREQUEST_0_AMT"))
+        Dim amountText As String = FirstValue(values, "PAYMENTREQUEST_0_AMT", "AMT", "GROSSAMT")
         Dim amount As Decimal
         If Decimal.TryParse(amountText, NumberStyles.Any, CultureInfo.InvariantCulture, amount) Then
             result.Amount = amount
         End If
 
         Return result
+    End Function
+
+    Private Shared Function FirstValue(ByVal values As NameValueCollection, ParamArray keys() As String) As String
+        If values Is Nothing OrElse keys Is Nothing Then Return ""
+
+        For Each key As String In keys
+            If String.IsNullOrWhiteSpace(key) Then Continue For
+            Dim value As String = Convert.ToString(values(key))
+            If Not String.IsNullOrWhiteSpace(value) Then Return value.Trim()
+        Next
+
+        Return ""
     End Function
 
     Private Shared Function BuildFormBody(ByVal fields As Dictionary(Of String, String)) As String
