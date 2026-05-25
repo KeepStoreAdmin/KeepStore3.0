@@ -5,6 +5,57 @@ Aggiornato: 2026-05-25
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
+## Contratto operativo Germano / ChatGPT / Codex
+
+### Germano
+
+- Decide priorita e perimetro.
+- Autorizza merge, smoke, pagamenti sandbox/live, modifiche DB e modifiche gateway.
+- Approva scelte funzionali e grafiche.
+- Puo fermare o riorientare i micro-task in qualsiasi momento.
+
+### ChatGPT
+
+- Analizza contesto e report.
+- Pianifica micro-task.
+- Scrive istruzioni operative per Codex.
+- Definisce guardrail.
+- Verifica i report Codex.
+- Classifica gli esiti come A/B/E.
+- Decide il prossimo micro-task da proporre.
+- Mantiene aggiornato il masterplan.
+- Non deve saltare passaggi o cambiare metodo.
+
+### Codex
+
+- Esegue operativamente nel repository.
+- Crea branch dedicati.
+- Modifica file entro il perimetro autorizzato.
+- Esegue build, precompilazioni, `git diff --check` e smoke test richiesti.
+- Apre PR verso la base indicata.
+- Non deve cambiare perimetro senza fermarsi.
+- Non deve toccare `main`.
+- Non deve creare pagamenti, ordini o chiamate gateway senza autorizzazione.
+- Riporta esiti in modo preciso.
+
+### Metodo
+
+- Ogni lavoro passa da micro-task.
+- Ogni PR passa da verifica B.
+- Ogni merge passa da smoke D.
+- Ogni cleanup avviene solo dopo smoke A/B.
+- Per refactor UI si usa prima audit ONSUS, poi implementazione coerente.
+- Niente patch sul vecchio layout quando si cambia grafica/impostazione.
+- Usare sempre campi DB esistenti e query/logiche esistenti quando possibile.
+- Modifiche strutturali o logiche vecchie richiedono prima analisi impatto e proposta micro-task.
+
+### Nuova chat
+
+- Leggere subito `docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md`.
+- Riprendere da HEAD/stato indicati.
+- Mantenere lo stesso metodo Germano/ChatGPT/Codex.
+- Non ripetere audit gia conclusi se nel masterplan sono marcati chiusi.
+
 ## 1. Metodo ChatGPT + Codex
 
 ### Ruoli
