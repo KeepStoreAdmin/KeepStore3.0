@@ -219,6 +219,91 @@ Partial Class documentidettaglio
         Return sb.ToString()
     End Function
 
+    Protected Function FormatOrderStatus(ByVal stato1Obj As Object, ByVal stato2Obj As Object) As String
+        Dim stato1 As String = SafeStatusText(stato1Obj)
+        Dim stato2 As String = SafeStatusText(stato2Obj)
+
+        If stato1 = "" Then Return If(stato2 = "", "Non disponibile", stato2)
+        If stato2 = "" Then Return stato1
+        Return (stato1 & " " & stato2).Trim()
+    End Function
+
+    Protected Function GetPaymentStatusLabel(ByVal pagatoObj As Object, ByVal statoObj As Object) As String
+        Dim pagato As Integer = SafeInt(pagatoObj, 0)
+        Dim stato As Integer = SafeInt(statoObj, 0)
+
+        If pagato = 1 OrElse stato = 2 Then Return "Pagato"
+
+        Select Case stato
+            Case 1
+                Return "In verifica PayPal"
+            Case 3
+                Return "Non completato"
+            Case 4
+                Return "Annullato dall'utente"
+            Case 5
+                Return "In verifica"
+            Case Else
+                Return "Non avviato"
+        End Select
+    End Function
+
+    Protected Function GetPaymentStatusCssClass(ByVal pagatoObj As Object, ByVal statoObj As Object) As String
+        Dim pagato As Integer = SafeInt(pagatoObj, 0)
+        Dim stato As Integer = SafeInt(statoObj, 0)
+        Dim baseClass As String = "ks-status-badge "
+
+        If pagato = 1 OrElse stato = 2 Then Return baseClass & "is-success"
+
+        Select Case stato
+            Case 1, 5
+                Return baseClass & "is-warning"
+            Case 3
+                Return baseClass & "is-danger"
+            Case 4
+                Return baseClass & "is-canceled"
+            Case Else
+                Return baseClass & "is-muted"
+        End Select
+    End Function
+
+    Protected Function GetPaymentStatusDescription(ByVal pagatoObj As Object, ByVal statoObj As Object, ByVal esitoObj As Object) As String
+        Dim esito As String = SafeStatusText(esitoObj)
+        If esito <> "" Then Return esito
+
+        Dim pagato As Integer = SafeInt(pagatoObj, 0)
+        Dim stato As Integer = SafeInt(statoObj, 0)
+
+        If pagato = 1 OrElse stato = 2 Then Return "Pagamento confermato."
+
+        Select Case stato
+            Case 1
+                Return "Pagamento in attesa di conferma dal gateway."
+            Case 3
+                Return "Pagamento non completato."
+            Case 4
+                Return "Pagamento annullato dall'utente."
+            Case 5
+                Return "Pagamento in verifica."
+            Case Else
+                Return "Pagamento non ancora avviato."
+        End Select
+    End Function
+
+    Protected Function IsPaymentPending(ByVal statoObj As Object) As Boolean
+        Return SafeInt(statoObj, 0) = 1
+    End Function
+
+    Protected Function HasPaymentStateDate(ByVal value As Object) As Boolean
+        Return SafeDate(value, DateTime.MinValue) <> DateTime.MinValue
+    End Function
+
+    Protected Function FormatPaymentStateDate(ByVal value As Object) As String
+        Dim dt As DateTime = SafeDate(value, DateTime.MinValue)
+        If dt = DateTime.MinValue Then Return ""
+        Return dt.ToString("g", CultureInfo.GetCultureInfo("it-IT"))
+    End Function
+
     Protected Sub FormView1_DataBound(sender As Object, e As EventArgs) Handles FormView1.DataBound
         ' Mostra i pulsanti di pagamento online solo quando la policy "Paga ora" lo consente.
         ' Logica volutamente conservativa per evitare regressioni: in dubbio, lascia nascosto.
@@ -228,11 +313,13 @@ Partial Class documentidettaglio
             End If
 
             Dim hlSella As Control = FindFormViewControl("hlBancaSella")
+            Dim hlPayPal As Control = FindFormViewControl("hlPayPalExpress")
             Dim btIw As Control = FindFormViewControl("btIwBank")
             Dim btPP As Control = FindFormViewControl("btPayPal")
 
             ' Default: nascondi
             SetVisible(hlSella, False)
+            SetVisible(hlPayPal, False)
             SetVisible(btIw, False)
             SetVisible(btPP, False)
 
@@ -246,13 +333,15 @@ Partial Class documentidettaglio
                 Return
             End If
 
-            ' BancaSella usa OnLine=3. PayPal resta nascosto finche' il flusso documento non e' verificato.
             If info.PagamentiTipoOnline = 3 Then
                 Dim bancaSellaUrl As String = BuildBancaSellaPayNowUrl(info)
                 If Not String.IsNullOrEmpty(bancaSellaUrl) Then
                     ConfigureBancaSellaPayNowLink(hlSella, bancaSellaUrl)
                     SetVisible(hlSella, True)
                 End If
+            ElseIf info.PagamentiTipoOnline = 2 Then
+                ConfigurePayPalExpressPayNowLink(hlPayPal, info.DocumentId)
+                SetVisible(hlPayPal, True)
             End If
 
         Catch
@@ -267,6 +356,15 @@ Partial Class documentidettaglio
         If link Is Nothing Then Return
 
         link.NavigateUrl = navigateUrl
+    End Sub
+
+    Private Sub ConfigurePayPalExpressPayNowLink(ByVal hlPayPal As Control, ByVal documentId As Integer)
+        If hlPayPal Is Nothing OrElse documentId <= 0 Then Return
+
+        Dim link As HyperLink = TryCast(hlPayPal, HyperLink)
+        If link Is Nothing Then Return
+
+        link.NavigateUrl = "paypalcheckout.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture)
     End Sub
 
     Private Function FindFormViewControl(ByVal controlId As String) As Control
@@ -386,7 +484,7 @@ Partial Class documentidettaglio
         Return info.Pagato = 0 AndAlso
                info.PagamentiTipoOnline <> 0 AndAlso
                info.PermettiPagamentoSuccessivo = 1 AndAlso
-               (info.StatoPagamentoWeb = 0 OrElse info.StatoPagamentoWeb = 1 OrElse info.StatoPagamentoWeb = 3 OrElse info.StatoPagamentoWeb = 4 OrElse info.StatoPagamentoWeb = 5) AndAlso
+               (info.StatoPagamentoWeb = 0 OrElse info.StatoPagamentoWeb = 3 OrElse info.StatoPagamentoWeb = 4 OrElse info.StatoPagamentoWeb = 5) AndAlso
                String.IsNullOrEmpty(info.CodiceAutorizzazione) AndAlso
                info.StatiId <> 0 AndAlso
                info.StatiId <> 3 AndAlso
@@ -441,6 +539,20 @@ Partial Class documentidettaglio
         End Try
 
         Return fallback
+    End Function
+
+    Private Function SafeStatusText(ByVal value As Object) As String
+        Try
+            If value Is Nothing OrElse IsDBNull(value) Then Return ""
+            Dim text As String = Convert.ToString(value).Replace(vbCr, " ").Replace(vbLf, " ").Replace(vbTab, " ").Trim()
+            While text.Contains("  ")
+                text = text.Replace("  ", " ")
+            End While
+            If text.Length > 255 Then text = text.Substring(0, 255)
+            Return text
+        Catch
+            Return ""
+        End Try
     End Function
 
     Private Function SafeDecimal(ByVal value As Object, ByVal fallback As Decimal) As Decimal

@@ -4,6 +4,83 @@ body.ks-page-home {
   color: #1f2933;
 }
 
+.ks-order-detail .ks-order-status-row {
+  margin-top: 24px;
+}
+
+.ks-order-detail .ks-status-card {
+  height: calc(100% - 30px);
+}
+
+.ks-order-detail .ks-status-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.ks-order-detail .ks-status-card-head h5 {
+  margin: 0;
+}
+
+.ks-order-detail .ks-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.ks-order-detail .ks-status-badge-order,
+.ks-order-detail .ks-status-badge.is-muted {
+  color: #5b6472;
+  background: #f4f6f8;
+  border-color: #e0e5eb;
+}
+
+.ks-order-detail .ks-status-badge.is-success {
+  color: #146c43;
+  background: #dff5e8;
+  border-color: #b8e5c9;
+}
+
+.ks-order-detail .ks-status-badge.is-warning {
+  color: #7a4d00;
+  background: #fff3cd;
+  border-color: #ffe08a;
+}
+
+.ks-order-detail .ks-status-badge.is-danger {
+  color: #842029;
+  background: #f8d7da;
+  border-color: #f1aeb5;
+}
+
+.ks-order-detail .ks-status-badge.is-canceled {
+  color: #8a4b12;
+  background: #fff0e1;
+  border-color: #ffd6ad;
+}
+
+@media (max-width: 767.98px) {
+  .ks-order-detail .ks-status-card-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ks-order-detail .ks-status-badge {
+    white-space: normal;
+    text-align: left;
+  }
+}
+
 .preload-container.ks-preload {
   position: fixed;
   inset: 0;

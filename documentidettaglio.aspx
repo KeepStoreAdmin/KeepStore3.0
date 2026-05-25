@@ -27,7 +27,7 @@
 
     <section class="tf-sp-2 ks-order-detail">
         <div class="container">
-            <asp:SqlDataSource ID="sdsTestata" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" SelectCommand="SELECT * FROM (vdocumenti LEFT JOIN utenti ON vdocumenti.`UtentiId` = utenti.`Id`) LEFT JOIN vettori ON vdocumenti.`VettoriId` = vettori.`id` WHERE ((vdocumenti.Id = ?Id) AND (vdocumenti.UtentiId = ?UtentiId))">
+            <asp:SqlDataSource ID="sdsTestata" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" SelectCommand="SELECT vd.*, utenti.*, vettori.*, COALESCE(dpay.Pagato,0) AS DettaglioPagato, COALESCE(dpay.StatoPagamentoWeb,0) AS DettaglioStatoPagamentoWeb, dpay.DataStatoPagamentoWeb AS DettaglioDataStatoPagamentoWeb, COALESCE(dpay.UltimoEsitoPagamentoWeb,'') AS DettaglioUltimoEsitoPagamentoWeb FROM ((vdocumenti vd LEFT JOIN utenti ON vd.`UtentiId` = utenti.`Id`) LEFT JOIN vettori ON vd.`VettoriId` = vettori.`id`) LEFT JOIN documenti dpay ON dpay.`id` = vd.`Id` WHERE ((vd.Id = ?Id) AND (vd.UtentiId = ?UtentiId))">
                 <SelectParameters>
                     <asp:QueryStringParameter Name="Id" Type="Int64" QueryStringField="id"/>
                     <asp:SessionParameter Name="UtentiId" SessionField="UtentiID" Type="int32" />
@@ -48,17 +48,36 @@
                                     <path d="M128,16A112,112,0,1,0,240,128,112.13,112.13,0,0,0,128,16Zm0,208a96,96,0,1,1,96-96A96.11,96.11,0,0,1,128,224Zm-8-56a12,12,0,1,1,12,12A12,12,0,0,1,120,168Zm20-88v48a8,8,0,0,1-16,0V88a8,8,0,0,1,16,0Z"></path>
                                 </svg>
                             </span>
-                            <p>Dettaglio documento</p>
+                            <p>Dettaglio ordine</p>
                         </div>
 
                         <ul class="order-overview-list">
-                            <li>Documento: <strong><%# Eval("TipoDocumentiDescrizione") %> n. <%# Eval("NDocumento") %></strong></li>
+                            <li>Documento / Ordine n.: <strong><%# Eval("TipoDocumentiDescrizione") %> n. <%# Eval("NDocumento") %></strong></li>
                             <li>Data: <strong><%# Eval("DataDocumento", "{0:d}") %></strong></li>
                             <li>Totale: <strong><%# Eval("TotaleDocumento", "{0:C}") %></strong></li>
-                            <li>Pagamento: <strong><%# Eval("PagamentiTipoDescrizione") %></strong></li>
+                            <li>Metodo pagamento: <strong><%# Eval("PagamentiTipoDescrizione") %></strong></li>
                         </ul>
-                        <div class="mt-3">
-                            <span class="body-text-3">Stato: <strong><%# Eval("StatiDescrizione1") %> <%# Eval("StatiDescrizione2") %></strong></span>
+
+                        <div class="row gap-30 gap-sm-0 ks-order-status-row">
+                            <div class="col-md-6 col-12">
+                                <div class="order-detail-wrap ks-status-card">
+                                    <div class="ks-status-card-head">
+                                        <h5 class="fw-bold">Stato ordine</h5>
+                                        <span class="ks-status-badge ks-status-badge-order"><%# FormatOrderStatus(Eval("StatiDescrizione1"), Eval("StatiDescrizione2")) %></span>
+                                    </div>
+                                    <p class="body-small ks-muted">Stato operativo del documento.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-12">
+                                <div class="order-detail-wrap ks-status-card">
+                                    <div class="ks-status-card-head">
+                                        <h5 class="fw-bold">Stato pagamento</h5>
+                                        <span class='<%# GetPaymentStatusCssClass(Eval("DettaglioPagato"), Eval("DettaglioStatoPagamentoWeb")) %>'><%# GetPaymentStatusLabel(Eval("DettaglioPagato"), Eval("DettaglioStatoPagamentoWeb")) %></span>
+                                    </div>
+                                    <p class="body-small ks-muted"><%# GetPaymentStatusDescription(Eval("DettaglioPagato"), Eval("DettaglioStatoPagamentoWeb"), Eval("DettaglioUltimoEsitoPagamentoWeb")) %></p>
+                                    <p class="body-small ks-muted" runat="server" visible='<%# HasPaymentStateDate(Eval("DettaglioDataStatoPagamentoWeb")) %>'>Aggiornato: <%# FormatPaymentStateDate(Eval("DettaglioDataStatoPagamentoWeb")) %></p>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="order-detail-wrap">
@@ -106,6 +125,7 @@
                                 <asp:HiddenField ID="hfPayNowDocumentId" runat="server" Value='<%# Eval("id") %>' />
 
                                 <asp:HyperLink ID="hlBancaSella" runat="server" Visible="false" ToolTip="Paga Adesso" ImageUrl="/Public/Images/paga_adesso.gif" Style="height:42px;" />
+                                <asp:HyperLink ID="hlPayPalExpress" runat="server" Visible="false" ToolTip="Paga con PayPal" CssClass="tf-btn" Text="Paga con PayPal" />
 
                                 <asp:ImageButton ID="btIwBank" runat="server" Visible="false" PostBackUrl='<%# "https://checkout.iwsmile.it/Pagamenti/?ACCOUNT=" & Me.Session("AccountIwBank") & "&ITEM_NAME=Ordine+n.+" & Eval("NDocumento") & "+del+" & Eval("DataDocumento") & "&ITEM_NUMBER=" & Eval("NDocumento") & "&QUANTITY=1&FLAG_ONLY_IWS=0&AMOUNT=" & Replace(Replace(Eval("TotaleDocumento", "{0:N}"), ".", ""), ",", ".") & "&NOTE=0&URL_OK=" & Request.Url.Scheme & "://" & Request.Url.Host & "/pagamento.aspx?id=" & Eval("id") & "&URL_BAD=" & Request.Url.Scheme & "://" & Request.Url.Host & "/documentidettaglio.aspx?id=" & Eval("id") %>' ToolTip="Paga con IwBank" ImageUrl="/Public/Images/paga_adesso.gif" Style="height:42px;" />
 
