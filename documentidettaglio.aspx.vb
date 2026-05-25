@@ -316,8 +316,10 @@ Partial Class documentidettaglio
             Dim hlPayPal As Control = FindFormViewControl("hlPayPalExpress")
             Dim btIw As Control = FindFormViewControl("btIwBank")
             Dim btPP As Control = FindFormViewControl("btPayPal")
+            Dim pnlPayNow As Control = FindFormViewControl("pnlPayNowCard")
 
             ' Default: nascondi
+            SetVisible(pnlPayNow, False)
             SetVisible(hlSella, False)
             SetVisible(hlPayPal, False)
             SetVisible(btIw, False)
@@ -338,10 +340,12 @@ Partial Class documentidettaglio
                 If Not String.IsNullOrEmpty(bancaSellaUrl) Then
                     ConfigureBancaSellaPayNowLink(hlSella, bancaSellaUrl)
                     SetVisible(hlSella, True)
+                    SetVisible(pnlPayNow, True)
                 End If
             ElseIf info.PagamentiTipoOnline = 2 Then
                 ConfigurePayPalExpressPayNowLink(hlPayPal, info.DocumentId)
                 SetVisible(hlPayPal, True)
+                SetVisible(pnlPayNow, True)
             End If
 
         Catch
