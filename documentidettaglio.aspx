@@ -117,7 +117,7 @@
                             </div>
                         </div>
 
-                        <div class="order-detail-wrap">
+                        <div id="pnlPayNowCard" runat="server" visible="false" class="order-detail-wrap">
                             <h5 class="fw-bold">Paga adesso</h5>
                             <div class="ks-actions">
                                 <asp:TextBox ID="tbTipo" runat="server" Visible="false" Text='<%# Eval("TipoDocumentiId") %>' Width="10"></asp:TextBox>
