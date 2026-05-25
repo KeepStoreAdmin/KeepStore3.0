@@ -226,12 +226,25 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
         Dim tipoDocumentoId As Integer = SafeTipoDocumentoId
 
         ' Base query (con filtri aggiunti SOLO se validi)
-        Dim strSql As String = "SELECT `Id`, `DataDocumento`, `NumeroDoc`, `DocumentoStatiId`, `StatiId`, `Stati`, `TipoDocumento`, `TipoDoc`, `Token`, `TipoDocumentoAvanzato`, `TipoDocAv`, `IdDocumentoAvanzato`, `Note`, `DocumentoStatoAvanzatoId`, `StatoAvanzato`, `Magazzino` FROM `vdocumenti` WHERE ((`UtentiId`=?UtentiId) AND (`TipoDocumentiId`=?TipoDocumentiId))"
+        Dim strSql As String = ""
+        strSql &= "SELECT vdocumenti.*, utenti.*, vettori.Link_Tracking, "
+        strSql &= "COALESCE(dpay.Pagato,0) AS ListaPagato, "
+        strSql &= "COALESCE(dpay.StatoPagamentoWeb,0) AS ListaStatoPagamentoWeb, "
+        strSql &= "dpay.DataStatoPagamentoWeb AS ListaDataStatoPagamentoWeb, "
+        strSql &= "COALESCE(dpay.UltimoEsitoPagamentoWeb,'') AS ListaUltimoEsitoPagamentoWeb, "
+        strSql &= "COALESCE(pagamentitipo.Descrizione,'') AS ListaPagamentoDescrizione, "
+        strSql &= "COALESCE(pagamentitipo.OnLine,0) AS ListaPagamentiTipoOnline "
+        strSql &= "FROM `vdocumenti` "
+        strSql &= "LEFT JOIN `utenti` ON `vdocumenti`.`UtentiId` = `utenti`.`Id` "
+        strSql &= "LEFT JOIN (SELECT id, Link_Tracking FROM `vettori`) AS vettori ON `vdocumenti`.`VettoriId` = `vettori`.`id` "
+        strSql &= "LEFT JOIN `pagamentitipo` ON `vdocumenti`.`PagamentiTipoId` = `pagamentitipo`.`id` "
+        strSql &= "LEFT JOIN `documenti` dpay ON dpay.`id` = `vdocumenti`.`Id` "
+        strSql &= "WHERE ((`vdocumenti`.`UtentiId`=?UtentiId) AND (`vdocumenti`.`TipoDocumentiId`=?TipoDocumentiId))"
 
         ' Stato
         Dim idStato As Integer = -1
         If filtroStati IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(filtroStati.SelectedValue), idStato) AndAlso idStato > -1 Then
-            strSql &= " AND (`StatiId`=?idStato)"
+            strSql &= " AND (`vdocumenti`.`StatiId`=?idStato)"
         Else
             idStato = -1
         End If
@@ -261,11 +274,11 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
         End If
 
         If hasInizio Then
-            strSql &= " AND (`DataDocumento` >= ?DataInizio)"
+            strSql &= " AND (`vdocumenti`.`DataDocumento` >= ?DataInizio)"
         End If
-        strSql &= " AND (`DataDocumento` <= ?DataFine)"
+        strSql &= " AND (`vdocumenti`.`DataDocumento` <= ?DataFine)"
 
-        strSql &= " ORDER BY `DataDocumento` DESC, `NumeroDoc` DESC"
+        strSql &= " ORDER BY `vdocumenti`.`DataDocumento` DESC, `vdocumenti`.`NumeroDoc` DESC"
 
         sdsDocumenti.SelectCommand = strSql
 
@@ -515,7 +528,7 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
                         Return pagato = 0 AndAlso
                                online <> 0 AndAlso
                                permettePagamentoSuccessivo = 1 AndAlso
-                               (statoPagamentoWeb = 0 OrElse statoPagamentoWeb = 1 OrElse statoPagamentoWeb = 3 OrElse statoPagamentoWeb = 5) AndAlso
+                               (statoPagamentoWeb = 0 OrElse statoPagamentoWeb = 3 OrElse statoPagamentoWeb = 4 OrElse statoPagamentoWeb = 5) AndAlso
                                Not haAutorizzazione AndAlso
                                statiId <> 0 AndAlso
                                statiId <> 3 AndAlso
@@ -554,6 +567,119 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
     Private Function HasValue(ByVal value As Object) As Boolean
         If value Is Nothing OrElse IsDBNull(value) Then Return False
         Return Convert.ToString(value).Trim() <> ""
+    End Function
+
+    Protected Function FormatOrderStatus(ByVal stato1Obj As Object, ByVal stato2Obj As Object) As String
+        Dim stato1 As String = SafeStatusText(stato1Obj)
+        Dim stato2 As String = SafeStatusText(stato2Obj)
+
+        If stato1 = "" Then Return If(stato2 = "", "Non disponibile", stato2)
+        If stato2 = "" Then Return stato1
+        Return (stato1 & " " & stato2).Trim()
+    End Function
+
+    Protected Function GetPaymentStatusLabel(ByVal pagatoObj As Object, ByVal statoObj As Object) As String
+        Dim pagato As Integer = SafeInt(pagatoObj, 0)
+        Dim stato As Integer = SafeInt(statoObj, 0)
+
+        If pagato = 1 OrElse stato = 2 Then Return "Pagato"
+
+        Select Case stato
+            Case 1
+                Return "In verifica PayPal"
+            Case 3
+                Return "Non completato"
+            Case 4
+                Return "Annullato dall'utente"
+            Case 5
+                Return "In verifica"
+            Case Else
+                Return "Non avviato"
+        End Select
+    End Function
+
+    Protected Function GetPaymentStatusCssClass(ByVal pagatoObj As Object, ByVal statoObj As Object) As String
+        Dim pagato As Integer = SafeInt(pagatoObj, 0)
+        Dim stato As Integer = SafeInt(statoObj, 0)
+        Dim baseClass As String = "ks-status-badge "
+
+        If pagato = 1 OrElse stato = 2 Then Return baseClass & "is-success"
+
+        Select Case stato
+            Case 1, 5
+                Return baseClass & "is-warning"
+            Case 3
+                Return baseClass & "is-danger"
+            Case 4
+                Return baseClass & "is-canceled"
+            Case Else
+                Return baseClass & "is-muted"
+        End Select
+    End Function
+
+    Protected Function GetPaymentStatusDescription(ByVal pagatoObj As Object,
+                                                   ByVal statoObj As Object,
+                                                   ByVal esitoObj As Object,
+                                                   ByVal onlineObj As Object,
+                                                   ByVal pagamentoObj As Object) As String
+        Dim esito As String = SafePaymentMessage(esitoObj)
+        If esito <> "" Then Return esito
+
+        Dim pagato As Integer = SafeInt(pagatoObj, 0)
+        Dim stato As Integer = SafeInt(statoObj, 0)
+        Dim online As Integer = SafeInt(onlineObj, 0)
+        Dim pagamento As String = SafeStatusText(pagamentoObj)
+
+        If pagato = 1 OrElse stato = 2 Then Return "Pagamento confermato."
+
+        Select Case stato
+            Case 1
+                Return "Pagamento in attesa di conferma dal gateway."
+            Case 3
+                Return "Pagamento non completato."
+            Case 4
+                Return "Pagamento annullato dall'utente."
+            Case 5
+                Return "Pagamento in verifica."
+            Case Else
+                If online = 0 AndAlso pagamento <> "" Then
+                    Return "Metodo: " & pagamento
+                End If
+                Return "Pagamento non ancora avviato."
+        End Select
+    End Function
+
+    Private Function SafePaymentMessage(ByVal value As Object) As String
+        Dim text As String = SafeStatusText(value)
+        If text = "" Then Return ""
+
+        Dim lower As String = text.ToLowerInvariant()
+        If lower.Contains("ec-token") OrElse lower.Contains("token=") OrElse lower.Contains("signature") OrElse lower.Contains("pwd") Then
+            Return "Dettaglio pagamento disponibile nel documento."
+        End If
+
+        Return TruncateText(text, 90)
+    End Function
+
+    Private Function SafeStatusText(ByVal value As Object) As String
+        If value Is Nothing OrElse IsDBNull(value) Then Return ""
+
+        Dim text As String = Convert.ToString(value).Trim()
+        If text = "" Then Return ""
+
+        text = text.Replace(vbCr, " ").Replace(vbLf, " ").Replace(vbTab, " ")
+        Do While text.Contains("  ")
+            text = text.Replace("  ", " ")
+        Loop
+
+        Return text
+    End Function
+
+    Private Function TruncateText(ByVal value As String, ByVal maxLength As Integer) As String
+        If String.IsNullOrEmpty(value) Then Return ""
+        If maxLength <= 0 Then Return ""
+        If value.Length <= maxLength Then Return value
+        Return value.Substring(0, maxLength).TrimEnd() & "..."
     End Function
 
     '==============================================================
