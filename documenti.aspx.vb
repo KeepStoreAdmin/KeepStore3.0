@@ -11,7 +11,6 @@ Partial Class documenti
 
     Public nDocTrovati As String = "0"
 
-
     '==============================================================
     ' Safe tipo documento (QueryString t)
     ' - se manca o è invalido: redirect a t=4 (se esiste), altrimenti primo tipo disponibile
@@ -107,11 +106,11 @@ Partial Class documenti
                 Response.Redirect("documenti.aspx?t=" & safeT.ToString(), True)
                 Exit Sub
             End If
+
+            If HasDocumentFiltersRequest() Then
+                ApplyFiltersFromRequest()
+            End If
         End If
-' Eventuale logica iniziale (se ti serve in futuro)
-        'If Not IsPostBack Then
-        '    ...
-        'End If
 
     End Sub
 
@@ -172,6 +171,7 @@ Partial Class documenti
 
     Sub aggiungiStato(sender As Object, e As EventArgs)
         filtroStati.Items.Insert(0, New ListItem("Qualsiasi stato", "-1"))
+        TrySetListValue(filtroStati, SafeFilterValue(Request.QueryString("stato"), "-1"))
     End Sub
 
     '==============================================================
@@ -221,10 +221,51 @@ Partial Class documenti
         Return DateTime.TryParseExact(raw, "dd-MM-yyyy", System.Globalization.CultureInfo.GetCultureInfo("it-IT"), System.Globalization.DateTimeStyles.None, dt)
     End Function
 
-Sub applicaFiltri(sender As Object, e As EventArgs)
+    Private Function HasDocumentFiltersRequest() As Boolean
+        Return Request.QueryString("stato") IsNot Nothing OrElse
+               Request.QueryString("tempo") IsNot Nothing OrElse
+               Request.QueryString("dal") IsNot Nothing OrElse
+               Request.QueryString("al") IsNot Nothing
+    End Function
 
+    Private Sub ApplyFiltersFromRequest()
         Dim tipoDocumentoId As Integer = SafeTipoDocumentoId
+        Dim idStato As Integer = SafeFilterInt(Request.QueryString("stato"), -1)
+        Dim tempo As Integer = SafeTempoFilter(Request.QueryString("tempo"))
+        Dim hasInizio As Boolean = False
+        Dim inizio As DateTime
+        Dim fine As DateTime = DateTime.Now
 
+        TrySetListValue(filtroTempo, tempo.ToString(System.Globalization.CultureInfo.InvariantCulture))
+
+        If tempo > 0 Then
+            inizio = DateTime.Now.AddDays(-tempo)
+            fine = DateTime.Now
+            hasInizio = True
+        Else
+            hasInizio = TryParseDDMMYYYY(Convert.ToString(Request.QueryString("dal")), inizio)
+
+            Dim tmpFine As DateTime
+            If TryParseDDMMYYYY(Convert.ToString(Request.QueryString("al")), tmpFine) Then
+                fine = tmpFine
+            End If
+        End If
+
+        If hasInizio Then
+            dataInizio.Text = inizio.ToString("dd-MM-yyyy")
+            dataFine.Text = fine.ToString("dd-MM-yyyy")
+            Session("filtroDocumentoDataInizio") = dataInizio.Text
+            Session("filtroDocumentoDataFine") = dataFine.Text
+        End If
+
+        ConfigureDocumentSelect(tipoDocumentoId, idStato, hasInizio, inizio, fine)
+    End Sub
+
+    Private Sub ConfigureDocumentSelect(ByVal tipoDocumentoId As Integer,
+                                        ByVal idStato As Integer,
+                                        ByVal hasInizio As Boolean,
+                                        ByVal inizio As DateTime,
+                                        ByVal fine As DateTime)
         ' Base query (con filtri aggiunti SOLO se validi)
         Dim strSql As String = ""
         strSql &= "SELECT vdocumenti.*, utenti.*, vettori.Link_Tracking, "
@@ -239,56 +280,92 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
         strSql &= "LEFT JOIN (SELECT id, Link_Tracking FROM `vettori`) AS vettori ON `vdocumenti`.`VettoriId` = `vettori`.`id` "
         strSql &= "LEFT JOIN `pagamentitipo` ON `vdocumenti`.`PagamentiTipoId` = `pagamentitipo`.`id` "
         strSql &= "LEFT JOIN `documenti` dpay ON dpay.`id` = `vdocumenti`.`Id` "
-        strSql &= "WHERE ((`vdocumenti`.`UtentiId`=?UtentiId) AND (`vdocumenti`.`TipoDocumentiId`=?TipoDocumentiId))"
+        Dim utentiId As Integer = SafeInt(Session("UtentiID"), 0)
+        strSql &= "WHERE ((`vdocumenti`.`UtentiId`=" & utentiId.ToString(System.Globalization.CultureInfo.InvariantCulture) & ") AND (`vdocumenti`.`TipoDocumentiId`=" & tipoDocumentoId.ToString(System.Globalization.CultureInfo.InvariantCulture) & "))"
 
         ' Stato
-        Dim idStato As Integer = -1
-        If filtroStati IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(filtroStati.SelectedValue), idStato) AndAlso idStato > -1 Then
+        If idStato > -1 Then
             strSql &= " AND (`vdocumenti`.`StatiId`=" & idStato.ToString(System.Globalization.CultureInfo.InvariantCulture) & ")"
-        Else
-            idStato = -1
         End If
 
         ' Date range (formato dd-MM-yyyy)
-        Dim hasInizio As Boolean = False
-        Dim inizio As DateTime
-        If dataInizio IsNot Nothing Then
-            Dim rawInizio As String = Convert.ToString(dataInizio.Text)
-            If TryParseDDMMYYYY(rawInizio, inizio) Then
-                hasInizio = True
-            Else
-                dataInizio.Text = ""
-            End If
-        End If
-
-        Dim fine As DateTime = DateTime.Now
-        If dataFine IsNot Nothing Then
-            Dim rawFine As String = Convert.ToString(dataFine.Text)
-            Dim tmpFine As DateTime
-            If TryParseDDMMYYYY(rawFine, tmpFine) Then
-                fine = tmpFine
-            Else
-                fine = DateTime.Now
-            End If
-            dataFine.Text = fine.ToString("dd-MM-yyyy")
-        End If
-
         If hasInizio Then
             strSql &= " AND (`vdocumenti`.`DataDocumento` >= '" & inizio.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) & "')"
             strSql &= " AND (`vdocumenti`.`DataDocumento` <= '" & fine.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) & "')"
         End If
 
-        strSql &= " ORDER BY `vdocumenti`.`DataDocumento` DESC, `vdocumenti`.`NumeroDoc` DESC"
+        strSql &= " ORDER BY `vdocumenti`.`ID` DESC"
 
         sdsDocumenti.SelectCommand = strSql
 
         sdsDocumenti.SelectParameters.Clear()
-        sdsDocumenti.SelectParameters.Add("UtentiId", TypeCode.Int32, Convert.ToString(Session("UtentiID")))
-        sdsDocumenti.SelectParameters.Add("TipoDocumentiId", TypeCode.Int16, tipoDocumentoId.ToString())
+    End Sub
+
+Sub applicaFiltri(sender As Object, e As EventArgs)
+
+        Dim tipoDocumentoId As Integer = SafeTipoDocumentoId
+        Dim idStato As Integer = -1
+        If filtroStati IsNot Nothing Then
+            idStato = SafeFilterInt(Convert.ToString(filtroStati.SelectedValue), -1)
+        End If
+
+        Dim hasInizio As Boolean = False
+        Dim inizio As DateTime
+        If dataInizio IsNot Nothing Then
+            hasInizio = TryParseDDMMYYYY(Convert.ToString(dataInizio.Text), inizio)
+            If Not hasInizio Then dataInizio.Text = ""
+        End If
+
+        Dim fine As DateTime = DateTime.Now
+        If dataFine IsNot Nothing Then
+            Dim tmpFine As DateTime
+            If TryParseDDMMYYYY(Convert.ToString(dataFine.Text), tmpFine) Then
+                fine = tmpFine
+            End If
+            dataFine.Text = fine.ToString("dd-MM-yyyy")
+        End If
+
+        ConfigureDocumentSelect(tipoDocumentoId, idStato, hasInizio, inizio, fine)
 
         GridView1.DataBind()
         nDocTrovati = GridView1.Rows.Count.ToString()
 
+    End Sub
+
+    Private Function SafeFilterInt(ByVal raw As String, ByVal fallback As Integer) As Integer
+        Dim parsed As Integer = fallback
+        If Integer.TryParse(Convert.ToString(raw), parsed) Then
+            If parsed >= -1 Then Return parsed
+        End If
+
+        Return fallback
+    End Function
+
+    Private Function SafeTempoFilter(ByVal raw As String) As Integer
+        Dim parsed As Integer = -1
+        If Not Integer.TryParse(Convert.ToString(raw), parsed) Then Return -1
+
+        Select Case parsed
+            Case -1, 7, 30, 60, 90
+                Return parsed
+            Case Else
+                Return -1
+        End Select
+    End Function
+
+    Private Function SafeFilterValue(ByVal raw As String, ByVal fallback As String) As String
+        Dim parsed As Integer = SafeFilterInt(raw, -1)
+        If parsed < -1 Then Return fallback
+        Return parsed.ToString(System.Globalization.CultureInfo.InvariantCulture)
+    End Function
+
+    Private Sub TrySetListValue(ByVal list As ListControl, ByVal value As String)
+        If list Is Nothing Then Exit Sub
+        Dim item As ListItem = list.Items.FindByValue(value)
+        If item Is Nothing Then Exit Sub
+
+        list.ClearSelection()
+        item.Selected = True
     End Sub
 
     '==============================================================
