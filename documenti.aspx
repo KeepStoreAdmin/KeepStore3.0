@@ -35,6 +35,48 @@
             if (spinner) spinner.style.display = 'block';
             if (content) content.style.opacity = '0.5';
         }
+
+        function ksApplyDocumentFilters() {
+            var stato = document.getElementById('<%= filtroStati.ClientID %>');
+            var tempo = document.getElementById('<%= filtroTempo.ClientID %>');
+            var dal = document.getElementById('<%= dataInizio.ClientID %>');
+            var al = document.getElementById('<%= dataFine.ClientID %>');
+            var params = new URLSearchParams(window.location.search);
+
+            if (!params.get('t')) {
+                params.set('t', '4');
+            }
+
+            if (stato && stato.value && stato.value !== '-1') {
+                params.set('stato', stato.value);
+            } else {
+                params.delete('stato');
+            }
+
+            if (tempo && tempo.value && tempo.value !== '-1') {
+                params.set('tempo', tempo.value);
+                params.delete('dal');
+                params.delete('al');
+            } else {
+                params.delete('tempo');
+
+                if (dal && dal.value) {
+                    params.set('dal', dal.value);
+                } else {
+                    params.delete('dal');
+                }
+
+                if (al && al.value) {
+                    params.set('al', al.value);
+                } else {
+                    params.delete('al');
+                }
+            }
+
+            ksShowSpinnerOnSubmit();
+            window.location.href = 'documenti.aspx?' + params.toString();
+            return false;
+        }
     </script>
 </asp:Content>
 
@@ -214,7 +256,7 @@
                                 <asp:Panel ID="Panel1" runat="server" Font-Size="Small" GroupingText="Ricerca rapida" CssClass="ks-fieldset">
                                     <div class="d-flex align-items-center gap-2 flex-wrap">
                                         <span class="body-small text-main-2">Visualizza</span>
-                                        <asp:DropDownList ID="filtroTempo" runat="server" OnSelectedIndexChanged="filtroDataRapido" AutoPostBack="true" CssClass="form-select form-select-sm">
+                                        <asp:DropDownList ID="filtroTempo" runat="server" OnSelectedIndexChanged="filtroDataRapido" AutoPostBack="false" CssClass="form-select form-select-sm" onchange="return ksApplyDocumentFilters();">
                                             <asp:ListItem Value="-1" Selected="True">tutti i documenti</asp:ListItem>
                                             <asp:ListItem Value="7">i documenti dell'ultima settimana</asp:ListItem>
                                             <asp:ListItem Value="30">i documenti dell'ultimo mese</asp:ListItem>
@@ -260,7 +302,7 @@
                         </div>
 
                         <div class="d-flex justify-content-end mt-3">
-                            <asp:Button ID="Button1" runat="server" Text="Filtra" OnClick="applicaFiltri" CssClass="tf-btn btn-fill" OnClientClick="ksShowSpinnerOnSubmit();" />
+                            <asp:Button ID="Button1" runat="server" Text="Filtra" OnClick="applicaFiltri" CssClass="tf-btn btn-fill" OnClientClick="return ksApplyDocumentFilters();" />
                         </div>
                     </div>
 
@@ -270,9 +312,9 @@
                         </div>
                         <div class="col-12 col-md-6 d-flex justify-content-md-end align-items-center gap-2">
                             <span class="body-small text-main-2">Stato</span>
-                            <asp:DropDownList ID="filtroStati" runat="server" AutoPostBack="True"
+                            <asp:DropDownList ID="filtroStati" runat="server" AutoPostBack="False"
                                 DataSourceID="sdsStatoOrdine" DataTextField="Descrizione1" DataValueField="id"
-                                OnSelectedIndexChanged="applicaFiltri" OnDataBound="aggiungiStato" CssClass="form-select form-select-sm">
+                                OnSelectedIndexChanged="applicaFiltri" OnDataBound="aggiungiStato" CssClass="form-select form-select-sm" onchange="return ksApplyDocumentFilters();">
                             </asp:DropDownList>
                         </div>
                     </div>
