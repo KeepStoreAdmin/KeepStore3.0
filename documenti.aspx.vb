@@ -177,7 +177,7 @@ Partial Class documenti
     '==============================================================
     ' FILTRO RAPIDO (ultima settimana, ultimo mese, ecc.)
     '==============================================================
-    Sub filtroDataRapido(sender As Object, e As EventArgs) Handles filtroTempo.SelectedIndexChanged, filtroStati.SelectedIndexChanged
+    Sub filtroDataRapido(sender As Object, e As EventArgs) Handles filtroTempo.SelectedIndexChanged
 
         Dim v As Integer = filtroTempo.SelectedValue
 
@@ -244,7 +244,7 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
         ' Stato
         Dim idStato As Integer = -1
         If filtroStati IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(filtroStati.SelectedValue), idStato) AndAlso idStato > -1 Then
-            strSql &= " AND (`vdocumenti`.`StatiId`=?idStato)"
+            strSql &= " AND (`vdocumenti`.`StatiId`=" & idStato.ToString(System.Globalization.CultureInfo.InvariantCulture) & ")"
         Else
             idStato = -1
         End If
@@ -274,9 +274,9 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
         End If
 
         If hasInizio Then
-            strSql &= " AND (`vdocumenti`.`DataDocumento` >= ?DataInizio)"
+            strSql &= " AND (`vdocumenti`.`DataDocumento` >= '" & inizio.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) & "')"
+            strSql &= " AND (`vdocumenti`.`DataDocumento` <= '" & fine.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) & "')"
         End If
-        strSql &= " AND (`vdocumenti`.`DataDocumento` <= ?DataFine)"
 
         strSql &= " ORDER BY `vdocumenti`.`DataDocumento` DESC, `vdocumenti`.`NumeroDoc` DESC"
 
@@ -285,14 +285,6 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
         sdsDocumenti.SelectParameters.Clear()
         sdsDocumenti.SelectParameters.Add("UtentiId", TypeCode.Int32, Convert.ToString(Session("UtentiID")))
         sdsDocumenti.SelectParameters.Add("TipoDocumentiId", TypeCode.Int16, tipoDocumentoId.ToString())
-
-        If idStato > -1 Then
-            sdsDocumenti.SelectParameters.Add("idStato", TypeCode.Int16, idStato.ToString())
-        End If
-        If hasInizio Then
-            sdsDocumenti.SelectParameters.Add("DataInizio", TypeCode.DateTime, inizio.ToString("yyyy-MM-dd"))
-        End If
-        sdsDocumenti.SelectParameters.Add("DataFine", TypeCode.DateTime, fine.ToString("yyyy-MM-dd"))
 
         GridView1.DataBind()
         nDocTrovati = GridView1.Rows.Count.ToString()
