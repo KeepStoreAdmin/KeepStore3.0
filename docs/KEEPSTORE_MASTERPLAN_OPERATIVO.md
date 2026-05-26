@@ -1,6 +1,6 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-05-25
+Aggiornato: 2026-05-26
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
@@ -107,6 +107,16 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 ## 2. Regola ONSUS per refactor UI
 
 ONSUS e il riferimento grafico principale per i refactor UI del frontend KeepStore.
+Quando si rifattorizza o si adegua una pagina, la priorita visuale e di esperienza utente va data a ONSUS e a una UX moderna 2026.
+
+Principio operativo:
+
+- KeepStore legacy resta fonte dati, contratti, permessi e logica esistente.
+- La presentazione deve seguire ONSUS quando offre una struttura piu efficace.
+- Le informazioni devono essere chiare, intuitive, sintetiche e leggibili senza percorsi macchinosi.
+- Non bisogna replicare automaticamente schermate legacy se il template ONSUS permette una lettura piu moderna.
+- Se una logica legacy e vecchia, errata o poco moderna, non va corretta di nascosto dentro un refactor grafico: serve prima analisi impatto e proposta micro-task.
+- Germano decide se intervenire subito sulla logica o rimandare.
 
 Quando si rifattorizza una pagina:
 
@@ -120,14 +130,14 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo DOC-DETAIL-2C:
+Stato di riferimento dopo MY-ORDERS-1E-D e cleanup MY-ORDERS-1:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `7df0d843ede8e8eb2e7676831f24773fb5796fb0`
-- Merge PR #92: `7df0d843ede8e8eb2e7676831f24773fb5796fb0`
-- `main` invariato rispetto a `origin/main` al momento dei task recenti.
+- HEAD stabile: `41a709b22ce37bf6b1669f52b690824082e4ebc1`
+- Merge PR #96: `41a709b22ce37bf6b1669f52b690824082e4ebc1`
+- `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
-Branch PayPal/config/document detail gia mergiati e, dove previsto, puliti:
+Branch PayPal/config/document detail/my orders gia mergiati e, dove previsto, puliti:
 
 - PR #81 PayPal state contract and sandbox-safe launcher skeleton
 - PR #82 PayPal post-order routing to launcher
@@ -141,6 +151,9 @@ Branch PayPal/config/document detail gia mergiati e, dove previsto, puliti:
 - PR #90 pending transaction recheck
 - PR #91 ONSUS document detail refactor
 - PR #92 hide empty Pay Now card
+- PR #94 ONSUS my orders list refactor
+- PR #95 stato filter fix, superato dal fix definitivo successivo
+- PR #96 documenti filters GET fix
 
 ## 4. Roadmap sintetica
 
@@ -159,8 +172,9 @@ Branch PayPal/config/document detail gia mergiati e, dove previsto, puliti:
 2. Separare sempre:
    - stato ordine;
    - stato pagamento.
-3. Rifinire lista "I miei ordini" per allinearla al dettaglio ordine.
+3. Mantenere lista ordini e dettaglio ordine coerenti tra loro.
 4. Aggiungere smoke desktop/mobile per ogni refactor.
+5. Evitare azioni gateway dirette nelle liste: il retry pagamento resta nel dettaglio ordine salvo task dedicato.
 
 ### Documentazione
 
@@ -296,12 +310,53 @@ Smoke DOC-DETAIL-2C-D:
 - `167336`: canceled, card visibile con link reale PayPal retry.
 - mobile `390x844`: nessuna card vuota e nessun overflow sui casi principali.
 
-## 7. Prossimi step consigliati
+## 7. Stato My Orders / documenti.aspx
+
+MY-ORDERS-1 e chiuso.
+
+Esiti principali:
+
+- MY-ORDERS-1A audit ONSUS: A.
+- MY-ORDERS-1B/1C refactor lista ONSUS: completato.
+- PR #94 merge commit: `b3970df0838a805adb6db6d4eb1adfc1126582b4`.
+- MY-ORDERS-1D filtro stato: superato dalla correzione successiva.
+- PR #95 merge commit: `c96fe7ef95574831d9874a497df85c283c31099b`.
+- MY-ORDERS-1E fix definitivo filtri GET: completato.
+- PR #96 merge commit: `41a709b22ce37bf6b1669f52b690824082e4ebc1`.
+- Smoke MY-ORDERS-1E-D: A.
+- Cleanup branch MY-ORDERS: completato.
+
+Comportamento finale `documenti.aspx`:
+
+- layout ONSUS account/orders;
+- colonne: Numero, Data, Totale, Metodo pagamento, Stato ordine, Stato pagamento, Azione;
+- Azione solo `Dettaglio`;
+- nessun Pay Now diretto in lista;
+- nessun link PayPal/BancaSella/gateway diretto in lista;
+- tracking non in Azione;
+- filtri GET validati;
+- filtro `Inviato`: OK;
+- filtro `ultimo mese`: OK;
+- filtro `In lavorazione`: OK;
+- combinazione `Inviato + ultimo mese`: OK;
+- mobile `390x844`: OK;
+- nessun ordine, pagamento o gateway chiamato nello smoke.
+
+Regola UX confermata:
+
+- la lista ordini mostra lo stato pagamento senza obbligare l'utente ad aprire dettagli tecnici;
+- il retry pagamento resta nel dettaglio ordine;
+- stato ordine e stato pagamento restano concetti separati.
+
+## 8. Prossimi step consigliati
 
 ### Immediati
 
-1. Merge e cleanup del branch `task/docs-1-masterplan-operativo`.
-2. Continuare con smoke/cleanup dei branch document detail rimasti.
+1. Scegliere la prossima pagina account da portare su ONSUS/UX 2026.
+2. Possibili audit:
+   - ACCOUNT-DASHBOARD-1A audit ONSUS `my-account.html`;
+   - LOGIN-REGISTER-1A audit login/registrazione ONSUS;
+   - altra pagina account secondo priorita Germano.
 3. Decidere prossimo task PayPal:
    - retry sandbox per ottenere `Completed`;
    - oppure UI/admin per pending review.
@@ -322,17 +377,16 @@ Smoke DOC-DETAIL-2C-D:
 
 ### UI
 
-1. Refactor ONSUS della lista ordini.
-2. Mostrare nella lista ordini anche lo stato pagamento, separato dallo stato ordine.
-3. Verificare casi:
-   - pending PayPal;
-   - canceled PayPal;
-   - failed PayPal;
-   - BancaSella;
-   - bonifico/contanti;
-   - documento pagato.
+1. ACCOUNT-DASHBOARD-1A: audit ONSUS `my-account.html`.
+2. LOGIN-REGISTER-1A: audit login/registrazione ONSUS.
+3. Proseguire altra pagina account secondo priorita Germano.
+4. Per ogni refactor UI:
+   - audit ONSUS prima;
+   - micro-task implementativo dopo;
+   - smoke desktop/mobile;
+   - nessuna patch sul vecchio layout quando si cambia impostazione grafica.
 
-## 8. Guardrail permanenti
+## 9. Guardrail permanenti
 
 - Non toccare `main` senza task esplicito.
 - Non creare PR verso `main`.
