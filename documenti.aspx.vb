@@ -578,6 +578,12 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
         Return (stato1 & " " & stato2).Trim()
     End Function
 
+    Protected Function GetPaymentMethodLabel(ByVal value As Object) As String
+        Dim text As String = SafeStatusText(value)
+        If text = "" Then Return "Non specificato"
+        Return text
+    End Function
+
     Protected Function GetPaymentStatusLabel(ByVal pagatoObj As Object, ByVal statoObj As Object) As String
         Dim pagato As Integer = SafeInt(pagatoObj, 0)
         Dim stato As Integer = SafeInt(statoObj, 0)

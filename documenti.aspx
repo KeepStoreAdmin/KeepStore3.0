@@ -335,6 +335,21 @@
                 </ItemTemplate>
             </asp:TemplateField>
 
+            <asp:TemplateField HeaderText="Totale">
+                <ItemTemplate>
+                    <div class="d-flex flex-column">
+                        <div class="body-text-3"><%# Eval("TotaleDocumento", "{0:C}") %></div>
+                        <div class="body-small text-main-2">Imponibile: <%# Eval("TotImponibile", "{0:C}") %></div>
+                    </div>
+                </ItemTemplate>
+            </asp:TemplateField>
+
+            <asp:TemplateField HeaderText="Metodo pagamento">
+                <ItemTemplate>
+                    <span class="body-text-3"><%#: GetPaymentMethodLabel(Eval("ListaPagamentoDescrizione")) %></span>
+                </ItemTemplate>
+            </asp:TemplateField>
+
             <asp:TemplateField HeaderText="Stato ordine">
                 <ItemTemplate>
                     <span class="ks-status-badge ks-status-badge-order"><%#: FormatOrderStatus(Eval("StatiDescrizione1"), Eval("StatiDescrizione2")) %></span>
@@ -350,35 +365,12 @@
                 </ItemTemplate>
             </asp:TemplateField>
 
-            <asp:TemplateField HeaderText="Totale">
-                <ItemTemplate>
-                    <div class="d-flex flex-column">
-                        <div class="body-text-3"><%# Eval("TotaleDocumento", "{0:C}") %></div>
-                        <div class="body-small text-main-2">Imponibile: <%# Eval("TotImponibile", "{0:C}") %></div>
-                    </div>
-                </ItemTemplate>
-            </asp:TemplateField>
-
             <asp:TemplateField HeaderText="Azione">
                 <ItemTemplate>
                     <div class="ks-action-stack">
 
-                        <% If Request.QueryString("t") = Session("IdDocumentoCoupon") Then %>
-                            <a href="<%# "coupon_esito_acquisto.aspx?id=" & Eval("Coupon_idCoupon") & "&cod=" & Eval("Coupon_CodControllo") %>" class="tf-btn btn-small d-inline-flex">
-                                <span class="text-white">Dettaglio</span>
-                            </a>
-                        <% Else %>
-                            <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>" class="tf-btn btn-small d-inline-flex">
-                                <span class="text-white">Dettaglio</span>
-                            </a>
-                        <% End If %>
-
-                        <asp:ImageButton ID="imgStampaDoc" idDoc='<%# Eval("id")%>' runat="server"
-                            ToolTip="Richiedi documento tramite posta elettronica"
-                            ImageUrl="/Images/pdf2mail.png" OnClick="stampaClick" CssClass="ks-icon-btn" />
-
-                        <a <%# SafeTrackingHref(Eval("Tracking")) %> class="ks-icon-btn" target="_blank" title="Tracking">
-                            <img src='<%# GetTrackingImage(Eval("Tracking")) %>' alt="Tracking" />
+                        <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>" class="tf-btn btn-small d-inline-flex">
+                            <span class="text-white">Dettaglio</span>
                         </a>
 
                     </div>
