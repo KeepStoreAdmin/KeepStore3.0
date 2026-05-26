@@ -100,7 +100,7 @@
         <asp:SqlDataSource ID="sdsDocumenti" runat="server" 
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" 
-            SelectCommand="SELECT * FROM (`vdocumenti` LEFT JOIN `utenti` ON ((`vdocumenti`.`UtentiId` = `utenti`.`Id`)) LEFT JOIN ( SELECT id, Link_Tracking FROM `vettori`) AS vettori ON (`vdocumenti`.`VettoriId` = `vettori`.`id`) ) Left Join pagamentitipo on vdocumenti.pagamentiTipoId = pagamentiTipo.id WHERE ( (UtentiId = ?UtentiId ) AND (TipoDocumentiId = ?TipoDocumentiId ) ) ORDER BY vdocumenti.ID DESC">
+            SelectCommand="SELECT vdocumenti.*, utenti.*, vettori.Link_Tracking, COALESCE(dpay.Pagato,0) AS ListaPagato, COALESCE(dpay.StatoPagamentoWeb,0) AS ListaStatoPagamentoWeb, dpay.DataStatoPagamentoWeb AS ListaDataStatoPagamentoWeb, COALESCE(dpay.UltimoEsitoPagamentoWeb,'') AS ListaUltimoEsitoPagamentoWeb, COALESCE(pagamentitipo.Descrizione,'') AS ListaPagamentoDescrizione, COALESCE(pagamentitipo.OnLine,0) AS ListaPagamentiTipoOnline FROM `vdocumenti` LEFT JOIN `utenti` ON `vdocumenti`.`UtentiId` = `utenti`.`Id` LEFT JOIN (SELECT id, Link_Tracking FROM `vettori`) AS vettori ON `vdocumenti`.`VettoriId` = `vettori`.`id` LEFT JOIN `pagamentitipo` ON `vdocumenti`.`PagamentiTipoId` = `pagamentitipo`.`id` LEFT JOIN `documenti` dpay ON dpay.`id` = `vdocumenti`.`Id` WHERE ((`vdocumenti`.`UtentiId` = ?UtentiId) AND (`vdocumenti`.`TipoDocumentiId` = ?TipoDocumentiId)) ORDER BY `vdocumenti`.`ID` DESC">
             <SelectParameters>
                 <asp:SessionParameter Name="UtentiId" SessionField="UtentiID" Type="int32" />
                 <asp:QueryStringParameter QueryStringField="t" Name="TipoDocumentiId" Type="Int16" />
@@ -318,7 +318,7 @@
                             <div class="ks-order-details-body">
                                 <div class="body-small"><strong>Destinatario:</strong> <%#: Eval("RagioneSociale") %> <%#: Eval("CognomeNome") %> - <%#: Eval("SedeLegale") %></div>
                                 <div class="body-small"><strong>Altra destinazione:</strong> <%#: Eval("DestinazioneMerci") %></div>
-                                <div class="body-small"><strong>Pagamento:</strong> <%#: Eval("PagamentiTipoDescrizione") %></div>
+                                <div class="body-small"><strong>Pagamento:</strong> <%#: Eval("ListaPagamentoDescrizione") %></div>
                                 <div class="body-small"><strong>Spedizione:</strong> <%#: Eval("VettoriDescrizione") %></div>
                                 <div class="body-small"><strong>Tracking:</strong> <%# separa_tracking(Eval("Tracking"), Eval("Link_Tracking")) %></div>
                                 <div class="body-small" style="<%# testNote(Eval("Note")) %>"><strong>Note corriere:</strong> <%#: Eval("Note") %></div>
@@ -335,12 +335,6 @@
                 </ItemTemplate>
             </asp:TemplateField>
 
-            <asp:TemplateField HeaderText="Stato">
-                <ItemTemplate>
-                    <span class="body-text-3 ks-status-pill"><%#: Eval("StatiDescrizione1") %></span>
-                </ItemTemplate>
-            </asp:TemplateField>
-
             <asp:TemplateField HeaderText="Totale">
                 <ItemTemplate>
                     <div class="d-flex flex-column">
@@ -350,45 +344,33 @@
                 </ItemTemplate>
             </asp:TemplateField>
 
+            <asp:TemplateField HeaderText="Metodo pagamento">
+                <ItemTemplate>
+                    <span class="body-text-3"><%#: GetPaymentMethodLabel(Eval("ListaPagamentoDescrizione")) %></span>
+                </ItemTemplate>
+            </asp:TemplateField>
+
+            <asp:TemplateField HeaderText="Stato ordine">
+                <ItemTemplate>
+                    <span class="ks-status-badge ks-status-badge-order"><%#: FormatOrderStatus(Eval("StatiDescrizione1"), Eval("StatiDescrizione2")) %></span>
+                </ItemTemplate>
+            </asp:TemplateField>
+
+            <asp:TemplateField HeaderText="Stato pagamento">
+                <ItemTemplate>
+                    <div class="ks-order-payment-state">
+                        <span class='<%# GetPaymentStatusCssClass(Eval("ListaPagato"), Eval("ListaStatoPagamentoWeb")) %>'><%# GetPaymentStatusLabel(Eval("ListaPagato"), Eval("ListaStatoPagamentoWeb")) %></span>
+                        <span class="body-small text-main-2"><%#: GetPaymentStatusDescription(Eval("ListaPagato"), Eval("ListaStatoPagamentoWeb"), Eval("ListaUltimoEsitoPagamentoWeb"), Eval("ListaPagamentiTipoOnline"), Eval("ListaPagamentoDescrizione")) %></span>
+                    </div>
+                </ItemTemplate>
+            </asp:TemplateField>
+
             <asp:TemplateField HeaderText="Azione">
                 <ItemTemplate>
                     <div class="ks-action-stack">
 
-                        <% If Request.QueryString("t") = Session("IdDocumentoCoupon") Then %>
-                            <a href="<%# "coupon_esito_acquisto.aspx?id=" & Eval("Coupon_idCoupon") & "&cod=" & Eval("Coupon_CodControllo") %>" class="tf-btn btn-small d-inline-flex">
-                                <span class="text-white">Dettaglio</span>
-                            </a>
-                        <% Else %>
-                            <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>" class="tf-btn btn-small d-inline-flex">
-                                <span class="text-white">Dettaglio</span>
-                            </a>
-                        <% End If %>
-
-                        <asp:ImageButton ID="imgStampaDoc" idDoc='<%# Eval("id")%>' runat="server"
-                            ToolTip="Richiedi documento tramite posta elettronica"
-                            ImageUrl="/Images/pdf2mail.png" OnClick="stampaClick" CssClass="ks-icon-btn" />
-
-                        <% If Request.QueryString("t") = Session("IdDocumentoCoupon") Then %>
-                            <a href="<%# "coupon_esito_acquisto.aspx?id=" & Eval("Coupon_idCoupon") & "&cod=" & Eval("Coupon_CodControllo") %>"
-                               class="ks-icon-btn"
-                               style="display:<%# IIf(Eval("Pagato") = 1 Or (Eval("PagamentiTipoOnline") = 0), "", "none")%>;">
-                                <img src="/Public/Images/pagato.png" alt="Pagato" />
-                            </a>
-                        <% Else %>
-                            <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>"
-                               class="ks-icon-btn"
-                               style="display:<%# IIf((Eval("Pagato") = 1 And (Eval("PagamentiTipoOnline") > 0)) Or (Eval("CodiceAutorizzazione") <> ""), "", "none")%>;">
-                                <img src="/Public/Images/pagato.png" alt="Pagato" />
-                            </a>
-                            <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>"
-                               class="ks-icon-btn"
-                               style="display:<%# MostraPagaOra(Eval("id"), Eval("Pagato"), Eval("CodiceAutorizzazione"), Eval("StatiId"), Eval("PagamentiTipoOnline"), Eval("TotaleDocumento")) %>;">
-                                <img src="/Public/Images/Paga_Ora.png" alt="Paga ora" />
-                            </a>
-                        <% End If %>
-
-                        <a <%# SafeTrackingHref(Eval("Tracking")) %> class="ks-icon-btn" target="_blank" title="Tracking">
-                            <img src='<%# GetTrackingImage(Eval("Tracking")) %>' alt="Tracking" />
+                        <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>" class="tf-btn btn-small d-inline-flex">
+                            <span class="text-white">Dettaglio</span>
                         </a>
 
                     </div>
