@@ -130,14 +130,14 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo MY-ORDERS-1E-D e cleanup MY-ORDERS-1:
+Stato di riferimento dopo ACCOUNT-DASHBOARD-1B-D e cleanup ACCOUNT-DASHBOARD-1:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `41a709b22ce37bf6b1669f52b690824082e4ebc1`
-- Merge PR #96: `41a709b22ce37bf6b1669f52b690824082e4ebc1`
+- HEAD stabile: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
+- Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
-Branch PayPal/config/document detail/my orders gia mergiati e, dove previsto, puliti:
+Branch PayPal/config/document detail/my orders/account dashboard gia mergiati e, dove previsto, puliti:
 
 - PR #81 PayPal state contract and sandbox-safe launcher skeleton
 - PR #82 PayPal post-order routing to launcher
@@ -154,6 +154,7 @@ Branch PayPal/config/document detail/my orders gia mergiati e, dove previsto, pu
 - PR #94 ONSUS my orders list refactor
 - PR #95 stato filter fix, superato dal fix definitivo successivo
 - PR #96 documenti filters GET fix
+- PR #98 ONSUS account dashboard refactor
 
 ## 4. Roadmap sintetica
 
@@ -168,13 +169,17 @@ Branch PayPal/config/document detail/my orders gia mergiati e, dove previsto, pu
 
 ### UI account/documenti
 
-1. Continuare refactor ONSUS sulle pagine area account.
+1. Continuare refactor ONSUS sulle pagine area account non ancora migrate.
 2. Separare sempre:
    - stato ordine;
    - stato pagamento.
-3. Mantenere lista ordini e dettaglio ordine coerenti tra loro.
+3. Mantenere dashboard, lista ordini e dettaglio ordine coerenti tra loro.
 4. Aggiungere smoke desktop/mobile per ogni refactor.
 5. Evitare azioni gateway dirette nelle liste: il retry pagamento resta nel dettaglio ordine salvo task dedicato.
+6. Stato area account gia stabilizzata:
+   - `documentidettaglio.aspx`: stabile;
+   - `documenti.aspx`: stabile;
+   - `myaccount.aspx`: stabile.
 
 ### Documentazione
 
@@ -348,13 +353,48 @@ Regola UX confermata:
 - il retry pagamento resta nel dettaglio ordine;
 - stato ordine e stato pagamento restano concetti separati.
 
-## 8. Prossimi step consigliati
+## 8. Stato Account Dashboard / myaccount.aspx
+
+ACCOUNT-DASHBOARD-1 e chiuso.
+
+Esiti principali:
+
+- ACCOUNT-DASHBOARD-1A audit ONSUS `my-account.html`: B, pronto con note.
+- ACCOUNT-DASHBOARD-1B refactor dashboard ONSUS: completato.
+- PR #98 merge commit: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`.
+- Smoke ACCOUNT-DASHBOARD-1B-D: A.
+- Cleanup branch ACCOUNT-DASHBOARD-1: completato.
+
+Comportamento finale `myaccount.aspx`:
+
+- layout ONSUS account/dashboard;
+- sidebar account coerente con l'area account;
+- hero/saluto con fallback sicuro;
+- card Profilo con dati essenziali;
+- card Indirizzi con indirizzo principale o fallback;
+- card Ordini recenti, massimo 5 righe;
+- ordini recenti con Stato ordine e Stato pagamento visibili;
+- link `Dettaglio` verso `documentidettaglio.aspx?id=<id>`;
+- link `Vedi tutti gli ordini` verso `documenti.aspx?t=4`;
+- nessun Pay Now diretto;
+- nessun link PayPal/BancaSella/gateway diretto;
+- mobile `390x844`: OK;
+- nessun errore server, MySql, Object reference o BC30002 nello smoke.
+
+Stato area account stabilizzata:
+
+- `documentidettaglio.aspx`: stabile con layout ONSUS e stato pagamento separato;
+- `documenti.aspx`: stabile con layout ONSUS, filtri GET validati e azione solo Dettaglio;
+- `myaccount.aspx`: stabile con dashboard ONSUS, profilo, indirizzi e ordini recenti.
+
+## 9. Prossimi step consigliati
 
 ### Immediati
 
 1. Scegliere la prossima pagina account da portare su ONSUS/UX 2026.
 2. Possibili audit:
-   - ACCOUNT-DASHBOARD-1A audit ONSUS `my-account.html`;
+   - ACCOUNT-PROFILE-1A audit `my-account-edit.aspx` / `datiutente.aspx`;
+   - ACCOUNT-ADDRESS-1A audit `my-account-address.aspx`;
    - LOGIN-REGISTER-1A audit login/registrazione ONSUS;
    - altra pagina account secondo priorita Germano.
 3. Decidere prossimo task PayPal:
@@ -377,16 +417,17 @@ Regola UX confermata:
 
 ### UI
 
-1. ACCOUNT-DASHBOARD-1A: audit ONSUS `my-account.html`.
-2. LOGIN-REGISTER-1A: audit login/registrazione ONSUS.
-3. Proseguire altra pagina account secondo priorita Germano.
-4. Per ogni refactor UI:
+1. ACCOUNT-PROFILE-1A: audit ONSUS profilo / modifica dati account.
+2. ACCOUNT-ADDRESS-1A: audit ONSUS indirizzi.
+3. LOGIN-REGISTER-1A: audit login/registrazione ONSUS.
+4. Proseguire altra pagina account secondo priorita Germano.
+5. Per ogni refactor UI:
    - audit ONSUS prima;
    - micro-task implementativo dopo;
    - smoke desktop/mobile;
    - nessuna patch sul vecchio layout quando si cambia impostazione grafica.
 
-## 9. Guardrail permanenti
+## 10. Guardrail permanenti
 
 - Non toccare `main` senza task esplicito.
 - Non creare PR verso `main`.
