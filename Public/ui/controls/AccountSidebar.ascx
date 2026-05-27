@@ -47,9 +47,9 @@
                     </a>
                 </li>
                 <li>
-                    <a href="cambiapassword.aspx" class="ks-account-nav-link" data-ks-active="cambiapassword.aspx" runat="server" id="lnkPassword">
+                    <a href="password.aspx" class="ks-account-nav-link" data-ks-active="password.aspx" runat="server" id="lnkPassword">
                         <i class="icon-lock"></i>
-                        <span>Password</span>
+                        <span>Cambia password</span>
                     </a>
                 </li>
                 <li>
