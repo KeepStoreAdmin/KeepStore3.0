@@ -31,8 +31,9 @@ Partial Class Public_ui_controls_AccountSidebar
         If pageName = "datiutente.aspx" Then
             Dim tab As String = (Request.QueryString("tab") & "").ToLowerInvariant()
             If tab = "addr" OrElse tab = "addresses" OrElse tab = "indirizzi" Then
-                Return "datiutente.aspx?tab=addr"
+                Return "my-account-address.aspx"
             End If
+            Return "my-account-edit.aspx"
         End If
 
 
@@ -94,6 +95,8 @@ Partial Class Public_ui_controls_AccountSidebar
         Select Case (pageName & "").ToLowerInvariant()
             Case "myaccount.aspx",
                  "datiutente.aspx",
+                 "my-account-edit.aspx",
+                 "my-account-address.aspx",
                  "documenti.aspx",
                  "wishlist.aspx",
                  "password.aspx",
