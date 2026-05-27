@@ -8,7 +8,6 @@
 
     <div class="ks-myaccount">
 
-        <!-- Breadcrumb (tema) -->
         <div class="tf-sp-1 pb-0">
             <div class="container">
                 <div class="tf-breadcrumb-wrap">
@@ -23,12 +22,10 @@
             </div>
         </div>
 
-        <!-- My Account -->
         <section class="tf-sp-2">
             <div class="container">
                 <div class="row">
 
-                    <!-- Sidebar -->
                     <div class="col-lg-3">
                         <div class="wrap-sidebar-account">
                             <ul class="myaccount-nav content-append">
@@ -37,74 +34,128 @@
                                 <li><a href="my-account-address.aspx" class="myaccount-nav-item">Indirizzi</a></li>
                                 <li><span class="myaccount-nav-item active">Dettagli account</span></li>
                                 <li><a href="wishlist.aspx" class="myaccount-nav-item">Wishlist</a></li>
+                                <li><a href="password.aspx" class="myaccount-nav-item">Cambia password</a></li>
                                 <li><a href="logout.aspx" class="myaccount-nav-item">Logout</a></li>
                             </ul>
                         </div>
                     </div>
 
-                    <!-- Content -->
                     <div class="col-lg-9">
                         <div class="myaccount-content account-edit">
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                                 <div>
                                     <h4 class="fw-semibold mb-0">Dettagli account</h4>
-                                    <div class="body-small text-main-2">Aggiorna i tuoi dati anagrafici, fiscali e i contatti.</div>
+                                    <div class="body-small text-main-2">Aggiorna profilo, contatti e indirizzo di fatturazione.</div>
                                 </div>
-                                <a href="datiutente.aspx?edit=1" class="tf-btn btn-fill">Modifica</a>
+                                <a href="myaccount.aspx" class="tf-btn btn-line">Annulla</a>
                             </div>
 
-                            <asp:SqlDataSource ID="sdsUtente" runat="server"
-                                ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                                ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                                SelectCommand="SELECT v.Username, v.email, v.cognomenome, v.ultimoaccesso, u.Codice, u.RagioneSociale, u.Piva, u.CodiceFiscale, u.Telefono, u.Cellulare FROM vlogin v INNER JOIN utenti u ON v.utentiid=u.id WHERE v.id=?LoginId">
-                                <SelectParameters>
-                                    <asp:SessionParameter Name="LoginId" SessionField="LoginId" Type="Int32" />
-                                </SelectParameters>
-                            </asp:SqlDataSource>
+                            <asp:Panel ID="pnlMessage" runat="server" Visible="false" CssClass="alert mb-4" role="status">
+                                <asp:Literal ID="litMessage" runat="server" />
+                            </asp:Panel>
 
-                            <asp:FormView ID="fvAcc" runat="server" DataSourceID="sdsUtente" DefaultMode="ReadOnly">
-                                <ItemTemplate>
-                                    <div class="ks-card tf-bg-1">
-                                        <div class="row g-3">
-                                            <div class="col-12 col-md-6">
-                                                <div class="account-section-title">Accesso / Account</div>
-                                                <div class="account-field-value"><span class="account-field-label">Username:</span> <%# Eval("Username") %></div>
-                                                <div class="account-field-value"><span class="account-field-label">Email:</span> <%# Eval("email") %></div>
-                                                <div class="account-field-value"><span class="account-field-label">Ultimo accesso:</span> <%# Eval("ultimoaccesso", "{0:dd/MM/yyyy HH:mm}") %></div>
-                                                <div class="account-field-value"><span class="account-field-label">Codice cliente:</span> <%# Eval("Codice") %></div>
-                                            </div>
-                                            <div class="col-12 col-md-6">
-                                                <div class="account-section-title">Anagrafica / Fiscale</div>
-                                                <div class="account-field-value"><span class="account-field-label">Ragione sociale:</span> <%# Eval("RagioneSociale") %></div>
-                                                <div class="account-field-value"><span class="account-field-label">Cognome / Nome:</span> <%# Eval("cognomenome") %></div>
-                                                <div class="account-field-value"><span class="account-field-label">Partita IVA:</span> <%# Eval("Piva") %></div>
-                                                <div class="account-field-value"><span class="account-field-label">Codice fiscale:</span> <%# Eval("CodiceFiscale") %></div>
-                                            </div>
+                            <asp:Panel ID="pnlProfile" runat="server">
+                                <asp:HiddenField ID="hidUtentiId" runat="server" />
+
+                                <div class="ks-card tf-bg-1 mb-4">
+                                    <div class="account-section-title">Dati accesso / profilo</div>
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-6">
+                                            <label class="body-small text-main-2" for="<%= txtUsername.ClientID %>">Username</label>
+                                            <asp:TextBox ID="txtUsername" runat="server" CssClass="form-control" ReadOnly="true" />
                                         </div>
-
-                                        <hr class="my-4" />
-
-                                        <div class="row g-3">
-                                            <div class="col-12 col-md-6">
-                                                <div class="account-section-title">Contatti</div>
-                                                <div class="account-field-value"><span class="account-field-label">Telefono:</span> <%# Eval("Telefono") %></div>
-                                                <div class="account-field-value"><span class="account-field-label">Cellulare:</span> <%# Eval("Cellulare") %></div>
-                                            </div>
-                                            <div class="col-12 col-md-6 d-flex align-items-end justify-content-md-end">
-                                                <div class="d-flex gap-2 flex-wrap">
-                                                    <a class="tf-btn btn-line" href="my-account-address.aspx">Indirizzi</a>
-                                                    <a class="tf-btn btn-fill" href="datiutente.aspx?edit=1">Modifica dati</a>
-                                                </div>
-                                            </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="body-small text-main-2" for="<%= txtEmail.ClientID %>">Email</label>
+                                            <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" TextMode="Email" MaxLength="150" />
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="body-small text-main-2" for="<%= txtCodice.ClientID %>">Codice cliente</label>
+                                            <asp:TextBox ID="txtCodice" runat="server" CssClass="form-control" ReadOnly="true" />
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="body-small text-main-2" for="<%= txtUltimoAccesso.ClientID %>">Ultimo accesso</label>
+                                            <asp:TextBox ID="txtUltimoAccesso" runat="server" CssClass="form-control" ReadOnly="true" />
                                         </div>
                                     </div>
-                                </ItemTemplate>
-                            </asp:FormView>
+                                </div>
 
-                            <div class="mt-4">
-                                <a href="password.aspx" class="tf-btn btn-line">Cambia password</a>
-                            </div>
+                                <div class="ks-card tf-bg-1 mb-4">
+                                    <div class="account-section-title">Dati fiscali / intestazione</div>
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-6">
+                                            <label class="body-small text-main-2" for="<%= txtRagioneSociale.ClientID %>">Ragione sociale</label>
+                                            <asp:TextBox ID="txtRagioneSociale" runat="server" CssClass="form-control" ReadOnly="true" />
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="body-small text-main-2" for="<%= txtCognomeNome.ClientID %>">Nome / Cognome</label>
+                                            <asp:TextBox ID="txtCognomeNome" runat="server" CssClass="form-control" ReadOnly="true" />
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="body-small text-main-2" for="<%= txtPiva.ClientID %>">Partita IVA</label>
+                                            <asp:TextBox ID="txtPiva" runat="server" CssClass="form-control" ReadOnly="true" />
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="body-small text-main-2" for="<%= txtCodiceFiscale.ClientID %>">Codice fiscale</label>
+                                            <asp:TextBox ID="txtCodiceFiscale" runat="server" CssClass="form-control" ReadOnly="true" />
+                                        </div>
+                                    </div>
+                                </div>
 
+                                <div class="ks-card tf-bg-1 mb-4">
+                                    <div class="account-section-title">Contatti</div>
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-4">
+                                            <label class="body-small text-main-2" for="<%= txtTelefono.ClientID %>">Telefono</label>
+                                            <asp:TextBox ID="txtTelefono" runat="server" CssClass="form-control" MaxLength="80" />
+                                        </div>
+                                        <div class="col-12 col-md-4">
+                                            <label class="body-small text-main-2" for="<%= txtCellulare.ClientID %>">Cellulare</label>
+                                            <asp:TextBox ID="txtCellulare" runat="server" CssClass="form-control" MaxLength="80" />
+                                        </div>
+                                        <div class="col-12 col-md-4">
+                                            <label class="body-small text-main-2" for="<%= txtFax.ClientID %>">Fax</label>
+                                            <asp:TextBox ID="txtFax" runat="server" CssClass="form-control" MaxLength="80" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="ks-card tf-bg-1 mb-4">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                        <div class="account-section-title mb-0">Indirizzo di fatturazione</div>
+                                        <a href="my-account-address.aspx" class="tf-btn btn-line">Indirizzi</a>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="body-small text-main-2" for="<%= txtIndirizzo.ClientID %>">Indirizzo</label>
+                                            <asp:TextBox ID="txtIndirizzo" runat="server" CssClass="form-control" MaxLength="255" />
+                                        </div>
+                                        <div class="col-12 col-md-3">
+                                            <label class="body-small text-main-2" for="<%= txtCap.ClientID %>">CAP</label>
+                                            <asp:TextBox ID="txtCap" runat="server" CssClass="form-control" MaxLength="12" />
+                                        </div>
+                                        <div class="col-12 col-md-5">
+                                            <label class="body-small text-main-2" for="<%= txtCitta.ClientID %>">Citta</label>
+                                            <asp:TextBox ID="txtCitta" runat="server" CssClass="form-control" MaxLength="120" />
+                                        </div>
+                                        <div class="col-6 col-md-2">
+                                            <label class="body-small text-main-2" for="<%= txtProvincia.ClientID %>">Provincia</label>
+                                            <asp:TextBox ID="txtProvincia" runat="server" CssClass="form-control" MaxLength="8" />
+                                        </div>
+                                        <div class="col-6 col-md-2">
+                                            <label class="body-small text-main-2" for="<%= txtNazione.ClientID %>">Nazione</label>
+                                            <asp:TextBox ID="txtNazione" runat="server" CssClass="form-control" MaxLength="8" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <asp:LinkButton ID="btnSave" runat="server" CssClass="tf-btn btn-fill" OnClick="btnSave_Click">
+                                        Salva dati
+                                    </asp:LinkButton>
+                                    <a href="myaccount.aspx" class="tf-btn btn-line">Annulla</a>
+                                    <a href="password.aspx" class="tf-btn btn-line">Cambia password</a>
+                                </div>
+                            </asp:Panel>
                         </div>
                     </div>
 

@@ -23,13 +23,13 @@
                     </a>
                 </li>
                 <li>
-                    <a href="datiutente.aspx" class="ks-account-nav-link" data-ks-active="datiutente.aspx" runat="server" id="lnkDati">
+                    <a href="my-account-edit.aspx" class="ks-account-nav-link" data-ks-active="my-account-edit.aspx" runat="server" id="lnkDati">
                         <i class="icon-user"></i>
                         <span>Dettagli account</span>
                     </a>
                 </li>
                 <li>
-                    <a href="datiutente.aspx?tab=addr" class="ks-account-nav-link" data-ks-active="datiutente.aspx?tab=addr" runat="server" id="lnkIndirizzi">
+                    <a href="my-account-address.aspx" class="ks-account-nav-link" data-ks-active="my-account-address.aspx" runat="server" id="lnkIndirizzi">
                         <i class="icon-map-pin"></i>
                         <span>Indirizzi</span>
                     </a>
