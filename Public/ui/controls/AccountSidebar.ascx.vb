@@ -16,7 +16,18 @@ Partial Class Public_ui_controls_AccountSidebar
             Return
         End If
 
+        SetRootLinks()
         SetActiveMenuCss(currentKey, currentPage)
+    End Sub
+
+    Private Sub SetRootLinks()
+        lnkDashboard.HRef = ResolveUrl("~/myaccount.aspx")
+        lnkDati.HRef = ResolveUrl("~/my-account-edit.aspx")
+        lnkIndirizzi.HRef = ResolveUrl("~/my-account-address.aspx")
+        lnkOrdini.HRef = ResolveUrl("~/documenti.aspx")
+        lnkWishlist.HRef = ResolveUrl("~/wishlist.aspx")
+        lnkPassword.HRef = ResolveUrl("~/password.aspx")
+        lnkLogout.HRef = ResolveUrl("~/logout.aspx")
     End Sub
 
     Private Function GetCurrentPageName() As String
