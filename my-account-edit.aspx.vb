@@ -7,6 +7,8 @@ Imports System.Web.UI.WebControls
 Partial Class my_account_edit
     Inherits System.Web.UI.Page
 
+    Private Const MaxEmailLength As Integer = 50
+
     Private ReadOnly Property ConnString As String
         Get
             Return ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
@@ -47,6 +49,10 @@ Partial Class my_account_edit
             ShowMessage("Inserisci un indirizzo email valido.", False)
             Return
         End If
+        If newEmail.Length > MaxEmailLength Then
+            ShowMessage("L'indirizzo email non puo superare 50 caratteri.", False)
+            Return
+        End If
 
         Dim updated As New AccountProfileData()
         updated.UtentiId = current.UtentiId
@@ -56,9 +62,9 @@ Partial Class my_account_edit
         updated.Citta = MergeText(txtCitta, current.Citta)
         updated.Provincia = MergeText(txtProvincia, current.Provincia)
         updated.Nazione = MergeText(txtNazione, current.Nazione)
-        updated.Telefono = MergeText(txtTelefono, current.Telefono)
-        updated.Cellulare = MergeText(txtCellulare, current.Cellulare)
-        updated.Fax = MergeText(txtFax, current.Fax)
+        updated.Telefono = SubmittedText(txtTelefono)
+        updated.Cellulare = SubmittedText(txtCellulare)
+        updated.Fax = SubmittedText(txtFax)
 
         Try
             Using conn As New MySqlConnection(ConnString)
@@ -93,10 +99,11 @@ Partial Class my_account_edit
                     End Using
 
                     Dim sqlLogin As String =
-                        "UPDATE login SET Email = @Email WHERE UtentiId = @UtentiId"
+                        "UPDATE login SET Email = @Email WHERE id = @LoginId AND UtentiId = @UtentiId"
 
                     Using cmdLogin As New MySqlCommand(sqlLogin, conn, tr)
                         cmdLogin.Parameters.AddWithValue("@Email", updated.Email)
+                        cmdLogin.Parameters.AddWithValue("@LoginId", loginId)
                         cmdLogin.Parameters.AddWithValue("@UtentiId", current.UtentiId)
                         cmdLogin.ExecuteNonQuery()
                     End Using
@@ -213,6 +220,11 @@ Partial Class my_account_edit
         Dim value As String = CleanText(tb.Text)
         If String.IsNullOrWhiteSpace(value) Then Return CleanText(currentValue)
         Return value
+    End Function
+
+    Private Function SubmittedText(ByVal tb As TextBox) As String
+        If tb Is Nothing Then Return ""
+        Return CleanText(tb.Text)
     End Function
 
     Private Function CleanText(ByVal value As String) As String

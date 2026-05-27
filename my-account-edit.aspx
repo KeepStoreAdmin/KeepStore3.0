@@ -66,7 +66,7 @@
                                         </div>
                                         <div class="col-12 col-md-6">
                                             <label class="body-small text-main-2" for="<%= txtEmail.ClientID %>">Email</label>
-                                            <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" TextMode="Email" MaxLength="150" />
+                                            <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" TextMode="Email" MaxLength="50" />
                                         </div>
                                         <div class="col-12 col-md-6">
                                             <label class="body-small text-main-2" for="<%= txtCodice.ClientID %>">Codice cliente</label>
@@ -106,15 +106,15 @@
                                     <div class="row g-3">
                                         <div class="col-12 col-md-4">
                                             <label class="body-small text-main-2" for="<%= txtTelefono.ClientID %>">Telefono</label>
-                                            <asp:TextBox ID="txtTelefono" runat="server" CssClass="form-control" MaxLength="80" />
+                                            <asp:TextBox ID="txtTelefono" runat="server" CssClass="form-control" MaxLength="50" />
                                         </div>
                                         <div class="col-12 col-md-4">
                                             <label class="body-small text-main-2" for="<%= txtCellulare.ClientID %>">Cellulare</label>
-                                            <asp:TextBox ID="txtCellulare" runat="server" CssClass="form-control" MaxLength="80" />
+                                            <asp:TextBox ID="txtCellulare" runat="server" CssClass="form-control" MaxLength="50" />
                                         </div>
                                         <div class="col-12 col-md-4">
                                             <label class="body-small text-main-2" for="<%= txtFax.ClientID %>">Fax</label>
-                                            <asp:TextBox ID="txtFax" runat="server" CssClass="form-control" MaxLength="80" />
+                                            <asp:TextBox ID="txtFax" runat="server" CssClass="form-control" MaxLength="50" />
                                         </div>
                                     </div>
                                 </div>
