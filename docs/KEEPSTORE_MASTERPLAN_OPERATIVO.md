@@ -130,14 +130,15 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo ACCOUNT-PROFILE-1B-T e cleanup ACCOUNT-PROFILE-1B:
+Stato di riferimento dopo DOCS-4C e cleanup DOCS-4:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `919b342bd0d0c9ff7b7bddc0453f99e4efe79fbc`
+- HEAD stabile: `8a3efe677fce31c7eb7f590747ac1a7d2cf7197d`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
 - Merge PR #102: `919b342bd0d0c9ff7b7bddc0453f99e4efe79fbc`
+- Merge PR #103: `8a3efe677fce31c7eb7f590747ac1a7d2cf7197d`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -161,6 +162,7 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
 - PR #100 ONSUS account profile refactor
 - PR #101 account sidebar root-level links fix
 - PR #102 account sidebar active/current fix
+- PR #103 masterplan update after account profile closure
 
 ## 4. Roadmap sintetica
 
@@ -388,12 +390,14 @@ Comportamento finale `myaccount.aspx`:
 - mobile `390x844`: OK;
 - nessun errore server, MySql, Object reference o BC30002 nello smoke.
 
-Stato area account stabilizzata:
+Stato area account stabilizzata per funzionalita principali:
 
 - `documentidettaglio.aspx`: stabile con layout ONSUS e stato pagamento separato;
 - `documenti.aspx`: stabile con layout ONSUS, filtri GET validati e azione solo Dettaglio;
 - `myaccount.aspx`: stabile con dashboard ONSUS, profilo, indirizzi e ordini recenti;
-- `my-account-edit.aspx`: stabile con profilo ONSUS, salvataggio campi contatto validato e sidebar account coerente.
+- `my-account-edit.aspx`: stabile con profilo ONSUS, salvataggio campi contatto validato e AccountSidebar condivisa coerente.
+
+Nota: questa stabilizzazione non equivale al cleanup completo di tutte le nav/sidebar inline legacy presenti nelle pagine account. Quel debito UI resta separato.
 
 ## 9. Stato Account Profile / my-account-edit.aspx
 
@@ -424,7 +428,7 @@ Comportamento finale area profilo:
 - Pulsante `Annulla` validato.
 - Mobile `390x844`: validato.
 
-Sidebar account finale:
+Sidebar condivisa AccountSidebar finale:
 
 - Link root-level:
   - `/myaccount.aspx`
@@ -434,9 +438,10 @@ Sidebar account finale:
   - `/wishlist.aspx`
   - `/password.aspx`
   - `/logout.aspx`
-- Nessun link `Public/ui/controls/...`.
-- Active/current corretto con una sola voce `active` e un solo `aria-current="page"` per pagina.
+- Nessun link `Public/ui/controls/...` nella sidebar condivisa `AccountSidebar`.
+- Active/current della sidebar condivisa corretto con una sola voce `active` e un solo `aria-current="page"` per pagina.
 - Validato su dashboard, dettagli account, indirizzi, ordini, wishlist e password.
+- Non affermare che tutte le sidebar/nav inline legacy dell'area account siano gia state rimosse.
 
 Smoke finale ACCOUNT-PROFILE-1B-T:
 
@@ -450,15 +455,47 @@ Smoke finale ACCOUNT-PROFILE-1B-T:
 Follow-up separato:
 
 - `ACCOUNT-PASSWORD-AUDIT-1A`: valutare `password.aspx` vs `cambiapassword.aspx`.
-- Non correggere in DOCS-4.
+- Non correggere in DOCS-4/DOCS-5.
 - Non modificare password flow senza autorizzazione Germano.
 
-## 10. Prossimi step consigliati
+## 10. Debito UI residuo sidebar inline account
+
+SIDEBAR-DOC-AUDIT-1A ha confermato che la nota Codex post DOCS-4 era reale/parziale:
+
+- `Page.master` renderizza la sidebar condivisa `AccountSidebar` in `ks-account-aside`.
+- `AccountSidebar` condivisa e corretta e validata:
+  - link root-level OK;
+  - active/current dinamico OK;
+  - target password attuale: `/password.aspx`;
+  - mapping legacy presente per `datiutente.aspx`, `documentidettaglio.aspx` e `cambiapassword.aspx`.
+- Diverse pagine account contengono ancora nav/sidebar inline legacy nel `MainContent`, in particolare strutture tipo `myaccount-nav`.
+- Alcune nav inline hanno `active` hardcoded.
+- Alcune pagine contengono ancora link legacy verso `datiutente.aspx`.
+- Smoke server leggero ha indicato almeno DOM doppio nav su `my-account-edit.aspx`: `.ks-account-nav` globale nel DOM e `.myaccount-nav` inline nel DOM.
+- Su `my-account-edit.aspx` la doppia nav non risultava doppia visibile nello smoke leggero: la `ks-account-nav` era nel DOM ma non visibile, mentre la `myaccount-nav` inline era visibile.
+- Impatto funzionale attuale: medio, non bloccante sul profilo, ma da non ignorare prima dei prossimi refactor account.
+
+Task consigliato separato:
+
+- `ACCOUNT-SIDEBAR-INLINE-CLEANUP-1A`: audit/cleanup delle sidebar inline legacy nelle pagine:
+  - `myaccount.aspx`
+  - `my-account-edit.aspx`
+  - `my-account-address.aspx`
+  - `documenti.aspx`
+  - `wishlist.aspx`
+  - `password.aspx`
+  - `datiutente.aspx`
+  - `cambiapassword.aspx`
+- Obiettivo: decidere con Germano se rimuovere, nascondere o riallineare le nav inline legacy, mantenendo `AccountSidebar` condivisa come fonte di navigazione account.
+- Vincolo: non modificare password flow dentro il cleanup sidebar senza autorizzazione Germano.
+
+## 11. Prossimi step consigliati
 
 ### Immediati
 
 1. Scegliere la prossima pagina account da portare su ONSUS/UX 2026.
 2. Possibili audit:
+   - ACCOUNT-SIDEBAR-INLINE-CLEANUP-1A audit/cleanup debito UI sidebar inline account;
    - ACCOUNT-ADDRESS-1A audit `my-account-address.aspx`;
    - LOGIN-REGISTER-1A audit login/registrazione ONSUS;
    - ACCOUNT-PASSWORD-AUDIT-1A audit separato `password.aspx` vs `cambiapassword.aspx`, non urgente salvo decisione Germano;
@@ -483,17 +520,18 @@ Follow-up separato:
 
 ### UI
 
-1. ACCOUNT-ADDRESS-1A: audit ONSUS indirizzi.
-2. LOGIN-REGISTER-1A: audit login/registrazione ONSUS.
-3. ACCOUNT-PASSWORD-AUDIT-1A: audit separato password, senza modificare password flow senza autorizzazione Germano.
-4. Proseguire altra pagina account secondo priorita Germano.
-5. Per ogni refactor UI:
+1. ACCOUNT-SIDEBAR-INLINE-CLEANUP-1A: audit/cleanup debito UI sidebar inline account.
+2. ACCOUNT-ADDRESS-1A: audit ONSUS indirizzi.
+3. LOGIN-REGISTER-1A: audit login/registrazione ONSUS.
+4. ACCOUNT-PASSWORD-AUDIT-1A: audit separato password, senza modificare password flow senza autorizzazione Germano.
+5. Proseguire altra pagina account secondo priorita Germano.
+6. Per ogni refactor UI:
    - audit ONSUS prima;
    - micro-task implementativo dopo;
    - smoke desktop/mobile;
    - nessuna patch sul vecchio layout quando si cambia impostazione grafica.
 
-## 11. Guardrail permanenti
+## 12. Guardrail permanenti
 
 - Non toccare `main` senza task esplicito.
 - Non creare PR verso `main`.
