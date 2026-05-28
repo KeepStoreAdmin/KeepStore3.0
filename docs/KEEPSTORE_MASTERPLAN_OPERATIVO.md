@@ -1,6 +1,6 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-05-26
+Aggiornato: 2026-05-28
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
@@ -130,14 +130,17 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo ACCOUNT-DASHBOARD-1B-D e cleanup ACCOUNT-DASHBOARD-1:
+Stato di riferimento dopo ACCOUNT-PROFILE-1B-T e cleanup ACCOUNT-PROFILE-1B:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
+- HEAD stabile: `919b342bd0d0c9ff7b7bddc0453f99e4efe79fbc`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
+- Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
+- Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
+- Merge PR #102: `919b342bd0d0c9ff7b7bddc0453f99e4efe79fbc`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
-Branch PayPal/config/document detail/my orders/account dashboard gia mergiati e, dove previsto, puliti:
+Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
 
 - PR #81 PayPal state contract and sandbox-safe launcher skeleton
 - PR #82 PayPal post-order routing to launcher
@@ -155,6 +158,9 @@ Branch PayPal/config/document detail/my orders/account dashboard gia mergiati e,
 - PR #95 stato filter fix, superato dal fix definitivo successivo
 - PR #96 documenti filters GET fix
 - PR #98 ONSUS account dashboard refactor
+- PR #100 ONSUS account profile refactor
+- PR #101 account sidebar root-level links fix
+- PR #102 account sidebar active/current fix
 
 ## 4. Roadmap sintetica
 
@@ -179,7 +185,8 @@ Branch PayPal/config/document detail/my orders/account dashboard gia mergiati e,
 6. Stato area account gia stabilizzata:
    - `documentidettaglio.aspx`: stabile;
    - `documenti.aspx`: stabile;
-   - `myaccount.aspx`: stabile.
+   - `myaccount.aspx`: stabile;
+   - `my-account-edit.aspx`: stabile.
 
 ### Documentazione
 
@@ -385,17 +392,76 @@ Stato area account stabilizzata:
 
 - `documentidettaglio.aspx`: stabile con layout ONSUS e stato pagamento separato;
 - `documenti.aspx`: stabile con layout ONSUS, filtri GET validati e azione solo Dettaglio;
-- `myaccount.aspx`: stabile con dashboard ONSUS, profilo, indirizzi e ordini recenti.
+- `myaccount.aspx`: stabile con dashboard ONSUS, profilo, indirizzi e ordini recenti;
+- `my-account-edit.aspx`: stabile con profilo ONSUS, salvataggio campi contatto validato e sidebar account coerente.
 
-## 9. Prossimi step consigliati
+## 9. Stato Account Profile / my-account-edit.aspx
+
+ACCOUNT-PROFILE-1B e chiuso.
+
+Esiti principali:
+
+- PR #100 merge commit: `f0eeccc12d701268641dc10950bb1253670f86fa`.
+- PR #100 ha introdotto il profilo account ONSUS su `my-account-edit.aspx`.
+- PR #101 merge commit: `7bfd40cb685e0500f427cf4a481516f70038d235`.
+- PR #101 ha corretto i link root-level della sidebar account.
+- PR #102 merge commit: `919b342bd0d0c9ff7b7bddc0453f99e4efe79fbc`.
+- PR #102 ha corretto lo stato active/current della sidebar account.
+- Smoke finale ACCOUNT-PROFILE-1B-T: A.
+- Cleanup branch ACCOUNT-PROFILE-1B: completato.
+
+Comportamento finale area profilo:
+
+- `myaccount.aspx`: dashboard stabile.
+- Click `Modifica dati`: porta a `my-account-edit.aspx`.
+- `my-account-edit.aspx`: pagina profilo ONSUS visibile e coerente con area account.
+- Sezioni presenti: dati accesso/profilo, dati fiscali read-only, contatti, indirizzo fatturazione.
+- Username read-only.
+- Email con limite coerente a 50 caratteri.
+- Campi opzionali `Telefono`, `Cellulare`, `Fax` svuotabili.
+- Update `login.Email` ristretto al login corrente.
+- Salvataggio, svuotamento e ripristino `Fax` validati.
+- Pulsante `Annulla` validato.
+- Mobile `390x844`: validato.
+
+Sidebar account finale:
+
+- Link root-level:
+  - `/myaccount.aspx`
+  - `/my-account-edit.aspx`
+  - `/my-account-address.aspx`
+  - `/documenti.aspx`
+  - `/wishlist.aspx`
+  - `/password.aspx`
+  - `/logout.aspx`
+- Nessun link `Public/ui/controls/...`.
+- Active/current corretto con una sola voce `active` e un solo `aria-current="page"` per pagina.
+- Validato su dashboard, dettagli account, indirizzi, ordini, wishlist e password.
+
+Smoke finale ACCOUNT-PROFILE-1B-T:
+
+- Ambiente: `https://www.taikun.it/`.
+- Utente test: PROVA, senza password nei report.
+- Nessun errore ASP.NET/MySQL/Object reference/500.
+- Nessun gateway/carrello/checkout/ordine invocato.
+- Password non modificata.
+- Dati sensibili non esposti.
+
+Follow-up separato:
+
+- `ACCOUNT-PASSWORD-AUDIT-1A`: valutare `password.aspx` vs `cambiapassword.aspx`.
+- Non correggere in DOCS-4.
+- Non modificare password flow senza autorizzazione Germano.
+
+## 10. Prossimi step consigliati
 
 ### Immediati
 
 1. Scegliere la prossima pagina account da portare su ONSUS/UX 2026.
 2. Possibili audit:
-   - ACCOUNT-PROFILE-1A audit `my-account-edit.aspx` / `datiutente.aspx`;
    - ACCOUNT-ADDRESS-1A audit `my-account-address.aspx`;
    - LOGIN-REGISTER-1A audit login/registrazione ONSUS;
+   - ACCOUNT-PASSWORD-AUDIT-1A audit separato `password.aspx` vs `cambiapassword.aspx`, non urgente salvo decisione Germano;
    - altra pagina account secondo priorita Germano.
 3. Decidere prossimo task PayPal:
    - retry sandbox per ottenere `Completed`;
@@ -417,9 +483,9 @@ Stato area account stabilizzata:
 
 ### UI
 
-1. ACCOUNT-PROFILE-1A: audit ONSUS profilo / modifica dati account.
-2. ACCOUNT-ADDRESS-1A: audit ONSUS indirizzi.
-3. LOGIN-REGISTER-1A: audit login/registrazione ONSUS.
+1. ACCOUNT-ADDRESS-1A: audit ONSUS indirizzi.
+2. LOGIN-REGISTER-1A: audit login/registrazione ONSUS.
+3. ACCOUNT-PASSWORD-AUDIT-1A: audit separato password, senza modificare password flow senza autorizzazione Germano.
 4. Proseguire altra pagina account secondo priorita Germano.
 5. Per ogni refactor UI:
    - audit ONSUS prima;
@@ -427,7 +493,7 @@ Stato area account stabilizzata:
    - smoke desktop/mobile;
    - nessuna patch sul vecchio layout quando si cambia impostazione grafica.
 
-## 10. Guardrail permanenti
+## 11. Guardrail permanenti
 
 - Non toccare `main` senza task esplicito.
 - Non creare PR verso `main`.
