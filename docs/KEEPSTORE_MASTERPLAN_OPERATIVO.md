@@ -130,15 +130,17 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo DOCS-4C e cleanup DOCS-4:
+Stato di riferimento dopo ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1 e cleanup branch PR #105:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `8a3efe677fce31c7eb7f590747ac1a7d2cf7197d`
+- HEAD stabile: `fbafc68ca36b2ba19a9d16d50af05313e3824209`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
 - Merge PR #102: `919b342bd0d0c9ff7b7bddc0453f99e4efe79fbc`
 - Merge PR #103: `8a3efe677fce31c7eb7f590747ac1a7d2cf7197d`
+- Merge PR #104: `7279f797be01090b573d514a9a64d5519ebe4489`
+- Merge PR #105: `fbafc68ca36b2ba19a9d16d50af05313e3824209`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -163,6 +165,8 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
 - PR #101 account sidebar root-level links fix
 - PR #102 account sidebar active/current fix
 - PR #103 masterplan update after account profile closure
+- PR #104 masterplan sidebar inline debt correction
+- PR #105 account sidebar inline cleanup phase 1 simple pages
 
 ## 4. Roadmap sintetica
 
@@ -460,7 +464,7 @@ Follow-up separato:
 
 ## 10. Debito UI residuo sidebar inline account
 
-SIDEBAR-DOC-AUDIT-1A ha confermato che la nota Codex post DOCS-4 era reale/parziale:
+SIDEBAR-DOC-AUDIT-1A ha confermato che la nota Codex post DOCS-4 era reale/parziale. ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1 e chiuso, ma il cleanup completo di tutte le nav/sidebar inline legacy account non e ancora concluso.
 
 - `Page.master` renderizza la sidebar condivisa `AccountSidebar` in `ks-account-aside`.
 - `AccountSidebar` condivisa e corretta e validata:
@@ -471,18 +475,69 @@ SIDEBAR-DOC-AUDIT-1A ha confermato che la nota Codex post DOCS-4 era reale/parzi
 - Diverse pagine account contengono ancora nav/sidebar inline legacy nel `MainContent`, in particolare strutture tipo `myaccount-nav`.
 - Alcune nav inline hanno `active` hardcoded.
 - Alcune pagine contengono ancora link legacy verso `datiutente.aspx`.
-- Smoke server leggero ha indicato almeno DOM doppio nav su `my-account-edit.aspx`: `.ks-account-nav` globale nel DOM e `.myaccount-nav` inline nel DOM.
-- Su `my-account-edit.aspx` la doppia nav non risultava doppia visibile nello smoke leggero: la `ks-account-nav` era nel DOM ma non visibile, mentre la `myaccount-nav` inline era visibile.
 - Impatto funzionale attuale: medio, non bloccante sul profilo, ma da non ignorare prima dei prossimi refactor account.
 
-Task consigliato separato:
+### Fase 1 cleanup sidebar inline account chiusa
 
-- `ACCOUNT-SIDEBAR-INLINE-CLEANUP-1A`: audit/cleanup delle sidebar inline legacy nelle pagine:
+ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1 e chiuso.
+
+Esiti principali:
+
+- PR #105 merge commit: `fbafc68ca36b2ba19a9d16d50af05313e3824209`.
+- Branch task: `task/account-sidebar-inline-cleanup-1b-simple-pages`.
+- Cleanup branch completato: branch locale e remoto rimossi.
+
+Perimetro chiuso in fase 1:
+
+- `Page.master.vb` abilita `body.ks-page-account` solo sulle tre pagine fase 1:
   - `myaccount.aspx`
   - `my-account-edit.aspx`
+  - `wishlist.aspx`
+- `AccountSidebar` globale ora e visibile/usabile sulle tre pagine.
+- Nav inline legacy rimossa/non visibile su:
+  - `myaccount.aspx`
+  - `my-account-edit.aspx`
+  - `wishlist.aspx`
+- Active/current corretto sulle tre pagine.
+- Nessuna doppia sidebar visibile.
+- Layout desktop e mobile validato.
+
+Smoke finale ACCOUNT-SIDEBAR-INLINE-CLEANUP-1F:
+
+- Esito: A.
+- Ambiente: `https://www.taikun.it/`.
+- Utente test: PROVA, senza password nei report.
+- Desktop OK su `myaccount.aspx`, `my-account-edit.aspx`, `wishlist.aspx`.
+- Mobile `390x844` OK sulle stesse tre pagine.
+- Nessun errore ASP.NET/MySQL/Object reference/500.
+- Nessun gateway/carrello/checkout/ordine invocato.
+- Password non modificata.
+- Dati profilo non modificati.
+- Dati sensibili non esposti.
+
+Pagine escluse dalla fase 1:
+
+- `documenti.aspx`
+- `password.aspx`
+- `datiutente.aspx`
+- `cambiapassword.aspx`
+- `documentidettaglio.aspx`
+
+### Debito residuo dopo fase 1
+
+- `documenti.aspx` resta da trattare separatamente per navigazione ordini/fatture/DDT `t=4/2/1`.
+- `password.aspx` resta da trattare solo con audit password autorizzato.
+- `datiutente.aspx` resta legacy con tab/JS e non va toccato senza task dedicato.
+- `cambiapassword.aspx` resta legacy/password flow.
+- `my-account-address.aspx` resta da valutare dentro `ACCOUNT-ADDRESS-1A` o cleanup fase separata.
+- `ACCOUNT-PROFILE-1B` resta chiuso.
+- `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
+
+Task consigliato separato per eventuale proseguimento:
+
+- `ACCOUNT-SIDEBAR-INLINE-CLEANUP-2A`: audit/cleanup delle sidebar inline legacy residue nelle pagine:
   - `my-account-address.aspx`
   - `documenti.aspx`
-  - `wishlist.aspx`
   - `password.aspx`
   - `datiutente.aspx`
   - `cambiapassword.aspx`
@@ -495,10 +550,10 @@ Task consigliato separato:
 
 1. Scegliere la prossima pagina account da portare su ONSUS/UX 2026.
 2. Possibili audit:
-   - ACCOUNT-SIDEBAR-INLINE-CLEANUP-1A audit/cleanup debito UI sidebar inline account;
    - ACCOUNT-ADDRESS-1A audit `my-account-address.aspx`;
-   - LOGIN-REGISTER-1A audit login/registrazione ONSUS;
+   - ACCOUNT-SIDEBAR-INLINE-CLEANUP-2A audit/cleanup pagine residue sidebar inline account, se Germano decide di proseguire;
    - ACCOUNT-PASSWORD-AUDIT-1A audit separato `password.aspx` vs `cambiapassword.aspx`, non urgente salvo decisione Germano;
+   - LOGIN-REGISTER-1A audit login/registrazione ONSUS;
    - altra pagina account secondo priorita Germano.
 3. Decidere prossimo task PayPal:
    - retry sandbox per ottenere `Completed`;
@@ -520,10 +575,10 @@ Task consigliato separato:
 
 ### UI
 
-1. ACCOUNT-SIDEBAR-INLINE-CLEANUP-1A: audit/cleanup debito UI sidebar inline account.
-2. ACCOUNT-ADDRESS-1A: audit ONSUS indirizzi.
-3. LOGIN-REGISTER-1A: audit login/registrazione ONSUS.
-4. ACCOUNT-PASSWORD-AUDIT-1A: audit separato password, senza modificare password flow senza autorizzazione Germano.
+1. ACCOUNT-ADDRESS-1A: audit ONSUS indirizzi.
+2. ACCOUNT-SIDEBAR-INLINE-CLEANUP-2A: audit/cleanup pagine residue sidebar inline account, se Germano decide di proseguire.
+3. ACCOUNT-PASSWORD-AUDIT-1A: audit separato password, senza modificare password flow senza autorizzazione Germano.
+4. LOGIN-REGISTER-1A: audit login/registrazione ONSUS.
 5. Proseguire altra pagina account secondo priorita Germano.
 6. Per ogni refactor UI:
    - audit ONSUS prima;
