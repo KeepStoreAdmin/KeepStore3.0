@@ -36,6 +36,7 @@ Partial Class PageMaster
 
         Return path.EndsWith("/myaccount.aspx") OrElse
                path.EndsWith("/my-account-edit.aspx") OrElse
+               path.EndsWith("/my-account-address.aspx") OrElse
                path.EndsWith("/wishlist.aspx")
     End Function
 
