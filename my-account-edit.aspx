@@ -25,22 +25,7 @@
         <section class="tf-sp-2">
             <div class="container">
                 <div class="row">
-
-                    <div class="col-lg-3">
-                        <div class="wrap-sidebar-account">
-                            <ul class="myaccount-nav content-append">
-                                <li><a href="myaccount.aspx" class="myaccount-nav-item">Dashboard</a></li>
-                                <li><a href="documenti.aspx?t=4" class="myaccount-nav-item">I miei ordini</a></li>
-                                <li><a href="my-account-address.aspx" class="myaccount-nav-item">Indirizzi</a></li>
-                                <li><span class="myaccount-nav-item active">Dettagli account</span></li>
-                                <li><a href="wishlist.aspx" class="myaccount-nav-item">Wishlist</a></li>
-                                <li><a href="password.aspx" class="myaccount-nav-item">Cambia password</a></li>
-                                <li><a href="logout.aspx" class="myaccount-nav-item">Logout</a></li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="col-lg-9">
+                    <div class="col-12">
                         <div class="myaccount-content account-edit">
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                                 <div>

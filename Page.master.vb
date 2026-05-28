@@ -31,6 +31,14 @@ Partial Class PageMaster
         End Try
     End Function
 
+    Private Function IsAccountShellEnabledPath(ByVal absolutePath As String) As Boolean
+        Dim path As String = Convert.ToString(absolutePath).ToLowerInvariant()
+
+        Return path.EndsWith("/myaccount.aspx") OrElse
+               path.EndsWith("/my-account-edit.aspx") OrElse
+               path.EndsWith("/wishlist.aspx")
+    End Function
+
     Private Function CurrentLoginIdSafe() As Integer
         Dim loginId As Integer = 0
         Try
@@ -994,6 +1002,10 @@ End Function
             Dim tag As String = ("ks-theme-" & theme).Trim()
             If Not String.IsNullOrWhiteSpace(tag) AndAlso cls.IndexOf(tag, StringComparison.OrdinalIgnoreCase) < 0 Then
                 cls = (cls & " " & tag).Trim()
+            End If
+
+            If IsAccountShellEnabledPath(Me.Request.Url.AbsolutePath) AndAlso cls.IndexOf("ks-page-account", StringComparison.OrdinalIgnoreCase) < 0 Then
+                cls = (cls & " ks-page-account").Trim()
             End If
 
             PageBody.Attributes("class") = cls
