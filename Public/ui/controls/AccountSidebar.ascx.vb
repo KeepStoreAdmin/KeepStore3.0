@@ -1,4 +1,5 @@
 Imports System
+Imports System.Collections.Generic
 Imports System.Web
 Imports System.Web.UI
 Imports System.Web.UI.HtmlControls
@@ -17,7 +18,7 @@ Partial Class Public_ui_controls_AccountSidebar
         End If
 
         SetRootLinks()
-        SetActiveMenuCss(currentKey, currentPage)
+        SetActiveMenuCss(currentKey)
     End Sub
 
     Private Sub SetRootLinks()
@@ -52,54 +53,65 @@ Partial Class Public_ui_controls_AccountSidebar
             Return "documenti.aspx"
         End If
 
+        If pageName = "cambiapassword.aspx" Then
+            Return "password.aspx"
+        End If
+
         Return pageName
     End Function
 
-    Private Sub SetActiveMenuCss(currentKey As String, currentPage As String)
-        For Each li As Control In ulMenu.Controls
-            Dim anchor As HtmlAnchor = TryCast(FindAnchor(li), HtmlAnchor)
-            If anchor Is Nothing Then Continue For
+    Private Sub SetActiveMenuCss(currentKey As String)
+        ClearActiveState(lnkDashboard)
+        ClearActiveState(lnkDati)
+        ClearActiveState(lnkIndirizzi)
+        ClearActiveState(lnkOrdini)
+        ClearActiveState(lnkWishlist)
+        ClearActiveState(lnkPassword)
+        ClearActiveState(lnkLogout)
 
-            Dim activeKey As String = (anchor.Attributes("data-ks-active") & "").ToLowerInvariant().Trim()
-            If String.IsNullOrEmpty(activeKey) Then Continue For
-
-            Dim isActive As Boolean
-
-            ' se data-ks-active contiene querystring, confronta con currentKey
-            If activeKey.Contains("?") Then
-                isActive = (activeKey = currentKey)
-            Else
-                ' fallback: confronto solo pagina
-                isActive = (activeKey = currentPage)
-            End If
-
-            If isActive Then
-                If Not anchor.Attributes("class").Contains("active") Then
-                    anchor.Attributes("class") = (anchor.Attributes("class") & " active").Trim()
-                End If
-                anchor.Attributes("aria-current") = "page"
-            Else
-                ' rimuovi active se presente
-                Dim cls As String = (anchor.Attributes("class") & "").Replace(" active", "").Replace("active", "").Trim()
-                anchor.Attributes("class") = cls
-                anchor.Attributes.Remove("aria-current")
-            End If
-        Next
+        Select Case (currentKey & "").ToLowerInvariant()
+            Case "myaccount.aspx"
+                SetActiveState(lnkDashboard)
+            Case "my-account-edit.aspx"
+                SetActiveState(lnkDati)
+            Case "my-account-address.aspx"
+                SetActiveState(lnkIndirizzi)
+            Case "documenti.aspx"
+                SetActiveState(lnkOrdini)
+            Case "wishlist.aspx"
+                SetActiveState(lnkWishlist)
+            Case "password.aspx"
+                SetActiveState(lnkPassword)
+            Case "logout.aspx"
+                SetActiveState(lnkLogout)
+        End Select
     End Sub
 
-    Private Function FindAnchor(parent As Control) As Control
-        If parent Is Nothing Then Return Nothing
+    Private Sub SetActiveState(anchor As HtmlAnchor)
+        If anchor Is Nothing Then Return
 
-        ' In alcuni casi ulMenu contiene LiteralControls per whitespace
-        For Each c As Control In parent.Controls
-            Dim a As HtmlAnchor = TryCast(c, HtmlAnchor)
-            If a IsNot Nothing Then Return a
+        Dim cls As String = RemoveCssClass(anchor.Attributes("class"), "active")
+        anchor.Attributes("class") = (cls & " active").Trim()
+        anchor.Attributes("aria-current") = "page"
+    End Sub
 
-            Dim nested As Control = FindAnchor(c)
-            If nested IsNot Nothing Then Return nested
+    Private Sub ClearActiveState(anchor As HtmlAnchor)
+        If anchor Is Nothing Then Return
+
+        anchor.Attributes("class") = RemoveCssClass(anchor.Attributes("class"), "active")
+        anchor.Attributes.Remove("aria-current")
+    End Sub
+
+    Private Function RemoveCssClass(classValue As String, className As String) As String
+        Dim parts As New List(Of String)()
+
+        For Each part As String In (classValue & "").Split(New Char() {" "c}, StringSplitOptions.RemoveEmptyEntries)
+            If Not String.Equals(part, className, StringComparison.OrdinalIgnoreCase) Then
+                parts.Add(part)
+            End If
         Next
 
-        Return Nothing
+        Return String.Join(" ", parts.ToArray())
     End Function
 
     Private Function IsAccountArea(pageName As String) As Boolean
