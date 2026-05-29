@@ -31,6 +31,11 @@ Partial Class password
         Dim newPwd As String = Convert.ToString(tbPasswordNuova.Text)
         Dim newPwd2 As String = Convert.ToString(tbPasswordConferma.Text)
 
+        If Not String.Equals(newPwd, newPwd2, StringComparison.Ordinal) Then
+            lblMessaggio.Text = "Le nuove password non coincidono."
+            Exit Sub
+        End If
+
         Dim loginIdValue As Integer = 0
         If Not TryGetLoginId(loginIdValue) Then
             Response.Redirect("accessonegato.aspx", True)
@@ -51,7 +56,7 @@ Partial Class password
                     Exit Sub
                 End If
 
-                If Not UpdatePassword(conn, loginIdValue, currentPassword, newPwd) Then
+                If Not UpdatePassword(conn, loginIdValue, currentPassword, newPwd, newPwd2) Then
                     lblMessaggio.Text = "Nessuna modifica eseguita."
                     Exit Sub
                 End If
@@ -148,12 +153,14 @@ Partial Class password
     Private Function UpdatePassword(ByVal conn As MySqlConnection,
                                     ByVal loginIdValue As Integer,
                                     ByVal currentPassword As String,
-                                    ByVal newPwd As String) As Boolean
+                                    ByVal newPwd As String,
+                                    ByVal confirmPwd As String) As Boolean
 
         Const sql As String = "UPDATE login " &
                               "SET Password = @newpwd, DataPassword = @dataPassword " &
                               "WHERE id = @id " &
                               "AND BINARY Password = BINARY @currentpwd " &
+                              "AND BINARY @newpwd = BINARY @confirmpwd " &
                               "AND CHAR_LENGTH(@newpwd) BETWEEN @minLen AND @maxLen " &
                               "AND BINARY @newpwd <> BINARY @currentpwd"
 
@@ -163,6 +170,7 @@ Partial Class password
             cmd.Parameters.AddWithValue("@dataPassword", DateTime.Today)
             cmd.Parameters.AddWithValue("@id", loginIdValue)
             cmd.Parameters.AddWithValue("@currentpwd", currentPassword)
+            cmd.Parameters.AddWithValue("@confirmpwd", confirmPwd)
             cmd.Parameters.AddWithValue("@minLen", MinPasswordLength)
             cmd.Parameters.AddWithValue("@maxLen", MaxPasswordLength)
 
