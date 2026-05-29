@@ -110,7 +110,7 @@
                                             </dl>
 
                                             <div class="mt-3">
-                                                <a class="btn btn-outline-secondary btn-sm" href="cambiapassword.aspx">Cambia password</a>
+                                                <a class="btn btn-outline-secondary btn-sm" href="password.aspx">Cambia password</a>
                                             </div>
                                         </div>
                                     </div>
@@ -472,7 +472,7 @@
                                             </dl>
 
                                             <div class="mt-3">
-                                                <a class="btn btn-outline-secondary btn-sm" href="cambiapassword.aspx">Cambia password</a>
+                                                <a class="btn btn-outline-secondary btn-sm" href="password.aspx">Cambia password</a>
                                             </div>
                                         </div>
                                     </div>
@@ -834,7 +834,7 @@
                                             </dl>
 
                                             <div class="mt-3">
-                                                <a class="btn btn-outline-secondary btn-sm" href="cambiapassword.aspx">Cambia password</a>
+                                                <a class="btn btn-outline-secondary btn-sm" href="password.aspx">Cambia password</a>
                                             </div>
                                         </div>
                                     </div>
