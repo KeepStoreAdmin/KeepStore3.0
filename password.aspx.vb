@@ -1,11 +1,14 @@
 Imports MySql.Data.MySqlClient
 Imports System.Data
+Imports System.Configuration
 
 Partial Class password
     Inherits System.Web.UI.Page
 
+    Private Const MinPasswordLength As Integer = 8
+    Private Const MaxPasswordLength As Integer = 25
+
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
-        ' Pagina riservata: se non sei loggato, vai a accessonegato.aspx
         If Session("LoginId") Is Nothing Then
             Response.Redirect("accessonegato.aspx", True)
         End If
@@ -19,14 +22,13 @@ Partial Class password
         lblMessaggio.ForeColor = Drawing.Color.Red
         lblMessaggio.Text = ""
 
-        ' Rispetta i validator
         If Not Page.IsValid Then
             Exit Sub
         End If
 
-        Dim oldPwd As String = tbPasswordAttuale.Text
-        Dim newPwd As String = tbPasswordNuova.Text
-        Dim newPwd2 As String = tbPasswordConferma.Text
+        Dim oldPwd As String = Convert.ToString(tbPasswordAttuale.Text)
+        Dim newPwd As String = Convert.ToString(tbPasswordNuova.Text)
+        Dim newPwd2 As String = Convert.ToString(tbPasswordConferma.Text)
 
         If String.IsNullOrWhiteSpace(oldPwd) OrElse
            String.IsNullOrWhiteSpace(newPwd) OrElse
@@ -36,8 +38,13 @@ Partial Class password
             Exit Sub
         End If
 
-        If newPwd.Length < 4 Then
-            lblMessaggio.Text = "La nuova password deve avere almeno 4 caratteri."
+        If newPwd.Length < MinPasswordLength Then
+            lblMessaggio.Text = "La nuova password deve avere almeno " & MinPasswordLength.ToString() & " caratteri."
+            Exit Sub
+        End If
+
+        If newPwd.Length > MaxPasswordLength Then
+            lblMessaggio.Text = "La nuova password non puo superare " & MaxPasswordLength.ToString() & " caratteri."
             Exit Sub
         End If
 
@@ -46,8 +53,16 @@ Partial Class password
             Exit Sub
         End If
 
-        Dim loginId As Object = Session("LoginId")
-        If loginId Is Nothing Then
+        If String.Equals(oldPwd, newPwd, StringComparison.Ordinal) Then
+            lblMessaggio.Text = "La nuova password deve essere diversa da quella attuale."
+            Exit Sub
+        End If
+
+        Dim loginIdValue As Integer = 0
+        If Session("LoginId") Is Nothing OrElse
+           Not Integer.TryParse(Convert.ToString(Session("LoginId")), loginIdValue) OrElse
+           loginIdValue <= 0 Then
+
             Response.Redirect("accessonegato.aspx", True)
             Exit Sub
         End If
@@ -62,15 +77,14 @@ Partial Class password
                     cmd.Connection = conn
                     cmd.CommandType = CommandType.Text
 
-                    ' 1) Controllo che la password attuale sia corretta
-                    cmd.CommandText = "SELECT Password FROM vlogin WHERE id = ?id LIMIT 0,1"
+                    cmd.CommandText = "SELECT Password FROM login WHERE id = @id LIMIT 1"
                     cmd.Parameters.Clear()
-                    cmd.Parameters.AddWithValue("?id", CInt(loginId))
+                    cmd.Parameters.AddWithValue("@id", loginIdValue)
 
                     Dim dbPwd As String = Nothing
                     Using dr As MySqlDataReader = cmd.ExecuteReader()
                         If dr.Read() Then
-                            dbPwd = dr("Password").ToString()
+                            dbPwd = Convert.ToString(dr("Password"))
                         End If
                     End Using
 
@@ -79,25 +93,26 @@ Partial Class password
                         Exit Sub
                     End If
 
-                    ' Stesso criterio del login: confronto case-insensitive
-                    If dbPwd.ToLower() <> oldPwd.ToLower() Then
-                        lblMessaggio.Text = "La password attuale non è corretta."
+                    If Not String.Equals(dbPwd, oldPwd, StringComparison.Ordinal) Then
+                        lblMessaggio.Text = "La password attuale non e corretta."
                         Exit Sub
                     End If
 
-                    ' 2) Aggiorno la password (aggiornando la vista vlogin, se updatabile)
-                    cmd.CommandText = "UPDATE vlogin SET Password = ?newpwd WHERE id = ?id"
+                    cmd.CommandText = "UPDATE login SET Password = @newpwd, DataPassword = @dataPassword WHERE id = @id"
                     cmd.Parameters.Clear()
-                    cmd.Parameters.AddWithValue("?newpwd", newPwd)
-                    cmd.Parameters.AddWithValue("?id", CInt(loginId))
+                    cmd.Parameters.AddWithValue("@newpwd", newPwd)
+                    cmd.Parameters.AddWithValue("@dataPassword", DateTime.Today)
+                    cmd.Parameters.AddWithValue("@id", loginIdValue)
 
                     Dim rows As Integer = cmd.ExecuteNonQuery()
 
                     If rows > 0 Then
                         lblMessaggio.ForeColor = Drawing.Color.Green
                         lblMessaggio.Text = "Password aggiornata correttamente."
-                        ' facoltativo: aggiorna anche in sessione una data password, se la usi
-                        ' Session("DataPassword") = DateTime.Now
+                        Session("DataPassword") = DateTime.Today
+                        tbPasswordAttuale.Text = ""
+                        tbPasswordNuova.Text = ""
+                        tbPasswordConferma.Text = ""
                     Else
                         lblMessaggio.Text = "Nessuna modifica eseguita."
                     End If
@@ -105,10 +120,7 @@ Partial Class password
             End Using
 
         Catch ex As Exception
-            ' In ambiente di produzione meglio loggare l'errore
             lblMessaggio.Text = "Errore tecnico durante l'aggiornamento della password."
         End Try
-
     End Sub
-
 End Class

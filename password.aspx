@@ -65,25 +65,7 @@
         <section class="tf-sp-2">
             <div class="container">
                 <div class="row">
-                    <!-- Sidebar -->
-                    <div class="col-lg-3">
-                        <div class="wrap-sidebar-account">
-                            <ul class="myaccount-nav content-append">
-                                <li><a href="myaccount.aspx" class="myaccount-nav-item">Dashboard</a></li>
-                                <li><a href="datiutente.aspx" class="myaccount-nav-item">I miei dati</a></li>
-                                <li><a href="documenti.aspx?t=4" class="myaccount-nav-item">I miei ordini</a></li>
-                                <li><a href="documenti.aspx?t=2" class="myaccount-nav-item">Le mie fatture</a></li>
-                                <li><a href="documenti.aspx?t=1" class="myaccount-nav-item">I miei DDT</a></li>
-                                <li><a href="wishlist.aspx" class="myaccount-nav-item">Wishlist</a></li>
-                                <li><span class="myaccount-nav-item active">Cambia password</span></li>
-                                <li><a href="remind.aspx" class="myaccount-nav-item">Recupero accesso</a></li>
-                                <li><a href="logout.aspx" class="myaccount-nav-item">Logout</a></li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <!-- Content -->
-                    <div class="col-lg-9">
+                    <div class="col-12">
                         <div class="tf-section-heading mb-4">
                             <h3 class="heading">Cambia password</h3>
                             <p class="text mt-2">Aggiorna la tua password in modo sicuro.</p>
@@ -117,7 +99,7 @@
 
                     <fieldset>
                         <label class="fw-semibold body-md-2" for="tbPasswordAttuale">Password attuale *</label>
-                        <asp:TextBox ID="tbPasswordAttuale" runat="server" CssClass="form-control" TextMode="Password" />
+                        <asp:TextBox ID="tbPasswordAttuale" runat="server" CssClass="form-control" TextMode="Password" MaxLength="25" />
                         <div class="validator">
                             <asp:RequiredFieldValidator ID="rfvOld" runat="server" ControlToValidate="tbPasswordAttuale" ErrorMessage="Inserisci la password attuale." Display="Dynamic" ForeColor="Red" />
                         </div>
@@ -125,7 +107,7 @@
 
                     <fieldset>
                         <label class="fw-semibold body-md-2" for="tbPasswordNuova">Nuova password *</label>
-                        <asp:TextBox ID="tbPasswordNuova" runat="server" CssClass="form-control" TextMode="Password" />
+                        <asp:TextBox ID="tbPasswordNuova" runat="server" CssClass="form-control" TextMode="Password" MaxLength="25" />
                         <div class="validator">
                             <asp:RequiredFieldValidator ID="rfvNew" runat="server" ControlToValidate="tbPasswordNuova" ErrorMessage="Inserisci la nuova password." Display="Dynamic" ForeColor="Red" />
                         </div>
@@ -133,7 +115,7 @@
 
                     <fieldset>
                         <label class="fw-semibold body-md-2" for="tbPasswordConferma">Conferma nuova password *</label>
-                        <asp:TextBox ID="tbPasswordConferma" runat="server" CssClass="form-control" TextMode="Password" />
+                        <asp:TextBox ID="tbPasswordConferma" runat="server" CssClass="form-control" TextMode="Password" MaxLength="25" />
                         <div class="validator">
                             <asp:RequiredFieldValidator ID="rfvNew2" runat="server" ControlToValidate="tbPasswordConferma" ErrorMessage="Conferma la nuova password." Display="Dynamic" ForeColor="Red" />
                             <asp:CompareValidator ID="cvPwd" runat="server" ControlToValidate="tbPasswordConferma" ControlToCompare="tbPasswordNuova" ErrorMessage="Le nuove password non coincidono." Display="Dynamic" ForeColor="Red" />

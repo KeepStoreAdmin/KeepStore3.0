@@ -38,7 +38,8 @@ Partial Class PageMaster
                path.EndsWith("/my-account-edit.aspx") OrElse
                path.EndsWith("/my-account-address.aspx") OrElse
                path.EndsWith("/documenti.aspx") OrElse
-               path.EndsWith("/wishlist.aspx")
+               path.EndsWith("/wishlist.aspx") OrElse
+               path.EndsWith("/password.aspx")
     End Function
 
     Private Function CurrentLoginIdSafe() As Integer
@@ -651,7 +652,11 @@ End If
         'Scadenza password: redirect robusto e non ciclico.
         Dim currentScript As String = CurrentScriptPathLower()
         Dim loginIdPassword As Integer = CurrentLoginIdSafe()
-        If loginIdPassword > 0 AndAlso Not currentScript.EndsWith("/cambiapassword.aspx") Then
+        If loginIdPassword > 0 AndAlso
+           Not currentScript.EndsWith("/password.aspx") AndAlso
+           Not currentScript.EndsWith("/login.aspx") AndAlso
+           Not currentScript.EndsWith("/logout.aspx") AndAlso
+           Not currentScript.EndsWith("/accessonegato.aspx") Then
             Try
                 Dim dataPassword As DateTime
                 Dim mesiScadenza As Integer
@@ -660,7 +665,7 @@ End If
                    mesiScadenza > 0 Then
 
                     If DateTime.Today > dataPassword.AddMonths(mesiScadenza).Date Then
-                        Me.Response.Redirect("cambiapassword.aspx", False)
+                        Me.Response.Redirect("password.aspx", False)
                         Context.ApplicationInstance.CompleteRequest()
                         Return
                     End If
