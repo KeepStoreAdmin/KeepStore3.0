@@ -110,6 +110,8 @@
                         <asp:TextBox ID="tbPasswordNuova" runat="server" CssClass="form-control" TextMode="Password" MaxLength="25" />
                         <div class="validator">
                             <asp:RequiredFieldValidator ID="rfvNew" runat="server" ControlToValidate="tbPasswordNuova" ErrorMessage="Inserisci la nuova password." Display="Dynamic" ForeColor="Red" />
+                            <asp:RegularExpressionValidator ID="revNewLength" runat="server" ControlToValidate="tbPasswordNuova" ValidationExpression="^[\s\S]{8,25}$" ErrorMessage="La nuova password deve avere tra 8 e 25 caratteri." Display="Dynamic" ForeColor="Red" />
+                            <asp:CompareValidator ID="cvPwdDiversa" runat="server" ControlToValidate="tbPasswordNuova" ControlToCompare="tbPasswordAttuale" Operator="NotEqual" ErrorMessage="La nuova password deve essere diversa da quella attuale." Display="Dynamic" ForeColor="Red" />
                         </div>
                     </fieldset>
 

@@ -38,26 +38,6 @@ Partial Class password
             Exit Sub
         End If
 
-        If newPwd.Length < MinPasswordLength Then
-            lblMessaggio.Text = "La nuova password deve avere almeno " & MinPasswordLength.ToString() & " caratteri."
-            Exit Sub
-        End If
-
-        If newPwd.Length > MaxPasswordLength Then
-            lblMessaggio.Text = "La nuova password non puo superare " & MaxPasswordLength.ToString() & " caratteri."
-            Exit Sub
-        End If
-
-        If newPwd <> newPwd2 Then
-            lblMessaggio.Text = "Le nuove password non coincidono."
-            Exit Sub
-        End If
-
-        If String.Equals(oldPwd, newPwd, StringComparison.Ordinal) Then
-            lblMessaggio.Text = "La nuova password deve essere diversa da quella attuale."
-            Exit Sub
-        End If
-
         Dim loginIdValue As Integer = 0
         If Session("LoginId") Is Nothing OrElse
            Not Integer.TryParse(Convert.ToString(Session("LoginId")), loginIdValue) OrElse
@@ -98,11 +78,32 @@ Partial Class password
                         Exit Sub
                     End If
 
-                    cmd.CommandText = "UPDATE login SET Password = @newpwd, DataPassword = @dataPassword WHERE id = @id"
+                    If newPwd.Length < MinPasswordLength Then
+                        lblMessaggio.Text = "La nuova password deve avere almeno " & MinPasswordLength.ToString() & " caratteri."
+                        Exit Sub
+                    End If
+
+                    If newPwd.Length > MaxPasswordLength Then
+                        lblMessaggio.Text = "La nuova password non puo superare " & MaxPasswordLength.ToString() & " caratteri."
+                        Exit Sub
+                    End If
+
+                    If newPwd <> newPwd2 Then
+                        lblMessaggio.Text = "Le nuove password non coincidono."
+                        Exit Sub
+                    End If
+
+                    If String.Equals(oldPwd, newPwd, StringComparison.Ordinal) Then
+                        lblMessaggio.Text = "La nuova password deve essere diversa da quella attuale."
+                        Exit Sub
+                    End If
+
+                    cmd.CommandText = "UPDATE login SET Password = @newpwd, DataPassword = @dataPassword WHERE id = @id AND BINARY Password = @oldpwd"
                     cmd.Parameters.Clear()
                     cmd.Parameters.AddWithValue("@newpwd", newPwd)
                     cmd.Parameters.AddWithValue("@dataPassword", DateTime.Today)
                     cmd.Parameters.AddWithValue("@id", loginIdValue)
+                    cmd.Parameters.AddWithValue("@oldpwd", oldPwd)
 
                     Dim rows As Integer = cmd.ExecuteNonQuery()
 
