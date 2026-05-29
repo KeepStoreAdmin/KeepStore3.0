@@ -130,10 +130,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo ACCOUNT-ADDRESS-1B e cleanup branch PR #107:
+Stato di riferimento dopo ACCOUNT-SIDEBAR-INLINE-CLEANUP-2B, merge PR #109 e cleanup branch:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `a4381b83ec5c617c6dc75022d30580ded5394f62`
+- HEAD stabile: `7fe10f0edfbc7b7d5951116697c6654a100ba60f`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -142,6 +142,7 @@ Stato di riferimento dopo ACCOUNT-ADDRESS-1B e cleanup branch PR #107:
 - Merge PR #104: `7279f797be01090b573d514a9a64d5519ebe4489`
 - Merge PR #105: `fbafc68ca36b2ba19a9d16d50af05313e3824209`
 - Merge PR #107: `a4381b83ec5c617c6dc75022d30580ded5394f62`
+- Merge PR #109: `7fe10f0edfbc7b7d5951116697c6654a100ba60f`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -169,6 +170,7 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
 - PR #104 masterplan sidebar inline debt correction
 - PR #105 account sidebar inline cleanup phase 1 simple pages
 - PR #107 account address ONSUS read-only refactor
+- PR #109 account documenti sidebar cleanup phase 2 with dynamic document selector
 
 ## 4. Roadmap sintetica
 
@@ -192,7 +194,7 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
 5. Evitare azioni gateway dirette nelle liste: il retry pagamento resta nel dettaglio ordine salvo task dedicato.
 6. Stato area account gia stabilizzata:
    - `documentidettaglio.aspx`: stabile;
-   - `documenti.aspx`: stabile;
+   - `documenti.aspx`: stabile con AccountSidebar globale e selector documenti dinamico;
    - `myaccount.aspx`: stabile;
    - `my-account-edit.aspx`: stabile.
    - `wishlist.aspx`: stabile;
@@ -335,6 +337,7 @@ Smoke DOC-DETAIL-2C-D:
 ## 7. Stato My Orders / documenti.aspx
 
 MY-ORDERS-1 e chiuso.
+ACCOUNT-SIDEBAR-INLINE-CLEANUP-2B su `documenti.aspx` e chiuso.
 
 Esiti principali:
 
@@ -347,14 +350,29 @@ Esiti principali:
 - PR #96 merge commit: `41a709b22ce37bf6b1669f52b690824082e4ebc1`.
 - Smoke MY-ORDERS-1E-D: A.
 - Cleanup branch MY-ORDERS: completato.
+- PR #109 merge commit: `7fe10f0edfbc7b7d5951116697c6654a100ba60f`.
+- Branch task PR #109: `task/account-sidebar-inline-cleanup-2b-documenti`.
+- Cleanup branch PR #109 completato: branch locale e remoto rimossi.
 
 Comportamento finale `documenti.aspx`:
 
 - layout ONSUS account/orders;
+- `Page.master.vb` include `documenti.aspx` tra le pagine con `body.ks-page-account`;
+- AccountSidebar globale visibile/usabile;
+- voce Ordini/Documenti active/current corretta con una sola voce `active` e un solo `aria-current`;
+- nav inline legacy `.myaccount-nav` rimossa/non visibile;
+- nessuna doppia sidebar visibile;
+- selector dinamico `sdsTipo` mantenuto/ripristinato;
+- `asp:Repeater rTipo` mantenuto con `DataSourceID="sdsTipo"`;
+- `LinkButton lbTipoDocumento` mantenuto con attributo `tipoDocumento`, `tipoDocumentoClick` e `preRenderClick`;
+- hardcoding esclusivo `t=4/2/1` eliminato;
+- tipi documento extra non esclusi;
 - colonne: Numero, Data, Totale, Metodo pagamento, Stato ordine, Stato pagamento, Azione;
 - Azione solo `Dettaglio`;
+- azione Dettaglio invariata;
 - nessun Pay Now diretto in lista;
 - nessun link PayPal/BancaSella/gateway diretto in lista;
+- nessun Pay Now/gateway diretto introdotto;
 - tracking non in Azione;
 - filtri GET validati;
 - filtro `Inviato`: OK;
@@ -363,6 +381,70 @@ Comportamento finale `documenti.aspx`:
 - combinazione `Inviato + ultimo mese`: OK;
 - mobile `390x844`: OK;
 - nessun ordine, pagamento o gateway chiamato nello smoke.
+- `documenti.aspx.vb` invariato.
+
+File modificati da ACCOUNT-SIDEBAR-INLINE-CLEANUP-2B:
+
+- `Page.master.vb`
+- `documenti.aspx`
+
+File non modificati:
+
+- `documenti.aspx.vb`
+- `documentidettaglio.aspx`
+- `documentidettaglio.aspx.vb`
+- `datiutente.aspx`
+- `datiutente.aspx.vb`
+- `datiutente-ui.js`
+- `password.aspx`
+- `password.aspx.vb`
+- `cambiapassword.aspx`
+- `cambiapassword.aspx.vb`
+- `myaccount.aspx`
+- `my-account-edit.aspx`
+- `my-account-address.aspx`
+- `wishlist.aspx`
+- `web.config`
+- markup `Page.master`
+- DB/schema/dump SQL
+- checkout/carrello/gateway/pagamenti
+- asset ONSUS originali
+
+Smoke finale ACCOUNT-SIDEBAR-INLINE-CLEANUP-2H:
+
+- Esito: A.
+- Ambiente: `https://www.taikun.it/`.
+- Utente test: PROVA, senza password nei report.
+- Login PROVA OK.
+- `documenti.aspx` desktop OK.
+- Redirect previsto a `documenti.aspx?t=4`.
+- `body.ks-page-account` presente.
+- AccountSidebar visibile/usabile.
+- Ordini/Documenti active/current con 1 `active` e 1 `aria-current`.
+- `.myaccount-nav` assente/non visibile.
+- Nessuna doppia sidebar visibile.
+- Selector dinamico `sdsTipo` presente e recepito.
+- Hardcoding esclusivo `t=4/2/1` assente.
+- Tipi documento visibili da datasource:
+  - Preventivo
+  - Ordine
+  - D.D.T.
+  - Fattura Immediata
+  - Fattura Differita
+  - Nota di Credito
+- Tipi extra non esclusi.
+- `t=4`, `t=2`, `t=1` verificati solo lista/read-only.
+- `t=18` verificato con redirect sicuro a `t=4`, nessun errore.
+- Lista documenti/stato vuoto OK.
+- Azione Dettaglio presente dove ci sono righe, ma nessun dettaglio aperto.
+- Pay Now/gateway diretto assente.
+- Mobile `390x844` OK.
+- Nessun overflow orizzontale grave.
+- Nessun errore ASP.NET/MySQL/Object reference/500.
+- Nessun PayPal, BancaSella, gateway, carrello, checkout o ordine invocato.
+- Password non modificata.
+- Dati utente non modificati.
+- Dati sensibili non esposti.
 
 Regola UX confermata:
 
@@ -401,7 +483,7 @@ Comportamento finale `myaccount.aspx`:
 Stato area account stabilizzata per funzionalita principali:
 
 - `documentidettaglio.aspx`: stabile con layout ONSUS e stato pagamento separato;
-- `documenti.aspx`: stabile con layout ONSUS, filtri GET validati e azione solo Dettaglio, con debito nav/tabs residuo da trattare separatamente;
+- `documenti.aspx`: stabile con layout ONSUS, AccountSidebar globale, selector documenti dinamico, filtri GET validati e azione solo Dettaglio;
 - `myaccount.aspx`: stabile con dashboard ONSUS, profilo, indirizzi e ordini recenti;
 - `my-account-edit.aspx`: stabile con profilo ONSUS, salvataggio campi contatto validato e AccountSidebar condivisa coerente.
 - `wishlist.aspx`: stabile con AccountSidebar globale e nav inline legacy rimossa/non visibile nella fase 1 cleanup.
@@ -607,21 +689,62 @@ Pagine escluse dalla fase 1:
 - `cambiapassword.aspx`
 - `documentidettaglio.aspx`
 
-### Debito residuo dopo fase 1
+### Fase 2 cleanup documenti chiusa
 
-- `documenti.aspx` resta da trattare separatamente per navigazione ordini/fatture/DDT `t=4/2/1`.
+ACCOUNT-SIDEBAR-INLINE-CLEANUP-2B su `documenti.aspx` e chiuso.
+
+Esiti principali:
+
+- PR #109 merge commit: `7fe10f0edfbc7b7d5951116697c6654a100ba60f`.
+- Branch task: `task/account-sidebar-inline-cleanup-2b-documenti`.
+- Cleanup branch completato: branch locale e remoto rimossi.
+
+Perimetro chiuso in fase 2:
+
+- `Page.master.vb` abilita `body.ks-page-account` anche su `documenti.aspx`.
+- AccountSidebar globale visibile/usabile su `documenti.aspx`.
+- Voce Ordini/Documenti active/current corretta.
+- Nav inline legacy `.myaccount-nav` rimossa/non visibile.
+- Nessuna doppia sidebar visibile.
+- Selector dinamico `sdsTipo` mantenuto/ripristinato.
+- `asp:Repeater rTipo` mantenuto con `DataSourceID="sdsTipo"`.
+- `LinkButton lbTipoDocumento` mantenuto con `tipoDocumento`, `tipoDocumentoClick` e `preRenderClick`.
+- Hardcoding esclusivo `t=4/2/1` eliminato.
+- Tipi documento extra non esclusi.
+- Lista documenti invariata.
+- Azione Dettaglio invariata.
+- Nessun Pay Now/gateway diretto introdotto.
+- `documenti.aspx.vb` invariato.
+
+Smoke finale ACCOUNT-SIDEBAR-INLINE-CLEANUP-2H:
+
+- Esito: A.
+- Ambiente: `https://www.taikun.it/`.
+- Desktop e mobile `390x844` OK.
+- `t=4`, `t=2`, `t=1` verificati solo lista/read-only.
+- `t=18` verificato con redirect sicuro a `t=4`, nessun errore.
+- Tipi documento visibili da datasource: Preventivo, Ordine, D.D.T., Fattura Immediata, Fattura Differita, Nota di Credito.
+- Nessun dettaglio ordine aperto.
+- Nessun PayPal, BancaSella, gateway, carrello, checkout o ordine invocato.
+- Password e dati utente non modificati.
+- Dati sensibili non esposti.
+
+### Debito residuo dopo fase 2
+
 - `password.aspx` resta da trattare solo con audit password autorizzato.
 - `datiutente.aspx` resta legacy con tab/JS e non va toccato senza task dedicato.
 - `cambiapassword.aspx` resta legacy/password flow.
 - `my-account-address.aspx` e stabile read-only ONSUS dopo ACCOUNT-ADDRESS-1B, ma la gestione add/edit/delete indirizzi resta legacy in `datiutente.aspx`.
+- La gestione add/edit/delete indirizzi non e stata migrata.
+- Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per password/datiutente/cambiapassword.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
+- `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 2 documenti` resta chiuso.
 - `ACCOUNT-ADDRESS-1B` resta chiuso.
 
 Task consigliato separato per eventuale proseguimento:
 
-- `ACCOUNT-SIDEBAR-INLINE-CLEANUP-2A`: audit/cleanup delle sidebar inline legacy residue nelle pagine:
-  - `documenti.aspx`
+- `ACCOUNT-SIDEBAR-INLINE-CLEANUP-3A`: eventuale audit/cleanup delle sidebar inline legacy residue solo dopo audit password/datiutente, nelle pagine:
   - `password.aspx`
   - `datiutente.aspx`
   - `cambiapassword.aspx`
@@ -634,10 +757,10 @@ Task consigliato separato per eventuale proseguimento:
 
 1. Scegliere la prossima pagina account da portare su ONSUS/UX 2026.
 2. Possibili audit:
-   - ACCOUNT-SIDEBAR-INLINE-CLEANUP-2A audit/cleanup pagine residue sidebar inline account, se Germano decide di proseguire;
-   - ACCOUNT-PASSWORD-AUDIT-1A audit separato `password.aspx` vs `cambiapassword.aspx`, non urgente salvo decisione Germano;
+   - ACCOUNT-PASSWORD-AUDIT-1A audit separato `password.aspx` vs `cambiapassword.aspx`, consigliato prima di qualunque cleanup password;
    - LOGIN-REGISTER-1A audit login/registrazione ONSUS;
    - ACCOUNT-ADDRESS-2A solo se Germano autorizza audit/migrazione della gestione indirizzi legacy;
+   - ACCOUNT-SIDEBAR-INLINE-CLEANUP-3A solo dopo audit password/datiutente;
    - altra pagina account secondo priorita Germano.
 3. Decidere prossimo task PayPal:
    - retry sandbox per ottenere `Completed`;
@@ -659,10 +782,10 @@ Task consigliato separato per eventuale proseguimento:
 
 ### UI
 
-1. ACCOUNT-SIDEBAR-INLINE-CLEANUP-2A: audit/cleanup pagine residue sidebar inline account, se Germano decide di proseguire.
-2. ACCOUNT-PASSWORD-AUDIT-1A: audit separato password, senza modificare password flow senza autorizzazione Germano.
-3. LOGIN-REGISTER-1A: audit login/registrazione ONSUS.
-4. ACCOUNT-ADDRESS-2A solo se Germano autorizza audit/migrazione della gestione indirizzi legacy.
+1. ACCOUNT-PASSWORD-AUDIT-1A: audit separato password, senza modificare password flow senza autorizzazione Germano.
+2. LOGIN-REGISTER-1A: audit login/registrazione ONSUS.
+3. ACCOUNT-ADDRESS-2A solo se Germano autorizza audit/migrazione della gestione indirizzi legacy.
+4. ACCOUNT-SIDEBAR-INLINE-CLEANUP-3A solo dopo audit password/datiutente.
 5. Proseguire altra pagina account secondo priorita Germano.
 6. Per ogni refactor UI:
    - audit ONSUS prima;
