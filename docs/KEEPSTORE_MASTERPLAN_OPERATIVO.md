@@ -130,10 +130,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo ACCOUNT-SIDEBAR-INLINE-CLEANUP-2B, merge PR #109 e cleanup branch:
+Stato di riferimento dopo ACCOUNT-PASSWORD-SECURITY-1B/1I, merge PR #111/#112 e cleanup branch:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `7fe10f0edfbc7b7d5951116697c6654a100ba60f`
+- HEAD stabile: `3d1873f5e3ea071ef187cc906f5d8712a58a09e6`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -143,6 +143,8 @@ Stato di riferimento dopo ACCOUNT-SIDEBAR-INLINE-CLEANUP-2B, merge PR #109 e cle
 - Merge PR #105: `fbafc68ca36b2ba19a9d16d50af05313e3824209`
 - Merge PR #107: `a4381b83ec5c617c6dc75022d30580ded5394f62`
 - Merge PR #109: `7fe10f0edfbc7b7d5951116697c6654a100ba60f`
+- Merge PR #111: `90c13d3bb41ff8d437f3cc9605a736659b04f4ce`
+- Merge PR #112: `3d1873f5e3ea071ef187cc906f5d8712a58a09e6`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -171,6 +173,8 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
 - PR #105 account sidebar inline cleanup phase 1 simple pages
 - PR #107 account address ONSUS read-only refactor
 - PR #109 account documenti sidebar cleanup phase 2 with dynamic document selector
+- PR #111 account password canonical flow
+- PR #112 account password confirmation validation hotfix
 
 ## 4. Roadmap sintetica
 
@@ -199,6 +203,8 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
    - `my-account-edit.aspx`: stabile.
    - `wishlist.aspx`: stabile;
    - `my-account-address.aspx`: stabile read-only ONSUS.
+   - `password.aspx`: stabile come pagina canonica cambio password.
+   - `cambiapassword.aspx`: legacy redirect controllato verso `password.aspx`.
 
 ### Documentazione
 
@@ -488,6 +494,12 @@ Stato area account stabilizzata per funzionalita principali:
 - `my-account-edit.aspx`: stabile con profilo ONSUS, salvataggio campi contatto validato e AccountSidebar condivisa coerente.
 - `wishlist.aspx`: stabile con AccountSidebar globale e nav inline legacy rimossa/non visibile nella fase 1 cleanup.
 - `my-account-address.aspx`: stabile read-only ONSUS, con AccountSidebar globale e gestione indirizzi legacy rimandata.
+- `password.aspx`: stabile come pagina canonica cambio password, dentro shell account con AccountSidebar globale.
+- `cambiapassword.aspx`: legacy redirect controllato verso `password.aspx`.
+- AccountSidebar condivisa validata.
+- Cleanup sidebar fase 1 chiuso.
+- Cleanup documenti fase 2 chiuso.
+- Consolidamento password chiuso con hotfix.
 
 Nota: questa stabilizzazione non equivale al cleanup completo di tutte le nav/sidebar inline legacy presenti nelle pagine account. Quel debito UI resta separato.
 
@@ -544,11 +556,12 @@ Smoke finale ACCOUNT-PROFILE-1B-T:
 - Password non modificata.
 - Dati sensibili non esposti.
 
-Follow-up separato:
+Follow-up password:
 
-- `ACCOUNT-PASSWORD-AUDIT-1A`: valutare `password.aspx` vs `cambiapassword.aspx`.
-- Non correggere in DOCS-4/DOCS-5.
-- Non modificare password flow senza autorizzazione Germano.
+- `ACCOUNT-PASSWORD-AUDIT-1A`: chiuso.
+- `ACCOUNT-PASSWORD-SECURITY-1B`: chiuso con PR #111.
+- `ACCOUNT-PASSWORD-SECURITY-1I`: hotfix chiusa con PR #112.
+- Hash/migrazione password non implementati: richiedono audit login/registrazione/reset password separato.
 
 ## 10. Stato Account Address / my-account-address.aspx
 
@@ -729,40 +742,150 @@ Smoke finale ACCOUNT-SIDEBAR-INLINE-CLEANUP-2H:
 - Password e dati utente non modificati.
 - Dati sensibili non esposti.
 
-### Debito residuo dopo fase 2
+### Consolidamento password account chiuso
 
-- `password.aspx` resta da trattare solo con audit password autorizzato.
-- `datiutente.aspx` resta legacy con tab/JS e non va toccato senza task dedicato.
-- `cambiapassword.aspx` resta legacy/password flow.
+ACCOUNT-PASSWORD-SECURITY-1B e chiuso. ACCOUNT-PASSWORD-SECURITY-1I hotfix e chiuso.
+
+Esiti principali:
+
+- PR #111 merge commit: `90c13d3bb41ff8d437f3cc9605a736659b04f4ce`.
+- Branch task PR #111: `task/account-password-security-1b-canonical-flow`.
+- Cleanup branch PR #111 completato: branch locale e remoto rimossi.
+- PR #112 merge commit: `3d1873f5e3ea071ef187cc906f5d8712a58a09e6`.
+- Branch task PR #112: `task/account-password-security-1i-confirm-hotfix`.
+- Cleanup branch PR #112 completato: branch locale e remoto rimossi.
+
+File modificati da ACCOUNT-PASSWORD-SECURITY-1B / PR #111:
+
+- `Page.master.vb`
+- `password.aspx`
+- `password.aspx.vb`
+- `cambiapassword.aspx`
+- `cambiapassword.aspx.vb`
+- `datiutente.aspx`
+
+File modificati da ACCOUNT-PASSWORD-SECURITY-1I / PR #112:
+
+- `password.aspx.vb`
+
+File non modificati:
+
+- `datiutente.aspx.vb`
+- `datiutente-ui.js`
+- `login.aspx`
+- registrazione/reset password
+- `web.config`
+- markup `Page.master`
+- DB/schema/dump SQL
+- checkout/carrello/gateway/pagamenti
+- pagine account stabilizzate non previste
+- asset ONSUS originali
+
+Comportamento finale password:
+
+- `password.aspx` e la pagina canonica per cambio password account.
+- `cambiapassword.aspx` e legacy redirect controllato verso `password.aspx`.
+- I link "Cambia password" in `datiutente.aspx` puntano a `password.aspx`.
+- Il redirect scadenza password in `Page.master.vb` punta a `password.aspx`.
+- `password.aspx` e dentro la shell account con `body.ks-page-account`.
+- AccountSidebar globale visibile/usabile su `password.aspx`.
+- Voce Cambia password active/current corretta.
+- Nav inline legacy `.myaccount-nav` rimossa/non visibile.
+- Nessuna doppia sidebar visibile.
+- Diagnostica tecnica legacy rimossa/disabilitata.
+- Nessun `ex.Message`, stack, path, identity o dettaglio tecnico a schermo.
+- Confronto vecchia password case-sensitive.
+- Policy server-side:
+  - minimo 8 caratteri;
+  - massimo 25 caratteri;
+  - conferma obbligatoria;
+  - nuova password diversa dalla vecchia.
+- Query parametrizzate.
+- `DataPassword` aggiornata solo su cambio password valido e riuscito.
+- Hash implementato: no.
+- DB schema modificato: no.
+- Login/registrazione/reset password non modificati.
+
+Hotfix ACCOUNT-PASSWORD-SECURITY-1I:
+
+- Smoke post-merge PR #111 aveva dato E sul caso conferma non coincidente.
+- Problema rilevato: conferma non coincidente aggiornava la password.
+- Hotfix PR #112 circoscritta a `password.aspx.vb`.
+- Update DB centralizzato dopo validazioni.
+- Conferma non coincidente gestita server-side.
+- Guard SQL con confronto case-sensitive: `BINARY @newpwd = BINARY @confirmpwd`.
+- Nessun update `Password` se:
+  - vecchia password errata;
+  - nuova password troppo corta;
+  - conferma non coincidente;
+  - nuova uguale alla vecchia.
+- Nessun update `DataPassword` nei casi falliti.
+- `DataPassword` aggiornata solo su successo.
+- Diagnostica tecnica assente.
+- Hash non implementato.
+- DB schema non modificato.
+
+Smoke finale ACCOUNT-PASSWORD-SECURITY-1L:
+
+- Esito: A.
+- Ambiente: `https://www.taikun.it/`.
+- Utente test: PROVA, senza password nei report.
+- Login iniziale PROVA OK.
+- `password.aspx` loggato OK.
+- `body.ks-page-account` presente.
+- AccountSidebar visibile/usabile.
+- Cambia password active/current.
+- `.myaccount-nav` assente/non visibile.
+- Nessuna doppia sidebar visibile.
+- Negativo A, vecchia password errata: OK, nessun update inatteso.
+- Negativo B, nuova password troppo corta: OK.
+- Negativo C, conferma non coincidente: OK.
+- Negativo D, nuova uguale alla vecchia: OK.
+- Test positivo controllato: OK.
+- Login finale PROVA riuscito.
+- Password finale in stato noto conforme.
+- Redirect loop assente.
+- `cambiapassword.aspx` redirect controllato confermato.
+- `datiutente.aspx`: errore generico legacy/preesistente, nessun salvataggio.
+- Nessun errore server/browser bloccante.
+- Nessun PayPal, BancaSella, gateway, carrello, checkout o ordine invocato.
+- Nessun dettaglio ordine aperto.
+- Dati profilo/indirizzi non modificati.
+- Dati sensibili non esposti.
+
+### Debito residuo dopo consolidamento password
+
+- Hash/migrazione password non implementati.
+- Audit hash/login/registrazione/reset password da fare in task separato.
+- `datiutente.aspx` resta legacy con errore generico preesistente, tab/JS e gestione salvataggi/destinazioni.
 - `my-account-address.aspx` e stabile read-only ONSUS dopo ACCOUNT-ADDRESS-1B, ma la gestione add/edit/delete indirizzi resta legacy in `datiutente.aspx`.
 - La gestione add/edit/delete indirizzi non e stata migrata.
-- Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per password/datiutente/cambiapassword.
+- Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 2 documenti` resta chiuso.
 - `ACCOUNT-ADDRESS-1B` resta chiuso.
+- `ACCOUNT-PASSWORD-SECURITY-1B` resta chiuso.
+- `ACCOUNT-PASSWORD-SECURITY-1I` resta chiuso.
 
 Task consigliato separato per eventuale proseguimento:
 
-- `ACCOUNT-SIDEBAR-INLINE-CLEANUP-3A`: eventuale audit/cleanup delle sidebar inline legacy residue solo dopo audit password/datiutente, nelle pagine:
-  - `password.aspx`
+- `ACCOUNT-SIDEBAR-INLINE-CLEANUP-3A`: eventuale audit/cleanup delle sidebar inline legacy residue solo dopo audit datiutente, nella pagina:
   - `datiutente.aspx`
-  - `cambiapassword.aspx`
 - Obiettivo: decidere con Germano se rimuovere, nascondere o riallineare le nav inline legacy, mantenendo `AccountSidebar` condivisa come fonte di navigazione account.
-- Vincolo: non modificare password flow dentro il cleanup sidebar senza autorizzazione Germano.
+- Vincolo: non modificare dati utente o salvataggi legacy senza autorizzazione Germano.
 
 ## 12. Prossimi step consigliati
 
 ### Immediati
 
-1. Scegliere la prossima pagina account da portare su ONSUS/UX 2026.
-2. Possibili audit:
-   - ACCOUNT-PASSWORD-AUDIT-1A audit separato `password.aspx` vs `cambiapassword.aspx`, consigliato prima di qualunque cleanup password;
-   - LOGIN-REGISTER-1A audit login/registrazione ONSUS;
-   - ACCOUNT-ADDRESS-2A solo se Germano autorizza audit/migrazione della gestione indirizzi legacy;
-   - ACCOUNT-SIDEBAR-INLINE-CLEANUP-3A solo dopo audit password/datiutente;
-   - altra pagina account secondo priorita Germano.
-3. Decidere prossimo task PayPal:
+1. LOGIN-REGISTER-1A audit login/registrazione ONSUS.
+2. PASSWORD-HASH-AUDIT-2A o SECURITY-PASSWORD-HASH-2A solo dopo audit login/registrazione/reset password.
+3. ACCOUNT-ADDRESS-2A solo se Germano autorizza audit/migrazione della gestione indirizzi legacy.
+4. DATIUTENTE-LEGACY-AUDIT-1A per errore generico, tab/JS legacy e salvataggi/destinazioni.
+5. ACCOUNT-SIDEBAR-INLINE-CLEANUP-3A solo dopo audit datiutente.
+6. Altra pagina account secondo priorita Germano.
+7. Decidere prossimo task PayPal:
    - retry sandbox per ottenere `Completed`;
    - oppure UI/admin per pending review.
 
@@ -782,12 +905,13 @@ Task consigliato separato per eventuale proseguimento:
 
 ### UI
 
-1. ACCOUNT-PASSWORD-AUDIT-1A: audit separato password, senza modificare password flow senza autorizzazione Germano.
-2. LOGIN-REGISTER-1A: audit login/registrazione ONSUS.
+1. LOGIN-REGISTER-1A: audit login/registrazione ONSUS.
+2. PASSWORD-HASH-AUDIT-2A / SECURITY-PASSWORD-HASH-2A: solo dopo audit login/registrazione/reset password.
 3. ACCOUNT-ADDRESS-2A solo se Germano autorizza audit/migrazione della gestione indirizzi legacy.
-4. ACCOUNT-SIDEBAR-INLINE-CLEANUP-3A solo dopo audit password/datiutente.
-5. Proseguire altra pagina account secondo priorita Germano.
-6. Per ogni refactor UI:
+4. DATIUTENTE-LEGACY-AUDIT-1A: errore generico preesistente, tab/JS legacy, salvataggi e destinazioni.
+5. ACCOUNT-SIDEBAR-INLINE-CLEANUP-3A solo dopo audit datiutente.
+6. Proseguire altra pagina account secondo priorita Germano.
+7. Per ogni refactor UI:
    - audit ONSUS prima;
    - micro-task implementativo dopo;
    - smoke desktop/mobile;
