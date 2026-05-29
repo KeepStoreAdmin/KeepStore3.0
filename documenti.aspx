@@ -200,9 +200,16 @@
                     <div class="ks-doc-typebar">
                         <div class="body-small text-main-2 mb-2">Seleziona il tipo di documento</div>
                         <div class="d-flex flex-wrap gap-2">
-                            <a href="documenti.aspx?t=4" class="<%= If(Convert.ToString(Request.QueryString("t")) = "4", "selezionato", "nonSelezionato") %>">Ordini</a>
-                            <a href="documenti.aspx?t=2" class="<%= If(Convert.ToString(Request.QueryString("t")) = "2", "selezionato", "nonSelezionato") %>">Fatture</a>
-                            <a href="documenti.aspx?t=1" class="<%= If(Convert.ToString(Request.QueryString("t")) = "1", "selezionato", "nonSelezionato") %>">DDT</a>
+                            <asp:Repeater ID="rTipo" runat="server" DataSourceID="sdsTipo">
+                                <ItemTemplate>
+                                    <asp:LinkButton ID="lbTipoDocumento" runat="server" CssClass="nonSelezionato"
+                                        tipoDocumento='<%# Eval("id") %>'
+                                        OnClick="tipoDocumentoClick"
+                                        OnPreRender="preRenderClick">
+                                        <%# Eval("descrizione") %>
+                                    </asp:LinkButton>
+                                </ItemTemplate>
+                            </asp:Repeater>
                         </div>
                     </div>
 
