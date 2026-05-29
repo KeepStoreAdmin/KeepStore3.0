@@ -1,6 +1,6 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-05-28
+Aggiornato: 2026-05-29
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
@@ -130,10 +130,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1 e cleanup branch PR #105:
+Stato di riferimento dopo ACCOUNT-ADDRESS-1B e cleanup branch PR #107:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `fbafc68ca36b2ba19a9d16d50af05313e3824209`
+- HEAD stabile: `a4381b83ec5c617c6dc75022d30580ded5394f62`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -141,6 +141,7 @@ Stato di riferimento dopo ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1 e cleanup branch
 - Merge PR #103: `8a3efe677fce31c7eb7f590747ac1a7d2cf7197d`
 - Merge PR #104: `7279f797be01090b573d514a9a64d5519ebe4489`
 - Merge PR #105: `fbafc68ca36b2ba19a9d16d50af05313e3824209`
+- Merge PR #107: `a4381b83ec5c617c6dc75022d30580ded5394f62`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -167,6 +168,7 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
 - PR #103 masterplan update after account profile closure
 - PR #104 masterplan sidebar inline debt correction
 - PR #105 account sidebar inline cleanup phase 1 simple pages
+- PR #107 account address ONSUS read-only refactor
 
 ## 4. Roadmap sintetica
 
@@ -193,6 +195,8 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
    - `documenti.aspx`: stabile;
    - `myaccount.aspx`: stabile;
    - `my-account-edit.aspx`: stabile.
+   - `wishlist.aspx`: stabile;
+   - `my-account-address.aspx`: stabile read-only ONSUS.
 
 ### Documentazione
 
@@ -397,9 +401,11 @@ Comportamento finale `myaccount.aspx`:
 Stato area account stabilizzata per funzionalita principali:
 
 - `documentidettaglio.aspx`: stabile con layout ONSUS e stato pagamento separato;
-- `documenti.aspx`: stabile con layout ONSUS, filtri GET validati e azione solo Dettaglio;
+- `documenti.aspx`: stabile con layout ONSUS, filtri GET validati e azione solo Dettaglio, con debito nav/tabs residuo da trattare separatamente;
 - `myaccount.aspx`: stabile con dashboard ONSUS, profilo, indirizzi e ordini recenti;
 - `my-account-edit.aspx`: stabile con profilo ONSUS, salvataggio campi contatto validato e AccountSidebar condivisa coerente.
+- `wishlist.aspx`: stabile con AccountSidebar globale e nav inline legacy rimossa/non visibile nella fase 1 cleanup.
+- `my-account-address.aspx`: stabile read-only ONSUS, con AccountSidebar globale e gestione indirizzi legacy rimandata.
 
 Nota: questa stabilizzazione non equivale al cleanup completo di tutte le nav/sidebar inline legacy presenti nelle pagine account. Quel debito UI resta separato.
 
@@ -462,7 +468,85 @@ Follow-up separato:
 - Non correggere in DOCS-4/DOCS-5.
 - Non modificare password flow senza autorizzazione Germano.
 
-## 10. Debito UI residuo sidebar inline account
+## 10. Stato Account Address / my-account-address.aspx
+
+ACCOUNT-ADDRESS-1B e chiuso.
+
+Esiti principali:
+
+- PR #107 merge commit: `a4381b83ec5c617c6dc75022d30580ded5394f62`.
+- Branch task: `task/account-address-1b-onsus-readonly`.
+- Cleanup branch completato: branch locale e remoto rimossi.
+
+File modificati da ACCOUNT-ADDRESS-1B:
+
+- `Page.master.vb`
+- `my-account-address.aspx`
+
+File non modificati:
+
+- `my-account-address.aspx.vb`
+- `datiutente.aspx`
+- `datiutente.aspx.vb`
+- `datiutente-ui.js`
+- `documenti.aspx`
+- `password.aspx`
+- `cambiapassword.aspx`
+- `documentidettaglio.aspx`
+- `web.config`
+- markup `Page.master`
+- DB/schema/dump SQL
+- checkout/carrello/gateway/pagamenti
+- asset ONSUS originali
+
+Comportamento finale `my-account-address.aspx`:
+
+- layout ONSUS/UX 2026 read-only;
+- `Page.master.vb` include `my-account-address.aspx` tra le pagine con `body.ks-page-account`;
+- AccountSidebar globale visibile/usabile;
+- voce `Indirizzi` active/current corretta;
+- nav inline legacy `.myaccount-nav` rimossa/non visibile;
+- nessuna doppia sidebar visibile;
+- card indirizzo fatturazione presente;
+- card contatti/destinazioni presente;
+- `EmptyDataTemplate` presente;
+- link legacy mantenuti:
+  - `datiutente.aspx?edit=1`
+  - `datiutente.aspx?edit=1&tab=addr`
+- pagina confermata read-only;
+- nessun add/edit/delete diretto indirizzi introdotto;
+- nessun salvataggio introdotto;
+- query/DB/salvataggi invariati.
+
+Smoke finale ACCOUNT-ADDRESS-1B-D:
+
+- Esito: A.
+- Ambiente: `https://www.taikun.it/`.
+- Utente test: PROVA, senza password nei report.
+- Login PROVA OK.
+- `my-account-address.aspx` desktop OK.
+- `body.ks-page-account` presente.
+- AccountSidebar visibile/usabile.
+- `Indirizzi` active/current.
+- `.myaccount-nav` assente/non visibile.
+- Nessuna doppia sidebar visibile.
+- Card indirizzo e card contatti/destinazioni presenti.
+- Link legacy verificati senza salvataggi.
+- Mobile `390x844` OK.
+- Nessun errore ASP.NET/MySQL/Object reference/500.
+- Nessun PayPal, BancaSella, gateway, carrello, checkout o ordine invocato.
+- Password non modificata.
+- Dati utente non modificati.
+- Dati sensibili non esposti.
+
+Debito residuo indirizzi:
+
+- `datiutente.aspx` resta legacy con tab/JS e gestione destinazioni.
+- Non e stata migrata la gestione add/edit/delete indirizzi.
+- Le destinazioni alternative restano nel pannello legacy.
+- Eventuale migrazione della gestione indirizzi richiede audit/task dedicato e autorizzazione Germano.
+
+## 11. Debito UI residuo sidebar inline account
 
 SIDEBAR-DOC-AUDIT-1A ha confermato che la nota Codex post DOCS-4 era reale/parziale. ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1 e chiuso, ma il cleanup completo di tutte le nav/sidebar inline legacy account non e ancora concluso.
 
@@ -529,14 +613,14 @@ Pagine escluse dalla fase 1:
 - `password.aspx` resta da trattare solo con audit password autorizzato.
 - `datiutente.aspx` resta legacy con tab/JS e non va toccato senza task dedicato.
 - `cambiapassword.aspx` resta legacy/password flow.
-- `my-account-address.aspx` resta da valutare dentro `ACCOUNT-ADDRESS-1A` o cleanup fase separata.
+- `my-account-address.aspx` e stabile read-only ONSUS dopo ACCOUNT-ADDRESS-1B, ma la gestione add/edit/delete indirizzi resta legacy in `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
+- `ACCOUNT-ADDRESS-1B` resta chiuso.
 
 Task consigliato separato per eventuale proseguimento:
 
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP-2A`: audit/cleanup delle sidebar inline legacy residue nelle pagine:
-  - `my-account-address.aspx`
   - `documenti.aspx`
   - `password.aspx`
   - `datiutente.aspx`
@@ -544,16 +628,16 @@ Task consigliato separato per eventuale proseguimento:
 - Obiettivo: decidere con Germano se rimuovere, nascondere o riallineare le nav inline legacy, mantenendo `AccountSidebar` condivisa come fonte di navigazione account.
 - Vincolo: non modificare password flow dentro il cleanup sidebar senza autorizzazione Germano.
 
-## 11. Prossimi step consigliati
+## 12. Prossimi step consigliati
 
 ### Immediati
 
 1. Scegliere la prossima pagina account da portare su ONSUS/UX 2026.
 2. Possibili audit:
-   - ACCOUNT-ADDRESS-1A audit `my-account-address.aspx`;
    - ACCOUNT-SIDEBAR-INLINE-CLEANUP-2A audit/cleanup pagine residue sidebar inline account, se Germano decide di proseguire;
    - ACCOUNT-PASSWORD-AUDIT-1A audit separato `password.aspx` vs `cambiapassword.aspx`, non urgente salvo decisione Germano;
    - LOGIN-REGISTER-1A audit login/registrazione ONSUS;
+   - ACCOUNT-ADDRESS-2A solo se Germano autorizza audit/migrazione della gestione indirizzi legacy;
    - altra pagina account secondo priorita Germano.
 3. Decidere prossimo task PayPal:
    - retry sandbox per ottenere `Completed`;
@@ -575,10 +659,10 @@ Task consigliato separato per eventuale proseguimento:
 
 ### UI
 
-1. ACCOUNT-ADDRESS-1A: audit ONSUS indirizzi.
-2. ACCOUNT-SIDEBAR-INLINE-CLEANUP-2A: audit/cleanup pagine residue sidebar inline account, se Germano decide di proseguire.
-3. ACCOUNT-PASSWORD-AUDIT-1A: audit separato password, senza modificare password flow senza autorizzazione Germano.
-4. LOGIN-REGISTER-1A: audit login/registrazione ONSUS.
+1. ACCOUNT-SIDEBAR-INLINE-CLEANUP-2A: audit/cleanup pagine residue sidebar inline account, se Germano decide di proseguire.
+2. ACCOUNT-PASSWORD-AUDIT-1A: audit separato password, senza modificare password flow senza autorizzazione Germano.
+3. LOGIN-REGISTER-1A: audit login/registrazione ONSUS.
+4. ACCOUNT-ADDRESS-2A solo se Germano autorizza audit/migrazione della gestione indirizzi legacy.
 5. Proseguire altra pagina account secondo priorita Germano.
 6. Per ogni refactor UI:
    - audit ONSUS prima;
@@ -586,7 +670,7 @@ Task consigliato separato per eventuale proseguimento:
    - smoke desktop/mobile;
    - nessuna patch sul vecchio layout quando si cambia impostazione grafica.
 
-## 12. Guardrail permanenti
+## 13. Guardrail permanenti
 
 - Non toccare `main` senza task esplicito.
 - Non creare PR verso `main`.
