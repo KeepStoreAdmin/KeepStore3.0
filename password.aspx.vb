@@ -22,6 +22,7 @@ Partial Class password
         lblMessaggio.ForeColor = Drawing.Color.Red
         lblMessaggio.Text = ""
 
+        Page.Validate()
         If Not Page.IsValid Then
             Exit Sub
         End If
@@ -30,19 +31,8 @@ Partial Class password
         Dim newPwd As String = Convert.ToString(tbPasswordNuova.Text)
         Dim newPwd2 As String = Convert.ToString(tbPasswordConferma.Text)
 
-        If String.IsNullOrWhiteSpace(oldPwd) OrElse
-           String.IsNullOrWhiteSpace(newPwd) OrElse
-           String.IsNullOrWhiteSpace(newPwd2) Then
-
-            lblMessaggio.Text = "Compila tutti i campi."
-            Exit Sub
-        End If
-
         Dim loginIdValue As Integer = 0
-        If Session("LoginId") Is Nothing OrElse
-           Not Integer.TryParse(Convert.ToString(Session("LoginId")), loginIdValue) OrElse
-           loginIdValue <= 0 Then
-
+        If Not TryGetLoginId(loginIdValue) Then
             Response.Redirect("accessonegato.aspx", True)
             Exit Sub
         End If
@@ -53,75 +43,130 @@ Partial Class password
             Using conn As New MySqlConnection(connString)
                 conn.Open()
 
-                Using cmd As New MySqlCommand()
-                    cmd.Connection = conn
-                    cmd.CommandType = CommandType.Text
+                Dim currentPassword As String = GetCurrentPassword(conn, loginIdValue)
+                Dim validationMessage As String = ""
 
-                    cmd.CommandText = "SELECT Password FROM login WHERE id = @id LIMIT 1"
-                    cmd.Parameters.Clear()
-                    cmd.Parameters.AddWithValue("@id", loginIdValue)
+                If Not ValidatePasswordChange(oldPwd, newPwd, newPwd2, currentPassword, validationMessage) Then
+                    lblMessaggio.Text = validationMessage
+                    Exit Sub
+                End If
 
-                    Dim dbPwd As String = Nothing
-                    Using dr As MySqlDataReader = cmd.ExecuteReader()
-                        If dr.Read() Then
-                            dbPwd = Convert.ToString(dr("Password"))
-                        End If
-                    End Using
+                If Not UpdatePassword(conn, loginIdValue, currentPassword, newPwd) Then
+                    lblMessaggio.Text = "Nessuna modifica eseguita."
+                    Exit Sub
+                End If
 
-                    If String.IsNullOrEmpty(dbPwd) Then
-                        lblMessaggio.Text = "Impossibile verificare la password attuale."
-                        Exit Sub
-                    End If
-
-                    If Not String.Equals(dbPwd, oldPwd, StringComparison.Ordinal) Then
-                        lblMessaggio.Text = "La password attuale non e corretta."
-                        Exit Sub
-                    End If
-
-                    If newPwd.Length < MinPasswordLength Then
-                        lblMessaggio.Text = "La nuova password deve avere almeno " & MinPasswordLength.ToString() & " caratteri."
-                        Exit Sub
-                    End If
-
-                    If newPwd.Length > MaxPasswordLength Then
-                        lblMessaggio.Text = "La nuova password non puo superare " & MaxPasswordLength.ToString() & " caratteri."
-                        Exit Sub
-                    End If
-
-                    If newPwd <> newPwd2 Then
-                        lblMessaggio.Text = "Le nuove password non coincidono."
-                        Exit Sub
-                    End If
-
-                    If String.Equals(oldPwd, newPwd, StringComparison.Ordinal) Then
-                        lblMessaggio.Text = "La nuova password deve essere diversa da quella attuale."
-                        Exit Sub
-                    End If
-
-                    cmd.CommandText = "UPDATE login SET Password = @newpwd, DataPassword = @dataPassword WHERE id = @id AND BINARY Password = @oldpwd"
-                    cmd.Parameters.Clear()
-                    cmd.Parameters.AddWithValue("@newpwd", newPwd)
-                    cmd.Parameters.AddWithValue("@dataPassword", DateTime.Today)
-                    cmd.Parameters.AddWithValue("@id", loginIdValue)
-                    cmd.Parameters.AddWithValue("@oldpwd", oldPwd)
-
-                    Dim rows As Integer = cmd.ExecuteNonQuery()
-
-                    If rows > 0 Then
-                        lblMessaggio.ForeColor = Drawing.Color.Green
-                        lblMessaggio.Text = "Password aggiornata correttamente."
-                        Session("DataPassword") = DateTime.Today
-                        tbPasswordAttuale.Text = ""
-                        tbPasswordNuova.Text = ""
-                        tbPasswordConferma.Text = ""
-                    Else
-                        lblMessaggio.Text = "Nessuna modifica eseguita."
-                    End If
-                End Using
+                lblMessaggio.ForeColor = Drawing.Color.Green
+                lblMessaggio.Text = "Password aggiornata correttamente."
+                Session("DataPassword") = DateTime.Today
+                tbPasswordAttuale.Text = ""
+                tbPasswordNuova.Text = ""
+                tbPasswordConferma.Text = ""
             End Using
 
         Catch ex As Exception
             lblMessaggio.Text = "Errore tecnico durante l'aggiornamento della password."
         End Try
     End Sub
+
+    Private Function TryGetLoginId(ByRef loginIdValue As Integer) As Boolean
+        loginIdValue = 0
+        If Session("LoginId") Is Nothing Then
+            Return False
+        End If
+
+        If Not Integer.TryParse(Convert.ToString(Session("LoginId")), loginIdValue) Then
+            Return False
+        End If
+
+        Return loginIdValue > 0
+    End Function
+
+    Private Function GetCurrentPassword(ByVal conn As MySqlConnection, ByVal loginIdValue As Integer) As String
+        Using cmd As New MySqlCommand("SELECT Password FROM login WHERE id = @id LIMIT 1", conn)
+            cmd.CommandType = CommandType.Text
+            cmd.Parameters.AddWithValue("@id", loginIdValue)
+
+            Dim result As Object = cmd.ExecuteScalar()
+            If result Is Nothing OrElse Convert.IsDBNull(result) Then
+                Return ""
+            End If
+
+            Return Convert.ToString(result)
+        End Using
+    End Function
+
+    Private Function ValidatePasswordChange(ByVal oldPwd As String,
+                                            ByVal newPwd As String,
+                                            ByVal newPwd2 As String,
+                                            ByVal currentPassword As String,
+                                            ByRef validationMessage As String) As Boolean
+
+        validationMessage = ""
+
+        If String.IsNullOrWhiteSpace(oldPwd) OrElse
+           String.IsNullOrWhiteSpace(newPwd) OrElse
+           String.IsNullOrWhiteSpace(newPwd2) Then
+
+            validationMessage = "Compila tutti i campi."
+            Return False
+        End If
+
+        If String.IsNullOrEmpty(currentPassword) Then
+            validationMessage = "Impossibile verificare la password attuale."
+            Return False
+        End If
+
+        If Not String.Equals(currentPassword, oldPwd, StringComparison.Ordinal) Then
+            validationMessage = "La password attuale non e corretta."
+            Return False
+        End If
+
+        If newPwd.Length < MinPasswordLength Then
+            validationMessage = "La nuova password deve avere almeno " & MinPasswordLength.ToString() & " caratteri."
+            Return False
+        End If
+
+        If newPwd.Length > MaxPasswordLength Then
+            validationMessage = "La nuova password non puo superare " & MaxPasswordLength.ToString() & " caratteri."
+            Return False
+        End If
+
+        If Not String.Equals(newPwd, newPwd2, StringComparison.Ordinal) Then
+            validationMessage = "Le nuove password non coincidono."
+            Return False
+        End If
+
+        If String.Equals(currentPassword, newPwd, StringComparison.Ordinal) Then
+            validationMessage = "La nuova password deve essere diversa da quella attuale."
+            Return False
+        End If
+
+        Return True
+    End Function
+
+    Private Function UpdatePassword(ByVal conn As MySqlConnection,
+                                    ByVal loginIdValue As Integer,
+                                    ByVal currentPassword As String,
+                                    ByVal newPwd As String) As Boolean
+
+        Const sql As String = "UPDATE login " &
+                              "SET Password = @newpwd, DataPassword = @dataPassword " &
+                              "WHERE id = @id " &
+                              "AND BINARY Password = BINARY @currentpwd " &
+                              "AND CHAR_LENGTH(@newpwd) BETWEEN @minLen AND @maxLen " &
+                              "AND BINARY @newpwd <> BINARY @currentpwd"
+
+        Using cmd As New MySqlCommand(sql, conn)
+            cmd.CommandType = CommandType.Text
+            cmd.Parameters.AddWithValue("@newpwd", newPwd)
+            cmd.Parameters.AddWithValue("@dataPassword", DateTime.Today)
+            cmd.Parameters.AddWithValue("@id", loginIdValue)
+            cmd.Parameters.AddWithValue("@currentpwd", currentPassword)
+            cmd.Parameters.AddWithValue("@minLen", MinPasswordLength)
+            cmd.Parameters.AddWithValue("@maxLen", MaxPasswordLength)
+
+            Return cmd.ExecuteNonQuery() > 0
+        End Using
+    End Function
 End Class
