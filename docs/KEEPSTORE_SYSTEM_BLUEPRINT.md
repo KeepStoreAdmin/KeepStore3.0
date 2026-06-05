@@ -457,7 +457,11 @@ L'audit ha rilevato campi di indirizzamento/connessione e codici utente/azienda,
 
 ### 11.8 Focus login/password/hash migration
 
-`login.Password` e `login.DataPassword` sono campi centrali. Nel dump cliente non sono stati rilevati campi dedicati a hash, salt o versione algoritmo. `vlogin` e `Newlogin` non risultano come oggetti DDL nel backup `taikun`; il codice legacy li cita o li presuppone, quindi vanno verificati in audit mirato.
+`login.Password` e `login.DataPassword` sono campi centrali. Nel dump cliente operativo analizzato non sono stati rilevati campi dedicati a hash, salt o versione algoritmo.
+
+Nel backup operativo `taikun_2026-06-05_02-00-02.zip`, l'audit non ha evidenziato `vlogin` / `Newlogin` come oggetti DDL estratti. Tuttavia il file SQL versionato `Database Taikun/KeepStore.sql` contiene riferimenti DDL a `vlogin` e `Newlogin`, e il codice legacy di autenticazione/registrazione li richiama o li presuppone. Per questo motivo la futura hash migration deve includere un audit mirato di coerenza tra dump operativo, schema versionato, codice applicativo e gestionale prima di modificare `login.Password`.
+
+Rischio specifico hash migration: fonte DB operativa e fonte schema versionata potrebbero non essere perfettamente allineate. Prima di introdurre hash, salt o versione algoritmo serve riconciliazione tra backup, file SQL versionato, codice legacy e gestionale.
 
 Qualsiasi hash migration richiede coordinamento con il gestionale e con Vincenzo. Non riportare mai password, hash reali o valori credenziali.
 
@@ -630,12 +634,13 @@ Sequenza suggerita:
 | 2026-06-05 | BLUEPRINT-1A | #114 | `0e030f8...` | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Creazione blueprint tecnico permanente | Nuova base documentale stabile | Da mantenere in parallelo al masterplan |
 | 2026-06-05 | BLUEPRINT-1B | #114 | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Integrazione backup database cliente/azienda, city registry e connessioni gestionale | Conoscenza architetturale e preparazione audit DB futuri | Nessun backup estratto/importato, nessun dato sensibile esposto |
 | 2026-06-05 | DB-BACKUP-AUDIT-1A / DB-BACKUP-BLUEPRINT-1B | documentale | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Integrazione mappa sanificata dei tre database KeepStore | Nessun runtime; alta utilita per progettare login/hash/registrazione/gestionale | Nessun backup importato, nessun dato sensibile esposto |
+| 2026-06-05 | DB-BACKUP-BLUEPRINT-1C-FIX | documentale | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Correzione nota `vlogin` / `Newlogin` | Distingue backup operativo, schema versionato e codice legacy | Nessun file SQL modificato, nessun dato sensibile esposto |
 
 ## 16. Debito tecnico e backlog architetturale
 
 - Hash/migrazione password non implementati.
 - Audit hash/login/registrazione/reset da fare.
-- `PASSWORD-HASH-AUDIT-2A`: audit hash migration su login, registrazione, remind e gestionale.
+- `PASSWORD-HASH-AUDIT-2A`: audit hash migration su `login.Password`, `vlogin`, `Newlogin`, `login.aspx.vb`, `registrazione.aspx.vb`, `remind.aspx.vb`, gestionale/Vincenzo e confronto tra backup operativo e `Database Taikun/KeepStore.sql`.
 - `remind.aspx` da sostituire con reset tokenizzato.
 - Registrazione da allineare a policy password unica.
 - Login da normalizzare rispetto a confronto password e messaggi utente.
