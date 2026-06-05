@@ -42,14 +42,15 @@ Relazione con il masterplan: il masterplan resta il riferimento operativo per ta
 - [8. Componenti, controlli e moduli](#8-componenti-controlli-e-moduli)
 - [9. Flussi logici principali](#9-flussi-logici-principali)
 - [10. Database e tabelle](#10-database-e-tabelle)
-- [11. Funzionalita ecommerce](#11-funzionalita-ecommerce)
-- [12. Area account - stato consolidato](#12-area-account---stato-consolidato)
-- [13. Login, registrazione e recupero password - audit LOGIN-REGISTER-1A](#13-login-registrazione-e-recupero-password---audit-login-register-1a)
-- [14. Registro modifiche tecniche](#14-registro-modifiche-tecniche)
-- [15. Debito tecnico e backlog architetturale](#15-debito-tecnico-e-backlog-architetturale)
-- [16. Sezione brochure sintetica](#16-sezione-brochure-sintetica)
-- [17. Glossario](#17-glossario)
-- [18. Regole per aggiornamenti futuri](#18-regole-per-aggiornamenti-futuri)
+- [11. Database fisici, backup e ruolo multi-azienda](#11-database-fisici-backup-e-ruolo-multi-azienda)
+- [12. Funzionalita ecommerce](#12-funzionalita-ecommerce)
+- [13. Area account - stato consolidato](#13-area-account---stato-consolidato)
+- [14. Login, registrazione e recupero password - audit LOGIN-REGISTER-1A](#14-login-registrazione-e-recupero-password---audit-login-register-1a)
+- [15. Registro modifiche tecniche](#15-registro-modifiche-tecniche)
+- [16. Debito tecnico e backlog architetturale](#16-debito-tecnico-e-backlog-architetturale)
+- [17. Sezione brochure sintetica](#17-sezione-brochure-sintetica)
+- [18. Glossario](#18-glossario)
+- [19. Regole per aggiornamenti futuri](#19-regole-per-aggiornamenti-futuri)
 
 ## 4. Executive summary tecnico
 
@@ -127,6 +128,8 @@ Nota sicurezza: alcune session key legacy possono contenere dati sensibili o rif
 - Database MySQL.
 - Connection string e credenziali non devono essere riportate.
 - Tabelle/view note: `login`, `vlogin`, `utenti`, `utentitipo`, `utentiindirizzi`, `utentirapporto`, `pagamentitipo`, `carrello`.
+- Il modello fisico distingue tra database ecommerce cliente/azienda, registry citta/CAP e registry connessioni gestionale.
+- Il nome del database cliente/azienda non e fisso: cambia in base al cliente/azienda che utilizza KeepStore.
 
 ### 5.8 Integrazioni esterne
 
@@ -144,6 +147,8 @@ Nota sicurezza: alcune session key legacy possono contenere dati sensibili o rif
 ### 5.10 Relazione con gestionale KeepStore
 
 KeepStore web condivide dati e contratti con il gestionale. Le modifiche a DB, password, documenti, ordini, pagamento e indirizzi devono considerare compatibilita gestionale e richiedono audit dedicato.
+
+Il gestionale KeepStore usa l'archivio `connessioni` come primo punto di verifica/indirizzamento. Se il controllo e positivo, il gestionale si collega al database cliente/azienda corretto. Sito e gestionale condividono almeno il database cliente/azienda e il registry citta/CAP. Ogni modifica a login, password, utenti, indirizzi, documenti o ordini puo avere impatto anche sul gestionale.
 
 ## 6. Struttura cartelle
 
@@ -285,7 +290,15 @@ Legacy auditata in LOGIN-REGISTER-1A. Crea utente/login con stored procedure leg
 
 ## 10. Database e tabelle
 
-Non riportare valori sensibili. Documentare solo nomi tabelle/campi e relazioni funzionali. Non inserire connection string, password, hash, token, cookie, session id o dati personali.
+Non riportare valori sensibili. Documentare solo nomi tabelle/campi e relazioni funzionali. Non inserire connection string, password, hash, token, cookie, session id, email reali o dati personali.
+
+Il blueprint distingue tre livelli fisici/logici:
+
+- database ecommerce cliente/azienda: database operativo del sito e dei dati cliente/azienda;
+- database registry citta/CAP: archivio di supporto per riconoscimento e normalizzazione di citta e CAP;
+- database registry connessioni gestionale: archivio di verifica/indirizzamento usato dal gestionale per raggiungere il database cliente/azienda corretto.
+
+I backup disponibili sono fonti tecniche per audit controllati. Non devono essere estratti, importati o analizzati nei task documentali, e non devono mai essere usati per riportare valori reali nel blueprint.
 
 | Tabella/View | Uso noto | Campi chiave noti | Stato |
 | --- | --- | --- | --- |
@@ -300,7 +313,35 @@ Non riportare valori sensibili. Documentare solo nomi tabelle/campi e relazioni 
 
 Campi chiave gia noti: `Password`, `DataPassword`, `ScadenzaPassword`, `Username`, `Email`, `Abilitato`, `UtentiAbilitato`, `UtentiId`, `UtentiTipoId`, `AziendeID`.
 
-## 11. Funzionalita ecommerce
+## 11. Database fisici, backup e ruolo multi-azienda
+
+Germano ha fornito tre backup database come materiale tecnico di riferimento. I backup sono presenti nel progetto e nell'area di lavoro Codex, ma non devono essere aperti, estratti, importati o scanditi senza task DB esplicito. Questa sezione documenta solo il ruolo architetturale dichiarato.
+
+| Nome file backup | Ruolo | Usato da | Contenuto/logica | Note architetturali | Dati sensibili: si/no, non esporre |
+| --- | --- | --- | --- | --- | --- |
+| `taikun_2026-06-05_02-00-02.zip` | Database ecommerce cliente/azienda | Sito KeepStore e gestionale collegato al cliente/azienda | Tabelle, query, viste e dati completi del sito/ecommerce | `taikun` e un nome specifico del caso Taikun: l'architettura generale usa database aziendali con nome variabile per cliente/azienda | Si: non esporre dati, credenziali, email, hash/password o valori reali |
+| `city_registry_2026-06-05_02-00-02.zip` | Registry citta/CAP | Sito KeepStore e gestionale KeepStore | Archivio di supporto per citta e CAP | Coinvolto nella registrazione nuovo utente per inserimento/riconoscimento automatico o assistito di citta e CAP; collegamento da approfondire in audit registrazione/database | Potenzialmente si: non esporre valori reali se non autorizzati |
+| `connessioni_2026-06-05_02-00-02.zip` | Registry connessioni/indirizzamento gestionale | Gestionale KeepStore | Archivio usato all'avvio del gestionale per verificare connessione e indirizzare al database cliente/azienda corretto | Ha ruolo di registry/configurazione multi-tenant o multi-azienda; trattare con massima cautela per possibili riferimenti di connessione | Si: non esporre riferimenti di connessione o configurazioni reali |
+
+### 11.1 Database cliente/azienda
+
+Il backup `taikun_2026-06-05_02-00-02.zip` rappresenta il database cliente/azienda usato dal sito nel caso Taikun. Contiene dati completi nei campi, tabelle, query e viste. In architettura generale, il nome del database non deve essere considerato fisso: cambia in base al cliente/azienda che utilizza il servizio KeepStore.
+
+Il sito KeepStore usa un database aziendale specifico, mentre il gestionale puo collegarsi al database corretto dopo verifica/indirizzamento tramite il registry `connessioni`.
+
+### 11.2 Registry citta/CAP
+
+Il backup `city_registry_2026-06-05_02-00-02.zip` rappresenta l'archivio di supporto per citta e CAP. E usato sia dal sito sia dal gestionale. Durante la registrazione di un nuovo utente, questo archivio puo essere interrogato per supportare inserimento, riconoscimento o normalizzazione automatica/assistita di citta e CAP.
+
+Il collegamento preciso con la registrazione sito e con il gestionale deve essere approfondito con `CITY-REGISTRY-AUDIT-1A`, senza esporre dati reali.
+
+### 11.3 Registry connessioni gestionale
+
+Il backup `connessioni_2026-06-05_02-00-02.zip` rappresenta l'archivio di connessione/indirizzamento del gestionale KeepStore. Quando l'utente avvia il gestionale, il gestionale punta prima a questo archivio; se la verifica e valida, ottiene le informazioni necessarie per collegarsi al database cliente/azienda corretto.
+
+Questo archivio va trattato come componente sensibile della configurazione multi-tenant/multi-azienda. Non riportare mai riferimenti di connessione, credenziali, host, nomi utente o valori operativi reali.
+
+## 12. Funzionalita ecommerce
 
 | Funzionalita | Stato iniziale | Note |
 | --- | --- | --- |
@@ -319,7 +360,7 @@ Campi chiave gia noti: `Password`, `DataPassword`, `ScadenzaPassword`, `Username
 | Email/notifiche | da completare | Reminder/registrazione hanno debiti security |
 | Integrazione gestionale | da completare | Relazione DB/stored procedure/view |
 
-## 12. Area account - stato consolidato
+## 13. Area account - stato consolidato
 
 - `myaccount.aspx`: stabile.
 - `my-account-edit.aspx`: stabile.
@@ -340,7 +381,7 @@ Debito residuo account:
 - Gestione add/edit/delete indirizzi non migrata.
 - Cleanup completo sidebar/nav inline legacy non ancora concluso su `datiutente.aspx`.
 
-## 13. Login, registrazione e recupero password - audit LOGIN-REGISTER-1A
+## 14. Login, registrazione e recupero password - audit LOGIN-REGISTER-1A
 
 Esito audit: A.
 
@@ -352,7 +393,7 @@ Esito audit: A.
 | File modificati | nessuno |
 | DB/gateway/carrello/checkout/ordine invocati | no |
 
-### 13.1 Rischi principali
+### 14.1 Rischi principali
 
 - Password ancora gestite in chiaro nel flusso legacy login/registrazione/recupero.
 - Login ancora case-insensitive sulla password.
@@ -367,7 +408,7 @@ Esito audit: A.
 - Diagnostica tecnica ancora presente in alcuni rami legacy registrazione.
 - Segreti/config presenti in codice/config ma non riportati.
 
-### 13.2 File analizzati
+### 14.2 File analizzati
 
 - `login.aspx` / `login.aspx.vb`
 - `registrazione.aspx` / `registrazione.aspx.vb`
@@ -381,7 +422,7 @@ Esito audit: A.
 - `web.config`
 - `App_Code/AntiCsrfPage.vb`
 
-### 13.3 Meccanismo password rilevato
+### 14.3 Meccanismo password rilevato
 
 - Hash implementato: no.
 - Password legacy in chiaro: si.
@@ -391,7 +432,7 @@ Esito audit: A.
 - Cambio password canonico: `password.aspx`, case-sensitive, policy 8-25, `DataPassword` aggiornata su successo.
 - `cambiapassword.aspx`: redirect controllato verso `password.aspx`.
 
-### 13.4 Session key rilevate
+### 14.4 Session key rilevate
 
 - `LoginId`
 - `LoginID`
@@ -408,7 +449,7 @@ Esito audit: A.
 - `Login_User`
 - `Login_Password`
 
-### 13.5 Tabella rischi audit
+### 14.5 Tabella rischi audit
 
 | Area | Rischio | Nota |
 | --- | --- | --- |
@@ -425,7 +466,7 @@ Esito audit: A.
 | CSRF/sessione | medio/alto | Helper presente ma non ereditato dalle auth pages |
 | `web.config` | alto gestionale | Segreti/config presenti, non riportati |
 
-### 13.6 Piano consigliato audit
+### 14.6 Piano consigliato audit
 
 Opzione consigliata: B, migrazione hash progressiva, preceduta da micro-task preparatorio controllato.
 
@@ -437,7 +478,7 @@ Sequenza suggerita:
 4. `REMIND-RESET-1A`
 5. `REGISTRATION-UX-1A`
 
-## 14. Registro modifiche tecniche
+## 15. Registro modifiche tecniche
 
 | Data | Task | PR | Commit | File modificati | Sintesi tecnica | Impatto funzionale | Note/debito residuo |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -447,9 +488,10 @@ Sequenza suggerita:
 | 2026-05-29 | ACCOUNT-PASSWORD-SECURITY-1B | #111 | `90c13d3bb41ff8d437f3cc9605a736659b04f4ce` | password flow/account link | `password.aspx` canonica e redirect legacy | Cambio password stabilizzato | Hash non implementato |
 | 2026-05-29 | ACCOUNT-PASSWORD-SECURITY-1I | #112 | `3d1873f5e3ea071ef187cc906f5d8712a58a09e6` | `password.aspx.vb` | Hotfix validazioni atomiche conferma password | Nessun update su validazioni fallite | Login/register legacy da audit |
 | 2026-06-05 | LOGIN-REGISTER-1A | audit | n/a | nessuno | Audit read-only login/registrazione/remind | Rischi legacy mappati | Hash migration da pianificare |
-| 2026-06-05 | BLUEPRINT-1A | da aprire | da aprire | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Creazione blueprint tecnico permanente | Nuova base documentale stabile | Da mantenere in parallelo al masterplan |
+| 2026-06-05 | BLUEPRINT-1A | #114 | `0e030f8...` | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Creazione blueprint tecnico permanente | Nuova base documentale stabile | Da mantenere in parallelo al masterplan |
+| 2026-06-05 | BLUEPRINT-1B | #114 | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Integrazione backup database cliente/azienda, city registry e connessioni gestionale | Conoscenza architetturale e preparazione audit DB futuri | Nessun backup estratto/importato, nessun dato sensibile esposto |
 
-## 15. Debito tecnico e backlog architetturale
+## 16. Debito tecnico e backlog architetturale
 
 - Hash/migrazione password non implementati.
 - Audit hash/login/registrazione/reset da fare.
@@ -466,12 +508,15 @@ Sequenza suggerita:
 - `LOGIN-REGISTER-SECURITY-1B` da decidere.
 - `PASSWORD-HASH-AUDIT-2A` da pianificare.
 - Integrazione gestionale da considerare prima di modifiche DB/hash.
+- `DB-BACKUP-AUDIT-1A`: audit read-only dei tre backup per mappa tabelle/view/procedure, senza dati sensibili.
+- `DB-MULTITENANT-AUDIT-1A`: audit del modello multi-azienda/multi-database e relazione con `connessioni`.
+- `CITY-REGISTRY-AUDIT-1A`: audit citta/CAP usati in registrazione sito e gestionale.
 
-## 16. Sezione brochure sintetica
+## 17. Sezione brochure sintetica
 
 Questa sezione raccoglie materiale prudente e riusabile per una brochure tecnica o commerciale sintetica. Non contiene promesse non verificate.
 
-### 16.1 Punti di forza ecommerce
+### 17.1 Punti di forza ecommerce
 
 - Piattaforma ecommerce collegata a logiche gestionali KeepStore.
 - Area cliente con dashboard, profilo, ordini/documenti, wishlist e cambio password.
@@ -479,7 +524,7 @@ Questa sezione raccoglie materiale prudente e riusabile per una brochure tecnica
 - Integrazione pagamenti PayPal Express NVP stabilizzata in modalita controllata.
 - Architettura WebForms consolidata e progressivamente modernizzata con template ONSUS.
 
-### 16.2 Funzionalita chiave
+### 17.2 Funzionalita chiave
 
 - Catalogo prodotti e ricerca.
 - Schede prodotto.
@@ -491,41 +536,41 @@ Questa sezione raccoglie materiale prudente e riusabile per una brochure tecnica
 - Email/notifiche legacy.
 - Integrazione con database gestionale.
 
-### 16.3 Caratteristiche distintive
+### 17.3 Caratteristiche distintive
 
 - Refactoring progressivo senza rompere i contratti gestionali esistenti.
 - Separazione tra stato ordine e stato pagamento.
 - AccountSidebar condivisa e navigazione account coerente.
 - Documentazione operativa e blueprint tecnico mantenuti in parallelo.
 
-### 16.4 Vantaggi operativi
+### 17.4 Vantaggi operativi
 
 - Continuita su codice legacy.
 - Migrazioni graduali e verificabili.
 - Smoke test desktop/mobile sui refactor principali.
 - Guardrail forti su DB, pagamenti, carrello e dati sensibili.
 
-### 16.5 Automazioni
+### 17.5 Automazioni
 
 Da completare con audit dedicato. Sono presenti flussi automatici/legacy collegati a email, carrello, PayPal recheck e gestione sessione.
 
-### 16.6 Integrazione gestionale
+### 17.6 Integrazione gestionale
 
 La piattaforma web usa dati e contratti collegati al gestionale KeepStore. Ogni modifica a DB, password, documenti, ordini o indirizzi deve valutare compatibilita gestionale.
 
-### 16.7 Area cliente
+### 17.7 Area cliente
 
 Area cliente modernizzata nelle pagine principali: dashboard, profilo, indirizzi read-only, documenti, wishlist e cambio password.
 
-### 16.8 Documenti/ordini
+### 17.8 Documenti/ordini
 
 Lista documenti con selector dinamico e dettaglio ordine con stato ordine/pagamento separato. Retry pagamento gestito nel dettaglio quando previsto, non nella lista.
 
-### 16.9 Sicurezza e sviluppo evolutivo
+### 17.9 Sicurezza e sviluppo evolutivo
 
 Il cambio password account e stabilizzato, ma hash/migrazione password, reset tokenizzato e normalizzazione login/registrazione sono backlog prioritari.
 
-## 17. Glossario
+## 18. Glossario
 
 | Termine | Definizione |
 | --- | --- |
@@ -542,7 +587,7 @@ Il cambio password account e stabilizzato, ma hash/migrazione password, reset to
 | merge commit | Commit creato dal merge non squash/non rebase. |
 | hash migration | Migrazione da password legacy in chiaro a password hashata. |
 
-## 18. Regole per aggiornamenti futuri
+## 19. Regole per aggiornamenti futuri
 
 Da BLUEPRINT-1A in poi, ogni task con modifica funzionale o audit rilevante deve valutare se aggiornare:
 
@@ -555,3 +600,5 @@ Regola pratica:
 - Blueprint = architettura, funzionalita, mappe tecniche, flussi, DB noto, componenti, debiti stabili e conoscenza riusabile.
 
 Se un task cambia una pagina, un flow, una tabella, un componente condiviso, una policy di sicurezza o una integrazione, il blueprint deve essere aggiornato o esplicitamente marcato come non impattato nel report del task.
+
+Quando si lavora su login, registrazione, utenti, indirizzi o documenti, verificare se l'impatto riguarda anche il gestionale e i database condivisi. Quando si lavora sulla registrazione, considerare sempre il registry `city_registry`. Quando si lavora su configurazione clienti/aziende, indirizzamento gestionale o multi-tenant, considerare sempre il registry `connessioni`.
