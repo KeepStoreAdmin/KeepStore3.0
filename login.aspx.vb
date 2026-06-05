@@ -4,6 +4,8 @@ Imports System.Data
 Partial Class Login
     Inherits System.Web.UI.Page
 
+    Private Const GenericLoginFailureMessage As String = "Accesso non riuscito. Verifica le credenziali o contatta il supporto."
+
     Private Function IsBlockedReturnPath(ByVal url As String) As Boolean
         Dim value As String = Convert.ToString(url).ToLowerInvariant()
         Return value.Contains("/login.aspx") OrElse value.EndsWith("login.aspx") OrElse
@@ -125,7 +127,7 @@ Partial Class Login
         Dim pass As String = tbPassword.Text
 
         If user = "" OrElse pass = "" Then
-            lblLogin.Text = "Inserire username e password."
+            lblLogin.Text = GenericLoginFailureMessage
             Exit Sub
         End If
 
@@ -155,7 +157,7 @@ Partial Class Login
 
         ' Se EseguiLogin restituisce False, lblLogin contiene già il messaggio
         If String.IsNullOrWhiteSpace(lblLogin.Text) Then
-            lblLogin.Text = "Accesso non riuscito. Controlla username e password."
+            lblLogin.Text = GenericLoginFailureMessage
         End If
     End Sub
 
@@ -190,25 +192,25 @@ Partial Class Login
                 Using dr As MySqlDataReader = cmd.ExecuteReader()
 
                     If Not dr.Read() Then
-                        lblLogin.Text = "Username Errato!"
+                        lblLogin.Text = GenericLoginFailureMessage
                         Return False
                     End If
 
                     ' Controlli di abilitazione
                     If dr.Item("Abilitato") <> 1 Then
-                        lblLogin.Text = "Login non attivo!"
+                        lblLogin.Text = GenericLoginFailureMessage
                         Return False
                     End If
 
                     If dr.Item("UtentiAbilitato") <> 1 Then
-                        lblLogin.Text = "Utente non attivo!"
+                        lblLogin.Text = GenericLoginFailureMessage
                         Return False
                     End If
 
                     ' Controllo password (case-insensitive, come in origine)
                     Dim dbPass As String = dr.Item("Password").ToString()
                     If dbPass.ToLower() <> pass.ToLower() Then
-                        lblLogin.Text = "Password Errata!"
+                        lblLogin.Text = GenericLoginFailureMessage
                         Return False
                     End If
 

@@ -15,6 +15,8 @@ Partial Class PageMaster
     Inherits System.Web.UI.MasterPage
     Implements ISeoMaster
 
+    Private Const GenericLoginFailureMessage As String = "Accesso non riuscito. Verifica le credenziali o contatta il supporto."
+
     Private Function IsTechnicalNavigationPath(ByVal absolutePath As String) As Boolean
         Dim path As String = Convert.ToString(absolutePath).ToLowerInvariant()
         Return path.EndsWith("/accessonegato.aspx") OrElse
@@ -621,15 +623,9 @@ Dim IvaTipo As Integer
         Dim tbPass As TextBox = TryCast(Me.FindControl("tbPassword"), TextBox)
 
         If tbUser IsNot Nothing AndAlso tbPass IsNot Nothing Then
-            ' Dati passati dopo registrazione
-            If (Session.Item("Inserimento_User") IsNot Nothing AndAlso Session.Item("Inserimento_User").ToString() <> "") AndAlso
-               (Session.Item("Inserimento_Password") IsNot Nothing AndAlso Session.Item("Inserimento_Password").ToString() <> "") Then
-
-                tbUser.Text = Session.Item("Inserimento_User").ToString()
-                tbPass.Text = Session.Item("Inserimento_Password").ToString()
-                Session.Item("Inserimento_User") = ""
-                Session.Item("Inserimento_Password") = ""
-            End If
+            ' Dati legacy post-registrazione: non usare password in sessione per auto-login.
+            If Session.Item("Inserimento_User") IsNot Nothing Then Session.Item("Inserimento_User") = ""
+            If Session.Item("Inserimento_Password") IsNot Nothing Then Session.Item("Inserimento_Password") = ""
 
             ' Login automatico se i campi sono compilati
             If tbUser.Text <> "" AndAlso tbUser.Text <> "Username" AndAlso tbPass.Text <> "" Then
@@ -1435,17 +1431,17 @@ End Function
         If dr.HasRows Then
             If dr.Item("Abilitato") <> 1 Then
                 If lblLogin IsNot Nothing Then
-                    lblLogin.Text = "Login non attivo!"
+                    lblLogin.Text = GenericLoginFailureMessage
                     lblLogin.Focus()
                 End If
-                Me.Page.ClientScript.RegisterClientScriptBlock(Me.GetType(), "prova", "<script type='text/javascript'>document.body.onload=function(){alert('Login non attivo!')}</script>")
+                Me.Page.ClientScript.RegisterClientScriptBlock(Me.GetType(), "prova", "<script type='text/javascript'>document.body.onload=function(){alert('" & GenericLoginFailureMessage & "')}</script>")
 
             ElseIf dr.Item("UtentiAbilitato") <> 1 Then
                 If lblLogin IsNot Nothing Then
-                    lblLogin.Text = "Utente non attivo!"
+                    lblLogin.Text = GenericLoginFailureMessage
                     lblLogin.Focus()
                 End If
-                Me.Page.ClientScript.RegisterClientScriptBlock(Me.GetType(), "prova", "<script type='text/javascript'>document.body.onload=function(){alert('Utente non attivo!')}</script>")
+                Me.Page.ClientScript.RegisterClientScriptBlock(Me.GetType(), "prova", "<script type='text/javascript'>document.body.onload=function(){alert('" & GenericLoginFailureMessage & "')}</script>")
 
             ElseIf dr.Item("Password").ToString().ToLower() = pass.ToLower() Then
                 'Login OK
@@ -1509,21 +1505,21 @@ End Function
 
             Else
                 If lblLogin IsNot Nothing Then
-                    lblLogin.Text = "Password Errata!"
+                    lblLogin.Text = GenericLoginFailureMessage
                 End If
                 If tbPass IsNot Nothing Then
                     tbPass.Focus()
                 End If
-                Me.Page.ClientScript.RegisterClientScriptBlock(Me.GetType(), "prova", "<script type='text/javascript'>document.body.onload=function(){alert('Password Errata!')}</script>")
+                Me.Page.ClientScript.RegisterClientScriptBlock(Me.GetType(), "prova", "<script type='text/javascript'>document.body.onload=function(){alert('" & GenericLoginFailureMessage & "')}</script>")
             End If
         Else
             If lblLogin IsNot Nothing Then
-                lblLogin.Text = "Username Errato!"
+                lblLogin.Text = GenericLoginFailureMessage
             End If
             If tbUser IsNot Nothing Then
                 tbUser.Focus()
             End If
-            Me.Page.ClientScript.RegisterClientScriptBlock(Me.GetType(), "prova", "<script type='text/javascript'>document.body.onload=function(){alert('Username Errato!')}</script>")
+            Me.Page.ClientScript.RegisterClientScriptBlock(Me.GetType(), "prova", "<script type='text/javascript'>document.body.onload=function(){alert('" & GenericLoginFailureMessage & "')}</script>")
         End If
 
         dr.Close()
