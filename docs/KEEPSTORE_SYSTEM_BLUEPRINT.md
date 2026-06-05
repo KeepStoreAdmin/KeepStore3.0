@@ -315,31 +315,170 @@ Campi chiave gia noti: `Password`, `DataPassword`, `ScadenzaPassword`, `Username
 
 ## 11. Database fisici, backup e ruolo multi-azienda
 
-Germano ha fornito tre backup database come materiale tecnico di riferimento. I backup sono presenti nel progetto e nell'area di lavoro Codex, ma non devono essere aperti, estratti, importati o scanditi senza task DB esplicito. Questa sezione documenta solo il ruolo architetturale dichiarato.
+Germano ha fornito tre backup database come materiale tecnico di riferimento. I backup sono presenti nel progetto e nell'area di lavoro Codex, ma non devono essere aperti, estratti, importati o scanditi senza task DB esplicito.
 
-| Nome file backup | Ruolo | Usato da | Contenuto/logica | Note architetturali | Dati sensibili: si/no, non esporre |
-| --- | --- | --- | --- | --- | --- |
-| `taikun_2026-06-05_02-00-02.zip` | Database ecommerce cliente/azienda | Sito KeepStore e gestionale collegato al cliente/azienda | Tabelle, query, viste e dati completi del sito/ecommerce | `taikun` e un nome specifico del caso Taikun: l'architettura generale usa database aziendali con nome variabile per cliente/azienda | Si: non esporre dati, credenziali, email, hash/password o valori reali |
-| `city_registry_2026-06-05_02-00-02.zip` | Registry citta/CAP | Sito KeepStore e gestionale KeepStore | Archivio di supporto per citta e CAP | Coinvolto nella registrazione nuovo utente per inserimento/riconoscimento automatico o assistito di citta e CAP; collegamento da approfondire in audit registrazione/database | Potenzialmente si: non esporre valori reali se non autorizzati |
-| `connessioni_2026-06-05_02-00-02.zip` | Registry connessioni/indirizzamento gestionale | Gestionale KeepStore | Archivio usato all'avvio del gestionale per verificare connessione e indirizzare al database cliente/azienda corretto | Ha ruolo di registry/configurazione multi-tenant o multi-azienda; trattare con massima cautela per possibili riferimenti di connessione | Si: non esporre riferimenti di connessione o configurazioni reali |
+`DB-BACKUP-AUDIT-1A` ha analizzato i tre backup in sola lettura, tramite estrazione temporanea fuori dal repository. Nessun backup e stato importato in MySQL, nessun database e stato ripristinato, nessun dato sensibile e stato riportato e nessun file del repository e stato modificato durante l'audit. I backup sono fonti tecniche per audit controllati, non materiale da esporre.
 
-### 11.1 Database cliente/azienda
+### 11.1 Backup database analizzati
 
-Il backup `taikun_2026-06-05_02-00-02.zip` rappresenta il database cliente/azienda usato dal sito nel caso Taikun. Contiene dati completi nei campi, tabelle, query e viste. In architettura generale, il nome del database non deve essere considerato fisso: cambia in base al cliente/azienda che utilizza il servizio KeepStore.
+| File | Ruolo | Stato analisi | Sensibilita | Note |
+| --- | --- | --- | --- | --- |
+| `taikun_2026-06-05_02-00-02.zip` | DB cliente/azienda ecommerce | OK | alta | 178 tabelle, 29 viste, dati operativi completi |
+| `city_registry_2026-06-05_02-00-02.zip` | registry citta/CAP | OK | bassa | 4 tabelle, 1 vista, 5 procedure |
+| `connessioni_2026-06-05_02-00-02.zip` | registry connessioni gestionale | OK | alta | 8 tabelle, 1 vista, 1 procedura |
+
+### 11.2 Database cliente/azienda ecommerce
+
+Il backup `taikun_2026-06-05_02-00-02.zip` rappresenta il database cliente/azienda usato dal sito nel caso Taikun. Il nome database rilevato e `taikun`, ma in architettura generale il nome cambia in base al cliente/azienda che utilizza KeepStore.
+
+Il database contiene dati operativi completi, 178 tabelle e 29 viste. Procedure, funzioni e trigger non sono stati rilevati nel dump. Sono presenti foreign key, ma non in modo esteso; molte relazioni sembrano gestite da codice o da logica applicativa legacy. L'audit ha rilevato 27 tabelle senza primary key. La sensibilita e alta.
+
+Tabelle grandi o critiche rilevate:
+
+- `logoperazioni`
+- `logmovimentiarticoli`
+- `articoli_listini`
+- `documentirighe`
+- `movimentimagazzino`
+- `documenti`
+- `carrello`
+
+Aree funzionali rilevate:
+
+- catalogo/articoli;
+- listini/prezzi;
+- offerte/promozioni;
+- giacenze/disponibilita;
+- carrello;
+- documenti/ordini;
+- utenti/login;
+- indirizzi;
+- pagamenti;
+- configurazioni azienda;
+- email/notifiche;
+- integrazioni marketplace;
+- SEO e URL, da approfondire con audit dedicato.
 
 Il sito KeepStore usa un database aziendale specifico, mentre il gestionale puo collegarsi al database corretto dopo verifica/indirizzamento tramite il registry `connessioni`.
 
-### 11.2 Registry citta/CAP
+### 11.3 Registry citta/CAP
 
-Il backup `city_registry_2026-06-05_02-00-02.zip` rappresenta l'archivio di supporto per citta e CAP. E usato sia dal sito sia dal gestionale. Durante la registrazione di un nuovo utente, questo archivio puo essere interrogato per supportare inserimento, riconoscimento o normalizzazione automatica/assistita di citta e CAP.
+Il backup `city_registry_2026-06-05_02-00-02.zip` rappresenta il registry citta/CAP/province/nazioni. Il database rilevato e `city_registry`. La sensibilita e bassa salvo verifiche future, perche il contenuto atteso e geografico e non personale.
 
-Il collegamento preciso con la registrazione sito e con il gestionale deve essere approfondito con `CITY-REGISTRY-AUDIT-1A`, senza esporre dati reali.
+Tabelle rilevate:
 
-### 11.3 Registry connessioni gestionale
+- `cities`
+- `countries`
+- `postcode_codes`
+- `provinces`
 
-Il backup `connessioni_2026-06-05_02-00-02.zip` rappresenta l'archivio di connessione/indirizzamento del gestionale KeepStore. Quando l'utente avvia il gestionale, il gestionale punta prima a questo archivio; se la verifica e valida, ottiene le informazioni necessarie per collegarsi al database cliente/azienda corretto.
+Vista rilevata:
 
-Questo archivio va trattato come componente sensibile della configurazione multi-tenant/multi-azienda. Non riportare mai riferimenti di connessione, credenziali, host, nomi utente o valori operativi reali.
+- `getalldata`
+
+Procedure rilevate:
+
+- `Delcities`
+- `Delprovinces`
+- `Modprovinces`
+- `Newcities`
+- `Newprovinces`
+
+Uso dedotto:
+
+- lookup citta/CAP/province/nazioni;
+- supporto alla registrazione sito;
+- supporto al gestionale.
+
+Le procedure `New*`, `Mod*` e `Del*` sembrano gestionali o di manutenzione e non devono essere invocate dal sito senza audit dedicato.
+
+### 11.4 Registry connessioni gestionale
+
+Il backup `connessioni_2026-06-05_02-00-02.zip` rappresenta il registry connessioni/indirizzamento gestionale. Il database rilevato e `connessioni`. La sensibilita e alta.
+
+Questo archivio e usato dal gestionale KeepStore all'avvio per verificare e indirizzare il collegamento verso il database cliente/azienda corretto. Non riportare mai valori di connessione, host, credenziali, nomi utente, stringhe operative o codici reali.
+
+Tabelle principali rilevate:
+
+- `aziende`
+- `aziende_licenze`
+- `utenti_aziende`
+- `codiciseriali_utenti`
+- `serviziabilitati`
+- `versioni`
+- `_iva`
+
+Vista rilevata:
+
+- `getallaziende`
+
+Procedura rilevata:
+
+- `GetAziende`
+
+L'audit ha rilevato campi di indirizzamento/connessione e codici utente/azienda, senza riportare valori. Qualsiasi modifica a questo database richiede coordinamento con il gestionale e con Vincenzo.
+
+### 11.5 Database e tabelle principali
+
+| Database | Oggetto | Tipo | Area funzionale | Rischio |
+| --- | --- | --- | --- | --- |
+| `taikun` | `login` | tabella | utenti/password | alto |
+| `taikun` | `articoli`, `articoli_listini`, `articoli_giacenze` | tabelle | catalogo/prezzi/giacenze | medio |
+| `taikun` | `carrello` | tabella | carrello/sessione | alto |
+| `taikun` | `documenti`, `documentirighe`, `documentidestinazioni` | tabelle | ordini/documenti | alto |
+| `taikun` | `pagamentitipo`, `payment_event`, `bancasella_*` | tabelle | pagamenti | alto |
+| `taikun` | `aziende`, `mailconfig` | tabelle | configurazione/email | alto |
+| `city_registry` | `cities`, `postcode_codes`, `provinces`, `countries` | tabelle | citta/CAP | basso |
+| `connessioni` | `aziende`, `utenti_aziende`, `aziende_licenze` | tabelle/view | registry gestionale | alto |
+
+### 11.6 Campi sensibili rilevati, senza valori
+
+| Database | Tabella/view | Campo | Categoria rischio | Valore riportato |
+| --- | --- | --- | --- | --- |
+| `taikun` | `login` | `Password`, `DataPassword`, `UserName`, `email` | password/account | NO |
+| `taikun` | `aziende` | campi SMTP/FTP/PayPal/fiscali/contatto | configurazione/segreti/dati azienda | NO |
+| `taikun` | `carrello` | `LoginId`, `SessionId` | sessione/carrello | NO |
+| `taikun` | `documenti` | campi fiscali/utente | documenti/dati cliente | NO |
+| `taikun` | `ks_amazon_data`, `ks_ebay_data`, `data_amazon` | token/secret | integrazioni | NO |
+| `connessioni` | `aziende` | `Connessione` | connection registry | NO |
+| `connessioni` | `utenti_aziende`, `codiciseriali_utenti` | `CodiceUtente` | indirizzamento/gestionale | NO |
+
+### 11.7 Dipendenze sito/gestionale
+
+| Area | Database coinvolto | Tabelle/view | Usato da sito | Usato da gestionale | Rischio modifica |
+| --- | --- | --- | --- | --- | --- |
+| login/password | `taikun` | `login` | si | probabile | alto |
+| registrazione/citta | `taikun`, `city_registry` | `login`, geografiche | si | si | alto |
+| catalogo/listini/giacenze | `taikun` | `articoli*`, `listini*`, `movimentimagazzino` | si | si | alto |
+| carrello/checkout | `taikun` | `carrello`, `documenti*` | si | probabile | alto |
+| ordini/documenti | `taikun` | `documenti`, `documentirighe` | si | si | alto |
+| pagamenti | `taikun` | `pagamentitipo`, `payment_event`, gateway tables | si | possibile | alto |
+| multi-azienda | `connessioni` | `aziende`, `getallaziende`, `GetAziende` | no diretto | si | critico |
+
+### 11.8 Focus login/password/hash migration
+
+`login.Password` e `login.DataPassword` sono campi centrali. Nel dump cliente non sono stati rilevati campi dedicati a hash, salt o versione algoritmo. `vlogin` e `Newlogin` non risultano come oggetti DDL nel backup `taikun`; il codice legacy li cita o li presuppone, quindi vanno verificati in audit mirato.
+
+Qualsiasi hash migration richiede coordinamento con il gestionale e con Vincenzo. Non riportare mai password, hash reali o valori credenziali.
+
+### 11.9 Focus registrazione/city registry
+
+`city_registry` e adatto a lookup citta/CAP/province/nazioni. La registrazione va auditata considerando sia il database cliente/azienda sia il registry citta/CAP. Le procedure `New*`, `Mod*` e `Del*` sembrano da trattare come manutenzione/gestionale e non devono essere invocate dal sito senza audit.
+
+### 11.10 Focus carrello/documenti/ordini
+
+`carrello`, `documenti`, `documentirighe` e `documentidestinazioni` sono tabelle ad alto impatto. Modifiche a checkout e ordini possono impattare gestionale, documenti fiscali e pagamenti.
+
+L'audit DB non ha invocato gateway, non ha letto dati ordine reali e non ha riportato dati ordine/documento.
+
+### 11.11 Rischi principali DB
+
+- Il DB operativo contiene password legacy e campi segreti/configurativi.
+- `connessioni` e altamente sensibile per il modello multi-azienda.
+- Nel DB cliente non sono stati rilevati campi hash/salt/versione algoritmo.
+- Molte relazioni sembrano legacy/applicative piu che basate su foreign key robuste.
+- `city_registry` e una dipendenza reale della registrazione.
+- Modifiche a login, password, utenti, indirizzi, documenti o ordini richiedono coordinamento con gestionale e Vincenzo.
 
 ## 12. Funzionalita ecommerce
 
@@ -428,7 +567,7 @@ Esito audit: A.
 - Password legacy in chiaro: si.
 - Login: confronto password case-insensitive.
 - Registrazione: password salvata lower-case.
-- Recupero password: invio credenziali esistenti, non reset tokenizzato.
+- Recupero credenziali legacy con invio di credenziali esistenti, non reset tokenizzato.
 - Cambio password canonico: `password.aspx`, case-sensitive, policy 8-25, `DataPassword` aggiornata su successo.
 - `cambiapassword.aspx`: redirect controllato verso `password.aspx`.
 
@@ -490,11 +629,13 @@ Sequenza suggerita:
 | 2026-06-05 | LOGIN-REGISTER-1A | audit | n/a | nessuno | Audit read-only login/registrazione/remind | Rischi legacy mappati | Hash migration da pianificare |
 | 2026-06-05 | BLUEPRINT-1A | #114 | `0e030f8...` | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Creazione blueprint tecnico permanente | Nuova base documentale stabile | Da mantenere in parallelo al masterplan |
 | 2026-06-05 | BLUEPRINT-1B | #114 | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Integrazione backup database cliente/azienda, city registry e connessioni gestionale | Conoscenza architetturale e preparazione audit DB futuri | Nessun backup estratto/importato, nessun dato sensibile esposto |
+| 2026-06-05 | DB-BACKUP-AUDIT-1A / DB-BACKUP-BLUEPRINT-1B | documentale | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Integrazione mappa sanificata dei tre database KeepStore | Nessun runtime; alta utilita per progettare login/hash/registrazione/gestionale | Nessun backup importato, nessun dato sensibile esposto |
 
 ## 16. Debito tecnico e backlog architetturale
 
 - Hash/migrazione password non implementati.
 - Audit hash/login/registrazione/reset da fare.
+- `PASSWORD-HASH-AUDIT-2A`: audit hash migration su login, registrazione, remind e gestionale.
 - `remind.aspx` da sostituire con reset tokenizzato.
 - Registrazione da allineare a policy password unica.
 - Login da normalizzare rispetto a confronto password e messaggi utente.
@@ -509,8 +650,10 @@ Sequenza suggerita:
 - `PASSWORD-HASH-AUDIT-2A` da pianificare.
 - Integrazione gestionale da considerare prima di modifiche DB/hash.
 - `DB-BACKUP-AUDIT-1A`: audit read-only dei tre backup per mappa tabelle/view/procedure, senza dati sensibili.
+- `DB-BACKUP-BLUEPRINT-1B`: aggiornamento blueprint con mappa DB sanificata.
 - `DB-MULTITENANT-AUDIT-1A`: audit del modello multi-azienda/multi-database e relazione con `connessioni`.
 - `CITY-REGISTRY-AUDIT-1A`: audit citta/CAP usati in registrazione sito e gestionale.
+- Task Vincenzo/manuale tecnico: documento operativo per modifiche DB richieste e coordinamento gestionale.
 
 ## 17. Sezione brochure sintetica
 
