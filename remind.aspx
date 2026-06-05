@@ -89,8 +89,8 @@
                     <div class="col-xl-6 col-lg-7 col-md-9">
                         <div class="ks-auth-card">
 
-                            <h5 class="title fw-semibold mb-2">Recupero dati di accesso</h5>
-                            <p class="body-text-3 mb-4">Inserisci il tuo indirizzo email e riceverai i dati di accesso.</p>
+                            <h5 class="title fw-semibold mb-2">Recupero accesso</h5>
+                            <p class="body-text-3 mb-4">Inserisci il tuo indirizzo email per richiedere assistenza sul recupero dell'accesso.</p>
 
                             <!-- BOTTONE TORNA A MY ACCOUNT -->
                             <div class="mb-3">
@@ -131,7 +131,7 @@
                                             <asp:Label ID="lblError" runat="server"
                                                 Font-Bold="True"
                                                 ForeColor="Red"
-                                                Text="Indirizzo Email non presente in archivio!"
+                                                Text="Se i dati indicati risultano validi, riceverai istruzioni per recuperare l'accesso o sarai contattato dall'assistenza."
                                                 Visible="False">
                                             </asp:Label>
 
@@ -150,14 +150,14 @@
                                     CausesValidation="True"
                                     Visible="true"
                                     runat="server"
-                                    Text="Invia dati d'accesso"
+                                    Text="Richiedi assistenza accesso"
                                     PostBackUrl="remind.aspx" />
 
                                 <div class="mt-3 text-center">
                                     <asp:Label ID="lblOk" runat="server"
                                         Font-Size="8pt"
                                         Visible="false"
-                                        Text="I tuoi dati d'accesso al sito sono stati inviati correttamente.<br><br>Attendi qualche istante e controlla la tua email."
+                                        Text="Se i dati indicati risultano validi, riceverai istruzioni per recuperare l'accesso o sarai contattato dall'assistenza."
                                         Font-Bold="True"
                                         EnableViewState="False">
                                     </asp:Label>

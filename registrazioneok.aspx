@@ -7,7 +7,7 @@
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
     <%If Request.QueryString("state") = "coupon" Then%>
-        <meta http-equiv="refresh" content="2; url='<%= "login.aspx?username=" & Session("Login_User") & "&passw=" & Session("Login_Password") & "&redirect=" & Request.QueryString("redirect") %>'" />
+        <meta http-equiv="refresh" content="2; url='<%= "login.aspx?redirect=" & Request.QueryString("redirect") %>'" />
     <%Else%>
         <meta http-equiv="refresh" content="2; url=default.aspx" />
     <%End If%>
@@ -32,7 +32,7 @@
                 <div class="col-xl-6 col-lg-7">
                     <div class="ks-auth-card text-center">
                         <h3 class="fw-semibold mb-10">Registrazione conclusa con successo!</h3>
-                        <p class="mb-20">Ti abbiamo inviato una <b>mail di conferma</b> con i tuoi dati d’accesso.</p>
+                        <p class="mb-20">Ti abbiamo inviato una <b>mail di conferma registrazione</b>.</p>
 
                         <div class="d-flex align-items-center justify-content-center gap-2 mb-20">
                             <span class="icon icon-loader"></span>

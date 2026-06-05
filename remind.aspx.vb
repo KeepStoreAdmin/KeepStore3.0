@@ -17,38 +17,9 @@ Partial Class Remind
     End Sub
 
     Public Sub RecuperaDati()
-
-        Dim conn As New MySqlConnection
-        Dim cmd As New MySqlCommand
-
-        conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-        conn.Open()
-
-        cmd.Connection = conn
-        cmd.CommandType = CommandType.Text
-        cmd.CommandText = "Select * from vlogin where AziendeID=?AziendeID and Email=?Email And Abilitato=1 and UtentiAbilitato=1"
-        cmd.Parameters.AddWithValue("?AziendeID", Session("AziendaID"))
-        cmd.Parameters.AddWithValue("?Email", Me.tbEmail.Text)
-        Dim dr As MySqlDataReader = cmd.ExecuteReader()
-        dr.Read()
-
-        If dr.HasRows Then
-            'Me.tCerca.Visible = False
-            Me.lblOk.Visible = True
-            Email(dr.Item("CognomeNome"), dr.Item("Username"), dr.Item("Password"), dr.Item("email"))
-            'Email(dr)
-        Else
-            Me.lblerror.Visible = True
-        End If
-
-        dr.Close()
-        dr.Dispose()
-
-        cmd.Dispose()
-
-        conn.Close()
-        conn.Dispose()
-
+        Me.lblerror.Visible = False
+        Me.lblOk.Text = "Se i dati indicati risultano validi, riceverai istruzioni per recuperare l'accesso o sarai contattato dall'assistenza."
+        Me.lblOk.Visible = True
     End Sub
 
     Protected Sub Page_PreInit(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreInit
@@ -63,6 +34,8 @@ Partial Class Remind
     End Sub
 
     Public Sub Email(ByVal nomecognome As String, ByVal user As String, ByVal pass As String, ByVal email As String)
+        ' Legacy disabled: never send existing passwords.
+        Exit Sub
 
         Dim oMsg As MailMessage = New MailMessage()
         oMsg.From = New MailAddress(Session("AziendaEmail"), Session("AziendaNome"))
@@ -71,7 +44,7 @@ Partial Class Remind
         oMsg.Body = "<font face=verdana size= 2>Gentile <b>" & nomecognome & "</b>, come da tua richiesta," & _
                     "<br>ti ricordiamo i dati d'accesso per accedere al sito <b>" & Session("AziendaNome") & "</b>:" & _
                     "<br><br>Username = <b>" & user & "</b>" & _
-                    "<br>Password = <b>" & pass & "</b>" & _
+                    "<br>Per completare il recupero contatta l'assistenza." & _
                     "<br><br><br>Lo staff di <b>" & Session("AziendaNome") & "</b><br><a href=http://" & Session("AziendaUrl") & ">" & Session("AziendaUrl") & "</a></font>"
 
         oMsg.IsBodyHtml = True
@@ -89,6 +62,8 @@ Partial Class Remind
 
 
     Public Sub Email(ByVal dr As MySqlDataReader)
+        ' Legacy disabled: never send existing passwords or account data.
+        Exit Sub
 
         Dim oMsg As MailMessage = New MailMessage()
         oMsg.From = New MailAddress(Session("AziendaEmail"), Session("AziendaNome"))
@@ -96,7 +71,7 @@ Partial Class Remind
         oMsg.Subject = "Dati di accesso al sito " & Session("AziendaNome")
         oMsg.Body = "<font face=arial size=2 color=black>Gentile " & dr.Item("CognomeNome") & "," & _
                     "<br>Le comunichiamo i suoi dati di accesso al sito web <u>" & Session("AziendaUrl") & "</u>" & _
-                    "<br><br><b>Username:</b> " & dr.Item("Username") & "<br><b>Password:</b> " & dr.Item("Password") & "<br><b>Email:</b> " & dr.Item("Email") & " </b>" & _
+                    "<br><br><b>Username:</b> " & dr.Item("Username") & "<br><b>Email:</b> " & dr.Item("Email") & " </b>" & _
                     "<br><br>Di seguito, Le riepiloghiamo i dati che ci ha fornito, pregandola di controllarne la correttezza." & _
                     "<br>Se necessario potrà comunque modificare tali dati accedendo alla sezione <i>MY ACCOUNT</i>.</font>" & _
                     "<br><br><table cellspacing=3 cellpadding=3 style='font-family:arial;font-size:9pt'>" & _

@@ -6,6 +6,9 @@ Imports CityRegistry.CityRegistrySoapClient
 Partial Class registrazione
     Inherits System.Web.UI.Page
 
+    Private Const MinPasswordLength As Integer = 8
+    Private Const MaxPasswordLength As Integer = 25
+
     Dim conn As New MySqlConnection
     Dim cmd As New MySqlCommand
     Dim strSql As String = ""
@@ -501,6 +504,9 @@ Partial Class registrazione
 
     Public Sub Registrazione()
         If (cbCondizioniVendita.Checked = True) And (cbPrivacy.Checked = True) Then
+            If Not IsPasswordPolicyValid() Then
+                Exit Sub
+            End If
             ErrorCondizioni.Visible = False
             ErrorCondizioni.Text = vbCrLf & ErrorCondizioni.Text
             ControllaUser(Session("AziendaID"))
@@ -509,6 +515,25 @@ Partial Class registrazione
             ErrorCondizioni.Focus()
         End If
     End Sub
+
+    Private Function IsPasswordPolicyValid() As Boolean
+        If tbPassword.Text Is Nothing OrElse tbPasswordConferma.Text Is Nothing Then
+            Return False
+        End If
+
+        If tbPassword.Text.Length < MinPasswordLength OrElse tbPassword.Text.Length > MaxPasswordLength Then
+            RegularExpressionValidator2.IsValid = False
+            RegularExpressionValidator2.ErrorMessage = "La password deve avere tra 8 e 25 caratteri."
+            Return False
+        End If
+
+        If Not String.Equals(tbPassword.Text, tbPasswordConferma.Text, StringComparison.Ordinal) Then
+            CompareValidator1.IsValid = False
+            Return False
+        End If
+
+        Return True
+    End Function
 
     Public Sub ControllaUtente(ByVal aziendaId As Integer)
         Dim codice As String = 1
@@ -562,8 +587,6 @@ Partial Class registrazione
                 'Invio l'email di registrazione effettuata
                 Email("Conferma registrazione al sito ", 1)
             Catch ex As Exception
-                'Response.Write(ex.Message.ToString & "in " & cmd.CommandText)
-                'Response.end()
                 'Se l'email esiste già lo blocco
                 'Me.lblEmail.Text = "Email errata !!"
                 'Me.tbEmail.Focus()
@@ -576,7 +599,6 @@ Partial Class registrazione
                 Else
                     If Request.UrlReferrer.AbsoluteUri.Contains("coupon") Then
                         Session("Login_User") = tbUsername.Text
-                        Session("Login_Password") = tbPassword.Text
                         Response.Redirect("registrazioneok.aspx?state=coupon")
                     Else
                         Response.Redirect("registrazioneok.aspx?redirect=" & Request.QueryString("redirect"))
@@ -585,7 +607,6 @@ Partial Class registrazione
             Else
                 If Request.UrlReferrer.AbsoluteUri.Contains("coupon") Then
                     Session("Login_User") = tbUsername.Text
-                    Session("Login_Password") = tbPassword.Text
                     Response.Redirect("registrazioneok.aspx?state=coupon")
                 Else
                     Response.Redirect("registrazioneok.aspx?redirect=" & Request.QueryString("redirect"))
@@ -811,8 +832,9 @@ Partial Class registrazione
 
             cmd.Dispose()
         Catch ex As Exception
-            Response.Write(ex.Message.ToString & tbRagioneSocialeA.Text & tbIndirizzo2.Text & getDdlCittaValue(ddlCitta2) & tbProvincia2.Text & tbCap2.Text & tbTelefono2.Text &" in " & cmd.CommandText)
-			
+            Me.lblEmail.Text = "Si e' verificato un errore durante la registrazione. Contatta il supporto."
+            Me.lblEmail.Visible = True
+
         End Try
     End Sub
 
@@ -905,7 +927,7 @@ Partial Class registrazione
 
             cmd.Parameters.AddWithValue("?parUtentiId", UtenteId)
             cmd.Parameters.AddWithValue("?parUsername", Me.tbUsername.Text.ToString.Trim.ToLower)
-            cmd.Parameters.AddWithValue("?parPassword", Me.tbPassword.Text.ToString.Trim.ToLower)
+            cmd.Parameters.AddWithValue("?parPassword", Me.tbPassword.Text.ToString.Trim)
             cmd.Parameters.AddWithValue("?parEmail", Me.tbEmail.Text.ToString.Trim.ToLower)
             cmd.Parameters.AddWithValue("?parCognomeNome", Me.tbRagioneSociale.Text.ToString.Trim.ToUpper)
             cmd.Parameters.AddWithValue("?parUltimoAccesso", System.DateTime.Now)
@@ -927,9 +949,8 @@ Partial Class registrazione
             'Me.MyAccordion.Visible = False
             Me.btRegistrati.Visible = False
 
-            'Metto in sezione la user e la password scelti
-            Session.Item("Inserimento_User") = Me.tbUsername.Text
-            Session.Item("Inserimento_Password") = Me.tbPassword.Text
+            Session.Item("Inserimento_User") = ""
+            Session.Item("Inserimento_Password") = ""
         Catch ex As Exception
         End Try
     End Sub
@@ -937,21 +958,14 @@ Partial Class registrazione
     Public Sub Email(ByVal oggetto As String, ByVal tipo As Integer)
         Dim indirizzoSecondario As String = ""
 
-        Dim pass As String = ""
-        If tipo = 1 Then
-            pass = Me.tbPassword.Text
-        ElseIf tipo = 2 Then
-            pass = Me.tbPassword.Attributes("value").ToString
-        End If
-
         Dim oMsg As MailMessage = New MailMessage()
         oMsg.From = New MailAddress(Session("AziendaEmail"), Session("AziendaNome"))
         oMsg.To.Add(Me.tbEmail.Text)
         oMsg.Bcc.Add(New MailAddress(Session("AziendaEmail"), Session("AziendaNome")))
         oMsg.Subject = oggetto & Session("AziendaNome")
         oMsg.Body = "<font face=arial size=2 color=black>Gentile " & Me.tbNomeCognome.Text.ToUpper & "," & _
-                    "<br>Le comunichiamo i suoi dati di accesso al sito web <u>" & Session("AziendaUrl") & "</u>" & _
-                    "<br><br><b>Username:</b> " & Me.tbUsername.Text & "<br><b>Password:</b> " & pass & "<br><b>Email:</b> " & Me.tbEmail.Text.ToLower & " </b>" & _
+                    "<br>La registrazione al sito web <u>" & Session("AziendaUrl") & "</u> e stata completata." & _
+                    "<br><br><b>Username:</b> " & Me.tbUsername.Text & "<br><b>Email:</b> " & Me.tbEmail.Text.ToLower & " </b>" & _
                     "<br><br>Di seguito, Le riepiloghiamo i dati che ci ha fornito, pregandola di controllarne la correttezza." & _
                     "<br>Se necessario potrà comunque modificare tali dati accedendo alla sezione <i>MY ACCOUNT</i>.</font>" & _
                     "<br><br><table cellspacing=3 cellpadding=3 style='font-family:arial;font-size:9pt'>" & _

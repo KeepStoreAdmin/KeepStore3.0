@@ -683,7 +683,7 @@
                                 </td>
                                 <td style="padding:5px;">
                                     <asp:TextBox ID="tbPassword" runat="server" Width="98%" MaxLength="25" TextMode="Password" ValidationGroup="registrazione_Accesso" CausesValidation="True" style="font-size:10pt; padding:1%;"></asp:TextBox>
-                                    <asp:RequiredFieldValidator ID="RequiredFieldValidator2" runat="server" ControlToValidate="tbPassword" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator><asp:RegularExpressionValidator ID="RegularExpressionValidator2" runat="server" ControlToValidate="tbPassword" Display="Dynamic" ErrorMessage="la password deve essere almeno di 6 caratteri (max 12), non puo contenere caratteri speciali" SetFocusOnError="True" ValidationExpression="\w{6,12}" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>
+                                    <asp:RequiredFieldValidator ID="RequiredFieldValidator2" runat="server" ControlToValidate="tbPassword" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator><asp:RegularExpressionValidator ID="RegularExpressionValidator2" runat="server" ControlToValidate="tbPassword" Display="Dynamic" ErrorMessage="la password deve avere tra 8 e 25 caratteri" SetFocusOnError="True" ValidationExpression="^[\s\S]{8,25}$" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>
                                 </td>
                             </tr>
                             <tr>
@@ -861,7 +861,7 @@ setInputFilter(document.getElementById("hexTextBox"), function(value) {
     <tr>
         <td colspan="2" align="center">
         <b>Registrazione conclusa con successo!</b><br /><br />
-         <u>Ti abbiamo inviato una mail di conferma con i tuoi dati d'accesso.</u>
+         <u>Ti abbiamo inviato una mail di conferma registrazione.</u>
         <br /><br /><br />
         Ora puoi accedere all'area My Account per effettuare gli ordini.<br /><br />
         </td>
