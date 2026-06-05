@@ -90,7 +90,7 @@
                         <div class="ks-auth-card">
 
                             <h5 class="title fw-semibold mb-2">Recupero accesso</h5>
-                            <p class="body-text-3 mb-4">Inserisci il tuo indirizzo email per richiedere assistenza sul recupero dell'accesso.</p>
+                            <p class="body-text-3 mb-4">Per motivi di sicurezza il recupero automatico della password e' stato disabilitato. Per recuperare l'accesso contatta l'assistenza.</p>
 
                             <!-- BOTTONE TORNA A MY ACCOUNT -->
                             <div class="mb-3">
@@ -103,7 +103,7 @@
                                 </asp:HyperLink>
                             </div>
 
-                            <!-- SPINNER OPERAZIONE IN CORSO (invio email) -->
+                            <!-- SPINNER OPERAZIONE IN CORSO -->
                             <div id="remind-spinner">
                                 <img src="Public/Images/loader.gif" alt="Operazione in corso..." />
                                 <p>Operazione in corso, attendere il completamento della richiesta...</p>
@@ -131,7 +131,7 @@
                                             <asp:Label ID="lblError" runat="server"
                                                 Font-Bold="True"
                                                 ForeColor="Red"
-                                                Text="Se i dati indicati risultano validi, riceverai istruzioni per recuperare l'accesso o sarai contattato dall'assistenza."
+                                                Text="Per motivi di sicurezza il recupero automatico della password e' stato disabilitato. Per recuperare l'accesso contatta l'assistenza."
                                                 Visible="False">
                                             </asp:Label>
 
@@ -150,14 +150,14 @@
                                     CausesValidation="True"
                                     Visible="true"
                                     runat="server"
-                                    Text="Richiedi assistenza accesso"
+                                    Text="Mostra indicazioni assistenza"
                                     PostBackUrl="remind.aspx" />
 
                                 <div class="mt-3 text-center">
                                     <asp:Label ID="lblOk" runat="server"
                                         Font-Size="8pt"
                                         Visible="false"
-                                        Text="Se i dati indicati risultano validi, riceverai istruzioni per recuperare l'accesso o sarai contattato dall'assistenza."
+                                        Text="Per motivi di sicurezza il recupero automatico della password e' stato disabilitato. Per recuperare l'accesso contatta l'assistenza."
                                         Font-Bold="True"
                                         EnableViewState="False">
                                     </asp:Label>

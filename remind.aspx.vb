@@ -18,7 +18,7 @@ Partial Class Remind
 
     Public Sub RecuperaDati()
         Me.lblerror.Visible = False
-        Me.lblOk.Text = "Se i dati indicati risultano validi, riceverai istruzioni per recuperare l'accesso o sarai contattato dall'assistenza."
+        Me.lblOk.Text = "Per motivi di sicurezza il recupero automatico della password e' stato disabilitato. Per recuperare l'accesso contatta l'assistenza."
         Me.lblOk.Visible = True
     End Sub
 
