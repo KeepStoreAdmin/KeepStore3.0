@@ -758,13 +758,187 @@ Conclusione: opzione D preparatoria e stata parzialmente eseguita con LOGIN-REGI
 Backlog consigliato post-audit:
 
 - `LOGIN-REGISTER-SECURITY-1B`: chiuso con PR #117.
-- `REMIND-RESET-1A`: sostituire reminder con reset tokenizzato.
+- `REMIND-RESET-1A`: audit/progettazione reset tokenizzato, completato read-only.
+- `REMIND-RESET-BLUEPRINT-1B`: aggiornare Blueprint con progettazione reset.
+- `REMIND-RESET-DB-MANUAL-1C`: manuale DB per Vincenzo, tabella token.
+- `REMIND-RESET-IMPLEMENT-1D`: implementazione `remind.aspx` / `resetpassword.aspx` senza hash.
+- `REMIND-RESET-SMOKE-1E`: smoke controllato reset tokenizzato.
 - `REGISTRATION-POLICY-1A` / `REGISTRATION-UX-1A`: completare modernizzazione registrazione.
 - `GESTIONALE-PASSWORD-AUDIT-1A`: verifica con Vincenzo su `login.Password`, `vlogin`, `Newlogin`.
 - `PASSWORD-HASH-SCHEMA-2B`: proposta campi DB/manuale per Vincenzo.
 - `PASSWORD-HASH-MIGRATION-2C`: adapter legacy/hash e migrazione on-login.
 - `AUTH-CSRF-AUDIT-1A`: audit `AntiCsrfPage` sui flussi auth.
 - `AUTH-JS-LEGACY-AUDIT-1A`: audit errori JS legacy su `remind.aspx`/`registrazione.aspx`.
+
+### 14.9 Progettazione reset password tokenizzato - REMIND-RESET-1A
+
+Esito audit/progettazione: A.
+
+| Campo | Valore |
+| --- | --- |
+| Branch analizzato | `frontend-rebuild` |
+| HEAD analizzato | `1f61dd721a485080918fcb9ff8ad67e6738d861a` |
+| Tipo audit | read-only |
+| Backup importati | no |
+| DB runtime interrogato | no |
+| File repository modificati in audit | nessuno |
+| Dati sensibili esposti | no |
+
+Stato attuale reminder:
+
+- `remind.aspx` oggi non invia piu la password esistente.
+- Il flow e stato trasformato in recupero assistito.
+- Il campo email e ancora presente.
+- Il submit non invia password, non invia email reale nel flow mitigato e non fa enumeration.
+- `remind.aspx.vb` mostra un messaggio di assistenza.
+- I metodi email legacy risultano disabilitati con `Exit Sub`.
+- I blocchi email storici restano da bonificare in task controllato, senza riportare valori sensibili.
+- Nessun reset tokenizzato e ancora implementato.
+
+Stato invio email:
+
+- Non esiste ancora un sender reset tokenizzato.
+- L'email legacy e page-local e basata su session/config.
+- L'infrastruttura email non e centralizzata.
+- SMTP/config sono presenti nel sistema, ma valori, host, credenziali e destinatari reali non devono essere riportati.
+- Prima di implementare il reset serve audit controllato del sender email.
+
+Stato `password.aspx`:
+
+- `password.aspx` e la pagina canonica autenticata per cambio password.
+- Policy attuale: minimo 8 caratteri, massimo 25 caratteri.
+- Conferma password obbligatoria.
+- Nuova password diversa dalla vecchia.
+- `DataPassword` aggiornata solo su cambio password valido e riuscito.
+- `password.aspx` non va trasformata in pagina reset anonima.
+- Il reset futuro deve avere una pagina separata.
+
+Requisiti reset tokenizzato:
+
+- `remind.aspx` resta la pagina di richiesta reset.
+- Risposta sempre generica anti-enumeration.
+- Se l'account e valido e abilitato, generazione token.
+- Invio email con link reset.
+- Link verso pagina dedicata `resetpassword.aspx`.
+- Utente imposta nuova password nella pagina reset.
+- Token monouso, con scadenza breve e invalidazione dopo uso.
+- Nessuna password inviata via email.
+- Nessuna password in URL.
+- Nessuna enumeration.
+- Nessun dettaglio tecnico a video.
+
+Proposta pagine:
+
+| Pagina | Ruolo futuro | Note |
+| --- | --- | --- |
+| `remind.aspx` | richiesta reset | mantiene link da `login.aspx`; risposta generica |
+| `resetpassword.aspx` | pagina reset tokenizzato | futura pagina da creare, non presente oggi |
+| `resetpassword.aspx.vb` | code-behind reset | futura logica token/password policy |
+| pagina esito opzionale | conferma reset | solo se utile, altrimenti messaggio sulla stessa pagina |
+| `password.aspx` | cambio password autenticato | resta separata dal reset anonimo |
+
+Proposta DB token:
+
+Nome consigliato tabella: `login_password_reset_tokens`.
+
+| Campo | Scopo |
+| --- | --- |
+| `Id` | PK token |
+| `LoginId` | riferimento a `login.id` |
+| `TokenHash` | hash SHA-256/compatibile del token, unico |
+| `CreatedAt` | creazione |
+| `ExpiresAt` | scadenza, consigliato 30 minuti |
+| `UsedAt` | valorizzato su uso |
+| `IsRevoked`, `RevokedAt`, `RevokedReason` | revoca controllata |
+| `Attempts` | limite tentativi |
+| `RequestIpHash`, `UserAgentHash` | audit sanificato/opzionale |
+
+Note DB:
+
+- Salvare solo hash del token.
+- Token in chiaro solo nel link email.
+- Scadenza consigliata: 30 minuti.
+- Indice univoco su `TokenHash`.
+- Indice su `LoginId`.
+- Pulizia periodica dei token scaduti.
+- Compatibilita MySQL.
+- Tabella da creare in ogni DB cliente/azienda coinvolto.
+- Necessaria approvazione Vincenzo prima di qualunque modifica DB.
+
+Sicurezza token:
+
+- Almeno 256 bit generati da RNG crittografico.
+- Storage solo hash token.
+- Token monouso.
+- Scadenza breve.
+- Consumo atomico con `UsedAt IS NULL` e `ExpiresAt >= NOW()`.
+- Invalidazione token precedenti opzionale.
+- Rate limiting per email/account/IP hash.
+- Messaggi generici.
+- Logging sicuro senza token/password.
+- Nessun token nei log.
+- Minimizzare rischio token in referer.
+- HTTPS obbligatorio.
+
+Email reset:
+
+- Oggetto generico.
+- Link reset.
+- Indicazione scadenza token.
+- Testo tipo "se non hai richiesto tu il reset, ignora questa email o contatta l'assistenza".
+- Nessuna password.
+- Nessun dato sensibile.
+- Nessun allegato.
+- Compatibilita con configurazione SMTP esistente.
+- Fallback assistenza se email non configurata.
+
+Anti-enumeration:
+
+- `remind.aspx` deve rispondere sempre con testo generico.
+- Nessuna distinzione pubblica tra email inesistente, utente non abilitato o account bloccato.
+- Link reset invalido/scaduto con messaggio generico.
+- Evitare differenze di tempi eccessive se possibile.
+- Nessun dettaglio tecnico a video.
+
+Relazione con hash migration:
+
+- Reset tokenizzato e prerequisito forte per futura hash migration.
+- Nella prima fase puo aggiornare ancora `login.Password` legacy.
+- In fase hash futura potra scrivere hash/salt/versione tramite adapter.
+- Non deve dipendere dal recupero della vecchia password.
+- Deve invalidare il token dopo cambio password.
+- Deve aggiornare `DataPassword` solo su reset riuscito.
+
+Impatto gestionale/Vincenzo:
+
+- Il gestionale ha funzioni di reset password?
+- Il gestionale legge/scrive `login.Password`?
+- Il gestionale usa `DataPassword` / `ScadenzaPassword`?
+- Il gestionale deve vedere i token?
+- Serve una maschera gestionale per revocare token?
+- Ci sono procedure o viste coinvolte?
+- Deployment DB multi-azienda: come va gestito?
+- La tabella token va creata in ogni DB cliente?
+
+Opzioni progettuali:
+
+| Opzione | Descrizione | Esito |
+| --- | --- | --- |
+| A | Reset tokenizzato minimo, legacy password write | valida ma meno pronta per hash |
+| B | Reset tokenizzato hash-ready, oggi scrive legacy | consigliata |
+| C | Mantenere solo assistenza manuale | sicura ma non risolve UX |
+| D | Rinviare reset e fare hash prima | troppo lenta per recupero accesso |
+
+Conclusione: opzione consigliata B. Implementare reset tokenizzato hash-ready, senza hash migration ora, con adapter/struttura compatibile con futura migrazione.
+
+Micro-task futuri:
+
+- `REMIND-RESET-BLUEPRINT-1B`: aggiornare Blueprint con progettazione reset.
+- `REMIND-RESET-DB-MANUAL-1C`: manuale DB per Vincenzo, tabella token.
+- `REMIND-RESET-IMPLEMENT-1D`: implementazione `remind.aspx` / `resetpassword.aspx` senza hash.
+- `REMIND-RESET-SMOKE-1E`: smoke controllato.
+- `PASSWORD-HASH-SCHEMA-2B`: schema hash/salt/versione.
+- `PASSWORD-HASH-MIGRATION-2C`: migrazione progressiva.
 
 ## 15. Registro modifiche tecniche
 
@@ -782,6 +956,7 @@ Backlog consigliato post-audit:
 | 2026-06-05 | DB-BACKUP-BLUEPRINT-1C-FIX | documentale | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Correzione nota `vlogin` / `Newlogin` | Distingue backup operativo, schema versionato e codice legacy | Nessun file SQL modificato, nessun dato sensibile esposto |
 | 2026-06-05 | PASSWORD-HASH-AUDIT-2A / PASSWORD-HASH-BLUEPRINT-2B | documentale | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Integrazione audit hash/password, flussi auth legacy e opzioni migrazione | Nessun runtime; base tecnica per mitigazione e futura hash migration | Nessun codice/DB modificato, nessun dato sensibile esposto |
 | 2026-06-05 | LOGIN-REGISTER-SECURITY-1B/1H/1I | #117 | `f51ab9a4df9afb71760a31db97ed0eac547cd9c3` | `Page.master.vb`, `login.aspx.vb`, `registrazione.aspx`, `registrazione.aspx.vb`, `registrazioneok.aspx`, `remind.aspx`, `remind.aspx.vb` | Mitigazioni immediate login/registrazione/reminder senza schema change | Riduzione esposizione password e enumeration | Nessun hash, nessun DB change, nessun utente/password/email reale modificato/inviato |
+| 2026-06-05 | REMIND-RESET-1A / REMIND-RESET-BLUEPRINT-1B | documentale | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Progettazione reset password tokenizzato hash-ready | Nessun runtime; base tecnica per futuro reset sicuro | Nessun codice/DB modificato, nessun dato sensibile esposto |
 
 ## 16. Debito tecnico e backlog architetturale
 
@@ -793,6 +968,11 @@ Backlog consigliato post-audit:
 - Gestione hash richiede coordinamento con Vincenzo.
 - `remind.aspx` da sostituire con reset tokenizzato.
 - Reminder automatico password disabilitato, ma reset tokenizzato non ancora presente.
+- Tabella token reset non ancora creata.
+- Email reset non ancora implementata.
+- Reminder oggi e solo assistito.
+- Blocchi email legacy disabilitati in `remind.aspx.vb` da bonificare in task controllato.
+- DB/schema reset tokenizzato ancora da approvare con Vincenzo.
 - Registrazione mitigata, ma da modernizzare lato UX e sicurezza.
 - Login mitigato nei messaggi, ma ancora legacy e senza hash.
 - Gestione password via email/sessione/URL mitigata in LOGIN-REGISTER-SECURITY-1; mantenere guardrail e completare reset/hash.
@@ -804,7 +984,11 @@ Backlog consigliato post-audit:
 - Gestione add/edit/delete indirizzi non migrata.
 - Cleanup completo sidebar/nav inline legacy su `datiutente.aspx` da completare.
 - `LOGIN-REGISTER-SECURITY-1B`: chiuso con PR #117.
-- `REMIND-RESET-1A`: sostituire reminder con reset tokenizzato.
+- `REMIND-RESET-1A`: audit/progettazione reset tokenizzato, completato read-only.
+- `REMIND-RESET-BLUEPRINT-1B`: aggiornare Blueprint con progettazione reset.
+- `REMIND-RESET-DB-MANUAL-1C`: manuale DB per Vincenzo, tabella token.
+- `REMIND-RESET-IMPLEMENT-1D`: implementazione `remind.aspx` / `resetpassword.aspx` senza hash.
+- `REMIND-RESET-SMOKE-1E`: smoke controllato.
 - `REGISTRATION-POLICY-1A` / `REGISTRATION-UX-1A`: completare modernizzazione registrazione.
 - `GESTIONALE-PASSWORD-AUDIT-1A`: verifica con Vincenzo su `login.Password`, `vlogin`, `Newlogin`.
 - `PASSWORD-HASH-SCHEMA-2B`: proposta campi DB/manuale per Vincenzo.
@@ -874,7 +1058,7 @@ Lista documenti con selector dinamico e dettaglio ordine con stato ordine/pagame
 
 ### 17.9 Sicurezza e sviluppo evolutivo
 
-Il cambio password account e stabilizzato e i flussi login/registrazione/reminder sono oggetto di progressivo consolidamento e riduzione dei rischi legacy. Hash/migrazione password, reset tokenizzato, CSRF auth e ulteriore modernizzazione registrazione restano backlog prioritari.
+Il cambio password account e stabilizzato e i flussi login/registrazione/reminder sono oggetto di progressivo consolidamento e riduzione dei rischi legacy. I flussi di recupero accesso sono in fase di progettazione evolutiva verso reset tokenizzato sicuro. Hash/migrazione password, CSRF auth e ulteriore modernizzazione registrazione restano backlog prioritari.
 
 ## 18. Glossario
 
