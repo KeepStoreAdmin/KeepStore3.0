@@ -1,6 +1,6 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-05-29
+Aggiornato: 2026-06-05
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
@@ -130,10 +130,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo ACCOUNT-PASSWORD-SECURITY-1B/1I, merge PR #111/#112 e cleanup branch:
+Stato di riferimento dopo LOGIN-REGISTER-SECURITY-1, merge PR #117, smoke post-merge e cleanup branch:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `3d1873f5e3ea071ef187cc906f5d8712a58a09e6`
+- HEAD stabile: `f51ab9a4df9afb71760a31db97ed0eac547cd9c3`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -145,6 +145,7 @@ Stato di riferimento dopo ACCOUNT-PASSWORD-SECURITY-1B/1I, merge PR #111/#112 e 
 - Merge PR #109: `7fe10f0edfbc7b7d5951116697c6654a100ba60f`
 - Merge PR #111: `90c13d3bb41ff8d437f3cc9605a736659b04f4ce`
 - Merge PR #112: `3d1873f5e3ea071ef187cc906f5d8712a58a09e6`
+- Merge PR #117: `f51ab9a4df9afb71760a31db97ed0eac547cd9c3`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -175,6 +176,7 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
 - PR #109 account documenti sidebar cleanup phase 2 with dynamic document selector
 - PR #111 account password canonical flow
 - PR #112 account password confirmation validation hotfix
+- PR #117 login/registrazione/reminder immediate security mitigations
 
 ## 4. Roadmap sintetica
 
@@ -211,6 +213,14 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
 1. Aggiornare questo masterplan dopo merge importanti.
 2. Aggiungere note operative per smoke PayPal sandbox.
 3. Mantenere documenti tecnici senza secret.
+
+### Sicurezza login/registrazione/reminder
+
+1. LOGIN-REGISTER-SECURITY-1 e chiuso lato codice con PR #117.
+2. Login, registrazione e reminder sono mitigati senza schema change e senza hash migration.
+3. Reminder automatico password disabilitato e trasformato in recupero assistito.
+4. Registrazione non deve esporre password in email, URL o sessione.
+5. Hash migration, reset tokenizzato e audit gestionale restano task separati.
 
 ## 5. Stato PayPal
 
@@ -853,10 +863,102 @@ Smoke finale ACCOUNT-PASSWORD-SECURITY-1L:
 - Dati profilo/indirizzi non modificati.
 - Dati sensibili non esposti.
 
+## 12. Stato Login / Registrazione / Reminder
+
+LOGIN-REGISTER-SECURITY-1 e chiuso lato codice.
+
+Esiti principali:
+
+- PR #117 merged.
+- Merge commit PR #117: `f51ab9a4df9afb71760a31db97ed0eac547cd9c3`.
+- Branch task: `task/login-register-security-1b-no-schema`.
+- Cleanup branch LOGIN-REGISTER-SECURITY-1I completato: branch locale e remoto rimossi.
+- Smoke post-merge LOGIN-REGISTER-SECURITY-1H: A.
+
+File modificati da PR #117:
+
+- `Page.master.vb`
+- `login.aspx.vb`
+- `registrazione.aspx`
+- `registrazione.aspx.vb`
+- `registrazioneok.aspx`
+- `remind.aspx`
+- `remind.aspx.vb`
+
+File esclusi/non modificati:
+
+- `password.aspx`
+- `password.aspx.vb`
+- `cambiapassword.aspx`
+- `cambiapassword.aspx.vb`
+- `datiutente.aspx`
+- `datiutente.aspx.vb`
+- `web.config`
+- markup `Page.master`
+- DB/schema/dump SQL
+- gateway/pagamenti
+- carrello/checkout/ordini
+- asset ONSUS originali
+
+Mitigazioni applicate:
+
+- Login enumeration ridotta con messaggio generico unico.
+- Reminder trasformato in recupero assistito.
+- Reminder non promette azioni non eseguite.
+- Reminder non invia password esistente.
+- Reminder non invia email reale.
+- Reminder non fa enumeration.
+- Registrazione non invia password in email.
+- Password in URL rimossa/neutralizzata.
+- Password in sessione rimossa/neutralizzata.
+- Policy registrazione allineata a 8-25.
+- Lowercase forzato password rimosso.
+- Diagnostica tecnica rimossa.
+- Hash implementato: no.
+- DB schema modificato: no.
+- `password.aspx` invariata/stabile.
+
+Smoke post-merge LOGIN-REGISTER-SECURITY-1H:
+
+- Ambiente: `https://www.taikun.it/`.
+- Utente test PROVA: login OK, senza password nei report.
+- Login negativo con messaggio generico OK.
+- Reminder assistito OK.
+- Submit reminder sicuro con dato fittizio.
+- Registrazione read-only OK.
+- `registrazioneok.aspx` OK, nessun `passw=`.
+- `password.aspx` invariata/stabile.
+- Nessuna password in URL/email/UI.
+- Nessuna diagnostica tecnica.
+- Nessun errore ASP.NET/MySQL/Object reference/500.
+- Restano due errori JS legacy/preesistenti su `remind.aspx` e `registrazione.aspx`, non bloccanti.
+- Nessun gateway/carrello/checkout/ordine invocato.
+- Nessuna password modificata.
+- Nessun utente creato.
+- Nessuna email reale inviata.
+- Nessun dato sensibile esposto.
+
+Stato finale area sicurezza/login:
+
+- Cambio password canonico gia stabile su `password.aspx`.
+- Login/registrazione/reminder ora mitigati senza hash.
+- Reminder automatico password disabilitato e convertito a recupero assistito.
+- Registrazione non espone password in email/URL/sessione.
+- Hash migration ancora non implementata.
+- Reset tokenizzato ancora da progettare.
+
 ### Debito residuo dopo consolidamento password
 
 - Hash/migrazione password non implementati.
 - Audit hash/login/registrazione/reset password da fare in task separato.
+- Password legacy ancora in chiaro nel DB.
+- Login usa ancora meccanismo legacy, non hash.
+- Reminder non e ancora reset tokenizzato.
+- Registrazione va ulteriormente modernizzata lato UX e sicurezza.
+- `AntiCsrfPage` non ancora applicato ai flussi auth.
+- Hash/salt/versione algoritmo non presenti.
+- Serve coordinamento con Vincenzo/gestionale prima di modifiche DB.
+- Errori JS legacy su `remind.aspx`/`registrazione.aspx` da valutare in task separato.
 - `datiutente.aspx` resta legacy con errore generico preesistente, tab/JS e gestione salvataggi/destinazioni.
 - `my-account-address.aspx` e stabile read-only ONSUS dopo ACCOUNT-ADDRESS-1B, ma la gestione add/edit/delete indirizzi resta legacy in `datiutente.aspx`.
 - La gestione add/edit/delete indirizzi non e stata migrata.
@@ -867,6 +969,7 @@ Smoke finale ACCOUNT-PASSWORD-SECURITY-1L:
 - `ACCOUNT-ADDRESS-1B` resta chiuso.
 - `ACCOUNT-PASSWORD-SECURITY-1B` resta chiuso.
 - `ACCOUNT-PASSWORD-SECURITY-1I` resta chiuso.
+- `LOGIN-REGISTER-SECURITY-1` resta chiuso.
 
 Task consigliato separato per eventuale proseguimento:
 
@@ -875,17 +978,21 @@ Task consigliato separato per eventuale proseguimento:
 - Obiettivo: decidere con Germano se rimuovere, nascondere o riallineare le nav inline legacy, mantenendo `AccountSidebar` condivisa come fonte di navigazione account.
 - Vincolo: non modificare dati utente o salvataggi legacy senza autorizzazione Germano.
 
-## 12. Prossimi step consigliati
+## 13. Prossimi step consigliati
 
 ### Immediati
 
-1. LOGIN-REGISTER-1A audit login/registrazione ONSUS.
-2. PASSWORD-HASH-AUDIT-2A o SECURITY-PASSWORD-HASH-2A solo dopo audit login/registrazione/reset password.
-3. ACCOUNT-ADDRESS-2A solo se Germano autorizza audit/migrazione della gestione indirizzi legacy.
-4. DATIUTENTE-LEGACY-AUDIT-1A per errore generico, tab/JS legacy e salvataggi/destinazioni.
-5. ACCOUNT-SIDEBAR-INLINE-CLEANUP-3A solo dopo audit datiutente.
-6. Altra pagina account secondo priorita Germano.
-7. Decidere prossimo task PayPal:
+1. REMIND-RESET-1A: progettare reset password tokenizzato.
+2. GESTIONALE-PASSWORD-AUDIT-1A: verifica con Vincenzo su `login.Password`, `vlogin`, `Newlogin`.
+3. PASSWORD-HASH-SCHEMA-2B: manuale campi DB hash/salt/versione.
+4. PASSWORD-HASH-MIGRATION-2C: adapter legacy/hash e migrazione progressiva.
+5. REGISTRATION-POLICY-1A o REGISTRATION-UX-1A: modernizzazione registrazione.
+6. AUTH-CSRF-AUDIT-1A: audit `AntiCsrfPage` sui flussi auth.
+7. AUTH-JS-LEGACY-AUDIT-1A: audit errori JS legacy su remind/registrazione.
+8. ACCOUNT-ADDRESS-2A solo se Germano autorizza audit/migrazione della gestione indirizzi legacy.
+9. DATIUTENTE-LEGACY-AUDIT-1A per errore generico, tab/JS legacy e salvataggi/destinazioni.
+10. ACCOUNT-SIDEBAR-INLINE-CLEANUP-3A solo dopo audit datiutente.
+11. Decidere prossimo task PayPal:
    - retry sandbox per ottenere `Completed`;
    - oppure UI/admin per pending review.
 
@@ -905,19 +1012,18 @@ Task consigliato separato per eventuale proseguimento:
 
 ### UI
 
-1. LOGIN-REGISTER-1A: audit login/registrazione ONSUS.
-2. PASSWORD-HASH-AUDIT-2A / SECURITY-PASSWORD-HASH-2A: solo dopo audit login/registrazione/reset password.
-3. ACCOUNT-ADDRESS-2A solo se Germano autorizza audit/migrazione della gestione indirizzi legacy.
-4. DATIUTENTE-LEGACY-AUDIT-1A: errore generico preesistente, tab/JS legacy, salvataggi e destinazioni.
-5. ACCOUNT-SIDEBAR-INLINE-CLEANUP-3A solo dopo audit datiutente.
-6. Proseguire altra pagina account secondo priorita Germano.
-7. Per ogni refactor UI:
+1. REGISTRATION-UX-1A: modernizzazione registrazione, se Germano la prioritizza.
+2. ACCOUNT-ADDRESS-2A solo se Germano autorizza audit/migrazione della gestione indirizzi legacy.
+3. DATIUTENTE-LEGACY-AUDIT-1A: errore generico preesistente, tab/JS legacy, salvataggi e destinazioni.
+4. ACCOUNT-SIDEBAR-INLINE-CLEANUP-3A solo dopo audit datiutente.
+5. Proseguire altra pagina account secondo priorita Germano.
+6. Per ogni refactor UI:
    - audit ONSUS prima;
    - micro-task implementativo dopo;
    - smoke desktop/mobile;
    - nessuna patch sul vecchio layout quando si cambia impostazione grafica.
 
-## 13. Guardrail permanenti
+## 14. Guardrail permanenti
 
 - Non toccare `main` senza task esplicito.
 - Non creare PR verso `main`.
