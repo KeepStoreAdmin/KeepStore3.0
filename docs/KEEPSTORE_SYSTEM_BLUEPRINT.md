@@ -761,8 +761,9 @@ Backlog consigliato post-audit:
 - `REMIND-RESET-1A`: audit/progettazione reset tokenizzato, completato read-only.
 - `REMIND-RESET-BLUEPRINT-1B`: aggiornare Blueprint con progettazione reset.
 - `REMIND-RESET-DB-MANUAL-1C`: manuale DB per Vincenzo, tabella token.
-- `REMIND-RESET-IMPLEMENT-1D`: implementazione `remind.aspx` / `resetpassword.aspx` senza hash.
-- `REMIND-RESET-SMOKE-1E`: smoke controllato reset tokenizzato.
+- `REMIND-RESET-DB-MANUAL-1D`: verifica manuale con Germano/Vincenzo.
+- `REMIND-RESET-IMPLEMENT-1E`: implementazione `remind.aspx` / `resetpassword.aspx` senza hash.
+- `REMIND-RESET-SMOKE-1F`: smoke controllato reset tokenizzato.
 - `REGISTRATION-POLICY-1A` / `REGISTRATION-UX-1A`: completare modernizzazione registrazione.
 - `GESTIONALE-PASSWORD-AUDIT-1A`: verifica con Vincenzo su `login.Password`, `vlogin`, `Newlogin`.
 - `PASSWORD-HASH-SCHEMA-2B`: proposta campi DB/manuale per Vincenzo.
@@ -841,6 +842,10 @@ Proposta DB token:
 
 Nome consigliato tabella: `login_password_reset_tokens`.
 
+Documento tecnico DB preparatorio: `docs/REMIND_RESET_DB_MANUALE_VINCENZO.md`.
+
+Nota: il manuale e una proposta per Vincenzo e non corrisponde a DB gia modificato, tabella gia creata o reset tokenizzato gia implementato.
+
 | Campo | Scopo |
 | --- | --- |
 | `Id` | PK token |
@@ -864,6 +869,7 @@ Note DB:
 - Compatibilita MySQL.
 - Tabella da creare in ogni DB cliente/azienda coinvolto.
 - Necessaria approvazione Vincenzo prima di qualunque modifica DB.
+- Il manuale `docs/REMIND_RESET_DB_MANUALE_VINCENZO.md` dettaglia schema, query indicative, transazione, rollout multi-azienda, rollback e checklist approvazione.
 
 Sicurezza token:
 
@@ -935,8 +941,9 @@ Micro-task futuri:
 
 - `REMIND-RESET-BLUEPRINT-1B`: aggiornare Blueprint con progettazione reset.
 - `REMIND-RESET-DB-MANUAL-1C`: manuale DB per Vincenzo, tabella token.
-- `REMIND-RESET-IMPLEMENT-1D`: implementazione `remind.aspx` / `resetpassword.aspx` senza hash.
-- `REMIND-RESET-SMOKE-1E`: smoke controllato.
+- `REMIND-RESET-DB-MANUAL-1D`: verifica manuale con Germano/Vincenzo.
+- `REMIND-RESET-IMPLEMENT-1E`: implementazione `remind.aspx` / `resetpassword.aspx` senza hash.
+- `REMIND-RESET-SMOKE-1F`: smoke controllato.
 - `PASSWORD-HASH-SCHEMA-2B`: schema hash/salt/versione.
 - `PASSWORD-HASH-MIGRATION-2C`: migrazione progressiva.
 
@@ -957,6 +964,7 @@ Micro-task futuri:
 | 2026-06-05 | PASSWORD-HASH-AUDIT-2A / PASSWORD-HASH-BLUEPRINT-2B | documentale | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Integrazione audit hash/password, flussi auth legacy e opzioni migrazione | Nessun runtime; base tecnica per mitigazione e futura hash migration | Nessun codice/DB modificato, nessun dato sensibile esposto |
 | 2026-06-05 | LOGIN-REGISTER-SECURITY-1B/1H/1I | #117 | `f51ab9a4df9afb71760a31db97ed0eac547cd9c3` | `Page.master.vb`, `login.aspx.vb`, `registrazione.aspx`, `registrazione.aspx.vb`, `registrazioneok.aspx`, `remind.aspx`, `remind.aspx.vb` | Mitigazioni immediate login/registrazione/reminder senza schema change | Riduzione esposizione password e enumeration | Nessun hash, nessun DB change, nessun utente/password/email reale modificato/inviato |
 | 2026-06-05 | REMIND-RESET-1A / REMIND-RESET-BLUEPRINT-1B | documentale | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Progettazione reset password tokenizzato hash-ready | Nessun runtime; base tecnica per futuro reset sicuro | Nessun codice/DB modificato, nessun dato sensibile esposto |
+| 2026-06-05 | REMIND-RESET-DB-MANUAL-1C | documentale | branch PR | `docs/REMIND_RESET_DB_MANUALE_VINCENZO.md`, `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Manuale tecnico DB per Vincenzo sulla tabella reset token | Nessun runtime; base per approvazione DB futura | Nessun codice/DB modificato, nessuna tabella creata, nessun dato sensibile esposto |
 
 ## 16. Debito tecnico e backlog architetturale
 
@@ -973,6 +981,7 @@ Micro-task futuri:
 - Reminder oggi e solo assistito.
 - Blocchi email legacy disabilitati in `remind.aspx.vb` da bonificare in task controllato.
 - DB/schema reset tokenizzato ancora da approvare con Vincenzo.
+- Manuale DB preparatorio disponibile in `docs/REMIND_RESET_DB_MANUALE_VINCENZO.md`; resta da verificare con Germano/Vincenzo.
 - Registrazione mitigata, ma da modernizzare lato UX e sicurezza.
 - Login mitigato nei messaggi, ma ancora legacy e senza hash.
 - Gestione password via email/sessione/URL mitigata in LOGIN-REGISTER-SECURITY-1; mantenere guardrail e completare reset/hash.
@@ -987,8 +996,9 @@ Micro-task futuri:
 - `REMIND-RESET-1A`: audit/progettazione reset tokenizzato, completato read-only.
 - `REMIND-RESET-BLUEPRINT-1B`: aggiornare Blueprint con progettazione reset.
 - `REMIND-RESET-DB-MANUAL-1C`: manuale DB per Vincenzo, tabella token.
-- `REMIND-RESET-IMPLEMENT-1D`: implementazione `remind.aspx` / `resetpassword.aspx` senza hash.
-- `REMIND-RESET-SMOKE-1E`: smoke controllato.
+- `REMIND-RESET-DB-MANUAL-1D`: verifica manuale con Germano/Vincenzo.
+- `REMIND-RESET-IMPLEMENT-1E`: implementazione `remind.aspx` / `resetpassword.aspx` senza hash.
+- `REMIND-RESET-SMOKE-1F`: smoke controllato.
 - `REGISTRATION-POLICY-1A` / `REGISTRATION-UX-1A`: completare modernizzazione registrazione.
 - `GESTIONALE-PASSWORD-AUDIT-1A`: verifica con Vincenzo su `login.Password`, `vlogin`, `Newlogin`.
 - `PASSWORD-HASH-SCHEMA-2B`: proposta campi DB/manuale per Vincenzo.
