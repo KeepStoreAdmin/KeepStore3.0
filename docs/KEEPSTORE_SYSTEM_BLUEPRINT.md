@@ -611,15 +611,101 @@ Esito audit: A.
 
 ### 14.6 Piano consigliato audit
 
-Opzione consigliata: B, migrazione hash progressiva, preceduta da micro-task preparatorio controllato.
+Opzione consigliata: fase D preparatoria senza schema change, seguita da migrazione B progressiva on-login dopo audit gestionale e proposta schema.
 
 Sequenza suggerita:
 
 1. `LOGIN-REGISTER-SECURITY-1B`
 2. `PASSWORD-HASH-AUDIT-2A`
-3. `SECURITY-PASSWORD-HASH-2A`
-4. `REMIND-RESET-1A`
-5. `REGISTRATION-UX-1A`
+3. `REMIND-RESET-1A`
+4. `REGISTRATION-POLICY-1A`
+5. `GESTIONALE-PASSWORD-AUDIT-1A`
+6. `PASSWORD-HASH-SCHEMA-2B`
+7. `PASSWORD-HASH-MIGRATION-2C`
+
+### 14.7 Audit password/hash - PASSWORD-HASH-AUDIT-2A
+
+Esito audit: A.
+
+| Campo | Valore |
+| --- | --- |
+| Branch analizzato | `frontend-rebuild` |
+| HEAD analizzato | `57ea6a2c750f94286afd1d78214f3dbef8f88a7b` |
+| Tipo audit | read-only |
+| Backup importati | no |
+| File repository modificati | nessuno |
+| Dati sensibili esposti | no |
+
+Mappa password:
+
+- Fonte principale account: `login.Password`.
+- `login.DataPassword` e usato nel ciclo password/scadenza.
+- `ScadenzaPassword` risulta su configurazione azienda/sessione e viene usato per redirect scadenza.
+- Campi hash/salt/versione gia esistenti: no.
+- Reset token/scadenza token rilevati: no.
+- Altri campi password/config esistono per SMTP/export/spedizioni e non vanno confusi con password account.
+
+Riconciliazione `vlogin` / `Newlogin`:
+
+| Oggetto | Backup operativo | Schema versionato | Codice legacy | Impatto | Azione |
+| --- | --- | --- | --- | --- | --- |
+| `vlogin` | non rilevato come DDL estratto nel blueprint/audit backup | si | si, login/reminder/master/registrazione | divergenza fonti | riconciliare prima di hash |
+| `Newlogin` | non rilevato come DDL estratto nel blueprint/audit backup | si | si, registrazione | rischio rottura registrazione | audit DB+gestionale |
+| `login.Password` | campo legacy centrale | si | si | cleartext legacy | migrazione progressiva |
+| `DataPassword` | campo legacy centrale | si | si | scadenza password | aggiornare solo su successo |
+
+Nota: per `vlogin` e `Newlogin` evitare formulazioni assolute. Specificare sempre la fonte: backup operativo, schema versionato o codice legacy.
+
+Flussi auth:
+
+| Flusso | File | DB coinvolto | Meccanismo password | Rischio | Priorita |
+| --- | --- | --- | --- | --- | --- |
+| Login pagina | `login.aspx.vb` | `vlogin` | confronto legacy case-insensitive | enumeration, no hash | alta |
+| Login master | `Page.master.vb` | `vlogin` | confronto legacy case-insensitive | flow parallelo | alta |
+| Registrazione | `registrazione.aspx(.vb)` | `utenti`, `login`, `Newlogin`, `vlogin` | password lowercase, email/sessione | critica | alta |
+| Reminder | `remind.aspx.vb` | `vlogin` | recupera password esistente | incompatibile con hash | critica |
+| Cambio password | `password.aspx.vb` | `login` | update centralizzato legacy | buon punto per hash adapter | alta |
+| Logout/protezione | `logout`, `accessonegato`, `Page.master` | sessione/carrello | session clear/abandon | ok, ma carrello collegato | media |
+
+Sintesi tecnica:
+
+- Login legacy usa query parametrizzata su `vlogin`, ma password confrontata in chiaro e case-insensitive.
+- I messaggi login distinguono username, password e utente non attivo, con rischio enumeration.
+- Registrazione usa `Newlogin`, controlli duplicati su `vlogin` e policy vecchia 6-12 alfanumerici.
+- Registrazione converte password lowercase.
+- Registrazione salva password in sessione e la invia via email.
+- Esiste redirect con password in URL in caso coupon.
+- Reminder recupera password esistente e la invia via email.
+- Non sono stati rilevati token reset/scadenza token.
+- `password.aspx.vb` e il punto piu pulito per futuro hash adapter.
+- `Page.master` gestisce `DataPassword`/`ScadenzaPassword` e redirect a `password.aspx`.
+- Restano flow automatici post-registrazione basati su password in sessione.
+
+Impatto gestionale/Vincenzo:
+
+- Impatto alto.
+- Il gestionale probabilmente legge/scrive `login.Password` o dipende da `vlogin` / `Newlogin`.
+- Prima di cambiare schema servono conferme su lettura login, creazione utenti, reset password, scadenza password, sincronizzazione multi-azienda e deploy DB.
+
+Opzioni hash migration:
+
+| Opzione | Descrizione | Pro | Contro | DB | Gestionale | Raccomandazione |
+| --- | --- | --- | --- | --- | --- | --- |
+| A hard switch | convertire tutto subito | veloce in teoria | altissimo rischio lockout | alto | alto | no |
+| B progressiva on-login | aggiungere hash/salt/versione, migrare al login valido | compatibile, controllabile | richiede adapter e periodo transitorio | medio | medio/alto | consigliata dopo fase D |
+| C reset forzato | invalidare legacy e reset utenti | sicurezza forte | impatto utenti/assistenza | medio | alto | solo se autorizzato |
+| D preparatoria | eliminare email/sessione/URL password e ridurre enumeration senza schema | riduce rischio subito | non risolve hash | basso | basso/medio | primo passo consigliato |
+
+Conclusione: opzione consigliata D come fase immediata, poi B dopo schema/manuale e audit gestionale.
+
+Backlog consigliato post-audit:
+
+- `LOGIN-REGISTER-SECURITY-1B`: ridurre rischi immediati senza hash/schema change.
+- `REMIND-RESET-1A`: sostituire reminder con reset tokenizzato.
+- `REGISTRATION-POLICY-1A`: allineare policy registrazione a password canonica.
+- `GESTIONALE-PASSWORD-AUDIT-1A`: verifica con Vincenzo su `login.Password`, `vlogin`, `Newlogin`.
+- `PASSWORD-HASH-SCHEMA-2B`: proposta campi DB/manuale per Vincenzo.
+- `PASSWORD-HASH-MIGRATION-2C`: adapter legacy/hash e migrazione on-login.
 
 ## 15. Registro modifiche tecniche
 
@@ -635,14 +721,20 @@ Sequenza suggerita:
 | 2026-06-05 | BLUEPRINT-1B | #114 | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Integrazione backup database cliente/azienda, city registry e connessioni gestionale | Conoscenza architetturale e preparazione audit DB futuri | Nessun backup estratto/importato, nessun dato sensibile esposto |
 | 2026-06-05 | DB-BACKUP-AUDIT-1A / DB-BACKUP-BLUEPRINT-1B | documentale | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Integrazione mappa sanificata dei tre database KeepStore | Nessun runtime; alta utilita per progettare login/hash/registrazione/gestionale | Nessun backup importato, nessun dato sensibile esposto |
 | 2026-06-05 | DB-BACKUP-BLUEPRINT-1C-FIX | documentale | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Correzione nota `vlogin` / `Newlogin` | Distingue backup operativo, schema versionato e codice legacy | Nessun file SQL modificato, nessun dato sensibile esposto |
+| 2026-06-05 | PASSWORD-HASH-AUDIT-2A / PASSWORD-HASH-BLUEPRINT-2B | documentale | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Integrazione audit hash/password, flussi auth legacy e opzioni migrazione | Nessun runtime; base tecnica per mitigazione e futura hash migration | Nessun codice/DB modificato, nessun dato sensibile esposto |
 
 ## 16. Debito tecnico e backlog architetturale
 
 - Hash/migrazione password non implementati.
-- Audit hash/login/registrazione/reset da fare.
-- `PASSWORD-HASH-AUDIT-2A`: audit hash migration su `login.Password`, `vlogin`, `Newlogin`, `login.aspx.vb`, `registrazione.aspx.vb`, `remind.aspx.vb`, gestionale/Vincenzo e confronto tra backup operativo e `Database Taikun/KeepStore.sql`.
+- Password legacy ancora in chiaro nei flussi login/registrazione/reminder.
+- Assenza campi hash/salt/versione.
+- Audit hash/login/registrazione/reset completato in `PASSWORD-HASH-AUDIT-2A`; resta da scegliere la strategia implementativa.
+- `vlogin` / `Newlogin` da riconciliare fra backup operativo, schema versionato, codice e gestionale.
+- Gestione hash richiede coordinamento con Vincenzo.
 - `remind.aspx` da sostituire con reset tokenizzato.
+- Reminder incompatibile con hash finche recupera/invia password esistente.
 - Registrazione da allineare a policy password unica.
+- Registrazione invia/salva password in modo non moderno.
 - Login da normalizzare rispetto a confronto password e messaggi utente.
 - Gestione password via email/sessione/URL da eliminare.
 - `AntiCsrfPage` da valutare sulle auth pages e sulle pagine con azioni state-changing.
@@ -652,7 +744,11 @@ Sequenza suggerita:
 - Gestione add/edit/delete indirizzi non migrata.
 - Cleanup completo sidebar/nav inline legacy su `datiutente.aspx` da completare.
 - `LOGIN-REGISTER-SECURITY-1B` da decidere.
-- `PASSWORD-HASH-AUDIT-2A` da pianificare.
+- `REMIND-RESET-1A`: sostituire reminder con reset tokenizzato.
+- `REGISTRATION-POLICY-1A`: allineare policy registrazione a password canonica.
+- `GESTIONALE-PASSWORD-AUDIT-1A`: verifica con Vincenzo su `login.Password`, `vlogin`, `Newlogin`.
+- `PASSWORD-HASH-SCHEMA-2B`: proposta campi DB/manuale per Vincenzo.
+- `PASSWORD-HASH-MIGRATION-2C`: adapter legacy/hash e migrazione on-login.
 - Integrazione gestionale da considerare prima di modifiche DB/hash.
 - `DB-BACKUP-AUDIT-1A`: audit read-only dei tre backup per mappa tabelle/view/procedure, senza dati sensibili.
 - `DB-BACKUP-BLUEPRINT-1B`: aggiornamento blueprint con mappa DB sanificata.
