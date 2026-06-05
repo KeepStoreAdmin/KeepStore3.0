@@ -870,6 +870,12 @@ Note DB:
 - Tabella da creare in ogni DB cliente/azienda coinvolto.
 - Necessaria approvazione Vincenzo prima di qualunque modifica DB.
 - Il manuale `docs/REMIND_RESET_DB_MANUALE_VINCENZO.md` dettaglia schema, query indicative, transazione, rollout multi-azienda, rollback e checklist approvazione.
+- Revisione Germano preliminare: tabella confermata come proposta per ogni DB cliente/azienda, non per `connessioni` o `city_registry`.
+- Revisione Germano preliminare: no FK iniziale consigliata; `LoginId` resta riferimento logico indicizzato verso `login.id`.
+- Revisione Germano preliminare: fase 1 legacy-compatible, quindi reset tokenizzato aggiornera ancora `login.Password` e `login.DataPassword`.
+- Revisione Germano preliminare: il gestionale oggi ha dipendenza operativa dalla password in chiaro nella griglia utenti web; questa dipendenza e debito tecnico da chiudere prima della hash migration.
+- `aziende.ScadenzaPassword` e policy aziendale in giorni; il reset riuscito aggiorna `login.DataPassword` ma non modifica `aziende.ScadenzaPassword`.
+- Logica scadenza da preservare: `login.DataPassword + aziende.ScadenzaPassword`.
 
 Sicurezza token:
 
@@ -926,6 +932,20 @@ Impatto gestionale/Vincenzo:
 - Deployment DB multi-azienda: come va gestito?
 - La tabella token va creata in ogni DB cliente?
 
+Decisioni preliminari Germano:
+
+- Nome tabella confermato: `login_password_reset_tokens`.
+- Tabella da creare in ogni DB cliente/azienda che usa il sito.
+- Non creare la tabella nel DB `connessioni`.
+- Non creare la tabella nel DB `city_registry`.
+- No FK iniziale consigliata, salvo futura approvazione esplicita Vincenzo.
+- Gestionale oggi con griglia "Accesso Utenti Web" che mostra password in chiaro.
+- Fase 1 reset: legacy-compatible, nessun hash.
+- Fase 1 reset: aggiornare `login.Password` e `login.DataPassword`.
+- `aziende.ScadenzaPassword` governa la scadenza password in giorni.
+- Durata token reset indipendente da `aziende.ScadenzaPassword`; consigliati 30 minuti.
+- Futura schermata gestionale JANUS token reset utile, ma fuori scope ora.
+
 Opzioni progettuali:
 
 | Opzione | Descrizione | Esito |
@@ -946,6 +966,8 @@ Micro-task futuri:
 - `REMIND-RESET-SMOKE-1F`: smoke controllato.
 - `PASSWORD-HASH-SCHEMA-2B`: schema hash/salt/versione.
 - `PASSWORD-HASH-MIGRATION-2C`: migrazione progressiva.
+- `GESTIONALE-RESET-TOKEN-UI-1A`: futura schermata gestionale JANUS per audit/revoca token reset.
+- `GESTIONALE-PASSWORD-HASH-UI-1A`: adeguare gestionale per non mostrare o richiedere password in chiaro.
 
 ## 15. Registro modifiche tecniche
 
@@ -965,6 +987,7 @@ Micro-task futuri:
 | 2026-06-05 | LOGIN-REGISTER-SECURITY-1B/1H/1I | #117 | `f51ab9a4df9afb71760a31db97ed0eac547cd9c3` | `Page.master.vb`, `login.aspx.vb`, `registrazione.aspx`, `registrazione.aspx.vb`, `registrazioneok.aspx`, `remind.aspx`, `remind.aspx.vb` | Mitigazioni immediate login/registrazione/reminder senza schema change | Riduzione esposizione password e enumeration | Nessun hash, nessun DB change, nessun utente/password/email reale modificato/inviato |
 | 2026-06-05 | REMIND-RESET-1A / REMIND-RESET-BLUEPRINT-1B | documentale | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Progettazione reset password tokenizzato hash-ready | Nessun runtime; base tecnica per futuro reset sicuro | Nessun codice/DB modificato, nessun dato sensibile esposto |
 | 2026-06-05 | REMIND-RESET-DB-MANUAL-1C | documentale | branch PR | `docs/REMIND_RESET_DB_MANUALE_VINCENZO.md`, `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Manuale tecnico DB per Vincenzo sulla tabella reset token | Nessun runtime; base per approvazione DB futura | Nessun codice/DB modificato, nessuna tabella creata, nessun dato sensibile esposto |
+| 2026-06-05 | REMIND-RESET-DB-REVIEW-1G | documentale | branch PR | `docs/REMIND_RESET_DB_MANUALE_VINCENZO.md`, `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Integrazione feedback Germano: strategia legacy-compatible, tabella per DB cliente, no FK iniziale, `aziende.ScadenzaPassword`, futura UI JANUS token reset | Nessun runtime; chiarisce impatto gestionale e scadenza password | Nessun codice/DB modificato, nessuna tabella creata, nessun dato sensibile esposto |
 
 ## 16. Debito tecnico e backlog architetturale
 
@@ -982,6 +1005,11 @@ Micro-task futuri:
 - Blocchi email legacy disabilitati in `remind.aspx.vb` da bonificare in task controllato.
 - DB/schema reset tokenizzato ancora da approvare con Vincenzo.
 - Manuale DB preparatorio disponibile in `docs/REMIND_RESET_DB_MANUALE_VINCENZO.md`; resta da verificare con Germano/Vincenzo.
+- Gestionale oggi dipendente dalla password web in chiaro; incompatibile con futura hash migration.
+- `aziende.ScadenzaPassword` documentato come policy aziendale in giorni; reset tokenizzato non deve modificarlo.
+- Relazione scadenza password documentata: `login.DataPassword + aziende.ScadenzaPassword`.
+- Futura schermata gestionale JANUS token reset da progettare in `GESTIONALE-RESET-TOKEN-UI-1A`.
+- Futura rimozione visualizzazione password in chiaro dal gestionale da progettare in `GESTIONALE-PASSWORD-HASH-UI-1A`.
 - Registrazione mitigata, ma da modernizzare lato UX e sicurezza.
 - Login mitigato nei messaggi, ma ancora legacy e senza hash.
 - Gestione password via email/sessione/URL mitigata in LOGIN-REGISTER-SECURITY-1; mantenere guardrail e completare reset/hash.
@@ -1001,6 +1029,8 @@ Micro-task futuri:
 - `REMIND-RESET-SMOKE-1F`: smoke controllato.
 - `REGISTRATION-POLICY-1A` / `REGISTRATION-UX-1A`: completare modernizzazione registrazione.
 - `GESTIONALE-PASSWORD-AUDIT-1A`: verifica con Vincenzo su `login.Password`, `vlogin`, `Newlogin`.
+- `GESTIONALE-RESET-TOKEN-UI-1A`: futura griglia JANUS per token reset.
+- `GESTIONALE-PASSWORD-HASH-UI-1A`: rimozione dipendenza gestionale da password in chiaro.
 - `PASSWORD-HASH-SCHEMA-2B`: proposta campi DB/manuale per Vincenzo.
 - `PASSWORD-HASH-MIGRATION-2C`: adapter legacy/hash e migrazione on-login.
 - `AUTH-CSRF-AUDIT-1A`: audit `AntiCsrfPage` sui flussi auth.

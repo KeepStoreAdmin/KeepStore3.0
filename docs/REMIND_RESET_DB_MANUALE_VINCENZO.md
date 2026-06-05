@@ -15,6 +15,22 @@
 
 Questo documento e destinato alla revisione tecnica di Vincenzo Iacobelli per valutare la futura introduzione della tabella token reset password. Non e uno script di deploy automatico e non autorizza modifiche al database.
 
+## 1.1 Decisioni preliminari Germano
+
+Le seguenti decisioni derivano dalla revisione manuale Germano su SQLyog/gestionale KeepStore. Non riportare valori reali visibili negli screenshot.
+
+- Confermato nome tabella: `login_password_reset_tokens`.
+- Confermati i campi generali proposti.
+- Confermata la tabella `login` come riferimento operativo per la password web.
+- La tabella token va creata in ogni DB cliente/azienda che usa il sito.
+- Gestione FK: lasciare decisione tecnica a noi/Vincenzo; proposta no FK iniziale.
+- Rollout multi-azienda da definire tecnicamente; proposta script controllato per DB cliente.
+- Il gestionale oggi mostra password web in chiaro nella griglia "Accesso Utenti Web".
+- Una schermata gestionale token reset sarebbe utile in futuro.
+- Confermato campo `aziende.ScadenzaPassword` come policy aziendale in giorni.
+- Confermata relazione funzionale: `login.DataPassword + aziende.ScadenzaPassword`.
+- Scelta tecnica consigliata: Opzione B, reset tokenizzato hash-ready ma fase 1 legacy-compatible.
+
 ## 2. Scopo della modifica futura
 
 La modifica futura dovra sostituire il vecchio reminder password con un reset tramite token monouso, evitando invio o visualizzazione di password esistenti.
@@ -36,7 +52,9 @@ Obiettivi:
 - `password.aspx` resta la pagina di cambio password autenticato.
 - `login.Password` e ancora campo legacy.
 - `DataPassword` viene aggiornata su cambio password riuscito.
+- `aziende.ScadenzaPassword` esiste e rappresenta la policy aziendale di scadenza password in giorni.
 - Hash password non implementato.
+- Il gestionale ha una griglia "Accesso Utenti Web" che visualizza anche la password web in chiaro.
 
 ## 4. Nuova tabella proposta
 
@@ -44,11 +62,20 @@ Nome tabella proposto: `login_password_reset_tokens`.
 
 Scopo: gestire richieste reset password tramite token sicuro, monouso, con scadenza e consumo atomico.
 
-La tabella e pensata per il database cliente/azienda che contiene `login`, non per registry esterni.
+La tabella e pensata per il database cliente/azienda che contiene `login`, non per registry esterni. Il DB cliente puo cambiare nome in base all'azienda; il gestionale usa `connessioni` per indirizzare il DB corretto, ma i token reset appartengono al DB operativo cliente.
 
 ## 5. Schema tabella proposto
 
 Script indicativo MySQL da revisionare da Vincenzo. Non eseguire automaticamente. Adattare charset, collation, naming e opzioni allo standard reale del DB cliente.
+
+Prima dell'esecuzione Vincenzo deve confermare:
+
+- tipo effettivo di `login.id` e quindi tipo coerente di `LoginId`;
+- tipo effettivo da usare per `Id`;
+- charset/collation reale;
+- indici;
+- assenza FK iniziale;
+- compatibilita MySQL reale dei DB clienti.
 
 ```sql
 CREATE TABLE login_password_reset_tokens (
@@ -72,7 +99,16 @@ CREATE TABLE login_password_reset_tokens (
 );
 ```
 
-Nota: non inserire foreign key se lo schema storico KeepStore non le usa in modo esteso, salvo decisione esplicita di Vincenzo.
+Nota FK: non imporre foreign key nella prima fase. Usare `LoginId` come riferimento logico indicizzato verso `login.id`.
+
+Motivazione no FK iniziale:
+
+- lo schema storico KeepStore non usa FK in modo esteso;
+- riduce rischio di blocchi in DB clienti non perfettamente allineati;
+- facilita rollout multi-azienda;
+- Vincenzo potra decidere in seguito se aggiungere FK dove compatibile.
+
+FK opzionale solo dopo approvazione esplicita di Vincenzo.
 
 ## 6. Descrizione campi
 
@@ -180,10 +216,17 @@ Pseudoflusso:
 
 ## 10. Integrazione con `DataPassword` e `ScadenzaPassword`
 
-- `DataPassword` va aggiornata solo su reset riuscito.
-- `ScadenzaPassword` resta nella logica azienda/sessione.
-- Il reset riuscito deve evitare loop di cambio password se la policy aziendale lo consente.
-- Verificare con Vincenzo come il gestionale usa questi campi.
+- `aziende.ScadenzaPassword` e la policy aziendale di scadenza password espressa in giorni.
+- Esempio operativo: valore 999 significa che l'utente dovra cambiare password dopo 999 giorni dall'ultimo cambio/reset.
+- `login.DataPassword` e la data dell'ultimo cambio/reset password del singolo utente.
+- La logica corretta e: `login.DataPassword + aziende.ScadenzaPassword = data di scadenza password utente`.
+- Il reset tokenizzato deve aggiornare `login.DataPassword = NOW()` solo dopo reset riuscito.
+- Il reset tokenizzato non deve modificare `aziende.ScadenzaPassword`.
+- La durata del token reset e indipendente da `aziende.ScadenzaPassword`.
+- Durata token consigliata: 30 minuti.
+- `ScadenzaPassword` governa la validita della password nel tempo, non la validita del link reset.
+- Se il reset avviene correttamente, il ciclo di scadenza password riparte da `DataPassword`.
+- Eventuali valori speciali, nulli o anomali di `ScadenzaPassword` vanno verificati nel codice esistente e con Vincenzo, senza cambiarli in questo task.
 
 ## 11. Deployment multi-azienda
 
@@ -193,6 +236,14 @@ Pseudoflusso:
 - Non creare tabella nel DB `connessioni`, salvo diversa decisione.
 - Non creare tabella nel DB `city_registry`.
 - Serve procedura di rollout multi-database.
+- Backup del DB cliente prima del deploy.
+- Script SQL idempotente o preceduto da controllo `INFORMATION_SCHEMA`.
+- Esecuzione controllata su ogni DB cliente/azienda.
+- Nessuna esecuzione cieca su `connessioni` o `city_registry`.
+- Registrare quali DB sono stati aggiornati.
+- Prevedere rollback.
+- Allineare la versione gestionale/sito prima di attivare la funzione reset.
+- Il deploy va coordinato da Vincenzo.
 
 ## 12. Impatto sul gestionale
 
@@ -208,12 +259,26 @@ Domande per Vincenzo:
 - Il gestionale richiede aggiornamento per la tabella token?
 - Come viene gestito il deploy su piu database cliente?
 
+Compatibilita gestionale fase 1:
+
+- Il gestionale oggi visualizza password web in chiaro nella griglia "Accesso Utenti Web".
+- Quindi la fase 1 del reset tokenizzato non deve introdurre hash.
+- La fase 1 deve aggiornare ancora `login.Password` legacy e `login.DataPassword`.
+- Hash/salt/versione algoritmo saranno introdotti solo in task successivi.
+- Prima della hash migration il gestionale dovra essere adeguato per non dipendere piu da password in chiaro.
+- La visibilita della password nel gestionale e un debito tecnico da chiudere con progetto dedicato.
+
 ## 13. Relazione con `vlogin` e `Newlogin`
 
 - `vlogin` e `Newlogin` sono da riconciliare tra schema versionato, DB operativo e codice.
 - Il reset tokenizzato deve aggiornare il dato effettivo letto dal login.
 - Prima della migrazione hash serve audit dedicato.
 - Per il reset legacy iniziale basta aggiornare `login.Password` solo se confermato da Vincenzo.
+- Germano ritiene probabile l'uso di `vlogin`.
+- Non cambiare `vlogin` / `Newlogin` in questa fase.
+- Se `vlogin` legge da `login.Password`, l'update legacy su `login.Password` e coerente.
+- Se esistono differenze fra schema versionato, DB operativo e gestionale, Vincenzo dovra confermare.
+- Ogni modifica a `vlogin` / `Newlogin` resta fuori scope e va fatta solo dopo audit dedicato.
 
 ## 14. Relazione con futura hash migration
 
@@ -222,6 +287,67 @@ Domande per Vincenzo:
 - Domani potra chiamare adapter password per scrivere hash/salt/versione.
 - Non deve mai recuperare password precedente.
 - Non deve mai inviare password.
+
+Debito gestionale per hash migration:
+
+- Il gestionale oggi mostra password in chiaro.
+- Questa funzionalita e incompatibile con futura hash migration.
+- Nella fase hash il gestionale dovra non visualizzare piu password.
+- Il gestionale non dovra pretendere di leggere password in chiaro.
+- Il gestionale potra eventualmente permettere solo "imposta nuova password temporanea" o "invia link reset".
+- Il workflow gestionale dovra usare reset sicuro.
+
+## 14.1 Futura schermata gestionale token reset
+
+Questa schermata non va implementata ora. Va progettata come task futuro: `GESTIONALE-RESET-TOKEN-UI-1A`.
+
+Proposta menu/sezione:
+
+- `Accesso Utenti Web`;
+- oppure `Utility > Reset Password Web`.
+
+Componente suggerito: griglia JANUS coerente con stile gestionale KeepStore.
+
+Scopo:
+
+- vedere richieste reset;
+- filtrare token attivi/scaduti/usati/revocati;
+- revocare token;
+- verificare audit senza mostrare token;
+- eventualmente inviare nuovo link reset in task futuro.
+
+Colonne consigliate:
+
+- `Id`;
+- `LoginId`;
+- `UserName`;
+- `Email` mascherata o parzialmente oscurata;
+- `CreatedAt`;
+- `ExpiresAt`;
+- `UsedAt`;
+- `IsRevoked`;
+- `RevokedAt`;
+- `RevokedReason`;
+- `Attempts`;
+- `Stato` calcolato: Attivo, Scaduto, Usato, Revocato;
+- `UltimaOperazione`.
+
+Colonne da non mostrare:
+
+- `TokenHash` completo;
+- token in chiaro, che non deve mai stare nel DB;
+- IP chiaro;
+- user agent chiaro;
+- password.
+
+Azioni future:
+
+- `Revoca token`;
+- `Filtra attivi`;
+- `Filtra scaduti`;
+- `Filtra usati`;
+- `Filtra revocati`;
+- eventuale `Invia nuovo link reset`, solo dopo implementazione email sicura.
 
 ## 15. Checklist approvazione Vincenzo
 
