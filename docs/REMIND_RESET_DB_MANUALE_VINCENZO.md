@@ -490,6 +490,20 @@ Esito atteso subito dopo la creazione:
 - nessun dato personale e presente;
 - evidenza tecnica salvata senza password, token, hash reali, email reali, IP reali, connection string o dati cliente.
 
+Esito gate DB `taikun` comunicato da Germano:
+
+- esecuzione manuale controllata completata su SQLyog Ultimate 64;
+- backup effettuato;
+- tabella `login_password_reset_tokens` creata sul DB `taikun`;
+- `SHOW TABLES` OK;
+- `SHOW CREATE TABLE` coerente;
+- `SELECT COUNT(*)` pari a `0` subito dopo la creazione;
+- nessuna anomalia comunicata;
+- nessun dato reale inserito;
+- nessun token reale inserito;
+- runtime reset tokenizzato non ancora implementato;
+- prossima fase possibile solo su branch dedicato runtime.
+
 Criterio di approvazione:
 
 - Germano approva la consegna operativa;
