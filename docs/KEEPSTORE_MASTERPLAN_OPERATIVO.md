@@ -1,6 +1,6 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-06-05
+Aggiornato: 2026-06-06
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
@@ -130,10 +130,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo LOGIN-REGISTER-SECURITY-1, merge PR #117, smoke post-merge e cleanup branch:
+Stato di riferimento dopo REMIND-RESET-DB-REVIEW-1, merge PR #121 e cleanup branch:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `f51ab9a4df9afb71760a31db97ed0eac547cd9c3`
+- HEAD stabile: `f11cf0b434b9be111d470b995083edf9d18b481b`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -146,6 +146,7 @@ Stato di riferimento dopo LOGIN-REGISTER-SECURITY-1, merge PR #117, smoke post-m
 - Merge PR #111: `90c13d3bb41ff8d437f3cc9605a736659b04f4ce`
 - Merge PR #112: `3d1873f5e3ea071ef187cc906f5d8712a58a09e6`
 - Merge PR #117: `f51ab9a4df9afb71760a31db97ed0eac547cd9c3`
+- Merge PR #121: `f11cf0b434b9be111d470b995083edf9d18b481b`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -177,6 +178,7 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
 - PR #111 account password canonical flow
 - PR #112 account password confirmation validation hotfix
 - PR #117 login/registrazione/reminder immediate security mitigations
+- PR #121 feedback Germano su reset token, gestionale e `aziende.ScadenzaPassword`
 
 ## 4. Roadmap sintetica
 
@@ -945,7 +947,40 @@ Stato finale area sicurezza/login:
 - Reminder automatico password disabilitato e convertito a recupero assistito.
 - Registrazione non espone password in email/URL/sessione.
 - Hash migration ancora non implementata.
-- Reset tokenizzato ancora da progettare.
+- Reset tokenizzato progettato/documentato a livello Blueprint/manuale, ma non ancora implementato.
+
+### Reset tokenizzato - progettazione DB chiusa
+
+REMIND-RESET-DB-REVIEW-1 e chiuso a livello documentale/progettuale.
+
+Esiti principali:
+
+- PR #121 merged e chiusa.
+- Merge commit PR #121: `f11cf0b434b9be111d470b995083edf9d18b481b`.
+- Branch task PR #121: `task/remind-reset-db-review-1g-germano-feedback`.
+- Cleanup branch PR #121 completato con esito A: branch locale e remoto rimossi.
+
+File aggiornati da PR #121:
+
+- `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md`
+- `docs/REMIND_RESET_DB_MANUALE_VINCENZO.md`
+
+Stato finale PR #121:
+
+- Manuale Vincenzo aggiornato solo a livello progettuale.
+- Blueprint aggiornato solo a livello progettuale.
+- Feedback Germano integrato su gestionale, tabella `login`, `login.Password`, `login.DataPassword`, `aziende.ScadenzaPassword`, relazione `login.DataPassword + aziende.ScadenzaPassword`, strategia legacy-compatible, rollout multi-azienda e futura UI JANUS token reset.
+- Nessun codice runtime modificato.
+- Nessun DB modificato.
+- Nessuna tabella `login_password_reset_tokens` creata.
+- Nessuno script SQL eseguito.
+- Nessun reset tokenizzato implementato.
+- Nessun hash implementato.
+- Nessun dato sensibile esposto.
+
+Prossimo step consigliato:
+
+- Preparare uno script DB idempotente e controllato per `login_password_reset_tokens`, senza eseguirlo, da verificare con Vincenzo prima di qualunque modifica DB.
 
 ### Debito residuo dopo consolidamento password
 
@@ -954,6 +989,8 @@ Stato finale area sicurezza/login:
 - Password legacy ancora in chiaro nel DB.
 - Login usa ancora meccanismo legacy, non hash.
 - Reminder non e ancora reset tokenizzato.
+- Tabella `login_password_reset_tokens` non ancora creata.
+- Script DB idempotente per `login_password_reset_tokens` ancora da preparare e verificare, senza esecuzione.
 - Registrazione va ulteriormente modernizzata lato UX e sicurezza.
 - `AntiCsrfPage` non ancora applicato ai flussi auth.
 - Hash/salt/versione algoritmo non presenti.
@@ -982,7 +1019,7 @@ Task consigliato separato per eventuale proseguimento:
 
 ### Immediati
 
-1. REMIND-RESET-1A: progettare reset password tokenizzato.
+1. REMIND-RESET-DB-SCRIPT-1A: preparare script DB idempotente controllato per `login_password_reset_tokens`, senza eseguirlo.
 2. GESTIONALE-PASSWORD-AUDIT-1A: verifica con Vincenzo su `login.Password`, `vlogin`, `Newlogin`.
 3. PASSWORD-HASH-SCHEMA-2B: manuale campi DB hash/salt/versione.
 4. PASSWORD-HASH-MIGRATION-2C: adapter legacy/hash e migrazione progressiva.
