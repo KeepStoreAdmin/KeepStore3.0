@@ -130,10 +130,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo DOCS-PR121-CLOSE-1A, merge PR #122 e cleanup branch:
+Stato di riferimento dopo REMIND-RESET-DB-SCRIPT-1C, merge PR #123 e cleanup branch:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `3415094758e4b3cdc38d5284daf1e847695766c4`
+- HEAD stabile: `93a186e850caf5195b8bb7b3e21c42e5cf1c15af`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -148,6 +148,7 @@ Stato di riferimento dopo DOCS-PR121-CLOSE-1A, merge PR #122 e cleanup branch:
 - Merge PR #117: `f51ab9a4df9afb71760a31db97ed0eac547cd9c3`
 - Merge PR #121: `f11cf0b434b9be111d470b995083edf9d18b481b`
 - Merge PR #122: `3415094758e4b3cdc38d5284daf1e847695766c4`
+- Merge PR #123: `93a186e850caf5195b8bb7b3e21c42e5cf1c15af`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -181,6 +182,7 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
 - PR #117 login/registrazione/reminder immediate security mitigations
 - PR #121 feedback Germano su reset token, gestionale e `aziende.ScadenzaPassword`
 - PR #122 masterplan post PR #121 closure alignment
+- PR #123 script DB idempotente `login_password_reset_tokens` versionato, non eseguito
 
 ## 4. Roadmap sintetica
 
@@ -1002,6 +1004,26 @@ Prossimo step:
 
 - Review/approvazione dello script SQL con Germano/Vincenzo prima di qualunque esecuzione DB o implementazione runtime.
 
+### Reset tokenizzato - handoff Vincenzo preparato
+
+REMIND-RESET-DB-HANDOFF-1A prepara la consegna operativa dello script DB a Vincenzo.
+
+Stato:
+
+- Manuale Vincenzo aggiornato con appendice operativa per `docs/db/login_password_reset_tokens.mysql.sql`.
+- Script SQL gia versionato e non modificato da questo handoff.
+- Script SQL non eseguito.
+- DB non modificato.
+- Nessuna tabella `login_password_reset_tokens` creata da Codex.
+- Nessuna modifica runtime login/registrazione/reminder/password.
+- Nessuna modifica a `connessioni` o `city_registry`.
+
+Gate successivo:
+
+- Germano approva la consegna operativa.
+- Vincenzo approva ed eventualmente esegue lo script sul DB cliente/azienda corretto, dopo backup e verifica tecnica.
+- Solo dopo conferma creazione tabella e verifica post-esecuzione si puo aprire il task runtime reset tokenizzato fase 1.
+
 ### Debito residuo dopo consolidamento password
 
 - Hash/migrazione password non implementati.
@@ -1010,7 +1032,7 @@ Prossimo step:
 - Login usa ancora meccanismo legacy, non hash.
 - Reminder non e ancora reset tokenizzato.
 - Tabella `login_password_reset_tokens` non ancora creata.
-- Script DB idempotente per `login_password_reset_tokens` preparato a livello repository e da verificare, senza esecuzione.
+- Script DB idempotente per `login_password_reset_tokens` preparato a livello repository e consegna operativa a Vincenzo pronta, senza esecuzione.
 - Registrazione va ulteriormente modernizzata lato UX e sicurezza.
 - `AntiCsrfPage` non ancora applicato ai flussi auth.
 - Hash/salt/versione algoritmo non presenti.
@@ -1039,7 +1061,7 @@ Task consigliato separato per eventuale proseguimento:
 
 ### Immediati
 
-1. REMIND-RESET-DB-SCRIPT-1B: review/approvazione script DB `login_password_reset_tokens`, senza eseguirlo.
+1. REMIND-RESET-DB-HANDOFF-1B: review della consegna operativa e gate approvazione/esecuzione controllata DB da parte di Vincenzo, senza runtime.
 2. GESTIONALE-PASSWORD-AUDIT-1A: verifica con Vincenzo su `login.Password`, `vlogin`, `Newlogin`.
 3. PASSWORD-HASH-SCHEMA-2B: manuale campi DB hash/salt/versione.
 4. PASSWORD-HASH-MIGRATION-2C: adapter legacy/hash e migrazione progressiva.

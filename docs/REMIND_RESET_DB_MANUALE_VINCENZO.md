@@ -428,3 +428,77 @@ Glossario breve:
 | `DataPassword` | Data ultimo cambio/reset password |
 | `ScadenzaPassword` | Valore policy scadenza password aziendale/sessione |
 | Hash migration | Migrazione da password legacy a hash/salt/versione |
+
+## 21. Appendice operativa - Script login_password_reset_tokens
+
+Script versionato:
+
+- `docs/db/login_password_reset_tokens.mysql.sql`
+
+Stato:
+
+- script versionato nel repository;
+- script non eseguito;
+- DB non modificato;
+- tabella `login_password_reset_tokens` non creata da Codex;
+- nessun reset tokenizzato implementato;
+- nessun hash implementato.
+
+Target di esecuzione:
+
+- eseguire solo nel DB cliente/azienda selezionato;
+- esempio DB cliente/azienda: `taikun`;
+- non eseguire su `connessioni`;
+- non eseguire su `city_registry`;
+- non eseguire su DB di registry, backup, dump o ambienti non autorizzati.
+
+Checklist prima dell'esecuzione:
+
+- confermare il DB cliente/azienda corretto;
+- confermare backup DB verificato e ripristinabile;
+- confermare versione MySQL e compatibilita charset/collation;
+- verificare se `login_password_reset_tokens` esiste gia e, se esiste, confrontare struttura e indici prima di procedere;
+- confermare che non saranno inseriti dati reali o token reali manualmente;
+- confermare che nessun runtime KeepStore dipende ancora dalla tabella;
+- confermare approvazione Germano e approvazione tecnica Vincenzo.
+
+Checklist di esecuzione:
+
+- selezionare manualmente nel client SQL il DB cliente/azienda corretto;
+- eseguire solo lo script approvato `docs/db/login_password_reset_tokens.mysql.sql`;
+- non eseguire script modificati al volo senza nuova approvazione;
+- non fare `INSERT` manuali nella tabella;
+- non modificare `login.Password`;
+- non modificare `login.DataPassword`;
+- non modificare `aziende.ScadenzaPassword`;
+- non creare foreign key obbligatorie nella fase 1.
+
+Checklist post-esecuzione:
+
+```sql
+SHOW TABLES LIKE 'login_password_reset_tokens';
+SHOW CREATE TABLE login_password_reset_tokens;
+SELECT COUNT(*) FROM login_password_reset_tokens;
+```
+
+Esito atteso subito dopo la creazione:
+
+- la tabella e presente;
+- `SHOW CREATE TABLE` corrisponde allo script approvato o alle eventuali variazioni tecniche autorizzate da Vincenzo;
+- `SELECT COUNT(*)` restituisce `0`;
+- nessun token reale e presente;
+- nessun dato personale e presente;
+- evidenza tecnica salvata senza password, token, hash reali, email reali, IP reali, connection string o dati cliente.
+
+Criterio di approvazione:
+
+- Germano approva la consegna operativa;
+- Vincenzo approva ed eventualmente esegue lo script sul DB cliente/azienda corretto;
+- solo dopo conferma della creazione tabella e verifica post-esecuzione si puo aprire il task runtime `REMIND-RESET-IMPLEMENT-1E` o equivalente per reset tokenizzato fase 1.
+
+Nota sicurezza:
+
+- il token in chiaro dovra esistere solo nel futuro link email di reset;
+- il DB dovra contenere solo `TokenHash`;
+- non inserire token reali in documenti, log, issue, PR o report;
+- non riportare password, hash reali, cookie, session id, email reali, IP reali o dati personali nelle evidenze.
