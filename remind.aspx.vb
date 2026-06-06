@@ -19,7 +19,7 @@ Partial Class Remind
             Exit Sub
         End If
 
-        PasswordResetTokenService.RequestReset(Me.tbEmail.Text, Me)
+        PasswordResetTokenService.RequestReset(Me.tbEmail.Text, Me.txtFiscalCodeOrVat.Text, Me)
     End Sub
 
     Protected Sub Page_PreInit(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreInit

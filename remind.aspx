@@ -90,7 +90,7 @@
                         <div class="ks-auth-card">
 
                             <h5 class="title fw-semibold mb-2">Recupero accesso</h5>
-                            <p class="body-text-3 mb-4">Inserisci l'email del tuo account. Se i dati sono corretti riceverai un link per impostare una nuova password.</p>
+                            <p class="body-text-3 mb-4">Inserisci l'email del tuo account e il codice fiscale o la partita IVA. Se i dati sono corretti riceverai un link per impostare una nuova password.</p>
 
                             <!-- BOTTONE TORNA A MY ACCOUNT -->
                             <div class="mb-3">
@@ -139,6 +139,21 @@
                                                 runat="server"
                                                 ControlToValidate="tbEmail"
                                                 ErrorMessage="Inserire Email">
+                                            </asp:RequiredFieldValidator>
+                                        </div>
+                                    </fieldset>
+
+                                    <fieldset>
+                                        <label class="fw-semibold body-md-2">
+                                            <asp:Label ID="lblFiscalCodeOrVat" runat="server" Text="Codice fiscale o Partita IVA *" Visible="True"></asp:Label>
+                                        </label>
+                                        <asp:TextBox ID="txtFiscalCodeOrVat" CssClass="form-control" AutoPostBack="false" runat="server" Visible="True"></asp:TextBox>
+
+                                        <div class="validator">
+                                            <asp:RequiredFieldValidator ID="RequiredFieldValidatorFiscalCodeOrVat"
+                                                runat="server"
+                                                ControlToValidate="txtFiscalCodeOrVat"
+                                                ErrorMessage="Inserire Codice fiscale o Partita IVA">
                                             </asp:RequiredFieldValidator>
                                         </div>
                                     </fieldset>

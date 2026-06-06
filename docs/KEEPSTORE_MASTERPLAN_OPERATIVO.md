@@ -1059,16 +1059,17 @@ Stato previsto:
 - Hash password rimandato a task separato.
 - Smoke runtime richiesti prima di merge.
 
-### Reset tokenizzato - gestione email duplicata
+### Reset tokenizzato - disambiguazione account
 
-REMIND-RESET-IMPLEMENT-1H aggiorna il runtime PR #126 per gestire email associate a piu account validi senza aggiungere campi a `remind.aspx`.
+REMIND-RESET-IMPLEMENT-1I aggiorna il runtime PR #126 per rendere deterministico il reset in presenza di email duplicate.
 
-- La pagina reminder resta semplice: solo email e messaggio generico anti-enumeration.
-- Se non ci sono candidati validi non viene generato alcun token.
-- Se c'e un solo candidato viene inviata email reset standard con un link.
-- Se ci sono piu candidati entro limite sicurezza, viene inviata una sola email con link separato per ciascun account candidato.
-- Nessuna scelta arbitraria del primo record.
-- Nessun dato fiscale completo in token/link/email/log.
+- `remind.aspx` richiede email e Codice fiscale o Partita IVA.
+- Il runtime usa email, CF/PIVA normalizzato e contesto URL/AziendaId quando determinabile.
+- Se la ricerca produce zero candidati non viene generato alcun token.
+- Se la ricerca produce un solo candidato valido viene generato un solo token.
+- Se la ricerca resta ambigua con candidati multipli non viene generato alcun token.
+- Nessuna scelta arbitraria del primo record e nessuna email con link multipli.
+- Nessun dato fiscale, azienda o tipo utente viene salvato nel token, inserito nel link o scritto nei log.
 - Nessun DB schema modificato; PR #126 resta da smoke finale.
 
 ### Debito residuo dopo consolidamento password
