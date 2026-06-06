@@ -1,5 +1,6 @@
 Imports System
 Imports System.Configuration
+Imports System.Collections.Generic
 Imports System.Data
 Imports System.Net
 Imports System.Net.Mail
@@ -13,11 +14,24 @@ Public Class PasswordResetTokenInfo
     Public Property LoginId As Integer
 End Class
 
+Public Class PasswordResetAccountCandidate
+    Public Property LoginId As Integer
+    Public Property DestinationEmail As String
+    Public Property DisplayName As String
+    Public Property Label As String
+End Class
+
+Friend Class PasswordResetPendingToken
+    Public Property Candidate As PasswordResetAccountCandidate
+    Public Property ClearToken As String
+End Class
+
 Public Module PasswordResetTokenService
     Private Const TokenBytesLength As Integer = 32
     Private Const TokenLifetimeMinutes As Integer = 30
     Private Const MinPasswordLength As Integer = 8
     Private Const MaxPasswordLength As Integer = 25
+    Private Const MaxResetCandidates As Integer = 10
     Private Const GenericResetMessage As String = "Se i dati inseriti sono corretti riceverai le istruzioni per completare il reset della password."
 
     Public Function GenericRequestMessage() As String
@@ -29,34 +43,47 @@ Public Module PasswordResetTokenService
         If cleanEmail = "" OrElse page Is Nothing Then Return
 
         Try
-            Dim loginId As Integer = 0
-            Dim destinationEmail As String = ""
-            Dim displayName As String = ""
-
             Using conn As New MySqlConnection(GetConnectionString())
                 conn.Open()
 
-                If Not TryFindAccount(conn, cleanEmail, page, loginId, destinationEmail, displayName) Then
+                Dim candidates As List(Of PasswordResetAccountCandidate) = FindResetCandidates(conn, cleanEmail, page)
+                If candidates.Count = 0 Then
                     Return
                 End If
 
-                Dim clearToken As String = GenerateToken()
-                Dim tokenHash As String = Sha256Hex(clearToken)
+                If candidates.Count > MaxResetCandidates Then
+                    KeepStoreLog.Info("password-reset", "Richiesta reset ignorata: candidati oltre limite sicurezza.", HttpContext.Current)
+                    Return
+                End If
+
                 Dim ipHash As String = HashOptional(GetClientIp(page))
                 Dim userAgentHash As String = HashOptional(Convert.ToString(page.Request.UserAgent))
+                Dim pendingTokens As New List(Of PasswordResetPendingToken)()
 
                 Using tx As MySqlTransaction = conn.BeginTransaction()
-                    RevokeActiveTokens(conn, tx, loginId)
-                    InsertToken(conn, tx, loginId, tokenHash, ipHash, userAgentHash)
+                    For Each candidate As PasswordResetAccountCandidate In candidates
+                        Dim clearToken As String = GenerateToken()
+                        Dim tokenHash As String = Sha256Hex(clearToken)
+
+                        RevokeActiveTokens(conn, tx, candidate.LoginId)
+                        InsertToken(conn, tx, candidate.LoginId, tokenHash, ipHash, userAgentHash)
+
+                        Dim pending As New PasswordResetPendingToken()
+                        pending.Candidate = candidate
+                        pending.ClearToken = clearToken
+                        pendingTokens.Add(pending)
+                    Next
                     tx.Commit()
                 End Using
 
                 Try
-                    SendResetEmail(page, destinationEmail, displayName, clearToken)
+                    SendResetEmail(page, candidates(0).DestinationEmail, pendingTokens)
                 Catch ex As Exception
                     Try
                         Using tx As MySqlTransaction = conn.BeginTransaction()
-                            RevokeActiveTokens(conn, tx, loginId)
+                            For Each candidate As PasswordResetAccountCandidate In candidates
+                                RevokeActiveTokens(conn, tx, candidate.LoginId)
+                            Next
                             tx.Commit()
                         End Using
                     Catch
@@ -159,17 +186,10 @@ Public Module PasswordResetTokenService
         End Try
     End Function
 
-    Private Function TryFindAccount(ByVal conn As MySqlConnection,
-                                    ByVal email As String,
-                                    ByVal page As Page,
-                                    ByRef loginId As Integer,
-                                    ByRef destinationEmail As String,
-                                    ByRef displayName As String) As Boolean
-
-        loginId = 0
-        destinationEmail = ""
-        displayName = ""
-
+    Private Function FindResetCandidates(ByVal conn As MySqlConnection,
+                                         ByVal email As String,
+                                         ByVal page As Page) As List(Of PasswordResetAccountCandidate)
+        Dim candidates As New List(Of PasswordResetAccountCandidate)()
         Dim aziendaId As Integer = 0
         Try
             Integer.TryParse(Convert.ToString(page.Session("AziendaID")), aziendaId)
@@ -181,7 +201,7 @@ Public Module PasswordResetTokenService
         If aziendaId > 0 Then
             sql &= " AND AziendeID=@aziendaId"
         End If
-        sql &= " LIMIT 1"
+        sql &= " ORDER BY id LIMIT " & (MaxResetCandidates + 1).ToString()
 
         Using cmd As New MySqlCommand(sql, conn)
             cmd.CommandType = CommandType.Text
@@ -191,15 +211,26 @@ Public Module PasswordResetTokenService
             End If
 
             Using dr As MySqlDataReader = cmd.ExecuteReader()
-                If Not dr.Read() Then Return False
+                Dim index As Integer = 1
+                While dr.Read()
+                    Dim candidate As New PasswordResetAccountCandidate()
 
-                Integer.TryParse(Convert.ToString(dr("id")), loginId)
-                destinationEmail = Convert.ToString(dr("email")).Trim()
-                displayName = Convert.ToString(dr("cognomenome")).Trim()
+                    Dim loginId As Integer = 0
+                    Integer.TryParse(Convert.ToString(dr("id")), loginId)
+                    candidate.LoginId = loginId
+                    candidate.DestinationEmail = Convert.ToString(dr("email")).Trim()
+                    candidate.DisplayName = Convert.ToString(dr("cognomenome")).Trim()
+                    candidate.Label = "Account " & index.ToString()
+
+                    If candidate.LoginId > 0 AndAlso candidate.DestinationEmail <> "" Then
+                        candidates.Add(candidate)
+                        index += 1
+                    End If
+                End While
             End Using
         End Using
 
-        Return loginId > 0 AndAlso destinationEmail <> ""
+        Return candidates
     End Function
 
     Private Sub RevokeActiveTokens(ByVal conn As MySqlConnection, ByVal tx As MySqlTransaction, ByVal loginId As Integer)
@@ -304,7 +335,9 @@ Public Module PasswordResetTokenService
         Return True
     End Function
 
-    Private Sub SendResetEmail(ByVal page As Page, ByVal destinationEmail As String, ByVal displayName As String, ByVal clearToken As String)
+    Private Sub SendResetEmail(ByVal page As Page, ByVal destinationEmail As String, ByVal pendingTokens As List(Of PasswordResetPendingToken))
+        If pendingTokens Is Nothing OrElse pendingTokens.Count = 0 Then Return
+
         Dim ctx As HttpContext = HttpContext.Current
         Dim aziendaNome As String = SessionString(ctx, "AziendaNome")
         Dim aziendaEmail As String = SessionString(ctx, "AziendaEmail")
@@ -316,8 +349,6 @@ Public Module PasswordResetTokenService
             Throw New InvalidOperationException("SMTP reset password non configurato.")
         End If
 
-        Dim resetUrl As String = BuildResetUrl(page, clearToken)
-
         Using msg As New MailMessage()
             msg.From = New MailAddress(aziendaEmail, If(aziendaNome = "", "KeepStore", aziendaNome))
             msg.To.Add(New MailAddress(destinationEmail))
@@ -326,17 +357,45 @@ Public Module PasswordResetTokenService
             msg.BodyEncoding = Encoding.UTF8
             msg.IsBodyHtml = True
 
-            Dim safeName As String = HttpUtility.HtmlEncode(If(displayName = "", "cliente", displayName))
-            Dim safeUrl As String = HttpUtility.HtmlAttributeEncode(resetUrl)
-            Dim safeUrlText As String = HttpUtility.HtmlEncode(resetUrl)
+            Dim body As New StringBuilder()
+            body.Append("<font face='arial' size='2' color='black'>")
+            body.Append("Abbiamo ricevuto una richiesta di reset password.<br/>")
 
-            msg.Body = "<font face='arial' size='2' color='black'>" &
-                       "Gentile " & safeName & ",<br/>" &
-                       "abbiamo ricevuto una richiesta di reset password per il tuo account.<br/>" &
-                       "Per impostare una nuova password usa questo link entro " & TokenLifetimeMinutes.ToString() & " minuti:<br/><br/>" &
-                       "<a href='" & safeUrl & "'>" & safeUrlText & "</a><br/><br/>" &
-                       "Se non hai richiesto tu il reset, ignora questa email." &
-                       "</font>"
+            If pendingTokens.Count = 1 Then
+                Dim resetUrl As String = BuildResetUrl(page, pendingTokens(0).ClearToken)
+                Dim safeUrl As String = HttpUtility.HtmlAttributeEncode(resetUrl)
+
+                body.Append("Per impostare una nuova password usa questo link entro ")
+                body.Append(TokenLifetimeMinutes.ToString())
+                body.Append(" minuti:<br/><br/>")
+                body.Append("<a href='")
+                body.Append(safeUrl)
+                body.Append("'>Reimposta la password</a>")
+            Else
+                body.Append("Abbiamo trovato piu account associati a questa email. Scegli l'account per cui vuoi reimpostare la password entro ")
+                body.Append(TokenLifetimeMinutes.ToString())
+                body.Append(" minuti:<br/><br/>")
+                body.Append("<ul>")
+
+                For Each pending As PasswordResetPendingToken In pendingTokens
+                    Dim resetUrl As String = BuildResetUrl(page, pending.ClearToken)
+                    Dim safeUrl As String = HttpUtility.HtmlAttributeEncode(resetUrl)
+                    Dim safeLabel As String = HttpUtility.HtmlEncode(pending.Candidate.Label)
+
+                    body.Append("<li>")
+                    body.Append(safeLabel)
+                    body.Append(": <a href='")
+                    body.Append(safeUrl)
+                    body.Append("'>Reimposta password</a>")
+                    body.Append("</li>")
+                Next
+
+                body.Append("</ul>")
+            End If
+
+            body.Append("<br/><br/>Se non hai richiesto tu il reset, ignora questa email.")
+            body.Append("</font>")
+            msg.Body = body.ToString()
 
             Using smtp As New SmtpClient(smtpHost)
                 smtp.DeliveryMethod = SmtpDeliveryMethod.Network
