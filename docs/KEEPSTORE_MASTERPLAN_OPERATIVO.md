@@ -1046,6 +1046,19 @@ Prossimo step:
 
 - Implementazione runtime reset tokenizzato fase 1 su branch dedicato, senza hash e mantenendo i guardrail legacy gia documentati.
 
+### Reset tokenizzato - runtime fase 1 avviato
+
+REMIND-RESET-IMPLEMENT-1E avvia l'implementazione runtime legacy-compatible su branch dedicato.
+
+Stato previsto:
+
+- DB `taikun` gia predisposto con tabella `login_password_reset_tokens`.
+- Reminder convertito a richiesta reset tokenizzata anti-enumeration.
+- Nuova pagina reset password anonima con token monouso e scadenza 30 minuti.
+- Reset riuscito aggiorna `login.Password` legacy e `login.DataPassword`.
+- Hash password rimandato a task separato.
+- Smoke runtime richiesti prima di merge.
+
 ### Debito residuo dopo consolidamento password
 
 - Hash/migrazione password non implementati.
