@@ -68,7 +68,7 @@ Lo stato generale del refactoring e avanzato soprattutto sull'area account:
 - cambio password consolidato su `password.aspx`;
 - `cambiapassword.aspx` ridotto a redirect legacy controllato.
 
-La sicurezza password e stata consolidata nel flow account e LOGIN-REGISTER-SECURITY-1 ha ridotto i rischi immediati su login, registrazione e reminder senza schema change. Hash/migrazione password, reset tokenizzato e modernizzazione auth completa non sono ancora implementati e richiedono task separati.
+La sicurezza password e stata consolidata nel flow account, LOGIN-REGISTER-SECURITY-1 ha ridotto i rischi immediati su login/registrazione e il reset password tokenizzato fase 1 e operativo in modalita legacy-compatible. Hash/migrazione password, adeguamento gestionale Janus e modernizzazione auth completa richiedono task separati.
 
 ## 5. Architettura generale
 
@@ -194,7 +194,7 @@ Il gestionale KeepStore usa l'archivio `connessioni` come primo punto di verific
 | `login.aspx` | `login.aspx.vb` | Login | mitigato senza hash | `vlogin`, sessione | Messaggio generico, password legacy in chiaro/case-insensitive |
 | `registrazione.aspx` | `registrazione.aspx.vb` | Registrazione | mitigata senza hash | `utenti`, `login`, SP legacy | Policy 8-25, no lowercase forzato, no password in email/sessione/URL |
 | `registrazioneok.aspx` | `registrazioneok.aspx.vb` | Esito registrazione | mitigato | sessioni post-registrazione | Nessuna password in URL/UI |
-| `remind.aspx` | `remind.aspx.vb` | Recupero accesso assistito | mitigato senza reset token | `vlogin`, email | Recupero automatico password disabilitato; da sostituire con reset tokenizzato |
+| `remind.aspx` | `remind.aspx.vb` | Richiesta reset password tokenizzato | fase 1 operativa | `vlogin`, `login_password_reset_tokens`, email | Email + CF/PIVA, anti-enumeration, PRG/F5 corretto |
 | `accessonegato.aspx` | `accessonegato.aspx.vb` | Accesso negato | legacy semplice | sessione | Redirect se login presente |
 | `logout.aspx` | `logout.aspx.vb` | Logout | legacy semplice | sessione, carrello | Pulisce sessione/carrello |
 
@@ -274,7 +274,7 @@ Auditata in LOGIN-REGISTER-1A e mitigata in LOGIN-REGISTER-SECURITY-1. Crea uten
 
 ### 9.14 Recupero password
 
-`remind.aspx` e stato mitigato in LOGIN-REGISTER-SECURITY-1: il recupero automatico della password e disabilitato e la pagina mostra un recupero assistito. Non invia password esistenti, non invia email reale nel flow mitigato e non fa enumeration. Resta da progettare un reset tokenizzato.
+`remind.aspx` e stato evoluto a richiesta reset password tokenizzata fase 1. Il flow usa email + Codice fiscale oppure email + Partita IVA, con CF/PIVA alternativi e non cumulativi. La ricerca e de-duplicata per `LoginId`: zero o piu candidati distinti non generano token; un candidato valido genera un solo token. Il DB salva solo `TokenHash`, il token chiaro esiste solo nel link email, la scadenza e 30 minuti e il reset riuscito aggiorna `login.Password` legacy e `login.DataPassword`. `aziende.ScadenzaPassword` resta invariato. Hash password non implementato.
 
 ### 9.15 Cambio password
 
@@ -957,13 +957,21 @@ Opzioni progettuali:
 
 Conclusione: opzione consigliata B. Implementare reset tokenizzato hash-ready, senza hash migration ora, con adapter/struttura compatibile con futura migrazione.
 
+Stato runtime fase 1 dopo PR #126/#127/#128:
+
+- Reset tokenizzato operativo in modalita legacy-compatible.
+- `login_password_reset_tokens` presente su DB `taikun` dopo gate manuale controllato.
+- `remind.aspx` invia richiesta reset anti-enumeration con email + CF/PIVA.
+- `resetpassword.aspx` consuma token monouso, applica policy password 8-25 e mostra toggle mostra/nascondi password.
+- PRG/F5 su `remind.aspx` corretto con redirect 303 a `remind.aspx?sent=1`.
+- Email reset professionale con riferimenti aziendali da `aziende`, CTA, link fallback, scadenza 30 minuti e avvertenze anti-phishing.
+- Smoke live finale Germano: redirect `sent=1`, F5 senza prompt, nessuna seconda email, email professionale e link reset funzionante.
+- Hash migration non implementata e rimandata a task futuro.
+- Adeguamento gestionale Janus per token reset/hash rimandato a task futuro.
+
 Micro-task futuri:
 
-- `REMIND-RESET-BLUEPRINT-1B`: aggiornare Blueprint con progettazione reset.
-- `REMIND-RESET-DB-MANUAL-1C`: manuale DB per Vincenzo, tabella token.
-- `REMIND-RESET-DB-MANUAL-1D`: verifica manuale con Germano/Vincenzo.
-- `REMIND-RESET-IMPLEMENT-1E`: implementazione `remind.aspx` / `resetpassword.aspx` senza hash.
-- `REMIND-RESET-SMOKE-1F`: smoke controllato.
+- `REMIND-RESET-CLOSE-1A`: chiusura documentale fase 1.
 - `PASSWORD-HASH-SCHEMA-2B`: schema hash/salt/versione.
 - `PASSWORD-HASH-MIGRATION-2C`: migrazione progressiva.
 - `GESTIONALE-RESET-TOKEN-UI-1A`: futura schermata gestionale JANUS per audit/revoca token reset.
@@ -988,6 +996,7 @@ Micro-task futuri:
 | 2026-06-05 | REMIND-RESET-1A / REMIND-RESET-BLUEPRINT-1B | documentale | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Progettazione reset password tokenizzato hash-ready | Nessun runtime; base tecnica per futuro reset sicuro | Nessun codice/DB modificato, nessun dato sensibile esposto |
 | 2026-06-05 | REMIND-RESET-DB-MANUAL-1C | documentale | branch PR | `docs/REMIND_RESET_DB_MANUALE_VINCENZO.md`, `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Manuale tecnico DB per Vincenzo sulla tabella reset token | Nessun runtime; base per approvazione DB futura | Nessun codice/DB modificato, nessuna tabella creata, nessun dato sensibile esposto |
 | 2026-06-05 | REMIND-RESET-DB-REVIEW-1G | documentale | branch PR | `docs/REMIND_RESET_DB_MANUALE_VINCENZO.md`, `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Integrazione feedback Germano: strategia legacy-compatible, tabella per DB cliente, no FK iniziale, `aziende.ScadenzaPassword`, futura UI JANUS token reset | Nessun runtime; chiarisce impatto gestionale e scadenza password | Nessun codice/DB modificato, nessuna tabella creata, nessun dato sensibile esposto |
+| 2026-06-07 | REMIND-RESET-IMPLEMENT/POST-REFRESH | #126/#127/#128 | `c5b8535421ecdf163a8cc21d8c4d007a139a5c9a`, `30be626a820f640ac564e4f98220c209ff2f57ce`, `687198cf51a8d57f61acc997856ffd2eac7cd9e4` | `remind.aspx`, `remind.aspx.vb`, `resetpassword.aspx`, `resetpassword.aspx.vb`, `App_Code/PasswordResetTokenService.vb`, docs | Reset password tokenizzato fase 1, PRG/F5 e email professionale | Reset operativo legacy-compatible su `taikun` | Hash e adeguamento gestionale Janus rimandati |
 
 ## 16. Debito tecnico e backlog architetturale
 
@@ -997,14 +1006,13 @@ Micro-task futuri:
 - Audit hash/login/registrazione/reset completato in `PASSWORD-HASH-AUDIT-2A`; resta da scegliere la strategia implementativa.
 - `vlogin` / `Newlogin` da riconciliare fra backup operativo, schema versionato, codice e gestionale.
 - Gestione hash richiede coordinamento con Vincenzo.
-- `remind.aspx` da sostituire con reset tokenizzato.
-- Reminder automatico password disabilitato, ma reset tokenizzato non ancora presente.
-- Tabella token reset non ancora creata.
-- Email reset non ancora implementata.
-- Reminder oggi e solo assistito.
+- Reset tokenizzato fase 1 operativo su `remind.aspx` / `resetpassword.aspx`.
+- Tabella token reset creata su DB `taikun`; rollout su altri DB cliente/azienda da gestire separatamente.
+- Email reset professionale implementata con riferimenti aziendali e avvertenze anti-phishing.
+- Reminder automatico password legacy disabilitato.
 - Blocchi email legacy disabilitati in `remind.aspx.vb` da bonificare in task controllato.
-- DB/schema reset tokenizzato ancora da approvare con Vincenzo.
-- Manuale DB preparatorio disponibile in `docs/REMIND_RESET_DB_MANUALE_VINCENZO.md`; resta da verificare con Germano/Vincenzo.
+- DB/schema reset tokenizzato approvato per fase 1 su `taikun`; manuale operativo resta riferimento per rollout controllati.
+- Chiudere eventuali variabili/credenziali temporanee usate per smoke e revocare/cambiare password MySQL temporanea se ancora attiva.
 - Gestionale oggi dipendente dalla password web in chiaro; incompatibile con futura hash migration.
 - `aziende.ScadenzaPassword` documentato come policy aziendale in giorni; reset tokenizzato non deve modificarlo.
 - Relazione scadenza password documentata: `login.DataPassword + aziende.ScadenzaPassword`.
@@ -1025,8 +1033,8 @@ Micro-task futuri:
 - `REMIND-RESET-BLUEPRINT-1B`: aggiornare Blueprint con progettazione reset.
 - `REMIND-RESET-DB-MANUAL-1C`: manuale DB per Vincenzo, tabella token.
 - `REMIND-RESET-DB-MANUAL-1D`: verifica manuale con Germano/Vincenzo.
-- `REMIND-RESET-IMPLEMENT-1E`: implementazione `remind.aspx` / `resetpassword.aspx` senza hash.
-- `REMIND-RESET-SMOKE-1F`: smoke controllato.
+- `REMIND-RESET-IMPLEMENT-1E`: chiuso con PR #126.
+- `REMIND-RESET-POST-REFRESH-1A/1C`: chiuso con PR #127/#128.
 - `REGISTRATION-POLICY-1A` / `REGISTRATION-UX-1A`: completare modernizzazione registrazione.
 - `GESTIONALE-PASSWORD-AUDIT-1A`: verifica con Vincenzo su `login.Password`, `vlogin`, `Newlogin`.
 - `GESTIONALE-RESET-TOKEN-UI-1A`: futura griglia JANUS per token reset.
