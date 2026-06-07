@@ -130,10 +130,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo DOCS-RESET-CLEANUP-CLOSE-1A, merge PR #134 e cleanup warning legacy `remind.aspx.vb`:
+Stato di riferimento dopo ACCOUNT-ADDRESS-1A, merge PR #139 e smoke live account address/profile:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `7d7205871f85fb33a7cd74dbfbc790cb8f435718`
+- HEAD stabile: `2d9c11d9df99a3973593d6f7e7109f5517d3501c`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -157,6 +157,11 @@ Stato di riferimento dopo DOCS-RESET-CLEANUP-CLOSE-1A, merge PR #134 e cleanup w
 - Merge PR #132: `3c50d87962f7791bd7424be1fa376377889b90f8`
 - Merge PR #133: `1e0bea8fdcf6e623d22b74ab481b763bfcad6a52`
 - Merge PR #134: `7d7205871f85fb33a7cd74dbfbc790cb8f435718`
+- Merge PR #135: `54f7bea85c817e7d2a37ab42db0e2e61428d3f9d`
+- Merge PR #136: `6160bd8f1f81eff63e789ea7f5a15c130be8f4ba`
+- Merge PR #137: `08d5b197393c5d8786dc6a6e108c83beadff0445`
+- Merge PR #138: `86d9abfe5fd2567c6ab586167230c455a6325a87`
+- Merge PR #139: `2d9c11d9df99a3973593d6f7e7109f5517d3501c`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -194,6 +199,11 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
 - PR #124 handoff operativo Vincenzo per script DB reset tokenizzato
 - PR #133 chiusura documentale reset password tokenizzato fase 1
 - PR #134 cleanup warning legacy `remind.aspx.vb`
+- PR #135 chiusura documentale post cleanup warning reset/remind
+- PR #136 account profile validation hardening
+- PR #137 account smoke hotfix
+- PR #138 account smoke hotfix follow-up
+- PR #139 account address defaults
 
 ## 4. Roadmap sintetica
 
@@ -578,6 +588,16 @@ Nota ACCOUNT-ADDRESS-1A:
 - Update predefinito vincolato a `UtenteId` della sessione e transazione con massimo un `Predefinito=1` per utente.
 - Carrello non modificato: legge gia `utentiindirizzi.Predefinito` e usa fallback/selezione indirizzo esistenti.
 - Nessun DB/schema modificato e nessun SQL schema eseguito.
+- Nessun percorso legacy immagini introdotto.
+
+Nota ACCOUNT-ADDRESS-LOGIN-UX-1A:
+
+- Rifinitura `my-account-address.aspx`: mantiene una sola `AccountSidebar`, rimuove le azioni duplicate in testata e forza wrapping locale dei valori lunghi nelle card indirizzo.
+- `RagioneSociale` e `CognomeNome` dell'indirizzo principale sono esposti come campi distinti.
+- `RagioneSocialeA` e `NomeA` delle sedi alternative sono esposti entrambi, senza fallback che nasconda uno dei due valori.
+- `login.aspx` aggiunge solo il toggle client-side mostra/nascondi password; `login.aspx.vb` e il flusso auth restano invariati.
+- Carrello non modificato: selezione manuale indirizzo e link "modifica indirizzo" restano da verificare/correggere in task separato `CART-ADDRESS-SELECTION-1A`.
+- Nessun DB/schema modificato e nessun SQL eseguito.
 - Nessun percorso legacy immagini introdotto.
 
 Comportamento finale area profilo:
@@ -1249,6 +1269,7 @@ Stato finale post-cleanup warning:
 - `datiutente.aspx` resta legacy con errore generico preesistente, tab/JS e gestione salvataggi/destinazioni.
 - `my-account-address.aspx` e stabile read-only ONSUS dopo ACCOUNT-ADDRESS-1B, ma la gestione add/edit/delete indirizzi resta legacy in `datiutente.aspx`.
 - La gestione add/edit/delete indirizzi non e stata migrata.
+- La selezione manuale indirizzo nel carrello e il link "modifica indirizzo" del carrello restano debito separato: `CART-ADDRESS-SELECTION-1A`.
 - Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
@@ -1274,6 +1295,7 @@ Task consigliato separato per eventuale proseguimento:
    - PASSWORD-HASH-SCHEMA-2B / PASSWORD-HASH-MIGRATION-2C: futuro task hash password; hash password non ancora implementato.
    - GESTIONALE-PASSWORD-AUDIT-1A / JANUS-PASSWORD-RESET-1A: audit gestionale Janus per reset/hash.
    - ACCOUNT-ADDRESS-2A o area account profilo/indirizzi, solo se Germano autorizza audit/migrazione della gestione indirizzi legacy.
+   - CART-ADDRESS-SELECTION-1A: verifica/correzione selezione indirizzo carrello e link modifica indirizzo, senza toccare gateway/checkout salvo task dedicato.
    - REGISTRATION-POLICY-1A / REGISTRATION-UX-1A: refinement residuo login/registrazione.
 3. Revocare/cambiare la password dell'utente MySQL temporaneo usato nello smoke, se ancora attivo.
 4. Eliminare eventuali variabili ambiente temporanee di smoke.
