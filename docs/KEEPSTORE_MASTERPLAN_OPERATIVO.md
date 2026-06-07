@@ -1104,6 +1104,14 @@ REMIND-RESET-POST-REFRESH-1C rafforza il comportamento live di `remind.aspx` e m
 - Il token in chiaro resta solo nel link email; nessun token, hash, password, CF/PIVA o dato personale viene inserito nei log o nei documenti.
 - Nessun DB/schema modificato e nessun hash implementato.
 
+RESET-LOGIN-REDIRECT-1A corregge il redirect post-login dopo reset password.
+
+- `resetpassword.aspx`, `remind.aspx` e URL contenenti token/reset/remind non sono destinazioni valide per `ReturnUrl` o `Pagina_visitata`.
+- I redirect post-login accettano solo URL relative interne sicure e rifiutano URL assolute esterne.
+- Se la destinazione non e sicura, il fallback post-login e `myaccount.aspx`.
+- La master non salva piu pagine reset/remind come ultima pagina visitata e pulisce sessioni di redirect legacy non sicure.
+- Nessun DB/schema modificato e nessun hash implementato.
+
 ### Debito residuo dopo consolidamento password
 
 - Hash/migrazione password non implementati.
