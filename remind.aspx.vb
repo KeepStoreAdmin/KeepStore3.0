@@ -16,18 +16,32 @@ Partial Class Remind
     Protected Sub btInvia_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btInvia.Click
         Me.lblerror.Visible = False
 
+        If IsResetRequestSent() Then
+            ShowGenericResetMessage()
+            Return
+        End If
+
         If Not Page.IsValid Then
             Exit Sub
         End If
 
         PasswordResetTokenService.RequestReset(Me.tbEmail.Text, Me.txtFiscalCodeOrVat.Text, Me)
-        Response.Redirect("remind.aspx?sent=1", False)
-        Context.ApplicationInstance.CompleteRequest()
+        RedirectToSentPage()
+        Return
     End Sub
 
     Private Function IsResetRequestSent() As Boolean
         Return String.Equals(Convert.ToString(Request.QueryString("sent")), "1", StringComparison.Ordinal)
     End Function
+
+    Private Sub RedirectToSentPage()
+        Response.Clear()
+        Response.StatusCode = 303
+        Response.RedirectLocation = ResolveUrl("~/remind.aspx?sent=1")
+        Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache)
+        Response.Cache.SetNoStore()
+        Context.ApplicationInstance.CompleteRequest()
+    End Sub
 
     Private Sub ShowGenericResetMessage()
         Me.lblerror.Visible = False
