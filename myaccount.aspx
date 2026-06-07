@@ -24,7 +24,7 @@
                 <asp:SqlDataSource ID="sdsDashboardProfile" runat="server"
                     ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                     ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                    SelectCommand="SELECT v.Username, v.email, v.cognomenome, v.ultimoaccesso, u.Codice, u.RagioneSociale, u.Piva, u.CodiceFiscale, u.Telefono, u.Cellulare, u.Indirizzo, u.Cap, u.Citta, u.Provincia, u.Nazione FROM vlogin v INNER JOIN utenti u ON v.utentiid=u.id WHERE v.id=?LoginId">
+                    SelectCommand="SELECT v.Username, v.email, COALESCE(u.CognomeNome, v.cognomenome, '') AS CognomeNome, v.ultimoaccesso, u.Codice, u.RagioneSociale, u.Piva, u.CodiceFiscale, u.Telefono, u.Cellulare, u.Indirizzo, u.Cap, u.Citta, u.Provincia, u.Nazione FROM vlogin v INNER JOIN utenti u ON v.utentiid=u.id WHERE v.id=?LoginId">
                     <SelectParameters>
                         <asp:SessionParameter Name="LoginId" SessionField="LoginId" Type="Int32" />
                     </SelectParameters>
@@ -46,7 +46,7 @@
                                 <ItemTemplate>
                                     <div class="ks-dashboard-hero">
                                         <div>
-                                            <h3 class="fw-semibold mb-2"><%#: GetDashboardGreeting(Eval("RagioneSociale"), Eval("cognomenome"), Eval("Username")) %></h3>
+                                            <h3 class="fw-semibold mb-2"><%#: GetDashboardGreeting(Eval("RagioneSociale"), Eval("CognomeNome"), Eval("Username")) %></h3>
                                             <p class="body-md-2 text-main-2 mb-0">Da qui puoi controllare ordini, dati account e indirizzi.</p>
                                         </div>
                                         <a href="documenti.aspx?t=4" class="tf-btn btn-fill">I miei ordini</a>
@@ -64,8 +64,10 @@
                                                 </div>
 
                                                 <dl class="ks-dashboard-list">
-                                                    <dt>Nome / Ragione sociale</dt>
-                                                    <dd><%#: SafeAccountText(FirstValue(Eval("RagioneSociale"), Eval("cognomenome"), Eval("Username")), "Non specificato") %></dd>
+                                                    <dt>Ragione Sociale / Cognome</dt>
+                                                    <dd><%#: SafeAccountText(Eval("RagioneSociale"), "Non specificato") %></dd>
+                                                    <dt>Nome</dt>
+                                                    <dd><%#: SafeAccountText(Eval("CognomeNome"), "Non specificato") %></dd>
                                                     <dt>Email / Username</dt>
                                                     <dd><%#: SafeAccountText(FirstValue(Eval("email"), Eval("Username")), "Non specificato") %></dd>
                                                     <dt>Telefono</dt>

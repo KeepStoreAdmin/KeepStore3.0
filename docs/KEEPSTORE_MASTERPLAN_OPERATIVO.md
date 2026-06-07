@@ -654,6 +654,18 @@ Nota ACCOUNT-PROFILE-FISCAL-LABELS-1C:
 - Nessun DB/schema modificato e nessun SQL eseguito.
 - Nessun percorso legacy immagini introdotto.
 
+Nota ACCOUNT-PROFILE-NAME-FIELD-1B:
+
+- Rettifica funzionale post diagnosi schema: `utenti.Nome` non esiste nello schema versionato, quindi non viene inventato ne usato.
+- Il campo reale per la label `Nome` resta lo storico `CognomeNome`, letto da `utenti.CognomeNome` con fallback compatibile su `vlogin.cognomenome`.
+- `RagioneSociale` resta il campo per la label `Ragione Sociale / Cognome`.
+- `my-account-edit.aspx` riallinea la label fiscale a `Nome`, lasciando PIVA e Codice Fiscale invariati e read-only.
+- `myaccount.aspx` separa nel riquadro `Profilo` `Ragione Sociale / Cognome` e `Nome`, senza fallback che fonda i due valori.
+- Nessuno split automatico, nessuna concatenazione nuova e nessuna inversione dei campi legacy.
+- Nessuna modifica a DB/schema, nessun SQL di modifica, nessuna modifica indirizzi/carrello/login/reset/password.
+- Carrello non modificato: resta follow-up dedicato `CART-ADDRESS-SELECTION-1A`.
+- Nessun percorso legacy immagini introdotto.
+
 Comportamento finale area profilo:
 
 - `myaccount.aspx`: dashboard stabile.
