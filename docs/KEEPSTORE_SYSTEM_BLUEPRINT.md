@@ -186,7 +186,7 @@ Il gestionale KeepStore usa l'archivio `connessioni` come primo punto di verific
 | `documenti.aspx` | `documenti.aspx.vb` | Lista documenti/ordini | stabile ONSUS account | `sdsTipo`, documenti | Selector dinamico |
 | `myaccount.aspx` | `myaccount.aspx.vb` | Dashboard account | stabile ONSUS | profilo, indirizzi, ordini recenti | AccountSidebar |
 | `my-account-edit.aspx` | `my-account-edit.aspx.vb` | Profilo account | stabile ONSUS | login/utente/contatti | Salvataggi validati |
-| `my-account-address.aspx` | `my-account-address.aspx.vb` | Indirizzi account read-only | stabile read-only ONSUS | indirizzo fatturazione/destinazioni | Gestione legacy rimandata |
+| `my-account-address.aspx` | `my-account-address.aspx.vb` | Indirizzi account | stabile ONSUS autonomo | indirizzo fatturazione/destinazioni | Add/edit sedi alternative e predefinito verificati |
 | `wishlist.aspx` | `wishlist.aspx.vb` | Wishlist utente | stabile account | wishlist/prodotti | AccountSidebar globale |
 | `password.aspx` | `password.aspx.vb` | Cambio password canonico | stabile account | `login.Password`, `DataPassword` | Hash non implementato |
 | `cambiapassword.aspx` | `cambiapassword.aspx.vb` | Redirect legacy cambio password | stabile redirect | sessione login | Redirect verso `password.aspx` |
@@ -254,11 +254,11 @@ Area progressivamente stabilizzata con shell account ONSUS, `body.ks-page-accoun
 
 ### 9.9 Profilo utente
 
-`my-account-edit.aspx` e pagina profilo ONSUS stabilizzata. `datiutente.aspx` resta legacy per parti non migrate.
+`my-account-edit.aspx` e pagina profilo ONSUS stabilizzata. Il riquadro fiscale usa `RagioneSociale` per `Ragione Sociale / Cognome` e `CognomeNome` per `Nome`; `datiutente.aspx` resta legacy/compatibilita per parti non migrate.
 
 ### 9.10 Indirizzi
 
-`my-account-address.aspx` e read-only ONSUS. Add/edit/delete indirizzi restano legacy in `datiutente.aspx` e richiedono audit separato.
+`my-account-address.aspx` e pagina ONSUS autonoma per indirizzi account: indirizzo principale, sedi alternative, add/edit sede alternativa e scelta predefinito sono stabilizzati. Delete indirizzi resta da valutare con task dedicato. La selezione manuale indirizzo nel carrello resta debito separato.
 
 ### 9.11 Wishlist
 
@@ -505,9 +505,9 @@ L'audit DB non ha invocato gateway, non ha letto dati ordine reali e non ha ripo
 
 ## 13. Area account - stato consolidato
 
-- `myaccount.aspx`: stabile.
-- `my-account-edit.aspx`: stabile.
-- `my-account-address.aspx`: stabile read-only ONSUS.
+- `myaccount.aspx`: stabile con dashboard e profilo separato tra `RagioneSociale` e `CognomeNome`.
+- `my-account-edit.aspx`: stabile con dettagli account, validazioni profilo e campi fiscali read-only allineati.
+- `my-account-address.aspx`: stabile ONSUS autonomo per indirizzi account, con add/edit sedi alternative e scelta predefinito.
 - `wishlist.aspx`: stabile.
 - `documenti.aspx`: stabile con AccountSidebar globale e selector documenti dinamico.
 - `documentidettaglio.aspx`: stabile.
@@ -520,8 +520,9 @@ L'audit DB non ha invocato gateway, non ha letto dati ordine reali e non ha ripo
 
 Debito residuo account:
 
-- `datiutente.aspx` resta legacy con tab/JS e gestione salvataggi/destinazioni.
-- Gestione add/edit/delete indirizzi non migrata.
+- `datiutente.aspx` resta legacy/compatibilita con tab/JS e gestione salvataggi/destinazioni non piu percorso operativo principale per indirizzi account.
+- Delete indirizzi resta da valutare solo con task dedicato.
+- Selezione manuale indirizzo carrello e link modifica indirizzo carrello restano follow-up `CART-ADDRESS-SELECTION-1A`.
 - Cleanup completo sidebar/nav inline legacy non ancora concluso su `datiutente.aspx`.
 
 ## 14. Login, registrazione e recupero password - audit LOGIN-REGISTER-1A
@@ -988,6 +989,7 @@ Micro-task futuri:
 | 2026-06-05 | REMIND-RESET-1A / REMIND-RESET-BLUEPRINT-1B | documentale | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Progettazione reset password tokenizzato hash-ready | Nessun runtime; base tecnica per futuro reset sicuro | Nessun codice/DB modificato, nessun dato sensibile esposto |
 | 2026-06-05 | REMIND-RESET-DB-MANUAL-1C | documentale | branch PR | `docs/REMIND_RESET_DB_MANUALE_VINCENZO.md`, `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Manuale tecnico DB per Vincenzo sulla tabella reset token | Nessun runtime; base per approvazione DB futura | Nessun codice/DB modificato, nessuna tabella creata, nessun dato sensibile esposto |
 | 2026-06-05 | REMIND-RESET-DB-REVIEW-1G | documentale | branch PR | `docs/REMIND_RESET_DB_MANUALE_VINCENZO.md`, `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Integrazione feedback Germano: strategia legacy-compatible, tabella per DB cliente, no FK iniziale, `aziende.ScadenzaPassword`, futura UI JANUS token reset | Nessun runtime; chiarisce impatto gestionale e scadenza password | Nessun codice/DB modificato, nessuna tabella creata, nessun dato sensibile esposto |
+| 2026-06-07 | ACCOUNT-PROFILE-ADDRESS-CLOSE-1A | #136-#145 | `6160bd8...` - `1fe259a...` | account profile/address/login docs | Chiusura blocco account profilo/indirizzi: dashboard profilo, dettagli account, indirizzi autonomi e smoke live finale | Area account profilo/indirizzi stabile | Carrello indirizzi resta follow-up `CART-ADDRESS-SELECTION-1A`; nessun DB/schema modificato |
 
 ## 16. Debito tecnico e backlog architetturale
 
@@ -1016,9 +1018,9 @@ Micro-task futuri:
 - `AntiCsrfPage` da valutare sulle auth pages e sulle pagine con azioni state-changing.
 - Rigenerazione sessione post-login da verificare/implementare.
 - Errori JS legacy su `remind.aspx`/`registrazione.aspx` da valutare in task separato.
-- `datiutente.aspx` legacy con errore generico preesistente.
-- `datiutente.aspx` con tab/JS legacy e gestione salvataggi/destinazioni.
-- Gestione add/edit/delete indirizzi non migrata.
+- `datiutente.aspx` legacy/compatibilita con tab/JS e gestione salvataggi/destinazioni.
+- Delete indirizzi non migrato; add/edit sedi alternative e predefinito sono ora su `my-account-address.aspx`.
+- Carrello indirizzi: selezione manuale indirizzo diverso dal predefinito e link modifica indirizzo da correggere in `CART-ADDRESS-SELECTION-1A`.
 - Cleanup completo sidebar/nav inline legacy su `datiutente.aspx` da completare.
 - `LOGIN-REGISTER-SECURITY-1B`: chiuso con PR #117.
 - `REMIND-RESET-1A`: audit/progettazione reset tokenizzato, completato read-only.
