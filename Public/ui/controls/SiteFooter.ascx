@@ -91,7 +91,7 @@
                     <div class="form-newsletter" data-ks-newsletter="1">
                         <div class="subscribe-content">
                             <fieldset class="email">
-                                <input id="ksNewsletterEmail" class="subscribe-email type-fs-2" name="ksNewsletterEmail" placeholder="Enter your email address" tabindex="0" type="email" autocomplete="email" />
+                                <input id="ksNewsletterEmail" class="subscribe-email type-fs-2" name="ksNewsletterEmail" placeholder="Enter your email address" tabindex="0" type="text" inputmode="email" autocomplete="email" />
                             </fieldset>
                             <div class="button-submit">
                                 <button id="ksNewsletterSubmit" class="subscribe-button tf-btn btn-large hover-shine" type="button" aria-label="Subscribe to newsletter">

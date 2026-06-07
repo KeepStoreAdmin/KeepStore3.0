@@ -14,15 +14,14 @@ Partial Class password
         End If
 
         If Not IsPostBack Then
-            lblMessaggio.Text = ""
+            ClearPasswordMessage()
         End If
     End Sub
 
     Protected Sub btnSalva_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btnSalva.Click
-        lblMessaggio.ForeColor = Drawing.Color.Red
-        lblMessaggio.Text = ""
+        ClearPasswordMessage()
 
-        Page.Validate()
+        Page.Validate("PasswordChange")
         If Not Page.IsValid Then
             Exit Sub
         End If
@@ -32,7 +31,7 @@ Partial Class password
         Dim newPwd2 As String = Convert.ToString(tbPasswordConferma.Text)
 
         If Not String.Equals(newPwd, newPwd2, StringComparison.Ordinal) Then
-            lblMessaggio.Text = "Le nuove password non coincidono."
+            ShowPasswordMessage("Le nuove password non coincidono.", False)
             Exit Sub
         End If
 
@@ -52,26 +51,36 @@ Partial Class password
                 Dim validationMessage As String = ""
 
                 If Not ValidatePasswordChange(oldPwd, newPwd, newPwd2, currentPassword, validationMessage) Then
-                    lblMessaggio.Text = validationMessage
+                    ShowPasswordMessage(validationMessage, False)
                     Exit Sub
                 End If
 
                 If Not UpdatePassword(conn, loginIdValue, currentPassword, newPwd, newPwd2) Then
-                    lblMessaggio.Text = "Nessuna modifica eseguita."
+                    ShowPasswordMessage("Nessuna modifica eseguita.", False)
                     Exit Sub
                 End If
 
-                lblMessaggio.ForeColor = Drawing.Color.Green
-                lblMessaggio.Text = "Password aggiornata correttamente."
+                ShowPasswordMessage("Password aggiornata correttamente.", True)
                 Session("DataPassword") = DateTime.Today
                 tbPasswordAttuale.Text = ""
                 tbPasswordNuova.Text = ""
                 tbPasswordConferma.Text = ""
             End Using
 
-        Catch ex As Exception
-            lblMessaggio.Text = "Errore tecnico durante l'aggiornamento della password."
+        Catch
+            ShowPasswordMessage("Non e stato possibile aggiornare la password. Riprova piu tardi.", False)
         End Try
+    End Sub
+
+    Private Sub ClearPasswordMessage()
+        lblMessaggio.Text = ""
+        lblMessaggio.CssClass = "d-none"
+    End Sub
+
+    Private Sub ShowPasswordMessage(ByVal message As String, ByVal success As Boolean)
+        lblMessaggio.Text = message
+        lblMessaggio.ForeColor = If(success, Drawing.Color.Green, Drawing.Color.Red)
+        lblMessaggio.CssClass = If(success, "alert alert-success d-block", "alert alert-danger d-block")
     End Sub
 
     Private Function TryGetLoginId(ByRef loginIdValue As Integer) As Boolean

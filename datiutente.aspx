@@ -799,7 +799,11 @@
                 </div>
 
                 <div class="ks-userdata-formview js-ks-userdata-fv" data-fv-id="fvUtente">
-                <asp:FormView ID="fvUtente" runat="server" RenderOuterTable="false">
+                <asp:FormView ID="fvUtente" runat="server" RenderOuterTable="false"
+                    DataKeyNames="UtentiId"
+                    OnModeChanging="fvUtente_ModeChanging"
+                    OnDataBound="fvUtente_DataBound"
+                    OnItemUpdating="fvUtente_ItemUpdating">
 
                     <%-- TEMPLATE LETTURA --%>
                     <ItemTemplate>
@@ -1096,7 +1100,7 @@
                                         <div class="row g-3">
                                             <div class="col-12 col-md-6">
                                                 <label class="form-label" for="ddlDestinazione">Seleziona destinazione</label>
-                                                <asp:DropDownList ID="ddlDestinazione" runat="server" CssClass="form-select" AutoPostBack="true" />
+                                                <asp:DropDownList ID="ddlDestinazione" runat="server" CssClass="form-select" AutoPostBack="true" OnSelectedIndexChanged="ddlDestAlt_SelectedIndexChanged" />
                                             </div>
                                             <div class="col-12"></div>
 

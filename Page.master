@@ -68,7 +68,7 @@
                         <p class="body-text-3 mb-4">Ricevi novita su prodotti, promozioni e servizi tecnici. Solo comunicazioni utili, niente spam.</p>
                         <div class="subscribe-content">
                             <fieldset class="email">
-                                <input type="email" id="ksNewsletterEmailModal" class="subscribe-email type-fs-2" placeholder="Inserisci la tua email" autocomplete="email" />
+                                <input type="text" inputmode="email" id="ksNewsletterEmailModal" class="subscribe-email type-fs-2" placeholder="Inserisci la tua email" autocomplete="email" />
                             </fieldset>
                             <div class="button-submit">
                                 <button id="ksNewsletterSubmitModal" class="subscribe-button tf-btn btn-large hover-shine" type="button">
