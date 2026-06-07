@@ -130,10 +130,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo ACCOUNT-ADDRESS-1A, merge PR #139 e smoke live account address/profile:
+Stato di riferimento dopo ACCOUNT-ADDRESS-LOGIN-UX-1B, merge PR #140 e cleanup branch:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `2d9c11d9df99a3973593d6f7e7109f5517d3501c`
+- HEAD stabile: `73ac6bdf2f303e3581c539ae6dcfca9d1a64f969`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -162,6 +162,7 @@ Stato di riferimento dopo ACCOUNT-ADDRESS-1A, merge PR #139 e smoke live account
 - Merge PR #137: `08d5b197393c5d8786dc6a6e108c83beadff0445`
 - Merge PR #138: `86d9abfe5fd2567c6ab586167230c455a6325a87`
 - Merge PR #139: `2d9c11d9df99a3973593d6f7e7109f5517d3501c`
+- Merge PR #140: `73ac6bdf2f303e3581c539ae6dcfca9d1a64f969`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -204,6 +205,7 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
 - PR #137 account smoke hotfix
 - PR #138 account smoke hotfix follow-up
 - PR #139 account address defaults
+- PR #140 account address/login UX polish
 
 ## 4. Roadmap sintetica
 
@@ -598,6 +600,23 @@ Nota ACCOUNT-ADDRESS-LOGIN-UX-1A:
 - `login.aspx` aggiunge solo il toggle client-side mostra/nascondi password; `login.aspx.vb` e il flusso auth restano invariati.
 - Carrello non modificato: selezione manuale indirizzo e link "modifica indirizzo" restano da verificare/correggere in task separato `CART-ADDRESS-SELECTION-1A`.
 - Nessun DB/schema modificato e nessun SQL eseguito.
+- Nessun percorso legacy immagini introdotto.
+
+Nota ACCOUNT-ADDRESS-UX-1C:
+
+- `my-account-address.aspx` viene rifinita come pagina moderna definitiva per gestione sedi alternative account.
+- Causa menu sdoppiato: la pagina renderizzava una `AccountSidebar` locale mentre `Page.master` renderizza gia la sidebar globale dentro `.ks-account-shell`; la sidebar locale e stata rimossa.
+- Causa valori tagliati: layout a colonne/card troppo stretto dentro la shell account e valori lunghi non sempre in campi full-width; la lista sedi alternative passa a card full-width con wrapping locale.
+- L'indirizzo principale espone chiaramente `Ragione Sociale/Cognome` e `Nome`.
+- Le sedi alternative espongono chiaramente `RagioneSocialeA` come `Ragione Sociale/Cognome` e `NomeA` come `Nome`.
+- Il link operativo principale verso `datiutente.aspx?edit=1&tab=addr` viene rimosso dalla pagina moderna.
+- Add/edit sedi alternative viene gestito direttamente in `my-account-address.aspx`, con form server-side, query parametrizzate e `UtenteId` risolto dalla sessione.
+- Il salvataggio verifica sempre che l'id sede appartenga all'`UtenteId` corrente.
+- La scelta `Imposta come predefinito` resta disponibile e preserva al massimo una sede alternativa predefinita per utente.
+- Delete indirizzi non implementato in questa fase; da valutare solo con task dedicato.
+- `datiutente.aspx` resta legacy e non viene modificata.
+- Carrello non modificato: resta follow-up dedicato `CART-ADDRESS-SELECTION-1A`.
+- Nessun DB/schema modificato e nessun SQL schema eseguito.
 - Nessun percorso legacy immagini introdotto.
 
 Comportamento finale area profilo:
@@ -1270,6 +1289,7 @@ Stato finale post-cleanup warning:
 - `my-account-address.aspx` e stabile read-only ONSUS dopo ACCOUNT-ADDRESS-1B, ma la gestione add/edit/delete indirizzi resta legacy in `datiutente.aspx`.
 - La gestione add/edit/delete indirizzi non e stata migrata.
 - La selezione manuale indirizzo nel carrello e il link "modifica indirizzo" del carrello restano debito separato: `CART-ADDRESS-SELECTION-1A`.
+- Stato noto carrello: propone correttamente il predefinito, ma la selezione manuale di un indirizzo diverso non aggiorna correttamente e "modifica indirizzo" nel carrello sballa la UI.
 - Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
@@ -1295,7 +1315,7 @@ Task consigliato separato per eventuale proseguimento:
    - PASSWORD-HASH-SCHEMA-2B / PASSWORD-HASH-MIGRATION-2C: futuro task hash password; hash password non ancora implementato.
    - GESTIONALE-PASSWORD-AUDIT-1A / JANUS-PASSWORD-RESET-1A: audit gestionale Janus per reset/hash.
    - ACCOUNT-ADDRESS-2A o area account profilo/indirizzi, solo se Germano autorizza audit/migrazione della gestione indirizzi legacy.
-   - CART-ADDRESS-SELECTION-1A: verifica/correzione selezione indirizzo carrello e link modifica indirizzo, senza toccare gateway/checkout salvo task dedicato.
+   - CART-ADDRESS-SELECTION-1A: verifica/correzione selezione indirizzo carrello diversa dal predefinito e link modifica indirizzo che sballa la UI, senza toccare gateway/checkout salvo task dedicato.
    - REGISTRATION-POLICY-1A / REGISTRATION-UX-1A: refinement residuo login/registrazione.
 3. Revocare/cambiare la password dell'utente MySQL temporaneo usato nello smoke, se ancora attivo.
 4. Eliminare eventuali variabili ambiente temporanee di smoke.
