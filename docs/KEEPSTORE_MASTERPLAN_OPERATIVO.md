@@ -1084,6 +1084,16 @@ REMIND-RESET-UX-1A aggiorna `resetpassword.aspx` sul ramo PR #126.
 - Nessuna password viene salvata in JavaScript globale, storage, cookie o log.
 - Nessun DB/schema modificato e nessuna logica token/password server-side modificata.
 
+### Reset tokenizzato - refresh sicuro remind
+
+REMIND-RESET-POST-REFRESH-1A corregge `remind.aspx` con pattern POST/Redirect/GET.
+
+- Dopo una richiesta reset processata, la pagina redirige a `remind.aspx?sent=1`.
+- Il messaggio post-redirect resta generico e anti-enumeration.
+- Refresh/F5 ricarica solo la GET e non reinvia il POST.
+- Nessun dato email, fiscale o token viene salvato in querystring.
+- Nessun DB/schema modificato e nessuna logica token/password server-side modificata.
+
 ### Debito residuo dopo consolidamento password
 
 - Hash/migrazione password non implementati.
