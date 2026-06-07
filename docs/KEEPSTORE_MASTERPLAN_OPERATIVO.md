@@ -1074,6 +1074,16 @@ REMIND-RESET-IMPLEMENT-1I aggiorna il runtime PR #126 per rendere deterministico
 - Nessun dato fiscale, azienda o tipo utente viene salvato nel token, inserito nel link o scritto nei log.
 - Nessun DB schema modificato; PR #126 resta da smoke finale.
 
+### Reset tokenizzato - UX reset password
+
+REMIND-RESET-UX-1A aggiorna `resetpassword.aspx` sul ramo PR #126.
+
+- Aggiunto toggle mostra/nascondi password sui campi nuova password e conferma nuova password.
+- I campi restano mascherati di default.
+- Il toggle e client-side, accessibile da tastiera e non invia submit accidentali.
+- Nessuna password viene salvata in JavaScript globale, storage, cookie o log.
+- Nessun DB/schema modificato e nessuna logica token/password server-side modificata.
+
 ### Debito residuo dopo consolidamento password
 
 - Hash/migrazione password non implementati.

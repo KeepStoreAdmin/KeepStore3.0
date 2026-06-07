@@ -5,6 +5,35 @@
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <style type="text/css">
+        .ks-password-field {
+            position: relative;
+        }
+
+        .ks-password-field .form-control {
+            padding-right: 5.75rem;
+        }
+
+        .ks-password-toggle {
+            position: absolute;
+            top: 50%;
+            right: 0.75rem;
+            transform: translateY(-50%);
+            border: 0;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+            padding: 0.25rem;
+        }
+
+        .ks-password-toggle:focus {
+            outline: 2px solid currentColor;
+            outline-offset: 2px;
+        }
+    </style>
+
     <script type="text/javascript">
         function ksHideSpinnerAndShowContent() {
             var spinner = document.getElementById('<%= pnlLoading.ClientID %>');
@@ -32,6 +61,17 @@
             var content = document.getElementById('<%= pnlContent.ClientID %>');
             if (spinner) spinner.style.display = 'block';
             if (content) content.style.opacity = '0.5';
+        }
+
+        function ksTogglePasswordVisibility(inputId, button) {
+            var input = document.getElementById(inputId);
+            if (!input || !button) return;
+
+            var showPassword = input.type === 'password';
+            input.type = showPassword ? 'text' : 'password';
+            button.setAttribute('aria-pressed', showPassword ? 'true' : 'false');
+            button.setAttribute('aria-label', showPassword ? 'Nascondi password' : 'Mostra password');
+            button.innerText = showPassword ? 'Nascondi' : 'Mostra';
         }
     </script>
 </asp:Content>
@@ -88,7 +128,10 @@
                                     <div class="form-content">
                                         <fieldset>
                                             <label class="fw-semibold body-md-2" for="<%= tbPasswordNuova.ClientID %>">Nuova password *</label>
-                                            <asp:TextBox ID="tbPasswordNuova" runat="server" CssClass="form-control" TextMode="Password" MaxLength="25" />
+                                            <div class="ks-password-field">
+                                                <asp:TextBox ID="tbPasswordNuova" runat="server" CssClass="form-control" TextMode="Password" MaxLength="25" />
+                                                <button type="button" class="ks-password-toggle" aria-label="Mostra password" aria-pressed="false" onclick="ksTogglePasswordVisibility('<%= tbPasswordNuova.ClientID %>', this);">Mostra</button>
+                                            </div>
                                             <div class="validator">
                                                 <asp:RequiredFieldValidator ID="rfvNew" runat="server" ControlToValidate="tbPasswordNuova" ErrorMessage="Inserisci la nuova password." Display="Dynamic" ForeColor="Red" />
                                                 <asp:RegularExpressionValidator ID="revNewLength" runat="server" ControlToValidate="tbPasswordNuova" ValidationExpression="^[\s\S]{8,25}$" ErrorMessage="La nuova password deve avere tra 8 e 25 caratteri." Display="Dynamic" ForeColor="Red" />
@@ -97,7 +140,10 @@
 
                                         <fieldset>
                                             <label class="fw-semibold body-md-2" for="<%= tbPasswordConferma.ClientID %>">Conferma nuova password *</label>
-                                            <asp:TextBox ID="tbPasswordConferma" runat="server" CssClass="form-control" TextMode="Password" MaxLength="25" />
+                                            <div class="ks-password-field">
+                                                <asp:TextBox ID="tbPasswordConferma" runat="server" CssClass="form-control" TextMode="Password" MaxLength="25" />
+                                                <button type="button" class="ks-password-toggle" aria-label="Mostra password" aria-pressed="false" onclick="ksTogglePasswordVisibility('<%= tbPasswordConferma.ClientID %>', this);">Mostra</button>
+                                            </div>
                                             <div class="validator">
                                                 <asp:RequiredFieldValidator ID="rfvConfirm" runat="server" ControlToValidate="tbPasswordConferma" ErrorMessage="Conferma la nuova password." Display="Dynamic" ForeColor="Red" />
                                                 <asp:CompareValidator ID="cvPwd" runat="server" ControlToValidate="tbPasswordConferma" ControlToCompare="tbPasswordNuova" ErrorMessage="Le nuove password non coincidono." Display="Dynamic" ForeColor="Red" />
