@@ -1188,7 +1188,8 @@ Comportamento finale fase 1:
 - `AntiCsrfPage` non ancora applicato ai flussi auth.
 - Hash/salt/versione algoritmo non presenti.
 - Serve coordinamento con Vincenzo/gestionale prima di modifiche DB.
-- Warning legacy di precompile in `remind.aspx.vb` da valutare in task separato non urgente.
+- Warning legacy di precompile in `remind.aspx.vb` chiusi da REMIND-CLEANUP-WARNINGS-1A con rimozione di codice email legacy disabilitato e import inutilizzati.
+- Cleanup limitato a codice morto/variabili inutilizzate: nessuna modifica funzionale a reset tokenizzato, PRG/F5, anti-enumeration o regola email + CF/PIVA.
 - Errori JS legacy su `registrazione.aspx` da valutare in task separato.
 - `datiutente.aspx` resta legacy con errore generico preesistente, tab/JS e gestione salvataggi/destinazioni.
 - `my-account-address.aspx` e stabile read-only ONSUS dopo ACCOUNT-ADDRESS-1B, ma la gestione add/edit/delete indirizzi resta legacy in `datiutente.aspx`.
@@ -1218,13 +1219,12 @@ Task consigliato separato per eventuale proseguimento:
 3. Eliminare o lasciare scadere eventuali link reset test residui.
 4. PASSWORD-HASH-SCHEMA-2B / PASSWORD-HASH-MIGRATION-2C: futuro task hash password.
 5. GESTIONALE-PASSWORD-AUDIT-1A / JANUS-PASSWORD-RESET-1A: futuro task gestionale Janus per reset/hash.
-6. REMIND-RESET-WARNINGS-CLEANUP-1A: eventuale cleanup warning legacy `remind.aspx.vb`, task separato non urgente.
-7. REGISTRATION-POLICY-1A o REGISTRATION-UX-1A: modernizzazione registrazione.
-8. AUTH-CSRF-AUDIT-1A: audit `AntiCsrfPage` sui flussi auth.
-9. AUTH-JS-LEGACY-AUDIT-1A: audit errori JS legacy residui.
-10. ACCOUNT-ADDRESS-2A solo se Germano autorizza audit/migrazione della gestione indirizzi legacy.
-11. DATIUTENTE-LEGACY-AUDIT-1A per errore generico, tab/JS legacy e salvataggi/destinazioni.
-12. Scegliere il prossimo blocco operativo su `frontend-rebuild` pulito.
+6. REGISTRATION-POLICY-1A o REGISTRATION-UX-1A: modernizzazione registrazione.
+7. AUTH-CSRF-AUDIT-1A: audit `AntiCsrfPage` sui flussi auth.
+8. AUTH-JS-LEGACY-AUDIT-1A: audit errori JS legacy residui.
+9. ACCOUNT-ADDRESS-2A solo se Germano autorizza audit/migrazione della gestione indirizzi legacy.
+10. DATIUTENTE-LEGACY-AUDIT-1A per errore generico, tab/JS legacy e salvataggi/destinazioni.
+11. Scegliere il prossimo blocco operativo su `frontend-rebuild` pulito.
 
 ### PayPal Express
 
