@@ -130,10 +130,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo ACCOUNT-ADDRESS-LOGIN-UX-1B, merge PR #140 e cleanup branch:
+Stato di riferimento dopo ACCOUNT-PROFILE-NAME-FIELD-1C, merge PR #145 e cleanup branch:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `73ac6bdf2f303e3581c539ae6dcfca9d1a64f969`
+- HEAD stabile: `1fe259a44e9d9252a9733a4c721b13d933963d46`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -163,6 +163,11 @@ Stato di riferimento dopo ACCOUNT-ADDRESS-LOGIN-UX-1B, merge PR #140 e cleanup b
 - Merge PR #138: `86d9abfe5fd2567c6ab586167230c455a6325a87`
 - Merge PR #139: `2d9c11d9df99a3973593d6f7e7109f5517d3501c`
 - Merge PR #140: `73ac6bdf2f303e3581c539ae6dcfca9d1a64f969`
+- Merge PR #141: `f8c75acd94531ceb7e2a1488bddc5eb5e27704da`
+- Merge PR #142: `3e3efd58268597b6ea1ce978e00bf673dd14a783`
+- Merge PR #143: `ccb41fc019100e38d2ba01840ac293956a7a0260`
+- Merge PR #144: `42dc685c3c7b99fe9d19284f477ff9f26fb5ee20`
+- Merge PR #145: `1fe259a44e9d9252a9733a4c721b13d933963d46`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -666,12 +671,27 @@ Nota ACCOUNT-PROFILE-NAME-FIELD-1B:
 - Carrello non modificato: resta follow-up dedicato `CART-ADDRESS-SELECTION-1A`.
 - Nessun percorso legacy immagini introdotto.
 
+Chiusura blocco ACCOUNT-PROFILE-ADDRESS-CLOSE-1A:
+
+- Blocco account profilo/indirizzi chiuso dopo PR #136, #137, #138, #139, #140, #141, #142, #143, #144 e #145.
+- Smoke live finale Germano su ACCOUNT-PROFILE-NAME-FIELD: login OK; `my-account-edit.aspx` OK; sezione "Dati fiscali / intestazione" OK; `Ragione Sociale / Cognome` da `RagioneSociale` OK; `Nome` da `CognomeNome` OK; PIVA/CF invariati e read-only OK; salvataggio profilo campo non critico OK; `myaccount.aspx` OK; riquadro `Profilo` con `Ragione Sociale / Cognome` e `Nome` OK; `my-account-address.aspx` senza regressioni visive; anomalie: no.
+- `myaccount.aspx`: dashboard account stabile, quick links coerenti, sezione `Profilo` allineata con `RagioneSociale` e `CognomeNome` separati.
+- `my-account-edit.aspx`: dettagli account stabili, validazioni server-side profilo consolidate, PIVA/CF read-only invariati, salvataggio profilo campo non critico verificato live.
+- `my-account-address.aspx`: pagina moderna autonoma per indirizzi; indirizzo principale e sedi alternative visibili; add/edit sede alternativa funzionanti; scelta predefinito funzionante; reload mantiene il predefinito; massimo un predefinito; valori non tagliati; label `Ragione Sociale/Cognome` e `Nome` coerenti.
+- `datiutente.aspx`: non e piu il percorso operativo principale per gestione indirizzi account, resta legacy/compatibilita e non crasha sui percorsi verificati.
+- `login.aspx`: toggle mostra/nascondi password verificato, backend login non modificato.
+- Newsletter/footer/password: fix precedenti non regrediti, password/account non bloccati dalla newsletter.
+- Nessuna modifica DB/schema, nessun SQL eseguito, nessuna tabella creata.
+- Nessun percorso legacy `Public/Images/` introdotto; per nuovi asset resta la regola `/Public/assets/images/...`.
+- Prossimo blocco operativo: `CART-ADDRESS-SELECTION-1A`.
+
 Comportamento finale area profilo:
 
-- `myaccount.aspx`: dashboard stabile.
+- `myaccount.aspx`: dashboard stabile con riquadro `Profilo` separato tra `Ragione Sociale / Cognome` da `RagioneSociale` e `Nome` da `CognomeNome`.
 - Click `Modifica dati`: porta a `my-account-edit.aspx`.
 - `my-account-edit.aspx`: pagina profilo ONSUS visibile e coerente con area account.
 - Sezioni presenti: dati accesso/profilo, dati fiscali read-only, contatti, indirizzo fatturazione.
+- Sezione "Dati fiscali / intestazione": `Ragione Sociale / Cognome` da `RagioneSociale`, `Nome` da `CognomeNome`.
 - Username read-only.
 - Email con limite coerente a 50 caratteri.
 - Campi opzionali `Telefono`, `Cellulare`, `Fax` svuotabili.
@@ -744,7 +764,7 @@ File non modificati:
 
 Comportamento finale `my-account-address.aspx`:
 
-- layout ONSUS/UX 2026 read-only;
+- layout ONSUS/UX 2026 moderno e autonomo;
 - `Page.master.vb` include `my-account-address.aspx` tra le pagine con `body.ks-page-account`;
 - AccountSidebar globale visibile/usabile;
 - voce `Indirizzi` active/current corretta;
@@ -752,14 +772,17 @@ Comportamento finale `my-account-address.aspx`:
 - nessuna doppia sidebar visibile;
 - card indirizzo fatturazione presente;
 - card contatti/destinazioni presente;
-- `EmptyDataTemplate` presente;
-- link legacy mantenuti:
-  - `datiutente.aspx?edit=1`
-  - `datiutente.aspx?edit=1&tab=addr`
-- pagina confermata read-only;
-- nessun add/edit/delete diretto indirizzi introdotto;
-- nessun salvataggio introdotto;
-- query/DB/salvataggi invariati.
+- sedi alternative visibili;
+- add indirizzo funzionante;
+- edit indirizzo funzionante;
+- scelta predefinito funzionante;
+- reload mantiene il predefinito;
+- massimo un predefinito;
+- valori non tagliati;
+- label `Ragione Sociale/Cognome` e `Nome` coerenti;
+- `datiutente.aspx` resta legacy/compatibilita, non percorso operativo principale per indirizzi account;
+- delete indirizzi non implementato in questa fase, da valutare solo con task dedicato;
+- nessuna modifica DB/schema e nessun SQL eseguito.
 
 Smoke finale ACCOUNT-ADDRESS-1B-D:
 
@@ -1332,9 +1355,9 @@ Stato finale post-cleanup warning:
 - Warning legacy di precompile in `remind.aspx.vb` chiusi da REMIND-CLEANUP-WARNINGS-1A con rimozione di codice email legacy disabilitato e import inutilizzati.
 - Cleanup limitato a codice morto/variabili inutilizzate: nessuna modifica funzionale a reset tokenizzato, PRG/F5, anti-enumeration o regola email + CF/PIVA.
 - Errori JS legacy su `registrazione.aspx` da valutare in task separato.
-- `datiutente.aspx` resta legacy con errore generico preesistente, tab/JS e gestione salvataggi/destinazioni.
-- `my-account-address.aspx` e stabile read-only ONSUS dopo ACCOUNT-ADDRESS-1B, ma la gestione add/edit/delete indirizzi resta legacy in `datiutente.aspx`.
-- La gestione add/edit/delete indirizzi non e stata migrata.
+- `datiutente.aspx` resta legacy/compatibilita con tab/JS e gestione salvataggi/destinazioni non piu percorso operativo principale per indirizzi account.
+- `my-account-address.aspx` e stabile come pagina moderna autonoma per indirizzi account; add/edit sedi alternative e scelta predefinito sono verificati live.
+- Delete indirizzi resta da valutare solo con task dedicato.
 - La selezione manuale indirizzo nel carrello e il link "modifica indirizzo" del carrello restano debito separato: `CART-ADDRESS-SELECTION-1A`.
 - Stato noto carrello: propone correttamente il predefinito, ma la selezione manuale di un indirizzo diverso non aggiorna correttamente e "modifica indirizzo" nel carrello sballa la UI.
 - Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
@@ -1361,7 +1384,6 @@ Task consigliato separato per eventuale proseguimento:
 2. Possibili candidati:
    - PASSWORD-HASH-SCHEMA-2B / PASSWORD-HASH-MIGRATION-2C: futuro task hash password; hash password non ancora implementato.
    - GESTIONALE-PASSWORD-AUDIT-1A / JANUS-PASSWORD-RESET-1A: audit gestionale Janus per reset/hash.
-   - ACCOUNT-ADDRESS-2A o area account profilo/indirizzi, solo se Germano autorizza audit/migrazione della gestione indirizzi legacy.
    - CART-ADDRESS-SELECTION-1A: verifica/correzione selezione indirizzo carrello diversa dal predefinito e link modifica indirizzo che sballa la UI, senza toccare gateway/checkout salvo task dedicato.
    - REGISTRATION-POLICY-1A / REGISTRATION-UX-1A: refinement residuo login/registrazione.
 3. Revocare/cambiare la password dell'utente MySQL temporaneo usato nello smoke, se ancora attivo.
