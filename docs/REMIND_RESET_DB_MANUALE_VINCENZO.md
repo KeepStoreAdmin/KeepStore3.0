@@ -10,10 +10,10 @@
 | Scopo | Proposta DB preparatoria per futuro reset password tokenizzato |
 | Data | 2026-06-05 |
 | Branch di riferimento | `frontend-rebuild` |
-| HEAD di riferimento | `29abf63ebfc5413f1360214f8525a6580fab1b67` |
-| Stato | Documento progettuale; nessuna modifica DB applicata |
+| HEAD di riferimento | `687198cf51a8d57f61acc997856ffd2eac7cd9e4` |
+| Stato | Gate DB `taikun` completato manualmente; runtime reset fase 1 completato; rollout altri DB da autorizzare |
 
-Questo documento e destinato alla revisione tecnica di Vincenzo Iacobelli per valutare la futura introduzione della tabella token reset password. Non e uno script di deploy automatico e non autorizza modifiche al database.
+Questo documento e destinato alla revisione tecnica di Vincenzo Iacobelli per la tabella token reset password. Non e uno script di deploy automatico e non autorizza modifiche al database fuori dai gate espliciti Germano/Vincenzo.
 
 ## 1.1 Decisioni preliminari Germano
 
@@ -501,14 +501,24 @@ Esito gate DB `taikun` comunicato da Germano:
 - nessuna anomalia comunicata;
 - nessun dato reale inserito;
 - nessun token reale inserito;
-- runtime reset tokenizzato non ancora implementato;
-- prossima fase possibile solo su branch dedicato runtime.
+- runtime reset tokenizzato fase 1 completato su branch dedicato e mergiato;
+- hash migration rimandata a task futuro;
+- nessuna ulteriore modifica DB eseguita da Codex.
 
 Criterio di approvazione:
 
 - Germano approva la consegna operativa;
 - Vincenzo approva ed eventualmente esegue lo script sul DB cliente/azienda corretto;
-- solo dopo conferma della creazione tabella e verifica post-esecuzione si puo aprire il task runtime `REMIND-RESET-IMPLEMENT-1E` o equivalente per reset tokenizzato fase 1.
+- per altri DB cliente/azienda servono nuovo gate esplicito, backup, verifica Vincenzo e autorizzazione Germano.
+
+Nota finale fase 1:
+
+- Tabella gia creata su `taikun` tramite esecuzione manuale controllata.
+- Runtime reset password tokenizzato fase 1 completato.
+- Il runtime resta legacy-compatible: reset riuscito aggiorna `login.Password` e `login.DataPassword`.
+- `aziende.ScadenzaPassword` non viene modificato dal reset.
+- Nessun dato/token reale inserito manualmente nella tabella.
+- Hash migration rimandata a task futuro coordinato con Vincenzo/gestionale Janus.
 
 Nota sicurezza:
 
