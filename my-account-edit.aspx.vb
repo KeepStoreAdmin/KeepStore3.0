@@ -8,6 +8,12 @@ Partial Class my_account_edit
     Inherits System.Web.UI.Page
 
     Private Const MaxEmailLength As Integer = 50
+    Private Const MaxPhoneLength As Integer = 50
+    Private Const MaxAddressLength As Integer = 255
+    Private Const MaxCapLength As Integer = 12
+    Private Const MaxCityLength As Integer = 120
+    Private Const MaxProvinceLength As Integer = 8
+    Private Const MaxNationLength As Integer = 8
 
     Private ReadOnly Property ConnString As String
         Get
@@ -44,19 +50,9 @@ Partial Class my_account_edit
             Return
         End If
 
-        Dim newEmail As String = CleanText(txtEmail.Text)
-        If String.IsNullOrWhiteSpace(newEmail) OrElse Not LooksLikeEmail(newEmail) Then
-            ShowMessage("Inserisci un indirizzo email valido.", False)
-            Return
-        End If
-        If newEmail.Length > MaxEmailLength Then
-            ShowMessage("L'indirizzo email non puo superare 50 caratteri.", False)
-            Return
-        End If
-
         Dim updated As New AccountProfileData()
         updated.UtentiId = current.UtentiId
-        updated.Email = newEmail
+        updated.Email = CleanText(txtEmail.Text)
         updated.Indirizzo = MergeText(txtIndirizzo, current.Indirizzo)
         updated.Cap = MergeText(txtCap, current.Cap)
         updated.Citta = MergeText(txtCitta, current.Citta)
@@ -66,23 +62,30 @@ Partial Class my_account_edit
         updated.Cellulare = SubmittedText(txtCellulare)
         updated.Fax = SubmittedText(txtFax)
 
+        Dim validationMessage As String = ""
+        If Not ValidateProfileInput(updated, validationMessage) Then
+            ShowMessage(validationMessage, False)
+            Return
+        End If
+
         Try
             Using conn As New MySqlConnection(ConnString)
                 conn.Open()
 
                 Using tr As MySqlTransaction = conn.BeginTransaction()
                     Dim sqlUtente As String =
-                        "UPDATE utenti SET " &
-                        "Email = @Email, " &
-                        "Indirizzo = @Indirizzo, " &
-                        "Cap = @Cap, " &
-                        "Citta = @Citta, " &
-                        "Provincia = @Provincia, " &
-                        "Nazione = @Nazione, " &
-                        "Telefono = @Telefono, " &
-                        "Cellulare = @Cellulare, " &
-                        "Fax = @Fax " &
-                        "WHERE id = @UtentiId"
+                        "UPDATE utenti u " &
+                        "INNER JOIN login l ON l.UtentiId = u.id " &
+                        "SET u.Email = @Email, " &
+                        "u.Indirizzo = @Indirizzo, " &
+                        "u.Cap = @Cap, " &
+                        "u.Citta = @Citta, " &
+                        "u.Provincia = @Provincia, " &
+                        "u.Nazione = @Nazione, " &
+                        "u.Telefono = @Telefono, " &
+                        "u.Cellulare = @Cellulare, " &
+                        "u.Fax = @Fax " &
+                        "WHERE u.id = @UtentiId AND l.id = @LoginId"
 
                     Using cmd As New MySqlCommand(sqlUtente, conn, tr)
                         cmd.Parameters.AddWithValue("@Email", updated.Email)
@@ -95,6 +98,7 @@ Partial Class my_account_edit
                         cmd.Parameters.AddWithValue("@Cellulare", updated.Cellulare)
                         cmd.Parameters.AddWithValue("@Fax", updated.Fax)
                         cmd.Parameters.AddWithValue("@UtentiId", current.UtentiId)
+                        cmd.Parameters.AddWithValue("@LoginId", loginId)
                         cmd.ExecuteNonQuery()
                     End Using
 
@@ -225,6 +229,63 @@ Partial Class my_account_edit
     Private Function SubmittedText(ByVal tb As TextBox) As String
         If tb Is Nothing Then Return ""
         Return CleanText(tb.Text)
+    End Function
+
+    Private Function ValidateProfileInput(ByVal profile As AccountProfileData, ByRef message As String) As Boolean
+        message = ""
+
+        If profile Is Nothing Then
+            message = "Non e stato possibile verificare i dati del profilo."
+            Return False
+        End If
+
+        If String.IsNullOrWhiteSpace(profile.Email) OrElse Not LooksLikeEmail(profile.Email) Then
+            message = "Inserisci un indirizzo email valido."
+            Return False
+        End If
+        If profile.Email.Length > MaxEmailLength Then
+            message = "L'indirizzo email non puo superare 50 caratteri."
+            Return False
+        End If
+
+        If Not ValidateMaxLength(profile.Telefono, MaxPhoneLength, "Il telefono", message) Then Return False
+        If Not ValidateMaxLength(profile.Cellulare, MaxPhoneLength, "Il cellulare", message) Then Return False
+        If Not ValidateMaxLength(profile.Fax, MaxPhoneLength, "Il fax", message) Then Return False
+        If Not ValidateMaxLength(profile.Indirizzo, MaxAddressLength, "L'indirizzo", message) Then Return False
+        If Not ValidateMaxLength(profile.Cap, MaxCapLength, "Il CAP", message) Then Return False
+        If Not ValidateMaxLength(profile.Citta, MaxCityLength, "La citta", message) Then Return False
+        If Not ValidateMaxLength(profile.Provincia, MaxProvinceLength, "La provincia", message) Then Return False
+        If Not ValidateMaxLength(profile.Nazione, MaxNationLength, "La nazione", message) Then Return False
+
+        If profile.Cap <> "" AndAlso Not Regex.IsMatch(profile.Cap, "^[A-Za-z0-9][A-Za-z0-9\s-]{1,11}$") Then
+            message = "Inserisci un CAP valido."
+            Return False
+        End If
+
+        If profile.Provincia <> "" AndAlso Not Regex.IsMatch(profile.Provincia, "^[A-Za-z]{2,8}$") Then
+            message = "Inserisci una provincia valida."
+            Return False
+        End If
+
+        If Not IsContactTextValid(profile.Telefono) OrElse Not IsContactTextValid(profile.Cellulare) OrElse Not IsContactTextValid(profile.Fax) Then
+            message = "Telefono, cellulare e fax possono contenere solo numeri, spazi e simboli telefonici comuni."
+            Return False
+        End If
+
+        Return True
+    End Function
+
+    Private Function ValidateMaxLength(ByVal value As String, ByVal maxLength As Integer, ByVal label As String, ByRef message As String) As Boolean
+        If value IsNot Nothing AndAlso value.Length > maxLength Then
+            message = label & " non puo superare " & maxLength.ToString() & " caratteri."
+            Return False
+        End If
+        Return True
+    End Function
+
+    Private Function IsContactTextValid(ByVal value As String) As Boolean
+        If String.IsNullOrWhiteSpace(value) Then Return True
+        Return Regex.IsMatch(value, "^[0-9+()./\s-]+$")
     End Function
 
     Private Function CleanText(ByVal value As String) As String
