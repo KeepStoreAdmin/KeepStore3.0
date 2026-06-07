@@ -99,6 +99,8 @@
                                 </button>
                             </div>
                         </div>
+                        <div class="alert alert-danger d-none mt-3" id="ksNewsletterFooterError" role="alert">Inserisci un indirizzo email valido.</div>
+                        <div class="alert alert-success d-none mt-3" id="ksNewsletterFooterSuccess" role="status">Grazie, la tua richiesta di iscrizione e stata presa in carico.</div>
                     </div>
                 </div>
             </div>

@@ -345,6 +345,23 @@
             }
 
             document.addEventListener('DOMContentLoaded', function () {
+                var footerSubmit = document.getElementById('ksNewsletterSubmit');
+                var footerInput = document.getElementById('ksNewsletterEmail');
+                if (footerSubmit && footerInput) {
+                    footerSubmit.addEventListener('click', function (ev) {
+                        if (ev) ev.preventDefault();
+                        var email = (footerInput.value || '').trim();
+                        var isValid = /^\S+@\S+\.\S+$/.test(email);
+                        if (!isValid) {
+                            setNotice('ksNewsletterFooterError', 'ksNewsletterFooterSuccess');
+                            return false;
+                        }
+
+                        setNotice('ksNewsletterFooterSuccess', 'ksNewsletterFooterError');
+                        return false;
+                    });
+                }
+
                 var modalEl = document.getElementById('ksNewsletterModal');
                 if (!modalEl) return;
 
@@ -372,8 +389,6 @@
                             return;
                         }
 
-                        var footerInput = document.getElementById('ksNewsletterEmail');
-                        var footerSubmit = document.getElementById('ksNewsletterSubmit');
                         if (footerInput) footerInput.value = email;
 
                         if (footerSubmit) {

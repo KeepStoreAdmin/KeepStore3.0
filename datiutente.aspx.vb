@@ -27,7 +27,7 @@ Partial Class datiutente
 
             ' Supporto deep-link in modalità modifica (es. da my-account-edit.aspx)
             Dim qEdit As String = Convert.ToString(Request.QueryString("edit"))
-            If qEdit = "1" OrElse qEdit.Equals("true", StringComparison.OrdinalIgnoreCase) Then
+            If String.Equals(qEdit, "1", StringComparison.OrdinalIgnoreCase) OrElse String.Equals(qEdit, "true", StringComparison.OrdinalIgnoreCase) Then
                 fvUtente.ChangeMode(FormViewMode.Edit)
             End If
 
