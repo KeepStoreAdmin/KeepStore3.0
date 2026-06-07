@@ -483,6 +483,11 @@ Public Module PasswordResetTokenService
         sb.AppendLine()
         sb.AppendLine("Se non hai richiesto tu il reset, ignora questa email: la password attuale resta invariata.")
         sb.AppendLine()
+        sb.AppendLine("Avvertenze di sicurezza:")
+        sb.AppendLine("- Non condividere questo link con nessuno.")
+        sb.AppendLine("- L'azienda non chiedera mai la tua password via email.")
+        sb.AppendLine("- Questa email non contiene la tua password.")
+        sb.AppendLine()
         sb.AppendLine("Grazie,")
         sb.AppendLine(companyName)
         Return sb.ToString()
@@ -511,6 +516,14 @@ Public Module PasswordResetTokenService
                "<p style='margin:0 0 8px 0;font-size:13px;line-height:1.5;color:#4b5563;'>Se il pulsante non funziona, copia e incolla questo indirizzo nel browser:</p>" &
                "<p style='margin:0 0 20px 0;font-size:12px;line-height:1.45;color:#374151;word-break:break-all;'>" & HtmlText(resetUrl) & "</p>" &
                "<p style='margin:0;font-size:13px;line-height:1.5;color:#4b5563;'>Se non hai richiesto tu il reset, ignora questa email: la password attuale resta invariata.</p>" &
+               "<div style='margin:22px 0 0 0;padding:14px 16px;background:#fff8e6;border:1px solid #f0d98c;border-radius:4px;'>" &
+               "<p style='margin:0 0 8px 0;font-size:13px;font-weight:bold;color:#5f4b12;'>Avvertenze di sicurezza</p>" &
+               "<ul style='margin:0;padding-left:18px;font-size:13px;line-height:1.55;color:#5f4b12;'>" &
+               "<li>Non condividere questo link con nessuno.</li>" &
+               "<li>L'azienda non chiedera mai la tua password via email.</li>" &
+               "<li>Questa email non contiene la tua password.</li>" &
+               "</ul>" &
+               "</div>" &
                "</td></tr>" &
                "<tr><td style='padding:18px 32px;background:#f8fafc;border-top:1px solid #edf1f5;font-size:12px;line-height:1.5;color:#6b7280;'>" &
                footer &

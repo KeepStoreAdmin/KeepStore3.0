@@ -1099,6 +1099,7 @@ REMIND-RESET-POST-REFRESH-1C rafforza il comportamento live di `remind.aspx` e m
 - Il redirect post-submit usa una risposta 303 verso `remind.aspx?sent=1`, con `CompleteRequest()` e uscita immediata dal click handler.
 - `sent=1` e gestito come GET di conferma generica e non genera token/email, anche in caso di POST artificiale verso la stessa querystring.
 - Il template email reset e HTML professionale con versione testuale alternativa, CTA, fallback link, nota sicurezza e footer aziendale.
+- Le avvertenze anti-phishing esplicite sono presenti in HTML e plain text: non condividere il link, nessuna richiesta password via email, nessuna password inclusa nella mail.
 - I dati azienda per mittente/footer vengono letti dalla tabella reale `aziende` quando associabili all'account, con fallback alle sessioni legacy.
 - Il token in chiaro resta solo nel link email; nessun token, hash, password, CF/PIVA o dato personale viene inserito nei log o nei documenti.
 - Nessun DB/schema modificato e nessun hash implementato.
