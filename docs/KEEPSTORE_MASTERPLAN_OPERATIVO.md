@@ -630,6 +630,18 @@ Nota ACCOUNT-ADDRESS-UX-1E:
 - Nessun DB/schema modificato e nessun SQL schema eseguito.
 - Nessun percorso legacy immagini introdotto.
 
+Nota ACCOUNT-PROFILE-FISCAL-LABELS-1A:
+
+- Hotfix visuale/testuale su `my-account-edit.aspx`, sezione "Dati fiscali / intestazione".
+- Causa anomalia: i valori erano gia associati ai campi corretti (`RagioneSociale` e `CognomeNome`), ma le label "Ragione sociale" e "Nome / Cognome" non erano coerenti con la convenzione account validata.
+- La label di `RagioneSociale` diventa `Ragione Sociale / Cognome`.
+- La label di `CognomeNome` diventa `Nome`, mantenendo lo schema legacy senza concatenazioni o inversioni.
+- PIVA e Codice Fiscale restano invariati e read-only.
+- Nessuna modifica a indirizzi, carrello, login/reset/password flow.
+- Carrello non modificato: resta follow-up dedicato `CART-ADDRESS-SELECTION-1A`.
+- Nessun DB/schema modificato e nessun SQL eseguito.
+- Nessun percorso legacy immagini introdotto.
+
 Comportamento finale area profilo:
 
 - `myaccount.aspx`: dashboard stabile.
