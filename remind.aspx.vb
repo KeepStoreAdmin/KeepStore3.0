@@ -8,18 +8,31 @@ Partial Class Remind
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         'Me.lblSito.Text = Session("AziendaNome")
 
+        If Not IsPostBack AndAlso IsResetRequestSent() Then
+            ShowGenericResetMessage()
+        End If
     End Sub
 
     Protected Sub btInvia_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btInvia.Click
         Me.lblerror.Visible = False
-        Me.lblOk.Text = PasswordResetTokenService.GenericRequestMessage()
-        Me.lblOk.Visible = True
 
         If Not Page.IsValid Then
             Exit Sub
         End If
 
         PasswordResetTokenService.RequestReset(Me.tbEmail.Text, Me.txtFiscalCodeOrVat.Text, Me)
+        Response.Redirect("remind.aspx?sent=1", False)
+        Context.ApplicationInstance.CompleteRequest()
+    End Sub
+
+    Private Function IsResetRequestSent() As Boolean
+        Return String.Equals(Convert.ToString(Request.QueryString("sent")), "1", StringComparison.Ordinal)
+    End Function
+
+    Private Sub ShowGenericResetMessage()
+        Me.lblerror.Visible = False
+        Me.lblOk.Text = PasswordResetTokenService.GenericRequestMessage()
+        Me.lblOk.Visible = True
     End Sub
 
     Protected Sub Page_PreInit(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreInit
