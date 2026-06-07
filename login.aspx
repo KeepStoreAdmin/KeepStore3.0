@@ -5,7 +5,33 @@
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    
+    <style>
+        .ks-login-password-wrap {
+            position: relative;
+        }
+
+        .ks-login-password-wrap .form-control {
+            padding-right: 5.75rem;
+        }
+
+        .ks-login-password-toggle {
+            position: absolute;
+            top: 50%;
+            right: .5rem;
+            transform: translateY(-50%);
+            border: 0;
+            background: transparent;
+            color: #3a3a3a;
+            font-size: .875rem;
+            line-height: 1;
+            padding: .45rem .5rem;
+        }
+
+        .ks-login-password-toggle:focus {
+            outline: 2px solid currentColor;
+            outline-offset: 2px;
+        }
+    </style>
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
@@ -52,7 +78,17 @@
                                     <label class="fw-semibold body-md-2">
                                         <asp:Label ID="lblPassword" runat="server" Text="Password *" Visible="True"></asp:Label>
                                     </label>
-                                    <asp:TextBox ID="tbPassword" CssClass="form-control" AutoPostBack="false" TextMode="Password" runat="server" Visible="True"></asp:TextBox>
+                                    <div class="ks-login-password-wrap">
+                                        <asp:TextBox ID="tbPassword" CssClass="form-control" AutoPostBack="false" TextMode="Password" runat="server" Visible="True"></asp:TextBox>
+                                        <button type="button"
+                                            id="btnToggleLoginPassword"
+                                            class="ks-login-password-toggle"
+                                            aria-controls="<%= tbPassword.ClientID %>"
+                                            aria-pressed="false"
+                                            aria-label="Mostra password">
+                                            Mostra
+                                        </button>
+                                    </div>
                                     <div class="validator">
                                         <asp:RequiredFieldValidator ID="RequiredFieldValidatorPass" runat="server"
                                             ControlToValidate="tbPassword"
@@ -96,4 +132,33 @@
         </div>
     </section>
 
+</asp:Content>
+
+<asp:Content ID="ScriptsContent" ContentPlaceHolderID="ScriptsContent" runat="server">
+    <script>
+        (function () {
+            function bindLoginPasswordToggle() {
+                var input = document.getElementById('<%= tbPassword.ClientID %>');
+                var button = document.getElementById('btnToggleLoginPassword');
+
+                if (!input || !button) {
+                    return;
+                }
+
+                button.addEventListener('click', function () {
+                    var isVisible = input.getAttribute('type') === 'text';
+                    input.setAttribute('type', isVisible ? 'password' : 'text');
+                    button.setAttribute('aria-pressed', isVisible ? 'false' : 'true');
+                    button.setAttribute('aria-label', isVisible ? 'Mostra password' : 'Nascondi password');
+                    button.textContent = isVisible ? 'Mostra' : 'Nascondi';
+                });
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', bindLoginPasswordToggle);
+            } else {
+                bindLoginPasswordToggle();
+            }
+        }());
+    </script>
 </asp:Content>

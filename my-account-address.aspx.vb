@@ -114,7 +114,8 @@ Partial Class my_account_address
         pnlMainAddress.Visible = True
         pnlNoMainAddress.Visible = False
 
-        litMainName.Text = Server.HtmlEncode(FirstValue(row, "RagioneSociale", "CognomeNome", "Non indicato"))
+        litMainRagioneSociale.Text = Server.HtmlEncode(SafeRowValue(row, "RagioneSociale", "Non indicata"))
+        litMainCognomeNome.Text = Server.HtmlEncode(SafeRowValue(row, "CognomeNome", "Non indicato"))
         litMainEmail.Text = Server.HtmlEncode(SafeRowValue(row, "Email", "Non indicata"))
         litMainAddress.Text = Server.HtmlEncode(SafeRowValue(row, "Indirizzo", "Non indicato"))
         litMainCap.Text = Server.HtmlEncode(SafeRowValue(row, "Cap", "-"))
@@ -247,19 +248,6 @@ Partial Class my_account_address
         End Using
     End Function
 
-    Public Function FormatAlternativeTitle(ByVal dataItem As Object) As String
-        Dim rowView As DataRowView = TryCast(dataItem, DataRowView)
-        If rowView Is Nothing Then Return "Sede alternativa"
-
-        Dim ragione As String = SafeRowViewValue(rowView, "RagioneSocialeA", "")
-        If Not String.IsNullOrWhiteSpace(ragione) Then Return Server.HtmlEncode(ragione)
-
-        Dim nome As String = SafeRowViewValue(rowView, "NomeA", "")
-        If Not String.IsNullOrWhiteSpace(nome) Then Return Server.HtmlEncode(nome)
-
-        Return "Sede alternativa"
-    End Function
-
     Public Function SafeField(ByVal dataItem As Object, ByVal fieldName As String, ByVal fallback As String) As String
         Dim rowView As DataRowView = TryCast(dataItem, DataRowView)
         If rowView Is Nothing Then Return Server.HtmlEncode(fallback)
@@ -286,16 +274,6 @@ Partial Class my_account_address
     Private Function SafeRowValue(ByVal row As DataRow, ByVal fieldName As String, ByVal fallback As String) As String
         If row Is Nothing OrElse Not row.Table.Columns.Contains(fieldName) Then Return fallback
         Return SafeText(row(fieldName), fallback)
-    End Function
-
-    Private Function FirstValue(ByVal row As DataRow, ByVal firstField As String, ByVal secondField As String, ByVal fallback As String) As String
-        Dim first As String = SafeRowValue(row, firstField, "")
-        If Not String.IsNullOrWhiteSpace(first) Then Return first
-
-        Dim second As String = SafeRowValue(row, secondField, "")
-        If Not String.IsNullOrWhiteSpace(second) Then Return second
-
-        Return fallback
     End Function
 
     Private Function SafeText(ByVal raw As Object, ByVal fallback As String) As String
