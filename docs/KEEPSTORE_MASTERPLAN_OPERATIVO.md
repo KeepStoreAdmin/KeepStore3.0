@@ -1046,6 +1046,44 @@ Prossimo step:
 
 - Implementazione runtime reset tokenizzato fase 1 su branch dedicato, senza hash e mantenendo i guardrail legacy gia documentati.
 
+### Reset tokenizzato - runtime fase 1 avviato
+
+REMIND-RESET-IMPLEMENT-1E avvia l'implementazione runtime legacy-compatible su branch dedicato.
+
+Stato previsto:
+
+- DB `taikun` gia predisposto con tabella `login_password_reset_tokens`.
+- Reminder convertito a richiesta reset tokenizzata anti-enumeration.
+- Nuova pagina reset password anonima con token monouso e scadenza 30 minuti.
+- Reset riuscito aggiorna `login.Password` legacy e `login.DataPassword`.
+- Hash password rimandato a task separato.
+- Smoke runtime richiesti prima di merge.
+
+### Reset tokenizzato - disambiguazione account
+
+REMIND-RESET-IMPLEMENT-1I aggiorna il runtime PR #126 per rendere deterministico il reset in presenza di email duplicate.
+
+- `remind.aspx` richiede email e Codice fiscale o Partita IVA.
+- Il runtime usa email, CF/PIVA normalizzato e contesto URL/AziendaId quando determinabile.
+- Il campo CF/PIVA e alternativo: il valore inserito puo corrispondere a `CodiceFiscale` oppure a `Piva`, senza richiedere entrambi.
+- La ricerca viene de-duplicata per `LoginId`: piu righe `vlogin` dello stesso account contano come un solo candidato.
+- Se la ricerca produce zero candidati non viene generato alcun token.
+- Se la ricerca produce un solo candidato valido viene generato un solo token.
+- Se la ricerca resta ambigua con candidati multipli distinti per `LoginId` non viene generato alcun token.
+- Nessuna scelta arbitraria del primo record e nessuna email con link multipli.
+- Nessun dato fiscale, azienda o tipo utente viene salvato nel token, inserito nel link o scritto nei log.
+- Nessun DB schema modificato; PR #126 resta da smoke finale.
+
+### Reset tokenizzato - UX reset password
+
+REMIND-RESET-UX-1A aggiorna `resetpassword.aspx` sul ramo PR #126.
+
+- Aggiunto toggle mostra/nascondi password sui campi nuova password e conferma nuova password.
+- I campi restano mascherati di default.
+- Il toggle e client-side, accessibile da tastiera e non invia submit accidentali.
+- Nessuna password viene salvata in JavaScript globale, storage, cookie o log.
+- Nessun DB/schema modificato e nessuna logica token/password server-side modificata.
+
 ### Debito residuo dopo consolidamento password
 
 - Hash/migrazione password non implementati.

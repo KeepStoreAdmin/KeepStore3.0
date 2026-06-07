@@ -8,18 +8,18 @@ Partial Class Remind
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         'Me.lblSito.Text = Session("AziendaNome")
 
-        If Me.IsPostBack Then
-            If Me.tbEmail.Text <> "" Then
-                RecuperaDati()
-            End If
-        End If
-
     End Sub
 
-    Public Sub RecuperaDati()
+    Protected Sub btInvia_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btInvia.Click
         Me.lblerror.Visible = False
-        Me.lblOk.Text = "Per motivi di sicurezza il recupero automatico della password e' stato disabilitato. Per recuperare l'accesso contatta l'assistenza."
+        Me.lblOk.Text = PasswordResetTokenService.GenericRequestMessage()
         Me.lblOk.Visible = True
+
+        If Not Page.IsValid Then
+            Exit Sub
+        End If
+
+        PasswordResetTokenService.RequestReset(Me.tbEmail.Text, Me.txtFiscalCodeOrVat.Text, Me)
     End Sub
 
     Protected Sub Page_PreInit(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreInit

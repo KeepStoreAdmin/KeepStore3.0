@@ -90,7 +90,7 @@
                         <div class="ks-auth-card">
 
                             <h5 class="title fw-semibold mb-2">Recupero accesso</h5>
-                            <p class="body-text-3 mb-4">Per motivi di sicurezza il recupero automatico della password e' stato disabilitato. Per recuperare l'accesso contatta l'assistenza.</p>
+                            <p class="body-text-3 mb-4">Inserisci l'email del tuo account e il codice fiscale o la partita IVA. Se i dati sono corretti riceverai un link per impostare una nuova password.</p>
 
                             <!-- BOTTONE TORNA A MY ACCOUNT -->
                             <div class="mb-3">
@@ -131,7 +131,7 @@
                                             <asp:Label ID="lblError" runat="server"
                                                 Font-Bold="True"
                                                 ForeColor="Red"
-                                                Text="Per motivi di sicurezza il recupero automatico della password e' stato disabilitato. Per recuperare l'accesso contatta l'assistenza."
+                                                Text="Se i dati inseriti sono corretti riceverai le istruzioni per completare il reset della password."
                                                 Visible="False">
                                             </asp:Label>
 
@@ -139,6 +139,21 @@
                                                 runat="server"
                                                 ControlToValidate="tbEmail"
                                                 ErrorMessage="Inserire Email">
+                                            </asp:RequiredFieldValidator>
+                                        </div>
+                                    </fieldset>
+
+                                    <fieldset>
+                                        <label class="fw-semibold body-md-2">
+                                            <asp:Label ID="lblFiscalCodeOrVat" runat="server" Text="Codice fiscale o Partita IVA *" Visible="True"></asp:Label>
+                                        </label>
+                                        <asp:TextBox ID="txtFiscalCodeOrVat" CssClass="form-control" AutoPostBack="false" runat="server" Visible="True"></asp:TextBox>
+
+                                        <div class="validator">
+                                            <asp:RequiredFieldValidator ID="RequiredFieldValidatorFiscalCodeOrVat"
+                                                runat="server"
+                                                ControlToValidate="txtFiscalCodeOrVat"
+                                                ErrorMessage="Inserire Codice fiscale o Partita IVA">
                                             </asp:RequiredFieldValidator>
                                         </div>
                                     </fieldset>
@@ -150,14 +165,13 @@
                                     CausesValidation="True"
                                     Visible="true"
                                     runat="server"
-                                    Text="Mostra indicazioni assistenza"
-                                    PostBackUrl="remind.aspx" />
+                                    Text="Invia link reset" />
 
                                 <div class="mt-3 text-center">
                                     <asp:Label ID="lblOk" runat="server"
                                         Font-Size="8pt"
                                         Visible="false"
-                                        Text="Per motivi di sicurezza il recupero automatico della password e' stato disabilitato. Per recuperare l'accesso contatta l'assistenza."
+                                        Text="Se i dati inseriti sono corretti riceverai le istruzioni per completare il reset della password."
                                         Font-Bold="True"
                                         EnableViewState="False">
                                     </asp:Label>
