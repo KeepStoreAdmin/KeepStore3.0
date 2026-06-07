@@ -8,8 +8,13 @@ Partial Class Remind
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         'Me.lblSito.Text = Session("AziendaNome")
 
-        If Not IsPostBack AndAlso IsResetRequestSent() Then
-            ShowGenericResetMessage()
+        If IsResetRequestSent() Then
+            ShowSentConfirmation()
+            Return
+        End If
+
+        If Not IsPostBack Then
+            ShowRequestForm()
         End If
     End Sub
 
@@ -17,7 +22,7 @@ Partial Class Remind
         Me.lblerror.Visible = False
 
         If IsResetRequestSent() Then
-            ShowGenericResetMessage()
+            ShowSentConfirmation()
             Return
         End If
 
@@ -43,10 +48,28 @@ Partial Class Remind
         Context.ApplicationInstance.CompleteRequest()
     End Sub
 
-    Private Sub ShowGenericResetMessage()
+    Private Sub ShowRequestForm()
         Me.lblerror.Visible = False
-        Me.lblOk.Text = PasswordResetTokenService.GenericRequestMessage()
-        Me.lblOk.Visible = True
+        Me.lblOk.Visible = False
+        Me.pnlLoading.Visible = False
+        Me.pnlContent.Style("display") = "block"
+        Me.pnlSentConfirmation.Visible = False
+        Me.pnlRequestIntro.Visible = True
+        Me.pnlRequestForm.Visible = True
+        Me.pnlOperationProgress.Visible = True
+    End Sub
+
+    Private Sub ShowSentConfirmation()
+        Me.lblerror.Visible = False
+        Me.lblOk.Visible = False
+        Me.tbEmail.Text = ""
+        Me.txtFiscalCodeOrVat.Text = ""
+        Me.pnlLoading.Visible = False
+        Me.pnlContent.Style("display") = "block"
+        Me.pnlSentConfirmation.Visible = True
+        Me.pnlRequestIntro.Visible = False
+        Me.pnlRequestForm.Visible = False
+        Me.pnlOperationProgress.Visible = False
     End Sub
 
     Protected Sub Page_PreInit(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreInit

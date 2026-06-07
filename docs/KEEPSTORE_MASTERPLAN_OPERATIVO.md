@@ -1112,6 +1112,16 @@ RESET-LOGIN-REDIRECT-1A corregge il redirect post-login dopo reset password.
 - La master non salva piu pagine reset/remind come ultima pagina visitata e pulisce sessioni di redirect legacy non sicure.
 - Nessun DB/schema modificato e nessun hash implementato.
 
+REMIND-RESET-SENT-UX-1B migliora lo stato di conferma `remind.aspx?sent=1`.
+
+- La GET `sent=1` mostra una card di conferma evidente in alto, subito sotto il titolo `Recupero accesso`.
+- Il form email + CF/PIVA viene nascosto nello stato di conferma e i campi vengono puliti server-side.
+- Loader, testi operativi e immagini loader non vengono renderizzati su GET normale o `sent=1`.
+- Le azioni disponibili sono `Vai al login` e `Effettua una nuova richiesta`, con nuova richiesta verso `remind.aspx` pulito.
+- Il messaggio resta generico e anti-enumeration.
+- PRG/F5 invariato: la GET `sent=1` non genera token/email.
+- Nessun DB/schema modificato.
+
 ### Debito residuo dopo consolidamento password
 
 - Hash/migrazione password non implementati.
