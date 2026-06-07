@@ -501,8 +501,17 @@ Esito gate DB `taikun` comunicato da Germano:
 - nessuna anomalia comunicata;
 - nessun dato reale inserito;
 - nessun token reale inserito;
-- runtime reset tokenizzato non ancora implementato;
-- prossima fase possibile solo su branch dedicato runtime.
+- runtime reset tokenizzato non ancora implementato al momento del gate DB;
+- fase runtime successiva da eseguire solo su branch dedicato.
+
+Nota finale dopo runtime fase 1:
+
+- La tabella `login_password_reset_tokens` risulta gia creata sul DB `taikun` tramite esecuzione manuale controllata, non da Codex.
+- Il runtime reset password tokenizzato fase 1 e completato in modalita legacy-compatible.
+- Nessun dato/token reale e stato inserito manualmente nella tabella durante il gate documentato.
+- La tabella era vuota subito dopo la creazione; i token runtime devono restare gestiti solo dal codice applicativo.
+- Nessuna ulteriore modifica DB/schema e stata eseguita da Codex in questa chiusura documentale.
+- Hash migration rimandata a task futuro coordinato con Vincenzo/gestionale.
 
 Criterio di approvazione:
 
