@@ -163,7 +163,7 @@ Partial Class my_account_edit
                 "u.id AS UtentiId, " &
                 "COALESCE(v.Username,'') AS Username, " &
                 "COALESCE(v.email, u.Email, '') AS Email, " &
-                "COALESCE(v.cognomenome,'') AS CognomeNome, " &
+                "COALESCE(u.CognomeNome, v.cognomenome, '') AS CognomeNome, " &
                 "v.ultimoaccesso AS UltimoAccesso, " &
                 "COALESCE(u.Codice,'') AS Codice, " &
                 "COALESCE(u.RagioneSociale,'') AS RagioneSociale, " &
