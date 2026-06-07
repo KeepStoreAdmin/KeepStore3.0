@@ -14,14 +14,25 @@
 
         body.ks-page-account .ks-address-page .ks-address-content,
         body.ks-page-account .ks-address-page .ks-address-card,
+        body.ks-page-account .ks-address-page .ks-address-card .card-body,
         body.ks-page-account .ks-address-page .ks-address-card [class*="col-"] {
             min-width: 0;
+            overflow: visible;
+        }
+
+        body.ks-page-account .ks-address-page .ks-address-value,
+        body.ks-page-account .ks-address-page .ks-address-field-label,
+        body.ks-page-account .ks-address-page .ks-address-muted-label {
+            max-width: 100%;
+            white-space: normal !important;
+            overflow: visible !important;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            line-height: 1.45;
         }
 
         body.ks-page-account .ks-address-page .ks-address-value {
-            white-space: normal;
-            overflow-wrap: anywhere;
-            word-break: break-word;
+            min-height: 1.45em;
         }
 
         body.ks-page-account .ks-address-page .ks-address-heading {
@@ -34,6 +45,27 @@
 
         body.ks-page-account .ks-address-page .ks-address-title {
             min-width: 0;
+            width: 100%;
+        }
+
+        body.ks-page-account .ks-address-page .ks-address-card-top {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: start;
+        }
+
+        body.ks-page-account .ks-address-page .ks-address-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: .75rem;
+        }
+
+        body.ks-page-account .ks-address-page .ks-address-detail-grid--main {
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        }
+
+        body.ks-page-account .ks-address-page .ks-address-detail-item--wide {
+            grid-column: 1 / -1;
         }
 
         body.ks-page-account .ks-address-page .ks-address-field {
@@ -41,7 +73,8 @@
             border: 1px solid rgba(0,0,0,.08);
             border-radius: .5rem;
             background: rgba(0,0,0,.015);
-            height: 100%;
+            height: auto;
+            min-height: 100%;
         }
 
         body.ks-page-account .ks-address-page .ks-address-field-label {
@@ -59,6 +92,14 @@
 
         body.ks-page-account .ks-address-page textarea.form-control {
             min-height: 96px;
+        }
+
+        @media (max-width: 575.98px) {
+            body.ks-page-account .ks-address-page .ks-address-card-top,
+            body.ks-page-account .ks-address-page .ks-address-detail-grid,
+            body.ks-page-account .ks-address-page .ks-address-detail-grid--main {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </asp:Content>
@@ -107,62 +148,62 @@
                                 </div>
                                 <div class="card-body">
                                     <asp:Panel ID="pnlMainAddress" runat="server">
-                                        <div class="row g-3">
-                                            <div class="col-12 col-md-6">
+                                        <div class="ks-address-detail-grid ks-address-detail-grid--main">
+                                            <div class="ks-address-detail-item">
                                                 <div class="ks-address-field">
                                                     <div class="ks-address-field-label">Ragione Sociale/Cognome</div>
                                                     <div class="fw-medium ks-address-value"><asp:Literal ID="litMainRagioneSociale" runat="server" /></div>
                                                 </div>
                                             </div>
-                                            <div class="col-12 col-md-6">
+                                            <div class="ks-address-detail-item">
                                                 <div class="ks-address-field">
                                                     <div class="ks-address-field-label">Nome</div>
                                                     <div class="fw-medium ks-address-value"><asp:Literal ID="litMainCognomeNome" runat="server" /></div>
                                                 </div>
                                             </div>
-                                            <div class="col-12 col-md-6">
+                                            <div class="ks-address-detail-item">
                                                 <div class="ks-address-field">
                                                     <div class="ks-address-field-label">Email</div>
                                                     <div class="fw-medium ks-address-value"><asp:Literal ID="litMainEmail" runat="server" /></div>
                                                 </div>
                                             </div>
-                                            <div class="col-12">
+                                            <div class="ks-address-detail-item ks-address-detail-item--wide">
                                                 <div class="ks-address-field">
                                                     <div class="ks-address-field-label">Indirizzo completo</div>
                                                     <div class="fw-medium ks-address-value"><asp:Literal ID="litMainAddress" runat="server" /></div>
                                                 </div>
                                             </div>
-                                            <div class="col-6 col-md-3">
+                                            <div class="ks-address-detail-item">
                                                 <div class="ks-address-field">
                                                     <div class="ks-address-field-label">CAP</div>
                                                     <div class="fw-medium ks-address-value"><asp:Literal ID="litMainCap" runat="server" /></div>
                                                 </div>
                                             </div>
-                                            <div class="col-6 col-md-4">
+                                            <div class="ks-address-detail-item">
                                                 <div class="ks-address-field">
                                                     <div class="ks-address-field-label">Citta</div>
                                                     <div class="fw-medium ks-address-value"><asp:Literal ID="litMainCity" runat="server" /></div>
                                                 </div>
                                             </div>
-                                            <div class="col-6 col-md-2">
+                                            <div class="ks-address-detail-item">
                                                 <div class="ks-address-field">
                                                     <div class="ks-address-field-label">Provincia</div>
                                                     <div class="fw-medium ks-address-value"><asp:Literal ID="litMainProvince" runat="server" /></div>
                                                 </div>
                                             </div>
-                                            <div class="col-6 col-md-3">
+                                            <div class="ks-address-detail-item">
                                                 <div class="ks-address-field">
                                                     <div class="ks-address-field-label">Nazione</div>
                                                     <div class="fw-medium ks-address-value"><asp:Literal ID="litMainCountry" runat="server" /></div>
                                                 </div>
                                             </div>
-                                            <div class="col-12 col-md-6">
+                                            <div class="ks-address-detail-item">
                                                 <div class="ks-address-field">
                                                     <div class="ks-address-field-label">Telefono</div>
                                                     <div class="fw-medium ks-address-value"><asp:Literal ID="litMainPhone" runat="server" /></div>
                                                 </div>
                                             </div>
-                                            <div class="col-12 col-md-6">
+                                            <div class="ks-address-detail-item">
                                                 <div class="ks-address-field">
                                                     <div class="ks-address-field-label">Cellulare</div>
                                                     <div class="fw-medium ks-address-value"><asp:Literal ID="litMainMobile" runat="server" /></div>
@@ -272,7 +313,7 @@
                                             <div class="col-12">
                                                 <div class="card h-100 border">
                                                     <div class="card-body d-flex flex-column gap-3">
-                                                        <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                                                        <div class="ks-address-card-top gap-2">
                                                             <div class="ks-address-title">
                                                                 <div class="ks-address-field-label">Ragione Sociale/Cognome</div>
                                                                 <div class="fw-semibold ks-address-value"><%# SafeField(Container.DataItem, "RagioneSocialeA", "-") %></div>
@@ -284,45 +325,45 @@
                                                             </asp:PlaceHolder>
                                                         </div>
 
-                                                        <div class="row g-2 body-small">
-                                                            <div class="col-12">
-                                                                <div class="text-muted">Indirizzo completo</div>
+                                                        <div class="ks-address-detail-grid body-small">
+                                                            <div class="ks-address-detail-item ks-address-detail-item--wide">
+                                                                <div class="text-muted ks-address-muted-label">Indirizzo completo</div>
                                                                 <div class="fw-medium ks-address-value"><%# SafeField(Container.DataItem, "IndirizzoA", "-") %></div>
                                                             </div>
-                                                            <div class="col-6 col-lg-2">
-                                                                <div class="text-muted">CAP</div>
+                                                            <div class="ks-address-detail-item">
+                                                                <div class="text-muted ks-address-muted-label">CAP</div>
                                                                 <div class="fw-medium ks-address-value"><%# SafeField(Container.DataItem, "CapA", "-") %></div>
                                                             </div>
-                                                            <div class="col-6 col-lg-3">
-                                                                <div class="text-muted">Citta</div>
+                                                            <div class="ks-address-detail-item">
+                                                                <div class="text-muted ks-address-muted-label">Citta</div>
                                                                 <div class="fw-medium ks-address-value"><%# SafeField(Container.DataItem, "CittaA", "-") %></div>
                                                             </div>
-                                                            <div class="col-6 col-lg-2">
-                                                                <div class="text-muted">Provincia</div>
+                                                            <div class="ks-address-detail-item">
+                                                                <div class="text-muted ks-address-muted-label">Provincia</div>
                                                                 <div class="fw-medium ks-address-value"><%# SafeField(Container.DataItem, "ProvinciaA", "-") %></div>
                                                             </div>
-                                                            <div class="col-6 col-lg-2">
-                                                                <div class="text-muted">Zona</div>
+                                                            <div class="ks-address-detail-item">
+                                                                <div class="text-muted ks-address-muted-label">Zona</div>
                                                                 <div class="fw-medium ks-address-value"><%# SafeField(Container.DataItem, "Zona", "-") %></div>
                                                             </div>
-                                                            <div class="col-6 col-lg-3">
-                                                                <div class="text-muted">Nazione</div>
+                                                            <div class="ks-address-detail-item">
+                                                                <div class="text-muted ks-address-muted-label">Nazione</div>
                                                                 <div class="fw-medium ks-address-value"><%# SafeField(Container.DataItem, "NazioneA", "-") %></div>
                                                             </div>
-                                                            <div class="col-6 col-lg-4">
-                                                                <div class="text-muted">Telefono</div>
+                                                            <div class="ks-address-detail-item">
+                                                                <div class="text-muted ks-address-muted-label">Telefono</div>
                                                                 <div class="fw-medium ks-address-value"><%# SafeField(Container.DataItem, "TelefonoA", "-") %></div>
                                                             </div>
-                                                            <div class="col-6 col-lg-4">
-                                                                <div class="text-muted">Cellulare</div>
+                                                            <div class="ks-address-detail-item">
+                                                                <div class="text-muted ks-address-muted-label">Cellulare</div>
                                                                 <div class="fw-medium ks-address-value"><%# SafeField(Container.DataItem, "CellulareA", "-") %></div>
                                                             </div>
-                                                            <div class="col-6 col-lg-4">
-                                                                <div class="text-muted">Fax</div>
+                                                            <div class="ks-address-detail-item">
+                                                                <div class="text-muted ks-address-muted-label">Fax</div>
                                                                 <div class="fw-medium ks-address-value"><%# SafeField(Container.DataItem, "FaxA", "-") %></div>
                                                             </div>
-                                                            <div class="col-12">
-                                                                <div class="text-muted">Note</div>
+                                                            <div class="ks-address-detail-item ks-address-detail-item--wide">
+                                                                <div class="text-muted ks-address-muted-label">Note</div>
                                                                 <div class="fw-medium ks-address-value"><%# SafeField(Container.DataItem, "Note", "-") %></div>
                                                             </div>
                                                         </div>

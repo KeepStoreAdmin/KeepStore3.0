@@ -619,6 +619,17 @@ Nota ACCOUNT-ADDRESS-UX-1C:
 - Nessun DB/schema modificato e nessun SQL schema eseguito.
 - Nessun percorso legacy immagini introdotto.
 
+Nota ACCOUNT-ADDRESS-UX-1E:
+
+- Hotfix visuale post smoke live su `my-account-address.aspx`: i valori indirizzo passano da colonne Bootstrap strette a griglie locali elastiche con wrapping esplicito.
+- Causa valori ancora tagliati: alcune righe usavano colonne troppo strette dentro la shell account (`col-md-*`/`col-lg-*`) e header flex con badge, quindi i valori lunghi risultavano compressi anche se wrappabili.
+- Indirizzo principale: `Ragione Sociale/Cognome` e `Nome` restano etichette distinte e leggibili, con valori non troncati.
+- Sedi alternative: `RagioneSocialeA` e `NomeA` restano etichette distinte e leggibili, con card coerenti fra sede predefinita e sedi successive.
+- Nessuna modifica funzionale DB: add/edit, messaggi, badge predefinito e cambio predefinito restano invariati.
+- Carrello non modificato: resta follow-up dedicato `CART-ADDRESS-SELECTION-1A`.
+- Nessun DB/schema modificato e nessun SQL schema eseguito.
+- Nessun percorso legacy immagini introdotto.
+
 Comportamento finale area profilo:
 
 - `myaccount.aspx`: dashboard stabile.
