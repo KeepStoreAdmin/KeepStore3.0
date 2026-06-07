@@ -570,6 +570,16 @@ Nota hotfix ACCOUNT-SMOKE-HOTFIX-1C:
 - Nessun DB/schema modificato e nessun SQL eseguito.
 - Nessun percorso legacy immagini introdotto.
 
+Nota ACCOUNT-ADDRESS-1A:
+
+- `my-account-address.aspx` diventa la pagina moderna ONSUS per gestione indirizzi account.
+- Visualizza indirizzo principale da `utenti` e sedi alternative da `utentiindirizzi`.
+- Evidenzia la sede alternativa predefinita e consente di impostarne una nuova.
+- Update predefinito vincolato a `UtenteId` della sessione e transazione con massimo un `Predefinito=1` per utente.
+- Carrello non modificato: legge gia `utentiindirizzi.Predefinito` e usa fallback/selezione indirizzo esistenti.
+- Nessun DB/schema modificato e nessun SQL schema eseguito.
+- Nessun percorso legacy immagini introdotto.
+
 Comportamento finale area profilo:
 
 - `myaccount.aspx`: dashboard stabile.
