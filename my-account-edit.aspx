@@ -68,11 +68,11 @@
                                     <div class="account-section-title">Dati fiscali / intestazione</div>
                                     <div class="row g-3">
                                         <div class="col-12 col-md-6">
-                                            <label class="body-small text-main-2" for="<%= txtRagioneSociale.ClientID %>">Ragione sociale</label>
+                                            <label class="body-small text-main-2" for="<%= txtRagioneSociale.ClientID %>">Ragione Sociale / Cognome</label>
                                             <asp:TextBox ID="txtRagioneSociale" runat="server" CssClass="form-control" ReadOnly="true" />
                                         </div>
                                         <div class="col-12 col-md-6">
-                                            <label class="body-small text-main-2" for="<%= txtCognomeNome.ClientID %>">Nome / Cognome</label>
+                                            <label class="body-small text-main-2" for="<%= txtCognomeNome.ClientID %>">Nome</label>
                                             <asp:TextBox ID="txtCognomeNome" runat="server" CssClass="form-control" ReadOnly="true" />
                                         </div>
                                         <div class="col-12 col-md-6">
