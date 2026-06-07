@@ -562,6 +562,14 @@ Nota hotfix ACCOUNT-SMOKE-HOTFIX-1A:
 - Nessun DB/schema modificato e nessun SQL eseguito.
 - Nessun percorso legacy immagini introdotto.
 
+Nota hotfix ACCOUNT-SMOKE-HOTFIX-1C:
+
+- `datiutente.aspx?tab=addr` e `datiutente.aspx?edit=1&tab=addr` protetti dal caso `edit` assente in querystring.
+- Submit newsletter footer gestito con evento dedicato e messaggi inline senza validazione HTML5 globale.
+- Password/account verificati senza regressioni statiche.
+- Nessun DB/schema modificato e nessun SQL eseguito.
+- Nessun percorso legacy immagini introdotto.
+
 Comportamento finale area profilo:
 
 - `myaccount.aspx`: dashboard stabile.
