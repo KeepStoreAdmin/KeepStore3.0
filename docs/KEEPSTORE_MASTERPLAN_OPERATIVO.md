@@ -130,10 +130,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo REMIND-RESET-SENT-UX-1C, merge PR #132 e smoke live finale Germano:
+Stato di riferimento dopo DOCS-RESET-CLEANUP-CLOSE-1A, merge PR #134 e cleanup warning legacy `remind.aspx.vb`:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `3c50d87962f7791bd7424be1fa376377889b90f8`
+- HEAD stabile: `7d7205871f85fb33a7cd74dbfbc790cb8f435718`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -155,6 +155,8 @@ Stato di riferimento dopo REMIND-RESET-SENT-UX-1C, merge PR #132 e smoke live fi
 - Merge PR #128: `687198cf51a8d57f61acc997856ffd2eac7cd9e4`
 - Merge PR #130: `e621eca0a110d2b02d4b83afc27716738108a64a`
 - Merge PR #132: `3c50d87962f7791bd7424be1fa376377889b90f8`
+- Merge PR #133: `1e0bea8fdcf6e623d22b74ab481b763bfcad6a52`
+- Merge PR #134: `7d7205871f85fb33a7cd74dbfbc790cb8f435718`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -190,6 +192,8 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
 - PR #122 masterplan post PR #121 closure alignment
 - PR #123 script DB idempotente `login_password_reset_tokens` versionato, non eseguito
 - PR #124 handoff operativo Vincenzo per script DB reset tokenizzato
+- PR #133 chiusura documentale reset password tokenizzato fase 1
+- PR #134 cleanup warning legacy `remind.aspx.vb`
 
 ## 4. Roadmap sintetica
 
@@ -1138,6 +1142,8 @@ PR completate:
 - PR #128 merged: PRG definitivo e email reset professionale con riferimenti aziendali e avvertenze anti-phishing.
 - PR #130 merged: fix redirect post-login dopo reset.
 - PR #132 merged: UX finale `remind.aspx?sent=1` con card conferma evidente, form non ambiguo e loader/testi operazione rimossi.
+- PR #133 merged: chiusura documentale reset password tokenizzato fase 1.
+- PR #134 merged: cleanup warning legacy `BC42024` in `remind.aspx.vb` con rimozione di codice email legacy disabilitato.
 
 Smoke live finale Germano:
 
@@ -1174,6 +1180,20 @@ Comportamento finale fase 1:
 - Redirect post-login sanificato: `resetpassword.aspx`, `remind.aspx` e URL con token/reset/remind sono esclusi da `ReturnUrl` e redirect sessione.
 - Fallback sicuro post-login: `myaccount.aspx`.
 - Hash password non implementato; rimandato a task futuro.
+
+Stato finale post-cleanup warning:
+
+- Runtime reset tokenizzato chiuso.
+- UX `remind.aspx?sent=1` chiusa.
+- Redirect post-login sicuro chiuso.
+- Email reset professionale chiusa.
+- Documentazione finale chiusa.
+- Cleanup warning legacy `remind.aspx.vb` chiuso.
+- Reset behavior invariato.
+- PRG/F5 invariato.
+- Anti-enumeration invariata.
+- Regola email + CF oppure email + PIVA invariata.
+- Nessun vecchio invio password via email ripristinato.
 
 ### Debito residuo dopo consolidamento password
 
@@ -1214,17 +1234,18 @@ Task consigliato separato per eventuale proseguimento:
 
 ### Immediati
 
-1. Revocare/cambiare la password dell'utente MySQL temporaneo usato nello smoke, se ancora attivo.
-2. Eliminare eventuali variabili ambiente temporanee di smoke.
-3. Eliminare o lasciare scadere eventuali link reset test residui.
-4. PASSWORD-HASH-SCHEMA-2B / PASSWORD-HASH-MIGRATION-2C: futuro task hash password.
-5. GESTIONALE-PASSWORD-AUDIT-1A / JANUS-PASSWORD-RESET-1A: futuro task gestionale Janus per reset/hash.
-6. REGISTRATION-POLICY-1A o REGISTRATION-UX-1A: modernizzazione registrazione.
-7. AUTH-CSRF-AUDIT-1A: audit `AntiCsrfPage` sui flussi auth.
-8. AUTH-JS-LEGACY-AUDIT-1A: audit errori JS legacy residui.
-9. ACCOUNT-ADDRESS-2A solo se Germano autorizza audit/migrazione della gestione indirizzi legacy.
-10. DATIUTENTE-LEGACY-AUDIT-1A per errore generico, tab/JS legacy e salvataggi/destinazioni.
-11. Scegliere il prossimo blocco operativo su `frontend-rebuild` pulito.
+1. Scegliere il prossimo blocco operativo su `frontend-rebuild` pulito.
+2. Possibili candidati:
+   - PASSWORD-HASH-SCHEMA-2B / PASSWORD-HASH-MIGRATION-2C: futuro task hash password; hash password non ancora implementato.
+   - GESTIONALE-PASSWORD-AUDIT-1A / JANUS-PASSWORD-RESET-1A: audit gestionale Janus per reset/hash.
+   - ACCOUNT-ADDRESS-2A o area account profilo/indirizzi, solo se Germano autorizza audit/migrazione della gestione indirizzi legacy.
+   - REGISTRATION-POLICY-1A / REGISTRATION-UX-1A: refinement residuo login/registrazione.
+3. Revocare/cambiare la password dell'utente MySQL temporaneo usato nello smoke, se ancora attivo.
+4. Eliminare eventuali variabili ambiente temporanee di smoke.
+5. Eliminare o lasciare scadere eventuali link reset test residui.
+6. AUTH-CSRF-AUDIT-1A: audit `AntiCsrfPage` sui flussi auth.
+7. AUTH-JS-LEGACY-AUDIT-1A: audit errori JS legacy residui.
+8. DATIUTENTE-LEGACY-AUDIT-1A per errore generico, tab/JS legacy e salvataggi/destinazioni.
 
 ### PayPal Express
 
