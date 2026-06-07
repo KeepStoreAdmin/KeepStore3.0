@@ -130,10 +130,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo REMIND-RESET-DB-HANDOFF-1C, merge PR #124 e cleanup branch:
+Stato di riferimento dopo RESET-LOGIN-REDIRECT-1B, merge PR #130 e smoke live finale Germano:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `9d9d56661db0bcf4f6cdfa1dae331db05b7d5f20`
+- HEAD stabile: `e621eca0a110d2b02d4b83afc27716738108a64a`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -150,6 +150,10 @@ Stato di riferimento dopo REMIND-RESET-DB-HANDOFF-1C, merge PR #124 e cleanup br
 - Merge PR #122: `3415094758e4b3cdc38d5284daf1e847695766c4`
 - Merge PR #123: `93a186e850caf5195b8bb7b3e21c42e5cf1c15af`
 - Merge PR #124: `9d9d56661db0bcf4f6cdfa1dae331db05b7d5f20`
+- Merge PR #126: `c5b85354f9f589354d2e08ec14502f6ac5d159c2`
+- Merge PR #127: `30be626aeb285f3fa6cb6e6f98bc47ba081edba0`
+- Merge PR #128: `687198cf51a8d57f61acc997856ffd2eac7cd9e4`
+- Merge PR #130: `e621eca0a110d2b02d4b83afc27716738108a64a`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -226,9 +230,9 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
 
 1. LOGIN-REGISTER-SECURITY-1 e chiuso lato codice con PR #117.
 2. Login, registrazione e reminder sono mitigati senza schema change e senza hash migration.
-3. Reminder automatico password disabilitato e trasformato in recupero assistito.
+3. Reminder automatico password disabilitato; recupero assistito superato dal reset tokenizzato fase 1.
 4. Registrazione non deve esporre password in email, URL o sessione.
-5. Hash migration, reset tokenizzato e audit gestionale restano task separati.
+5. Hash migration e audit gestionale restano task separati.
 
 ## 5. Stato PayPal
 
@@ -911,7 +915,7 @@ File esclusi/non modificati:
 Mitigazioni applicate:
 
 - Login enumeration ridotta con messaggio generico unico.
-- Reminder trasformato in recupero assistito.
+- Reminder trasformato prima in recupero assistito e poi in reset tokenizzato fase 1.
 - Reminder non promette azioni non eseguite.
 - Reminder non invia password esistente.
 - Reminder non invia email reale.
@@ -950,10 +954,10 @@ Stato finale area sicurezza/login:
 
 - Cambio password canonico gia stabile su `password.aspx`.
 - Login/registrazione/reminder ora mitigati senza hash.
-- Reminder automatico password disabilitato e convertito a recupero assistito.
+- Reminder automatico password disabilitato e sostituito dal reset tokenizzato fase 1 legacy-compatible.
 - Registrazione non espone password in email/URL/sessione.
 - Hash migration ancora non implementata.
-- Reset tokenizzato progettato/documentato a livello Blueprint/manuale, ma non ancora implementato.
+- Reset tokenizzato fase 1 operativo; hash migration rimandata a task futuro.
 
 ### Reset tokenizzato - progettazione DB chiusa
 
@@ -1039,25 +1043,25 @@ Esito DB `taikun`:
 - `COUNT(*) = 0` subito dopo la creazione.
 - Nessuna anomalia comunicata.
 - Nessun dato/token reale inserito.
-- Runtime reset tokenizzato non ancora implementato.
+- Runtime reset tokenizzato non era ancora implementato al momento del gate DB; fase 1 completata successivamente.
 - Codex non ha eseguito SQL e non ha modificato DB.
 
-Prossimo step:
+Step successivo completato:
 
-- Implementazione runtime reset tokenizzato fase 1 su branch dedicato, senza hash e mantenendo i guardrail legacy gia documentati.
+- Implementazione runtime reset tokenizzato fase 1 completata e mergiata, senza hash e mantenendo i guardrail legacy gia documentati.
 
 ### Reset tokenizzato - runtime fase 1 avviato
 
-REMIND-RESET-IMPLEMENT-1E avvia l'implementazione runtime legacy-compatible su branch dedicato.
+REMIND-RESET-IMPLEMENT-1E ha avviato e chiuso l'implementazione runtime legacy-compatible su branch dedicato.
 
-Stato previsto:
+Stato finale:
 
 - DB `taikun` gia predisposto con tabella `login_password_reset_tokens`.
 - Reminder convertito a richiesta reset tokenizzata anti-enumeration.
 - Nuova pagina reset password anonima con token monouso e scadenza 30 minuti.
 - Reset riuscito aggiorna `login.Password` legacy e `login.DataPassword`.
 - Hash password rimandato a task separato.
-- Smoke runtime richiesti prima di merge.
+- Smoke runtime e smoke live finale Germano superati.
 
 ### Reset tokenizzato - disambiguazione account
 
@@ -1072,7 +1076,7 @@ REMIND-RESET-IMPLEMENT-1I aggiorna il runtime PR #126 per rendere deterministico
 - Se la ricerca resta ambigua con candidati multipli distinti per `LoginId` non viene generato alcun token.
 - Nessuna scelta arbitraria del primo record e nessuna email con link multipli.
 - Nessun dato fiscale, azienda o tipo utente viene salvato nel token, inserito nel link o scritto nei log.
-- Nessun DB schema modificato; PR #126 resta da smoke finale.
+- Nessun DB schema modificato; PR #126 mergiata e smoke finale superato.
 
 ### Reset tokenizzato - UX reset password
 
@@ -1112,20 +1116,62 @@ RESET-LOGIN-REDIRECT-1A corregge il redirect post-login dopo reset password.
 - La master non salva piu pagine reset/remind come ultima pagina visitata e pulisce sessioni di redirect legacy non sicure.
 - Nessun DB/schema modificato e nessun hash implementato.
 
+### Reset tokenizzato - fase 1 chiusa
+
+REMIND-RESET-FINAL-CLOSE-1A registra la chiusura funzionale del blocco reset password tokenizzato fase 1.
+
+PR completate:
+
+- PR #126 merged: implementazione reset password tokenizzato fase 1 legacy-compatible.
+- PR #127 merged: primo hotfix POST/Redirect/GET su `remind.aspx`.
+- PR #128 merged: PRG definitivo e email reset professionale con riferimenti aziendali e avvertenze anti-phishing.
+- PR #130 merged: fix redirect post-login dopo reset.
+
+Smoke live finale Germano:
+
+- Reset password via link email OK.
+- Cambio password OK.
+- Login con nuova password OK.
+- Redirect post-login verso pagina sicura OK.
+- Nessun ritorno a `resetpassword.aspx`.
+- URL finale senza token.
+- PRG/F5 `remind.aspx` OK.
+- Email reset professionale OK, con riferimenti aziendali e avvertenze anti-phishing.
+- Nessuna anomalia comunicata.
+
+Comportamento finale fase 1:
+
+- Reset tokenizzato operativo e legacy-compatible.
+- `remind.aspx` richiede email e Codice fiscale oppure Partita IVA.
+- CF/PIVA sono alternativi, non cumulativi.
+- La ricerca de-duplica per `LoginId`.
+- Zero candidati o candidati multipli distinti: nessun token generato.
+- Un candidato valido: un solo token generato.
+- Token single-use con scadenza 30 minuti.
+- Il DB salva solo `TokenHash`; il token chiaro resta solo nel link email.
+- Reset riuscito aggiorna `login.Password` legacy e `login.DataPassword`.
+- `aziende.ScadenzaPassword` invariato.
+- `resetpassword.aspx` include toggle mostra/nascondi password client-side.
+- `remind.aspx` usa PRG/F5 sicuro.
+- Redirect post-login sanificato: `resetpassword.aspx`, `remind.aspx` e URL con token/reset/remind sono esclusi da `ReturnUrl` e redirect sessione.
+- Fallback sicuro post-login: `myaccount.aspx`.
+- Hash password non implementato; rimandato a task futuro.
+
 ### Debito residuo dopo consolidamento password
 
 - Hash/migrazione password non implementati.
 - Audit hash/login/registrazione/reset password da fare in task separato.
 - Password legacy ancora in chiaro nel DB.
 - Login usa ancora meccanismo legacy, non hash.
-- Reminder non e ancora reset tokenizzato.
+- Reminder fase 1 ora tokenizzato e legacy-compatible; hash migration non implementata.
 - Tabella `login_password_reset_tokens` creata manualmente su DB `taikun`; rollout su eventuali altri DB cliente/azienda ancora da gestire separatamente.
-- Script DB idempotente per `login_password_reset_tokens` preparato a livello repository e consegna operativa a Vincenzo pronta, senza esecuzione.
+- Script DB idempotente per `login_password_reset_tokens` preparato a livello repository e gia eseguito manualmente su `taikun` da Germano/Vincenzo, non da Codex.
 - Registrazione va ulteriormente modernizzata lato UX e sicurezza.
 - `AntiCsrfPage` non ancora applicato ai flussi auth.
 - Hash/salt/versione algoritmo non presenti.
 - Serve coordinamento con Vincenzo/gestionale prima di modifiche DB.
-- Errori JS legacy su `remind.aspx`/`registrazione.aspx` da valutare in task separato.
+- Warning legacy di precompile in `remind.aspx.vb` da valutare in task separato non urgente.
+- Errori JS legacy su `registrazione.aspx` da valutare in task separato.
 - `datiutente.aspx` resta legacy con errore generico preesistente, tab/JS e gestione salvataggi/destinazioni.
 - `my-account-address.aspx` e stabile read-only ONSUS dopo ACCOUNT-ADDRESS-1B, ma la gestione add/edit/delete indirizzi resta legacy in `datiutente.aspx`.
 - La gestione add/edit/delete indirizzi non e stata migrata.
@@ -1149,15 +1195,17 @@ Task consigliato separato per eventuale proseguimento:
 
 ### Immediati
 
-1. REMIND-RESET-IMPLEMENT-1E / PR #126: completare smoke finale, review e merge del runtime reset tokenizzato fase 1, senza hash e senza modifiche DB.
-2. GESTIONALE-PASSWORD-AUDIT-1A: verifica con Vincenzo su `login.Password`, `vlogin`, `Newlogin`.
-3. PASSWORD-HASH-SCHEMA-2B: manuale campi DB hash/salt/versione.
-4. PASSWORD-HASH-MIGRATION-2C: adapter legacy/hash e migrazione progressiva.
-5. REGISTRATION-POLICY-1A o REGISTRATION-UX-1A: modernizzazione registrazione.
-6. AUTH-CSRF-AUDIT-1A: audit `AntiCsrfPage` sui flussi auth.
-7. AUTH-JS-LEGACY-AUDIT-1A: audit errori JS legacy su remind/registrazione.
-8. ACCOUNT-ADDRESS-2A solo se Germano autorizza audit/migrazione della gestione indirizzi legacy.
-9. DATIUTENTE-LEGACY-AUDIT-1A per errore generico, tab/JS legacy e salvataggi/destinazioni.
+1. Revocare/cambiare la password dell'utente MySQL temporaneo usato nello smoke, se ancora attivo.
+2. Eliminare eventuali variabili ambiente temporanee di smoke.
+3. Eliminare o lasciare scadere eventuali link reset test residui.
+4. PASSWORD-HASH-SCHEMA-2B / PASSWORD-HASH-MIGRATION-2C: futuro task hash password.
+5. GESTIONALE-PASSWORD-AUDIT-1A / JANUS-PASSWORD-RESET-1A: futuro task gestionale Janus per reset/hash.
+6. REMIND-RESET-WARNINGS-CLEANUP-1A: eventuale cleanup warning legacy `remind.aspx.vb`, task separato non urgente.
+7. REGISTRATION-POLICY-1A o REGISTRATION-UX-1A: modernizzazione registrazione.
+8. AUTH-CSRF-AUDIT-1A: audit `AntiCsrfPage` sui flussi auth.
+9. AUTH-JS-LEGACY-AUDIT-1A: audit errori JS legacy residui.
+10. ACCOUNT-ADDRESS-2A solo se Germano autorizza audit/migrazione della gestione indirizzi legacy.
+11. DATIUTENTE-LEGACY-AUDIT-1A per errore generico, tab/JS legacy e salvataggi/destinazioni.
 10. ACCOUNT-SIDEBAR-INLINE-CLEANUP-3A solo dopo audit datiutente.
 11. Decidere prossimo task PayPal:
    - retry sandbox per ottenere `Completed`;
