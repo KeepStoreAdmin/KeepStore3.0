@@ -554,6 +554,14 @@ Nota hardening ACCOUNT-PROFILE-1A:
 - Update profilo vincolato a `LoginId` e `UtentiId` della sessione.
 - `datiutente.aspx`, `my-account-address.aspx`, DB/schema, password/reset/remind e gateway non toccati.
 
+Nota hotfix ACCOUNT-SMOKE-HOTFIX-1A:
+
+- `datiutente.aspx?edit=1&tab=addr` gestito con binding legacy protetto e messaggi non tecnici.
+- Newsletter footer/modal non blocca piu i submit account/password con validazione HTML5 globale.
+- `password.aspx` usa messaggi professionali vicino al form e ValidationGroup dedicato.
+- Nessun DB/schema modificato e nessun SQL eseguito.
+- Nessun percorso legacy immagini introdotto.
+
 Comportamento finale area profilo:
 
 - `myaccount.aspx`: dashboard stabile.

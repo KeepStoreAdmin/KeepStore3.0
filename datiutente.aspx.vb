@@ -23,13 +23,15 @@ Partial Class datiutente
 
         If Not IsPostBack Then
             lblEsito.Text = ""
+            PrepareLegacyFormViews()
 
             ' Supporto deep-link in modalità modifica (es. da my-account-edit.aspx)
             Dim qEdit As String = Convert.ToString(Request.QueryString("edit"))
             If qEdit = "1" OrElse qEdit.Equals("true", StringComparison.OrdinalIgnoreCase) Then
                 fvUtente.ChangeMode(FormViewMode.Edit)
-                fvUtente.DataBind()
             End If
+
+            BindUtenteFormView()
         End If
     End Sub
 
@@ -40,8 +42,131 @@ Partial Class datiutente
     ' Cambio modalità (ReadOnly/Edit)
     Protected Sub fvUtente_ModeChanging(ByVal sender As Object, ByVal e As FormViewModeEventArgs)
         fvUtente.ChangeMode(e.NewMode)
-        fvUtente.DataBind()
+        BindUtenteFormView()
         lblEsito.Text = ""
+    End Sub
+
+    Private Sub PrepareLegacyFormViews()
+        If FormView1 IsNot Nothing Then FormView1.Visible = False
+        If fvDatiUtente IsNot Nothing Then fvDatiUtente.Visible = False
+        If fvUtente IsNot Nothing Then fvUtente.Visible = True
+    End Sub
+
+    Private Sub BindUtenteFormView()
+        If fvUtente Is Nothing Then
+            ShowUserDataMessage("Non e stato possibile caricare la sezione dati utente.")
+            Return
+        End If
+
+        Dim loginId As Integer = CurrentLoginId()
+        If loginId <= 0 Then
+            Response.Redirect("accessonegato.aspx", True)
+            Return
+        End If
+
+        Try
+            Dim dt As DataTable = LoadUtenteData(loginId)
+            fvUtente.DataKeyNames = New String() {"UtentiId"}
+            fvUtente.DataSource = dt
+            fvUtente.DataBind()
+
+            If dt.Rows.Count = 0 Then
+                ShowUserDataMessage("Non sono stati trovati dati per il profilo corrente.")
+            End If
+        Catch
+            fvUtente.Visible = False
+            ShowUserDataMessage("Non e stato possibile caricare i dati. Riprova piu tardi.")
+        End Try
+    End Sub
+
+    Private Function CurrentLoginId() As Integer
+        Dim loginId As Integer = 0
+        If Session("LoginId") IsNot Nothing Then
+            Integer.TryParse(Convert.ToString(Session("LoginId")), loginId)
+        End If
+        Return loginId
+    End Function
+
+    Private Function LoadUtenteData(ByVal loginId As Integer) As DataTable
+        Dim dt As New DataTable()
+
+        Using conn As New MySqlConnection(ConnString)
+            Dim sql As String =
+                "SELECT " &
+                "u.id AS UtentiId, " &
+                "COALESCE(v.Username,'') AS username, " &
+                "COALESCE(v.email, u.Email, '') AS email, " &
+                "COALESCE(v.cognomenome,'') AS cognomenome, " &
+                "v.ultimoaccesso AS ultimoaccesso, " &
+                "COALESCE(u.Codice,'') AS Codice, " &
+                "COALESCE(u.RagioneSociale,'') AS RagioneSociale, " &
+                "COALESCE(u.Piva,'') AS Piva, " &
+                "COALESCE(u.CodiceFiscale,'') AS CodiceFiscale, " &
+                "COALESCE(u.Telefono,'') AS Telefono, " &
+                "COALESCE(u.Cellulare,'') AS Cellulare, " &
+                "COALESCE(u.Fax,'') AS Fax, " &
+                "COALESCE(u.Indirizzo,'') AS Indirizzo, " &
+                "COALESCE(u.Cap,'') AS Cap, " &
+                "COALESCE(u.Citta,'') AS Citta, " &
+                "COALESCE(u.Provincia,'') AS Provincia, " &
+                "COALESCE(u.Nazione,'') AS Nazione " &
+                "FROM vlogin v " &
+                "INNER JOIN utenti u ON v.utentiid = u.id " &
+                "WHERE v.id = @LoginId " &
+                "LIMIT 1"
+
+            Using cmd As New MySqlCommand(sql, conn)
+                cmd.Parameters.AddWithValue("@LoginId", loginId)
+                Using da As New MySqlDataAdapter(cmd)
+                    da.Fill(dt)
+                End Using
+            End Using
+        End Using
+
+        EnsureLegacyDisplayColumns(dt)
+
+        Return dt
+    End Function
+
+    Private Sub EnsureLegacyDisplayColumns(ByVal dt As DataTable)
+        If dt Is Nothing OrElse dt.Rows.Count = 0 Then Return
+
+        EnsureColumn(dt, "listino", GetSessionText("listino", GetSessionText("Listino", "")))
+        EnsureColumn(dt, "UtenteTipoDescrizione", GetSessionText("UtentiTipoDescrizione", ""))
+        EnsureColumn(dt, "IvaTipo", GetSessionInt("IvaTipo", 2))
+        EnsureColumn(dt, "DescrizioneEsenzioneIva", GetSessionText("DescrizioneEsenzioneIva", ""))
+        EnsureColumn(dt, "AbilitatoIvaReverseCharge", GetSessionInt("AbilitatoIvaReverseCharge", 0) = 1)
+    End Sub
+
+    Private Sub EnsureColumn(ByVal dt As DataTable, ByVal columnName As String, ByVal value As Object)
+        If Not dt.Columns.Contains(columnName) Then
+            dt.Columns.Add(columnName, If(value Is Nothing, GetType(String), value.GetType()))
+        End If
+
+        For Each row As DataRow In dt.Rows
+            row(columnName) = If(value Is Nothing, "", value)
+        Next
+    End Sub
+
+    Private Function GetSessionText(ByVal key As String, ByVal fallback As String) As String
+        If Session IsNot Nothing AndAlso Session(key) IsNot Nothing Then
+            Return Convert.ToString(Session(key))
+        End If
+        Return fallback
+    End Function
+
+    Private Function GetSessionInt(ByVal key As String, ByVal fallback As Integer) As Integer
+        Dim value As Integer = fallback
+        If Session IsNot Nothing AndAlso Session(key) IsNot Nothing Then
+            Integer.TryParse(Convert.ToString(Session(key)), value)
+        End If
+        Return value
+    End Function
+
+    Private Sub ShowUserDataMessage(ByVal message As String)
+        If lblEsito Is Nothing Then Return
+        lblEsito.Text = message
+        lblEsito.CssClass = "ks-esito alert alert-warning py-2 px-3 mb-3"
     End Sub
 
     ' Quando il FormView ha fatto DataBind
@@ -57,10 +182,10 @@ Partial Class datiutente
             Dim row As FormViewRow = fvUtente.Row
 
             ' --- Anagrafica principale ---
-            Dim tbCapEdit As TextBox = TryCast(row.FindControl("tbCapEdit"), TextBox)
+            Dim tbCapEdit As TextBox = FindTextBox(row, "tbCapEdit", "txtCap")
             Dim ddlCittaEdit As DropDownList = TryCast(row.FindControl("ddlCittaEdit"), DropDownList)
-            Dim tbCittaEdit As TextBox = TryCast(row.FindControl("tbCittaEdit"), TextBox)
-            Dim tbProvinciaEdit As TextBox = TryCast(row.FindControl("tbProvinciaEdit"), TextBox)
+            Dim tbCittaEdit As TextBox = FindTextBox(row, "tbCittaEdit", "txtCitta")
+            Dim tbProvinciaEdit As TextBox = FindTextBox(row, "tbProvinciaEdit", "txtProvincia")
             Dim lblCapMessage As Label = TryCast(row.FindControl("lblCapMessage"), Label)
 
             ' Città non modificabile manualmente
@@ -76,15 +201,15 @@ Partial Class datiutente
             SetupCapCittaProvincia(tbCapEdit, ddlCittaEdit, tbCittaEdit, tbProvinciaEdit, lblCapMessage)
 
             ' --- Destinazione alternativa: combo + campi editabili ---
-            Dim ddlDestAlt As DropDownList = TryCast(row.FindControl("ddlDestAlt"), DropDownList)
-            Dim tbRagioneSocialeAEdit As TextBox = TryCast(row.FindControl("tbRagioneSocialeAEdit"), TextBox)
-            Dim tbNomeAEdit As TextBox = TryCast(row.FindControl("tbNomeAEdit"), TextBox)
-            Dim tbIndirizzoAEdit As TextBox = TryCast(row.FindControl("tbIndirizzoAEdit"), TextBox)
-            Dim tbCapAEdit As TextBox = TryCast(row.FindControl("tbCapAEdit"), TextBox)
+            Dim ddlDestAlt As DropDownList = FindDropDown(row, "ddlDestAlt", "ddlDestinazione")
+            Dim tbRagioneSocialeAEdit As TextBox = FindTextBox(row, "tbRagioneSocialeAEdit", "tbDestRagioneSociale")
+            Dim tbNomeAEdit As TextBox = FindTextBox(row, "tbNomeAEdit", "tbDestNome")
+            Dim tbIndirizzoAEdit As TextBox = FindTextBox(row, "tbIndirizzoAEdit", "tbDestIndirizzo")
+            Dim tbCapAEdit As TextBox = FindTextBox(row, "tbCapAEdit", "tbDestCap")
             Dim ddlCittaAEdit As DropDownList = TryCast(row.FindControl("ddlCittaAEdit"), DropDownList)
-            Dim tbCittaAEdit As TextBox = TryCast(row.FindControl("tbCittaAEdit"), TextBox)
-            Dim tbProvinciaAEdit As TextBox = TryCast(row.FindControl("tbProvinciaAEdit"), TextBox)
-            Dim tbNazioneAEdit As TextBox = TryCast(row.FindControl("tbNazioneAEdit"), TextBox)
+            Dim tbCittaAEdit As TextBox = FindTextBox(row, "tbCittaAEdit", "tbDestCitta")
+            Dim tbProvinciaAEdit As TextBox = FindTextBox(row, "tbProvinciaAEdit", "tbDestProvincia")
+            Dim tbNazioneAEdit As TextBox = FindTextBox(row, "tbNazioneAEdit", "tbDestNazione")
             Dim lblCapAMessage As Label = TryCast(row.FindControl("lblCapAMessage"), Label)
 
             ' Città destinazione alternativa non editabile a mano
@@ -136,13 +261,15 @@ Partial Class datiutente
         ElseIf fvUtente.CurrentMode = FormViewMode.ReadOnly Then
             Dim row As FormViewRow = fvUtente.Row
             Dim pnlDestAltRead As Panel = TryCast(row.FindControl("pnlDestAltRead"), Panel)
-            Dim lblRag As Label = TryCast(row.FindControl("lblDestAltRagioneSociale"), Label)
-            Dim lblNome As Label = TryCast(row.FindControl("lblDestAltNome"), Label)
-            Dim lblInd As Label = TryCast(row.FindControl("lblDestAltIndirizzo"), Label)
-            Dim lblCap As Label = TryCast(row.FindControl("lblDestAltCap"), Label)
-            Dim lblCitta As Label = TryCast(row.FindControl("lblDestAltCitta"), Label)
-            Dim lblProv As Label = TryCast(row.FindControl("lblDestAltProvincia"), Label)
-            Dim lblNaz As Label = TryCast(row.FindControl("lblDestAltNazione"), Label)
+            Dim lblRag As Label = FindLabel(row, "lblDestAltRagioneSociale", "lblDestRagioneSociale")
+            Dim lblNome As Label = FindLabel(row, "lblDestAltNome", "lblDestNome")
+            Dim lblInd As Label = FindLabel(row, "lblDestAltIndirizzo", "lblDestIndirizzo")
+            Dim lblCap As Label = FindLabel(row, "lblDestAltCap", "lblDestCap")
+            Dim lblCitta As Label = FindLabel(row, "lblDestAltCitta", "lblDestCitta")
+            Dim lblProv As Label = FindLabel(row, "lblDestAltProvincia", "lblDestProvincia")
+            Dim lblNaz As Label = FindLabel(row, "lblDestAltNazione", "lblDestNazione")
+            Dim lblCognome As Label = FindLabel(row, "lblDestCognome")
+            Dim lblTelefono As Label = FindLabel(row, "lblDestTelefono")
 
             If utentiId > 0 Then
                 Dim alt As DataRow = GetDestinazioneAlternativa(utentiId)
@@ -155,11 +282,15 @@ Partial Class datiutente
                     If lblCitta IsNot Nothing Then lblCitta.Text = alt("CittaA").ToString()
                     If lblProv IsNot Nothing Then lblProv.Text = alt("ProvinciaA").ToString()
                     If lblNaz IsNot Nothing Then lblNaz.Text = alt("NazioneA").ToString()
+                    If lblCognome IsNot Nothing Then lblCognome.Text = ""
+                    If lblTelefono IsNot Nothing Then lblTelefono.Text = ""
                 Else
                     If pnlDestAltRead IsNot Nothing Then pnlDestAltRead.Visible = False
+                    ShowEmptyDestinazioneMessage(row)
                 End If
             Else
                 If pnlDestAltRead IsNot Nothing Then pnlDestAltRead.Visible = False
+                ShowEmptyDestinazioneMessage(row)
             End If
         End If
     End Sub
@@ -169,19 +300,19 @@ Partial Class datiutente
         If fvUtente.Row Is Nothing Then Return
 
         Dim row As FormViewRow = fvUtente.Row
-        Dim ddl As DropDownList = TryCast(row.FindControl("ddlDestAlt"), DropDownList)
+        Dim ddl As DropDownList = FindDropDown(row, "ddlDestAlt", "ddlDestinazione")
         If ddl Is Nothing Then Return
 
-        Dim tbRagioneSocialeAEdit As TextBox = TryCast(row.FindControl("tbRagioneSocialeAEdit"), TextBox)
-        Dim tbNomeAEdit As TextBox = TryCast(row.FindControl("tbNomeAEdit"), TextBox)
-        Dim tbIndirizzoAEdit As TextBox = TryCast(row.FindControl("tbIndirizzoAEdit"), TextBox)
-        Dim tbCapAEdit As TextBox = TryCast(row.FindControl("tbCapAEdit"), TextBox)
+        Dim tbRagioneSocialeAEdit As TextBox = FindTextBox(row, "tbRagioneSocialeAEdit", "tbDestRagioneSociale")
+        Dim tbNomeAEdit As TextBox = FindTextBox(row, "tbNomeAEdit", "tbDestNome")
+        Dim tbIndirizzoAEdit As TextBox = FindTextBox(row, "tbIndirizzoAEdit", "tbDestIndirizzo")
+        Dim tbCapAEdit As TextBox = FindTextBox(row, "tbCapAEdit", "tbDestCap")
         Dim ddlCittaAEdit As DropDownList = TryCast(row.FindControl("ddlCittaAEdit"), DropDownList)
-        Dim tbCittaAEdit As TextBox = TryCast(row.FindControl("tbCittaAEdit"), TextBox)
-        Dim tbProvinciaAEdit As TextBox = TryCast(row.FindControl("tbProvinciaAEdit"), TextBox)
-        Dim tbNazioneAEdit As TextBox = TryCast(row.FindControl("tbNazioneAEdit"), TextBox)
+        Dim tbCittaAEdit As TextBox = FindTextBox(row, "tbCittaAEdit", "tbDestCitta")
+        Dim tbProvinciaAEdit As TextBox = FindTextBox(row, "tbProvinciaAEdit", "tbDestProvincia")
+        Dim tbNazioneAEdit As TextBox = FindTextBox(row, "tbNazioneAEdit", "tbDestNazione")
         Dim lblCapAMessage As Label = TryCast(row.FindControl("lblCapAMessage"), Label)
-        Dim tbNazioneEdit As TextBox = TryCast(row.FindControl("tbNazioneEdit"), TextBox)
+        Dim tbNazioneEdit As TextBox = FindTextBox(row, "tbNazioneEdit", "txtNazione")
 
         Dim utentiId As Integer = 0
         If fvUtente.DataKey IsNot Nothing AndAlso fvUtente.DataKey("UtentiId") IsNot Nothing Then
@@ -246,25 +377,25 @@ Partial Class datiutente
         Dim row As FormViewRow = fvUtente.Row
 
         ' Controlli anagrafica principale
-        Dim tbEmailEdit As TextBox = TryCast(row.FindControl("tbEmailEdit"), TextBox)
-        Dim tbIndirizzoEdit As TextBox = TryCast(row.FindControl("tbIndirizzoEdit"), TextBox)
-        Dim tbCapEdit As TextBox = TryCast(row.FindControl("tbCapEdit"), TextBox)
-        Dim tbCittaEdit As TextBox = TryCast(row.FindControl("tbCittaEdit"), TextBox)
-        Dim tbProvinciaEdit As TextBox = TryCast(row.FindControl("tbProvinciaEdit"), TextBox)
-        Dim tbNazioneEdit As TextBox = TryCast(row.FindControl("tbNazioneEdit"), TextBox)
-        Dim tbTelefonoEdit As TextBox = TryCast(row.FindControl("tbTelefonoEdit"), TextBox)
-        Dim tbCellulareEdit As TextBox = TryCast(row.FindControl("tbCellulareEdit"), TextBox)
-        Dim tbFaxEdit As TextBox = TryCast(row.FindControl("tbFaxEdit"), TextBox)
+        Dim tbEmailEdit As TextBox = FindTextBox(row, "tbEmailEdit", "txtEmail")
+        Dim tbIndirizzoEdit As TextBox = FindTextBox(row, "tbIndirizzoEdit", "txtIndirizzo")
+        Dim tbCapEdit As TextBox = FindTextBox(row, "tbCapEdit", "txtCap")
+        Dim tbCittaEdit As TextBox = FindTextBox(row, "tbCittaEdit", "txtCitta")
+        Dim tbProvinciaEdit As TextBox = FindTextBox(row, "tbProvinciaEdit", "txtProvincia")
+        Dim tbNazioneEdit As TextBox = FindTextBox(row, "tbNazioneEdit", "txtNazione")
+        Dim tbTelefonoEdit As TextBox = FindTextBox(row, "tbTelefonoEdit", "txtTelefono")
+        Dim tbCellulareEdit As TextBox = FindTextBox(row, "tbCellulareEdit", "txtCellulare")
+        Dim tbFaxEdit As TextBox = FindTextBox(row, "tbFaxEdit", "txtFax")
 
         ' Controlli destinazione alternativa
-        Dim ddlDestAlt As DropDownList = TryCast(row.FindControl("ddlDestAlt"), DropDownList)
-        Dim tbRagioneSocialeAEdit As TextBox = TryCast(row.FindControl("tbRagioneSocialeAEdit"), TextBox)
-        Dim tbNomeAEdit As TextBox = TryCast(row.FindControl("tbNomeAEdit"), TextBox)
-        Dim tbIndirizzoAEdit As TextBox = TryCast(row.FindControl("tbIndirizzoAEdit"), TextBox)
-        Dim tbCapAEdit As TextBox = TryCast(row.FindControl("tbCapAEdit"), TextBox)
-        Dim tbCittaAEdit As TextBox = TryCast(row.FindControl("tbCittaAEdit"), TextBox)
-        Dim tbProvinciaAEdit As TextBox = TryCast(row.FindControl("tbProvinciaAEdit"), TextBox)
-        Dim tbNazioneAEdit As TextBox = TryCast(row.FindControl("tbNazioneAEdit"), TextBox)
+        Dim ddlDestAlt As DropDownList = FindDropDown(row, "ddlDestAlt", "ddlDestinazione")
+        Dim tbRagioneSocialeAEdit As TextBox = FindTextBox(row, "tbRagioneSocialeAEdit", "tbDestRagioneSociale")
+        Dim tbNomeAEdit As TextBox = FindTextBox(row, "tbNomeAEdit", "tbDestNome")
+        Dim tbIndirizzoAEdit As TextBox = FindTextBox(row, "tbIndirizzoAEdit", "tbDestIndirizzo")
+        Dim tbCapAEdit As TextBox = FindTextBox(row, "tbCapAEdit", "tbDestCap")
+        Dim tbCittaAEdit As TextBox = FindTextBox(row, "tbCittaAEdit", "tbDestCitta")
+        Dim tbProvinciaAEdit As TextBox = FindTextBox(row, "tbProvinciaAEdit", "tbDestProvincia")
+        Dim tbNazioneAEdit As TextBox = FindTextBox(row, "tbNazioneAEdit", "tbDestNazione")
 
         Dim destAltId As Integer = 0
         If ddlDestAlt IsNot Nothing Then
@@ -337,13 +468,70 @@ Partial Class datiutente
 
             lblEsito.Text = "Dati aggiornati correttamente."
             fvUtente.ChangeMode(FormViewMode.ReadOnly)
-            fvUtente.DataBind()
+            BindUtenteFormView()
             e.Cancel = True
 
-        Catch ex As Exception
-            lblEsito.Text = "Errore durante il salvataggio dei dati: " & ex.Message
+        Catch
+            lblEsito.Text = "Non e stato possibile salvare i dati. Riprova piu tardi."
             e.Cancel = True
         End Try
+    End Sub
+
+    Private Function FindTextBox(ByVal row As FormViewRow, ParamArray ids() As String) As TextBox
+        If row Is Nothing OrElse ids Is Nothing Then Return Nothing
+
+        For Each id As String In ids
+            Dim tb As TextBox = TryCast(row.FindControl(id), TextBox)
+            If tb IsNot Nothing Then Return tb
+        Next
+
+        Return Nothing
+    End Function
+
+    Private Function FindDropDown(ByVal row As FormViewRow, ParamArray ids() As String) As DropDownList
+        If row Is Nothing OrElse ids Is Nothing Then Return Nothing
+
+        For Each id As String In ids
+            Dim ddl As DropDownList = TryCast(row.FindControl(id), DropDownList)
+            If ddl IsNot Nothing Then Return ddl
+        Next
+
+        Return Nothing
+    End Function
+
+    Private Function FindLabel(ByVal row As FormViewRow, ParamArray ids() As String) As Label
+        If row Is Nothing OrElse ids Is Nothing Then Return Nothing
+
+        For Each id As String In ids
+            Dim lbl As Label = TryCast(row.FindControl(id), Label)
+            If lbl IsNot Nothing Then Return lbl
+        Next
+
+        Return Nothing
+    End Function
+
+    Private Sub ShowEmptyDestinazioneMessage(ByVal row As FormViewRow)
+        If row Is Nothing Then Return
+
+        Dim lblRag As Label = FindLabel(row, "lblDestAltRagioneSociale", "lblDestRagioneSociale")
+        Dim lblNome As Label = FindLabel(row, "lblDestAltNome", "lblDestNome")
+        Dim lblCognome As Label = FindLabel(row, "lblDestCognome")
+        Dim lblInd As Label = FindLabel(row, "lblDestAltIndirizzo", "lblDestIndirizzo")
+        Dim lblCap As Label = FindLabel(row, "lblDestAltCap", "lblDestCap")
+        Dim lblCitta As Label = FindLabel(row, "lblDestAltCitta", "lblDestCitta")
+        Dim lblProv As Label = FindLabel(row, "lblDestAltProvincia", "lblDestProvincia")
+        Dim lblNaz As Label = FindLabel(row, "lblDestAltNazione", "lblDestNazione")
+        Dim lblTelefono As Label = FindLabel(row, "lblDestTelefono")
+
+        If lblRag IsNot Nothing Then lblRag.Text = "Non hai ancora destinazioni salvate."
+        If lblNome IsNot Nothing Then lblNome.Text = ""
+        If lblCognome IsNot Nothing Then lblCognome.Text = ""
+        If lblInd IsNot Nothing Then lblInd.Text = ""
+        If lblCap IsNot Nothing Then lblCap.Text = ""
+        If lblCitta IsNot Nothing Then lblCitta.Text = ""
+        If lblProv IsNot Nothing Then lblProv.Text = ""
+        If lblNaz IsNot Nothing Then lblNaz.Text = ""
+        If lblTelefono IsNot Nothing Then lblTelefono.Text = ""
     End Sub
 
     ' =========================

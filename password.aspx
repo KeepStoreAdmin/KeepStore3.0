@@ -101,7 +101,7 @@
                         <label class="fw-semibold body-md-2" for="tbPasswordAttuale">Password attuale *</label>
                         <asp:TextBox ID="tbPasswordAttuale" runat="server" CssClass="form-control" TextMode="Password" MaxLength="25" />
                         <div class="validator">
-                            <asp:RequiredFieldValidator ID="rfvOld" runat="server" ControlToValidate="tbPasswordAttuale" ErrorMessage="Inserisci la password attuale." Display="Dynamic" ForeColor="Red" />
+                            <asp:RequiredFieldValidator ID="rfvOld" runat="server" ControlToValidate="tbPasswordAttuale" ErrorMessage="Inserisci la password attuale." Display="Dynamic" ForeColor="Red" ValidationGroup="PasswordChange" />
                         </div>
                     </fieldset>
 
@@ -109,9 +109,9 @@
                         <label class="fw-semibold body-md-2" for="tbPasswordNuova">Nuova password *</label>
                         <asp:TextBox ID="tbPasswordNuova" runat="server" CssClass="form-control" TextMode="Password" MaxLength="25" />
                         <div class="validator">
-                            <asp:RequiredFieldValidator ID="rfvNew" runat="server" ControlToValidate="tbPasswordNuova" ErrorMessage="Inserisci la nuova password." Display="Dynamic" ForeColor="Red" />
-                            <asp:RegularExpressionValidator ID="revNewLength" runat="server" ControlToValidate="tbPasswordNuova" ValidationExpression="^[\s\S]{8,25}$" ErrorMessage="La nuova password deve avere tra 8 e 25 caratteri." Display="Dynamic" ForeColor="Red" />
-                            <asp:CompareValidator ID="cvPwdDiversa" runat="server" ControlToValidate="tbPasswordNuova" ControlToCompare="tbPasswordAttuale" Operator="NotEqual" ErrorMessage="La nuova password deve essere diversa da quella attuale." Display="Dynamic" ForeColor="Red" />
+                            <asp:RequiredFieldValidator ID="rfvNew" runat="server" ControlToValidate="tbPasswordNuova" ErrorMessage="Inserisci la nuova password." Display="Dynamic" ForeColor="Red" ValidationGroup="PasswordChange" />
+                            <asp:RegularExpressionValidator ID="revNewLength" runat="server" ControlToValidate="tbPasswordNuova" ValidationExpression="^[\s\S]{8,25}$" ErrorMessage="La nuova password deve avere tra 8 e 25 caratteri." Display="Dynamic" ForeColor="Red" ValidationGroup="PasswordChange" />
+                            <asp:CompareValidator ID="cvPwdDiversa" runat="server" ControlToValidate="tbPasswordNuova" ControlToCompare="tbPasswordAttuale" Operator="NotEqual" ErrorMessage="La nuova password deve essere diversa da quella attuale." Display="Dynamic" ForeColor="Red" ValidationGroup="PasswordChange" />
                         </div>
                     </fieldset>
 
@@ -119,17 +119,17 @@
                         <label class="fw-semibold body-md-2" for="tbPasswordConferma">Conferma nuova password *</label>
                         <asp:TextBox ID="tbPasswordConferma" runat="server" CssClass="form-control" TextMode="Password" MaxLength="25" />
                         <div class="validator">
-                            <asp:RequiredFieldValidator ID="rfvNew2" runat="server" ControlToValidate="tbPasswordConferma" ErrorMessage="Conferma la nuova password." Display="Dynamic" ForeColor="Red" />
-                            <asp:CompareValidator ID="cvPwd" runat="server" ControlToValidate="tbPasswordConferma" ControlToCompare="tbPasswordNuova" ErrorMessage="Le nuove password non coincidono." Display="Dynamic" ForeColor="Red" />
+                            <asp:RequiredFieldValidator ID="rfvNew2" runat="server" ControlToValidate="tbPasswordConferma" ErrorMessage="Conferma la nuova password." Display="Dynamic" ForeColor="Red" ValidationGroup="PasswordChange" />
+                            <asp:CompareValidator ID="cvPwd" runat="server" ControlToValidate="tbPasswordConferma" ControlToCompare="tbPasswordNuova" ErrorMessage="Le nuove password non coincidono." Display="Dynamic" ForeColor="Red" ValidationGroup="PasswordChange" />
                         </div>
                     </fieldset>
 
                 </div>
 
-                <asp:Button ID="btnSalva" runat="server" CssClass="tf-btn w-100 text-white" Text="Aggiorna password" OnClientClick="ksShowSpinnerOnSubmit();" />
+                <asp:Button ID="btnSalva" runat="server" CssClass="tf-btn w-100 text-white" Text="Aggiorna password" ValidationGroup="PasswordChange" OnClientClick="if (typeof(Page_ClientValidate) === 'function' && !Page_ClientValidate('PasswordChange')) { return false; } ksShowSpinnerOnSubmit();" />
 
                 <div class="mt-3 text-center">
-                    <asp:Label ID="lblMessaggio" runat="server" />
+                    <asp:Label ID="lblMessaggio" runat="server" CssClass="d-none" />
                 </div>
             </div>
 
