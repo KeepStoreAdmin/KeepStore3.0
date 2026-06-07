@@ -1065,9 +1065,11 @@ REMIND-RESET-IMPLEMENT-1I aggiorna il runtime PR #126 per rendere deterministico
 
 - `remind.aspx` richiede email e Codice fiscale o Partita IVA.
 - Il runtime usa email, CF/PIVA normalizzato e contesto URL/AziendaId quando determinabile.
+- Il campo CF/PIVA e alternativo: il valore inserito puo corrispondere a `CodiceFiscale` oppure a `Piva`, senza richiedere entrambi.
+- La ricerca viene de-duplicata per `LoginId`: piu righe `vlogin` dello stesso account contano come un solo candidato.
 - Se la ricerca produce zero candidati non viene generato alcun token.
 - Se la ricerca produce un solo candidato valido viene generato un solo token.
-- Se la ricerca resta ambigua con candidati multipli non viene generato alcun token.
+- Se la ricerca resta ambigua con candidati multipli distinti per `LoginId` non viene generato alcun token.
 - Nessuna scelta arbitraria del primo record e nessuna email con link multipli.
 - Nessun dato fiscale, azienda o tipo utente viene salvato nel token, inserito nel link o scritto nei log.
 - Nessun DB schema modificato; PR #126 resta da smoke finale.

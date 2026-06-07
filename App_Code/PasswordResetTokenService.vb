@@ -181,7 +181,7 @@ Public Module PasswordResetTokenService
             aziendaId = ResolveAziendaIdFromHost(conn, page)
         End If
 
-        Dim sql As String = "SELECT id, email, cognomenome FROM vlogin " &
+        Dim sql As String = "SELECT id, MIN(email) AS email, MIN(cognomenome) AS cognomenome FROM vlogin " &
                             "WHERE UPPER(email)=UPPER(@email) " &
                             "AND Abilitato=1 AND UtentiAbilitato=1 " &
                             "AND (UPPER(REPLACE(REPLACE(COALESCE(CodiceFiscale,''), ' ', ''), CHAR(9), ''))=@fiscalCodeOrVat " &
@@ -189,7 +189,7 @@ Public Module PasswordResetTokenService
         If aziendaId > 0 Then
             sql &= " AND AziendeID=@aziendaId"
         End If
-        sql &= " LIMIT 2"
+        sql &= " GROUP BY id LIMIT 2"
 
         Using cmd As New MySqlCommand(sql, conn)
             cmd.CommandType = CommandType.Text
