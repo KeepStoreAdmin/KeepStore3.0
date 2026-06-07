@@ -642,6 +642,18 @@ Nota ACCOUNT-PROFILE-FISCAL-LABELS-1A:
 - Nessun DB/schema modificato e nessun SQL eseguito.
 - Nessun percorso legacy immagini introdotto.
 
+Nota ACCOUNT-PROFILE-FISCAL-LABELS-1C:
+
+- Hotfix testuale su `my-account-edit.aspx`, sezione "Dati fiscali / intestazione", dopo smoke live PR #143.
+- Diagnosi: il valore sotto la label "Nome" arriva dal campo storico `CognomeNome`, popolato da `vlogin.cognomenome`; nella query locale non esiste un campo `Nome` separato.
+- La label di `CognomeNome` diventa `Nome e Cognome`, senza split automatici, concatenazioni nuove o inversioni.
+- La label `Ragione Sociale / Cognome` resta associata a `RagioneSociale`.
+- PIVA e Codice Fiscale restano invariati e read-only.
+- Nessuna modifica a indirizzi, carrello, login/reset/password flow.
+- Carrello non modificato: resta follow-up dedicato `CART-ADDRESS-SELECTION-1A`.
+- Nessun DB/schema modificato e nessun SQL eseguito.
+- Nessun percorso legacy immagini introdotto.
+
 Comportamento finale area profilo:
 
 - `myaccount.aspx`: dashboard stabile.

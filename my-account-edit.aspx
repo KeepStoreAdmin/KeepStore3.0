@@ -72,7 +72,7 @@
                                             <asp:TextBox ID="txtRagioneSociale" runat="server" CssClass="form-control" ReadOnly="true" />
                                         </div>
                                         <div class="col-12 col-md-6">
-                                            <label class="body-small text-main-2" for="<%= txtCognomeNome.ClientID %>">Nome</label>
+                                            <label class="body-small text-main-2" for="<%= txtCognomeNome.ClientID %>">Nome e Cognome</label>
                                             <asp:TextBox ID="txtCognomeNome" runat="server" CssClass="form-control" ReadOnly="true" />
                                         </div>
                                         <div class="col-12 col-md-6">
