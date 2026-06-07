@@ -545,6 +545,15 @@ Esiti principali:
 - Smoke finale ACCOUNT-PROFILE-1B-T: A.
 - Cleanup branch ACCOUNT-PROFILE-1B: completato.
 
+Nota hardening ACCOUNT-PROFILE-1A:
+
+- `my-account-edit.aspx` mantiene layout ONSUS e AccountSidebar invariati.
+- Validazioni server-side rafforzate su email, contatti e campi indirizzo profilo.
+- Messaggi utente non tecnici confermati; nessun `ex.Message` esposto.
+- Query parametrizzate confermate.
+- Update profilo vincolato a `LoginId` e `UtentiId` della sessione.
+- `datiutente.aspx`, `my-account-address.aspx`, DB/schema, password/reset/remind e gateway non toccati.
+
 Comportamento finale area profilo:
 
 - `myaccount.aspx`: dashboard stabile.
