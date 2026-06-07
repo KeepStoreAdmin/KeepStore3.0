@@ -22,7 +22,54 @@ Partial Class PageMaster
         Return path.EndsWith("/accessonegato.aspx") OrElse
                path.EndsWith("/login.aspx") OrElse
                path.EndsWith("/cambiapassword.aspx") OrElse
-               path.EndsWith("/logout.aspx")
+               path.EndsWith("/logout.aspx") OrElse
+               path.EndsWith("/resetpassword.aspx") OrElse
+               path.EndsWith("/remind.aspx")
+    End Function
+
+    Private Function NormalizeNavigationUrlForCheck(ByVal value As String) As String
+        Dim url As String = Convert.ToString(value).Trim()
+        If url = "" Then Return ""
+
+        Try
+            url = Server.UrlDecode(url)
+        Catch
+        End Try
+
+        Return url.ToLowerInvariant()
+    End Function
+
+    Private Function IsBlockedPostLoginUrl(ByVal value As String) As Boolean
+        Dim url As String = NormalizeNavigationUrlForCheck(value)
+        Return url = "" OrElse
+               url.Contains("/login.aspx") OrElse url.EndsWith("login.aspx") OrElse
+               url.Contains("/accessonegato.aspx") OrElse url.EndsWith("accessonegato.aspx") OrElse
+               url.Contains("/logout.aspx") OrElse url.EndsWith("logout.aspx") OrElse
+               url.Contains("/cambiapassword.aspx") OrElse url.EndsWith("cambiapassword.aspx") OrElse
+               url.Contains("/resetpassword.aspx") OrElse url.EndsWith("resetpassword.aspx") OrElse
+               url.Contains("/remind.aspx") OrElse url.EndsWith("remind.aspx") OrElse
+               url.Contains("token=") OrElse
+               url.Contains("reset") OrElse
+               url.Contains("remind")
+    End Function
+
+    Private Function TrySafeLocalPostLoginPath(ByVal value As Object) As String
+        Dim u As Uri = TryCast(value, Uri)
+        If u Is Nothing Then Return ""
+
+        Try
+            If Not String.Equals(u.Host, Request.Url.Host, StringComparison.OrdinalIgnoreCase) Then Return ""
+
+            Dim localPath As String = u.PathAndQuery
+            If localPath.StartsWith("//") Then Return ""
+            If localPath.IndexOf("\"c) >= 0 Then Return ""
+            If localPath.IndexOfAny(New Char() {ControlChars.Cr, ControlChars.Lf}) >= 0 Then Return ""
+            If IsBlockedPostLoginUrl(localPath) Then Return ""
+
+            Return localPath
+        Catch
+            Return ""
+        End Try
     End Function
 
     Private Function CurrentScriptPathLower() As String
@@ -610,8 +657,10 @@ Dim IvaTipo As Integer
         ApplySupportEmail()
 
         Dim currentPathLower As String = Convert.ToString(Me.Request.Url.AbsolutePath).ToLowerInvariant()
-        If Not IsTechnicalNavigationPath(currentPathLower) Then
+        If Not IsTechnicalNavigationPath(currentPathLower) AndAlso TrySafeLocalPostLoginPath(Me.Request.Url) <> "" Then
             Session.Item("Pagina_visitata") = Me.Request.Url
+        ElseIf IsBlockedPostLoginUrl(Me.Request.Url.PathAndQuery) Then
+            Session.Remove("Pagina_visitata")
         End If
 
 
@@ -1536,11 +1585,15 @@ End Function
 
         If Not Session.Item("Pagina_visitata") Is Nothing Then
             Try
-                Dim lastUrl As Uri = TryCast(Session.Item("Pagina_visitata"), Uri)
-                If lastUrl IsNot Nothing AndAlso Not IsTechnicalNavigationPath(lastUrl.AbsolutePath) Then
-                    Response.Redirect(lastUrl.AbsoluteUri)
+                Dim targetUrl As String = TrySafeLocalPostLoginPath(Session.Item("Pagina_visitata"))
+                Session.Remove("Pagina_visitata")
+                If targetUrl <> "" Then
+                    Response.Redirect(targetUrl, False)
+                    Context.ApplicationInstance.CompleteRequest()
+                    Return
                 End If
             Catch
+                Session.Remove("Pagina_visitata")
             End Try
         End If
     End Sub

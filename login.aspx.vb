@@ -7,23 +7,62 @@ Partial Class Login
     Private Const GenericLoginFailureMessage As String = "Accesso non riuscito. Verifica le credenziali o contatta il supporto."
 
     Private Function IsBlockedReturnPath(ByVal url As String) As Boolean
-        Dim value As String = Convert.ToString(url).ToLowerInvariant()
-        Return value.Contains("/login.aspx") OrElse value.EndsWith("login.aspx") OrElse
+        Dim value As String = NormalizeReturnUrlForCheck(url)
+        Return value = "" OrElse
+               value.Contains("/login.aspx") OrElse value.EndsWith("login.aspx") OrElse
                value.Contains("/cambiapassword.aspx") OrElse value.EndsWith("cambiapassword.aspx") OrElse
                value.Contains("/accessonegato.aspx") OrElse value.EndsWith("accessonegato.aspx") OrElse
-               value.Contains("/logout.aspx") OrElse value.EndsWith("logout.aspx")
+               value.Contains("/logout.aspx") OrElse value.EndsWith("logout.aspx") OrElse
+               value.Contains("/resetpassword.aspx") OrElse value.EndsWith("resetpassword.aspx") OrElse
+               value.Contains("/remind.aspx") OrElse value.EndsWith("remind.aspx") OrElse
+               value.Contains("token=") OrElse
+               value.Contains("reset") OrElse
+               value.Contains("remind")
     End Function
 
     Private Function IsSafeLocalReturnUrl(ByVal url As String) As Boolean
         If String.IsNullOrWhiteSpace(url) Then Return False
 
         Dim value As String = url.Trim()
+        Try
+            value = Server.UrlDecode(value)
+        Catch
+        End Try
+
         If value.StartsWith("//") Then Return False
         If value.IndexOf("://", StringComparison.Ordinal) >= 0 Then Return False
+        If value.IndexOf("\"c) >= 0 Then Return False
+        If value.IndexOfAny(New Char() {ControlChars.Cr, ControlChars.Lf}) >= 0 Then Return False
         If IsBlockedReturnPath(value) Then Return False
 
         Return value.StartsWith("/", StringComparison.Ordinal) OrElse
                value.IndexOf(".aspx", StringComparison.OrdinalIgnoreCase) >= 0
+    End Function
+
+    Private Function NormalizeReturnUrlForCheck(ByVal url As String) As String
+        Dim value As String = Convert.ToString(url).Trim()
+        If value = "" Then Return ""
+
+        Try
+            value = Server.UrlDecode(value)
+        Catch
+        End Try
+
+        Return value.ToLowerInvariant()
+    End Function
+
+    Private Function TrySafeLocalPathFromUri(ByVal value As Object) As String
+        Dim u As Uri = TryCast(value, Uri)
+        If u Is Nothing Then Return ""
+
+        Try
+            If Not String.Equals(u.Host, Request.Url.Host, StringComparison.OrdinalIgnoreCase) Then Return ""
+            Dim localPath As String = u.PathAndQuery
+            If IsSafeLocalReturnUrl(localPath) Then Return localPath
+        Catch
+        End Try
+
+        Return ""
     End Function
 
     Private Function ResolvePostLoginTarget(ByVal fallback As String) As String
@@ -42,11 +81,11 @@ Partial Class Login
 
         If Session.Item("Pagina_visitata") IsNot Nothing Then
             Try
-                Dim u As Uri = TryCast(Session.Item("Pagina_visitata"), Uri)
-                If u IsNot Nothing AndAlso Not IsBlockedReturnPath(u.AbsolutePath) Then
-                    Return u.AbsoluteUri
-                End If
+                Dim safeVisitedUrl As String = TrySafeLocalPathFromUri(Session.Item("Pagina_visitata"))
+                Session.Remove("Pagina_visitata")
+                If safeVisitedUrl <> "" Then Return safeVisitedUrl
             Catch
+                Session.Remove("Pagina_visitata")
             End Try
         End If
 
@@ -88,7 +127,7 @@ Partial Class Login
 
             ' Se è già loggato, non ha senso stare sulla pagina di login
             If CurrentLoginIdSafe() > 0 Then
-                Response.Redirect(ResolvePostLoginTarget("default.aspx"), False)
+                Response.Redirect(ResolvePostLoginTarget("myaccount.aspx"), False)
                 Context.ApplicationInstance.CompleteRequest()
                 Return
             Else
@@ -148,7 +187,7 @@ Partial Class Login
             End Try
 
             ' Decido dove reindirizzare senza tornare su pagine tecniche.
-            Dim targetUrl As String = ResolvePostLoginTarget("default.aspx")
+            Dim targetUrl As String = ResolvePostLoginTarget("myaccount.aspx")
 
             Response.Redirect(targetUrl, False)
             Context.ApplicationInstance.CompleteRequest()
