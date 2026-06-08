@@ -469,6 +469,7 @@ Private Const SessCartShippingAddressManual As String = "CART_SELECTED_ADDRESS_I
     Private Sub SetShippingAddressUxState(ByVal badgeText As String, ByVal hintText As String)
         If lblAddressSelectionBadge IsNot Nothing Then lblAddressSelectionBadge.Text = badgeText
         If lblAddressSelectionHint IsNot Nothing Then lblAddressSelectionHint.Text = hintText
+        If lblAddressSelectionInlineStatus IsNot Nothing Then lblAddressSelectionInlineStatus.Text = badgeText & " - " & hintText
         UpdateShippingAddressQualityHint()
     End Sub
 
@@ -1584,7 +1585,10 @@ End Sub
     Private Sub StabilizeCartAddressEditUi()
         If open1 IsNot Nothing Then open1.Style.Item("display") = ""
         If open2 IsNot Nothing Then open2.Style.Item("display") = ""
-        If panel IsNot Nothing Then panel.Style.Item("display") = "none"
+        If panel IsNot Nothing Then
+            panel.Style.Item("display") = "none"
+            panel.Visible = False
+        End If
         If PnlDestinazione IsNot Nothing Then PnlDestinazione.Visible = False
         If CHKPREDEFINITO IsNot Nothing Then CHKPREDEFINITO.Visible = False
         Session("cityBinding") = 0

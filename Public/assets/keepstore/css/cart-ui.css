@@ -214,12 +214,13 @@
 }
 
 .ks-delivery-address-section .ks-address-status-badge{
-    display: inline-flex;
+    display: inline-flex !important;
     align-items: center;
     min-height: 30px;
     padding: .35rem .65rem;
     border-radius: 999px;
-    background: rgba(255,61,61,.1);
+    border: 1px solid rgba(197,34,34,.22);
+    background: rgba(255,61,61,.12);
     color: #c52222;
     font-size: 12px;
     font-weight: 700;
@@ -248,6 +249,19 @@
     width: 100%;
 }
 
+.ks-delivery-address-section .ks-address-inline-status{
+    display: block;
+    margin-top: .45rem;
+    padding: .55rem .65rem;
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 8px;
+    background: #fff;
+    color: #1f2933;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
 .ks-delivery-address-section .ks-address-summary{
     margin-top: .35rem;
 }
@@ -261,11 +275,15 @@
     display: flex;
     flex-wrap: wrap;
     gap: .65rem;
-    margin-top: 1rem;
+    margin-top: .75rem;
 }
 
 .ks-delivery-address-section .ks-address-actions .tf-btn{
     min-height: 42px;
+}
+
+.ks-delivery-address-section .ks-address-account-copy{
+    margin: 1rem 0 0;
 }
 
 /* Fine-tuning cart layout */
