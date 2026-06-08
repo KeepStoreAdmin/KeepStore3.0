@@ -286,6 +286,93 @@
     margin: 1rem 0 0;
 }
 
+.ks-delivery-address-section .ks-cart-address-editor{
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid rgba(0,0,0,.09);
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 12px 30px rgba(0,0,0,.05);
+}
+
+.ks-delivery-address-section .ks-cart-address-editor-head{
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 340px);
+    gap: 1rem;
+    align-items: start;
+    margin-bottom: 1rem;
+}
+
+.ks-delivery-address-section .ks-cart-address-editor-head h6{
+    margin: 0 0 .25rem;
+}
+
+.ks-delivery-address-section .ks-address-form-message{
+    display: none;
+    margin: 0 0 1rem;
+    padding: .7rem .8rem;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.ks-delivery-address-section .ks-address-form-message.is-error,
+.ks-delivery-address-section .ks-address-form-message.is-ok{
+    display: block;
+}
+
+.ks-delivery-address-section .ks-address-form-message.is-error{
+    border: 1px solid rgba(197,34,34,.24);
+    background: rgba(255,61,61,.08);
+    color: #a51d1d;
+}
+
+.ks-delivery-address-section .ks-address-form-message.is-ok{
+    border: 1px solid rgba(28,120,74,.18);
+    background: rgba(28,120,74,.07);
+    color: #17623d;
+}
+
+.ks-delivery-address-section .ks-cart-address-form-grid{
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .85rem 1rem;
+}
+
+.ks-delivery-address-section .ks-form-field{
+    display: grid;
+    gap: .35rem;
+}
+
+.ks-delivery-address-section .ks-form-field label{
+    margin: 0;
+    color: #1f2933;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.ks-delivery-address-section .ks-form-field-wide{
+    grid-column: 1 / -1;
+}
+
+.ks-delivery-address-section .ks-cart-address-options{
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem 1.25rem;
+    margin-top: 1rem;
+}
+
+.ks-delivery-address-section .ks-cart-address-options label{
+    display: inline-flex;
+    gap: .45rem;
+    align-items: center;
+    margin: 0;
+    color: #1f2933;
+    font-size: 13px;
+    font-weight: 600;
+}
+
 /* Fine-tuning cart layout */
 .s-shoping-cart .ks-cart-form {
     margin-bottom: 0;
@@ -408,6 +495,16 @@
     .ks-delivery-address-section .ks-address-picker-card{
         grid-template-columns: 1fr;
         padding: .85rem;
+    }
+
+    .ks-delivery-address-section .ks-cart-address-editor-head,
+    .ks-delivery-address-section .ks-cart-address-form-grid{
+        grid-template-columns: 1fr;
+    }
+
+    .ks-delivery-address-section .ks-cart-address-options{
+        flex-direction: column;
+        align-items: stretch;
     }
 
     .ks-delivery-address-section .ks-address-actions .tf-btn{
