@@ -176,7 +176,7 @@ Il gestionale KeepStore usa l'archivio `connessioni` come primo punto di verific
 | `Default.aspx` | `Default.aspx.vb` | Home pubblica | da completare con audit dedicato | catalogo/home/sessione | Home ecommerce |
 | `articoli.aspx` | `articoli.aspx.vb` | Lista/catalogo prodotti | da completare con audit dedicato | articoli, settori, filtri | Catalogo legacy/modernizzato parziale |
 | `articolo.aspx` | `articolo.aspx.vb` | Scheda prodotto | da completare con audit dedicato | prodotto, prezzo, disponibilita | Product detail |
-| `carrello.aspx` | `carrello.aspx.vb` | Carrello | da completare con audit dedicato | `carrello`, sessione, login | Non toccare senza task checkout |
+| `carrello.aspx` | `carrello.aspx.vb` | Carrello | stabile UI/indirizzi/Conferma | `carrello`, sessione, login, `utentiindirizzi`, `city_registry` | Gateway/core checkout separati |
 | `ordine.aspx` | `ordine.aspx.vb` | Checkout/ordine | da completare con audit dedicato | ordine, pagamento, spedizione | Perimetro sensibile |
 | `pagamento.aspx` | `pagamento.aspx.vb` | Pagamento legacy | da completare con audit dedicato | documenti/pagamenti | Perimetro gateway |
 | `paypalcheckout.aspx` | `paypalcheckout.aspx.vb` | PayPal Express launcher | stabilizzato lato PayPal | PayPal NVP, documenti | Non invocare senza task |
@@ -234,7 +234,7 @@ Da completare con audit dedicato. Coinvolge disponibilita, prezzo, add-to-cart, 
 
 ### 9.4 Carrello
 
-Da completare con audit dedicato. Area sensibile: non modificare senza task carrello/checkout.
+`carrello.aspx` e modernizzato sul layout ONSUS per UI carrello, scelta indirizzo, add/edit indirizzi alternativi inline e step finale `Conferma`. Gli indirizzi inline restano collegati a `utentiindirizzi`; il lookup CAP/citta/provincia usa `city_registry` con query parametrizzate, citta/provincia bloccate quando il CAP e riconosciuto e gestione multi-citta tramite dropdown. L'avvio ordine/gateway resta consentito solo dallo step `Conferma`. Gateway core, costi, totali, IVA, spedizione e schema DB non sono stati modificati.
 
 ### 9.5 Checkout
 
@@ -258,7 +258,7 @@ Area progressivamente stabilizzata con shell account ONSUS, `body.ks-page-accoun
 
 ### 9.10 Indirizzi
 
-`my-account-address.aspx` e pagina ONSUS autonoma per indirizzi account: indirizzo principale, sedi alternative, add/edit sede alternativa e scelta predefinito sono stabilizzati. Delete indirizzi resta da valutare con task dedicato. La selezione manuale indirizzo nel carrello resta debito separato.
+`my-account-address.aspx` e pagina ONSUS autonoma per indirizzi account: indirizzo principale, sedi alternative, add/edit sede alternativa e scelta predefinito sono stabilizzati. Delete indirizzi resta da valutare con task dedicato. La selezione manuale indirizzo nel carrello e chiusa nel blocco `CART-ADDRESS-SELECTION`; add/edit inline carrello e lookup CAP da `city_registry` sono chiusi nel blocco `CART-INLINE-ADDRESS-CITYREGISTRY-STEP`.
 
 ### 9.11 Wishlist
 
@@ -493,7 +493,7 @@ L'audit DB non ha invocato gateway, non ha letto dati ordine reali e non ha ripo
 | Settori/categorie | da completare | App_Code e menu home collegati |
 | Prodotto | da completare | Product detail e product card |
 | Promozioni/prezzi | da completare | Promo, listini, coupon |
-| Carrello | da completare | Perimetro sensibile |
+| Carrello | stabile UI/indirizzi/Conferma | Perimetro sensibile: gateway/core checkout separati |
 | Ordini | parziale | Lista/dettaglio account stabilizzati |
 | Documenti | stabile area account | Selector documenti dinamico |
 | Pagamenti | parziale/stabilizzato PayPal | PayPal Express NVP stabilizzato; BancaSella legacy |
@@ -522,7 +522,7 @@ Debito residuo account:
 
 - `datiutente.aspx` resta legacy/compatibilita con tab/JS e gestione salvataggi/destinazioni non piu percorso operativo principale per indirizzi account.
 - Delete indirizzi resta da valutare solo con task dedicato.
-- Selezione manuale indirizzo carrello e link modifica indirizzo carrello restano follow-up `CART-ADDRESS-SELECTION-1A`.
+- Carrello indirizzi chiuso: selezione manuale, link gestione indirizzi, add/edit inline, lookup CAP `city_registry` e step `Conferma` sono stabilizzati; gateway/core checkout restano separati.
 - Cleanup completo sidebar/nav inline legacy non ancora concluso su `datiutente.aspx`.
 
 ## 14. Login, registrazione e recupero password - audit LOGIN-REGISTER-1A
@@ -989,7 +989,8 @@ Micro-task futuri:
 | 2026-06-05 | REMIND-RESET-1A / REMIND-RESET-BLUEPRINT-1B | documentale | branch PR | `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Progettazione reset password tokenizzato hash-ready | Nessun runtime; base tecnica per futuro reset sicuro | Nessun codice/DB modificato, nessun dato sensibile esposto |
 | 2026-06-05 | REMIND-RESET-DB-MANUAL-1C | documentale | branch PR | `docs/REMIND_RESET_DB_MANUALE_VINCENZO.md`, `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Manuale tecnico DB per Vincenzo sulla tabella reset token | Nessun runtime; base per approvazione DB futura | Nessun codice/DB modificato, nessuna tabella creata, nessun dato sensibile esposto |
 | 2026-06-05 | REMIND-RESET-DB-REVIEW-1G | documentale | branch PR | `docs/REMIND_RESET_DB_MANUALE_VINCENZO.md`, `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Integrazione feedback Germano: strategia legacy-compatible, tabella per DB cliente, no FK iniziale, `aziende.ScadenzaPassword`, futura UI JANUS token reset | Nessun runtime; chiarisce impatto gestionale e scadenza password | Nessun codice/DB modificato, nessuna tabella creata, nessun dato sensibile esposto |
-| 2026-06-07 | ACCOUNT-PROFILE-ADDRESS-CLOSE-1A | #136-#145 | `6160bd8...` - `1fe259a...` | account profile/address/login docs | Chiusura blocco account profilo/indirizzi: dashboard profilo, dettagli account, indirizzi autonomi e smoke live finale | Area account profilo/indirizzi stabile | Carrello indirizzi resta follow-up `CART-ADDRESS-SELECTION-1A`; nessun DB/schema modificato |
+| 2026-06-07 | ACCOUNT-PROFILE-ADDRESS-CLOSE-1A | #136-#145 | `6160bd8...` - `1fe259a...` | account profile/address/login docs | Chiusura blocco account profilo/indirizzi: dashboard profilo, dettagli account, indirizzi autonomi e smoke live finale | Area account profilo/indirizzi stabile | Il follow-up carrello indirizzi e stato poi chiuso nel blocco #147-#150; nessun DB/schema modificato |
+| 2026-06-09 | CART-INLINE-ADDRESS-CITYREGISTRY-STEP | #147-#150 | `5c4ec079...` - `b41cc367...` | `carrello.aspx`, `carrello.aspx.vb`, `documentidettaglio.aspx`, docs | Carrello ONSUS con selezione indirizzi, add/edit inline, lookup CAP da `city_registry` e step `Conferma` | Carrello stabile post-smoke live | Nessun gateway/core checkout, costi/totali, DB/schema o SQL modificato |
 
 ## 16. Debito tecnico e backlog architetturale
 
@@ -1020,7 +1021,7 @@ Micro-task futuri:
 - Errori JS legacy su `remind.aspx`/`registrazione.aspx` da valutare in task separato.
 - `datiutente.aspx` legacy/compatibilita con tab/JS e gestione salvataggi/destinazioni.
 - Delete indirizzi non migrato; add/edit sedi alternative e predefinito sono ora su `my-account-address.aspx`.
-- Carrello indirizzi: selezione manuale indirizzo diverso dal predefinito e link modifica indirizzo da correggere in `CART-ADDRESS-SELECTION-1A`.
+- Carrello indirizzi/CAP/step `Conferma` chiuso con `CART-ADDRESS-SELECTION`, `CART-INLINE-ADDRESS-PAYPAL-RETURN` e `CART-INLINE-ADDRESS-CITYREGISTRY-STEP`; non riaprire salvo bug live verificato. Gateway/core checkout e pagamenti restano task separati.
 - Cleanup completo sidebar/nav inline legacy su `datiutente.aspx` da completare.
 - `LOGIN-REGISTER-SECURITY-1B`: chiuso con PR #117.
 - `REMIND-RESET-1A`: audit/progettazione reset tokenizzato, completato read-only.
