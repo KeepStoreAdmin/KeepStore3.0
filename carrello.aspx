@@ -957,7 +957,8 @@
             <tr>
                 <td style="text-align:left;" class="carrello-td1-step4"><b>Indirizzi registrati:</b></td>
                 <td colspan="2" style="text-align:left;">
-                    <asp:DropDownList ID="LstScegliIndirizzo" runat="server" CssClass="form-select ks-form-select" />
+                    <asp:DropDownList ID="LstScegliIndirizzo" runat="server" CssClass="form-select ks-form-select" AutoPostBack="true" OnSelectedIndexChanged="LstScegliIndirizzo_SelectedIndexChanged" />
+                    <asp:Label ID="lblAddressSelectionMessage" runat="server" CssClass="body-text-3 text-main-2 d-block mt-2" EnableViewState="false" />
                 </td>
             </tr>
             <tr>
@@ -1004,8 +1005,8 @@
             </div>
         </div>
         <div class="ks-address-actions">
-            <div id="open1" runat="server"><a href="#" class="tf-btn btn-gray">Modifica indirizzo</a></div>
-            <div id="open2" runat="server"><a href="#" class="tf-btn">Nuova destinazione</a></div>
+            <div id="open1" runat="server"><a href="my-account-address.aspx" class="tf-btn btn-gray">Gestisci indirizzi</a></div>
+            <div id="open2" runat="server"><a href="my-account-address.aspx" class="tf-btn">Aggiungi indirizzo</a></div>
         </div>
         </asp:Panel>
 		<div id="panel" runat="server" ClientIDMode="Static">
