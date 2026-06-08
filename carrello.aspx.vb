@@ -107,11 +107,29 @@ Protected Function IsCheckoutStepVisible() As Boolean
     Return tOrdine IsNot Nothing AndAlso tOrdine.Visible
 End Function
 
+Protected Function IsCheckoutConfirmStep() As Boolean
+    Return IsCheckoutStepVisible() AndAlso String.Equals(Convert.ToString(Session(SessCheckoutStep)), "confirm", StringComparison.Ordinal)
+End Function
+
+Private Sub SetCheckoutStep(ByVal stepName As String)
+    If String.Equals(stepName, "confirm", StringComparison.OrdinalIgnoreCase) Then
+        Session(SessCheckoutStep) = "confirm"
+    ElseIf String.Equals(stepName, "checkout", StringComparison.OrdinalIgnoreCase) Then
+        Session(SessCheckoutStep) = "checkout"
+    Else
+        Session(SessCheckoutStep) = "cart"
+    End If
+End Sub
+
 Protected Function CheckoutStatusBarClass() As String
+    If IsCheckoutConfirmStep() Then Return "end"
     Return If(IsCheckoutStepVisible(), "next", "first")
 End Function
 
 Protected Function CheckoutStepTextClass(ByVal stepNumber As Integer) As String
+    If IsCheckoutConfirmStep() Then
+        Return If(stepNumber = 3, "text-secondary link body-text-3", "link body-text-3")
+    End If
     If IsCheckoutStepVisible() Then
         Return If(stepNumber = 2, "text-secondary link body-text-3", "link body-text-3")
     End If
@@ -119,7 +137,9 @@ Protected Function CheckoutStepTextClass(ByVal stepNumber As Integer) As String
 End Function
 
 Protected Function CheckoutStepAria(ByVal stepNumber As Integer) As String
-    If (Not IsCheckoutStepVisible() AndAlso stepNumber = 1) OrElse (IsCheckoutStepVisible() AndAlso stepNumber = 2) Then
+    If (Not IsCheckoutStepVisible() AndAlso stepNumber = 1) _
+        OrElse (IsCheckoutStepVisible() AndAlso Not IsCheckoutConfirmStep() AndAlso stepNumber = 2) _
+        OrElse (IsCheckoutConfirmStep() AndAlso stepNumber = 3) Then
         Return "aria-current=""step"""
     End If
     Return ""
@@ -129,6 +149,14 @@ End Function
 ' === HARDENING HELPERS (VB2012 safe) ===
 Private Const CHECKOUT_TOKEN_SESSION_KEY As String = "CheckoutToken"
 Private Const CHECKOUT_TOKEN_TIME_SESSION_KEY As String = "CheckoutTokenIssuedUtc"
+Private Const SessCheckoutStep As String = "CartCheckoutStep"
+Private Const CartEditorLockMessage As String = "Completa o annulla la modifica dell'indirizzo prima di continuare."
+
+Private Class CityRegistryAddressOption
+    Public Property Cap As String
+    Public Property Citta As String
+    Public Property Provincia As String
+End Class
 
 Private Function GenerateCheckoutToken() As String
     ' 32 bytes random -> Base64Url (no +,/ or =)
@@ -481,6 +509,133 @@ Private Const SessCartAddressEditorId As String = "CART_ADDRESS_EDITOR_ID"
         Return value.Trim()
     End Function
 
+    Private Function NormalizeCartCap(ByVal value As String) As String
+        Dim cap As String = CleanCartAddressInput(value)
+        If cap.Length > 5 Then cap = cap.Substring(0, 5)
+        Return cap
+    End Function
+
+    Private Function GetCartCityOptionKey(ByVal city As String, ByVal province As String) As String
+        Return CleanCartAddressInput(city) & "|" & CleanCartAddressInput(province)
+    End Function
+
+    Private Function LoadCityRegistryOptionsByCap(ByVal cap As String) As List(Of CityRegistryAddressOption)
+        Dim options As New List(Of CityRegistryAddressOption)
+        cap = NormalizeCartCap(cap)
+        If cap = "" Then Return options
+
+        Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+            conn.Open()
+            Using cmd As New MySqlCommand(
+                "SELECT DISTINCT pc.code AS Cap, pc.name_city AS Citta, c.abbreviation_province AS Provincia " &
+                "FROM city_registry.postcode_codes pc " &
+                "LEFT JOIN city_registry.cities c ON c.name = pc.name_city " &
+                "LEFT JOIN city_registry.provinces pr ON pr.abbreviation = c.abbreviation_province " &
+                "WHERE pc.code = @Cap " &
+                "ORDER BY pc.name_city, c.abbreviation_province", conn)
+                cmd.Parameters.AddWithValue("@Cap", cap)
+                Using dr As MySqlDataReader = cmd.ExecuteReader()
+                    While dr.Read()
+                        Dim citta As String = If(IsDBNull(dr("Citta")), "", dr("Citta").ToString().Trim())
+                        Dim provincia As String = If(IsDBNull(dr("Provincia")), "", dr("Provincia").ToString().Trim())
+                        If citta <> "" Then
+                            options.Add(New CityRegistryAddressOption With {
+                                .Cap = cap,
+                                .Citta = citta,
+                                .Provincia = provincia
+                            })
+                        End If
+                    End While
+                End Using
+            End Using
+        End Using
+
+        Return options
+    End Function
+
+    Private Sub ClearCartCityResolution()
+        If ddlCartCittaA IsNot Nothing Then
+            ddlCartCittaA.Items.Clear()
+            ddlCartCittaA.Visible = False
+        End If
+        If hfCartResolvedCap IsNot Nothing Then hfCartResolvedCap.Value = ""
+        If hfCartResolvedCity IsNot Nothing Then hfCartResolvedCity.Value = ""
+        If hfCartResolvedProvince IsNot Nothing Then hfCartResolvedProvince.Value = ""
+        If tbCartCittaA IsNot Nothing Then tbCartCittaA.Text = ""
+        If tbCartProvinciaA IsNot Nothing Then tbCartProvinciaA.Text = ""
+    End Sub
+
+    Private Sub SetCartCityResolution(ByVal cap As String, ByVal city As String, ByVal province As String)
+        cap = NormalizeCartCap(cap)
+        city = CleanCartAddressInput(city)
+        province = CleanCartAddressInput(province)
+        If hfCartResolvedCap IsNot Nothing Then hfCartResolvedCap.Value = cap
+        If hfCartResolvedCity IsNot Nothing Then hfCartResolvedCity.Value = city
+        If hfCartResolvedProvince IsNot Nothing Then hfCartResolvedProvince.Value = province
+        If tbCartCittaA IsNot Nothing Then tbCartCittaA.Text = city
+        If tbCartProvinciaA IsNot Nothing Then tbCartProvinciaA.Text = province
+        If tbCartNazioneA IsNot Nothing AndAlso CleanCartAddressInput(tbCartNazioneA.Text) = "" Then tbCartNazioneA.Text = "IT"
+    End Sub
+
+    Private Sub BindCartCityOptions(ByVal options As List(Of CityRegistryAddressOption), Optional ByVal selectedKey As String = "")
+        If ddlCartCittaA Is Nothing Then Return
+
+        ddlCartCittaA.Items.Clear()
+        ddlCartCittaA.Items.Add(New ListItem("Seleziona citta", ""))
+        For Each item As CityRegistryAddressOption In options
+            Dim text As String = item.Citta
+            If item.Provincia <> "" Then text &= " (" & item.Provincia & ")"
+            ddlCartCittaA.Items.Add(New ListItem(text, GetCartCityOptionKey(item.Citta, item.Provincia)))
+        Next
+        ddlCartCittaA.Visible = True
+
+        If selectedKey <> "" AndAlso ddlCartCittaA.Items.FindByValue(selectedKey) IsNot Nothing Then
+            ddlCartCittaA.SelectedValue = selectedKey
+        End If
+    End Sub
+
+    Private Sub ResolveCartAddressCap(Optional ByVal selectedKey As String = "")
+        Dim cap As String = NormalizeCartCap(If(tbCartCapA IsNot Nothing, tbCartCapA.Text, ""))
+
+        ClearCartCityResolution()
+        If tbCartCapA IsNot Nothing Then tbCartCapA.Text = cap
+
+        If cap = "" Then
+            SetCartAddressEditorMessage("Inserisci il CAP per rilevare citta e provincia.", True)
+            Return
+        End If
+
+        Try
+            Dim options As List(Of CityRegistryAddressOption) = LoadCityRegistryOptionsByCap(cap)
+            If options.Count = 0 Then
+                SetCartAddressEditorMessage("CAP non riconosciuto. Verifica il CAP prima di salvare l'indirizzo.", True)
+                Return
+            End If
+
+            If options.Count = 1 Then
+                Dim one As CityRegistryAddressOption = options(0)
+                SetCartCityResolution(cap, one.Citta, one.Provincia)
+                SetCartAddressEditorMessage("Citta e provincia rilevate dal CAP.", False)
+                Return
+            End If
+
+            BindCartCityOptions(options, selectedKey)
+            If selectedKey <> "" Then
+                Dim parts() As String = selectedKey.Split("|"c)
+                If parts.Length >= 2 Then
+                    SetCartCityResolution(cap, parts(0), parts(1))
+                    SetCartAddressEditorMessage("Citta e provincia rilevate dal CAP.", False)
+                    Return
+                End If
+            End If
+
+            SetCartAddressEditorMessage("Sono disponibili piu citta per questo CAP. Seleziona quella corretta.", True)
+        Catch ex As Exception
+            LogEx(ex, "ResolveCartAddressCap")
+            SetCartAddressEditorMessage("Non e stato possibile verificare il CAP. Riprova tra qualche minuto.", True)
+        End Try
+    End Sub
+
     Private Function GetCartAddressEditorOpen() As Boolean
         Return String.Equals(Convert.ToString(Session(SessCartAddressEditorOpen)), "1", StringComparison.Ordinal)
     End Function
@@ -522,6 +677,13 @@ Private Const SessCartAddressEditorId As String = "CART_ADDRESS_EDITOR_ID"
         If tbCartCapA IsNot Nothing Then tbCartCapA.Text = ""
         If tbCartCittaA IsNot Nothing Then tbCartCittaA.Text = ""
         If tbCartProvinciaA IsNot Nothing Then tbCartProvinciaA.Text = ""
+        If ddlCartCittaA IsNot Nothing Then
+            ddlCartCittaA.Items.Clear()
+            ddlCartCittaA.Visible = False
+        End If
+        If hfCartResolvedCap IsNot Nothing Then hfCartResolvedCap.Value = ""
+        If hfCartResolvedCity IsNot Nothing Then hfCartResolvedCity.Value = ""
+        If hfCartResolvedProvince IsNot Nothing Then hfCartResolvedProvince.Value = ""
         If tbCartZona IsNot Nothing Then tbCartZona.Text = ""
         If tbCartTelefonoA IsNot Nothing Then tbCartTelefonoA.Text = ""
         If tbCartCellulareA IsNot Nothing Then tbCartCellulareA.Text = ""
@@ -537,7 +699,10 @@ Private Const SessCartAddressEditorId As String = "CART_ADDRESS_EDITOR_ID"
         Dim errors As New List(Of String)
 
         If String.IsNullOrWhiteSpace(tbCartIndirizzoA.Text) Then errors.Add("Inserire l'indirizzo.")
-        If String.IsNullOrWhiteSpace(tbCartCittaA.Text) Then errors.Add("Inserire la citta.")
+        Dim cap As String = NormalizeCartCap(tbCartCapA.Text)
+        If cap = "" OrElse cap.Length <> 5 Then errors.Add("Inserire un CAP valido di 5 caratteri.")
+        If String.IsNullOrWhiteSpace(tbCartCittaA.Text) Then errors.Add("Selezionare una citta valida per il CAP.")
+        If String.IsNullOrWhiteSpace(tbCartProvinciaA.Text) Then errors.Add("La provincia deve essere rilevata dal CAP.")
         If CleanCartAddressInput(tbCartRagioneSocialeA.Text).Length > 100 Then errors.Add("La ragione sociale/cognome e troppo lunga.")
         If CleanCartAddressInput(tbCartNomeA.Text).Length > 50 Then errors.Add("Il nome e troppo lungo.")
         If CleanCartAddressInput(tbCartIndirizzoA.Text).Length > 100 Then errors.Add("L'indirizzo e troppo lungo.")
@@ -551,6 +716,17 @@ Private Const SessCartAddressEditorId As String = "CART_ADDRESS_EDITOR_ID"
         If CleanCartAddressInput(tbCartNote.Text).Length > 255 Then errors.Add("Le note sono troppo lunghe.")
         If CleanCartAddressInput(tbCartNazioneA.Text).Length > 50 Then errors.Add("La nazione e troppo lunga.")
 
+        If errors.Count = 0 Then
+            Dim resolvedCap As String = If(hfCartResolvedCap IsNot Nothing, hfCartResolvedCap.Value, "")
+            Dim resolvedCity As String = If(hfCartResolvedCity IsNot Nothing, hfCartResolvedCity.Value, "")
+            Dim resolvedProvince As String = If(hfCartResolvedProvince IsNot Nothing, hfCartResolvedProvince.Value, "")
+            If Not String.Equals(cap, resolvedCap, StringComparison.Ordinal) _
+                OrElse Not String.Equals(CleanCartAddressInput(tbCartCittaA.Text), resolvedCity, StringComparison.Ordinal) _
+                OrElse Not String.Equals(CleanCartAddressInput(tbCartProvinciaA.Text), resolvedProvince, StringComparison.Ordinal) Then
+                errors.Add("Verificare il CAP e selezionare la citta proposta prima di salvare.")
+            End If
+        End If
+
         Return errors
     End Function
 
@@ -560,7 +736,7 @@ Private Const SessCartAddressEditorId As String = "CART_ADDRESS_EDITOR_ID"
         Dim hints As New List(Of String)
         Dim cap As String = CleanCartAddressInput(tbCartCapA.Text)
         If cap = "" OrElse cap.Length < 5 Then hints.Add("CAP da controllare")
-        If CleanCartAddressInput(tbCartProvinciaA.Text) = "" Then hints.Add("provincia utile")
+        If CleanCartAddressInput(tbCartProvinciaA.Text) = "" Then hints.Add("citta e provincia da rilevare")
         If CleanCartAddressInput(tbCartTelefonoA.Text) = "" AndAlso CleanCartAddressInput(tbCartCellulareA.Text) = "" Then hints.Add("telefono utile per il corriere")
 
         If hints.Count = 0 Then
@@ -586,8 +762,133 @@ Private Const SessCartAddressEditorId As String = "CART_ADDRESS_EDITOR_ID"
             litCartAddressEditorTitle.Text = If(mode = "edit", "<h6 class=""fw-semibold"">Modifica indirizzo selezionato</h6>", "<h6 class=""fw-semibold"">Aggiungi nuovo indirizzo</h6>")
         End If
         If btnCartAddressSave IsNot Nothing Then btnCartAddressSave.Text = If(mode = "edit", "Salva modifiche", "Salva nuovo indirizzo")
+        If tbCartCittaA IsNot Nothing Then tbCartCittaA.ReadOnly = True
+        If tbCartProvinciaA IsNot Nothing Then tbCartProvinciaA.ReadOnly = True
         UpdateCartAddressEditorHint()
     End Sub
+
+    Private Sub SetControlEnabled(ByVal control As WebControl, ByVal enabled As Boolean)
+        If control Is Nothing Then Return
+        control.Enabled = enabled
+        Dim css As String = If(control.CssClass, "")
+        css = css.Replace(" ks-action-disabled", "")
+        If Not enabled Then css &= " ks-action-disabled"
+        control.CssClass = css.Trim()
+        control.Attributes("aria-disabled") = If(enabled, "false", "true")
+    End Sub
+
+    Private Sub ApplyCartAddressEditorLock()
+        Dim unlocked As Boolean = Not GetCartAddressEditorOpen()
+
+        SetControlEnabled(btContinua, unlocked)
+        SetControlEnabled(btAggiorna, unlocked)
+        SetControlEnabled(btSvuota, unlocked)
+        SetControlEnabled(btCompleta, unlocked)
+        SetControlEnabled(BT_ApplicaBuonoSconto, unlocked)
+        SetControlEnabled(LB_CancelBuonoSconto, unlocked)
+        SetControlEnabled(LstScegliIndirizzo, unlocked)
+        SetControlEnabled(gvVettoriPromo, unlocked)
+        SetControlEnabled(gvVettori, unlocked)
+        SetControlEnabled(cbAssicurazione, unlocked)
+        SetControlEnabled(gvPagamento, unlocked)
+        SetControlEnabled(btnVaiConfermaOrdine, unlocked)
+        SetControlEnabled(btInviaOrdine, unlocked)
+        SetControlEnabled(btSalvaPreventivo, unlocked)
+    End Sub
+
+    Private Function IsAddressEditorActionAllowed(ByVal sender As Object) As Boolean
+        If Not GetCartAddressEditorOpen() Then Return True
+        If sender Is btnCartAddressSave OrElse sender Is btnCartAddressCancel OrElse sender Is tbCartCapA OrElse sender Is ddlCartCittaA Then Return True
+
+        SetCartAddressEditorMessage(CartEditorLockMessage, True)
+        ConfigureCartAddressEditor()
+        Return False
+    End Function
+
+    Private Function CheckoutStepIsConfirm() As Boolean
+        Return String.Equals(Convert.ToString(Session(SessCheckoutStep)), "confirm", StringComparison.Ordinal)
+    End Function
+
+    Private Sub ApplyCheckoutStepUi()
+        If tOrdine Is Nothing OrElse Not tOrdine.Visible Then
+            SetCheckoutStep("cart")
+            If pnlCheckoutConfirm IsNot Nothing Then pnlCheckoutConfirm.Visible = False
+            Return
+        End If
+
+        Dim isConfirm As Boolean = CheckoutStepIsConfirm()
+        If pnlCheckoutConfirm IsNot Nothing Then pnlCheckoutConfirm.Visible = isConfirm
+        If pSpedizione IsNot Nothing Then pSpedizione.Visible = Not isConfirm
+        If pAssicurazione IsNot Nothing Then pAssicurazione.Visible = Not isConfirm
+        If pPagamento IsNot Nothing Then pPagamento.Visible = Not isConfirm
+        If PnlFatturazione IsNot Nothing Then PnlFatturazione.Visible = Not isConfirm
+        If PnlSpedizione IsNot Nothing Then PnlSpedizione.Visible = Not isConfirm
+        If Panel_Note IsNot Nothing Then Panel_Note.Visible = Not isConfirm
+        If btnVaiConfermaOrdine IsNot Nothing Then btnVaiConfermaOrdine.Visible = Not isConfirm
+        If btInviaOrdine IsNot Nothing Then btInviaOrdine.Visible = isConfirm
+        If btSalvaPreventivo IsNot Nothing Then btSalvaPreventivo.Visible = False
+
+        If isConfirm Then BindCheckoutConfirmSummary()
+    End Sub
+
+    Private Function LabelText(ByVal label As Label) As String
+        If label Is Nothing Then Return ""
+        Return label.Text.Trim()
+    End Function
+
+    Private Function GetSelectedGridDescription(ByVal grid As GridView) As String
+        If grid Is Nothing Then Return ""
+        For Each row As GridViewRow In grid.Rows
+            If row.RowType <> DataControlRowType.DataRow Then Continue For
+            For Each cell As TableCell In row.Cells
+                Dim text As String = cell.Text.Replace("&nbsp;", "").Trim()
+                If text <> "" AndAlso Not text.StartsWith("<", StringComparison.Ordinal) Then Return text
+            Next
+        Next
+        Return ""
+    End Function
+
+    Private Sub BindCheckoutConfirmSummary()
+        If lblConfirmBillingName IsNot Nothing Then lblConfirmBillingName.Text = LabelText(lblTab_RagioneSociale) & " " & LabelText(lblTab_Nome)
+        If lblConfirmBillingAddress IsNot Nothing Then lblConfirmBillingAddress.Text = (LabelText(lblTab_Indirizzo) & " - " & LabelText(lblTab_Cap) & " " & LabelText(lblTab_Citta) & " " & LabelText(lblTab_Provincia)).Trim()
+        If lblConfirmShippingName IsNot Nothing Then lblConfirmShippingName.Text = LabelText(lblTab_RagioneSocialeSpedizione) & " " & LabelText(lblTab_NomeSpedizione)
+        If lblConfirmShippingAddress IsNot Nothing Then lblConfirmShippingAddress.Text = (LabelText(lblTab_IndirizzoSpedizione) & " - " & LabelText(lblTab_CapSpedizione) & " " & LabelText(lblTab_CittaSpedizione) & " " & LabelText(lblTab_ProvinciaSpedizione)).Trim()
+        If lblConfirmShippingMethod IsNot Nothing Then lblConfirmShippingMethod.Text = If(tbVettoriId IsNot Nothing AndAlso CleanCartAddressInput(tbVettoriId.Text) <> "", "Metodo selezionato", "Da selezionare")
+        If lblConfirmPaymentMethod IsNot Nothing Then lblConfirmPaymentMethod.Text = If(tbPagamenti IsNot Nothing AndAlso CleanCartAddressInput(tbPagamenti.Text) <> "", "Pagamento selezionato", "Da selezionare")
+        If lblConfirmNotes IsNot Nothing Then lblConfirmNotes.Text = If(txtNoteSpedizione IsNot Nothing AndAlso CleanCartAddressInput(txtNoteSpedizione.Text) <> "", Server.HtmlEncode(CleanCartAddressInput(txtNoteSpedizione.Text)), "Nessuna nota")
+        If lblConfirmTotal IsNot Nothing Then lblConfirmTotal.Text = If(lblTotale IsNot Nothing, lblTotale.Text, "")
+    End Sub
+
+    Private Function ValidateCheckoutBeforeConfirm() As Boolean
+        If GetLoginIdSafe(0) <= 0 Then
+            Session.Item("StavonelCarrello") = 1
+            SafeRedirectLocal("/carrello.aspx?loginrequired=1#ksCartLoginRequired")
+            Return False
+        End If
+
+        If GetCartAddressEditorOpen() Then
+            SetCartAddressEditorMessage(CartEditorLockMessage, True)
+            Return False
+        End If
+
+        ApplyCurrentShippingAddress()
+        If IsBlankLabel(lblTab_CapSpedizione) OrElse IsBlankLabel(lblTab_CittaSpedizione) OrElse IsBlankLabel(lblTab_ProvinciaSpedizione) Then
+            SetAddressSelectionMessage("Completa un indirizzo di spedizione valido prima di rivedere l'ordine.")
+            Return False
+        End If
+
+        If tbVettoriId IsNot Nothing AndAlso CleanCartAddressInput(tbVettoriId.Text) = "" Then
+            SetAddressSelectionMessage("Seleziona un metodo di spedizione prima di rivedere l'ordine.")
+            Return False
+        End If
+
+        If tbPagamenti IsNot Nothing AndAlso CleanCartAddressInput(tbPagamenti.Text) = "" Then
+            SetAddressSelectionMessage("Seleziona un metodo di pagamento prima di rivedere l'ordine.")
+            Return False
+        End If
+
+        Return True
+    End Function
 
     Private Function LoadAlternativeAddressRow(ByVal utentiId As Integer, ByVal addressId As Integer) As DataRow
         If utentiId <= 0 OrElse addressId <= 0 Then Return Nothing
@@ -613,8 +914,8 @@ Private Const SessCartAddressEditorId As String = "CART_ADDRESS_EDITOR_ID"
         tbCartNomeA.Text = DbText(row("NomeA"))
         tbCartIndirizzoA.Text = DbText(row("IndirizzoA"))
         tbCartCapA.Text = DbText(row("CapA"))
-        tbCartCittaA.Text = DbText(row("CittaA"))
-        tbCartProvinciaA.Text = DbText(row("ProvinciaA"))
+        tbCartCittaA.Text = ""
+        tbCartProvinciaA.Text = ""
         tbCartZona.Text = DbText(row("Zona"))
         tbCartTelefonoA.Text = DbText(row("TelefonoA"))
         tbCartCellulareA.Text = DbText(row("CellulareA"))
@@ -625,6 +926,7 @@ Private Const SessCartAddressEditorId As String = "CART_ADDRESS_EDITOR_ID"
         Dim pref As Integer = 0
         Integer.TryParse(DbText(row("Predefinito")), pref)
         chkCartAddressSetDefault.Checked = (pref = 1)
+        ResolveCartAddressCap(GetCartCityOptionKey(DbText(row("CittaA")), DbText(row("ProvinciaA"))))
     End Sub
 
     Private Sub AddCartAddressParameters(ByVal cmd As MySqlCommand, ByVal utentiId As Integer, ByVal includeDefault As Boolean, ByVal setDefault As Boolean)
@@ -1818,6 +2120,8 @@ End Sub
         If PnlDestinazione IsNot Nothing Then PnlDestinazione.Visible = False
         If CHKPREDEFINITO IsNot Nothing Then CHKPREDEFINITO.Visible = False
         ConfigureCartAddressEditor()
+        ApplyCartAddressEditorLock()
+        ApplyCheckoutStepUi()
         Session("cityBinding") = 0
     End Sub
 
@@ -1968,6 +2272,7 @@ End Sub
     End Sub
 
     Protected Sub LstScegliIndirizzo_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs)
+        If Not IsAddressEditorActionAllowed(sender) Then Return
         Dim selectedId As Integer = 0
         Integer.TryParse(If(LstScegliIndirizzo IsNot Nothing, LstScegliIndirizzo.SelectedValue, "0"), selectedId)
 
@@ -1995,9 +2300,11 @@ End Sub
         End If
 
         ClearCartAddressEditorFields()
+        SetCheckoutStep("checkout")
         SetCartAddressEditorState(True, "add", 0)
         SetAddressSelectionMessage("Aggiungi un nuovo indirizzo senza uscire dal carrello.")
         ConfigureCartAddressEditor()
+        ApplyCartAddressEditorLock()
     End Sub
 
     Protected Sub btnCartAddressEdit_Click(ByVal sender As Object, ByVal e As System.EventArgs)
@@ -2027,9 +2334,11 @@ End Sub
         End If
 
         FillCartAddressEditor(row)
+        SetCheckoutStep("checkout")
         SetCartAddressEditorState(True, "edit", selectedId)
         SetAddressSelectionMessage("Modifica l'indirizzo selezionato senza uscire dal carrello.")
         ConfigureCartAddressEditor()
+        ApplyCartAddressEditorLock()
     End Sub
 
     Protected Sub btnCartAddressCancel_Click(ByVal sender As Object, ByVal e As System.EventArgs)
@@ -2040,12 +2349,26 @@ End Sub
         StabilizeCartAddressEditUi()
     End Sub
 
+    Protected Sub tbCartCapA_TextChanged(ByVal sender As Object, ByVal e As System.EventArgs)
+        SetCartAddressEditorState(True, GetCartAddressEditorMode(), GetCartAddressEditorId())
+        ResolveCartAddressCap()
+        ConfigureCartAddressEditor()
+    End Sub
+
+    Protected Sub ddlCartCittaA_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs)
+        SetCartAddressEditorState(True, GetCartAddressEditorMode(), GetCartAddressEditorId())
+        ResolveCartAddressCap(If(ddlCartCittaA IsNot Nothing, ddlCartCittaA.SelectedValue, ""))
+        ConfigureCartAddressEditor()
+    End Sub
+
     Protected Sub btnCartAddressSave_Click(ByVal sender As Object, ByVal e As System.EventArgs)
         Dim utentiId As Integer = GetUtentiIdSafe(0)
         If utentiId <= 0 Then
             SetCartAddressEditorMessage("Accedi per salvare un indirizzo.", True)
             Return
         End If
+
+        ResolveCartAddressCap(If(ddlCartCittaA IsNot Nothing AndAlso ddlCartCittaA.Visible, ddlCartCittaA.SelectedValue, ""))
 
         Dim errors As List(Of String) = ValidateCartAddressEditor()
         If errors.Count > 0 Then
@@ -2826,6 +3149,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
 
 
     Protected Sub btSvuota_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btSvuota.Click
+        If Not IsAddressEditorActionAllowed(sender) Then Return
         Dim LoginId As Integer = GetLoginIdSafe(0)
         Dim SessionID As String = Me.Session.SessionID
         Me.sdsArticoli.DeleteParameters.Clear()
@@ -2841,6 +3165,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
     End Sub
 
     Protected Sub btCompleta_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btCompleta.Click
+        If Not IsAddressEditorActionAllowed(sender) Then Return
         If GetLoginIdSafe(0) <= 0 Then
             Session.Item("StavonelCarrello") = 1
             SafeRedirectLocal("/carrello.aspx?loginrequired=1#ksCartLoginRequired")
@@ -2855,6 +3180,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
 
         If Me.tOrdine.Visible = True Then
             Me.tOrdine.Visible = False
+            SetCheckoutStep("cart")
             Me.TableConteggi.Visible = False
             Me.btAggiorna.Enabled = True
             Me.btContinua.Enabled = True
@@ -2867,6 +3193,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
         Else
             Me.TableConteggi.Visible = True
             Me.tOrdine.Visible = True
+            SetCheckoutStep("checkout")
             Me.btAggiorna.Enabled = True
             Me.btContinua.Enabled = True
             Me.btSvuota.Enabled = True
@@ -2877,10 +3204,30 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
 
         BindLstDestinazioneLstScegliIndirizzo
         ApplyCurrentShippingAddress()
+        ApplyCheckoutStepUi()
 
         'Me.LblDescrDest.Text = "Destinazione predefinita: " & vbCrLf & Me.getIndirizzoPrincipale
 
     End Sub
+
+Protected Sub btnVaiConfermaOrdine_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+    If Not IsAddressEditorActionAllowed(sender) Then Return
+    Aggiorna_Prezzi_Carrello()
+    LeggiVettori()
+    LeggiPagamenti()
+    If Not ValidateCheckoutBeforeConfirm() Then
+        SetCheckoutStep("checkout")
+        ApplyCheckoutStepUi()
+        Return
+    End If
+    SetCheckoutStep("confirm")
+    ApplyCheckoutStepUi()
+End Sub
+
+Protected Sub btnModificaCheckout_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+    SetCheckoutStep("checkout")
+    ApplyCheckoutStepUi()
+End Sub
 
    Protected Sub btnModDest_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btnModDest.Click
 
@@ -3823,6 +4170,7 @@ End Function
 
 
 Protected Sub GV_BuoniSconti_RowCommand(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.GridViewCommandEventArgs) Handles GV_BuoniSconti.RowCommand
+    If Not IsAddressEditorActionAllowed(sender) Then Return
     If e.CommandName = "CancellaBuonoSconto" Then
         Session("BuonoSconto_id") = Nothing
         TB_BuonoSconto.Text = ""
@@ -3877,6 +4225,7 @@ End Function
 
 
 Protected Sub btContinua_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btContinua.Click
+    If Not IsAddressEditorActionAllowed(sender) Then Return
     If Session.Item("Pagina_visitata_Articoli") Is Nothing Then
         Response.Redirect("default.aspx")
     Else
@@ -3890,6 +4239,7 @@ End Sub
 
 
 Protected Sub btAggiorna_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btAggiorna.Click
+    If Not IsAddressEditorActionAllowed(sender) Then Return
     Aggiorna_Prezzi_Carrello()
 
     ' Session("Click_AggiornaCarrello") = 1 
@@ -3898,6 +4248,7 @@ End Sub
 
 
 Protected Sub LB_CancelBuonoSconto_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles LB_CancelBuonoSconto.Click
+    If Not IsAddressEditorActionAllowed(sender) Then Return
     Session("BuonoSconto_id") = Nothing
     TB_BuonoSconto.Text = ""
     lblBuonoScontoConvalida.Text = ""
@@ -3907,6 +4258,7 @@ End Sub
 
 
 Protected Sub btSalvaPreventivo_click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btSalvaPreventivo.Click
+    If Not IsAddressEditorActionAllowed(sender) Then Return
     Me.PnlDestinazione.Visible = False
 
     Me.Session("Ordine_TipoDoc") = 2
@@ -3930,6 +4282,13 @@ End Sub
 
 
 Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btInviaOrdine.Click
+    If Not IsAddressEditorActionAllowed(sender) Then Return
+    If Not IsCheckoutConfirmStep() Then
+        SetCheckoutStep("checkout")
+        SetAddressSelectionMessage("Rivedi il riepilogo finale prima di confermare l'ordine.")
+        ApplyCheckoutStepUi()
+        Return
+    End If
     Me.PnlDestinazione.Visible = False
 
     Try
@@ -4077,45 +4436,39 @@ End Function
 ' =========================
 
 Private Function GetCitiesFromPostcodeCodeSafe(ByVal cap As String) As DataSet
+    Dim ds As New DataSet()
+    Dim dt As New DataTable()
+    dt.Columns.Add("name_city", GetType(String))
+    ds.Tables.Add(dt)
     Try
-        ' Forzo l'uso dell'istanza di pagina/classe, NON del namespace
-        Dim o As Object = Nothing
-        Try
-            o = CallByName(Me, "cityRegistry", CallType.Get)
-        Catch
-            o = Nothing
-        End Try
-
-        If o Is Nothing Then Return New DataSet()
-
-        Dim res As Object = CallByName(o, "GetCitiesFromPostcodeCode", CallType.Method, cap)
-        If TypeOf res Is DataSet Then Return DirectCast(res, DataSet)
-
-        Return New DataSet()
+        For Each item As CityRegistryAddressOption In LoadCityRegistryOptionsByCap(cap)
+            dt.Rows.Add(item.Citta)
+        Next
+        Return ds
     Catch ex As Exception
         LogEx(ex, "GetCitiesFromPostcodeCodeSafe")
-        Return New DataSet()
+        Return ds
     End Try
 End Function
 
 Private Function GetProvinceFromCitySafe(ByVal citta As String) As DataSet
+    Dim ds As New DataSet()
+    Dim dt As New DataTable()
+    dt.Columns.Add("abbreviation", GetType(String))
+    ds.Tables.Add(dt)
     Try
-        Dim o As Object = Nothing
-        Try
-            o = CallByName(Me, "cityRegistry", CallType.Get)
-        Catch
-            o = Nothing
-        End Try
-
-        If o Is Nothing Then Return New DataSet()
-
-        Dim res As Object = CallByName(o, "GetProvinceFromCity", CallType.Method, citta)
-        If TypeOf res Is DataSet Then Return DirectCast(res, DataSet)
-
-        Return New DataSet()
+        Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+            conn.Open()
+            Using cmd As New MySqlCommand("SELECT abbreviation_province FROM city_registry.cities WHERE name=@Citta ORDER BY abbreviation_province LIMIT 1", conn)
+                cmd.Parameters.AddWithValue("@Citta", CleanCartAddressInput(citta))
+                Dim value As Object = cmd.ExecuteScalar()
+                If value IsNot Nothing AndAlso value IsNot DBNull.Value Then dt.Rows.Add(value.ToString())
+            End Using
+        End Using
+        Return ds
     Catch ex As Exception
         LogEx(ex, "GetProvinceFromCitySafe")
-        Return New DataSet()
+        Return ds
     End Try
 End Function
 
