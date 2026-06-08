@@ -130,10 +130,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo ACCOUNT-PROFILE-NAME-FIELD-1C, merge PR #145, cleanup branch e preparazione fix carrello indirizzi:
+Stato di riferimento dopo merge PR #147, cleanup branch e hotfix live carrello indirizzi:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `c999ecd5e890b2e11bd05c204f2738492f086b07`
+- HEAD stabile: `5c4ec079528c8d0610a85d66ec766d266f1b6c3b`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -1366,6 +1366,8 @@ Stato finale post-cleanup warning:
 - `CART-ADDRESS-SELECTION-1B` estende la stessa PR #147 con UX carrello piu vicina a ONSUS: riferimento a `Public/assets/keepstore/shop-cart.html` e `checkout.html`, card indirizzo selezionato piu chiara, badge predefinito/manuale, micro-copy locale di controllo CAP/citta/provincia, trust box sobrie e riepilogo piu rassicurante.
 - Gli accorgimenti "AI-style" restano euristici locali: nessuna API esterna, nessun modello, nessun invio dati, nessuna modifica DB. Sono solo suggerimenti e micro-copy basati sui campi indirizzo gia presenti nella pagina.
 - Anche nell'estensione UX restano invariati gateway, pagamenti, costi, sconti, IVA, totali e flusso ordine.
+- `CART-ADDRESS-SELECTION-1D` corregge i residui emersi nello smoke live post-merge: stato selezione indirizzo reso visibile anche accanto alla dropdown, link gestione indirizzi reso diretto verso `/my-account-address.aspx`, pannello legacy inline destinazione escluso dal rendering della pagina carrello.
+- Il follow-up 1D resta confinato a UI/UX carrello e documentazione: nessuna modifica a gateway/pagamenti, costi, totali, DB/schema, SQL o flussi account gia chiusi.
 - Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
@@ -1390,7 +1392,7 @@ Task consigliato separato per eventuale proseguimento:
 2. Possibili candidati:
    - PASSWORD-HASH-SCHEMA-2B / PASSWORD-HASH-MIGRATION-2C: futuro task hash password; hash password non ancora implementato.
    - GESTIONALE-PASSWORD-AUDIT-1A / JANUS-PASSWORD-RESET-1A: audit gestionale Janus per reset/hash.
-   - CART-ADDRESS-SELECTION-1C: verifica PR #147 aggiornata e smoke live della selezione indirizzo carrello/UX ONSUS, senza pagamenti e senza invocare gateway.
+   - CART-ADDRESS-SELECTION-1D: verifica PR hotfix live carrello per badge selezione, link gestione indirizzi e pannello legacy disattivato, senza pagamenti e senza invocare gateway.
    - REGISTRATION-POLICY-1A / REGISTRATION-UX-1A: refinement residuo login/registrazione.
 3. Revocare/cambiare la password dell'utente MySQL temporaneo usato nello smoke, se ancora attivo.
 4. Eliminare eventuali variabili ambiente temporanee di smoke.

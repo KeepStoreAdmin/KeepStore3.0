@@ -980,6 +980,7 @@
                 <asp:Label ID="lblChooseShippingAddress" runat="server" AssociatedControlID="LstScegliIndirizzo" CssClass="body-text-3 fw-semibold" Text="Cambia indirizzo" />
                     <asp:DropDownList ID="LstScegliIndirizzo" runat="server" CssClass="form-select ks-form-select" AutoPostBack="true" OnSelectedIndexChanged="LstScegliIndirizzo_SelectedIndexChanged" />
                     <asp:Label ID="lblAddressSelectionMessage" runat="server" CssClass="body-text-3 text-main-2 d-block mt-2" EnableViewState="false" />
+                    <asp:Label ID="lblAddressSelectionInlineStatus" runat="server" CssClass="ks-address-inline-status" EnableViewState="false" />
             </div>
         </div>
         <div class="ks-info-card-grid ks-address-summary">
@@ -1020,13 +1021,14 @@
                 <span>Gli indirizzi si gestiscono dall'area account, senza usare pannelli legacy nel carrello.</span>
             </div>
         </div>
+        <p class="body-text-3 text-main-2 ks-address-account-copy">Per aggiungere o modificare indirizzi usa l'area account. Torna poi al carrello per scegliere la destinazione aggiornata.</p>
         <div class="ks-address-actions">
-            <div id="open1" runat="server"><a href="my-account-address.aspx" class="tf-btn btn-gray">Gestisci indirizzi</a></div>
-            <div id="open2" runat="server"><a href="my-account-address.aspx" class="tf-btn">Aggiungi indirizzo</a></div>
+            <div id="open1" runat="server"><a href="/my-account-address.aspx" class="tf-btn btn-gray" rel="nofollow">Gestisci indirizzi</a></div>
+            <div id="open2" runat="server"><a href="/my-account-address.aspx" class="tf-btn" rel="nofollow">Aggiungi o modifica indirizzi</a></div>
         </div>
         </asp:Panel>
-		<div id="panel" runat="server" ClientIDMode="Static">
-            <asp:Panel ID="PnlDestinazione" runat="server" Width="100%" Visible="True" GroupingText="Inserisci i dati"  CssClass="wrap ks-checkout-section ks-destination-section">
+		<div id="panel" runat="server" ClientIDMode="Static" style="display:none !important;" aria-hidden="true">
+            <asp:Panel ID="PnlDestinazione" runat="server" Width="100%" Visible="False" GroupingText="Inserisci i dati"  CssClass="wrap ks-checkout-section ks-destination-section" style="display:none !important;">
 							<h5 class="title fw-semibold">Gestisci destinazione</h5>
                 <p class="body-text-3 text-main-2 ks-section-help">Aggiungi o modifica l'indirizzo di consegna mantenendo i dati reali già salvati nel tuo account.</p>
                 <asp:ValidationSummary ID="vsDestinazione" runat="server" ValidationGroup="registrazione" CssClass="ks-validation-summary" HeaderText="Controlla i campi richiesti:" />
