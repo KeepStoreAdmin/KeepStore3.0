@@ -130,10 +130,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo ACCOUNT-PROFILE-NAME-FIELD-1C, merge PR #145 e cleanup branch:
+Stato di riferimento dopo ACCOUNT-PROFILE-NAME-FIELD-1C, merge PR #145, cleanup branch e preparazione fix carrello indirizzi:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `1fe259a44e9d9252a9733a4c721b13d933963d46`
+- HEAD stabile: `c999ecd5e890b2e11bd05c204f2738492f086b07`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -1358,8 +1358,14 @@ Stato finale post-cleanup warning:
 - `datiutente.aspx` resta legacy/compatibilita con tab/JS e gestione salvataggi/destinazioni non piu percorso operativo principale per indirizzi account.
 - `my-account-address.aspx` e stabile come pagina moderna autonoma per indirizzi account; add/edit sedi alternative e scelta predefinito sono verificati live.
 - Delete indirizzi resta da valutare solo con task dedicato.
-- La selezione manuale indirizzo nel carrello e il link "modifica indirizzo" del carrello restano debito separato: `CART-ADDRESS-SELECTION-1A`.
-- Stato noto carrello: propone correttamente il predefinito, ma la selezione manuale di un indirizzo diverso non aggiorna correttamente e "modifica indirizzo" nel carrello sballa la UI.
+- `CART-ADDRESS-SELECTION-1A` corregge il debito carrello indirizzi: la dropdown spedizione fa postback, la scelta manuale viene salvata in sessione per il flusso corrente, l'ID selezionato viene validato contro `UtenteId` e il rebind non deve piu sovrascrivere la scelta manuale con il predefinito.
+- Il default carrello resta `utentiindirizzi.Predefinito = 1` quando presente, con fallback all'indirizzo principale `utenti` se non ci sono sedi alternative predefinite.
+- Il riepilogo indirizzo spedizione viene aggiornato dalla scelta corrente; in caso di indirizzo non valido/non appartenente all'utente si torna al default sicuro con messaggio utente non tecnico.
+- La modifica inline legacy indirizzo nel carrello viene stabilizzata sostituendo le azioni rotte con link sicuri a `my-account-address.aspx`; la gestione add/edit indirizzi resta nella pagina account moderna.
+- Nessun gateway/pagamento, costo, totale, DB/schema o SQL viene modificato da `CART-ADDRESS-SELECTION-1A`.
+- `CART-ADDRESS-SELECTION-1B` estende la stessa PR #147 con UX carrello piu vicina a ONSUS: riferimento a `Public/assets/keepstore/shop-cart.html` e `checkout.html`, card indirizzo selezionato piu chiara, badge predefinito/manuale, micro-copy locale di controllo CAP/citta/provincia, trust box sobrie e riepilogo piu rassicurante.
+- Gli accorgimenti "AI-style" restano euristici locali: nessuna API esterna, nessun modello, nessun invio dati, nessuna modifica DB. Sono solo suggerimenti e micro-copy basati sui campi indirizzo gia presenti nella pagina.
+- Anche nell'estensione UX restano invariati gateway, pagamenti, costi, sconti, IVA, totali e flusso ordine.
 - Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
@@ -1384,7 +1390,7 @@ Task consigliato separato per eventuale proseguimento:
 2. Possibili candidati:
    - PASSWORD-HASH-SCHEMA-2B / PASSWORD-HASH-MIGRATION-2C: futuro task hash password; hash password non ancora implementato.
    - GESTIONALE-PASSWORD-AUDIT-1A / JANUS-PASSWORD-RESET-1A: audit gestionale Janus per reset/hash.
-   - CART-ADDRESS-SELECTION-1A: verifica/correzione selezione indirizzo carrello diversa dal predefinito e link modifica indirizzo che sballa la UI, senza toccare gateway/checkout salvo task dedicato.
+   - CART-ADDRESS-SELECTION-1C: verifica PR #147 aggiornata e smoke live della selezione indirizzo carrello/UX ONSUS, senza pagamenti e senza invocare gateway.
    - REGISTRATION-POLICY-1A / REGISTRATION-UX-1A: refinement residuo login/registrazione.
 3. Revocare/cambiare la password dell'utente MySQL temporaneo usato nello smoke, se ancora attivo.
 4. Eliminare eventuali variabili ambiente temporanee di smoke.

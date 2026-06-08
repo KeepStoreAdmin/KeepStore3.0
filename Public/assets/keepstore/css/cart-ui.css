@@ -175,6 +175,99 @@
     margin-bottom: .8rem;
 }
 
+.s-shoping-cart .ks-cart-trust-list,
+.ks-address-smart-notes{
+    display: grid;
+    gap: .65rem;
+    margin-top: 1rem;
+}
+
+.s-shoping-cart .ks-cart-trust-item,
+.ks-address-smart-note{
+    display: flex;
+    align-items: flex-start;
+    gap: .55rem;
+    padding: .75rem;
+    border: 1px solid rgba(0,0,0,.07);
+    border-radius: 8px;
+    background: rgba(0,0,0,.018);
+    color: rgba(0,0,0,.72);
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.s-shoping-cart .ks-cart-trust-item i,
+.ks-address-smart-note i{
+    flex: 0 0 auto;
+    color: #ff3d3d;
+    font-size: 18px;
+    line-height: 1;
+    margin-top: .05rem;
+}
+
+.ks-delivery-address-section .ks-address-header{
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.ks-delivery-address-section .ks-address-status-badge{
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: .35rem .65rem;
+    border-radius: 999px;
+    background: rgba(255,61,61,.1);
+    color: #c52222;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.ks-delivery-address-section .ks-address-picker-card{
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 380px);
+    gap: 1rem;
+    align-items: end;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 8px;
+    background: #fafafa;
+}
+
+.ks-delivery-address-section .ks-address-picker-copy,
+.ks-delivery-address-section .ks-address-picker-control{
+    display: grid;
+    gap: .35rem;
+}
+
+.ks-delivery-address-section .ks-address-picker-control .form-select{
+    width: 100%;
+}
+
+.ks-delivery-address-section .ks-address-summary{
+    margin-top: .35rem;
+}
+
+.ks-delivery-address-section .ks-address-summary .ks-info-card strong,
+.ks-delivery-address-section .ks-address-summary .ks-info-card span{
+    overflow-wrap: anywhere;
+}
+
+.ks-delivery-address-section .ks-address-actions{
+    display: flex;
+    flex-wrap: wrap;
+    gap: .65rem;
+    margin-top: 1rem;
+}
+
+.ks-delivery-address-section .ks-address-actions .tf-btn{
+    min-height: 42px;
+}
+
 /* Fine-tuning cart layout */
 .s-shoping-cart .ks-cart-form {
     margin-bottom: 0;
@@ -281,5 +374,26 @@
 
     .s-shoping-cart .ks-cart-meta .mx-2 {
         display: none;
+    }
+
+    .ks-delivery-address-section .ks-address-header,
+    .ks-delivery-address-section .ks-address-actions{
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ks-delivery-address-section .ks-address-status-badge{
+        width: fit-content;
+        white-space: normal;
+    }
+
+    .ks-delivery-address-section .ks-address-picker-card{
+        grid-template-columns: 1fr;
+        padding: .85rem;
+    }
+
+    .ks-delivery-address-section .ks-address-actions .tf-btn{
+        width: 100%;
+        justify-content: center;
     }
 }

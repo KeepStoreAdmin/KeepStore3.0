@@ -507,6 +507,20 @@
                                 <td align="right"><asp:Label ID="lblTotale" runat="server" Text="&#8364; 0,00" Font-Bold="true" CssClass="ks-total" ></asp:Label></td>
                             </tr>
                         </table>
+                        <div class="ks-cart-trust-list">
+                            <div class="ks-cart-trust-item">
+                                <i class="icon-shield"></i>
+                                <span>Pagamento sicuro nello step finale.</span>
+                            </div>
+                            <div class="ks-cart-trust-item">
+                                <i class="icon-shop-cart-2"></i>
+                                <span>Potrai ricontrollare spedizione, pagamento e note prima della conferma.</span>
+                            </div>
+                            <div class="ks-cart-trust-item">
+                                <i class="icon-delivery-2"></i>
+                                <span>Spese e totali restano calcolati dalle regole esistenti del carrello.</span>
+                            </div>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -953,32 +967,21 @@
         </asp:Panel>
     <asp:Panel ID="PnlSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap ks-checkout-section ks-delivery-address-section">
 							<h5 class="title fw-semibold">Indirizzo di spedizione</h5>
-        <table class="ks-info-table" cellspacing="5" border="0" style="border-bottom-style:solid;" width="100%">
-            <tr>
-                <td style="text-align:left;" class="carrello-td1-step4"><b>Indirizzi registrati:</b></td>
-                <td colspan="2" style="text-align:left;">
-                    <asp:DropDownList ID="LstScegliIndirizzo" runat="server" CssClass="form-select ks-form-select" />
-                </td>
-            </tr>
-            <tr>
-                <td style="text-align:left;"><b>Ragione Sociale / Cognome:&nbsp;</b></td>
-            </tr>
-                <td style="text-align:left;"><b>Nome:&nbsp;</b></td>
-            </tr>  
-            <tr>
-                <td style="text-align:left;"><b>Indirizzo:&nbsp;</b></td>
-                <td style="text-align:left;"><b>Città:&nbsp;</b></td>
-            </tr>
-            <tr>
-                <td style="text-align:left;"><b>Provincia:&nbsp;</b></td>
-                <td style="text-align:left;"><b>CAP:&nbsp;</b></td>
-            <tr>
-                <td style="text-align:left;"><b>Zona:&nbsp;</b></td>
-                <td style="text-align:left;"><b>Telefono:&nbsp;</b></td>
-                <td style="text-align:left;"><b>Nota destinazione:&nbsp;</b></td>
-            <tr>
-            <tr>
-        </table>
+        <div class="ks-address-header">
+            <asp:Label ID="lblAddressSelectionBadge" runat="server" CssClass="ks-address-status-badge" EnableViewState="false" />
+            <p class="body-text-3 text-main-2 ks-section-help">Scegli dove consegnare questo ordine. Puoi verificare tutti i dati prima della conferma.</p>
+        </div>
+        <div class="ks-address-picker-card">
+            <div class="ks-address-picker-copy">
+                <asp:Label ID="lblAddressSelectionHint" runat="server" CssClass="body-md-2 fw-semibold" EnableViewState="false" />
+                <span class="body-text-3 text-main-2">Controlla CAP, citt&agrave; e provincia per evitare ritardi nella consegna.</span>
+            </div>
+            <div class="ks-address-picker-control">
+                <asp:Label ID="lblChooseShippingAddress" runat="server" AssociatedControlID="LstScegliIndirizzo" CssClass="body-text-3 fw-semibold" Text="Cambia indirizzo" />
+                    <asp:DropDownList ID="LstScegliIndirizzo" runat="server" CssClass="form-select ks-form-select" AutoPostBack="true" OnSelectedIndexChanged="LstScegliIndirizzo_SelectedIndexChanged" />
+                    <asp:Label ID="lblAddressSelectionMessage" runat="server" CssClass="body-text-3 text-main-2 d-block mt-2" EnableViewState="false" />
+            </div>
+        </div>
         <div class="ks-info-card-grid ks-address-summary">
             <div class="ks-info-card ks-info-card-wide">
                 <span class="ks-info-label">Destinatario</span>
@@ -1003,9 +1006,23 @@
                 <strong><asp:Label ID="lblTab_NotaDestinazione" runat="server" /></strong>
             </div>
         </div>
+        <div class="ks-address-smart-notes">
+            <div class="ks-address-smart-note">
+                <i class="icon-delivery-2"></i>
+                <asp:Label ID="lblAddressQualityHint" runat="server" EnableViewState="false" />
+            </div>
+            <div class="ks-address-smart-note">
+                <i class="icon-shield"></i>
+                <span>Pagamento sicuro nel passaggio finale, dopo il controllo dei dati ordine.</span>
+            </div>
+            <div class="ks-address-smart-note">
+                <i class="icon-user"></i>
+                <span>Gli indirizzi si gestiscono dall'area account, senza usare pannelli legacy nel carrello.</span>
+            </div>
+        </div>
         <div class="ks-address-actions">
-            <div id="open1" runat="server"><a href="#" class="tf-btn btn-gray">Modifica indirizzo</a></div>
-            <div id="open2" runat="server"><a href="#" class="tf-btn">Nuova destinazione</a></div>
+            <div id="open1" runat="server"><a href="my-account-address.aspx" class="tf-btn btn-gray">Gestisci indirizzi</a></div>
+            <div id="open2" runat="server"><a href="my-account-address.aspx" class="tf-btn">Aggiungi indirizzo</a></div>
         </div>
         </asp:Panel>
 		<div id="panel" runat="server" ClientIDMode="Static">

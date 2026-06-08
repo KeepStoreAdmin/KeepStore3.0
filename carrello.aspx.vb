@@ -1,6 +1,7 @@
 ﻿Imports System
 Imports System.Data
 Imports System.Configuration
+Imports System.Collections.Generic
 Imports System.Globalization
 Imports MySql.Data.MySqlClient
 Imports System.Web.UI
@@ -405,6 +406,8 @@ Private Const SessListino_B As String = "listino"
 
 Private Const SessLoginId_A As String = "LoginId"
 Private Const SessLoginId_B As String = "LOGINID"
+Private Const SessCartShippingAddress As String = "SCEGLIINDIRIZZO"
+Private Const SessCartShippingAddressManual As String = "CART_SELECTED_ADDRESS_IS_MANUAL"
 
     Private Function GetSessionInt(ByVal key As String, Optional ByVal def As Integer = 0) As Integer
     Try
@@ -431,6 +434,63 @@ Private Const SessLoginId_B As String = "LOGINID"
 
     Return If(id > 0, id, defaultVal)
     End Function
+
+    Private Function GetCartShippingAddressIsManual() As Boolean
+        Return GetSessionInt(SessCartShippingAddressManual, 0) = 1
+    End Function
+
+    Private Sub SetCartShippingAddressIsManual(ByVal isManual As Boolean)
+        Session(SessCartShippingAddressManual) = If(isManual, 1, 0)
+    End Sub
+
+    Private Function GetCartShippingAddressId() As Integer
+        Return GetSessionInt(SessCartShippingAddress, 0)
+    End Function
+
+    Private Sub SetCartShippingAddressId(ByVal addressId As Integer)
+        If addressId > 0 Then
+            Session(SessCartShippingAddress) = addressId
+        Else
+            Session(SessCartShippingAddress) = Nothing
+        End If
+    End Sub
+
+    Private Function DbText(ByVal value As Object) As String
+        If value Is Nothing OrElse value Is DBNull.Value Then Return ""
+        Return value.ToString()
+    End Function
+
+    Private Sub SetAddressSelectionMessage(ByVal message As String)
+        If lblAddressSelectionMessage IsNot Nothing Then
+            lblAddressSelectionMessage.Text = message
+        End If
+    End Sub
+
+    Private Sub SetShippingAddressUxState(ByVal badgeText As String, ByVal hintText As String)
+        If lblAddressSelectionBadge IsNot Nothing Then lblAddressSelectionBadge.Text = badgeText
+        If lblAddressSelectionHint IsNot Nothing Then lblAddressSelectionHint.Text = hintText
+        UpdateShippingAddressQualityHint()
+    End Sub
+
+    Private Function IsBlankLabel(ByVal label As Label) As Boolean
+        If label Is Nothing Then Return True
+        Return label.Text.Trim() = ""
+    End Function
+
+    Private Sub UpdateShippingAddressQualityHint()
+        If lblAddressQualityHint Is Nothing Then Return
+
+        Dim missing As New List(Of String)
+        If IsBlankLabel(lblTab_CapSpedizione) Then missing.Add("CAP")
+        If IsBlankLabel(lblTab_CittaSpedizione) Then missing.Add("citta")
+        If IsBlankLabel(lblTab_ProvinciaSpedizione) Then missing.Add("provincia")
+
+        If missing.Count > 0 Then
+            lblAddressQualityHint.Text = "Suggerimento: completa " & String.Join(", ", missing.ToArray()) & " prima di confermare l'ordine."
+        Else
+            lblAddressQualityHint.Text = "Pronto per il checkout: i dati principali dell'indirizzo sono presenti."
+        End If
+    End Sub
 
     Private Function GetLoginIdSafe(Optional ByVal defaultVal As Integer = 0) As Integer
     Dim id As Integer = GetSessionInt(SessLoginId_A, 0)
@@ -578,7 +638,7 @@ Private Const SessLoginId_B As String = "LOGINID"
 
     Me.pnlFatturazione.Visible = isLogged
     Me.PnlSpedizione.Visible = isLogged
-    Me.PnlDestinazione.Visible = isLogged
+    Me.PnlDestinazione.Visible = False
     Me.Panel_Note.Visible = isLogged
 
     If Not Page.IsPostBack Then
@@ -595,6 +655,7 @@ Private Const SessLoginId_B As String = "LOGINID"
             FillTableInfo()
         End If
     End If
+    StabilizeCartAddressEditUi()
     End Sub
 
     Private Sub ConfigureCartDataSources()
@@ -693,7 +754,7 @@ Private Const SessLoginId_B As String = "LOGINID"
         If LoginId > 0 Then
             Me.pnlFatturazione.Visible = True
 			Me.PnlSpedizione.Visible = True
-			Me.PnlDestinazione.Visible = True
+			Me.PnlDestinazione.Visible = False
             Me.Panel_Note.Visible = True
         Else
             Me.pnlFatturazione.Visible = False
@@ -701,6 +762,7 @@ Private Const SessLoginId_B As String = "LOGINID"
             Me.PnlDestinazione.Visible = False
             Me.Panel_Note.Visible = False
         End If
+        StabilizeCartAddressEditUi()
 		
 		
 		REM Me.Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "prova", "<script type='text/javascript'>document.body.onload=function(){alert('" & Me.sdsArticoli.SelectCommand.Replace("'", """").ToUpper & "')}</script>")
@@ -1322,6 +1384,8 @@ End Sub
             LstScegliIndirizzo.DataValueField = "ID"
             LstScegliIndirizzo.DataTextField = "CAMPO"
             LstScegliIndirizzo.DataBind()
+            LstScegliIndirizzo.Items.Insert(0, New ListItem("Indirizzo principale", "0"))
+            ApplyCurrentShippingAddress()
 
         Catch ex As Exception
         LogEx(ex, "SendOrder")
@@ -1377,6 +1441,154 @@ End Sub
         End Try
 
     End Function
+
+    Private Function ShippingAddressBelongsToCurrentUser(ByVal addressId As Integer) As Boolean
+        Dim utentiId As Integer = GetUtentiIdSafe(0)
+        If addressId <= 0 OrElse utentiId <= 0 Then Return False
+
+        Try
+            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                conn.Open()
+                Using cmd As New MySqlCommand("SELECT COUNT(*) FROM utentiindirizzi WHERE Id=@Id AND UtenteId=@UtentiId", conn)
+                    cmd.CommandType = CommandType.Text
+                    cmd.Parameters.AddWithValue("@Id", addressId)
+                    cmd.Parameters.AddWithValue("@UtentiId", utentiId)
+                    Dim countValue As Object = cmd.ExecuteScalar()
+                    Return Convert.ToInt32(countValue) > 0
+                End Using
+            End Using
+        Catch ex As Exception
+            LogEx(ex, "ShippingAddressBelongsToCurrentUser")
+            Return False
+        End Try
+    End Function
+
+    Private Sub SelectShippingAddressListValue(ByVal addressId As Integer)
+        If LstScegliIndirizzo Is Nothing OrElse LstScegliIndirizzo.Items.Count = 0 Then Return
+
+        Dim value As String = addressId.ToString()
+        If LstScegliIndirizzo.Items.FindByValue(value) IsNot Nothing Then
+            LstScegliIndirizzo.ClearSelection()
+            LstScegliIndirizzo.SelectedValue = value
+        End If
+    End Sub
+
+    Private Sub ClearShippingAddressSummary()
+        lblTab_RagioneSocialeSpedizione.Text = ""
+        lblTab_NomeSpedizione.Text = ""
+        lblTab_IndirizzoSpedizione.Text = ""
+        lblTab_CittaSpedizione.Text = ""
+        lblTab_CapSpedizione.Text = ""
+        lblTab_ProvinciaSpedizione.Text = ""
+        lblTab_ZonaSpedizione.Text = ""
+        lblTab_TelSpedizione.Text = ""
+        lblTab_NotaDestinazione.Text = ""
+    End Sub
+
+    Private Sub FillMainShippingAddressSummary()
+        Dim utentiId As Integer = GetUtentiIdSafe(0)
+        If utentiId <= 0 Then
+            ClearShippingAddressSummary()
+            Return
+        End If
+
+        Try
+            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                conn.Open()
+                Using cmd As New MySqlCommand("SELECT RagioneSociale, CognomeNome, Indirizzo, Cap, Citta, Provincia, Telefono, Cellulare FROM utenti WHERE Id=@Id", conn)
+                    cmd.CommandType = CommandType.Text
+                    cmd.Parameters.AddWithValue("@Id", utentiId)
+                    Using dr As MySqlDataReader = cmd.ExecuteReader()
+                        If dr.Read() Then
+                            Dim telefono As String = DbText(dr("Cellulare"))
+                            If telefono = "" Then telefono = DbText(dr("Telefono"))
+
+                            lblTab_RagioneSocialeSpedizione.Text = DbText(dr("RagioneSociale"))
+                            lblTab_NomeSpedizione.Text = DbText(dr("CognomeNome"))
+                            lblTab_IndirizzoSpedizione.Text = DbText(dr("Indirizzo"))
+                            lblTab_CapSpedizione.Text = DbText(dr("Cap"))
+                            lblTab_CittaSpedizione.Text = DbText(dr("Citta"))
+                            lblTab_ProvinciaSpedizione.Text = DbText(dr("Provincia"))
+                            lblTab_ZonaSpedizione.Text = ""
+                            lblTab_TelSpedizione.Text = telefono
+                            lblTab_NotaDestinazione.Text = ""
+                        Else
+                            ClearShippingAddressSummary()
+                        End If
+                    End Using
+                End Using
+            End Using
+        Catch ex As Exception
+            LogEx(ex, "FillMainShippingAddressSummary")
+            ClearShippingAddressSummary()
+        End Try
+    End Sub
+
+    Private Sub ApplyAlternativeShippingAddress(ByVal addressId As Integer, ByVal isManual As Boolean)
+        If Not ShippingAddressBelongsToCurrentUser(addressId) Then
+            ApplyDefaultShippingAddress()
+            Return
+        End If
+
+        SetCartShippingAddressId(addressId)
+        SetCartShippingAddressIsManual(isManual)
+        SelectShippingAddressListValue(addressId)
+        compila_campi_destinazione_alternativa_o_indirizzo_spedizione(addressId, Lst.indirizzoSpedizione)
+        If isManual Then
+            SetShippingAddressUxState("Selezionato per questo ordine", "Stai usando un indirizzo scelto manualmente per il checkout corrente.")
+        Else
+            SetShippingAddressUxState("Predefinito", "Indirizzo consigliato: predefinito salvato nella tua area account.")
+        End If
+    End Sub
+
+    Private Sub ApplyMainShippingAddress(ByVal isManual As Boolean)
+        SetCartShippingAddressId(0)
+        SetCartShippingAddressIsManual(isManual)
+        SelectShippingAddressListValue(0)
+        FillMainShippingAddressSummary()
+        If isManual Then
+            SetShippingAddressUxState("Selezionato per questo ordine", "Stai usando l'indirizzo principale per il checkout corrente.")
+        Else
+            SetShippingAddressUxState("Indirizzo principale", "Non risulta una sede alternativa predefinita: useremo l'indirizzo principale.")
+        End If
+    End Sub
+
+    Private Sub ApplyDefaultShippingAddress()
+        Dim prefId As Integer = calcola_indirizzo_spedizione_predefinito()
+        If prefId > 0 AndAlso ShippingAddressBelongsToCurrentUser(prefId) Then
+            ApplyAlternativeShippingAddress(prefId, False)
+        Else
+            ApplyMainShippingAddress(False)
+        End If
+    End Sub
+
+    Private Sub ApplyCurrentShippingAddress()
+        If GetCartShippingAddressIsManual() Then
+            Dim selectedId As Integer = GetCartShippingAddressId()
+            If selectedId > 0 Then
+                If ShippingAddressBelongsToCurrentUser(selectedId) Then
+                    ApplyAlternativeShippingAddress(selectedId, True)
+                Else
+                    SetCartShippingAddressIsManual(False)
+                    ApplyDefaultShippingAddress()
+                    SetAddressSelectionMessage("Indirizzo selezionato non disponibile. Abbiamo ripristinato l'indirizzo predefinito.")
+                End If
+            Else
+                ApplyMainShippingAddress(True)
+            End If
+        Else
+            ApplyDefaultShippingAddress()
+        End If
+    End Sub
+
+    Private Sub StabilizeCartAddressEditUi()
+        If open1 IsNot Nothing Then open1.Style.Item("display") = ""
+        If open2 IsNot Nothing Then open2.Style.Item("display") = ""
+        If panel IsNot Nothing Then panel.Style.Item("display") = "none"
+        If PnlDestinazione IsNot Nothing Then PnlDestinazione.Visible = False
+        If CHKPREDEFINITO IsNot Nothing Then CHKPREDEFINITO.Visible = False
+        Session("cityBinding") = 0
+    End Sub
 
     Public Sub FillTableInfo()
 
@@ -1514,63 +1726,35 @@ End Sub
 
     Protected Sub LstScegliIndirizzo_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles LstScegliIndirizzo.PreRender
 
-    Dim selectedId As Integer = 0
+    If LstScegliIndirizzo IsNot Nothing AndAlso LstScegliIndirizzo.Items.Count > 0 Then
+        ApplyCurrentShippingAddress()
+    Else
+        ApplyMainShippingAddress(False)
+    End If
 
-    If LstScegliIndirizzo.Items.Count > 0 Then
+    StabilizeCartAddressEditUi()
 
-        ' Se non selezionato, provo a impostare il predefinito (senza generare eccezioni se non esiste in lista)
-        If Val(LstScegliIndirizzo.SelectedValue) <= 0 Then
-            Dim prefId As Integer = calcola_indirizzo_spedizione_predefinito()
-            If prefId > 0 AndAlso LstScegliIndirizzo.Items.FindByValue(prefId.ToString()) IsNot Nothing Then
-                LstScegliIndirizzo.SelectedValue = prefId.ToString()
-            Else
-                LstScegliIndirizzo.SelectedIndex = 0
-            End If
-        End If
+    End Sub
 
-        Integer.TryParse(LstScegliIndirizzo.SelectedValue, selectedId)
+    Protected Sub LstScegliIndirizzo_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs)
+        Dim selectedId As Integer = 0
+        Integer.TryParse(If(LstScegliIndirizzo IsNot Nothing, LstScegliIndirizzo.SelectedValue, "0"), selectedId)
 
-        ' Compilo tab spedizione (se ho un ID valido)
         If selectedId > 0 Then
-            compila_campi_destinazione_alternativa_o_indirizzo_spedizione(selectedId, Lst.indirizzoSpedizione)
+            If ShippingAddressBelongsToCurrentUser(selectedId) Then
+                ApplyAlternativeShippingAddress(selectedId, True)
+                SetAddressSelectionMessage("Indirizzo di spedizione aggiornato.")
+            Else
+                SetCartShippingAddressIsManual(False)
+                ApplyDefaultShippingAddress()
+                SetAddressSelectionMessage("Indirizzo selezionato non disponibile. Abbiamo ripristinato l'indirizzo predefinito.")
+            End If
+        Else
+            ApplyMainShippingAddress(True)
+            SetAddressSelectionMessage("Indirizzo di spedizione aggiornato.")
         End If
 
-        Me.CHKPREDEFINITO.Visible = True
-    Else
-        Me.CHKPREDEFINITO.Visible = False
-    End If
-
-    ' FIX: SelectedItem puÃ² essere Nothing se Items.Count=0
-    Session("SCEGLIINDIRIZZO") = selectedId
-
-    Dim cityBinding As Integer = 0
-    If Session("cityBinding") IsNot Nothing Then Integer.TryParse(Session("cityBinding").ToString(), cityBinding)
-
-    If cityBinding <> 1 Then
-        open1.Style.Item("display") = ""
-        open2.Style.Item("display") = ""
-        panel.Style.Item("display") = "none"
-
-        ' Mantengo la logica originale: aggiorno campi destinazione alternatica coerenti con selezione
-        compila_campi_destinazione_alternativa_o_indirizzo_spedizione(selectedId, Lst.destinazioneAlternativa)
-    Else
-        open1.Style.Item("display") = "none"
-        open2.Style.Item("display") = "none"
-        panel.Style.Item("display") = ""
-
-        If insOmod.Value = "mod" Then
-            btnModDest.Style.Item("display") = ""
-            btnElimDest.Style.Item("display") = "none"
-            btnSalvaDest.Style.Item("display") = "none"
-        ElseIf insOmod.Value = "ins" Then
-            btnModDest.Style.Item("display") = "none"
-            btnElimDest.Style.Item("display") = "none"
-            btnSalvaDest.Style.Item("display") = ""
-        End If
-
-        Session("cityBinding") = 0
-    End If
-
+        StabilizeCartAddressEditUi()
     End Sub
 	
     Protected Sub LstDestinazione_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles LstDestinazione.PreRender
@@ -2362,6 +2546,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
         FillTableInfo()
 
         BindLstDestinazioneLstScegliIndirizzo
+        ApplyCurrentShippingAddress()
 
         'Me.LblDescrDest.Text = "Destinazione predefinita: " & vbCrLf & Me.getIndirizzoPrincipale
 
@@ -3420,6 +3605,7 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
     Try
         LeggiVettori()
         Aggiorna_Prezzi_Carrello()
+        ApplyCurrentShippingAddress()
 
         If (controlla_articoli_quantita_zero() = 1) Then
 
