@@ -97,7 +97,7 @@
                         <span class="icon">
                             <i class="icon-shop-cart-3"></i>
                         </span>
-                        <span class="link-secondary body-text-3">Conferma</span>
+                        <span class="<%= CheckoutStepTextClass(3) %>" <%= CheckoutStepAria(3) %>>Conferma</span>
                     </div>
                 </div>
             </div>
@@ -1052,16 +1052,20 @@
                 </div>
                 <div class="ks-form-field">
                     <label for="<%= tbCartCapA.ClientID %>">CAP</label>
-                    <asp:TextBox ID="tbCartCapA" runat="server" CssClass="form-control ks-form-control" MaxLength="10" />
+                    <asp:TextBox ID="tbCartCapA" runat="server" CssClass="form-control ks-form-control" MaxLength="5" AutoPostBack="true" OnTextChanged="tbCartCapA_TextChanged" />
                 </div>
                 <div class="ks-form-field">
                     <label for="<%= tbCartCittaA.ClientID %>">Citta *</label>
-                    <asp:TextBox ID="tbCartCittaA" runat="server" CssClass="form-control ks-form-control" MaxLength="80" />
+                    <asp:TextBox ID="tbCartCittaA" runat="server" CssClass="form-control ks-form-control" MaxLength="80" ReadOnly="true" />
+                    <asp:DropDownList ID="ddlCartCittaA" runat="server" CssClass="form-select ks-form-select ks-cart-city-select" Visible="false" AutoPostBack="true" OnSelectedIndexChanged="ddlCartCittaA_SelectedIndexChanged" />
                 </div>
                 <div class="ks-form-field">
                     <label for="<%= tbCartProvinciaA.ClientID %>">Provincia</label>
-                    <asp:TextBox ID="tbCartProvinciaA" runat="server" CssClass="form-control ks-form-control" MaxLength="10" />
+                    <asp:TextBox ID="tbCartProvinciaA" runat="server" CssClass="form-control ks-form-control" MaxLength="10" ReadOnly="true" />
                 </div>
+                <asp:HiddenField ID="hfCartResolvedCap" runat="server" />
+                <asp:HiddenField ID="hfCartResolvedCity" runat="server" />
+                <asp:HiddenField ID="hfCartResolvedProvince" runat="server" />
                 <div class="ks-form-field">
                     <label for="<%= tbCartZona.ClientID %>">Zona</label>
                     <asp:TextBox ID="tbCartZona" runat="server" CssClass="form-control ks-form-control" MaxLength="100" />
@@ -1195,21 +1199,69 @@
         <div class="wrap ks-checkout-section ks-confirm-section">
             <div class="ks-confirm-copy">
                 <h5 class="title fw-semibold">Conferma ordine</h5>
-                <p class="body-text-3 text-main-2">Controlla spedizione, pagamento e riepilogo prima di inviare l'ordine. Se non hai effettuato l'accesso, potrai preparare il carrello ma dovrai accedere per completare l'invio.</p>
+                <p class="body-text-3 text-main-2">Controlla spedizione e pagamento prima del riepilogo finale. Il pagamento parte solo dal passaggio di conferma.</p>
             </div>
             <div class="ks-checkout-actions">
                 <asp:LinkButton Visible="False" CausesValidation="false" ID="btSalvaPreventivo" runat="server" CssClass="tf-btn btn-gray" OnClientClick="javascript:visualizza_spinner_caricamento();">SALVA PREVENTIVO</asp:LinkButton>
+                <asp:LinkButton CausesValidation="false" ID="btnVaiConfermaOrdine" runat="server" CssClass="tf-btn" OnClick="btnVaiConfermaOrdine_Click">Rivedi e conferma</asp:LinkButton>
+            </div>
+        </div>
+        <asp:Panel ID="pnlCheckoutConfirm" runat="server" Visible="false" CssClass="wrap ks-checkout-section ks-final-confirm-section">
+            <div class="ks-confirm-copy">
+                <h5 class="title fw-semibold">Riepilogo finale</h5>
+                <p class="body-text-3 text-main-2">Verifica indirizzo, spedizione, pagamento, note e importi prima di confermare. Nessun pagamento viene avviato prima di questo pulsante finale.</p>
+            </div>
+            <div class="ks-final-confirm-grid">
+                <div class="ks-final-confirm-card">
+                    <span class="ks-info-label">Fatturazione</span>
+                    <strong><asp:Label ID="lblConfirmBillingName" runat="server" /></strong>
+                    <span><asp:Label ID="lblConfirmBillingAddress" runat="server" /></span>
+                </div>
+                <div class="ks-final-confirm-card">
+                    <span class="ks-info-label">Spedizione</span>
+                    <strong><asp:Label ID="lblConfirmShippingName" runat="server" /></strong>
+                    <span><asp:Label ID="lblConfirmShippingAddress" runat="server" /></span>
+                </div>
+                <div class="ks-final-confirm-card">
+                    <span class="ks-info-label">Metodo di consegna</span>
+                    <strong><asp:Label ID="lblConfirmShippingMethod" runat="server" /></strong>
+                </div>
+                <div class="ks-final-confirm-card">
+                    <span class="ks-info-label">Pagamento</span>
+                    <strong><asp:Label ID="lblConfirmPaymentMethod" runat="server" /></strong>
+                </div>
+                <div class="ks-final-confirm-card ks-final-confirm-card-wide">
+                    <span class="ks-info-label">Note</span>
+                    <strong><asp:Label ID="lblConfirmNotes" runat="server" /></strong>
+                </div>
+                <div class="ks-final-confirm-card">
+                    <span class="ks-info-label">Totale ordine</span>
+                    <strong><asp:Label ID="lblConfirmTotal" runat="server" /></strong>
+                </div>
+            </div>
+            <div class="ks-address-smart-notes">
+                <div class="ks-address-smart-note">
+                    <i class="icon-shield"></i>
+                    <span>Pagamento sicuro: l'invio parte solo dopo questa conferma finale.</span>
+                </div>
+                <div class="ks-address-smart-note">
+                    <i class="icon-delivery-2"></i>
+                    <span>Per modificare spedizione o pagamento torna al passaggio precedente.</span>
+                </div>
+            </div>
+            <div class="ks-checkout-actions">
+                <asp:LinkButton CausesValidation="false" ID="btnModificaCheckout" runat="server" CssClass="tf-btn btn-gray" OnClick="btnModificaCheckout_Click">Modifica spedizione e pagamento</asp:LinkButton>
                 <%if Session("DESTINAZIONEALTERNATIVA")=0 then %>
-                    <asp:LinkButton CausesValidation="false" ID="btInviaOrdine" runat="server" CssClass="tf-btn" OnClientClick="javascript:visualizza_spinner_caricamento();">CONFERMA ORDINE</asp:LinkButton>
+                    <asp:LinkButton CausesValidation="false" ID="btInviaOrdine" runat="server" CssClass="tf-btn" OnClientClick="javascript:visualizza_spinner_caricamento();">Conferma ordine e procedi al pagamento</asp:LinkButton>
                 <%else%>
-                    <span class="tf-btn btn-gray" style="pointer-events:none;opacity:.6;">CONFERMA ORDINE</span>
+                    <span class="tf-btn btn-gray" style="pointer-events:none;opacity:.6;">Conferma ordine e procedi al pagamento</span>
                 <%end if%>
             </div>
             <div id="spinner_caricamento" style="text-align:center;display:none;padding-top:5px;padding-bottom:5px;">
                 <div class="ks-inline-loader-text"><b>ATTENDERE L'INVIO AI NOSTRI SERVER</b></div>
                 <span class="ks-inline-loader" role="status" aria-label="Invio in corso"></span>
             </div>
-        </div>
+        </asp:Panel>
 </asp:Panel>
     <% If tOrdine IsNot Nothing AndAlso tOrdine.Visible Then %>
                 </div>

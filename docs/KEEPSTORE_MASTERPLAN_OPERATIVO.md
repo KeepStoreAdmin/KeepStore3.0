@@ -1374,6 +1374,13 @@ Stato finale post-cleanup warning:
 - `CART-INLINE-ADDRESS-PAYPAL-RETURN-1A` introduce il passo successivo: add/edit indirizzi alternativi inline nel carrello, link area account solo secondario, euristiche locali di qualita indirizzo, audit statico del ritorno PayPal post-pagamento e continuita chat nel masterplan.
 - Diagnosi PayPal del task 1A: il CTA problematico "Torna indietro" e nel nostro `documentidettaglio.aspx` come `javascript:history.back()`; non appartiene al gateway PayPal. Va sostituito con destinazioni sicure senza modificare credenziali, importi, cattura pagamento o stato gateway.
 - `CART-INLINE-ADDRESS-PAYPAL-RETURN-1A` non modifica DB/schema/SQL, gateway core, importi gateway, calcoli prezzi, sconti, spedizione, IVA o totali documento.
+- `CART-INLINE-ADDRESS-CITYREGISTRY-STEP-1A` si e fermato con Esito B per assenza dello schema completo del DB separato `city_registry` nel dump locale `Database Taikun/KeepStore.sql`; nessun codice e stato modificato in quel passaggio.
+- `CART-INLINE-ADDRESS-CITYREGISTRY-STEP-1B` riprende con schema reale `city_registry` fornito da dump separato e verificato in sola lettura: tabelle `cities`, `postcode_codes`, `provinces`, `countries` e campi CAP/citta/provincia richiesti risultano disponibili alla connessione applicativa.
+- Il carrello ora usa lookup server-side parametrizzato su `city_registry.postcode_codes`, `city_registry.cities` e `city_registry.provinces` per guidare CAP -> citta/provincia nel form add/edit indirizzo inline; citta e provincia restano non editabili manualmente quando risolte dal CAP.
+- Se un CAP corrisponde a piu citta, il form mostra una dropdown e il salvataggio richiede una scelta coerente; se il CAP non e riconosciuto, il salvataggio viene bloccato con messaggio utente non tecnico.
+- Durante add/edit indirizzo inline, le azioni non pertinenti del carrello/checkout vengono bloccate lato UI e lato server finche l'utente salva o annulla.
+- Il checkout carrello introduce un vero step finale `Conferma`: il pulsante nella fase spedizione/pagamento porta prima al riepilogo finale, mentre l'avvio del flusso ordine/gateway resta consentito solo dal pulsante finale nello step `Conferma`.
+- `CART-INLINE-ADDRESS-CITYREGISTRY-STEP-1B` non modifica DB/schema/SQL, gateway core, importi gateway, calcoli prezzi, sconti, spedizione, IVA, totali documento, login/reset/password o area account chiusa.
 - Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
