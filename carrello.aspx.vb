@@ -1,6 +1,7 @@
 ﻿Imports System
 Imports System.Data
 Imports System.Configuration
+Imports System.Collections.Generic
 Imports System.Globalization
 Imports MySql.Data.MySqlClient
 Imports System.Web.UI
@@ -462,6 +463,32 @@ Private Const SessCartShippingAddressManual As String = "CART_SELECTED_ADDRESS_I
     Private Sub SetAddressSelectionMessage(ByVal message As String)
         If lblAddressSelectionMessage IsNot Nothing Then
             lblAddressSelectionMessage.Text = message
+        End If
+    End Sub
+
+    Private Sub SetShippingAddressUxState(ByVal badgeText As String, ByVal hintText As String)
+        If lblAddressSelectionBadge IsNot Nothing Then lblAddressSelectionBadge.Text = badgeText
+        If lblAddressSelectionHint IsNot Nothing Then lblAddressSelectionHint.Text = hintText
+        UpdateShippingAddressQualityHint()
+    End Sub
+
+    Private Function IsBlankLabel(ByVal label As Label) As Boolean
+        If label Is Nothing Then Return True
+        Return label.Text.Trim() = ""
+    End Function
+
+    Private Sub UpdateShippingAddressQualityHint()
+        If lblAddressQualityHint Is Nothing Then Return
+
+        Dim missing As New List(Of String)
+        If IsBlankLabel(lblTab_CapSpedizione) Then missing.Add("CAP")
+        If IsBlankLabel(lblTab_CittaSpedizione) Then missing.Add("citta")
+        If IsBlankLabel(lblTab_ProvinciaSpedizione) Then missing.Add("provincia")
+
+        If missing.Count > 0 Then
+            lblAddressQualityHint.Text = "Suggerimento: completa " & String.Join(", ", missing.ToArray()) & " prima di confermare l'ordine."
+        Else
+            lblAddressQualityHint.Text = "Pronto per il checkout: i dati principali dell'indirizzo sono presenti."
         End If
     End Sub
 
@@ -1507,6 +1534,11 @@ End Sub
         SetCartShippingAddressIsManual(isManual)
         SelectShippingAddressListValue(addressId)
         compila_campi_destinazione_alternativa_o_indirizzo_spedizione(addressId, Lst.indirizzoSpedizione)
+        If isManual Then
+            SetShippingAddressUxState("Selezionato per questo ordine", "Stai usando un indirizzo scelto manualmente per il checkout corrente.")
+        Else
+            SetShippingAddressUxState("Predefinito", "Indirizzo consigliato: predefinito salvato nella tua area account.")
+        End If
     End Sub
 
     Private Sub ApplyMainShippingAddress(ByVal isManual As Boolean)
@@ -1514,6 +1546,11 @@ End Sub
         SetCartShippingAddressIsManual(isManual)
         SelectShippingAddressListValue(0)
         FillMainShippingAddressSummary()
+        If isManual Then
+            SetShippingAddressUxState("Selezionato per questo ordine", "Stai usando l'indirizzo principale per il checkout corrente.")
+        Else
+            SetShippingAddressUxState("Indirizzo principale", "Non risulta una sede alternativa predefinita: useremo l'indirizzo principale.")
+        End If
     End Sub
 
     Private Sub ApplyDefaultShippingAddress()

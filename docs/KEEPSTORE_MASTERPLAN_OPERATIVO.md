@@ -1363,6 +1363,9 @@ Stato finale post-cleanup warning:
 - Il riepilogo indirizzo spedizione viene aggiornato dalla scelta corrente; in caso di indirizzo non valido/non appartenente all'utente si torna al default sicuro con messaggio utente non tecnico.
 - La modifica inline legacy indirizzo nel carrello viene stabilizzata sostituendo le azioni rotte con link sicuri a `my-account-address.aspx`; la gestione add/edit indirizzi resta nella pagina account moderna.
 - Nessun gateway/pagamento, costo, totale, DB/schema o SQL viene modificato da `CART-ADDRESS-SELECTION-1A`.
+- `CART-ADDRESS-SELECTION-1B` estende la stessa PR #147 con UX carrello piu vicina a ONSUS: riferimento a `Public/assets/keepstore/shop-cart.html` e `checkout.html`, card indirizzo selezionato piu chiara, badge predefinito/manuale, micro-copy locale di controllo CAP/citta/provincia, trust box sobrie e riepilogo piu rassicurante.
+- Gli accorgimenti "AI-style" restano euristici locali: nessuna API esterna, nessun modello, nessun invio dati, nessuna modifica DB. Sono solo suggerimenti e micro-copy basati sui campi indirizzo gia presenti nella pagina.
+- Anche nell'estensione UX restano invariati gateway, pagamenti, costi, sconti, IVA, totali e flusso ordine.
 - Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
@@ -1387,7 +1390,7 @@ Task consigliato separato per eventuale proseguimento:
 2. Possibili candidati:
    - PASSWORD-HASH-SCHEMA-2B / PASSWORD-HASH-MIGRATION-2C: futuro task hash password; hash password non ancora implementato.
    - GESTIONALE-PASSWORD-AUDIT-1A / JANUS-PASSWORD-RESET-1A: audit gestionale Janus per reset/hash.
-   - CART-ADDRESS-SELECTION-1B: verifica PR e smoke live della selezione indirizzo carrello, senza pagamenti e senza invocare gateway.
+   - CART-ADDRESS-SELECTION-1C: verifica PR #147 aggiornata e smoke live della selezione indirizzo carrello/UX ONSUS, senza pagamenti e senza invocare gateway.
    - REGISTRATION-POLICY-1A / REGISTRATION-UX-1A: refinement residuo login/registrazione.
 3. Revocare/cambiare la password dell'utente MySQL temporaneo usato nello smoke, se ancora attivo.
 4. Eliminare eventuali variabili ambiente temporanee di smoke.
