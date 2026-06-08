@@ -1,6 +1,6 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-06-08
+Aggiornato: 2026-06-09
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
@@ -51,7 +51,7 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ### Ripartenza rapida in nuova chat
 
-- In caso di chat satura o bloccata, aprire una nuova chat e scrivere: "Leggi `docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md` e riparti dall'ultimo HEAD stabile, seguendo il metodo ChatGPT + Codex usato finora."
+- In caso di chat satura o bloccata, aprire una nuova chat e scrivere: "Leggi docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md e riparti dall'ultimo HEAD stabile."
 - Il file contiene HEAD stabile, ultimo blocco completato, task corrente, PR aperte/chiuse, vincoli di scope e prossimi step.
 - Non consumare token ripetendo tutta la storia: leggere questo masterplan, verificare Git e ripartire dal micro-task successivo.
 - Mantenere lo stesso metodo Germano/ChatGPT/Codex: micro-task, branch dedicati, PR verso `frontend-rebuild`, merge controllati e cleanup separati.
@@ -131,10 +131,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo merge PR #148, cleanup branch e preparazione inline address/paypal return:
+Stato di riferimento dopo merge PR #150 e smoke live `CART-INLINE-ADDRESS-CITYREGISTRY-STEP-1D`:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `7558e7dbd8a3221425d5b9bc432fcf272c45625e`
+- HEAD stabile: `b41cc367366fd0a2cfb470edc9afb259cbde2c71`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -169,6 +169,11 @@ Stato di riferimento dopo merge PR #148, cleanup branch e preparazione inline ad
 - Merge PR #143: `ccb41fc019100e38d2ba01840ac293956a7a0260`
 - Merge PR #144: `42dc685c3c7b99fe9d19284f477ff9f26fb5ee20`
 - Merge PR #145: `1fe259a44e9d9252a9733a4c721b13d933963d46`
+- Merge PR #146: `c999ecd5e890b2e11bd05c204f2738492f086b07`
+- Merge PR #147: `5c4ec079528c8d0610a85d66ec766d266f1b6c3b`
+- Merge PR #148: `7558e7dbd8a3221425d5b9bc432fcf272c45625e`
+- Merge PR #149: `05a43e54821af795ce897f50465405a7cae21bea`
+- Merge PR #150: `b41cc367366fd0a2cfb470edc9afb259cbde2c71`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -1381,6 +1386,13 @@ Stato finale post-cleanup warning:
 - Durante add/edit indirizzo inline, le azioni non pertinenti del carrello/checkout vengono bloccate lato UI e lato server finche l'utente salva o annulla.
 - Il checkout carrello introduce un vero step finale `Conferma`: il pulsante nella fase spedizione/pagamento porta prima al riepilogo finale, mentre l'avvio del flusso ordine/gateway resta consentito solo dal pulsante finale nello step `Conferma`.
 - `CART-INLINE-ADDRESS-CITYREGISTRY-STEP-1B` non modifica DB/schema/SQL, gateway core, importi gateway, calcoli prezzi, sconti, spedizione, IVA, totali documento, login/reset/password o area account chiusa.
+- PR #149 e mergiata con merge commit `05a43e54821af795ce897f50465405a7cae21bea`; PR #150 e mergiata con merge commit `b41cc367366fd0a2cfb470edc9afb259cbde2c71`.
+- `CART-ADDRESS-SELECTION`, `CART-INLINE-ADDRESS-PAYPAL-RETURN` e `CART-INLINE-ADDRESS-CITYREGISTRY-STEP` sono chiusi come blocco unico carrello/indirizzi/CAP/step `Conferma`.
+- Smoke live `CART-INLINE-ADDRESS-CITYREGISTRY-STEP-1D` completato con esito A: login OK, carrello aperto, layout ONSUS stabile, indirizzo predefinito e indirizzo manuale selezionabili, riepilogo aggiornato, add/edit inline funzionanti, CAP con lookup `city_registry`, multi-citta gestita, citta/provincia bloccate quando il CAP e riconosciuto, azioni bloccate durante edit, step `Conferma` attivo, gateway avviabile solo dal pulsante finale, nessuna anomalia rilevata.
+- `documentidettaglio.aspx` non usa piu `history.back()` per il CTA post-pagamento coinvolto dal blocco: le CTA post-PayPal/post-documento restano su destinazioni sicure.
+- Durante tutto il blocco non sono stati modificati gateway PayPal/BancaSella, core checkout, costi, sconti, spedizione, IVA, totali documento, DB/schema, SQL, login/reset/password o area account gia chiusa.
+- Stato finale carrello/checkout: `carrello.aspx` stabile per UI carrello, selezione indirizzi, add/edit inline e step `Conferma`; il core pagamenti/gateway resta separato e va trattato solo con task dedicati.
+- Non riaprire il blocco carrello/indirizzi/CAP/step `Conferma` salvo bug live verificato.
 - Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
@@ -1403,16 +1415,18 @@ Task consigliato separato per eventuale proseguimento:
 
 1. Scegliere il prossimo blocco operativo su `frontend-rebuild` pulito.
 2. Possibili candidati:
+   - AUDIT-FINALE-CHECKOUT-PAGAMENTI-1A: audit separato di checkout/pagamenti/gateway, senza confonderlo con UI carrello.
+   - Prossima pagina o area scelta da Germano su branch dedicato.
    - PASSWORD-HASH-SCHEMA-2B / PASSWORD-HASH-MIGRATION-2C: futuro task hash password; hash password non ancora implementato.
    - GESTIONALE-PASSWORD-AUDIT-1A / JANUS-PASSWORD-RESET-1A: audit gestionale Janus per reset/hash.
-   - CART-INLINE-ADDRESS-PAYPAL-RETURN-1A: verifica PR con gestione indirizzi inline carrello, CTA post-PayPal sicure e masterplan continuita chat.
    - REGISTRATION-POLICY-1A / REGISTRATION-UX-1A: refinement residuo login/registrazione.
-3. Revocare/cambiare la password dell'utente MySQL temporaneo usato nello smoke, se ancora attivo.
-4. Eliminare eventuali variabili ambiente temporanee di smoke.
-5. Eliminare o lasciare scadere eventuali link reset test residui.
-6. AUTH-CSRF-AUDIT-1A: audit `AntiCsrfPage` sui flussi auth.
-7. AUTH-JS-LEGACY-AUDIT-1A: audit errori JS legacy residui.
-8. DATIUTENTE-LEGACY-AUDIT-1A per errore generico, tab/JS legacy e salvataggi/destinazioni.
+3. Mantenere PayPal, BancaSella, gateway e pagamenti in task separati dal carrello UI.
+4. Revocare/cambiare la password dell'utente MySQL temporaneo usato nello smoke, se ancora attivo.
+5. Eliminare eventuali variabili ambiente temporanee di smoke.
+6. Eliminare o lasciare scadere eventuali link reset test residui.
+7. AUTH-CSRF-AUDIT-1A: audit `AntiCsrfPage` sui flussi auth.
+8. AUTH-JS-LEGACY-AUDIT-1A: audit errori JS legacy residui.
+9. DATIUTENTE-LEGACY-AUDIT-1A per errore generico, tab/JS legacy e salvataggi/destinazioni.
 
 ### PayPal Express
 
