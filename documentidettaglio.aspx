@@ -300,8 +300,8 @@
 
                 <div class="order-detail-wrap">
                     <div class="ks-actions" style="justify-content:space-between;">
-                        <a href="javascript:history.back()" class="tf-btn"><span class="ks-link-back"><i class="icon-arrow-left-lg"></i>Torna indietro</span></a>
-                        <a href="default.aspx" class="tf-btn">Vai alla homepage</a>
+                        <a href="documenti.aspx?t=4" class="tf-btn"><span class="ks-link-back"><i class="icon-arrow-left-lg"></i>Vai ai miei ordini</span></a>
+                        <a href="default.aspx" class="tf-btn btn-gray">Continua gli acquisti</a>
                     </div>
                 </div>
 

@@ -408,6 +408,9 @@ Private Const SessLoginId_A As String = "LoginId"
 Private Const SessLoginId_B As String = "LOGINID"
 Private Const SessCartShippingAddress As String = "SCEGLIINDIRIZZO"
 Private Const SessCartShippingAddressManual As String = "CART_SELECTED_ADDRESS_IS_MANUAL"
+Private Const SessCartAddressEditorOpen As String = "CART_ADDRESS_EDITOR_OPEN"
+Private Const SessCartAddressEditorMode As String = "CART_ADDRESS_EDITOR_MODE"
+Private Const SessCartAddressEditorId As String = "CART_ADDRESS_EDITOR_ID"
 
     Private Function GetSessionInt(ByVal key As String, Optional ByVal def As Integer = 0) As Integer
     Try
@@ -473,6 +476,228 @@ Private Const SessCartShippingAddressManual As String = "CART_SELECTED_ADDRESS_I
         UpdateShippingAddressQualityHint()
     End Sub
 
+    Private Function CleanCartAddressInput(ByVal value As String) As String
+        If value Is Nothing Then Return ""
+        Return value.Trim()
+    End Function
+
+    Private Function GetCartAddressEditorOpen() As Boolean
+        Return String.Equals(Convert.ToString(Session(SessCartAddressEditorOpen)), "1", StringComparison.Ordinal)
+    End Function
+
+    Private Sub SetCartAddressEditorState(ByVal isOpen As Boolean, ByVal mode As String, ByVal addressId As Integer)
+        Session(SessCartAddressEditorOpen) = If(isOpen, "1", "0")
+        Session(SessCartAddressEditorMode) = If(String.Equals(mode, "edit", StringComparison.OrdinalIgnoreCase), "edit", "add")
+        Session(SessCartAddressEditorId) = Math.Max(0, addressId).ToString(CultureInfo.InvariantCulture)
+    End Sub
+
+    Private Function GetCartAddressEditorMode() As String
+        Dim mode As String = Convert.ToString(Session(SessCartAddressEditorMode))
+        If String.Equals(mode, "edit", StringComparison.OrdinalIgnoreCase) Then Return "edit"
+        Return "add"
+    End Function
+
+    Private Function GetCartAddressEditorId() As Integer
+        Dim id As Integer = 0
+        Integer.TryParse(Convert.ToString(Session(SessCartAddressEditorId)), id)
+        Return Math.Max(0, id)
+    End Function
+
+    Private Sub SetCartAddressEditorMessage(ByVal message As String, Optional ByVal isError As Boolean = False)
+        If lblCartAddressEditorMessage Is Nothing Then Return
+        lblCartAddressEditorMessage.Text = message
+        If String.IsNullOrWhiteSpace(message) Then
+            lblCartAddressEditorMessage.CssClass = "ks-address-form-message"
+        Else
+            lblCartAddressEditorMessage.CssClass = If(isError, "ks-address-form-message is-error", "ks-address-form-message is-ok")
+        End If
+    End Sub
+
+    Private Sub ClearCartAddressEditorFields()
+        If hfCartAddressMode IsNot Nothing Then hfCartAddressMode.Value = "add"
+        If hfCartAddressId IsNot Nothing Then hfCartAddressId.Value = "0"
+        If tbCartRagioneSocialeA IsNot Nothing Then tbCartRagioneSocialeA.Text = ""
+        If tbCartNomeA IsNot Nothing Then tbCartNomeA.Text = ""
+        If tbCartIndirizzoA IsNot Nothing Then tbCartIndirizzoA.Text = ""
+        If tbCartCapA IsNot Nothing Then tbCartCapA.Text = ""
+        If tbCartCittaA IsNot Nothing Then tbCartCittaA.Text = ""
+        If tbCartProvinciaA IsNot Nothing Then tbCartProvinciaA.Text = ""
+        If tbCartZona IsNot Nothing Then tbCartZona.Text = ""
+        If tbCartTelefonoA IsNot Nothing Then tbCartTelefonoA.Text = ""
+        If tbCartCellulareA IsNot Nothing Then tbCartCellulareA.Text = ""
+        If tbCartFaxA IsNot Nothing Then tbCartFaxA.Text = ""
+        If tbCartNote IsNot Nothing Then tbCartNote.Text = ""
+        If tbCartNazioneA IsNot Nothing Then tbCartNazioneA.Text = "IT"
+        If chkCartAddressUseForOrder IsNot Nothing Then chkCartAddressUseForOrder.Checked = True
+        If chkCartAddressSetDefault IsNot Nothing Then chkCartAddressSetDefault.Checked = False
+        SetCartAddressEditorMessage("")
+    End Sub
+
+    Private Function ValidateCartAddressEditor() As List(Of String)
+        Dim errors As New List(Of String)
+
+        If String.IsNullOrWhiteSpace(tbCartIndirizzoA.Text) Then errors.Add("Inserire l'indirizzo.")
+        If String.IsNullOrWhiteSpace(tbCartCittaA.Text) Then errors.Add("Inserire la citta.")
+        If CleanCartAddressInput(tbCartRagioneSocialeA.Text).Length > 100 Then errors.Add("La ragione sociale/cognome e troppo lunga.")
+        If CleanCartAddressInput(tbCartNomeA.Text).Length > 50 Then errors.Add("Il nome e troppo lungo.")
+        If CleanCartAddressInput(tbCartIndirizzoA.Text).Length > 100 Then errors.Add("L'indirizzo e troppo lungo.")
+        If CleanCartAddressInput(tbCartCapA.Text).Length > 10 Then errors.Add("Il CAP e troppo lungo.")
+        If CleanCartAddressInput(tbCartCittaA.Text).Length > 80 Then errors.Add("La citta e troppo lunga.")
+        If CleanCartAddressInput(tbCartProvinciaA.Text).Length > 10 Then errors.Add("La provincia e troppo lunga.")
+        If CleanCartAddressInput(tbCartZona.Text).Length > 100 Then errors.Add("La zona e troppo lunga.")
+        If CleanCartAddressInput(tbCartTelefonoA.Text).Length > 30 Then errors.Add("Il telefono e troppo lungo.")
+        If CleanCartAddressInput(tbCartCellulareA.Text).Length > 30 Then errors.Add("Il cellulare e troppo lungo.")
+        If CleanCartAddressInput(tbCartFaxA.Text).Length > 30 Then errors.Add("Il fax e troppo lungo.")
+        If CleanCartAddressInput(tbCartNote.Text).Length > 255 Then errors.Add("Le note sono troppo lunghe.")
+        If CleanCartAddressInput(tbCartNazioneA.Text).Length > 50 Then errors.Add("La nazione e troppo lunga.")
+
+        Return errors
+    End Function
+
+    Private Sub UpdateCartAddressEditorHint()
+        If lblCartAddressEditorHint Is Nothing Then Return
+
+        Dim hints As New List(Of String)
+        Dim cap As String = CleanCartAddressInput(tbCartCapA.Text)
+        If cap = "" OrElse cap.Length < 5 Then hints.Add("CAP da controllare")
+        If CleanCartAddressInput(tbCartProvinciaA.Text) = "" Then hints.Add("provincia utile")
+        If CleanCartAddressInput(tbCartTelefonoA.Text) = "" AndAlso CleanCartAddressInput(tbCartCellulareA.Text) = "" Then hints.Add("telefono utile per il corriere")
+
+        If hints.Count = 0 Then
+            lblCartAddressEditorHint.Text = "Controllo rapido: indirizzo pronto per il checkout."
+        Else
+            lblCartAddressEditorHint.Text = "Controllo rapido: " & String.Join(", ", hints.ToArray()) & "."
+        End If
+    End Sub
+
+    Private Sub ConfigureCartAddressEditor()
+        If pnlCartAddressEditor Is Nothing Then Return
+
+        Dim isOpen As Boolean = GetCartAddressEditorOpen()
+        Dim mode As String = GetCartAddressEditorMode()
+        Dim addressId As Integer = GetCartAddressEditorId()
+
+        pnlCartAddressEditor.Visible = isOpen
+        If Not isOpen Then Return
+
+        If hfCartAddressMode IsNot Nothing Then hfCartAddressMode.Value = mode
+        If hfCartAddressId IsNot Nothing Then hfCartAddressId.Value = addressId.ToString(CultureInfo.InvariantCulture)
+        If litCartAddressEditorTitle IsNot Nothing Then
+            litCartAddressEditorTitle.Text = If(mode = "edit", "<h6 class=""fw-semibold"">Modifica indirizzo selezionato</h6>", "<h6 class=""fw-semibold"">Aggiungi nuovo indirizzo</h6>")
+        End If
+        If btnCartAddressSave IsNot Nothing Then btnCartAddressSave.Text = If(mode = "edit", "Salva modifiche", "Salva nuovo indirizzo")
+        UpdateCartAddressEditorHint()
+    End Sub
+
+    Private Function LoadAlternativeAddressRow(ByVal utentiId As Integer, ByVal addressId As Integer) As DataRow
+        If utentiId <= 0 OrElse addressId <= 0 Then Return Nothing
+
+        Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+            conn.Open()
+            Using cmd As New MySqlCommand("SELECT Id, RagioneSocialeA, NomeA, IndirizzoA, CapA, CittaA, ProvinciaA, Zona, TelefonoA, CellulareA, FaxA, Note, NazioneA, Predefinito FROM utentiindirizzi WHERE Id=@Id AND UtenteId=@UtentiId LIMIT 1", conn)
+                cmd.Parameters.AddWithValue("@Id", addressId)
+                cmd.Parameters.AddWithValue("@UtentiId", utentiId)
+                Using adp As New MySqlDataAdapter(cmd)
+                    Dim dt As New DataTable()
+                    adp.Fill(dt)
+                    If dt.Rows.Count = 0 Then Return Nothing
+                    Return dt.Rows(0)
+                End Using
+            End Using
+        End Using
+    End Function
+
+    Private Sub FillCartAddressEditor(ByVal row As DataRow)
+        If row Is Nothing Then Return
+        tbCartRagioneSocialeA.Text = DbText(row("RagioneSocialeA"))
+        tbCartNomeA.Text = DbText(row("NomeA"))
+        tbCartIndirizzoA.Text = DbText(row("IndirizzoA"))
+        tbCartCapA.Text = DbText(row("CapA"))
+        tbCartCittaA.Text = DbText(row("CittaA"))
+        tbCartProvinciaA.Text = DbText(row("ProvinciaA"))
+        tbCartZona.Text = DbText(row("Zona"))
+        tbCartTelefonoA.Text = DbText(row("TelefonoA"))
+        tbCartCellulareA.Text = DbText(row("CellulareA"))
+        tbCartFaxA.Text = DbText(row("FaxA"))
+        tbCartNote.Text = DbText(row("Note"))
+        tbCartNazioneA.Text = If(DbText(row("NazioneA")) = "", "IT", DbText(row("NazioneA")))
+        chkCartAddressUseForOrder.Checked = True
+        Dim pref As Integer = 0
+        Integer.TryParse(DbText(row("Predefinito")), pref)
+        chkCartAddressSetDefault.Checked = (pref = 1)
+    End Sub
+
+    Private Sub AddCartAddressParameters(ByVal cmd As MySqlCommand, ByVal utentiId As Integer, ByVal includeDefault As Boolean, ByVal setDefault As Boolean)
+        cmd.Parameters.AddWithValue("@UtentiId", utentiId)
+        cmd.Parameters.AddWithValue("@RagioneSocialeA", CleanCartAddressInput(tbCartRagioneSocialeA.Text))
+        cmd.Parameters.AddWithValue("@NomeA", CleanCartAddressInput(tbCartNomeA.Text))
+        cmd.Parameters.AddWithValue("@IndirizzoA", CleanCartAddressInput(tbCartIndirizzoA.Text))
+        cmd.Parameters.AddWithValue("@CapA", CleanCartAddressInput(tbCartCapA.Text))
+        cmd.Parameters.AddWithValue("@CittaA", CleanCartAddressInput(tbCartCittaA.Text))
+        cmd.Parameters.AddWithValue("@ProvinciaA", CleanCartAddressInput(tbCartProvinciaA.Text))
+        cmd.Parameters.AddWithValue("@Zona", CleanCartAddressInput(tbCartZona.Text))
+        cmd.Parameters.AddWithValue("@TelefonoA", CleanCartAddressInput(tbCartTelefonoA.Text))
+        cmd.Parameters.AddWithValue("@CellulareA", CleanCartAddressInput(tbCartCellulareA.Text))
+        cmd.Parameters.AddWithValue("@FaxA", CleanCartAddressInput(tbCartFaxA.Text))
+        cmd.Parameters.AddWithValue("@Note", CleanCartAddressInput(tbCartNote.Text))
+        cmd.Parameters.AddWithValue("@NazioneA", CleanCartAddressInput(tbCartNazioneA.Text))
+        If includeDefault Then cmd.Parameters.AddWithValue("@Predefinito", If(setDefault, 1, 0))
+    End Sub
+
+    Private Function SaveCartAddressInline(ByVal utentiId As Integer, ByVal mode As String, ByVal addressId As Integer, ByVal setDefault As Boolean) As Integer
+        Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+            conn.Open()
+            Using tr As MySqlTransaction = conn.BeginTransaction()
+                Try
+                    If mode = "edit" AndAlso Not ShippingAddressBelongsToCurrentUser(addressId) Then
+                        tr.Rollback()
+                        Return 0
+                    End If
+
+                    If setDefault Then
+                        Using resetCmd As New MySqlCommand("UPDATE utentiindirizzi SET Predefinito=0 WHERE UtenteId=@UtentiId", conn, tr)
+                            resetCmd.Parameters.AddWithValue("@UtentiId", utentiId)
+                            resetCmd.ExecuteNonQuery()
+                        End Using
+                    End If
+
+                    If mode = "edit" Then
+                        Dim sql As String =
+                            "UPDATE utentiindirizzi SET " &
+                            "RagioneSocialeA=@RagioneSocialeA, NomeA=@NomeA, IndirizzoA=@IndirizzoA, CapA=@CapA, CittaA=@CittaA, ProvinciaA=@ProvinciaA, " &
+                            "Zona=@Zona, TelefonoA=@TelefonoA, CellulareA=@CellulareA, FaxA=@FaxA, Note=@Note, NazioneA=@NazioneA"
+                        If setDefault Then sql &= ", Predefinito=@Predefinito"
+                        sql &= " WHERE Id=@Id AND UtenteId=@UtentiId"
+
+                        Using cmd As New MySqlCommand(sql, conn, tr)
+                            AddCartAddressParameters(cmd, utentiId, setDefault, setDefault)
+                            cmd.Parameters.AddWithValue("@Id", addressId)
+                            If cmd.ExecuteNonQuery() <> 1 Then
+                                tr.Rollback()
+                                Return 0
+                            End If
+                        End Using
+                        tr.Commit()
+                        Return addressId
+                    End If
+
+                    Using cmd As New MySqlCommand("INSERT INTO utentiindirizzi (UtenteId, RagioneSocialeA, NomeA, IndirizzoA, CapA, CittaA, ProvinciaA, Zona, TelefonoA, CellulareA, FaxA, Note, NazioneA, Predefinito) VALUES (@UtentiId, @RagioneSocialeA, @NomeA, @IndirizzoA, @CapA, @CittaA, @ProvinciaA, @Zona, @TelefonoA, @CellulareA, @FaxA, @Note, @NazioneA, @Predefinito); SELECT LAST_INSERT_ID();", conn, tr)
+                        AddCartAddressParameters(cmd, utentiId, True, setDefault)
+                        Dim newId As Integer = Convert.ToInt32(cmd.ExecuteScalar())
+                        tr.Commit()
+                        Return newId
+                    End Using
+                Catch
+                    Try
+                        tr.Rollback()
+                    Catch
+                    End Try
+                    Throw
+                End Try
+            End Using
+        End Using
+    End Function
+
     Private Function IsBlankLabel(ByVal label As Label) As Boolean
         If label Is Nothing Then Return True
         Return label.Text.Trim() = ""
@@ -488,6 +713,8 @@ Private Const SessCartShippingAddressManual As String = "CART_SELECTED_ADDRESS_I
 
         If missing.Count > 0 Then
             lblAddressQualityHint.Text = "Suggerimento: completa " & String.Join(", ", missing.ToArray()) & " prima di confermare l'ordine."
+        ElseIf IsBlankLabel(lblTab_TelSpedizione) Then
+            lblAddressQualityHint.Text = "Indirizzo quasi pronto: aggiungere un telefono o cellulare aiuta il corriere in caso di consegna."
         Else
             lblAddressQualityHint.Text = "Pronto per il checkout: i dati principali dell'indirizzo sono presenti."
         End If
@@ -1584,13 +1811,13 @@ End Sub
 
     Private Sub StabilizeCartAddressEditUi()
         If open1 IsNot Nothing Then open1.Style.Item("display") = ""
-        If open2 IsNot Nothing Then open2.Style.Item("display") = ""
         If panel IsNot Nothing Then
             panel.Style.Item("display") = "none"
             panel.Visible = False
         End If
         If PnlDestinazione IsNot Nothing Then PnlDestinazione.Visible = False
         If CHKPREDEFINITO IsNot Nothing Then CHKPREDEFINITO.Visible = False
+        ConfigureCartAddressEditor()
         Session("cityBinding") = 0
     End Sub
 
@@ -1759,6 +1986,105 @@ End Sub
         End If
 
         StabilizeCartAddressEditUi()
+    End Sub
+
+    Protected Sub btnCartAddressAdd_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+        If GetUtentiIdSafe(0) <= 0 Then
+            SetAddressSelectionMessage("Accedi per aggiungere un indirizzo di spedizione.")
+            Return
+        End If
+
+        ClearCartAddressEditorFields()
+        SetCartAddressEditorState(True, "add", 0)
+        SetAddressSelectionMessage("Aggiungi un nuovo indirizzo senza uscire dal carrello.")
+        ConfigureCartAddressEditor()
+    End Sub
+
+    Protected Sub btnCartAddressEdit_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+        Dim utentiId As Integer = GetUtentiIdSafe(0)
+        If utentiId <= 0 Then
+            SetAddressSelectionMessage("Accedi per modificare un indirizzo di spedizione.")
+            Return
+        End If
+
+        Dim selectedId As Integer = GetCartShippingAddressId()
+        If LstScegliIndirizzo IsNot Nothing Then
+            Integer.TryParse(If(LstScegliIndirizzo.SelectedValue, "0"), selectedId)
+        End If
+
+        If selectedId <= 0 Then
+            SetCartAddressEditorState(False, "add", 0)
+            SetAddressSelectionMessage("L'indirizzo principale si modifica dai dettagli account. Puoi aggiungere una nuova sede alternativa da qui.")
+            Return
+        End If
+
+        Dim row As DataRow = LoadAlternativeAddressRow(utentiId, selectedId)
+        If row Is Nothing Then
+            SetCartAddressEditorState(False, "add", 0)
+            SetAddressSelectionMessage("Indirizzo selezionato non disponibile. Abbiamo ripristinato il controllo del carrello.")
+            ApplyCurrentShippingAddress()
+            Return
+        End If
+
+        FillCartAddressEditor(row)
+        SetCartAddressEditorState(True, "edit", selectedId)
+        SetAddressSelectionMessage("Modifica l'indirizzo selezionato senza uscire dal carrello.")
+        ConfigureCartAddressEditor()
+    End Sub
+
+    Protected Sub btnCartAddressCancel_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+        SetCartAddressEditorState(False, "add", 0)
+        ClearCartAddressEditorFields()
+        SetAddressSelectionMessage("Modifica indirizzo annullata.")
+        ApplyCurrentShippingAddress()
+        StabilizeCartAddressEditUi()
+    End Sub
+
+    Protected Sub btnCartAddressSave_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+        Dim utentiId As Integer = GetUtentiIdSafe(0)
+        If utentiId <= 0 Then
+            SetCartAddressEditorMessage("Accedi per salvare un indirizzo.", True)
+            Return
+        End If
+
+        Dim errors As List(Of String) = ValidateCartAddressEditor()
+        If errors.Count > 0 Then
+            SetCartAddressEditorState(True, GetCartAddressEditorMode(), GetCartAddressEditorId())
+            SetCartAddressEditorMessage(String.Join(" ", errors.ToArray()), True)
+            ConfigureCartAddressEditor()
+            Return
+        End If
+
+        Try
+            Dim mode As String = GetCartAddressEditorMode()
+            Dim addressId As Integer = GetCartAddressEditorId()
+            Dim savedId As Integer = SaveCartAddressInline(utentiId, mode, addressId, chkCartAddressSetDefault.Checked)
+
+            If savedId <= 0 Then
+                SetCartAddressEditorState(True, mode, addressId)
+                SetCartAddressEditorMessage("Non e stato possibile salvare l'indirizzo selezionato.", True)
+                ConfigureCartAddressEditor()
+                Return
+            End If
+
+            BindLstDestinazioneLstScegliIndirizzo()
+            If chkCartAddressUseForOrder Is Nothing OrElse chkCartAddressUseForOrder.Checked Then
+                ApplyAlternativeShippingAddress(savedId, True)
+                SetAddressSelectionMessage("Indirizzo salvato e selezionato per questo ordine.")
+            Else
+                ApplyCurrentShippingAddress()
+                SetAddressSelectionMessage("Indirizzo salvato. La scelta di spedizione corrente resta invariata.")
+            End If
+
+            SetCartAddressEditorState(False, "add", 0)
+            ClearCartAddressEditorFields()
+            StabilizeCartAddressEditUi()
+        Catch ex As Exception
+            LogEx(ex, "btnCartAddressSave_Click")
+            SetCartAddressEditorState(True, GetCartAddressEditorMode(), GetCartAddressEditorId())
+            SetCartAddressEditorMessage("Non e stato possibile salvare l'indirizzo. Riprova tra qualche minuto.", True)
+            ConfigureCartAddressEditor()
+        End Try
     End Sub
 	
     Protected Sub LstDestinazione_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles LstDestinazione.PreRender

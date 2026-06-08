@@ -1,6 +1,6 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-06-06
+Aggiornato: 2026-06-08
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
@@ -49,12 +49,13 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 - Usare sempre campi DB esistenti e query/logiche esistenti quando possibile.
 - Modifiche strutturali o logiche vecchie richiedono prima analisi impatto e proposta micro-task.
 
-### Nuova chat
+### Ripartenza rapida in nuova chat
 
-- Leggere subito `docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md`.
-- Riprendere da HEAD/stato indicati.
-- Mantenere lo stesso metodo Germano/ChatGPT/Codex.
-- Non ripetere audit gia conclusi se nel masterplan sono marcati chiusi.
+- In caso di chat satura o bloccata, aprire una nuova chat e scrivere: "Leggi `docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md` e riparti dall'ultimo HEAD stabile, seguendo il metodo ChatGPT + Codex usato finora."
+- Il file contiene HEAD stabile, ultimo blocco completato, task corrente, PR aperte/chiuse, vincoli di scope e prossimi step.
+- Non consumare token ripetendo tutta la storia: leggere questo masterplan, verificare Git e ripartire dal micro-task successivo.
+- Mantenere lo stesso metodo Germano/ChatGPT/Codex: micro-task, branch dedicati, PR verso `frontend-rebuild`, merge controllati e cleanup separati.
+- Aggiornare questa sezione dopo ogni blocco importante.
 
 ## 1. Metodo ChatGPT + Codex
 
@@ -130,10 +131,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo merge PR #147, cleanup branch e hotfix live carrello indirizzi:
+Stato di riferimento dopo merge PR #148, cleanup branch e preparazione inline address/paypal return:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `5c4ec079528c8d0610a85d66ec766d266f1b6c3b`
+- HEAD stabile: `7558e7dbd8a3221425d5b9bc432fcf272c45625e`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -1368,6 +1369,11 @@ Stato finale post-cleanup warning:
 - Anche nell'estensione UX restano invariati gateway, pagamenti, costi, sconti, IVA, totali e flusso ordine.
 - `CART-ADDRESS-SELECTION-1D` corregge i residui emersi nello smoke live post-merge: stato selezione indirizzo reso visibile anche accanto alla dropdown, link gestione indirizzi reso diretto verso `/my-account-address.aspx`, pannello legacy inline destinazione escluso dal rendering della pagina carrello.
 - Il follow-up 1D resta confinato a UI/UX carrello e documentazione: nessuna modifica a gateway/pagamenti, costi, totali, DB/schema, SQL o flussi account gia chiusi.
+- PR #148 e mergiata con merge commit `7558e7dbd8a3221425d5b9bc432fcf272c45625e`; cleanup branch `task/cart-address-selection-1d` completato.
+- Smoke live `CART-ADDRESS-SELECTION-1F` conferma carrello moderno, badge predefinito, scelta indirizzo diverso, riepilogo aggiornato, link gestione indirizzi e pannello legacy non raggiungibile; nessun gateway avviato nello smoke base.
+- `CART-INLINE-ADDRESS-PAYPAL-RETURN-1A` introduce il passo successivo: add/edit indirizzi alternativi inline nel carrello, link area account solo secondario, euristiche locali di qualita indirizzo, audit statico del ritorno PayPal post-pagamento e continuita chat nel masterplan.
+- Diagnosi PayPal del task 1A: il CTA problematico "Torna indietro" e nel nostro `documentidettaglio.aspx` come `javascript:history.back()`; non appartiene al gateway PayPal. Va sostituito con destinazioni sicure senza modificare credenziali, importi, cattura pagamento o stato gateway.
+- `CART-INLINE-ADDRESS-PAYPAL-RETURN-1A` non modifica DB/schema/SQL, gateway core, importi gateway, calcoli prezzi, sconti, spedizione, IVA o totali documento.
 - Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
@@ -1392,7 +1398,7 @@ Task consigliato separato per eventuale proseguimento:
 2. Possibili candidati:
    - PASSWORD-HASH-SCHEMA-2B / PASSWORD-HASH-MIGRATION-2C: futuro task hash password; hash password non ancora implementato.
    - GESTIONALE-PASSWORD-AUDIT-1A / JANUS-PASSWORD-RESET-1A: audit gestionale Janus per reset/hash.
-   - CART-ADDRESS-SELECTION-1D: verifica PR hotfix live carrello per badge selezione, link gestione indirizzi e pannello legacy disattivato, senza pagamenti e senza invocare gateway.
+   - CART-INLINE-ADDRESS-PAYPAL-RETURN-1A: verifica PR con gestione indirizzi inline carrello, CTA post-PayPal sicure e masterplan continuita chat.
    - REGISTRATION-POLICY-1A / REGISTRATION-UX-1A: refinement residuo login/registrazione.
 3. Revocare/cambiare la password dell'utente MySQL temporaneo usato nello smoke, se ancora attivo.
 4. Eliminare eventuali variabili ambiente temporanee di smoke.

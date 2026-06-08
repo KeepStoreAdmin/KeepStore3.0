@@ -1018,14 +1018,84 @@
             </div>
             <div class="ks-address-smart-note">
                 <i class="icon-user"></i>
-                <span>Gli indirizzi si gestiscono dall'area account, senza usare pannelli legacy nel carrello.</span>
+                <span>Puoi aggiungere o aggiornare una sede alternativa direttamente da questo carrello.</span>
             </div>
         </div>
-        <p class="body-text-3 text-main-2 ks-address-account-copy">Per aggiungere o modificare indirizzi usa l'area account. Torna poi al carrello per scegliere la destinazione aggiornata.</p>
         <div class="ks-address-actions">
-            <div id="open1" runat="server"><a href="/my-account-address.aspx" class="tf-btn btn-gray" rel="nofollow">Gestisci indirizzi</a></div>
-            <div id="open2" runat="server"><a href="/my-account-address.aspx" class="tf-btn" rel="nofollow">Aggiungi o modifica indirizzi</a></div>
+            <asp:LinkButton ID="btnCartAddressAdd" runat="server" CssClass="tf-btn" CausesValidation="false" OnClick="btnCartAddressAdd_Click">Aggiungi nuovo indirizzo</asp:LinkButton>
+            <asp:LinkButton ID="btnCartAddressEdit" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false" OnClick="btnCartAddressEdit_Click">Modifica indirizzo selezionato</asp:LinkButton>
+            <div id="open1" runat="server"><a href="/my-account-address.aspx" class="tf-btn btn-line" rel="nofollow">Gestisci tutti gli indirizzi</a></div>
         </div>
+        <asp:Panel ID="pnlCartAddressEditor" runat="server" Visible="false" CssClass="ks-cart-address-editor">
+            <asp:HiddenField ID="hfCartAddressMode" runat="server" Value="add" />
+            <asp:HiddenField ID="hfCartAddressId" runat="server" Value="0" />
+            <div class="ks-cart-address-editor-head">
+                <div>
+                    <asp:Literal ID="litCartAddressEditorTitle" runat="server" />
+                    <p class="body-text-3 text-main-2">Compila solo i dati utili alla spedizione. I controlli sono locali e nessun dato viene inviato a servizi esterni.</p>
+                </div>
+                <asp:Label ID="lblCartAddressEditorHint" runat="server" CssClass="ks-address-inline-status" EnableViewState="false" />
+            </div>
+            <asp:Label ID="lblCartAddressEditorMessage" runat="server" CssClass="ks-address-form-message" EnableViewState="false" />
+            <div class="ks-cart-address-form-grid">
+                <div class="ks-form-field">
+                    <label for="<%= tbCartRagioneSocialeA.ClientID %>">Ragione sociale / Cognome</label>
+                    <asp:TextBox ID="tbCartRagioneSocialeA" runat="server" CssClass="form-control ks-form-control" MaxLength="100" />
+                </div>
+                <div class="ks-form-field">
+                    <label for="<%= tbCartNomeA.ClientID %>">Nome</label>
+                    <asp:TextBox ID="tbCartNomeA" runat="server" CssClass="form-control ks-form-control" MaxLength="50" />
+                </div>
+                <div class="ks-form-field ks-form-field-wide">
+                    <label for="<%= tbCartIndirizzoA.ClientID %>">Indirizzo *</label>
+                    <asp:TextBox ID="tbCartIndirizzoA" runat="server" CssClass="form-control ks-form-control" MaxLength="100" />
+                </div>
+                <div class="ks-form-field">
+                    <label for="<%= tbCartCapA.ClientID %>">CAP</label>
+                    <asp:TextBox ID="tbCartCapA" runat="server" CssClass="form-control ks-form-control" MaxLength="10" />
+                </div>
+                <div class="ks-form-field">
+                    <label for="<%= tbCartCittaA.ClientID %>">Citta *</label>
+                    <asp:TextBox ID="tbCartCittaA" runat="server" CssClass="form-control ks-form-control" MaxLength="80" />
+                </div>
+                <div class="ks-form-field">
+                    <label for="<%= tbCartProvinciaA.ClientID %>">Provincia</label>
+                    <asp:TextBox ID="tbCartProvinciaA" runat="server" CssClass="form-control ks-form-control" MaxLength="10" />
+                </div>
+                <div class="ks-form-field">
+                    <label for="<%= tbCartZona.ClientID %>">Zona</label>
+                    <asp:TextBox ID="tbCartZona" runat="server" CssClass="form-control ks-form-control" MaxLength="100" />
+                </div>
+                <div class="ks-form-field">
+                    <label for="<%= tbCartTelefonoA.ClientID %>">Telefono</label>
+                    <asp:TextBox ID="tbCartTelefonoA" runat="server" CssClass="form-control ks-form-control" MaxLength="30" />
+                </div>
+                <div class="ks-form-field">
+                    <label for="<%= tbCartCellulareA.ClientID %>">Cellulare</label>
+                    <asp:TextBox ID="tbCartCellulareA" runat="server" CssClass="form-control ks-form-control" MaxLength="30" />
+                </div>
+                <div class="ks-form-field">
+                    <label for="<%= tbCartFaxA.ClientID %>">Fax</label>
+                    <asp:TextBox ID="tbCartFaxA" runat="server" CssClass="form-control ks-form-control" MaxLength="30" />
+                </div>
+                <div class="ks-form-field">
+                    <label for="<%= tbCartNazioneA.ClientID %>">Nazione</label>
+                    <asp:TextBox ID="tbCartNazioneA" runat="server" CssClass="form-control ks-form-control" MaxLength="50" />
+                </div>
+                <div class="ks-form-field ks-form-field-wide">
+                    <label for="<%= tbCartNote.ClientID %>">Note per la consegna</label>
+                    <asp:TextBox ID="tbCartNote" runat="server" CssClass="form-control ks-form-control" MaxLength="255" TextMode="MultiLine" Rows="3" />
+                </div>
+            </div>
+            <div class="ks-cart-address-options">
+                <label><asp:CheckBox ID="chkCartAddressUseForOrder" runat="server" Checked="true" /> Usa questo indirizzo per l'ordine corrente</label>
+                <label><asp:CheckBox ID="chkCartAddressSetDefault" runat="server" /> Imposta come predefinito</label>
+            </div>
+            <div class="ks-address-actions">
+                <asp:Button ID="btnCartAddressSave" runat="server" CssClass="tf-btn" Text="Salva indirizzo" CausesValidation="false" OnClick="btnCartAddressSave_Click" />
+                <asp:Button ID="btnCartAddressCancel" runat="server" CssClass="tf-btn btn-gray" Text="Annulla" CausesValidation="false" OnClick="btnCartAddressCancel_Click" />
+            </div>
+        </asp:Panel>
         </asp:Panel>
 		<div id="panel" runat="server" ClientIDMode="Static" style="display:none !important;" aria-hidden="true">
             <asp:Panel ID="PnlDestinazione" runat="server" Width="100%" Visible="False" GroupingText="Inserisci i dati"  CssClass="wrap ks-checkout-section ks-destination-section" style="display:none !important;">
