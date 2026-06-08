@@ -228,6 +228,121 @@ Partial Class documentidettaglio
         Return (stato1 & " " & stato2).Trim()
     End Function
 
+    Protected Function GetOrderHeroBadge() As String
+        If IsPostOrderContext() Then Return "Ordine confermato"
+        Return "Riepilogo ordine"
+    End Function
+
+    Protected Function GetOrderHeroTitle() As String
+        If IsPostOrderContext() Then Return "Grazie per il tuo ordine"
+        Return "Dettaglio ordine"
+    End Function
+
+    Protected Function GetOrderHeroText(ByVal pagatoObj As Object, ByVal statoObj As Object) As String
+        If IsPaymentConfirmed(pagatoObj, statoObj) Then
+            Return "Abbiamo ricevuto il pagamento. Trovi qui riepilogo, indirizzi e prossimi passi."
+        End If
+
+        If IsPostOrderContext() Then
+            Return "Il tuo ordine e stato registrato. Ti invieremo aggiornamenti appena disponibili."
+        End If
+
+        Return "Consulta i dettagli del documento, lo stato pagamento e le informazioni di spedizione."
+    End Function
+
+    Private Function IsPostOrderContext() As Boolean
+        Dim ndoc As String = Convert.ToString(Request.QueryString("ndoc"))
+        Dim payReturn As String = Convert.ToString(Request.QueryString("payreturn"))
+
+        Return Not String.IsNullOrWhiteSpace(ndoc) OrElse
+               String.Equals(payReturn, "ok", StringComparison.OrdinalIgnoreCase) OrElse
+               String.Equals(payReturn, "ko", StringComparison.OrdinalIgnoreCase)
+    End Function
+
+    Protected Function FormatCustomerNumber(ByVal value As Object) As String
+        Dim id As Integer = SafeInt(value, 0)
+        If id <= 0 Then Return "Non disponibile"
+        Return id.ToString(CultureInfo.InvariantCulture)
+    End Function
+
+    Protected Function HtmlText(ByVal value As Object) As String
+        Return HttpUtility.HtmlEncode(SafeStatusText(value))
+    End Function
+
+    Protected Function HtmlAttr(ByVal value As Object) As String
+        Return HttpUtility.HtmlAttributeEncode(SafeStatusText(value))
+    End Function
+
+    Protected Function FormatPhoneLine(ByVal telefonoObj As Object, ByVal cellulareObj As Object) As String
+        Dim telefono As String = SafeStatusText(telefonoObj)
+        Dim cellulare As String = SafeStatusText(cellulareObj)
+
+        If telefono = "" AndAlso cellulare = "" Then Return ""
+        If telefono <> "" AndAlso cellulare <> "" Then Return HtmlText(telefono & " - " & cellulare)
+        If telefono <> "" Then Return HtmlText(telefono)
+        Return HtmlText(cellulare)
+    End Function
+
+    Protected Function FormatShippingRecipient(ByVal destinazioneObj As Object, ByVal ragioneObj As Object, ByVal nomeObj As Object) As String
+        Dim destinazione As String = SafeStatusText(destinazioneObj)
+        Dim ragione As String = SafeStatusText(ragioneObj)
+        Dim nome As String = SafeStatusText(nomeObj)
+
+        If destinazione <> "" Then Return HtmlText(destinazione)
+        If ragione <> "" Then Return HtmlText(ragione)
+        If nome <> "" Then Return HtmlText(nome)
+        Return "Destinatario non specificato"
+    End Function
+
+    Protected Function FormatShippingAddress(ByVal destinazioneObj As Object, ByVal indirizzoObj As Object) As String
+        Dim destinazione As String = SafeStatusText(destinazioneObj)
+        Dim indirizzo As String = SafeStatusText(indirizzoObj)
+
+        If destinazione <> "" Then Return HtmlText(destinazione)
+        If indirizzo <> "" Then Return HtmlText(indirizzo)
+        Return "Indirizzo non disponibile"
+    End Function
+
+    Protected Function GetTrackingMessage(ByVal trackingObj As Object, ByVal linkTrackingObj As Object) As String
+        Dim tracking As String = SafeStatusText(trackingObj)
+        If tracking = "" Then Return "Tracking non ancora disponibile."
+
+        Dim rendered As String = SeparaTracking(trackingObj, linkTrackingObj)
+        If rendered <> "" Then Return rendered
+
+        Return HtmlText(tracking)
+    End Function
+
+    Protected Function GetTimelineStepCssClass(ByVal stepName As String, ByVal pagatoObj As Object, ByVal statoObj As Object, ByVal trackingObj As Object) As String
+        Dim stepValue As String = Convert.ToString(stepName).Trim().ToLowerInvariant()
+
+        If stepValue = "payment" Then
+            If IsPaymentConfirmed(pagatoObj, statoObj) Then Return "is-complete"
+            Return "is-current"
+        End If
+
+        If stepValue = "shipping" Then
+            If SafeStatusText(trackingObj) <> "" Then Return "is-complete"
+            Return ""
+        End If
+
+        Return ""
+    End Function
+
+    Protected Function GetTimelinePaymentText(ByVal pagatoObj As Object, ByVal statoObj As Object) As String
+        If IsPaymentConfirmed(pagatoObj, statoObj) Then Return "Pagamento ricevuto"
+        Return "Pagamento in verifica"
+    End Function
+
+    Protected Function GetTimelineShippingText(ByVal trackingObj As Object) As String
+        If SafeStatusText(trackingObj) <> "" Then Return "Spedizione tracciata"
+        Return "Tracking non ancora disponibile"
+    End Function
+
+    Private Function IsPaymentConfirmed(ByVal pagatoObj As Object, ByVal statoObj As Object) As Boolean
+        Return SafeInt(pagatoObj, 0) = 1 OrElse SafeInt(statoObj, 0) = 2
+    End Function
+
     Protected Function GetPaymentStatusLabel(ByVal pagatoObj As Object, ByVal statoObj As Object) As String
         Dim pagato As Integer = SafeInt(pagatoObj, 0)
         Dim stato As Integer = SafeInt(statoObj, 0)
