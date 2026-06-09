@@ -401,6 +401,10 @@
     opacity: .58;
 }
 
+.ks-action-disabled{
+    pointer-events: none;
+}
+
 .ks-final-confirm-section{
     border: 1px solid rgba(0,0,0,.08);
     background: #fff;

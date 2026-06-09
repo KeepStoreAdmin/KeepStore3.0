@@ -131,10 +131,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo merge PR #154 e smoke live timeout carrello:
+Stato di riferimento dopo merge PR #155 e smoke live carrello/riepilogo/stepper:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `1b7e77b2a7ef6cb4f6fcd6f490a3e3d3bad6abea`
+- HEAD stabile: `6c3724ba36bc146fe7551a0d1f90676403fd4ad7`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -1411,6 +1411,10 @@ Stato finale post-cleanup warning:
 - Smoke live `CART-SESSION-TIMEOUT-1C` completato con esito A: sessione valida OK, sessione scaduta + F5 senza pagina bianca, redirect controllato a login con messaggio chiaro e `ReturnUrl`, rientro al carrello funzionante, postback protetti, add/edit indirizzo, CAP/`city_registry`, step `Conferma` e `documentidettaglio.aspx` verificati; nessun gateway, pagamento, ordine o dato sensibile coinvolto.
 - `CART-UX-SUMMARY-STEPPER-TIMEOUT-1A` risolve le anomalie residue del carrello: un solo riepilogo visibile `Riepilogo ordine`, riepilogo tecnico legacy mantenuto solo per le label server-side, stepper superiore navigabile in modo coerente tra `Carrello`, `Spedizione e checkout` e `Conferma` senza avviare gateway, timeout sessione standardizzato a 30 minuti in `web.config` e in `carrello.aspx.vb`.
 - Il task resta confinato a UX carrello, gestione sessione e documentazione: nessuna modifica a gateway PayPal/BancaSella, core checkout, costi, sconti, spedizione, IVA, totali documento, generazione ordine/documento, DB/schema, SQL, login/reset/password o area account gia chiusa.
+- Smoke live `CART-UX-SUMMARY-STEPPER-TIMEOUT-1C = B`: carrello/riepilogo, stepper normale, timeout/sessionExpired, add/edit indirizzo, CAP/`city_registry` e `documentidettaglio.aspx` risultano OK; resta da correggere il lock coerente durante add/edit indirizzo, per impedire stepper e azioni carrello/checkout finche l'utente salva o annulla.
+- `CART-ADD-EDIT-LOCK-1A` registra il follow-up mirato: durante add/edit indirizzo inline il checkout entra in stato lock, con UI disabilitata e guard server-side centralizzata su stepper, procedi ordine, conferma/gateway, righe carrello, coupon, cambio indirizzo, spedizione e pagamento.
+- Lo stesso task corregge il logo header desktop/mobile: sorgente `Aziende.LogoWeb`, path pubblico `/Public/assets/images/logo/{LogoWeb}`, nome file sanificato, fallback interno `logo.svg` nella stessa cartella e nessun path legacy `Public/Images/`.
+- `EMAIL-ENGINE-1A` resta successivo: non avviarlo finche `CART-ADD-EDIT-LOCK-1A` non e verificato e il carrello non torna stabile.
 - `EMAIL-SYSTEM-AUDIT-1A` apre il blocco e-mail transazionali Taikun/KeepStore, solo documentale e senza runtime: audit invii esistenti, fonti DB ordine/pagamento/spedizione/logo, benchmark sintetico fornitori, standard template e roadmap micro-task futuri.
 - Manuale creato: `docs/KEEPSTORE_EMAIL_STANDARD.md`. Contiene mappa invii attuali, dati DB reali, standard HTML/plain text, varianti bonifico/contrassegno/PayPal/carta/Banca Sella, oggetti consigliati e roadmap `EMAIL-ENGINE`, `EMAIL-ORDER-CONFIRMATION`, `EMAIL-BANKTRANSFER`, `EMAIL-COD`, `EMAIL-ORDER-STATUS`, `EMAIL-AUTH`, preview/test e deliverability.
 - Benchmark sintetico recepito: email chiare su stato pagamento, importi, causale bonifico, pagamento alla consegna, CTA sicure, riepilogo ordine completo, layout table-based 600/640 px, logo azienda da DB e nessun asset esterno/legacy.
@@ -1439,9 +1443,9 @@ Task consigliato separato per eventuale proseguimento:
 
 1. Scegliere il prossimo blocco operativo su `frontend-rebuild` pulito.
 2. Possibili candidati:
-   - CART-UX-SUMMARY-STEPPER-TIMEOUT-1B: review PR, merge controllato e smoke mirato del riepilogo unico, stepper e timeout 30 minuti, senza pagamento reale.
+   - CART-ADD-EDIT-LOCK-1B: review PR, merge controllato e smoke mirato lock add/edit indirizzo + logo `Aziende.LogoWeb`, senza pagamento reale.
    - EMAIL-SYSTEM-AUDIT-1B: verifica PR documentale audit e-mail transazionali.
-   - EMAIL-ENGINE-1A: solo dopo merge audit, progettare helper unico e-mail HTML + plain text, logo da DB e CSS inline.
+   - EMAIL-ENGINE-1A: solo dopo carrello stabile e merge audit, progettare helper unico e-mail HTML + plain text, logo da DB e CSS inline.
    - EMAIL-ORDER-CONFIRMATION-1A: solo dopo motore email, conferma ordine standard con varianti pagamento.
    - ORDER-CONFIRMATION-UX smoke live: verificare la nuova UX post-ordine, senza pagamento reale.
    - AUDIT-FINALE-CHECKOUT-PAGAMENTI-1A: audit separato di checkout/pagamenti/gateway, senza confonderlo con UI carrello.

@@ -1145,7 +1145,9 @@ End Function
                 Me.Session("AziendaEmail") = dr.Item("Email")
                 Me.Session("AziendaNome") = dr.Item("Nome")
                 Me.Session("AziendaDescrizione") = dr.Item("Descrizione")
-                Me.Session("AziendaLogo") = "public/images/" & dr.Item("logoWeb")
+                Dim logoWebPath As String = BuildLogoWebAssetPath(dr.Item("logoWeb"))
+                Me.Session("AziendaLogo") = logoWebPath
+                Me.Session("AziendaLogoMobile") = logoWebPath
                 Me.Session("AziendaUrl") = dr.Item("url1")
                 Me.Session("Credits") = " <b>© " & DateTime.Now.Year.ToString() & " " & dr.Item("RagioneSociale") & "</b> - " & dr.Item("Indirizzo") & " - " & dr.Item("Cap") & " " & dr.Item("Citta") & " (" & dr.Item("provincia") & ") - P.I. " & dr.Item("Piva") & " - Tel. " & dr.Item("Telefono") & " - Fax " & dr.Item("Fax")
                 Me.Session("Credits2") = "<br>" & dr.Item("RagioneSociale") & "<br>" & dr.Item("Indirizzo") & "-" & dr.Item("Cap") & "<br>" & dr.Item("Citta") & " (" & dr.Item("provincia") & ")<br>P.Iva " & dr.Item("Piva") & "<br>Tel " & dr.Item("Telefono") & "<br>Fax " & dr.Item("Fax")
@@ -1389,6 +1391,26 @@ End Function
         If Not String.IsNullOrWhiteSpace(normalized) AndAlso LogoAssetExists(normalized) Then Return normalized
 
         Return InlineLogoPlaceholder()
+    End Function
+
+    Private Function BuildLogoWebAssetPath(ByVal rawFileName As Object) As String
+        Dim value As String = Convert.ToString(rawFileName).Trim()
+        If value = "" Then Return ThemeManager.Asset("images/logo/logo.svg")
+        If value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse
+           value.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse
+           value.StartsWith("//", StringComparison.OrdinalIgnoreCase) OrElse
+           value.StartsWith("data:", StringComparison.OrdinalIgnoreCase) OrElse
+           value.Contains("/") OrElse
+           value.Contains("\") Then
+            Return ThemeManager.Asset("images/logo/logo.svg")
+        End If
+
+        Dim fileName As String = IO.Path.GetFileName(value)
+        If String.IsNullOrWhiteSpace(fileName) OrElse fileName.Contains("..") OrElse fileName.Contains("/") OrElse fileName.Contains("\") Then
+            Return ThemeManager.Asset("images/logo/logo.svg")
+        End If
+
+        Return "/Public/assets/images/logo/" & fileName
     End Function
 
     Private Function NormalizeLogoAssetUrl(ByVal value As String) As String
