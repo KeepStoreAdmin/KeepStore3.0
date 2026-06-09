@@ -131,10 +131,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo merge PR #158 e smoke live carrello/logo/lock quantita:
+Stato di riferimento dopo merge PR #159 e smoke live finale carrello/logo/accessonegato:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `19e5ff8ce9cca198c0458aa0bd5ef70fe5a9bf5d`
+- HEAD stabile: `a23f2a6153b57048769dd5b2a6153f2d13ced445`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -182,6 +182,7 @@ Stato di riferimento dopo merge PR #158 e smoke live carrello/logo/lock quantita
 - Merge PR #156: `5718df4067cd73a1ce5e9fb958e5d6b74577f0ca`
 - Merge PR #157: `6d103d68df9931bc4f44e28b5c89018dfd86dd29`
 - Merge PR #158: `19e5ff8ce9cca198c0458aa0bd5ef70fe5a9bf5d`
+- Merge PR #159: `a23f2a6153b57048769dd5b2a6153f2d13ced445`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -1422,8 +1423,11 @@ Stato finale post-cleanup warning:
 - Smoke live `CART-LOGO-LOCK-FINAL-1C = B`: logo header/footer OK, carrello normale OK, stepper/procedi/gateway lock OK, CAP/sessione OK; residua solo anomalia dei controlli quantita `+/-` che cambiano valore a video durante add/edit indirizzo.
 - `CART-ADD-EDIT-QTY-LOCK-1A` corregge il residuo: durante add/edit indirizzo anche il quantity stepper `+/-` e l'input quantita sono inibiti lato UI, mentre il guard server-side continua a bloccare ogni update riga.
 - Anomalia live `ACCESS-DENIED-PAGE-404`: richiesta `/accessonegato.aspx` restituisce 404 ASP.NET "Impossibile trovare la risorsa" invece di una pagina utente coerente. La causa locale e una pagina legacy non canonica rispetto al code-behind esistente e al deploy live; `ACCESS-DENIED-PAGE-1A` ripristina una pagina runtime mirata per accesso negato/sessione non valida, senza modificare carrello, logo, gateway, totali, DB/schema o web.config.
-- Il blocco carrello/logo resta funzionalmente OK; la chiusura documentale finale viene rinviata dopo il micro-fix `ACCESS-DENIED-PAGE-1A`.
-- `EMAIL-ENGINE-1A` resta successivo: non avviarlo finche `ACCESS-DENIED-PAGE-1A` non e verificato e il carrello non torna stabile live.
+- Smoke live `CART-ADD-EDIT-QTY-LOCK-1C = A`: carrello normale, quantity `+/-`, pulsante Aggiorna, riepilogo unico `Riepilogo ordine`, add/edit indirizzo, microcopy, lock stepper/procedi/aggiorna, blocco click `+/-` e input quantita durante add/edit, ripristino con Annulla/Salva, CAP/`city_registry`, session timeout + F5 e `documentidettaglio.aspx` tutti OK. Step `Conferma` non avvia gateway da solo, gateway solo da pulsante finale Conferma; logo header desktop, header mobile e footer OK; nessun 404 logo, errore 500, stack trace, loop redirect o pagamento reale.
+- Smoke live `ACCESS-DENIED-PAGE-1C = A`: `/accessonegato.aspx` apre correttamente, non mostra piu il 404 ASP.NET, usa layout sito, titolo `Accesso non consentito` o equivalente, messaggio non tecnico, CTA `Accedi` verso `login.aspx`, CTA home verso `Default.aspx`/home, nessun loop redirect, `ReturnUrl=carrello.aspx` gestito con pagina richiesta locale, `ReturnUrl` esterno non produce redirect esterno, nessun open redirect evidente, homepage/carrello/documentidettaglio e logo header/footer OK.
+- Blocco carrello/session timeout/riepilogo/stepper/add-edit/quantity lock/logo/accessonegato chiuso live su HEAD stabile `a23f2a6153b57048769dd5b2a6153f2d13ced445`.
+- Gli smoke finali non hanno modificato gateway, PayPal/BancaSella, totali, costi, spedizione, IVA, sconti, DB/schema, SQL, `web.config` o sistema email runtime.
+- `EMAIL-ENGINE-1A` e il prossimo blocco operativo consigliato.
 - `EMAIL-SYSTEM-AUDIT-1A` apre il blocco e-mail transazionali Taikun/KeepStore, solo documentale e senza runtime: audit invii esistenti, fonti DB ordine/pagamento/spedizione/logo, benchmark sintetico fornitori, standard template e roadmap micro-task futuri.
 - Manuale creato: `docs/KEEPSTORE_EMAIL_STANDARD.md`. Contiene mappa invii attuali, dati DB reali, standard HTML/plain text, varianti bonifico/contrassegno/PayPal/carta/Banca Sella, oggetti consigliati e roadmap `EMAIL-ENGINE`, `EMAIL-ORDER-CONFIRMATION`, `EMAIL-BANKTRANSFER`, `EMAIL-COD`, `EMAIL-ORDER-STATUS`, `EMAIL-AUTH`, preview/test e deliverability.
 - Benchmark sintetico recepito: email chiare su stato pagamento, importi, causale bonifico, pagamento alla consegna, CTA sicure, riepilogo ordine completo, layout table-based 600/640 px, logo azienda da DB e nessun asset esterno/legacy.
@@ -1452,9 +1456,7 @@ Task consigliato separato per eventuale proseguimento:
 
 1. Scegliere il prossimo blocco operativo su `frontend-rebuild` pulito.
 2. Possibili candidati:
-   - ACCESS-DENIED-PAGE-1B: verifica PR, merge controllato e smoke mirato `/accessonegato.aspx`, senza gateway o modifiche carrello.
-   - EMAIL-SYSTEM-AUDIT-1B: verifica PR documentale audit e-mail transazionali.
-   - EMAIL-ENGINE-1A: solo dopo carrello stabile, fix accesso negato e merge audit, progettare helper unico e-mail HTML + plain text, logo da DB e CSS inline.
+   - EMAIL-ENGINE-1A: prossimo blocco operativo consigliato; progettare helper unico e-mail HTML + plain text, logo da DB e CSS inline, partendo da `frontend-rebuild` pulito.
    - EMAIL-ORDER-CONFIRMATION-1A: solo dopo motore email, conferma ordine standard con varianti pagamento.
    - ORDER-CONFIRMATION-UX smoke live: verificare la nuova UX post-ordine, senza pagamento reale.
    - AUDIT-FINALE-CHECKOUT-PAGAMENTI-1A: audit separato di checkout/pagamenti/gateway, senza confonderlo con UI carrello.
