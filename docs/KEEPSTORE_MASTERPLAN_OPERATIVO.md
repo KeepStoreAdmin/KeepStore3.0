@@ -131,10 +131,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo merge PR #153 e apertura audit email transazionali:
+Stato di riferimento dopo merge PR #154 e smoke live timeout carrello:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `5a0e2565fa94b3ab8705842c3e10359d381f46e6`
+- HEAD stabile: `1b7e77b2a7ef6cb4f6fcd6f490a3e3d3bad6abea`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -177,6 +177,7 @@ Stato di riferimento dopo merge PR #153 e apertura audit email transazionali:
 - Merge PR #151: `a5e39aa9ff226af1de7604503489d0d34efbe4a8`
 - Merge PR #152: `c0896bfe40c40cc88aabd6944e309a738e37156f`
 - Merge PR #153: `5a0e2565fa94b3ab8705842c3e10359d381f46e6`
+- Merge PR #154: `1b7e77b2a7ef6cb4f6fcd6f490a3e3d3bad6abea`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -220,6 +221,7 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
 - PR #138 account smoke hotfix follow-up
 - PR #139 account address defaults
 - PR #140 account address/login UX polish
+- PR #154 audit e-mail transazionali documentale
 
 ## 4. Roadmap sintetica
 
@@ -1406,6 +1408,9 @@ Stato finale post-cleanup warning:
 - `CART-SESSION-TIMEOUT-1A` non modifica gateway core, PayPal/BancaSella, importi gateway, calcolo prezzi, sconti, spedizione, IVA, totali documento, generazione ordine/documento, DB/schema o SQL.
 - Smoke live richiesto dopo eventuale merge: carrello con sessione valida, simulazione o attesa timeout, F5 senza pagina bianca, redirect/messaggio sessione scaduta, login con ritorno al carrello se previsto, nessun gateway avviato.
 - PR #153 e mergiata con merge commit `5a0e2565fa94b3ab8705842c3e10359d381f46e6`; cleanup branch `task/cart-session-timeout-1a` completato. Lo smoke live mirato session timeout resta da eseguire da Germano senza pagamento reale.
+- Smoke live `CART-SESSION-TIMEOUT-1C` completato con esito A: sessione valida OK, sessione scaduta + F5 senza pagina bianca, redirect controllato a login con messaggio chiaro e `ReturnUrl`, rientro al carrello funzionante, postback protetti, add/edit indirizzo, CAP/`city_registry`, step `Conferma` e `documentidettaglio.aspx` verificati; nessun gateway, pagamento, ordine o dato sensibile coinvolto.
+- `CART-UX-SUMMARY-STEPPER-TIMEOUT-1A` risolve le anomalie residue del carrello: un solo riepilogo visibile `Riepilogo ordine`, riepilogo tecnico legacy mantenuto solo per le label server-side, stepper superiore navigabile in modo coerente tra `Carrello`, `Spedizione e checkout` e `Conferma` senza avviare gateway, timeout sessione standardizzato a 30 minuti in `web.config` e in `carrello.aspx.vb`.
+- Il task resta confinato a UX carrello, gestione sessione e documentazione: nessuna modifica a gateway PayPal/BancaSella, core checkout, costi, sconti, spedizione, IVA, totali documento, generazione ordine/documento, DB/schema, SQL, login/reset/password o area account gia chiusa.
 - `EMAIL-SYSTEM-AUDIT-1A` apre il blocco e-mail transazionali Taikun/KeepStore, solo documentale e senza runtime: audit invii esistenti, fonti DB ordine/pagamento/spedizione/logo, benchmark sintetico fornitori, standard template e roadmap micro-task futuri.
 - Manuale creato: `docs/KEEPSTORE_EMAIL_STANDARD.md`. Contiene mappa invii attuali, dati DB reali, standard HTML/plain text, varianti bonifico/contrassegno/PayPal/carta/Banca Sella, oggetti consigliati e roadmap `EMAIL-ENGINE`, `EMAIL-ORDER-CONFIRMATION`, `EMAIL-BANKTRANSFER`, `EMAIL-COD`, `EMAIL-ORDER-STATUS`, `EMAIL-AUTH`, preview/test e deliverability.
 - Benchmark sintetico recepito: email chiare su stato pagamento, importi, causale bonifico, pagamento alla consegna, CTA sicure, riepilogo ordine completo, layout table-based 600/640 px, logo azienda da DB e nessun asset esterno/legacy.
@@ -1434,7 +1439,7 @@ Task consigliato separato per eventuale proseguimento:
 
 1. Scegliere il prossimo blocco operativo su `frontend-rebuild` pulito.
 2. Possibili candidati:
-   - CART-SESSION-TIMEOUT-1B: verifica PR e smoke live della gestione sessione scaduta carrello, senza pagamento reale.
+   - CART-UX-SUMMARY-STEPPER-TIMEOUT-1B: review PR, merge controllato e smoke mirato del riepilogo unico, stepper e timeout 30 minuti, senza pagamento reale.
    - EMAIL-SYSTEM-AUDIT-1B: verifica PR documentale audit e-mail transazionali.
    - EMAIL-ENGINE-1A: solo dopo merge audit, progettare helper unico e-mail HTML + plain text, logo da DB e CSS inline.
    - EMAIL-ORDER-CONFIRMATION-1A: solo dopo motore email, conferma ordine standard con varianti pagamento.

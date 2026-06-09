@@ -116,6 +116,8 @@ Session key account note:
 
 Nota sicurezza: alcune session key legacy possono contenere dati sensibili o riferimenti a password nei flow registrazione/auto-login; non riportare mai valori reali.
 
+Session timeout web standardizzato a 30 minuti: `web.config` dichiara `sessionState timeout="30"` e `carrello.aspx.vb` non deve abbassare il timeout del carrello sotto questo valore. Il flow carrello intercetta sessione scaduta e redirecta a login con messaggio non tecnico e `ReturnUrl` locale.
+
 ### 5.6 Gestione accessi
 
 - Accesso account basato su sessione.
@@ -235,7 +237,7 @@ Da completare con audit dedicato. Coinvolge disponibilita, prezzo, add-to-cart, 
 
 ### 9.4 Carrello
 
-`carrello.aspx` e modernizzato sul layout ONSUS per UI carrello, scelta indirizzo, add/edit indirizzi alternativi inline e step finale `Conferma`. Gli indirizzi inline restano collegati a `utentiindirizzi`; il lookup CAP/citta/provincia usa `city_registry` con query parametrizzate, citta/provincia bloccate quando il CAP e riconosciuto e gestione multi-citta tramite dropdown. L'avvio ordine/gateway resta consentito solo dallo step `Conferma`. Gateway core, costi, totali, IVA, spedizione e schema DB non sono stati modificati.
+`carrello.aspx` e modernizzato sul layout ONSUS per UI carrello, scelta indirizzo, add/edit indirizzi alternativi inline e step finale `Conferma`. Gli indirizzi inline restano collegati a `utentiindirizzi`; il lookup CAP/citta/provincia usa `city_registry` con query parametrizzate, citta/provincia bloccate quando il CAP e riconosciuto e gestione multi-citta tramite dropdown. Il carrello espone un solo riepilogo visibile `Riepilogo ordine`; le label tecniche legacy restano non visibili e alimentano il riepilogo finale. Lo stepper superiore consente navigazione controllata tra carrello, spedizione/checkout e conferma senza avviare gateway. L'avvio ordine/gateway resta consentito solo dallo step `Conferma`. Gateway core, costi, totali, IVA, spedizione e schema DB non sono stati modificati.
 
 ### 9.5 Checkout
 

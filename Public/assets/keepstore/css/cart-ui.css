@@ -154,6 +154,22 @@
     margin-right: auto;
 }
 
+.s-shoping-cart .checkout-status .ks-checkout-step-link{
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    text-align: center;
+}
+
+.s-shoping-cart .checkout-status .ks-checkout-step-link[aria-current="step"]{
+    cursor: default;
+    opacity: 1;
+}
+
+.s-shoping-cart .checkout-status .ks-checkout-step-disabled{
+    cursor: default;
+}
+
 .s-shoping-cart .cart-bottom.ks-cart-bottom {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);

@@ -91,13 +91,13 @@
                         <span class="icon">
                             <i class="icon-shop-cart-2"></i>
                         </span>
-                        <span class="<%= CheckoutStepTextClass(2) %>" <%= CheckoutStepAria(2) %>>Spedizione e checkout</span>
+                        <asp:LinkButton ID="lnkCheckoutStep2" runat="server" CausesValidation="false" CssClass="link body-text-3 ks-checkout-step-link" OnClick="lnkCheckoutStep2_Click">Spedizione e checkout</asp:LinkButton>
                     </div>
                     <div class="step-payment">
                         <span class="icon">
                             <i class="icon-shop-cart-3"></i>
                         </span>
-                        <span class="<%= CheckoutStepTextClass(3) %>" <%= CheckoutStepAria(3) %>>Conferma</span>
+                        <asp:LinkButton ID="lnkCheckoutStep3" runat="server" CausesValidation="false" CssClass="link body-text-3 ks-checkout-step-link" OnClick="lnkCheckoutStep3_Click">Conferma</asp:LinkButton>
                     </div>
                 </div>
             </div>
@@ -469,10 +469,10 @@
                     <asp:TextBox ID="tbTotale" runat="server" Width="20px" Style="display:none" ToolTip="Totale"></asp:TextBox>
                 </div>
 
-                <div class="col-12 col-lg-4">
+                <div id="CartSummaryColumn" runat="server" class="col-12 col-lg-4">
                     <div class="tf-page-cart-footer">
                         <div class="tf-cart-summery ks-summary-card">
-                            <h4 class="title">Riepilogo</h4>
+                            <h4 class="title">Riepilogo ordine</h4>
                         <table width="100%" id="TableConteggi" runat="server" visible="false" class="ks-summary-table">
                             <tr>
                                 <td align="right">Imponibile:</td>
