@@ -131,10 +131,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo merge PR #155 e smoke live carrello/riepilogo/stepper:
+Stato di riferimento dopo merge PR #158 e smoke live carrello/logo/lock quantita:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `6c3724ba36bc146fe7551a0d1f90676403fd4ad7`
+- HEAD stabile: `19e5ff8ce9cca198c0458aa0bd5ef70fe5a9bf5d`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -178,6 +178,10 @@ Stato di riferimento dopo merge PR #155 e smoke live carrello/riepilogo/stepper:
 - Merge PR #152: `c0896bfe40c40cc88aabd6944e309a738e37156f`
 - Merge PR #153: `5a0e2565fa94b3ab8705842c3e10359d381f46e6`
 - Merge PR #154: `1b7e77b2a7ef6cb4f6fcd6f490a3e3d3bad6abea`
+- Merge PR #155: `6c3724ba36bc146fe7551a0d1f90676403fd4ad7`
+- Merge PR #156: `5718df4067cd73a1ce5e9fb958e5d6b74577f0ca`
+- Merge PR #157: `6d103d68df9931bc4f44e28b5c89018dfd86dd29`
+- Merge PR #158: `19e5ff8ce9cca198c0458aa0bd5ef70fe5a9bf5d`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -1417,7 +1421,9 @@ Stato finale post-cleanup warning:
 - `FOOTER-LOGOWEB-1A` completa la standardizzazione logo iniziata con PR #156: anche il footer usa `Aziende.LogoWeb`, path `/Public/assets/images/logo/{LogoWeb}`, nome file sanificato e fallback interno controllato; nessun carrello, gateway, totale, DB/schema o SQL modificato.
 - Smoke live `CART-LOGO-LOCK-FINAL-1C = B`: logo header/footer OK, carrello normale OK, stepper/procedi/gateway lock OK, CAP/sessione OK; residua solo anomalia dei controlli quantita `+/-` che cambiano valore a video durante add/edit indirizzo.
 - `CART-ADD-EDIT-QTY-LOCK-1A` corregge il residuo: durante add/edit indirizzo anche il quantity stepper `+/-` e l'input quantita sono inibiti lato UI, mentre il guard server-side continua a bloccare ogni update riga.
-- `EMAIL-ENGINE-1A` resta successivo: non avviarlo finche `CART-ADD-EDIT-QTY-LOCK-1A` non e verificato e il carrello non torna stabile live.
+- Anomalia live `ACCESS-DENIED-PAGE-404`: richiesta `/accessonegato.aspx` restituisce 404 ASP.NET "Impossibile trovare la risorsa" invece di una pagina utente coerente. La causa locale e una pagina legacy non canonica rispetto al code-behind esistente e al deploy live; `ACCESS-DENIED-PAGE-1A` ripristina una pagina runtime mirata per accesso negato/sessione non valida, senza modificare carrello, logo, gateway, totali, DB/schema o web.config.
+- Il blocco carrello/logo resta funzionalmente OK; la chiusura documentale finale viene rinviata dopo il micro-fix `ACCESS-DENIED-PAGE-1A`.
+- `EMAIL-ENGINE-1A` resta successivo: non avviarlo finche `ACCESS-DENIED-PAGE-1A` non e verificato e il carrello non torna stabile live.
 - `EMAIL-SYSTEM-AUDIT-1A` apre il blocco e-mail transazionali Taikun/KeepStore, solo documentale e senza runtime: audit invii esistenti, fonti DB ordine/pagamento/spedizione/logo, benchmark sintetico fornitori, standard template e roadmap micro-task futuri.
 - Manuale creato: `docs/KEEPSTORE_EMAIL_STANDARD.md`. Contiene mappa invii attuali, dati DB reali, standard HTML/plain text, varianti bonifico/contrassegno/PayPal/carta/Banca Sella, oggetti consigliati e roadmap `EMAIL-ENGINE`, `EMAIL-ORDER-CONFIRMATION`, `EMAIL-BANKTRANSFER`, `EMAIL-COD`, `EMAIL-ORDER-STATUS`, `EMAIL-AUTH`, preview/test e deliverability.
 - Benchmark sintetico recepito: email chiare su stato pagamento, importi, causale bonifico, pagamento alla consegna, CTA sicure, riepilogo ordine completo, layout table-based 600/640 px, logo azienda da DB e nessun asset esterno/legacy.
@@ -1446,11 +1452,9 @@ Task consigliato separato per eventuale proseguimento:
 
 1. Scegliere il prossimo blocco operativo su `frontend-rebuild` pulito.
 2. Possibili candidati:
-   - CART-ADD-EDIT-LOCK-1B: review PR, merge controllato e smoke mirato lock add/edit indirizzo + logo `Aziende.LogoWeb`, senza pagamento reale.
-   - FOOTER-LOGOWEB-1B: review PR, merge controllato e smoke live logo header/footer + lock carrello, senza pagamento reale.
-   - CART-ADD-EDIT-QTY-LOCK-1B: review PR, merge controllato e smoke live mirato sui controlli quantita `+/-` durante add/edit indirizzo, senza pagamento reale.
+   - ACCESS-DENIED-PAGE-1B: verifica PR, merge controllato e smoke mirato `/accessonegato.aspx`, senza gateway o modifiche carrello.
    - EMAIL-SYSTEM-AUDIT-1B: verifica PR documentale audit e-mail transazionali.
-   - EMAIL-ENGINE-1A: solo dopo carrello stabile e merge audit, progettare helper unico e-mail HTML + plain text, logo da DB e CSS inline.
+   - EMAIL-ENGINE-1A: solo dopo carrello stabile, fix accesso negato e merge audit, progettare helper unico e-mail HTML + plain text, logo da DB e CSS inline.
    - EMAIL-ORDER-CONFIRMATION-1A: solo dopo motore email, conferma ordine standard con varianti pagamento.
    - ORDER-CONFIRMATION-UX smoke live: verificare la nuova UX post-ordine, senza pagamento reale.
    - AUDIT-FINALE-CHECKOUT-PAGAMENTI-1A: audit separato di checkout/pagamenti/gateway, senza confonderlo con UI carrello.
