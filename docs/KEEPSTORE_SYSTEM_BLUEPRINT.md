@@ -1026,7 +1026,7 @@ Ogni email transazionale deve:
 - avere CTA sicure verso ordine, area account, continua acquisti o assistenza;
 - avere versione plain text;
 - non includere password, token non necessari, dettagli tecnici, stack trace o transaction id completi non autorizzati;
-- usare logo azienda da `aziende.LogoWeb` per header desktop/mobile, con path `/Public/assets/images/logo/{LogoWeb}`, nome file sanificato e fallback interno controllato;
+- usare logo azienda da `aziende.LogoWeb` per header desktop/mobile e footer, con path `/Public/assets/images/logo/{LogoWeb}`, nome file sanificato e fallback interno controllato;
 - evitare asset esterni non controllati e percorsi legacy immagini del vecchio sito.
 
 ### 15.5 Roadmap email
