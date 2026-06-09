@@ -45,12 +45,12 @@ Partial Class SiteFooter
         Try
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 conn.Open()
-                Using cmd As New MySqlCommand("SELECT Logo, nome AS CompanyName FROM aziende WHERE id=@companyId LIMIT 1", conn)
+                Using cmd As New MySqlCommand("SELECT LogoWeb, nome AS CompanyName FROM aziende WHERE id=@companyId LIMIT 1", conn)
                     cmd.Parameters.AddWithValue("@companyId", ResolveFooterCompanyId(conn))
                     Using reader As MySqlDataReader = cmd.ExecuteReader()
                         If reader.Read() Then
                             companyName = SafeString(reader, "CompanyName")
-                            Return SafeString(reader, "Logo")
+                            Return SafeString(reader, "LogoWeb")
                         End If
                     End Using
                 End Using
@@ -106,8 +106,15 @@ Partial Class SiteFooter
         If String.IsNullOrWhiteSpace(value) Then
             Return String.Empty
         End If
+        If value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse
+           value.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse
+           value.StartsWith("//", StringComparison.OrdinalIgnoreCase) OrElse
+           value.StartsWith("data:", StringComparison.OrdinalIgnoreCase) OrElse
+           value.Contains("/") OrElse
+           value.Contains("\") Then
+            Return String.Empty
+        End If
 
-        value = value.Replace("\"c, "/"c)
         Dim fileName As String = Path.GetFileName(value)
         If String.IsNullOrWhiteSpace(fileName) Then
             Return String.Empty
