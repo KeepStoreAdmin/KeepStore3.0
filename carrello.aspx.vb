@@ -439,6 +439,8 @@ Private Const SessCartShippingAddressManual As String = "CART_SELECTED_ADDRESS_I
 Private Const SessCartAddressEditorOpen As String = "CART_ADDRESS_EDITOR_OPEN"
 Private Const SessCartAddressEditorMode As String = "CART_ADDRESS_EDITOR_MODE"
 Private Const SessCartAddressEditorId As String = "CART_ADDRESS_EDITOR_ID"
+Private Const CartSessionExpiredLoginUrl As String = "login.aspx?ReturnUrl=carrello.aspx&sessionExpired=1"
+Private _cartSessionExpiredRedirectIssued As Boolean = False
 
     Private Function GetSessionInt(ByVal key As String, Optional ByVal def As Integer = 0) As Integer
     Try
@@ -452,6 +454,44 @@ Private Const SessCartAddressEditorId As String = "CART_ADDRESS_EDITOR_ID"
     Catch
         Return def
     End Try
+    End Function
+
+    Private Function HasExistingAspNetSessionCookie() As Boolean
+        Try
+            Dim cookieHeader As String = Convert.ToString(Request.Headers("Cookie"))
+            If cookieHeader = "" Then Return False
+            Return cookieHeader.IndexOf("ASP.NET_SessionId", StringComparison.OrdinalIgnoreCase) >= 0
+        Catch
+            Return False
+        End Try
+    End Function
+
+    Private Function IsLikelyExpiredCartSession() As Boolean
+        Try
+            If Session Is Nothing OrElse Request Is Nothing Then Return False
+            If GetSessionInt(SessLoginId_A, 0) > 0 OrElse GetSessionInt(SessLoginId_B, 0) > 0 Then Return False
+            Return Session.IsNewSession AndAlso HasExistingAspNetSessionCookie()
+        Catch
+            Return False
+        End Try
+    End Function
+
+    Private Sub RedirectToCartSessionExpiredLogin()
+        _cartSessionExpiredRedirectIssued = True
+        Try
+            Session("StavonelCarrello") = 1
+        Catch
+        End Try
+        Response.Redirect(CartSessionExpiredLoginUrl, False)
+        Context.ApplicationInstance.CompleteRequest()
+    End Sub
+
+    Private Function GuardCartSessionForSensitiveAction() As Boolean
+        If _cartSessionExpiredRedirectIssued OrElse IsLikelyExpiredCartSession() Then
+            RedirectToCartSessionExpiredLogin()
+            Return False
+        End If
+        Return True
     End Function
 
     Private Function GetUtentiIdSafe(Optional ByVal defaultVal As Integer = 0) As Integer
@@ -797,6 +837,7 @@ Private Const SessCartAddressEditorId As String = "CART_ADDRESS_EDITOR_ID"
     End Sub
 
     Private Function IsAddressEditorActionAllowed(ByVal sender As Object) As Boolean
+        If Not GuardCartSessionForSensitiveAction() Then Return False
         If Not GetCartAddressEditorOpen() Then Return True
         If sender Is btnCartAddressSave OrElse sender Is btnCartAddressCancel OrElse sender Is tbCartCapA OrElse sender Is ddlCartCittaA Then Return True
 
@@ -1146,11 +1187,15 @@ Private Const SessCartAddressEditorId As String = "CART_ADDRESS_EDITOR_ID"
     End Function
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
-    ' Setto il Timeout di Sessione
-    Session.Timeout = 10
-    If Session("DESTINAZIONEALTERNATIVA") Is Nothing Then
-    Session("DESTINAZIONEALTERNATIVA") = 0
-    End If
+        ' Setto il Timeout di Sessione
+        Session.Timeout = 10
+        If IsLikelyExpiredCartSession() Then
+            RedirectToCartSessionExpiredLogin()
+            Return
+        End If
+        If Session("DESTINAZIONEALTERNATIVA") Is Nothing Then
+            Session("DESTINAZIONEALTERNATIVA") = 0
+        End If
 
     Me.MaintainScrollPositionOnPostBack = True
 
@@ -1273,6 +1318,7 @@ Private Const SessCartAddressEditorId As String = "CART_ADDRESS_EDITOR_ID"
 
 	
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
+        If _cartSessionExpiredRedirectIssued Then Return
         Me.Title = Me.Title & " - Il tuo Carrello"
 		
         Dim LoginId As Integer = GetSessionInt("LoginId", 0)
@@ -2176,10 +2222,12 @@ End Sub
     End Sub
 
     Protected Sub ImgBtnDestinazioneSi_Click(ByVal sender As Object, ByVal e As System.Web.UI.ImageClickEventArgs) Handles ImgBtnDestinazioneSi.Click
+        If Not GuardCartSessionForSensitiveAction() Then Return
         AggiornaDestinazionePredefinita(True)
     End Sub
 
     Protected Sub ImgBtnDestinazioneNo_Click(ByVal sender As Object, ByVal e As System.Web.UI.ImageClickEventArgs) Handles ImgBtnDestinazioneNo.Click
+        If Not GuardCartSessionForSensitiveAction() Then Return
         AggiornaDestinazionePredefinita(False)
     End Sub
 
@@ -2254,6 +2302,7 @@ End Sub
 	End Sub
 	
     Protected Sub btnAnnullaDest_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btnAnnullaDest.Click
+        If Not GuardCartSessionForSensitiveAction() Then Return
         'btInviaOrdine.Enabled = True
 		clear_destinazione_alternativa
 		Session("cityBinding") = 0
@@ -2294,6 +2343,7 @@ End Sub
     End Sub
 
     Protected Sub btnCartAddressAdd_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+        If Not GuardCartSessionForSensitiveAction() Then Return
         If GetUtentiIdSafe(0) <= 0 Then
             SetAddressSelectionMessage("Accedi per aggiungere un indirizzo di spedizione.")
             Return
@@ -2308,6 +2358,7 @@ End Sub
     End Sub
 
     Protected Sub btnCartAddressEdit_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+        If Not GuardCartSessionForSensitiveAction() Then Return
         Dim utentiId As Integer = GetUtentiIdSafe(0)
         If utentiId <= 0 Then
             SetAddressSelectionMessage("Accedi per modificare un indirizzo di spedizione.")
@@ -2342,6 +2393,7 @@ End Sub
     End Sub
 
     Protected Sub btnCartAddressCancel_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+        If Not GuardCartSessionForSensitiveAction() Then Return
         SetCartAddressEditorState(False, "add", 0)
         ClearCartAddressEditorFields()
         SetAddressSelectionMessage("Modifica indirizzo annullata.")
@@ -2350,18 +2402,21 @@ End Sub
     End Sub
 
     Protected Sub tbCartCapA_TextChanged(ByVal sender As Object, ByVal e As System.EventArgs)
+        If Not GuardCartSessionForSensitiveAction() Then Return
         SetCartAddressEditorState(True, GetCartAddressEditorMode(), GetCartAddressEditorId())
         ResolveCartAddressCap()
         ConfigureCartAddressEditor()
     End Sub
 
     Protected Sub ddlCartCittaA_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs)
+        If Not GuardCartSessionForSensitiveAction() Then Return
         SetCartAddressEditorState(True, GetCartAddressEditorMode(), GetCartAddressEditorId())
         ResolveCartAddressCap(If(ddlCartCittaA IsNot Nothing, ddlCartCittaA.SelectedValue, ""))
         ConfigureCartAddressEditor()
     End Sub
 
     Protected Sub btnCartAddressSave_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+        If Not GuardCartSessionForSensitiveAction() Then Return
         Dim utentiId As Integer = GetUtentiIdSafe(0)
         If utentiId <= 0 Then
             SetCartAddressEditorMessage("Accedi per salvare un indirizzo.", True)
@@ -2442,6 +2497,7 @@ End Sub
     End Sub
 
     Protected Sub LstDestinazione_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles LstDestinazione.SelectedIndexChanged
+        If Not GuardCartSessionForSensitiveAction() Then Return
 		Session("VECCHIADESTINAZIONEALTERNATIVA") = Session("DESTINAZIONEALTERNATIVA")
         'If LstDestinazione.SelectedItem.Value <> "0" Then
         '    Session("DESTINAZIONEALTERNATIVA") = LstDestinazione.SelectedItem.Value
@@ -2723,6 +2779,7 @@ End Sub
     End Sub
 
     Protected Sub Page_PreRenderComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRenderComplete
+        If _cartSessionExpiredRedirectIssued Then Return
         Dim imponibileVal As Double = SafeDbl(lblImponibile.Text, 0)
         Dim speseAssVal As Double = SafeDbl(lblSpeseAss.Text, 0)
         Dim speseSpedVal As Double = SafeDbl(lblSpeseSped.Text, 0)
@@ -3225,11 +3282,13 @@ Protected Sub btnVaiConfermaOrdine_Click(ByVal sender As Object, ByVal e As Syst
 End Sub
 
 Protected Sub btnModificaCheckout_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+    If Not GuardCartSessionForSensitiveAction() Then Return
     SetCheckoutStep("checkout")
     ApplyCheckoutStepUi()
 End Sub
 
    Protected Sub btnModDest_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btnModDest.Click
+    If Not GuardCartSessionForSensitiveAction() Then Return
 
     Dim utentiId As Integer = GetUtentiIdSafe(0)
     If utentiId <= 0 Then Exit Sub
@@ -3314,6 +3373,7 @@ End Sub
 End Sub
 	
     Protected Sub btnSalvaDest_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btnSalvaDest.Click
+    If Not GuardCartSessionForSensitiveAction() Then Return
 
     Dim utentiId As Integer = GetUtentiIdSafe(0)
     If utentiId <= 0 Then Exit Sub
@@ -3385,6 +3445,7 @@ End Sub
 End Sub
 
     Protected Sub btnElimDest_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btnElimDest.Click
+    If Not GuardCartSessionForSensitiveAction() Then Return
 
     If LstScegliIndirizzo Is Nothing OrElse LstScegliIndirizzo.Items.Count <= 1 Then Exit Sub
 
@@ -3630,6 +3691,7 @@ End Sub
 
 	
     Protected Sub Repeater1_ItemCommand(ByVal sender As Object, ByVal e As RepeaterCommandEventArgs) Handles Repeater1.ItemCommand
+        If Not GuardCartSessionForSensitiveAction() Then Return
 		If e.CommandName = "Aggiorna" Then
             btAggiorna_Click(sender, e)
         End If
@@ -3641,6 +3703,7 @@ End Sub
     End Sub
 
     Protected Sub gvArticoliGratis_ItemCommand(ByVal sender As Object, ByVal e As RepeaterCommandEventArgs) Handles gvArticoliGratis.ItemCommand
+        If Not GuardCartSessionForSensitiveAction() Then Return
         If e.CommandName = "Aggiorna" Then
             btAggiorna_Click(sender, e)
         End If
@@ -3699,6 +3762,7 @@ End Sub
     End Sub
 
     Protected Sub TB_BuonoSconto_TextChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles TB_BuonoSconto.TextChanged
+    If Not GuardCartSessionForSensitiveAction() Then Return
 
     Dim codice As String = If(TB_BuonoSconto.Text, "").Trim()
     If codice.Length <= 0 Then Exit Sub
@@ -4170,6 +4234,7 @@ End Function
 
 
 Protected Sub GV_BuoniSconti_RowCommand(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.GridViewCommandEventArgs) Handles GV_BuoniSconti.RowCommand
+    If Not GuardCartSessionForSensitiveAction() Then Return
     If Not IsAddressEditorActionAllowed(sender) Then Return
     If e.CommandName = "CancellaBuonoSconto" Then
         Session("BuonoSconto_id") = Nothing
@@ -4345,6 +4410,7 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
 ' =========================
 
 Protected Sub City_Bind_Data2(ByVal sender As Object, ByVal e As System.EventArgs)
+    If Not GuardCartSessionForSensitiveAction() Then Return
     riempi_ddl_citta(tbCap2.Text, ddlCitta2, tbProvincia2)
     Session("cityBinding") = 1
 End Sub
@@ -4415,6 +4481,7 @@ Protected Sub riempi_text_provincia(ByVal citta As String, ByVal provincia As Te
 End Sub
 
 Protected Sub Province_Bind_Data2(ByVal sender As Object, ByVal e As System.EventArgs)
+    If Not GuardCartSessionForSensitiveAction() Then Return
     riempi_text_provincia(getDdlCittaValue(ddlCitta2), tbProvincia2)
     Session("cityBinding") = 1
 End Sub

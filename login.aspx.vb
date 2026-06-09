@@ -5,6 +5,7 @@ Partial Class Login
     Inherits System.Web.UI.Page
 
     Private Const GenericLoginFailureMessage As String = "Accesso non riuscito. Verifica le credenziali o contatta il supporto."
+    Private Const SessionExpiredMessage As String = "La sessione e' scaduta per inattivita. Accedi di nuovo per continuare dal carrello."
 
     Private Function IsBlockedReturnPath(ByVal url As String) As Boolean
         Dim value As String = NormalizeReturnUrlForCheck(url)
@@ -132,6 +133,10 @@ Partial Class Login
                 Return
             Else
                 ClearInvalidLoginSession()
+            End If
+
+            If String.Equals(Convert.ToString(Request.QueryString("sessionExpired")), "1", StringComparison.OrdinalIgnoreCase) Then
+                lblLogin.Text = SessionExpiredMessage
             End If
 
             ' Prefill da cookie (solo username, se presente)
