@@ -131,10 +131,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo merge PR #152 e UX conferma ordine:
+Stato di riferimento dopo merge PR #153 e apertura audit email transazionali:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `c0896bfe40c40cc88aabd6944e309a738e37156f`
+- HEAD stabile: `5a0e2565fa94b3ab8705842c3e10359d381f46e6`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -176,6 +176,7 @@ Stato di riferimento dopo merge PR #152 e UX conferma ordine:
 - Merge PR #150: `b41cc367366fd0a2cfb470edc9afb259cbde2c71`
 - Merge PR #151: `a5e39aa9ff226af1de7604503489d0d34efbe4a8`
 - Merge PR #152: `c0896bfe40c40cc88aabd6944e309a738e37156f`
+- Merge PR #153: `5a0e2565fa94b3ab8705842c3e10359d381f46e6`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -1404,6 +1405,13 @@ Stato finale post-cleanup warning:
 - Fix previsto in `CART-SESSION-TIMEOUT-1A`: guard server-side iniziale su sessione ASP.NET ricreata da cookie scaduto, redirect sicuro a `login.aspx?ReturnUrl=carrello.aspx&sessionExpired=1`, messaggio utente non tecnico su login e blocco degli eventi sensibili del carrello quando la sessione e scaduta.
 - `CART-SESSION-TIMEOUT-1A` non modifica gateway core, PayPal/BancaSella, importi gateway, calcolo prezzi, sconti, spedizione, IVA, totali documento, generazione ordine/documento, DB/schema o SQL.
 - Smoke live richiesto dopo eventuale merge: carrello con sessione valida, simulazione o attesa timeout, F5 senza pagina bianca, redirect/messaggio sessione scaduta, login con ritorno al carrello se previsto, nessun gateway avviato.
+- PR #153 e mergiata con merge commit `5a0e2565fa94b3ab8705842c3e10359d381f46e6`; cleanup branch `task/cart-session-timeout-1a` completato. Lo smoke live mirato session timeout resta da eseguire da Germano senza pagamento reale.
+- `EMAIL-SYSTEM-AUDIT-1A` apre il blocco e-mail transazionali Taikun/KeepStore, solo documentale e senza runtime: audit invii esistenti, fonti DB ordine/pagamento/spedizione/logo, benchmark sintetico fornitori, standard template e roadmap micro-task futuri.
+- Manuale creato: `docs/KEEPSTORE_EMAIL_STANDARD.md`. Contiene mappa invii attuali, dati DB reali, standard HTML/plain text, varianti bonifico/contrassegno/PayPal/carta/Banca Sella, oggetti consigliati e roadmap `EMAIL-ENGINE`, `EMAIL-ORDER-CONFIRMATION`, `EMAIL-BANKTRANSFER`, `EMAIL-COD`, `EMAIL-ORDER-STATUS`, `EMAIL-AUTH`, preview/test e deliverability.
+- Benchmark sintetico recepito: email chiare su stato pagamento, importi, causale bonifico, pagamento alla consegna, CTA sicure, riepilogo ordine completo, layout table-based 600/640 px, logo azienda da DB e nessun asset esterno/legacy.
+- Audit iniziale conferma che la conferma ordine parte da `ordine.aspx.vb`, il reset password tokenizzato da `App_Code/PasswordResetTokenService.vb`, registrazione/profilo da `registrazione.aspx.vb`; cambio password, reset completato, cambio stato ordine e tracking/spedizione non risultano inviati dal runtime web auditato.
+- `documenti.aspx` inserisce richieste in `inviadocumenti`; invio reale documento/fattura/proforma da gestionale/processo esterno resta da confermare con Vincenzo.
+- Nessun codice runtime, CSS, DB/schema, SQL, gateway, carrello/checkout, login/reset/registrazione o template applicativo viene modificato da `EMAIL-SYSTEM-AUDIT-1A`.
 - Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
@@ -1427,6 +1435,9 @@ Task consigliato separato per eventuale proseguimento:
 1. Scegliere il prossimo blocco operativo su `frontend-rebuild` pulito.
 2. Possibili candidati:
    - CART-SESSION-TIMEOUT-1B: verifica PR e smoke live della gestione sessione scaduta carrello, senza pagamento reale.
+   - EMAIL-SYSTEM-AUDIT-1B: verifica PR documentale audit e-mail transazionali.
+   - EMAIL-ENGINE-1A: solo dopo merge audit, progettare helper unico e-mail HTML + plain text, logo da DB e CSS inline.
+   - EMAIL-ORDER-CONFIRMATION-1A: solo dopo motore email, conferma ordine standard con varianti pagamento.
    - ORDER-CONFIRMATION-UX smoke live: verificare la nuova UX post-ordine, senza pagamento reale.
    - AUDIT-FINALE-CHECKOUT-PAGAMENTI-1A: audit separato di checkout/pagamenti/gateway, senza confonderlo con UI carrello.
    - Prossima pagina o area scelta da Germano su branch dedicato.

@@ -46,11 +46,12 @@ Relazione con il masterplan: il masterplan resta il riferimento operativo per ta
 - [12. Funzionalita ecommerce](#12-funzionalita-ecommerce)
 - [13. Area account - stato consolidato](#13-area-account---stato-consolidato)
 - [14. Login, registrazione e recupero password - audit LOGIN-REGISTER-1A](#14-login-registrazione-e-recupero-password---audit-login-register-1a)
-- [15. Registro modifiche tecniche](#15-registro-modifiche-tecniche)
-- [16. Debito tecnico e backlog architetturale](#16-debito-tecnico-e-backlog-architetturale)
-- [17. Sezione brochure sintetica](#17-sezione-brochure-sintetica)
-- [18. Glossario](#18-glossario)
-- [19. Regole per aggiornamenti futuri](#19-regole-per-aggiornamenti-futuri)
+- [15. Sistema email transazionali](#15-sistema-email-transazionali)
+- [16. Registro modifiche tecniche](#16-registro-modifiche-tecniche)
+- [17. Debito tecnico e backlog architetturale](#17-debito-tecnico-e-backlog-architetturale)
+- [18. Sezione brochure sintetica](#18-sezione-brochure-sintetica)
+- [19. Glossario](#19-glossario)
+- [20. Regole per aggiornamenti futuri](#20-regole-per-aggiornamenti-futuri)
 
 ## 4. Executive summary tecnico
 
@@ -970,10 +971,82 @@ Micro-task futuri:
 - `GESTIONALE-RESET-TOKEN-UI-1A`: futura schermata gestionale JANUS per audit/revoca token reset.
 - `GESTIONALE-PASSWORD-HASH-UI-1A`: adeguare gestionale per non mostrare o richiedere password in chiaro.
 
-## 15. Registro modifiche tecniche
+## 15. Sistema email transazionali
+
+Riferimento operativo completo: `docs/KEEPSTORE_EMAIL_STANDARD.md`.
+
+### 15.1 Stato attuale da audit EMAIL-SYSTEM-AUDIT-1A
+
+Il sistema email e misto legacy/moderno:
+
+- conferma ordine/preventivo inviata da `ordine.aspx.vb` tramite `SendEmail`, dopo creazione documento e commit;
+- reset password tokenizzato inviato da `App_Code/PasswordResetTokenService.vb`, con HTML + plain text, token monouso e `TokenHash` su DB;
+- registrazione e aggiornamento profilo inviano email da `registrazione.aspx.vb` tramite metodo `Email`;
+- `documenti.aspx` non invia direttamente documenti/fatture/proforma, ma inserisce richieste in `inviadocumenti`, da completare/verificare con processo esterno o gestionale;
+- cambio password area account, reset completato, cambio stato ordine, spedizione/tracking ed email pagamento gateway dedicate non risultano inviate dal runtime web auditato;
+- `mailconfig` esiste nello schema, ma non risulta usata direttamente dal runtime web auditato.
+
+### 15.2 Dati DB coinvolti
+
+Fonti dati ordine:
+
+- documento: `documenti`, `vdocumenticompleta`, `vstampadocumento`;
+- righe: `documentirighe`, `vdocumentirighe`;
+- totali: `documentipie.TotImponibile`, `TotIva`, `TotaleDocumento`, `CostoSpedizione`, `CostoAssicurazione`, `CostoPagamento`, `TotSconto`;
+- pagamento: `documenti.PagamentiTipoId`, `documenti.Pagato`, `documenti.StatoPagamentoWeb`, `documenti.IdTransazione`, `pagamentitipo.Descrizione`, `Informazioni`, `Contrassegno`, `OnLine`, `Banca`, `FE_Pagamento`;
+- PayPal: `paypal_express_transazioni`;
+- Banca Sella: `bancasella_impostazioni_azienda`, `bancasella_ordini_pagati`, `bancasella_log`;
+- spedizione/tracking: `documentipie.VettoriId`, `documenti.Tracking`, `documentipie.Tracking`, `vettori.Descrizione`, `vettori.Informazioni`, `vettori.Link_Tracking`;
+- azienda/logo: `aziende.RagioneSociale`, `email`, `Telefono`, `Piva`, `URL1`, `URL2`, `Logo`, `LogoWeb`, `Iban`, `SwiftCode`, `NomeBanca`, `Condizioni_vendita`, `Condizioni_privacy`;
+- coda documento: `inviadocumenti`, view `vdatiinviadocumenti`.
+
+Le credenziali SMTP restano dati sensibili: documentare solo i nomi campo (`Smtp`, `User_smtp`, `Password_smtp`), mai valori.
+
+### 15.3 Architettura futura proposta
+
+Separare in micro-componenti:
+
+- motore email: helper unico in `App_Code`, invio SMTP, HTML + plain text, sanitizzazione e logging minimo;
+- dati ordine: adapter read-only da documento/righe/totali;
+- dati pagamento: adapter che traduce `pagamentitipo`, `Pagato`, `StatoPagamentoWeb` e gateway in stato testuale sicuro;
+- dati spedizione: adapter vettore/tracking con link sanificati;
+- template: layout table-based max 600/640 px, logo da DB, sezioni coerenti, CSS inline;
+- preview/test: modalita di anteprima senza inviare email reali;
+- log invio: da progettare, se non esiste gia un tracciamento gestionale sufficiente.
+
+### 15.4 Standard funzionale
+
+Ogni email transazionale deve:
+
+- avere oggetto chiaro e specifico;
+- distinguere stato ordine, pagamento e spedizione;
+- includere solo dati necessari all'evento;
+- avere CTA sicure verso ordine, area account, continua acquisti o assistenza;
+- avere versione plain text;
+- non includere password, token non necessari, dettagli tecnici, stack trace o transaction id completi non autorizzati;
+- usare logo azienda da `aziende.LogoWeb`/`Logo`, con fallback testuale;
+- evitare asset esterni non controllati e percorsi legacy immagini del vecchio sito.
+
+### 15.5 Roadmap email
+
+Task consigliati:
+
+1. `EMAIL-ENGINE-1A`;
+2. `EMAIL-ORDER-CONFIRMATION-1A`;
+3. `EMAIL-BANKTRANSFER-1A`;
+4. `EMAIL-COD-1A`;
+5. `EMAIL-ORDER-STATUS-1A`;
+6. `EMAIL-AUTH-1A`;
+7. `EMAIL-PREVIEW-TEST-1A`;
+8. `EMAIL-DELIVERABILITY-1A`.
+
+Non implementare runtime email senza task dedicato e senza conferma delle fonti bonifico/gestionale con Germano/Vincenzo.
+
+## 16. Registro modifiche tecniche
 
 | Data | Task | PR | Commit | File modificati | Sintesi tecnica | Impatto funzionale | Note/debito residuo |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-06-09 | EMAIL-SYSTEM-AUDIT-1A | branch PR | pending | `docs/KEEPSTORE_EMAIL_STANDARD.md`, masterplan, blueprint | Audit sistema email transazionali e standard Taikun | Base per motore email futuro | Solo docs, nessun runtime/DB/gateway modificato |
 | 2026-05-29 | ACCOUNT-PROFILE-1B | #100/#101/#102 | `f0eeccc...`, `7bfd40c...`, `919b342...` | account profile/sidebar | Profilo account ONSUS e sidebar root/active | Profilo stabilizzato | Cleanup inline non completo all'epoca |
 | 2026-05-29 | ACCOUNT-ADDRESS-1B | #107 | `a4381b83ec5c617c6dc75022d30580ded5394f62` | `Page.master.vb`, `my-account-address.aspx` | Indirizzi read-only ONSUS | Pagina indirizzi stabile | Add/edit/delete rimandati |
 | 2026-05-29 | ACCOUNT-SIDEBAR-INLINE-CLEANUP-2B | #109 | `7fe10f0edfbc7b7d5951116697c6654a100ba60f` | `Page.master.vb`, `documenti.aspx` | AccountSidebar globale su documenti e selector dinamico | Lista documenti stabile | Nessun gateway diretto |
@@ -993,7 +1066,7 @@ Micro-task futuri:
 | 2026-06-09 | CART-INLINE-ADDRESS-CITYREGISTRY-STEP | #147-#150 | `5c4ec079...` - `b41cc367...` | `carrello.aspx`, `carrello.aspx.vb`, `documentidettaglio.aspx`, docs | Carrello ONSUS con selezione indirizzi, add/edit inline, lookup CAP da `city_registry` e step `Conferma` | Carrello stabile post-smoke live | Nessun gateway/core checkout, costi/totali, DB/schema o SQL modificato |
 | 2026-06-09 | ORDER-CONFIRMATION-UX-1A | PR da verificare | branch task | `documentidettaglio.aspx`, `documentidettaglio.aspx.vb`, `Public/assets/keepstore/css/order-ui.css`, docs | Hero conferma ordine, card post-acquisto, stampa/copia numero ordine e timeline locale | Migliora touchpoint post-acquisto e dettaglio storico | Nessun gateway core, totali/costi, DB/schema o SQL modificato; smoke live richiesto |
 
-## 16. Debito tecnico e backlog architetturale
+## 17. Debito tecnico e backlog architetturale
 
 - Hash/migrazione password non implementati.
 - Password legacy ancora in chiaro nel DB e nel meccanismo login.
@@ -1046,7 +1119,7 @@ Micro-task futuri:
 - `CITY-REGISTRY-AUDIT-1A`: audit citta/CAP usati in registrazione sito e gestionale.
 - Task Vincenzo/manuale tecnico: documento operativo per modifiche DB richieste e coordinamento gestionale.
 
-## 17. Sezione brochure sintetica
+## 18. Sezione brochure sintetica
 
 Questa sezione raccoglie materiale prudente e riusabile per una brochure tecnica o commerciale sintetica. Non contiene promesse non verificate.
 
@@ -1104,7 +1177,7 @@ Lista documenti con selector dinamico e dettaglio ordine con stato ordine/pagame
 
 Il cambio password account e stabilizzato e i flussi login/registrazione/reminder sono oggetto di progressivo consolidamento e riduzione dei rischi legacy. Il reset password tokenizzato fase 1 e operativo e validato live; hash/migrazione password, CSRF auth e ulteriore modernizzazione registrazione restano backlog prioritari.
 
-## 18. Glossario
+## 19. Glossario
 
 | Termine | Definizione |
 | --- | --- |
@@ -1121,7 +1194,7 @@ Il cambio password account e stabilizzato e i flussi login/registrazione/reminde
 | merge commit | Commit creato dal merge non squash/non rebase. |
 | hash migration | Migrazione da password legacy in chiaro a password hashata. |
 
-## 19. Regole per aggiornamenti futuri
+## 20. Regole per aggiornamenti futuri
 
 Da BLUEPRINT-1A in poi, ogni task con modifica funzionale o audit rilevante deve valutare se aggiornare:
 
