@@ -131,10 +131,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo merge PR #150 e smoke live `CART-INLINE-ADDRESS-CITYREGISTRY-STEP-1D`:
+Stato di riferimento dopo merge PR #151 e chiusura documentale carrello/indirizzi/CAP/step `Conferma`:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `b41cc367366fd0a2cfb470edc9afb259cbde2c71`
+- HEAD stabile: `a5e39aa9ff226af1de7604503489d0d34efbe4a8`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -174,6 +174,7 @@ Stato di riferimento dopo merge PR #150 e smoke live `CART-INLINE-ADDRESS-CITYRE
 - Merge PR #148: `7558e7dbd8a3221425d5b9bc432fcf272c45625e`
 - Merge PR #149: `05a43e54821af795ce897f50465405a7cae21bea`
 - Merge PR #150: `b41cc367366fd0a2cfb470edc9afb259cbde2c71`
+- Merge PR #151: `a5e39aa9ff226af1de7604503489d0d34efbe4a8`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 
 Branch PayPal/config/document detail/my orders/account dashboard/account profile gia mergiati e, dove previsto, puliti:
@@ -1393,6 +1394,11 @@ Stato finale post-cleanup warning:
 - Durante tutto il blocco non sono stati modificati gateway PayPal/BancaSella, core checkout, costi, sconti, spedizione, IVA, totali documento, DB/schema, SQL, login/reset/password o area account gia chiusa.
 - Stato finale carrello/checkout: `carrello.aspx` stabile per UI carrello, selezione indirizzi, add/edit inline e step `Conferma`; il core pagamenti/gateway resta separato e va trattato solo con task dedicati.
 - Non riaprire il blocco carrello/indirizzi/CAP/step `Conferma` salvo bug live verificato.
+- `ORDER-CONFIRMATION-UX-1A` modernizza `documentidettaglio.aspx` come pagina post-acquisto/dettaglio ordine compatibile: hero stile e-commerce ONSUS/Taikun, messaggio "Grazie per il tuo ordine" solo nel contesto post-conferma o rientro pagamento, dati ordine principali, stampa ordine, copia numero ordine, CTA sicure, card pagamento/spedizione/fatturazione/riepilogo/prossimi passi/supporto e timeline locale.
+- Il riferimento UX fornito da Germano viene usato solo come ispirazione generica post-acquisto: nessun brand/testo/asset dello screenshot, nessuna immagine esterna, nessuna API AI o tracking esterno introdotto.
+- File coinvolti da `ORDER-CONFIRMATION-UX-1A`: `documentidettaglio.aspx`, `documentidettaglio.aspx.vb`, `Public/assets/keepstore/css/order-ui.css`, `docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md`, `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md`.
+- `ORDER-CONFIRMATION-UX-1A` non modifica gateway core PayPal/BancaSella/IwBank, credenziali, endpoint, autorizzazione/cattura, importi inviati ai gateway, calcolo prezzi, sconti, spedizione, IVA, totale documento, generazione ordine/documento, DB/schema o SQL.
+- Smoke live richiesto dopo eventuale merge: aprire dettaglio ordine/post-conferma, verificare hero, dati ordine, stampa, copia numero ordine, CTA sicure, card indirizzi/pagamento/riepilogo, responsive base e assenza regressioni PayPal/gateway senza eseguire pagamenti reali.
 - Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
@@ -1415,6 +1421,7 @@ Task consigliato separato per eventuale proseguimento:
 
 1. Scegliere il prossimo blocco operativo su `frontend-rebuild` pulito.
 2. Possibili candidati:
+   - ORDER-CONFIRMATION-UX-1B: verifica PR e poi smoke live della nuova UX post-ordine, senza pagamento reale.
    - AUDIT-FINALE-CHECKOUT-PAGAMENTI-1A: audit separato di checkout/pagamenti/gateway, senza confonderlo con UI carrello.
    - Prossima pagina o area scelta da Germano su branch dedicato.
    - PASSWORD-HASH-SCHEMA-2B / PASSWORD-HASH-MIGRATION-2C: futuro task hash password; hash password non ancora implementato.

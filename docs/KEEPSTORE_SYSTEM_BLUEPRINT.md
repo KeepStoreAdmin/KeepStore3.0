@@ -182,7 +182,7 @@ Il gestionale KeepStore usa l'archivio `connessioni` come primo punto di verific
 | `paypalcheckout.aspx` | `paypalcheckout.aspx.vb` | PayPal Express launcher | stabilizzato lato PayPal | PayPal NVP, documenti | Non invocare senza task |
 | `paypalreturn.aspx` | `paypalreturn.aspx.vb` | Return PayPal | stabilizzato lato PayPal | token, transaction state | Non invocare senza task |
 | `paypalrecheck.aspx` | `paypalrecheck.aspx.vb` | Recheck pending PayPal | stabilizzato lato PayPal | `GetTransactionDetails` | Non invocare senza task |
-| `documentidettaglio.aspx` | `documentidettaglio.aspx.vb` | Dettaglio documento/ordine | stabile ONSUS | documento, righe, pagamento | Pay Now solo se azione reale |
+| `documentidettaglio.aspx` | `documentidettaglio.aspx.vb` | Dettaglio documento/ordine e conferma post-acquisto | stabile ONSUS + UX conferma | documento, righe, pagamento | Pay Now solo se azione reale; gateway/totali separati |
 | `documenti.aspx` | `documenti.aspx.vb` | Lista documenti/ordini | stabile ONSUS account | `sdsTipo`, documenti | Selector dinamico |
 | `myaccount.aspx` | `myaccount.aspx.vb` | Dashboard account | stabile ONSUS | profilo, indirizzi, ordini recenti | AccountSidebar |
 | `my-account-edit.aspx` | `my-account-edit.aspx.vb` | Profilo account | stabile ONSUS | login/utente/contatti | Salvataggi validati |
@@ -250,7 +250,7 @@ Area progressivamente stabilizzata con shell account ONSUS, `body.ks-page-accoun
 
 ### 9.8 Documenti/ordini
 
-`documenti.aspx` lista documenti/ordini con selector dinamico `sdsTipo`; `documentidettaglio.aspx` dettaglio documento/ordine con stato ordine e stato pagamento separati.
+`documenti.aspx` lista documenti/ordini con selector dinamico `sdsTipo`; `documentidettaglio.aspx` dettaglio documento/ordine con stato ordine e stato pagamento separati. `ORDER-CONFIRMATION-UX-1A` aggiunge una UX post-acquisto moderna compatibile con lo storico: hero contestuale, dati ordine principali, stampa/copia numero ordine, card informative e timeline locale, senza modificare gateway core, totali, costi, DB/schema o stato pagamento.
 
 ### 9.9 Profilo utente
 
@@ -494,7 +494,7 @@ L'audit DB non ha invocato gateway, non ha letto dati ordine reali e non ha ripo
 | Prodotto | da completare | Product detail e product card |
 | Promozioni/prezzi | da completare | Promo, listini, coupon |
 | Carrello | stabile UI/indirizzi/Conferma | Perimetro sensibile: gateway/core checkout separati |
-| Ordini | parziale | Lista/dettaglio account stabilizzati |
+| Ordini | parziale/stabile UX dettaglio | Lista/dettaglio account stabilizzati; UX conferma ordine moderna su `documentidettaglio.aspx` |
 | Documenti | stabile area account | Selector documenti dinamico |
 | Pagamenti | parziale/stabilizzato PayPal | PayPal Express NVP stabilizzato; BancaSella legacy |
 | Area cliente | consolidata su pagine principali | Sidebar/account shell |
@@ -991,6 +991,7 @@ Micro-task futuri:
 | 2026-06-05 | REMIND-RESET-DB-REVIEW-1G | documentale | branch PR | `docs/REMIND_RESET_DB_MANUALE_VINCENZO.md`, `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` | Integrazione feedback Germano: strategia legacy-compatible, tabella per DB cliente, no FK iniziale, `aziende.ScadenzaPassword`, futura UI JANUS token reset | Nessun runtime; chiarisce impatto gestionale e scadenza password | Nessun codice/DB modificato, nessuna tabella creata, nessun dato sensibile esposto |
 | 2026-06-07 | ACCOUNT-PROFILE-ADDRESS-CLOSE-1A | #136-#145 | `6160bd8...` - `1fe259a...` | account profile/address/login docs | Chiusura blocco account profilo/indirizzi: dashboard profilo, dettagli account, indirizzi autonomi e smoke live finale | Area account profilo/indirizzi stabile | Il follow-up carrello indirizzi e stato poi chiuso nel blocco #147-#150; nessun DB/schema modificato |
 | 2026-06-09 | CART-INLINE-ADDRESS-CITYREGISTRY-STEP | #147-#150 | `5c4ec079...` - `b41cc367...` | `carrello.aspx`, `carrello.aspx.vb`, `documentidettaglio.aspx`, docs | Carrello ONSUS con selezione indirizzi, add/edit inline, lookup CAP da `city_registry` e step `Conferma` | Carrello stabile post-smoke live | Nessun gateway/core checkout, costi/totali, DB/schema o SQL modificato |
+| 2026-06-09 | ORDER-CONFIRMATION-UX-1A | PR da verificare | branch task | `documentidettaglio.aspx`, `documentidettaglio.aspx.vb`, `Public/assets/keepstore/css/order-ui.css`, docs | Hero conferma ordine, card post-acquisto, stampa/copia numero ordine e timeline locale | Migliora touchpoint post-acquisto e dettaglio storico | Nessun gateway core, totali/costi, DB/schema o SQL modificato; smoke live richiesto |
 
 ## 16. Debito tecnico e backlog architetturale
 
