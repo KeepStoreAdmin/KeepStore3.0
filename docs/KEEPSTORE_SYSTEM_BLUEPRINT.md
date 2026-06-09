@@ -198,7 +198,7 @@ Il gestionale KeepStore usa l'archivio `connessioni` come primo punto di verific
 | `registrazione.aspx` | `registrazione.aspx.vb` | Registrazione | mitigata senza hash | `utenti`, `login`, SP legacy | Policy 8-25, no lowercase forzato, no password in email/sessione/URL |
 | `registrazioneok.aspx` | `registrazioneok.aspx.vb` | Esito registrazione | mitigato | sessioni post-registrazione | Nessuna password in URL/UI |
 | `remind.aspx` | `remind.aspx.vb` | Reset password tokenizzato | fase 1 operativa legacy-compatible | `vlogin`, `login_password_reset_tokens`, email | Email + CF/PIVA, PRG, sent=1 UX, token single-use, hash non implementato |
-| `accessonegato.aspx` | `accessonegato.aspx.vb` | Accesso negato | legacy semplice | sessione | Redirect se login presente |
+| `accessonegato.aspx` | `accessonegato.aspx.vb` | Accesso negato/sessione non autorizzata | pagina standard | sessione, `ReturnUrl` locale opzionale | Messaggio non tecnico, CTA login/home, no redirect automatico |
 | `logout.aspx` | `logout.aspx.vb` | Logout | legacy semplice | sessione, carrello | Pulisce sessione/carrello |
 
 ## 8. Componenti, controlli e moduli
@@ -289,7 +289,7 @@ Auditata in LOGIN-REGISTER-1A e mitigata in LOGIN-REGISTER-SECURITY-1. Crea uten
 
 ### 9.17 Accesso negato
 
-`accessonegato.aspx` mostra accesso negato e redirecta a default se sessione login presente.
+`accessonegato.aspx` e la pagina standard per accesso negato, sessione non autorizzata o area riservata non disponibile. Usa `Page.master`, mostra un messaggio non tecnico, offre CTA sicure verso login e home e accetta solo un eventuale `ReturnUrl` locale sanificato; non deve mostrare dettagli ASP.NET, stack trace o redirect automatici verso se stessa.
 
 ## 10. Database e tabelle
 
