@@ -134,7 +134,7 @@ Quando si rifattorizza una pagina:
 Stato di riferimento dopo merge PR #159 e smoke live finale carrello/logo/accessonegato:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `a23f2a6153b57048769dd5b2a6153f2d13ced445`
+- HEAD stabile: `78acd2585c9135f30054b633bac9ec6ea6aaae7f`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -1441,6 +1441,13 @@ Stato finale post-cleanup warning:
 - `LOCAL-ASSET-UNTRACKED-CLEANUP-1A = B`: dopo merge `EMAIL-ENGINE-1B` la working tree locale era sporca solo per asset non tracciati sotto `Public/assets/images/...`; 684 asset non referenziati sono stati spostati in quarantena fuori repository in `C:\KeepStoreWeb\_untracked_assets_quarantine\20260609-2352`, con manifest dedicato, senza cancellare file tracciati e senza commit.
 - `REFERENCED-ASSETS-DECISION-1A`: i 22 asset rimasti sono stati versionati perche referenziati da runtime attivo o template inclusi nel repository (`coupon*.aspx`, `carrello.aspx`, `documenti.aspx.vb`, `SiteHeader.ascx.vb`, template mailing/eBay legacy). Gli ulteriori 78 asset locali extra non referenziati, ricomparsi fuori dal perimetro dei 22, sono stati spostati in quarantena separata `C:\KeepStoreWeb\_untracked_assets_quarantine\referenced-assets-extra-20260610-0007`.
 - Stato atteso dopo `REFERENCED-ASSETS-DECISION-1A`: working tree pulita, nessun codice runtime modificato, nessun DB/schema/SQL, gateway, carrello, email engine, `web.config`, header/footer/logo o `Page.master` modificati. Prossimo task operativo resta `EMAIL-ORDER-CONFIRMATION-1A`.
+- `EMAIL-ORDER-CONFIRMATION-1A` parte da base HEAD `78acd2585c9135f30054b633bac9ec6ea6aaae7f` e migra la sola email conferma ordine/preventivo in `ordine.aspx.vb` al renderer standard `App_Code/KeepStoreEmailTemplate.vb`.
+- Trigger, timing, destinatario cliente, BCC azienda, mittente, SMTP, credenziali SMTP e condizioni di invio restano invariati; non vengono introdotti invii duplicati o anticipati.
+- Il subject usa gli helper standard: conferma ordine generica oppure variante bonifico quando il metodo pagamento esistente indica bonifico. Il vecchio body HTML resta come fallback se il renderer fallisce.
+- Il nuovo body usa HTML table-based e plain text, logo aziendale da `Aziende.LogoWeb` tramite sessione azienda gia popolata, riepilogo documento, cliente/indirizzi gia disponibili, righe, importi gia calcolati, pagamento, spedizione e CTA sicura al dettaglio documento.
+- Le varianti pagamento supportate usano microcopy standard per bonifico, PayPal/carta/online, contrassegno e pagamento generico; non viene dichiarato pagamento ricevuto senza conferma gia presente nel flusso.
+- `EMAIL-ORDER-CONFIRMATION-1A` non modifica gateway PayPal/BancaSella, carrello/checkout, importi, costi, IVA, spedizione, sconti, generazione ordine/documento, DB/schema, SQL, `web.config`, connection string, appSettings o impostazioni SMTP.
+- Prossimo task: `EMAIL-ORDER-CONFIRMATION-1B` review/merge PR.
 - Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.

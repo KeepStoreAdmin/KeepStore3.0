@@ -216,6 +216,28 @@ Componenti disponibili:
 
 Tutti i valori dinamici passati al renderer devono essere gia fonti applicative autorizzate e vengono codificati in HTML/attributi dal renderer. Il task non cambia SMTP, `web.config`, gateway, carrello, checkout, DB/schema o logiche di invio esistenti.
 
+### 4.5 Uso nella conferma ordine `EMAIL-ORDER-CONFIRMATION-1A`
+
+`ordine.aspx.vb` usa il renderer standard per la conferma ordine/preventivo mantenendo lo stesso punto di invio, destinatario, BCC, SMTP, timing e condizioni legacy. Il vecchio body HTML resta fallback se il renderer non produce il messaggio.
+
+Campi minimi passati al modello ordine:
+
+- numero e data documento;
+- stato documento se gia disponibile;
+- cliente, recapiti e indirizzo alternativo se gia presenti nel punto di invio;
+- metodo e informazioni pagamento;
+- metodo e informazioni spedizione;
+- righe ordine con codice, descrizione, quantita, prezzo unitario e totale riga gia usati dal body legacy;
+- importi gia calcolati dal documento, senza ricalcolo;
+- note documento e link sicuro al dettaglio documento.
+
+Regole pagamento nel renderer:
+
+- bonifico: subject e titolo specifici di ordine in attesa di bonifico; nessuna dichiarazione di incasso;
+- PayPal/carta/online: testo neutro di verifica/conferma secondo dati esistenti, senza transaction id completi;
+- contrassegno/contanti: microcopy di pagamento alla consegna solo se riconosciuto dal metodo pagamento;
+- generico: uso di descrizione e informazioni pagamento gia presenti nel documento.
+
 ### 4.3 Plain text
 
 Ogni email deve avere una versione plain text con:
