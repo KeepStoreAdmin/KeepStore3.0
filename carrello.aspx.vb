@@ -834,6 +834,7 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         SetControlEnabled(btnVaiConfermaOrdine, unlocked)
         SetControlEnabled(btInviaOrdine, unlocked)
         SetControlEnabled(btSalvaPreventivo, unlocked)
+        ApplyCheckoutStepperNavigation()
     End Sub
 
     Private Function IsAddressEditorActionAllowed(ByVal sender As Object) As Boolean
@@ -853,11 +854,14 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
     Private Sub ApplyCheckoutStepUi()
         If tOrdine Is Nothing OrElse Not tOrdine.Visible Then
             SetCheckoutStep("cart")
+            If CartSummaryColumn IsNot Nothing Then CartSummaryColumn.Visible = True
             If pnlCheckoutConfirm IsNot Nothing Then pnlCheckoutConfirm.Visible = False
+            ApplyCheckoutStepperNavigation()
             Return
         End If
 
         Dim isConfirm As Boolean = CheckoutStepIsConfirm()
+        If CartSummaryColumn IsNot Nothing Then CartSummaryColumn.Visible = False
         If pnlCheckoutConfirm IsNot Nothing Then pnlCheckoutConfirm.Visible = isConfirm
         If pSpedizione IsNot Nothing Then pSpedizione.Visible = Not isConfirm
         If pAssicurazione IsNot Nothing Then pAssicurazione.Visible = Not isConfirm
@@ -870,6 +874,29 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         If btSalvaPreventivo IsNot Nothing Then btSalvaPreventivo.Visible = False
 
         If isConfirm Then BindCheckoutConfirmSummary()
+        ApplyCheckoutStepperNavigation()
+    End Sub
+
+    Private Sub ApplyCheckoutStepperNavigation()
+        Dim checkoutVisible As Boolean = tOrdine IsNot Nothing AndAlso tOrdine.Visible
+        Dim isConfirm As Boolean = checkoutVisible AndAlso CheckoutStepIsConfirm()
+        Dim editorUnlocked As Boolean = Not GetCartAddressEditorOpen()
+
+        ConfigureCheckoutStepLink(lnkCheckoutStep2, 2, checkoutVisible AndAlso Not isConfirm, checkoutVisible AndAlso isConfirm AndAlso editorUnlocked)
+        ConfigureCheckoutStepLink(lnkCheckoutStep3, 3, isConfirm, checkoutVisible AndAlso Not isConfirm AndAlso editorUnlocked)
+    End Sub
+
+    Private Sub ConfigureCheckoutStepLink(ByVal link As LinkButton, ByVal stepNumber As Integer, ByVal isCurrent As Boolean, ByVal isInteractive As Boolean)
+        If link Is Nothing Then Return
+
+        Dim css As String = CheckoutStepTextClass(stepNumber) & " ks-checkout-step-link"
+        If Not isInteractive Then css &= " ks-checkout-step-disabled"
+
+        link.CssClass = css.Trim()
+        link.Enabled = isInteractive
+        link.Attributes("aria-disabled") = If(isInteractive, "false", "true")
+        link.Attributes.Remove("aria-current")
+        If isCurrent Then link.Attributes("aria-current") = "step"
     End Sub
 
     Private Function LabelText(ByVal label As Label) As String
@@ -1187,8 +1214,8 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
     End Function
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
-        ' Setto il Timeout di Sessione
-        Session.Timeout = 10
+        ' Standard carrello: 30 minuti, allineato a web.config.
+        Session.Timeout = 30
         If IsLikelyExpiredCartSession() Then
             RedirectToCartSessionExpiredLogin()
             Return
@@ -3269,6 +3296,21 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
 
 Protected Sub btnVaiConfermaOrdine_Click(ByVal sender As Object, ByVal e As System.EventArgs)
     If Not IsAddressEditorActionAllowed(sender) Then Return
+    MoveToCheckoutConfirmStep()
+End Sub
+
+Protected Sub lnkCheckoutStep2_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+    If Not IsAddressEditorActionAllowed(sender) Then Return
+    SetCheckoutStep("checkout")
+    ApplyCheckoutStepUi()
+End Sub
+
+Protected Sub lnkCheckoutStep3_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+    If Not IsAddressEditorActionAllowed(sender) Then Return
+    MoveToCheckoutConfirmStep()
+End Sub
+
+Private Sub MoveToCheckoutConfirmStep()
     Aggiorna_Prezzi_Carrello()
     LeggiVettori()
     LeggiPagamenti()
