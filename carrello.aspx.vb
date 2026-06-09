@@ -6,6 +6,7 @@ Imports System.Globalization
 Imports MySql.Data.MySqlClient
 Imports System.Web.UI
 Imports System.Web.UI.WebControls
+Imports System.Web.UI.HtmlControls
 Imports System.Security.Cryptography
 Imports System.Web
 
@@ -872,10 +873,22 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         If repeater Is Nothing Then Return
         For Each item As RepeaterItem In repeater.Items
             If item.ItemType <> ListItemType.Item AndAlso item.ItemType <> ListItemType.AlternatingItem Then Continue For
+            SetQuantityWrapLocked(TryCast(item.FindControl("qtyWrap"), HtmlGenericControl), Not unlocked)
             SetControlEnabled(TryCast(item.FindControl("tbQta"), WebControl), unlocked)
             SetControlEnabled(TryCast(item.FindControl("LB_Aggiorna"), WebControl), unlocked)
             SetControlEnabled(TryCast(item.FindControl("LB_Delete"), WebControl), unlocked)
         Next
+    End Sub
+
+    Private Sub SetQuantityWrapLocked(ByVal wrap As HtmlGenericControl, ByVal locked As Boolean)
+        If wrap Is Nothing Then Return
+
+        Dim css As String = If(wrap.Attributes("class"), "")
+        css = css.Replace(" ks-qty-locked", "")
+        If locked Then css &= " ks-qty-locked"
+        wrap.Attributes("class") = css.Trim()
+        wrap.Attributes("aria-disabled") = If(locked, "true", "false")
+        wrap.Attributes("data-ks-qty-locked") = If(locked, "true", "false")
     End Sub
 
     Private Function CheckoutStepIsConfirm() As Boolean

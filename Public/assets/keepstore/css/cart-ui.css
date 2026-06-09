@@ -405,6 +405,16 @@
     pointer-events: none;
 }
 
+.ks-wg-quantity.ks-qty-locked{
+    opacity: .58;
+}
+
+.ks-wg-quantity.ks-qty-locked .btn-quantity,
+.ks-wg-quantity.ks-qty-locked .quantity-product{
+    cursor: not-allowed !important;
+    pointer-events: none;
+}
+
 .ks-final-confirm-section{
     border: 1px solid rgba(0,0,0,.08);
     background: #fff;
