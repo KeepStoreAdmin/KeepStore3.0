@@ -150,7 +150,7 @@ End Function
 Private Const CHECKOUT_TOKEN_SESSION_KEY As String = "CheckoutToken"
 Private Const CHECKOUT_TOKEN_TIME_SESSION_KEY As String = "CheckoutTokenIssuedUtc"
 Private Const SessCheckoutStep As String = "CartCheckoutStep"
-Private Const CartEditorLockMessage As String = "Completa o annulla la modifica dell'indirizzo prima di continuare."
+Private Const CartEditorLockMessage As String = "Completa o annulla la modifica dell'indirizzo prima di continuare con il checkout."
 
 Private Class CityRegistryAddressOption
     Public Property Cap As String
@@ -680,6 +680,10 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         Return String.Equals(Convert.ToString(Session(SessCartAddressEditorOpen)), "1", StringComparison.Ordinal)
     End Function
 
+    Private Function IsAddressEditModeActive() As Boolean
+        Return GetCartAddressEditorOpen()
+    End Function
+
     Private Sub SetCartAddressEditorState(ByVal isOpen As Boolean, ByVal mode As String, ByVal addressId As Integer)
         Session(SessCartAddressEditorOpen) = If(isOpen, "1", "0")
         Session(SessCartAddressEditorMode) = If(String.Equals(mode, "edit", StringComparison.OrdinalIgnoreCase), "edit", "add")
@@ -804,6 +808,9 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         If btnCartAddressSave IsNot Nothing Then btnCartAddressSave.Text = If(mode = "edit", "Salva modifiche", "Salva nuovo indirizzo")
         If tbCartCittaA IsNot Nothing Then tbCartCittaA.ReadOnly = True
         If tbCartProvinciaA IsNot Nothing Then tbCartProvinciaA.ReadOnly = True
+        If lblCartAddressEditorMessage IsNot Nothing AndAlso String.IsNullOrWhiteSpace(lblCartAddressEditorMessage.Text) Then
+            SetCartAddressEditorMessage(CartEditorLockMessage, False)
+        End If
         UpdateCartAddressEditorHint()
     End Sub
 
@@ -818,15 +825,18 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
     End Sub
 
     Private Sub ApplyCartAddressEditorLock()
-        Dim unlocked As Boolean = Not GetCartAddressEditorOpen()
+        Dim unlocked As Boolean = Not IsAddressEditModeActive()
 
         SetControlEnabled(btContinua, unlocked)
         SetControlEnabled(btAggiorna, unlocked)
         SetControlEnabled(btSvuota, unlocked)
         SetControlEnabled(btCompleta, unlocked)
+        SetControlEnabled(TB_BuonoSconto, unlocked)
         SetControlEnabled(BT_ApplicaBuonoSconto, unlocked)
         SetControlEnabled(LB_CancelBuonoSconto, unlocked)
         SetControlEnabled(LstScegliIndirizzo, unlocked)
+        SetControlEnabled(btnCartAddressAdd, unlocked)
+        SetControlEnabled(btnCartAddressEdit, unlocked)
         SetControlEnabled(gvVettoriPromo, unlocked)
         SetControlEnabled(gvVettori, unlocked)
         SetControlEnabled(cbAssicurazione, unlocked)
@@ -834,18 +844,39 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         SetControlEnabled(btnVaiConfermaOrdine, unlocked)
         SetControlEnabled(btInviaOrdine, unlocked)
         SetControlEnabled(btSalvaPreventivo, unlocked)
+        If open1 IsNot Nothing Then
+            open1.Visible = unlocked
+            open1.Attributes("aria-disabled") = If(unlocked, "false", "true")
+        End If
+        ApplyCartLineItemLock(unlocked)
         ApplyCheckoutStepperNavigation()
     End Sub
 
     Private Function IsAddressEditorActionAllowed(ByVal sender As Object) As Boolean
         If Not GuardCartSessionForSensitiveAction() Then Return False
-        If Not GetCartAddressEditorOpen() Then Return True
+        If Not IsAddressEditModeActive() Then Return True
         If sender Is btnCartAddressSave OrElse sender Is btnCartAddressCancel OrElse sender Is tbCartCapA OrElse sender Is ddlCartCittaA Then Return True
 
         SetCartAddressEditorMessage(CartEditorLockMessage, True)
         ConfigureCartAddressEditor()
+        ApplyCheckoutStepperNavigation()
         Return False
     End Function
+
+    Private Sub ApplyCartLineItemLock(ByVal unlocked As Boolean)
+        ApplyRepeaterItemLock(Repeater1, unlocked)
+        ApplyRepeaterItemLock(gvArticoliGratis, unlocked)
+    End Sub
+
+    Private Sub ApplyRepeaterItemLock(ByVal repeater As Repeater, ByVal unlocked As Boolean)
+        If repeater Is Nothing Then Return
+        For Each item As RepeaterItem In repeater.Items
+            If item.ItemType <> ListItemType.Item AndAlso item.ItemType <> ListItemType.AlternatingItem Then Continue For
+            SetControlEnabled(TryCast(item.FindControl("tbQta"), WebControl), unlocked)
+            SetControlEnabled(TryCast(item.FindControl("LB_Aggiorna"), WebControl), unlocked)
+            SetControlEnabled(TryCast(item.FindControl("LB_Delete"), WebControl), unlocked)
+        Next
+    End Sub
 
     Private Function CheckoutStepIsConfirm() As Boolean
         Return String.Equals(Convert.ToString(Session(SessCheckoutStep)), "confirm", StringComparison.Ordinal)
@@ -880,8 +911,9 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
     Private Sub ApplyCheckoutStepperNavigation()
         Dim checkoutVisible As Boolean = tOrdine IsNot Nothing AndAlso tOrdine.Visible
         Dim isConfirm As Boolean = checkoutVisible AndAlso CheckoutStepIsConfirm()
-        Dim editorUnlocked As Boolean = Not GetCartAddressEditorOpen()
+        Dim editorUnlocked As Boolean = Not IsAddressEditModeActive()
 
+        ConfigureCheckoutStepLink(lnkCheckoutStep1, 1, Not checkoutVisible, checkoutVisible AndAlso editorUnlocked)
         ConfigureCheckoutStepLink(lnkCheckoutStep2, 2, checkoutVisible AndAlso Not isConfirm, checkoutVisible AndAlso isConfirm AndAlso editorUnlocked)
         ConfigureCheckoutStepLink(lnkCheckoutStep3, 3, isConfirm, checkoutVisible AndAlso Not isConfirm AndAlso editorUnlocked)
     End Sub
@@ -1467,6 +1499,7 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
 
         'ABILITA E DISABILITA I PULSANTI
         ArticoliCarrello(qta)
+        ApplyRepeaterItemLock(Repeater1, Not IsAddressEditModeActive())
 
         'Me.gvVettori.DataBind()
     End Sub
@@ -2524,7 +2557,7 @@ End Sub
     End Sub
 
     Protected Sub LstDestinazione_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles LstDestinazione.SelectedIndexChanged
-        If Not GuardCartSessionForSensitiveAction() Then Return
+        If Not IsAddressEditorActionAllowed(sender) Then Return
 		Session("VECCHIADESTINAZIONEALTERNATIVA") = Session("DESTINAZIONEALTERNATIVA")
         'If LstDestinazione.SelectedItem.Value <> "0" Then
         '    Session("DESTINAZIONEALTERNATIVA") = LstDestinazione.SelectedItem.Value
@@ -2710,6 +2743,7 @@ End Function
         End If
 
     Next
+    ApplyRepeaterItemLock(gvArticoliGratis, Not IsAddressEditModeActive())
     End Sub
 
     Protected Sub gvVettoriPromo_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles gvVettoriPromo.PreRender
@@ -2849,7 +2883,7 @@ End Sub
             lblBuonoScontoIVA.Text = FormatCurrencyIt(0D)
         End If
 
-        If (gvArticoliGratis.Items.Count > 0) Or (Repeater1.items.Count > 0) Then
+        If ((gvArticoliGratis.Items.Count > 0) Or (Repeater1.items.Count > 0)) AndAlso Not IsAddressEditModeActive() Then
             TB_BuonoSconto_TextChanged(TB_BuonoSconto, New System.EventArgs)
             GV_BuoniSconti.DataBind()
         Else
@@ -2963,6 +2997,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
         Else
             Panel_BuoniSconto.Visible = False
         End If
+        ApplyCartAddressEditorLock()
     End Sub
 
     'Restituisce 1, se il controllo Ã¨ andato a buon fine, altrimenti 0
@@ -3299,6 +3334,14 @@ Protected Sub btnVaiConfermaOrdine_Click(ByVal sender As Object, ByVal e As Syst
     MoveToCheckoutConfirmStep()
 End Sub
 
+Protected Sub lnkCheckoutStep1_Click(ByVal sender As Object, ByVal e As System.EventArgs)
+    If Not IsAddressEditorActionAllowed(sender) Then Return
+    SetCheckoutStep("cart")
+    If tOrdine IsNot Nothing Then tOrdine.Visible = False
+    If TableConteggi IsNot Nothing Then TableConteggi.Visible = False
+    ApplyCheckoutStepUi()
+End Sub
+
 Protected Sub lnkCheckoutStep2_Click(ByVal sender As Object, ByVal e As System.EventArgs)
     If Not IsAddressEditorActionAllowed(sender) Then Return
     SetCheckoutStep("checkout")
@@ -3324,13 +3367,13 @@ Private Sub MoveToCheckoutConfirmStep()
 End Sub
 
 Protected Sub btnModificaCheckout_Click(ByVal sender As Object, ByVal e As System.EventArgs)
-    If Not GuardCartSessionForSensitiveAction() Then Return
+    If Not IsAddressEditorActionAllowed(sender) Then Return
     SetCheckoutStep("checkout")
     ApplyCheckoutStepUi()
 End Sub
 
    Protected Sub btnModDest_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btnModDest.Click
-    If Not GuardCartSessionForSensitiveAction() Then Return
+    If Not IsAddressEditorActionAllowed(sender) Then Return
 
     Dim utentiId As Integer = GetUtentiIdSafe(0)
     If utentiId <= 0 Then Exit Sub
@@ -3415,7 +3458,7 @@ End Sub
 End Sub
 	
     Protected Sub btnSalvaDest_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btnSalvaDest.Click
-    If Not GuardCartSessionForSensitiveAction() Then Return
+    If Not IsAddressEditorActionAllowed(sender) Then Return
 
     Dim utentiId As Integer = GetUtentiIdSafe(0)
     If utentiId <= 0 Then Exit Sub
@@ -3487,7 +3530,7 @@ End Sub
 End Sub
 
     Protected Sub btnElimDest_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btnElimDest.Click
-    If Not GuardCartSessionForSensitiveAction() Then Return
+    If Not IsAddressEditorActionAllowed(sender) Then Return
 
     If LstScegliIndirizzo Is Nothing OrElse LstScegliIndirizzo.Items.Count <= 1 Then Exit Sub
 
@@ -3733,7 +3776,7 @@ End Sub
 
 	
     Protected Sub Repeater1_ItemCommand(ByVal sender As Object, ByVal e As RepeaterCommandEventArgs) Handles Repeater1.ItemCommand
-        If Not GuardCartSessionForSensitiveAction() Then Return
+        If Not IsAddressEditorActionAllowed(sender) Then Return
 		If e.CommandName = "Aggiorna" Then
             btAggiorna_Click(sender, e)
         End If
@@ -3745,7 +3788,7 @@ End Sub
     End Sub
 
     Protected Sub gvArticoliGratis_ItemCommand(ByVal sender As Object, ByVal e As RepeaterCommandEventArgs) Handles gvArticoliGratis.ItemCommand
-        If Not GuardCartSessionForSensitiveAction() Then Return
+        If Not IsAddressEditorActionAllowed(sender) Then Return
         If e.CommandName = "Aggiorna" Then
             btAggiorna_Click(sender, e)
         End If
@@ -3804,7 +3847,7 @@ End Sub
     End Sub
 
     Protected Sub TB_BuonoSconto_TextChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles TB_BuonoSconto.TextChanged
-    If Not GuardCartSessionForSensitiveAction() Then Return
+    If Not IsAddressEditorActionAllowed(sender) Then Return
 
     Dim codice As String = If(TB_BuonoSconto.Text, "").Trim()
     If codice.Length <= 0 Then Exit Sub

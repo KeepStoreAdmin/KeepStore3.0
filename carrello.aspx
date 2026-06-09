@@ -85,7 +85,7 @@
                         <span class="icon">
                             <i class="icon-shop-cart-1"></i>
                         </span>
-                        <a href="carrello.aspx" class="<%= CheckoutStepTextClass(1) %>" <%= CheckoutStepAria(1) %>>Carrello</a>
+                        <asp:LinkButton ID="lnkCheckoutStep1" runat="server" CausesValidation="false" CssClass="link body-text-3 ks-checkout-step-link" OnClick="lnkCheckoutStep1_Click">Carrello</asp:LinkButton>
                     </div>
                     <div class="step-payment">
                         <span class="icon">

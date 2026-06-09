@@ -377,12 +377,13 @@ Partial Class SiteHeader
         Try
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 conn.Open()
-                Using cmd As New MySqlCommand("SELECT Logo, LogoWeb, nome AS CompanyName FROM aziende WHERE id=@companyId LIMIT 1", conn)
+                Using cmd As New MySqlCommand("SELECT LogoWeb, nome AS CompanyName FROM aziende WHERE id=@companyId LIMIT 1", conn)
                     cmd.Parameters.AddWithValue("@companyId", ResolveHeaderCompanyId(conn))
                     Using reader As MySqlDataReader = cmd.ExecuteReader()
                         If reader.Read() Then
-                            info.DesktopLogoFile = SafeString(reader, "Logo")
-                            info.MobileLogoFile = SafeString(reader, "LogoWeb")
+                            Dim logoWeb As String = SafeString(reader, "LogoWeb")
+                            info.DesktopLogoFile = logoWeb
+                            info.MobileLogoFile = logoWeb
                             info.CompanyName = SafeString(reader, "CompanyName")
                         End If
                     End Using
@@ -439,8 +440,15 @@ Partial Class SiteHeader
         If String.IsNullOrWhiteSpace(value) Then
             Return String.Empty
         End If
+        If value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse
+           value.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse
+           value.StartsWith("//", StringComparison.OrdinalIgnoreCase) OrElse
+           value.StartsWith("data:", StringComparison.OrdinalIgnoreCase) OrElse
+           value.Contains("/") OrElse
+           value.Contains("\") Then
+            Return String.Empty
+        End If
 
-        value = value.Replace("\"c, "/"c)
         Dim fileName As String = Path.GetFileName(value)
         If String.IsNullOrWhiteSpace(fileName) Then
             Return String.Empty
@@ -497,10 +505,6 @@ Partial Class SiteHeader
         End If
         If lower.Contains("/public/assets/images/logo/") Then
             u = ReplaceInsensitive(u, "/Public/assets/images/logo/", "/Public/assets/images/logo/")
-            lower = u.ToLowerInvariant()
-        End If
-        If lower.Contains("/public/images/") Then
-            u = ReplaceInsensitive(u, "/Public/images/", "/public/images/")
             lower = u.ToLowerInvariant()
         End If
         If lower.StartsWith("images/logo/", StringComparison.OrdinalIgnoreCase) OrElse
