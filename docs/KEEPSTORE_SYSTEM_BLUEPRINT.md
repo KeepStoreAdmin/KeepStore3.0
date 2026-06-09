@@ -1027,6 +1027,7 @@ Ogni email transazionale deve:
 - avere versione plain text;
 - non includere password, token non necessari, dettagli tecnici, stack trace o transaction id completi non autorizzati;
 - usare logo azienda da `aziende.LogoWeb` per header desktop/mobile e footer, con path `/Public/assets/images/logo/{LogoWeb}`, nome file sanificato e fallback interno controllato;
+- per nuovi invii runtime, usare la fondazione `App_Code/KeepStoreEmailTemplate.vb`: renderer HTML/plain text, subject helper, microcopy pagamento/spedizione e sanitizzazione logo `LogoWeb`;
 - evitare asset esterni non controllati e percorsi legacy immagini del vecchio sito.
 
 ### 15.5 Roadmap email
@@ -1048,6 +1049,7 @@ Non implementare runtime email senza task dedicato e senza conferma delle fonti 
 
 | Data | Task | PR | Commit | File modificati | Sintesi tecnica | Impatto funzionale | Note/debito residuo |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-06-09 | EMAIL-ENGINE-1A | branch PR | pending | `App_Code/KeepStoreEmailTemplate.vb`, documentazione | Fondazione renderer email HTML/plain text, subject helper, logo `LogoWeb` e microcopy pagamento/spedizione | Base runtime per migrare invii futuri | Nessun invio reale migrato, nessun SMTP/web.config/DB/gateway modificato |
 | 2026-06-09 | EMAIL-SYSTEM-AUDIT-1A | branch PR | pending | `docs/KEEPSTORE_EMAIL_STANDARD.md`, masterplan, blueprint | Audit sistema email transazionali e standard Taikun | Base per motore email futuro | Solo docs, nessun runtime/DB/gateway modificato |
 | 2026-05-29 | ACCOUNT-PROFILE-1B | #100/#101/#102 | `f0eeccc...`, `7bfd40c...`, `919b342...` | account profile/sidebar | Profilo account ONSUS e sidebar root/active | Profilo stabilizzato | Cleanup inline non completo all'epoca |
 | 2026-05-29 | ACCOUNT-ADDRESS-1B | #107 | `a4381b83ec5c617c6dc75022d30580ded5394f62` | `Page.master.vb`, `my-account-address.aspx` | Indirizzi read-only ONSUS | Pagina indirizzi stabile | Add/edit/delete rimandati |
