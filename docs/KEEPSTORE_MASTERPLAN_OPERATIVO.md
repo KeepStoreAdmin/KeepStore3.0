@@ -1415,7 +1415,9 @@ Stato finale post-cleanup warning:
 - `CART-ADD-EDIT-LOCK-1A` registra il follow-up mirato: durante add/edit indirizzo inline il checkout entra in stato lock, con UI disabilitata e guard server-side centralizzata su stepper, procedi ordine, conferma/gateway, righe carrello, coupon, cambio indirizzo, spedizione e pagamento.
 - Lo stesso task corregge il logo header desktop/mobile: sorgente `Aziende.LogoWeb`, path pubblico `/Public/assets/images/logo/{LogoWeb}`, nome file sanificato, fallback interno `logo.svg` nella stessa cartella e nessun path legacy `Public/Images/`.
 - `FOOTER-LOGOWEB-1A` completa la standardizzazione logo iniziata con PR #156: anche il footer usa `Aziende.LogoWeb`, path `/Public/assets/images/logo/{LogoWeb}`, nome file sanificato e fallback interno controllato; nessun carrello, gateway, totale, DB/schema o SQL modificato.
-- `EMAIL-ENGINE-1A` resta successivo: non avviarlo finche `CART-ADD-EDIT-LOCK-1A` non e verificato e il carrello non torna stabile.
+- Smoke live `CART-LOGO-LOCK-FINAL-1C = B`: logo header/footer OK, carrello normale OK, stepper/procedi/gateway lock OK, CAP/sessione OK; residua solo anomalia dei controlli quantita `+/-` che cambiano valore a video durante add/edit indirizzo.
+- `CART-ADD-EDIT-QTY-LOCK-1A` corregge il residuo: durante add/edit indirizzo anche il quantity stepper `+/-` e l'input quantita sono inibiti lato UI, mentre il guard server-side continua a bloccare ogni update riga.
+- `EMAIL-ENGINE-1A` resta successivo: non avviarlo finche `CART-ADD-EDIT-QTY-LOCK-1A` non e verificato e il carrello non torna stabile live.
 - `EMAIL-SYSTEM-AUDIT-1A` apre il blocco e-mail transazionali Taikun/KeepStore, solo documentale e senza runtime: audit invii esistenti, fonti DB ordine/pagamento/spedizione/logo, benchmark sintetico fornitori, standard template e roadmap micro-task futuri.
 - Manuale creato: `docs/KEEPSTORE_EMAIL_STANDARD.md`. Contiene mappa invii attuali, dati DB reali, standard HTML/plain text, varianti bonifico/contrassegno/PayPal/carta/Banca Sella, oggetti consigliati e roadmap `EMAIL-ENGINE`, `EMAIL-ORDER-CONFIRMATION`, `EMAIL-BANKTRANSFER`, `EMAIL-COD`, `EMAIL-ORDER-STATUS`, `EMAIL-AUTH`, preview/test e deliverability.
 - Benchmark sintetico recepito: email chiare su stato pagamento, importi, causale bonifico, pagamento alla consegna, CTA sicure, riepilogo ordine completo, layout table-based 600/640 px, logo azienda da DB e nessun asset esterno/legacy.
@@ -1446,6 +1448,7 @@ Task consigliato separato per eventuale proseguimento:
 2. Possibili candidati:
    - CART-ADD-EDIT-LOCK-1B: review PR, merge controllato e smoke mirato lock add/edit indirizzo + logo `Aziende.LogoWeb`, senza pagamento reale.
    - FOOTER-LOGOWEB-1B: review PR, merge controllato e smoke live logo header/footer + lock carrello, senza pagamento reale.
+   - CART-ADD-EDIT-QTY-LOCK-1B: review PR, merge controllato e smoke live mirato sui controlli quantita `+/-` durante add/edit indirizzo, senza pagamento reale.
    - EMAIL-SYSTEM-AUDIT-1B: verifica PR documentale audit e-mail transazionali.
    - EMAIL-ENGINE-1A: solo dopo carrello stabile e merge audit, progettare helper unico e-mail HTML + plain text, logo da DB e CSS inline.
    - EMAIL-ORDER-CONFIRMATION-1A: solo dopo motore email, conferma ordine standard con varianti pagamento.

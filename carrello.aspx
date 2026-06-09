@@ -193,7 +193,7 @@
                                     </td>
 
                                     <td data-cart-title="Q.tà" class="tf-cart-item_quantity">
-                                        <div class="wg-quantity ks-wg-quantity">
+                                        <div id="qtyWrap" runat="server" class="wg-quantity ks-wg-quantity">
                                             <span class="btn-quantity btn-decrease"><i class="icon icon-minus"></i></span>
                                             <asp:TextBox ID="tbQta" runat="server" Text='<%#: Eval("qnt") %>' CssClass="quantity-product" MaxLength="4" />
                                             <span class="btn-quantity btn-increase"><i class="icon icon-plus"></i></span>
@@ -303,7 +303,7 @@
                                     </td>
 
                                     <td data-cart-title="Q.tà" class="tf-cart-item_quantity">
-                                        <div class="wg-quantity ks-wg-quantity">
+                                        <div id="qtyWrap" runat="server" class="wg-quantity ks-wg-quantity">
                                             <span class="btn-quantity btn-decrease"><i class="icon icon-minus"></i></span>
                                             <asp:TextBox ID="tbQta" runat="server" Text='<%#: Eval("qnt") %>' CssClass="quantity-product" MaxLength="4" />
                                             <span class="btn-quantity btn-increase"><i class="icon icon-plus"></i></span>
