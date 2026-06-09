@@ -1434,6 +1434,10 @@ Stato finale post-cleanup warning:
 - Audit iniziale conferma che la conferma ordine parte da `ordine.aspx.vb`, il reset password tokenizzato da `App_Code/PasswordResetTokenService.vb`, registrazione/profilo da `registrazione.aspx.vb`; cambio password, reset completato, cambio stato ordine e tracking/spedizione non risultano inviati dal runtime web auditato.
 - `documenti.aspx` inserisce richieste in `inviadocumenti`; invio reale documento/fattura/proforma da gestionale/processo esterno resta da confermare con Vincenzo.
 - Nessun codice runtime, CSS, DB/schema, SQL, gateway, carrello/checkout, login/reset/registrazione o template applicativo viene modificato da `EMAIL-SYSTEM-AUDIT-1A`.
+- `EMAIL-ENGINE-1A` introduce la fondazione runtime `App_Code/KeepStoreEmailTemplate.vb`: renderer HTML table-based + plain text, logo da `Aziende.LogoWeb` con path `/Public/assets/images/logo/{LogoWeb}` e fallback interno `logo.svg`, subject helper e microcopy pagamento/spedizione.
+- Primo invio runtime migrato: NON MIGRATO. Gli invii legacy in `ordine.aspx.vb`, `registrazione.aspx.vb` e `App_Code/PasswordResetTokenService.vb` restano invariati in questo task.
+- `EMAIL-ENGINE-1A` non modifica SMTP, `web.config`, appSettings, connection string, DB/schema, SQL, gateway, carrello/checkout, calcolo importi/totali/costi, login/reset/registrazione runtime o sistema email runtime esistente.
+- Prossimo passo consigliato dopo merge/verifica di `EMAIL-ENGINE-1A`: `EMAIL-ORDER-CONFIRMATION-1A`, migrazione controllata della sola conferma ordine usando il renderer condiviso, senza modificare gateway o totali.
 - Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
@@ -1456,8 +1460,9 @@ Task consigliato separato per eventuale proseguimento:
 
 1. Scegliere il prossimo blocco operativo su `frontend-rebuild` pulito.
 2. Possibili candidati:
-   - EMAIL-ENGINE-1A: prossimo blocco operativo consigliato; progettare helper unico e-mail HTML + plain text, logo da DB e CSS inline, partendo da `frontend-rebuild` pulito.
-   - EMAIL-ORDER-CONFIRMATION-1A: solo dopo motore email, conferma ordine standard con varianti pagamento.
+   - EMAIL-ORDER-CONFIRMATION-1A: prossimo blocco consigliato dopo `EMAIL-ENGINE-1A`; migrare la conferma ordine standard con varianti pagamento senza toccare gateway, costi o totali.
+   - EMAIL-BANKTRANSFER-1A: istruzioni bonifico dedicate, solo dopo conferma fonti coordinate bancarie.
+   - EMAIL-COD-1A: microcopy contrassegno/contanti, senza modificare pagamento reale.
    - ORDER-CONFIRMATION-UX smoke live: verificare la nuova UX post-ordine, senza pagamento reale.
    - AUDIT-FINALE-CHECKOUT-PAGAMENTI-1A: audit separato di checkout/pagamenti/gateway, senza confonderlo con UI carrello.
    - Prossima pagina o area scelta da Germano su branch dedicato.

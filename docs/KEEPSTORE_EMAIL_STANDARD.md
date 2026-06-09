@@ -186,7 +186,7 @@ Standard proposto:
 - CSS inline essenziale;
 - nessun CSS esterno obbligatorio;
 - nessun font esterno necessario;
-- logo in alto da `aziende.LogoWeb` o `aziende.Logo`;
+- logo in alto da `aziende.LogoWeb`, con fallback interno controllato;
 - box stato evento;
 - sezioni/card ordinate: ordine, pagamento, spedizione, prodotti, riepilogo importi, prossimi passi, assistenza;
 - footer aziendale con dati venditore e link utili;
@@ -195,13 +195,26 @@ Standard proposto:
 
 ### 4.2 Regole logo
 
-Priorita proposta:
+Priorita runtime `EMAIL-ENGINE-1A`:
 
 1. `aziende.LogoWeb` se valorizzato.
-2. `aziende.Logo` se valorizzato.
-3. fallback testuale con nome azienda.
+2. fallback interno controllato sotto `/Public/assets/images/logo/`.
 
-Se il valore DB e un path relativo, normalizzarlo con base URL pubblica azienda/sito. Non usare percorsi legacy immagini del vecchio sito e non hardcodare asset di fornitori.
+Il valore DB deve essere trattato come nome file relativo, non come URL o path arbitrario. Il renderer deve costruire il path pubblico come `/Public/assets/images/logo/{LogoWeb}`, dopo sanitizzazione del nome file. Non usare percorsi legacy immagini del vecchio sito e non hardcodare asset di fornitori.
+
+### 4.4 Fondazione runtime `EMAIL-ENGINE-1A`
+
+`EMAIL-ENGINE-1A` introduce il file `App_Code/KeepStoreEmailTemplate.vb` come fondazione runtime condivisa, senza migrare ancora invii reali.
+
+Componenti disponibili:
+
+- `KeepStoreEmailRenderer`: genera corpo HTML table-based con CSS inline e versione plain text;
+- `KeepStoreEmailLogo`: normalizza `LogoWeb`, costruisce `/Public/assets/images/logo/{LogoWeb}` e usa fallback interno `logo.svg`;
+- `KeepStoreEmailSubjects`: centralizza oggetti consigliati per registrazione, reset, cambio password, ordine, pagamento e spedizione;
+- `KeepStoreEmailPaymentMicrocopy`: microcopy sicura per bonifico, contrassegno e pagamento online senza dichiarare pagato se il gateway non e confermato;
+- `KeepStoreEmailShippingMicrocopy`: microcopy spedizione/tracking senza inventare dati assenti.
+
+Tutti i valori dinamici passati al renderer devono essere gia fonti applicative autorizzate e vengono codificati in HTML/attributi dal renderer. Il task non cambia SMTP, `web.config`, gateway, carrello, checkout, DB/schema o logiche di invio esistenti.
 
 ### 4.3 Plain text
 
