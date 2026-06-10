@@ -47,6 +47,7 @@ Public Class KeepStoreEmailMessageModel
         Recipient = New KeepStoreEmailRecipientInfo()
         BodyLines = New List(Of String)()
         InfoBlocks = New List(Of KeepStoreEmailInfoBlock)()
+        HighlightItems = New List(Of KeepStoreEmailInfoItem)()
     End Sub
 
     Public Property Brand As KeepStoreEmailBrandInfo
@@ -55,8 +56,11 @@ Public Class KeepStoreEmailMessageModel
     Public Property Title As String
     Public Property Intro As String
     Public Property BodyLines As List(Of String)
+    Public Property StatusBadge As String
+    Public Property HighlightItems As List(Of KeepStoreEmailInfoItem)
     Public Property InfoBlocks As List(Of KeepStoreEmailInfoBlock)
     Public Property ActionLink As KeepStoreEmailActionLink
+    Public Property SecondaryActionLink As KeepStoreEmailActionLink
     Public Property FooterNote As String
 End Class
 
@@ -74,6 +78,10 @@ Public NotInheritable Class KeepStoreEmailLogo
 
     Public Shared Function BuildLogoPath(ByVal logoWeb As String) As String
         Return LogoBasePath & SafeLogoFileName(logoWeb)
+    End Function
+
+    Public Shared Function BuildLogoUrl(ByVal siteUrl As String, ByVal logoWeb As String) As String
+        Return CombineHttpsBaseUrl(siteUrl, BuildLogoPath(logoWeb))
     End Function
 
     Public Shared Function SafeLogoFileName(ByVal logoWeb As String) As String
@@ -114,6 +122,27 @@ Public NotInheritable Class KeepStoreEmailLogo
 
         Return fileName
     End Function
+
+    Private Shared Function CombineHttpsBaseUrl(ByVal siteUrl As String, ByVal path As String) As String
+        Dim baseUrl As String = If(siteUrl, "").Trim()
+        If baseUrl = "" Then
+            baseUrl = "https://www.taikun.it"
+        End If
+
+        If baseUrl.StartsWith("//", StringComparison.Ordinal) OrElse
+           baseUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase) OrElse
+           baseUrl.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) Then
+            baseUrl = "https://www.taikun.it"
+        End If
+
+        If baseUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) Then
+            baseUrl = "https://" & baseUrl.Substring(7)
+        ElseIf Not baseUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+            baseUrl = "https://" & baseUrl
+        End If
+
+        Return baseUrl.TrimEnd("/"c) & "/" & If(path, "").TrimStart("/"c)
+    End Function
 End Class
 
 Public NotInheritable Class KeepStoreEmailSubjects
@@ -136,8 +165,20 @@ Public NotInheritable Class KeepStoreEmailSubjects
         Return Company(companyName) & " - Conferma ordine " & SafeSuffix(orderNumber)
     End Function
 
+    Public Shared Function OrderConfirmation(ByVal companyName As String, ByVal orderNumber As String, ByVal documentDate As String) As String
+        Return "Conferma ordine " & Company(companyName) & DocumentNumberDateSuffix(orderNumber, documentDate)
+    End Function
+
     Public Shared Function OrderBankTransfer(ByVal companyName As String, ByVal orderNumber As String) As String
         Return Company(companyName) & " - Istruzioni bonifico ordine " & SafeSuffix(orderNumber)
+    End Function
+
+    Public Shared Function OrderBankTransfer(ByVal companyName As String, ByVal orderNumber As String, ByVal documentDate As String) As String
+        Return "Ordine " & Company(companyName) & DocumentNumberDateSuffix(orderNumber, documentDate) & " in attesa di bonifico"
+    End Function
+
+    Public Shared Function QuoteConfirmation(ByVal companyName As String, ByVal documentNumber As String, ByVal documentDate As String) As String
+        Return "Preventivo " & Company(companyName) & DocumentNumberDateSuffix(documentNumber, documentDate)
     End Function
 
     Public Shared Function OrderOnlinePayment(ByVal companyName As String, ByVal orderNumber As String) As String
@@ -170,6 +211,17 @@ Public NotInheritable Class KeepStoreEmailSubjects
         End If
 
         Return value.Trim()
+    End Function
+
+    Private Shared Function DocumentNumberDateSuffix(ByVal number As String, ByVal documentDate As String) As String
+        Dim suffix As String = ""
+        If Not String.IsNullOrWhiteSpace(number) Then
+            suffix &= " n. " & number.Trim()
+        End If
+        If Not String.IsNullOrWhiteSpace(documentDate) Then
+            suffix &= " del " & documentDate.Trim()
+        End If
+        Return suffix
     End Function
 End Class
 
@@ -210,6 +262,9 @@ Public NotInheritable Class KeepStoreEmailPaymentMicrocopy
 
         If payment.IsBankTransfer Then
             lines.Add("Il pagamento tramite bonifico sara verificato dopo l'accredito.")
+            If Not String.IsNullOrWhiteSpace(payment.Beneficiary) Then
+                lines.Add("Beneficiario: " & payment.Beneficiary.Trim())
+            End If
             If Not String.IsNullOrWhiteSpace(payment.Iban) Then
                 lines.Add("IBAN: " & payment.Iban.Trim())
             End If
@@ -290,7 +345,7 @@ Public NotInheritable Class KeepStoreEmailRenderer
         Dim sb As New StringBuilder()
         Dim title As String = If(String.IsNullOrWhiteSpace(model.Title), "Aggiornamento KeepStore", model.Title.Trim())
         Dim companyName As String = If(String.IsNullOrWhiteSpace(brand.CompanyName), "KeepStore", brand.CompanyName.Trim())
-        Dim logoPath As String = KeepStoreEmailLogo.BuildLogoPath(brand.LogoWeb)
+        Dim logoPath As String = KeepStoreEmailLogo.BuildLogoUrl(brand.SiteUrl, brand.LogoWeb)
 
         sb.Append("<!doctype html><html><head><meta charset=""utf-8""><meta name=""viewport"" content=""width=device-width, initial-scale=1"">")
         sb.Append("<title>").Append(Html(title)).Append("</title></head>")
@@ -298,11 +353,16 @@ Public NotInheritable Class KeepStoreEmailRenderer
         sb.Append("<span style=""display:none!important;visibility:hidden;mso-hide:all;opacity:0;color:transparent;height:0;width:0;overflow:hidden;"">")
         sb.Append(Html(model.Preheader)).Append("</span>")
         sb.Append("<table role=""presentation"" width=""100%"" cellspacing=""0"" cellpadding=""0"" style=""background:#f5f7f9;margin:0;padding:24px 0;""><tr><td align=""center"">")
-        sb.Append("<table role=""presentation"" width=""640"" cellspacing=""0"" cellpadding=""0"" style=""width:100%;max-width:640px;background:#ffffff;border:1px solid #e3e8ee;"">")
-        sb.Append("<tr><td style=""padding:28px 32px 18px 32px;border-bottom:1px solid #e7ebef;"">")
-        sb.Append("<img src=""").Append(Attr(logoPath)).Append(""" alt=""").Append(Attr(companyName)).Append(""" style=""display:block;max-width:180px;max-height:72px;height:auto;border:0;outline:none;text-decoration:none;"">")
+        sb.Append("<table role=""presentation"" width=""640"" cellspacing=""0"" cellpadding=""0"" style=""width:100%;max-width:640px;background:#ffffff;border:1px solid #dde5ec;border-radius:8px;overflow:hidden;"">")
+        sb.Append("<tr><td style=""padding:24px 32px;border-bottom:1px solid #e7ebef;background:#ffffff;"">")
+        sb.Append("<table role=""presentation"" width=""100%"" cellspacing=""0"" cellpadding=""0""><tr>")
+        sb.Append("<td align=""left"" style=""vertical-align:middle;""><img src=""").Append(Attr(logoPath)).Append(""" alt=""").Append(Attr(companyName)).Append(""" style=""display:block;max-width:190px;max-height:78px;height:auto;border:0;outline:none;text-decoration:none;""></td>")
+        If Not String.IsNullOrWhiteSpace(model.StatusBadge) Then
+            sb.Append("<td align=""right"" style=""vertical-align:middle;""><span style=""display:inline-block;padding:7px 11px;border-radius:999px;background:#eef5ff;color:#175aa6;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;"">").Append(Html(model.StatusBadge)).Append("</span></td>")
+        End If
+        sb.Append("</tr></table>")
         sb.Append("</td></tr>")
-        sb.Append("<tr><td style=""padding:28px 32px 12px 32px;"">")
+        sb.Append("<tr><td style=""padding:30px 32px 14px 32px;background:#fbfcfd;"">")
         sb.Append("<h1 style=""margin:0 0 16px 0;font-size:24px;line-height:32px;font-weight:700;color:#17212b;"">").Append(Html(title)).Append("</h1>")
 
         AppendParagraph(sb, model.Intro)
@@ -311,6 +371,22 @@ Public NotInheritable Class KeepStoreEmailRenderer
             For Each line As String In model.BodyLines
                 AppendParagraph(sb, line)
             Next
+        End If
+
+        If model.HighlightItems IsNot Nothing AndAlso model.HighlightItems.Count > 0 Then
+            sb.Append("<table role=""presentation"" width=""100%"" cellspacing=""0"" cellpadding=""0"" style=""margin:22px 0;border:1px solid #dbe4ed;background:#ffffff;"">")
+            sb.Append("<tr>")
+            For Each item As KeepStoreEmailInfoItem In model.HighlightItems
+                If item IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(item.Value) Then
+                    sb.Append("<td style=""padding:14px 16px;border-right:1px solid #e7ebef;vertical-align:top;"">")
+                    If Not String.IsNullOrWhiteSpace(item.Label) Then
+                        sb.Append("<div style=""font-size:12px;line-height:17px;color:#697586;text-transform:uppercase;font-weight:700;"">").Append(Html(item.Label)).Append("</div>")
+                    End If
+                    sb.Append("<div style=""margin-top:3px;font-size:16px;line-height:22px;color:#17212b;font-weight:700;"">").Append(Html(item.Value)).Append("</div>")
+                    sb.Append("</td>")
+                End If
+            Next
+            sb.Append("</tr></table>")
         End If
 
         If model.InfoBlocks IsNot Nothing Then
@@ -324,6 +400,10 @@ Public NotInheritable Class KeepStoreEmailRenderer
             sb.Append("<a href=""").Append(Attr(SafeHref(model.ActionLink.Url))).Append(""" style=""display:inline-block;background:#17212b;color:#ffffff;text-decoration:none;padding:12px 18px;font-size:15px;line-height:20px;font-weight:700;"">")
             sb.Append(Html(model.ActionLink.Text)).Append("</a>")
             sb.Append("</td></tr></table>")
+        End If
+        If model.SecondaryActionLink IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(model.SecondaryActionLink.Text) Then
+            sb.Append("<p style=""margin:12px 0 0 0;font-size:14px;line-height:20px;""><a href=""").Append(Attr(SafeHref(model.SecondaryActionLink.Url))).Append(""" style=""color:#175aa6;text-decoration:underline;"">")
+            sb.Append(Html(model.SecondaryActionLink.Text)).Append("</a></p>")
         End If
 
         sb.Append("</td></tr>")
@@ -375,6 +455,9 @@ Public NotInheritable Class KeepStoreEmailRenderer
         If model.ActionLink IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(model.ActionLink.Text) Then
             AppendPlainLine(sb, "")
             AppendPlainLine(sb, CleanText(model.ActionLink.Text) & ": " & SafeHref(model.ActionLink.Url))
+        End If
+        If model.SecondaryActionLink IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(model.SecondaryActionLink.Text) Then
+            AppendPlainLine(sb, CleanText(model.SecondaryActionLink.Text) & ": " & SafeHref(model.SecondaryActionLink.Url))
         End If
 
         AppendPlainLine(sb, "")

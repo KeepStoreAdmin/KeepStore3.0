@@ -28,7 +28,7 @@ Partial Class documentidettaglio
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         ' Richiede login
         If Session("LoginId") Is Nothing OrElse Convert.ToString(Session("LoginId")) = "" Then
-            Response.Redirect("accesonegato.aspx")
+            Response.Redirect("accessonegato.aspx")
             Return
         End If
 
