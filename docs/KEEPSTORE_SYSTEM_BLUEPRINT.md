@@ -988,6 +988,8 @@ Il sistema email e misto legacy/moderno:
 - cambio password area account, reset completato, cambio stato ordine, spedizione/tracking ed email pagamento gateway dedicate non risultano inviate dal runtime web auditato;
 - `mailconfig` esiste nello schema, ma non risulta usata direttamente dal runtime web auditato.
 
+`EMAIL-ORDER-CONFIRMATION-1A` migra la conferma ordine/preventivo di `ordine.aspx.vb` al renderer standard `App_Code/KeepStoreEmailTemplate.vb` usando esclusivamente dati gia disponibili nel punto di invio: documento, righe, pagamento, spedizione, indirizzi e importi persistiti. Trigger, destinatario, BCC, SMTP, timing e condizioni di invio restano invariati; gateway, costi, totali, IVA, DB/schema e `web.config` non vengono modificati.
+
 ### 15.2 Dati DB coinvolti
 
 Fonti dati ordine:
@@ -1049,6 +1051,7 @@ Non implementare runtime email senza task dedicato e senza conferma delle fonti 
 
 | Data | Task | PR | Commit | File modificati | Sintesi tecnica | Impatto funzionale | Note/debito residuo |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-06-10 | EMAIL-ORDER-CONFIRMATION-1A | branch PR | pending | `ordine.aspx.vb`, documentazione | Migrazione conferma ordine/preventivo al renderer standard HTML/plain text con microcopy pagamento/spedizione e fallback legacy | Email ordine piu coerente e professionale | Nessun gateway, totale, DB/schema, SMTP o `web.config` modificato; invio live non testato in PR |
 | 2026-06-09 | EMAIL-ENGINE-1A | branch PR | pending | `App_Code/KeepStoreEmailTemplate.vb`, documentazione | Fondazione renderer email HTML/plain text, subject helper, logo `LogoWeb` e microcopy pagamento/spedizione | Base runtime per migrare invii futuri | Nessun invio reale migrato, nessun SMTP/web.config/DB/gateway modificato |
 | 2026-06-09 | EMAIL-SYSTEM-AUDIT-1A | branch PR | pending | `docs/KEEPSTORE_EMAIL_STANDARD.md`, masterplan, blueprint | Audit sistema email transazionali e standard Taikun | Base per motore email futuro | Solo docs, nessun runtime/DB/gateway modificato |
 | 2026-05-29 | ACCOUNT-PROFILE-1B | #100/#101/#102 | `f0eeccc...`, `7bfd40c...`, `919b342...` | account profile/sidebar | Profilo account ONSUS e sidebar root/active | Profilo stabilizzato | Cleanup inline non completo all'epoca |

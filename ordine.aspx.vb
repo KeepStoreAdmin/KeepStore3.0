@@ -1,6 +1,7 @@
 Imports MySql.Data.MySqlClient
 Imports System.Data
 Imports System.Globalization
+Imports System.Collections.Generic
 Imports System.Net
 Imports System.Net.Mail
 Imports BancaSella
@@ -660,6 +661,14 @@ End If
         Me.Title = Me.Title & " - Ordine"
     End Sub
 
+    Private Class OrderEmailLine
+        Public Property Code As String
+        Public Property Description As String
+        Public Property Quantity As String
+        Public Property UnitPrice As String
+        Public Property LineTotal As String
+    End Class
+
     Public Sub SendEmail(ByVal n As Long, ByVal documento As String, ByVal id As Integer, ByVal Descrizione_Coupon As String)
         Dim conn As New MySqlConnection
         Dim connDestAlt As New MySqlConnection
@@ -692,8 +701,34 @@ End If
             Dim SpesePag As String = ""
             Dim Iva As String = ""
             Dim Totale As String = ""
+            Dim numeroDocumento As String = ""
+            Dim dataDocumento As String = ""
+            Dim statoDocumento As String = ""
+            Dim clienteRiepilogo As String = ""
+            Dim recapitiRiepilogo As String = ""
+            Dim indirizzoAlternativo As String = ""
+            Dim pagamentoDescrizione As String = ""
+            Dim pagamentoInformazioni As String = ""
+            Dim spedizioneDescrizione As String = ""
+            Dim spedizioneInformazioni As String = ""
+            Dim righeOrdine As New List(Of OrderEmailLine)()
 
             If drTestata.HasRows Then
+                numeroDocumento = DbText(drTestata, "NDocumento")
+                dataDocumento = DbText(drTestata, "DataDocumento")
+                clienteRiepilogo = JoinNonEmpty(" - ",
+                                               JoinNonEmpty(", ", DbText(drTestata, "RagioneSociale"), DbText(drTestata, "cognomenome")),
+                                               JoinNonEmpty(", ", DbText(drTestata, "Indirizzo"), DbText(drTestata, "citta"), DbText(drTestata, "Cap"), DbText(drTestata, "provincia")),
+                                               JoinNonEmpty(", ", "Codice: " & DbText(drTestata, "codice"), "P.Iva: " & DbText(drTestata, "piva"), "C.F: " & DbText(drTestata, "codicefiscale")))
+                recapitiRiepilogo = JoinNonEmpty(" - ",
+                                                JoinNonEmpty(", ", "Tel: " & DbText(drTestata, "Telefono"), "Fax: " & DbText(drTestata, "Fax")),
+                                                JoinNonEmpty(", ", "Cell: " & DbText(drTestata, "Cellulare"), "Email: " & DbText(drTestata, "Email")))
+                statoDocumento = JoinNonEmpty(" - ", DbText(drTestata, "StatiDescrizione1"), DbText(drTestata, "StatiDescrizione2"))
+                spedizioneDescrizione = DbText(drTestata, "VettoriDescrizione")
+                spedizioneInformazioni = DbText(drTestata, "VettoriInformazioni")
+                pagamentoDescrizione = DbText(drTestata, "PagamentiTipoDescrizione")
+                pagamentoInformazioni = DbText(drTestata, "PagamentiTipoInformazioni")
+
                 StrCarrello = "<br><br><table cellpadding=3 cellspacing=3  border=0 bordercolor=silver style='font-family:arial;font-size:9pt;'>" &
                         "<tr><td bgcolor=whitesmoke><b>" & documento & ":</td><td colspan=2><b>n° " & drTestata.Item("NDocumento") & " del " & drTestata.Item("DataDocumento") & "</td></tr>" &
                         "<tr><td bgcolor=whitesmoke valign=top>Cliente:</td><td>" & drTestata.Item("RagioneSociale") & "<br>" & drTestata.Item("Indirizzo") & "<br>" & drTestata.Item("citta") & "<br>" & drTestata.Item("Cap") & " " & drTestata.Item("provincia") & "</td><td>" & drTestata.Item("cognomenome") & "<br>Codice: " & drTestata.Item("codice") & "<br>P.Iva: " & drTestata.Item("piva") & "<br>C.F: " & drTestata.Item("codicefiscale") & "</td></tr>" &
@@ -740,6 +775,9 @@ End If
 
                 If dsdata.Tables(0).Rows.Count > 0 Then
                     StrCarrello &= "<tr><td bgcolor=whitesmoke valign=top>Indirizzo<br/>Alternativo:</td><td style=""vertical-align:top;"">" & RagioneSocialeA & "<br>" & Indirizzo2 & "<br>" & Citta2 & "<br>" & Cap2 & " " & Provincia2 & "</td><td style=""vertical-align:top;"">" & NomeA & "</td></tr>"
+                    indirizzoAlternativo = JoinNonEmpty(" - ",
+                                                        JoinNonEmpty(", ", RagioneSocialeA, NomeA),
+                                                        JoinNonEmpty(", ", Indirizzo2, Citta2, Cap2, Provincia2))
                 End If
 
                 dsdata.Dispose()
@@ -782,12 +820,21 @@ End If
 
                 Dim drRighe As MySqlDataReader = cmdRighe.ExecuteReader()
                 While drRighe.Read()
+                    Dim emailLine As New OrderEmailLine()
+                    emailLine.Code = JoinNonEmpty(" ", DbText(drRighe, "marchedescrizione"), DbText(drRighe, "codice"))
+                    emailLine.Description = DbText(drRighe, "descrizione1")
+                    emailLine.Quantity = DbText(drRighe, "qnt")
                     If IvaTipo = 1 Then
+                        emailLine.UnitPrice = String.Format("{0:c}", drRighe.Item("prezzo"))
+                        emailLine.LineTotal = String.Format("{0:c}", drRighe.Item("importo"))
                         StrCarrello &= "<tr><td>" & drRighe.Item("marchedescrizione") & " " & drRighe.Item("codice") & "</td><td>" & drRighe.Item("descrizione1") & "</td><td align=right>" & drRighe.Item("qnt") & "</td><td nowrap align=right>" & String.Format("{0:c}", drRighe.Item("prezzo")) & "</td><td nowrap align=right><b>" & String.Format("{0:c}", drRighe.Item("importo")) & "</td></tr>"
                     ElseIf IvaTipo = 2 Then
+                        emailLine.UnitPrice = String.Format("{0:c}", drRighe.Item("prezzoivato"))
+                        emailLine.LineTotal = String.Format("{0:c}", drRighe.Item("importoivato"))
                         StrCarrello &= "<tr><td>" & drRighe.Item("marchedescrizione") & " " & drRighe.Item("codice") & "</td><td>" & drRighe.Item("descrizione1") & "</td><td align=right>" & drRighe.Item("qnt") & "</td><td nowrap align=right>" & String.Format("{0:c}", drRighe.Item("prezzoivato")) & "</td><td nowrap align=right><b>" & String.Format("{0:c}", drRighe.Item("importoivato")) & "</td></tr>"
                         StrCarrello &= "<tr><td></td><td colspan=""2"" bgcolor=whitesmoke align=right style=""font-size:7pt;""><span style=""color:red;"">IVA " & drRighe.Item("ValoreIva") & "%</span> - <i>" & drRighe.Item("DescrizioneIva") & "</i></td><td nowrap align=right></td><td nowrap align=right></td></tr>"
                     End If
+                    righeOrdine.Add(emailLine)
                     StrCarrello &= "<tr><td colspan=5 bgcolor=whitesmoke height=1></td></tr>"
                 End While
 
@@ -808,24 +855,57 @@ End If
             oMsg.From = New MailAddress(Session("AziendaEmail"), Session("AziendaNome"))
             oMsg.To.Add(New MailAddress(Session("LoginEmail"), Session("LoginNomeCognome")))
             oMsg.Bcc.Add(New MailAddress(Session("AziendaEmail"), Session("AziendaNome")))
-            oMsg.Subject = "Conferma " & documento & " dal sito " & Session("AziendaNome")
-            oMsg.Body = "<font face=arial size=2 color=black>Gentile " & Session("LoginNomeCognome") & "," &
-                        "<br>La ringraziamo per aver preferito " & Session("AziendaNome") & ", abbiamo ricevuto la sua richiesta di " & documento & ",<br>Le riportiamo di seguito l'elenco completo dei prodotti scelti e le condizioni commerciali.</font>" &
-                        StrCarrello
+            Dim legacySubject As String = "Conferma " & documento & " dal sito " & Session("AziendaNome")
+            Dim legacyBody As String = "<font face=arial size=2 color=black>Gentile " & Session("LoginNomeCognome") & "," &
+                                       "<br>La ringraziamo per aver preferito " & Session("AziendaNome") & ", abbiamo ricevuto la sua richiesta di " & documento & ",<br>Le riportiamo di seguito l'elenco completo dei prodotti scelti e le condizioni commerciali.</font>" &
+                                       StrCarrello
 
             If documento.Contains("Preventivo") = True Then
-                oMsg.Body &= "<br/><span style=""font-size:9pt; color:red;"">Le ricordiamo che tale documento non ha nessuna validità di impegno poichè non è un ORDINE ma semplicemente un PREVENTIVO online.<br/>Se vuole può convertirlo in ordine contattandoci, ed indicando il tipo di pagamento che vuole effettuare.<br/>Oppure può rifare l’ordine on-line e alla fine del carrello deve cliccare sul tasto ""CONFERMA ORDINE"" e non ""SALVA PREVENTIVO"".<br/>Dopodichè seguendo le istruzioni, potrà procedere al pagamento.</span>"
+                legacyBody &= "<br/><span style=""font-size:9pt; color:red;"">Le ricordiamo che tale documento non ha nessuna validità di impegno poichè non è un ORDINE ma semplicemente un PREVENTIVO online.<br/>Se vuole può convertirlo in ordine contattandoci, ed indicando il tipo di pagamento che vuole effettuare.<br/>Oppure può rifare l’ordine on-line e alla fine del carrello deve cliccare sul tasto ""CONFERMA ORDINE"" e non ""SALVA PREVENTIVO"".<br/>Dopodichè seguendo le istruzioni, potrà procedere al pagamento.</span>"
             End If
 
             If (Session.Item("AziendaId") = 2) Then
-                oMsg.Body &= "<br/><br/><font face=arial size=2 color=black><b>NOTE: </b><br>" & Me.Session("NoteDocumento") & "</font>" &
+                legacyBody &= "<br/><br/><font face=arial size=2 color=black><b>NOTE: </b><br>" & Me.Session("NoteDocumento") & "</font>" &
                             "<br><font face=arial size=2 color=black><b>" & Session("AziendaNome") & "</b><br>" & Session("AziendaDescrizione") & "<br>Sito Web: <a href=http://" & Session("AziendaUrl") & ">http://" & Session("AziendaUrl") & "</a> - Email: <a href=mailto:" & Session("AziendaEmail") & ">" & Session("AziendaEmail") & "</a></font>" &
-                            "<br/><br/><a href=""http://www.facebook.com/pages/Webaffareit/199922450453""><img src=""http://www.webaffare.it/Public/Images/seguici_facebook.jpg""/></a><br>" &
                             "<br/><br/><font face=arial size=1 color=silver>D.Lgs 196/2003 tutela delle persone di altri soggetti rispetto al trattamento di dati personali. La presente comunicazione è destinata esclusivamente al soggetto indicato più sopra quale destinatario o ad eventuali altri soggetti autorizzati a riceverla. Essa contiene informazioni strettamente confidenziali e riservate, la cui comunicazione o diffusione a terzi è proibita, salvo che non sia espressamente autorizzata. Se avete ricevuto questa comunicazione per errore, o se desiderate non ricevere più comunicazioni su novità e offerte, Vi preghiamo di darne immediata comunicazione al mittente scrivendo a " & Me.Session("AziendaEmail") & ". Si informa che i dati forniti saranno tenuti rigorosamente riservati, saranno utilizzati unicamente da " & Me.Session("AziendaNome") & " per comunicare offerte promozionali o novità sui prodotti/servizi e resteranno a disposizione per eventuali variazioni o per la cancellazione ai sensi dell'art. 7 del citato decreto legislativo.</font>"
             Else
-                oMsg.Body &= "<br/><br/><font face=arial size=2 color=black><b>NOTE: </b><br>" & Me.Session("NoteDocumento") & "</font>" &
+                legacyBody &= "<br/><br/><font face=arial size=2 color=black><b>NOTE: </b><br>" & Me.Session("NoteDocumento") & "</font>" &
                             "<br/><font face=arial size=2 color=black><b>" & Session("AziendaNome") & "</b><br>" & Session("AziendaDescrizione") & "<br>Sito Web: <a href=http://" & Session("AziendaUrl") & ">http://" & Session("AziendaUrl") & "</a> - Email: <a href=mailto:" & Session("AziendaEmail") & ">" & Session("AziendaEmail") & "</a></font>" &
                             "<br/><br><font face=arial size=1 color=silver>D.Lgs 196/2003 tutela delle persone di altri soggetti rispetto al trattamento di dati personali. La presente comunicazione è destinata esclusivamente al soggetto indicato più sopra quale destinatario o ad eventuali altri soggetti autorizzati a riceverla. Essa contiene informazioni strettamente confidenziali e riservate, la cui comunicazione o diffusione a terzi è proibita, salvo che non sia espressamente autorizzata. Se avete ricevuto questa comunicazione per errore, o se desiderate non ricevere più comunicazioni su novità e offerte, Vi preghiamo di darne immediata comunicazione al mittente scrivendo a " & Me.Session("AziendaEmail") & ". Si informa che i dati forniti saranno tenuti rigorosamente riservati, saranno utilizzati unicamente da " & Me.Session("AziendaNome") & " per comunicare offerte promozionali o novità sui prodotti/servizi e resteranno a disposizione per eventuali variazioni o per la cancellazione ai sensi dell'art. 7 del citato decreto legislativo.</font>"
+            End If
+
+            Dim renderedEmail As KeepStoreEmailRenderResult = TryRenderOrderConfirmationEmail(documento,
+                                                                                              numeroDocumento,
+                                                                                              dataDocumento,
+                                                                                              statoDocumento,
+                                                                                              clienteRiepilogo,
+                                                                                              recapitiRiepilogo,
+                                                                                              indirizzoAlternativo,
+                                                                                              pagamentoDescrizione,
+                                                                                              pagamentoInformazioni,
+                                                                                              spedizioneDescrizione,
+                                                                                              spedizioneInformazioni,
+                                                                                              Imponibile,
+                                                                                              SpeseSped,
+                                                                                              SpeseAss,
+                                                                                              SpesePag,
+                                                                                              Iva,
+                                                                                              Totale,
+                                                                                              StrIva,
+                                                                                              Descrizione_Coupon,
+                                                                                              righeOrdine,
+                                                                                              id,
+                                                                                              n)
+
+            If renderedEmail IsNot Nothing Then
+                oMsg.Subject = BuildOrderConfirmationSubject(documento, numeroDocumento, pagamentoDescrizione, pagamentoInformazioni)
+                oMsg.Body = renderedEmail.HtmlBody
+                If Not String.IsNullOrWhiteSpace(renderedEmail.PlainTextBody) Then
+                    oMsg.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(renderedEmail.PlainTextBody, Nothing, "text/plain"))
+                End If
+            Else
+                oMsg.Subject = legacySubject
+                oMsg.Body = legacyBody
             End If
 
             oMsg.IsBodyHtml = True
@@ -852,6 +932,260 @@ End If
             End If
         End Try
     End Sub
+
+    Private Function TryRenderOrderConfirmationEmail(ByVal documento As String,
+                                                     ByVal numeroDocumento As String,
+                                                     ByVal dataDocumento As String,
+                                                     ByVal statoDocumento As String,
+                                                     ByVal clienteRiepilogo As String,
+                                                     ByVal recapitiRiepilogo As String,
+                                                     ByVal indirizzoAlternativo As String,
+                                                     ByVal pagamentoDescrizione As String,
+                                                     ByVal pagamentoInformazioni As String,
+                                                     ByVal spedizioneDescrizione As String,
+                                                     ByVal spedizioneInformazioni As String,
+                                                     ByVal imponibile As String,
+                                                     ByVal speseSpedizione As String,
+                                                     ByVal speseAssicurazione As String,
+                                                     ByVal spesePagamento As String,
+                                                     ByVal iva As String,
+                                                     ByVal totale As String,
+                                                     ByVal notaIva As String,
+                                                     ByVal descrizioneCoupon As String,
+                                                     ByVal righeOrdine As List(Of OrderEmailLine),
+                                                     ByVal idDocumento As Integer,
+                                                     ByVal numeroDocumentoNumerico As Long) As KeepStoreEmailRenderResult
+        Try
+            Dim companyName As String = SessionText("AziendaNome")
+            Dim model As New KeepStoreEmailMessageModel()
+
+            model.Brand.CompanyName = companyName
+            model.Brand.SupportEmail = SessionText("AziendaEmail")
+            model.Brand.SiteUrl = BuildSiteHomeUrl()
+            model.Brand.LogoWeb = ExtractLogoFileName(SessionText("AziendaLogo"))
+            model.Recipient.DisplayName = SessionText("LoginNomeCognome")
+            model.Recipient.Email = SessionText("LoginEmail")
+
+            model.Title = BuildOrderEmailTitle(documento, numeroDocumento, pagamentoDescrizione, pagamentoInformazioni)
+            model.Preheader = "Riepilogo " & documento & " n. " & numeroDocumento
+            model.Intro = "Gentile " & SessionText("LoginNomeCognome") & ", abbiamo ricevuto la sua richiesta di " & documento & ". Di seguito trova il riepilogo dell'ordine e delle condizioni commerciali."
+
+            If documento.Contains("Preventivo") Then
+                model.BodyLines.Add("Questo documento e un preventivo online e non costituisce impegno d'ordine.")
+            End If
+
+            If Not String.IsNullOrWhiteSpace(descrizioneCoupon) Then
+                model.BodyLines.Add("Il documento contiene un coupon acquistato. Il link coupon resta gestito dal flusso esistente.")
+            End If
+
+            Dim summaryBlock As New KeepStoreEmailInfoBlock()
+            summaryBlock.Title = "Riepilogo ordine"
+            AddInfoItem(summaryBlock, documento, "n. " & numeroDocumento)
+            AddInfoItem(summaryBlock, "Data", dataDocumento)
+            AddInfoItem(summaryBlock, "Stato", statoDocumento)
+            AddInfoItem(summaryBlock, "Cliente", clienteRiepilogo)
+            AddInfoItem(summaryBlock, "Recapiti", recapitiRiepilogo)
+            If Not String.IsNullOrWhiteSpace(indirizzoAlternativo) Then
+                AddInfoItem(summaryBlock, "Indirizzo spedizione", indirizzoAlternativo)
+            End If
+            model.InfoBlocks.Add(summaryBlock)
+
+            Dim paymentBlock As New KeepStoreEmailInfoBlock()
+            paymentBlock.Title = "Pagamento"
+            AddInfoItem(paymentBlock, "Metodo", JoinNonEmpty(" - ", pagamentoDescrizione, pagamentoInformazioni))
+            Dim paymentInfo As New KeepStoreEmailPaymentInfo()
+            paymentInfo.Description = pagamentoDescrizione
+            paymentInfo.Information = pagamentoInformazioni
+            paymentInfo.OrderNumber = numeroDocumento
+            paymentInfo.IsBankTransfer = IsBankTransferPayment(pagamentoDescrizione, pagamentoInformazioni)
+            paymentInfo.IsCashOnDelivery = IsCashOnDeliveryPayment(pagamentoDescrizione, pagamentoInformazioni)
+            paymentInfo.IsOnline = IsOnlinePayment(pagamentoDescrizione, pagamentoInformazioni)
+            paymentInfo.IsGatewayConfirmed = Not String.IsNullOrWhiteSpace(descrizioneCoupon)
+            For Each line As String In KeepStoreEmailPaymentMicrocopy.BuildPaymentCopy(paymentInfo)
+                AddInfoItem(paymentBlock, "", line)
+            Next
+            model.InfoBlocks.Add(paymentBlock)
+
+            Dim shippingBlock As New KeepStoreEmailInfoBlock()
+            shippingBlock.Title = "Spedizione"
+            AddInfoItem(shippingBlock, "Metodo", JoinNonEmpty(" - ", spedizioneDescrizione, spedizioneInformazioni))
+            Dim shippingInfo As New KeepStoreEmailShippingInfo()
+            shippingInfo.MethodDescription = spedizioneDescrizione
+            shippingInfo.CarrierName = spedizioneInformazioni
+            For Each line As String In KeepStoreEmailShippingMicrocopy.BuildShippingCopy(shippingInfo)
+                AddInfoItem(shippingBlock, "", line)
+            Next
+            model.InfoBlocks.Add(shippingBlock)
+
+            If righeOrdine IsNot Nothing AndAlso righeOrdine.Count > 0 Then
+                Dim linesBlock As New KeepStoreEmailInfoBlock()
+                linesBlock.Title = "Prodotti"
+                For Each line As OrderEmailLine In righeOrdine
+                    AddInfoItem(linesBlock,
+                                JoinNonEmpty(" ", line.Code, "x" & line.Quantity),
+                                JoinNonEmpty(" - ", line.Description, "Prezzo: " & line.UnitPrice, "Totale riga: " & line.LineTotal))
+                Next
+                model.InfoBlocks.Add(linesBlock)
+            End If
+
+            Dim totalsBlock As New KeepStoreEmailInfoBlock()
+            totalsBlock.Title = "Importi"
+            AddInfoItem(totalsBlock, "Imponibile", imponibile)
+            AddInfoItem(totalsBlock, "Spedizione", speseSpedizione)
+            AddInfoItem(totalsBlock, "Assicurazione", speseAssicurazione)
+            AddInfoItem(totalsBlock, "Pagamento", spesePagamento)
+            AddInfoItem(totalsBlock, "IVA", iva)
+            AddInfoItem(totalsBlock, "Totale", totale)
+            If Not String.IsNullOrWhiteSpace(notaIva) Then
+                totalsBlock.Body = notaIva
+            End If
+            model.InfoBlocks.Add(totalsBlock)
+
+            Dim noteDocumento As String = SessionText("NoteDocumento")
+            If Not String.IsNullOrWhiteSpace(noteDocumento) Then
+                Dim noteBlock As New KeepStoreEmailInfoBlock()
+                noteBlock.Title = "Note"
+                noteBlock.Body = noteDocumento
+                model.InfoBlocks.Add(noteBlock)
+            End If
+
+            Dim detailUrl As String = BuildSiteUrl("documentidettaglio.aspx?id=" & idDocumento.ToString(CultureInfo.InvariantCulture) & "&ndoc=" & numeroDocumentoNumerico.ToString(CultureInfo.InvariantCulture))
+            If Not String.IsNullOrWhiteSpace(detailUrl) Then
+                Dim action As New KeepStoreEmailActionLink()
+                action.Text = "Visualizza ordine"
+                action.Url = detailUrl
+                model.ActionLink = action
+            End If
+
+            model.FooterNote = "Per assistenza puo contattarci usando i riferimenti indicati in questa email."
+
+            Return KeepStoreEmailRenderer.Render(model)
+        Catch
+            Return Nothing
+        End Try
+    End Function
+
+    Private Function BuildOrderConfirmationSubject(ByVal documento As String,
+                                                   ByVal numeroDocumento As String,
+                                                   ByVal pagamentoDescrizione As String,
+                                                   ByVal pagamentoInformazioni As String) As String
+        Dim companyName As String = SessionText("AziendaNome")
+        If IsBankTransferPayment(pagamentoDescrizione, pagamentoInformazioni) Then
+            Return KeepStoreEmailSubjects.OrderBankTransfer(companyName, numeroDocumento)
+        End If
+
+        Return KeepStoreEmailSubjects.OrderConfirmation(companyName, numeroDocumento)
+    End Function
+
+    Private Function BuildOrderEmailTitle(ByVal documento As String,
+                                          ByVal numeroDocumento As String,
+                                          ByVal pagamentoDescrizione As String,
+                                          ByVal pagamentoInformazioni As String) As String
+        If IsBankTransferPayment(pagamentoDescrizione, pagamentoInformazioni) Then
+            Return "Ordine n. " & numeroDocumento & " in attesa di bonifico"
+        End If
+
+        Return "Conferma " & documento & " n. " & numeroDocumento
+    End Function
+
+    Private Sub AddInfoItem(ByVal block As KeepStoreEmailInfoBlock, ByVal label As String, ByVal value As String)
+        If block Is Nothing OrElse String.IsNullOrWhiteSpace(value) Then
+            Return
+        End If
+
+        Dim item As New KeepStoreEmailInfoItem()
+        item.Label = If(label, "")
+        item.Value = value
+        block.Items.Add(item)
+    End Sub
+
+    Private Function DbText(ByVal record As IDataRecord, ByVal fieldName As String) As String
+        Try
+            Dim value As Object = record.Item(fieldName)
+            If value Is Nothing OrElse Convert.IsDBNull(value) Then
+                Return ""
+            End If
+
+            Return Convert.ToString(value).Trim()
+        Catch
+            Return ""
+        End Try
+    End Function
+
+    Private Function SessionText(ByVal key As String) As String
+        Try
+            Dim value As Object = Session(key)
+            If value Is Nothing Then
+                Return ""
+            End If
+
+            Return Convert.ToString(value).Trim()
+        Catch
+            Return ""
+        End Try
+    End Function
+
+    Private Function JoinNonEmpty(ByVal separator As String, ParamArray values() As String) As String
+        Dim parts As New List(Of String)()
+        If values IsNot Nothing Then
+            For Each value As String In values
+                If Not String.IsNullOrWhiteSpace(value) Then
+                    Dim cleaned As String = value.Trim()
+                    If Not cleaned.EndsWith(":") Then
+                        parts.Add(cleaned)
+                    End If
+                End If
+            Next
+        End If
+
+        Return String.Join(separator, parts.ToArray())
+    End Function
+
+    Private Function BuildSiteHomeUrl() As String
+        Return BuildSiteUrl("")
+    End Function
+
+    Private Function BuildSiteUrl(ByVal relativePath As String) As String
+        Dim host As String = SessionText("AziendaUrl")
+        If String.IsNullOrWhiteSpace(host) Then
+            Return relativePath
+        End If
+
+        If host.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse host.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+            Return host.TrimEnd("/"c) & "/" & relativePath.TrimStart("/"c)
+        End If
+
+        Return "http://" & host.TrimEnd("/"c) & "/" & relativePath.TrimStart("/"c)
+    End Function
+
+    Private Function ExtractLogoFileName(ByVal logoPath As String) As String
+        If String.IsNullOrWhiteSpace(logoPath) Then
+            Return ""
+        End If
+
+        Dim normalized As String = logoPath.Replace("\"c, "/"c)
+        Dim slashIndex As Integer = normalized.LastIndexOf("/"c)
+        If slashIndex >= 0 AndAlso slashIndex < normalized.Length - 1 Then
+            Return normalized.Substring(slashIndex + 1)
+        End If
+
+        Return normalized
+    End Function
+
+    Private Function IsBankTransferPayment(ByVal description As String, ByVal information As String) As Boolean
+        Dim value As String = (If(description, "") & " " & If(information, "")).ToLowerInvariant()
+        Return value.Contains("bonifico")
+    End Function
+
+    Private Function IsCashOnDeliveryPayment(ByVal description As String, ByVal information As String) As Boolean
+        Dim value As String = (If(description, "") & " " & If(information, "")).ToLowerInvariant()
+        Return value.Contains("contrassegno") OrElse value.Contains("contanti")
+    End Function
+
+    Private Function IsOnlinePayment(ByVal description As String, ByVal information As String) As Boolean
+        Dim value As String = (If(description, "") & " " & If(information, "")).ToLowerInvariant()
+        Return value.Contains("paypal") OrElse value.Contains("carta") OrElse value.Contains("banca sella") OrElse value.Contains("online")
+    End Function
 
     ' --- Tracking: lasciati, ma con una correzione di base sulla query del carrello (parametrizzata) ---
     Private Sub track_Kelkoo(ByVal orderNumber As String, ByRef orderValue As Decimal, ByRef qta As Decimal, ByRef N As String, ByRef P As String, ByRef U As String)
