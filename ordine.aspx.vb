@@ -4,6 +4,8 @@ Imports System.Globalization
 Imports System.Collections.Generic
 Imports System.Net
 Imports System.Net.Mail
+Imports System.Net.Mime
+Imports System.Text
 Imports BancaSella
 Imports System.Security.Authentication
 Imports System.Web
@@ -855,6 +857,7 @@ End If
             oMsg.From = New MailAddress(Session("AziendaEmail"), Session("AziendaNome"))
             oMsg.To.Add(New MailAddress(Session("LoginEmail"), Session("LoginNomeCognome")))
             oMsg.Bcc.Add(New MailAddress(Session("AziendaEmail"), Session("AziendaNome")))
+            ConfigureOrderEmailEncoding(oMsg)
             Dim legacySubject As String = "Conferma " & documento & " dal sito " & Session("AziendaNome")
             Dim legacyBody As String = "<font face=arial size=2 color=black>Gentile " & Session("LoginNomeCognome") & "," &
                                        "<br>La ringraziamo per aver preferito " & Session("AziendaNome") & ", abbiamo ricevuto la sua richiesta di " & documento & ",<br>Le riportiamo di seguito l'elenco completo dei prodotti scelti e le condizioni commerciali.</font>" &
@@ -897,18 +900,13 @@ End If
                                                                                               id,
                                                                                               n)
 
-            If renderedEmail IsNot Nothing Then
+            If renderedEmail IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(renderedEmail.HtmlBody) Then
                 oMsg.Subject = BuildOrderConfirmationSubject(documento, numeroDocumento, pagamentoDescrizione, pagamentoInformazioni)
-                oMsg.Body = renderedEmail.HtmlBody
-                If Not String.IsNullOrWhiteSpace(renderedEmail.PlainTextBody) Then
-                    oMsg.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(renderedEmail.PlainTextBody, Nothing, "text/plain"))
-                End If
+                ApplyRenderedOrderEmailMime(oMsg, renderedEmail)
             Else
                 oMsg.Subject = legacySubject
-                oMsg.Body = legacyBody
+                ApplyLegacyOrderEmailMime(oMsg, legacyBody)
             End If
-
-            oMsg.IsBodyHtml = True
 
             Dim oSmtp As SmtpClient = New SmtpClient(Me.Session.Item("smtp"))
             oSmtp.DeliveryMethod = SmtpDeliveryMethod.Network
@@ -931,6 +929,34 @@ End If
                 connDestAlt.Dispose()
             End If
         End Try
+    End Sub
+
+    Private Sub ConfigureOrderEmailEncoding(ByVal message As MailMessage)
+        message.SubjectEncoding = Encoding.UTF8
+        message.BodyEncoding = Encoding.UTF8
+        message.HeadersEncoding = Encoding.UTF8
+    End Sub
+
+    Private Sub ApplyRenderedOrderEmailMime(ByVal message As MailMessage, ByVal renderedEmail As KeepStoreEmailRenderResult)
+        message.AlternateViews.Clear()
+        message.Body = ""
+        message.IsBodyHtml = False
+
+        Dim plainBody As String = renderedEmail.PlainTextBody
+        If String.IsNullOrWhiteSpace(plainBody) Then
+            plainBody = "Riepilogo ordine disponibile in formato HTML."
+        End If
+
+        Dim plainView As AlternateView = AlternateView.CreateAlternateViewFromString(plainBody, Encoding.UTF8, MediaTypeNames.Text.Plain)
+        Dim htmlView As AlternateView = AlternateView.CreateAlternateViewFromString(renderedEmail.HtmlBody, Encoding.UTF8, MediaTypeNames.Text.Html)
+        message.AlternateViews.Add(plainView)
+        message.AlternateViews.Add(htmlView)
+    End Sub
+
+    Private Sub ApplyLegacyOrderEmailMime(ByVal message As MailMessage, ByVal legacyBody As String)
+        message.AlternateViews.Clear()
+        message.Body = legacyBody
+        message.IsBodyHtml = True
     End Sub
 
     Private Function TryRenderOrderConfirmationEmail(ByVal documento As String,

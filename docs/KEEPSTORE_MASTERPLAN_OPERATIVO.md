@@ -1448,6 +1448,9 @@ Stato finale post-cleanup warning:
 - Le varianti pagamento supportate usano microcopy standard per bonifico, PayPal/carta/online, contrassegno e pagamento generico; non viene dichiarato pagamento ricevuto senza conferma gia presente nel flusso.
 - `EMAIL-ORDER-CONFIRMATION-1A` non modifica gateway PayPal/BancaSella, carrello/checkout, importi, costi, IVA, spedizione, sconti, generazione ordine/documento, DB/schema, SQL, `web.config`, connection string, appSettings o impostazioni SMTP.
 - Prossimo task: `EMAIL-ORDER-CONFIRMATION-1B` review/merge PR.
+- `EMAIL-ORDER-CONFIRMATION-1C = B`: smoke live parziale su ordine test/preventivo con bonifico ha confermato e-mail ricevuta e subject coerente, ma il sorgente MIME risultava errato: HTML dentro una parte `text/plain` e plain text separato.
+- `EMAIL-ORDER-CONFIRMATION-MIME-1A` corregge solo MIME/AlternateViews della conferma ordine/preventivo: plain text come `text/plain; charset=utf-8`, HTML come `text/html; charset=utf-8`, senza modificare trigger, destinatario, subject, SMTP, ordine, gateway, totali, DB/schema o `web.config`.
+- Backlog futuro: `EMAIL-LEGACY-SENDS-CLEANUP-1A` per mappare e bonificare i vecchi invii e-mail legacy dopo stabilizzazione dei nuovi flussi ordine/registrazione/reset, senza rimuovere codice legacy in task MIME.
 - Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
