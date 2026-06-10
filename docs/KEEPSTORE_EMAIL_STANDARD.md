@@ -238,6 +238,18 @@ Regole pagamento nel renderer:
 - contrassegno/contanti: microcopy di pagamento alla consegna solo se riconosciuto dal metodo pagamento;
 - generico: uso di descrizione e informazioni pagamento gia presenti nel documento.
 
+Regole polish conferma ordine:
+
+- subject ordine bonifico: `Ordine {Azienda} n. {NumeroOrdine} del {DataOrdine} in attesa di bonifico`;
+- subject ordine generico: `Conferma ordine {Azienda} n. {NumeroOrdine} del {DataOrdine}`;
+- subject preventivo: `Preventivo {Azienda} n. {NumeroDocumento} del {DataDocumento}`;
+- non stampare date finte: se la data non e affidabile, omettere la parte data;
+- logo email sempre da `Aziende.LogoWeb`, trattato come nome file relativo sanificato e risolto come URL assoluto HTTPS verso `/Public/assets/images/logo/{LogoWeb}`;
+- non hardcodare nomi logo specifici: il fallback interno e ammesso solo se `LogoWeb` e vuoto o non valido;
+- compatibilita multi-azienda: il logo, il brand e il dominio/base URL devono derivare dai dati azienda disponibili e sicuri;
+- CTA verso dettagli protetti: usare URL assoluto HTTPS a `login.aspx?ReturnUrl={path locale urlencoded}`; il `ReturnUrl` deve restare locale e non deve puntare a `accessonegato.aspx`, reset/remind/logout o URL esterni;
+- blocchi consigliati: header con logo/badge, hero con numero-data-totale-pagamento, pagamento, spedizione, prodotti, importi, prossimi passi, assistenza e footer aziendale essenziale.
+
 ### 4.3 Plain text
 
 Ogni email deve avere una versione plain text con:

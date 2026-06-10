@@ -1030,6 +1030,7 @@ Ogni email transazionale deve:
 - non includere password, token non necessari, dettagli tecnici, stack trace o transaction id completi non autorizzati;
 - usare logo azienda da `aziende.LogoWeb` per header desktop/mobile e footer, con path `/Public/assets/images/logo/{LogoWeb}`, nome file sanificato e fallback interno controllato;
 - per nuovi invii runtime, usare la fondazione `App_Code/KeepStoreEmailTemplate.vb`: renderer HTML/plain text, subject helper, microcopy pagamento/spedizione e sanitizzazione logo `LogoWeb`;
+- negli invii email gli asset devono essere URL assoluti HTTPS; il logo email resta dinamico da `Aziende.LogoWeb`, non hardcoded, e i link a pagine protette devono passare da login con `ReturnUrl` locale sanificato;
 - evitare asset esterni non controllati e percorsi legacy immagini del vecchio sito.
 
 ### 15.5 Roadmap email

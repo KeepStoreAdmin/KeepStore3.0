@@ -713,11 +713,13 @@ End If
             Dim pagamentoInformazioni As String = ""
             Dim spedizioneDescrizione As String = ""
             Dim spedizioneInformazioni As String = ""
+            Dim dataDocumentoDisplay As String = ""
             Dim righeOrdine As New List(Of OrderEmailLine)()
 
             If drTestata.HasRows Then
                 numeroDocumento = DbText(drTestata, "NDocumento")
                 dataDocumento = DbText(drTestata, "DataDocumento")
+                dataDocumentoDisplay = FormatDocumentDate(dataDocumento)
                 clienteRiepilogo = JoinNonEmpty(" - ",
                                                JoinNonEmpty(", ", DbText(drTestata, "RagioneSociale"), DbText(drTestata, "cognomenome")),
                                                JoinNonEmpty(", ", DbText(drTestata, "Indirizzo"), DbText(drTestata, "citta"), DbText(drTestata, "Cap"), DbText(drTestata, "provincia")),
@@ -895,13 +897,14 @@ End If
                                                                                               Iva,
                                                                                               Totale,
                                                                                               StrIva,
+                                                                                              dataDocumentoDisplay,
                                                                                               Descrizione_Coupon,
                                                                                               righeOrdine,
                                                                                               id,
                                                                                               n)
 
             If renderedEmail IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(renderedEmail.HtmlBody) Then
-                oMsg.Subject = BuildOrderConfirmationSubject(documento, numeroDocumento, pagamentoDescrizione, pagamentoInformazioni)
+                oMsg.Subject = BuildOrderConfirmationSubject(documento, numeroDocumento, dataDocumentoDisplay, pagamentoDescrizione, pagamentoInformazioni)
                 ApplyRenderedOrderEmailMime(oMsg, renderedEmail)
             Else
                 oMsg.Subject = legacySubject
@@ -977,6 +980,7 @@ End If
                                                      ByVal iva As String,
                                                      ByVal totale As String,
                                                      ByVal notaIva As String,
+                                                     ByVal dataDocumentoDisplay As String,
                                                      ByVal descrizioneCoupon As String,
                                                      ByVal righeOrdine As List(Of OrderEmailLine),
                                                      ByVal idDocumento As Integer,
@@ -988,13 +992,19 @@ End If
             model.Brand.CompanyName = companyName
             model.Brand.SupportEmail = SessionText("AziendaEmail")
             model.Brand.SiteUrl = BuildSiteHomeUrl()
-            model.Brand.LogoWeb = ExtractLogoFileName(SessionText("AziendaLogo"))
+            model.Brand.LogoWeb = ResolveEmailLogoWebFileName()
+            model.Brand.Beneficiary = companyName
             model.Recipient.DisplayName = SessionText("LoginNomeCognome")
             model.Recipient.Email = SessionText("LoginEmail")
 
-            model.Title = BuildOrderEmailTitle(documento, numeroDocumento, pagamentoDescrizione, pagamentoInformazioni)
-            model.Preheader = "Riepilogo " & documento & " n. " & numeroDocumento
+            model.Title = BuildOrderEmailTitle(documento, numeroDocumento, dataDocumentoDisplay, pagamentoDescrizione, pagamentoInformazioni)
+            model.StatusBadge = If(IsBankTransferPayment(pagamentoDescrizione, pagamentoInformazioni), "In attesa di bonifico", "Ordine ricevuto")
+            model.Preheader = JoinNonEmpty(" - ", "Riepilogo " & documento & " n. " & numeroDocumento, dataDocumentoDisplay)
             model.Intro = "Gentile " & SessionText("LoginNomeCognome") & ", abbiamo ricevuto la sua richiesta di " & documento & ". Di seguito trova il riepilogo dell'ordine e delle condizioni commerciali."
+            AddHighlightItem(model, documento, "n. " & numeroDocumento)
+            AddHighlightItem(model, "Data", dataDocumentoDisplay)
+            AddHighlightItem(model, "Totale", totale)
+            AddHighlightItem(model, "Pagamento", pagamentoDescrizione)
 
             If documento.Contains("Preventivo") Then
                 model.BodyLines.Add("Questo documento e un preventivo online e non costituisce impegno d'ordine.")
@@ -1007,7 +1017,7 @@ End If
             Dim summaryBlock As New KeepStoreEmailInfoBlock()
             summaryBlock.Title = "Riepilogo ordine"
             AddInfoItem(summaryBlock, documento, "n. " & numeroDocumento)
-            AddInfoItem(summaryBlock, "Data", dataDocumento)
+            AddInfoItem(summaryBlock, "Data ordine", dataDocumentoDisplay)
             AddInfoItem(summaryBlock, "Stato", statoDocumento)
             AddInfoItem(summaryBlock, "Cliente", clienteRiepilogo)
             AddInfoItem(summaryBlock, "Recapiti", recapitiRiepilogo)
@@ -1023,6 +1033,7 @@ End If
             paymentInfo.Description = pagamentoDescrizione
             paymentInfo.Information = pagamentoInformazioni
             paymentInfo.OrderNumber = numeroDocumento
+            paymentInfo.Beneficiary = companyName
             paymentInfo.IsBankTransfer = IsBankTransferPayment(pagamentoDescrizione, pagamentoInformazioni)
             paymentInfo.IsCashOnDelivery = IsCashOnDeliveryPayment(pagamentoDescrizione, pagamentoInformazioni)
             paymentInfo.IsOnline = IsOnlinePayment(pagamentoDescrizione, pagamentoInformazioni)
@@ -1067,6 +1078,20 @@ End If
             End If
             model.InfoBlocks.Add(totalsBlock)
 
+            Dim nextStepsBlock As New KeepStoreEmailInfoBlock()
+            nextStepsBlock.Title = "Prossimi passi"
+            If IsBankTransferPayment(pagamentoDescrizione, pagamentoInformazioni) Then
+                AddInfoItem(nextStepsBlock, "1", "Effettuare il bonifico usando la causale indicata.")
+                AddInfoItem(nextStepsBlock, "2", "Verificheremo il pagamento dopo l'accredito.")
+                AddInfoItem(nextStepsBlock, "3", "Prepareremo l'ordine secondo disponibilita e condizioni concordate.")
+                AddInfoItem(nextStepsBlock, "4", "La spedizione seguira il metodo selezionato.")
+            Else
+                AddInfoItem(nextStepsBlock, "1", "Abbiamo registrato la richiesta.")
+                AddInfoItem(nextStepsBlock, "2", "Verificheremo pagamento e disponibilita secondo il metodo scelto.")
+                AddInfoItem(nextStepsBlock, "3", "Ricevera aggiornamenti dai canali previsti dal sito.")
+            End If
+            model.InfoBlocks.Add(nextStepsBlock)
+
             Dim noteDocumento As String = SessionText("NoteDocumento")
             If Not String.IsNullOrWhiteSpace(noteDocumento) Then
                 Dim noteBlock As New KeepStoreEmailInfoBlock()
@@ -1075,12 +1100,18 @@ End If
                 model.InfoBlocks.Add(noteBlock)
             End If
 
-            Dim detailUrl As String = BuildSiteUrl("documentidettaglio.aspx?id=" & idDocumento.ToString(CultureInfo.InvariantCulture) & "&ndoc=" & numeroDocumentoNumerico.ToString(CultureInfo.InvariantCulture))
+            Dim detailPath As String = "/documentidettaglio.aspx?id=" & idDocumento.ToString(CultureInfo.InvariantCulture) & "&ndoc=" & numeroDocumentoNumerico.ToString(CultureInfo.InvariantCulture)
+            Dim detailUrl As String = BuildSiteUrl("login.aspx?ReturnUrl=" & HttpUtility.UrlEncode(detailPath))
             If Not String.IsNullOrWhiteSpace(detailUrl) Then
                 Dim action As New KeepStoreEmailActionLink()
                 action.Text = "Visualizza ordine"
                 action.Url = detailUrl
                 model.ActionLink = action
+
+                Dim accountAction As New KeepStoreEmailActionLink()
+                accountAction.Text = "Accedi al tuo account"
+                accountAction.Url = BuildSiteUrl("login.aspx")
+                model.SecondaryActionLink = accountAction
             End If
 
             model.FooterNote = "Per assistenza puo contattarci usando i riferimenti indicati in questa email."
@@ -1093,26 +1124,43 @@ End If
 
     Private Function BuildOrderConfirmationSubject(ByVal documento As String,
                                                    ByVal numeroDocumento As String,
+                                                   ByVal dataDocumentoDisplay As String,
                                                    ByVal pagamentoDescrizione As String,
                                                    ByVal pagamentoInformazioni As String) As String
         Dim companyName As String = SessionText("AziendaNome")
-        If IsBankTransferPayment(pagamentoDescrizione, pagamentoInformazioni) Then
-            Return KeepStoreEmailSubjects.OrderBankTransfer(companyName, numeroDocumento)
+        If documento.Contains("Preventivo") Then
+            Return KeepStoreEmailSubjects.QuoteConfirmation(companyName, numeroDocumento, dataDocumentoDisplay)
         End If
 
-        Return KeepStoreEmailSubjects.OrderConfirmation(companyName, numeroDocumento)
+        If IsBankTransferPayment(pagamentoDescrizione, pagamentoInformazioni) Then
+            Return KeepStoreEmailSubjects.OrderBankTransfer(companyName, numeroDocumento, dataDocumentoDisplay)
+        End If
+
+        Return KeepStoreEmailSubjects.OrderConfirmation(companyName, numeroDocumento, dataDocumentoDisplay)
     End Function
 
     Private Function BuildOrderEmailTitle(ByVal documento As String,
                                           ByVal numeroDocumento As String,
+                                          ByVal dataDocumentoDisplay As String,
                                           ByVal pagamentoDescrizione As String,
                                           ByVal pagamentoInformazioni As String) As String
         If IsBankTransferPayment(pagamentoDescrizione, pagamentoInformazioni) Then
-            Return "Ordine n. " & numeroDocumento & " in attesa di bonifico"
+            Return JoinNonEmpty(" ", "Ordine n.", numeroDocumento, If(String.IsNullOrWhiteSpace(dataDocumentoDisplay), "", "del " & dataDocumentoDisplay), "in attesa di bonifico")
         End If
 
-        Return "Conferma " & documento & " n. " & numeroDocumento
+        Return JoinNonEmpty(" ", "Conferma " & documento & " n.", numeroDocumento, If(String.IsNullOrWhiteSpace(dataDocumentoDisplay), "", "del " & dataDocumentoDisplay))
     End Function
+
+    Private Sub AddHighlightItem(ByVal model As KeepStoreEmailMessageModel, ByVal label As String, ByVal value As String)
+        If model Is Nothing OrElse model.HighlightItems Is Nothing OrElse String.IsNullOrWhiteSpace(value) Then
+            Return
+        End If
+
+        Dim item As New KeepStoreEmailInfoItem()
+        item.Label = If(label, "")
+        item.Value = value
+        model.HighlightItems.Add(item)
+    End Sub
 
     Private Sub AddInfoItem(ByVal block As KeepStoreEmailInfoBlock, ByVal label As String, ByVal value As String)
         If block Is Nothing OrElse String.IsNullOrWhiteSpace(value) Then
@@ -1174,14 +1222,49 @@ End If
     Private Function BuildSiteUrl(ByVal relativePath As String) As String
         Dim host As String = SessionText("AziendaUrl")
         If String.IsNullOrWhiteSpace(host) Then
-            Return relativePath
+            host = "www.taikun.it"
         End If
 
-        If host.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse host.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
-            Return host.TrimEnd("/"c) & "/" & relativePath.TrimStart("/"c)
+        If host.StartsWith("//", StringComparison.Ordinal) OrElse
+           host.StartsWith("data:", StringComparison.OrdinalIgnoreCase) OrElse
+           host.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) Then
+            host = "www.taikun.it"
         End If
 
-        Return "http://" & host.TrimEnd("/"c) & "/" & relativePath.TrimStart("/"c)
+        If host.StartsWith("http://", StringComparison.OrdinalIgnoreCase) Then
+            host = "https://" & host.Substring(7)
+        ElseIf Not host.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+            host = "https://" & host
+        End If
+
+        Return host.TrimEnd("/"c) & "/" & relativePath.TrimStart("/"c)
+    End Function
+
+    Private Function ResolveEmailLogoWebFileName() As String
+        ' Page.master sets AziendaLogo from Aziende.LogoWeb through BuildLogoWebAssetPath.
+        Return ExtractLogoFileName(SessionText("AziendaLogo"))
+    End Function
+
+    Private Function FormatDocumentDate(ByVal value As String) As String
+        If String.IsNullOrWhiteSpace(value) Then
+            Return ""
+        End If
+
+        Dim parsed As DateTime
+        If DateTime.TryParse(value, CultureInfo.GetCultureInfo("it-IT"), DateTimeStyles.None, parsed) OrElse
+           DateTime.TryParse(value, CultureInfo.CurrentCulture, DateTimeStyles.None, parsed) Then
+            If parsed = DateTime.MinValue Then
+                Return ""
+            End If
+
+            If parsed.TimeOfDay = TimeSpan.Zero Then
+                Return parsed.ToString("dd/MM/yyyy", CultureInfo.GetCultureInfo("it-IT"))
+            End If
+
+            Return parsed.ToString("dd/MM/yyyy HH:mm", CultureInfo.GetCultureInfo("it-IT"))
+        End If
+
+        Return value.Trim()
     End Function
 
     Private Function ExtractLogoFileName(ByVal logoPath As String) As String
