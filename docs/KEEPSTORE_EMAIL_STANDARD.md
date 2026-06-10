@@ -250,6 +250,13 @@ Ogni email deve avere una versione plain text con:
 - assistenza;
 - footer aziendale compatto.
 
+Regola MIME obbligatoria:
+
+- il corpo HTML deve essere inviato come `text/html; charset=utf-8`;
+- il fallback testuale deve essere inviato come `text/plain; charset=utf-8`;
+- non inserire mai HTML completo, `<!doctype html>`, `<html>`, `<table>` o markup visibile dentro parti dichiarate `text/plain`;
+- quando si usano `AlternateViews`, aggiungere prima la vista plain text e poi la vista HTML.
+
 ## 5. Varianti transazionali
 
 ### 5.1 Ordine pagato online
