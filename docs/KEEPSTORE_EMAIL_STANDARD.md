@@ -248,7 +248,12 @@ Regole polish conferma ordine:
 - non hardcodare nomi logo specifici: il fallback interno e ammesso solo se `LogoWeb` e vuoto o non valido;
 - compatibilita multi-azienda: il logo, il brand e il dominio/base URL devono derivare dai dati azienda disponibili e sicuri;
 - CTA verso dettagli protetti: usare URL assoluto HTTPS a `login.aspx?ReturnUrl={path locale urlencoded}`; il `ReturnUrl` deve restare locale e non deve puntare a `accessonegato.aspx`, reset/remind/logout o URL esterni;
-- blocchi consigliati: header con logo/badge, hero con numero-data-totale-pagamento, pagamento, spedizione, prodotti, importi, prossimi passi, assistenza e footer aziendale essenziale.
+- blocchi consigliati: header con logo/badge, hero con numero-data-totale-pagamento, pagamento, spedizione, prodotti, importi, prossimi passi, assistenza e footer aziendale essenziale;
+- tabella prodotti: usare righe gia persistite, con foto piccola, codice, EAN se presente, descrizione, quantita, prezzo unitario e totale riga; non ricalcolare importi o IVA;
+- immagini prodotto: usare URL assoluti HTTPS, preferire la versione compressa `_nomefile` sotto asset pubblici moderni, non usare base64, allegati, CDN esterni o path legacy; se manca immagine valida, mostrare fallback testuale;
+- caption prezzi prodotti: indicare `Prezzi prodotti IVA inclusa` oppure `Prezzi prodotti IVA esclusa` secondo il flag cliente gia usato dal sito; il blocco importi deve mostrare solo righe economiche e non la nota legacy `*Prezzi Iva Esclusa`;
+- spedizione: mostrare al massimo corriere e servizio da `vettori.Descrizione` / `vettori.Informazioni`, deduplicando valori uguali o inclusi; tracking solo se presente;
+- footer azienda: usare dati da `Aziende`, omettere campi vuoti o duplicati e non hardcodare dati Taikun in un prodotto multi-azienda.
 
 ### 4.3 Plain text
 
@@ -311,7 +316,7 @@ Contenuti obbligatori:
 - banca da `aziende.NomeBanca` o fonte confermata;
 - IBAN da `aziende.Iban`;
 - BIC/SWIFT da `aziende.SwiftCode` se presente;
-- causale con numero ordine;
+- causale consigliata nel formato `Pagamento ordine n. {NumeroOrdine} del {DataOrdine:dd/MM/yyyy}`; se la data non e affidabile usare `Pagamento ordine n. {NumeroOrdine}`;
 - avviso che preparazione/spedizione partono dopo accredito o convalida;
 - link area ordini.
 

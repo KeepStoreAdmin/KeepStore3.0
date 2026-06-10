@@ -14,6 +14,12 @@ Public Class KeepStoreEmailBrandInfo
     Public Property SwiftCode As String
     Public Property BankName As String
     Public Property Beneficiary As String
+    Public Property AddressLine As String
+    Public Property CityLine As String
+    Public Property VatNumber As String
+    Public Property FiscalCode As String
+    Public Property Pec As String
+    Public Property Sdi As String
 End Class
 
 Public Class KeepStoreEmailRecipientInfo
@@ -41,6 +47,17 @@ Public Class KeepStoreEmailInfoBlock
     Public Property Items As List(Of KeepStoreEmailInfoItem)
 End Class
 
+Public Class KeepStoreEmailProductLine
+    Public Property ImageUrl As String
+    Public Property ImageAlt As String
+    Public Property Code As String
+    Public Property Ean As String
+    Public Property Description As String
+    Public Property Quantity As String
+    Public Property UnitPrice As String
+    Public Property LineTotal As String
+End Class
+
 Public Class KeepStoreEmailMessageModel
     Public Sub New()
         Brand = New KeepStoreEmailBrandInfo()
@@ -48,6 +65,7 @@ Public Class KeepStoreEmailMessageModel
         BodyLines = New List(Of String)()
         InfoBlocks = New List(Of KeepStoreEmailInfoBlock)()
         HighlightItems = New List(Of KeepStoreEmailInfoItem)()
+        ProductLines = New List(Of KeepStoreEmailProductLine)()
     End Sub
 
     Public Property Brand As KeepStoreEmailBrandInfo
@@ -58,6 +76,8 @@ Public Class KeepStoreEmailMessageModel
     Public Property BodyLines As List(Of String)
     Public Property StatusBadge As String
     Public Property HighlightItems As List(Of KeepStoreEmailInfoItem)
+    Public Property ProductTableCaption As String
+    Public Property ProductLines As List(Of KeepStoreEmailProductLine)
     Public Property InfoBlocks As List(Of KeepStoreEmailInfoBlock)
     Public Property ActionLink As KeepStoreEmailActionLink
     Public Property SecondaryActionLink As KeepStoreEmailActionLink
@@ -237,6 +257,8 @@ Public Class KeepStoreEmailPaymentInfo
     Public Property SwiftCode As String
     Public Property BankName As String
     Public Property Beneficiary As String
+    Public Property AmountDue As String
+    Public Property RecommendedCause As String
 End Class
 
 Public Class KeepStoreEmailShippingInfo
@@ -262,6 +284,9 @@ Public NotInheritable Class KeepStoreEmailPaymentMicrocopy
 
         If payment.IsBankTransfer Then
             lines.Add("Il pagamento tramite bonifico sara verificato dopo l'accredito.")
+            If Not String.IsNullOrWhiteSpace(payment.AmountDue) Then
+                lines.Add("Importo da pagare: " & payment.AmountDue.Trim())
+            End If
             If Not String.IsNullOrWhiteSpace(payment.Beneficiary) Then
                 lines.Add("Beneficiario: " & payment.Beneficiary.Trim())
             End If
@@ -274,8 +299,10 @@ Public NotInheritable Class KeepStoreEmailPaymentMicrocopy
             If Not String.IsNullOrWhiteSpace(payment.SwiftCode) Then
                 lines.Add("SWIFT/BIC: " & payment.SwiftCode.Trim())
             End If
-            If Not String.IsNullOrWhiteSpace(payment.OrderNumber) Then
-                lines.Add("Causale consigliata: ordine " & payment.OrderNumber.Trim())
+            If Not String.IsNullOrWhiteSpace(payment.RecommendedCause) Then
+                lines.Add("Causale consigliata: " & payment.RecommendedCause.Trim())
+            ElseIf Not String.IsNullOrWhiteSpace(payment.OrderNumber) Then
+                lines.Add("Causale consigliata: Pagamento ordine n. " & payment.OrderNumber.Trim())
             End If
         ElseIf payment.IsCashOnDelivery Then
             lines.Add("Il pagamento e previsto alla consegna secondo le condizioni dell'ordine.")
@@ -287,7 +314,7 @@ Public NotInheritable Class KeepStoreEmailPaymentMicrocopy
             End If
         End If
 
-        If Not String.IsNullOrWhiteSpace(payment.Information) Then
+        If Not payment.IsBankTransfer AndAlso Not String.IsNullOrWhiteSpace(payment.Information) Then
             lines.Add(payment.Information.Trim())
         End If
 
@@ -389,6 +416,8 @@ Public NotInheritable Class KeepStoreEmailRenderer
             sb.Append("</tr></table>")
         End If
 
+        AppendProductTable(sb, model)
+
         If model.InfoBlocks IsNot Nothing Then
             For Each block As KeepStoreEmailInfoBlock In model.InfoBlocks
                 AppendInfoBlock(sb, block)
@@ -408,9 +437,20 @@ Public NotInheritable Class KeepStoreEmailRenderer
 
         sb.Append("</td></tr>")
         sb.Append("<tr><td style=""padding:20px 32px 28px 32px;background:#f9fafb;border-top:1px solid #e7ebef;color:#5b6673;font-size:13px;line-height:20px;"">")
+        sb.Append("<table role=""presentation"" width=""100%"" cellspacing=""0"" cellpadding=""0""><tr>")
+        sb.Append("<td style=""width:50%;vertical-align:top;padding-right:14px;"">")
+        AppendFooterLine(sb, companyName, "Azienda")
+        AppendFooterLine(sb, brand.AddressLine, "Indirizzo")
+        AppendFooterLine(sb, brand.CityLine, "Sede")
+        sb.Append("</td><td style=""width:50%;vertical-align:top;padding-left:14px;"">")
         AppendFooterLine(sb, brand.SupportEmail, "Email")
         AppendFooterLine(sb, brand.Phone, "Telefono")
         AppendFooterLine(sb, brand.SiteUrl, "Sito")
+        AppendFooterLine(sb, brand.VatNumber, "P.IVA")
+        AppendFooterLine(sb, brand.FiscalCode, "C.F.")
+        AppendFooterLine(sb, brand.Pec, "PEC")
+        AppendFooterLine(sb, brand.Sdi, "SDI")
+        sb.Append("</td></tr></table>")
         AppendParagraph(sb, model.FooterNote)
         sb.Append("</td></tr>")
         sb.Append("</table></td></tr></table></body></html>")
@@ -432,6 +472,24 @@ Public NotInheritable Class KeepStoreEmailRenderer
         If model.BodyLines IsNot Nothing Then
             For Each line As String In model.BodyLines
                 AppendPlainLine(sb, line)
+            Next
+        End If
+
+        If model.ProductLines IsNot Nothing AndAlso model.ProductLines.Count > 0 Then
+            AppendPlainLine(sb, "")
+            AppendPlainLine(sb, "Prodotti")
+            AppendPlainLine(sb, model.ProductTableCaption)
+            For Each product As KeepStoreEmailProductLine In model.ProductLines
+                If product IsNot Nothing Then
+                    Dim parts As New List(Of String)()
+                    AddPlainPart(parts, "Codice", product.Code)
+                    AddPlainPart(parts, "EAN", product.Ean)
+                    AddPlainPart(parts, "Descrizione", product.Description)
+                    AddPlainPart(parts, "Q.ta", product.Quantity)
+                    AddPlainPart(parts, "Prezzo unit.", product.UnitPrice)
+                    AddPlainPart(parts, "Totale", product.LineTotal)
+                    AppendPlainLine(sb, String.Join(" | ", parts.ToArray()))
+                End If
             Next
         End If
 
@@ -463,9 +521,15 @@ Public NotInheritable Class KeepStoreEmailRenderer
         AppendPlainLine(sb, "")
         AppendPlainLine(sb, If(String.IsNullOrWhiteSpace(brand.CompanyName), "KeepStore", brand.CompanyName.Trim()))
         AppendPlainLine(sb, model.FooterNote)
+        AppendPlainLine(sb, brand.AddressLine)
+        AppendPlainLine(sb, brand.CityLine)
         AppendPlainLine(sb, brand.SupportEmail)
         AppendPlainLine(sb, brand.Phone)
         AppendPlainLine(sb, brand.SiteUrl)
+        AppendPlainLine(sb, JoinFooterPlain("P.IVA", brand.VatNumber))
+        AppendPlainLine(sb, JoinFooterPlain("C.F.", brand.FiscalCode))
+        AppendPlainLine(sb, JoinFooterPlain("PEC", brand.Pec))
+        AppendPlainLine(sb, JoinFooterPlain("SDI", brand.Sdi))
 
         Return sb.ToString().Trim()
     End Function
@@ -505,6 +569,50 @@ Public NotInheritable Class KeepStoreEmailRenderer
         sb.Append("</td></tr></table>")
     End Sub
 
+    Private Shared Sub AppendProductTable(ByVal sb As StringBuilder, ByVal model As KeepStoreEmailMessageModel)
+        If model Is Nothing OrElse model.ProductLines Is Nothing OrElse model.ProductLines.Count = 0 Then
+            Return
+        End If
+
+        sb.Append("<table role=""presentation"" width=""100%"" cellspacing=""0"" cellpadding=""0"" style=""margin:20px 0;border:1px solid #e3e8ee;background:#ffffff;"">")
+        sb.Append("<tr><td colspan=""7"" style=""padding:16px 18px;background:#fbfcfd;"">")
+        sb.Append("<h2 style=""margin:0 0 6px 0;font-size:17px;line-height:24px;color:#17212b;"">Prodotti</h2>")
+        If Not String.IsNullOrWhiteSpace(model.ProductTableCaption) Then
+            sb.Append("<p style=""margin:0;font-size:13px;line-height:19px;color:#697586;"">").Append(Html(model.ProductTableCaption)).Append("</p>")
+        End If
+        sb.Append("</td></tr>")
+        sb.Append("<tr style=""background:#f1f5f9;color:#354052;font-size:12px;line-height:16px;text-transform:uppercase;font-weight:700;"">")
+        sb.Append("<td style=""padding:9px 8px;border-top:1px solid #e3e8ee;"">Foto</td>")
+        sb.Append("<td style=""padding:9px 8px;border-top:1px solid #e3e8ee;"">Codice</td>")
+        sb.Append("<td style=""padding:9px 8px;border-top:1px solid #e3e8ee;"">EAN</td>")
+        sb.Append("<td style=""padding:9px 8px;border-top:1px solid #e3e8ee;"">Descrizione</td>")
+        sb.Append("<td align=""right"" style=""padding:9px 8px;border-top:1px solid #e3e8ee;"">Q.ta</td>")
+        sb.Append("<td align=""right"" style=""padding:9px 8px;border-top:1px solid #e3e8ee;"">Unitario</td>")
+        sb.Append("<td align=""right"" style=""padding:9px 8px;border-top:1px solid #e3e8ee;"">Totale</td>")
+        sb.Append("</tr>")
+
+        For Each product As KeepStoreEmailProductLine In model.ProductLines
+            If product Is Nothing Then Continue For
+            sb.Append("<tr>")
+            sb.Append("<td style=""width:72px;padding:10px 8px;border-top:1px solid #e7ebef;vertical-align:top;"">")
+            If Not String.IsNullOrWhiteSpace(product.ImageUrl) Then
+                sb.Append("<img src=""").Append(Attr(product.ImageUrl)).Append(""" width=""64"" height=""64"" alt=""").Append(Attr(product.ImageAlt)).Append(""" style=""display:block;border:0;outline:none;text-decoration:none;width:64px;height:auto;max-width:64px;"">")
+            Else
+                sb.Append("<div style=""width:64px;min-height:44px;padding-top:20px;background:#f1f5f9;color:#7b8794;text-align:center;font-size:10px;line-height:12px;"">Foto non disponibile</div>")
+            End If
+            sb.Append("</td>")
+            sb.Append("<td style=""padding:10px 8px;border-top:1px solid #e7ebef;vertical-align:top;font-size:13px;line-height:19px;color:#17212b;font-weight:700;"">").Append(Html(product.Code)).Append("</td>")
+            sb.Append("<td style=""padding:10px 8px;border-top:1px solid #e7ebef;vertical-align:top;font-size:12px;line-height:18px;color:#5b6673;"">").Append(Html(product.Ean)).Append("</td>")
+            sb.Append("<td style=""padding:10px 8px;border-top:1px solid #e7ebef;vertical-align:top;font-size:13px;line-height:19px;color:#354052;"">").Append(Html(product.Description)).Append("</td>")
+            sb.Append("<td align=""right"" style=""padding:10px 8px;border-top:1px solid #e7ebef;vertical-align:top;font-size:13px;line-height:19px;color:#354052;"">").Append(Html(product.Quantity)).Append("</td>")
+            sb.Append("<td align=""right"" style=""padding:10px 8px;border-top:1px solid #e7ebef;vertical-align:top;font-size:13px;line-height:19px;color:#354052;white-space:nowrap;"">").Append(Html(product.UnitPrice)).Append("</td>")
+            sb.Append("<td align=""right"" style=""padding:10px 8px;border-top:1px solid #e7ebef;vertical-align:top;font-size:13px;line-height:19px;color:#17212b;font-weight:700;white-space:nowrap;"">").Append(Html(product.LineTotal)).Append("</td>")
+            sb.Append("</tr>")
+        Next
+
+        sb.Append("</table>")
+    End Sub
+
     Private Shared Sub AppendParagraph(ByVal sb As StringBuilder, ByVal text As String)
         If String.IsNullOrWhiteSpace(text) Then
             Return
@@ -528,6 +636,20 @@ Public NotInheritable Class KeepStoreEmailRenderer
 
         sb.AppendLine(CleanText(value))
     End Sub
+
+    Private Shared Sub AddPlainPart(ByVal parts As List(Of String), ByVal label As String, ByVal value As String)
+        If parts Is Nothing OrElse String.IsNullOrWhiteSpace(value) Then
+            Return
+        End If
+        parts.Add(CleanText(label) & ": " & CleanText(value))
+    End Sub
+
+    Private Shared Function JoinFooterPlain(ByVal label As String, ByVal value As String) As String
+        If String.IsNullOrWhiteSpace(value) Then
+            Return ""
+        End If
+        Return CleanText(label) & ": " & CleanText(value)
+    End Function
 
     Private Shared Function Html(ByVal value As String) As String
         If value Is Nothing Then
