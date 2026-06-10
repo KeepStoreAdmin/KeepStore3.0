@@ -6,6 +6,7 @@ Imports System.Net
 Imports System.Net.Mail
 Imports System.Net.Mime
 Imports System.Text
+Imports System.IO
 Imports BancaSella
 Imports System.Security.Authentication
 Imports System.Web
@@ -665,10 +666,31 @@ End If
 
     Private Class OrderEmailLine
         Public Property Code As String
+        Public Property Ean As String
         Public Property Description As String
         Public Property Quantity As String
         Public Property UnitPrice As String
         Public Property LineTotal As String
+        Public Property ImageUrl As String
+        Public Property ImageAlt As String
+    End Class
+
+    Private Class OrderEmailBrandData
+        Public Property CompanyName As String
+        Public Property SupportEmail As String
+        Public Property Phone As String
+        Public Property SiteUrl As String
+        Public Property LogoWeb As String
+        Public Property Iban As String
+        Public Property SwiftCode As String
+        Public Property BankName As String
+        Public Property Beneficiary As String
+        Public Property AddressLine As String
+        Public Property CityLine As String
+        Public Property VatNumber As String
+        Public Property FiscalCode As String
+        Public Property Pec As String
+        Public Property Sdi As String
     End Class
 
     Public Sub SendEmail(ByVal n As Long, ByVal documento As String, ByVal id As Integer, ByVal Descrizione_Coupon As String)
@@ -715,6 +737,7 @@ End If
             Dim spedizioneInformazioni As String = ""
             Dim dataDocumentoDisplay As String = ""
             Dim righeOrdine As New List(Of OrderEmailLine)()
+            Dim emailBrand As OrderEmailBrandData = Nothing
 
             If drTestata.HasRows Then
                 numeroDocumento = DbText(drTestata, "NDocumento")
@@ -810,6 +833,8 @@ End If
             drTestata.Dispose()
             cmdTestata.Dispose()
 
+            emailBrand = LoadOrderEmailBrandData(conn)
+
             If Descrizione_Coupon <> "" Then
                 StrCarrello &= "<tr><td colspan=6 bgcolor=whitesmoke><b>Coupon</b></td></tr>"
                 StrCarrello &= "<tr><td colspan=6>" & Descrizione_Coupon & "</td></tr>"
@@ -825,9 +850,12 @@ End If
                 Dim drRighe As MySqlDataReader = cmdRighe.ExecuteReader()
                 While drRighe.Read()
                     Dim emailLine As New OrderEmailLine()
-                    emailLine.Code = JoinNonEmpty(" ", DbText(drRighe, "marchedescrizione"), DbText(drRighe, "codice"))
+                    emailLine.Code = DbText(drRighe, "codice")
+                    emailLine.Ean = DbText(drRighe, "ean")
                     emailLine.Description = DbText(drRighe, "descrizione1")
-                    emailLine.Quantity = DbText(drRighe, "qnt")
+                    emailLine.Quantity = FormatQuantity(DbText(drRighe, "qnt"))
+                    emailLine.ImageUrl = ResolveOrderProductImageUrl(DbText(drRighe, "Img1"))
+                    emailLine.ImageAlt = JoinNonEmpty(" - ", emailLine.Code, emailLine.Description)
                     If IvaTipo = 1 Then
                         emailLine.UnitPrice = String.Format("{0:c}", drRighe.Item("prezzo"))
                         emailLine.LineTotal = String.Format("{0:c}", drRighe.Item("importo"))
@@ -898,10 +926,12 @@ End If
                                                                                               Totale,
                                                                                               StrIva,
                                                                                               dataDocumentoDisplay,
-                                                                                              Descrizione_Coupon,
-                                                                                              righeOrdine,
-                                                                                              id,
-                                                                                              n)
+                                                                                               Descrizione_Coupon,
+                                                                                               righeOrdine,
+                                                                                               IvaTipo,
+                                                                                               emailBrand,
+                                                                                               id,
+                                                                                               n)
 
             If renderedEmail IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(renderedEmail.HtmlBody) Then
                 oMsg.Subject = BuildOrderConfirmationSubject(documento, numeroDocumento, dataDocumentoDisplay, pagamentoDescrizione, pagamentoInformazioni)
@@ -983,17 +1013,15 @@ End If
                                                      ByVal dataDocumentoDisplay As String,
                                                      ByVal descrizioneCoupon As String,
                                                      ByVal righeOrdine As List(Of OrderEmailLine),
+                                                     ByVal ivaTipo As Integer,
+                                                     ByVal emailBrand As OrderEmailBrandData,
                                                      ByVal idDocumento As Integer,
                                                      ByVal numeroDocumentoNumerico As Long) As KeepStoreEmailRenderResult
         Try
             Dim companyName As String = SessionText("AziendaNome")
             Dim model As New KeepStoreEmailMessageModel()
 
-            model.Brand.CompanyName = companyName
-            model.Brand.SupportEmail = SessionText("AziendaEmail")
-            model.Brand.SiteUrl = BuildSiteHomeUrl()
-            model.Brand.LogoWeb = ResolveEmailLogoWebFileName()
-            model.Brand.Beneficiary = companyName
+            ApplyOrderEmailBrand(model.Brand, emailBrand, companyName)
             model.Recipient.DisplayName = SessionText("LoginNomeCognome")
             model.Recipient.Email = SessionText("LoginEmail")
 
@@ -1005,6 +1033,8 @@ End If
             AddHighlightItem(model, "Data", dataDocumentoDisplay)
             AddHighlightItem(model, "Totale", totale)
             AddHighlightItem(model, "Pagamento", pagamentoDescrizione)
+            AddHighlightItem(model, "Spedizione", CleanJoinedShipping(spedizioneDescrizione, spedizioneInformazioni))
+            model.BodyLines.Add("Abbiamo ricevuto il tuo ordine. Riceverai aggiornamenti quando l'ordine sara lavorato o spedito.")
 
             If documento.Contains("Preventivo") Then
                 model.BodyLines.Add("Questo documento e un preventivo online e non costituisce impegno d'ordine.")
@@ -1028,12 +1058,17 @@ End If
 
             Dim paymentBlock As New KeepStoreEmailInfoBlock()
             paymentBlock.Title = "Pagamento"
-            AddInfoItem(paymentBlock, "Metodo", JoinNonEmpty(" - ", pagamentoDescrizione, pagamentoInformazioni))
+            AddInfoItem(paymentBlock, "Metodo", pagamentoDescrizione)
             Dim paymentInfo As New KeepStoreEmailPaymentInfo()
             paymentInfo.Description = pagamentoDescrizione
             paymentInfo.Information = pagamentoInformazioni
             paymentInfo.OrderNumber = numeroDocumento
-            paymentInfo.Beneficiary = companyName
+            paymentInfo.Beneficiary = model.Brand.Beneficiary
+            paymentInfo.Iban = model.Brand.Iban
+            paymentInfo.SwiftCode = model.Brand.SwiftCode
+            paymentInfo.BankName = model.Brand.BankName
+            paymentInfo.AmountDue = totale
+            paymentInfo.RecommendedCause = BuildBankTransferCause(numeroDocumento, dataDocumentoDisplay)
             paymentInfo.IsBankTransfer = IsBankTransferPayment(pagamentoDescrizione, pagamentoInformazioni)
             paymentInfo.IsCashOnDelivery = IsCashOnDeliveryPayment(pagamentoDescrizione, pagamentoInformazioni)
             paymentInfo.IsOnline = IsOnlinePayment(pagamentoDescrizione, pagamentoInformazioni)
@@ -1045,24 +1080,28 @@ End If
 
             Dim shippingBlock As New KeepStoreEmailInfoBlock()
             shippingBlock.Title = "Spedizione"
-            AddInfoItem(shippingBlock, "Metodo", JoinNonEmpty(" - ", spedizioneDescrizione, spedizioneInformazioni))
             Dim shippingInfo As New KeepStoreEmailShippingInfo()
-            shippingInfo.MethodDescription = spedizioneDescrizione
-            shippingInfo.CarrierName = spedizioneInformazioni
+            shippingInfo.CarrierName = CleanField(spedizioneDescrizione)
+            shippingInfo.MethodDescription = CleanDistinctField(spedizioneInformazioni, spedizioneDescrizione)
             For Each line As String In KeepStoreEmailShippingMicrocopy.BuildShippingCopy(shippingInfo)
                 AddInfoItem(shippingBlock, "", line)
             Next
             model.InfoBlocks.Add(shippingBlock)
 
             If righeOrdine IsNot Nothing AndAlso righeOrdine.Count > 0 Then
-                Dim linesBlock As New KeepStoreEmailInfoBlock()
-                linesBlock.Title = "Prodotti"
                 For Each line As OrderEmailLine In righeOrdine
-                    AddInfoItem(linesBlock,
-                                JoinNonEmpty(" ", line.Code, "x" & line.Quantity),
-                                JoinNonEmpty(" - ", line.Description, "Prezzo: " & line.UnitPrice, "Totale riga: " & line.LineTotal))
+                    Dim product As New KeepStoreEmailProductLine()
+                    product.Code = line.Code
+                    product.Ean = line.Ean
+                    product.Description = line.Description
+                    product.Quantity = line.Quantity
+                    product.UnitPrice = line.UnitPrice
+                    product.LineTotal = line.LineTotal
+                    product.ImageUrl = line.ImageUrl
+                    product.ImageAlt = line.ImageAlt
+                    model.ProductLines.Add(product)
                 Next
-                model.InfoBlocks.Add(linesBlock)
+                model.ProductTableCaption = BuildProductVatCaption(ivaTipo)
             End If
 
             Dim totalsBlock As New KeepStoreEmailInfoBlock()
@@ -1073,9 +1112,6 @@ End If
             AddInfoItem(totalsBlock, "Pagamento", spesePagamento)
             AddInfoItem(totalsBlock, "IVA", iva)
             AddInfoItem(totalsBlock, "Totale", totale)
-            If Not String.IsNullOrWhiteSpace(notaIva) Then
-                totalsBlock.Body = notaIva
-            End If
             model.InfoBlocks.Add(totalsBlock)
 
             Dim nextStepsBlock As New KeepStoreEmailInfoBlock()
@@ -1091,6 +1127,13 @@ End If
                 AddInfoItem(nextStepsBlock, "3", "Ricevera aggiornamenti dai canali previsti dal sito.")
             End If
             model.InfoBlocks.Add(nextStepsBlock)
+
+            Dim supportBlock As New KeepStoreEmailInfoBlock()
+            supportBlock.Title = "Assistenza ordine"
+            AddInfoItem(supportBlock, "Riferimento", JoinNonEmpty(" ", "Ordine n.", numeroDocumento))
+            AddInfoItem(supportBlock, "Email", model.Brand.SupportEmail)
+            AddInfoItem(supportBlock, "Telefono", model.Brand.Phone)
+            model.InfoBlocks.Add(supportBlock)
 
             Dim noteDocumento As String = SessionText("NoteDocumento")
             If Not String.IsNullOrWhiteSpace(noteDocumento) Then
@@ -1114,7 +1157,7 @@ End If
                 model.SecondaryActionLink = accountAction
             End If
 
-            model.FooterNote = "Per assistenza puo contattarci usando i riferimenti indicati in questa email."
+            model.FooterNote = "Questa email e stata generata automaticamente in seguito alla richiesta d'ordine."
 
             Return KeepStoreEmailRenderer.Render(model)
         Catch
@@ -1172,6 +1215,240 @@ End If
         item.Value = value
         block.Items.Add(item)
     End Sub
+
+    Private Function LoadOrderEmailBrandData(ByVal conn As MySqlConnection) As OrderEmailBrandData
+        Dim data As New OrderEmailBrandData()
+        data.CompanyName = SessionText("AziendaNome")
+        data.SupportEmail = SessionText("AziendaEmail")
+        data.SiteUrl = BuildSiteHomeUrl()
+        data.LogoWeb = ResolveEmailLogoWebFileName()
+        data.Beneficiary = data.CompanyName
+
+        If conn Is Nothing OrElse conn.State <> ConnectionState.Open Then
+            Return data
+        End If
+
+        Dim aziendaId As Integer = GetSessionInt("AziendaID", 0)
+        If aziendaId <= 0 Then
+            Return data
+        End If
+
+        Try
+            Using cmd As New MySqlCommand("SELECT RagioneSociale, Indirizzo, Cap, Citta, Provincia, Telefono, email, URL1, URL2, Piva, CodiceFiscale, email_pec, codice_sdi, Iban, SwiftCode, NomeBanca, LogoWeb FROM aziende WHERE id=?id LIMIT 1", conn)
+                cmd.Parameters.AddWithValue("?id", aziendaId)
+                Using reader As MySqlDataReader = cmd.ExecuteReader()
+                    If reader.Read() Then
+                        data.CompanyName = FirstNonEmpty(DbText(reader, "RagioneSociale"), data.CompanyName)
+                        data.SupportEmail = FirstNonEmpty(DbText(reader, "email"), data.SupportEmail)
+                        data.Phone = DbText(reader, "Telefono")
+                        data.SiteUrl = BuildCompanySiteUrl(DbText(reader, "URL1"), DbText(reader, "URL2"), data.SiteUrl)
+                        data.LogoWeb = FirstNonEmpty(DbText(reader, "LogoWeb"), data.LogoWeb)
+                        data.Iban = DbText(reader, "Iban")
+                        data.SwiftCode = DbText(reader, "SwiftCode")
+                        data.BankName = DbText(reader, "NomeBanca")
+                        data.Beneficiary = data.CompanyName
+                        data.AddressLine = DbText(reader, "Indirizzo")
+                        data.CityLine = JoinNonEmpty(" ", DbText(reader, "Cap"), DbText(reader, "Citta"), DbText(reader, "Provincia"))
+                        data.VatNumber = DbText(reader, "Piva")
+                        data.FiscalCode = DbText(reader, "CodiceFiscale")
+                        data.Pec = DbText(reader, "email_pec")
+                        data.Sdi = DbText(reader, "codice_sdi")
+                    End If
+                End Using
+            End Using
+        Catch
+        End Try
+
+        Return data
+    End Function
+
+    Private Sub ApplyOrderEmailBrand(ByVal brand As KeepStoreEmailBrandInfo, ByVal data As OrderEmailBrandData, ByVal fallbackCompanyName As String)
+        If brand Is Nothing Then
+            Return
+        End If
+
+        If data Is Nothing Then
+            data = New OrderEmailBrandData()
+        End If
+
+        brand.CompanyName = FirstNonEmpty(data.CompanyName, fallbackCompanyName, SessionText("AziendaNome"))
+        brand.SupportEmail = FirstNonEmpty(data.SupportEmail, SessionText("AziendaEmail"))
+        brand.Phone = data.Phone
+        brand.SiteUrl = FirstNonEmpty(data.SiteUrl, BuildSiteHomeUrl())
+        brand.LogoWeb = FirstNonEmpty(data.LogoWeb, ResolveEmailLogoWebFileName())
+        brand.Iban = data.Iban
+        brand.SwiftCode = data.SwiftCode
+        brand.BankName = data.BankName
+        brand.Beneficiary = FirstNonEmpty(data.Beneficiary, brand.CompanyName)
+        brand.AddressLine = data.AddressLine
+        brand.CityLine = data.CityLine
+        brand.VatNumber = data.VatNumber
+        brand.FiscalCode = If(String.Equals(data.FiscalCode, data.VatNumber, StringComparison.OrdinalIgnoreCase), "", data.FiscalCode)
+        brand.Pec = data.Pec
+        brand.Sdi = data.Sdi
+    End Sub
+
+    Private Function BuildBankTransferCause(ByVal numeroDocumento As String, ByVal dataDocumentoDisplay As String) As String
+        If String.IsNullOrWhiteSpace(numeroDocumento) Then
+            Return ""
+        End If
+
+        Dim cause As String = "Pagamento ordine n. " & numeroDocumento.Trim()
+        Dim dateOnly As String = ExtractDateOnly(dataDocumentoDisplay)
+        If Not String.IsNullOrWhiteSpace(dateOnly) Then
+            cause &= " del " & dateOnly
+        End If
+        Return cause
+    End Function
+
+    Private Function ExtractDateOnly(ByVal value As String) As String
+        If String.IsNullOrWhiteSpace(value) Then
+            Return ""
+        End If
+
+        Dim parsed As DateTime
+        If DateTime.TryParse(value, CultureInfo.GetCultureInfo("it-IT"), DateTimeStyles.None, parsed) OrElse
+           DateTime.TryParse(value, CultureInfo.CurrentCulture, DateTimeStyles.None, parsed) Then
+            If parsed = DateTime.MinValue Then Return ""
+            Return parsed.ToString("dd/MM/yyyy", CultureInfo.GetCultureInfo("it-IT"))
+        End If
+
+        Dim trimmed As String = value.Trim()
+        If trimmed.Length >= 10 Then
+            Return trimmed.Substring(0, 10)
+        End If
+        Return trimmed
+    End Function
+
+    Private Function BuildProductVatCaption(ByVal ivaTipo As Integer) As String
+        If ivaTipo = 2 Then
+            Return "Prezzi prodotti IVA inclusa"
+        End If
+        Return "Prezzi prodotti IVA esclusa"
+    End Function
+
+    Private Function ResolveOrderProductImageUrl(ByVal rawFileName As String) As String
+        Dim fileName As String = SafeProductImageFileName(rawFileName)
+        If String.IsNullOrWhiteSpace(fileName) Then
+            Return ""
+        End If
+
+        Dim compressed As String = "_" & fileName
+        Dim compressedPath As String = Server.MapPath("~/Public/assets/images/articoli/" & compressed)
+        If File.Exists(compressedPath) Then
+            Return BuildSiteUrl("/Public/assets/images/articoli/" & compressed)
+        End If
+
+        Dim originalPath As String = Server.MapPath("~/Public/assets/images/articoli/" & fileName)
+        If File.Exists(originalPath) Then
+            Return BuildSiteUrl("/Public/assets/images/articoli/" & fileName)
+        End If
+
+        Return ""
+    End Function
+
+    Private Function SafeProductImageFileName(ByVal rawFileName As String) As String
+        If String.IsNullOrWhiteSpace(rawFileName) Then
+            Return ""
+        End If
+
+        Dim raw As String = rawFileName.Trim()
+        Dim lowered As String = raw.ToLowerInvariant()
+        If lowered.StartsWith("http://") OrElse lowered.StartsWith("https://") OrElse lowered.StartsWith("//") OrElse lowered.StartsWith("data:") Then
+            Return ""
+        End If
+        If lowered.Contains("../") OrElse lowered.Contains("..\") OrElse lowered.Contains("%2f") OrElse lowered.Contains("%5c") Then
+            Return ""
+        End If
+        If raw.IndexOfAny(New Char() {"/"c, "\"c, ":"c, "?"c, "#"c, "&"c}) >= 0 Then
+            Return ""
+        End If
+
+        Dim fileName As String = Path.GetFileName(raw)
+        If String.IsNullOrWhiteSpace(fileName) OrElse Not String.Equals(fileName, raw, StringComparison.Ordinal) Then
+            Return ""
+        End If
+
+        Dim extension As String = Path.GetExtension(fileName).ToLowerInvariant()
+        If extension <> ".jpg" AndAlso extension <> ".jpeg" AndAlso extension <> ".png" AndAlso extension <> ".gif" Then
+            Return ""
+        End If
+
+        For Each c As Char In fileName
+            If Not (Char.IsLetterOrDigit(c) OrElse c = "."c OrElse c = "-"c OrElse c = "_"c) Then
+                Return ""
+            End If
+        Next
+
+        Return fileName
+    End Function
+
+    Private Function FormatQuantity(ByVal value As String) As String
+        If String.IsNullOrWhiteSpace(value) Then
+            Return ""
+        End If
+
+        Dim parsed As Decimal
+        If Decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, parsed) OrElse
+           Decimal.TryParse(value, NumberStyles.Any, CultureInfo.CurrentCulture, parsed) Then
+            Return parsed.ToString("0.#####", CultureInfo.GetCultureInfo("it-IT"))
+        End If
+
+        Return value.Trim()
+    End Function
+
+    Private Function CleanJoinedShipping(ByVal carrier As String, ByVal service As String) As String
+        Return JoinNonEmpty(" - ", CleanField(carrier), CleanDistinctField(service, carrier))
+    End Function
+
+    Private Function CleanDistinctField(ByVal value As String, ByVal other As String) As String
+        Dim cleaned As String = CleanField(value)
+        Dim compareWith As String = CleanField(other)
+        If cleaned = "" OrElse compareWith = "" Then
+            Return cleaned
+        End If
+
+        If String.Equals(cleaned, compareWith, StringComparison.OrdinalIgnoreCase) Then
+            Return ""
+        End If
+        If compareWith.IndexOf(cleaned, StringComparison.OrdinalIgnoreCase) >= 0 Then
+            Return ""
+        End If
+        If cleaned.IndexOf(compareWith, StringComparison.OrdinalIgnoreCase) >= 0 Then
+            Return cleaned
+        End If
+        Return cleaned
+    End Function
+
+    Private Function CleanField(ByVal value As String) As String
+        If String.IsNullOrWhiteSpace(value) Then
+            Return ""
+        End If
+        Return value.Replace(ControlChars.Cr, " ").Replace(ControlChars.Lf, " ").Trim()
+    End Function
+
+    Private Function BuildCompanySiteUrl(ByVal url1 As String, ByVal url2 As String, ByVal fallbackUrl As String) As String
+        Dim selected As String = FirstNonEmpty(url1, url2, fallbackUrl)
+        If String.IsNullOrWhiteSpace(selected) Then
+            Return BuildSiteHomeUrl()
+        End If
+        If selected.StartsWith("//", StringComparison.Ordinal) OrElse selected.StartsWith("data:", StringComparison.OrdinalIgnoreCase) OrElse selected.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) Then
+            Return BuildSiteHomeUrl()
+        End If
+        Return selected.Trim()
+    End Function
+
+    Private Function FirstNonEmpty(ParamArray values() As String) As String
+        If values Is Nothing Then
+            Return ""
+        End If
+        For Each value As String In values
+            If Not String.IsNullOrWhiteSpace(value) Then
+                Return value.Trim()
+            End If
+        Next
+        Return ""
+    End Function
 
     Private Function DbText(ByVal record As IDataRecord, ByVal fieldName As String) As String
         Try

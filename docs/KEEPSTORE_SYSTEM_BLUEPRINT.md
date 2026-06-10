@@ -1031,7 +1031,8 @@ Ogni email transazionale deve:
 - usare logo azienda da `aziende.LogoWeb` per header desktop/mobile e footer, con path `/Public/assets/images/logo/{LogoWeb}`, nome file sanificato e fallback interno controllato;
 - per nuovi invii runtime, usare la fondazione `App_Code/KeepStoreEmailTemplate.vb`: renderer HTML/plain text, subject helper, microcopy pagamento/spedizione e sanitizzazione logo `LogoWeb`;
 - negli invii email gli asset devono essere URL assoluti HTTPS; il logo email resta dinamico da `Aziende.LogoWeb`, non hardcoded, e i link a pagine protette devono passare da login con `ReturnUrl` locale sanificato;
-- evitare asset esterni non controllati e percorsi legacy immagini del vecchio sito.
+- evitare asset esterni non controllati e percorsi legacy immagini del vecchio sito;
+- per righe prodotto email, usare immagini articolo da asset pubblici moderni con URL assoluto HTTPS, preferendo `_nomefile` compresso se disponibile, senza base64 o allegati.
 
 ### 15.5 Roadmap email
 
@@ -1053,6 +1054,7 @@ Non implementare runtime email senza task dedicato e senza conferma delle fonti 
 | Data | Task | PR | Commit | File modificati | Sintesi tecnica | Impatto funzionale | Note/debito residuo |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 2026-06-10 | EMAIL-ORDER-CONFIRMATION-1A | branch PR | pending | `ordine.aspx.vb`, documentazione | Migrazione conferma ordine/preventivo al renderer standard HTML/plain text con microcopy pagamento/spedizione e fallback legacy | Email ordine piu coerente e professionale | Nessun gateway, totale, DB/schema, SMTP o `web.config` modificato; invio live non testato in PR |
+| 2026-06-11 | EMAIL-ORDER-CONFIRMATION-PRO-1A | branch PR | pending | `ordine.aspx.vb`, `App_Code/KeepStoreEmailTemplate.vb`, documentazione | Rifinitura conferma ordine: causale bonifico completa, tabella prodotti con foto/codice/EAN/prezzi, footer `Aziende`, vettori deduplicati e caption IVA prodotti | Email ordine piu completa e professionale | Nessun gateway, totale/costo reale, DB/schema, SMTP o `web.config` modificato; smoke live demandato a Germano |
 | 2026-06-09 | EMAIL-ENGINE-1A | branch PR | pending | `App_Code/KeepStoreEmailTemplate.vb`, documentazione | Fondazione renderer email HTML/plain text, subject helper, logo `LogoWeb` e microcopy pagamento/spedizione | Base runtime per migrare invii futuri | Nessun invio reale migrato, nessun SMTP/web.config/DB/gateway modificato |
 | 2026-06-09 | EMAIL-SYSTEM-AUDIT-1A | branch PR | pending | `docs/KEEPSTORE_EMAIL_STANDARD.md`, masterplan, blueprint | Audit sistema email transazionali e standard Taikun | Base per motore email futuro | Solo docs, nessun runtime/DB/gateway modificato |
 | 2026-05-29 | ACCOUNT-PROFILE-1B | #100/#101/#102 | `f0eeccc...`, `7bfd40c...`, `919b342...` | account profile/sidebar | Profilo account ONSUS e sidebar root/active | Profilo stabilizzato | Cleanup inline non completo all'epoca |
