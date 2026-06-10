@@ -844,7 +844,7 @@ End If
                 Dim cmdRighe As New MySqlCommand
                 cmdRighe.Connection = conn
                 cmdRighe.CommandType = CommandType.Text
-                cmdRighe.CommandText = "SELECT * FROM vdocumentirighe WHERE DocumentiId=?id"
+                cmdRighe.CommandText = "SELECT vr.*, a.Img1 AS ArticoloImg1, a.Img2 AS ArticoloImg2, a.Img3 AS ArticoloImg3, a.Img4 AS ArticoloImg4, a.Img5 AS ArticoloImg5, a.Img6 AS ArticoloImg6 FROM vdocumentirighe vr LEFT JOIN articoli a ON vr.ArticoliId = a.id WHERE vr.DocumentiId=?id"
                 cmdRighe.Parameters.AddWithValue("?id", id)
 
                 Dim drRighe As MySqlDataReader = cmdRighe.ExecuteReader()
@@ -854,7 +854,7 @@ End If
                     emailLine.Ean = DbText(drRighe, "ean")
                     emailLine.Description = DbText(drRighe, "descrizione1")
                     emailLine.Quantity = FormatQuantity(DbText(drRighe, "qnt"))
-                    emailLine.ImageUrl = ResolveOrderProductImageUrl(DbText(drRighe, "Img1"))
+                    emailLine.ImageUrl = ResolveOrderProductImageUrl(BuildOrderProductImageCandidates(drRighe))
                     emailLine.ImageAlt = JoinNonEmpty(" - ", emailLine.Code, emailLine.Description)
                     If IvaTipo = 1 Then
                         emailLine.UnitPrice = String.Format("{0:c}", drRighe.Item("prezzo"))
@@ -1033,8 +1033,11 @@ End If
             AddHighlightItem(model, "Data", dataDocumentoDisplay)
             AddHighlightItem(model, "Totale", totale)
             AddHighlightItem(model, "Pagamento", pagamentoDescrizione)
-            AddHighlightItem(model, "Spedizione", CleanJoinedShipping(spedizioneDescrizione, spedizioneInformazioni))
+            AddHighlightItem(model, "Spedizione", CleanField(spedizioneDescrizione))
             model.BodyLines.Add("Abbiamo ricevuto il tuo ordine. Riceverai aggiornamenti quando l'ordine sara lavorato o spedito.")
+            model.ActionIntro = "Dalla tua area cliente puoi verificare i dettagli dell’ordine, consultare le fatture di cortesia e controllare in tempo reale lo stato della spedizione."
+            model.LegalTitle = "Informazioni sul documento di vendita"
+            model.LegalText = "Per l'emissione del documento di vendita, faranno fede le informazioni fornite dall'utente al momento della trasmissione dell'ordine tramite il Sito, che l'utente dichiara con la formulazione dell’ordine di acquisto, essere rispondenti al vero. Nessuna variazione sarà possibile, dopo l'emissione del documento di vendita. L'utente si impegna a tenere il venditore indenne e manlevato da qualunque danno allo stesso possa derivare, comprese eventuali sanzioni, nel caso in cui i dati forniti dall'utente tramite il Sito per l'emissione del documento di vendita non siano rispondenti al vero."
 
             If documento.Contains("Preventivo") Then
                 model.BodyLines.Add("Questo documento e un preventivo online e non costituisce impegno d'ordine.")
@@ -1046,11 +1049,13 @@ End If
 
             Dim summaryBlock As New KeepStoreEmailInfoBlock()
             summaryBlock.Title = "Riepilogo ordine"
-            AddInfoItem(summaryBlock, documento, "n. " & numeroDocumento)
+            AddInfoItem(summaryBlock, "Ordine n.", numeroDocumento)
             AddInfoItem(summaryBlock, "Data ordine", dataDocumentoDisplay)
             AddInfoItem(summaryBlock, "Stato", statoDocumento)
+            AddInfoItem(summaryBlock, "Totale", totale)
+            AddInfoItem(summaryBlock, "Pagamento", CleanField(pagamentoDescrizione))
+            AddInfoItem(summaryBlock, "Spedizione", CleanField(spedizioneDescrizione))
             AddInfoItem(summaryBlock, "Cliente", clienteRiepilogo)
-            AddInfoItem(summaryBlock, "Recapiti", recapitiRiepilogo)
             If Not String.IsNullOrWhiteSpace(indirizzoAlternativo) Then
                 AddInfoItem(summaryBlock, "Indirizzo spedizione", indirizzoAlternativo)
             End If
@@ -1327,22 +1332,54 @@ End If
         Return "Prezzi prodotti IVA esclusa"
     End Function
 
-    Private Function ResolveOrderProductImageUrl(ByVal rawFileName As String) As String
-        Dim fileName As String = SafeProductImageFileName(rawFileName)
-        If String.IsNullOrWhiteSpace(fileName) Then
+    Private Function BuildOrderProductImageCandidates(ByVal row As MySqlDataReader) As String()
+        Dim candidates As New List(Of String)()
+        AddImageCandidate(candidates, DbText(row, "Img1"))
+        AddImageCandidate(candidates, DbText(row, "ArticoloImg1"))
+        AddImageCandidate(candidates, DbText(row, "ArticoloImg2"))
+        AddImageCandidate(candidates, DbText(row, "ArticoloImg3"))
+        AddImageCandidate(candidates, DbText(row, "ArticoloImg4"))
+        AddImageCandidate(candidates, DbText(row, "ArticoloImg5"))
+        AddImageCandidate(candidates, DbText(row, "ArticoloImg6"))
+        Return candidates.ToArray()
+    End Function
+
+    Private Sub AddImageCandidate(ByVal candidates As List(Of String), ByVal value As String)
+        If candidates Is Nothing OrElse String.IsNullOrWhiteSpace(value) Then
+            Return
+        End If
+
+        Dim cleaned As String = value.Trim()
+        For Each existing As String In candidates
+            If String.Equals(existing, cleaned, StringComparison.OrdinalIgnoreCase) Then
+                Return
+            End If
+        Next
+        candidates.Add(cleaned)
+    End Sub
+
+    Private Function ResolveOrderProductImageUrl(ParamArray rawFileNames() As String) As String
+        If rawFileNames Is Nothing OrElse rawFileNames.Length = 0 Then
             Return ""
         End If
 
-        Dim compressed As String = "_" & fileName
-        Dim compressedPath As String = Server.MapPath("~/Public/assets/images/articoli/" & compressed)
-        If File.Exists(compressedPath) Then
-            Return BuildSiteUrl("/Public/assets/images/articoli/" & compressed)
-        End If
+        For Each rawFileName As String In rawFileNames
+            Dim fileName As String = SafeProductImageFileName(rawFileName)
+            If String.IsNullOrWhiteSpace(fileName) Then
+                Continue For
+            End If
 
-        Dim originalPath As String = Server.MapPath("~/Public/assets/images/articoli/" & fileName)
-        If File.Exists(originalPath) Then
-            Return BuildSiteUrl("/Public/assets/images/articoli/" & fileName)
-        End If
+            Dim compressed As String = If(fileName.StartsWith("_", StringComparison.Ordinal), fileName, "_" & fileName)
+            Dim compressedPath As String = Server.MapPath("~/Public/assets/images/articoli/" & compressed)
+            If File.Exists(compressedPath) Then
+                Return BuildSiteUrl("/Public/assets/images/articoli/" & compressed)
+            End If
+
+            Dim originalPath As String = Server.MapPath("~/Public/assets/images/articoli/" & fileName)
+            If File.Exists(originalPath) Then
+                Return BuildSiteUrl("/Public/assets/images/articoli/" & fileName)
+            End If
+        Next
 
         Return ""
     End Function
@@ -1352,20 +1389,20 @@ End If
             Return ""
         End If
 
-        Dim raw As String = rawFileName.Trim()
+        Dim raw As String = rawFileName.Trim().Replace("\"c, "/"c)
         Dim lowered As String = raw.ToLowerInvariant()
         If lowered.StartsWith("http://") OrElse lowered.StartsWith("https://") OrElse lowered.StartsWith("//") OrElse lowered.StartsWith("data:") Then
             Return ""
         End If
-        If lowered.Contains("../") OrElse lowered.Contains("..\") OrElse lowered.Contains("%2f") OrElse lowered.Contains("%5c") Then
+        If lowered.Contains("../") OrElse lowered.Contains("..\") OrElse lowered.Contains("%2f") OrElse lowered.Contains("%5c") OrElse lowered.Contains("javascript:") Then
             Return ""
         End If
-        If raw.IndexOfAny(New Char() {"/"c, "\"c, ":"c, "?"c, "#"c, "&"c}) >= 0 Then
+        If raw.IndexOfAny(New Char() {":"c, "?"c, "#"c, "&"c}) >= 0 Then
             Return ""
         End If
 
         Dim fileName As String = Path.GetFileName(raw)
-        If String.IsNullOrWhiteSpace(fileName) OrElse Not String.Equals(fileName, raw, StringComparison.Ordinal) Then
+        If String.IsNullOrWhiteSpace(fileName) Then
             Return ""
         End If
 

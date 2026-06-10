@@ -186,6 +186,7 @@ Standard proposto:
 - CSS inline essenziale;
 - nessun CSS esterno obbligatorio;
 - nessun font esterno necessario;
+- font email-safe `Arial, Helvetica, sans-serif` o equivalente di sistema; body 15/16px con line-height circa 1.5, paragrafi leggibili e nessun Google Fonts/CDN;
 - logo in alto da `aziende.LogoWeb`, con fallback interno controllato;
 - box stato evento;
 - sezioni/card ordinate: ordine, pagamento, spedizione, prodotti, riepilogo importi, prossimi passi, assistenza;
@@ -247,13 +248,16 @@ Regole polish conferma ordine:
 - logo email sempre da `Aziende.LogoWeb`, trattato come nome file relativo sanificato e risolto come URL assoluto HTTPS verso `/Public/assets/images/logo/{LogoWeb}`;
 - non hardcodare nomi logo specifici: il fallback interno e ammesso solo se `LogoWeb` e vuoto o non valido;
 - compatibilita multi-azienda: il logo, il brand e il dominio/base URL devono derivare dai dati azienda disponibili e sicuri;
+- CTA ordine: prima dei pulsanti inserire copy descrittivo e coerente con funzionalita reali, ad esempio accesso all'area cliente per dettagli ordine, fatture di cortesia e stato spedizione, senza promettere tracking se non disponibile;
 - CTA verso dettagli protetti: usare URL assoluto HTTPS a `login.aspx?ReturnUrl={path locale urlencoded}`; il `ReturnUrl` deve restare locale e non deve puntare a `accessonegato.aspx`, reset/remind/logout o URL esterni;
 - blocchi consigliati: header con logo/badge, hero con numero-data-totale-pagamento, pagamento, spedizione, prodotti, importi, prossimi passi, assistenza e footer aziendale essenziale;
+- riepilogo ordine: usare sezione dedicata con titolo, label chiare, valore leggibile, totale evidenziato e layout non compresso; pagamento/spedizione nel riepilogo devono essere sintetici, con dettagli nei rispettivi blocchi;
 - tabella prodotti: usare righe gia persistite, con foto piccola, codice, EAN se presente, descrizione, quantita, prezzo unitario e totale riga; non ricalcolare importi o IVA;
-- immagini prodotto: usare URL assoluti HTTPS, preferire la versione compressa `_nomefile` sotto asset pubblici moderni, non usare base64, allegati, CDN esterni o path legacy; se manca immagine valida, mostrare fallback testuale;
+- immagini prodotto: usare URL assoluti HTTPS, preferire la versione compressa `_nomefile` sotto asset pubblici moderni, poi il nome originale; se `vdocumentirighe` non espone una foto valida, recuperare candidati immagine articolo gia esistenti (`Img1..Img6`) senza hardcodare codici; non usare base64, allegati, CDN esterni o path legacy; fallback testuale solo se nessuna immagine valida/file esistente e disponibile;
 - caption prezzi prodotti: indicare `Prezzi prodotti IVA inclusa` oppure `Prezzi prodotti IVA esclusa` secondo il flag cliente gia usato dal sito; il blocco importi deve mostrare solo righe economiche e non la nota legacy `*Prezzi Iva Esclusa`;
 - spedizione: mostrare al massimo corriere e servizio da `vettori.Descrizione` / `vettori.Informazioni`, deduplicando valori uguali o inclusi; tracking solo se presente;
-- footer azienda: usare dati da `Aziende`, omettere campi vuoti o duplicati e non hardcodare dati Taikun in un prodotto multi-azienda.
+- footer azienda: usare dati da `Aziende`, omettere campi vuoti o duplicati e non hardcodare dati Taikun in un prodotto multi-azienda;
+- nota legale documento vendita: aggiungere sezione visibile `Informazioni sul documento di vendita` in HTML e plain text, con testo legale fornito da business, font piccolo ma leggibile e senza sostituire il footer aziendale.
 
 ### 4.3 Plain text
 
