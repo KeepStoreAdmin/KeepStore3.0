@@ -252,8 +252,31 @@ End Function
         Return String.Join(",", outParts)
     End Function
 
+    Private Function GetRedirectDiagnosticKind(ByVal value As String) As String
+        If String.IsNullOrWhiteSpace(value) Then Return "none"
+
+        If value.IndexOf("documentidettaglio.aspx", StringComparison.OrdinalIgnoreCase) >= 0 Then
+            Return "document-detail"
+        End If
+
+        If value.IndexOf("coupon_esito_acquisto.aspx", StringComparison.OrdinalIgnoreCase) >= 0 Then
+            Return "coupon-result"
+        End If
+
+        If value.IndexOf("bancasella.aspx", StringComparison.OrdinalIgnoreCase) >= 0 Then
+            Return "bancasella"
+        End If
+
+        If value.IndexOf("paypal", StringComparison.OrdinalIgnoreCase) >= 0 Then
+            Return "paypal"
+        End If
+
+        Return "other"
+    End Function
+
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
 
+        SessionDiagnostics.Write("order-page-load", Me, "phase=start")
         If Me.Session("LoginId") Is Nothing Then
             ' Mantengo la tua variabile originale (Page) e aggiungo anche Pagina_visitata (pattern standard)
             Me.Session("Page") = Me.Request.Url.ToString()
@@ -267,6 +290,7 @@ If Not ConsumeValidCheckoutToken() Then
     SafeRedirect("carrello.aspx")
     Exit Sub
 End If
+SessionDiagnostics.Write("order-token-page", Me, "checkout=tokenAccepted")
 
 
         SyncLock Semaforo
@@ -557,6 +581,8 @@ End If
                         redirect = "documentidettaglio.aspx?id=" & id & "&ndoc=" & NumDoc
                     End If
                 End If
+
+                SessionDiagnostics.Write("order-sent-rendered", Me, "redirect=" & GetRedirectDiagnosticKind(redirect))
 
             Catch ex As Exception
                 Try

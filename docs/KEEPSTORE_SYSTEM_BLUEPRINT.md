@@ -118,6 +118,8 @@ Nota sicurezza: alcune session key legacy possono contenere dati sensibili o rif
 
 Session timeout web standardizzato a 30 minuti: `web.config` dichiara `sessionState timeout="30"` e `carrello.aspx.vb` non deve abbassare il timeout del carrello sotto questo valore. Il flow carrello intercetta sessione scaduta e redirecta a login con messaggio non tecnico e `ReturnUrl` locale.
 
+Regola diagnostica sessione: dopo ordine completato, un utente loggato deve restare riconosciuto fino alla scadenza naturale della sessione. Eventuali diagnosi runtime su sessione devono essere non pubbliche, disabilitabili, scritte in area non servita (`App_Data`) e prive di password, token completi, cookie completi, dati cliente, connection string, SMTP, gateway o importi.
+
 ### 5.6 Gestione accessi
 
 - Accesso account basato su sessione.
@@ -242,6 +244,8 @@ Da completare con audit dedicato. Coinvolge disponibilita, prezzo, add-to-cart, 
 ### 9.5 Checkout
 
 Da completare con audit dedicato. Area sensibile: ordini, documenti, pagamento, spedizione.
+
+Diagnostica temporanea `SESSION-POST-ORDER-LOGOUT-DIAG-1A`: per anomalie live di perdita riconoscimento login dopo `ordine.aspx?t=...&C=N`, i punti ammessi sono login riuscito, decisione account in `Page.master.vb`, submit finale carrello, ingresso/riconoscimento token/render ordine in `ordine.aspx.vb` e controllo accesso in `myaccount.aspx.vb`. La diagnostica non deve modificare gateway, totali, ordine/documento, DB/schema, SMTP o cookie policy generale.
 
 ### 9.6 Pagamenti
 
@@ -1059,6 +1063,7 @@ Non implementare runtime email senza task dedicato e senza conferma delle fonti 
 | 2026-06-11 | EMAIL-ORDER-CONFIRMATION-FINAL-POLISH-1A | branch PR | pending | `ordine.aspx.vb`, `App_Code/KeepStoreEmailTemplate.vb`, documentazione | Polish finale email ordine: copy CTA, nota legale documento vendita, font email-safe, riepilogo ordine leggibile e fallback foto articolo `Img1..Img6` | Email conferma ordine piu chiara e robusta | Nessun gateway, totale/costo reale, DB/schema, SMTP, `web.config` o vecchi invii rimossi |
 | 2026-06-09 | EMAIL-ENGINE-1A | branch PR | pending | `App_Code/KeepStoreEmailTemplate.vb`, documentazione | Fondazione renderer email HTML/plain text, subject helper, logo `LogoWeb` e microcopy pagamento/spedizione | Base runtime per migrare invii futuri | Nessun invio reale migrato, nessun SMTP/web.config/DB/gateway modificato |
 | 2026-06-09 | EMAIL-SYSTEM-AUDIT-1A | branch PR | pending | `docs/KEEPSTORE_EMAIL_STANDARD.md`, masterplan, blueprint | Audit sistema email transazionali e standard Taikun | Base per motore email futuro | Solo docs, nessun runtime/DB/gateway modificato |
+| 2026-06-11 | SESSION-POST-ORDER-LOGOUT-DIAG-1A | branch PR | pending | `App_Code/SessionDiagnostics.vb`, tracce minime su login/master/carrello/ordine/myaccount, documentazione | Diagnostica sicura e disabilitabile per perdita riconoscimento sessione dopo ordine live | Permette di distinguere cambio `SessionID`, perdita `LoginId`/`LoginID`, assenza cookie sessione o decisione header/account | Nessun fix funzionale, nessun gateway/totale/DB/schema/SMTP/web.config modificato; log senza dati sensibili |
 | 2026-05-29 | ACCOUNT-PROFILE-1B | #100/#101/#102 | `f0eeccc...`, `7bfd40c...`, `919b342...` | account profile/sidebar | Profilo account ONSUS e sidebar root/active | Profilo stabilizzato | Cleanup inline non completo all'epoca |
 | 2026-05-29 | ACCOUNT-ADDRESS-1B | #107 | `a4381b83ec5c617c6dc75022d30580ded5394f62` | `Page.master.vb`, `my-account-address.aspx` | Indirizzi read-only ONSUS | Pagina indirizzi stabile | Add/edit/delete rimandati |
 | 2026-05-29 | ACCOUNT-SIDEBAR-INLINE-CLEANUP-2B | #109 | `7fe10f0edfbc7b7d5951116697c6654a100ba60f` | `Page.master.vb`, `documenti.aspx` | AccountSidebar globale su documenti e selector dinamico | Lista documenti stabile | Nessun gateway diretto |
