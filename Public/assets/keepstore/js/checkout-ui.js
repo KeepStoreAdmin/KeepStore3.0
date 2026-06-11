@@ -489,6 +489,78 @@
     if (prev) prev.style.display = 'none';
   };
 
+  function getTermsConsentInput() {
+    return qs('[data-ks-checkout-consent] input[type="checkbox"]');
+  }
+
+  function getTermsConsentError() {
+    return qs('[id$="lblTermsConsentError"]');
+  }
+
+  function getFinalOrderButton() {
+    return qs('[id$="btInviaOrdine"]');
+  }
+
+  function setTermsConsentError(message) {
+    var error = getTermsConsentError();
+    if (!error) return;
+    error.textContent = message || '';
+    error.style.display = message ? 'block' : 'none';
+  }
+
+  function syncTermsConsentButton() {
+    var input = getTermsConsentInput();
+    var btn = getFinalOrderButton();
+    if (!btn || !input) return;
+
+    var accepted = !!input.checked;
+    btn.classList.toggle('ks-btn-disabled', !accepted);
+    btn.setAttribute('aria-disabled', accepted ? 'false' : 'true');
+  }
+
+  window.ksValidateCheckoutTermsConsent = function () {
+    var input = getTermsConsentInput();
+    if (input && !input.checked) {
+      setTermsConsentError('Per proseguire devi accettare le Condizioni Generali di Vendita.');
+      syncTermsConsentButton();
+      try { input.focus(); } catch (e) { /* ignore */ }
+      return false;
+    }
+
+    setTermsConsentError('');
+    window.visualizza_spinner_caricamento();
+    return true;
+  };
+
+  function setupTermsConsentGate() {
+    var input = getTermsConsentInput();
+    var btn = getFinalOrderButton();
+    if (!input || !btn) return;
+
+    if (input.dataset.ksTermsBound !== '1') {
+      input.dataset.ksTermsBound = '1';
+      input.addEventListener('change', function () {
+        if (input.checked) setTermsConsentError('');
+        syncTermsConsentButton();
+      });
+    }
+
+    if (btn.dataset.ksTermsBound !== '1') {
+      btn.dataset.ksTermsBound = '1';
+      btn.addEventListener('click', function (ev) {
+        if (input && !input.checked) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          setTermsConsentError('Per proseguire devi accettare le Condizioni Generali di Vendita.');
+          syncTermsConsentButton();
+          try { input.focus(); } catch (e) { /* ignore */ }
+        }
+      }, true);
+    }
+
+    syncTermsConsentButton();
+  }
+
   function boot() {
     setCheckoutStatus();
     cleanupLegacyEnhancedUx();
@@ -500,6 +572,7 @@
     restoreCartServerTotals();
     setupCartQuantityControls();
     protectServerCartCommands();
+    setupTermsConsentGate();
     window.setTimeout(restoreCartServerTotals, 120);
   }
 

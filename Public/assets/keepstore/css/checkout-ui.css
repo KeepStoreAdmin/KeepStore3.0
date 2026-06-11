@@ -688,6 +688,67 @@ table.ks-checkout-grid input[type="checkbox"]{
   justify-content:space-between;
 }
 
+.ks-checkout-shell .ks-final-confirm-section .ks-checkout-actions{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:12px;
+}
+
+.ks-checkout-shell .ks-final-confirm-section .ks-checkout-actions .tf-btn{
+  width:100%;
+  justify-content:center;
+  text-align:center;
+}
+
+.ks-checkout-consent{
+  padding:14px 16px;
+  border:1px solid rgba(0,0,0,.10);
+  border-radius:8px;
+  background:#fff;
+}
+
+.ks-checkout-consent__label{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  margin:0;
+  cursor:pointer;
+  color:#161616;
+  line-height:1.45;
+}
+
+.ks-checkout-consent__checkbox,
+.ks-checkout-consent__checkbox input{
+  width:18px;
+  height:18px;
+  margin-top:2px;
+  cursor:pointer;
+}
+
+.ks-checkout-consent__text{
+  display:block;
+  font-size:15px;
+}
+
+.ks-checkout-consent__text a{
+  color:#ff3d3d;
+  text-decoration:underline;
+  text-underline-offset:2px;
+}
+
+.ks-checkout-consent__error{
+  display:block;
+  margin-top:8px;
+  color:#b42318;
+  font-size:14px;
+  font-weight:600;
+}
+
+.ks-checkout-shell .ks-checkout-actions .tf-btn.ks-btn-disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
+
 .ks-checkout-shell .ks-note-section textarea{
   min-height:132px;
   resize:vertical;

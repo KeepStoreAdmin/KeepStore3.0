@@ -1252,7 +1252,21 @@
             <div class="ks-checkout-actions">
                 <asp:LinkButton CausesValidation="false" ID="btnModificaCheckout" runat="server" CssClass="tf-btn btn-gray" OnClick="btnModificaCheckout_Click">Modifica spedizione e pagamento</asp:LinkButton>
                 <%if Session("DESTINAZIONEALTERNATIVA")=0 then %>
-                    <asp:LinkButton CausesValidation="false" ID="btInviaOrdine" runat="server" CssClass="tf-btn" OnClientClick="javascript:visualizza_spinner_caricamento();">Conferma ordine e procedi al pagamento</asp:LinkButton>
+                    <div class="ks-checkout-consent" data-ks-checkout-consent>
+                        <label class="ks-checkout-consent__label" for="<%= chkTermsConsent.ClientID %>">
+                            <asp:CheckBox ID="chkTermsConsent" runat="server" CssClass="ks-checkout-consent__checkbox" />
+                            <span class="ks-checkout-consent__text">
+                                Ho letto e accetto le
+                                <a href="Contattaci.aspx" target="_blank" rel="noopener">Condizioni Generali di Vendita</a>,
+                                le condizioni sul
+                                <a href="Contattaci.aspx" target="_blank" rel="noopener">diritto di recesso</a>
+                                e la
+                                <a href="privacy.aspx" target="_blank" rel="noopener">Privacy Policy</a>.
+                            </span>
+                        </label>
+                        <asp:Label ID="lblTermsConsentError" runat="server" CssClass="ks-checkout-consent__error" EnableViewState="false" />
+                    </div>
+                    <asp:LinkButton CausesValidation="false" ID="btInviaOrdine" runat="server" CssClass="tf-btn" OnClientClick="return ksValidateCheckoutTermsConsent();">INVIA ORDINE CON OBBLIGO DI PAGAMENTO</asp:LinkButton>
                 <%else%>
                     <span class="tf-btn btn-gray" style="pointer-events:none;opacity:.6;">Conferma ordine e procedi al pagamento</span>
                 <%end if%>
