@@ -241,7 +241,7 @@ Da completare con audit dedicato. Coinvolge disponibilita, prezzo, add-to-cart, 
 
 ### 9.5 Checkout
 
-Da completare con audit dedicato. Area sensibile: ordini, documenti, pagamento, spedizione.
+Da completare con audit dedicato. Area sensibile: ordini, documenti, pagamento, spedizione. Dopo ordine completato, l'utente loggato deve restare autenticato fino alla scadenza naturale della sessione; la pulizia post-ordine deve essere selettiva su carrello/checkout/chiavi temporanee e non deve cancellare `LoginId`, `LoginID`, `UtentiId`, `UtentiID`, `Listino` o dati account. `SESSION-POST-ORDER-LOGOUT-1A` non ha rilevato logout applicativo post-ordine: se il problema si ripresenta live, verificare perdita Session InProc/session cookie o riciclo applicativo prima di modificare runtime.
 
 ### 9.6 Pagamenti
 
