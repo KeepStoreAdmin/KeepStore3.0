@@ -259,6 +259,8 @@ Private Sub ApplyGlobalSeoPolicy()
 
             If lnkAcc IsNot Nothing Then lnkAcc.HRef = accountUrl
             If lnkAccMob IsNot Nothing Then lnkAccMob.HRef = accountUrl
+            SessionDiagnostics.Write("page-master-auth-check", Me, "accountLink=" & If(isLogged, "myaccount", "login"))
+            SessionDiagnostics.Write(If(isLogged, "account-link-myaccount", "account-link-login"), Me, "source=header")
 
             If lblWish IsNot Nothing Then
                 Dim wishCount As Integer = 0
@@ -1550,6 +1552,7 @@ End Function
                 Me.Session("Listino") = dr.Item("listino")
                 Me.Session("IvaTipo") = dr.Item("IvaTipo")
                 Me.Session("DataPassword") = dr.Item("DataPassword")
+                SessionDiagnostics.Write("login-success", Me, "source=master-login")
                 ' Cookie username (OK)
                 Try
                     If Me.Session("AziendaNome") IsNot Nothing Then

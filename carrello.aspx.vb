@@ -4493,6 +4493,7 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
     Finally
         If (controlla_articoli_quantita_zero() = 1) Then
             If (GetLoginIdSafe(0) > 0) Then
+                SessionDiagnostics.Write("cart-before-order-submit", Me, "phase=before-send-order")
                 Cookie = "N"
                 SendOrder()
             Else

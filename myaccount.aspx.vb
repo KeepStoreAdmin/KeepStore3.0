@@ -2,10 +2,13 @@ Partial Class myaccount
     Inherits System.Web.UI.Page
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        SessionDiagnostics.Write("myaccount-load", Me, "phase=start")
         If Me.Session("LoginId") Is Nothing Then
+            SessionDiagnostics.Write("myaccount-missing-login-session", Me, "redirect=accessonegato")
             Me.Session("Page") = Me.Request.Url.ToString()
             Me.Response.Redirect("accessonegato.aspx", True)
         End If
+        SessionDiagnostics.Write("myaccount-authorized", Me, "phase=authorized")
     End Sub
 
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender

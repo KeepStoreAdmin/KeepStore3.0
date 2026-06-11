@@ -312,6 +312,7 @@ Partial Class Login
                         Session("ScadenzaPassword") = dr.Item("ScadenzaPassword")
                     Catch
                     End Try
+                    SessionDiagnostics.Write("login-success", Me, "source=login-page")
 
                 End Using
             End Using

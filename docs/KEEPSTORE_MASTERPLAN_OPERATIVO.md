@@ -134,7 +134,7 @@ Quando si rifattorizza una pagina:
 Stato di riferimento dopo merge PR #159 e smoke live finale carrello/logo/accessonegato:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `d826aff7e98b02dfb7569563766a50a69b2b5dbe`
+- HEAD stabile: `2a80b6b704d1c984faf0a4885d4712d89a63557e`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -1464,6 +1464,9 @@ Stato finale post-cleanup warning:
 - `EMAIL-ORDER-CONFIRMATION-FINAL-POLISH-1C = B`: smoke live su ordine test 192 ha confermato email complessivamente rifinita, ma le prime due righe prodotto risultavano ancora senza foto mentre una terza riga mostrava correttamente immagine assoluta HTTPS da `/Public/assets/images/articoli/`; il renderer email era corretto, la risoluzione candidati immagine restava incompleta.
 - `EMAIL-ORDER-CONFIRMATION-PRODUCT-IMAGES-1A` corregge solo la risoluzione foto prodotto della conferma ordine: candidati da `vdocumentirighe.Img1`, immagini variante tramite `articoli_tagliecolori.immaginiId` / `immagini.Immagine1..Immagine6`, poi `articoli.Img1..Img6`; priorita alla versione compressa `_nomefile`, fallback al nome originale, nome file sanificato e segmento URL encodato, nessun codice prodotto hardcoded, nessun base64/allegato/path legacy.
 - Scope invariato per `EMAIL-ORDER-CONFIRMATION-PRODUCT-IMAGES-1A`: nessun gateway, PayPal/BancaSella, carrello/checkout, totali/costi/IVA/spedizione/sconti reali, generazione/stato ordine-documento, DB/schema, SQL, `web.config`, SMTP, header/footer/logo sito, layout generale email o vecchi invii email rimossi.
+- `SESSION-POST-ORDER-LOGOUT-1B = B`: Germano ha riprodotto live la perdita di riconoscimento sessione dopo ordine bonifico test, restando su `ordine.aspx?t=...&C=N` e poi navigando verso Account dopo alcuni minuti. La creazione ordine risulta corretta; il problema e capire se si perde `SessionID`, `LoginId`/`LoginID`, cookie sessione o solo la decisione di `Page.master`/`myaccount.aspx`.
+- `SESSION-POST-ORDER-LOGOUT-DIAG-1A` apre un branch diagnostico sicuro: log temporaneo in `App_Data`, disabilitato salvo debug/local/flag file non pubblico, senza password, email, token ordine completo, cookie completi, dati cliente, connection string, SMTP, gateway o importi.
+- La diagnostica traccia solo contesti runtime ammessi (`login-success`, `page-master-auth-check`, `account-link-*`, `cart-before-order-submit`, `order-page-load`, `order-token-page`, `order-sent-rendered`, `myaccount-*`) e stato booleano/mascherato di sessione. Nessun fix funzionale deve essere applicato finche la causa non e certa.
 - Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
