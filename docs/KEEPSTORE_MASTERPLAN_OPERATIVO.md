@@ -134,7 +134,7 @@ Quando si rifattorizza una pagina:
 Stato di riferimento dopo merge PR #159 e smoke live finale carrello/logo/accessonegato:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `78acd2585c9135f30054b633bac9ec6ea6aaae7f`
+- HEAD stabile: `d826aff7e98b02dfb7569563766a50a69b2b5dbe`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -1458,6 +1458,9 @@ Stato finale post-cleanup warning:
 - `EMAIL-ORDER-CONFIRMATION-PRO-1A` completa la rifinitura professionale della conferma ordine: causale bonifico `Pagamento ordine n. ... del ...`, foto prodotto ottimizzata con `_nomefile` se disponibile sotto asset pubblici moderni, tabella prodotti con codice/EAN/descrizione/quantita/prezzo unitario/totale riga, footer azienda da `Aziende`, vettori deduplicati da `vettori.Descrizione`/`vettori.Informazioni`, prezzi prodotto coerenti con flag IVA cliente e nota IVA spostata fuori dal blocco importi.
 - Scope invariato per `EMAIL-ORDER-CONFIRMATION-PRO-1A`: trigger, destinatario, mittente, BCC, SMTP, ordine/documento, gateway, PayPal/BancaSella, importi/totali/costi/IVA reali, DB/schema, SQL e `web.config` non vengono modificati.
 - Backlog `EMAIL-LEGACY-SENDS-CLEANUP-1A` resta aperto: mappare successivamente vecchi invii dopo ordine e registrazione nuovo cliente, poi disattivarli/rimuoverli solo quando il nuovo sistema email e stabile.
+- `EMAIL-ORDER-CONFIRMATION-PRO-1C = B`: smoke live su ordine test 190 ha confermato email ricevuta, MIME corretto, subject corretto, causale bonifico corretta, tabella prodotti presente, importi coerenti, footer aziendale, CTA funzionante e vettore deduplicato; restano anomalie di rifinitura su copy CTA, nota legale documento vendita, font/leggibilita, riepilogo ordine e foto mancanti per le prime due righe prodotto.
+- `EMAIL-ORDER-CONFIRMATION-FINAL-POLISH-1A` interviene solo su `ordine.aspx.vb`, `App_Code/KeepStoreEmailTemplate.vb` e documentazione per CTA copy, nota legale, tipografia email-safe, riepilogo ordine piu leggibile e risoluzione foto prodotto piu robusta con candidati `Img1..Img6` da articolo.
+- Scope invariato per `EMAIL-ORDER-CONFIRMATION-FINAL-POLISH-1A`: nessun gateway, PayPal/BancaSella, carrello/checkout, totali/costi/IVA/spedizione/sconti reali, generazione/stato ordine-documento, DB/schema, SQL, `web.config`, SMTP, header/footer/logo sito o vecchi invii email rimossi.
 - Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
