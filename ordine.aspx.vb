@@ -844,7 +844,14 @@ End If
                 Dim cmdRighe As New MySqlCommand
                 cmdRighe.Connection = conn
                 cmdRighe.CommandType = CommandType.Text
-                cmdRighe.CommandText = "SELECT vr.*, a.Img1 AS ArticoloImg1, a.Img2 AS ArticoloImg2, a.Img3 AS ArticoloImg3, a.Img4 AS ArticoloImg4, a.Img5 AS ArticoloImg5, a.Img6 AS ArticoloImg6 FROM vdocumentirighe vr LEFT JOIN articoli a ON vr.ArticoliId = a.id WHERE vr.DocumentiId=?id"
+                cmdRighe.CommandText = "SELECT vr.*, " &
+                                        "img.Immagine1 AS VarianteImmagine1, img.Immagine2 AS VarianteImmagine2, img.Immagine3 AS VarianteImmagine3, img.Immagine4 AS VarianteImmagine4, img.Immagine5 AS VarianteImmagine5, img.Immagine6 AS VarianteImmagine6, " &
+                                        "a.Img1 AS ArticoloImg1, a.Img2 AS ArticoloImg2, a.Img3 AS ArticoloImg3, a.Img4 AS ArticoloImg4, a.Img5 AS ArticoloImg5, a.Img6 AS ArticoloImg6 " &
+                                        "FROM vdocumentirighe vr " &
+                                        "LEFT JOIN articoli a ON vr.ArticoliId = a.id " &
+                                        "LEFT JOIN articoli_tagliecolori atc ON atc.id = vr.TCId " &
+                                        "LEFT JOIN immagini img ON img.id = atc.immaginiId " &
+                                        "WHERE vr.DocumentiId=?id"
                 cmdRighe.Parameters.AddWithValue("?id", id)
 
                 Dim drRighe As MySqlDataReader = cmdRighe.ExecuteReader()
@@ -1335,6 +1342,12 @@ End If
     Private Function BuildOrderProductImageCandidates(ByVal row As MySqlDataReader) As String()
         Dim candidates As New List(Of String)()
         AddImageCandidate(candidates, DbText(row, "Img1"))
+        AddImageCandidate(candidates, DbText(row, "VarianteImmagine1"))
+        AddImageCandidate(candidates, DbText(row, "VarianteImmagine2"))
+        AddImageCandidate(candidates, DbText(row, "VarianteImmagine3"))
+        AddImageCandidate(candidates, DbText(row, "VarianteImmagine4"))
+        AddImageCandidate(candidates, DbText(row, "VarianteImmagine5"))
+        AddImageCandidate(candidates, DbText(row, "VarianteImmagine6"))
         AddImageCandidate(candidates, DbText(row, "ArticoloImg1"))
         AddImageCandidate(candidates, DbText(row, "ArticoloImg2"))
         AddImageCandidate(candidates, DbText(row, "ArticoloImg3"))
@@ -1369,17 +1382,53 @@ End If
                 Continue For
             End If
 
-            Dim compressed As String = If(fileName.StartsWith("_", StringComparison.Ordinal), fileName, "_" & fileName)
-            Dim compressedPath As String = Server.MapPath("~/Public/assets/images/articoli/" & compressed)
-            If File.Exists(compressedPath) Then
-                Return BuildSiteUrl("/Public/assets/images/articoli/" & compressed)
-            End If
-
-            Dim originalPath As String = Server.MapPath("~/Public/assets/images/articoli/" & fileName)
-            If File.Exists(originalPath) Then
-                Return BuildSiteUrl("/Public/assets/images/articoli/" & fileName)
+            Dim resolvedFileName As String = ResolveExistingProductImageFileName(fileName)
+            If Not String.IsNullOrWhiteSpace(resolvedFileName) Then
+                Return BuildSiteUrl("/Public/assets/images/articoli/" & EncodeProductImageFileName(resolvedFileName))
             End If
         Next
+
+        Return ""
+    End Function
+
+    Private Function ResolveExistingProductImageFileName(ByVal fileName As String) As String
+        Dim candidateFileNames As New List(Of String)()
+        AddImageCandidate(candidateFileNames, If(fileName.StartsWith("_", StringComparison.Ordinal), fileName, "_" & fileName))
+        AddImageCandidate(candidateFileNames, fileName)
+        If fileName.StartsWith("_", StringComparison.Ordinal) AndAlso fileName.Length > 1 Then
+            AddImageCandidate(candidateFileNames, fileName.Substring(1))
+        End If
+
+        For Each candidateFileName As String In candidateFileNames
+            Dim exactPath As String = Server.MapPath("~/Public/assets/images/articoli/" & candidateFileName)
+            If File.Exists(exactPath) Then
+                Return candidateFileName
+            End If
+
+            Dim matchedFileName As String = FindProductImageFileNameCaseInsensitive(candidateFileName)
+            If Not String.IsNullOrWhiteSpace(matchedFileName) Then
+                Return matchedFileName
+            End If
+        Next
+
+        Return ""
+    End Function
+
+    Private Function FindProductImageFileNameCaseInsensitive(ByVal fileName As String) As String
+        Try
+            Dim productImageRoot As String = Server.MapPath("~/Public/assets/images/articoli/")
+            If Not Directory.Exists(productImageRoot) Then
+                Return ""
+            End If
+
+            For Each imagePath As String In Directory.EnumerateFiles(productImageRoot)
+                Dim existingFileName As String = Path.GetFileName(imagePath)
+                If String.Equals(existingFileName, fileName, StringComparison.OrdinalIgnoreCase) Then
+                    Return existingFileName
+                End If
+            Next
+        Catch
+        End Try
 
         Return ""
     End Function
@@ -1389,7 +1438,7 @@ End If
             Return ""
         End If
 
-        Dim raw As String = rawFileName.Trim().Replace("\"c, "/"c)
+        Dim raw As String = rawFileName.Trim()
         Dim lowered As String = raw.ToLowerInvariant()
         If lowered.StartsWith("http://") OrElse lowered.StartsWith("https://") OrElse lowered.StartsWith("//") OrElse lowered.StartsWith("data:") Then
             Return ""
@@ -1401,7 +1450,22 @@ End If
             Return ""
         End If
 
-        Dim fileName As String = Path.GetFileName(raw)
+        Dim decoded As String = raw
+        Try
+            Dim decodedValue As String = HttpUtility.UrlDecode(raw)
+            If Not String.IsNullOrWhiteSpace(decodedValue) Then
+                decoded = decodedValue
+            End If
+        Catch
+        End Try
+
+        decoded = decoded.Replace("\"c, "/"c)
+        Dim decodedLowered As String = decoded.ToLowerInvariant()
+        If decodedLowered.Contains("../") OrElse decodedLowered.Contains("..\") OrElse decodedLowered.StartsWith("/") OrElse decodedLowered.StartsWith("\\") Then
+            Return ""
+        End If
+
+        Dim fileName As String = Path.GetFileName(decoded)
         If String.IsNullOrWhiteSpace(fileName) Then
             Return ""
         End If
@@ -1412,12 +1476,16 @@ End If
         End If
 
         For Each c As Char In fileName
-            If Not (Char.IsLetterOrDigit(c) OrElse c = "."c OrElse c = "-"c OrElse c = "_"c) Then
+            If Char.IsControl(c) OrElse c = "/"c OrElse c = "\"c OrElse c = ":"c OrElse c = "?"c OrElse c = "#"c OrElse c = "&"c OrElse c = "<"c OrElse c = ">"c OrElse c = """"c OrElse c = ChrW(39) Then
                 Return ""
             End If
         Next
 
         Return fileName
+    End Function
+
+    Private Function EncodeProductImageFileName(ByVal fileName As String) As String
+        Return Uri.EscapeDataString(fileName)
     End Function
 
     Private Function FormatQuantity(ByVal value As String) As String
