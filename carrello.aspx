@@ -1257,9 +1257,9 @@
                             <asp:CheckBox ID="chkTermsConsent" runat="server" CssClass="ks-checkout-consent__checkbox" />
                             <span class="ks-checkout-consent__text">
                                 Ho letto e accetto le
-                                <a href="Contattaci.aspx" target="_blank" rel="noopener">Condizioni Generali di Vendita</a>,
+                                <a href="condizioni-vendita.aspx" target="_blank" rel="noopener">Condizioni Generali di Vendita</a>,
                                 le condizioni sul
-                                <a href="Contattaci.aspx" target="_blank" rel="noopener">diritto di recesso</a>
+                                <a href="condizioni-vendita.aspx#diritto-recesso" target="_blank" rel="noopener">diritto di recesso</a>
                                 e la
                                 <a href="privacy.aspx" target="_blank" rel="noopener">Privacy Policy</a>.
                             </span>
