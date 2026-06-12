@@ -1255,7 +1255,21 @@
             <div class="ks-checkout-actions">
                 <asp:LinkButton CausesValidation="false" ID="btnModificaCheckout" runat="server" CssClass="tf-btn btn-gray" OnClick="btnModificaCheckout_Click">Modifica spedizione e pagamento</asp:LinkButton>
                 <%if Session("DESTINAZIONEALTERNATIVA")=0 then %>
-                    <asp:LinkButton CausesValidation="false" ID="btInviaOrdine" runat="server" CssClass="tf-btn" OnClientClick="javascript:visualizza_spinner_caricamento();">Conferma ordine e procedi al pagamento</asp:LinkButton>
+                    <div class="ks-checkout-consent" style="width:100%;margin:0 0 14px 0;">
+                        <div style="display:flex;gap:10px;align-items:flex-start;">
+                            <asp:CheckBox ID="chkTermsConsent" runat="server" ClientIDMode="Static" />
+                            <label for="chkTermsConsent" class="body-text-3 text-main-2" style="margin:0;">
+                                Ho letto e accetto le
+                                <a href="condizioni-vendita.aspx" target="_blank" rel="noopener">condizioni di vendita</a>,
+                                le condizioni sul
+                                <a href="condizioni-vendita.aspx#diritto-recesso" target="_blank" rel="noopener">diritto di recesso</a>
+                                e la
+                                <a href="privacy.aspx" target="_blank" rel="noopener">Privacy Policy</a>.
+                            </label>
+                        </div>
+                        <asp:Label ID="lblTermsConsentError" runat="server" ClientIDMode="Static" EnableViewState="false" CssClass="text-danger body-text-3" />
+                    </div>
+                    <asp:LinkButton CausesValidation="false" ID="btInviaOrdine" runat="server" CssClass="tf-btn" OnClientClick="return ksValidateCheckoutTermsConsent();">INVIA ORDINE CON OBBLIGO DI PAGAMENTO</asp:LinkButton>
                 <%else%>
                     <span class="tf-btn btn-gray" style="pointer-events:none;opacity:.6;">Conferma ordine e procedi al pagamento</span>
                 <%end if%>
@@ -1268,6 +1282,24 @@
 </asp:Panel>
     <script type="text/javascript">
         (function () {
+            window.ksValidateCheckoutTermsConsent = function () {
+                var checkbox = document.getElementById('chkTermsConsent');
+                var error = document.getElementById('lblTermsConsentError');
+                if (checkbox && !checkbox.checked) {
+                    if (error) {
+                        error.innerHTML = 'Per proseguire devi accettare le Condizioni Generali di Vendita.';
+                    }
+                    return false;
+                }
+                if (error) {
+                    error.innerHTML = '';
+                }
+                if (typeof visualizza_spinner_caricamento === 'function') {
+                    visualizza_spinner_caricamento();
+                }
+                return true;
+            };
+
             function wireOrderNotesLimit() {
                 var input = document.getElementById('<%= txtNoteSpedizione.ClientID %>');
                 var counter = document.getElementById('ksOrderNotesCounter');

@@ -556,6 +556,17 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         Return False
     End Function
 
+    Private Function TermsConsentAccepted() As Boolean
+        Return chkTermsConsent IsNot Nothing AndAlso chkTermsConsent.Checked
+    End Function
+
+    Private Sub SetTermsConsentError(ByVal message As String)
+        If lblTermsConsentError Is Nothing Then Return
+
+        lblTermsConsentError.Text = If(message, "")
+        lblTermsConsentError.Visible = Not String.IsNullOrWhiteSpace(lblTermsConsentError.Text)
+    End Sub
+
     Private Sub SetShippingAddressUxState(ByVal badgeText As String, ByVal hintText As String)
         If lblAddressSelectionBadge IsNot Nothing Then lblAddressSelectionBadge.Text = badgeText
         If lblAddressSelectionHint IsNot Nothing Then lblAddressSelectionHint.Text = hintText
@@ -4484,6 +4495,13 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
         ApplyCheckoutStepUi()
         Return
     End If
+    If Not TermsConsentAccepted() Then
+        SetTermsConsentError("Per proseguire devi accettare le Condizioni Generali di Vendita.")
+        SetCheckoutStep("confirm")
+        ApplyCheckoutStepUi()
+        Return
+    End If
+    SetTermsConsentError("")
     Me.PnlDestinazione.Visible = False
     If Not ValidateOrderNotesLength() Then Return
 
