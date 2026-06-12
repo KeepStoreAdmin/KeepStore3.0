@@ -194,6 +194,15 @@ Standard proposto:
 - immagini solo assolute sicure oppure CID se supportato in task futuro;
 - versione plain text sempre presente.
 
+Compatibilita webmail strette:
+
+- evitare tabelle dati con molte colonne affiancate nelle email, in particolare per le righe prodotto;
+- per i prodotti usare card table-based con foto fissa e dettagli label/value (`Codice`, `EAN`, `Q.ta`, `Prezzo unitario`, `Totale riga`);
+- usare massimo due colonne solo quando le celle restano ampie e robuste; per riepiloghi ordine/pagamento/spedizione preferire label/value verticale;
+- non affidarsi alle media query come requisito essenziale, perche alcune webmail le ignorano o comprimono il contenuto;
+- usare CSS inline, `width="100%"`, container 600/640 px e valori monetari in `white-space:nowrap`;
+- mantenere leggibilita anche in Aruba Webmail e in webmail che restringono il viewport disponibile.
+
 ### 4.2 Regole logo
 
 Priorita runtime `EMAIL-ENGINE-1A`:
@@ -252,7 +261,8 @@ Regole polish conferma ordine:
 - CTA verso dettagli protetti: usare URL assoluto HTTPS a `login.aspx?ReturnUrl={path locale urlencoded}`; il `ReturnUrl` deve restare locale e non deve puntare a `accessonegato.aspx`, reset/remind/logout o URL esterni;
 - blocchi consigliati: header con logo/badge, hero con numero-data-totale-pagamento, pagamento, spedizione, prodotti, importi, prossimi passi, assistenza e footer aziendale essenziale;
 - riepilogo ordine: usare sezione dedicata con titolo, label chiare, valore leggibile, totale evidenziato e layout non compresso; pagamento/spedizione nel riepilogo devono essere sintetici, con dettagli nei rispettivi blocchi;
-- tabella prodotti: usare righe gia persistite, con foto piccola, codice, EAN se presente, descrizione, quantita, prezzo unitario e totale riga; non ricalcolare importi o IVA;
+- prodotti: usare righe gia persistite, con foto piccola, codice, EAN se presente, descrizione, quantita, prezzo unitario e totale riga; non ricalcolare importi o IVA;
+- layout prodotti: non usare header a molte colonne (`Foto`, `Codice`, `EAN`, `Descrizione`, `Q.ta`, `Unitario`, `Totale`) nella stessa riga; usare card prodotto con foto a sinistra e dettagli label/value leggibili, compatibili con Aruba Webmail e viewport stretti;
 - immagini prodotto: usare URL assoluti HTTPS, preferire la versione compressa `_nomefile` sotto asset pubblici moderni, poi il nome originale; risolvere i candidati in ordine da foto riga/modello esposta da `vdocumentirighe`, immagini variante collegate a `articoli_tagliecolori.immaginiId` / `immagini.Immagine1..Immagine6`, poi `articoli.Img1..Img6`; non hardcodare codici prodotto, sanitizzare il nome file, URL-encodare solo il segmento file, non usare base64, allegati, CDN esterni o path legacy; fallback testuale solo se nessuna immagine valida/file esistente e disponibile;
 - caption prezzi prodotti: indicare `Prezzi prodotti IVA inclusa` oppure `Prezzi prodotti IVA esclusa` secondo il flag cliente gia usato dal sito; il blocco importi deve mostrare solo righe economiche e non la nota legacy `*Prezzi Iva Esclusa`;
 - spedizione: mostrare al massimo corriere e servizio da `vettori.Descrizione` / `vettori.Informazioni`, deduplicando valori uguali o inclusi; tracking solo se presente;

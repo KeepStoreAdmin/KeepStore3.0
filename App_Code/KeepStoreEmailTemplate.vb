@@ -405,18 +405,28 @@ Public NotInheritable Class KeepStoreEmailRenderer
 
         If model.HighlightItems IsNot Nothing AndAlso model.HighlightItems.Count > 0 Then
             sb.Append("<table role=""presentation"" width=""100%"" cellspacing=""0"" cellpadding=""0"" style=""margin:22px 0;border:1px solid #dbe4ed;background:#ffffff;"">")
-            sb.Append("<tr>")
             For Each item As KeepStoreEmailInfoItem In model.HighlightItems
                 If item IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(item.Value) Then
-                    sb.Append("<td style=""padding:14px 16px;border-right:1px solid #e7ebef;vertical-align:top;"">")
+                    Dim isTotal As Boolean = String.Equals(item.Label, "Totale", StringComparison.OrdinalIgnoreCase)
+                    Dim valueColor As String = If(isTotal, "#17212b", "#243244")
+                    Dim weight As String = If(isTotal, "800", "700")
+                    sb.Append("<tr>")
+                    sb.Append("<td style=""width:132px;padding:11px 14px;border-top:1px solid #eef2f6;vertical-align:top;font-size:12px;line-height:18px;color:#5b6673;font-weight:700;word-break:normal;overflow-wrap:normal;white-space:normal;"">")
                     If Not String.IsNullOrWhiteSpace(item.Label) Then
-                        sb.Append("<div style=""font-size:12px;line-height:17px;color:#697586;text-transform:uppercase;font-weight:700;"">").Append(Html(item.Label)).Append("</div>")
+                        sb.Append(Html(item.Label)).Append(":")
                     End If
-                    sb.Append("<div style=""margin-top:3px;font-size:16px;line-height:22px;color:#17212b;font-weight:700;"">").Append(Html(item.Value)).Append("</div>")
                     sb.Append("</td>")
+                    sb.Append("<td style=""padding:11px 14px;border-top:1px solid #eef2f6;vertical-align:top;font-size:15px;line-height:22px;color:").Append(valueColor).Append(";font-weight:").Append(weight).Append(";word-break:normal;overflow-wrap:normal;white-space:normal;"">")
+                    If isTotal Then
+                        sb.Append("<span style=""white-space:nowrap;"">").Append(Html(item.Value)).Append("</span>")
+                    Else
+                        sb.Append(Html(item.Value))
+                    End If
+                    sb.Append("</td>")
+                    sb.Append("</tr>")
                 End If
             Next
-            sb.Append("</tr></table>")
+            sb.Append("</table>")
         End If
 
         AppendProductTable(sb, model)
@@ -608,31 +618,27 @@ Public NotInheritable Class KeepStoreEmailRenderer
         sb.Append("</td></tr>")
 
         If block.Items IsNot Nothing Then
-            Dim index As Integer = 0
             For Each item As KeepStoreEmailInfoItem In block.Items
                 If item Is Nothing OrElse String.IsNullOrWhiteSpace(item.Value) Then Continue For
-                If index Mod 2 = 0 Then
-                    sb.Append("<tr>")
-                End If
 
                 Dim isTotal As Boolean = String.Equals(item.Label, "Totale", StringComparison.OrdinalIgnoreCase)
                 Dim valueColor As String = If(isTotal, "#17212b", "#243244")
                 Dim weight As String = If(isTotal, "800", "700")
-                sb.Append("<td style=""width:50%;padding:14px 18px;border-top:1px solid #eef2f6;vertical-align:top;"">")
+                sb.Append("<tr>")
+                sb.Append("<td style=""width:150px;padding:12px 18px;border-top:1px solid #eef2f6;vertical-align:top;font-size:13px;line-height:19px;color:#5b6673;font-weight:700;word-break:normal;overflow-wrap:normal;white-space:normal;"">")
                 If Not String.IsNullOrWhiteSpace(item.Label) Then
-                    sb.Append("<div style=""font-size:12px;line-height:17px;color:#5b6673;text-transform:uppercase;font-weight:700;letter-spacing:.2px;"">").Append(Html(item.Label)).Append("</div>")
+                    sb.Append(Html(item.Label)).Append(":")
                 End If
-                sb.Append("<div style=""margin-top:4px;font-size:15px;line-height:22px;color:").Append(valueColor).Append(";font-weight:").Append(weight).Append(";"">").Append(Html(item.Value)).Append("</div>")
                 sb.Append("</td>")
-
-                If index Mod 2 = 1 Then
-                    sb.Append("</tr>")
+                sb.Append("<td style=""padding:12px 18px;border-top:1px solid #eef2f6;vertical-align:top;font-size:15px;line-height:22px;color:").Append(valueColor).Append(";font-weight:").Append(weight).Append(";word-break:normal;overflow-wrap:normal;white-space:normal;"">")
+                If isTotal Then
+                    sb.Append("<span style=""white-space:nowrap;"">").Append(Html(item.Value)).Append("</span>")
+                Else
+                    sb.Append(Html(item.Value))
                 End If
-                index += 1
+                sb.Append("</td>")
+                sb.Append("</tr>")
             Next
-            If index Mod 2 = 1 Then
-                sb.Append("<td style=""width:50%;padding:14px 18px;border-top:1px solid #eef2f6;"">&nbsp;</td></tr>")
-            End If
         End If
 
         sb.Append("</table>")
@@ -644,42 +650,69 @@ Public NotInheritable Class KeepStoreEmailRenderer
         End If
 
         sb.Append("<table role=""presentation"" width=""100%"" cellspacing=""0"" cellpadding=""0"" style=""margin:22px 0;border:1px solid #e3e8ee;background:#ffffff;"">")
-        sb.Append("<tr><td colspan=""7"" style=""padding:16px 18px;background:#fbfcfd;"">")
+        sb.Append("<tr><td style=""padding:16px 18px;background:#fbfcfd;"">")
         sb.Append("<h2 style=""margin:0 0 6px 0;font-size:17px;line-height:24px;color:#17212b;"">Prodotti</h2>")
         If Not String.IsNullOrWhiteSpace(model.ProductTableCaption) Then
             sb.Append("<p style=""margin:0;font-size:13px;line-height:19px;color:#697586;"">").Append(Html(model.ProductTableCaption)).Append("</p>")
         End If
         sb.Append("</td></tr>")
-        sb.Append("<tr style=""background:#f1f5f9;color:#354052;font-size:12px;line-height:16px;text-transform:uppercase;font-weight:700;"">")
-        sb.Append("<td style=""padding:9px 8px;border-top:1px solid #e3e8ee;"">Foto</td>")
-        sb.Append("<td style=""padding:9px 8px;border-top:1px solid #e3e8ee;"">Codice</td>")
-        sb.Append("<td style=""padding:9px 8px;border-top:1px solid #e3e8ee;"">EAN</td>")
-        sb.Append("<td style=""padding:9px 8px;border-top:1px solid #e3e8ee;"">Descrizione</td>")
-        sb.Append("<td align=""right"" style=""padding:9px 8px;border-top:1px solid #e3e8ee;"">Q.ta</td>")
-        sb.Append("<td align=""right"" style=""padding:9px 8px;border-top:1px solid #e3e8ee;"">Unitario</td>")
-        sb.Append("<td align=""right"" style=""padding:9px 8px;border-top:1px solid #e3e8ee;"">Totale</td>")
-        sb.Append("</tr>")
 
         For Each product As KeepStoreEmailProductLine In model.ProductLines
             If product Is Nothing Then Continue For
             sb.Append("<tr>")
-            sb.Append("<td style=""width:72px;padding:10px 8px;border-top:1px solid #e7ebef;vertical-align:top;"">")
+            sb.Append("<td style=""padding:0;border-top:1px solid #e7ebef;"">")
+            sb.Append("<table role=""presentation"" width=""100%"" cellspacing=""0"" cellpadding=""0"" style=""width:100%;background:#ffffff;"">")
+            sb.Append("<tr>")
+            sb.Append("<td width=""80"" style=""width:80px;padding:14px 0 14px 14px;vertical-align:top;"">")
             If Not String.IsNullOrWhiteSpace(product.ImageUrl) Then
                 sb.Append("<img src=""").Append(Attr(product.ImageUrl)).Append(""" width=""64"" height=""64"" alt=""").Append(Attr(product.ImageAlt)).Append(""" style=""display:block;border:0;outline:none;text-decoration:none;width:64px;height:auto;max-width:64px;"">")
             Else
                 sb.Append("<div style=""width:64px;min-height:44px;padding-top:20px;background:#f1f5f9;color:#5b6673;text-align:center;font-size:10px;line-height:12px;"">Foto non disponibile</div>")
             End If
             sb.Append("</td>")
-            sb.Append("<td style=""padding:10px 8px;border-top:1px solid #e7ebef;vertical-align:top;font-size:13px;line-height:19px;color:#17212b;font-weight:700;"">").Append(Html(product.Code)).Append("</td>")
-            sb.Append("<td style=""padding:10px 8px;border-top:1px solid #e7ebef;vertical-align:top;font-size:12px;line-height:18px;color:#5b6673;"">").Append(Html(product.Ean)).Append("</td>")
-            sb.Append("<td style=""padding:10px 8px;border-top:1px solid #e7ebef;vertical-align:top;font-size:14px;line-height:20px;color:#354052;"">").Append(Html(product.Description)).Append("</td>")
-            sb.Append("<td align=""right"" style=""padding:10px 8px;border-top:1px solid #e7ebef;vertical-align:top;font-size:13px;line-height:19px;color:#354052;"">").Append(Html(product.Quantity)).Append("</td>")
-            sb.Append("<td align=""right"" style=""padding:10px 8px;border-top:1px solid #e7ebef;vertical-align:top;font-size:13px;line-height:19px;color:#354052;white-space:nowrap;"">").Append(Html(product.UnitPrice)).Append("</td>")
-            sb.Append("<td align=""right"" style=""padding:10px 8px;border-top:1px solid #e7ebef;vertical-align:top;font-size:13px;line-height:19px;color:#17212b;font-weight:700;white-space:nowrap;"">").Append(Html(product.LineTotal)).Append("</td>")
+            sb.Append("<td style=""padding:14px 14px 14px 14px;vertical-align:top;"">")
+            If Not String.IsNullOrWhiteSpace(product.Description) Then
+                sb.Append("<div style=""margin:0 0 8px 0;font-size:15px;line-height:22px;color:#17212b;font-weight:700;word-break:normal;overflow-wrap:normal;white-space:normal;"">").Append(Html(product.Description)).Append("</div>")
+            End If
+            sb.Append("<table role=""presentation"" width=""100%"" cellspacing=""0"" cellpadding=""0"" style=""width:100%;"">")
+            AppendProductDetailRow(sb, "Descrizione", product.Description, False, False)
+            AppendProductDetailRow(sb, "Codice", product.Code, False, False)
+            If Not String.IsNullOrWhiteSpace(product.Ean) Then
+                AppendProductDetailRow(sb, "EAN", product.Ean, False, False)
+            End If
+            AppendProductDetailRow(sb, "Q.ta", product.Quantity, False, True)
+            AppendProductDetailRow(sb, "Prezzo unitario", product.UnitPrice, False, True)
+            AppendProductDetailRow(sb, "Totale riga", product.LineTotal, True, True)
+            sb.Append("</table>")
+            sb.Append("</td>")
+            sb.Append("</tr>")
+            sb.Append("</table>")
+            sb.Append("</td>")
             sb.Append("</tr>")
         Next
 
         sb.Append("</table>")
+    End Sub
+
+    Private Shared Sub AppendProductDetailRow(ByVal sb As StringBuilder, ByVal label As String, ByVal value As String, ByVal highlight As Boolean, ByVal noWrapValue As Boolean)
+        If String.IsNullOrWhiteSpace(value) Then
+            Return
+        End If
+
+        Dim valueColor As String = If(highlight, "#17212b", "#354052")
+        Dim weight As String = If(highlight, "800", "400")
+        sb.Append("<tr>")
+        sb.Append("<td style=""width:118px;padding:2px 10px 2px 0;vertical-align:top;font-size:13px;line-height:20px;color:#697586;font-weight:700;word-break:normal;overflow-wrap:normal;white-space:normal;"">")
+        sb.Append(Html(label)).Append(":")
+        sb.Append("</td>")
+        sb.Append("<td style=""padding:2px 0;vertical-align:top;font-size:13px;line-height:20px;color:").Append(valueColor).Append(";font-weight:").Append(weight).Append(";word-break:normal;overflow-wrap:normal")
+        If noWrapValue Then
+            sb.Append(";white-space:nowrap")
+        Else
+            sb.Append(";white-space:normal")
+        End If
+        sb.Append(";"">").Append(Html(value)).Append("</td>")
+        sb.Append("</tr>")
     End Sub
 
     Private Shared Sub AppendParagraph(ByVal sb As StringBuilder, ByVal text As String)
