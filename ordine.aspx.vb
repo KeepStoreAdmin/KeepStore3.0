@@ -55,6 +55,7 @@ End Sub
 Private Const CHECKOUT_TOKEN_SESSION_KEY As String = "CheckoutToken"
 Private Const CHECKOUT_TOKEN_TIME_SESSION_KEY As String = "CheckoutTokenIssuedUtc"
 Private Const CHECKOUT_TOKEN_QS_KEY As String = "t"
+Private Const OrderNotesMaxLength As Integer = 255
 Private Shared ReadOnly CHECKOUT_TOKEN_MAX_AGE As TimeSpan = TimeSpan.FromMinutes(30)
 
 Private Function GetQueryString(ByVal key As String, Optional ByVal maxLen As Integer = 200) As String
@@ -67,6 +68,11 @@ Private Function GetQueryString(ByVal key As String, Optional ByVal maxLen As In
     Catch
         Return ""
     End Try
+End Function
+
+Private Function OrderNotesAreTooLong(ByVal note As String) As Boolean
+    If note Is Nothing Then Return False
+    Return note.Length > OrderNotesMaxLength
 End Function
 
 Private Function ConsumeValidCheckoutToken() As Boolean
@@ -289,6 +295,11 @@ End If
             Dim id As Integer = 0
             Dim DataDoc As String = ""
             Dim Note As String = If(TryCast(Me.Session("NoteDocumento"), String), "")
+
+            If OrderNotesAreTooLong(Note) Then
+                Me.SafeRedirect("carrello.aspx?noteerror=1")
+                Exit Sub
+            End If
 
             If TipoDoc <= 0 Then
                 Me.SafeRedirect("documenti.aspx")
@@ -566,7 +577,10 @@ End If
 
                 Me.Panel1.Visible = False
                 Me.Panel2.Visible = True
-                Response.Write("Errore :" & ex.Message)
+                Try
+                    KeepStoreLog.Error("ordine.aspx", "Errore conferma ordine", ex, HttpContext.Current)
+                Catch
+                End Try
 
             Finally
                 If conn.State = ConnectionState.Open Then
