@@ -1193,7 +1193,10 @@
 		<asp:Panel ID="Panel_Note" runat="server" Width="100%" Visible="False" CssClass="wrap ks-checkout-section ks-note-section">
 					<h5 class="title fw-semibold">Note</h5>
                 <p class="body-text-3 text-main-2 ks-section-help">Aggiungi eventuali indicazioni utili per evasione, consegna o amministrazione ordine.</p>
-				<asp:TextBox ID="txtNoteSpedizione" CssClass="form-control ks-form-control" TextMode="MultiLine" Rows="5" runat="server" Width="100%"></asp:TextBox>
+				<asp:TextBox ID="txtNoteSpedizione" CssClass="form-control ks-form-control" TextMode="MultiLine" Rows="5" runat="server" Width="100%" MaxLength="255"></asp:TextBox>
+                <p class="body-text-3 text-main-2 mt-2 mb-0">
+                    <span id="ksOrderNotesCounter">0 / 255 caratteri</span>
+                </p>
 			</asp:Panel>
     <div class="line"></div>
         <div class="wrap ks-checkout-section ks-confirm-section">
@@ -1263,6 +1266,32 @@
             </div>
         </asp:Panel>
 </asp:Panel>
+    <script type="text/javascript">
+        (function () {
+            function wireOrderNotesLimit() {
+                var input = document.getElementById('<%= txtNoteSpedizione.ClientID %>');
+                var counter = document.getElementById('ksOrderNotesCounter');
+                var max = 255;
+                if (!input) return;
+                input.setAttribute('maxlength', max.toString());
+                function updateCounter() {
+                    if (input.value && input.value.length > max) {
+                        input.value = input.value.substring(0, max);
+                    }
+                    if (counter) {
+                        counter.innerHTML = (input.value ? input.value.length : 0) + ' / ' + max + ' caratteri';
+                    }
+                }
+                input.oninput = updateCounter;
+                updateCounter();
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', wireOrderNotesLimit);
+            } else {
+                wireOrderNotesLimit();
+            }
+        })();
+    </script>
     <% If tOrdine IsNot Nothing AndAlso tOrdine.Visible Then %>
                 </div>
                 <div class="flat-sidebar-checkout">

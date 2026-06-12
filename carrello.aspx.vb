@@ -152,6 +152,8 @@ Private Const CHECKOUT_TOKEN_SESSION_KEY As String = "CheckoutToken"
 Private Const CHECKOUT_TOKEN_TIME_SESSION_KEY As String = "CheckoutTokenIssuedUtc"
 Private Const SessCheckoutStep As String = "CartCheckoutStep"
 Private Const CartEditorLockMessage As String = "Completa o annulla la modifica dell'indirizzo prima di continuare con il checkout."
+Private Const OrderNotesMaxLength As Integer = 255
+Private Const OrderNotesLimitMessage As String = "Le note dell'ordine superano il limite massimo di 255 caratteri. Riduci il testo e riprova."
 
 Private Class CityRegistryAddressOption
     Public Property Cap As String
@@ -537,6 +539,22 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
             lblAddressSelectionMessage.Text = message
         End If
     End Sub
+
+    Private Function GetOrderNotesText() As String
+        If txtNoteSpedizione Is Nothing OrElse txtNoteSpedizione.Text Is Nothing Then Return ""
+        Return txtNoteSpedizione.Text
+    End Function
+
+    Private Function ValidateOrderNotesLength() As Boolean
+        Dim note As String = GetOrderNotesText()
+        If note.Length <= OrderNotesMaxLength Then Return True
+
+        SetAddressSelectionMessage(OrderNotesLimitMessage)
+        SetCheckoutStep("checkout")
+        If tOrdine IsNot Nothing Then tOrdine.Visible = True
+        ApplyCheckoutStepUi()
+        Return False
+    End Function
 
     Private Sub SetShippingAddressUxState(ByVal badgeText As String, ByVal hintText As String)
         If lblAddressSelectionBadge IsNot Nothing Then lblAddressSelectionBadge.Text = badgeText
@@ -1000,6 +1018,8 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
             Return False
         End If
 
+        If Not ValidateOrderNotesLength() Then Return False
+
         Return True
     End Function
 
@@ -1283,6 +1303,10 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         pnlLoginRequired.Visible = (Not isLogged AndAlso String.Equals(Request.QueryString("loginrequired"), "1", StringComparison.OrdinalIgnoreCase))
     End If
 
+    If txtNoteSpedizione IsNot Nothing Then
+        txtNoteSpedizione.MaxLength = OrderNotesMaxLength
+    End If
+
     Me.pnlFatturazione.Visible = isLogged
     Me.PnlSpedizione.Visible = isLogged
     Me.PnlDestinazione.Visible = False
@@ -1301,6 +1325,12 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         If utentiId > 0 Then
             FillTableInfo()
         End If
+    End If
+    If String.Equals(Request.QueryString("noteerror"), "1", StringComparison.OrdinalIgnoreCase) Then
+        SetCheckoutStep("checkout")
+        If tOrdine IsNot Nothing Then tOrdine.Visible = True
+        SetAddressSelectionMessage(OrderNotesLimitMessage)
+        ApplyCheckoutStepUi()
     End If
     StabilizeCartAddressEditUi()
     End Sub
@@ -1559,6 +1589,7 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
     Private Sub SendOrder()
 
         Try
+            If Not ValidateOrderNotesLength() Then Return
 
             Me.Session("Ordine_TipoDoc") = 4
             Me.Session("Ordine_Documento") = "Ordine"
@@ -4422,6 +4453,7 @@ End Sub
 
 Protected Sub btSalvaPreventivo_click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btSalvaPreventivo.Click
     If Not IsAddressEditorActionAllowed(sender) Then Return
+    If Not ValidateOrderNotesLength() Then Return
     Me.PnlDestinazione.Visible = False
 
     Me.Session("Ordine_TipoDoc") = 2
@@ -4453,6 +4485,7 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
         Return
     End If
     Me.PnlDestinazione.Visible = False
+    If Not ValidateOrderNotesLength() Then Return
 
     Try
         LeggiVettori()
