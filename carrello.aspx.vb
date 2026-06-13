@@ -443,6 +443,7 @@ Private Const SessCartAddressEditorOpen As String = "CART_ADDRESS_EDITOR_OPEN"
 Private Const SessCartAddressEditorMode As String = "CART_ADDRESS_EDITOR_MODE"
 Private Const SessCartAddressEditorId As String = "CART_ADDRESS_EDITOR_ID"
 Private Const CartSessionExpiredLoginUrl As String = "login.aspx?ReturnUrl=carrello.aspx&sessionExpired=1"
+Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizione selezionato non è più valido. Seleziona nuovamente l'indirizzo e conferma l'ordine."
 Private _cartSessionExpiredRedirectIssued As Boolean = False
 
     Private Function GetSessionInt(ByVal key As String, Optional ByVal def As Integer = 0) As Integer
@@ -534,9 +535,10 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         Return value.ToString()
     End Function
 
-    Private Sub SetAddressSelectionMessage(ByVal message As String)
+    Private Sub SetAddressSelectionMessage(ByVal message As String, Optional ByVal isError As Boolean = False)
         If lblAddressSelectionMessage IsNot Nothing Then
             lblAddressSelectionMessage.Text = message
+            lblAddressSelectionMessage.CssClass = If(isError, "ks-alert ks-alert-danger d-block mt-2", "body-text-3 text-main-2 d-block mt-2")
         End If
     End Sub
 
@@ -1337,7 +1339,12 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
             FillTableInfo()
         End If
     End If
-    If String.Equals(Request.QueryString("noteerror"), "1", StringComparison.OrdinalIgnoreCase) Then
+    If String.Equals(Request.QueryString("addresserror"), "1", StringComparison.OrdinalIgnoreCase) Then
+        SetCheckoutStep("checkout")
+        If tOrdine IsNot Nothing Then tOrdine.Visible = True
+        SetAddressSelectionMessage(InvalidShippingAddressMessage, True)
+        ApplyCheckoutStepUi()
+    ElseIf String.Equals(Request.QueryString("noteerror"), "1", StringComparison.OrdinalIgnoreCase) Then
         SetCheckoutStep("checkout")
         If tOrdine IsNot Nothing Then tOrdine.Visible = True
         SetAddressSelectionMessage(OrderNotesLimitMessage)
