@@ -429,6 +429,85 @@ Public NotInheritable Class KeepStorePasswordEmailMessages
     End Function
 End Class
 
+Public NotInheritable Class KeepStoreContactEmailMessages
+    Private Sub New()
+    End Sub
+
+    Public Shared Function RenderContactRequest(ByVal brand As KeepStoreEmailBrandInfo,
+                                                ByVal userName As String,
+                                                ByVal userEmail As String,
+                                                ByVal reason As String,
+                                                ByVal userMessage As String) As KeepStoreEmailRenderResult
+        If brand Is Nothing Then
+            brand = New KeepStoreEmailBrandInfo()
+        End If
+
+        Dim cleanName As String = FirstNonEmpty(userName, "visitatore")
+        Dim cleanEmail As String = FirstNonEmpty(userEmail, "non indicata")
+        Dim cleanReason As String = FirstNonEmpty(reason, "Richiesta dal sito")
+        Dim cleanMessage As String = FirstNonEmpty(userMessage, "Messaggio non indicato")
+
+        Dim model As New KeepStoreEmailMessageModel()
+        model.Brand = brand
+        model.Title = "Nuova richiesta dal sito"
+        model.StatusBadge = "Contatto sito"
+        model.Preheader = "Nuova richiesta inviata dal form contatti del sito."
+        model.Intro = "E stata ricevuta una nuova richiesta dal form contatti del sito."
+        model.BodyLines.Add("Rispondi al mittente usando l'indirizzo indicato nel Reply-To della email.")
+        model.FooterNote = "Comunicazione generata dal form contatti del sito. Non contiene password o token."
+
+        Dim requestBlock As New KeepStoreEmailInfoBlock()
+        requestBlock.Title = "Dati richiesta"
+        AddInfoItem(requestBlock, "Nome", cleanName)
+        AddInfoItem(requestBlock, "Email", cleanEmail)
+        AddInfoItem(requestBlock, "Motivo", cleanReason)
+        model.InfoBlocks.Add(requestBlock)
+
+        Dim messageBlock As New KeepStoreEmailInfoBlock()
+        messageBlock.Title = "Messaggio"
+        messageBlock.Body = cleanMessage
+        model.InfoBlocks.Add(messageBlock)
+
+        model.LegalTitle = "Avvertenza operativa"
+        model.LegalText = "La richiesta contiene dati forniti dall'utente tramite il form contatti. Verifica il contenuto prima di rispondere o inoltrare."
+
+        Return KeepStoreEmailRenderer.Render(model)
+    End Function
+
+    Private Shared Sub AddInfoItem(ByVal block As KeepStoreEmailInfoBlock, ByVal label As String, ByVal value As String)
+        If block Is Nothing OrElse String.IsNullOrWhiteSpace(value) Then
+            Return
+        End If
+
+        Dim item As New KeepStoreEmailInfoItem()
+        item.Label = label
+        item.Value = value.Trim()
+        block.Items.Add(item)
+    End Sub
+
+    Private Shared Function FirstNonEmpty(ParamArray values() As String) As String
+        If values Is Nothing Then
+            Return ""
+        End If
+
+        For Each value As String In values
+            If Not String.IsNullOrWhiteSpace(value) Then
+                Return NormalizeText(value)
+            End If
+        Next
+
+        Return ""
+    End Function
+
+    Private Shared Function NormalizeText(ByVal value As String) As String
+        If value Is Nothing Then
+            Return ""
+        End If
+
+        Return value.Replace(ControlChars.NullChar, " "c).Trim()
+    End Function
+End Class
+
 Public Class KeepStoreEmailPaymentInfo
     Public Property Description As String
     Public Property Information As String
