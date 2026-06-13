@@ -1,10 +1,21 @@
 Imports MySql.Data.MySqlClient
 Imports System.Data
 Imports System.Configuration
+Imports System.Text.RegularExpressions
 Imports System.Web.UI.WebControls
 
 Partial Class datiutente
     Inherits System.Web.UI.Page
+
+    Private Const MaxEmailLength As Integer = 50
+    Private Const MaxAddressLength As Integer = 255
+    Private Const MaxCityLength As Integer = 120
+    Private Const MaxProvinceLength As Integer = 10
+    Private Const MaxNationLength As Integer = 50
+    Private Const MaxPhoneLength As Integer = 50
+    Private Const MaxAltNameLength As Integer = 100
+    Private Const MaxAltFirstNameLength As Integer = 50
+    Private Const MaxAltAddressLength As Integer = 100
 
     Private ReadOnly Property ConnString As String
         Get
@@ -84,7 +95,26 @@ Partial Class datiutente
         If Session("LoginId") IsNot Nothing Then
             Integer.TryParse(Convert.ToString(Session("LoginId")), loginId)
         End If
+        If loginId <= 0 AndAlso Session("LoginID") IsNot Nothing Then
+            Integer.TryParse(Convert.ToString(Session("LoginID")), loginId)
+        End If
         Return loginId
+    End Function
+
+    Private Function ResolveUtentiIdForLogin(ByVal conn As MySqlConnection,
+                                             ByVal tr As MySqlTransaction,
+                                             ByVal loginId As Integer) As Integer
+        If loginId <= 0 Then Return 0
+
+        Using cmd As New MySqlCommand("SELECT u.id FROM vlogin v INNER JOIN utenti u ON v.utentiid = u.id WHERE v.id = @LoginId LIMIT 1", conn, tr)
+            cmd.Parameters.AddWithValue("@LoginId", loginId)
+            Dim raw As Object = cmd.ExecuteScalar()
+            Dim utentiId As Integer = 0
+            If raw IsNot Nothing AndAlso raw IsNot DBNull.Value Then
+                Integer.TryParse(Convert.ToString(raw), utentiId)
+            End If
+            Return utentiId
+        End Using
     End Function
 
     Private Function LoadUtenteData(ByVal loginId As Integer) As DataTable
@@ -374,6 +404,13 @@ Partial Class datiutente
             Return
         End If
 
+        Dim loginId As Integer = CurrentLoginId()
+        If loginId <= 0 Then
+            lblEsito.Text = "Sessione scaduta. Effettua nuovamente l'accesso."
+            e.Cancel = True
+            Return
+        End If
+
         Dim row As FormViewRow = fvUtente.Row
 
         ' Controlli anagrafica principale
@@ -402,38 +439,76 @@ Partial Class datiutente
             Integer.TryParse(ddlDestAlt.SelectedValue, destAltId)
         End If
 
+        Dim validationMessage As String = ""
+        If Not ValidateMainProfileInput(tbEmailEdit,
+                                        tbIndirizzoEdit,
+                                        tbCapEdit,
+                                        tbCittaEdit,
+                                        tbProvinciaEdit,
+                                        tbNazioneEdit,
+                                        tbTelefonoEdit,
+                                        tbCellulareEdit,
+                                        tbFaxEdit,
+                                        validationMessage) Then
+            lblEsito.Text = validationMessage
+            e.Cancel = True
+            Return
+        End If
+
+        If Not ValidateAlternativeAddressInput(tbRagioneSocialeAEdit,
+                                               tbNomeAEdit,
+                                               tbIndirizzoAEdit,
+                                               tbCapAEdit,
+                                               tbCittaAEdit,
+                                               tbProvinciaAEdit,
+                                               tbNazioneAEdit,
+                                               validationMessage) Then
+            lblEsito.Text = validationMessage
+            e.Cancel = True
+            Return
+        End If
+
         Try
             Using conn As New MySqlConnection(ConnString)
                 conn.Open()
                 Using tr As MySqlTransaction = conn.BeginTransaction()
 
+                    Dim ownerUtentiId As Integer = ResolveUtentiIdForLogin(conn, tr, loginId)
+                    If ownerUtentiId <= 0 OrElse ownerUtentiId <> utentiId Then
+                        Throw New InvalidOperationException("datiutente ownership mismatch")
+                    End If
+
                     ' 1) Aggiorno anagrafica principale (tabella utenti)
                     Dim sqlUtente As String = _
-                        "UPDATE utenti SET " & _
-                        "Indirizzo = @Indirizzo, " & _
-                        "Cap = @Cap, " & _
-                        "Citta = @Citta, " & _
-                        "Provincia = @Provincia, " & _
-                        "Nazione = @Nazione, " & _
-                        "Telefono = @Telefono, " & _
-                        "Cellulare = @Cellulare, " & _
-                        "Fax = @Fax, " & _
-                        "Email = @Email " & _
-                        "WHERE id = @UtentiId"
+                        "UPDATE utenti u " & _
+                        "INNER JOIN login l ON l.UtentiId = u.id " & _
+                        "SET u.Indirizzo = @Indirizzo, " & _
+                        "u.Cap = @Cap, " & _
+                        "u.Citta = @Citta, " & _
+                        "u.Provincia = @Provincia, " & _
+                        "u.Nazione = @Nazione, " & _
+                        "u.Telefono = @Telefono, " & _
+                        "u.Cellulare = @Cellulare, " & _
+                        "u.Fax = @Fax, " & _
+                        "u.Email = @Email " & _
+                        "WHERE u.id = @UtentiId AND l.id = @LoginId"
 
                     Using cmd As New MySqlCommand(sqlUtente, conn, tr)
-                        cmd.Parameters.AddWithValue("@Indirizzo", If(tbIndirizzoEdit Is Nothing, "", tbIndirizzoEdit.Text.Trim()))
-                        cmd.Parameters.AddWithValue("@Cap", If(tbCapEdit Is Nothing, "", tbCapEdit.Text.Trim()))
-                        cmd.Parameters.AddWithValue("@Citta", If(tbCittaEdit Is Nothing, "", tbCittaEdit.Text.Trim()))
-                        cmd.Parameters.AddWithValue("@Provincia", If(tbProvinciaEdit Is Nothing, "", tbProvinciaEdit.Text.Trim()))
-                        cmd.Parameters.AddWithValue("@Nazione", If(tbNazioneEdit Is Nothing, "", tbNazioneEdit.Text.Trim()))
-                        cmd.Parameters.AddWithValue("@Telefono", If(tbTelefonoEdit Is Nothing, "", tbTelefonoEdit.Text.Trim()))
-                        cmd.Parameters.AddWithValue("@Cellulare", If(tbCellulareEdit Is Nothing, "", tbCellulareEdit.Text.Trim()))
-                        cmd.Parameters.AddWithValue("@Fax", If(tbFaxEdit Is Nothing, "", tbFaxEdit.Text.Trim()))
-                        cmd.Parameters.AddWithValue("@Email", If(tbEmailEdit Is Nothing, "", tbEmailEdit.Text.Trim()))
+                        cmd.Parameters.AddWithValue("@Indirizzo", TextBoxText(tbIndirizzoEdit))
+                        cmd.Parameters.AddWithValue("@Cap", TextBoxText(tbCapEdit))
+                        cmd.Parameters.AddWithValue("@Citta", TextBoxText(tbCittaEdit))
+                        cmd.Parameters.AddWithValue("@Provincia", TextBoxText(tbProvinciaEdit))
+                        cmd.Parameters.AddWithValue("@Nazione", TextBoxText(tbNazioneEdit))
+                        cmd.Parameters.AddWithValue("@Telefono", TextBoxText(tbTelefonoEdit))
+                        cmd.Parameters.AddWithValue("@Cellulare", TextBoxText(tbCellulareEdit))
+                        cmd.Parameters.AddWithValue("@Fax", TextBoxText(tbFaxEdit))
+                        cmd.Parameters.AddWithValue("@Email", TextBoxText(tbEmailEdit))
                         cmd.Parameters.AddWithValue("@UtentiId", utentiId)
+                        cmd.Parameters.AddWithValue("@LoginId", loginId)
 
-                        cmd.ExecuteNonQuery()
+                        If cmd.ExecuteNonQuery() <> 1 Then
+                            Throw New InvalidOperationException("datiutente profile update failed")
+                        End If
                     End Using
 
                     ' 2) Aggiorno anche la Email nella tabella login (se esiste)
@@ -441,12 +516,15 @@ Partial Class datiutente
                         Dim sqlLogin As String = _
                             "UPDATE login " & _
                             "SET Email = @Email " & _
-                            "WHERE UtentiId = @UtentiId"
+                            "WHERE id = @LoginId AND UtentiId = @UtentiId"
 
                         Using cmdLogin As New MySqlCommand(sqlLogin, conn, tr)
-                            cmdLogin.Parameters.AddWithValue("@Email", tbEmailEdit.Text.Trim())
+                            cmdLogin.Parameters.AddWithValue("@Email", TextBoxText(tbEmailEdit))
+                            cmdLogin.Parameters.AddWithValue("@LoginId", loginId)
                             cmdLogin.Parameters.AddWithValue("@UtentiId", utentiId)
-                            cmdLogin.ExecuteNonQuery()
+                            If cmdLogin.ExecuteNonQuery() <> 1 Then
+                                Throw New InvalidOperationException("datiutente login update failed")
+                            End If
                         End Using
                     End If
 
@@ -472,10 +550,158 @@ Partial Class datiutente
             e.Cancel = True
 
         Catch
-            lblEsito.Text = "Non e stato possibile salvare i dati. Riprova piu tardi."
+            lblEsito.Text = "Non e stato possibile salvare i dati. Controlla i campi e riprova."
             e.Cancel = True
         End Try
     End Sub
+
+    Private Function ValidateMainProfileInput(ByVal tbEmail As TextBox,
+                                              ByVal tbIndirizzo As TextBox,
+                                              ByVal tbCap As TextBox,
+                                              ByVal tbCitta As TextBox,
+                                              ByVal tbProvincia As TextBox,
+                                              ByVal tbNazione As TextBox,
+                                              ByVal tbTelefono As TextBox,
+                                              ByVal tbCellulare As TextBox,
+                                              ByVal tbFax As TextBox,
+                                              ByRef message As String) As Boolean
+        message = ""
+
+        Dim email As String = TextBoxText(tbEmail)
+        If String.IsNullOrWhiteSpace(email) OrElse Not LooksLikeEmail(email) Then
+            message = "Inserisci un indirizzo email valido."
+            Return False
+        End If
+        If email.Length > MaxEmailLength Then
+            message = "L'indirizzo email non puo superare " & MaxEmailLength.ToString() & " caratteri."
+            Return False
+        End If
+
+        Dim indirizzo As String = TextBoxText(tbIndirizzo)
+        Dim cap As String = TextBoxText(tbCap)
+        Dim citta As String = TextBoxText(tbCitta)
+        Dim provincia As String = TextBoxText(tbProvincia)
+
+        If String.IsNullOrWhiteSpace(indirizzo) Then
+            message = "Inserisci l'indirizzo di fatturazione."
+            Return False
+        End If
+        If String.IsNullOrWhiteSpace(cap) OrElse Not LooksLikeCap(cap) Then
+            message = "Inserisci un CAP valido."
+            Return False
+        End If
+        If String.IsNullOrWhiteSpace(citta) Then
+            message = "Inserisci la citta."
+            Return False
+        End If
+        If String.IsNullOrWhiteSpace(provincia) Then
+            message = "Inserisci la provincia."
+            Return False
+        End If
+
+        If Not CheckMaxLength(indirizzo, MaxAddressLength, "L'indirizzo", message) Then Return False
+        If Not CheckMaxLength(citta, MaxCityLength, "La citta", message) Then Return False
+        If Not CheckMaxLength(provincia, MaxProvinceLength, "La provincia", message) Then Return False
+        If Not CheckMaxLength(TextBoxText(tbNazione), MaxNationLength, "La nazione", message) Then Return False
+
+        If Not LooksLikePhone(TextBoxText(tbTelefono), "Il telefono", message) Then Return False
+        If Not LooksLikePhone(TextBoxText(tbCellulare), "Il cellulare", message) Then Return False
+        If Not LooksLikePhone(TextBoxText(tbFax), "Il fax", message) Then Return False
+
+        Return True
+    End Function
+
+    Private Function ValidateAlternativeAddressInput(ByVal tbRag As TextBox,
+                                                     ByVal tbNome As TextBox,
+                                                     ByVal tbInd As TextBox,
+                                                     ByVal tbCap As TextBox,
+                                                     ByVal tbCitta As TextBox,
+                                                     ByVal tbProv As TextBox,
+                                                     ByVal tbNaz As TextBox,
+                                                     ByRef message As String) As Boolean
+        message = ""
+
+        Dim rag As String = TextBoxText(tbRag)
+        Dim nome As String = TextBoxText(tbNome)
+        Dim ind As String = TextBoxText(tbInd)
+        Dim cap As String = TextBoxText(tbCap)
+        Dim citta As String = TextBoxText(tbCitta)
+        Dim prov As String = TextBoxText(tbProv)
+        Dim naz As String = TextBoxText(tbNaz)
+
+        Dim hasData As Boolean = Not (String.IsNullOrWhiteSpace(rag) AndAlso
+                                      String.IsNullOrWhiteSpace(nome) AndAlso
+                                      String.IsNullOrWhiteSpace(ind) AndAlso
+                                      String.IsNullOrWhiteSpace(cap) AndAlso
+                                      String.IsNullOrWhiteSpace(citta) AndAlso
+                                      String.IsNullOrWhiteSpace(prov))
+
+        If Not hasData Then Return True
+
+        If String.IsNullOrWhiteSpace(ind) Then
+            message = "Inserisci l'indirizzo di spedizione."
+            Return False
+        End If
+        If String.IsNullOrWhiteSpace(cap) OrElse Not LooksLikeCap(cap) Then
+            message = "Inserisci un CAP di spedizione valido."
+            Return False
+        End If
+        If String.IsNullOrWhiteSpace(citta) Then
+            message = "Inserisci la citta di spedizione."
+            Return False
+        End If
+        If String.IsNullOrWhiteSpace(prov) Then
+            message = "Inserisci la provincia di spedizione."
+            Return False
+        End If
+
+        If Not CheckMaxLength(rag, MaxAltNameLength, "La ragione sociale/cognome di spedizione", message) Then Return False
+        If Not CheckMaxLength(nome, MaxAltFirstNameLength, "Il nome di spedizione", message) Then Return False
+        If Not CheckMaxLength(ind, MaxAltAddressLength, "L'indirizzo di spedizione", message) Then Return False
+        If Not CheckMaxLength(citta, MaxCityLength, "La citta di spedizione", message) Then Return False
+        If Not CheckMaxLength(prov, MaxProvinceLength, "La provincia di spedizione", message) Then Return False
+        If Not CheckMaxLength(naz, MaxNationLength, "La nazione di spedizione", message) Then Return False
+
+        Return True
+    End Function
+
+    Private Function TextBoxText(ByVal tb As TextBox) As String
+        If tb Is Nothing OrElse tb.Text Is Nothing Then Return ""
+        Return tb.Text.Trim()
+    End Function
+
+    Private Function LooksLikeEmail(ByVal value As String) As Boolean
+        If String.IsNullOrWhiteSpace(value) Then Return False
+        Return Regex.IsMatch(value.Trim(), "^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    End Function
+
+    Private Function LooksLikeCap(ByVal value As String) As Boolean
+        If String.IsNullOrWhiteSpace(value) Then Return False
+        value = value.Trim()
+        If value.Length < 2 OrElse value.Length > 12 Then Return False
+        Return Regex.IsMatch(value, "^[A-Za-z0-9][A-Za-z0-9\s-]*$")
+    End Function
+
+    Private Function LooksLikePhone(ByVal value As String, ByVal label As String, ByRef message As String) As Boolean
+        If String.IsNullOrWhiteSpace(value) Then Return True
+        If value.Length > MaxPhoneLength Then
+            message = label & " non puo superare " & MaxPhoneLength.ToString() & " caratteri."
+            Return False
+        End If
+        If Not Regex.IsMatch(value, "^[0-9A-Za-z\+\-\s\(\)\./]*$") Then
+            message = label & " contiene caratteri non validi."
+            Return False
+        End If
+        Return True
+    End Function
+
+    Private Function CheckMaxLength(ByVal value As String, ByVal maxLength As Integer, ByVal label As String, ByRef message As String) As Boolean
+        If value IsNot Nothing AndAlso value.Length > maxLength Then
+            message = label & " non puo superare " & maxLength.ToString() & " caratteri."
+            Return False
+        End If
+        Return True
+    End Function
 
     Private Function FindTextBox(ByVal row As FormViewRow, ParamArray ids() As String) As TextBox
         If row Is Nothing OrElse ids Is Nothing Then Return Nothing
@@ -776,7 +1002,9 @@ Partial Class datiutente
                 cmdUpd.Parameters.AddWithValue("@Id", destAltId)
                 cmdUpd.Parameters.AddWithValue("@UtenteId", utentiId)
 
-                cmdUpd.ExecuteNonQuery()
+                If cmdUpd.ExecuteNonQuery() <> 1 Then
+                    Throw New InvalidOperationException("datiutente address update failed")
+                End If
             End Using
         Else
             ' INSERT nuova destinazione
