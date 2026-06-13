@@ -164,6 +164,72 @@ End Function
         Return o
     End Function
 
+    Private Function ResolveCurrentUtentiId(ByVal conn As MySqlConnection, ByVal loginId As Long, ByVal sessionUtentiId As Long) As Long
+        If sessionUtentiId > 0 Then Return sessionUtentiId
+
+        Dim candidate As Long = GetSessionLong("UtentIId", 0)
+        If candidate <= 0 Then candidate = GetSessionLong("UTENTIID", 0)
+        If candidate <= 0 Then candidate = GetSessionLong("UtentiID", 0)
+        If candidate > 0 Then Return candidate
+
+        If loginId <= 0 Then Return 0
+
+        Using cmd As New MySqlCommand("SELECT utentiid FROM vlogin WHERE id=?LoginId LIMIT 1", conn)
+            cmd.CommandType = CommandType.Text
+            cmd.Parameters.AddWithValue("?LoginId", loginId)
+            Dim raw As Object = cmd.ExecuteScalar()
+            If raw IsNot Nothing AndAlso raw IsNot DBNull.Value Then
+                Long.TryParse(raw.ToString(), candidate)
+            End If
+        End Using
+
+        Return candidate
+    End Function
+
+    Private Function TryReadSelectedShippingAddressId(ByRef selectedAddressId As Integer) As Boolean
+        selectedAddressId = 0
+
+        Dim raw As Object = Session("SCEGLIINDIRIZZO")
+        If raw Is Nothing OrElse raw Is DBNull.Value Then Return True
+
+        Dim value As String = Convert.ToString(raw).Trim()
+        If value = "" Then Return True
+
+        Dim parsed As Integer = 0
+        If Not Integer.TryParse(value, parsed) Then Return False
+        If parsed < 0 Then Return False
+
+        selectedAddressId = parsed
+        Return True
+    End Function
+
+    Private Function ShippingAddressBelongsToUser(ByVal conn As MySqlConnection, ByVal addressId As Integer, ByVal utentiId As Long) As Boolean
+        If addressId <= 0 OrElse utentiId <= 0 Then Return False
+
+        Using cmd As New MySqlCommand("SELECT COUNT(*) FROM utentiindirizzi WHERE Id=?Id AND UtenteId=?UtentiId", conn)
+            cmd.CommandType = CommandType.Text
+            cmd.Parameters.AddWithValue("?Id", addressId)
+            cmd.Parameters.AddWithValue("?UtentiId", utentiId)
+            Dim raw As Object = cmd.ExecuteScalar()
+            Return raw IsNot Nothing AndAlso Convert.ToInt32(raw) > 0
+        End Using
+    End Function
+
+    Private Function ValidateSelectedShippingAddressForOrder(ByVal conn As MySqlConnection, ByVal loginId As Long, ByVal sessionUtentiId As Long, ByRef selectedAddressId As Integer) As Boolean
+        If Not TryReadSelectedShippingAddressId(selectedAddressId) Then Return False
+        If selectedAddressId <= 0 Then Return True
+
+        Dim utentiId As Long = ResolveCurrentUtentiId(conn, loginId, sessionUtentiId)
+        If utentiId <= 0 Then Return False
+
+        Return ShippingAddressBelongsToUser(conn, selectedAddressId, utentiId)
+    End Function
+
+    Private Sub BlockInvalidShippingAddress()
+        Session("SCEGLIINDIRIZZO") = Nothing
+        SafeRedirect("carrello.aspx?addresserror=1")
+    End Sub
+
     Private Sub InitializeWebPaymentStatus(ByVal conn As MySqlConnection,
                                            ByVal trns As MySqlTransaction,
                                            ByVal documentiId As Integer,
@@ -348,6 +414,12 @@ End If
                     End Using
                 End Using
 
+                Dim selectedShippingAddressId As Integer = 0
+                If Not ValidateSelectedShippingAddressForOrder(conn, LoginId, UtentiId, selectedShippingAddressId) Then
+                    BlockInvalidShippingAddress()
+                    Exit Sub
+                End If
+
                 ' Facebook Pixel (solo se ci sono articoli)
                 If articoliIdGlobali <> "" Then
                     facebook_pixel(articoliIdGlobali)
@@ -371,11 +443,7 @@ End If
                     cmd.Parameters.AddWithValue("?pBuonoScontoIdIVA", DbVal(Session("Ordine_BuonoScontoIdIva")))
                     cmd.Parameters.AddWithValue("?pBuonoScontoValoreIVA", DbVal(Session("Ordine_BuonoScontoValoreIva")))
 
-                    If IsNothing(Session("SCEGLIINDIRIZZO")) Then
-                        cmd.Parameters.AddWithValue("?pUtentiInirizzoId", 0)
-                    Else
-                        cmd.Parameters.AddWithValue("?pUtentiInirizzoId", DbVal(Session("SCEGLIINDIRIZZO")))
-                    End If
+                    cmd.Parameters.AddWithValue("?pUtentiInirizzoId", selectedShippingAddressId)
 
                     ' Se è coupon azzero i costi
                     Dim isCoupon As Boolean = (Not (Session("Coupon_idArticolo") Is Nothing) AndAlso GetSessionInt("Coupon_idArticolo", 0) > 0)

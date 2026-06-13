@@ -283,6 +283,8 @@ Area progressivamente stabilizzata con shell account ONSUS, `body.ks-page-accoun
 
 `DOCS-ACCOUNT-AREA-UI-CLOSE-1A` chiude il blocco Area Cliente UI/datiutente dopo smoke manuale A: PR #180 hardening `datiutente.aspx.vb`, PR #181 UI `datiutente.aspx` e PR #182 rimozione duplicato legacy risultano mergeate; accesso anonimo protetto, accesso loggato coerente, link area cliente funzionanti e nessun dato cliente reale modificato. Checkout, carrello, ordine, gateway, email, DB/schema/SP restano non toccati.
 
+`ACCOUNT-ADDRESS-ORDER-GUARD-1A` / PR #183 aggiunge in `ordine.aspx.vb` una guard difensiva sull'indirizzo di spedizione selezionato prima della stored procedure `Carrello_Documento`. `SCEGLIINDIRIZZO` assente/null/0 resta compatibile con il flusso storico; valori non numerici/negativi o id alternativi non appartenenti all'utente loggato bloccano la creazione ordine prima di documento, gateway, email e svuotamento carrello. La verifica usa query parametrizzata su `utentiindirizzi.Id` + `UtenteId`; DB/schema/SP, carrello, gateway, email/template, prezzi/IVA/totali non cambiano.
+
 ### 9.10 Indirizzi
 
 `my-account-address.aspx` e pagina ONSUS autonoma per indirizzi account: indirizzo principale, sedi alternative, add/edit sede alternativa e scelta predefinito sono stabilizzati. Delete indirizzi resta da valutare con task dedicato. La selezione manuale indirizzo nel carrello e chiusa nel blocco `CART-ADDRESS-SELECTION`; add/edit inline carrello e lookup CAP da `city_registry` sono chiusi nel blocco `CART-INLINE-ADDRESS-CITYREGISTRY-STEP`.
@@ -1089,6 +1091,7 @@ Non implementare runtime email senza task dedicato e senza conferma delle fonti 
 
 | Data | Task | PR | Commit | File modificati | Sintesi tecnica | Impatto funzionale | Note/debito residuo |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-06-13 | ACCOUNT-ADDRESS-ORDER-GUARD-1A | #183 | `d7ca913aec57a5f5aebb1537ef08de07a71b3124` | `ordine.aspx.vb`, documentazione | Guard ownership su `SCEGLIINDIRIZZO > 0` prima di `Carrello_Documento` | Blocca ordine se l'indirizzo alternativo selezionato non appartiene all'utente o non e valido | Nessun cambio DB/schema/SP, carrello, gateway, email/template, prezzi/IVA/totali; PR da review/merge |
 | 2026-06-13 | DOCS-ACCOUNT-AREA-UI-CLOSE-1A | n/a | n/a | documentazione | Chiusura Area Cliente UI/datiutente dopo smoke manuale A | PR #180/#181/#182 e audit duplicati confermati chiusi | Nessun codice, DB/schema/SP, checkout/carrello/ordine/gateway/email modificato |
 | 2026-06-13 | ACCOUNT-AREA-LEGACY-DUPLICATES-1A | n/a | n/a | documentazione | Audit statico post-merge PR #182 su pagine account, sidebar e CSS | Nessun duplicato legacy evidente residuo fuori layout; nessun fix applicativo aggiuntivo | Smoke manuale UI area account esito A |
 | 2026-06-13 | ACCOUNT-DATIUTENTE-UI-FIX-1A | #182 | `a0023fbc7b27e06a2f82aea49c475576b7fcdb38` | `datiutente.aspx`, `Public/assets/keepstore/css/datiutente-ui.css`, documentazione | Rimozione blocco legacy duplicato fuori layout da pagina dati utente | Lascia una sola UI account coerente e mantiene la sezione legacy solo dentro la card moderna | `datiutente.aspx.vb`, DB/schema/SP, checkout/carrello/ordine, email/template, registrazione e pagine account moderne fuori scope; PR mergeata |
