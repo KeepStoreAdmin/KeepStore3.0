@@ -241,6 +241,8 @@ Da completare con audit dedicato. Coinvolge disponibilita, prezzo, add-to-cart, 
 
 I campi input del checkout devono rispettare le lunghezze reali dei contratti DB/procedure prima di creare documenti o avviare gateway. Per le note ordine web il contratto operativo e `carrello_Documento.pNoteSpedizione VARCHAR(255)`, poi salvato in `documenti.NoteEsterne`: la UI deve impostare limite/hint coerente e il server deve bloccare valori oltre 255 caratteri prima della stored procedure, senza troncamento silenzioso. Gli errori DB come `Data too long` non devono essere esposti all'utente finale; usare messaggi specifici per validazioni note e messaggi generici non tecnici per errori imprevisti.
 
+Il consenso alle condizioni di vendita nel riepilogo finale checkout deve essere esplicito tramite checkbox non preselezionata, con link a `condizioni-vendita.aspx` e blocco sia client-side sia server-side. Senza consenso non devono essere creati ordine/documento, gateway o email e il carrello deve restare preservato. La pagina `condizioni-vendita.aspx` legge il testo da `Aziende.Condizioni_vendita` con query parametrizzata e non modifica DB/schema.
+
 ### 9.5 Checkout
 
 Da completare con audit dedicato. Area sensibile: ordini, documenti, pagamento, spedizione.
