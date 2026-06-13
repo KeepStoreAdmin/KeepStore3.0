@@ -49,6 +49,17 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 - Usare sempre campi DB esistenti e query/logiche esistenti quando possibile.
 - Modifiche strutturali o logiche vecchie richiedono prima analisi impatto e proposta micro-task.
 
+### Metodo Codex Token-Safe / One-Shot
+
+- Prima di dare prompt a Codex, ChatGPT deve consolidare piano, scope, file ammessi, vincoli, verifiche, output e criterio A/B/E.
+- Evitare prompt esplorativi quando causa e fix sono gia chiari: un task deve avere un solo prompt operativo principale.
+- Revisioni successive sono ammesse per blocchi reali, non per perfezionismo documentale o per inseguire il commit documentale appena creato.
+- La documentazione deve registrare PR, branch, commit funzionale principale, stato, smoke e decisioni; i commit documentali successivi restano tracciati da Git/PR e non generano automaticamente nuove REV.
+- Cleanup branch e housekeeping sono secondari: usarli solo su richiesta esplicita o se sbloccano il flusso. Prima di cancellare branch verificare sempre che non esistano commit assenti da `frontend-rebuild`.
+- Se un problema e solo sospetto o non riproducibile, prima fare test manuale mirato; aprire PR diagnostiche solo se il problema torna riproducibile.
+- ChatGPT decide piano, ordine e priorita; Codex esegue task piccoli, verificabili e con confini rigidi. Evitare task generici tipo "controlla tutto".
+- Priorita: bug bloccanti/regressioni utente, smoke, documentazione minima, poi cleanup. Non consumare token su attivita non funzionali mentre ci sono step piu importanti aperti.
+
 ### Ripartenza rapida in nuova chat
 
 - In caso di chat satura o bloccata, aprire una nuova chat e scrivere: "Leggi docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md e riparti dall'ultimo HEAD stabile."
@@ -131,10 +142,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo merge PR #174 e smoke live checkout consenso condizioni / limite note:
+Stato di riferimento dopo merge PR #174, smoke live checkout consenso condizioni / limite note e aggiornamento metodo operativo:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `e837206c2c31e1ab7e9282f0a6bbe5aa3a4effd0`
+- HEAD stabile: `9ebb9fc80dec78a686f3d48233501bb3f02f94b0`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -1470,6 +1481,7 @@ Stato finale post-cleanup warning:
 - REV1 documentale PR #173 registrata con commit `d64961b1fe04f4a539d5605e3a34ddf27eedab19`: integrazione documentale dopo review bloccata; PR tecnicamente conforme, documentazione integrata e pronta per nuova review/merge `ORDER-NOTES-LIMIT-1B`, poi smoke manuale note ordine.
 - Checkbox consenso condizioni: PR #169 storica non mergiata e sostituita da PR #174; PR #169 va chiusa come superseded e non mergiata.
 - `CART-TERMS-CONSENT-1B` / PR #174 su branch `task/cart-terms-consent-1b`, commit funzionale `3b20195aca524c06cd13e7f4a88cac84af96dc8e`, merge commit `e837206c2c31e1ab7e9282f0a6bbe5aa3a4effd0`: sostituisce PR #169 non recuperata per conflitti con PR #173 su `carrello.aspx` / `carrello.aspx.vb` e per asset CSS/JS fuori scope. Regola: consenso condizioni vendita obbligatorio prima di creare ordine, gateway o email; preservato fix PR #173 limite note ordine 255, contatore/hint, validazione server-side e guard difensiva. Smoke `CART-CHECKOUT-SMOKE-1D = A`: checkbox visibile, testo corretto, link `condizioni-vendita.aspx` OK, pagina condizioni leggibile, blocco UI senza consenso OK, nessun ordine/gateway/email senza consenso, carrello preservato, con consenso pulsante/flusso abilitato senza completare ordine, nessun errore tecnico o JS console. Prossimo step: cleanup sicuro branch gia mergiati, poi valutare PR #171 diagnostica sessione post-ordine solo se il problema logout/sessione e ancora riproducibile.
+- Checkout note ordine + consenso condizioni e chiuso con smoke A: PR #173 e PR #174 sono merged e validate live; PR #169 chiusa come superseded. Test manuale sessione/logout post-ordine: esito A, problema non riproducibile ora; PR #171 resta backlog non attivo e non va ripresa finche il problema non torna riproducibile.
 - Backlog `EMAIL-HOTMAIL-DELIVERY-DELAY-1A`: non modificare SMTP/template in questo task. Analisi rinviata a disponibilita `.eml` Hotmail o persistenza ritardo; confrontare `.eml` Aruba e Hotmail, `Date`, catena `Received`, SPF/DKIM/DMARC, SCL/spam/quarantena e copie/BCC gestore.
 - Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
@@ -1502,6 +1514,7 @@ Task consigliato separato per eventuale proseguimento:
    - PASSWORD-HASH-SCHEMA-2B / PASSWORD-HASH-MIGRATION-2C: futuro task hash password; hash password non ancora implementato.
    - GESTIONALE-PASSWORD-AUDIT-1A / JANUS-PASSWORD-RESET-1A: audit gestionale Janus per reset/hash.
    - REGISTRATION-POLICY-1A / REGISTRATION-UX-1A: refinement residuo login/registrazione.
+   - PR #171 diagnostica sessione/logout post-ordine: non attiva ora; riprendere solo se il problema torna riproducibile con test manuale mirato.
 3. Mantenere PayPal, BancaSella, gateway e pagamenti in task separati dal carrello UI.
 4. Revocare/cambiare la password dell'utente MySQL temporaneo usato nello smoke, se ancora attivo.
 5. Eliminare eventuali variabili ambiente temporanee di smoke.

@@ -30,6 +30,16 @@ Relazione con il masterplan: il masterplan resta il riferimento operativo per ta
 - Usare date, task-id, PR e commit quando disponibili.
 - Se una informazione non e ancora verificata, marcarla come "da completare con audit dedicato".
 
+### 2.1 Metodo operativo Codex Token-Safe / One-Shot
+
+- Il lavoro Codex deve partire da prompt unici e consolidati: branch, HEAD atteso, file ammessi, divieti, verifiche, output sintetico e criterio A/B/E devono essere gia definiti da ChatGPT.
+- Evitare cicli esplorativi e task generici quando il problema e chiaro; Codex e esecutore di micro-task verificabili, non consulente continuo.
+- Non creare loop documentali: un documento registra commit funzionale principale, PR, branch, stato, smoke e decisioni; il commit documentale che chiude una REV non deve essere richiesto come prerequisito di una nuova REV automatica.
+- Prima di aprire PR diagnostiche su problemi sospetti, fare test manuale mirato. Se il problema non e riproducibile, resta backlog non attivo.
+- Cleanup branch e housekeeping si fanno solo se richiesti o se sbloccano il lavoro; prima di cancellare branch verificare che non esistano commit assenti da `frontend-rebuild`.
+- Priorita operativa: bug bloccanti e regressioni utente, smoke, documentazione minima, poi cleanup. Non consumare token su attivita non funzionali se ci sono blocchi piu importanti.
+- Esempio corrente: checkout note ordine + consenso condizioni chiuso e validato live; PR #171 sessione/logout post-ordine resta backlog non attivo perche il test manuale ha dato esito A e il problema non e riproducibile ora.
+
 ## 3. Indice
 
 - [1. Frontespizio tecnico](#1-frontespizio-tecnico)
