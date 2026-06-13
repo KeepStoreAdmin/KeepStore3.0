@@ -1006,6 +1006,8 @@ Il sistema email e misto legacy/moderno:
 
 `EMAIL-AUTH-TEMPLATE-1A` migra gli invii registrazione nuovo cliente e aggiornamento profilo legacy di `registrazione.aspx.vb` al renderer standard `App_Code/KeepStoreEmailTemplate.vb`. Restano invariati destinatario, BCC aziendale, mittente e configurazione SMTP esistente; il contenuto passa a HTML/plain text coerente con lo standard email, senza password nel body. Reset/remind password, email ordine, DB/schema, gateway, carrello/checkout, `web.config`, appSettings e connection string restano fuori scope.
 
+`EMAIL-PASSWORD-TEMPLATE-1A` migra il solo rendering dell'email reset/remind password tokenizzato di `App_Code/PasswordResetTokenService.vb` al renderer standard `App_Code/KeepStoreEmailTemplate.vb`. Il link reset continua a essere generato dal flow esistente e viene usato solo nel corpo email; generazione token, `TokenHash`, scadenza 30 minuti, validazione, consumo, revoca, destinatario, mittente, SMTP/config e anti-enumerazione restano invariati. Nessuna password viene inserita nel body; registrazione/profilo, email ordine, DB/schema, gateway, carrello/checkout e `web.config` restano fuori scope.
+
 ### 15.2 Dati DB coinvolti
 
 Fonti dati ordine:
@@ -1071,6 +1073,7 @@ Non implementare runtime email senza task dedicato e senza conferma delle fonti 
 
 | Data | Task | PR | Commit | File modificati | Sintesi tecnica | Impatto funzionale | Note/debito residuo |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-06-13 | EMAIL-PASSWORD-TEMPLATE-1A | #176 | `49ee7888f10eddcbe65b96ba257b94657bc9d880` | `App_Code/PasswordResetTokenService.vb`, `App_Code/KeepStoreEmailTemplate.vb`, documentazione | Migrazione rendering email reset/remind password tokenizzato al renderer standard HTML/plain text | Email reset piu coerente con lo standard KeepStore senza cambiare il token flow | Generazione/validazione/scadenza/consumo token, SMTP/config, DB/schema, registrazione/profilo, email ordine, gateway e carrello/checkout invariati; smoke runtime solo con SMTP sink/test |
 | 2026-06-13 | EMAIL-AUTH-TEMPLATE-1A | #175 | `6f11e652f5b20d78dbdaac46da808edebd774568` | `registrazione.aspx.vb`, `App_Code/KeepStoreEmailTemplate.vb`, documentazione | Migrazione email registrazione/profilo al renderer standard HTML/plain text | Email account/auth piu coerenti e senza body HTML legacy hardcoded | Nessun reset/remind, ordine, SMTP/config, DB/schema, gateway, carrello/checkout o `web.config` modificato; smoke controllato demandato a task successivo |
 | 2026-06-10 | EMAIL-ORDER-CONFIRMATION-1A | branch PR | pending | `ordine.aspx.vb`, documentazione | Migrazione conferma ordine/preventivo al renderer standard HTML/plain text con microcopy pagamento/spedizione e fallback legacy | Email ordine piu coerente e professionale | Nessun gateway, totale, DB/schema, SMTP o `web.config` modificato; invio live non testato in PR |
 | 2026-06-11 | EMAIL-ORDER-CONFIRMATION-PRO-1A | branch PR | pending | `ordine.aspx.vb`, `App_Code/KeepStoreEmailTemplate.vb`, documentazione | Rifinitura conferma ordine: causale bonifico completa, tabella prodotti con foto/codice/EAN/prezzi, footer `Aziende`, vettori deduplicati e caption IVA prodotti | Email ordine piu completa e professionale | Nessun gateway, totale/costo reale, DB/schema, SMTP o `web.config` modificato; smoke live demandato a Germano |
