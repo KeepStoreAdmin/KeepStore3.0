@@ -27,8 +27,8 @@
 
     <asp:ScriptManager ID="ScriptManager1" runat="server" />
 
-    <div class="ks-userdata js-ks-userdata">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="ks-myaccount ks-userdata js-ks-userdata">
+        <div class="ks-userdata-legacy-head d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
             <div>
                 <h2 class="h5 mb-1">Dati di accesso / account</h2>
                 <div class="text-muted small">Gestisci i tuoi dati e l’indirizzo predefinito.</div>
@@ -39,7 +39,7 @@
             </a>
         </div>
 
-        <ul class="nav nav-tabs ks-userdata-tabs js-ks-userdata-tabs mb-3" role="tablist">
+        <ul class="nav nav-tabs ks-userdata-tabs ks-userdata-legacy-tabs mb-3" role="tablist">
             <li class="nav-item" role="presentation">
                 <a class="nav-link" href="datiutente.aspx">Dettagli account</a>
             </li>
@@ -47,6 +47,59 @@
                 <a class="nav-link" href="datiutente.aspx?tab=addr">Indirizzi</a>
             </li>
         </ul>
+
+        <div class="tf-sp-1 pb-0 ks-userdata-modern-breadcrumb">
+            <div class="container">
+                <div class="tf-breadcrumb-wrap">
+                    <div class="tf-breadcrumb-list">
+                        <a href="Default.aspx" class="text">Home</a>
+                        <i class="icon icon-arrow-right"></i>
+                        <a href="myaccount.aspx" class="text">Account</a>
+                        <i class="icon icon-arrow-right"></i>
+                        <span class="text">I miei dati</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="tf-sp-2 ks-userdata-modern">
+            <div class="container">
+                <div class="myaccount-content account-dashboard">
+                    <div class="ks-userdata-hero">
+                        <div>
+                            <h3 class="fw-semibold mb-2">Gestione dati account</h3>
+                            <p class="body-md-2 text-main-2 mb-0">Per modificare i dati personali, di fatturazione o gli indirizzi usa le sezioni aggiornate dell'area cliente.</p>
+                        </div>
+                        <a href="myaccount.aspx" class="tf-btn btn-line">Torna al mio account</a>
+                    </div>
+
+                    <div class="ks-userdata-actions-card">
+                        <div class="ks-dashboard-card-head">
+                            <div>
+                                <h4 class="fw-semibold mb-1">Dati account</h4>
+                                <p class="body-small text-main-2 mb-0">Questa pagina resta disponibile come ponte legacy di compatibilita.</p>
+                            </div>
+                            <i class="icon-user"></i>
+                        </div>
+
+                        <div class="ks-userdata-actions">
+                            <a href="my-account-edit.aspx" class="tf-btn btn-fill">Modifica dati account</a>
+                            <a href="my-account-address.aspx" class="tf-btn btn-line">Rubrica indirizzi</a>
+                            <a href="myaccount.aspx" class="tf-btn btn-line">Torna al mio account</a>
+                        </div>
+                    </div>
+
+                    <div class="ks-userdata-legacy-card">
+                        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+                            <div>
+                                <h4 class="fw-semibold mb-1">Sezione legacy di compatibilita</h4>
+                                <p class="body-small text-main-2 mb-0">Consulta i dati storici qui sotto solo se arrivi da un vecchio collegamento.</p>
+                            </div>
+                            <div class="ks-userdata-tab-links js-ks-userdata-tabs" role="tablist">
+                                <a class="tf-btn btn-line nav-link" href="datiutente.aspx">Dettagli account</a>
+                                <a class="tf-btn btn-line nav-link" href="datiutente.aspx?tab=addr">Indirizzi</a>
+                            </div>
+                        </div>
 
         <asp:UpdateProgress ID="updProgress" runat="server">
             <ProgressTemplate>
@@ -1166,6 +1219,11 @@
 
             </ContentTemplate>
         </asp:UpdatePanel>
+
+                    </div>
+                </div>
+            </div>
+        </section>
 
     </div>
 
