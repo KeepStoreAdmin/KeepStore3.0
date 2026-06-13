@@ -4,12 +4,6 @@
 /* Messaggi esito (Label server). Nasconde automaticamente se vuoto. */
 .ks-esito:empty{display:none;}
 
-.ks-breadcrumb,
-.ks-userdata-legacy-head,
-.ks-userdata-legacy-tabs {
-  display: none;
-}
-
 .ks-userdata-modern {
   min-height: 520px;
 }

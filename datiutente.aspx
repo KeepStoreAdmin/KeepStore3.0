@@ -9,18 +9,6 @@
 </asp:Content>
 
 <asp:Content ID="ContentBreadcrumb" ContentPlaceHolderID="BreadcrumbContent" runat="server">
-    <div class="tf-sp-1 pb-0 ks-breadcrumb">
-        <div class="container">
-            <h1 class="h6 mb-0 fw-semibold">I miei dati</h1>
-            <div class="tf-breadcrumb-wrap">
-                <div class="tf-breadcrumb-list">
-                    <li class="breadcrumb-item"><a href="Default.aspx">Home</a></li>
-                    <li class="breadcrumb-item"><a href="myaccount.aspx">Account</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">I miei dati</li>
-                </div>
-            </div>
-        </div>
-    </div>
 </asp:Content>
 
 <asp:Content ID="ContentMain" ContentPlaceHolderID="MainContent" runat="server">
@@ -28,26 +16,6 @@
     <asp:ScriptManager ID="ScriptManager1" runat="server" />
 
     <div class="ks-myaccount ks-userdata js-ks-userdata">
-        <div class="ks-userdata-legacy-head d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-            <div>
-                <h2 class="h5 mb-1">Dati di accesso / account</h2>
-                <div class="text-muted small">Gestisci i tuoi dati e l’indirizzo predefinito.</div>
-            </div>
-            <a class="btn btn-outline-secondary btn-sm" href="myaccount.aspx">
-                <i class="icon-arrow-left"></i>
-                Torna all'area personale
-            </a>
-        </div>
-
-        <ul class="nav nav-tabs ks-userdata-tabs ks-userdata-legacy-tabs mb-3" role="tablist">
-            <li class="nav-item" role="presentation">
-                <a class="nav-link" href="datiutente.aspx">Dettagli account</a>
-            </li>
-            <li class="nav-item" role="presentation">
-                <a class="nav-link" href="datiutente.aspx?tab=addr">Indirizzi</a>
-            </li>
-        </ul>
-
         <div class="tf-sp-1 pb-0 ks-userdata-modern-breadcrumb">
             <div class="container">
                 <div class="tf-breadcrumb-wrap">
