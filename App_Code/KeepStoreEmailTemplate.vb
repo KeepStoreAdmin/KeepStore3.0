@@ -381,6 +381,54 @@ Public NotInheritable Class KeepStoreAccountEmailMessages
     End Function
 End Class
 
+Public NotInheritable Class KeepStorePasswordEmailMessages
+    Private Sub New()
+    End Sub
+
+    Public Shared Function RenderPasswordReset(ByVal brand As KeepStoreEmailBrandInfo,
+                                               ByVal displayName As String,
+                                               ByVal resetUrl As String,
+                                               ByVal expiresInMinutes As Integer) As KeepStoreEmailRenderResult
+        If brand Is Nothing Then
+            brand = New KeepStoreEmailBrandInfo()
+        End If
+
+        Dim cleanName As String = FirstNonEmpty(displayName, "cliente")
+        Dim model As New KeepStoreEmailMessageModel()
+        model.Brand = brand
+        model.Recipient.DisplayName = cleanName
+        model.Title = "Reimposta la password"
+        model.StatusBadge = "Reset password"
+        model.Preheader = "Istruzioni per reimpostare la password del tuo account."
+        model.Intro = "Gentile " & cleanName & ", abbiamo ricevuto una richiesta di reset password per il tuo account."
+        model.BodyLines.Add("Puoi impostare una nuova password usando il pulsante qui sotto. Il link resta valido per " & expiresInMinutes.ToString() & " minuti.")
+        model.BodyLines.Add("Se non hai richiesto tu il reset, ignora questa email: la password attuale resta invariata.")
+        model.ActionIntro = "Per motivi di sicurezza non condividere questo link con nessuno."
+        model.ActionLink = New KeepStoreEmailActionLink()
+        model.ActionLink.Text = "Reimposta password"
+        model.ActionLink.Url = resetUrl
+        model.LegalTitle = "Avvertenze di sicurezza"
+        model.LegalText = "Questa email non contiene password. L'azienda non chiedera mai la tua password via email."
+        model.FooterNote = "Comunicazione automatica di servizio. Non rispondere con dati sensibili a questa email."
+
+        Return KeepStoreEmailRenderer.Render(model)
+    End Function
+
+    Private Shared Function FirstNonEmpty(ParamArray values() As String) As String
+        If values Is Nothing Then
+            Return ""
+        End If
+
+        For Each value As String In values
+            If Not String.IsNullOrWhiteSpace(value) Then
+                Return value.Trim()
+            End If
+        Next
+
+        Return ""
+    End Function
+End Class
+
 Public Class KeepStoreEmailPaymentInfo
     Public Property Description As String
     Public Property Information As String

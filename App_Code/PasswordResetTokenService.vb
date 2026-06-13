@@ -24,6 +24,7 @@ Public Module PasswordResetTokenService
         Public Property Name As String
         Public Property Email As String
         Public Property WebsiteUrl As String
+        Public Property LogoWeb As String
         Public Property Phone As String
         Public Property Address As String
         Public Property City As String
@@ -242,7 +243,7 @@ Public Module PasswordResetTokenService
     Private Function LoadCompanyInfo(ByVal conn As MySqlConnection, ByVal aziendaId As Integer) As PasswordResetCompanyInfo
         If aziendaId <= 0 Then Return Nothing
 
-        Const sql As String = "SELECT RagioneSociale, CognomeNome, email, URL1, URL2, Telefono, Indirizzo, Citta, Provincia, Cap, Piva " &
+        Const sql As String = "SELECT RagioneSociale, CognomeNome, email, URL1, URL2, LogoWeb, Telefono, Indirizzo, Citta, Provincia, Cap, Piva " &
                               "FROM aziende WHERE id=@aziendaId LIMIT 1"
 
         Using cmd As New MySqlCommand(sql, conn)
@@ -256,6 +257,7 @@ Public Module PasswordResetTokenService
                 info.Name = FirstNonEmpty(Convert.ToString(dr("RagioneSociale")), Convert.ToString(dr("CognomeNome")))
                 info.Email = Convert.ToString(dr("email")).Trim()
                 info.WebsiteUrl = FirstNonEmpty(Convert.ToString(dr("URL1")), Convert.ToString(dr("URL2")))
+                info.LogoWeb = Convert.ToString(dr("LogoWeb")).Trim()
                 info.Phone = Convert.ToString(dr("Telefono")).Trim()
                 info.Address = Convert.ToString(dr("Indirizzo")).Trim()
                 info.City = Convert.ToString(dr("Citta")).Trim()
@@ -449,17 +451,16 @@ Public Module PasswordResetTokenService
         Using msg As New MailMessage()
             msg.From = New MailAddress(aziendaEmail, aziendaNome)
             msg.To.Add(New MailAddress(destinationEmail))
-            msg.Subject = "Reimposta la password del tuo account " & aziendaNome
+            msg.Subject = KeepStoreEmailSubjects.PasswordReset(aziendaNome)
             msg.SubjectEncoding = Encoding.UTF8
             msg.BodyEncoding = Encoding.UTF8
 
-            Dim plainBody As String = BuildResetPlainText(aziendaNome, displayName, resetUrl)
-            Dim htmlBody As String = BuildResetHtmlBody(aziendaNome, displayName, resetUrl, companyInfo)
+            Dim renderedEmail As KeepStoreEmailRenderResult = KeepStorePasswordEmailMessages.RenderPasswordReset(BuildResetEmailBrand(aziendaNome, aziendaEmail, companyInfo), displayName, resetUrl, TokenLifetimeMinutes)
 
-            msg.Body = htmlBody
+            msg.Body = renderedEmail.HtmlBody
             msg.IsBodyHtml = True
-            msg.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(plainBody, Encoding.UTF8, "text/plain"))
-            msg.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(htmlBody, Encoding.UTF8, "text/html"))
+            msg.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(renderedEmail.PlainTextBody, Encoding.UTF8, "text/plain"))
+            msg.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(renderedEmail.HtmlBody, Encoding.UTF8, "text/html"))
 
             Using smtp As New SmtpClient(smtpHost)
                 smtp.DeliveryMethod = SmtpDeliveryMethod.Network
@@ -472,100 +473,33 @@ Public Module PasswordResetTokenService
         End Using
     End Sub
 
-    Private Function BuildResetPlainText(ByVal companyName As String, ByVal displayName As String, ByVal resetUrl As String) As String
-        Dim name As String = FirstNonEmpty(displayName, "cliente")
-        Dim sb As New StringBuilder()
-        sb.AppendLine("Gentile " & name & ",")
-        sb.AppendLine()
-        sb.AppendLine("abbiamo ricevuto una richiesta di reset password per il tuo account " & companyName & ".")
-        sb.AppendLine("Per impostare una nuova password usa il link seguente entro " & TokenLifetimeMinutes.ToString() & " minuti:")
-        sb.AppendLine(resetUrl)
-        sb.AppendLine()
-        sb.AppendLine("Se non hai richiesto tu il reset, ignora questa email: la password attuale resta invariata.")
-        sb.AppendLine()
-        sb.AppendLine("Avvertenze di sicurezza:")
-        sb.AppendLine("- Non condividere questo link con nessuno.")
-        sb.AppendLine("- L'azienda non chiedera mai la tua password via email.")
-        sb.AppendLine("- Questa email non contiene la tua password.")
-        sb.AppendLine()
-        sb.AppendLine("Grazie,")
-        sb.AppendLine(companyName)
-        Return sb.ToString()
-    End Function
+    Private Function BuildResetEmailBrand(ByVal aziendaNome As String, ByVal aziendaEmail As String, ByVal companyInfo As PasswordResetCompanyInfo) As KeepStoreEmailBrandInfo
+        Dim brand As New KeepStoreEmailBrandInfo()
+        brand.CompanyName = FirstNonEmpty(aziendaNome, If(companyInfo Is Nothing, "", companyInfo.Name), "KeepStore")
+        brand.SupportEmail = FirstNonEmpty(aziendaEmail, If(companyInfo Is Nothing, "", companyInfo.Email))
 
-    Private Function BuildResetHtmlBody(ByVal companyName As String, ByVal displayName As String, ByVal resetUrl As String, ByVal companyInfo As PasswordResetCompanyInfo) As String
-        Dim safeCompanyName As String = HtmlText(companyName)
-        Dim safeName As String = HtmlText(FirstNonEmpty(displayName, "cliente"))
-        Dim safeUrl As String = HttpUtility.HtmlAttributeEncode(resetUrl)
-        Dim footer As String = BuildCompanyFooter(companyInfo)
-
-        Return "<!doctype html>" &
-               "<html><body style='margin:0;padding:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;color:#1f2933;'>" &
-               "<table role='presentation' width='100%' cellspacing='0' cellpadding='0' style='background:#f4f6f8;padding:24px 0;'>" &
-               "<tr><td align='center'>" &
-               "<table role='presentation' width='100%' cellspacing='0' cellpadding='0' style='max-width:620px;background:#ffffff;border:1px solid #dde3ea;border-radius:6px;'>" &
-               "<tr><td style='padding:28px 32px 12px 32px;border-bottom:1px solid #edf1f5;'>" &
-               "<div style='font-size:20px;font-weight:bold;color:#111827;'>" & safeCompanyName & "</div>" &
-               "<div style='font-size:13px;color:#6b7280;margin-top:6px;'>Reset password account</div>" &
-               "</td></tr>" &
-               "<tr><td style='padding:28px 32px;'>" &
-               "<p style='margin:0 0 16px 0;font-size:15px;line-height:1.55;'>Gentile " & safeName & ",</p>" &
-               "<p style='margin:0 0 16px 0;font-size:15px;line-height:1.55;'>abbiamo ricevuto una richiesta di reset password per il tuo account.</p>" &
-               "<p style='margin:0 0 24px 0;font-size:15px;line-height:1.55;'>Il link resta valido per " & TokenLifetimeMinutes.ToString() & " minuti.</p>" &
-               "<p style='margin:0 0 24px 0;'><a href='" & safeUrl & "' style='display:inline-block;background:#1f5eff;color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:12px 20px;border-radius:4px;'>Reimposta la password</a></p>" &
-               "<p style='margin:0 0 8px 0;font-size:13px;line-height:1.5;color:#4b5563;'>Se il pulsante non funziona, copia e incolla questo indirizzo nel browser:</p>" &
-               "<p style='margin:0 0 20px 0;font-size:12px;line-height:1.45;color:#374151;word-break:break-all;'>" & HtmlText(resetUrl) & "</p>" &
-               "<p style='margin:0;font-size:13px;line-height:1.5;color:#4b5563;'>Se non hai richiesto tu il reset, ignora questa email: la password attuale resta invariata.</p>" &
-               "<div style='margin:22px 0 0 0;padding:14px 16px;background:#fff8e6;border:1px solid #f0d98c;border-radius:4px;'>" &
-               "<p style='margin:0 0 8px 0;font-size:13px;font-weight:bold;color:#5f4b12;'>Avvertenze di sicurezza</p>" &
-               "<ul style='margin:0;padding-left:18px;font-size:13px;line-height:1.55;color:#5f4b12;'>" &
-               "<li>Non condividere questo link con nessuno.</li>" &
-               "<li>L'azienda non chiedera mai la tua password via email.</li>" &
-               "<li>Questa email non contiene la tua password.</li>" &
-               "</ul>" &
-               "</div>" &
-               "</td></tr>" &
-               "<tr><td style='padding:18px 32px;background:#f8fafc;border-top:1px solid #edf1f5;font-size:12px;line-height:1.5;color:#6b7280;'>" &
-               footer &
-               "</td></tr>" &
-               "</table>" &
-               "</td></tr>" &
-               "</table>" &
-               "</body></html>"
-    End Function
-
-    Private Function BuildCompanyFooter(ByVal companyInfo As PasswordResetCompanyInfo) As String
-        If companyInfo Is Nothing Then
-            Return "Comunicazione automatica di servizio. Non rispondere con dati sensibili a questa email."
+        If companyInfo IsNot Nothing Then
+            brand.SiteUrl = companyInfo.WebsiteUrl
+            brand.LogoWeb = companyInfo.LogoWeb
+            brand.Phone = companyInfo.Phone
+            brand.AddressLine = companyInfo.Address
+            brand.CityLine = BuildCompanyCityLine(companyInfo)
+            brand.VatNumber = companyInfo.VatNumber
         End If
+
+        Return brand
+    End Function
+
+    Private Function BuildCompanyCityLine(ByVal companyInfo As PasswordResetCompanyInfo) As String
+        If companyInfo Is Nothing Then Return ""
 
         Dim parts As New System.Collections.Generic.List(Of String)()
-        Dim companyName As String = FirstNonEmpty(companyInfo.Name, "KeepStore")
-        parts.Add("<strong>" & HtmlText(companyName) & "</strong>")
+        If companyInfo.ZipCode <> "" Then parts.Add(companyInfo.ZipCode)
+        If companyInfo.City <> "" Then parts.Add(companyInfo.City)
 
-        Dim addressLine As String = BuildAddressLine(companyInfo)
-        If addressLine <> "" Then parts.Add(HtmlText(addressLine))
-
-        If companyInfo.Phone <> "" Then parts.Add("Telefono: " & HtmlText(companyInfo.Phone))
-        If companyInfo.Email <> "" Then parts.Add("Email: " & HtmlText(companyInfo.Email))
-        If companyInfo.WebsiteUrl <> "" Then
-            Dim webUrl As String = NormalizeWebsiteUrl(companyInfo.WebsiteUrl)
-            parts.Add("Sito: <a href='" & HttpUtility.HtmlAttributeEncode(webUrl) & "' style='color:#1f5eff;text-decoration:none;'>" & HtmlText(companyInfo.WebsiteUrl) & "</a>")
-        End If
-        If companyInfo.VatNumber <> "" Then parts.Add("P.IVA: " & HtmlText(companyInfo.VatNumber))
-
-        parts.Add("Comunicazione automatica di servizio. Non rispondere con dati sensibili a questa email.")
-        Return String.Join("<br/>", parts.ToArray())
-    End Function
-
-    Private Function BuildAddressLine(ByVal companyInfo As PasswordResetCompanyInfo) As String
-        Dim location As String = ""
-        If companyInfo.ZipCode <> "" Then location &= companyInfo.ZipCode
-        If companyInfo.City <> "" Then location = FirstNonEmpty(location & " " & companyInfo.City, companyInfo.City)
-        If companyInfo.Province <> "" Then location &= " (" & companyInfo.Province & ")"
-
-        If companyInfo.Address <> "" AndAlso location <> "" Then Return companyInfo.Address & " - " & location
-        Return FirstNonEmpty(companyInfo.Address, location)
+        Dim cityLine As String = String.Join(" ", parts.ToArray())
+        If companyInfo.Province <> "" Then cityLine &= " (" & companyInfo.Province & ")"
+        Return cityLine.Trim()
     End Function
 
     Private Function FirstNonEmpty(ParamArray values As String()) As String
@@ -577,17 +511,6 @@ Public Module PasswordResetTokenService
         Next
 
         Return ""
-    End Function
-
-    Private Function HtmlText(ByVal value As String) As String
-        Return HttpUtility.HtmlEncode(Convert.ToString(value))
-    End Function
-
-    Private Function NormalizeWebsiteUrl(ByVal value As String) As String
-        Dim url As String = Convert.ToString(value).Trim()
-        If url = "" Then Return ""
-        If url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then Return url
-        Return "https://" & url
     End Function
 
     Private Function BuildResetUrl(ByVal page As Page, ByVal clearToken As String) As String
