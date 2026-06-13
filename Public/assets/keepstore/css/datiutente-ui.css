@@ -4,6 +4,60 @@
 /* Messaggi esito (Label server). Nasconde automaticamente se vuoto. */
 .ks-esito:empty{display:none;}
 
+.ks-breadcrumb,
+.ks-userdata-legacy-head,
+.ks-userdata-legacy-tabs {
+  display: none;
+}
+
+.ks-userdata-modern {
+  min-height: 520px;
+}
+
+.ks-userdata-hero,
+.ks-userdata-actions-card,
+.ks-userdata-legacy-card {
+  border: 1px solid #e7ebf0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.ks-userdata-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 24px;
+  padding: 24px;
+}
+
+.ks-userdata-actions-card,
+.ks-userdata-legacy-card {
+  padding: 22px;
+}
+
+.ks-userdata-actions-card {
+  margin-bottom: 24px;
+}
+
+.ks-userdata-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ks-userdata-tab-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ks-userdata-tab-links .nav-link.active {
+  border-color: #333e48;
+  background: #333e48;
+  color: #fff;
+}
+
 .ks-userdata-tabs {
   border-bottom: 1px solid rgba(0,0,0,.08);
 }
@@ -20,7 +74,7 @@
   display: none;
 }
 
-.ks-userdata-formview:first-of-type {
+.ks-userdata-formview[data-fv-id="fvUtente"] {
   display: block;
 }
 
@@ -52,6 +106,19 @@
 
 /* Make dl rows breathe a bit on small screens */
 @media (max-width: 575.98px) {
+  .ks-userdata-hero,
+  .ks-userdata-legacy-card > .d-flex {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ks-userdata-actions,
+  .ks-userdata-actions .tf-btn,
+  .ks-userdata-tab-links,
+  .ks-userdata-tab-links .tf-btn {
+    width: 100%;
+  }
+
   .ks-kv dt,
   .ks-kv dd {
     flex: 0 0 100%;
