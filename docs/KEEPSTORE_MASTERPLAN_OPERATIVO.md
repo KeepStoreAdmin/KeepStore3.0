@@ -142,10 +142,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo merge PR #174, smoke live checkout consenso condizioni / limite note e aggiornamento metodo operativo:
+Stato di riferimento dopo chiusura blocco email `KeepStoreEmailTemplate`:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `9ebb9fc80dec78a686f3d48233501bb3f02f94b0`
+- HEAD stabile: `6fff30eb04811e0b16c5434486ee498796bbf0d7`
 - Merge PR #98: `12f4fd5ec2dff6c15ee7479e854628bd71dc9ed5`
 - Merge PR #100: `f0eeccc12d701268641dc10950bb1253670f86fa`
 - Merge PR #101: `7bfd40cb685e0500f427cf4a481516f70038d235`
@@ -1489,6 +1489,7 @@ Stato finale post-cleanup warning:
 - `EMAIL-LEGACY-SENDS-CLEANUP-1A` / PR #177 su branch `task/email-legacy-sends-cleanup-1a`: inventario controllato residui email legacy dopo migrazione ordine, registrazione/profilo e reset/remind a `KeepStoreEmailTemplate`. Commit funzionale non necessario: nessun codice runtime rimosso perche gli elementi rimasti sono trasporto SMTP vivo (`MailMessage`/`SmtpClient`), fallback legacy ordine prudenziale ancora attivo se il renderer fallisce, invii contatto/main fuori scope o import non bloccanti. SMTP/config, destinatari, BCC/mittente, token flow, ordine, DB/schema, gateway, carrello/checkout, prezzi/IVA e documenti runtime restano invariati. La PR registra l'esito di cleanup controllato; smoke runtime resta ammesso solo con SMTP sink/test.
 - `EMAIL-MAIN-CONTACT-CLEANUP-1A` / PR #178 su branch `task/email-main-contact-cleanup-1a`, commit funzionale `f5132b24413dd91b3c29a74317468559fe856c89`, mette in sicurezza solo l'invio contatto legacy di `main.aspx.vb`: body raw HTML eliminato a favore di `KeepStoreEmailTemplate`, From utente non piu usato come mittente diretto, Reply-To utente preservato, destinatario aziendale e SMTP/config invariati, `ex.Message` non piu esposto all'utente. `Contattaci.aspx.vb`, ordine, registrazione/profilo, reset/remind, DB/schema, gateway, carrello/checkout, prezzi/IVA e `web.config` restano fuori scope. Prossimo step eventuale: `EMAIL-CONTATTI-TEMPLATE-1A`.
 - `EMAIL-CONTATTI-TEMPLATE-1A` / PR #179 su branch `task/email-contatti-template-1a`, commit funzionale `fe75c8874fca5d9ae6ecf436f76c3f51a1c085f6`, migra il rendering dell'email contatto di `Contattaci.aspx.vb` al renderer condiviso `KeepStoreEmailTemplate`. Restano preservati destinatario aziendale, mittente aziendale, Reply-To utente, subject `[Contatto sito]`, SMTP/config, logging e messaggi utente non tecnici; `main.aspx.vb`, ordine, registrazione/profilo, reset/remind, DB/schema, gateway, carrello/checkout, prezzi/IVA e `web.config` restano fuori scope. Prossimo step: review/merge PR #179 e smoke statico post-merge.
+- Blocco email `KeepStoreEmailTemplate` chiuso: email ordine, PR #175 registrazione/profilo, PR #176 reset/remind password con token flow preservato, PR #178 contatto legacy `main.aspx.vb` e PR #179 `Contattaci.aspx.vb` sono completate e validate con smoke statici A dove richiesto. Nessuna email live inviata, nessun utente live creato, nessuna password reale resettata; SMTP/config, DB/schema, gateway, carrello/checkout, prezzi/IVA e `main` restano invariati. Rendering/runtime non eseguito per assenza di ambiente autorizzato con SMTP sink; eventuale smoke runtime futuro richiede DB test, account test e SMTP sink.
 - Il cleanup completo sidebar/nav inline legacy account non e ancora concluso per `datiutente.aspx`.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
