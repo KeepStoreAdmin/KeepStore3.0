@@ -14,6 +14,11 @@
             padding-right: 5.75rem;
         }
 
+        #<%= tbPassword.ClientID %>::-ms-reveal,
+        #<%= tbPassword.ClientID %>::-ms-clear {
+            display: none;
+        }
+
         .ks-login-password-toggle {
             position: absolute;
             top: 50%;
