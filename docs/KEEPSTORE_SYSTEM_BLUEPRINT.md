@@ -297,6 +297,8 @@ Area progressivamente stabilizzata con shell account ONSUS, `body.ks-page-accoun
 
 Auditato in LOGIN-REGISTER-1A e mitigato in LOGIN-REGISTER-SECURITY-1. Usa ancora `vlogin`, sessione e confronto password case-insensitive; hash non implementato. I messaggi pubblici di errore sono ora generici per ridurre enumeration tra username inesistente, password errata e utente non attivo.
 
+`LOGIN-PASSWORD-TOGGLE-1A` / PR #184 interviene solo sulla resa del campo password in `login.aspx`: mantiene il toggle custom mostra/nascondi gia presente e nasconde il reveal nativo del browser per evitare doppio controllo visivo. Non modifica `login.aspx.vb`, autenticazione server-side, sessione/cookie, registrazione, reset/remind, DB/schema/SP, checkout/carrello/ordine/gateway o email/template.
+
 ### 9.13 Registrazione
 
 Auditata in LOGIN-REGISTER-1A e mitigata in LOGIN-REGISTER-SECURITY-1. Crea utente/login con stored procedure legacy, senza schema change e senza hash. La policy visibile e stata allineata a 8-25, il lowercase forzato della password e stato rimosso e i flow post-registrazione basati su password in email/sessione/URL sono stati neutralizzati.
@@ -1091,6 +1093,7 @@ Non implementare runtime email senza task dedicato e senza conferma delle fonti 
 
 | Data | Task | PR | Commit | File modificati | Sintesi tecnica | Impatto funzionale | Note/debito residuo |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-06-13 | LOGIN-PASSWORD-TOGGLE-1A | #184 | `a1851c52dc1fb03af40a94618c068a5168504ff5` | `login.aspx`, documentazione | Nasconde il reveal nativo browser sul campo password login lasciando il toggle custom come unico controllo visibile | Elimina il doppio "Mostra password" senza cambiare login/auth | `login.aspx.vb`, sessione/cookie, registrazione/reset/remind, DB/schema/SP, checkout/gateway/email fuori scope; PR da review/merge |
 | 2026-06-13 | ACCOUNT-ADDRESS-ORDER-GUARD-1A | #183 | `d7ca913aec57a5f5aebb1537ef08de07a71b3124` | `ordine.aspx.vb`, documentazione | Guard ownership su `SCEGLIINDIRIZZO > 0` prima di `Carrello_Documento` | Blocca ordine se l'indirizzo alternativo selezionato non appartiene all'utente o non e valido | Nessun cambio DB/schema/SP, carrello, gateway, email/template, prezzi/IVA/totali; PR da review/merge |
 | 2026-06-13 | DOCS-ACCOUNT-AREA-UI-CLOSE-1A | n/a | n/a | documentazione | Chiusura Area Cliente UI/datiutente dopo smoke manuale A | PR #180/#181/#182 e audit duplicati confermati chiusi | Nessun codice, DB/schema/SP, checkout/carrello/ordine/gateway/email modificato |
 | 2026-06-13 | ACCOUNT-AREA-LEGACY-DUPLICATES-1A | n/a | n/a | documentazione | Audit statico post-merge PR #182 su pagine account, sidebar e CSS | Nessun duplicato legacy evidente residuo fuori layout; nessun fix applicativo aggiuntivo | Smoke manuale UI area account esito A |
