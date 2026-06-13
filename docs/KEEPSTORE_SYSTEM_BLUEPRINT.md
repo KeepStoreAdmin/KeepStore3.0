@@ -279,6 +279,8 @@ Area progressivamente stabilizzata con shell account ONSUS, `body.ks-page-accoun
 
 `ACCOUNT-DATIUTENTE-UI-FIX-1A` / PR #182 rimuove il blocco legacy duplicato rimasto fuori layout dopo PR #181: breadcrumb legacy, intestazione "Dati di accesso / account" e tab "Dettagli account" / "Indirizzi" fuori contesto non vengono piu renderizzati. Restano la UI moderna centrale e la sezione legacy incapsulata; `datiutente.aspx.vb` e la logica dati PR #180 non cambiano.
 
+`ACCOUNT-AREA-LEGACY-DUPLICATES-1A` conferma post-merge PR #182 che le pagine account principali (`myaccount.aspx`, `my-account-edit.aspx`, `my-account-address.aspx`, `datiutente.aspx`), `AccountSidebar.ascx` e i CSS account non mostrano duplicati legacy evidenti fuori layout. I selettori CSS storici `wrap-sidebar-account` restano non referenziati dal markup account ispezionato; nessun fix applicativo aggiuntivo e nessun branch/PR separato necessari.
+
 ### 9.10 Indirizzi
 
 `my-account-address.aspx` e pagina ONSUS autonoma per indirizzi account: indirizzo principale, sedi alternative, add/edit sede alternativa e scelta predefinito sono stabilizzati. Delete indirizzi resta da valutare con task dedicato. La selezione manuale indirizzo nel carrello e chiusa nel blocco `CART-ADDRESS-SELECTION`; add/edit inline carrello e lookup CAP da `city_registry` sono chiusi nel blocco `CART-INLINE-ADDRESS-CITYREGISTRY-STEP`.
@@ -1085,7 +1087,8 @@ Non implementare runtime email senza task dedicato e senza conferma delle fonti 
 
 | Data | Task | PR | Commit | File modificati | Sintesi tecnica | Impatto funzionale | Note/debito residuo |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-06-13 | ACCOUNT-DATIUTENTE-UI-FIX-1A | #182 | `a0023fbc7b27e06a2f82aea49c475576b7fcdb38` | `datiutente.aspx`, `Public/assets/keepstore/css/datiutente-ui.css`, documentazione | Rimozione blocco legacy duplicato fuori layout da pagina dati utente | Lascia una sola UI account coerente e mantiene la sezione legacy solo dentro la card moderna | `datiutente.aspx.vb`, DB/schema/SP, checkout/carrello/ordine, email/template, registrazione e pagine account moderne fuori scope; PR da review/merge |
+| 2026-06-13 | ACCOUNT-AREA-LEGACY-DUPLICATES-1A | n/a | n/a | documentazione | Audit statico post-merge PR #182 su pagine account, sidebar e CSS | Nessun duplicato legacy evidente residuo fuori layout; nessun fix applicativo aggiuntivo | Smoke manuale UI area account come prossimo controllo |
+| 2026-06-13 | ACCOUNT-DATIUTENTE-UI-FIX-1A | #182 | `a0023fbc7b27e06a2f82aea49c475576b7fcdb38` | `datiutente.aspx`, `Public/assets/keepstore/css/datiutente-ui.css`, documentazione | Rimozione blocco legacy duplicato fuori layout da pagina dati utente | Lascia una sola UI account coerente e mantiene la sezione legacy solo dentro la card moderna | `datiutente.aspx.vb`, DB/schema/SP, checkout/carrello/ordine, email/template, registrazione e pagine account moderne fuori scope; PR mergeata |
 | 2026-06-13 | ACCOUNT-DATIUTENTE-UI-1A | #181 | `bd26979e7d9572fe03a864aa6de18ec6f862dbfc` | `datiutente.aspx`, `Public/assets/keepstore/css/datiutente-ui.css`, documentazione | Sistemazione UI pagina legacy dati utente: card ponte account, CTA verso pagine moderne e sezione legacy incapsulata | Rende la pagina compatibile meno vuota/grezza senza cambiare salvataggi o ownership PR #180 | DB/schema/SP, checkout/carrello/ordine, email/template, registrazione e pagine account moderne fuori scope; PR da review/merge |
 | 2026-06-13 | ACCOUNT-DATIUTENTE-VALIDATION-1A | #180 | `82c85d13d73128824613018f3975b22fe9165569` | `datiutente.aspx.vb`, documentazione | Hardening minimo pagina legacy dati utente: ownership `LoginId`/`UtentiId`, validazioni server-side leggere e messaggi non tecnici | Riduce rischio modifica dati non coerenti o non appartenenti all'utente loggato senza rifare la pagina legacy | DB/schema/SP, checkout/carrello/ordine, email/template, registrazione e pagine account moderne fuori scope; PR da review/merge |
 | 2026-06-13 | EMAIL-CONTATTI-TEMPLATE-1A | #179 | `fe75c8874fca5d9ae6ecf436f76c3f51a1c085f6` | `Contattaci.aspx.vb`, documentazione | Migrazione body email contatto di `Contattaci.aspx.vb` al renderer standard HTML/plain text | Uniforma il form Contattaci al template email condiviso mantenendo mittente/destinatario/Reply-To e SMTP esistenti | `main.aspx.vb`, ordine, registrazione/profilo, reset/remind, DB/schema, gateway e carrello/checkout fuori scope; invio live non eseguito |
@@ -1147,7 +1150,7 @@ Non implementare runtime email senza task dedicato e senza conferma delle fonti 
 - `datiutente.aspx` legacy/compatibilita con tab/JS e gestione salvataggi/destinazioni.
 - Delete indirizzi non migrato; add/edit sedi alternative e predefinito sono ora su `my-account-address.aspx`.
 - Carrello indirizzi/CAP/step `Conferma` chiuso con `CART-ADDRESS-SELECTION`, `CART-INLINE-ADDRESS-PAYPAL-RETURN` e `CART-INLINE-ADDRESS-CITYREGISTRY-STEP`; non riaprire salvo bug live verificato. Gateway/core checkout e pagamenti restano task separati.
-- Cleanup completo sidebar/nav inline legacy su `datiutente.aspx` da completare.
+- Cleanup sidebar/nav inline legacy account verificato da `ACCOUNT-AREA-LEGACY-DUPLICATES-1A`: nessun duplicato evidente residuo fuori layout da correggere.
 - `LOGIN-REGISTER-SECURITY-1B`: chiuso con PR #117.
 - `REMIND-RESET-1A`: audit/progettazione reset tokenizzato, completato read-only.
 - `REMIND-RESET-BLUEPRINT-1B`: aggiornare Blueprint con progettazione reset.
