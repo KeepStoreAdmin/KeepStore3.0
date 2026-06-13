@@ -1010,6 +1010,8 @@ Il sistema email e misto legacy/moderno:
 
 Il blocco email account/auth/password e chiuso lato static smoke: PR #175 e PR #176 sono mergeate, registrazione/profilo e reset/remind usano `KeepStoreEmailTemplate`, gli smoke statici sono A e non sono stati eseguiti invii live, creazioni utenti live o reset password reali. Il runtime rendering/smoke resta consentito solo in ambiente autorizzato con DB test, account test e SMTP sink; SMTP/config, DB/schema, gateway, carrello/checkout, prezzi/IVA, email ordine e token flow reset restano invariati.
 
+`EMAIL-LEGACY-SENDS-CLEANUP-1A` / PR #177 classifica i residui email dopo la migrazione al template condiviso. `MailMessage` e `SmtpClient` restano trasporto SMTP vivo per ordine, registrazione/profilo e reset/remind; non vanno rimossi finche il trasporto non viene centralizzato in un task dedicato. Il fallback HTML legacy di `ordine.aspx.vb` resta prudenzialmente attivo solo se il renderer ordine fallisce; gli invii `Contattaci.aspx.vb` e `main.aspx.vb` sono fuori scope account/auth/password e l'import non usato in `documenti.aspx.vb` non blocca il runtime. Nessun codice e stato rimosso nel cleanup controllato per evitare cambi funzionali non richiesti.
+
 ### 15.2 Dati DB coinvolti
 
 Fonti dati ordine:
