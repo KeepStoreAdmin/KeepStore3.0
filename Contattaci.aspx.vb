@@ -5,6 +5,7 @@ Imports System
 Imports System.Configuration
 Imports System.Net
 Imports System.Net.Mail
+Imports System.Net.Mime
 Imports System.Text
 Imports System.Web
 Imports MySql.Data.MySqlClient
@@ -168,17 +169,8 @@ Partial Class Contattaci
                 oMsg.Subject = "[Contatto sito] " & oggetto
                 oMsg.SubjectEncoding = Encoding.UTF8
                 oMsg.BodyEncoding = Encoding.UTF8
-                oMsg.IsBodyHtml = True
-
-                Dim sb As New StringBuilder()
-                sb.Append("<font face='arial' size='2' color='black'>")
-                sb.Append("<b>Richiesta da:</b> ").Append(HttpUtility.HtmlEncode(nome)).Append("<br/>")
-                sb.Append("<b>Email:</b> ").Append(HttpUtility.HtmlEncode(fromEmailUser)).Append("<br/>")
-                sb.Append("<b>Oggetto:</b> ").Append(HttpUtility.HtmlEncode(oggetto)).Append("<br/><br/>")
-                sb.Append("<b>Messaggio:</b><br/>")
-                sb.Append(HttpUtility.HtmlEncode(messaggio).Replace(vbCrLf, "<br/>"))
-                sb.Append("</font>")
-                oMsg.Body = sb.ToString()
+                oMsg.HeadersEncoding = Encoding.UTF8
+                ApplyRenderedContactEmailMime(oMsg, RenderContactEmail(aziendaNome, aziendaEmail, nome, fromEmailUser, oggetto, messaggio))
 
                 Using oSmtp As New SmtpClient(smtpHost)
                     oSmtp.DeliveryMethod = SmtpDeliveryMethod.Network
@@ -204,6 +196,52 @@ Partial Class Contattaci
             ShowAlert("Errore durante l'invio del messaggio. Riprova più tardi o contattaci via email/telefono.", True)
         End Try
     End Sub
+
+    Private Function RenderContactEmail(ByVal aziendaNome As String,
+                                        ByVal aziendaEmail As String,
+                                        ByVal nome As String,
+                                        ByVal fromEmailUser As String,
+                                        ByVal oggetto As String,
+                                        ByVal messaggio As String) As KeepStoreEmailRenderResult
+        Dim brand As New KeepStoreEmailBrandInfo()
+        brand.CompanyName = aziendaNome
+        brand.SupportEmail = aziendaEmail
+        brand.SiteUrl = BuildSiteHomeUrl()
+        brand.LogoWeb = KeepStoreEmailLogo.SafeLogoFileName(S("AziendaLogo"))
+
+        Return KeepStoreContactEmailMessages.RenderContactRequest(brand, nome, fromEmailUser, oggetto, messaggio)
+    End Function
+
+    Private Sub ApplyRenderedContactEmailMime(ByVal message As MailMessage, ByVal renderedEmail As KeepStoreEmailRenderResult)
+        message.AlternateViews.Clear()
+        message.Body = ""
+        message.IsBodyHtml = False
+
+        Dim plainBody As String = renderedEmail.PlainTextBody
+        If String.IsNullOrWhiteSpace(plainBody) Then
+            plainBody = "Richiesta contatto disponibile in formato HTML."
+        End If
+
+        message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(plainBody, Encoding.UTF8, MediaTypeNames.Text.Plain))
+        message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(renderedEmail.HtmlBody, Encoding.UTF8, MediaTypeNames.Text.Html))
+    End Sub
+
+    Private Function BuildSiteHomeUrl() As String
+        Dim url As String = S("AziendaUrl")
+        If url = "" Then
+            Return "https://www.taikun.it"
+        End If
+
+        If url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) Then
+            Return "https://" & url.Substring(7)
+        End If
+
+        If url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+            Return url
+        End If
+
+        Return "https://" & url
+    End Function
 
     Private Sub ShowAlert(ByVal msg As String, ByVal isError As Boolean)
         pnlAlert.Visible = True
