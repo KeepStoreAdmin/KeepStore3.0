@@ -173,7 +173,11 @@ Public NotInheritable Class KeepStoreEmailSubjects
     End Sub
 
     Public Shared Function Registration(ByVal companyName As String) As String
-        Return Company(companyName) & " - Registrazione completata"
+        Return "Registrazione account " & Company(companyName)
+    End Function
+
+    Public Shared Function AccountProfileUpdated(ByVal companyName As String) As String
+        Return "Aggiornamento dati account " & Company(companyName)
     End Function
 
     Public Shared Function PasswordReset(ByVal companyName As String) As String
@@ -245,6 +249,135 @@ Public NotInheritable Class KeepStoreEmailSubjects
             suffix &= " del " & documentDate.Trim()
         End If
         Return suffix
+    End Function
+End Class
+
+Public Class KeepStoreAccountEmailProfile
+    Public Property DisplayName As String
+    Public Property Username As String
+    Public Property Email As String
+    Public Property BillingName As String
+    Public Property BillingCompany As String
+    Public Property FiscalCode As String
+    Public Property VatNumber As String
+    Public Property BillingAddress As String
+    Public Property BillingCityLine As String
+    Public Property Phone As String
+    Public Property MobilePhone As String
+    Public Property ShippingName As String
+    Public Property ShippingCompany As String
+    Public Property ShippingAddress As String
+    Public Property ShippingCityLine As String
+    Public Property ShippingPhone As String
+End Class
+
+Public NotInheritable Class KeepStoreAccountEmailMessages
+    Private Sub New()
+    End Sub
+
+    Public Shared Function RenderRegistration(ByVal brand As KeepStoreEmailBrandInfo,
+                                              ByVal profile As KeepStoreAccountEmailProfile) As KeepStoreEmailRenderResult
+        Return RenderAccountEmail(brand,
+                                  profile,
+                                  "Registrazione account completata",
+                                  "Registrazione completata",
+                                  "La registrazione al sito e stata completata.",
+                                  "Di seguito trovi il riepilogo dei dati forniti. Puoi modificarli in seguito dalla tua area account.",
+                                  "Questa email conferma la creazione dell'account e non contiene password.")
+    End Function
+
+    Public Shared Function RenderProfileUpdated(ByVal brand As KeepStoreEmailBrandInfo,
+                                                ByVal profile As KeepStoreAccountEmailProfile) As KeepStoreEmailRenderResult
+        Return RenderAccountEmail(brand,
+                                  profile,
+                                  "Dati account aggiornati",
+                                  "Profilo aggiornato",
+                                  "I dati del tuo account sono stati aggiornati.",
+                                  "Di seguito trovi il riepilogo dei dati salvati. Puoi modificarli nuovamente dalla tua area account.",
+                                  "Questa email conferma l'aggiornamento del profilo e non contiene password.")
+    End Function
+
+    Private Shared Function RenderAccountEmail(ByVal brand As KeepStoreEmailBrandInfo,
+                                               ByVal profile As KeepStoreAccountEmailProfile,
+                                               ByVal title As String,
+                                               ByVal statusBadge As String,
+                                               ByVal intro As String,
+                                               ByVal bodyLine As String,
+                                               ByVal footerNote As String) As KeepStoreEmailRenderResult
+        If brand Is Nothing Then
+            brand = New KeepStoreEmailBrandInfo()
+        End If
+        If profile Is Nothing Then
+            profile = New KeepStoreAccountEmailProfile()
+        End If
+
+        Dim model As New KeepStoreEmailMessageModel()
+        model.Brand = brand
+        model.Recipient.DisplayName = profile.DisplayName
+        model.Recipient.Email = profile.Email
+        model.Title = title
+        model.StatusBadge = statusBadge
+        model.Preheader = title
+        model.Intro = "Gentile " & FirstNonEmpty(profile.DisplayName, "cliente") & ", " & intro
+        model.BodyLines.Add(bodyLine)
+        model.FooterNote = footerNote
+
+        Dim accessBlock As New KeepStoreEmailInfoBlock()
+        accessBlock.Title = "Dati accesso"
+        AddInfoItem(accessBlock, "Username", profile.Username)
+        AddInfoItem(accessBlock, "Email", profile.Email)
+        model.InfoBlocks.Add(accessBlock)
+
+        Dim billingBlock As New KeepStoreEmailInfoBlock()
+        billingBlock.Title = "Dati fatturazione"
+        AddInfoItem(billingBlock, "Nome", profile.BillingName)
+        AddInfoItem(billingBlock, "Cognome/Ragione sociale", profile.BillingCompany)
+        AddInfoItem(billingBlock, "Codice fiscale", profile.FiscalCode)
+        AddInfoItem(billingBlock, "Partita IVA", profile.VatNumber)
+        AddInfoItem(billingBlock, "Indirizzo", profile.BillingAddress)
+        AddInfoItem(billingBlock, "Localita", profile.BillingCityLine)
+        AddInfoItem(billingBlock, "Telefono", profile.Phone)
+        AddInfoItem(billingBlock, "Cellulare", profile.MobilePhone)
+        model.InfoBlocks.Add(billingBlock)
+
+        Dim shippingBlock As New KeepStoreEmailInfoBlock()
+        shippingBlock.Title = "Dati spedizione"
+        AddInfoItem(shippingBlock, "Nome", profile.ShippingName)
+        AddInfoItem(shippingBlock, "Cognome/Ragione sociale", profile.ShippingCompany)
+        AddInfoItem(shippingBlock, "Indirizzo", profile.ShippingAddress)
+        AddInfoItem(shippingBlock, "Localita", profile.ShippingCityLine)
+        AddInfoItem(shippingBlock, "Telefono", profile.ShippingPhone)
+        model.InfoBlocks.Add(shippingBlock)
+
+        model.LegalTitle = "Comunicazione di servizio"
+        model.LegalText = "La comunicazione e destinata al titolare dell'account. Se hai ricevuto questa email per errore, contatta l'assistenza senza inoltrare dati sensibili."
+
+        Return KeepStoreEmailRenderer.Render(model)
+    End Function
+
+    Private Shared Sub AddInfoItem(ByVal block As KeepStoreEmailInfoBlock, ByVal label As String, ByVal value As String)
+        If block Is Nothing OrElse String.IsNullOrWhiteSpace(value) Then
+            Return
+        End If
+
+        Dim item As New KeepStoreEmailInfoItem()
+        item.Label = label
+        item.Value = value.Trim()
+        block.Items.Add(item)
+    End Sub
+
+    Private Shared Function FirstNonEmpty(ParamArray values() As String) As String
+        If values Is Nothing Then
+            Return ""
+        End If
+
+        For Each value As String In values
+            If Not String.IsNullOrWhiteSpace(value) Then
+                Return value.Trim()
+            End If
+        Next
+
+        Return ""
     End Function
 End Class
 

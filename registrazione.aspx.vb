@@ -1,6 +1,9 @@
 ﻿Imports MySql.Data.MySqlClient
+Imports System.Collections.Generic
 Imports System.Data
 Imports System.Net.Mail
+Imports System.Net.Mime
+Imports System.Text
 Imports CityRegistry.CityRegistrySoapClient
 
 Partial Class registrazione
@@ -587,6 +590,7 @@ Partial Class registrazione
                 'Invio l'email di registrazione effettuata
                 Email("Conferma registrazione al sito ", 1)
             Catch ex As Exception
+                KeepStoreLog.Error("registrazione", "Errore invio email registrazione account", ex, HttpContext.Current)
                 'Se l'email esiste già lo blocco
                 'Me.lblEmail.Text = "Email errata !!"
                 'Me.tbEmail.Focus()
@@ -956,72 +960,13 @@ Partial Class registrazione
     End Sub
 
     Public Sub Email(ByVal oggetto As String, ByVal tipo As Integer)
-        Dim indirizzoSecondario As String = ""
-
         Dim oMsg As MailMessage = New MailMessage()
         oMsg.From = New MailAddress(Session("AziendaEmail"), Session("AziendaNome"))
         oMsg.To.Add(Me.tbEmail.Text)
         oMsg.Bcc.Add(New MailAddress(Session("AziendaEmail"), Session("AziendaNome")))
-        oMsg.Subject = oggetto & Session("AziendaNome")
-        oMsg.Body = "<font face=arial size=2 color=black>Gentile " & Me.tbNomeCognome.Text.ToUpper & "," & _
-                    "<br>La registrazione al sito web <u>" & Session("AziendaUrl") & "</u> e stata completata." & _
-                    "<br><br><b>Username:</b> " & Me.tbUsername.Text & "<br><b>Email:</b> " & Me.tbEmail.Text.ToLower & " </b>" & _
-                    "<br><br>Di seguito, Le riepiloghiamo i dati che ci ha fornito, pregandola di controllarne la correttezza." & _
-                    "<br>Se necessario potrà comunque modificare tali dati accedendo alla sezione <i>MY ACCOUNT</i>.</font>" & _
-                    "<br><br><table cellspacing=3 cellpadding=3 style='font-family:arial;font-size:9pt'>" & _
-                    "<tr><td colspan='2' style='text-align:center;' bgcolor=whitesmoke><b>INDIRIZZO FATTURAZIONE</b></td></tr>" & _
-                    "<tr><td bgcolor=whitesmoke>Nome:</td><td>" & Me.tbNomeCognome.Text.ToUpper & "</td></tr>" & _
-                    "<tr><td bgcolor=whitesmoke>Cognome/Rag.Sociale:</td><td>" & Me.tbRagioneSociale.Text.ToUpper & "</td></tr>" & _
-                    "<tr><td bgcolor=whitesmoke>Codice Fiscale:</td><td>" & Me.tbCodiceFiscale.Text.ToUpper & "</td></tr>" & _
-                    "<tr><td bgcolor=whitesmoke>Partita Iva:</td><td>" & Me.tbPartitaIva.Text.ToUpper & "</td></tr>" & _
-                    "<tr><td bgcolor=whitesmoke>Indirizzo Principale:</td><td>" & Me.tbIndirizzo.Text.ToUpper & "</td></tr>" & _
-                    "<tr><td bgcolor=whitesmoke>Città:</td><td>" & Me.ddlCitta.Text.ToUpper & "</td></tr>" & _
-                    "<tr><td bgcolor=whitesmoke>Provincia:</td><td>" & Me.tbProvincia.Text.ToUpper & "</td></tr>" & _
-                    "<tr><td bgcolor=whitesmoke>Cap:</td><td>" & Me.tbCap.Text.ToUpper & "</td></tr>" & _
-                    "<tr><td bgcolor=whitesmoke>Telefono:</td><td>" & Me.tbTelefono.Text.ToUpper & "</td></tr>" & _
-                    "<tr><td bgcolor=whitesmoke>Fax:</td><td>" & Me.tbFax.Text.ToUpper & "</td></tr>" & _
-                    "<tr><td bgcolor=whitesmoke>Cellulare:</td><td>" & Me.tbCellulare.Text.ToUpper & "</td></tr>" & _
-                    "<tr><td bgcolor=whitesmoke>Skype:</td><td>" & Me.tbSkype.Text.ToLower & "</td></tr>" & _
-                    "<tr><td bgcolor=whitesmoke>Sito:</td><td>" & Me.tbSito.Text.ToLower & "</td></tr>" & _
-                    "<tr><td bgcolor=whitesmoke>Note:</td><td>" & Me.TextBoxNote.Text & "</td></tr>" & _
-                    "<tr><td colspan='2' style='text-align:center;' bgcolor=whitesmoke><b>INDIRIZZO SPEDIZIONE</b></td></tr>"
-
-        'Indico l'indirizzo di spedizione uguale a quello di fatturazione nel caso quello di spedizione non sia stato specificato
-        If (tbRagioneSocialeA.Text <> "") And (tbIndirizzo2.Text <> "") And (getDdlCittaValue(ddlCitta2) <> "") And (tbProvincia2.Text <> "") And (tbCap2.Text <> "") And (tbTelefono2.Text <> "") Then
-            indirizzoSecondario = "<tr><td bgcolor=whitesmoke>Cogn./Rag Soc:</td><td>" & Me.tbRagioneSocialeA.Text.ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Nome:</td><td>" & Me.tbNomeA.Text.ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Indirizzo:</td><td>" & Me.tbIndirizzo2.Text.ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Città:</td><td>" & Me.getDdlCittaValue(ddlCitta2).ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Provincia:</td><td>" & Me.tbProvincia2.Text.ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Cap:</td><td>" & Me.tbCap2.Text.ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Telefono:</td><td>" & Me.tbTelefono2.Text.ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Fax:</td><td>" & Me.tbFax2.Text.ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Cellulare:</td><td>" & Me.tbCellulare2.Text.ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Zona:</td><td>" & Me.tbZona.Text.ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Note:</td><td>" & Me.tbNote.Text.ToUpper & "</td></tr>" & _
-                                "</table>" & _
-                                "<br><font face=arial size=2 color=black><b>" & Session("AziendaNome") & "</b><br>" & Session("AziendaDescrizione") & "<br>Sito Web: <a href=http://" & Session("AziendaUrl") & ">http://" & Session("AziendaUrl") & "</a> - Email: <a href=mailto:" & Session("AziendaEmail") & ">" & Session("AziendaEmail") & "</a></font>" & _
-                                "<br><br><font face=arial size=1 color=silver>D.Lgs 196/2003 tutela delle persone di altri soggetti rispetto al trattamento di dati personali. La presente comunicazione è destinata esclusivamente al soggetto indicato più sopra quale destinatario o ad eventuali altri soggetti autorizzati a riceverla. Essa contiene informazioni strettamente confidenziali e riservate, la cui comunicazione o diffusione a terzi è proibita, salvo che non sia espressamente autorizzata. Se avete ricevuto questa comunicazione per errore, o se desiderate non ricevere più comunicazioni su novità e offerte, Vi preghiamo di darne immediata comunicazione al mittente scrivendo a " & Me.Session("AziendaEmail") & ". Si informa che i dati forniti saranno tenuti rigorosamente riservati, saranno utilizzati unicamente da " & Me.Session("AziendaNome") & " per comunicare offerte promozionali o novità sui prodotti/servizi e resteranno a disposizione per eventuali variazioni o per la cancellazione ai sensi dell'art. 7 del citato decreto legislativo.</font>"
-        Else
-            indirizzoSecondario = "<tr><td bgcolor=whitesmoke>Cogn./Rag Soc:</td><td>" & Me.tbRagioneSociale.Text.ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Nome:</td><td>" & Me.tbNomeCognome.Text.ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Indirizzo:</td><td>" & Me.tbIndirizzo.Text.ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Città:</td><td>" & Me.ddlCitta.Text.ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Provincia:</td><td>" & Me.tbProvincia.Text.ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Cap:</td><td>" & Me.tbCap.Text.ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Telefono:</td><td>" & Me.tbTelefono.Text.ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Fax:</td><td>" & Me.tbFax.Text.ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Cellulare:</td><td>" & Me.tbCellulare.Text.ToUpper & "</td></tr>" & _
-                                "<tr><td bgcolor=whitesmoke>Note:</td><td>" & Me.TextBoxNote.Text.ToUpper & "</td></tr>" & _
-                                "</table>" & _
-                                "<br><font face=arial size=2 color=black><b>" & Session("AziendaNome") & "</b><br>" & Session("AziendaDescrizione") & "<br>Sito Web: <a href=http://" & Session("AziendaUrl") & ">http://" & Session("AziendaUrl") & "</a> - Email: <a href=mailto:" & Session("AziendaEmail") & ">" & Session("AziendaEmail") & "</a></font>" & _
-                                "<br><br><font face=arial size=1 color=silver>D.Lgs 196/2003 tutela delle persone di altri soggetti rispetto al trattamento di dati personali. La presente comunicazione è destinata esclusivamente al soggetto indicato più sopra quale destinatario o ad eventuali altri soggetti autorizzati a riceverla. Essa contiene informazioni strettamente confidenziali e riservate, la cui comunicazione o diffusione a terzi è proibita, salvo che non sia espressamente autorizzata. Se avete ricevuto questa comunicazione per errore, o se desiderate non ricevere più comunicazioni su novità e offerte, Vi preghiamo di darne immediata comunicazione al mittente scrivendo a " & Me.Session("AziendaEmail") & ". Si informa che i dati forniti saranno tenuti rigorosamente riservati, saranno utilizzati unicamente da " & Me.Session("AziendaNome") & " per comunicare offerte promozionali o novità sui prodotti/servizi e resteranno a disposizione per eventuali variazioni o per la cancellazione ai sensi dell'art. 7 del citato decreto legislativo.</font>"
-        End If
-
-        'Aggiungo la porzione di codice HTML relativa all'indirizzo di spedizione
-        oMsg.Body = oMsg.Body & indirizzoSecondario
-
-        oMsg.IsBodyHtml = True
+        ConfigureAccountEmailEncoding(oMsg)
+        oMsg.Subject = BuildAccountEmailSubject(tipo)
+        ApplyRenderedAccountEmailMime(oMsg, RenderAccountEmail(tipo))
 
         Dim oSmtp As SmtpClient = New SmtpClient(Session("smtp"))
         oSmtp.DeliveryMethod = SmtpDeliveryMethod.Network
@@ -1032,6 +977,173 @@ Partial Class registrazione
 
         oSmtp.Send(oMsg)
     End Sub
+
+    Private Function RenderAccountEmail(ByVal tipo As Integer) As KeepStoreEmailRenderResult
+        Dim brand As KeepStoreEmailBrandInfo = BuildAccountEmailBrand()
+        Dim profile As KeepStoreAccountEmailProfile = BuildAccountEmailProfile()
+
+        If tipo = 2 Then
+            Return KeepStoreAccountEmailMessages.RenderProfileUpdated(brand, profile)
+        End If
+
+        Return KeepStoreAccountEmailMessages.RenderRegistration(brand, profile)
+    End Function
+
+    Private Function BuildAccountEmailSubject(ByVal tipo As Integer) As String
+        If tipo = 2 Then
+            Return KeepStoreEmailSubjects.AccountProfileUpdated(SessionText("AziendaNome"))
+        End If
+
+        Return KeepStoreEmailSubjects.Registration(SessionText("AziendaNome"))
+    End Function
+
+    Private Function BuildAccountEmailBrand() As KeepStoreEmailBrandInfo
+        Dim brand As New KeepStoreEmailBrandInfo()
+        brand.CompanyName = SessionText("AziendaNome")
+        brand.SupportEmail = SessionText("AziendaEmail")
+        brand.SiteUrl = BuildSiteHomeUrl()
+        brand.LogoWeb = ExtractLogoFileName(SessionText("AziendaLogo"))
+        Return brand
+    End Function
+
+    Private Function BuildAccountEmailProfile() As KeepStoreAccountEmailProfile
+        Dim profile As New KeepStoreAccountEmailProfile()
+        profile.DisplayName = TextBoxText(Me.tbNomeCognome)
+        profile.Username = TextBoxText(Me.tbUsername)
+        profile.Email = TextBoxText(Me.tbEmail).ToLowerInvariant()
+        profile.BillingName = TextBoxText(Me.tbNomeCognome)
+        profile.BillingCompany = TextBoxText(Me.tbRagioneSociale)
+        profile.FiscalCode = TextBoxText(Me.tbCodiceFiscale)
+        profile.VatNumber = TextBoxText(Me.tbPartitaIva)
+        profile.BillingAddress = TextBoxText(Me.tbIndirizzo)
+        profile.BillingCityLine = JoinNonEmpty(" ", TextBoxText(Me.tbCap), DropDownText(Me.ddlCitta), TextBoxText(Me.tbProvincia))
+        profile.Phone = TextBoxText(Me.tbTelefono)
+        profile.MobilePhone = TextBoxText(Me.tbCellulare)
+
+        If HasShippingAddress() Then
+            profile.ShippingName = TextBoxText(Me.tbNomeA)
+            profile.ShippingCompany = TextBoxText(Me.tbRagioneSocialeA)
+            profile.ShippingAddress = TextBoxText(Me.tbIndirizzo2)
+            profile.ShippingCityLine = JoinNonEmpty(" ", TextBoxText(Me.tbCap2), SafeShippingCityText(), TextBoxText(Me.tbProvincia2))
+            profile.ShippingPhone = TextBoxText(Me.tbTelefono2)
+        Else
+            profile.ShippingName = profile.BillingName
+            profile.ShippingCompany = profile.BillingCompany
+            profile.ShippingAddress = profile.BillingAddress
+            profile.ShippingCityLine = profile.BillingCityLine
+            profile.ShippingPhone = profile.Phone
+        End If
+
+        Return profile
+    End Function
+
+    Private Sub ConfigureAccountEmailEncoding(ByVal message As MailMessage)
+        message.SubjectEncoding = Encoding.UTF8
+        message.BodyEncoding = Encoding.UTF8
+        message.HeadersEncoding = Encoding.UTF8
+    End Sub
+
+    Private Sub ApplyRenderedAccountEmailMime(ByVal message As MailMessage, ByVal renderedEmail As KeepStoreEmailRenderResult)
+        message.AlternateViews.Clear()
+        message.Body = ""
+        message.IsBodyHtml = False
+
+        Dim plainBody As String = renderedEmail.PlainTextBody
+        If String.IsNullOrWhiteSpace(plainBody) Then
+            plainBody = "Comunicazione account disponibile in formato HTML."
+        End If
+
+        message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(plainBody, Encoding.UTF8, MediaTypeNames.Text.Plain))
+        message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(renderedEmail.HtmlBody, Encoding.UTF8, MediaTypeNames.Text.Html))
+    End Sub
+
+    Private Function HasShippingAddress() As Boolean
+        Return TextBoxText(Me.tbRagioneSocialeA) <> "" AndAlso
+               TextBoxText(Me.tbIndirizzo2) <> "" AndAlso
+               SafeShippingCityText() <> "" AndAlso
+               TextBoxText(Me.tbProvincia2) <> "" AndAlso
+               TextBoxText(Me.tbCap2) <> ""
+    End Function
+
+    Private Function SafeShippingCityText() As String
+        Try
+            Return Convert.ToString(getDdlCittaValue(ddlCitta2)).Trim()
+        Catch
+            Return ""
+        End Try
+    End Function
+
+    Private Function TextBoxText(ByVal tb As TextBox) As String
+        If tb Is Nothing OrElse tb.Text Is Nothing Then
+            Return ""
+        End If
+
+        Return tb.Text.Trim()
+    End Function
+
+    Private Function DropDownText(ByVal ddl As DropDownList) As String
+        If ddl Is Nothing Then
+            Return ""
+        End If
+
+        Return Convert.ToString(ddl.Text).Trim()
+    End Function
+
+    Private Function SessionText(ByVal key As String) As String
+        If Session Is Nothing OrElse Session(key) Is Nothing Then
+            Return ""
+        End If
+
+        Return Convert.ToString(Session(key)).Trim()
+    End Function
+
+    Private Function BuildSiteHomeUrl() As String
+        Dim host As String = SessionText("AziendaUrl")
+        If String.IsNullOrWhiteSpace(host) Then
+            host = "www.taikun.it"
+        End If
+
+        If host.StartsWith("//", StringComparison.Ordinal) OrElse
+           host.StartsWith("data:", StringComparison.OrdinalIgnoreCase) OrElse
+           host.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) Then
+            host = "www.taikun.it"
+        End If
+
+        If host.StartsWith("http://", StringComparison.OrdinalIgnoreCase) Then
+            host = "https://" & host.Substring(7)
+        ElseIf Not host.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
+            host = "https://" & host
+        End If
+
+        Return host.TrimEnd("/"c) & "/"
+    End Function
+
+    Private Function ExtractLogoFileName(ByVal logoPath As String) As String
+        If String.IsNullOrWhiteSpace(logoPath) Then
+            Return ""
+        End If
+
+        Dim normalized As String = logoPath.Replace("\"c, "/"c)
+        Dim slashIndex As Integer = normalized.LastIndexOf("/"c)
+        If slashIndex >= 0 AndAlso slashIndex < normalized.Length - 1 Then
+            Return normalized.Substring(slashIndex + 1)
+        End If
+
+        Return normalized
+    End Function
+
+    Private Function JoinNonEmpty(ByVal separator As String, ParamArray values() As String) As String
+        Dim parts As New List(Of String)()
+        If values IsNot Nothing Then
+            For Each value As String In values
+                If Not String.IsNullOrWhiteSpace(value) Then
+                    parts.Add(value.Trim())
+                End If
+            Next
+        End If
+
+        Return String.Join(separator, parts.ToArray())
+    End Function
 
     Public Sub CaricaDati()
 	
@@ -1393,7 +1505,11 @@ Partial Class registrazione
             Me.tConclusa.Visible = False
             Me.tAggiorna.Visible = True
 
-            Email("Profilo aggiornato sul sito ", 2)
+            Try
+                Email("Profilo aggiornato sul sito ", 2)
+            Catch ex As Exception
+                KeepStoreLog.Error("registrazione", "Errore invio email aggiornamento profilo", ex, HttpContext.Current)
+            End Try
 
         Catch ex As Exception
 

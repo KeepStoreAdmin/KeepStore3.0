@@ -997,12 +997,14 @@ Il sistema email e misto legacy/moderno:
 
 - conferma ordine/preventivo inviata da `ordine.aspx.vb` tramite `SendEmail`, dopo creazione documento e commit;
 - reset password tokenizzato inviato da `App_Code/PasswordResetTokenService.vb`, con HTML + plain text, token monouso e `TokenHash` su DB;
-- registrazione e aggiornamento profilo inviano email da `registrazione.aspx.vb` tramite metodo `Email`;
+- registrazione e aggiornamento profilo inviano email da `registrazione.aspx.vb` tramite metodo `Email`, con contenuto migrato su `App_Code/KeepStoreEmailTemplate.vb`;
 - `documenti.aspx` non invia direttamente documenti/fatture/proforma, ma inserisce richieste in `inviadocumenti`, da completare/verificare con processo esterno o gestionale;
 - cambio password area account, reset completato, cambio stato ordine, spedizione/tracking ed email pagamento gateway dedicate non risultano inviate dal runtime web auditato;
 - `mailconfig` esiste nello schema, ma non risulta usata direttamente dal runtime web auditato.
 
 `EMAIL-ORDER-CONFIRMATION-1A` migra la conferma ordine/preventivo di `ordine.aspx.vb` al renderer standard `App_Code/KeepStoreEmailTemplate.vb` usando esclusivamente dati gia disponibili nel punto di invio: documento, righe, pagamento, spedizione, indirizzi e importi persistiti. Trigger, destinatario, BCC, SMTP, timing e condizioni di invio restano invariati; gateway, costi, totali, IVA, DB/schema e `web.config` non vengono modificati.
+
+`EMAIL-AUTH-TEMPLATE-1A` migra gli invii registrazione nuovo cliente e aggiornamento profilo legacy di `registrazione.aspx.vb` al renderer standard `App_Code/KeepStoreEmailTemplate.vb`. Restano invariati destinatario, BCC aziendale, mittente e configurazione SMTP esistente; il contenuto passa a HTML/plain text coerente con lo standard email, senza password nel body. Reset/remind password, email ordine, DB/schema, gateway, carrello/checkout, `web.config`, appSettings e connection string restano fuori scope.
 
 ### 15.2 Dati DB coinvolti
 
@@ -1059,7 +1061,7 @@ Task consigliati:
 3. `EMAIL-BANKTRANSFER-1A`;
 4. `EMAIL-COD-1A`;
 5. `EMAIL-ORDER-STATUS-1A`;
-6. `EMAIL-AUTH-1A`;
+6. `EMAIL-AUTH-TEMPLATE-1A`;
 7. `EMAIL-PREVIEW-TEST-1A`;
 8. `EMAIL-DELIVERABILITY-1A`.
 
@@ -1069,6 +1071,7 @@ Non implementare runtime email senza task dedicato e senza conferma delle fonti 
 
 | Data | Task | PR | Commit | File modificati | Sintesi tecnica | Impatto funzionale | Note/debito residuo |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-06-13 | EMAIL-AUTH-TEMPLATE-1A | branch PR | pending | `registrazione.aspx.vb`, `App_Code/KeepStoreEmailTemplate.vb`, documentazione | Migrazione email registrazione/profilo al renderer standard HTML/plain text | Email account/auth piu coerenti e senza body HTML legacy hardcoded | Nessun reset/remind, ordine, SMTP/config, DB/schema, gateway, carrello/checkout o `web.config` modificato; smoke controllato demandato a task successivo |
 | 2026-06-10 | EMAIL-ORDER-CONFIRMATION-1A | branch PR | pending | `ordine.aspx.vb`, documentazione | Migrazione conferma ordine/preventivo al renderer standard HTML/plain text con microcopy pagamento/spedizione e fallback legacy | Email ordine piu coerente e professionale | Nessun gateway, totale, DB/schema, SMTP o `web.config` modificato; invio live non testato in PR |
 | 2026-06-11 | EMAIL-ORDER-CONFIRMATION-PRO-1A | branch PR | pending | `ordine.aspx.vb`, `App_Code/KeepStoreEmailTemplate.vb`, documentazione | Rifinitura conferma ordine: causale bonifico completa, tabella prodotti con foto/codice/EAN/prezzi, footer `Aziende`, vettori deduplicati e caption IVA prodotti | Email ordine piu completa e professionale | Nessun gateway, totale/costo reale, DB/schema, SMTP o `web.config` modificato; smoke live demandato a Germano |
 | 2026-06-11 | EMAIL-ORDER-CONFIRMATION-FINAL-POLISH-1A | branch PR | pending | `ordine.aspx.vb`, `App_Code/KeepStoreEmailTemplate.vb`, documentazione | Polish finale email ordine: copy CTA, nota legale documento vendita, font email-safe, riepilogo ordine leggibile e fallback foto articolo `Img1..Img6` | Email conferma ordine piu chiara e robusta | Nessun gateway, totale/costo reale, DB/schema, SMTP, `web.config` o vecchi invii rimossi |
