@@ -253,6 +253,8 @@ I campi input del checkout devono rispettare le lunghezze reali dei contratti DB
 
 Il consenso alle condizioni di vendita nel riepilogo finale checkout deve essere esplicito tramite checkbox non preselezionata, con link a `condizioni-vendita.aspx` e blocco sia client-side sia server-side. Senza consenso non devono essere creati ordine/documento, gateway o email e il carrello deve restare preservato. La pagina `condizioni-vendita.aspx` legge il testo da `Aziende.Condizioni_vendita` con query parametrizzata e non modifica DB/schema.
 
+Durante lo step checkout, il wrapper principale del carrello `CartItemsWrap` deve essere nascosto lato UI per evitare doppio rendering con shell checkout e riepilogo laterale; torna visibile nello step carrello. Il fix `CART-LEGACY-DUPLICATE-AUDIT-FIX-1A` / PR #186 e solo di visibilita UI in `carrello.aspx.vb` e non modifica `ordine.aspx.vb`, `Carrello_Documento`, DB/schema/SP, gateway, email/template, prezzi/IVA/totali/righe, note ordine o consenso condizioni.
+
 ### 9.5 Checkout
 
 Da completare con audit dedicato. Area sensibile: ordini, documenti, pagamento, spedizione.
@@ -1095,6 +1097,7 @@ Non implementare runtime email senza task dedicato e senza conferma delle fonti 
 
 | Data | Task | PR | Commit | File modificati | Sintesi tecnica | Impatto funzionale | Note/debito residuo |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-06-15 | CART-LEGACY-DUPLICATE-AUDIT-FIX-1A | #186 | `38cdab5a76c305940d8735cbf21b3ecc96406959` | `carrello.aspx.vb`, documentazione | Nasconde `CartItemsWrap` durante lo step checkout per evitare doppio rendering con shell checkout e riepilogo laterale | Un solo carrello principale visibile nel percorso checkout, preservando controlli server e flussi esistenti | PR da review/merge; nessun cambio a ordine, `Carrello_Documento`, DB/schema/SP, gateway, email/template, prezzi/IVA/totali/righe |
 | 2026-06-13 | CART-ADDRESS-ERROR-MESSAGE-1A | #185 | `d3b5de9097328b8b28b6729d899d36e1402e6508` | `carrello.aspx.vb`, documentazione | Alert carrello per `addresserror=1` dopo guard indirizzo ordine | L'utente riceve istruzione chiara quando l'indirizzo selezionato non e piu valido | Nessun valore querystring riflesso; nessun cambio ordine, DB/schema/SP, gateway, email/template, prezzi/IVA/totali/righe; PR da review/merge |
 | 2026-06-13 | LOGIN-PASSWORD-TOGGLE-1A | #184 | `a1851c52dc1fb03af40a94618c068a5168504ff5` | `login.aspx`, documentazione | Nasconde il reveal nativo browser sul campo password login lasciando il toggle custom come unico controllo visibile | Elimina il doppio "Mostra password" senza cambiare login/auth | PR mergeata e smoke manuale A; `login.aspx.vb`, sessione/cookie, registrazione/reset/remind, DB/schema/SP, checkout/gateway/email fuori scope |
 | 2026-06-13 | ACCOUNT-ADDRESS-ORDER-GUARD-1A | #183 | `d7ca913aec57a5f5aebb1537ef08de07a71b3124` | `ordine.aspx.vb`, documentazione | Guard ownership su `SCEGLIINDIRIZZO > 0` prima di `Carrello_Documento` | Blocca ordine se l'indirizzo alternativo selezionato non appartiene all'utente o non e valido | PR mergeata; smoke statico A; runtime solo con ambiente sicuro; nessun cambio DB/schema/SP, carrello, gateway, email/template, prezzi/IVA/totali |
