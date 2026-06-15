@@ -14,6 +14,13 @@
             padding-right: 5.75rem;
         }
 
+        #<%= tbPasswordNuova.ClientID %>::-ms-reveal,
+        #<%= tbPasswordNuova.ClientID %>::-ms-clear,
+        #<%= tbPasswordConferma.ClientID %>::-ms-reveal,
+        #<%= tbPasswordConferma.ClientID %>::-ms-clear {
+            display: none;
+        }
+
         .ks-password-toggle {
             position: absolute;
             top: 50%;
