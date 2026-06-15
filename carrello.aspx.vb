@@ -922,6 +922,15 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         wrap.Attributes("data-ks-qty-locked") = If(locked, "true", "false")
     End Sub
 
+    Private Sub SetCartMainWrapHidden(ByVal hidden As Boolean)
+        If CartItemsWrap Is Nothing Then Return
+
+        Dim css As String = If(CartItemsWrap.Attributes("class"), "")
+        css = css.Replace(" d-none", "")
+        If hidden Then css &= " d-none"
+        CartItemsWrap.Attributes("class") = css.Trim()
+    End Sub
+
     Private Function CheckoutStepIsConfirm() As Boolean
         Return String.Equals(Convert.ToString(Session(SessCheckoutStep)), "confirm", StringComparison.Ordinal)
     End Function
@@ -929,6 +938,7 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
     Private Sub ApplyCheckoutStepUi()
         If tOrdine Is Nothing OrElse Not tOrdine.Visible Then
             SetCheckoutStep("cart")
+            SetCartMainWrapHidden(False)
             If CartSummaryColumn IsNot Nothing Then CartSummaryColumn.Visible = True
             If pnlCheckoutConfirm IsNot Nothing Then pnlCheckoutConfirm.Visible = False
             ApplyCheckoutStepperNavigation()
@@ -936,6 +946,7 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         End If
 
         Dim isConfirm As Boolean = CheckoutStepIsConfirm()
+        SetCartMainWrapHidden(True)
         If CartSummaryColumn IsNot Nothing Then CartSummaryColumn.Visible = False
         If pnlCheckoutConfirm IsNot Nothing Then pnlCheckoutConfirm.Visible = isConfirm
         If pSpedizione IsNot Nothing Then pSpedizione.Visible = Not isConfirm
