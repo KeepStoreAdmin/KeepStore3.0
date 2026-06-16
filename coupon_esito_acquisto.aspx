@@ -156,7 +156,7 @@
                 <table style="text-align:left; vertical-align:middle;">
                     <tr>
                         <td>
-                            <img src="Public/Images/servizio_clienti.jpg"  alt="" />
+                            <img src="/Public/assets/images/headphone-2.svg"  alt="" />
                         </td>
                         <td>
                             <div style="font-weight:bold; font-size:22pt; color:Black;">
@@ -183,6 +183,5 @@
         ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" 
     SelectCommand="SELECT * FROM coupon_inserzione"></asp:SqlDataSource>
 </asp:Content>
-
 
 

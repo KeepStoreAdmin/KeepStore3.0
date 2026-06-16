@@ -323,6 +323,8 @@ Chiusura post-smoke: `SMOKE RESET TOKEN: A` conferma che `resetpassword.aspx` se
 
 Chiusura post-smoke: `SMOKE REGISTRATION UI: A` conferma che la registrazione apre senza errori, il blocco "LISTINI AGEVOLATI" non mostra placeholder/immagine mancante e l'icona sconto finale e coerente. Nessun utente reale creato e nessuna email live inviata; nessuna modifica a logica registrazione/auth/sessioni/email/DB, reset/remind/token, carrello/ordine/gateway/prezzi/totali o asset legacy `Public/Images/`.
 
+`LEGACY-ASSET-PATH-AUDIT-FIX-1A` / PR #190 mantiene la regola KeepStore 3.0 sui nuovi path asset: non introdurre `Public/Images/`, usare solo asset esistenti sotto `/Public/assets/images/...` e non sostituire immagini informative/funzionali con placeholder generici. Il fix sicuro applicato e limitato a `coupon_esito_acquisto.aspx`: il vecchio `Public/Images/servizio_clienti.jpg` viene sostituito da `/Public/assets/images/headphone-2.svg`; gli altri riferimenti legacy emersi in carrello, documenti, coupon, promo, wishlist, articolix e rettifica magazzino restano backlog dedicato per rischio funzionale o assenza di equivalente moderno certo.
+
 ### 9.15 Cambio password
 
 `password.aspx` e pagina canonica. Policy server-side 8-25, conferma obbligatoria, nuova diversa dalla vecchia, update centralizzato, `DataPassword` su successo. Hash non implementato.
