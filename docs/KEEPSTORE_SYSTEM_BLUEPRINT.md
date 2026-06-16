@@ -321,6 +321,8 @@ Chiusura post-smoke: `SMOKE RESET TOKEN: A` conferma che `resetpassword.aspx` se
 
 `REGISTRATION-LEGACY-ASSET-PATH-1A` / PR #189 rimuove da `registrazione.aspx` l'unico riferimento legacy `Public/Images/loghi_agevolazione.jpg`. REV1 sostituisce il placeholder generico rifiutato con l'asset reale `/Public/assets/images/coupon/Struttura/sconto_50px.png`, gia versionato nel nuovo schema asset e piu coerente con il blocco listini agevolati. La modifica riguarda solo il path dell'immagine decorativa: form, controlli server, ID, eventi, validatori, code-behind registrazione, login/auth/sessioni/cookie, salvataggi, email/password, reset/remind/token, DB/schema/SP, carrello/ordine/gateway/prezzi/totali restano invariati.
 
+Chiusura post-smoke: `SMOKE REGISTRATION UI: A` conferma che la registrazione apre senza errori, il blocco "LISTINI AGEVOLATI" non mostra placeholder/immagine mancante e l'icona sconto finale e coerente. Nessun utente reale creato e nessuna email live inviata; nessuna modifica a logica registrazione/auth/sessioni/email/DB, reset/remind/token, carrello/ordine/gateway/prezzi/totali o asset legacy `Public/Images/`.
+
 ### 9.15 Cambio password
 
 `password.aspx` e pagina canonica. Policy server-side 8-25, conferma obbligatoria, nuova diversa dalla vecchia, update centralizzato, `DataPassword` su successo. Hash non implementato.
