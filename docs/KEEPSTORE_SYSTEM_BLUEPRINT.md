@@ -319,6 +319,8 @@ Auditata in LOGIN-REGISTER-1A e mitigata in LOGIN-REGISTER-SECURITY-1. Crea uten
 
 Chiusura post-smoke: `SMOKE RESET TOKEN: A` conferma che `resetpassword.aspx` senza token, con `token=` vuoto e con token non valido non mostra piu errori server, stack trace o dettagli tecnici. Il form reset resta nascosto/non utilizzabile senza token valido; PR #187 e PR #188 non modificano `PasswordResetTokenService.vb`, login/auth, sessioni/cookie, registrazione/remind, email/template, DB/schema/SP, carrello/ordine/gateway/prezzi/totali. Il path legacy preesistente `Public/Images/` in `registrazione.aspx` resta backlog separato e non appartiene a questo blocco.
 
+`REGISTRATION-LEGACY-ASSET-PATH-1A` / PR #189 rimuove da `registrazione.aspx` l'unico riferimento legacy `Public/Images/loghi_agevolazione.jpg`, sostituendolo con `/Public/assets/images/placeholder.svg`, fallback interno gia versionato nel nuovo schema asset. La modifica riguarda solo il path dell'immagine decorativa del blocco listini agevolati: form, controlli server, ID, eventi, validatori, code-behind registrazione, login/auth/sessioni/cookie, salvataggi, email/password, reset/remind/token, DB/schema/SP, carrello/ordine/gateway/prezzi/totali restano invariati.
+
 ### 9.15 Cambio password
 
 `password.aspx` e pagina canonica. Policy server-side 8-25, conferma obbligatoria, nuova diversa dalla vecchia, update centralizzato, `DataPassword` su successo. Hash non implementato.
