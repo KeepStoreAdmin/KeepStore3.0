@@ -114,7 +114,7 @@
 
                             <asp:Panel ID="pnlInvalid" runat="server" Visible="false">
                                 <div class="alert alert-warning">
-                                    Il link di reset non e valido o non e piu utilizzabile. Richiedi un nuovo link dalla pagina di recupero accesso.
+                                    Il link per reimpostare la password non e valido o non e piu attivo. Richiedi un nuovo link di reimpostazione password.
                                 </div>
                                 <asp:HyperLink ID="hlRemind" runat="server" NavigateUrl="remind.aspx" CssClass="tf-btn w-100 text-white">
                                     Richiedi un nuovo link
