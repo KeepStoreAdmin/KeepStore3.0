@@ -4,6 +4,10 @@
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
 
+<asp:Panel ID="InvalidCouponRequestPanel" runat="server" Visible="false" style="max-width:720px; margin:30px auto; padding:18px; border:1px solid #ddd; background:#fff; color:#333; font-size:16px; line-height:1.5;">
+    Non è possibile visualizzare l’esito dell’acquisto coupon. Il link non è valido o i dati della richiesta non sono completi.
+</asp:Panel>
+
 <asp:DataList ID="Esito_pagamento_coupon" runat="server" DataSourceID="SqlData_Coupon" style="margin:auto;">
         <ItemTemplate>
             <div style="margin:auto; margin-top:20px; position:relative; width:500px; height:200px; border-color:Black; border-width:1px; border-style:solid;">

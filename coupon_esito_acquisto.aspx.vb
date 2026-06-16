@@ -1,9 +1,14 @@
 ﻿Imports System.IO
+Imports System.Globalization
 Imports System.Net
 Imports System.Web
+Imports System.Web.UI
+Imports System.Web.UI.WebControls
 
 Partial Class coupon_esito_acquisto
     Inherits System.Web.UI.Page
+
+    Private Const InvalidCouponRequestMessage As String = "Non è possibile visualizzare l’esito dell’acquisto coupon. Il link non è valido o i dati della richiesta non sono completi."
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         ' Controllo se l'utente è loggato o meno, se non è loggato lo indirizzo alla registrazione
@@ -18,13 +23,60 @@ Partial Class coupon_esito_acquisto
         End If
         '----------------------------------------------------------------------------------------
 
+        Dim couponId As Integer = 0
+        Dim couponCode As String = NormalizeQueryStringValue(Request.QueryString("cod"))
+        If Integer.TryParse(NormalizeQueryStringValue(Request.QueryString("id")), couponId) = False OrElse
+           couponId <= 0 OrElse
+           IsValidCouponCode(couponCode) = False Then
+            ShowInvalidCouponRequest()
+            Return
+        End If
+
+        SqlData_Coupon.SelectParameters.Clear()
+        SqlData_Coupon.SelectParameters.Add(New Parameter("cod_controllo", TypeCode.String, couponCode))
+
         ' Seleziono il coupon da visualizzare (logica esistente)
         SqlData_CouponInserzioni.SelectCommand =
             "SELECT * FROM coupon_inserzione " &
             "JOIN coupon_partners ON coupon_inserzione.idPartner=coupon_partners.idPartner " &
             "JOIN coupon_tabella_temporanea ON coupon_inserzione.idCoupon=coupon_tabella_temporanea.idCoupon " &
-            "WHERE (coupon_tabella_temporanea.idCoupon=" & Request.QueryString("id") & ") " &
-            "AND (cod_controllo='" & Request.QueryString("cod") & "')"
+            "WHERE (coupon_tabella_temporanea.idCoupon = @idCoupon) " &
+            "AND (cod_controllo = @cod_controllo)"
+        SqlData_CouponInserzioni.SelectParameters.Clear()
+        SqlData_CouponInserzioni.SelectParameters.Add(New Parameter("idCoupon", TypeCode.Int32, couponId.ToString(CultureInfo.InvariantCulture)))
+        SqlData_CouponInserzioni.SelectParameters.Add(New Parameter("cod_controllo", TypeCode.String, couponCode))
+    End Sub
+
+    Private Function NormalizeQueryStringValue(ByVal value As String) As String
+        If value Is Nothing Then Return ""
+        Return value.Trim()
+    End Function
+
+    Private Function IsValidCouponCode(ByVal value As String) As Boolean
+        If String.IsNullOrWhiteSpace(value) Then Return False
+        If value.Length > 128 Then Return False
+
+        For Each ch As Char In value
+            If Char.IsControl(ch) Then Return False
+        Next
+
+        Return True
+    End Function
+
+    Private Sub ShowInvalidCouponRequest()
+        InvalidCouponRequestPanel.Visible = True
+        InvalidCouponRequestPanel.Controls.Clear()
+        InvalidCouponRequestPanel.Controls.Add(New LiteralControl(Server.HtmlEncode(InvalidCouponRequestMessage)))
+
+        Esito_pagamento_coupon.Visible = False
+        Esito_pagamento_coupon.DataSourceID = String.Empty
+        DataList_Coupon.Visible = False
+        DataList_Coupon.DataSourceID = String.Empty
+
+        SqlData_Coupon.SelectParameters.Clear()
+        SqlData_Coupon.SelectCommand = "SELECT * FROM coupon_tabella_temporanea WHERE 1 = 0"
+        SqlData_CouponInserzioni.SelectParameters.Clear()
+        SqlData_CouponInserzioni.SelectCommand = "SELECT * FROM coupon_inserzione WHERE 1 = 0"
     End Sub
 
     ' --- Helper migrate dal markup (bonifica legacy) ---
