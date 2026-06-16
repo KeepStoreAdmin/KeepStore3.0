@@ -36,8 +36,14 @@ Partial Class resetpassword
     End Sub
 
     Private Sub LoadResetState()
+        Dim token As String = CurrentToken()
+        If String.IsNullOrWhiteSpace(token) Then
+            ShowInvalid()
+            Exit Sub
+        End If
+
         Dim info As PasswordResetTokenInfo = Nothing
-        If PasswordResetTokenService.TryValidateToken(CurrentToken(), info) Then
+        If PasswordResetTokenService.TryValidateToken(token, info) Then
             ShowForm()
         Else
             ShowInvalid()
@@ -45,7 +51,13 @@ Partial Class resetpassword
     End Sub
 
     Private Function CurrentToken() As String
-        Return Convert.ToString(Request.QueryString("token")).Trim()
+        Dim rawToken As String = Nothing
+        If Request IsNot Nothing AndAlso Request.QueryString IsNot Nothing Then
+            rawToken = Request.QueryString("token")
+        End If
+
+        If String.IsNullOrWhiteSpace(rawToken) Then Return ""
+        Return rawToken.Trim()
     End Function
 
     Private Sub ShowForm()
