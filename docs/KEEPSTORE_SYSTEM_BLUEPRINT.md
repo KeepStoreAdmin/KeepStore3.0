@@ -315,6 +315,8 @@ Auditata in LOGIN-REGISTER-1A e mitigata in LOGIN-REGISTER-SECURITY-1. Crea uten
 
 `AUTH-LEGACY-DUPLICATE-AUDIT-FIX-1A` / PR #187 conferma che `login.aspx`, `registrazione.aspx`, `remind.aspx` e `resetpassword.aspx` non hanno doppie form runtime. Il solo fix UI applicato e su `resetpassword.aspx`: i reveal nativi browser dei campi `tbPasswordNuova` e `tbPasswordConferma` sono nascosti con CSS mirato, lasciando i toggle custom come unico controllo visivo per ciascun campo. Non cambia code-behind, token flow, login/auth, sessioni/cookie, registrazione, email/template, DB/schema/SP, carrello/ordine/gateway/prezzi/totali.
 
+`RESET-PASSWORD-TOKEN-GUARD-1A` / PR #188 corregge la robustezza server-side di `resetpassword.aspx` per token assente, vuoto o non valido. `CurrentToken()` non chiama piu `.Trim()` su un valore potenzialmente `Nothing` e `LoadResetState()` mostra il pannello invalido controllato senza form reset utilizzabile quando il token manca o e vuoto. Il messaggio utente resta generico e non tecnico; generazione, validazione, durata, storage e consumo token restano invariati, cosi come login/auth, sessioni/cookie, registrazione, remind generation, email/template, DB/schema/SP, carrello/ordine/gateway/prezzi/totali.
+
 ### 9.15 Cambio password
 
 `password.aspx` e pagina canonica. Policy server-side 8-25, conferma obbligatoria, nuova diversa dalla vecchia, update centralizzato, `DataPassword` su successo. Hash non implementato.
