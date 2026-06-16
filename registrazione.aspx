@@ -605,7 +605,7 @@
                             <tr>
                                 <td bgcolor="whitesmoke" width="200" valign="top" style="height: 36px">
                                     <asp:CheckBox ID="CheckBoxAgevolazione" runat="server" Text="Attiva Agevolazione" AutoPostBack="True" /><br />
-                                    <img src="Public/Images/loghi_agevolazione.jpg" alt="" /></td>
+                                    <img src="/Public/assets/images/coupon/Struttura/sconto_50px.png" alt="" /></td>
                                 
                                 <td style="height: 36px" >
                                     Se sei un dipendente statale o fai parte di una delle categorie elencate di seguito
