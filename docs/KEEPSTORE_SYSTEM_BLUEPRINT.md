@@ -325,6 +325,8 @@ Chiusura post-smoke: `SMOKE REGISTRATION UI: A` conferma che la registrazione ap
 
 `LEGACY-ASSET-PATH-AUDIT-FIX-1A` / PR #190 mantiene la regola KeepStore 3.0 sui nuovi path asset: non introdurre `Public/Images/`, usare solo asset esistenti sotto `/Public/assets/images/...` e non sostituire immagini informative/funzionali con placeholder generici. Il fix sicuro applicato e limitato a `coupon_esito_acquisto.aspx`: il vecchio `Public/Images/servizio_clienti.jpg` viene sostituito da `/Public/assets/images/headphone-2.svg`; gli altri riferimenti legacy emersi in carrello, documenti, coupon, promo, wishlist, articolix e rettifica magazzino restano backlog dedicato per rischio funzionale o assenza di equivalente moderno certo.
 
+`COUPON-ESITO-PARAM-GUARD-1A` / PR #191 aggiunge una guard server-side a `coupon_esito_acquisto.aspx` prima del databind: `id` deve essere numerico e positivo, `cod` deve essere presente, non vuoto e privo di caratteri di controllo; in caso contrario i DataList vengono scollegati dai DataSource e viene mostrato un messaggio generico non tecnico. La query `SqlData_CouponInserzioni` non concatena piu querystring ma usa parametri `@idCoupon` e `@cod_controllo`, evitando SQL malformati da link incompleti. Nessun cambio a DB/schema/SP, gateway/pagamenti, email/template, carrello/ordine/prezzi/totali o auth/sessioni/cookie.
+
 ### 9.15 Cambio password
 
 `password.aspx` e pagina canonica. Policy server-side 8-25, conferma obbligatoria, nuova diversa dalla vecchia, update centralizzato, `DataPassword` su successo. Hash non implementato.
