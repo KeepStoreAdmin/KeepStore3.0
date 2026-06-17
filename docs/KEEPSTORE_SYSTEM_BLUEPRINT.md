@@ -325,6 +325,8 @@ Chiusura post-smoke: `SMOKE REGISTRATION UI: A` conferma che la registrazione ap
 
 `LEGACY-ASSET-PATH-AUDIT-FIX-1A` / PR #190 mantiene la regola KeepStore 3.0 sui nuovi path asset: non introdurre `Public/Images/`, usare solo asset esistenti sotto `/Public/assets/images/...` e non sostituire immagini informative/funzionali con placeholder generici. Il fix sicuro applicato e limitato a `coupon_esito_acquisto.aspx`: il vecchio `Public/Images/servizio_clienti.jpg` viene sostituito da `/Public/assets/images/headphone-2.svg`; gli altri riferimenti legacy emersi in carrello, documenti, coupon, promo, wishlist, articolix e rettifica magazzino restano backlog dedicato per rischio funzionale o assenza di equivalente moderno certo.
 
+`CART-DISCOUNT-LEGACY-ICONS-1A` / PR #192 applica il primo micro-fix non-coupon sui path asset legacy: in `carrello.aspx` le sole icone feedback buono sconto passano da `Public/Images/Ok.png` e `Public/Images/Remove.png` agli asset gia presenti `/Public/assets/images/ico/modalok.svg` e `/Public/assets/images/ico/modalno.svg`. `interrogativo.png` e `StepCarrello1.png` restano backlog separato; PR #191 e coupon restano fuori scope. Nessuna modifica a logica buono sconto, prezzi/IVA/totali/righe, checkout/ordine/gateway, email/template, DB/schema/SP o auth/sessioni/cookie.
+
 ### 9.15 Cambio password
 
 `password.aspx` e pagina canonica. Policy server-side 8-25, conferma obbligatoria, nuova diversa dalla vecchia, update centralizzato, `DataPassword` su successo. Hash non implementato.
