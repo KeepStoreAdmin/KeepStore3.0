@@ -444,11 +444,12 @@
 
             <div class="cart-bottom ks-cart-bottom">
                 <div class="col-12 col-lg-8">
-                    <asp:Panel ID="Panel_BuoniSconto" runat="server" HorizontalAlign="left" CssClass="ip-discount-code ks-coupon-panel">
-                        <div class="ks-coupon-title body-md-2 fw-semibold">Codice sconto</div>
+                    <asp:Panel ID="Panel_BuoniSconto" runat="server" HorizontalAlign="left" CssClass="ip-discount-code ks-coupon-panel ks-cart-discount-panel">
+                        <div class="ks-coupon-title body-md-2 fw-semibold">Hai un codice sconto?</div>
+                        <div class="ks-coupon-copy body-text-3">Inseriscilo qui prima di procedere al checkout.</div>
                         <div class="ks-coupon-controls">
-                            <asp:TextBox ID="TB_BuonoSconto" runat="server" CssClass="form-control ks-coupon-input"></asp:TextBox>
-                            <asp:Button ID="BT_ApplicaBuonoSconto" runat="server" CausesValidation="false" Text="Applica coupon" CssClass="tf-btn btn-gray" />
+                            <asp:TextBox ID="TB_BuonoSconto" runat="server" CssClass="form-control ks-coupon-input" placeholder="Inserisci codice sconto"></asp:TextBox>
+                            <asp:Button ID="BT_ApplicaBuonoSconto" runat="server" CausesValidation="false" Text="Applica" CssClass="tf-btn btn-gray ks-coupon-apply" />
                         </div>
                         <div class="ks-coupon-feedback body-text-3">
                             <asp:Image ID="checkOKBuonoSconto" runat="server" ImageUrl="/Public/assets/images/ico/modalok.svg" Height="30px" Visible="false" />
