@@ -6,6 +6,7 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260617-cart-checkout-ux-smoke-fix-1a" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/checkout-ui.js") %>" defer></script>
 
@@ -446,7 +447,7 @@
                 <div class="col-12 col-lg-8">
                     <asp:Panel ID="Panel_BuoniSconto" runat="server" HorizontalAlign="left" CssClass="ip-discount-code ks-coupon-panel ks-cart-discount-panel">
                         <div class="ks-coupon-title body-md-2 fw-semibold">Hai un codice sconto?</div>
-                        <div class="ks-coupon-copy body-text-3">Inseriscilo qui prima di procedere al checkout.</div>
+                        <div class="ks-coupon-copy body-text-3">Inseriscilo qui prima di procedere.</div>
                         <div class="ks-coupon-controls">
                             <asp:TextBox ID="TB_BuonoSconto" runat="server" CssClass="form-control ks-coupon-input" placeholder="Inserisci codice sconto"></asp:TextBox>
                             <asp:Button ID="BT_ApplicaBuonoSconto" runat="server" CausesValidation="false" Text="Applica" CssClass="tf-btn btn-gray ks-coupon-apply" />

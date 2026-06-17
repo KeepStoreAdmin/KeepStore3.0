@@ -27,9 +27,11 @@
 }
 
 .ks-coupon-controls .ks-coupon-apply{
+    position: static;
     min-height: 48px;
     padding-left: 1.35rem;
     padding-right: 1.35rem;
+    border-radius: 8px;
     color: #fff;
     white-space: nowrap;
 }
@@ -147,6 +149,39 @@
     margin-left: auto;
 }
 
+.s-shoping-cart .tf-btn{
+    min-height: 44px;
+    font-size: 15px;
+    line-height: 1.35;
+    text-decoration: none;
+}
+
+.s-shoping-cart .tf-btn.btn-gray{
+    color: #fff;
+    background-color: #303030;
+}
+
+.s-shoping-cart .tf-btn.btn-gray:hover,
+.s-shoping-cart .tf-btn.btn-gray:focus{
+    color: #fff;
+    background-color: var(--primary);
+}
+
+.s-shoping-cart .tf-btn.btn-gray *,
+.s-shoping-cart .tf-btn.btn-gray:hover *,
+.s-shoping-cart .tf-btn.btn-gray:focus *{
+    color: inherit;
+}
+
+.s-shoping-cart .ks-cart-buttons .tf-btn{
+    min-width: 164px;
+    padding: 12px 18px;
+}
+
+.s-shoping-cart .ks-cart-buttons .ks-right .tf-btn{
+    min-width: 220px;
+}
+
 @media (max-width: 576px){
     .ks-cart-buttons{
         flex-direction: column;
@@ -205,6 +240,12 @@
     border: 1px solid rgba(0,0,0,.08);
     border-radius: 8px;
     background: #fff;
+}
+
+.s-shoping-cart .ks-coupon-panel {
+    max-width: none;
+    width: 100%;
+    position: static;
 }
 
 .s-shoping-cart .ks-cart-discount-panel {
@@ -468,6 +509,69 @@
 .ks-final-confirm-card strong,
 .ks-final-confirm-card span{
     overflow-wrap: anywhere;
+}
+
+.s-shoping-cart .ks-checkout-shell .tf-checkout-wrap{
+    gap: 32px;
+    align-items: flex-start;
+}
+
+.s-shoping-cart .ks-checkout-shell .page-checkout{
+    display: grid;
+    gap: 1.25rem;
+}
+
+.s-shoping-cart .ks-checkout-section{
+    margin: 0 0 1.15rem;
+    padding: 1.25rem;
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 8px;
+    background: #fff;
+}
+
+.s-shoping-cart .ks-checkout-section .title{
+    margin-bottom: .45rem;
+    color: #111;
+}
+
+.s-shoping-cart .ks-checkout-section .ks-section-help{
+    margin-bottom: 1rem;
+}
+
+.s-shoping-cart .ks-checkout-grid{
+    margin-top: .65rem;
+}
+
+.s-shoping-cart .ks-checkout-grid td{
+    padding: .65rem .5rem;
+    vertical-align: middle;
+}
+
+.s-shoping-cart .ks-checkout-grid img{
+    max-height: 34px;
+    width: auto;
+}
+
+.s-shoping-cart .ks-insurance-section label,
+.s-shoping-cart .ks-payment-section label{
+    line-height: 1.45;
+}
+
+.s-shoping-cart .ks-note-section textarea,
+.s-shoping-cart .ks-note-section .form-control{
+    min-height: 112px;
+}
+
+.s-shoping-cart .ks-checkout-actions{
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.s-shoping-cart .ks-checkout-actions .tf-btn{
+    min-width: 210px;
 }
 
 /* Fine-tuning cart layout */
