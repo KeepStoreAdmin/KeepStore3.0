@@ -451,8 +451,8 @@
                             <asp:Button ID="BT_ApplicaBuonoSconto" runat="server" CausesValidation="false" Text="Applica coupon" CssClass="tf-btn btn-gray" />
                         </div>
                         <div class="ks-coupon-feedback body-text-3">
-                            <asp:Image ID="checkOKBuonoSconto" runat="server" ImageUrl="Public/Images/Ok.png" Height="30px" Visible="false" />
-                            <asp:Image ID="checkNOBuonoSconto" runat="server" ImageUrl="Public/Images/Remove.png" Height="30px" Visible="false" />
+                            <asp:Image ID="checkOKBuonoSconto" runat="server" ImageUrl="/Public/assets/images/ico/modalok.svg" Height="30px" Visible="false" />
+                            <asp:Image ID="checkNOBuonoSconto" runat="server" ImageUrl="/Public/assets/images/ico/modalno.svg" Height="30px" Visible="false" />
                             <asp:Label ID="lblBuonoScontoConvalida" runat="server" Text=""></asp:Label>
                             <asp:LinkButton ID="LB_CancelBuonoSconto" runat="server" CssClass="link" ForeColor="Red" Visible="false">Elimina codice</asp:LinkButton>
                         </div>
