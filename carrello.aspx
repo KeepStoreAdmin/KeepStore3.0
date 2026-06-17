@@ -6,7 +6,7 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260617-cart-checkout-ux-smoke-fix-1a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260617-cart-checkout-ux-smoke-fix-1d-rev2" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/checkout-ui.js") %>" defer></script>
 
@@ -76,7 +76,7 @@
 
     <!-- NOTE: rimosso frammento di markup corrotto rimasto da una migrazione precedente (carattere di controllo). -->
 
-    <section class="s-shoping-cart tf-sp-2 <%= If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", If(IsCheckoutStepVisible(), "ks-cart-step-checkout", "ks-cart-step-cart")) %>">
+    <section class="s-shoping-cart tf-sp-2 ks-cart-page <%= If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", If(IsCheckoutStepVisible(), "ks-cart-step-checkout", "ks-cart-step-cart")) %>">
         <div class="container">
 
             <div class="checkout-status tf-sp-2 pt-0">
@@ -398,9 +398,10 @@
                     <a id="ksCartLoginRequiredLink" href="login.aspx?ReturnUrl=%2Fcarrello.aspx" class="tf-btn">Accedi o registrati</a>
                 </div>
             </asp:Panel>
+            </div>
 
             <!-- Buono Sconto (dati) -->
-            <div id="CartActionsWrap" runat="server">
+            <div id="CartActionsWrap" runat="server" class="ks-cart-support-panel">
             <asp:SqlDataSource ID="SqlDataBuonoSconto" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                 EnableViewState="False" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
                 SelectCommand="SELECT * FROM buoni_sconti WHERE id=@idBuonoSconto">
@@ -547,14 +548,13 @@
                 </div>
             </div>
             </div>
-
         </div>
     </section>
 
 <asp:Panel ID="Panel_Unico" runat="server" CssClass="ks-checkout-panel">   
     
     <% If tOrdine IsNot Nothing AndAlso tOrdine.Visible Then %>
-    <section class="tf-page-checkout flat-spacing-11 ks-checkout-shell <%= If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", "ks-cart-step-checkout") %>">
+    <section class="tf-page-checkout flat-spacing-11 ks-cart-page ks-checkout-shell <%= If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", "ks-cart-step-checkout") %>">
         <div class="container">
             <div class="tf-checkout-wrap flex-lg-nowrap">
                 <div class="page-checkout">
