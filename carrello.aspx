@@ -76,7 +76,7 @@
 
     <!-- NOTE: rimosso frammento di markup corrotto rimasto da una migrazione precedente (carattere di controllo). -->
 
-    <section class="s-shoping-cart tf-sp-2">
+    <section class="s-shoping-cart tf-sp-2 <%= If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", If(IsCheckoutStepVisible(), "ks-cart-step-checkout", "ks-cart-step-cart")) %>">
         <div class="container">
 
             <div class="checkout-status tf-sp-2 pt-0">
@@ -104,12 +104,12 @@
             </div>
 
             <div class="heading-section mb-3">
-                <h3 class="heading">Il tuo carrello</h3>
-                <div class="body-text-3">
+                <h3 class="heading"><% If IsCheckoutConfirmStep() Then %>Conferma ordine<% ElseIf IsCheckoutStepVisible() Then %>Spedizione e checkout<% Else %>Il tuo carrello<% End If %></h3>
+                <div class="body-text-3 ks-cart-heading-meta">
                     <asp:Label ID="lblArticoli" runat="server" Text="" Font-Bold="true" ForeColor="#E12825"></asp:Label>
                     <asp:Label ID="lblPresenti" runat="server" Text=""></asp:Label>
                 </div>
-                <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" Font-Size="7pt" Font-Names="arial"></asp:Label>
+                <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" Font-Size="7pt" Font-Names="arial" CssClass="ks-cart-price-note"></asp:Label>
             </div>
 
             <asp:SqlDataSource ID="sdsArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
@@ -125,7 +125,7 @@
                 DeleteCommand="delete from carrello where (Id = ?Id)"
                 UpdateCommand="update carrello set qnt = ?Qnt where (Id = ?Id)">
             </asp:SqlDataSource>
-            <div id="CartItemsWrap" runat="server" class="row g-4">
+            <div id="CartItemsWrap" runat="server" class="row g-4 ks-cart-step-cart-body">
                 <div class="col-12">
                     <div class="form-discount ks-cart-form">
                     <div class="overflow-x-auto">
@@ -443,8 +443,8 @@
                 </Columns>
             </asp:GridView>
 
-            <div class="cart-bottom ks-cart-bottom">
-                <div class="col-12 col-lg-8">
+            <div class="cart-bottom ks-cart-bottom ks-cart-layout">
+                <div class="col-12 col-lg-8 ks-cart-main">
                     <asp:Panel ID="Panel_BuoniSconto" runat="server" HorizontalAlign="left" CssClass="ip-discount-code ks-coupon-panel ks-cart-discount-panel">
                         <div class="ks-coupon-title body-md-2 fw-semibold">Hai un codice sconto?</div>
                         <div class="ks-coupon-copy body-text-3">Inseriscilo qui prima di procedere.</div>
@@ -471,7 +471,7 @@
                     <asp:TextBox ID="tbTotale" runat="server" Width="20px" Style="display:none" ToolTip="Totale"></asp:TextBox>
                 </div>
 
-                <div id="CartSummaryColumn" runat="server" class="col-12 col-lg-4">
+                <div id="CartSummaryColumn" runat="server" class="col-12 col-lg-4 ks-cart-side">
                     <div class="tf-page-cart-footer">
                         <div class="tf-cart-summery ks-summary-card">
                             <h4 class="title">Riepilogo ordine</h4>
@@ -538,7 +538,7 @@
                 </div>
             </div>
 
-            <div class="box-btn ks-cart-buttons">
+            <div class="box-btn ks-cart-buttons ks-cart-actions">
                 <asp:LinkButton ID="btContinua" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Continua lo Shopping</asp:LinkButton>
                 <asp:LinkButton ID="btAggiorna" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Aggiorna Carrello</asp:LinkButton>
                 <asp:LinkButton ID="btSvuota" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Svuota Carrello</asp:LinkButton>
@@ -554,7 +554,7 @@
 <asp:Panel ID="Panel_Unico" runat="server" CssClass="ks-checkout-panel">   
     
     <% If tOrdine IsNot Nothing AndAlso tOrdine.Visible Then %>
-    <section class="tf-page-checkout flat-spacing-11 ks-checkout-shell">
+    <section class="tf-page-checkout flat-spacing-11 ks-checkout-shell <%= If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", "ks-cart-step-checkout") %>">
         <div class="container">
             <div class="tf-checkout-wrap flex-lg-nowrap">
                 <div class="page-checkout">
@@ -1271,7 +1271,7 @@
                         </div>
                         <asp:Label ID="lblTermsConsentError" runat="server" ClientIDMode="Static" EnableViewState="false" CssClass="text-danger body-text-3" />
                     </div>
-                    <asp:LinkButton CausesValidation="false" ID="btInviaOrdine" runat="server" CssClass="tf-btn" OnClientClick="return ksValidateCheckoutTermsConsent();">INVIA ORDINE CON OBBLIGO DI PAGAMENTO</asp:LinkButton>
+                    <asp:LinkButton CausesValidation="false" ID="btInviaOrdine" runat="server" CssClass="tf-btn" OnClientClick="return ksValidateCheckoutTermsConsent();">Invia ordine con obbligo di pagamento</asp:LinkButton>
                 <%else%>
                     <span class="tf-btn btn-gray" style="pointer-events:none;opacity:.6;">Conferma ordine e procedi al pagamento</span>
                 <%end if%>
@@ -1328,11 +1328,16 @@
     </script>
     <% If tOrdine IsNot Nothing AndAlso tOrdine.Visible Then %>
                 </div>
-                <div class="flat-sidebar-checkout">
+                <div class="flat-sidebar-checkout ks-checkout-side">
                     <div class="tf-sidebar-checkout">
-                        <div class="sidebar-checkout-content">
+                        <div class="sidebar-checkout-content ks-order-summary-card">
                             <div class="sidebar-checkout-header">
                                 <h5 class="fw-semibold">Riepilogo ordine</h5>
+                            </div>
+                            <div class="ks-checkout-discount-status">
+                                <span class="ks-info-label">Codice sconto</span>
+                                <span class="body-text-3">Gestibile dal carrello prima del checkout.</span>
+                                <strong><%= lblBuonoSconto.Text %></strong>
                             </div>
 
                             <div class="ks-sidebar-products">
@@ -1410,7 +1415,7 @@
                                 <span class="fw-semibold"><%= lblTotale.Text %></span>
                             </div>
 
-                            <div class="mt-3 body-text-3 text-secondary">
+                            <div class="mt-3 body-text-3 text-secondary ks-sidebar-terms-note">
                                 Procedendo con l&#39;ordine confermi di aver letto e accettato le condizioni di vendita.
                             </div>
                             <div class="ks-checkout-trust-list">
