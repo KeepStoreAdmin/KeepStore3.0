@@ -6,7 +6,7 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260617-cart-checkout-ux-smoke-fix-1e-rev3" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260618-cart-checkout-ux-smoke-fix-1f-rev4" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/checkout-ui.js") %>" defer></script>
 
@@ -1103,6 +1103,7 @@
             </div>
         </asp:Panel>
         </asp:Panel>
+        <div id="CheckoutCouponSlot" class="ks-checkout-coupon-slot"></div>
 		<div id="panel" runat="server" ClientIDMode="Static" style="display:none !important;" aria-hidden="true">
             <asp:Panel ID="PnlDestinazione" runat="server" Width="100%" Visible="False" GroupingText="Inserisci i dati"  CssClass="wrap ks-checkout-section ks-destination-section" style="display:none !important;">
 							<h5 class="title fw-semibold">Gestisci destinazione</h5>

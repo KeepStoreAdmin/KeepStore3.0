@@ -182,6 +182,7 @@
 
   // Indirizzi registrati (checkout) -> cards UI sopra la DropDownList
   function enhanceShippingAddressPicker() {
+    return;
     // Cerca la DropDownList in carrello/checkout (AutoPostBack=True)
     var ddl = qs('select[id$="LstScegliIndirizzo"]') || document.getElementById('LstScegliIndirizzo');
     if (!ddl) return;
@@ -477,6 +478,16 @@
     });
   }
 
+  function placeCheckoutCouponPanel() {
+    var panel = document.getElementById('CartActionsWrap') || qs('[id$="CartActionsWrap"]');
+    var slot = document.getElementById('CheckoutCouponSlot');
+    if (!panel || !slot) return;
+    if (!isVisible(slot)) return;
+    if (panel.parentNode !== slot) {
+      slot.appendChild(panel);
+    }
+  }
+
   // Funzione richiamata da OnClientClick nel markup: deve essere globale.
   window.visualizza_spinner_caricamento = function () {
     var sp = document.getElementById('spinner_caricamento');
@@ -497,6 +508,7 @@
     setupDestinationToggles();
     enhanceShippingAddressPicker();
     preventDoubleSubmit();
+    placeCheckoutCouponPanel();
     restoreCartServerTotals();
     setupCartQuantityControls();
     protectServerCartCommands();

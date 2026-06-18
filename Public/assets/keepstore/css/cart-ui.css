@@ -1547,3 +1547,44 @@
         padding: 14px 12px;
     }
 }
+
+/* REV4: surgical fixes for quantity, checkout coupon placement and compact addresses. */
+.ks-cart-page.ks-checkout-shell .ks-checkout-coupon-slot{
+    display: block;
+}
+
+.ks-cart-page.ks-checkout-shell .ks-checkout-coupon-slot .ks-cart-support-panel{
+    margin: 0 0 18px;
+}
+
+.ks-cart-page.ks-checkout-shell .ks-checkout-coupon-slot .cart-bottom.ks-cart-layout{
+    display: block;
+    max-width: none;
+    margin: 0;
+}
+
+.ks-cart-page.ks-checkout-shell .ks-checkout-coupon-slot .ks-cart-main{
+    display: block;
+    max-width: none;
+}
+
+.ks-cart-page.ks-checkout-shell .ks-checkout-coupon-slot .ks-cart-side,
+.ks-cart-page.ks-checkout-shell .ks-checkout-coupon-slot .ks-cart-actions{
+    display: none;
+}
+
+.ks-cart-page.ks-checkout-shell.ks-cart-step-confirm .ks-checkout-coupon-slot{
+    display: none;
+}
+
+.ks-cart-page.ks-checkout-shell .ks-delivery-address-section .ks-addr-picker{
+    display: none;
+}
+
+.ks-cart-page.ks-checkout-shell .ks-delivery-address-section .ks-address-picker-card{
+    align-items: center;
+}
+
+.ks-cart-page.ks-checkout-shell .ks-delivery-address-section .ks-address-picker-control .form-select{
+    overflow: hidden;
+}
