@@ -1563,6 +1563,7 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         Session.Item("Imponibile") = imponibile - imponibile_gratis
 
         Me.lblImponibile.Text = FormatCurrencyIt(imponibile)
+        Me.lblCartSubtotalOnly.Text = Me.lblImponibile.Text
         'Session("Calcolo_Iva") = calcolo_iva
         Me.tbPeso.Text = pesoTotale
 
@@ -3064,11 +3065,12 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
         '    LeggiVettori()
         'End If
 
-        ' Mostra l'input buono sconto quando il carrello ha articoli e i buoni sono abilitati.
-        ' La visibilita dell'input non deve dipendere dal riepilogo conteggi, che cambia tra gli step.
+        ' Mostra l'input buono sconto solo nello step Spedizione e checkout.
+        ' Lo step carrello resta focalizzato su articoli e subtotale prodotti.
         Dim showDiscountInput As Boolean = _
             (GetSessionInt("AbilitaBuoniScontiCarrello", 0) = 1) AndAlso _
             (qta > 0) AndAlso _
+            IsCheckoutStepVisible() AndAlso _
             (Not IsCheckoutConfirmStep())
 
         Panel_BuoniSconto.Visible = showDiscountInput
@@ -4990,9 +4992,12 @@ End Function
         Next
 
         If found Is Nothing Then
-            found = New System.Web.UI.HtmlControls.HtmlMeta()
-            found.Name = metaName
-            page.Header.Controls.Add(found)
+            If String.Equals(metaName, "description", StringComparison.OrdinalIgnoreCase) Then
+                page.MetaDescription = metaContent
+            ElseIf String.Equals(metaName, "keywords", StringComparison.OrdinalIgnoreCase) Then
+                page.MetaKeywords = metaContent
+            End If
+            Exit Sub
         End If
 
         found.Content = metaContent
@@ -5014,11 +5019,7 @@ End Function
             End If
         Next
 
-        If found Is Nothing Then
-            found = New System.Web.UI.HtmlControls.HtmlLink()
-            found.Attributes("rel") = "canonical"
-            page.Header.Controls.Add(found)
-        End If
+        If found Is Nothing Then Exit Sub
 
         found.Href = canonicalUrl
     End Sub

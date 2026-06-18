@@ -476,6 +476,11 @@
                     <div class="tf-page-cart-footer">
                         <div class="tf-cart-summery ks-summary-card">
                             <h4 class="title">Riepilogo ordine</h4>
+                            <div class="ks-cart-subtotal-card">
+                                <span class="ks-info-label">Totale articoli</span>
+                                <strong><asp:Label ID="lblCartSubtotalOnly" runat="server" Text="&#8364; 0,00"></asp:Label></strong>
+                                <p class="body-text-3">Spedizione, pagamento e costi checkout saranno calcolati nello step successivo.</p>
+                            </div>
                         <table width="100%" id="TableConteggi" runat="server" visible="false" class="ks-summary-table">
                             <tr>
                                 <td align="right">Imponibile:</td>
