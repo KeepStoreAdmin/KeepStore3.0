@@ -3064,12 +3064,14 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
         '    LeggiVettori()
         'End If
 
-        'Visualizzo o meno il pannello relativo ai Buoni Sconti, in base alle impostazioni nell'azienda
-        If (Session("AbilitaBuoniScontiCarrello") = 1) AndAlso (TableConteggi.Visible = True) Then
-            Panel_BuoniSconto.Visible = True
-        Else
-            Panel_BuoniSconto.Visible = False
-        End If
+        ' Mostra l'input buono sconto quando il carrello ha articoli e i buoni sono abilitati.
+        ' La visibilita dell'input non deve dipendere dal riepilogo conteggi, che cambia tra gli step.
+        Dim showDiscountInput As Boolean = _
+            (GetSessionInt("AbilitaBuoniScontiCarrello", 0) = 1) AndAlso _
+            (qta > 0) AndAlso _
+            (Not IsCheckoutConfirmStep())
+
+        Panel_BuoniSconto.Visible = showDiscountInput
         ApplyCartAddressEditorLock()
     End Sub
 
