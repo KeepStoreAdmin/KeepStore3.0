@@ -9,6 +9,75 @@
     <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
+    <style>
+        .ks-order-receipt-page{
+            color:#1f2933;
+            font-family:"Inter",Arial,sans-serif;
+            font-size:16px;
+            line-height:1.55;
+        }
+        .ks-order-receipt-page .container{max-width:1180px;}
+        .ks-order-receipt-shell{display:grid;gap:24px;}
+        .ks-order-hero{
+            display:grid;
+            grid-template-columns:minmax(0,1fr) auto;
+            gap:18px;
+            align-items:center;
+            padding:28px;
+            border:1px solid rgba(20,128,74,.18);
+            border-radius:8px;
+            background:linear-gradient(180deg,#f2fbf6 0%,#fff 100%);
+        }
+        .ks-order-hero h3{margin:0 0 8px;font-size:30px;line-height:1.2;}
+        .ks-order-hero p{margin:0;color:#4b5563;}
+        .ks-order-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
+        .ks-order-meta span{display:inline-flex;gap:6px;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid rgba(0,0,0,.08);font-size:15px;}
+        .ks-order-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;}
+        .ks-order-actions .tf-btn{min-height:46px;border-radius:8px;}
+        .ks-order-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,380px);gap:24px;align-items:start;}
+        .ks-order-card{padding:22px;border:1px solid rgba(0,0,0,.08);border-radius:8px;background:#fff;box-shadow:0 14px 34px rgba(0,0,0,.05);}
+        .ks-order-card h5{margin:0 0 14px;font-size:20px;line-height:1.3;}
+        .ks-order-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+        .ks-order-info{display:grid;gap:4px;padding:12px 14px;border:1px solid rgba(0,0,0,.07);border-radius:8px;background:#fafafa;}
+        .ks-order-info-wide{grid-column:1/-1;}
+        .ks-order-label{color:#6b7280;font-size:12px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;}
+        .ks-order-info strong{color:#111;overflow-wrap:anywhere;}
+        .ks-order-table-wrap{overflow-x:auto;}
+        .ks-order-table{width:100%;border-collapse:collapse;}
+        .ks-order-table th,.ks-order-table td{padding:12px;border-bottom:1px solid rgba(0,0,0,.08);vertical-align:middle;text-align:left;font-size:15px;}
+        .ks-order-table th{background:#f7f8f7;color:#4b5563;font-size:13px;font-weight:800;text-transform:uppercase;}
+        .ks-order-product{display:grid;grid-template-columns:56px minmax(0,1fr);gap:12px;align-items:center;}
+        .ks-order-product img{width:56px;height:56px;object-fit:contain;border:1px solid rgba(0,0,0,.08);border-radius:8px;background:#fff;}
+        .ks-order-product-title{font-weight:700;color:#111;}
+        .ks-order-product-meta{color:#6b7280;font-size:13px;}
+        .ks-order-total-list{display:grid;gap:0;}
+        .ks-order-total-row{display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.08);}
+        .ks-order-total-row strong{color:#111;}
+        .ks-order-total-row-final{margin-top:4px;padding-top:14px;border-bottom:0;font-size:20px;font-weight:800;}
+        .ks-order-next-steps{display:grid;gap:10px;margin:0;padding-left:18px;}
+        @media (max-width: 991.98px){
+            .ks-order-hero,.ks-order-grid{grid-template-columns:1fr;}
+            .ks-order-actions{justify-content:flex-start;}
+        }
+        @media (max-width: 575.98px){
+            .ks-order-receipt-page{font-size:15px;}
+            .ks-order-hero,.ks-order-card{padding:18px;}
+            .ks-order-info-grid{grid-template-columns:1fr;}
+            .ks-order-product{grid-template-columns:1fr;}
+            .ks-order-product img{display:none;}
+        }
+        @media print{
+            body{background:#fff!important;color:#000!important;}
+            header,footer,.tf-breadcrumb-wrap,.ks-order-actions,.newsletter,.offcanvas,.modal,.scroll-top,.tf-toolbar-bottom{display:none!important;}
+            .ks-order-receipt-page{font-size:11pt;line-height:1.35;}
+            .ks-order-receipt-page .container{max-width:none;width:100%;}
+            .ks-order-hero,.ks-order-card{box-shadow:none!important;border:1px solid #999!important;background:#fff!important;break-inside:avoid;}
+            .ks-order-grid{grid-template-columns:1fr;gap:12px;}
+            .ks-order-table th,.ks-order-table td{padding:7px;border-color:#bbb;}
+            .ks-order-product img{width:42px;height:42px;}
+            .ks-order-card,.ks-order-table tr,.ks-order-info{break-inside:avoid;}
+        }
+    </style>
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
@@ -110,40 +179,31 @@
 </div>
 
 
-    <section class="tf-sp-2">
+    <section class="tf-sp-2 ks-order-receipt-page">
         <div class="container">
-            <div class="ks-order-center">
+            <div class="ks-order-receipt-shell">
 
-                <div class="tf-order-detail">
-
-                    <div class="order-notice">
-                        <span class="icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="#ffffff" viewBox="0 0 256 256">
-                                <path d="M128,16A112,112,0,1,0,240,128,112.13,112.13,0,0,0,128,16Zm0,208a96,96,0,1,1,96-96A96.11,96.11,0,0,1,128,224Zm-8-56a12,12,0,1,1,12,12A12,12,0,0,1,120,168Zm20-88v48a8,8,0,0,1-16,0V88a8,8,0,0,1,16,0Z"></path>
-                            </svg>
-                        </span>
-                        <p>Ordine</p>
+                <asp:Panel ID="Panel1" runat="server">
+                    <div class="ks-order-hero">
+                        <div>
+                            <h3>Ordine inviato</h3>
+                            <p>Abbiamo ricevuto il tuo ordine. Riceverai una conferma via email.</p>
+                            <div class="ks-order-meta">
+                                <span><strong>Documento</strong> <asp:Label ID="Label2" runat="server" Text=""></asp:Label></span>
+                                <span><strong>N.</strong> <asp:Label ID="Label1" runat="server" Text=""></asp:Label></span>
+                                <span><strong>Data</strong> <asp:Label ID="Label3" runat="server" Text=""></asp:Label></span>
+                                <span><strong>Stato</strong> <asp:Label ID="lblOrderReceiptStatus" runat="server" Text="Ordine ricevuto"></asp:Label></span>
+                            </div>
+                        </div>
+                        <div class="ks-order-actions">
+                            <button type="button" class="tf-btn" onclick="window.print();">Stampa ordine</button>
+                            <asp:HyperLink ID="HyperLink1" runat="server" Font-Underline="false" CssClass="tf-btn btn-line" Text="I miei ordini"></asp:HyperLink>
+                            <a href="<%= ResolveUrl("~/Default.aspx") %>" class="tf-btn btn-gray">Continua gli acquisti</a>
+                        </div>
                     </div>
 
-                    <div class="order-detail-wrap">
-
-                        <div class="mb_16">
-                            <asp:Label ID="img_bs_label" runat="server" />
-                        </div>
-
-                        <asp:Panel ID="Panel1" runat="server">
-                            <h4 class="heading" class="heading mb_8">Ordine inviato</h4>
-                            <p class="body-text-3 mb-0">
-                                <span class="ks-order-inline-label"><asp:Label ID="Label2" runat="server" Text="" Font-Bold="true"></asp:Label></span>
-                                <span class="ks-order-inline-label">n° <asp:Label ID="Label1" runat="server" Text="" Font-Bold="true"></asp:Label></span>
-                                <span class="ks-order-inline-label">del <asp:Label ID="Label3" runat="server" Text="" Font-Bold="true"></asp:Label></span>
-                                <span class="ks-order-inline-label">correttamente inviato.</span>
-                            </p>
-
-                            <div class="ks-order-actions">
-                                <asp:HyperLink ID="HyperLink1" runat="server" Font-Underline="false" CssClass="tf-btn btn-line"></asp:HyperLink>
-                            </div>
-                        </asp:Panel>
+                    <asp:Literal ID="litOrderReceipt" runat="server"></asp:Literal>
+                </asp:Panel>
 
                         <asp:Panel ID="Panel2" runat="server" Visible="false">
                             <div class="ks-alert ks-alert-danger">
@@ -152,14 +212,12 @@
                             </div>
                         </asp:Panel>
 
-                    </div>
-
                     <div class="order-detail-wrap">
+                        <asp:Label ID="img_bs_label" runat="server" />
                         <div runat="server" id="DivImg"></div>
                         <asp:Literal runat="server" ID="litScript"></asp:Literal>
                     </div>
 
-                </div>
             </div>
         </div>
     </section>

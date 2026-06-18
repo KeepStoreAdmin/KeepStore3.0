@@ -1100,7 +1100,7 @@
 .ks-cart-page{
     color: #1f2933;
     font-family: "Inter", Arial, sans-serif;
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1.55;
 }
 
@@ -1138,7 +1138,7 @@
 .ks-cart-page textarea,
 .ks-cart-page .form-control,
 .ks-cart-page .form-select{
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.5;
 }
 
@@ -1147,7 +1147,7 @@
 .ks-cart-page input[type="submit"]{
     min-height: 48px;
     border-radius: 8px;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
     line-height: 1.35;
 }
@@ -1211,7 +1211,7 @@
 .ks-cart-page .ks-coupon-copy{
     max-width: 520px;
     color: #4b5563;
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .ks-cart-page .ks-coupon-controls{
@@ -1242,8 +1242,46 @@
 }
 
 .ks-cart-page .ks-coupon-feedback{
-    font-size: 14px;
+    display: none;
+    margin-top: 12px;
+    padding: 12px 14px;
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 8px;
+    background: #f7f8f7;
+    color: #1f2933;
+    font-size: 15px;
     line-height: 1.45;
+}
+
+.ks-cart-page .ks-coupon-feedback.has-message{
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.ks-cart-page .ks-coupon-feedback.is-success{
+    border-color: rgba(20,128,74,.22);
+    background: #effaf4;
+    color: #14532d;
+}
+
+.ks-cart-page .ks-coupon-feedback.is-error{
+    border-color: rgba(197,34,34,.24);
+    background: #fff5f5;
+    color: #991b1b;
+}
+
+.ks-cart-page .ks-coupon-feedback img{
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+}
+
+.ks-cart-page .ks-coupon-feedback .link,
+.ks-cart-page .ks-coupon-feedback a{
+    margin-left: auto;
+    font-weight: 700;
 }
 
 .ks-cart-page .ks-summary-table{
@@ -1335,6 +1373,23 @@
     max-width: 760px;
 }
 
+.ks-cart-page.ks-checkout-shell .ks-discount-section{
+    display: grid;
+    gap: 14px;
+}
+
+.ks-cart-page.ks-checkout-shell .ks-discount-section .ks-coupon-panel{
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+.ks-cart-page.ks-checkout-shell .ks-discount-section .ks-coupon-title,
+.ks-cart-page.ks-checkout-shell .ks-discount-section .ks-coupon-copy{
+    display: none;
+}
+
 .ks-cart-page.ks-checkout-shell{
     padding-top: 0;
 }
@@ -1358,6 +1413,19 @@
 .ks-cart-page.ks-checkout-shell .ks-delivery-address-section .ks-address-header{
     align-items: flex-start;
     margin-bottom: 18px;
+}
+
+.ks-cart-page.ks-checkout-shell .ks-billing-section .ks-info-card-grid{
+    gap: 10px;
+}
+
+.ks-cart-page.ks-checkout-shell .ks-billing-section .ks-info-card{
+    padding: 12px 14px;
+}
+
+.ks-cart-page.ks-checkout-shell .ks-billing-section .ks-info-card strong,
+.ks-cart-page.ks-checkout-shell .ks-billing-section .ks-info-card span{
+    line-height: 1.35;
 }
 
 .ks-cart-page.ks-checkout-shell .ks-delivery-address-section .ks-address-picker-card{
@@ -1441,7 +1509,7 @@
 .ks-cart-page.ks-checkout-shell .sidebar-checkout-content > .d-flex{
     padding: 10px 0;
     border-bottom: 1px solid rgba(0,0,0,.07);
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.45;
 }
 

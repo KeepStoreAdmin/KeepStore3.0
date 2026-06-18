@@ -941,6 +941,12 @@
 			</div>
 			<!--<td>&nbsp;</td>-->
 		</div>
+        <div id="CheckoutCouponSlot" class="wrap ks-checkout-section ks-discount-section ks-checkout-coupon-slot">
+            <div class="ks-coupon-slot-heading">
+                <h5 class="title fw-semibold">Codice sconto</h5>
+                <p class="body-text-3 text-main-2 ks-section-help">Inserisci un codice sconto prima di confermare l'ordine.</p>
+            </div>
+        </div>
     <asp:Panel ID="PnlFatturazione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap ks-checkout-section ks-billing-section">
 							<h5 class="title fw-semibold">Dati fatturazione</h5>
         <div class="ks-info-card-grid">
@@ -1108,7 +1114,6 @@
             </div>
         </asp:Panel>
         </asp:Panel>
-        <div id="CheckoutCouponSlot" class="ks-checkout-coupon-slot"></div>
 		<div id="panel" runat="server" ClientIDMode="Static" style="display:none !important;" aria-hidden="true">
             <asp:Panel ID="PnlDestinazione" runat="server" Width="100%" Visible="False" GroupingText="Inserisci i dati"  CssClass="wrap ks-checkout-section ks-destination-section" style="display:none !important;">
 							<h5 class="title fw-semibold">Gestisci destinazione</h5>
@@ -1342,8 +1347,14 @@
                             </div>
                             <div class="ks-checkout-discount-status">
                                 <span class="ks-info-label">Codice sconto</span>
-                                <span class="body-text-3">Gestibile dal carrello prima del checkout.</span>
-                                <strong><%= lblBuonoSconto.Text %></strong>
+                                <% If Val(Session("BuonoSconto_id")) > 0 Then %>
+                                    <span class="body-text-3">Codice applicato</span>
+                                    <strong><%= Server.HtmlEncode(TB_BuonoSconto.Text) %></strong>
+                                    <span class="body-text-3">Sconto: <%= lblBuonoSconto.Text %></span>
+                                <% Else %>
+                                    <span class="body-text-3">Nessun codice applicato.</span>
+                                    <strong><%= lblBuonoSconto.Text %></strong>
+                                <% End If %>
                             </div>
 
                             <div class="ks-sidebar-products">

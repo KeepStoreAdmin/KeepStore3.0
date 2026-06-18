@@ -479,13 +479,26 @@
   }
 
   function placeCheckoutCouponPanel() {
-    var panel = document.getElementById('CartActionsWrap') || qs('[id$="CartActionsWrap"]');
+    var panel = document.getElementById('Panel_BuoniSconto') || qs('[id$="Panel_BuoniSconto"]') || qs('.ks-cart-discount-panel');
     var slot = document.getElementById('CheckoutCouponSlot');
     if (!panel || !slot) return;
     if (!isVisible(slot)) return;
     if (panel.parentNode !== slot) {
       slot.appendChild(panel);
     }
+  }
+
+  function decorateCouponFeedback() {
+    qsa('.ks-coupon-feedback').forEach(function (feedback) {
+      var text = (feedback.textContent || '').replace(/\s+/g, ' ').trim();
+      var ok = feedback.querySelector('img[id$="checkOKBuonoSconto"]');
+      var ko = feedback.querySelector('img[id$="checkNOBuonoSconto"]');
+      var okVisible = ok && isVisible(ok);
+      var koVisible = ko && isVisible(ko);
+      feedback.classList.toggle('has-message', !!text || okVisible || koVisible);
+      feedback.classList.toggle('is-success', okVisible && !koVisible);
+      feedback.classList.toggle('is-error', koVisible);
+    });
   }
 
   // Funzione richiamata da OnClientClick nel markup: deve essere globale.
@@ -509,6 +522,7 @@
     enhanceShippingAddressPicker();
     preventDoubleSubmit();
     placeCheckoutCouponPanel();
+    decorateCouponFeedback();
     restoreCartServerTotals();
     setupCartQuantityControls();
     protectServerCartCommands();
