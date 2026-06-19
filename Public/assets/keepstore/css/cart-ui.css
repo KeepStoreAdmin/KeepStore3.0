@@ -120,7 +120,11 @@
 }
 
 .ks-cart-page.ks-cart-is-empty .ks-cart-heading-meta{
-    justify-content: center;
+    display: none;
+}
+
+.ks-cart-page.ks-cart-is-empty .ks-cart-price-note{
+    display: none;
 }
 
 .ks-cart-page.ks-cart-is-empty .heading-section{
