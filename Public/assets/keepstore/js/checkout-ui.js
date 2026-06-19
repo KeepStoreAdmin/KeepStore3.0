@@ -44,8 +44,8 @@
     var btnInvia = qs('[id$="btInviaOrdine"]') || document.getElementById('btInviaOrdine');
     var inCheckout = (!!tOrdine && isVisible(tOrdine)) || (!!btnInvia && isVisible(btnInvia));
 
-    // (opzionale) stato completato: se la pagina imposta una classe dedicata
-    var isDone = document.body.classList.contains('ks-mode-order-done');
+    // Stato finale/conferma: il markup carrello espone .ks-cart-step-confirm.
+    var isDone = document.body.classList.contains('ks-mode-order-done') || !!qs('.ks-cart-step-confirm');
 
     document.body.classList.toggle('ks-mode-checkout', inCheckout);
 
@@ -78,6 +78,95 @@
 
     // Expose state for CSS/hooks
     document.body.dataset.ksCheckoutStep = (step === 0 ? 'cart' : (step === 1 ? 'checkout' : 'done'));
+  }
+
+  var STEP_SCROLL_KEY = 'ksCartCheckoutStepScroll';
+
+  function getCurrentCheckoutStep() {
+    if (qs('.ks-cart-step-confirm')) return 'done';
+    if (document.body && document.body.dataset && document.body.dataset.ksCheckoutStep) {
+      return document.body.dataset.ksCheckoutStep;
+    }
+    if (document.body && document.body.classList.contains('ks-cart-step-confirm')) return 'done';
+    if (document.body && document.body.classList.contains('ks-cart-step-checkout')) return 'checkout';
+    var tOrdine = document.getElementById('tOrdine') || qs('[id$="tOrdine"]');
+    return (tOrdine && isVisible(tOrdine)) ? 'checkout' : 'cart';
+  }
+
+  function findStepScrollTarget() {
+    return qs('.ks-cart-page') || qs('.checkout-status') || qs('.ks-cart-title') || qs('.s-shoping-cart');
+  }
+
+  function getElementTop(el) {
+    if (!el) return 0;
+    var rect = el.getBoundingClientRect();
+    var scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    return Math.max(0, Math.floor(rect.top + scrollTop - 12));
+  }
+
+  function markStepScroll(targetStep) {
+    try {
+      if (!targetStep || !window.sessionStorage) return;
+      var current = getCurrentCheckoutStep();
+      window.sessionStorage.setItem(STEP_SCROLL_KEY, JSON.stringify({
+        from: current,
+        target: targetStep,
+        ts: Date.now()
+      }));
+    } catch (e) {
+      // storage non disponibile: nessun blocco UX
+    }
+  }
+
+  function setupStepScrollTriggers() {
+    if (document.documentElement.dataset.ksStepScrollBound === '1') return;
+    document.documentElement.dataset.ksStepScrollBound = '1';
+
+    document.addEventListener('click', function (ev) {
+      var el = ev.target && ev.target.closest ? ev.target.closest('a,input,button') : null;
+      if (!el || !el.id) return;
+
+      if (/_?btCompleta$/.test(el.id)) {
+        markStepScroll(getCurrentCheckoutStep() === 'cart' ? 'checkout' : 'cart');
+      } else if (/_?btnVaiConfermaOrdine$/.test(el.id) || /_?lnkCheckoutStep3$/.test(el.id)) {
+        markStepScroll('done');
+      } else if (/_?btnModificaCheckout$/.test(el.id) || /_?lnkCheckoutStep2$/.test(el.id)) {
+        markStepScroll('checkout');
+      } else if (/_?lnkCheckoutStep1$/.test(el.id)) {
+        markStepScroll('cart');
+      }
+    }, true);
+  }
+
+  function scrollTopAfterStepChange() {
+    var raw = null;
+    try {
+      if (!window.sessionStorage) return;
+      raw = window.sessionStorage.getItem(STEP_SCROLL_KEY);
+      if (!raw) return;
+      window.sessionStorage.removeItem(STEP_SCROLL_KEY);
+    } catch (e) {
+      return;
+    }
+
+    var pending = null;
+    try { pending = JSON.parse(raw); } catch (e2) { return; }
+    if (!pending || !pending.target || !pending.from) return;
+    if (pending.ts && (Date.now() - pending.ts > 30000)) return;
+
+    var current = getCurrentCheckoutStep();
+    if (current === pending.from) return;
+    if (pending.target !== current && !(pending.target === 'done' && current === 'checkout')) return;
+
+    window.setTimeout(function () {
+      var target = findStepScrollTarget();
+      var top = getElementTop(target);
+      try {
+        window.scrollTo({ top: top, behavior: 'auto' });
+      } catch (e3) {
+        window.scrollTo(0, top);
+      }
+    }, 0);
   }
 
   // Se in passato è stata abilitata una UX “accordion / chips”, la neutralizziamo.
@@ -515,6 +604,8 @@
 
   function boot() {
     setCheckoutStatus();
+    setupStepScrollTriggers();
+    scrollTopAfterStepChange();
     cleanupLegacyEnhancedUx();
     decorateCheckoutTables();
     enhanceGridRowSelection();
