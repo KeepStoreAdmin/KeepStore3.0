@@ -1217,6 +1217,8 @@ End If
                 End Using
             End Using
 
+            sb.Append(BuildOrderCompanyHeaderHtml(brand, documento, numeroDocumentoTesto, dataDisplay))
+
             sb.Append("<div class=""ks-order-grid"">")
             sb.Append("<div class=""ks-order-main"">")
 
@@ -1303,6 +1305,64 @@ End If
         sb.Append("<div class=""ks-order-total-row")
         If isFinal Then sb.Append(" ks-order-total-row-final")
         sb.Append("""><span>").Append(H(label)).Append("</span><strong>").Append(H(value)).Append("</strong></div>")
+    End Sub
+
+    Private Function BuildOrderCompanyHeaderHtml(ByVal brand As OrderEmailBrandData,
+                                                 ByVal documento As String,
+                                                 ByVal numeroDocumento As String,
+                                                 ByVal dataDocumentoDisplay As String) As String
+        If brand Is Nothing Then
+            brand = New OrderEmailBrandData()
+        End If
+
+        Dim companyName As String = FirstNonEmpty(brand.CompanyName, SessionText("AziendaNome"))
+        Dim siteUrl As String = FirstNonEmpty(brand.SiteUrl, BuildSiteHomeUrl())
+        Dim logoUrl As String = KeepStoreEmailLogo.BuildLogoUrl(siteUrl, brand.LogoWeb)
+        Dim fiscalCode As String = brand.FiscalCode
+        If String.Equals(fiscalCode, brand.VatNumber, StringComparison.OrdinalIgnoreCase) Then
+            fiscalCode = ""
+        End If
+
+        Dim orderReference As String = JoinNonEmpty(" ",
+                                                    documento,
+                                                    "n.",
+                                                    numeroDocumento,
+                                                    If(String.IsNullOrWhiteSpace(dataDocumentoDisplay), "", "del " & dataDocumentoDisplay))
+
+        Dim sb As New StringBuilder()
+        sb.Append("<section class=""ks-order-company-header"">")
+        sb.Append("<div class=""ks-order-company-logo"">")
+        sb.Append("<img src=""").Append(H(logoUrl)).Append(""" alt=""").Append(H(FirstNonEmpty(companyName, "Logo azienda"))).Append(""" />")
+        sb.Append("</div>")
+        sb.Append("<div class=""ks-order-company-title"">")
+        If Not String.IsNullOrWhiteSpace(companyName) Then
+            sb.Append("<h4>").Append(H(companyName)).Append("</h4>")
+        End If
+        sb.Append("<div class=""ks-order-company-lines"">")
+        AppendCompanyHeaderLine(sb, JoinNonEmpty(" - ", brand.AddressLine, brand.CityLine))
+        AppendCompanyHeaderLine(sb, JoinNonEmpty(" - ",
+                                                If(String.IsNullOrWhiteSpace(brand.SupportEmail), "", "Email: " & brand.SupportEmail),
+                                                If(String.IsNullOrWhiteSpace(brand.Phone), "", "Tel: " & brand.Phone)))
+        AppendCompanyHeaderLine(sb, JoinNonEmpty(" - ",
+                                                If(String.IsNullOrWhiteSpace(brand.VatNumber), "", "P.IVA " & brand.VatNumber),
+                                                If(String.IsNullOrWhiteSpace(fiscalCode), "", "C.F. " & fiscalCode)))
+        AppendCompanyHeaderLine(sb, JoinNonEmpty(" - ",
+                                                If(String.IsNullOrWhiteSpace(brand.Pec), "", "PEC: " & brand.Pec),
+                                                If(String.IsNullOrWhiteSpace(brand.Sdi), "", "SDI: " & brand.Sdi)))
+        AppendCompanyHeaderLine(sb, If(String.IsNullOrWhiteSpace(siteUrl), "", "Web: " & siteUrl))
+        sb.Append("</div></div>")
+        sb.Append("<div class=""ks-order-company-ref""><span>Riferimento</span><strong>").Append(H(orderReference)).Append("</strong></div>")
+        sb.Append("</section>")
+
+        Return sb.ToString()
+    End Function
+
+    Private Sub AppendCompanyHeaderLine(ByVal sb As StringBuilder, ByVal value As String)
+        If sb Is Nothing OrElse String.IsNullOrWhiteSpace(value) Then
+            Return
+        End If
+
+        sb.Append("<p>").Append(H(value)).Append("</p>")
     End Sub
 
     Private Function MoneyDisplay(ByVal value As Object) As String
