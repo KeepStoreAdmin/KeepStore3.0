@@ -6,7 +6,7 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260618-cart-checkout-ux-smoke-fix-1f-rev4" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260619-cart-empty-state-cleanup-1a-rev12" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/checkout-ui.js") %>" defer></script>
 
@@ -76,7 +76,7 @@
 
     <!-- NOTE: rimosso frammento di markup corrotto rimasto da una migrazione precedente (carattere di controllo). -->
 
-    <section class="s-shoping-cart tf-sp-2 ks-cart-page <%= If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", If(IsCheckoutStepVisible(), "ks-cart-step-checkout", "ks-cart-step-cart")) %>">
+    <section class="s-shoping-cart tf-sp-2 ks-cart-page <%= If(IsCartEmptyState(), "ks-cart-is-empty", If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", If(IsCheckoutStepVisible(), "ks-cart-step-checkout", "ks-cart-step-cart"))) %>">
         <div class="container">
 
             <div class="checkout-status tf-sp-2 pt-0">
@@ -370,7 +370,7 @@
                 </div>
             </div>
 
-            <asp:Panel ID="CartEmptyPanel" runat="server" CssClass="ks-cart-empty" Visible="false">
+            <asp:Panel ID="CartEmptyPanel" runat="server" CssClass="ks-cart-empty ks-cart-empty-card" Visible="false">
                 <div class="ks-cart-message-icon">
                     <i class="icon-shop-cart-1"></i>
                 </div>
@@ -378,8 +378,8 @@
                     <h4>Il carrello è vuoto</h4>
                     <p class="body-text-3">Aggiungi prodotti dal catalogo e torna qui quando vuoi completare l'acquisto.</p>
                     <div class="box-btn ks-cart-message-actions">
-                        <a href="articoli.aspx" class="tf-btn">Sfoglia il catalogo</a>
-                        <a href="Default.aspx" class="tf-btn btn-gray">Torna alla home</a>
+                        <a href="articoli.aspx" class="tf-btn ks-cart-empty-primary">Sfoglia il catalogo</a>
+                        <a href="Default.aspx" class="tf-btn ks-cart-empty-secondary">Torna alla home</a>
                     </div>
                 </div>
             </asp:Panel>

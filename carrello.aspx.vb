@@ -15,6 +15,7 @@ Public Partial Class carrello
     Inherits System.Web.UI.Page
 
 Private Shared ReadOnly CartCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
+Private _cartHasItems As Boolean = True
 
 Protected Overrides Sub InitializeCulture()
     System.Threading.Thread.CurrentThread.CurrentCulture = CartCulture
@@ -106,6 +107,10 @@ End Function
 
 Protected Function IsCheckoutStepVisible() As Boolean
     Return tOrdine IsNot Nothing AndAlso tOrdine.Visible
+End Function
+
+Protected Function IsCartEmptyState() As Boolean
+    Return Not _cartHasItems
 End Function
 
 Protected Function IsCheckoutConfirmStep() As Boolean
@@ -936,6 +941,16 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
     End Function
 
     Private Sub ApplyCheckoutStepUi()
+        If IsCartEmptyState() Then
+            SetCheckoutStep("cart")
+            If tOrdine IsNot Nothing Then tOrdine.Visible = False
+            SetCartMainWrapHidden(True)
+            If CartSummaryColumn IsNot Nothing Then CartSummaryColumn.Visible = False
+            If pnlCheckoutConfirm IsNot Nothing Then pnlCheckoutConfirm.Visible = False
+            ApplyCheckoutStepperNavigation()
+            Return
+        End If
+
         If tOrdine Is Nothing OrElse Not tOrdine.Visible Then
             SetCheckoutStep("cart")
             SetCartMainWrapHidden(False)
@@ -1580,9 +1595,16 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
     Public Sub ArticoliCarrello(ByVal numero As Integer)
         Me.lblArticoli.Text = numero
         Dim hasItems As Boolean = (numero > 0)
+        _cartHasItems = hasItems
         If CartItemsWrap IsNot Nothing Then CartItemsWrap.Visible = hasItems
         If CartEmptyPanel IsNot Nothing Then CartEmptyPanel.Visible = Not hasItems
         If CartActionsWrap IsNot Nothing Then CartActionsWrap.Visible = hasItems
+        If CartSummaryColumn IsNot Nothing AndAlso Not hasItems Then CartSummaryColumn.Visible = False
+        If Not hasItems Then
+            SetCheckoutStep("cart")
+            If tOrdine IsNot Nothing Then tOrdine.Visible = False
+            If pnlCheckoutConfirm IsNot Nothing Then pnlCheckoutConfirm.Visible = False
+        End If
         If pnlLoginRequired IsNot Nothing AndAlso Not hasItems Then pnlLoginRequired.Visible = False
         If numero = 0 Then
             Me.lblPresenti.Text = "articoli nel carrello"
