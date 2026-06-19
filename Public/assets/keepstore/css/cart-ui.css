@@ -1665,6 +1665,25 @@
         grid-template-columns: 1fr;
     }
 
+    .ks-cart-page.ks-checkout-shell .tf-checkout-wrap{
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 18px;
+    }
+
+    .ks-cart-page.ks-checkout-shell .page-checkout,
+    .ks-cart-page.ks-checkout-shell .ks-checkout-side,
+    .ks-cart-page.ks-checkout-shell .tf-sidebar-checkout,
+    .ks-cart-page.ks-checkout-shell .ks-order-summary-card{
+        position: static;
+        transform: none;
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        flex: 0 0 auto;
+    }
+
     .ks-cart-page .ks-coupon-panel,
     .ks-cart-page .ks-summary-card,
     .ks-cart-page.ks-checkout-shell .ks-order-summary-card,
@@ -1692,21 +1711,34 @@
 
     .ks-cart-page.ks-checkout-shell.ks-cart-step-confirm .ks-final-actions-mobile-slot.has-actions{
         display: block;
+        position: static;
+        transform: none;
         width: 100%;
+        max-width: none;
+        min-width: 0;
         order: 9;
+        clear: both;
+        margin: 0 0 24px;
         padding: 18px;
         border: 1px solid rgba(225,40,37,.16);
         border-radius: 8px;
         background: #fff;
+        pointer-events: auto;
     }
 
     .ks-cart-page.ks-checkout-shell.ks-cart-step-confirm .ks-final-actions-mobile-slot .ks-checkout-actions{
+        position: static;
+        transform: none;
         margin-top: 0;
+        pointer-events: auto;
     }
 
     .ks-cart-page.ks-checkout-shell.ks-cart-step-confirm .ks-final-actions-mobile-slot .tf-btn{
+        display: flex;
         width: 100%;
         min-width: 0;
+        justify-content: center;
+        pointer-events: auto;
     }
 }
 
