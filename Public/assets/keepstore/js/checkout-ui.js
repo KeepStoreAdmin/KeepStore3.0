@@ -158,7 +158,7 @@
     if (current === pending.from) return;
     if (pending.target !== current && !(pending.target === 'done' && current === 'checkout')) return;
 
-    window.setTimeout(function () {
+    function applyScroll() {
       var target = findStepScrollTarget();
       var top = getElementTop(target);
       try {
@@ -166,7 +166,11 @@
       } catch (e3) {
         window.scrollTo(0, top);
       }
-    }, 0);
+    }
+
+    applyScroll();
+    window.setTimeout(applyScroll, 80);
+    window.setTimeout(applyScroll, 240);
   }
 
   // Se in passato è stata abilitata una UX “accordion / chips”, la neutralizziamo.
@@ -590,6 +594,35 @@
     });
   }
 
+  function placeFinalConfirmActionsForMobile() {
+    var actions = qs('.ks-final-confirm-section .ks-checkout-actions') || qs('#FinalCheckoutActionsMobileSlot .ks-checkout-actions');
+    var inlineSlot = document.getElementById('FinalCheckoutActionsInlineSlot');
+    var mobileSlot = document.getElementById('FinalCheckoutActionsMobileSlot');
+    if (!actions || !inlineSlot || !mobileSlot) return;
+
+    var isConfirm = !!qs('.ks-cart-step-confirm');
+    var isMobile = false;
+    try {
+      isMobile = window.matchMedia && window.matchMedia('(max-width: 767.98px)').matches;
+    } catch (e) {
+      isMobile = window.innerWidth <= 768;
+    }
+
+    if (isConfirm && isMobile) {
+      if (actions.parentNode !== mobileSlot) {
+        mobileSlot.appendChild(actions);
+      }
+      mobileSlot.classList.add('has-actions');
+      mobileSlot.removeAttribute('aria-hidden');
+    } else {
+      if (actions.parentNode !== inlineSlot) {
+        inlineSlot.appendChild(actions);
+      }
+      mobileSlot.classList.remove('has-actions');
+      mobileSlot.setAttribute('aria-hidden', 'true');
+    }
+  }
+
   // Funzione richiamata da OnClientClick nel markup: deve essere globale.
   window.visualizza_spinner_caricamento = function () {
     var sp = document.getElementById('spinner_caricamento');
@@ -613,6 +646,7 @@
     enhanceShippingAddressPicker();
     preventDoubleSubmit();
     placeCheckoutCouponPanel();
+    placeFinalConfirmActionsForMobile();
     decorateCouponFeedback();
     restoreCartServerTotals();
     setupCartQuantityControls();
@@ -622,6 +656,10 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     boot();
+  });
+
+  window.addEventListener('resize', function () {
+    placeFinalConfirmActionsForMobile();
   });
 
   // Se la pagina usa UpdatePanel, riapplica su endRequest

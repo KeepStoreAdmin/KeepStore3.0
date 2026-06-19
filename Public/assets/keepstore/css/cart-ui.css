@@ -832,13 +832,7 @@
 }
 
 .ks-cart-page.ks-checkout-shell .ks-checkout-discount-status{
-    display: grid;
-    gap: .25rem;
-    margin-bottom: 1rem;
-    padding: .85rem;
-    border: 1px solid rgba(199,142,36,.22);
-    border-radius: 8px;
-    background: #fffdf7;
+    display: none;
 }
 
 .ks-cart-page.ks-checkout-shell .ks-checkout-discount-status strong{
@@ -1390,6 +1384,57 @@
     display: none;
 }
 
+.ks-cart-page .ks-applied-coupon-grid{
+    display: block;
+    margin: 0 0 12px;
+}
+
+.ks-cart-page .ks-applied-coupon-grid tbody,
+.ks-cart-page .ks-applied-coupon-grid tr,
+.ks-cart-page .ks-applied-coupon-grid td{
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+}
+
+.ks-cart-page .ks-applied-coupon-grid .ks-discount-card{
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid rgba(20,128,74,.22);
+    border-radius: 8px;
+    background: #effaf4;
+    color: #14532d;
+}
+
+.ks-cart-page .ks-applied-coupon-grid .ks-discount-card__header{
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.ks-cart-page .ks-applied-coupon-grid .ks-discount-card__body{
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+}
+
+.ks-cart-page .ks-applied-coupon-grid .ks-discount-card__value{
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.ks-cart-page .ks-applied-coupon-grid .ks-discount-card__footer,
+.ks-cart-page .ks-applied-coupon-grid .ks-discount-legacy-cancel{
+    display: none;
+}
+
+.ks-cart-page .ks-final-actions-mobile-slot{
+    display: none;
+}
+
 .ks-cart-page.ks-checkout-shell{
     padding-top: 0;
 }
@@ -1643,6 +1688,25 @@
     .ks-cart-page .tf-table-page-cart th,
     .ks-cart-page .tf-table-page-cart td{
         padding: 14px 12px;
+    }
+
+    .ks-cart-page.ks-checkout-shell.ks-cart-step-confirm .ks-final-actions-mobile-slot.has-actions{
+        display: block;
+        width: 100%;
+        order: 9;
+        padding: 18px;
+        border: 1px solid rgba(225,40,37,.16);
+        border-radius: 8px;
+        background: #fff;
+    }
+
+    .ks-cart-page.ks-checkout-shell.ks-cart-step-confirm .ks-final-actions-mobile-slot .ks-checkout-actions{
+        margin-top: 0;
+    }
+
+    .ks-cart-page.ks-checkout-shell.ks-cart-step-confirm .ks-final-actions-mobile-slot .tf-btn{
+        width: 100%;
+        min-width: 0;
     }
 }
 
