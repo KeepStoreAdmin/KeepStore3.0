@@ -128,7 +128,7 @@
 }
 
 .ks-cart-page.ks-cart-is-empty .heading-section{
-    text-align: center;
+    display: none;
 }
 
 .ks-cart-page .ks-cart-empty-card .ks-cart-message-icon{
