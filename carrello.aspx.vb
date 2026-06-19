@@ -861,6 +861,33 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         control.Attributes("aria-disabled") = If(enabled, "false", "true")
     End Sub
 
+    Private Function IsCouponApplied() As Boolean
+        Return GetSessionInt("BuonoSconto_id", 0) > 0
+    End Function
+
+    Private Sub SyncCouponUiState()
+        Dim couponApplied As Boolean = IsCouponApplied()
+        Dim unlocked As Boolean = Not IsAddressEditModeActive()
+
+        If couponApplied Then
+            If TB_BuonoSconto IsNot Nothing AndAlso String.IsNullOrWhiteSpace(TB_BuonoSconto.Text) Then
+                TB_BuonoSconto.Text = getBuonoScontoCodice(GetSessionInt("BuonoSconto_id", 0))
+            End If
+
+            SetControlEnabled(TB_BuonoSconto, False)
+            SetControlEnabled(BT_ApplicaBuonoSconto, False)
+
+            If LB_CancelBuonoSconto IsNot Nothing Then
+                LB_CancelBuonoSconto.Visible = True
+                SetControlEnabled(LB_CancelBuonoSconto, unlocked)
+            End If
+        Else
+            SetControlEnabled(TB_BuonoSconto, unlocked)
+            SetControlEnabled(BT_ApplicaBuonoSconto, unlocked)
+            If LB_CancelBuonoSconto IsNot Nothing Then SetControlEnabled(LB_CancelBuonoSconto, unlocked)
+        End If
+    End Sub
+
     Private Sub ApplyCartAddressEditorLock()
         Dim unlocked As Boolean = Not IsAddressEditModeActive()
 
@@ -887,6 +914,7 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         End If
         ApplyCartLineItemLock(unlocked)
         ApplyCheckoutStepperNavigation()
+        SyncCouponUiState()
     End Sub
 
     Private Function IsAddressEditorActionAllowed(ByVal sender As Object) As Boolean
@@ -4044,6 +4072,8 @@ End Sub
         LB_CancelBuonoSconto.Visible = False
     End If
 
+    SyncCouponUiState()
+
     End Sub
 
 
@@ -4428,6 +4458,7 @@ Protected Sub GV_BuoniSconti_RowCommand(ByVal sender As Object, ByVal e As Syste
         TB_BuonoSconto.Text = ""
         lblBuonoScontoConvalida.Text = ""
         BT_ApplicaBuonoSconto.Enabled = True
+        SyncCouponUiState()
     End If
 End Sub
 
@@ -4506,6 +4537,7 @@ Protected Sub LB_CancelBuonoSconto_Click(ByVal sender As Object, ByVal e As Syst
     lblBuonoScontoConvalida.Text = ""
     BT_ApplicaBuonoSconto.Enabled = True
     LB_CancelBuonoSconto.Visible = False
+    SyncCouponUiState()
 End Sub
 
 

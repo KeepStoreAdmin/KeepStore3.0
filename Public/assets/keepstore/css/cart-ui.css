@@ -1343,6 +1343,27 @@
     border-color: #303030;
 }
 
+.ks-cart-page .ks-coupon-controls .ks-coupon-apply:disabled,
+.ks-cart-page .ks-coupon-controls .ks-coupon-apply.ks-action-disabled,
+.ks-cart-page .ks-coupon-controls .ks-coupon-apply[aria-disabled="true"]{
+    color: rgba(17,17,17,.52);
+    background: #f1f2f1;
+    border-color: rgba(0,0,0,.12);
+    cursor: not-allowed;
+    opacity: .72;
+}
+
+.ks-cart-page .ks-coupon-controls .ks-coupon-apply:disabled:hover,
+.ks-cart-page .ks-coupon-controls .ks-coupon-apply:disabled:focus,
+.ks-cart-page .ks-coupon-controls .ks-coupon-apply.ks-action-disabled:hover,
+.ks-cart-page .ks-coupon-controls .ks-coupon-apply.ks-action-disabled:focus,
+.ks-cart-page .ks-coupon-controls .ks-coupon-apply[aria-disabled="true"]:hover,
+.ks-cart-page .ks-coupon-controls .ks-coupon-apply[aria-disabled="true"]:focus{
+    color: rgba(17,17,17,.52);
+    background: #f1f2f1;
+    border-color: rgba(0,0,0,.12);
+}
+
 .ks-cart-page .ks-coupon-feedback{
     display: none;
     margin-top: 12px;
