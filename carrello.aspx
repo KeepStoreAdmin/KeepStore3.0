@@ -6,7 +6,7 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260619-cart-coupon-apply-state-1a-rev15" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260620-cart-recently-viewed-1d-rev4" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/checkout-ui.js") %>" defer></script>
 
@@ -1448,43 +1448,8 @@
     </section>
     <% End If %>
 
-    <asp:PlaceHolder ID="phCartRecentlyViewed" runat="server" Visible="false">
-        <section class="ks-cart-recommendations" aria-labelledby="ksCartRecentlyViewedTitle">
-            <div class="ks-cart-recommendations-head">
-                <div>
-                    <p class="ks-cart-recommendations-copy">
-                        <asp:Literal ID="litCartRecommendationsCopy" runat="server" Text="Prodotti che hai consultato di recente." />
-                    </p>
-                    <h5 id="ksCartRecentlyViewedTitle" class="ks-cart-recommendations-title">
-                        <asp:Literal ID="litCartRecommendationsTitle" runat="server" Text="Visti di recente" />
-                    </h5>
-                </div>
-                <a href="articoli.aspx" class="ks-cart-recommendations-catalog-link">Sfoglia il catalogo</a>
-            </div>
-
-            <div class="ks-cart-recommendations-grid">
-                <asp:Repeater ID="rptCartRecentlyViewed" runat="server">
-                    <ItemTemplate>
-                        <article class="ks-cart-recommendation-card">
-                            <a class="ks-cart-recommendation-media" href='<%# CartRecommendationUrl(Container.DataItem) %>'>
-                                <img src='<%# CartRecommendationImage(Container.DataItem) %>'
-                                     alt='<%# Server.HtmlEncode(CartRecommendationTitle(Container.DataItem)) %>' />
-                            </a>
-                            <div class="ks-cart-recommendation-body">
-                                <p class="ks-cart-recommendation-meta"><%# Server.HtmlEncode(CartRecommendationMeta(Container.DataItem)) %></p>
-                                <a class="ks-cart-recommendation-name" href='<%# CartRecommendationUrl(Container.DataItem) %>'>
-                                    <%# Server.HtmlEncode(ThemeManager.CompactText(CartRecommendationTitle(Container.DataItem), 72)) %>
-                                </a>
-                                <div class="ks-cart-recommendation-bottom">
-                                    <span class="ks-cart-recommendation-price"><%# Server.HtmlEncode(CartRecommendationPrice(Container.DataItem)) %></span>
-                                    <a class="ks-cart-recommendation-link" href='<%# CartRecommendationUrl(Container.DataItem) %>'>Vedi prodotto</a>
-                                </div>
-                            </div>
-                        </article>
-                    </ItemTemplate>
-                </asp:Repeater>
-            </div>
-        </section>
+    <asp:PlaceHolder ID="RecommendedProductsPanel" runat="server" Visible="false">
+        <asp:Literal ID="RecommendedProductsHtml" runat="server" />
     </asp:PlaceHolder>
 
 </asp:Panel> 

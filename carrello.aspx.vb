@@ -3,6 +3,7 @@ Imports System.Data
 Imports System.Configuration
 Imports System.Collections.Generic
 Imports System.Globalization
+Imports System.Text
 Imports MySql.Data.MySqlClient
 Imports System.Web.UI
 Imports System.Web.UI.WebControls
@@ -306,14 +307,7 @@ Protected Function checkImg(ByVal imgname As Object) As String
     Return "Public/Foto/img_non_disponibile.png"
 End Function
 
-Private Function CartRecommendationRow(ByVal dataItem As Object) As DataRow
-    Dim rowView As DataRowView = TryCast(dataItem, DataRowView)
-    If rowView Is Nothing Then Return Nothing
-    Return rowView.Row
-End Function
-
-Protected Function CartRecommendationTitle(ByVal dataItem As Object) As String
-    Dim row As DataRow = CartRecommendationRow(dataItem)
+Private Function CartRecommendationTitle(ByVal row As DataRow) As String
     If row Is Nothing Then Return ""
 
     Dim title As String = Convert.ToString(row("Descrizione1")).Trim()
@@ -322,8 +316,7 @@ Protected Function CartRecommendationTitle(ByVal dataItem As Object) As String
     Return title
 End Function
 
-Protected Function CartRecommendationMeta(ByVal dataItem As Object) As String
-    Dim row As DataRow = CartRecommendationRow(dataItem)
+Private Function CartRecommendationMeta(ByVal row As DataRow) As String
     If row Is Nothing Then Return ""
 
     Dim brand As String = Convert.ToString(row("MarcheDescrizione")).Trim()
@@ -335,14 +328,12 @@ Protected Function CartRecommendationMeta(ByVal dataItem As Object) As String
     Return Convert.ToString(row("Codice")).Trim()
 End Function
 
-Protected Function CartRecommendationImage(ByVal dataItem As Object) As String
-    Dim row As DataRow = CartRecommendationRow(dataItem)
+Private Function CartRecommendationImage(ByVal row As DataRow) As String
     If row Is Nothing Then Return ThemeManager.PlaceholderProductImageUrl()
     Return ThemeManager.ProductImageUrl(row("Img1"))
 End Function
 
-Protected Function CartRecommendationUrl(ByVal dataItem As Object) As String
-    Dim row As DataRow = CartRecommendationRow(dataItem)
+Private Function CartRecommendationUrl(ByVal row As DataRow) As String
     If row Is Nothing Then Return "articoli.aspx"
 
     Dim id As Integer = SafeInt(row("id"), 0)
@@ -352,8 +343,7 @@ Protected Function CartRecommendationUrl(ByVal dataItem As Object) As String
     Return url
 End Function
 
-Protected Function CartRecommendationPrice(ByVal dataItem As Object) As String
-    Dim row As DataRow = CartRecommendationRow(dataItem)
+Private Function CartRecommendationPrice(ByVal row As DataRow) As String
     If row Is Nothing Then Return ""
 
     Dim useNetPrice As Boolean = (GetSessionInt("IvaTipo", 0) = 1)
@@ -1093,6 +1083,41 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         End Using
     End Function
 
+    Private Function LoadCatalogFallbackRecommendations(ByVal maxItems As Integer, ByVal cartIds As HashSet(Of Integer)) As DataTable
+        Dim excludedIds As New List(Of Integer)()
+        If cartIds IsNot Nothing Then
+            For Each id As Integer In cartIds
+                If id > 0 AndAlso Not excludedIds.Contains(id) Then excludedIds.Add(id)
+                If excludedIds.Count >= 80 Then Exit For
+            Next
+        End If
+
+        Dim exclusion As String = ""
+        If excludedIds.Count > 0 Then exclusion = "AND COALESCE(v.id,0) NOT IN (" & String.Join(",", excludedIds.ToArray()) & ") "
+
+        Dim sql As String = _
+            "SELECT " & CartRecommendationSelectFields() & _
+            "FROM vsuperarticoli v INNER JOIN articoli aBase ON aBase.id=v.id " & _
+            "WHERE COALESCE(v.NListino,1)=@listino AND COALESCE(aBase.Abilitato,1)=1 " & _
+            exclusion & _
+            "AND COALESCE(NULLIF(v.Img1,''),'')<>'' " & _
+            "AND " & CartRecommendationStockWhere() & " " & _
+            "ORDER BY COALESCE(v.InOfferta,0) DESC, (COALESCE(v.Giacenza,0)-COALESCE(v.Impegnata,0)) DESC, COALESCE(v.visite,0) DESC, v.id DESC " & _
+            "LIMIT " & Math.Max(1, maxItems).ToString(CultureInfo.InvariantCulture)
+
+        Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+            Using cmd As New MySqlCommand(sql, conn)
+                cmd.Parameters.AddWithValue("@listino", GetListinoSafe(1))
+                Using da As New MySqlDataAdapter(cmd)
+                    Dim dt As New DataTable()
+                    conn.Open()
+                    da.Fill(dt)
+                    Return dt
+                End Using
+            End Using
+        End Using
+    End Function
+
     Private Function LoadCartRecommendations(ByVal maxItems As Integer, ByRef title As String) As DataTable
         title = "Visti di recente"
         Dim cartIds As HashSet(Of Integer) = GetCartArticleIds()
@@ -1101,36 +1126,86 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         If recentItems IsNot Nothing AndAlso recentItems.Rows.Count > 0 Then Return recentItems
 
         title = "Potrebbe interessarti anche"
-        Return LoadCartFallbackRecommendations(maxItems, cartIds)
+        Dim relatedItems As DataTable = LoadCartFallbackRecommendations(maxItems, cartIds)
+        If relatedItems IsNot Nothing AndAlso relatedItems.Rows.Count > 0 Then Return relatedItems
+
+        Return LoadCatalogFallbackRecommendations(maxItems, cartIds)
+    End Function
+
+    Private Function RenderCartRecommendationCard(ByVal row As DataRow) As String
+        If row Is Nothing Then Return ""
+
+        Dim title As String = CartRecommendationTitle(row)
+        Dim url As String = CartRecommendationUrl(row)
+        Dim imageUrl As String = CartRecommendationImage(row)
+        Dim meta As String = CartRecommendationMeta(row)
+        Dim price As String = CartRecommendationPrice(row)
+
+        If String.IsNullOrWhiteSpace(title) OrElse String.IsNullOrWhiteSpace(url) OrElse String.IsNullOrWhiteSpace(imageUrl) Then Return ""
+
+        Dim sb As New StringBuilder()
+        sb.Append("<article class=""ks-cart-recommendation-card"">")
+        sb.Append("<a class=""ks-cart-recommendation-card__image"" href=""").Append(HttpUtility.HtmlAttributeEncode(url)).Append(""">")
+        sb.Append("<img src=""").Append(HttpUtility.HtmlAttributeEncode(imageUrl)).Append(""" alt=""").Append(HttpUtility.HtmlAttributeEncode(title)).Append(""" />")
+        sb.Append("</a>")
+        sb.Append("<div class=""ks-cart-recommendation-card__body"">")
+        If Not String.IsNullOrWhiteSpace(meta) Then
+            sb.Append("<p class=""ks-cart-recommendation-card__meta"">").Append(HttpUtility.HtmlEncode(meta)).Append("</p>")
+        End If
+        sb.Append("<a class=""ks-cart-recommendation-card__name"" href=""").Append(HttpUtility.HtmlAttributeEncode(url)).Append(""">")
+        sb.Append(HttpUtility.HtmlEncode(ThemeManager.CompactText(title, 72))).Append("</a>")
+        sb.Append("<div class=""ks-cart-recommendation-card__bottom"">")
+        If Not String.IsNullOrWhiteSpace(price) Then
+            sb.Append("<span class=""ks-cart-recommendation-card__price"">").Append(HttpUtility.HtmlEncode(price)).Append("</span>")
+        End If
+        sb.Append("<a class=""ks-cart-recommendation-card__link"" href=""").Append(HttpUtility.HtmlAttributeEncode(url)).Append(""">Vedi prodotto</a>")
+        sb.Append("</div></div></article>")
+        Return sb.ToString()
+    End Function
+
+    Private Function RenderCartRecommendationsSection(ByVal items As DataTable, ByVal title As String) As String
+        If items Is Nothing OrElse items.Rows.Count = 0 Then Return ""
+
+        Dim cards As New StringBuilder()
+        For Each row As DataRow In items.Rows
+            Dim card As String = RenderCartRecommendationCard(row)
+            If Not String.IsNullOrWhiteSpace(card) Then cards.Append(card)
+        Next
+        If cards.Length = 0 Then Return ""
+
+        Dim copy As String = If(String.Equals(title, "Potrebbe interessarti anche", StringComparison.OrdinalIgnoreCase), _
+                                "Suggerimenti selezionati dal catalogo KeepStore.", _
+                                "Prodotti che hai consultato di recente.")
+
+        Dim sb As New StringBuilder()
+        sb.Append("<section class=""ks-cart-recommendations"" aria-labelledby=""ksCartRecommendationsTitle"">")
+        sb.Append("<div class=""ks-cart-recommendations__head""><div>")
+        sb.Append("<p class=""ks-cart-recommendations__copy"">").Append(HttpUtility.HtmlEncode(copy)).Append("</p>")
+        sb.Append("<h5 id=""ksCartRecommendationsTitle"" class=""ks-cart-recommendations__title"">").Append(HttpUtility.HtmlEncode(title)).Append("</h5>")
+        sb.Append("</div><a class=""ks-cart-recommendations__catalog-link"" href=""articoli.aspx"">Sfoglia il catalogo</a></div>")
+        sb.Append("<div class=""ks-cart-recommendations-grid"">").Append(cards.ToString()).Append("</div>")
+        sb.Append("</section>")
+        Return sb.ToString()
     End Function
 
     Private Sub BindCartRecentlyViewed()
         Try
-            If phCartRecentlyViewed Is Nothing OrElse rptCartRecentlyViewed Is Nothing Then Return
+            If RecommendedProductsPanel Is Nothing OrElse RecommendedProductsHtml Is Nothing Then Return
 
-            phCartRecentlyViewed.Visible = False
-            If IsCheckoutConfirmStep() Then Return
+            RecommendedProductsPanel.Visible = False
+            RecommendedProductsHtml.Text = ""
+            If IsCheckoutConfirmStep() OrElse IsCartEmptyState() Then Return
 
             Dim recommendationTitle As String = "Visti di recente"
             Dim items As DataTable = LoadCartRecommendations(8, recommendationTitle)
-            If items Is Nothing OrElse items.Rows.Count = 0 Then
-                ' Nessun prodotto reale disponibile: il modulo resta nascosto, senza fallback statici/demo.
-                Return
-            End If
+            Dim html As String = RenderCartRecommendationsSection(items, recommendationTitle)
+            If String.IsNullOrWhiteSpace(html) Then Return
 
-            rptCartRecentlyViewed.DataSource = items
-            rptCartRecentlyViewed.DataBind()
-            If litCartRecommendationsTitle IsNot Nothing Then litCartRecommendationsTitle.Text = Server.HtmlEncode(recommendationTitle)
-            If litCartRecommendationsCopy IsNot Nothing Then
-                If String.Equals(recommendationTitle, "Potrebbe interessarti anche", StringComparison.OrdinalIgnoreCase) Then
-                    litCartRecommendationsCopy.Text = "Suggerimenti selezionati dal catalogo KeepStore."
-                Else
-                    litCartRecommendationsCopy.Text = "Prodotti che hai consultato di recente."
-                End If
-            End If
-            phCartRecentlyViewed.Visible = True
+            RecommendedProductsHtml.Text = html
+            RecommendedProductsPanel.Visible = True
         Catch ex As Exception
-            If phCartRecentlyViewed IsNot Nothing Then phCartRecentlyViewed.Visible = False
+            If RecommendedProductsPanel IsNot Nothing Then RecommendedProductsPanel.Visible = False
+            If RecommendedProductsHtml IsNot Nothing Then RecommendedProductsHtml.Text = ""
             Try
                 KeepStoreLog.Error("carrello.aspx", "Errore BindCartRecentlyViewed", ex, HttpContext.Current)
             Catch

@@ -1564,14 +1564,13 @@
     clear: both;
     width: 100%;
     max-width: 1320px;
-    margin: 34px auto 8px;
-    padding: 26px;
-    border: 1px solid #eeeeee;
-    border-radius: 10px;
+    margin: 32px auto 40px;
+    padding: 24px 0 0;
+    border-top: 1px solid #eeeeee;
     background: #ffffff;
 }
 
-.ks-cart-page .ks-cart-recommendations-head{
+.ks-cart-page .ks-cart-recommendations__head{
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
@@ -1579,14 +1578,14 @@
     margin-bottom: 20px;
 }
 
-.ks-cart-page .ks-cart-recommendations-copy{
+.ks-cart-page .ks-cart-recommendations__copy{
     margin: 0 0 4px;
     color: #6f6f6f;
     font-size: 14px;
     line-height: 1.45;
 }
 
-.ks-cart-page .ks-cart-recommendations-title{
+.ks-cart-page .ks-cart-recommendations__title{
     margin: 0;
     color: #222222;
     font-size: 22px;
@@ -1594,7 +1593,7 @@
     line-height: 1.25;
 }
 
-.ks-cart-page .ks-cart-recommendations-catalog-link{
+.ks-cart-page .ks-cart-recommendations__catalog-link{
     color: #c51230;
     font-size: 14px;
     font-weight: 600;
@@ -1602,7 +1601,7 @@
     white-space: nowrap;
 }
 
-.ks-cart-page .ks-cart-recommendations-catalog-link:hover{
+.ks-cart-page .ks-cart-recommendations__catalog-link:hover{
     color: #8f0d22;
 }
 
@@ -1623,9 +1622,10 @@
     border: 1px solid #eeeeee;
     border-radius: 8px;
     background: #ffffff;
+    box-shadow: 0 10px 24px rgba(17, 24, 39, .06);
 }
 
-.ks-cart-page .ks-cart-recommendation-media{
+.ks-cart-page .ks-cart-recommendation-card__image{
     display: flex;
     width: 100%;
     height: 170px;
@@ -1636,7 +1636,7 @@
     background: #f7f7f7;
 }
 
-.ks-cart-page .ks-cart-recommendation-media img{
+.ks-cart-page .ks-cart-recommendation-card__image img{
     display: block;
     width: auto;
     max-width: 100%;
@@ -1645,7 +1645,7 @@
     object-fit: contain;
 }
 
-.ks-cart-page .ks-cart-recommendation-body{
+.ks-cart-page .ks-cart-recommendation-card__body{
     display: flex;
     min-height: 170px;
     flex: 1 1 auto;
@@ -1653,7 +1653,7 @@
     padding-top: 12px;
 }
 
-.ks-cart-page .ks-cart-recommendation-meta{
+.ks-cart-page .ks-cart-recommendation-card__meta{
     min-height: 18px;
     margin: 0 0 6px;
     color: #777777;
@@ -1664,7 +1664,7 @@
     white-space: nowrap;
 }
 
-.ks-cart-page .ks-cart-recommendation-name{
+.ks-cart-page .ks-cart-recommendation-card__name{
     display: -webkit-box;
     min-height: 42px;
     color: #222222;
@@ -1677,11 +1677,11 @@
     -webkit-line-clamp: 2;
 }
 
-.ks-cart-page .ks-cart-recommendation-name:hover{
+.ks-cart-page .ks-cart-recommendation-card__name:hover{
     color: #c51230;
 }
 
-.ks-cart-page .ks-cart-recommendation-bottom{
+.ks-cart-page .ks-cart-recommendation-card__bottom{
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1690,14 +1690,14 @@
     padding-top: 14px;
 }
 
-.ks-cart-page .ks-cart-recommendation-price{
+.ks-cart-page .ks-cart-recommendation-card__price{
     color: #222222;
     font-size: 15px;
     font-weight: 700;
     line-height: 1.2;
 }
 
-.ks-cart-page .ks-cart-recommendation-link{
+.ks-cart-page .ks-cart-recommendation-card__link{
     display: inline-flex;
     min-height: 36px;
     align-items: center;
@@ -1712,7 +1712,7 @@
     white-space: nowrap;
 }
 
-.ks-cart-page .ks-cart-recommendation-link:hover{
+.ks-cart-page .ks-cart-recommendation-card__link:hover{
     background: #c51230;
     color: #ffffff;
 }
@@ -2002,11 +2002,12 @@
     }
 
     .ks-cart-page .ks-cart-recommendations{
-        padding: 18px;
         margin-top: 24px;
+        margin-bottom: 32px;
+        padding-top: 20px;
     }
 
-    .ks-cart-page .ks-cart-recommendations-head{
+    .ks-cart-page .ks-cart-recommendations__head{
         align-items: flex-start;
         flex-direction: column;
     }
@@ -2016,20 +2017,20 @@
         gap: 14px;
     }
 
-    .ks-cart-page .ks-cart-recommendation-media{
+    .ks-cart-page .ks-cart-recommendation-card__image{
         height: 160px;
     }
 
-    .ks-cart-page .ks-cart-recommendation-body{
+    .ks-cart-page .ks-cart-recommendation-card__body{
         min-height: 0;
     }
 
-    .ks-cart-page .ks-cart-recommendation-bottom{
+    .ks-cart-page .ks-cart-recommendation-card__bottom{
         align-items: flex-start;
         flex-direction: column;
     }
 
-    .ks-cart-page .ks-cart-recommendation-link{
+    .ks-cart-page .ks-cart-recommendation-card__link{
         width: 100%;
         justify-content: center;
     }
