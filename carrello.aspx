@@ -6,7 +6,7 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260620-cart-recently-viewed-1d-rev4" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260620-cart-recently-viewed-1e-rev5" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/checkout-ui.js") %>" defer></script>
 

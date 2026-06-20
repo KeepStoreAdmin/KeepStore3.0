@@ -1144,22 +1144,22 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         If String.IsNullOrWhiteSpace(title) OrElse String.IsNullOrWhiteSpace(url) OrElse String.IsNullOrWhiteSpace(imageUrl) Then Return ""
 
         Dim sb As New StringBuilder()
-        sb.Append("<article class=""ks-cart-recommendation-card"">")
-        sb.Append("<a class=""ks-cart-recommendation-card__image"" href=""").Append(HttpUtility.HtmlAttributeEncode(url)).Append(""">")
-        sb.Append("<img src=""").Append(HttpUtility.HtmlAttributeEncode(imageUrl)).Append(""" alt=""").Append(HttpUtility.HtmlAttributeEncode(title)).Append(""" />")
-        sb.Append("</a>")
-        sb.Append("<div class=""ks-cart-recommendation-card__body"">")
+        sb.Append("<article class=""ks-rv-card"">")
+        sb.Append("<a class=""ks-rv-image-link"" href=""").Append(HttpUtility.HtmlAttributeEncode(url)).Append(""">")
+        sb.Append("<span class=""ks-rv-image-box"">")
+        sb.Append("<img src=""").Append(HttpUtility.HtmlAttributeEncode(imageUrl)).Append(""" alt=""").Append(HttpUtility.HtmlAttributeEncode(title)).Append(""" loading=""lazy"" width=""180"" height=""180"" />")
+        sb.Append("</span></a>")
+        sb.Append("<div class=""ks-rv-body"">")
         If Not String.IsNullOrWhiteSpace(meta) Then
-            sb.Append("<p class=""ks-cart-recommendation-card__meta"">").Append(HttpUtility.HtmlEncode(meta)).Append("</p>")
+            sb.Append("<p class=""ks-rv-code"">").Append(HttpUtility.HtmlEncode(meta)).Append("</p>")
         End If
-        sb.Append("<a class=""ks-cart-recommendation-card__name"" href=""").Append(HttpUtility.HtmlAttributeEncode(url)).Append(""">")
-        sb.Append(HttpUtility.HtmlEncode(ThemeManager.CompactText(title, 72))).Append("</a>")
-        sb.Append("<div class=""ks-cart-recommendation-card__bottom"">")
+        sb.Append("<h3 class=""ks-rv-name""><a href=""").Append(HttpUtility.HtmlAttributeEncode(url)).Append(""">")
+        sb.Append(HttpUtility.HtmlEncode(ThemeManager.CompactText(title, 72))).Append("</a></h3>")
         If Not String.IsNullOrWhiteSpace(price) Then
-            sb.Append("<span class=""ks-cart-recommendation-card__price"">").Append(HttpUtility.HtmlEncode(price)).Append("</span>")
+            sb.Append("<div class=""ks-rv-price"">").Append(HttpUtility.HtmlEncode(price)).Append("</div>")
         End If
-        sb.Append("<a class=""ks-cart-recommendation-card__link"" href=""").Append(HttpUtility.HtmlAttributeEncode(url)).Append(""">Vedi prodotto</a>")
-        sb.Append("</div></div></article>")
+        sb.Append("<a class=""ks-rv-link"" href=""").Append(HttpUtility.HtmlAttributeEncode(url)).Append(""">Vedi prodotto</a>")
+        sb.Append("</div></article>")
         Return sb.ToString()
     End Function
 
@@ -1173,18 +1173,20 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         Next
         If cards.Length = 0 Then Return ""
 
-        Dim copy As String = If(String.Equals(title, "Potrebbe interessarti anche", StringComparison.OrdinalIgnoreCase), _
-                                "Suggerimenti selezionati dal catalogo KeepStore.", _
-                                "Prodotti che hai consultato di recente.")
+        Dim subtitle As String = If(String.Equals(title, "Potrebbe interessarti anche", StringComparison.OrdinalIgnoreCase), _
+                                    "Suggerimenti selezionati dal catalogo KeepStore.", _
+                                    "Prodotti che hai consultato di recente.")
 
         Dim sb As New StringBuilder()
-        sb.Append("<section class=""ks-cart-recommendations"" aria-labelledby=""ksCartRecommendationsTitle"">")
-        sb.Append("<div class=""ks-cart-recommendations__head""><div>")
-        sb.Append("<p class=""ks-cart-recommendations__copy"">").Append(HttpUtility.HtmlEncode(copy)).Append("</p>")
-        sb.Append("<h5 id=""ksCartRecommendationsTitle"" class=""ks-cart-recommendations__title"">").Append(HttpUtility.HtmlEncode(title)).Append("</h5>")
-        sb.Append("</div><a class=""ks-cart-recommendations__catalog-link"" href=""articoli.aspx"">Sfoglia il catalogo</a></div>")
-        sb.Append("<div class=""ks-cart-recommendations-grid"">").Append(cards.ToString()).Append("</div>")
-        sb.Append("</section>")
+        sb.Append("<section class=""ks-rv-section"" aria-labelledby=""ks-rv-title"">")
+        sb.Append("<div class=""ks-rv-container"">")
+        sb.Append("<div class=""ks-rv-head""><div>")
+        sb.Append("<p class=""ks-rv-eyebrow"">Suggerimenti per te</p>")
+        sb.Append("<h2 id=""ks-rv-title"">").Append(HttpUtility.HtmlEncode(title)).Append("</h2>")
+        sb.Append("<p class=""ks-rv-subtitle"">").Append(HttpUtility.HtmlEncode(subtitle)).Append("</p>")
+        sb.Append("</div></div>")
+        sb.Append("<div class=""ks-rv-grid"">").Append(cards.ToString()).Append("</div>")
+        sb.Append("</div></section>")
         Return sb.ToString()
     End Function
 
