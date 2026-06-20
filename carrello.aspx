@@ -6,6 +6,7 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260619-cart-coupon-apply-state-1a-rev15" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/checkout-ui.js") %>" defer></script>
 
@@ -75,7 +76,7 @@
 
     <!-- NOTE: rimosso frammento di markup corrotto rimasto da una migrazione precedente (carattere di controllo). -->
 
-    <section class="s-shoping-cart tf-sp-2">
+    <section class="s-shoping-cart tf-sp-2 ks-cart-page <%= If(IsCartEmptyState(), "ks-cart-is-empty", If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", If(IsCheckoutStepVisible(), "ks-cart-step-checkout", "ks-cart-step-cart"))) %>">
         <div class="container">
 
             <div class="checkout-status tf-sp-2 pt-0">
@@ -103,12 +104,12 @@
             </div>
 
             <div class="heading-section mb-3">
-                <h3 class="heading">Il tuo carrello</h3>
-                <div class="body-text-3">
+                <h3 class="heading"><% If IsCheckoutConfirmStep() Then %>Conferma ordine<% ElseIf IsCheckoutStepVisible() Then %>Spedizione e checkout<% Else %>Il tuo carrello<% End If %></h3>
+                <div class="body-text-3 ks-cart-heading-meta">
                     <asp:Label ID="lblArticoli" runat="server" Text="" Font-Bold="true" ForeColor="#E12825"></asp:Label>
                     <asp:Label ID="lblPresenti" runat="server" Text=""></asp:Label>
                 </div>
-                <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" Font-Size="7pt" Font-Names="arial"></asp:Label>
+                <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" Font-Size="7pt" Font-Names="arial" CssClass="ks-cart-price-note"></asp:Label>
             </div>
 
             <asp:SqlDataSource ID="sdsArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
@@ -124,7 +125,7 @@
                 DeleteCommand="delete from carrello where (Id = ?Id)"
                 UpdateCommand="update carrello set qnt = ?Qnt where (Id = ?Id)">
             </asp:SqlDataSource>
-            <div id="CartItemsWrap" runat="server" class="row g-4">
+            <div id="CartItemsWrap" runat="server" class="row g-4 ks-cart-step-cart-body">
                 <div class="col-12">
                     <div class="form-discount ks-cart-form">
                     <div class="overflow-x-auto">
@@ -369,7 +370,7 @@
                 </div>
             </div>
 
-            <asp:Panel ID="CartEmptyPanel" runat="server" CssClass="ks-cart-empty" Visible="false">
+            <asp:Panel ID="CartEmptyPanel" runat="server" CssClass="ks-cart-empty ks-cart-empty-card" Visible="false">
                 <div class="ks-cart-message-icon">
                     <i class="icon-shop-cart-1"></i>
                 </div>
@@ -377,8 +378,8 @@
                     <h4>Il carrello è vuoto</h4>
                     <p class="body-text-3">Aggiungi prodotti dal catalogo e torna qui quando vuoi completare l'acquisto.</p>
                     <div class="box-btn ks-cart-message-actions">
-                        <a href="articoli.aspx" class="tf-btn">Sfoglia il catalogo</a>
-                        <a href="Default.aspx" class="tf-btn btn-gray">Torna alla home</a>
+                        <a href="articoli.aspx" class="tf-btn ks-cart-empty-primary">Sfoglia il catalogo</a>
+                        <a href="Default.aspx" class="tf-btn ks-cart-empty-secondary">Torna alla home</a>
                     </div>
                 </div>
             </asp:Panel>
@@ -397,9 +398,10 @@
                     <a id="ksCartLoginRequiredLink" href="login.aspx?ReturnUrl=%2Fcarrello.aspx" class="tf-btn">Accedi o registrati</a>
                 </div>
             </asp:Panel>
+            </div>
 
             <!-- Buono Sconto (dati) -->
-            <div id="CartActionsWrap" runat="server">
+            <div id="CartActionsWrap" runat="server" class="ks-cart-support-panel">
             <asp:SqlDataSource ID="SqlDataBuonoSconto" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                 EnableViewState="False" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
                 SelectCommand="SELECT * FROM buoni_sconti WHERE id=@idBuonoSconto">
@@ -408,45 +410,44 @@
                 </SelectParameters>
             </asp:SqlDataSource>
 
-            <asp:GridView ID="GV_BuoniSconti" DataSourceID="SqlDataBuonoSconto" runat="server" AutoGenerateColumns="False" GridLines="None" BorderStyle="None" CellSpacing="0" ShowHeader="False" Width="100%">
-                <Columns>
-                    <asp:TemplateField>
-                        <ItemTemplate>
-                            <asp:Label ID="lbl_idBuonoSconto" runat="server" Text='<%#: Eval("id")%>' Visible="false"></asp:Label>
-                            <asp:Label ID="lbl_Percentuale_BuonoSconto" runat="server" Text='<%#: Eval("scontoPercentuale")%>' Visible="false"></asp:Label>
-                            <asp:Label ID="lbl_scontoFisso_BuonoSconto" runat="server" Text='<%#: Eval("scontoFisso")%>' Visible="false"></asp:Label>
-                            <asp:Label ID="lbl_valore_BuonoSconto" runat="server" Text='<%#: Eval("valore")%>' Visible="false"></asp:Label>
-                            <asp:Label ID="lbl_ScontoVettore" runat="server" Text='<%#: Eval("scontoVettore")%>' Visible="false"></asp:Label>
-
-                            <div class="ks-discount-card mb-3">
-                                <div class="ks-discount-card__header">BUONO SCONTO</div>
-                                <div class="ks-discount-card__body">
-                                    <div>
-                                        <div class="body-md-2 fw-semibold">
-                                            <asp:Label ID="lbl_Descrizione1_BuonoSconto" runat="server" Text='<%#: Eval("descrizione1")%>'></asp:Label>
-                                        </div>
-                                        <div class="body-text-3">
-                                            <asp:Label ID="lbl_Descrizione2_BuonoSconto" runat="server" Text='<%#: Eval("descrizione2")%>'></asp:Label>
-                                        </div>
-                                    </div>
-                                    <div class="ks-discount-card__value">
-                                        <asp:Label ID="lbl_TotSconto" runat="server" Text=""></asp:Label>
-                                    </div>
-                                </div>
-                                <div class="ks-discount-card__footer">
-                                    <asp:LinkButton ID="CancellaBuonoSconto" CommandName="CancellaBuonoSconto" runat="server" CssClass="link">Elimina buono sconto</asp:LinkButton>
-                                </div>
-                            </div>
-                        </ItemTemplate>
-                    </asp:TemplateField>
-                </Columns>
-            </asp:GridView>
-
-            <div class="cart-bottom ks-cart-bottom">
-                <div class="col-12 col-lg-8">
+            <div class="cart-bottom ks-cart-bottom ks-cart-layout">
+                <div class="col-12 col-lg-8 ks-cart-main">
                     <asp:Panel ID="Panel_BuoniSconto" runat="server" HorizontalAlign="left" CssClass="ip-discount-code ks-coupon-panel ks-cart-discount-panel">
                         <div class="ks-coupon-title body-md-2 fw-semibold">Hai un codice sconto?</div>
-                        <div class="ks-coupon-copy body-text-3">Inseriscilo qui prima di procedere al checkout.</div>
+                        <div class="ks-coupon-copy body-text-3">Inseriscilo qui prima di procedere.</div>
+                        <asp:GridView ID="GV_BuoniSconti" DataSourceID="SqlDataBuonoSconto" runat="server" AutoGenerateColumns="False" GridLines="None" BorderStyle="None" CellSpacing="0" ShowHeader="False" Width="100%" CssClass="ks-applied-coupon-grid">
+                            <Columns>
+                                <asp:TemplateField>
+                                    <ItemTemplate>
+                                        <asp:Label ID="lbl_idBuonoSconto" runat="server" Text='<%#: Eval("id")%>' Visible="false"></asp:Label>
+                                        <asp:Label ID="lbl_Percentuale_BuonoSconto" runat="server" Text='<%#: Eval("scontoPercentuale")%>' Visible="false"></asp:Label>
+                                        <asp:Label ID="lbl_scontoFisso_BuonoSconto" runat="server" Text='<%#: Eval("scontoFisso")%>' Visible="false"></asp:Label>
+                                        <asp:Label ID="lbl_valore_BuonoSconto" runat="server" Text='<%#: Eval("valore")%>' Visible="false"></asp:Label>
+                                        <asp:Label ID="lbl_ScontoVettore" runat="server" Text='<%#: Eval("scontoVettore")%>' Visible="false"></asp:Label>
+
+                                        <div class="ks-discount-card mb-3">
+                                            <div class="ks-discount-card__header">Buono sconto applicato</div>
+                                            <div class="ks-discount-card__body">
+                                                <div>
+                                                    <div class="body-md-2 fw-semibold">
+                                                        <asp:Label ID="lbl_Descrizione1_BuonoSconto" runat="server" Text='<%#: Eval("descrizione1")%>'></asp:Label>
+                                                    </div>
+                                                    <div class="body-text-3">
+                                                        <asp:Label ID="lbl_Descrizione2_BuonoSconto" runat="server" Text='<%#: Eval("descrizione2")%>'></asp:Label>
+                                                    </div>
+                                                </div>
+                                                <div class="ks-discount-card__value">
+                                                    <asp:Label ID="lbl_TotSconto" runat="server" Text=""></asp:Label>
+                                                </div>
+                                            </div>
+                                            <div class="ks-discount-card__footer">
+                                                <asp:LinkButton ID="CancellaBuonoSconto" CommandName="CancellaBuonoSconto" runat="server" CssClass="link ks-discount-legacy-cancel">Elimina buono sconto</asp:LinkButton>
+                                            </div>
+                                        </div>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                            </Columns>
+                        </asp:GridView>
                         <div class="ks-coupon-controls">
                             <asp:TextBox ID="TB_BuonoSconto" runat="server" CssClass="form-control ks-coupon-input" placeholder="Inserisci codice sconto"></asp:TextBox>
                             <asp:Button ID="BT_ApplicaBuonoSconto" runat="server" CausesValidation="false" Text="Applica" CssClass="tf-btn btn-gray ks-coupon-apply" />
@@ -470,10 +471,15 @@
                     <asp:TextBox ID="tbTotale" runat="server" Width="20px" Style="display:none" ToolTip="Totale"></asp:TextBox>
                 </div>
 
-                <div id="CartSummaryColumn" runat="server" class="col-12 col-lg-4">
+                <div id="CartSummaryColumn" runat="server" class="col-12 col-lg-4 ks-cart-side">
                     <div class="tf-page-cart-footer">
                         <div class="tf-cart-summery ks-summary-card">
                             <h4 class="title">Riepilogo ordine</h4>
+                            <div class="ks-cart-subtotal-card">
+                                <span class="ks-info-label">Totale articoli</span>
+                                <strong><asp:Label ID="lblCartSubtotalOnly" runat="server" Text="&#8364; 0,00"></asp:Label></strong>
+                                <p class="body-text-3">Spedizione, pagamento e costi checkout saranno calcolati nello step successivo.</p>
+                            </div>
                         <table width="100%" id="TableConteggi" runat="server" visible="false" class="ks-summary-table">
                             <tr>
                                 <td align="right">Imponibile:</td>
@@ -537,7 +543,7 @@
                 </div>
             </div>
 
-            <div class="box-btn ks-cart-buttons">
+            <div class="box-btn ks-cart-buttons ks-cart-actions">
                 <asp:LinkButton ID="btContinua" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Continua lo Shopping</asp:LinkButton>
                 <asp:LinkButton ID="btAggiorna" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Aggiorna Carrello</asp:LinkButton>
                 <asp:LinkButton ID="btSvuota" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Svuota Carrello</asp:LinkButton>
@@ -546,14 +552,13 @@
                 </div>
             </div>
             </div>
-
         </div>
     </section>
 
 <asp:Panel ID="Panel_Unico" runat="server" CssClass="ks-checkout-panel">   
     
     <% If tOrdine IsNot Nothing AndAlso tOrdine.Visible Then %>
-    <section class="tf-page-checkout flat-spacing-11 ks-checkout-shell">
+    <section class="tf-page-checkout flat-spacing-11 ks-cart-page ks-checkout-shell <%= If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", "ks-cart-step-checkout") %>">
         <div class="container">
             <div class="tf-checkout-wrap flex-lg-nowrap">
                 <div class="page-checkout">
@@ -935,6 +940,12 @@
 			</div>
 			<!--<td>&nbsp;</td>-->
 		</div>
+        <div id="CheckoutCouponSlot" class="wrap ks-checkout-section ks-discount-section ks-checkout-coupon-slot">
+            <div class="ks-coupon-slot-heading">
+                <h5 class="title fw-semibold">Codice sconto</h5>
+                <p class="body-text-3 text-main-2 ks-section-help">Inserisci un codice sconto prima di confermare l'ordine.</p>
+            </div>
+        </div>
     <asp:Panel ID="PnlFatturazione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap ks-checkout-section ks-billing-section">
 							<h5 class="title fw-semibold">Dati fatturazione</h5>
         <div class="ks-info-card-grid">
@@ -1253,27 +1264,29 @@
                     <span>Per modificare spedizione o pagamento torna al passaggio precedente.</span>
                 </div>
             </div>
-            <div class="ks-checkout-actions">
-                <asp:LinkButton CausesValidation="false" ID="btnModificaCheckout" runat="server" CssClass="tf-btn btn-gray" OnClick="btnModificaCheckout_Click">Modifica spedizione e pagamento</asp:LinkButton>
-                <%if Session("DESTINAZIONEALTERNATIVA")=0 then %>
-                    <div class="ks-checkout-consent" style="width:100%;margin:0 0 14px 0;">
-                        <div style="display:flex;gap:10px;align-items:flex-start;">
-                            <asp:CheckBox ID="chkTermsConsent" runat="server" ClientIDMode="Static" />
-                            <label for="chkTermsConsent" class="body-text-3 text-main-2" style="margin:0;">
-                                Ho letto e accetto le
-                                <a href="condizioni-vendita.aspx" target="_blank" rel="noopener">condizioni di vendita</a>,
-                                le condizioni sul
-                                <a href="condizioni-vendita.aspx#diritto-recesso" target="_blank" rel="noopener">diritto di recesso</a>
-                                e la
-                                <a href="privacy.aspx" target="_blank" rel="noopener">Privacy Policy</a>.
-                            </label>
+            <div id="FinalCheckoutActionsInlineSlot" class="ks-final-actions-inline-slot">
+                <div class="ks-checkout-actions">
+                    <asp:LinkButton CausesValidation="false" ID="btnModificaCheckout" runat="server" CssClass="tf-btn btn-gray" OnClick="btnModificaCheckout_Click">Modifica spedizione e pagamento</asp:LinkButton>
+                    <%if Session("DESTINAZIONEALTERNATIVA")=0 then %>
+                        <div class="ks-checkout-consent" style="width:100%;margin:0 0 14px 0;">
+                            <div style="display:flex;gap:10px;align-items:flex-start;">
+                                <asp:CheckBox ID="chkTermsConsent" runat="server" ClientIDMode="Static" />
+                                <label for="chkTermsConsent" class="body-text-3 text-main-2" style="margin:0;">
+                                    Ho letto e accetto le
+                                    <a href="condizioni-vendita.aspx" target="_blank" rel="noopener">condizioni di vendita</a>,
+                                    le condizioni sul
+                                    <a href="condizioni-vendita.aspx#diritto-recesso" target="_blank" rel="noopener">diritto di recesso</a>
+                                    e la
+                                    <a href="privacy.aspx" target="_blank" rel="noopener">Privacy Policy</a>.
+                                </label>
+                            </div>
+                            <asp:Label ID="lblTermsConsentError" runat="server" ClientIDMode="Static" EnableViewState="false" CssClass="text-danger body-text-3" />
                         </div>
-                        <asp:Label ID="lblTermsConsentError" runat="server" ClientIDMode="Static" EnableViewState="false" CssClass="text-danger body-text-3" />
-                    </div>
-                    <asp:LinkButton CausesValidation="false" ID="btInviaOrdine" runat="server" CssClass="tf-btn" OnClientClick="return ksValidateCheckoutTermsConsent();">INVIA ORDINE CON OBBLIGO DI PAGAMENTO</asp:LinkButton>
-                <%else%>
-                    <span class="tf-btn btn-gray" style="pointer-events:none;opacity:.6;">Conferma ordine e procedi al pagamento</span>
-                <%end if%>
+                        <asp:LinkButton CausesValidation="false" ID="btInviaOrdine" runat="server" CssClass="tf-btn" OnClientClick="return ksValidateCheckoutTermsConsent();">Invia ordine con obbligo di pagamento</asp:LinkButton>
+                    <%else%>
+                        <span class="tf-btn btn-gray" style="pointer-events:none;opacity:.6;">Conferma ordine e procedi al pagamento</span>
+                    <%end if%>
+                </div>
             </div>
             <div id="spinner_caricamento" style="text-align:center;display:none;padding-top:5px;padding-bottom:5px;">
                 <div class="ks-inline-loader-text"><b>ATTENDERE L'INVIO AI NOSTRI SERVER</b></div>
@@ -1327,9 +1340,9 @@
     </script>
     <% If tOrdine IsNot Nothing AndAlso tOrdine.Visible Then %>
                 </div>
-                <div class="flat-sidebar-checkout">
+                <div class="flat-sidebar-checkout ks-checkout-side">
                     <div class="tf-sidebar-checkout">
-                        <div class="sidebar-checkout-content">
+                        <div class="sidebar-checkout-content ks-order-summary-card">
                             <div class="sidebar-checkout-header">
                                 <h5 class="fw-semibold">Riepilogo ordine</h5>
                             </div>
@@ -1409,7 +1422,7 @@
                                 <span class="fw-semibold"><%= lblTotale.Text %></span>
                             </div>
 
-                            <div class="mt-3 body-text-3 text-secondary">
+                            <div class="mt-3 body-text-3 text-secondary ks-sidebar-terms-note">
                                 Procedendo con l&#39;ordine confermi di aver letto e accettato le condizioni di vendita.
                             </div>
                             <div class="ks-checkout-trust-list">
@@ -1429,6 +1442,7 @@
                         </div>
                     </div>
                 </div>
+                <div id="FinalCheckoutActionsMobileSlot" class="ks-final-actions-mobile-slot" aria-hidden="true"></div>
             </div>
         </div>
     </section>

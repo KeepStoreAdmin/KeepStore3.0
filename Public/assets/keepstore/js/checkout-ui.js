@@ -44,8 +44,8 @@
     var btnInvia = qs('[id$="btInviaOrdine"]') || document.getElementById('btInviaOrdine');
     var inCheckout = (!!tOrdine && isVisible(tOrdine)) || (!!btnInvia && isVisible(btnInvia));
 
-    // (opzionale) stato completato: se la pagina imposta una classe dedicata
-    var isDone = document.body.classList.contains('ks-mode-order-done');
+    // Stato finale/conferma: il markup carrello espone .ks-cart-step-confirm.
+    var isDone = document.body.classList.contains('ks-mode-order-done') || !!qs('.ks-cart-step-confirm');
 
     document.body.classList.toggle('ks-mode-checkout', inCheckout);
 
@@ -78,6 +78,99 @@
 
     // Expose state for CSS/hooks
     document.body.dataset.ksCheckoutStep = (step === 0 ? 'cart' : (step === 1 ? 'checkout' : 'done'));
+  }
+
+  var STEP_SCROLL_KEY = 'ksCartCheckoutStepScroll';
+
+  function getCurrentCheckoutStep() {
+    if (qs('.ks-cart-step-confirm')) return 'done';
+    if (document.body && document.body.dataset && document.body.dataset.ksCheckoutStep) {
+      return document.body.dataset.ksCheckoutStep;
+    }
+    if (document.body && document.body.classList.contains('ks-cart-step-confirm')) return 'done';
+    if (document.body && document.body.classList.contains('ks-cart-step-checkout')) return 'checkout';
+    var tOrdine = document.getElementById('tOrdine') || qs('[id$="tOrdine"]');
+    return (tOrdine && isVisible(tOrdine)) ? 'checkout' : 'cart';
+  }
+
+  function findStepScrollTarget() {
+    return qs('.ks-cart-page') || qs('.checkout-status') || qs('.ks-cart-title') || qs('.s-shoping-cart');
+  }
+
+  function getElementTop(el) {
+    if (!el) return 0;
+    var rect = el.getBoundingClientRect();
+    var scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    return Math.max(0, Math.floor(rect.top + scrollTop - 12));
+  }
+
+  function markStepScroll(targetStep) {
+    try {
+      if (!targetStep || !window.sessionStorage) return;
+      var current = getCurrentCheckoutStep();
+      window.sessionStorage.setItem(STEP_SCROLL_KEY, JSON.stringify({
+        from: current,
+        target: targetStep,
+        ts: Date.now()
+      }));
+    } catch (e) {
+      // storage non disponibile: nessun blocco UX
+    }
+  }
+
+  function setupStepScrollTriggers() {
+    if (document.documentElement.dataset.ksStepScrollBound === '1') return;
+    document.documentElement.dataset.ksStepScrollBound = '1';
+
+    document.addEventListener('click', function (ev) {
+      var el = ev.target && ev.target.closest ? ev.target.closest('a,input,button') : null;
+      if (!el || !el.id) return;
+
+      if (/_?btCompleta$/.test(el.id)) {
+        markStepScroll(getCurrentCheckoutStep() === 'cart' ? 'checkout' : 'cart');
+      } else if (/_?btnVaiConfermaOrdine$/.test(el.id) || /_?lnkCheckoutStep3$/.test(el.id)) {
+        markStepScroll('done');
+      } else if (/_?btnModificaCheckout$/.test(el.id) || /_?lnkCheckoutStep2$/.test(el.id)) {
+        markStepScroll('checkout');
+      } else if (/_?lnkCheckoutStep1$/.test(el.id)) {
+        markStepScroll('cart');
+      }
+    }, true);
+  }
+
+  function scrollTopAfterStepChange() {
+    var raw = null;
+    try {
+      if (!window.sessionStorage) return;
+      raw = window.sessionStorage.getItem(STEP_SCROLL_KEY);
+      if (!raw) return;
+      window.sessionStorage.removeItem(STEP_SCROLL_KEY);
+    } catch (e) {
+      return;
+    }
+
+    var pending = null;
+    try { pending = JSON.parse(raw); } catch (e2) { return; }
+    if (!pending || !pending.target || !pending.from) return;
+    if (pending.ts && (Date.now() - pending.ts > 30000)) return;
+
+    var current = getCurrentCheckoutStep();
+    if (current === pending.from) return;
+    if (pending.target !== current && !(pending.target === 'done' && current === 'checkout')) return;
+
+    function applyScroll() {
+      var target = findStepScrollTarget();
+      var top = getElementTop(target);
+      try {
+        window.scrollTo({ top: top, behavior: 'auto' });
+      } catch (e3) {
+        window.scrollTo(0, top);
+      }
+    }
+
+    applyScroll();
+    window.setTimeout(applyScroll, 80);
+    window.setTimeout(applyScroll, 240);
   }
 
   // Se in passato è stata abilitata una UX “accordion / chips”, la neutralizziamo.
@@ -182,6 +275,7 @@
 
   // Indirizzi registrati (checkout) -> cards UI sopra la DropDownList
   function enhanceShippingAddressPicker() {
+    return;
     // Cerca la DropDownList in carrello/checkout (AutoPostBack=True)
     var ddl = qs('select[id$="LstScegliIndirizzo"]') || document.getElementById('LstScegliIndirizzo');
     if (!ddl) return;
@@ -477,6 +571,58 @@
     });
   }
 
+  function placeCheckoutCouponPanel() {
+    var panel = document.getElementById('Panel_BuoniSconto') || qs('[id$="Panel_BuoniSconto"]') || qs('.ks-cart-discount-panel');
+    var slot = document.getElementById('CheckoutCouponSlot');
+    if (!panel || !slot) return;
+    if (!isVisible(slot)) return;
+    if (panel.parentNode !== slot) {
+      slot.appendChild(panel);
+    }
+  }
+
+  function decorateCouponFeedback() {
+    qsa('.ks-coupon-feedback').forEach(function (feedback) {
+      var text = (feedback.textContent || '').replace(/\s+/g, ' ').trim();
+      var ok = feedback.querySelector('img[id$="checkOKBuonoSconto"]');
+      var ko = feedback.querySelector('img[id$="checkNOBuonoSconto"]');
+      var okVisible = ok && isVisible(ok);
+      var koVisible = ko && isVisible(ko);
+      feedback.classList.toggle('has-message', !!text || okVisible || koVisible);
+      feedback.classList.toggle('is-success', okVisible && !koVisible);
+      feedback.classList.toggle('is-error', koVisible);
+    });
+  }
+
+  function placeFinalConfirmActionsForMobile() {
+    var actions = qs('.ks-final-confirm-section .ks-checkout-actions') || qs('#FinalCheckoutActionsMobileSlot .ks-checkout-actions');
+    var inlineSlot = document.getElementById('FinalCheckoutActionsInlineSlot');
+    var mobileSlot = document.getElementById('FinalCheckoutActionsMobileSlot');
+    if (!actions || !inlineSlot || !mobileSlot) return;
+
+    var isConfirm = !!qs('.ks-cart-step-confirm');
+    var isMobile = false;
+    try {
+      isMobile = window.matchMedia && window.matchMedia('(max-width: 767.98px)').matches;
+    } catch (e) {
+      isMobile = window.innerWidth <= 768;
+    }
+
+    if (isConfirm && isMobile) {
+      if (actions.parentNode !== mobileSlot) {
+        mobileSlot.appendChild(actions);
+      }
+      mobileSlot.classList.add('has-actions');
+      mobileSlot.removeAttribute('aria-hidden');
+    } else {
+      if (actions.parentNode !== inlineSlot) {
+        inlineSlot.appendChild(actions);
+      }
+      mobileSlot.classList.remove('has-actions');
+      mobileSlot.setAttribute('aria-hidden', 'true');
+    }
+  }
+
   // Funzione richiamata da OnClientClick nel markup: deve essere globale.
   window.visualizza_spinner_caricamento = function () {
     var sp = document.getElementById('spinner_caricamento');
@@ -491,12 +637,17 @@
 
   function boot() {
     setCheckoutStatus();
+    setupStepScrollTriggers();
+    scrollTopAfterStepChange();
     cleanupLegacyEnhancedUx();
     decorateCheckoutTables();
     enhanceGridRowSelection();
     setupDestinationToggles();
     enhanceShippingAddressPicker();
     preventDoubleSubmit();
+    placeCheckoutCouponPanel();
+    placeFinalConfirmActionsForMobile();
+    decorateCouponFeedback();
     restoreCartServerTotals();
     setupCartQuantityControls();
     protectServerCartCommands();
@@ -505,6 +656,10 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     boot();
+  });
+
+  window.addEventListener('resize', function () {
+    placeFinalConfirmActionsForMobile();
   });
 
   // Se la pagina usa UpdatePanel, riapplica su endRequest

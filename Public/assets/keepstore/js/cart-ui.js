@@ -12,6 +12,7 @@
 
         var wrap = btn.closest(".wg-quantity");
         if (!wrap) return;
+        if (wrap.classList.contains("ks-wg-quantity")) return;
         if (wrap.classList.contains("ks-qty-locked") || wrap.getAttribute("data-ks-qty-locked") === "true" || wrap.getAttribute("aria-disabled") === "true") {
             e.preventDefault();
             e.stopPropagation();

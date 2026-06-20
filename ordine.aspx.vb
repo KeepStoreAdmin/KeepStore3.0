@@ -503,10 +503,21 @@ End If
 
                 Me.Label1.Text = NumDoc.ToString()
                 Me.Label2.Text = Documento
-                Me.Label3.Text = DataDoc
+                Me.Label3.Text = FormatDocumentDate(DataDoc)
 
                 trns.Commit()
                 trns = Nothing
+
+                If lblOrderReceiptStatus IsNot Nothing Then
+                    lblOrderReceiptStatus.Text = "Ordine ricevuto"
+                End If
+                If HyperLink1 IsNot Nothing Then
+                    HyperLink1.NavigateUrl = ResolveUrl("~/documenti.aspx")
+                    HyperLink1.Text = "I miei ordini"
+                End If
+                If litOrderReceipt IsNot Nothing Then
+                    litOrderReceipt.Text = BuildOrderReceiptHtml(conn, id, Documento, NumDoc, DataDoc, If(TryCast(Session("Coupon_Codice_Controllo"), String), ""))
+                End If
 
                 ' Email (ordine normale vs coupon)
                 If (If(TryCast(Session("Coupon_Codice_Controllo"), String), "")) = "" Then
@@ -633,7 +644,7 @@ End If
                                    "&buyername=" & buyerName &
                                    "&buyeremail=" & buyerEmail
                     Else
-                        redirect = "documentidettaglio.aspx?id=" & id & "&ndoc=" & NumDoc
+                        redirect = ""
                     End If
                 End If
 
@@ -1080,6 +1091,296 @@ End If
         message.Body = legacyBody
         message.IsBodyHtml = True
     End Sub
+
+    Private Function BuildOrderReceiptHtml(ByVal conn As MySqlConnection,
+                                           ByVal idDocumento As Integer,
+                                           ByVal documento As String,
+                                           ByVal numeroDocumento As Long,
+                                           ByVal dataDocumento As String,
+                                           ByVal descrizioneCoupon As String) As String
+        Dim sb As New StringBuilder()
+        Try
+            Dim numeroDocumentoTesto As String = numeroDocumento.ToString(CultureInfo.InvariantCulture)
+            Dim dataDisplay As String = FormatDocumentDate(dataDocumento)
+            Dim statoDocumento As String = ""
+            Dim imponibile As String = ""
+            Dim spedizione As String = ""
+            Dim assicurazione As String = ""
+            Dim pagamentoCosto As String = ""
+            Dim iva As String = ""
+            Dim totale As String = ""
+            Dim sconto As String = MoneyDisplay(GetSessionDouble("Ordine_TotaleBuonoSconto", 0))
+            Dim pagamentoDescrizione As String = ""
+            Dim pagamentoInformazioni As String = ""
+            Dim spedizioneDescrizione As String = ""
+            Dim spedizioneInformazioni As String = ""
+            Dim billingName As String = ""
+            Dim billingAddress As String = ""
+            Dim billingTax As String = ""
+            Dim billingContacts As String = ""
+            Dim shippingName As String = ""
+            Dim shippingAddress As String = ""
+            Dim shippingContacts As String = ""
+            Dim brand As OrderEmailBrandData = LoadOrderEmailBrandData(conn)
+            Dim lines As New List(Of OrderEmailLine)()
+
+            Using cmdTestata As New MySqlCommand("SELECT * FROM vdocumenticompleta WHERE id=?id", conn)
+                cmdTestata.Parameters.AddWithValue("?id", idDocumento)
+                Using dr As MySqlDataReader = cmdTestata.ExecuteReader()
+                    If dr.Read() Then
+                        If String.IsNullOrWhiteSpace(numeroDocumentoTesto) OrElse numeroDocumentoTesto = "0" Then
+                            numeroDocumentoTesto = DbText(dr, "NDocumento")
+                        End If
+                        If String.IsNullOrWhiteSpace(dataDisplay) Then
+                            dataDisplay = FormatDocumentDate(DbText(dr, "DataDocumento"))
+                        End If
+                        statoDocumento = JoinNonEmpty(" - ", DbText(dr, "StatiDescrizione1"), DbText(dr, "StatiDescrizione2"))
+                        billingName = JoinNonEmpty(" ", DbText(dr, "RagioneSociale"), DbText(dr, "cognomenome"))
+                        billingAddress = JoinNonEmpty(" - ",
+                                                      DbText(dr, "Indirizzo"),
+                                                      JoinNonEmpty(" ", DbText(dr, "Cap"), DbText(dr, "citta"), DbText(dr, "provincia")))
+                        billingTax = JoinNonEmpty(" - ",
+                                                  If(String.IsNullOrWhiteSpace(DbText(dr, "piva")), "", "P.IVA " & DbText(dr, "piva")),
+                                                  If(String.IsNullOrWhiteSpace(DbText(dr, "codicefiscale")), "", "C.F. " & DbText(dr, "codicefiscale")))
+                        billingContacts = JoinNonEmpty(" - ",
+                                                       If(String.IsNullOrWhiteSpace(DbText(dr, "Email")), "", DbText(dr, "Email")),
+                                                       If(String.IsNullOrWhiteSpace(DbText(dr, "Telefono")), "", "Tel. " & DbText(dr, "Telefono")),
+                                                       If(String.IsNullOrWhiteSpace(DbText(dr, "Cellulare")), "", "Cell. " & DbText(dr, "Cellulare")))
+                        spedizioneDescrizione = DbText(dr, "VettoriDescrizione")
+                        spedizioneInformazioni = DbText(dr, "VettoriInformazioni")
+                        pagamentoDescrizione = DbText(dr, "PagamentiTipoDescrizione")
+                        pagamentoInformazioni = DbText(dr, "PagamentiTipoInformazioni")
+                        imponibile = MoneyDisplay(dr("totimponibile"))
+                        spedizione = MoneyDisplay(dr("costospedizione"))
+                        assicurazione = MoneyDisplay(dr("costoassicurazione"))
+                        pagamentoCosto = MoneyDisplay(dr("costopagamento"))
+                        iva = MoneyDisplay(dr("totiva"))
+                        totale = MoneyDisplay(dr("totaledocumento"))
+                    End If
+                End Using
+            End Using
+
+            Dim selectedAddressId As Integer = 0
+            TryReadSelectedShippingAddressId(selectedAddressId)
+            If selectedAddressId > 0 Then
+                Dim receiptUtentiId As Long = GetSessionLong("UtentiId", 0)
+                If receiptUtentiId <= 0 Then receiptUtentiId = GetSessionLong("UtentIId", 0)
+                If receiptUtentiId <= 0 Then receiptUtentiId = GetSessionLong("UtentiID", 0)
+                Using cmdAddress As New MySqlCommand("SELECT RagioneSocialeA, NomeA, IndirizzoA, CapA, CittaA, ProvinciaA, TelefonoA, CellulareA, Note FROM utentiindirizzi WHERE ID=?id AND UtenteId=?utenteId LIMIT 1", conn)
+                    cmdAddress.Parameters.AddWithValue("?id", selectedAddressId)
+                    cmdAddress.Parameters.AddWithValue("?utenteId", receiptUtentiId)
+                    Using drAddress As MySqlDataReader = cmdAddress.ExecuteReader()
+                        If drAddress.Read() Then
+                            shippingName = JoinNonEmpty(" ", DbText(drAddress, "RagioneSocialeA"), DbText(drAddress, "NomeA"))
+                            shippingAddress = JoinNonEmpty(" - ",
+                                                           DbText(drAddress, "IndirizzoA"),
+                                                           JoinNonEmpty(" ", DbText(drAddress, "CapA"), DbText(drAddress, "CittaA"), DbText(drAddress, "ProvinciaA")))
+                            shippingContacts = JoinNonEmpty(" - ",
+                                                            If(String.IsNullOrWhiteSpace(DbText(drAddress, "TelefonoA")), "", "Tel. " & DbText(drAddress, "TelefonoA")),
+                                                            If(String.IsNullOrWhiteSpace(DbText(drAddress, "CellulareA")), "", "Cell. " & DbText(drAddress, "CellulareA")),
+                                                            DbText(drAddress, "Note"))
+                        End If
+                    End Using
+                End Using
+            End If
+            If String.IsNullOrWhiteSpace(shippingName) Then shippingName = billingName
+            If String.IsNullOrWhiteSpace(shippingAddress) Then shippingAddress = billingAddress
+            If String.IsNullOrWhiteSpace(shippingContacts) Then shippingContacts = billingContacts
+
+            Using cmdRighe As New MySqlCommand("SELECT vr.*, " &
+                                                "img.Immagine1 AS VarianteImmagine1, img.Immagine2 AS VarianteImmagine2, img.Immagine3 AS VarianteImmagine3, img.Immagine4 AS VarianteImmagine4, img.Immagine5 AS VarianteImmagine5, img.Immagine6 AS VarianteImmagine6, " &
+                                                "a.Img1 AS ArticoloImg1, a.Img2 AS ArticoloImg2, a.Img3 AS ArticoloImg3, a.Img4 AS ArticoloImg4, a.Img5 AS ArticoloImg5, a.Img6 AS ArticoloImg6 " &
+                                                "FROM vdocumentirighe vr " &
+                                                "LEFT JOIN articoli a ON vr.ArticoliId = a.id " &
+                                                "LEFT JOIN articoli_tagliecolori atc ON atc.id = vr.TCId " &
+                                                "LEFT JOIN immagini img ON img.id = atc.immaginiId " &
+                                                "WHERE vr.DocumentiId=?id", conn)
+                cmdRighe.Parameters.AddWithValue("?id", idDocumento)
+                Using drRighe As MySqlDataReader = cmdRighe.ExecuteReader()
+                    While drRighe.Read()
+                        Dim line As New OrderEmailLine()
+                        line.Code = DbText(drRighe, "codice")
+                        line.Ean = DbText(drRighe, "ean")
+                        line.Description = DbText(drRighe, "descrizione1")
+                        line.Quantity = FormatQuantity(DbText(drRighe, "qnt"))
+                        line.ImageUrl = ResolveOrderProductImageUrl(BuildOrderProductImageCandidates(drRighe))
+                        line.ImageAlt = JoinNonEmpty(" - ", line.Code, line.Description)
+                        If GetSessionInt("IvaTipo", 0) = 1 Then
+                            line.UnitPrice = MoneyDisplay(drRighe("prezzo"))
+                            line.LineTotal = MoneyDisplay(drRighe("importo"))
+                        Else
+                            line.UnitPrice = MoneyDisplay(drRighe("prezzoivato"))
+                            line.LineTotal = MoneyDisplay(drRighe("importoivato"))
+                        End If
+                        lines.Add(line)
+                    End While
+                End Using
+            End Using
+
+            sb.Append(BuildOrderCompanyHeaderHtml(brand, documento, numeroDocumentoTesto, dataDisplay))
+
+            sb.Append("<div class=""ks-order-grid"">")
+            sb.Append("<div class=""ks-order-main"">")
+
+            sb.Append("<div class=""ks-order-card""><h5>Articoli ordinati</h5><div class=""ks-order-table-wrap""><table class=""ks-order-table""><thead><tr><th>Prodotto</th><th>Q.t&agrave;</th><th>Prezzo</th><th>Totale</th></tr></thead><tbody>")
+            If lines.Count = 0 Then
+                sb.Append("<tr><td colspan=""4"">Le righe ordine non sono disponibili in questa vista.</td></tr>")
+            Else
+                For Each line As OrderEmailLine In lines
+                    sb.Append("<tr><td><div class=""ks-order-product"">")
+                    If Not String.IsNullOrWhiteSpace(line.ImageUrl) Then
+                        sb.Append("<img src=""").Append(H(line.ImageUrl)).Append(""" alt=""").Append(H(line.ImageAlt)).Append(""" />")
+                    Else
+                        sb.Append("<span></span>")
+                    End If
+                    sb.Append("<div><div class=""ks-order-product-title"">").Append(H(line.Description)).Append("</div>")
+                    sb.Append("<div class=""ks-order-product-meta"">").Append(H(JoinNonEmpty(" - ", line.Code, If(String.IsNullOrWhiteSpace(line.Ean), "", "EAN " & line.Ean)))).Append("</div></div></div></td>")
+                    sb.Append("<td>").Append(H(line.Quantity)).Append("</td><td>").Append(H(line.UnitPrice)).Append("</td><td><strong>").Append(H(line.LineTotal)).Append("</strong></td></tr>")
+                Next
+            End If
+            sb.Append("</tbody></table></div></div>")
+
+            sb.Append("<div class=""ks-order-card""><h5>Cliente e indirizzi</h5><div class=""ks-order-info-grid"">")
+            AppendReceiptInfo(sb, "Intestatario", billingName, False)
+            AppendReceiptInfo(sb, "Recapiti", billingContacts, False)
+            AppendReceiptInfo(sb, "P.IVA / C.F.", billingTax, False)
+            AppendReceiptInfo(sb, "Fatturazione", billingAddress, True)
+            AppendReceiptInfo(sb, "Spedizione", JoinNonEmpty(" - ", shippingName, shippingAddress, shippingContacts), True)
+            sb.Append("</div></div>")
+
+            sb.Append("<div class=""ks-order-card""><h5>Metodo e prossimi passi</h5><div class=""ks-order-info-grid"">")
+            AppendReceiptInfo(sb, "Spedizione", JoinNonEmpty(" - ", spedizioneDescrizione, CleanDistinctField(spedizioneInformazioni, spedizioneDescrizione)), True)
+            AppendReceiptInfo(sb, "Pagamento", JoinNonEmpty(" - ", pagamentoDescrizione, CleanDistinctField(pagamentoInformazioni, pagamentoDescrizione)), True)
+            sb.Append("</div><ol class=""ks-order-next-steps"">")
+            If IsBankTransferPayment(pagamentoDescrizione, pagamentoInformazioni) Then
+                sb.Append("<li>Effettua il bonifico usando la causale: <strong>").Append(H(BuildBankTransferCause(numeroDocumentoTesto, dataDisplay))).Append("</strong>.</li>")
+                If brand IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(brand.Iban) Then
+                    sb.Append("<li>IBAN: <strong>").Append(H(brand.Iban)).Append("</strong></li>")
+                End If
+                sb.Append("<li>Verificheremo il pagamento dopo l'accredito.</li>")
+            Else
+                sb.Append("<li>Abbiamo registrato la richiesta e verificheremo pagamento e disponibilit&agrave; secondo il metodo scelto.</li>")
+            End If
+            sb.Append("<li>Per assistenza indica sempre il numero ordine.</li>")
+            sb.Append("</ol></div>")
+
+            sb.Append("</div>")
+            sb.Append("<aside class=""ks-order-side"">")
+            sb.Append("<div class=""ks-order-card""><h5>Riepilogo importi</h5><div class=""ks-order-total-list"">")
+            AppendTotalRow(sb, "Imponibile", imponibile, False)
+            AppendTotalRow(sb, "Spedizione", spedizione, False)
+            AppendTotalRow(sb, "Assicurazione", assicurazione, False)
+            AppendTotalRow(sb, "Pagamento", pagamentoCosto, False)
+            AppendTotalRow(sb, "Sconto", sconto, False)
+            AppendTotalRow(sb, "IVA", iva, False)
+            AppendTotalRow(sb, "Totale ordine", totale, True)
+            sb.Append("</div></div>")
+            sb.Append("<div class=""ks-order-card""><h5>Assistenza</h5><div class=""ks-order-info-grid"">")
+            If brand IsNot Nothing Then
+                AppendReceiptInfo(sb, "Email", brand.SupportEmail, True)
+                AppendReceiptInfo(sb, "Telefono", brand.Phone, True)
+            End If
+            AppendReceiptInfo(sb, "Riferimento", JoinNonEmpty(" ", documento, "n.", numeroDocumentoTesto, If(String.IsNullOrWhiteSpace(dataDisplay), "", "del " & dataDisplay)), True)
+            sb.Append("</div></div>")
+            sb.Append("</aside></div>")
+
+            If Not String.IsNullOrWhiteSpace(statoDocumento) AndAlso lblOrderReceiptStatus IsNot Nothing Then
+                lblOrderReceiptStatus.Text = statoDocumento
+            End If
+        Catch
+            Return "<div class=""ks-order-card""><h5>Riepilogo ordine</h5><p>Il riepilogo dettagliato non e disponibile in questa vista. Usa il numero ordine per assistenza.</p></div>"
+        End Try
+
+        Return sb.ToString()
+    End Function
+
+    Private Sub AppendReceiptInfo(ByVal sb As StringBuilder, ByVal label As String, ByVal value As String, ByVal wide As Boolean)
+        If String.IsNullOrWhiteSpace(value) Then Return
+        sb.Append("<div class=""ks-order-info")
+        If wide Then sb.Append(" ks-order-info-wide")
+        sb.Append("""><span class=""ks-order-label"">").Append(H(label)).Append("</span><strong>").Append(H(value)).Append("</strong></div>")
+    End Sub
+
+    Private Sub AppendTotalRow(ByVal sb As StringBuilder, ByVal label As String, ByVal value As String, ByVal isFinal As Boolean)
+        sb.Append("<div class=""ks-order-total-row")
+        If isFinal Then sb.Append(" ks-order-total-row-final")
+        sb.Append("""><span>").Append(H(label)).Append("</span><strong>").Append(H(value)).Append("</strong></div>")
+    End Sub
+
+    Private Function BuildOrderCompanyHeaderHtml(ByVal brand As OrderEmailBrandData,
+                                                 ByVal documento As String,
+                                                 ByVal numeroDocumento As String,
+                                                 ByVal dataDocumentoDisplay As String) As String
+        If brand Is Nothing Then
+            brand = New OrderEmailBrandData()
+        End If
+
+        Dim companyName As String = FirstNonEmpty(brand.CompanyName, SessionText("AziendaNome"))
+        Dim siteUrl As String = FirstNonEmpty(brand.SiteUrl, BuildSiteHomeUrl())
+        Dim logoUrl As String = KeepStoreEmailLogo.BuildLogoUrl(siteUrl, brand.LogoWeb)
+        Dim fiscalCode As String = brand.FiscalCode
+        If String.Equals(fiscalCode, brand.VatNumber, StringComparison.OrdinalIgnoreCase) Then
+            fiscalCode = ""
+        End If
+
+        Dim orderReference As String = JoinNonEmpty(" ",
+                                                    documento,
+                                                    "n.",
+                                                    numeroDocumento,
+                                                    If(String.IsNullOrWhiteSpace(dataDocumentoDisplay), "", "del " & dataDocumentoDisplay))
+
+        Dim sb As New StringBuilder()
+        sb.Append("<section class=""ks-order-company-header"">")
+        sb.Append("<div class=""ks-order-company-logo"">")
+        sb.Append("<img src=""").Append(H(logoUrl)).Append(""" alt=""").Append(H(FirstNonEmpty(companyName, "Logo azienda"))).Append(""" />")
+        sb.Append("</div>")
+        sb.Append("<div class=""ks-order-company-title"">")
+        If Not String.IsNullOrWhiteSpace(companyName) Then
+            sb.Append("<h4>").Append(H(companyName)).Append("</h4>")
+        End If
+        sb.Append("<div class=""ks-order-company-lines"">")
+        AppendCompanyHeaderLine(sb, JoinNonEmpty(" - ", brand.AddressLine, brand.CityLine))
+        AppendCompanyHeaderLine(sb, JoinNonEmpty(" - ",
+                                                If(String.IsNullOrWhiteSpace(brand.SupportEmail), "", "Email: " & brand.SupportEmail),
+                                                If(String.IsNullOrWhiteSpace(brand.Phone), "", "Tel: " & brand.Phone)))
+        AppendCompanyHeaderLine(sb, JoinNonEmpty(" - ",
+                                                If(String.IsNullOrWhiteSpace(brand.VatNumber), "", "P.IVA " & brand.VatNumber),
+                                                If(String.IsNullOrWhiteSpace(fiscalCode), "", "C.F. " & fiscalCode)))
+        AppendCompanyHeaderLine(sb, JoinNonEmpty(" - ",
+                                                If(String.IsNullOrWhiteSpace(brand.Pec), "", "PEC: " & brand.Pec),
+                                                If(String.IsNullOrWhiteSpace(brand.Sdi), "", "SDI: " & brand.Sdi)))
+        AppendCompanyHeaderLine(sb, If(String.IsNullOrWhiteSpace(siteUrl), "", "Web: " & siteUrl))
+        sb.Append("</div></div>")
+        sb.Append("<div class=""ks-order-company-ref""><span>Riferimento</span><strong>").Append(H(orderReference)).Append("</strong></div>")
+        sb.Append("</section>")
+
+        Return sb.ToString()
+    End Function
+
+    Private Sub AppendCompanyHeaderLine(ByVal sb As StringBuilder, ByVal value As String)
+        If sb Is Nothing OrElse String.IsNullOrWhiteSpace(value) Then
+            Return
+        End If
+
+        sb.Append("<p>").Append(H(value)).Append("</p>")
+    End Sub
+
+    Private Function MoneyDisplay(ByVal value As Object) As String
+        Try
+            If value Is Nothing OrElse Convert.IsDBNull(value) Then Return String.Format(CultureInfo.GetCultureInfo("it-IT"), "{0:C}", 0D)
+            Dim d As Decimal
+            If Decimal.TryParse(Convert.ToString(value), NumberStyles.Any, CultureInfo.CurrentCulture, d) OrElse Decimal.TryParse(Convert.ToString(value), NumberStyles.Any, CultureInfo.InvariantCulture, d) Then
+                Return String.Format(CultureInfo.GetCultureInfo("it-IT"), "{0:C}", d)
+            End If
+        Catch
+        End Try
+        Return String.Format(CultureInfo.GetCultureInfo("it-IT"), "{0:C}", 0D)
+    End Function
+
+    Private Function H(ByVal value As String) As String
+        If value Is Nothing Then Return ""
+        Return HttpUtility.HtmlEncode(value)
+    End Function
 
     Private Function TryRenderOrderConfirmationEmail(ByVal documento As String,
                                                      ByVal numeroDocumento As String,

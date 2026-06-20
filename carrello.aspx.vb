@@ -15,6 +15,7 @@ Public Partial Class carrello
     Inherits System.Web.UI.Page
 
 Private Shared ReadOnly CartCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
+Private _cartHasItems As Boolean = True
 
 Protected Overrides Sub InitializeCulture()
     System.Threading.Thread.CurrentThread.CurrentCulture = CartCulture
@@ -106,6 +107,10 @@ End Function
 
 Protected Function IsCheckoutStepVisible() As Boolean
     Return tOrdine IsNot Nothing AndAlso tOrdine.Visible
+End Function
+
+Protected Function IsCartEmptyState() As Boolean
+    Return Not _cartHasItems
 End Function
 
 Protected Function IsCheckoutConfirmStep() As Boolean
@@ -856,6 +861,33 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         control.Attributes("aria-disabled") = If(enabled, "false", "true")
     End Sub
 
+    Private Function IsCouponApplied() As Boolean
+        Return GetSessionInt("BuonoSconto_id", 0) > 0
+    End Function
+
+    Private Sub SyncCouponUiState()
+        Dim couponApplied As Boolean = IsCouponApplied()
+        Dim unlocked As Boolean = Not IsAddressEditModeActive()
+
+        If couponApplied Then
+            If TB_BuonoSconto IsNot Nothing AndAlso String.IsNullOrWhiteSpace(TB_BuonoSconto.Text) Then
+                TB_BuonoSconto.Text = getBuonoScontoCodice(GetSessionInt("BuonoSconto_id", 0))
+            End If
+
+            SetControlEnabled(TB_BuonoSconto, False)
+            SetControlEnabled(BT_ApplicaBuonoSconto, False)
+
+            If LB_CancelBuonoSconto IsNot Nothing Then
+                LB_CancelBuonoSconto.Visible = True
+                SetControlEnabled(LB_CancelBuonoSconto, unlocked)
+            End If
+        Else
+            SetControlEnabled(TB_BuonoSconto, unlocked)
+            SetControlEnabled(BT_ApplicaBuonoSconto, unlocked)
+            If LB_CancelBuonoSconto IsNot Nothing Then SetControlEnabled(LB_CancelBuonoSconto, unlocked)
+        End If
+    End Sub
+
     Private Sub ApplyCartAddressEditorLock()
         Dim unlocked As Boolean = Not IsAddressEditModeActive()
 
@@ -882,6 +914,7 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         End If
         ApplyCartLineItemLock(unlocked)
         ApplyCheckoutStepperNavigation()
+        SyncCouponUiState()
     End Sub
 
     Private Function IsAddressEditorActionAllowed(ByVal sender As Object) As Boolean
@@ -936,6 +969,16 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
     End Function
 
     Private Sub ApplyCheckoutStepUi()
+        If IsCartEmptyState() Then
+            SetCheckoutStep("cart")
+            If tOrdine IsNot Nothing Then tOrdine.Visible = False
+            SetCartMainWrapHidden(True)
+            If CartSummaryColumn IsNot Nothing Then CartSummaryColumn.Visible = False
+            If pnlCheckoutConfirm IsNot Nothing Then pnlCheckoutConfirm.Visible = False
+            ApplyCheckoutStepperNavigation()
+            Return
+        End If
+
         If tOrdine Is Nothing OrElse Not tOrdine.Visible Then
             SetCheckoutStep("cart")
             SetCartMainWrapHidden(False)
@@ -1563,6 +1606,7 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         Session.Item("Imponibile") = imponibile - imponibile_gratis
 
         Me.lblImponibile.Text = FormatCurrencyIt(imponibile)
+        Me.lblCartSubtotalOnly.Text = Me.lblImponibile.Text
         'Session("Calcolo_Iva") = calcolo_iva
         Me.tbPeso.Text = pesoTotale
 
@@ -1579,9 +1623,19 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
     Public Sub ArticoliCarrello(ByVal numero As Integer)
         Me.lblArticoli.Text = numero
         Dim hasItems As Boolean = (numero > 0)
+        _cartHasItems = hasItems
+        If lblArticoli IsNot Nothing Then lblArticoli.Visible = hasItems
+        If lblPresenti IsNot Nothing Then lblPresenti.Visible = hasItems
+        If lblPrezzi IsNot Nothing Then lblPrezzi.Visible = hasItems
         If CartItemsWrap IsNot Nothing Then CartItemsWrap.Visible = hasItems
         If CartEmptyPanel IsNot Nothing Then CartEmptyPanel.Visible = Not hasItems
         If CartActionsWrap IsNot Nothing Then CartActionsWrap.Visible = hasItems
+        If CartSummaryColumn IsNot Nothing AndAlso Not hasItems Then CartSummaryColumn.Visible = False
+        If Not hasItems Then
+            SetCheckoutStep("cart")
+            If tOrdine IsNot Nothing Then tOrdine.Visible = False
+            If pnlCheckoutConfirm IsNot Nothing Then pnlCheckoutConfirm.Visible = False
+        End If
         If pnlLoginRequired IsNot Nothing AndAlso Not hasItems Then pnlLoginRequired.Visible = False
         If numero = 0 Then
             Me.lblPresenti.Text = "articoli nel carrello"
@@ -3064,12 +3118,15 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
         '    LeggiVettori()
         'End If
 
-        'Visualizzo o meno il pannello relativo ai Buoni Sconti, in base alle impostazioni nell'azienda
-        If (Session("AbilitaBuoniScontiCarrello") = 1) AndAlso (TableConteggi.Visible = True) Then
-            Panel_BuoniSconto.Visible = True
-        Else
-            Panel_BuoniSconto.Visible = False
-        End If
+        ' Mostra l'input buono sconto solo nello step Spedizione e checkout.
+        ' Lo step carrello resta focalizzato su articoli e subtotale prodotti.
+        Dim showDiscountInput As Boolean = _
+            (GetSessionInt("AbilitaBuoniScontiCarrello", 0) = 1) AndAlso _
+            (qta > 0) AndAlso _
+            IsCheckoutStepVisible() AndAlso _
+            (Not IsCheckoutConfirmStep())
+
+        Panel_BuoniSconto.Visible = showDiscountInput
         ApplyCartAddressEditorLock()
     End Sub
 
@@ -4015,6 +4072,8 @@ End Sub
         LB_CancelBuonoSconto.Visible = False
     End If
 
+    SyncCouponUiState()
+
     End Sub
 
 
@@ -4399,6 +4458,7 @@ Protected Sub GV_BuoniSconti_RowCommand(ByVal sender As Object, ByVal e As Syste
         TB_BuonoSconto.Text = ""
         lblBuonoScontoConvalida.Text = ""
         BT_ApplicaBuonoSconto.Enabled = True
+        SyncCouponUiState()
     End If
 End Sub
 
@@ -4477,6 +4537,7 @@ Protected Sub LB_CancelBuonoSconto_Click(ByVal sender As Object, ByVal e As Syst
     lblBuonoScontoConvalida.Text = ""
     BT_ApplicaBuonoSconto.Enabled = True
     LB_CancelBuonoSconto.Visible = False
+    SyncCouponUiState()
 End Sub
 
 
@@ -4988,9 +5049,12 @@ End Function
         Next
 
         If found Is Nothing Then
-            found = New System.Web.UI.HtmlControls.HtmlMeta()
-            found.Name = metaName
-            page.Header.Controls.Add(found)
+            If String.Equals(metaName, "description", StringComparison.OrdinalIgnoreCase) Then
+                page.MetaDescription = metaContent
+            ElseIf String.Equals(metaName, "keywords", StringComparison.OrdinalIgnoreCase) Then
+                page.MetaKeywords = metaContent
+            End If
+            Exit Sub
         End If
 
         found.Content = metaContent
@@ -5012,11 +5076,7 @@ End Function
             End If
         Next
 
-        If found Is Nothing Then
-            found = New System.Web.UI.HtmlControls.HtmlLink()
-            found.Attributes("rel") = "canonical"
-            page.Header.Controls.Add(found)
-        End If
+        If found Is Nothing Then Exit Sub
 
         found.Href = canonicalUrl
     End Sub
