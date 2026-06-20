@@ -1453,7 +1453,9 @@
             <div class="ks-cart-recent-head">
                 <div>
                     <p class="body-text-3 text-main-2 mb-1">Prodotti reali dal catalogo KeepStore</p>
-                    <h5 id="ksCartRecentlyViewedTitle" class="fw-semibold">Visti di recente</h5>
+                    <h5 id="ksCartRecentlyViewedTitle" class="fw-semibold">
+                        <asp:Literal ID="litCartRecommendationsTitle" runat="server" Text="Visti di recente" />
+                    </h5>
                 </div>
                 <a href="articoli.aspx" class="link body-md-2">Sfoglia il catalogo</a>
             </div>

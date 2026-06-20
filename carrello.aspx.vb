@@ -997,11 +997,21 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         Next
     End Sub
 
-    Private Function LoadCartRecentlyViewedProducts(ByVal maxItems As Integer) As DataTable
+    Private Function CartRecommendationSelectFields() As String
+        Return "v.id, COALESCE(v.TCid,-1) AS TCid, v.Codice, v.Descrizione1, v.Descrizione2, " & _
+               "IFNULL(v.MarcheDescrizione,'') AS MarcheDescrizione, IFNULL(v.CategorieDescrizione,'') AS CategorieDescrizione, " & _
+               "v.Img1, COALESCE(v.Prezzo,0) AS Prezzo, COALESCE(v.PrezzoIvato,0) AS PrezzoIvato, " & _
+               "COALESCE(v.PrezzoPromo,0) AS PrezzoPromo, COALESCE(v.PrezzoPromoIvato,0) AS PrezzoPromoIvato, COALESCE(v.InOfferta,0) AS InOfferta "
+    End Function
+
+    Private Function CartRecommendationStockWhere() As String
+        Return "(COALESCE(v.Disponibilita,0)>0 OR (COALESCE(v.Giacenza,0)-COALESCE(v.Impegnata,0))>0)"
+    End Function
+
+    Private Function LoadCartRecentlyViewedProducts(ByVal maxItems As Integer, ByVal cartIds As HashSet(Of Integer)) As DataTable
         Dim recentIds As List(Of Integer) = GetCartRecentlyViewedIds(40)
         If recentIds.Count = 0 Then Return Nothing
 
-        Dim cartIds As HashSet(Of Integer) = GetCartArticleIds()
         Dim safeIds As New List(Of Integer)()
         For Each id As Integer In recentIds
             If id > 0 AndAlso Not cartIds.Contains(id) AndAlso Not safeIds.Contains(id) Then safeIds.Add(id)
@@ -1015,15 +1025,12 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         Next
 
         Dim sql As String = _
-            "SELECT v.id, COALESCE(v.TCid,-1) AS TCid, v.Codice, v.Descrizione1, v.Descrizione2, " & _
-            "IFNULL(v.MarcheDescrizione,'') AS MarcheDescrizione, IFNULL(v.CategorieDescrizione,'') AS CategorieDescrizione, " & _
-            "v.Img1, COALESCE(v.Prezzo,0) AS Prezzo, COALESCE(v.PrezzoIvato,0) AS PrezzoIvato, " & _
-            "COALESCE(v.PrezzoPromo,0) AS PrezzoPromo, COALESCE(v.PrezzoPromoIvato,0) AS PrezzoPromoIvato, COALESCE(v.InOfferta,0) AS InOfferta " & _
+            "SELECT " & CartRecommendationSelectFields() & _
             "FROM vsuperarticoli v INNER JOIN articoli aBase ON aBase.id=v.id " & _
             "WHERE COALESCE(v.NListino,1)=@listino AND COALESCE(aBase.Abilitato,1)=1 " & _
             "AND COALESCE(v.id,0) IN (" & String.Join(",", safeIds.ToArray()) & ") " & _
             "AND COALESCE(NULLIF(v.Img1,''),'')<>'' " & _
-            "AND COALESCE(v.Disponibilita, COALESCE(v.Giacenza,0)) > 0 " & _
+            "AND " & CartRecommendationStockWhere() & " " & _
             "ORDER BY CASE v.id " & String.Join(" ", orderParts.ToArray()) & " ELSE 9999 END " & _
             "LIMIT " & Math.Max(1, maxItems).ToString(CultureInfo.InvariantCulture)
 
@@ -1040,6 +1047,63 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         End Using
     End Function
 
+    Private Function LoadCartFallbackRecommendations(ByVal maxItems As Integer, ByVal cartIds As HashSet(Of Integer)) As DataTable
+        If cartIds Is Nothing OrElse cartIds.Count = 0 Then Return Nothing
+
+        Dim ids As New List(Of Integer)()
+        For Each id As Integer In cartIds
+            If id > 0 AndAlso Not ids.Contains(id) Then ids.Add(id)
+            If ids.Count >= 40 Then Exit For
+        Next
+        If ids.Count = 0 Then Return Nothing
+
+        Dim idsCsv As String = String.Join(",", ids.ToArray())
+        Dim seedWhere As String = "COALESCE(seed.NListino,1)=@listino AND COALESCE(seed.id,0) IN (" & idsCsv & ")"
+        Dim categoryMatch As String = "COALESCE(v.CategorieId,0)>0 AND v.CategorieId IN (SELECT DISTINCT seed.CategorieId FROM vsuperarticoli seed WHERE " & seedWhere & " AND COALESCE(seed.CategorieId,0)>0)"
+        Dim typeMatch As String = "COALESCE(v.TipologieId,0)>0 AND v.TipologieId IN (SELECT DISTINCT seed.TipologieId FROM vsuperarticoli seed WHERE " & seedWhere & " AND COALESCE(seed.TipologieId,0)>0)"
+        Dim brandMatch As String = "COALESCE(v.MarcheId,0)>0 AND v.MarcheId IN (SELECT DISTINCT seed.MarcheId FROM vsuperarticoli seed WHERE " & seedWhere & " AND COALESCE(seed.MarcheId,0)>0)"
+        Dim sectorMatch As String = "COALESCE(v.SettoriId,0)>0 AND v.SettoriId IN (SELECT DISTINCT seed.SettoriId FROM vsuperarticoli seed WHERE " & seedWhere & " AND COALESCE(seed.SettoriId,0)>0)"
+        Dim relevance As String = _
+            "(CASE WHEN " & categoryMatch & " THEN 8 ELSE 0 END + " & _
+            "CASE WHEN " & typeMatch & " THEN 4 ELSE 0 END + " & _
+            "CASE WHEN " & brandMatch & " THEN 3 ELSE 0 END + " & _
+            "CASE WHEN " & sectorMatch & " THEN 1 ELSE 0 END)"
+
+        Dim sql As String = _
+            "SELECT " & CartRecommendationSelectFields() & _
+            "FROM vsuperarticoli v INNER JOIN articoli aBase ON aBase.id=v.id " & _
+            "WHERE COALESCE(v.NListino,1)=@listino AND COALESCE(aBase.Abilitato,1)=1 " & _
+            "AND COALESCE(v.id,0) NOT IN (" & idsCsv & ") " & _
+            "AND COALESCE(NULLIF(v.Img1,''),'')<>'' " & _
+            "AND " & CartRecommendationStockWhere() & " " & _
+            "AND ((" & categoryMatch & ") OR (" & typeMatch & ") OR (" & brandMatch & ") OR (" & sectorMatch & ")) " & _
+            "ORDER BY " & relevance & " DESC, COALESCE(v.InOfferta,0) DESC, (COALESCE(v.Giacenza,0)-COALESCE(v.Impegnata,0)) DESC, COALESCE(v.visite,0) DESC, v.id DESC " & _
+            "LIMIT " & Math.Max(1, maxItems).ToString(CultureInfo.InvariantCulture)
+
+        Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+            Using cmd As New MySqlCommand(sql, conn)
+                cmd.Parameters.AddWithValue("@listino", GetListinoSafe(1))
+                Using da As New MySqlDataAdapter(cmd)
+                    Dim dt As New DataTable()
+                    conn.Open()
+                    da.Fill(dt)
+                    Return dt
+                End Using
+            End Using
+        End Using
+    End Function
+
+    Private Function LoadCartRecommendations(ByVal maxItems As Integer, ByRef title As String) As DataTable
+        title = "Visti di recente"
+        Dim cartIds As HashSet(Of Integer) = GetCartArticleIds()
+
+        Dim recentItems As DataTable = LoadCartRecentlyViewedProducts(maxItems, cartIds)
+        If recentItems IsNot Nothing AndAlso recentItems.Rows.Count > 0 Then Return recentItems
+
+        title = "Potrebbe interessarti anche"
+        Return LoadCartFallbackRecommendations(maxItems, cartIds)
+    End Function
+
     Private Sub BindCartRecentlyViewed()
         Try
             If phCartRecentlyViewed Is Nothing OrElse rptCartRecentlyViewed Is Nothing Then Return
@@ -1047,11 +1111,16 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
             phCartRecentlyViewed.Visible = False
             If IsCheckoutConfirmStep() Then Return
 
-            Dim items As DataTable = LoadCartRecentlyViewedProducts(8)
-            If items Is Nothing OrElse items.Rows.Count = 0 Then Return
+            Dim recommendationTitle As String = "Visti di recente"
+            Dim items As DataTable = LoadCartRecommendations(8, recommendationTitle)
+            If items Is Nothing OrElse items.Rows.Count = 0 Then
+                ' Nessun prodotto reale disponibile: il modulo resta nascosto, senza fallback statici/demo.
+                Return
+            End If
 
             rptCartRecentlyViewed.DataSource = items
             rptCartRecentlyViewed.DataBind()
+            If litCartRecommendationsTitle IsNot Nothing Then litCartRecommendationsTitle.Text = Server.HtmlEncode(recommendationTitle)
             phCartRecentlyViewed.Visible = True
         Catch ex As Exception
             If phCartRecentlyViewed IsNot Nothing Then phCartRecentlyViewed.Visible = False
