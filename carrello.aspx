@@ -1448,6 +1448,50 @@
     </section>
     <% End If %>
 
+    <asp:PlaceHolder ID="phCartRecentlyViewed" runat="server" Visible="false">
+        <section class="ks-cart-recent-section" aria-labelledby="ksCartRecentlyViewedTitle">
+            <div class="ks-cart-recent-head">
+                <div>
+                    <p class="body-text-3 text-main-2 mb-1">Prodotti reali dal catalogo KeepStore</p>
+                    <h5 id="ksCartRecentlyViewedTitle" class="fw-semibold">Visti di recente</h5>
+                </div>
+                <a href="articoli.aspx" class="link body-md-2">Sfoglia il catalogo</a>
+            </div>
+            <asp:Repeater ID="rptCartRecentlyViewed" runat="server">
+                <HeaderTemplate>
+                    <div class="ks-cart-recent-grid">
+                </HeaderTemplate>
+                <ItemTemplate>
+                    <article class="card-product style-img-border ks-cart-recent-card">
+                        <div class="card-product-wrapper">
+                            <a class="product-img" href='<%# CartRecommendationUrl(Container.DataItem) %>'>
+                                <img class="img-product lazyload"
+                                     src='<%# CartRecommendationImage(Container.DataItem) %>'
+                                     data-src='<%# CartRecommendationImage(Container.DataItem) %>'
+                                     alt='<%# Server.HtmlEncode(CartRecommendationTitle(Container.DataItem)) %>' />
+                            </a>
+                        </div>
+                        <div class="card-product-info">
+                            <div class="box-title">
+                                <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(CartRecommendationMeta(Container.DataItem)) %></p>
+                                <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# CartRecommendationUrl(Container.DataItem) %>'>
+                                    <%# Server.HtmlEncode(ThemeManager.CompactText(CartRecommendationTitle(Container.DataItem), 72)) %>
+                                </a>
+                            </div>
+                            <div class="ks-cart-recent-bottom">
+                                <span class="price-wrap fw-medium"><%# Server.HtmlEncode(CartRecommendationPrice(Container.DataItem)) %></span>
+                                <a class="tf-btn btn-line ks-cart-recent-link" href='<%# CartRecommendationUrl(Container.DataItem) %>'>Vedi prodotto</a>
+                            </div>
+                        </div>
+                    </article>
+                </ItemTemplate>
+                <FooterTemplate>
+                    </div>
+                </FooterTemplate>
+            </asp:Repeater>
+        </section>
+    </asp:PlaceHolder>
+
 </asp:Panel> 
 <asp:validationsummary id="ValidationSummary1" runat="server" HeaderText="Attenzione!" ShowMessageBox="True" ShowSummary="False"></asp:validationsummary>
 		                

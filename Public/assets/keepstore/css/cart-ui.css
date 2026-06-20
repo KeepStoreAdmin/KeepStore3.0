@@ -1560,6 +1560,79 @@
     display: none;
 }
 
+.ks-cart-page .ks-cart-recent-section{
+    margin: 34px 0 8px;
+    padding: 26px;
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 10px;
+    background: #fff;
+}
+
+.ks-cart-page .ks-cart-recent-head{
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.ks-cart-page .ks-cart-recent-head h5{
+    margin: 0;
+    font-size: 22px;
+}
+
+.ks-cart-page .ks-cart-recent-grid{
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.ks-cart-page .ks-cart-recent-card{
+    min-width: 0;
+}
+
+.ks-cart-page .ks-cart-recent-card .card-product-wrapper{
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f8f9fa;
+}
+
+.ks-cart-page .ks-cart-recent-card .product-img{
+    aspect-ratio: 1 / 1;
+    display: block;
+}
+
+.ks-cart-page .ks-cart-recent-card .product-img img{
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 12px;
+}
+
+.ks-cart-page .ks-cart-recent-card .card-product-info{
+    padding-top: 12px;
+}
+
+.ks-cart-page .ks-cart-recent-card .name-product{
+    min-height: 42px;
+    display: block;
+}
+
+.ks-cart-page .ks-cart-recent-bottom{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.ks-cart-page .ks-cart-recent-link{
+    min-height: 38px;
+    padding: 9px 13px;
+    white-space: nowrap;
+}
+
 .ks-cart-page .ks-final-actions-mobile-slot{
     display: none;
 }
@@ -1836,6 +1909,31 @@
     .ks-cart-page .tf-table-page-cart th,
     .ks-cart-page .tf-table-page-cart td{
         padding: 14px 12px;
+    }
+
+    .ks-cart-page .ks-cart-recent-section{
+        padding: 18px;
+        margin-top: 24px;
+    }
+
+    .ks-cart-page .ks-cart-recent-head{
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .ks-cart-page .ks-cart-recent-grid{
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .ks-cart-page .ks-cart-recent-bottom{
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .ks-cart-page .ks-cart-recent-link{
+        width: 100%;
+        justify-content: center;
     }
 
     .ks-cart-page.ks-checkout-shell.ks-cart-step-confirm .ks-final-actions-mobile-slot.has-actions{

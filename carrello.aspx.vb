@@ -306,6 +306,66 @@ Protected Function checkImg(ByVal imgname As Object) As String
     Return "Public/Foto/img_non_disponibile.png"
 End Function
 
+Private Function CartRecommendationRow(ByVal dataItem As Object) As DataRow
+    Dim rowView As DataRowView = TryCast(dataItem, DataRowView)
+    If rowView Is Nothing Then Return Nothing
+    Return rowView.Row
+End Function
+
+Protected Function CartRecommendationTitle(ByVal dataItem As Object) As String
+    Dim row As DataRow = CartRecommendationRow(dataItem)
+    If row Is Nothing Then Return ""
+
+    Dim title As String = Convert.ToString(row("Descrizione1")).Trim()
+    If String.IsNullOrWhiteSpace(title) Then title = Convert.ToString(row("Descrizione2")).Trim()
+    If String.IsNullOrWhiteSpace(title) Then title = "Articolo " & SafeInt(row("id"), 0).ToString(CultureInfo.InvariantCulture)
+    Return title
+End Function
+
+Protected Function CartRecommendationMeta(ByVal dataItem As Object) As String
+    Dim row As DataRow = CartRecommendationRow(dataItem)
+    If row Is Nothing Then Return ""
+
+    Dim brand As String = Convert.ToString(row("MarcheDescrizione")).Trim()
+    If Not String.IsNullOrWhiteSpace(brand) Then Return brand
+
+    Dim category As String = Convert.ToString(row("CategorieDescrizione")).Trim()
+    If Not String.IsNullOrWhiteSpace(category) Then Return category
+
+    Return Convert.ToString(row("Codice")).Trim()
+End Function
+
+Protected Function CartRecommendationImage(ByVal dataItem As Object) As String
+    Dim row As DataRow = CartRecommendationRow(dataItem)
+    If row Is Nothing Then Return ThemeManager.PlaceholderProductImageUrl()
+    Return ThemeManager.ProductImageUrl(row("Img1"))
+End Function
+
+Protected Function CartRecommendationUrl(ByVal dataItem As Object) As String
+    Dim row As DataRow = CartRecommendationRow(dataItem)
+    If row Is Nothing Then Return "articoli.aspx"
+
+    Dim id As Integer = SafeInt(row("id"), 0)
+    Dim tcid As Integer = SafeInt(row("TCid"), -1)
+    Dim url As String = "articolo.aspx?id=" & id.ToString(CultureInfo.InvariantCulture)
+    If tcid > 0 Then url &= "&TCid=" & tcid.ToString(CultureInfo.InvariantCulture)
+    Return url
+End Function
+
+Protected Function CartRecommendationPrice(ByVal dataItem As Object) As String
+    Dim row As DataRow = CartRecommendationRow(dataItem)
+    If row Is Nothing Then Return ""
+
+    Dim useNetPrice As Boolean = (GetSessionInt("IvaTipo", 0) = 1)
+    Dim basePrice As Double = If(useNetPrice, SafeDbl(row("Prezzo"), 0), SafeDbl(row("PrezzoIvato"), 0))
+    Dim promoPrice As Double = If(useNetPrice, SafeDbl(row("PrezzoPromo"), 0), SafeDbl(row("PrezzoPromoIvato"), 0))
+    Dim inOffer As Boolean = SafeInt(row("InOfferta"), 0) = 1
+    Dim displayPrice As Double = If(inOffer AndAlso promoPrice > 0 AndAlso promoPrice < basePrice, promoPrice, basePrice)
+
+    If displayPrice <= 0 Then Return ""
+    Return FormatCurrencyIt(displayPrice)
+End Function
+
 '
 
 ' --- HELPERS (in classe carrello) ---
@@ -886,6 +946,120 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
             SetControlEnabled(BT_ApplicaBuonoSconto, unlocked)
             If LB_CancelBuonoSconto IsNot Nothing Then SetControlEnabled(LB_CancelBuonoSconto, unlocked)
         End If
+    End Sub
+
+    Private Function GetCartRecentlyViewedIds(ByVal maxCount As Integer) As List(Of Integer)
+        Dim result As New List(Of Integer)()
+        MergeCartRecentIds(result, Convert.ToString(Session("ks_recent_ids")), maxCount)
+        MergeCartRecentIds(result, Convert.ToString(Session("ks_recent_session")), maxCount)
+
+        Dim recentCookie As HttpCookie = Request.Cookies("ks_recent")
+        If recentCookie IsNot Nothing Then
+            MergeCartRecentIds(result, HttpUtility.UrlDecode(recentCookie.Value), maxCount)
+        End If
+
+        Dim sessionCookie As HttpCookie = Request.Cookies("ks_recent_session")
+        If sessionCookie IsNot Nothing Then
+            MergeCartRecentIds(result, HttpUtility.UrlDecode(sessionCookie.Value), maxCount)
+        End If
+
+        Return result
+    End Function
+
+    Private Sub MergeCartRecentIds(ByVal target As List(Of Integer), ByVal raw As String, ByVal maxCount As Integer)
+        If target Is Nothing OrElse String.IsNullOrWhiteSpace(raw) Then Return
+
+        Dim parts As String() = raw.Split(New Char() {","c}, StringSplitOptions.RemoveEmptyEntries)
+        For Each part As String In parts
+            If target.Count >= maxCount Then Exit For
+
+            Dim id As Integer = SafeInt(part.Trim(), 0)
+            If id > 0 AndAlso Not target.Contains(id) Then target.Add(id)
+        Next
+    End Sub
+
+    Private Function GetCartArticleIds() As HashSet(Of Integer)
+        Dim result As New HashSet(Of Integer)()
+        AddCartArticleIdsFromRepeater(result, Repeater1)
+        AddCartArticleIdsFromRepeater(result, gvArticoliGratis)
+        Return result
+    End Function
+
+    Private Sub AddCartArticleIdsFromRepeater(ByVal target As HashSet(Of Integer), ByVal repeater As Repeater)
+        If target Is Nothing OrElse repeater Is Nothing OrElse repeater.Items Is Nothing Then Return
+
+        For Each item As RepeaterItem In repeater.Items
+            If item.ItemType <> ListItemType.Item AndAlso item.ItemType <> ListItemType.AlternatingItem Then Continue For
+
+            Dim tbArtID As TextBox = TryCast(item.FindControl("tbArtID"), TextBox)
+            Dim id As Integer = SafeInt(If(tbArtID IsNot Nothing, tbArtID.Text, Nothing), 0)
+            If id > 0 Then target.Add(id)
+        Next
+    End Sub
+
+    Private Function LoadCartRecentlyViewedProducts(ByVal maxItems As Integer) As DataTable
+        Dim recentIds As List(Of Integer) = GetCartRecentlyViewedIds(40)
+        If recentIds.Count = 0 Then Return Nothing
+
+        Dim cartIds As HashSet(Of Integer) = GetCartArticleIds()
+        Dim safeIds As New List(Of Integer)()
+        For Each id As Integer In recentIds
+            If id > 0 AndAlso Not cartIds.Contains(id) AndAlso Not safeIds.Contains(id) Then safeIds.Add(id)
+            If safeIds.Count >= 40 Then Exit For
+        Next
+        If safeIds.Count = 0 Then Return Nothing
+
+        Dim orderParts As New List(Of String)()
+        For i As Integer = 0 To safeIds.Count - 1
+            orderParts.Add("WHEN " & safeIds(i).ToString(CultureInfo.InvariantCulture) & " THEN " & i.ToString(CultureInfo.InvariantCulture))
+        Next
+
+        Dim sql As String = _
+            "SELECT v.id, COALESCE(v.TCid,-1) AS TCid, v.Codice, v.Descrizione1, v.Descrizione2, " & _
+            "IFNULL(v.MarcheDescrizione,'') AS MarcheDescrizione, IFNULL(v.CategorieDescrizione,'') AS CategorieDescrizione, " & _
+            "v.Img1, COALESCE(v.Prezzo,0) AS Prezzo, COALESCE(v.PrezzoIvato,0) AS PrezzoIvato, " & _
+            "COALESCE(v.PrezzoPromo,0) AS PrezzoPromo, COALESCE(v.PrezzoPromoIvato,0) AS PrezzoPromoIvato, COALESCE(v.InOfferta,0) AS InOfferta " & _
+            "FROM vsuperarticoli v INNER JOIN articoli aBase ON aBase.id=v.id " & _
+            "WHERE COALESCE(v.NListino,1)=@listino AND COALESCE(aBase.Abilitato,1)=1 " & _
+            "AND COALESCE(v.id,0) IN (" & String.Join(",", safeIds.ToArray()) & ") " & _
+            "AND COALESCE(NULLIF(v.Img1,''),'')<>'' " & _
+            "AND COALESCE(v.Disponibilita, COALESCE(v.Giacenza,0)) > 0 " & _
+            "ORDER BY CASE v.id " & String.Join(" ", orderParts.ToArray()) & " ELSE 9999 END " & _
+            "LIMIT " & Math.Max(1, maxItems).ToString(CultureInfo.InvariantCulture)
+
+        Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+            Using cmd As New MySqlCommand(sql, conn)
+                cmd.Parameters.AddWithValue("@listino", GetListinoSafe(1))
+                Using da As New MySqlDataAdapter(cmd)
+                    Dim dt As New DataTable()
+                    conn.Open()
+                    da.Fill(dt)
+                    Return dt
+                End Using
+            End Using
+        End Using
+    End Function
+
+    Private Sub BindCartRecentlyViewed()
+        Try
+            If phCartRecentlyViewed Is Nothing OrElse rptCartRecentlyViewed Is Nothing Then Return
+
+            phCartRecentlyViewed.Visible = False
+            If IsCheckoutConfirmStep() Then Return
+
+            Dim items As DataTable = LoadCartRecentlyViewedProducts(8)
+            If items Is Nothing OrElse items.Rows.Count = 0 Then Return
+
+            rptCartRecentlyViewed.DataSource = items
+            rptCartRecentlyViewed.DataBind()
+            phCartRecentlyViewed.Visible = True
+        Catch ex As Exception
+            If phCartRecentlyViewed IsNot Nothing Then phCartRecentlyViewed.Visible = False
+            Try
+                KeepStoreLog.Error("carrello.aspx", "Errore BindCartRecentlyViewed", ex, HttpContext.Current)
+            Catch
+            End Try
+        End Try
     End Sub
 
     Private Sub ApplyCartAddressEditorLock()
@@ -3128,6 +3302,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
 
         Panel_BuoniSconto.Visible = showDiscountInput
         ApplyCartAddressEditorLock()
+        BindCartRecentlyViewed()
     End Sub
 
     'Restituisce 1, se il controllo Ã¨ andato a buon fine, altrimenti 0
