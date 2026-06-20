@@ -365,6 +365,50 @@ Private Function CartRecommendationPrice(ByVal row As DataRow) As String
     Return FormatCurrencyIt(displayPrice)
 End Function
 
+Private Function CartRecommendationKey(ByVal row As DataRow, ByVal mode As String) As String
+    If row Is Nothing Then Return ""
+
+    Dim value As String = ""
+    Select Case mode
+        Case "id"
+            Dim id As Integer = SafeInt(row("id"), 0)
+            If id > 0 Then value = id.ToString(CultureInfo.InvariantCulture)
+        Case "code"
+            value = Convert.ToString(row("Codice"))
+        Case "url"
+            value = CartRecommendationUrl(row)
+        Case "nameprice"
+            value = CartRecommendationTitle(row) & "|" & CartRecommendationPrice(row)
+    End Select
+
+    If String.IsNullOrWhiteSpace(value) Then Return ""
+    value = value.Trim().ToUpperInvariant()
+
+    Dim chars As New StringBuilder(value.Length)
+    For Each ch As Char In value
+        If Char.IsLetterOrDigit(ch) Then chars.Append(ch)
+    Next
+    Return chars.ToString()
+End Function
+
+Private Function CartRecommendationIsDuplicate(ByVal row As DataRow, ByVal seenIds As HashSet(Of String), ByVal seenCodes As HashSet(Of String), ByVal seenUrls As HashSet(Of String), ByVal seenNames As HashSet(Of String)) As Boolean
+    Dim idKey As String = CartRecommendationKey(row, "id")
+    Dim codeKey As String = CartRecommendationKey(row, "code")
+    Dim urlKey As String = CartRecommendationKey(row, "url")
+    Dim nameKey As String = CartRecommendationKey(row, "nameprice")
+
+    If idKey <> "" AndAlso seenIds.Contains(idKey) Then Return True
+    If codeKey <> "" AndAlso seenCodes.Contains(codeKey) Then Return True
+    If urlKey <> "" AndAlso seenUrls.Contains(urlKey) Then Return True
+    If nameKey <> "" AndAlso seenNames.Contains(nameKey) Then Return True
+
+    If idKey <> "" Then seenIds.Add(idKey)
+    If codeKey <> "" Then seenCodes.Add(codeKey)
+    If urlKey <> "" Then seenUrls.Add(urlKey)
+    If nameKey <> "" Then seenNames.Add(nameKey)
+    Return False
+End Function
+
 '
 
 ' --- HELPERS (in classe carrello) ---
@@ -1172,13 +1216,24 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         Return sb.ToString()
     End Function
 
-    Private Function RenderCartRecommendationsSection(ByVal items As DataTable, ByVal title As String) As String
+    Private Function RenderCartRecommendationsSection(ByVal items As DataTable, ByVal title As String, ByVal maxCards As Integer) As String
         If items Is Nothing OrElse items.Rows.Count = 0 Then Return ""
 
         Dim cards As New StringBuilder()
+        Dim seenIds As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim seenCodes As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim seenUrls As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim seenNames As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim renderedCount As Integer = 0
+
         For Each row As DataRow In items.Rows
+            If CartRecommendationIsDuplicate(row, seenIds, seenCodes, seenUrls, seenNames) Then Continue For
             Dim card As String = RenderCartRecommendationCard(row)
-            If Not String.IsNullOrWhiteSpace(card) Then cards.Append(card)
+            If Not String.IsNullOrWhiteSpace(card) Then
+                cards.Append(card)
+                renderedCount += 1
+                If renderedCount >= Math.Max(1, maxCards) Then Exit For
+            End If
         Next
         If cards.Length = 0 Then Return ""
 
@@ -1208,8 +1263,8 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
             If IsCheckoutConfirmStep() OrElse IsCartEmptyState() Then Return
 
             Dim recommendationTitle As String = "Visti di recente"
-            Dim items As DataTable = LoadCartRecommendations(8, recommendationTitle)
-            Dim html As String = RenderCartRecommendationsSection(items, recommendationTitle)
+            Dim items As DataTable = LoadCartRecommendations(16, recommendationTitle)
+            Dim html As String = RenderCartRecommendationsSection(items, recommendationTitle, 8)
             If String.IsNullOrWhiteSpace(html) Then Return
 
             RecommendedProductsHtml.Text = html
