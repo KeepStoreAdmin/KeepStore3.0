@@ -271,6 +271,8 @@ REV6 `CART-RECENTLY-VIEWED-1F` e solo rifinitura visuale/UX del modulo gia visib
 
 REV7 `CART-RECENTLY-VIEWED-1G` finalizza font, deduplica e card senza immagine: il modulo `.ks-rv-*` eredita il font del carrello, riduce heading/nome/prezzo/CTA a proporzioni coerenti con ONSUS/checkout, deduplica la lista finale per ID, codice, URL e nome+prezzo prima del rendering, e mantiene al massimo 8 card visibili dopo deduplica. Le immagini mancanti/non valide restano filtrate o gestite con placeholder CSS interno; non vengono introdotti asset esterni, statici ONSUS o path legacy.
 
+Il blocco carrello/checkout/recently e chiuso su `frontend-rebuild`: PR #194 mergeata con merge commit `02e7ec16b832bb333e7f0c21871aa724822dd51b`, PR #195 mergeata con merge commit `7ad1d9b7c296b58881f796a9032b0e2eeff7d8e2` e smoke utente finale `SMOKE CART RECENTLY REV7: A`. Lo stato stabile comprende carrello vuoto moderno, carrello pieno step 1, checkout step 2, conferma step 3, coupon applica/elimina, CTA mobile conferma, `ordine.aspx` ricevuta/stampa e modulo `Visti di recente` / `Potrebbe interessarti anche`. Non riaprire questi flussi per micro-rifiniture non bloccanti: future evoluzioni Amazon-like, cross-sell, upsell, bundle, SEO e AI search vanno trattate come moduli separati con dati reali, senza alterare DB/schema/SP, gateway, email/template, auth/sessioni/cookie, prezzi/IVA/totali/righe/spedizione/pagamento.
+
 ### 9.5 Checkout
 
 Da completare con audit dedicato. Area sensibile: ordini, documenti, pagamento, spedizione.
