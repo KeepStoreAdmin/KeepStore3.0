@@ -329,8 +329,17 @@ Private Function CartRecommendationMeta(ByVal row As DataRow) As String
 End Function
 
 Private Function CartRecommendationImage(ByVal row As DataRow) As String
-    If row Is Nothing Then Return ThemeManager.PlaceholderProductImageUrl()
-    Return ThemeManager.ProductImageUrl(row("Img1"))
+    If row Is Nothing Then Return ""
+
+    Dim raw As String = Convert.ToString(row("Img1")).Trim()
+    If String.IsNullOrWhiteSpace(raw) Then Return ""
+    If raw.Contains("..") OrElse raw.StartsWith("data:", StringComparison.OrdinalIgnoreCase) Then Return ""
+
+    Dim imageUrl As String = ThemeManager.ProductImageUrl(raw)
+    If String.IsNullOrWhiteSpace(imageUrl) Then Return ""
+    If imageUrl.IndexOf("placeholder.svg", StringComparison.OrdinalIgnoreCase) >= 0 Then Return ""
+
+    Return imageUrl
 End Function
 
 Private Function CartRecommendationUrl(ByVal row As DataRow) As String
@@ -1146,8 +1155,8 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         Dim sb As New StringBuilder()
         sb.Append("<article class=""ks-rv-card"">")
         sb.Append("<a class=""ks-rv-image-link"" href=""").Append(HttpUtility.HtmlAttributeEncode(url)).Append(""">")
-        sb.Append("<span class=""ks-rv-image-box"">")
-        sb.Append("<img src=""").Append(HttpUtility.HtmlAttributeEncode(imageUrl)).Append(""" alt=""").Append(HttpUtility.HtmlAttributeEncode(title)).Append(""" loading=""lazy"" width=""180"" height=""180"" />")
+        sb.Append("<span class=""ks-rv-image-box"" data-placeholder=""Immagine non disponibile"">")
+        sb.Append("<img src=""").Append(HttpUtility.HtmlAttributeEncode(imageUrl)).Append(""" alt=""").Append(HttpUtility.HtmlAttributeEncode(title)).Append(""" loading=""lazy"" width=""180"" height=""180"" onerror=""this.style.display='none';this.parentNode.className=this.parentNode.className+' is-missing';"" />")
         sb.Append("</span></a>")
         sb.Append("<div class=""ks-rv-body"">")
         If Not String.IsNullOrWhiteSpace(meta) Then

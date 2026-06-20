@@ -1563,7 +1563,7 @@
 .ks-rv-section{
     clear: both;
     width: 100%;
-    margin: 36px auto 48px;
+    margin: 40px auto 56px;
     padding: 0 16px;
     box-sizing: border-box;
 }
@@ -1578,7 +1578,7 @@
     align-items: flex-end;
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 18px;
+    margin-bottom: 22px;
 }
 
 .ks-rv-eyebrow{
@@ -1609,7 +1609,7 @@
     display: grid;
     width: 100%;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 18px;
+    gap: 20px;
     align-items: stretch;
 }
 
@@ -1626,6 +1626,13 @@
     background: #ffffff;
     box-shadow: 0 10px 26px rgba(17, 24, 39, .07);
     box-sizing: border-box;
+    transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.ks-rv-card:hover{
+    border-color: rgba(197, 18, 48, .22);
+    box-shadow: 0 16px 34px rgba(17, 24, 39, .1);
+    transform: translateY(-2px);
 }
 
 .ks-rv-image-link{
@@ -1635,15 +1642,29 @@
 }
 
 .ks-rv-image-box{
+    position: relative;
     display: flex;
     width: 100%;
-    height: 170px;
+    height: 176px;
     align-items: center;
     justify-content: center;
     overflow: hidden;
     border-radius: 10px;
     background: #fafafa;
     box-sizing: border-box;
+}
+
+.ks-rv-image-box.is-missing::after{
+    content: attr(data-placeholder);
+    display: flex;
+    max-width: 150px;
+    align-items: center;
+    justify-content: center;
+    color: #777777;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.35;
+    text-align: center;
 }
 
 .ks-rv-image-box img{
@@ -1657,7 +1678,7 @@
 
 .ks-rv-body{
     display: flex;
-    min-height: 166px;
+    min-height: 176px;
     flex: 1 1 auto;
     flex-direction: column;
     min-width: 0;
@@ -1696,10 +1717,9 @@
 }
 
 .ks-rv-price{
-    margin-top: auto;
-    padding-top: 12px;
+    margin-top: 14px;
     color: #222222;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
     line-height: 1.2;
 }
@@ -1709,7 +1729,7 @@
     min-height: 38px;
     align-items: center;
     justify-content: center;
-    margin-top: 12px;
+    margin-top: auto;
     padding: 8px 14px;
     border: 1px solid #c51230;
     border-radius: 6px;
@@ -1733,8 +1753,31 @@
 }
 
 @media (max-width: 575.98px){
+    .ks-rv-section{
+        margin-top: 28px;
+        margin-bottom: 36px;
+        padding: 0 14px;
+    }
+
     .ks-rv-grid{
         grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .ks-rv-head h2{
+        font-size: 22px;
+    }
+
+    .ks-rv-image-box{
+        height: 164px;
+    }
+
+    .ks-rv-body{
+        min-height: 0;
+    }
+
+    .ks-rv-link{
+        width: 100%;
     }
 }
 
