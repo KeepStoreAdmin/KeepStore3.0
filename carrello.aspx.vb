@@ -1121,6 +1121,13 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
             rptCartRecentlyViewed.DataSource = items
             rptCartRecentlyViewed.DataBind()
             If litCartRecommendationsTitle IsNot Nothing Then litCartRecommendationsTitle.Text = Server.HtmlEncode(recommendationTitle)
+            If litCartRecommendationsCopy IsNot Nothing Then
+                If String.Equals(recommendationTitle, "Potrebbe interessarti anche", StringComparison.OrdinalIgnoreCase) Then
+                    litCartRecommendationsCopy.Text = "Suggerimenti selezionati dal catalogo KeepStore."
+                Else
+                    litCartRecommendationsCopy.Text = "Prodotti che hai consultato di recente."
+                End If
+            End If
             phCartRecentlyViewed.Visible = True
         Catch ex As Exception
             If phCartRecentlyViewed IsNot Nothing Then phCartRecentlyViewed.Visible = False
