@@ -6,7 +6,7 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260619-cart-coupon-apply-state-1a-rev15" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260620-cart-recently-viewed-1e-rev5" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/checkout-ui.js") %>" defer></script>
 
@@ -1447,6 +1447,10 @@
         </div>
     </section>
     <% End If %>
+
+    <asp:PlaceHolder ID="RecommendedProductsPanel" runat="server" Visible="false">
+        <asp:Literal ID="RecommendedProductsHtml" runat="server" />
+    </asp:PlaceHolder>
 
 </asp:Panel> 
 <asp:validationsummary id="ValidationSummary1" runat="server" HeaderText="Attenzione!" ShowMessageBox="True" ShowSummary="False"></asp:validationsummary>
