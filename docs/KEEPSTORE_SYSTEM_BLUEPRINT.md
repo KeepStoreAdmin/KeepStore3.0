@@ -243,7 +243,9 @@ Da completare con audit dedicato. Pagine principali note: `articoli.aspx`, `arti
 
 ### 9.3 Scheda prodotto
 
-Da completare con audit dedicato. Coinvolge disponibilita, prezzo, add-to-cart, immagini e informazioni prodotto.
+Runtime principale: `articolo.aspx?id=...`, con `TCid` opzionale per varianti taglia/colore. Il code-behind `articolo.aspx.vb` carica il prodotto da `vsuperarticoli`, risolve prezzo/promo in base a listino e `Session("IvaTipo")`, costruisce disponibilita, gallery immagini `Img1`-`Img6`, varianti TC, add-to-cart e moduli commerciali gia esistenti. `Public/ui/controls/ProductDetailView.ascx` resta preview/demo locale e non sostituisce il runtime.
+
+`PRODUCT-DETAIL-SHELL-1A` limita il primo intervento alla shell visuale della scheda prodotto: wrapper scoped `.ks-product-detail-page`, layout desktop a due colonne gallery/info-buy box, gallery contenuta, buy box piu leggibile, descrizione/info ordinate e mobile a colonna. Il task non cambia logiche di prezzo, promo, disponibilita, TC, quantita, add-to-cart, SEO/JSON-LD, recensioni, carrello, checkout, ordine, recently, coupon, gateway, email, auth, DB/schema/SP o asset demo ONSUS.
 
 ### 9.4 Carrello
 
