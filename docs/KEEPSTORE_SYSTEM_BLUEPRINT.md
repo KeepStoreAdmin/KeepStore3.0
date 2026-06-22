@@ -96,6 +96,8 @@ La sicurezza password e stata consolidata nel flow account e LOGIN-REGISTER-SECU
 - Asset KeepStore in `Public/assets`.
 - Controlli UI condivisi in `Public/ui/controls`.
 - Alcune pagine legacy mantengono markup tabellare e script inline.
+- KeepStore UI Typography Standard - ONSUS aligned: la fonte primaria e il template ONSUS gia presente nel repo, con stack `Inter`, body 15/24, title prodotto 22/25, price principale 30/36, `price-text` 20/22, `body-md-2` 14/22, `body-text-3` 14/20, `caption` 12/22 e CTA `tf-btn` 15/600. Le nuove pagine devono ereditare o riusare questo stack, mantenere line-height leggibile, gerarchia chiara, CTA touch-friendly su mobile e non introdurre font o CDN esterni.
+- I task di singola pagina devono applicare typography solo in scope locale, evitando CSS globali aggressivi. La standardizzazione globale del sito e backlog separato `GLOBAL-TYPOGRAPHY-ONSUS-1A`: audit CSS, design token tipografici e applicazione progressiva a home, catalogo, scheda prodotto, account e carrello con smoke desktop/mobile.
 
 ### 5.3 Master page
 
@@ -245,7 +247,7 @@ Da completare con audit dedicato. Pagine principali note: `articoli.aspx`, `arti
 
 Runtime principale: `articolo.aspx?id=...`, con `TCid` opzionale per varianti taglia/colore. Il code-behind `articolo.aspx.vb` carica il prodotto da `vsuperarticoli`, risolve prezzo/promo in base a listino e `Session("IvaTipo")`, costruisce disponibilita, gallery immagini `Img1`-`Img6`, varianti TC, add-to-cart e moduli commerciali gia esistenti. `Public/ui/controls/ProductDetailView.ascx` resta preview/demo locale e non sostituisce il runtime.
 
-`PRODUCT-DETAIL-SHELL-1A` limita il primo intervento alla shell visuale della scheda prodotto: wrapper scoped `.ks-product-detail-page`, layout desktop a due colonne gallery/info-buy box, gallery contenuta, buy box piu leggibile, descrizione/info ordinate e mobile a colonna. Il task non cambia logiche di prezzo, promo, disponibilita, TC, quantita, add-to-cart, SEO/JSON-LD, recensioni, carrello, checkout, ordine, recently, coupon, gateway, email, auth, DB/schema/SP o asset demo ONSUS.
+`PRODUCT-DETAIL-SHELL-1A` limita il primo intervento alla shell visuale della scheda prodotto: wrapper scoped `.ks-product-detail-page`, layout desktop a due colonne gallery/info-buy box, gallery contenuta, buy box piu leggibile, descrizione/info ordinate e mobile a colonna. REV1 `PRODUCT-DETAIL-SHELL-1B` allinea font-size, pesi, line-height e spacing della pagina prodotto alla scala ONSUS senza toccare business logic. Il task non cambia logiche di prezzo, promo, disponibilita, TC, quantita, add-to-cart, SEO/JSON-LD, recensioni, carrello, checkout, ordine, recently, coupon, gateway, email, auth, DB/schema/SP o asset demo ONSUS.
 
 ### 9.4 Carrello
 
