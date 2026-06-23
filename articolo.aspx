@@ -9,7 +9,7 @@
 
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/drift-basic.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/photoswipe.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=pr196-rev7b" />
 
     <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
 </asp:Content>
@@ -71,7 +71,9 @@
                                                                  alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Alt"))) %>'
                                                                  data-zoom='<%# Eval("Url") %>'
                                                                  data-src='<%# Eval("Url") %>'
-                                                                 src='<%# Eval("Url") %>' />
+                                                                 src='<%# Eval("Url") %>'
+                                                                 onload="this.closest('.item').classList.add('is-loaded')"
+                                                                 onerror="this.alt='';this.classList.add('is-missing');this.closest('.item').classList.add('is-missing')" />
                                                         </a>
                                                     </div>
                                                 </ItemTemplate>
@@ -90,7 +92,9 @@
                                                                      alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Alt"))) %>'
                                                                      data-zoom='<%# Eval("Url") %>'
                                                                      data-src='<%# Eval("Url") %>'
-                                                                     src='<%# Eval("Url") %>' />
+                                                                     src='<%# Eval("Url") %>'
+                                                                     onload="this.closest('.item').classList.add('is-loaded')"
+                                                                     onerror="this.alt='';this.classList.add('is-missing');this.closest('.item').classList.add('is-missing')" />
                                                             </div>
                                                         </div>
                                                     </ItemTemplate>
@@ -469,7 +473,7 @@
     </asp:Panel>
 
     <asp:PlaceHolder ID="phSimilar" runat="server" Visible="false">
-        <section class="tf-sp-2 pt-0">
+        <section class="tf-sp-2 pt-0 ks-product-list-section ks-similar-products-section">
             <div class="container">
                 <div class="flat-title">
                     <h5 class="fw-semibold">Scopri articoli simili</h5>
@@ -494,11 +498,15 @@
                                         <img class="lazyload img-product"
                                              alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
                                              data-src='<%# Eval("Img") %>'
-                                             src='<%# Eval("Img") %>' />
+                                             src='<%# Eval("Img") %>'
+                                             onload="this.closest('.product-img').classList.add('is-loaded')"
+                                             onerror="this.alt='';this.classList.add('is-missing');this.closest('.product-img').classList.add('is-missing')" />
                                         <img class="lazyload img-hover"
                                              alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
                                              data-src='<%# Eval("ImgHover") %>'
-                                             src='<%# Eval("ImgHover") %>' />
+                                             src='<%# Eval("ImgHover") %>'
+                                             onload="this.closest('.product-img').classList.add('is-loaded')"
+                                             onerror="this.alt='';this.classList.add('is-missing');this.closest('.product-img').classList.add('is-missing')" />
                                     </a>
                                     <ul class="list-product-btn">
                                         <li>
@@ -560,7 +568,7 @@
     </asp:PlaceHolder>
 
     <asp:PlaceHolder ID="phRelated" runat="server" Visible="false">
-        <section class="tf-sp-2 pt-0">
+        <section class="tf-sp-2 pt-0 ks-product-list-section ks-related-products-section">
             <div class="container">
                 <div class="flat-title">
                     <h5 class="fw-semibold">Prodotti correlati a questo articolo</h5>
@@ -585,11 +593,15 @@
                                         <img class="lazyload img-product"
                                              alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
                                              data-src='<%# Eval("Img") %>'
-                                             src='<%# Eval("Img") %>' />
+                                             src='<%# Eval("Img") %>'
+                                             onload="this.closest('.product-img').classList.add('is-loaded')"
+                                             onerror="this.alt='';this.classList.add('is-missing');this.closest('.product-img').classList.add('is-missing')" />
                                         <img class="lazyload img-hover"
                                              alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
                                              data-src='<%# Eval("ImgHover") %>'
-                                             src='<%# Eval("ImgHover") %>' />
+                                             src='<%# Eval("ImgHover") %>'
+                                             onload="this.closest('.product-img').classList.add('is-loaded')"
+                                             onerror="this.alt='';this.classList.add('is-missing');this.closest('.product-img').classList.add('is-missing')" />
                                     </a>
                                     <ul class="list-product-btn">
                                         <li>
@@ -671,7 +683,7 @@
     </asp:PlaceHolder>
 
     <asp:PlaceHolder ID="phRecentlyViewed" runat="server" Visible="false">
-        <section class="tf-sp-2">
+        <section class="tf-sp-2 ks-product-list-section ks-recently-viewed-section">
             <div class="container">
                 <div class="flat-title">
                     <h5 class="fw-semibold">Visti di recente</h5>
@@ -696,11 +708,15 @@
                                         <img class="lazyload img-product"
                                              alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
                                              data-src='<%# Eval("Img") %>'
-                                             src='<%# Eval("Img") %>' />
+                                             src='<%# Eval("Img") %>'
+                                             onload="this.closest('.product-img').classList.add('is-loaded')"
+                                             onerror="this.alt='';this.classList.add('is-missing');this.closest('.product-img').classList.add('is-missing')" />
                                         <img class="lazyload img-hover"
                                              alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
                                              data-src='<%# Eval("ImgHover") %>'
-                                             src='<%# Eval("ImgHover") %>' />
+                                             src='<%# Eval("ImgHover") %>'
+                                             onload="this.closest('.product-img').classList.add('is-loaded')"
+                                             onerror="this.alt='';this.classList.add('is-missing');this.closest('.product-img').classList.add('is-missing')" />
                                     </a>
                                     <ul class="list-product-btn">
                                         <li>
