@@ -1377,12 +1377,7 @@ Partial Class articolo
 
         Dim longValue As String = FirstNonEmpty(GetRowString(row, "DescrizioneHTML"), GetRowString(row, "DescrizioneLunga"), GetRowString(row, "Descrizione2"))
         Dim availabilityText As String = BuildAvailabilityText(row)
-        Dim availabilityCss As String = "ks-availability-check"
-        If availabilityText.IndexOf("Disponibile", StringComparison.OrdinalIgnoreCase) >= 0 Then
-            availabilityCss = "ks-availability-ok"
-        ElseIf availabilityText.IndexOf("arrivo", StringComparison.OrdinalIgnoreCase) >= 0 OrElse availabilityText.IndexOf("ordine", StringComparison.OrdinalIgnoreCase) >= 0 Then
-            availabilityCss = "ks-availability-wait"
-        End If
+        Dim availabilityCss As String = BuildAvailabilityCss(row)
 
         Dim stockAvailable As Integer = GetRowInt(row, "Giacenza", 0) - GetRowInt(row, "Impegnata", 0)
 
@@ -1432,7 +1427,7 @@ Partial Class articolo
             .IvaLabel = price.IvaLabel,
             .PromoText = If(price.IsPromo, "In offerta", String.Empty),
             .IsPromo = price.IsPromo,
-            .AvailabilityHtml = BuildAvailabilityHtml(availabilityText),
+            .AvailabilityHtml = BuildAvailabilityHtml(row),
             .AvailabilityText = availabilityText,
             .AvailabilityCss = availabilityCss,
             .IsAvailable = (stockAvailable > 0),
@@ -1592,7 +1587,7 @@ Partial Class articolo
 
         ' Disponibilità (Arrivo)
         Dim availabilityText As String = BuildAvailabilityText(row)
-        Dim availabilityHtml As String = BuildAvailabilityHtml(availabilityText)
+        Dim availabilityHtml As String = BuildAvailabilityHtml(row)
         phAvailability.Visible = Not String.IsNullOrEmpty(availabilityText)
         phAvailabilityInfo.Visible = phAvailability.Visible
         litAvailability.Text = availabilityHtml
@@ -2285,43 +2280,15 @@ Partial Class articolo
     End Function
 
     Private Function BuildAvailabilityText(row As DataRow) As String
-        Dim giacenza As Integer = GetRowInt(row, "Giacenza", 0)
-        Dim impegnata As Integer = GetRowInt(row, "Impegnata", 0)
-        Dim disponibile As Integer = giacenza - impegnata
-        Dim disponibilita As Integer = GetRowInt(row, "Disponibilita", 0)
-        Dim inOrdine As Integer = GetRowInt(row, "InOrdine", 0)
-
-        If disponibile > 0 Then
-            Return "Disponibile"
-        End If
-
-        Dim arrivo As String = FirstNonEmpty(GetRowString(row, "Arrivo"), StripHtml(GetRowString(row, "arrivi")))
-        If Not String.IsNullOrEmpty(arrivo) Then
-            Return "In arrivo: " & ThemeManager.CompactText(arrivo, 90)
-        End If
-
-        If disponibilita > 0 Then
-            Return "Disponibile su ordinazione"
-        End If
-
-        If inOrdine > 0 Then
-            Return "In ordine"
-        End If
-
-        Return "Verifica disponibilita"
+        Return AvailabilityDisplayHelper.BuildText(row, HttpContext.Current)
     End Function
 
-    Private Function BuildAvailabilityHtml(text As String) As String
-        If String.IsNullOrWhiteSpace(text) Then Return ""
+    Private Function BuildAvailabilityHtml(row As DataRow) As String
+        Return AvailabilityDisplayHelper.BuildHtml(row, HttpContext.Current)
+    End Function
 
-        Dim css As String = "ks-availability-check"
-        If text.IndexOf("Disponibile", StringComparison.OrdinalIgnoreCase) >= 0 Then
-            css = "ks-availability-ok"
-        ElseIf text.IndexOf("arrivo", StringComparison.OrdinalIgnoreCase) >= 0 OrElse text.IndexOf("ordine", StringComparison.OrdinalIgnoreCase) >= 0 Then
-            css = "ks-availability-wait"
-        End If
-
-        Return "<span class=""" & css & """>" & Server.HtmlEncode(text) & "</span>"
+    Private Function BuildAvailabilityCss(row As DataRow) As String
+        Return AvailabilityDisplayHelper.BuildCssClass(row, HttpContext.Current)
     End Function
 
     Private Sub EmitRecentlyViewedClientScript(row As DataRow,
