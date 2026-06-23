@@ -56,7 +56,7 @@ Public Module AvailabilityDisplayHelper
         model.LegacyText = BuildLegacyStatusText(dataItem, effectiveStock, model.AvailableQty, model.IncomingQty)
 
         If model.DisplayMode = 2 Then
-            model.Text = "Disponibilita: " & FormatQuantity(model.AvailableQty) &
+            model.Text = "Disponibilità: " & FormatQuantity(model.AvailableQty) &
                          "; Impegnati: " & FormatQuantity(model.CommittedQty) &
                          "; In Arrivo: " & FormatQuantity(model.IncomingQty) &
                          "; " & model.StatusText
@@ -88,10 +88,10 @@ Public Module AvailabilityDisplayHelper
             Return "<span class=""" & legacyCss & """>" & HtmlEncode(model.LegacyText) & "</span>"
         End If
 
-        Dim statusStyle As String = If(model.IsAvailable, "", " style=""color:#b42318;font-weight:700;""")
+        Dim statusStyle As String = If(model.IsAvailable, " style=""color:#15803d;font-weight:700;""", " style=""color:#b42318;font-weight:700;""")
         Dim sb As New StringBuilder()
         sb.Append("<span class=""ks-availability-numeric"" style=""display:inline-flex;flex-direction:column;gap:2px;line-height:1.35;"">")
-        sb.Append("<span><span class=""fw-semibold"">Disponibilita:</span> ").Append(HtmlEncode(FormatQuantity(model.AvailableQty))).Append("</span>")
+        sb.Append("<span><span class=""fw-semibold"">Disponibilità:</span> ").Append(HtmlEncode(FormatQuantity(model.AvailableQty))).Append("</span>")
         sb.Append("<span><span class=""fw-semibold"">Impegnati:</span> ").Append(HtmlEncode(FormatQuantity(model.CommittedQty))).Append("</span>")
         sb.Append("<span><span class=""fw-semibold"">In Arrivo:</span> ").Append(HtmlEncode(FormatQuantity(model.IncomingQty))).Append("</span>")
         sb.Append("<span class=""").Append(model.StatusCssClass).Append("""" & statusStyle & ">").Append(HtmlEncode(model.StatusText)).Append("</span>")
