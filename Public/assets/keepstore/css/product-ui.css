@@ -79,19 +79,19 @@
 }
 
 .ks-product-page .product-fearture-list {
-  gap: 8px;
+  gap: 2px;
 }
 
 .ks-product-page .product-fearture-list li {
-  gap: 16px;
-  line-height: 20px;
+  gap: 12px;
+  line-height: 18px;
   min-height: 0;
 }
 
 .ks-product-page .product-fearture-list .body-md-2,
 .ks-product-page .product-fearture-list .body-text-3 {
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 13px;
+  line-height: 18px;
 }
 
 .ks-refurbished-detail {
@@ -185,42 +185,42 @@
 }
 
 .ks-product-page .flat-title-tab .menu-tab-line {
-  gap: 26px;
+  gap: 22px;
 }
 
 .ks-product-page .tab-main {
-  padding-bottom: 24px;
-  padding-top: 24px;
+  padding-bottom: 10px;
+  padding-top: 10px;
 }
 
 .ks-product-page .tab-usually {
-  align-items: stretch;
-  flex-wrap: nowrap;
-  gap: 24px;
+  align-items: flex-start;
+  flex-wrap: nowrap !important;
+  gap: 12px;
   overflow-x: auto;
 }
 
 .ks-product-page .card-usually {
-  flex: 0 0 min(300px, 72vw);
+  flex: 0 0 min(210px, 60vw);
   min-width: 0;
 }
 
 .ks-product-page .card-usually .image {
   aspect-ratio: 16 / 9;
-  min-height: 76px;
+  min-height: 56px;
 }
 
 .ks-product-page .card-usually .prd-name {
   display: -webkit-box;
-  line-height: 20px;
-  max-height: 40px;
+  line-height: 18px;
+  max-height: 36px;
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
 
 .ks-product-page .box-total-btn {
-  flex: 0 0 220px;
+  flex: 0 0 160px;
 }
 
 .ks-product-list-section {
@@ -229,7 +229,7 @@
 }
 
 .ks-product-list-section .flat-title {
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .ks-product-list-section .card-product {
@@ -246,17 +246,17 @@
 }
 
 .ks-product-list-section .card-product-info {
-  padding-top: 14px;
+  padding-top: 10px;
 }
 
 .ks-product-list-section .box-title {
-  gap: 6px;
+  gap: 4px;
 }
 
 .ks-product-list-section .name-product {
   display: -webkit-box;
-  line-height: 20px;
-  max-height: 40px;
+  line-height: 18px;
+  max-height: 36px;
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -265,17 +265,17 @@
 .ks-product-list-section .price-wrap,
 .ks-product-list-section .price-wrap .new-price {
   font-size: 18px;
-  line-height: 22px;
+  line-height: 20px;
 }
 
 .ks-product-list-section .card-product-btn {
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .ks-product-list-section .card-product-btn .tf-btn {
-  min-height: 40px;
-  padding-bottom: 8px;
-  padding-top: 8px;
+  min-height: 36px;
+  padding-bottom: 6px;
+  padding-top: 6px;
 }
 
 .ks-product-description {
@@ -377,6 +377,10 @@
 
   .ks-product-page .card-usually {
     flex-basis: 260px;
+  }
+
+  .ks-product-page .card-usually .image {
+    min-height: 76px;
   }
 
   .ks-product-list-section .card-product-info {
