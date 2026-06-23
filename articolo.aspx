@@ -151,7 +151,7 @@
                                         </div>
 
                                         <div class="infor-center">
-                                            <div class="product-info-price ks-product-price">
+                                            <div class="product-info-price">
                                                 <asp:Literal ID="litPriceHtml" runat="server" />
                                             </div>
 
@@ -205,7 +205,7 @@
 
                                     <div class="tf-product-info-choose-option sticky-top">
                                         <div class="product-delivery">
-                                            <div class="price-text fw-medium text-primary ks-product-price">
+                                            <div class="price-text fw-medium text-primary">
                                                 <asp:Literal ID="litPriceHtml2" runat="server" />
                                             </div>
                                             <p>
@@ -235,7 +235,7 @@
 
                                         <div class="product-quantity">
                                             <p class="title body-text-3">Quantita</p>
-                                            <div class="wg-quantity ks-qty-stepper">
+                                            <div class="wg-quantity">
                                                 <button class="btn-quantity btn-decrease" type="button" data-ks-qty="minus">
                                                     <i class="icon-minus"></i>
                                                 </button>
@@ -490,7 +490,7 @@
                             <div class="swiper-slide">
                             <div class="card-product style-img-border">
                                 <div class="card-product-wrapper">
-                                    <a class="product-img ks-product-card-image" href='<%# Eval("Url") %>'>
+                                    <a class="product-img" href='<%# Eval("Url") %>'>
                                         <img class="lazyload img-product"
                                              alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
                                              data-src='<%# Eval("Img") %>'
@@ -581,7 +581,7 @@
                             <div class="swiper-slide">
                             <div class="card-product style-img-border">
                                 <div class="card-product-wrapper">
-                                    <a class="product-img ks-product-card-image" href='<%# Eval("Url") %>'>
+                                    <a class="product-img" href='<%# Eval("Url") %>'>
                                         <img class="lazyload img-product"
                                              alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
                                              data-src='<%# Eval("Img") %>'
@@ -692,7 +692,7 @@
                             <div class="swiper-slide">
                             <div class="card-product style-img-border">
                                 <div class="card-product-wrapper">
-                                    <a class="product-img ks-product-card-image" href='<%# Eval("Url") %>'>
+                                    <a class="product-img" href='<%# Eval("Url") %>'>
                                         <img class="lazyload img-product"
                                              alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>'
                                              data-src='<%# Eval("Img") %>'

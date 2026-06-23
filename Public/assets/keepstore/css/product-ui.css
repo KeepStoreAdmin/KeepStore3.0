@@ -1,82 +1,7 @@
 /* Product detail runtime bridge
-   Scope: articolo.aspx only. Keep the ONSUS product-detail structure as the source
-   of truth; use ks-* only to bridge WebForms output and real product media. */
+   Scope: articolo.aspx only. ONSUS product-detail classes are the visual source
+   of truth; ks-* rules only protect real WebForms data and media. */
 
-/* 1. ONSUS measured variables, scoped */
-.ks-product-detail-page {
-  --ks-onsus-font-family: "Inter", serif;
-  --ks-onsus-text: #333e48;
-  --ks-onsus-muted: #73787d;
-  --ks-onsus-primary: #ff3d3d;
-  --ks-onsus-secondary: #004ec3;
-  --ks-onsus-border: #ebebeb;
-  --ks-onsus-panel: #f5f5f5;
-  --ks-onsus-body-size: 14px;
-  --ks-onsus-body-line: 20px;
-  --ks-onsus-body-md-line: 22px;
-  --ks-onsus-page-size: 15px;
-  --ks-onsus-page-line: 24px;
-  --ks-onsus-caption-size: 12px;
-  --ks-onsus-caption-line: 22px;
-  --ks-onsus-title-size: 22px;
-  --ks-onsus-title-line: 25px;
-  --ks-onsus-tab-size: 18px;
-  --ks-onsus-tab-line: 24px;
-  --ks-onsus-card-price-size: 20px;
-  --ks-onsus-card-price-line: 22px;
-  --ks-onsus-button-size: 15px;
-  --ks-onsus-button-line: 24px;
-  --ks-onsus-button-weight: 600;
-  --ks-onsus-button-padding: 10px 16px;
-  --ks-onsus-button-radius: 8px;
-  color: var(--ks-onsus-text);
-  font-family: var(--ks-onsus-font-family);
-  font-size: var(--ks-onsus-page-size);
-  line-height: var(--ks-onsus-page-line);
-}
-
-.ks-product-page .product-info-name {
-  color: var(--ks-onsus-text);
-  font-family: var(--ks-onsus-font-family);
-  font-size: var(--ks-onsus-title-size);
-  font-weight: 600;
-  letter-spacing: 0;
-  line-height: var(--ks-onsus-title-line);
-  overflow-wrap: anywhere;
-  text-transform: none;
-}
-
-.ks-product-detail-page .caption,
-.ks-product-detail-page .text-main-2 {
-  font-size: var(--ks-onsus-caption-size);
-  line-height: var(--ks-onsus-caption-line);
-}
-
-.ks-product-detail-page .body-text-3,
-.ks-product-description p,
-.ks-product-description li,
-.ks-product-description td,
-.ks-product-description th {
-  font-size: var(--ks-onsus-body-size);
-  line-height: var(--ks-onsus-body-line);
-}
-
-.ks-product-detail-page .body-md-2 {
-  font-size: var(--ks-onsus-body-size);
-  line-height: var(--ks-onsus-body-md-line);
-}
-
-.ks-product-detail-page .flat-title-tab-product-des .menu-tab-line .tab-link {
-  font-size: var(--ks-onsus-tab-size);
-  line-height: var(--ks-onsus-tab-line);
-}
-
-.ks-product-detail-page .flat-title-tab-product-des .menu-tab-line .tab-link:hover,
-.ks-product-detail-page .flat-title-tab-product-des .menu-tab-line .tab-link.active {
-  color: var(--ks-onsus-secondary);
-}
-
-/* 2. Minimal WebForms bridge */
 .ks-product-page .tf-product-info-content,
 .ks-product-page .tf-product-info-choose-option,
 .ks-product-page .tf-product-media-wrap,
@@ -86,31 +11,6 @@
 .ks-product-page .swiper-wrapper,
 .ks-product-page .swiper-slide {
   min-width: 0;
-}
-
-.ks-product-page .product-info-price .price,
-.ks-product-page .product-info-price .new-price,
-.ks-product-page .product-info-price ins {
-  color: var(--ks-onsus-primary);
-  font-size: 30px;
-  font-weight: 500;
-  line-height: 36px;
-  text-decoration: none;
-}
-
-.ks-product-page .tf-product-info-choose-option .ks-product-price .price,
-.ks-product-page .tf-product-info-choose-option .ks-product-price .new-price,
-.ks-product-page .tf-product-info-choose-option .ks-product-price ins {
-  font-size: var(--ks-onsus-card-price-size);
-  line-height: var(--ks-onsus-card-price-line);
-}
-
-.ks-product-page .ks-product-price .old-price,
-.ks-product-page .ks-product-price del,
-.ks-product-page .ks-product-price s,
-.ks-product-page .ks-product-price strike {
-  color: var(--ks-onsus-muted);
-  text-decoration: line-through;
 }
 
 .ks-product-page .tf-select-color,
@@ -125,17 +25,8 @@
   width: 100%;
 }
 
-.ks-product-page .tf-btn {
-  font-size: var(--ks-onsus-button-size);
-  font-weight: var(--ks-onsus-button-weight);
-  line-height: var(--ks-onsus-button-line);
-  padding: var(--ks-onsus-button-padding);
-}
-
 .ks-product-page .wg-quantity input,
 .ks-product-page .wg-quantity .quantity-product {
-  font-size: 16px;
-  line-height: 18px;
   text-align: center;
 }
 
@@ -152,11 +43,6 @@
 .ks-refurbished-detail img {
   height: 32px;
   width: 32px;
-}
-
-/* 3. Safe runtime fixes for real data and media */
-.ks-product-page .tf-product-media-main .item {
-  background: var(--ks-onsus-panel);
 }
 
 .ks-product-page .tf-product-media-main .item img,
@@ -195,8 +81,6 @@
 .ks-product-description h4,
 .ks-product-description h5,
 .ks-product-description h6 {
-  color: var(--ks-onsus-text);
-  font-family: var(--ks-onsus-font-family);
   letter-spacing: 0;
   text-transform: none;
 }
@@ -214,16 +98,12 @@
 
 .ks-brand-text {
   align-items: center;
-  border: 1px solid var(--ks-onsus-border);
-  border-radius: 4px;
-  color: var(--ks-onsus-text);
   display: inline-flex;
-  font-size: var(--ks-onsus-page-size);
-  font-weight: 600;
   justify-content: center;
   min-height: 40px;
   min-width: 140px;
   padding: 6px 14px;
+  text-align: center;
 }
 
 @media (max-width: 1199.98px) {
