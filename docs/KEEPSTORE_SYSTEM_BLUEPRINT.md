@@ -245,7 +245,7 @@ Da completare con audit dedicato. Pagine principali note: `articoli.aspx`, `arti
 
 Da completare con audit dedicato. Coinvolge disponibilita, prezzo, add-to-cart, immagini e informazioni prodotto.
 
-La visualizzazione disponibilita deve passare dal helper centrale `App_Code/AvailabilityDisplayHelper.vb`, alimentato dai dati articolo gia disponibili e da `Session("DispoTipo")`, che riflette `Aziende.DispoTipo`. Il valore `1` mantiene il comportamento sintetico legacy/pallini; il valore `2` espone numeri leggibili per `Disponibilita`, `Impegnati`, `In Arrivo` e stato finale verde/rosso. La scheda prodotto `articolo.aspx.vb` e la prima applicazione; home, catalogo, product card e carrello vanno migrati solo con micro-task separati, senza query ripetute per card verso `Aziende`.
+La visualizzazione disponibilita deve passare dal helper centrale `App_Code/AvailabilityDisplayHelper.vb`, alimentato dai dati articolo gia disponibili e da `Session("DispoTipo")`, che riflette `Aziende.DispoTipo`. Il valore `1` espone lo stato sintetico con pallino: verde `Disponibile` quando `AvailableQty > LowStockThreshold`, arancione `Pochi pezzi` quando `AvailableQty > 0 And AvailableQty <= LowStockThreshold`, arancione `In arrivo` quando `AvailableQty <= 0 And IncomingQty > 0`, rosso `Non disponibile` quando `AvailableQty <= 0 And IncomingQty <= 0`; se `ScortaMinima` e nulla/non valida si usa fallback soglia bassa `2`. Il valore `2` espone numeri leggibili per `Disponibilita`, `Impegnati`, `In Arrivo` e stato finale verde/rosso. La scheda prodotto `articolo.aspx.vb` e la prima applicazione; home, catalogo, product card e carrello vanno migrati solo con micro-task separati, senza query ripetute per card verso `Aziende`.
 
 ### 9.4 Carrello
 
