@@ -54,14 +54,14 @@
     </asp:PlaceHolder>
 
     <asp:Panel ID="pnlProduct" runat="server" CssClass="ks-product-page ks-product-detail-page">
-        <section class="ks-product-main-section ks-product-shell-section">
+        <section class="tf-sp-2">
             <div class="tf-main-product section-image-zoom">
                 <div class="container">
-                    <div class="row g-4 g-xl-5 align-items-start ks-product-shell-grid">
+                    <div class="row">
                         <div class="col-lg-6">
-                            <div class="tf-product-media-wrap thumbs-default sticky-top ks-product-gallery-shell">
+                            <div class="tf-product-media-wrap thumbs-default sticky-top">
                                 <div class="thumbs-slider">
-                                    <div class="swiper tf-product-media-main ks-product-gallery-main" id="gallery-swiper-started">
+                                    <div class="swiper tf-product-media-main" id="gallery-swiper-started">
                                         <div class="swiper-wrapper">
                                             <asp:Repeater ID="rptMainImages" runat="server">
                                                 <ItemTemplate>
@@ -80,13 +80,13 @@
                                     </div>
 
                                     <div class="container-swiper" id="ks-product-thumbs-wrap">
-                                        <div class="swiper tf-product-media-thumbs other-image-zoom ks-product-gallery-thumbs" id="thumbs-swiper-started" data-direction="horizontal">
+                                        <div class="swiper tf-product-media-thumbs other-image-zoom" id="thumbs-swiper-started" data-direction="horizontal">
                                             <div class="swiper-wrapper stagger-wrap">
                                                 <asp:Repeater ID="rptThumbs" runat="server">
                                                     <ItemTemplate>
                                                         <div class="swiper-slide stagger-item">
                                                             <div class="item">
-                                                                <img class="lazyload ks-product-thumb"
+                                                                <img class="lazyload"
                                                                      alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Alt"))) %>'
                                                                      data-zoom='<%# Eval("Url") %>'
                                                                      data-src='<%# Eval("Url") %>'
@@ -103,20 +103,20 @@
                         </div>
 
                         <div class="col-lg-6">
-                            <div class="tf-product-info-wrap position-relative ks-product-info-shell">
+                            <div class="tf-product-info-wrap position-relative">
                                 <div class="tf-zoom-main"></div>
-                                <div class="tf-product-info-list other-image-zoom flex-xxl-nowrap ks-product-info-layout">
-                                    <div class="tf-product-info-content ks-product-summary">
-                                        <div class="infor-heading ks-product-heading">
+                                <div class="tf-product-info-list other-image-zoom flex-xxl-nowrap">
+                                    <div class="tf-product-info-content">
+                                        <div class="infor-heading">
                                             <p class="caption">
                                                 Categoria:
                                                 <asp:HyperLink ID="lnkCategory" runat="server" CssClass="link text-secondary" NavigateUrl="/articoli.aspx" Text="Catalogo" />
                                             </p>
-                                            <h1 class="product-info-name fw-semibold">
+                                            <h5 class="product-info-name fw-semibold">
                                                 <asp:Literal ID="litNome" runat="server" />
-                                            </h1>
+                                            </h5>
 
-                                            <ul class="product-info-rate-wrap ks-product-meta">
+                                            <ul class="product-info-rate-wrap">
                                                 <li>
                                                     <p class="caption text-main-2">
                                                         Codice:
@@ -150,12 +150,12 @@
                                             </ul>
                                         </div>
 
-                                        <div class="infor-center ks-product-core">
+                                        <div class="infor-center">
                                             <div class="product-info-price ks-product-price">
                                                 <asp:Literal ID="litPriceHtml" runat="server" />
                                             </div>
 
-                                            <ul class="product-fearture-list ks-product-feature-grid">
+                                            <ul class="product-fearture-list">
                                                 <asp:PlaceHolder ID="phCategoryFeature" runat="server" Visible="false">
                                                     <li>
                                                         <p class="body-md-2 fw-semibold">Categoria</p>
@@ -203,8 +203,8 @@
                                         </div>
                                     </div>
 
-                                    <div class="tf-product-info-choose-option sticky-top ks-product-buy ks-product-purchase-card">
-                                        <div class="product-delivery ks-buy-summary">
+                                    <div class="tf-product-info-choose-option sticky-top">
+                                        <div class="product-delivery">
                                             <div class="price-text fw-medium text-primary ks-product-price">
                                                 <asp:Literal ID="litPriceHtml2" runat="server" />
                                             </div>
@@ -226,14 +226,14 @@
                                             </div>
                                         </div>
 
-                                        <asp:Panel ID="pnlVariants" runat="server" Visible="false" CssClass="product-color ks-product-option">
+                                        <asp:Panel ID="pnlVariants" runat="server" Visible="false" CssClass="product-color">
                                             <p class="title body-text-3">Variante</p>
                                             <div class="tf-select-color">
                                                 <asp:DropDownList ID="ddlTc" runat="server" CssClass="select-color" AutoPostBack="true" OnSelectedIndexChanged="ddlTc_SelectedIndexChanged" />
                                             </div>
                                         </asp:Panel>
 
-                                        <div class="product-quantity ks-product-option">
+                                        <div class="product-quantity">
                                             <p class="title body-text-3">Quantita</p>
                                             <div class="wg-quantity ks-qty-stepper">
                                                 <button class="btn-quantity btn-decrease" type="button" data-ks-qty="minus">
@@ -249,7 +249,7 @@
                                             </div>
                                         </div>
 
-                                        <div class="product-box-btn ks-product-actions">
+                                        <div class="product-box-btn">
                                             <asp:LinkButton ID="btnAddToCart" runat="server" CssClass="tf-btn text-white" OnClick="btnAddToCart_Click" CausesValidation="false">
                                                 <span>Aggiungi al carrello</span>
                                                 <i class="icon-cart-2"></i>
@@ -257,7 +257,7 @@
                                             <a class="tf-btn text-white btn-gray" href="/carrello.aspx">Vai al carrello</a>
                                         </div>
 
-                                        <div class="product-detail ks-product-note">
+                                        <div class="product-detail">
                                             <p class="caption">Acquisto</p>
                                             <p class="body-text-3">
                                                 <span>Prezzi e disponibilita sono calcolati con il listino corrente.</span>
@@ -273,9 +273,9 @@
             </div>
         </section>
 
-        <section class="tf-sp-4 ks-product-detail-tabs-section">
+        <section class="tf-sp-4">
             <div class="container">
-                <div class="flat-animate-tab flat-title-tab-product-des ks-product-tabs">
+                <div class="flat-animate-tab flat-title-tab-product-des">
                     <div class="flat-title-tab text-center">
                         <ul class="menu-tab-line" role="tablist">
                             <li class="nav-tab-item" role="presentation">
@@ -469,7 +469,7 @@
     </asp:Panel>
 
     <asp:PlaceHolder ID="phSimilar" runat="server" Visible="false">
-        <section class="tf-sp-2 pt-0 ks-product-relation-section">
+        <section class="tf-sp-2 pt-0">
             <div class="container">
                 <div class="flat-title">
                     <h5 class="fw-semibold">Scopri articoli simili</h5>
@@ -560,7 +560,7 @@
     </asp:PlaceHolder>
 
     <asp:PlaceHolder ID="phRelated" runat="server" Visible="false">
-        <section class="tf-sp-2 pt-0 ks-product-relation-section">
+        <section class="tf-sp-2 pt-0">
             <div class="container">
                 <div class="flat-title">
                     <h5 class="fw-semibold">Prodotti correlati a questo articolo</h5>
@@ -671,7 +671,7 @@
     </asp:PlaceHolder>
 
     <asp:PlaceHolder ID="phRecentlyViewed" runat="server" Visible="false">
-        <section class="tf-sp-2 ks-product-relation-section ks-product-recent-section">
+        <section class="tf-sp-2">
             <div class="container">
                 <div class="flat-title">
                     <h5 class="fw-semibold">Visti di recente</h5>
