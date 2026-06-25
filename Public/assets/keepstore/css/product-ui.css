@@ -401,22 +401,28 @@
 
 .ks-availability-info {
   align-items: center;
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
+  background: #004ec3;
+  border: 1px solid #004ec3;
   border-radius: 999px;
-  color: #334155;
+  color: #fff;
   cursor: help;
   display: inline-flex;
-  font-size: 10px;
-  font-weight: 800;
-  height: 16px;
+  height: 17px;
   justify-content: center;
   line-height: 1;
   margin-left: 4px;
   position: relative;
-  text-transform: uppercase;
   vertical-align: middle;
-  width: 16px;
+  width: 17px;
+}
+
+.ks-availability-info::before {
+  content: "i";
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1;
+  transform: translateY(-0.5px);
 }
 
 .ks-availability-info:focus {

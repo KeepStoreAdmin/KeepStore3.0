@@ -107,7 +107,7 @@ Public Module AvailabilityDisplayHelper
             Dim tooltipText As String = HtmlEncode(model.IncomingTooltipText)
             sb.Append("<span class=""fw-semibold"">In Arrivo:</span> ")
             sb.Append(HtmlEncode(FormatQuantity(model.IncomingQty)))
-            sb.Append(" <span class=""ks-availability-info"" role=""button"" tabindex=""0"" title=""").Append(tooltipText).Append(""" aria-label=""In Arrivo. ").Append(tooltipText).Append(""" data-tooltip=""").Append(tooltipText).Append(""">i</span>")
+            sb.Append(" <span class=""ks-availability-info"" role=""button"" tabindex=""0"" title=""").Append(tooltipText).Append(""" aria-label=""In Arrivo. ").Append(tooltipText).Append(""" data-tooltip=""").Append(tooltipText).Append("""></span>")
         Else
             sb.Append("<span class=""fw-semibold"">In Arrivo:</span> ")
             sb.Append(HtmlEncode(FormatQuantity(model.IncomingQty)))
