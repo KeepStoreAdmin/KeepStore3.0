@@ -400,9 +400,23 @@
 }
 
 .ks-availability-info {
-  border-bottom: 1px dotted currentColor;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  color: #334155;
   cursor: help;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 800;
+  height: 16px;
+  justify-content: center;
+  line-height: 1;
+  margin-left: 4px;
   position: relative;
+  text-transform: uppercase;
+  vertical-align: middle;
+  width: 16px;
 }
 
 .ks-availability-info:focus {
@@ -410,30 +424,37 @@
   outline-offset: 2px;
 }
 
-.ks-availability-tooltip {
-  background: #111827;
-  border: 1px solid #e5e7eb;
+.ks-availability-info::after {
+  background: #fff;
+  border: 1px solid #d7dde6;
   border-radius: 8px;
   bottom: calc(100% + 8px);
-  box-shadow: 0 8px 20px rgba(17, 24, 39, 0.16);
-  color: #fff;
-  display: none;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+  color: #334155;
+  content: attr(data-tooltip);
   font-size: 12px;
   font-weight: 500;
   left: 0;
   line-height: 1.4;
   max-width: min(320px, 78vw);
   min-width: 240px;
+  opacity: 0;
   padding: 10px 12px;
+  pointer-events: none;
   position: absolute;
   text-align: left;
   text-transform: none;
+  transform: translateY(4px);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  visibility: hidden;
   z-index: 20;
 }
 
-.ks-availability-info:hover .ks-availability-tooltip,
-.ks-availability-info:focus .ks-availability-tooltip {
-  display: block;
+.ks-availability-info:hover::after,
+.ks-availability-info:focus::after {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
 }
 
 @media (max-width: 1199.98px) {
@@ -495,7 +516,7 @@
     padding-top: 10px;
   }
 
-  .ks-availability-tooltip {
+  .ks-availability-info::after {
     left: auto;
     right: 0;
   }

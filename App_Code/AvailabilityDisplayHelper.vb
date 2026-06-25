@@ -105,14 +105,14 @@ Public Module AvailabilityDisplayHelper
         sb.Append("<span>")
         If model.IncomingQty > 0D Then
             Dim tooltipText As String = HtmlEncode(model.IncomingTooltipText)
-            sb.Append("<span class=""fw-semibold ks-availability-info"" tabindex=""0"" title=""").Append(tooltipText).Append(""" aria-label=""In Arrivo. ").Append(tooltipText).Append(""">")
-            sb.Append("In Arrivo")
-            sb.Append("<span class=""ks-availability-tooltip"" role=""tooltip"">").Append(tooltipText).Append("</span>")
-            sb.Append("</span>: ")
+            sb.Append("<span class=""fw-semibold"">In Arrivo:</span> ")
+            sb.Append(HtmlEncode(FormatQuantity(model.IncomingQty)))
+            sb.Append(" <span class=""ks-availability-info"" role=""button"" tabindex=""0"" title=""").Append(tooltipText).Append(""" aria-label=""In Arrivo. ").Append(tooltipText).Append(""" data-tooltip=""").Append(tooltipText).Append(""">i</span>")
         Else
             sb.Append("<span class=""fw-semibold"">In Arrivo:</span> ")
+            sb.Append(HtmlEncode(FormatQuantity(model.IncomingQty)))
         End If
-        sb.Append(HtmlEncode(FormatQuantity(model.IncomingQty))).Append("</span>")
+        sb.Append("</span>")
         sb.Append("<span class=""").Append(model.StatusCssClass).Append("""" & model.StatusStyle & ">").Append(HtmlEncode(model.StatusText)).Append("</span>")
         sb.Append("</span>")
         Return sb.ToString()
