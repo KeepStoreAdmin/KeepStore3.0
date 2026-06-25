@@ -401,28 +401,40 @@
 
 .ks-availability-info {
   align-items: center;
-  background: #004ec3;
-  border: 1px solid #004ec3;
+  background: transparent;
+  border: 0;
   border-radius: 999px;
   color: #fff;
   cursor: help;
   display: inline-flex;
-  height: 17px;
+  height: 18px;
   justify-content: center;
   line-height: 1;
   margin-left: 4px;
   position: relative;
   vertical-align: middle;
-  width: 17px;
+  width: 18px;
 }
 
-.ks-availability-info::before {
-  content: "i";
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 800;
-  line-height: 1;
-  transform: translateY(-0.5px);
+.ks-availability-info__icon {
+  display: block;
+  height: 18px;
+  width: 18px;
+}
+
+.ks-availability-info__shape {
+  fill: #004ec3;
+}
+
+.ks-availability-info__stem {
+  fill: none;
+  stroke: #fff;
+  stroke-linecap: round;
+  stroke-width: 1.9;
+}
+
+.ks-availability-info__dot {
+  fill: #fff;
 }
 
 .ks-availability-info:focus {

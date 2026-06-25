@@ -1604,9 +1604,9 @@ Partial Class articolo
         ' Disponibilità (Arrivo)
         Dim availabilityText As String = BuildAvailabilityText(row)
         Dim availabilityHtml As String = BuildAvailabilityHtml(row)
-        phAvailability.Visible = Not String.IsNullOrEmpty(availabilityText)
-        phAvailabilityInfo.Visible = phAvailability.Visible
-        litAvailability.Text = availabilityHtml
+        phAvailability.Visible = False
+        phAvailabilityInfo.Visible = Not String.IsNullOrEmpty(availabilityText)
+        litAvailability.Text = String.Empty
         litBuyBoxAvailability.Text = availabilityHtml
         litAvailabilityInfo.Text = availabilityHtml
 
