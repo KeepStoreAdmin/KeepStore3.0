@@ -328,6 +328,141 @@
   text-align: center;
 }
 
+.ks-product-promos {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 4px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.ks-product-promos__head,
+.ks-product-promos__summary,
+.ks-product-promos__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ks-product-promos__eyebrow,
+.ks-product-promos__label {
+  color: #111827;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.ks-product-promos__discount {
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ks-product-promos__summary {
+  align-items: flex-start;
+  flex-direction: column;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.ks-product-promos__summary strong {
+  color: #111827;
+  font-weight: 700;
+}
+
+.ks-product-promos__list {
+  display: grid;
+  gap: 8px;
+}
+
+.ks-product-promos__item {
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.ks-product-promos__item strong {
+  color: #111827;
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.ks-product-promos__dates {
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.25;
+  text-align: right;
+}
+
+.ks-availability-info {
+  align-items: center;
+  background: #004ec3;
+  border: 1px solid #004ec3;
+  border-radius: 999px;
+  color: #fff;
+  cursor: help;
+  display: inline-flex;
+  height: 17px;
+  justify-content: center;
+  line-height: 1;
+  margin-left: 4px;
+  position: relative;
+  vertical-align: middle;
+  width: 17px;
+}
+
+.ks-availability-info::before {
+  content: "i";
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1;
+  transform: translateY(-0.5px);
+}
+
+.ks-availability-info:focus {
+  outline: 2px solid #94a3b8;
+  outline-offset: 2px;
+}
+
+.ks-availability-info::after {
+  background: #fff;
+  border: 1px solid #d7dde6;
+  border-radius: 8px;
+  bottom: calc(100% + 8px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+  color: #334155;
+  content: attr(data-tooltip);
+  font-size: 12px;
+  font-weight: 500;
+  left: 0;
+  line-height: 1.4;
+  max-width: min(320px, 78vw);
+  min-width: 240px;
+  opacity: 0;
+  padding: 10px 12px;
+  pointer-events: none;
+  position: absolute;
+  text-align: left;
+  text-transform: none;
+  transform: translateY(4px);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  visibility: hidden;
+  z-index: 20;
+}
+
+.ks-availability-info:hover::after,
+.ks-availability-info:focus::after {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+}
+
 @media (max-width: 1199.98px) {
   .ks-product-page .tf-product-info-list {
     flex-direction: column;
@@ -385,5 +520,10 @@
 
   .ks-product-list-section .card-product-info {
     padding-top: 10px;
+  }
+
+  .ks-availability-info::after {
+    left: auto;
+    right: 0;
   }
 }

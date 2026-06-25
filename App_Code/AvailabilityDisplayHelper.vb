@@ -18,6 +18,7 @@ Public Class AvailabilityDisplayModel
     Public Property StatusStyle As String
     Public Property DotCssClass As String
     Public Property DotStyle As String
+    Public Property IncomingTooltipText As String
     Public Property LegacyText As String
     Public Property Text As String
     Public Property Html As String
@@ -26,6 +27,7 @@ End Class
 Public Module AvailabilityDisplayHelper
     Private Const DefaultDisplayMode As Integer = 1
     Private Const DefaultLowStockThreshold As Decimal = 2D
+    Private Const DefaultIncomingTooltipText As String = "Il tempo di consegna indicativo e di 7 / 14 giorni lavorativi dalla data di inserimento dell'ordine. Le date di arrivo merce sono indicative: l'effettiva consegna presso i nostri magazzini potrebbe variare per cause esterne. Ti aggiorneremo in caso di variazioni."
 
     Public Function GetDisplayMode(Optional ByVal ctx As HttpContext = Nothing) As Integer
         Dim mode As Integer = DefaultDisplayMode
@@ -54,10 +56,10 @@ Public Module AvailabilityDisplayHelper
         model.IncomingQty = Quantity(dataItem, "InOrdine")
         model.AvailableQty = EffectiveAvailableQty(dataItem, model.StockQty, model.CommittedQty)
         model.LowStockThreshold = LowStockThreshold(dataItem)
+        model.IncomingTooltipText = DefaultIncomingTooltipText
 
-        Dim effectiveStock As Decimal = model.StockQty - model.CommittedQty
         ApplySyntheticStatus(model)
-        model.LegacyText = BuildLegacyStatusText(dataItem, effectiveStock, model.AvailableQty, model.IncomingQty)
+        model.LegacyText = BuildLegacyStatusText(dataItem, model.AvailableQty, model.IncomingQty)
 
         If model.DisplayMode = 2 Then
             model.Text = "Disponibilità: " & FormatQuantity(model.AvailableQty) &
@@ -100,7 +102,17 @@ Public Module AvailabilityDisplayHelper
         sb.Append("<span class=""ks-availability-numeric"" style=""display:inline-flex;flex-direction:column;gap:2px;line-height:1.35;"">")
         sb.Append("<span><span class=""fw-semibold"">Disponibilità:</span> ").Append(HtmlEncode(FormatQuantity(model.AvailableQty))).Append("</span>")
         sb.Append("<span><span class=""fw-semibold"">Impegnati:</span> ").Append(HtmlEncode(FormatQuantity(model.CommittedQty))).Append("</span>")
-        sb.Append("<span><span class=""fw-semibold"">In Arrivo:</span> ").Append(HtmlEncode(FormatQuantity(model.IncomingQty))).Append("</span>")
+        sb.Append("<span>")
+        If model.IncomingQty > 0D Then
+            Dim tooltipText As String = HtmlEncode(model.IncomingTooltipText)
+            sb.Append("<span class=""fw-semibold"">In Arrivo:</span> ")
+            sb.Append(HtmlEncode(FormatQuantity(model.IncomingQty)))
+            sb.Append(" <span class=""ks-availability-info"" role=""button"" tabindex=""0"" title=""").Append(tooltipText).Append(""" aria-label=""In Arrivo. ").Append(tooltipText).Append(""" data-tooltip=""").Append(tooltipText).Append("""></span>")
+        Else
+            sb.Append("<span class=""fw-semibold"">In Arrivo:</span> ")
+            sb.Append(HtmlEncode(FormatQuantity(model.IncomingQty)))
+        End If
+        sb.Append("</span>")
         sb.Append("<span class=""").Append(model.StatusCssClass).Append("""" & model.StatusStyle & ">").Append(HtmlEncode(model.StatusText)).Append("</span>")
         sb.Append("</span>")
         Return sb.ToString()
@@ -132,15 +144,14 @@ Public Module AvailabilityDisplayHelper
         model.DotStyle = "background-color:" & color & ";"
     End Sub
 
-    Private Function BuildLegacyStatusText(ByVal dataItem As Object, ByVal effectiveStock As Decimal, ByVal availabilityQty As Decimal, ByVal incomingQty As Decimal) As String
-        If effectiveStock > 0D Then Return "Disponibile"
+    Private Function BuildLegacyStatusText(ByVal dataItem As Object, ByVal availabilityQty As Decimal, ByVal incomingQty As Decimal) As String
+        If availabilityQty > 0D Then Return "Disponibile"
 
         Dim arrivalText As String = FirstNonEmpty(TextValue(dataItem, "Arrivo"), StripHtml(TextValue(dataItem, "arrivi")))
         If Not String.IsNullOrEmpty(arrivalText) Then
             Return "In arrivo: " & ThemeManager.CompactText(arrivalText, 90)
         End If
 
-        If availabilityQty > 0D Then Return "Disponibile su ordinazione"
         If incomingQty > 0D Then Return "In ordine"
         Return "Verifica disponibilita"
     End Function
@@ -166,10 +177,11 @@ Public Module AvailabilityDisplayHelper
         Dim raw As Object = UiData.Get(dataItem, "Disponibilita")
         If raw IsNot Nothing AndAlso Not Convert.IsDBNull(raw) Then
             Dim parsed As Decimal
-            If Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.CurrentCulture, parsed) Then Return parsed
-            If Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.InvariantCulture, parsed) Then Return parsed
+            If Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.CurrentCulture, parsed) AndAlso parsed > 0D Then Return parsed
+            If Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.InvariantCulture, parsed) AndAlso parsed > 0D Then Return parsed
         End If
 
+        If stockQty > 0D Then Return stockQty
         Return stockQty - committedQty
     End Function
 

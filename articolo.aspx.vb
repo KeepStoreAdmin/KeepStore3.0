@@ -160,6 +160,8 @@ Partial Class articolo
             Return
         End If
 
+        EnsureArticleCompanyContext()
+
         ' ==========================================================
         ' LISTINO: nel progetto è gestito principalmente tramite Session("Listino")
         ' (default anonimi = 1). Alcune parti legacy usano anche Session("listino").
@@ -455,7 +457,7 @@ Partial Class articolo
         Dim imgHover As String = NormalizeImageUrl(GetRowString(row, "Img2"))
         If String.IsNullOrEmpty(imgHover) Then imgHover = imgVal
 
-        Dim inOfferta As Integer = GetRowInt(row, "InOfferta", 0)
+        Dim inOfferta As Integer = GetEffectiveInOfferta(row)
         Dim tcidVal As Integer = GetRowInt(row, "TCid", _tcid)
         Dim codiceVal As String = FirstNonEmpty(GetRowString(row, "Codice"), GetRowString(row, "SKU"))
         Dim eanVal As String = FirstNonEmpty(GetRowString(row, "Ean"), GetRowString(row, "EAN"))
@@ -1337,6 +1339,11 @@ Partial Class articolo
             sb.AppendLine("  AND TCid=@tcid")
         End If
 
+        sb.AppendLine("ORDER BY")
+        sb.AppendLine("  CASE WHEN COALESCE(InOfferta,0)=1 AND (OfferteDataInizio IS NULL OR OfferteDataInizio<=CURDATE()) AND (OfferteDataFine IS NULL OR OfferteDataFine>=CURDATE()) THEN 0 ELSE 1 END,")
+        sb.AppendLine("  CASE WHEN COALESCE(PrezzoPromoIvato,0)>0 THEN PrezzoPromoIvato WHEN COALESCE(PrezzoPromo,0)>0 THEN PrezzoPromo ELSE COALESCE(PrezzoIvato, Prezzo, 999999999) END ASC,")
+        sb.AppendLine("  COALESCE(PrezzoIvato, Prezzo, 999999999) ASC,")
+        sb.AppendLine("  COALESCE(OfferteDettagliId,0) ASC")
         sb.AppendLine("LIMIT 1")
         Return sb.ToString()
     End Function
@@ -1356,7 +1363,7 @@ Partial Class articolo
                                                       GetRowDecimal(row, "PrezzoIvato"),
                                                       GetRowDecimal(row, "PrezzoPromo"),
                                                       GetRowDecimal(row, "PrezzoPromoIvato"),
-                                                      GetRowInt(row, "InOfferta", 0))
+                                                      GetEffectiveInOfferta(row))
 
         Dim shortDesc As String = FirstNonEmpty(GetRowString(row, "Descrizione2"), GetRowString(row, "Sottotitolo"))
         Dim shortDescHtml As String = String.Empty
@@ -1552,13 +1559,22 @@ Partial Class articolo
                                                       GetRowDecimal(row, "PrezzoIvato"),
                                                       GetRowDecimal(row, "PrezzoPromo"),
                                                       GetRowDecimal(row, "PrezzoPromoIvato"),
-                                                      GetRowInt(row, "InOfferta", 0))
+                                                      GetEffectiveInOfferta(row))
 
         litPriceHtml.Text = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo)
         ' Box prezzo sticky (stesso HTML del prezzo principale)
         litPriceHtml2.Text = litPriceHtml.Text
         litPriceInfo.Text = BuildPriceText(price.CurrentPrice)
         litIvaInfo.Text = Server.HtmlEncode(price.IvaLabel)
+
+        Dim promotionModel As ProductPromotionDisplayModel = ProductPromotionDisplayHelper.BuildForProduct(GetConnectionString(),
+                                                                                                            _id,
+                                                                                                            GetCurrentAziendaId(),
+                                                                                                            _listino,
+                                                                                                            GetRowDecimal(row, "Prezzo"),
+                                                                                                            GetRowDecimal(row, "PrezzoIvato"))
+        phPromotionOffers.Visible = (promotionModel IsNot Nothing AndAlso promotionModel.HasOffers)
+        litPromotionOffers.Text = If(promotionModel IsNot Nothing, promotionModel.Html, String.Empty)
 
         Dim isRefurbished As Boolean = (GetRowInt(row, "Ricondizionato", 0) = 1)
         phRefurbished.Visible = isRefurbished
@@ -1848,7 +1864,7 @@ Partial Class articolo
                                                           GetRowDecimal(row, "PrezzoIvato"),
                                                           GetRowDecimal(row, "PrezzoPromo"),
                                                           GetRowDecimal(row, "PrezzoPromoIvato"),
-                                                          GetRowInt(row, "InOfferta", 0))
+                                                          GetEffectiveInOfferta(row))
 
             ' --- Base entity ids
             Dim baseUrl As String = canonical.TrimEnd("/"c)
@@ -2265,6 +2281,41 @@ Partial Class articolo
         If Not promoPrice.HasValue OrElse promoPrice.Value <= 0D Then Return False
         If basePrice.HasValue AndAlso basePrice.Value > 0D AndAlso promoPrice.Value >= basePrice.Value Then Return False
         Return True
+    End Function
+
+    Private Function GetEffectiveInOfferta(row As DataRow) As Integer
+        If row Is Nothing Then Return 0
+        If GetRowInt(row, "InOfferta", 0) <> 1 Then Return 0
+        If Not IsProductRowPromoActive(row) Then Return 0
+        Return 1
+    End Function
+
+    Private Function IsProductRowPromoActive(row As DataRow) As Boolean
+        If row Is Nothing Then Return False
+
+        Dim fromListino As Integer = GetRowInt(row, "OfferteDaListino", 0)
+        Dim toListino As Integer = GetRowInt(row, "OfferteAListino", 0)
+        If fromListino > 0 AndAlso _listino < fromListino Then Return False
+        If toListino > 0 AndAlso _listino > toListino Then Return False
+
+        Dim today As Date = Date.Today
+        Dim startsOn As Nullable(Of Date) = GetRowDate(row, "OfferteDataInizio")
+        Dim endsOn As Nullable(Of Date) = GetRowDate(row, "OfferteDataFine")
+        If startsOn.HasValue AndAlso startsOn.Value.Date > today Then Return False
+        If endsOn.HasValue AndAlso endsOn.Value.Date < today Then Return False
+
+        Return True
+    End Function
+
+    Private Function GetRowDate(row As DataRow, columnName As String) As Nullable(Of Date)
+        If row Is Nothing OrElse row.Table Is Nothing OrElse Not row.Table.Columns.Contains(columnName) Then Return Nothing
+
+        Dim raw As Object = row(columnName)
+        If raw Is Nothing OrElse Convert.IsDBNull(raw) Then Return Nothing
+
+        Dim parsed As Date
+        If Date.TryParse(Convert.ToString(raw), parsed) Then Return parsed
+        Return Nothing
     End Function
 
     Private Function FormatMoney(value As Decimal) As String
@@ -3232,6 +3283,64 @@ Partial Class articolo
         Return ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
     End Function
 
+    Private Function GetCurrentAziendaId() As Integer
+        Return FirstPositiveInt(GetSessionInt("AziendaID", 0),
+                                GetSessionInt("AziendaId", 0),
+                                GetSessionInt("AziendeId", 0))
+    End Function
+
+    Private Sub EnsureArticleCompanyContext()
+        Try
+            If Request Is Nothing OrElse Request.Url Is Nothing Then Return
+
+            Dim host As String = Convert.ToString(Request.Url.Host)
+            If String.IsNullOrWhiteSpace(host) Then Return
+            host = host.Trim()
+            If host.Length > 255 Then host = host.Substring(0, 255)
+
+            Using cn As New MySqlConnection(GetConnectionString())
+                cn.Open()
+                Using cmd As New MySqlCommand("SELECT Id, ListinoDefault, ListinoUser, IvaTipo, DispoTipo, url1, url2 FROM aziende WHERE (url1 LIKE @dominio OR url2 LIKE @dominio) LIMIT 1", cn)
+                    cmd.Parameters.AddWithValue("@dominio", "%" & host & "%")
+                    Using rdr As MySqlDataReader = cmd.ExecuteReader()
+                        If Not rdr.Read() Then Return
+
+                        Dim aziendaId As Integer = SafeReaderInt(rdr, "Id", 0)
+                        If aziendaId <= 0 Then Return
+
+                        Session("AziendaID") = aziendaId
+                        Session("AziendaId") = aziendaId
+                        Session("AziendeId") = aziendaId
+
+                        Dim ivaTipo As Integer = SafeReaderInt(rdr, "IvaTipo", 0)
+                        If ivaTipo > 0 Then Session("IvaTipo") = ivaTipo
+
+                        Dim dispoTipo As Integer = SafeReaderInt(rdr, "DispoTipo", 0)
+                        If dispoTipo > 0 Then Session("DispoTipo") = dispoTipo
+
+                        Dim isLogged As Boolean = (GetSessionInt("LoginId", 0) > 0 OrElse GetSessionInt("LoginID", 0) > 0)
+                        Dim defaultListino As Integer = SafeReaderInt(rdr, "ListinoDefault", 0)
+                        If defaultListino > 0 AndAlso (Not isLogged OrElse GetCurrentListinoValueOnly() <= 0) Then
+                            Session("Listino") = defaultListino
+                            Session("listino") = defaultListino
+                        End If
+
+                        Dim listinoUser As Integer = SafeReaderInt(rdr, "ListinoUser", 0)
+                        If listinoUser > 0 Then Session("ListinoUser") = listinoUser
+                    End Using
+                End Using
+            End Using
+        Catch ex As Exception
+            KeepStoreLog.Error("articolo.aspx", "Errore EnsureArticleCompanyContext", ex, HttpContext.Current)
+        End Try
+    End Sub
+
+    Private Function GetCurrentListinoValueOnly() As Integer
+        Dim n As Integer = GetSessionInt("Listino", 0)
+        If n <= 0 Then n = GetSessionInt("listino", 0)
+        Return n
+    End Function
+
     ' Listino robusto: usa Session("Listino") come fonte principale, con fallback a Session("listino").
     ' Imposta anche in Session per coerenza con le altre pagine.
     Private Function GetCurrentListino() As Integer
@@ -3265,6 +3374,18 @@ Partial Class articolo
         Catch
         End Try
         Return 0
+    End Function
+
+    Private Function SafeReaderInt(rdr As MySqlDataReader, columnName As String, fallback As Integer) As Integer
+        If rdr Is Nothing OrElse String.IsNullOrWhiteSpace(columnName) Then Return fallback
+        Try
+            Dim ordinal As Integer = rdr.GetOrdinal(columnName)
+            If ordinal < 0 OrElse rdr.IsDBNull(ordinal) Then Return fallback
+            Dim value As Integer
+            If Integer.TryParse(Convert.ToString(rdr.GetValue(ordinal)), value) Then Return value
+        Catch
+        End Try
+        Return fallback
     End Function
 
 End Class
