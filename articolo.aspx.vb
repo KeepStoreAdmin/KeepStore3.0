@@ -1337,6 +1337,11 @@ Partial Class articolo
             sb.AppendLine("  AND TCid=@tcid")
         End If
 
+        sb.AppendLine("ORDER BY")
+        sb.AppendLine("  CASE WHEN COALESCE(InOfferta,0)=1 AND (OfferteDataInizio IS NULL OR OfferteDataInizio<=CURDATE()) AND (OfferteDataFine IS NULL OR OfferteDataFine>=CURDATE()) THEN 0 ELSE 1 END,")
+        sb.AppendLine("  CASE WHEN COALESCE(PrezzoPromoIvato,0)>0 THEN PrezzoPromoIvato WHEN COALESCE(PrezzoPromo,0)>0 THEN PrezzoPromo ELSE COALESCE(PrezzoIvato, Prezzo, 999999999) END ASC,")
+        sb.AppendLine("  COALESCE(PrezzoIvato, Prezzo, 999999999) ASC,")
+        sb.AppendLine("  COALESCE(OfferteDettagliId,0) ASC")
         sb.AppendLine("LIMIT 1")
         Return sb.ToString()
     End Function
@@ -1559,6 +1564,14 @@ Partial Class articolo
         litPriceHtml2.Text = litPriceHtml.Text
         litPriceInfo.Text = BuildPriceText(price.CurrentPrice)
         litIvaInfo.Text = Server.HtmlEncode(price.IvaLabel)
+
+        Dim promotionModel As ProductPromotionDisplayModel = ProductPromotionDisplayHelper.BuildForProduct(GetConnectionString(),
+                                                                                                           _id,
+                                                                                                           _listino,
+                                                                                                           GetRowDecimal(row, "Prezzo"),
+                                                                                                           GetRowDecimal(row, "PrezzoIvato"))
+        phPromotionOffers.Visible = (promotionModel IsNot Nothing AndAlso promotionModel.HasOffers)
+        litPromotionOffers.Text = If(promotionModel IsNot Nothing, promotionModel.Html, String.Empty)
 
         Dim isRefurbished As Boolean = (GetRowInt(row, "Ricondizionato", 0) = 1)
         phRefurbished.Visible = isRefurbished

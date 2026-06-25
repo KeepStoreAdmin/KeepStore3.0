@@ -216,6 +216,9 @@
                                                 <i class="icon-delivery-2"></i>
                                                 <asp:Literal ID="litBuyBoxAvailability" runat="server" />
                                             </p>
+                                            <asp:PlaceHolder ID="phPromotionOffers" runat="server" Visible="false">
+                                                <asp:Literal ID="litPromotionOffers" runat="server" />
+                                            </asp:PlaceHolder>
                                             <div class="shipping-to">
                                                 <p class="body-md-2">Riferimenti</p>
                                                 <div class="body-text-3">

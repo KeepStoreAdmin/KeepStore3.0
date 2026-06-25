@@ -328,6 +328,77 @@
   text-align: center;
 }
 
+.ks-product-promos {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 4px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.ks-product-promos__head,
+.ks-product-promos__summary,
+.ks-product-promos__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ks-product-promos__eyebrow,
+.ks-product-promos__label {
+  color: #111827;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.ks-product-promos__discount {
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ks-product-promos__summary {
+  align-items: flex-start;
+  flex-direction: column;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.ks-product-promos__summary strong {
+  color: #111827;
+  font-weight: 700;
+}
+
+.ks-product-promos__list {
+  display: grid;
+  gap: 8px;
+}
+
+.ks-product-promos__item {
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.ks-product-promos__item strong {
+  color: #111827;
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.ks-product-promos__dates {
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.25;
+  text-align: right;
+}
+
 @media (max-width: 1199.98px) {
   .ks-product-page .tf-product-info-list {
     flex-direction: column;

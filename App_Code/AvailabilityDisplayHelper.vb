@@ -55,9 +55,8 @@ Public Module AvailabilityDisplayHelper
         model.AvailableQty = EffectiveAvailableQty(dataItem, model.StockQty, model.CommittedQty)
         model.LowStockThreshold = LowStockThreshold(dataItem)
 
-        Dim effectiveStock As Decimal = model.StockQty - model.CommittedQty
         ApplySyntheticStatus(model)
-        model.LegacyText = BuildLegacyStatusText(dataItem, effectiveStock, model.AvailableQty, model.IncomingQty)
+        model.LegacyText = BuildLegacyStatusText(dataItem, model.AvailableQty, model.IncomingQty)
 
         If model.DisplayMode = 2 Then
             model.Text = "Disponibilità: " & FormatQuantity(model.AvailableQty) &
@@ -132,15 +131,14 @@ Public Module AvailabilityDisplayHelper
         model.DotStyle = "background-color:" & color & ";"
     End Sub
 
-    Private Function BuildLegacyStatusText(ByVal dataItem As Object, ByVal effectiveStock As Decimal, ByVal availabilityQty As Decimal, ByVal incomingQty As Decimal) As String
-        If effectiveStock > 0D Then Return "Disponibile"
+    Private Function BuildLegacyStatusText(ByVal dataItem As Object, ByVal availabilityQty As Decimal, ByVal incomingQty As Decimal) As String
+        If availabilityQty > 0D Then Return "Disponibile"
 
         Dim arrivalText As String = FirstNonEmpty(TextValue(dataItem, "Arrivo"), StripHtml(TextValue(dataItem, "arrivi")))
         If Not String.IsNullOrEmpty(arrivalText) Then
             Return "In arrivo: " & ThemeManager.CompactText(arrivalText, 90)
         End If
 
-        If availabilityQty > 0D Then Return "Disponibile su ordinazione"
         If incomingQty > 0D Then Return "In ordine"
         Return "Verifica disponibilita"
     End Function
@@ -166,10 +164,11 @@ Public Module AvailabilityDisplayHelper
         Dim raw As Object = UiData.Get(dataItem, "Disponibilita")
         If raw IsNot Nothing AndAlso Not Convert.IsDBNull(raw) Then
             Dim parsed As Decimal
-            If Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.CurrentCulture, parsed) Then Return parsed
-            If Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.InvariantCulture, parsed) Then Return parsed
+            If Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.CurrentCulture, parsed) AndAlso parsed > 0D Then Return parsed
+            If Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.InvariantCulture, parsed) AndAlso parsed > 0D Then Return parsed
         End If
 
+        If stockQty > 0D Then Return stockQty
         Return stockQty - committedQty
     End Function
 
