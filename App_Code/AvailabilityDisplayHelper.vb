@@ -107,7 +107,12 @@ Public Module AvailabilityDisplayHelper
             Dim tooltipText As String = HtmlEncode(model.IncomingTooltipText)
             sb.Append("<span class=""fw-semibold"">In Arrivo:</span> ")
             sb.Append(HtmlEncode(FormatQuantity(model.IncomingQty)))
-            sb.Append(" <span class=""ks-availability-info"" role=""button"" tabindex=""0"" title=""").Append(tooltipText).Append(""" aria-label=""In Arrivo. ").Append(tooltipText).Append(""" data-tooltip=""").Append(tooltipText).Append("""></span>")
+            sb.Append(" <span class=""ks-availability-info"" role=""button"" tabindex=""0"" title=""").Append(tooltipText).Append(""" aria-label=""In Arrivo. ").Append(tooltipText).Append(""" data-tooltip=""").Append(tooltipText).Append(""">")
+            sb.Append("<svg class=""ks-availability-info__icon"" viewBox=""0 0 18 18"" aria-hidden=""true"" focusable=""false"">")
+            sb.Append("<circle class=""ks-availability-info__shape"" cx=""9"" cy=""9"" r=""8""></circle>")
+            sb.Append("<path class=""ks-availability-info__stem"" d=""M9 8v5""></path>")
+            sb.Append("<circle class=""ks-availability-info__dot"" cx=""9"" cy=""5.2"" r=""0.85""></circle>")
+            sb.Append("</svg></span>")
         Else
             sb.Append("<span class=""fw-semibold"">In Arrivo:</span> ")
             sb.Append(HtmlEncode(FormatQuantity(model.IncomingQty)))

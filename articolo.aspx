@@ -155,9 +155,11 @@
                                         </div>
 
                                         <div class="infor-center">
-                                            <div class="product-info-price">
-                                                <asp:Literal ID="litPriceHtml" runat="server" />
-                                            </div>
+                                            <asp:PlaceHolder ID="phProductInfoPrice" runat="server" Visible="false">
+                                                <div class="product-info-price">
+                                                    <asp:Literal ID="litPriceHtml" runat="server" />
+                                                </div>
+                                            </asp:PlaceHolder>
 
                                             <ul class="product-fearture-list">
                                                 <asp:PlaceHolder ID="phCategoryFeature" runat="server" Visible="false">
