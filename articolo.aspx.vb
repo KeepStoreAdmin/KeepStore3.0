@@ -160,6 +160,8 @@ Partial Class articolo
             Return
         End If
 
+        EnsureArticleCompanyContext()
+
         ' ==========================================================
         ' LISTINO: nel progetto è gestito principalmente tramite Session("Listino")
         ' (default anonimi = 1). Alcune parti legacy usano anche Session("listino").
@@ -3287,6 +3289,58 @@ Partial Class articolo
                                 GetSessionInt("AziendeId", 0))
     End Function
 
+    Private Sub EnsureArticleCompanyContext()
+        Try
+            If Request Is Nothing OrElse Request.Url Is Nothing Then Return
+
+            Dim host As String = Convert.ToString(Request.Url.Host)
+            If String.IsNullOrWhiteSpace(host) Then Return
+            host = host.Trim()
+            If host.Length > 255 Then host = host.Substring(0, 255)
+
+            Using cn As New MySqlConnection(GetConnectionString())
+                cn.Open()
+                Using cmd As New MySqlCommand("SELECT Id, ListinoDefault, ListinoUser, IvaTipo, DispoTipo, url1, url2 FROM aziende WHERE (url1 LIKE @dominio OR url2 LIKE @dominio) LIMIT 1", cn)
+                    cmd.Parameters.AddWithValue("@dominio", "%" & host & "%")
+                    Using rdr As MySqlDataReader = cmd.ExecuteReader()
+                        If Not rdr.Read() Then Return
+
+                        Dim aziendaId As Integer = SafeReaderInt(rdr, "Id", 0)
+                        If aziendaId <= 0 Then Return
+
+                        Session("AziendaID") = aziendaId
+                        Session("AziendaId") = aziendaId
+                        Session("AziendeId") = aziendaId
+
+                        Dim ivaTipo As Integer = SafeReaderInt(rdr, "IvaTipo", 0)
+                        If ivaTipo > 0 Then Session("IvaTipo") = ivaTipo
+
+                        Dim dispoTipo As Integer = SafeReaderInt(rdr, "DispoTipo", 0)
+                        If dispoTipo > 0 Then Session("DispoTipo") = dispoTipo
+
+                        Dim isLogged As Boolean = (GetSessionInt("LoginId", 0) > 0 OrElse GetSessionInt("LoginID", 0) > 0)
+                        Dim defaultListino As Integer = SafeReaderInt(rdr, "ListinoDefault", 0)
+                        If defaultListino > 0 AndAlso (Not isLogged OrElse GetCurrentListinoValueOnly() <= 0) Then
+                            Session("Listino") = defaultListino
+                            Session("listino") = defaultListino
+                        End If
+
+                        Dim listinoUser As Integer = SafeReaderInt(rdr, "ListinoUser", 0)
+                        If listinoUser > 0 Then Session("ListinoUser") = listinoUser
+                    End Using
+                End Using
+            End Using
+        Catch ex As Exception
+            KeepStoreLog.Error("articolo.aspx", "Errore EnsureArticleCompanyContext", ex, HttpContext.Current)
+        End Try
+    End Sub
+
+    Private Function GetCurrentListinoValueOnly() As Integer
+        Dim n As Integer = GetSessionInt("Listino", 0)
+        If n <= 0 Then n = GetSessionInt("listino", 0)
+        Return n
+    End Function
+
     ' Listino robusto: usa Session("Listino") come fonte principale, con fallback a Session("listino").
     ' Imposta anche in Session per coerenza con le altre pagine.
     Private Function GetCurrentListino() As Integer
@@ -3320,6 +3374,18 @@ Partial Class articolo
         Catch
         End Try
         Return 0
+    End Function
+
+    Private Function SafeReaderInt(rdr As MySqlDataReader, columnName As String, fallback As Integer) As Integer
+        If rdr Is Nothing OrElse String.IsNullOrWhiteSpace(columnName) Then Return fallback
+        Try
+            Dim ordinal As Integer = rdr.GetOrdinal(columnName)
+            If ordinal < 0 OrElse rdr.IsDBNull(ordinal) Then Return fallback
+            Dim value As Integer
+            If Integer.TryParse(Convert.ToString(rdr.GetValue(ordinal)), value) Then Return value
+        Catch
+        End Try
+        Return fallback
     End Function
 
 End Class

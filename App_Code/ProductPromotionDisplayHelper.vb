@@ -53,17 +53,21 @@ Public Module ProductPromotionDisplayHelper
                     cmd.Parameters.Add("@listino", MySqlDbType.Int32).Value = listino
 
                     Using rdr As MySqlDataReader = cmd.ExecuteReader()
-                        While rdr.Read()
-                            Dim offer As ProductPromotionOffer = BuildOffer(rdr, baseNetPrice, baseGrossPrice)
-                            If offer Is Nothing OrElse offer.PriceGross <= 0D Then Continue While
-                            model.Offers.Add(offer)
-                            If model.BestPriceGross <= 0D OrElse offer.PriceGross < model.BestPriceGross Then
-                                model.BestPriceGross = offer.PriceGross
-                                model.BestDiscountPercent = offer.DiscountPercent
-                            End If
-                        End While
+                        LoadOffers(rdr, model, baseNetPrice, baseGrossPrice)
                     End Using
                 End Using
+
+                If model.Offers.Count = 0 Then
+                    Using cmdProduct As New MySqlCommand(BuildProductRowSql(), cn)
+                        cmdProduct.Parameters.Add("@articleId", MySqlDbType.Int32).Value = articleId
+                        cmdProduct.Parameters.Add("@companyId", MySqlDbType.Int32).Value = companyId
+                        cmdProduct.Parameters.Add("@listino", MySqlDbType.Int32).Value = listino
+
+                        Using rdrProduct As MySqlDataReader = cmdProduct.ExecuteReader()
+                            LoadOffers(rdrProduct, model, baseNetPrice, baseGrossPrice)
+                        End Using
+                    End Using
+                End If
             End Using
         Catch
             model.Offers.Clear()
@@ -89,6 +93,38 @@ Public Module ProductPromotionDisplayHelper
                "ORDER BY CASE WHEN COALESCE(Multipli,0)=10 THEN 0 WHEN COALESCE(QntMinima,0)>0 THEN 1 WHEN COALESCE(Multipli,0)>0 THEN 2 ELSE 3 END, " &
                "         COALESCE(Multipli,0) ASC, COALESCE(QntMinima,0) ASC, OfferteId ASC"
     End Function
+
+    Private Function BuildProductRowSql() As String
+        Return "SELECT COALESCE(OfferteDettagliId,0) AS OfferteId, @companyId AS AziendeId, " &
+               "OfferteDataInizio AS DataInizio, OfferteDataFine AS DataFine, OfferteQntMinima AS QntMinima, " &
+               "OfferteMultipli AS Multipli, OffertePrezzo AS Prezzo, OfferteSconto AS Sconto " &
+               "FROM vsuperarticoli " &
+               "WHERE ID=@articleId " &
+               "  AND NListino=@listino " &
+               "  AND COALESCE(InOfferta,0)=1 " &
+               "  AND COALESCE(OfferteDettagliId,0)>0 " &
+               "  AND (OfferteDataInizio IS NULL OR OfferteDataInizio<=CURDATE()) " &
+               "  AND (OfferteDataFine IS NULL OR OfferteDataFine>=CURDATE()) " &
+               "ORDER BY CASE WHEN COALESCE(OfferteMultipli,0)=10 THEN 0 WHEN COALESCE(OfferteQntMinima,0)>0 THEN 1 WHEN COALESCE(OfferteMultipli,0)>0 THEN 2 ELSE 3 END, " &
+               "         COALESCE(OfferteMultipli,0) ASC, COALESCE(OfferteQntMinima,0) ASC, COALESCE(OfferteDettagliId,0) ASC"
+    End Function
+
+    Private Sub LoadOffers(ByVal rdr As MySqlDataReader,
+                           ByVal model As ProductPromotionDisplayModel,
+                           ByVal baseNetPrice As Decimal,
+                           ByVal baseGrossPrice As Decimal)
+        If rdr Is Nothing OrElse model Is Nothing Then Return
+
+        While rdr.Read()
+            Dim offer As ProductPromotionOffer = BuildOffer(rdr, baseNetPrice, baseGrossPrice)
+            If offer Is Nothing OrElse offer.PriceGross <= 0D Then Continue While
+            model.Offers.Add(offer)
+            If model.BestPriceGross <= 0D OrElse offer.PriceGross < model.BestPriceGross Then
+                model.BestPriceGross = offer.PriceGross
+                model.BestDiscountPercent = offer.DiscountPercent
+            End If
+        End While
+    End Sub
 
     Private Function BuildOffer(ByVal rdr As IDataRecord, ByVal baseNetPrice As Decimal, ByVal baseGrossPrice As Decimal) As ProductPromotionOffer
         Dim qntMinima As Decimal = FieldDecimal(rdr, "QntMinima")
