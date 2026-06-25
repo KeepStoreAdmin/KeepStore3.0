@@ -388,6 +388,10 @@
                 E' stata impostata una quantità articolo minore o uguale a 0.<br />Eliminare l'articolo dal carrello o impostare una quantità maggiore di 0.
             </div>
 
+            <asp:Panel ID="pnlCartPriceRevalidation" runat="server" CssClass="ks-alert ks-alert-warning ks-price-revalidation-alert" Visible="false">
+                <asp:Literal ID="litCartPriceRevalidation" runat="server" />
+            </asp:Panel>
+
             <asp:Panel ID="pnlLoginRequired" runat="server" ClientIDMode="Static" CssClass="ks-cart-message ks-cart-message-login" Visible="false" tabindex="-1">
                 <div class="ks-cart-message-icon">
                     <i class="icon-user"></i>

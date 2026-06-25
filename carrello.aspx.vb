@@ -650,6 +650,30 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         End If
     End Sub
 
+    Private Sub ShowCartPriceRevalidationMessage()
+        If pnlCartPriceRevalidation Is Nothing OrElse litCartPriceRevalidation Is Nothing Then Return
+
+        Dim msg As String = ""
+        If Session(CartPriceRevalidationHelper.SessionMessageKey) IsNot Nothing Then
+            msg = Convert.ToString(Session(CartPriceRevalidationHelper.SessionMessageKey))
+        End If
+
+        pnlCartPriceRevalidation.Visible = Not String.IsNullOrWhiteSpace(msg)
+        litCartPriceRevalidation.Text = msg
+        Session(CartPriceRevalidationHelper.SessionMessageKey) = Nothing
+        Session(CartPriceRevalidationHelper.SessionChangedKey) = Nothing
+    End Sub
+
+    Private Function RevalidateCartPricesBeforeOrder() As Boolean
+        Dim result As CartPriceRevalidationResult = CartPriceRevalidationHelper.RevalidateCurrentCart(HttpContext.Current, True)
+        If result Is Nothing OrElse Not (result.HasChanges OrElse result.HasBlockingError) Then Return True
+
+        CartPriceRevalidationHelper.StoreResultInSession(HttpContext.Current, result)
+        SetCheckoutStep("confirm")
+        SafeRedirectLocal("carrello.aspx?pricechanged=1")
+        Return False
+    End Function
+
     Private Function GetOrderNotesText() As String
         If txtNoteSpedizione Is Nothing OrElse txtNoteSpedizione.Text Is Nothing Then Return ""
         Return txtNoteSpedizione.Text
@@ -1794,7 +1818,12 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         If tOrdine IsNot Nothing Then tOrdine.Visible = True
         SetAddressSelectionMessage(OrderNotesLimitMessage)
         ApplyCheckoutStepUi()
+    ElseIf String.Equals(Request.QueryString("pricechanged"), "1", StringComparison.OrdinalIgnoreCase) Then
+        SetCheckoutStep("confirm")
+        If tOrdine IsNot Nothing Then tOrdine.Visible = True
+        ApplyCheckoutStepUi()
     End If
+    ShowCartPriceRevalidationMessage()
     StabilizeCartAddressEditUi()
     End Sub
 
@@ -4975,6 +5004,7 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
     SetTermsConsentError("")
     Me.PnlDestinazione.Visible = False
     If Not ValidateOrderNotesLength() Then Return
+    If Not RevalidateCartPricesBeforeOrder() Then Return
 
     Try
         LeggiVettori()
