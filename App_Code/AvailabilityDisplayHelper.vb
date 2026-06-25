@@ -18,6 +18,7 @@ Public Class AvailabilityDisplayModel
     Public Property StatusStyle As String
     Public Property DotCssClass As String
     Public Property DotStyle As String
+    Public Property IncomingTooltipText As String
     Public Property LegacyText As String
     Public Property Text As String
     Public Property Html As String
@@ -26,6 +27,7 @@ End Class
 Public Module AvailabilityDisplayHelper
     Private Const DefaultDisplayMode As Integer = 1
     Private Const DefaultLowStockThreshold As Decimal = 2D
+    Private Const DefaultIncomingTooltipText As String = "Il tempo di consegna indicativo e di 7 / 14 giorni lavorativi dalla data di inserimento dell'ordine. Le date di arrivo merce sono indicative: l'effettiva consegna presso i nostri magazzini potrebbe variare per cause esterne. Ti aggiorneremo in caso di variazioni."
 
     Public Function GetDisplayMode(Optional ByVal ctx As HttpContext = Nothing) As Integer
         Dim mode As Integer = DefaultDisplayMode
@@ -54,6 +56,7 @@ Public Module AvailabilityDisplayHelper
         model.IncomingQty = Quantity(dataItem, "InOrdine")
         model.AvailableQty = EffectiveAvailableQty(dataItem, model.StockQty, model.CommittedQty)
         model.LowStockThreshold = LowStockThreshold(dataItem)
+        model.IncomingTooltipText = DefaultIncomingTooltipText
 
         ApplySyntheticStatus(model)
         model.LegacyText = BuildLegacyStatusText(dataItem, model.AvailableQty, model.IncomingQty)
@@ -99,7 +102,17 @@ Public Module AvailabilityDisplayHelper
         sb.Append("<span class=""ks-availability-numeric"" style=""display:inline-flex;flex-direction:column;gap:2px;line-height:1.35;"">")
         sb.Append("<span><span class=""fw-semibold"">Disponibilità:</span> ").Append(HtmlEncode(FormatQuantity(model.AvailableQty))).Append("</span>")
         sb.Append("<span><span class=""fw-semibold"">Impegnati:</span> ").Append(HtmlEncode(FormatQuantity(model.CommittedQty))).Append("</span>")
-        sb.Append("<span><span class=""fw-semibold"">In Arrivo:</span> ").Append(HtmlEncode(FormatQuantity(model.IncomingQty))).Append("</span>")
+        sb.Append("<span>")
+        If model.IncomingQty > 0D Then
+            Dim tooltipText As String = HtmlEncode(model.IncomingTooltipText)
+            sb.Append("<span class=""fw-semibold ks-availability-info"" tabindex=""0"" title=""").Append(tooltipText).Append(""" aria-label=""In Arrivo. ").Append(tooltipText).Append(""">")
+            sb.Append("In Arrivo")
+            sb.Append("<span class=""ks-availability-tooltip"" role=""tooltip"">").Append(tooltipText).Append("</span>")
+            sb.Append("</span>: ")
+        Else
+            sb.Append("<span class=""fw-semibold"">In Arrivo:</span> ")
+        End If
+        sb.Append(HtmlEncode(FormatQuantity(model.IncomingQty))).Append("</span>")
         sb.Append("<span class=""").Append(model.StatusCssClass).Append("""" & model.StatusStyle & ">").Append(HtmlEncode(model.StatusText)).Append("</span>")
         sb.Append("</span>")
         Return sb.ToString()

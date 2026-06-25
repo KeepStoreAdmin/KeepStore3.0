@@ -399,6 +399,43 @@
   text-align: right;
 }
 
+.ks-availability-info {
+  border-bottom: 1px dotted currentColor;
+  cursor: help;
+  position: relative;
+}
+
+.ks-availability-info:focus {
+  outline: 2px solid #94a3b8;
+  outline-offset: 2px;
+}
+
+.ks-availability-tooltip {
+  background: #111827;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  bottom: calc(100% + 8px);
+  box-shadow: 0 8px 20px rgba(17, 24, 39, 0.16);
+  color: #fff;
+  display: none;
+  font-size: 12px;
+  font-weight: 500;
+  left: 0;
+  line-height: 1.4;
+  max-width: min(320px, 78vw);
+  min-width: 240px;
+  padding: 10px 12px;
+  position: absolute;
+  text-align: left;
+  text-transform: none;
+  z-index: 20;
+}
+
+.ks-availability-info:hover .ks-availability-tooltip,
+.ks-availability-info:focus .ks-availability-tooltip {
+  display: block;
+}
+
 @media (max-width: 1199.98px) {
   .ks-product-page .tf-product-info-list {
     flex-direction: column;
@@ -456,5 +493,10 @@
 
   .ks-product-list-section .card-product-info {
     padding-top: 10px;
+  }
+
+  .ks-availability-tooltip {
+    left: auto;
+    right: 0;
   }
 }

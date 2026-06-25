@@ -455,7 +455,7 @@ Partial Class articolo
         Dim imgHover As String = NormalizeImageUrl(GetRowString(row, "Img2"))
         If String.IsNullOrEmpty(imgHover) Then imgHover = imgVal
 
-        Dim inOfferta As Integer = GetRowInt(row, "InOfferta", 0)
+        Dim inOfferta As Integer = GetEffectiveInOfferta(row)
         Dim tcidVal As Integer = GetRowInt(row, "TCid", _tcid)
         Dim codiceVal As String = FirstNonEmpty(GetRowString(row, "Codice"), GetRowString(row, "SKU"))
         Dim eanVal As String = FirstNonEmpty(GetRowString(row, "Ean"), GetRowString(row, "EAN"))
@@ -1361,7 +1361,7 @@ Partial Class articolo
                                                       GetRowDecimal(row, "PrezzoIvato"),
                                                       GetRowDecimal(row, "PrezzoPromo"),
                                                       GetRowDecimal(row, "PrezzoPromoIvato"),
-                                                      GetRowInt(row, "InOfferta", 0))
+                                                      GetEffectiveInOfferta(row))
 
         Dim shortDesc As String = FirstNonEmpty(GetRowString(row, "Descrizione2"), GetRowString(row, "Sottotitolo"))
         Dim shortDescHtml As String = String.Empty
@@ -1557,7 +1557,7 @@ Partial Class articolo
                                                       GetRowDecimal(row, "PrezzoIvato"),
                                                       GetRowDecimal(row, "PrezzoPromo"),
                                                       GetRowDecimal(row, "PrezzoPromoIvato"),
-                                                      GetRowInt(row, "InOfferta", 0))
+                                                      GetEffectiveInOfferta(row))
 
         litPriceHtml.Text = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo)
         ' Box prezzo sticky (stesso HTML del prezzo principale)
@@ -1566,10 +1566,11 @@ Partial Class articolo
         litIvaInfo.Text = Server.HtmlEncode(price.IvaLabel)
 
         Dim promotionModel As ProductPromotionDisplayModel = ProductPromotionDisplayHelper.BuildForProduct(GetConnectionString(),
-                                                                                                           _id,
-                                                                                                           _listino,
-                                                                                                           GetRowDecimal(row, "Prezzo"),
-                                                                                                           GetRowDecimal(row, "PrezzoIvato"))
+                                                                                                            _id,
+                                                                                                            GetCurrentAziendaId(),
+                                                                                                            _listino,
+                                                                                                            GetRowDecimal(row, "Prezzo"),
+                                                                                                            GetRowDecimal(row, "PrezzoIvato"))
         phPromotionOffers.Visible = (promotionModel IsNot Nothing AndAlso promotionModel.HasOffers)
         litPromotionOffers.Text = If(promotionModel IsNot Nothing, promotionModel.Html, String.Empty)
 
@@ -1861,7 +1862,7 @@ Partial Class articolo
                                                           GetRowDecimal(row, "PrezzoIvato"),
                                                           GetRowDecimal(row, "PrezzoPromo"),
                                                           GetRowDecimal(row, "PrezzoPromoIvato"),
-                                                          GetRowInt(row, "InOfferta", 0))
+                                                          GetEffectiveInOfferta(row))
 
             ' --- Base entity ids
             Dim baseUrl As String = canonical.TrimEnd("/"c)
@@ -2278,6 +2279,41 @@ Partial Class articolo
         If Not promoPrice.HasValue OrElse promoPrice.Value <= 0D Then Return False
         If basePrice.HasValue AndAlso basePrice.Value > 0D AndAlso promoPrice.Value >= basePrice.Value Then Return False
         Return True
+    End Function
+
+    Private Function GetEffectiveInOfferta(row As DataRow) As Integer
+        If row Is Nothing Then Return 0
+        If GetRowInt(row, "InOfferta", 0) <> 1 Then Return 0
+        If Not IsProductRowPromoActive(row) Then Return 0
+        Return 1
+    End Function
+
+    Private Function IsProductRowPromoActive(row As DataRow) As Boolean
+        If row Is Nothing Then Return False
+
+        Dim fromListino As Integer = GetRowInt(row, "OfferteDaListino", 0)
+        Dim toListino As Integer = GetRowInt(row, "OfferteAListino", 0)
+        If fromListino > 0 AndAlso _listino < fromListino Then Return False
+        If toListino > 0 AndAlso _listino > toListino Then Return False
+
+        Dim today As Date = Date.Today
+        Dim startsOn As Nullable(Of Date) = GetRowDate(row, "OfferteDataInizio")
+        Dim endsOn As Nullable(Of Date) = GetRowDate(row, "OfferteDataFine")
+        If startsOn.HasValue AndAlso startsOn.Value.Date > today Then Return False
+        If endsOn.HasValue AndAlso endsOn.Value.Date < today Then Return False
+
+        Return True
+    End Function
+
+    Private Function GetRowDate(row As DataRow, columnName As String) As Nullable(Of Date)
+        If row Is Nothing OrElse row.Table Is Nothing OrElse Not row.Table.Columns.Contains(columnName) Then Return Nothing
+
+        Dim raw As Object = row(columnName)
+        If raw Is Nothing OrElse Convert.IsDBNull(raw) Then Return Nothing
+
+        Dim parsed As Date
+        If Date.TryParse(Convert.ToString(raw), parsed) Then Return parsed
+        Return Nothing
     End Function
 
     Private Function FormatMoney(value As Decimal) As String
@@ -3243,6 +3279,12 @@ Partial Class articolo
 
     Private Function GetConnectionString() As String
         Return ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+    End Function
+
+    Private Function GetCurrentAziendaId() As Integer
+        Return FirstPositiveInt(GetSessionInt("AziendaID", 0),
+                                GetSessionInt("AziendaId", 0),
+                                GetSessionInt("AziendeId", 0))
     End Function
 
     ' Listino robusto: usa Session("Listino") come fonte principale, con fallback a Session("listino").

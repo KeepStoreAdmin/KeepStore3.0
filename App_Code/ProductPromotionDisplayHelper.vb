@@ -29,6 +29,7 @@ Public Module ProductPromotionDisplayHelper
 
     Public Function BuildForProduct(ByVal connectionString As String,
                                     ByVal articleId As Integer,
+                                    ByVal companyId As Integer,
                                     ByVal listino As Integer,
                                     ByVal baseNetPrice As Decimal,
                                     ByVal baseGrossPrice As Decimal) As ProductPromotionDisplayModel
@@ -38,7 +39,7 @@ Public Module ProductPromotionDisplayHelper
         model.StandardPriceGross = baseGrossPrice
         model.BestPriceGross = baseGrossPrice
 
-        If String.IsNullOrWhiteSpace(connectionString) OrElse articleId <= 0 OrElse listino <= 0 OrElse baseGrossPrice <= 0D Then
+        If String.IsNullOrWhiteSpace(connectionString) OrElse articleId <= 0 OrElse companyId <= 0 OrElse listino <= 0 OrElse baseGrossPrice <= 0D Then
             model.Html = String.Empty
             Return model
         End If
@@ -48,6 +49,7 @@ Public Module ProductPromotionDisplayHelper
                 cn.Open()
                 Using cmd As New MySqlCommand(BuildSql(), cn)
                     cmd.Parameters.Add("@articleId", MySqlDbType.Int32).Value = articleId
+                    cmd.Parameters.Add("@companyId", MySqlDbType.Int32).Value = companyId
                     cmd.Parameters.Add("@listino", MySqlDbType.Int32).Value = listino
 
                     Using rdr As MySqlDataReader = cmd.ExecuteReader()
@@ -76,9 +78,10 @@ Public Module ProductPromotionDisplayHelper
     End Function
 
     Private Function BuildSql() As String
-        Return "SELECT OfferteId, DataInizio, DataFine, QntMinima, Multipli, Prezzo, Sconto " &
+        Return "SELECT OfferteId, AziendeId, DataInizio, DataFine, QntMinima, Multipli, Prezzo, Sconto " &
                "FROM voffertedettagli " &
                "WHERE ArticoliId=@articleId " &
+               "  AND AziendeId=@companyId " &
                "  AND COALESCE(Abilitato,0)=1 " &
                "  AND @listino BETWEEN COALESCE(DaListino,@listino) AND COALESCE(AListino,@listino) " &
                "  AND (DataInizio IS NULL OR DataInizio<=CURDATE()) " &
