@@ -420,6 +420,13 @@ End If
                     Exit Sub
                 End If
 
+                Dim priceRevalidation As CartPriceRevalidationResult = CartPriceRevalidationHelper.RevalidateCurrentCart(HttpContext.Current, True)
+                If priceRevalidation IsNot Nothing AndAlso (priceRevalidation.HasChanges OrElse priceRevalidation.HasBlockingError) Then
+                    CartPriceRevalidationHelper.StoreResultInSession(HttpContext.Current, priceRevalidation)
+                    Me.SafeRedirect("carrello.aspx?pricechanged=1")
+                    Exit Sub
+                End If
+
                 ' Facebook Pixel (solo se ci sono articoli)
                 If articoliIdGlobali <> "" Then
                     facebook_pixel(articoliIdGlobali)

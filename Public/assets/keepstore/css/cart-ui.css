@@ -88,6 +88,15 @@
     color: rgba(0,0,0,.8);
 }
 
+.ks-cart-page .ks-price-revalidation-list{
+    margin: .5rem 0 0;
+    padding-left: 1.15rem;
+}
+
+.ks-cart-page .ks-price-revalidation-list li{
+    margin-top: .25rem;
+}
+
 .ks-cart-page .ks-cart-empty,
 .ks-cart-page .ks-cart-message{
     display: flex;

@@ -57,6 +57,8 @@ Partial Public Class carrello
     Protected WithEvents lblValoreIvaRC As System.Web.UI.WebControls.Label
     Protected WithEvents lblOfferta As System.Web.UI.WebControls.Label
     Protected WithEvents Repeater1 As System.Web.UI.WebControls.Repeater
+    Protected WithEvents pnlCartPriceRevalidation As System.Web.UI.WebControls.Panel
+    Protected WithEvents litCartPriceRevalidation As System.Web.UI.WebControls.Literal
     Protected WithEvents SqlDataBuonoSconto As System.Web.UI.WebControls.SqlDataSource
     Protected WithEvents GV_BuoniSconti As System.Web.UI.WebControls.GridView
     Protected WithEvents lbl_idBuonoSconto As System.Web.UI.WebControls.Label
