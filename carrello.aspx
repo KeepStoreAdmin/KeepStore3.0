@@ -243,7 +243,7 @@
                                                 <div style="<%# iif(Eval("InOfferta")=1,"","display:none;") %>">
                                                     <span class="ks-promo-badge">
                                                         <strong>PROMO</strong>
-                                                        <asp:Label ID="lblOfferta" runat="server" Visible="false" Text='<%# "PROMO FINO AL " & Eval("OfferteDataFine") %>'></asp:Label>
+                                                        <asp:Label ID="lblOfferta" runat="server" Visible="false" Text="PROMO"></asp:Label>
                                                     </span>
                                                 </div>
                                             </ItemTemplate>
@@ -353,7 +353,7 @@
                                                 <div style="<%# iif(Eval("InOfferta")=1,"","display:none;") %>">
                                                     <span class="ks-promo-badge">
                                                         <strong>PROMO</strong>
-                                                        <asp:Label ID="lblOfferta" runat="server" Visible="false" Text='<%# "PROMO FINO AL " & Eval("OfferteDataFine") %>'></asp:Label>
+                                                        <asp:Label ID="lblOfferta" runat="server" Visible="false" Text="PROMO"></asp:Label>
                                                     </span>
                                                 </div>
                                             </ItemTemplate>
@@ -595,7 +595,7 @@
                 </asp:TemplateField>
                 <asp:TemplateField InsertVisible="False" ShowHeader="False">
                      <ItemTemplate>
-                        <img src='<%# "Public/Vettori/" & Eval("Img") %>' title='PROMO fino al <%#: Eval("Promo_Data_Fine","{0:d}") %>' alt="" />
+                        <img src='<%# "Public/Vettori/" & Eval("Img") %>' title='PROMO fino al <%#: Eval("Promo_Data_Fine","{0:dd/MM/yyyy}") %>' alt="" />
                     </ItemTemplate>
                     <ItemStyle HorizontalAlign="Left" VerticalAlign="Middle" />
                 </asp:TemplateField>
