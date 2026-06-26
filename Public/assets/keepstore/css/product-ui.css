@@ -375,6 +375,14 @@
   font-weight: 700;
 }
 
+.ks-product-promos__tier-note {
+  color: #6b7280;
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
 .ks-product-promos__list {
   display: grid;
   gap: 8px;
