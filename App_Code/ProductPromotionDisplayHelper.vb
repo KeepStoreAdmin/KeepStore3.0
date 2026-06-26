@@ -175,9 +175,9 @@ Public Module ProductPromotionDisplayHelper
     End Function
 
     Private Function IsDefaultQuantityOffer(ByVal qntMinima As Decimal, ByVal multipli As Decimal) As Boolean
-        If multipli > 1D Then Return False
-        If qntMinima > 1D Then Return False
-        Return True
+        If qntMinima > 0D Then Return qntMinima <= 1D
+        If multipli > 0D Then Return Decimal.Remainder(1D, multipli) = 0D
+        Return False
     End Function
 
     Private Function RenderHtml(ByVal model As ProductPromotionDisplayModel) As String

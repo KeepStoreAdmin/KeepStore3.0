@@ -2297,9 +2297,12 @@ Partial Class articolo
 
     Private Function IsProductRowPromoApplicableToDefaultQuantity(row As DataRow) As Boolean
         If row Is Nothing Then Return False
-        If GetRowDecimal(row, "OfferteMultipli").GetValueOrDefault(0D) > 1D Then Return False
-        If GetRowDecimal(row, "OfferteQntMinima").GetValueOrDefault(0D) > 1D Then Return False
-        Return True
+        Dim qntMinima As Decimal = GetRowDecimal(row, "OfferteQntMinima").GetValueOrDefault(0D)
+        If qntMinima > 0D Then Return qntMinima <= 1D
+
+        Dim multipli As Decimal = GetRowDecimal(row, "OfferteMultipli").GetValueOrDefault(0D)
+        If multipli > 0D Then Return Decimal.Remainder(1D, multipli) = 0D
+        Return False
     End Function
 
     Private Function IsProductRowPromoActive(row As DataRow) As Boolean
