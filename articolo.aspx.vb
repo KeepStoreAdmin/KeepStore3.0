@@ -1341,7 +1341,8 @@ Partial Class articolo
 
         sb.AppendLine("ORDER BY")
         sb.AppendLine("  CASE")
-        sb.AppendLine("    WHEN COALESCE(InOfferta,0)=1 AND (OfferteDataInizio IS NULL OR OfferteDataInizio<=CURDATE()) AND (OfferteDataFine IS NULL OR OfferteDataFine>=CURDATE()) AND COALESCE(OfferteQntMinima,0)<=1 AND COALESCE(OfferteMultipli,0)<=1 THEN 0")
+        ' Keep row selection aligned with cart/add-to-cart: QntMinima wins, Multipli is fallback.
+        sb.AppendLine("    WHEN COALESCE(InOfferta,0)=1 AND (OfferteDataInizio IS NULL OR OfferteDataInizio<=CURDATE()) AND (OfferteDataFine IS NULL OR OfferteDataFine>=CURDATE()) AND ((COALESCE(OfferteQntMinima,0)>0 AND COALESCE(OfferteQntMinima,0)<=1) OR (COALESCE(OfferteQntMinima,0)<=0 AND COALESCE(OfferteMultipli,0)>0 AND MOD(1, COALESCE(OfferteMultipli,0))=0)) THEN 0")
         sb.AppendLine("    WHEN COALESCE(InOfferta,0)<>1 OR COALESCE(OfferteDettagliId,0)=0 THEN 1")
         sb.AppendLine("    ELSE 2")
         sb.AppendLine("  END,")
