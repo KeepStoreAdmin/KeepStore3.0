@@ -12,6 +12,7 @@ Public Class ProductPromotionOffer
     Public Property DiscountPercent As Decimal
     Public Property StartsOn As Nullable(Of Date)
     Public Property EndsOn As Nullable(Of Date)
+    Public Property AppliesToDefaultQuantity As Boolean
 End Class
 
 Public Class ProductPromotionDisplayModel
@@ -20,6 +21,8 @@ Public Class ProductPromotionDisplayModel
     Public Property StandardPriceGross As Decimal
     Public Property BestPriceGross As Decimal
     Public Property BestDiscountPercent As Decimal
+    Public Property BestOfferLabel As String
+    Public Property BestPriceRequiresQuantityTier As Boolean
     Public Property Offers As List(Of ProductPromotionOffer)
     Public Property Html As String
 End Class
@@ -122,6 +125,8 @@ Public Module ProductPromotionDisplayHelper
             If model.BestPriceGross <= 0D OrElse offer.PriceGross < model.BestPriceGross Then
                 model.BestPriceGross = offer.PriceGross
                 model.BestDiscountPercent = offer.DiscountPercent
+                model.BestOfferLabel = offer.Label
+                model.BestPriceRequiresQuantityTier = Not offer.AppliesToDefaultQuantity
             End If
         End While
     End Sub
@@ -164,8 +169,15 @@ Public Module ProductPromotionDisplayHelper
             .PriceGross = grossPrice,
             .DiscountPercent = effectiveDiscount,
             .StartsOn = FieldDate(rdr, "DataInizio"),
-            .EndsOn = FieldDate(rdr, "DataFine")
+            .EndsOn = FieldDate(rdr, "DataFine"),
+            .AppliesToDefaultQuantity = IsDefaultQuantityOffer(qntMinima, multipli)
         }
+    End Function
+
+    Private Function IsDefaultQuantityOffer(ByVal qntMinima As Decimal, ByVal multipli As Decimal) As Boolean
+        If qntMinima > 0D Then Return qntMinima <= 1D
+        If multipli > 0D Then Return Decimal.Remainder(1D, multipli) = 0D
+        Return False
     End Function
 
     Private Function RenderHtml(ByVal model As ProductPromotionDisplayModel) As String
@@ -182,7 +194,15 @@ Public Module ProductPromotionDisplayHelper
         sb.Append("<div class=""ks-product-promos__summary"">")
         sb.Append("<span>Prezzo di Listino <strong>").Append(HtmlEncode(FormatMoney(model.ListPriceGross))).Append("</strong></span>")
         sb.Append("<span>Prezzo Standard <strong>").Append(HtmlEncode(FormatMoney(model.StandardPriceGross))).Append("</strong></span>")
-        sb.Append("<span>Prezzo promo <strong>").Append(HtmlEncode(FormatMoney(model.BestPriceGross))).Append("</strong></span>")
+        sb.Append("<span>Prezzo promo <strong>")
+        If model.BestPriceRequiresQuantityTier Then
+            sb.Append("Da ")
+        End If
+        sb.Append(HtmlEncode(FormatMoney(model.BestPriceGross))).Append("</strong>")
+        If model.BestPriceRequiresQuantityTier AndAlso Not String.IsNullOrWhiteSpace(model.BestOfferLabel) Then
+            sb.Append("<small class=""ks-product-promos__tier-note"">").Append(HtmlEncode(model.BestOfferLabel)).Append("</small>")
+        End If
+        sb.Append("</span>")
         sb.Append("</div>")
         sb.Append("<div class=""ks-product-promos__list"">")
         For Each offer As ProductPromotionOffer In model.Offers

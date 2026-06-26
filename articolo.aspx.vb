@@ -1340,7 +1340,12 @@ Partial Class articolo
         End If
 
         sb.AppendLine("ORDER BY")
-        sb.AppendLine("  CASE WHEN COALESCE(InOfferta,0)=1 AND (OfferteDataInizio IS NULL OR OfferteDataInizio<=CURDATE()) AND (OfferteDataFine IS NULL OR OfferteDataFine>=CURDATE()) THEN 0 ELSE 1 END,")
+        sb.AppendLine("  CASE")
+        ' Keep row selection aligned with cart/add-to-cart: QntMinima wins, Multipli is fallback.
+        sb.AppendLine("    WHEN COALESCE(InOfferta,0)=1 AND (OfferteDataInizio IS NULL OR OfferteDataInizio<=CURDATE()) AND (OfferteDataFine IS NULL OR OfferteDataFine>=CURDATE()) AND ((COALESCE(OfferteQntMinima,0)>0 AND COALESCE(OfferteQntMinima,0)<=1) OR (COALESCE(OfferteQntMinima,0)<=0 AND COALESCE(OfferteMultipli,0)>0 AND MOD(1, COALESCE(OfferteMultipli,0))=0)) THEN 0")
+        sb.AppendLine("    WHEN COALESCE(InOfferta,0)<>1 OR COALESCE(OfferteDettagliId,0)=0 THEN 1")
+        sb.AppendLine("    ELSE 2")
+        sb.AppendLine("  END,")
         sb.AppendLine("  CASE WHEN COALESCE(PrezzoPromoIvato,0)>0 THEN PrezzoPromoIvato WHEN COALESCE(PrezzoPromo,0)>0 THEN PrezzoPromo ELSE COALESCE(PrezzoIvato, Prezzo, 999999999) END ASC,")
         sb.AppendLine("  COALESCE(PrezzoIvato, Prezzo, 999999999) ASC,")
         sb.AppendLine("  COALESCE(OfferteDettagliId,0) ASC")
@@ -2287,7 +2292,18 @@ Partial Class articolo
         If row Is Nothing Then Return 0
         If GetRowInt(row, "InOfferta", 0) <> 1 Then Return 0
         If Not IsProductRowPromoActive(row) Then Return 0
+        If Not IsProductRowPromoApplicableToDefaultQuantity(row) Then Return 0
         Return 1
+    End Function
+
+    Private Function IsProductRowPromoApplicableToDefaultQuantity(row As DataRow) As Boolean
+        If row Is Nothing Then Return False
+        Dim qntMinima As Decimal = GetRowDecimal(row, "OfferteQntMinima").GetValueOrDefault(0D)
+        If qntMinima > 0D Then Return qntMinima <= 1D
+
+        Dim multipli As Decimal = GetRowDecimal(row, "OfferteMultipli").GetValueOrDefault(0D)
+        If multipli > 0D Then Return Decimal.Remainder(1D, multipli) = 0D
+        Return False
     End Function
 
     Private Function IsProductRowPromoActive(row As DataRow) As Boolean
