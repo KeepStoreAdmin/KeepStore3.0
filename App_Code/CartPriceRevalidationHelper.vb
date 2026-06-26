@@ -39,6 +39,7 @@ Friend Class CartPriceRevalidationRow
     Public Property CurrentPrice As Double
     Public Property CurrentPriceIvato As Double
     Public Property Description As String
+    Public Property IsComplimentary As Boolean
 End Class
 
 Friend Class CartPriceCandidate
@@ -183,7 +184,7 @@ Public Module CartPriceRevalidationHelper
         Using cmd As New MySqlCommand()
             cmd.Connection = conn
             cmd.CommandType = CommandType.Text
-            cmd.CommandText = "SELECT ID, ArticoliId, COALESCE(TCId,-1) AS TCId, COALESCE(Qnt,0) AS Qnt, COALESCE(Prezzo,0) AS Prezzo, COALESCE(PrezzoIvato,0) AS PrezzoIvato, COALESCE(Descrizione1,'') AS Descrizione1 FROM carrello WHERE " & OwnerWhere(loginId)
+            cmd.CommandText = "SELECT ID, ArticoliId, COALESCE(TCId,-1) AS TCId, COALESCE(Qnt,0) AS Qnt, COALESCE(Prezzo,0) AS Prezzo, COALESCE(PrezzoIvato,0) AS PrezzoIvato, COALESCE(Descrizione1,'') AS Descrizione1, COALESCE(Prodotto_Gratis,0) AS Prodotto_Gratis FROM carrello WHERE " & OwnerWhere(loginId)
             AddOwnerParameters(cmd, loginId, sessionId)
 
             Using dr As MySqlDataReader = cmd.ExecuteReader()
@@ -196,6 +197,8 @@ Public Module CartPriceRevalidationHelper
                     row.CurrentPrice = ReadDouble(dr("Prezzo"), 0)
                     row.CurrentPriceIvato = ReadDouble(dr("PrezzoIvato"), 0)
                     row.Description = Convert.ToString(dr("Descrizione1"))
+                    row.IsComplimentary = (ReadInt(dr("Prodotto_Gratis"), 0) <> 0)
+                    If row.IsComplimentary Then Continue While
                     If row.CartRowId > 0 AndAlso row.ArticleId > 0 Then rows.Add(row)
                 End While
             End Using
@@ -362,11 +365,9 @@ Public Module CartPriceRevalidationHelper
     End Function
 
     Private Function SessionDouble(ByVal ctx As HttpContext, ByVal key As String, ByVal defaultValue As Double) As Double
-        Dim output As Double = defaultValue
         Try
             If ctx IsNot Nothing AndAlso ctx.Session IsNot Nothing AndAlso ctx.Session(key) IsNot Nothing Then
-                If Double.TryParse(Convert.ToString(ctx.Session(key)), NumberStyles.Any, CultureInfo.InvariantCulture, output) Then Return output
-                If Double.TryParse(Convert.ToString(ctx.Session(key)), NumberStyles.Any, PriceCulture, output) Then Return output
+                Return ParseDoubleValue(ctx.Session(key), defaultValue)
             End If
         Catch
         End Try
@@ -383,11 +384,26 @@ Public Module CartPriceRevalidationHelper
     End Function
 
     Private Function ReadDouble(ByVal value As Object, ByVal defaultValue As Double) As Double
+        Return ParseDoubleValue(value, defaultValue)
+    End Function
+
+    Private Function ParseDoubleValue(ByVal value As Object, ByVal defaultValue As Double) As Double
         Dim output As Double = defaultValue
         Try
             If value IsNot Nothing AndAlso value IsNot DBNull.Value Then
-                If Double.TryParse(Convert.ToString(value), NumberStyles.Any, CultureInfo.InvariantCulture, output) Then Return output
-                If Double.TryParse(Convert.ToString(value), NumberStyles.Any, PriceCulture, output) Then Return output
+                If TypeOf value Is Byte OrElse TypeOf value Is Short OrElse TypeOf value Is Integer OrElse TypeOf value Is Long OrElse
+                   TypeOf value Is Single OrElse TypeOf value Is Double OrElse TypeOf value Is Decimal Then
+                    Return Convert.ToDouble(value, CultureInfo.InvariantCulture)
+                End If
+
+                Dim text As String = Convert.ToString(value).Trim()
+                If text.IndexOf(","c) >= 0 AndAlso text.IndexOf("."c) < 0 Then
+                    If Double.TryParse(text, NumberStyles.Any, PriceCulture, output) Then Return output
+                    If Double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, output) Then Return output
+                Else
+                    If Double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, output) Then Return output
+                    If Double.TryParse(text, NumberStyles.Any, PriceCulture, output) Then Return output
+                End If
             End If
         Catch
         End Try
