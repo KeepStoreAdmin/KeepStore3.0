@@ -13,6 +13,7 @@ Partial Class Public_ui_controls_ProductCard
     Public Property PriceText As String
     Public Property OldPriceText As String
     Public Property BadgeText As String
+    Public Property PromoSummaryHtml As String
     Public Property IsOnSale As Boolean
     Public Property IsAvailable As Boolean = True
     Public Property AvailabilityText As String
@@ -138,6 +139,12 @@ Partial Class Public_ui_controls_ProductCard
     Protected ReadOnly Property SafeBadgeText As String
         Get
             Return EncodeText(If(String.IsNullOrWhiteSpace(BadgeText), "Promo", BadgeText))
+        End Get
+    End Property
+
+    Protected ReadOnly Property RenderPromoSummary As Boolean
+        Get
+            Return Not String.IsNullOrWhiteSpace(PromoSummaryHtml)
         End Get
     End Property
 

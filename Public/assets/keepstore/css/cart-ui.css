@@ -68,6 +68,25 @@
     color: rgba(0,0,0,.65);
 }
 
+.ks-cart-page .ks-cart-item-promo td{
+    padding-top: 0;
+    padding-bottom: 10px;
+}
+
+.ks-cart-page .ks-promo-badge{
+    display: inline-flex;
+    max-width: 100%;
+    align-items: center;
+    padding: 6px 10px;
+    border: 1px solid rgba(180,35,24,.16);
+    border-radius: 8px;
+    background: #fff7f6;
+    color: #7a271a;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
 .ks-cart-page .ks-summary-table tr:last-child td,
 .ks-cart-page .ks-summary-table .ks-summary-total-row td{
     border-bottom: 0;

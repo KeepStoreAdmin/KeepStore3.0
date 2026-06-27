@@ -5408,6 +5408,13 @@ End Function
     End If
 
     Dim lblInOfferta As Label = TryCast(e.Item.FindControl("lblInOfferta"), Label)
+    Dim lblQtaMin As Label = TryCast(e.Item.FindControl("lblQtaMin"), Label)
+    Dim lblMultipli As Label = TryCast(e.Item.FindControl("lblMultipli"), Label)
+    Dim lblPrezzoPromo As Label = TryCast(e.Item.FindControl("lblPrezzoPromo"), Label)
+    Dim lblPrezzoPromoIvato As Label = TryCast(e.Item.FindControl("lblPrezzoPromoIvato"), Label)
+    Dim lblPrezzoBase As Label = TryCast(e.Item.FindControl("lblPrezzoBase"), Label)
+    Dim lblPrezzoBaseIvato As Label = TryCast(e.Item.FindControl("lblPrezzoBaseIvato"), Label)
+    Dim lblDataInizio As Label = TryCast(e.Item.FindControl("lblDataInizio"), Label)
     Dim lblDataFine As Label = TryCast(e.Item.FindControl("lblDataFine"), Label)
     Dim lblOfferta As Label = TryCast(e.Item.FindControl("lblOfferta"), Label)
 
@@ -5419,16 +5426,18 @@ End Function
     If inOfferta = 1 Then
         lblOfferta.Visible = True
 
-        Dim dataFine As String = ""
-        If lblDataFine IsNot Nothing Then
-            dataFine = FormatPromoDateOnly(lblDataFine.Text)
-        End If
+        Dim useNetPrice As Boolean = (GetSessionInt("IvaTipo", 0) = 1)
+        Dim promoPrice As String = If(useNetPrice, If(lblPrezzoPromo Is Nothing, "", lblPrezzoPromo.Text), If(lblPrezzoPromoIvato Is Nothing, "", lblPrezzoPromoIvato.Text))
+        Dim basePrice As String = If(useNetPrice, If(lblPrezzoBase Is Nothing, "", lblPrezzoBase.Text), If(lblPrezzoBaseIvato Is Nothing, "", lblPrezzoBaseIvato.Text))
+        Dim offerText As String = ProductPromotionDisplayHelper.BuildLegacyOfferText(
+            If(lblQtaMin Is Nothing, "", lblQtaMin.Text),
+            If(lblMultipli Is Nothing, "", lblMultipli.Text),
+            promoPrice,
+            basePrice,
+            If(lblDataInizio Is Nothing, "", lblDataInizio.Text),
+            If(lblDataFine Is Nothing, "", lblDataFine.Text))
 
-        If dataFine <> "" Then
-            lblOfferta.Text = "PROMO FINO AL " & dataFine
-        Else
-            lblOfferta.Text = "PROMO"
-        End If
+        lblOfferta.Text = If(String.IsNullOrWhiteSpace(offerText), "PROMO", offerText)
     Else
         lblOfferta.Visible = False
     End If

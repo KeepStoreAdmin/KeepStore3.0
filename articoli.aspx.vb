@@ -18,6 +18,7 @@ Partial Class Articoli
     Dim oldUrl As String
     Private productCardPreviewRendered As Boolean = False
     Private productCardReplaceRenderedCount As Integer = 0
+    Private ReadOnly catalogPromotionCache As New Dictionary(Of String, ProductPromotionDisplayModel)(StringComparer.Ordinal)
     Private Const UseNewCatalogProductCard As Boolean = True
     Private Const ProductCardReplaceMaxCount As Integer = 3
 
@@ -39,6 +40,7 @@ Partial Class Articoli
         Public Property PriceText As String
         Public Property OldPriceText As String
         Public Property BadgeText As String
+        Public Property PromoSummaryHtml As String
         Public Property IsOnSale As Boolean
         Public Property IsAvailable As Boolean
         Public Property AvailabilityText As String
@@ -1117,6 +1119,7 @@ strWhere = strWhere & " GROUP BY id"
         card.PriceText = model.PriceText
         card.OldPriceText = model.OldPriceText
         card.BadgeText = model.BadgeText
+        card.PromoSummaryHtml = model.PromoSummaryHtml
         card.IsOnSale = model.IsOnSale
         card.IsAvailable = model.IsAvailable
         card.AvailabilityText = model.AvailabilityText
@@ -3070,18 +3073,20 @@ strWhere = strWhere & " GROUP BY id"
         If String.IsNullOrWhiteSpace(descriptionText) Then descriptionText = UiData.Str(dataItem, "DescrizioneLunga")
         descriptionText = ThemeManager.CompactText(descriptionText, 180)
 
-        Dim hasValidPromo As Boolean = CatalogHasValidPromo(dataItem)
+        Dim promoModel As ProductPromotionDisplayModel = CatalogPromotionModel(dataItem)
+        Dim hasValidPromo As Boolean = (promoModel IsNot Nothing AndAlso promoModel.HasOffers)
         Dim basePrice As Decimal = CatalogBasePrice(dataItem)
         Dim promoPrice As Decimal = CatalogPromoPrice(dataItem)
         Dim oldPriceText As String = ""
         Dim badgeText As String = ""
+        Dim promoSummaryHtml As String = ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(promoModel)
 
         If hasValidPromo Then
             If basePrice > 0D Then
                 oldPriceText = basePrice.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) & " " & ChrW(8364)
             End If
 
-            badgeText = GetDiscountPercent(basePrice, promoPrice)
+            badgeText = If(promoModel.BestDiscountPercent > 0, "-" & promoModel.BestDiscountPercent.ToString() & "%", GetDiscountPercent(basePrice, promoPrice))
             If String.IsNullOrWhiteSpace(badgeText) Then badgeText = "Offerta"
         End If
 
@@ -3106,6 +3111,7 @@ strWhere = strWhere & " GROUP BY id"
         model.PriceText = CatalogPriceText(dataItem)
         model.OldPriceText = oldPriceText
         model.BadgeText = badgeText
+        model.PromoSummaryHtml = promoSummaryHtml
         model.IsOnSale = hasValidPromo
         model.IsAvailable = ((UiData.Int(dataItem, "Giacenza") - UiData.Int(dataItem, "Impegnata")) > 0)
         model.AvailabilityText = CatalogAvailabilityText(dataItem)
@@ -3130,6 +3136,12 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     Protected Function CatalogPromoBadgeHtml(ByVal dataItem As Object) As String
+        Dim promoModel As ProductPromotionDisplayModel = CatalogPromotionModel(dataItem)
+        If promoModel IsNot Nothing AndAlso promoModel.HasOffers Then
+            Dim modelText As String = If(promoModel.BestDiscountPercent > 0, "-" & promoModel.BestDiscountPercent.ToString() & "%", "Offerta")
+            Return "<div class='box-sale-wrap pst-default'><p class='small-text'>" & Server.HtmlEncode(modelText) & "</p></div>"
+        End If
+
         If Not CatalogHasValidPromo(dataItem) Then Return ""
 
         Dim oldPrice As Decimal = CatalogBasePrice(dataItem)
@@ -3137,6 +3149,37 @@ strWhere = strWhere & " GROUP BY id"
         Dim pct As String = GetDiscountPercent(oldPrice, newPrice)
         Dim text As String = If(String.IsNullOrWhiteSpace(pct), "Offerta", pct)
         Return "<div class='box-sale-wrap pst-default'><p class='small-text'>" & Server.HtmlEncode(text) & "</p></div>"
+    End Function
+
+    Protected Function CatalogPromoDetailsHtml(ByVal dataItem As Object) As String
+        Return ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(CatalogPromotionModel(dataItem))
+    End Function
+
+    Private Function CatalogPromotionModel(ByVal dataItem As Object) As ProductPromotionDisplayModel
+        If dataItem Is Nothing Then Return Nothing
+
+        Try
+            Dim articleId As Integer = UiData.Int(dataItem, "id")
+            Dim companyId As Integer = CurrentAziendaId()
+            Dim listino As Integer = CurrentListinoId()
+            If articleId <= 0 OrElse companyId <= 0 OrElse listino <= 0 Then Return Nothing
+
+            Dim cacheKey As String = articleId.ToString() & ":" & companyId.ToString() & ":" & listino.ToString()
+            If catalogPromotionCache.ContainsKey(cacheKey) Then Return catalogPromotionCache(cacheKey)
+
+            Dim model As ProductPromotionDisplayModel = ProductPromotionDisplayHelper.BuildForProduct(
+                ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString,
+                articleId,
+                companyId,
+                listino,
+                KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "Prezzo"), 0D),
+                KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoIvato"), 0D))
+
+            catalogPromotionCache(cacheKey) = model
+            Return model
+        Catch
+            Return Nothing
+        End Try
     End Function
 
     Protected Function CatalogActionDataAttributes(ByVal dataItem As Object) As String
@@ -3193,6 +3236,21 @@ strWhere = strWhere & " GROUP BY id"
             If value <= 0D Then value = KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoPromo"), 0D)
         End If
         Return value
+    End Function
+
+    Private Function CurrentAziendaId() As Integer
+        Dim value As Integer = 0
+        If Session("AziendaID") IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(Session("AziendaID")), value) AndAlso value > 0 Then Return value
+        If Session("AziendaId") IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(Session("AziendaId")), value) AndAlso value > 0 Then Return value
+        If Session("AziendeId") IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(Session("AziendeId")), value) AndAlso value > 0 Then Return value
+        Return 0
+    End Function
+
+    Private Function CurrentListinoId() As Integer
+        Dim value As Integer = 0
+        If Session("listino") IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(Session("listino")), value) AndAlso value > 0 Then Return value
+        If Session("Listino") IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(Session("Listino")), value) AndAlso value > 0 Then Return value
+        Return 0
     End Function
 
 

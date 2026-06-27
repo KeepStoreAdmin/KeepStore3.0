@@ -8,6 +8,8 @@ Imports MySql.Data.MySqlClient
 
 Public Class ProductPromotionOffer
     Public Property Label As String
+    Public Property QntMinima As Decimal
+    Public Property Multipli As Decimal
     Public Property PriceGross As Decimal
     Public Property DiscountPercent As Decimal
     Public Property StartsOn As Nullable(Of Date)
@@ -150,14 +152,7 @@ Public Module ProductPromotionDisplayHelper
 
         If grossPrice <= 0D Then Return Nothing
 
-        Dim label As String
-        If multipli > 0D Then
-            label = "MULTIPLI " & FormatQuantity(multipli) & " PZ."
-        ElseIf qntMinima > 0D Then
-            label = "MINIMO " & FormatQuantity(qntMinima) & " PZ."
-        Else
-            label = "PROMO"
-        End If
+        Dim label As String = BuildOfferLabel(qntMinima, multipli)
 
         Dim effectiveDiscount As Decimal = discount
         If effectiveDiscount <= 0D AndAlso baseGrossPrice > grossPrice Then
@@ -166,6 +161,8 @@ Public Module ProductPromotionDisplayHelper
 
         Return New ProductPromotionOffer() With {
             .Label = label,
+            .QntMinima = qntMinima,
+            .Multipli = multipli,
             .PriceGross = grossPrice,
             .DiscountPercent = effectiveDiscount,
             .StartsOn = FieldDate(rdr, "DataInizio"),
@@ -208,13 +205,58 @@ Public Module ProductPromotionDisplayHelper
         For Each offer As ProductPromotionOffer In model.Offers
             sb.Append("<div class=""ks-product-promos__item"">")
             sb.Append("<span class=""ks-product-promos__label"">").Append(HtmlEncode(offer.Label)).Append("</span>")
-            sb.Append("<strong>").Append(HtmlEncode(FormatMoney(offer.PriceGross))).Append("</strong>")
+            sb.Append("<strong>A ").Append(HtmlEncode(FormatMoney(offer.PriceGross))).Append("</strong>")
             sb.Append("<span class=""ks-product-promos__dates"">").Append(HtmlEncode(FormatDateRange(offer.StartsOn, offer.EndsOn))).Append("</span>")
             sb.Append("</div>")
         Next
         sb.Append("</div>")
         sb.Append("</div>")
         Return sb.ToString()
+    End Function
+
+    Public Function RenderCatalogSummaryHtml(ByVal model As ProductPromotionDisplayModel) As String
+        If model Is Nothing OrElse Not model.HasOffers Then Return String.Empty
+
+        Dim sb As New StringBuilder()
+        sb.Append("<div class=""ks-catalog-promos"" aria-label=""Offerte attive"">")
+        If model.BestDiscountPercent > 0D Then
+            sb.Append("<span class=""ks-catalog-promos__discount"">-").Append(HtmlEncode(FormatQuantity(model.BestDiscountPercent))).Append("%</span>")
+        End If
+        sb.Append("<span class=""ks-catalog-promos__price"">Da <strong>").Append(HtmlEncode(FormatMoney(model.BestPriceGross))).Append("</strong></span>")
+        If Not String.IsNullOrWhiteSpace(model.BestOfferLabel) Then
+            sb.Append("<span class=""ks-catalog-promos__tier"">").Append(HtmlEncode(model.BestOfferLabel)).Append("</span>")
+        End If
+        If model.Offers.Count > 1 Then
+            sb.Append("<span class=""ks-catalog-promos__count"">").Append(model.Offers.Count.ToString(CultureInfo.InvariantCulture)).Append(" offerte attive</span>")
+        End If
+        sb.Append("</div>")
+        Return sb.ToString()
+    End Function
+
+    Public Function BuildLegacyOfferText(ByVal qntMinimaValue As Object,
+                                         ByVal multipliValue As Object,
+                                         ByVal promoPriceValue As Object,
+                                         ByVal basePriceValue As Object,
+                                         ByVal startDateValue As Object,
+                                         ByVal endDateValue As Object) As String
+        Dim qntMinima As Decimal = ParseDecimal(promoValue:=qntMinimaValue)
+        Dim multipli As Decimal = ParseDecimal(promoValue:=multipliValue)
+        Dim promoPrice As Decimal = ParseDecimal(promoValue:=promoPriceValue)
+        Dim basePrice As Decimal = ParseDecimal(promoValue:=basePriceValue)
+        If promoPrice <= 0D Then Return String.Empty
+
+        Dim text As String = BuildOfferLabel(qntMinima, multipli) & " A " & FormatMoney(promoPrice)
+        Dim dateText As String = FormatDateRange(ParseDate(startDateValue), ParseDate(endDateValue))
+        If Not String.IsNullOrWhiteSpace(dateText) AndAlso dateText <> "promo attiva" Then
+            text &= " - " & dateText
+        End If
+
+        Dim discount As Decimal = CalculateDiscount(basePrice, promoPrice)
+        If discount > 0D Then
+            text &= " - SCONTO -" & FormatQuantity(discount) & "%"
+        End If
+
+        Return text
     End Function
 
     Private Function FieldDecimal(ByVal record As IDataRecord, ByVal fieldName As String) As Decimal
@@ -240,10 +282,43 @@ Public Module ProductPromotionDisplayHelper
 
     Private Function FormatDateRange(ByVal startDate As Nullable(Of Date), ByVal endDate As Nullable(Of Date)) As String
         If startDate.HasValue AndAlso endDate.HasValue Then
-            Return "dal " & startDate.Value.ToString("dd/MM/yyyy", ItCulture) & " al " & endDate.Value.ToString("dd/MM/yyyy", ItCulture)
+            Return startDate.Value.ToString("dd/MM/yyyy", ItCulture) & " - " & endDate.Value.ToString("dd/MM/yyyy", ItCulture)
         End If
         If endDate.HasValue Then Return "fino al " & endDate.Value.ToString("dd/MM/yyyy", ItCulture)
         Return "promo attiva"
+    End Function
+
+    Private Function BuildOfferLabel(ByVal qntMinima As Decimal, ByVal multipli As Decimal) As String
+        If multipli > 0D Then
+            Return "MULTIPLI " & FormatQuantity(multipli) & " PZ."
+        End If
+        If qntMinima > 0D Then
+            If qntMinima <= 1D Then Return "QUANTITA " & FormatQuantity(qntMinima) & " PZ."
+            Return "MINIMO " & FormatQuantity(qntMinima) & " PZ."
+        End If
+        Return "PROMO"
+    End Function
+
+    Private Function CalculateDiscount(ByVal basePrice As Decimal, ByVal promoPrice As Decimal) As Decimal
+        If basePrice <= 0D OrElse promoPrice <= 0D OrElse promoPrice >= basePrice Then Return 0D
+        Return Math.Round((1D - (promoPrice / basePrice)) * 100D, 0, MidpointRounding.AwayFromZero)
+    End Function
+
+    Private Function ParseDecimal(ByVal promoValue As Object) As Decimal
+        If promoValue Is Nothing OrElse promoValue Is DBNull.Value Then Return 0D
+        Dim result As Decimal
+        If Decimal.TryParse(Convert.ToString(promoValue), NumberStyles.Any, ItCulture, result) Then Return result
+        If Decimal.TryParse(Convert.ToString(promoValue), NumberStyles.Any, CultureInfo.InvariantCulture, result) Then Return result
+        Return 0D
+    End Function
+
+    Private Function ParseDate(ByVal value As Object) As Nullable(Of Date)
+        If value Is Nothing OrElse value Is DBNull.Value Then Return Nothing
+        If TypeOf value Is Date Then Return DirectCast(value, Date)
+        Dim result As Date
+        If Date.TryParse(Convert.ToString(value), ItCulture, DateTimeStyles.None, result) Then Return result
+        If Date.TryParse(Convert.ToString(value), CultureInfo.InvariantCulture, DateTimeStyles.None, result) Then Return result
+        Return Nothing
     End Function
 
     Private Function FormatQuantity(ByVal value As Decimal) As String

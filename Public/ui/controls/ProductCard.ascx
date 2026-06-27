@@ -96,6 +96,9 @@
                     <span class="old-price body-md-2 text-main-2"><%= SafeOldPriceText %></span>
                 </asp:PlaceHolder>
             </p>
+            <% If RenderPromoSummary Then %>
+            <%= PromoSummaryHtml %>
+            <% End If %>
         </div>
         <div class="box-infor-detail">
             <ul class="list-computer-memory">

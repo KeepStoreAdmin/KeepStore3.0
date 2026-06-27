@@ -407,6 +407,49 @@
   text-align: right;
 }
 
+.ks-catalog-promos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 7px;
+  align-items: center;
+  margin-top: 8px;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.ks-catalog-promos__discount,
+.ks-catalog-promos__tier {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.ks-catalog-promos__discount {
+  color: #b42318;
+  background: #fff1f0;
+}
+
+.ks-catalog-promos__tier {
+  color: #111827;
+  background: #f3f4f6;
+}
+
+.ks-catalog-promos__price strong {
+  color: #111827;
+}
+
+.ks-catalog-promos__count {
+  flex-basis: 100%;
+  color: #6b7280;
+}
+
 .ks-availability-info {
   align-items: center;
   background: transparent;
