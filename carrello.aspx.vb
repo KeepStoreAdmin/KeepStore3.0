@@ -1985,7 +1985,7 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         Repeater1.items(i).FindControl("lblprezzoivato").Visible = False
 
         TotaleMerce += SafeDblFromText(importo.Text, 0)
-    ElseIf IvaTipo = 2 Then
+    Else
         importo.Visible = False
         importoIvato.Visible = True
         Repeater1.items(i).FindControl("lblprezzo").Visible = False
@@ -2040,7 +2040,7 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         Session.Item("Imponibile") = imponibile - imponibile_gratis
 
         Me.lblImponibile.Text = FormatCurrencyIt(imponibile)
-        Me.lblCartSubtotalOnly.Text = Me.lblImponibile.Text
+        Me.lblCartSubtotalOnly.Text = FormatCurrencyIt(TotaleMerce)
         'Session("Calcolo_Iva") = calcolo_iva
         Me.tbPeso.Text = pesoTotale
 
@@ -3238,7 +3238,7 @@ End Function
 
             TotaleMerce += SafeDblFromText(If(importo IsNot Nothing, importo.Text, "0"), 0)
 
-        ElseIf IvaTipo = 2 Then
+        Else
             If importo IsNot Nothing Then importo.Visible = False
             If importoIvato IsNot Nothing Then importoIvato.Visible = True
             Dim lblPrezzo As Control = gvArticoliGratis.Items(i).FindControl("lblprezzo")
@@ -3250,6 +3250,7 @@ End Function
         End If
 
         Session("TotaleMerce") = TotaleMerce
+        Me.lblCartSubtotalOnly.Text = FormatCurrencyIt(TotaleMerce)
 
         Dim impNetto As Double = SafeDblFromText(If(importo IsNot Nothing, importo.Text, "0"), 0)
         Dim impIvato As Double = SafeDblFromText(If(importoIvato IsNot Nothing, importoIvato.Text, "0"), 0)
