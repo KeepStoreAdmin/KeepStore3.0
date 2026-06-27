@@ -28,6 +28,20 @@ Private Shared Function FormatCurrencyIt(ByVal value As Double) As String
     Return value.ToString("N2", CartCulture) & " " & ChrW(8364)
 End Function
 
+Private Shared Function FormatPromoDateOnly(ByVal value As Object) As String
+    If value Is Nothing OrElse value Is DBNull.Value Then Return ""
+
+    Dim parsed As Date
+    If TypeOf value Is Date Then
+        parsed = DirectCast(value, Date)
+    ElseIf Not Date.TryParse(Convert.ToString(value).Trim(), CartCulture, DateTimeStyles.None, parsed) AndAlso
+           Not Date.TryParse(Convert.ToString(value).Trim(), CultureInfo.InvariantCulture, DateTimeStyles.None, parsed) Then
+        Return ""
+    End If
+
+    Return parsed.ToString("dd/MM/yyyy", CartCulture)
+End Function
+
 Private Shared Function ParseDecimalForDb(ByVal value As Object, Optional ByVal def As Decimal = 0D) As Decimal
     If value Is Nothing OrElse value Is DBNull.Value Then Return def
 
@@ -5407,7 +5421,7 @@ End Function
 
         Dim dataFine As String = ""
         If lblDataFine IsNot Nothing Then
-            dataFine = (If(lblDataFine.Text, "")).Trim()
+            dataFine = FormatPromoDateOnly(lblDataFine.Text)
         End If
 
         If dataFine <> "" Then

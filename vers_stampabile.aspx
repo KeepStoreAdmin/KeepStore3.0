@@ -84,7 +84,7 @@
                                     <asp:Label ID="lblPrezzoPromoIvato" runat="server" Text='<%# Eval("PrezzoPromoIvato") %>' Visible="false" ForeColor="White" Font-Bold="true"></asp:Label>
                                     <asp:Label ID="lblInOfferta" runat="server" Text='<%# Eval("InOfferta") %>' Visible="false" ForeColor="White" Font-Bold="true"></asp:Label>
                                     
-                                    <asp:Label ID="lblOfferta" runat="server" Visible='<%# Eval("InOfferta")%>' Font-Size="10pt" Text='<%# "DAL "& Eval("OfferteDataInizio") &" AL "& Eval("OfferteDataFine") %>' ForeColor="Black" Font-Bold="true"></asp:Label>
+                                    <asp:Label ID="lblOfferta" runat="server" Visible='<%# Eval("InOfferta")%>' Font-Size="10pt" Text='<%# "DAL "& Eval("OfferteDataInizio", "{0:dd/MM/yyyy}") &" AL "& Eval("OfferteDataFine", "{0:dd/MM/yyyy}") %>' ForeColor="Black" Font-Bold="true"></asp:Label>
                                 </td>
                             </tr>
                         </table>
