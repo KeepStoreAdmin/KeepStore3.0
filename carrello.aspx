@@ -220,7 +220,7 @@
                                 <tr class="ks-cart-item-promo">
                                     <td colspan="5">
                                         <asp:SqlDataSource ID="sdsPromo" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                                            SelectCommand="SELECT * FROM vsuperarticoli WHERE ID=?ID AND NListino=?NListino GROUP BY offerteQntMinima, offerteMultipli, nlistino ORDER BY PrezzoPromo DESC" EnableViewState="False">
+                                            SelectCommand="SELECT * FROM vsuperarticoli WHERE ID=?ID AND NListino=?NListino AND COALESCE(InOfferta,0)=1 AND (OfferteDataInizio IS NULL OR OfferteDataInizio&lt;=CURDATE()) AND (OfferteDataFine IS NULL OR OfferteDataFine&gt;=CURDATE()) GROUP BY offerteQntMinima, offerteMultipli, nlistino ORDER BY CASE WHEN COALESCE(OfferteMultipli,0)=10 THEN 0 WHEN COALESCE(OfferteQntMinima,0)&gt;0 THEN 1 WHEN COALESCE(OfferteMultipli,0)&gt;0 THEN 2 ELSE 3 END, COALESCE(OfferteMultipli,0) ASC, COALESCE(OfferteQntMinima,0) ASC, PrezzoPromo DESC" EnableViewState="False">
                                             <SelectParameters>
                                                 <asp:ControlParameter Name="ID" ControlID="tbArtID" PropertyName="Text" Type="Int32" />
                                                 <asp:SessionParameter Name="NListino" SessionField="listino" Type="Int32" />
@@ -234,6 +234,8 @@
                                                     <asp:Label ID="lblMultipli" runat="server" Text='<%#: Eval("OfferteMultipli") %>' Visible="false"></asp:Label>
                                                     <asp:Label ID="lblPrezzoPromo" runat="server" Text='<%#: Eval("PrezzoPromo") %>' Visible="false"></asp:Label>
                                                     <asp:Label ID="lblPrezzoPromoIvato" runat="server" Text='<%#: Eval("PrezzoPromoIvato") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblPrezzoBase" runat="server" Text='<%#: Eval("Prezzo") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblPrezzoBaseIvato" runat="server" Text='<%#: Eval("PrezzoIvato") %>' Visible="false"></asp:Label>
                                                     <asp:Label ID="lblInOfferta" runat="server" Text='<%#: Eval("InOfferta") %>' Visible="false"></asp:Label>
                                                     <asp:Label ID="lblDataInizio" runat="server" Text='<%#: Eval("OfferteDataInizio") %>' Visible="false"></asp:Label>
                                                     <asp:Label ID="lblDataFine" runat="server" Text='<%#: Eval("OfferteDataFine") %>' Visible="false"></asp:Label>
@@ -242,7 +244,6 @@
                                                 </div>
                                                 <div style="<%# iif(Eval("InOfferta")=1,"","display:none;") %>">
                                                     <span class="ks-promo-badge">
-                                                        <strong>PROMO</strong>
                                                         <asp:Label ID="lblOfferta" runat="server" Visible="false" Text="PROMO"></asp:Label>
                                                     </span>
                                                 </div>
@@ -330,7 +331,7 @@
                                 <tr class="ks-cart-item-promo">
                                     <td colspan="5">
                                         <asp:SqlDataSource ID="sdsPromo" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                                            SelectCommand="SELECT * FROM vsuperarticoli WHERE ID=?ID AND NListino=?NListino GROUP BY offerteQntMinima, offerteMultipli, nlistino ORDER BY PrezzoPromo DESC" EnableViewState="False">
+                                            SelectCommand="SELECT * FROM vsuperarticoli WHERE ID=?ID AND NListino=?NListino AND COALESCE(InOfferta,0)=1 AND (OfferteDataInizio IS NULL OR OfferteDataInizio&lt;=CURDATE()) AND (OfferteDataFine IS NULL OR OfferteDataFine&gt;=CURDATE()) GROUP BY offerteQntMinima, offerteMultipli, nlistino ORDER BY CASE WHEN COALESCE(OfferteMultipli,0)=10 THEN 0 WHEN COALESCE(OfferteQntMinima,0)&gt;0 THEN 1 WHEN COALESCE(OfferteMultipli,0)&gt;0 THEN 2 ELSE 3 END, COALESCE(OfferteMultipli,0) ASC, COALESCE(OfferteQntMinima,0) ASC, PrezzoPromo DESC" EnableViewState="False">
                                             <SelectParameters>
                                                 <asp:ControlParameter Name="ID" ControlID="tbArtID" PropertyName="Text" Type="Int32" />
                                                 <asp:SessionParameter Name="NListino" SessionField="listino" Type="Int32" />
@@ -344,6 +345,8 @@
                                                     <asp:Label ID="lblMultipli" runat="server" Text='<%#: Eval("OfferteMultipli") %>' Visible="false"></asp:Label>
                                                     <asp:Label ID="lblPrezzoPromo" runat="server" Text='<%#: Eval("PrezzoPromo") %>' Visible="false"></asp:Label>
                                                     <asp:Label ID="lblPrezzoPromoIvato" runat="server" Text='<%#: Eval("PrezzoPromoIvato") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblPrezzoBase" runat="server" Text='<%#: Eval("Prezzo") %>' Visible="false"></asp:Label>
+                                                    <asp:Label ID="lblPrezzoBaseIvato" runat="server" Text='<%#: Eval("PrezzoIvato") %>' Visible="false"></asp:Label>
                                                     <asp:Label ID="lblInOfferta" runat="server" Text='<%#: Eval("InOfferta") %>' Visible="false"></asp:Label>
                                                     <asp:Label ID="lblDataInizio" runat="server" Text='<%#: Eval("OfferteDataInizio") %>' Visible="false"></asp:Label>
                                                     <asp:Label ID="lblDataFine" runat="server" Text='<%#: Eval("OfferteDataFine") %>' Visible="false"></asp:Label>
@@ -352,7 +355,6 @@
                                                 </div>
                                                 <div style="<%# iif(Eval("InOfferta")=1,"","display:none;") %>">
                                                     <span class="ks-promo-badge">
-                                                        <strong>PROMO</strong>
                                                         <asp:Label ID="lblOfferta" runat="server" Visible="false" Text="PROMO"></asp:Label>
                                                     </span>
                                                 </div>

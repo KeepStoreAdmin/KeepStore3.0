@@ -334,6 +334,7 @@
                                                         Session("IvaTipo")
                                                     ) %>
                                             </div>
+                                            <%# CatalogPromoDetailsHtml(Container.DataItem) %>
                                         </div>
 
                                         <div class="box-infor-detail">
