@@ -60,6 +60,14 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 - ChatGPT decide piano, ordine e priorita; Codex esegue task piccoli, verificabili e con confini rigidi. Evitare task generici tipo "controlla tutto".
 - Priorita: bug bloccanti/regressioni utente, smoke, documentazione minima, poi cleanup. Non consumare token su attivita non funzionali mentre ci sono step piu importanti aperti.
 
+### Regola multi-azienda / dominio / runtime
+
+- KeepStore usa un database condiviso multi-azienda: `AziendeId=1` identifica Taikun, `AziendeId=2` identifica Webaffare.
+- I domini possono puntare allo stesso DB ma usare spazi webroot e `web.config` separati; prima di validare bug sensibili a pagamenti, logo, listini, promo, gateway o dati azienda bisogna annotare dominio/host, `AziendaID` risolta e contesto runtime.
+- `localhost` non rappresenta automaticamente Taikun: nel runtime verificato mappa Webaffare/Azienda 2 tramite `Aziende.URL2=localhost`. Per test Taikun usare host/domain mapping corretto, ad esempio host locale coerente o `--resolve`, e dichiararlo nel report.
+- Non confondere "metodo pagamento visibile" con "gateway configurato": `pagamentitipo`/`vpagamentitipo` determinano visibilita del metodo, mentre il gateway PayPal Express richiede configurazione aziendale dedicata in `vpaypal_express_azienda` o fallback espliciti `PAYPAL_EXPRESS_*`.
+- Non copiare configurazioni gateway tra aziende senza decisione esplicita del titolare. PayPal Taikun e PayPal Webaffare restano task separati.
+
 ### Ripartenza rapida in nuova chat
 
 - In caso di chat satura o bloccata, aprire una nuova chat e scrivere: "Leggi docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md e riparti dall'ultimo HEAD stabile."
@@ -142,11 +150,12 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento corrente dopo chiusura promo display + coerenza IVA/totali carrello:
+Stato di riferimento corrente dopo chiusura promo display + coerenza IVA/totali carrello e documentazione finale:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `1d87f083f488f06acbdd38b617ee8f7d68f276a0`
+- HEAD stabile: `08a68f27ca7938a999cda6992ae0086cab7b3447`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
+- Merge PR #206 documentazione chiusura promo/carrello/IVA: `08a68f27ca7938a999cda6992ae0086cab7b3447`
 - Merge PR #204 promo/offerte legacy su scheda/catalogo/carrello: `daae01b0ab0cf2e52afc685c047ddd45779fad89`
 - Merge PR #205 coerenza `Totale articoli` carrello IVA inclusa/esclusa: `1d87f083f488f06acbdd38b617ee8f7d68f276a0`
 - Smoke finale promo/carrello/IVA: `FINAL-SMOKE-PROMO-CART-VAT-1A = A`
@@ -328,6 +337,21 @@ Scelte definitive:
 - niente alias intermedi nella view;
 - `DEFAULT_PAYPAL_NVP_VERSION = "204.0"` in `PayPalCheckoutConfig.vb`;
 - `VERSION=204.0` per Set/Get/Do/Recheck.
+
+### Diagnosi multi-azienda PayPal ON-LINE
+
+Audit `PAYPAL-ONLINE-CONFIG-VERIFY-1A` chiuso con esito A: il problema PayPal osservato in locale non e un bug gateway generico, ma una differenza di contesto azienda/configurazione.
+
+- DB condiviso multi-azienda: Taikun = `AziendeId=1`, Webaffare = `AziendeId=2`.
+- Il runtime locale verificato con `localhost` mappa Webaffare/Azienda 2 tramite `Aziende.URL2=localhost`; quindi un test locale su `localhost` non prova automaticamente il comportamento Taikun.
+- `pagamentitipo` contiene PayPal ON-LINE per entrambe le aziende:
+  - Taikun/Azienda 1: pagamento `19`, `PayPal ON-LINE`, `OnLine=2`, `Abilitato=1`, `Web=1`, `CostoMassimo=5000`;
+  - Webaffare/Azienda 2: pagamento `12`, `-PayPal ON-LINE`, `OnLine=2`, `Abilitato=1`, `Web=1`, `CostoMassimo=1000`.
+- `vpagamentitipo` restituisce PayPal per entrambe le aziende con i totali test, quindi la visibilita del metodo non e il blocco principale.
+- `vpaypal_express_azienda` contiene configurazione Express solo per Taikun/Azienda 1 + pagamento `19`, ambiente `sandbox`, credenziali presenti e `AllowLive=0`.
+- Non e presente configurazione Express per Webaffare/Azienda 2 + pagamento `12`; i fallback `PAYPAL_EXPRESS_*` risultano assenti in `web.config/appSettings` e environment.
+- Conclusione operativa: per Taikun/Azienda 1 la base di configurazione PayPal Express sembra presente e va testata solo con contesto Taikun; per Webaffare/Azienda 2 PayPal puo apparire come metodo ma non puo partire correttamente finche manca la configurazione Express o una decisione di disabilitazione/nascondimento.
+- Prossimi task separati: `PAYPAL-TAIKUN-SANDBOX-SMOKE-1A`, `PAYPAL-WEBAFFARE-EXPRESS-CONFIG-DECISION-1A`, eventuale `MULTI-AZIENDA-RUNTIME-DIAGNOSTIC-1A` solo se approvato esplicitamente.
 
 ### Stato pagamento KeepStore
 
