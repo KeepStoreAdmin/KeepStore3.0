@@ -132,21 +132,24 @@
         <div class="container relative">
             <div class="row">
                 <div class="col-xl-9 col-12">
-                    <div class="header-bt-left">
+                    <div class="header-bt-left ks-header-nav-shell">
+                        <div class="nav-category-wrap ks-header-catalog-item ks-header-all-categories">
+                            <a href="articoli.aspx" class="item-link nav-title btn-active ks-header-catalog-trigger" aria-label="Apri catalogo prodotti">
+                                <i class="icon-menu-dots fs-20"></i>
+                                <h6 class="title fw-semibold" data-ks-i18n="nav.catalog">Catalogo</h6>
+                                <i class="icon icon-arrow-down"></i>
+                            </a>
+                            <nav class="category-menu sub-menu-container ks-header-catalog-menu" aria-label="Catalogo completo">
+                                <div id="ksDesktopCategoryMenu" class="menu-category-menu-container ks-header-catalog-wrapper">
+                                    <ul class="megamenu ks-header-catalog-list">
+                                        <asp:Literal ID="litDesktopCatalogMegaMenu" runat="server" />
+                                    </ul>
+                                </div>
+                            </nav>
+                        </div>
                         <nav class="main-nav-menu">
                             <ul class="nav-list">
                                 <li class="nav-item active pst-unset"><a href="Default.aspx" class="item-link link body-md-2"><span data-ks-i18n="nav.home">Home</span></a></li>
-                                <li class="nav-item pst-unset ks-header-catalog-item">
-                                    <a href="articoli.aspx" class="item-link link body-md-2 fw-semibold">
-                                        <span data-ks-i18n="nav.catalog">Catalogo</span>
-                                        <i class="icon icon-arrow-down"></i>
-                                    </a>
-                                    <div class="sub-menu-container mega-menu text-nowrap ks-header-catalog-mega" aria-label="Catalogo completo">
-                                        <div id="ksDesktopCategoryMenu" class="wrapper-sub-menu ks-header-catalog-wrapper ks-header-catalog-grid">
-                                            <asp:Literal ID="litDesktopCatalogMegaMenu" runat="server" />
-                                        </div>
-                                    </div>
-                                </li>
                                 <li class="nav-item"><a href="articoli.aspx?inpromo=1" class="item-link body-md-2"><span data-ks-i18n="nav.offers">Offerte</span></a></li>
                                 <li class="nav-item"><a href="Contattaci.aspx" class="item-link body-md-2"><span data-ks-i18n="nav.contact">Contatti</span></a></li>
                             </ul>
