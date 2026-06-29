@@ -295,6 +295,8 @@ Chiusura finale scheda articolo: merge commit PR #199 `94c328c16f172b352bc1a5a99
 
 Chiusura promo/carrello/IVA: PR #204 merge commit `daae01b0ab0cf2e52afc685c047ddd45779fad89`, PR #205 merge commit `1d87f083f488f06acbdd38b617ee8f7d68f276a0`, smoke conclusivo `FINAL-SMOKE-PROMO-CART-VAT-1A = A`. Quantita test carrello: 1 = `12,20`, 3 = `36,60`, 5 = `48,80`, 10 = `97,60`. Eventuali retest mobile reale, PayPal ON-LINE, casi IVA esclusa con fixture certe e anomalie documento dettaglio restano backlog separati, non regressioni del blocco chiuso.
 
+`CART-TCID-DATABINDING-ERROR-1A` / PR #208 stabilizza il binding carrello su `TCId`: `carrello.aspx` deve usare `Eval("TCId")` nei template e selezionare esplicitamente `vcarrello.TCId` nelle `SqlDataSource` dichiarative che alimentano righe carrello e riepilogo checkout. Il parametro URL storico resta `TCid` per compatibilita (`articolo.aspx?id=...&TCid=...`), ma il nome colonna/binding runtime e `TCId`. Il fix elimina l'errore `DataRowView` senza proprieta `TCid` su refresh/F5 o datasource in condizioni particolari; non modifica `carrello.aspx.vb`, `ordine.aspx`, prezzi, promo, IVA/totali, DB/schema/SP, gateway, email, auth o asset. Test validati: carrello vuoto HTTP 200, articolo `12384&TCid=-1` HTTP 200, refresh senza errore, ordine solo protezione/redirect, PR #204 e PR #205 non regredite; merge commit stabile `3cf52876ecec1033fdde3ab51d13a7c4a25390f9`.
+
 Backlog successivo non immediato: ulteriori evoluzioni ecommerce, SEO, AI search, cross-sell, upsell, bundle o polish grafico generale vanno trattate come moduli dedicati con dati reali; non riaprire scheda articolo, promo display o riepilogo carrello per micro-rifiniture non bloccanti.
 
 ### 9.4 Carrello

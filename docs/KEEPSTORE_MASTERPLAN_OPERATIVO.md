@@ -150,11 +150,12 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento corrente dopo chiusura promo display + coerenza IVA/totali carrello e documentazione finale:
+Stato di riferimento corrente dopo merge PR #208 fix binding `TCid`/`TCId` carrello:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile: `08a68f27ca7938a999cda6992ae0086cab7b3447`
+- HEAD stabile: `3cf52876ecec1033fdde3ab51d13a7c4a25390f9`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
+- Merge PR #208 fix binding carrello `TCid`/`TCId`: `3cf52876ecec1033fdde3ab51d13a7c4a25390f9`
 - Merge PR #206 documentazione chiusura promo/carrello/IVA: `08a68f27ca7938a999cda6992ae0086cab7b3447`
 - Merge PR #204 promo/offerte legacy su scheda/catalogo/carrello: `daae01b0ab0cf2e52afc685c047ddd45779fad89`
 - Merge PR #205 coerenza `Totale articoli` carrello IVA inclusa/esclusa: `1d87f083f488f06acbdd38b617ee8f7d68f276a0`
@@ -1648,7 +1649,8 @@ KeepStore UI Typography Standard - ONSUS Computed Source of Truth:
 - `PROMO-OFFERS-LEGACY-DISPLAY-1A` / PR #204 e chiusa su `frontend-rebuild` con merge commit `daae01b0ab0cf2e52afc685c047ddd45779fad89`: il display commerciale promo e stato esteso in modo read-only e coerente a scheda articolo, catalogo/product card e carrello usando `ProductPromotionDisplayHelper`, fonte preferita `vOfferteDettagli` e fallback controllato `vsuperarticoli`, senza cambiare il calcolo ordine. Caso riferimento `id=12384`: prezzo principale qty 1 `12,20`, miglior prezzo `9,76`, sconto `-76%`, offerte `MULTIPLI 10`, `QUANTITA/MINIMO 1`, `MULTIPLI 5`, validita `25/06/2026 - 31/07/2026`; eliminata la duplicazione `PROMO PROMO`, date senza orario dopo PR #203, JSON-LD prezzo principale preservato a `12.20`.
 - `CART-SUMMARY-VAT-CONSISTENCY-1A` / PR #205 e chiusa su `frontend-rebuild` con merge commit `1d87f083f488f06acbdd38b617ee8f7d68f276a0`: il riepilogo carrello usa `TotaleMerce` per `Totale articoli`, evitando l'uso errato di `lblImponibile` in contesti IVA inclusa. Per utenti anonimi/Webaffare il subtotale visuale resta lordo/IVA inclusa e coerente con le righe prodotto; per `IvaTipo=1` resta preservata la vista netta/IVA esclusa storica. Smoke finale su quantita 1/3/5/10: `12,20`, `36,60`, `48,80`, `97,60`; nessun cambio a prezzi unitari, promo, ordine, gateway, email, DB/schema/SP o auth.
 - Smoke conclusivo `FINAL-SMOKE-PROMO-CART-VAT-1A = A`: scheda articolo, catalogo/card, carrello anonimo/Webaffare, carrello IVA inclusa, carrello `IvaTipo=1`, ordine protetto via `accessonegato.aspx`, Home e flussi principali verificati senza errori runtime; nessun ordine live, gateway o email live generati; build/precompile, `git diff --check` e secret scan OK. La directory non tracciata `Public/assets/images/articoli/` resta esclusa e non va inclusa in task documentali o merge.
-- Backlog successivo non immediato: eventuale retest mobile reale, PayPal ON-LINE, verifiche IVA esclusa con dati certi e `documentidettaglio.aspx` restano task separati; non riaprire promo/carrello/IVA per micro-rifiniture non bloccanti. Ulteriori evoluzioni ecommerce, SEO, AI search, cross-sell, upsell e bundle devono essere moduli dedicati con dati reali.
+- `CART-TCID-DATABINDING-ERROR-1A` / PR #208 e chiusa su `frontend-rebuild` con merge commit `3cf52876ecec1033fdde3ab51d13a7c4a25390f9`: corretto l'errore runtime di `carrello.aspx` `DataBinding: 'System.Data.DataRowView' non contiene una proprieta con nome 'TCid'`, osservabile dopo refresh/F5, sessione lunga/nuova o datasource in certe condizioni. Causa: markup con `Eval("TCid")` mentre la view/datasource espone `TCId`, e due `SqlDataSource` dichiarative non selezionavano esplicitamente `vcarrello.TCId`. Fix: aggiunto `vcarrello.TCId` alle datasource e sostituiti gli `Eval("TCid")` con `Eval("TCId")`, preservando il parametro URL storico `&TCid=`. Test: carrello vuoto HTTP 200, carrello con articolo `12384&TCid=-1` HTTP 200, refresh/F5/sessione nuova senza errore, `ordine.aspx` solo protezione/redirect, PR #204 promo non regressa, PR #205 IVA/totali non regressa, build/precompile, `git diff --check` e secret scan OK. Nessun cambio a DB/schema/SP, gateway, email, auth, ordine, prezzi/promo/IVA o asset; `Public/assets/images/articoli/` resta non tracciata e fuori commit.
+- Backlog successivo non immediato: eventuale retest mobile reale, verifiche IVA esclusa con dati certi, `documentidettaglio.aspx`, header/menu hover, compare/offcanvas, ricerca AI/header/home, spinner/loading e moduli ecommerce evoluti restano task separati da scegliere dal backlog non PayPal. Non riaprire PayPal o promo/carrello/IVA per micro-rifiniture non bloccanti.
 - `ACCOUNT-PROFILE-1B` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 1` resta chiuso.
 - `ACCOUNT-SIDEBAR-INLINE-CLEANUP fase 2 documenti` resta chiuso.
