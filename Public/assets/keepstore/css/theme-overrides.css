@@ -1629,6 +1629,9 @@ body.ks-page-home .ks-home-main .sw-dot-default {
   .ks-header-ui .ks-header-catalog-item.is-open > .ks-header-catalog-trigger .icon-arrow-down,
   .ks-header-ui .ks-header-catalog-item:focus-within > .ks-header-catalog-trigger .icon-arrow-down { transform: rotate(180deg); }
   .ks-header-ui .ks-header-catalog-menu { width: 760px; min-width: 270px; max-height: 620px; overflow: hidden; border-radius: 0 0 10px 10px; box-shadow: 0 22px 45px rgba(15, 23, 42, .14); }
+  .ks-header-ui .ks-header-catalog-item:hover > .ks-header-catalog-menu,
+  .ks-header-ui .ks-header-catalog-item:focus-within > .ks-header-catalog-menu,
+  .ks-header-ui .ks-header-catalog-item.is-open > .ks-header-catalog-menu { opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0); }
   .ks-header-ui .ks-header-catalog-menu .menu-category-menu-container { max-height: 620px; overflow-y: auto; overflow-x: hidden; }
   .ks-header-ui .ks-header-catalog-list { padding: 8px 0; }
   .ks-header-ui .ks-header-catalog-sector { position: static; box-shadow: inset 0 -1px 0 #eef1f5; }
