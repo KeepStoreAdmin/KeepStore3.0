@@ -123,6 +123,7 @@ La sicurezza password e stata consolidata nel flow account e LOGIN-REGISTER-SECU
 ### 5.4 Controlli utente
 
 - Controlli principali in `Public/ui/controls`.
+- `Public/ui/controls/SiteHeader.ascx` e `SiteHeader.ascx.vb` governano l'header frontend. Dopo PR #210 il catalogo desktop reale non deve tornare dentro il `main-nav-menu`: il pattern stabile e ONSUS "All Categories" con blocco separato `ks-header-all-categories`, classi `ks-header-catalog-*`, immagini settore da `/Public/assets/images/settori/` e fallback interno. Il CSS del catalogo header resta scoped in `Public/assets/keepstore/css/theme-overrides.css`, caricato da `Page.master` con cache-busting `theme-overrides.css?v=20260629-headercatalog2`; non aggiungere CSS inline strutturale, JS dedicato o path legacy `Public/Images/` per questo blocco. Search, account, mini cart e mobile/offcanvas restano superfici preservate; eventuali rifiniture mobile categorie/ONSUS tab, compare/offcanvas o ricerca AI sono task separati.
 - `AccountSidebar.ascx` e `AccountSidebar.ascx.vb` sono la navigazione account condivisa.
 - `MiniCart.ascx`, `SiteHeader.ascx`, `SiteFooter.ascx`, controlli home e product card compongono parti UI pubbliche.
 
