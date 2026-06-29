@@ -160,6 +160,9 @@ Session timeout web standardizzato a 30 minuti: `web.config` dichiara `sessionSt
 - Tabelle/view note: `login`, `vlogin`, `utenti`, `utentitipo`, `utentiindirizzi`, `utentirapporto`, `pagamentitipo`, `carrello`.
 - Il modello fisico distingue tra database ecommerce cliente/azienda, registry citta/CAP e registry connessioni gestionale.
 - Il nome del database cliente/azienda non e fisso: cambia in base al cliente/azienda che utilizza KeepStore.
+- Il database ecommerce e condiviso e multi-azienda: `AziendeId=1` = Taikun, `AziendeId=2` = Webaffare. I domini possono usare webroot e `web.config` separati pur puntando allo stesso DB.
+- Il contesto azienda dipende da dominio/host e dai dati `Aziende` (`URL1`, `URL2`, dati azienda, logo, listino, `DispoTipo`, configurazioni gateway). Nei test runtime annotare sempre host, azienda risolta e listino quando si verificano pagamenti, promo, logo o dati azienda.
+- Nel runtime locale verificato, `localhost` risolve Webaffare/Azienda 2 tramite `Aziende.URL2=localhost`; per test Taikun/Azienda 1 usare host/domain mapping coerente o una configurazione locale dedicata.
 
 ### 5.8 Integrazioni esterne
 
@@ -167,6 +170,8 @@ Session timeout web standardizzato a 30 minuti: `web.config` dichiara `sessionSt
 - BancaSella legacy.
 - Email SMTP configurata da dati azienda/sessione.
 - Eventuali integrazioni Amazon/eBay/CheckVat presenti nel codice: da completare con audit dedicato.
+- Per PayPal distinguere visibilita metodo da configurazione gateway: `pagamentitipo`/`vpagamentitipo` decidono se PayPal appare nel carrello, mentre `vpaypal_express_azienda` o fallback `PAYPAL_EXPRESS_*` determinano se Express puo partire.
+- Audit multi-azienda PayPal: metodo PayPal presente e visibile per Taikun/Azienda 1 e Webaffare/Azienda 2; configurazione Express presente solo per Taikun/Azienda 1 + pagamento `19`; configurazione Express assente per Webaffare/Azienda 2 + pagamento `12`; fallback `PAYPAL_EXPRESS_*` assenti. Non copiare configurazioni tra aziende senza decisione esplicita.
 
 ### 5.9 Deployment/staging/live
 
@@ -327,6 +332,8 @@ Da completare con audit dedicato. Area sensibile: ordini, documenti, pagamento, 
 ### 9.6 Pagamenti
 
 PayPal Express NVP e stato stabilizzato con token `EC-TOKEN` e transazioni `TXN` mascherate nei report. BancaSella resta legacy. Non invocare gateway senza task dedicato.
+
+Regola di test multi-azienda: prima di qualsiasi smoke gateway verificare azienda attiva, host/dominio, `AziendaID`, pagamento selezionato e configurazione gateway senza esporre segreti. `localhost` puo rappresentare Webaffare/Azienda 2, non Taikun/Azienda 1. Prossimi task separati consigliati: `PAYPAL-TAIKUN-SANDBOX-SMOKE-1A` per contesto Taikun e `PAYPAL-WEBAFFARE-EXPRESS-CONFIG-DECISION-1A` per decidere configurazione o disabilitazione PayPal Webaffare; eventuale diagnostica runtime protetta solo con approvazione esplicita.
 
 ### 9.7 Area account
 
