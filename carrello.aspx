@@ -114,14 +114,14 @@
 
             <asp:SqlDataSource ID="sdsArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                 EnableViewState="False" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                SelectCommand="SELECT vcarrello.id, vcarrello.LoginId, vcarrello.SessionId, vcarrello.DataOra, vcarrello.ArticoliId, vcarrello.Codice, vcarrello.Descrizione1, vcarrello.Qnt, vcarrello.NListino, vcarrello.OfferteDettaglioID, vcarrello.Ean, vcarrello.Descrizione2, vcarrello.UmID, vcarrello.MarcheId, vcarrello.MarcheDescrizione, vcarrello.MarcheOrdinamento, vcarrello.iva, vcarrello.Peso, vcarrello.PesoRiga, vcarrello.Img1, vcarrello.Giacenza, vcarrello.InOrdine, vcarrello.Disponibilita, vcarrello.Impegnata, vcarrello.ScortaMinima, vcarrello.Prezzo, vcarrello.PrezzoIvato, vcarrello.Importo, vcarrello.ImportoIvato, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine FROM vcarrello LEFT OUTER JOIN articoli ON vcarrello.ArticoliId = articoli.id WHERE (articoli.SpedizioneGratis_Listini IS NULL) ORDER BY vcarrello.id"
+                SelectCommand="SELECT vcarrello.id, vcarrello.LoginId, vcarrello.SessionId, vcarrello.DataOra, vcarrello.ArticoliId, vcarrello.TCId, vcarrello.Codice, vcarrello.Descrizione1, vcarrello.Qnt, vcarrello.NListino, vcarrello.OfferteDettaglioID, vcarrello.Ean, vcarrello.Descrizione2, vcarrello.UmID, vcarrello.MarcheId, vcarrello.MarcheDescrizione, vcarrello.MarcheOrdinamento, vcarrello.iva, vcarrello.Peso, vcarrello.PesoRiga, vcarrello.Img1, vcarrello.Giacenza, vcarrello.InOrdine, vcarrello.Disponibilita, vcarrello.Impegnata, vcarrello.ScortaMinima, vcarrello.Prezzo, vcarrello.PrezzoIvato, vcarrello.Importo, vcarrello.ImportoIvato, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine FROM vcarrello LEFT OUTER JOIN articoli ON vcarrello.ArticoliId = articoli.id WHERE (articoli.SpedizioneGratis_Listini IS NULL) ORDER BY vcarrello.id"
                 DeleteCommand="delete from carrello where (Id = ?Id)"
                 UpdateCommand="update carrello set qnt = ?Qnt where (Id = ?Id)">
             </asp:SqlDataSource>
 
             <asp:SqlDataSource ID="sdsArticoli_Spedizione_Gratis" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                 EnableViewState="False" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                SelectCommand="SELECT vcarrello.id, vcarrello.LoginId, vcarrello.SessionId, vcarrello.DataOra, vcarrello.ArticoliId, vcarrello.Codice, vcarrello.Descrizione1, vcarrello.Qnt, vcarrello.NListino, vcarrello.OfferteDettaglioID, vcarrello.Ean, vcarrello.Descrizione2, vcarrello.UmID, vcarrello.MarcheId, vcarrello.MarcheDescrizione, vcarrello.MarcheOrdinamento, vcarrello.iva, vcarrello.Valoreiva, vcarrello.Peso, vcarrello.PesoRiga, vcarrello.Img1, vcarrello.Giacenza, vcarrello.InOrdine, vcarrello.Disponibilita, vcarrello.Impegnata, vcarrello.ScortaMinima, vcarrello.Prezzo, vcarrello.PrezzoIvato, vcarrello.Importo, vcarrello.ImportoIvato, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine FROM vcarrello LEFT OUTER JOIN articoli ON vcarrello.ArticoliId = articoli.id WHERE (articoli.SpedizioneGratis_Listini IS NOT NULL) ORDER BY vcarrello.id"
+                SelectCommand="SELECT vcarrello.id, vcarrello.LoginId, vcarrello.SessionId, vcarrello.DataOra, vcarrello.ArticoliId, vcarrello.TCId, vcarrello.Codice, vcarrello.Descrizione1, vcarrello.Qnt, vcarrello.NListino, vcarrello.OfferteDettaglioID, vcarrello.Ean, vcarrello.Descrizione2, vcarrello.UmID, vcarrello.MarcheId, vcarrello.MarcheDescrizione, vcarrello.MarcheOrdinamento, vcarrello.iva, vcarrello.Valoreiva, vcarrello.Peso, vcarrello.PesoRiga, vcarrello.Img1, vcarrello.Giacenza, vcarrello.InOrdine, vcarrello.Disponibilita, vcarrello.Impegnata, vcarrello.ScortaMinima, vcarrello.Prezzo, vcarrello.PrezzoIvato, vcarrello.Importo, vcarrello.ImportoIvato, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine FROM vcarrello LEFT OUTER JOIN articoli ON vcarrello.ArticoliId = articoli.id WHERE (articoli.SpedizioneGratis_Listini IS NOT NULL) ORDER BY vcarrello.id"
                 DeleteCommand="delete from carrello where (Id = ?Id)"
                 UpdateCommand="update carrello set qnt = ?Qnt where (Id = ?Id)">
             </asp:SqlDataSource>
@@ -146,11 +146,11 @@
                             <ItemTemplate>
                                 <tr class="tf-cart-item">
                                     <td class="tf-cart-item_product">
-                                        <asp:HyperLink ID="HyperLink3" runat="server" CssClass="img-box" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCid") %>'>
+                                        <asp:HyperLink ID="HyperLink3" runat="server" CssClass="img-box" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCId") %>'>
                                             <asp:Image ID="Image2" runat="server" ImageUrl='<%# checkImg(Eval("img1")) %>' AlternateText="" />
                                         </asp:HyperLink>
                                         <div class="cart-info">
-                                            <asp:HyperLink ID="HyperLink5" runat="server" CssClass="cart-title body-md-2 fw-semibold link" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCid") %>'>
+                                            <asp:HyperLink ID="HyperLink5" runat="server" CssClass="cart-title body-md-2 fw-semibold link" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCId") %>'>
                                                 <span class="ks-cart-title">
                                                     <asp:Label ID="Label2" runat="server" Text='<%#: Eval("MarcheDescrizione") %>' CssClass="ks-brand"></asp:Label>
                                                     <span><%# controllaLunghezzaTesto(Eval("Descrizione1"), 60) %></span>
@@ -172,7 +172,7 @@
 
                                             <!-- Hidden / technical fields (used by VB code-behind) -->
                                             <asp:TextBox ID="tbArtID" runat="server" Text='<%#: Eval("ArticoliID") %>' Visible="false"></asp:TextBox>
-                                            <asp:TextBox ID="tbTCID" runat="server" Text='<%#: Eval("TCid") %>' Visible="false"></asp:TextBox>
+                                            <asp:TextBox ID="tbTCID" runat="server" Text='<%#: Eval("TCId") %>' Visible="false"></asp:TextBox>
                                             <asp:Label ID="lblIvaReverseCharge" runat="server" Text='<%# stampa_iva_applicata(If(IsDBNull(Eval("DescrizioneEsenzioneIva")), "", Eval("DescrizioneEsenzioneIva")),If(IsDBNull(Eval("DescrizioneIvaRC")), "", Eval("DescrizioneIvaRC"))) %>' Visible="true" Font-Size="7pt"></asp:Label>
                                             <asp:Label ID="lblValoreIva" runat="server" Text='<%#: Eval("Valoreiva") %>' Visible="False"></asp:Label>
                                             <asp:Label ID="lblidIvaRC" runat="server" Text='<%#: Eval("IdIvaRC") %>' Visible="False"></asp:Label>
@@ -259,11 +259,11 @@
                             <ItemTemplate>
                                 <tr class="tf-cart-item">
                                     <td class="tf-cart-item_product">
-                                        <asp:HyperLink ID="HyperLink3" runat="server" CssClass="img-box" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCid") %>'>
+                                        <asp:HyperLink ID="HyperLink3" runat="server" CssClass="img-box" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCId") %>'>
                                             <asp:Image ID="Image2" runat="server" ImageUrl='<%# checkImg(Eval("img1")) %>' AlternateText="" />
                                         </asp:HyperLink>
                                         <div class="cart-info">
-                                            <asp:HyperLink ID="HyperLink5" runat="server" CssClass="cart-title body-md-2 fw-semibold link" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCid") %>'>
+                                            <asp:HyperLink ID="HyperLink5" runat="server" CssClass="cart-title body-md-2 fw-semibold link" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCId") %>'>
                                                 <span class="ks-cart-title">
                                                     <asp:Label ID="Label2" runat="server" Text='<%#: Eval("MarcheDescrizione") %>' CssClass="ks-brand"></asp:Label>
                                                     <span><%# controllaLunghezzaTesto(Eval("Descrizione1"), 60) %></span>
@@ -283,7 +283,7 @@
 
                                             <!-- Hidden / technical fields (used by VB code-behind) -->
                                             <asp:TextBox ID="tbArtID" runat="server" Text='<%#: Eval("ArticoliID") %>' Visible="false"></asp:TextBox>
-                                            <asp:TextBox ID="tbTCID" runat="server" Text='<%#: Eval("TCid") %>' Visible="false"></asp:TextBox>
+                                            <asp:TextBox ID="tbTCID" runat="server" Text='<%#: Eval("TCId") %>' Visible="false"></asp:TextBox>
                                             <asp:Label ID="lblIvaReverseCharge" runat="server" Text='<%# stampa_iva_applicata(If(IsDBNull(Eval("DescrizioneEsenzioneIva")), "", Eval("DescrizioneEsenzioneIva")),If(IsDBNull(Eval("DescrizioneIvaRC")), "", Eval("DescrizioneIvaRC"))) %>' Visible="true" Font-Size="7pt"></asp:Label>
                                             <asp:Label ID="lblValoreIva" runat="server" Text='<%#: Eval("Valoreiva") %>' Visible="False"></asp:Label>
                                             <asp:Label ID="lblidIvaRC" runat="server" Text='<%#: Eval("IdIvaRC") %>' Visible="False"></asp:Label>
@@ -1359,11 +1359,11 @@
                                     <asp:Repeater ID="rpCheckoutSummaryGratis" runat="server" DataSourceID="sdsArticoli_Spedizione_Gratis">
                                         <ItemTemplate>
                                             <li class="item-product">
-                                                <asp:HyperLink ID="lnkSummaryImg" runat="server" CssClass="img-product" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("ArticoliId") & "&TCid=" & Eval("TCid") %>'>
+                                                <asp:HyperLink ID="lnkSummaryImg" runat="server" CssClass="img-product" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("ArticoliId") & "&TCid=" & Eval("TCId") %>'>
                                                     <asp:Image ID="imgSummary" runat="server" ImageUrl='<%# checkImg(Eval("Img1")) %>' AlternateText='<%# Convert.ToString(Eval("Descrizione1")) %>' />
                                                 </asp:HyperLink>
                                                 <div class="content-box">
-                                                    <asp:HyperLink ID="lnkSummaryName" runat="server" CssClass="link-secondary body-md-2 fw-semibold" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("ArticoliId") & "&TCid=" & Eval("TCid") %>'>
+                                                    <asp:HyperLink ID="lnkSummaryName" runat="server" CssClass="link-secondary body-md-2 fw-semibold" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("ArticoliId") & "&TCid=" & Eval("TCId") %>'>
                                                         <%# controllaLunghezzaTesto(Eval("Descrizione1"), 58) %>
                                                     </asp:HyperLink>
                                                     <div class="ks-summary-product-meta body-text-3">
@@ -1379,11 +1379,11 @@
                                     <asp:Repeater ID="rpCheckoutSummaryStandard" runat="server" DataSourceID="sdsArticoli">
                                         <ItemTemplate>
                                             <li class="item-product">
-                                                <asp:HyperLink ID="lnkSummaryImg" runat="server" CssClass="img-product" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("ArticoliId") & "&TCid=" & Eval("TCid") %>'>
+                                                <asp:HyperLink ID="lnkSummaryImg" runat="server" CssClass="img-product" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("ArticoliId") & "&TCid=" & Eval("TCId") %>'>
                                                     <asp:Image ID="imgSummary" runat="server" ImageUrl='<%# checkImg(Eval("Img1")) %>' AlternateText='<%# Convert.ToString(Eval("Descrizione1")) %>' />
                                                 </asp:HyperLink>
                                                 <div class="content-box">
-                                                    <asp:HyperLink ID="lnkSummaryName" runat="server" CssClass="link-secondary body-md-2 fw-semibold" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("ArticoliId") & "&TCid=" & Eval("TCid") %>'>
+                                                    <asp:HyperLink ID="lnkSummaryName" runat="server" CssClass="link-secondary body-md-2 fw-semibold" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("ArticoliId") & "&TCid=" & Eval("TCId") %>'>
                                                         <%# controllaLunghezzaTesto(Eval("Descrizione1"), 58) %>
                                                     </asp:HyperLink>
                                                     <div class="ks-summary-product-meta body-text-3">
