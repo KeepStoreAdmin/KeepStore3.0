@@ -660,7 +660,7 @@ Partial Class SiteHeader
 
     Private Function BuildDesktopCatalogMegaMenuHtml(ByVal sectors As List(Of CatalogMenuSector)) As String
         If sectors Is Nothing OrElse sectors.Count = 0 Then
-            Return "<div class='ks-header-catalog-empty'>Nessun settore disponibile.</div>"
+            Return "<li class='menu-item ks-header-catalog-empty'>Nessun settore disponibile.</li>"
         End If
 
         Dim sb As New StringBuilder()
@@ -670,13 +670,12 @@ Partial Class SiteHeader
                 Continue For
             End If
 
-            sb.Append("<div class='mega-menu-item ks-header-catalog-column' data-sector-id='")
+            sb.Append("<li class='menu-item ks-header-catalog-sector' data-sector-id='")
             sb.Append(sector.Id.ToString())
             sb.Append("'>")
-            sb.Append("<div class='menu-heading body-small ks-header-catalog-heading'>")
             sb.Append("<a href='")
             sb.Append(HttpUtility.HtmlAttributeEncode(sector.DefaultUrl))
-            sb.Append("' class='ks-header-catalog-sector-link'>")
+            sb.Append("' class='item-link body-text-3 ks-header-catalog-sector-link'>")
             sb.Append("<span class='ks-header-catalog-media")
             If String.IsNullOrWhiteSpace(sector.ImgUrl) Then
                 sb.Append(" is-empty")
@@ -688,14 +687,29 @@ Partial Class SiteHeader
                 sb.Append("' alt='")
                 sb.Append(HttpUtility.HtmlAttributeEncode(If(sector.Descrizione, String.Empty)))
                 sb.Append("' onerror=""this.style.display='none';this.parentNode.classList.add('is-empty');"" />")
+            Else
+                sb.Append("<span class='ks-header-catalog-fallback'>")
+                sb.Append(HttpUtility.HtmlEncode(SectorFallbackText(sector.Descrizione)))
+                sb.Append("</span>")
             End If
             sb.Append("</span>")
-            sb.Append("<span>")
+            sb.Append("<span class='ks-header-catalog-sector-title'>")
             sb.Append(HttpUtility.HtmlEncode(If(sector.Descrizione, String.Empty)))
             sb.Append("</span>")
+            sb.Append("<i class='icon icon-arrow-right'></i>")
+            sb.Append("</a>")
+
+            sb.Append("<div class='ks-header-sector-panel' aria-label='")
+            sb.Append(HttpUtility.HtmlAttributeEncode(If(sector.Descrizione, String.Empty)))
+            sb.Append("'>")
+            sb.Append("<div class='ks-header-sector-panel-head'>")
+            sb.Append("<span class='ks-header-sector-kicker'>Reparto</span>")
+            sb.Append("<a href='")
+            sb.Append(HttpUtility.HtmlAttributeEncode(sector.DefaultUrl))
+            sb.Append("' class='ks-header-sector-title'>")
+            sb.Append(HttpUtility.HtmlEncode(If(sector.Descrizione, String.Empty)))
             sb.Append("</a>")
             sb.Append("</div>")
-
             sb.Append("<div class='ks-header-catalog-menu-list'>")
             If sector.Categories IsNot Nothing AndAlso sector.Categories.Count > 0 Then
                 For Each category As CatalogMenuCategory In sector.Categories
@@ -741,9 +755,36 @@ Partial Class SiteHeader
             End If
             sb.Append("</div>")
             sb.Append("</div>")
+            sb.Append("</li>")
         Next
 
         Return sb.ToString()
+    End Function
+
+    Private Function SectorFallbackText(ByVal value As String) As String
+        If String.IsNullOrWhiteSpace(value) Then
+            Return "KS"
+        End If
+
+        Dim parts As String() = value.Trim().Split(New Char() {" "c, "-"c, "_"c}, StringSplitOptions.RemoveEmptyEntries)
+        Dim result As New StringBuilder()
+
+        For Each part As String In parts
+            If String.IsNullOrWhiteSpace(part) Then
+                Continue For
+            End If
+
+            result.Append(Char.ToUpperInvariant(part.Trim()(0)))
+            If result.Length >= 2 Then
+                Exit For
+            End If
+        Next
+
+        If result.Length = 0 Then
+            Return "KS"
+        End If
+
+        Return result.ToString()
     End Function
 
     Private Function SafeString(ByVal reader As IDataRecord, ByVal fieldName As String) As String

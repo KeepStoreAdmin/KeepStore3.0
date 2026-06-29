@@ -1,4 +1,44 @@
 <%@ Control Language="VB" AutoEventWireup="false" CodeFile="SiteHeader.ascx.vb" Inherits="SiteHeader" %>
+<style>
+@media (min-width: 1200px) {
+  .ks-header-ui .ks-header-nav-shell { display: flex; align-items: center; gap: 28px; min-width: 0; }
+  .ks-header-ui .ks-header-all-categories { position: relative; flex: 0 0 270px; z-index: 120; }
+  .ks-header-ui .ks-header-catalog-trigger { min-height: 50px; display: flex; align-items: center; gap: 9px; padding: 0 18px; border-radius: 8px 8px 0 0; color: #111827; background: #fff; box-shadow: inset 0 0 0 1px #eceff3; }
+  .ks-header-ui .ks-header-catalog-trigger .title { margin: 0; line-height: 50px; color: inherit; }
+  .ks-header-ui .ks-header-catalog-trigger .icon-arrow-down { margin-left: auto; transition: transform .2s ease, color .2s ease; }
+  .ks-header-ui .ks-header-catalog-item.is-open > .ks-header-catalog-trigger,
+  .ks-header-ui .ks-header-catalog-item:focus-within > .ks-header-catalog-trigger,
+  .ks-header-ui .ks-header-catalog-trigger:hover { color: var(--primary); }
+  .ks-header-ui .ks-header-catalog-item.is-open > .ks-header-catalog-trigger .icon-arrow-down,
+  .ks-header-ui .ks-header-catalog-item:focus-within > .ks-header-catalog-trigger .icon-arrow-down { transform: rotate(180deg); }
+  .ks-header-ui .ks-header-catalog-menu { width: 760px; min-width: 270px; max-height: 620px; overflow: hidden; border-radius: 0 0 10px 10px; box-shadow: 0 22px 45px rgba(15, 23, 42, .14); }
+  .ks-header-ui .ks-header-catalog-menu .menu-category-menu-container { max-height: 620px; overflow-y: auto; overflow-x: hidden; }
+  .ks-header-ui .ks-header-catalog-list { padding: 8px 0; }
+  .ks-header-ui .ks-header-catalog-sector { position: static; box-shadow: inset 0 -1px 0 #eef1f5; }
+  .ks-header-ui .ks-header-catalog-sector-link { min-height: 48px; gap: 10px; padding: 8px 14px; color: #111827; }
+  .ks-header-ui .ks-header-catalog-sector-title { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ks-header-ui .ks-header-catalog-media { width: 30px; height: 30px; flex: 0 0 30px; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 8px; background: #f4f6f8; color: #6b7280; font-size: 10px; font-weight: 800; line-height: 1; }
+  .ks-header-ui .ks-header-catalog-media img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+  .ks-header-ui .ks-header-catalog-media.is-empty { background: #eef2f7; }
+  .ks-header-ui .ks-header-sector-panel { display: none; padding: 14px 16px 18px 54px; background: #fbfcfe; border-top: 1px solid #eef1f5; }
+  .ks-header-ui .ks-header-catalog-sector:hover > .ks-header-sector-panel,
+  .ks-header-ui .ks-header-catalog-sector:focus-within > .ks-header-sector-panel { display: block; }
+  .ks-header-ui .ks-header-sector-panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #eef1f5; }
+  .ks-header-ui .ks-header-sector-kicker { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #8a94a6; letter-spacing: .04em; }
+  .ks-header-ui .ks-header-sector-title { color: #111827; font-size: 18px; font-weight: 800; line-height: 1.2; }
+  .ks-header-ui .ks-header-catalog-menu-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 18px; }
+  .ks-header-ui .ks-header-catalog-category-block { min-width: 0; }
+  .ks-header-ui .ks-header-catalog-category-link { height: auto; display: inline-flex; padding: 0 0 6px; color: #111827; font-weight: 800; line-height: 1.25; }
+  .ks-header-ui .ks-header-catalog-tipology-list { display: grid; gap: 3px; padding: 0; margin: 0; }
+  .ks-header-ui .ks-header-catalog-tipology { box-shadow: none; }
+  .ks-header-ui .ks-header-catalog-tipology-link,
+  .ks-header-ui .ks-header-catalog-empty-link { height: auto; padding: 2px 0; color: #5f6b7a; font-size: 13px; line-height: 1.32; }
+  .ks-header-ui .ks-header-catalog-tipology-link:hover,
+  .ks-header-ui .ks-header-catalog-empty-link:hover,
+  .ks-header-ui .ks-header-catalog-category-link:hover,
+  .ks-header-ui .ks-header-sector-title:hover { color: var(--primary); padding-left: 0; }
+}
+</style>
 <header class="tf-header style-2 ks-header-ui" data-ks-header>
     <div class="tf-topbar line-bt d-none d-xl-block">
         <div class="container">
@@ -132,21 +172,24 @@
         <div class="container relative">
             <div class="row">
                 <div class="col-xl-9 col-12">
-                    <div class="header-bt-left">
+                    <div class="header-bt-left ks-header-nav-shell">
+                        <div class="nav-category-wrap ks-header-catalog-item ks-header-all-categories">
+                            <a href="articoli.aspx" class="item-link nav-title btn-active ks-header-catalog-trigger" aria-label="Apri catalogo prodotti">
+                                <i class="icon-menu-dots fs-20"></i>
+                                <h6 class="title fw-semibold" data-ks-i18n="nav.catalog">Catalogo</h6>
+                                <i class="icon icon-arrow-down"></i>
+                            </a>
+                            <nav class="category-menu sub-menu-container ks-header-catalog-menu" aria-label="Catalogo completo">
+                                <div id="ksDesktopCategoryMenu" class="menu-category-menu-container ks-header-catalog-wrapper">
+                                    <ul class="megamenu ks-header-catalog-list">
+                                        <asp:Literal ID="litDesktopCatalogMegaMenu" runat="server" />
+                                    </ul>
+                                </div>
+                            </nav>
+                        </div>
                         <nav class="main-nav-menu">
                             <ul class="nav-list">
                                 <li class="nav-item active pst-unset"><a href="Default.aspx" class="item-link link body-md-2"><span data-ks-i18n="nav.home">Home</span></a></li>
-                                <li class="nav-item pst-unset ks-header-catalog-item">
-                                    <a href="articoli.aspx" class="item-link link body-md-2 fw-semibold">
-                                        <span data-ks-i18n="nav.catalog">Catalogo</span>
-                                        <i class="icon icon-arrow-down"></i>
-                                    </a>
-                                    <div class="sub-menu-container mega-menu text-nowrap ks-header-catalog-mega" aria-label="Catalogo completo">
-                                        <div id="ksDesktopCategoryMenu" class="wrapper-sub-menu ks-header-catalog-wrapper ks-header-catalog-grid">
-                                            <asp:Literal ID="litDesktopCatalogMegaMenu" runat="server" />
-                                        </div>
-                                    </div>
-                                </li>
                                 <li class="nav-item"><a href="articoli.aspx?inpromo=1" class="item-link body-md-2"><span data-ks-i18n="nav.offers">Offerte</span></a></li>
                                 <li class="nav-item"><a href="Contattaci.aspx" class="item-link body-md-2"><span data-ks-i18n="nav.contact">Contatti</span></a></li>
                             </ul>
