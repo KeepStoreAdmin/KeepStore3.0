@@ -567,6 +567,7 @@ Private Const SessCartAddressEditorId As String = "CART_ADDRESS_EDITOR_ID"
 Private Const CartSessionExpiredLoginUrl As String = "login.aspx?ReturnUrl=carrello.aspx&sessionExpired=1"
 Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizione selezionato non è più valido. Seleziona nuovamente l'indirizzo e conferma l'ordine."
 Private _cartSessionExpiredRedirectIssued As Boolean = False
+Private _cartLoginRequiredFastPathActive As Boolean = False
 
     Private Function GetSessionInt(ByVal key As String, Optional ByVal def As Integer = 0) As Integer
     Try
@@ -619,6 +620,40 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
         End If
         Return True
     End Function
+
+    Private Function IsLoginRequiredAnonymousFastPath(ByVal loginId As Integer) As Boolean
+        Return loginId <= 0 AndAlso IsLoginRequiredCartRequest()
+    End Function
+
+    Private Function IsLoginRequiredCartRequest() As Boolean
+        Return String.Equals(Request.QueryString("loginrequired"), "1", StringComparison.OrdinalIgnoreCase)
+    End Function
+
+    Private Sub ApplyLoginRequiredAnonymousFastPath()
+        _cartLoginRequiredFastPathActive = True
+
+        If pnlLoginRequired IsNot Nothing Then pnlLoginRequired.Visible = True
+        If CartItemsWrap IsNot Nothing Then CartItemsWrap.Visible = False
+        If CartEmptyPanel IsNot Nothing Then CartEmptyPanel.Visible = False
+        If CartActionsWrap IsNot Nothing Then CartActionsWrap.Visible = False
+        If CartSummaryColumn IsNot Nothing Then CartSummaryColumn.Visible = False
+        If Panel_Unico IsNot Nothing Then Panel_Unico.Visible = False
+        If tOrdine IsNot Nothing Then tOrdine.Visible = False
+        If pnlCheckoutConfirm IsNot Nothing Then pnlCheckoutConfirm.Visible = False
+
+        If pnlFatturazione IsNot Nothing Then pnlFatturazione.Visible = False
+        If PnlSpedizione IsNot Nothing Then PnlSpedizione.Visible = False
+        If PnlDestinazione IsNot Nothing Then PnlDestinazione.Visible = False
+        If Panel_Note IsNot Nothing Then Panel_Note.Visible = False
+        If pSpedizione IsNot Nothing Then pSpedizione.Visible = False
+        If pAssicurazione IsNot Nothing Then pAssicurazione.Visible = False
+        If pPagamento IsNot Nothing Then pPagamento.Visible = False
+
+        If Repeater1 IsNot Nothing Then Repeater1.DataSourceID = ""
+        If gvArticoliGratis IsNot Nothing Then gvArticoliGratis.DataSourceID = ""
+        If rpCheckoutSummaryStandard IsNot Nothing Then rpCheckoutSummaryStandard.DataSourceID = ""
+        If rpCheckoutSummaryGratis IsNot Nothing Then rpCheckoutSummaryGratis.DataSourceID = ""
+    End Sub
 
     Private Function GetUtentiIdSafe(Optional ByVal defaultVal As Integer = 0) As Integer
     Dim id As Integer = GetSessionInt(SessUtentiId_A, 0)
@@ -1775,6 +1810,11 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
     End Function
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        If IsLoginRequiredCartRequest() Then
+            ApplyLoginRequiredAnonymousFastPath()
+            Return
+        End If
+
         ' Standard carrello: 30 minuti, allineato a web.config.
         Session.Timeout = 30
         If IsLikelyExpiredCartSession() Then
@@ -1807,6 +1847,11 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
     Me.PnlSpedizione.Visible = isLogged
     Me.PnlDestinazione.Visible = False
     Me.Panel_Note.Visible = isLogged
+
+    If IsLoginRequiredAnonymousFastPath(loginId) Then
+        ApplyLoginRequiredAnonymousFastPath()
+        Return
+    End If
 
     If Not Page.IsPostBack Then
         Aggiorna_Prezzi_Carrello()
@@ -1928,6 +1973,11 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
         If _cartSessionExpiredRedirectIssued Then Return
         Me.Title = Me.Title & " - Il tuo Carrello"
+
+        If _cartLoginRequiredFastPathActive Then
+            ApplyLoginRequiredAnonymousFastPath()
+            Return
+        End If
 		
         Dim LoginId As Integer = GetSessionInt("LoginId", 0)
 
@@ -1953,6 +2003,8 @@ Private _cartSessionExpiredRedirectIssued As Boolean = False
     End Sub
 
     Protected Sub Repeater1_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Repeater1.PreRender
+        If _cartLoginRequiredFastPathActive Then Return
+
         Dim i As Integer
 
         'Carrello Normale
@@ -3208,6 +3260,8 @@ End Sub
 End Function
 
     Protected Sub gvArticoliGratis_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles gvArticoliGratis.PreRender
+    If _cartLoginRequiredFastPathActive Then Return
+
     Dim i As Integer
 
     For i = 0 To gvArticoliGratis.Items.Count - 1
