@@ -1810,7 +1810,13 @@ Private _cartLoginRequiredFastPathActive As Boolean = False
     End Function
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        Dim loginRequiredLoginId As Integer = 0
         If IsLoginRequiredCartRequest() Then
+            loginRequiredLoginId = GetSessionInt(SessLoginId_A, 0)
+            If loginRequiredLoginId <= 0 Then loginRequiredLoginId = GetSessionInt(SessLoginId_B, 0)
+        End If
+
+        If IsLoginRequiredAnonymousFastPath(loginRequiredLoginId) Then
             ApplyLoginRequiredAnonymousFastPath()
             Return
         End If
