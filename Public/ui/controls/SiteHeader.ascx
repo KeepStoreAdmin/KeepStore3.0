@@ -160,7 +160,7 @@
                     <div class="header-bt-right">
                         <ul class="nav-icon style-2">
                             <li>
-                                <a href="#compare" class="link link-fill nav-icon-item relative" id="ksCompareHeaderLink" data-bs-toggle="offcanvas" aria-controls="compare">
+                                <a href="#compare" class="link link-fill nav-icon-item relative" id="ksCompareHeaderLink" data-bs-toggle="offcanvas" data-bs-target="#compare" aria-controls="compare">
                                     <i class="icon-compare1 text-main fs-26 link"></i>
                                     <span class="count-box style-pst-2 d-none d-xxl-flex" id="ksCompareCount">0</span>
                                 </a>
@@ -274,7 +274,7 @@
             <ul class="nav-ul-mb ks-mobile-utility-nav">
                 <li class="nav-mb-item"><a id="lnkAccountMobileButton" href="myaccount.aspx" runat="server" class="mb-menu-link"><span data-ks-i18n="header.accountArea">Area personale</span></a></li>
                 <li class="nav-mb-item"><a href="wishlist.aspx" class="mb-menu-link"><span data-ks-i18n="header.wishlist">Wishlist</span></a></li>
-                <li class="nav-mb-item"><a href="#compare" data-bs-toggle="offcanvas" aria-controls="compare" class="mb-menu-link"><span data-ks-i18n="header.compare">Confronta prodotti</span></a></li>
+                <li class="nav-mb-item"><a href="#compare" data-bs-toggle="offcanvas" data-bs-target="#compare" aria-controls="compare" class="mb-menu-link"><span data-ks-i18n="header.compare">Confronta prodotti</span></a></li>
             </ul>
             <div class="bottom-bar-language bar-lang">
                 <div class="tf-curs">

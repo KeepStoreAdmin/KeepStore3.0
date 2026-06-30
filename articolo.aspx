@@ -533,7 +533,7 @@
                                             </a>
                                         </li>
                                         <li class="d-none d-sm-block">
-                                            <a href="#compare" data-bs-toggle="offcanvas" class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-compare" <%# Eval("CompareAttrs") %> aria-label="Confronta">
+                                            <a href="#compare" data-bs-toggle="offcanvas" data-bs-target="#compare" aria-controls="compare" class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-compare" <%# Eval("CompareAttrs") %> aria-label="Confronta">
                                                 <span class="icon icon-compare1"></span>
                                                 <span class="tooltip">Confronta</span>
                                             </a>
@@ -628,7 +628,7 @@
                                             </a>
                                         </li>
                                         <li class="d-none d-sm-block">
-                                            <a href="#compare" data-bs-toggle="offcanvas" class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-compare" <%# Eval("CompareAttrs") %> aria-label="Confronta">
+                                            <a href="#compare" data-bs-toggle="offcanvas" data-bs-target="#compare" aria-controls="compare" class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-compare" <%# Eval("CompareAttrs") %> aria-label="Confronta">
                                                 <span class="icon icon-compare1"></span>
                                                 <span class="tooltip">Confronta</span>
                                             </a>
@@ -743,7 +743,7 @@
                                             </a>
                                         </li>
                                         <li class="d-none d-sm-block">
-                                            <a href="#compare" data-bs-toggle="offcanvas" class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-compare" <%# Eval("CompareAttrs") %> aria-label="Confronta">
+                                            <a href="#compare" data-bs-toggle="offcanvas" data-bs-target="#compare" aria-controls="compare" class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-compare" <%# Eval("CompareAttrs") %> aria-label="Confronta">
                                                 <span class="icon icon-compare1"></span>
                                                 <span class="tooltip">Confronta</span>
                                             </a>

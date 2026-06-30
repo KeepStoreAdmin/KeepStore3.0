@@ -2369,7 +2369,7 @@ Partial Public Class _Default
         sb.Append("<li><a href='").Append(CartAddUrl(row)).Append("' class='box-icon add-to-cart btn-icon-action ").Append(tooltipClass).Append(" js-ks-cart-link'").Append(quickViewAttrs).Append(" aria-label='Aggiungi al carrello'><i class='icon icon-cart2'></i><span class='tooltip'>Aggiungi al carrello</span></a></li>")
         sb.Append("<li class='wishlist'><a href='").Append(WishlistAddUrl(row("id"))).Append("' class='box-icon btn-icon-action ").Append(tooltipClass).Append(" js-ks-wishlist-link'").Append(quickViewAttrs).Append(" aria-label='Wishlist'><i class='icon icon-heart2'></i><span class='tooltip'>Wishlist</span></a></li>")
         sb.Append("<li><a href='#quickView' data-bs-toggle='modal' class='box-icon quickview btn-icon-action ").Append(tooltipClass).Append(" js-ks-quickview'").Append(quickViewAttrs).Append(" aria-label='Vedi prodotto'><i class='icon icon-view'></i><span class='tooltip'>Vedi prodotto</span></a></li>")
-        sb.Append("<li><a href='#compare' data-bs-toggle='offcanvas' class='box-icon btn-icon-action ").Append(tooltipClass).Append(" js-ks-compare'").Append(compareAttrs).Append(" aria-label='Confronta'><i class='icon icon-compare1'></i><span class='tooltip'>Confronta</span></a></li>")
+        sb.Append("<li><a href='#compare' data-bs-toggle='offcanvas' data-bs-target='#compare' aria-controls='compare' class='box-icon btn-icon-action ").Append(tooltipClass).Append(" js-ks-compare'").Append(compareAttrs).Append(" aria-label='Confronta'><i class='icon icon-compare1'></i><span class='tooltip'>Confronta</span></a></li>")
         sb.Append("</ul>")
         Return sb.ToString()
     End Function
