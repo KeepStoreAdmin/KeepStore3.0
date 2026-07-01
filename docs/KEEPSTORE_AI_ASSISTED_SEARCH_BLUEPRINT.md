@@ -63,13 +63,13 @@ Campi gia cercati o disponibili nella ricerca attuale:
 - `SottogruppiDescrizione`;
 - disponibilita, promo, prezzo/listino, vetrina, visite, immagini e TC dove gia esposti.
 
-Limiti/anomalie note da non correggere in questa blueprint:
+Stato micro-task search deterministica post PR #222/#223/#224:
 
-- `search_suggest` genera `catalogUrl` con `available=1`, mentre `articoli.aspx` usa `disponibile=1`;
-- possibile mismatch `sort` vs `ordinamento`;
-- `search_suggest.aspx.vb` restituisce `ex.Message` nel JSON pubblico in caso errore;
-- LIKE su molte colonne lunghe puo diventare costoso;
-- zero results ancora basilare.
+- PR #222 chiusa: `catalogUrl` suggest usa `disponibile=1` e `ordinamento=...`, allineati ad `articoli.aspx`; ranking/query SQL invariati.
+- PR #223 chiusa: JSON pubblico suggest non espone piu `ex.Message`; errore generico `Servizio suggerimenti temporaneamente non disponibile.` con formato `ok=false` + `error`.
+- PR #224 chiusa: `SearchScore` catalogo ampliato in `articoli.aspx.vb` con `DescrizioneHTML` solo scoring, marca+descrizione, tassonomie e token multi-parola; query filtro principale, `Export +500`, Codice/EAN e query numeriche preservati.
+- Test registrati: `hp` non peggiorato (`18933,20018`), `stampante hp` migliorato verso suggest (`20810,17698`), `12384` invariato con nessun ID catalogo e suggest `total=0`; smoke suggest/articoli/carrello OK.
+- Limiti residui: LIKE su molte colonne lunghe puo diventare costoso; zero results ancora basilare; eventuale AI/LLM resta fase successiva con privacy task.
 
 ## 3. Architettura a strati
 
@@ -236,21 +236,19 @@ Vincoli:
 ## 8. Roadmap micro-task token-safe
 
 1. `SEARCH-SUGGEST-CATALOGURL-PARAM-1A`
-   - correggere `available -> disponibile`;
-   - correggere `sort -> ordinamento` se confermato;
-   - non toccare ranking.
+   - chiuso con PR #222;
+   - `available -> disponibile` e `sort -> ordinamento`;
+   - ranking/query SQL invariati.
 
 2. `SEARCH-SUGGEST-ERROR-HARDENING-1A`
-   - rimuovere `ex.Message` dal JSON pubblico;
-   - usare messaggio generico;
-   - logging sicuro solo se gia disponibile.
+   - chiuso con PR #223;
+   - `ex.Message` rimosso dal JSON pubblico;
+   - messaggio generico compatibile con `ok=false` + `error`.
 
 3. `SEARCH-RANKING-ALIGN-1A`
-   - allineare ranking suggest/finale;
-   - codice/EAN esatto;
-   - inizio parola;
-   - marca + descrizione;
-   - descrizioni e scheda tecnica se auditata.
+   - chiuso con PR #224;
+   - `SearchScore` catalogo avvicinato al suggest;
+   - codice/EAN, query numeriche, `Export +500` e filtro principale preservati.
 
 4. `SEARCH-ZERO-RESULTS-ASSIST-1A`
    - empty state intelligente;
