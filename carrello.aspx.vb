@@ -593,11 +593,52 @@ Private _cartLoginRequiredFastPathActive As Boolean = False
         End Try
     End Function
 
+    Private Function HasRememberedLoginUsernameCookie() As Boolean
+        Try
+            If Request Is Nothing OrElse Request.Cookies Is Nothing Then Return False
+
+            Dim aziendaCookieName As String = Convert.ToString(Session("AziendaNome")).Trim()
+            If aziendaCookieName <> "" Then
+                Dim aziendaCookie As HttpCookie = Request.Cookies(aziendaCookieName)
+                If aziendaCookie IsNot Nothing AndAlso Convert.ToString(aziendaCookie("Username")).Trim() <> "" Then Return True
+            End If
+
+            For Each cookieName As String In Request.Cookies.AllKeys
+                If String.IsNullOrWhiteSpace(cookieName) Then Continue For
+                If String.Equals(cookieName, "ASP.NET_SessionId", StringComparison.OrdinalIgnoreCase) Then Continue For
+                If String.Equals(cookieName, "ks_recent", StringComparison.OrdinalIgnoreCase) Then Continue For
+                If String.Equals(cookieName, "ks_recent_session", StringComparison.OrdinalIgnoreCase) Then Continue For
+                If String.Equals(cookieName, "FacebookLike", StringComparison.OrdinalIgnoreCase) Then Continue For
+                If String.Equals(cookieName, "tid_bs", StringComparison.OrdinalIgnoreCase) Then Continue For
+
+                Dim cookie As HttpCookie = Request.Cookies(cookieName)
+                If cookie IsNot Nothing AndAlso Convert.ToString(cookie("Username")).Trim() <> "" Then Return True
+            Next
+        Catch
+        End Try
+
+        Return False
+    End Function
+
     Private Function IsLikelyExpiredCartSession() As Boolean
         Try
             If Session Is Nothing OrElse Request Is Nothing Then Return False
             If GetSessionInt(SessLoginId_A, 0) > 0 OrElse GetSessionInt(SessLoginId_B, 0) > 0 Then Return False
             Return Session.IsNewSession AndAlso HasExistingAspNetSessionCookie()
+        Catch
+            Return False
+        End Try
+    End Function
+
+    Private Function IsStaleLoggedCartSessionRequest() As Boolean
+        Try
+            If Session Is Nothing OrElse Request Is Nothing Then Return False
+            If IsLoginRequiredCartRequest() Then Return False
+            If Not String.Equals(Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) Then Return False
+            If GetSessionInt(SessLoginId_A, 0) > 0 OrElse GetSessionInt(SessLoginId_B, 0) > 0 Then Return False
+            If IsLikelyExpiredCartSession() Then Return True
+
+            Return HasExistingAspNetSessionCookie() AndAlso HasRememberedLoginUsernameCookie()
         Catch
             Return False
         End Try
@@ -653,6 +694,15 @@ Private _cartLoginRequiredFastPathActive As Boolean = False
         If gvArticoliGratis IsNot Nothing Then gvArticoliGratis.DataSourceID = ""
         If rpCheckoutSummaryStandard IsNot Nothing Then rpCheckoutSummaryStandard.DataSourceID = ""
         If rpCheckoutSummaryGratis IsNot Nothing Then rpCheckoutSummaryGratis.DataSourceID = ""
+    End Sub
+
+    Private Sub ApplyStaleLoggedCartSessionFastPath()
+        Try
+            Session("StavonelCarrello") = 1
+        Catch
+        End Try
+
+        ApplyLoginRequiredAnonymousFastPath()
     End Sub
 
     Private Function GetUtentiIdSafe(Optional ByVal defaultVal As Integer = 0) As Integer
@@ -1818,6 +1868,11 @@ Private _cartLoginRequiredFastPathActive As Boolean = False
 
         If IsLoginRequiredAnonymousFastPath(loginRequiredLoginId) Then
             ApplyLoginRequiredAnonymousFastPath()
+            Return
+        End If
+
+        If IsStaleLoggedCartSessionRequest() Then
+            ApplyStaleLoggedCartSessionFastPath()
             Return
         End If
 
