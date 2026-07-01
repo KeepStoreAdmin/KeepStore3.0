@@ -51,52 +51,6 @@
 
                         <div class="canvas-body">
                             <asp:Panel ID="ksFilters" runat="server">
-                                <div class="widget-facet facet-fieldset">
-                                    <p class="facet-title title-sidebar fw-semibold">Disponibilita</p>
-                                    <div class="box-fieldset-item">
-                                        <fieldset class="fieldset-item ks-filter-checkbox">
-                                            <asp:CheckBox ID="CheckBox_Disponibile" runat="server" Text="Solo disponibili" AutoPostBack="true" />
-                                        </fieldset>
-                                    </div>
-                                </div>
-
-                                <div class="widget-facet facet-fieldset">
-                                    <p class="facet-title title-sidebar fw-semibold">Categorie</p>
-                                    <asp:FormView ID="FormView1" runat="server" DataSourceID="sdsGruppo">
-                                        <ItemTemplate>
-                                            <asp:Label ID="lblCategoria" runat="server" Text='<%# Eval("descrizione") %>' Visible="false" />
-                                        </ItemTemplate>
-                                    </asp:FormView>
-                                    <div class="box-fieldset-item">
-                                        <asp:DataList ID="DataList1" runat="server" DataSourceID="sdsGruppo" RepeatLayout="Flow" CssClass="ks-filter-list">
-                                            <ItemTemplate>
-                                                <fieldset class="fieldset-item">
-                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("gr", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("gr", Container.DataItem) %>'>
-                                                        <span><%# Server.HtmlEncode(Convert.ToString(Eval("descrizione"))) %></span>
-                                                        <small><%# If(UiData.HasColumn(Container.DataItem, "Numero"), Eval("Numero"), "") %></small>
-                                                    </a>
-                                                </fieldset>
-                                            </ItemTemplate>
-                                        </asp:DataList>
-                                    </div>
-                                </div>
-
-                                <div class="widget-facet facet-fieldset">
-                                    <p class="facet-title title-sidebar fw-semibold">Sottocategorie</p>
-                                    <div class="box-fieldset-item">
-                                        <asp:DataList ID="DataList4" runat="server" DataSourceID="sdsSottogruppo" RepeatLayout="Flow" CssClass="ks-filter-list">
-                                            <ItemTemplate>
-                                                <fieldset class="fieldset-item">
-                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("sg", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("sg", Container.DataItem) %>'>
-                                                        <span><%# Server.HtmlEncode(Convert.ToString(Eval("descrizione"))) %></span>
-                                                        <small><%# If(UiData.HasColumn(Container.DataItem, "Numero"), Eval("Numero"), "") %></small>
-                                                    </a>
-                                                </fieldset>
-                                            </ItemTemplate>
-                                        </asp:DataList>
-                                    </div>
-                                </div>
-
                                 <div class="widget-facet facet-fieldset has-loadmore">
                                     <p class="facet-title title-sidebar fw-semibold">Marche</p>
                                     <div class="box-fieldset-item">
@@ -104,6 +58,27 @@
                                             <ItemTemplate>
                                                 <fieldset class="fieldset-item">
                                                     <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("mr", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("mr", Container.DataItem) %>'>
+                                                        <span><%# Server.HtmlEncode(Convert.ToString(Eval("descrizione"))) %></span>
+                                                        <small><%# If(UiData.HasColumn(Container.DataItem, "Numero"), Eval("Numero"), "") %></small>
+                                                    </a>
+                                                </fieldset>
+                                            </ItemTemplate>
+                                        </asp:DataList>
+                                    </div>
+                                </div>
+
+                                <div class="widget-facet facet-fieldset">
+                                    <p class="facet-title title-sidebar fw-semibold">Categoria</p>
+                                    <asp:FormView ID="FormView1" runat="server" DataSourceID="sdsCategorie">
+                                        <ItemTemplate>
+                                            <asp:Label ID="lblCategoria" runat="server" Text='<%# Eval("descrizione") %>' Visible="false" />
+                                        </ItemTemplate>
+                                    </asp:FormView>
+                                    <div class="box-fieldset-item">
+                                        <asp:DataList ID="DataListCategoria" runat="server" DataSourceID="sdsCategorie" RepeatLayout="Flow" CssClass="ks-filter-list">
+                                            <ItemTemplate>
+                                                <fieldset class="fieldset-item">
+                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("ct", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("ct", Container.DataItem) %>'>
                                                         <span><%# Server.HtmlEncode(Convert.ToString(Eval("descrizione"))) %></span>
                                                         <small><%# If(UiData.HasColumn(Container.DataItem, "Numero"), Eval("Numero"), "") %></small>
                                                     </a>
@@ -126,6 +101,47 @@
                                                 </fieldset>
                                             </ItemTemplate>
                                         </asp:DataList>
+                                    </div>
+                                </div>
+
+                                <div class="widget-facet facet-fieldset">
+                                    <p class="facet-title title-sidebar fw-semibold">Gruppi</p>
+                                    <div class="box-fieldset-item">
+                                        <asp:DataList ID="DataList1" runat="server" DataSourceID="sdsGruppo" RepeatLayout="Flow" CssClass="ks-filter-list">
+                                            <ItemTemplate>
+                                                <fieldset class="fieldset-item">
+                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("gr", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("gr", Container.DataItem) %>'>
+                                                        <span><%# Server.HtmlEncode(Convert.ToString(Eval("descrizione"))) %></span>
+                                                        <small><%# If(UiData.HasColumn(Container.DataItem, "Numero"), Eval("Numero"), "") %></small>
+                                                    </a>
+                                                </fieldset>
+                                            </ItemTemplate>
+                                        </asp:DataList>
+                                    </div>
+                                </div>
+
+                                <div class="widget-facet facet-fieldset">
+                                    <p class="facet-title title-sidebar fw-semibold">Sottogruppi</p>
+                                    <div class="box-fieldset-item">
+                                        <asp:DataList ID="DataList4" runat="server" DataSourceID="sdsSottogruppo" RepeatLayout="Flow" CssClass="ks-filter-list">
+                                            <ItemTemplate>
+                                                <fieldset class="fieldset-item">
+                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("sg", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("sg", Container.DataItem) %>'>
+                                                        <span><%# Server.HtmlEncode(Convert.ToString(Eval("descrizione"))) %></span>
+                                                        <small><%# If(UiData.HasColumn(Container.DataItem, "Numero"), Eval("Numero"), "") %></small>
+                                                    </a>
+                                                </fieldset>
+                                            </ItemTemplate>
+                                        </asp:DataList>
+                                    </div>
+                                </div>
+
+                                <div class="widget-facet facet-fieldset">
+                                    <p class="facet-title title-sidebar fw-semibold">Disponibilita</p>
+                                    <div class="box-fieldset-item">
+                                        <fieldset class="fieldset-item ks-filter-checkbox">
+                                            <asp:CheckBox ID="CheckBox_Disponibile" runat="server" Text="Solo disponibili" AutoPostBack="true" />
+                                        </fieldset>
                                     </div>
                                 </div>
 
@@ -427,6 +443,11 @@
         SelectCommand="SELECT 0 as id, '' as descrizione, '' as url WHERE 1=0" />
 
     <asp:SqlDataSource ID="sdsTipologie" runat="server"
+        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+        SelectCommand="SELECT 0 as id, '' as descrizione, '' as url WHERE 1=0" />
+
+    <asp:SqlDataSource ID="sdsCategorie" runat="server"
         ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
         ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
         SelectCommand="SELECT 0 as id, '' as descrizione, '' as url WHERE 1=0" />

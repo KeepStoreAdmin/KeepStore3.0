@@ -960,6 +960,13 @@ strWhere = strWhere & " GROUP BY id"
             Regex.Replace(strWhere2, " AND varticolibase.TipologieId in \(([^\)])+\) ", String.Empty) &
             " group by `tipologie`.`Descrizione` order by `tipologie`.`Ordinamento`, `tipologie`.`Descrizione`"
 
+        Me.sdsCategorie.SelectCommand =
+            "select `varticolibase`.`CategorieId` AS `CategorieId`,`categorie`.`Descrizione` AS `Descrizione`," &
+            "`categorie`.`Ordinamento` AS `Ordinamento`,count(DISTINCT `varticolibase`.`id`) AS `Numero`" &
+            " from `varticolibase` join `categorie` on(`varticolibase`.`CategorieId` = `categorie`.`id`) " &
+            Regex.Replace(strWhere2, " AND \(varticolibase.CategorieId=\?CategorieId\) ", String.Empty) &
+            " group by `categorie`.`Descrizione` order by `categorie`.`Ordinamento`, `categorie`.`Descrizione`"
+
         Me.sdsGruppo.SelectCommand =
             "select GROUP_CONCAT(DISTINCT `varticolibase`.`GruppiId` SEPARATOR '|') AS `GruppiId`," &
             "`Gruppi`.`Descrizione` AS `Descrizione`,`Gruppi`.`Ordinamento` AS `Ordinamento`," &
@@ -979,6 +986,7 @@ strWhere = strWhere & " GROUP BY id"
 
         ' Ensure all filter datasources reuse the exact same parameters (100% param-only)
         CopyParams(Me.sdsArticoli.SelectParameters, Me.sdsMarche.SelectParameters)
+        CopyParams(Me.sdsArticoli.SelectParameters, Me.sdsCategorie.SelectParameters)
         CopyParams(Me.sdsArticoli.SelectParameters, Me.sdsTipologie.SelectParameters)
         CopyParams(Me.sdsArticoli.SelectParameters, Me.sdsGruppo.SelectParameters)
         CopyParams(Me.sdsArticoli.SelectParameters, Me.sdsSottogruppo.SelectParameters)
@@ -1004,6 +1012,19 @@ strWhere = strWhere & " GROUP BY id"
                 " AND (TipologieDescrizione IS NOT NULL)" &
                 promoExtraWhere &
                 " GROUP BY id) AS t1 GROUP BY Tipologieid"
+
+            Me.sdsCategorie.SelectCommand =
+                "SELECT *, COUNT(CategorieId) AS Numero FROM (" &
+                " SELECT MarcheId, MarcheDescrizione, SettoriId, SettoriDescrizione, CategorieId, CategorieDescrizione AS Descrizione," &
+                " TipologieId, TipologieDescrizione, GruppiId, GruppiDescrizione, SottogruppiId, SottogruppiDescrizione" &
+                " FROM vsuperarticoli" &
+                " WHERE (inofferta=1)" &
+                " AND ((?NListino>=OfferteDaListino) AND (?NListino<=OfferteAListino))" &
+                " AND (NListino=?NListino)" &
+                " AND ((CURDATE()>=offerteDatainizio) AND (CURDATE()<=offerteDataFine))" &
+                " AND (CategorieDescrizione IS NOT NULL)" &
+                promoExtraWhere &
+                " GROUP BY id) AS t1 GROUP BY CategorieId"
 
             Me.sdsGruppo.SelectCommand =
                 "SELECT *, COUNT(GruppiId) AS Numero FROM (" &
@@ -1155,6 +1176,7 @@ strWhere = strWhere & " GROUP BY id"
 
         If ksFilters IsNot Nothing Then ksFilters.Visible = True
         If FormView1 IsNot Nothing Then FormView1.DataBind()
+        If DataListCategoria IsNot Nothing Then DataListCategoria.DataBind()
         If DataList1 IsNot Nothing Then DataList1.DataBind()
         If DataList2 IsNot Nothing Then DataList2.DataBind()
         If DataList3 IsNot Nothing Then DataList3.DataBind()
@@ -1390,6 +1412,10 @@ strWhere = strWhere & " GROUP BY id"
 
     Protected Sub DataList1_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles DataList1.PreRender
         Me.DataList1.Visible = (Me.DataList1.Items.Count > 0)
+    End Sub
+
+    Protected Sub DataListCategoria_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles DataListCategoria.PreRender
+        Me.DataListCategoria.Visible = (Me.DataListCategoria.Items.Count > 0)
     End Sub
 
     Protected Sub DataList2_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles DataList2.PreRender
@@ -1923,10 +1949,11 @@ strWhere = strWhere & " GROUP BY id"
             AddActiveFilter(active, "spedgratis=", "Spedizione gratis")
         End If
 
-        AddFacetActiveFilters(active, "tp", "Tipologia", "tipologie")
-        AddFacetActiveFilters(active, "gr", "Categoria", "Gruppi")
-        AddFacetActiveFilters(active, "sg", "Sottocategoria", "SottoGruppi")
         AddFacetActiveFilters(active, "mr", "Marca", "Marche")
+        AddFacetActiveFilters(active, "ct", "Categoria", "categorie")
+        AddFacetActiveFilters(active, "tp", "Tipologia", "tipologie")
+        AddFacetActiveFilters(active, "gr", "Gruppo", "Gruppi")
+        AddFacetActiveFilters(active, "sg", "Sottogruppo", "SottoGruppi")
 
         Dim rawSort As String = Convert.ToString(Request.QueryString("ordinamento"))
         If rawSort <> "" AndAlso Drop_Ordinamento IsNot Nothing AndAlso Drop_Ordinamento.SelectedItem IsNot Nothing AndAlso Drop_Ordinamento.SelectedValue <> "" Then
@@ -1991,6 +2018,8 @@ strWhere = strWhere & " GROUP BY id"
 
         Dim safeTable As String = ""
         Select Case tableName
+            Case "categorie"
+                safeTable = "categorie"
             Case "tipologie"
                 safeTable = "tipologie"
             Case "Gruppi"
