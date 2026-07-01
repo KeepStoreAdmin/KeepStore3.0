@@ -60,6 +60,15 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 - ChatGPT decide piano, ordine e priorita; Codex esegue task piccoli, verificabili e con confini rigidi. Evitare task generici tipo "controlla tutto".
 - Priorita: bug bloccanti/regressioni utente, smoke, documentazione minima, poi cleanup. Non consumare token su attivita non funzionali mentre ci sono step piu importanti aperti.
 
+### Conoscenza storica integrata / anti-regressione
+
+- Dai vecchi file `AGENTS.md` e patch notes resta confermata la separazione fondamentale: KeepStore e il motore dati/logica/permessi, ONSUS e la sorgente UI/UX, e tra i due servono componenti e contratti dati chiari. Non mischiare nello stesso micro-task logica VB, query SQL, HTML, SEO, JS e template se non e indispensabile e autorizzato.
+- Non fare task larghi tipo "sistema tutto" e non riaprire blocchi chiusi senza bug live verificato. Le vecchie istruzioni ZIP/copia-incolla e patch manuali sono storiche, non metodo operativo attuale: oggi si lavora con branch, commit, PR verso `frontend-rebuild`, review, smoke e merge controllato.
+- Header, search e catalogo devono restare ONSUS source-first: provider catalogo unico dove applicabile, gerarchia reale `settore > categoria > tipologia`, immagini settore moderne da `/Public/assets/images/settori/`, top bar con dati reali da `aziende`/`vettori` e hook ONSUS per compare, wishlist e cart. PR #210 e PR #214 restano chiuse; eventuali evoluzioni sono nuovi audit mirati, non regressioni.
+- Ricerca intelligente resta roadmap separata: prima ranking deterministico coerente tra suggest e risultati (`codice/EAN` esatto, inizio parola, contenuto, marca + descrizione), preview immagine, recenti client-side e redirect coerente verso `articoli.aspx`; solo dopo audit dati reali si valuta AI/search assistita.
+- Le patch sicurezza storiche indicano hardening incrementale, non sicurezza completata: backlog progressivo su `AntiCsrfPage`, `KeepStoreSecurity`, encoding output, query parametrizzate/whitelist, escape LIKE e parsing numerico. Non modificare auth, DB o pagine sensibili senza task dedicato e verifica dello stato reale.
+- Feature flag/kill-switch sono solo backlog/policy futura: se serviranno, dovranno essere espliciti, admin-only, auditati, CSRF-protected, con storage controllato e logging. Evitare chiavi `Application` opache e output JS inline; nessuna tabella o implementazione DB viene autorizzata da questa nota.
+
 ### Regola multi-azienda / dominio / runtime
 
 - KeepStore usa un database condiviso multi-azienda: `AziendeId=1` identifica Taikun, `AziendeId=2` identifica Webaffare.
