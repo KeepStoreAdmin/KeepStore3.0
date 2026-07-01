@@ -22,6 +22,8 @@ Partial Class Articoli
     Private ReadOnly catalogPromotionCache As New Dictionary(Of String, ProductPromotionDisplayModel)(StringComparer.Ordinal)
     Private Const UseNewCatalogProductCard As Boolean = True
     Private Const ProductCardReplaceMaxCount As Integer = 3
+    Private catalogSideFiltersDeferred As Boolean = False
+    Private catalogSideFiltersBound As Boolean = False
 
     Private Class ActiveFilterItem
         Public Property Key As String
@@ -193,6 +195,8 @@ Partial Class Articoli
         If sm IsNot Nothing Then sm.EnablePartialRendering = False
         oldUrl = HttpContext.Current.Request.Url.AbsoluteUri
         If IsProductCardPreviewEnabled() OrElse IsProductCardPreviewRealEnabled() OrElse IsProductCardReplaceAllEnabled() OrElse GetProductCardReplaceCount() > 0 OrElse IsProductCardFeatureEnabled() Then AddHandler Me.lvProdotti.ItemDataBound, AddressOf lvProdotti_ItemDataBound
+
+        DeferCatalogSideFiltersForSearch()
 
         If Not String.IsNullOrEmpty(Request.QueryString("rimuovi")) Then
             Dim filtersToRemove As String = Request.QueryString("rimuovi")
@@ -1041,11 +1045,15 @@ strWhere = strWhere & " GROUP BY id"
                 " GROUP BY id) AS t1 GROUP BY marcheid"
         End If
 
-        Dim conn As New MySqlConnection
-        conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-        conn.Open()
-        showFilters(conn, sdsArticoli.SelectCommand)
-        conn.Close()
+        If ShouldDeferCatalogSideFilters() Then
+            If filtritagliaecolore IsNot Nothing Then filtritagliaecolore.Visible = False
+        Else
+            Dim conn As New MySqlConnection
+            conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+            conn.Open()
+            showFilters(conn, sdsArticoli.SelectCommand)
+            conn.Close()
+        End If
 
         Dim sdsArticoliToShow = Me.sdsArticoli.SelectCommand.Replace("'", """").ToUpper
     End Sub
@@ -1097,6 +1105,13 @@ strWhere = strWhere & " GROUP BY id"
         Dim hasItems As Boolean = (Me.lvProdotti.Items.Count > 0)
         If Me.ksMultiFooter IsNot Nothing Then Me.ksMultiFooter.Visible = hasItems
         If Me.ksPagerWrap IsNot Nothing Then Me.ksPagerWrap.Visible = hasItems
+        If catalogSideFiltersDeferred Then
+            If hasItems Then
+                BindDeferredCatalogSideFilters()
+            Else
+                HideDeferredCatalogSideFilters()
+            End If
+        End If
         If Not hasItems Then BindCatalogEmptySearchState()
 
         If Me.dpProdotti IsNot Nothing AndAlso Me.dpProdotti.TotalRowCount >= 0 Then
@@ -1119,6 +1134,46 @@ strWhere = strWhere & " GROUP BY id"
         If queryPlaceholder IsNot Nothing Then queryPlaceholder.Visible = CatalogEmptySearchHasQuery()
         If queryLiteral IsNot Nothing Then queryLiteral.Text = CatalogEmptySearchQueryText()
         If linksLiteral IsNot Nothing Then linksLiteral.Text = CatalogEmptySearchLinksHtml()
+    End Sub
+
+    Private Function ShouldDeferCatalogSideFilters() As Boolean
+        Return Not String.IsNullOrWhiteSpace(Convert.ToString(Request.QueryString("q")))
+    End Function
+
+    Private Sub DeferCatalogSideFiltersForSearch()
+        If Not ShouldDeferCatalogSideFilters() Then Exit Sub
+        catalogSideFiltersDeferred = True
+        catalogSideFiltersBound = False
+
+        If ksFilters IsNot Nothing Then ksFilters.Visible = False
+        If filtritagliaecolore IsNot Nothing Then filtritagliaecolore.Visible = False
+    End Sub
+
+    Private Sub BindDeferredCatalogSideFilters()
+        If catalogSideFiltersBound Then Exit Sub
+        catalogSideFiltersBound = True
+
+        If ksFilters IsNot Nothing Then ksFilters.Visible = True
+        If FormView1 IsNot Nothing Then FormView1.DataBind()
+        If DataList1 IsNot Nothing Then DataList1.DataBind()
+        If DataList2 IsNot Nothing Then DataList2.DataBind()
+        If DataList3 IsNot Nothing Then DataList3.DataBind()
+        If DataList4 IsNot Nothing Then DataList4.DataBind()
+
+        Dim conn As New MySqlConnection
+        Try
+            conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+            conn.Open()
+            showFilters(conn, sdsArticoli.SelectCommand)
+        Finally
+            If conn.State = ConnectionState.Open Then conn.Close()
+            conn.Dispose()
+        End Try
+    End Sub
+
+    Private Sub HideDeferredCatalogSideFilters()
+        If ksFilters IsNot Nothing Then ksFilters.Visible = False
+        If filtritagliaecolore IsNot Nothing Then filtritagliaecolore.Visible = False
     End Sub
 
     Private Function FindControlRecursive(ByVal root As Control, ByVal controlId As String) As Control
