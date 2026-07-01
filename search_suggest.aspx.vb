@@ -111,7 +111,7 @@ Partial Public Class search_suggest
             Next
         Catch ex As Exception
             payload("ok") = False
-            payload("error") = ex.Message
+            payload("error") = "Servizio suggerimenti temporaneamente non disponibile."
         End Try
 
         Dim serializer As New JavaScriptSerializer()
