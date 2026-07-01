@@ -68,27 +68,6 @@
                                 </div>
 
                                 <div class="widget-facet facet-fieldset">
-                                    <p class="facet-title title-sidebar fw-semibold">Categoria</p>
-                                    <asp:FormView ID="FormView1" runat="server" DataSourceID="sdsCategorie">
-                                        <ItemTemplate>
-                                            <asp:Label ID="lblCategoria" runat="server" Text='<%# Eval("descrizione") %>' Visible="false" />
-                                        </ItemTemplate>
-                                    </asp:FormView>
-                                    <div class="box-fieldset-item">
-                                        <asp:DataList ID="DataListCategoria" runat="server" DataSourceID="sdsCategorie" RepeatLayout="Flow" CssClass="ks-filter-list">
-                                            <ItemTemplate>
-                                                <fieldset class="fieldset-item">
-                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("ct", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("ct", Container.DataItem) %>'>
-                                                        <span><%# Server.HtmlEncode(Convert.ToString(Eval("descrizione"))) %></span>
-                                                        <small><%# If(UiData.HasColumn(Container.DataItem, "Numero"), Eval("Numero"), "") %></small>
-                                                    </a>
-                                                </fieldset>
-                                            </ItemTemplate>
-                                        </asp:DataList>
-                                    </div>
-                                </div>
-
-                                <div class="widget-facet facet-fieldset">
                                     <p class="facet-title title-sidebar fw-semibold">Tipologie</p>
                                     <div class="box-fieldset-item">
                                         <asp:DataList ID="DataList3" runat="server" DataSourceID="sdsTipologie" RepeatLayout="Flow" CssClass="ks-filter-list">
@@ -106,6 +85,11 @@
 
                                 <div class="widget-facet facet-fieldset">
                                     <p class="facet-title title-sidebar fw-semibold">Gruppi</p>
+                                    <asp:FormView ID="FormView1" runat="server" DataSourceID="sdsGruppo">
+                                        <ItemTemplate>
+                                            <asp:Label ID="lblCategoria" runat="server" Text='<%# Eval("descrizione") %>' Visible="false" />
+                                        </ItemTemplate>
+                                    </asp:FormView>
                                     <div class="box-fieldset-item">
                                         <asp:DataList ID="DataList1" runat="server" DataSourceID="sdsGruppo" RepeatLayout="Flow" CssClass="ks-filter-list">
                                             <ItemTemplate>
@@ -443,11 +427,6 @@
         SelectCommand="SELECT 0 as id, '' as descrizione, '' as url WHERE 1=0" />
 
     <asp:SqlDataSource ID="sdsTipologie" runat="server"
-        ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-        ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-        SelectCommand="SELECT 0 as id, '' as descrizione, '' as url WHERE 1=0" />
-
-    <asp:SqlDataSource ID="sdsCategorie" runat="server"
         ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
         ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
         SelectCommand="SELECT 0 as id, '' as descrizione, '' as url WHERE 1=0" />

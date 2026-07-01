@@ -223,6 +223,19 @@
   flex: 0 0 284px;
 }
 
+#ksCatalogPage .widget-facet .facet-title {
+  margin-bottom: 10px;
+}
+
+#ksCatalogPage .widget-facet .box-fieldset-item {
+  gap: 6px;
+}
+
+#ksCatalogPage .widget-facet:not(:last-child) {
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+}
+
 #ksCatalogPage .tf-shop-control {
   align-items: center;
   margin-bottom: 16px;
