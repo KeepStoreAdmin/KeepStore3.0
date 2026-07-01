@@ -68,8 +68,9 @@ Stato micro-task search deterministica post PR #222/#223/#224:
 - PR #222 chiusa: `catalogUrl` suggest usa `disponibile=1` e `ordinamento=...`, allineati ad `articoli.aspx`; ranking/query SQL invariati.
 - PR #223 chiusa: JSON pubblico suggest non espone piu `ex.Message`; errore generico `Servizio suggerimenti temporaneamente non disponibile.` con formato `ok=false` + `error`.
 - PR #224 chiusa: `SearchScore` catalogo ampliato in `articoli.aspx.vb` con `DescrizioneHTML` solo scoring, marca+descrizione, tassonomie e token multi-parola; query filtro principale, `Export +500`, Codice/EAN e query numeriche preservati.
+- PR #226 chiusa: zero-results catalogo migliorato in `articoli.aspx` con query HTML encoded, CTA generiche e chip da token query; fallback statici merceologici/elettronica rimossi per multi-merceologia, senza AI attiva, prodotti inventati, query DB extra o modifiche a suggest/ranking.
 - Test registrati: `hp` non peggiorato (`18933,20018`), `stampante hp` migliorato verso suggest (`20810,17698`), `12384` invariato con nessun ID catalogo e suggest `total=0`; smoke suggest/articoli/carrello OK.
-- Limiti residui: LIKE su molte colonne lunghe puo diventare costoso; zero results ancora basilare; eventuale AI/LLM resta fase successiva con privacy task.
+- Limiti residui: LIKE su molte colonne lunghe puo diventare costoso; zero results ora e assistito ma resta locale/non-AI; eventuale AI/LLM resta fase successiva con privacy task.
 
 ## 3. Architettura a strati
 
@@ -251,10 +252,10 @@ Vincoli:
    - codice/EAN, query numeriche, `Export +500` e filtro principale preservati.
 
 4. `SEARCH-ZERO-RESULTS-ASSIST-1A`
-   - empty state intelligente;
-   - alternative locali;
-   - categorie vicine;
-   - visti di recente.
+   - chiuso con PR #226;
+   - empty state catalogo piu utile;
+   - query HTML encoded, CTA generiche e chip da token query;
+   - nessun fallback hardcoded merceologico, nessuna AI attiva e nessuna query DB extra.
 
 5. `AI-ASSISTANT-DATA-PROFILE-AUDIT-1A`
    - audit campi e vocabolario per merceologie;
