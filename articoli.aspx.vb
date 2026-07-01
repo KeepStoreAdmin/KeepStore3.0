@@ -1923,10 +1923,10 @@ strWhere = strWhere & " GROUP BY id"
             AddActiveFilter(active, "spedgratis=", "Spedizione gratis")
         End If
 
-        AddFacetActiveFilters(active, "tp", "Tipologia", "tipologie")
-        AddFacetActiveFilters(active, "gr", "Categoria", "Gruppi")
-        AddFacetActiveFilters(active, "sg", "Sottocategoria", "SottoGruppi")
         AddFacetActiveFilters(active, "mr", "Marca", "Marche")
+        AddFacetActiveFilters(active, "tp", "Tipologia", "tipologie")
+        AddFacetActiveFilters(active, "gr", "Gruppo", "Gruppi")
+        AddFacetActiveFilters(active, "sg", "Sottogruppo", "SottoGruppi")
 
         Dim rawSort As String = Convert.ToString(Request.QueryString("ordinamento"))
         If rawSort <> "" AndAlso Drop_Ordinamento IsNot Nothing AndAlso Drop_Ordinamento.SelectedItem IsNot Nothing AndAlso Drop_Ordinamento.SelectedValue <> "" Then
