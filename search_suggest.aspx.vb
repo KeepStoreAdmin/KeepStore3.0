@@ -472,11 +472,11 @@ Partial Public Class search_suggest
             If filters.SottoGruppoId > 0 Then args.Add("sg=" & filters.SottoGruppoId.ToString(CultureInfo.InvariantCulture))
             If filters.MarcaId > 0 Then args.Add("mr=" & filters.MarcaId.ToString(CultureInfo.InvariantCulture))
             If filters.SoloPromo Then args.Add("inpromo=1")
-            If filters.SoloDisponibili Then args.Add("available=1")
+            If filters.SoloDisponibili Then args.Add("disponibile=1")
             If filters.SoloRicondizionati Then args.Add("ricondizionato=1")
             If filters.MinPrice > 0D Then args.Add("min=" & filters.MinPrice.ToString(CultureInfo.InvariantCulture))
             If filters.MaxPrice > 0D Then args.Add("max=" & filters.MaxPrice.ToString(CultureInfo.InvariantCulture))
-            If Not String.IsNullOrWhiteSpace(filters.Sort) Then args.Add("sort=" & HttpUtility.UrlEncode(filters.Sort))
+            If Not String.IsNullOrWhiteSpace(filters.Sort) Then args.Add("ordinamento=" & HttpUtility.UrlEncode(filters.Sort))
         End If
         If args.Count > 0 Then url.Append("?").Append(String.Join("&", args))
         Return url.ToString()
