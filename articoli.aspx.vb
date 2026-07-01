@@ -81,11 +81,6 @@ Partial Class Articoli
             If links.Count >= 2 Then Exit For
         Next
 
-        AddCatalogEmptySearchLink(links, seen, "Toner stampante", "articoli.aspx?q=toner%20stampante")
-        AddCatalogEmptySearchLink(links, seen, "Notebook ricondizionato", "articoli.aspx?q=notebook%20ricondizionato")
-        AddCatalogEmptySearchLink(links, seen, "Accessori smartphone", "articoli.aspx?q=smartphone%20accessori")
-        AddCatalogEmptySearchLink(links, seen, "Cavi USB", "articoli.aspx?q=cavo%20usb")
-
         Dim html As New StringBuilder()
         Dim renderedLinks As Integer = 0
         For Each link As KeyValuePair(Of String, String) In links
