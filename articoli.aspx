@@ -377,10 +377,17 @@
 
                             <EmptyDataTemplate>
                                 <div class="tf-empty-state text-center py-5">
-                                    <div class="heading">Nessun prodotto trovato</div>
-                                    <p class="text-main-2 mt-2">Modifica i filtri o torna al catalogo completo.</p>
-                                    <div class="mt-4">
+                                    <div class="heading">Non abbiamo trovato prodotti per la tua ricerca</div>
+                                    <asp:PlaceHolder ID="phEmptySearchQuery" runat="server" Visible="false">
+                                        <p class="text-main-2 mt-2 mb-0">Ricerca: <strong><asp:Literal ID="litEmptySearchQuery" runat="server" /></strong></p>
+                                    </asp:PlaceHolder>
+                                    <p class="text-main-2 mt-2 mb-0">Controlla le parole chiave, prova termini piu generici o rimuovi i filtri applicati.</p>
+                                    <div class="mt-4 d-flex flex-wrap gap-2 justify-content-center">
                                         <a class="tf-btn btn-fill" href="articoli.aspx">Reset filtri</a>
+                                        <a class="tf-btn btn-line" href="articoli.aspx">Vai al catalogo</a>
+                                    </div>
+                                    <div class="mt-3 d-flex flex-wrap gap-2 justify-content-center">
+                                        <asp:Literal ID="litEmptySearchLinks" runat="server" />
                                     </div>
                                 </div>
                             </EmptyDataTemplate>

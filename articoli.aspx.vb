@@ -5,6 +5,7 @@ Imports System.Web
 Imports System.Text.RegularExpressions
 Imports System.Collections
 Imports System.Collections.Generic
+Imports System.Web.UI
 Imports System.Web.UI.WebControls
 
 Partial Class Articoli
@@ -62,6 +63,79 @@ Partial Class Articoli
         Public Property QuantityText As String
         Public Property ActionDataAttributes As String
     End Class
+
+    Protected Function CatalogEmptySearchHasQuery() As Boolean
+        Return CatalogEmptySearchQueryRaw() <> ""
+    End Function
+
+    Protected Function CatalogEmptySearchQueryText() As String
+        Return Server.HtmlEncode(CatalogEmptySearchQueryRaw())
+    End Function
+
+    Protected Function CatalogEmptySearchLinksHtml() As String
+        Dim links As New List(Of KeyValuePair(Of String, String))()
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+        For Each token As String In CatalogEmptySearchTokens()
+            AddCatalogEmptySearchLink(links, seen, "Cerca " & token, "articoli.aspx?q=" & HttpUtility.UrlEncode(token))
+            If links.Count >= 2 Then Exit For
+        Next
+
+        AddCatalogEmptySearchLink(links, seen, "Toner stampante", "articoli.aspx?q=toner%20stampante")
+        AddCatalogEmptySearchLink(links, seen, "Notebook ricondizionato", "articoli.aspx?q=notebook%20ricondizionato")
+        AddCatalogEmptySearchLink(links, seen, "Accessori smartphone", "articoli.aspx?q=smartphone%20accessori")
+        AddCatalogEmptySearchLink(links, seen, "Cavi USB", "articoli.aspx?q=cavo%20usb")
+
+        Dim html As New StringBuilder()
+        Dim renderedLinks As Integer = 0
+        For Each link As KeyValuePair(Of String, String) In links
+            If renderedLinks >= 4 Then Exit For
+            html.Append("<a class=""badge rounded-pill text-bg-light text-decoration-none"" href=""")
+            html.Append(Server.HtmlEncode(link.Value))
+            html.Append(""">")
+            html.Append(Server.HtmlEncode(link.Key))
+            html.Append("</a>")
+            renderedLinks += 1
+        Next
+        Return html.ToString()
+    End Function
+
+    Private Function CatalogEmptySearchQueryRaw() As String
+        Dim raw As String = Convert.ToString(Request.QueryString("q"))
+        If String.IsNullOrWhiteSpace(raw) Then Return String.Empty
+        raw = Regex.Replace(raw, "\s+", " ").Trim()
+        If raw.Length > 80 Then raw = raw.Substring(0, 80).Trim()
+        Return raw
+    End Function
+
+    Private Function CatalogEmptySearchTokens() As List(Of String)
+        Dim output As New List(Of String)()
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim query As String = CatalogEmptySearchQueryRaw()
+        If query = "" Then Return output
+
+        For Each match As Match In Regex.Matches(query, "[A-Za-z0-9]{3,}")
+            Dim token As String = match.Value.Trim()
+            If token.Length > 24 Then token = token.Substring(0, 24)
+            If Not seen.Contains(token) Then
+                seen.Add(token)
+                output.Add(token)
+            End If
+            If output.Count >= 2 Then Exit For
+        Next
+
+        Return output
+    End Function
+
+    Private Sub AddCatalogEmptySearchLink(ByVal links As List(Of KeyValuePair(Of String, String)), ByVal seen As HashSet(Of String), ByVal label As String, ByVal url As String)
+        If links Is Nothing OrElse seen Is Nothing Then Exit Sub
+        label = If(label, String.Empty).Trim()
+        url = If(url, String.Empty).Trim()
+        If label = "" OrElse url = "" Then Exit Sub
+        If seen.Contains(label) Then Exit Sub
+        seen.Add(label)
+        links.Add(New KeyValuePair(Of String, String)(label, url))
+    End Sub
 
     Function sostituisci_caratteri_speciali(ByRef stringa As String) As String
         stringa = Server.HtmlEncode(stringa)
@@ -1028,6 +1102,7 @@ strWhere = strWhere & " GROUP BY id"
         Dim hasItems As Boolean = (Me.lvProdotti.Items.Count > 0)
         If Me.ksMultiFooter IsNot Nothing Then Me.ksMultiFooter.Visible = hasItems
         If Me.ksPagerWrap IsNot Nothing Then Me.ksPagerWrap.Visible = hasItems
+        If Not hasItems Then BindCatalogEmptySearchState()
 
         If Me.dpProdotti IsNot Nothing AndAlso Me.dpProdotti.TotalRowCount >= 0 Then
             SetCatalogCountText(Me.dpProdotti.TotalRowCount)
@@ -1040,6 +1115,29 @@ strWhere = strWhere & " GROUP BY id"
             End If
         End If
     End Sub
+
+    Private Sub BindCatalogEmptySearchState()
+        Dim queryPlaceholder As PlaceHolder = TryCast(FindControlRecursive(Me.lvProdotti, "phEmptySearchQuery"), PlaceHolder)
+        Dim queryLiteral As Literal = TryCast(FindControlRecursive(Me.lvProdotti, "litEmptySearchQuery"), Literal)
+        Dim linksLiteral As Literal = TryCast(FindControlRecursive(Me.lvProdotti, "litEmptySearchLinks"), Literal)
+
+        If queryPlaceholder IsNot Nothing Then queryPlaceholder.Visible = CatalogEmptySearchHasQuery()
+        If queryLiteral IsNot Nothing Then queryLiteral.Text = CatalogEmptySearchQueryText()
+        If linksLiteral IsNot Nothing Then linksLiteral.Text = CatalogEmptySearchLinksHtml()
+    End Sub
+
+    Private Function FindControlRecursive(ByVal root As Control, ByVal controlId As String) As Control
+        If root Is Nothing OrElse String.IsNullOrEmpty(controlId) Then Return Nothing
+        Dim direct As Control = root.FindControl(controlId)
+        If direct IsNot Nothing Then Return direct
+
+        For Each child As Control In root.Controls
+            Dim found As Control = FindControlRecursive(child, controlId)
+            If found IsNot Nothing Then Return found
+        Next
+
+        Return Nothing
+    End Function
 
     Private Function IsProductCardDebugModeAllowed() As Boolean
         Try
