@@ -71,6 +71,7 @@ Stato micro-task search deterministica post PR #222/#223/#224:
 - PR #226 chiusa: zero-results catalogo migliorato in `articoli.aspx` con query HTML encoded, CTA generiche e chip da token query; fallback statici merceologici/elettronica rimossi per multi-merceologia, senza AI attiva, prodotti inventati, query DB extra o modifiche a suggest/ranking.
 - PR #228/#229/#230 chiuse: performance zero-results e sidebar filtri catalogo stabilizzate senza AI attiva. PR #228 evita facet/`showFilters()` su zero-results usando `lvProdotti.Items.Count`; PR #229 fissa l'ordine `Marche > Tipologie > Gruppi > Sottogruppi > Disponibilita > Varianti`, rimuove `Categoria` dalla sidebar e preserva `ct` come querystring; PR #230 compatta lo spacing con CSS scoped sotto `#ksCatalogPage`. Query prodotti principale, SearchScore/ranking, suggest, DB/schema/SP, carrello/checkout/ordine e gateway restano invariati.
 - PR #232 chiusa: filtri applicati catalogo in stile ONSUS-like con `.meta-filter-shop`, `#applied-filters`, `.remove-all-filters` e `icon-close`; rimozione singola filtro via GET sicuro, remove-all visibile e funzionante, `st/ct` preservati, nessun chip tecnico solo ID, sidebar invariata e zero-results preservato. Query prodotti principale, SearchScore/ranking, suggest, DB/schema/SP, carrello/checkout/ordine, gateway e JS restano invariati; CSS scoped sotto `#ksCatalogPage`.
+- PR #234 chiusa: navigazione `Settori` ONSUS-like sopra i facet catalogo, basata su `CatalogMenuSector` e `CatalogMenuProvider`, gerarchia `Settori > Categorie`, URL puliti `st`/`st+ct`, parametri sporchi azzerati, cache `LoadCatalogMenuCached()` 600s e rendering limitato. La label `Categoria/Categorie` e stata corretta in `Settori`; non e un facet laterale e non modifica query prodotti, SearchScore/ranking, suggest, DB/schema/SP, carrello/checkout/ordine, gateway o JS. Applied filters PR #232 e zero-results PR #226 restano preservati.
 - Test registrati: `hp` non peggiorato (`18933,20018`), `stampante hp` migliorato verso suggest (`20810,17698`), `12384` invariato con nessun ID catalogo e suggest `total=0`; smoke suggest/articoli/carrello OK.
 - Limiti residui: LIKE su molte colonne lunghe puo diventare costoso; zero results ora e assistito ma resta locale/non-AI; eventuale AI/LLM resta fase successiva con privacy task.
 
@@ -270,10 +271,17 @@ Vincoli:
    - ranking/SearchScore, suggest, DB, query prodotti, zero-results e sidebar filtri preservati.
 
 7. `CATALOG-SIDEBAR-CATEGORIES-ONSUS-AUDIT-1A`
-   - audit dedicato separato prima di valutare categorie/sidebar, price range, grid/list o review;
+   - chiuso prima della PR #234;
+   - confermata separazione tra navigazione catalogo e facet laterali;
    - evitare copia massiva ONSUS e usare dati reali KeepStore.
 
-8. `AI-ASSISTANT-DATA-PROFILE-AUDIT-1A`
+8. `CATALOG-SIDEBAR-CATEGORIES-ONSUS-1A`
+   - chiuso con PR #234;
+   - sezione visibile `Settori` sopra i facet, dati reali `CatalogMenuSector`, gerarchia `Settori > Categorie`;
+   - URL `st`/`st+ct` puliti, nessun parametro sporco, no hardcoding merceologico;
+   - query prodotti, SearchScore/ranking, suggest, zero-results e filtri applicati preservati.
+
+9. `AI-ASSISTANT-DATA-PROFILE-AUDIT-1A`
    - audit campi e vocabolario per merceologie;
    - capire dove sta la scheda tecnica;
    - nessuna modifica DB.
