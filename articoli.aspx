@@ -51,7 +51,7 @@
 
                         <div class="canvas-body">
                             <asp:Panel ID="pnlCatalogCategoryNav" runat="server" CssClass="facet-categories ks-catalog-category-nav" Visible="false">
-                                <h6 class="title fw-medium">Categorie</h6>
+                                <h6 class="title fw-medium">Settori</h6>
                                 <asp:Literal ID="litCatalogCategoryNav" runat="server" />
                             </asp:Panel>
 
