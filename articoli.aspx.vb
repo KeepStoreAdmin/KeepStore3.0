@@ -22,6 +22,8 @@ Partial Class Articoli
     Private ReadOnly catalogPromotionCache As New Dictionary(Of String, ProductPromotionDisplayModel)(StringComparer.Ordinal)
     Private Const UseNewCatalogProductCard As Boolean = True
     Private Const ProductCardReplaceMaxCount As Integer = 3
+    Private Const CatalogNavMaxSectors As Integer = 12
+    Private Const CatalogNavMaxCategories As Integer = 10
     Private catalogSideFiltersDeferred As Boolean = False
     Private catalogSideFiltersBound As Boolean = False
 
@@ -224,6 +226,8 @@ Partial Class Articoli
             InitializeCatalogControlsFromRequest()
         End If
 
+        BindCatalogCategoryNavigation()
+
         'Redirect nel caso c'è la presenza di #up
         If Request.Url.AbsoluteUri.Contains("%23up") Or (Request.Url.AbsoluteUri.Contains("#23up")) Then
             Dim cleanAnchorUrl As String = Request.Url.AbsoluteUri.Replace("%23up", "").Replace("#23up", "")
@@ -287,7 +291,105 @@ Partial Class Articoli
         RedirectIfChanged(newUrl, False)
     End Sub
 
-Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.LoadComplete
+    Private Sub BindCatalogCategoryNavigation()
+        If pnlCatalogCategoryNav Is Nothing OrElse litCatalogCategoryNav Is Nothing Then Exit Sub
+
+        pnlCatalogCategoryNav.Visible = False
+        litCatalogCategoryNav.Text = String.Empty
+
+        Dim sectors As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenuCached()
+        If sectors Is Nothing OrElse sectors.Count = 0 Then Exit Sub
+
+        Dim activeSectorId As Integer = 0
+        Dim activeCategoryId As Integer = 0
+        Integer.TryParse(Convert.ToString(Request.QueryString("st")), activeSectorId)
+        Integer.TryParse(Convert.ToString(Request.QueryString("ct")), activeCategoryId)
+
+        If activeSectorId <= 0 AndAlso activeCategoryId > 0 Then
+            activeSectorId = LookupSettoreIdByCategoria(activeCategoryId)
+        End If
+
+        Dim html As New StringBuilder()
+        Dim renderedSectors As Integer = 0
+
+        html.Append("<ul class=""ks-category-nav-list"">")
+
+        For Each sector As CatalogMenuSector In sectors
+            If sector Is Nothing Then Continue For
+            Dim isActiveSector As Boolean = (sector.Id > 0 AndAlso sector.Id = activeSectorId)
+            If renderedSectors >= CatalogNavMaxSectors AndAlso Not isActiveSector Then Continue For
+
+            Dim sectorLabel As String = CatalogNavText(sector.Descrizione, 42)
+            If sectorLabel = "" Then Continue For
+
+            html.Append("<li class=""ks-category-nav-item")
+            If isActiveSector Then html.Append(" active")
+            html.Append(""">")
+            html.Append("<a class=""ks-category-nav-link")
+            If isActiveSector Then html.Append(" active")
+            html.Append(""" href=""")
+            html.Append(HA(BuildCatalogCategoryUrl(sector.Id, 0)))
+            html.Append("""><span>")
+            html.Append(Server.HtmlEncode(sectorLabel))
+            html.Append("</span><i class=""icon-arrow-right"" aria-hidden=""true""></i></a>")
+
+            If isActiveSector AndAlso sector.Categories IsNot Nothing AndAlso sector.Categories.Count > 0 Then
+                html.Append("<ul class=""ks-category-nav-sublist"">")
+                Dim renderedCategories As Integer = 0
+
+                For Each category As CatalogMenuCategory In sector.Categories
+                    If category Is Nothing Then Continue For
+                    If renderedCategories >= CatalogNavMaxCategories Then Exit For
+
+                    Dim categoryLabel As String = CatalogNavText(category.Descrizione, 46)
+                    If categoryLabel = "" Then Continue For
+
+                    Dim isActiveCategory As Boolean = (category.Id > 0 AndAlso category.Id = activeCategoryId)
+                    html.Append("<li class=""ks-category-nav-subitem")
+                    If isActiveCategory Then html.Append(" active")
+                    html.Append(""">")
+                    html.Append("<a class=""ks-category-nav-sublink")
+                    If isActiveCategory Then html.Append(" active")
+                    html.Append(""" href=""")
+                    html.Append(HA(BuildCatalogCategoryUrl(sector.Id, category.Id)))
+                    html.Append("""><span>")
+                    html.Append(Server.HtmlEncode(categoryLabel))
+                    html.Append("</span><i class=""icon-arrow-right"" aria-hidden=""true""></i></a></li>")
+                    renderedCategories += 1
+                Next
+
+                html.Append("</ul>")
+            End If
+
+            html.Append("</li>")
+            renderedSectors += 1
+        Next
+
+        html.Append("</ul>")
+
+        If renderedSectors <= 0 Then Exit Sub
+
+        litCatalogCategoryNav.Text = html.ToString()
+        pnlCatalogCategoryNav.Visible = True
+    End Sub
+
+    Private Function CatalogNavText(ByVal value As Object, ByVal maxLength As Integer) As String
+        Dim text As String = HttpUtility.HtmlDecode(Convert.ToString(value)).Trim()
+        If text = "" Then Return String.Empty
+        text = Regex.Replace(text, "\s+", " ")
+        Return ThemeManager.CompactText(text, maxLength)
+    End Function
+
+    Private Function BuildCatalogCategoryUrl(ByVal sectorId As Integer, ByVal categoryId As Integer) As String
+        Dim parts As New List(Of String)()
+        If sectorId > 0 Then parts.Add("st=" & HttpUtility.UrlEncode(sectorId.ToString()))
+        If categoryId > 0 Then parts.Add("ct=" & HttpUtility.UrlEncode(categoryId.ToString()))
+
+        If parts.Count = 0 Then Return "articoli.aspx"
+        Return "articoli.aspx?" & String.Join("&", parts.ToArray())
+    End Function
+
+    Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.LoadComplete
         IvaTipo = Me.Session("IvaTipo")
 
         If IvaTipo = 1 Then

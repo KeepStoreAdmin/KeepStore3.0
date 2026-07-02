@@ -3,6 +3,8 @@ Imports System.Collections.Generic
 Imports System.Configuration
 Imports System.Data
 Imports System.IO
+Imports System.Web
+Imports System.Web.Caching
 Imports MySql.Data.MySqlClient
 
 Public Class CatalogMenuSector
@@ -45,6 +47,25 @@ End Class
 Public Module CatalogMenuProvider
 
     Private ReadOnly ColumnCache As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+    Private Const MenuCacheKey As String = "KeepStore:CatalogMenuProvider:Menu"
+
+    Public Function LoadCatalogMenuCached(Optional ByVal cacheSeconds As Integer = 600) As List(Of CatalogMenuSector)
+        Try
+            Dim cached As List(Of CatalogMenuSector) = TryCast(HttpRuntime.Cache(MenuCacheKey), List(Of CatalogMenuSector))
+            If cached IsNot Nothing Then Return cached
+        Catch
+        End Try
+
+        Dim sectors As List(Of CatalogMenuSector) = LoadCatalogMenu()
+
+        Try
+            If cacheSeconds < 60 Then cacheSeconds = 60
+            HttpRuntime.Cache.Insert(MenuCacheKey, sectors, Nothing, DateTime.Now.AddSeconds(cacheSeconds), Cache.NoSlidingExpiration)
+        Catch
+        End Try
+
+        Return sectors
+    End Function
 
     Public Function LoadCatalogMenu() As List(Of CatalogMenuSector)
         Dim sectors As New List(Of CatalogMenuSector)()
