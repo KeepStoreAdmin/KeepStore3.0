@@ -194,20 +194,22 @@
                         </div>
                     </div>
 
-                    <div id="ksActiveFilters" class="ks-active-filters mb-3" runat="server" Visible="false">
-                        <div class="d-flex flex-wrap gap-2 align-items-center">
-                            <asp:Repeater ID="rptActiveFilters" runat="server" OnItemCommand="rptActiveFilters_ItemCommand">
+                    <div id="ksActiveFilters" class="meta-filter-shop ks-active-filters" runat="server" Visible="false">
+                        <div id="applied-filters">
+                            <asp:Repeater ID="rptActiveFilters" runat="server">
                                 <ItemTemplate>
-                                    <asp:LinkButton ID="lbRemove" runat="server" CssClass="badge rounded-pill text-bg-secondary" CommandName="remove" CommandArgument='<%# Eval("Key") %>'>
-                                        <%# Eval("Label") %> <span class="ms-1">x</span>
-                                    </asp:LinkButton>
+                                    <a class="ks-applied-filter" href='<%# Server.HtmlEncode(Convert.ToString(Eval("RemoveUrl"))) %>'>
+                                        <span class="caption"><%# Server.HtmlEncode(Convert.ToString(Eval("Label"))) %></span>
+                                        <i class="icon icon-close" aria-hidden="true"></i>
+                                    </a>
                                 </ItemTemplate>
                             </asp:Repeater>
-
-                            <asp:LinkButton ID="lbClearAllFilters" runat="server" CssClass="badge rounded-pill text-bg-dark" CommandName="clear" OnClick="lbClearAllFilters_Click" Visible="false">
-                                Pulisci tutto
-                            </asp:LinkButton>
                         </div>
+
+                        <a id="remove-all" class="remove-all-filters" href="<%= Server.HtmlEncode(ClearCatalogFiltersUrl) %>">
+                            <span class="caption">Rimuovi tutto</span>
+                            <i class="icon icon-close" aria-hidden="true"></i>
+                        </a>
                     </div>
 
                     <section id="ksRecentlyViewedBlock"
@@ -229,12 +231,6 @@
                             <div class="swiper-wrapper" data-ks-recent-items></div>
                         </div>
                     </section>
-
-                    <div class="meta-filter-shop d-none">
-                        <div id="product-count-grid" class="count-text"></div>
-                        <div id="product-count-list" class="count-text"></div>
-                        <div id="applied-filters"></div>
-                    </div>
 
                     <asp:PlaceHolder ID="phProductCardPreview" runat="server" Visible="false" />
 

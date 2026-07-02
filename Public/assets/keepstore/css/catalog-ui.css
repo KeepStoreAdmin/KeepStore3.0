@@ -272,6 +272,68 @@
   max-width: 220px;
 }
 
+#ksCatalogPage .meta-filter-shop.ks-active-filters {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding: 0;
+}
+
+#ksCatalogPage #applied-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#ksCatalogPage .ks-applied-filter,
+#ksCatalogPage .remove-all-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-main, #333e48);
+  line-height: 22px;
+  text-decoration: none;
+}
+
+#ksCatalogPage .ks-applied-filter {
+  border: 1px solid var(--gray-5, #e5e5e5);
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: var(--white, #fff);
+}
+
+#ksCatalogPage .ks-applied-filter:hover,
+#ksCatalogPage .remove-all-filters:hover {
+  color: var(--primary, #ff3b30);
+}
+
+#ksCatalogPage .ks-applied-filter .icon,
+#ksCatalogPage .remove-all-filters .icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+#ksCatalogPage .remove-all-filters {
+  border: 1px solid var(--text-main, #333e48);
+  border-radius: 999px;
+  padding: 4px 12px;
+  background: var(--text-main, #333e48);
+  color: var(--white, #fff);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+#ksCatalogPage .remove-all-filters:hover {
+  border-color: var(--primary, #ff3b30);
+  background: var(--primary, #ff3b30);
+  color: var(--white, #fff);
+}
+
 #ksCatalogPage .tf-grid-layout {
   column-gap: 18px;
   row-gap: 26px;

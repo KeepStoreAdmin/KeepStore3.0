@@ -28,7 +28,10 @@ Partial Class Articoli
     Private Class ActiveFilterItem
         Public Property Key As String
         Public Property Label As String
+        Public Property RemoveUrl As String
     End Class
+
+    Protected ClearCatalogFiltersUrl As String = "articoli.aspx"
 
     Private Class ProductCardModel
         Public Property ProductId As Integer
@@ -1941,8 +1944,8 @@ strWhere = strWhere & " GROUP BY id"
             rptActiveFilters.DataBind()
         End If
 
+        ClearCatalogFiltersUrl = ClearCatalogFiltersFromUrl(GetSafeReturnUrl())
         If ksActiveFilters IsNot Nothing Then ksActiveFilters.Visible = (active.Count > 0)
-        If lbClearAllFilters IsNot Nothing Then lbClearAllFilters.Visible = (active.Count > 1)
     End Sub
 
     Private Sub AddActiveFilter(ByVal list As List(Of ActiveFilterItem), ByVal key As String, ByVal label As String)
@@ -1950,6 +1953,7 @@ strWhere = strWhere & " GROUP BY id"
         Dim item As New ActiveFilterItem()
         item.Key = key
         item.Label = ThemeManager.CompactText(label, 70)
+        item.RemoveUrl = RemoveActiveFilterFromUrl(GetSafeReturnUrl(), key)
         list.Add(item)
     End Sub
 
@@ -1962,8 +1966,9 @@ strWhere = strWhere & " GROUP BY id"
             Dim id As Integer = 0
             If Not Integer.TryParse(rawId, id) OrElse id <= 0 Then Continue For
 
-            Dim text As String = id.ToString()
+            Dim text As String = ""
             If labels IsNot Nothing AndAlso labels.ContainsKey(id) Then text = labels(id)
+            If text = "" Then text = title & " selezionata"
             AddActiveFilter(active, parName & "=" & id.ToString(), title & ": " & text)
         Next
     End Sub
