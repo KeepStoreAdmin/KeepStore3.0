@@ -275,8 +275,8 @@
 #ksCatalogPage .meta-filter-shop.ks-active-filters {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px 18px;
+  justify-content: flex-start;
+  gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 18px;
   padding: 0;
@@ -318,7 +318,20 @@
 }
 
 #ksCatalogPage .remove-all-filters {
+  border: 1px solid var(--text-main, #333e48);
+  border-radius: 999px;
+  padding: 4px 12px;
+  background: var(--text-main, #333e48);
+  color: var(--white, #fff);
+  font-size: 14px;
+  font-weight: 600;
   white-space: nowrap;
+}
+
+#ksCatalogPage .remove-all-filters:hover {
+  border-color: var(--primary, #ff3b30);
+  background: var(--primary, #ff3b30);
+  color: var(--white, #fff);
 }
 
 #ksCatalogPage .tf-grid-layout {
