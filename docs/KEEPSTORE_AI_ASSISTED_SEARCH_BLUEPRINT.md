@@ -70,6 +70,7 @@ Stato micro-task search deterministica post PR #222/#223/#224:
 - PR #224 chiusa: `SearchScore` catalogo ampliato in `articoli.aspx.vb` con `DescrizioneHTML` solo scoring, marca+descrizione, tassonomie e token multi-parola; query filtro principale, `Export +500`, Codice/EAN e query numeriche preservati.
 - PR #226 chiusa: zero-results catalogo migliorato in `articoli.aspx` con query HTML encoded, CTA generiche e chip da token query; fallback statici merceologici/elettronica rimossi per multi-merceologia, senza AI attiva, prodotti inventati, query DB extra o modifiche a suggest/ranking.
 - PR #228/#229/#230 chiuse: performance zero-results e sidebar filtri catalogo stabilizzate senza AI attiva. PR #228 evita facet/`showFilters()` su zero-results usando `lvProdotti.Items.Count`; PR #229 fissa l'ordine `Marche > Tipologie > Gruppi > Sottogruppi > Disponibilita > Varianti`, rimuove `Categoria` dalla sidebar e preserva `ct` come querystring; PR #230 compatta lo spacing con CSS scoped sotto `#ksCatalogPage`. Query prodotti principale, SearchScore/ranking, suggest, DB/schema/SP, carrello/checkout/ordine e gateway restano invariati.
+- PR #232 chiusa: filtri applicati catalogo in stile ONSUS-like con `.meta-filter-shop`, `#applied-filters`, `.remove-all-filters` e `icon-close`; rimozione singola filtro via GET sicuro, remove-all visibile e funzionante, `st/ct` preservati, nessun chip tecnico solo ID, sidebar invariata e zero-results preservato. Query prodotti principale, SearchScore/ranking, suggest, DB/schema/SP, carrello/checkout/ordine, gateway e JS restano invariati; CSS scoped sotto `#ksCatalogPage`.
 - Test registrati: `hp` non peggiorato (`18933,20018`), `stampante hp` migliorato verso suggest (`20810,17698`), `12384` invariato con nessun ID catalogo e suggest `total=0`; smoke suggest/articoli/carrello OK.
 - Limiti residui: LIKE su molte colonne lunghe puo diventare costoso; zero results ora e assistito ma resta locale/non-AI; eventuale AI/LLM resta fase successiva con privacy task.
 
@@ -259,13 +260,14 @@ Vincoli:
    - nessun fallback hardcoded merceologico, nessuna AI attiva e nessuna query DB extra.
 
 5. `CATALOG-APPLIED-FILTERS-ONSUS-AUDIT-1A`
-   - prossimo audit consigliato dopo PR #228/#229/#230;
-   - verificare chips/filtri applicati secondo ONSUS `shop-default.html`;
-   - mantenere logica KeepStore: `Settori/st` livello alto/header, `ct` querystring supportata ma non facet laterale in questa fase.
+   - chiuso prima della PR #232;
+   - confermato mapping con ONSUS `shop-default.html` per chip/filtri applicati e remove all;
+   - mantenuta logica KeepStore: `Settori/st` livello alto/header, `ct` querystring supportata ma non facet laterale in questa fase.
 
 6. `CATALOG-APPLIED-FILTERS-ONSUS-1A`
-   - eventuale micro-fix successivo solo dopo audit;
-   - non riaprire ranking/SearchScore, suggest, DB o query prodotti.
+   - chiuso con PR #232;
+   - chip filtri applicati, remove singolo via GET e `Rimuovi tutto` visibile/chiaro sono integrati;
+   - ranking/SearchScore, suggest, DB, query prodotti, zero-results e sidebar filtri preservati.
 
 7. `CATALOG-SIDEBAR-CATEGORIES-ONSUS-AUDIT-1A`
    - audit dedicato separato prima di valutare categorie/sidebar, price range, grid/list o review;
