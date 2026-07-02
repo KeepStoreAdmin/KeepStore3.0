@@ -50,6 +50,11 @@
                         </div>
 
                         <div class="canvas-body">
+                            <asp:Panel ID="pnlCatalogCategoryNav" runat="server" CssClass="facet-categories ks-catalog-category-nav" Visible="false">
+                                <h6 class="title fw-medium">Categorie</h6>
+                                <asp:Literal ID="litCatalogCategoryNav" runat="server" />
+                            </asp:Panel>
+
                             <asp:Panel ID="ksFilters" runat="server">
                                 <div class="widget-facet facet-fieldset has-loadmore">
                                     <p class="facet-title title-sidebar fw-semibold">Marche</p>

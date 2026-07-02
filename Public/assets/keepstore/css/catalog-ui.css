@@ -223,6 +223,63 @@
   flex: 0 0 284px;
 }
 
+#ksCatalogPage .facet-categories.ks-catalog-category-nav {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--gray-5, #e5e5e5);
+}
+
+#ksCatalogPage .ks-catalog-category-nav .title {
+  margin: 0 0 8px;
+  line-height: 20px;
+}
+
+#ksCatalogPage .ks-category-nav-list,
+#ksCatalogPage .ks-category-nav-sublist {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+#ksCatalogPage .ks-category-nav-sublist {
+  margin-top: 4px;
+  padding-left: 12px;
+}
+
+#ksCatalogPage .ks-category-nav-link,
+#ksCatalogPage .ks-category-nav-sublink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+#ksCatalogPage .ks-category-nav-sublink {
+  color: var(--text-main-2, #666);
+  font-size: 13px;
+}
+
+#ksCatalogPage .ks-category-nav-link .icon-arrow-right,
+#ksCatalogPage .ks-category-nav-sublink .icon-arrow-right {
+  flex: 0 0 auto;
+  font-size: 11px;
+}
+
+#ksCatalogPage .ks-category-nav-link.active,
+#ksCatalogPage .ks-category-nav-sublink.active,
+#ksCatalogPage .ks-category-nav-link:hover,
+#ksCatalogPage .ks-category-nav-sublink:hover {
+  color: var(--primary, #ff3b30);
+  font-weight: 600;
+}
+
 #ksCatalogPage .widget-facet.facet-fieldset:not(:last-child) {
   margin-bottom: 10px;
   padding-bottom: 10px;
