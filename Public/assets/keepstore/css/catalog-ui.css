@@ -223,17 +223,30 @@
   flex: 0 0 284px;
 }
 
-#ksCatalogPage .widget-facet .facet-title {
+#ksCatalogPage .widget-facet.facet-fieldset:not(:last-child) {
   margin-bottom: 10px;
+  padding-bottom: 10px;
 }
 
-#ksCatalogPage .widget-facet .box-fieldset-item {
-  gap: 6px;
+#ksCatalogPage .widget-facet .facet-title.title-sidebar {
+  margin: 0 0 6px;
+  line-height: 18px;
 }
 
-#ksCatalogPage .widget-facet:not(:last-child) {
-  margin-bottom: 14px;
-  padding-bottom: 14px;
+#ksCatalogPage .widget-facet .box-fieldset-item,
+#ksCatalogPage .widget-facet .ks-filter-list {
+  gap: 4px;
+}
+
+#ksCatalogPage .widget-facet .ks-filter-list {
+  display: grid;
+}
+
+#ksCatalogPage .widget-facet .fieldset-item {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
 }
 
 #ksCatalogPage .tf-shop-control {
