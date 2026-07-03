@@ -3,8 +3,8 @@
 <article class="card-product" aria-labelledby="<%= ProductTitleClientId %>">
     <div class="card-product-wrapper">
         <a href="<%= SafeProductUrl %>" class="product-img" aria-label="<%= SafeProductNameAttribute %>">
-            <img class="img-product" src="<%= SafeImageUrl %>" alt="<%= SafeProductNameAttribute %>" onerror="this.onerror=null;this.src='/Public/assets/images/img/placeholder.svg';" />
-            <img class="img-hover" src="<%= SafeHoverImageUrl %>" alt="" aria-hidden="true" onerror="this.onerror=null;this.src='/Public/assets/images/img/placeholder.svg';" />
+            <img class="img-product" src="<%= SafeImageUrl %>" alt="<%= SafeProductNameAttribute %>" />
+            <img class="img-hover" src="<%= SafeHoverImageUrl %>" alt="" aria-hidden="true" />
         </a>
         <% If RenderQuickActions Then %>
         <ul class="list-product-btn top-0 end-0" aria-label="Azioni prodotto">
