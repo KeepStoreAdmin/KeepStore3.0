@@ -405,6 +405,164 @@
   box-shadow: none;
 }
 
+#ksCatalogPage article.card-product {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+#ksCatalogPage article.card-product .card-product-wrapper {
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #f4f4f4;
+  border-radius: 4px;
+}
+
+#ksCatalogPage article.card-product .product-img {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+}
+
+#ksCatalogPage article.card-product .img-product,
+#ksCatalogPage article.card-product .img-hover {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+#ksCatalogPage article.card-product .list-product-btn {
+  z-index: 2;
+}
+
+#ksCatalogPage article.card-product .box-icon {
+  width: 36px;
+  height: 36px;
+}
+
+#ksCatalogPage article.card-product .card-product-info {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  padding-top: 14px;
+}
+
+#ksCatalogPage article.card-product .box-title {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+#ksCatalogPage article.card-product .product-tag {
+  min-height: 18px;
+  margin-bottom: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#ksCatalogPage article.card-product .name-product {
+  display: -webkit-box;
+  overflow: hidden;
+  min-height: 2.7em;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+#ksCatalogPage article.card-product .price-wrap {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-height: 32px;
+  margin: 8px 0 0;
+}
+
+#ksCatalogPage article.card-product .price-wrap .price,
+#ksCatalogPage article.card-product .price-wrap .new-price,
+#ksCatalogPage article.card-product .price-wrap ins {
+  color: var(--black, #121212);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+#ksCatalogPage article.card-product .price-wrap .old-price,
+#ksCatalogPage article.card-product .price-wrap del,
+#ksCatalogPage article.card-product .price-wrap s,
+#ksCatalogPage article.card-product .price-wrap strike {
+  color: var(--text-main-2, #666);
+  font-size: 13px;
+  text-decoration: line-through;
+}
+
+#ksCatalogPage article.card-product .ks-catalog-promos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+#ksCatalogPage article.card-product .ks-catalog-promos__discount,
+#ksCatalogPage article.card-product .ks-catalog-promos__price,
+#ksCatalogPage article.card-product .ks-catalog-promos__tier,
+#ksCatalogPage article.card-product .ks-catalog-promos__count {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+#ksCatalogPage article.card-product .ks-catalog-promos__discount {
+  color: var(--primary, #ff3b30);
+  font-weight: 700;
+}
+
+#ksCatalogPage article.card-product .box-infor-detail {
+  padding-top: 10px;
+  margin-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+#ksCatalogPage article.card-product .list-computer-memory {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 0;
+}
+
+#ksCatalogPage article.card-product .list-computer-memory li {
+  min-width: 0;
+}
+
+#ksCatalogPage article.card-product .list-computer-memory p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+#ksCatalogPage article.card-product .list-computer-memory .caption {
+  line-height: 1.35;
+}
+
+#ksCatalogPage article.card-product .card-product-btn {
+  padding-top: 12px;
+  margin-top: auto;
+}
+
 #ksCatalogPage .ks-catalog-card .card-product-wrapper {
   aspect-ratio: 1 / 1;
   min-height: 0;
@@ -617,7 +775,15 @@
     padding-top: 10px;
   }
 
+  #ksCatalogPage article.card-product .card-product-info {
+    padding-top: 10px;
+  }
+
   #ksCatalogPage .ks-catalog-card .product-tag {
+    min-height: 16px;
+  }
+
+  #ksCatalogPage article.card-product .product-tag {
     min-height: 16px;
   }
 
@@ -625,8 +791,21 @@
     font-size: 13px;
   }
 
+  #ksCatalogPage article.card-product .name-product {
+    font-size: 13px;
+  }
+
   #ksCatalogPage .ks-catalog-card .price-wrap {
     font-size: 13px;
+  }
+
+  #ksCatalogPage article.card-product .price-wrap {
+    font-size: 13px;
+  }
+
+  #ksCatalogPage article.card-product .box-icon {
+    width: 34px;
+    height: 34px;
   }
 
   #ksCatalogPage .ks-catalog-card-actions {
@@ -642,7 +821,13 @@
     visibility: visible;
   }
 
+  #ksCatalogPage article.card-product .list-product-btn {
+    opacity: 1;
+    visibility: visible;
+  }
+
   #ksCatalogPage .ks-catalog-card .list-product-btn li,
+  #ksCatalogPage article.card-product .list-product-btn li,
   .ks-recently-viewed-block .ks-recent-card .list-product-btn li {
     opacity: 1;
     visibility: visible;
@@ -660,6 +845,11 @@
   }
 
   #ksCatalogPage .ks-catalog-card {
+    max-width: 330px;
+    margin-inline: auto;
+  }
+
+  #ksCatalogPage article.card-product {
     max-width: 330px;
     margin-inline: auto;
   }
