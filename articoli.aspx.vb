@@ -3495,8 +3495,8 @@ strWhere = strWhere & " GROUP BY id"
         Dim qtyText As String = Server.HtmlEncode(FormatCatalogCartQuantity(qty))
         Dim label As String = "Nel carrello: " & qtyText
         Return "<div class=""ks-cart-qty-indicator"" aria-label=""" & Server.HtmlEncode(label) & """ title=""" & Server.HtmlEncode(label) & """>" &
-               "<span class=""ks-cart-qty-indicator__icon"" aria-hidden=""true""></span>" &
-               "<span class=""ks-cart-qty-indicator__count"">" & qtyText & "</span>" &
+               "<span class=""ks-cart-qty-indicator__label"">In carrello</span>" &
+               "<strong class=""ks-cart-qty-indicator__count"">" & qtyText & "</strong>" &
                "</div>"
     End Function
 
