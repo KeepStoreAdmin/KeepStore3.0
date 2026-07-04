@@ -309,6 +309,12 @@
     return qty;
   }
 
+  function getCartUrlQty(link) {
+    var url = link ? (link.getAttribute('href') || link.getAttribute('data-ks-cart-url') || '') : '';
+    var match = /[?&]qty=([^&#]*)/i.exec(url);
+    return normalizeQty(match ? decodeURIComponent(match[1].replace(/\+/g, ' ')) : '1');
+  }
+
   function findCardQty(link) {
     var card = link && link.closest ? link.closest('.card-product') : null;
     var input = card ? card.querySelector('input.ks-qty') : null;
@@ -321,12 +327,12 @@
   function findCardQtyToAdd(link) {
     var card = link && link.closest ? link.closest('.card-product') : null;
     var input = card ? card.querySelector('input.ks-qty') : null;
-    if (!input) return 1;
+    if (!input) return getCartUrlQty(link);
 
     var desiredQty = normalizeQty(input.value);
     input.value = String(desiredQty);
 
-    var existingQty = normalizeExistingQty(input.getAttribute('data-ks-existing-cart-qty'));
+    var existingQty = normalizeExistingQty(input.getAttribute('data-ks-existing-cart-qty') || link.getAttribute('data-ks-existing-cart-qty'));
     if (existingQty <= 0) return desiredQty;
 
     var qtyToAdd = desiredQty - existingQty;

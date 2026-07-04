@@ -3732,6 +3732,8 @@ strWhere = strWhere & " GROUP BY id"
         attrs.Append(" data-ks-price=""").Append(HA(CatalogPriceText(dataItem))).Append("""")
         attrs.Append(" data-ks-available=""").Append(HA(CatalogAvailabilityText(dataItem))).Append("""")
         attrs.Append(" data-ks-cart-url=""").Append(HA(CatalogCartAddUrl(dataItem))).Append("""")
+        Dim cartQty As Decimal = GetCatalogCartQuantity(UiData.Int(dataItem, "id"), CatalogTcId(dataItem, True))
+        If cartQty > 0D Then attrs.Append(" data-ks-existing-cart-qty=""").Append(HA(FormatCatalogCartQuantity(cartQty))).Append("""")
         attrs.Append(" data-ks-description=""").Append(HA(ThemeManager.CompactText(descr, 180))).Append("""")
         Return attrs.ToString()
     End Function

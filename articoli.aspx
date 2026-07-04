@@ -467,6 +467,6 @@
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>"></script>
     <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>"></script>
-    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20260705-cartdelta"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>"></script>
 </asp:Content>
