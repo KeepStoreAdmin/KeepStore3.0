@@ -582,6 +582,64 @@
   margin-top: auto;
 }
 
+#ksCatalogPage article.card-product .box-infor-detail > .d-flex.align-items-center.gap-2.mt-2 {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px !important;
+  padding: 7px 8px;
+  border: 1px solid var(--gray-4, #dcdcdc);
+  border-radius: 4px;
+  background: rgba(245, 245, 245, 0.72);
+}
+
+#ksCatalogPage article.card-product .box-infor-detail .form-check-input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border-color: var(--gray-4, #dcdcdc);
+  cursor: pointer;
+}
+
+#ksCatalogPage article.card-product .box-infor-detail .form-check-input input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  cursor: pointer;
+}
+
+#ksCatalogPage article.card-product .box-infor-detail .ks-qty-wrap {
+  flex: 0 0 auto;
+  width: 108px;
+}
+
+#ksCatalogPage article.card-product .box-infor-detail .ks-qty {
+  width: 46px;
+  min-width: 0;
+  max-width: 46px;
+  padding-inline: 4px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--text, #333e48);
+}
+
+#ksCatalogPage article.card-product .box-infor-detail .ks-qty-btn {
+  color: var(--text, #333e48);
+  border-color: var(--gray-4, #dcdcdc);
+  background: #fff;
+}
+
+#ksCatalogPage article.card-product .box-infor-detail .ks-qty-btn:hover,
+#ksCatalogPage article.card-product .box-infor-detail .ks-qty-btn:focus-visible {
+  color: var(--secondary, #004ec3);
+  border-color: var(--secondary, #004ec3);
+}
+
 #ksCatalogPage .ks-catalog-card .card-product-wrapper {
   aspect-ratio: 1 / 1;
   min-height: 0;
