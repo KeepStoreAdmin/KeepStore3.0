@@ -1443,7 +1443,7 @@ strWhere = strWhere & " GROUP BY id"
         Dim legacyControls As PlaceHolder = TryCast(FindControlRecursive(root, "phLegacyServerControls"), PlaceHolder)
         If legacyControls Is Nothing Then Exit Sub
 
-        legacyControls.Controls.Add(New LiteralControl("<div class=""ks-cart-qty-badge"" aria-label=""Quantita gia nel carrello"">Nel carrello: " & Server.HtmlEncode(FormatCatalogCartQuantity(qty)) & "</div>"))
+        legacyControls.Controls.Add(New LiteralControl(BuildCatalogCartQuantityIndicatorHtml(qty)))
     End Sub
 
     ' CLICK SU ICONA "CARRELLO" PER SINGOLO ARTICOLO
@@ -3356,7 +3356,7 @@ strWhere = strWhere & " GROUP BY id"
         Dim qty As Decimal = GetCatalogCartQuantity(UiData.Int(dataItem, "id"), CatalogTcId(dataItem, True))
         If qty <= 0D Then Return String.Empty
 
-        Return "<div class=""ks-cart-qty-badge"" aria-label=""Quantita gia nel carrello"">Nel carrello: " & Server.HtmlEncode(FormatCatalogCartQuantity(qty)) & "</div>"
+        Return BuildCatalogCartQuantityIndicatorHtml(qty)
     End Function
 
     Protected Function CatalogWishlistAddUrl(ByVal dataItem As Object) As String
@@ -3489,6 +3489,15 @@ strWhere = strWhere & " GROUP BY id"
     Private Function FormatCatalogCartQuantity(ByVal qty As Decimal) As String
         If Decimal.Truncate(qty) = qty Then Return qty.ToString("0", System.Globalization.CultureInfo.GetCultureInfo("it-IT"))
         Return qty.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("it-IT"))
+    End Function
+
+    Private Function BuildCatalogCartQuantityIndicatorHtml(ByVal qty As Decimal) As String
+        Dim qtyText As String = Server.HtmlEncode(FormatCatalogCartQuantity(qty))
+        Dim label As String = "Nel carrello: " & qtyText
+        Return "<div class=""ks-cart-qty-indicator"" aria-label=""" & Server.HtmlEncode(label) & """ title=""" & Server.HtmlEncode(label) & """>" &
+               "<span class=""ks-cart-qty-indicator__icon"" aria-hidden=""true""></span>" &
+               "<span class=""ks-cart-qty-indicator__count"">" & qtyText & "</span>" &
+               "</div>"
     End Function
 
     Protected Function CatalogBrandCodeLabel(ByVal dataItem As Object) As String
