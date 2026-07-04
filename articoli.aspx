@@ -350,11 +350,10 @@
                                                 </li>
                                             </ul>
 
-                                            <div class="d-flex align-items-center gap-2 mt-2 ks-catalog-card-actions">
+                                            <div class='<%# CatalogQuantityBoxCss(Container.DataItem) %>' <%# CatalogQuantityBoxAttributes(Container.DataItem) %>>
                                                 <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" CssClass="form-check-input" />
-                                                <asp:TextBox ID="tbQuantita" runat="server" CssClass="form-control form-control-sm ks-qty" Text="1" Width="70" />
+                                                <asp:TextBox ID="tbQuantita" runat="server" CssClass='<%# CatalogQuantityInputCss(Container.DataItem) %>' Text="1" Width="70" />
                                             </div>
-                                            <%# CatalogCartQuantityBadgeHtml(Container.DataItem) %>
                                         </div>
                                     </div>
 

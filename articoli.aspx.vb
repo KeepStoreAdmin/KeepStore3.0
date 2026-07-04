@@ -6,6 +6,7 @@ Imports System.Text.RegularExpressions
 Imports System.Collections
 Imports System.Collections.Generic
 Imports System.Web.UI
+Imports System.Web.UI.HtmlControls
 Imports System.Web.UI.WebControls
 
 Partial Class Articoli
@@ -1406,7 +1407,7 @@ strWhere = strWhere & " GROUP BY id"
         card.ActionDataAttributes = model.ActionDataAttributes
         card.IsDemoMode = Not isRealPreview
         ApplyMultiSelectCheckboxMicrocopy(card)
-        AppendCatalogCartQuantityBadge(card, model.ProductId, model.TCId)
+        ApplyCatalogCartQuantityState(card, model.ProductId, model.TCId)
 
         If isPreview OrElse isRealPreview Then
             Me.phProductCardPreview.Controls.Add(card)
@@ -1434,16 +1435,26 @@ strWhere = strWhere & " GROUP BY id"
         cbMultiSelect.ToolTip = "Seleziona prodotto per acquisto multiplo"
     End Sub
 
-    Private Sub AppendCatalogCartQuantityBadge(ByVal root As Control, ByVal articleId As Integer, ByVal tcId As Integer)
+    Private Sub ApplyCatalogCartQuantityState(ByVal root As Control, ByVal articleId As Integer, ByVal tcId As Integer)
         If root Is Nothing Then Exit Sub
 
         Dim qty As Decimal = GetCatalogCartQuantity(articleId, tcId)
         If qty <= 0D Then Exit Sub
 
-        Dim legacyControls As PlaceHolder = TryCast(FindControlRecursive(root, "phLegacyServerControls"), PlaceHolder)
-        If legacyControls Is Nothing Then Exit Sub
+        Dim qtyBox As TextBox = TryCast(FindControlRecursive(root, "tbQuantita"), TextBox)
+        If qtyBox Is Nothing Then Exit Sub
 
-        legacyControls.Controls.Add(New LiteralControl(BuildCatalogCartQuantityIndicatorHtml(qty)))
+        Dim label As String = "Nel carrello: " & FormatCatalogCartQuantity(qty)
+        qtyBox.CssClass = AddCatalogCssClass(qtyBox.CssClass, "ks-cart-qty-input-present")
+        qtyBox.ToolTip = label
+        qtyBox.Attributes("aria-label") = "Quantita da aggiungere. " & label
+
+        Dim wrapper As HtmlGenericControl = TryCast(qtyBox.Parent, HtmlGenericControl)
+        If wrapper Is Nothing Then Exit Sub
+
+        wrapper.Attributes("class") = AddCatalogCssClass(wrapper.Attributes("class"), "ks-cart-qty-present")
+        wrapper.Attributes("title") = label
+        wrapper.Attributes("aria-label") = label
     End Sub
 
     ' CLICK SU ICONA "CARRELLO" PER SINGOLO ARTICOLO
@@ -3352,11 +3363,26 @@ strWhere = strWhere & " GROUP BY id"
         Return ResolveUrl(url)
     End Function
 
-    Protected Function CatalogCartQuantityBadgeHtml(ByVal dataItem As Object) As String
+    Protected Function CatalogQuantityBoxCss(ByVal dataItem As Object) As String
+        Dim qty As Decimal = GetCatalogCartQuantity(UiData.Int(dataItem, "id"), CatalogTcId(dataItem, True))
+        Dim cssClass As String = "d-flex align-items-center gap-2 mt-2 ks-catalog-card-actions"
+        If qty > 0D Then cssClass = AddCatalogCssClass(cssClass, "ks-cart-qty-present")
+        Return cssClass
+    End Function
+
+    Protected Function CatalogQuantityInputCss(ByVal dataItem As Object) As String
+        Dim qty As Decimal = GetCatalogCartQuantity(UiData.Int(dataItem, "id"), CatalogTcId(dataItem, True))
+        Dim cssClass As String = "form-control form-control-sm ks-qty"
+        If qty > 0D Then cssClass = AddCatalogCssClass(cssClass, "ks-cart-qty-input-present")
+        Return cssClass
+    End Function
+
+    Protected Function CatalogQuantityBoxAttributes(ByVal dataItem As Object) As String
         Dim qty As Decimal = GetCatalogCartQuantity(UiData.Int(dataItem, "id"), CatalogTcId(dataItem, True))
         If qty <= 0D Then Return String.Empty
 
-        Return BuildCatalogCartQuantityIndicatorHtml(qty)
+        Dim label As String = "Nel carrello: " & FormatCatalogCartQuantity(qty)
+        Return " title=""" & HA(label) & """ aria-label=""" & HA(label) & """"
     End Function
 
     Protected Function CatalogWishlistAddUrl(ByVal dataItem As Object) As String
@@ -3491,13 +3517,16 @@ strWhere = strWhere & " GROUP BY id"
         Return qty.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("it-IT"))
     End Function
 
-    Private Function BuildCatalogCartQuantityIndicatorHtml(ByVal qty As Decimal) As String
-        Dim qtyText As String = Server.HtmlEncode(FormatCatalogCartQuantity(qty))
-        Dim label As String = "Nel carrello: " & qtyText
-        Return "<div class=""ks-cart-qty-indicator"" aria-label=""" & Server.HtmlEncode(label) & """ title=""" & Server.HtmlEncode(label) & """>" &
-               "<span class=""ks-cart-qty-indicator__label"">In carrello</span>" &
-               "<strong class=""ks-cart-qty-indicator__count"">" & qtyText & "</strong>" &
-               "</div>"
+    Private Function AddCatalogCssClass(ByVal cssClass As String, ByVal className As String) As String
+        If String.IsNullOrWhiteSpace(className) Then Return If(cssClass, String.Empty)
+        If String.IsNullOrWhiteSpace(cssClass) Then Return className
+
+        Dim classes As String() = Regex.Split(cssClass.Trim(), "\s+")
+        For Each item As String In classes
+            If String.Equals(item, className, StringComparison.Ordinal) Then Return cssClass
+        Next
+
+        Return cssClass.Trim() & " " & className
     End Function
 
     Protected Function CatalogBrandCodeLabel(ByVal dataItem As Object) As String
