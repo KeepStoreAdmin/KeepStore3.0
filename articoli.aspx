@@ -265,7 +265,7 @@
                                                     aria-label="Aggiungi al carrello"
                                                     <%# CatalogActionDataAttributes(Container.DataItem) %>>
                                                     <span class="icon icon-cart2"></span>
-                                                    <span class="tooltip">Carrello</span>
+                                                    <span class="tooltip">Aggiungi al carrello</span>
                                                 </a>
                                             </li>
                                             <li class="wishlist">
@@ -409,9 +409,9 @@
                         <div class="ks-multi-footer__content">
                             <div>
                                 <p class="ks-multi-footer__title">Acquisto multiplo</p>
-                                <p class="ks-multi-footer__text">Spunta uno o piu articoli, imposta le quantita e aggiungili insieme al carrello.</p>
+                                <p class="ks-multi-footer__text">Spunta la casella Seleziona sui prodotti desiderati, imposta le quantita e aggiungili insieme al carrello.</p>
                                 <ul class="ks-multi-footer__steps" aria-label="Come funziona l'acquisto multiplo">
-                                    <li><span>1</span>Spunta i prodotti</li>
+                                    <li><span>1</span>Spunta Seleziona</li>
                                     <li><span>2</span>Modifica le quantita</li>
                                     <li><span>3</span>Premi il pulsante</li>
                                 </ul>

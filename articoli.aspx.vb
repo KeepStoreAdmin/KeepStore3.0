@@ -1204,6 +1204,8 @@ strWhere = strWhere & " GROUP BY id"
         For Each it As ListViewDataItem In Me.lvProdotti.Items
             Dim lbWishlist As LinkButton = TryCast(it.FindControl("LB_wishlist"), LinkButton)
             If lbWishlist IsNot Nothing AndAlso idUtente <= 0 Then lbWishlist.Visible = False
+
+            ApplyMultiSelectCheckboxMicrocopy(it)
         Next
 
         ' Footer multi-selezione e pager: li mostro solo se ho risultati
@@ -1402,6 +1404,7 @@ strWhere = strWhere & " GROUP BY id"
         card.QuantityText = model.QuantityText
         card.ActionDataAttributes = model.ActionDataAttributes
         card.IsDemoMode = Not isRealPreview
+        ApplyMultiSelectCheckboxMicrocopy(card)
 
         If isPreview OrElse isRealPreview Then
             Me.phProductCardPreview.Controls.Add(card)
@@ -1418,6 +1421,15 @@ strWhere = strWhere & " GROUP BY id"
             inlineCard.Visible = False
             productCardReplaceRenderedCount += 1
         End If
+    End Sub
+
+    Private Sub ApplyMultiSelectCheckboxMicrocopy(ByVal root As Control)
+        Dim cbMultiSelect As CheckBox = TryCast(FindControlRecursive(root, "CheckBox_SelezioneMultipla"), CheckBox)
+        If cbMultiSelect Is Nothing Then Exit Sub
+
+        cbMultiSelect.Text = "Seleziona"
+        cbMultiSelect.TextAlign = TextAlign.Right
+        cbMultiSelect.ToolTip = "Seleziona prodotto per acquisto multiplo"
     End Sub
 
     ' CLICK SU ICONA "CARRELLO" PER SINGOLO ARTICOLO

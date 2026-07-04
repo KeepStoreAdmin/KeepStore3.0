@@ -772,6 +772,42 @@
   cursor: pointer;
 }
 
+#ksCatalogPage .ks-catalog-card-actions .form-check-input label,
+#ksCatalogPage .card-product-info .box-infor-detail > .d-flex.align-items-center.gap-2.mt-2 .form-check-input label {
+  margin-left: 7px;
+  color: var(--black, #121212);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+#ksCatalogPage .ks-catalog-card-actions .form-check-input input[type="checkbox"],
+#ksCatalogPage .card-product-info .box-infor-detail > .d-flex.align-items-center.gap-2.mt-2 .form-check-input input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+#ksCatalogPage article.card-product .box-infor-detail > .d-flex.align-items-center.gap-2.mt-2 > .form-check-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: auto;
+  height: auto;
+  min-height: 24px;
+}
+
+#ksCatalogPage article.card-product .js-ks-cart-link .tooltip {
+  font-size: 0;
+}
+
+#ksCatalogPage article.card-product .js-ks-cart-link .tooltip::after {
+  content: "Aggiungi al carrello";
+  font-size: 12px;
+}
+
 #ksCatalogPage .ks-catalog-card-actions .ks-qty,
 #ksCatalogPage .card-product-info .box-infor-detail > .d-flex.align-items-center.gap-2.mt-2 .ks-qty {
   max-width: 70px;
