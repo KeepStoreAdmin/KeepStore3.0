@@ -408,8 +408,13 @@
                     <asp:Panel ID="ksMultiFooter" runat="server" CssClass="mt-4 ks-multi-footer" Visible="false">
                         <div class="ks-multi-footer__content">
                             <div>
-                                <p class="ks-multi-footer__title">Selezione multipla attiva</p>
-                                <p class="ks-multi-footer__text">Seleziona i prodotti, imposta la quantita e aggiungili al carrello.</p>
+                                <p class="ks-multi-footer__title">Acquisto multiplo</p>
+                                <p class="ks-multi-footer__text">Spunta uno o piu articoli, imposta le quantita e aggiungili insieme al carrello.</p>
+                                <ul class="ks-multi-footer__steps" aria-label="Come funziona l'acquisto multiplo">
+                                    <li><span>1</span>Spunta i prodotti</li>
+                                    <li><span>2</span>Modifica le quantita</li>
+                                    <li><span>3</span>Premi il pulsante</li>
+                                </ul>
                                 <asp:Label ID="lblMultiSelectFeedback" runat="server" CssClass="ks-multi-footer__feedback" Visible="false" />
                             </div>
                             <asp:LinkButton ID="btnAggiungiSelezionati" runat="server"

@@ -752,16 +752,28 @@
   margin-top: auto;
 }
 
-#ksCatalogPage .ks-catalog-card-actions {
+#ksCatalogPage .ks-catalog-card-actions,
+#ksCatalogPage .card-product-info .box-infor-detail > .d-flex.align-items-center.gap-2.mt-2 {
   min-height: 34px;
   margin-top: auto;
+  width: fit-content;
+  padding: 6px 8px;
+  border: 1px solid var(--gray-4, #dcdcdc);
+  border-radius: 4px;
+  background: #fff;
 }
 
-#ksCatalogPage .ks-catalog-card-actions .form-check-input {
+#ksCatalogPage .ks-catalog-card-actions .form-check-input,
+#ksCatalogPage .card-product-info .box-infor-detail > .d-flex.align-items-center.gap-2.mt-2 .form-check-input {
   flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 0;
+  cursor: pointer;
 }
 
-#ksCatalogPage .ks-catalog-card-actions .ks-qty {
+#ksCatalogPage .ks-catalog-card-actions .ks-qty,
+#ksCatalogPage .card-product-info .box-infor-detail > .d-flex.align-items-center.gap-2.mt-2 .ks-qty {
   max-width: 70px;
   text-align: center;
 }
@@ -790,30 +802,68 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 18px 20px;
-  border: 1px solid var(--gray-4, #dcdcdc);
+  padding: 20px 22px;
+  border: 1px solid var(--line, #e5e5e5);
+  border-left: 4px solid var(--black, #121212);
   border-radius: 4px;
-  background: #f8f8f8;
+  background: #fafafa;
 }
 
 #ksCatalogPage .ks-multi-footer__title {
   margin: 0;
   color: var(--black, #121212);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 22px;
 }
 
 #ksCatalogPage .ks-multi-footer__text {
-  margin: 2px 0 0;
+  margin: 4px 0 0;
   color: var(--text-main-2, #666);
   font-size: 13px;
   line-height: 22px;
 }
 
+#ksCatalogPage .ks-multi-footer__steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+#ksCatalogPage .ks-multi-footer__steps li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 10px 4px 6px;
+  border: 1px solid var(--gray-4, #dcdcdc);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--text-main, #444);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+#ksCatalogPage .ks-multi-footer__steps span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--black, #121212);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
 #ksCatalogPage .ks-multi-footer__feedback {
   display: block;
-  margin-top: 6px;
+  margin-top: 10px;
   color: var(--primary, #ff3b30);
   font-size: 13px;
   line-height: 20px;
@@ -925,7 +975,8 @@
     font-size: 14px;
   }
 
-  #ksCatalogPage .ks-catalog-card-actions {
+  #ksCatalogPage .ks-catalog-card-actions,
+  #ksCatalogPage .card-product-info .box-infor-detail > .d-flex.align-items-center.gap-2.mt-2 {
     gap: 6px !important;
   }
 

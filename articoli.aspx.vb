@@ -1562,7 +1562,7 @@ strWhere = strWhere & " GROUP BY id"
         Next
 
         If listaArticoli.Count = 0 Then
-            ShowMultiSelectFeedback("Seleziona almeno un prodotto prima di aggiungere al carrello.")
+            ShowMultiSelectFeedback("Seleziona almeno un prodotto prima di aggiungerlo al carrello.")
             Return
         End If
 
