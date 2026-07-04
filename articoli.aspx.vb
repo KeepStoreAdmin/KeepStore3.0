@@ -1515,6 +1515,14 @@ strWhere = strWhere & " GROUP BY id"
     End Sub
 
     Protected Sub Selezione_Multipla_Click(ByVal sender As Object, ByVal e As System.Web.UI.ImageClickEventArgs)
+        ProcessSelezioneMultipla()
+    End Sub
+
+    Protected Sub Selezione_Multipla_Button_Click(ByVal sender As Object, ByVal e As EventArgs)
+        ProcessSelezioneMultipla()
+    End Sub
+
+    Private Sub ProcessSelezioneMultipla()
         Dim listaArticoli As New ArrayList()
 
         ' Listino corrente (default 1)
@@ -1527,7 +1535,7 @@ strWhere = strWhere & " GROUP BY id"
 
         For Each it As ListViewDataItem In Me.lvProdotti.Items
             Dim temp_check As CheckBox = TryCast(it.FindControl("CheckBox_SelezioneMultipla"), CheckBox)
-            Dim isSelected As Boolean = (temp_check IsNot Nothing AndAlso temp_check.Checked)
+            Dim isSelected As Boolean = (temp_check IsNot Nothing AndAlso (temp_check.Checked OrElse IsPostedCheckboxChecked(temp_check, it)))
             If temp_check Is Nothing Then
                 Dim replacementCard As Public_ui_controls_ProductCard = FindReplacementProductCard(it)
                 isSelected = (replacementCard IsNot Nothing AndAlso replacementCard.SelectedForMultiAdd)
@@ -1554,7 +1562,7 @@ strWhere = strWhere & " GROUP BY id"
         Next
 
         If listaArticoli.Count = 0 Then
-            ' Nessun articolo selezionato: non faccio nulla
+            ShowMultiSelectFeedback("Seleziona almeno un prodotto prima di aggiungere al carrello.")
             Return
         End If
 
@@ -1572,6 +1580,17 @@ strWhere = strWhere & " GROUP BY id"
         Session("ProdottoGratis") = 0 ' la logica puntuale è comunque nella lista
         Me.Response.Redirect("aggiungi.aspx")
     End Sub
+
+    Private Sub ShowMultiSelectFeedback(ByVal message As String)
+        If Me.lblMultiSelectFeedback IsNot Nothing Then
+            Me.lblMultiSelectFeedback.Text = Server.HtmlEncode(Convert.ToString(message))
+            Me.lblMultiSelectFeedback.Visible = True
+        End If
+    End Sub
+
+    Private Function IsPostedCheckboxChecked(ByVal checkBox As CheckBox, ByVal item As ListViewDataItem) As Boolean
+        Return GetPostedListViewControlValue(checkBox, item, "CheckBox_SelezioneMultipla") IsNot Nothing
+    End Function
 
     ' ============================
     ' HELPER PER LETTURA DATI DAL ROW
@@ -1633,7 +1652,9 @@ strWhere = strWhere & " GROUP BY id"
     Private Function GetQuantitaFromContainer(ByVal container As Control) As Integer
         Dim qtaBox As TextBox = TryCast(container.FindControl("tbQuantita"), TextBox)
         If qtaBox IsNot Nothing Then
-            Dim qta As Integer = NormalizeCartQuantity(qtaBox.Text, 1, 9999)
+            Dim postedValue As String = GetPostedListViewControlValue(qtaBox, TryCast(container, ListViewDataItem), "tbQuantita")
+            Dim rawQta As String = If(postedValue IsNot Nothing, postedValue, qtaBox.Text)
+            Dim qta As Integer = NormalizeCartQuantity(rawQta, 1, 9999)
             qtaBox.Text = qta.ToString()
             Return qta
         End If
@@ -1644,6 +1665,27 @@ strWhere = strWhere & " GROUP BY id"
         End If
 
         Return 1
+    End Function
+
+    Private Function GetPostedListViewControlValue(ByVal control As Control, ByVal item As ListViewDataItem, ByVal controlId As String) As String
+        If control Is Nothing OrElse Request Is Nothing OrElse Request.Form Is Nothing Then Return Nothing
+
+        Dim directValue As String = Request.Form(control.UniqueID)
+        If directValue IsNot Nothing Then Return directValue
+
+        If item Is Nothing OrElse String.IsNullOrEmpty(controlId) Then Return Nothing
+
+        Dim itemToken As String = "$lvProdotti$ctrl" & item.DisplayIndex.ToString() & "$"
+        Dim controlSuffix As String = "$" & controlId
+        For Each key As String In Request.Form.AllKeys
+            If key IsNot Nothing AndAlso
+                key.IndexOf(itemToken, StringComparison.OrdinalIgnoreCase) >= 0 AndAlso
+                key.EndsWith(controlSuffix, StringComparison.OrdinalIgnoreCase) Then
+                Return Request.Form(key)
+            End If
+        Next
+
+        Return Nothing
     End Function
 
     Private Function NormalizeCartQuantity(ByVal rawValue As String, ByVal fallbackValue As Integer, ByVal maxValue As Integer) As Integer

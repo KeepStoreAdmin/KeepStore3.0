@@ -405,8 +405,20 @@
                         </asp:DataPager>
                     </asp:Panel>
 
-                    <asp:Panel ID="ksMultiFooter" runat="server" CssClass="mt-4" Visible="false">
-                        <div class="alert alert-info">Selezione multipla attiva: scegli le quantita e aggiungi al carrello.</div>
+                    <asp:Panel ID="ksMultiFooter" runat="server" CssClass="mt-4 ks-multi-footer" Visible="false">
+                        <div class="ks-multi-footer__content">
+                            <div>
+                                <p class="ks-multi-footer__title">Selezione multipla attiva</p>
+                                <p class="ks-multi-footer__text">Seleziona i prodotti, imposta la quantita e aggiungili al carrello.</p>
+                                <asp:Label ID="lblMultiSelectFeedback" runat="server" CssClass="ks-multi-footer__feedback" Visible="false" />
+                            </div>
+                            <asp:LinkButton ID="btnAggiungiSelezionati" runat="server"
+                                CssClass="tf-btn btn-fill ks-multi-footer__cta"
+                                CausesValidation="false"
+                                OnClick="Selezione_Multipla_Button_Click">
+                                Aggiungi selezionati al carrello
+                            </asp:LinkButton>
+                        </div>
                     </asp:Panel>
 
                     <asp:Panel ID="tNavig" runat="server" Visible="false" />
