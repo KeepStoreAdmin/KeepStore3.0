@@ -250,7 +250,7 @@
                             <ItemTemplate>
                                 <asp:PlaceHolder ID="phReplacementProductCard" runat="server" />
                                 <asp:PlaceHolder ID="phInlineProductCard" runat="server">
-                                <div class="card-product ks-catalog-card">
+                                <div class='<%# CatalogCardCss(Container.DataItem) %>'>
                                     <div class="card-product-wrapper">
                                         <a href='<%# CatalogProductUrl(Container.DataItem) %>' class="product-img">
                                             <img class="lazyload img-product" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>'
@@ -352,7 +352,7 @@
 
                                             <div class='<%# CatalogQuantityBoxCss(Container.DataItem) %>' <%# CatalogQuantityBoxAttributes(Container.DataItem) %>>
                                                 <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" CssClass="form-check-input" />
-                                                <asp:TextBox ID="tbQuantita" runat="server" CssClass='<%# CatalogQuantityInputCss(Container.DataItem) %>' Text="1" Width="70" />
+                                                <asp:TextBox ID="tbQuantita" runat="server" CssClass='<%# CatalogQuantityInputCss(Container.DataItem) %>' Text='<%# CatalogQuantityInputValue(Container.DataItem) %>' Width="70" />
                                             </div>
                                         </div>
                                     </div>

@@ -1404,10 +1404,12 @@ strWhere = strWhere & " GROUP BY id"
         card.ShowAddToCart = model.ShowAddToCart
         card.ShowMultiSelect = model.ShowMultiSelect
         card.QuantityText = model.QuantityText
+        Dim cartQty As Decimal = GetCatalogCartQuantity(model.ProductId, model.TCId)
+        If cartQty > 0D Then card.QuantityText = FormatCatalogCartQuantity(cartQty)
         card.ActionDataAttributes = model.ActionDataAttributes
         card.IsDemoMode = Not isRealPreview
         ApplyMultiSelectCheckboxMicrocopy(card)
-        ApplyCatalogCartQuantityState(card, model.ProductId, model.TCId)
+        ApplyCatalogCartQuantityState(card, model.ProductId, model.TCId, cartQty)
 
         If isPreview OrElse isRealPreview Then
             Me.phProductCardPreview.Controls.Add(card)
@@ -1435,16 +1437,19 @@ strWhere = strWhere & " GROUP BY id"
         cbMultiSelect.ToolTip = "Seleziona prodotto per acquisto multiplo"
     End Sub
 
-    Private Sub ApplyCatalogCartQuantityState(ByVal root As Control, ByVal articleId As Integer, ByVal tcId As Integer)
+    Private Sub ApplyCatalogCartQuantityState(ByVal root As Control, ByVal articleId As Integer, ByVal tcId As Integer, Optional ByVal knownQty As Decimal = -1D)
         If root Is Nothing Then Exit Sub
 
-        Dim qty As Decimal = GetCatalogCartQuantity(articleId, tcId)
+        Dim qty As Decimal = knownQty
+        If qty < 0D Then qty = GetCatalogCartQuantity(articleId, tcId)
         If qty <= 0D Then Exit Sub
 
         Dim qtyBox As TextBox = TryCast(FindControlRecursive(root, "tbQuantita"), TextBox)
         If qtyBox Is Nothing Then Exit Sub
 
-        Dim label As String = "Nel carrello: " & FormatCatalogCartQuantity(qty)
+        Dim qtyText As String = FormatCatalogCartQuantity(qty)
+        Dim label As String = "Nel carrello: " & qtyText
+        qtyBox.Text = qtyText
         qtyBox.CssClass = AddCatalogCssClass(qtyBox.CssClass, "ks-cart-qty-input-present")
         qtyBox.ToolTip = label
         qtyBox.Attributes("aria-label") = "Quantita da aggiungere. " & label
@@ -3363,6 +3368,13 @@ strWhere = strWhere & " GROUP BY id"
         Return ResolveUrl(url)
     End Function
 
+    Protected Function CatalogCardCss(ByVal dataItem As Object) As String
+        Dim qty As Decimal = GetCatalogCartQuantity(UiData.Int(dataItem, "id"), CatalogTcId(dataItem, True))
+        Dim cssClass As String = "card-product ks-catalog-card"
+        If qty > 0D Then cssClass = AddCatalogCssClass(cssClass, "ks-card-in-cart")
+        Return cssClass
+    End Function
+
     Protected Function CatalogQuantityBoxCss(ByVal dataItem As Object) As String
         Dim qty As Decimal = GetCatalogCartQuantity(UiData.Int(dataItem, "id"), CatalogTcId(dataItem, True))
         Dim cssClass As String = "d-flex align-items-center gap-2 mt-2 ks-catalog-card-actions"
@@ -3375,6 +3387,12 @@ strWhere = strWhere & " GROUP BY id"
         Dim cssClass As String = "form-control form-control-sm ks-qty"
         If qty > 0D Then cssClass = AddCatalogCssClass(cssClass, "ks-cart-qty-input-present")
         Return cssClass
+    End Function
+
+    Protected Function CatalogQuantityInputValue(ByVal dataItem As Object) As String
+        Dim qty As Decimal = GetCatalogCartQuantity(UiData.Int(dataItem, "id"), CatalogTcId(dataItem, True))
+        If qty > 0D Then Return FormatCatalogCartQuantity(qty)
+        Return "1"
     End Function
 
     Protected Function CatalogQuantityBoxAttributes(ByVal dataItem As Object) As String
