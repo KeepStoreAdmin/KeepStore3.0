@@ -354,6 +354,7 @@
                                                 <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" CssClass="form-check-input" />
                                                 <asp:TextBox ID="tbQuantita" runat="server" CssClass="form-control form-control-sm ks-qty" Text="1" Width="70" />
                                             </div>
+                                            <%# CatalogCartQuantityBadgeHtml(Container.DataItem) %>
                                         </div>
                                     </div>
 
