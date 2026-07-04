@@ -302,6 +302,13 @@
     return qty;
   }
 
+  function normalizeExistingQty(value) {
+    var qty = parseInt(String(value || '0').replace(/\D/g, ''), 10);
+    if (!isFinite(qty) || qty <= 0) qty = 0;
+    if (qty > 9999) qty = 9999;
+    return qty;
+  }
+
   function findCardQty(link) {
     var card = link && link.closest ? link.closest('.card-product') : null;
     var input = card ? card.querySelector('input.ks-qty') : null;
@@ -309,6 +316,21 @@
     var qty = normalizeQty(input.value);
     input.value = String(qty);
     return qty;
+  }
+
+  function findCardQtyToAdd(link) {
+    var card = link && link.closest ? link.closest('.card-product') : null;
+    var input = card ? card.querySelector('input.ks-qty') : null;
+    if (!input) return 1;
+
+    var desiredQty = normalizeQty(input.value);
+    input.value = String(desiredQty);
+
+    var existingQty = normalizeExistingQty(input.getAttribute('data-ks-existing-cart-qty'));
+    if (existingQty <= 0) return desiredQty;
+
+    var qtyToAdd = desiredQty - existingQty;
+    return qtyToAdd > 0 ? qtyToAdd : 0;
   }
 
   function setUrlParam(url, key, value) {
@@ -335,7 +357,9 @@
       var cartLink = ev.target && ev.target.closest ? ev.target.closest('.js-ks-cart-link') : null;
       if (cartLink) {
         stopTemplateDemoHandlers(ev);
-        navigateKeepStore(setUrlParam(cartLink.getAttribute('href'), 'qty', findCardQty(cartLink)));
+        var qtyToAdd = findCardQtyToAdd(cartLink);
+        if (qtyToAdd <= 0) return;
+        navigateKeepStore(setUrlParam(cartLink.getAttribute('href'), 'qty', qtyToAdd));
         return;
       }
 
@@ -373,7 +397,8 @@
       stopTemplateDemoHandlers(ev);
       var item = readActionItem(link);
       if (!item) return;
-      item.cartUrl = setUrlParam(item.cartUrl || item.url, 'qty', findCardQty(link));
+      var quickViewQtyToAdd = findCardQtyToAdd(link);
+      item.cartUrl = quickViewQtyToAdd > 0 ? setUrlParam(item.cartUrl || item.url, 'qty', quickViewQtyToAdd) : '#';
 
       setText('ksQuickViewMeta', item.category || item.brand || 'Prodotto');
       var title = document.getElementById('ksQuickViewTitle');

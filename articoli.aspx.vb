@@ -1453,6 +1453,7 @@ strWhere = strWhere & " GROUP BY id"
         qtyBox.CssClass = AddCatalogCssClass(qtyBox.CssClass, "ks-cart-qty-input-present")
         qtyBox.ToolTip = label
         qtyBox.Attributes("aria-label") = "Quantita da aggiungere. " & label
+        qtyBox.Attributes("data-ks-existing-cart-qty") = qtyText
 
         Dim wrapper As HtmlGenericControl = TryCast(qtyBox.Parent, HtmlGenericControl)
         If wrapper Is Nothing Then Exit Sub
@@ -1502,10 +1503,13 @@ strWhere = strWhere & " GROUP BY id"
         End If
 
         ' 2) QUANTITÀ
-        Dim qta As Integer = GetQuantitaFromContainer(item)
-
-        ' 3) TCID (Taglia/Colore) se presente, altrimenti -1
         Dim tcIdVal As Integer = GetTCIdFromContainer(item)
+
+        Dim qta As Integer = GetQuantityToAddFromContainer(item, idVal, tcIdVal)
+        If qta <= 0 Then
+            ShowMultiSelectFeedback("La quantita indicata e gia presente nel carrello.")
+            Return
+        End If
 
         ' 4) PRODOTTO GRATIS (spedito gratis) calcolato da DB
         Session("ProdottoGratis") = spedito_gratis(idVal, listino)
@@ -1595,7 +1599,8 @@ strWhere = strWhere & " GROUP BY id"
                 End If
 
                 Dim tcIdVal As Integer = GetTCIdFromContainer(it)
-                Dim qta As Integer = GetQuantitaFromContainer(it)
+                Dim qta As Integer = GetQuantityToAddFromContainer(it, idVal, tcIdVal)
+                If qta <= 0 Then Continue For
                 Dim prodottoGratisFlag As Integer = spedito_gratis(idVal, listino)
 
                 ' Stesso formato di sempre: id,tcid,qta,ProdottoGratis
@@ -1707,6 +1712,26 @@ strWhere = strWhere & " GROUP BY id"
         End If
 
         Return 1
+    End Function
+
+    Private Function GetQuantityToAddFromContainer(ByVal container As Control, ByVal articleId As Integer, ByVal tcId As Integer) As Integer
+        Dim desiredQty As Integer = GetQuantitaFromContainer(container)
+        Dim existingQty As Integer = GetExistingCatalogCartQuantityAsInteger(articleId, tcId)
+        If existingQty <= 0 Then Return desiredQty
+
+        Dim qtyToAdd As Integer = desiredQty - existingQty
+        If qtyToAdd < 0 Then Return 0
+        Return qtyToAdd
+    End Function
+
+    Private Function GetExistingCatalogCartQuantityAsInteger(ByVal articleId As Integer, ByVal tcId As Integer) As Integer
+        Dim qty As Decimal = GetCatalogCartQuantity(articleId, tcId)
+        If qty <= 0D Then Return 0
+
+        Dim roundedQty As Integer = Convert.ToInt32(Math.Ceiling(qty))
+        If roundedQty < 0 Then Return 0
+        If roundedQty > 9999 Then Return 9999
+        Return roundedQty
     End Function
 
     Private Function GetPostedListViewControlValue(ByVal control As Control, ByVal item As ListViewDataItem, ByVal controlId As String) As String
@@ -3387,6 +3412,12 @@ strWhere = strWhere & " GROUP BY id"
         Dim cssClass As String = "form-control form-control-sm ks-qty"
         If qty > 0D Then cssClass = AddCatalogCssClass(cssClass, "ks-cart-qty-input-present")
         Return cssClass
+    End Function
+
+    Protected Function CatalogQuantityInputExistingQty(ByVal dataItem As Object) As String
+        Dim qty As Decimal = GetCatalogCartQuantity(UiData.Int(dataItem, "id"), CatalogTcId(dataItem, True))
+        If qty <= 0D Then Return String.Empty
+        Return FormatCatalogCartQuantity(qty)
     End Function
 
     Protected Function CatalogQuantityInputValue(ByVal dataItem As Object) As String

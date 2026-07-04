@@ -352,7 +352,7 @@
 
                                             <div class='<%# CatalogQuantityBoxCss(Container.DataItem) %>' <%# CatalogQuantityBoxAttributes(Container.DataItem) %>>
                                                 <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" CssClass="form-check-input" />
-                                                <asp:TextBox ID="tbQuantita" runat="server" CssClass='<%# CatalogQuantityInputCss(Container.DataItem) %>' Text='<%# CatalogQuantityInputValue(Container.DataItem) %>' Width="70" />
+                                                <asp:TextBox ID="tbQuantita" runat="server" CssClass='<%# CatalogQuantityInputCss(Container.DataItem) %>' Text='<%# CatalogQuantityInputValue(Container.DataItem) %>' Width="70" data-ks-existing-cart-qty='<%# CatalogQuantityInputExistingQty(Container.DataItem) %>' />
                                             </div>
                                         </div>
                                     </div>
