@@ -73,6 +73,7 @@ Stato micro-task search deterministica post PR #222/#223/#224:
 - PR #232 chiusa: filtri applicati catalogo in stile ONSUS-like con `.meta-filter-shop`, `#applied-filters`, `.remove-all-filters` e `icon-close`; rimozione singola filtro via GET sicuro, remove-all visibile e funzionante, `st/ct` preservati, nessun chip tecnico solo ID, sidebar invariata e zero-results preservato. Query prodotti principale, SearchScore/ranking, suggest, DB/schema/SP, carrello/checkout/ordine, gateway e JS restano invariati; CSS scoped sotto `#ksCatalogPage`.
 - PR #234 chiusa: navigazione `Settori` ONSUS-like sopra i facet catalogo, basata su `CatalogMenuSector` e `CatalogMenuProvider`, gerarchia `Settori > Categorie`, URL puliti `st`/`st+ct`, parametri sporchi azzerati, cache `LoadCatalogMenuCached()` 600s e rendering limitato. La label `Categoria/Categorie` e stata corretta in `Settori`; non e un facet laterale e non modifica query prodotti, SearchScore/ranking, suggest, DB/schema/SP, carrello/checkout/ordine, gateway o JS. Applied filters PR #232 e zero-results PR #226 restano preservati.
 - PR #236 chiusa: card prodotto runtime catalogo `article.card-product` rifinita in stile ONSUS-like con CSS scoped sotto `#ksCatalogPage`; `.ks-catalog-card` resta fallback, non target principale. Tipografia verificata: `"Inter", serif`, titolo `14px / 600 / 22px`, prezzo `20px / 500 / 22px`, dettagli codice/disponibilita `12px / 22px`. Regola immagini DB-first documentata: placeholder `/Public/assets/images/img/placeholder.svg` solo se `ImageUrl` manca, niente `onerror` aggressivo; immagini rotte con path DB presente restano backlog asset/path. Query prodotti, SearchScore/ranking, suggest, DB/schema/SP, carrello/checkout/ordine, gateway, Settori/sidebar/filtri/applied filters e asset restano invariati.
+- PR #238 chiusa: polish CSS-only di quantita/checkbox nella card runtime `article.card-product`, scoped sotto `#ksCatalogPage`. Restano invariati `tbQuantita`, `CheckBox_SelezioneMultipla`, `hfID`/`hfTCId`, `data-ks-*`, `ProductCard.ascx`, `ProductCard.ascx.vb`, `articoli.aspx`, `articoli.aspx.vb`, JS, link `cart_add.aspx`, add-to-cart, wishlist, compare e quickview; nessun bottone globale selezionati aggiunto. L'eventuale "aggiungi selezionati" globale resta backlog/audit separato per rischio carrello/WebForms. Query prodotti, SearchScore/ranking, suggest, DB/schema/SP, carrello/checkout/ordine, gateway, Settori/sidebar/filtri/applied filters e asset restano invariati; card typography PR #236 preservata. Smoke visuale Germano OK / "TUTTO OK" e performance pre/post merge documentata.
 - Test registrati: `hp` non peggiorato (`18933,20018`), `stampante hp` migliorato verso suggest (`20810,17698`), `12384` invariato con nessun ID catalogo e suggest `total=0`; smoke suggest/articoli/carrello OK.
 - Limiti residui: LIKE su molte colonne lunghe puo diventare costoso; zero results ora e assistito ma resta locale/non-AI; eventuale AI/LLM resta fase successiva con privacy task.
 
@@ -288,7 +289,13 @@ Vincoli:
    - tipografia ONSUS reale, immagini stabilizzate e regola DB-first per placeholder immagini;
    - query prodotti, SearchScore/ranking, suggest, zero-results, filtri applicati e navigazione Settori preservati.
 
-10. `AI-ASSISTANT-DATA-PROFILE-AUDIT-1A`
+10. `CATALOG-CARD-QUANTITY-CHECKBOX-CSS-GUARD-1A`
+   - chiuso con PR #238;
+   - polish CSS-only di quantita e checkbox selezione multipla nella card runtime `article.card-product`;
+   - nessun cambio a WebForms, add-to-cart, `cart_add.aspx`, `data-ks-*`, JS o query/ranking;
+   - bottone globale "aggiungi selezionati" lasciato a backlog/audit separato.
+
+11. `AI-ASSISTANT-DATA-PROFILE-AUDIT-1A`
    - audit campi e vocabolario per merceologie;
    - capire dove sta la scheda tecnica;
    - nessuna modifica DB.
