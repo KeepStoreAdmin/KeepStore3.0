@@ -408,7 +408,10 @@
                     <asp:Panel ID="ksMultiFooter" runat="server" CssClass="mt-4 ks-multi-footer" Visible="false">
                         <div class="ks-multi-footer__content">
                             <div>
-                                <p class="ks-multi-footer__title">Acquisto multiplo</p>
+                                <p class="ks-multi-footer__title">
+                                    <span class="ks-multi-select-icon" aria-hidden="true"></span>
+                                    Acquisto multiplo
+                                </p>
                                 <p class="ks-multi-footer__text">Spunta la casella Seleziona sui prodotti desiderati, imposta le quantita e aggiungili insieme al carrello.</p>
                                 <ul class="ks-multi-footer__steps" aria-label="Come funziona l'acquisto multiplo">
                                     <li><span>1</span>Spunta Seleziona</li>
