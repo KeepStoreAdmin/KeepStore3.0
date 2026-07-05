@@ -996,10 +996,23 @@
 
 #ksCatalogPage .card-product.ks-card-in-cart,
 #ksCatalogPage article.card-product:has(.ks-cart-qty-input-present) {
-  border: 1px solid rgba(19, 140, 64, 0.16);
+  position: relative;
   border-radius: 8px;
-  background: linear-gradient(180deg, rgba(19, 140, 64, 0.045), rgba(255, 255, 255, 0));
-  box-shadow: 0 14px 34px rgba(19, 140, 64, 0.08);
+  background: linear-gradient(180deg, rgba(19, 140, 64, 0.035), rgba(255, 255, 255, 0) 68%);
+  box-shadow:
+    inset 0 0 0 1px rgba(19, 140, 64, 0.18),
+    0 10px 26px rgba(19, 140, 64, 0.055);
+}
+
+#ksCatalogPage .card-product.ks-card-in-cart::before,
+#ksCatalogPage article.card-product:has(.ks-cart-qty-input-present)::before {
+  content: "";
+  position: absolute;
+  inset: 8px auto 8px 0;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(19, 140, 64, 0.62), rgba(19, 140, 64, 0.18));
+  pointer-events: none;
 }
 
 #ksCatalogPage .ks-catalog-card-actions.ks-cart-qty-present,
