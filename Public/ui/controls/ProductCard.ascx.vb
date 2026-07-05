@@ -35,6 +35,9 @@ Partial Class Public_ui_controls_ProductCard
     Public Property EnableLegacyServerControls As Boolean = False
     Public Property QuantityText As String = "1"
     Public Property ActionDataAttributes As String
+    Public Property CardStateCssClass As String
+    Public Property LegacyQuantityStateCssClass As String
+    Public Property LegacyQuantityStateText As String
 
     Public ReadOnly Property SelectedForMultiAdd As Boolean
         Get
@@ -85,6 +88,12 @@ Partial Class Public_ui_controls_ProductCard
     Protected ReadOnly Property SafeProductUrl As String
         Get
             Return CleanUrl(ProductUrl)
+        End Get
+    End Property
+
+    Protected ReadOnly Property SafeCardStateCssClass As String
+        Get
+            Return SanitizeCssClass(CardStateCssClass)
         End Get
     End Property
 
@@ -282,11 +291,25 @@ Partial Class Public_ui_controls_ProductCard
         End Get
     End Property
 
+    Protected ReadOnly Property SafeLegacyQuantityStateCssClass As String
+        Get
+            Return SanitizeCssClass(LegacyQuantityStateCssClass)
+        End Get
+    End Property
+
+    Protected ReadOnly Property SafeLegacyQuantityStateAttributes As String
+        Get
+            If String.IsNullOrWhiteSpace(LegacyQuantityStateText) Then Return ""
+
+            Dim label As String = EncodeAttribute(LegacyQuantityStateText)
+            Return " title=""" & label & """ aria-label=""" & label & """"
+        End Get
+    End Property
+
     Protected ReadOnly Property SafeAvailabilityCss As String
         Get
             Dim css As String = If(AvailabilityCss, String.Empty)
-            css = System.Text.RegularExpressions.Regex.Replace(css, "[^A-Za-z0-9_\- ]", String.Empty)
-            Return EncodeAttribute(css.Trim())
+            Return SanitizeCssClass(css)
         End Get
     End Property
 
@@ -332,5 +355,11 @@ Partial Class Public_ui_controls_ProductCard
         If url = String.Empty Then Return "#"
         If url.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) Then Return "#"
         Return System.Web.HttpUtility.HtmlAttributeEncode(url)
+    End Function
+
+    Private Function SanitizeCssClass(ByVal value As String) As String
+        Dim css As String = If(value, String.Empty)
+        css = System.Text.RegularExpressions.Regex.Replace(css, "[^A-Za-z0-9_\- ]", String.Empty)
+        Return EncodeAttribute(css.Trim())
     End Function
 End Class

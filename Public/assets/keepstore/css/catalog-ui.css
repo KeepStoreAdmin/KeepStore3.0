@@ -1016,6 +1016,7 @@
 }
 
 #ksCatalogPage .ks-catalog-card-actions.ks-cart-qty-present,
+#ksCatalogPage article.card-product .box-infor-detail .d-flex.align-items-center.gap-2.mt-2.ks-cart-qty-present,
 #ksCatalogPage article.card-product .box-infor-detail .d-flex.align-items-center.gap-2.mt-2:has(.ks-cart-qty-input-present) {
   width: fit-content;
   max-width: 100%;

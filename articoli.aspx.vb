@@ -1449,6 +1449,13 @@ strWhere = strWhere & " GROUP BY id"
 
         Dim qtyText As String = FormatCatalogCartQuantity(qty)
         Dim label As String = "Nel carrello: " & qtyText
+        Dim productCard As Public_ui_controls_ProductCard = TryCast(root, Public_ui_controls_ProductCard)
+        If productCard IsNot Nothing Then
+            productCard.CardStateCssClass = AddCatalogCssClass(productCard.CardStateCssClass, "ks-card-in-cart")
+            productCard.LegacyQuantityStateCssClass = AddCatalogCssClass(productCard.LegacyQuantityStateCssClass, "ks-cart-qty-present")
+            productCard.LegacyQuantityStateText = label
+        End If
+
         qtyBox.Text = qtyText
         qtyBox.CssClass = AddCatalogCssClass(qtyBox.CssClass, "ks-cart-qty-input-present")
         qtyBox.ToolTip = label

@@ -1,6 +1,6 @@
 <%@ Control Language="VB" AutoEventWireup="false" CodeFile="ProductCard.ascx.vb" Inherits="Public_ui_controls_ProductCard" %>
 
-<article class="card-product" aria-labelledby="<%= ProductTitleClientId %>">
+<article class="card-product <%= SafeCardStateCssClass %>" aria-labelledby="<%= ProductTitleClientId %>">
     <div class="card-product-wrapper">
         <a href="<%= SafeProductUrl %>" class="product-img" aria-label="<%= SafeProductNameAttribute %>">
             <img class="img-product" src="<%= SafeImageUrl %>" alt="<%= SafeProductNameAttribute %>" />
@@ -114,7 +114,7 @@
             <asp:PlaceHolder ID="phLegacyServerControls" runat="server" Visible="false">
                 <asp:HiddenField ID="hfID" runat="server" />
                 <asp:HiddenField ID="hfTCId" runat="server" />
-                <div class="d-flex align-items-center gap-2 mt-2">
+                <div class="d-flex align-items-center gap-2 mt-2 <%= SafeLegacyQuantityStateCssClass %>"<%= SafeLegacyQuantityStateAttributes %>>
                     <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" CssClass="form-check-input" />
                     <asp:TextBox ID="tbQuantita" runat="server" CssClass="form-control form-control-sm ks-qty" Width="70" />
                 </div>
