@@ -1648,7 +1648,7 @@ body.ks-page-home .ks-home-main .sw-dot-default {
   .ks-header-ui .ks-header-sector-title { color: #111827; font-size: 18px; font-weight: 800; line-height: 1.2; }
   .ks-header-ui .ks-header-catalog-menu-list { display: grid; grid-template-columns: repeat(3, minmax(190px, 1fr)); gap: 30px 38px; align-items: start; }
   .ks-header-ui .ks-header-catalog-category-block { min-width: 0; }
-  .ks-header-ui .ks-header-catalog-category-link { position: relative; height: auto; display: block; padding: 0 0 11px; color: var(--primary, #ff3b30); font-family: "Inter", serif; font-size: 19px; font-weight: 800; line-height: 1.25; text-transform: uppercase; letter-spacing: 0; }
+  .ks-header-ui .ks-header-catalog-category-link { position: relative; height: auto; display: block; padding: 0 0 11px; color: var(--primary-2, #D80027); font-family: "Inter", serif; font-size: 19px; font-weight: 800; line-height: 1.25; text-transform: uppercase; letter-spacing: 0; }
   .ks-header-ui .ks-header-catalog-category-link::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: #e6e8ec; }
   .ks-header-ui .ks-header-catalog-tipology-list { display: grid; gap: 8px; padding: 0; margin: 13px 0 0; }
   .ks-header-ui .ks-header-catalog-tipology { box-shadow: none; }
@@ -1661,5 +1661,5 @@ body.ks-page-home .ks-home-main .sw-dot-default {
   .ks-header-ui .ks-header-catalog-tipology-link:focus-visible,
   .ks-header-ui .ks-header-catalog-empty-link:focus-visible,
   .ks-header-ui .ks-header-catalog-category-link:focus-visible,
-  .ks-header-ui .ks-header-sector-title:focus-visible { color: var(--primary); padding-left: 0; outline: none; text-decoration: underline; text-underline-offset: 4px; }
+  .ks-header-ui .ks-header-sector-title:focus-visible { color: var(--primary-2, #D80027); padding-left: 0; outline: none; text-decoration: underline; text-underline-offset: 4px; }
 }
