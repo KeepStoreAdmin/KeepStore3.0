@@ -133,7 +133,6 @@ End If
         Me.Session("Carrello_ArticoloId") = Nothing
         Me.Session("Carrello_ListaArticoloId") = Nothing
         Me.Session("Carrello_Quantita") = Nothing
-        Me.Session("Carrello_Pagina") = Nothing
         Me.Session("Carrello_SelezioneMultipla") = Nothing
         Me.Session("ProdottoGratis") = Nothing
 

@@ -240,6 +240,90 @@ Private Sub SafeRedirectLocal(ByVal url As String)
     Response.Redirect(url, True)
 End Sub
 
+Private Function ResolveContinueShoppingUrl() As String
+    Dim candidates As New List(Of String)()
+
+    AddContinueShoppingCandidate(candidates, Convert.ToString(Session("Carrello_Pagina")))
+    AddContinueShoppingCandidate(candidates, Convert.ToString(Session("Pagina_visitata_Articoli")))
+
+    Try
+        If Request IsNot Nothing AndAlso Request.UrlReferrer IsNot Nothing Then
+            AddContinueShoppingCandidate(candidates, Request.UrlReferrer.AbsoluteUri)
+        End If
+    Catch
+    End Try
+
+    For Each candidate As String In candidates
+        Dim normalized As String = NormalizeContinueShoppingUrl(candidate)
+        If Not String.IsNullOrEmpty(normalized) Then Return normalized
+    Next
+
+    Return "/articoli.aspx"
+End Function
+
+Private Sub AddContinueShoppingCandidate(ByVal candidates As List(Of String), ByVal value As String)
+    If candidates Is Nothing OrElse String.IsNullOrWhiteSpace(value) Then Return
+    candidates.Add(value)
+End Sub
+
+Private Function NormalizeContinueShoppingUrl(ByVal value As String) As String
+    If String.IsNullOrWhiteSpace(value) Then Return String.Empty
+
+    Dim candidate As String = value.Trim()
+    Try
+        candidate = HttpUtility.UrlDecode(candidate).Trim()
+    Catch
+    End Try
+
+    If String.IsNullOrWhiteSpace(candidate) Then Return String.Empty
+    If candidate.IndexOfAny(New Char() {ControlChars.Cr, ControlChars.Lf}) >= 0 Then Return String.Empty
+    If candidate.IndexOf("\"c) >= 0 Then Return String.Empty
+
+    Dim lowered As String = candidate.ToLowerInvariant()
+    If lowered.StartsWith("javascript:", StringComparison.Ordinal) OrElse
+       lowered.StartsWith("data:", StringComparison.Ordinal) OrElse
+       lowered.StartsWith("//", StringComparison.Ordinal) Then
+        Return String.Empty
+    End If
+
+    Dim absoluteUri As Uri = Nothing
+    If Uri.TryCreate(candidate, UriKind.Absolute, absoluteUri) Then
+        If Request Is Nothing OrElse Request.Url Is Nothing Then Return String.Empty
+        If Not String.Equals(absoluteUri.Authority, Request.Url.Authority, StringComparison.OrdinalIgnoreCase) Then Return String.Empty
+        candidate = absoluteUri.PathAndQuery
+    End If
+
+    If candidate.StartsWith("~/", StringComparison.Ordinal) Then
+        candidate = "/" & candidate.Substring(2)
+    ElseIf Not candidate.StartsWith("/", StringComparison.Ordinal) Then
+        candidate = "/" & candidate
+    End If
+
+    If candidate.StartsWith("//", StringComparison.Ordinal) OrElse candidate.StartsWith("/\", StringComparison.Ordinal) Then Return String.Empty
+    If Not IsAllowedContinueShoppingPath(candidate) Then Return String.Empty
+
+    Return candidate
+End Function
+
+Private Function IsAllowedContinueShoppingPath(ByVal localUrl As String) As Boolean
+    If String.IsNullOrWhiteSpace(localUrl) Then Return False
+
+    Dim pathOnly As String = localUrl
+    Dim queryIndex As Integer = pathOnly.IndexOf("?"c)
+    If queryIndex >= 0 Then pathOnly = pathOnly.Substring(0, queryIndex)
+
+    Dim hashIndex As Integer = pathOnly.IndexOf("#"c)
+    If hashIndex >= 0 Then pathOnly = pathOnly.Substring(0, hashIndex)
+
+    Dim pageName As String = IO.Path.GetFileName(pathOnly).ToLowerInvariant()
+    Select Case pageName
+        Case "default.aspx", "articoli.aspx", "articolo.aspx"
+            Return True
+    End Select
+
+    Return False
+End Function
+
 Private Function UrlIsLocal(ByVal url As String) As Boolean
     ' Minimal local-url check compatible with .NET 4.0
     If String.IsNullOrEmpty(url) Then Return False
@@ -5060,15 +5144,7 @@ End Function
 
 Protected Sub btContinua_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btContinua.Click
     If Not IsAddressEditorActionAllowed(sender) Then Return
-    If Session.Item("Pagina_visitata_Articoli") Is Nothing Then
-        Response.Redirect("default.aspx")
-    Else
-        If Session.Item("Pagina_visitata_Articoli").ToString = String.Empty Then
-            Response.Redirect("default.aspx")
-        Else
-            SafeRedirectLocal(Session.Item("Pagina_visitata_Articoli").ToString())
-        End If
-    End If
+    SafeRedirectLocal(ResolveContinueShoppingUrl())
 End Sub
 
 
