@@ -8,21 +8,6 @@
         </a>
         <% If RenderQuickActions Then %>
         <ul class="list-product-btn top-0 end-0" aria-label="Azioni prodotto">
-            <% If RenderAddToCart Then %>
-            <li>
-                <% If IsDemoMode Then %>
-                <button class="box-icon btn-icon-action hover-tooltip tooltip-left" type="button" disabled="disabled" aria-label="Carrello dimostrativo">
-                    <span class="icon" aria-hidden="true">C</span>
-                    <span class="tooltip"><%= CartButtonText %></span>
-                </button>
-                <% Else %>
-                <a href="<%= SafeCartUrl %>" class="<%= AddToCartActionClass %>" aria-label="Aggiungi al carrello"<%= SafeActionDataAttributes %>>
-                    <span class="icon icon-cart2"></span>
-                    <span class="tooltip">Carrello</span>
-                </a>
-                <% End If %>
-            </li>
-            <% End If %>
             <% If RenderWishlist Then %>
             <li>
                 <% If IsDemoMode Then %>
@@ -117,6 +102,15 @@
                 <div class="d-flex align-items-center gap-2 mt-2 <%= SafeLegacyQuantityStateCssClass %>"<%= SafeLegacyQuantityStateAttributes %>>
                     <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" CssClass="form-check-input" />
                     <asp:TextBox ID="tbQuantita" runat="server" CssClass="form-control form-control-sm ks-qty" Width="70" />
+                    <% If RenderAddToCart Then %>
+                    <a href="<%= SafeCartUrl %>"
+                       class="ks-card-buy-cta js-ks-cart-link"
+                       aria-label="Acquista: aggiungi al carrello"
+                       title="Acquista: aggiungi al carrello"<%= SafeActionDataAttributes %>>
+                        <span class="ks-card-buy-cta__icon icon-cart-2" aria-hidden="true"></span>
+                        <span class="ks-card-buy-cta__text">Acquista</span>
+                    </a>
+                    <% End If %>
                 </div>
             </asp:PlaceHolder>
         </div>
@@ -127,7 +121,7 @@
             <span><%= CartButtonText %></span>
         </button>
         <% ElseIf RenderAddToCart Then %>
-        <a href="<%= SafeCartUrl %>" class="<%= PrimaryButtonClass %>" aria-label="Aggiungi al carrello"<%= SafeActionDataAttributes %>>
+        <a href="<%= SafeCartUrl %>" class="<%= PrimaryButtonClass %>" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello"<%= SafeActionDataAttributes %>>
             <span><%= CartButtonText %></span>
         </a>
         <% End If %>

@@ -174,13 +174,13 @@ Partial Class Public_ui_controls_ProductCard
     Protected ReadOnly Property CartButtonText As String
         Get
             If IsDemoMode Then Return "Azione demo"
-            Return "Aggiungi al carrello"
+            Return "Acquista"
         End Get
     End Property
 
     Protected ReadOnly Property RenderQuickActions As Boolean
         Get
-            Return ShowQuickActions AndAlso (ShowAddToCart OrElse ShowWishlist OrElse ShowQuickView OrElse ShowCompare)
+            Return ShowQuickActions AndAlso (ShowWishlist OrElse ShowQuickView OrElse ShowCompare)
         End Get
     End Property
 
