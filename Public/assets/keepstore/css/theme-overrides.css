@@ -1000,7 +1000,7 @@ body.ks-page-home .ks-home-main .ks-home-buy-cta {
   min-width: 40px;
   min-height: 40px;
   padding: 0 10px;
-  gap: 7px;
+  gap: 8px;
   border: 1px solid var(--primary-2, #D80027);
   border-radius: 6px;
   background: var(--primary-2, #D80027);
@@ -1009,13 +1009,19 @@ body.ks-page-home .ks-home-main .ks-home-buy-cta {
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
-  box-shadow: 0 9px 18px rgba(216, 0, 39, .18);
-  transition: width .2s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+  text-decoration: none;
+  letter-spacing: 0;
+  box-shadow: 0 4px 12px rgba(216, 0, 39, .12);
+  transition: width 180ms ease, padding 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
-body.ks-page-home .ks-home-main .ks-home-buy-cta .icon {
+body.ks-page-home .ks-home-main .ks-card-buy-cta__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
-  font-size: 17px;
+  font-size: 16px;
+  line-height: 1;
 }
 
 body.ks-page-home .ks-home-main .ks-home-buy-cta__text {
@@ -1024,7 +1030,8 @@ body.ks-page-home .ks-home-main .ks-home-buy-cta__text {
   overflow: hidden;
   opacity: 0;
   white-space: nowrap;
-  transition: max-width .2s ease, opacity .16s ease;
+  transform: translateX(-4px);
+  transition: max-width 180ms ease, opacity 160ms ease, transform 180ms ease;
 }
 
 body.ks-page-home .ks-home-main .ks-home-buy-cta:hover,
@@ -1036,7 +1043,7 @@ body.ks-page-home .ks-home-main .card-product .ks-home-buy-cta:active {
   background-color: #b90021 !important;
   border-color: #b90021 !important;
   color: #fff !important;
-  box-shadow: 0 12px 24px rgba(216, 0, 39, .24);
+  box-shadow: 0 6px 16px rgba(216, 0, 39, .18);
   transform: translateY(-1px);
 }
 
@@ -1045,6 +1052,7 @@ body.ks-page-home .ks-home-main .ks-home-buy-cta:focus .ks-home-buy-cta__text,
 body.ks-page-home .ks-home-main .ks-home-buy-cta:active .ks-home-buy-cta__text {
   max-width: 76px;
   opacity: 1;
+  transform: translateX(0);
 }
 
 body.ks-page-home .ks-home-main .ks-home-buy-cta:focus-visible {
