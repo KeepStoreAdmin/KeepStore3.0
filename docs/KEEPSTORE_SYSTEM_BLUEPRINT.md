@@ -40,6 +40,38 @@ Relazione con il masterplan: il masterplan resta il riferimento operativo per ta
 - Priorita operativa: bug bloccanti e regressioni utente, smoke, documentazione minima, poi cleanup. Non consumare token su attivita non funzionali se ci sono blocchi piu importanti.
 - Esempio corrente: checkout note ordine + consenso condizioni chiuso e validato live; PR #171 sessione/logout post-ordine resta backlog non attivo perche il test manuale ha dato esito A e il problema non e riproducibile ora.
 
+### 2.2 Contratto permanente stack, linguaggio e sicurezza
+
+Ogni prompt Codex runtime del progetto KeepStore 3.0 deve dichiarare esplicitamente la sezione "Stack e divieti tecnici".
+
+Stack reale obbligatorio:
+
+- ASP.NET WebForms.
+- VB.NET.
+- .NET Framework 4.x.
+- MySQL.
+- WebForms code-behind `.aspx.vb` / `.ascx.vb`.
+- `Page.master`, controlli ASCX e `App_Code`.
+
+Divieti permanenti:
+
+- Non proporre o introdurre C#.
+- Non proporre o introdurre ASP.NET Core, Razor Pages, MVC/MVC Core, Blazor, minimal API, controller/API rewrite o template ASP.NET Core.
+- Non introdurre Entity Framework Core, migrations, dependency injection moderna non gia presente nel progetto o riscritture architetturali non autorizzate.
+- Non introdurre TypeScript build pipeline, npm, Vite o Webpack se non gia esistenti e non esplicitamente richiesti.
+- Non aggiungere nuove librerie senza audit e approvazione.
+- Se Codex ritiene necessaria una tecnologia diversa, deve fermarsi, motivare e non modificare file.
+
+Regola compatibilita: ogni modifica deve restare compatibile con WebForms/VB.NET, con il ciclo di build/precompile ASP.NET gia usato nel progetto e con il runtime .NET Framework 4.x.
+
+Regola "codice fresco ma compatibile": KeepStore deve restare moderno nella UX, nella sicurezza e nella qualita senza rompere lo stack. HTML/CSS/JS moderno e ammesso solo se compatibile con il runtime attuale. Il server WebForms resta fonte di verita per carrello, prezzi, listini, IVA, promo, sessione, login e checkout: nessun calcolo commerciale deve dipendere solo dal browser e la logica carrello non va duplicata lato JS.
+
+Regola sicurezza per task sensibili: ogni task che tocca input utente, URL, querystring, form, carrello, login, checkout, ordine, e-mail, upload, immagini o redirect deve verificare esplicitamente validazione input lato server, query parametrizzate, whitelist per campi dinamici/ordinamenti/redirect/nomi file, output encoding per dati DB o input utente, CSRF/ViewState dove pertinente, assenza di open redirect, segreti hardcoded, log con dati sensibili, path traversal, uso legacy `Public/Images/` e modifiche DB/schema/SP non autorizzate.
+
+Riferimenti metodologici: OWASP Top 10 per i rischi web principali, OWASP ASVS come checklist tecnica dei controlli e documentazione Microsoft ASP.NET WebForms / ASP.NET 4.x security per request validation, WebForms security e protezioni native.
+
+Regola "non hacker-proof": nessun sito va dichiarato "a prova di hacker" in senso assoluto. L'obiettivo operativo e ridurre la superficie d'attacco, rendere ogni modifica verificabile, applicare controlli server-side, eseguire scan e test, proteggere segreti/sessioni/redirect e mantenere regressioni sotto controllo.
+
 ## 3. Indice
 
 - [1. Frontespizio tecnico](#1-frontespizio-tecnico)

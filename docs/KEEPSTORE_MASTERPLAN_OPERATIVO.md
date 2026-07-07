@@ -60,6 +60,18 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 - ChatGPT decide piano, ordine e priorita; Codex esegue task piccoli, verificabili e con confini rigidi. Evitare task generici tipo "controlla tutto".
 - Priorita: bug bloccanti/regressioni utente, smoke, documentazione minima, poi cleanup. Non consumare token su attivita non funzionali mentre ci sono step piu importanti aperti.
 
+### Contratto permanente stack, linguaggio e sicurezza
+
+- Ogni prompt runtime Codex deve includere una sezione "Stack e divieti tecnici".
+- Stack obbligatorio da dichiarare: ASP.NET WebForms, VB.NET, .NET Framework 4.x, MySQL, code-behind `.aspx.vb`/`.ascx.vb`, `Page.master`, controlli ASCX e `App_Code`.
+- Codex non deve proporre o introdurre C#, ASP.NET Core, Razor Pages, MVC/MVC Core, Blazor, Entity Framework Core, migrations, controller/API rewrite, dependency injection moderna non presente, minimal API, template ASP.NET Core, TypeScript build pipeline, npm/Vite/Webpack non gia presenti o nuove librerie senza audit e approvazione.
+- Non convertire pagine WebForms in MVC/Razor/Core e non proporre riscritture architetturali non autorizzate. Se sembra necessaria una tecnologia diversa, Codex deve fermarsi, motivare e non modificare file.
+- Ogni modifica deve restare compatibile con WebForms/VB.NET, .NET Framework 4.x e con il ciclo di build/precompile ASP.NET gia usato.
+- "Codice fresco ma compatibile": UX, sicurezza e qualita possono modernizzarsi con HTML/CSS/JS compatibile, ma WebForms server-side resta fonte di verita per carrello, prezzi, listini, IVA, promo, sessione, login e checkout. Nessun calcolo commerciale solo browser e nessuna duplicazione della logica carrello lato JS.
+- Ogni task che tocca input utente, URL, querystring, form, carrello, login, checkout, ordine, e-mail, upload, immagini o redirect deve verificare validazione server-side, query parametrizzate, whitelist per campi dinamici/ordinamenti/redirect/nomi file, output encoding, CSRF/ViewState dove pertinente, nessun open redirect, nessun segreto hardcoded, nessun log con dati sensibili, nessun path traversal, nessun `Public/Images/` legacy e nessuna modifica DB/schema/SP senza task dedicato.
+- Riferimenti metodologici: OWASP Top 10, OWASP ASVS e documentazione Microsoft ASP.NET WebForms / ASP.NET 4.x security.
+- Nessun sito va dichiarato "a prova di hacker" in senso assoluto. Obiettivo operativo: ridurre superficie d'attacco, rendere ogni modifica verificabile, applicare controlli server-side, eseguire scan/test, proteggere segreti/sessioni/redirect e tenere sotto controllo le regressioni.
+
 ### Conoscenza storica integrata / anti-regressione
 
 - Dai vecchi file `AGENTS.md` e patch notes resta confermata la separazione fondamentale: KeepStore e il motore dati/logica/permessi, ONSUS e la sorgente UI/UX, e tra i due servono componenti e contratti dati chiari. Non mischiare nello stesso micro-task logica VB, query SQL, HTML, SEO, JS e template se non e indispensabile e autorizzato.

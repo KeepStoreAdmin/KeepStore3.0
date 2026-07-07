@@ -4,6 +4,8 @@ Stato: blueprint architetturale, non implementazione runtime.
 
 Questo documento definisce la direzione futura per una ricerca assistita / assistente acquisto multi-merceologia in KeepStore 3.0. La funzione deve nascere sopra la ricerca deterministica esistente e sopra i dati reali del catalogo, senza introdurre API AI, nuove tabelle, endpoint o modifiche runtime in questa fase.
 
+Nota permanente stack/sicurezza: qualunque task runtime futuro legato a search, assistenza acquisto o AI deve rispettare il contratto tecnico generale KeepStore: ASP.NET WebForms, VB.NET, .NET Framework 4.x e MySQL; niente C#, ASP.NET Core, Razor/MVC/Blazor, EF Core, migrations, API rewrite, nuove pipeline npm/Vite/Webpack o librerie senza audit e approvazione. Input, querystring, redirect, output e dati catalogo devono restare validati/encoded lato server, con query parametrizzate e whitelist dove servono. OWASP Top 10, OWASP ASVS e Microsoft ASP.NET WebForms / ASP.NET 4.x security sono i riferimenti metodologici.
+
 ## 1. Principio multi-merceologia
 
 L'assistente acquisto non deve contenere domande hardcoded valide per tutti i negozi. KeepStore e rivendibile e multi-azienda: Taikun, Webaffare e futuri ecommerce possono avere merceologie molto diverse.
