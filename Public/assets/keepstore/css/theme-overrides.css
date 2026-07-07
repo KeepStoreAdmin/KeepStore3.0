@@ -1101,6 +1101,15 @@ body.ks-page-home .ks-home-deals .ks-deal-card .box-icon {
   height: 48px;
 }
 
+body.ks-page-home .ks-home-deals .ks-deal-card .ks-home-buy-cta {
+  width: auto;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 6px;
+}
+
 body.ks-page-home .ks-home-deals .ks-deal-thumbs {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1672,6 +1681,14 @@ body.ks-page-home .ks-home-main .sw-dot-default {
   body.ks-page-home .ks-home-deals .ks-deal-card .box-icon {
     width: 40px;
     height: 40px;
+  }
+
+  body.ks-page-home .ks-home-deals .ks-deal-card .ks-home-buy-cta {
+    width: auto;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0 11px;
   }
 
   body.ks-page-home .ks-home-main .ks-home-buy-cta {
