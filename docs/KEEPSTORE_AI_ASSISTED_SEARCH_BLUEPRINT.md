@@ -8,7 +8,9 @@ Nota permanente stack/sicurezza: qualunque task runtime futuro legato a search, 
 
 Nota roadmap permanente: le funzioni search/AI/SEO seguono la scaletta prioritaria del masterplan e non devono scavalcare i blocchi ecommerce/UX gia pianificati. La proposta futura `llms.ashx` / `llms.txt` / JSON-LD dinamico resta in Priorita 8 e richiede prima `LLMS-TXT-ASHX-JSONLD-AUDIT-1` read-only, con approvazione esplicita Germano prima di qualunque runtime. Non usare C#, ASP.NET Core, controller o routing Core; la pagina prodotto reale e `articolo.aspx`, non `prodotto.aspx`.
 
-Regola stato: chiudere un micro-task su `articoli.aspx` non significa dichiarare completa la pagina catalogo. Il catalogo ha task chiusi su search, zero-results, filtri, card, selezione multipla, quantita in carrello, visual mobile e CTA `Acquista`, ma full ONSUS parity, funzioni residue, controlli, sort/layout e responsive complessivo restano aperti fino a `CATALOG-ONSUS-PARITY-AUDIT-1` e task successivi.
+Regola stato: chiudere un micro-task su `articoli.aspx` non significa dichiarare completa la pagina catalogo. Sono chiusi micro-task su card, selezione multipla, quantita in carrello, delta quantita, visual mobile e CTA `Acquista`; search/suggest, zero-results, sidebar/facet e filtri applicati hanno interventi documentati per perimetri specifici, ma non sono da dichiarare completi come funzioni pagina senza audit dedicato. Full ONSUS parity, funzioni residue, filtri/sidebar/sort/layout, ricerca interna, zero-results complessivo e responsive complessivo restano aperti fino a `CATALOG-ONSUS-PARITY-AUDIT-1` e task successivi.
+
+Nota anti-false-closure: `articoli.aspx` non e una pagina dichiarata completa. I micro-task chiusi non equivalgono alla parita ONSUS completa. Filtri, sidebar, ordinamenti, ricerca interna, zero-results, layout completo e responsive complessivo devono essere confermati o completati nel task `CATALOG-ONSUS-PARITY-AUDIT-1`, salvo evidenza documentale specifica gia presente per un singolo micro-task.
 
 ## 1. Principio multi-merceologia
 
