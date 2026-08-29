@@ -77,9 +77,9 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ### Stato reale, perimetro chiuso e scaletta prioritaria ufficiale
 
-Stato Git stabile dopo la chiusura del blocco typography storefront:
+Stato Git stabile dopo `CATALOG-ONSUS-PARITY-1B-TOOLBAR-CONTROLS`:
 
-- `frontend-rebuild` e `origin/frontend-rebuild`: `df98e70ced14a6f635d7819fadebe22d09f103ee`.
+- `frontend-rebuild` e `origin/frontend-rebuild`: `9903687f89f99073d29cc0598746e17511f7e546`.
 - `main` e `origin/main`: `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - Working tree atteso: pulito salvo eventuali directory non tracciate `Public/assets/images/articoli/` e `Public/assets/images/settori/`, che non vanno committate.
 
@@ -89,12 +89,12 @@ Regola permanente "task specifico chiuso" vs "area/pagina completa":
 - Non scrivere "pagina completa", "catalogo completo", "articoli.aspx completata" o formule equivalenti se manca un task dedicato di parity/audit completo con ONSUS, smoke reale desktop/mobile e documentazione.
 - Quando una pagina ha molti task chiusi, descrivere sempre "micro-task X/Y/Z chiusi su quella pagina" e tenere separato lo stato della pagina intera.
 - Esempio vincolante `articoli.aspx`: sono chiusi multiselect catalogo / `Aggiungi selezionati al carrello`, quantita gia nel carrello su card catalogo, delta quantita catalogo, visual mobile della quantita gia in carrello e CTA `Acquista` catalogo con icona standard. Esistono inoltre micro-task documentati su search/suggest, zero-results, sidebar/facet e applied filters, ma non vanno letti come chiusura completa di quelle funzioni dentro la pagina catalogo.
-- Nota anti-false-closure: `articoli.aspx` non e una pagina dichiarata completa. I micro-task chiusi non equivalgono alla parita ONSUS completa. Filtri, sidebar, ordinamenti, ricerca interna, zero-results, layout completo e responsive complessivo devono essere confermati o completati nel task `CATALOG-ONSUS-PARITY-AUDIT-1`, salvo evidenza documentale specifica gia presente per un singolo micro-task.
-- `articoli.aspx` resta area aperta per ONSUS parity completa: funzioni ONSUS mancanti, filtri/sort/layout/controlli, componenti commerciali, comportamento responsive complessivo e piena coerenza con template reale vanno auditati con `CATALOG-ONSUS-PARITY-AUDIT-1` e poi implementati per micro-task.
+- Nota anti-false-closure: `articoli.aspx` non e una pagina dichiarata completa. I micro-task chiusi non equivalgono alla parita ONSUS completa. `CATALOG-ONSUS-PARITY-AUDIT-1` e terminato, ma i gap individuati devono essere completati per micro-task: immagini prodotto 404, sidebar/facet residui, Marche load-more, tassonomie troncate, active-filter legacy, Price/Deals/Condition, performance, componenti commerciali e responsive complessivo.
+- `articoli.aspx` resta area aperta per ONSUS parity completa: `1A` ha stabilizzato stato/paging e `1B` ha riallineato toolbar/view controls, senza chiudere gli altri gap dell'audit.
 
 Stato sintetico dei blocchi chiusi:
 
-- Catalogo `articoli.aspx`: chiusi i micro-task multiselect, quantita gia in carrello su catalogo, delta quantita, fix visual mobile della quantita in carrello e CTA `Acquista` catalogo. Zero-results, sidebar/facet, Settori/applied filters, performance zero-results e search/suggest hanno interventi documentati e verificati per singolo perimetro, ma la loro copertura complessiva nella pagina resta da confermare in `CATALOG-ONSUS-PARITY-AUDIT-1`. Non dichiarare il catalogo completo.
+- Catalogo `articoli.aspx`: oltre ai micro-task multiselect, quantita/delta/visual mobile in carrello e CTA `Acquista`, sono chiusi `CATALOG-ONSUS-PARITY-1A` per stato/paging deterministico e `CATALOG-ONSUS-PARITY-1B-TOOLBAR-CONTROLS` per toolbar e quattro viste. L'audit parity e completato; immagini 404 e gap P1/P2 restano aperti. Zero-results, sidebar/facet, Settori/applied filters, performance e search/suggest mantengono il proprio perimetro documentato. Non dichiarare il catalogo completo.
 - PDP `articolo.aspx`: chiusi `PDP-BUY-CTA-ACQUISTA-AUDIT-1`, runtime `PDP-BUY-CTA-ACQUISTA-1A/1B` e il micro-perimetro quantita/stato carrello assorbito da `STOREFRONT-CART-STATE-PERSISTENCE-1A`; la pagina non e dichiarata completa. Il blocco typography globale e chiuso, mentre side cart e altre evoluzioni restano task separati.
 - Riconciliazione storica PDP: eventuali righe precedenti che elencano `PDP-BUY-CTA-ACQUISTA-1A` come backlog descrivono lo stato al momento della relativa chiusura catalogo/HOME/header e sono superate dalla chiusura PDP a HEAD `3b0b2ac97564c497abd26d224e5e945834a2ec26`.
 - HOME: chiusa CTA `Acquista` HOME, allineamento `icon-cart-2` con catalogo, blocco `Occasione Imperdibile` e standard CTA commerciale unico.
@@ -114,6 +114,22 @@ Problemi affrontati e risolti:
 - Il blocco HOME `Occasione Imperdibile` aveva override/stile CTA diverso dagli altri blocchi: e stato allineato allo stesso standard.
 - L'errore intermittente WebForms `BC30560 public_ui_controls_breadcrumb_ascx ambiguo nello spazio dei nomi ASP` e stato osservato una volta e non riprodotto: audit read-only senza duplicati reali `Breadcrumb`; causa piu probabile cache/compilazione dinamica ASP.NET temporanea, nessun fix applicato.
 
+Chiusura progressiva catalog parity audit / `1A` / `1B`:
+
+- `CATALOG-ONSUS-PARITY-AUDIT-1`: COMPLETATO / READ-ONLY, esito operativo E. La E non indica audit fallito: l'audit e completo e utile, non ha modificato file e ha individuato P0 reali che hanno interrotto la parity puramente visuale. P0 originari: contaminazione dello stato catalogo da Session (`st`, `ct`, `q`), paging non deterministico/pagina 2 instabile e immagini prodotto 404. I primi due sono chiusi da `1A`; le immagini restano APERTE / P0.
+- `CATALOG-ONSUS-PARITY-1A`: CHIUSO / A sul branch `task/catalog-onsus-parity-1a`, commit `1acbba90a4e9973da695ec08a80840fd113a90fa` (`fix: stabilize catalog request state and paging`), runtime limitato a `articoli.aspx.vb`. QueryString e la source of truth dello stato catalogo; Session e solo mirror di compatibilita della request corrente. Rimossi i fallback stale di `st`, `ct`, `q` e `pg`: `q=hp` non eredita settore/categoria, una request senza `q` non eredita ricerche precedenti, `st/ct` e combinazioni esplicite `q+st` restano valide.
+- Paging `1A`: `pg` assente/invalido porta a pagina 1; `pg=N` positivo porta a N; nessun recupero pagina da Session. Root cause: la modifica programmatica di `DataPager.PageSize` attivava `PagePropertiesChanging` con indice zero e perdeva `pg`. Il guard `catalogPagerSettingsApplying` protegge il lifecycle. QA A: pagina 2 diversa dalla 1, refresh/back/forward stabili, filtri e sort coerenti con `pg`.
+- Page-size `1A`: whitelist `12`, `24`, `48`, `96`; valori Session legacy come `15` normalizzati a `12`; `Drop_Righe` e `DataPager.PageSize` coerenti; cambio page-size azzera a pagina 1. Codex A, smoke Germano `SMOKE UTENTE CATALOG-ONSUS-PARITY-1A: A`, HTTP 200, build/precompile A, nessuna modifica DB/schema/SP.
+- `CATALOG-ONSUS-PARITY-1B-TOOLBAR-CONTROLS`: CHIUSO / A sul branch `task/catalog-onsus-parity-1b-toolbar-controls`, commit `9903687f89f99073d29cc0598746e17511f7e546` (`fix: align catalog toolbar with Onsus controls`), merge fast-forward `--ff-only`. Smoke Germano `SMOKE UTENTE CATALOG-ONSUS-PARITY-1B-TOOLBAR-CONTROLS: A`.
+- Toolbar derivata da `Public/assets/keepstore/shop-default.html`: `.tf-shop-control`, `.tf-control-view`, `.tf-control-layout`, `.tf-control-sort`, `.tf-sort`; espone result range, quattro viste, Mostra, Ordina e Filtri responsive. Le icone `icon-menu-dots`, `icon-dot-line`, `icon-list-1`, `icon-list-2` mappano `tabgrid-1`, `tabgrid-2`, `tablist-1`, `tablist-2`; default `tabgrid-1`.
+- Guardrail layout: KeepStore usa `.ks-view-layout-switch`, non `.tf-view-layout-switch`, per evitare il reset distruttivo delle classi card operato dal `main.js` ONSUS. Il JS modifica soltanto classi presentation consentite e preserva classi server/cart-state. `sessionStorage` usa la chiave `KeepStore:CatalogLayout` esclusivamente per la preferenza grafica, con whitelist delle quattro viste; non governa carrello, quantita, filtri business, prezzi o autenticazione.
+- Tutte le viste preservano quantita, `+/-`, checkbox multiselect, una sola CTA `Acquista`, `icon-cart-2`, stato `Nel carrello`, `ks-card-in-cart`, quick actions, page-size, sort e pagination. `tabgrid-2` mantiene intenzionalmente i controlli ecommerce KeepStore che il comportamento ONSUS puro nasconderebbe.
+- `Mostra` conserva il backend server-side `12/24/48/96`, senza introdurre il valore demo `50`. `Ordina` conserva i value `Consigliati`, `P_basso`, `P_alto`, `P_offerta`, `P_disponibilita`, `P_recenti`, `P_popolarita`, `P_codice`, `P_descrizione`; cambia solo la UI.
+- Result range ONSUS-like senza query DB aggiuntive: `1-12 di 539 risultati per "hp"` e `13-24 di 539 risultati per "hp"`; query output-encoded. QA reale: desktop `1365x900` A (Filtri nascosto, quattro viste, Mostra/Ordina, nessun overflow), tablet `820x900` A (Filtri visibile, wrap coerente), mobile `390x844` A (controlli touch, nessun overflow/accavallamento).
+- Manifest `1B`: modificati `articoli.aspx`, `articoli.aspx.vb`, `Public/assets/keepstore/css/catalog-ui.css`, `Public/assets/keepstore/js/catalog-product-flow.js`; aggiunti 0, eliminati 0; cache-buster `20260829-onsus-toolbar1b`.
+- P0 immagini: APERTO. Prossimo runtime ufficiale `CATALOG-ONSUS-PARITY-1C-IMAGE-PATH-404`, per distinguere path DB, file fisico, mapping `/Public/assets/images/articoli/`, deploy asset, `ThemeManager.ProductImageUrl` e uso appropriato del placeholder, senza anticipare la soluzione. Le directory non tracciate `Public/assets/images/articoli/` e `Public/assets/images/settori/` non vanno committate automaticamente e da sole non provano la root cause.
+- Gap P1/P2 aperti: Marche oltre 7/load-more, Settori/Categorie limitati o troncati, active filters server + JS legacy, reset mobile contesto `st/ct`, Price facet, Deals, Condition/Ricondizionato, Reviews solo con fonte reale, performance/N+1 promo, positioning Recently Viewed, Compare empty-state e ulteriori componenti commerciali/parity ONSUS.
+
 Scaletta prioritaria ufficiale:
 
 1. Priorita 1 - PDP / scheda prodotto `articolo.aspx`.
@@ -127,8 +143,11 @@ Scaletta prioritaria ufficiale:
    - `GLOBAL-TYPOGRAPHY-ONSUS-1B`: CHIUSO / A; normalizzazione scoped delle famiglie esplicite residue e polish clipping titoli HOME inclusi.
    - `GLOBAL-TYPOGRAPHY-ONSUS-1C`: NON NECESSARIO / NON CREATO dopo esito A di `1B`; resta solo riferimento storico.
 2. Priorita 2 - Catalogo `articoli.aspx` full ONSUS parity.
-   - `CATALOG-ONSUS-PARITY-AUDIT-1`: PROSSIMO TASK RUNTIME UFFICIALE; audit completo funzioni/markup/desktop/mobile rispetto a ONSUS reale.
-   - `CATALOG-ONSUS-PARITY-1A/1B/...`: micro-task successivi, senza confondere singole chiusure con pagina completa.
+   - `CATALOG-ONSUS-PARITY-AUDIT-1`: COMPLETATO / READ-ONLY, esito operativo E per P0 reali individuati.
+   - `CATALOG-ONSUS-PARITY-1A`: CHIUSO / A; stato request e paging deterministici.
+   - `CATALOG-ONSUS-PARITY-1B-TOOLBAR-CONTROLS`: CHIUSO / A; toolbar ONSUS-like e quattro viste.
+   - `CATALOG-ONSUS-PARITY-1C-IMAGE-PATH-404`: PROSSIMO TASK RUNTIME UFFICIALE; audit/fix root cause immagini prodotto 404.
+   - Dopo il P0 immagini, proseguire con i gap P1 secondo audit e priorita effettiva, senza dichiarare completa `articoli.aspx`.
 3. Priorita 3 - Side cart/offcanvas.
    - `SIDE-CART-OFFCANVAS-ONSUS-AUDIT-1`: audit read-only del flusso post add-to-cart.
    - `SIDE-CART-OFFCANVAS-ONSUS-1A`: implementazione solo dopo audit, preservando carrello/checkout.
@@ -300,15 +319,17 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento corrente dopo chiusura e merge fast-forward `GLOBAL-TYPOGRAPHY-ONSUS-1B`:
+Stato di riferimento corrente dopo chiusura e merge fast-forward `CATALOG-ONSUS-PARITY-1B-TOOLBAR-CONTROLS`:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile locale/origin: `df98e70ced14a6f635d7819fadebe22d09f103ee`
+- HEAD stabile locale/origin: `9903687f89f99073d29cc0598746e17511f7e546`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 - Commit PDP CTA: `b56277c7777345c70021e21270628b72a51a2f4c` e `3b0b2ac97564c497abd26d224e5e945834a2ec26`; merge `--ff-only`, smoke Germano finale A desktop/mobile.
 - Commit foundation typography: `d0f5f500f75da70aaf0c4a961762cf35f3db51ac` (`fix: establish Arial typography foundation`); runtime limitato a `Page.master` e `Public/assets/keepstore/css/theme-overrides.css`, smoke Germano A desktop/mobile.
 - Commit typography `1B`: `efae083a3d2dece257290d3c3b5d6bde39d6af32` (`fix: normalize storefront typography families`) e `df98e70ced14a6f635d7819fadebe22d09f103ee` (`fix: prevent home product title clipping`); merge fast-forward `--ff-only`, smoke Germano A desktop/mobile, blocco typography chiuso.
 - Commit cart-state storefront: `68325c1879e2859628b59f297fe2a329b5aadb35` (`fix: unify storefront cart state`); merge fast-forward `--ff-only`, smoke Germano A desktop/mobile.
+- Commit catalog parity `1A`: `1acbba90a4e9973da695ec08a80840fd113a90fa` (`fix: stabilize catalog request state and paging`); stato URL e paging deterministici, smoke Germano A.
+- Commit catalog toolbar `1B`: `9903687f89f99073d29cc0598746e17511f7e546` (`fix: align catalog toolbar with Onsus controls`); merge fast-forward `--ff-only`, smoke Germano A.
 - Merge PR #208 fix binding carrello `TCid`/`TCId`: `3cf52876ecec1033fdde3ab51d13a7c4a25390f9`
 - Merge PR #206 documentazione chiusura promo/carrello/IVA: `08a68f27ca7938a999cda6992ae0086cab7b3447`
 - Merge PR #204 promo/offerte legacy su scheda/catalogo/carrello: `daae01b0ab0cf2e52afc685c047ddd45779fad89`
