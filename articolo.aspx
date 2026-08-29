@@ -9,7 +9,7 @@
 
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/drift-basic.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/photoswipe.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=pdp-buy-cta-acquista-1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20260829-cartstate1a" />
 
     <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
 </asp:Content>
@@ -253,6 +253,9 @@
                                                     <i class="icon-plus"></i>
                                                 </button>
                                             </div>
+                                            <asp:Panel ID="pnlPdpCartState" runat="server" CssClass="ks-pdp-cart-state" Visible="false" role="status" aria-live="polite">
+                                                Nel carrello: <strong><asp:Literal ID="litPdpCartQty" runat="server" Mode="Encode" /></strong>
+                                            </asp:Panel>
                                             <div class="small text-danger mt-1">
                                                 <asp:Literal ID="litQtyHelp" runat="server" />
                                             </div>

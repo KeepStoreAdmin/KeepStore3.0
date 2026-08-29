@@ -34,7 +34,7 @@
     <asp:Literal ID="litGlobalSeoHead" runat="server" EnableViewState="False" />
     <asp:PlaceHolder ID="phHeadDynamic" runat="server" />
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") & "?v=20260829-typography1a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") & "?v=20260829-typography1a-cartstate1a" %>" />
 </head>
 
 <body id="PageBody" runat="server">
@@ -283,7 +283,7 @@
         <script src="<%= ThemeManager.Asset("js/drift.min.js") %>"></script>
         <script src="<%= ThemeManager.Asset("js/ks-page-flags.js") %>?v=20260520-checkout4"></script>
         <asp:Literal ID="litCartStateScript" runat="server" EnableViewState="false" />
-        <script src="<%= ThemeManager.Asset("js/keepstore-cart-state.js") %>?v=20260518-cart3"></script>
+        <script src="<%= ThemeManager.Asset("js/keepstore-cart-state.js") %>?v=20260829-cartstate1a"></script>
         <asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
 
         <script type="text/javascript">

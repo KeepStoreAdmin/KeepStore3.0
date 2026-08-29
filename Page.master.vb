@@ -1899,12 +1899,9 @@ End Function
         Session("Carrello_Quantita") = 0
         Session("Carrello_Totale_Merce") = 0D
 
-        Dim LoginId As Integer = 0
-        If Not IsNothing(Me.Session("LoginId")) AndAlso IsNumeric(Me.Session("LoginId")) Then
-            LoginId = CInt(Me.Session("LoginId"))
-        End If
-
-        Dim SessionID As String = Me.Session.SessionID
+        Dim cartSnapshot As CartStateSnapshotProvider = CartStateSnapshotProvider.GetCurrent(HttpContext.Current)
+        Dim LoginId As Integer = cartSnapshot.LoginId
+        Dim SessionID As String = cartSnapshot.SessionId
 
         ' Tipo IVA: 1 = imponibile, 2 = ivato. Default 2 se non impostato.
         Dim ivaTipoLocal As Integer = 2
@@ -1977,7 +1974,6 @@ End Function
                     End Using
                 End Using
             End Using
-            PublishCartProductState(LoginId, SessionID)
         Catch
             ' In caso di errore DB: lascio i valori a 0
             If lblCarrelloCountCtrl IsNot Nothing Then
@@ -1988,8 +1984,9 @@ End Function
             End If
             Session("Carrello_Quantita") = 0
             Session("Carrello_Totale_Merce") = 0D
-            PublishEmptyCartProductState()
         End Try
+
+        PublishCartProductState(cartSnapshot)
     End Sub
 
     Private Sub PublishEmptyCartProductState()
@@ -2002,44 +1999,21 @@ End Function
         End Try
     End Sub
 
-    Private Sub PublishCartProductState(ByVal loginId As Integer, ByVal sessionId As String)
+    Private Sub PublishCartProductState(ByVal snapshot As CartStateSnapshotProvider)
         Try
             Dim items As New List(Of Dictionary(Of String, Object))()
-            Dim connString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+            If snapshot IsNot Nothing Then
+                For Each snapshotItem As CartStateSnapshotItem In snapshot.Items
+                    If snapshotItem Is Nothing OrElse snapshotItem.ArticleId <= 0 OrElse snapshotItem.Quantity <= 0D Then Continue For
 
-            Using conn As New MySqlConnection(connString)
-                conn.Open()
-                Using cmd As New MySqlCommand()
-                    cmd.Connection = conn
-                    cmd.CommandType = CommandType.Text
-                    If loginId > 0 Then
-                        cmd.CommandText = "SELECT ArticoliId, COALESCE(TCid,-1) AS TCid, SUM(COALESCE(Qnt,0)) AS Qty FROM carrello WHERE LoginId=?loginId GROUP BY ArticoliId, COALESCE(TCid,-1)"
-                        cmd.Parameters.AddWithValue("?loginId", loginId)
-                    Else
-                        cmd.CommandText = "SELECT ArticoliId, COALESCE(TCid,-1) AS TCid, SUM(COALESCE(Qnt,0)) AS Qty FROM carrello WHERE SessionId=?sessionId GROUP BY ArticoliId, COALESCE(TCid,-1)"
-                        cmd.Parameters.AddWithValue("?sessionId", sessionId)
-                    End If
-
-                    Using rdr As MySqlDataReader = cmd.ExecuteReader()
-                        While rdr.Read()
-                            Dim idVal As Integer = 0
-                            Dim tcVal As Integer = -1
-                            Dim qtyVal As Decimal = 0D
-                            Integer.TryParse(Convert.ToString(rdr("ArticoliId")), idVal)
-                            Integer.TryParse(Convert.ToString(rdr("TCid")), tcVal)
-                            Decimal.TryParse(Convert.ToString(rdr("Qty")), qtyVal)
-                            If idVal <= 0 OrElse qtyVal <= 0D Then Continue While
-
-                            Dim item As New Dictionary(Of String, Object)()
-                            item("id") = idVal.ToString(System.Globalization.CultureInfo.InvariantCulture)
-                            item("tcid") = tcVal.ToString(System.Globalization.CultureInfo.InvariantCulture)
-                            item("qty") = qtyVal
-                            item("key") = idVal.ToString(System.Globalization.CultureInfo.InvariantCulture) & ":" & tcVal.ToString(System.Globalization.CultureInfo.InvariantCulture)
-                            items.Add(item)
-                        End While
-                    End Using
-                End Using
-            End Using
+                    Dim item As New Dictionary(Of String, Object)()
+                    item("id") = snapshotItem.ArticleId.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    item("tcid") = snapshotItem.TCId.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    item("qty") = snapshotItem.Quantity
+                    item("key") = snapshotItem.ArticleId.ToString(System.Globalization.CultureInfo.InvariantCulture) & ":" & snapshotItem.TCId.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    items.Add(item)
+                Next
+            End If
 
             Dim lit As Literal = FindCtrl(Of Literal)("litCartStateScript")
             If lit IsNot Nothing Then

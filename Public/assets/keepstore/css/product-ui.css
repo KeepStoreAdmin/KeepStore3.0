@@ -622,3 +622,24 @@
     min-width: 44px;
   }
 }
+
+.ks-product-page .ks-pdp-cart-state {
+  align-items: center;
+  background: rgba(216, 0, 39, 0.055);
+  border-left: 3px solid var(--primary-2, #D80027);
+  border-radius: 4px;
+  color: #202124;
+  display: inline-flex;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+  margin-top: 8px;
+  padding: 4px 9px;
+}
+
+.ks-product-page .ks-pdp-cart-state strong {
+  color: var(--primary-2, #D80027);
+  font-weight: 700;
+  margin-left: 4px;
+}

@@ -21,7 +21,6 @@ Partial Class Articoli
     Private productCardPreviewRendered As Boolean = False
     Private productCardReplaceRenderedCount As Integer = 0
     Private ReadOnly catalogPromotionCache As New Dictionary(Of String, ProductPromotionDisplayModel)(StringComparer.Ordinal)
-    Private catalogCartQuantitySnapshot As Dictionary(Of String, Decimal)
     Private Const UseNewCatalogProductCard As Boolean = True
     Private Const ProductCardReplaceMaxCount As Integer = 3
     Private Const CatalogNavMaxSectors As Integer = 12
@@ -3468,104 +3467,11 @@ strWhere = strWhere & " GROUP BY id"
 
     Private Function GetCatalogCartQuantity(ByVal articleId As Integer, ByVal tcId As Integer) As Decimal
         If articleId <= 0 Then Return 0D
-
-        Dim snapshot As Dictionary(Of String, Decimal) = GetCatalogCartQuantitySnapshot()
-        If snapshot Is Nothing OrElse snapshot.Count = 0 Then Return 0D
-
-        Dim qty As Decimal = 0D
-        If snapshot.TryGetValue(BuildCatalogCartQuantityKey(articleId, tcId), qty) Then Return qty
-        If tcId <= 0 AndAlso snapshot.TryGetValue(BuildCatalogCartQuantityKey(articleId, -1), qty) Then Return qty
-
-        Return 0D
-    End Function
-
-    Private Function GetCatalogCartQuantitySnapshot() As Dictionary(Of String, Decimal)
-        If catalogCartQuantitySnapshot IsNot Nothing Then Return catalogCartQuantitySnapshot
-
-        catalogCartQuantitySnapshot = New Dictionary(Of String, Decimal)(StringComparer.Ordinal)
-
-        Dim loginId As Integer = GetCatalogCartLoginId()
-        Dim sessionId As String = GetCatalogCartSessionId()
-        If loginId <= 0 AndAlso String.IsNullOrEmpty(sessionId) Then Return catalogCartQuantitySnapshot
-
-        Dim settings = System.Configuration.ConfigurationManager.ConnectionStrings("EntropicConnectionString")
-        If settings Is Nothing OrElse String.IsNullOrWhiteSpace(settings.ConnectionString) Then Return catalogCartQuantitySnapshot
-
         Try
-            Using conn As New MySqlConnection(settings.ConnectionString)
-                conn.Open()
-
-                Using cmd As New MySqlCommand()
-                    cmd.Connection = conn
-                    cmd.CommandType = CommandType.Text
-
-                    If loginId > 0 Then
-                        cmd.CommandText = "SELECT ArticoliId, COALESCE(TCId,-1) AS TCId, SUM(COALESCE(Qnt,0)) AS Qnt FROM carrello WHERE LoginId=@LoginId AND COALESCE(Qnt,0)>0 GROUP BY ArticoliId, COALESCE(TCId,-1)"
-                        cmd.Parameters.Add("@LoginId", MySqlDbType.Int32).Value = loginId
-                    Else
-                        cmd.CommandText = "SELECT ArticoliId, COALESCE(TCId,-1) AS TCId, SUM(COALESCE(Qnt,0)) AS Qnt FROM carrello WHERE SessionId=@SessionId AND COALESCE(Qnt,0)>0 GROUP BY ArticoliId, COALESCE(TCId,-1)"
-                        cmd.Parameters.Add("@SessionId", MySqlDbType.VarChar, 50).Value = sessionId
-                    End If
-
-                    Using rdr As MySqlDataReader = cmd.ExecuteReader()
-                        While rdr.Read()
-                            Dim rowArticleId As Integer = SafeCatalogCartInt(rdr("ArticoliId"), 0)
-                            Dim rowTcId As Integer = NormalizeCatalogCartTcId(SafeCatalogCartInt(rdr("TCId"), -1))
-                            Dim qty As Decimal = SafeCatalogCartDecimal(rdr("Qnt"), 0D)
-                            If rowArticleId > 0 AndAlso qty > 0D Then
-                                catalogCartQuantitySnapshot(BuildCatalogCartQuantityKey(rowArticleId, rowTcId)) = qty
-                            End If
-                        End While
-                    End Using
-                End Using
-            End Using
+            Return CartStateSnapshotProvider.GetCurrent(HttpContext.Current).GetQuantity(articleId, tcId)
         Catch
-            catalogCartQuantitySnapshot.Clear()
+            Return 0D
         End Try
-
-        Return catalogCartQuantitySnapshot
-    End Function
-
-    Private Function BuildCatalogCartQuantityKey(ByVal articleId As Integer, ByVal tcId As Integer) As String
-        Return articleId.ToString(System.Globalization.CultureInfo.InvariantCulture) & "|" & NormalizeCatalogCartTcId(tcId).ToString(System.Globalization.CultureInfo.InvariantCulture)
-    End Function
-
-    Private Function NormalizeCatalogCartTcId(ByVal tcId As Integer) As Integer
-        If tcId <= 0 Then Return -1
-        Return tcId
-    End Function
-
-    Private Function GetCatalogCartLoginId() As Integer
-        Dim loginId As Integer = 0
-        If Session("LoginId") IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(Session("LoginId")), loginId) AndAlso loginId > 0 Then Return loginId
-        If Session("LoginID") IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(Session("LoginID")), loginId) AndAlso loginId > 0 Then Return loginId
-        Return 0
-    End Function
-
-    Private Function GetCatalogCartSessionId() As String
-        Try
-            If Session IsNot Nothing AndAlso Session.SessionID IsNot Nothing Then Return Session.SessionID
-        Catch
-        End Try
-
-        Return String.Empty
-    End Function
-
-    Private Function SafeCatalogCartInt(ByVal value As Object, ByVal fallback As Integer) As Integer
-        Dim output As Integer = fallback
-        If value IsNot Nothing AndAlso value IsNot DBNull.Value AndAlso Integer.TryParse(Convert.ToString(value), output) Then Return output
-        Return fallback
-    End Function
-
-    Private Function SafeCatalogCartDecimal(ByVal value As Object, ByVal fallback As Decimal) As Decimal
-        If value Is Nothing OrElse value Is DBNull.Value Then Return fallback
-        Try
-            Return Convert.ToDecimal(value, System.Globalization.CultureInfo.InvariantCulture)
-        Catch
-            Dim output As Decimal = fallback
-            If Decimal.TryParse(Convert.ToString(value), output) Then Return output
-        End Try
-        Return fallback
     End Function
 
     Private Function FormatCatalogCartQuantity(ByVal qty As Decimal) As String

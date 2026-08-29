@@ -1785,3 +1785,30 @@ h5,
 h6 {
   font-family: var(--ks-font-ui);
 }
+
+/* STOREFRONT-CART-STATE-PERSISTENCE-1A: server-backed card state. */
+.card-product-wrapper > .ks-cart-state-badge,
+.card-usually .image > .ks-cart-state-badge {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.96);
+  border-left: 3px solid var(--primary-2, #D80027);
+  border-radius: 4px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.09);
+  color: #202124;
+  display: inline-flex;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  left: 10px;
+  line-height: 20px;
+  max-width: calc(100% - 20px);
+  padding: 4px 8px;
+  position: absolute;
+  top: 10px;
+  white-space: nowrap;
+  z-index: 6;
+}
+
+.card-usually .image {
+  position: relative;
+}

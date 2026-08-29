@@ -1625,9 +1625,8 @@ Partial Class articolo
         BindImages(row, nome)
         EmitRecentlyViewedClientScript(row, price, categoryName, brandName, codice, availabilityText, currentTcid)
 
-        ' Quantità
-        txtQty.Text = "1"
-        litQtyHelp.Text = ""
+        ' Quantità desiderata e stato carrello corrente.
+        BindPdpCartState(_id, currentTcid, True)
     End Sub
 
     Private Sub BindVariantsIfNeeded(id As Integer, currentTcid As Integer)
@@ -2669,8 +2668,8 @@ Partial Class articolo
     End Sub
 
     Protected Sub btnAddToCart_Click(sender As Object, e As EventArgs)
-        Dim qty As Integer = NormalizeCartQuantity(txtQty.Text, 1, 9999)
-        txtQty.Text = qty.ToString()
+        Dim desiredQty As Integer = NormalizeCartQuantity(txtQty.Text, 1, 9999)
+        txtQty.Text = desiredQty.ToString(CultureInfo.InvariantCulture)
 
         ' Risolve il TCid effettivo prima del redirect legacy verso aggiungi.aspx.
         Dim tcidToUse As Integer = _tcid
@@ -2697,20 +2696,65 @@ Partial Class articolo
 
         tcidToUse = GetRowInt(cartRow, "TCid", tcidToUse)
 
+        Dim existingQty As Integer = GetPdpCartQuantity(_id, tcidToUse)
+        Dim qtyToAdd As Integer = If(existingQty > 0, desiredQty - existingQty, desiredQty)
+        If qtyToAdd <= 0 Then
+            ApplyPdpCartState(existingQty, False)
+            txtQty.Text = existingQty.ToString(CultureInfo.InvariantCulture)
+            litQtyHelp.Text = Server.HtmlEncode("Nel carrello sono gia presenti " & existingQty.ToString(CultureInfo.GetCultureInfo("it-IT")) & " pezzi. Aumenta la quantita se vuoi aggiungerne altri.")
+            Return
+        End If
+
         Session("ProdottoGratis") = GetRowInt(cartRow, "SpeditoGratis", 0)
         Session("Carrello_ArticoloId") = _id.ToString()
         Session("Carrello_TCId") = tcidToUse.ToString()
-        Session("Carrello_Quantita") = qty.ToString()
+        Session("Carrello_Quantita") = qtyToAdd.ToString(CultureInfo.InvariantCulture)
         Session("Carrello_Pagina") = Request.RawUrl
         Session("Carrello_SelezioneMultipla") = Nothing
 
         Dim addToCartUrl As String = "aggiungi.aspx?id=" & HttpUtility.UrlEncode(_id.ToString(CultureInfo.InvariantCulture)) &
                                       "&TCid=" & HttpUtility.UrlEncode(tcidToUse.ToString(CultureInfo.InvariantCulture)) &
-                                      "&qty=" & HttpUtility.UrlEncode(qty.ToString(CultureInfo.InvariantCulture))
+                                      "&qty=" & HttpUtility.UrlEncode(qtyToAdd.ToString(CultureInfo.InvariantCulture))
 
         Response.Redirect(addToCartUrl, False)
         Context.ApplicationInstance.CompleteRequest()
     End Sub
+
+    Private Sub BindPdpCartState(ByVal articleId As Integer, ByVal tcId As Integer, ByVal initializeInput As Boolean)
+        Dim existingQty As Integer = GetPdpCartQuantity(articleId, tcId)
+        ApplyPdpCartState(existingQty, initializeInput)
+        litQtyHelp.Text = ""
+    End Sub
+
+    Private Sub ApplyPdpCartState(ByVal existingQty As Integer, ByVal initializeInput As Boolean)
+        Dim hasCartQuantity As Boolean = existingQty > 0
+        pnlPdpCartState.Visible = hasCartQuantity
+
+        If hasCartQuantity Then
+            Dim quantityText As String = existingQty.ToString(CultureInfo.GetCultureInfo("it-IT"))
+            Dim label As String = "Nel carrello: " & quantityText
+            litPdpCartQty.Text = quantityText
+            pnlPdpCartState.ToolTip = label
+            pnlPdpCartState.Attributes("aria-label") = label
+            If initializeInput Then txtQty.Text = existingQty.ToString(CultureInfo.InvariantCulture)
+        Else
+            litPdpCartQty.Text = ""
+            pnlPdpCartState.ToolTip = ""
+            pnlPdpCartState.Attributes.Remove("aria-label")
+            If initializeInput Then txtQty.Text = "1"
+        End If
+    End Sub
+
+    Private Function GetPdpCartQuantity(ByVal articleId As Integer, ByVal tcId As Integer) As Integer
+        Try
+            Dim quantity As Decimal = CartStateSnapshotProvider.GetCurrent(HttpContext.Current).GetQuantity(articleId, tcId)
+            If quantity <= 0D Then Return 0
+            If quantity >= 9999D Then Return 9999
+            Return Math.Max(0, Convert.ToInt32(Decimal.Truncate(quantity)))
+        Catch
+            Return 0
+        End Try
+    End Function
 
     Protected Sub btnBundleAddToCart_Click(sender As Object, e As EventArgs)
         Dim bundleItems As ArrayList = TryCast(Session("ks_product_bundle_cart_items"), ArrayList)
