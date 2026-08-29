@@ -337,7 +337,7 @@
                                 </asp:PlaceHolder>
                                 <div class="box-total-btn">
                                     <p class="body-text-3 text-center">Totale selezione: <span class="text-primary"><asp:Literal ID="litBundleTotal" runat="server" /></span></p>
-                                    <asp:LinkButton ID="btnBundleAddToCart" runat="server" CssClass="tf-btn btn-line" OnClick="btnBundleAddToCart_Click" CausesValidation="false" aria-label="Acquista i prodotti selezionati" ToolTip="Acquista i prodotti selezionati">
+                                    <asp:LinkButton ID="btnBundleAddToCart" runat="server" CssClass="tf-btn text-white" OnClick="btnBundleAddToCart_Click" CausesValidation="false" aria-label="Acquista i prodotti selezionati" ToolTip="Acquista i prodotti selezionati">
                                         Acquista selezionati
                                         <i class="icon-cart-2" aria-hidden="true"></i>
                                     </asp:LinkButton>
