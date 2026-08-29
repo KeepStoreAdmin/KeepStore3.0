@@ -77,9 +77,9 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ### Stato reale, perimetro chiuso e scaletta prioritaria ufficiale
 
-Stato Git stabile dopo la foundation typography globale e il cart-state storefront condiviso:
+Stato Git stabile dopo la chiusura del blocco typography storefront:
 
-- `frontend-rebuild` e `origin/frontend-rebuild`: `68325c1879e2859628b59f297fe2a329b5aadb35`.
+- `frontend-rebuild` e `origin/frontend-rebuild`: `df98e70ced14a6f635d7819fadebe22d09f103ee`.
 - `main` e `origin/main`: `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - Working tree atteso: pulito salvo eventuali directory non tracciate `Public/assets/images/articoli/` e `Public/assets/images/settori/`, che non vanno committate.
 
@@ -95,13 +95,13 @@ Regola permanente "task specifico chiuso" vs "area/pagina completa":
 Stato sintetico dei blocchi chiusi:
 
 - Catalogo `articoli.aspx`: chiusi i micro-task multiselect, quantita gia in carrello su catalogo, delta quantita, fix visual mobile della quantita in carrello e CTA `Acquista` catalogo. Zero-results, sidebar/facet, Settori/applied filters, performance zero-results e search/suggest hanno interventi documentati e verificati per singolo perimetro, ma la loro copertura complessiva nella pagina resta da confermare in `CATALOG-ONSUS-PARITY-AUDIT-1`. Non dichiarare il catalogo completo.
-- PDP `articolo.aspx`: chiusi `PDP-BUY-CTA-ACQUISTA-AUDIT-1`, runtime `PDP-BUY-CTA-ACQUISTA-1A/1B` e il micro-perimetro quantita/stato carrello assorbito da `STOREFRONT-CART-STATE-PERSISTENCE-1A`; la pagina non e dichiarata completa. Typography globale residua, side cart e altre evoluzioni restano task separati.
+- PDP `articolo.aspx`: chiusi `PDP-BUY-CTA-ACQUISTA-AUDIT-1`, runtime `PDP-BUY-CTA-ACQUISTA-1A/1B` e il micro-perimetro quantita/stato carrello assorbito da `STOREFRONT-CART-STATE-PERSISTENCE-1A`; la pagina non e dichiarata completa. Il blocco typography globale e chiuso, mentre side cart e altre evoluzioni restano task separati.
 - Riconciliazione storica PDP: eventuali righe precedenti che elencano `PDP-BUY-CTA-ACQUISTA-1A` come backlog descrivono lo stato al momento della relativa chiusura catalogo/HOME/header e sono superate dalla chiusura PDP a HEAD `3b0b2ac97564c497abd26d224e5e945834a2ec26`.
 - HOME: chiusa CTA `Acquista` HOME, allineamento `icon-cart-2` con catalogo, blocco `Occasione Imperdibile` e standard CTA commerciale unico.
 - Carrello: chiuso `Continua lo Shopping` verso ultima pagina/contesto reale con URL locali normalizzati e protezione checkout/loginrequired preservata.
 - Header/menu: chiusa leggibilita desktop del mega menu `Catalogo`; menu Catalogo mobile resta aperto.
 - Stack/sicurezza: chiuso e documentato il contratto permanente WebForms/VB.NET/.NET Framework/MySQL, con divieti C#/ASP.NET Core e checklist sicurezza.
-- Typography storefront: `GLOBAL-TYPOGRAPHY-ONSUS-AUDIT-1` e `GLOBAL-TYPOGRAPHY-ONSUS-1A` chiusi con esito A. La foundation deterministica approvata e `Arial, sans-serif`; la normalizzazione delle famiglie esplicite residue resta aperta nel task `GLOBAL-TYPOGRAPHY-ONSUS-1B` e non equivale a completamento typography globale.
+- Typography storefront: blocco CHIUSO / A. `GLOBAL-TYPOGRAPHY-ONSUS-AUDIT-1`, `GLOBAL-TYPOGRAPHY-ONSUS-1A` e `GLOBAL-TYPOGRAPHY-ONSUS-1B` sono chiusi con esito A; foundation deterministica `Arial, sans-serif`, famiglie testuali residue normalizzate nel layer KeepStore finale, Icomoon preservato e scale ONSUS invariate. `GLOBAL-TYPOGRAPHY-ONSUS-1C` e NON NECESSARIO / NON CREATO dopo smoke Germano A e assenza di Times/Poppins accidentali sulle superfici testate. La chiusura vale soltanto per la typography e non rende complete HOME, catalogo, PDP, header o footer.
 - Cart-state storefront: `STOREFRONT-CART-STATE-PERSISTENCE-REGRESSION-AUDIT-1` chiuso come audit diagnostico B/procedibile e `STOREFRONT-CART-STATE-PERSISTENCE-1A` chiuso con esito A al commit `68325c1879e2859628b59f297fe2a329b5aadb35`; HOME, catalogo e PDP condividono ora uno snapshot server-side request-scoped. Questa chiusura non rende complete le tre pagine.
 
 Problemi affrontati e risolti:
@@ -124,10 +124,10 @@ Scaletta prioritaria ufficiale:
    - `STOREFRONT-CART-STATE-PERSISTENCE-REGRESSION-AUDIT-1`: CHIUSO / B diagnostico e procedibile; nessuna root cause regressiva specifica catalogo dimostrata.
    - `STOREFRONT-CART-STATE-PERSISTENCE-1A`: CHIUSO / A; stato carrello server-side unificato su HOME/catalogo/PDP, smoke Germano A.
    - `ARTICOLO-CART-QTY-IN-PDP-AUDIT-1` e `ARTICOLO-CART-QTY-IN-PDP-1A`: ASSORBITI / SODDISFATTI dai due task cart-state precedenti; non sono piu task futuri indipendenti.
-   - `GLOBAL-TYPOGRAPHY-ONSUS-1B`: PROSSIMO TASK RUNTIME; normalizzazione scoped delle sole famiglie esplicite residue, senza cambiare scale o layout ONSUS.
-   - `GLOBAL-TYPOGRAPHY-ONSUS-1C`: solo se dopo `1B` computed style o smoke rilevano ancora Times/Poppins/serif accidentali o regressioni; altrimenti il blocco typography si chiude direttamente.
+   - `GLOBAL-TYPOGRAPHY-ONSUS-1B`: CHIUSO / A; normalizzazione scoped delle famiglie esplicite residue e polish clipping titoli HOME inclusi.
+   - `GLOBAL-TYPOGRAPHY-ONSUS-1C`: NON NECESSARIO / NON CREATO dopo esito A di `1B`; resta solo riferimento storico.
 2. Priorita 2 - Catalogo `articoli.aspx` full ONSUS parity.
-   - `CATALOG-ONSUS-PARITY-AUDIT-1`: audit completo funzioni/markup/desktop/mobile rispetto a ONSUS reale.
+   - `CATALOG-ONSUS-PARITY-AUDIT-1`: PROSSIMO TASK RUNTIME UFFICIALE; audit completo funzioni/markup/desktop/mobile rispetto a ONSUS reale.
    - `CATALOG-ONSUS-PARITY-1A/1B/...`: micro-task successivi, senza confondere singole chiusure con pagina completa.
 3. Priorita 3 - Side cart/offcanvas.
    - `SIDE-CART-OFFCANVAS-ONSUS-AUDIT-1`: audit read-only del flusso post add-to-cart.
@@ -171,15 +171,18 @@ Regola operativa sulla scaletta:
 - Deployment guardrail per nuovi file tracked: prima dello smoke/deploy finale costruire il manifest Git distinguendo `added`, `modified`, `deleted` e `renamed`; ogni file `added` va verificato esplicitamente nel target. Per nuovi `App_Code/*.vb`, quando l'ambiente lo consente, controllare presenza nel webroot, cold compile/recycle del solo application pool e HTTP 200. Una build repository OK non prova che il deployment abbia incluso i nuovi file. Se Codex non ha privilegi IIS, dichiarare `runtime deployment sanity non verificabile`; questo da solo non blocca il merge Git quando lo smoke reale Germano e A e il repository non mostra problemi.
 - Non implementare `llms.ashx`, `llms.txt`, JSON-LD dinamico, side cart/offcanvas o image brightness preview prima dei relativi audit e del punto corretto in scaletta.
 
-### Priorita immediata: typography globale storefront
+### Chiusura typography globale storefront
 
 - `GLOBAL-TYPOGRAPHY-ONSUS-AUDIT-1` e CHIUSO / A, read-only e senza file modificati. Il runtime e stato misurato su desktop `1365x900` e mobile `390x844`, includendo HOME, catalogo, PDP, carrello di riferimento e componenti condivisi. `styles.css` dichiara `"Inter", serif`, ma `font.css` contiene solo MADE Outer e UTM Banque: l'assenza di `@font-face`/asset Inter e il font effettivo Times New Roman sulle superfici interessate sono stati confermati con CDP `CSS.getPlatformFontsForNode`. La regola legacy `font-size: 1rem !important` in `keepstore.css`, proveniente dal blocco Coupon.master e concorrente al body runtime 16px, e stata rilevata ma non modificata.
 - `carrello.aspx` usa `"Inter", Arial, sans-serif`, ma senza Inter il font realmente approvato e Arial. Per questo `GLOBAL-TYPOGRAPHY-ONSUS-1A` e CHIUSO / A sul branch runtime `task/global-typography-onsus-1a`, commit `d0f5f500f75da70aaf0c4a961762cf35f3db51ac` (`fix: establish Arial typography foundation`), con foundation deterministica `Arial, sans-serif`, variabile `--ks-font-ui`, applicata in `Page.master`/`theme-overrides.css` a body, controlli form e heading senza selettore universale e senza interferire con Icomoon; cache-buster `?v=20260829-typography1a`.
 - `1A` ha cambiato solo la famiglia. Restano intatte le scale ONSUS: body di riferimento `15/24`, titolo PDP `22/600/25`, CTA PDP `15/600/24`, titolo card catalogo `14/600/22`, prezzo card `20/500/22`, metadata/caption `12-14px`, quantita dedicata e gerarchia responsive HOME. `carrello.aspx` e riferimento di leggibilita, non una dimensione universale da copiare.
-- Residui intenzionali aperti per `GLOBAL-TYPOGRAPHY-ONSUS-1B`: card catalogo e MegaMenu con `"Inter", serif`, classi `styles.css` `.font-main`, `.font-2`, `.ft-heading`, caption/CTA HOME con famiglia esplicita, footer headings e MiniCart/Breadcrumb/Quick View/Compare solo dove il runtime conferma un serif esplicito. Il PDP principale resta Arial e richiede solo controllo regressione.
-- `1B` deve intervenire nel layer KeepStore in modo scoped e solo sulle `font-family`, senza mass edit del CSS ONSUS e senza cambiare font-size, weight, line-height, letter-spacing, spacing o layout. `1C` si apre soltanto se dopo `1B` CDP o smoke Germano trovano ancora Times/Poppins/serif accidentali o regressioni; diversamente il blocco typography si chiude.
-- Criterio di chiusura: nessun Times accidentale sulle superfici principali, foundation Arial coerente, icon font preservati, gerarchia ONSUS invariata, nessun wrapping/overflow e smoke A desktop/mobile. Un futuro asset locale Inter richiede task separato con pesi, `font-display`, CSP e approvazione Germano.
-- QA `1A`: HTTP 200 su `Default.aspx`, `articoli.aspx?q=hp`, `articolo.aspx?id=12384&TCid=-1` e `carrello.aspx`; build/precompile, diff check e secret scan OK. Dopo la foundation HOME root, PDP root, catalog root e carrello risolvono Arial; la card catalogo resta Times per override esplicito e passa al backlog `1B`. Germano ha approvato con esito A e ha verificato realmente HOME e PDP anche tramite screenshot.
+- `GLOBAL-TYPOGRAPHY-ONSUS-1B` e CHIUSO / A sul branch `task/global-typography-onsus-1b`, con commit `efae083a3d2dece257290d3c3b5d6bde39d6af32` (`fix: normalize storefront typography families`) e polish `df98e70ced14a6f635d7819fadebe22d09f103ee` (`fix: prevent home product title clipping`), merge fast-forward `--ff-only`.
+- Il layer KeepStore finale `theme-overrides.css` normalizza a `var(--ks-font-ui)` le famiglie esplicite pertinenti residue: CTA prodotto HOME; MegaMenu settore, categoria e tipologia/empty; `.font-main`; `.font-2`; `.box-sale-wrap p`; `.ft-heading`; `.sib-form`; card prodotto catalogo; CTA `Acquista` catalogo; quantita catalogo gia presente nel carrello. `styles.css` non e stato riscritto e non e stato fatto alcun mass edit del CSS ONSUS.
+- Risultato verificato: HOME, catalogo, PDP, header/MegaMenu, footer e carrello risolvono Arial; Times New Roman e Poppins accidentali risultano assenti sulle superfici storefront visibili testate; Icomoon e preservato. Nessuna modifica generale a font-size, font-weight, letter-spacing, spacing, breakpoint o struttura/layout ONSUS. Una platform font puo mostrare Arial Black su un titolo con peso 800 senza rappresentare un cambio della family CSS.
+- Polish HOME incluso in `1B`: sulle card `In Evidenza` e `Best Seller`, `body.ks-page-home .ks-home-main .name-product` usa `line-height: 20px` e `min-height: 40px`. Restano invariati font-size desktop `14px`, mobile `12px`, weight, Arial, uppercase, colore, `-webkit-line-clamp: 2`, overflow e massimo due righe. La causa misurata era la combinazione precedente `min-height: 48px` con line-height `18.2px` desktop / `15.6px` mobile, che lasciava clipping o una porzione indesiderata della riga successiva.
+- QA finale: 8 card `In Evidenza` e 8 card `Best Seller` verificate; desktop `1365x900` A e mobile `390x844` A; nessuna terza linea parziale, nessun clipping e prezzi/CTA/allineamento card invariati. `Occasione Imperdibile` non esponeva una product card reale nella fixture e non e stata modificata inutilmente. Smoke Germano A; HTTP post-merge 200 su `Default.aspx`, `articoli.aspx?q=hp`, `articolo.aspx?id=12384&TCid=-1` e `carrello.aspx`.
+- Manifest runtime storico `1B`: modificati soltanto `Page.master` e `Public/assets/keepstore/css/theme-overrides.css`; file aggiunti 0, eliminati 0. Il deployment guardrail generale sui nuovi file tracked, in particolare `App_Code/*.vb`, resta comunque valido.
+- `GLOBAL-TYPOGRAPHY-ONSUS-1C` e NON NECESSARIO / NON CREATO: `1B` e smoke Germano sono A, Times/Poppins accidentali sono assenti sulle superfici testate, Icomoon e preservato e il clipping HOME e corretto senza regressioni desktop/mobile. Il blocco typography storefront e CHIUSO; questa chiusura non dichiara complete HOME, `articoli.aspx`, `articolo.aspx`, header, footer o l'intera area ecommerce.
 
 ### Chiusura cart-state storefront condiviso
 
@@ -297,13 +300,14 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento corrente dopo chiusura e merge fast-forward `STOREFRONT-CART-STATE-PERSISTENCE-1A`:
+Stato di riferimento corrente dopo chiusura e merge fast-forward `GLOBAL-TYPOGRAPHY-ONSUS-1B`:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile locale/origin: `68325c1879e2859628b59f297fe2a329b5aadb35`
+- HEAD stabile locale/origin: `df98e70ced14a6f635d7819fadebe22d09f103ee`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 - Commit PDP CTA: `b56277c7777345c70021e21270628b72a51a2f4c` e `3b0b2ac97564c497abd26d224e5e945834a2ec26`; merge `--ff-only`, smoke Germano finale A desktop/mobile.
 - Commit foundation typography: `d0f5f500f75da70aaf0c4a961762cf35f3db51ac` (`fix: establish Arial typography foundation`); runtime limitato a `Page.master` e `Public/assets/keepstore/css/theme-overrides.css`, smoke Germano A desktop/mobile.
+- Commit typography `1B`: `efae083a3d2dece257290d3c3b5d6bde39d6af32` (`fix: normalize storefront typography families`) e `df98e70ced14a6f635d7819fadebe22d09f103ee` (`fix: prevent home product title clipping`); merge fast-forward `--ff-only`, smoke Germano A desktop/mobile, blocco typography chiuso.
 - Commit cart-state storefront: `68325c1879e2859628b59f297fe2a329b5aadb35` (`fix: unify storefront cart state`); merge fast-forward `--ff-only`, smoke Germano A desktop/mobile.
 - Merge PR #208 fix binding carrello `TCid`/`TCId`: `3cf52876ecec1033fdde3ab51d13a7c4a25390f9`
 - Merge PR #206 documentazione chiusura promo/carrello/IVA: `08a68f27ca7938a999cda6992ae0086cab7b3447`
