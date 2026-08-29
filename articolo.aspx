@@ -9,7 +9,7 @@
 
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/drift-basic.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/photoswipe.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=pr196-rev8" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=pdp-buy-cta-acquista-1a" />
 
     <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
 </asp:Content>
@@ -259,9 +259,9 @@
                                         </div>
 
                                         <div class="product-box-btn">
-                                            <asp:LinkButton ID="btnAddToCart" runat="server" CssClass="tf-btn text-white" OnClick="btnAddToCart_Click" CausesValidation="false">
-                                                <span>Aggiungi al carrello</span>
-                                                <i class="icon-cart-2"></i>
+                                            <asp:LinkButton ID="btnAddToCart" runat="server" CssClass="tf-btn text-white" OnClick="btnAddToCart_Click" CausesValidation="false" aria-label="Acquista: aggiungi al carrello" ToolTip="Acquista: aggiungi al carrello">
+                                                <span>Acquista</span>
+                                                <i class="icon-cart-2" aria-hidden="true"></i>
                                             </asp:LinkButton>
                                             <a class="tf-btn text-white btn-gray" href="/carrello.aspx">Vai al carrello</a>
                                         </div>
@@ -337,9 +337,9 @@
                                 </asp:PlaceHolder>
                                 <div class="box-total-btn">
                                     <p class="body-text-3 text-center">Totale selezione: <span class="text-primary"><asp:Literal ID="litBundleTotal" runat="server" /></span></p>
-                                    <asp:LinkButton ID="btnBundleAddToCart" runat="server" CssClass="tf-btn btn-line" OnClick="btnBundleAddToCart_Click" CausesValidation="false">
-                                        Aggiungi al carrello
-                                        <i class="icon-cart-2"></i>
+                                    <asp:LinkButton ID="btnBundleAddToCart" runat="server" CssClass="tf-btn btn-line" OnClick="btnBundleAddToCart_Click" CausesValidation="false" aria-label="Acquista i prodotti selezionati" ToolTip="Acquista i prodotti selezionati">
+                                        Acquista selezionati
+                                        <i class="icon-cart-2" aria-hidden="true"></i>
                                     </asp:LinkButton>
                                 </div>
                             </div>
@@ -514,10 +514,10 @@
                                              onerror="this.alt='';this.classList.add('is-missing');this.closest('.product-img').classList.add('is-missing')" />
                                     </a>
                                     <ul class="list-product-btn">
-                                        <li>
-                                            <a href='<%# Eval("AddToCartUrl") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link" aria-label="Aggiungi al carrello">
-                                                <span class="icon icon-cart2"></span>
-                                                <span class="tooltip">Aggiungi al carrello</span>
+                                        <li class="ks-pdp-cart-action">
+                                            <a href='<%# Eval("AddToCartUrl") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
+                                                <span class="icon icon-cart-2" aria-hidden="true"></span>
+                                                <span class="tooltip">Acquista</span>
                                             </a>
                                         </li>
                                         <li class="d-none d-sm-block wishlist">
@@ -609,10 +609,10 @@
                                              onerror="this.alt='';this.classList.add('is-missing');this.closest('.product-img').classList.add('is-missing')" />
                                     </a>
                                     <ul class="list-product-btn">
-                                        <li>
-                                            <a href='<%# Eval("AddToCartUrl") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link" aria-label="Aggiungi al carrello">
-                                                <span class="icon icon-cart2"></span>
-                                                <span class="tooltip">Aggiungi al carrello</span>
+                                        <li class="ks-pdp-cart-action">
+                                            <a href='<%# Eval("AddToCartUrl") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
+                                                <span class="icon icon-cart-2" aria-hidden="true"></span>
+                                                <span class="tooltip">Acquista</span>
                                             </a>
                                         </li>
                                         <li class="d-none d-sm-block wishlist">
@@ -724,10 +724,10 @@
                                              onerror="this.alt='';this.classList.add('is-missing');this.closest('.product-img').classList.add('is-missing')" />
                                     </a>
                                     <ul class="list-product-btn">
-                                        <li>
-                                            <a href='<%# Eval("AddToCartUrl") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link" aria-label="Aggiungi al carrello">
-                                                <span class="icon icon-cart2"></span>
-                                                <span class="tooltip">Aggiungi al carrello</span>
+                                        <li class="ks-pdp-cart-action">
+                                            <a href='<%# Eval("AddToCartUrl") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
+                                                <span class="icon icon-cart-2" aria-hidden="true"></span>
+                                                <span class="tooltip">Acquista</span>
                                             </a>
                                         </li>
                                         <li class="d-none d-sm-block wishlist">
