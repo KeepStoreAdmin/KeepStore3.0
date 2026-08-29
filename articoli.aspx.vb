@@ -25,8 +25,10 @@ Partial Class Articoli
     Private Const ProductCardReplaceMaxCount As Integer = 3
     Private Const CatalogNavMaxSectors As Integer = 12
     Private Const CatalogNavMaxCategories As Integer = 10
+    Private Const DefaultCatalogPageSize As Integer = 12
     Private catalogSideFiltersDeferred As Boolean = False
     Private catalogSideFiltersBound As Boolean = False
+    Private catalogPagerSettingsApplying As Boolean = False
 
     Private Class ActiveFilterItem
         Public Property Key As String
@@ -264,18 +266,21 @@ Partial Class Articoli
     '  PAGER HELPERS (ListView + DataPager)
     ' ==========================================================
     Private Sub ApplyPagerSettings(ByVal doDataBind As Boolean)
-        Dim pageSize As Integer = 12
-        If Session("RigheArticoli") IsNot Nothing Then Integer.TryParse(Session("RigheArticoli").ToString(), pageSize)
-        If pageSize <= 0 Then pageSize = 12
+        Dim pageSize As Integer = GetCatalogPageSize()
 
         If Me.dpProdotti IsNot Nothing Then
-            Me.dpProdotti.PageSize = pageSize
+            catalogPagerSettingsApplying = True
+            Try
+                Me.dpProdotti.PageSize = pageSize
 
-            Dim pageIndex As Integer = GetCatalogPageIndex(pageSize)
-            Session("Articoli_PageIndex") = pageIndex
+                Dim pageIndex As Integer = GetCatalogPageIndex(pageSize)
+                Session("Articoli_PageIndex") = pageIndex
 
-            Dim startRow As Integer = pageIndex * pageSize
-            Me.dpProdotti.SetPageProperties(startRow, pageSize, doDataBind)
+                Dim startRow As Integer = pageIndex * pageSize
+                Me.dpProdotti.SetPageProperties(startRow, pageSize, doDataBind)
+            Finally
+                catalogPagerSettingsApplying = False
+            End Try
         End If
 
         If Me.lblLinee IsNot Nothing Then Me.lblLinee.Text = pageSize.ToString()
@@ -283,7 +288,9 @@ Partial Class Articoli
     End Sub
 
     Protected Sub lvProdotti_PagePropertiesChanging(ByVal sender As Object, ByVal e As PagePropertiesChangingEventArgs)
-        ' Salvo la pagina corrente per mantenere lo stato tra postback/filtri
+        If catalogPagerSettingsApplying Then Exit Sub
+
+        ' Mantengo la Session come mirror, mentre l'URL resta la fonte dello stato pagina.
         Dim pageIndex As Integer = 0
         If e.MaximumRows > 0 Then pageIndex = CInt(Math.Floor(e.StartRowIndex / e.MaximumRows))
         Session("Articoli_PageIndex") = pageIndex
@@ -399,6 +406,9 @@ Partial Class Articoli
             Me.lblPrezzi.Text = "*Prezzi Iva Inclusa*"
         End If
 
+        ' Page.master puo aggiornare valori legacy durante Load: riallineo il mirror
+        ' alla QueryString corrente prima del binding effettivo del catalogo.
+        SyncCatalogSessionFromQuery()
         CaricaArticoli()
         BindActiveFilters()
 
@@ -590,20 +600,19 @@ End Sub
         Dim strCerca As String = ""
         Dim SpedizioneGratis As Integer = 0
 
-        'Carico le variabili da Sessione se non sono presenti nella QueryString
+        ' Lo stato di navigazione della listing deriva esclusivamente dalla request corrente.
         Dim rawSt As String = Me.Request.QueryString("st")
         If Not String.IsNullOrEmpty(rawSt) Then
             Integer.TryParse(rawSt, SettoriId)
-        ElseIf Me.Session("st") IsNot Nothing Then
-            Integer.TryParse(Me.Session("st").ToString(), SettoriId)
         End If
+        If SettoriId < 0 Then SettoriId = 0
 
         Dim rawCt As String = Me.Request.QueryString("ct")
         If Not String.IsNullOrEmpty(rawCt) Then
             Integer.TryParse(rawCt, CategorieId)
-        ElseIf Me.Session("ct") IsNot Nothing Then
-            Integer.TryParse(Me.Session("ct").ToString(), CategorieId)
         End If
+        If CategorieId < 0 Then CategorieId = 0
+        If SettoriId <= 0 AndAlso CategorieId > 0 Then SettoriId = LookupSettoreIdByCategoria(CategorieId)
 
         Dim rawPid As String = Me.Request.QueryString("pid")
         If Not String.IsNullOrEmpty(rawPid) Then
@@ -626,13 +635,7 @@ End Sub
         SottogruppiId = SafeIdListFromQuery("sg")
         MarcheId = SafeIdListFromQuery("mr")
 
-        If QS("q", 80) <> "" Then
-            strCerca = QS("q", 80).Replace("%23up", "").Replace("#up", "")
-        Else
-            If Session("q") IsNot Nothing Then
-                strCerca = sostituisci_caratteri_speciali(Session("q").Replace("%23up", "").Replace("#up", ""))
-            End If
-        End If
+        strCerca = QS("q", 80).Replace("%23up", "").Replace("#up", "")
 
         If InOfferta = 1 Then
             Session("Promo") = 1
@@ -1914,12 +1917,7 @@ strWhere = strWhere & " GROUP BY id"
     End Sub
 
     Protected Sub Drop_Righe_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Righe.SelectedIndexChanged
-        Dim pageSize As Integer = 12
-        If Integer.TryParse(Drop_Righe.SelectedValue, pageSize) = False OrElse pageSize <= 0 Then
-            pageSize = 12
-        End If
-
-        Session("RigheArticoli") = pageSize
+        Dim pageSize As Integer = NormalizeCatalogPageSize(Drop_Righe.SelectedValue)
         Session("Articoli_PageIndex") = 0
         RedirectIfChanged(BuildCatalogPageUrl(0), False)
     End Sub
@@ -1953,11 +1951,7 @@ strWhere = strWhere & " GROUP BY id"
         changeCheckBoxDependingFromUrl(CheckBox_Disponibile, "disponibile", "1")
         changeDropDownListDependingFromUrl(Drop_Ordinamento, "ordinamento")
 
-        Dim pageSize As Integer = 12
-        If Session("RigheArticoli") IsNot Nothing Then
-            Integer.TryParse(Convert.ToString(Session("RigheArticoli")), pageSize)
-        End If
-        If pageSize <= 0 Then pageSize = 12
+        Dim pageSize As Integer = GetCatalogPageSize()
         SelectDropDownValueSafe(Drop_Righe, pageSize.ToString())
     End Sub
 
@@ -2084,12 +2078,29 @@ strWhere = strWhere & " GROUP BY id"
 
         If Integer.TryParse(rawPg, pg) AndAlso pg > 0 Then
             pageIndex = pg - 1
-        ElseIf Session("Articoli_PageIndex") IsNot Nothing Then
-            Integer.TryParse(Convert.ToString(Session("Articoli_PageIndex")), pageIndex)
         End If
 
         If pageIndex < 0 Then pageIndex = 0
         Return pageIndex
+    End Function
+
+    Private Function GetCatalogPageSize() As Integer
+        Return NormalizeCatalogPageSize(Session("RigheArticoli"))
+    End Function
+
+    Private Function NormalizeCatalogPageSize(ByVal rawValue As Object) As Integer
+        Dim pageSize As Integer = DefaultCatalogPageSize
+        Integer.TryParse(Convert.ToString(rawValue), pageSize)
+
+        Select Case pageSize
+            Case 12, 24, 48, 96
+                ' Valore supportato dalla UI.
+            Case Else
+                pageSize = DefaultCatalogPageSize
+        End Select
+
+        Session("RigheArticoli") = pageSize
+        Return pageSize
     End Function
 
     Private Function BuildCatalogPageUrl(ByVal pageIndex As Integer) As String
@@ -2711,13 +2722,12 @@ strWhere = strWhere & " GROUP BY id"
                 stId = LookupSettoreIdByCategoria(ctId)
             End If
 
-            If stId > 0 Then
-                Session("st") = stId
-            End If
+            Session("st") = If(stId > 0, CType(stId, Object), Nothing)
+            Session("ct") = If(ctId > 0, CType(ctId, Object), Nothing)
 
-            If ctId > 0 Then
-                Session("ct") = ctId
-            End If
+            Dim query As String = QS("q", 80)
+            Session("q") = If(query <> "", CType(query, Object), Nothing)
+            Session("Articoli_PageIndex") = GetCatalogPageIndex(DefaultCatalogPageSize)
 
         Catch
             'silent
