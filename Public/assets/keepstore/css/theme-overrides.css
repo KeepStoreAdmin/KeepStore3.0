@@ -1005,7 +1005,7 @@ body.ks-page-home .ks-home-main .ks-home-buy-cta {
   border-radius: 6px;
   background: var(--primary-2, #D80027);
   color: #fff;
-  font-family: "Inter", serif;
+  font-family: var(--ks-font-ui);
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
@@ -1728,7 +1728,7 @@ body.ks-page-home .ks-home-main .sw-dot-default {
   .ks-header-ui .ks-header-catalog-menu .menu-category-menu-container { position: relative; height: min(680px, calc(100vh - 122px)); max-height: min(680px, calc(100vh - 122px)); overflow: hidden; }
   .ks-header-ui .ks-header-catalog-list { width: 270px; min-height: 100%; max-height: 100%; padding: 10px 0; overflow-y: auto; overflow-x: visible; }
   .ks-header-ui .ks-header-catalog-sector { position: static; box-shadow: inset 0 -1px 0 #eef1f5; }
-  .ks-header-ui .ks-header-catalog-sector-link { min-height: 48px; gap: 10px; padding: 8px 14px; color: #111827; font-family: "Inter", serif; font-size: 15px; font-weight: 600; line-height: 22px; transition: color .18s ease, background-color .18s ease; }
+  .ks-header-ui .ks-header-catalog-sector-link { min-height: 48px; gap: 10px; padding: 8px 14px; color: #111827; font-family: var(--ks-font-ui); font-size: 15px; font-weight: 600; line-height: 22px; transition: color .18s ease, background-color .18s ease; }
   .ks-header-ui .ks-header-catalog-sector:hover > .ks-header-catalog-sector-link,
   .ks-header-ui .ks-header-catalog-sector:focus-within > .ks-header-catalog-sector-link,
   .ks-header-ui .ks-header-catalog-item:hover .ks-header-catalog-sector:first-child > .ks-header-catalog-sector-link,
@@ -1751,12 +1751,12 @@ body.ks-page-home .ks-home-main .sw-dot-default {
   .ks-header-ui .ks-header-sector-title { color: #111827; font-size: 18px; font-weight: 800; line-height: 1.2; }
   .ks-header-ui .ks-header-catalog-menu-list { display: grid; grid-template-columns: repeat(3, minmax(190px, 1fr)); gap: 30px 38px; align-items: start; }
   .ks-header-ui .ks-header-catalog-category-block { min-width: 0; }
-  .ks-header-ui .ks-header-catalog-category-link { position: relative; height: auto; display: block; padding: 0 0 11px; color: var(--primary-2, #D80027); font-family: "Inter", serif; font-size: 19px; font-weight: 800; line-height: 1.25; text-transform: uppercase; letter-spacing: 0; white-space: normal; overflow-wrap: anywhere; }
+  .ks-header-ui .ks-header-catalog-category-link { position: relative; height: auto; display: block; padding: 0 0 11px; color: var(--primary-2, #D80027); font-family: var(--ks-font-ui); font-size: 19px; font-weight: 800; line-height: 1.25; text-transform: uppercase; letter-spacing: 0; white-space: normal; overflow-wrap: anywhere; }
   .ks-header-ui .ks-header-catalog-category-link::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: #e6e8ec; }
   .ks-header-ui .ks-header-catalog-tipology-list { display: grid; gap: 8px; padding: 0; margin: 13px 0 0; }
   .ks-header-ui .ks-header-catalog-tipology { box-shadow: none; }
   .ks-header-ui .ks-header-catalog-tipology-link,
-  .ks-header-ui .ks-header-catalog-empty-link { height: auto; padding: 1px 0; color: #151515; font-family: "Inter", serif; font-size: 16px; font-weight: 500; line-height: 1.5; }
+  .ks-header-ui .ks-header-catalog-empty-link { height: auto; padding: 1px 0; color: #151515; font-family: var(--ks-font-ui); font-size: 16px; font-weight: 500; line-height: 1.5; }
   .ks-header-ui .ks-header-catalog-tipology-link:hover,
   .ks-header-ui .ks-header-catalog-empty-link:hover,
   .ks-header-ui .ks-header-catalog-category-link:hover,
@@ -1784,6 +1784,28 @@ h4,
 h5,
 h6 {
   font-family: var(--ks-font-ui);
+}
+
+/* GLOBAL-TYPOGRAPHY-ONSUS-1B: normalize explicit storefront families. */
+.font-main,
+.font-2,
+.box-sale-wrap p,
+.ft-heading {
+  font-family: var(--ks-font-ui);
+}
+
+.sib-form {
+  font-family: var(--ks-font-ui) !important;
+}
+
+#ksCatalogPage article.card-product,
+#ksCatalogPage article.card-product .ks-card-buy-cta {
+  font-family: var(--ks-font-ui);
+}
+
+#ksCatalogPage .ks-catalog-card-actions.ks-cart-qty-present .ks-qty,
+#ksCatalogPage .ks-cart-qty-input-present {
+  font-family: var(--ks-font-ui) !important;
 }
 
 /* STOREFRONT-CART-STATE-PERSISTENCE-1A: server-backed card state. */
