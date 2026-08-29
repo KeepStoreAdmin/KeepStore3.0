@@ -1766,3 +1766,22 @@ body.ks-page-home .ks-home-main .sw-dot-default {
   .ks-header-ui .ks-header-catalog-category-link:focus-visible,
   .ks-header-ui .ks-header-sector-title:focus-visible { color: var(--primary-2, #D80027); padding-left: 0; outline: none; text-decoration: underline; text-underline-offset: 4px; }
 }
+
+/* GLOBAL-TYPOGRAPHY-ONSUS-1A: deterministic storefront foundation. */
+:root {
+  --ks-font-ui: Arial, sans-serif;
+}
+
+body,
+button,
+input,
+select,
+textarea,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--ks-font-ui);
+}
