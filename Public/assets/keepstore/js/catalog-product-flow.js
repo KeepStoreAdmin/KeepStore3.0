@@ -87,13 +87,91 @@
     }
   }
 
+  var catalogLayoutStorageKey = 'KeepStore:CatalogLayout';
+  var catalogLayouts = ['tabgrid-1', 'tabgrid-2', 'tablist-1', 'tablist-2'];
+  var gridLayoutClasses = ['layout-tabgrid-1', 'layout-tabgrid-2', 'layout-tablist-1', 'layout-tablist-2'];
+  var cardPresentationClasses = ['style-row', 'type-row-2', 'row-small', 'flex-sm-row'];
+
+  function isCatalogLayout(value) {
+    return catalogLayouts.indexOf(value) !== -1;
+  }
+
+  function readCatalogLayout() {
+    try {
+      var stored = window.sessionStorage.getItem(catalogLayoutStorageKey);
+      if (isCatalogLayout(stored)) return stored;
+    } catch (e) {}
+    return 'tabgrid-1';
+  }
+
+  function storeCatalogLayout(layout) {
+    try { window.sessionStorage.setItem(catalogLayoutStorageKey, layout); } catch (e) {}
+  }
+
+  function applyCatalogLayout(root, layout, persist) {
+    if (!root || !isCatalogLayout(layout)) layout = 'tabgrid-1';
+
+    var grid = root.querySelector('#gridLayout');
+    if (!grid) return;
+
+    for (var i = 0; i < gridLayoutClasses.length; i++) {
+      grid.classList.remove(gridLayoutClasses[i]);
+    }
+    grid.classList.add('layout-' + layout);
+
+    var cards = grid.querySelectorAll('article.card-product');
+    for (var cardIndex = 0; cardIndex < cards.length; cardIndex++) {
+      var card = cards[cardIndex];
+      for (var classIndex = 0; classIndex < cardPresentationClasses.length; classIndex++) {
+        card.classList.remove(cardPresentationClasses[classIndex]);
+      }
+
+      if (layout === 'tablist-1') {
+        card.classList.add('style-row');
+      } else if (layout === 'tablist-2') {
+        card.classList.add('style-row', 'type-row-2', 'row-small', 'flex-sm-row');
+      }
+    }
+
+    var switches = root.querySelectorAll('.ks-view-layout-switch');
+    for (var switchIndex = 0; switchIndex < switches.length; switchIndex++) {
+      var current = switches[switchIndex];
+      var active = current.getAttribute('data-ks-layout') === layout;
+      current.classList.toggle('active', active);
+      current.setAttribute('aria-pressed', active ? 'true' : 'false');
+      current.setAttribute('aria-selected', active ? 'true' : 'false');
+    }
+
+    if (persist) storeCatalogLayout(layout);
+  }
+
+  function initializeCatalogLayout() {
+    var root = document.getElementById('ksCatalogPage');
+    if (!root) return;
+
+    var switches = root.querySelectorAll('.ks-view-layout-switch');
+    for (var i = 0; i < switches.length; i++) {
+      if (switches[i].getAttribute('data-ks-layout-ready') === '1') continue;
+      switches[i].setAttribute('data-ks-layout-ready', '1');
+      switches[i].addEventListener('click', function (event) {
+        event.preventDefault();
+        applyCatalogLayout(root, this.getAttribute('data-ks-layout'), true);
+      });
+    }
+
+    applyCatalogLayout(root, readCatalogLayout(), false);
+  }
+
   // Re-run after UpdatePanel async postback (WebForms)
   function wireUpdatePanel() {
     try {
       if (window.Sys && Sys.WebForms && Sys.WebForms.PageRequestManager) {
         var prm = Sys.WebForms.PageRequestManager.getInstance();
         if (prm) {
-          prm.add_endRequest(function () { ensureQtyEnhancement(document); });
+          prm.add_endRequest(function () {
+            ensureQtyEnhancement(document);
+            initializeCatalogLayout();
+          });
         }
       }
     } catch (e) {}
@@ -101,6 +179,7 @@
 
   onReady(function () {
     ensureQtyEnhancement(document);
+    initializeCatalogLayout();
     wireUpdatePanel();
   });
 })();

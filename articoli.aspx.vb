@@ -2121,7 +2121,23 @@ strWhere = strWhere & " GROUP BY id"
             End If
             Me.lblTrovati.Text = titleLabel
         End If
-        If Me.lblCatalogSummary IsNot Nothing Then Me.lblCatalogSummary.Text = label
+        If Me.lblCatalogSummary IsNot Nothing Then
+            Dim summary As String = "0 risultati"
+            If total > 0 Then
+                Dim pageSize As Integer = GetCatalogPageSize()
+                Dim pageIndex As Integer = GetCatalogPageIndex(pageSize)
+                Dim firstResult As Integer = (pageIndex * pageSize) + 1
+                If firstResult > total Then firstResult = 1
+
+                Dim lastResult As Integer = Math.Min(firstResult + pageSize - 1, total)
+                summary = firstResult.ToString() & "-" & lastResult.ToString() & " di " & total.ToString() & " risultati"
+
+                Dim query As String = CatalogEmptySearchQueryRaw()
+                If query <> "" Then summary &= " per """ & query & """"
+            End If
+
+            Me.lblCatalogSummary.Text = Server.HtmlEncode(summary)
+        End If
     End Sub
 
     Protected Sub rptActiveFilters_ItemCommand(ByVal source As Object, ByVal e As RepeaterCommandEventArgs)

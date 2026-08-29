@@ -9,7 +9,7 @@
 
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
     <asp:Literal ID="litSeoHead" runat="server" EnableViewState="false" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20260829-onsus-toolbar1b" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>" />
 </asp:Content>
@@ -160,34 +160,59 @@
 
                 <div class="content-area">
                     <div class="tf-shop-control flex-wrap gap-10">
-                        <div class="d-flex align-items-center gap-10">
+                        <div class="ks-shop-control-summary d-flex align-items-center gap-10">
                             <button id="filterShop" type="button" class="tf-btn-filter d-flex d-xl-none">
                                 <span class="icon icon-filter"></span>
                                 <span class="body-md-2 fw-medium">Filtri</span>
                             </button>
-                            <p class="body-text-3 mb-0 d-none d-lg-block">
-                                <asp:Label ID="lblLinee" runat="server" Text="" CssClass="d-none" />
-                                <asp:Label ID="lblCatalogSummary" runat="server" CssClass="title-sidebar fw-bold" Text="Sfoglia il catalogo" />
+                            <p class="ks-catalog-result-summary body-text-3 mb-0" aria-live="polite">
+                                <asp:Label ID="lblLinee" runat="server" Text="" Visible="false" />
+                                <asp:Label ID="lblCatalogSummary" runat="server" Text="Sfoglia il catalogo" />
                             </p>
                         </div>
 
                         <div class="tf-control-view flat-title-tab-product flex-wrap">
-                            <div class="tf-control-show d-flex align-items-center gap-2">
-                                <span class="body-text-3">Mostra</span>
-                                <asp:DropDownList ID="Drop_Righe" runat="server" CssClass="select-show form-select" AutoPostBack="true">
-                                    <asp:ListItem Value="12" Text="12"></asp:ListItem>
-                                    <asp:ListItem Value="24" Text="24"></asp:ListItem>
-                                    <asp:ListItem Value="48" Text="48"></asp:ListItem>
-                                    <asp:ListItem Value="96" Text="96"></asp:ListItem>
+                            <ul class="tf-control-layout menu-tab-line" role="tablist" aria-label="Visualizzazione prodotti">
+                                <li role="presentation">
+                                    <a href="#" class="ks-view-layout-switch active" data-ks-layout="tabgrid-1" role="tab" aria-label="Vista griglia" aria-pressed="true" aria-selected="true">
+                                        <i class="icon-menu-dots" aria-hidden="true"></i>
+                                    </a>
+                                </li>
+                                <li role="presentation">
+                                    <a href="#" class="ks-view-layout-switch" data-ks-layout="tabgrid-2" role="tab" aria-label="Vista griglia compatta" aria-pressed="false" aria-selected="false">
+                                        <i class="icon-dot-line" aria-hidden="true"></i>
+                                    </a>
+                                </li>
+                                <li role="presentation">
+                                    <a href="#" class="ks-view-layout-switch" data-ks-layout="tablist-1" role="tab" aria-label="Vista lista" aria-pressed="false" aria-selected="false">
+                                        <i class="icon-list-1" aria-hidden="true"></i>
+                                    </a>
+                                </li>
+                                <li role="presentation">
+                                    <a href="#" class="ks-view-layout-switch" data-ks-layout="tablist-2" role="tab" aria-label="Vista lista compatta" aria-pressed="false" aria-selected="false">
+                                        <i class="icon-list-2" aria-hidden="true"></i>
+                                    </a>
+                                </li>
+                            </ul>
+
+                            <div class="tf-control-sort type-sort-quatity tf-sort ks-toolbar-select">
+                                <i class="icon-menu-dots" aria-hidden="true"></i>
+                                <asp:DropDownList ID="Drop_Righe" runat="server" CssClass="ks-toolbar-native-select" AutoPostBack="true" aria-label="Numero prodotti per pagina">
+                                    <asp:ListItem Value="12" Text="Mostra: 12"></asp:ListItem>
+                                    <asp:ListItem Value="24" Text="Mostra: 24"></asp:ListItem>
+                                    <asp:ListItem Value="48" Text="Mostra: 48"></asp:ListItem>
+                                    <asp:ListItem Value="96" Text="Mostra: 96"></asp:ListItem>
                                 </asp:DropDownList>
+                                <i class="icon-arrow-down" aria-hidden="true"></i>
                             </div>
 
-                            <div class="tf-control-sorting d-flex align-items-center gap-2">
-                                <span class="body-text-3">Ordina</span>
-                                <asp:DropDownList ID="Drop_Ordinamento" runat="server" CssClass="select-sorting form-select" AutoPostBack="true">
+                            <div class="tf-control-sort type-sort-by tf-sort ks-toolbar-select">
+                                <i class="icon-sort" aria-hidden="true"></i>
+                                <span class="ks-toolbar-select-label" aria-hidden="true">Ordina:</span>
+                                <asp:DropDownList ID="Drop_Ordinamento" runat="server" CssClass="ks-toolbar-native-select" AutoPostBack="true" aria-label="Ordinamento prodotti">
                                     <asp:ListItem Value="" Text="Consigliati"></asp:ListItem>
-                                    <asp:ListItem Value="P_basso" Text="Prezzo: crescente"></asp:ListItem>
-                                    <asp:ListItem Value="P_alto" Text="Prezzo: decrescente"></asp:ListItem>
+                                    <asp:ListItem Value="P_basso" Text="Prezzo crescente"></asp:ListItem>
+                                    <asp:ListItem Value="P_alto" Text="Prezzo decrescente"></asp:ListItem>
                                     <asp:ListItem Value="P_offerta" Text="Offerte"></asp:ListItem>
                                     <asp:ListItem Value="P_disponibilita" Text="Disponibilita"></asp:ListItem>
                                     <asp:ListItem Value="P_recenti" Text="Novita"></asp:ListItem>
@@ -195,6 +220,7 @@
                                     <asp:ListItem Value="P_codice" Text="Codice"></asp:ListItem>
                                     <asp:ListItem Value="P_descrizione" Text="Nome"></asp:ListItem>
                                 </asp:DropDownList>
+                                <i class="icon-arrow-down" aria-hidden="true"></i>
                             </div>
                         </div>
                     </div>
@@ -466,7 +492,7 @@
 
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>"></script>
-    <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>"></script>
+    <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>?v=20260829-onsus-toolbar1b"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20260705-cartdelta"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>"></script>
 </asp:Content>
