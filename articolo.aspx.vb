@@ -131,6 +131,14 @@ Partial Class articolo
         Public Property IvaLabel As String
     End Class
 
+    Private Class ProductShippingInfo
+        Public Property IsFreeShipping As Boolean
+        Public Property FreeShippingEndDate As Nullable(Of DateTime)
+        Public Property WeightValue As Nullable(Of Decimal)
+        Public Property WeightUnit As String
+        Public Property WeightUnitVerified As Boolean
+    End Class
+
     Private Class VariantInfo
         Public Property Taglia As String
         Public Property Colore As String
@@ -1512,23 +1520,19 @@ Partial Class articolo
 
         Dim codice As String = FirstNonEmpty(GetRowString(row, "Codice"), GetRowString(row, "SKU"))
         litCodice.Text = Server.HtmlEncode(codice)
-        litCodice2.Text = Server.HtmlEncode(codice)
         litCodice3.Text = Server.HtmlEncode(codice)
         litCodice4.Text = Server.HtmlEncode(codice)
 
         Dim ean As String = FirstNonEmpty(GetRowString(row, "Ean"), GetRowString(row, "EAN"))
         If Not String.IsNullOrEmpty(ean) Then
             phEan.Visible = True
-            phEan2.Visible = True
             phEan3.Visible = True
             phEanInfo.Visible = True
             litEan.Text = Server.HtmlEncode(ean)
-            litEan2.Text = Server.HtmlEncode(ean)
             litEan3.Text = Server.HtmlEncode(ean)
             litEan4.Text = Server.HtmlEncode(ean)
         Else
             phEan.Visible = False
-            phEan2.Visible = False
             phEan3.Visible = False
             phEanInfo.Visible = False
             litEan3.Text = String.Empty
@@ -1540,19 +1544,16 @@ Partial Class articolo
         Dim brandId As Integer = FirstPositiveInt(GetRowInt(row, "MarcaId", 0), GetRowInt(row, "IdMarca", 0), GetRowInt(row, "MarcheId", 0))
         If brandId > 0 AndAlso Not String.IsNullOrEmpty(brandName) Then
             phBrand.Visible = True
-            phBrand2.Visible = True
             phBrandFeature.Visible = True
             phBrandInfo.Visible = True
 
             lnkMarca.Text = Server.HtmlEncode(brandName)
             lnkMarca.NavigateUrl = BuildBrandCatalogUrl(row, brandId)
 
-            litMarca2.Text = Server.HtmlEncode(brandName)
             litMarcaFeature.Text = Server.HtmlEncode(brandName)
             litMarcaInfo.Text = Server.HtmlEncode(brandName)
         Else
             phBrand.Visible = False
-            phBrand2.Visible = False
             phBrandFeature.Visible = False
             phBrandInfo.Visible = False
             litMarcaFeature.Text = String.Empty
@@ -1615,6 +1616,8 @@ Partial Class articolo
         litBuyBoxAvailability.Text = availabilityHtml
         litAvailabilityInfo.Text = availabilityHtml
 
+        BindProductShippingInfo(_id, _listino)
+
         ' Varianti (Taglia/Colore)
         Dim currentTcid As Integer = GetRowInt(row, "TCid", _tcid)
         ' Mantengo il TCid effettivo caricato (serve per Aggiungi al carrello anche quando il dropdown non è visibile)
@@ -1628,6 +1631,82 @@ Partial Class articolo
         ' Quantità desiderata e stato carrello corrente.
         BindPdpCartState(_id, currentTcid, True)
     End Sub
+
+    Private Sub BindProductShippingInfo(articleId As Integer, listino As Integer)
+        Dim shippingInfo As ProductShippingInfo = LoadProductShippingInfo(articleId, listino)
+
+        phFreeShipping.Visible = shippingInfo.IsFreeShipping
+        phStandardShipping.Visible = Not shippingInfo.IsFreeShipping
+        phFreeShippingEndDate.Visible = shippingInfo.IsFreeShipping AndAlso shippingInfo.FreeShippingEndDate.HasValue
+        litFreeShippingEndDate.Text = String.Empty
+        If phFreeShippingEndDate.Visible Then
+            litFreeShippingEndDate.Text = Server.HtmlEncode("Valida fino al " & shippingInfo.FreeShippingEndDate.Value.ToString("dd/MM/yyyy", ItCulture))
+        End If
+
+        Dim showWeight As Boolean = shippingInfo.WeightUnitVerified AndAlso
+                                    shippingInfo.WeightValue.HasValue AndAlso
+                                    shippingInfo.WeightValue.Value > 0D AndAlso
+                                    Not String.IsNullOrWhiteSpace(shippingInfo.WeightUnit)
+        phShippingWeight.Visible = showWeight
+        litShippingWeight.Text = String.Empty
+        If showWeight Then
+            Dim weightText As String = shippingInfo.WeightValue.Value.ToString("0.###", ItCulture)
+            litShippingWeight.Text = Server.HtmlEncode("Peso articolo: " & weightText & " " & shippingInfo.WeightUnit)
+        End If
+    End Sub
+
+    Private Function LoadProductShippingInfo(articleId As Integer, listino As Integer) As ProductShippingInfo
+        Dim info As New ProductShippingInfo() With {
+            .IsFreeShipping = False,
+            .WeightUnit = String.Empty,
+            .WeightUnitVerified = False
+        }
+
+        Try
+            Const sql As String =
+                "SELECT Peso, SpedizioneGratis_Listini, SpedizioneGratis_Data_Inizio, SpedizioneGratis_Data_Fine, " &
+                "CASE WHEN (COALESCE(SpedizioneGratis_Listini, '') <> '' " &
+                "AND SpedizioneGratis_Listini LIKE CONCAT('%', @listino, ';%') " &
+                "AND SpedizioneGratis_Data_Inizio <= CURDATE() " &
+                "AND (SpedizioneGratis_Data_Fine >= CURDATE() OR SpedizioneGratis_Data_Fine IS NULL)) " &
+                "THEN 1 ELSE 0 END AS SpedizioneGratisAttiva " &
+                "FROM articoli WHERE id = @id LIMIT 1"
+
+            Using cn As New MySqlConnection(GetConnectionString())
+                cn.Open()
+                Using cmd As New MySqlCommand(sql, cn)
+                    cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = articleId
+                    cmd.Parameters.Add("@listino", MySqlDbType.Int32).Value = listino
+
+                    Using rdr As MySqlDataReader = cmd.ExecuteReader()
+                        If Not rdr.Read() Then Return info
+
+                        info.IsFreeShipping = (SafeReaderInt(rdr, "SpedizioneGratisAttiva", 0) = 1)
+
+                        Dim endDateOrdinal As Integer = rdr.GetOrdinal("SpedizioneGratis_Data_Fine")
+                        If Not rdr.IsDBNull(endDateOrdinal) Then
+                            info.FreeShippingEndDate = Convert.ToDateTime(rdr.GetValue(endDateOrdinal), CultureInfo.InvariantCulture).Date
+                        End If
+
+                        Dim weightOrdinal As Integer = rdr.GetOrdinal("Peso")
+                        If Not rdr.IsDBNull(weightOrdinal) Then
+                            Dim weightValue As Decimal = Convert.ToDecimal(rdr.GetValue(weightOrdinal), CultureInfo.InvariantCulture)
+                            If weightValue > 0D Then info.WeightValue = weightValue
+                        End If
+                    End Using
+                End Using
+            End Using
+        Catch ex As Exception
+            KeepStoreLog.Error("articolo.aspx", "Errore LoadProductShippingInfo (id=" & articleId.ToString() & ")", ex, HttpContext.Current)
+            Return New ProductShippingInfo() With {
+                .IsFreeShipping = False,
+                .WeightUnit = String.Empty,
+                .WeightUnitVerified = False
+            }
+        End Try
+
+        Return info
+    End Function
 
     Private Sub BindVariantsIfNeeded(id As Integer, currentTcid As Integer)
         If Not _tcEnabled Then

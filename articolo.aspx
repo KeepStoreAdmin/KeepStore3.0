@@ -9,7 +9,7 @@
 
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/drift-basic.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/photoswipe.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20260829-cartstate1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20260830-pdptitleshipping1a" />
 
     <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
 </asp:Content>
@@ -221,15 +221,22 @@
                                             <asp:PlaceHolder ID="phPromotionOffers" runat="server" Visible="false">
                                                 <asp:Literal ID="litPromotionOffers" runat="server" />
                                             </asp:PlaceHolder>
-                                            <div class="shipping-to">
-                                                <p class="body-md-2">Riferimenti</p>
-                                                <div class="body-text-3">
-                                                    <span>Codice: <asp:Literal ID="litCodice2" runat="server" /></span>
-                                                    <asp:PlaceHolder ID="phEan2" runat="server" Visible="false">
-                                                        <span>EAN: <asp:Literal ID="litEan2" runat="server" /></span>
+                                            <div class="shipping-to ks-pdp-shipping-info">
+                                                <p class="body-md-2 fw-semibold">Spedizione</p>
+                                                <div class="body-text-3 ks-pdp-shipping-lines">
+                                                    <asp:PlaceHolder ID="phFreeShipping" runat="server" Visible="false">
+                                                        <p class="ks-pdp-shipping-status fw-semibold text-success">Spedizione gratuita</p>
+                                                        <p>Questo articolo usufruisce della spedizione gratuita.</p>
+                                                        <asp:PlaceHolder ID="phFreeShippingEndDate" runat="server" Visible="false">
+                                                            <p><asp:Literal ID="litFreeShippingEndDate" runat="server" /></p>
+                                                        </asp:PlaceHolder>
                                                     </asp:PlaceHolder>
-                                                    <asp:PlaceHolder ID="phBrand2" runat="server" Visible="false">
-                                                        <span>Marca: <asp:Literal ID="litMarca2" runat="server" /></span>
+                                                    <asp:PlaceHolder ID="phStandardShipping" runat="server">
+                                                        <p class="ks-pdp-shipping-status fw-semibold">Spese di spedizione calcolate nel carrello</p>
+                                                        <p>Le opzioni e il costo definitivo vengono mostrati nel carrello.</p>
+                                                    </asp:PlaceHolder>
+                                                    <asp:PlaceHolder ID="phShippingWeight" runat="server" Visible="false">
+                                                        <p><asp:Literal ID="litShippingWeight" runat="server" /></p>
                                                     </asp:PlaceHolder>
                                                 </div>
                                             </div>
