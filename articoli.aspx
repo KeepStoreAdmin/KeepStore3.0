@@ -494,5 +494,5 @@
     <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>"></script>
     <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>?v=20260829-onsus-toolbar1b"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20260705-cartdelta"></script>
-    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260830-rvhover1"></script>
 </asp:Content>

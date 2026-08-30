@@ -118,7 +118,7 @@
   }
 
   function fallbackImage(container) {
-    return container.getAttribute('data-ks-placeholder') || '/Public/assets/keepstore/images/img/placeholder.svg';
+    return container.getAttribute('data-ks-placeholder') || '/Public/assets/images/img/placeholder.svg';
   }
 
   function deriveCartUrl(item) {
@@ -156,6 +156,7 @@
         '<div class="card-product-wrapper">' +
           '<a class="product-img" href="' + attr(item.url) + '">' +
             '<img class="lazyload img-product" src="' + attr(img) + '" data-src="' + attr(img) + '" alt="' + attr(item.name) + '">' +
+            '<img class="img-hover" src="' + attr(img) + '" alt="" aria-hidden="true">' +
           '</a>' +
           '<ul class="list-product-btn top-0 end-0">' +
             '<li><a href="' + attr(deriveCartUrl(item)) + '" class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link" aria-label="Aggiungi al carrello"' + actionAttrs(item, img) + '><span class="icon icon-cart2"></span><span class="tooltip">Carrello</span></a></li>' +
