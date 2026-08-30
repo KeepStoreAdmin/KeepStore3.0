@@ -28,6 +28,7 @@ Public Module ThemeManager
     Private Const DefaultBaseUrl As String = "/Public/assets/keepstore/"
     Private Const ProductImageBaseUrl As String = "/Public/assets/images/articoli/"
     Private Const ProductPlaceholderUrl As String = "/Public/assets/images/img/placeholder.svg"
+    Private Const ProductPlaceholderFallbackDataUri As String = "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20320%20320'%20role='img'%20aria-label='Immagine%20prodotto%20non%20disponibile'%3E%3Crect%20width='320'%20height='320'%20fill='%23f3f5f7'/%3E%3Crect%20x='52'%20y='58'%20width='216'%20height='150'%20rx='12'%20fill='%23fff'%20stroke='%23aeb7c1'%20stroke-width='5'/%3E%3Ccircle%20cx='218'%20cy='102'%20r='17'%20fill='%23d5dbe1'/%3E%3Cpath%20d='M70%20190l58-62%2043%2044%2032-30%2047%2048z'%20fill='%23c7ced6'/%3E%3Ctext%20x='160'%20y='258'%20text-anchor='middle'%20font-family='Arial,sans-serif'%20font-size='18'%20font-weight='700'%20fill='%23343a40'%3EImmagine%20non%20disponibile%3C/text%3E%3C/svg%3E"
 
     ''' <summary>
     ''' Nome logico del tema attivo (per tagging e future switch).
@@ -202,11 +203,36 @@ Public Module ThemeManager
     ''' Placeholder standard per immagini prodotto mancanti.
     ''' </summary>
     Public Function PlaceholderProductImageUrl() As String
+        If Not ProductPlaceholderFileExists() Then Return ProductPlaceholderFallbackDataUri
+
         Try
             Return VirtualPathUtility.ToAbsolute(ProductPlaceholderUrl)
         Catch
-            Return ProductPlaceholderUrl
+            Return ProductPlaceholderFallbackDataUri
         End Try
+    End Function
+
+    Private Function ProductPlaceholderFileExists() As Boolean
+        Const cacheKey As String = "ks_product_placeholder_exists"
+        Dim context As HttpContext = HttpContext.Current
+
+        If context IsNot Nothing AndAlso context.Items(cacheKey) IsNot Nothing Then
+            Return Convert.ToBoolean(context.Items(cacheKey))
+        End If
+
+        Dim exists As Boolean = False
+        Try
+            Dim physicalPath As String = System.Web.Hosting.HostingEnvironment.MapPath("~" & ProductPlaceholderUrl)
+            If String.IsNullOrWhiteSpace(physicalPath) AndAlso context IsNot Nothing Then
+                physicalPath = context.Server.MapPath(ProductPlaceholderUrl)
+            End If
+            exists = Not String.IsNullOrWhiteSpace(physicalPath) AndAlso System.IO.File.Exists(physicalPath)
+        Catch
+            exists = False
+        End Try
+
+        If context IsNot Nothing Then context.Items(cacheKey) = exists
+        Return exists
     End Function
 
     Private Function ProductImageRawValue(ByVal imgValue As Object) As String
