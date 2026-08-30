@@ -117,26 +117,7 @@ End Function
     End Function
 
     Protected Function CheckImg(ByVal temp As Object) As String
-        Dim imgname As String = ""
-        If temp IsNot Nothing AndAlso Not Convert.IsDBNull(temp) Then
-            imgname = Convert.ToString(temp)
-        End If
-
-        If imgname Is Nothing Then imgname = ""
-        imgname = imgname.Trim()
-
-        If imgname = "" Then
-            Return ThemeManager.PlaceholderProductImageUrl()
-        End If
-
-        If imgname.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse imgname.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
-            Return imgname
-        End If
-
-        imgname = imgname.Replace("\", "/")
-        imgname = IO.Path.GetFileName(imgname)
-        If String.IsNullOrWhiteSpace(imgname) Then Return ThemeManager.PlaceholderProductImageUrl()
-        Return ResolveUrl("~/Public/assets/images/articoli/" & imgname)
+        Return ThemeManager.ProductImageUrl(temp)
     End Function
 
 

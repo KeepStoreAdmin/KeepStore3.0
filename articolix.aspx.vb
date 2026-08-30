@@ -116,24 +116,7 @@ Partial Class articolix
     ' Helpers per binding markup (legacy)
     '------------------------------------------------------------
     Protected Function checkImg(ByVal value As Object) As String
-        Dim s As String = Convert.ToString(value)
-        If String.IsNullOrWhiteSpace(s) Then
-            'fallback: lascia vuoto (o sostituisci con un placeholder se presente)
-            Return String.Empty
-        End If
-
-        s = s.Trim()
-
-        If s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse s.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
-            Return s
-        End If
-
-        If s.StartsWith("/") Then
-            Return s
-        End If
-
-        'Percorso legacy più comune
-        Return ResolveUrl("~/public/immagini/" & s.TrimStart("/"c))
+        Return ThemeManager.ProductImageUrl(value)
     End Function
 
     Protected Function sotto_stringa(ByVal value As Object) As String

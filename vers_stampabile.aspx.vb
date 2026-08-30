@@ -349,10 +349,7 @@ Partial Class vers_stampabile
     End Function
 
     Protected Function checkImg(ByVal imgname As String) As String
-        If String.IsNullOrWhiteSpace(imgname) Then
-            Return "Public/Foto/img_non_disponibile.png"
-        End If
-        Return "Public/Foto/" & imgname.Trim()
+        Return ThemeManager.ProductImageUrl(imgname)
     End Function
 
     Protected Function controllo_img(ByVal temp As Object) As Boolean

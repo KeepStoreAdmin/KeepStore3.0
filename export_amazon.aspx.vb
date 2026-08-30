@@ -92,6 +92,14 @@ Partial Class export_amazon
         Return result
     End Function
 
+    Private Function ExportProductImageUrl(ByVal value As Object, ByVal dominio As String, ByVal thumbnail As Boolean) As String
+        Dim resolved As String = If(thumbnail, ThemeManager.ProductThumbnailImageUrl(value), ThemeManager.ProductImageUrl(value))
+        If String.Equals(resolved, ThemeManager.PlaceholderProductImageUrl(), StringComparison.OrdinalIgnoreCase) Then Return String.Empty
+        If resolved.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse resolved.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then Return resolved
+        If resolved.StartsWith("data:", StringComparison.OrdinalIgnoreCase) Then Return String.Empty
+        Return "http://" & dominio.Trim().TrimEnd("/"c) & "/" & resolved.TrimStart("/"c)
+    End Function
+
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
 
         'Formato del response
@@ -286,22 +294,14 @@ Partial Class export_amazon
                     IdSottogruppo = checkAndCorrectIntDrItem(dr.Item("SottoGruppiId"))
                     Aliquota = dr.Item("Valoreiva").ToString
 
-                    If dr.Item("Img1") <> "" Then
-                        UrlImg = "http://" & Dominio & "/Public/foto/_" & dr.Item("Img1")
-                        UrlImgBig = "http://" & Dominio & "/Public/foto/" & dr.Item("Img1")
-                    End If
-                    If dr.Item("Img2") <> "" Then
-                        UrlImg2 = "http://" & Dominio & "/Public/foto/_" & dr.Item("Img2")
-                        UrlImg2Big = "http://" & Dominio & "/Public/foto/" & dr.Item("Img2")
-                    End If
-                    If dr.Item("Img3") <> "" Then
-                        UrlImg3 = "http://" & Dominio & "/Public/foto/_" & dr.Item("Img3")
-                        UrlImg3Big = "http://" & Dominio & "/Public/foto/" & dr.Item("Img3")
-                    End If
-                    If dr.Item("Img4") <> "" Then
-                        UrlImg4 = "http://" & Dominio & "/Public/foto/_" & dr.Item("Img4")
-                        UrlImg4Big = "http://" & Dominio & "/Public/foto/" & dr.Item("Img4")
-                    End If
+                    UrlImg = ExportProductImageUrl(dr.Item("Img1"), Dominio, True)
+                    UrlImgBig = ExportProductImageUrl(dr.Item("Img1"), Dominio, False)
+                    UrlImg2 = ExportProductImageUrl(dr.Item("Img2"), Dominio, True)
+                    UrlImg2Big = ExportProductImageUrl(dr.Item("Img2"), Dominio, False)
+                    UrlImg3 = ExportProductImageUrl(dr.Item("Img3"), Dominio, True)
+                    UrlImg3Big = ExportProductImageUrl(dr.Item("Img3"), Dominio, False)
+                    UrlImg4 = ExportProductImageUrl(dr.Item("Img4"), Dominio, True)
+                    UrlImg4Big = ExportProductImageUrl(dr.Item("Img4"), Dominio, False)
 
                     If (dr.Item("giacenza").ToString = "") Then
                         Gia = 0

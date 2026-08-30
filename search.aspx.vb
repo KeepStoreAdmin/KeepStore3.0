@@ -83,7 +83,7 @@ Partial Class search
 
                 Dim hrefProd As String = "articolo.aspx?id=" & HttpUtility.UrlEncode(id) & "&TCid=" & HttpUtility.UrlEncode(tcid)
                 Dim descrHtml As String = HttpUtility.HtmlEncode(descrizione)
-                Dim imgSrc As String = "Public/foto/" & HttpUtility.UrlEncode(nomeFoto)
+                Dim imgSrc As String = ThemeManager.ProductThumbnailImageUrl(nomeFoto)
 
                 sb.AppendLine(
                     "<li><div style=""position:relative;width:500px;top:0px;left:0px;"">" &

@@ -734,44 +734,11 @@ Partial Public Class search_suggest
     End Function
 
     Private Function BuildPreviewVariant(ByVal raw As String) As String
-        Dim url As String = NormalizeMediaUrl(raw)
-        If String.IsNullOrWhiteSpace(url) Then Return String.Empty
-        If url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse url.StartsWith("//", StringComparison.OrdinalIgnoreCase) Then Return url
-
-        Dim fileName As String = Path.GetFileName(url)
-        If String.IsNullOrWhiteSpace(fileName) OrElse fileName.StartsWith("_", StringComparison.OrdinalIgnoreCase) Then Return url
-
-        Dim slash As Integer = url.LastIndexOf("/"c)
-        Dim dir As String = If(slash >= 0, url.Substring(0, slash), "/Public/assets/images/articoli")
-        Dim candidate As String = dir.TrimEnd("/"c) & "/_" & fileName
-        If VirtualFileExists(candidate) Then Return candidate
-
-        Dim defaultCandidate As String = "/Public/assets/images/articoli/_" & fileName
-        If Not String.Equals(defaultCandidate, candidate, StringComparison.OrdinalIgnoreCase) AndAlso VirtualFileExists(defaultCandidate) Then Return defaultCandidate
-
-        Return url
-    End Function
-
-    Private Function VirtualFileExists(ByVal virtualUrl As String) As Boolean
-        Try
-            If String.IsNullOrWhiteSpace(virtualUrl) Then Return False
-            Dim probe As String = virtualUrl
-            If probe.StartsWith("/", StringComparison.OrdinalIgnoreCase) Then probe = "~" & probe
-            Dim physical As String = HostingEnvironment.MapPath(probe)
-            Return Not String.IsNullOrWhiteSpace(physical) AndAlso File.Exists(physical)
-        Catch
-            Return False
-        End Try
+        Return ThemeManager.ProductThumbnailImageUrl(raw)
     End Function
 
     Private Function NormalizeMediaUrl(ByVal raw As Object) As String
-        Dim value As String = SafeString(raw).Replace("\", "/")
-        If String.IsNullOrWhiteSpace(value) Then Return String.Empty
-        If value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse value.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse value.StartsWith("//", StringComparison.OrdinalIgnoreCase) Then Return value
-        If value.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then Return ResolveUrl(value)
-        Dim fileName As String = Path.GetFileName(value)
-        If String.IsNullOrWhiteSpace(fileName) Then Return String.Empty
-        Return ResolveUrl("~/Public/assets/images/articoli/" & fileName)
+        Return ThemeManager.ProductImageUrl(raw)
     End Function
 
     Private Function BuildQuickLinks(ByVal query As String, ByVal items As List(Of SuggestItem), ByVal intent As QueryIntent) As List(Of Dictionary(Of String, Object))

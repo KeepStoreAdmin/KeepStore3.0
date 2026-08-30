@@ -2612,50 +2612,7 @@ Partial Class articolo
     End Function
 
     Private Function NormalizeImageUrl(raw As String) As String
-        If String.IsNullOrEmpty(raw) Then Return ""
-
-        Dim s As String = raw.Trim()
-        If s.Length = 0 Then Return ""
-
-        If s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse s.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
-            Return s
-        End If
-
-        If s.StartsWith("~", StringComparison.Ordinal) Then
-            Return ResolveUrl(s)
-        End If
-
-        s = s.Replace("\", "/")
-
-        If s.StartsWith("/Public/assets/images/articoli/", StringComparison.OrdinalIgnoreCase) Then
-            Return "/Public/assets/images/articoli/" & IO.Path.GetFileName(s)
-        End If
-
-        If s.StartsWith("/assets/Images/articoli/", StringComparison.OrdinalIgnoreCase) Then
-            Return "/Public/assets/images/articoli/" & IO.Path.GetFileName(s)
-        End If
-
-        If s.StartsWith("/Public/assets/images/articoli/", StringComparison.OrdinalIgnoreCase) Then
-            Return s
-        End If
-
-        If s.StartsWith("/", StringComparison.Ordinal) Then
-            Dim fileOnly As String = IO.Path.GetFileName(s)
-            If Not String.IsNullOrWhiteSpace(fileOnly) Then
-                Return "/Public/assets/images/articoli/" & fileOnly
-            End If
-            Return ""
-        End If
-
-        If s.IndexOf("/"c) >= 0 Then
-            Dim fileOnly As String = IO.Path.GetFileName(s)
-            If Not String.IsNullOrWhiteSpace(fileOnly) Then
-                Return ResolveUrl("~/Public/assets/images/articoli/" & fileOnly)
-            End If
-            Return "/" & s.TrimStart("/"c)
-        End If
-
-        Return ResolveUrl("~/Public/assets/images/articoli/" & s)
+        Return ThemeManager.ProductImageUrl(raw)
     End Function
 
     Protected Sub ddlTc_SelectedIndexChanged(sender As Object, e As EventArgs)

@@ -199,18 +199,7 @@ Partial Class MiniCart
     End Function
 
     Public Function GetProductImg(ByVal imgObj As Object) As String
-        Dim s As String = If(imgObj Is Nothing OrElse imgObj Is DBNull.Value, "", Convert.ToString(imgObj))
-        s = If(s, "").Trim()
-
-        If Not String.IsNullOrEmpty(s) Then
-            s = s.Replace("\", "/")
-            Dim fileName As String = IO.Path.GetFileName(s)
-            If Not String.IsNullOrWhiteSpace(fileName) Then
-                Return ResolveUrl("~/Public/assets/images/articoli/" & fileName)
-            End If
-        End If
-
-        Return ThemeManager.PlaceholderProductImageUrl()
+        Return ThemeManager.ProductImageUrl(imgObj)
     End Function
 
     Public Function GetLineTotalText(ByVal importoObj As Object, ByVal importoIvatoObj As Object) As String

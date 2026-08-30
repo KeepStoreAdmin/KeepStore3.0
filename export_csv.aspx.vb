@@ -66,6 +66,20 @@ Partial Class export
         Return (UCase(testo.Substring(0, 1)) & (testo.Substring(1, testo.Length - 1)))
     End Function
 
+    Private Function ExportProductImageUrl(ByVal value As Object, ByVal dominio As String, ByVal thumbnail As Boolean) As String
+        Dim resolved As String = If(thumbnail, ThemeManager.ProductThumbnailImageUrl(value), ThemeManager.ProductImageUrl(value))
+        If String.Equals(resolved, ThemeManager.PlaceholderProductImageUrl(), StringComparison.OrdinalIgnoreCase) Then Return String.Empty
+        If resolved.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse resolved.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then Return resolved
+        If resolved.StartsWith("data:", StringComparison.OrdinalIgnoreCase) Then Return String.Empty
+        Return "http://" & dominio.Trim().TrimEnd("/"c) & "/" & resolved.TrimStart("/"c)
+    End Function
+
+    Private Function QuotedExportProductImageUrl(ByVal value As Object, ByVal dominio As String, ByVal thumbnail As Boolean) As String
+        Dim resolved As String = ExportProductImageUrl(value, dominio, thumbnail)
+        If String.IsNullOrWhiteSpace(resolved) Then Return String.Empty
+        Return """" & resolved & """"
+    End Function
+
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         'Formato del response
         Response.ContentType = "application/CSV"
@@ -283,25 +297,14 @@ Partial Class export
                 CVuoto2 = ""
                 CVuoto3 = ""
 
-                If dr.Item("Img1") <> "" Then
-                    UrlImg = """" & "http://" & Dominio & "/Public/foto/_" & dr.Item("Img1") & """"
-                    UrlImgBig = """" & "http://" & Dominio & "/Public/foto/" & dr.Item("Img1") & """"
-                End If
-
-                If dr.Item("Img2") <> "" Then
-                    UrlImg2 = """" & "http://" & Dominio & "/Public/foto/_" & dr.Item("Img2") & """"
-                    UrlImg2Big = """" & "http://" & Dominio & "/Public/foto/" & dr.Item("Img2") & """"
-                End If
-
-                If dr.Item("Img3") <> "" Then
-                    UrlImg3 = """" & "http://" & Dominio & "/Public/foto/_" & dr.Item("Img3") & """"
-                    UrlImg3Big = """" & "http://" & Dominio & "/Public/foto/" & dr.Item("Img3") & """"
-                End If
-
-                If dr.Item("Img4") <> "" Then
-                    UrlImg4 = """" & "http://" & Dominio & "/Public/foto/_" & dr.Item("Img4") & """"
-                    UrlImg4Big = """" & "http://" & Dominio & "/Public/foto/" & dr.Item("Img4") & """"
-                End If
+                UrlImg = QuotedExportProductImageUrl(dr.Item("Img1"), Dominio, True)
+                UrlImgBig = QuotedExportProductImageUrl(dr.Item("Img1"), Dominio, False)
+                UrlImg2 = QuotedExportProductImageUrl(dr.Item("Img2"), Dominio, True)
+                UrlImg2Big = QuotedExportProductImageUrl(dr.Item("Img2"), Dominio, False)
+                UrlImg3 = QuotedExportProductImageUrl(dr.Item("Img3"), Dominio, True)
+                UrlImg3Big = QuotedExportProductImageUrl(dr.Item("Img3"), Dominio, False)
+                UrlImg4 = QuotedExportProductImageUrl(dr.Item("Img4"), Dominio, True)
+                UrlImg4Big = QuotedExportProductImageUrl(dr.Item("Img4"), Dominio, False)
 
                 If dr.Item("giacenza").ToString = "" Then
                     Gia = 0

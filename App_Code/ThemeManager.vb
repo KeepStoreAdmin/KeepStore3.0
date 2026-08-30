@@ -26,6 +26,8 @@ Imports System.Web
 Public Module ThemeManager
 
     Private Const DefaultBaseUrl As String = "/Public/assets/keepstore/"
+    Private Const ProductImageBaseUrl As String = "/Public/assets/images/articoli/"
+    Private Const ProductPlaceholderUrl As String = "/Public/assets/images/img/placeholder.svg"
 
     ''' <summary>
     ''' Nome logico del tema attivo (per tagging e future switch).
@@ -155,151 +157,136 @@ Public Module ThemeManager
     End Function
 
     ''' <summary>
-    ''' URL immagine prodotto (catalogo/home/dettaglio).
-    ''' - Supporta: URL assoluti, path root-relative (/Images/...), path relativo (Images/..), o solo filename.
-    ''' - Configurazioni opzionali:
-    '''     KeepStore.Products.ImageBaseUrl         (default: /Public/assets/images/articoli/)
-    '''     KeepStore.Products.PlaceholderImageUrl  (fallback: Asset("images/img/placeholder.svg"))
+    ''' URL canonico di un'immagine prodotto locale esistente.
+    ''' URL HTTP/HTTPS e data URI vengono preservati; i file locali mancanti usano il placeholder.
     ''' </summary>
     Public Function ProductImageUrl(ByVal imgValue As Object) As String
-        Dim raw As String = ""
+        Dim raw As String = ProductImageRawValue(imgValue)
+        If IsExternalProductImageUrl(raw) Then Return raw
 
-        Try
-            If imgValue Is Nothing OrElse Convert.IsDBNull(imgValue) Then
-                raw = ""
-            Else
-                raw = Convert.ToString(imgValue)
-            End If
-        Catch
-            raw = ""
-        End Try
-
-        raw = If(raw, "").Trim()
-
-        If raw = "" Then
-            Dim ph As String = Nothing
-            Try
-                ph = ConfigurationManager.AppSettings("KeepStore.Products.PlaceholderImageUrl")
-            Catch
-                ph = Nothing
-            End Try
-
-			If String.IsNullOrWhiteSpace(ph) Then
-				ph = PlaceholderProductImageUrl()
-			End If
-
-            Return ph
+        Dim fileName As String = NormalizeProductFileName(raw)
+        If String.IsNullOrWhiteSpace(fileName) OrElse Not ProductImageFileExists(fileName) Then
+            Return PlaceholderProductImageUrl()
         End If
 
-        raw = raw.Replace("\", "/")
+        Return BuildProductImageUrl(fileName)
+    End Function
 
-        ' URL assoluti / data uri
-        If raw.StartsWith("http://", StringComparison.OrdinalIgnoreCase) _
-            OrElse raw.StartsWith("https://", StringComparison.OrdinalIgnoreCase) _
-            OrElse raw.StartsWith("data:", StringComparison.OrdinalIgnoreCase) Then
-            Return raw
-        End If
+    ''' <summary>
+    ''' Preferisce la miniatura locale _filename quando esiste, altrimenti usa l'immagine piena.
+    ''' </summary>
+    Public Function ProductThumbnailImageUrl(ByVal imgValue As Object) As String
+        Dim raw As String = ProductImageRawValue(imgValue)
+        If IsExternalProductImageUrl(raw) Then Return raw
 
-        ' previeni traversal
-        If raw.Contains("..") Then raw = raw.Replace("..", String.Empty)
-
-        ' path già root-relative
-        If raw.StartsWith("/", StringComparison.Ordinal) OrElse raw.IndexOf("/", StringComparison.Ordinal) >= 0 Then
-            raw = System.IO.Path.GetFileName(raw)
-        End If
-
-		Dim fileName As String = EscapePathSegment(raw)
+        Dim fileName As String = NormalizeProductFileName(raw)
         If String.IsNullOrWhiteSpace(fileName) Then Return PlaceholderProductImageUrl()
-		Dim baseUrl As String = ResolveProductImageBaseUrl(fileName)
 
-		Dim url As String = baseUrl & fileName
-        Try
-            Return VirtualPathUtility.ToAbsolute(url)
-        Catch
-            Return url
-        End Try
+        If fileName.StartsWith("_", StringComparison.Ordinal) Then
+            If ProductImageFileExists(fileName) Then Return BuildProductImageUrl(fileName)
+
+            Dim fullFileName As String = fileName.Substring(1)
+            If String.IsNullOrWhiteSpace(fullFileName) Then Return PlaceholderProductImageUrl()
+            Return ProductImageUrl(fullFileName)
+        End If
+
+        Dim thumbnailFileName As String = "_" & fileName
+        If ProductImageFileExists(thumbnailFileName) Then
+            Return BuildProductImageUrl(thumbnailFileName)
+        End If
+
+        Return ProductImageUrl(fileName)
     End Function
 
     ''' <summary>
     ''' Placeholder standard per immagini prodotto mancanti.
     ''' </summary>
     Public Function PlaceholderProductImageUrl() As String
-        ' SVG leggero, stabile, senza dipendenze.
-        Return Asset("images/img/placeholder.svg")
+        Try
+            Return VirtualPathUtility.ToAbsolute(ProductPlaceholderUrl)
+        Catch
+            Return ProductPlaceholderUrl
+        End Try
     End Function
 
-    ''' <summary>
-    ''' Risolve la base URL per le immagini prodotto.
-    ''' Evita 404 quando il deploy usa cartelle diverse (es. /Images/articoli/, /Public/images/articoli/...).
-    '''
-    ''' NOTE:
-    ''' - cache per-request in HttpContext.Items
-    ''' - se non riesce a verificare l'esistenza fisica, usa config o default
-    ''' </summary>
-    Private Function ResolveProductImageBaseUrl(ByVal fileName As String) As String
-        Dim configured As String = Nothing
+    Private Function ProductImageRawValue(ByVal imgValue As Object) As String
         Try
-            configured = ConfigurationManager.AppSettings("KeepStore.Products.ImageBaseUrl")
+            If imgValue Is Nothing OrElse Convert.IsDBNull(imgValue) Then Return String.Empty
+            Return If(Convert.ToString(imgValue), String.Empty).Trim()
         Catch
-            configured = Nothing
+            Return String.Empty
+        End Try
+    End Function
+
+    Private Function IsExternalProductImageUrl(ByVal raw As String) As Boolean
+        If String.IsNullOrWhiteSpace(raw) Then Return False
+        Return raw.StartsWith("http://", StringComparison.OrdinalIgnoreCase) _
+            OrElse raw.StartsWith("https://", StringComparison.OrdinalIgnoreCase) _
+            OrElse raw.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
+    End Function
+
+    Private Function NormalizeProductFileName(ByVal raw As String) As String
+        If String.IsNullOrWhiteSpace(raw) Then Return String.Empty
+
+        Dim decoded As String = raw.Trim()
+        Try
+            decoded = Uri.UnescapeDataString(decoded)
+        Catch
+            Return String.Empty
         End Try
 
-        Dim fallback As String = "/Public/assets/images/articoli/"
+        decoded = decoded.Replace("\", "/")
+        If decoded.IndexOf("..", StringComparison.Ordinal) >= 0 Then Return String.Empty
 
-        Dim NormalizeBase As Func(Of String, String) = Function(b As String) As String
-                                                           If String.IsNullOrWhiteSpace(b) Then Return ""
-                                                           Dim s As String = b.Trim().Replace("\", "/")
-                                                           If Not s.EndsWith("/", StringComparison.Ordinal) Then s &= "/"
-                                                           If Not s.StartsWith("/", StringComparison.Ordinal) AndAlso Not s.StartsWith("http", StringComparison.OrdinalIgnoreCase) Then
-                                                               s = "/" & s
-                                                           End If
-                                                           Return s
-                                                       End Function
+        Dim fileName As String = String.Empty
+        Try
+            fileName = System.IO.Path.GetFileName(decoded)
+        Catch
+            Return String.Empty
+        End Try
 
-        configured = NormalizeBase(configured)
-        If String.IsNullOrWhiteSpace(configured) OrElse Not configured.Equals("/Public/assets/images/articoli/", StringComparison.OrdinalIgnoreCase) Then
-            configured = "/Public/assets/images/articoli/"
-        End If
-        fallback = NormalizeBase(fallback)
-
-        Dim ctx As HttpContext = HttpContext.Current
-        If ctx Is Nothing OrElse ctx.Server Is Nothing Then
-            Return fallback
+        If String.IsNullOrWhiteSpace(fileName) _
+            OrElse fileName.IndexOf("/"c) >= 0 _
+            OrElse fileName.IndexOf("\"c) >= 0 _
+            OrElse fileName.IndexOf("..", StringComparison.Ordinal) >= 0 Then
+            Return String.Empty
         End If
 
-        Dim cacheKey As String = "ks_product_img_base"
-        Dim cached As String = TryCast(ctx.Items(cacheKey), String)
-        If Not String.IsNullOrWhiteSpace(cached) Then
-            Return cached
-        End If
+        Return fileName.Trim()
+    End Function
 
-        Dim candidates As New List(Of String)()
-        candidates.Add(configured)
+    Private Function ProductImageFileExists(ByVal fileName As String) As Boolean
+        Dim safeFileName As String = NormalizeProductFileName(fileName)
+        If String.IsNullOrWhiteSpace(safeFileName) Then Return False
 
-        For Each b As String In candidates
-            Dim baseUrl As String = NormalizeBase(b)
-            If String.IsNullOrWhiteSpace(baseUrl) Then Continue For
+        Try
+            Dim basePhysicalPath As String = System.Web.Hosting.HostingEnvironment.MapPath("~" & ProductImageBaseUrl)
+            If String.IsNullOrWhiteSpace(basePhysicalPath) AndAlso HttpContext.Current IsNot Nothing Then
+                basePhysicalPath = HttpContext.Current.Server.MapPath(ProductImageBaseUrl)
+            End If
+            If String.IsNullOrWhiteSpace(basePhysicalPath) Then Return False
 
-            ' se non è un virtual-path locale non possiamo MapPath
-            If Not baseUrl.StartsWith("/", StringComparison.Ordinal) OrElse baseUrl.StartsWith("//") Then
-                Continue For
+            Dim normalizedBase As String = System.IO.Path.GetFullPath(basePhysicalPath)
+            If Not normalizedBase.EndsWith(System.IO.Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal) Then
+                normalizedBase &= System.IO.Path.DirectorySeparatorChar
             End If
 
-            Try
-                Dim virtualPath As String = baseUrl & fileName
-                Dim physical As String = ctx.Server.MapPath(virtualPath)
-                If Not String.IsNullOrEmpty(physical) AndAlso System.IO.File.Exists(physical) Then
-                    ctx.Items(cacheKey) = baseUrl
-                    Return baseUrl
-                End If
-            Catch
-                ' ignora e prova il prossimo
-            End Try
-        Next
+            Dim candidate As String = System.IO.Path.GetFullPath(System.IO.Path.Combine(normalizedBase, safeFileName))
+            If Not candidate.StartsWith(normalizedBase, StringComparison.OrdinalIgnoreCase) Then Return False
 
-        Dim chosen As String = "/Public/assets/images/articoli/"
-        ctx.Items(cacheKey) = chosen
-        Return chosen
+            Return System.IO.File.Exists(candidate)
+        Catch
+            Return False
+        End Try
+    End Function
+
+    Private Function BuildProductImageUrl(ByVal fileName As String) As String
+        Dim url As String = ProductImageBaseUrl & EscapePathSegment(fileName)
+        Try
+            Return VirtualPathUtility.ToAbsolute(url)
+        Catch
+            Return url
+        End Try
     End Function
 
 

@@ -115,7 +115,7 @@
                             <table style="width:191px; height:191px; text-align:center; vertical-align:middle;">
                                 <tr>
                                     <td>
-                                       <a href="articolo.aspx?id=<%# Eval("id") %>"><img border="0" width="190px" src='<%# "Public/Foto/_" & Eval("Img1") %>' /></a>
+                                       <a href="articolo.aspx?id=<%# Eval("id") %>"><img border="0" width="190px" src='<%# ThemeManager.ProductThumbnailImageUrl(Eval("Img1")) %>' /></a>
                                     </td>
                                 </tr>
                             </table>
@@ -205,5 +205,4 @@
         SelectCommand="SELECT * FROM [1_pubblico]"></asp:SqlDataSource>    
     
 </asp:Content>
-
 

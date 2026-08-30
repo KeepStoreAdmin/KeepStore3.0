@@ -5,27 +5,7 @@ Option Strict On
 Partial Class articolix
 
     Public Function checkImg(img1 As Object) As String
-        Dim s As String = ""
-        If img1 IsNot Nothing Then
-            s = img1.ToString().Trim()
-        End If
-
-        If String.IsNullOrWhiteSpace(s) Then
-            Return "~/Public/images/nofoto.gif"
-        End If
-
-        ' Se è già un URL assoluto, lo lascio invariato
-        If s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse s.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
-            Return s
-        End If
-
-        ' Se è già un path assoluto/virtuale, lo lascio invariato
-        If s.StartsWith("~/", StringComparison.Ordinal) OrElse s.StartsWith("/", StringComparison.Ordinal) Then
-            Return s
-        End If
-
-        ' Default: cartella immagini articolo
-        Return "~/Public/assets/images/articoli/" & s
+        Return ThemeManager.ProductImageUrl(img1)
     End Function
 
     Public Function sotto_stringa(val As Object) As String

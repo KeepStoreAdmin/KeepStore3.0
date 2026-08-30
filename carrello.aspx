@@ -10,36 +10,6 @@
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/checkout-ui.js") %>" defer></script>
 
-
-<script type="text/javascript">
-        (function(){
-            function normalizeCartImage(img){
-                if(!img) return;
-                var original = img.getAttribute("src") || "";
-                if(!original) return;
-                var filename = original.split("?")[0].split("#")[0].split("/").pop();
-                if(!filename) return;
-                var clean = filename.replace(/^_+/, "");
-                var low = "/Public/assets/images/articoli/_" + clean;
-                var normal = "/Public/assets/images/articoli/" + clean;
-                var step = 0;
-                img.onerror = function(){
-                    step++;
-                    if(step === 1){ img.src = normal; img.setAttribute("data-src", normal); return; }
-                    img.onerror = null;
-                    img.src = original;
-                };
-                img.setAttribute("data-src", low);
-                img.src = low;
-            }
-            window.ksNormalizeCartProductImages = function(){
-                document.querySelectorAll('.tf-cart-item_product img, .cart-info img').forEach(normalizeCartImage);
-            };
-            document.addEventListener('DOMContentLoaded', window.ksNormalizeCartProductImages);
-        })();
-    </script>
-
-
 </asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
 

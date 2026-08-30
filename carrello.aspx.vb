@@ -398,11 +398,7 @@ Protected Function controllo_img(ByVal temp As Object) As String
 End Function
 
 Protected Function checkImg(ByVal imgname As Object) As String
-    Dim s As String = If(imgname Is Nothing OrElse imgname Is DBNull.Value, "", imgname.ToString())
-    If Not String.IsNullOrEmpty(s) Then
-        Return "public/foto/_" & s
-    End If
-    Return "Public/Foto/img_non_disponibile.png"
+    Return ThemeManager.ProductThumbnailImageUrl(imgname)
 End Function
 
 Private Function CartRecommendationTitle(ByVal row As DataRow) As String

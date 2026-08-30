@@ -1058,13 +1058,7 @@ End Function
     End Function
 
     Protected Function checkImg(ByVal imgname As String) As String
-        ' Fallback immagine (coerente con struttura progetto /Public/Foto)
-        If String.IsNullOrWhiteSpace(imgname) Then
-            Return "Public/Foto/img_non_disponibile.png"
-        End If
-
-        ' Questa pagina storicamente usa immagini prefissate con underscore
-        Return "Public/Foto/_" & imgname.Trim()
+        Return ThemeManager.ProductThumbnailImageUrl(imgname)
     End Function
 
     Protected Function sotto_stringa(ByVal temp As String) As String

@@ -1784,30 +1784,15 @@ Partial Public Class _Default
     End Function
 
     Protected Function ProductImageThumb(ByVal value As Object) As String
-        Dim fileName As String = Convert.ToString(value).Trim()
-        If String.IsNullOrWhiteSpace(fileName) Then Return ProductImagePlaceholder()
-        fileName = fileName.Replace("\", "/")
-        fileName = Path.GetFileName(fileName)
-        If fileName.StartsWith("_", StringComparison.OrdinalIgnoreCase) Then
-            Return "/Public/assets/images/articoli/" & fileName
-        End If
-        Dim thumb As String = "/Public/assets/images/articoli/_" & fileName
-        If VirtualPathExists(thumb) Then
-            Return thumb
-        End If
-        Return "/Public/assets/images/articoli/" & fileName
+        Return ThemeManager.ProductThumbnailImageUrl(value)
     End Function
 
     Protected Function ProductImageFull(ByVal value As Object) As String
-        Dim fileName As String = Convert.ToString(value).Trim()
-        If String.IsNullOrWhiteSpace(fileName) Then Return ProductImagePlaceholder()
-        fileName = fileName.Replace("\", "/")
-        fileName = Path.GetFileName(fileName)
-        Return "/Public/assets/images/articoli/" & fileName
+        Return ThemeManager.ProductImageUrl(value)
     End Function
 
     Private Function ProductImagePlaceholder() As String
-        Return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='640' viewBox='0 0 640 640'%3E%3Crect width='640' height='640' rx='28' fill='%23f4f6f8'/%3E%3Crect x='138' y='166' width='364' height='278' rx='18' fill='%23ffffff' stroke='%23d8e0ea' stroke-width='10'/%3E%3Cpath d='M182 390l95-100 70 68 50-45 75 77z' fill='%23dbeafe'/%3E%3Ccircle cx='430' cy='235' r='40' fill='%23bfdbfe'/%3E%3C/svg%3E"
+        Return ThemeManager.PlaceholderProductImageUrl()
     End Function
 
     Private Function ResolveBrandImage(ByVal value As Object) As String

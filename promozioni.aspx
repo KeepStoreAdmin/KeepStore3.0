@@ -100,12 +100,14 @@
     
     <asp:GridView ID="GridView1" runat="server" AutoGenerateColumns="False" DataKeyNames="id" Width="100%" DataSourceID="sdsArticoli" AllowPaging="True" AllowSorting="True" Font-Size="8pt" GridLines="None" CellPadding="3">
         <Columns>
-            <asp:ImageField DataAlternateTextField="Descrizione1" DataImageUrlField="img1" DataImageUrlFormatString="~/Public/assets/images/articoli/{0}"
-                HeaderText="Ordina &gt;&gt;" NullImageUrl="~/Public/assets/keepstore/images/img/placeholder.svg">
+            <asp:TemplateField HeaderText="Ordina &gt;&gt;">
+                <ItemTemplate>
+                    <asp:Image ID="imgProdotto" runat="server" AlternateText='<%# Convert.ToString(Eval("Descrizione1")) %>' ImageUrl='<%# ThemeManager.ProductImageUrl(Eval("img1")) %>' />
+                </ItemTemplate>
                 <HeaderStyle ForeColor="#E12825" />
                 <ItemStyle Height="60px" HorizontalAlign="Center" VerticalAlign="Middle"
                     Width="80px" />
-            </asp:ImageField>
+            </asp:TemplateField>
             <asp:TemplateField HeaderText="[Descrizione]" SortExpression="Descrizione1">
                 <ItemTemplate>
                     <asp:HyperLink ID="HyperLink5" ToolTip="Scheda Prodotto" runat="server" NavigateUrl='<%# "~/articolo.aspx?id="& Eval("id") %>' >

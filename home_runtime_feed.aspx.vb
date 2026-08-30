@@ -376,13 +376,7 @@ Partial Public Class home_runtime_feed
     End Function
 
     Private Function NormalizeArticleImage(ByVal raw As Object) As String
-        Dim value As String = SafeString(raw).Replace("\", "/")
-        If String.IsNullOrWhiteSpace(value) Then Return String.Empty
-        If value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse value.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse value.StartsWith("//", StringComparison.OrdinalIgnoreCase) Then Return value
-        If value.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then value = ResolveUrl(value)
-        Dim fileName As String = IO.Path.GetFileName(value)
-        If String.IsNullOrWhiteSpace(fileName) Then Return String.Empty
-        Return ResolveUrl("~/Public/assets/images/articoli/" & fileName)
+        Return ThemeManager.ProductImageUrl(raw)
     End Function
 
     Private Function CleanText(ByVal raw As Object) As String

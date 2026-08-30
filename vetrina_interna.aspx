@@ -76,7 +76,7 @@
 			        
 			        <div style="width:100%; height:70%; background-color:white; position:relative;">
 			                <!-- Immagini Prodotto -->
-			                <img alt="" src='<%# "Public/Foto/" & Eval("img1") %>' style="max-height:90%; max-width:100%; position:absolute; top:10px; left:20px;" />    
+			                <img alt="" src='<%# ThemeManager.ProductImageUrl(Eval("img1")) %>' style="max-height:90%; max-width:100%; position:absolute; top:10px; left:20px;" />
 			                
 			                <!-- Immagini Bollini Promo -->
 			                <img src='<%# "Public/Bollini/" & Eval("path") %>' alt="" style="height:60%; max-width:100%; position:absolute; top:10px; right:100px;" /> 

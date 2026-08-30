@@ -2381,32 +2381,11 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     ' *** GESTIONE IMMAGINI PRODOTTO ***
-    ' Usa la cartella pubblica ~/Public/images/articoli/ e la fallback ~/Public/images/nofoto.gif
+    ' Delega al resolver centrale per immagini prodotto e placeholder.
     Public Function checkImg(ParamArray args() As Object) As String
-        Dim fileName As String = ""
-
-        If args IsNot Nothing AndAlso args.Length > 0 AndAlso
-           args(0) IsNot Nothing AndAlso Not Convert.IsDBNull(args(0)) Then
-
-            fileName = Convert.ToString(args(0)).Trim()
-        End If
-
-        ' Nessun valore: uso la nofoto
-        If String.IsNullOrEmpty(fileName) Then
-            Return ThemeManager.PlaceholderProductImageUrl()
-        End If
-
-        ' Se è già un path completo, non lo tocchiamo
-        If fileName.StartsWith("~") OrElse fileName.StartsWith("/") Then
-            Dim resolvedFileName As String = IO.Path.GetFileName(fileName.Replace("\", "/"))
-            If String.IsNullOrWhiteSpace(resolvedFileName) Then Return ThemeManager.PlaceholderProductImageUrl()
-            Return "~/Public/assets/images/articoli/" & resolvedFileName
-        End If
-
-        ' Nome file "nudo": lo mettiamo nella cartella pubblica articoli
-        Dim finalFileName As String = IO.Path.GetFileName(fileName.Replace("\", "/"))
-        If String.IsNullOrWhiteSpace(finalFileName) Then Return ThemeManager.PlaceholderProductImageUrl()
-        Return "~/Public/assets/images/articoli/" & finalFileName
+        Dim value As Object = Nothing
+        If args IsNot Nothing AndAlso args.Length > 0 Then value = args(0)
+        Return ThemeManager.ProductImageUrl(value)
     End Function
 
     ' Lista sicura di ID da QueryString (mr / tp / gr / sg)

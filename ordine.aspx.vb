@@ -1767,115 +1767,13 @@ End If
         End If
 
         For Each rawFileName As String In rawFileNames
-            Dim fileName As String = SafeProductImageFileName(rawFileName)
-            If String.IsNullOrWhiteSpace(fileName) Then
-                Continue For
-            End If
-
-            Dim resolvedFileName As String = ResolveExistingProductImageFileName(fileName)
-            If Not String.IsNullOrWhiteSpace(resolvedFileName) Then
-                Return BuildSiteUrl("/Public/assets/images/articoli/" & EncodeProductImageFileName(resolvedFileName))
-            End If
+            Dim resolved As String = ThemeManager.ProductThumbnailImageUrl(rawFileName)
+            If String.Equals(resolved, ThemeManager.PlaceholderProductImageUrl(), StringComparison.OrdinalIgnoreCase) Then Continue For
+            If resolved.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse resolved.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then Return resolved
+            Return BuildSiteUrl(resolved)
         Next
 
         Return ""
-    End Function
-
-    Private Function ResolveExistingProductImageFileName(ByVal fileName As String) As String
-        Dim candidateFileNames As New List(Of String)()
-        AddImageCandidate(candidateFileNames, If(fileName.StartsWith("_", StringComparison.Ordinal), fileName, "_" & fileName))
-        AddImageCandidate(candidateFileNames, fileName)
-        If fileName.StartsWith("_", StringComparison.Ordinal) AndAlso fileName.Length > 1 Then
-            AddImageCandidate(candidateFileNames, fileName.Substring(1))
-        End If
-
-        For Each candidateFileName As String In candidateFileNames
-            Dim exactPath As String = Server.MapPath("~/Public/assets/images/articoli/" & candidateFileName)
-            If File.Exists(exactPath) Then
-                Return candidateFileName
-            End If
-
-            Dim matchedFileName As String = FindProductImageFileNameCaseInsensitive(candidateFileName)
-            If Not String.IsNullOrWhiteSpace(matchedFileName) Then
-                Return matchedFileName
-            End If
-        Next
-
-        Return ""
-    End Function
-
-    Private Function FindProductImageFileNameCaseInsensitive(ByVal fileName As String) As String
-        Try
-            Dim productImageRoot As String = Server.MapPath("~/Public/assets/images/articoli/")
-            If Not Directory.Exists(productImageRoot) Then
-                Return ""
-            End If
-
-            For Each imagePath As String In Directory.EnumerateFiles(productImageRoot)
-                Dim existingFileName As String = Path.GetFileName(imagePath)
-                If String.Equals(existingFileName, fileName, StringComparison.OrdinalIgnoreCase) Then
-                    Return existingFileName
-                End If
-            Next
-        Catch
-        End Try
-
-        Return ""
-    End Function
-
-    Private Function SafeProductImageFileName(ByVal rawFileName As String) As String
-        If String.IsNullOrWhiteSpace(rawFileName) Then
-            Return ""
-        End If
-
-        Dim raw As String = rawFileName.Trim()
-        Dim lowered As String = raw.ToLowerInvariant()
-        If lowered.StartsWith("http://") OrElse lowered.StartsWith("https://") OrElse lowered.StartsWith("//") OrElse lowered.StartsWith("data:") Then
-            Return ""
-        End If
-        If lowered.Contains("../") OrElse lowered.Contains("..\") OrElse lowered.Contains("%2f") OrElse lowered.Contains("%5c") OrElse lowered.Contains("javascript:") Then
-            Return ""
-        End If
-        If raw.IndexOfAny(New Char() {":"c, "?"c, "#"c, "&"c}) >= 0 Then
-            Return ""
-        End If
-
-        Dim decoded As String = raw
-        Try
-            Dim decodedValue As String = HttpUtility.UrlDecode(raw)
-            If Not String.IsNullOrWhiteSpace(decodedValue) Then
-                decoded = decodedValue
-            End If
-        Catch
-        End Try
-
-        decoded = decoded.Replace("\"c, "/"c)
-        Dim decodedLowered As String = decoded.ToLowerInvariant()
-        If decodedLowered.Contains("../") OrElse decodedLowered.Contains("..\") OrElse decodedLowered.StartsWith("/") OrElse decodedLowered.StartsWith("\\") Then
-            Return ""
-        End If
-
-        Dim fileName As String = Path.GetFileName(decoded)
-        If String.IsNullOrWhiteSpace(fileName) Then
-            Return ""
-        End If
-
-        Dim extension As String = Path.GetExtension(fileName).ToLowerInvariant()
-        If extension <> ".jpg" AndAlso extension <> ".jpeg" AndAlso extension <> ".png" AndAlso extension <> ".gif" Then
-            Return ""
-        End If
-
-        For Each c As Char In fileName
-            If Char.IsControl(c) OrElse c = "/"c OrElse c = "\"c OrElse c = ":"c OrElse c = "?"c OrElse c = "#"c OrElse c = "&"c OrElse c = "<"c OrElse c = ">"c OrElse c = """"c OrElse c = ChrW(39) Then
-                Return ""
-            End If
-        Next
-
-        Return fileName
-    End Function
-
-    Private Function EncodeProductImageFileName(ByVal fileName As String) As String
-        Return Uri.EscapeDataString(fileName)
     End Function
 
     Private Function FormatQuantity(ByVal value As String) As String
