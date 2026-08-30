@@ -116,7 +116,7 @@ Problemi affrontati e risolti:
 
 Chiusura progressiva catalog parity audit / `1A` / `1B`:
 
-- `CATALOG-ONSUS-PARITY-AUDIT-1`: COMPLETATO / READ-ONLY, esito operativo E. La E non indica audit fallito: l'audit e completo e utile, non ha modificato file e ha individuato P0 reali che hanno interrotto la parity puramente visuale. P0 originari: contaminazione dello stato catalogo da Session (`st`, `ct`, `q`), paging non deterministico/pagina 2 instabile e immagini prodotto 404. I primi due sono chiusi da `1A`; le immagini restano APERTE / P0.
+- `CATALOG-ONSUS-PARITY-AUDIT-1`: COMPLETATO / READ-ONLY, esito operativo E. La E non indica audit fallito: l'audit e completo e utile, non ha modificato file e ha individuato P0 reali che hanno interrotto la parity puramente visuale. P0 originari: contaminazione dello stato catalogo da Session (`st`, `ct`, `q`), paging non deterministico/pagina 2 instabile e immagini prodotto 404. Stato e paging sono chiusi da `1A`; immagini prodotto 404 sono chiuse da `1C`: tutti e tre i P0 risultano chiusi.
 - `CATALOG-ONSUS-PARITY-1A`: CHIUSO / A sul branch `task/catalog-onsus-parity-1a`, commit `1acbba90a4e9973da695ec08a80840fd113a90fa` (`fix: stabilize catalog request state and paging`), runtime limitato a `articoli.aspx.vb`. QueryString e la source of truth dello stato catalogo; Session e solo mirror di compatibilita della request corrente. Rimossi i fallback stale di `st`, `ct`, `q` e `pg`: `q=hp` non eredita settore/categoria, una request senza `q` non eredita ricerche precedenti, `st/ct` e combinazioni esplicite `q+st` restano valide.
 - Paging `1A`: `pg` assente/invalido porta a pagina 1; `pg=N` positivo porta a N; nessun recupero pagina da Session. Root cause: la modifica programmatica di `DataPager.PageSize` attivava `PagePropertiesChanging` con indice zero e perdeva `pg`. Il guard `catalogPagerSettingsApplying` protegge il lifecycle. QA A: pagina 2 diversa dalla 1, refresh/back/forward stabili, filtri e sort coerenti con `pg`.
 - Page-size `1A`: whitelist `12`, `24`, `48`, `96`; valori Session legacy come `15` normalizzati a `12`; `Drop_Righe` e `DataPager.PageSize` coerenti; cambio page-size azzera a pagina 1. Codex A, smoke Germano `SMOKE UTENTE CATALOG-ONSUS-PARITY-1A: A`, HTTP 200, build/precompile A, nessuna modifica DB/schema/SP.
@@ -127,8 +127,22 @@ Chiusura progressiva catalog parity audit / `1A` / `1B`:
 - `Mostra` conserva il backend server-side `12/24/48/96`, senza introdurre il valore demo `50`. `Ordina` conserva i value `Consigliati`, `P_basso`, `P_alto`, `P_offerta`, `P_disponibilita`, `P_recenti`, `P_popolarita`, `P_codice`, `P_descrizione`; cambia solo la UI.
 - Result range ONSUS-like senza query DB aggiuntive: `1-12 di 539 risultati per "hp"` e `13-24 di 539 risultati per "hp"`; query output-encoded. QA reale: desktop `1365x900` A (Filtri nascosto, quattro viste, Mostra/Ordina, nessun overflow), tablet `820x900` A (Filtri visibile, wrap coerente), mobile `390x844` A (controlli touch, nessun overflow/accavallamento).
 - Manifest `1B`: modificati `articoli.aspx`, `articoli.aspx.vb`, `Public/assets/keepstore/css/catalog-ui.css`, `Public/assets/keepstore/js/catalog-product-flow.js`; aggiunti 0, eliminati 0; cache-buster `20260829-onsus-toolbar1b`.
-- P0 immagini: APERTO. Prossimo runtime ufficiale `CATALOG-ONSUS-PARITY-1C-IMAGE-PATH-404`, per distinguere path DB, file fisico, mapping `/Public/assets/images/articoli/`, deploy asset, `ThemeManager.ProductImageUrl` e uso appropriato del placeholder, senza anticipare la soluzione. Le directory non tracciate `Public/assets/images/articoli/` e `Public/assets/images/settori/` non vanno committate automaticamente e da sole non provano la root cause.
+- P0 immagini: CHIUSO / A da `CATALOG-ONSUS-PARITY-1C-IMAGE-PATH-404`, branch `task/catalog-onsus-parity-1c-image-path-404`, commit `817966edc417c907a79a20f22f9cf6f84d4a17f6` (`fix: centralize product image resolution`) e polish `9a6e5b1babc836adb33cd43f930a112cd6e77103` (`fix: polish missing product image placeholder`), merge fast-forward `--ff-only` e smoke Germano A. Le directory non tracciate `Public/assets/images/articoli/` e `Public/assets/images/settori/` non vanno committate automaticamente.
 - Gap P1/P2 aperti: Marche oltre 7/load-more, Settori/Categorie limitati o troncati, active filters server + JS legacy, reset mobile contesto `st/ct`, Price facet, Deals, Condition/Ricondizionato, Reviews solo con fonte reale, performance/N+1 promo, positioning Recently Viewed, Compare empty-state e ulteriori componenti commerciali/parity ONSUS.
+
+### Chiusura immagini prodotto catalogo e prossimo finding PDP
+
+- I tre P0 originari di `CATALOG-ONSUS-PARITY-AUDIT-1` sono chiusi: contaminazione stato request/Session e paging pagina 2 da `1A`; product-image 404 da `1C`. Questa chiusura non dichiara completa `articoli.aspx` e non equivale alla full parity ONSUS: i gap P1/P2 e il responsive complessivo finale restano aperti.
+- Contratto permanente product-image: directory fisica/pubblica canonica `/Public/assets/images/articoli/`; unico resolver runtime in `ThemeManager` tramite `ProductImageUrl()`, `ProductThumbnailImageUrl()` e `PlaceholderProductImageUrl()`. Non reintrodurre resolver product-image verso `Public/foto`, `Public/Foto`, `Public/Images` o `/Public/images/nofoto.gif`.
+- `ProductImageUrl()` preserva URL HTTP/HTTPS/data; per valori locali normalizza in sicurezza al solo filename finale, respinge path traversal, verifica il file per-file nella directory canonica e URL-escapa il filename. File presente -> immagine reale; file assente -> placeholder, senza produrre deliberatamente URL locali rotti.
+- `ProductThumbnailImageUrl()` usa `_filename` solo se il thumbnail esiste; in caso contrario usa la full image reale e, se manca anche questa, il placeholder. Catalogo, HOME, PDP, suggest, home runtime feed, carrello, MiniCart, wishlist, documenti, vetrina, search legacy, `articolix` ed export/feed convergono sul resolver centrale. Il vecchio ripristino client `normalizeCartImage()` + `img.onerror` e stato rimosso: il server rende gia thumbnail, full o placeholder.
+- Placeholder canonico `/Public/assets/images/img/placeholder.svg`: SVG vettoriale responsive `800x800`, neutro/professionale, icona immagine, accento KeepStore `#D80027`, testo visibile `Immagine non disponibile`, Arial, accessibile, senza script o riferimenti remoti. Se il file fisico non e disponibile nel deployment, `ThemeManager` restituisce come last-resort un piccolo `data:image/svg+xml,...`; il data URI non sostituisce lo standard primario.
+- Contratto Settori separato, confermato da Germano: `/Public/assets/images/settori/`. Il resolver product-image non e un resolver generico Settori e non deve confondere `articoli` con `settori`.
+- QA `1C`: product-image 404 su `q=hp` pari a 0; HOME, catalogo, catalogo `pg=2`, PDP, carrello e placeholder HTTP 200; build/precompile .NET Framework 4.8, `git diff --check` e secret scan A; smoke Germano A con placeholder visibile e nessuna broken image nelle superfici testate. Manifest: commit `817966ed` con 23 file runtime modificati, 0 aggiunti/eliminati; polish `9a6e5b1b` su `ThemeManager.vb` e `placeholder.svg`; cumulativo 24 file unici modificati, 0 aggiunti, 0 eliminati.
+- Finding separato: `articolix.aspx` puo ancora restituire HTTP 500 per binding legacy `TCid`; non e causato dal resolver immagini, non e corretto da `1C` e resta backlog autonomo.
+- Prossimo runtime immediato: `PDP-TITLE-SHIPPING-INFO-1A`, scope limitato a `articolo.aspx` e al riferimento reale `Public/assets/keepstore/product-detail.html`. Il titolo alimentato da `Descrizione1` e oggi tagliato visivamente da `.product-info-name` con max-height/overflow/clamp a due righe: il DB non tronca il valore e il requisito e mostrare sempre il nome completo, senza clamp, ellipsis o altezza che nasconda testo.
+- Nella stessa micro-implementazione, `div.shipping-to` deve smettere di duplicare Codice/EAN/Marca e assumere semantica spedizione. Usare solo dati reali KeepStore, verificando nel runtime `SpedizioneGratis_Listini`, `SpedizioneGratis_Data_Inizio` e `SpedizioneGratis_Data_Fine` rispetto a listino e data correnti. Spedizione gratuita valida -> `Spedizione gratuita` ed eventuale scadenza significativa; altrimenti -> `Spese di spedizione calcolate nel carrello`, perche il costo puo dipendere da composizione ordine, importo, peso, vettore e condizioni runtime.
+- Non inventare corriere, costo, tempi, data consegna, destinazione, soglie o localita. Il campo `Peso` puo essere mostrato solo dopo aver verificato datasource, unita e semantica reali; non assumere kg. `PDP-TITLE-SHIPPING-INFO-1A` non e full PDP parity e `articolo.aspx` resta non completa. Side cart/offcanvas resta separato; AI/Gemini/LLMS resta priorita finale.
 
 Scaletta prioritaria ufficiale:
 
@@ -142,12 +156,13 @@ Scaletta prioritaria ufficiale:
    - `ARTICOLO-CART-QTY-IN-PDP-AUDIT-1` e `ARTICOLO-CART-QTY-IN-PDP-1A`: ASSORBITI / SODDISFATTI dai due task cart-state precedenti; non sono piu task futuri indipendenti.
    - `GLOBAL-TYPOGRAPHY-ONSUS-1B`: CHIUSO / A; normalizzazione scoped delle famiglie esplicite residue e polish clipping titoli HOME inclusi.
    - `GLOBAL-TYPOGRAPHY-ONSUS-1C`: NON NECESSARIO / NON CREATO dopo esito A di `1B`; resta solo riferimento storico.
+   - `PDP-TITLE-SHIPPING-INFO-1A`: PROSSIMO TASK RUNTIME UFFICIALE; titolo `Descrizione1` completo e `shipping-to` basato solo su dati spedizione reali KeepStore.
 2. Priorita 2 - Catalogo `articoli.aspx` full ONSUS parity.
    - `CATALOG-ONSUS-PARITY-AUDIT-1`: COMPLETATO / READ-ONLY, esito operativo E per P0 reali individuati.
    - `CATALOG-ONSUS-PARITY-1A`: CHIUSO / A; stato request e paging deterministici.
    - `CATALOG-ONSUS-PARITY-1B-TOOLBAR-CONTROLS`: CHIUSO / A; toolbar ONSUS-like e quattro viste.
-   - `CATALOG-ONSUS-PARITY-1C-IMAGE-PATH-404`: PROSSIMO TASK RUNTIME UFFICIALE; audit/fix root cause immagini prodotto 404.
-   - Dopo il P0 immagini, proseguire con i gap P1 secondo audit e priorita effettiva, senza dichiarare completa `articoli.aspx`.
+   - `CATALOG-ONSUS-PARITY-1C-IMAGE-PATH-404`: CHIUSO / A; resolver centrale, path canonico e placeholder fail-safe, smoke Germano A.
+   - Proseguire poi con i gap P1 secondo audit e priorita effettiva, senza dichiarare completa `articoli.aspx`.
 3. Priorita 3 - Side cart/offcanvas.
    - `SIDE-CART-OFFCANVAS-ONSUS-AUDIT-1`: audit read-only del flusso post add-to-cart.
    - `SIDE-CART-OFFCANVAS-ONSUS-1A`: implementazione solo dopo audit, preservando carrello/checkout.
@@ -319,10 +334,10 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento corrente dopo chiusura e merge fast-forward `CATALOG-ONSUS-PARITY-1B-TOOLBAR-CONTROLS`:
+Stato di riferimento corrente dopo chiusura e merge fast-forward `CATALOG-ONSUS-PARITY-1C-IMAGE-PATH-404`:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile locale/origin: `9903687f89f99073d29cc0598746e17511f7e546`
+- HEAD stabile locale/origin: `9a6e5b1babc836adb33cd43f930a112cd6e77103`
 - `main` invariato: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 - Commit PDP CTA: `b56277c7777345c70021e21270628b72a51a2f4c` e `3b0b2ac97564c497abd26d224e5e945834a2ec26`; merge `--ff-only`, smoke Germano finale A desktop/mobile.
 - Commit foundation typography: `d0f5f500f75da70aaf0c4a961762cf35f3db51ac` (`fix: establish Arial typography foundation`); runtime limitato a `Page.master` e `Public/assets/keepstore/css/theme-overrides.css`, smoke Germano A desktop/mobile.
@@ -330,6 +345,7 @@ Stato di riferimento corrente dopo chiusura e merge fast-forward `CATALOG-ONSUS-
 - Commit cart-state storefront: `68325c1879e2859628b59f297fe2a329b5aadb35` (`fix: unify storefront cart state`); merge fast-forward `--ff-only`, smoke Germano A desktop/mobile.
 - Commit catalog parity `1A`: `1acbba90a4e9973da695ec08a80840fd113a90fa` (`fix: stabilize catalog request state and paging`); stato URL e paging deterministici, smoke Germano A.
 - Commit catalog toolbar `1B`: `9903687f89f99073d29cc0598746e17511f7e546` (`fix: align catalog toolbar with Onsus controls`); merge fast-forward `--ff-only`, smoke Germano A.
+- Commit product-image `1C`: `817966edc417c907a79a20f22f9cf6f84d4a17f6` (`fix: centralize product image resolution`) e polish/stable `9a6e5b1babc836adb33cd43f930a112cd6e77103` (`fix: polish missing product image placeholder`); merge fast-forward `--ff-only`, smoke Germano A.
 - Merge PR #208 fix binding carrello `TCid`/`TCId`: `3cf52876ecec1033fdde3ab51d13a7c4a25390f9`
 - Merge PR #206 documentazione chiusura promo/carrello/IVA: `08a68f27ca7938a999cda6992ae0086cab7b3447`
 - Merge PR #204 promo/offerte legacy su scheda/catalogo/carrello: `daae01b0ab0cf2e52afc685c047ddd45779fad89`
