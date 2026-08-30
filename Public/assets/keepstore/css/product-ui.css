@@ -74,7 +74,9 @@
 
 .ks-product-page .ks-pdp-shipping-lines p {
   margin: 0;
-  overflow-wrap: anywhere;
+  hyphens: none;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .ks-product-page .product-info-price {
@@ -567,14 +569,32 @@
     flex-direction: column;
   }
 
+  .ks-product-page .tf-product-info-content,
+  .ks-product-page .tf-product-info-choose-option {
+    flex-basis: auto;
+    min-width: 0;
+    width: 100%;
+  }
+
   .ks-product-page .tf-product-info-choose-option {
     max-width: none;
     position: static;
-    width: 100%;
   }
 }
 
 @media (min-width: 1200px) {
+  .ks-product-page .tf-product-info-content {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .ks-product-page .tf-product-info-choose-option {
+    flex: 0 0 245px;
+    max-width: 245px;
+    min-width: 230px;
+    width: 245px;
+  }
+
   .ks-product-list-section .card-product:focus-within .list-product-btn li.ks-pdp-cart-action {
     opacity: 1;
     transform: translateX(0);

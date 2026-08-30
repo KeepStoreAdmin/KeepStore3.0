@@ -9,7 +9,7 @@
 
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/drift-basic.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/photoswipe.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20260830-pdptitleshipping1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20260830-pdplayoutpolish1" />
 
     <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
 </asp:Content>
@@ -58,7 +58,7 @@
             <div class="tf-main-product section-image-zoom">
                 <div class="container">
                     <div class="row">
-                        <div class="col-lg-6">
+                        <div class="col-lg-6 col-xl-5">
                             <div class="tf-product-media-wrap thumbs-default sticky-top">
                                 <div class="thumbs-slider">
                                     <div class="swiper tf-product-media-main" id="gallery-swiper-started">
@@ -106,7 +106,7 @@
                             </div>
                         </div>
 
-                        <div class="col-lg-6">
+                        <div class="col-lg-6 col-xl-7">
                             <div class="tf-product-info-wrap position-relative">
                                 <div class="tf-zoom-main"></div>
                                 <div class="tf-product-info-list other-image-zoom flex-xxl-nowrap">
