@@ -18,8 +18,15 @@
   line-height: 24px;
 }
 
+.ks-product-page .tf-product-info-wrap {
+  box-sizing: border-box;
+  margin-left: 0;
+  width: 100%;
+}
+
 .ks-product-page .tf-product-info-list {
   gap: 30px;
+  width: 100%;
 }
 
 .ks-product-page .tf-product-info-content {
@@ -589,6 +596,7 @@
   }
 
   .ks-product-page .tf-product-info-choose-option {
+    align-self: flex-start;
     flex: 0 0 245px;
     max-width: 245px;
     min-width: 230px;
