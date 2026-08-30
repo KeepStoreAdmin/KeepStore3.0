@@ -9,7 +9,7 @@
 
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
     <asp:Literal ID="litSeoHead" runat="server" EnableViewState="false" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20260829-onsus-toolbar1b" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20260830-mobilecatalog1" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>" />
 </asp:Content>
@@ -494,5 +494,5 @@
     <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>"></script>
     <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>?v=20260829-onsus-toolbar1b"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20260705-cartdelta"></script>
-    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260830-rvhover1"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260830-rvhovermobile1"></script>
 </asp:Content>

@@ -159,10 +159,10 @@
             '<img class="img-hover" src="' + attr(img) + '" alt="" aria-hidden="true">' +
           '</a>' +
           '<ul class="list-product-btn top-0 end-0">' +
-            '<li><a href="' + attr(deriveCartUrl(item)) + '" class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link" aria-label="Aggiungi al carrello"' + actionAttrs(item, img) + '><span class="icon icon-cart2"></span><span class="tooltip">Carrello</span></a></li>' +
-            '<li class="wishlist"><a href="' + attr(deriveWishlistUrl(item)) + '" class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-wishlist-link" aria-label="Aggiungi a wishlist"' + actionAttrs(item, img) + '><span class="icon icon-heart2"></span><span class="tooltip">Wishlist</span></a></li>' +
-            '<li><a href="#quickView" data-bs-toggle="modal" class="box-icon quickview btn-icon-action hover-tooltip tooltip-left js-ks-quickview" aria-label="Vista rapida"' + actionAttrs(item, img) + '><span class="icon icon-view"></span><span class="tooltip">Vista rapida</span></a></li>' +
-            '<li><a href="#compare" data-bs-toggle="offcanvas" data-bs-target="#compare" aria-controls="compare" class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-compare" aria-label="Confronta articolo"' + actionAttrs(item, img) + '><span class="icon icon-compare1"></span><span class="tooltip">Confronta</span></a></li>' +
+            '<li class="ks-rv-cart-action d-none d-lg-block"><a href="' + attr(deriveCartUrl(item)) + '" class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello"' + actionAttrs(item, img) + '><span class="icon icon-cart-2" aria-hidden="true"></span><span class="tooltip d-none d-lg-block">Acquista</span></a></li>' +
+            '<li class="wishlist"><a href="' + attr(deriveWishlistUrl(item)) + '" class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-wishlist-link" aria-label="Aggiungi a wishlist"' + actionAttrs(item, img) + '><span class="icon icon-heart2"></span><span class="tooltip d-none d-lg-block">Wishlist</span></a></li>' +
+            '<li><a href="#quickView" data-bs-toggle="modal" class="box-icon quickview btn-icon-action hover-tooltip tooltip-left js-ks-quickview" aria-label="Vista rapida"' + actionAttrs(item, img) + '><span class="icon icon-view"></span><span class="tooltip d-none d-lg-block">Vista rapida</span></a></li>' +
+            '<li><a href="#compare" data-bs-toggle="offcanvas" data-bs-target="#compare" aria-controls="compare" class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-compare" aria-label="Confronta articolo"' + actionAttrs(item, img) + '><span class="icon icon-compare1"></span><span class="tooltip d-none d-lg-block">Confronta</span></a></li>' +
           '</ul>' +
         '</div>' +
         '<div class="card-product-info">' +
@@ -171,6 +171,7 @@
           (sub ? '<p class="caption text-main-2 ks-card-brand-code">' + escapeHtml(sub) + '</p>' : '') +
           '<div class="price-wrap fw-medium mt-1"><span class="ks-price"><span class="ks-price-now">' + escapeHtml(item.price || 'Prezzo su richiesta') + '</span></span></div>' +
           (item.availability ? '<p class="caption text-main-2 mt-1">' + escapeHtml(item.availability) + '</p>' : '') +
+          '<a href="' + attr(deriveCartUrl(item)) + '" class="tf-btn text-white w-100 d-lg-none ks-mobile-card-buy-cta ks-home-buy-cta js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello"' + actionAttrs(item, img) + '><span class="ks-card-buy-cta__icon icon-cart-2" aria-hidden="true"></span><span class="ks-home-buy-cta__text">Acquista</span></a>' +
         '</div>' +
       '</div>' +
     '</div>';

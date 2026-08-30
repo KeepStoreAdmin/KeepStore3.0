@@ -9,7 +9,7 @@
 
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/drift-basic.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/photoswipe.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20260830-pdplayoutpolish2" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20260830-mobilepdp1" />
 
     <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
 </asp:Content>
@@ -209,7 +209,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="tf-product-info-choose-option sticky-top">
+                                    <div class="tf-product-info-choose-option ks-pdp-buybox-sticky">
                                         <div class="product-delivery">
                                             <div class="price-text fw-medium text-primary">
                                                 <asp:Literal ID="litPriceHtml2" runat="server" />
@@ -565,6 +565,11 @@
                                         </div>
                                     </div>
 
+                                    <a href='<%# Eval("AddToCartUrl") %>' class="tf-btn text-white w-100 ks-mobile-card-buy-cta js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
+                                        <span class="icon-cart-2" aria-hidden="true"></span>
+                                        <span>Acquista</span>
+                                    </a>
+
                                     <div class="card-product-btn">
                                         <a class="tf-btn btn-line w-100" href='<%# Eval("Url") %>'>
                                             <span>Vedi prodotto</span>
@@ -659,6 +664,11 @@
                                             <%# Eval("PrezzoHtml") %>
                                         </div>
                                     </div>
+
+                                    <a href='<%# Eval("AddToCartUrl") %>' class="tf-btn text-white w-100 ks-mobile-card-buy-cta js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
+                                        <span class="icon-cart-2" aria-hidden="true"></span>
+                                        <span>Acquista</span>
+                                    </a>
 
                                     <div class="card-product-btn">
                                         <a class="tf-btn btn-line w-100" href='<%# Eval("Url") %>'>
@@ -774,6 +784,10 @@
                                             <%# Eval("PrezzoHtml") %>
                                         </div>
                                     </div>
+                                    <a href='<%# Eval("AddToCartUrl") %>' class="tf-btn text-white w-100 ks-mobile-card-buy-cta js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
+                                        <span class="icon-cart-2" aria-hidden="true"></span>
+                                        <span>Acquista</span>
+                                    </a>
                                 </div>
                             </div>
                             </div>
@@ -845,6 +859,6 @@
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/product-ui.js") %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>"></script>
-    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260830-rvhover1"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260830-rvhovermobile1"></script>
     <asp:Literal ID="litRecentlyViewedScript" runat="server" EnableViewState="false" />
 </asp:Content>
