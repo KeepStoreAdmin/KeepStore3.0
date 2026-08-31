@@ -696,7 +696,7 @@
 #ksCatalogPage #gridLayout.layout-tabgrid-2 article.card-product .box-infor-detail,
 #ksCatalogPage #gridLayout.layout-tablist-1 article.card-product .box-infor-detail,
 #ksCatalogPage #gridLayout.layout-tablist-2 article.card-product .box-infor-detail {
-  display: grid !important;
+  display: flex !important;
 }
 
 #ksCatalogPage #gridLayout.layout-tabgrid-2 article.card-product .list-computer-memory,
@@ -829,7 +829,9 @@
 }
 
 #ksCatalogPage article.card-product .card-product-info {
-  display: grid;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   gap: 20px;
   min-width: 0;
   padding-top: 0;
@@ -916,7 +918,9 @@
 }
 
 #ksCatalogPage article.card-product .box-infor-detail {
-  display: grid;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   gap: 10px;
   padding-top: 0;
   margin-top: 0;
@@ -960,7 +964,7 @@
   flex-wrap: wrap;
   gap: 8px;
   width: 100%;
-  margin-top: 10px !important;
+  margin-top: auto !important;
   padding: 7px 8px;
   border: 1px solid var(--gray-4, #dcdcdc);
   border-radius: 4px;
@@ -1774,7 +1778,7 @@
 
   #ksCatalogPage #gridLayout.layout-tabgrid-2 article.card-product .box-infor-detail > .d-flex.align-items-center.gap-2.mt-2,
   #ksCatalogPage #gridLayout.layout-tablist-2 article.card-product .box-infor-detail > .d-flex.align-items-center.gap-2.mt-2 {
-    margin-top: 6px !important;
+    margin-top: auto !important;
     padding: 6px;
   }
 
