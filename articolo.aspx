@@ -9,7 +9,7 @@
 
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/drift-basic.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/photoswipe.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20260831-pdpmobileux1" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20260831-cardgeometry1" />
 
     <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
 </asp:Content>

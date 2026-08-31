@@ -840,7 +840,9 @@
 #ksCatalogPage article.card-product .box-title {
   display: grid;
   gap: 10px;
+  max-width: 100%;
   min-width: 0;
+  width: 100%;
 }
 
 #ksCatalogPage article.card-product .product-tag {
@@ -856,13 +858,24 @@
 #ksCatalogPage article.card-product .name-product {
   display: -webkit-box;
   overflow: hidden;
+  max-width: 100%;
   min-height: 44px;
   font-size: 14px;
   font-weight: 600;
   line-height: 22px;
   overflow-wrap: anywhere;
+  white-space: normal;
+  width: 100%;
+  word-break: normal;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+#ksCatalogPage article.card-product .ks-cart-awareness {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+  white-space: normal;
 }
 
 #ksCatalogPage article.card-product .price-wrap {
@@ -1696,6 +1709,11 @@
 }
 
 @media (max-width: 767.98px) {
+  #ksCatalogPage #gridLayout.layout-tabgrid-1,
+  #ksCatalogPage #gridLayout.layout-tabgrid-2 {
+    align-items: stretch;
+  }
+
   #ksCatalogPage #gridLayout.layout-tabgrid-1 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1714,6 +1732,11 @@
 
   #ksCatalogPage #gridLayout.layout-tablist-2 {
     row-gap: 14px;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product,
+  #ksCatalogPage #gridLayout.layout-tabgrid-2 article.card-product {
+    height: 100%;
   }
 
   #ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product,
