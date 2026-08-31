@@ -1447,17 +1447,6 @@
     0 10px 26px rgba(19, 140, 64, 0.055);
 }
 
-#ksCatalogPage .card-product.ks-card-in-cart::before,
-#ksCatalogPage article.card-product:has(.ks-cart-qty-input-present)::before {
-  content: "";
-  position: absolute;
-  inset: 8px auto 8px 0;
-  width: 3px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(19, 140, 64, 0.62), rgba(19, 140, 64, 0.18));
-  pointer-events: none;
-}
-
 #ksCatalogPage .ks-catalog-card-actions.ks-cart-qty-present,
 #ksCatalogPage article.card-product .box-infor-detail .d-flex.align-items-center.gap-2.mt-2.ks-cart-qty-present,
 #ksCatalogPage article.card-product .box-infor-detail .d-flex.align-items-center.gap-2.mt-2:has(.ks-cart-qty-input-present) {
