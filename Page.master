@@ -34,7 +34,7 @@
     <asp:Literal ID="litGlobalSeoHead" runat="server" EnableViewState="False" />
     <asp:PlaceHolder ID="phHeadDynamic" runat="server" />
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") & "?v=20260831-home-mobile-cta1" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") & "?v=20260831-cartfeedback1a" %>" />
 </head>
 
 <body id="PageBody" runat="server">
@@ -126,6 +126,36 @@
         </div>
 
         <ks:MiniCart ID="MiniCart1" runat="server" />
+
+        <asp:Panel ID="pnlCartFeedbackToast"
+                   runat="server"
+                   ClientIDMode="Static"
+                   CssClass="ks-cart-feedback-toast"
+                   Visible="false"
+                   role="status"
+                   aria-live="polite"
+                   aria-atomic="true"
+                   data-ks-cart-feedback="true">
+            <span class="ks-cart-feedback-toast__icon icon-check" aria-hidden="true"></span>
+            <div class="ks-cart-feedback-toast__content">
+                <strong class="ks-cart-feedback-toast__title">
+                    <asp:Literal ID="litCartFeedbackTitle" runat="server" Mode="Encode" />
+                </strong>
+                <p class="ks-cart-feedback-toast__message">
+                    <asp:Literal ID="litCartFeedbackMessage" runat="server" Mode="Encode" />
+                </p>
+                <p class="ks-cart-feedback-toast__state">
+                    <asp:Literal ID="litCartFeedbackState" runat="server" Mode="Encode" />
+                </p>
+                <a class="ks-cart-feedback-toast__link" href="/carrello.aspx">Vai al carrello</a>
+            </div>
+            <button class="ks-cart-feedback-toast__close"
+                    type="button"
+                    aria-label="Chiudi notifica"
+                    data-ks-cart-feedback-close>
+                <span class="icon-close" aria-hidden="true"></span>
+            </button>
+        </asp:Panel>
 
         <div class="modal fade modalCentered modal-def modal-quick-view" id="quickView" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
@@ -283,7 +313,7 @@
         <script src="<%= ThemeManager.Asset("js/drift.min.js") %>"></script>
         <script src="<%= ThemeManager.Asset("js/ks-page-flags.js") %>?v=20260520-checkout4"></script>
         <asp:Literal ID="litCartStateScript" runat="server" EnableViewState="false" />
-        <script src="<%= ThemeManager.Asset("js/keepstore-cart-state.js") %>?v=20260829-cartstate1a"></script>
+        <script src="<%= ThemeManager.Asset("js/keepstore-cart-state.js") %>?v=20260831-cartfeedback1a"></script>
         <asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
 
         <script type="text/javascript">

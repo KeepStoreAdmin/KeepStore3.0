@@ -2768,7 +2768,7 @@ Partial Class articolo
 
         If hasCartQuantity Then
             Dim quantityText As String = existingQty.ToString(CultureInfo.GetCultureInfo("it-IT"))
-            Dim label As String = "Nel carrello: " & quantityText
+            Dim label As String = "Nel carrello attivo: " & quantityText & " pz."
             litPdpCartQty.Text = quantityText
             pnlPdpCartState.ToolTip = label
             pnlPdpCartState.Attributes("aria-label") = label

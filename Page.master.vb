@@ -16,6 +16,12 @@ Partial Class PageMaster
     Implements ISeoMaster
 
     Private Const GenericLoginFailureMessage As String = "Accesso non riuscito. Verifica le credenziali o contatta il supporto."
+    Private Const CartFeedbackKindKey As String = "ks_cart_feedback_kind"
+    Private Const CartFeedbackProductNameKey As String = "ks_cart_feedback_product_name"
+    Private Const CartFeedbackArticleIdKey As String = "ks_cart_feedback_article_id"
+    Private Const CartFeedbackTcidKey As String = "ks_cart_feedback_tcid"
+    Private Const CartFeedbackCountKey As String = "ks_cart_feedback_count"
+    Private Const CartFeedbackCreatedUtcKey As String = "ks_cart_feedback_created_utc"
 
     Private Function IsTechnicalNavigationPath(ByVal absolutePath As String) As Boolean
         Dim path As String = Convert.ToString(absolutePath).ToLowerInvariant()
@@ -838,6 +844,7 @@ End Sub
 
         'Carrello (icone in header) → usa totale aggiornato direttamente da DB
         LeggiCarrello()
+        BindCartFeedback(CartStateSnapshotProvider.GetCurrent(HttpContext.Current))
 
         'Meta tag SEO
         Meta()
@@ -2023,6 +2030,90 @@ End Function
         Catch
             PublishEmptyCartProductState()
         End Try
+    End Sub
+
+    Private Sub BindCartFeedback(ByVal snapshot As CartStateSnapshotProvider)
+        Dim panel As Panel = FindCtrl(Of Panel)("pnlCartFeedbackToast")
+        If panel IsNot Nothing Then panel.Visible = False
+
+        Try
+            Dim kind As String = Convert.ToString(Session(CartFeedbackKindKey)).Trim().ToLowerInvariant()
+            If kind <> "single" AndAlso kind <> "multi" Then Return
+
+            Dim createdUtc As DateTime
+            If Not DateTime.TryParse(Convert.ToString(Session(CartFeedbackCreatedUtcKey)),
+                                     System.Globalization.CultureInfo.InvariantCulture,
+                                     System.Globalization.DateTimeStyles.RoundtripKind,
+                                     createdUtc) Then
+                Return
+            End If
+            createdUtc = createdUtc.ToUniversalTime()
+            Dim feedbackAge As TimeSpan = DateTime.UtcNow.Subtract(createdUtc)
+            If feedbackAge.TotalSeconds < -30 OrElse feedbackAge.TotalMinutes > 2 Then Return
+
+            Dim successfulCount As Integer = 0
+            Integer.TryParse(Convert.ToString(Session(CartFeedbackCountKey)), successfulCount)
+            If successfulCount <= 0 OrElse snapshot Is Nothing Then Return
+
+            Dim title As String
+            Dim message As String
+            Dim currentQuantity As Decimal = 0D
+
+            If kind = "single" Then
+                Dim articleId As Integer = 0
+                Dim tcId As Integer = -1
+                Integer.TryParse(Convert.ToString(Session(CartFeedbackArticleIdKey)), articleId)
+                Integer.TryParse(Convert.ToString(Session(CartFeedbackTcidKey)), tcId)
+                If articleId <= 0 Then Return
+
+                If tcId > 0 Then
+                    currentQuantity = snapshot.GetQuantity(articleId, tcId)
+                Else
+                    currentQuantity = snapshot.GetArticleQuantity(articleId)
+                End If
+                If currentQuantity <= 0D Then Return
+
+                Dim productName As String = Convert.ToString(Session(CartFeedbackProductNameKey)).Trim()
+                If productName = "" Then productName = "Il prodotto"
+                title = "Prodotto aggiunto al carrello"
+                message = productName & " è stato aggiunto al tuo carrello."
+            Else
+                For Each item As CartStateSnapshotItem In snapshot.Items
+                    If item IsNot Nothing AndAlso item.Quantity > 0D Then currentQuantity += item.Quantity
+                Next
+                If currentQuantity <= 0D Then Return
+
+                title = "Prodotti aggiunti al carrello"
+                message = successfulCount.ToString(System.Globalization.CultureInfo.GetCultureInfo("it-IT")) & " prodotti sono stati aggiunti al tuo carrello."
+            End If
+
+            Dim titleLiteral As Literal = FindCtrl(Of Literal)("litCartFeedbackTitle")
+            Dim messageLiteral As Literal = FindCtrl(Of Literal)("litCartFeedbackMessage")
+            Dim stateLiteral As Literal = FindCtrl(Of Literal)("litCartFeedbackState")
+            If panel Is Nothing OrElse titleLiteral Is Nothing OrElse messageLiteral Is Nothing OrElse stateLiteral Is Nothing Then Return
+
+            titleLiteral.Text = title
+            messageLiteral.Text = message
+            stateLiteral.Text = "Nel carrello attivo: " & FormatCartFeedbackQuantity(currentQuantity) & " pz."
+            panel.Visible = True
+        Finally
+            ClearCartFeedbackSession()
+        End Try
+    End Sub
+
+    Private Function FormatCartFeedbackQuantity(ByVal quantity As Decimal) As String
+        Dim culture As System.Globalization.CultureInfo = System.Globalization.CultureInfo.GetCultureInfo("it-IT")
+        If Decimal.Truncate(quantity) = quantity Then Return quantity.ToString("0", culture)
+        Return quantity.ToString("0.##", culture)
+    End Function
+
+    Private Sub ClearCartFeedbackSession()
+        Session.Remove(CartFeedbackKindKey)
+        Session.Remove(CartFeedbackProductNameKey)
+        Session.Remove(CartFeedbackArticleIdKey)
+        Session.Remove(CartFeedbackTcidKey)
+        Session.Remove(CartFeedbackCountKey)
+        Session.Remove(CartFeedbackCreatedUtcKey)
     End Sub
 
     ' Metodo pubblico comodo da usare dalle pagine figlie

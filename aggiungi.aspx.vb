@@ -8,6 +8,21 @@ Imports System.Web
 Partial Class aggiungi
     Inherits AntiCsrfPage
 
+    Private Const CartFeedbackKindKey As String = "ks_cart_feedback_kind"
+    Private Const CartFeedbackProductNameKey As String = "ks_cart_feedback_product_name"
+    Private Const CartFeedbackArticleIdKey As String = "ks_cart_feedback_article_id"
+    Private Const CartFeedbackTcidKey As String = "ks_cart_feedback_tcid"
+    Private Const CartFeedbackCountKey As String = "ks_cart_feedback_count"
+    Private Const CartFeedbackCreatedUtcKey As String = "ks_cart_feedback_created_utc"
+
+    Private NotInheritable Class SuccessfulCartAdd
+        Public Property ArticleId As Integer
+        Public Property TCId As Integer
+        Public Property ProductName As String
+    End Class
+
+    Private ReadOnly _successfulCartAdds As New List(Of SuccessfulCartAdd)()
+
 
 ' =========================
 ' HELPERS (safe redirect)
@@ -18,6 +33,109 @@ Private Sub SafeRedirect(ByVal url As String)
         Context.ApplicationInstance.CompleteRequest()
     Catch
     End Try
+End Sub
+
+Private Function ResolveSafeCartReturnUrl() As String
+    Dim normalized As String = NormalizeSafeCartReturnUrl(Convert.ToString(Session("Carrello_Pagina")))
+    If String.IsNullOrEmpty(normalized) Then normalized = "Default.aspx"
+
+    Session("Carrello_Pagina") = normalized
+    Return normalized
+End Function
+
+Private Function NormalizeSafeCartReturnUrl(ByVal rawValue As String) As String
+    Dim candidate As String = Convert.ToString(rawValue).Trim()
+    If candidate = "" Then Return ""
+    If candidate.IndexOfAny(New Char() {ControlChars.Cr, ControlChars.Lf, ControlChars.NullChar, "\"c}) >= 0 Then Return ""
+
+    Dim lowered As String = candidate.ToLowerInvariant()
+    If candidate.StartsWith("//", StringComparison.Ordinal) OrElse
+       candidate.StartsWith("\\", StringComparison.Ordinal) OrElse
+       lowered.StartsWith("javascript:", StringComparison.Ordinal) OrElse
+       lowered.StartsWith("data:", StringComparison.Ordinal) OrElse
+       lowered.Contains("%0d") OrElse lowered.Contains("%0a") OrElse
+       lowered.Contains("%00") OrElse lowered.Contains("%5c") Then
+        Return ""
+    End If
+
+    Dim resolved As Uri = Nothing
+    Dim absoluteCandidate As Uri = Nothing
+    If Uri.TryCreate(candidate, UriKind.Absolute, absoluteCandidate) Then
+        If absoluteCandidate.Scheme <> Uri.UriSchemeHttp AndAlso absoluteCandidate.Scheme <> Uri.UriSchemeHttps Then Return ""
+        If Request.Url Is Nothing OrElse Not String.Equals(absoluteCandidate.Host, Request.Url.Host, StringComparison.OrdinalIgnoreCase) Then Return ""
+        resolved = absoluteCandidate
+    Else
+        If Request.Url Is Nothing OrElse Not Uri.TryCreate(Request.Url, candidate, resolved) Then Return ""
+        If Not String.Equals(resolved.Host, Request.Url.Host, StringComparison.OrdinalIgnoreCase) Then Return ""
+    End If
+
+    Dim decodedPath As String
+    Try
+        decodedPath = Uri.UnescapeDataString(resolved.AbsolutePath)
+    Catch
+        Return ""
+    End Try
+    If decodedPath.IndexOf("\"c) >= 0 OrElse
+       decodedPath.IndexOfAny(New Char() {ControlChars.Cr, ControlChars.Lf, ControlChars.NullChar}) >= 0 OrElse
+       decodedPath.Contains("..") Then
+        Return ""
+    End If
+
+    Dim pathForWhitelist As String = resolved.AbsolutePath
+    Dim applicationPath As String = Convert.ToString(Request.ApplicationPath).TrimEnd("/"c)
+    If applicationPath <> "" AndAlso applicationPath <> "/" AndAlso
+       pathForWhitelist.StartsWith(applicationPath & "/", StringComparison.OrdinalIgnoreCase) Then
+        pathForWhitelist = pathForWhitelist.Substring(applicationPath.Length)
+    End If
+    If pathForWhitelist = "" Then pathForWhitelist = "/"
+
+    Dim allowedPaths As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {
+        "/",
+        "/default.aspx",
+        "/articoli.aspx",
+        "/articolo.aspx",
+        "/wishlist.aspx",
+        "/compare.aspx",
+        "/carrello.aspx"
+    }
+    If Not allowedPaths.Contains(pathForWhitelist) Then Return ""
+
+    Return resolved.PathAndQuery
+End Function
+
+Private Sub ClearCartFeedbackSession()
+    Session.Remove(CartFeedbackKindKey)
+    Session.Remove(CartFeedbackProductNameKey)
+    Session.Remove(CartFeedbackArticleIdKey)
+    Session.Remove(CartFeedbackTcidKey)
+    Session.Remove(CartFeedbackCountKey)
+    Session.Remove(CartFeedbackCreatedUtcKey)
+End Sub
+
+Private Sub RecordSuccessfulCartAdd(ByVal articleId As Integer, ByVal tcId As Integer, ByVal productName As String)
+    If articleId <= 0 Then Return
+
+    _successfulCartAdds.Add(New SuccessfulCartAdd With {
+        .ArticleId = articleId,
+        .TCId = If(tcId > 0, tcId, -1),
+        .ProductName = Convert.ToString(productName).Trim()
+    })
+End Sub
+
+Private Sub StoreCartFeedbackSession()
+    If _successfulCartAdds.Count <= 0 Then Return
+
+    Dim isSingle As Boolean = _successfulCartAdds.Count = 1
+    Dim firstItem As SuccessfulCartAdd = _successfulCartAdds(0)
+    Dim productName As String = firstItem.ProductName
+    If productName = "" Then productName = "Il prodotto"
+
+    Session(CartFeedbackKindKey) = If(isSingle, "single", "multi")
+    Session(CartFeedbackProductNameKey) = If(isSingle, productName, "")
+    Session(CartFeedbackArticleIdKey) = If(isSingle, firstItem.ArticleId, 0)
+    Session(CartFeedbackTcidKey) = If(isSingle, firstItem.TCId, -1)
+    Session(CartFeedbackCountKey) = _successfulCartAdds.Count
+    Session(CartFeedbackCreatedUtcKey) = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
 End Sub
 
 
@@ -48,6 +166,7 @@ End Sub
 
         If idParam Is Nothing Then idParam = ""
         idParam = idParam.Trim()
+        Dim isGrouponFlow As Boolean = String.Equals(idParam, "groupon", StringComparison.OrdinalIgnoreCase)
 
         ' 1) GESTIONE COUPON
         If String.Equals(idParam, "Coupon", StringComparison.OrdinalIgnoreCase) Then
@@ -61,7 +180,7 @@ End Sub
         End If
 
 ' 2b) GESTIONE GROUPON (coupon esterno)
-        If String.Equals(idParam, "groupon", StringComparison.OrdinalIgnoreCase) Then
+        If isGrouponFlow Then
     Dim idArt As String = Convert.ToString(Session("Groupon_idArticolo"))
     If String.IsNullOrEmpty(idArt) Then
         SafeRedirect("carrello_groupon.aspx")
@@ -101,14 +220,6 @@ End If
             End If
         End If
 
-
-        ' 3) Pagina di provenienza (non usata ora, la mantengo per compatibilità)
-        Dim Pagina As String = TryCast(Me.Session("Carrello_Pagina"), String)
-        If String.IsNullOrEmpty(Pagina) AndAlso Request.UrlReferrer IsNot Nothing Then
-            Pagina = Request.UrlReferrer.ToString()
-        End If
-
-        
 ' 3b) Se non c'è nessun articolo in sessione e non siamo in un flusso speciale, torno al carrello
 If String.IsNullOrEmpty(idParam) AndAlso Me.Session("Carrello_ArticoloId") Is Nothing Then
     SafeRedirect("carrello.aspx")
@@ -118,6 +229,7 @@ End If
 ' 4) LOGICA DI AGGIUNTA AL CARRELLO
 
         If Me.Session("Carrello_ArticoloId") IsNot Nothing Then
+            ClearCartFeedbackSession()
             Try
                 articoliIdGlobali = GestisciAggiuntaArticoli()
             Catch ex As Exception
@@ -127,6 +239,10 @@ End If
                 Catch
                 End Try
             End Try
+        End If
+
+        If Not isGrouponFlow AndAlso _successfulCartAdds.Count > 0 Then
+            StoreCartFeedbackSession()
         End If
 
         ' 5) Pulizia variabili di sessione carrello temporanee
@@ -142,9 +258,13 @@ End If
         End If
 
         
-    ' 7) Redirect server-side al carrello: questa è una pagina tecnica di inserimento,
-    ' non deve dipendere dal rendering client per completare il flusso.
-    SafeRedirect("carrello.aspx")
+    ' 7) I flussi speciali e gli inserimenti non verificati conservano il fail-safe storico.
+    If isGrouponFlow OrElse _successfulCartAdds.Count = 0 Then
+        SafeRedirect("carrello.aspx")
+        Return
+    End If
+
+    SafeRedirect(ResolveSafeCartReturnUrl())
 End Sub
 
 
@@ -397,18 +517,19 @@ End Sub
                 Dim visualCartOk As Boolean = VerifyVCarrelloRow(LoginId, SessionID, addId, addTc)
                 If Not rawCartOk Then
                     Try
-                        KeepStoreLog.Info("aggiungi.aspx", "Aggiunta multipla non verificata in carrello id=" & selezionamultipla_ID & " tcid=" & selezionamultipla_TCID & " rowId=" & cartRowId.ToString(CultureInfo.InvariantCulture) & " sessionId=" & SessionID & " nListino=" & NListino.ToString(CultureInfo.InvariantCulture), HttpContext.Current)
+                        KeepStoreLog.Info("aggiungi.aspx", "Aggiunta multipla non verificata in carrello id=" & selezionamultipla_ID & " tcid=" & selezionamultipla_TCID & " rowId=" & cartRowId.ToString(CultureInfo.InvariantCulture) & " nListino=" & NListino.ToString(CultureInfo.InvariantCulture), HttpContext.Current)
                     Catch
                     End Try
                     Continue For
                 End If
                 If Not visualCartOk Then
                     Try
-                        KeepStoreLog.Info("aggiungi.aspx", "Aggiunta multipla presente in carrello ma non ancora visibile in vcarrello id=" & selezionamultipla_ID & " tcid=" & selezionamultipla_TCID & " rowId=" & cartRowId.ToString(CultureInfo.InvariantCulture) & " sessionId=" & SessionID & " nListino=" & NListino.ToString(CultureInfo.InvariantCulture), HttpContext.Current)
+                        KeepStoreLog.Info("aggiungi.aspx", "Aggiunta multipla presente in carrello ma non ancora visibile in vcarrello id=" & selezionamultipla_ID & " tcid=" & selezionamultipla_TCID & " rowId=" & cartRowId.ToString(CultureInfo.InvariantCulture) & " nListino=" & NListino.ToString(CultureInfo.InvariantCulture), HttpContext.Current)
                     Catch
                     End Try
                 End If
 
+                RecordSuccessfulCartAdd(addId, addTc, Descrizione)
                 AggiornaVisite(CInt(selezionamultipla_ID))
 
                 If articoliIdGlobali <> String.Empty Then
@@ -504,18 +625,19 @@ End Sub
                 Dim visualCartOk As Boolean = VerifyVCarrelloRow(LoginId, SessionID, addId, addTc)
                 If Not rawCartOk Then
                     Try
-                        KeepStoreLog.Info("aggiungi.aspx", "Aggiunta singola non verificata in carrello id=" & ListaArticoli(i).ToString() & " tcid=" & tcidRiga & " rowId=" & cartRowId.ToString(CultureInfo.InvariantCulture) & " sessionId=" & SessionID & " nListino=" & NListino.ToString(CultureInfo.InvariantCulture), HttpContext.Current)
+                        KeepStoreLog.Info("aggiungi.aspx", "Aggiunta singola non verificata in carrello id=" & ListaArticoli(i).ToString() & " tcid=" & tcidRiga & " rowId=" & cartRowId.ToString(CultureInfo.InvariantCulture) & " nListino=" & NListino.ToString(CultureInfo.InvariantCulture), HttpContext.Current)
                     Catch
                     End Try
                     Continue For
                 End If
                 If Not visualCartOk Then
                     Try
-                        KeepStoreLog.Info("aggiungi.aspx", "Aggiunta singola presente in carrello ma non ancora visibile in vcarrello id=" & ListaArticoli(i).ToString() & " tcid=" & tcidRiga & " rowId=" & cartRowId.ToString(CultureInfo.InvariantCulture) & " sessionId=" & SessionID & " nListino=" & NListino.ToString(CultureInfo.InvariantCulture), HttpContext.Current)
+                        KeepStoreLog.Info("aggiungi.aspx", "Aggiunta singola presente in carrello ma non ancora visibile in vcarrello id=" & ListaArticoli(i).ToString() & " tcid=" & tcidRiga & " rowId=" & cartRowId.ToString(CultureInfo.InvariantCulture) & " nListino=" & NListino.ToString(CultureInfo.InvariantCulture), HttpContext.Current)
                     Catch
                     End Try
                 End If
 
+                RecordSuccessfulCartAdd(addId, addTc, Descrizione)
                 AggiornaVisite(CInt(ListaArticoli(i)))
                 If articoliIdGlobali <> String.Empty Then
                     articoliIdGlobali &= ","
@@ -852,7 +974,7 @@ End Sub
                                          ByVal sessionId As String,
                                          ByVal source As String)
         Try
-            KeepStoreLog.Info("aggiungi.aspx", "Price lookup failed: skip cart insert source=" & source & " id=" & articoloId & " tcid=" & tcId & " nListino=" & nListino.ToString(CultureInfo.InvariantCulture) & " loginId=" & loginId.ToString(CultureInfo.InvariantCulture) & " sessionId=" & sessionId, HttpContext.Current)
+            KeepStoreLog.Info("aggiungi.aspx", "Price lookup failed: skip cart insert source=" & source & " id=" & articoloId & " tcid=" & tcId & " nListino=" & nListino.ToString(CultureInfo.InvariantCulture) & " loginId=" & loginId.ToString(CultureInfo.InvariantCulture), HttpContext.Current)
         Catch
         End Try
     End Sub

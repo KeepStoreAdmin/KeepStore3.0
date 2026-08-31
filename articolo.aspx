@@ -260,8 +260,10 @@
                                                     <i class="icon-plus"></i>
                                                 </button>
                                             </div>
-                                            <asp:Panel ID="pnlPdpCartState" runat="server" CssClass="ks-pdp-cart-state" Visible="false" role="status" aria-live="polite">
-                                                Nel carrello: <strong><asp:Literal ID="litPdpCartQty" runat="server" Mode="Encode" /></strong>
+                                            <asp:Panel ID="pnlPdpCartState" runat="server" CssClass="ks-pdp-cart-state ks-cart-awareness" Visible="false" role="status" aria-live="polite">
+                                                <span class="ks-cart-awareness__icon icon-cart-2" aria-hidden="true"></span>
+                                                <span>Nel carrello attivo:</span>
+                                                <strong><asp:Literal ID="litPdpCartQty" runat="server" Mode="Encode" /> pz.</strong>
                                             </asp:Panel>
                                             <div class="small text-danger mt-1">
                                                 <asp:Literal ID="litQtyHelp" runat="server" />
@@ -269,7 +271,7 @@
                                         </div>
 
                                         <div class="product-box-btn">
-                                            <asp:LinkButton ID="btnAddToCart" runat="server" CssClass="tf-btn text-white" OnClick="btnAddToCart_Click" CausesValidation="false" aria-label="Acquista: aggiungi al carrello" ToolTip="Acquista: aggiungi al carrello">
+                                            <asp:LinkButton ID="btnAddToCart" runat="server" CssClass="tf-btn text-white js-ks-cart-context" OnClick="btnAddToCart_Click" CausesValidation="false" aria-label="Acquista: aggiungi al carrello" ToolTip="Acquista: aggiungi al carrello">
                                                 <span>Acquista</span>
                                                 <i class="icon-cart-2" aria-hidden="true"></i>
                                             </asp:LinkButton>
@@ -347,7 +349,7 @@
                                 </asp:PlaceHolder>
                                 <div class="box-total-btn">
                                     <p class="body-text-3 text-center">Totale selezione: <span class="text-primary"><asp:Literal ID="litBundleTotal" runat="server" /></span></p>
-                                    <asp:LinkButton ID="btnBundleAddToCart" runat="server" CssClass="tf-btn text-white" OnClick="btnBundleAddToCart_Click" CausesValidation="false" aria-label="Acquista i prodotti selezionati" ToolTip="Acquista i prodotti selezionati">
+                                    <asp:LinkButton ID="btnBundleAddToCart" runat="server" CssClass="tf-btn text-white js-ks-cart-context" OnClick="btnBundleAddToCart_Click" CausesValidation="false" aria-label="Acquista i prodotti selezionati" ToolTip="Acquista i prodotti selezionati">
                                         Acquista selezionati
                                         <i class="icon-cart-2" aria-hidden="true"></i>
                                     </asp:LinkButton>

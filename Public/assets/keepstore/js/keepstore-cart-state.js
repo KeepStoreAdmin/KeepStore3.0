@@ -97,30 +97,56 @@
     return String(Math.round(quantity * 100) / 100).replace('.', ',');
   }
 
-  function ensureBadge(target, item) {
-    if (!target || !item || target.querySelector('.ks-cart-state-badge')) return;
-    var label = 'Nel carrello: ' + formatQuantity(item.qty);
-    var badge = document.createElement('span');
-    badge.className = 'ks-cart-state-badge';
-    badge.textContent = label;
-    badge.setAttribute('title', label);
-    badge.setAttribute('aria-label', label);
-    target.insertBefore(badge, target.firstChild || null);
+  function directChildContaining(parent, node) {
+    var current = node;
+    while (current && current.parentNode !== parent) current = current.parentNode;
+    return current && current.parentNode === parent ? current : null;
+  }
+
+  function insertBeforeCardControls(target, awareness) {
+    var control = target.querySelector('.ks-card-buy-cta,.ks-mobile-card-buy-cta,.ks-home-buy-cta,.ks-qty,input[type="checkbox"]');
+    var directControl = control ? directChildContaining(target, control) : null;
+    if (directControl) {
+      target.insertBefore(awareness, directControl);
+      return;
+    }
+    target.appendChild(awareness);
+  }
+
+  function ensureAwareness(target, item) {
+    if (!target || !item || target.querySelector('.ks-cart-awareness')) return;
+    var label = 'Nel carrello attivo: ' + formatQuantity(item.qty) + ' pz.';
+    var awareness = document.createElement('span');
+    awareness.className = 'ks-cart-awareness ks-cart-awareness--generated';
+    awareness.setAttribute('title', label);
+    awareness.setAttribute('aria-label', label);
+
+    var icon = document.createElement('span');
+    icon.className = 'ks-cart-awareness__icon icon-cart-2';
+    icon.setAttribute('aria-hidden', 'true');
+
+    var text = document.createElement('span');
+    text.className = 'ks-cart-awareness__text';
+    text.textContent = label;
+
+    awareness.appendChild(icon);
+    awareness.appendChild(text);
+    insertBeforeCardControls(target, awareness);
   }
 
   function clearBadges() {
-    Array.prototype.slice.call(document.querySelectorAll('.ks-cart-state-badge,.ks-product-cart-state-badge')).forEach(function (badge) {
+    Array.prototype.slice.call(document.querySelectorAll('.ks-cart-awareness--generated,.ks-cart-state-badge,.ks-product-cart-state-badge')).forEach(function (badge) {
       if (badge && badge.parentNode) badge.parentNode.removeChild(badge);
     });
   }
 
   function decorateCards(items) {
     Array.prototype.slice.call(document.querySelectorAll('.card-product')).forEach(function (card) {
-      if (card.closest('#ksCatalogPage')) return;
       var product = productFromNode(card);
       var item = product ? findCartItem(items, product.id, product.tcid) : null;
       if (!item) return;
-      ensureBadge(card.querySelector('.card-product-wrapper') || card, item);
+      var target = card.querySelector('.box-infor-detail') || card.querySelector('.card-product-info') || card;
+      ensureAwareness(target, item);
     });
   }
 
@@ -129,7 +155,8 @@
       var product = productFromNode(card);
       var item = product ? findCartItem(items, product.id, product.tcid) : null;
       if (!item) return;
-      ensureBadge(card.querySelector('.image') || card, item);
+      var target = card.querySelector('.content .box-name') || card.querySelector('.content') || card;
+      ensureAwareness(target, item);
     });
   }
 
@@ -147,12 +174,90 @@
     window.setTimeout(decorate, 300);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', refreshBadges);
-  } else {
+  function dismissToast(toast) {
+    if (!toast || toast.classList.contains('is-dismissed')) return;
+    toast.classList.add('is-dismissed');
+    window.setTimeout(function () {
+      toast.hidden = true;
+    }, 220);
+  }
+
+  function initCartFeedbackToast() {
+    var toast = document.querySelector('[data-ks-cart-feedback]');
+    if (!toast) return;
+
+    var close = toast.querySelector('[data-ks-cart-feedback-close]');
+    if (close) {
+      close.addEventListener('click', function () {
+        dismissToast(toast);
+      });
+    }
+    window.setTimeout(function () {
+      dismissToast(toast);
+    }, 5800);
+  }
+
+  var scrollStorageKey = 'KeepStore:CartReturnScroll';
+
+  function currentPathAndQuery() {
+    return window.location.pathname + window.location.search;
+  }
+
+  function saveCartReturnScroll(event) {
+    if (event.button && event.button !== 0) return;
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    var trigger = event.target && event.target.closest ? event.target.closest('.js-ks-cart-link,.js-ks-cart-context') : null;
+    if (!trigger) return;
+
+    try {
+      window.sessionStorage.setItem(scrollStorageKey, JSON.stringify({
+        path: currentPathAndQuery(),
+        y: Math.max(0, Math.round(window.scrollY || window.pageYOffset || 0)),
+        created: Date.now()
+      }));
+    } catch (e) {}
+  }
+
+  function restoreCartReturnScroll() {
+    var stored = null;
+    try {
+      stored = window.sessionStorage.getItem(scrollStorageKey);
+      window.sessionStorage.removeItem(scrollStorageKey);
+    } catch (e) {
+      return;
+    }
+    if (!stored) return;
+
+    try {
+      var state = JSON.parse(stored);
+      var age = Date.now() - Number(state.created || 0);
+      var y = Number(state.y || 0);
+      if (state.path !== currentPathAndQuery() || age < 0 || age > 120000 || !isFinite(y) || y < 0) return;
+
+      window.setTimeout(function () {
+        window.requestAnimationFrame(function () {
+          window.scrollTo(0, y);
+        });
+      }, 60);
+    } catch (e) {}
+  }
+
+  function initialize() {
     refreshBadges();
+    initCartFeedbackToast();
+  }
+
+  document.addEventListener('click', saveCartReturnScroll, true);
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+  } else {
+    initialize();
   }
   window.addEventListener('pageshow', refreshBadges);
-  window.addEventListener('load', refreshBadges);
+  window.addEventListener('load', function () {
+    refreshBadges();
+    restoreCartReturnScroll();
+  });
   window.KeepStoreCartBadges = { refresh: refreshBadges };
 })();
