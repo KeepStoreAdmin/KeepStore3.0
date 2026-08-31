@@ -9,13 +9,13 @@
 
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/drift-basic.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/photoswipe.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20260830-mobilepdp1" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20260831-pdpmobileux1" />
 
     <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
 </asp:Content>
 
 <asp:Content ID="BreadcrumbContent1" ContentPlaceHolderID="BreadcrumbContent" runat="server">
-    <div class="tf-sp-1">
+    <div class="tf-sp-1 ks-pdp-breadcrumb">
         <div class="container">
             <ul class="breakcrumbs">
                 <li><a href="/">Home</a></li>

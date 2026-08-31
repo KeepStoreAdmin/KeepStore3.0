@@ -662,6 +662,33 @@
 }
 
 @media (max-width: 767.98px) {
+  .ks-pdp-breadcrumb .breakcrumbs {
+    align-items: center;
+    display: flex;
+    flex-wrap: nowrap;
+    min-width: 0;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .ks-pdp-breadcrumb .breakcrumbs > li {
+    flex: 0 0 auto;
+  }
+
+  .ks-pdp-breadcrumb .breakcrumbs > li:last-child {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .ks-pdp-breadcrumb .breakcrumbs > li:last-child > span {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .ks-product-page .product-info-price .new-price {
     font-size: 28px;
     line-height: 34px;
@@ -702,7 +729,46 @@
   }
 
   .ks-product-page .card-usually .image {
-    min-height: 76px;
+    aspect-ratio: 4 / 3;
+    min-height: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: none;
+  }
+
+  .ks-product-page .card-usually .image img {
+    padding: 4px;
+  }
+
+  .ks-product-list-section .card-product.style-img-border .card-product-wrapper {
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: #fff;
+  }
+
+  .ks-product-list-section .card-product-wrapper .product-img {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .ks-product-list-section .card-product-wrapper .product-img img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    padding: 4px;
+    object-fit: contain;
+    object-position: center;
   }
 
   .ks-product-list-section .card-product-info {
@@ -741,6 +807,10 @@
     outline-offset: 3px;
   }
 
+  .ks-product-list-section .card-product-btn {
+    display: none;
+  }
+
   .ks-availability-info::after {
     left: auto;
     right: 0;
@@ -748,6 +818,10 @@
 }
 
 @media (hover: none), (pointer: coarse) {
+  .ks-product-page .tab-usually .card-usually.hover-img:hover .img-style > img {
+    transform: none !important;
+  }
+
   .ks-product-page .hover-tooltip .tooltip,
   .ks-product-list-section .hover-tooltip .tooltip {
     display: none !important;
