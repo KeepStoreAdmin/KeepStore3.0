@@ -1701,3 +1701,132 @@
     margin-inline: auto;
   }
 }
+
+@media (max-width: 767.98px) {
+  #ksCatalogPage #gridLayout.layout-tabgrid-1 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #ksCatalogPage #gridLayout.layout-tabgrid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 8px;
+    row-gap: 16px;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tablist-1,
+  #ksCatalogPage #gridLayout.layout-tablist-2 {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 18px;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tablist-2 {
+    row-gap: 14px;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product,
+  #ksCatalogPage #gridLayout.layout-tabgrid-2 article.card-product,
+  #ksCatalogPage #gridLayout.layout-tablist-1 article.card-product,
+  #ksCatalogPage #gridLayout.layout-tablist-2 article.card-product {
+    max-width: none;
+    margin-inline: 0;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tabgrid-2 article.card-product {
+    gap: 12px;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tabgrid-2 article.card-product .card-product-wrapper {
+    aspect-ratio: 4 / 3;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tabgrid-2 article.card-product .card-product-info {
+    gap: 12px;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tabgrid-2 article.card-product .box-title,
+  #ksCatalogPage #gridLayout.layout-tablist-2 article.card-product .box-title {
+    gap: 6px;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tabgrid-2 article.card-product .product-tag,
+  #ksCatalogPage #gridLayout.layout-tablist-2 article.card-product .product-tag {
+    display: none;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tabgrid-2 article.card-product .list-computer-memory {
+    display: flex !important;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tabgrid-2 article.card-product .list-computer-memory li,
+  #ksCatalogPage #gridLayout.layout-tablist-2 article.card-product .list-computer-memory li {
+    padding: 2px 5px;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tabgrid-2 article.card-product .list-computer-memory li:nth-child(n + 2),
+  #ksCatalogPage #gridLayout.layout-tablist-2 article.card-product .list-computer-memory li:nth-child(n + 2) {
+    display: none;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tabgrid-2 article.card-product .box-infor-detail,
+  #ksCatalogPage #gridLayout.layout-tablist-2 article.card-product .box-infor-detail {
+    gap: 6px;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tabgrid-2 article.card-product .box-infor-detail > .d-flex.align-items-center.gap-2.mt-2,
+  #ksCatalogPage #gridLayout.layout-tablist-2 article.card-product .box-infor-detail > .d-flex.align-items-center.gap-2.mt-2 {
+    margin-top: 6px !important;
+    padding: 6px;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tablist-1 article.card-product.style-row,
+  #ksCatalogPage #gridLayout.layout-tablist-2 article.card-product.style-row {
+    align-items: flex-start;
+    flex-direction: row;
+    gap: 14px;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tablist-1 article.card-product.style-row .card-product-wrapper,
+  #ksCatalogPage #gridLayout.layout-tablist-2 article.card-product.style-row .card-product-wrapper {
+    align-self: flex-start;
+    flex: 0 0 38%;
+    width: 38%;
+    max-width: 180px;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tablist-1 article.card-product.style-row .card-product-info,
+  #ksCatalogPage #gridLayout.layout-tablist-2 article.card-product.style-row .card-product-info {
+    align-self: stretch;
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    gap: 12px;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tablist-2 article.card-product.style-row {
+    gap: 10px;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tablist-2 article.card-product.style-row .card-product-wrapper {
+    flex-basis: 30%;
+    width: 30%;
+    max-width: 132px;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tablist-2 article.card-product.style-row .card-product-info {
+    gap: 8px;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tablist-1 article.card-product .img-product,
+  #ksCatalogPage #gridLayout.layout-tablist-1 article.card-product .img-hover,
+  #ksCatalogPage #gridLayout.layout-tablist-2 article.card-product .img-product,
+  #ksCatalogPage #gridLayout.layout-tablist-2 article.card-product .img-hover {
+    object-fit: contain;
+    object-position: center;
+  }
+}
+
+@media (max-width: 374.98px) {
+  #ksCatalogPage #gridLayout.layout-tabgrid-1 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
