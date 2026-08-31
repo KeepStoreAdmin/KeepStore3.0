@@ -1709,6 +1709,39 @@ body.ks-page-home .ks-home-main .sw-dot-default {
   }
 }
 
+/* HOME product-card overlay action: keep the ONSUS icon-only control on mobile. */
+@media (max-width: 767.98px) {
+  body.ks-page-home .ks-home-main .ks-home-buy-cta:not(.ks-mobile-card-buy-cta),
+  body.ks-page-home .ks-home-deals .ks-deal-card .ks-home-buy-cta:not(.ks-mobile-card-buy-cta) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid rgba(45, 55, 66, .12);
+    border-radius: 50%;
+    background: #fff;
+    color: #2d3742;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, .12);
+  }
+
+  body.ks-page-home .ks-home-main .ks-home-buy-cta:not(.ks-mobile-card-buy-cta) .ks-home-buy-cta__text {
+    display: none;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  body.ks-page-home .ks-home-main .ks-home-buy-cta:not(.ks-mobile-card-buy-cta) .tooltip {
+    display: none !important;
+  }
+}
+
 /* KeepStore header catalog / ONSUS All Categories */
 @media (min-width: 1200px) {
   .ks-header-ui .ks-header-nav-shell { display: flex; align-items: center; gap: 28px; min-width: 0; }
