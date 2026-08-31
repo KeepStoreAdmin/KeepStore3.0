@@ -136,8 +136,10 @@
 .ks-product-page .tf-product-media-main .item img,
 .ks-product-page .tf-product-media-thumbs .item img,
 .ks-product-page .card-product-wrapper img,
+.ks-product-list-section .card-product-wrapper img,
 .ks-product-page .card-usually .image img {
   object-fit: contain;
+  object-position: center;
 }
 
 .ks-product-page .tf-product-media-main .item,
@@ -205,6 +207,24 @@
   background: #fff;
   font-size: 0;
   height: 100%;
+  width: 100%;
+}
+
+.ks-product-list-section .card-product-wrapper .product-img img {
+  display: block;
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: center;
+  width: 100%;
+}
+
+.ks-product-page .card-usually .image img {
+  display: block;
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: center;
   width: 100%;
 }
 

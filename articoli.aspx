@@ -9,7 +9,7 @@
 
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
     <asp:Literal ID="litSeoHead" runat="server" EnableViewState="false" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20260830-mobilecatalog1" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20260831-mediasort1" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>" />
 </asp:Content>
@@ -206,21 +206,43 @@
                                 <i class="icon-arrow-down" aria-hidden="true"></i>
                             </div>
 
-                            <div class="tf-control-sort type-sort-by tf-sort ks-toolbar-select">
-                                <i class="icon-sort" aria-hidden="true"></i>
-                                <span class="ks-toolbar-select-label" aria-hidden="true">Ordina:</span>
-                                <asp:DropDownList ID="Drop_Ordinamento" runat="server" CssClass="ks-toolbar-native-select" AutoPostBack="true" aria-label="Ordinamento prodotti">
-                                    <asp:ListItem Value="" Text="Consigliati"></asp:ListItem>
-                                    <asp:ListItem Value="P_basso" Text="Prezzo crescente"></asp:ListItem>
-                                    <asp:ListItem Value="P_alto" Text="Prezzo decrescente"></asp:ListItem>
-                                    <asp:ListItem Value="P_offerta" Text="Offerte"></asp:ListItem>
-                                    <asp:ListItem Value="P_disponibilita" Text="Disponibilita"></asp:ListItem>
-                                    <asp:ListItem Value="P_recenti" Text="Novita"></asp:ListItem>
-                                    <asp:ListItem Value="P_popolarita" Text="Popolarita"></asp:ListItem>
-                                    <asp:ListItem Value="P_codice" Text="Codice"></asp:ListItem>
-                                    <asp:ListItem Value="P_descrizione" Text="Nome"></asp:ListItem>
-                                </asp:DropDownList>
-                                <i class="icon-arrow-down" aria-hidden="true"></i>
+                            <div class="tf-control-sort type-sort-by ks-sort-control">
+                                <div class="tf-sort ks-toolbar-select ks-sort-native-control">
+                                    <i class="icon-sort" aria-hidden="true"></i>
+                                    <span class="ks-toolbar-select-label" aria-hidden="true">Ordina:</span>
+                                    <asp:DropDownList ID="Drop_Ordinamento" runat="server" CssClass="ks-toolbar-native-select" AutoPostBack="true" aria-label="Ordinamento prodotti">
+                                        <asp:ListItem Value="" Text="Consigliati"></asp:ListItem>
+                                        <asp:ListItem Value="P_basso" Text="Prezzo crescente"></asp:ListItem>
+                                        <asp:ListItem Value="P_alto" Text="Prezzo decrescente"></asp:ListItem>
+                                        <asp:ListItem Value="P_offerta" Text="Offerte"></asp:ListItem>
+                                        <asp:ListItem Value="P_disponibilita" Text="Disponibilita"></asp:ListItem>
+                                        <asp:ListItem Value="P_recenti" Text="Novita"></asp:ListItem>
+                                        <asp:ListItem Value="P_popolarita" Text="Popolarita"></asp:ListItem>
+                                        <asp:ListItem Value="P_codice" Text="Codice"></asp:ListItem>
+                                        <asp:ListItem Value="P_descrizione" Text="Nome"></asp:ListItem>
+                                    </asp:DropDownList>
+                                    <i class="icon-arrow-down" aria-hidden="true"></i>
+                                </div>
+
+                                <div class="tf-dropdown-sort tf-sort ks-sort-dropdown" data-ks-sort-dropdown>
+                                    <button type="button" class="btn-select ks-sort-trigger" aria-label="Ordina prodotti. Selezione attuale: Consigliati" aria-haspopup="listbox" aria-expanded="false" aria-controls="ksCatalogSortMenu">
+                                        <i class="ks-sort-trigger-icon icon-sort" aria-hidden="true"></i>
+                                        <span class="ks-sort-trigger-label" aria-hidden="true">Ordina:</span>
+                                        <span class="ks-sort-trigger-value">Consigliati</span>
+                                        <i class="icon-arrow-down ks-sort-trigger-arrow" aria-hidden="true"></i>
+                                    </button>
+                                    <div id="ksCatalogSortMenu" class="dropdown-menu ks-sort-menu" role="listbox" aria-label="Criterio di ordinamento">
+                                        <button type="button" class="ks-sort-option" role="option" aria-selected="true" data-ks-sort-value="" data-ks-sort-icon="icon-sort"><i class="icon-sort" aria-hidden="true"></i><span>Consigliati</span></button>
+                                        <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_basso" data-ks-sort-icon="icon-money-bag"><i class="icon-money-bag" aria-hidden="true"></i><span>Prezzo crescente</span></button>
+                                        <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_alto" data-ks-sort-icon="icon-money-bag"><i class="icon-money-bag" aria-hidden="true"></i><span>Prezzo decrescente</span></button>
+                                        <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_offerta" data-ks-sort-icon="icon-fire"><i class="icon-fire" aria-hidden="true"></i><span>Offerte</span></button>
+                                        <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_disponibilita" data-ks-sort-icon="icon-check"><i class="icon-check" aria-hidden="true"></i><span>Disponibilita</span></button>
+                                        <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_recenti" data-ks-sort-icon="icon-clock"><i class="icon-clock" aria-hidden="true"></i><span>Novita</span></button>
+                                        <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_popolarita" data-ks-sort-icon="icon-star"><i class="icon-star" aria-hidden="true"></i><span>Popolarita</span></button>
+                                        <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_codice" data-ks-sort-icon="icon-sort"><i class="icon-sort" aria-hidden="true"></i><span>Codice</span></button>
+                                        <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_descrizione" data-ks-sort-icon="icon-sort"><i class="icon-sort" aria-hidden="true"></i><span>Nome</span></button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -492,7 +514,7 @@
 
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>"></script>
-    <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>?v=20260829-onsus-toolbar1b"></script>
+    <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>?v=20260831-mediasort1"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20260705-cartdelta"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260830-rvhovermobile1"></script>
 </asp:Content>

@@ -392,8 +392,12 @@
   width: 150px;
 }
 
-#ksCatalogPage .tf-control-view .ks-toolbar-select.type-sort-by {
+#ksCatalogPage .tf-control-view .ks-sort-control {
+  position: relative;
+  flex: 0 1 auto;
   width: 224px;
+  min-width: 204px;
+  gap: 0;
 }
 
 #ksCatalogPage .tf-control-view .ks-toolbar-select:hover,
@@ -461,6 +465,165 @@
 
 #ksCatalogPage .type-sort-by .ks-toolbar-native-select {
   padding-left: 91px;
+}
+
+#ksCatalogPage .ks-sort-dropdown {
+  display: none;
+  position: relative;
+  width: 100%;
+  height: 44px;
+  min-width: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  color: var(--black, #121212);
+}
+
+#ksCatalogPage .ks-sort-native-control {
+  width: 100%;
+}
+
+#ksCatalogPage .ks-sort-control.ks-sort-enhanced-ready .ks-sort-native-control {
+  display: none;
+}
+
+#ksCatalogPage .ks-sort-control.ks-sort-enhanced-ready .ks-sort-dropdown {
+  display: block;
+}
+
+#ksCatalogPage .ks-sort-trigger {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 11px;
+  border: 1px solid var(--gray-5, #ebebeb);
+  border-radius: 3px;
+  background: var(--white, #fff);
+  color: var(--black, #121212);
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 22px;
+  text-align: left;
+  cursor: pointer;
+}
+
+#ksCatalogPage .ks-sort-trigger:hover,
+#ksCatalogPage .ks-sort-dropdown.is-open .ks-sort-trigger {
+  border-color: var(--primary, #ff3b30);
+  color: var(--primary, #ff3b30);
+}
+
+#ksCatalogPage .ks-sort-trigger:focus-visible {
+  border-color: var(--primary, #ff3b30);
+  outline: 2px solid rgba(255, 59, 48, 0.24);
+  outline-offset: 2px;
+}
+
+#ksCatalogPage .ks-sort-trigger-icon {
+  font-size: 21px;
+  line-height: 1;
+}
+
+#ksCatalogPage .ks-sort-trigger-label {
+  color: inherit;
+  white-space: nowrap;
+}
+
+#ksCatalogPage .ks-sort-trigger-value {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--black, #121212);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#ksCatalogPage .ks-sort-trigger-arrow {
+  font-size: 12px;
+  line-height: 1;
+  transition: transform 180ms ease;
+}
+
+#ksCatalogPage .ks-sort-dropdown.is-open .ks-sort-trigger-arrow {
+  transform: rotate(180deg);
+}
+
+#ksCatalogPage .ks-sort-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 80;
+  display: none;
+  width: min(280px, calc(100vw - 30px));
+  min-width: 240px;
+  max-height: min(430px, 68vh);
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid var(--gray-5, #ebebeb);
+  border-radius: 6px;
+  background: var(--white, #fff);
+  box-shadow: 0 14px 34px rgba(18, 18, 18, 0.14);
+  isolation: isolate;
+  overscroll-behavior-y: contain;
+}
+
+#ksCatalogPage .ks-sort-dropdown.is-open .ks-sort-menu {
+  display: block;
+}
+
+#ksCatalogPage .ks-sort-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 11px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--secondary, #4d4e4f);
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+#ksCatalogPage .ks-sort-option i {
+  flex: 0 0 22px;
+  color: var(--text-main-2, #666);
+  font-size: 18px;
+  line-height: 1;
+  text-align: center;
+}
+
+#ksCatalogPage .ks-sort-option:hover,
+#ksCatalogPage .ks-sort-option:focus-visible {
+  background: var(--gray-4, #f2f2f2);
+  color: var(--black, #121212);
+}
+
+#ksCatalogPage .ks-sort-option:focus-visible {
+  outline: 2px solid rgba(255, 59, 48, 0.24);
+  outline-offset: -2px;
+}
+
+#ksCatalogPage .ks-sort-option.is-selected {
+  background: rgba(255, 59, 48, 0.08);
+  color: var(--primary-2, #D80027);
+  font-weight: 700;
+}
+
+#ksCatalogPage .ks-sort-option.is-selected i {
+  color: var(--primary-2, #D80027);
 }
 
 #ksCatalogPage .meta-filter-shop.ks-active-filters {
@@ -1372,7 +1535,7 @@
     gap: 10px;
   }
 
-  #ksCatalogPage .tf-control-view .ks-toolbar-select.type-sort-by {
+  #ksCatalogPage .tf-control-view .ks-sort-control {
     width: min(224px, 100%);
   }
 
@@ -1519,6 +1682,11 @@
 }
 
 @media (max-width: 420px) {
+  #ksCatalogPage .ks-sort-menu {
+    right: auto;
+    left: 0;
+  }
+
   #ksCatalogPage #gridLayout {
     grid-template-columns: 1fr;
   }

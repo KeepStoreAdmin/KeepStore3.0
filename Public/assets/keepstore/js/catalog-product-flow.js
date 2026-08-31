@@ -162,6 +162,169 @@
     applyCatalogLayout(root, readCatalogLayout(), false);
   }
 
+  function initializeCatalogSort() {
+    var root = document.getElementById('ksCatalogPage');
+    if (!root) return;
+
+    var control = root.querySelector('.ks-sort-control');
+    if (!control || control.getAttribute('data-ks-sort-ready') === '1') return;
+
+    var nativeSelect = control.querySelector('select.ks-toolbar-native-select');
+    var dropdown = control.querySelector('[data-ks-sort-dropdown]');
+    var trigger = control.querySelector('.ks-sort-trigger');
+    var triggerIcon = control.querySelector('.ks-sort-trigger-icon');
+    var triggerValue = control.querySelector('.ks-sort-trigger-value');
+    var menu = control.querySelector('.ks-sort-menu');
+    var options = control.querySelectorAll('.ks-sort-option');
+    if (!nativeSelect || !dropdown || !trigger || !triggerIcon || !triggerValue || !menu || !options.length) return;
+
+    var nativeValues = [];
+    for (var nativeIndex = 0; nativeIndex < nativeSelect.options.length; nativeIndex++) {
+      nativeValues.push(nativeSelect.options[nativeIndex].value);
+    }
+    for (var optionIndex = 0; optionIndex < options.length; optionIndex++) {
+      if (nativeValues.indexOf(options[optionIndex].getAttribute('data-ks-sort-value')) === -1) return;
+    }
+    if (typeof nativeSelect.onchange !== 'function' && typeof window.__doPostBack !== 'function' && !nativeSelect.form) return;
+
+    function selectedVisualOption() {
+      for (var i = 0; i < options.length; i++) {
+        if (options[i].getAttribute('data-ks-sort-value') === nativeSelect.value) return options[i];
+      }
+      return options[0];
+    }
+
+    function syncVisualState() {
+      var selected = selectedVisualOption();
+      var text = selected ? String(selected.textContent || '').replace(/\s+/g, ' ').trim() : 'Consigliati';
+      var icon = selected ? selected.getAttribute('data-ks-sort-icon') : 'icon-sort';
+
+      triggerIcon.className = 'ks-sort-trigger-icon ' + (icon || 'icon-sort');
+      triggerValue.textContent = text;
+      trigger.setAttribute('aria-label', 'Ordina prodotti. Selezione attuale: ' + text);
+
+      for (var i = 0; i < options.length; i++) {
+        var active = options[i] === selected;
+        options[i].classList.toggle('is-selected', active);
+        options[i].setAttribute('aria-selected', active ? 'true' : 'false');
+      }
+    }
+
+    function closeMenu(returnFocus) {
+      dropdown.classList.remove('is-open');
+      trigger.setAttribute('aria-expanded', 'false');
+      if (returnFocus) trigger.focus();
+    }
+
+    function openMenu(focusSelected) {
+      dropdown.classList.add('is-open');
+      trigger.setAttribute('aria-expanded', 'true');
+      if (focusSelected) selectedVisualOption().focus();
+    }
+
+    function focusOption(current, offset) {
+      var index = Array.prototype.indexOf.call(options, current);
+      if (index < 0) index = 0;
+      index = (index + offset + options.length) % options.length;
+      options[index].focus();
+    }
+
+    function requestNativeSortPostback() {
+      var nativeChangeHandler = nativeSelect.onchange;
+      nativeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+      if (typeof nativeChangeHandler === 'function') return;
+
+      if (typeof window.__doPostBack === 'function') {
+        window.__doPostBack(nativeSelect.name, '');
+        return;
+      }
+
+      var form = nativeSelect.form;
+      if (!form) return;
+
+      var eventTarget = form.elements.namedItem('__EVENTTARGET');
+      if (!eventTarget) {
+        eventTarget = document.createElement('input');
+        eventTarget.type = 'hidden';
+        eventTarget.name = '__EVENTTARGET';
+        form.appendChild(eventTarget);
+      }
+      eventTarget.value = nativeSelect.name;
+
+      var eventArgument = form.elements.namedItem('__EVENTARGUMENT');
+      if (!eventArgument) {
+        eventArgument = document.createElement('input');
+        eventArgument.type = 'hidden';
+        eventArgument.name = '__EVENTARGUMENT';
+        form.appendChild(eventArgument);
+      }
+      eventArgument.value = '';
+
+      window.HTMLFormElement.prototype.submit.call(form);
+    }
+
+    trigger.addEventListener('click', function () {
+      if (dropdown.classList.contains('is-open')) closeMenu(false);
+      else openMenu(false);
+    });
+
+    trigger.addEventListener('keydown', function (event) {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        openMenu(true);
+      } else if (event.key === 'Escape') {
+        closeMenu(false);
+      }
+    });
+
+    menu.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeMenu(true);
+      } else if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        focusOption(document.activeElement, 1);
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        focusOption(document.activeElement, -1);
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        options[0].focus();
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        options[options.length - 1].focus();
+      }
+    });
+
+    for (var i = 0; i < options.length; i++) {
+      options[i].addEventListener('click', function () {
+        var value = this.getAttribute('data-ks-sort-value');
+        if (nativeSelect.value === value) {
+          closeMenu(true);
+          return;
+        }
+
+        nativeSelect.value = value;
+        syncVisualState();
+        closeMenu(false);
+        requestNativeSortPostback();
+      });
+    }
+
+    document.addEventListener('click', function (event) {
+      if (!control.contains(event.target)) closeMenu(false);
+    });
+
+    nativeSelect.addEventListener('change', syncVisualState);
+    syncVisualState();
+
+    nativeSelect.setAttribute('tabindex', '-1');
+    nativeSelect.setAttribute('aria-hidden', 'true');
+    control.setAttribute('data-ks-sort-ready', '1');
+    control.classList.add('ks-sort-enhanced-ready');
+  }
+
   // Re-run after UpdatePanel async postback (WebForms)
   function wireUpdatePanel() {
     try {
@@ -171,6 +334,7 @@
           prm.add_endRequest(function () {
             ensureQtyEnhancement(document);
             initializeCatalogLayout();
+            initializeCatalogSort();
           });
         }
       }
@@ -180,6 +344,7 @@
   onReady(function () {
     ensureQtyEnhancement(document);
     initializeCatalogLayout();
+    initializeCatalogSort();
     wireUpdatePanel();
   });
 })();

@@ -1808,6 +1808,42 @@ h6 {
   font-family: var(--ks-font-ui) !important;
 }
 
+/* STOREFRONT-PRODUCT-MEDIA-SORT-1A: product photos remain complete and centered. */
+#quickView .quickview-image .tf-image-view,
+#compare .tf-compare-item .image,
+#ksCompareGrid .ks-compare-page-card .image,
+body.ks-page-home .ks-ai130-img {
+  align-items: center;
+  background: #fff;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#quickView #ksQuickViewMainImage,
+#compare .tf-compare-item .image img,
+#ksCompareGrid .ks-compare-page-card .image img,
+body.ks-page-home .ks-ai130-img img {
+  display: block;
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: center;
+  width: 100%;
+}
+
+#ksCompareGrid .ks-compare-page-card .image {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+}
+
+body.ks-page-home .ks-ai130-img {
+  display: inline-flex;
+  height: 72px;
+  vertical-align: middle;
+  width: 72px;
+}
+
 /* STOREFRONT-CART-STATE-PERSISTENCE-1A: server-backed card state. */
 .card-product-wrapper > .ks-cart-state-badge,
 .card-usually .image > .ks-cart-state-badge {
