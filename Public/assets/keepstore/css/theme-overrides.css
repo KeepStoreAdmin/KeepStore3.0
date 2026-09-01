@@ -416,12 +416,11 @@ body.ks-page-home .ks-home-hero-area {
 
 body.ks-page-home .ks-home-hero-grid {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) 300px;
   gap: 18px;
   align-items: stretch;
 }
 
-body.ks-page-home .ks-home-departments-panel,
 body.ks-page-home .ks-home-main-hero,
 body.ks-page-home .ks-home-side-promos {
   min-width: 0;
@@ -435,19 +434,6 @@ body.ks-page-home .ks-home-departments-list {
   overflow: hidden;
   border: 1px solid #e7ebf0;
   box-shadow: 0 10px 24px rgba(15, 23, 42, .04);
-}
-
-body.ks-page-home .ks-home-departments-list > .main-nav.category-menu {
-  position: relative;
-  inset: auto;
-  z-index: auto;
-  width: 100%;
-  min-width: 0;
-  height: 100%;
-  border: 0;
-  opacity: 1;
-  visibility: visible;
-  transform: none;
 }
 
 body.ks-page-home .ks-home-departments-list .nav-title {
@@ -487,6 +473,11 @@ body.ks-page-home .ks-home-departments-list .item-link {
 body.ks-page-home .ks-home-departments-list .item-link:hover {
   background: #f7f8fa;
   color: #ff3b30;
+}
+
+/* The shared header/offcanvas catalog is the HOME navigation source of truth. */
+body.ks-page-home .ks-home-departments-panel {
+  display: none;
 }
 
 body.ks-page-home .ks-home-menu-link {
@@ -1435,7 +1426,7 @@ body.ks-page-home .ks-home-main .sw-dot-default {
   }
 
   body.ks-page-home .ks-home-hero-grid {
-    grid-template-columns: 250px minmax(0, 1fr) 260px;
+    grid-template-columns: minmax(0, 1fr) 260px;
   }
 }
 
@@ -1445,10 +1436,9 @@ body.ks-page-home .ks-home-main .sw-dot-default {
   }
 
   body.ks-page-home .ks-home-hero-grid {
-    grid-template-columns: 230px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  body.ks-page-home .ks-home-departments-panel,
   body.ks-page-home .ks-home-main-hero {
     height: 340px;
   }
