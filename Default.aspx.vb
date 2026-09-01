@@ -845,6 +845,7 @@ Partial Public Class _Default
         sql.Append(StockWhereClause()).Append(" AS Giacenza, ")
         sql.Append(AvailabilityWhereClause()).Append(" AS Disponibilita, ")
         sql.Append(ReservedWhereClause()).Append(" AS Impegnata, ")
+        sql.Append("COALESCE(v.InOrdine,0) AS InOrdine, ")
         sql.Append("COALESCE(v.Prezzo,0) AS Prezzo, ")
         sql.Append(prezzoIvatoSql).Append(" AS PrezzoIvato, ")
         sql.Append("COALESCE(v.PrezzoPromo,0) AS PrezzoPromo, ")
@@ -1338,6 +1339,7 @@ Partial Public Class _Default
         dt.Columns.Add("Giacenza", GetType(Decimal))
         dt.Columns.Add("Disponibilita", GetType(Decimal))
         dt.Columns.Add("Impegnata", GetType(Decimal))
+        dt.Columns.Add("InOrdine", GetType(Decimal))
         dt.Columns.Add("Prezzo", GetType(Decimal))
         dt.Columns.Add("PrezzoIvato", GetType(Decimal))
         dt.Columns.Add("PrezzoPromo", GetType(Decimal))
@@ -2290,7 +2292,7 @@ Partial Public Class _Default
         Dim img As String = ProductImageFull(row("Img1"))
         Dim priceText As String = FormatMoney(CurrentPrice(row))
         Dim soldText As String = FormatQuantity(row("VendutiAnno"))
-        Dim availableText As String = FormatQuantity(row("Giacenza"))
+        Dim availableText As String = AvailabilityDisplayHelper.BuildText(row, HttpContext.Current)
         Dim description As String = QuickViewDescription(row)
         Dim progress As String = AvailabilityPercent(row("Giacenza"), row("VendutiAnno")).ToString("0.##", CultureInfo.InvariantCulture)
 
@@ -2402,6 +2404,11 @@ Partial Public Class _Default
         Return sb.ToString()
     End Function
 
+    Private Function RenderAvailability(ByVal row As DataRow) As String
+        If row Is Nothing Then Return String.Empty
+        Return AvailabilityDisplayHelper.BuildHtml(row, HttpContext.Current)
+    End Function
+
     Protected Function RenderDealCard(ByVal dataItem As Object) As String
         Dim rowView As DataRowView = TryCast(dataItem, DataRowView)
         If rowView Is Nothing Then Return String.Empty
@@ -2438,6 +2445,7 @@ Partial Public Class _Default
         sb.Append("<h6><a href='").Append(ProductUrl(row("id"))).Append("' class='name-product fw-semibold text-secondary link'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></h6>")
         sb.Append("</div>")
         sb.Append(RenderPriceBlock(row, True))
+        sb.Append(RenderAvailability(row))
         sb.Append("</div>")
         If ShowDiscount(row) Then
             sb.Append("<p class='box-sale-tag'>Risparmi ").Append(FormatMoney(SavingsAmount(row))).Append("</p>")
@@ -2451,7 +2459,6 @@ Partial Public Class _Default
         sb.Append("</div>")
         sb.Append("<div class='box-quantity d-flex justify-content-between'>")
         sb.Append("<p class='text-avaiable caption'>Venduti: <span class='fw-bold'>").Append(FormatQuantity(row("VendutiAnno"))).Append("</span></p>")
-        sb.Append("<p class='text-avaiable caption'>Disponibili: <span class='fw-bold'>").Append(FormatQuantity(row("Giacenza"))).Append("</span></p>")
         sb.Append("</div>")
         sb.Append("</div>")
         sb.Append("</div>")
@@ -2482,6 +2489,7 @@ Partial Public Class _Default
         sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='name-product body-md-2 fw-semibold text-secondary link'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></div>")
         sb.Append("<div class='group-btn'>")
         sb.Append(RenderPriceBlock(row, False))
+        sb.Append(RenderAvailability(row))
         sb.Append(RenderActionButtons(row, True))
         sb.Append("</div>")
         sb.Append("</div></div>")
@@ -2533,6 +2541,7 @@ Partial Public Class _Default
         If hasDiscount Then sb.Append(RenderCountdownBlock(row))
         sb.Append("<div class='group-btn'>")
         sb.Append(RenderPriceBlock(row, True))
+        sb.Append(RenderAvailability(row))
         sb.Append(RenderActionButtons(row, True))
         sb.Append("</div>")
         sb.Append("</div></div>")
@@ -2565,6 +2574,7 @@ Partial Public Class _Default
         End If
         sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='name-product body-md-2 fw-semibold text-secondary link'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></div>")
         sb.Append(RenderPriceBlock(row, False))
+        sb.Append(RenderAvailability(row))
         sb.Append("</div>")
         sb.Append("</div></div>")
         Return sb.ToString()

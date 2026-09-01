@@ -134,9 +134,8 @@
 
                                             <div class="ks-cart-meta body-text-3 mt-1">
                                                 <span>Codice: <asp:Label ID="Label3" runat="server" Text='<%#: Eval("Codice") %>' Font-Bold="true"></asp:Label></span>
-                                                <span class="mx-2">|</span>
-                                                <span>Disponibilità: <asp:Label ID="lblDispo" runat="server" Text='<%#: Eval("giacenza") %>' Font-Bold="true"></asp:Label></span>
                                             </div>
+                                            <div class="ks-cart-availability mt-2"><%# AvailabilityDisplayHelper.BuildHtml(Container.DataItem, System.Web.HttpContext.Current) %></div>
 
                                             <span class="ks-cart-badge-free mt-2">Spedizione gratis</span>
 
@@ -148,6 +147,7 @@
                                             <asp:Label ID="lblidIvaRC" runat="server" Text='<%#: Eval("IdIvaRC") %>' Visible="False"></asp:Label>
                                             <asp:Label ID="lblPeso" runat="server" Text='<%#: Eval("PesoRiga") %>' Visible="False"></asp:Label>
                                             <asp:Label ID="lblArrivo" runat="server" Text="" Visible="False"></asp:Label>
+                                            <asp:Label ID="lblDispo" runat="server" Text='<%#: Eval("giacenza") %>' Visible="False"></asp:Label>
                                             <asp:Label ID="Label7" runat="server" Text='<%#: Eval("Ean") %>' Visible="false"></asp:Label>
                                             <asp:Label ID="lblImp" runat="server" Text='<%#: Eval("Impegnata")%>' Visible="false"></asp:Label>
                                             <asp:Label ID="lbl" runat="server" Text='<%#: Eval("InOrdine")%>' Visible="false"></asp:Label>
@@ -247,9 +247,8 @@
 
                                             <div class="ks-cart-meta body-text-3 mt-1">
                                                 <span>Codice: <asp:Label ID="Label3" runat="server" Text='<%#: Eval("Codice") %>' Font-Bold="true"></asp:Label></span>
-                                                <span class="mx-2">|</span>
-                                                <span>Disponibilità: <asp:Label ID="lblDispo" runat="server" Text='<%#: Eval("giacenza") %>' Font-Bold="true"></asp:Label></span>
                                             </div>
+                                            <div class="ks-cart-availability mt-2"><%# AvailabilityDisplayHelper.BuildHtml(Container.DataItem, System.Web.HttpContext.Current) %></div>
 
                                             <!-- Hidden / technical fields (used by VB code-behind) -->
                                             <asp:TextBox ID="tbArtID" runat="server" Text='<%#: Eval("ArticoliID") %>' Visible="false"></asp:TextBox>
@@ -259,6 +258,7 @@
                                             <asp:Label ID="lblidIvaRC" runat="server" Text='<%#: Eval("IdIvaRC") %>' Visible="False"></asp:Label>
                                             <asp:Label ID="lblPeso" runat="server" Text='<%#: Eval("PesoRiga") %>' Visible="False"></asp:Label>
                                             <asp:Label ID="lblArrivo" runat="server" Text="" Visible="False"></asp:Label>
+                                            <asp:Label ID="lblDispo" runat="server" Text='<%#: Eval("giacenza") %>' Visible="False"></asp:Label>
                                             <asp:Label ID="Label7" runat="server" Text='<%#: Eval("Ean") %>' Visible="false"></asp:Label>
                                             <asp:Label ID="lblImp" runat="server" Text='<%#: Eval("Impegnata")%>' Visible="false"></asp:Label>
                                             <asp:Label ID="lbl" runat="server" Text='<%#: Eval("InOrdine")%>' Visible="false"></asp:Label>

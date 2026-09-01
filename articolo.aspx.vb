@@ -98,6 +98,8 @@ Partial Class articolo
         Public Property TagliaName As String
         Public Property ColoreName As String
         Public Property AvailabilityText As String
+        Public Property AvailabilityHtml As String
+        Public Property IsAvailable As Boolean
         Public Property PriceValue As Nullable(Of Decimal)
         Public Property IsCurrent As Boolean
         Public Property BusinessKey As String
@@ -477,6 +479,7 @@ Partial Class articolo
                                                       GetRowDecimal(row, "PrezzoPromo"),
                                                       GetRowDecimal(row, "PrezzoPromoIvato"),
                                                       inOfferta)
+        Dim availability As AvailabilityDisplayModel = AvailabilityDisplayHelper.BuildFromDataItem(row, HttpContext.Current)
 
         Dim item As New RelatedItem() With {
             .Id = _id,
@@ -496,7 +499,9 @@ Partial Class articolo
             .BrandId = FirstPositiveInt(GetRowInt(row, "MarcaId", 0), GetRowInt(row, "IdMarca", 0), GetRowInt(row, "MarcheId", 0)),
             .TagliaName = If(variantInfo IsNot Nothing, variantInfo.Taglia, String.Empty),
             .ColoreName = If(variantInfo IsNot Nothing, variantInfo.Colore, String.Empty),
-            .AvailabilityText = BuildAvailabilityText(row),
+            .AvailabilityText = availability.Text,
+            .AvailabilityHtml = availability.Html,
+            .IsAvailable = availability.IsAvailable,
             .PriceValue = price.CurrentPrice,
             .IsCurrent = True
         }
@@ -984,7 +989,7 @@ Partial Class articolo
             End If
         End If
 
-        If String.Equals(item.AvailabilityText, "Disponibile", StringComparison.OrdinalIgnoreCase) Then score += 20
+        If item.IsAvailable Then score += 20
 
         Return score
     End Function
@@ -1153,10 +1158,16 @@ Partial Class articolo
                 item.ColoreName = FirstNonEmpty(SafeReaderString(rdr, "TCColore"), ExtractColorKey(nameVal & " " & codiceVal))
                 item.PriceValue = price.CurrentPrice
                 item.IsCurrent = False
-                item.AvailabilityText = BuildRelatedAvailabilityText(SafeInt(rdr("Giacenza"), 0),
-                                                                     SafeInt(rdr("Impegnata"), 0),
-                                                                     SafeInt(rdr("Disponibilita"), 0),
-                                                                     SafeInt(rdr("InOrdine"), 0))
+                Dim availability As AvailabilityDisplayModel = AvailabilityDisplayHelper.BuildFromValues(
+                    SafeDec(rdr("Giacenza"), 0D),
+                    SafeDec(rdr("Disponibilita"), 0D),
+                    SafeDec(rdr("Impegnata"), 0D),
+                    SafeDec(rdr("InOrdine"), 0D),
+                    0D,
+                    HttpContext.Current)
+                item.AvailabilityText = availability.Text
+                item.AvailabilityHtml = availability.Html
+                item.IsAvailable = availability.IsAvailable
                 FinalizeRelatedItem(item)
 
                 Dim businessKey As String = RelatedBusinessKey(item)
@@ -1274,13 +1285,6 @@ Partial Class articolo
         Return text
     End Function
 
-    Private Function BuildRelatedAvailabilityText(giacenza As Integer, impegnata As Integer, disponibilita As Integer, inOrdine As Integer) As String
-        If (giacenza - impegnata) > 0 Then Return "Disponibile"
-        If disponibilita > 0 Then Return "In arrivo"
-        If inOrdine > 0 Then Return "In ordine"
-        Return "Verifica disponibilita"
-    End Function
-
     Private Function SafeInt(v As Object, fallback As Integer) As Integer
         If v Is Nothing OrElse v Is DBNull.Value Then Return fallback
         Dim n As Integer
@@ -1396,10 +1400,9 @@ Partial Class articolo
         End If
 
         Dim longValue As String = FirstNonEmpty(GetRowString(row, "DescrizioneHTML"), GetRowString(row, "DescrizioneLunga"), GetRowString(row, "Descrizione2"))
-        Dim availabilityText As String = BuildAvailabilityText(row)
-        Dim availabilityCss As String = BuildAvailabilityCss(row)
-
-        Dim stockAvailable As Integer = GetRowInt(row, "Giacenza", 0) - GetRowInt(row, "Impegnata", 0)
+        Dim availabilityModel As AvailabilityDisplayModel = AvailabilityDisplayHelper.BuildFromDataItem(row, HttpContext.Current)
+        Dim availabilityText As String = availabilityModel.Text
+        Dim availabilityCss As String = availabilityModel.StatusCssClass
 
         Dim isRefurbished As Boolean = (GetRowInt(row, "Ricondizionato", 0) = 1)
         Dim refurbishedNote As String = GetRowString(row, "NoteRicondizionato")
@@ -1447,10 +1450,10 @@ Partial Class articolo
             .IvaLabel = price.IvaLabel,
             .PromoText = If(price.IsPromo, "In offerta", String.Empty),
             .IsPromo = price.IsPromo,
-            .AvailabilityHtml = BuildAvailabilityHtml(row),
+            .AvailabilityHtml = availabilityModel.Html,
             .AvailabilityText = availabilityText,
             .AvailabilityCss = availabilityCss,
-            .IsAvailable = (stockAvailable > 0),
+            .IsAvailable = availabilityModel.IsAvailable,
             .IsRefurbished = isRefurbished,
             .RefurbishedText = refurbishedText,
             .RefurbishedBadgeUrl = "/Public/assets/images/img/refurbished.png",
@@ -1608,8 +1611,9 @@ Partial Class articolo
         litLongDesc.Text = NormalizeDescriptionHtml(longValue)
 
         ' Disponibilità (Arrivo)
-        Dim availabilityText As String = BuildAvailabilityText(row)
-        Dim availabilityHtml As String = BuildAvailabilityHtml(row)
+        Dim availabilityModel As AvailabilityDisplayModel = AvailabilityDisplayHelper.BuildFromDataItem(row, HttpContext.Current)
+        Dim availabilityText As String = availabilityModel.Text
+        Dim availabilityHtml As String = availabilityModel.Html
         phAvailability.Visible = False
         phAvailabilityInfo.Visible = Not String.IsNullOrEmpty(availabilityText)
         litAvailability.Text = String.Empty
@@ -1626,7 +1630,7 @@ Partial Class articolo
 
         ' Immagini
         BindImages(row, nome)
-        EmitRecentlyViewedClientScript(row, price, categoryName, brandName, codice, availabilityText, currentTcid)
+        EmitRecentlyViewedClientScript(row, price, categoryName, brandName, codice, availabilityModel, currentTcid)
 
         ' Quantità desiderata e stato carrello corrente.
         BindPdpCartState(_id, currentTcid, True)
@@ -2441,7 +2445,7 @@ Partial Class articolo
                                                categoryName As String,
                                                brandName As String,
                                                codice As String,
-                                               availabilityText As String,
+                                               availability As AvailabilityDisplayModel,
                                                currentTcid As Integer)
         Try
             If row Is Nothing OrElse _id <= 0 Then
@@ -2462,7 +2466,20 @@ Partial Class articolo
             item("category") = categoryName
             item("image") = img
             item("price") = BuildPriceText(price.CurrentPrice)
-            item("availability") = availabilityText
+            item("availability") = If(availability IsNot Nothing, availability.Text, String.Empty)
+            If availability IsNot Nothing Then
+                Dim presentation As New Dictionary(Of String, Object)()
+                presentation("mode") = availability.DisplayMode
+                presentation("statusText") = availability.StatusText
+                presentation("tone") = availability.StatusToneClass
+                presentation("availableQtyText") = availability.AvailableQtyText
+                presentation("committedQtyText") = availability.CommittedQtyText
+                presentation("incomingQtyText") = availability.IncomingQtyText
+                presentation("availableMetricClass") = availability.AvailableMetricClass
+                presentation("incomingMetricClass") = availability.IncomingMetricClass
+                If availability.IncomingQty > 0D Then presentation("incomingTooltip") = availability.IncomingTooltipText
+                item("availabilityPresentation") = presentation
+            End If
             item("url") = BuildProductUrl(_id, currentTcid, includeTcid:=(currentTcid > 0))
             item("cartUrl") = BuildCartAddUrl(_id, currentTcid)
             item("wishlistUrl") = BuildWishlistAddUrl(_id, currentTcid)

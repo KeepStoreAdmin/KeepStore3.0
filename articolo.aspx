@@ -336,6 +336,7 @@
                                                         <%# If(Convert.ToBoolean(Eval("IsCurrent")), "Questo articolo: ", String.Empty) & Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 88)) %>
                                                     </a>
                                                     <p class="price-text fw-medium"><%# Eval("PrezzoHtml") %></p>
+                                                    <%# Eval("AvailabilityHtml") %>
                                                 </div>
                                             </div>
                                         </div>
@@ -565,6 +566,7 @@
                                         <div class="price-wrap fw-medium">
                                             <%# Eval("PrezzoHtml") %>
                                         </div>
+                                        <%# Eval("AvailabilityHtml") %>
                                     </div>
 
                                     <a href='<%# Eval("AddToCartUrl") %>' class="tf-btn text-white w-100 ks-mobile-card-buy-cta js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
@@ -665,6 +667,7 @@
                                         <div class="price-wrap fw-medium">
                                             <%# Eval("PrezzoHtml") %>
                                         </div>
+                                        <%# Eval("AvailabilityHtml") %>
                                     </div>
 
                                     <a href='<%# Eval("AddToCartUrl") %>' class="tf-btn text-white w-100 ks-mobile-card-buy-cta js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
@@ -785,6 +788,7 @@
                                         <div class="price-wrap fw-medium">
                                             <%# Eval("PrezzoHtml") %>
                                         </div>
+                                        <%# Eval("AvailabilityHtml") %>
                                     </div>
                                     <a href='<%# Eval("AddToCartUrl") %>' class="tf-btn text-white w-100 ks-mobile-card-buy-cta js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
                                         <span class="icon-cart-2" aria-hidden="true"></span>
@@ -861,6 +865,6 @@
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/product-ui.js") %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>"></script>
-    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260830-rvhovermobile1"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260901-availability1a"></script>
     <asp:Literal ID="litRecentlyViewedScript" runat="server" EnableViewState="false" />
 </asp:Content>

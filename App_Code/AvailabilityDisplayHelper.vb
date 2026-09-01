@@ -15,10 +15,16 @@ Public Class AvailabilityDisplayModel
     Public Property DisplayMode As Integer
     Public Property StatusText As String
     Public Property StatusCssClass As String
+    Public Property StatusToneClass As String
     Public Property StatusStyle As String
     Public Property DotCssClass As String
     Public Property DotStyle As String
     Public Property IncomingTooltipText As String
+    Public Property AvailableQtyText As String
+    Public Property CommittedQtyText As String
+    Public Property IncomingQtyText As String
+    Public Property AvailableMetricClass As String
+    Public Property IncomingMetricClass As String
     Public Property LegacyText As String
     Public Property Text As String
     Public Property Html As String
@@ -49,30 +55,63 @@ Public Module AvailabilityDisplayHelper
     End Function
 
     Public Function BuildFromDataItem(ByVal dataItem As Object, Optional ByVal ctx As HttpContext = Nothing) As AvailabilityDisplayModel
+        Dim stockQty As Decimal = Quantity(dataItem, "Giacenza")
+        Dim committedQty As Decimal = Quantity(dataItem, "Impegnata")
+        Dim incomingQty As Decimal = Quantity(dataItem, "InOrdine")
+        Dim rawAvailableQty As Decimal = Quantity(dataItem, "Disponibilita")
+        Dim model As AvailabilityDisplayModel = BuildFromValues(stockQty,
+                                                                 rawAvailableQty,
+                                                                 committedQty,
+                                                                 incomingQty,
+                                                                 LowStockThreshold(dataItem, ctx),
+                                                                 ctx)
+        model.LegacyText = BuildLegacyStatusText(dataItem, model.AvailableQty, model.IncomingQty)
+        CompletePresentation(model)
+        Return model
+    End Function
+
+    Public Function BuildFromValues(ByVal stockQty As Decimal,
+                                    ByVal rawAvailableQty As Decimal,
+                                    ByVal committedQty As Decimal,
+                                    ByVal incomingQty As Decimal,
+                                    ByVal lowStockThreshold As Decimal,
+                                    Optional ByVal ctx As HttpContext = Nothing) As AvailabilityDisplayModel
         Dim model As New AvailabilityDisplayModel()
         model.DisplayMode = GetDisplayMode(ctx)
-        model.StockQty = Quantity(dataItem, "Giacenza")
-        model.CommittedQty = Quantity(dataItem, "Impegnata")
-        model.IncomingQty = Quantity(dataItem, "InOrdine")
-        model.AvailableQty = EffectiveAvailableQty(dataItem, model.StockQty, model.CommittedQty)
-        model.LowStockThreshold = LowStockThreshold(dataItem)
+        model.StockQty = stockQty
+        model.CommittedQty = committedQty
+        model.IncomingQty = incomingQty
+        model.AvailableQty = EffectiveAvailableQty(rawAvailableQty, stockQty, committedQty)
+        model.LowStockThreshold = ResolveLowStockThreshold(lowStockThreshold, ctx)
         model.IncomingTooltipText = DefaultIncomingTooltipText
 
         ApplySyntheticStatus(model)
-        model.LegacyText = BuildLegacyStatusText(dataItem, model.AvailableQty, model.IncomingQty)
+        model.LegacyText = If(model.AvailableQty > 0D,
+                              "Disponibile",
+                              If(model.IncomingQty > 0D, "In ordine", "Verifica disponibilita"))
+        CompletePresentation(model)
+        Return model
+    End Function
 
+    Private Sub CompletePresentation(ByVal model As AvailabilityDisplayModel)
+        If model Is Nothing Then Return
+
+        model.AvailableQtyText = FormatQuantity(model.AvailableQty)
+        model.CommittedQtyText = FormatQuantity(model.CommittedQty)
+        model.IncomingQtyText = FormatQuantity(model.IncomingQty)
+        model.AvailableMetricClass = If(model.AvailableQty > 0D, "has-value", String.Empty)
+        model.IncomingMetricClass = If(model.IncomingQty > 0D, "has-value", String.Empty)
         If model.DisplayMode = 2 Then
-            model.Text = "Disponibilità: " & FormatQuantity(model.AvailableQty) &
-                         "; Impegnati: " & FormatQuantity(model.CommittedQty) &
-                         "; In Arrivo: " & FormatQuantity(model.IncomingQty) &
+            model.Text = "Disponibilità: " & model.AvailableQtyText &
+                         "; Impegnati: " & model.CommittedQtyText &
+                         "; In Arrivo: " & model.IncomingQtyText &
                          "; " & model.StatusText
         Else
             model.Text = model.LegacyText
         End If
 
         model.Html = BuildHtml(model)
-        Return model
-    End Function
+    End Sub
 
     Public Function BuildText(ByVal dataItem As Object, Optional ByVal ctx As HttpContext = Nothing) As String
         Return BuildFromDataItem(dataItem, ctx).Text
@@ -91,59 +130,59 @@ Public Module AvailabilityDisplayHelper
 
         If model.DisplayMode <> 2 Then
             Dim sbSynthetic As New StringBuilder()
-            sbSynthetic.Append("<span class=""ks-availability-synthetic"" style=""display:inline-flex;align-items:center;gap:7px;line-height:1.35;"">")
-            sbSynthetic.Append("<span class=""ks-availability-dot ").Append(model.DotCssClass).Append(""" style=""display:inline-block;width:9px;height:9px;border-radius:50%;flex:0 0 9px;").Append(model.DotStyle).Append(""" aria-hidden=""true""></span>")
-            sbSynthetic.Append("<span class=""").Append(model.StatusCssClass).Append("""" & model.StatusStyle & ">").Append(HtmlEncode(model.StatusText)).Append("</span>")
+            sbSynthetic.Append("<span class=""ks-availability ks-availability--synthetic"" role=""status"" aria-label=""Disponibilita: ").Append(HtmlAttributeEncode(model.StatusText)).Append(""">")
+            AppendStatus(sbSynthetic, model)
             sbSynthetic.Append("</span>")
             Return sbSynthetic.ToString()
         End If
 
         Dim sb As New StringBuilder()
-        sb.Append("<span class=""ks-availability-numeric"" style=""display:inline-flex;flex-direction:column;gap:2px;line-height:1.35;"">")
-        sb.Append("<span><span class=""fw-semibold"">Disponibilità:</span> ").Append(HtmlEncode(FormatQuantity(model.AvailableQty))).Append("</span>")
-        sb.Append("<span><span class=""fw-semibold"">Impegnati:</span> ").Append(HtmlEncode(FormatQuantity(model.CommittedQty))).Append("</span>")
-        sb.Append("<span>")
+        Dim ariaText As String = "Disponibili: " & model.AvailableQtyText & ". Impegnati: " & model.CommittedQtyText & ". In arrivo: " & model.IncomingQtyText & ". " & model.StatusText
+        sb.Append("<span class=""ks-availability ks-availability--numeric"" role=""status"" aria-label=""").Append(HtmlAttributeEncode(ariaText)).Append(""">")
+        sb.Append("<span class=""ks-availability__metrics"">")
+        AppendMetric(sb, "Disponibili", model.AvailableQtyText, "is-available " & model.AvailableMetricClass)
+        AppendMetric(sb, "Impegnati", model.CommittedQtyText, "is-committed")
+        sb.Append("<span class=""ks-availability__metric is-incoming ").Append(model.IncomingMetricClass).Append("""><span class=""ks-availability__label"">In arrivo</span><strong class=""ks-availability__value"">").Append(HtmlEncode(model.IncomingQtyText)).Append("</strong>")
         If model.IncomingQty > 0D Then
             Dim tooltipText As String = HtmlEncode(model.IncomingTooltipText)
-            sb.Append("<span class=""fw-semibold"">In Arrivo:</span> ")
-            sb.Append(HtmlEncode(FormatQuantity(model.IncomingQty)))
-            sb.Append(" <span class=""ks-availability-info"" role=""button"" tabindex=""0"" title=""").Append(tooltipText).Append(""" aria-label=""In Arrivo. ").Append(tooltipText).Append(""" data-tooltip=""").Append(tooltipText).Append(""">")
-            sb.Append("<svg class=""ks-availability-info__icon"" viewBox=""0 0 18 18"" aria-hidden=""true"" focusable=""false"">")
-            sb.Append("<circle class=""ks-availability-info__shape"" cx=""9"" cy=""9"" r=""8""></circle>")
-            sb.Append("<path class=""ks-availability-info__stem"" d=""M9 8v5""></path>")
-            sb.Append("<circle class=""ks-availability-info__dot"" cx=""9"" cy=""5.2"" r=""0.85""></circle>")
-            sb.Append("</svg></span>")
-        Else
-            sb.Append("<span class=""fw-semibold"">In Arrivo:</span> ")
-            sb.Append(HtmlEncode(FormatQuantity(model.IncomingQty)))
+            sb.Append("<button type=""button"" class=""ks-availability__info"" title=""").Append(tooltipText).Append(""" aria-label=""Informazioni sugli articoli in arrivo: ").Append(tooltipText).Append("""><span aria-hidden=""true"">i</span></button>")
         End If
-        sb.Append("</span>")
-        sb.Append("<span class=""").Append(model.StatusCssClass).Append("""" & model.StatusStyle & ">").Append(HtmlEncode(model.StatusText)).Append("</span>")
+        sb.Append("</span></span>")
+        AppendStatus(sb, model)
         sb.Append("</span>")
         Return sb.ToString()
     End Function
+
+    Private Sub AppendMetric(ByVal sb As StringBuilder, ByVal label As String, ByVal value As String, ByVal modifier As String)
+        sb.Append("<span class=""ks-availability__metric ").Append(modifier).Append("""><span class=""ks-availability__label"">").Append(HtmlEncode(label)).Append("</span><strong class=""ks-availability__value"">").Append(HtmlEncode(value)).Append("</strong></span>")
+    End Sub
+
+    Private Sub AppendStatus(ByVal sb As StringBuilder, ByVal model As AvailabilityDisplayModel)
+        sb.Append("<span class=""ks-availability__status ").Append(model.StatusToneClass).Append("""><span class=""ks-availability__dot"" aria-hidden=""true""></span><span class=""ks-availability__status-text"">").Append(HtmlEncode(model.StatusText)).Append("</span></span>")
+    End Sub
 
     Private Sub ApplySyntheticStatus(ByVal model As AvailabilityDisplayModel)
         If model Is Nothing Then Return
 
         If model.AvailableQty > 0D Then
             If model.AvailableQty <= model.LowStockThreshold Then
-                ApplyStatus(model, "Pochi pezzi", "ks-availability-status-low", "ks-availability-dot-low", "#b45309")
+                ApplyStatus(model, "Pochi pezzi", "ks-availability-status-low", "ks-availability-dot-low", "is-low", "#b45309")
             Else
-                ApplyStatus(model, "Disponibile", "ks-availability-status-ok", "ks-availability-dot-ok", "#15803d")
+                ApplyStatus(model, "Disponibile", "ks-availability-status-ok", "ks-availability-dot-ok", "is-ok", "#15803d")
             End If
         ElseIf model.IncomingQty > 0D Then
-            ApplyStatus(model, "In arrivo", "ks-availability-status-low", "ks-availability-dot-low", "#b45309")
+            ApplyStatus(model, "In arrivo", "ks-availability-status-low", "ks-availability-dot-low", "is-incoming", "#b45309")
         Else
-            ApplyStatus(model, "Non disponibile", "ks-availability-status-ko", "ks-availability-dot-ko", "#b42318")
+            ApplyStatus(model, "Non disponibile", "ks-availability-status-ko", "ks-availability-dot-ko", "is-unavailable", "#b42318")
         End If
 
         model.IsAvailable = (model.AvailableQty > 0D)
     End Sub
 
-    Private Sub ApplyStatus(ByVal model As AvailabilityDisplayModel, ByVal text As String, ByVal statusCssClass As String, ByVal dotCssClass As String, ByVal color As String)
+    Private Sub ApplyStatus(ByVal model As AvailabilityDisplayModel, ByVal text As String, ByVal statusCssClass As String, ByVal dotCssClass As String, ByVal toneClass As String, ByVal color As String)
         model.StatusText = text
         model.StatusCssClass = statusCssClass
+        model.StatusToneClass = toneClass
         model.DotCssClass = dotCssClass
         model.StatusStyle = " style=""color:" & color & ";font-weight:700;"""
         model.DotStyle = "background-color:" & color & ";"
@@ -178,20 +217,33 @@ Public Module AvailabilityDisplayHelper
         Return 0D
     End Function
 
-    Private Function EffectiveAvailableQty(ByVal dataItem As Object, ByVal stockQty As Decimal, ByVal committedQty As Decimal) As Decimal
-        Dim raw As Object = UiData.Get(dataItem, "Disponibilita")
-        If raw IsNot Nothing AndAlso Not Convert.IsDBNull(raw) Then
-            Dim parsed As Decimal
-            If Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.CurrentCulture, parsed) AndAlso parsed > 0D Then Return parsed
-            If Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.InvariantCulture, parsed) AndAlso parsed > 0D Then Return parsed
-        End If
-
+    Private Function EffectiveAvailableQty(ByVal rawAvailableQty As Decimal, ByVal stockQty As Decimal, ByVal committedQty As Decimal) As Decimal
+        If rawAvailableQty > 0D Then Return rawAvailableQty
         If stockQty > 0D Then Return stockQty
         Return stockQty - committedQty
     End Function
 
-    Private Function LowStockThreshold(ByVal dataItem As Object) As Decimal
+    Private Function LowStockThreshold(ByVal dataItem As Object, ByVal ctx As HttpContext) As Decimal
         Dim threshold As Decimal = Quantity(dataItem, "ScortaMinima")
+        Return ResolveLowStockThreshold(threshold, ctx)
+    End Function
+
+    Private Function ResolveLowStockThreshold(ByVal threshold As Decimal, ByVal ctx As HttpContext) As Decimal
+        If threshold > 0D Then Return threshold
+
+        Try
+            If ctx Is Nothing Then ctx = HttpContext.Current
+            If ctx IsNot Nothing AndAlso ctx.Session IsNot Nothing Then
+                Dim raw As Object = ctx.Session("DispoMinima")
+                If raw IsNot Nothing AndAlso Not Convert.IsDBNull(raw) Then
+                    Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.CurrentCulture, threshold)
+                    If threshold <= 0D Then Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.InvariantCulture, threshold)
+                End If
+            End If
+        Catch
+            threshold = 0D
+        End Try
+
         If threshold <= 0D Then threshold = DefaultLowStockThreshold
         Return threshold
     End Function
@@ -219,5 +271,9 @@ Public Module AvailabilityDisplayHelper
 
     Private Function HtmlEncode(ByVal value As String) As String
         Return HttpUtility.HtmlEncode(If(value, String.Empty))
+    End Function
+
+    Private Function HtmlAttributeEncode(ByVal value As String) As String
+        Return HttpUtility.HtmlAttributeEncode(If(value, String.Empty))
     End Function
 End Module

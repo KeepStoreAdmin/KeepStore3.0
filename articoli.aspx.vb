@@ -55,6 +55,7 @@ Partial Class Articoli
         Public Property IsOnSale As Boolean
         Public Property IsAvailable As Boolean
         Public Property AvailabilityText As String
+        Public Property AvailabilityHtml As String
         Public Property IsDemoMode As Boolean
         Public Property CartUrl As String
         Public Property WishlistUrl As String
@@ -1485,6 +1486,7 @@ strWhere = strWhere & " GROUP BY id"
         card.IsOnSale = model.IsOnSale
         card.IsAvailable = model.IsAvailable
         card.AvailabilityText = model.AvailabilityText
+        card.AvailabilityHtml = model.AvailabilityHtml
         card.CartUrl = model.CartUrl
         card.WishlistUrl = model.WishlistUrl
         card.QuickViewTarget = model.QuickViewTarget
@@ -3459,24 +3461,15 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     Protected Function CatalogAvailabilityText(ByVal dataItem As Object) As String
-        Dim disponibile As Integer = UiData.Int(dataItem, "Giacenza") - UiData.Int(dataItem, "Impegnata")
-        If disponibile > 0 Then Return "Disponibile"
-
-        If UiData.Int(dataItem, "Disponibilita") > 0 Then Return "In arrivo"
-        If UiData.Int(dataItem, "InOrdine") > 0 Then Return "In ordine"
-
-        Return "Verifica disponibilita"
+        Return AvailabilityDisplayHelper.BuildText(dataItem, HttpContext.Current)
     End Function
 
     Protected Function CatalogAvailabilityCss(ByVal dataItem As Object) As String
-        Dim disponibile As Integer = UiData.Int(dataItem, "Giacenza") - UiData.Int(dataItem, "Impegnata")
-        If disponibile > 0 Then Return "ks-availability-ok"
+        Return AvailabilityDisplayHelper.BuildCssClass(dataItem, HttpContext.Current)
+    End Function
 
-        If UiData.Int(dataItem, "Disponibilita") > 0 OrElse UiData.Int(dataItem, "InOrdine") > 0 Then
-            Return "ks-availability-wait"
-        End If
-
-        Return "ks-availability-check"
+    Protected Function CatalogAvailabilityHtml(ByVal dataItem As Object) As String
+        Return AvailabilityDisplayHelper.BuildHtml(dataItem, HttpContext.Current)
     End Function
 
     Protected Function CatalogProductUrl(ByVal dataItem As Object) As String
@@ -3643,6 +3636,8 @@ strWhere = strWhere & " GROUP BY id"
             isRefurbished = String.Equals(refurbishedValue, "visible", StringComparison.OrdinalIgnoreCase) OrElse UiData.Bool(dataItem, "refurbished")
         End If
 
+        Dim availability As AvailabilityDisplayModel = AvailabilityDisplayHelper.BuildFromDataItem(dataItem, HttpContext.Current)
+
         Dim model As New ProductCardModel()
         model.ProductId = UiData.Int(dataItem, "id")
         model.TCId = CatalogTcId(dataItem, True)
@@ -3658,15 +3653,16 @@ strWhere = strWhere & " GROUP BY id"
         model.BadgeText = badgeText
         model.PromoSummaryHtml = promoSummaryHtml
         model.IsOnSale = hasValidPromo
-        model.IsAvailable = ((UiData.Int(dataItem, "Giacenza") - UiData.Int(dataItem, "Impegnata")) > 0)
-        model.AvailabilityText = CatalogAvailabilityText(dataItem)
+        model.IsAvailable = availability.IsAvailable
+        model.AvailabilityText = availability.Text
+        model.AvailabilityHtml = availability.Html
         model.IsDemoMode = True
         model.CartUrl = CatalogCartAddUrl(dataItem)
         model.WishlistUrl = CatalogWishlistAddUrl(dataItem)
         model.QuickViewTarget = "#quickView"
         model.CompareTarget = "#compare"
         model.DescriptionText = descriptionText
-        model.AvailabilityCss = CatalogAvailabilityCss(dataItem)
+        model.AvailabilityCss = availability.StatusCssClass
         model.IsRefurbished = isRefurbished
         model.RefurbishedText = If(isRefurbished, "Ricondizionato", "")
         model.ShowQuickActions = True

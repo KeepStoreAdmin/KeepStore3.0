@@ -372,9 +372,8 @@
                                                     <p class="caption name-feature">Codice:</p>
                                                     <p class="caption property"><%# Server.HtmlEncode(UiData.Str(Container.DataItem, "Codice")) %></p>
                                                 </li>
-                                                <li>
-                                                    <p class="caption name-feature">Disponibilita:</p>
-                                                    <p class='caption property <%# CatalogAvailabilityCss(Container.DataItem) %>'><%# Server.HtmlEncode(CatalogAvailabilityText(Container.DataItem)) %></p>
+                                                <li class="ks-catalog-availability-row">
+                                                    <%# CatalogAvailabilityHtml(Container.DataItem) %>
                                                 </li>
                                             </ul>
 
@@ -513,5 +512,5 @@
     <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>"></script>
     <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>?v=20260831-mediasort1"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20260705-cartdelta"></script>
-    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260830-rvhovermobile1"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260901-availability1a"></script>
 </asp:Content>

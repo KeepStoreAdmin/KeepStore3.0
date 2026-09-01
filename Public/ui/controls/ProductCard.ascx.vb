@@ -17,6 +17,7 @@ Partial Class Public_ui_controls_ProductCard
     Public Property IsOnSale As Boolean
     Public Property IsAvailable As Boolean = True
     Public Property AvailabilityText As String
+    Public Property AvailabilityHtml As String
     Public Property IsDemoMode As Boolean = True
     Public Property CartUrl As String
     Public Property WishlistUrl As String
@@ -161,6 +162,19 @@ Partial Class Public_ui_controls_ProductCard
         Get
             If Not IsAvailable Then Return "Non disponibile"
             Return EncodeText(If(String.IsNullOrWhiteSpace(AvailabilityText), "Disponibile", AvailabilityText))
+        End Get
+    End Property
+
+    Protected ReadOnly Property RenderAvailabilityHtml As Boolean
+        Get
+            Return Not String.IsNullOrWhiteSpace(AvailabilityHtml)
+        End Get
+    End Property
+
+    Protected ReadOnly Property TrustedAvailabilityHtml As String
+        Get
+            ' Trusted because callers assign only AvailabilityDisplayHelper.BuildHtml output.
+            Return If(AvailabilityHtml, String.Empty)
         End Get
     End Property
 

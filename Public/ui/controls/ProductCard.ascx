@@ -87,7 +87,13 @@
         </div>
         <div class="box-infor-detail">
             <ul class="list-computer-memory">
-                <li><p class="caption <%= SafeAvailabilityCss %>"><%= SafeAvailabilityText %></p></li>
+                <li>
+                    <% If RenderAvailabilityHtml Then %>
+                    <%= TrustedAvailabilityHtml %>
+                    <% Else %>
+                    <p class="caption <%= SafeAvailabilityCss %>"><%= SafeAvailabilityText %></p>
+                    <% End If %>
+                </li>
                 <li><p class="caption"><%= SafeProductCodeText %></p></li>
             </ul>
             <% If ShowMultiSelect Then %>

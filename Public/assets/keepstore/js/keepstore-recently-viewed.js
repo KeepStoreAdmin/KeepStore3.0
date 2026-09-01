@@ -65,6 +65,35 @@
     return (!isFinite(n) || n <= 0) ? '-1' : String(n);
   }
 
+  function normalizeAvailabilityPresentation(input) {
+    if (!input || typeof input !== 'object') return null;
+
+    var mode = parseInt(input.mode, 10) === 2 ? 2 : 1;
+    var tones = {
+      'is-ok': true,
+      'is-low': true,
+      'is-incoming': true,
+      'is-unavailable': true
+    };
+    var tone = cleanText(input.tone, '');
+    if (!tones[tone]) return null;
+
+    var statusText = cleanText(input.statusText, '').slice(0, 80);
+    if (!statusText) return null;
+
+    return {
+      mode: mode,
+      statusText: statusText,
+      tone: tone,
+      availableQtyText: cleanText(input.availableQtyText, '0').slice(0, 24),
+      committedQtyText: cleanText(input.committedQtyText, '0').slice(0, 24),
+      incomingQtyText: cleanText(input.incomingQtyText, '0').slice(0, 24),
+      availableMetricClass: cleanText(input.availableMetricClass, '') === 'has-value' ? 'has-value' : '',
+      incomingMetricClass: cleanText(input.incomingMetricClass, '') === 'has-value' ? 'has-value' : '',
+      incomingTooltip: cleanText(input.incomingTooltip, '').slice(0, 600)
+    };
+  }
+
   function normalizeProduct(input) {
     if (!input) return null;
 
@@ -78,6 +107,7 @@
       image: validUrl(input.image),
       price: cleanText(input.price, 'Prezzo su richiesta'),
       availability: cleanText(input.availability || input.available, ''),
+      availabilityPresentation: normalizeAvailabilityPresentation(input.availabilityPresentation),
       url: validUrl(input.url),
       cartUrl: validUrl(input.cartUrl),
       wishlistUrl: validUrl(input.wishlistUrl),
@@ -146,6 +176,44 @@
       ' data-ks-description="' + attr(item.category || item.brand || item.availability || 'Prodotto') + '"';
   }
 
+  function renderAvailabilityStatus(presentation) {
+    return '<span class="ks-availability__status ' + attr(presentation.tone) + '">' +
+      '<span class="ks-availability__dot" aria-hidden="true"></span>' +
+      '<span class="ks-availability__status-text">' + escapeHtml(presentation.statusText) + '</span>' +
+    '</span>';
+  }
+
+  function renderAvailabilityMetric(label, value, modifier, infoText) {
+    var info = infoText ? '<button type="button" class="ks-availability__info" title="' + attr(infoText) + '" aria-label="Informazioni sugli articoli in arrivo: ' + attr(infoText) + '"><span aria-hidden="true">i</span></button>' : '';
+    return '<span class="ks-availability__metric ' + attr(modifier) + '">' +
+      '<span class="ks-availability__label">' + escapeHtml(label) + '</span>' +
+      '<strong class="ks-availability__value">' + escapeHtml(value) + '</strong>' + info +
+    '</span>';
+  }
+
+  function renderAvailability(item) {
+    var presentation = item.availabilityPresentation;
+    if (!presentation) {
+      return item.availability ? '<p class="caption text-main-2 mt-1">' + escapeHtml(item.availability) + '</p>' : '';
+    }
+
+    if (presentation.mode === 1) {
+      return '<span class="ks-availability ks-availability--synthetic" role="status" aria-label="Disponibilita: ' + attr(presentation.statusText) + '">' +
+        renderAvailabilityStatus(presentation) +
+      '</span>';
+    }
+
+    var ariaText = 'Disponibili: ' + presentation.availableQtyText + '. Impegnati: ' + presentation.committedQtyText + '. In arrivo: ' + presentation.incomingQtyText + '. ' + presentation.statusText;
+    return '<span class="ks-availability ks-availability--numeric" role="status" aria-label="' + attr(ariaText) + '">' +
+      '<span class="ks-availability__metrics">' +
+        renderAvailabilityMetric('Disponibili', presentation.availableQtyText, 'is-available ' + presentation.availableMetricClass, '') +
+        renderAvailabilityMetric('Impegnati', presentation.committedQtyText, 'is-committed', '') +
+        renderAvailabilityMetric('In arrivo', presentation.incomingQtyText, 'is-incoming ' + presentation.incomingMetricClass, presentation.incomingTooltip) +
+      '</span>' +
+      renderAvailabilityStatus(presentation) +
+    '</span>';
+  }
+
   function renderCard(item, container) {
     var img = item.image || fallbackImage(container);
     var meta = item.category || item.brand || 'Prodotto';
@@ -170,7 +238,7 @@
           '<a class="name-product body-md-2 fw-semibold text-secondary link" href="' + attr(item.url) + '">' + escapeHtml(item.name) + '</a>' +
           (sub ? '<p class="caption text-main-2 ks-card-brand-code">' + escapeHtml(sub) + '</p>' : '') +
           '<div class="price-wrap fw-medium mt-1"><span class="ks-price"><span class="ks-price-now">' + escapeHtml(item.price || 'Prezzo su richiesta') + '</span></span></div>' +
-          (item.availability ? '<p class="caption text-main-2 mt-1">' + escapeHtml(item.availability) + '</p>' : '') +
+          renderAvailability(item) +
           '<a href="' + attr(deriveCartUrl(item)) + '" class="tf-btn text-white w-100 d-lg-none ks-mobile-card-buy-cta ks-home-buy-cta js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello"' + actionAttrs(item, img) + '><span class="ks-card-buy-cta__icon icon-cart-2" aria-hidden="true"></span><span class="ks-home-buy-cta__text">Acquista</span></a>' +
         '</div>' +
       '</div>' +

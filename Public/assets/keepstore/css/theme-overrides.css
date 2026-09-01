@@ -940,7 +940,7 @@ body.ks-page-home .ks-home-main .caption {
 }
 
 body.ks-page-home .ks-home-main .name-product {
-  min-height: 40px;
+  min-height: 60px;
   margin-bottom: 10px;
   color: #005aa7;
   font-size: 14px;
@@ -949,7 +949,7 @@ body.ks-page-home .ks-home-main .name-product {
   text-decoration: none;
   text-transform: uppercase;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -1143,7 +1143,7 @@ body.ks-page-home .ks-home-deals .ks-deal-card .card-product-info {
 }
 
 body.ks-page-home .ks-home-deals .ks-deal-card .name-product {
-  min-height: 58px;
+  min-height: 76px;
   margin-bottom: 12px;
   color: #0057bd;
   font-size: 19px;
@@ -1733,6 +1733,203 @@ body.ks-page-home .ks-home-main .sw-dot-default {
 
   body.ks-page-home .ks-home-main .ks-home-buy-cta:not(.ks-mobile-card-buy-cta) .ks-home-buy-cta__text {
     display: none;
+  }
+}
+
+/* STOREFRONT-AVAILABILITY-PRESENTATION-1A: shared commercial availability UI. */
+.ks-availability {
+  box-sizing: border-box;
+  color: #303842;
+  display: inline-flex;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  line-height: 18px;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  vertical-align: middle;
+}
+
+.ks-availability--synthetic {
+  align-items: center;
+  background: #f7f9f8;
+  border: 1px solid #e2e8e4;
+  border-radius: 6px;
+  min-height: 28px;
+  padding: 4px 8px;
+  width: fit-content;
+}
+
+.ks-availability--numeric {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+}
+
+.ks-availability__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+}
+
+.ks-availability__metric {
+  align-items: baseline;
+  background: #f7f8fa;
+  border: 1px solid #e5e8ec;
+  border-radius: 5px;
+  display: inline-flex;
+  flex: 1 1 94px;
+  gap: 5px;
+  justify-content: space-between;
+  min-height: 28px;
+  min-width: 0;
+  padding: 4px 7px;
+}
+
+.ks-availability__label {
+  color: #68727d;
+  flex: 1 1 auto;
+  font-size: 11px;
+  line-height: 18px;
+  min-width: 0;
+}
+
+.ks-availability__value {
+  color: #303842;
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+.ks-availability__metric.is-available.has-value .ks-availability__value {
+  color: #17713d;
+}
+
+.ks-availability__metric.is-incoming.has-value .ks-availability__value {
+  color: #9a5a08;
+}
+
+.ks-availability__status {
+  align-items: center;
+  color: #4d5863;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 7px;
+  line-height: 18px;
+  min-width: 0;
+}
+
+.ks-availability--numeric > .ks-availability__status {
+  padding: 0 3px;
+}
+
+.ks-availability__dot {
+  background: currentColor;
+  border-radius: 50%;
+  flex: 0 0 8px;
+  height: 8px;
+  width: 8px;
+}
+
+.ks-availability__status.is-ok {
+  color: #17713d;
+}
+
+.ks-availability__status.is-low,
+.ks-availability__status.is-incoming {
+  color: #9a5a08;
+}
+
+.ks-availability__status.is-unavailable {
+  color: #a5221d;
+}
+
+.ks-availability__status-text {
+  min-width: 0;
+}
+
+.ks-availability__info {
+  align-items: center;
+  align-self: center;
+  background: #fff;
+  border: 1px solid #bdc6d0;
+  border-radius: 50%;
+  color: #52606d;
+  cursor: help;
+  display: inline-flex;
+  flex: 0 0 28px;
+  font: 700 12px/1 Arial, sans-serif;
+  height: 28px;
+  justify-content: center;
+  margin: -4px -5px -4px 1px;
+  padding: 0;
+  width: 28px;
+}
+
+.ks-availability__info:hover,
+.ks-availability__info:focus-visible {
+  background: #f1f5f8;
+  border-color: #7d8995;
+  color: #28323c;
+}
+
+.ks-availability__info:focus-visible {
+  outline: 2px solid var(--primary-2, #D80027);
+  outline-offset: 2px;
+}
+
+body.ks-page-home .ks-home-main .ks-availability,
+#ksCatalogPage .ks-availability,
+.ks-product-page .ks-availability,
+.tf-cart-item .ks-availability {
+  margin-top: 7px;
+}
+
+body.ks-page-home .ks-home-main .group-btn .ks-availability,
+body.ks-page-home .ks-home-main .box-title .ks-availability,
+#ksCatalogPage .list-computer-memory .ks-availability,
+.ks-product-page .card-product-info .ks-availability,
+.tf-cart-item .ks-cart-availability .ks-availability {
+  flex: 1 1 100%;
+}
+
+body.ks-page-home .ks-home-main .group-btn,
+body.ks-page-home .ks-home-main .box-title {
+  flex-wrap: wrap;
+}
+
+#ksCatalogPage .ks-catalog-availability-row,
+#ksCatalogPage .list-computer-memory > li,
+.ks-product-page .card-product-info .box-title,
+.card-usually .box-name,
+.tf-cart-item .ks-cart-availability {
+  min-width: 0;
+  width: 100%;
+}
+
+@media (max-width: 767.98px) {
+  body.ks-page-home .ks-home-deals .ks-deal-card .name-product {
+    min-height: 64px;
+  }
+
+  .ks-availability__metric {
+    flex-basis: calc(50% - 2px);
+  }
+
+  .ks-availability__label {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .ks-availability__metric {
+    flex-basis: 100%;
   }
 }
 
