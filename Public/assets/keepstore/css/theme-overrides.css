@@ -1941,6 +1941,33 @@ body.ks-page-home .ks-home-main .box-title {
   }
 }
 
+/* PDP recommendation cards: stable ONSUS text rhythm without server truncation. */
+.ks-pdp-card-category,
+.ks-pdp-card-title {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  width: 100%;
+  word-break: normal;
+  -webkit-box-orient: vertical;
+}
+
+.ks-pdp-card-category {
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  -webkit-line-clamp: 2;
+}
+
+.ks-pdp-card-title {
+  height: 54px;
+  min-height: 54px;
+  max-height: 54px;
+  -webkit-line-clamp: 3;
+}
+
 @media (max-width: 575.98px) {
   .ks-availability__metric {
     flex-basis: 100%;

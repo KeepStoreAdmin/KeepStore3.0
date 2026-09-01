@@ -331,9 +331,9 @@
                                                     </label>
                                                 </div>
                                                 <div class="box-name">
-                                                    <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
-                                                    <a href='<%# Eval("Url") %>' class="prd-name body-md-2 text-main link-secondary fw-semibold">
-                                                        <%# If(Convert.ToBoolean(Eval("IsCurrent")), "Questo articolo: ", String.Empty) & Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 88)) %>
+                                                    <p class="caption text-main-2 font-2 ks-pdp-card-category"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
+                                                    <a href='<%# Eval("Url") %>' class="prd-name body-md-2 text-main link-secondary fw-semibold ks-pdp-card-title">
+                                                        <%# If(Convert.ToBoolean(Eval("IsCurrent")), "Questo articolo: ", String.Empty) & Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>
                                                     </a>
                                                     <p class="price-text fw-medium"><%# Eval("PrezzoHtml") %></p>
                                                     <%# Eval("AvailabilityHtml") %>
@@ -558,9 +558,9 @@
 
                                 <div class="card-product-info">
                                     <div class="box-title">
-                                        <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
-                                        <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# Eval("Url") %>'>
-                                            <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 70)) %>
+                                        <p class="caption text-main-2 font-2 ks-pdp-card-category"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
+                                        <a class="name-product body-md-2 fw-semibold text-secondary link ks-pdp-card-title" href='<%# Eval("Url") %>'>
+                                            <%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>
                                         </a>
 
                                         <div class="price-wrap fw-medium">
@@ -659,9 +659,9 @@
 
                                 <div class="card-product-info">
                                     <div class="box-title">
-                                        <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
-                                        <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# Eval("Url") %>'>
-                                            <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 70)) %>
+                                        <p class="caption text-main-2 font-2 ks-pdp-card-category"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
+                                        <a class="name-product body-md-2 fw-semibold text-secondary link ks-pdp-card-title" href='<%# Eval("Url") %>'>
+                                            <%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>
                                         </a>
 
                                         <div class="price-wrap fw-medium">
@@ -780,9 +780,9 @@
 
                                 <div class="card-product-info">
                                     <div class="box-title">
-                                        <p class="caption text-main-2 font-2"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
-                                        <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# Eval("Url") %>'>
-                                            <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Nome")), 70)) %>
+                                        <p class="caption text-main-2 font-2 ks-pdp-card-category"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
+                                        <a class="name-product body-md-2 fw-semibold text-secondary link ks-pdp-card-title" href='<%# Eval("Url") %>'>
+                                            <%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>
                                         </a>
 
                                         <div class="price-wrap fw-medium">
