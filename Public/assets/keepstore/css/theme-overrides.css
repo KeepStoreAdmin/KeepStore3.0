@@ -437,6 +437,19 @@ body.ks-page-home .ks-home-departments-list {
   box-shadow: 0 10px 24px rgba(15, 23, 42, .04);
 }
 
+body.ks-page-home .ks-home-departments-list > .main-nav.category-menu {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+
 body.ks-page-home .ks-home-departments-list .nav-title {
   height: 52px;
   margin: 0;
@@ -927,6 +940,17 @@ body.ks-page-home .ks-home-main .card-product-info {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
+}
+
+body.ks-page-home .ks-home-main .card-product-info .box-title {
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  width: 100%;
+}
+
+body.ks-page-home .ks-home-main .card-product-info .box-title > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 body.ks-page-home .ks-home-main .caption {
