@@ -9,7 +9,7 @@
 
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
     <asp:Literal ID="litSeoHead" runat="server" EnableViewState="false" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20260831-mobilecardfix2" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20260901-catalogstructure1" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>" />
 </asp:Content>
@@ -265,26 +265,6 @@
                         </a>
                     </div>
 
-                    <section id="ksRecentlyViewedBlock"
-                             class="ks-recently-viewed-block d-none"
-                             data-ks-limit="8"
-                             data-ks-placeholder="<%= ThemeManager.PlaceholderProductImageUrl() %>">
-                        <div class="flat-title mb-3">
-                            <h5 class="fw-semibold">Visti di recente</h5>
-                            <div class="box-btn-slide relative">
-                                <div class="swiper-button-prev nav-swiper nav-prev-products ks-rv-prev">
-                                    <i class="icon-arrow-left-lg"></i>
-                                </div>
-                                <div class="swiper-button-next nav-swiper nav-next-products ks-rv-next">
-                                    <i class="icon-arrow-right-lg"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="swiper tf-sw-products ks-recently-viewed-swiper">
-                            <div class="swiper-wrapper" data-ks-recent-items></div>
-                        </div>
-                    </section>
-
                     <asp:PlaceHolder ID="phProductCardPreview" runat="server" Visible="false" />
 
                     <div class="gridLayout-wrapper">
@@ -366,7 +346,7 @@
                                                 </p>
 
                                                 <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# CatalogProductUrl(Container.DataItem) %>'>
-                                                    <%# Server.HtmlEncode(ThemeManager.CompactText(Convert.ToString(Eval("Descrizione1")), 72)) %>
+                                                    <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>
                                                 </a>
                                                 <p class="caption text-main-2 ks-card-brand-code">
                                                     <%# Server.HtmlEncode(CatalogBrandCodeLabel(Container.DataItem)) %>
@@ -443,17 +423,7 @@
                         </asp:ListView>
                     </div>
 
-                    <asp:Panel ID="ksPagerWrap" runat="server" CssClass="wrap-pagination d-flex justify-content-center mt-4">
-                        <asp:DataPager ID="dpProdotti" runat="server" PagedControlID="lvProdotti" PageSize="12">
-                            <Fields>
-                                <asp:NextPreviousPagerField ShowFirstPageButton="false" ShowPreviousPageButton="true" ShowNextPageButton="false" ShowLastPageButton="false" ButtonType="Link" PreviousPageText="&laquo;" ButtonCssClass="pagination-link" />
-                                <asp:NumericPagerField ButtonType="Link" ButtonCount="7" NumericButtonCssClass="pagination-link" CurrentPageLabelCssClass="pagination-link active" />
-                                <asp:NextPreviousPagerField ShowFirstPageButton="false" ShowPreviousPageButton="false" ShowNextPageButton="true" ShowLastPageButton="false" ButtonType="Link" NextPageText="&raquo;" ButtonCssClass="pagination-link" />
-                            </Fields>
-                        </asp:DataPager>
-                    </asp:Panel>
-
-                    <asp:Panel ID="ksMultiFooter" runat="server" CssClass="mt-4 ks-multi-footer" Visible="false">
+                    <asp:Panel ID="ksMultiFooter" runat="server" ClientIDMode="Static" CssClass="mt-4 ks-multi-footer" Visible="false">
                         <div class="ks-multi-footer__content">
                             <div>
                                 <p class="ks-multi-footer__title">
@@ -476,6 +446,33 @@
                             </asp:LinkButton>
                         </div>
                     </asp:Panel>
+
+                    <asp:Panel ID="ksPagerWrap" runat="server" ClientIDMode="Static" CssClass="ks-catalog-pager-wrap" Visible="false">
+                        <span class="ks-catalog-pager__engine" aria-hidden="true">
+                            <asp:DataPager ID="dpProdotti" runat="server" PagedControlID="lvProdotti" PageSize="12" EnableViewState="false" />
+                        </span>
+                        <asp:Literal ID="litCatalogPager" runat="server" EnableViewState="false" />
+                    </asp:Panel>
+
+                    <section id="ksRecentlyViewedBlock"
+                             class="ks-recently-viewed-block d-none"
+                             data-ks-limit="8"
+                             data-ks-placeholder="<%= ThemeManager.PlaceholderProductImageUrl() %>">
+                        <div class="flat-title mb-3">
+                            <h5 class="fw-semibold">Visti di recente</h5>
+                            <div class="box-btn-slide relative">
+                                <div class="swiper-button-prev nav-swiper nav-prev-products ks-rv-prev">
+                                    <i class="icon-arrow-left-lg"></i>
+                                </div>
+                                <div class="swiper-button-next nav-swiper nav-next-products ks-rv-next">
+                                    <i class="icon-arrow-right-lg"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="swiper tf-sw-products ks-recently-viewed-swiper">
+                            <div class="swiper-wrapper" data-ks-recent-items></div>
+                        </div>
+                    </section>
 
                     <asp:Panel ID="tNavig" runat="server" Visible="false" />
                 </div>

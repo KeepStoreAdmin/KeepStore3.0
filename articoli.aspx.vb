@@ -1212,10 +1212,9 @@ strWhere = strWhere & " GROUP BY id"
             ApplyMultiSelectCheckboxMicrocopy(it)
         Next
 
-        ' Footer multi-selezione e pager: li mostro solo se ho risultati
+        ' Footer multi-selezione: lo mostro solo se ho risultati.
         Dim hasItems As Boolean = (Me.lvProdotti.Items.Count > 0)
         If Me.ksMultiFooter IsNot Nothing Then Me.ksMultiFooter.Visible = hasItems
-        If Me.ksPagerWrap IsNot Nothing Then Me.ksPagerWrap.Visible = hasItems
         If catalogSideFiltersDeferred Then
             If hasItems Then
                 BindDeferredCatalogSideFilters()
@@ -1235,6 +1234,101 @@ strWhere = strWhere & " GROUP BY id"
                 RedirectIfChanged(resetPageUrl, False)
             End If
         End If
+
+        RenderCatalogPager(hasItems)
+    End Sub
+
+    Private Sub RenderCatalogPager(ByVal hasItems As Boolean)
+        If Me.ksPagerWrap Is Nothing OrElse Me.litCatalogPager Is Nothing Then Exit Sub
+
+        Me.ksPagerWrap.Visible = False
+        Me.litCatalogPager.Text = String.Empty
+
+        If Not hasItems OrElse Me.dpProdotti Is Nothing Then Exit Sub
+
+        Dim pageSize As Integer = Me.dpProdotti.PageSize
+        Dim totalRows As Integer = Me.dpProdotti.TotalRowCount
+        If pageSize <= 0 OrElse totalRows <= 0 Then Exit Sub
+
+        Dim totalPages As Integer = CInt(Math.Ceiling(CDbl(totalRows) / CDbl(pageSize)))
+        If totalPages <= 1 Then Exit Sub
+
+        Dim currentPageIndex As Integer = GetCatalogPageIndex(pageSize)
+        If currentPageIndex < 0 Then currentPageIndex = 0
+        If currentPageIndex >= totalPages Then currentPageIndex = totalPages - 1
+
+        Dim builder As New StringBuilder()
+        builder.Append("<nav class=""ks-catalog-pager"" aria-label=""Paginazione catalogo"">")
+        builder.Append("<div class=""ks-catalog-pager__items"">")
+
+        AppendCatalogPagerControl(builder,
+                                  "ks-catalog-pager__first",
+                                  "Prima pagina",
+                                  "<span class=""ks-catalog-pager__symbol"" aria-hidden=""true"">&laquo;</span>",
+                                  0,
+                                  currentPageIndex = 0)
+        AppendCatalogPagerControl(builder,
+                                  "ks-catalog-pager__previous ks-catalog-pager__control--wide",
+                                  "Pagina precedente",
+                                  "<span class=""ks-catalog-pager__symbol"" aria-hidden=""true"">&lsaquo;</span><span>Precedente</span>",
+                                  currentPageIndex - 1,
+                                  currentPageIndex = 0)
+
+        builder.Append("<span class=""ks-catalog-pager__summary"">Pagina ")
+        builder.Append("<span class=""ks-catalog-pager__current"" aria-current=""page"">")
+        builder.Append((currentPageIndex + 1).ToString())
+        builder.Append("</span> di <span class=""ks-catalog-pager__total"">")
+        builder.Append(totalPages.ToString())
+        builder.Append("</span></span>")
+
+        AppendCatalogPagerControl(builder,
+                                  "ks-catalog-pager__next ks-catalog-pager__control--wide",
+                                  "Pagina successiva",
+                                  "<span>Prossimo</span><span class=""ks-catalog-pager__symbol"" aria-hidden=""true"">&rsaquo;</span>",
+                                  currentPageIndex + 1,
+                                  currentPageIndex = totalPages - 1)
+        AppendCatalogPagerControl(builder,
+                                  "ks-catalog-pager__last",
+                                  "Ultima pagina",
+                                  "<span class=""ks-catalog-pager__symbol"" aria-hidden=""true"">&raquo;</span>",
+                                  totalPages - 1,
+                                  currentPageIndex = totalPages - 1)
+
+        builder.Append("</div></nav>")
+
+        Me.litCatalogPager.Text = builder.ToString()
+        Me.ksPagerWrap.Visible = True
+    End Sub
+
+    Private Sub AppendCatalogPagerControl(ByVal builder As StringBuilder,
+                                          ByVal modifierClass As String,
+                                          ByVal ariaLabel As String,
+                                          ByVal contentHtml As String,
+                                          ByVal targetPageIndex As Integer,
+                                          ByVal disabled As Boolean)
+        Dim cssClass As String = "ks-catalog-pager__control " & modifierClass
+        Dim safeAriaLabel As String = HttpUtility.HtmlAttributeEncode(ariaLabel)
+
+        If disabled Then
+            builder.Append("<span class=""")
+            builder.Append(cssClass)
+            builder.Append(" is-disabled"" role=""link"" aria-disabled=""true"" aria-label=""")
+            builder.Append(safeAriaLabel)
+            builder.Append(""">")
+            builder.Append(contentHtml)
+            builder.Append("</span>")
+            Exit Sub
+        End If
+
+        builder.Append("<a class=""")
+        builder.Append(cssClass)
+        builder.Append(""" href=""")
+        builder.Append(HttpUtility.HtmlAttributeEncode(BuildCatalogPageUrl(targetPageIndex)))
+        builder.Append(""" aria-label=""")
+        builder.Append(safeAriaLabel)
+        builder.Append(""">")
+        builder.Append(contentHtml)
+        builder.Append("</a>")
     End Sub
 
     Private Sub BindCatalogEmptySearchState()
