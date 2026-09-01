@@ -80,9 +80,9 @@ La documentazione tecnica deve distinguere sempre tra chiusura di un micro-task 
 
 Esempio vincolante: `articoli.aspx` ha micro-task chiusi su card prodotto, selezione multipla, quantita gia nel carrello, delta quantita, visual mobile, CTA `Acquista`, stato/paging deterministico, toolbar con quattro viste e risoluzione immagini prodotto. Search/suggest, zero-results, sidebar/facet e filtri applicati mantengono i perimetri specifici gia documentati. Questo non rende la pagina catalogo completa ne "allineata ONSUS" in senso pieno: i gap P1/P2 dell'audit restano aperti.
 
-Nota anti-false-closure: `articoli.aspx` non e una pagina dichiarata completa. `CATALOG-ONSUS-PARITY-AUDIT-1` e completato e i tre P0 sono chiusi, ma i micro-task chiusi non equivalgono alla parita ONSUS completa. Sidebar/facet residui, load-more Marche, tassonomie, active filters legacy, Price/Deals/Condition, performance, componenti commerciali e responsive complessivo richiedono task successivi.
+Nota anti-false-closure: `articoli.aspx` non e una pagina dichiarata completa. `CATALOG-ONSUS-PARITY-AUDIT-1` e completato e i tre P0 sono chiusi, ma i micro-task chiusi non equivalgono alla parita ONSUS completa. Pager/posizione recent, quattro viste mobile, compact grid e containment recent sono stati chiusi da task successivi; sidebar/facet residui, load-more Marche, tassonomie, active filters legacy/reset, Price/Deals/Condition, Reviews con dati reali, performance, componenti commerciali e responsive complessivo richiedono ancora task dedicati.
 
-Stato Git stabile corrente dopo `CATALOG-ONSUS-PARITY-1C-IMAGE-PATH-404`: `frontend-rebuild` / `origin/frontend-rebuild` a `9a6e5b1babc836adb33cd43f930a112cd6e77103`; `main` / `origin/main` a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Gli SHA `1acbba90...` (`1A`), `9903687...` (`1B`), `817966ed...` (`1C` principale) e gli SHA typography restano riferimenti storici corretti; `9a6e5b1b...` e il polish immagini e la stable corrente.
+Stato Git stabile corrente dopo `MERGE-STOREFRONT-CATALOG-MOBILE-CART-BLOCK-2`: `frontend-rebuild` / `origin/frontend-rebuild` a `b31f8177e09cffcd5e9193e1e26eb3bbec4f8e6b`; `main` / `origin/main` a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Base cumulativa precedente `300b97a7a8873d3cd0cb750be2e949523a8ebaa0`, merge fast-forward only, ahead/behind pre-merge `0 / 7`. Gli SHA catalog parity, typography e product-image precedenti restano riferimenti storici corretti, non descrizioni della stable corrente.
 
 Riconciliazione storica PDP: eventuali record precedenti che riportano `PDP-BUY-CTA-ACQUISTA-1A` tra i backlog descrivono lo stato al momento della chiusura catalogo/HOME e sono superati dalla chiusura PDP a HEAD `3b0b2ac97564c497abd26d224e5e945834a2ec26`; resta fermo che la pagina `articolo.aspx` non e completa.
 
@@ -105,7 +105,54 @@ Riconciliazione storica quantita PDP: eventuali record precedenti che riportano 
 - Le superfici runtime rilevanti convergono sul resolver centrale: catalogo, HOME, PDP, suggest, home feed, carrello, MiniCart, wishlist, documenti, vetrina, search legacy, `articolix` ed export/feed. Nel carrello sono rimossi `normalizeCartImage()` e il fallback `img.onerror`: il server deve rendere thumbnail, full o placeholder corretti.
 - Placeholder canonico `/Public/assets/images/img/placeholder.svg`: SVG `800x800`, vettoriale/responsive, neutro, icona immagine, accento `#D80027`, testo `Immagine non disponibile`, Arial, accessibile e senza script/riferimenti remoti. Se il file non e disponibile nel deployment, un piccolo `data:image/svg+xml,...` e il last-resort. Directory Settori separata: `/Public/assets/images/settori/`; il resolver prodotto non deve inglobarla. Le directory asset non tracciate non vanno aggiunte automaticamente.
 - QA/manifest `1C`: q=hp image 404 pari a 0; HOME/catalogo/catalogo pg=2/PDP/carrello/placeholder HTTP 200; build .NET Framework 4.8, diff check e secret scan A; smoke Germano A. Commit principale: 23 modificati, 0 aggiunti/eliminati; polish su `ThemeManager.vb` + `placeholder.svg`; cumulativo 24 file unici modificati, 0 aggiunti/eliminati. `articolix.aspx` HTTP 500 per binding legacy `TCid` resta finding separato e non e risolto dal task immagini.
-- Gap P1/P2 ancora aperti: Marche oltre 7/load-more, Settori/Categorie troncati, active filters server/JS legacy, reset mobile `st/ct`, Price, Deals, Condition/Ricondizionato, Reviews solo con sorgente reale, N+1 promo, Recently Viewed, Compare empty-state e altri componenti commerciali ONSUS. `articoli.aspx` non e completa.
+- Gap P1/P2 ancora aperti: Marche oltre 7/load-more, tassonomie/Settori/Categorie dove ancora limitati, active filters server/JS legacy, reset mobile `st/ct`, Price, Deals, Condition/Ricondizionato, Reviews solo con sorgente reale, N+1 promo/performance, Compare empty-state e altri componenti commerciali ONSUS. Pager, posizione Recently Viewed, quattro viste mobile, compact grid e containment recent sono chiusi e non vanno riproposti come gap. `articoli.aspx` non e completa.
+
+### 2.5 Storefront mobile/cart/catalog block 2
+
+Consolidamento Git corrente: base `300b97a7a8873d3cd0cb750be2e949523a8ebaa0`, stable finale `b31f8177e09cffcd5e9193e1e26eb3bbec4f8e6b`, merge fast-forward only con ahead/behind `0 / 7`. Catena runtime lineare:
+
+1. `3cdea2709712d133cfa82adb717ea9df69d0ed88` - `fix: add storefront cart feedback and awareness`.
+2. `c747b1ca2baa2a353251e1204b9b6775a44b5c01` - `fix: restore catalog mobile view layouts`.
+3. `55709258786405c9f75057f171d65742cf395ffc` - `fix: align catalog cards with cart awareness`.
+4. `bcb1cf5e048d5641119f7d829936a423d33ec2c7` - `fix: remove catalog cart state side accent`.
+5. `1e5c4070db5da39dfee26b7fa55362909dcae292` - `fix: stabilize storefront product card geometry`.
+6. `925244d17a87add4098266b273e8a45b2428c2c4` - `fix: stabilize catalog recent cards on mobile`.
+7. `b31f8177e09cffcd5e9193e1e26eb3bbec4f8e6b` - `fix: refine catalog structure and compact view`.
+
+Contratto cart feedback/awareness:
+
+- L'add-to-cart normale non forza sempre il redirect a `carrello.aspx`; il ritorno usa un URL shopping locale validato e puo preservare querystring, filtri e `pg`.
+- Il feedback success e one-shot dopo aggiunta reale; il refresh non ripete la toast. Lo stato persistente `Nel carrello attivo: N pz.` e derivato dallo snapshot server-side `CartStateSnapshotProvider`.
+- `window.KeepStoreCartState` e uno snapshot client per decorazione UI, non una source of truth; nessun `localStorage` governa il carrello. Quantita e stato vengono dal server.
+- Il green state leggero resta; la barra verticale verde laterale e stata rimossa e il badge non deve coprire la fotografia. La semantica delta PDP resta `2 -> 2 = 2`, `2 -> 3 = 3`, `2 -> 5 = 5`.
+- Side cart/offcanvas non e implementato da questo blocco e resta modulo separato.
+
+Contratto viste e compact grid:
+
+- Layout supportati anche mobile: `tabgrid-1`, `tabgrid-2`, `tablist-1`, `tablist-2`. `sessionStorage["KeepStore:CatalogLayout"]` memorizza esclusivamente la preferenza presentazionale whitelist.
+- Guardrail: usare `.ks-view-layout-switch`, mai `.tf-view-layout-switch`, per non attivare il reset distruttivo del `main.js` ONSUS. Tutte le viste devono conservare disponibilita, cart-awareness, quantita, multiselect e CTA `Acquista`.
+- `tabgrid-2` e una compact grid reale: due colonne mobile dove appropriato e cinque colonne a `1365px`. Prezzo, disponibilita, cart-awareness, quantita, multiselect e `Acquista` restano obbligatori; solo metadata secondari possono essere ridotti.
+- Fotografia compact, relation e bundle: fondo bianco, `border: 0`, `object-fit: contain`, `object-position: center`, breathing space minimo e nessun gray panel esterno. Restano invariati `ThemeManager`, `/Public/assets/images/articoli/`, `/Public/assets/images/img/placeholder.svg` e `/Public/assets/images/settori/`.
+
+Contratto geometria e contenimento:
+
+- Card equal-height dove necessario con layout flex; purchase row ancorata naturalmente al fondo. Vietato introdurre fixed height per compensare cart-awareness.
+- Cart-awareness non deve spostare le righe acquisto. Titoli e metadata restano dentro la card; `product-tag` mobile usa containment/ellipsis.
+- Recently Viewed dinamico del catalogo ha contratto flex dedicato e CTA bottom-aligned. Nessun horizontal overflow e stato rilevato nei viewport QA del blocco.
+- Card `articoli.aspx` e Recently Viewed catalogo: titolo massimo presentazionale di circa tre righe. La rimozione di `CompactText(Descrizione1, 72)` lascia il testo completo nel DOM; il limite e CSS. `.product-info-name` PDP resta completo e non clampato. HOME a tre righe resta requisito aperto del prossimo runtime.
+
+Contratto pager e struttura pagina:
+
+- Source of truth paging: querystring `pg` + `DataPager`. Il DataPager resta motore server-side, ma la UI visibile e `«`, `Precedente`, `Pagina [N] di [TOT]`, `Prossimo`, `»`.
+- `BuildCatalogPageUrl()` preserva lo stato catalogo legittimo. Pager visibile solo con `totalPages > 1`; First/Previous/Next/Last sono accessibili e disabled correttamente. QA: `1/45`, `2/45`, `23/45`, `45/45`.
+- Ordine DOM/logico finale di `articoli.aspx`: `gridLayout`, `ksMultiFooter`, `ksPagerWrap`, `ksRecentlyViewedBlock`. I Visti di recente seguono prodotti, acquisto multiplo e pager.
+
+QA e stato roadmap:
+
+- Smoke Germano espliciti A: `STOREFRONT-CART-FEEDBACK-AND-AWARENESS-1A`, `CATALOG-MOBILE-FOUR-VIEWS-1A`, `CATALOG-CART-AWARENESS-CARD-ALIGNMENT-1A`, `CATALOG-MOBILE-RECENT-CARD-TAG-CONTAINMENT-1A`, `CATALOG-STRUCTURE-PAGER-COMPACT-GRID-1A`. I polish intermedi sono incorporati nella stable senza attribuire loro smoke A non ricevuti.
+- Browser runtime WebForms reale riusabile: `https://localhost:8443`. Viewport verificati: `360x800`, `390x844`, `430x932`, `768x1024`, `1365x900`, piu sanity `1920x1080`. Per task UI significativi A visuale richiede browser reale; senza browser dichiarare B visuale. Nessuna dipendenza Playwright/browser va aggiunta al repository.
+- Prossimo runtime ufficiale: `STOREFRONT-AVAILABILITY-PRESENTATION-1A`. Source of truth `AvailabilityDisplayHelper`, configurazione `Session("DispoTipo")`, scope HOME/catalogo/PDP (main, related/similar/bundle/recent)/carrello. Modalita numerica `Disponibili`, `Impegnati`, `In arrivo`; modalita sintetica con indicatore compatto. Nessun N+1 e nessuna duplicazione business lato browser; eventuale `InOrdine` HOME va aggiunto alla query esistente, non letto per card. Include titoli HOME circa tre righe, preservando il titolo PDP completo.
+- Roadmap successiva separata: `SIDE-CART-OFFCANVAS-ONSUS-AUDIT-1`, mobile responsive account/auth/documenti, catalog parity P1/P2, payments/checkout/e-mail, search/navigation e infine SEO/AI/Gemini.
 
 ## 3. Indice
 
@@ -172,7 +219,7 @@ La sicurezza password e stata consolidata nel flow account e LOGIN-REGISTER-SECU
 - Il layer KeepStore finale `theme-overrides.css`, senza riscrivere `styles.css`, normalizza a `var(--ks-font-ui)` le famiglie testuali residue pertinenti: CTA HOME; MegaMenu settore/categoria/tipologia/empty; `.font-main`; `.font-2`; `.box-sale-wrap p`; `.ft-heading`; `.sib-form`; card prodotto, CTA `Acquista` e quantita in-carrello del catalogo. HOME, catalogo, PDP, header/MegaMenu, footer e carrello risultano Arial; nessun Times New Roman o Poppins accidentale sulle superfici storefront visibili testate; Icomoon preservato.
 - Nessuna scala ONSUS e stata uniformata: font-size, font-weight, letter-spacing, spacing, breakpoint e struttura/layout restano invariati. Arial Black osservabile come platform font su un titolo `800` non modifica la family CSS `Arial, sans-serif`.
 - Polish title clipping HOME: `body.ks-page-home .ks-home-main .name-product` usa `line-height: 20px` e `min-height: 40px`, preservando `14px` desktop, `12px` mobile, weight, uppercase, colore, `-webkit-line-clamp: 2`, overflow e massimo due righe. Verificate 8 card `In Evidenza` e 8 `Best Seller` su desktop `1365x900` e mobile `390x844`, senza clipping o terza linea parziale e senza variazioni a prezzi/CTA/allineamento. `Occasione Imperdibile` non aveva product card reale nella fixture e non e stata modificata.
-- `GLOBAL-TYPOGRAPHY-ONSUS-1C` e NON NECESSARIO / NON CREATO dopo esito A di `1B`; il blocco typography storefront e CHIUSO. La chiusura non dichiara complete HOME, catalogo, PDP, header, footer o l'area ecommerce. Catalog audit e runtime `1A/1B/1C` sono poi stati eseguiti; il prossimo runtime corrente e `PDP-TITLE-SHIPPING-INFO-1A`, mentre side cart resta successivo e separato. Il vecchio `ARTICOLO-CART-QTY-IN-PDP-AUDIT-1` non e piu successivo: audit e runtime quantita PDP sono assorbiti dal cart-state storefront globale.
+- `GLOBAL-TYPOGRAPHY-ONSUS-1C` e NON NECESSARIO / NON CREATO dopo esito A di `1B`; il blocco typography storefront e CHIUSO. La chiusura non dichiara complete HOME, catalogo, PDP, header, footer o l'area ecommerce. Catalog audit e runtime `1A/1B/1C` sono poi stati eseguiti; il prossimo runtime corrente e `STOREFRONT-AVAILABILITY-PRESENTATION-1A`, mentre side cart resta successivo e separato. Il vecchio `ARTICOLO-CART-QTY-IN-PDP-AUDIT-1` non e piu successivo: audit e runtime quantita PDP sono assorbiti dal cart-state storefront globale.
 - Manifest runtime storico `1B`: modificati `Page.master` e `Public/assets/keepstore/css/theme-overrides.css`, aggiunti 0, eliminati 0. HTTP post-merge 200 su HOME, catalogo `q=hp`, PDP `id=12384&TCid=-1` e carrello; il guardrail deployment generale sui file tracked aggiunti resta valido.
 
 ### 5.2.1 Cart-state storefront condiviso
@@ -387,9 +434,9 @@ Riconciliazione post `GLOBAL-TYPOGRAPHY-ONSUS-AUDIT-1`: il record `PRODUCT-DETAI
 
 Regola operativa permanente scheda prodotto: ogni confronto visuale deve usare un URL runtime reale e deve prima distinguere asset/path failure da CSS/layout failure. Non correggere via CSS un problema di file fisico mancante; il CSS deve solo impedire collasso layout e alt text lunghi quando l'asset non carica.
 
-Finding successivo, da trattare esclusivamente in `PDP-TITLE-SHIPPING-INFO-1A`: il nome prodotto proveniente da `Descrizione1` non e troncato dal DB ma viene nascosto dopo due righe dalla combinazione CSS di `.product-info-name` (`max-height`, `overflow: hidden`, `-webkit-line-clamp: 2`). Il requisito e rendere sempre visibile il titolo completo, senza clamp, ellipsis o altezza massima occultante, seguendo `Public/assets/keepstore/product-detail.html`. Questa correzione non autorizza una full PDP parity.
+Riconciliazione storica `PDP-TITLE-SHIPPING-INFO-1A`: il finding sul nome prodotto proveniente da `Descrizione1` descriveva il precedente limite CSS di `.product-info-name`; nella stable corrente il titolo PDP resta completo, senza clamp. Il task non e piu il prossimo runtime e la sua chiusura non autorizza una dichiarazione di full PDP parity.
 
-Nello stesso task il blocco `div.shipping-to` deve essere riallineato alla semantica ONSUS: oggi duplica Codice, EAN e Marca gia presenti nelle informazioni prodotto; in futuro deve mostrare esclusivamente informazioni di spedizione reali KeepStore. Prima del runtime verificare i campi/logiche gia usati dal carrello `SpedizioneGratis_Listini`, `SpedizioneGratis_Data_Inizio` e `SpedizioneGratis_Data_Fine` con listino e data correnti. Se la spedizione gratuita articolo e valida, mostrare `Spedizione gratuita` ed eventualmente `Valida fino al gg/mm/aaaa`; altrimenti mostrare `Spese di spedizione calcolate nel carrello` e spiegare brevemente che il costo definitivo dipende da ordine e metodo disponibile.
+Contratto shipping PDP da preservare: `div.shipping-to` deve mostrare esclusivamente informazioni di spedizione reali KeepStore e non duplicare Codice, EAN o Marca. Le condizioni usano i campi/logiche gia previsti dal carrello `SpedizioneGratis_Listini`, `SpedizioneGratis_Data_Inizio` e `SpedizioneGratis_Data_Fine` con listino e data correnti. Spedizione gratuita articolo valida -> `Spedizione gratuita` ed eventuale scadenza significativa; altrimenti -> `Spese di spedizione calcolate nel carrello`, perche il costo definitivo dipende da ordine e metodo disponibile.
 
 Non inventare corriere, costo fisso, tempi 24/48 ore, data consegna, destinazione, soglie o localita: il costo puo dipendere da composizione completa dell'ordine, importo, peso, vettore e altre condizioni runtime. Il campo reale `Peso` puo essere esposto soltanto dopo aver verificato che sia disponibile nella datasource PDP e averne accertato unita e semantica; non assumere automaticamente kg. `articolo.aspx` resta non completa; side cart/offcanvas resta roadmap separata.
 
@@ -1412,7 +1459,7 @@ Non implementare runtime email senza task dedicato e senza conferma delle fonti 
 ## 17. Debito tecnico e backlog architetturale
 
 - `GLOBAL-TYPOGRAPHY-ONSUS-AUDIT-1`, `GLOBAL-TYPOGRAPHY-ONSUS-1A` e `GLOBAL-TYPOGRAPHY-ONSUS-1B`: CHIUSI / A. `GLOBAL-TYPOGRAPHY-ONSUS-1C`: NON NECESSARIO / NON CREATO. Il blocco typography storefront resta chiuso; audit catalog parity e runtime `1A/1B/1C` sono chiusi, senza dichiarare `articoli.aspx` completa.
-- `CATALOG-ONSUS-PARITY-1C-IMAGE-PATH-404`: CHIUSO / A; i gap P1/P2 catalogo restano backlog. Prossimo runtime ufficiale `PDP-TITLE-SHIPPING-INFO-1A`; `SIDE-CART-OFFCANVAS-ONSUS-AUDIT-1` resta separato e successivo.
+- `CATALOG-ONSUS-PARITY-1C-IMAGE-PATH-404`: CHIUSO / A; anche pager/posizione recent, quattro viste mobile, compact grid e containment recent sono chiusi dal blocco runtime successivo. I gap P1/P2 catalogo residui restano backlog. Prossimo runtime ufficiale `STOREFRONT-AVAILABILITY-PRESENTATION-1A`; `SIDE-CART-OFFCANVAS-ONSUS-AUDIT-1` resta separato e successivo.
 - `STOREFRONT-CART-STATE-PERSISTENCE-REGRESSION-AUDIT-1`: CHIUSO / B diagnostico; `STOREFRONT-CART-STATE-PERSISTENCE-1A`: CHIUSO / A. `ARTICOLO-CART-QTY-IN-PDP-AUDIT-1` e `ARTICOLO-CART-QTY-IN-PDP-1A` sono ASSORBITI / SODDISFATTI e non restano backlog autonomi.
 - `CART-ADD-QTY-SERVER-MAX-HARDENING-AUDIT-1`: backlog sicurezza separato nato dall'audit PDP CTA; verificare se `cart_add.aspx` debba applicare server-side lo stesso massimo quantita `9999` usato altrove. Nessun fix autorizzato e nessuna classificazione come vulnerabilita critica prima dell'audit; mantenere visibile prima del go-live.
 - `CART-SESSIONID-LOG-REDACTION-1A`: backlog hardening separato nato dall'audit cart-state; verificare e redigere i log legacy di `aggiungi.aspx.vb` che possono contenere SessionId completo. Non modificato dal task cart-state e non classificato critico senza audit.
