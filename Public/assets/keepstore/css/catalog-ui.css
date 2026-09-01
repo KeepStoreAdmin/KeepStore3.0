@@ -845,7 +845,17 @@
   width: 100%;
 }
 
+#ksCatalogPage article.card-product .box-title > div {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
 #ksCatalogPage article.card-product .product-tag {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
   min-height: 22px;
   margin-bottom: 0;
   overflow: hidden;
@@ -853,6 +863,7 @@
   line-height: 22px;
   text-overflow: ellipsis;
   white-space: nowrap;
+  width: 100%;
 }
 
 #ksCatalogPage article.card-product .name-product {
@@ -1523,6 +1534,92 @@
 @media (max-width: 767.98px) {
   #ksCatalogPage.flat-content {
     padding-top: 0;
+  }
+
+  #ksCatalogPage .ks-recently-viewed-block .ks-recently-viewed-swiper .swiper-wrapper {
+    align-items: stretch;
+  }
+
+  #ksCatalogPage .ks-recently-viewed-block .ks-recently-viewed-swiper .swiper-slide {
+    display: flex;
+    height: auto;
+    min-width: 0;
+  }
+
+  #ksCatalogPage .ks-recently-viewed-block .ks-recent-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  #ksCatalogPage .ks-recently-viewed-block .ks-recent-card .card-product-info {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    width: 100%;
+  }
+
+  #ksCatalogPage .ks-recently-viewed-block .ks-recent-card .card-product-info > * {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  #ksCatalogPage .ks-recently-viewed-block .ks-recent-card .product-tag {
+    display: block;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+  }
+
+  #ksCatalogPage .ks-recently-viewed-block .ks-recent-card .name-product {
+    display: -webkit-box;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    width: 100%;
+    word-break: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  #ksCatalogPage .ks-recently-viewed-block .ks-recent-card .ks-card-brand-code {
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+  }
+
+  #ksCatalogPage .ks-recently-viewed-block .ks-recent-card .card-product-info > .caption.mt-1 {
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    width: 100%;
+    word-break: normal;
+  }
+
+  #ksCatalogPage .ks-recently-viewed-block .ks-recent-card .price-wrap,
+  #ksCatalogPage .ks-recently-viewed-block .ks-recent-card .ks-cart-awareness {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  #ksCatalogPage .ks-recently-viewed-block .ks-recent-card .ks-cart-awareness {
+    white-space: normal;
+  }
+
+  #ksCatalogPage .ks-recently-viewed-block .ks-recent-card .ks-mobile-card-buy-cta {
+    margin-top: auto;
   }
 
   #ksCatalogPage .tf-shop-control {
