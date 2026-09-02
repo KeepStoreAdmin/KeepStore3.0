@@ -77,9 +77,9 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ### Stato reale, perimetro chiuso e scaletta prioritaria ufficiale
 
-Stato Git stabile prima del merge runtime `STOREAVAIL-1A`:
+Stato Git dopo il fast-forward runtime/documentale `STOREAVAIL-1A`:
 
-- `frontend-rebuild` e `origin/frontend-rebuild`: `b31f8177e09cffcd5e9193e1e26eb3bbec4f8e6b`.
+- Merge point applicativo/documentale su `frontend-rebuild`: `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`.
 - `main` e `origin/main`: `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - Working tree atteso: pulito salvo eventuali directory non tracciate `Public/assets/images/articoli/`, `Public/assets/images/marche/` e `Public/assets/images/settori/`, che non vanno committate.
 
@@ -119,13 +119,13 @@ Stato sintetico dei blocchi chiusi:
 - Ordine finale in `articoli.aspx`: `gridLayout` < `ksMultiFooter` < `ksPagerWrap` < `ksRecentlyViewedBlock`. I Visti di recente seguono quindi prodotti, acquisto multiplo e pager, coerentemente con la separazione di `shop-default.html`.
 - Browser QA reale riusabile su IIS locale `https://localhost:8443`: viewport `360x800`, `390x844`, `430x932`, `768x1024`, `1365x900` e sanity `1920x1080`. Guardrail: per task UI significativi non dichiarare A desktop/mobile dalla sola analisi CSS; usare il runtime browser reale. Se non disponibile, riportare B visuale. Non aggiungere dipendenze browser/Playwright al repository.
 - Anti-false-closure: catalogo e `articoli.aspx` non sono completi. Restano gap P1/P2, dove applicabili: Marche/load-more, tassonomie, active filters legacy/reset, Price, Deals, Condition/Ricondizionato, Reviews soltanto con dati reali, performance e ulteriori componenti commerciali/responsive. Pager, posizione recent, quattro viste mobile, compact grid e containment recent non vanno invece lasciati come problemi aperti.
-- `STOREFRONT-AVAILABILITY-PRESENTATION-1A` e funzionalmente accettato sul branch task a HEAD applicativo `2b4e751d0041aa6ee4ec5be26a1cd138c3b3bc71`; resta da consolidare con merge separato su `frontend-rebuild`.
-- Roadmap immediata dopo il merge: `CATALOG-ASYNC-CART-1A`, poi `PDP-BRAND-LOGO-1A`, poi `STOREFRONT-OFFERS-PROMO-VERIFY-1A` soltanto quando Germano avra attivato offerte e promozioni nell'ambiente di test. Side cart/offcanvas, catalog parity P1/P2, account/auth/documenti responsive, payments/checkout/e-mail, search/navigation e SEO/AI/Gemini restano separati.
+- `STOREFRONT-AVAILABILITY-PRESENTATION-1A` e integrato con fast-forward in `frontend-rebuild`; codice applicativo accettato a `2b4e751d0041aa6ee4ec5be26a1cd138c3b3bc71` e merge point con documentazione iniziale a `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`.
+- Prossimo task ufficiale: `CATALOG-ASYNC-CART-1A`; seguono `PDP-BRAND-LOGO-1A` e `STOREFRONT-OFFERS-PROMO-VERIFY-1A` soltanto quando Germano avra attivato offerte e promozioni nell'ambiente di test. Side cart/offcanvas, catalog parity P1/P2, account/auth/documenti responsive, payments/checkout/e-mail, search/navigation e SEO/AI/Gemini restano separati.
 
-### STOREAVAIL-1A accettato prima del merge
+### STOREAVAIL-1A integrato in frontend-rebuild
 
-- Branch runtime: `task/storefront-availability-presentation-1a`; base originale `a5eb1c5823997b83430cd49874c794a9d1bfa18e`; HEAD applicativo accettato prima del commit documentale `2b4e751d0041aa6ee4ec5be26a1cd138c3b3bc71`.
-- `main` e `origin/main` restano preservati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. L'accettazione del task non equivale ancora al merge su `frontend-rebuild`.
+- Branch runtime conservato: `task/storefront-availability-presentation-1a`; base originale `a5eb1c5823997b83430cd49874c794a9d1bfa18e`; HEAD applicativo accettato `2b4e751d0041aa6ee4ec5be26a1cd138c3b3bc71`; merge point applicativo/documentale `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`.
+- `main` e `origin/main` restano preservati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. STOREAVAIL-1A risulta integrato in `frontend-rebuild` con fast-forward, senza merge commit.
 - Manifest applicativo cumulativo, 13 file modificati e nessun file aggiunto/eliminato: `App_Code/AvailabilityDisplayHelper.vb`, `Default.aspx`, `Default.aspx.vb`, `Page.master`, `Public/assets/keepstore/css/theme-overrides.css`, `Public/assets/keepstore/js/keepstore-recently-viewed.js`, `Public/ui/controls/ProductCard.ascx`, `Public/ui/controls/ProductCard.ascx.vb`, `articoli.aspx`, `articoli.aspx.vb`, `articolo.aspx`, `articolo.aspx.vb`, `carrello.aspx`.
 - Contratto disponibilita: la modalita arriva da `Session("DispoTipo")`, caricata da `Page.master.vb`, e viene interpretata dal solo `AvailabilityDisplayHelper`. `DispoMinima`/`ScortaMinima` sono preservate con fallback centralizzato. La modalita `1` mostra uno stato sintetico compatto senza numeri; la modalita `2` mostra sempre `Disponibili`, `Impegnati` e `In arrivo`. `In arrivo` deriva dal dato reale `InOrdine`; zero, `DBNull` e valori mancanti diventano visivamente `0` senza rimuovere la metrica. Stati e colori sintetici restano nella whitelist verde/ambra/rosso.
 - Nessuna business logic disponibilita e stata affidata al JavaScript. HOME usa la query esistente estesa con `InOrdine`, senza SELECT per card e senza N+1. I Visti di recente ricevono uno snapshot strutturato generato server-side; il fallback legacy resta escaped.
@@ -203,7 +203,7 @@ Chiusura progressiva catalog parity audit / `1A` / `1B`:
 - QA `1C`: product-image 404 su `q=hp` pari a 0; HOME, catalogo, catalogo `pg=2`, PDP, carrello e placeholder HTTP 200; build/precompile .NET Framework 4.8, `git diff --check` e secret scan A; smoke Germano A con placeholder visibile e nessuna broken image nelle superfici testate. Manifest: commit `817966ed` con 23 file runtime modificati, 0 aggiunti/eliminati; polish `9a6e5b1b` su `ThemeManager.vb` e `placeholder.svg`; cumulativo 24 file unici modificati, 0 aggiunti, 0 eliminati.
 - Finding separato: `articolix.aspx` puo ancora restituire HTTP 500 per binding legacy `TCid`; non e causato dal resolver immagini, non e corretto da `1C` e resta backlog autonomo.
 - Riconciliazione stato: il precedente finding `PDP-TITLE-SHIPPING-INFO-1A` resta storico utile e non descrive piu il prossimo runtime. Il titolo PDP `.product-info-name` e preservato completo; la pagina `articolo.aspx` non e comunque dichiarata completa.
-- Stato successivo a quel finding: `STOREFRONT-AVAILABILITY-PRESENTATION-1A` e stato implementato e funzionalmente accettato sul branch task; source of truth `AvailabilityDisplayHelper`, `Session("DispoTipo")`, copertura HOME/catalogo/PDP/carrello, nessun N+1 e titoli HOME a massimo tre righe. Il merge su `frontend-rebuild` resta lo step immediato separato.
+- Stato successivo a quel finding: `STOREFRONT-AVAILABILITY-PRESENTATION-1A` e implementato, accettato e integrato in `frontend-rebuild`; source of truth `AvailabilityDisplayHelper`, `Session("DispoTipo")`, copertura HOME/catalogo/PDP/carrello, nessun N+1 e titoli HOME a massimo tre righe. Il prossimo task e `CATALOG-ASYNC-CART-1A`.
 - Side cart/offcanvas resta separato; AI/Gemini/LLMS resta priorita finale.
 
 Scaletta prioritaria ufficiale:
@@ -219,7 +219,7 @@ Scaletta prioritaria ufficiale:
    - `GLOBAL-TYPOGRAPHY-ONSUS-1B`: CHIUSO / A; normalizzazione scoped delle famiglie esplicite residue e polish clipping titoli HOME inclusi.
    - `GLOBAL-TYPOGRAPHY-ONSUS-1C`: NON NECESSARIO / NON CREATO dopo esito A di `1B`; resta solo riferimento storico.
    - `PDP-TITLE-SHIPPING-INFO-1A`: perimetro storico incorporato nella stable; non e il task runtime corrente e non dichiara completa `articolo.aspx`.
-   - `STOREFRONT-AVAILABILITY-PRESENTATION-1A`: FUNZIONALMENTE ACCETTATO sul branch task a `2b4e751d0041aa6ee4ec5be26a1cd138c3b3bc71`; merge runtime ancora da eseguire. Dopo il merge: `CATALOG-ASYNC-CART-1A`, poi `PDP-BRAND-LOGO-1A`, poi verifica promo condizionata.
+   - `STOREFRONT-AVAILABILITY-PRESENTATION-1A`: INTEGRATO con fast-forward, merge point `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`. Prossimo task `CATALOG-ASYNC-CART-1A`, poi `PDP-BRAND-LOGO-1A`, poi verifica promo condizionata.
 2. Priorita 2 - Catalogo `articoli.aspx` full ONSUS parity.
    - `CATALOG-ONSUS-PARITY-AUDIT-1`: COMPLETATO / READ-ONLY, esito operativo E per P0 reali individuati.
    - `CATALOG-ONSUS-PARITY-1A`: CHIUSO / A; stato request e paging deterministici.
@@ -397,11 +397,11 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento stabile prima del merge runtime `STOREAVAIL-1A`:
+Stato di riferimento dopo il merge fast-forward `STOREAVAIL-1A`:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD stabile locale/origin: `b31f8177e09cffcd5e9193e1e26eb3bbec4f8e6b`
-- Branch availability accettato, non ancora mergiato: `task/storefront-availability-presentation-1a` a HEAD applicativo `2b4e751d0041aa6ee4ec5be26a1cd138c3b3bc71`.
+- Merge point `frontend-rebuild`: `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`; il successivo commit docs-only di chiusura non viene auto-referenziato nel documento.
+- Branch availability conservato: `task/storefront-availability-presentation-1a` a `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`.
 - `main` / `origin/main` invariati: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 - Base cumulativa precedente: `300b97a7a8873d3cd0cb750be2e949523a8ebaa0`; consolidamento lineare fast-forward only di 7 commit, ahead/behind pre-merge `0 / 7`.
 - Commit PDP CTA: `b56277c7777345c70021e21270628b72a51a2f4c` e `3b0b2ac97564c497abd26d224e5e945834a2ec26`; merge `--ff-only`, smoke Germano finale A desktop/mobile.
