@@ -38,7 +38,7 @@ Relazione con il masterplan: il masterplan resta il riferimento operativo per ta
 - Non creare loop documentali: un documento registra commit funzionale principale, PR, branch, stato, smoke e decisioni; il commit documentale che chiude una REV non deve essere richiesto come prerequisito di una nuova REV automatica.
 - Prima di aprire PR diagnostiche su problemi sospetti, fare test manuale mirato. Se il problema non e riproducibile, resta backlog non attivo.
 - Cleanup branch e housekeeping si fanno solo se richiesti o se sbloccano il lavoro; prima di cancellare branch verificare che non esistano commit assenti da `frontend-rebuild`.
-- Priorita operativa: bug bloccanti e regressioni utente, smoke, documentazione minima, poi cleanup. Non consumare token su attivita non funzionali se ci sono blocchi piu importanti.
+- Priorita operativa: regressioni o blocker, smoke, merge controllato, documentazione minima, poi task successivo. Cleanup solo se richiesto o necessario a sbloccare il flusso.
 - Regola permanente: ogni branch runtime Codex deve essere pushato su origin prima del report finale/review ChatGPT, salvo impedimento tecnico documentato. Codex non mergea finche ChatGPT e Germano non approvano.
 - Esempio corrente: checkout note ordine + consenso condizioni chiuso e validato live; PR #171 sessione/logout post-ordine resta backlog non attivo perche il test manuale ha dato esito A e il problema non e riproducibile ora.
 
@@ -82,7 +82,7 @@ Esempio vincolante: `articoli.aspx` ha micro-task chiusi su card prodotto, selez
 
 Nota anti-false-closure: `articoli.aspx` non e una pagina dichiarata completa. `CATALOG-ONSUS-PARITY-AUDIT-1` e completato e i tre P0 sono chiusi, ma i micro-task chiusi non equivalgono alla parita ONSUS completa. Pager/posizione recent, quattro viste mobile, compact grid e containment recent sono stati chiusi da task successivi; sidebar/facet residui, load-more Marche, tassonomie, active filters legacy/reset, Price/Deals/Condition, Reviews con dati reali, performance, componenti commerciali e responsive complessivo richiedono ancora task dedicati.
 
-Stato Git dopo il fast-forward `STOREAVAIL-1A`: merge point applicativo/documentale `frontend-rebuild` `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`; codice applicativo accettato `2b4e751d0041aa6ee4ec5be26a1cd138c3b3bc71`; branch `task/storefront-availability-presentation-1a` conservato a `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`; `main` / `origin/main` a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Gli SHA catalog parity, typography e product-image precedenti restano riferimenti storici corretti, non descrizioni della stable corrente.
+Stato Git corrente dopo il fast-forward `HOTFIX-CARD-LAYOUT-1A`: `frontend-rebuild` / `origin/frontend-rebuild` `982cc83bcbcbb913dd1e320ece456957801f8121`; branch `task/storefront-card-layout-regression-1a` conservato allo stesso commit; `main` / `origin/main` a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Gli SHA STOREAVAIL, catalog parity, typography e product-image precedenti restano riferimenti storici corretti, non descrizioni della stable corrente.
 
 Riconciliazione storica PDP: eventuali record precedenti che riportano `PDP-BUY-CTA-ACQUISTA-1A` tra i backlog descrivono lo stato al momento della chiusura catalogo/HOME e sono superati dalla chiusura PDP a HEAD `3b0b2ac97564c497abd26d224e5e945834a2ec26`; resta fermo che la pagina `articolo.aspx` non e completa.
 
@@ -109,7 +109,7 @@ Riconciliazione storica quantita PDP: eventuali record precedenti che riportano 
 
 ### 2.5 Storefront mobile/cart/catalog block 2
 
-Consolidamento Git corrente: base `300b97a7a8873d3cd0cb750be2e949523a8ebaa0`, stable finale `b31f8177e09cffcd5e9193e1e26eb3bbec4f8e6b`, merge fast-forward only con ahead/behind `0 / 7`. Catena runtime lineare:
+Consolidamento Git storico del blocco: base `300b97a7a8873d3cd0cb750be2e949523a8ebaa0`, stable finale del blocco `b31f8177e09cffcd5e9193e1e26eb3bbec4f8e6b`, merge fast-forward only con ahead/behind `0 / 7`. Catena runtime lineare:
 
 1. `3cdea2709712d133cfa82adb717ea9df69d0ed88` - `fix: add storefront cart feedback and awareness`.
 2. `c747b1ca2baa2a353251e1204b9b6775a44b5c01` - `fix: restore catalog mobile view layouts`.
@@ -139,7 +139,7 @@ Contratto geometria e contenimento:
 - Card equal-height dove necessario con layout flex; purchase row ancorata naturalmente al fondo. Vietato introdurre fixed height per compensare cart-awareness.
 - Cart-awareness non deve spostare le righe acquisto. Titoli e metadata restano dentro la card; `product-tag` mobile usa containment/ellipsis.
 - Recently Viewed dinamico del catalogo ha contratto flex dedicato e CTA bottom-aligned. Nessun horizontal overflow e stato rilevato nei viewport QA del blocco.
-- Card `articoli.aspx` e Recently Viewed catalogo: titolo massimo presentazionale di circa tre righe. La rimozione di `CompactText(Descrizione1, 72)` lascia il testo completo nel DOM; il limite e CSS. `.product-info-name` PDP resta completo e non clampato. HOME a tre righe resta requisito aperto del prossimo runtime.
+- Card `articoli.aspx` e Recently Viewed catalogo: titolo massimo presentazionale di tre righe. La rimozione di `CompactText(Descrizione1, 72)` lascia il testo completo nel DOM; il limite e CSS. `.product-info-name` PDP principale resta completo e non clampato. Il contratto globale categoria 2 righe/titolo 3 righe delle product card HOME/catalogo/PDP/recenti e stato chiuso dal successivo `HOTFIX-CARD-LAYOUT-1A`.
 
 Contratto pager e struttura pagina:
 
@@ -153,6 +153,31 @@ QA e stato roadmap:
 - Browser runtime WebForms reale riusabile: `https://localhost:8443`. Viewport verificati: `360x800`, `390x844`, `430x932`, `768x1024`, `1365x900`, piu sanity `1920x1080`. Per task UI significativi A visuale richiede browser reale; senza browser dichiarare B visuale. Nessuna dipendenza Playwright/browser va aggiunta al repository.
 - `STOREFRONT-AVAILABILITY-PRESENTATION-1A` e integrato in `frontend-rebuild` con fast-forward al merge point `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`. L'architettura finale e descritta in `5.2.2`; il prossimo task e `CATALOG-ASYNC-CART-1A`.
 - Roadmap successiva separata: `SIDE-CART-OFFCANVAS-ONSUS-AUDIT-1`, mobile responsive account/auth/documenti, catalog parity P1/P2, payments/checkout/e-mail, search/navigation e infine SEO/AI/Gemini.
+
+### 2.6 Contratto card globale, mobile-first e continuita operativa
+
+`HOTFIX-CARD-LAYOUT-1A` e CHIUSO / A. Branch runtime `task/storefront-card-layout-regression-1a`, base `ab86e01220ac219fdb82c41ab240d96994d83550`, commit/stable `982cc83bcbcbb913dd1e320ece456957801f8121`, merge fast-forward only senza merge commit, `SMOKE UTENTE HOTFIX-CARD-LAYOUT-1A: A`. `main` resta `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
+
+Manifest runtime: 10 file modificati, 141 inserimenti, 67 rimozioni, added/deleted 0: `Default.aspx`, `Default.aspx.vb`, `Page.master`, `Public/assets/keepstore/css/theme-overrides.css`, `Public/assets/keepstore/js/keepstore-recently-viewed.js`, `Public/ui/controls/ProductCard.ascx`, `Public/ui/controls/ProductCard.ascx.vb`, `articoli.aspx`, `articoli.aspx.vb`, `articolo.aspx`.
+
+Contratto tecnico product card:
+
+- Classi semantiche condivise `.ks-card-category` e `.ks-card-title`, applicate soltanto alle product card.
+- Categoria sopra il titolo, massimo e spazio riservato per 2 righe; titolo massimo e spazio riservato per 3 righe. La geometria usa `2lh` e `3lh`, quindi segue il line-height reale delle varianti HOME/catalogo/PDP.
+- Testo completo nel DOM; vietati `CompactText`/`Substring` sui contenuti categoria/titolo card. Categoria assente = area vuota, senza fallback inventato.
+- Coperti rendering server, snapshot server-generated e fallback JavaScript, HOME Grid/Deal/Row/Big/Recent, quattro viste catalogo/ProductCard/Recent e PDP frequent/similar/related/recent.
+- Causa blank catalogo: sidebar facet `4644.1px` nel flusso flex; ora contenuta su desktop nel viewport a circa `868px`, sticky con scroll interno e facet accessibili. `scrollHeight` `5616 -> 4073px`, gap Recent/footer `1631.4 -> 0px`.
+- Causa METEOR: slide/card Recent non estese con altezze `565.8`, `513.8`, `491.8px`; dopo il fix circa `589.1px` uniformi a viewport 1365.
+- QA reale desktop/mobile ai viewport `1920`, `1365`, `768`, `430`, `390`, `360px`. La chiusura certifica questo hotfix, non la completezza di catalogo o PDP.
+
+Contratto operativo stabile, con dettaglio canonico nel Masterplan:
+
+- Prima di ogni risposta operativa ChatGPT rilegge integralmente i tre manuali dal ref corrente, verifica GitHub/Git e legge i file runtime/template coinvolti. Ordine fonti: GitHub/Git reale, tre manuali, handoff piu recente, memoria/chat/allegati.
+- Working copy canonica `C:\KeepStoreWeb\KeepStore3.0\`; branch runtime/docs pushato su origin prima del report; preflight con fetch/SHA; dopo merge `frontend-rebuild == origin/frontend-rebuild`; solo fast-forward, niente reset/rebase/force non autorizzati e nessuna modifica a `main`.
+- Mobile-first: progettazione e QA iniziano da `360px` e `390px`; niente funzioni essenziali hover-only; nessun A visuale senza browser mobile reale e smoke Germano quando previsto.
+- Codex copre test strumentali/tecnici; Germano copre resa commerciale, navigazione e percorsi utente semplici. Merge e docs-only non ripetono build/browser/smoke gia conclusi.
+- Un solo task attivo; prompt one-shot con HEAD, manifest, divieti, verifiche e output espliciti. Solo A/B/E: A chiudibile, B parziale o in attesa smoke, E regressione grave/blocker.
+- Preservare fuori staging `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`.
 
 ## 3. Indice
 

@@ -5,6 +5,22 @@ Aggiornato: 2026-09-02
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
+## Checkpoint operativo corrente
+
+- Aggiornato: 2026-09-02.
+- Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
+- Ultimo runtime stabile: `frontend-rebuild` / `origin/frontend-rebuild` a `982cc83bcbcbb913dd1e320ece456957801f8121`.
+- Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
+- Ultimo task chiuso: `HOTFIX-CARD-LAYOUT-1A`, branch `task/storefront-card-layout-regression-1a`, commit `982cc83bcbcbb913dd1e320ece456957801f8121`, merge fast-forward only senza merge commit.
+- Smoke: `SMOKE UTENTE HOTFIX-CARD-LAYOUT-1A: A`.
+- Task attivo: nessun task runtime; questo aggiornamento e docs-only.
+- Azione immediata successiva: chiudere e mergeare questo task documentale, senza ripetere build o smoke gia conclusi.
+- Prossimi runtime, in ordine: `CATALOG-ASYNC-CART-1A`, `PDP-BRAND-LOGO-1A`, `STOREFRONT-OFFERS-PROMO-VERIFY-1A` solo dopo attivazione offerte/promozioni da parte di Germano.
+- Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`.
+- Blocker reali: nessuno per la chiusura documentale; catalogo e PDP restano aree non dichiarate complete.
+
+Questo checkpoint va aggiornato dopo ogni blocco importante. E una mappa di ripartenza, non sostituisce la verifica diretta di Git e dei tre manuali.
+
 ## Contratto operativo Germano / ChatGPT / Codex
 
 ### Germano
@@ -21,7 +37,8 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 - Scrive istruzioni operative per Codex.
 - Definisce guardrail.
 - Verifica i report Codex.
-- Prima dei prompt importanti legge i tre manuali e confronta direttamente branch, commit e diff pubblicati su GitHub con lo stato runtime documentato.
+- Prima di ogni risposta operativa rilegge integralmente i tre manuali dal ref Git corrente, verifica direttamente GitHub/Git reale e legge i file runtime o template coinvolti.
+- Controlla stable, task branch, commit, parent, compare e diff pertinenti prima di valutare il problema o scrivere un prompt.
 - Classifica gli esiti come A/B/E.
 - Decide il prossimo micro-task da proporre.
 - Mantiene aggiornato il masterplan.
@@ -43,9 +60,10 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 ### Metodo
 
 - Ogni lavoro passa da micro-task.
-- Ogni PR passa da verifica B.
-- Ogni merge passa da smoke D.
-- Ogni cleanup avviene solo dopo smoke A/B.
+- Un solo task resta attivo per volta e il successivo non parte finche il prerequisito non e chiuso.
+- Il solo sistema corrente di classificazione e A/B/E: A = verificato e chiudibile; B = parziale, micro-fix o smoke ancora necessario; E = regressione grave o blocker.
+- Un task UI in attesa dello smoke Germano resta B. Non usare classificazioni operative diverse; le lettere presenti in task-id o record storici restano invariate.
+- Ogni merge avviene soltanto dopo esito A e autorizzazione esplicita; merge e docs-only non ripetono build/browser/smoke gia conclusi.
 - Per refactor UI si usa prima audit ONSUS, poi implementazione coerente.
 - Niente patch sul vecchio layout quando si cambia grafica/impostazione.
 - Usare sempre campi DB esistenti e query/logiche esistenti quando possibile.
@@ -54,6 +72,8 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 ### Metodo Codex Token-Safe / One-Shot
 
 - Prima di dare prompt a Codex, ChatGPT deve consolidare piano, scope, file ammessi, vincoli, verifiche, output e criterio A/B/E.
+- I prompt devono essere piccoli, one-shot e contenere solo il contesto necessario; non copiare l'intera storia della chat.
+- HEAD, manifest, divieti, verifiche e output devono essere sempre espliciti.
 - Evitare prompt esplorativi quando causa e fix sono gia chiari: un task deve avere un solo prompt operativo principale.
 - Revisioni successive sono ammesse per blocchi reali, non per perfezionismo documentale o per inseguire il commit documentale appena creato.
 - La documentazione deve registrare PR, branch, commit funzionale principale, stato, smoke e decisioni; i commit documentali successivi restano tracciati da Git/PR e non generano automaticamente nuove REV.
@@ -61,7 +81,43 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 - Se un problema e solo sospetto o non riproducibile, prima fare test manuale mirato; aprire PR diagnostiche solo se il problema torna riproducibile.
 - ChatGPT decide piano, ordine e priorita; Codex esegue task piccoli, verificabili e con confini rigidi. Evitare task generici tipo "controlla tutto".
 - Dopo il commit runtime Codex deve pubblicare il task branch su origin prima della review finale; ChatGPT usa il diff GitHub per verificare scope e dichiarazioni, mentre merge e approvazione restano bloccati fino al via libera ChatGPT/Germano.
-- Priorita: bug bloccanti/regressioni utente, smoke, documentazione minima, poi cleanup. Non consumare token su attivita non funzionali mentre ci sono step piu importanti aperti.
+- Priorita: regressioni o blocker, smoke, merge controllato, documentazione minima, poi task successivo. Cleanup solo se richiesto o necessario a sbloccare il flusso.
+- Evitare audit generici tipo "controlla tutto" e verifiche ripetute senza un motivo tecnico reale. Le idee fuori scope vanno registrate nel backlog, non implementate subito.
+- I comportamenti gia accettati diventano guardrail anti-regressione dei task successivi.
+
+### Protocollo canonico fonti, continuita e Git
+
+Prima di ogni risposta operativa sul progetto, ChatGPT deve:
+
+1. rileggere direttamente e integralmente i tre manuali dal ref Git corrente;
+2. verificare direttamente GitHub/Git: stable, task branch, commit, parent, compare e diff pertinenti;
+3. leggere i file runtime e il template realmente coinvolti prima di diagnosticare o scrivere un prompt.
+
+Ordine vincolante delle fonti:
+
+1. GitHub/Git reale: branch, commit, diff e codice corrente;
+2. i tre manuali correnti;
+3. handoff piu recente per data;
+4. memoria della chat e allegati storici.
+
+Handoff, memoria e allegati sono supporto, non source of truth. In caso di conflitto prevale GitHub/Git e la documentazione va riconciliata.
+
+Regole di sincronizzazione:
+
+- Tutte le modifiche Codex avvengono nella working copy canonica `C:\KeepStoreWeb\KeepStore3.0\`.
+- Ogni branch runtime o docs deve essere pushato su origin prima del report; una modifica solo locale o solo descritta in chat non e chiusa.
+- Ogni task parte con `git fetch` e verifica degli SHA. Dopo ogni merge deve risultare `frontend-rebuild == origin/frontend-rebuild`.
+- Gli aggiornamenti locali sono esclusivamente fast-forward; reset, rebase e force non autorizzati sono vietati. `main` non va modificato.
+- Le directory non tracciate `Public/assets/images/articoli/`, `Public/assets/images/marche/` e `Public/assets/images/settori/` vanno sempre preservate fuori da staging e commit.
+
+### Mobile-first e divisione efficiente dei test
+
+- Il mobile e l'esperienza primaria, non un adattamento secondario del desktop. Progettazione, gerarchia, interazioni e QA iniziano da `360px` e `390px`; tablet e desktop vengono dopo.
+- Nessuna funzione essenziale puo dipendere dal solo hover. Touch target, offcanvas, ordine contenuti, leggibilita, densita commerciale e scrolling devono essere progettati mobile-first.
+- Nessun esito A visuale senza browser mobile reale. Una verifica desktop non certifica mobile; se mobile non e verificato, va dichiarato esplicitamente. Per UI/UX serve anche smoke Germano quando previsto.
+- Codex esegue cio che richiede accesso tecnico o strumentazione: build/precompile, sintassi JavaScript, DOM/computed style e misure, console/runtime, test tecnici o sicurezza, `git diff --check`, secret scan, manifest, branch e working tree.
+- Germano esegue, con istruzioni brevi e precise di ChatGPT, verifica visiva/commerciale, navigazione utente normale, confronto desktop/mobile e click o percorsi riproducibili senza strumenti tecnici.
+- Non chiedere a Codex di ripetere test semplici eseguibili da Germano, salvo diagnostica, automazione o riproduzione strumentata. Merge e task docs-only non ripetono build/browser/smoke gia conclusi.
 
 ### Contratto permanente stack, linguaggio e sicurezza
 
@@ -77,9 +133,9 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ### Stato reale, perimetro chiuso e scaletta prioritaria ufficiale
 
-Stato Git dopo il fast-forward runtime/documentale `STOREAVAIL-1A`:
+Stato Git corrente dopo il fast-forward `HOTFIX-CARD-LAYOUT-1A`:
 
-- Merge point applicativo/documentale su `frontend-rebuild`: `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`.
+- `frontend-rebuild` / `origin/frontend-rebuild`: `982cc83bcbcbb913dd1e320ece456957801f8121`.
 - `main` e `origin/main`: `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - Working tree atteso: pulito salvo eventuali directory non tracciate `Public/assets/images/articoli/`, `Public/assets/images/marche/` e `Public/assets/images/settori/`, che non vanno committate.
 
@@ -103,6 +159,17 @@ Stato sintetico dei blocchi chiusi:
 - Stack/sicurezza: chiuso e documentato il contratto permanente WebForms/VB.NET/.NET Framework/MySQL, con divieti C#/ASP.NET Core e checklist sicurezza.
 - Typography storefront: blocco CHIUSO / A. `GLOBAL-TYPOGRAPHY-ONSUS-AUDIT-1`, `GLOBAL-TYPOGRAPHY-ONSUS-1A` e `GLOBAL-TYPOGRAPHY-ONSUS-1B` sono chiusi con esito A; foundation deterministica `Arial, sans-serif`, famiglie testuali residue normalizzate nel layer KeepStore finale, Icomoon preservato e scale ONSUS invariate. `GLOBAL-TYPOGRAPHY-ONSUS-1C` e NON NECESSARIO / NON CREATO dopo smoke Germano A e assenza di Times/Poppins accidentali sulle superfici testate. La chiusura vale soltanto per la typography e non rende complete HOME, catalogo, PDP, header o footer.
 - Cart-state storefront: `STOREFRONT-CART-STATE-PERSISTENCE-REGRESSION-AUDIT-1` chiuso come audit diagnostico B/procedibile e `STOREFRONT-CART-STATE-PERSISTENCE-1A` chiuso con esito A al commit `68325c1879e2859628b59f297fe2a329b5aadb35`; HOME, catalogo e PDP condividono ora uno snapshot server-side request-scoped. Questa chiusura non rende complete le tre pagine.
+
+### Chiusura HOTFIX-CARD-LAYOUT-1A
+
+- Task `HOTFIX-CARD-LAYOUT-1A`, branch runtime `task/storefront-card-layout-regression-1a`, base `ab86e01220ac219fdb82c41ab240d96994d83550`, commit runtime/stable `982cc83bcbcbb913dd1e320ece456957801f8121`.
+- Merge in `frontend-rebuild` eseguito fast-forward only, senza merge commit. `SMOKE UTENTE HOTFIX-CARD-LAYOUT-1A: A`; `main` invariato a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
+- Manifest runtime: 10 file modificati, 141 inserimenti, 67 rimozioni, nessun file aggiunto/eliminato: `Default.aspx`, `Default.aspx.vb`, `Page.master`, `Public/assets/keepstore/css/theme-overrides.css`, `Public/assets/keepstore/js/keepstore-recently-viewed.js`, `Public/ui/controls/ProductCard.ascx`, `Public/ui/controls/ProductCard.ascx.vb`, `articoli.aspx`, `articoli.aspx.vb`, `articolo.aspx`.
+- Causa altezza catalogo: sidebar facet alta `4644.1px` nel normale flusso flex. Il fix la contiene su desktop nel viewport a circa `868px`, sticky e con scroll interno, mantenendo accessibili tutti i facet. `scrollHeight` pagina `5616 -> 4073px`; spazio anomalo Recent/footer `1631.4 -> 0px`.
+- Causa disallineamento METEOR: slide/card Recently Viewed non estese, con altezze `565.8`, `513.8`, `491.8px`; dopo il fix tutte circa `589.1px` a viewport 1365.
+- Contratto semantico condiviso limitato alle product card: `.ks-card-category` sopra `.ks-card-title`; categoria massimo e spazio riservato per 2 righe, titolo massimo e spazio riservato per 3 righe, geometria `2lh`/`3lh` basata sul line-height reale. Testo completo nel DOM, nessun `CompactText`/`Substring`; categoria assente = area vuota senza fallback inventato.
+- Copertura: rendering server, snapshot server-generated e fallback JavaScript; HOME Grid/Deal/Row/Big/Recent, catalogo quattro viste/ProductCard/Recent, PDP frequent/similar/related/recent. Desktop e mobile verificati ai viewport `1920`, `1365`, `768`, `430`, `390`, `360px`.
+- Questa chiusura riguarda esclusivamente la regressione geometria/altezza e non dichiara completi catalogo, `articoli.aspx`, PDP o `articolo.aspx`.
 
 ### Chiusura storefront mobile/cart/catalog block 2
 
@@ -317,11 +384,11 @@ Backlog hardening separato: `CART-SESSIONID-LOG-REDACTION-1A`. L'audit cart-stat
 
 ### Ripartenza rapida in nuova chat
 
-- In caso di chat satura o bloccata, aprire una nuova chat e scrivere: "Leggi docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md e riparti dall'ultimo HEAD stabile."
-- Il file contiene HEAD stabile, ultimo blocco completato, task corrente, PR aperte/chiuse, vincoli di scope e prossimi step.
-- Non consumare token ripetendo tutta la storia: leggere questo masterplan, verificare Git e ripartire dal micro-task successivo.
+- In una nuova chat leggere prima integralmente i tre manuali dal ref corrente, poi verificare direttamente GitHub/Git e i file runtime coinvolti.
+- Usare il checkpoint operativo iniziale per HEAD stabile, ultimo task chiuso, task attivo, prossimo runtime, directory consentite e blocker; verificarlo sempre contro Git.
+- Non richiedere o produrre un enorme riepilogo della chat e non rifare audit gia chiusi. Handoff e memoria sono supporto, non source of truth.
 - Mantenere lo stesso metodo Germano/ChatGPT/Codex: micro-task, branch dedicati, PR verso `frontend-rebuild`, merge controllati e cleanup separati.
-- Aggiornare questa sezione dopo ogni blocco importante.
+- La continuita dipende da Git e documentazione corrente. Aggiornare checkpoint e sezioni di stato dopo ogni blocco importante.
 
 ## 1. Metodo ChatGPT + Codex
 
@@ -397,10 +464,11 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo il merge fast-forward `STOREAVAIL-1A`:
+Stato di riferimento dopo il merge fast-forward `HOTFIX-CARD-LAYOUT-1A`:
 
 - Branch stabile: `frontend-rebuild`
-- Merge point `frontend-rebuild`: `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`; il successivo commit docs-only di chiusura non viene auto-referenziato nel documento.
+- HEAD locale/origin `frontend-rebuild`: `982cc83bcbcbb913dd1e320ece456957801f8121`; il successivo commit docs-only di chiusura non viene auto-referenziato nel documento.
+- Branch hotfix conservato: `task/storefront-card-layout-regression-1a` a `982cc83bcbcbb913dd1e320ece456957801f8121`.
 - Branch availability conservato: `task/storefront-availability-presentation-1a` a `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`.
 - `main` / `origin/main` invariati: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
 - Base cumulativa precedente: `300b97a7a8873d3cd0cb750be2e949523a8ebaa0`; consolidamento lineare fast-forward only di 7 commit, ahead/behind pre-merge `0 / 7`.
