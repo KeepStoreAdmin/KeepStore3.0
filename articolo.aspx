@@ -331,8 +331,8 @@
                                                     </label>
                                                 </div>
                                                 <div class="box-name">
-                                                    <p class="caption text-main-2 font-2 ks-pdp-card-category"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
-                                                    <a href='<%# Eval("Url") %>' class="prd-name body-md-2 text-main link-secondary fw-semibold ks-pdp-card-title">
+                                                    <p class="caption text-main-2 font-2 ks-card-category ks-pdp-card-category"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
+                                                    <a href='<%# Eval("Url") %>' class="prd-name body-md-2 text-main link-secondary fw-semibold ks-card-title ks-pdp-card-title">
                                                         <%# If(Convert.ToBoolean(Eval("IsCurrent")), "Questo articolo: ", String.Empty) & Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>
                                                     </a>
                                                     <p class="price-text fw-medium"><%# Eval("PrezzoHtml") %></p>
@@ -558,8 +558,8 @@
 
                                 <div class="card-product-info">
                                     <div class="box-title">
-                                        <p class="caption text-main-2 font-2 ks-pdp-card-category"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
-                                        <a class="name-product body-md-2 fw-semibold text-secondary link ks-pdp-card-title" href='<%# Eval("Url") %>'>
+                                        <p class="caption text-main-2 font-2 ks-card-category ks-pdp-card-category"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
+                                        <a class="name-product body-md-2 fw-semibold text-secondary link ks-card-title ks-pdp-card-title" href='<%# Eval("Url") %>'>
                                             <%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>
                                         </a>
 
@@ -659,8 +659,8 @@
 
                                 <div class="card-product-info">
                                     <div class="box-title">
-                                        <p class="caption text-main-2 font-2 ks-pdp-card-category"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
-                                        <a class="name-product body-md-2 fw-semibold text-secondary link ks-pdp-card-title" href='<%# Eval("Url") %>'>
+                                        <p class="caption text-main-2 font-2 ks-card-category ks-pdp-card-category"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
+                                        <a class="name-product body-md-2 fw-semibold text-secondary link ks-card-title ks-pdp-card-title" href='<%# Eval("Url") %>'>
                                             <%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>
                                         </a>
 
@@ -780,8 +780,8 @@
 
                                 <div class="card-product-info">
                                     <div class="box-title">
-                                        <p class="caption text-main-2 font-2 ks-pdp-card-category"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
-                                        <a class="name-product body-md-2 fw-semibold text-secondary link ks-pdp-card-title" href='<%# Eval("Url") %>'>
+                                        <p class="caption text-main-2 font-2 ks-card-category ks-pdp-card-category"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
+                                        <a class="name-product body-md-2 fw-semibold text-secondary link ks-card-title ks-pdp-card-title" href='<%# Eval("Url") %>'>
                                             <%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>
                                         </a>
 
@@ -865,6 +865,6 @@
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/product-ui.js") %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>"></script>
-    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260901-availability1a"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260902-cardlayout1a"></script>
     <asp:Literal ID="litRecentlyViewedScript" runat="server" EnableViewState="false" />
 </asp:Content>

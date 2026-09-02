@@ -216,7 +216,7 @@
 
   function renderCard(item, container) {
     var img = item.image || fallbackImage(container);
-    var meta = item.category || item.brand || 'Prodotto';
+    var meta = item.category || '';
     var sub = [item.brand, item.code ? 'Cod. ' + item.code : ''].filter(Boolean).join(' - ');
 
     return '<div class="swiper-slide">' +
@@ -234,8 +234,8 @@
           '</ul>' +
         '</div>' +
         '<div class="card-product-info">' +
-          '<p class="product-tag caption text-main-2">' + escapeHtml(meta) + '</p>' +
-          '<a class="name-product body-md-2 fw-semibold text-secondary link" href="' + attr(item.url) + '">' + escapeHtml(item.name) + '</a>' +
+          '<p class="product-tag caption text-main-2 ks-card-category">' + escapeHtml(meta) + '</p>' +
+          '<a class="name-product body-md-2 fw-semibold text-secondary link ks-card-title" href="' + attr(item.url) + '">' + escapeHtml(item.name) + '</a>' +
           (sub ? '<p class="caption text-main-2 ks-card-brand-code">' + escapeHtml(sub) + '</p>' : '') +
           '<div class="price-wrap fw-medium mt-1"><span class="ks-price"><span class="ks-price-now">' + escapeHtml(item.price || 'Prezzo su richiesta') + '</span></span></div>' +
           renderAvailability(item) +

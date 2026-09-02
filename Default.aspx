@@ -551,6 +551,6 @@
 
 <asp:Content ID="cntScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>"></script>
-    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260901-availability1a"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260902-cardlayout1a"></script>
     <script src="<%= ThemeManager.Asset("js/home-default.js") & "?v=20260518-home6" %>"></script>
 </asp:Content>

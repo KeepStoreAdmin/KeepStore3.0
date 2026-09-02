@@ -70,8 +70,8 @@
     <div class="card-product-info">
         <div class="box-title">
             <div>
-                <p class="product-tag caption text-main-2"><%= SafeMetaText %></p>
-                <a id="<%= ProductTitleClientId %>" href="<%= SafeProductUrl %>" class="name-product body-md-2 fw-semibold text-secondary link">
+                <p class="product-tag caption text-main-2 ks-card-category"><%= SafeMetaText %></p>
+                <a id="<%= ProductTitleClientId %>" href="<%= SafeProductUrl %>" class="name-product body-md-2 fw-semibold text-secondary link ks-card-title">
                     <%= SafeProductName %>
                 </a>
             </div>

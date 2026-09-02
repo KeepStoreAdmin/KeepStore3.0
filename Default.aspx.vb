@@ -2260,6 +2260,26 @@ Partial Public Class _Default
         Return String.Empty
     End Function
 
+    Private Function CardCategoryLabel(ByVal row As DataRow) As String
+        If row Is Nothing Then
+            Return String.Empty
+        End If
+
+        Dim candidates As String() = {
+            If(row.Table.Columns.Contains("TipologieDescrizione"), Convert.ToString(row("TipologieDescrizione")).Trim(), String.Empty),
+            If(row.Table.Columns.Contains("CategorieDescrizione"), Convert.ToString(row("CategorieDescrizione")).Trim(), String.Empty),
+            If(row.Table.Columns.Contains("SettoriDescrizione"), Convert.ToString(row("SettoriDescrizione")).Trim(), String.Empty)
+        }
+
+        For Each candidate As String In candidates
+            If Not String.IsNullOrWhiteSpace(candidate) Then
+                Return HttpUtility.HtmlEncode(candidate)
+            End If
+        Next
+
+        Return String.Empty
+    End Function
+
     Private Function QuickViewDescription(ByVal row As DataRow) As String
         If row Is Nothing Then
             Return String.Empty
@@ -2439,10 +2459,8 @@ Partial Public Class _Default
         sb.Append("<div class='card-product-info'>")
         sb.Append("<div class='box-title gap-xl-12'>")
         sb.Append("<div class='d-flex flex-column'>")
-        If Not String.IsNullOrWhiteSpace(Convert.ToString(row("MarcheDescrizione"))) Then
-            sb.Append("<p class='caption text-main-2 font-2'>").Append(HttpUtility.HtmlEncode(Convert.ToString(row("MarcheDescrizione")))).Append("</p>")
-        End If
-        sb.Append("<h6><a href='").Append(ProductUrl(row("id"))).Append("' class='name-product fw-semibold text-secondary link'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></h6>")
+        sb.Append("<p class='caption text-main-2 font-2 ks-card-category'>").Append(CardCategoryLabel(row)).Append("</p>")
+        sb.Append("<h6><a href='").Append(ProductUrl(row("id"))).Append("' class='name-product fw-semibold text-secondary link ks-card-title'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></h6>")
         sb.Append("</div>")
         sb.Append(RenderPriceBlock(row, True))
         sb.Append(RenderAvailability(row))
@@ -2480,13 +2498,8 @@ Partial Public Class _Default
         sb.Append(RenderRefurbishedBadge(row))
         sb.Append("</div>")
         sb.Append("<div class='card-product-info'><div class='box-title'>")
-        Dim caption As String = CardCaption(row)
-        If Not String.IsNullOrWhiteSpace(caption) Then
-            sb.Append("<div class='bg-white relative z-5'><p class='caption text-main-2 font-2'>").Append(caption).Append("</p>")
-        Else
-            sb.Append("<div class='bg-white relative z-5'>")
-        End If
-        sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='name-product body-md-2 fw-semibold text-secondary link'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></div>")
+        sb.Append("<div class='bg-white relative z-5'><p class='caption text-main-2 font-2 ks-card-category'>").Append(CardCategoryLabel(row)).Append("</p>")
+        sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='name-product body-md-2 fw-semibold text-secondary link ks-card-title'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></div>")
         sb.Append("<div class='group-btn'>")
         sb.Append(RenderPriceBlock(row, False))
         sb.Append(RenderAvailability(row))
@@ -2507,7 +2520,6 @@ Partial Public Class _Default
         If rowView Is Nothing Then Return String.Empty
         Dim row As DataRow = rowView.Row
         Dim images As List(Of String) = ProductGalleryImages(row)
-        Dim caption As String = CardCaption(row)
         Dim hasDiscount As Boolean = ShowDiscount(row)
 
         Dim sb As New StringBuilder()
@@ -2533,10 +2545,8 @@ Partial Public Class _Default
         sb.Append("</div>")
         sb.Append("<div class='card-product-info'>")
         sb.Append("<div class='box-title gap-xl-6'>")
-        If Not String.IsNullOrWhiteSpace(caption) Then
-            sb.Append("<p class='caption text-main-2 font-2'>").Append(caption).Append("</p>")
-        End If
-        sb.Append("<h6 class='bg-white relative z-5'><a href='").Append(ProductUrl(row("id"))).Append("' class='name-product fw-semibold text-secondary link'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></h6>")
+        sb.Append("<p class='caption text-main-2 font-2 ks-card-category'>").Append(CardCategoryLabel(row)).Append("</p>")
+        sb.Append("<h6 class='bg-white relative z-5'><a href='").Append(ProductUrl(row("id"))).Append("' class='name-product fw-semibold text-secondary link ks-card-title'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></h6>")
         sb.Append("</div>")
         If hasDiscount Then sb.Append(RenderCountdownBlock(row))
         sb.Append("<div class='group-btn'>")
@@ -2566,13 +2576,8 @@ Partial Public Class _Default
         sb.Append("</div>")
         sb.Append("<div class='card-product-info'>")
         sb.Append("<div class='box-title'>")
-        Dim caption As String = CardCaption(row)
-        If Not String.IsNullOrWhiteSpace(caption) Then
-            sb.Append("<div class='bg-white relative z-5'><p class='caption text-main-2 font-2'>").Append(caption).Append("</p>")
-        Else
-            sb.Append("<div class='bg-white relative z-5'>")
-        End If
-        sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='name-product body-md-2 fw-semibold text-secondary link'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></div>")
+        sb.Append("<div class='bg-white relative z-5'><p class='caption text-main-2 font-2 ks-card-category'>").Append(CardCategoryLabel(row)).Append("</p>")
+        sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='name-product body-md-2 fw-semibold text-secondary link ks-card-title'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></div>")
         sb.Append(RenderPriceBlock(row, False))
         sb.Append(RenderAvailability(row))
         sb.Append("</div>")

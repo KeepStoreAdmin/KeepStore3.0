@@ -126,11 +126,7 @@ Partial Class Public_ui_controls_ProductCard
 
     Protected ReadOnly Property SafeMetaText As String
         Get
-            Dim parts As New List(Of String)()
-            If Not String.IsNullOrWhiteSpace(CategoryName) Then parts.Add(CategoryName)
-            If Not String.IsNullOrWhiteSpace(BrandName) Then parts.Add(BrandName)
-            If parts.Count = 0 Then parts.Add("Categoria demo")
-            Return EncodeText(String.Join(" - ", parts.ToArray()))
+            Return EncodeText(If(CategoryName, String.Empty).Trim())
         End Get
     End Property
 

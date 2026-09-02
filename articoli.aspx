@@ -341,11 +341,11 @@
                                     <div class="card-product-info">
                                         <div class="box-title">
                                             <div>
-                                                <p class="product-tag caption text-main-2">
+                                                <p class="product-tag caption text-main-2 ks-card-category">
                                                     <%# Server.HtmlEncode(CatalogCategoryLabel(Container.DataItem)) %>
                                                 </p>
 
-                                                <a class="name-product body-md-2 fw-semibold text-secondary link" href='<%# CatalogProductUrl(Container.DataItem) %>'>
+                                                <a class="name-product body-md-2 fw-semibold text-secondary link ks-card-title" href='<%# CatalogProductUrl(Container.DataItem) %>'>
                                                     <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>
                                                 </a>
                                                 <p class="caption text-main-2 ks-card-brand-code">
@@ -512,5 +512,5 @@
     <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>"></script>
     <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>?v=20260831-mediasort1"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20260705-cartdelta"></script>
-    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260901-availability1a"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260902-cardlayout1a"></script>
 </asp:Content>

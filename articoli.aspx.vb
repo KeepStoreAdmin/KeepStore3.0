@@ -3545,8 +3545,7 @@ strWhere = strWhere & " GROUP BY id"
         Dim label As String = UiData.Str(dataItem, "TipologieDescrizione")
         If String.IsNullOrWhiteSpace(label) Then label = UiData.Str(dataItem, "CategorieDescrizione")
         If String.IsNullOrWhiteSpace(label) Then label = UiData.Str(dataItem, "SettoriDescrizione")
-        If String.IsNullOrWhiteSpace(label) Then label = "Catalogo"
-        Return ThemeManager.CompactText(label, 42)
+        Return If(label, String.Empty).Trim()
     End Function
 
     Private Function CatalogTcId(ByVal dataItem As Object, ByVal fallbackMinusOne As Boolean) As Integer
