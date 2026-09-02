@@ -38,7 +38,11 @@
         </div>
     </asp:Panel>
 
-    <section id="ksCatalogPage" class="flat-content ks-catalog-page">
+    <section id="ksCatalogPage"
+             class="flat-content ks-catalog-page"
+             data-ks-async-cart-endpoint="<%= ResolveUrl("~/catalog_cart_async.aspx") %>"
+             data-ks-async-cart-token="<%= System.Web.HttpUtility.HtmlAttributeEncode(CatalogAsyncCartToken) %>">
+        <div id="ksCatalogCartStatus" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
         <div class="container">
             <div class="tf-product-view-content wrapper-control-shop">
 
@@ -511,6 +515,6 @@
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>"></script>
     <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>?v=20260831-mediasort1"></script>
-    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20260705-cartdelta"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20260902-catalogasynccart1a"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260902-cardlayout1a"></script>
 </asp:Content>

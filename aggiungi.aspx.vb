@@ -241,7 +241,8 @@ End If
             End Try
         End If
 
-        If Not isGrouponFlow AndAlso _successfulCartAdds.Count > 0 Then
+        Dim isCatalogAsyncExecution As Boolean = CatalogAsyncCartSupport.IsExecutionActive(HttpContext.Current)
+        If Not isGrouponFlow AndAlso Not isCatalogAsyncExecution AndAlso _successfulCartAdds.Count > 0 Then
             StoreCartFeedbackSession()
         End If
 
@@ -251,6 +252,20 @@ End If
         Me.Session("Carrello_Quantita") = Nothing
         Me.Session("Carrello_SelezioneMultipla") = Nothing
         Me.Session("ProdottoGratis") = Nothing
+
+        If isCatalogAsyncExecution Then
+            Dim asyncSuccess As Boolean = Not isGrouponFlow AndAlso _successfulCartAdds.Count > 0
+            Dim asyncArticleId As Integer = 0
+            Dim asyncTCId As Integer = -1
+            Dim asyncProductName As String = String.Empty
+            If asyncSuccess Then
+                asyncArticleId = _successfulCartAdds(0).ArticleId
+                asyncTCId = _successfulCartAdds(0).TCId
+                asyncProductName = _successfulCartAdds(0).ProductName
+            End If
+            CatalogAsyncCartSupport.CompleteExecution(HttpContext.Current, asyncSuccess, asyncArticleId, asyncTCId, asyncProductName)
+            Return
+        End If
 
         ' 6) Facebook Pixel (solo se abbiamo effettivamente aggiunto qualcosa)
         If Not String.IsNullOrEmpty(articoliIdGlobali) Then

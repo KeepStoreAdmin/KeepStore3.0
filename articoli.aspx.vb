@@ -12,6 +12,12 @@ Imports System.Web.UI.WebControls
 Partial Class Articoli
     Inherits AntiCsrfPage
 
+    Protected ReadOnly Property CatalogAsyncCartToken As String
+        Get
+            Return CatalogAsyncCartSupport.GetOrCreateCsrfToken(HttpContext.Current)
+        End Get
+    End Property
+
     Dim IvaTipo As Integer
     Dim DispoTipo As Integer
     Dim DispoMinima As Integer

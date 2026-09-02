@@ -1894,11 +1894,13 @@ End Function
     '==========================================================
     Public Sub LeggiCarrello()
         Dim lblCarrelloCountCtrl As Label = FindCtrl(Of Label)("lblCarrelloCount")
+        Dim lblCarrelloCountMobileCtrl As Label = FindCtrl(Of Label)("lblCarrelloCountMobile")
         Dim lblCarrelloTotaleCtrl As Label = FindCtrl(Of Label)("lblCarrelloTotale")
         ' Reset di default
         If lblCarrelloCountCtrl IsNot Nothing Then
             If lblCarrelloCountCtrl IsNot Nothing Then lblCarrelloCountCtrl.Text = "0"
         End If
+        If lblCarrelloCountMobileCtrl IsNot Nothing Then lblCarrelloCountMobileCtrl.Text = "0"
         If lblCarrelloTotaleCtrl IsNot Nothing Then
             If lblCarrelloTotaleCtrl IsNot Nothing Then lblCarrelloTotaleCtrl.Text = "0,00"
         End If
@@ -1959,6 +1961,7 @@ End Function
                                 If lblCarrelloCountCtrl IsNot Nothing Then
                                     If lblCarrelloCountCtrl IsNot Nothing Then lblCarrelloCountCtrl.Text = qVal.ToString()
                                 End If
+                                If lblCarrelloCountMobileCtrl IsNot Nothing Then lblCarrelloCountMobileCtrl.Text = qVal.ToString()
                             End If
 
                             ' Totale carrello (merce)
@@ -1986,6 +1989,7 @@ End Function
             If lblCarrelloCountCtrl IsNot Nothing Then
                 If lblCarrelloCountCtrl IsNot Nothing Then lblCarrelloCountCtrl.Text = "0"
             End If
+            If lblCarrelloCountMobileCtrl IsNot Nothing Then lblCarrelloCountMobileCtrl.Text = "0"
             If lblCarrelloTotaleCtrl IsNot Nothing Then
                 If lblCarrelloTotaleCtrl IsNot Nothing Then lblCarrelloTotaleCtrl.Text = "0,00"
             End If
