@@ -9,17 +9,32 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 - Aggiornato: 2026-09-03.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Ultimo runtime stabile: `frontend-rebuild` / `origin/frontend-rebuild` a `58f4ee43c363d629b3124fc0fb1a10beaeeef48a`.
+- Ultimo runtime stabile: `frontend-rebuild` / `origin/frontend-rebuild` a `91cbc10b3b343217e18c5a9a6707b72997467b00`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
-- Ultimi task chiusi: `CATALOG-ASYNC-CART-1A` a `b80f8d4683bbb9bb6ec8a7a486a79048bfae094f` e `STOREFRONT-CARD-BUY-CTA-STABILITY-1A` a `58f4ee43c363d629b3124fc0fb1a10beaeeef48a`, entrambi mergeati fast-forward senza merge commit.
-- Smoke: `SMOKE UTENTE CATALOG-ASYNC-CART-1A REV1: A` e `SMOKE UTENTE STOREFRONT-CARD-BUY-CTA-STABILITY-1A: A`.
+- Ultimo task chiuso: `PDP-COMMERCIAL-INFO-SHIPPING-1A`, branch `task/pdp-commercial-info-shipping-1a`, base `f32e3b1e0153cc8931c2fe282f78da489983ceb8`, implementazione `afc4c72c148984ba729c6cb20de38161dc56e2b4` e REV1 IVA `91cbc10b3b343217e18c5a9a6707b72997467b00`, mergeato fast-forward senza merge commit.
+- Smoke: `SMOKE UTENTE PDP-COMMERCIAL-INFO-SHIPPING-1A: A`.
 - Task attivo: nessun task runtime; questo aggiornamento e docs-only.
 - Azione immediata successiva: chiudere e mergeare questo task documentale, senza ripetere build o smoke gia conclusi.
 - Prossimi runtime, in ordine: `LOGIN-RETURN-CONTEXT-1A`, poi `PDP-BRAND-LOGO-1A`, quindi `STOREFRONT-OFFERS-PROMO-VERIFY-1A` solo dopo attivazione offerte/promozioni da parte di Germano. AI/Gemini/LLMS resta finale e separato.
-- Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`.
+- Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
 - Blocker reali: nessuno per la chiusura documentale; catalogo e PDP restano aree non dichiarate complete.
 
 Questo checkpoint va aggiornato dopo ogni blocco importante. E una mappa di ripartenza, non sostituisce la verifica diretta di Git e dei tre manuali.
+
+### Chiusura PDP-COMMERCIAL-INFO-SHIPPING-1A
+
+- Perimetro chiuso: informazioni commerciali e tariffe spedizione della sola PDP `articolo.aspx`. La catena runtime e `f32e3b1e0153cc8931c2fe282f78da489983ceb8` -> `afc4c72c148984ba729c6cb20de38161dc56e2b4` -> `91cbc10b3b343217e18c5a9a6707b72997467b00`; merge fast-forward only, nessun merge commit, smoke Germano A. Questa chiusura non dichiara completa la PDP ne il catalogo.
+- `Visite` e ora dentro `Informazioni prodotto`: incremento parametrizzato soltanto sul primo GET valido dell'articolo nella sessione; postback, refresh successivi dello stesso articolo e prefetch sono esclusi, mentre una nuova sessione viene conteggiata normalmente.
+- Garanzia: `Mesi` e `Garanzia` producono la sintesi; `NormeGaranzia` alimenta il testo esteso reale in disclosure accessibile. Output HTML-encoded, dato mancante `—`, nessuna durata o norma inventata.
+- Prezzo di Listino: usa `ListinoUfficiale`, memorizzato netto. Con `IvaTipo=1` resta netto; altrimenti segue reverse charge, IVA utente e IVA articolo. Non viene sostituito dal prezzo di vendita e non genera un falso sconto.
+- Peso: `articoli.Peso` e stato verificato in Kg e viene mostrato solo quando positivo e valido; dato assente o non valido conserva il fallback.
+- Contratto spedizione corrente: la spedizione gratuita valida per listino e date ha priorita. In caso contrario la PDP risolve server-side le tariffe reali del singolo articolo da `vvettoricosti` e `vettoricosti`, filtrate per `AziendeId`, `Abilitato=1`, `Web=1`, `Promo=0`, costo positivo, assenza di soglie dipendenti dall'ordine e prima fascia `PesoMax` compatibile. Mostra tutti i vettori applicabili: due opzioni immediate e le ulteriori in disclosure, con logo, descrizione e prezzo. Il fallback e neutro, senza `0,00 €`, vettori inventati o immagini rotte.
+- Il precedente contratto storico `Spese di spedizione calcolate nel carrello.` e superato. Oggi la PDP mostra tariffe reali applicabili al singolo articolo e al suo peso; il carrello resta fonte di verita per composizione completa dell'ordine, destinazione, promozioni, metodo selezionato e costo definitivo. Resta corretta la frase `Le opzioni e il costo definitivo vengono mostrati nel carrello.`
+- REV1 IVA: l'implementazione iniziale usava impropriamente `vettori.Iva`; la REV1 adotta il contratto del carrello. `IvaTipo=1` mostra `CostoFisso` netto; altrimenti usa `CostoFisso * (1 + Iva_Vettori/100)`. Se `Iva_Vettori` e assente, negativo o non valido non inventa importi e attiva il fallback neutro. Il comportamento copre utenti autenticati, esenti o con IVA personalizzata.
+- Sicurezza loghi: path `/Public/assets/images/vettori/`, solo basename proveniente dal DB, estensioni in whitelist, esistenza fisica obbligatoria e blocco di traversal, URL esterni e schemi. In assenza di logo valido resta il fallback testuale. Gli unici asset nominativamente tracciati dal task sono `LICCARDI.png` e `sda.jpg`.
+- Manifest runtime complessivo: `App_Code/ProductShippingRateResolver.vb`, `Public/assets/images/vettori/LICCARDI.png`, `Public/assets/images/vettori/sda.jpg`, `Public/assets/keepstore/css/product-ui.css`, `articolo.aspx`, `articolo.aspx.vb`.
+- Verifiche concluse: precompile ASP.NET Framework 4.8, HTTP essenziali, dati DB/rendering, visite tra sessione/refresh/postback/prefetch, spedizione gratuita e fallback, desktop/mobile reali a `1365`, `768`, `430`, `390` e `360px`, nessun overflow, `git diff --check` e secret scan tutti OK; smoke Germano A.
+- Roadmap ripristinata dopo la priorita inserita: `LOGIN-RETURN-CONTEXT-1A`, `PDP-BRAND-LOGO-1A`, verifica promo soltanto con dati reali attivati, infine AI/Gemini/LLMS.
 
 ## Contratto operativo Germano / ChatGPT / Codex
 
@@ -133,11 +148,11 @@ Regole di sincronizzazione:
 
 ### Stato reale, perimetro chiuso e scaletta prioritaria ufficiale
 
-Stato Git corrente al 2026-09-03 dopo il fast-forward `STOREFRONT-CARD-BUY-CTA-STABILITY-1A`:
+Stato Git corrente al 2026-09-03 dopo il fast-forward `PDP-COMMERCIAL-INFO-SHIPPING-1A`:
 
-- `frontend-rebuild` / `origin/frontend-rebuild`: `58f4ee43c363d629b3124fc0fb1a10beaeeef48a`.
+- `frontend-rebuild` / `origin/frontend-rebuild`: `91cbc10b3b343217e18c5a9a6707b72997467b00`.
 - `main` e `origin/main`: `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
-- Working tree atteso: pulito salvo eventuali directory non tracciate `Public/assets/images/articoli/`, `Public/assets/images/marche/` e `Public/assets/images/settori/`, che non vanno committate.
+- Working tree atteso: pulito salvo eventuali asset immagini non tracciati preservati. Le directory `Public/assets/images/articoli/`, `Public/assets/images/marche/` e `Public/assets/images/settori/` non vanno committate; eventuali loghi locali in `Public/assets/images/vettori/` richiedono autorizzazione nominativa nel manifest.
 
 Regola permanente "task specifico chiuso" vs "area/pagina completa":
 
@@ -299,6 +314,7 @@ Scaletta prioritaria ufficiale:
    - `GLOBAL-TYPOGRAPHY-ONSUS-1B`: CHIUSO / A; normalizzazione scoped delle famiglie esplicite residue e polish clipping titoli HOME inclusi.
    - `GLOBAL-TYPOGRAPHY-ONSUS-1C`: NON NECESSARIO / NON CREATO dopo esito A di `1B`; resta solo riferimento storico.
    - `PDP-TITLE-SHIPPING-INFO-1A`: perimetro storico incorporato nella stable; non e il task runtime corrente e non dichiara completa `articolo.aspx`.
+   - `PDP-COMMERCIAL-INFO-SHIPPING-1A`: CHIUSO / A a `91cbc10b3b343217e18c5a9a6707b72997467b00`; chiude solo informazioni commerciali e tariffe reali del singolo articolo, con REV1 IVA allineata al carrello. `articolo.aspx` resta non dichiarata completa.
    - `STOREFRONT-AVAILABILITY-PRESENTATION-1A`: INTEGRATO con fast-forward, merge point `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`. `CATALOG-ASYNC-CART-1A` e poi stato CHIUSO / A; prossimo task `LOGIN-RETURN-CONTEXT-1A`, quindi `PDP-BRAND-LOGO-1A` e verifica promo condizionata.
 2. Priorita 2 - Catalogo `articoli.aspx` full ONSUS parity.
    - `CATALOG-ONSUS-PARITY-AUDIT-1`: COMPLETATO / READ-ONLY, esito operativo E per P0 reali individuati.
@@ -477,11 +493,12 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento al 2026-09-03 dopo il merge fast-forward `STOREFRONT-CARD-BUY-CTA-STABILITY-1A`:
+Stato di riferimento al 2026-09-03 dopo il merge fast-forward `PDP-COMMERCIAL-INFO-SHIPPING-1A`:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD locale/origin `frontend-rebuild`: `58f4ee43c363d629b3124fc0fb1a10beaeeef48a`; il successivo commit docs-only di chiusura non viene auto-referenziato nel documento.
+- HEAD locale/origin `frontend-rebuild`: `91cbc10b3b343217e18c5a9a6707b72997467b00`; il successivo commit docs-only di chiusura non viene auto-referenziato nel documento.
 - Commit async cart finale: `b80f8d4683bbb9bb6ec8a7a486a79048bfae094f`; commit CTA stability finale: `58f4ee43c363d629b3124fc0fb1a10beaeeef48a`.
+- Commit PDP commercial info/shipping: `afc4c72c148984ba729c6cb20de38161dc56e2b4`; REV1 IVA e merge point: `91cbc10b3b343217e18c5a9a6707b72997467b00`.
 - Branch hotfix conservato: `task/storefront-card-layout-regression-1a` a `982cc83bcbcbb913dd1e320ece456957801f8121`.
 - Branch availability conservato: `task/storefront-availability-presentation-1a` a `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`.
 - `main` / `origin/main` invariati: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
