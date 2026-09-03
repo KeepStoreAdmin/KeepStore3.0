@@ -2386,9 +2386,14 @@ Partial Public Class _Default
             Return String.Empty
         End If
 
+        Dim discountPercentValue As Integer = DiscountPercent(row)
+        Dim badgeText As String = If(discountPercentValue > 0,
+                                     "-" & discountPercentValue.ToString(ItCulture) & "%",
+                                     "Offerta")
+
         Return "<div class='box-sale-wrap top-0 start-0 pst-default z-5'><p class='small-text'>Promo</p><p class='title-sidebar-2'>" &
-               DiscountPercent(row).ToString(ItCulture) &
-               "%</p></div>"
+               badgeText &
+               "</p></div>"
     End Function
 
     Private Function RenderCenterSaleBadge(ByVal row As DataRow) As String
