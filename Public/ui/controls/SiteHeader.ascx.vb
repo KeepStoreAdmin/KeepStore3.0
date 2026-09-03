@@ -306,7 +306,16 @@ Partial Class SiteHeader
             isLogged = True
         End If
 
-        Dim accountUrl As String = If(isLogged, ResolveUrl("~/myaccount.aspx"), ResolveUrl("~/login.aspx"))
+        Dim accountUrl As String
+        If isLogged Then
+            accountUrl = ResolveUrl("~/myaccount.aspx")
+        Else
+            Dim currentTarget As String = PostLoginReturnUrlPolicy.NormalizeNavigableContext(HttpContext.Current, Request.Url)
+            If currentTarget <> String.Empty Then
+                PostLoginReturnUrlPolicy.RememberContext(HttpContext.Current, currentTarget)
+            End If
+            accountUrl = PostLoginReturnUrlPolicy.BuildLoginUrl(HttpContext.Current, currentTarget)
+        End If
         If mvLogin IsNot Nothing Then
             mvLogin.ActiveViewIndex = If(isLogged, 1, 0)
         End If

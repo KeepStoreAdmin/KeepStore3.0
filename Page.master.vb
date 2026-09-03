@@ -23,61 +23,6 @@ Partial Class PageMaster
     Private Const CartFeedbackCountKey As String = "ks_cart_feedback_count"
     Private Const CartFeedbackCreatedUtcKey As String = "ks_cart_feedback_created_utc"
 
-    Private Function IsTechnicalNavigationPath(ByVal absolutePath As String) As Boolean
-        Dim path As String = Convert.ToString(absolutePath).ToLowerInvariant()
-        Return path.EndsWith("/accessonegato.aspx") OrElse
-               path.EndsWith("/login.aspx") OrElse
-               path.EndsWith("/cambiapassword.aspx") OrElse
-               path.EndsWith("/logout.aspx") OrElse
-               path.EndsWith("/resetpassword.aspx") OrElse
-               path.EndsWith("/remind.aspx")
-    End Function
-
-    Private Function NormalizeNavigationUrlForCheck(ByVal value As String) As String
-        Dim url As String = Convert.ToString(value).Trim()
-        If url = "" Then Return ""
-
-        Try
-            url = Server.UrlDecode(url)
-        Catch
-        End Try
-
-        Return url.ToLowerInvariant()
-    End Function
-
-    Private Function IsBlockedPostLoginUrl(ByVal value As String) As Boolean
-        Dim url As String = NormalizeNavigationUrlForCheck(value)
-        Return url = "" OrElse
-               url.Contains("/login.aspx") OrElse url.EndsWith("login.aspx") OrElse
-               url.Contains("/accessonegato.aspx") OrElse url.EndsWith("accessonegato.aspx") OrElse
-               url.Contains("/logout.aspx") OrElse url.EndsWith("logout.aspx") OrElse
-               url.Contains("/cambiapassword.aspx") OrElse url.EndsWith("cambiapassword.aspx") OrElse
-               url.Contains("/resetpassword.aspx") OrElse url.EndsWith("resetpassword.aspx") OrElse
-               url.Contains("/remind.aspx") OrElse url.EndsWith("remind.aspx") OrElse
-               url.Contains("token=") OrElse
-               url.Contains("reset") OrElse
-               url.Contains("remind")
-    End Function
-
-    Private Function TrySafeLocalPostLoginPath(ByVal value As Object) As String
-        Dim u As Uri = TryCast(value, Uri)
-        If u Is Nothing Then Return ""
-
-        Try
-            If Not String.Equals(u.Host, Request.Url.Host, StringComparison.OrdinalIgnoreCase) Then Return ""
-
-            Dim localPath As String = u.PathAndQuery
-            If localPath.StartsWith("//") Then Return ""
-            If localPath.IndexOf("\"c) >= 0 Then Return ""
-            If localPath.IndexOfAny(New Char() {ControlChars.Cr, ControlChars.Lf}) >= 0 Then Return ""
-            If IsBlockedPostLoginUrl(localPath) Then Return ""
-
-            Return localPath
-        Catch
-            Return ""
-        End Try
-    End Function
-
     Private Function CurrentScriptPathLower() As String
         Try
             Return Convert.ToString(Me.Request.ServerVariables("SCRIPT_NAME")).ToLowerInvariant()
@@ -252,19 +197,12 @@ Private Sub ApplyGlobalSeoPolicy()
         ' HEADER ICONS (Account / Wishlist) - template integration
         '---------------------------
         Try
-            Dim lnkAcc As System.Web.UI.HtmlControls.HtmlAnchor = FindCtrl(Of System.Web.UI.HtmlControls.HtmlAnchor)("lnkAccount")
-            Dim lnkAccMob As System.Web.UI.HtmlControls.HtmlAnchor = FindCtrl(Of System.Web.UI.HtmlControls.HtmlAnchor)("lnkAccountMobile")
             Dim lblWish As Label = FindCtrl(Of Label)("lblWishlistCount")
 
             Dim isLogged As Boolean = False
             Dim loginIdVal As Integer = 0
             If Not IsNothing(Session("LoginId")) AndAlso Integer.TryParse(Session("LoginId").ToString(), loginIdVal) AndAlso loginIdVal > 0 Then isLogged = True
             If Not isLogged AndAlso Not IsNothing(Session("LoginID")) AndAlso Integer.TryParse(Session("LoginID").ToString(), loginIdVal) AndAlso loginIdVal > 0 Then isLogged = True
-
-            Dim accountUrl As String = If(isLogged, "myaccount.aspx", "login.aspx")
-
-            If lnkAcc IsNot Nothing Then lnkAcc.HRef = accountUrl
-            If lnkAccMob IsNot Nothing Then lnkAccMob.HRef = accountUrl
 
             If lblWish IsNot Nothing Then
                 Dim wishCount As Integer = 0
@@ -662,12 +600,7 @@ Dim IvaTipo As Integer
         ' Footer: email supporto configurabile (fallback safe)
         ApplySupportEmail()
 
-        Dim currentPathLower As String = Convert.ToString(Me.Request.Url.AbsolutePath).ToLowerInvariant()
-        If Not IsTechnicalNavigationPath(currentPathLower) AndAlso TrySafeLocalPostLoginPath(Me.Request.Url) <> "" Then
-            Session.Item("Pagina_visitata") = Me.Request.Url
-        ElseIf IsBlockedPostLoginUrl(Me.Request.Url.PathAndQuery) Then
-            Session.Remove("Pagina_visitata")
-        End If
+        PostLoginReturnUrlPolicy.RememberContext(HttpContext.Current, Me.Request.Url)
 
 
         ' SECURITY: rimuove subito il cookie legacy \"Password\" (se presente)
@@ -1612,18 +1545,18 @@ End Function
             AggiornaDati()
         End If
 
-        If Not Session.Item("Pagina_visitata") Is Nothing Then
-            Try
-                Dim targetUrl As String = TrySafeLocalPostLoginPath(Session.Item("Pagina_visitata"))
-                Session.Remove("Pagina_visitata")
-                If targetUrl <> "" Then
-                    Response.Redirect(targetUrl, False)
-                    Context.ApplicationInstance.CompleteRequest()
-                    Return
-                End If
-            Catch
-                Session.Remove("Pagina_visitata")
-            End Try
+        If CurrentLoginIdSafe() > 0 Then
+            Dim targetUrl As String = PostLoginReturnUrlPolicy.ResolvePostLoginTarget(
+                HttpContext.Current,
+                Request.QueryString("ReturnUrl"),
+                Session.Item("Page"),
+                Session.Item("Pagina_visitata"))
+            PostLoginReturnUrlPolicy.ClearRememberedContext(HttpContext.Current)
+            Session.Remove("Page")
+            Session.Remove("Pagina_visitata")
+            Response.Redirect(targetUrl, False)
+            Context.ApplicationInstance.CompleteRequest()
+            Return
         End If
     End Sub
 

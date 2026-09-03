@@ -4,44 +4,14 @@ Imports System.Web.UI.HtmlControls
 Partial Class accessonegato
     Inherits System.Web.UI.Page
 
-    Private Function IsSafeLocalReturnUrl(ByVal value As String) As Boolean
-        If String.IsNullOrWhiteSpace(value) Then Return False
-
-        Dim candidate As String = value.Trim()
-        Try
-            candidate = Server.UrlDecode(candidate)
-        Catch
-        End Try
-
-        If candidate.StartsWith("//", StringComparison.Ordinal) Then Return False
-        If candidate.IndexOf("://", StringComparison.Ordinal) >= 0 Then Return False
-        If candidate.IndexOf("\"c) >= 0 Then Return False
-        If candidate.IndexOfAny(New Char() {ControlChars.Cr, ControlChars.Lf}) >= 0 Then Return False
-
-        Dim lowered As String = candidate.ToLowerInvariant()
-        If lowered.Contains("/accessonegato.aspx") OrElse lowered.EndsWith("accessonegato.aspx") Then Return False
-        If lowered.Contains("/logout.aspx") OrElse lowered.EndsWith("logout.aspx") Then Return False
-        If lowered.Contains("/resetpassword.aspx") OrElse lowered.EndsWith("resetpassword.aspx") Then Return False
-        If lowered.Contains("/remind.aspx") OrElse lowered.EndsWith("remind.aspx") Then Return False
-        If lowered.Contains("token=") Then Return False
-        If lowered.Contains("javascript:") OrElse lowered.Contains("data:") Then Return False
-
-        Return candidate.StartsWith("/", StringComparison.Ordinal) OrElse
-               candidate.IndexOf(".aspx", StringComparison.OrdinalIgnoreCase) >= 0
-    End Function
-
-    Private Function SafeReturnUrl() As String
-        Dim value As String = Convert.ToString(Request.QueryString("ReturnUrl"))
-        If Not IsSafeLocalReturnUrl(value) Then Return String.Empty
-
-        Try
-            value = Server.UrlDecode(value).Trim()
-        Catch
-            value = value.Trim()
-        End Try
-
-        If value.StartsWith("/", StringComparison.Ordinal) Then Return value
-        Return ResolveUrl("~/" & value.TrimStart("/"c))
+    Private Function ResolveRequestedDestination() As String
+        Return PostLoginReturnUrlPolicy.FirstValidReturnUrl(
+            HttpContext.Current,
+            Request.QueryString("ReturnUrl"),
+            Session("Page"),
+            Session("Pagina_visitata"),
+            Request.UrlReferrer,
+            PostLoginReturnUrlPolicy.PeekRememberedContext(HttpContext.Current))
     End Function
 
     Private Sub MarkBody()
@@ -65,13 +35,22 @@ Partial Class accessonegato
         MarkBody()
 
         If Not IsPostBack Then
-            hlLogin.NavigateUrl = ResolveUrl("~/login.aspx")
             hlHome.NavigateUrl = ResolveUrl("~/Default.aspx")
 
-            Dim returnUrl As String = SafeReturnUrl()
+            Dim returnUrl As String = ResolveRequestedDestination()
             If Not String.IsNullOrWhiteSpace(returnUrl) Then
-                hlReturn.NavigateUrl = returnUrl
-                hlReturn.Visible = True
+                PostLoginReturnUrlPolicy.RememberContext(HttpContext.Current, returnUrl)
+                hlLogin.NavigateUrl = PostLoginReturnUrlPolicy.BuildLoginUrl(HttpContext.Current, returnUrl)
+
+                If Not PostLoginReturnUrlPolicy.IsProtectedDestination(HttpContext.Current, returnUrl) Then
+                    hlReturn.NavigateUrl = returnUrl
+                    hlReturn.Visible = True
+                Else
+                    hlReturn.Visible = False
+                End If
+            Else
+                hlLogin.NavigateUrl = PostLoginReturnUrlPolicy.BuildLoginUrl(HttpContext.Current, Nothing)
+                hlReturn.Visible = False
             End If
         End If
     End Sub
