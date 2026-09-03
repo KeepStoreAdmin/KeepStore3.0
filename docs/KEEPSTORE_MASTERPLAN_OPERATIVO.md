@@ -1,21 +1,21 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-09-02
+Aggiornato: 2026-09-03
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
 
-- Aggiornato: 2026-09-02.
+- Aggiornato: 2026-09-03.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Ultimo runtime stabile: `frontend-rebuild` / `origin/frontend-rebuild` a `982cc83bcbcbb913dd1e320ece456957801f8121`.
+- Ultimo runtime stabile: `frontend-rebuild` / `origin/frontend-rebuild` a `58f4ee43c363d629b3124fc0fb1a10beaeeef48a`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
-- Ultimo task chiuso: `HOTFIX-CARD-LAYOUT-1A`, branch `task/storefront-card-layout-regression-1a`, commit `982cc83bcbcbb913dd1e320ece456957801f8121`, merge fast-forward only senza merge commit.
-- Smoke: `SMOKE UTENTE HOTFIX-CARD-LAYOUT-1A: A`.
+- Ultimi task chiusi: `CATALOG-ASYNC-CART-1A` a `b80f8d4683bbb9bb6ec8a7a486a79048bfae094f` e `STOREFRONT-CARD-BUY-CTA-STABILITY-1A` a `58f4ee43c363d629b3124fc0fb1a10beaeeef48a`, entrambi mergeati fast-forward senza merge commit.
+- Smoke: `SMOKE UTENTE CATALOG-ASYNC-CART-1A REV1: A` e `SMOKE UTENTE STOREFRONT-CARD-BUY-CTA-STABILITY-1A: A`.
 - Task attivo: nessun task runtime; questo aggiornamento e docs-only.
 - Azione immediata successiva: chiudere e mergeare questo task documentale, senza ripetere build o smoke gia conclusi.
-- Prossimi runtime, in ordine: `CATALOG-ASYNC-CART-1A`, `PDP-BRAND-LOGO-1A`, `STOREFRONT-OFFERS-PROMO-VERIFY-1A` solo dopo attivazione offerte/promozioni da parte di Germano.
+- Prossimi runtime, in ordine: `LOGIN-RETURN-CONTEXT-1A`, poi `PDP-BRAND-LOGO-1A`, quindi `STOREFRONT-OFFERS-PROMO-VERIFY-1A` solo dopo attivazione offerte/promozioni da parte di Germano. AI/Gemini/LLMS resta finale e separato.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`.
 - Blocker reali: nessuno per la chiusura documentale; catalogo e PDP restano aree non dichiarate complete.
 
@@ -133,9 +133,9 @@ Regole di sincronizzazione:
 
 ### Stato reale, perimetro chiuso e scaletta prioritaria ufficiale
 
-Stato Git corrente dopo il fast-forward `HOTFIX-CARD-LAYOUT-1A`:
+Stato Git corrente al 2026-09-03 dopo il fast-forward `STOREFRONT-CARD-BUY-CTA-STABILITY-1A`:
 
-- `frontend-rebuild` / `origin/frontend-rebuild`: `982cc83bcbcbb913dd1e320ece456957801f8121`.
+- `frontend-rebuild` / `origin/frontend-rebuild`: `58f4ee43c363d629b3124fc0fb1a10beaeeef48a`.
 - `main` e `origin/main`: `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - Working tree atteso: pulito salvo eventuali directory non tracciate `Public/assets/images/articoli/`, `Public/assets/images/marche/` e `Public/assets/images/settori/`, che non vanno committate.
 
@@ -159,6 +159,19 @@ Stato sintetico dei blocchi chiusi:
 - Stack/sicurezza: chiuso e documentato il contratto permanente WebForms/VB.NET/.NET Framework/MySQL, con divieti C#/ASP.NET Core e checklist sicurezza.
 - Typography storefront: blocco CHIUSO / A. `GLOBAL-TYPOGRAPHY-ONSUS-AUDIT-1`, `GLOBAL-TYPOGRAPHY-ONSUS-1A` e `GLOBAL-TYPOGRAPHY-ONSUS-1B` sono chiusi con esito A; foundation deterministica `Arial, sans-serif`, famiglie testuali residue normalizzate nel layer KeepStore finale, Icomoon preservato e scale ONSUS invariate. `GLOBAL-TYPOGRAPHY-ONSUS-1C` e NON NECESSARIO / NON CREATO dopo smoke Germano A e assenza di Times/Poppins accidentali sulle superfici testate. La chiusura vale soltanto per la typography e non rende complete HOME, catalogo, PDP, header o footer.
 - Cart-state storefront: `STOREFRONT-CART-STATE-PERSISTENCE-REGRESSION-AUDIT-1` chiuso come audit diagnostico B/procedibile e `STOREFRONT-CART-STATE-PERSISTENCE-1A` chiuso con esito A al commit `68325c1879e2859628b59f297fe2a329b5aadb35`; HOME, catalogo e PDP condividono ora uno snapshot server-side request-scoped. Questa chiusura non rende complete le tre pagine.
+
+### Chiusura CATALOG-ASYNC-CART-1A e revisione ReturnUrl
+
+- `CATALOG-ASYNC-CART-1A` e CHIUSO / A. Branch `task/catalog-async-cart-1a`, base `588bde58a328df8ee7a430652b2397a77bdb726c`, commit iniziale `e92139f4e81e5619b632c14d8808ef76ffe55375`, revisione finale e merge point `b80f8d4683bbb9bb6ec8a7a486a79048bfae094f`. Merge fast-forward in `frontend-rebuild`, senza merge commit; `SMOKE UTENTE CATALOG-ASYNC-CART-1A REV1: A`.
+- Contratto finale: POST asincrona same-origin limitata a `#ksCatalogPage` verso `catalog_cart_async.aspx`, con riuso della business logic reale di `aggiungi.aspx`; CSRF di sessione, parametri validati, request-id idempotente e JSON privo di dettagli sensibili. Non avvengono reload, redirect o cambio URL; quantita, stato card, header desktop/mobile e MiniCart vengono aggiornati preservando querystring, filtri, ordinamento, vista e scroll. Il doppio click genera una sola POST e una sola aggiunta; anonimo e autenticato sono verificati; acquisto multiplo e fallback senza `fetch` restano invariati.
+- Revisione ReturnUrl inclusa in `b80f8d...`: `Continua lo shopping` nel MiniCart chiude soltanto l'offcanvas; `Vai al carrello` passa un `ReturnUrl` relativo e salva lo scroll. Il carrello completo risolve in ordine `ReturnUrl -> referrer -> sessione -> /articoli.aspx`; i postback non sovrascrivono la provenienza. `StorefrontReturnUrlPolicy` respinge URL esterni, protocol-relative, tecnici, circolari, traversal e schemi pericolosi. Lo scroll viene consumato solo dopo il ripristino sulla destinazione esatta. Provenienza verificata da catalogo con `q`, filtri/pagina/vista, PDP e pagina informativa.
+
+### Chiusura STOREFRONT-CARD-BUY-CTA-STABILITY-1A
+
+- Task CHIUSO / A, branch `task/storefront-card-buy-cta-stability-1a`, base `b80f8d4683bbb9bb6ec8a7a486a79048bfae094f`, commit e merge point `58f4ee43c363d629b3124fc0fb1a10beaeeef48a`. Merge fast-forward senza merge commit; `SMOKE UTENTE STOREFRONT-CARD-BUY-CTA-STABILITY-1A: A`.
+- Causa: testo inline espandibile e flex wrapping cambiavano dimensione e posizione durante hover, focus e click. Contratto corrente: classe condivisa `.ks-compact-buy-cta`, controllo fisso `44x44px` in normal/hover/focus/active/busy/disabled, icona centrata, tooltip desktop fuori flusso, etichetta accessibile e spinner busy interno senza layout shift. Nessuna funzione essenziale dipende dall'hover.
+- La purchase row dipende dalla larghezza reale della card tramite container query: card larga su una riga; card stretta su due righe con quantita e CTA affiancate; CTA mai sola su una terza riga. Copertura: quattro viste catalogo e tutti i renderer HOME. PDP, Recent, multiselect e CTA full-width sono preservati perche gia stabili. Il hotfix non modifica JavaScript.
+- Riconciliazione storica: le chiusure `CATALOG-BUY-CTA-ACQUISTA-*` e `HOME-BUY-CTA-ACQUISTA-*` restano autentiche, ma il loro precedente contratto di testo espandibile su hover/focus e superato. Il contratto vigente per le CTA compatte e esclusivamente il quadrato fisso con tooltip esterno.
 
 ### Chiusura HOTFIX-CARD-LAYOUT-1A
 
@@ -187,7 +200,7 @@ Stato sintetico dei blocchi chiusi:
 - Browser QA reale riusabile su IIS locale `https://localhost:8443`: viewport `360x800`, `390x844`, `430x932`, `768x1024`, `1365x900` e sanity `1920x1080`. Guardrail: per task UI significativi non dichiarare A desktop/mobile dalla sola analisi CSS; usare il runtime browser reale. Se non disponibile, riportare B visuale. Non aggiungere dipendenze browser/Playwright al repository.
 - Anti-false-closure: catalogo e `articoli.aspx` non sono completi. Restano gap P1/P2, dove applicabili: Marche/load-more, tassonomie, active filters legacy/reset, Price, Deals, Condition/Ricondizionato, Reviews soltanto con dati reali, performance e ulteriori componenti commerciali/responsive. Pager, posizione recent, quattro viste mobile, compact grid e containment recent non vanno invece lasciati come problemi aperti.
 - `STOREFRONT-AVAILABILITY-PRESENTATION-1A` e integrato con fast-forward in `frontend-rebuild`; codice applicativo accettato a `2b4e751d0041aa6ee4ec5be26a1cd138c3b3bc71` e merge point con documentazione iniziale a `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`.
-- Prossimo task ufficiale: `CATALOG-ASYNC-CART-1A`; seguono `PDP-BRAND-LOGO-1A` e `STOREFRONT-OFFERS-PROMO-VERIFY-1A` soltanto quando Germano avra attivato offerte e promozioni nell'ambiente di test. Side cart/offcanvas, catalog parity P1/P2, account/auth/documenti responsive, payments/checkout/e-mail, search/navigation e SEO/AI/Gemini restano separati.
+- `CATALOG-ASYNC-CART-1A` e ora chiuso / A. Prossimo task ufficiale: `LOGIN-RETURN-CONTEXT-1A`, con audit mirato iniziale del flusso login e confronto ecommerce moderno; dopo login va preservata in sicurezza la provenienza oppure scelta una destinazione commerciale sicura, senza implementazione anticipata nei docs. Seguono `PDP-BRAND-LOGO-1A` e `STOREFRONT-OFFERS-PROMO-VERIFY-1A` soltanto quando Germano avra attivato offerte e promozioni. Side cart/offcanvas, catalog parity P1/P2 e gli altri blocchi restano separati; AI/Gemini/LLMS resta finale.
 
 ### STOREAVAIL-1A integrato in frontend-rebuild
 
@@ -206,7 +219,7 @@ Limitazione obbligatoria: “Presentazione offerte e promozioni non validata per
 
 #### Task futuri separati
 
-`CATALOG-ASYNC-CART-1A` descrive un comportamento preesistente, non una regressione STOREAVAIL, e non e implementato nel branch availability. Diagnosi: `keepstore-product.js` intercetta `.js-ks-cart-link`, esegue `preventDefault()` e `window.location.assign()` verso `cart_add.aspx`; `cart_add.aspx` delega ad `aggiungi.aspx`, quindi il redirect a `articoli.aspx` produce un render WebForms completo. `#ksMiniCartCanvas` e server-rendered da `MiniCart.ascx.vb` e non esiste ancora un contratto async/fragment riusabile. Il futuro task non e un semplice fix JavaScript: deve riusare la business logic carrello tramite contratto server asincrono sicuro, evitare refresh/redirect, aggiornare mini-cart/offcanvas, contatore header e quantita card, garantire una sola aggiunta per click con protezione doppio click, preservare filtri/ordinamento/pager/vista/scroll, coprire le quattro viste e utenti anonimi/autenticati e mantenere l'acquisto multiplo.
+`CATALOG-ASYNC-CART-1A` era un task futuro nel checkpoint STOREAVAIL e non una regressione availability; quella diagnosi resta storica. Il task e ora CHIUSO / A a `b80f8d4683bbb9bb6ec8a7a486a79048bfae094f`: il flusso catalogo usa il contratto server asincrono sicuro documentato sopra, senza refresh/redirect, con MiniCart/header/card aggiornati, doppio click protetto, stato catalogo preservato e copertura anonimo/autenticato; acquisto multiplo e fallback legacy restano preservati.
 
 `PDP-BRAND-LOGO-1A` non e implementato. I loghi copiati localmente dall'utente in `/Public/assets/images/marche/` restano non tracciati e fuori dal commit. Il task futuro richiede audit della relazione reale articolo-marca e dei campi/path esistenti, nessun filename dedotto, risoluzione server-side, contenitore stabile nella testata PDP, testo marca preservato per SEO/accessibilita, fallback senza immagine rotta, verifica desktop/mobile e coerenza ONSUS, con manifest asset esplicito prima di qualsiasi commit.
 
@@ -270,7 +283,7 @@ Chiusura progressiva catalog parity audit / `1A` / `1B`:
 - QA `1C`: product-image 404 su `q=hp` pari a 0; HOME, catalogo, catalogo `pg=2`, PDP, carrello e placeholder HTTP 200; build/precompile .NET Framework 4.8, `git diff --check` e secret scan A; smoke Germano A con placeholder visibile e nessuna broken image nelle superfici testate. Manifest: commit `817966ed` con 23 file runtime modificati, 0 aggiunti/eliminati; polish `9a6e5b1b` su `ThemeManager.vb` e `placeholder.svg`; cumulativo 24 file unici modificati, 0 aggiunti, 0 eliminati.
 - Finding separato: `articolix.aspx` puo ancora restituire HTTP 500 per binding legacy `TCid`; non e causato dal resolver immagini, non e corretto da `1C` e resta backlog autonomo.
 - Riconciliazione stato: il precedente finding `PDP-TITLE-SHIPPING-INFO-1A` resta storico utile e non descrive piu il prossimo runtime. Il titolo PDP `.product-info-name` e preservato completo; la pagina `articolo.aspx` non e comunque dichiarata completa.
-- Stato successivo a quel finding: `STOREFRONT-AVAILABILITY-PRESENTATION-1A` e implementato, accettato e integrato in `frontend-rebuild`; source of truth `AvailabilityDisplayHelper`, `Session("DispoTipo")`, copertura HOME/catalogo/PDP/carrello, nessun N+1 e titoli HOME a massimo tre righe. Il prossimo task e `CATALOG-ASYNC-CART-1A`.
+- Stato successivo a quel finding: `STOREFRONT-AVAILABILITY-PRESENTATION-1A` e implementato, accettato e integrato in `frontend-rebuild`; source of truth `AvailabilityDisplayHelper`, `Session("DispoTipo")`, copertura HOME/catalogo/PDP/carrello, nessun N+1 e titoli HOME a massimo tre righe. `CATALOG-ASYNC-CART-1A` e stato poi chiuso / A; il prossimo runtime corrente e `LOGIN-RETURN-CONTEXT-1A`.
 - Side cart/offcanvas resta separato; AI/Gemini/LLMS resta priorita finale.
 
 Scaletta prioritaria ufficiale:
@@ -286,7 +299,7 @@ Scaletta prioritaria ufficiale:
    - `GLOBAL-TYPOGRAPHY-ONSUS-1B`: CHIUSO / A; normalizzazione scoped delle famiglie esplicite residue e polish clipping titoli HOME inclusi.
    - `GLOBAL-TYPOGRAPHY-ONSUS-1C`: NON NECESSARIO / NON CREATO dopo esito A di `1B`; resta solo riferimento storico.
    - `PDP-TITLE-SHIPPING-INFO-1A`: perimetro storico incorporato nella stable; non e il task runtime corrente e non dichiara completa `articolo.aspx`.
-   - `STOREFRONT-AVAILABILITY-PRESENTATION-1A`: INTEGRATO con fast-forward, merge point `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`. Prossimo task `CATALOG-ASYNC-CART-1A`, poi `PDP-BRAND-LOGO-1A`, poi verifica promo condizionata.
+   - `STOREFRONT-AVAILABILITY-PRESENTATION-1A`: INTEGRATO con fast-forward, merge point `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`. `CATALOG-ASYNC-CART-1A` e poi stato CHIUSO / A; prossimo task `LOGIN-RETURN-CONTEXT-1A`, quindi `PDP-BRAND-LOGO-1A` e verifica promo condizionata.
 2. Priorita 2 - Catalogo `articoli.aspx` full ONSUS parity.
    - `CATALOG-ONSUS-PARITY-AUDIT-1`: COMPLETATO / READ-ONLY, esito operativo E per P0 reali individuati.
    - `CATALOG-ONSUS-PARITY-1A`: CHIUSO / A; stato request e paging deterministici.
@@ -464,10 +477,11 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento dopo il merge fast-forward `HOTFIX-CARD-LAYOUT-1A`:
+Stato di riferimento al 2026-09-03 dopo il merge fast-forward `STOREFRONT-CARD-BUY-CTA-STABILITY-1A`:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD locale/origin `frontend-rebuild`: `982cc83bcbcbb913dd1e320ece456957801f8121`; il successivo commit docs-only di chiusura non viene auto-referenziato nel documento.
+- HEAD locale/origin `frontend-rebuild`: `58f4ee43c363d629b3124fc0fb1a10beaeeef48a`; il successivo commit docs-only di chiusura non viene auto-referenziato nel documento.
+- Commit async cart finale: `b80f8d4683bbb9bb6ec8a7a486a79048bfae094f`; commit CTA stability finale: `58f4ee43c363d629b3124fc0fb1a10beaeeef48a`.
 - Branch hotfix conservato: `task/storefront-card-layout-regression-1a` a `982cc83bcbcbb913dd1e320ece456957801f8121`.
 - Branch availability conservato: `task/storefront-availability-presentation-1a` a `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`.
 - `main` / `origin/main` invariati: `976e99f17cabc8a5c6a8715463444edfeaadcd91`
