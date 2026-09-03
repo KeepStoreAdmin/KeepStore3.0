@@ -1,25 +1,50 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-09-03
+Aggiornato: 2026-09-04
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
 
-- Aggiornato: 2026-09-03.
+- Aggiornato: 2026-09-04.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Ultimo runtime stabile: `frontend-rebuild` / `origin/frontend-rebuild` a `91cbc10b3b343217e18c5a9a6707b72997467b00`.
+- Ultimo runtime stabile: `frontend-rebuild` / `origin/frontend-rebuild` a `2ae053771284f6d3769c7d7bfd18e3a34436bc72`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
-- Ultimo task chiuso: `PDP-COMMERCIAL-INFO-SHIPPING-1A`, branch `task/pdp-commercial-info-shipping-1a`, base `f32e3b1e0153cc8931c2fe282f78da489983ceb8`, implementazione `afc4c72c148984ba729c6cb20de38161dc56e2b4` e REV1 IVA `91cbc10b3b343217e18c5a9a6707b72997467b00`, mergeato fast-forward senza merge commit.
-- Smoke: `SMOKE UTENTE PDP-COMMERCIAL-INFO-SHIPPING-1A: A`.
+- Ultimi task chiusi: `LOGIN-RETURN-CONTEXT-1A`, base `f04fb72b407106cb2017aba8d3b652eb226a4268`, commit `ffbd78ffceaca8db96baf77548732e9b94724b1e`; `LOGIN-ACCESS-AUDIT-1A`, base `ffbd78ffceaca8db96baf77548732e9b94724b1e`, commit `2ae053771284f6d3769c7d7bfd18e3a34436bc72`. Entrambi integrati fast-forward only, senza merge commit, con smoke Germano A.
 - Task attivo: nessun task runtime; questo aggiornamento e docs-only.
 - Azione immediata successiva: chiudere e mergeare questo task documentale, senza ripetere build o smoke gia conclusi.
-- Prossimi runtime, in ordine: `LOGIN-RETURN-CONTEXT-1A`, poi `PDP-BRAND-LOGO-1A`, quindi `STOREFRONT-OFFERS-PROMO-VERIFY-1A` solo dopo attivazione offerte/promozioni da parte di Germano. AI/Gemini/LLMS resta finale e separato.
+- Prossimi runtime, in ordine: `HOTFIX-STOREFRONT-PROMO-DEMO-BADGE-1A`, `STOREFRONT-OFFERS-PROMO-ONSUS-AUDIT-1A`, `STOREFRONT-OFFERS-PROMO-UX-1A`, quindi `PDP-BRAND-LOGO-1A`. AI/Gemini/LLMS resta finale e separato.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
 - Blocker reali: nessuno per la chiusura documentale; catalogo e PDP restano aree non dichiarate complete.
 
 Questo checkpoint va aggiornato dopo ogni blocco importante. E una mappa di ripartenza, non sostituisce la verifica diretta di Git e dei tre manuali.
+
+Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo task o riportano SHA precedenti sono storico autentico superato dal checkpoint corrente, non istruzioni operative vigenti. Catalogo e PDP restano esplicitamente aree non dichiarate complete.
+
+### Chiusura LOGIN-RETURN-CONTEXT-1A
+
+- Base `f04fb72b407106cb2017aba8d3b652eb226a4268`, commit `ffbd78ffceaca8db96baf77548732e9b94724b1e`, merge fast-forward only e nessun merge commit. Smoke: `SMOKE UTENTE LOGIN-RETURN-CONTEXT-1A: A`.
+- Contratto definitivo: `ReturnUrl` esplicito e sicuro, contesto dedicato con TTL, querystring catalogo/PDP preservata e fallback finale `/Default.aspx`.
+- Header desktop, icona mobile e menu mobile condividono la policy centralizzata `PostLoginReturnUrlPolicy`; login fallito non consuma la destinazione e il login diretto senza contesto non porta piu automaticamente a `myaccount.aspx`.
+- Pagine tecniche, endpoint con effetti collaterali, checkout diretto, gateway, token, redirect annidati e destinazioni esterne sono bloccati. Un checkout interrotto degrada al carrello quando necessario: nessun open redirect.
+
+### Chiusura LOGIN-ACCESS-AUDIT-1A
+
+- Base `ffbd78ffceaca8db96baf77548732e9b94724b1e`, commit `2ae053771284f6d3769c7d7bfd18e3a34436bc72`, merge fast-forward only e nessun merge commit. Smoke: `SMOKE UTENTE LOGIN-ACCESS-AUDIT-1A: A`, eseguito da Germano con fixture autenticata gestita fuori da Git.
+- Il nuovo `App_Code/LoginAccessAuditRecorder.vb` registra subito dopo una vera autenticazione valida, sia dal login corrente sia dal percorso legacy della master: `UltimoAccesso = NOW()`, IP validato/normalizzato con `IPAddress.TryParse`, query parametrizzata, `NumeroAccessi = COALESCE(NumeroAccessi, 0) + 1` e verifica di una sola riga aggiornata.
+- IPv4, IPv6, IPv4-mapped e loopback sono supportati; gli header proxy non sono considerati affidabili automaticamente. L'incremento e singolo per autenticazione e non avviene per password errata, refresh, accesso negato o visita login di un utente gia autenticato. `LoginUltimoAccesso` conserva l'accesso precedente.
+- Audit e sincronizzazione carrello sono separati: una loro anomalia non espone dettagli all'utente e non blocca il login. La diagnostica non registra credenziali, token o IP completi.
+- Migrazione DB manuale, fuori Git e verificata da Germano: `login.UltimoIp` da `VARCHAR(15) NULL` a `VARCHAR(45) NULL`, con charset/collation `utf8mb4 / utf8mb4_0900_ai_ci` preservati. `UltimoAccesso` resta `DATETIME NULL` e `NumeroAccessi` resta `BIGINT NULL DEFAULT 0`; nessun dato utente e stato modificato manualmente e nessun DDL/migration file e stato aggiunto al repository.
+
+### Roadmap login e promo
+
+1. `HOTFIX-STOREFRONT-PROMO-DEMO-BADGE-1A`: rimuovere l'etichetta hardcoded `Demo` dal badge promo e usare solo dati promo reali.
+2. `STOREFRONT-OFFERS-PROMO-ONSUS-AUDIT-1A`: audit read-only di HOME, catalogo, PDP e componenti condivisi sulle promozioni ora attivate.
+3. `STOREFRONT-OFFERS-PROMO-UX-1A`: redesign professionale mobile-first soltanto dopo l'audit.
+4. `PDP-BRAND-LOGO-1A`, poi gli altri task gia pianificati; AI/Gemini/LLMS resta finale.
+
+Finding aperto: `Public/ui/controls/ProductCard.ascx` contiene ancora `<p class="title-sidebar-2">Demo</p>` dentro `phBadge`. Non e corretto da questo task docs e non rende completa la gestione promozioni.
 
 ### Chiusura PDP-COMMERCIAL-INFO-SHIPPING-1A
 
@@ -34,7 +59,7 @@ Questo checkpoint va aggiornato dopo ogni blocco importante. E una mappa di ripa
 - Sicurezza loghi: path `/Public/assets/images/vettori/`, solo basename proveniente dal DB, estensioni in whitelist, esistenza fisica obbligatoria e blocco di traversal, URL esterni e schemi. In assenza di logo valido resta il fallback testuale. Gli unici asset nominativamente tracciati dal task sono `LICCARDI.png` e `sda.jpg`.
 - Manifest runtime complessivo: `App_Code/ProductShippingRateResolver.vb`, `Public/assets/images/vettori/LICCARDI.png`, `Public/assets/images/vettori/sda.jpg`, `Public/assets/keepstore/css/product-ui.css`, `articolo.aspx`, `articolo.aspx.vb`.
 - Verifiche concluse: precompile ASP.NET Framework 4.8, HTTP essenziali, dati DB/rendering, visite tra sessione/refresh/postback/prefetch, spedizione gratuita e fallback, desktop/mobile reali a `1365`, `768`, `430`, `390` e `360px`, nessun overflow, `git diff --check` e secret scan tutti OK; smoke Germano A.
-- Roadmap ripristinata dopo la priorita inserita: `LOGIN-RETURN-CONTEXT-1A`, `PDP-BRAND-LOGO-1A`, verifica promo soltanto con dati reali attivati, infine AI/Gemini/LLMS.
+- Roadmap storica al checkpoint 2026-09-03: `LOGIN-RETURN-CONTEXT-1A`, `PDP-BRAND-LOGO-1A`, verifica promo soltanto con dati reali attivati, infine AI/Gemini/LLMS. E superata dalla roadmap promo corrente nel checkpoint 2026-09-04.
 
 ## Contratto operativo Germano / ChatGPT / Codex
 
@@ -215,7 +240,7 @@ Stato sintetico dei blocchi chiusi:
 - Browser QA reale riusabile su IIS locale `https://localhost:8443`: viewport `360x800`, `390x844`, `430x932`, `768x1024`, `1365x900` e sanity `1920x1080`. Guardrail: per task UI significativi non dichiarare A desktop/mobile dalla sola analisi CSS; usare il runtime browser reale. Se non disponibile, riportare B visuale. Non aggiungere dipendenze browser/Playwright al repository.
 - Anti-false-closure: catalogo e `articoli.aspx` non sono completi. Restano gap P1/P2, dove applicabili: Marche/load-more, tassonomie, active filters legacy/reset, Price, Deals, Condition/Ricondizionato, Reviews soltanto con dati reali, performance e ulteriori componenti commerciali/responsive. Pager, posizione recent, quattro viste mobile, compact grid e containment recent non vanno invece lasciati come problemi aperti.
 - `STOREFRONT-AVAILABILITY-PRESENTATION-1A` e integrato con fast-forward in `frontend-rebuild`; codice applicativo accettato a `2b4e751d0041aa6ee4ec5be26a1cd138c3b3bc71` e merge point con documentazione iniziale a `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`.
-- `CATALOG-ASYNC-CART-1A` e ora chiuso / A. Prossimo task ufficiale: `LOGIN-RETURN-CONTEXT-1A`, con audit mirato iniziale del flusso login e confronto ecommerce moderno; dopo login va preservata in sicurezza la provenienza oppure scelta una destinazione commerciale sicura, senza implementazione anticipata nei docs. Seguono `PDP-BRAND-LOGO-1A` e `STOREFRONT-OFFERS-PROMO-VERIFY-1A` soltanto quando Germano avra attivato offerte e promozioni. Side cart/offcanvas, catalog parity P1/P2 e gli altri blocchi restano separati; AI/Gemini/LLMS resta finale.
+- `CATALOG-ASYNC-CART-1A` e ora chiuso / A. Nota storica al checkpoint precedente: `LOGIN-RETURN-CONTEXT-1A` era il successivo audit/implementation del flusso login. E stato poi chiuso / A; la roadmap vigente e riportata nel checkpoint 2026-09-04. Side cart/offcanvas, catalog parity P1/P2 e gli altri blocchi restano separati; AI/Gemini/LLMS resta finale.
 
 ### STOREAVAIL-1A integrato in frontend-rebuild
 
@@ -298,7 +323,7 @@ Chiusura progressiva catalog parity audit / `1A` / `1B`:
 - QA `1C`: product-image 404 su `q=hp` pari a 0; HOME, catalogo, catalogo `pg=2`, PDP, carrello e placeholder HTTP 200; build/precompile .NET Framework 4.8, `git diff --check` e secret scan A; smoke Germano A con placeholder visibile e nessuna broken image nelle superfici testate. Manifest: commit `817966ed` con 23 file runtime modificati, 0 aggiunti/eliminati; polish `9a6e5b1b` su `ThemeManager.vb` e `placeholder.svg`; cumulativo 24 file unici modificati, 0 aggiunti, 0 eliminati.
 - Finding separato: `articolix.aspx` puo ancora restituire HTTP 500 per binding legacy `TCid`; non e causato dal resolver immagini, non e corretto da `1C` e resta backlog autonomo.
 - Riconciliazione stato: il precedente finding `PDP-TITLE-SHIPPING-INFO-1A` resta storico utile e non descrive piu il prossimo runtime. Il titolo PDP `.product-info-name` e preservato completo; la pagina `articolo.aspx` non e comunque dichiarata completa.
-- Stato successivo a quel finding: `STOREFRONT-AVAILABILITY-PRESENTATION-1A` e implementato, accettato e integrato in `frontend-rebuild`; source of truth `AvailabilityDisplayHelper`, `Session("DispoTipo")`, copertura HOME/catalogo/PDP/carrello, nessun N+1 e titoli HOME a massimo tre righe. `CATALOG-ASYNC-CART-1A` e stato poi chiuso / A; il prossimo runtime corrente e `LOGIN-RETURN-CONTEXT-1A`.
+- Stato successivo a quel finding: `STOREFRONT-AVAILABILITY-PRESENTATION-1A` e implementato, accettato e integrato in `frontend-rebuild`; source of truth `AvailabilityDisplayHelper`, `Session("DispoTipo")`, copertura HOME/catalogo/PDP/carrello, nessun N+1 e titoli HOME a massimo tre righe. `CATALOG-ASYNC-CART-1A`, `LOGIN-RETURN-CONTEXT-1A` e `LOGIN-ACCESS-AUDIT-1A` sono poi stati chiusi; la priorita vigente e nel checkpoint 2026-09-04.
 - Side cart/offcanvas resta separato; AI/Gemini/LLMS resta priorita finale.
 
 Scaletta prioritaria ufficiale:
@@ -315,7 +340,7 @@ Scaletta prioritaria ufficiale:
    - `GLOBAL-TYPOGRAPHY-ONSUS-1C`: NON NECESSARIO / NON CREATO dopo esito A di `1B`; resta solo riferimento storico.
    - `PDP-TITLE-SHIPPING-INFO-1A`: perimetro storico incorporato nella stable; non e il task runtime corrente e non dichiara completa `articolo.aspx`.
    - `PDP-COMMERCIAL-INFO-SHIPPING-1A`: CHIUSO / A a `91cbc10b3b343217e18c5a9a6707b72997467b00`; chiude solo informazioni commerciali e tariffe reali del singolo articolo, con REV1 IVA allineata al carrello. `articolo.aspx` resta non dichiarata completa.
-   - `STOREFRONT-AVAILABILITY-PRESENTATION-1A`: INTEGRATO con fast-forward, merge point `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`. `CATALOG-ASYNC-CART-1A` e poi stato CHIUSO / A; prossimo task `LOGIN-RETURN-CONTEXT-1A`, quindi `PDP-BRAND-LOGO-1A` e verifica promo condizionata.
+   - `STOREFRONT-AVAILABILITY-PRESENTATION-1A`: INTEGRATO con fast-forward, merge point `b78cbedab9cd21806cd57d7efb0d91e8c0a8d0f3`. Storicamente fu seguito da `CATALOG-ASYNC-CART-1A` e `LOGIN-RETURN-CONTEXT-1A`, entrambi chiusi; l'ordine corrente parte dall'hotfix promo nel checkpoint 2026-09-04.
 2. Priorita 2 - Catalogo `articoli.aspx` full ONSUS parity.
    - `CATALOG-ONSUS-PARITY-AUDIT-1`: COMPLETATO / READ-ONLY, esito operativo E per P0 reali individuati.
    - `CATALOG-ONSUS-PARITY-1A`: CHIUSO / A; stato request e paging deterministici.
@@ -386,7 +411,7 @@ Regola operativa sulla scaletta:
 - `articolo.aspx` mostra `Nel carrello: X` nella buy-box e usa `txtQty` come totale desiderato. Semantica: `qtyToAdd = desiredQty - existingQty`; `2 -> 2` non aggiunge, `2 -> 3` invia delta `1`, `2 -> 5` invia delta `3`; se il totale desiderato non supera l'esistente non avviene redirect e compare feedback. `Session("Carrello_Quantita")` e il parametro `qty` verso `aggiungi.aspx` contengono il delta. Business logic bundle, `ks_product_bundle_cart_items`, `Carrello_SelezioneMultipla` e `Acquista selezionati` restano invariati; bundle e Simili/Correlati/Recenti possono mostrare lo stato quando riconoscibili nello snapshot.
 - `keepstore-cart-state.js` e ora soltanto renderer UI di `window.KeepStoreCartState.items`: rimossi `localStorage`, `STORAGE_KEY`, persistenza click e fallback browser come source of truth. Matching esatto `ArticoliId + TCId` per varianti positive; aggregazione per articolo solo su superfici generiche; nessun secondo badge JS sulle card server-side del catalogo.
 - `ARTICOLO-CART-QTY-IN-PDP-AUDIT-1` e `ARTICOLO-CART-QTY-IN-PDP-1A` sono ASSORBITI / SODDISFATTI da audit e runtime cart-state globale e non restano task futuri autonomi. La chiusura riguarda stato e delta quantita, non dichiara `articolo.aspx` completa.
-- Limiti test dichiarati: `TCId > 0` non certificato runtime da Codex per assenza fixture reale; login runtime non certificato per assenza credenziali. Alias e migrazione login sono stati verificati staticamente e nessuna auth e stata modificata.
+- Limiti test storici del cart-state: `TCId > 0` non era certificato runtime da Codex per assenza fixture reale. Il limite storico sul login non certificato e superato dallo smoke autenticato Germano A dei task `LOGIN-RETURN-CONTEXT-1A` e `LOGIN-ACCESS-AUDIT-1A`; cio non estende automaticamente la certificazione ai casi cart-state `TCId > 0` non coperti.
 - Incidente deployment durante lo smoke Germano: errore `BC30002` (`CartStateSnapshotProvider` non definito) causato da deploy incompleto, con codice dipendente aggiornato ma nuovo file tracked `App_Code/CartStateSnapshotProvider.vb` assente dal webroot. Germano ha ripristinato il file corretto; nessun fix sorgente e stato necessario e lo smoke finale cart-state e A. Non classificare l'incidente come timeout sessione, problema anonimo, DB issue o regressione logica carrello.
 
 Backlog sicurezza separato: `CART-ADD-QTY-SERVER-MAX-HARDENING-AUDIT-1`. L'audit PDP CTA ha osservato che `cart_add.aspx` accetta una quantita positiva server-side ma non risulta applicare lo stesso massimo `9999` usato altrove. Non e dichiarata una vulnerabilita critica e non va corretto senza audit dedicato; mantenerlo visibile prima del go-live finale.
@@ -496,7 +521,7 @@ Quando si rifattorizza una pagina:
 Stato di riferimento al 2026-09-03 dopo il merge fast-forward `PDP-COMMERCIAL-INFO-SHIPPING-1A`:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD locale/origin `frontend-rebuild`: `91cbc10b3b343217e18c5a9a6707b72997467b00`; il successivo commit docs-only di chiusura non viene auto-referenziato nel documento.
+- Nota storica del checkpoint shipping: HEAD locale/origin `frontend-rebuild` era `91cbc10b3b343217e18c5a9a6707b72997467b00`; il checkpoint corrente e `2ae053771284f6d3769c7d7bfd18e3a34436bc72`.
 - Commit async cart finale: `b80f8d4683bbb9bb6ec8a7a486a79048bfae094f`; commit CTA stability finale: `58f4ee43c363d629b3124fc0fb1a10beaeeef48a`.
 - Commit PDP commercial info/shipping: `afc4c72c148984ba729c6cb20de38161dc56e2b4`; REV1 IVA e merge point: `91cbc10b3b343217e18c5a9a6707b72997467b00`.
 - Branch hotfix conservato: `task/storefront-card-layout-regression-1a` a `982cc83bcbcbb913dd1e320ece456957801f8121`.
