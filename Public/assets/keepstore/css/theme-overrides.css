@@ -2048,7 +2048,169 @@ body.ks-page-home #HomeRecentlyViewedSection .ks-recent-card .card-product-info,
   }
 }
 
+/* Shared fixed-size buy action for storefront product cards. */
+.ks-compact-buy-cta,
+body.ks-page-home .ks-home-main .ks-compact-buy-cta,
+#ksCatalogPage article.card-product .ks-compact-buy-cta {
+  position: relative;
+  box-sizing: border-box;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px !important;
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  border: 1px solid var(--primary-2, #D80027) !important;
+  border-radius: 6px !important;
+  background: var(--primary-2, #D80027) !important;
+  color: #fff !important;
+  font-family: var(--ks-font-ui, Arial, sans-serif);
+  line-height: 1;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(216, 0, 39, .12);
+  transform: none !important;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease !important;
+  touch-action: manipulation;
+}
+
+.ks-compact-buy-cta:hover,
+.ks-compact-buy-cta:focus,
+.ks-compact-buy-cta:active,
+body.ks-page-home .ks-home-main .ks-compact-buy-cta:hover,
+body.ks-page-home .ks-home-main .ks-compact-buy-cta:focus,
+body.ks-page-home .ks-home-main .ks-compact-buy-cta:active,
+#ksCatalogPage article.card-product .ks-compact-buy-cta:hover,
+#ksCatalogPage article.card-product .ks-compact-buy-cta:focus,
+#ksCatalogPage article.card-product .ks-compact-buy-cta:active {
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  padding: 0 !important;
+  background: #b90021 !important;
+  border-color: #b90021 !important;
+  color: #fff !important;
+  box-shadow: 0 6px 16px rgba(216, 0, 39, .2);
+  transform: none !important;
+}
+
+.ks-compact-buy-cta:focus {
+  outline: 2px solid rgba(216, 0, 39, .28);
+  outline-offset: 3px;
+}
+
+.ks-compact-buy-cta:focus:not(:focus-visible) {
+  outline: 0;
+}
+
+.ks-compact-buy-cta:focus-visible {
+  outline: 3px solid rgba(216, 0, 39, .34);
+  outline-offset: 3px;
+}
+
+.ks-compact-buy-cta .ks-card-buy-cta__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.ks-compact-buy-cta__tooltip {
+  position: absolute !important;
+  right: 0;
+  bottom: calc(100% + 8px);
+  left: auto;
+  z-index: 40;
+  display: block;
+  width: max-content;
+  max-width: 140px;
+  padding: 6px 9px;
+  border-radius: 4px;
+  background: #1f2933;
+  color: #fff;
+  font-family: var(--ks-font-ui, Arial, sans-serif);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 140ms ease, visibility 140ms ease, transform 140ms ease;
+}
+
+.ks-compact-buy-cta:hover .ks-compact-buy-cta__tooltip,
+.ks-compact-buy-cta:focus-visible .ks-compact-buy-cta__tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+body.ks-page-home .ks-home-main .ks-compact-buy-cta__tooltip {
+  top: 50%;
+  right: calc(100% + 8px);
+  bottom: auto;
+  left: auto;
+  transform: translate(4px, -50%);
+}
+
+body.ks-page-home .ks-home-main .ks-compact-buy-cta:hover .ks-compact-buy-cta__tooltip,
+body.ks-page-home .ks-home-main .ks-compact-buy-cta:focus-visible .ks-compact-buy-cta__tooltip {
+  transform: translate(0, -50%);
+}
+
+.ks-compact-buy-cta.disabled,
+.ks-compact-buy-cta[aria-disabled="true"],
+.ks-compact-buy-cta[data-ks-cart-busy="1"] {
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  height: 44px !important;
+  padding: 0 !important;
+  cursor: progress;
+  opacity: .78;
+  transform: none !important;
+}
+
+.ks-compact-buy-cta[data-ks-cart-busy="1"] .ks-card-buy-cta__icon::before {
+  content: "";
+  display: block;
+  box-sizing: border-box;
+  width: 17px;
+  height: 17px;
+  border: 2px solid rgba(255, 255, 255, .5);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: ks-compact-buy-cta-spin .7s linear infinite;
+}
+
+.ks-compact-buy-cta.disabled .ks-compact-buy-cta__tooltip,
+.ks-compact-buy-cta[aria-disabled="true"] .ks-compact-buy-cta__tooltip,
+.ks-compact-buy-cta[data-ks-cart-busy="1"] .ks-compact-buy-cta__tooltip {
+  opacity: 0;
+  visibility: hidden;
+}
+
+@keyframes ks-compact-buy-cta-spin {
+  to { transform: rotate(360deg); }
+}
+
 @media (hover: none), (pointer: coarse) {
+  .ks-compact-buy-cta__tooltip {
+    display: none !important;
+  }
+
   body.ks-page-home .ks-home-main .ks-home-buy-cta:not(.ks-mobile-card-buy-cta) .tooltip {
     display: none !important;
   }

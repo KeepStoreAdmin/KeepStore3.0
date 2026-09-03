@@ -105,16 +105,16 @@
             <asp:PlaceHolder ID="phLegacyServerControls" runat="server" Visible="false">
                 <asp:HiddenField ID="hfID" runat="server" />
                 <asp:HiddenField ID="hfTCId" runat="server" />
-                <div class="d-flex align-items-center gap-2 mt-2 <%= SafeLegacyQuantityStateCssClass %>"<%= SafeLegacyQuantityStateAttributes %>>
+                <div class="d-flex align-items-center gap-2 mt-2 ks-card-purchase-actions <%= SafeLegacyQuantityStateCssClass %>"<%= SafeLegacyQuantityStateAttributes %>>
                     <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" CssClass="form-check-input" />
                     <asp:TextBox ID="tbQuantita" runat="server" CssClass="form-control form-control-sm ks-qty" Width="70" />
                     <% If RenderAddToCart Then %>
                     <a href="<%= SafeCartUrl %>"
-                       class="ks-card-buy-cta js-ks-cart-link"
+                       class="ks-card-buy-cta ks-compact-buy-cta js-ks-cart-link"
                        aria-label="Acquista: aggiungi al carrello"
                        title="Acquista: aggiungi al carrello"<%= SafeActionDataAttributes %>>
                         <span class="ks-card-buy-cta__icon icon-cart-2" aria-hidden="true"></span>
-                        <span class="ks-card-buy-cta__text">Acquista</span>
+                        <span class="ks-compact-buy-cta__tooltip" aria-hidden="true">Acquista</span>
                     </a>
                     <% End If %>
                 </div>
