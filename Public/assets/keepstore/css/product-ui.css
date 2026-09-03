@@ -67,16 +67,18 @@
 
 .ks-product-page .ks-pdp-shipping-info {
   align-items: flex-start;
+  display: block;
 }
 
 .ks-product-page .ks-pdp-shipping-info > .body-md-2 {
-  flex: 0 0 auto;
+  margin-bottom: 6px;
 }
 
 .ks-product-page .ks-pdp-shipping-lines {
   display: grid;
   gap: 2px;
   min-width: 0;
+  width: 100%;
 }
 
 .ks-product-page .ks-pdp-shipping-lines p {
@@ -84,6 +86,95 @@
   hyphens: none;
   overflow-wrap: break-word;
   word-break: normal;
+}
+
+.ks-product-page .ks-pdp-shipping-rates {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 6px;
+  min-width: 0;
+}
+
+.ks-product-page .ks-pdp-shipping-rate {
+  align-items: center;
+  background: #f7f8fa;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 44px;
+  padding: 6px 8px;
+}
+
+.ks-product-page .ks-pdp-shipping-rate.has-logo {
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+}
+
+.ks-product-page .ks-pdp-shipping-rate__logo {
+  display: block;
+  height: 28px;
+  max-width: 36px;
+  object-fit: contain;
+  width: 36px;
+}
+
+.ks-product-page .ks-pdp-shipping-rate__name {
+  color: #202223;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 17px;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.ks-product-page .ks-pdp-shipping-rate__cost {
+  color: #087a3f;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.ks-product-page .ks-pdp-shipping-more {
+  min-width: 0;
+}
+
+.ks-product-page .ks-pdp-shipping-more summary,
+.ks-product-page .ks-pdp-warranty-info summary {
+  color: var(--primary-2, #D80027);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 20px;
+  min-height: 44px;
+  padding: 11px 0;
+}
+
+.ks-product-page .ks-pdp-shipping-more[open] summary {
+  margin-bottom: 6px;
+}
+
+.ks-product-page .ks-pdp-warranty-info {
+  min-width: 0;
+}
+
+.ks-product-page .ks-pdp-warranty-info details {
+  margin-top: 4px;
+}
+
+.ks-product-page .ks-pdp-warranty-info details p {
+  margin: 0;
+  max-width: 72ch;
+  overflow-wrap: break-word;
+  white-space: pre-line;
+}
+
+.ks-product-page .ks-pdp-shipping-more summary:focus-visible,
+.ks-product-page .ks-pdp-warranty-info summary:focus-visible {
+  border-radius: 3px;
+  outline: 2px solid rgba(216, 0, 39, 0.35);
+  outline-offset: 2px;
 }
 
 .ks-product-page .product-info-price {

@@ -248,6 +248,7 @@ Partial Class articolo
             Return
         End If
 
+        IncrementVisitsForSession(row)
         BindProduct(row)
         BindProductDetailPreview(row)
         TrackRecentlyViewed(_id)
@@ -1575,6 +1576,7 @@ Partial Class articolo
         litPriceHtml2.Text = litPriceHtml.Text
         litPriceInfo.Text = BuildPriceText(price.CurrentPrice)
         litIvaInfo.Text = Server.HtmlEncode(price.IvaLabel)
+        BindCommercialProductInfo(row)
 
         Dim promotionModel As ProductPromotionDisplayModel = ProductPromotionDisplayHelper.BuildForProduct(GetConnectionString(),
                                                                                                             _id,
@@ -1641,6 +1643,9 @@ Partial Class articolo
 
         phFreeShipping.Visible = shippingInfo.IsFreeShipping
         phStandardShipping.Visible = Not shippingInfo.IsFreeShipping
+        phShippingRates.Visible = False
+        phMoreShippingRates.Visible = False
+        phShippingRatesFallback.Visible = False
         phFreeShippingEndDate.Visible = shippingInfo.IsFreeShipping AndAlso shippingInfo.FreeShippingEndDate.HasValue
         litFreeShippingEndDate.Text = String.Empty
         If phFreeShippingEndDate.Visible Then
@@ -1656,6 +1661,37 @@ Partial Class articolo
         If showWeight Then
             Dim weightText As String = shippingInfo.WeightValue.Value.ToString("0.###", ItCulture)
             litShippingWeight.Text = Server.HtmlEncode("Peso articolo: " & weightText & " " & shippingInfo.WeightUnit)
+        End If
+
+        If shippingInfo.IsFreeShipping Then Return
+
+        Dim rates As New List(Of ProductShippingRate)()
+        If showWeight Then
+            Try
+                rates = ProductShippingRateResolver.LoadApplicableRates(GetConnectionString(),
+                                                                         GetCurrentAziendaId(),
+                                                                         shippingInfo.WeightValue.Value,
+                                                                         GetSessionInt("IvaTipo", 2),
+                                                                         Server.MapPath("~/Public/assets/images/vettori/"))
+            Catch ex As Exception
+                KeepStoreLog.Error("articolo.aspx", "Errore caricamento tariffe spedizione PDP (id=" & articleId.ToString() & ")", ex, HttpContext.Current)
+            End Try
+        End If
+
+        If rates.Count = 0 Then
+            phShippingRatesFallback.Visible = True
+            Return
+        End If
+
+        Dim visibleCount As Integer = Math.Min(2, rates.Count)
+        rptShippingRates.DataSource = rates.GetRange(0, visibleCount)
+        rptShippingRates.DataBind()
+        phShippingRates.Visible = True
+
+        If rates.Count > visibleCount Then
+            rptMoreShippingRates.DataSource = rates.GetRange(visibleCount, rates.Count - visibleCount)
+            rptMoreShippingRates.DataBind()
+            phMoreShippingRates.Visible = True
         End If
     End Sub
 
@@ -1695,7 +1731,11 @@ Partial Class articolo
                         Dim weightOrdinal As Integer = rdr.GetOrdinal("Peso")
                         If Not rdr.IsDBNull(weightOrdinal) Then
                             Dim weightValue As Decimal = Convert.ToDecimal(rdr.GetValue(weightOrdinal), CultureInfo.InvariantCulture)
-                            If weightValue > 0D Then info.WeightValue = weightValue
+                            If weightValue > 0D Then
+                                info.WeightValue = weightValue
+                                info.WeightUnit = "Kg"
+                                info.WeightUnitVerified = True
+                            End If
                         End If
                     End Using
                 End Using
@@ -1710,6 +1750,112 @@ Partial Class articolo
         End Try
 
         Return info
+    End Function
+
+    Private Sub IncrementVisitsForSession(row As DataRow)
+        If row Is Nothing OrElse IsPostBack OrElse Request Is Nothing OrElse
+           Not String.Equals(Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) Then Return
+        If String.Equals(Request.Headers("Purpose"), "prefetch", StringComparison.OrdinalIgnoreCase) OrElse
+           String.Equals(Request.Headers("Sec-Purpose"), "prefetch", StringComparison.OrdinalIgnoreCase) Then Return
+
+        Const sessionKey As String = "KeepStore:PdpVisitedArticleIds"
+        Dim visited As HashSet(Of Integer) = TryCast(Session(sessionKey), HashSet(Of Integer))
+        If visited Is Nothing Then visited = New HashSet(Of Integer)()
+        If visited.Contains(_id) Then Return
+
+        Try
+            Dim currentVisits As Integer = 0
+            Using cn As New MySqlConnection(GetConnectionString())
+                cn.Open()
+                Using updateCommand As New MySqlCommand("UPDATE articoli SET Visite = COALESCE(Visite, 0) + 1 WHERE id = @id", cn)
+                    updateCommand.Parameters.Add("@id", MySqlDbType.Int32).Value = _id
+                    If updateCommand.ExecuteNonQuery() <= 0 Then Return
+                End Using
+
+                Using readCommand As New MySqlCommand("SELECT COALESCE(Visite, 0) FROM articoli WHERE id = @id LIMIT 1", cn)
+                    readCommand.Parameters.Add("@id", MySqlDbType.Int32).Value = _id
+                    currentVisits = Convert.ToInt32(readCommand.ExecuteScalar(), CultureInfo.InvariantCulture)
+                End Using
+            End Using
+
+            visited.Add(_id)
+            Session(sessionKey) = visited
+            If row.Table IsNot Nothing AndAlso row.Table.Columns.Contains("Visite") Then row("Visite") = currentVisits
+        Catch ex As Exception
+            KeepStoreLog.Error("articolo.aspx", "Errore incremento visite PDP (id=" & _id.ToString() & ")", ex, HttpContext.Current)
+        End Try
+    End Sub
+
+    Private Sub BindCommercialProductInfo(row As DataRow)
+        Dim visits As Integer = Math.Max(0, GetRowInt(row, "Visite", 0))
+        litVisitsInfo.Text = visits.ToString("N0", ItCulture)
+
+        Dim months As Integer = Math.Max(0, GetRowInt(row, "Mesi", 0))
+        Dim warrantyType As String = GetRowString(row, "Garanzia").Trim()
+        Dim warrantySummary As String = String.Empty
+        If months > 0 Then warrantySummary = months.ToString(CultureInfo.InvariantCulture) & " mesi"
+        If Not String.IsNullOrWhiteSpace(warrantyType) Then
+            If String.IsNullOrWhiteSpace(warrantySummary) OrElse warrantyType.IndexOf("mesi", StringComparison.OrdinalIgnoreCase) >= 0 Then
+                warrantySummary = warrantyType
+            Else
+                warrantySummary &= " - " & warrantyType
+            End If
+        End If
+        If String.IsNullOrWhiteSpace(warrantySummary) Then warrantySummary = ChrW(&H2014)
+        litWarrantySummary.Text = warrantySummary
+
+        Dim warrantyDetails As String = LoadWarrantyDetails(_id)
+        phWarrantyDetails.Visible = Not String.IsNullOrWhiteSpace(warrantyDetails)
+        litWarrantyDetails.Text = If(phWarrantyDetails.Visible, warrantyDetails, String.Empty)
+
+        Dim officialPrice As Nullable(Of Decimal) = ResolveOfficialListPrice(row)
+        litOfficialListPrice.Text = If(officialPrice.HasValue AndAlso officialPrice.Value > 0D,
+                                       FormatMoney(officialPrice.Value),
+                                       ChrW(&H2014))
+    End Sub
+
+    Private Function LoadWarrantyDetails(articleId As Integer) As String
+        If articleId <= 0 Then Return String.Empty
+
+        Try
+            Using cn As New MySqlConnection(GetConnectionString())
+                cn.Open()
+                Using cmd As New MySqlCommand("SELECT NormeGaranzia FROM articoli WHERE id = @id LIMIT 1", cn)
+                    cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = articleId
+                    Dim value As Object = cmd.ExecuteScalar()
+                    If value Is Nothing OrElse value Is DBNull.Value Then Return String.Empty
+                    Return Convert.ToString(value, CultureInfo.InvariantCulture).Trim()
+                End Using
+            End Using
+        Catch ex As Exception
+            KeepStoreLog.Error("articolo.aspx", "Errore lettura norme garanzia PDP (id=" & articleId.ToString() & ")", ex, HttpContext.Current)
+            Return String.Empty
+        End Try
+    End Function
+
+    Private Function ResolveOfficialListPrice(row As DataRow) As Nullable(Of Decimal)
+        Dim netValue As Nullable(Of Decimal) = GetRowDecimal(row, "ListinoUfficiale")
+        If Not netValue.HasValue OrElse netValue.Value <= 0D Then Return Nothing
+        If GetSessionInt("IvaTipo", 2) = 1 Then Return netValue
+
+        Dim vatRate As Nullable(Of Decimal) = Nothing
+        Dim reverseChargeEnabled As Boolean = (GetSessionInt("AbilitatoIvaReverseCharge", 0) = 1)
+        Dim reverseChargeId As Integer = GetRowInt(row, "IdIvaRC", -1)
+        Dim reverseChargeRate As Nullable(Of Decimal) = GetRowDecimal(row, "ValoreIvaRC")
+        If reverseChargeEnabled AndAlso reverseChargeId > -1 AndAlso reverseChargeRate.HasValue AndAlso reverseChargeRate.Value >= 0D Then
+            vatRate = reverseChargeRate
+        Else
+            Dim userVat As Decimal = GetSessionDecimal("Iva_Utente", -1D)
+            If userVat >= 0D Then
+                vatRate = userVat
+            Else
+                Dim productVat As Nullable(Of Decimal) = GetRowDecimal(row, "Valoreiva")
+                If productVat.HasValue AndAlso productVat.Value >= 0D Then vatRate = productVat
+            End If
+        End If
+
+        If Not vatRate.HasValue Then Return Nothing
+        Return netValue.Value * ((vatRate.Value / 100D) + 1D)
     End Function
 
     Private Sub BindVariantsIfNeeded(id As Integer, currentTcid As Integer)
@@ -3368,6 +3514,16 @@ Partial Class articolo
             If Integer.TryParse(Convert.ToString(Session(key)), tmp) Then
                 Return tmp
             End If
+        Catch
+        End Try
+        Return defaultValue
+    End Function
+
+    Private Function GetSessionDecimal(key As String, defaultValue As Decimal) As Decimal
+        Try
+            If Session(key) Is Nothing Then Return defaultValue
+            Dim value As Decimal
+            If TryParseKeepStoreDecimal(Session(key), value) Then Return value
         Catch
         End Try
         Return defaultValue

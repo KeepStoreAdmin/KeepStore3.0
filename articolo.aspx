@@ -9,7 +9,7 @@
 
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/drift-basic.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/photoswipe.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20260831-cardgeometry1" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20260903-commercialshipping2" />
 
     <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
 </asp:Content>
@@ -232,9 +232,38 @@
                                                         </asp:PlaceHolder>
                                                     </asp:PlaceHolder>
                                                     <asp:PlaceHolder ID="phStandardShipping" runat="server">
-                                                        <p class="ks-pdp-shipping-status fw-semibold">Spese di spedizione calcolate nel carrello</p>
-                                                        <p>Le opzioni e il costo definitivo vengono mostrati nel carrello.</p>
+                                                        <asp:PlaceHolder ID="phShippingRates" runat="server" Visible="false">
+                                                            <div class="ks-pdp-shipping-rates" aria-label="Tariffe di spedizione applicabili al singolo articolo">
+                                                                <asp:Repeater ID="rptShippingRates" runat="server">
+                                                                    <ItemTemplate>
+                                                                        <div class='<%# If(Convert.ToBoolean(Eval("HasLogo")), "ks-pdp-shipping-rate has-logo", "ks-pdp-shipping-rate") %>'>
+                                                                            <asp:Image ID="imgCarrier" runat="server" CssClass="ks-pdp-shipping-rate__logo" ImageUrl='<%# Eval("LogoUrl") %>' AlternateText='<%# Eval("LogoAlt") %>' Visible='<%# Convert.ToBoolean(Eval("HasLogo")) %>' />
+                                                                            <span class="ks-pdp-shipping-rate__name"><%#: Eval("Description") %></span>
+                                                                            <strong class="ks-pdp-shipping-rate__cost"><%#: Eval("DisplayCost") %></strong>
+                                                                        </div>
+                                                                    </ItemTemplate>
+                                                                </asp:Repeater>
+                                                                <asp:PlaceHolder ID="phMoreShippingRates" runat="server" Visible="false">
+                                                                    <details class="ks-pdp-shipping-more">
+                                                                        <summary>Mostra altre opzioni</summary>
+                                                                        <asp:Repeater ID="rptMoreShippingRates" runat="server">
+                                                                            <ItemTemplate>
+                                                                                <div class='<%# If(Convert.ToBoolean(Eval("HasLogo")), "ks-pdp-shipping-rate has-logo", "ks-pdp-shipping-rate") %>'>
+                                                                                    <asp:Image ID="imgCarrierMore" runat="server" CssClass="ks-pdp-shipping-rate__logo" ImageUrl='<%# Eval("LogoUrl") %>' AlternateText='<%# Eval("LogoAlt") %>' Visible='<%# Convert.ToBoolean(Eval("HasLogo")) %>' />
+                                                                                    <span class="ks-pdp-shipping-rate__name"><%#: Eval("Description") %></span>
+                                                                                    <strong class="ks-pdp-shipping-rate__cost"><%#: Eval("DisplayCost") %></strong>
+                                                                                </div>
+                                                                            </ItemTemplate>
+                                                                        </asp:Repeater>
+                                                                    </details>
+                                                                </asp:PlaceHolder>
+                                                            </div>
+                                                        </asp:PlaceHolder>
+                                                        <asp:PlaceHolder ID="phShippingRatesFallback" runat="server" Visible="false">
+                                                            <p class="ks-pdp-shipping-status fw-semibold">Tariffe non disponibili per questo articolo.</p>
+                                                        </asp:PlaceHolder>
                                                     </asp:PlaceHolder>
+                                                    <p>Le opzioni e il costo definitivo vengono mostrati nel carrello.</p>
                                                     <asp:PlaceHolder ID="phShippingWeight" runat="server" Visible="false">
                                                         <p><asp:Literal ID="litShippingWeight" runat="server" /></p>
                                                     </asp:PlaceHolder>
@@ -402,6 +431,26 @@
                                     <li>
                                         <p class="name-feature">IVA</p>
                                         <p class="property"><asp:Literal ID="litIvaInfo" runat="server" /></p>
+                                    </li>
+                                    <li>
+                                        <p class="name-feature">Visite</p>
+                                        <p class="property"><asp:Literal ID="litVisitsInfo" runat="server" Mode="Encode" /></p>
+                                    </li>
+                                    <li>
+                                        <p class="name-feature">Garanzia</p>
+                                        <div class="property ks-pdp-warranty-info">
+                                            <asp:Literal ID="litWarrantySummary" runat="server" Mode="Encode" />
+                                            <asp:PlaceHolder ID="phWarrantyDetails" runat="server" Visible="false">
+                                                <details>
+                                                    <summary>Dettagli garanzia</summary>
+                                                    <p><asp:Literal ID="litWarrantyDetails" runat="server" Mode="Encode" /></p>
+                                                </details>
+                                            </asp:PlaceHolder>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <p class="name-feature">Prezzo di Listino</p>
+                                        <p class="property"><asp:Literal ID="litOfficialListPrice" runat="server" Mode="Encode" /></p>
                                     </li>
                                 </ul>
                             </div>
