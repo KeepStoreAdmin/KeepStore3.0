@@ -72,7 +72,8 @@ Partial Class CatalogCartAsync
             Session("Carrello_TCId") = _tcId.ToString(CultureInfo.InvariantCulture)
             Session("Carrello_Quantita") = quantity.ToString(CultureInfo.InvariantCulture)
             Session("ProdottoGratis") = freeProduct.ToString(CultureInfo.InvariantCulture)
-            Session("Carrello_Pagina") = Request.UrlReferrer.PathAndQuery
+            Dim cartReturnUrl As String = StorefrontReturnUrlPolicy.NormalizeShoppingReturnUrl(HttpContext.Current, Request.UrlReferrer.AbsoluteUri)
+            Session("Carrello_Pagina") = If(cartReturnUrl <> String.Empty, cartReturnUrl, "/articoli.aspx")
             Session("Carrello_SelezioneMultipla") = Nothing
 
             CatalogAsyncCartSupport.BeginExecution(HttpContext.Current, _articleId, _tcId)

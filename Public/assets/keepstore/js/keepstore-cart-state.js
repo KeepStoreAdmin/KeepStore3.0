@@ -209,12 +209,22 @@
     var trigger = event.target && event.target.closest ? event.target.closest('.js-ks-cart-link,.js-ks-cart-context') : null;
     if (!trigger) return;
 
+    var returnPath = currentPathAndQuery();
     try {
       window.sessionStorage.setItem(scrollStorageKey, JSON.stringify({
-        path: currentPathAndQuery(),
-        y: Math.max(0, Math.round(window.scrollY || window.pageYOffset || 0)),
-        created: Date.now()
+        path: returnPath,
+        y: Math.max(0, Math.round(window.scrollY || window.pageYOffset || 0))
       }));
+    } catch (e) {}
+
+    if (trigger.hasAttribute('data-ks-cart-full-link')) {
+      trigger.setAttribute('href', '/carrello.aspx?ReturnUrl=' + encodeURIComponent(returnPath));
+    }
+  }
+
+  function removeCartReturnScroll() {
+    try {
+      window.sessionStorage.removeItem(scrollStorageKey);
     } catch (e) {}
   }
 
@@ -222,7 +232,6 @@
     var stored = null;
     try {
       stored = window.sessionStorage.getItem(scrollStorageKey);
-      window.sessionStorage.removeItem(scrollStorageKey);
     } catch (e) {
       return;
     }
@@ -230,16 +239,25 @@
 
     try {
       var state = JSON.parse(stored);
-      var age = Date.now() - Number(state.created || 0);
-      var y = Number(state.y || 0);
-      if (state.path !== currentPathAndQuery() || age < 0 || age > 120000 || !isFinite(y) || y < 0) return;
+      var path = state && state.path;
+      var y = Number(state && state.y);
+      if (typeof path !== 'string' || path.charAt(0) !== '/' || path.indexOf('//') === 0 ||
+          /[\\\r\n\0]/.test(path) || !isFinite(y) || y < 0) {
+        removeCartReturnScroll();
+        return;
+      }
+      if (path !== currentPathAndQuery()) return;
 
       window.setTimeout(function () {
         window.requestAnimationFrame(function () {
+          if (path !== currentPathAndQuery()) return;
           window.scrollTo(0, y);
+          removeCartReturnScroll();
         });
       }, 60);
-    } catch (e) {}
+    } catch (e) {
+      removeCartReturnScroll();
+    }
   }
 
   function initialize() {

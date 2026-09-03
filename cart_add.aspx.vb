@@ -35,7 +35,12 @@ Partial Class cart_add
         Session("Carrello_TCId") = tcId.ToString(CultureInfo.InvariantCulture)
         Session("Carrello_Quantita") = qty.ToString(CultureInfo.InvariantCulture)
         Session("ProdottoGratis") = freeShipping.ToString(CultureInfo.InvariantCulture)
-        Session("Carrello_Pagina") = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.PathAndQuery, "Default.aspx")
+        Dim cartReturnUrl As String = StorefrontReturnUrlPolicy.FirstValidShoppingReturnUrl(
+            HttpContext.Current,
+            Convert.ToString(Request.QueryString("ReturnUrl")),
+            If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.AbsoluteUri, String.Empty),
+            Convert.ToString(Session("Carrello_Pagina")))
+        Session("Carrello_Pagina") = If(cartReturnUrl <> String.Empty, cartReturnUrl, "/articoli.aspx")
 
         Dim redirectUrl As String = "aggiungi.aspx?id=" & articleId.ToString(CultureInfo.InvariantCulture) &
                                     "&TCid=" & tcId.ToString(CultureInfo.InvariantCulture) &

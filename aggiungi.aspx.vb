@@ -36,71 +36,11 @@ Private Sub SafeRedirect(ByVal url As String)
 End Sub
 
 Private Function ResolveSafeCartReturnUrl() As String
-    Dim normalized As String = NormalizeSafeCartReturnUrl(Convert.ToString(Session("Carrello_Pagina")))
-    If String.IsNullOrEmpty(normalized) Then normalized = "Default.aspx"
+    Dim normalized As String = StorefrontReturnUrlPolicy.NormalizeShoppingReturnUrl(HttpContext.Current, Convert.ToString(Session("Carrello_Pagina")))
+    If String.IsNullOrEmpty(normalized) Then normalized = "/articoli.aspx"
 
     Session("Carrello_Pagina") = normalized
     Return normalized
-End Function
-
-Private Function NormalizeSafeCartReturnUrl(ByVal rawValue As String) As String
-    Dim candidate As String = Convert.ToString(rawValue).Trim()
-    If candidate = "" Then Return ""
-    If candidate.IndexOfAny(New Char() {ControlChars.Cr, ControlChars.Lf, ControlChars.NullChar, "\"c}) >= 0 Then Return ""
-
-    Dim lowered As String = candidate.ToLowerInvariant()
-    If candidate.StartsWith("//", StringComparison.Ordinal) OrElse
-       candidate.StartsWith("\\", StringComparison.Ordinal) OrElse
-       lowered.StartsWith("javascript:", StringComparison.Ordinal) OrElse
-       lowered.StartsWith("data:", StringComparison.Ordinal) OrElse
-       lowered.Contains("%0d") OrElse lowered.Contains("%0a") OrElse
-       lowered.Contains("%00") OrElse lowered.Contains("%5c") Then
-        Return ""
-    End If
-
-    Dim resolved As Uri = Nothing
-    Dim absoluteCandidate As Uri = Nothing
-    If Uri.TryCreate(candidate, UriKind.Absolute, absoluteCandidate) Then
-        If absoluteCandidate.Scheme <> Uri.UriSchemeHttp AndAlso absoluteCandidate.Scheme <> Uri.UriSchemeHttps Then Return ""
-        If Request.Url Is Nothing OrElse Not String.Equals(absoluteCandidate.Host, Request.Url.Host, StringComparison.OrdinalIgnoreCase) Then Return ""
-        resolved = absoluteCandidate
-    Else
-        If Request.Url Is Nothing OrElse Not Uri.TryCreate(Request.Url, candidate, resolved) Then Return ""
-        If Not String.Equals(resolved.Host, Request.Url.Host, StringComparison.OrdinalIgnoreCase) Then Return ""
-    End If
-
-    Dim decodedPath As String
-    Try
-        decodedPath = Uri.UnescapeDataString(resolved.AbsolutePath)
-    Catch
-        Return ""
-    End Try
-    If decodedPath.IndexOf("\"c) >= 0 OrElse
-       decodedPath.IndexOfAny(New Char() {ControlChars.Cr, ControlChars.Lf, ControlChars.NullChar}) >= 0 OrElse
-       decodedPath.Contains("..") Then
-        Return ""
-    End If
-
-    Dim pathForWhitelist As String = resolved.AbsolutePath
-    Dim applicationPath As String = Convert.ToString(Request.ApplicationPath).TrimEnd("/"c)
-    If applicationPath <> "" AndAlso applicationPath <> "/" AndAlso
-       pathForWhitelist.StartsWith(applicationPath & "/", StringComparison.OrdinalIgnoreCase) Then
-        pathForWhitelist = pathForWhitelist.Substring(applicationPath.Length)
-    End If
-    If pathForWhitelist = "" Then pathForWhitelist = "/"
-
-    Dim allowedPaths As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {
-        "/",
-        "/default.aspx",
-        "/articoli.aspx",
-        "/articolo.aspx",
-        "/wishlist.aspx",
-        "/compare.aspx",
-        "/carrello.aspx"
-    }
-    If Not allowedPaths.Contains(pathForWhitelist) Then Return ""
-
-    Return resolved.PathAndQuery
 End Function
 
 Private Sub ClearCartFeedbackSession()
@@ -210,7 +150,12 @@ End If
                 Session("Carrello_TCId") = directTc.ToString(CultureInfo.InvariantCulture)
                 Session("Carrello_Quantita") = directQty.ToString(CultureInfo.InvariantCulture)
                 Session("ProdottoGratis") = directProdottoGratis.ToString(CultureInfo.InvariantCulture)
-                Session("Carrello_Pagina") = If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.PathAndQuery, "Default.aspx")
+                Dim directReturnUrl As String = StorefrontReturnUrlPolicy.FirstValidShoppingReturnUrl(
+                    HttpContext.Current,
+                    Convert.ToString(Request.QueryString("ReturnUrl")),
+                    If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.AbsoluteUri, String.Empty),
+                    Convert.ToString(Session("Carrello_Pagina")))
+                Session("Carrello_Pagina") = If(directReturnUrl <> String.Empty, directReturnUrl, "/articoli.aspx")
                 Session("Carrello_SelezioneMultipla") = Nothing
             End If
         Else

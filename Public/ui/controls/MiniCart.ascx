@@ -51,8 +51,8 @@
                     <span class="fw-semibold"><asp:Label ID="lblMiniCartTotale" runat="server" Text="0,00" /></span>
                 </div>
 
-                <a class="tf-btn btn-fill w-100 mb-2" href="carrello.aspx">Vai al carrello</a>
-                <a class="tf-btn btn-line w-100" href="articoli.aspx">Continua lo shopping</a>
+                <a class="tf-btn btn-fill w-100 mb-2 js-ks-cart-context" href="/carrello.aspx" data-ks-cart-full-link>Vai al carrello</a>
+                <button class="tf-btn btn-line w-100" type="button" data-bs-dismiss="offcanvas">Continua lo shopping</button>
             </div>
         </asp:PlaceHolder>
     </div>
