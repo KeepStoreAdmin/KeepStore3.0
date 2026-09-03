@@ -11,7 +11,6 @@ Public Class ProductShippingRate
     Public Property SortOrder As Integer
     Public Property MaximumWeightKg As Decimal
     Public Property NetCost As Decimal
-    Public Property VatRate As Decimal
     Public Property DisplayCost As String
     Public Property LogoUrl As String
     Public Property LogoAlt As String
@@ -33,16 +32,16 @@ Public NotInheritable Class ProductShippingRateResolver
                                                companyId As Integer,
                                                weightKg As Decimal,
                                                ivaTipo As Integer,
+                                               ivaVettori As Decimal,
                                                carrierLogoPhysicalRoot As String) As List(Of ProductShippingRate)
         Dim rates As New List(Of ProductShippingRate)()
         If String.IsNullOrWhiteSpace(connectionString) OrElse companyId <= 0 OrElse weightKg <= 0D Then Return rates
+        If ivaTipo <> 1 AndAlso ivaVettori < 0D Then Return rates
 
         Const sql As String =
-            "SELECT DISTINCT vc.id, vc.Descrizione, vc.Ordinamento, vc.Img, vc.PesoMax, vc.CostoFisso, i.Valore AS IvaValore " &
+            "SELECT DISTINCT vc.id, vc.Descrizione, vc.Ordinamento, vc.Img, vc.PesoMax, vc.CostoFisso " &
             "FROM vvettoricosti vc " &
             "INNER JOIN vettoricosti c ON c.Id = vc.vettoricostiId " &
-            "INNER JOIN vettori v ON v.id = vc.id " &
-            "INNER JOIN iva i ON i.id = v.Iva " &
             "WHERE vc.AziendeId = @aziendaId " &
             "AND vc.Abilitato = 1 AND vc.Web = 1 AND vc.Promo = 0 " &
             "AND vc.PesoMax >= @peso AND vc.CostoFisso > 0 " &
@@ -65,15 +64,14 @@ Public NotInheritable Class ProductShippingRateResolver
                 Using rdr As MySqlDataReader = cmd.ExecuteReader()
                     While rdr.Read()
                         Dim netCost As Decimal = ReaderDecimal(rdr, "CostoFisso", 0D)
-                        Dim vatRate As Decimal = ReaderDecimal(rdr, "IvaValore", -1D)
-                        If netCost <= 0D OrElse (ivaTipo <> 1 AndAlso vatRate < 0D) Then Continue While
+                        If netCost <= 0D Then Continue While
 
                         Dim description As String = ReaderString(rdr, "Descrizione").Trim()
                         If String.IsNullOrWhiteSpace(description) Then Continue While
 
                         Dim displayCostValue As Decimal = netCost
                         If ivaTipo <> 1 Then
-                            displayCostValue = netCost * ((vatRate / 100D) + 1D)
+                            displayCostValue = netCost * ((ivaVettori / 100D) + 1D)
                         End If
 
                         rates.Add(New ProductShippingRate() With {
@@ -82,7 +80,6 @@ Public NotInheritable Class ProductShippingRateResolver
                             .SortOrder = ReaderInt(rdr, "Ordinamento", 0),
                             .MaximumWeightKg = ReaderDecimal(rdr, "PesoMax", 0D),
                             .NetCost = netCost,
-                            .VatRate = vatRate,
                             .DisplayCost = displayCostValue.ToString("N2", ItCulture) & " " & ChrW(8364),
                             .LogoUrl = ResolveLogoUrl(ReaderString(rdr, "Img"), carrierLogoPhysicalRoot),
                             .LogoAlt = "Logo " & description

@@ -1672,6 +1672,7 @@ Partial Class articolo
                                                                          GetCurrentAziendaId(),
                                                                          shippingInfo.WeightValue.Value,
                                                                          GetSessionInt("IvaTipo", 2),
+                                                                         GetSessionDecimal("Iva_Vettori", -1D),
                                                                          Server.MapPath("~/Public/assets/images/vettori/"))
             Catch ex As Exception
                 KeepStoreLog.Error("articolo.aspx", "Errore caricamento tariffe spedizione PDP (id=" & articleId.ToString() & ")", ex, HttpContext.Current)
