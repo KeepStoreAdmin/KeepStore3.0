@@ -34,6 +34,7 @@ Partial Class Login
     End Function
 
     Private Sub ClearInvalidLoginSession()
+        LoginAccessAuditRecorder.ClearAuthenticationMarker(HttpContext.Current)
         Session.Remove("LoginId")
         Session.Remove("LoginID")
         Session.Remove("LoginEmail")
@@ -108,14 +109,23 @@ Partial Class Login
         ' Se il login è andato a buon fine, Session("LoginId") è valorizzata
         If ok AndAlso CurrentLoginIdSafe() > 0 Then
 
-            ' Chiamo AggiornaDati della master (aggiorna carrello, prezzi, ecc.)
+            ' Registra l'accesso riuscito prima delle operazioni accessorie.
+            LoginAccessAuditRecorder.TryRecordSuccessfulLogin(HttpContext.Current, CurrentLoginIdSafe())
+
+            ' Sincronizza il carrello separatamente: un errore non annulla l'audit o il login.
             Try
-                Dim masterObj As Object = Me.Master
-                If masterObj IsNot Nothing Then
-                    masterObj.AggiornaDati()
+                Dim masterPage As PageMaster = TryCast(Me.Master, PageMaster)
+                If masterPage IsNot Nothing Then
+                    masterPage.AggiornaDati()
+                Else
+                    KeepStoreLog.Error("login-cart-sync", "Post-login cart synchronization master was unavailable.", Nothing, HttpContext.Current)
                 End If
-            Catch
-                ' Se per qualche motivo fallisce, non blocchiamo il login
+            Catch ex As Exception
+                KeepStoreLog.Error(
+                    "login-cart-sync",
+                    "Post-login cart synchronization failed. Error type: " & ex.GetType().Name & ".",
+                    Nothing,
+                    HttpContext.Current)
             End Try
 
             ' Decido dove reindirizzare senza tornare su pagine tecniche.

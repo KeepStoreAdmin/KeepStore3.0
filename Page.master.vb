@@ -1424,6 +1424,7 @@ End Function
     ' LOGIN + AGGIORNAMENTO DATI
     '==========================================================
     Public Sub Login(ByVal user As String, ByVal pass As String)
+        Dim authenticationSucceeded As Boolean = False
         conn.Open()
 
         cmd.CommandType = CommandType.Text
@@ -1513,6 +1514,7 @@ End Function
                 ' SECURITY: non salvare mai la password nei cookie.
                 ' Elimino eventuale cookie legacy "Password" residuo.
                 ExpireLegacyPasswordCookie()
+                authenticationSucceeded = True
 
             Else
                 If lblLogin IsNot Nothing Then
@@ -1541,11 +1543,20 @@ End Function
 
         cmd.Dispose()
 
-        If CurrentLoginIdSafe() > 0 Then
-            AggiornaDati()
-        End If
+        If authenticationSucceeded AndAlso CurrentLoginIdSafe() > 0 Then
+            Dim authenticatedLoginId As Integer = CurrentLoginIdSafe()
+            LoginAccessAuditRecorder.TryRecordSuccessfulLogin(HttpContext.Current, authenticatedLoginId)
 
-        If CurrentLoginIdSafe() > 0 Then
+            Try
+                AggiornaDati()
+            Catch ex As Exception
+                KeepStoreLog.Error(
+                    "login-cart-sync",
+                    "Legacy post-login cart synchronization failed. Error type: " & ex.GetType().Name & ".",
+                    Nothing,
+                    HttpContext.Current)
+            End Try
+
             Dim targetUrl As String = PostLoginReturnUrlPolicy.ResolvePostLoginTarget(
                 HttpContext.Current,
                 Request.QueryString("ReturnUrl"),
@@ -1573,7 +1584,8 @@ End Function
         Session("LoginId") = loginId
 
         '==========================================================
-        ' 1) Aggiorno ultimo accesso e sistemo il carrello/sessione
+        ' Sincronizzo il carrello/sessione dopo il login.
+        ' L'audit dell'accesso e' gestito separatamente dal recorder condiviso.
         '==========================================================
         Using conn As New MySqlConnection(connString)
             conn.Open()
@@ -1581,13 +1593,6 @@ End Function
             Using comm As New MySqlCommand()
                 comm.Connection = conn
                 comm.CommandType = CommandType.Text
-
-                ' Aggiorno ultimo accesso su login
-                comm.CommandText = "UPDATE login SET ultimoaccesso = NOW(), UltimoIp = ?UltimoIp, NumeroAccessi = NumeroAccessi + 1 WHERE id = ?LoginID"
-                comm.Parameters.Clear()
-                comm.Parameters.AddWithValue("?UltimoIp", Me.Request.UserHostAddress)
-                comm.Parameters.AddWithValue("?LoginID", loginId)
-                comm.ExecuteNonQuery()
 
                 ' Sposto il carrello della sessione anonima sull'utente loggato
                 comm.CommandText = "UPDATE carrello SET LoginID = ?LoginID, SessionId = '' WHERE SessionId = ?SessionId"
