@@ -57,8 +57,8 @@
         <% End If %>
         <asp:PlaceHolder ID="phBadge" runat="server">
             <div class="box-sale-wrap pst-default">
-                <p class="small-text"><%= SafeBadgeText %></p>
-                <p class="title-sidebar-2">Demo</p>
+                <p class="small-text">Promo</p>
+                <p class="title-sidebar-2"><%= SafeBadgeText %></p>
             </div>
         </asp:PlaceHolder>
         <% If IsRefurbished Then %>
