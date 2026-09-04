@@ -1,12 +1,13 @@
 Imports System
 Imports System.Collections.Generic
-Imports System.Data
 Imports System.Globalization
 Imports System.Text
 Imports System.Web
-Imports MySql.Data.MySqlClient
 
 Public Class ProductPromotionOffer
+    Public Property OfferId As Integer
+    Public Property OfferDetailId As Integer
+    Public Property OwnerUserId As Integer
     Public Property Label As String
     Public Property QntMinima As Decimal
     Public Property Multipli As Decimal
@@ -16,6 +17,7 @@ Public Class ProductPromotionOffer
     Public Property StartsOn As Nullable(Of Date)
     Public Property EndsOn As Nullable(Of Date)
     Public Property AppliesToDefaultQuantity As Boolean
+    Public Property IsExactVariant As Boolean
 End Class
 
 Public Class ProductPromotionDisplayModel
@@ -35,10 +37,12 @@ Public Class ProductPromotionDisplayModel
     Public Property BestDefaultQuantityPriceGross As Decimal
     Public Property BestDefaultQuantityDiscountPercent As Decimal
     Public Property BestDefaultQuantityOfferLabel As String
+    Public Property BestDefaultQuantityEndsOn As Nullable(Of Date)
     Public Property BestQuantityTierPriceNet As Decimal
     Public Property BestQuantityTierPriceGross As Decimal
     Public Property BestQuantityTierDiscountPercent As Decimal
     Public Property BestQuantityTierOfferLabel As String
+    Public Property BestQuantityTierEndsOn As Nullable(Of Date)
     Public Property Offers As List(Of ProductPromotionOffer)
     Public Property Html As String
 End Class
@@ -48,8 +52,8 @@ Public Module ProductPromotionDisplayHelper
 
     Public Function BuildForProduct(ByVal connectionString As String,
                                     ByVal articleId As Integer,
-                                    ByVal companyId As Integer,
-                                    ByVal listino As Integer,
+                                    ByVal tcId As Integer,
+                                    ByVal eligibilityContext As ProductPromotionEligibilityContext,
                                     ByVal baseNetPrice As Decimal,
                                     ByVal baseGrossPrice As Decimal) As ProductPromotionDisplayModel
         Dim model As New ProductPromotionDisplayModel()
@@ -63,25 +67,21 @@ Public Module ProductPromotionDisplayHelper
         model.BestDefaultQuantityPriceNet = baseNetPrice
         model.BestDefaultQuantityPriceGross = baseGrossPrice
 
-        If String.IsNullOrWhiteSpace(connectionString) OrElse articleId <= 0 OrElse companyId <= 0 OrElse listino <= 0 OrElse baseGrossPrice <= 0D Then
+        If String.IsNullOrWhiteSpace(connectionString) OrElse articleId <= 0 OrElse eligibilityContext Is Nothing OrElse baseGrossPrice <= 0D Then
             model.Html = String.Empty
             Return model
         End If
 
         Try
-            Using cn As New MySqlConnection(connectionString)
-                cn.Open()
-                Using cmd As New MySqlCommand(BuildSql(), cn)
-                    cmd.Parameters.Add("@articleId", MySqlDbType.Int32).Value = articleId
-                    cmd.Parameters.Add("@companyId", MySqlDbType.Int32).Value = companyId
-                    cmd.Parameters.Add("@listino", MySqlDbType.Int32).Value = listino
-
-                    Using rdr As MySqlDataReader = cmd.ExecuteReader()
-                        LoadOffers(rdr, model, baseNetPrice, baseGrossPrice)
-                    End Using
-                End Using
-
-            End Using
+            Dim eligibility As ProductPromotionEligibilityResult =
+                ProductPromotionEligibilityResolver.Resolve(connectionString,
+                                                            eligibilityContext,
+                                                            articleId,
+                                                            tcId,
+                                                            1D,
+                                                            baseNetPrice,
+                                                            baseGrossPrice)
+            LoadOffers(eligibility, model)
         Catch
             ResetOfferState(model, baseNetPrice, baseGrossPrice)
         End Try
@@ -91,28 +91,13 @@ Public Module ProductPromotionDisplayHelper
         Return model
     End Function
 
-    Private Function BuildSql() As String
-        Return "SELECT OfferteId, AziendeId, DataInizio, DataFine, QntMinima, Multipli, Prezzo, Sconto " &
-               "FROM voffertedettagli " &
-               "WHERE ArticoliId=@articleId " &
-               "  AND AziendeId=@companyId " &
-               "  AND COALESCE(Abilitato,0)=1 " &
-               "  AND @listino BETWEEN COALESCE(DaListino,@listino) AND COALESCE(AListino,@listino) " &
-               "  AND (DataInizio IS NULL OR DataInizio<=CURDATE()) " &
-               "  AND (DataFine IS NULL OR DataFine>=CURDATE()) " &
-               "ORDER BY CASE WHEN COALESCE(Multipli,0)=10 THEN 0 WHEN COALESCE(QntMinima,0)>0 THEN 1 WHEN COALESCE(Multipli,0)>0 THEN 2 ELSE 3 END, " &
-               "         COALESCE(Multipli,0) ASC, COALESCE(QntMinima,0) ASC, OfferteId ASC"
-    End Function
+    Private Sub LoadOffers(ByVal eligibility As ProductPromotionEligibilityResult,
+                           ByVal model As ProductPromotionDisplayModel)
+        If eligibility Is Nothing OrElse model Is Nothing OrElse eligibility.AuthorizedOffers Is Nothing Then Return
 
-    Private Sub LoadOffers(ByVal rdr As MySqlDataReader,
-                           ByVal model As ProductPromotionDisplayModel,
-                           ByVal baseNetPrice As Decimal,
-                           ByVal baseGrossPrice As Decimal)
-        If rdr Is Nothing OrElse model Is Nothing Then Return
-
-        While rdr.Read()
-            Dim offer As ProductPromotionOffer = BuildOffer(rdr, baseNetPrice, baseGrossPrice)
-            If offer Is Nothing Then Continue While
+        For Each authorized As ProductPromotionEligibilityOffer In eligibility.AuthorizedOffers
+            Dim offer As ProductPromotionOffer = BuildOffer(authorized)
+            If offer Is Nothing Then Continue For
             model.Offers.Add(offer)
             If model.BestPriceGross <= 0D OrElse offer.PriceGross < model.BestPriceGross Then
                 model.BestPriceNet = offer.PriceNet
@@ -121,68 +106,71 @@ Public Module ProductPromotionDisplayHelper
                 model.BestOfferLabel = offer.Label
                 model.BestPriceRequiresQuantityTier = Not offer.AppliesToDefaultQuantity
             End If
+        Next
 
-            If offer.AppliesToDefaultQuantity Then
-                If Not model.HasDefaultQuantityOffer OrElse offer.PriceGross < model.BestDefaultQuantityPriceGross Then
-                    model.HasDefaultQuantityOffer = True
-                    model.BestDefaultQuantityPriceNet = offer.PriceNet
-                    model.BestDefaultQuantityPriceGross = offer.PriceGross
-                    model.BestDefaultQuantityDiscountPercent = offer.DiscountPercent
-                    model.BestDefaultQuantityOfferLabel = offer.Label
-                End If
-            ElseIf Not model.HasQuantityTierOffer OrElse offer.PriceGross < model.BestQuantityTierPriceGross Then
-                model.HasQuantityTierOffer = True
-                model.BestQuantityTierPriceNet = offer.PriceNet
-                model.BestQuantityTierPriceGross = offer.PriceGross
-                model.BestQuantityTierDiscountPercent = offer.DiscountPercent
-                model.BestQuantityTierOfferLabel = offer.Label
-            End If
-        End While
-    End Sub
-
-    Private Function BuildOffer(ByVal rdr As IDataRecord, ByVal baseNetPrice As Decimal, ByVal baseGrossPrice As Decimal) As ProductPromotionOffer
-        Dim qntMinima As Decimal = FieldDecimal(rdr, "QntMinima")
-        Dim multipli As Decimal = FieldDecimal(rdr, "Multipli")
-        Dim promoNet As Decimal = FieldDecimal(rdr, "Prezzo")
-        Dim discount As Decimal = FieldDecimal(rdr, "Sconto")
-        Dim netPrice As Decimal = 0D
-        Dim grossPrice As Decimal = 0D
-
-        If baseNetPrice <= 0D OrElse baseGrossPrice <= 0D Then Return Nothing
-        If qntMinima <= 0D AndAlso multipli <= 0D Then Return Nothing
-
-        If promoNet > 0D Then
-            netPrice = promoNet
-        ElseIf discount > 0D AndAlso discount < 100D Then
-            netPrice = baseNetPrice * (1D - (discount / 100D))
+        If eligibility.AppliedOffer IsNot Nothing Then
+            SetDefaultQuantityOffer(model, BuildOffer(eligibility.AppliedOffer))
         End If
 
-        If netPrice <= 0D OrElse netPrice >= baseNetPrice Then Return Nothing
+        Dim tier As ProductPromotionOffer = BestTierOffer(model.Offers)
+        If tier IsNot Nothing Then SetQuantityTierOffer(model, tier)
+    End Sub
 
-        grossPrice = netPrice * (baseGrossPrice / baseNetPrice)
-        If grossPrice <= 0D OrElse grossPrice >= baseGrossPrice Then Return Nothing
-
-        Dim label As String = BuildOfferLabel(qntMinima, multipli)
-        Dim effectiveDiscount As Decimal = CalculateDiscount(baseNetPrice, netPrice)
-
+    Private Function BuildOffer(ByVal authorized As ProductPromotionEligibilityOffer) As ProductPromotionOffer
+        If authorized Is Nothing Then Return Nothing
         Return New ProductPromotionOffer() With {
-            .Label = label,
-            .QntMinima = qntMinima,
-            .Multipli = multipli,
-            .PriceNet = netPrice,
-            .PriceGross = grossPrice,
-            .DiscountPercent = effectiveDiscount,
-            .StartsOn = FieldDate(rdr, "DataInizio"),
-            .EndsOn = FieldDate(rdr, "DataFine"),
-            .AppliesToDefaultQuantity = IsDefaultQuantityOffer(qntMinima, multipli)
+            .OfferId = authorized.OfferId,
+            .OfferDetailId = authorized.OfferDetailId,
+            .OwnerUserId = authorized.OwnerUserId,
+            .Label = BuildOfferLabel(authorized.QntMinima, authorized.Multipli),
+            .QntMinima = authorized.QntMinima,
+            .Multipli = authorized.Multipli,
+            .PriceNet = authorized.PriceNet,
+            .PriceGross = authorized.PriceGross,
+            .DiscountPercent = authorized.DiscountPercent,
+            .StartsOn = authorized.StartsOn,
+            .EndsOn = authorized.EndsOn,
+            .AppliesToDefaultQuantity = authorized.AppliesToQuantity(1D),
+            .IsExactVariant = authorized.IsExactVariant
         }
     End Function
 
-    Private Function IsDefaultQuantityOffer(ByVal qntMinima As Decimal, ByVal multipli As Decimal) As Boolean
-        If qntMinima > 0D Then Return qntMinima <= 1D
-        If multipli > 0D Then Return Decimal.Remainder(1D, multipli) = 0D
-        Return False
+    Private Sub SetDefaultQuantityOffer(ByVal model As ProductPromotionDisplayModel, ByVal offer As ProductPromotionOffer)
+        If model Is Nothing OrElse offer Is Nothing Then Return
+        model.HasDefaultQuantityOffer = True
+        model.BestDefaultQuantityPriceNet = offer.PriceNet
+        model.BestDefaultQuantityPriceGross = offer.PriceGross
+        model.BestDefaultQuantityDiscountPercent = offer.DiscountPercent
+        model.BestDefaultQuantityOfferLabel = offer.Label
+        model.BestDefaultQuantityEndsOn = offer.EndsOn
+    End Sub
+
+    Private Function BestTierOffer(ByVal offers As List(Of ProductPromotionOffer)) As ProductPromotionOffer
+        If offers Is Nothing Then Return Nothing
+        Dim best As ProductPromotionOffer = Nothing
+        Dim bestRank As Integer = Integer.MaxValue
+        For Each offer As ProductPromotionOffer In offers
+            If offer Is Nothing OrElse offer.AppliesToDefaultQuantity Then Continue For
+            Dim rank As Integer = If(offer.IsExactVariant, 0, 2) + If(offer.QntMinima > 0D, 0, 1)
+            If best Is Nothing OrElse rank < bestRank OrElse
+               (rank = bestRank AndAlso offer.PriceGross < best.PriceGross) OrElse
+               (rank = bestRank AndAlso offer.PriceGross = best.PriceGross AndAlso offer.OfferDetailId < best.OfferDetailId) Then
+                best = offer
+                bestRank = rank
+            End If
+        Next
+        Return best
     End Function
+
+    Private Sub SetQuantityTierOffer(ByVal model As ProductPromotionDisplayModel, ByVal offer As ProductPromotionOffer)
+        If model Is Nothing OrElse offer Is Nothing Then Return
+        model.HasQuantityTierOffer = True
+        model.BestQuantityTierPriceNet = offer.PriceNet
+        model.BestQuantityTierPriceGross = offer.PriceGross
+        model.BestQuantityTierDiscountPercent = offer.DiscountPercent
+        model.BestQuantityTierOfferLabel = offer.Label
+        model.BestQuantityTierEndsOn = offer.EndsOn
+    End Sub
 
     Private Function RenderHtml(ByVal model As ProductPromotionDisplayModel) As String
         If model Is Nothing OrElse Not model.HasOffers Then Return String.Empty
@@ -274,23 +262,6 @@ Public Module ProductPromotionDisplayHelper
         Return text
     End Function
 
-    Private Function FieldDecimal(ByVal record As IDataRecord, ByVal fieldName As String) As Decimal
-        Dim ordinal As Integer = record.GetOrdinal(fieldName)
-        If record.IsDBNull(ordinal) Then Return 0D
-        Dim value As Decimal
-        If Decimal.TryParse(Convert.ToString(record.GetValue(ordinal)), NumberStyles.Any, CultureInfo.CurrentCulture, value) Then Return value
-        If Decimal.TryParse(Convert.ToString(record.GetValue(ordinal)), NumberStyles.Any, CultureInfo.InvariantCulture, value) Then Return value
-        Return 0D
-    End Function
-
-    Private Function FieldDate(ByVal record As IDataRecord, ByVal fieldName As String) As Nullable(Of Date)
-        Dim ordinal As Integer = record.GetOrdinal(fieldName)
-        If record.IsDBNull(ordinal) Then Return Nothing
-        Dim value As Date
-        If Date.TryParse(Convert.ToString(record.GetValue(ordinal)), value) Then Return value
-        Return Nothing
-    End Function
-
     Private Function FormatMoney(ByVal value As Decimal) As String
         Return value.ToString("C2", ItCulture)
     End Function
@@ -331,10 +302,12 @@ Public Module ProductPromotionDisplayHelper
         model.BestDefaultQuantityPriceGross = baseGrossPrice
         model.BestDefaultQuantityDiscountPercent = 0D
         model.BestDefaultQuantityOfferLabel = String.Empty
+        model.BestDefaultQuantityEndsOn = Nothing
         model.BestQuantityTierPriceNet = 0D
         model.BestQuantityTierPriceGross = 0D
         model.BestQuantityTierDiscountPercent = 0D
         model.BestQuantityTierOfferLabel = String.Empty
+        model.BestQuantityTierEndsOn = Nothing
     End Sub
 
     Private Function UseNetPriceDisplay() As Boolean

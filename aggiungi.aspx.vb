@@ -457,13 +457,13 @@ End Sub
                     End If
                 End If
 
-                ResolveCartPriceFromRows(dr, quantitaRiga, Codice, Descrizione, Prezzo, PrezzoIvato, OfferteDettagliID)
-
-                ' Inserisco articolo
                 Dim addId As Integer = 0
                 Dim addTc As Integer = -1
                 Integer.TryParse(selezionamultipla_ID, addId)
                 Integer.TryParse(selezionamultipla_TCID, addTc)
+                ResolveCartPriceFromRows(dr, quantitaRiga, addId, addTc, NListino, Codice, Descrizione, Prezzo, PrezzoIvato, OfferteDettagliID)
+
+                ' Inserisco articolo
 
                 If ShouldSkipZeroPriceCartInsert(Prezzo, PrezzoIvato, _pgTmp) Then
                     SetCartAddPriceLookupMessage()
@@ -561,9 +561,6 @@ End Sub
                     End If
                 End If
 
-                ResolveCartPriceFromRows(dr, quantitaRiga, Codice, Descrizione, Prezzo, PrezzoIvato, OfferteDettagliID)
-
-                ' Inserisco articolo
                 Dim prodottoGratis As Integer = 0
                 If Session("ProdottoGratis") IsNot Nothing Then
                     Integer.TryParse(Session("ProdottoGratis").ToString(), prodottoGratis)
@@ -572,6 +569,9 @@ End Sub
                 Dim addTc As Integer = -1
                 Integer.TryParse(ListaArticoli(i).ToString(), addId)
                 Integer.TryParse(tcidRiga, addTc)
+                ResolveCartPriceFromRows(dr, quantitaRiga, addId, addTc, NListino, Codice, Descrizione, Prezzo, PrezzoIvato, OfferteDettagliID)
+
+                ' Inserisco articolo
 
                 If ShouldSkipZeroPriceCartInsert(Prezzo, PrezzoIvato, prodottoGratis) Then
                     SetCartAddPriceLookupMessage()
@@ -621,7 +621,7 @@ End Sub
         Dim fallbackParams As New Dictionary(Of String, String)
         fallbackParams.Add("@ArticoliId", articoloId)
         fallbackParams.Add("@NListino", nListino.ToString(CultureInfo.InvariantCulture))
-        rows = ExecuteQueryGetDataReader("*", "vsuperarticoli", "where id=@ArticoliId AND NListino=@NListino ORDER BY CASE WHEN COALESCE(TCid,-1) IN (-1,0) THEN 0 ELSE 1 END, PrezzoPromo DESC LIMIT 1", fallbackParams)
+        rows = ExecuteQueryGetDataReader("*", "vsuperarticoli", "where id=@ArticoliId AND NListino=@NListino AND COALESCE(TCid,-1)<=0 ORDER BY PrezzoPromo DESC LIMIT 1", fallbackParams)
         If rows.Count > 0 Then Return rows
 
         Dim articleParams As New Dictionary(Of String, String)
@@ -645,6 +645,9 @@ End Sub
 
     Private Sub ResolveCartPriceFromRows(ByVal rows As List(Of Dictionary(Of String, Object)),
                                          ByVal quantity As Double,
+                                         ByVal articleId As Integer,
+                                         ByVal tcId As Integer,
+                                         ByVal listino As Integer,
                                          ByRef codice As String,
                                          ByRef descrizione As String,
                                          ByRef prezzo As Double,
@@ -664,30 +667,22 @@ End Sub
         prezzo = RowDouble(baseRow, "Prezzo", 0)
         prezzoIvato = ResolveCartPrezzoIvato(baseRow, prezzo, RowDouble(baseRow, "PrezzoIvato", 0))
 
-        Dim today As Date = Date.Today
+        Dim context As ProductPromotionEligibilityContext =
+            ProductPromotionEligibilityResolver.CreateContext(HttpContext.Current, listino)
+        Dim resolved As ProductPromotionEligibilityResult = ProductPromotionEligibilityResolver.Resolve(
+            ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString,
+            context,
+            articleId,
+            tcId,
+            Convert.ToDecimal(quantity, CultureInfo.InvariantCulture),
+            Convert.ToDecimal(prezzo, CultureInfo.InvariantCulture),
+            Convert.ToDecimal(prezzoIvato, CultureInfo.InvariantCulture))
 
-        For Each row As Dictionary(Of String, Object) In rows
-            If String.IsNullOrEmpty(codice) Then codice = RowString(row, "Codice")
-            If String.IsNullOrEmpty(descrizione) Then descrizione = RowString(row, "Descrizione1")
-
-            If RowInt(row, "InOfferta", 0) <> 1 Then Continue For
-            If Not CartOfferIsActive(row, today) Then Continue For
-
-            Dim qmin As Double = RowDouble(row, "OfferteQntMinima", 0)
-            Dim multipli As Double = RowDouble(row, "OfferteMultipli", 0)
-            Dim promo As Double = RowDouble(row, "PrezzoPromo", 0)
-            Dim rowBase As Double = RowDouble(row, "Prezzo", 0)
-
-            Dim match As Boolean = False
-            If qmin > 0 AndAlso quantity >= qmin Then match = True
-            If (Not match) AndAlso multipli > 0 AndAlso QuantityMatchesMultiple(quantity, multipli) Then match = True
-
-            If match AndAlso promo > 0 AndAlso rowBase > 0 AndAlso promo < rowBase Then
-                prezzo = promo
-                prezzoIvato = ResolveCartPrezzoIvato(row, promo, RowDouble(row, "PrezzoPromoIvato", 0))
-                offerteDettaglioId = RowInt(row, "OfferteDettagliId", 0)
-            End If
-        Next
+        If resolved.HasAppliedOffer Then
+            prezzo = Convert.ToDouble(resolved.EffectivePriceNet, CultureInfo.InvariantCulture)
+            prezzoIvato = Convert.ToDouble(resolved.EffectivePriceGross, CultureInfo.InvariantCulture)
+            offerteDettaglioId = resolved.AppliedOffer.OfferDetailId
+        End If
     End Sub
 
     Private Function ResolveCartPrezzoIvato(ByVal row As Dictionary(Of String, Object),
@@ -715,20 +710,6 @@ End Sub
         End If
 
         Return fallbackIvato
-    End Function
-
-    Private Function CartOfferIsActive(ByVal row As Dictionary(Of String, Object), ByVal today As Date) As Boolean
-        Dim dataInizio As Nullable(Of Date) = RowDate(row, "OfferteDataInizio")
-        Dim dataFine As Nullable(Of Date) = RowDate(row, "OfferteDataFine")
-        If dataInizio.HasValue AndAlso dataInizio.Value.Date > today Then Return False
-        If dataFine.HasValue AndAlso dataFine.Value.Date < today Then Return False
-        Return True
-    End Function
-
-    Private Function QuantityMatchesMultiple(ByVal quantity As Double, ByVal multiple As Double) As Boolean
-        If multiple <= 0 Then Return False
-        Dim quotient As Double = quantity / multiple
-        Return Math.Abs(quotient - Math.Round(quotient, 0, MidpointRounding.AwayFromZero)) < 0.000001
     End Function
 
     Private Function RowString(ByVal row As Dictionary(Of String, Object), ByVal key As String, Optional ByVal defaultValue As String = "") As String

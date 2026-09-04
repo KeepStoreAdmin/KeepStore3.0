@@ -3703,18 +3703,21 @@ strWhere = strWhere & " GROUP BY id"
 
         Try
             Dim articleId As Integer = UiData.Int(dataItem, "id")
+            Dim tcId As Integer = CatalogTcId(dataItem, True)
             Dim companyId As Integer = CurrentAziendaId()
             Dim listino As Integer = CurrentListinoId()
             If articleId <= 0 OrElse companyId <= 0 OrElse listino <= 0 Then Return Nothing
 
-            Dim cacheKey As String = articleId.ToString() & ":" & companyId.ToString() & ":" & listino.ToString()
+            Dim eligibilityContext As ProductPromotionEligibilityContext =
+                ProductPromotionEligibilityResolver.CreateContext(HttpContext.Current, companyId, listino)
+            Dim cacheKey As String = articleId.ToString() & ":" & tcId.ToString() & ":" & eligibilityContext.CacheKey
             If catalogPromotionCache.ContainsKey(cacheKey) Then Return catalogPromotionCache(cacheKey)
 
             Dim model As ProductPromotionDisplayModel = ProductPromotionDisplayHelper.BuildForProduct(
                 ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString,
                 articleId,
-                companyId,
-                listino,
+                tcId,
+                eligibilityContext,
                 KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "Prezzo"), 0D),
                 KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoIvato"), 0D))
 

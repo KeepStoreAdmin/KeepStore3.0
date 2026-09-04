@@ -16,14 +16,6 @@ Imports MySql.Data.MySqlClient
 Partial Public Class _Default
     Inherits Page
 
-    Private Class HomePromotionSnapshot
-        Public Property DefaultQuantityPrice As Decimal
-        Public Property TierPrice As Decimal
-        Public Property TierQntMinima As Decimal
-        Public Property TierMultipli As Decimal
-        Public Property Deadline As Nullable(Of Date)
-    End Class
-
     Private Shared ReadOnly ItCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
     Private Shared ReadOnly Rng As New Random()
     Private Const RuntimeSiteBaseUrl As String = "https://www.taikun.it"
@@ -630,11 +622,11 @@ Partial Public Class _Default
     End Function
 
     Private Function GetOfferPool(ByVal limit As Integer) As DataTable
-        Return QueryProducts(OfferWhereClause(), "CASE WHEN v.OfferteDataFine IS NULL THEN 1 ELSE 0 END ASC, COALESCE(v.OfferteDataFine,'9999-12-31') ASC, COALESCE(sy.VendutiAnno,0) DESC, COALESCE(v.Visite,0) DESC, v.id DESC", limit)
+        Return QueryProducts(OfferWhereClause(), "CASE WHEN v.OfferteDataFine IS NULL THEN 1 ELSE 0 END ASC, COALESCE(v.OfferteDataFine,'9999-12-31') ASC, COALESCE(sy.VendutiAnno,0) DESC, COALESCE(v.Visite,0) DESC, v.id DESC", limit, True)
     End Function
 
     Private Function GetDealOfferPool(ByVal limit As Integer) As DataTable
-        Return QueryProducts(OfferWhereClause(), "CASE WHEN v.OfferteDataFine IS NULL THEN 1 ELSE 0 END ASC, COALESCE(v.OfferteDataFine,'9999-12-31') ASC, COALESCE(sy.VendutiAnno,0) DESC, COALESCE(v.Visite,0) DESC, v.id DESC", limit)
+        Return QueryProducts(OfferWhereClause(), "CASE WHEN v.OfferteDataFine IS NULL THEN 1 ELSE 0 END ASC, COALESCE(v.OfferteDataFine,'9999-12-31') ASC, COALESCE(sy.VendutiAnno,0) DESC, COALESCE(v.Visite,0) DESC, v.id DESC", limit, True)
     End Function
 
     Private Function GetFeaturedPool(ByVal limit As Integer) As DataTable
@@ -679,8 +671,11 @@ Partial Public Class _Default
                              limit)
     End Function
 
-    Private Function QueryProducts(ByVal whereClause As String, ByVal orderClause As String, ByVal limit As Integer) As DataTable
-        Dim dt As DataTable = TryLoadProducts(whereClause, orderClause, limit)
+    Private Function QueryProducts(ByVal whereClause As String,
+                                   ByVal orderClause As String,
+                                   ByVal limit As Integer,
+                                   Optional ByVal requireAuthorizedPromotion As Boolean = False) As DataTable
+        Dim dt As DataTable = TryLoadProducts(whereClause, orderClause, limit, requireAuthorizedPromotion)
         If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
             Return dt
         End If
@@ -836,7 +831,10 @@ Partial Public Class _Default
         Return filtered
     End Function
 
-    Private Function TryLoadProducts(ByVal whereClause As String, ByVal orderClause As String, ByVal limit As Integer) As DataTable
+    Private Function TryLoadProducts(ByVal whereClause As String,
+                                     ByVal orderClause As String,
+                                     ByVal limit As Integer,
+                                     Optional ByVal requireAuthorizedPromotion As Boolean = False) As DataTable
         Dim prezzoIvatoSql As String = BuildPrezzoIvatoSql()
         Dim prezzoPromoIvatoSql As String = BuildPrezzoPromoIvatoSql()
 
@@ -906,6 +904,7 @@ Partial Public Class _Default
                         conn.Open()
                         da.Fill(dt)
                         PopulatePromotionDisplaySnapshot(dt)
+                        If requireAuthorizedPromotion Then dt = FilterAuthorizedPromotionRows(dt)
                         Return dt
                     End Using
                 End Using
@@ -921,47 +920,55 @@ Partial Public Class _Default
         If products Is Nothing Then Return
 
         EnsurePromotionDisplayColumns(products)
-        Dim snapshots As New Dictionary(Of String, HomePromotionSnapshot)(StringComparer.OrdinalIgnoreCase)
-
-        For Each row As DataRow In products.Rows
-            Dim businessKey As String = GetBusinessKey(row)
-            If String.IsNullOrWhiteSpace(businessKey) Then Continue For
-
-            Dim promoPrice As Decimal = 0D
-            Dim appliesToInitialQuantity As Boolean = False
-            If Not TryGetCommercialPromoPrice(row, promoPrice, appliesToInitialQuantity) Then Continue For
-
-            Dim snapshot As HomePromotionSnapshot = Nothing
-            If Not snapshots.TryGetValue(businessKey, snapshot) Then
-                snapshot = New HomePromotionSnapshot()
-                snapshots.Add(businessKey, snapshot)
-            End If
-
-            If appliesToInitialQuantity Then
-                If snapshot.DefaultQuantityPrice <= 0D OrElse promoPrice < snapshot.DefaultQuantityPrice Then
-                    snapshot.DefaultQuantityPrice = promoPrice
-                    snapshot.Deadline = RowDateValue(row, "OfferteDataFine")
-                End If
-            ElseIf snapshot.TierPrice <= 0D OrElse promoPrice < snapshot.TierPrice Then
-                snapshot.TierPrice = promoPrice
-                snapshot.TierQntMinima = ToDecimal(row("OfferteQntMinima"))
-                snapshot.TierMultipli = ToDecimal(row("OfferteMultipli"))
-                If snapshot.DefaultQuantityPrice <= 0D Then snapshot.Deadline = RowDateValue(row, "OfferteDataFine")
-            End If
-        Next
+        Dim listino As Integer = GetCurrentListino()
+        Dim eligibilityContext As ProductPromotionEligibilityContext =
+            ProductPromotionEligibilityResolver.CreateContext(HttpContext.Current, GetCurrentAziendaId(), listino)
+        Dim useNetPrices As Boolean = UseNetPriceDisplay()
 
         For Each row As DataRow In products.Rows
             row("DisplayPromoSnapshotReady") = True
-            Dim snapshot As HomePromotionSnapshot = Nothing
-            If snapshots.TryGetValue(GetBusinessKey(row), snapshot) Then
-                row("DisplayPromoQtyOnePrice") = snapshot.DefaultQuantityPrice
-                row("DisplayPromoTierPrice") = snapshot.TierPrice
-                row("DisplayPromoTierQntMinima") = snapshot.TierQntMinima
-                row("DisplayPromoTierMultipli") = snapshot.TierMultipli
-                row("DisplayPromoDeadline") = If(snapshot.Deadline.HasValue, CType(snapshot.Deadline.Value, Object), DBNull.Value)
+            Dim articleId As Integer = SafeInt(row("id"))
+            Dim tcId As Integer = If(row.Table.Columns.Contains("TCid"), SafeInt(row("TCid")), -1)
+            Dim model As ProductPromotionDisplayModel = ProductPromotionDisplayHelper.BuildForProduct(
+                ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString,
+                articleId,
+                tcId,
+                eligibilityContext,
+                ToDecimal(row("Prezzo")),
+                ToDecimal(row("PrezzoIvato")))
+
+            If model IsNot Nothing AndAlso model.HasDefaultQuantityOffer Then
+                row("DisplayPromoQtyOnePrice") = If(useNetPrices, model.BestDefaultQuantityPriceNet, model.BestDefaultQuantityPriceGross)
+                If model.BestDefaultQuantityEndsOn.HasValue Then row("DisplayPromoDeadline") = model.BestDefaultQuantityEndsOn.Value
+            End If
+            If model IsNot Nothing AndAlso model.HasQuantityTierOffer Then
+                row("DisplayPromoTierPrice") = If(useNetPrices, model.BestQuantityTierPriceNet, model.BestQuantityTierPriceGross)
+                Dim tier As ProductPromotionOffer = model.Offers.Find(
+                    Function(offer As ProductPromotionOffer) offer IsNot Nothing AndAlso
+                                                               Not offer.AppliesToDefaultQuantity AndAlso
+                                                               offer.PriceNet = model.BestQuantityTierPriceNet AndAlso
+                                                               offer.OfferDetailId > 0)
+                If tier IsNot Nothing Then
+                    row("DisplayPromoTierQntMinima") = tier.QntMinima
+                    row("DisplayPromoTierMultipli") = tier.Multipli
+                End If
+                If row.IsNull("DisplayPromoDeadline") AndAlso model.BestQuantityTierEndsOn.HasValue Then
+                    row("DisplayPromoDeadline") = model.BestQuantityTierEndsOn.Value
+                End If
             End If
         Next
     End Sub
+
+    Private Function FilterAuthorizedPromotionRows(ByVal products As DataTable) As DataTable
+        Dim filtered As DataTable = If(products IsNot Nothing, products.Clone(), EmptyProductsTable())
+        If products Is Nothing Then Return filtered
+        For Each row As DataRow In products.Rows
+            If ToDecimal(row("DisplayPromoQtyOnePrice")) > 0D OrElse ToDecimal(row("DisplayPromoTierPrice")) > 0D Then
+                filtered.ImportRow(row)
+            End If
+        Next
+        Return filtered
+    End Function
 
     Private Sub EnsurePromotionDisplayColumns(ByVal products As DataTable)
         If Not products.Columns.Contains("DisplayPromoSnapshotReady") Then products.Columns.Add("DisplayPromoSnapshotReady", GetType(Boolean))
@@ -1654,6 +1661,14 @@ Partial Public Class _Default
         End If
         If listino <= 0 Then listino = 1
         Return listino
+    End Function
+
+    Private Function GetCurrentAziendaId() As Integer
+        Dim value As Integer = 0
+        If Session("AziendaID") IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(Session("AziendaID")), value) AndAlso value > 0 Then Return value
+        If Session("AziendaId") IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(Session("AziendaId")), value) AndAlso value > 0 Then Return value
+        If Session("AziendeId") IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(Session("AziendeId")), value) AndAlso value > 0 Then Return value
+        Return 0
     End Function
 
     Protected Function SafeText(ByVal value As Object) As String
