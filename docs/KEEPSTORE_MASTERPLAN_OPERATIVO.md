@@ -9,12 +9,12 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 - Aggiornato: 2026-09-04.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Ultimo runtime stabile: `frontend-rebuild` / `origin/frontend-rebuild` a `2ae053771284f6d3769c7d7bfd18e3a34436bc72`.
+- Ultimo runtime stabile: `frontend-rebuild` / `origin/frontend-rebuild` a `e4211b7eb50c384898c78f78ce0b38e2832ce472`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
-- Ultimi task chiusi: `LOGIN-RETURN-CONTEXT-1A`, base `f04fb72b407106cb2017aba8d3b652eb226a4268`, commit `ffbd78ffceaca8db96baf77548732e9b94724b1e`; `LOGIN-ACCESS-AUDIT-1A`, base `ffbd78ffceaca8db96baf77548732e9b94724b1e`, commit `2ae053771284f6d3769c7d7bfd18e3a34436bc72`. Entrambi integrati fast-forward only, senza merge commit, con smoke Germano A.
+- Ultimi task chiusi: `HOTFIX-STOREFRONT-PROMO-DEMO-BADGE-1A` e `PROMO-COMMERCIAL-CORRECTNESS-1A`, integrati fast-forward only senza merge commit, con smoke Germano A.
 - Task attivo: nessun task runtime; questo aggiornamento e docs-only.
 - Azione immediata successiva: chiudere e mergeare questo task documentale, senza ripetere build o smoke gia conclusi.
-- Prossimi runtime, in ordine: `HOTFIX-STOREFRONT-PROMO-DEMO-BADGE-1A`, `STOREFRONT-OFFERS-PROMO-ONSUS-AUDIT-1A`, `STOREFRONT-OFFERS-PROMO-UX-1A`, quindi `PDP-BRAND-LOGO-1A`. AI/Gemini/LLMS resta finale e separato.
+- Prossimi runtime, in ordine: `STOREFRONT-PROMO-ROUTES-AUDIT-1A`; eventuale `STOREFRONT-PROMO-ROUTES-HOTFIX-1A` solo se la route e attiva; `STOREFRONT-OFFERS-PROMO-UX-1A`; `HOME-ASYNC-CART-1A`; `PDP-BRAND-LOGO-1A`. Performance, SEO tecnico, Google Product structured data e AI/Gemini/LLMS seguono e restano separati.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
 - Blocker reali: nessuno per la chiusura documentale; catalogo e PDP restano aree non dichiarate complete.
 
@@ -37,14 +37,27 @@ Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo tas
 - Audit e sincronizzazione carrello sono separati: una loro anomalia non espone dettagli all'utente e non blocca il login. La diagnostica non registra credenziali, token o IP completi.
 - Migrazione DB manuale, fuori Git e verificata da Germano: `login.UltimoIp` da `VARCHAR(15) NULL` a `VARCHAR(45) NULL`, con charset/collation `utf8mb4 / utf8mb4_0900_ai_ci` preservati. `UltimoAccesso` resta `DATETIME NULL` e `NumeroAccessi` resta `BIGINT NULL DEFAULT 0`; nessun dato utente e stato modificato manualmente e nessun DDL/migration file e stato aggiunto al repository.
 
-### Roadmap login e promo
+### Chiusura badge e correttezza commerciale promo
 
-1. `HOTFIX-STOREFRONT-PROMO-DEMO-BADGE-1A`: rimuovere l'etichetta hardcoded `Demo` dal badge promo e usare solo dati promo reali.
-2. `STOREFRONT-OFFERS-PROMO-ONSUS-AUDIT-1A`: audit read-only di HOME, catalogo, PDP e componenti condivisi sulle promozioni ora attivate.
-3. `STOREFRONT-OFFERS-PROMO-UX-1A`: redesign professionale mobile-first soltanto dopo l'audit.
-4. `PDP-BRAND-LOGO-1A`, poi gli altri task gia pianificati; AI/Gemini/LLMS resta finale.
+- `HOTFIX-STOREFRONT-PROMO-DEMO-BADGE-1A` e CHIUSO / A. Catena integrata: `f28052d821e6d0ee25f707732159030aa016d173`, REV1 finale `185511889279078e7b4b56c4b53b5fb59e46c1f5`; smoke `SMOKE UTENTE STOREFRONT-PROMO-DEMO-BADGE-1A: A`. Il testo hardcoded `Demo` e eliminato: prima riga `Promo`, seconda riga `-NN%` oppure `Offerta` quando manca una percentuale positiva valida. Il caso `6,00 EUR -> 4,00 EUR` rende `-33%`; un prodotto non promo non espone il badge. HOME e ProductCard/catalogo sono coerenti. Ogni precedente finding che descrive `Demo` come ancora aperto e storico superato.
+- L'audit commerciale read-only sul listino 1 ha rilevato 755 testate attive, 97 scadute, 920 righe `voffertearticoli`, 894 articoli, 745 offerte, 10 testate attive non materializzate, 918 righe promo in `vsuperarticoli`, 912 promo inferiori al prezzo base e 6 uguali o superiori. Le offerte anomale sono `6534`, `19570`, `19571`, `12565`, `17332`, `17654`: cinque superiori al prezzo base e una uguale. La correzione commerciale dei dati resta manuale e fuori Git. Le 10 testate non materializzate puntano ad articoli disabilitati e sono legittimamente escluse dallo storefront; l'eventuale pulizia amministrativa e facoltativa.
+- Finding architetturale promo: `CreaVistaPromo()` esegue cancellazione globale e reinserimento non atomico, senza staging/swap o transazione robusta; la tabella materializzata non ha chiave univoca e usa precisione a tre decimali. `AggiornaOfferte2` non e equivalente e non va usata come sostituzione senza audit DB dedicato. Audit e runtime non hanno effettuato scritture DB.
+- `PROMO-COMMERCIAL-CORRECTNESS-1A` e CHIUSO / A sul branch `task/promo-commercial-correctness-1a`: base `185511889279078e7b4b56c4b53b5fb59e46c1f5`, commit principale `9e4f33ec11afe738ae4a08fac43a73af29e2d1a3`, REV1 finale/stable `e4211b7eb50c384898c78f78ce0b38e2832ce472`, merge fast-forward only senza merge commit; smoke `SMOKE UTENTE PROMO-COMMERCIAL-CORRECTNESS-1A REV1: A`.
+- Contratto commerciale: una promo diventa prezzo principale solo se valida, attiva, applicabile alla quantita 1, positiva e inferiore al prezzo base. `QntMinima` e `Multipli` restano regole distinte; un tier non sostituisce il prezzo immediato ed e comunicato separatamente con quantita minima o multipli. Storefront e carrello non devono promettere prezzi incompatibili. HOME usa uno snapshot in-memory per prodotto; catalogo mantiene prezzo visibile e `data-ks-price` coerenti; PDP usa il riepilogo condiviso ed esclude promo invalide. Il carrello resta fonte di verita. Non tutti gli N+1 promo sono eliminati: bulk e performance restano backlog.
+- REV1 HOME: le CTA superiori seguono la struttura ONSUS dei Visti di recente, con pulsante circolare a sola icona carrello, area stabile `44x44px`, nessuna espansione geometrica in hover/focus/active/busy, tooltip desktop non essenziale e funzione disponibile su touch. Il vecchio contratto della CTA HOME rettangolare rossa con testo `Acquista` espandibile resta storico autentico ma e superato dalla REV1 corrente.
+- Badge `Promo` e `Ricondizionato` sono raccolti in uno stack angolare fuori dal flusso, senza sovrapposizioni. Verifica reale articolo `16483`: `Promo -58%`, prezzo promo `1.500,00 €`, listino `3.600,00 €`; slot prezzi deterministici `66px` emphasized e `52px` compact, nessun valore troncato o simbolo euro separato, sei DealCard della stessa altezza. QA mobile reale `360/390/430/768px` e desktop `1365px`.
+- Contratto EAN/GTIN: le etichette umane delle superfici runtime autorizzate usano `EAN/GTIN`, inclusi ricerca desktop/mobile, PDP/Informazioni prodotto e pagine stampa/documenti/promozioni coperte. Nomi tecnici DB `Ean`, variabili, SQL, business key `EAN:`, feed, CSV/XML, integrazioni e proprieta JSON-LD `gtin*` restano invariati; EAN e comunicato come GTIN-13 senza migrazione dei contratti macchina. Il cleanup globale non e completo: `Public/ui/controls/ProductDetailView.ascx`, preview diagnostica non operativa, conserva due label `EAN:` come finding nominativo futuro.
 
-Finding aperto: `Public/ui/controls/ProductCard.ascx` contiene ancora `<p class="title-sidebar-2">Demo</p>` dentro `phBadge`. Non e corretto da questo task docs e non rende completa la gestione promozioni.
+### Finding promo aperti e roadmap
+
+1. `STOREFRONT-PROMO-ROUTES-AUDIT-1A`: audit read-only di `promozioni.aspx`, che in REV1 ha restituito HTTP 500; stabilire se la route e attiva, linkata, canonica, indicizzabile o legacy e diagnosticarla senza modifiche.
+2. Solo se la route e attiva, `STOREFRONT-PROMO-ROUTES-HOTFIX-1A`; se legacy, progettare separatamente redirect/canonical/noindex senza automatismi.
+3. `STOREFRONT-OFFERS-PROMO-UX-1A`: redesign professionale mobile-first con dati reali e coerenza HOME/catalogo/PDP/carrello, senza dati demo.
+4. `HOME-ASYNC-CART-1A`: l'add HOME incrementa una sola volta ma conserva redirect/ritorno legacy e non equivale al catalogo asincrono; riusare endpoint e business logic server esistenti.
+5. `PDP-BRAND-LOGO-1A`.
+6. In seguito audit performance/bulk N+1, SEO tecnico, Google Product structured data e infine AI/Gemini/LLMS.
+
+Finding separati: `articolix.aspx` conserva il noto HTTP 500 legacy sul binding `TCid`, non causato dalla REV1; le pagine protette hanno mostrato redirect 302 ma il contenuto autenticato non e stato validato dalla REV1; la materializzazione promo richiede task DB/runtime dedicato e non va unita al redesign UI. HOME, catalogo e PDP non sono dichiarati completi. La gestione promo e commercialmente corretta nelle superfici coperte, ma il redesign complessivo resta aperto; mobile resta l'esperienza primaria.
 
 ### Chiusura PDP-COMMERCIAL-INFO-SHIPPING-1A
 
@@ -521,7 +534,7 @@ Quando si rifattorizza una pagina:
 Stato di riferimento al 2026-09-03 dopo il merge fast-forward `PDP-COMMERCIAL-INFO-SHIPPING-1A`:
 
 - Branch stabile: `frontend-rebuild`
-- Nota storica del checkpoint shipping: HEAD locale/origin `frontend-rebuild` era `91cbc10b3b343217e18c5a9a6707b72997467b00`; il checkpoint corrente e `2ae053771284f6d3769c7d7bfd18e3a34436bc72`.
+- Nota storica del checkpoint shipping: HEAD locale/origin `frontend-rebuild` era `91cbc10b3b343217e18c5a9a6707b72997467b00`; il checkpoint corrente e quello 2026-09-04 in apertura a `e4211b7eb50c384898c78f78ce0b38e2832ce472`.
 - Commit async cart finale: `b80f8d4683bbb9bb6ec8a7a486a79048bfae094f`; commit CTA stability finale: `58f4ee43c363d629b3124fc0fb1a10beaeeef48a`.
 - Commit PDP commercial info/shipping: `afc4c72c148984ba729c6cb20de38161dc56e2b4`; REV1 IVA e merge point: `91cbc10b3b343217e18c5a9a6707b72997467b00`.
 - Branch hotfix conservato: `task/storefront-card-layout-regression-1a` a `982cc83bcbcbb913dd1e320ece456957801f8121`.
