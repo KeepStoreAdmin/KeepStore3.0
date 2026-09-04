@@ -2516,7 +2516,7 @@ Partial Public Class _Default
 
         Dim sb As New StringBuilder()
         sb.Append("<ul class='").Append(buttonClass).Append("'>")
-        sb.Append("<li><a href='").Append(CartAddUrl(row)).Append("' class='box-icon add-to-cart btn-icon-action ks-home-buy-cta ks-compact-buy-cta js-ks-cart-link'").Append(quickViewAttrs).Append(" aria-label='Acquista: aggiungi al carrello' title='Acquista: aggiungi al carrello'><span class='ks-card-buy-cta__icon icon-cart-2' aria-hidden='true'></span><span class='ks-compact-buy-cta__tooltip' aria-hidden='true'>Acquista</span></a></li>")
+        sb.Append("<li><a href='").Append(CartAddUrl(row)).Append("' class='box-icon add-to-cart btn-icon-action ").Append(tooltipClass).Append(" ks-home-top-buy-action js-ks-cart-link'").Append(quickViewAttrs).Append(" aria-label='Acquista: aggiungi al carrello' title='Acquista: aggiungi al carrello'><span class='icon icon-cart-2' aria-hidden='true'></span><span class='tooltip d-none d-lg-block'>Acquista</span></a></li>")
         sb.Append("<li class='wishlist'><a href='").Append(WishlistAddUrl(row("id"))).Append("' class='box-icon btn-icon-action ").Append(tooltipClass).Append(" js-ks-wishlist-link'").Append(quickViewAttrs).Append(" aria-label='Wishlist'><i class='icon icon-heart2'></i><span class='tooltip'>Wishlist</span></a></li>")
         sb.Append("<li><a href='#quickView' data-bs-toggle='modal' class='box-icon quickview btn-icon-action ").Append(tooltipClass).Append(" js-ks-quickview'").Append(quickViewAttrs).Append(" aria-label='Vedi prodotto'><i class='icon icon-view'></i><span class='tooltip'>Vedi prodotto</span></a></li>")
         sb.Append("<li><a href='#compare' data-bs-toggle='offcanvas' data-bs-target='#compare' aria-controls='compare' class='box-icon btn-icon-action ").Append(tooltipClass).Append(" js-ks-compare'").Append(compareAttrs).Append(" aria-label='Confronta'><i class='icon icon-compare1'></i><span class='tooltip'>Confronta</span></a></li>")
@@ -2557,12 +2557,28 @@ Partial Public Class _Default
         Return "<div class='badge-refurbished'><img src='/Public/assets/images/img/refurbished.png' alt='Ricondizionato'></div>"
     End Function
 
+    Private Function RenderCornerBadgeStack(ByVal row As DataRow,
+                                            ByVal includeSale As Boolean,
+                                            ByVal useWideSaleBadge As Boolean) As String
+        If row Is Nothing Then Return String.Empty
+
+        Dim badges As New StringBuilder()
+        If includeSale Then
+            badges.Append(If(useWideSaleBadge, RenderCenterSaleBadge(row), RenderSaleBadge(row)))
+        End If
+        badges.Append(RenderRefurbishedBadge(row))
+
+        If badges.Length = 0 Then Return String.Empty
+        Return "<div class='ks-home-corner-badge-stack'>" & badges.ToString() & "</div>"
+    End Function
+
     Private Function RenderPriceBlock(ByVal row As DataRow, ByVal emphasize As Boolean) As String
         Dim sb As New StringBuilder()
-        Dim priceClass As String = If(emphasize, "new-price h4 fw-normal text-primary mb-0", "new-price body-md-2 fw-medium text-primary mb-0")
-        Dim oldPriceClass As String = If(emphasize, "old-price price-text text-main-2", "old-price body-md-2 text-main-2")
+        Dim priceClass As String = If(emphasize, "new-price h4 fw-normal text-primary mb-0", "new-price body-md-2 fw-medium text-primary mb-0") & " ks-home-price-value ks-home-price-value--current"
+        Dim oldPriceClass As String = If(emphasize, "old-price price-text text-main-2", "old-price body-md-2 text-main-2") & " ks-home-price-value ks-home-price-value--old"
+        Dim slotClass As String = If(emphasize, "ks-home-price-slot--emphasized", "ks-home-price-slot--compact")
 
-        sb.Append("<p class='price-wrap fw-medium'>")
+        sb.Append("<p class='price-wrap fw-medium ks-home-price-slot ").Append(slotClass).Append("'>")
         sb.Append("<span class='").Append(priceClass).Append("'>").Append(FormatMoney(CurrentPrice(row))).Append("</span>")
         If ShowDiscount(row) Then
             sb.Append("<span class='").Append(oldPriceClass).Append("'>").Append(FormatMoney(GetBasePrice(row))).Append("</span>")
@@ -2613,8 +2629,7 @@ Partial Public Class _Default
         sb.Append("<img class='lazyload img-product' src='").Append(ProductImageFull(row("Img1"))).Append("' data-src='").Append(ProductImageFull(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("' />")
         sb.Append("</a>")
         sb.Append(RenderActionButtons(row, False))
-        sb.Append(RenderRefurbishedBadge(row))
-        sb.Append(RenderSaleBadge(row))
+        sb.Append(RenderCornerBadgeStack(row, True, False))
         sb.Append("</div>")
         sb.Append("</div>")
         Dim galleryImages As List(Of String) = ProductGalleryImages(row)
@@ -2666,7 +2681,7 @@ Partial Public Class _Default
         sb.Append("<img class='img-product lazyload' src='").Append(ProductImageThumb(row("Img1"))).Append("' data-src='").Append(ProductImageThumb(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
         sb.Append("<img class='img-hover lazyload' src='").Append(ProductImageFull(row("Img1"))).Append("' data-src='").Append(ProductImageFull(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
         sb.Append("</a>")
-        sb.Append(RenderRefurbishedBadge(row))
+        sb.Append(RenderCornerBadgeStack(row, False, False))
         sb.Append("</div>")
         sb.Append("<div class='card-product-info'><div class='box-title'>")
         sb.Append("<div class='bg-white relative z-5'><p class='caption text-main-2 font-2 ks-card-category'>").Append(CardCategoryLabel(row)).Append("</p>")
@@ -2711,8 +2726,7 @@ Partial Public Class _Default
         sb.Append("</div></div>")
         sb.Append("</div>")
         sb.Append(RenderActionButtons(row, False))
-        sb.Append(RenderRefurbishedBadge(row))
-        sb.Append(RenderCenterSaleBadge(row))
+        sb.Append(RenderCornerBadgeStack(row, True, True))
         sb.Append("</div>")
         sb.Append("<div class='card-product-info'>")
         sb.Append("<div class='box-title gap-xl-6'>")
@@ -2742,8 +2756,7 @@ Partial Public Class _Default
         sb.Append("<img class='img-hover lazyload' src='").Append(ProductImageThumb(row("Img1"))).Append("' data-src='").Append(ProductImageThumb(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
         sb.Append("</a>")
         sb.Append(RenderActionButtons(row, False))
-        sb.Append(RenderRefurbishedBadge(row))
-        sb.Append(RenderSaleBadge(row))
+        sb.Append(RenderCornerBadgeStack(row, True, False))
         sb.Append("</div>")
         sb.Append("<div class='card-product-info'>")
         sb.Append("<div class='box-title'>")

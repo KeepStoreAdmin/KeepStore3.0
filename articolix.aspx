@@ -92,7 +92,7 @@
                             Codice:
                             <span class="fw-semibold"><%# Eval("Codice") %></span>
                             &nbsp;&nbsp;
-                            EAN:
+                            EAN/GTIN:
                             <span class="fw-semibold"><%# Eval("Ean") %></span>
                         </p>
 

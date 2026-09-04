@@ -77,7 +77,7 @@
                             </div>
                             <span class="br-line type-vertical bg-line"></span>
                             <fieldset>
-                                <asp:TextBox ID="tbCerca" runat="server" ClientIDMode="Static" placeholder="Cerca prodotti, codici o EAN" AutoCompleteType="Disabled" />
+                                <asp:TextBox ID="tbCerca" runat="server" ClientIDMode="Static" placeholder="Cerca prodotti, codici o EAN/GTIN" AutoCompleteType="Disabled" />
                             </fieldset>
                             <button id="btnSearch" runat="server" ClientIDMode="Static" type="submit" class="btn-submit-form" aria-label="Cerca">
                                 <i class="icon-search"></i>
@@ -203,7 +203,7 @@
                     </div>
                     <span class="br-line type-vertical bg-line d-none d-sm-block"></span>
                     <fieldset>
-                        <asp:TextBox ID="tbCercaMobile" runat="server" ClientIDMode="Static" placeholder="Cerca prodotti, codici o EAN" AutoCompleteType="Disabled" />
+                        <asp:TextBox ID="tbCercaMobile" runat="server" ClientIDMode="Static" placeholder="Cerca prodotti, codici o EAN/GTIN" AutoCompleteType="Disabled" />
                     </fieldset>
                     <button id="btnSearchMobile" runat="server" ClientIDMode="Static" type="submit" class="btn-submit-form" aria-label="Cerca">
                         <i class="icon-search"></i>

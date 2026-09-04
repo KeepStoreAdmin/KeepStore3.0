@@ -132,7 +132,7 @@
                 <div class="ks-ai130-brain">
                     <span class="ks-ai130-kicker">AI locale KeepStore</span>
                     <h5>Chiedimi cosa stai cercando</h5>
-                    <p>Interpreta la richiesta e interroga il catalogo articoli KeepStore usando descrizioni, codice, EAN, marca, reparto e categoria.</p>
+                    <p>Interpreta la richiesta e interroga il catalogo articoli KeepStore usando descrizioni, codice, EAN/GTIN, marca, reparto e categoria.</p>
                     <div class="ks-ai130-form" role="search">
                         <input type="search" autocomplete="off" placeholder="Es. Cerco un toner compatibile sotto 50 euro" aria-label="Cerca con AI locale KeepStore" />
                         <button type="button">Ragiona</button>

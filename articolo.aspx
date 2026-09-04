@@ -130,7 +130,7 @@
                                                 <asp:PlaceHolder ID="phEan" runat="server" Visible="false">
                                                     <li>
                                                         <p class="caption text-main-2">
-                                                            EAN:
+                                                            EAN/GTIN:
                                                             <span class="text-secondary"><asp:Literal ID="litEan" runat="server" /></span>
                                                         </p>
                                                     </li>
@@ -180,7 +180,7 @@
                                                 </li>
                                                 <asp:PlaceHolder ID="phEan3" runat="server" Visible="false">
                                                     <li>
-                                                        <p class="body-md-2 fw-semibold">EAN</p>
+                                                        <p class="body-md-2 fw-semibold">EAN/GTIN</p>
                                                         <span class="body-text-3"><asp:Literal ID="litEan3" runat="server" /></span>
                                                     </li>
                                                 </asp:PlaceHolder>
@@ -414,7 +414,7 @@
                                     </li>
                                     <asp:PlaceHolder ID="phEanInfo" runat="server" Visible="false">
                                         <li>
-                                            <p class="name-feature">EAN</p>
+                                            <p class="name-feature">EAN/GTIN</p>
                                             <p class="property"><asp:Literal ID="litEan4" runat="server" /></p>
                                         </li>
                                     </asp:PlaceHolder>

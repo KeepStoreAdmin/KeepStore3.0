@@ -35,7 +35,7 @@ Partial Class vers_stampabile
             Dim Codice As Label = Me.fvPage.FindControl("Label13")
             Dim EAN As Label = Me.fvPage.FindControl("Label15")
             lblDescrizione = Me.fvPage.FindControl("lblDescrizione")
-            Me.Title = Me.Title & " > " & lblDescrizione.Text & " > Codice: " & Codice.Text & " > EAN: " & EAN.Text
+            Me.Title = Me.Title & " > " & lblDescrizione.Text & " > Codice: " & Codice.Text & " > EAN/GTIN: " & EAN.Text
         Catch ex As Exception
         End Try
     End Sub

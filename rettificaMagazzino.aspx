@@ -192,7 +192,7 @@
                                 in <%# Eval("SettoriDescrizione") &" > "&  Eval("CategorieDescrizione") &" > "& Eval("MarcheDescrizione")%></span></a>
                                 
                                 <div style="float:right; width:auto; font-size:7pt; color:rgb(24, 40, 156);">
-                                    <asp:Label ID="Label5" runat="server" Text="Codice: " ForeColor="black"></asp:Label><asp:Label ID="Label3" runat="server" Text='<%# Eval("Codice") %>' Font-Bold="true"></asp:Label>&nbsp;&nbsp;<asp:Label ID="Label6" runat="server" Text="EAN: " ForeColor="black"></asp:Label><asp:Label ID="Label7" runat="server"  Text='<%# Eval("Ean") %>' Font-Bold="true"></asp:Label>
+                                    <asp:Label ID="Label5" runat="server" Text="Codice: " ForeColor="black"></asp:Label><asp:Label ID="Label3" runat="server" Text='<%# Eval("Codice") %>' Font-Bold="true"></asp:Label>&nbsp;&nbsp;<asp:Label ID="Label6" runat="server" Text="EAN/GTIN: " ForeColor="black"></asp:Label><asp:Label ID="Label7" runat="server"  Text='<%# Eval("Ean") %>' Font-Bold="true"></asp:Label>
                                 </div>
                             </td>
                         </tr>
@@ -425,4 +425,3 @@
     <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" Font-Size="7pt" Font-Names="arial"></asp:Label><br /><br />
     
 </asp:Content>
-

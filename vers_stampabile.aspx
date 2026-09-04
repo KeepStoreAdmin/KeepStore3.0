@@ -189,7 +189,7 @@
                         <table style="width:100%; text-align:right; font-size:10pt; font-style:italic;">
                             <tr style="width:100%;">
                                 <td style="width:50%;">
-                                    <b style="font-size:11pt; font-weight:bold; font-style:normal;">EAN</b><br /><asp:Label ID="Label21" runat="server" Text='<%# Bind("ean") %>'></asp:Label>
+                                    <b style="font-size:11pt; font-weight:bold; font-style:normal;">EAN/GTIN</b><br /><asp:Label ID="Label21" runat="server" Text='<%# Bind("ean") %>'></asp:Label>
                                 </td>
                             </tr>
                             <tr>

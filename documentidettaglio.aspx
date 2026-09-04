@@ -259,7 +259,7 @@
                                                 NavigateUrl='<%# IIf(Eval("articoliid") > 0, "~/articolo.aspx?id=" & Eval("articoliid") & "&TCId=" & Eval("TCId"), "#") %>'
                                                 Text='<%# AdattaTesto(Eval("Descrizione1"), 110) %>' />
                                             <div class="body-small ks-muted mt-1">
-                                                <span>EAN: <%# Eval("Ean") %></span>
+                                                <span>EAN/GTIN: <%# Eval("Ean") %></span>
                                                 <span class="ms-2">Codice: <%# Eval("Codice") %></span>
                                                 <span class="ms-2">Marca: <%# Eval("MarcheDescrizione") %></span>
                                                 <span class="ms-2"><%# Eval("taglia") & " " & Eval("colore") %></span>
