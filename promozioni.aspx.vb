@@ -61,146 +61,80 @@ Partial Class promozioni
     End Sub
 
     Public Sub CaricaArticoli()
-        Dim conn As New MySqlConnection
-        Dim cmd As New MySqlCommand
-        Dim dr As MySqlDataReader
-        Dim UtentiID As Integer = Me.Session("UtentiID")
-        Dim NListino As Integer = Me.Session("Listino")
-        Dim Data As Date = System.DateTime.Today
-        Dim strSelect As String = "SELECT id, Codice, Ean, Descrizione1, Prezzo, PrezzoIvato, Img1, MarcheDescrizione, Disponibilita, InOrdine, Impegnata"
-        Dim strSelect2 As String
-        Dim strFrom As String = "FROM varticolilistini WHERE NListino=@listino"
-        Dim strWhere As String
-        Dim strArticoli As String = ""
-        Dim MarcheID As String
-        Dim SettoriId As String
-        Dim CategorieId As String
-        Dim TipologieId As String
-        Dim GruppiId As String
-        Dim SottoGruppiId As String
-        Dim ArticoliId As String
-        Dim strWhere2 As String = ""
+        Dim utentiId As Integer = GetSessionInt("UtentiID", 0)
+        Dim nListino As Integer = GetSessionInt("Listino", 0)
+        Dim dataCorrente As Date = System.DateTime.Today
 
-        conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-        conn.Open()
+        iMarcheId = GetSessionInt("pmr", 0)
+        iSettoriId = GetSessionInt("pst", 0)
+        iCategorieId = GetSessionInt("pct", 0)
+        iTipologieId = GetSessionInt("ptp", 0)
+        iGruppiId = GetSessionInt("pgr", 0)
+        iSottogruppiId = GetSessionInt("psg", 0)
+        iArticoliId = GetSessionInt("part", 0)
+        iPromoID = GetSessionInt("pid", 0)
 
-        iMarcheId = Me.Session("pmr")
-        iSettoriId = Me.Session("pst")
-        iCategorieId = Me.Session("pct")
-        iTipologieId = Me.Session("ptp")
-        iGruppiId = Me.Session("pgr")
-        iSottogruppiId = Me.Session("psg")
-        iArticoliId = Me.Session("part")
-        iPromoID = Me.Session("pid")
-
-        cmd.Connection = conn
-
-        If iMarcheId > 0 Then
-            strWhere2 = strWhere2 & " AND MarcheID=?iMarcheId"
-            cmd.Parameters.AddWithValue("?iMarcheId", iMarcheId)
-        End If
-        If iSettoriId > 0 Then
-            strWhere2 = strWhere2 & " AND SettoriId=?iSettoriId"
-            cmd.Parameters.AddWithValue("?iSettoriId", iSettoriId)
-        End If
-        If iCategorieId > 0 Then
-            strWhere2 = strWhere2 & " AND CategorieId=?iCategorieId"
-            cmd.Parameters.AddWithValue("?iCategorieId", iCategorieId)
-        End If
-        If iTipologieId > 0 Then
-            strWhere2 = strWhere2 & " AND TipologieId=?iTipologieId"
-            cmd.Parameters.AddWithValue("?iTipologieId", iTipologieId)
-        End If
-        If iGruppiId > 0 Then
-            strWhere2 = strWhere2 & " AND GruppiId=?iGruppiId"
-            cmd.Parameters.AddWithValue("?iGruppiId", iGruppiId)
-        End If
-        If iSottogruppiId > 0 Then
-            strWhere2 = strWhere2 & " AND SottogruppiId=?iSottogruppiId"
-            cmd.Parameters.AddWithValue("?iSottogruppiId", iSottogruppiId)
-        End If
-        If iArticoliId > 0 Then
-            strWhere2 = strWhere2 & " AND ArticoliId=?iArticoliId"
-            cmd.Parameters.AddWithValue("?iArticoliId", iArticoliId)
-        End If
         If iPromoID > 0 Then
-            strWhere2 = strWhere2 & " AND OfferteId=?iPromoID"
-            cmd.Parameters.AddWithValue("?iPromoID", iPromoID)
             SetSelectedIndex(Me.DataList4, iPromoID)
         End If
 
-        cmd.CommandType = CommandType.Text
-        cmd.CommandText = "SELECT * FROM vOfferteDettagli WHERE ((DaListino<=?NListino AND AListino>=?NListino) OR UtentiID=@UtentiID) AND (Abilitato=1) AND (DataInizio<=?Data) AND (DataFine>=?Data) " & strWhere2 & " ORDER BY OfferteId, id"
-        cmd.Parameters.AddWithValue("?NListino", NListino)
-        cmd.Parameters.AddWithValue("?UtentiID", UtentiID)
-        cmd.Parameters.AddWithValue("?Data", Data)
+        Me.sdsArticoli.SelectParameters.Clear()
+        Me.sdsArticoli.SelectCommand =
+            "SELECT STRAIGHT_JOIN a.id, a.Codice, a.Ean, a.Descrizione1, a.Prezzo, a.PrezzoIvato, " &
+            "       a.Img1, a.MarcheDescrizione, a.Disponibilita, a.InOrdine, a.Impegnata, " &
+            "       d.OfferteId AS OfferteID, d.id AS OfferteDettaglioId, " &
+            "       d.Descrizione AS DescrizionePromo, d.Immagine AS ImmaginePromo, " &
+            "       d.DataInizio AS DataInizioPromo, d.DataFine AS DataFinePromo, " &
+            "       d.QntMinima AS QntMinimaPromo, d.Multipli AS MultipliPromo, " &
+            "       d.Prezzo AS PrezzoPromo, d.Sconto AS ScontoPromo " &
+            "FROM vOfferteDettagli d " &
+            "INNER JOIN varticolilistini a ON " &
+            "       a.NListino = @NListino " &
+            "   AND (COALESCE(d.MarcheId, 0) = 0 OR a.MarcheId = d.MarcheId) " &
+            "   AND (COALESCE(d.SettoriId, 0) = 0 OR a.SettoriId = d.SettoriId) " &
+            "   AND (COALESCE(d.CategorieId, 0) = 0 OR a.CategorieId = d.CategorieId) " &
+            "   AND (COALESCE(d.TipologieId, 0) = 0 OR a.TipologieId = d.TipologieId) " &
+            "   AND (COALESCE(d.GruppiId, 0) = 0 OR a.GruppiId = d.GruppiId) " &
+            "   AND (COALESCE(d.SottoGruppiId, 0) = 0 OR a.SottoGruppiId = d.SottoGruppiId) " &
+            "   AND (COALESCE(d.ArticoliId, 0) = 0 OR a.id = d.ArticoliId) " &
+            "WHERE ((d.DaListino <= @NListino AND d.AListino >= @NListino) OR d.UtentiId = @UtentiID) " &
+            "  AND d.Abilitato = 1 " &
+            "  AND d.DataInizio <= @Data " &
+            "  AND d.DataFine >= @Data " &
+            "  AND (@pmr = 0 OR COALESCE(d.MarcheId, 0) = @pmr) " &
+            "  AND (@pst = 0 OR COALESCE(d.SettoriId, 0) = @pst) " &
+            "  AND (@pct = 0 OR COALESCE(d.CategorieId, 0) = @pct) " &
+            "  AND (@ptp = 0 OR COALESCE(d.TipologieId, 0) = @ptp) " &
+            "  AND (@pgr = 0 OR COALESCE(d.GruppiId, 0) = @pgr) " &
+            "  AND (@psg = 0 OR COALESCE(d.SottoGruppiId, 0) = @psg) " &
+            "  AND (@part = 0 OR COALESCE(d.ArticoliId, 0) = @part) " &
+            "  AND (@pid = 0 OR d.OfferteId = @pid) " &
+            "ORDER BY d.OfferteId, d.id, a.Codice, a.Descrizione1, a.id"
 
-        dr = cmd.ExecuteReader()
-
-        While dr.Read()
-            MarcheID = dr.Item("MarcheId").ToString
-            SettoriId = dr.Item("SettoriId").ToString
-            CategorieId = dr.Item("CategorieId").ToString
-            TipologieId = dr.Item("TipologieId").ToString
-            GruppiId = dr.Item("GruppiId").ToString
-            SottoGruppiId = dr.Item("SottoGruppiId").ToString
-            ArticoliId = dr.Item("ArticoliId").ToString
-
-            strSelect2 = ""
-            strWhere = ""
-
-            strSelect2 = strSelect2 & ", '" & dr.Item("OfferteId") & "' as OfferteID "
-            strSelect2 = strSelect2 & ", '" & dr.Item("Id") & "' as OfferteDettaglioId "
-            strSelect2 = strSelect2 & ", '" & dr.Item("Descrizione") & "' as DescrizionePromo "
-            strSelect2 = strSelect2 & ", '" & dr.Item("Immagine") & "' as ImmaginePromo "
-            strSelect2 = strSelect2 & ", '" & dr.Item("DataInizio") & "' as DataInizioPromo "
-            strSelect2 = strSelect2 & ", '" & dr.Item("DataFine") & "' as DataFinePromo "
-            strSelect2 = strSelect2 & ", '" & dr.Item("QntMinima") & "' as QntMinimaPromo "
-            strSelect2 = strSelect2 & ", '" & dr.Item("Multipli") & "' as MultipliPromo "
-            strSelect2 = strSelect2 & ", '" & dr.Item("Prezzo") & "' as PrezzoPromo "
-            strSelect2 = strSelect2 & ", '" & dr.Item("Sconto") & "' as ScontoPromo "
-
-            If MarcheID <> "" And MarcheID <> "0" Then
-                strWhere = strWhere & " AND MarcheID=" & MarcheID
-            End If
-            If SettoriId <> "" And SettoriId <> "0" Then
-                strWhere = strWhere & " AND SettoriId=" & SettoriId
-            End If
-            If CategorieId <> "" And CategorieId <> "0" Then
-                strWhere = strWhere & " AND CategorieId=" & CategorieId
-            End If
-            If TipologieId <> "" And TipologieId <> "0" Then
-                strWhere = strWhere & " AND TipologieId=" & TipologieId
-            End If
-            If GruppiId <> "" And GruppiId <> "0" Then
-                strWhere = strWhere & " AND GruppiId=" & GruppiId
-            End If
-            If SottoGruppiId <> "" And SottoGruppiId <> "0" Then
-                strWhere = strWhere & " AND SottoGruppiId=" & SottoGruppiId
-            End If
-            If ArticoliId <> "" And ArticoliId <> "0" Then
-                strWhere = strWhere & " AND Id=" & ArticoliId
-            End If
-
-            If strArticoli <> "" Then
-                strArticoli = strArticoli & " UNION ALL "
-            End If
-            strArticoli = strArticoli & "(" & strSelect & strSelect2 & strFrom & strWhere & ")"
-
-        End While
-
-        dr.Close()
-        dr.Dispose()
-
-        cmd.Dispose()
-
-        conn.Close()
-        conn.Dispose()
-
-        Me.sdsArticoli.SelectCommand = strArticoli
-        Me.sdsArticoli.SelectParameters.Add("@listino", NListino)
+        Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("NListino", TypeCode.Int32, nListino.ToString()))
+        Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("UtentiID", TypeCode.Int32, utentiId.ToString()))
+        Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("Data", TypeCode.DateTime, dataCorrente.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)))
+        Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("pmr", TypeCode.Int32, iMarcheId.ToString()))
+        Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("pst", TypeCode.Int32, iSettoriId.ToString()))
+        Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("pct", TypeCode.Int32, iCategorieId.ToString()))
+        Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("ptp", TypeCode.Int32, iTipologieId.ToString()))
+        Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("pgr", TypeCode.Int32, iGruppiId.ToString()))
+        Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("psg", TypeCode.Int32, iSottogruppiId.ToString()))
+        Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("part", TypeCode.Int32, iArticoliId.ToString()))
+        Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("pid", TypeCode.Int32, iPromoID.ToString()))
 
     End Sub
+
+    Private Function GetSessionInt(ByVal key As String, ByVal fallbackValue As Integer) As Integer
+        Dim parsedValue As Integer
+        Dim rawValue As Object = Me.Session(key)
+
+        If rawValue IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(rawValue), parsedValue) Then
+            Return parsedValue
+        End If
+
+        Return fallbackValue
+    End Function
 
     Public Sub SetSelectedIndex(ByVal dl As DataList, ByVal val As Integer)
         Dim i As Integer
