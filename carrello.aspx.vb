@@ -388,13 +388,30 @@ Private Function CartRecommendationPrice(ByVal row As DataRow) As String
     If row Is Nothing Then Return ""
 
     Dim useNetPrice As Boolean = (GetSessionInt("IvaTipo", 0) = 1)
-    Dim basePrice As Double = If(useNetPrice, SafeDbl(row("Prezzo"), 0), SafeDbl(row("PrezzoIvato"), 0))
-    Dim promoPrice As Double = If(useNetPrice, SafeDbl(row("PrezzoPromo"), 0), SafeDbl(row("PrezzoPromoIvato"), 0))
-    Dim inOffer As Boolean = SafeInt(row("InOfferta"), 0) = 1
-    Dim displayPrice As Double = If(inOffer AndAlso promoPrice > 0 AndAlso promoPrice < basePrice, promoPrice, basePrice)
+    Dim baseNet As Decimal = Convert.ToDecimal(SafeDbl(row("Prezzo"), 0), CultureInfo.InvariantCulture)
+    Dim baseGross As Decimal = Convert.ToDecimal(SafeDbl(row("PrezzoIvato"), 0), CultureInfo.InvariantCulture)
+    Dim articleId As Integer = SafeInt(row("id"), 0)
+    Dim tcId As Integer = SafeInt(row("TCid"), -1)
+    Dim listino As Integer = GetSessionInt("Listino", GetSessionInt("listino", 1))
+    Dim eligibilityContext As ProductPromotionEligibilityContext =
+        ProductPromotionEligibilityResolver.CreateContext(HttpContext.Current, listino)
+    Dim promotionModel As ProductPromotionDisplayModel = ProductPromotionDisplayHelper.BuildForProduct(
+        ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString,
+        articleId,
+        tcId,
+        eligibilityContext,
+        baseNet,
+        baseGross)
+
+    Dim displayPrice As Decimal = If(useNetPrice, baseNet, baseGross)
+    If promotionModel IsNot Nothing AndAlso promotionModel.HasDefaultQuantityOffer Then
+        displayPrice = If(useNetPrice,
+                          promotionModel.BestDefaultQuantityPriceNet,
+                          promotionModel.BestDefaultQuantityPriceGross)
+    End If
 
     If displayPrice <= 0 Then Return ""
-    Return FormatCurrencyIt(displayPrice)
+    Return FormatCurrencyIt(Convert.ToDouble(displayPrice, CultureInfo.InvariantCulture))
 End Function
 
 Private Function CartRecommendationKey(ByVal row As DataRow, ByVal mode As String) As String
@@ -1935,6 +1952,10 @@ Private _cartLoginRequiredFastPathActive As Boolean = False
     End If
 
     If Not Page.IsPostBack Then
+        Dim initialPriceCheck As CartPriceRevalidationResult = CartPriceRevalidationHelper.RevalidateCurrentCart(HttpContext.Current, True)
+        If initialPriceCheck IsNot Nothing AndAlso (initialPriceCheck.HasChanges OrElse initialPriceCheck.HasBlockingError) Then
+            CartPriceRevalidationHelper.StoreResultInSession(HttpContext.Current, initialPriceCheck)
+        End If
         Aggiorna_Prezzi_Carrello()
     End If
 
@@ -5535,40 +5556,42 @@ End Function
         Exit Sub
     End If
 
-    Dim lblInOfferta As Label = TryCast(e.Item.FindControl("lblInOfferta"), Label)
-    Dim lblQtaMin As Label = TryCast(e.Item.FindControl("lblQtaMin"), Label)
-    Dim lblMultipli As Label = TryCast(e.Item.FindControl("lblMultipli"), Label)
-    Dim lblPrezzoPromo As Label = TryCast(e.Item.FindControl("lblPrezzoPromo"), Label)
-    Dim lblPrezzoPromoIvato As Label = TryCast(e.Item.FindControl("lblPrezzoPromoIvato"), Label)
-    Dim lblPrezzoBase As Label = TryCast(e.Item.FindControl("lblPrezzoBase"), Label)
-    Dim lblPrezzoBaseIvato As Label = TryCast(e.Item.FindControl("lblPrezzoBaseIvato"), Label)
-    Dim lblDataInizio As Label = TryCast(e.Item.FindControl("lblDataInizio"), Label)
-    Dim lblDataFine As Label = TryCast(e.Item.FindControl("lblDataFine"), Label)
     Dim lblOfferta As Label = TryCast(e.Item.FindControl("lblOfferta"), Label)
+    If lblOfferta Is Nothing Then Exit Sub
+    lblOfferta.Visible = False
 
-    If lblInOfferta Is Nothing OrElse lblOfferta Is Nothing Then Exit Sub
+    Dim articleId As Integer = SafeInt(DataBinder.Eval(e.Item.DataItem, "ID"), 0)
+    Dim tcId As Integer = SafeInt(DataBinder.Eval(e.Item.DataItem, "TCid"), -1)
+    Dim detailId As Integer = SafeInt(DataBinder.Eval(e.Item.DataItem, "OfferteDettagliId"), 0)
+    Dim baseNet As Decimal = Convert.ToDecimal(SafeDbl(DataBinder.Eval(e.Item.DataItem, "Prezzo"), 0), CultureInfo.InvariantCulture)
+    Dim baseGross As Decimal = Convert.ToDecimal(SafeDbl(DataBinder.Eval(e.Item.DataItem, "PrezzoIvato"), 0), CultureInfo.InvariantCulture)
+    Dim listino As Integer = GetSessionInt("Listino", GetSessionInt("listino", 1))
+    Dim eligibilityContext As ProductPromotionEligibilityContext =
+        ProductPromotionEligibilityResolver.CreateContext(HttpContext.Current, listino)
+    Dim model As ProductPromotionDisplayModel = ProductPromotionDisplayHelper.BuildForProduct(
+        ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString,
+        articleId,
+        tcId,
+        eligibilityContext,
+        baseNet,
+        baseGross)
+    If model Is Nothing OrElse model.Offers Is Nothing Then Exit Sub
 
-    Dim inOfferta As Integer = 0
-    Integer.TryParse((If(lblInOfferta.Text, "")).Trim(), inOfferta)
+    Dim authorizedOffer As ProductPromotionOffer = model.Offers.Find(
+        Function(offer As ProductPromotionOffer) offer IsNot Nothing AndAlso offer.OfferDetailId = detailId)
+    If authorizedOffer Is Nothing Then Exit Sub
 
-    If inOfferta = 1 Then
-        lblOfferta.Visible = True
-
-        Dim useNetPrice As Boolean = (GetSessionInt("IvaTipo", 0) = 1)
-        Dim promoPrice As String = If(useNetPrice, If(lblPrezzoPromo Is Nothing, "", lblPrezzoPromo.Text), If(lblPrezzoPromoIvato Is Nothing, "", lblPrezzoPromoIvato.Text))
-        Dim basePrice As String = If(useNetPrice, If(lblPrezzoBase Is Nothing, "", lblPrezzoBase.Text), If(lblPrezzoBaseIvato Is Nothing, "", lblPrezzoBaseIvato.Text))
-        Dim offerText As String = ProductPromotionDisplayHelper.BuildLegacyOfferText(
-            If(lblQtaMin Is Nothing, "", lblQtaMin.Text),
-            If(lblMultipli Is Nothing, "", lblMultipli.Text),
-            promoPrice,
-            basePrice,
-            If(lblDataInizio Is Nothing, "", lblDataInizio.Text),
-            If(lblDataFine Is Nothing, "", lblDataFine.Text))
-
-        lblOfferta.Text = If(String.IsNullOrWhiteSpace(offerText), "PROMO", offerText)
-    Else
-        lblOfferta.Visible = False
-    End If
+    Dim useNetPrice As Boolean = (GetSessionInt("IvaTipo", 0) = 1)
+    Dim promoPrice As Decimal = If(useNetPrice, authorizedOffer.PriceNet, authorizedOffer.PriceGross)
+    Dim basePrice As Decimal = If(useNetPrice, baseNet, baseGross)
+    lblOfferta.Text = ProductPromotionDisplayHelper.BuildLegacyOfferText(
+        authorizedOffer.QntMinima,
+        authorizedOffer.Multipli,
+        promoPrice,
+        basePrice,
+        authorizedOffer.StartsOn,
+        authorizedOffer.EndsOn)
+    lblOfferta.Visible = Not String.IsNullOrWhiteSpace(lblOfferta.Text)
 
     End Sub
 

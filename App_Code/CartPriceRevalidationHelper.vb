@@ -38,6 +38,7 @@ Friend Class CartPriceRevalidationRow
     Public Property Quantity As Double
     Public Property CurrentPrice As Double
     Public Property CurrentPriceIvato As Double
+    Public Property CurrentOfferDetailId As Integer
     Public Property Description As String
     Public Property IsComplimentary As Boolean
 End Class
@@ -46,15 +47,6 @@ Friend Class CartPriceCandidate
     Public Property TCId As Integer
     Public Property Price As Double
     Public Property PriceIvato As Double
-    Public Property InOffer As Integer
-    Public Property OfferStart As Nullable(Of Date)
-    Public Property OfferEnd As Nullable(Of Date)
-    Public Property OfferMinQty As Double
-    Public Property OfferMultiple As Double
-    Public Property OfferDetailId As Integer
-    Public Property OfferCompanyId As Integer
-    Public Property PromoPrice As Double
-    Public Property PromoPriceIvato As Double
     Public Property ReverseChargeVatId As Integer
     Public Property ReverseChargeVatValue As Double
     Public Property ReverseChargeDescription As String
@@ -100,7 +92,8 @@ Public Module CartPriceRevalidationHelper
 
         Dim listino As Integer = SessionInt(ctx, "Listino", SessionInt(ctx, "listino", 1))
         If listino <= 0 Then listino = 1
-        Dim companyId As Integer = SessionInt(ctx, "AziendaID", SessionInt(ctx, "AziendeId", 0))
+        Dim eligibilityContext As ProductPromotionEligibilityContext =
+            ProductPromotionEligibilityResolver.CreateContext(ctx, listino)
 
         Try
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
@@ -109,14 +102,16 @@ Public Module CartPriceRevalidationHelper
                 Dim rows As List(Of CartPriceRevalidationRow) = LoadCartRows(conn, loginId, sessionId)
                 For Each row As CartPriceRevalidationRow In rows
                     Dim candidates As List(Of CartPriceCandidate) = LoadCandidates(conn, row.ArticleId, listino)
-                    Dim resolved As CartResolvedPrice = ResolvePrice(ctx, row, candidates, companyId)
+                    Dim resolved As CartResolvedPrice = ResolvePrice(ctx, row, candidates, eligibilityContext)
                     If Not resolved.IsValid Then
                         result.HasBlockingError = True
                         result.ErrorMessage = "Prezzo prodotto non disponibile. Ricontrolla il carrello prima di confermare l'ordine."
                         Continue For
                     End If
 
-                    If PriceChanged(row.CurrentPrice, resolved.Price) OrElse PriceChanged(row.CurrentPriceIvato, resolved.PriceIvato) Then
+                    If PriceChanged(row.CurrentPrice, resolved.Price) OrElse
+                       PriceChanged(row.CurrentPriceIvato, resolved.PriceIvato) OrElse
+                       row.CurrentOfferDetailId <> resolved.OfferDetailId Then
                         Dim change As New CartPriceRevalidationChange()
                         change.CartRowId = row.CartRowId
                         change.ArticleId = row.ArticleId
@@ -184,7 +179,7 @@ Public Module CartPriceRevalidationHelper
         Using cmd As New MySqlCommand()
             cmd.Connection = conn
             cmd.CommandType = CommandType.Text
-            cmd.CommandText = "SELECT ID, ArticoliId, COALESCE(TCId,-1) AS TCId, COALESCE(Qnt,0) AS Qnt, COALESCE(Prezzo,0) AS Prezzo, COALESCE(PrezzoIvato,0) AS PrezzoIvato, COALESCE(Descrizione1,'') AS Descrizione1, COALESCE(Prodotto_Gratis,0) AS Prodotto_Gratis FROM carrello WHERE " & OwnerWhere(loginId)
+            cmd.CommandText = "SELECT ID, ArticoliId, COALESCE(TCId,-1) AS TCId, COALESCE(Qnt,0) AS Qnt, COALESCE(Prezzo,0) AS Prezzo, COALESCE(PrezzoIvato,0) AS PrezzoIvato, COALESCE(OfferteDettaglioId,0) AS OfferteDettaglioId, COALESCE(Descrizione1,'') AS Descrizione1, COALESCE(Prodotto_Gratis,0) AS Prodotto_Gratis FROM carrello WHERE " & OwnerWhere(loginId)
             AddOwnerParameters(cmd, loginId, sessionId)
 
             Using dr As MySqlDataReader = cmd.ExecuteReader()
@@ -196,6 +191,7 @@ Public Module CartPriceRevalidationHelper
                     row.Quantity = ReadDouble(dr("Qnt"), 0)
                     row.CurrentPrice = ReadDouble(dr("Prezzo"), 0)
                     row.CurrentPriceIvato = ReadDouble(dr("PrezzoIvato"), 0)
+                    row.CurrentOfferDetailId = ReadInt(dr("OfferteDettaglioId"), 0)
                     row.Description = Convert.ToString(dr("Descrizione1"))
                     row.IsComplimentary = (ReadInt(dr("Prodotto_Gratis"), 0) <> 0)
                     If row.IsComplimentary Then Continue While
@@ -208,7 +204,7 @@ Public Module CartPriceRevalidationHelper
 
     Private Function LoadCandidates(ByVal conn As MySqlConnection, ByVal articleId As Integer, ByVal listino As Integer) As List(Of CartPriceCandidate)
         Dim candidates As New List(Of CartPriceCandidate)()
-        Using cmd As New MySqlCommand("SELECT v.ID, v.TCid, v.Prezzo, v.PrezzoIvato, v.InOfferta, v.OfferteDataInizio, v.OfferteDataFine, v.OfferteQntMinima, v.OfferteMultipli, v.OfferteDettagliId, COALESCE(od.AziendeId,0) AS OfferteAziendeId, v.PrezzoPromo, v.PrezzoPromoIvato, v.IdIvaRC, v.ValoreIvaRC, v.DescrizioneIvaRC FROM vsuperarticoli v LEFT JOIN voffertedettagli od ON od.id=v.OfferteDettagliId WHERE v.NListino=?listino AND v.ID=?id ORDER BY v.ID, CASE WHEN COALESCE(v.TCid,-1) IN (-1,0) THEN 0 ELSE 1 END, v.PrezzoPromo DESC", conn)
+        Using cmd As New MySqlCommand("SELECT DISTINCT v.ID, COALESCE(v.TCid,-1) AS TCid, v.Prezzo, v.PrezzoIvato, v.IdIvaRC, v.ValoreIvaRC, v.DescrizioneIvaRC FROM vsuperarticoli v WHERE v.NListino=?listino AND v.ID=?id ORDER BY v.ID, CASE WHEN COALESCE(v.TCid,-1) IN (-1,0) THEN 0 ELSE 1 END, COALESCE(v.TCid,-1) ASC", conn)
             cmd.Parameters.Add("?listino", MySqlDbType.Int32).Value = listino
             cmd.Parameters.Add("?id", MySqlDbType.Int32).Value = articleId
 
@@ -218,15 +214,6 @@ Public Module CartPriceRevalidationHelper
                     item.TCId = ReadInt(dr("TCid"), -1)
                     item.Price = ReadDouble(dr("Prezzo"), 0)
                     item.PriceIvato = ReadDouble(dr("PrezzoIvato"), 0)
-                    item.InOffer = ReadInt(dr("InOfferta"), 0)
-                    If Not IsDBNull(dr("OfferteDataInizio")) Then item.OfferStart = CDate(dr("OfferteDataInizio"))
-                    If Not IsDBNull(dr("OfferteDataFine")) Then item.OfferEnd = CDate(dr("OfferteDataFine"))
-                    item.OfferMinQty = ReadDouble(dr("OfferteQntMinima"), 0)
-                    item.OfferMultiple = ReadDouble(dr("OfferteMultipli"), 0)
-                    item.OfferDetailId = ReadInt(dr("OfferteDettagliId"), 0)
-                    item.OfferCompanyId = ReadInt(dr("OfferteAziendeId"), 0)
-                    item.PromoPrice = ReadDouble(dr("PrezzoPromo"), 0)
-                    item.PromoPriceIvato = ReadDouble(dr("PrezzoPromoIvato"), 0)
                     item.ReverseChargeVatId = ReadInt(dr("IdIvaRC"), -1)
                     item.ReverseChargeVatValue = ReadDouble(dr("ValoreIvaRC"), -1)
                     item.ReverseChargeDescription = Convert.ToString(dr("DescrizioneIvaRC"))
@@ -237,41 +224,37 @@ Public Module CartPriceRevalidationHelper
         Return candidates
     End Function
 
-    Private Function ResolvePrice(ByVal ctx As HttpContext, ByVal row As CartPriceRevalidationRow, ByVal allCandidates As List(Of CartPriceCandidate), ByVal companyId As Integer) As CartResolvedPrice
+    Private Function ResolvePrice(ByVal ctx As HttpContext,
+                                  ByVal row As CartPriceRevalidationRow,
+                                  ByVal allCandidates As List(Of CartPriceCandidate),
+                                  ByVal eligibilityContext As ProductPromotionEligibilityContext) As CartResolvedPrice
         Dim resolved As New CartResolvedPrice()
         If allCandidates Is Nothing OrElse allCandidates.Count = 0 Then Return resolved
 
         Dim candidates As List(Of CartPriceCandidate) = allCandidates.FindAll(Function(x) x.TCId = row.TCId)
         If candidates.Count = 0 AndAlso row.TCId <= 0 Then candidates = allCandidates.FindAll(Function(x) x.TCId <= 0)
-        If candidates.Count = 0 Then candidates = allCandidates
+        If candidates.Count = 0 Then candidates = allCandidates.FindAll(Function(x) x.TCId <= 0)
+        If candidates.Count = 0 Then Return resolved
 
         Dim baseRow As CartPriceCandidate = candidates(0)
-        Dim chosen As CartPriceCandidate = baseRow
         Dim price As Double = baseRow.Price
-        Dim offerId As Integer = 0
-        Dim promoApplied As Boolean = False
-        Dim today As Date = Date.Today
-
-        For Each item As CartPriceCandidate In candidates
-            If item.InOffer <> 1 Then Continue For
-            If item.OfferDetailId <= 0 OrElse companyId <= 0 OrElse item.OfferCompanyId <> companyId Then Continue For
-            If item.OfferStart.HasValue AndAlso item.OfferStart.Value.Date > today Then Continue For
-            If item.OfferEnd.HasValue AndAlso item.OfferEnd.Value.Date < today Then Continue For
-
-            Dim matches As Boolean = False
-            If item.OfferMinQty > 0 AndAlso row.Quantity >= item.OfferMinQty Then matches = True
-            If Not matches AndAlso QuantityMatchesMultiple(row.Quantity, item.OfferMultiple) Then matches = True
-
-            If matches AndAlso item.PromoPrice > 0 AndAlso item.Price > 0 AndAlso item.PromoPrice < item.Price Then
-                promoApplied = True
-                chosen = item
-                price = item.PromoPrice
-                offerId = item.OfferDetailId
-            End If
-        Next
-
-        Dim priceIvato As Double = ResolvePriceIvato(ctx, chosen, price, If(promoApplied, chosen.PromoPriceIvato, chosen.PriceIvato))
+        Dim priceIvato As Double = ResolvePriceIvato(ctx, baseRow, price, baseRow.PriceIvato)
         If price <= 0 OrElse priceIvato <= 0 Then Return resolved
+
+        Dim promotion As ProductPromotionEligibilityResult = ProductPromotionEligibilityResolver.Resolve(
+            ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString,
+            eligibilityContext,
+            row.ArticleId,
+            row.TCId,
+            Convert.ToDecimal(row.Quantity, CultureInfo.InvariantCulture),
+            Convert.ToDecimal(price, CultureInfo.InvariantCulture),
+            Convert.ToDecimal(priceIvato, CultureInfo.InvariantCulture))
+        Dim offerId As Integer = 0
+        If promotion.HasAppliedOffer Then
+            price = Convert.ToDouble(promotion.EffectivePriceNet, CultureInfo.InvariantCulture)
+            priceIvato = Convert.ToDouble(promotion.EffectivePriceGross, CultureInfo.InvariantCulture)
+            offerId = promotion.AppliedOffer.OfferDetailId
+        End If
 
         resolved.IsValid = True
         resolved.Price = price
@@ -328,12 +311,6 @@ Public Module CartPriceRevalidationHelper
 
     Private Function ReverseChargeEnabled(ByVal ctx As HttpContext) As Boolean
         Return SessionInt(ctx, "AbilitatoIvaReverseCharge", 0) = 1
-    End Function
-
-    Private Function QuantityMatchesMultiple(ByVal quantity As Double, ByVal multiple As Double) As Boolean
-        If multiple <= 0 Then Return False
-        Dim quotient As Double = quantity / multiple
-        Return Math.Abs(quotient - Math.Round(quotient, 0, MidpointRounding.AwayFromZero)) < 0.000001
     End Function
 
     Private Function PriceChanged(ByVal oldValue As Double, ByVal newValue As Double) As Boolean

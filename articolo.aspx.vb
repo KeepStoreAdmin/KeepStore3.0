@@ -19,6 +19,7 @@ Partial Class articolo
     Private _tcidPresent As Boolean
     Private _listino As Integer
     Private _tcEnabled As Boolean
+    Private ReadOnly _promotionModelCache As New Dictionary(Of String, ProductPromotionDisplayModel)(StringComparer.Ordinal)
     Private Shared ReadOnly ItCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
 
     Private Class ImgItem
@@ -468,18 +469,16 @@ Partial Class articolo
         Dim imgHover As String = NormalizeImageUrl(GetRowString(row, "Img2"))
         If String.IsNullOrEmpty(imgHover) Then imgHover = imgVal
 
-        Dim inOfferta As Integer = GetEffectiveInOfferta(row)
         Dim tcidVal As Integer = GetRowInt(row, "TCid", _tcid)
         Dim codiceVal As String = FirstNonEmpty(GetRowString(row, "Codice"), GetRowString(row, "SKU"))
         Dim eanVal As String = FirstNonEmpty(GetRowString(row, "Ean"), GetRowString(row, "EAN"))
         Dim brandName As String = FirstNonEmpty(GetRowString(row, "MarcheDescrizione"), GetRowString(row, "Marca"))
         Dim categoryName As String = BuildCategoryCaption(row)
         Dim variantInfo As VariantInfo = LoadVariantInfo(_id, tcidVal)
-        Dim price As PriceContext = BuildPriceContext(GetRowDecimal(row, "Prezzo"),
-                                                      GetRowDecimal(row, "PrezzoIvato"),
-                                                      GetRowDecimal(row, "PrezzoPromo"),
-                                                      GetRowDecimal(row, "PrezzoPromoIvato"),
-                                                      inOfferta)
+        Dim price As PriceContext = BuildAuthorizedPriceContext(_id,
+                                                                tcidVal,
+                                                                GetRowDecimal(row, "Prezzo"),
+                                                                GetRowDecimal(row, "PrezzoIvato"))
         Dim availability As AvailabilityDisplayModel = AvailabilityDisplayHelper.BuildFromDataItem(row, HttpContext.Current)
 
         Dim item As New RelatedItem() With {
@@ -490,7 +489,7 @@ Partial Class articolo
             .ImgHover = imgHover,
             .Url = BuildProductUrl(_id, tcidVal, includeTcid:=(Request.QueryString("TCid") IsNot Nothing)),
             .PrezzoHtml = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo),
-            .InOfferta = (inOfferta = 1),
+            .InOfferta = price.IsPromo,
             .Codice = codiceVal,
             .Ean = eanVal,
             .BrandName = brandName,
@@ -1131,13 +1130,10 @@ Partial Class articolo
                 If String.IsNullOrEmpty(imgHover) Then imgHover = imgVal
                 If String.IsNullOrEmpty(imgVal) Then imgVal = ThemeManager.PlaceholderProductImageUrl()
                 If String.IsNullOrEmpty(imgHover) Then imgHover = imgVal
-                Dim inOfferta As Integer = SafeInt(rdr("InOfferta"), 0)
-
-                Dim price As PriceContext = BuildPriceContext(SafeDec(rdr("Prezzo"), 0D),
-                                                               SafeDec(rdr("PrezzoIvato"), 0D),
-                                                               SafeDec(rdr("PrezzoPromo"), 0D),
-                                                               SafeDec(rdr("PrezzoPromoIvato"), 0D),
-                                                               inOfferta)
+                Dim price As PriceContext = BuildAuthorizedPriceContext(idVal,
+                                                                        tcidVal,
+                                                                        SafeDec(rdr("Prezzo"), 0D),
+                                                                        SafeDec(rdr("PrezzoIvato"), 0D))
 
                 Dim item As New RelatedItem()
                 item.Id = idVal
@@ -1147,7 +1143,7 @@ Partial Class articolo
                 item.ImgHover = imgHover
                 item.Url = BuildProductUrl(idVal, tcidVal, includeTcid:=(_tcEnabled AndAlso tcidVal <> -1))
                 item.PrezzoHtml = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo)
-                item.InOfferta = (inOfferta = 1)
+                item.InOfferta = price.IsPromo
                 item.Codice = codiceVal
                 item.Ean = eanVal
                 item.BrandName = SafeReaderString(rdr, "MarcheDescrizione")
@@ -1377,11 +1373,10 @@ Partial Class articolo
         Dim brandName As String = FirstNonEmpty(GetRowString(row, "MarcheDescrizione"), GetRowString(row, "Marca"))
         Dim categoryName As String = FirstNonEmpty(GetRowString(row, "TipologieDescrizione"), GetRowString(row, "CategorieDescrizione"), GetRowString(row, "SettoriDescrizione"), "Catalogo")
 
-        Dim price As PriceContext = BuildPriceContext(GetRowDecimal(row, "Prezzo"),
-                                                      GetRowDecimal(row, "PrezzoIvato"),
-                                                      GetRowDecimal(row, "PrezzoPromo"),
-                                                      GetRowDecimal(row, "PrezzoPromoIvato"),
-                                                      GetEffectiveInOfferta(row))
+        Dim price As PriceContext = BuildAuthorizedPriceContext(productId,
+                                                                selectedTcid,
+                                                                GetRowDecimal(row, "Prezzo"),
+                                                                GetRowDecimal(row, "PrezzoIvato"))
 
         Dim shortDesc As String = FirstNonEmpty(GetRowString(row, "Descrizione2"), GetRowString(row, "Sottotitolo"))
         Dim shortDescHtml As String = String.Empty
@@ -1565,11 +1560,11 @@ Partial Class articolo
         End If
 
         ' Prezzi
-        Dim price As PriceContext = BuildPriceContext(GetRowDecimal(row, "Prezzo"),
-                                                      GetRowDecimal(row, "PrezzoIvato"),
-                                                      GetRowDecimal(row, "PrezzoPromo"),
-                                                      GetRowDecimal(row, "PrezzoPromoIvato"),
-                                                      GetEffectiveInOfferta(row))
+        Dim selectedTcid As Integer = GetRowInt(row, "TCid", _tcid)
+        Dim price As PriceContext = BuildAuthorizedPriceContext(_id,
+                                                                selectedTcid,
+                                                                GetRowDecimal(row, "Prezzo"),
+                                                                GetRowDecimal(row, "PrezzoIvato"))
 
         litPriceHtml.Text = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo)
         ' Box prezzo sticky (stesso HTML del prezzo principale)
@@ -1578,12 +1573,10 @@ Partial Class articolo
         litIvaInfo.Text = Server.HtmlEncode(price.IvaLabel)
         BindCommercialProductInfo(row)
 
-        Dim promotionModel As ProductPromotionDisplayModel = ProductPromotionDisplayHelper.BuildForProduct(GetConnectionString(),
-                                                                                                            _id,
-                                                                                                            GetCurrentAziendaId(),
-                                                                                                            _listino,
-                                                                                                            GetRowDecimal(row, "Prezzo"),
-                                                                                                            GetRowDecimal(row, "PrezzoIvato"))
+        Dim promotionModel As ProductPromotionDisplayModel = GetAuthorizedPromotionModel(_id,
+                                                                                          selectedTcid,
+                                                                                          GetRowDecimal(row, "Prezzo"),
+                                                                                          GetRowDecimal(row, "PrezzoIvato"))
         phPromotionOffers.Visible = (promotionModel IsNot Nothing AndAlso promotionModel.HasOffers)
         litPromotionOffers.Text = If(promotionModel IsNot Nothing, promotionModel.Html, String.Empty)
 
@@ -2094,11 +2087,10 @@ Partial Class articolo
                 img = MakeAbsoluteUrl(img)
             End If
 
-            Dim price As PriceContext = BuildPriceContext(GetRowDecimal(row, "Prezzo"),
-                                                          GetRowDecimal(row, "PrezzoIvato"),
-                                                          GetRowDecimal(row, "PrezzoPromo"),
-                                                          GetRowDecimal(row, "PrezzoPromoIvato"),
-                                                          GetEffectiveInOfferta(row))
+            Dim price As PriceContext = BuildAuthorizedPriceContext(FirstPositiveInt(GetRowInt(row, "ID", 0), GetRowInt(row, "id", 0), _id),
+                                                                    GetRowInt(row, "TCid", _tcid),
+                                                                    GetRowDecimal(row, "Prezzo"),
+                                                                    GetRowDecimal(row, "PrezzoIvato"))
 
             ' --- Base entity ids
             Dim baseUrl As String = canonical.TrimEnd("/"c)
@@ -2471,96 +2463,58 @@ Partial Class articolo
         Return "Prezzo su richiesta"
     End Function
 
-    Private Function BuildPriceContext(prezzo As Nullable(Of Decimal),
-                                       prezzoIvato As Nullable(Of Decimal),
-                                       prezzoPromo As Nullable(Of Decimal),
-                                       prezzoPromoIvato As Nullable(Of Decimal),
-                                       inOfferta As Integer) As PriceContext
-        Dim ctx As New PriceContext()
+    Private Function GetAuthorizedPromotionModel(ByVal articleId As Integer,
+                                                  ByVal tcId As Integer,
+                                                  ByVal baseNet As Nullable(Of Decimal),
+                                                  ByVal baseGross As Nullable(Of Decimal)) As ProductPromotionDisplayModel
+        Dim context As ProductPromotionEligibilityContext =
+            ProductPromotionEligibilityResolver.CreateContext(HttpContext.Current, GetCurrentAziendaId(), _listino)
+        Dim netValue As Decimal = baseNet.GetValueOrDefault(0D)
+        Dim grossValue As Decimal = baseGross.GetValueOrDefault(0D)
+        Dim cacheKey As String = articleId.ToString(CultureInfo.InvariantCulture) & ":" &
+                                 tcId.ToString(CultureInfo.InvariantCulture) & ":" &
+                                 context.CacheKey & ":" &
+                                 netValue.ToString(CultureInfo.InvariantCulture) & ":" &
+                                 grossValue.ToString(CultureInfo.InvariantCulture)
+        Dim cached As ProductPromotionDisplayModel = Nothing
+        If _promotionModelCache.TryGetValue(cacheKey, cached) Then Return cached
+
+        Dim model As ProductPromotionDisplayModel = ProductPromotionDisplayHelper.BuildForProduct(GetConnectionString(),
+                                                                                                    articleId,
+                                                                                                    tcId,
+                                                                                                    context,
+                                                                                                    netValue,
+                                                                                                    grossValue)
+        _promotionModelCache(cacheKey) = model
+        Return model
+    End Function
+
+    Private Function BuildAuthorizedPriceContext(ByVal articleId As Integer,
+                                                  ByVal tcId As Integer,
+                                                  ByVal baseNet As Nullable(Of Decimal),
+                                                  ByVal baseGross As Nullable(Of Decimal)) As PriceContext
+        Dim price As New PriceContext()
         Dim ivaTipo As Integer = GetSessionInt("IvaTipo", 2)
+        price.IvaLabel = If(ivaTipo = 1, "IVA esclusa", "IVA inclusa")
+        price.CurrentPrice = If(ivaTipo = 1, baseNet, baseGross)
 
-        If ivaTipo = 1 Then
-            ctx.CurrentPrice = prezzo
-            ctx.OldPrice = Nothing
-            ctx.IvaLabel = "IVA esclusa"
-            If IsValidPromoPrice(prezzo, prezzoPromo, inOfferta) Then
-                ctx.CurrentPrice = prezzoPromo
-                If prezzo.HasValue AndAlso prezzo.Value > prezzoPromo.Value Then
-                    ctx.OldPrice = prezzo
-                End If
-                ctx.IsPromo = True
-            End If
-        Else
-            ctx.CurrentPrice = prezzoIvato
-            ctx.OldPrice = Nothing
-            ctx.IvaLabel = "IVA inclusa"
-            If IsValidPromoPrice(prezzoIvato, prezzoPromoIvato, inOfferta) Then
-                ctx.CurrentPrice = prezzoPromoIvato
-                If prezzoIvato.HasValue AndAlso prezzoIvato.Value > prezzoPromoIvato.Value Then
-                    ctx.OldPrice = prezzoIvato
-                End If
-                ctx.IsPromo = True
+        Dim model As ProductPromotionDisplayModel = GetAuthorizedPromotionModel(articleId, tcId, baseNet, baseGross)
+        If model IsNot Nothing AndAlso model.HasDefaultQuantityOffer Then
+            Dim authorizedPrice As Decimal = If(ivaTipo = 1,
+                                                model.BestDefaultQuantityPriceNet,
+                                                model.BestDefaultQuantityPriceGross)
+            Dim oldPrice As Nullable(Of Decimal) = If(ivaTipo = 1, baseNet, baseGross)
+            If authorizedPrice > 0D AndAlso oldPrice.HasValue AndAlso authorizedPrice < oldPrice.Value Then
+                price.CurrentPrice = authorizedPrice
+                price.OldPrice = oldPrice
+                price.IsPromo = True
             End If
         End If
 
-        If Not ctx.CurrentPrice.HasValue OrElse ctx.CurrentPrice.Value <= 0D Then
-            ctx.CurrentPrice = FirstPositiveDecimal(prezzoIvato, prezzo, prezzoPromoIvato, prezzoPromo)
+        If Not price.CurrentPrice.HasValue OrElse price.CurrentPrice.Value <= 0D Then
+            price.CurrentPrice = FirstPositiveDecimal(baseGross, baseNet)
         End If
-
-        Return ctx
-    End Function
-
-    Private Function IsValidPromoPrice(basePrice As Nullable(Of Decimal), promoPrice As Nullable(Of Decimal), inOfferta As Integer) As Boolean
-        If inOfferta <> 1 Then Return False
-        If Not promoPrice.HasValue OrElse promoPrice.Value <= 0D Then Return False
-        If basePrice.HasValue AndAlso basePrice.Value > 0D AndAlso promoPrice.Value >= basePrice.Value Then Return False
-        Return True
-    End Function
-
-    Private Function GetEffectiveInOfferta(row As DataRow) As Integer
-        If row Is Nothing Then Return 0
-        If GetRowInt(row, "InOfferta", 0) <> 1 Then Return 0
-        If Not IsProductRowPromoActive(row) Then Return 0
-        If Not IsProductRowPromoApplicableToDefaultQuantity(row) Then Return 0
-        Return 1
-    End Function
-
-    Private Function IsProductRowPromoApplicableToDefaultQuantity(row As DataRow) As Boolean
-        If row Is Nothing Then Return False
-        Dim qntMinima As Decimal = GetRowDecimal(row, "OfferteQntMinima").GetValueOrDefault(0D)
-        If qntMinima > 0D Then Return qntMinima <= 1D
-
-        Dim multipli As Decimal = GetRowDecimal(row, "OfferteMultipli").GetValueOrDefault(0D)
-        If multipli > 0D Then Return Decimal.Remainder(1D, multipli) = 0D
-        Return False
-    End Function
-
-    Private Function IsProductRowPromoActive(row As DataRow) As Boolean
-        If row Is Nothing Then Return False
-
-        Dim fromListino As Integer = GetRowInt(row, "OfferteDaListino", 0)
-        Dim toListino As Integer = GetRowInt(row, "OfferteAListino", 0)
-        If fromListino > 0 AndAlso _listino < fromListino Then Return False
-        If toListino > 0 AndAlso _listino > toListino Then Return False
-
-        Dim today As Date = Date.Today
-        Dim startsOn As Nullable(Of Date) = GetRowDate(row, "OfferteDataInizio")
-        Dim endsOn As Nullable(Of Date) = GetRowDate(row, "OfferteDataFine")
-        If startsOn.HasValue AndAlso startsOn.Value.Date > today Then Return False
-        If endsOn.HasValue AndAlso endsOn.Value.Date < today Then Return False
-
-        Return True
-    End Function
-
-    Private Function GetRowDate(row As DataRow, columnName As String) As Nullable(Of Date)
-        If row Is Nothing OrElse row.Table Is Nothing OrElse Not row.Table.Columns.Contains(columnName) Then Return Nothing
-
-        Dim raw As Object = row(columnName)
-        If raw Is Nothing OrElse Convert.IsDBNull(raw) Then Return Nothing
-
-        Dim parsed As Date
-        If Date.TryParse(Convert.ToString(raw), parsed) Then Return parsed
-        Return Nothing
+        Return price
     End Function
 
     Private Function FormatMoney(value As Decimal) As String
