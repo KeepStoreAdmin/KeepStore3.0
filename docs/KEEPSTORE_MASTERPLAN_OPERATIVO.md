@@ -9,12 +9,12 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 - Aggiornato: 2026-09-04.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Ultimo runtime stabile: `frontend-rebuild` / `origin/frontend-rebuild` a `e4211b7eb50c384898c78f78ce0b38e2832ce472`.
+- Ultimo runtime stabile: `frontend-rebuild` / `origin/frontend-rebuild` a `c088988080e54371a60c27c1f5979adf957358f1`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
-- Ultimi task chiusi: `HOTFIX-STOREFRONT-PROMO-DEMO-BADGE-1A` e `PROMO-COMMERCIAL-CORRECTNESS-1A`, integrati fast-forward only senza merge commit, con smoke Germano A.
+- Ultimi task chiusi: `STOREFRONT-PROMO-ROUTES-AUDIT-1A` (read-only / A, route legacy classificata C) e `STOREFRONT-PROMO-ROUTES-HOTFIX-1A` (A), integrato fast-forward only senza merge commit e con smoke Germano A.
 - Task attivo: nessun task runtime; questo aggiornamento e docs-only.
 - Azione immediata successiva: chiudere e mergeare questo task documentale, senza ripetere build o smoke gia conclusi.
-- Prossimi runtime, in ordine: `STOREFRONT-PROMO-ROUTES-AUDIT-1A`; eventuale `STOREFRONT-PROMO-ROUTES-HOTFIX-1A` solo se la route e attiva; `STOREFRONT-OFFERS-PROMO-UX-1A`; `HOME-ASYNC-CART-1A`; `PDP-BRAND-LOGO-1A`. Performance, SEO tecnico, Google Product structured data e AI/Gemini/LLMS seguono e restano separati.
+- Prossimi runtime, in ordine: `STOREFRONT-PROMO-MODERN-PARITY-1A`; `STOREFRONT-PROMO-ROUTE-RETIREMENT-1A` solo dopo parita dimostrata; `STOREFRONT-OFFERS-PROMO-UX-1A`; `HOME-ASYNC-CART-1A`; `PDP-BRAND-LOGO-1A`. Performance/bulk promo, SEO tecnico, Google Product structured data e AI/Gemini/LLMS seguono e restano separati.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
 - Blocker reali: nessuno per la chiusura documentale; catalogo e PDP restano aree non dichiarate complete.
 
@@ -48,16 +48,27 @@ Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo tas
 - Badge `Promo` e `Ricondizionato` sono raccolti in uno stack angolare fuori dal flusso, senza sovrapposizioni. Verifica reale articolo `16483`: `Promo -58%`, prezzo promo `1.500,00 €`, listino `3.600,00 €`; slot prezzi deterministici `66px` emphasized e `52px` compact, nessun valore troncato o simbolo euro separato, sei DealCard della stessa altezza. QA mobile reale `360/390/430/768px` e desktop `1365px`.
 - Contratto EAN/GTIN: le etichette umane delle superfici runtime autorizzate usano `EAN/GTIN`, inclusi ricerca desktop/mobile, PDP/Informazioni prodotto e pagine stampa/documenti/promozioni coperte. Nomi tecnici DB `Ean`, variabili, SQL, business key `EAN:`, feed, CSV/XML, integrazioni e proprieta JSON-LD `gtin*` restano invariati; EAN e comunicato come GTIN-13 senza migrazione dei contratti macchina. Il cleanup globale non e completo: `Public/ui/controls/ProductDetailView.ascx`, preview diagnostica non operativa, conserva due label `EAN:` come finding nominativo futuro.
 
+### Chiusura audit e hotfix route promozioni legacy
+
+- `STOREFRONT-PROMO-ROUTES-AUDIT-1A` e COMPLETATO / A come audit interamente read-only: zero file, branch e commit; zero scritture DB; query in transazione read-only concluse con rollback. `promozioni.aspx` e una route legacy, parzialmente sovrapposta a `articoli.aspx?inpromo=1`, con classificazione funzionale C e non ancora sostituibile tramite redirect immediato.
+- La route legacy mantiene GridView/markup, selettore campagna `pid`, filtri legacy, potenziale inclusione per `UtentiID`, `noindex,follow`, canonical verso `/promozioni.aspx`, assenza dalla sitemap, autoriferimenti e whitelist post-login. Non e collegata dalle superfici storefront moderne. La route moderna e invece collegata da header desktop/mobile e HOME e usa listing ONSUS, filtri, ordinamento, paginazione, ProductCard, promo helper condiviso e add-to-cart asincrono.
+- Le route non sono equivalenti: 25 prodotti risultano solo nella moderna e 22 solo nella legacy. Contratti `pid` e `UtentiID`, quantita minima/multipli e filtri legacy non sono ancora migrati. Tre offerte personalizzate sono attive globalmente, ma nessuna era applicabile al listino 1 della sessione verificata. Le querystring tassonomiche presenti nel markup legacy non risultano mappate in modo affidabile dalla pipeline corrente.
+- Causa del 500 provata: `CaricaArticoli()` leggeva `vOfferteDettagli`, inseriva descrizione, immagine, date, prezzi e altri dati DB dentro literal SQL e generava centinaia di `UNION ALL`. Un apostrofo chiudeva il literal e un successivo `@CLIP` diventava un falso parametro MySQL, con `Parameter '@CLIP' must be defined`. Sono state rilevate 13 descrizioni attive con apostrofo e 2 contenenti `@CLIP`; `pid=6534` riproduceva il problema, mentre `pid=14556` dimostrava che `@CLIP` da solo non era la causa.
+- `STOREFRONT-PROMO-ROUTES-HOTFIX-1A` e CHIUSO / A: branch `task/storefront-promo-routes-hotfix-1a`, base `e8dd8abf35afabd783c28090bca2df58ae7d7d7b`, commit/stable `c088988080e54371a60c27c1f5979adf957358f1`, manifest esclusivo `promozioni.aspx.vb`, diffstat 66 inserimenti e 132 eliminazioni. Merge fast-forward only, nessun merge commit, parent diretto `e8dd8abf35afabd783c28090bca2df58ae7d7d7b`; smoke `SMOKE UTENTE STOREFRONT-PROMO-ROUTES-HOTFIX-1A: A`.
+- Contratto finale: rimosso il reader generatore di SQL, eliminate concatenazioni DB e catena `UNION ALL`, nessun escaping manuale. Una query set-based a colonne esplicite unisce `vOfferteDettagli` e `varticolilistini`, usa ordinamento deterministico e 11 parametri tipizzati (`NListino`, `UtentiID`, `Data`, `pid`, `pmr`, `pst`, `pct`, `ptp`, `pgr`, `psg`, `part`). I dati restano dati, le Session numeriche sono convertite in interi e il risultato vuoto produce HTTP 200 con zero righe.
+- Parita tecnica: 935/935 righe, differenza multiset zero complessiva e per i `pid` verificati. `pid=6534`: HTTP 200 e una riga; `pid=14556`: HTTP 200 e due righe; `pid=99999999`: HTTP 200 e zero righe. Zero scritture DB.
+- Campione tecnico, non benchmark generale: query precedente circa 505.646 caratteri, 934 rami e 933 `UNION ALL`; query fissa circa 1.487 caratteri. Prova read-only: riferimento circa 9.696 ms, set-based circa 1.689 ms. Sono risolti la rottura/second-order SQL injection causata dai contenuti DB, l'apostrofo, il falso parametro `@CLIP` e la query monolitica; non sono dichiarate risolte performance promo generali, N+1 storefront, materializzazione, grafica legacy, output encoding complessivo, migrazione route, offerte personalizzate, filtri legacy o SEO complessiva.
+
 ### Finding promo aperti e roadmap
 
-1. `STOREFRONT-PROMO-ROUTES-AUDIT-1A`: audit read-only di `promozioni.aspx`, che in REV1 ha restituito HTTP 500; stabilire se la route e attiva, linkata, canonica, indicizzabile o legacy e diagnosticarla senza modifiche.
-2. Solo se la route e attiva, `STOREFRONT-PROMO-ROUTES-HOTFIX-1A`; se legacy, progettare separatamente redirect/canonical/noindex senza automatismi.
-3. `STOREFRONT-OFFERS-PROMO-UX-1A`: redesign professionale mobile-first con dati reali e coerenza HOME/catalogo/PDP/carrello, senza dati demo.
-4. `HOME-ASYNC-CART-1A`: l'add HOME incrementa una sola volta ma conserva redirect/ritorno legacy e non equivale al catalogo asincrono; riusare endpoint e business logic server esistenti.
+1. `STOREFRONT-PROMO-MODERN-PARITY-1A`: rendere la pipeline moderna commercialmente equivalente, riconciliando i 25/22 prodotti, campagne `pid`, offerte personalizzate `UtentiID` e quantita minima/multipli, senza redesign.
+2. `STOREFRONT-PROMO-ROUTE-RETIREMENT-1A`: solo dopo parita dimostrata, definire redirect permanente, canonical/noindex/sitemap coerenti e conservazione sicura degli URL campagna ancora necessari.
+3. `STOREFRONT-OFFERS-PROMO-UX-1A`: redesign professionale ONSUS mobile-first su HOME, catalogo e PDP, con dati reali e contratto commerciale condiviso.
+4. `HOME-ASYNC-CART-1A`.
 5. `PDP-BRAND-LOGO-1A`.
-6. In seguito audit performance/bulk N+1, SEO tecnico, Google Product structured data e infine AI/Gemini/LLMS.
+6. In seguito performance/bulk promo, SEO tecnico, Google Product structured data e infine AI/Gemini/LLMS.
 
-Finding separati: `articolix.aspx` conserva il noto HTTP 500 legacy sul binding `TCid`, non causato dalla REV1; le pagine protette hanno mostrato redirect 302 ma il contenuto autenticato non e stato validato dalla REV1; la materializzazione promo richiede task DB/runtime dedicato e non va unita al redesign UI. HOME, catalogo e PDP non sono dichiarati completi. La gestione promo e commercialmente corretta nelle superfici coperte, ma il redesign complessivo resta aperto; mobile resta l'esperienza primaria.
+Finding separati ancora aperti: 25 prodotti solo moderni e 22 solo legacy; campagne `pid`; offerte personalizzate `UtentiID`; semantica quantita minima/multipli; filtri legacy non affidabili; add-to-cart legacy; GridView/markup non mobile-first e overflow mobile; due 404 legacy osservati e non attribuiti al fix; output encoding legacy; materializzazione promo; performance/N+1 complessiva; `articolix.aspx` HTTP 500; due label `EAN:` nella preview diagnostica `ProductDetailView.ascx`; HOME add-to-cart con redirect legacy. HOME, catalogo, PDP, promo, SEO e AI non sono dichiarati completi.
 
 ### Chiusura PDP-COMMERCIAL-INFO-SHIPPING-1A
 
@@ -534,7 +545,7 @@ Quando si rifattorizza una pagina:
 Stato di riferimento al 2026-09-03 dopo il merge fast-forward `PDP-COMMERCIAL-INFO-SHIPPING-1A`:
 
 - Branch stabile: `frontend-rebuild`
-- Nota storica del checkpoint shipping: HEAD locale/origin `frontend-rebuild` era `91cbc10b3b343217e18c5a9a6707b72997467b00`; il checkpoint corrente e quello 2026-09-04 in apertura a `e4211b7eb50c384898c78f78ce0b38e2832ce472`.
+- Nota storica del checkpoint shipping: HEAD locale/origin `frontend-rebuild` era `91cbc10b3b343217e18c5a9a6707b72997467b00`; il checkpoint corrente e quello 2026-09-04 in apertura a `c088988080e54371a60c27c1f5979adf957358f1`.
 - Commit async cart finale: `b80f8d4683bbb9bb6ec8a7a486a79048bfae094f`; commit CTA stability finale: `58f4ee43c363d629b3124fc0fb1a10beaeeef48a`.
 - Commit PDP commercial info/shipping: `afc4c72c148984ba729c6cb20de38161dc56e2b4`; REV1 IVA e merge point: `91cbc10b3b343217e18c5a9a6707b72997467b00`.
 - Branch hotfix conservato: `task/storefront-card-layout-regression-1a` a `982cc83bcbcbb913dd1e320ece456957801f8121`.
