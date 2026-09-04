@@ -16,6 +16,14 @@ Imports MySql.Data.MySqlClient
 Partial Public Class _Default
     Inherits Page
 
+    Private Class HomePromotionSnapshot
+        Public Property DefaultQuantityPrice As Decimal
+        Public Property TierPrice As Decimal
+        Public Property TierQntMinima As Decimal
+        Public Property TierMultipli As Decimal
+        Public Property Deadline As Nullable(Of Date)
+    End Class
+
     Private Shared ReadOnly ItCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
     Private Shared ReadOnly Rng As New Random()
     Private Const RuntimeSiteBaseUrl As String = "https://www.taikun.it"
@@ -897,6 +905,7 @@ Partial Public Class _Default
                         Dim dt As New DataTable()
                         conn.Open()
                         da.Fill(dt)
+                        PopulatePromotionDisplaySnapshot(dt)
                         Return dt
                     End Using
                 End Using
@@ -905,6 +914,68 @@ Partial Public Class _Default
             ReportHomeError("TryLoadProducts", ex)
         End Try
 
+        Return Nothing
+    End Function
+
+    Private Sub PopulatePromotionDisplaySnapshot(ByVal products As DataTable)
+        If products Is Nothing Then Return
+
+        EnsurePromotionDisplayColumns(products)
+        Dim snapshots As New Dictionary(Of String, HomePromotionSnapshot)(StringComparer.OrdinalIgnoreCase)
+
+        For Each row As DataRow In products.Rows
+            Dim businessKey As String = GetBusinessKey(row)
+            If String.IsNullOrWhiteSpace(businessKey) Then Continue For
+
+            Dim promoPrice As Decimal = 0D
+            Dim appliesToInitialQuantity As Boolean = False
+            If Not TryGetCommercialPromoPrice(row, promoPrice, appliesToInitialQuantity) Then Continue For
+
+            Dim snapshot As HomePromotionSnapshot = Nothing
+            If Not snapshots.TryGetValue(businessKey, snapshot) Then
+                snapshot = New HomePromotionSnapshot()
+                snapshots.Add(businessKey, snapshot)
+            End If
+
+            If appliesToInitialQuantity Then
+                If snapshot.DefaultQuantityPrice <= 0D OrElse promoPrice < snapshot.DefaultQuantityPrice Then
+                    snapshot.DefaultQuantityPrice = promoPrice
+                    snapshot.Deadline = RowDateValue(row, "OfferteDataFine")
+                End If
+            ElseIf snapshot.TierPrice <= 0D OrElse promoPrice < snapshot.TierPrice Then
+                snapshot.TierPrice = promoPrice
+                snapshot.TierQntMinima = ToDecimal(row("OfferteQntMinima"))
+                snapshot.TierMultipli = ToDecimal(row("OfferteMultipli"))
+                If snapshot.DefaultQuantityPrice <= 0D Then snapshot.Deadline = RowDateValue(row, "OfferteDataFine")
+            End If
+        Next
+
+        For Each row As DataRow In products.Rows
+            row("DisplayPromoSnapshotReady") = True
+            Dim snapshot As HomePromotionSnapshot = Nothing
+            If snapshots.TryGetValue(GetBusinessKey(row), snapshot) Then
+                row("DisplayPromoQtyOnePrice") = snapshot.DefaultQuantityPrice
+                row("DisplayPromoTierPrice") = snapshot.TierPrice
+                row("DisplayPromoTierQntMinima") = snapshot.TierQntMinima
+                row("DisplayPromoTierMultipli") = snapshot.TierMultipli
+                row("DisplayPromoDeadline") = If(snapshot.Deadline.HasValue, CType(snapshot.Deadline.Value, Object), DBNull.Value)
+            End If
+        Next
+    End Sub
+
+    Private Sub EnsurePromotionDisplayColumns(ByVal products As DataTable)
+        If Not products.Columns.Contains("DisplayPromoSnapshotReady") Then products.Columns.Add("DisplayPromoSnapshotReady", GetType(Boolean))
+        If Not products.Columns.Contains("DisplayPromoQtyOnePrice") Then products.Columns.Add("DisplayPromoQtyOnePrice", GetType(Decimal))
+        If Not products.Columns.Contains("DisplayPromoTierPrice") Then products.Columns.Add("DisplayPromoTierPrice", GetType(Decimal))
+        If Not products.Columns.Contains("DisplayPromoTierQntMinima") Then products.Columns.Add("DisplayPromoTierQntMinima", GetType(Decimal))
+        If Not products.Columns.Contains("DisplayPromoTierMultipli") Then products.Columns.Add("DisplayPromoTierMultipli", GetType(Decimal))
+        If Not products.Columns.Contains("DisplayPromoDeadline") Then products.Columns.Add("DisplayPromoDeadline", GetType(Date))
+    End Sub
+
+    Private Function RowDateValue(ByVal row As DataRow, ByVal columnName As String) As Nullable(Of Date)
+        If row Is Nothing OrElse Not row.Table.Columns.Contains(columnName) OrElse row.IsNull(columnName) Then Return Nothing
+        Dim parsed As Date
+        If TryParseKeepStoreDate(row(columnName), parsed) Then Return parsed
         Return Nothing
     End Function
 
@@ -1351,6 +1422,12 @@ Partial Public Class _Default
         dt.Columns.Add("OfferteAListino", GetType(Integer))
         dt.Columns.Add("OfferteQntMinima", GetType(Integer))
         dt.Columns.Add("OfferteMultipli", GetType(Integer))
+        dt.Columns.Add("DisplayPromoSnapshotReady", GetType(Boolean))
+        dt.Columns.Add("DisplayPromoQtyOnePrice", GetType(Decimal))
+        dt.Columns.Add("DisplayPromoTierPrice", GetType(Decimal))
+        dt.Columns.Add("DisplayPromoTierQntMinima", GetType(Decimal))
+        dt.Columns.Add("DisplayPromoTierMultipli", GetType(Decimal))
+        dt.Columns.Add("DisplayPromoDeadline", GetType(Date))
         dt.Columns.Add("OffertePrezzo", GetType(Decimal))
         dt.Columns.Add("OfferteSconto", GetType(Decimal))
         dt.Columns.Add("IdIvaRC", GetType(Integer))
@@ -1865,9 +1942,14 @@ Partial Public Class _Default
             Return 0D
         End If
 
-        Dim listino As Decimal = If(row.Table.Columns.Contains("PrezzoIvato"), ToDecimal(row("PrezzoIvato")), 0D)
-        If listino <= 0D AndAlso row.Table.Columns.Contains("Prezzo") Then
-            listino = ToDecimal(row("Prezzo"))
+        Dim useNetPrice As Boolean = UseNetPriceDisplay()
+        Dim listino As Decimal = If(useNetPrice AndAlso row.Table.Columns.Contains("Prezzo"), ToDecimal(row("Prezzo")), 0D)
+        If Not useNetPrice AndAlso row.Table.Columns.Contains("PrezzoIvato") Then
+            listino = ToDecimal(row("PrezzoIvato"))
+        End If
+        If listino <= 0D Then
+            Dim fallbackField As String = If(useNetPrice, "PrezzoIvato", "Prezzo")
+            If row.Table.Columns.Contains(fallbackField) Then listino = ToDecimal(row(fallbackField))
         End If
         Return listino
     End Function
@@ -1997,25 +2079,80 @@ Partial Public Class _Default
 
     Private Function TryGetValidPromoPrice(ByVal row As DataRow, ByRef promoPrice As Decimal) As Boolean
         promoPrice = 0D
-        If row Is Nothing OrElse Not IsPromoRowValid(row) Then
+        If HasPromotionDisplaySnapshot(row) Then
+            promoPrice = ToDecimal(row("DisplayPromoQtyOnePrice"))
+            Return promoPrice > 0D
+        End If
+
+        Dim appliesToInitialQuantity As Boolean = False
+        If Not TryGetCommercialPromoPrice(row, promoPrice, appliesToInitialQuantity) Then
             Return False
         End If
+
+        Return appliesToInitialQuantity
+    End Function
+
+    Private Function TryGetValidTierPrice(ByVal row As DataRow, ByRef promoPrice As Decimal) As Boolean
+        promoPrice = 0D
+        If HasPromotionDisplaySnapshot(row) Then
+            promoPrice = ToDecimal(row("DisplayPromoTierPrice"))
+            Return promoPrice > 0D
+        End If
+
+        Dim appliesToInitialQuantity As Boolean = False
+        If Not TryGetCommercialPromoPrice(row, promoPrice, appliesToInitialQuantity) Then Return False
+        Return Not appliesToInitialQuantity
+    End Function
+
+    Private Function HasPromotionDisplaySnapshot(ByVal row As DataRow) As Boolean
+        Return row IsNot Nothing AndAlso
+               row.Table.Columns.Contains("DisplayPromoSnapshotReady") AndAlso
+               Not row.IsNull("DisplayPromoSnapshotReady") AndAlso
+               Convert.ToBoolean(row("DisplayPromoSnapshotReady"), CultureInfo.InvariantCulture)
+    End Function
+
+    Private Function TryGetCommercialPromoPrice(ByVal row As DataRow,
+                                                 ByRef promoPrice As Decimal,
+                                                 ByRef appliesToInitialQuantity As Boolean) As Boolean
+        promoPrice = 0D
+        appliesToInitialQuantity = False
+        If row Is Nothing OrElse Not IsPromoRowValid(row) Then Return False
+
+        Dim baseNet As Decimal = If(row.Table.Columns.Contains("Prezzo"), ToDecimal(row("Prezzo")), 0D)
+        Dim promoNet As Decimal = If(row.Table.Columns.Contains("PrezzoPromo"), ToDecimal(row("PrezzoPromo")), 0D)
+        If baseNet <= 0D OrElse promoNet <= 0D OrElse promoNet >= baseNet Then Return False
+
+        Dim qntMinima As Decimal = If(row.Table.Columns.Contains("OfferteQntMinima"), ToDecimal(row("OfferteQntMinima")), 0D)
+        Dim multipli As Decimal = If(row.Table.Columns.Contains("OfferteMultipli"), ToDecimal(row("OfferteMultipli")), 0D)
+        If qntMinima <= 0D AndAlso multipli <= 0D Then Return False
+
+        appliesToInitialQuantity = IsQuantityCompatible(1D, qntMinima, multipli)
 
         Dim basePrice As Decimal = GetBasePrice(row)
-        Dim promoGross As Decimal = ToDecimal(row("PrezzoPromoIvato"))
-        Dim promoNet As Decimal = ToDecimal(row("PrezzoPromo"))
-        Dim candidate As Decimal = If(promoGross > 0D, promoGross, promoNet)
-
-        If candidate <= 0D Then
-            Return False
+        Dim candidate As Decimal = promoNet
+        If Not UseNetPriceDisplay() Then
+            candidate = If(row.Table.Columns.Contains("PrezzoPromoIvato"), ToDecimal(row("PrezzoPromoIvato")), 0D)
         End If
 
-        If basePrice > 0D AndAlso candidate >= basePrice Then
-            Return False
-        End If
+        If basePrice <= 0D OrElse candidate <= 0D OrElse candidate >= basePrice Then Return False
 
         promoPrice = candidate
         Return True
+    End Function
+
+    Private Function IsQuantityCompatible(ByVal quantity As Decimal,
+                                          ByVal qntMinima As Decimal,
+                                          ByVal multipli As Decimal) As Boolean
+        If qntMinima > 0D Then Return quantity >= qntMinima
+        If multipli <= 0D Then Return False
+        Return Decimal.Remainder(quantity, multipli) = 0D
+    End Function
+
+    Private Function UseNetPriceDisplay() As Boolean
+        Dim ivaTipo As Integer = 0
+        Return Session("IvaTipo") IsNot Nothing AndAlso
+               Integer.TryParse(Convert.ToString(Session("IvaTipo")), ivaTipo) AndAlso
+               ivaTipo = 1
     End Function
 
     Private Function IsPromoRowValid(ByVal row As DataRow) As Boolean
@@ -2085,9 +2222,15 @@ Partial Public Class _Default
 
     Private Function TryGetPromoDeadline(ByVal row As DataRow, ByRef deadline As DateTime) As Boolean
         deadline = DateTime.MinValue
-        If row Is Nothing OrElse Not IsPromoRowValid(row) Then
-            Return False
+        If HasPromotionDisplaySnapshot(row) Then
+            If Not row.Table.Columns.Contains("DisplayPromoDeadline") OrElse row.IsNull("DisplayPromoDeadline") Then Return False
+            deadline = Convert.ToDateTime(row("DisplayPromoDeadline"), CultureInfo.InvariantCulture).Date.AddDays(1)
+            Return deadline > DateTime.Now
         End If
+
+        Dim promoPrice As Decimal = 0D
+        Dim appliesToInitialQuantity As Boolean = False
+        If Not TryGetCommercialPromoPrice(row, promoPrice, appliesToInitialQuantity) Then Return False
 
         Dim raw As Object = Nothing
         If row.Table.Columns.Contains("OfferteDataFine") Then
@@ -2425,8 +2568,31 @@ Partial Public Class _Default
             sb.Append("<span class='").Append(oldPriceClass).Append("'>").Append(FormatMoney(GetBasePrice(row))).Append("</span>")
         End If
         sb.Append("</p>")
+        sb.Append(RenderTierPrice(row))
 
         Return sb.ToString()
+    End Function
+
+    Private Function RenderTierPrice(ByVal row As DataRow) As String
+        Dim tierPrice As Decimal = 0D
+        If Not TryGetValidTierPrice(row, tierPrice) Then Return String.Empty
+
+        Dim qntMinima As Decimal = 0D
+        Dim multipli As Decimal = 0D
+        If HasPromotionDisplaySnapshot(row) Then
+            qntMinima = ToDecimal(row("DisplayPromoTierQntMinima"))
+            multipli = ToDecimal(row("DisplayPromoTierMultipli"))
+        Else
+            qntMinima = If(row.Table.Columns.Contains("OfferteQntMinima"), ToDecimal(row("OfferteQntMinima")), 0D)
+            multipli = If(row.Table.Columns.Contains("OfferteMultipli"), ToDecimal(row("OfferteMultipli")), 0D)
+        End If
+        Dim condition As String = If(qntMinima > 0D,
+                                     "Minimo " & FormatQuantity(qntMinima) & " pz.",
+                                     "Multipli " & FormatQuantity(multipli) & " pz.")
+
+        Return "<p class='caption text-main-2 mb-0 ks-home-promo-tier'>Da <strong>" &
+               HttpUtility.HtmlEncode(FormatMoney(tierPrice)) &
+               "</strong> - " & HttpUtility.HtmlEncode(condition) & "</p>"
     End Function
 
     Private Function RenderAvailability(ByVal row As DataRow) As String

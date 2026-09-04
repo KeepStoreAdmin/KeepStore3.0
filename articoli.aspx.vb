@@ -3598,14 +3598,14 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     Protected Function CatalogPriceText(ByVal dataItem As Object) As String
-        Return UiPriceFormatter.RenderPriceText(
-            UiData.Get(dataItem, "Prezzo"),
-            UiData.Get(dataItem, "PrezzoIvato"),
-            UiData.Get(dataItem, "PrezzoPromo"),
-            UiData.Get(dataItem, "PrezzoPromoIvato"),
-            UiData.Get(dataItem, "InOfferta"),
-            Session("IvaTipo")
-        )
+        Dim price As Decimal = CatalogBasePrice(dataItem)
+        Dim promoModel As ProductPromotionDisplayModel = CatalogPromotionModel(dataItem)
+        If promoModel IsNot Nothing AndAlso promoModel.HasDefaultQuantityOffer Then
+            price = CatalogDefaultQuantityPromoPrice(promoModel)
+        End If
+
+        If price <= 0D Then Return "Prezzo su richiesta"
+        Return price.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) & " " & ChrW(8364)
     End Function
 
     Private Function BuildProductCardModel(ByVal dataItem As Object) As ProductCardModel
@@ -3617,19 +3617,21 @@ strWhere = strWhere & " GROUP BY id"
         descriptionText = ThemeManager.CompactText(descriptionText, 180)
 
         Dim promoModel As ProductPromotionDisplayModel = CatalogPromotionModel(dataItem)
-        Dim hasValidPromo As Boolean = (promoModel IsNot Nothing AndAlso promoModel.HasOffers)
+        Dim hasDefaultQuantityPromo As Boolean = (promoModel IsNot Nothing AndAlso promoModel.HasDefaultQuantityOffer)
         Dim basePrice As Decimal = CatalogBasePrice(dataItem)
-        Dim promoPrice As Decimal = CatalogPromoPrice(dataItem)
         Dim oldPriceText As String = ""
         Dim badgeText As String = ""
         Dim promoSummaryHtml As String = ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(promoModel)
 
-        If hasValidPromo Then
+        If hasDefaultQuantityPromo Then
             If basePrice > 0D Then
                 oldPriceText = basePrice.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) & " " & ChrW(8364)
             End If
 
-            badgeText = If(promoModel.BestDiscountPercent > 0, "-" & promoModel.BestDiscountPercent.ToString() & "%", GetDiscountPercent(basePrice, promoPrice))
+            Dim promoPrice As Decimal = CatalogDefaultQuantityPromoPrice(promoModel)
+            badgeText = If(promoModel.BestDefaultQuantityDiscountPercent > 0,
+                           "-" & promoModel.BestDefaultQuantityDiscountPercent.ToString() & "%",
+                           GetDiscountPercent(basePrice, promoPrice))
             If String.IsNullOrWhiteSpace(badgeText) Then badgeText = "Offerta"
         End If
 
@@ -3657,7 +3659,7 @@ strWhere = strWhere & " GROUP BY id"
         model.OldPriceText = oldPriceText
         model.BadgeText = badgeText
         model.PromoSummaryHtml = promoSummaryHtml
-        model.IsOnSale = hasValidPromo
+        model.IsOnSale = hasDefaultQuantityPromo
         model.IsAvailable = availability.IsAvailable
         model.AvailabilityText = availability.Text
         model.AvailabilityHtml = availability.Html
@@ -3683,18 +3685,13 @@ strWhere = strWhere & " GROUP BY id"
 
     Protected Function CatalogPromoBadgeHtml(ByVal dataItem As Object) As String
         Dim promoModel As ProductPromotionDisplayModel = CatalogPromotionModel(dataItem)
-        If promoModel IsNot Nothing AndAlso promoModel.HasOffers Then
-            Dim modelText As String = If(promoModel.BestDiscountPercent > 0, "-" & promoModel.BestDiscountPercent.ToString() & "%", "Offerta")
+        If promoModel IsNot Nothing AndAlso promoModel.HasDefaultQuantityOffer Then
+            Dim modelText As String = If(promoModel.BestDefaultQuantityDiscountPercent > 0,
+                                         "-" & promoModel.BestDefaultQuantityDiscountPercent.ToString() & "%",
+                                         "Offerta")
             Return "<div class='box-sale-wrap pst-default'><p class='small-text'>" & Server.HtmlEncode(modelText) & "</p></div>"
         End If
-
-        If Not CatalogHasValidPromo(dataItem) Then Return ""
-
-        Dim oldPrice As Decimal = CatalogBasePrice(dataItem)
-        Dim newPrice As Decimal = CatalogPromoPrice(dataItem)
-        Dim pct As String = GetDiscountPercent(oldPrice, newPrice)
-        Dim text As String = If(String.IsNullOrWhiteSpace(pct), "Offerta", pct)
-        Return "<div class='box-sale-wrap pst-default'><p class='small-text'>" & Server.HtmlEncode(text) & "</p></div>"
+        Return ""
     End Function
 
     Protected Function CatalogPromoDetailsHtml(ByVal dataItem As Object) As String
@@ -3751,15 +3748,6 @@ strWhere = strWhere & " GROUP BY id"
         Return attrs.ToString()
     End Function
 
-    Private Function CatalogHasValidPromo(ByVal dataItem As Object) As Boolean
-        Dim promoFlag As Integer = UiData.Int(dataItem, "InOfferta")
-        If promoFlag = 0 Then Return False
-
-        Dim oldPrice As Decimal = CatalogBasePrice(dataItem)
-        Dim newPrice As Decimal = CatalogPromoPrice(dataItem)
-        Return oldPrice > 0D AndAlso newPrice > 0D AndAlso newPrice < oldPrice
-    End Function
-
     Private Function CatalogBasePrice(ByVal dataItem As Object) As Decimal
         Dim ivaMode As Integer = 0
         Integer.TryParse(Convert.ToString(Session("IvaTipo")), ivaMode)
@@ -3773,17 +3761,13 @@ strWhere = strWhere & " GROUP BY id"
         Return value
     End Function
 
-    Private Function CatalogPromoPrice(ByVal dataItem As Object) As Decimal
+    Private Function CatalogDefaultQuantityPromoPrice(ByVal model As ProductPromotionDisplayModel) As Decimal
+        If model Is Nothing OrElse Not model.HasDefaultQuantityOffer Then Return 0D
+
         Dim ivaMode As Integer = 0
         Integer.TryParse(Convert.ToString(Session("IvaTipo")), ivaMode)
-        Dim value As Decimal = If(ivaMode = 1,
-                                  KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoPromo"), 0D),
-                                  KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoPromoIvato"), 0D))
-        If value <= 0D Then
-            value = KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoPromoIvato"), 0D)
-            If value <= 0D Then value = KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoPromo"), 0D)
-        End If
-        Return value
+        If ivaMode = 1 Then Return model.BestDefaultQuantityPriceNet
+        Return model.BestDefaultQuantityPriceGross
     End Function
 
     Private Function CurrentAziendaId() As Integer
