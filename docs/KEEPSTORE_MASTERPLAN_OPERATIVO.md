@@ -149,6 +149,13 @@ Finding separati ancora aperti: 25 prodotti solo moderni e 22 solo legacy; campa
 - Evitare audit generici tipo "controlla tutto" e verifiche ripetute senza un motivo tecnico reale. Le idee fuori scope vanno registrate nel backlog, non implementate subito.
 - I comportamenti gia accettati diventano guardrail anti-regressione dei task successivi.
 
+Richiamo operativo alla policy permanente definita nel System Blueprint, sezione `2.1.1`:
+
+- ChatGPT assegna a ogni task un profilo `ECONOMY`, `STANDARD`, `DEEP` o `CRITICAL`, scegliendo il livello meno costoso compatibile con una elevata probabilita di A al primo passaggio; qualita, sicurezza e test necessari non si riducono per risparmiare token.
+- Ogni task runtime applica la Minimum Verification Baseline e una proactive engineering review mirata alla superficie e alle dipendenze reali, con root cause e controlli anti-regressione proporzionati.
+- Codex analizza, testa e segnala finding, ma non amplia autonomamente scope/manifest e non implementa migliorie extra. ChatGPT decide se ignorare, mettere in backlog, creare un micro-task, richiedere una REV o autorizzare un'estensione.
+- La metrica economica e il costo totale per task chiuso correttamente: rework, REV evitabili e regressioni sono inefficienza. Il dettaglio normativo completo e la Definition of Done restano nel System Blueprint, senza duplicazione nel Masterplan.
+
 ### Protocollo canonico fonti, continuita e Git
 
 Prima di ogni risposta operativa sul progetto, ChatGPT deve:
