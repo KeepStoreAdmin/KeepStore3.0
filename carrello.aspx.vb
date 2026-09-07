@@ -556,30 +556,14 @@ Private lastSqlString As String = ""
 
     ' Evita doppi aggiornamenti nella stessa request (es. click evento + altra chiamata indiretta)
     Private _carrelloAggiornatoThisRequest As Boolean = False
+    Private _cartPriceRevalidationBlockedThisRequest As Boolean = False
 
     Private Structure CartRowInfo
     Public Id As Integer
     Public ArtId As Integer
     Public TCId As Integer
-    Public Qnt As Long
+    Public Qnt As Decimal
     End Structure
-
-    Private Class VsuperInfo
-    Public TCId As Integer
-    Public Prezzo As Double
-    Public PrezzoIvato As Double
-    Public InOfferta As Integer
-    Public OfferteDataInizio As Nullable(Of Date)
-    Public OfferteDataFine As Nullable(Of Date)
-    Public OfferteQntMinima As Long
-    Public OfferteMultipli As Long
-    Public OfferteDettagliId As Long
-    Public PrezzoPromo As Double
-    Public PrezzoPromoIvato As Double
-    Public IdIvaRC As Integer
-    Public ValoreIvaRC As Double
-    Public DescrizioneIvaRC As String
-    End Class
 
 ' =========================
 ' PATCH STEP 4 - HELPERS
@@ -599,10 +583,7 @@ Private Const SessCartShippingAddressManual As String = "CART_SELECTED_ADDRESS_I
 Private Const SessCartAddressEditorOpen As String = "CART_ADDRESS_EDITOR_OPEN"
 Private Const SessCartAddressEditorMode As String = "CART_ADDRESS_EDITOR_MODE"
 Private Const SessCartAddressEditorId As String = "CART_ADDRESS_EDITOR_ID"
-Private Const CartSessionExpiredLoginUrl As String = "login.aspx?ReturnUrl=carrello.aspx&sessionExpired=1"
 Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizione selezionato non è più valido. Seleziona nuovamente l'indirizzo e conferma l'ordine."
-Private _cartSessionExpiredRedirectIssued As Boolean = False
-Private _cartLoginRequiredFastPathActive As Boolean = False
 
     Private Function GetSessionInt(ByVal key As String, Optional ByVal def As Integer = 0) As Integer
     Try
@@ -618,82 +599,9 @@ Private _cartLoginRequiredFastPathActive As Boolean = False
     End Try
     End Function
 
-    Private Function HasExistingAspNetSessionCookie() As Boolean
-        Try
-            Dim cookieHeader As String = Convert.ToString(Request.Headers("Cookie"))
-            If cookieHeader = "" Then Return False
-            Return cookieHeader.IndexOf("ASP.NET_SessionId", StringComparison.OrdinalIgnoreCase) >= 0
-        Catch
-            Return False
-        End Try
-    End Function
-
-    Private Function HasRememberedLoginUsernameCookie() As Boolean
-        Try
-            If Request Is Nothing OrElse Request.Cookies Is Nothing Then Return False
-
-            Dim aziendaCookieName As String = Convert.ToString(Session("AziendaNome")).Trim()
-            If aziendaCookieName <> "" Then
-                Dim aziendaCookie As HttpCookie = Request.Cookies(aziendaCookieName)
-                If aziendaCookie IsNot Nothing AndAlso Convert.ToString(aziendaCookie("Username")).Trim() <> "" Then Return True
-            End If
-
-            For Each cookieName As String In Request.Cookies.AllKeys
-                If String.IsNullOrWhiteSpace(cookieName) Then Continue For
-                If String.Equals(cookieName, "ASP.NET_SessionId", StringComparison.OrdinalIgnoreCase) Then Continue For
-                If String.Equals(cookieName, "ks_recent", StringComparison.OrdinalIgnoreCase) Then Continue For
-                If String.Equals(cookieName, "ks_recent_session", StringComparison.OrdinalIgnoreCase) Then Continue For
-                If String.Equals(cookieName, "FacebookLike", StringComparison.OrdinalIgnoreCase) Then Continue For
-                If String.Equals(cookieName, "tid_bs", StringComparison.OrdinalIgnoreCase) Then Continue For
-
-                Dim cookie As HttpCookie = Request.Cookies(cookieName)
-                If cookie IsNot Nothing AndAlso Convert.ToString(cookie("Username")).Trim() <> "" Then Return True
-            Next
-        Catch
-        End Try
-
-        Return False
-    End Function
-
-    Private Function IsLikelyExpiredCartSession() As Boolean
-        Try
-            If Session Is Nothing OrElse Request Is Nothing Then Return False
-            If GetSessionInt(SessLoginId_A, 0) > 0 OrElse GetSessionInt(SessLoginId_B, 0) > 0 Then Return False
-            Return Session.IsNewSession AndAlso HasExistingAspNetSessionCookie()
-        Catch
-            Return False
-        End Try
-    End Function
-
-    Private Function IsStaleLoggedCartSessionRequest() As Boolean
-        Try
-            If Session Is Nothing OrElse Request Is Nothing Then Return False
-            If IsLoginRequiredCartRequest() Then Return False
-            If Not String.Equals(Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) Then Return False
-            If GetSessionInt(SessLoginId_A, 0) > 0 OrElse GetSessionInt(SessLoginId_B, 0) > 0 Then Return False
-            If IsLikelyExpiredCartSession() Then Return True
-
-            Return HasExistingAspNetSessionCookie() AndAlso HasRememberedLoginUsernameCookie()
-        Catch
-            Return False
-        End Try
-    End Function
-
-    Private Sub RedirectToCartSessionExpiredLogin()
-        _cartSessionExpiredRedirectIssued = True
-        Try
-            Session("StavonelCarrello") = 1
-        Catch
-        End Try
-        Response.Redirect(CartSessionExpiredLoginUrl, False)
-        Context.ApplicationInstance.CompleteRequest()
-    End Sub
-
     Private Function GuardCartSessionForSensitiveAction() As Boolean
-        If _cartSessionExpiredRedirectIssued OrElse IsLikelyExpiredCartSession() Then
-            RedirectToCartSessionExpiredLogin()
-            Return False
-        End If
+        ' L'accesso al carrello e alle sue righe non richiede autenticazione.
+        ' Il login resta obbligatorio soltanto nel passaggio checkout/ordine.
         Return True
     End Function
 
@@ -706,14 +614,7 @@ Private _cartLoginRequiredFastPathActive As Boolean = False
     End Function
 
     Private Sub ApplyLoginRequiredAnonymousFastPath()
-        _cartLoginRequiredFastPathActive = True
-
         If pnlLoginRequired IsNot Nothing Then pnlLoginRequired.Visible = True
-        If CartItemsWrap IsNot Nothing Then CartItemsWrap.Visible = False
-        If CartEmptyPanel IsNot Nothing Then CartEmptyPanel.Visible = False
-        If CartActionsWrap IsNot Nothing Then CartActionsWrap.Visible = False
-        If CartSummaryColumn IsNot Nothing Then CartSummaryColumn.Visible = False
-        If Panel_Unico IsNot Nothing Then Panel_Unico.Visible = False
         If tOrdine IsNot Nothing Then tOrdine.Visible = False
         If pnlCheckoutConfirm IsNot Nothing Then pnlCheckoutConfirm.Visible = False
 
@@ -724,20 +625,6 @@ Private _cartLoginRequiredFastPathActive As Boolean = False
         If pSpedizione IsNot Nothing Then pSpedizione.Visible = False
         If pAssicurazione IsNot Nothing Then pAssicurazione.Visible = False
         If pPagamento IsNot Nothing Then pPagamento.Visible = False
-
-        If Repeater1 IsNot Nothing Then Repeater1.DataSourceID = ""
-        If gvArticoliGratis IsNot Nothing Then gvArticoliGratis.DataSourceID = ""
-        If rpCheckoutSummaryStandard IsNot Nothing Then rpCheckoutSummaryStandard.DataSourceID = ""
-        If rpCheckoutSummaryGratis IsNot Nothing Then rpCheckoutSummaryGratis.DataSourceID = ""
-    End Sub
-
-    Private Sub ApplyStaleLoggedCartSessionFastPath()
-        Try
-            Session("StavonelCarrello") = 1
-        Catch
-        End Try
-
-        ApplyLoginRequiredAnonymousFastPath()
     End Sub
 
     Private Function GetUtentiIdSafe(Optional ByVal defaultVal As Integer = 0) As Integer
@@ -797,16 +684,6 @@ Private _cartLoginRequiredFastPathActive As Boolean = False
         Session(CartPriceRevalidationHelper.SessionMessageKey) = Nothing
         Session(CartPriceRevalidationHelper.SessionChangedKey) = Nothing
     End Sub
-
-    Private Function RevalidateCartPricesBeforeOrder() As Boolean
-        Dim result As CartPriceRevalidationResult = CartPriceRevalidationHelper.RevalidateCurrentCart(HttpContext.Current, True)
-        If result Is Nothing OrElse Not (result.HasChanges OrElse result.HasBlockingError) Then Return True
-
-        CartPriceRevalidationHelper.StoreResultInSession(HttpContext.Current, result)
-        SetCheckoutStep("confirm")
-        SafeRedirectLocal("carrello.aspx?pricechanged=1")
-        Return False
-    End Function
 
     Private Function GetOrderNotesText() As String
         If txtNoteSpedizione Is Nothing OrElse txtNoteSpedizione.Text Is Nothing Then Return ""
@@ -1887,9 +1764,7 @@ Private _cartLoginRequiredFastPathActive As Boolean = False
     r.ArtId = SafeInt(If(tbArtID IsNot Nothing, tbArtID.Text, 0), 0)
     r.TCId = SafeInt(If(tbTCID IsNot Nothing, tbTCID.Text, -1), -1)
 
-    Dim q As Integer = SafeInt(If(tbQta IsNot Nothing, tbQta.Text, 0), 0)
-    If q < 0 Then q = 0
-    r.Qnt = CLng(q)
+    r.Qnt = ParseDecimalForDb(If(tbQta IsNot Nothing, tbQta.Text, 0), 0D)
 
     Return r
     End Function
@@ -1905,20 +1780,10 @@ Private _cartLoginRequiredFastPathActive As Boolean = False
 
         If IsLoginRequiredAnonymousFastPath(loginRequiredLoginId) Then
             ApplyLoginRequiredAnonymousFastPath()
-            Return
-        End If
-
-        If IsStaleLoggedCartSessionRequest() Then
-            ApplyStaleLoggedCartSessionFastPath()
-            Return
         End If
 
         ' Standard carrello: 30 minuti, allineato a web.config.
         Session.Timeout = 30
-        If IsLikelyExpiredCartSession() Then
-            RedirectToCartSessionExpiredLogin()
-            Return
-        End If
         If Session("DESTINAZIONEALTERNATIVA") Is Nothing Then
             Session("DESTINAZIONEALTERNATIVA") = 0
         End If
@@ -1948,7 +1813,6 @@ Private _cartLoginRequiredFastPathActive As Boolean = False
 
     If IsLoginRequiredAnonymousFastPath(loginId) Then
         ApplyLoginRequiredAnonymousFastPath()
-        Return
     End If
 
     If Not Page.IsPostBack Then
@@ -1956,7 +1820,6 @@ Private _cartLoginRequiredFastPathActive As Boolean = False
         If initialPriceCheck IsNot Nothing AndAlso (initialPriceCheck.HasChanges OrElse initialPriceCheck.HasBlockingError) Then
             CartPriceRevalidationHelper.StoreResultInSession(HttpContext.Current, initialPriceCheck)
         End If
-        Aggiorna_Prezzi_Carrello()
     End If
 
     ' Il carrello deve essere bindato anche per utenti anonimi.
@@ -2000,7 +1863,7 @@ Private _cartLoginRequiredFastPathActive As Boolean = False
         Sqlstring = Sqlstring + " LEFT OUTER JOIN colori ON articoli_tagliecolori.coloreid = colori.id"
 
         If LoginId = 0 Then
-            WhereUserId = "(SessionId=@SessionId)"
+            WhereUserId = "(COALESCE(LoginId,0)<=0 AND SessionId=@SessionId)"
         Else
             WhereUserId = "(LoginId=@LoginId)"
         End If
@@ -2047,7 +1910,7 @@ Private _cartLoginRequiredFastPathActive As Boolean = False
 
     Dim loginOrSessionId As String = ""
     If LoginId = 0 Then
-        loginOrSessionId = "SessionID=@SessionId"
+        loginOrSessionId = "COALESCE(LoginId,0)<=0 AND SessionID=@SessionId"
         params.Add("@SessionId", If(Me.Session IsNot Nothing, Me.Session.SessionID, ""))
     Else
         loginOrSessionId = "LoginId=@LoginId"
@@ -2073,13 +1936,7 @@ Private _cartLoginRequiredFastPathActive As Boolean = False
 
 	
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
-        If _cartSessionExpiredRedirectIssued Then Return
         Me.Title = Me.Title & " - Il tuo Carrello"
-
-        If _cartLoginRequiredFastPathActive Then
-            ApplyLoginRequiredAnonymousFastPath()
-            Return
-        End If
 		
         Dim LoginId As Integer = GetSessionInt("LoginId", 0)
 
@@ -2105,8 +1962,6 @@ Private _cartLoginRequiredFastPathActive As Boolean = False
     End Sub
 
     Protected Sub Repeater1_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Repeater1.PreRender
-        If _cartLoginRequiredFastPathActive Then Return
-
         Dim i As Integer
 
         'Carrello Normale
@@ -3362,8 +3217,6 @@ End Sub
 End Function
 
     Protected Sub gvArticoliGratis_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles gvArticoliGratis.PreRender
-    If _cartLoginRequiredFastPathActive Then Return
-
     Dim i As Integer
 
     For i = 0 To gvArticoliGratis.Items.Count - 1
@@ -3558,7 +3411,6 @@ End Sub
     End Sub
 
     Protected Sub Page_PreRenderComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRenderComplete
-        If _cartSessionExpiredRedirectIssued Then Return
         Dim imponibileVal As Double = SafeDbl(lblImponibile.Text, 0)
         Dim speseAssVal As Double = SafeDbl(lblSpeseAss.Text, 0)
         Dim speseSpedVal As Double = SafeDbl(lblSpeseSped.Text, 0)
@@ -3730,7 +3582,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
         If Repeater1.items.Count > 0 Then
             For Each row In Repeater1.items
                 Dim Qta As TextBox = row.FindControl("tbQta")
-                If (SafeInt(Qta.Text, 0) <= 0) Then
+                If (ParseDecimalForDb(Qta.Text, 0D) <= 0D) Then
                     Return 0
                 End If
             Next
@@ -3740,7 +3592,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
         If Me.gvArticoliGratis.items.Count > 0 Then
             For Each row In gvArticoliGratis.items
                 Dim Qta As TextBox = row.FindControl("tbQta")
-                If (SafeInt(Qta.Text, 0) <= 0) Then
+                If (ParseDecimalForDb(Qta.Text, 0D) <= 0D) Then
                     Return 0
                 End If
             Next
@@ -3750,259 +3602,78 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
     End Function
 
     Sub Aggiorna_Prezzi_Carrello()
+        If _carrelloAggiornatoThisRequest Then Exit Sub
+        _carrelloAggiornatoThisRequest = True
 
-    If _carrelloAggiornatoThisRequest Then Exit Sub
-    _carrelloAggiornatoThisRequest = True
-
-    If (controlla_articoli_quantita_zero() = 0) Then
-        Qnt_Errata.Visible = True
-        ' continuo comunque: salvo Qnt=0 come da logica originale
-    End If
-
-    ' 1) Raccolgo righe dal Repeater (normali + gratis) UNA volta
-    Dim rows As New List(Of CartRowInfo)
-
-    If Repeater1 IsNot Nothing AndAlso Repeater1.Items IsNot Nothing AndAlso Repeater1.Items.Count > 0 Then
-        For Each it As RepeaterItem In Repeater1.Items
-            Dim r As CartRowInfo = ReadCartRowFromItem(it)
-            If r.Id > 0 AndAlso r.ArtId > 0 Then rows.Add(r)
-        Next
-    End If
-
-    If gvArticoliGratis IsNot Nothing AndAlso gvArticoliGratis.Items IsNot Nothing AndAlso gvArticoliGratis.Items.Count > 0 Then
-        For Each it As RepeaterItem In gvArticoliGratis.Items
-            Dim r As CartRowInfo = ReadCartRowFromItem(it)
-            If r.Id > 0 AndAlso r.ArtId > 0 Then rows.Add(r)
-        Next
-    End If
-
-    If rows.Count = 0 Then Exit Sub
-
-    ' 2) Lista ArtId univoci
-    Dim artIds As New List(Of Integer)
-    Dim seen As New HashSet(Of Integer)
-    For Each r As CartRowInfo In rows
-        If Not seen.Contains(r.ArtId) Then
-            seen.Add(r.ArtId)
-            artIds.Add(r.ArtId)
+        Dim rows As New List(Of CartRowInfo)()
+        If Repeater1 IsNot Nothing AndAlso Repeater1.Items IsNot Nothing Then
+            For Each item As RepeaterItem In Repeater1.Items
+                Dim row As CartRowInfo = ReadCartRowFromItem(item)
+                If row.Id > 0 AndAlso row.ArtId > 0 Then rows.Add(row)
+            Next
         End If
-    Next
-
-    Dim listino As Integer = SafeInt(GetListinoSafe(0), 0)
-    Dim ivaUtentePct As Double = SafeDbl(Session("Iva_Utente"), -1) ' qui Ã¨ â€œ%â€ (o id=valore, come nel tuo impianto)
-    Dim abRC As Boolean = (SafeInt(Session("AbilitatoIvaReverseCharge"), 0) = 1)
-
-    Dim idEsenzioneIva As Integer = SafeInt(Session("IdEsenzioneIva"), -1)
-    Dim valoreEsenzioneIva As Double = SafeDbl(Session("Iva_Utente"), -1)
-    Dim descrEsenzioneIva As String = If(TryCast(Session("DescrizioneEsenzioneIva"), String), "")
-
-    Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
-        conn.Open()
-
-        ' 3) Carico vsuperarticoli per tutti gli ArtId con UNA query
-        Dim vsup As New Dictionary(Of Integer, List(Of VsuperInfo))
-
-        Using cmdV As New MySqlCommand()
-            cmdV.Connection = conn
-            cmdV.CommandType = CommandType.Text
-
-            Dim inNames As New List(Of String)
-            For i As Integer = 0 To artIds.Count - 1
-                Dim pName As String = "@a" & i.ToString()
-                inNames.Add(pName)
-                cmdV.Parameters.AddWithValue(pName, artIds(i))
+        If gvArticoliGratis IsNot Nothing AndAlso gvArticoliGratis.Items IsNot Nothing Then
+            For Each item As RepeaterItem In gvArticoliGratis.Items
+                Dim row As CartRowInfo = ReadCartRowFromItem(item)
+                If row.Id > 0 AndAlso row.ArtId > 0 Then rows.Add(row)
             Next
+        End If
 
-            cmdV.Parameters.AddWithValue("@listino", listino)
+        If rows.Count = 0 Then Exit Sub
 
-            cmdV.CommandText =
-                "SELECT ID, TCid, prezzo, prezzoIvato, InOfferta, OfferteDataInizio, OfferteDataFine, " &
-                "OfferteQntMinima, OfferteMultipli, OfferteDettagliId, prezzopromo, prezzopromoIvato, " &
-                "IdIvaRC, ValoreIvaRC, DescrizioneIvaRC " &
-                "FROM vsuperarticoli " &
-                "WHERE NListino=@listino AND ID IN (" & String.Join(",", inNames) & ") " &
-                "ORDER BY ID, CASE WHEN COALESCE(TCid,-1) IN (-1,0) THEN 0 ELSE 1 END, PrezzoPromo DESC"
+        Dim requests As New List(Of CartQuantityMutationRequest)()
+        For Each row As CartRowInfo In rows
+            If row.Qnt <= 0D Then
+                Qnt_Errata.Visible = True
+                Dim invalidQuantity As New CartPriceRevalidationResult() With {
+                    .HasBlockingError = True,
+                    .ErrorMessage = "La quantità richiesta non è valida."
+                }
+                _cartPriceRevalidationBlockedThisRequest = True
+                CartPriceRevalidationHelper.StoreResultInSession(HttpContext.Current, invalidQuantity)
+                Exit Sub
+            End If
+            requests.Add(New CartQuantityMutationRequest() With {.CartRowId = row.Id, .Quantity = row.Qnt})
+        Next
 
-            Using dr As MySqlDataReader = cmdV.ExecuteReader()
-                While dr.Read()
-                    Dim id As Integer = SafeInt(dr("ID"), 0)
-                    If id <= 0 Then Continue While
-
-                    Dim info As New VsuperInfo()
-                    info.TCId = SafeInt(dr("TCid"), -1)
-                    info.Prezzo = SafeDbl(dr("prezzo"), 0)
-                    info.PrezzoIvato = SafeDbl(dr("prezzoIvato"), 0)
-                    info.InOfferta = SafeInt(dr("InOfferta"), 0)
-
-                    If Not IsDBNull(dr("OfferteDataInizio")) Then info.OfferteDataInizio = CDate(dr("OfferteDataInizio"))
-                    If Not IsDBNull(dr("OfferteDataFine")) Then info.OfferteDataFine = CDate(dr("OfferteDataFine"))
-
-                    info.OfferteQntMinima = CLng(SafeInt(dr("OfferteQntMinima"), 0))
-                    info.OfferteMultipli = CLng(SafeInt(dr("OfferteMultipli"), 0))
-                    info.OfferteDettagliId = CLng(SafeDbl(dr("OfferteDettagliId"), 0))
-
-                    info.PrezzoPromo = SafeDbl(dr("prezzopromo"), 0)
-                    info.PrezzoPromoIvato = SafeDbl(dr("prezzopromoIvato"), 0)
-
-                    info.IdIvaRC = SafeInt(dr("IdIvaRC"), -1)
-                    info.ValoreIvaRC = SafeDbl(dr("ValoreIvaRC"), -1)
-                    info.DescrizioneIvaRC = If(TryCast(dr("DescrizioneIvaRC"), String), "")
-
-                    If Not vsup.ContainsKey(id) Then
-                        vsup(id) = New List(Of VsuperInfo)
-                    End If
-                    vsup(id).Add(info)
-                End While
-            End Using
-        End Using
-
-        ' 4) Preparo UPDATE UNA volta (N esecuzioni, stessa connessione)
-        Using cmdU As New MySqlCommand()
-            cmdU.Connection = conn
-            cmdU.CommandType = CommandType.Text
-            cmdU.CommandText =
-                "UPDATE carrello SET " &
-                "Qnt=@Qnt, " &
-                "IdIvaRC=@IdIvaRC, ValoreIvaRC=@ValoreIvaRC, DescrizioneIvaRC=@DescrizioneIvaRC, " &
-                "IdEsenzioneIva=@IdEsenzioneIva, ValoreEsenzioneIva=@ValoreEsenzioneIva, DescrizioneEsenzioneIva=@DescrizioneEsenzioneIva " &
-                "WHERE ID=@id"
-
-            cmdU.Parameters.Add("@Qnt", MySqlDbType.Int64)
-            cmdU.Parameters.Add("@IdIvaRC", MySqlDbType.Int32)
-            cmdU.Parameters.Add("@ValoreIvaRC", MySqlDbType.Double)
-            cmdU.Parameters.Add("@DescrizioneIvaRC", MySqlDbType.VarChar)
-            cmdU.Parameters.Add("@IdEsenzioneIva", MySqlDbType.Int32)
-            cmdU.Parameters.Add("@ValoreEsenzioneIva", MySqlDbType.Double)
-            cmdU.Parameters.Add("@DescrizioneEsenzioneIva", MySqlDbType.VarChar)
-            cmdU.Parameters.Add("@id", MySqlDbType.Int32)
-
-            Dim cmdQtyOnly As New MySqlCommand("UPDATE carrello SET Qnt=@Qnt WHERE ID=@id", conn)
-            cmdQtyOnly.CommandType = CommandType.Text
-            cmdQtyOnly.Parameters.Add("@Qnt", MySqlDbType.Int64)
-            cmdQtyOnly.Parameters.Add("@id", MySqlDbType.Int32)
-
-            Dim today As Date = Date.Today
-
-            For Each r As CartRowInfo In rows
-
-                If Not vsup.ContainsKey(r.ArtId) OrElse vsup(r.ArtId).Count = 0 Then
-                    ' Se il listino non torna righe, non azzero i prezzi giÃ  validi: salvo solo la quantitÃ .
-                    cmdQtyOnly.Parameters("@Qnt").Value = r.Qnt
-                    cmdQtyOnly.Parameters("@id").Value = r.Id
-                    cmdQtyOnly.ExecuteNonQuery()
-                    Continue For
-                End If
-
-                Dim lst As List(Of VsuperInfo) = vsup(r.ArtId)
-                Dim exactRows As List(Of VsuperInfo) = lst.FindAll(Function(x) x.TCId = r.TCId)
-                If exactRows.Count = 0 AndAlso r.TCId <= 0 Then
-                    exactRows = lst.FindAll(Function(x) x.TCId <= 0)
-                End If
-                If exactRows.Count > 0 Then lst = exactRows
-
-                Dim baseRow As VsuperInfo = lst(0)
-
-                Dim prezzo As Double = baseRow.Prezzo
-                Dim prezzoIvato As Double = 0
-                Dim offId As Long = 0
-                Dim promoApplied As Boolean = False
-                Dim chosenPromoRow As VsuperInfo = Nothing
-
-                ' Replica logica originale: scorro tutte le righe (ordinate per PrezzoPromo DESC)
-                ' e tengo lâ€™ULTIMA promo valida che matcha (quindi, di fatto, il prezzo promo piÃ¹ basso)
-                For Each info As VsuperInfo In lst
-                    If info.InOfferta = 1 AndAlso info.OfferteDataInizio.HasValue AndAlso info.OfferteDataFine.HasValue Then
-                        If info.OfferteDataInizio.Value.Date <= today AndAlso info.OfferteDataFine.Value.Date >= today Then
-
-                            Dim match As Boolean = False
-                            If info.OfferteQntMinima > 0 AndAlso r.Qnt >= info.OfferteQntMinima Then match = True
-                            If (Not match) AndAlso info.OfferteMultipli > 0 AndAlso (r.Qnt Mod info.OfferteMultipli = 0) Then match = True
-
-                            If match AndAlso info.PrezzoPromo > 0 AndAlso info.Prezzo > 0 AndAlso info.PrezzoPromo < info.Prezzo Then
-                                promoApplied = True
-                                offId = info.OfferteDettagliId
-                                prezzo = info.PrezzoPromo
-                                chosenPromoRow = info
-                            End If
-
-                        End If
-                    End If
-                Next
-
-                If promoApplied AndAlso chosenPromoRow IsNot Nothing Then
-                    ' prezzoIvato su promo
-                    If abRC AndAlso chosenPromoRow.IdIvaRC > -1 Then
-                        prezzoIvato = prezzo * ((chosenPromoRow.ValoreIvaRC / 100) + 1)
-                    ElseIf ivaUtentePct > -1 Then
-                        prezzoIvato = prezzo * ((ivaUtentePct / 100) + 1)
-                    Else
-                        prezzoIvato = chosenPromoRow.PrezzoPromoIvato
-                    End If
-                Else
-                    ' prezzoIvato su base
-                    If abRC AndAlso baseRow.IdIvaRC > -1 Then
-                        prezzoIvato = prezzo * ((baseRow.ValoreIvaRC / 100) + 1)
-                    ElseIf ivaUtentePct > -1 Then
-                        prezzoIvato = prezzo * ((ivaUtentePct / 100) + 1)
-                    Else
-                        prezzoIvato = baseRow.PrezzoIvato
-                    End If
-                End If
-
-                If prezzo <= 0 OrElse prezzoIvato <= 0 Then
-                    ' Protezione anti-azzeramento: se il lookup non restituisce un
-                    ' prezzo valido, salvo solo la quantitÃ  e mantengo i prezzi DB.
-                    cmdQtyOnly.Parameters("@Qnt").Value = r.Qnt
-                    cmdQtyOnly.Parameters("@id").Value = r.Id
-                    cmdQtyOnly.ExecuteNonQuery()
-                    Continue For
-                End If
-
-                ' Reverse charge: replico logica â€œabilitato + idIvaRC validoâ€
-                Dim idIvaRC As Integer = -1
-                Dim valoreIvaRC As Double = -1
-                Dim descIvaRC As String = ""
-
-                If abRC AndAlso baseRow.IdIvaRC > -1 Then
-                    idIvaRC = baseRow.IdIvaRC
-                    valoreIvaRC = baseRow.ValoreIvaRC
-                    descIvaRC = baseRow.DescrizioneIvaRC
-                End If
-
-                cmdU.Parameters("@Qnt").Value = r.Qnt
-                ' CART-2: cambiare quantita' dal carrello non deve sostituire
-                ' il prezzo unitario salvato al momento dell'add-to-cart.
-                cmdU.Parameters("@IdIvaRC").Value = idIvaRC
-                cmdU.Parameters("@ValoreIvaRC").Value = valoreIvaRC
-                cmdU.Parameters("@DescrizioneIvaRC").Value = descIvaRC
-                cmdU.Parameters("@IdEsenzioneIva").Value = idEsenzioneIva
-                cmdU.Parameters("@ValoreEsenzioneIva").Value = valoreEsenzioneIva
-                cmdU.Parameters("@DescrizioneEsenzioneIva").Value = descrEsenzioneIva
-                cmdU.Parameters("@id").Value = r.Id
-
-                cmdU.ExecuteNonQuery()
-            Next
-
-        End Using
-    End Using
-
+        Dim loginId As Integer = GetLoginIdSafe(0)
+        Dim sessionId As String = If(Me.Session IsNot Nothing, Me.Session.SessionID, String.Empty)
+        Dim listino As Integer = GetListinoSafe(1)
+        Dim revalidation As CartPriceRevalidationResult = CartMutationService.UpdateStandardQuantities(
+            HttpContext.Current, loginId, sessionId, listino, requests)
+        If revalidation Is Nothing OrElse revalidation.HasBlockingError OrElse revalidation.HasChanges Then
+            _cartPriceRevalidationBlockedThisRequest = True
+            CartPriceRevalidationHelper.StoreResultInSession(HttpContext.Current, revalidation)
+        End If
     End Sub
-
-
     Protected Sub btSvuota_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btSvuota.Click
         If Not IsAddressEditorActionAllowed(sender) Then Return
         Dim LoginId As Integer = GetLoginIdSafe(0)
         Dim SessionID As String = Me.Session.SessionID
-        Me.sdsArticoli.DeleteParameters.Clear()
-        If LoginId = 0 Then
-            Me.sdsArticoli.DeleteParameters.Add("@SessionID", SessionID)
-            Me.sdsArticoli.DeleteCommand = "delete from carrello where (SessionID=@SessionID)"
-        Else
-            Me.sdsArticoli.DeleteParameters.Add("@LoginId", LoginId)
-            Me.sdsArticoli.DeleteCommand = "delete from carrello where (LoginId=@LoginId)"
-        End If
+        Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+            conn.Open()
+            Using cmd As New MySqlCommand()
+                cmd.Connection = conn
+                cmd.CommandText = "DELETE FROM carrello WHERE " & If(LoginId > 0, "LoginId=@LoginId", "SessionId=@SessionId")
+                If LoginId > 0 Then
+                    cmd.Parameters.Add("@LoginId", MySqlDbType.Int32).Value = LoginId
+                Else
+                    cmd.Parameters.Add("@SessionId", MySqlDbType.VarChar, 50).Value = SessionID
+                End If
+                cmd.ExecuteNonQuery()
+            End Using
 
-        Me.sdsArticoli.Delete()
+            Using verify As New MySqlCommand("SELECT COUNT(*) FROM carrello WHERE " & If(LoginId > 0, "LoginId=@LoginId", "SessionId=@SessionId"), conn)
+                If LoginId > 0 Then
+                    verify.Parameters.Add("@LoginId", MySqlDbType.Int32).Value = LoginId
+                Else
+                    verify.Parameters.Add("@SessionId", MySqlDbType.VarChar, 50).Value = SessionID
+                End If
+                If Convert.ToInt32(verify.ExecuteScalar(), CultureInfo.InvariantCulture) <> 0 Then
+                    Throw New InvalidOperationException("Owned cart clear did not remove all expected rows.")
+                End If
+            End Using
+        End Using
     End Sub
 
     Protected Sub btCompleta_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btCompleta.Click
@@ -4015,6 +3686,11 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
 
         'Aggiorno i prodotti e il prezzo
         Aggiorna_Prezzi_Carrello()
+        If _cartPriceRevalidationBlockedThisRequest Then
+            SetCheckoutStep("cart")
+            SafeRedirectLocal("carrello.aspx?pricechanged=1")
+            Return
+        End If
 
         'Disabilito il completa ordine, quando giÃ  cliccato
         Me.btCompleta.Visible = False
@@ -4066,6 +3742,17 @@ End Sub
 
 Protected Sub lnkCheckoutStep2_Click(ByVal sender As Object, ByVal e As System.EventArgs)
     If Not IsAddressEditorActionAllowed(sender) Then Return
+    If GetLoginIdSafe(0) <= 0 Then
+        Session.Item("StavonelCarrello") = 1
+        SafeRedirectLocal("/carrello.aspx?loginrequired=1#ksCartLoginRequired")
+        Return
+    End If
+    Aggiorna_Prezzi_Carrello()
+    If _cartPriceRevalidationBlockedThisRequest Then
+        SetCheckoutStep("cart")
+        SafeRedirectLocal("carrello.aspx?pricechanged=1")
+        Return
+    End If
     SetCheckoutStep("checkout")
     ApplyCheckoutStepUi()
 End Sub
@@ -4076,7 +3763,17 @@ Protected Sub lnkCheckoutStep3_Click(ByVal sender As Object, ByVal e As System.E
 End Sub
 
 Private Sub MoveToCheckoutConfirmStep()
+    If GetLoginIdSafe(0) <= 0 Then
+        Session.Item("StavonelCarrello") = 1
+        SafeRedirectLocal("/carrello.aspx?loginrequired=1#ksCartLoginRequired")
+        Return
+    End If
     Aggiorna_Prezzi_Carrello()
+    If _cartPriceRevalidationBlockedThisRequest Then
+        SetCheckoutStep("cart")
+        SafeRedirectLocal("carrello.aspx?pricechanged=1")
+        Return
+    End If
     LeggiVettori()
     LeggiPagamenti()
     If Not ValidateCheckoutBeforeConfirm() Then
@@ -5152,6 +4849,11 @@ End Sub
 
 Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btInviaOrdine.Click
     If Not IsAddressEditorActionAllowed(sender) Then Return
+    If GetLoginIdSafe(0) <= 0 Then
+        Session.Item("StavonelCarrello") = 1
+        SafeRedirectLocal("/carrello.aspx?loginrequired=1#ksCartLoginRequired")
+        Return
+    End If
     If Not IsCheckoutConfirmStep() Then
         SetCheckoutStep("checkout")
         SetAddressSelectionMessage("Rivedi il riepilogo finale prima di confermare l'ordine.")
@@ -5167,14 +4869,19 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
     SetTermsConsentError("")
     Me.PnlDestinazione.Visible = False
     If Not ValidateOrderNotesLength() Then Return
-    If Not RevalidateCartPricesBeforeOrder() Then Return
 
+    Dim shouldSendOrder As Boolean = False
     Try
         LeggiVettori()
         Aggiorna_Prezzi_Carrello()
+        If _cartPriceRevalidationBlockedThisRequest Then
+            SetCheckoutStep("confirm")
+            SafeRedirectLocal("carrello.aspx?pricechanged=1")
+            Return
+        End If
         ApplyCurrentShippingAddress()
 
-        If (controlla_articoli_quantita_zero() = 1) Then
+        If Not _cartPriceRevalidationBlockedThisRequest AndAlso (controlla_articoli_quantita_zero() = 1) Then
 
             LeggiPagamenti()
 
@@ -5198,6 +4905,8 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
                 End Try
             End If
 
+            shouldSendOrder = True
+
         Else
             Qnt_Errata.Visible = True
         End If
@@ -5205,17 +4914,12 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
     Catch ex As Exception
         LogEx(ex, "btInviaOrdine_Click")
         ' (mantengo logica originale: nessun messaggio utente)
-    Finally
-        If (controlla_articoli_quantita_zero() = 1) Then
-            If (GetLoginIdSafe(0) > 0) Then
-                Cookie = "N"
-                SendOrder()
-            Else
-                Session.Item("StavonelCarrello") = 1
-                Response.Redirect("accessonegato.aspx")
-            End If
-        End If
     End Try
+
+    If shouldSendOrder AndAlso Not _cartPriceRevalidationBlockedThisRequest Then
+        Cookie = "N"
+        SendOrder()
+    End If
     End Sub
 
 ' =========================

@@ -7273,6 +7273,9 @@ html:not([dir=rtl]) .noUi-horizontal .noUi-handle {
 .tf-table-page-cart .remove {
   cursor: pointer;
 }
+.ks-cart-page .tf-table-page-cart .remove {
+  position: relative;
+}
 .tf-table-page-cart .tf-cart-item {
   border-bottom: 1px solid var(--gray-5);
 }

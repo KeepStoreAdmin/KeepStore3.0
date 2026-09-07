@@ -84,16 +84,12 @@
 
             <asp:SqlDataSource ID="sdsArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                 EnableViewState="False" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                SelectCommand="SELECT vcarrello.*, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine, taglie.descrizione AS taglia, colori.descrizione AS colore FROM vcarrello LEFT OUTER JOIN articoli ON vcarrello.ArticoliId = articoli.id LEFT OUTER JOIN articoli_tagliecolori ON vcarrello.TCid = articoli_tagliecolori.id LEFT OUTER JOIN taglie ON articoli_tagliecolori.tagliaid = taglie.id LEFT OUTER JOIN colori ON articoli_tagliecolori.coloreid = colori.id WHERE (articoli.SpedizioneGratis_Listini IS NULL) ORDER BY vcarrello.id"
-                DeleteCommand="delete from carrello where (Id = ?Id)"
-                UpdateCommand="update carrello set qnt = ?Qnt where (Id = ?Id)">
+                SelectCommand="SELECT vcarrello.*, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine, taglie.descrizione AS taglia, colori.descrizione AS colore FROM vcarrello LEFT OUTER JOIN articoli ON vcarrello.ArticoliId = articoli.id LEFT OUTER JOIN articoli_tagliecolori ON vcarrello.TCid = articoli_tagliecolori.id LEFT OUTER JOIN taglie ON articoli_tagliecolori.tagliaid = taglie.id LEFT OUTER JOIN colori ON articoli_tagliecolori.coloreid = colori.id WHERE (articoli.SpedizioneGratis_Listini IS NULL) ORDER BY vcarrello.id">
             </asp:SqlDataSource>
 
             <asp:SqlDataSource ID="sdsArticoli_Spedizione_Gratis" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                 EnableViewState="False" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                SelectCommand="SELECT vcarrello.*, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine, taglie.descrizione AS taglia, colori.descrizione AS colore FROM vcarrello LEFT OUTER JOIN articoli ON vcarrello.ArticoliId = articoli.id LEFT OUTER JOIN articoli_tagliecolori ON vcarrello.TCid = articoli_tagliecolori.id LEFT OUTER JOIN taglie ON articoli_tagliecolori.tagliaid = taglie.id LEFT OUTER JOIN colori ON articoli_tagliecolori.coloreid = colori.id WHERE (articoli.SpedizioneGratis_Listini IS NOT NULL) ORDER BY vcarrello.id"
-                DeleteCommand="delete from carrello where (Id = ?Id)"
-                UpdateCommand="update carrello set qnt = ?Qnt where (Id = ?Id)">
+                SelectCommand="SELECT vcarrello.*, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine, taglie.descrizione AS taglia, colori.descrizione AS colore FROM vcarrello LEFT OUTER JOIN articoli ON vcarrello.ArticoliId = articoli.id LEFT OUTER JOIN articoli_tagliecolori ON vcarrello.TCid = articoli_tagliecolori.id LEFT OUTER JOIN taglie ON articoli_tagliecolori.tagliaid = taglie.id LEFT OUTER JOIN colori ON articoli_tagliecolori.coloreid = colori.id WHERE (articoli.SpedizioneGratis_Listini IS NOT NULL) ORDER BY vcarrello.id">
             </asp:SqlDataSource>
             <div id="CartItemsWrap" runat="server" class="row g-4 ks-cart-step-cart-body">
                 <div class="col-12">

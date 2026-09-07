@@ -46,15 +46,37 @@ Public Class ProductPromotionEligibilityOffer
     End Function
 End Class
 
+Public Enum ProductPromotionEligibilityLoadStatus
+    Success = 0
+    InvalidRequest = 1
+    TechnicalError = 2
+    AmbiguousCommercialRule = 3
+End Enum
+
 Public Class ProductPromotionEligibilityResult
     Public Sub New()
         AuthorizedOffers = New List(Of ProductPromotionEligibilityOffer)()
+        Status = ProductPromotionEligibilityLoadStatus.Success
     End Sub
 
     Public Property BasePriceNet As Decimal
     Public Property BasePriceGross As Decimal
     Public Property AuthorizedOffers As List(Of ProductPromotionEligibilityOffer)
     Public Property AppliedOffer As ProductPromotionEligibilityOffer
+    Public Property Status As ProductPromotionEligibilityLoadStatus
+
+    Public ReadOnly Property HasTechnicalError As Boolean
+        Get
+            Return Status = ProductPromotionEligibilityLoadStatus.TechnicalError
+        End Get
+    End Property
+
+    Public ReadOnly Property HasBlockingError As Boolean
+        Get
+            Return Status = ProductPromotionEligibilityLoadStatus.TechnicalError OrElse
+                   Status = ProductPromotionEligibilityLoadStatus.AmbiguousCommercialRule
+        End Get
+    End Property
 
     Public ReadOnly Property HasAppliedOffer As Boolean
         Get
@@ -75,6 +97,16 @@ Public Class ProductPromotionEligibilityResult
             Return BasePriceGross
         End Get
     End Property
+End Class
+
+Friend Class ProductPromotionEligibilitySnapshot
+    Public Sub New()
+        OffersByArticle = New Dictionary(Of Integer, List(Of ProductPromotionEligibilityRawOffer))()
+        Status = ProductPromotionEligibilityLoadStatus.Success
+    End Sub
+
+    Public Property OffersByArticle As Dictionary(Of Integer, List(Of ProductPromotionEligibilityRawOffer))
+    Public Property Status As ProductPromotionEligibilityLoadStatus
 End Class
 
 Friend Class ProductPromotionEligibilityRawOffer
@@ -137,13 +169,57 @@ Public Module ProductPromotionEligibilityResolver
            articleId <= 0 OrElse
            basePriceNet <= 0D OrElse
            basePriceGross <= 0D Then
+            result.Status = ProductPromotionEligibilityLoadStatus.InvalidRequest
             Return result
         End If
 
-        Dim snapshot As Dictionary(Of Integer, List(Of ProductPromotionEligibilityRawOffer)) =
-            LoadAuthorizedSnapshot(connectionString, eligibilityContext)
+        Dim snapshot As ProductPromotionEligibilitySnapshot = LoadAuthorizedSnapshot(connectionString, eligibilityContext)
+        Return ResolveFromSnapshot(result, snapshot, eligibilityContext, articleId, tcId, quantity, basePriceNet, basePriceGross)
+    End Function
+
+    Public Function Resolve(ByVal conn As MySqlConnection,
+                            ByVal transaction As MySqlTransaction,
+                            ByVal eligibilityContext As ProductPromotionEligibilityContext,
+                            ByVal articleId As Integer,
+                            ByVal tcId As Integer,
+                            ByVal quantity As Decimal,
+                            ByVal basePriceNet As Decimal,
+                            ByVal basePriceGross As Decimal) As ProductPromotionEligibilityResult
+        Dim result As New ProductPromotionEligibilityResult() With {
+            .BasePriceNet = basePriceNet,
+            .BasePriceGross = basePriceGross
+        }
+
+        If conn Is Nothing OrElse conn.State <> ConnectionState.Open OrElse
+           transaction Is Nothing OrElse eligibilityContext Is Nothing OrElse
+           eligibilityContext.CompanyId <= 0 OrElse eligibilityContext.Listino <= 0 OrElse
+           articleId <= 0 OrElse basePriceNet <= 0D OrElse basePriceGross <= 0D Then
+            result.Status = ProductPromotionEligibilityLoadStatus.InvalidRequest
+            Return result
+        End If
+
+        Dim snapshot As ProductPromotionEligibilitySnapshot =
+            LoadAuthorizedSnapshot(conn, transaction, eligibilityContext, False, True, articleId)
+        Return ResolveFromSnapshot(result, snapshot, eligibilityContext, articleId, tcId, quantity, basePriceNet, basePriceGross)
+    End Function
+
+    Private Function ResolveFromSnapshot(ByVal result As ProductPromotionEligibilityResult,
+                                         ByVal snapshot As ProductPromotionEligibilitySnapshot,
+                                         ByVal eligibilityContext As ProductPromotionEligibilityContext,
+                                         ByVal articleId As Integer,
+                                         ByVal tcId As Integer,
+                                         ByVal quantity As Decimal,
+                                         ByVal basePriceNet As Decimal,
+                                         ByVal basePriceGross As Decimal) As ProductPromotionEligibilityResult
+        If snapshot Is Nothing OrElse snapshot.Status = ProductPromotionEligibilityLoadStatus.TechnicalError Then
+            result.Status = ProductPromotionEligibilityLoadStatus.TechnicalError
+            Return result
+        End If
+
         Dim rawOffers As List(Of ProductPromotionEligibilityRawOffer) = Nothing
-        If snapshot Is Nothing OrElse Not snapshot.TryGetValue(articleId, rawOffers) OrElse rawOffers Is Nothing Then
+        If snapshot.OffersByArticle Is Nothing OrElse
+           Not snapshot.OffersByArticle.TryGetValue(articleId, rawOffers) OrElse
+           rawOffers Is Nothing Then
             Return result
         End If
 
@@ -154,6 +230,11 @@ Public Module ProductPromotionEligibilityResolver
             Dim isExact As Boolean = (tcId > 0 AndAlso raw.TargetTCId = tcId)
             Dim isArticleFallback As Boolean = (raw.TargetTCId <= 0)
             If Not isExact AndAlso Not isArticleFallback Then Continue For
+
+            If raw.QntMinima > 0D AndAlso raw.Multipli > 0D Then
+                LogAmbiguousCommercialRule(articleId, raw.OfferDetailId)
+                Continue For
+            End If
 
             Dim offer As ProductPromotionEligibilityOffer = BuildOffer(raw, basePriceNet, basePriceGross, isExact)
             If offer Is Nothing Then Continue For
@@ -179,71 +260,98 @@ Public Module ProductPromotionEligibilityResolver
     End Function
 
     Private Function LoadAuthorizedSnapshot(ByVal connectionString As String,
-                                            ByVal eligibilityContext As ProductPromotionEligibilityContext) As Dictionary(Of Integer, List(Of ProductPromotionEligibilityRawOffer))
-        Dim cacheKey As String = RequestCachePrefix & eligibilityContext.CacheKey
+                                            ByVal eligibilityContext As ProductPromotionEligibilityContext) As ProductPromotionEligibilitySnapshot
         Dim current As HttpContext = HttpContext.Current
+        Dim cacheKey As String = RequestCachePrefix & eligibilityContext.CacheKey
         If current IsNot Nothing AndAlso current.Items IsNot Nothing Then
-            Dim cached As Dictionary(Of Integer, List(Of ProductPromotionEligibilityRawOffer)) =
-                TryCast(current.Items(cacheKey), Dictionary(Of Integer, List(Of ProductPromotionEligibilityRawOffer)))
+            Dim cached As ProductPromotionEligibilitySnapshot = TryCast(current.Items(cacheKey), ProductPromotionEligibilitySnapshot)
             If cached IsNot Nothing Then Return cached
         End If
 
-        Dim snapshot As New Dictionary(Of Integer, List(Of ProductPromotionEligibilityRawOffer))()
-        Dim seen As New HashSet(Of String)(StringComparer.Ordinal)
         Try
             Using conn As New MySqlConnection(connectionString)
                 conn.Open()
-                Using cmd As New MySqlCommand(BuildAuthorizedOffersSql(), conn)
-                    cmd.CommandType = CommandType.Text
-                    cmd.Parameters.Add("@companyId", MySqlDbType.Int32).Value = eligibilityContext.CompanyId
-                    cmd.Parameters.Add("@listino", MySqlDbType.Int32).Value = eligibilityContext.Listino
-                    cmd.Parameters.Add("@evaluationDate", MySqlDbType.Date).Value = eligibilityContext.EvaluationDate.Date
-                    cmd.Parameters.Add("@isAuthenticated", MySqlDbType.Int32).Value = If(eligibilityContext.IsAuthenticated, 1, 0)
-                    cmd.Parameters.Add("@currentUserId", MySqlDbType.Int32).Value = If(eligibilityContext.IsAuthenticated, eligibilityContext.CurrentUserId, 0)
+                Return LoadAuthorizedSnapshot(conn, Nothing, eligibilityContext, True, False, 0)
+            End Using
+        Catch ex As Exception
+            Dim snapshot As New ProductPromotionEligibilitySnapshot()
+            snapshot.OffersByArticle.Clear()
+            snapshot.Status = ProductPromotionEligibilityLoadStatus.TechnicalError
+            LogResolverFailure(ex)
+            Return snapshot
+        End Try
+    End Function
 
-                    Using reader As MySqlDataReader = cmd.ExecuteReader()
-                        While reader.Read()
-                            Dim raw As New ProductPromotionEligibilityRawOffer() With {
-                                .ArticleId = ReadInt(reader("ArticleId"), 0),
-                                .TargetTCId = ReadInt(reader("TargetTCId"), -1),
-                                .OfferId = ReadInt(reader("OfferId"), 0),
-                                .OfferDetailId = ReadInt(reader("OfferDetailId"), 0),
-                                .OwnerUserId = ReadInt(reader("OwnerUserId"), 0),
-                                .QntMinima = ReadDecimal(reader("QntMinima"), 0D),
-                                .Multipli = ReadDecimal(reader("Multipli"), 0D),
-                                .PromoPriceNet = ReadDecimal(reader("PromoPriceNet"), 0D),
-                                .DiscountPercent = ReadDecimal(reader("DiscountPercent"), 0D),
-                                .StartsOn = ReadDate(reader("StartsOn")),
-                                .EndsOn = ReadDate(reader("EndsOn"))
-                            }
+    Private Function LoadAuthorizedSnapshot(ByVal conn As MySqlConnection,
+                                            ByVal transaction As MySqlTransaction,
+                                            ByVal eligibilityContext As ProductPromotionEligibilityContext,
+                                            ByVal useRequestCache As Boolean,
+                                            ByVal lockCommercialRows As Boolean,
+                                            ByVal articleId As Integer) As ProductPromotionEligibilitySnapshot
+        Dim cacheKey As String = RequestCachePrefix & eligibilityContext.CacheKey
+        Dim current As HttpContext = HttpContext.Current
+        If useRequestCache AndAlso current IsNot Nothing AndAlso current.Items IsNot Nothing Then
+            Dim cached As ProductPromotionEligibilitySnapshot = TryCast(current.Items(cacheKey), ProductPromotionEligibilitySnapshot)
+            If cached IsNot Nothing Then Return cached
+        End If
 
-                            If raw.ArticleId <= 0 OrElse raw.OfferId <= 0 OrElse raw.OfferDetailId <= 0 Then Continue While
-                            If Not IsOwnerAuthorized(raw.OwnerUserId, eligibilityContext) Then Continue While
-                            Dim rowKey As String = raw.ArticleId.ToString(CultureInfo.InvariantCulture) & ":" &
-                                                   raw.TargetTCId.ToString(CultureInfo.InvariantCulture) & ":" &
-                                                   raw.OfferDetailId.ToString(CultureInfo.InvariantCulture)
-                            If Not seen.Add(rowKey) Then Continue While
+        Dim snapshot As New ProductPromotionEligibilitySnapshot()
+        Dim seen As New HashSet(Of String)(StringComparer.Ordinal)
+        Try
+            Using cmd As New MySqlCommand(BuildAuthorizedOffersSql(lockCommercialRows, articleId > 0), conn, transaction)
+                cmd.CommandType = CommandType.Text
+                cmd.Parameters.Add("@companyId", MySqlDbType.Int32).Value = eligibilityContext.CompanyId
+                cmd.Parameters.Add("@listino", MySqlDbType.Int32).Value = eligibilityContext.Listino
+                cmd.Parameters.Add("@evaluationDate", MySqlDbType.Date).Value = eligibilityContext.EvaluationDate.Date
+                cmd.Parameters.Add("@isAuthenticated", MySqlDbType.Int32).Value = If(eligibilityContext.IsAuthenticated, 1, 0)
+                cmd.Parameters.Add("@currentUserId", MySqlDbType.Int32).Value = If(eligibilityContext.IsAuthenticated, eligibilityContext.CurrentUserId, 0)
+                If articleId > 0 Then cmd.Parameters.Add("@articleId", MySqlDbType.Int32).Value = articleId
 
-                            If Not snapshot.ContainsKey(raw.ArticleId) Then
-                                snapshot(raw.ArticleId) = New List(Of ProductPromotionEligibilityRawOffer)()
-                            End If
-                            snapshot(raw.ArticleId).Add(raw)
-                        End While
-                    End Using
+                Using reader As MySqlDataReader = cmd.ExecuteReader()
+                    While reader.Read()
+                        Dim raw As New ProductPromotionEligibilityRawOffer() With {
+                            .ArticleId = ReadInt(reader("ArticleId"), 0),
+                            .TargetTCId = ReadInt(reader("TargetTCId"), -1),
+                            .OfferId = ReadInt(reader("OfferId"), 0),
+                            .OfferDetailId = ReadInt(reader("OfferDetailId"), 0),
+                            .OwnerUserId = ReadInt(reader("OwnerUserId"), 0),
+                            .QntMinima = ReadDecimal(reader("QntMinima"), 0D),
+                            .Multipli = ReadDecimal(reader("Multipli"), 0D),
+                            .PromoPriceNet = ReadDecimal(reader("PromoPriceNet"), 0D),
+                            .DiscountPercent = ReadDecimal(reader("DiscountPercent"), 0D),
+                            .StartsOn = ReadDate(reader("StartsOn")),
+                            .EndsOn = ReadDate(reader("EndsOn"))
+                        }
+
+                        If raw.ArticleId <= 0 OrElse raw.OfferId <= 0 OrElse raw.OfferDetailId <= 0 Then Continue While
+                        If Not IsOwnerAuthorized(raw.OwnerUserId, eligibilityContext) Then Continue While
+                        Dim rowKey As String = raw.ArticleId.ToString(CultureInfo.InvariantCulture) & ":" &
+                                               raw.TargetTCId.ToString(CultureInfo.InvariantCulture) & ":" &
+                                               raw.OfferDetailId.ToString(CultureInfo.InvariantCulture)
+                        If Not seen.Add(rowKey) Then Continue While
+
+                        If Not snapshot.OffersByArticle.ContainsKey(raw.ArticleId) Then
+                            snapshot.OffersByArticle(raw.ArticleId) = New List(Of ProductPromotionEligibilityRawOffer)()
+                        End If
+                        snapshot.OffersByArticle(raw.ArticleId).Add(raw)
+                    End While
                 End Using
             End Using
-        Catch
-            snapshot.Clear()
+        Catch ex As Exception
+            snapshot.OffersByArticle.Clear()
+            snapshot.Status = ProductPromotionEligibilityLoadStatus.TechnicalError
+            LogResolverFailure(ex)
         End Try
 
-        If current IsNot Nothing AndAlso current.Items IsNot Nothing Then
+        If useRequestCache AndAlso current IsNot Nothing AndAlso current.Items IsNot Nothing Then
             current.Items(cacheKey) = snapshot
         End If
         Return snapshot
     End Function
 
-    Private Function BuildAuthorizedOffersSql() As String
-        Return "SELECT va.id AS ArticleId, COALESCE(od.TCId,-1) AS TargetTCId, " &
+    Private Function BuildAuthorizedOffersSql(ByVal lockCommercialRows As Boolean,
+                                              ByVal filterArticle As Boolean) As String
+        Dim sql As String = "SELECT va.id AS ArticleId, COALESCE(od.TCId,-1) AS TargetTCId, " &
                "       o.id AS OfferId, od.id AS OfferDetailId, COALESCE(o.UtentiId,0) AS OwnerUserId, " &
                "       COALESCE(o.QntMinima,0) AS QntMinima, COALESCE(o.Multipli,0) AS Multipli, " &
                "       COALESCE(o.Prezzo,0) AS PromoPriceNet, COALESCE(o.Sconto,0) AS DiscountPercent, " &
@@ -261,13 +369,41 @@ Public Module ProductPromotionEligibilityResolver
                "  AND (o.DataInizio IS NULL OR o.DataInizio<=@evaluationDate) " &
                "  AND (o.DataFine IS NULL OR o.DataFine>=@evaluationDate) " &
                "  AND (COALESCE(o.UtentiId,0)<=0 OR (@isAuthenticated=1 AND @currentUserId>0 AND o.UtentiId=@currentUserId)) " &
+               If(filterArticle, "  AND va.id=@articleId ", String.Empty) &
                "  AND EXISTS (SELECT 1 FROM articoli_listini al " &
                "              WHERE al.ArticoliId=va.id AND al.NListino=@listino " &
                "                AND (COALESCE(od.TCId,-1)<=0 OR COALESCE(al.TCId,-1)=od.TCId)) " &
                "ORDER BY va.id ASC, CASE WHEN COALESCE(od.TCId,-1)>0 THEN 0 ELSE 1 END ASC, " &
                "         CASE WHEN COALESCE(o.QntMinima,0)>0 THEN 0 ELSE 1 END ASC, " &
                "         COALESCE(o.QntMinima,0) ASC, COALESCE(o.Multipli,0) ASC, o.id ASC, od.id ASC"
+        If lockCommercialRows Then sql &= " FOR UPDATE"
+        Return sql
     End Function
+
+    Private Sub LogAmbiguousCommercialRule(ByVal articleId As Integer, ByVal offerDetailId As Integer)
+        Try
+            KeepStoreLog.Error(
+                "promotion-eligibility",
+                "Ambiguous promotion quantity rule rejected. articleId=" & articleId.ToString(CultureInfo.InvariantCulture) &
+                " offerDetailId=" & offerDetailId.ToString(CultureInfo.InvariantCulture) & ".",
+                Nothing,
+                HttpContext.Current)
+        Catch logError As Exception
+            System.Diagnostics.Trace.TraceError("promotion-eligibility ambiguous-rule logging failed. Error type: " & logError.GetType().Name & ".")
+        End Try
+    End Sub
+
+    Private Sub LogResolverFailure(ByVal ex As Exception)
+        Try
+            KeepStoreLog.Error(
+                "promotion-eligibility",
+                "Authorized promotion snapshot could not be loaded. Error type: " & ex.GetType().Name & ".",
+                Nothing,
+                HttpContext.Current)
+        Catch logError As Exception
+            System.Diagnostics.Trace.TraceError("promotion-eligibility resolver logging failed. Error type: " & logError.GetType().Name & ".")
+        End Try
+    End Sub
 
     Private Function BuildOffer(ByVal raw As ProductPromotionEligibilityRawOffer,
                                 ByVal basePriceNet As Decimal,
@@ -305,10 +441,16 @@ Public Module ProductPromotionEligibilityResolver
     Private Function BestApplicableOffer(ByVal offers As List(Of ProductPromotionEligibilityOffer),
                                          ByVal quantity As Decimal) As ProductPromotionEligibilityOffer
         If offers Is Nothing Then Return Nothing
+        Dim best As ProductPromotionEligibilityOffer = Nothing
         For Each offer As ProductPromotionEligibilityOffer In offers
-            If offer.AppliesToQuantity(quantity) Then Return offer
+            If Not offer.AppliesToQuantity(quantity) Then Continue For
+            If best Is Nothing OrElse
+               offer.PriceNet < best.PriceNet OrElse
+               (offer.PriceNet = best.PriceNet AndAlso offer.OfferDetailId < best.OfferDetailId) Then
+                best = offer
+            End If
         Next
-        Return Nothing
+        Return best
     End Function
 
     Private Function IsOwnerAuthorized(ByVal ownerUserId As Integer,
@@ -325,8 +467,6 @@ Public Module ProductPromotionEligibilityResolver
         offers.Sort(Function(left As ProductPromotionEligibilityOffer, right As ProductPromotionEligibilityOffer) As Integer
                         Dim exactCompare As Integer = If(left.IsExactVariant, 0, 1).CompareTo(If(right.IsExactVariant, 0, 1))
                         If exactCompare <> 0 Then Return exactCompare
-                        Dim ruleCompare As Integer = If(left.QntMinima > 0D, 0, 1).CompareTo(If(right.QntMinima > 0D, 0, 1))
-                        If ruleCompare <> 0 Then Return ruleCompare
                         Dim priceCompare As Integer = left.PriceNet.CompareTo(right.PriceNet)
                         If priceCompare <> 0 Then Return priceCompare
                         Return left.OfferDetailId.CompareTo(right.OfferDetailId)

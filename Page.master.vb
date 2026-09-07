@@ -1572,203 +1572,22 @@ End Function
     End Sub
 
     Public Sub AggiornaDati()
-        Dim connString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-
-        ' Se per qualche motivo non c'è LoginID/LoginId valido, esco
         Dim loginId As Integer = CurrentLoginIdSafe()
-        If loginId <= 0 Then
-            Exit Sub
-        End If
+        If loginId <= 0 Then Exit Sub
 
         Session("LoginID") = loginId
         Session("LoginId") = loginId
 
-        '==========================================================
-        ' Sincronizzo il carrello/sessione dopo il login.
-        ' L'audit dell'accesso e' gestito separatamente dal recorder condiviso.
-        '==========================================================
-        Using conn As New MySqlConnection(connString)
-            conn.Open()
+        Dim listinoLogin As Integer = 1
+        Integer.TryParse(Convert.ToString(Session("Listino")), listinoLogin)
+        If listinoLogin <= 0 Then Integer.TryParse(Convert.ToString(Session("listino")), listinoLogin)
+        If listinoLogin <= 0 Then listinoLogin = 1
 
-            Using comm As New MySqlCommand()
-                comm.Connection = conn
-                comm.CommandType = CommandType.Text
-
-                ' Sposto il carrello della sessione anonima sull'utente loggato
-                comm.CommandText = "UPDATE carrello SET LoginID = ?LoginID, SessionId = '' WHERE SessionId = ?SessionId"
-                comm.Parameters.Clear()
-                comm.Parameters.AddWithValue("?LoginID", loginId)
-                comm.Parameters.AddWithValue("?SessionId", Session.SessionID)
-                comm.ExecuteNonQuery()
-
-                ' Pulisco SessionId e imposto il listino reale dell'utente appena loggato.
-                Dim listinoLogin As Integer = 1
-                Integer.TryParse(Convert.ToString(Session("Listino")), listinoLogin)
-                If listinoLogin <= 0 Then Integer.TryParse(Convert.ToString(Session("listino")), listinoLogin)
-                If listinoLogin <= 0 Then listinoLogin = 1
-
-                comm.CommandText = "UPDATE carrello SET SessionId = '', NListino = ?NListino WHERE LoginID = ?LoginID"
-                comm.Parameters.Clear()
-                comm.Parameters.AddWithValue("?NListino", listinoLogin)
-                comm.Parameters.AddWithValue("?LoginID", loginId)
-                comm.ExecuteNonQuery()
-            End Using
-        End Using
-
-        ' Il ricalcolo prezzi storico qui sotto non Ã¨ TC-aware e puÃ² alterare
-        ' prezzi corretti appena inseriti. Il carrello aggiorna prezzi/quantitÃ 
-        ' nel proprio flusso, usando TCId e listino correnti.
-        Dim skipLegacyCartPriceRecalc As Boolean = True
-        If skipLegacyCartPriceRecalc Then Exit Sub
-
-        '==========================================================
-        ' 2) Aggiorno prezzi base del carrello e accorpo duplicati
-        '==========================================================
-        Using connControllo As New MySqlConnection(connString)
-            connControllo.Open()
-
-            Using cmdControllo As New MySqlCommand()
-                cmdControllo.Connection = connControllo
-                cmdControllo.CommandType = CommandType.Text
-                cmdControllo.CommandText = "SELECT * FROM carrello WHERE (LoginID = ?LoginID)"
-                cmdControllo.Parameters.AddWithValue("?LoginID", loginId)
-
-                Dim dsdata As New DataSet()
-                Using sqlAdp As New MySqlDataAdapter(cmdControllo)
-                    sqlAdp.Fill(dsdata, "carrello")
-                End Using
-
-                Dim i As Integer = 1
-                Dim rows As DataTable = dsdata.Tables(0)
-
-                For Each ROW As DataRow In rows.Rows
-                    Dim ArticoloID As Integer = CInt(ROW("ArticoliId"))
-                    Dim RigaId As Integer = CInt(ROW("id"))
-
-                    ' Aggiorno il prezzo dell'articolo con il listino attuale
-                    cmdControllo.CommandText = "UPDATE carrello SET Prezzo = (SELECT Prezzo FROM articoli_listini WHERE NListino = ?listino AND ArticoliId = " & ArticoloID & "), PrezzoIvato = (SELECT PrezzoIvato FROM articoli_listini WHERE NListino = ?listino AND ArticoliId = " & ArticoloID & ") WHERE id = " & RigaId
-                    cmdControllo.Parameters.Clear()
-                    cmdControllo.Parameters.AddWithValue("?listino", Session("Listino"))
-                    cmdControllo.ExecuteNonQuery()
-
-                    ' Accorpo eventuali righe duplicate per lo stesso articolo
-                    Dim j As Integer
-                    For j = i To rows.Rows.Count - 1
-                        Dim ROW_temp As DataRow = rows.Rows(j)
-                        If ROW_temp("ArticoliId").ToString() = ROW("ArticoliId").ToString() Then
-                            Dim qntExtra As Integer = CInt(ROW_temp("QNT"))
-                            Dim idExtra As Integer = CInt(ROW_temp("id"))
-
-                            cmdControllo.CommandText = "UPDATE carrello SET QNT = QNT + " & qntExtra & " WHERE id = " & RigaId
-                            cmdControllo.Parameters.Clear()
-                            cmdControllo.ExecuteNonQuery()
-
-                            cmdControllo.CommandText = "DELETE FROM carrello WHERE id = " & idExtra
-                            cmdControllo.Parameters.Clear()
-                            cmdControllo.ExecuteNonQuery()
-
-                            Exit For
-                        End If
-                    Next
-
-                    i += 1
-                Next
-
-                dsdata.Dispose()
-            End Using
-        End Using
-
-        '==========================================================
-        '3) Applico eventuali offerte/promozioni (vsuperarticoli)
-        '==========================================================
-        Dim listino As Integer = 1
-        If Not IsNothing(Session("listino")) AndAlso IsNumeric(Session("listino")) Then
-            listino = CInt(Session("listino"))
+        Dim mergeResult As CartOwnershipMergeResult =
+            CartOwnershipService.MergeAnonymousCartIntoAccount(HttpContext.Current, loginId, listinoLogin)
+        If mergeResult Is Nothing OrElse Not mergeResult.Succeeded Then
+            Throw New InvalidOperationException("Post-login cart ownership merge did not complete.")
         End If
-
-        Dim sb As New System.Text.StringBuilder()
-
-        Using connCarrello As New MySqlConnection(connString)
-            connCarrello.Open()
-
-            Using connSuper As New MySqlConnection(connString)
-                connSuper.Open()
-
-                ' Leggo il carrello (vista vcarrello)
-                Using comm As New MySqlCommand("SELECT * FROM vcarrello WHERE (LoginId = " & loginId & ") ORDER BY id", connCarrello)
-                    Using dr As MySqlDataReader = comm.ExecuteReader()
-                        While dr.Read()
-                            Dim ID As Integer = CInt(dr("ID"))
-                            Dim ArtID As Integer = CInt(dr("ArticoliId"))
-                            Dim Qta As Integer = CInt(dr("Qnt"))
-
-                            Dim Prezzo As Double = 0
-                            Dim PrezzoIvato As Double = 0
-                            Dim OfferteDettagliID As Long = 0
-
-                            ' Per ogni articolo verifico eventuali offerte su vsuperarticoli
-                            Dim sqlSuper As String = "SELECT * FROM vsuperarticoli WHERE id = " & ArtID & " AND NListino = " & listino & " ORDER BY PrezzoPromo DESC"
-
-                            Using cmdSuper As New MySqlCommand(sqlSuper, connSuper)
-                                Using dr2 As MySqlDataReader = cmdSuper.ExecuteReader()
-                                    While dr2.Read()
-                                        If Prezzo = 0 Then
-                                            Prezzo = CDbl(dr2("prezzo"))
-                                        End If
-                                        If PrezzoIvato = 0 Then
-                                            PrezzoIvato = CDbl(dr2("prezzoivato"))
-                                        End If
-
-                                        Dim inOfferta As Integer = 0
-                                        If Not IsDBNull(dr2("InOfferta")) Then
-                                            inOfferta = CInt(dr2("InOfferta"))
-                                        End If
-
-                                        If inOfferta = 1 Then
-                                            Dim qMin As Integer = 0
-                                            Dim multipli As Integer = 0
-
-                                            If Not IsDBNull(dr2("OfferteQntMinima")) Then
-                                                qMin = CInt(dr2("OfferteQntMinima"))
-                                            End If
-                                            If Not IsDBNull(dr2("OfferteMultipli")) Then
-                                                multipli = CInt(dr2("OfferteMultipli"))
-                                            End If
-
-                                            If qMin > 0 AndAlso Qta >= qMin Then
-                                                OfferteDettagliID = CLng(dr2("OfferteDettagliId"))
-                                                Prezzo = CDbl(dr2("prezzopromo"))
-                                                PrezzoIvato = CDbl(dr2("prezzopromoivato"))
-                                            ElseIf multipli > 0 AndAlso (Qta Mod multipli) = 0 Then
-                                                OfferteDettagliID = CLng(dr2("OfferteDettagliId"))
-                                                Prezzo = CDbl(dr2("prezzopromo"))
-                                                PrezzoIvato = CDbl(dr2("prezzopromoivato"))
-                                            End If
-                                        End If
-                                    End While
-                                End Using
-                            End Using
-
-                            sb.Append("UPDATE carrello SET ")
-                            sb.Append("OfferteDettaglioId = " & OfferteDettagliID)
-                            sb.Append(", Prezzo = '" & Prezzo.ToString().Replace(",", ".") & "' ")
-                            sb.Append(", PrezzoIvato = '" & PrezzoIvato.ToString().Replace(",", ".") & "' ")
-                            sb.Append(" WHERE ID = ")
-                            sb.Append(ID)
-                            sb.Append(" ; ")
-                        End While
-                    End Using
-                End Using
-
-                ' Eseguo gli UPDATE in blocco
-                If sb.Length > 0 Then
-                    Using cmdUpdate As New MySqlCommand(sb.ToString(), connCarrello)
-                        cmdUpdate.CommandType = CommandType.Text
-                        cmdUpdate.ExecuteNonQuery()
-                    End Using
-                End If
-            End Using
-        End Using
     End Sub
 
     '================================================================

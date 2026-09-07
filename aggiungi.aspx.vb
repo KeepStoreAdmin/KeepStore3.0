@@ -141,15 +141,11 @@ End If
                 Integer.TryParse(Convert.ToString(Request.QueryString("TCid")), directTc)
                 If directTc <= 0 Then directTc = -1
 
-                Dim directQty As Double = ResolveRequestedCartQuantity()
-
-                Dim directProdottoGratis As Integer = 0
-                Integer.TryParse(Convert.ToString(Request.QueryString("pg")), directProdottoGratis)
+                Dim directQty As Decimal = ResolveRequestedCartQuantityDecimal()
 
                 Session("Carrello_ArticoloId") = directId.ToString(CultureInfo.InvariantCulture)
                 Session("Carrello_TCId") = directTc.ToString(CultureInfo.InvariantCulture)
                 Session("Carrello_Quantita") = directQty.ToString(CultureInfo.InvariantCulture)
-                Session("ProdottoGratis") = directProdottoGratis.ToString(CultureInfo.InvariantCulture)
                 Dim directReturnUrl As String = StorefrontReturnUrlPolicy.FirstValidShoppingReturnUrl(
                     HttpContext.Current,
                     Convert.ToString(Request.QueryString("ReturnUrl")),
@@ -159,8 +155,8 @@ End If
                 Session("Carrello_SelezioneMultipla") = Nothing
             End If
         Else
-            Dim requestedQty As Double
-            If TryGetValidQueryStringQuantity(requestedQty) Then
+            Dim requestedQty As Decimal
+            If TryGetValidQueryStringQuantityDecimal(requestedQty) Then
                 Session("Carrello_Quantita") = requestedQty.ToString(CultureInfo.InvariantCulture)
             End If
         End If
@@ -176,7 +172,9 @@ End If
         If Me.Session("Carrello_ArticoloId") IsNot Nothing Then
             ClearCartFeedbackSession()
             Try
-                articoliIdGlobali = GestisciAggiuntaArticoli()
+                articoliIdGlobali = If(isGrouponFlow,
+                                       GestisciAggiuntaArticoliLegacy(),
+                                       GestisciAggiuntaArticoli())
             Catch ex As Exception
                 articoliIdGlobali = String.Empty
                 Try
@@ -302,6 +300,96 @@ End Sub
     '  AGGIUNTA AL CARRELLO (ARTICOLI NORMALI)
     ' =======================================
     Private Function GestisciAggiuntaArticoli() As String
+        Dim loginId As Integer = SessionInt("LoginId", SessionInt("LoginID", 0))
+        Dim sessionId As String = If(loginId > 0, String.Empty, Session.SessionID)
+        Dim listino As Integer = SessionInt("Listino", SessionInt("listino", 1))
+        If listino <= 0 Then listino = 1
+
+        Dim addedIds As New List(Of String)()
+        Dim selection As ArrayList = TryCast(Session("Carrello_SelezioneMultipla"), ArrayList)
+        If selection IsNot Nothing AndAlso selection.Count > 0 Then
+            For Each rawItem As Object In selection
+                Dim parts As String() = Convert.ToString(rawItem).Split(","c)
+                If parts.Length < 3 Then Continue For
+
+                Dim articleId As Integer
+                If Not Integer.TryParse(parts(0), articleId) OrElse articleId <= 0 Then Continue For
+                Dim tcId As Integer = -1
+                Dim quantityText As String
+                If parts.Length >= 4 Then
+                    Integer.TryParse(parts(1), tcId)
+                    quantityText = parts(2)
+                Else
+                    quantityText = parts(1)
+                End If
+                If tcId <= 0 Then tcId = -1
+
+                Dim quantity As Decimal
+                If Not TryParseDecimal(quantityText, quantity) OrElse quantity <= 0D Then Continue For
+
+                If AddStandardCartItem(loginId, sessionId, listino, articleId, tcId, quantity) Then
+                    addedIds.Add(articleId.ToString(CultureInfo.InvariantCulture))
+                End If
+            Next
+        Else
+            Dim articleIds As New ArrayList()
+            Dim tcIds As New ArrayList()
+            Dim rawArticleIds As String = Convert.ToString(Session("Carrello_ArticoloId"))
+            If rawArticleIds = "0" Then
+                Dim legacyList As ArrayList = TryCast(Session("Carrello_ListaArticoloId"), ArrayList)
+                If legacyList IsNot Nothing Then articleIds.AddRange(legacyList)
+            ElseIf rawArticleIds <> String.Empty Then
+                articleIds.AddRange(rawArticleIds.Split(","c))
+            End If
+
+            Dim rawTCIds As String = Convert.ToString(Session("Carrello_TCId"))
+            If rawTCIds <> String.Empty Then tcIds.AddRange(rawTCIds.Split(","c))
+            While tcIds.Count < articleIds.Count
+                tcIds.Add("-1")
+            End While
+
+            Dim quantity As Decimal = ResolveRequestedCartQuantityDecimal()
+            For index As Integer = 0 To articleIds.Count - 1
+                Dim articleId As Integer
+                If Not Integer.TryParse(Convert.ToString(articleIds(index)), articleId) OrElse articleId <= 0 Then Continue For
+                Dim tcId As Integer = -1
+                Integer.TryParse(Convert.ToString(tcIds(index)), tcId)
+                If tcId <= 0 Then tcId = -1
+
+                If AddStandardCartItem(loginId, sessionId, listino, articleId, tcId, quantity) Then
+                    addedIds.Add(articleId.ToString(CultureInfo.InvariantCulture))
+                End If
+            Next
+        End If
+
+        Return String.Join(",", addedIds.ToArray())
+    End Function
+
+    Private Function AddStandardCartItem(ByVal loginId As Integer,
+                                         ByVal sessionId As String,
+                                         ByVal listino As Integer,
+                                         ByVal articleId As Integer,
+                                         ByVal tcId As Integer,
+                                         ByVal quantity As Decimal) As Boolean
+        Dim result As CartStandardMutationResult = CartMutationService.AddStandardProduct(
+            HttpContext.Current, loginId, sessionId, articleId, tcId, quantity, listino)
+        If result Is Nothing OrElse Not result.Succeeded Then
+            SetCartAddPriceLookupMessage()
+            LogCartPriceLookupFailed(articleId.ToString(CultureInfo.InvariantCulture),
+                                     tcId.ToString(CultureInfo.InvariantCulture),
+                                     listino,
+                                     loginId,
+                                     sessionId,
+                                     "atomic-standard")
+            Return False
+        End If
+
+        RecordSuccessfulCartAdd(articleId, result.TCId, result.ProductName)
+        AggiornaVisite(articleId)
+        Return True
+    End Function
+
+    Private Function GestisciAggiuntaArticoliLegacy() As String
         Dim articoliIdGlobali As String = String.Empty
 
         Dim IdRiga As Integer = 0
@@ -791,6 +879,56 @@ End Sub
         Return Double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, result)
     End Function
 
+    Private Function TryParseDecimal(ByVal raw As Object, ByRef result As Decimal) As Boolean
+        result = 0D
+        If raw Is Nothing OrElse raw Is DBNull.Value Then Return False
+
+        Try
+            If TypeOf raw Is Decimal OrElse TypeOf raw Is Double OrElse TypeOf raw Is Single OrElse
+               TypeOf raw Is Integer OrElse TypeOf raw Is Long OrElse TypeOf raw Is Short Then
+                result = Convert.ToDecimal(raw, CultureInfo.InvariantCulture)
+                Return True
+            End If
+        Catch
+        End Try
+
+        Dim text As String = Convert.ToString(raw).Trim()
+        If text = String.Empty Then Return False
+        Dim normalized As String = NormalizeCartDecimalText(text)
+        If Decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, result) Then Return True
+        If Decimal.TryParse(text, NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), result) Then Return True
+        Return Decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, result)
+    End Function
+
+    Private Function ResolveRequestedCartQuantityDecimal() As Decimal
+        Dim queryQuantity As Decimal
+        If TryGetValidQueryStringQuantityDecimal(queryQuantity) Then
+            Session("Carrello_Quantita") = queryQuantity.ToString(CultureInfo.InvariantCulture)
+            Return queryQuantity
+        End If
+
+        Dim sessionQuantity As Decimal
+        If TryParseDecimal(Session("Carrello_Quantita"), sessionQuantity) AndAlso sessionQuantity > 0D Then
+            Return sessionQuantity
+        End If
+        Return 1D
+    End Function
+
+    Private Function TryGetValidQueryStringQuantityDecimal(ByRef quantity As Decimal) As Boolean
+        quantity = 0D
+        If Request Is Nothing OrElse Request.QueryString("qty") Is Nothing Then Return False
+        Return TryParseDecimal(Request.QueryString("qty"), quantity) AndAlso quantity > 0D
+    End Function
+
+    Private Function SessionInt(ByVal key As String, ByVal defaultValue As Integer) As Integer
+        Dim parsed As Integer
+        If Session IsNot Nothing AndAlso Session(key) IsNot Nothing AndAlso
+           Integer.TryParse(Convert.ToString(Session(key), CultureInfo.InvariantCulture), parsed) Then
+            Return parsed
+        End If
+        Return defaultValue
+    End Function
+
     Private Function ResolveRequestedCartQuantity() As Double
         Dim queryQty As Double
         If TryGetValidQueryStringQuantity(queryQty) Then
@@ -905,7 +1043,21 @@ End Sub
 
         Dim params As New Dictionary(Of String, String)
         params.Add("@idRiga", rowId.ToString(CultureInfo.InvariantCulture))
-        ExecuteDelete("carrello", "where id=@idRiga", params)
+        Dim loginId As Integer = 0
+        Integer.TryParse(Convert.ToString(Session("LoginId")), loginId)
+        Dim ownerWhere As String
+        If loginId > 0 Then
+            ownerWhere = "where id=@idRiga and LoginId=@LoginId"
+            params.Add("@LoginId", loginId.ToString(CultureInfo.InvariantCulture))
+        Else
+            ownerWhere = "where id=@idRiga and SessionId=@SessionId"
+            params.Add("@SessionId", Session.SessionID)
+        End If
+
+        Dim affected As Integer = ExecuteDelete("carrello", ownerWhere, params)
+        If affected <> 1 Then
+            Throw New InvalidOperationException("Deferred cart row deletion did not affect exactly one owned row.")
+        End If
     End Sub
 
     Private Sub LogCartPriceLookupFailed(ByVal articoloId As String,
@@ -970,7 +1122,7 @@ End Sub
             End Using
         Catch ex As Exception
             Try
-                KeepStoreLog.Info("aggiungi.aspx", "Newcarrello non riuscita, fallback insert diretto: " & ex.Message, HttpContext.Current)
+                KeepStoreLog.Info("aggiungi.aspx", "Newcarrello non riuscita, fallback insert diretto. Error type: " & ex.GetType().Name & ".", HttpContext.Current)
             Catch
             End Try
         End Try

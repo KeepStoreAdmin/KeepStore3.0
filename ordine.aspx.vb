@@ -159,6 +159,25 @@ End Function
         Return defaultValue
     End Function
 
+    Private Function GetSessionDecimal(ByVal key As String, Optional ByVal defaultValue As Decimal = 0D) As Decimal
+        Try
+            Dim raw As Object = Session(key)
+            If raw Is Nothing OrElse raw Is DBNull.Value Then Return defaultValue
+            Dim parsed As Decimal
+            If Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.CurrentCulture, parsed) Then Return parsed
+            If Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.InvariantCulture, parsed) Then Return parsed
+        Catch
+        End Try
+        Return defaultValue
+    End Function
+
+    Private Sub AddDecimalParameter(ByVal command As MySqlCommand, ByVal name As String, ByVal value As Decimal)
+        Dim parameter As MySqlParameter = command.Parameters.Add(name, MySqlDbType.Decimal)
+        parameter.Precision = 15
+        parameter.Scale = 8
+        parameter.Value = value
+    End Sub
+
     Private Function DbVal(ByVal o As Object) As Object
         If o Is Nothing Then Return DBNull.Value
         Return o
@@ -349,9 +368,9 @@ End If
             Dim Documento As String = If(TryCast(Me.Session("Ordine_Documento"), String), "")
             Dim Pagamento As Integer = GetSessionInt("Ordine_Pagamento", 0)
             Dim Vettore As Integer = GetSessionInt("Ordine_Vettore", 0)
-            Dim SpeseSped As Double = GetSessionDouble("Ordine_SpeseSped", 0)
-            Dim SpeseAss As Double = GetSessionDouble("Ordine_SpeseAss", 0)
-            Dim SpesePag As Double = GetSessionDouble("Ordine_SpesePag", 0)
+            Dim SpeseSped As Decimal = GetSessionDecimal("Ordine_SpeseSped", 0D)
+            Dim SpeseAss As Decimal = GetSessionDecimal("Ordine_SpeseAss", 0D)
+            Dim SpesePag As Decimal = GetSessionDecimal("Ordine_SpesePag", 0D)
             Dim PagamentoOnLine As Integer = GetSessionInt("Ordine_Pagamento_OnLine", 0)
             Dim ConfermaOrdinePrimaPagamento As Integer = GetSessionInt("Ordine_ConfermaOrdinePrimaPagamento", 1)
             Dim PermettiPagamentoSuccessivo As Integer = GetSessionInt("Ordine_PermettiPagamentoSuccessivo", 1)
@@ -374,6 +393,7 @@ End If
 
             Dim NumDoc As Long = 0
             Dim numDoc_tracking As String = "1"
+            Dim isLegacyCouponFlow As Boolean = String.Equals(Documento, "Coupon", StringComparison.OrdinalIgnoreCase)
 
             Dim conn As New MySqlConnection()
             conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
@@ -393,12 +413,53 @@ End If
                     End Try
                 End Using
 
-                ' --- Carrello: verifica righe + lista articoli per pixel ---
+                Dim selectedShippingAddressId As Integer = 0
+                If Not ValidateSelectedShippingAddressForOrder(conn, LoginId, UtentiId, selectedShippingAddressId) Then
+                    BlockInvalidShippingAddress()
+                    Exit Sub
+                End If
+
+                ' Lock, rivalidazione commerciale e creazione documento condividono
+                ' la stessa connessione e la stessa transazione.
+                trns = conn.BeginTransaction(IsolationLevel.Serializable)
+                If Not isLegacyCouponFlow Then
+                    Dim listino As Integer = GetSessionInt("Listino", GetSessionInt("listino", 1))
+                    If listino <= 0 Then listino = 1
+                    Dim priceRevalidation As CartPriceRevalidationResult = CartPriceRevalidationHelper.RevalidateCurrentCart(
+                        HttpContext.Current, conn, trns, Convert.ToInt32(LoginId), String.Empty, listino, True, True, Nothing)
+                    If priceRevalidation Is Nothing OrElse priceRevalidation.HasBlockingError Then
+                        If priceRevalidation Is Nothing Then
+                            priceRevalidation = New CartPriceRevalidationResult() With {
+                                .HasBlockingError = True,
+                                .HasTechnicalError = True,
+                                .ErrorMessage = CartPriceRevalidationHelper.GenericTechnicalErrorMessage
+                            }
+                        End If
+                        trns.Rollback()
+                        trns.Dispose()
+                        trns = Nothing
+                        CartPriceRevalidationHelper.StoreResultInSession(HttpContext.Current, priceRevalidation)
+                        Me.SafeRedirect("carrello.aspx?pricechanged=1")
+                        Exit Sub
+                    End If
+                    If priceRevalidation.HasChanges Then
+                        trns.Commit()
+                        trns.Dispose()
+                        trns = Nothing
+                        CartPriceRevalidationHelper.StoreResultInSession(HttpContext.Current, priceRevalidation)
+                        Me.SafeRedirect("carrello.aspx?pricechanged=1")
+                        Exit Sub
+                    End If
+                End If
+
                 Dim articoliIdGlobali As String = ""
-                Using cmdCart As New MySqlCommand("SELECT ArticoliId FROM carrello WHERE LoginId=?LoginId", conn)
-                    cmdCart.Parameters.AddWithValue("?LoginId", LoginId)
+                Using cmdCart As New MySqlCommand("SELECT ArticoliId FROM carrello WHERE LoginId=?LoginId ORDER BY ID FOR UPDATE", conn, trns)
+                    cmdCart.Parameters.Add("?LoginId", MySqlDbType.Int64).Value = LoginId
                     Using drCart As MySqlDataReader = cmdCart.ExecuteReader()
                         If Not drCart.HasRows Then
+                            trns.Rollback()
+                            trns.Dispose()
+                            trns = Nothing
                             Me.SafeRedirect("carrello.aspx")
                             Exit Sub
                         End If
@@ -407,33 +468,12 @@ End If
                         While drCart.Read()
                             Dim aId As Integer = 0
                             If Integer.TryParse(drCart("ArticoliId").ToString(), aId) AndAlso aId > 0 Then
-                                tmp.Add(aId.ToString())
+                                tmp.Add(aId.ToString(CultureInfo.InvariantCulture))
                             End If
                         End While
-                        articoliIdGlobali = String.Join(",", tmp)
+                        articoliIdGlobali = String.Join(",", tmp.ToArray())
                     End Using
                 End Using
-
-                Dim selectedShippingAddressId As Integer = 0
-                If Not ValidateSelectedShippingAddressForOrder(conn, LoginId, UtentiId, selectedShippingAddressId) Then
-                    BlockInvalidShippingAddress()
-                    Exit Sub
-                End If
-
-                Dim priceRevalidation As CartPriceRevalidationResult = CartPriceRevalidationHelper.RevalidateCurrentCart(HttpContext.Current, True)
-                If priceRevalidation IsNot Nothing AndAlso (priceRevalidation.HasChanges OrElse priceRevalidation.HasBlockingError) Then
-                    CartPriceRevalidationHelper.StoreResultInSession(HttpContext.Current, priceRevalidation)
-                    Me.SafeRedirect("carrello.aspx?pricechanged=1")
-                    Exit Sub
-                End If
-
-                ' Facebook Pixel (solo se ci sono articoli)
-                If articoliIdGlobali <> "" Then
-                    facebook_pixel(articoliIdGlobali)
-                End If
-
-                ' --- Transazione documento ---
-                trns = conn.BeginTransaction()
 
                 Using cmd As New MySqlCommand("Carrello_Documento", conn, trns)
                     cmd.CommandType = CommandType.StoredProcedure
@@ -455,14 +495,14 @@ End If
                     ' Se è coupon azzero i costi
                     Dim isCoupon As Boolean = (Not (Session("Coupon_idArticolo") Is Nothing) AndAlso GetSessionInt("Coupon_idArticolo", 0) > 0)
 
-                    cmd.Parameters.AddWithValue("?pCostoAssicurazione", If(isCoupon, 0, SpeseAss))
-                    cmd.Parameters.AddWithValue("?pCostoSpedizione", If(isCoupon, 0, SpeseSped))
+                    AddDecimalParameter(cmd, "?pCostoAssicurazione", If(isCoupon, 0D, SpeseAss))
+                    AddDecimalParameter(cmd, "?pCostoSpedizione", If(isCoupon, 0D, SpeseSped))
                     cmd.Parameters.AddWithValue("?pArrotondamento", If(Session("Coupon_Arrotondamento") Is Nothing, 0, DbVal(Session("Coupon_Arrotondamento"))))
-                    cmd.Parameters.AddWithValue("?pCostoPagamento", If(isCoupon, 0, SpesePag))
+                    AddDecimalParameter(cmd, "?pCostoPagamento", If(isCoupon, 0D, SpesePag))
                     cmd.Parameters.AddWithValue("?pNoteSpedizione", Note)
                     cmd.Parameters.AddWithValue("?pUtenteAbilitatoRC", DbVal(Session("AbilitatoIvaReverseCharge")))
                     cmd.Parameters.AddWithValue("?pIvaVettore", DbVal(Session("Iva_Vettori")))
-                    cmd.Parameters.AddWithValue("?pStatiId", recupera_stato_default_Documento(TipoDoc))
+                    cmd.Parameters.AddWithValue("?pStatiId", recupera_stato_default_Documento(TipoDoc, conn, trns))
 
                     Dim pOut As New MySqlParameter("?DocumentoMemorizzato", MySqlDbType.Int64)
                     pOut.Direction = ParameterDirection.Output
@@ -513,7 +553,10 @@ End If
                 Me.Label3.Text = FormatDocumentDate(DataDoc)
 
                 trns.Commit()
+                trns.Dispose()
                 trns = Nothing
+
+                If articoliIdGlobali <> "" Then facebook_pixel(articoliIdGlobali)
 
                 If lblOrderReceiptStatus IsNot Nothing Then
                     lblOrderReceiptStatus.Text = "Ordine ricevuto"
@@ -595,16 +638,16 @@ End If
                     ElseIf (If(TryCast(Me.Session("Ordine_BancaSellaGestPay_ShopId"), String), "")) <> "" Then
                         ServicePointManager.SecurityProtocol = Tls12
 
-                        Dim totaleDocumento As Double = GetSessionDouble("Ordine_Totale_Documento", 0)
+                        Dim totaleDocumento As Decimal = GetSessionDecimal("Ordine_Totale_Documento", 0D)
                         Me.Session("Ordine_Totale_Documento") = 0
 
                         Dim currency As String = "242"
 
-                        Dim totBuono As Double = GetSessionDouble("Ordine_TotaleBuonoSconto", 0)
-                        Dim totBuonoImp As Double = GetSessionDouble("Ordine_TotaleBuonoScontoImponibile", 0)
-                        Dim ivaBuonoSconto As Double = (totBuono - totBuonoImp)
+                        Dim totBuono As Decimal = GetSessionDecimal("Ordine_TotaleBuonoSconto", 0D)
+                        Dim totBuonoImp As Decimal = GetSessionDecimal("Ordine_TotaleBuonoScontoImponibile", 0D)
+                        Dim ivaBuonoSconto As Decimal = (totBuono - totBuonoImp)
 
-                        Dim amountVal As Double = totaleDocumento - ivaBuonoSconto
+                        Dim amountVal As Decimal = totaleDocumento - ivaBuonoSconto
                         Dim amount As String = HttpUtility.UrlEncode(amountVal.ToString("0.00", CultureInfo.InvariantCulture))
 
                         Dim shopTransactionId As String = HttpUtility.UrlEncode(NumDoc.ToString() & "/" & Date.Now.Year.ToString())
@@ -658,7 +701,12 @@ End If
             Catch ex As Exception
                 Try
                     If trns IsNot Nothing Then trns.Rollback()
-                Catch
+                Catch rollbackError As Exception
+                    Try
+                        KeepStoreLog.Error("ordine.aspx", "Rollback conferma ordine non riuscito. Error type: " & rollbackError.GetType().Name & ".", Nothing, HttpContext.Current)
+                    Catch logError As Exception
+                        System.Diagnostics.Trace.TraceError("ordine.aspx rollback logging failed. Error type: " & logError.GetType().Name & ".")
+                    End Try
                 End Try
 
                 Me.Panel1.Visible = False
@@ -669,10 +717,9 @@ End If
                 End Try
 
             Finally
-                If conn.State = ConnectionState.Open Then
-                    conn.Close()
-                    conn.Dispose()
-                End If
+                If trns IsNot Nothing Then trns.Dispose()
+                If conn.State = ConnectionState.Open Then conn.Close()
+                conn.Dispose()
             End Try
 
         End SyncLock
@@ -2132,17 +2179,17 @@ End If
         End Try
     End Sub
 
-    Function recupera_stato_default_Documento(ByVal TipoDocumento As Integer) As Integer
+    Function recupera_stato_default_Documento(ByVal TipoDocumento As Integer,
+                                               ByVal conn As MySqlConnection,
+                                               ByVal transaction As MySqlTransaction) As Integer
         Dim esito As Integer = 1
-        Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
-            conn.Open()
-            Using cmd As New MySqlCommand("SELECT StatiId FROM tipodocumenti WHERE id=?id", conn)
-                cmd.Parameters.AddWithValue("?id", TipoDocumento)
-                Using dr As MySqlDataReader = cmd.ExecuteReader()
-                    If dr.Read() Then
-                        Integer.TryParse(dr("StatiId").ToString(), esito)
-                    End If
-                End Using
+        If conn Is Nothing OrElse conn.State <> ConnectionState.Open OrElse transaction Is Nothing Then
+            Throw New InvalidOperationException("La transazione ordine non è disponibile per la lettura dello stato documento.")
+        End If
+        Using cmd As New MySqlCommand("SELECT StatiId FROM tipodocumenti WHERE id=?id", conn, transaction)
+            cmd.Parameters.Add("?id", MySqlDbType.Int32).Value = TipoDocumento
+            Using dr As MySqlDataReader = cmd.ExecuteReader()
+                If dr.Read() Then Integer.TryParse(dr("StatiId").ToString(), esito)
             End Using
         End Using
         Return esito
