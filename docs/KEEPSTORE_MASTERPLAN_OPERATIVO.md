@@ -10,15 +10,16 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 - Aggiornato: 2026-09-08.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
 - Ultimo runtime stabile: `frontend-rebuild` / `origin/frontend-rebuild` a `30928ee81b9bbdc23b55c5aaa057ef1bf4b5d3ef`.
+- HEAD documentale verificato prima del task governance: `frontend-rebuild` / `origin/frontend-rebuild` a `b0241ac4fdb843c6b48421c4bdc6fccb2e2a04e7`; il parent runtime resta quello sopra.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - Ultimo task chiuso: `PROMO-OWNER-ENFORCEMENT-1A REV2.7A` (implementazione A, review conclusiva A e smoke Germano A), integrato fast-forward only senza merge commit.
-- Task attivo: nessun task runtime; questo aggiornamento e docs-only.
-- Azione immediata successiva: chiudere e mergeare questo task documentale, senza ripetere build o smoke gia conclusi.
+- Task attivo: `WORKFLOW-GOVERNANCE-1A`, esclusivamente documentale, dal base `b0241ac4fdb843c6b48421c4bdc6fccb2e2a04e7`.
+- Azione immediata successiva: review ChatGPT/Germano del task governance e, soltanto dopo A e autorizzazione esplicita, merge fast-forward verso `frontend-rebuild`; nessuna build o smoke runtime da ripetere.
 - Prossimi runtime da pianificare separatamente: `CART-BATCH-ATOMICITY-1A`, retry controllato per deadlock/race DB, `CART-MOBILE-RESPONSIVE-UX-1A`, touch target remove `44x44`, `HOME-TTFB-PERFORMANCE-1A`, `MYSQL-CONNECTOR-DEPENDENCY-AUDIT-1A` e audit futuro dei campi monetari DB ancora `DOUBLE`. La parity/retirement delle route promo, SEO e AI/Gemini/LLMS restano filoni separati.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
 - Blocker reali: nessuno per la chiusura documentale; catalogo e PDP restano aree non dichiarate complete.
 
-Questo checkpoint va aggiornato dopo ogni blocco importante. E una mappa di ripartenza, non sostituisce la verifica diretta di Git e dei tre manuali.
+Questo checkpoint va aggiornato dopo ogni blocco importante. E una mappa di ripartenza, non sostituisce la verifica diretta di Git, del root `AGENTS.md` e delle fonti pertinenti.
 
 Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo task o riportano SHA precedenti sono storico autentico superato dal checkpoint corrente, non istruzioni operative vigenti. Catalogo e PDP restano esplicitamente aree non dichiarate complete.
 
@@ -114,7 +115,7 @@ Finding separati ancora aperti: 25 prodotti solo moderni e 22 solo legacy; campa
 - Scrive istruzioni operative per Codex.
 - Definisce guardrail.
 - Verifica i report Codex.
-- Prima di ogni risposta operativa rilegge integralmente i tre manuali dal ref Git corrente, verifica direttamente GitHub/Git reale e legge i file runtime o template coinvolti.
+- Applica la lettura documentale proporzionata definita nel root `AGENTS.md`, verifica direttamente GitHub/Git reale e legge i file runtime o template coinvolti prima dei prompt importanti.
 - Controlla stable, task branch, commit, parent, compare e diff pertinenti prima di valutare il problema o scrivere un prompt.
 - Classifica gli esiti come A/B/E.
 - Decide il prossimo micro-task da proporre.
@@ -130,6 +131,8 @@ Finding separati ancora aperti: 25 prodotti solo moderni e 22 solo legacy; campa
 - Apre PR verso la base indicata.
 - Per ogni branch runtime esegue il push su origin prima del report finale e della review ChatGPT, salvo impedimento tecnico esplicitamente documentato.
 - Non deve cambiare perimetro senza fermarsi.
+- Controlla la superficie autorizzata e le dipendenze dirette pertinenti; cerca attivamente bug collegati, regressioni, rischi e incoerenze di sicurezza, performance o UX.
+- Classifica ogni finding significativo con evidenza, superficie, severita, impatto, capacita di bloccare il requisito e proposta `SAME-TASK CANDIDATE` o `SEPARATE MICRO-TASK`; non lo implementa senza decisione ChatGPT.
 - Non deve toccare `main`.
 - Non deve creare pagamenti, ordini o chiamate gateway senza autorizzazione.
 - Riporta esiti in modo preciso.
@@ -138,7 +141,7 @@ Finding separati ancora aperti: 25 prodotti solo moderni e 22 solo legacy; campa
 
 - Ogni lavoro passa da micro-task.
 - Un solo task resta attivo per volta e il successivo non parte finche il prerequisito non e chiuso.
-- Il solo sistema corrente di classificazione e A/B/E: A = verificato e chiudibile; B = parziale, micro-fix o smoke ancora necessario; E = regressione grave o blocker.
+- Il solo sistema corrente di classificazione e A/B/E: `A` = requisito autorizzato completato, verificato e chiudibile, senza blocker noti nel perimetro; `B` = direzione valida ma task incompleto, bloccato o in attesa di fix, autorizzazione, verifica tecnica o smoke; `E` = premessa, strategia o modifica errata/pericolosa, regressione grave introdotta o approccio da abbandonare e riprogettare. Un blocker tecnico scoperto prima di una modifica pericolosa e normalmente B, non E.
 - Un task UI in attesa dello smoke Germano resta B. Non usare classificazioni operative diverse; le lettere presenti in task-id o record storici restano invariate.
 - Ogni merge avviene soltanto dopo esito A e autorizzazione esplicita; merge e docs-only non ripetono build/browser/smoke gia conclusi.
 - Per refactor UI si usa prima audit ONSUS, poi implementazione coerente.
@@ -165,26 +168,34 @@ Finding separati ancora aperti: 25 prodotti solo moderni e 22 solo legacy; campa
 Richiamo operativo alla policy permanente definita nel System Blueprint, sezione `2.1.1`:
 
 - ChatGPT assegna a ogni task un profilo `ECONOMY`, `STANDARD`, `DEEP` o `CRITICAL`, scegliendo il livello meno costoso compatibile con una elevata probabilita di A al primo passaggio; qualita, sicurezza e test necessari non si riducono per risparmiare token.
+- Policy corrente: `ECONOMY` = GPT-5.6 Luna / Medium; `STANDARD` = GPT-5.6 Terra / Medium; `DEEP` = GPT-5.6 Sol / High; `CRITICAL` = GPT-5.6 Sol / Extra High. GPT-6 Astra e riservato a casi eccezionali e trasversali scelti esplicitamente da ChatGPT; Max e Ultra non sono default e Ultra non si usa ordinariamente. Ogni prompt dichiara modello, reasoning e motivazione; la policy va rivalutata se cambia la disponibilita reale dei modelli.
 - Ogni task runtime applica la Minimum Verification Baseline e una proactive engineering review mirata alla superficie e alle dipendenze reali, con root cause e controlli anti-regressione proporzionati.
 - Codex analizza, testa e segnala finding, ma non amplia autonomamente scope/manifest e non implementa migliorie extra. ChatGPT decide se ignorare, mettere in backlog, creare un micro-task, richiedere una REV o autorizzare un'estensione.
+- Con causa gia dimostrata `ECONOMY`/`STANDARD` possono procedere con un prompt implementativo diretto; `DEEP` con root cause incerta richiede investigazione read-only; `CRITICAL` richiede preflight/investigazione prima delle modifiche, salvo correzione gia completamente dimostrata e autorizzata. Non separare artificialmente investigazione e implementazione se cio duplica il lavoro senza ridurre il rischio.
 - La metrica economica e il costo totale per task chiuso correttamente: rework, REV evitabili e regressioni sono inefficienza. Il dettaglio normativo completo e la Definition of Done restano nel System Blueprint, senza duplicazione nel Masterplan.
 
 ### Protocollo canonico fonti, continuita e Git
 
-Prima di ogni risposta operativa sul progetto, ChatGPT deve:
+Il root `AGENTS.md` e la fonte canonica delle regole operative permanenti. Prima dei prompt importanti ChatGPT verifica Git/codice reale e applica una lettura proporzionata:
 
-1. rileggere direttamente e integralmente i tre manuali dal ref Git corrente;
-2. verificare direttamente GitHub/Git: stable, task branch, commit, parent, compare e diff pertinenti;
-3. leggere i file runtime e il template realmente coinvolti prima di diagnosticare o scrivere un prompt.
+1. nuova chat o audit generale: checkpoint Masterplan e fonti necessarie a ricostruire lo stato; lettura integrale solo se richiesta dall'ampiezza dell'audit;
+2. nuovo task: checkpoint corrente, sezioni pertinenti, contratti chiusi collegati e file runtime coinvolti;
+3. task UI: anche contratti ONSUS, mobile e componenti stabilizzati;
+4. carrello, login, prezzi, promo, checkout, ordine, DB o sicurezza: sezioni architetturali e di sicurezza pertinenti;
+5. search/AI/RAG/SEO AI/assistenza acquisto: anche AI Assisted Search Blueprint;
+6. task documentale trasversale o riconciliazione generale: lettura completa delle fonti coinvolte.
 
 Ordine vincolante delle fonti:
 
-1. GitHub/Git reale: branch, commit, diff e codice corrente;
-2. i tre manuali correnti;
-3. handoff piu recente per data;
-4. memoria della chat e allegati storici.
+1. richiesta corrente approvata da Germano;
+2. Git, codice, database e runtime reale per lo stato tecnico;
+3. root `AGENTS.md` per le regole operative permanenti;
+4. checkpoint corrente del Masterplan;
+5. System Blueprint per architettura, flussi e contratti;
+6. AI Assisted Search Blueprint soltanto per search, AI, RAG, SEO AI o assistenza acquisto;
+7. handoff, memoria, chat e allegati come supporto non autoritativo.
 
-Handoff, memoria e allegati sono supporto, non source of truth. In caso di conflitto prevale GitHub/Git e la documentazione va riconciliata.
+Gli SHA e lo stato Git reale prevalgono sui checkpoint documentali non ancora aggiornati. Handoff, memoria e allegati sono supporto, non source of truth. Nessuna richiesta corrente autorizza implicitamente modifiche a `main`, esposizione di segreti o merge non approvati.
 
 Regole di sincronizzazione:
 
@@ -192,7 +203,7 @@ Regole di sincronizzazione:
 - Ogni branch runtime o docs deve essere pushato su origin prima del report; una modifica solo locale o solo descritta in chat non e chiusa.
 - Ogni task parte con `git fetch` e verifica degli SHA. Dopo ogni merge deve risultare `frontend-rebuild == origin/frontend-rebuild`.
 - Gli aggiornamenti locali sono esclusivamente fast-forward; reset, rebase e force non autorizzati sono vietati. `main` non va modificato.
-- Le directory non tracciate `Public/assets/images/articoli/`, `Public/assets/images/marche/` e `Public/assets/images/settori/` vanno sempre preservate fuori da staging e commit.
+- Le directory non tracciate `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/` e `Public/assets/images/vettori/` vanno sempre preservate fuori da staging e commit, salvo asset nominativamente autorizzati dal manifest.
 
 ### Mobile-first e divisione efficiente dei test
 
@@ -482,7 +493,7 @@ Backlog hardening separato: `CART-SESSIONID-LOG-REDACTION-1A`. L'audit cart-stat
 
 ### Ripartenza rapida in nuova chat
 
-- In una nuova chat leggere prima integralmente i tre manuali dal ref corrente, poi verificare direttamente GitHub/Git e i file runtime coinvolti.
+- In una nuova chat partire dal root `AGENTS.md`, dal checkpoint corrente e dalle fonti necessarie a ricostruire lo stato; leggere integralmente i manuali solo quando l'ampiezza dell'audit lo richiede, verificando comunque Git e codice reale prima dei prompt importanti.
 - Usare il checkpoint operativo iniziale per HEAD stabile, ultimo task chiuso, task attivo, prossimo runtime, directory consentite e blocker; verificarlo sempre contro Git.
 - Non richiedere o produrre un enorme riepilogo della chat e non rifare audit gia chiusi. Handoff e memoria sono supporto, non source of truth.
 - Mantenere lo stesso metodo Germano/ChatGPT/Codex: micro-task, branch dedicati, PR verso `frontend-rebuild`, merge controllati e cleanup separati.
@@ -492,8 +503,8 @@ Backlog hardening separato: `CART-SESSIONID-LOG-REDACTION-1A`. L'audit cart-stat
 
 ### Ruoli
 
-- ChatGPT mantiene la direzione funzionale, la sequenza dei task e i criteri di accettazione; legge i manuali e, dopo il push, controlla direttamente branch/commit/diff GitHub prima di assegnare A/B/E.
-- Codex lavora su branch dedicati, legge il codice prima di modificare, applica patch piccole, crea commit e pubblica il task branch su origin prima del report finale/review ChatGPT; il merge resta vietato fino all'approvazione ChatGPT/Germano.
+- ChatGPT mantiene la direzione funzionale, la sequenza dei task e i criteri di accettazione; applica `AGENTS.md` e la lettura proporzionata e, dopo il push, controlla direttamente branch/commit/diff GitHub prima di assegnare A/B/E.
+- Codex lavora su branch dedicati, legge codice e dipendenze pertinenti, applica patch piccole, svolge discovery proattiva senza scope creep, crea commit e pubblica il task branch su origin prima del report finale/review ChatGPT; il merge resta vietato fino all'approvazione ChatGPT/Germano.
 - Ogni task deve avere una modalita chiara: implementazione, verifica sola lettura, merge controllato, smoke, cleanup.
 
 ### Regole operative
