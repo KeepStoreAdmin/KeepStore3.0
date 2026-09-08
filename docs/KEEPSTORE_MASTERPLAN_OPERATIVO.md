@@ -104,8 +104,9 @@ Finding separati ancora aperti: 25 prodotti solo moderni e 22 solo legacy; campa
 ### Germano
 
 - Decide priorita e perimetro.
-- Autorizza merge, smoke, pagamenti sandbox/live, modifiche DB e modifiche gateway.
+- Concede le autorizzazioni finali richieste, incluso il merge, e valuta il risultato commerciale.
 - Approva scelte funzionali e grafiche.
+- Non esegue comandi Git, operazioni GitHub, creazione/aggiornamento PR o merge.
 - Puo fermare o riorientare i micro-task in qualsiasi momento.
 
 ### ChatGPT
@@ -118,23 +119,25 @@ Finding separati ancora aperti: 25 prodotti solo moderni e 22 solo legacy; campa
 - Applica la lettura documentale proporzionata definita nel root `AGENTS.md`, verifica direttamente GitHub/Git reale e legge i file runtime o template coinvolti prima dei prompt importanti.
 - Controlla stable, task branch, commit, parent, compare e diff pertinenti prima di valutare il problema o scrivere un prompt.
 - Classifica gli esiti come A/B/E.
+- Dopo la review indipendente del diff pubblicato stabilisce se il lavoro puo avanzare.
 - Decide il prossimo micro-task da proporre.
 - Mantiene aggiornato il masterplan.
 - Non deve saltare passaggi o cambiare metodo.
 
 ### Codex
 
-- Esegue operativamente nel repository.
+- Esegue materialmente tutte le operazioni tecniche autorizzate.
 - Crea branch dedicati.
 - Modifica file entro il perimetro autorizzato.
-- Esegue build, precompilazioni, `git diff --check` e smoke test richiesti.
-- Apre PR verso la base indicata.
+- Esegue build, precompilazioni, `git diff --check`, smoke tecnici e browser automatizzabili.
+- Dopo commit e push riusciti apre o aggiorna la PR verso la base indicata, salvo stop condition esplicita.
 - Per ogni branch runtime esegue il push su origin prima del report finale e della review ChatGPT, salvo impedimento tecnico esplicitamente documentato.
 - Non deve cambiare perimetro senza fermarsi.
 - Controlla la superficie autorizzata e le dipendenze dirette pertinenti; cerca attivamente bug collegati, regressioni, rischi e incoerenze di sicurezza, performance o UX.
 - Classifica ogni finding significativo con evidenza, superficie, severita, impatto, capacita di bloccare il requisito e proposta `SAME-TASK CANDIDATE` o `SEPARATE MICRO-TASK`; non lo implementa senza decisione ChatGPT.
 - Non deve toccare `main`.
 - Non deve creare pagamenti, ordini o chiamate gateway senza autorizzazione.
+- Dopo A di ChatGPT e autorizzazione esplicita di Germano esegue il merge fast-forward, la sincronizzazione e le verifiche finali; non decide autonomamente il merge.
 - Riporta esiti in modo preciso.
 
 ### Metodo
@@ -142,7 +145,7 @@ Finding separati ancora aperti: 25 prodotti solo moderni e 22 solo legacy; campa
 - Ogni lavoro passa da micro-task.
 - Un solo task resta attivo per volta e il successivo non parte finche il prerequisito non e chiuso.
 - Il solo sistema corrente di classificazione e A/B/E: `A` = requisito autorizzato completato, verificato e chiudibile, senza blocker noti nel perimetro; `B` = direzione valida ma task incompleto, bloccato o in attesa di fix, autorizzazione, verifica tecnica o smoke; `E` = premessa, strategia o modifica errata/pericolosa, regressione grave introdotta o approccio da abbandonare e riprogettare. Un blocker tecnico scoperto prima di una modifica pericolosa e normalmente B, non E.
-- Un task UI in attesa dello smoke Germano resta B. Non usare classificazioni operative diverse; le lettere presenti in task-id o record storici restano invariate.
+- Un task UI in attesa di una conferma umana obbligatoria e non automatizzabile resta B. Non usare classificazioni operative diverse; le lettere presenti in task-id o record storici restano invariate.
 - Ogni merge avviene soltanto dopo esito A e autorizzazione esplicita; merge e docs-only non ripetono build/browser/smoke gia conclusi.
 - Per refactor UI si usa prima audit ONSUS, poi implementazione coerente.
 - Niente patch sul vecchio layout quando si cambia grafica/impostazione.
@@ -160,7 +163,7 @@ Finding separati ancora aperti: 25 prodotti solo moderni e 22 solo legacy; campa
 - Cleanup branch e housekeeping sono secondari: usarli solo su richiesta esplicita o se sbloccano il flusso. Prima di cancellare branch verificare sempre che non esistano commit assenti da `frontend-rebuild`.
 - Se un problema e solo sospetto o non riproducibile, prima fare test manuale mirato; aprire PR diagnostiche solo se il problema torna riproducibile.
 - ChatGPT decide piano, ordine e priorita; Codex esegue task piccoli, verificabili e con confini rigidi. Evitare task generici tipo "controlla tutto".
-- Dopo il commit runtime Codex deve pubblicare il task branch su origin prima della review finale; ChatGPT usa il diff GitHub per verificare scope e dichiarazioni, mentre merge e approvazione restano bloccati fino al via libera ChatGPT/Germano.
+- Dopo commit e push Codex apre o aggiorna la PR; ChatGPT verifica indipendentemente il diff pubblicato. PR e merge restano separati: Codex esegue il merge solo dopo A di ChatGPT e autorizzazione esplicita di Germano.
 - Priorita: regressioni o blocker, smoke, merge controllato, documentazione minima, poi task successivo. Cleanup solo se richiesto o necessario a sbloccare il flusso.
 - Evitare audit generici tipo "controlla tutto" e verifiche ripetute senza un motivo tecnico reale. Le idee fuori scope vanno registrate nel backlog, non implementate subito.
 - I comportamenti gia accettati diventano guardrail anti-regressione dei task successivi.
@@ -209,10 +212,10 @@ Regole di sincronizzazione:
 
 - Il mobile e l'esperienza primaria, non un adattamento secondario del desktop. Progettazione, gerarchia, interazioni e QA iniziano da `360px` e `390px`; tablet e desktop vengono dopo.
 - Nessuna funzione essenziale puo dipendere dal solo hover. Touch target, offcanvas, ordine contenuti, leggibilita, densita commerciale e scrolling devono essere progettati mobile-first.
-- Nessun esito A visuale senza browser mobile reale. Una verifica desktop non certifica mobile; se mobile non e verificato, va dichiarato esplicitamente. Per UI/UX serve anche smoke Germano quando previsto.
-- Codex esegue cio che richiede accesso tecnico o strumentazione: build/precompile, sintassi JavaScript, DOM/computed style e misure, console/runtime, test tecnici o sicurezza, `git diff --check`, secret scan, manifest, branch e working tree.
-- Germano esegue, con istruzioni brevi e precise di ChatGPT, verifica visiva/commerciale, navigazione utente normale, confronto desktop/mobile e click o percorsi riproducibili senza strumenti tecnici.
-- Non chiedere a Codex di ripetere test semplici eseguibili da Germano, salvo diagnostica, automazione o riproduzione strumentata. Merge e task docs-only non ripetono build/browser/smoke gia conclusi.
+- Nessun esito A visuale senza browser mobile reale. Una verifica desktop non certifica mobile; se mobile non e verificato, va dichiarato esplicitamente.
+- Codex esegue per impostazione predefinita tutti i test e smoke tecnici/browser automatizzabili: build/precompile, JavaScript, DOM/computed style, console/runtime, sicurezza, diff, manifest, branch e working tree.
+- Germano interviene soltanto per conferme umane visive, commerciali o funzionali realmente non automatizzabili o dipendenti da sue fixture/dispositivi; ChatGPT fornisce pochi passaggi semplici. Germano non esegue Git/GitHub.
+- Un blocco tecnico di strumenti, autenticazione o permessi produce B con prova precisa: non va aggirato e l'operazione non va trasferita automaticamente a Germano. Merge e task docs-only non ripetono test gia conclusi e non pertinenti.
 
 ### Contratto permanente stack, linguaggio e sicurezza
 
@@ -504,7 +507,7 @@ Backlog hardening separato: `CART-SESSIONID-LOG-REDACTION-1A`. L'audit cart-stat
 ### Ruoli
 
 - ChatGPT mantiene la direzione funzionale, la sequenza dei task e i criteri di accettazione; applica `AGENTS.md` e la lettura proporzionata e, dopo il push, controlla direttamente branch/commit/diff GitHub prima di assegnare A/B/E.
-- Codex lavora su branch dedicati, legge codice e dipendenze pertinenti, applica patch piccole, svolge discovery proattiva senza scope creep, crea commit e pubblica il task branch su origin prima del report finale/review ChatGPT; il merge resta vietato fino all'approvazione ChatGPT/Germano.
+- Codex lavora su branch dedicati, legge codice e dipendenze pertinenti, applica patch piccole, svolge discovery proattiva, crea commit, pusha e apre/aggiorna la PR; dopo A ChatGPT e autorizzazione Germano esegue il merge fast-forward e le verifiche finali.
 - Ogni task deve avere una modalita chiara: implementazione, verifica sola lettura, merge controllato, smoke, cleanup.
 
 ### Regole operative
@@ -518,8 +521,8 @@ Backlog hardening separato: `CART-SESSIONID-LOG-REDACTION-1A`. L'audit cart-stat
   - `git diff --check`;
   - commit;
   - push del task branch su origin prima della review finale ChatGPT;
-  - PR verso `frontend-rebuild`.
-- Ogni verifica PR e in sola lettura:
+  - apertura o aggiornamento PR verso `frontend-rebuild`.
+- La review della PR, separata dal merge, e in sola lettura:
   - niente commit;
   - niente push;
   - niente merge;
@@ -533,10 +536,11 @@ Backlog hardening separato: `CART-SESSIONID-LOG-REDACTION-1A`. L'audit cart-stat
   - `mergeable_state=clean`;
   - PR non verso `main`;
   - `main == origin/main`.
-- Dopo merge:
-  - aggiornare locale `frontend-rebuild` da origin;
-  - confermare `HEAD == origin/frontend-rebuild`;
-  - confermare working tree pulita.
+- Dopo autorizzazione, Codex esegue il merge fast-forward e poi:
+  - sincronizza locale `frontend-rebuild` da origin;
+  - verifica parent e assenza di merge commit;
+  - conferma `HEAD == origin/frontend-rebuild` e `main == origin/main`;
+  - conferma staging vuoto, tracked tree pulito e asset protetti preservati.
 
 ### Sicurezza
 
