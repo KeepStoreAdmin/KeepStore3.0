@@ -109,13 +109,18 @@
                     <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" CssClass="form-check-input" />
                     <asp:TextBox ID="tbQuantita" runat="server" CssClass="form-control form-control-sm ks-qty" Width="70" />
                     <% If RenderAddToCart Then %>
-                    <a href="<%= SafeCartUrl %>"
+                    <button type="submit"
+                       form="ksNativeCartForm"
+                       name="ksCartAction"
+                       value="<%= SafeCompactNativeCartActionValue %>"
                        class="ks-card-buy-cta ks-compact-buy-cta js-ks-cart-link"
                        aria-label="Acquista: aggiungi al carrello"
-                       title="Acquista: aggiungi al carrello"<%= SafeActionDataAttributes %>>
-                        <span class="ks-card-buy-cta__icon icon-cart-2" aria-hidden="true"></span>
-                        <span class="ks-compact-buy-cta__tooltip" aria-hidden="true">Acquista</span>
-                    </a>
+                       title="Acquista: aggiungi al carrello"
+                       data-ks-cart-url="<%= SafeCartUrl %>"
+                       data-ks-request-id="<%= CompactNativeCartRequestId %>"<%= SafeActionDataAttributes %>>
+                         <span class="ks-card-buy-cta__icon icon-cart-2" aria-hidden="true"></span>
+                         <span class="ks-compact-buy-cta__tooltip" aria-hidden="true">Acquista</span>
+                    </button>
                     <% End If %>
                 </div>
             </asp:PlaceHolder>
@@ -127,9 +132,9 @@
             <span><%= CartButtonText %></span>
         </button>
         <% ElseIf RenderAddToCart Then %>
-        <a href="<%= SafeCartUrl %>" class="<%= PrimaryButtonClass %>" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello"<%= SafeActionDataAttributes %>>
+        <button type="submit" form="ksNativeCartForm" name="ksCartAction" value="<%= SafePrimaryNativeCartActionValue %>" class="<%= PrimaryButtonClass %>" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello" data-ks-cart-url="<%= SafeCartUrl %>" data-ks-request-id="<%= PrimaryNativeCartRequestId %>"<%= SafeActionDataAttributes %>>
             <span><%= CartButtonText %></span>
-        </a>
+        </button>
         <% End If %>
         <div class="box-btn">
             <% If IsDemoMode Then %>

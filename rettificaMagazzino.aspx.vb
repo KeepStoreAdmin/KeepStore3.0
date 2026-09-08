@@ -1,6 +1,8 @@
 ﻿Imports MySql.Data.MySqlClient
 Imports System.Data
 Imports System.Configuration
+Imports System.Globalization
+Imports System.Web
 
 Partial Class Articoli
     Inherits AntiCsrfPage
@@ -43,6 +45,10 @@ End Function
                 Context.ApplicationInstance.CompleteRequest()
             End If
             Return
+        End If
+
+        If Not IsPostBack Then
+            CartMutationIdempotencyService.ClearProgressiveRequestIds(HttpContext.Current, "rettifica-cart:")
         End If
 
         'Redirect nel caso c'è la presenza di #up
@@ -668,9 +674,6 @@ End Function
     End Sub
 
     Protected Sub ImageButton1_Click(ByVal sender As Object, ByVal e As System.Web.UI.ImageClickEventArgs)
-        Dim temp As ImageButton = sender
-        Dim temp2 As GridView
-
         Dim img As Image = sender
         Dim Qta As TextBox
         Dim ID As Label
@@ -682,23 +685,14 @@ End Function
         'che avvisa l'utente che l'amministratore ha disabilitato tale Settore e quindi tutti gli articoli correlati non 
         'sono più disponibili per la vendita
         If controlla_abilitazione_settore(Val(ID.Text)) = 1 Then
-            temp2 = CType(temp.NamingContainer.FindControl("GridView3"), GridView)
-            If temp2.Rows.Count > 0 Then
-                'Comunico al carrello se il prodotto è un prodotto ha spedizione gratis
-                Session("ProdottoGratis") = 1
-            Else
-                'Comunico al carrello se il prodotto non è un prodotto ha spedizione gratis
-                Session("ProdottoGratis") = 0
+            Dim articleId As Integer = 0
+            Dim quantity As Decimal = 0D
+            If Integer.TryParse(ID.Text, articleId) AndAlso articleId > 0 AndAlso
+               Decimal.TryParse(Qta.Text, NumberStyles.Number, CultureInfo.GetCultureInfo("it-IT"), quantity) AndAlso quantity > 0D AndAlso
+               ExecuteStockCorrectionCartMutation(articleId, quantity, "rettifica-cart:single:" & articleId.ToString(CultureInfo.InvariantCulture)) Then
+                Response.Redirect(Request.RawUrl, False)
+                Context.ApplicationInstance.CompleteRequest()
             End If
-
-            Me.Session("Carrello_ArticoloId") = ID.Text
-            Me.Session("Carrello_Quantita") = Qta.Text
-
-            'Me.Session("SpedizioneGratis_Listini")
-            'Me.Session("SpedizioneGratis_Data_Inizio")
-            'Me.Session("SpedizioneGratis_Data_Fine")
-
-            Me.Response.Redirect("aggiungi.aspx")
         Else
             Response.Redirect("settore_disabilitato.aspx")
         End If
@@ -880,30 +874,31 @@ End Function
             For i = 0 To Me.GridView1.Rows.Count - 1
                 temp_check = CType(Me.GridView1.Rows(i).FindControl("CheckBox_SelezioneMultipla"), CheckBox)
                 If temp_check.Checked = True Then
-                    Dim temp2 As GridView
-
-                    temp2 = CType(Me.GridView1.Rows(i).FindControl("GridView3"), GridView)
-                    If temp2.Rows.Count > 0 Then
-                        'Comunico al carrello se il prodotto è un prodotto ha spedizione gratis
-                        Session("ProdottoGratis") = 1
-                    Else
-                        'Comunico al carrello se il prodotto non è un prodotto ha spedizione gratis
-                        Session("ProdottoGratis") = 0
-                    End If
-
-
                     ID = Me.GridView1.Rows(i).FindControl("lblID")
                     Qta = Me.GridView1.Rows(i).FindControl("tbQuantita")
 
-                    Me.Session("Carrello_ArticoloId") = ID.Text
-                    Me.Session("Carrello_Quantita") = Qta.Text
-
-                    ListaArticoli.Add(ID.Text & "," & Qta.Text & "," & Session("ProdottoGratis"))
+                    Dim articleId As Integer = 0
+                    Dim quantity As Decimal = 0D
+                    If Integer.TryParse(ID.Text, articleId) AndAlso articleId > 0 AndAlso
+                       Decimal.TryParse(Qta.Text, NumberStyles.Number, CultureInfo.GetCultureInfo("it-IT"), quantity) AndAlso quantity > 0D Then
+                        ListaArticoli.Add(articleId.ToString(CultureInfo.InvariantCulture) & "," & quantity.ToString(CultureInfo.InvariantCulture))
+                    End If
                 End If
             Next
 
-            Session("Carrello_SelezioneMultipla") = ListaArticoli
-            Me.Response.Redirect("aggiungi.aspx")
+            Dim added As Integer = 0
+            For Each raw As Object In ListaArticoli
+                Dim parts As String() = Convert.ToString(raw).Split(","c)
+                Dim articleId As Integer = 0
+                Dim quantity As Decimal = 0D
+                If parts.Length = 2 AndAlso Integer.TryParse(parts(0), articleId) AndAlso
+                   Decimal.TryParse(parts(1), NumberStyles.Number, CultureInfo.InvariantCulture, quantity) AndAlso
+                   ExecuteStockCorrectionCartMutation(articleId, quantity, "rettifica-cart:multi:" & articleId.ToString(CultureInfo.InvariantCulture)) Then added += 1
+            Next
+            If added > 0 Then
+                Response.Redirect(Request.RawUrl, False)
+                Context.ApplicationInstance.CompleteRequest()
+            End If
         Else
             Response.Redirect("settore_disabilitato.aspx")
         End If
@@ -1049,6 +1044,33 @@ End Function
         Response.AddHeader("Allow", "POST")
         Context.ApplicationInstance.CompleteRequest()
     End Sub
+
+    Private Function ExecuteStockCorrectionCartMutation(ByVal articleId As Integer,
+                                                         ByVal quantity As Decimal,
+                                                         ByVal slotName As String) As Boolean
+        Dim payload As String = CartMutationIdempotencyService.BuildStandardPayload(articleId, -1, quantity)
+        Dim requestId As String = CartMutationIdempotencyService.GetOrCreateProgressiveRequestId(
+            HttpContext.Current, slotName, "stock-correction-cart-add", payload)
+        Dim decision As CartMutationIntentDecision = CartMutationIdempotencyService.RegisterIntent(
+            HttpContext.Current, requestId, "stock-correction-cart-add", payload)
+        If decision = CartMutationIntentDecision.Completed Then Return True
+        If decision <> CartMutationIntentDecision.Accepted AndAlso decision <> CartMutationIntentDecision.Pending Then Return False
+
+        decision = CartMutationIdempotencyService.BeginIntent(
+            HttpContext.Current, requestId, "stock-correction-cart-add", payload)
+        If decision = CartMutationIntentDecision.Completed Then Return True
+        If decision <> CartMutationIntentDecision.Accepted Then Return False
+
+        Dim result As CartStandardMutationResult = CartMutationService.AddStandardProductForCurrentOwner(
+            HttpContext.Current, articleId, -1, quantity)
+        If result Is Nothing OrElse Not result.Succeeded Then
+            CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
+            Return False
+        End If
+
+        CartMutationIdempotencyService.CompleteIntent(HttpContext.Current, requestId)
+        Return True
+    End Function
 
 
     '--- Helper functions migrated from inline <script runat="server"> blocks (bonifica legacy) ---

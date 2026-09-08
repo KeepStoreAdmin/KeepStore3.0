@@ -5267,8 +5267,11 @@ End Function
     Dim articleId As Integer = SafeInt(DataBinder.Eval(e.Item.DataItem, "ID"), 0)
     Dim tcId As Integer = SafeInt(DataBinder.Eval(e.Item.DataItem, "TCid"), -1)
     Dim detailId As Integer = SafeInt(DataBinder.Eval(e.Item.DataItem, "OfferteDettagliId"), 0)
-    Dim baseNet As Decimal = Convert.ToDecimal(SafeDbl(DataBinder.Eval(e.Item.DataItem, "Prezzo"), 0), CultureInfo.InvariantCulture)
-    Dim baseGross As Decimal = Convert.ToDecimal(SafeDbl(DataBinder.Eval(e.Item.DataItem, "PrezzoIvato"), 0), CultureInfo.InvariantCulture)
+    Dim baseNet As Decimal
+    Dim baseGross As Decimal
+    If Not TryReadDatabaseDecimal(DataBinder.Eval(e.Item.DataItem, "Prezzo"), baseNet) OrElse
+       Not TryReadDatabaseDecimal(DataBinder.Eval(e.Item.DataItem, "PrezzoIvato"), baseGross) OrElse
+       baseNet <= 0D OrElse baseGross <= 0D Then Exit Sub
     Dim listino As Integer = GetSessionInt("Listino", GetSessionInt("listino", 1))
     Dim eligibilityContext As ProductPromotionEligibilityContext =
         ProductPromotionEligibilityResolver.CreateContext(HttpContext.Current, listino)
@@ -5288,6 +5291,14 @@ End Function
     Dim useNetPrice As Boolean = (GetSessionInt("IvaTipo", 0) = 1)
     Dim promoPrice As Decimal = If(useNetPrice, authorizedOffer.PriceNet, authorizedOffer.PriceGross)
     Dim basePrice As Decimal = If(useNetPrice, baseNet, baseGross)
+    If promoPrice <= 0D OrElse basePrice <= 0D OrElse promoPrice >= basePrice Then Exit Sub
+
+    Dim discountPercent As Decimal = Math.Round(
+        (1D - (promoPrice / basePrice)) * 100D,
+        0,
+        MidpointRounding.AwayFromZero)
+    If discountPercent < 1D OrElse discountPercent > 99D Then Exit Sub
+
     lblOfferta.Text = ProductPromotionDisplayHelper.BuildLegacyOfferText(
         authorizedOffer.QntMinima,
         authorizedOffer.Multipli,
@@ -5298,6 +5309,26 @@ End Function
     lblOfferta.Visible = Not String.IsNullOrWhiteSpace(lblOfferta.Text)
 
     End Sub
+
+Private Function TryReadDatabaseDecimal(ByVal value As Object, ByRef result As Decimal) As Boolean
+    result = 0D
+    If value Is Nothing OrElse value Is DBNull.Value Then Return False
+
+    Try
+        Select Case Type.GetTypeCode(value.GetType())
+            Case TypeCode.Byte, TypeCode.SByte,
+                 TypeCode.Int16, TypeCode.UInt16,
+                 TypeCode.Int32, TypeCode.UInt32,
+                 TypeCode.Int64, TypeCode.UInt64,
+                 TypeCode.Single, TypeCode.Double, TypeCode.Decimal
+                result = Convert.ToDecimal(value, CultureInfo.InvariantCulture)
+                Return True
+        End Select
+    Catch
+    End Try
+
+    Return False
+End Function
 
     ' =========================
 ' RADIOBUTTON COMPAT (ASP.NET + ConwayControls)

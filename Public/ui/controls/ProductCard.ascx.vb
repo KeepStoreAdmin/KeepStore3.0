@@ -39,6 +39,10 @@ Partial Class Public_ui_controls_ProductCard
     Public Property CardStateCssClass As String
     Public Property LegacyQuantityStateCssClass As String
     Public Property LegacyQuantityStateText As String
+    Public Property ExistingCartQuantity As Decimal
+
+    Private _compactNativeCartRequestId As String
+    Private _primaryNativeCartRequestId As String
 
     Public ReadOnly Property SelectedForMultiAdd As Boolean
         Get
@@ -222,6 +226,42 @@ Partial Class Public_ui_controls_ProductCard
         Get
             If IsDemoMode Then Return "#"
             Return CleanUrl(CartUrl)
+        End Get
+    End Property
+
+    Protected ReadOnly Property CompactNativeCartRequestId As String
+        Get
+            If String.IsNullOrWhiteSpace(_compactNativeCartRequestId) Then
+                _compactNativeCartRequestId = CartMutationIdempotencyService.CreateRequestId()
+            End If
+            Return _compactNativeCartRequestId
+        End Get
+    End Property
+
+    Protected ReadOnly Property PrimaryNativeCartRequestId As String
+        Get
+            If String.IsNullOrWhiteSpace(_primaryNativeCartRequestId) Then
+                _primaryNativeCartRequestId = CartMutationIdempotencyService.CreateRequestId()
+            End If
+            Return _primaryNativeCartRequestId
+        End Get
+    End Property
+
+    Protected ReadOnly Property SafeCompactNativeCartActionValue As String
+        Get
+            Dim requestedQuantity As Decimal = 1D
+            Decimal.TryParse(NormalizeQuantityText(QuantityText), requestedQuantity)
+            Dim delta As Decimal = If(ExistingCartQuantity > 0D, requestedQuantity - ExistingCartQuantity, requestedQuantity)
+            Return EncodeAttribute(CartMutationIdempotencyService.BuildNativeActionValue(ProductId, TCId, delta, CompactNativeCartRequestId))
+        End Get
+    End Property
+
+    Protected ReadOnly Property SafePrimaryNativeCartActionValue As String
+        Get
+            Dim requestedQuantity As Decimal = 1D
+            Decimal.TryParse(NormalizeQuantityText(QuantityText), requestedQuantity)
+            Dim delta As Decimal = If(ExistingCartQuantity > 0D, requestedQuantity - ExistingCartQuantity, requestedQuantity)
+            Return EncodeAttribute(CartMutationIdempotencyService.BuildNativeActionValue(ProductId, TCId, delta, PrimaryNativeCartRequestId))
         End Get
     End Property
 

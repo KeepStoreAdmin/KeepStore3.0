@@ -19,6 +19,8 @@ Partial Class articolo
     Private _tcidPresent As Boolean
     Private _listino As Integer
     Private _tcEnabled As Boolean
+    Private _pdpMainCartRequestId As String
+    Private _pdpBundleCartRequestId As String
     Private ReadOnly _promotionModelCache As New Dictionary(Of String, ProductPromotionDisplayModel)(StringComparer.Ordinal)
     Private Shared ReadOnly ItCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
 
@@ -105,6 +107,8 @@ Partial Class articolo
         Public Property IsCurrent As Boolean
         Public Property BusinessKey As String
         Public Property AddToCartUrl As String
+        Public Property QuickNativeCartAttributes As String
+        Public Property PrimaryNativeCartAttributes As String
         Public Property WishlistUrl As String
         Public Property QuickViewAttrs As String
         Public Property CompareAttrs As String
@@ -182,9 +186,7 @@ Partial Class articolo
         _listino = GetCurrentListino()
         _tcEnabled = (GetSessionInt("TC", 0) = 1)
 
-        If Not IsPostBack Then
-            LoadPage()
-        End If
+        If Not IsPostBack Then LoadPage()
     End Sub
 
     Private Function TryParseParams() As Boolean
@@ -1187,6 +1189,8 @@ Partial Class articolo
 
         item.BusinessKey = RelatedBusinessKey(item)
         item.AddToCartUrl = BuildCartAddUrl(item.Id, item.Tcid)
+        item.QuickNativeCartAttributes = BuildNativeCartButtonAttributes(item.Id, item.Tcid, item.AddToCartUrl)
+        item.PrimaryNativeCartAttributes = BuildNativeCartButtonAttributes(item.Id, item.Tcid, item.AddToCartUrl)
         item.WishlistUrl = BuildWishlistAddUrl(item.Id, item.Tcid)
         item.QuickViewAttrs = BuildActionDataAttributes(item)
         item.CompareAttrs = item.QuickViewAttrs
@@ -2821,64 +2825,77 @@ Partial Class articolo
         Response.Redirect(BuildProductUrl(_id, selected, includeTcid:=True), True)
     End Sub
 
-    Protected Sub btnAddToCart_Click(sender As Object, e As EventArgs)
-        Dim desiredQty As Integer = NormalizeCartQuantity(txtQty.Text, 1, 9999)
-        txtQty.Text = desiredQty.ToString(CultureInfo.InvariantCulture)
+    Private Function BuildNativeCartButtonAttributes(ByVal articleId As Integer,
+                                                     ByVal tcId As Integer,
+                                                     ByVal cartUrl As String) As String
+        Dim requestId As String = CartMutationIdempotencyService.CreateRequestId()
+        Dim actionValue As String = CartMutationIdempotencyService.BuildNativeActionValue(articleId, tcId, 1D, requestId)
+        Return "form='ksNativeCartForm' name='ksCartAction' value='" & EncodeAttr(actionValue) &
+               "' data-ks-request-id='" & EncodeAttr(requestId) & "' data-ks-cart-url='" & EncodeAttr(cartUrl) & "'"
+    End Function
 
-        ' Risolve il TCid effettivo prima del redirect legacy verso aggiungi.aspx.
-        Dim tcidToUse As Integer = _tcid
-        If _tcEnabled Then
-            tcidToUse = _tcid
-
-            If pnlVariants.Visible Then
-                Dim tmp As Integer
-                If Integer.TryParse(ddlTc.SelectedValue, tmp) Then
-                    tcidToUse = tmp
-                End If
+    Protected ReadOnly Property PdpMainNativeCartAttributes As String
+        Get
+            If String.IsNullOrWhiteSpace(_pdpMainCartRequestId) Then
+                _pdpMainCartRequestId = CartMutationIdempotencyService.CreateRequestId()
             End If
-        End If
+            Dim actionValue As String = CartMutationIdempotencyService.BuildNativeSetActionValue(
+                _id, _tcid, txtQty.UniqueID, _pdpMainCartRequestId)
+            Return "form='ksNativeCartForm' name='ksCartAction' value='" & EncodeAttr(actionValue) &
+                   "' data-ks-request-id='" & EncodeAttr(_pdpMainCartRequestId) &
+                   "' data-ks-id='" & _id.ToString(CultureInfo.InvariantCulture) &
+                   "' data-ks-tcid='" & _tcid.ToString(CultureInfo.InvariantCulture) & "'"
+        End Get
+    End Property
 
-        Dim cartRow As DataRow = GetProductRow(_id, tcidToUse, includeTcidFilter:=(_tcEnabled AndAlso tcidToUse > 0))
-        If cartRow Is Nothing Then
-            cartRow = GetProductRow(_id, -1, includeTcidFilter:=False)
-        End If
-
-        If cartRow Is Nothing Then
-            litQtyHelp.Text = "Articolo non disponibile per l'aggiunta al carrello."
-            Return
-        End If
-
-        tcidToUse = GetRowInt(cartRow, "TCid", tcidToUse)
-
-        Dim existingQty As Integer = GetPdpCartQuantity(_id, tcidToUse)
-        Dim qtyToAdd As Integer = If(existingQty > 0, desiredQty - existingQty, desiredQty)
-        If qtyToAdd <= 0 Then
-            ApplyPdpCartState(existingQty, False)
-            txtQty.Text = existingQty.ToString(CultureInfo.InvariantCulture)
-            litQtyHelp.Text = Server.HtmlEncode("Nel carrello sono gia presenti " & existingQty.ToString(CultureInfo.GetCultureInfo("it-IT")) & " pezzi. Aumenta la quantita se vuoi aggiungerne altri.")
-            Return
-        End If
-
-        Session("ProdottoGratis") = GetRowInt(cartRow, "SpeditoGratis", 0)
-        Session("Carrello_ArticoloId") = _id.ToString()
-        Session("Carrello_TCId") = tcidToUse.ToString()
-        Session("Carrello_Quantita") = qtyToAdd.ToString(CultureInfo.InvariantCulture)
-        Session("Carrello_Pagina") = Request.RawUrl
-        Session("Carrello_SelezioneMultipla") = Nothing
-
-        Dim addToCartUrl As String = "aggiungi.aspx?id=" & HttpUtility.UrlEncode(_id.ToString(CultureInfo.InvariantCulture)) &
-                                      "&TCid=" & HttpUtility.UrlEncode(tcidToUse.ToString(CultureInfo.InvariantCulture)) &
-                                      "&qty=" & HttpUtility.UrlEncode(qtyToAdd.ToString(CultureInfo.InvariantCulture))
-
-        Response.Redirect(addToCartUrl, False)
-        Context.ApplicationInstance.CompleteRequest()
-    End Sub
+    Protected ReadOnly Property PdpBundleNativeCartAttributes As String
+        Get
+            If String.IsNullOrWhiteSpace(_pdpBundleCartRequestId) Then
+                _pdpBundleCartRequestId = CartMutationIdempotencyService.CreateRequestId()
+            End If
+            Dim bundleItems As ArrayList = TryCast(Session("ks_product_bundle_cart_items"), ArrayList)
+            Dim actionValue As String = CartMutationIdempotencyService.BuildNativeBundleActionValue(
+                bundleItems, _pdpBundleCartRequestId)
+            Return "form='ksNativeCartForm' name='ksCartAction' value='" & EncodeAttr(actionValue) &
+                   "' data-ks-request-id='" & EncodeAttr(_pdpBundleCartRequestId) & "'"
+        End Get
+    End Property
 
     Private Sub BindPdpCartState(ByVal articleId As Integer, ByVal tcId As Integer, ByVal initializeInput As Boolean)
         Dim existingQty As Integer = GetPdpCartQuantity(articleId, tcId)
         ApplyPdpCartState(existingQty, initializeInput)
         litQtyHelp.Text = ""
+        BindPdpQuantityUpdateFeedback(articleId, tcId)
     End Sub
+
+    Private Sub BindPdpQuantityUpdateFeedback(ByVal articleId As Integer, ByVal tcId As Integer)
+        Const feedbackKey As String = "ks_pdp_cart_quantity_update"
+        Dim raw As String = Convert.ToString(Session(feedbackKey))
+        Session.Remove(feedbackKey)
+        If String.IsNullOrWhiteSpace(raw) Then Return
+
+        Dim parts As String() = raw.Split("|"c)
+        If parts.Length <> 3 Then Return
+
+        Dim feedbackArticleId As Integer
+        Dim feedbackTCId As Integer
+        Dim finalQuantity As Decimal
+        If Not Integer.TryParse(parts(0), feedbackArticleId) OrElse
+           Not Integer.TryParse(parts(1), feedbackTCId) OrElse
+           Not Decimal.TryParse(parts(2), NumberStyles.Number, CultureInfo.InvariantCulture, finalQuantity) Then Return
+        Dim normalizedFeedbackTCId As Integer = If(feedbackTCId > 0, feedbackTCId, -1)
+        Dim normalizedTCId As Integer = If(tcId > 0, tcId, -1)
+        If feedbackArticleId <> articleId OrElse normalizedFeedbackTCId <> normalizedTCId OrElse finalQuantity <= 0D Then Return
+
+        Dim itemLabel As String = If(finalQuantity = 1D, " pezzo", " pezzi")
+        litQtyHelp.Text = Server.HtmlEncode("Quantità aggiornata: " & FormatPdpQuantity(finalQuantity) & itemLabel & " nel carrello.")
+    End Sub
+
+    Private Function FormatPdpQuantity(ByVal quantity As Decimal) As String
+        Dim culture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
+        If Decimal.Truncate(quantity) = quantity Then Return quantity.ToString("0", culture)
+        Return quantity.ToString("0.##", culture)
+    End Function
 
     Private Sub ApplyPdpCartState(ByVal existingQty As Integer, ByVal initializeInput As Boolean)
         Dim hasCartQuantity As Boolean = existingQty > 0
@@ -2908,36 +2925,6 @@ Partial Class articolo
         Catch
             Return 0
         End Try
-    End Function
-
-    Protected Sub btnBundleAddToCart_Click(sender As Object, e As EventArgs)
-        Dim bundleItems As ArrayList = TryCast(Session("ks_product_bundle_cart_items"), ArrayList)
-        If bundleItems Is Nothing OrElse bundleItems.Count = 0 Then
-            btnAddToCart_Click(sender, e)
-            Return
-        End If
-
-        Session("ProdottoGratis") = 0
-        Session("Carrello_ArticoloId") = "0"
-        Session("Carrello_TCId") = Nothing
-        Session("Carrello_Quantita") = "1"
-        Session("Carrello_Pagina") = Request.RawUrl
-        Session("Carrello_SelezioneMultipla") = bundleItems
-
-        Response.Redirect("aggiungi.aspx", False)
-        Context.ApplicationInstance.CompleteRequest()
-    End Sub
-
-    Private Function NormalizeCartQuantity(ByVal rawValue As String, ByVal fallbackValue As Integer, ByVal maxValue As Integer) As Integer
-        Dim qty As Integer = fallbackValue
-        If Not Integer.TryParse(Convert.ToString(rawValue), qty) Then
-            qty = fallbackValue
-        End If
-
-        If qty <= 0 Then qty = fallbackValue
-        If qty > maxValue Then qty = maxValue
-
-        Return qty
     End Function
 
     Private Sub BindProductReviews()

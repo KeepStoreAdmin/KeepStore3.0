@@ -597,6 +597,11 @@ Dim IvaTipo As Integer
         ' Tema grafico: tagging per CSS token/switch (non altera la logica business)
         ApplyThemeTagging()
 
+        Dim nativeCartToken As String = CatalogAsyncCartSupport.GetOrCreateCsrfToken(HttpContext.Current)
+        litNativeCartSecurityFields.Text =
+            "<input type=""hidden"" name=""csrfToken"" value=""" & HttpUtility.HtmlAttributeEncode(nativeCartToken) & """ />" &
+            "<input type=""hidden"" name=""ReturnUrl"" value=""" & HttpUtility.HtmlAttributeEncode(Request.RawUrl) & """ />"
+
         ' Footer: email supporto configurabile (fallback safe)
         ApplySupportEmail()
 
@@ -1004,6 +1009,8 @@ End Function
 
             ' data attribute
             PageBody.Attributes("data-ks-theme") = theme
+            PageBody.Attributes("data-ks-async-cart-endpoint") = ResolveUrl("~/catalog_cart_async.aspx")
+            PageBody.Attributes("data-ks-async-cart-token") = CatalogAsyncCartSupport.GetOrCreateCsrfToken(HttpContext.Current)
         Catch
             ' no-op
         End Try

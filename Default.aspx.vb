@@ -2528,10 +2528,17 @@ Partial Public Class _Default
         Dim compareAttrs As String = quickViewAttrs
         Dim buttonClass As String = If(compact, "list-product-btn flex-row", "list-product-btn top-0 end-0")
         Dim tooltipClass As String = If(compact, "hover-tooltip", "hover-tooltip tooltip-left")
+        Dim articleId As Integer = 0
+        Integer.TryParse(Convert.ToString(row("id")), articleId)
+        Dim tcId As Integer = -1
+        If row.Table.Columns.Contains("TCid") Then Integer.TryParse(Convert.ToString(row("TCid")), tcId)
+        If tcId <= 0 Then tcId = -1
+        Dim requestId As String = CartMutationIdempotencyService.CreateRequestId()
+        Dim nativeAction As String = CartMutationIdempotencyService.BuildNativeActionValue(articleId, tcId, 1D, requestId)
 
         Dim sb As New StringBuilder()
         sb.Append("<ul class='").Append(buttonClass).Append("'>")
-        sb.Append("<li><a href='").Append(CartAddUrl(row)).Append("' class='box-icon add-to-cart btn-icon-action ").Append(tooltipClass).Append(" ks-home-top-buy-action js-ks-cart-link'").Append(quickViewAttrs).Append(" aria-label='Acquista: aggiungi al carrello' title='Acquista: aggiungi al carrello'><span class='icon icon-cart-2' aria-hidden='true'></span><span class='tooltip d-none d-lg-block'>Acquista</span></a></li>")
+        sb.Append("<li><button type='submit' form='ksNativeCartForm' name='ksCartAction' value='").Append(EncodeAttr(nativeAction)).Append("' class='box-icon add-to-cart btn-icon-action ").Append(tooltipClass).Append(" ks-home-top-buy-action js-ks-cart-link'").Append(quickViewAttrs).Append(" data-ks-request-id='").Append(EncodeAttr(requestId)).Append("' aria-label='Acquista: aggiungi al carrello' title='Acquista: aggiungi al carrello'><span class='icon icon-cart-2' aria-hidden='true'></span><span class='tooltip d-none d-lg-block'>Acquista</span></button></li>")
         sb.Append("<li class='wishlist'><a href='").Append(WishlistAddUrl(row("id"))).Append("' class='box-icon btn-icon-action ").Append(tooltipClass).Append(" js-ks-wishlist-link'").Append(quickViewAttrs).Append(" aria-label='Wishlist'><i class='icon icon-heart2'></i><span class='tooltip'>Wishlist</span></a></li>")
         sb.Append("<li><a href='#quickView' data-bs-toggle='modal' class='box-icon quickview btn-icon-action ").Append(tooltipClass).Append(" js-ks-quickview'").Append(quickViewAttrs).Append(" aria-label='Vedi prodotto'><i class='icon icon-view'></i><span class='tooltip'>Vedi prodotto</span></a></li>")
         sb.Append("<li><a href='#compare' data-bs-toggle='offcanvas' data-bs-target='#compare' aria-controls='compare' class='box-icon btn-icon-action ").Append(tooltipClass).Append(" js-ks-compare'").Append(compareAttrs).Append(" aria-label='Confronta'><i class='icon icon-compare1'></i><span class='tooltip'>Confronta</span></a></li>")

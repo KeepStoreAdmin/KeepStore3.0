@@ -14,11 +14,14 @@ Partial Class aggiungi
     Private Const CartFeedbackTcidKey As String = "ks_cart_feedback_tcid"
     Private Const CartFeedbackCountKey As String = "ks_cart_feedback_count"
     Private Const CartFeedbackCreatedUtcKey As String = "ks_cart_feedback_created_utc"
+    Private Const PdpQuantityUpdateFeedbackKey As String = "ks_pdp_cart_quantity_update"
 
     Private NotInheritable Class SuccessfulCartAdd
         Public Property ArticleId As Integer
         Public Property TCId As Integer
         Public Property ProductName As String
+        Public Property FinalQuantity As Decimal
+        Public Property Delta As Decimal
     End Class
 
     Private ReadOnly _successfulCartAdds As New List(Of SuccessfulCartAdd)()
@@ -52,13 +55,19 @@ Private Sub ClearCartFeedbackSession()
     Session.Remove(CartFeedbackCreatedUtcKey)
 End Sub
 
-Private Sub RecordSuccessfulCartAdd(ByVal articleId As Integer, ByVal tcId As Integer, ByVal productName As String)
+Private Sub RecordSuccessfulCartAdd(ByVal articleId As Integer,
+                                    ByVal tcId As Integer,
+                                    ByVal productName As String,
+                                    Optional ByVal finalQuantity As Decimal = 0D,
+                                    Optional ByVal delta As Decimal = 1D)
     If articleId <= 0 Then Return
 
     _successfulCartAdds.Add(New SuccessfulCartAdd With {
         .ArticleId = articleId,
         .TCId = If(tcId > 0, tcId, -1),
-        .ProductName = Convert.ToString(productName).Trim()
+        .ProductName = If(productName, String.Empty).Trim(),
+        .FinalQuantity = finalQuantity,
+        .Delta = delta
     })
 End Sub
 
@@ -70,6 +79,13 @@ Private Sub StoreCartFeedbackSession()
     Dim productName As String = firstItem.ProductName
     If productName = "" Then productName = "Il prodotto"
 
+    If isSingle AndAlso firstItem.Delta < 0D AndAlso firstItem.FinalQuantity > 0D AndAlso IsPdpReturnUrl() Then
+        Session(PdpQuantityUpdateFeedbackKey) = firstItem.ArticleId.ToString(CultureInfo.InvariantCulture) & "|" &
+                                                firstItem.TCId.ToString(CultureInfo.InvariantCulture) & "|" &
+                                                firstItem.FinalQuantity.ToString(CultureInfo.InvariantCulture)
+        Return
+    End If
+
     Session(CartFeedbackKindKey) = If(isSingle, "single", "multi")
     Session(CartFeedbackProductNameKey) = If(isSingle, productName, "")
     Session(CartFeedbackArticleIdKey) = If(isSingle, firstItem.ArticleId, 0)
@@ -77,6 +93,17 @@ Private Sub StoreCartFeedbackSession()
     Session(CartFeedbackCountKey) = _successfulCartAdds.Count
     Session(CartFeedbackCreatedUtcKey) = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
 End Sub
+
+Private Function IsPdpReturnUrl() As Boolean
+    Dim normalized As String = StorefrontReturnUrlPolicy.NormalizeShoppingReturnUrl(
+        HttpContext.Current,
+        Convert.ToString(Session("Carrello_Pagina")))
+    If String.IsNullOrWhiteSpace(normalized) Then Return False
+
+    Dim queryIndex As Integer = normalized.IndexOf("?"c)
+    Dim path As String = If(queryIndex >= 0, normalized.Substring(0, queryIndex), normalized)
+    Return String.Equals(VirtualPathUtility.GetFileName(path), "articolo.aspx", StringComparison.OrdinalIgnoreCase)
+End Function
 
 
     ' Dati utente per Facebook Pixel
@@ -102,11 +129,30 @@ End Sub
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         Dim articoliIdGlobali As String = String.Empty
 
+        If Not String.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase) Then
+            Response.StatusCode = 405
+            Response.TrySkipIisCustomErrors = True
+            Response.Headers("Allow") = "POST"
+            Response.ContentType = "text/plain"
+            Response.Write("Metodo non consentito.")
+            Context.ApplicationInstance.CompleteRequest()
+            Return
+        End If
+
         Dim idParam As String = Convert.ToString(Request.QueryString("id"))
 
         If idParam Is Nothing Then idParam = ""
         idParam = idParam.Trim()
         Dim isGrouponFlow As Boolean = String.Equals(idParam, "groupon", StringComparison.OrdinalIgnoreCase)
+        Dim isCatalogAsyncExecution As Boolean = CatalogAsyncCartSupport.IsExecutionActive(HttpContext.Current)
+        Dim intentRequestId As String = Convert.ToString(Request.QueryString("requestId"))
+        Dim intentOperation As String = If(Convert.ToString(Request.QueryString("operation")), String.Empty).Trim()
+        Dim hasManagedIntent As Boolean = Not isCatalogAsyncExecution AndAlso
+                                           (String.Equals(intentOperation, "pdp-single", StringComparison.OrdinalIgnoreCase) OrElse
+                                            String.Equals(intentOperation, "pdp-bundle", StringComparison.OrdinalIgnoreCase) OrElse
+                                            String.Equals(intentOperation, "catalog-single", StringComparison.OrdinalIgnoreCase) OrElse
+                                            String.Equals(intentOperation, "catalog-multi", StringComparison.OrdinalIgnoreCase) OrElse
+                                            String.Equals(intentOperation, "cart-add", StringComparison.OrdinalIgnoreCase))
 
         ' 1) GESTIONE COUPON
         If String.Equals(idParam, "Coupon", StringComparison.OrdinalIgnoreCase) Then
@@ -131,6 +177,16 @@ End Sub
     Session("Carrello_Quantita") = 1
     Session("Carrello_SelezioneMultipla") = Nothing
 End If
+
+        If Not isGrouponFlow AndAlso Not isCatalogAsyncExecution AndAlso Not hasManagedIntent Then
+            ClearTemporaryCartSession()
+            Response.StatusCode = 400
+            Response.TrySkipIisCustomErrors = True
+            Response.ContentType = "text/plain"
+            Response.Write("Percorso di aggiunta al carrello non supportato.")
+            Context.ApplicationInstance.CompleteRequest()
+            Return
+        End If
 
         ' 2c) Compatibilita legacy: alcuni punti storici chiamano ancora
         ' aggiungi.aspx?id=123&TCid=-1&qty=1 senza passare da cart_add.aspx.
@@ -161,6 +217,34 @@ End If
             End If
         End If
 
+        If Not isGrouponFlow AndAlso Not isCatalogAsyncExecution Then
+            If hasManagedIntent Then
+                Dim intentPayload As String = CartMutationIdempotencyService.BuildSessionPayload(Session)
+                If (String.Equals(intentOperation, "catalog-multi", StringComparison.OrdinalIgnoreCase) OrElse
+                    String.Equals(intentOperation, "pdp-bundle", StringComparison.OrdinalIgnoreCase)) AndAlso
+                   TryCast(Session("Carrello_SelezioneMultipla"), ArrayList) Is Nothing Then intentPayload = String.Empty
+                Dim intentDecision As CartMutationIntentDecision = CartMutationIdempotencyService.BeginIntent(
+                    HttpContext.Current, intentRequestId, intentOperation, intentPayload)
+                If intentDecision = CartMutationIntentDecision.Completed Then
+                    ClearTemporaryCartSession()
+                    SafeRedirect(ResolveSafeCartReturnUrl())
+                    Return
+                End If
+                If intentDecision <> CartMutationIntentDecision.Accepted Then
+                    If intentDecision = CartMutationIntentDecision.Collision Then
+                        Try
+                            KeepStoreLog.Info("aggiungi.aspx", "Richiesta carrello rifiutata per collisione idempotente.", HttpContext.Current)
+                        Catch
+                        End Try
+                    End If
+                    ClearTemporaryCartSession()
+                    Response.StatusCode = If(intentDecision = CartMutationIntentDecision.Collision, 409, 400)
+                    SafeRedirect(ResolveSafeCartReturnUrl())
+                    Return
+                End If
+            End If
+        End If
+
 ' 3b) Se non c'è nessun articolo in sessione e non siamo in un flusso speciale, torno al carrello
 If String.IsNullOrEmpty(idParam) AndAlso Me.Session("Carrello_ArticoloId") Is Nothing Then
     SafeRedirect("carrello.aspx")
@@ -184,7 +268,13 @@ End If
             End Try
         End If
 
-        Dim isCatalogAsyncExecution As Boolean = CatalogAsyncCartSupport.IsExecutionActive(HttpContext.Current)
+        If hasManagedIntent Then
+            If _successfulCartAdds.Count > 0 Then
+                CartMutationIdempotencyService.CompleteIntent(HttpContext.Current, intentRequestId)
+            Else
+                CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, intentRequestId)
+            End If
+        End If
         If Not isGrouponFlow AndAlso Not isCatalogAsyncExecution AndAlso _successfulCartAdds.Count > 0 Then
             StoreCartFeedbackSession()
         End If
@@ -223,6 +313,14 @@ End If
     End If
 
     SafeRedirect(ResolveSafeCartReturnUrl())
+End Sub
+
+Private Sub ClearTemporaryCartSession()
+    Me.Session("Carrello_ArticoloId") = Nothing
+    Me.Session("Carrello_ListaArticoloId") = Nothing
+    Me.Session("Carrello_Quantita") = Nothing
+    Me.Session("Carrello_SelezioneMultipla") = Nothing
+    Me.Session("ProdottoGratis") = Nothing
 End Sub
 
 
@@ -325,7 +423,7 @@ End Sub
                 If tcId <= 0 Then tcId = -1
 
                 Dim quantity As Decimal
-                If Not TryParseDecimal(quantityText, quantity) OrElse quantity <= 0D Then Continue For
+                If Not TryParseDecimal(quantityText, quantity) OrElse Not IsValidStandardCartDelta(quantity) Then Continue For
 
                 If AddStandardCartItem(loginId, sessionId, listino, articleId, tcId, quantity) Then
                     addedIds.Add(articleId.ToString(CultureInfo.InvariantCulture))
@@ -384,7 +482,7 @@ End Sub
             Return False
         End If
 
-        RecordSuccessfulCartAdd(articleId, result.TCId, result.ProductName)
+        RecordSuccessfulCartAdd(articleId, result.TCId, result.ProductName, result.Quantity, quantity)
         AggiornaVisite(articleId)
         Return True
     End Function
@@ -908,7 +1006,7 @@ End Sub
         End If
 
         Dim sessionQuantity As Decimal
-        If TryParseDecimal(Session("Carrello_Quantita"), sessionQuantity) AndAlso sessionQuantity > 0D Then
+        If TryParseDecimal(Session("Carrello_Quantita"), sessionQuantity) AndAlso IsValidStandardCartDelta(sessionQuantity) Then
             Return sessionQuantity
         End If
         Return 1D
@@ -917,7 +1015,11 @@ End Sub
     Private Function TryGetValidQueryStringQuantityDecimal(ByRef quantity As Decimal) As Boolean
         quantity = 0D
         If Request Is Nothing OrElse Request.QueryString("qty") Is Nothing Then Return False
-        Return TryParseDecimal(Request.QueryString("qty"), quantity) AndAlso quantity > 0D
+        Return TryParseDecimal(Request.QueryString("qty"), quantity) AndAlso IsValidStandardCartDelta(quantity)
+    End Function
+
+    Private Function IsValidStandardCartDelta(ByVal quantity As Decimal) As Boolean
+        Return quantity <> 0D AndAlso quantity >= -9999D AndAlso quantity <= 9999D AndAlso Decimal.Truncate(quantity) = quantity
     End Function
 
     Private Function SessionInt(ByVal key As String, ByVal defaultValue As Integer) As Integer

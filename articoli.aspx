@@ -19,6 +19,7 @@
 </asp:Content>
 
 <asp:Content ID="MainContent1" ContentPlaceHolderID="MainContent" runat="server">
+    <asp:HiddenField ID="hfCartMutationRequestId" runat="server" />
 
     <asp:Panel ID="ksPageTitle" runat="server" CssClass="tf-page-title d-none">
         <div class="container">
@@ -292,13 +293,13 @@
 
                                         <ul class="list-product-btn top-0 end-0">
                                             <li>
-                                                <a href='<%# CatalogCartAddUrl(Container.DataItem) %>'
+                                                <button type="submit" <%# CatalogNativeCartButtonAttributes(Container.DataItem) %>
                                                     class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link"
                                                     aria-label="Aggiungi al carrello"
                                                     <%# CatalogActionDataAttributes(Container.DataItem) %>>
                                                     <span class="icon icon-cart2"></span>
                                                     <span class="tooltip">Aggiungi al carrello</span>
-                                                </a>
+                                                </button>
                                             </li>
                                             <li class="wishlist">
                                                 <a href='<%# CatalogWishlistAddUrl(Container.DataItem) %>'
@@ -389,13 +390,13 @@
                                     </div>
 
                                     <div class="card-product-btn">
-                                        <a href='<%# CatalogCartAddUrl(Container.DataItem) %>'
+                                        <button type="submit" <%# CatalogNativeCartButtonAttributes(Container.DataItem) %>
                                             class="tf-btn btn-line w-100 js-ks-cart-link"
                                             aria-label="Aggiungi al carrello"
                                             <%# CatalogActionDataAttributes(Container.DataItem) %>>
                                             <span>Aggiungi al carrello</span>
                                             <i class="icon-cart-2"></i>
-                                        </a>
+                                        </button>
                                         <div class="box-btn">
                                             <a href='<%# CatalogProductUrl(Container.DataItem) %>' class="tf-btn-icon style-2 type-black" aria-label="Apri dettagli prodotto">
                                                 <i class="icon-view"></i>
@@ -441,12 +442,12 @@
                                 </ul>
                                 <asp:Label ID="lblMultiSelectFeedback" runat="server" CssClass="ks-multi-footer__feedback" Visible="false" />
                             </div>
-                            <asp:LinkButton ID="btnAggiungiSelezionati" runat="server"
+                            <asp:Button ID="btnAggiungiSelezionati" runat="server"
                                 CssClass="tf-btn btn-fill ks-multi-footer__cta"
                                 CausesValidation="false"
-                                OnClick="Selezione_Multipla_Button_Click">
-                                Aggiungi selezionati al carrello
-                            </asp:LinkButton>
+                                UseSubmitBehavior="true"
+                                Text="Aggiungi selezionati al carrello"
+                                OnClick="Selezione_Multipla_Button_Click" />
                         </div>
                     </asp:Panel>
 
@@ -515,6 +516,6 @@
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>"></script>
     <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>?v=20260831-mediasort1"></script>
-    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20260902-catalogasynccart1a"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20260907-cartidempotency2"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260902-cardlayout1a"></script>
 </asp:Content>

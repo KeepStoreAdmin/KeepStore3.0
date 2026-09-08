@@ -13,7 +13,9 @@ Partial Class CatalogCartAsync
     Private _statusCode As Integer = 500
     Private _success As Boolean
     Private _duplicate As Boolean
-    Private _message As String = "Non e' stato possibile aggiornare il carrello. Riprova."
+    Private _refreshRequired As Boolean
+    Private _message As String = "Non è stato possibile aggiornare il carrello. Riprova."
+    Private _requestedDelta As Decimal
     Private _articleId As Integer
     Private _tcId As Integer = -1
     Private _requestId As String = String.Empty
@@ -30,6 +32,7 @@ Partial Class CatalogCartAsync
         Response.TrySkipIisCustomErrors = True
 
         If Not String.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase) Then
+            Response.Headers("Allow") = "POST"
             Reject(405, "Metodo non consentito.")
             Return
         End If
@@ -46,67 +49,86 @@ Partial Class CatalogCartAsync
         End If
 
         Dim quantity As Decimal = 0D
-        Dim freeProduct As Integer = 0
-        If Not TryReadParameters(_articleId, _tcId, quantity, freeProduct, _requestId) Then
+        If Not TryReadParameters(_articleId, _tcId, quantity, _requestId) Then
             Reject(400, "Parametri carrello non validi.")
             Return
         End If
+        _requestedDelta = quantity
 
-        Dim fingerprint As String = CatalogAsyncCartSupport.BuildFingerprint(_articleId, _tcId, quantity, freeProduct)
-        Dim processedFingerprint As String = String.Empty
-        If CatalogAsyncCartSupport.TryGetProcessedFingerprint(Session, _requestId, processedFingerprint) Then
-            If Not String.Equals(processedFingerprint, fingerprint, StringComparison.Ordinal) Then
-                Reject(409, "Identificativo richiesta non valido.")
-                Return
-            End If
-
+        Dim payload As String = CartMutationIdempotencyService.BuildStandardPayload(_articleId, _tcId, quantity)
+        Dim decision As CartMutationIntentDecision = CartMutationIdempotencyService.RegisterIntent(
+            HttpContext.Current, _requestId, "cart-add", payload)
+        If decision = CartMutationIntentDecision.Completed Then
             _duplicate = True
             _success = True
             _statusCode = 200
-            _message = "Carrello gia' aggiornato."
+            _message = "Carrello già aggiornato."
+            Return
+        End If
+        If decision = CartMutationIntentDecision.Collision Then
+            Reject(409, "Identificativo richiesta non valido.")
+            Return
+        End If
+        If decision = CartMutationIntentDecision.Invalid Then
+            Reject(400, "Richiesta carrello non valida.")
+            Return
+        End If
+        If decision = CartMutationIntentDecision.Indeterminate Then
+            Reject(409, "Non è stato possibile confermare l'aggiornamento. Aggiorna il carrello e riprova.", True)
+            Return
+        End If
+        If decision = CartMutationIntentDecision.Processing OrElse decision = CartMutationIntentDecision.CapacityExceeded Then
+            Response.Headers("Retry-After") = "1"
+            Reject(503, "Aggiornamento carrello in corso. Riprova tra poco.")
             Return
         End If
 
+        Dim beginDecision As CartMutationIntentDecision = CartMutationIdempotencyService.BeginIntent(
+            HttpContext.Current, _requestId, "cart-add", payload)
+        If beginDecision = CartMutationIntentDecision.Completed Then
+            _duplicate = True
+            _success = True
+            _statusCode = 200
+            _message = "Carrello già aggiornato."
+            Return
+        End If
+        If beginDecision = CartMutationIntentDecision.Indeterminate Then
+            Reject(409, "Non è stato possibile confermare l'aggiornamento. Aggiorna il carrello e riprova.", True)
+            Return
+        End If
+        If beginDecision <> CartMutationIntentDecision.Accepted Then
+            If beginDecision = CartMutationIntentDecision.Processing Then Response.Headers("Retry-After") = "1"
+            Reject(If(beginDecision = CartMutationIntentDecision.Collision, 409, 503), "Aggiornamento carrello non disponibile. Riprova.")
+            Return
+        End If
+
+        Dim mutationCommitted As Boolean = False
         Try
-            Session("Carrello_ArticoloId") = _articleId.ToString(CultureInfo.InvariantCulture)
-            Session("Carrello_TCId") = _tcId.ToString(CultureInfo.InvariantCulture)
-            Session("Carrello_Quantita") = quantity.ToString(CultureInfo.InvariantCulture)
-            Session("ProdottoGratis") = freeProduct.ToString(CultureInfo.InvariantCulture)
             Dim cartReturnUrl As String = StorefrontReturnUrlPolicy.NormalizeShoppingReturnUrl(HttpContext.Current, Request.UrlReferrer.AbsoluteUri)
             Session("Carrello_Pagina") = If(cartReturnUrl <> String.Empty, cartReturnUrl, "/articoli.aspx")
-            Session("Carrello_SelezioneMultipla") = Nothing
 
-            CatalogAsyncCartSupport.BeginExecution(HttpContext.Current, _articleId, _tcId)
-            Dim discardedOutput As New StringBuilder()
-            Using capture As New StringWriter(discardedOutput, CultureInfo.InvariantCulture)
-                Dim executionUrl As String = "aggiungi.aspx?id=" & _articleId.ToString(CultureInfo.InvariantCulture) &
-                                             "&TCid=" & _tcId.ToString(CultureInfo.InvariantCulture) &
-                                             "&qty=" & quantity.ToString(CultureInfo.InvariantCulture)
-                If freeProduct <> 0 Then executionUrl &= "&pg=" & freeProduct.ToString(CultureInfo.InvariantCulture)
-                Server.Execute(executionUrl, capture, False)
-            End Using
-
-            Dim execution As CatalogAsyncCartExecutionResult = CatalogAsyncCartSupport.GetExecutionResult(HttpContext.Current)
-            If execution Is Nothing OrElse Not execution.IsComplete OrElse Not execution.Success Then
-                Reject(422, "Il prodotto non e' stato aggiunto. Verifica disponibilita' e prezzo.")
+            Dim result As CartStandardMutationResult = CartMutationService.AddStandardProductForCurrentOwner(
+                HttpContext.Current, _articleId, _tcId, quantity)
+            If result Is Nothing OrElse Not result.Succeeded Then
+                CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, _requestId)
+                Reject(422, "Il prodotto non è stato aggiunto. Verifica disponibilità e prezzo.")
                 Return
             End If
 
-            _articleId = execution.ArticleId
-            _tcId = execution.TCId
-            CatalogAsyncCartSupport.MarkProcessed(Session, _requestId, fingerprint)
+            _articleId = result.ArticleId
+            _tcId = result.TCId
+            mutationCommitted = True
+            CartMutationIdempotencyService.CompleteIntent(HttpContext.Current, _requestId)
             _success = True
             _statusCode = 200
             _message = "Prodotto aggiunto al carrello."
         Catch ex As Exception
+            If Not mutationCommitted Then CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, _requestId)
             Try
                 KeepStoreLog.Error("catalog_cart_async.aspx", "Errore aggiornamento asincrono carrello ArticoloId=" & _articleId.ToString(CultureInfo.InvariantCulture) & " TCId=" & _tcId.ToString(CultureInfo.InvariantCulture), ex, HttpContext.Current)
             Catch
             End Try
             Reject(500, "Non e' stato possibile aggiornare il carrello. Riprova.")
-        Finally
-            CatalogAsyncCartSupport.EndExecution(HttpContext.Current)
-            ClearTemporaryCartSession()
         End Try
     End Sub
 
@@ -115,7 +137,8 @@ Partial Class CatalogCartAsync
             {"ok", _success},
             {"message", _message},
             {"requestId", _requestId},
-            {"duplicate", _duplicate}
+            {"duplicate", _duplicate},
+            {"refreshRequired", _refreshRequired}
         }
 
         Try
@@ -137,6 +160,11 @@ Partial Class CatalogCartAsync
                 Dim productQuantity As Decimal = If(_tcId > 0,
                                                     snapshot.GetQuantity(_articleId, _tcId),
                                                     snapshot.GetArticleQuantity(_articleId))
+                If Not _duplicate AndAlso _requestedDelta < 0D AndAlso productQuantity > 0D Then
+                    Dim itemLabel As String = If(productQuantity = 1D, " pezzo", " pezzi")
+                    _message = "Quantità aggiornata: " & FormatQuantity(productQuantity) & itemLabel & " nel carrello."
+                    payload("message") = _message
+                End If
                 Dim cartTotal As Decimal = 0D
                 Decimal.TryParse(Convert.ToString(Session("Carrello_Totale_Merce")), NumberStyles.Any, CultureInfo.InvariantCulture, cartTotal)
 
@@ -163,6 +191,7 @@ Partial Class CatalogCartAsync
             payload("message") = _message
             payload("requestId") = _requestId
             payload("duplicate") = _duplicate
+            payload("refreshRequired") = _refreshRequired
         End Try
 
         Response.Clear()
@@ -182,7 +211,6 @@ Partial Class CatalogCartAsync
     Private Function TryReadParameters(ByRef articleId As Integer,
                                        ByRef tcId As Integer,
                                        ByRef quantity As Decimal,
-                                       ByRef freeProduct As Integer,
                                        ByRef requestId As String) As Boolean
         If Not Integer.TryParse(Convert.ToString(Request.Form("id")), articleId) OrElse articleId <= 0 Then Return False
 
@@ -192,16 +220,10 @@ Partial Class CatalogCartAsync
 
         Dim quantityRaw As String = Convert.ToString(Request.Form("qty"))
         If Not Decimal.TryParse(quantityRaw, NumberStyles.Any, CultureInfo.InvariantCulture, quantity) Then Return False
-        If quantity <= 0D OrElse quantity > 9999D OrElse Decimal.Truncate(quantity) <> quantity Then Return False
-
-        freeProduct = 0
-        If Not String.IsNullOrWhiteSpace(Request.Form("pg")) AndAlso
-           (Not Integer.TryParse(Request.Form("pg"), freeProduct) OrElse (freeProduct <> 0 AndAlso freeProduct <> 1)) Then
-            Return False
-        End If
+        If quantity = 0D OrElse quantity < -9999D OrElse quantity > 9999D OrElse Decimal.Truncate(quantity) <> quantity Then Return False
 
         Dim requestGuid As Guid
-        requestId = Convert.ToString(Request.Form("requestId")).Trim()
+        requestId = If(Convert.ToString(Request.Form("requestId")), String.Empty).Trim()
         If Not Guid.TryParse(requestId, requestGuid) Then Return False
         requestId = requestGuid.ToString("N")
         Return True
@@ -215,7 +237,13 @@ Partial Class CatalogCartAsync
 
         Dim referrerPath As String = If(referrerUri.AbsolutePath, String.Empty)
         Dim referrerFile As String = If(VirtualPathUtility.GetFileName(referrerPath), String.Empty)
-        If Not String.Equals(referrerFile, "articoli.aspx", StringComparison.OrdinalIgnoreCase) Then Return False
+        Dim isStorefrontCartCaller As Boolean =
+            String.IsNullOrEmpty(referrerFile) OrElse
+            String.Equals(referrerFile, "Default.aspx", StringComparison.OrdinalIgnoreCase) OrElse
+            String.Equals(referrerFile, "articoli.aspx", StringComparison.OrdinalIgnoreCase) OrElse
+            String.Equals(referrerFile, "articolo.aspx", StringComparison.OrdinalIgnoreCase) OrElse
+            String.Equals(referrerPath, ResolveUrl("~/compare.aspx"), StringComparison.OrdinalIgnoreCase)
+        If Not isStorefrontCartCaller Then Return False
 
         Dim fetchSite As String = If(Request.Headers("Sec-Fetch-Site"), String.Empty).Trim()
         If fetchSite <> "" AndAlso Not String.Equals(fetchSite, "same-origin", StringComparison.OrdinalIgnoreCase) Then Return False
@@ -258,17 +286,17 @@ Partial Class CatalogCartAsync
         Return Nothing
     End Function
 
-    Private Sub Reject(ByVal statusCode As Integer, ByVal message As String)
+    Private Sub Reject(ByVal statusCode As Integer, ByVal message As String, Optional ByVal refreshRequired As Boolean = False)
         _success = False
         _statusCode = statusCode
         _message = message
+        _refreshRequired = refreshRequired
     End Sub
 
-    Private Sub ClearTemporaryCartSession()
-        Session("Carrello_ArticoloId") = Nothing
-        Session("Carrello_ListaArticoloId") = Nothing
-        Session("Carrello_Quantita") = Nothing
-        Session("Carrello_SelezioneMultipla") = Nothing
-        Session("ProdottoGratis") = Nothing
-    End Sub
+    Private Function FormatQuantity(ByVal quantity As Decimal) As String
+        Dim culture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
+        If Decimal.Truncate(quantity) = quantity Then Return quantity.ToString("0", culture)
+        Return quantity.ToString("0.##", culture)
+    End Function
+
 End Class

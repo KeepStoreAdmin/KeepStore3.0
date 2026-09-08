@@ -1,8 +1,10 @@
 ﻿Imports MySql.Data.MySqlClient
 Imports System.Data
+Imports System.Globalization
+Imports System.Web
 
 Partial Class promozioni
-    Inherits System.Web.UI.Page
+    Inherits AntiCsrfPage
 
     Dim IvaTipo As Integer
     Dim DispoTipo As Integer
@@ -17,6 +19,8 @@ Partial Class promozioni
     Dim iPromoID As Integer
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+
+        If Not IsPostBack Then CartMutationIdempotencyService.ClearProgressiveRequestIds(HttpContext.Current, "promozioni:")
 
         Me.Session("Carrello_Pagina") = "promozioni.aspx"
 
@@ -236,14 +240,14 @@ Partial Class promozioni
         prezzo = img.Parent.FindControl("lblPrezzo")
         prezzoivato = img.Parent.FindControl("lblPrezzoIvato")
 
-        Me.Session("Carrello_ArticoloId") = ID.Text
-        Me.Session("Carrello_Codice") = codice.Text
-        Me.Session("Carrello_Descrizione") = descrizione.Text
-        Me.Session("Carrello_Quantita") = qta.Text
-        Me.Session("Carrello_Prezzo") = prezzo.Text
-        Me.Session("Carrello_PrezzoIvato") = prezzoivato.Text
-
-        Me.Response.Redirect("aggiungi.aspx")
+        Dim articleId As Integer = 0
+        Dim quantity As Decimal = 0D
+        If Not Integer.TryParse(ID.Text, articleId) OrElse articleId <= 0 OrElse
+           Not Decimal.TryParse(qta.Text, NumberStyles.Number, CultureInfo.GetCultureInfo("it-IT"), quantity) OrElse quantity <= 0D Then Exit Sub
+        If ExecutePromotionCartMutation(articleId, quantity) Then
+            Response.Redirect(Request.RawUrl, False)
+            Context.ApplicationInstance.CompleteRequest()
+        End If
 
     End Sub
 
@@ -378,5 +382,32 @@ Partial Class promozioni
             End If
         End If
     End Sub
+
+    Private Function ExecutePromotionCartMutation(ByVal articleId As Integer,
+                                                   ByVal quantity As Decimal) As Boolean
+        Dim payload As String = CartMutationIdempotencyService.BuildStandardPayload(articleId, -1, quantity)
+        Dim slotName As String = "promozioni:single:" & articleId.ToString(CultureInfo.InvariantCulture)
+        Dim requestId As String = CartMutationIdempotencyService.GetOrCreateProgressiveRequestId(
+            HttpContext.Current, slotName, "promotion-add", payload)
+        Dim decision As CartMutationIntentDecision = CartMutationIdempotencyService.RegisterIntent(
+            HttpContext.Current, requestId, "promotion-add", payload)
+        If decision = CartMutationIntentDecision.Completed Then Return True
+        If decision <> CartMutationIntentDecision.Accepted AndAlso decision <> CartMutationIntentDecision.Pending Then Return False
+
+        decision = CartMutationIdempotencyService.BeginIntent(
+            HttpContext.Current, requestId, "promotion-add", payload)
+        If decision = CartMutationIntentDecision.Completed Then Return True
+        If decision <> CartMutationIntentDecision.Accepted Then Return False
+
+        Dim result As CartStandardMutationResult = CartMutationService.AddStandardProductForCurrentOwner(
+            HttpContext.Current, articleId, -1, quantity)
+        If result Is Nothing OrElse Not result.Succeeded Then
+            CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
+            Return False
+        End If
+
+        CartMutationIdempotencyService.CompleteIntent(HttpContext.Current, requestId)
+        Return True
+    End Function
 
 End Class

@@ -33,6 +33,32 @@ End Class
 Public Module CartMutationService
     Private Const GenericMutationError As String = "Non è stato possibile aggiornare il carrello. Riprova."
 
+    Public Function AddStandardProductForCurrentOwner(ByVal ctx As HttpContext,
+                                                       ByVal articleId As Integer,
+                                                       ByVal requestedTCId As Integer,
+                                                       ByVal quantityToAdd As Decimal) As CartStandardMutationResult
+        If ctx Is Nothing OrElse ctx.Session Is Nothing Then Return New CartStandardMutationResult With {.ErrorMessage = GenericMutationError}
+
+        Dim loginId As Integer = SessionInteger(ctx, "LoginId", SessionInteger(ctx, "LoginID", 0))
+        Dim sessionId As String = If(loginId > 0, String.Empty, ctx.Session.SessionID)
+        Dim listino As Integer = SessionInteger(ctx, "Listino", SessionInteger(ctx, "listino", 1))
+        If listino <= 0 Then listino = 1
+        Return AddStandardProduct(ctx, loginId, sessionId, articleId, requestedTCId, quantityToAdd, listino)
+    End Function
+
+    Public Function SetStandardProductQuantityForCurrentOwner(ByVal ctx As HttpContext,
+                                                              ByVal articleId As Integer,
+                                                              ByVal requestedTCId As Integer,
+                                                              ByVal desiredQuantity As Decimal) As CartStandardMutationResult
+        If ctx Is Nothing OrElse ctx.Session Is Nothing Then Return New CartStandardMutationResult With {.ErrorMessage = GenericMutationError}
+
+        Dim loginId As Integer = SessionInteger(ctx, "LoginId", SessionInteger(ctx, "LoginID", 0))
+        Dim sessionId As String = If(loginId > 0, String.Empty, ctx.Session.SessionID)
+        Dim listino As Integer = SessionInteger(ctx, "Listino", SessionInteger(ctx, "listino", 1))
+        If listino <= 0 Then listino = 1
+        Return MutateStandardProduct(ctx, loginId, sessionId, articleId, requestedTCId, desiredQuantity, listino, True)
+    End Function
+
     Public Function AddStandardProduct(ByVal ctx As HttpContext,
                                        ByVal loginId As Integer,
                                        ByVal sessionId As String,
@@ -40,6 +66,17 @@ Public Module CartMutationService
                                        ByVal requestedTCId As Integer,
                                        ByVal quantityToAdd As Decimal,
                                        ByVal listino As Integer) As CartStandardMutationResult
+        Return MutateStandardProduct(ctx, loginId, sessionId, articleId, requestedTCId, quantityToAdd, listino, False)
+    End Function
+
+    Private Function MutateStandardProduct(ByVal ctx As HttpContext,
+                                           ByVal loginId As Integer,
+                                           ByVal sessionId As String,
+                                           ByVal articleId As Integer,
+                                           ByVal requestedTCId As Integer,
+                                           ByVal quantityValue As Decimal,
+                                           ByVal listino As Integer,
+                                           ByVal setAbsoluteQuantity As Boolean) As CartStandardMutationResult
         Dim result As New CartStandardMutationResult() With {
             .ArticleId = articleId,
             .TCId = NormalizeTCId(requestedTCId),
@@ -49,7 +86,7 @@ Public Module CartMutationService
         Dim transaction As MySqlTransaction = Nothing
         Try
             If ctx Is Nothing OrElse ctx.Session Is Nothing OrElse articleId <= 0 OrElse
-               quantityToAdd <= 0D OrElse listino <= 0 OrElse
+               (If(setAbsoluteQuantity, quantityValue <= 0D, quantityValue = 0D)) OrElse listino <= 0 OrElse
                (loginId <= 0 AndAlso String.IsNullOrWhiteSpace(sessionId)) Then Return result
 
             conn = New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
@@ -59,17 +96,23 @@ Public Module CartMutationService
             Dim ownedArticleRows As List(Of CartMutationExistingRow) = LoadOwnedArticleRows(
                 conn, transaction, loginId, sessionId, articleId)
             Dim eligibilityContext As ProductPromotionEligibilityContext = ProductPromotionEligibilityResolver.CreateContext(ctx, listino)
+            Dim probeQuantity As Decimal = If(quantityValue > 0D, quantityValue, 1D)
             Dim preliminary As CartResolvedPrice = CartPriceRevalidationHelper.ResolveStandardPrice(
-                ctx, conn, transaction, eligibilityContext, articleId, requestedTCId, quantityToAdd, listino, True)
+                ctx, conn, transaction, eligibilityContext, articleId, requestedTCId, probeQuantity, listino, True)
             EnsureResolved(preliminary)
 
             Dim effectiveTCId As Integer = preliminary.EffectiveTCId
             Dim existing As List(Of CartMutationExistingRow) = ownedArticleRows.FindAll(
                 Function(row As CartMutationExistingRow) NormalizeTCId(row.TCId) = effectiveTCId)
-            Dim finalQuantity As Decimal = quantityToAdd
-            For Each row As CartMutationExistingRow In existing
-                finalQuantity = Decimal.Add(finalQuantity, row.Quantity)
-            Next
+            If Not setAbsoluteQuantity AndAlso existing.Count = 0 AndAlso quantityValue < 0D Then Return result
+
+            Dim finalQuantity As Decimal = quantityValue
+            If Not setAbsoluteQuantity Then
+                For Each row As CartMutationExistingRow In existing
+                    finalQuantity = Decimal.Add(finalQuantity, row.Quantity)
+                Next
+            End If
+
             ValidateQuantity(finalQuantity)
 
             Dim resolved As CartResolvedPrice = CartPriceRevalidationHelper.ResolveStandardPrice(
@@ -103,13 +146,20 @@ Public Module CartMutationService
             result.OfferDetailId = resolved.OfferDetailId
             result.ErrorMessage = String.Empty
         Catch ex As Exception
-            TryRollback(transaction, ctx, "add-standard")
-            LogFailure(ctx, "Atomic standard cart add failed", ex)
+            TryRollback(transaction, ctx, If(setAbsoluteQuantity, "set-standard", "add-standard"))
+            LogFailure(ctx, If(setAbsoluteQuantity, "Atomic standard cart quantity update failed", "Atomic standard cart add failed"), ex)
         Finally
             If transaction IsNot Nothing Then transaction.Dispose()
             If conn IsNot Nothing Then conn.Dispose()
         End Try
         Return result
+    End Function
+
+    Private Function SessionInteger(ByVal ctx As HttpContext, ByVal key As String, ByVal fallback As Integer) As Integer
+        Dim parsed As Integer
+        If ctx IsNot Nothing AndAlso ctx.Session IsNot Nothing AndAlso
+           Integer.TryParse(Convert.ToString(ctx.Session(key)), NumberStyles.Integer, CultureInfo.InvariantCulture, parsed) Then Return parsed
+        Return fallback
     End Function
 
     Public Function UpdateStandardQuantities(ByVal ctx As HttpContext,

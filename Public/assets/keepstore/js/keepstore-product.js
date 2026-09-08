@@ -335,8 +335,7 @@
     var existingQty = normalizeExistingQty(input.getAttribute('data-ks-existing-cart-qty') || link.getAttribute('data-ks-existing-cart-qty'));
     if (existingQty <= 0) return desiredQty;
 
-    var qtyToAdd = desiredQty - existingQty;
-    return qtyToAdd > 0 ? qtyToAdd : 0;
+    return desiredQty - existingQty;
   }
 
   function setUrlParam(url, key, value) {
@@ -393,6 +392,7 @@
 
   function catalogAsyncConfig(link) {
     var page = link && link.closest ? link.closest('#ksCatalogPage') : null;
+    if (!page && document.body && document.body.getAttribute('data-ks-async-cart-endpoint')) page = document.body;
     if (!page || typeof window.fetch !== 'function') return null;
     var endpoint = page.getAttribute('data-ks-async-cart-endpoint') || '';
     var token = page.getAttribute('data-ks-async-cart-token') || '';
@@ -423,9 +423,87 @@
     var href = link ? (link.getAttribute('href') || link.getAttribute('data-ks-cart-url') || '') : '';
     return {
       id: String((link && link.getAttribute('data-ks-id')) || getUrlParam(href, 'id') || '').replace(/\D/g, ''),
-      tcid: normalizeTcid((link && link.getAttribute('data-ks-tcid')) || getUrlParam(href, 'TCid') || '-1'),
-      pg: String(getUrlParam(href, 'pg') || '0').replace(/\D/g, '') || '0'
+      tcid: normalizeTcid((link && link.getAttribute('data-ks-tcid')) || getUrlParam(href, 'TCid') || '-1')
     };
+  }
+
+  function cartIntentFingerprint(identity, qtyToAdd) {
+    return 'cart-add|' + identity.id + '|' + identity.tcid + '|' + String(qtyToAdd);
+  }
+
+  function requestIdForIntent(link, identity, qtyToAdd) {
+    var fingerprint = cartIntentFingerprint(identity, qtyToAdd);
+    var currentFingerprint = link.getAttribute('data-ks-request-fingerprint') || '';
+    var requestId = link.getAttribute('data-ks-request-id') || '';
+    if (requestId && (!currentFingerprint || currentFingerprint === fingerprint)) {
+      link.setAttribute('data-ks-request-fingerprint', fingerprint);
+      return requestId;
+    }
+
+    requestId = newCartRequestId();
+    link.setAttribute('data-ks-request-id', requestId);
+    link.setAttribute('data-ks-request-fingerprint', fingerprint);
+    return requestId;
+  }
+
+  function clearCartIntent(link, identity, qtyToAdd) {
+    if (!link) return;
+    if ((link.getAttribute('data-ks-request-fingerprint') || '') !== cartIntentFingerprint(identity, qtyToAdd)) return;
+    link.removeAttribute('data-ks-request-id');
+    link.removeAttribute('data-ks-request-fingerprint');
+  }
+
+  function nativeCartActionValue(identity, qtyToAdd, requestId) {
+    return formEncode({
+      id: identity.id,
+      tcid: identity.tcid,
+      qty: qtyToAdd,
+      requestId: requestId,
+      operation: 'cart-add'
+    });
+  }
+
+  function prepareNativeCartSubmit(link, identity, qtyToAdd) {
+    var requestId = requestIdForIntent(link, identity, qtyToAdd);
+    link.setAttribute('form', 'ksNativeCartForm');
+    link.setAttribute('name', 'ksCartAction');
+    link.setAttribute('value', nativeCartActionValue(identity, qtyToAdd, requestId));
+    return requestId;
+  }
+
+  function replaceCartAnchor(anchor) {
+    if (!anchor || String(anchor.tagName).toLowerCase() !== 'a') return anchor;
+    var button = document.createElement('button');
+    Array.prototype.forEach.call(anchor.attributes || [], function (attribute) {
+      if (String(attribute.name).toLowerCase() === 'href') return;
+      button.setAttribute(attribute.name, attribute.value);
+    });
+    button.type = 'submit';
+    button.setAttribute('form', 'ksNativeCartForm');
+    button.setAttribute('name', 'ksCartAction');
+    button.setAttribute('data-ks-cart-url', anchor.getAttribute('href') || anchor.getAttribute('data-ks-cart-url') || 'cart_add.aspx');
+    button.innerHTML = anchor.innerHTML;
+    anchor.parentNode.replaceChild(button, anchor);
+    return button;
+  }
+
+  function normalizeCartActionElements(root) {
+    var scope = root && root.querySelectorAll ? root : document;
+    qsa('a.js-ks-cart-link', scope).forEach(replaceCartAnchor);
+  }
+
+  function observeDynamicCartActions() {
+    if (!window.MutationObserver || !document.body) return;
+    var observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        Array.prototype.forEach.call(mutation.addedNodes || [], function (node) {
+          if (!node || node.nodeType !== 1) return;
+          if (node.matches && node.matches('a.js-ks-cart-link')) replaceCartAnchor(node);
+          normalizeCartActionElements(node);
+        });
+      });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
   }
 
   function formEncode(values) {
@@ -518,12 +596,11 @@
       return;
     }
 
-    var requestId = newCartRequestId();
+    var requestId = prepareNativeCartSubmit(link, identity, qtyToAdd);
     var body = formEncode({
       id: identity.id,
       tcid: identity.tcid,
       qty: qtyToAdd,
-      pg: identity.pg,
       requestId: requestId,
       csrfToken: config.token
     });
@@ -546,13 +623,18 @@
         var data = null;
         try { data = JSON.parse(text); } catch (e) {}
         if (!response.ok || !data || !data.ok) {
-          throw new Error(data && data.message ? data.message : 'Non e\' stato possibile aggiornare il carrello. Riprova.');
+          var responseError = new Error(data && data.message ? data.message : 'Non e\' stato possibile aggiornare il carrello. Riprova.');
+          responseError.ksRefreshRequired = !!(data && data.refreshRequired);
+          responseError.ksTerminal = response.status >= 400 && response.status < 500 && !responseError.ksRefreshRequired;
+          throw responseError;
         }
         return data;
       });
     }).then(function (data) {
       applyCatalogCartResponse(config, link, identity, data);
+      clearCartIntent(link, identity, qtyToAdd);
     }).catch(function (error) {
+      if (error && error.ksTerminal) clearCartIntent(link, identity, qtyToAdd);
       var message = error && error.message ? error.message : 'Risposta del carrello non disponibile. Verifica il carrello prima di riprovare.';
       setCatalogCartStatus(config, message);
     }).then(function () {
@@ -569,15 +651,26 @@
           stopTemplateDemoHandlers(ev);
           if (cartLink.getAttribute('data-ks-cart-busy') === '1') return;
           var asyncQtyToAdd = findCardQtyToAdd(cartLink);
-          if (asyncQtyToAdd <= 0) return;
+          if (asyncQtyToAdd === 0) {
+            var unchangedQty = findCardQty(cartLink);
+            setCatalogCartStatus(asyncConfig, 'Nel carrello sono già presenti ' + unchangedQty + (unchangedQty === 1 ? ' pezzo.' : ' pezzi.'));
+            return;
+          }
           submitCatalogCart(asyncConfig, cartLink, asyncQtyToAdd);
           return;
         }
 
-        stopTemplateDemoHandlers(ev);
         var qtyToAdd = findCardQtyToAdd(cartLink);
-        if (qtyToAdd <= 0) return;
-        navigateKeepStore(setUrlParam(cartLink.getAttribute('href'), 'qty', qtyToAdd));
+        var identity = cartLinkIdentity(cartLink);
+        if (!identity.id) {
+          stopTemplateDemoHandlers(ev);
+          return;
+        }
+        prepareNativeCartSubmit(cartLink, identity, qtyToAdd);
+        if (qtyToAdd === 0) {
+          stopTemplateDemoHandlers(ev);
+          return;
+        }
         return;
       }
 
@@ -597,6 +690,19 @@
   function setHref(id, value) {
     var el = document.getElementById(id);
     if (el && value) el.setAttribute('href', value);
+  }
+
+  function setCartButton(id, item, qtyToAdd) {
+    var button = document.getElementById(id);
+    if (!button || !item) return;
+    var identity = {
+      id: String(item.id || getUrlParam(item.cartUrl, 'id') || '').replace(/\D/g, ''),
+      tcid: normalizeTcid(item.tcid || getUrlParam(item.cartUrl, 'TCid') || '-1')
+    };
+    button.setAttribute('data-ks-id', identity.id);
+    button.setAttribute('data-ks-tcid', identity.tcid);
+    button.setAttribute('data-ks-cart-url', item.cartUrl || 'cart_add.aspx');
+    prepareNativeCartSubmit(button, identity, qtyToAdd);
   }
 
   function setQuickViewImage(item) {
@@ -631,7 +737,7 @@
       setQuickViewImage(item);
       setHref('ksQuickViewImageLink', item.url);
       setHref('ksQuickViewOpenLink', item.url);
-      setHref('ksQuickViewCartLink', item.cartUrl || item.url);
+      setCartButton('ksQuickViewCartLink', item, quickViewQtyToAdd);
       showQuickViewModal();
     }, true);
   }
@@ -721,7 +827,7 @@
           (availability ? '<p class="caption text-main-2">' + escapeHtml(availability) + '</p>' : '') +
           '<div class="d-flex gap-2 mt-3 flex-wrap">' +
             '<a class="tf-btn btn-line" href="' + escapeHtml(item.url || '#') + '"><span>Vedi prodotto</span></a>' +
-            '<a class="tf-btn btn-fill js-ks-cart-link" href="' + escapeHtml(cartUrl) + '" data-ks-id="' + escapeHtml(item.id) + '" data-ks-tcid="' + escapeHtml(item.tcid || '-1') + '"><span>Aggiungi</span></a>' +
+            '<button type="submit" form="ksNativeCartForm" name="ksCartAction" class="tf-btn btn-fill js-ks-cart-link" data-ks-cart-url="' + escapeHtml(cartUrl) + '" data-ks-id="' + escapeHtml(item.id) + '" data-ks-tcid="' + escapeHtml(item.tcid || '-1') + '"><span>Aggiungi</span></button>' +
           '</div>' +
         '</div>' +
         '<button type="button" class="remove link" data-ks-remove-compare="' + idx + '" aria-label="Rimuovi"><i class="icon icon-close"></i></button>' +
@@ -838,6 +944,8 @@
   }
 
   domReady(function () {
+    normalizeCartActionElements(document);
+    observeDynamicCartActions();
     initQtyButtons();
     initRefurbBadge();
     initCardActionLinks();

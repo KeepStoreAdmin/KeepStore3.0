@@ -1,9 +1,6 @@
 Imports System
-Imports System.Collections.Generic
-Imports System.Globalization
 Imports System.Security.Cryptography
 Imports System.Web
-Imports System.Web.SessionState
 
 Public NotInheritable Class CatalogAsyncCartExecutionResult
     Public Property IsComplete As Boolean
@@ -15,9 +12,7 @@ End Class
 
 Public NotInheritable Class CatalogAsyncCartSupport
     Private Const CsrfSessionKey As String = "KeepStore:CatalogAsyncCart:Csrf"
-    Private Const ProcessedSessionKey As String = "KeepStore:CatalogAsyncCart:Processed"
     Private Const ExecutionContextKey As String = "KeepStore:CatalogAsyncCart:Execution"
-    Private Const MaxProcessedRequests As Integer = 64
 
     Private Sub New()
     End Sub
@@ -44,51 +39,6 @@ Public NotInheritable Class CatalogAsyncCartSupport
         Dim expected As String = Convert.ToString(context.Session(CsrfSessionKey))
         Return FixedTimeEquals(expected, Convert.ToString(suppliedToken))
     End Function
-
-    Public Shared Function BuildFingerprint(ByVal articleId As Integer,
-                                            ByVal tcId As Integer,
-                                            ByVal quantity As Decimal,
-                                            ByVal freeProduct As Integer) As String
-        Return articleId.ToString(CultureInfo.InvariantCulture) & ":" &
-               NormalizeTCId(tcId).ToString(CultureInfo.InvariantCulture) & ":" &
-               quantity.ToString("0.####", CultureInfo.InvariantCulture) & ":" &
-               freeProduct.ToString(CultureInfo.InvariantCulture)
-    End Function
-
-    Public Shared Function TryGetProcessedFingerprint(ByVal session As HttpSessionState,
-                                                       ByVal requestId As String,
-                                                       ByRef fingerprint As String) As Boolean
-        fingerprint = String.Empty
-        If session Is Nothing OrElse String.IsNullOrWhiteSpace(requestId) Then Return False
-
-        Dim processed As Dictionary(Of String, String) = GetProcessedRequests(session, False)
-        If processed Is Nothing Then Return False
-
-        Dim stored As String = Nothing
-        If Not processed.TryGetValue(requestId, stored) OrElse String.IsNullOrEmpty(stored) Then Return False
-
-        Dim separator As Integer = stored.LastIndexOf("|"c)
-        fingerprint = If(separator > 0, stored.Substring(0, separator), stored)
-        Return True
-    End Function
-
-    Public Shared Sub MarkProcessed(ByVal session As HttpSessionState,
-                                    ByVal requestId As String,
-                                    ByVal fingerprint As String)
-        If session Is Nothing OrElse String.IsNullOrWhiteSpace(requestId) OrElse String.IsNullOrWhiteSpace(fingerprint) Then Return
-
-        Dim processed As Dictionary(Of String, String) = GetProcessedRequests(session, True)
-        If processed.Count >= MaxProcessedRequests Then
-            Dim removeCount As Integer = processed.Count - (MaxProcessedRequests \ 2)
-            Dim oldKeys As New List(Of String)(processed.Keys)
-            For index As Integer = 0 To Math.Min(removeCount, oldKeys.Count) - 1
-                processed.Remove(oldKeys(index))
-            Next
-        End If
-
-        processed(requestId) = fingerprint & "|" & DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture)
-        session(ProcessedSessionKey) = processed
-    End Sub
 
     Public Shared Sub BeginExecution(ByVal context As HttpContext, ByVal articleId As Integer, ByVal tcId As Integer)
         If context Is Nothing Then Return
@@ -130,16 +80,6 @@ Public NotInheritable Class CatalogAsyncCartSupport
 
     Public Shared Function NormalizeTCId(ByVal tcId As Integer) As Integer
         Return If(tcId > 0, tcId, -1)
-    End Function
-
-    Private Shared Function GetProcessedRequests(ByVal session As HttpSessionState,
-                                                  ByVal createIfMissing As Boolean) As Dictionary(Of String, String)
-        Dim processed As Dictionary(Of String, String) = TryCast(session(ProcessedSessionKey), Dictionary(Of String, String))
-        If processed Is Nothing AndAlso createIfMissing Then
-            processed = New Dictionary(Of String, String)(StringComparer.Ordinal)
-            session(ProcessedSessionKey) = processed
-        End If
-        Return processed
     End Function
 
     Private Shared Function FixedTimeEquals(ByVal expected As String, ByVal supplied As String) As Boolean

@@ -29,7 +29,6 @@
 </asp:Content>
 
 <asp:Content ID="MainContent1" ContentPlaceHolderID="MainContent" runat="server">
-
     <asp:PlaceHolder ID="phNotFound" runat="server" Visible="false">
         <section class="flat-spacing-2">
             <div class="container">
@@ -284,7 +283,7 @@
                                                 <button class="btn-quantity btn-decrease" type="button" data-ks-qty="minus">
                                                     <i class="icon-minus"></i>
                                                 </button>
-                                                <asp:TextBox ID="txtQty" runat="server" CssClass="quantity-product" Text="1" />
+                                                <asp:TextBox ID="txtQty" runat="server" CssClass="quantity-product" Text="1" form="ksNativeCartForm" />
                                                 <button class="btn-quantity btn-increase" type="button" data-ks-qty="plus">
                                                     <i class="icon-plus"></i>
                                                 </button>
@@ -300,10 +299,10 @@
                                         </div>
 
                                         <div class="product-box-btn">
-                                            <asp:LinkButton ID="btnAddToCart" runat="server" CssClass="tf-btn text-white js-ks-cart-context" OnClick="btnAddToCart_Click" CausesValidation="false" aria-label="Acquista: aggiungi al carrello" ToolTip="Acquista: aggiungi al carrello">
+                                            <button type="submit" id="MainContent_btnAddToCart" <%= PdpMainNativeCartAttributes %> class="tf-btn text-white js-ks-cart-context" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
                                                 <span>Acquista</span>
                                                 <i class="icon-cart-2" aria-hidden="true"></i>
-                                            </asp:LinkButton>
+                                            </button>
                                             <a class="tf-btn text-white btn-gray" href="/carrello.aspx">Vai al carrello</a>
                                         </div>
 
@@ -379,10 +378,10 @@
                                 </asp:PlaceHolder>
                                 <div class="box-total-btn">
                                     <p class="body-text-3 text-center">Totale selezione: <span class="text-primary"><asp:Literal ID="litBundleTotal" runat="server" /></span></p>
-                                    <asp:LinkButton ID="btnBundleAddToCart" runat="server" CssClass="tf-btn text-white js-ks-cart-context" OnClick="btnBundleAddToCart_Click" CausesValidation="false" aria-label="Acquista i prodotti selezionati" ToolTip="Acquista i prodotti selezionati">
+                                    <button type="submit" id="MainContent_btnBundleAddToCart" <%= PdpBundleNativeCartAttributes %> class="tf-btn text-white js-ks-cart-context" aria-label="Acquista i prodotti selezionati" title="Acquista i prodotti selezionati">
                                         Acquista selezionati
                                         <i class="icon-cart-2" aria-hidden="true"></i>
-                                    </asp:LinkButton>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -577,10 +576,10 @@
                                     </a>
                                     <ul class="list-product-btn">
                                         <li class="ks-pdp-cart-action">
-                                            <a href='<%# Eval("AddToCartUrl") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
+                                            <button type="submit" <%# Eval("QuickNativeCartAttributes") %> class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
                                                 <span class="icon icon-cart-2" aria-hidden="true"></span>
                                                 <span class="tooltip">Acquista</span>
-                                            </a>
+                                            </button>
                                         </li>
                                         <li class="d-none d-sm-block wishlist">
                                             <a href='<%# Eval("WishlistUrl") %>' class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-wishlist-link" aria-label="Aggiungi a wishlist">
@@ -618,10 +617,10 @@
                                         <%# Eval("AvailabilityHtml") %>
                                     </div>
 
-                                    <a href='<%# Eval("AddToCartUrl") %>' class="tf-btn text-white w-100 ks-mobile-card-buy-cta js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
+                                    <button type="submit" <%# Eval("PrimaryNativeCartAttributes") %> class="tf-btn text-white w-100 ks-mobile-card-buy-cta js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
                                         <span class="icon-cart-2" aria-hidden="true"></span>
                                         <span>Acquista</span>
-                                    </a>
+                                    </button>
 
                                     <div class="card-product-btn">
                                         <a class="tf-btn btn-line w-100" href='<%# Eval("Url") %>'>
@@ -678,10 +677,10 @@
                                     </a>
                                     <ul class="list-product-btn">
                                         <li class="ks-pdp-cart-action">
-                                            <a href='<%# Eval("AddToCartUrl") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
+                                            <button type="submit" <%# Eval("QuickNativeCartAttributes") %> class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
                                                 <span class="icon icon-cart-2" aria-hidden="true"></span>
                                                 <span class="tooltip">Acquista</span>
-                                            </a>
+                                            </button>
                                         </li>
                                         <li class="d-none d-sm-block wishlist">
                                             <a href='<%# Eval("WishlistUrl") %>' class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-wishlist-link" aria-label="Aggiungi a wishlist">
@@ -719,10 +718,10 @@
                                         <%# Eval("AvailabilityHtml") %>
                                     </div>
 
-                                    <a href='<%# Eval("AddToCartUrl") %>' class="tf-btn text-white w-100 ks-mobile-card-buy-cta js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
+                                    <button type="submit" <%# Eval("PrimaryNativeCartAttributes") %> class="tf-btn text-white w-100 ks-mobile-card-buy-cta js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
                                         <span class="icon-cart-2" aria-hidden="true"></span>
                                         <span>Acquista</span>
-                                    </a>
+                                    </button>
 
                                     <div class="card-product-btn">
                                         <a class="tf-btn btn-line w-100" href='<%# Eval("Url") %>'>
@@ -799,10 +798,10 @@
                                     </a>
                                     <ul class="list-product-btn">
                                         <li class="ks-pdp-cart-action">
-                                            <a href='<%# Eval("AddToCartUrl") %>' class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
+                                            <button type="submit" <%# Eval("QuickNativeCartAttributes") %> class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
                                                 <span class="icon icon-cart-2" aria-hidden="true"></span>
                                                 <span class="tooltip">Acquista</span>
-                                            </a>
+                                            </button>
                                         </li>
                                         <li class="d-none d-sm-block wishlist">
                                             <a href='<%# Eval("WishlistUrl") %>' class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-wishlist-link" aria-label="Aggiungi a wishlist">
@@ -839,10 +838,10 @@
                                         </div>
                                         <%# Eval("AvailabilityHtml") %>
                                     </div>
-                                    <a href='<%# Eval("AddToCartUrl") %>' class="tf-btn text-white w-100 ks-mobile-card-buy-cta js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
+                                    <button type="submit" <%# Eval("PrimaryNativeCartAttributes") %> class="tf-btn text-white w-100 ks-mobile-card-buy-cta js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">
                                         <span class="icon-cart-2" aria-hidden="true"></span>
                                         <span>Acquista</span>
-                                    </a>
+                                    </button>
                                 </div>
                             </div>
                             </div>
@@ -913,7 +912,7 @@
 
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/product-ui.js") %>" defer></script>
-    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20260907-cartidempotency2"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260902-cardlayout1a"></script>
     <asp:Literal ID="litRecentlyViewedScript" runat="server" EnableViewState="false" />
 </asp:Content>

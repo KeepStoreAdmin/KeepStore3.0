@@ -227,6 +227,7 @@ Partial Class Articoli
         ' - Se arriva solo st o solo ct, completa i parametri mancanti in modo coerente
         '==========================================================
         If Not Me.IsPostBack Then
+            hfCartMutationRequestId.Value = Guid.NewGuid().ToString("N")
             EnsureCatalogQueryDefaults()
         End If
 
@@ -1510,6 +1511,7 @@ strWhere = strWhere & " GROUP BY id"
         card.QuantityText = model.QuantityText
         Dim cartQty As Decimal = GetCatalogCartQuantity(model.ProductId, model.TCId)
         If cartQty > 0D Then card.QuantityText = FormatCatalogCartQuantity(cartQty)
+        card.ExistingCartQuantity = cartQty
         card.ActionDataAttributes = model.ActionDataAttributes
         card.IsDemoMode = Not isRealPreview
         ApplyMultiSelectCheckboxMicrocopy(card)
@@ -1617,13 +1619,12 @@ strWhere = strWhere & " GROUP BY id"
         Dim tcIdVal As Integer = GetTCIdFromContainer(item)
 
         Dim qta As Integer = GetQuantityToAddFromContainer(item, idVal, tcIdVal)
-        If qta <= 0 Then
-            ShowMultiSelectFeedback("La quantita indicata e gia presente nel carrello.")
+        If qta = 0 Then
+            Dim existingQty As Integer = GetExistingCatalogCartQuantityAsInteger(idVal, tcIdVal)
+            Dim itemLabel As String = If(existingQty = 1, " pezzo.", " pezzi.")
+            ShowMultiSelectFeedback("Nel carrello sono già presenti " & existingQty.ToString(System.Globalization.CultureInfo.GetCultureInfo("it-IT")) & itemLabel)
             Return
         End If
-
-        ' 4) PRODOTTO GRATIS (spedito gratis) calcolato da DB
-        Session("ProdottoGratis") = spedito_gratis(idVal, listino)
 
         ' 5) CONTROLLO SETTORE
         If controlla_abilitazione_settore(idVal) = 1 Then
@@ -1634,7 +1635,24 @@ strWhere = strWhere & " GROUP BY id"
             Session("Carrello_Pagina") = Request.RawUrl
             Session("Carrello_SelezioneMultipla") = Nothing
 
-            Response.Redirect("aggiungi.aspx")
+            Dim requestId As String = EnsureCatalogCartRequestId()
+            If Not RegisterCatalogCartIntent(requestId, "catalog-single") Then Return
+            Dim payload As String = CartMutationIdempotencyService.BuildSessionPayload(Session)
+            If Not BeginCatalogCartIntent(requestId, "catalog-single", payload) Then Return
+
+            Dim result As CartStandardMutationResult = CartMutationService.AddStandardProductForCurrentOwner(
+                HttpContext.Current, idVal, tcIdVal, qta)
+            If result Is Nothing OrElse Not result.Succeeded Then
+                CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
+                ShowMultiSelectFeedback("Il prodotto non è stato aggiunto. Verifica disponibilità e prezzo.")
+                Return
+            End If
+
+            CartMutationIdempotencyService.CompleteIntent(HttpContext.Current, requestId)
+            StoreCatalogCartFeedback(1, result.ProductName, result.ArticleId, result.TCId)
+            ClearCatalogCartMutationSession()
+            Response.Redirect(Request.RawUrl, False)
+            Context.ApplicationInstance.CompleteRequest()
         Else
             Response.Redirect("settore_disabilitato.aspx")
         End If
@@ -1681,6 +1699,7 @@ strWhere = strWhere & " GROUP BY id"
 
     Private Sub ProcessSelezioneMultipla()
         Dim listaArticoli As New ArrayList()
+        Dim selectedCount As Integer = 0
 
         ' Listino corrente (default 1)
         Dim listino As Integer = 1
@@ -1699,6 +1718,7 @@ strWhere = strWhere & " GROUP BY id"
             End If
 
             If isSelected Then
+                selectedCount += 1
 
                 Dim idVal As Integer = GetArticoloIdFromContainer(it)
                 If idVal <= 0 Then Continue For
@@ -1711,16 +1731,17 @@ strWhere = strWhere & " GROUP BY id"
 
                 Dim tcIdVal As Integer = GetTCIdFromContainer(it)
                 Dim qta As Integer = GetQuantityToAddFromContainer(it, idVal, tcIdVal)
-                If qta <= 0 Then Continue For
-                Dim prodottoGratisFlag As Integer = spedito_gratis(idVal, listino)
-
-                ' Stesso formato di sempre: id,tcid,qta,ProdottoGratis
-                listaArticoli.Add(String.Format("{0},{1},{2},{3}", idVal, tcIdVal, qta, prodottoGratisFlag))
+                If qta = 0 Then Continue For
+                listaArticoli.Add(String.Format(System.Globalization.CultureInfo.InvariantCulture, "{0},{1},{2}", idVal, tcIdVal, qta))
             End If
         Next
 
         If listaArticoli.Count = 0 Then
-            ShowMultiSelectFeedback("Seleziona almeno un prodotto prima di aggiungerlo al carrello.")
+            If selectedCount > 0 Then
+                ShowMultiSelectFeedback("Le quantità indicate sono già presenti nel carrello.")
+            Else
+                ShowMultiSelectFeedback("Seleziona almeno un prodotto prima di aggiungerlo al carrello.")
+            End If
             Return
         End If
 
@@ -1735,8 +1756,107 @@ strWhere = strWhere & " GROUP BY id"
 
         Session("Carrello_SelezioneMultipla") = listaArticoli
         Session("Carrello_Pagina") = Request.RawUrl
-        Session("ProdottoGratis") = 0 ' la logica puntuale è comunque nella lista
-        Me.Response.Redirect("aggiungi.aspx")
+        Dim requestId As String = EnsureCatalogCartRequestId()
+        If Not RegisterCatalogCartIntent(requestId, "catalog-multi") Then Return
+        Dim payload As String = CartMutationIdempotencyService.BuildSessionPayload(Session)
+        If Not BeginCatalogCartIntent(requestId, "catalog-multi", payload) Then Return
+
+        Dim addedCount As Integer = 0
+        For Each rawItem As Object In listaArticoli
+            Dim itemParts As String() = Convert.ToString(rawItem).Split(","c)
+            If itemParts.Length <> 3 Then Continue For
+            Dim articleId As Integer = 0
+            Dim tcId As Integer = -1
+            Dim delta As Decimal = 0D
+            If Not Integer.TryParse(itemParts(0), articleId) OrElse articleId <= 0 Then Continue For
+            Integer.TryParse(itemParts(1), tcId)
+            If tcId <= 0 Then tcId = -1
+            If Not Decimal.TryParse(itemParts(2), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, delta) OrElse delta = 0D Then Continue For
+
+            Dim result As CartStandardMutationResult = CartMutationService.AddStandardProductForCurrentOwner(
+                HttpContext.Current, articleId, tcId, delta)
+            If result IsNot Nothing AndAlso result.Succeeded Then addedCount += 1
+        Next
+
+        If addedCount <= 0 Then
+            CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
+            ShowMultiSelectFeedback("I prodotti selezionati non sono stati aggiunti. Verifica disponibilità e prezzo.")
+            Return
+        End If
+
+        CartMutationIdempotencyService.CompleteIntent(HttpContext.Current, requestId)
+        StoreCatalogCartFeedback(addedCount, String.Empty, 0, -1)
+        ClearCatalogCartMutationSession()
+        Response.Redirect(Request.RawUrl, False)
+        Context.ApplicationInstance.CompleteRequest()
+    End Sub
+
+    Private Function EnsureCatalogCartRequestId() As String
+        Dim normalized As String = String.Empty
+        If Not CartMutationIdempotencyService.NormalizeRequestId(hfCartMutationRequestId.Value, normalized) Then
+            normalized = Guid.NewGuid().ToString("N")
+            hfCartMutationRequestId.Value = normalized
+        End If
+        Return normalized
+    End Function
+
+    Private Function RegisterCatalogCartIntent(ByVal requestId As String, ByVal operationType As String) As Boolean
+        Dim payload As String = CartMutationIdempotencyService.BuildSessionPayload(Session)
+        Dim decision As CartMutationIntentDecision = CartMutationIdempotencyService.RegisterIntent(
+            HttpContext.Current, requestId, operationType, payload)
+        Select Case decision
+            Case CartMutationIntentDecision.Accepted, CartMutationIntentDecision.Pending
+                Return True
+            Case CartMutationIntentDecision.Completed
+                ShowMultiSelectFeedback("Carrello già aggiornato.")
+            Case CartMutationIntentDecision.Collision
+                Try
+                    KeepStoreLog.Info("articoli.aspx", "Richiesta carrello rifiutata per collisione idempotente.", HttpContext.Current)
+                Catch
+                End Try
+                ShowMultiSelectFeedback("Non è stato possibile aggiornare il carrello. Riprova.")
+            Case Else
+                ShowMultiSelectFeedback("Non è stato possibile aggiornare il carrello. Riprova.")
+        End Select
+        Return False
+    End Function
+
+    Private Function BeginCatalogCartIntent(ByVal requestId As String,
+                                            ByVal operationType As String,
+                                            ByVal payload As String) As Boolean
+        Dim decision As CartMutationIntentDecision = CartMutationIdempotencyService.BeginIntent(
+            HttpContext.Current, requestId, operationType, payload)
+        If decision = CartMutationIntentDecision.Completed Then
+            ShowMultiSelectFeedback("Carrello già aggiornato.")
+            Return False
+        End If
+        If decision <> CartMutationIntentDecision.Accepted Then
+            ShowMultiSelectFeedback(If(decision = CartMutationIntentDecision.Processing OrElse decision = CartMutationIntentDecision.CapacityExceeded,
+                                       "Aggiornamento carrello in corso. Riprova tra poco.",
+                                       "Non è stato possibile aggiornare il carrello. Riprova."))
+            Return False
+        End If
+        Return True
+    End Function
+
+    Private Sub StoreCatalogCartFeedback(ByVal count As Integer,
+                                         ByVal productName As String,
+                                         ByVal articleId As Integer,
+                                         ByVal tcId As Integer)
+        Session("ks_cart_feedback_kind") = If(count = 1, "single", "multi")
+        Session("ks_cart_feedback_product_name") = If(productName, String.Empty)
+        Session("ks_cart_feedback_article_id") = articleId
+        Session("ks_cart_feedback_tcid") = If(tcId > 0, tcId, -1)
+        Session("ks_cart_feedback_count") = count
+        Session("ks_cart_feedback_created_utc") = DateTime.UtcNow.ToString("o", System.Globalization.CultureInfo.InvariantCulture)
+    End Sub
+
+    Private Sub ClearCatalogCartMutationSession()
+        Session("Carrello_ArticoloId") = Nothing
+        Session("Carrello_TCId") = Nothing
+        Session("Carrello_Quantita") = Nothing
+        Session("Carrello_SelezioneMultipla") = Nothing
+        Session("ProdottoGratis") = Nothing
     End Sub
 
     Private Sub ShowMultiSelectFeedback(ByVal message As String)
@@ -1830,9 +1950,7 @@ strWhere = strWhere & " GROUP BY id"
         Dim existingQty As Integer = GetExistingCatalogCartQuantityAsInteger(articleId, tcId)
         If existingQty <= 0 Then Return desiredQty
 
-        Dim qtyToAdd As Integer = desiredQty - existingQty
-        If qtyToAdd < 0 Then Return 0
-        Return qtyToAdd
+        Return desiredQty - existingQty
     End Function
 
     Private Function GetExistingCatalogCartQuantityAsInteger(ByVal articleId As Integer, ByVal tcId As Integer) As Integer
@@ -3495,6 +3613,18 @@ strWhere = strWhere & " GROUP BY id"
                             "&TCid=" & HttpUtility.UrlEncode(tcId.ToString()) &
                             "&qty=1"
         Return ResolveUrl(url)
+    End Function
+
+    Protected Function CatalogNativeCartButtonAttributes(ByVal dataItem As Object) As String
+        Dim articleId As Integer = UiData.Int(dataItem, "id")
+        Dim tcId As Integer = CatalogTcId(dataItem, True)
+        Dim existingQuantity As Decimal = GetCatalogCartQuantity(articleId, tcId)
+        Dim desiredQuantity As Decimal = If(existingQuantity > 0D, existingQuantity, 1D)
+        Dim delta As Decimal = If(existingQuantity > 0D, desiredQuantity - existingQuantity, desiredQuantity)
+        Dim requestId As String = CartMutationIdempotencyService.CreateRequestId()
+        Dim actionValue As String = CartMutationIdempotencyService.BuildNativeActionValue(articleId, tcId, delta, requestId)
+        Return " form=""ksNativeCartForm"" name=""ksCartAction"" value=""" & HA(actionValue) &
+               """ data-ks-request-id=""" & HA(requestId) & """ data-ks-cart-url=""" & HA(CatalogCartAddUrl(dataItem)) & """"
     End Function
 
     Protected Function CatalogCardCss(ByVal dataItem As Object) As String

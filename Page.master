@@ -197,9 +197,9 @@
                                 </div>
                             </div>
                             <div class="box-quantity-wrap">
-                                <a href="articoli.aspx" class="tf-btn btn-gray" id="ksQuickViewCartLink">
+                                <button type="submit" form="ksNativeCartForm" name="ksCartAction" value="" class="tf-btn btn-gray js-ks-cart-link" id="ksQuickViewCartLink" data-ks-cart-url="cart_add.aspx">
                                     <span class="text-white">Aggiungi al carrello</span>
-                                </a>
+                                </button>
                                 <a href="articoli.aspx" class="tf-btn btn-line" id="ksQuickViewOpenLink">
                                     <span>Vedi prodotto</span>
                                 </a>
@@ -461,6 +461,9 @@
         })();
         </script>
 
+</form>
+<form id="ksNativeCartForm" method="post" action="<%= ResolveUrl("~/cart_add.aspx") %>">
+    <asp:Literal ID="litNativeCartSecurityFields" runat="server" />
 </form>
 </body>
 </html>

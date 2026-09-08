@@ -1,6 +1,8 @@
 ﻿Imports MySql.Data.MySqlClient
 Imports System.Data
 Imports System.Configuration
+Imports System.Globalization
+Imports System.Web
 
 Partial Class wishlist
     Inherits AntiCsrfPage
@@ -30,6 +32,7 @@ End Function
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         KeepStoreSecurity.AddSecurityHeaders(Response)
         KeepStoreSecurity.RequireHttps(Request, Response, enableHsts:=True)
+        If Not IsPostBack Then CartMutationIdempotencyService.ClearProgressiveRequestIds(HttpContext.Current, "wishlist:")
 
         If Session("UtentiId") < 1 Then
             Response.Redirect("default.aspx")
@@ -439,23 +442,20 @@ End Sub
             Exit Sub
         End If
 
-        Dim gv3 As GridView = TryCast(row.FindControl("GridView3"), GridView)
-        If gv3 IsNot Nothing AndAlso gv3.Rows.Count > 0 Then
-            Session("ProdottoGratis") = 1
-        Else
-            Session("ProdottoGratis") = 0
-        End If
-
         Dim ID As Label = TryCast(row.FindControl("lblID"), Label)
         Dim Qta As TextBox = TryCast(row.FindControl("tbQuantita"), TextBox)
         If ID Is Nothing OrElse Qta Is Nothing Then
             Exit Sub
         End If
 
-        Me.Session("Carrello_ArticoloId") = ID.Text
-        Me.Session("Carrello_Quantita") = Qta.Text
-
-        Me.Response.Redirect("aggiungi.aspx")
+        Dim articleId As Integer = 0
+        Dim quantity As Decimal = 0D
+        If Not Integer.TryParse(ID.Text, articleId) OrElse articleId <= 0 OrElse
+           Not Decimal.TryParse(Qta.Text, NumberStyles.Number, CultureInfo.GetCultureInfo("it-IT"), quantity) OrElse quantity <= 0D Then Exit Sub
+        If ExecuteWishlistCartMutation(articleId, quantity, "wishlist:single:" & articleId.ToString(CultureInfo.InvariantCulture)) Then
+            Response.Redirect(Request.RawUrl, False)
+            Context.ApplicationInstance.CompleteRequest()
+        End If
 
     End Sub
 
@@ -596,32 +596,34 @@ End Sub
         For i = 0 To Me.GridView1.Rows.Count - 1
             temp_check = CType(Me.GridView1.Rows(i).FindControl("CheckBox_SelezioneMultipla"), CheckBox)
             If temp_check.Checked = True Then
-                Dim temp2 As GridView
-
-                temp2 = CType(Me.GridView1.Rows(i).FindControl("GridView3"), GridView)
-                If temp2.Rows.Count > 0 Then
-                    'Comunico al carrello se il prodotto è un prodotto ha spedizione gratis
-                    Session("ProdottoGratis") = 1
-                Else
-                    'Comunico al carrello se il prodotto non è un prodotto ha spedizione gratis
-                    Session("ProdottoGratis") = 0
-                End If
-
                 Dim Qta As TextBox
                 Dim ID As Label
 
                 ID = Me.GridView1.Rows(i).FindControl("lblID")
                 Qta = Me.GridView1.Rows(i).FindControl("tbQuantita")
 
-                Me.Session("Carrello_ArticoloId") = ID.Text
-                Me.Session("Carrello_Quantita") = Qta.Text
-
-                ListaArticoli.Add(ID.Text & "," & Qta.Text & "," & Session("ProdottoGratis"))
+                Dim articleId As Integer = 0
+                Dim quantity As Decimal = 0D
+                If Integer.TryParse(ID.Text, articleId) AndAlso articleId > 0 AndAlso
+                   Decimal.TryParse(Qta.Text, NumberStyles.Number, CultureInfo.GetCultureInfo("it-IT"), quantity) AndAlso quantity > 0D Then
+                    ListaArticoli.Add(articleId.ToString(CultureInfo.InvariantCulture) & "," & quantity.ToString(CultureInfo.InvariantCulture))
+                End If
             End If
         Next
 
-        Session("Carrello_SelezioneMultipla") = ListaArticoli
-        Me.Response.Redirect("aggiungi.aspx")
+        Dim added As Integer = 0
+        For Each raw As Object In ListaArticoli
+            Dim parts As String() = Convert.ToString(raw).Split(","c)
+            Dim articleId As Integer = 0
+            Dim quantity As Decimal = 0D
+            If parts.Length = 2 AndAlso Integer.TryParse(parts(0), articleId) AndAlso
+               Decimal.TryParse(parts(1), NumberStyles.Number, CultureInfo.InvariantCulture, quantity) AndAlso
+               ExecuteWishlistCartMutation(articleId, quantity, "wishlist:multi:" & articleId.ToString(CultureInfo.InvariantCulture)) Then added += 1
+        Next
+        If added > 0 Then
+            Response.Redirect(Request.RawUrl, False)
+            Context.ApplicationInstance.CompleteRequest()
+        End If
     End Sub
 
     Protected Sub BT_Rimuovi_wishlist_Click(ByVal sender As Object, ByVal e As System.EventArgs)
@@ -713,5 +715,29 @@ End Sub
         Response.AddHeader("Allow", "POST")
         Context.ApplicationInstance.CompleteRequest()
     End Sub
+
+    Private Function ExecuteWishlistCartMutation(ByVal articleId As Integer,
+                                                 ByVal quantity As Decimal,
+                                                 ByVal slotName As String) As Boolean
+        Dim payload As String = CartMutationIdempotencyService.BuildStandardPayload(articleId, -1, quantity)
+        Dim requestId As String = CartMutationIdempotencyService.GetOrCreateProgressiveRequestId(
+            HttpContext.Current, slotName, "wishlist-add", payload)
+        Dim decision As CartMutationIntentDecision = CartMutationIdempotencyService.RegisterIntent(
+            HttpContext.Current, requestId, "wishlist-add", payload)
+        If decision = CartMutationIntentDecision.Completed Then Return True
+        If decision <> CartMutationIntentDecision.Accepted AndAlso decision <> CartMutationIntentDecision.Pending Then Return False
+        decision = CartMutationIdempotencyService.BeginIntent(HttpContext.Current, requestId, "wishlist-add", payload)
+        If decision = CartMutationIntentDecision.Completed Then Return True
+        If decision <> CartMutationIntentDecision.Accepted Then Return False
+
+        Dim result As CartStandardMutationResult = CartMutationService.AddStandardProductForCurrentOwner(
+            HttpContext.Current, articleId, -1, quantity)
+        If result Is Nothing OrElse Not result.Succeeded Then
+            CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
+            Return False
+        End If
+        CartMutationIdempotencyService.CompleteIntent(HttpContext.Current, requestId)
+        Return True
+    End Function
 
 End Class
