@@ -1,20 +1,20 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-09-04
+Aggiornato: 2026-09-08
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
 
-- Aggiornato: 2026-09-04.
+- Aggiornato: 2026-09-08.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Ultimo runtime stabile: `frontend-rebuild` / `origin/frontend-rebuild` a `c088988080e54371a60c27c1f5979adf957358f1`.
+- Ultimo runtime stabile: `frontend-rebuild` / `origin/frontend-rebuild` a `30928ee81b9bbdc23b55c5aaa057ef1bf4b5d3ef`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
-- Ultimi task chiusi: `STOREFRONT-PROMO-ROUTES-AUDIT-1A` (read-only / A, route legacy classificata C) e `STOREFRONT-PROMO-ROUTES-HOTFIX-1A` (A), integrato fast-forward only senza merge commit e con smoke Germano A.
+- Ultimo task chiuso: `PROMO-OWNER-ENFORCEMENT-1A REV2.7A` (implementazione A, review conclusiva A e smoke Germano A), integrato fast-forward only senza merge commit.
 - Task attivo: nessun task runtime; questo aggiornamento e docs-only.
 - Azione immediata successiva: chiudere e mergeare questo task documentale, senza ripetere build o smoke gia conclusi.
-- Prossimi runtime, in ordine: `STOREFRONT-PROMO-MODERN-PARITY-1A`; `STOREFRONT-PROMO-ROUTE-RETIREMENT-1A` solo dopo parita dimostrata; `STOREFRONT-OFFERS-PROMO-UX-1A`; `HOME-ASYNC-CART-1A`; `PDP-BRAND-LOGO-1A`. Performance/bulk promo, SEO tecnico, Google Product structured data e AI/Gemini/LLMS seguono e restano separati.
+- Prossimi runtime da pianificare separatamente: `CART-BATCH-ATOMICITY-1A`, retry controllato per deadlock/race DB, `CART-MOBILE-RESPONSIVE-UX-1A`, touch target remove `44x44`, `HOME-TTFB-PERFORMANCE-1A`, `MYSQL-CONNECTOR-DEPENDENCY-AUDIT-1A` e audit futuro dei campi monetari DB ancora `DOUBLE`. La parity/retirement delle route promo, SEO e AI/Gemini/LLMS restano filoni separati.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
 - Blocker reali: nessuno per la chiusura documentale; catalogo e PDP restano aree non dichiarate complete.
 
@@ -47,6 +47,19 @@ Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo tas
 - REV1 HOME: le CTA superiori seguono la struttura ONSUS dei Visti di recente, con pulsante circolare a sola icona carrello, area stabile `44x44px`, nessuna espansione geometrica in hover/focus/active/busy, tooltip desktop non essenziale e funzione disponibile su touch. Il vecchio contratto della CTA HOME rettangolare rossa con testo `Acquista` espandibile resta storico autentico ma e superato dalla REV1 corrente.
 - Badge `Promo` e `Ricondizionato` sono raccolti in uno stack angolare fuori dal flusso, senza sovrapposizioni. Verifica reale articolo `16483`: `Promo -58%`, prezzo promo `1.500,00 €`, listino `3.600,00 €`; slot prezzi deterministici `66px` emphasized e `52px` compact, nessun valore troncato o simbolo euro separato, sei DealCard della stessa altezza. QA mobile reale `360/390/430/768px` e desktop `1365px`.
 - Contratto EAN/GTIN: le etichette umane delle superfici runtime autorizzate usano `EAN/GTIN`, inclusi ricerca desktop/mobile, PDP/Informazioni prodotto e pagine stampa/documenti/promozioni coperte. Nomi tecnici DB `Ean`, variabili, SQL, business key `EAN:`, feed, CSV/XML, integrazioni e proprieta JSON-LD `gtin*` restano invariati; EAN e comunicato come GTIN-13 senza migrazione dei contratti macchina. Il cleanup globale non e completo: `Public/ui/controls/ProductDetailView.ascx`, preview diagnostica non operativa, conserva due label `EAN:` come finding nominativo futuro.
+
+### Chiusura PROMO-OWNER-ENFORCEMENT-1A REV2.7A
+
+- Esito definitivo: implementazione A, review conclusiva indipendente A e `SMOKE UTENTE PROMO-OWNER-ENFORCEMENT-1A REV2.7A: A`. Catena integrata fast-forward, senza merge commit: `9ed2802aebd6b40468fe99e79a644b0fe549bcd8` -> `3b207c3a58e52af6c6d603ba4748b0d2cd788c4f` -> `1f646b2a4e0069c8fb0ea62b15c21030157db77a` -> `30928ee81b9bbdc23b55c5aaa057ef1bf4b5d3ef`; `main` / `origin/main` invariati.
+- Contratto owner: il carrello anonimo appartiene a `Session.SessionID`; quello autenticato a `LoginId`. La promozione del carrello di sessione al login non equivale all'autorizzazione alle offerte personali: una promo pubblica ha `UtentiId IS NULL OR UtentiId <= 0`, mentre una promo personale e applicabile solo all'utente autenticato corrispondente. L'identita commerciale non proviene mai dal browser.
+- Policy promo uniforme su HOME, catalogo, PDP, add-to-cart, carrello e ordine: corrispondenza prima su `ArticoliId + TCId`, poi fallback articolo consentito; tra le offerte valide vince il prezzo netto piu basso e, a parita, l'`OfferteDettaglioId` deterministico. Offerte disabilitate, fuori data/listino/owner, non positive o non migliorative sono escluse. La combinazione ambigua `QntMinima + Multipli` e esclusa fail-closed; un errore tecnico e distinto da "nessuna promo" e blocca l'operazione sensibile.
+- Quantita delta firmata: `quantita finale = quantita esistente + delta`. Quindi `0 + 1 = 1`, `2 + 0 = 2`, `2 + 1 = 3`, `5 + (-2) = 3`; un delta che porterebbe a zero rimuove la riga secondo il percorso autorizzato, mentre risultati negativi o richieste non valide sono rifiutati. Il server, non il client, resta autorita.
+- Atomicita: quantita, netto, lordo, `OfferteDettaglioId` e spedizione gratuita sono ricalcolati server-side con `Decimal` e persistiti nella stessa transazione, sotto lock owner-scoped e con rollback completo. Login merge, modifica carrello, add e ordine rivalidano la promo; ordine e `Carrello_Documento` condividono la transazione. Un errore tecnico blocca l'ordine e conserva il carrello; una promo scaduta viene rimossa/ricalcolata prima della conferma.
+- `Prodotto_Gratis` significa spedizione gratuita, non articolo omaggio. Il valore client `pg` non e autorevole: l'idoneita e ricalcolata da stato abilitato, date e token listino esatto (`1` non coincide con `11`); valori malformati falliscono chiusi. La regola e rivalidata su add, variazione quantita, merge login, carrello e ordine.
+- Presentazione anonima: percentuali e prezzi promo derivano direttamente da `Decimal`, mai da testo, `SafeDbl` o `Double`; valori null/non numerici sono nascosti e la percentuale valida e `1-99`. Fixture `21906`: anonimo q1 `5,00 / -17%`, multiplo 5 `4,00 / -33%`; prove: q1 `4,09` offerta `27003`, q5 `3,28` offerta `27004`, q6 `4,09` offerta `27003`, q10 `3,28` offerta `27004`.
+- Mutazioni HTTP: `cart_add.aspx`, `aggiungi.aspx` e `catalog_cart_async.aspx` accettano solo POST; GET/HEAD non mutano, rendono `405 Method Not Allowed` con `Allow: POST`. CSRF legato alla sessione, controllo Origin/Referer, `ReturnUrl` locale e dati commerciali ignorati dal browser restano obbligatori. Ogni intenzione/CTA usa un GUID; fingerprint owner/operazione/articolo/TCId/delta e stati pending/processing/completed/indeterminate governano replay, collisioni, lease e redirect `303`, con chiave massima 64 caratteri e TTL 15 minuti.
+- Prerequisiti DB verificati: indici `IX_carrello_LoginId_ID (LoginId, id)` e `IX_carrello_SessionId_ID (SessionId, id)`; gli `EXPLAIN` owner-scoped non devono degradare a `ALL`. Dipendenza runtime: `Bin/System.Threading.Tasks.Extensions.dll`, assembly `4.2.0.1`, 25.984 byte, SHA-256 `4F81FFD0DC7204DB75AFC35EA4291769B07C440592F28894260EEA76626A23C6`, richiesta da MySql.Data 8.0.33; nessun binding redirect necessario nel runtime verificato.
+- Debiti esplicitamente aperti: `CART-BATCH-ATOMICITY-1A`, retry deadlock/race DB, `CART-MOBILE-RESPONSIVE-UX-1A`, touch target remove `44x44`, `HOME-TTFB-PERFORMANCE-1A`, `MYSQL-CONNECTOR-DEPENDENCY-AUDIT-1A` e audit dei monetari DB `DOUBLE`. Coupon/Groupon non e stato corretto o certificato: Germano non usa oggi quel flusso; resta differito a `COUPON-CART-LIFECYCLE-1A` e non va riaperto senza richiesta esplicita. I percorsi GET legacy non vanno presentati come funzionanti.
 
 ### Chiusura audit e hotfix route promozioni legacy
 
