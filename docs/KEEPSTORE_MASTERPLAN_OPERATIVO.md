@@ -1,27 +1,41 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-09-08
+Aggiornato: 2026-09-09
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
 
-- Aggiornato: 2026-09-08.
+- Aggiornato: 2026-09-09.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Ultimo runtime stabile: `frontend-rebuild` / `origin/frontend-rebuild` a `30928ee81b9bbdc23b55c5aaa057ef1bf4b5d3ef`.
-- HEAD documentale verificato prima del task governance: `frontend-rebuild` / `origin/frontend-rebuild` a `b0241ac4fdb843c6b48421c4bdc6fccb2e2a04e7`; il parent runtime resta quello sopra.
+- Runtime e HEAD stabile corrente: `frontend-rebuild` / `origin/frontend-rebuild` a `df5436deae0bdc672dbed1c7965941a031bb3d49`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
-- Ultimo task chiuso: `PROMO-OWNER-ENFORCEMENT-1A REV2.7A` (implementazione A, review conclusiva A e smoke Germano A), integrato fast-forward only senza merge commit.
-- Task attivo: `WORKFLOW-GOVERNANCE-1A`, esclusivamente documentale, dal base `b0241ac4fdb843c6b48421c4bdc6fccb2e2a04e7`.
-- Azione immediata successiva: review ChatGPT/Germano del task governance e, soltanto dopo A e autorizzazione esplicita, merge fast-forward verso `frontend-rebuild`; nessuna build o smoke runtime da ripetere.
-- Prossimi runtime da pianificare separatamente: `CART-BATCH-ATOMICITY-1A`, retry controllato per deadlock/race DB, `CART-MOBILE-RESPONSIVE-UX-1A`, touch target remove `44x44`, `HOME-TTFB-PERFORMANCE-1A`, `MYSQL-CONNECTOR-DEPENDENCY-AUDIT-1A` e audit futuro dei campi monetari DB ancora `DOUBLE`. La parity/retirement delle route promo, SEO e AI/Gemini/LLMS restano filoni separati.
+- `WORKFLOW-GOVERNANCE-1A` e CHIUSO / A e integrato: il root `AGENTS.md` e la fonte canonica del metodo operativo corrente.
+- Ultimo task runtime chiuso: `CART-BATCH-ATOMICITY-1A`, esito A, PR #242 mergiata fast-forward. Catena `516442a46869353daaac20407cd0c263c466ae72` -> `08d2b77bbb2b7d1403d5c73107d54587bd0c1d94` -> `df5436deae0bdc672dbed1c7965941a031bb3d49`: due commit runtime integrati e zero merge commit.
+- Task documentale corrente: `task/docs-cart-batch-atomicity-1a`; aggiorna soltanto i tre manuali canonici e si ferma prima del merge.
+- Prossimo micro-task raccomandato: `CART-DEADLOCK-RETRY-1A`. Seguono `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`, `CART-MOBILE-RESPONSIVE-UX-1A`, touch target rimozione carrello `44x44` e audit futuro dei campi monetari DB ancora `DOUBLE`. Restano separati `HOME-TTFB-PERFORMANCE-1A`, `MYSQL-CONNECTOR-DEPENDENCY-AUDIT-1A`, attivita catalogo/PDP e filoni SEO/AI finali.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
-- Blocker reali: nessuno per la chiusura documentale; catalogo e PDP restano aree non dichiarate complete.
+- Blocker reali: nessuno derivante dal task batch; catalogo e PDP restano aree non dichiarate complete.
 
 Questo checkpoint va aggiornato dopo ogni blocco importante. E una mappa di ripartenza, non sostituisce la verifica diretta di Git, del root `AGENTS.md` e delle fonti pertinenti.
 
 Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo task o riportano SHA precedenti sono storico autentico superato dal checkpoint corrente, non istruzioni operative vigenti. Catalogo e PDP restano esplicitamente aree non dichiarate complete.
+
+### Chiusura WORKFLOW-GOVERNANCE-1A
+
+- `WORKFLOW-GOVERNANCE-1A` e CHIUSO / A e integrato in `frontend-rebuild`. Il contratto permanente corrente e nel root `AGENTS.md`; le ripetizioni nei manuali restano supporto e storico, non una fonte concorrente.
+- Restano vincolanti micro-task dedicati, base SHA verificata, manifest rigido, `main` protetto, push e PR prima della review, gate separato per il merge e integrazione esclusivamente fast-forward autorizzata.
+
+### Chiusura CART-BATCH-ATOMICITY-1A
+
+- `CART-BATCH-ATOMICITY-1A` e CHIUSO / A. PR runtime #242 `fix: make standard cart batches atomic`, branch `task/cart-batch-atomicity-1a`, merge fast-forward in `frontend-rebuild` a `df5436deae0bdc672dbed1c7965941a031bb3d49`; due commit integrati, zero merge commit e `main` invariato.
+- Un unico motore batch standard tipizzato serve anche le API single-item. Applica limite raw e canonico, normalizzazione `Decimal` a scala coerente, aggregazione checked, deduplica, canonicalizzazione del payload, ordinamento deterministico e convergenza dei TC effettivi.
+- Owner e listino sono determinati server-side. Il batch usa una sola connessione e una transazione `Serializable`, lock deterministici owner-scoped, risoluzione nella transazione di prezzi, IVA, promozioni, TC e spedizione gratuita, pianificazione completa prima delle scritture, verifica finale delle righe, commit unico e rollback totale.
+- Idempotenza e protezione replay impediscono il completamento dell'intent prima del commit; feedback, visite e completamento intent avvengono soltanto dopo il commit. La persistenza idempotente corrente resta `Session`/`InProc` e non e certificata per recycle, web farm o piu nodi: questo limite appartiene al futuro `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`.
+- Copertura runtime del task: batch catalogo, wishlist, bundle PDP, `aggiungi.aspx` e rettifica magazzino nei limiti definiti dal task. Il fix wishlist rende il binding deterministico prima di conteggio e visibilita e ammette un solo rebind correttivo per page index non piu valido.
+- Smoke reale A: login account test PROVA; carrello anonimo e merge; batch catalogo valido/invalido; batch wishlist valido/invalido; wishlist vuota, una riga e due righe; rendering desktop, `390px` e `360px`; articolo `21906` con `1 -> 4,09 EUR @27003`, `5 -> 3,28 EUR @27004`, `6 -> 4,09 EUR @27003`, `10 -> 3,28 EUR @27004`; logout e nuovo login; checkout senza ordine, email, pagamento o gateway; fixture ripristinate; nessun HTTP 500, perdita o duplicazione.
+- Non e certificato l'isolamento tra due account autenticati, perche nello smoke era disponibile un solo account. Sono invece verificati owner server-side, carrello account non visibile dopo logout, conservazione al nuovo login e query/DML owner-scoped.
 
 ### Chiusura LOGIN-RETURN-CONTEXT-1A
 
@@ -60,7 +74,7 @@ Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo tas
 - Presentazione anonima: percentuali e prezzi promo derivano direttamente da `Decimal`, mai da testo, `SafeDbl` o `Double`; valori null/non numerici sono nascosti e la percentuale valida e `1-99`. Fixture `21906`: anonimo q1 `5,00 / -17%`, multiplo 5 `4,00 / -33%`; prove: q1 `4,09` offerta `27003`, q5 `3,28` offerta `27004`, q6 `4,09` offerta `27003`, q10 `3,28` offerta `27004`.
 - Mutazioni HTTP: `cart_add.aspx`, `aggiungi.aspx` e `catalog_cart_async.aspx` accettano solo POST; GET/HEAD non mutano, rendono `405 Method Not Allowed` con `Allow: POST`. CSRF legato alla sessione, controllo Origin/Referer, `ReturnUrl` locale e dati commerciali ignorati dal browser restano obbligatori. Ogni intenzione/CTA usa un GUID; fingerprint owner/operazione/articolo/TCId/delta e stati pending/processing/completed/indeterminate governano replay, collisioni, lease e redirect `303`, con chiave massima 64 caratteri e TTL 15 minuti.
 - Prerequisiti DB verificati: indici `IX_carrello_LoginId_ID (LoginId, id)` e `IX_carrello_SessionId_ID (SessionId, id)`; gli `EXPLAIN` owner-scoped non devono degradare a `ALL`. Dipendenza runtime: `Bin/System.Threading.Tasks.Extensions.dll`, assembly `4.2.0.1`, 25.984 byte, SHA-256 `4F81FFD0DC7204DB75AFC35EA4291769B07C440592F28894260EEA76626A23C6`, richiesta da MySql.Data 8.0.33; nessun binding redirect necessario nel runtime verificato.
-- Debiti esplicitamente aperti: `CART-BATCH-ATOMICITY-1A`, retry deadlock/race DB, `CART-MOBILE-RESPONSIVE-UX-1A`, touch target remove `44x44`, `HOME-TTFB-PERFORMANCE-1A`, `MYSQL-CONNECTOR-DEPENDENCY-AUDIT-1A` e audit dei monetari DB `DOUBLE`. Coupon/Groupon non e stato corretto o certificato: Germano non usa oggi quel flusso; resta differito a `COUPON-CART-LIFECYCLE-1A` e non va riaperto senza richiesta esplicita. I percorsi GET legacy non vanno presentati come funzionanti.
+- Debiti cart esplicitamente aperti, in ordine: `CART-DEADLOCK-RETRY-1A`, `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`, `CART-MOBILE-RESPONSIVE-UX-1A`, touch target rimozione `44x44` e audit dei monetari DB `DOUBLE`. `CART-BATCH-ATOMICITY-1A` e chiuso. Coupon/Groupon non e stato corretto o certificato: Germano non usa oggi quel flusso; resta differito a `COUPON-CART-LIFECYCLE-1A` e non va riaperto senza richiesta esplicita. I percorsi GET legacy non vanno presentati come funzionanti.
 
 ### Chiusura audit e hotfix route promozioni legacy
 
@@ -577,10 +591,12 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato di riferimento al 2026-09-03 dopo il merge fast-forward `PDP-COMMERCIAL-INFO-SHIPPING-1A`:
+Stato corrente al 2026-09-09 dopo il merge fast-forward `CART-BATCH-ATOMICITY-1A`:
 
 - Branch stabile: `frontend-rebuild`
-- Nota storica del checkpoint shipping: HEAD locale/origin `frontend-rebuild` era `91cbc10b3b343217e18c5a9a6707b72997467b00`; il checkpoint corrente e quello 2026-09-04 in apertura a `c088988080e54371a60c27c1f5979adf957358f1`.
+- HEAD locale/origin `frontend-rebuild`: `df5436deae0bdc672dbed1c7965941a031bb3d49`.
+- Catena batch atomico integrata: base `516442a46869353daaac20407cd0c263c466ae72`, commit `08d2b77bbb2b7d1403d5c73107d54587bd0c1d94` e commit finale `df5436deae0bdc672dbed1c7965941a031bb3d49`; PR #242, fast-forward only, due commit e zero merge commit.
+- Nota storica del checkpoint shipping: HEAD locale/origin `frontend-rebuild` era `91cbc10b3b343217e18c5a9a6707b72997467b00`; resta uno storico autentico e non il checkpoint corrente.
 - Commit async cart finale: `b80f8d4683bbb9bb6ec8a7a486a79048bfae094f`; commit CTA stability finale: `58f4ee43c363d629b3124fc0fb1a10beaeeef48a`.
 - Commit PDP commercial info/shipping: `afc4c72c148984ba729c6cb20de38161dc56e2b4`; REV1 IVA e merge point: `91cbc10b3b343217e18c5a9a6707b72997467b00`.
 - Branch hotfix conservato: `task/storefront-card-layout-regression-1a` a `982cc83bcbcbb913dd1e320ece456957801f8121`.
@@ -2133,8 +2149,15 @@ Task consigliato separato per eventuale proseguimento:
 
 ### Immediati
 
-1. Scegliere il prossimo blocco operativo su `frontend-rebuild` pulito.
-2. Possibili candidati:
+1. Prossimo micro-task raccomandato: `CART-DEADLOCK-RETRY-1A`, audit e retry controllato dei soli deadlock/race MySQL transitori riconosciuti nei percorsi cart critici, con massimo limitato, backoff controllato, compatibilita con idempotenza/transazioni e nessun doppio replay commerciale. Nessun retry su validazione, sicurezza o resolver.
+2. Ordine dei debiti cart successivi:
+   - `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`: valutare persistenza oltre `Session`/`InProc` per recycle, web farm e piu nodi.
+   - `CART-MOBILE-RESPONSIVE-UX-1A`.
+   - touch target rimozione carrello `44x44`.
+   - audit futuro dello schema monetario ancora `DOUBLE`.
+3. Candidati separati da conservare senza implementarli ora:
+   - `HOME-TTFB-PERFORMANCE-1A`.
+   - `MYSQL-CONNECTOR-DEPENDENCY-AUDIT-1A`.
    - EMAIL-ORDER-CONFIRMATION-1A: prossimo blocco consigliato dopo `EMAIL-ENGINE-1A`; migrare la conferma ordine standard con varianti pagamento senza toccare gateway, costi o totali.
    - EMAIL-BANKTRANSFER-1A: istruzioni bonifico dedicate, solo dopo conferma fonti coordinate bancarie.
    - EMAIL-COD-1A: microcopy contrassegno/contanti, senza modificare pagamento reale.
@@ -2145,13 +2168,13 @@ Task consigliato separato per eventuale proseguimento:
    - GESTIONALE-PASSWORD-AUDIT-1A / JANUS-PASSWORD-RESET-1A: audit gestionale Janus per reset/hash.
    - REGISTRATION-POLICY-1A / REGISTRATION-UX-1A: refinement residuo login/registrazione.
    - PR #171 diagnostica sessione/logout post-ordine: non attiva ora; riprendere solo se il problema torna riproducibile con test manuale mirato.
-3. Mantenere PayPal, BancaSella, gateway e pagamenti in task separati dal carrello UI.
-4. Revocare/cambiare la password dell'utente MySQL temporaneo usato nello smoke, se ancora attivo.
-5. Eliminare eventuali variabili ambiente temporanee di smoke.
-6. Eliminare o lasciare scadere eventuali link reset test residui.
-7. AUTH-CSRF-AUDIT-1A: audit `AntiCsrfPage` sui flussi auth.
-8. AUTH-JS-LEGACY-AUDIT-1A: audit errori JS legacy residui.
-9. DATIUTENTE-LEGACY-AUDIT-1A per errore generico, tab/JS legacy e salvataggi/destinazioni.
+4. Mantenere PayPal, BancaSella, gateway e pagamenti in task separati dal carrello UI.
+5. Revocare/cambiare la password dell'utente MySQL temporaneo usato nello smoke, se ancora attivo.
+6. Eliminare eventuali variabili ambiente temporanee di smoke.
+7. Eliminare o lasciare scadere eventuali link reset test residui.
+8. AUTH-CSRF-AUDIT-1A: audit `AntiCsrfPage` sui flussi auth.
+9. AUTH-JS-LEGACY-AUDIT-1A: audit errori JS legacy residui.
+10. DATIUTENTE-LEGACY-AUDIT-1A per errore generico, tab/JS legacy e salvataggi/destinazioni.
 
 ### PayPal Express
 
