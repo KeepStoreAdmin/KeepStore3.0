@@ -5,6 +5,7 @@ Imports System.Web
 Imports System.Text.RegularExpressions
 Imports System.Collections
 Imports System.Collections.Generic
+Imports System.Globalization
 Imports System.Web.UI
 Imports System.Web.UI.HtmlControls
 Imports System.Web.UI.WebControls
@@ -1699,7 +1700,9 @@ strWhere = strWhere & " GROUP BY id"
 
     Private Sub ProcessSelezioneMultipla()
         Dim listaArticoli As New ArrayList()
+        Dim batchItems As New List(Of CartStandardBatchMutationRequest)()
         Dim selectedCount As Integer = 0
+        Dim invalidSelection As Boolean = False
 
         ' Listino corrente (default 1)
         Dim listino As Integer = 1
@@ -1721,7 +1724,10 @@ strWhere = strWhere & " GROUP BY id"
                 selectedCount += 1
 
                 Dim idVal As Integer = GetArticoloIdFromContainer(it)
-                If idVal <= 0 Then Continue For
+                If idVal <= 0 Then
+                    invalidSelection = True
+                    Continue For
+                End If
 
                 ' Controllo settore per ogni articolo selezionato
                 If controlla_abilitazione_settore(idVal) <> 1 Then
@@ -1730,11 +1736,29 @@ strWhere = strWhere & " GROUP BY id"
                 End If
 
                 Dim tcIdVal As Integer = GetTCIdFromContainer(it)
-                Dim qta As Integer = GetQuantityToAddFromContainer(it, idVal, tcIdVal)
+                Dim qta As Integer = 0
+                If Not TryGetQuantityToAddFromContainer(it, idVal, tcIdVal, qta) Then
+                    invalidSelection = True
+                    Continue For
+                End If
                 If qta = 0 Then Continue For
+                If qta < -9999 OrElse qta > 9999 Then
+                    invalidSelection = True
+                    Continue For
+                End If
                 listaArticoli.Add(String.Format(System.Globalization.CultureInfo.InvariantCulture, "{0},{1},{2}", idVal, tcIdVal, qta))
+                batchItems.Add(New CartStandardBatchMutationRequest With {
+                    .ArticleId = idVal,
+                    .RequestedTCId = tcIdVal,
+                    .QuantityDelta = Convert.ToDecimal(qta, System.Globalization.CultureInfo.InvariantCulture)
+                })
             End If
         Next
+
+        If invalidSelection OrElse selectedCount > CartMutationIdempotencyService.MaxStandardBatchItems Then
+            ShowMultiSelectFeedback("La selezione contiene dati non validi o troppi prodotti.")
+            Return
+        End If
 
         If listaArticoli.Count = 0 Then
             If selectedCount > 0 Then
@@ -1754,38 +1778,29 @@ strWhere = strWhere & " GROUP BY id"
             Session("Carrello_Quantita") = parts(2)
         End If
 
+        Dim normalizedItems As List(Of CartStandardBatchMutationRequest) = Nothing
+        Dim payload As String = String.Empty
+        If Not CartMutationIdempotencyService.TryNormalizeStandardBatchItems(
+            batchItems, CartMutationIdempotencyService.MaxStandardBatchItems, normalizedItems, payload) Then
+            ShowMultiSelectFeedback("La selezione non contiene modifiche valide per il carrello.")
+            Return
+        End If
         Session("Carrello_SelezioneMultipla") = listaArticoli
         Session("Carrello_Pagina") = Request.RawUrl
         Dim requestId As String = EnsureCatalogCartRequestId()
-        If Not RegisterCatalogCartIntent(requestId, "catalog-multi") Then Return
-        Dim payload As String = CartMutationIdempotencyService.BuildSessionPayload(Session)
+        If Not RegisterCatalogCartIntent(requestId, "catalog-multi", payload) Then Return
         If Not BeginCatalogCartIntent(requestId, "catalog-multi", payload) Then Return
 
-        Dim addedCount As Integer = 0
-        For Each rawItem As Object In listaArticoli
-            Dim itemParts As String() = Convert.ToString(rawItem).Split(","c)
-            If itemParts.Length <> 3 Then Continue For
-            Dim articleId As Integer = 0
-            Dim tcId As Integer = -1
-            Dim delta As Decimal = 0D
-            If Not Integer.TryParse(itemParts(0), articleId) OrElse articleId <= 0 Then Continue For
-            Integer.TryParse(itemParts(1), tcId)
-            If tcId <= 0 Then tcId = -1
-            If Not Decimal.TryParse(itemParts(2), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, delta) OrElse delta = 0D Then Continue For
-
-            Dim result As CartStandardMutationResult = CartMutationService.AddStandardProductForCurrentOwner(
-                HttpContext.Current, articleId, tcId, delta)
-            If result IsNot Nothing AndAlso result.Succeeded Then addedCount += 1
-        Next
-
-        If addedCount <= 0 Then
+        Dim batchResult As CartStandardBatchMutationResult =
+            CartMutationService.AddStandardProductsBatchForCurrentOwner(HttpContext.Current, batchItems)
+        If batchResult Is Nothing OrElse Not batchResult.Succeeded OrElse batchResult.Items.Count = 0 Then
             CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
             ShowMultiSelectFeedback("I prodotti selezionati non sono stati aggiunti. Verifica disponibilità e prezzo.")
             Return
         End If
 
         CartMutationIdempotencyService.CompleteIntent(HttpContext.Current, requestId)
-        StoreCatalogCartFeedback(addedCount, String.Empty, 0, -1)
+        StoreCatalogCartFeedback(batchResult.Items.Count, String.Empty, 0, -1)
         ClearCatalogCartMutationSession()
         Response.Redirect(Request.RawUrl, False)
         Context.ApplicationInstance.CompleteRequest()
@@ -1800,8 +1815,12 @@ strWhere = strWhere & " GROUP BY id"
         Return normalized
     End Function
 
-    Private Function RegisterCatalogCartIntent(ByVal requestId As String, ByVal operationType As String) As Boolean
-        Dim payload As String = CartMutationIdempotencyService.BuildSessionPayload(Session)
+    Private Function RegisterCatalogCartIntent(ByVal requestId As String,
+                                               ByVal operationType As String,
+                                               Optional ByVal canonicalPayload As String = Nothing) As Boolean
+        Dim payload As String = If(String.IsNullOrWhiteSpace(canonicalPayload),
+                                   CartMutationIdempotencyService.BuildSessionPayload(Session),
+                                   canonicalPayload)
         Dim decision As CartMutationIntentDecision = CartMutationIdempotencyService.RegisterIntent(
             HttpContext.Current, requestId, operationType, payload)
         Select Case decision
@@ -1945,12 +1964,41 @@ strWhere = strWhere & " GROUP BY id"
         Return 1
     End Function
 
-    Private Function GetQuantityToAddFromContainer(ByVal container As Control, ByVal articleId As Integer, ByVal tcId As Integer) As Integer
+    Private Function GetQuantityToAddFromContainer(ByVal container As Control,
+                                                   ByVal articleId As Integer,
+                                                   ByVal tcId As Integer) As Integer
         Dim desiredQty As Integer = GetQuantitaFromContainer(container)
         Dim existingQty As Integer = GetExistingCatalogCartQuantityAsInteger(articleId, tcId)
         If existingQty <= 0 Then Return desiredQty
-
         Return desiredQty - existingQty
+    End Function
+
+    Private Function TryGetQuantityToAddFromContainer(ByVal container As Control,
+                                                      ByVal articleId As Integer,
+                                                      ByVal tcId As Integer,
+                                                      ByRef quantityDelta As Integer) As Boolean
+        quantityDelta = 0
+        Dim rawQuantity As String = String.Empty
+        Dim quantityBox As TextBox = TryCast(container.FindControl("tbQuantita"), TextBox)
+        If quantityBox IsNot Nothing Then
+            Dim postedValue As String = GetPostedListViewControlValue(
+                quantityBox, TryCast(container, ListViewDataItem), "tbQuantita")
+            rawQuantity = If(postedValue IsNot Nothing, postedValue, quantityBox.Text)
+        Else
+            Dim replacementCard As Public_ui_controls_ProductCard = FindReplacementProductCard(container)
+            rawQuantity = If(replacementCard IsNot Nothing, replacementCard.LegacyQuantityText, "1")
+        End If
+
+        Dim desiredQty As Integer = 0
+        If Not Integer.TryParse(Convert.ToString(rawQuantity), NumberStyles.Integer,
+                                CultureInfo.InvariantCulture, desiredQty) OrElse
+           desiredQty <= 0 OrElse desiredQty > 9999 Then Return False
+        If quantityBox IsNot Nothing Then quantityBox.Text = desiredQty.ToString(CultureInfo.InvariantCulture)
+
+        Dim existingQty As Integer = GetExistingCatalogCartQuantityAsInteger(articleId, tcId)
+        quantityDelta = If(existingQty <= 0, desiredQty, desiredQty - existingQty)
+
+        Return quantityDelta >= -9999 AndAlso quantityDelta <= 9999
     End Function
 
     Private Function GetExistingCatalogCartQuantityAsInteger(ByVal articleId As Integer, ByVal tcId As Integer) As Integer

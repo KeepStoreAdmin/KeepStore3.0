@@ -4,6 +4,7 @@ Imports System.Collections.Specialized
 Imports System.Globalization
 Imports System.Text.RegularExpressions
 Imports System.Web
+Imports System.Collections.Generic
 
 Partial Class cart_add
     Inherits AntiCsrfPage
@@ -128,37 +129,37 @@ Partial Class cart_add
     Private Sub HandleBundleAction(ByVal actionValues As NameValueCollection,
                                    ByVal requestId As String,
                                    ByVal cartReturnUrl As String)
-        Dim bundleItems As ArrayList = Nothing
+        Dim bundleItems As List(Of CartStandardBatchMutationRequest) = Nothing
         If Not TryParseBundleItems(ReadActionValue(actionValues, "items"), bundleItems) Then
             Reject(400, "Parametri carrello non validi.")
             Return
         End If
 
-        Dim payload As String = CartMutationIdempotencyService.BuildMultiPayload(bundleItems)
-        If payload = String.Empty OrElse Not TryAcquireIntent(requestId, "pdp-bundle", payload, cartReturnUrl) Then Return
+        Dim normalizedItems As List(Of CartStandardBatchMutationRequest) = Nothing
+        Dim payload As String = String.Empty
+        If Not CartMutationIdempotencyService.TryNormalizeStandardBatchItems(
+            bundleItems, 20, normalizedItems, payload) Then
+            Reject(400, "Parametri carrello non validi.")
+            Return
+        End If
+        If Not TryAcquireIntent(requestId, "pdp-bundle", payload, cartReturnUrl) Then Return
 
-        Dim addedCount As Integer = 0
+        Dim batchResult As CartStandardBatchMutationResult = Nothing
         Try
-            For Each rawItem As Object In bundleItems
-                Dim parts As String() = Convert.ToString(rawItem).Split(","c)
-                Dim articleId As Integer = Integer.Parse(parts(0), CultureInfo.InvariantCulture)
-                Dim tcId As Integer = Integer.Parse(parts(1), CultureInfo.InvariantCulture)
-                Dim quantity As Decimal = Decimal.Parse(parts(2), NumberStyles.Number, CultureInfo.InvariantCulture)
-                Dim result As CartStandardMutationResult = CartMutationService.AddStandardProductForCurrentOwner(
-                    HttpContext.Current, articleId, tcId, quantity)
-                If result IsNot Nothing AndAlso result.Succeeded Then addedCount += 1
-            Next
+            batchResult = CartMutationService.AddStandardProductsBatchForCurrentOwner(
+                HttpContext.Current, bundleItems)
         Catch ex As Exception
-            If addedCount = 0 Then CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
+            CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
             Try
                 KeepStoreLog.Error("cart_add.aspx", "Errore aggiunta bundle PDP.", ex, HttpContext.Current)
-            Catch
+            Catch logError As Exception
+                System.Diagnostics.Trace.TraceError("cart_add bundle logging failed. Error type: " & logError.GetType().Name & ".")
             End Try
-            Reject(500, If(addedCount > 0, IndeterminateMessage, "Non è stato possibile aggiornare il carrello. Riprova."))
+            Reject(500, "Non è stato possibile aggiornare il carrello. Riprova.")
             Return
         End Try
 
-        If addedCount <= 0 Then
+        If batchResult Is Nothing OrElse Not batchResult.Succeeded OrElse batchResult.Items.Count = 0 Then
             CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
             Reject(422, "I prodotti selezionati non sono stati aggiunti. Verifica disponibilità e prezzo.")
             Return
@@ -169,7 +170,7 @@ Partial Class cart_add
         Session("ks_cart_feedback_product_name") = ""
         Session("ks_cart_feedback_article_id") = 0
         Session("ks_cart_feedback_tcid") = -1
-        Session("ks_cart_feedback_count") = addedCount
+        Session("ks_cart_feedback_count") = batchResult.Items.Count
         Session("ks_cart_feedback_created_utc") = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
         RedirectAfterPost(cartReturnUrl)
     End Sub
@@ -225,8 +226,11 @@ Partial Class cart_add
         Return True
     End Function
 
-    Private Function TryParseBundleItems(ByVal rawItems As String, ByRef items As ArrayList) As Boolean
-        items = New ArrayList()
+    Private Function TryParseBundleItems(
+        ByVal rawItems As String,
+        ByRef items As List(Of CartStandardBatchMutationRequest)) As Boolean
+
+        items = New List(Of CartStandardBatchMutationRequest)()
         Dim values As String() = If(rawItems, String.Empty).Split(";"c)
         If values.Length = 0 OrElse values.Length > 20 Then Return False
 
@@ -242,9 +246,11 @@ Partial Class cart_add
             If tcId <= 0 Then tcId = -1
             If Not TryParseQuantity(parts(2), quantity) OrElse quantity <= 0D Then Return False
 
-            items.Add(articleId.ToString(CultureInfo.InvariantCulture) & "," &
-                      tcId.ToString(CultureInfo.InvariantCulture) & "," &
-                      quantity.ToString("0.####", CultureInfo.InvariantCulture))
+            items.Add(New CartStandardBatchMutationRequest With {
+                .ArticleId = articleId,
+                .RequestedTCId = tcId,
+                .QuantityDelta = quantity
+            })
         Next
 
         Return items.Count > 0

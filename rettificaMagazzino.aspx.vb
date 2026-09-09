@@ -3,6 +3,7 @@ Imports System.Data
 Imports System.Configuration
 Imports System.Globalization
 Imports System.Web
+Imports System.Collections.Generic
 
 Partial Class Articoli
     Inherits AntiCsrfPage
@@ -859,7 +860,9 @@ End Function
     Protected Sub Selezione_Multipla_Click(ByVal sender As Object, ByVal e As System.Web.UI.ImageClickEventArgs)
         Dim i As Integer = 0
         Dim temp_check As CheckBox
-        Dim ListaArticoli As New ArrayList
+        Dim batchItems As New List(Of CartStandardBatchMutationRequest)()
+        Dim selectedCount As Integer = 0
+        Dim invalidSelection As Boolean = False
 
         Dim Qta As TextBox
         Dim ID As Label
@@ -874,6 +877,7 @@ End Function
             For i = 0 To Me.GridView1.Rows.Count - 1
                 temp_check = CType(Me.GridView1.Rows(i).FindControl("CheckBox_SelezioneMultipla"), CheckBox)
                 If temp_check.Checked = True Then
+                    selectedCount += 1
                     ID = Me.GridView1.Rows(i).FindControl("lblID")
                     Qta = Me.GridView1.Rows(i).FindControl("tbQuantita")
 
@@ -881,21 +885,21 @@ End Function
                     Dim quantity As Decimal = 0D
                     If Integer.TryParse(ID.Text, articleId) AndAlso articleId > 0 AndAlso
                        Decimal.TryParse(Qta.Text, NumberStyles.Number, CultureInfo.GetCultureInfo("it-IT"), quantity) AndAlso quantity > 0D Then
-                        ListaArticoli.Add(articleId.ToString(CultureInfo.InvariantCulture) & "," & quantity.ToString(CultureInfo.InvariantCulture))
+                        batchItems.Add(New CartStandardBatchMutationRequest With {
+                            .ArticleId = articleId,
+                            .RequestedTCId = -1,
+                            .QuantityDelta = quantity
+                        })
+                    Else
+                        invalidSelection = True
                     End If
                 End If
             Next
 
-            Dim added As Integer = 0
-            For Each raw As Object In ListaArticoli
-                Dim parts As String() = Convert.ToString(raw).Split(","c)
-                Dim articleId As Integer = 0
-                Dim quantity As Decimal = 0D
-                If parts.Length = 2 AndAlso Integer.TryParse(parts(0), articleId) AndAlso
-                   Decimal.TryParse(parts(1), NumberStyles.Number, CultureInfo.InvariantCulture, quantity) AndAlso
-                   ExecuteStockCorrectionCartMutation(articleId, quantity, "rettifica-cart:multi:" & articleId.ToString(CultureInfo.InvariantCulture)) Then added += 1
-            Next
-            If added > 0 Then
+            If selectedCount = 0 OrElse invalidSelection OrElse
+               selectedCount > CartMutationIdempotencyService.MaxStandardBatchItems Then Return
+
+            If ExecuteStockCorrectionCartBatch(batchItems) Then
                 Response.Redirect(Request.RawUrl, False)
                 Context.ApplicationInstance.CompleteRequest()
             End If
@@ -1064,6 +1068,37 @@ End Function
         Dim result As CartStandardMutationResult = CartMutationService.AddStandardProductForCurrentOwner(
             HttpContext.Current, articleId, -1, quantity)
         If result Is Nothing OrElse Not result.Succeeded Then
+            CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
+            Return False
+        End If
+
+        CartMutationIdempotencyService.CompleteIntent(HttpContext.Current, requestId)
+        Return True
+    End Function
+
+    Private Function ExecuteStockCorrectionCartBatch(
+        ByVal items As IList(Of CartStandardBatchMutationRequest)) As Boolean
+
+        Dim normalized As List(Of CartStandardBatchMutationRequest) = Nothing
+        Dim payload As String = String.Empty
+        If Not CartMutationIdempotencyService.TryNormalizeStandardBatchItems(
+            items, CartMutationIdempotencyService.MaxStandardBatchItems, normalized, payload) Then Return False
+
+        Dim requestId As String = CartMutationIdempotencyService.GetOrCreateProgressiveRequestId(
+            HttpContext.Current, "rettifica-cart:multi", "stock-correction-cart-add-batch", payload)
+        Dim decision As CartMutationIntentDecision = CartMutationIdempotencyService.RegisterIntent(
+            HttpContext.Current, requestId, "stock-correction-cart-add-batch", payload)
+        If decision = CartMutationIntentDecision.Completed Then Return True
+        If decision <> CartMutationIntentDecision.Accepted AndAlso decision <> CartMutationIntentDecision.Pending Then Return False
+
+        decision = CartMutationIdempotencyService.BeginIntent(
+            HttpContext.Current, requestId, "stock-correction-cart-add-batch", payload)
+        If decision = CartMutationIntentDecision.Completed Then Return True
+        If decision <> CartMutationIntentDecision.Accepted Then Return False
+
+        Dim result As CartStandardBatchMutationResult =
+            CartMutationService.AddStandardProductsBatchForCurrentOwner(HttpContext.Current, items)
+        If result Is Nothing OrElse Not result.Succeeded OrElse result.Items.Count = 0 Then
             CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
             Return False
         End If

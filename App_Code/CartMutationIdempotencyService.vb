@@ -19,6 +19,7 @@ Public Enum CartMutationIntentDecision
 End Enum
 
 Public NotInheritable Class CartMutationIdempotencyService
+    Public Const MaxStandardBatchItems As Integer = 96
     Private Const RegistrySessionKey As String = "KeepStore:CartMutation:Intents"
     Private Const ProgressiveSlotSessionKey As String = "KeepStore:CartMutation:ProgressiveSlots"
     Private Const MaxEntries As Integer = 64
@@ -50,21 +51,126 @@ Public NotInheritable Class CartMutationIdempotencyService
             Return BuildMultiPayload(multi)
         End If
 
-        Return BuildStandardPayload(
-            NormalizeInteger(session("Carrello_ArticoloId"), 0),
-            NormalizeInteger(session("Carrello_TCId"), -1),
-            NormalizeDecimal(session("Carrello_Quantita"), 0D))
+        Dim rawArticleIds As String = Convert.ToString(session("Carrello_ArticoloId")).Trim()
+        Dim articleValues As New ArrayList()
+        If rawArticleIds = "0" Then
+            Dim legacyList As ArrayList = TryCast(session("Carrello_ListaArticoloId"), ArrayList)
+            If legacyList Is Nothing OrElse legacyList.Count = 0 Then Return String.Empty
+            articleValues.AddRange(legacyList)
+        ElseIf rawArticleIds <> String.Empty Then
+            articleValues.AddRange(rawArticleIds.Split(","c))
+        Else
+            Return String.Empty
+        End If
+        If articleValues.Count = 0 OrElse articleValues.Count > MaxStandardBatchItems Then Return String.Empty
+
+        Dim tcValues As New ArrayList()
+        Dim rawTCIds As String = Convert.ToString(session("Carrello_TCId")).Trim()
+        If rawTCIds <> String.Empty Then tcValues.AddRange(rawTCIds.Split(","c))
+        If tcValues.Count > articleValues.Count Then Return String.Empty
+        While tcValues.Count < articleValues.Count
+            tcValues.Add("-1")
+        End While
+
+        Dim quantity As Decimal = 0D
+        If Not Decimal.TryParse(Convert.ToString(session("Carrello_Quantita")), NumberStyles.Number,
+                                CultureInfo.InvariantCulture, quantity) OrElse quantity = 0D Then Return String.Empty
+
+        Dim requests As New List(Of CartStandardBatchMutationRequest)()
+        For index As Integer = 0 To articleValues.Count - 1
+            Dim articleId As Integer = 0
+            Dim tcId As Integer = -1
+            If Not Integer.TryParse(Convert.ToString(articleValues(index)), NumberStyles.Integer,
+                                    CultureInfo.InvariantCulture, articleId) OrElse articleId <= 0 OrElse
+               Not Integer.TryParse(Convert.ToString(tcValues(index)), NumberStyles.Integer,
+                                    CultureInfo.InvariantCulture, tcId) Then Return String.Empty
+            requests.Add(New CartStandardBatchMutationRequest With {
+                .ArticleId = articleId,
+                .RequestedTCId = NormalizeTCId(tcId),
+                .QuantityDelta = quantity
+            })
+        Next
+
+        If requests.Count = 1 Then
+            Return BuildStandardPayload(requests(0).ArticleId, requests(0).RequestedTCId, requests(0).QuantityDelta)
+        End If
+        Dim normalized As List(Of CartStandardBatchMutationRequest) = Nothing
+        Dim payload As String = String.Empty
+        If Not TryNormalizeStandardBatchItems(requests, MaxStandardBatchItems, normalized, payload) Then Return String.Empty
+        Return payload
     End Function
 
     Public Shared Function BuildMultiPayload(ByVal itemsSource As IEnumerable) As String
         If itemsSource Is Nothing Then Return String.Empty
-        Dim items As New List(Of String)()
+        Dim requests As New List(Of CartStandardBatchMutationRequest)()
         For Each raw As Object In itemsSource
-            Dim value As String = NormalizeMultiItem(Convert.ToString(raw))
-            If value <> String.Empty Then items.Add(value)
+            Dim request As CartStandardBatchMutationRequest = Nothing
+            If Not TryParseMultiItem(Convert.ToString(raw), request) Then Return String.Empty
+            requests.Add(request)
         Next
-        If items.Count = 0 Then Return String.Empty
-        Return "multi|" & String.Join(";", items.ToArray())
+        Dim normalized As List(Of CartStandardBatchMutationRequest) = Nothing
+        Dim payload As String = String.Empty
+        If Not TryNormalizeStandardBatchItems(requests, MaxStandardBatchItems, normalized, payload) Then
+            Return String.Empty
+        End If
+        Return payload
+    End Function
+
+    Public Shared Function TryNormalizeStandardBatchItems(
+        ByVal items As IList(Of CartStandardBatchMutationRequest),
+        ByVal maxItems As Integer,
+        ByRef normalizedItems As List(Of CartStandardBatchMutationRequest),
+        ByRef payload As String) As Boolean
+
+        normalizedItems = New List(Of CartStandardBatchMutationRequest)()
+        payload = String.Empty
+        If items Is Nothing OrElse maxItems <= 0 OrElse items.Count = 0 OrElse items.Count > maxItems Then
+            Return False
+        End If
+
+        Dim byKey As New Dictionary(Of String, CartStandardBatchMutationRequest)(StringComparer.Ordinal)
+        Try
+            For Each item As CartStandardBatchMutationRequest In items
+                If item Is Nothing OrElse item.ArticleId <= 0 OrElse item.QuantityDelta = 0D OrElse
+                   Not HasSupportedQuantityScale(item.QuantityDelta) OrElse
+                   item.QuantityDelta < -9999999.99999999D OrElse
+                   item.QuantityDelta > 9999999.99999999D Then Return False
+
+                Dim tcId As Integer = NormalizeTCId(item.RequestedTCId)
+                Dim key As String = item.ArticleId.ToString(CultureInfo.InvariantCulture) & ":" &
+                                    tcId.ToString(CultureInfo.InvariantCulture)
+                Dim canonical As CartStandardBatchMutationRequest = Nothing
+                If byKey.TryGetValue(key, canonical) Then
+                    canonical.QuantityDelta = Decimal.Add(canonical.QuantityDelta, item.QuantityDelta)
+                Else
+                    byKey(key) = New CartStandardBatchMutationRequest With {
+                        .ArticleId = item.ArticleId,
+                        .RequestedTCId = tcId,
+                        .QuantityDelta = item.QuantityDelta
+                    }
+                End If
+            Next
+        Catch ex As OverflowException
+            Return False
+        End Try
+
+        For Each item As CartStandardBatchMutationRequest In byKey.Values
+            If Not HasSupportedQuantityScale(item.QuantityDelta) OrElse
+               item.QuantityDelta < -9999999.99999999D OrElse
+               item.QuantityDelta > 9999999.99999999D Then Return False
+            If item.QuantityDelta <> 0D Then normalizedItems.Add(item)
+        Next
+        normalizedItems.Sort(AddressOf CompareBatchItems)
+        If normalizedItems.Count = 0 OrElse normalizedItems.Count > maxItems Then Return False
+
+        Dim parts As New List(Of String)()
+        For Each item As CartStandardBatchMutationRequest In normalizedItems
+            parts.Add(item.ArticleId.ToString(CultureInfo.InvariantCulture) & "," &
+                      NormalizeTCId(item.RequestedTCId).ToString(CultureInfo.InvariantCulture) & "," &
+                      item.QuantityDelta.ToString("0.########", CultureInfo.InvariantCulture))
+        Next
+        payload = "multi|" & String.Join(";", parts.ToArray())
+        Return True
     End Function
 
     Public Shared Function BuildStandardPayload(ByVal articleId As Integer,
@@ -358,30 +464,46 @@ Public NotInheritable Class CartMutationIdempotencyService
         Return fallback
     End Function
 
-    Private Shared Function NormalizeMultiItem(ByVal rawValue As String) As String
+    Private Shared Function TryParseMultiItem(ByVal rawValue As String,
+                                              ByRef request As CartStandardBatchMutationRequest) As Boolean
+        request = Nothing
         Dim parts As String() = If(rawValue, String.Empty).Split(","c)
-        If parts.Length < 2 Then Return String.Empty
+        If parts.Length < 2 OrElse parts.Length > 4 Then Return False
 
         Dim articleId As Integer = 0
         If Not Integer.TryParse(parts(0), NumberStyles.Integer, CultureInfo.InvariantCulture, articleId) OrElse articleId <= 0 Then
-            Return String.Empty
+            Return False
         End If
 
         Dim tcId As Integer = -1
         Dim quantityIndex As Integer = 1
         If parts.Length >= 3 Then
-            Integer.TryParse(parts(1), NumberStyles.Integer, CultureInfo.InvariantCulture, tcId)
+            If Not Integer.TryParse(parts(1), NumberStyles.Integer, CultureInfo.InvariantCulture, tcId) Then Return False
             quantityIndex = 2
         End If
 
         Dim quantity As Decimal = 0D
         If Not Decimal.TryParse(parts(quantityIndex), NumberStyles.Number, CultureInfo.InvariantCulture, quantity) Then
-            Return String.Empty
+            Return False
         End If
 
-        Return articleId.ToString(CultureInfo.InvariantCulture) & "," &
-               NormalizeTCId(tcId).ToString(CultureInfo.InvariantCulture) & "," &
-               quantity.ToString("0.####", CultureInfo.InvariantCulture)
+        request = New CartStandardBatchMutationRequest With {
+            .ArticleId = articleId,
+            .RequestedTCId = NormalizeTCId(tcId),
+            .QuantityDelta = quantity
+        }
+        Return True
+    End Function
+
+    Private Shared Function CompareBatchItems(ByVal left As CartStandardBatchMutationRequest,
+                                               ByVal right As CartStandardBatchMutationRequest) As Integer
+        Dim articleCompare As Integer = left.ArticleId.CompareTo(right.ArticleId)
+        If articleCompare <> 0 Then Return articleCompare
+        Return NormalizeTCId(left.RequestedTCId).CompareTo(NormalizeTCId(right.RequestedTCId))
+    End Function
+
+    Private Shared Function HasSupportedQuantityScale(ByVal quantity As Decimal) As Boolean
+        Return Decimal.Round(quantity, 8, MidpointRounding.ToEven) = quantity
     End Function
 
     Private Shared Function NormalizeTCId(ByVal tcId As Integer) As Integer

@@ -17,6 +17,7 @@ Public Class CartStandardMutationResult
     Public Property ArticleId As Integer
     Public Property TCId As Integer
     Public Property Quantity As Decimal
+    Public Property QuantityDelta As Decimal
     Public Property ProductName As String
     Public Property Price As Decimal
     Public Property PriceIvato As Decimal
@@ -24,10 +25,36 @@ Public Class CartStandardMutationResult
     Public Property ErrorMessage As String
 End Class
 
+Public Class CartStandardBatchMutationRequest
+    Public Property ArticleId As Integer
+    Public Property RequestedTCId As Integer
+    Public Property QuantityDelta As Decimal
+End Class
+
+Public Class CartStandardBatchMutationResult
+    Public Sub New()
+        Items = New List(Of CartStandardMutationResult)()
+    End Sub
+
+    Public Property Succeeded As Boolean
+    Public Property Items As List(Of CartStandardMutationResult)
+    Public Property ErrorMessage As String
+End Class
+
 Friend Class CartMutationExistingRow
     Public Property Id As Integer
+    Public Property ArticleId As Integer
     Public Property TCId As Integer
     Public Property Quantity As Decimal
+End Class
+
+Friend Class CartStandardBatchPlan
+    Public Property Request As CartStandardBatchMutationRequest
+    Public Property ExistingRows As List(Of CartMutationExistingRow)
+    Public Property FinalQuantity As Decimal
+    Public Property Resolved As CartResolvedPrice
+    Public Property FreeShipping As Integer
+    Public Property CartRowId As Integer
 End Class
 
 Public Module CartMutationService
@@ -44,6 +71,21 @@ Public Module CartMutationService
         Dim listino As Integer = SessionInteger(ctx, "Listino", SessionInteger(ctx, "listino", 1))
         If listino <= 0 Then listino = 1
         Return AddStandardProduct(ctx, loginId, sessionId, articleId, requestedTCId, quantityToAdd, listino)
+    End Function
+
+    Public Function AddStandardProductsBatchForCurrentOwner(
+        ByVal ctx As HttpContext,
+        ByVal items As IList(Of CartStandardBatchMutationRequest)) As CartStandardBatchMutationResult
+
+        If ctx Is Nothing OrElse ctx.Session Is Nothing Then
+            Return New CartStandardBatchMutationResult With {.ErrorMessage = GenericMutationError}
+        End If
+
+        Dim loginId As Integer = SessionInteger(ctx, "LoginId", SessionInteger(ctx, "LoginID", 0))
+        Dim sessionId As String = If(loginId > 0, String.Empty, ctx.Session.SessionID)
+        Dim listino As Integer = SessionInteger(ctx, "Listino", SessionInteger(ctx, "listino", 1))
+        If listino <= 0 Then listino = 1
+        Return MutateStandardProductsBatch(ctx, loginId, sessionId, listino, items)
     End Function
 
     Public Function SetStandardProductQuantityForCurrentOwner(ByVal ctx As HttpContext,
@@ -66,7 +108,172 @@ Public Module CartMutationService
                                        ByVal requestedTCId As Integer,
                                        ByVal quantityToAdd As Decimal,
                                        ByVal listino As Integer) As CartStandardMutationResult
-        Return MutateStandardProduct(ctx, loginId, sessionId, articleId, requestedTCId, quantityToAdd, listino, False)
+        Dim request As New CartStandardBatchMutationRequest With {
+            .ArticleId = articleId,
+            .RequestedTCId = requestedTCId,
+            .QuantityDelta = quantityToAdd
+        }
+        Dim requests As New List(Of CartStandardBatchMutationRequest) From {request}
+        Dim batchResult As CartStandardBatchMutationResult = MutateStandardProductsBatch(
+            ctx, loginId, sessionId, listino, requests)
+        If batchResult IsNot Nothing AndAlso batchResult.Succeeded AndAlso batchResult.Items.Count = 1 Then
+            Return batchResult.Items(0)
+        End If
+        Return New CartStandardMutationResult With {
+            .ArticleId = articleId,
+            .TCId = NormalizeTCId(requestedTCId),
+            .ErrorMessage = If(batchResult IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(batchResult.ErrorMessage),
+                               batchResult.ErrorMessage,
+                               GenericMutationError)
+        }
+    End Function
+
+    Private Function MutateStandardProductsBatch(
+        ByVal ctx As HttpContext,
+        ByVal loginId As Integer,
+        ByVal sessionId As String,
+        ByVal listino As Integer,
+        ByVal items As IList(Of CartStandardBatchMutationRequest)) As CartStandardBatchMutationResult
+
+        Dim result As New CartStandardBatchMutationResult With {.ErrorMessage = GenericMutationError}
+        Dim normalizedItems As List(Of CartStandardBatchMutationRequest) = Nothing
+        Dim canonicalPayload As String = String.Empty
+        If ctx Is Nothing OrElse ctx.Session Is Nothing OrElse listino <= 0 OrElse
+           (loginId <= 0 AndAlso String.IsNullOrWhiteSpace(sessionId)) OrElse
+           Not CartMutationIdempotencyService.TryNormalizeStandardBatchItems(
+               items, CartMutationIdempotencyService.MaxStandardBatchItems, normalizedItems, canonicalPayload) Then
+            Return result
+        End If
+
+        Dim conn As MySqlConnection = Nothing
+        Dim transaction As MySqlTransaction = Nothing
+        Try
+            conn = New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+            conn.Open()
+            transaction = conn.BeginTransaction(IsolationLevel.Serializable)
+
+            Dim ownerRows As List(Of CartMutationExistingRow) = LoadOwnedRows(
+                conn, transaction, loginId, sessionId)
+            Dim eligibilityContext As ProductPromotionEligibilityContext =
+                ProductPromotionEligibilityResolver.CreateContext(ctx, listino)
+
+            Dim effectiveByKey As New Dictionary(Of String, CartStandardBatchMutationRequest)(StringComparer.Ordinal)
+            For Each item As CartStandardBatchMutationRequest In normalizedItems
+                Dim probeQuantity As Decimal = If(item.QuantityDelta > 0D, item.QuantityDelta, 1D)
+                Dim preliminary As CartResolvedPrice = CartPriceRevalidationHelper.ResolveStandardPrice(
+                    ctx, conn, transaction, eligibilityContext, item.ArticleId, item.RequestedTCId,
+                    probeQuantity, listino, True)
+                EnsureResolved(preliminary)
+
+                Dim effectiveKey As String = BatchKey(item.ArticleId, preliminary.EffectiveTCId)
+                Dim effective As CartStandardBatchMutationRequest = Nothing
+                If effectiveByKey.TryGetValue(effectiveKey, effective) Then
+                    effective.QuantityDelta = Decimal.Add(effective.QuantityDelta, item.QuantityDelta)
+                Else
+                    effectiveByKey(effectiveKey) = New CartStandardBatchMutationRequest With {
+                        .ArticleId = item.ArticleId,
+                        .RequestedTCId = preliminary.EffectiveTCId,
+                        .QuantityDelta = item.QuantityDelta
+                    }
+                End If
+            Next
+
+            Dim effectiveItems As New List(Of CartStandardBatchMutationRequest)()
+            For Each effective As CartStandardBatchMutationRequest In effectiveByKey.Values
+                If effective.QuantityDelta <> 0D Then effectiveItems.Add(effective)
+            Next
+            effectiveItems.Sort(AddressOf CompareBatchRequests)
+            If effectiveItems.Count = 0 OrElse effectiveItems.Count > CartMutationIdempotencyService.MaxStandardBatchItems Then
+                Throw New InvalidOperationException("The standard cart batch has no effective mutations.")
+            End If
+
+            Dim plans As New List(Of CartStandardBatchPlan)()
+            For Each item As CartStandardBatchMutationRequest In effectiveItems
+                Dim existing As List(Of CartMutationExistingRow) = ownerRows.FindAll(
+                    Function(row As CartMutationExistingRow) row.ArticleId = item.ArticleId AndAlso
+                        NormalizeTCId(row.TCId) = NormalizeTCId(item.RequestedTCId))
+                If existing.Count = 0 AndAlso item.QuantityDelta < 0D Then
+                    Throw New InvalidOperationException("A negative cart delta requires an existing owned row.")
+                End If
+
+                Dim finalQuantity As Decimal = item.QuantityDelta
+                For Each row As CartMutationExistingRow In existing
+                    finalQuantity = Decimal.Add(finalQuantity, row.Quantity)
+                Next
+                ValidateQuantity(finalQuantity)
+
+                Dim resolved As CartResolvedPrice = CartPriceRevalidationHelper.ResolveStandardPrice(
+                    ctx, conn, transaction, eligibilityContext, item.ArticleId, item.RequestedTCId,
+                    finalQuantity, listino, True)
+                EnsureResolved(resolved)
+                If NormalizeTCId(resolved.EffectiveTCId) <> NormalizeTCId(item.RequestedTCId) Then
+                    Throw New InvalidOperationException("Effective product variant changed during batch planning.")
+                End If
+                plans.Add(New CartStandardBatchPlan With {
+                    .Request = New CartStandardBatchMutationRequest With {
+                        .ArticleId = item.ArticleId,
+                        .RequestedTCId = resolved.EffectiveTCId,
+                        .QuantityDelta = item.QuantityDelta
+                    },
+                    .ExistingRows = existing,
+                    .FinalQuantity = finalQuantity,
+                    .Resolved = resolved,
+                    .FreeShipping = If(resolved.FreeShipping <> 0, 1, 0)
+                })
+            Next
+
+            For planIndex As Integer = 0 To plans.Count - 1
+                Dim plan As CartStandardBatchPlan = plans(planIndex)
+                If plan.ExistingRows.Count = 0 Then
+                    plan.CartRowId = InsertRow(conn, transaction, ctx, loginId, sessionId, listino,
+                                               plan.FinalQuantity, plan.Resolved, plan.FreeShipping)
+                Else
+                    plan.CartRowId = plan.ExistingRows(0).Id
+                    UpdateRow(conn, transaction, ctx, loginId, sessionId, plan.CartRowId, listino,
+                              plan.FinalQuantity, plan.Resolved, plan.FreeShipping)
+                    For index As Integer = 1 To plan.ExistingRows.Count - 1
+                        DeleteOwnedRow(conn, transaction, loginId, sessionId, plan.ExistingRows(index).Id)
+                    Next
+                End If
+            Next
+
+            Dim confirmedItems As New List(Of CartStandardMutationResult)()
+            For Each plan As CartStandardBatchPlan In plans
+                VerifyFinalRow(conn, transaction, loginId, sessionId, plan.CartRowId,
+                               plan.Request.ArticleId, plan.Resolved.EffectiveTCId,
+                               plan.FinalQuantity, plan.Resolved)
+                VerifySingleOwnedProductRow(conn, transaction, loginId, sessionId,
+                                            plan.Request.ArticleId, plan.Resolved.EffectiveTCId)
+                confirmedItems.Add(New CartStandardMutationResult With {
+                    .Succeeded = True,
+                    .CartRowId = plan.CartRowId,
+                    .ArticleId = plan.Request.ArticleId,
+                    .TCId = plan.Resolved.EffectiveTCId,
+                    .Quantity = plan.FinalQuantity,
+                    .QuantityDelta = plan.Request.QuantityDelta,
+                    .ProductName = plan.Resolved.Description,
+                    .Price = plan.Resolved.Price,
+                    .PriceIvato = plan.Resolved.PriceIvato,
+                    .OfferDetailId = plan.Resolved.OfferDetailId,
+                    .ErrorMessage = String.Empty
+                })
+            Next
+
+            transaction.Commit()
+            transaction.Dispose()
+            transaction = Nothing
+
+            result.Items = confirmedItems
+            result.Succeeded = True
+            result.ErrorMessage = String.Empty
+        Catch ex As Exception
+            TryRollback(transaction, ctx, "standard-batch")
+            LogFailure(ctx, "Atomic standard cart batch failed", ex)
+        Finally
+            If transaction IsNot Nothing Then transaction.Dispose()
+            If conn IsNot Nothing Then conn.Dispose()
+        End Try
+        Return result
     End Function
 
     Private Function MutateStandardProduct(ByVal ctx As HttpContext,
@@ -209,6 +416,36 @@ Public Module CartMutationService
         End Try
     End Function
 
+    Private Function LoadOwnedRows(ByVal conn As MySqlConnection,
+                                   ByVal transaction As MySqlTransaction,
+                                   ByVal loginId As Integer,
+                                   ByVal sessionId As String) As List(Of CartMutationExistingRow)
+        Dim rows As New List(Of CartMutationExistingRow)()
+        Using cmd As New MySqlCommand(
+            "SELECT ID, ArticoliId, COALESCE(TCId,-1) AS TCId, COALESCE(Qnt,0) AS Qnt " &
+            "FROM carrello WHERE " & OwnerWhere(loginId) & " ORDER BY ID FOR UPDATE",
+            conn,
+            transaction)
+            AddOwnerParameter(cmd, loginId, sessionId)
+            Using reader As MySqlDataReader = cmd.ExecuteReader()
+                While reader.Read()
+                    Dim row As New CartMutationExistingRow With {
+                        .Id = Convert.ToInt32(reader("ID"), CultureInfo.InvariantCulture),
+                        .ArticleId = Convert.ToInt32(reader("ArticoliId"), CultureInfo.InvariantCulture),
+                        .TCId = Convert.ToInt32(reader("TCId"), CultureInfo.InvariantCulture),
+                        .Quantity = ReadDecimal(reader("Qnt"), 0D)
+                    }
+                    If row.Id <= 0 OrElse row.ArticleId <= 0 OrElse row.Quantity < 0D OrElse
+                       row.Quantity > 9999999.99999999D Then
+                        Throw New InvalidOperationException("Invalid owned cart row encountered during batch mutation.")
+                    End If
+                    rows.Add(row)
+                End While
+            End Using
+        End Using
+        Return rows
+    End Function
+
     Private Function LoadOwnedArticleRows(ByVal conn As MySqlConnection,
                                           ByVal transaction As MySqlTransaction,
                                           ByVal loginId As Integer,
@@ -226,6 +463,7 @@ Public Module CartMutationService
                 While reader.Read()
                     rows.Add(New CartMutationExistingRow() With {
                         .Id = Convert.ToInt32(reader("ID"), CultureInfo.InvariantCulture),
+                        .ArticleId = articleId,
                         .TCId = Convert.ToInt32(reader("TCId"), CultureInfo.InvariantCulture),
                         .Quantity = ReadDecimal(reader("Qnt"), 0D)
                     })
@@ -364,6 +602,26 @@ Public Module CartMutationService
         End Using
     End Sub
 
+    Private Sub VerifySingleOwnedProductRow(ByVal conn As MySqlConnection,
+                                            ByVal transaction As MySqlTransaction,
+                                            ByVal loginId As Integer,
+                                            ByVal sessionId As String,
+                                            ByVal articleId As Integer,
+                                            ByVal tcId As Integer)
+        Using cmd As New MySqlCommand(
+            "SELECT COUNT(*) FROM carrello WHERE " & OwnerWhere(loginId) &
+            " AND ArticoliId=?articleId AND COALESCE(TCId,-1)=?tcId",
+            conn,
+            transaction)
+            AddOwnerParameter(cmd, loginId, sessionId)
+            cmd.Parameters.Add("?articleId", MySqlDbType.Int32).Value = articleId
+            cmd.Parameters.Add("?tcId", MySqlDbType.Int32).Value = NormalizeTCId(tcId)
+            If Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) <> 1 Then
+                Throw New InvalidOperationException("Final standard cart batch contains duplicate or missing rows.")
+            End If
+        End Using
+    End Sub
+
     Private Function OwnedRowExists(ByVal conn As MySqlConnection,
                                     ByVal transaction As MySqlTransaction,
                                     ByVal loginId As Integer,
@@ -392,6 +650,18 @@ Public Module CartMutationService
 
     Private Function NormalizeTCId(ByVal tcId As Integer) As Integer
         Return If(tcId > 0, tcId, -1)
+    End Function
+
+    Private Function BatchKey(ByVal articleId As Integer, ByVal tcId As Integer) As String
+        Return articleId.ToString(CultureInfo.InvariantCulture) & ":" &
+               NormalizeTCId(tcId).ToString(CultureInfo.InvariantCulture)
+    End Function
+
+    Private Function CompareBatchRequests(ByVal left As CartStandardBatchMutationRequest,
+                                          ByVal right As CartStandardBatchMutationRequest) As Integer
+        Dim articleCompare As Integer = left.ArticleId.CompareTo(right.ArticleId)
+        If articleCompare <> 0 Then Return articleCompare
+        Return NormalizeTCId(left.RequestedTCId).CompareTo(NormalizeTCId(right.RequestedTCId))
     End Function
 
     Private Function OwnerWhere(ByVal loginId As Integer) As String

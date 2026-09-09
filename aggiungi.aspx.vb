@@ -25,6 +25,10 @@ Partial Class aggiungi
     End Class
 
     Private ReadOnly _successfulCartAdds As New List(Of SuccessfulCartAdd)()
+    Private _standardBatchItems As List(Of CartStandardBatchMutationRequest)
+    Private _standardBatchPayload As String = String.Empty
+    Private _standardBatchPrepared As Boolean
+    Private _standardBatchCommitted As Boolean
 
 
 ' =========================
@@ -219,10 +223,39 @@ End If
 
         If Not isGrouponFlow AndAlso Not isCatalogAsyncExecution Then
             If hasManagedIntent Then
-                Dim intentPayload As String = CartMutationIdempotencyService.BuildSessionPayload(Session)
                 If (String.Equals(intentOperation, "catalog-multi", StringComparison.OrdinalIgnoreCase) OrElse
                     String.Equals(intentOperation, "pdp-bundle", StringComparison.OrdinalIgnoreCase)) AndAlso
-                   TryCast(Session("Carrello_SelezioneMultipla"), ArrayList) Is Nothing Then intentPayload = String.Empty
+                   TryCast(Session("Carrello_SelezioneMultipla"), ArrayList) Is Nothing Then
+                    CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, intentRequestId)
+                    ClearTemporaryCartSession()
+                    Response.StatusCode = 400
+                    Response.TrySkipIisCustomErrors = True
+                    Response.ContentType = "text/plain"
+                    Response.Write("Parametri carrello non validi.")
+                    Context.ApplicationInstance.CompleteRequest()
+                    Return
+                End If
+                If Not TryPrepareStandardCartBatch() Then
+                    CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, intentRequestId)
+                    ClearTemporaryCartSession()
+                    Response.StatusCode = 400
+                    Response.TrySkipIisCustomErrors = True
+                    Response.ContentType = "text/plain"
+                    Response.Write("Parametri carrello non validi.")
+                    Context.ApplicationInstance.CompleteRequest()
+                    Return
+                End If
+                Dim intentPayload As String = CartMutationIdempotencyService.BuildSessionPayload(Session)
+                If String.IsNullOrWhiteSpace(intentPayload) Then
+                    CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, intentRequestId)
+                    ClearTemporaryCartSession()
+                    Response.StatusCode = 400
+                    Response.TrySkipIisCustomErrors = True
+                    Response.ContentType = "text/plain"
+                    Response.Write("Parametri carrello non validi.")
+                    Context.ApplicationInstance.CompleteRequest()
+                    Return
+                End If
                 Dim intentDecision As CartMutationIntentDecision = CartMutationIdempotencyService.BeginIntent(
                     HttpContext.Current, intentRequestId, intentOperation, intentPayload)
                 If intentDecision = CartMutationIntentDecision.Completed Then
@@ -246,14 +279,14 @@ End If
         End If
 
 ' 3b) Se non c'è nessun articolo in sessione e non siamo in un flusso speciale, torno al carrello
-If String.IsNullOrEmpty(idParam) AndAlso Me.Session("Carrello_ArticoloId") Is Nothing Then
+If String.IsNullOrEmpty(idParam) AndAlso Not HasStandardCartPayload() Then
     SafeRedirect("carrello.aspx")
     Return
 End If
 
 ' 4) LOGICA DI AGGIUNTA AL CARRELLO
 
-        If Me.Session("Carrello_ArticoloId") IsNot Nothing Then
+        If HasStandardCartPayload() Then
             ClearCartFeedbackSession()
             Try
                 articoliIdGlobali = If(isGrouponFlow,
@@ -269,7 +302,7 @@ End If
         End If
 
         If hasManagedIntent Then
-            If _successfulCartAdds.Count > 0 Then
+            If _standardBatchCommitted Then
                 CartMutationIdempotencyService.CompleteIntent(HttpContext.Current, intentRequestId)
             Else
                 CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, intentRequestId)
@@ -322,6 +355,14 @@ Private Sub ClearTemporaryCartSession()
     Me.Session("Carrello_SelezioneMultipla") = Nothing
     Me.Session("ProdottoGratis") = Nothing
 End Sub
+
+Private Function HasStandardCartPayload() As Boolean
+    If Me.Session("Carrello_ArticoloId") IsNot Nothing Then Return True
+    Dim selection As ArrayList = TryCast(Me.Session("Carrello_SelezioneMultipla"), ArrayList)
+    If selection IsNot Nothing AndAlso selection.Count > 0 Then Return True
+    Dim legacyList As ArrayList = TryCast(Me.Session("Carrello_ListaArticoloId"), ArrayList)
+    Return legacyList IsNot Nothing AndAlso legacyList.Count > 0
+End Function
 
 
     ' =======================================
@@ -398,94 +439,121 @@ End Sub
     '  AGGIUNTA AL CARRELLO (ARTICOLI NORMALI)
     ' =======================================
     Private Function GestisciAggiuntaArticoli() As String
-        Dim loginId As Integer = SessionInt("LoginId", SessionInt("LoginID", 0))
-        Dim sessionId As String = If(loginId > 0, String.Empty, Session.SessionID)
-        Dim listino As Integer = SessionInt("Listino", SessionInt("listino", 1))
-        If listino <= 0 Then listino = 1
+        If Not _standardBatchPrepared AndAlso Not TryPrepareStandardCartBatch() Then Return String.Empty
+
+        Dim batchResult As CartStandardBatchMutationResult =
+            CartMutationService.AddStandardProductsBatchForCurrentOwner(HttpContext.Current, _standardBatchItems)
+        If batchResult Is Nothing OrElse Not batchResult.Succeeded OrElse batchResult.Items.Count = 0 Then
+            SetCartAddPriceLookupMessage()
+            LogCartBatchFailure("atomic-standard-batch")
+            Return String.Empty
+        End If
+        _standardBatchCommitted = True
 
         Dim addedIds As New List(Of String)()
-        Dim selection As ArrayList = TryCast(Session("Carrello_SelezioneMultipla"), ArrayList)
-        If selection IsNot Nothing AndAlso selection.Count > 0 Then
-            For Each rawItem As Object In selection
-                Dim parts As String() = Convert.ToString(rawItem).Split(","c)
-                If parts.Length < 3 Then Continue For
+        For Each confirmed As CartStandardMutationResult In batchResult.Items
+            RecordSuccessfulCartAdd(confirmed.ArticleId, confirmed.TCId, confirmed.ProductName,
+                                    confirmed.Quantity, confirmed.QuantityDelta)
+            addedIds.Add(confirmed.ArticleId.ToString(CultureInfo.InvariantCulture))
+        Next
 
-                Dim articleId As Integer
-                If Not Integer.TryParse(parts(0), articleId) OrElse articleId <= 0 Then Continue For
-                Dim tcId As Integer = -1
-                Dim quantityText As String
-                If parts.Length >= 4 Then
-                    Integer.TryParse(parts(1), tcId)
-                    quantityText = parts(2)
-                Else
-                    quantityText = parts(1)
-                End If
-                If tcId <= 0 Then tcId = -1
-
-                Dim quantity As Decimal
-                If Not TryParseDecimal(quantityText, quantity) OrElse Not IsValidStandardCartDelta(quantity) Then Continue For
-
-                If AddStandardCartItem(loginId, sessionId, listino, articleId, tcId, quantity) Then
-                    addedIds.Add(articleId.ToString(CultureInfo.InvariantCulture))
-                End If
-            Next
-        Else
-            Dim articleIds As New ArrayList()
-            Dim tcIds As New ArrayList()
-            Dim rawArticleIds As String = Convert.ToString(Session("Carrello_ArticoloId"))
-            If rawArticleIds = "0" Then
-                Dim legacyList As ArrayList = TryCast(Session("Carrello_ListaArticoloId"), ArrayList)
-                If legacyList IsNot Nothing Then articleIds.AddRange(legacyList)
-            ElseIf rawArticleIds <> String.Empty Then
-                articleIds.AddRange(rawArticleIds.Split(","c))
-            End If
-
-            Dim rawTCIds As String = Convert.ToString(Session("Carrello_TCId"))
-            If rawTCIds <> String.Empty Then tcIds.AddRange(rawTCIds.Split(","c))
-            While tcIds.Count < articleIds.Count
-                tcIds.Add("-1")
-            End While
-
-            Dim quantity As Decimal = ResolveRequestedCartQuantityDecimal()
-            For index As Integer = 0 To articleIds.Count - 1
-                Dim articleId As Integer
-                If Not Integer.TryParse(Convert.ToString(articleIds(index)), articleId) OrElse articleId <= 0 Then Continue For
-                Dim tcId As Integer = -1
-                Integer.TryParse(Convert.ToString(tcIds(index)), tcId)
-                If tcId <= 0 Then tcId = -1
-
-                If AddStandardCartItem(loginId, sessionId, listino, articleId, tcId, quantity) Then
-                    addedIds.Add(articleId.ToString(CultureInfo.InvariantCulture))
-                End If
-            Next
-        End If
+        For Each confirmed As CartStandardMutationResult In batchResult.Items
+            Try
+                AggiornaVisite(confirmed.ArticleId)
+            Catch ex As Exception
+                Try
+                    KeepStoreLog.Error("aggiungi.aspx", "Aggiornamento visite post-commit non riuscito. Error type: " & ex.GetType().Name & ".", Nothing, HttpContext.Current)
+                Catch logError As Exception
+                    System.Diagnostics.Trace.TraceError("aggiungi.aspx visit logging failed. Error type: " & logError.GetType().Name & ".")
+                End Try
+            End Try
+        Next
 
         Return String.Join(",", addedIds.ToArray())
     End Function
 
-    Private Function AddStandardCartItem(ByVal loginId As Integer,
-                                         ByVal sessionId As String,
-                                         ByVal listino As Integer,
-                                         ByVal articleId As Integer,
-                                         ByVal tcId As Integer,
-                                         ByVal quantity As Decimal) As Boolean
-        Dim result As CartStandardMutationResult = CartMutationService.AddStandardProduct(
-            HttpContext.Current, loginId, sessionId, articleId, tcId, quantity, listino)
-        If result Is Nothing OrElse Not result.Succeeded Then
-            SetCartAddPriceLookupMessage()
-            LogCartPriceLookupFailed(articleId.ToString(CultureInfo.InvariantCulture),
-                                     tcId.ToString(CultureInfo.InvariantCulture),
-                                     listino,
-                                     loginId,
-                                     sessionId,
-                                     "atomic-standard")
-            Return False
+    Private Function TryPrepareStandardCartBatch() As Boolean
+        _standardBatchPrepared = False
+        _standardBatchPayload = String.Empty
+        _standardBatchItems = New List(Of CartStandardBatchMutationRequest)()
+
+        Dim selection As ArrayList = TryCast(Session("Carrello_SelezioneMultipla"), ArrayList)
+        If selection IsNot Nothing AndAlso selection.Count > 0 Then
+            If selection.Count > CartMutationIdempotencyService.MaxStandardBatchItems Then Return False
+            For Each rawItem As Object In selection
+                Dim parts As String() = Convert.ToString(rawItem).Split(","c)
+                If parts.Length <> 3 AndAlso parts.Length <> 4 Then Return False
+
+                Dim articleId As Integer = 0
+                Dim tcId As Integer = -1
+                Dim quantity As Decimal = 0D
+                If Not Integer.TryParse(parts(0), NumberStyles.Integer, CultureInfo.InvariantCulture, articleId) OrElse articleId <= 0 OrElse
+                   Not Integer.TryParse(parts(1), NumberStyles.Integer, CultureInfo.InvariantCulture, tcId) OrElse
+                   Not TryParseDecimal(parts(2), quantity) OrElse Not IsValidStandardCartDelta(quantity) Then Return False
+                If tcId <= 0 Then tcId = -1
+                _standardBatchItems.Add(New CartStandardBatchMutationRequest With {
+                    .ArticleId = articleId,
+                    .RequestedTCId = tcId,
+                    .QuantityDelta = quantity
+                })
+            Next
+        Else
+            Dim articleIds As New ArrayList()
+            Dim rawArticleIds As String = Convert.ToString(Session("Carrello_ArticoloId")).Trim()
+            If rawArticleIds = "0" Then
+                Dim legacyList As ArrayList = TryCast(Session("Carrello_ListaArticoloId"), ArrayList)
+                If legacyList Is Nothing OrElse legacyList.Count = 0 Then Return False
+                articleIds.AddRange(legacyList)
+            ElseIf rawArticleIds <> String.Empty Then
+                articleIds.AddRange(rawArticleIds.Split(","c))
+            Else
+                Return False
+            End If
+            If articleIds.Count = 0 OrElse articleIds.Count > CartMutationIdempotencyService.MaxStandardBatchItems Then Return False
+
+            Dim tcIds As New ArrayList()
+            Dim rawTCIds As String = Convert.ToString(Session("Carrello_TCId")).Trim()
+            If rawTCIds <> String.Empty Then tcIds.AddRange(rawTCIds.Split(","c))
+            If tcIds.Count > articleIds.Count Then Return False
+            While tcIds.Count < articleIds.Count
+                tcIds.Add("-1")
+            End While
+
+            Dim quantity As Decimal = 0D
+            If Not TryParseDecimal(Session("Carrello_Quantita"), quantity) OrElse
+               Not IsValidStandardCartDelta(quantity) Then Return False
+
+            For index As Integer = 0 To articleIds.Count - 1
+                Dim articleId As Integer = 0
+                Dim tcId As Integer = -1
+                If Not Integer.TryParse(Convert.ToString(articleIds(index)), NumberStyles.Integer, CultureInfo.InvariantCulture, articleId) OrElse
+                   articleId <= 0 OrElse
+                   Not Integer.TryParse(Convert.ToString(tcIds(index)), NumberStyles.Integer, CultureInfo.InvariantCulture, tcId) Then Return False
+                If tcId <= 0 Then tcId = -1
+                _standardBatchItems.Add(New CartStandardBatchMutationRequest With {
+                    .ArticleId = articleId,
+                    .RequestedTCId = tcId,
+                    .QuantityDelta = quantity
+                })
+            Next
         End If
 
-        RecordSuccessfulCartAdd(articleId, result.TCId, result.ProductName, result.Quantity, quantity)
-        AggiornaVisite(articleId)
+        Dim normalizedItems As List(Of CartStandardBatchMutationRequest) = Nothing
+        If Not CartMutationIdempotencyService.TryNormalizeStandardBatchItems(
+            _standardBatchItems, CartMutationIdempotencyService.MaxStandardBatchItems,
+            normalizedItems, _standardBatchPayload) Then Return False
+        _standardBatchItems = normalizedItems
+        _standardBatchPrepared = True
         Return True
     End Function
+
+    Private Sub LogCartBatchFailure(ByVal operationName As String)
+        Try
+            KeepStoreLog.Info("aggiungi.aspx", "Mutazione batch carrello non confermata. Operation=" & operationName & ".", HttpContext.Current)
+        Catch logError As Exception
+            System.Diagnostics.Trace.TraceError("aggiungi.aspx batch logging failed. Error type: " & logError.GetType().Name & ".")
+        End Try
+    End Sub
 
     Private Function GestisciAggiuntaArticoliLegacy() As String
         Dim articoliIdGlobali As String = String.Empty
