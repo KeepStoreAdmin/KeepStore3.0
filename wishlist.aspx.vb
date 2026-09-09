@@ -20,6 +20,8 @@ Partial Class wishlist
     Dim DispoTipo As Integer
     Dim DispoMinima As Integer
     Dim InOfferta As Integer
+    Private _wishlistSelectedRows As Integer = -1
+    Private _wishlistBindingCompleted As Boolean = False
 
     Function sostituisci_caratteri_speciali(ByRef stringa As String) As String
     If stringa Is Nothing Then Return ""
@@ -64,8 +66,8 @@ End Function
         End If
 
         CaricaArticoli()
-        Me.GridView1.PageSize = Me.Session("RigheArticoli")
-        Me.GridView1.PageIndex = Session("Articoli_PageIndex")
+        ConfigureWishlistPaging()
+        BindWishlistDeterministically()
         'Analytics: logging query_string anche per GET (analytics)
         If Not IsPostBack AndAlso String.Equals(Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) Then
             Try
@@ -100,15 +102,47 @@ End Function
 
     End Sub
 
-    Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
-        Try
-            Dim n As Integer = 0
-            Integer.TryParse(Convert.ToString(lblTrovati.Text), n)
-            phEmpty.Visible = (n <= 0)
-            phTable.Visible = Not phEmpty.Visible
-        Catch
-            'No-op
-        End Try
+    Private Sub ConfigureWishlistPaging()
+        Dim configuredPageSize As Integer = Me.GridView1.PageSize
+        Dim parsedPageSize As Integer = 0
+        If Integer.TryParse(Convert.ToString(Me.Session("RigheArticoli")), parsedPageSize) AndAlso parsedPageSize > 0 Then
+            configuredPageSize = parsedPageSize
+        End If
+        Me.GridView1.PageSize = configuredPageSize
+
+        Dim requestedPageIndex As Integer = 0
+        If Not Integer.TryParse(Convert.ToString(Me.Session("Articoli_PageIndex")), requestedPageIndex) OrElse requestedPageIndex < 0 Then
+            requestedPageIndex = 0
+        End If
+        Me.GridView1.PageIndex = requestedPageIndex
+    End Sub
+
+    Private Sub BindWishlistDeterministically()
+        If _wishlistBindingCompleted Then Return
+
+        _wishlistSelectedRows = -1
+        Me.GridView1.DataBind()
+
+        Dim totalRows As Integer = Math.Max(0, _wishlistSelectedRows)
+        Dim maxPageIndex As Integer = 0
+        If totalRows > 0 Then
+            maxPageIndex = (totalRows - 1) \ Me.GridView1.PageSize
+        End If
+
+        ' Una rimozione può rendere invalida l'ultima pagina salvata. In quel solo caso
+        ' correggo l'indice ed eseguo l'unico rebind aggiuntivo ammesso per la request.
+        If Me.GridView1.PageIndex > maxPageIndex Then
+            Me.GridView1.PageIndex = maxPageIndex
+            Me.Session("Articoli_PageIndex") = maxPageIndex
+            _wishlistSelectedRows = -1
+            Me.GridView1.DataBind()
+            totalRows = Math.Max(0, _wishlistSelectedRows)
+        End If
+
+        Me.lblTrovati.Text = totalRows.ToString(CultureInfo.InvariantCulture)
+        Me.phEmpty.Visible = (totalRows = 0)
+        Me.phTable.Visible = (totalRows > 0)
+        _wishlistBindingCompleted = True
     End Sub
 
     Protected Function TruncateText(ByVal testo As String, ByVal lunghezza As Integer) As String
@@ -217,7 +251,7 @@ End Sub
     End Sub
 
     Protected Sub sdsArticoli_Selected(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.SqlDataSourceStatusEventArgs) Handles sdsArticoli.Selected
-        Me.lblTrovati.Text = e.AffectedRows.ToString
+        _wishlistSelectedRows = Math.Max(0, e.AffectedRows)
     End Sub
 
     Protected Sub GridView1_PageIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles GridView1.PageIndexChanged
@@ -326,7 +360,7 @@ End Sub
                 cifre_da_visualizzare = "Images/cifre_no/"
             End If
 
-            If (temp <> "") Then
+            If temp.Length >= 6 Then
                 temp = temp.Substring(2)
                 img_cifra1.ImageUrl = cifre_da_visualizzare & temp(temp.Length - 1) & ".png"
                 img_cifra2.ImageUrl = cifre_da_visualizzare & temp(temp.Length - 2) & ".png"
@@ -621,13 +655,33 @@ End Sub
             End If
         Next
 
-        If selectedCount = 0 OrElse invalidSelection OrElse
-           selectedCount > CartMutationIdempotencyService.MaxStandardBatchItems Then Return
+        If selectedCount = 0 Then
+            ShowWishlistBatchFeedback("Seleziona almeno un prodotto prima di aggiungerlo al carrello.")
+            Return
+        End If
+        If invalidSelection OrElse selectedCount > CartMutationIdempotencyService.MaxStandardBatchItems Then
+            ShowWishlistBatchFeedback("La selezione contiene dati non validi o troppi prodotti.")
+            Return
+        End If
 
         If ExecuteWishlistCartBatch(batchItems) Then
             Response.Redirect(Request.RawUrl, False)
             Context.ApplicationInstance.CompleteRequest()
+        Else
+            ShowWishlistBatchFeedback("I prodotti selezionati non sono stati aggiunti. Verifica disponibilità e prezzo.")
         End If
+    End Sub
+
+    Private Sub ShowWishlistBatchFeedback(ByVal message As String)
+        Dim feedback As New CustomValidator() With {
+            .ID = "cvWishlistBatchFeedback",
+            .IsValid = False,
+            .ErrorMessage = message,
+            .Text = message,
+            .Display = ValidatorDisplay.Dynamic,
+            .CssClass = "ks-cart-message ks-cart-message-warning"
+        }
+        Me.phTable.Controls.AddAt(0, feedback)
     End Sub
 
     Protected Sub BT_Rimuovi_wishlist_Click(ByVal sender As Object, ByVal e As System.EventArgs)
