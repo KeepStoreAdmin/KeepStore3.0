@@ -1,22 +1,22 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-09-09
+Aggiornato: 2026-09-10
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
 
-- Aggiornato: 2026-09-09.
+- Aggiornato: 2026-09-10.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Runtime e HEAD stabile corrente: `frontend-rebuild` / `origin/frontend-rebuild` a `df5436deae0bdc672dbed1c7965941a031bb3d49`.
+- Runtime e HEAD stabile corrente: `frontend-rebuild` / `origin/frontend-rebuild` a `b5206fa247580d76843387dd1036c611df384302`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - `WORKFLOW-GOVERNANCE-1A` e CHIUSO / A e integrato: il root `AGENTS.md` e la fonte canonica del metodo operativo corrente.
 - Ultimo task runtime chiuso: `CART-BATCH-ATOMICITY-1A`, esito A, PR #242 mergiata fast-forward. Catena `516442a46869353daaac20407cd0c263c466ae72` -> `08d2b77bbb2b7d1403d5c73107d54587bd0c1d94` -> `df5436deae0bdc672dbed1c7965941a031bb3d49`: due commit runtime integrati e zero merge commit.
-- Task documentale corrente: `task/docs-cart-batch-atomicity-1a`; aggiorna soltanto i tre manuali canonici e si ferma prima del merge.
-- Prossimo micro-task raccomandato: `CART-DEADLOCK-RETRY-1A`. Seguono `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`, `CART-MOBILE-RESPONSIVE-UX-1A`, touch target rimozione carrello `44x44` e audit futuro dei campi monetari DB ancora `DOUBLE`. Restano separati `HOME-TTFB-PERFORMANCE-1A`, `MYSQL-CONNECTOR-DEPENDENCY-AUDIT-1A`, attivita catalogo/PDP e filoni SEO/AI finali.
+- Task documentale corrente: `B2C-WITHDRAWAL-DOCS-1A`, branch `task/docs-b2c-withdrawal-compliance-1a`; integra soltanto i tre manuali canonici e si ferma prima del merge.
+- Priorita normativa urgente: `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A` e il prossimo audit consigliato. `B2C-WITHDRAWAL-FUNCTION-1A` e condizionato all'audit, alla review ChatGPT, all'autorizzazione Germano e alla validazione legale; puo essere un release blocker. `CART-DEADLOCK-RETRY-1A` resta il successivo debito tecnico cart, senza essere chiuso o sostituito.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
-- Blocker reali: nessuno derivante dal task batch; catalogo e PDP restano aree non dichiarate complete.
+- Blocker reali: la conformita della funzione digitale di recesso non e ancora verificata nel runtime e la relativa implementazione puo essere un release blocker; catalogo e PDP restano aree non dichiarate complete.
 
 Questo checkpoint va aggiornato dopo ogni blocco importante. E una mappa di ripartenza, non sostituisce la verifica diretta di Git, del root `AGENTS.md` e delle fonti pertinenti.
 
@@ -36,6 +36,25 @@ Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo tas
 - Copertura runtime del task: batch catalogo, wishlist, bundle PDP, `aggiungi.aspx` e rettifica magazzino nei limiti definiti dal task. Il fix wishlist rende il binding deterministico prima di conteggio e visibilita e ammette un solo rebind correttivo per page index non piu valido.
 - Smoke reale A: login account test PROVA; carrello anonimo e merge; batch catalogo valido/invalido; batch wishlist valido/invalido; wishlist vuota, una riga e due righe; rendering desktop, `390px` e `360px`; articolo `21906` con `1 -> 4,09 EUR @27003`, `5 -> 3,28 EUR @27004`, `6 -> 4,09 EUR @27003`, `10 -> 3,28 EUR @27004`; logout e nuovo login; checkout senza ordine, email, pagamento o gateway; fixture ripristinate; nessun HTTP 500, perdita o duplicazione.
 - Non e certificato l'isolamento tra due account autenticati, perche nello smoke era disponibile un solo account. Sono invece verificati owner server-side, carrello account non visibile dopo logout, conservazione al nuovo login e query/DML owner-scoped.
+
+### Priorita normativa B2C - funzione digitale di recesso
+
+- Base normativa primaria: [Direttiva (UE) 2023/2673](https://eur-lex.europa.eu/legal-content/IT/TXT/?uri=CELEX:32023L2673) e [D.Lgs. 31 dicembre 2025, n. 209](https://www.gazzettaufficiale.it/eli/id/2026/01/08/26G00002/SG), con introduzione dell'art. 54-bis del Codice del consumo nell'[articolo 1](https://www.gazzettaufficiale.it/atto/serie_generale/caricaArticolo?art.codiceRedazionale=26G00002&art.dataPubblicazioneGazzetta=2026-01-08&art.flagTipoArticolo=0&art.idArticolo=1&art.idGruppo=0&art.idSottoArticolo=1&art.idSottoArticolo1=10&art.progressivo=0&art.versione=1). L'[articolo 4](https://www.gazzettaufficiale.it/atto/serie_generale/caricaArticolo?art.codiceRedazionale=26G00002&art.dataPubblicazioneGazzetta=2026-01-08&art.flagTipoArticolo=0&art.idArticolo=4&art.idGruppo=0&art.idSottoArticolo=1&art.idSottoArticolo1=10&art.progressivo=0&art.versione=1) rende applicabili le modifiche dal 19 giugno 2026 ai contratti conclusi successivamente a tale data.
+- Per i contratti a distanza conclusi mediante interfaccia online ai quali si applica il diritto di recesso, la funzione dovra essere evidente, facilmente accessibile e disponibile continuativamente durante il periodo di recesso. Dovra essere identificata con `Recedere dal contratto qui` o formulazione equivalente inequivocabile.
+- Il consumatore deve poter fornire o confermare nome, elementi identificativi del contratto e recapito elettronico per la conferma. Dopo il riepilogo deve essere disponibile un secondo comando `Conferma recesso` o formulazione equivalente. La dichiarazione inviata prima della scadenza e tempestiva; senza indebito ritardo deve seguire una ricevuta su supporto durevole con contenuto, data e ora di trasmissione.
+- La legge non prescrive esclusivamente il footer. Il disegno KeepStore prevede un accesso globale visibile, preferibilmente nel footer condiviso, e una CTA contestuale nel dettaglio ordine. La funzione pubblica non deve dipendere esclusivamente dal login; l'area autenticata puo precompilare dati noti, che il consumatore deve poter confermare.
+- La motivazione non deve diventare obbligatoria e l'indirizzo IP completo non e un requisito dell'art. 54-bis. PDF, email e modulo stampabile restano canali aggiuntivi e non sostitutivi. La data ordine non equivale automaticamente all'inizio del termine per i beni: consegne multiple, consegna non conosciuta ed eccezioni richiedono regole specifiche. Nei casi incerti la richiesta va acquisita come `Da verificare`, non respinta automaticamente.
+- Testi legali, privacy, esclusioni, politica resi e classificazione B2C/B2B richiedono approvazione professionale prima del rilascio. Questo manuale registra requisiti e piano tecnico, non fornisce parere legale.
+
+Task e gate:
+
+1. `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A`: priorita normativa urgente e prossimo audit consigliato, interamente read-only. Deve mappare pagine legali, footer, area ordini, documenti vendita web, ownership, `AziendeId`, multi-dominio, distinzione B2C/B2B, fonte reale della consegna, consegne multiple, eventuali resi/RMA, mailer/template/code/retry e identificazione ordine pubblica/autenticata; proporre modello dati, DDL, indici, `EXPLAIN` read-only, manifest runtime, matrice test ed eventuale rilascio minimo urgente se il sito risulta non conforme. Nessuna implementazione o DDL senza nuova autorizzazione.
+2. `B2C-WITHDRAWAL-FUNCTION-1A`: condizionato ad audit A, review ChatGPT, autorizzazione Germano e validazione legale; potenziale release blocker. Dovra coprire percorso pubblico e autenticato, precompilazione sicura, recesso totale e valutazione separata del recesso parziale, doppia conferma, persistenza atomica, dichiarazione immutabile, timestamp UTC e vista locale, riferimento non enumerabile, ricevuta web/email durevole, outbox/retry, storico stati, notifica interna, CSRF, Origin/Referer, POST-only, idempotenza, anti-replay, rate limiting, anti-enumerazione, owner e `AziendeId` server-side, mobile-first e accessibilita.
+3. `B2C-WITHDRAWAL-REFUND-AUTOMATION-1A`: futuro, separato e non autorizzato. Il primo rilascio acquisisce e prova la dichiarazione ma non annulla ordini, non effettua rimborsi, non chiama gateway, non genera movimenti magazzino e non decide automaticamente l'ammissibilita nei casi incerti.
+
+Stime provvisorie, da aggiornare dopo l'audit: audit normativo/funzionale/architetturale `8-16h`; schema dati e servizio transazionale `12-20h`; UI pubblica/autenticata e ordini `16-28h`; ricevuta, email/outbox e gestione `12-24h`; sicurezza, test, review, PR, merge e smoke `16-28h`; sviluppo totale `64-116h`, pari a `8-14,5` giornate da 8 ore. Validazione legale esterna `4-8h`, separata; calendario indicativo `2-5` settimane, dipendente da DDL, mailer e approvazioni.
+
+Responsabilita: Codex esegue audit e implementazioni tecniche solo nei manifest autorizzati; ChatGPT verifica fonti, perimetro, diff e gate A/B/E; Germano decide priorita, scelte commerciali e autorizzazioni; il consulente legale approva testi, privacy, esclusioni e politica resi prima del rilascio.
 
 ### Chiusura LOGIN-RETURN-CONTEXT-1A
 
@@ -591,10 +610,11 @@ Quando si rifattorizza una pagina:
 
 ## 3. Stato Git attuale
 
-Stato corrente al 2026-09-09 dopo il merge fast-forward `CART-BATCH-ATOMICITY-1A`:
+Stato corrente al 2026-09-10 dopo il merge fast-forward documentale della PR #243:
 
 - Branch stabile: `frontend-rebuild`
-- HEAD locale/origin `frontend-rebuild`: `df5436deae0bdc672dbed1c7965941a031bb3d49`.
+- HEAD locale/origin `frontend-rebuild`: `b5206fa247580d76843387dd1036c611df384302`.
+- Ultimo runtime stabile: `df5436deae0bdc672dbed1c7965941a031bb3d49`; il commit successivo `b5206fa247580d76843387dd1036c611df384302` e esclusivamente documentale.
 - Catena batch atomico integrata: base `516442a46869353daaac20407cd0c263c466ae72`, commit `08d2b77bbb2b7d1403d5c73107d54587bd0c1d94` e commit finale `df5436deae0bdc672dbed1c7965941a031bb3d49`; PR #242, fast-forward only, due commit e zero merge commit.
 - Nota storica del checkpoint shipping: HEAD locale/origin `frontend-rebuild` era `91cbc10b3b343217e18c5a9a6707b72997467b00`; resta uno storico autentico e non il checkpoint corrente.
 - Commit async cart finale: `b80f8d4683bbb9bb6ec8a7a486a79048bfae094f`; commit CTA stability finale: `58f4ee43c363d629b3124fc0fb1a10beaeeef48a`.
@@ -2149,13 +2169,14 @@ Task consigliato separato per eventuale proseguimento:
 
 ### Immediati
 
-1. Prossimo micro-task raccomandato: `CART-DEADLOCK-RETRY-1A`, audit e retry controllato dei soli deadlock/race MySQL transitori riconosciuti nei percorsi cart critici, con massimo limitato, backoff controllato, compatibilita con idempotenza/transazioni e nessun doppio replay commerciale. Nessun retry su validazione, sicurezza o resolver.
-2. Ordine dei debiti cart successivi:
+1. Priorita normativa urgente e prossimo audit consigliato: `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A`, read-only. La data di applicazione del 19 giugno 2026 e trascorsa e KeepStore/Taikun opera B2C; verificare subito conformita, superfici, dati, mailer e possibile rilascio minimo urgente. `B2C-WITHDRAWAL-FUNCTION-1A` resta condizionato all'audit e puo essere un release blocker; `B2C-WITHDRAWAL-REFUND-AUTOMATION-1A` resta futuro e non autorizzato.
+2. Successivo micro-task tecnico cart: `CART-DEADLOCK-RETRY-1A`, audit e retry controllato dei soli deadlock/race MySQL transitori riconosciuti nei percorsi cart critici, con massimo limitato, backoff controllato, compatibilita con idempotenza/transazioni e nessun doppio replay commerciale. Nessun retry su validazione, sicurezza o resolver.
+3. Ordine dei debiti cart successivi:
    - `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`: valutare persistenza oltre `Session`/`InProc` per recycle, web farm e piu nodi.
    - `CART-MOBILE-RESPONSIVE-UX-1A`.
    - touch target rimozione carrello `44x44`.
    - audit futuro dello schema monetario ancora `DOUBLE`.
-3. Candidati separati da conservare senza implementarli ora:
+4. Candidati separati da conservare senza implementarli ora:
    - `HOME-TTFB-PERFORMANCE-1A`.
    - `MYSQL-CONNECTOR-DEPENDENCY-AUDIT-1A`.
    - EMAIL-ORDER-CONFIRMATION-1A: prossimo blocco consigliato dopo `EMAIL-ENGINE-1A`; migrare la conferma ordine standard con varianti pagamento senza toccare gateway, costi o totali.
@@ -2168,13 +2189,13 @@ Task consigliato separato per eventuale proseguimento:
    - GESTIONALE-PASSWORD-AUDIT-1A / JANUS-PASSWORD-RESET-1A: audit gestionale Janus per reset/hash.
    - REGISTRATION-POLICY-1A / REGISTRATION-UX-1A: refinement residuo login/registrazione.
    - PR #171 diagnostica sessione/logout post-ordine: non attiva ora; riprendere solo se il problema torna riproducibile con test manuale mirato.
-4. Mantenere PayPal, BancaSella, gateway e pagamenti in task separati dal carrello UI.
-5. Revocare/cambiare la password dell'utente MySQL temporaneo usato nello smoke, se ancora attivo.
-6. Eliminare eventuali variabili ambiente temporanee di smoke.
-7. Eliminare o lasciare scadere eventuali link reset test residui.
-8. AUTH-CSRF-AUDIT-1A: audit `AntiCsrfPage` sui flussi auth.
-9. AUTH-JS-LEGACY-AUDIT-1A: audit errori JS legacy residui.
-10. DATIUTENTE-LEGACY-AUDIT-1A per errore generico, tab/JS legacy e salvataggi/destinazioni.
+5. Mantenere PayPal, BancaSella, gateway e pagamenti in task separati dal carrello UI e dalla funzione di recesso.
+6. Revocare/cambiare la password dell'utente MySQL temporaneo usato nello smoke, se ancora attivo.
+7. Eliminare eventuali variabili ambiente temporanee di smoke.
+8. Eliminare o lasciare scadere eventuali link reset test residui.
+9. AUTH-CSRF-AUDIT-1A: audit `AntiCsrfPage` sui flussi auth.
+10. AUTH-JS-LEGACY-AUDIT-1A: audit errori JS legacy residui.
+11. DATIUTENTE-LEGACY-AUDIT-1A per errore generico, tab/JS legacy e salvataggi/destinazioni.
 
 ### PayPal Express
 

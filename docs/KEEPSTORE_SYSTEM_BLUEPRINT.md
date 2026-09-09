@@ -113,7 +113,7 @@ Esempio vincolante: `articoli.aspx` ha micro-task chiusi su card prodotto, selez
 
 Nota anti-false-closure: `articoli.aspx` non e una pagina dichiarata completa. `CATALOG-ONSUS-PARITY-AUDIT-1` e completato e i tre P0 sono chiusi, ma i micro-task chiusi non equivalgono alla parita ONSUS completa. Pager/posizione recent, quattro viste mobile, compact grid e containment recent sono stati chiusi da task successivi; sidebar/facet residui, load-more Marche, tassonomie, active filters legacy/reset, Price/Deals/Condition, Reviews con dati reali, performance, componenti commerciali e responsive complessivo richiedono ancora task dedicati.
 
-Checkpoint Git corrente 2026-09-09: `frontend-rebuild` / `origin/frontend-rebuild` a `df5436deae0bdc672dbed1c7965941a031bb3d49`; `main` / `origin/main` a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. `WORKFLOW-GOVERNANCE-1A` e `CART-BATCH-ATOMICITY-1A` sono chiusi e integrati. La PR #242 ha incorporato con fast-forward due commit runtime (`08d2b77bbb2b7d1403d5c73107d54587bd0c1d94`, `df5436deae0bdc672dbed1c7965941a031bb3d49`) dalla base `516442a46869353daaac20407cd0c263c466ae72`, senza merge commit. Working tree atteso: soltanto asset immagini locali non tracciati e preservati nelle directory autorizzate. Gli SHA precedenti restano riferimenti storici corretti, non descrizioni della stable corrente.
+Checkpoint Git corrente 2026-09-10: `frontend-rebuild` / `origin/frontend-rebuild` a `b5206fa247580d76843387dd1036c611df384302`; `main` / `origin/main` a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. `WORKFLOW-GOVERNANCE-1A` e `CART-BATCH-ATOMICITY-1A` sono chiusi e integrati; la chiusura documentale della PR #243 e incorporata. Working tree atteso: soltanto asset immagini locali non tracciati e preservati nelle directory autorizzate. Gli SHA precedenti restano riferimenti storici corretti, non descrizioni della stable corrente.
 
 ### 2.3.1 Login return/access e priorita promo correnti
 
@@ -153,7 +153,7 @@ Checkpoint Git corrente 2026-09-09: `frontend-rebuild` / `origin/frontend-rebuil
 - Una sola connessione e una sola transazione `Serializable` racchiudono lock deterministici owner-scoped, risoluzione commerciale, pianificazione completa, DML e verifica finale delle righe. La validazione integrale precede il DML; il risultato e un commit unico oppure rollback totale, senza righe parziali.
 - L'idempotenza lega intent, owner, operazione e payload canonico; collisioni e replay non possono completare l'intent prima del commit. Rollback e logging sono sicuri e non espongono segreti. Feedback UI, visite e completamento intent avvengono soltanto dopo commit riuscito.
 - Limite noto: l'idempotenza corrente e basata su `Session`/`InProc`; non e certificata attraverso recycle, web farm o piu nodi. La verifica e la possibile persistenza appartengono a `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`. Resta inoltre da allineare in futuro il limite `Decimal` interno con il limite HTTP.
-- Il prossimo task raccomandato e `CART-DEADLOCK-RETRY-1A`: riconoscere soltanto errori MySQL transitori, applicare retry massimo limitato e backoff controllato, senza doppio replay commerciale e senza retry per errori di validazione, sicurezza o resolver.
+- Il successivo debito tecnico cart e `CART-DEADLOCK-RETRY-1A`: riconoscere soltanto errori MySQL transitori, applicare retry massimo limitato e backoff controllato, senza doppio replay commerciale e senza retry per errori di validazione, sicurezza o resolver. La priorita normativa B2C precede questo task.
 - Smoke reale A: login PROVA; merge carrello anonimo/account; batch catalogo e wishlist validi e invalidi con rollback; wishlist vuota/una/due righe; desktop, `390px`, `360px`; matrice articolo `21906` (`1=4,09@27003`, `5=3,28@27004`, `6=4,09@27003`, `10=3,28@27004`); logout/login, conservazione carrello e accesso checkout senza ordine, email, pagamento o gateway. Fixture ripristinate, nessun HTTP 500, perdita o duplicazione. Non e certificato l'isolamento tra due account autenticati per disponibilita di un solo account test.
 
 Riconciliazione storica PDP: eventuali record precedenti che riportano `PDP-BUY-CTA-ACQUISTA-1A` tra i backlog descrivono lo stato al momento della chiusura catalogo/HOME e sono superati dalla chiusura PDP a HEAD `3b0b2ac97564c497abd26d224e5e945834a2ec26`; resta fermo che la pagina `articolo.aspx` non e completa.
@@ -756,6 +756,39 @@ REV15 `CART-COUPON-APPLY-STATE-1A` / PR #194 sincronizza lo stato UI del coupon 
 ### 9.17 Accesso negato
 
 `accessonegato.aspx` e la pagina standard per accesso negato, sessione non autorizzata o area riservata non disponibile. Usa `Page.master`, mostra un messaggio non tecnico, offre CTA sicure verso login e home e accetta solo un eventuale `ReturnUrl` locale sanificato; non deve mostrare dettagli ASP.NET, stack trace o redirect automatici verso se stessa.
+
+### 9.18 Funzione digitale di recesso B2C
+
+Base e stato: la Direttiva (UE) 2023/2673 e il D.Lgs. 31 dicembre 2025, n. 209 hanno introdotto il nuovo art. 54-bis del Codice del consumo. Le modifiche si applicano dal 19 giugno 2026 ai contratti conclusi successivamente a tale data. KeepStore non ha ancora implementato o certificato questa funzione: `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A` e il prossimo audit normativo consigliato e `B2C-WITHDRAWAL-FUNCTION-1A` e un potenziale release blocker, subordinato ad audit, review, autorizzazione e validazione legale.
+
+Flussi previsti:
+
+1. Il percorso pubblico deve essere raggiungibile senza login da un accesso globale evidente e facilmente accessibile, preferibilmente nel footer condiviso; l'accesso non e per legge limitato al footer. L'utente identifica il contratto con un riferimento pubblico non enumerabile e fornisce o conferma nome e recapito elettronico.
+2. Il percorso autenticato parte anche dal dettaglio ordine, applica ownership e `AziendeId` server-side e precompila soltanto dati appartenenti all'utente/azienda correnti, chiedendone conferma.
+3. Entrambi mostrano la funzione `Recedere dal contratto qui` o formulazione equivalente inequivocabile, disponibile continuativamente per tutto il periodo applicabile. La motivazione resta facoltativa.
+4. Prima dell'invio definitivo viene mostrato un riepilogo immutabile della dichiarazione; il secondo comando e `Conferma recesso` o formulazione equivalente. L'operazione e POST-only, protetta da CSRF e controllo Origin/Referer, idempotenza, anti-replay, rate limiting e anti-enumerazione.
+5. Il server registra timestamp UTC, rappresentazione locale, request ID e impronta canonica. La dichiarazione trasmessa prima della scadenza e tempestiva. Senza indebito ritardo viene resa una ricevuta web stampabile e inviata una conferma su supporto durevole con contenuto, data e ora della trasmissione.
+
+Trust boundary e casi incerti:
+
+- Browser, querystring, hidden field e valori precompilati non sono autorita per documento, utente, azienda, stato, date o ammissibilita. Ownership, `AziendeId`, contratto e dati noti sono risolti server-side.
+- La funzione non decide automaticamente B2C/B2B con euristiche inaffidabili. Data ordine e data di decorrenza del recesso per i beni non sono sinonimi; fonte della consegna, consegne multiple, consegna non nota ed eccezioni devono essere determinate dall'audit.
+- Una richiesta incerta viene acquisita e marcata `Da verificare`, non respinta automaticamente. L'indirizzo IP completo non e requisito dell'art. 54-bis e non va raccolto senza distinta base giuridica e necessita documentata.
+- PDF, email e modulo stampabile possono integrare il flusso ma non sostituiscono la funzione digitale. Testi legali, privacy, esclusioni e politica resi richiedono approvazione professionale prima del rilascio.
+
+Modello dati concettuale, senza nomi o DDL definitivi:
+
+- richiesta di recesso con riferimento a documento, utente e azienda;
+- eventuali righe e quantita interessate, mantenendo separata la decisione sul recesso parziale;
+- snapshot immutabile della dichiarazione, request ID, impronta canonica e timestamp;
+- storico append-only degli stati candidati `Ricevuto`, `Da verificare`, `Accettato`, `Respinto con motivazione`, `In attesa del reso`, `Bene ricevuto`, `Rimborsato`, `Chiuso`;
+- evento email/outbox con retry affidabile e idempotente e notifica interna.
+
+Il DDL resta differito a `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A`, che deve prima verificare eventuali strutture resi/RMA riutilizzabili. La transazione futura deve persistire atomicamente dichiarazione, snapshot, evento iniziale di stato e outbox; la dichiarazione originaria non viene sovrascritta dai successivi cambi di stato. Il primo rilascio non annulla automaticamente ordini, non effettua rimborsi, non chiama gateway, non genera movimenti magazzino e non stabilisce automaticamente l'ammissibilita legale.
+
+Matrice minima futura: pubblico e autenticato; owner corretto e tentativo cross-owner; multi-azienda/multi-dominio; riferimento inesistente/non enumerabile; doppio submit/replay; scadenza al limite; data consegna assente; consegne multiple; B2C/B2B incerto; recesso totale e decisione sul parziale; email/outbox in errore e retry; timestamp/ricevuta; mobile `360px`/`390px`; accessibilita tastiera/screen reader; CSRF, Origin/Referer, metodi non POST, rate limit; nessun ordine, rimborso, gateway o magazzino automatico.
+
+Stop condition: l'audit e read-only e puo soltanto proporre modello dati, DDL, indici, manifest e test. Nessuna implementazione o DDL e autorizzata senza un task successivo; nessun rilascio e certificabile senza review ChatGPT/Germano e validazione legale esterna.
 
 ## 10. Database e tabelle
 
@@ -1597,8 +1630,12 @@ Non implementare runtime email senza task dedicato e senza conferma delle fonti 
 
 ## 17. Debito tecnico e backlog architetturale
 
+- `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A`: priorita normativa urgente e prossimo audit consigliato, read-only. Mappa pagine legali/footer/ordini, documenti web, ownership e multi-azienda, B2C/B2B, consegne, resi/RMA, mailer/outbox, identificazione ordine, modello dati, DDL/indici proposti, `EXPLAIN` read-only, manifest e test; nessun DDL o implementazione.
+- `B2C-WITHDRAWAL-FUNCTION-1A`: condizionato all'audit, alla review ChatGPT, all'autorizzazione Germano e alla validazione legale; potenziale release blocker. Include percorsi pubblico/autenticato, doppia conferma, immutabilita, persistenza atomica, ricevuta durevole, outbox/retry e controlli di sicurezza.
+- `B2C-WITHDRAWAL-REFUND-AUTOMATION-1A`: futuro separato e non autorizzato; nessun rimborso, annullamento ordine, gateway o movimento magazzino implicito nel primo rilascio.
+- Stime provvisorie da aggiornare dopo l'audit: audit `8-16h`; schema/servizio `12-20h`; UI e ordini `16-28h`; ricevuta/email/outbox `12-24h`; sicurezza/test/review/PR/merge/smoke `16-28h`; sviluppo totale `64-116h` (`8-14,5` giornate), validazione legale esterna `4-8h`, calendario indicativo `2-5` settimane.
 - `CART-BATCH-ATOMICITY-1A`: CHIUSO / A con PR #242; non e piu un task aperto.
-- `CART-DEADLOCK-RETRY-1A`: prossimo micro-task raccomandato; audit e retry controllato dei soli deadlock/race MySQL transitori riconosciuti, massimo limitato e backoff, compatibile con idempotenza/transazioni e senza replay commerciale doppio.
+- `CART-DEADLOCK-RETRY-1A`: successivo debito tecnico cart dopo la priorita normativa; audit e retry controllato dei soli deadlock/race MySQL transitori riconosciuti, massimo limitato e backoff, compatibile con idempotenza/transazioni e senza replay commerciale doppio.
 - `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`: audit futuro separato. L'idempotenza corrente e `Session`/`InProc` e non e certificata per recycle, web farm o piu nodi.
 - Ordine cart successivo: `CART-DEADLOCK-RETRY-1A`, `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`, `CART-MOBILE-RESPONSIVE-UX-1A`, touch target rimozione `44x44`, audit schema monetario `DOUBLE`. Mantenere separati `HOME-TTFB-PERFORMANCE-1A` e `MYSQL-CONNECTOR-DEPENDENCY-AUDIT-1A`.
 - Il limite massimo `Decimal` interno e il limite HTTP richiedono futuro allineamento. Lo schema monetario `DOUBLE` resta debito, non corretto dal batch.
