@@ -2250,3 +2250,9 @@ Task consigliato separato per eventuale proseguimento:
 - Non inserire o stampare secret.
 - Non esporre token o transaction id completi in UI/log/report.
 - Non confondere stato ordine con stato pagamento.
+
+## Chiusura CART-REMOVE-TRANSACTION-HARDENING-1A
+
+Chiusura A registrata con PR #247, integrata fast-forward in `frontend-rebuild` al checkpoint `2e3384a6a72d06b5cd090e4030d2548d96e4b165` (base `e7834f42eff4c5b11b39bae59780e88863c6e2bf`). Un commit integrato, zero merge commit. Remove/clear sono owner-scoped, transazionali, idempotenti e protetti da CSRF e same-origin; GET non muta. Smoke anonimo/autenticato, retry/rollback, concorrenza, 21906, checkout non distruttivo, viewport, precompile, diff-check e secret scan superati; fixture ripristinate. Il pulsante Svuota non è renderizzato a carrello vuoto: il no-op è stato verificato prima del merge, senza regressione.
+
+Roadmap cart: `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`, `CART-MOBILE-RESPONSIVE-UX-1A`, touch target rimozione 44×44, audit schema monetario DOUBLE. Recesso digitale e Coupon/Groupon restano differiti.

@@ -454,3 +454,5 @@ Ogni task futuro deve dichiarare esplicitamente:
 - nessun asset non tracciato incluso.
 
 Questa blueprint non implementa AI, chatbot, endpoint, DB, UI runtime o correzioni search. Registra solo architettura e roadmap.
+
+Checkpoint cart: `CART-REMOVE-TRANSACTION-HARDENING-1A` chiuso A con PR #247 e HEAD `2e3384a6a72d06b5cd090e4030d2548d96e4b165`; remove/clear restano server-side, owner-scoped e idempotenti, senza impatto su search, ranking o AI. Il prossimo audit è `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`; mobile UX e audit monetario seguono. Recesso digitale e Coupon/Groupon restano differiti.
