@@ -90,38 +90,36 @@ Public Module CartPriceRevalidationHelper
     Private ReadOnly PriceCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
 
     Public Function RevalidateCurrentCart(ByVal ctx As HttpContext, Optional ByVal updateCart As Boolean = True) As CartPriceRevalidationResult
-        Dim result As CartPriceRevalidationResult = Nothing
-        Dim conn As MySqlConnection = Nothing
-        Dim transaction As MySqlTransaction = Nothing
-        Try
-            If ctx Is Nothing OrElse ctx.Session Is Nothing Then Return TechnicalFailureResult()
+        If ctx Is Nothing OrElse ctx.Session Is Nothing Then Return TechnicalFailureResult()
+        Dim settings As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
+        If settings Is Nothing OrElse String.IsNullOrWhiteSpace(settings.ConnectionString) Then Return TechnicalFailureResult()
 
-            Dim loginId As Integer = SessionInt(ctx, "LoginId", SessionInt(ctx, "LoginID", 0))
-            Dim sessionId As String = Convert.ToString(ctx.Session.SessionID)
-            Dim listino As Integer = SessionInt(ctx, "Listino", SessionInt(ctx, "listino", 1))
-            If listino <= 0 Then listino = 1
-            If loginId <= 0 AndAlso String.IsNullOrWhiteSpace(sessionId) Then Return TechnicalFailureResult()
+        Dim execution As CartTransactionExecutionResult(Of CartPriceRevalidationResult) =
+            CartTransactionRetryPolicy.Execute(
+                settings.ConnectionString,
+                IsolationLevel.ReadCommitted,
+                "standalone-revalidation",
+                CartMutationIdempotencyService.GetCurrentRequestId(ctx),
+                Function(conn As MySqlConnection, transaction As MySqlTransaction) As CartTransactionWorkResult(Of CartPriceRevalidationResult)
+                    Dim loginId As Integer = SessionInt(ctx, "LoginId", SessionInt(ctx, "LoginID", 0))
+                    Dim sessionId As String = Convert.ToString(ctx.Session.SessionID)
+                    Dim listino As Integer = SessionInt(ctx, "Listino", SessionInt(ctx, "listino", 1))
+                    If listino <= 0 Then listino = 1
+                    If loginId <= 0 AndAlso String.IsNullOrWhiteSpace(sessionId) Then
+                        Return CartTransactionWorkResult(Of CartPriceRevalidationResult).Abort(TechnicalFailureResult())
+                    End If
 
-            conn = New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
-            conn.Open()
-            transaction = conn.BeginTransaction(IsolationLevel.ReadCommitted)
-            result = RevalidateCurrentCart(ctx, conn, transaction, loginId, sessionId, listino, updateCart, True, Nothing)
-            If result Is Nothing OrElse result.HasBlockingError Then
-                TryRollback(transaction, ctx, "standalone-revalidation")
-            Else
-                transaction.Commit()
-            End If
-            transaction.Dispose()
-            transaction = Nothing
-        Catch ex As Exception
-            TryRollback(transaction, ctx, "standalone-revalidation")
-            result = TechnicalFailureResult()
-            LogFailure(ctx, "Cart price revalidation failed", ex)
-        Finally
-            If transaction IsNot Nothing Then transaction.Dispose()
-            If conn IsNot Nothing Then conn.Dispose()
-        End Try
-        Return If(result, TechnicalFailureResult())
+                    Dim result As CartPriceRevalidationResult = RevalidateCurrentCart(
+                        ctx, conn, transaction, loginId, sessionId, listino, updateCart, True, Nothing, True)
+                    If result Is Nothing OrElse result.HasBlockingError Then
+                        Return CartTransactionWorkResult(Of CartPriceRevalidationResult).Abort(
+                            If(result, TechnicalFailureResult()))
+                    End If
+                    Return CartTransactionWorkResult(Of CartPriceRevalidationResult).Commit(result)
+                End Function)
+
+        If execution.IsIndeterminate Then CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(ctx)
+        Return If(execution.Value, TechnicalFailureResult())
     End Function
 
     Public Function RevalidateCurrentCart(ByVal ctx As HttpContext,
@@ -132,7 +130,8 @@ Public Module CartPriceRevalidationHelper
                                           ByVal listino As Integer,
                                           ByVal updateCart As Boolean,
                                           ByVal lockRows As Boolean,
-                                          ByVal quantityOverrides As IDictionary(Of Integer, Decimal)) As CartPriceRevalidationResult
+                                          ByVal quantityOverrides As IDictionary(Of Integer, Decimal),
+                                          Optional ByVal propagateTransactionTransientErrors As Boolean = False) As CartPriceRevalidationResult
         Dim result As New CartPriceRevalidationResult()
         Try
             If ctx Is Nothing OrElse conn Is Nothing OrElse conn.State <> ConnectionState.Open OrElse
@@ -168,7 +167,9 @@ Public Module CartPriceRevalidationHelper
                     matchedOverrides += 1
                 End If
 
-                Dim resolved As CartResolvedPrice = ResolveStandardPrice(ctx, conn, transaction, eligibilityContext, row.ArticleId, row.TCId, row.Quantity, listino, lockRows)
+                Dim resolved As CartResolvedPrice = ResolveStandardPrice(
+                    ctx, conn, transaction, eligibilityContext, row.ArticleId, row.TCId, row.Quantity,
+                    listino, lockRows, propagateTransactionTransientErrors)
                 If resolved.HasTechnicalError Then Return TechnicalFailureResult()
                 If resolved.HasCommercialRuleError Then Return CommercialRuleFailureResult()
                 If Not resolved.IsValid Then
@@ -208,7 +209,8 @@ Public Module CartPriceRevalidationHelper
                 Next
             End If
         Catch ex As Exception
-            LogFailure(ctx, "Transactional cart price revalidation failed", ex)
+            If propagateTransactionTransientErrors AndAlso CartTransactionRetryPolicy.GetMySqlErrorNumber(ex) >= 0 Then Throw
+            If Not propagateTransactionTransientErrors Then LogFailure(ctx, "Transactional cart price revalidation failed", ex)
             Return TechnicalFailureResult()
         End Try
         Return result
@@ -352,7 +354,8 @@ Public Module CartPriceRevalidationHelper
                                          ByVal tcId As Integer,
                                          ByVal quantity As Decimal,
                                          ByVal listino As Integer,
-                                         ByVal lockCommercialRows As Boolean) As CartResolvedPrice
+                                         ByVal lockCommercialRows As Boolean,
+                                         Optional ByVal propagateTransactionTransientErrors As Boolean = False) As CartResolvedPrice
         Dim resolved As New CartResolvedPrice()
         Dim allCandidates As List(Of CartPriceCandidate) = LoadCandidates(conn, transaction, articleId, listino, lockCommercialRows)
         If allCandidates Is Nothing OrElse allCandidates.Count = 0 Then Return resolved
@@ -369,7 +372,9 @@ Public Module CartPriceRevalidationHelper
 
         Dim promotion As ProductPromotionEligibilityResult
         If transaction IsNot Nothing Then
-            promotion = ProductPromotionEligibilityResolver.Resolve(conn, transaction, eligibilityContext, articleId, tcId, quantity, price, priceIvato)
+            promotion = ProductPromotionEligibilityResolver.Resolve(
+                conn, transaction, eligibilityContext, articleId, tcId, quantity, price, priceIvato,
+                propagateTransactionTransientErrors)
         Else
             promotion = ProductPromotionEligibilityResolver.Resolve(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString, eligibilityContext, articleId, tcId, quantity, price, priceIvato)
         End If
@@ -396,7 +401,8 @@ Public Module CartPriceRevalidationHelper
             eligibilityContext.CompanyId,
             listino,
             eligibilityContext.EvaluationDate,
-            lockCommercialRows)
+            lockCommercialRows,
+            propagateTransactionTransientErrors)
         If freeShipping Is Nothing OrElse freeShipping.Status <> ProductFreeShippingEligibilityStatus.Success Then
             resolved.HasTechnicalError = True
             Return resolved
@@ -589,15 +595,6 @@ Public Module CartPriceRevalidationHelper
             .ErrorMessage = GenericCommercialRuleErrorMessage
         }
     End Function
-
-    Private Sub TryRollback(ByVal transaction As MySqlTransaction, ByVal ctx As HttpContext, ByVal operationName As String)
-        If transaction Is Nothing Then Return
-        Try
-            transaction.Rollback()
-        Catch rollbackError As Exception
-            LogFailure(ctx, "Rollback failed for " & operationName, rollbackError)
-        End Try
-    End Sub
 
     Private Sub LogFailure(ByVal ctx As HttpContext, ByVal message As String, ByVal ex As Exception)
         Try

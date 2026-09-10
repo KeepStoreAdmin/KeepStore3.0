@@ -35,45 +35,52 @@ Public Module CartOwnershipService
         Dim result As New CartOwnershipMergeResult()
         If ctx Is Nothing OrElse ctx.Session Is Nothing OrElse loginId <= 0 OrElse listino <= 0 Then Return result
 
-        Dim sessionId As String = Convert.ToString(ctx.Session.SessionID)
-        If String.IsNullOrWhiteSpace(sessionId) Then Return result
-
         Dim settings As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
         If settings Is Nothing OrElse String.IsNullOrWhiteSpace(settings.ConnectionString) Then Return result
 
-        Dim conn As MySqlConnection = Nothing
-        Dim transaction As MySqlTransaction = Nothing
-        Try
-            conn = New MySqlConnection(settings.ConnectionString)
-            conn.Open()
-            transaction = conn.BeginTransaction(IsolationLevel.Serializable)
+        Dim execution As CartTransactionExecutionResult(Of CartOwnershipMergeResult) =
+            CartTransactionRetryPolicy.Execute(Of CartOwnershipMergeResult)(
+                settings.ConnectionString,
+                IsolationLevel.Serializable,
+                "merge-anonymous-account",
+                CartMutationIdempotencyService.GetCurrentRequestId(ctx),
+                Function(conn As MySqlConnection, transaction As MySqlTransaction) As CartTransactionWorkResult(Of CartOwnershipMergeResult)
+            Dim attemptLoginId As Integer = SessionInteger(ctx, "LoginId", SessionInteger(ctx, "LoginID", loginId))
+            Dim attemptListino As Integer = SessionInteger(ctx, "Listino", SessionInteger(ctx, "listino", listino))
+            Dim attemptSessionId As String = Convert.ToString(ctx.Session.SessionID)
+            If attemptLoginId <= 0 OrElse attemptListino <= 0 OrElse String.IsNullOrWhiteSpace(attemptSessionId) Then
+                Return CartTransactionWorkResult(Of CartOwnershipMergeResult).Abort(New CartOwnershipMergeResult())
+            End If
 
-            Dim rows As List(Of CartOwnershipRow) = LoadOwnedRows(conn, transaction, loginId, sessionId)
+            Dim attemptResult As New CartOwnershipMergeResult()
+
+            Dim rows As List(Of CartOwnershipRow) = LoadOwnedRows(conn, transaction, attemptLoginId, attemptSessionId)
             If rows.Count > 0 Then
-                MergeRows(conn, transaction, rows, loginId, sessionId, listino, result)
+                MergeRows(conn, transaction, rows, attemptLoginId, attemptSessionId, attemptListino, attemptResult)
 
-                result.PriceRevalidation = CartPriceRevalidationHelper.RevalidateCurrentCart(
-                    ctx, conn, transaction, loginId, String.Empty, listino, True, True, Nothing)
-                If result.PriceRevalidation Is Nothing OrElse result.PriceRevalidation.HasBlockingError Then
+                attemptResult.PriceRevalidation = CartPriceRevalidationHelper.RevalidateCurrentCart(
+                    ctx, conn, transaction, attemptLoginId, String.Empty, attemptListino,
+                    True, True, Nothing, True)
+                If attemptResult.PriceRevalidation Is Nothing OrElse attemptResult.PriceRevalidation.HasBlockingError Then
                     Throw New InvalidOperationException("Post-login cart price revalidation did not complete.")
                 End If
             End If
 
-            If CountAnonymousRows(conn, transaction, sessionId) <> 0 Then
+            If CountAnonymousRows(conn, transaction, attemptSessionId) <> 0 Then
                 Throw New InvalidOperationException("Anonymous cart ownership transfer was incomplete.")
             End If
 
-            transaction.Commit()
-            transaction.Dispose()
-            transaction = Nothing
-            result.Succeeded = True
+            Return CartTransactionWorkResult(Of CartOwnershipMergeResult).Commit(attemptResult)
+                End Function)
 
+        If execution.IsIndeterminate Then CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(ctx)
+        If execution.Succeeded AndAlso execution.Value IsNot Nothing Then
+            result = execution.Value
+            result.Succeeded = True
             If result.PriceRevalidation IsNot Nothing AndAlso result.PriceRevalidation.HasChanges Then
                 CartPriceRevalidationHelper.StoreResultInSession(ctx, result.PriceRevalidation)
             End If
-        Catch ex As Exception
-            TryRollback(transaction, ctx)
-            LogFailure(ctx, "Post-login cart ownership merge failed", ex)
+        Else
             If result.PriceRevalidation Is Nothing OrElse Not result.PriceRevalidation.HasBlockingError Then
                 result.PriceRevalidation = New CartPriceRevalidationResult() With {
                     .HasBlockingError = True,
@@ -82,10 +89,7 @@ Public Module CartOwnershipService
                 }
             End If
             CartPriceRevalidationHelper.StoreResultInSession(ctx, result.PriceRevalidation)
-        Finally
-            If transaction IsNot Nothing Then transaction.Dispose()
-            If conn IsNot Nothing Then conn.Dispose()
-        End Try
+        End If
 
         Return result
     End Function
@@ -95,15 +99,44 @@ Public Module CartOwnershipService
                                    ByVal loginId As Integer,
                                    ByVal sessionId As String) As List(Of CartOwnershipRow)
         Dim rows As New List(Of CartOwnershipRow)()
-        Using cmd As New MySqlCommand(
+        AppendOwnedRows(
+            conn,
+            transaction,
             "SELECT ID, COALESCE(LoginId,0) AS LoginId, COALESCE(SessionId,'') AS SessionId, " &
             "ArticoliId, COALESCE(TCId,-1) AS TCId, COALESCE(Qnt,0) AS Qnt " &
-            "FROM carrello WHERE LoginId=?loginId OR (COALESCE(LoginId,0)<=0 AND SessionId=?sessionId) " &
-            "ORDER BY ID FOR UPDATE",
+            "FROM carrello FORCE INDEX (IX_carrello_LoginId_ID) " &
+            "WHERE LoginId=?ownerId ORDER BY ID FOR UPDATE",
+            "?ownerId",
+            loginId,
+            rows)
+        AppendOwnedRows(
+            conn,
+            transaction,
+            "SELECT ID, COALESCE(LoginId,0) AS LoginId, COALESCE(SessionId,'') AS SessionId, " &
+            "ArticoliId, COALESCE(TCId,-1) AS TCId, COALESCE(Qnt,0) AS Qnt " &
+            "FROM carrello FORCE INDEX (IX_carrello_SessionId_ID) " &
+            "WHERE SessionId=?ownerId AND COALESCE(LoginId,0)<=0 ORDER BY ID FOR UPDATE",
+            "?ownerId",
+            sessionId,
+            rows)
+        Return rows
+    End Function
+
+    Private Sub AppendOwnedRows(ByVal conn As MySqlConnection,
+                                ByVal transaction As MySqlTransaction,
+                                ByVal sql As String,
+                                ByVal parameterName As String,
+                                ByVal ownerId As Object,
+                                ByVal rows As List(Of CartOwnershipRow))
+        Using cmd As New MySqlCommand(
+            sql,
             conn,
             transaction)
-            cmd.Parameters.Add("?loginId", MySqlDbType.Int32).Value = loginId
-            cmd.Parameters.Add("?sessionId", MySqlDbType.VarChar, 50).Value = sessionId
+            If TypeOf ownerId Is Integer Then
+                cmd.Parameters.Add(parameterName, MySqlDbType.Int32).Value = Convert.ToInt32(ownerId, CultureInfo.InvariantCulture)
+            Else
+                cmd.Parameters.Add(parameterName, MySqlDbType.VarChar, 50).Value = Convert.ToString(ownerId, CultureInfo.InvariantCulture)
+            End If
             Using reader As MySqlDataReader = cmd.ExecuteReader()
                 While reader.Read()
                     Dim row As New CartOwnershipRow() With {
@@ -121,8 +154,7 @@ Public Module CartOwnershipService
                 End While
             End Using
         End Using
-        Return rows
-    End Function
+    End Sub
 
     Private Sub MergeRows(ByVal conn As MySqlConnection,
                           ByVal transaction As MySqlTransaction,
@@ -264,22 +296,12 @@ Public Module CartOwnershipService
         Return If(tcId > 0, tcId, -1)
     End Function
 
-    Private Sub TryRollback(ByVal transaction As MySqlTransaction, ByVal ctx As HttpContext)
-        If transaction Is Nothing Then Return
-        Try
-            transaction.Rollback()
-        Catch rollbackError As Exception
-            LogFailure(ctx, "Post-login cart ownership rollback failed", rollbackError)
-        End Try
-    End Sub
-
-    Private Sub LogFailure(ByVal ctx As HttpContext, ByVal message As String, ByVal ex As Exception)
-        Try
-            KeepStoreLog.Error("cart-ownership", message & ". Error type: " & ex.GetType().Name & ".", Nothing, ctx)
-        Catch logError As Exception
-            System.Diagnostics.Trace.TraceError("cart-ownership logging failed. Error type: " & logError.GetType().Name & ".")
-        End Try
-    End Sub
+    Private Function SessionInteger(ByVal ctx As HttpContext, ByVal key As String, ByVal fallback As Integer) As Integer
+        Dim parsed As Integer
+        If ctx IsNot Nothing AndAlso ctx.Session IsNot Nothing AndAlso
+           Integer.TryParse(Convert.ToString(ctx.Session(key)), NumberStyles.Integer, CultureInfo.InvariantCulture, parsed) Then Return parsed
+        Return fallback
+    End Function
 
     Private Function ReadInt(ByVal value As Object, ByVal defaultValue As Integer) As Integer
         If value Is Nothing OrElse value Is DBNull.Value Then Return defaultValue

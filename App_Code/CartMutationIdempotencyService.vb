@@ -22,6 +22,7 @@ Public NotInheritable Class CartMutationIdempotencyService
     Public Const MaxStandardBatchItems As Integer = 96
     Private Const RegistrySessionKey As String = "KeepStore:CartMutation:Intents"
     Private Const ProgressiveSlotSessionKey As String = "KeepStore:CartMutation:ProgressiveSlots"
+    Private Const ActiveIntentItemKey As String = "KeepStore:CartMutation:ActiveIntent"
     Private Const MaxEntries As Integer = 64
     Private Shared ReadOnly EntryTtl As TimeSpan = TimeSpan.FromMinutes(15)
     Private Shared ReadOnly ProcessingLease As TimeSpan = TimeSpan.FromMinutes(2)
@@ -331,15 +332,31 @@ Public NotInheritable Class CartMutationIdempotencyService
         existing.State = "processing"
         existing.UpdatedUtc = DateTime.UtcNow
         context.Session(RegistrySessionKey) = registry
+        context.Items(ActiveIntentItemKey) = normalized
         Return CartMutationIntentDecision.Accepted
     End Function
 
     Public Shared Sub CompleteIntent(ByVal context As HttpContext, ByVal requestId As String)
         SetState(context, requestId, "completed", False)
+        ClearActiveIntent(context, requestId)
     End Sub
 
     Public Shared Sub AbandonIntent(ByVal context As HttpContext, ByVal requestId As String)
-        SetState(context, requestId, "pending", False)
+        SetState(context, requestId, "pending", False, True)
+        ClearActiveIntent(context, requestId)
+    End Sub
+
+    Public Shared Function GetCurrentRequestId(ByVal context As HttpContext) As String
+        If context Is Nothing OrElse context.Items Is Nothing Then Return String.Empty
+        Dim normalized As String = String.Empty
+        If NormalizeRequestId(Convert.ToString(context.Items(ActiveIntentItemKey)), normalized) Then Return normalized
+        Return String.Empty
+    End Function
+
+    Public Shared Sub MarkCurrentIntentIndeterminate(ByVal context As HttpContext)
+        Dim requestId As String = GetCurrentRequestId(context)
+        If requestId = String.Empty Then Return
+        SetState(context, requestId, "indeterminate", False)
     End Sub
 
     Private Shared Function BuildFingerprint(ByVal context As HttpContext,
@@ -358,7 +375,8 @@ Public NotInheritable Class CartMutationIdempotencyService
     Private Shared Sub SetState(ByVal context As HttpContext,
                                 ByVal requestId As String,
                                 ByVal state As String,
-                                ByVal remove As Boolean)
+                                ByVal remove As Boolean,
+                                Optional ByVal preserveTerminalState As Boolean = False)
         Dim normalized As String = String.Empty
         If Not IsUsableContext(context) OrElse Not NormalizeRequestId(requestId, normalized) Then Return
         Dim registry As Dictionary(Of String, IntentEntry) = GetRegistry(context.Session, False)
@@ -368,10 +386,24 @@ Public NotInheritable Class CartMutationIdempotencyService
         If remove Then
             registry.Remove(normalized)
         Else
+            If preserveTerminalState AndAlso
+               (String.Equals(existing.State, "completed", StringComparison.OrdinalIgnoreCase) OrElse
+                String.Equals(existing.State, "indeterminate", StringComparison.OrdinalIgnoreCase)) Then Return
             existing.State = state
             existing.UpdatedUtc = DateTime.UtcNow
         End If
         context.Session(RegistrySessionKey) = registry
+    End Sub
+
+    Private Shared Sub ClearActiveIntent(ByVal context As HttpContext, ByVal requestId As String)
+        If context Is Nothing OrElse context.Items Is Nothing Then Return
+        Dim normalized As String = String.Empty
+        If Not NormalizeRequestId(requestId, normalized) Then Return
+        Dim active As String = String.Empty
+        If NormalizeRequestId(Convert.ToString(context.Items(ActiveIntentItemKey)), active) AndAlso
+           String.Equals(active, normalized, StringComparison.Ordinal) Then
+            context.Items.Remove(ActiveIntentItemKey)
+        End If
     End Sub
 
     Private Shared Sub Prune(ByVal registry As Dictionary(Of String, IntentEntry))

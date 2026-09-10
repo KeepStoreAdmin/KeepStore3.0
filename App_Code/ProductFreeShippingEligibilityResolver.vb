@@ -33,7 +33,8 @@ Public Module ProductFreeShippingEligibilityResolver
                             ByVal companyId As Integer,
                             ByVal listino As Integer,
                             ByVal evaluationDate As Date,
-                            ByVal lockCommercialRows As Boolean) As ProductFreeShippingEligibilityResult
+                            ByVal lockCommercialRows As Boolean,
+                            Optional ByVal propagateTransactionTransientErrors As Boolean = False) As ProductFreeShippingEligibilityResult
         Dim result As New ProductFreeShippingEligibilityResult()
         If conn Is Nothing OrElse conn.State <> ConnectionState.Open OrElse
            articleId <= 0 OrElse companyId <= 0 OrElse listino <= 0 OrElse
@@ -71,9 +72,10 @@ Public Module ProductFreeShippingEligibilityResolver
                 End Using
             End Using
         Catch ex As Exception
+            If propagateTransactionTransientErrors AndAlso CartTransactionRetryPolicy.GetMySqlErrorNumber(ex) >= 0 Then Throw
             result.Eligible = False
             result.Status = ProductFreeShippingEligibilityStatus.TechnicalError
-            LogFailure(articleId, companyId, listino, ex)
+            If Not propagateTransactionTransientErrors Then LogFailure(articleId, companyId, listino, ex)
         End Try
 
         Return result

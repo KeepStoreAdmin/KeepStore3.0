@@ -57,6 +57,12 @@ Friend Class CartStandardBatchPlan
     Public Property CartRowId As Integer
 End Class
 
+Friend Class CartMutationOwnerContext
+    Public Property LoginId As Integer
+    Public Property SessionId As String
+    Public Property Listino As Integer
+End Class
+
 Public Module CartMutationService
     Private Const GenericMutationError As String = "Non è stato possibile aggiornare il carrello. Riprova."
 
@@ -65,12 +71,7 @@ Public Module CartMutationService
                                                        ByVal requestedTCId As Integer,
                                                        ByVal quantityToAdd As Decimal) As CartStandardMutationResult
         If ctx Is Nothing OrElse ctx.Session Is Nothing Then Return New CartStandardMutationResult With {.ErrorMessage = GenericMutationError}
-
-        Dim loginId As Integer = SessionInteger(ctx, "LoginId", SessionInteger(ctx, "LoginID", 0))
-        Dim sessionId As String = If(loginId > 0, String.Empty, ctx.Session.SessionID)
-        Dim listino As Integer = SessionInteger(ctx, "Listino", SessionInteger(ctx, "listino", 1))
-        If listino <= 0 Then listino = 1
-        Return AddStandardProduct(ctx, loginId, sessionId, articleId, requestedTCId, quantityToAdd, listino)
+        Return AddStandardProduct(ctx, 0, String.Empty, articleId, requestedTCId, quantityToAdd, 1)
     End Function
 
     Public Function AddStandardProductsBatchForCurrentOwner(
@@ -81,11 +82,7 @@ Public Module CartMutationService
             Return New CartStandardBatchMutationResult With {.ErrorMessage = GenericMutationError}
         End If
 
-        Dim loginId As Integer = SessionInteger(ctx, "LoginId", SessionInteger(ctx, "LoginID", 0))
-        Dim sessionId As String = If(loginId > 0, String.Empty, ctx.Session.SessionID)
-        Dim listino As Integer = SessionInteger(ctx, "Listino", SessionInteger(ctx, "listino", 1))
-        If listino <= 0 Then listino = 1
-        Return MutateStandardProductsBatch(ctx, loginId, sessionId, listino, items)
+        Return MutateStandardProductsBatch(ctx, 0, String.Empty, 1, items)
     End Function
 
     Public Function SetStandardProductQuantityForCurrentOwner(ByVal ctx As HttpContext,
@@ -94,11 +91,7 @@ Public Module CartMutationService
                                                               ByVal desiredQuantity As Decimal) As CartStandardMutationResult
         If ctx Is Nothing OrElse ctx.Session Is Nothing Then Return New CartStandardMutationResult With {.ErrorMessage = GenericMutationError}
 
-        Dim loginId As Integer = SessionInteger(ctx, "LoginId", SessionInteger(ctx, "LoginID", 0))
-        Dim sessionId As String = If(loginId > 0, String.Empty, ctx.Session.SessionID)
-        Dim listino As Integer = SessionInteger(ctx, "Listino", SessionInteger(ctx, "listino", 1))
-        If listino <= 0 Then listino = 1
-        Return MutateStandardProduct(ctx, loginId, sessionId, articleId, requestedTCId, desiredQuantity, listino, True)
+        Return MutateStandardProduct(ctx, 0, String.Empty, articleId, requestedTCId, desiredQuantity, 1, True)
     End Function
 
     Public Function AddStandardProduct(ByVal ctx As HttpContext,
@@ -138,31 +131,41 @@ Public Module CartMutationService
         Dim result As New CartStandardBatchMutationResult With {.ErrorMessage = GenericMutationError}
         Dim normalizedItems As List(Of CartStandardBatchMutationRequest) = Nothing
         Dim canonicalPayload As String = String.Empty
-        If ctx Is Nothing OrElse ctx.Session Is Nothing OrElse listino <= 0 OrElse
-           (loginId <= 0 AndAlso String.IsNullOrWhiteSpace(sessionId)) OrElse
+        If ctx Is Nothing OrElse ctx.Session Is Nothing OrElse
            Not CartMutationIdempotencyService.TryNormalizeStandardBatchItems(
                items, CartMutationIdempotencyService.MaxStandardBatchItems, normalizedItems, canonicalPayload) Then
             Return result
         End If
 
-        Dim conn As MySqlConnection = Nothing
-        Dim transaction As MySqlTransaction = Nothing
-        Try
-            conn = New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
-            conn.Open()
-            transaction = conn.BeginTransaction(IsolationLevel.Serializable)
+        Dim settings As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
+        If settings Is Nothing OrElse String.IsNullOrWhiteSpace(settings.ConnectionString) Then Return result
 
+        Dim execution As CartTransactionExecutionResult(Of CartStandardBatchMutationResult) =
+            CartTransactionRetryPolicy.Execute(Of CartStandardBatchMutationResult)(
+                settings.ConnectionString,
+                IsolationLevel.Serializable,
+                "standard-batch",
+                CartMutationIdempotencyService.GetCurrentRequestId(ctx),
+                Function(conn As MySqlConnection, transaction As MySqlTransaction) As CartTransactionWorkResult(Of CartStandardBatchMutationResult)
+            Dim owner As CartMutationOwnerContext = ResolveOwnerContext(ctx, loginId, sessionId, listino)
+            If owner Is Nothing Then
+                Return CartTransactionWorkResult(Of CartStandardBatchMutationResult).Abort(
+                    New CartStandardBatchMutationResult With {.ErrorMessage = GenericMutationError})
+            End If
+            Dim attemptLoginId As Integer = owner.LoginId
+            Dim attemptSessionId As String = owner.SessionId
+            Dim attemptListino As Integer = owner.Listino
             Dim ownerRows As List(Of CartMutationExistingRow) = LoadOwnedRows(
-                conn, transaction, loginId, sessionId)
+                conn, transaction, attemptLoginId, attemptSessionId)
             Dim eligibilityContext As ProductPromotionEligibilityContext =
-                ProductPromotionEligibilityResolver.CreateContext(ctx, listino)
+                ProductPromotionEligibilityResolver.CreateContext(ctx, attemptListino)
 
             Dim effectiveByKey As New Dictionary(Of String, CartStandardBatchMutationRequest)(StringComparer.Ordinal)
             For Each item As CartStandardBatchMutationRequest In normalizedItems
                 Dim probeQuantity As Decimal = If(item.QuantityDelta > 0D, item.QuantityDelta, 1D)
                 Dim preliminary As CartResolvedPrice = CartPriceRevalidationHelper.ResolveStandardPrice(
                     ctx, conn, transaction, eligibilityContext, item.ArticleId, item.RequestedTCId,
-                    probeQuantity, listino, True)
+                    probeQuantity, attemptListino, True, True)
                 EnsureResolved(preliminary)
 
                 Dim effectiveKey As String = BatchKey(item.ArticleId, preliminary.EffectiveTCId)
@@ -204,7 +207,7 @@ Public Module CartMutationService
 
                 Dim resolved As CartResolvedPrice = CartPriceRevalidationHelper.ResolveStandardPrice(
                     ctx, conn, transaction, eligibilityContext, item.ArticleId, item.RequestedTCId,
-                    finalQuantity, listino, True)
+                    finalQuantity, attemptListino, True, True)
                 EnsureResolved(resolved)
                 If NormalizeTCId(resolved.EffectiveTCId) <> NormalizeTCId(item.RequestedTCId) Then
                     Throw New InvalidOperationException("Effective product variant changed during batch planning.")
@@ -225,24 +228,24 @@ Public Module CartMutationService
             For planIndex As Integer = 0 To plans.Count - 1
                 Dim plan As CartStandardBatchPlan = plans(planIndex)
                 If plan.ExistingRows.Count = 0 Then
-                    plan.CartRowId = InsertRow(conn, transaction, ctx, loginId, sessionId, listino,
+                    plan.CartRowId = InsertRow(conn, transaction, ctx, attemptLoginId, attemptSessionId, attemptListino,
                                                plan.FinalQuantity, plan.Resolved, plan.FreeShipping)
                 Else
                     plan.CartRowId = plan.ExistingRows(0).Id
-                    UpdateRow(conn, transaction, ctx, loginId, sessionId, plan.CartRowId, listino,
+                    UpdateRow(conn, transaction, ctx, attemptLoginId, attemptSessionId, plan.CartRowId, attemptListino,
                               plan.FinalQuantity, plan.Resolved, plan.FreeShipping)
                     For index As Integer = 1 To plan.ExistingRows.Count - 1
-                        DeleteOwnedRow(conn, transaction, loginId, sessionId, plan.ExistingRows(index).Id)
+                        DeleteOwnedRow(conn, transaction, attemptLoginId, attemptSessionId, plan.ExistingRows(index).Id)
                     Next
                 End If
             Next
 
             Dim confirmedItems As New List(Of CartStandardMutationResult)()
             For Each plan As CartStandardBatchPlan In plans
-                VerifyFinalRow(conn, transaction, loginId, sessionId, plan.CartRowId,
+                VerifyFinalRow(conn, transaction, attemptLoginId, attemptSessionId, plan.CartRowId,
                                plan.Request.ArticleId, plan.Resolved.EffectiveTCId,
                                plan.FinalQuantity, plan.Resolved)
-                VerifySingleOwnedProductRow(conn, transaction, loginId, sessionId,
+                VerifySingleOwnedProductRow(conn, transaction, attemptLoginId, attemptSessionId,
                                             plan.Request.ArticleId, plan.Resolved.EffectiveTCId)
                 confirmedItems.Add(New CartStandardMutationResult With {
                     .Succeeded = True,
@@ -259,21 +262,16 @@ Public Module CartMutationService
                 })
             Next
 
-            transaction.Commit()
-            transaction.Dispose()
-            transaction = Nothing
+            Dim attemptResult As New CartStandardBatchMutationResult With {
+                .Succeeded = True,
+                .Items = confirmedItems,
+                .ErrorMessage = String.Empty
+            }
+            Return CartTransactionWorkResult(Of CartStandardBatchMutationResult).Commit(attemptResult)
+                End Function)
 
-            result.Items = confirmedItems
-            result.Succeeded = True
-            result.ErrorMessage = String.Empty
-        Catch ex As Exception
-            TryRollback(transaction, ctx, "standard-batch")
-            LogFailure(ctx, "Atomic standard cart batch failed", ex)
-        Finally
-            If transaction IsNot Nothing Then transaction.Dispose()
-            If conn IsNot Nothing Then conn.Dispose()
-        End Try
-        Return result
+        If execution.IsIndeterminate Then CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(ctx)
+        Return If(execution.Value, result)
     End Function
 
     Private Function MutateStandardProduct(ByVal ctx As HttpContext,
@@ -289,29 +287,53 @@ Public Module CartMutationService
             .TCId = NormalizeTCId(requestedTCId),
             .ErrorMessage = GenericMutationError
         }
-        Dim conn As MySqlConnection = Nothing
-        Dim transaction As MySqlTransaction = Nothing
-        Try
-            If ctx Is Nothing OrElse ctx.Session Is Nothing OrElse articleId <= 0 OrElse
-               (If(setAbsoluteQuantity, quantityValue <= 0D, quantityValue = 0D)) OrElse listino <= 0 OrElse
-               (loginId <= 0 AndAlso String.IsNullOrWhiteSpace(sessionId)) Then Return result
+        If ctx Is Nothing OrElse ctx.Session Is Nothing OrElse articleId <= 0 OrElse
+           (If(setAbsoluteQuantity, quantityValue <= 0D, quantityValue = 0D)) Then Return result
 
-            conn = New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
-            conn.Open()
-            transaction = conn.BeginTransaction(IsolationLevel.Serializable)
+        Dim settings As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
+        If settings Is Nothing OrElse String.IsNullOrWhiteSpace(settings.ConnectionString) Then Return result
+
+        Dim operationName As String = If(setAbsoluteQuantity, "set-standard", "add-standard")
+        Dim execution As CartTransactionExecutionResult(Of CartStandardMutationResult) =
+            CartTransactionRetryPolicy.Execute(Of CartStandardMutationResult)(
+                settings.ConnectionString,
+                IsolationLevel.Serializable,
+                operationName,
+                CartMutationIdempotencyService.GetCurrentRequestId(ctx),
+                Function(conn As MySqlConnection, transaction As MySqlTransaction) As CartTransactionWorkResult(Of CartStandardMutationResult)
+            Dim owner As CartMutationOwnerContext = ResolveOwnerContext(ctx, loginId, sessionId, listino)
+            If owner Is Nothing Then
+                Return CartTransactionWorkResult(Of CartStandardMutationResult).Abort(
+                    New CartStandardMutationResult With {
+                        .ArticleId = articleId,
+                        .TCId = NormalizeTCId(requestedTCId),
+                        .ErrorMessage = GenericMutationError
+                    })
+            End If
+            Dim attemptLoginId As Integer = owner.LoginId
+            Dim attemptSessionId As String = owner.SessionId
+            Dim attemptListino As Integer = owner.Listino
 
             Dim ownedArticleRows As List(Of CartMutationExistingRow) = LoadOwnedArticleRows(
-                conn, transaction, loginId, sessionId, articleId)
-            Dim eligibilityContext As ProductPromotionEligibilityContext = ProductPromotionEligibilityResolver.CreateContext(ctx, listino)
+                conn, transaction, attemptLoginId, attemptSessionId, articleId)
+            Dim eligibilityContext As ProductPromotionEligibilityContext = ProductPromotionEligibilityResolver.CreateContext(ctx, attemptListino)
             Dim probeQuantity As Decimal = If(quantityValue > 0D, quantityValue, 1D)
             Dim preliminary As CartResolvedPrice = CartPriceRevalidationHelper.ResolveStandardPrice(
-                ctx, conn, transaction, eligibilityContext, articleId, requestedTCId, probeQuantity, listino, True)
+                ctx, conn, transaction, eligibilityContext, articleId, requestedTCId, probeQuantity,
+                attemptListino, True, True)
             EnsureResolved(preliminary)
 
             Dim effectiveTCId As Integer = preliminary.EffectiveTCId
             Dim existing As List(Of CartMutationExistingRow) = ownedArticleRows.FindAll(
                 Function(row As CartMutationExistingRow) NormalizeTCId(row.TCId) = effectiveTCId)
-            If Not setAbsoluteQuantity AndAlso existing.Count = 0 AndAlso quantityValue < 0D Then Return result
+            If Not setAbsoluteQuantity AndAlso existing.Count = 0 AndAlso quantityValue < 0D Then
+                Return CartTransactionWorkResult(Of CartStandardMutationResult).Abort(
+                    New CartStandardMutationResult With {
+                        .ArticleId = articleId,
+                        .TCId = NormalizeTCId(requestedTCId),
+                        .ErrorMessage = GenericMutationError
+                    })
+            End If
 
             Dim finalQuantity As Decimal = quantityValue
             If Not setAbsoluteQuantity Then
@@ -323,43 +345,41 @@ Public Module CartMutationService
             ValidateQuantity(finalQuantity)
 
             Dim resolved As CartResolvedPrice = CartPriceRevalidationHelper.ResolveStandardPrice(
-                ctx, conn, transaction, eligibilityContext, articleId, effectiveTCId, finalQuantity, listino, True)
+                ctx, conn, transaction, eligibilityContext, articleId, effectiveTCId, finalQuantity,
+                attemptListino, True, True)
             EnsureResolved(resolved)
             Dim freeShipping As Integer = If(resolved.FreeShipping <> 0, 1, 0)
 
             Dim cartRowId As Integer
             If existing.Count = 0 Then
-                cartRowId = InsertRow(conn, transaction, ctx, loginId, sessionId, listino, finalQuantity, resolved, freeShipping)
+                cartRowId = InsertRow(conn, transaction, ctx, attemptLoginId, attemptSessionId, attemptListino, finalQuantity, resolved, freeShipping)
             Else
                 cartRowId = existing(0).Id
-                UpdateRow(conn, transaction, ctx, loginId, sessionId, cartRowId, listino, finalQuantity, resolved, freeShipping)
+                UpdateRow(conn, transaction, ctx, attemptLoginId, attemptSessionId, cartRowId, attemptListino, finalQuantity, resolved, freeShipping)
                 For i As Integer = 1 To existing.Count - 1
-                    DeleteOwnedRow(conn, transaction, loginId, sessionId, existing(i).Id)
+                    DeleteOwnedRow(conn, transaction, attemptLoginId, attemptSessionId, existing(i).Id)
                 Next
             End If
 
-            VerifyFinalRow(conn, transaction, loginId, sessionId, cartRowId, articleId, effectiveTCId, finalQuantity, resolved)
-            transaction.Commit()
-            transaction.Dispose()
-            transaction = Nothing
+            VerifyFinalRow(conn, transaction, attemptLoginId, attemptSessionId, cartRowId, articleId, effectiveTCId, finalQuantity, resolved)
 
-            result.Succeeded = True
-            result.CartRowId = cartRowId
-            result.TCId = effectiveTCId
-            result.Quantity = finalQuantity
-            result.ProductName = resolved.Description
-            result.Price = resolved.Price
-            result.PriceIvato = resolved.PriceIvato
-            result.OfferDetailId = resolved.OfferDetailId
-            result.ErrorMessage = String.Empty
-        Catch ex As Exception
-            TryRollback(transaction, ctx, If(setAbsoluteQuantity, "set-standard", "add-standard"))
-            LogFailure(ctx, If(setAbsoluteQuantity, "Atomic standard cart quantity update failed", "Atomic standard cart add failed"), ex)
-        Finally
-            If transaction IsNot Nothing Then transaction.Dispose()
-            If conn IsNot Nothing Then conn.Dispose()
-        End Try
-        Return result
+            Dim attemptResult As New CartStandardMutationResult With {
+                .Succeeded = True,
+                .CartRowId = cartRowId,
+                .ArticleId = articleId,
+                .TCId = effectiveTCId,
+                .Quantity = finalQuantity,
+                .ProductName = resolved.Description,
+                .Price = resolved.Price,
+                .PriceIvato = resolved.PriceIvato,
+                .OfferDetailId = resolved.OfferDetailId,
+                .ErrorMessage = String.Empty
+            }
+            Return CartTransactionWorkResult(Of CartStandardMutationResult).Commit(attemptResult)
+                End Function)
+
+        If execution.IsIndeterminate Then CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(ctx)
+        Return If(execution.Value, result)
     End Function
 
     Private Function SessionInteger(ByVal ctx As HttpContext, ByVal key As String, ByVal fallback As Integer) As Integer
@@ -367,6 +387,27 @@ Public Module CartMutationService
         If ctx IsNot Nothing AndAlso ctx.Session IsNot Nothing AndAlso
            Integer.TryParse(Convert.ToString(ctx.Session(key)), NumberStyles.Integer, CultureInfo.InvariantCulture, parsed) Then Return parsed
         Return fallback
+    End Function
+
+    Private Function ResolveOwnerContext(ByVal ctx As HttpContext,
+                                         ByVal fallbackLoginId As Integer,
+                                         ByVal fallbackSessionId As String,
+                                         ByVal fallbackListino As Integer) As CartMutationOwnerContext
+        If ctx Is Nothing OrElse ctx.Session Is Nothing Then Return Nothing
+        Dim loginId As Integer = SessionInteger(ctx, "LoginId", SessionInteger(ctx, "LoginID", fallbackLoginId))
+        Dim sessionId As String = String.Empty
+        If loginId <= 0 Then
+            sessionId = Convert.ToString(ctx.Session.SessionID)
+            If String.IsNullOrWhiteSpace(sessionId) Then sessionId = If(fallbackSessionId, String.Empty)
+        End If
+        Dim listino As Integer = SessionInteger(ctx, "Listino", SessionInteger(ctx, "listino", fallbackListino))
+        If listino <= 0 Then listino = 1
+        If loginId <= 0 AndAlso String.IsNullOrWhiteSpace(sessionId) Then Return Nothing
+        Return New CartMutationOwnerContext With {
+            .LoginId = loginId,
+            .SessionId = sessionId,
+            .Listino = listino
+        }
     End Function
 
     Public Function UpdateStandardQuantities(ByVal ctx As HttpContext,
@@ -388,32 +429,34 @@ Public Module CartMutationService
         End If
         If quantityOverrides.Count = 0 Then Return BlockingResult("Il carrello non contiene righe aggiornabili.")
 
-        Dim conn As MySqlConnection = Nothing
-        Dim transaction As MySqlTransaction = Nothing
-        Try
-            conn = New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
-            conn.Open()
-            transaction = conn.BeginTransaction(IsolationLevel.Serializable)
-            Dim result As CartPriceRevalidationResult = CartPriceRevalidationHelper.RevalidateCurrentCart(
-                ctx, conn, transaction, loginId, sessionId, listino, True, True, quantityOverrides)
-            If result Is Nothing OrElse result.HasBlockingError Then
-                TryRollback(transaction, ctx, "update-quantities")
-                transaction.Dispose()
-                transaction = Nothing
-                Return If(result, TechnicalResult())
+        If ctx Is Nothing OrElse ctx.Session Is Nothing Then Return TechnicalResult()
+        Dim settings As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
+        If settings Is Nothing OrElse String.IsNullOrWhiteSpace(settings.ConnectionString) Then Return TechnicalResult()
+
+        Dim execution As CartTransactionExecutionResult(Of CartPriceRevalidationResult) =
+            CartTransactionRetryPolicy.Execute(Of CartPriceRevalidationResult)(
+                settings.ConnectionString,
+                IsolationLevel.Serializable,
+                "update-quantities",
+                CartMutationIdempotencyService.GetCurrentRequestId(ctx),
+                Function(conn As MySqlConnection, transaction As MySqlTransaction) As CartTransactionWorkResult(Of CartPriceRevalidationResult)
+            Dim owner As CartMutationOwnerContext = ResolveOwnerContext(ctx, loginId, sessionId, listino)
+            If owner Is Nothing Then
+                Return CartTransactionWorkResult(Of CartPriceRevalidationResult).Abort(TechnicalResult())
             End If
-            transaction.Commit()
-            transaction.Dispose()
-            transaction = Nothing
-            Return result
-        Catch ex As Exception
-            TryRollback(transaction, ctx, "update-quantities")
-            LogFailure(ctx, "Atomic cart quantity update failed", ex)
-            Return TechnicalResult()
-        Finally
-            If transaction IsNot Nothing Then transaction.Dispose()
-            If conn IsNot Nothing Then conn.Dispose()
-        End Try
+            Dim attemptOverrides As New Dictionary(Of Integer, Decimal)(quantityOverrides)
+            Dim result As CartPriceRevalidationResult = CartPriceRevalidationHelper.RevalidateCurrentCart(
+                ctx, conn, transaction, owner.LoginId, owner.SessionId, owner.Listino,
+                True, True, attemptOverrides, True)
+            If result Is Nothing OrElse result.HasBlockingError Then
+                Return CartTransactionWorkResult(Of CartPriceRevalidationResult).Abort(
+                    If(result, TechnicalResult()))
+            End If
+            Return CartTransactionWorkResult(Of CartPriceRevalidationResult).Commit(result)
+                End Function)
+
+        If execution.IsIndeterminate Then CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(ctx)
+        Return If(execution.Value, TechnicalResult())
     End Function
 
     Private Function LoadOwnedRows(ByVal conn As MySqlConnection,
@@ -721,20 +764,4 @@ Public Module CartMutationService
         }
     End Function
 
-    Private Sub TryRollback(ByVal transaction As MySqlTransaction, ByVal ctx As HttpContext, ByVal operationName As String)
-        If transaction Is Nothing Then Return
-        Try
-            transaction.Rollback()
-        Catch rollbackError As Exception
-            LogFailure(ctx, "Rollback failed for " & operationName, rollbackError)
-        End Try
-    End Sub
-
-    Private Sub LogFailure(ByVal ctx As HttpContext, ByVal message As String, ByVal ex As Exception)
-        Try
-            KeepStoreLog.Error("cart-mutation", message & ". Error type: " & ex.GetType().Name & ".", Nothing, ctx)
-        Catch logError As Exception
-            System.Diagnostics.Trace.TraceError("cart-mutation logging failed. Error type: " & logError.GetType().Name & ".")
-        End Try
-    End Sub
 End Module

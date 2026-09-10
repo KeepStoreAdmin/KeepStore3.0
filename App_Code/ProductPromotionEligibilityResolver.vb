@@ -184,7 +184,8 @@ Public Module ProductPromotionEligibilityResolver
                             ByVal tcId As Integer,
                             ByVal quantity As Decimal,
                             ByVal basePriceNet As Decimal,
-                            ByVal basePriceGross As Decimal) As ProductPromotionEligibilityResult
+                            ByVal basePriceGross As Decimal,
+                            Optional ByVal propagateTransactionTransientErrors As Boolean = False) As ProductPromotionEligibilityResult
         Dim result As New ProductPromotionEligibilityResult() With {
             .BasePriceNet = basePriceNet,
             .BasePriceGross = basePriceGross
@@ -199,7 +200,8 @@ Public Module ProductPromotionEligibilityResolver
         End If
 
         Dim snapshot As ProductPromotionEligibilitySnapshot =
-            LoadAuthorizedSnapshot(conn, transaction, eligibilityContext, False, True, articleId)
+            LoadAuthorizedSnapshot(conn, transaction, eligibilityContext, False, True, articleId,
+                                   propagateTransactionTransientErrors)
         Return ResolveFromSnapshot(result, snapshot, eligibilityContext, articleId, tcId, quantity, basePriceNet, basePriceGross)
     End Function
 
@@ -287,7 +289,8 @@ Public Module ProductPromotionEligibilityResolver
                                             ByVal eligibilityContext As ProductPromotionEligibilityContext,
                                             ByVal useRequestCache As Boolean,
                                             ByVal lockCommercialRows As Boolean,
-                                            ByVal articleId As Integer) As ProductPromotionEligibilitySnapshot
+                                            ByVal articleId As Integer,
+                                            Optional ByVal propagateTransactionTransientErrors As Boolean = False) As ProductPromotionEligibilitySnapshot
         Dim cacheKey As String = RequestCachePrefix & eligibilityContext.CacheKey
         Dim current As HttpContext = HttpContext.Current
         If useRequestCache AndAlso current IsNot Nothing AndAlso current.Items IsNot Nothing Then
@@ -338,9 +341,10 @@ Public Module ProductPromotionEligibilityResolver
                 End Using
             End Using
         Catch ex As Exception
+            If propagateTransactionTransientErrors AndAlso CartTransactionRetryPolicy.GetMySqlErrorNumber(ex) >= 0 Then Throw
             snapshot.OffersByArticle.Clear()
             snapshot.Status = ProductPromotionEligibilityLoadStatus.TechnicalError
-            LogResolverFailure(ex)
+            If Not propagateTransactionTransientErrors Then LogResolverFailure(ex)
         End Try
 
         If useRequestCache AndAlso current IsNot Nothing AndAlso current.Items IsNot Nothing Then
