@@ -24,7 +24,7 @@
                 <ItemTemplate>
                     <div class="d-flex gap-3 align-items-start py-2 border-bottom">
                         <a class="flex-shrink-0" href='<%# GetProductUrl(Eval("ArticoliId"), Eval("TCId")) %>' aria-label="Vai al prodotto">
-                            <img class="rounded" style="width:64px;height:64px;object-fit:contain;" src='<%# GetProductImg(Eval("Img1")) %>' alt="" />
+                            <img class="rounded ks-mini-product-image" src='<%# GetProductImg(Eval("Img1")) %>' alt="" />
                         </a>
 
                         <div class="flex-grow-1">
@@ -39,7 +39,7 @@
 
                         <div class="text-end">
                             <button type="submit" form="ksNativeCartForm" name="ksCartAction" value='<%# BuildRemoveCartActionValue(Eval("Id")) %>'
-                                class="btn btn-sm btn-outline-secondary" title="Rimuovi" aria-label="Rimuovi articolo">x</button>
+                                class="btn btn-sm btn-outline-secondary ks-mini-remove" title="Rimuovi articolo" aria-label="Rimuovi articolo"><span class="icon-close" aria-hidden="true"></span><span class="visually-hidden">Rimuovi articolo</span></button>
                         </div>
                     </div>
                 </ItemTemplate>

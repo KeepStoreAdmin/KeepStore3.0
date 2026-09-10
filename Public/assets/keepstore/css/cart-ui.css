@@ -764,6 +764,130 @@
     border-radius: 999px;
 }
 
+/* Mobile-first cart rows: preserve one WebForms row/control source while
+   presenting semantic product cards below the desktop table breakpoint. */
+@media (max-width: 991.98px){
+    .ks-cart-page .tf-table-page-cart{
+        display: block;
+        width: 100%;
+    }
+
+    .ks-cart-page .tf-table-page-cart thead{
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    .ks-cart-page .tf-table-page-cart tbody,
+    .ks-cart-page .tf-table-page-cart .tf-cart-item{
+        display: block;
+        width: 100%;
+    }
+
+    .ks-cart-page .tf-table-page-cart .tf-cart-item{
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "product product"
+            "price quantity"
+            "total remove";
+        gap: 0 12px;
+        margin: 0;
+        padding: 14px;
+        border-bottom: 1px solid rgba(0,0,0,.08);
+    }
+
+    .ks-cart-page .tf-table-page-cart .tf-cart-item > td{
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        padding: 8px 0;
+        border: 0;
+    }
+
+    .ks-cart-page .tf-table-page-cart .tf-cart-item > td::before{
+        margin-right: 8px;
+        color: #5f6671;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.3;
+    }
+
+    .ks-cart-page .tf-table-page-cart .tf-cart-item_product{
+        grid-area: product;
+        align-items: flex-start;
+    }
+
+    .ks-cart-page .tf-table-page-cart .tf-cart-item_product::before{ content: none; }
+    .ks-cart-page .tf-table-page-cart .tf-cart-item_price{ grid-area: price; }
+    .ks-cart-page .tf-table-page-cart .tf-cart-item_price::before{ content: "Prezzo"; }
+    .ks-cart-page .tf-table-page-cart .tf-cart-item_quantity{ grid-area: quantity; justify-content: flex-end; }
+    .ks-cart-page .tf-table-page-cart .tf-cart-item_quantity::before{ content: "Quantità"; }
+    .ks-cart-page .tf-table-page-cart .tf-cart-item_total{ grid-area: total; }
+    .ks-cart-page .tf-table-page-cart .tf-cart-item_total::before{ content: "Totale"; }
+    .ks-cart-page .tf-table-page-cart .remove-cart{ grid-area: remove; justify-content: flex-end; }
+    .ks-cart-page .tf-table-page-cart .remove-cart::before{ content: none; }
+
+    .ks-cart-page .tf-table-page-cart .remove-cart .remove,
+    .ks-cart-page .tf-table-page-cart .btn-quantity{
+        width: 44px;
+        min-width: 44px;
+        height: 44px;
+        min-height: 44px;
+    }
+
+    .ks-cart-page .tf-table-page-cart .remove-cart .remove:focus-visible,
+    .ks-cart-page .tf-table-page-cart .btn-quantity:focus-visible{
+        outline: 3px solid rgba(216,0,39,.45);
+        outline-offset: 2px;
+    }
+
+    .ks-cart-page .tf-table-page-cart .ks-cart-item-promo{
+        display: block;
+        margin: 0 14px;
+    }
+}
+
+/* Mini-cart controls share the same touch and overflow contract. */
+.ks-mini-product-image{
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+}
+
+.ks-mini-remove{
+    display: inline-flex;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+}
+
+.ks-mini-remove:focus-visible{
+    outline: 3px solid rgba(216,0,39,.45);
+    outline-offset: 2px;
+}
+
+.popup-shopping-cart .offcanvas-body{
+    overflow-x: hidden;
+}
+
+.popup-shopping-cart .ks-mini-product-image{
+    flex: 0 0 64px;
+}
+
+.popup-shopping-cart .ks-mini-remove .icon-close{
+    pointer-events: none;
+}
+
 /* REV1: real cart/checkout hierarchy. */
 .ks-cart-page.ks-cart-step-checkout .ks-cart-heading-meta,
 .ks-cart-page.ks-cart-step-checkout .ks-cart-price-note,
