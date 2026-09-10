@@ -1956,6 +1956,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
             Me.Panel_Note.Visible = False
         End If
         StabilizeCartAddressEditUi()
+        RenderClearCartAction()
 		
 		
 		REM Me.Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "prova", "<script type='text/javascript'>document.body.onload=function(){alert('" & Me.sdsArticoli.SelectCommand.Replace("'", """").ToUpper & "')}</script>")
@@ -3646,36 +3647,6 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
             CartPriceRevalidationHelper.StoreResultInSession(HttpContext.Current, revalidation)
         End If
     End Sub
-    Protected Sub btSvuota_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btSvuota.Click
-        If Not IsAddressEditorActionAllowed(sender) Then Return
-        Dim LoginId As Integer = GetLoginIdSafe(0)
-        Dim SessionID As String = Me.Session.SessionID
-        Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
-            conn.Open()
-            Using cmd As New MySqlCommand()
-                cmd.Connection = conn
-                cmd.CommandText = "DELETE FROM carrello WHERE " & If(LoginId > 0, "LoginId=@LoginId", "SessionId=@SessionId")
-                If LoginId > 0 Then
-                    cmd.Parameters.Add("@LoginId", MySqlDbType.Int32).Value = LoginId
-                Else
-                    cmd.Parameters.Add("@SessionId", MySqlDbType.VarChar, 50).Value = SessionID
-                End If
-                cmd.ExecuteNonQuery()
-            End Using
-
-            Using verify As New MySqlCommand("SELECT COUNT(*) FROM carrello WHERE " & If(LoginId > 0, "LoginId=@LoginId", "SessionId=@SessionId"), conn)
-                If LoginId > 0 Then
-                    verify.Parameters.Add("@LoginId", MySqlDbType.Int32).Value = LoginId
-                Else
-                    verify.Parameters.Add("@SessionId", MySqlDbType.VarChar, 50).Value = SessionID
-                End If
-                If Convert.ToInt32(verify.ExecuteScalar(), CultureInfo.InvariantCulture) <> 0 Then
-                    Throw New InvalidOperationException("Owned cart clear did not remove all expected rows.")
-                End If
-            End Using
-        End Using
-    End Sub
-
     Protected Sub btCompleta_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btCompleta.Click
         If Not IsAddressEditorActionAllowed(sender) Then Return
         If GetLoginIdSafe(0) <= 0 Then
@@ -4200,10 +4171,35 @@ End Sub
             btAggiorna_Click(sender, e)
         End If
 
-        If e.CommandName = "Elimina" Then
-            eliminaRigaCarrello(e.CommandArgument)
-            RedirectToCartPage()
-        End If
+    End Sub
+
+    Public Function BuildRemoveCartActionValue(ByVal rowIdObj As Object,
+                                               ByVal surface As String) As String
+        Dim rowId As Integer = SafeInt(rowIdObj, 0)
+        If rowId <= 0 Then Return String.Empty
+        Dim safeSurface As String = If(String.Equals(surface, "free", StringComparison.Ordinal), "free", "standard")
+        Dim payload As String = CartMutationIdempotencyService.BuildRemoveRowPayload(rowId)
+        Dim requestId As String = CartMutationIdempotencyService.GetOrCreateProgressiveRequestId(
+            HttpContext.Current,
+            "cart-remove:page:" & safeSurface & ":" & rowId.ToString(CultureInfo.InvariantCulture),
+            "cart-remove-row",
+            payload)
+        Return HttpUtility.HtmlAttributeEncode(
+            CartMutationIdempotencyService.BuildNativeRemoveRowActionValue(rowId, requestId))
+    End Function
+
+    Private Sub RenderClearCartAction()
+        If litClearCartAction Is Nothing Then Return
+        Dim payload As String = CartMutationIdempotencyService.BuildClearCartPayload()
+        Dim requestId As String = CartMutationIdempotencyService.GetOrCreateProgressiveRequestId(
+            HttpContext.Current, "cart-clear:page", "cart-clear", payload)
+        Dim value As String = HttpUtility.HtmlAttributeEncode(
+            CartMutationIdempotencyService.BuildNativeClearCartActionValue(requestId))
+        Dim disabledAttributes As String = If(btSvuota IsNot Nothing AndAlso Not btSvuota.Enabled,
+                                              " disabled=""disabled"" aria-disabled=""true""",
+                                              String.Empty)
+        litClearCartAction.Text = "<button type=""submit"" form=""ksNativeCartForm"" name=""ksCartAction"" value=""" &
+            value & """ class=""tf-btn btn-gray""" & disabledAttributes & ">Svuota Carrello</button>"
     End Sub
 
     Protected Sub gvArticoliGratis_ItemCommand(ByVal sender As Object, ByVal e As RepeaterCommandEventArgs) Handles gvArticoliGratis.ItemCommand
@@ -4212,57 +4208,6 @@ End Sub
             btAggiorna_Click(sender, e)
         End If
 
-        If e.CommandName = "Elimina" Then
-            eliminaRigaCarrello(e.CommandArgument)
-            RedirectToCartPage()
-        End If
-    End Sub
-
-    Private Sub RedirectToCartPage()
-        Response.Redirect("carrello.aspx", False)
-        Context.ApplicationInstance.CompleteRequest()
-    End Sub
-
-    Public Sub eliminaRigaCarrello(ByVal id As Object)
-    Dim rowId As Integer = SafeInt(id, 0)
-    If rowId <= 0 Then Exit Sub
-
-    Dim conn As New MySqlConnection
-    Dim cmd As New MySqlCommand
-
-    Try
-        conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-        cmd.Connection = conn
-        conn.Open()
-
-        Dim loginId As Integer = GetLoginIdSafe(0)
-        If loginId > 0 Then
-            cmd.CommandText = "DELETE FROM carrello WHERE Id=@Id AND LoginId=@LoginId"
-            cmd.Parameters.Clear()
-            cmd.Parameters.Add("@Id", MySqlDbType.Int32).Value = rowId
-            cmd.Parameters.Add("@LoginId", MySqlDbType.Int32).Value = loginId
-        Else
-            cmd.CommandText = "DELETE FROM carrello WHERE Id=@Id AND SessionId=@SessionId"
-            cmd.Parameters.Clear()
-            cmd.Parameters.Add("@Id", MySqlDbType.Int32).Value = rowId
-            cmd.Parameters.Add("@SessionId", MySqlDbType.VarChar, 50).Value = If(Me.Session IsNot Nothing, Me.Session.SessionID, "")
-        End If
-
-        Dim affected As Integer = cmd.ExecuteNonQuery()
-        If affected <= 0 Then
-            Try
-                KeepStoreLog.Info("carrello.aspx", "Rimozione articolo non applicata id=" & rowId.ToString(CultureInfo.InvariantCulture) & " loginId=" & loginId.ToString(CultureInfo.InvariantCulture), HttpContext.Current)
-            Catch
-            End Try
-        End If
-    Catch ex As Exception
-        Try
-            KeepStoreLog.Error("carrello.aspx", "Errore rimozione articolo carrello id=" & rowId.ToString(CultureInfo.InvariantCulture), ex, HttpContext.Current)
-        Catch
-        End Try
-    Finally
-        Try : conn.Close() : Catch : End Try
-    End Try
     End Sub
 
     Protected Sub TB_BuonoSconto_TextChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles TB_BuonoSconto.TextChanged
@@ -4396,7 +4341,7 @@ End Sub
 
         If LoginId = 0 Then
             cmd.Parameters.AddWithValue("@SessionId", SessionID)
-            whereUserId = "(SessionId=@SessionId)"
+            whereUserId = "(COALESCE(LoginId,0)<=0 AND SessionId=@SessionId)"
         Else
             cmd.Parameters.AddWithValue("@LoginId", LoginId)
             whereUserId = "(LoginId=@LoginId)"

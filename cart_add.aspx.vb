@@ -56,9 +56,51 @@ Partial Class cart_add
                 HandleStandardAction(actionValues, requestId, cartReturnUrl, True)
             Case "pdp-bundle"
                 HandleBundleAction(actionValues, requestId, cartReturnUrl)
+            Case "cart-remove-row"
+                HandleRemovalAction(actionValues, requestId, cartReturnUrl, False)
+            Case "cart-clear"
+                HandleRemovalAction(actionValues, requestId, cartReturnUrl, True)
             Case Else
                 Reject(400, "Operazione carrello non valida.")
         End Select
+    End Sub
+
+    Private Sub HandleRemovalAction(ByVal actionValues As NameValueCollection,
+                                    ByVal requestId As String,
+                                    ByVal cartReturnUrl As String,
+                                    ByVal clearAll As Boolean)
+        Dim cartRowId As Integer = 0
+        If Not clearAll AndAlso
+           (Not Integer.TryParse(ReadActionValue(actionValues, "rowId"), cartRowId) OrElse cartRowId <= 0) Then
+            Reject(400, "Parametri carrello non validi.")
+            Return
+        End If
+
+        Dim operationType As String = If(clearAll, "cart-clear", "cart-remove-row")
+        Dim payload As String = If(clearAll,
+                                   CartMutationIdempotencyService.BuildClearCartPayload(),
+                                   CartMutationIdempotencyService.BuildRemoveRowPayload(cartRowId))
+        If Not TryAcquireIntent(requestId, operationType, payload, cartReturnUrl) Then Return
+
+        Dim result As CartOwnerRemovalResult = If(clearAll,
+            CartMutationService.ClearCartForCurrentOwner(HttpContext.Current),
+            CartMutationService.RemoveCartRowForCurrentOwner(HttpContext.Current, cartRowId))
+        If result Is Nothing OrElse Not result.Succeeded Then
+            If result IsNot Nothing AndAlso result.IsIndeterminate Then
+                Reject(409, IndeterminateMessage)
+            Else
+                CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
+                Reject(422, "Non è stato possibile aggiornare il carrello. Riprova.")
+            End If
+            Return
+        End If
+
+        CartMutationIdempotencyService.CompleteIntent(HttpContext.Current, requestId)
+        CartMutationIdempotencyService.ClearProgressiveRequestIds(
+            HttpContext.Current, If(clearAll, "cart-clear:", "cart-remove:"))
+        Session(CartPriceRevalidationHelper.SessionMessageKey) = "Il carrello è stato aggiornato."
+        Session(CartPriceRevalidationHelper.SessionChangedKey) = 1
+        RedirectAfterPost(cartReturnUrl)
     End Sub
 
     Private Sub HandleStandardAction(ByVal actionValues As NameValueCollection,

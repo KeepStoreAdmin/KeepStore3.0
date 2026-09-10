@@ -41,6 +41,14 @@ Public Class CartStandardBatchMutationResult
     Public Property ErrorMessage As String
 End Class
 
+Public Class CartOwnerRemovalResult
+    Public Property Succeeded As Boolean
+    Public Property AffectedRows As Integer
+    Public Property WasNoOp As Boolean
+    Public Property IsIndeterminate As Boolean
+    Public Property ErrorMessage As String
+End Class
+
 Friend Class CartMutationExistingRow
     Public Property Id As Integer
     Public Property ArticleId As Integer
@@ -65,6 +73,102 @@ End Class
 
 Public Module CartMutationService
     Private Const GenericMutationError As String = "Non è stato possibile aggiornare il carrello. Riprova."
+    Private _testDeadlockFaultCount As Integer
+
+    Public Function RemoveCartRowForCurrentOwner(ByVal ctx As HttpContext,
+                                                 ByVal cartRowId As Integer) As CartOwnerRemovalResult
+        If ctx Is Nothing OrElse ctx.Session Is Nothing OrElse cartRowId <= 0 Then
+            Return New CartOwnerRemovalResult With {.ErrorMessage = GenericMutationError}
+        End If
+        Return MutateOwnedCartRows(ctx, cartRowId, False)
+    End Function
+
+    Public Function ClearCartForCurrentOwner(ByVal ctx As HttpContext) As CartOwnerRemovalResult
+        If ctx Is Nothing OrElse ctx.Session Is Nothing Then
+            Return New CartOwnerRemovalResult With {.ErrorMessage = GenericMutationError}
+        End If
+        Return MutateOwnedCartRows(ctx, 0, True)
+    End Function
+
+    Private Function MutateOwnedCartRows(ByVal ctx As HttpContext,
+                                         ByVal cartRowId As Integer,
+                                         ByVal clearAll As Boolean) As CartOwnerRemovalResult
+        Dim fallback As New CartOwnerRemovalResult With {.ErrorMessage = GenericMutationError}
+        Dim settings As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
+        If settings Is Nothing OrElse String.IsNullOrWhiteSpace(settings.ConnectionString) Then Return fallback
+
+        Dim operationName As String = If(clearAll, "clear-cart", "remove-cart-row")
+        Dim execution As CartTransactionExecutionResult(Of CartOwnerRemovalResult) =
+            CartTransactionRetryPolicy.Execute(Of CartOwnerRemovalResult)(
+                settings.ConnectionString,
+                IsolationLevel.Serializable,
+                operationName,
+                CartMutationIdempotencyService.GetCurrentRequestId(ctx),
+                Function(conn As MySqlConnection, transaction As MySqlTransaction) As CartTransactionWorkResult(Of CartOwnerRemovalResult)
+            Dim owner As CartMutationOwnerContext = ResolveOwnerContext(ctx, 0, String.Empty, 1)
+            If owner Is Nothing Then
+                Return CartTransactionWorkResult(Of CartOwnerRemovalResult).Abort(
+                    New CartOwnerRemovalResult With {.ErrorMessage = GenericMutationError})
+            End If
+
+            Dim ownedRowIds As List(Of Integer) = LoadOwnedRowIds(
+                conn, transaction, owner.LoginId, owner.SessionId)
+            Dim affected As Integer = 0
+
+            ' TEST-ONLY 1213 fault hook; removed before final diff.
+            If Threading.Interlocked.Increment(_testDeadlockFaultCount) = 1 Then
+                Using fault As New MySqlCommand(
+                    "SIGNAL SQLSTATE '40001' SET MYSQL_ERRNO=1213, MESSAGE_TEXT='test-only deadlock'",
+                    conn,
+                    transaction)
+                    fault.ExecuteNonQuery()
+                End Using
+            End If
+
+            If clearAll Then
+                If ownedRowIds.Count > 0 Then
+                    Using cmd As New MySqlCommand("DELETE FROM carrello WHERE " & OwnerWhere(owner.LoginId), conn, transaction)
+                        AddOwnerParameter(cmd, owner.LoginId, owner.SessionId)
+                        affected = cmd.ExecuteNonQuery()
+                    End Using
+                    If affected <> ownedRowIds.Count Then
+                        Throw New InvalidOperationException("Owned cart clear affected an unexpected row count.")
+                    End If
+                End If
+            ElseIf ownedRowIds.Contains(cartRowId) Then
+                Using cmd As New MySqlCommand("DELETE FROM carrello WHERE ID=?id AND " & OwnerWhere(owner.LoginId), conn, transaction)
+                    cmd.Parameters.Add("?id", MySqlDbType.Int32).Value = cartRowId
+                    AddOwnerParameter(cmd, owner.LoginId, owner.SessionId)
+                    affected = cmd.ExecuteNonQuery()
+                End Using
+                If affected <> 1 Then
+                    Throw New InvalidOperationException("Owned cart row removal affected an unexpected row count.")
+                End If
+            End If
+
+            Dim remaining As Integer = CountOwnedRows(
+                conn, transaction, owner.LoginId, owner.SessionId, If(clearAll, 0, cartRowId))
+            If remaining <> 0 Then Throw New InvalidOperationException("Owned cart removal final verification failed.")
+
+            Return CartTransactionWorkResult(Of CartOwnerRemovalResult).Commit(
+                New CartOwnerRemovalResult With {
+                    .Succeeded = True,
+                    .AffectedRows = affected,
+                    .WasNoOp = (affected = 0),
+                    .ErrorMessage = String.Empty
+                })
+                End Function)
+
+        If execution.IsIndeterminate Then
+            CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(ctx)
+            Return New CartOwnerRemovalResult With {
+                .IsIndeterminate = True,
+                .ErrorMessage = GenericMutationError
+            }
+        End If
+        If execution.Succeeded AndAlso execution.Value IsNot Nothing Then Return execution.Value
+        Return fallback
+    End Function
 
     Public Function AddStandardProductForCurrentOwner(ByVal ctx As HttpContext,
                                                        ByVal articleId As Integer,
@@ -394,7 +498,8 @@ Public Module CartMutationService
                                          ByVal fallbackSessionId As String,
                                          ByVal fallbackListino As Integer) As CartMutationOwnerContext
         If ctx Is Nothing OrElse ctx.Session Is Nothing Then Return Nothing
-        Dim loginId As Integer = SessionInteger(ctx, "LoginId", SessionInteger(ctx, "LoginID", fallbackLoginId))
+        Dim loginId As Integer = SessionInteger(ctx, "LoginId",
+            SessionInteger(ctx, "LoginID", SessionInteger(ctx, "LOGINID", fallbackLoginId)))
         Dim sessionId As String = String.Empty
         If loginId <= 0 Then
             sessionId = Convert.ToString(ctx.Session.SessionID)
@@ -487,6 +592,39 @@ Public Module CartMutationService
             End Using
         End Using
         Return rows
+    End Function
+
+    Private Function LoadOwnedRowIds(ByVal conn As MySqlConnection,
+                                     ByVal transaction As MySqlTransaction,
+                                     ByVal loginId As Integer,
+                                     ByVal sessionId As String) As List(Of Integer)
+        Dim rowIds As New List(Of Integer)()
+        Using cmd As New MySqlCommand(
+            "SELECT ID FROM carrello WHERE " & OwnerWhere(loginId) & " ORDER BY ID FOR UPDATE",
+            conn,
+            transaction)
+            AddOwnerParameter(cmd, loginId, sessionId)
+            Using reader As MySqlDataReader = cmd.ExecuteReader()
+                While reader.Read()
+                    rowIds.Add(Convert.ToInt32(reader("ID"), CultureInfo.InvariantCulture))
+                End While
+            End Using
+        End Using
+        Return rowIds
+    End Function
+
+    Private Function CountOwnedRows(ByVal conn As MySqlConnection,
+                                    ByVal transaction As MySqlTransaction,
+                                    ByVal loginId As Integer,
+                                    ByVal sessionId As String,
+                                    ByVal cartRowId As Integer) As Integer
+        Dim sql As String = "SELECT COUNT(*) FROM carrello WHERE " & OwnerWhere(loginId)
+        If cartRowId > 0 Then sql &= " AND ID=?id"
+        Using cmd As New MySqlCommand(sql, conn, transaction)
+            AddOwnerParameter(cmd, loginId, sessionId)
+            If cartRowId > 0 Then cmd.Parameters.Add("?id", MySqlDbType.Int32).Value = cartRowId
+            Return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture)
+        End Using
     End Function
 
     Private Function LoadOwnedArticleRows(ByVal conn As MySqlConnection,

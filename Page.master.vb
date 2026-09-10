@@ -1696,9 +1696,9 @@ End Function
                     If LoginId = 0 Then
                         ' Carrello associato alla sessione anonima
                         If ivaTipoLocal = 1 Then
-                            sql = "SELECT Sum(Qnt) AS Quantita, Sum(Qnt * Prezzo) AS TotRiga FROM carrello WHERE SessionID = ?sessionId"
+                            sql = "SELECT Sum(Qnt) AS Quantita, Sum(Qnt * Prezzo) AS TotRiga FROM carrello WHERE COALESCE(LoginId,0)<=0 AND SessionID = ?sessionId"
                         Else
-                            sql = "SELECT Sum(Qnt) AS Quantita, Sum(Qnt * PrezzoIvato) AS TotRiga FROM carrello WHERE SessionID = ?sessionId"
+                            sql = "SELECT Sum(Qnt) AS Quantita, Sum(Qnt * PrezzoIvato) AS TotRiga FROM carrello WHERE COALESCE(LoginId,0)<=0 AND SessionID = ?sessionId"
                         End If
                         localCmd.Parameters.AddWithValue("?sessionId", SessionID)
                     Else

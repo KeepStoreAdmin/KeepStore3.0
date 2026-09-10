@@ -179,7 +179,8 @@
                                     </td>
 
                                     <td data-cart-title="Rimuovi" class="remove-cart text-xxl-end">
-                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") %>' runat="server" CausesValidation="false" CssClass="remove icon icon-close link" ToolTip="Rimuovi articolo" Text="<span class='visually-hidden'>Rimuovi articolo</span>"></asp:LinkButton>
+                                        <button type="submit" form="ksNativeCartForm" name="ksCartAction" value='<%# BuildRemoveCartActionValue(Eval("id"), "free") %>'
+                                            class="remove icon icon-close link border-0 bg-transparent" title="Rimuovi articolo"><span class="visually-hidden">Rimuovi articolo</span></button>
                                     </td>
                                 </tr>
 
@@ -290,7 +291,8 @@
                                     </td>
 
                                     <td data-cart-title="Rimuovi" class="remove-cart text-xxl-end">
-                                        <asp:LinkButton ID="LB_Delete" CommandName="Elimina" CommandArgument='<%#: Eval("id") %>' runat="server" CausesValidation="false" CssClass="remove icon icon-close link" ToolTip="Rimuovi articolo" Text="<span class='visually-hidden'>Rimuovi articolo</span>"></asp:LinkButton>
+                                        <button type="submit" form="ksNativeCartForm" name="ksCartAction" value='<%# BuildRemoveCartActionValue(Eval("id"), "standard") %>'
+                                            class="remove icon icon-close link border-0 bg-transparent" title="Rimuovi articolo"><span class="visually-hidden">Rimuovi articolo</span></button>
                                     </td>
                                 </tr>
 
@@ -518,7 +520,9 @@
             <div class="box-btn ks-cart-buttons ks-cart-actions">
                 <asp:LinkButton ID="btContinua" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Continua lo Shopping</asp:LinkButton>
                 <asp:LinkButton ID="btAggiorna" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Aggiorna Carrello</asp:LinkButton>
-                <asp:LinkButton ID="btSvuota" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Svuota Carrello</asp:LinkButton>
+                <asp:Panel ID="btSvuota" runat="server" style="display:contents">
+                    <asp:Literal ID="litClearCartAction" runat="server" />
+                </asp:Panel>
                 <div class="ks-right">
                     <asp:Button ID="btCompleta" runat="server" CssClass="tf-btn" CausesValidation="false" Text="Procedi con l'ordine" />
                 </div>

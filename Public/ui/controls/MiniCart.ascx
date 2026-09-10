@@ -17,10 +17,10 @@
         <asp:PlaceHolder ID="phMiniCartList" runat="server" Visible="false">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <span class="text-muted small">Articoli nel carrello</span>
-                <asp:LinkButton ID="lbClearCart" runat="server" CssClass="link small text-decoration-underline" CausesValidation="False" OnClick="lbClearCart_Click" Text="Svuota" />
+                <asp:Literal ID="litMiniClearCart" runat="server" />
             </div>
 
-            <asp:Repeater ID="rptMiniCart" runat="server" OnItemCommand="rptMiniCart_ItemCommand">
+            <asp:Repeater ID="rptMiniCart" runat="server">
                 <ItemTemplate>
                     <div class="d-flex gap-3 align-items-start py-2 border-bottom">
                         <a class="flex-shrink-0" href='<%# GetProductUrl(Eval("ArticoliId"), Eval("TCId")) %>' aria-label="Vai al prodotto">
@@ -38,8 +38,8 @@
                         </div>
 
                         <div class="text-end">
-                            <asp:LinkButton ID="lbRemove" runat="server" CommandName="Remove" CommandArgument='<%# Eval("Id") %>'
-                                CssClass="btn btn-sm btn-outline-secondary" CausesValidation="False" Text="x" ToolTip="Rimuovi" />
+                            <button type="submit" form="ksNativeCartForm" name="ksCartAction" value='<%# BuildRemoveCartActionValue(Eval("Id")) %>'
+                                class="btn btn-sm btn-outline-secondary" title="Rimuovi" aria-label="Rimuovi articolo">x</button>
                         </div>
                     </div>
                 </ItemTemplate>

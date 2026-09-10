@@ -190,6 +190,14 @@ Public NotInheritable Class CartMutationIdempotencyService
                desiredQuantity.ToString("0.####", CultureInfo.InvariantCulture)
     End Function
 
+    Public Shared Function BuildRemoveRowPayload(ByVal cartRowId As Integer) As String
+        Return "remove-row|" & cartRowId.ToString(CultureInfo.InvariantCulture)
+    End Function
+
+    Public Shared Function BuildClearCartPayload() As String
+        Return "clear|owner-cart"
+    End Function
+
     Public Shared Function CreateRequestId() As String
         Return Guid.NewGuid().ToString("N")
     End Function
@@ -258,6 +266,18 @@ Public NotInheritable Class CartMutationIdempotencyService
                "&qtyField=" & HttpUtility.UrlEncode(If(quantityFieldName, String.Empty)) &
                "&requestId=" & HttpUtility.UrlEncode(requestId) &
                "&operation=cart-set"
+    End Function
+
+    Public Shared Function BuildNativeRemoveRowActionValue(ByVal cartRowId As Integer,
+                                                           ByVal requestId As String) As String
+        Return "rowId=" & cartRowId.ToString(CultureInfo.InvariantCulture) &
+               "&requestId=" & HttpUtility.UrlEncode(requestId) &
+               "&operation=cart-remove-row"
+    End Function
+
+    Public Shared Function BuildNativeClearCartActionValue(ByVal requestId As String) As String
+        Return "requestId=" & HttpUtility.UrlEncode(requestId) &
+               "&operation=cart-clear"
     End Function
 
     Public Shared Function BuildNativeBundleActionValue(ByVal itemsSource As IEnumerable,

@@ -14,20 +14,7 @@ Partial Class MiniCart
 
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As EventArgs) Handles Me.PreRender
         BindMiniCartSafe()
-    End Sub
-
-    Protected Sub rptMiniCart_ItemCommand(ByVal sender As Object, ByVal e As RepeaterCommandEventArgs)
-        If String.Equals(e.CommandName, "Remove", StringComparison.OrdinalIgnoreCase) Then
-            Dim id As Integer = 0
-            Integer.TryParse(Convert.ToString(e.CommandArgument), id)
-            If id > 0 Then
-                DeleteCartRow(id)
-            End If
-        End If
-    End Sub
-
-    Protected Sub lbClearCart_Click(ByVal sender As Object, ByVal e As EventArgs)
-        ClearCart()
+        RenderClearCartAction()
     End Sub
 
     Private Sub BindMiniCartSafe()
@@ -95,7 +82,7 @@ Partial Class MiniCart
                         sql &= "LoginId=@loginId "
                         cmd.Parameters.AddWithValue("@loginId", loginId)
                     Else
-                        sql &= "SessionId=@sessionId "
+                        sql &= "COALESCE(LoginId,0)<=0 AND SessionId=@sessionId "
                         cmd.Parameters.AddWithValue("@sessionId", sessionId)
                     End If
 
@@ -114,74 +101,34 @@ Partial Class MiniCart
         Return dt
     End Function
 
-    Private Sub DeleteCartRow(ByVal id As Integer)
-        Dim connStr As String = GetConnectionString()
-        If String.IsNullOrEmpty(connStr) Then Exit Sub
-
-        Dim loginId As Integer = GetLoginIdSafe()
-        Dim sessionId As String = GetSessionIdSafe()
-
-        Try
-            Using cn As New MySqlConnection(connStr)
-                cn.Open()
-
-                Dim sql As String
-                Using cmd As New MySqlCommand()
-                    cmd.Connection = cn
-
-                    If loginId > 0 Then
-                        sql = "DELETE FROM carrello WHERE id=@id AND LoginId=@loginId"
-                        cmd.Parameters.AddWithValue("@loginId", loginId)
-                    Else
-                        sql = "DELETE FROM carrello WHERE id=@id AND SessionId=@sessionId"
-                        cmd.Parameters.AddWithValue("@sessionId", sessionId)
-                    End If
-
-                    cmd.Parameters.AddWithValue("@id", id)
-                    cmd.CommandText = sql
-                    cmd.ExecuteNonQuery()
-                End Using
-            End Using
-        Catch
-            ' best-effort
-        End Try
-    End Sub
-
-    Private Sub ClearCart()
-        Dim connStr As String = GetConnectionString()
-        If String.IsNullOrEmpty(connStr) Then Exit Sub
-
-        Dim loginId As Integer = GetLoginIdSafe()
-        Dim sessionId As String = GetSessionIdSafe()
-
-        Try
-            Using cn As New MySqlConnection(connStr)
-                cn.Open()
-
-                Dim sql As String
-                Using cmd As New MySqlCommand()
-                    cmd.Connection = cn
-
-                    If loginId > 0 Then
-                        sql = "DELETE FROM carrello WHERE LoginId=@loginId"
-                        cmd.Parameters.AddWithValue("@loginId", loginId)
-                    Else
-                        sql = "DELETE FROM carrello WHERE SessionId=@sessionId"
-                        cmd.Parameters.AddWithValue("@sessionId", sessionId)
-                    End If
-
-                    cmd.CommandText = sql
-                    cmd.ExecuteNonQuery()
-                End Using
-            End Using
-        Catch
-            ' best-effort
-        End Try
-    End Sub
-
     ' ------------------------------------------------------------
     ' Binding helpers (usati nel markup)
     ' ------------------------------------------------------------
+    Public Function BuildRemoveCartActionValue(ByVal rowIdObj As Object) As String
+        Dim rowId As Integer = SafeInt(rowIdObj, 0)
+        If rowId <= 0 Then Return String.Empty
+        Dim payload As String = CartMutationIdempotencyService.BuildRemoveRowPayload(rowId)
+        Dim requestId As String = CartMutationIdempotencyService.GetOrCreateProgressiveRequestId(
+            HttpContext.Current, "cart-remove:mini:" & rowId.ToString(CultureInfo.InvariantCulture),
+            "cart-remove-row", payload)
+        Return HttpUtility.HtmlAttributeEncode(
+            CartMutationIdempotencyService.BuildNativeRemoveRowActionValue(rowId, requestId))
+    End Function
+
+    Public Function BuildClearCartActionValue() As String
+        Dim payload As String = CartMutationIdempotencyService.BuildClearCartPayload()
+        Dim requestId As String = CartMutationIdempotencyService.GetOrCreateProgressiveRequestId(
+            HttpContext.Current, "cart-clear:mini", "cart-clear", payload)
+        Return HttpUtility.HtmlAttributeEncode(
+            CartMutationIdempotencyService.BuildNativeClearCartActionValue(requestId))
+    End Function
+
+    Private Sub RenderClearCartAction()
+        Dim value As String = BuildClearCartActionValue()
+        litMiniClearCart.Text = "<button type=""submit"" form=""ksNativeCartForm"" name=""ksCartAction"" value=""" &
+            value & """ class=""link small text-decoration-underline border-0 bg-transparent p-0"">Svuota</button>"
+    End Sub
+
     Public Function GetProductUrl(ByVal articoliIdObj As Object, ByVal tcIdObj As Object) As String
         Dim id As Integer = SafeInt(articoliIdObj, 0)
         Dim tcText As String = SafeString(tcIdObj)
