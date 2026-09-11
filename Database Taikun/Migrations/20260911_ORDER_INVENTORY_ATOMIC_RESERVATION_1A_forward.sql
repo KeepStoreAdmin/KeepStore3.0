@@ -1,37 +1,33 @@
 USE `taikun`;
-SELECT
-    DATABASE() AS DatabaseSelezionato,
-    CASE
-        WHEN DATABASE() = 'taikun' THEN 'OK'
-        ELSE 'STOP'
-    END AS EsitoDatabase;
+SELECT DATABASE() AS DatabaseSelezionato,
+       CASE WHEN DATABASE()='taikun' THEN 'OK' ELSE 'STOP' END AS EsitoDatabase;
 
--- ORDER-INVENTORY-ATOMIC-RESERVATION-1A
--- Apply only after reviewing the read-only pre-check below.
--- Both pre-check result sets must be empty before continuing.  CREATE PROCEDURE
--- itself is intentionally non-replacing: an existing web V1 aborts the script.
-SELECT ROUTINE_NAME AS UnexpectedExistingProcedure
+-- Pre-check read-only. Review these result sets and stop if any contract check fails.
+SELECT ROUTINE_NAME, ROUTINE_TYPE,
+       SHA2(ROUTINE_DEFINITION,256) AS definition_sha256,
+       CASE WHEN SHA2(ROUTINE_DEFINITION,256)='a3e831a40e998c139b58b739a9392d5878da827af3648b0011b9ae84f6995004'
+            THEN 1 ELSE 0 END AS historical_fingerprint_matches,
+       DTD_IDENTIFIER AS signature_marker
 FROM information_schema.routines
-WHERE ROUTINE_SCHEMA = 'taikun'
-  AND ROUTINE_NAME = 'Carrello_Documento_WebV1';
+WHERE ROUTINE_SCHEMA='taikun' AND ROUTINE_NAME='Carrello_Documento';
 
-SELECT 'Carrello_Documento' AS MissingHistoricalProcedure
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM information_schema.routines
-    WHERE ROUTINE_SCHEMA = 'taikun'
-      AND ROUTINE_NAME = 'Carrello_Documento'
-);
+SELECT ROUTINE_NAME AS UnexpectedAlternativeProcedure
+FROM information_schema.routines
+WHERE ROUTINE_SCHEMA='taikun'
+  AND ROUTINE_NAME IN ('Carrello_Documento_WebV1','Carrello_Documento_InventoryV1');
+
+-- Operator gate: do not continue unless the preceding checks are compliant.
+-- DROP/CREATE is not transactional; no checkout may run during deployment.
+DROP PROCEDURE `taikun`.`Carrello_Documento`;
 
 DELIMITER $$
-CREATE PROCEDURE `taikun`.`Carrello_Documento_WebV1`(IN pLoginId INT(11),
+CREATE PROCEDURE `taikun`.`Carrello_Documento`(IN pLoginId INT(11), 
 IN pTipoDoc INT(11), IN pTipoPagamento INT(11), IN pVettore INT(11), IN pUtentiInirizzoId INT(11),
  IN pCostoAssicurazione DOUBLE(15,5), IN pCostoSpedizione DOUBLE(15,5), IN pArrotondamento DOUBLE(15,5),
- IN pCostoPagamento DOUBLE(15,5), IN pNoteSpedizione VARCHAR(255), IN pUtenteAbilitatoRC INT(1), IN pIvaVettore DOUBLE(15,5), IN pStatiId INT(11),
- IN pBuonoScontoDescrizione VARCHAR(255), IN pBuonoScontoCodice VARCHAR(20), IN pBuonoScontoTotale DOUBLE(15,5), IN pBuonoScontoIdIVA INT(11),
+ IN pCostoPagamento DOUBLE(15,5), IN pNoteSpedizione VARCHAR(255), IN pUtenteAbilitatoRC INT(1), IN pIvaVettore DOUBLE(15,5), IN pStatiId INT(11), 
+ IN pBuonoScontoDescrizione VARCHAR(255), IN pBuonoScontoCodice VARCHAR(20), IN pBuonoScontoTotale DOUBLE(15,5), IN pBuonoScontoIdIVA INT(11), 
  IN pBuonoScontoValoreIva DOUBLE(15,5), OUT DocumentoMemorizzato INT(11))
 BEGIN
-	/* WEB ONLY - inventory reserved by caller in the same transaction. */
 	DECLARE finito INT DEFAULT 0;
 	DECLARE ndoc INT(11) DEFAULT 0;
 	DECLARE datadoc DATE;
@@ -100,86 +96,119 @@ BEGIN
 	DECLARE causaletrasportoid INT(11) DEFAULT -1;
 	DECLARE causaleportoid INT(11) DEFAULT -1;
 	DECLARE causaleaspettoid INT(11) DEFAULT -1;
+	
+	DECLARE invFound INT DEFAULT 0;
+
+	DECLARE dtInventory CURSOR FOR
+	SELECT ArticoliId, TCId, SUM(Qnt)
+		FROM carrello
+		WHERE LoginId=pLoginId
+		GROUP BY ArticoliId, TCId
+		ORDER BY ArticoliId, TCId;
 
 	DECLARE dtRighe CURSOR FOR
 	SELECT id
 		FROM documentirighe
 		WHERE DocumentiId=IdDocumento;
-
+		
 	DECLARE dtConto CURSOR FOR
 	SELECT ContoSpedizione
 		FROM pagamentitipo
 		WHERE id=pTipoPagamento;
-
+		
 	DECLARE dtCarrello CURSOR FOR
 	SELECT articoliid,TCId,ean,codice,descrizione1,descrizione2,peso,umid,qnt,nListino,prezzo,iva,Valoreiva,Importo,ImportoIvato,Prodotto_Gratis,DescrizioneIvaRC,IdIvaRC,ValoreIvaRC,idEsenzioneIva,ValoreEsenzioneIva,DescrizioneEsenzioneIva
 		FROM vCarrello
 		WHERE loginId=pLoginId;
 	DECLARE CONTINUE HANDLER FOR SQLSTATE '02000' SET finito = 1;
 
+	SET finito=0;
+	OPEN dtInventory;
+	InventoryLoop: LOOP
+		FETCH dtInventory INTO pArticoliId,pTCId,pQnt;
+		IF finito=1 THEN LEAVE InventoryLoop; END IF;
+		SET invFound=1;
+		IF pArticoliId IS NULL OR pArticoliId<=0 OR pTCId IS NULL OR pQnt IS NULL OR pQnt<=0 THEN
+			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='ORDER_INVENTORY_INVALID';
+		END IF;
+		UPDATE articoli_giacenze
+		SET Impegnata=COALESCE(Impegnata,0)+pQnt
+		WHERE MagazziniId=1
+		  AND ArticoliId=pArticoliId
+		  AND TCId=pTCId
+		  AND COALESCE(Giacenza,0)-COALESCE(Impegnata,0)>=pQnt;
+		IF ROW_COUNT()<>1 THEN
+			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='ORDER_INVENTORY_UNAVAILABLE';
+		END IF;
+	END LOOP;
+	CLOSE dtInventory;
+	IF invFound=0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='ORDER_INVENTORY_EMPTY_CART';
+	END IF;
+	
 	OPEN dtCarrello;
 	FETCH dtCarrello INTO pArticoliId,pTCId,pEan,pCodice,pDescrizione1,pdescrizione2,pPeso,pUmId,pQnt,pnListino,pPrezzo,parIva,parValoreIva,pImporto,pImportoIvato,pProdottoGratis,pDescrizioneIvaRC,pIdIvaRC,pValoreIvaRC,pidEsenzioneIva,pValoreEsenzioneIva,pDescrizioneEsenzioneIva;
-
+	
 	OPEN dtConto;
 	FETCH dtConto INTO Conto;
-
+	
 	SELECT MAX(ndocumento) AS nmax
-		INTO ndoc
+		INTO ndoc 
 		FROM documenti WHERE YEAR(datadocumento)=YEAR(CURRENT_TIMESTAMP) AND tipodocumentiid=pTipoDoc;
-		IF ndoc IS NULL THEN
+		IF ndoc IS NULL THEN 
 			SET ndoc=1;
 		ELSE
-			SET ndoc=ndoc+1;
+			SET ndoc=ndoc+1;	
 		END IF;
 		SET datadoc=CURRENT_TIMESTAMP;
-
-
+	
+	
 	SELECT UtentiId,AziendeId INTO IdUtente,Azienda FROM vlogin WHERE id=pLoginId LIMIT 1;
-
+	
 	SELECT AgenteId,Provvigione1,SubAgenteId,Provvigione2 INTO pAgente,pProvv1,pSubAgente,pProvv2 FROM utentiagenti WHERE UtentiId=idUtente;
-
-	SELECT RagioneSociale,CognomeNome,piva,codicefiscale,indirizzo,citta,cap,provincia,telefono,IFNULL(fax,'')
-		INTO pRagioneSociale,pCognomeNome,pPiva,pCodiceFiscale,pIndirizzo,pCitta,pCap,pProvincia,pTelefono,pFax
+	
+	SELECT RagioneSociale,CognomeNome,piva,codicefiscale,indirizzo,citta,cap,provincia,telefono,IFNULL(fax,'')  
+		INTO pRagioneSociale,pCognomeNome,pPiva,pCodiceFiscale,pIndirizzo,pCitta,pCap,pProvincia,pTelefono,pFax 
 		FROM utenti
 		WHERE id=idUtente;
 		SET sede1=CONCAT(pIndirizzo,CHAR(13),CHAR(10),pCap," ", pCitta," ",  pProvincia,CHAR(13),CHAR(10),"Tel. ",pTelefono,CHAR(13),CHAR(10),"Fax. ",pFax);
-
-	IF pUtentiInirizzoId<>0 THEN
-		SELECT IFNULL(RagioneSocialeA,''), NomeA, IndirizzoA,CittaA,CapA,ProvinciaA,Zona,Note,telefonoA,IFNULL(faxA,'')
-			INTO pRagioneSocialeA, pNomeA, pIndirizzoA,pCittaA,pCapA,pProvinciaA,pZonaA,pNoteA,pTelefonoA,pFaxA
+	
+	IF pUtentiInirizzoId<>0 THEN 
+		SELECT IFNULL(RagioneSocialeA,''), NomeA, IndirizzoA,CittaA,CapA,ProvinciaA,Zona,Note,telefonoA,IFNULL(faxA,'') 
+			INTO pRagioneSocialeA, pNomeA, pIndirizzoA,pCittaA,pCapA,pProvinciaA,pZonaA,pNoteA,pTelefonoA,pFaxA 
 			FROM utentiindirizzi WHERE id=pUtentiInirizzoId LIMIT 1;
 		SET sede2=CONCAT(pRagioneSocialeA," ", pNomeA,CHAR(13),CHAR(10), pIndirizzoA,CHAR(13),CHAR(10),pCapA," ", pCittaA," ",  pProvinciaA,CHAR(13),CHAR(10),pZonaA,CHAR(13),CHAR(10),"Tel. ",pTelefonoA,CHAR(13),CHAR(10),"Fax. ",pFaxA,CHAR(13),CHAR(10),pNoteA);
-
+			
 	ELSE
-		SELECT IFNULL(RagioneSocialeA,''), NomeA, IndirizzoA, CittaA, CapA, ProvinciaA,telefonoA,IFNULL(faxA,'')
+		SELECT IFNULL(RagioneSocialeA,''), NomeA, IndirizzoA, CittaA, CapA, ProvinciaA,telefonoA,IFNULL(faxA,'')  
 			INTO pRagioneSocialeA,pNomeA, pIndirizzoA, pCittaA, pCapA, pProvinciaA,pTelefonoA,pFaxA
 			FROM utentiindirizzi WHERE utenteid=idUtente AND predefinito=1 LIMIT 1;
 		SET sede2=CONCAT(pRagioneSocialeA," ", pNomeA,CHAR(13),CHAR(10),pIndirizzoA,CHAR(13),CHAR(10),pCapA," ", pCittaA," ",  pProvinciaA,CHAR(13),CHAR(10),"Tel. ",pTelefonoA,CHAR(13),CHAR(10),"Fax. ",pFaxA);
 	END IF;
-
-
+	
+	
 	WHILE NOT trovato DO
-		SELECT ndocumento INTO DocTrovato
-		FROM documenti
-		WHERE YEAR(datadocumento) = YEAR(CURRENT_TIMESTAMP)
-			AND tipodocumentiid=pTipoDoc
+		SELECT ndocumento INTO DocTrovato 
+		FROM documenti 
+		WHERE YEAR(datadocumento) = YEAR(CURRENT_TIMESTAMP) 
+			AND tipodocumentiid=pTipoDoc 
 			AND ndocumento=ndoc;
-		IF DocTrovato=ndoc THEN
-			SET ndoc=ndoc+1;
+		IF DocTrovato=ndoc THEN 
+			SET ndoc=ndoc+1;	
 		ELSE
 			SET trovato=TRUE;
 		END IF;
 	END WHILE;
-
-	IF ISNULL(pCognomeNome) THEN
+	
+	IF ISNULL(pCognomeNome) THEN 
 		SET pCognomeNome='';
 	END IF;
-
-	SELECT ImpegnaQnt
-		INTO impegna
-		FROM tipodocumenti
+	
+	SELECT ImpegnaQnt 
+		INTO impegna 
+		FROM tipodocumenti 
 		WHERE id=pTipoDoc;
-	INSERT INTO documenti SET
+	INSERT INTO documenti SET 
 		TipoDocumentiId=pTipoDoc,
 		AziendeId=Azienda,
 		NDocumento=ndoc,
@@ -206,15 +235,15 @@ BEGIN
 		Ordine_Web=1,
 		utentiIndirizziId=pUtentiInirizzoId;
 		SELECT last_insert_id() INTO IdDocumento;
-/*
+/*	
 	SELECT id
-		INTO IdDocumento
-		FROM documenti
+		INTO IdDocumento 
+		FROM documenti 
 		WHERE tipodocumentiId=pTipoDoc AND Ndocumento=ndoc AND DataDocumento=datadoc AND utentiid=idUtente;
-*/
-
+*/		
+	
 	Ciclo: REPEAT
-		INSERT INTO documentirighe SET
+		INSERT INTO documentirighe SET 
 			DocumentiId=IdDocumento,
 			ArticoliId=pArticoliId,
 			TCId=pTCId,
@@ -245,13 +274,12 @@ BEGIN
 			END IF;
 			SET totsconto=0;
 			SET totiva=totiva+IF((pUtenteAbilitatoRC=1) AND (pIdIvaRC>-1),pImporto*pValoreIvaRC/100,IF(pidEsenzioneIva>-1,pImporto*pValoreEsenzioneIva/100,pImporto*parValoreIva/100));
-
 		SET finito=0;
 		FETCH dtCarrello INTO pArticoliId,pTCId,pEan,pCodice,pDescrizione1,pdescrizione2,pPeso,pUmId,pQnt,pnListino,pPrezzo,parIva,parValoreIva,pImporto,pImportoIvato,pProdottoGratis,pDescrizioneIvaRC,pIdIvaRC,pValoreIvaRC,pidEsenzioneIva,pValoreEsenzioneIva,pDescrizioneEsenzioneIva;
         UNTIL finito=1
 	END REPEAT Ciclo;
-
-
+	
+	
 	SET finito=0;
 	OPEN dtRighe;
 	FETCH dtRighe INTO idRiga;
@@ -267,14 +295,14 @@ BEGIN
 	FETCH dtRighe INTO idRiga;
 	UNTIL finito=1
 	END REPEAT Ciclo_2;
-
+	
 	SET totiva=totiva+(pCostoSpedizione*pIvaVettore/100)+(pCostoAssicurazione*pIvaVettore/100);
 	SET totdoc=ROUND(imponibile,2)+ROUND(totiva,2);
-
+	
 	/*Prelevo dal database le impostazioni per Causale_Trasporto, Causale_Porto, Causale_Aspetto*/
 	SELECT CausaliAspettoId,CausaliPortoId,CausaliTrasportoId INTO causaleaspettoid,causaleportoid,causaletrasportoid FROM tipodocumenti WHERE tipodocumenti.`id` = pTipoDoc;
-
-	INSERT INTO documentipie SET
+	
+	INSERT INTO documentipie SET 
 		DocumentiId=idDocumento,
 		costoassicurazione=pCostoAssicurazione,
 		costospedizione=pCostoSpedizione,
@@ -295,20 +323,20 @@ BEGIN
 		NettoMerce=TotMerce-totsconto,
 		NettoServizi=0;
 	DELETE FROM documentiplus WHERE documentiid=idDocumento;
-
-	INSERT INTO documentiplus SET
+	
+	INSERT INTO documentiplus SET 
 		DocumentiId=idDocumento,
 		Assicurazione=0,
 		CalcolaAssicurazione=IF(pCostoAssicurazione>0,1,0),
 		Pagamento=0,
 		Spedizione=0;
-
+	
 	DELETE FROM carrello WHERE loginid=pLoginId;
 	SET DocumentoMemorizzato=ndoc;
-
-	INSERT INTO controllaArrotondamento SET
+	
+	INSERT INTO controllaArrotondamento SET 
 		DocumentiId=idDocumento;
-
+		
 	IF (pBuonoScontoTotale<0) THEN
 		INSERT INTO documentirighe SET
 		DocumentiId=IdDocumento,
@@ -321,11 +349,10 @@ BEGIN
 		importo=prezzo,
 		Descrizione1=pBuonoScontoDescrizione,
 		tiporiga='D';
-
+		
 		/*INSERT INTO documentipie SET
 		DocumentiId=idDocumento,
 		TotSconto=pBuonoScontoTotale;*/
 	END IF;
     END$$
-
 DELIMITER ;

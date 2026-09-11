@@ -8162,6 +8162,15 @@ BEGIN
 	DECLARE causaleportoid INT(11) DEFAULT -1;
 	DECLARE causaleaspettoid INT(11) DEFAULT -1;
 	
+	DECLARE invFound INT DEFAULT 0;
+
+	DECLARE dtInventory CURSOR FOR
+	SELECT ArticoliId, TCId, SUM(Qnt)
+		FROM carrello
+		WHERE LoginId=pLoginId
+		GROUP BY ArticoliId, TCId
+		ORDER BY ArticoliId, TCId;
+
 	DECLARE dtRighe CURSOR FOR
 	SELECT id
 		FROM documentirighe
@@ -8177,6 +8186,30 @@ BEGIN
 		FROM vCarrello
 		WHERE loginId=pLoginId;
 	DECLARE CONTINUE HANDLER FOR SQLSTATE '02000' SET finito = 1;
+
+	SET finito=0;
+	OPEN dtInventory;
+	InventoryLoop: LOOP
+		FETCH dtInventory INTO pArticoliId,pTCId,pQnt;
+		IF finito=1 THEN LEAVE InventoryLoop; END IF;
+		SET invFound=1;
+		IF pArticoliId IS NULL OR pArticoliId<=0 OR pTCId IS NULL OR pQnt IS NULL OR pQnt<=0 THEN
+			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='ORDER_INVENTORY_INVALID';
+		END IF;
+		UPDATE articoli_giacenze
+		SET Impegnata=COALESCE(Impegnata,0)+pQnt
+		WHERE MagazziniId=1
+		  AND ArticoliId=pArticoliId
+		  AND TCId=pTCId
+		  AND COALESCE(Giacenza,0)-COALESCE(Impegnata,0)>=pQnt;
+		IF ROW_COUNT()<>1 THEN
+			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='ORDER_INVENTORY_UNAVAILABLE';
+		END IF;
+	END LOOP;
+	CLOSE dtInventory;
+	IF invFound=0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='ORDER_INVENTORY_EMPTY_CART';
+	END IF;
 	
 	OPEN dtCarrello;
 	FETCH dtCarrello INTO pArticoliId,pTCId,pEan,pCodice,pDescrizione1,pdescrizione2,pPeso,pUmId,pQnt,pnListino,pPrezzo,parIva,parValoreIva,pImporto,pImportoIvato,pProdottoGratis,pDescrizioneIvaRC,pIdIvaRC,pValoreIvaRC,pidEsenzioneIva,pValoreEsenzioneIva,pDescrizioneEsenzioneIva;
@@ -8306,10 +8339,6 @@ BEGIN
 			END IF;
 			SET totsconto=0;
 			SET totiva=totiva+IF((pUtenteAbilitatoRC=1) AND (pIdIvaRC>-1),pImporto*pValoreIvaRC/100,IF(pidEsenzioneIva>-1,pImporto*pValoreEsenzioneIva/100,pImporto*parValoreIva/100));
-		IF impegna=1 THEN 
-			UPDATE articoli_giacenze SET impegnata=impegnata+pQnt WHERE ArticoliId=pArticoliId AND TCId=pTCId;
-		END IF;
-		
 		SET finito=0;
 		FETCH dtCarrello INTO pArticoliId,pTCId,pEan,pCodice,pDescrizione1,pdescrizione2,pPeso,pUmId,pQnt,pnListino,pPrezzo,parIva,parValoreIva,pImporto,pImportoIvato,pProdottoGratis,pDescrizioneIvaRC,pIdIvaRC,pValoreIvaRC,pidEsenzioneIva,pValoreEsenzioneIva,pDescrizioneEsenzioneIva;
         UNTIL finito=1
