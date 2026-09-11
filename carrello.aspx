@@ -362,6 +362,10 @@
                 <asp:Literal ID="litCartPriceRevalidation" runat="server" />
             </asp:Panel>
 
+            <asp:Panel ID="pnlOrderInventoryAvailability" runat="server" CssClass="ks-alert ks-alert-danger ks-order-inventory-alert" Visible="false" role="alert" aria-live="assertive">
+                <asp:Literal ID="litOrderInventoryAvailability" runat="server" />
+            </asp:Panel>
+
             <asp:Panel ID="pnlLoginRequired" runat="server" ClientIDMode="Static" CssClass="ks-cart-message ks-cart-message-login" Visible="false" tabindex="-1">
                 <div class="ks-cart-message-icon">
                     <i class="icon-user"></i>

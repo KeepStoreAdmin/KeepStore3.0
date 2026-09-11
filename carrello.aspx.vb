@@ -685,6 +685,19 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         Session(CartPriceRevalidationHelper.SessionChangedKey) = Nothing
     End Sub
 
+    Private Sub ShowOrderInventoryAvailabilityMessage()
+        If pnlOrderInventoryAvailability Is Nothing OrElse litOrderInventoryAvailability Is Nothing Then Return
+
+        Dim message As String = ""
+        If Session(OrderInventoryAvailabilityService.SessionMessageKey) IsNot Nothing Then
+            message = Convert.ToString(Session(OrderInventoryAvailabilityService.SessionMessageKey))
+        End If
+
+        pnlOrderInventoryAvailability.Visible = Not String.IsNullOrWhiteSpace(message)
+        litOrderInventoryAvailability.Text = HttpUtility.HtmlEncode(message)
+        Session(OrderInventoryAvailabilityService.SessionMessageKey) = Nothing
+    End Sub
+
     Private Function GetOrderNotesText() As String
         If txtNoteSpedizione Is Nothing OrElse txtNoteSpedizione.Text Is Nothing Then Return ""
         Return txtNoteSpedizione.Text
@@ -1848,6 +1861,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         ApplyCheckoutStepUi()
     End If
     ShowCartPriceRevalidationMessage()
+    ShowOrderInventoryAvailabilityMessage()
     StabilizeCartAddressEditUi()
     End Sub
 

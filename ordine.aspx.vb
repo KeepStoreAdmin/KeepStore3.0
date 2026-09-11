@@ -475,7 +475,12 @@ End If
                     End Using
                 End Using
 
-                Using cmd As New MySqlCommand("Carrello_Documento", conn, trns)
+                ' Reserve warehouse-1 inventory before the versioned document
+                ' procedure runs.  Both operations use this same connection and
+                ' transaction and never commit independently.
+                OrderInventoryAvailabilityService.ReserveCurrentCart(conn, trns, Convert.ToInt32(LoginId))
+
+                Using cmd As New MySqlCommand("Carrello_Documento_InventoryV1", conn, trns)
                     cmd.CommandType = CommandType.StoredProcedure
 
                     cmd.Parameters.AddWithValue("?pLoginId", LoginId)
@@ -708,6 +713,22 @@ End If
                         System.Diagnostics.Trace.TraceError("ordine.aspx rollback logging failed. Error type: " & logError.GetType().Name & ".")
                     End Try
                 End Try
+
+                If TypeOf ex Is OrderInventoryAvailabilityException Then
+                    Session(OrderInventoryAvailabilityService.SessionMessageKey) = ex.Message
+                    Me.SafeRedirect("carrello.aspx?stockerror=1")
+                    Return
+                End If
+
+                Dim missingInventoryProcedure As MySqlException = TryCast(ex, MySqlException)
+                If missingInventoryProcedure IsNot Nothing AndAlso
+                   (missingInventoryProcedure.Number = 1305 OrElse
+                    (missingInventoryProcedure.Message IsNot Nothing AndAlso
+                     missingInventoryProcedure.Message.IndexOf("cannot be found", StringComparison.OrdinalIgnoreCase) >= 0)) Then
+                    Session(OrderInventoryAvailabilityService.SessionMessageKey) = OrderInventoryAvailabilityService.TechnicalErrorMessage
+                    Me.SafeRedirect("carrello.aspx?stockerror=1")
+                    Return
+                End If
 
                 Me.Panel1.Visible = False
                 Me.Panel2.Visible = True
