@@ -1,22 +1,30 @@
+USE `taikun`;
+SELECT
+    DATABASE() AS DatabaseSelezionato,
+    CASE
+        WHEN DATABASE() = 'taikun' THEN 'OK'
+        ELSE 'STOP'
+    END AS EsitoDatabase;
+
 -- ORDER-INVENTORY-ATOMIC-RESERVATION-1A
 -- Apply only after reviewing the read-only pre-check below.
 -- Both pre-check result sets must be empty before continuing.  CREATE PROCEDURE
 -- itself is intentionally non-replacing: an existing web V1 aborts the script.
 SELECT ROUTINE_NAME AS UnexpectedExistingProcedure
 FROM information_schema.routines
-WHERE ROUTINE_SCHEMA = DATABASE()
+WHERE ROUTINE_SCHEMA = 'taikun'
   AND ROUTINE_NAME = 'Carrello_Documento_WebV1';
 
 SELECT 'Carrello_Documento' AS MissingHistoricalProcedure
 WHERE NOT EXISTS (
     SELECT 1
     FROM information_schema.routines
-    WHERE ROUTINE_SCHEMA = DATABASE()
+    WHERE ROUTINE_SCHEMA = 'taikun'
       AND ROUTINE_NAME = 'Carrello_Documento'
 );
 
 DELIMITER $$
-CREATE PROCEDURE `Carrello_Documento_WebV1`(IN pLoginId INT(11),
+CREATE PROCEDURE `taikun`.`Carrello_Documento_WebV1`(IN pLoginId INT(11),
 IN pTipoDoc INT(11), IN pTipoPagamento INT(11), IN pVettore INT(11), IN pUtentiInirizzoId INT(11),
  IN pCostoAssicurazione DOUBLE(15,5), IN pCostoSpedizione DOUBLE(15,5), IN pArrotondamento DOUBLE(15,5),
  IN pCostoPagamento DOUBLE(15,5), IN pNoteSpedizione VARCHAR(255), IN pUtenteAbilitatoRC INT(1), IN pIvaVettore DOUBLE(15,5), IN pStatiId INT(11),
