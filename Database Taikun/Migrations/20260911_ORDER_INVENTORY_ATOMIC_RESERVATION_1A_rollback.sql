@@ -3,6 +3,6 @@
 SELECT ROUTINE_NAME AS ProcedureToRemove
 FROM information_schema.routines
 WHERE ROUTINE_SCHEMA = DATABASE()
-  AND ROUTINE_NAME = 'Carrello_Documento_InventoryV1';
+  AND ROUTINE_NAME = 'Carrello_Documento_WebV1';
 
-DROP PROCEDURE `Carrello_Documento_InventoryV1`;
+DROP PROCEDURE `Carrello_Documento_WebV1`;

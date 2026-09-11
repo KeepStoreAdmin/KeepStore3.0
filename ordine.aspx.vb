@@ -475,12 +475,12 @@ End If
                     End Using
                 End Using
 
-                ' Reserve warehouse-1 inventory before the versioned document
-                ' procedure runs.  Both operations use this same connection and
+                ' Reserve warehouse-1 inventory before the web-only document
+                ' procedure runs. Both operations use this same connection and
                 ' transaction and never commit independently.
                 OrderInventoryAvailabilityService.ReserveCurrentCart(conn, trns, Convert.ToInt32(LoginId))
 
-                Using cmd As New MySqlCommand("Carrello_Documento_InventoryV1", conn, trns)
+                Using cmd As New MySqlCommand("Carrello_Documento_WebV1", conn, trns)
                     cmd.CommandType = CommandType.StoredProcedure
 
                     cmd.Parameters.AddWithValue("?pLoginId", LoginId)
