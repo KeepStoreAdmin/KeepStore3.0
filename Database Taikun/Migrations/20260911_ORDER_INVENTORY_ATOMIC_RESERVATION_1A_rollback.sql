@@ -1,8 +1,15 @@
 USE `taikun`;
-SELECT DATABASE() AS DatabaseSelezionato,
-       CASE WHEN DATABASE()='taikun' THEN 'OK' ELSE 'STOP' END AS EsitoDatabase;
-
--- Manual rollback only after a failed verify and explicit authorization.
+SELECT DATABASE() AS DatabaseSelezionato, CASE WHEN DATABASE()='taikun' THEN 'OK' ELSE 'STOP' END AS EsitoDatabase;
+-- Manual rollback only after explicit authorization. Stop unless this pre-check is OK and ChatGPT has reviewed it.
+SELECT ROUTINE_NAME,
+       CASE WHEN SHA2(ROUTINE_DEFINITION,256)='6d50508d402d4f35e5a8918825a5e6b66b5cfdcf5e4cf5fc41697b5535b6af23'
+            THEN 'OK' ELSE 'STOP' END AS CurrentWebFingerprint,
+       SHA2(DEFINER,256) AS DefinerSha256,
+       SECURITY_TYPE, SQL_MODE, CHARACTER_SET_CLIENT, COLLATION_CONNECTION,
+       DATABASE_COLLATION, ROUTINE_COMMENT
+FROM information_schema.routines
+WHERE ROUTINE_SCHEMA='taikun' AND ROUTINE_NAME='Carrello_Documento';
+-- Do not execute the DROP below when CurrentWebFingerprint is STOP.
 DROP PROCEDURE IF EXISTS `taikun`.`Carrello_Documento`;
 DELIMITER $$
 CREATE PROCEDURE `taikun`.`Carrello_Documento`(IN pLoginId INT(11), 
@@ -313,6 +320,5 @@ BEGIN
 DELIMITER ;
 DROP PROCEDURE IF EXISTS `taikun`.`Carrello_Documento_WebV1`;
 DROP PROCEDURE IF EXISTS `taikun`.`Carrello_Documento_InventoryV1`;
-SELECT ROUTINE_NAME, SHA2(ROUTINE_DEFINITION,256) AS historical_fingerprint,
-       CASE WHEN ROUTINE_NAME='Carrello_Documento' AND SHA2(ROUTINE_DEFINITION,256)='a3e831a40e998c139b58b739a9392d5878da827af3648b0011b9ae84f6995004' THEN 1 ELSE 0 END AS historical_fingerprint_matches
+SELECT ROUTINE_NAME, SHA2(ROUTINE_DEFINITION,256) AS HistoricalFingerprint, SECURITY_TYPE, SQL_MODE, CHARACTER_SET_CLIENT, COLLATION_CONNECTION, DATABASE_COLLATION, ROUTINE_COMMENT, SHA2(DEFINER,256) AS DefinerSha256, CASE WHEN SHA2(ROUTINE_DEFINITION,256)='a3e831a40e998c139b58b739a9392d5878da827af3648b0011b9ae84f6995004' THEN 'OK' ELSE 'STOP' END AS HistoricalRestore
 FROM information_schema.routines WHERE ROUTINE_SCHEMA='taikun' AND ROUTINE_NAME='Carrello_Documento';

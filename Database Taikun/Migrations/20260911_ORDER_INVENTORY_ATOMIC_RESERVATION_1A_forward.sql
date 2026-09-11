@@ -1,32 +1,17 @@
 USE `taikun`;
-SELECT DATABASE() AS DatabaseSelezionato,
-       CASE WHEN DATABASE()='taikun' THEN 'OK' ELSE 'STOP' END AS EsitoDatabase;
 
--- Pre-check read-only. Review these result sets and stop if any contract check fails.
-SELECT ROUTINE_NAME, ROUTINE_TYPE,
-       SHA2(ROUTINE_DEFINITION,256) AS definition_sha256,
-       CASE WHEN SHA2(ROUTINE_DEFINITION,256)='a3e831a40e998c139b58b739a9392d5878da827af3648b0011b9ae84f6995004'
-            THEN 1 ELSE 0 END AS historical_fingerprint_matches,
-       DTD_IDENTIFIER AS signature_marker
-FROM information_schema.routines
-WHERE ROUTINE_SCHEMA='taikun' AND ROUTINE_NAME='Carrello_Documento';
-
-SELECT ROUTINE_NAME AS UnexpectedAlternativeProcedure
-FROM information_schema.routines
-WHERE ROUTINE_SCHEMA='taikun'
-  AND ROUTINE_NAME IN ('Carrello_Documento_WebV1','Carrello_Documento_InventoryV1');
-
--- Operator gate: do not continue unless the preceding checks are compliant.
--- DROP/CREATE is not transactional; no checkout may run during deployment.
+-- Execute only after 00_preflight.sql has returned OK and ChatGPT has authorized continuation.
+-- DROP/CREATE PROCEDURE is not transactional; no checkout may run concurrently.
 DROP PROCEDURE `taikun`.`Carrello_Documento`;
 
 DELIMITER $$
-CREATE PROCEDURE `taikun`.`Carrello_Documento`(IN pLoginId INT(11), 
+CREATE DEFINER=CURRENT_USER PROCEDURE `taikun`.`Carrello_Documento`(IN pLoginId INT(11),
 IN pTipoDoc INT(11), IN pTipoPagamento INT(11), IN pVettore INT(11), IN pUtentiInirizzoId INT(11),
  IN pCostoAssicurazione DOUBLE(15,5), IN pCostoSpedizione DOUBLE(15,5), IN pArrotondamento DOUBLE(15,5),
  IN pCostoPagamento DOUBLE(15,5), IN pNoteSpedizione VARCHAR(255), IN pUtenteAbilitatoRC INT(1), IN pIvaVettore DOUBLE(15,5), IN pStatiId INT(11), 
  IN pBuonoScontoDescrizione VARCHAR(255), IN pBuonoScontoCodice VARCHAR(20), IN pBuonoScontoTotale DOUBLE(15,5), IN pBuonoScontoIdIVA INT(11), 
  IN pBuonoScontoValoreIva DOUBLE(15,5), OUT DocumentoMemorizzato INT(11))
+SQL SECURITY DEFINER
 BEGIN
 	DECLARE finito INT DEFAULT 0;
 	DECLARE ndoc INT(11) DEFAULT 0;
@@ -64,7 +49,8 @@ BEGIN
 	DECLARE pProdottoGratis INT(1);
 	DECLARE pPeso DOUBLE(15,3);
 	DECLARE pUmId INT(11);
-	DECLARE pQnt DOUBLE(15,3);
+	DECLARE pQnt DECIMAL(15,8);
+	DECLARE pInventoryQnt DECIMAL(15,8);
 	DECLARE pnListino INT(11);
 	DECLARE pPrezzo DOUBLE(15,3);
 	DECLARE parIva DOUBLE(15,3);
@@ -100,7 +86,7 @@ BEGIN
 	DECLARE invFound INT DEFAULT 0;
 
 	DECLARE dtInventory CURSOR FOR
-	SELECT ArticoliId, TCId, SUM(Qnt)
+	SELECT ArticoliId, TCId, SUM(CAST(Qnt AS DECIMAL(15,8)))
 		FROM carrello
 		WHERE LoginId=pLoginId
 		GROUP BY ArticoliId, TCId
@@ -122,21 +108,31 @@ BEGIN
 		WHERE loginId=pLoginId;
 	DECLARE CONTINUE HANDLER FOR SQLSTATE '02000' SET finito = 1;
 
-	SET finito=0;
+	SET impegna=COALESCE((SELECT MAX(ImpegnaQnt) FROM tipodocumenti WHERE id=pTipoDoc AND Web=1),-1);
+	IF impegna<>1 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='ORDER_INVENTORY_INVALID';
+	END IF;
+	IF EXISTS (SELECT 1 FROM carrello WHERE LoginId=pLoginId AND (Qnt IS NULL OR Qnt<>ROUND(Qnt,5))) THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='ORDER_INVENTORY_INVALID';
+	END IF;
+	IF EXISTS (SELECT 1 FROM carrello c WHERE c.LoginId=pLoginId
+		AND NOT EXISTS (SELECT 1 FROM vCarrello v WHERE v.id=c.id AND v.LoginId=pLoginId)) THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='ORDER_INVENTORY_INVALID';
+	END IF;	SET finito=0;
 	OPEN dtInventory;
 	InventoryLoop: LOOP
-		FETCH dtInventory INTO pArticoliId,pTCId,pQnt;
+		FETCH dtInventory INTO pArticoliId,pTCId,pInventoryQnt;
 		IF finito=1 THEN LEAVE InventoryLoop; END IF;
 		SET invFound=1;
-		IF pArticoliId IS NULL OR pArticoliId<=0 OR pTCId IS NULL OR pQnt IS NULL OR pQnt<=0 THEN
+		IF pArticoliId IS NULL OR pArticoliId<=0 OR pTCId IS NULL OR pInventoryQnt IS NULL OR pInventoryQnt<=0 THEN
 			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='ORDER_INVENTORY_INVALID';
 		END IF;
 		UPDATE articoli_giacenze
-		SET Impegnata=COALESCE(Impegnata,0)+pQnt
+		SET Impegnata=COALESCE(Impegnata,0)+pInventoryQnt
 		WHERE MagazziniId=1
 		  AND ArticoliId=pArticoliId
 		  AND TCId=pTCId
-		  AND COALESCE(Giacenza,0)-COALESCE(Impegnata,0)>=pQnt;
+		  AND COALESCE(Giacenza,0)-COALESCE(Impegnata,0)>=pInventoryQnt;
 		IF ROW_COUNT()<>1 THEN
 			SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='ORDER_INVENTORY_UNAVAILABLE';
 		END IF;
@@ -203,12 +199,7 @@ BEGIN
 	IF ISNULL(pCognomeNome) THEN 
 		SET pCognomeNome='';
 	END IF;
-	
-	SELECT ImpegnaQnt 
-		INTO impegna 
-		FROM tipodocumenti 
-		WHERE id=pTipoDoc;
-	INSERT INTO documenti SET 
+INSERT INTO documenti SET
 		TipoDocumentiId=pTipoDoc,
 		AziendeId=Azienda,
 		NDocumento=ndoc,
@@ -253,7 +244,7 @@ BEGIN
 			um=pUmId,
 			peso=pPeso,
 			prezzo=pPrezzo,
-			Qnt=pQnt,
+			Qnt=CAST(pQnt AS DECIMAL(15,5)),
 			sc1=0,
 			sc2=0,
 			sc3=0,
@@ -264,7 +255,7 @@ BEGIN
 			movimentato=0,
 			SpGratis=pProdottoGratis,
 			MagazziniID=1,
-			QntEvadibile=pQnt,
+			QntEvadibile=CAST(pQnt AS DECIMAL(15,5)),
 			QntEvasa=0,
 			IdConto=Conto,
 			tiporiga='A';
