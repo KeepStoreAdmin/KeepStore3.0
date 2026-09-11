@@ -2251,6 +2251,16 @@ Task consigliato separato per eventuale proseguimento:
 - Non esporre token o transaction id completi in UI/log/report.
 - Non confondere stato ordine con stato pagamento.
 
+## Chiusura CART-MOBILE-RESPONSIVE-UX-1A
+
+`CART-MOBILE-RESPONSIVE-UX-1A` è chiuso con esito A su `frontend-rebuild`, checkpoint `4e1c84a7f0d3528e6479b1b5e2fa6604a8649423`, PR #249 integrata fast-forward con un commit e zero merge commit. Il manifest runtime effettivo è `Public/assets/keepstore/css/cart-ui.css` e `Public/ui/controls/MiniCart.ascx`.
+
+Contratto visuale: desktop 1365×900 mantiene la tabella; tablet 768×1024 e mobile 390×844/360×800 usano card/grid con ordine immagine, titolo, disponibilità/promozione, prezzo, quantità, totale e rimozione. Etichette Prezzo/Quantità/Totale, riepilogo e CTA full-width mobile, MiniCart coerente ONSUS, immagine senza stile inline, target touch 44×44 e focus/naming accessibile sono verificati senza overflow. Sul desktop restano 36×48 per rimozione e 30×30 per quantità, scelta di densità puntatore e non blocker.
+
+L’audit `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta chiuso con esito E, implementazione differita e nessun DDL: Session/InProc conserva rischi su recycle e topologie multi-nodo. Recesso digitale e Coupon/Groupon restano differiti dal Product Owner.
+
+Roadmap corrente: prossimo task raccomandato `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` solo dopo conferma topologia/decisione infrastrutturale; seguono mobile UX residua, touch target desktop touch eventuale e audit monetari. Ordine/documento, AntiCsrfPage, Delcarrello, promo ambigua, Coupon/Groupon e recesso sono separati o differiti.
+
 ## Chiusura CART-REMOVE-TRANSACTION-HARDENING-1A
 
 Chiusura A registrata con PR #247, integrata fast-forward in `frontend-rebuild` al checkpoint `2e3384a6a72d06b5cd090e4030d2548d96e4b165` (base `e7834f42eff4c5b11b39bae59780e88863c6e2bf`). Un commit integrato, zero merge commit. Remove/clear sono owner-scoped, transazionali, idempotenti e protetti da CSRF e same-origin; GET non muta. Smoke anonimo/autenticato, retry/rollback, concorrenza, 21906, checkout non distruttivo, viewport, precompile, diff-check e secret scan superati; fixture ripristinate. Il pulsante Svuota non è renderizzato a carrello vuoto: il no-op è stato verificato prima del merge, senza regressione.
