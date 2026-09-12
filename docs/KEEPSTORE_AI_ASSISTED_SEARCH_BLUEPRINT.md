@@ -463,3 +463,5 @@ Checkpoint mobile cart: `CART-MOBILE-RESPONSIVE-UX-1A` chiuso A con PR #249 e HE
 Database-per-cliente con schema canonico condiviso. Nessuna nuova stored procedure, migrazione o modifica schema può essere considerata completata se non comprende sia l’upgrade dei database esistenti sia il provisioning automatico dei nuovi database.
 
 Guardrail: niente nomi database hardcoded nella logica canonica, DryRun prima di ogni applicazione, preflight read-only globale, backup/rollback per cliente e report senza credenziali o identificativi sensibili.
+
+La compatibilità strutturale non costituisce autorizzazione al deployment. L’allowlist dei database destinatari è stabilita esclusivamente dal Product Owner.

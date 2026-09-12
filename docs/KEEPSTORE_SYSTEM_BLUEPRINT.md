@@ -1815,3 +1815,5 @@ Quando si lavora su login, registrazione, utenti, indirizzi o documenti, verific
 Database-per-cliente con schema canonico condiviso. Nessuna nuova stored procedure, migrazione o modifica schema può essere considerata completata se non comprende sia l’upgrade dei database esistenti sia il provisioning automatico dei nuovi database.
 
 La definizione canonica usa tabelle non qualificate; l’installer qualifica soltanto la routine nel database validato, preservando DEFINER, SQL SECURITY, SQL_MODE, charset/collation e privilegi per ciascun cliente. Il rollout è DryRun di default, richiede `-Apply` e conferma locale, esegue preflight globale, verifica immediata e rollback isolato in caso di errore.
+
+La compatibilità strutturale non costituisce autorizzazione al deployment. L’allowlist dei database destinatari è stabilita esclusivamente dal Product Owner.

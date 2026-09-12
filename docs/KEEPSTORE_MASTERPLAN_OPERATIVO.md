@@ -2271,3 +2271,5 @@ Roadmap cart: `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`, `CART-MOBILE-RESPONSIVE-U
 Database-per-cliente con schema canonico condiviso. Nessuna nuova stored procedure, migrazione o modifica schema può essere considerata completata se non comprende sia l’upgrade dei database esistenti sia il provisioning automatico dei nuovi database.
 
 Ogni rollout DB deve essere ripetibile e verificabile per database, con preflight globale read-only, backup/rollback indipendente, applicazione sequenziale e report sanitizzato. Il nome del database è un parametro di deployment e non deve essere hardcoded nel corpo canonico della procedura.
+
+La compatibilità strutturale non costituisce autorizzazione al deployment. L’allowlist dei database destinatari è stabilita esclusivamente dal Product Owner.
