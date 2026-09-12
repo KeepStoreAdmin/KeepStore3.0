@@ -9,7 +9,7 @@ SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
 DROP PROCEDURE `taikun`.`Carrello_Documento`;
 
 DELIMITER $$
-CREATE DEFINER=__KEEPSTORE_HISTORICAL_DEFINER__ PROCEDURE `taikun`.`Carrello_Documento`(IN pLoginId INT(11),
+CREATE DEFINER=__KEEPSTORE_HISTORICAL_DEFINER__ PROCEDURE `Carrello_Documento`(IN pLoginId INT(11),
 IN pTipoDoc INT(11), IN pTipoPagamento INT(11), IN pVettore INT(11), IN pUtentiInirizzoId INT(11),
  IN pCostoAssicurazione DOUBLE(15,5), IN pCostoSpedizione DOUBLE(15,5), IN pArrotondamento DOUBLE(15,5),
  IN pCostoPagamento DOUBLE(15,5), IN pNoteSpedizione VARCHAR(255), IN pUtenteAbilitatoRC INT(1), IN pIvaVettore DOUBLE(15,5), IN pStatiId INT(11), 
