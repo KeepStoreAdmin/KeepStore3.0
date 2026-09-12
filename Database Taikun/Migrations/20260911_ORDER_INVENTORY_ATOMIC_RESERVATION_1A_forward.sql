@@ -1,11 +1,15 @@
 USE `taikun`;
 
+-- TEMPLATE: the historical DEFINER token is replaced only by the local generator.
+SET @KeepStoreInitialSqlMode := @@SESSION.sql_mode;
+SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
+
 -- Execute only after 00_preflight.sql has returned OK and ChatGPT has authorized continuation.
 -- DROP/CREATE PROCEDURE is not transactional; no checkout may run concurrently.
 DROP PROCEDURE `taikun`.`Carrello_Documento`;
 
 DELIMITER $$
-CREATE DEFINER=CURRENT_USER PROCEDURE `taikun`.`Carrello_Documento`(IN pLoginId INT(11),
+CREATE DEFINER=__KEEPSTORE_HISTORICAL_DEFINER__ PROCEDURE `taikun`.`Carrello_Documento`(IN pLoginId INT(11),
 IN pTipoDoc INT(11), IN pTipoPagamento INT(11), IN pVettore INT(11), IN pUtentiInirizzoId INT(11),
  IN pCostoAssicurazione DOUBLE(15,5), IN pCostoSpedizione DOUBLE(15,5), IN pArrotondamento DOUBLE(15,5),
  IN pCostoPagamento DOUBLE(15,5), IN pNoteSpedizione VARCHAR(255), IN pUtenteAbilitatoRC INT(1), IN pIvaVettore DOUBLE(15,5), IN pStatiId INT(11), 
@@ -347,3 +351,5 @@ INSERT INTO documenti SET
 	END IF;
     END$$
 DELIMITER ;
+SET SESSION sql_mode=@KeepStoreInitialSqlMode;
+SELECT CASE WHEN @@SESSION.sql_mode <=> @KeepStoreInitialSqlMode THEN 'OK' ELSE 'STOP' END AS SessionSqlModeRestored;

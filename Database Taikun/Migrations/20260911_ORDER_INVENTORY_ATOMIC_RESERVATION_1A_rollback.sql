@@ -1,5 +1,7 @@
 USE `taikun`;
 SELECT DATABASE() AS DatabaseSelezionato, CASE WHEN DATABASE()='taikun' THEN 'OK' ELSE 'STOP' END AS EsitoDatabase;
+SET @KeepStoreInitialSqlMode := @@SESSION.sql_mode;
+SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
 -- Manual rollback only after explicit authorization. Stop unless this pre-check is OK and ChatGPT has reviewed it.
 SELECT ROUTINE_NAME,
        CASE WHEN SHA2(ROUTINE_DEFINITION,256)='6d50508d402d4f35e5a8918825a5e6b66b5cfdcf5e4cf5fc41697b5535b6af23'
@@ -12,7 +14,7 @@ WHERE ROUTINE_SCHEMA='taikun' AND ROUTINE_NAME='Carrello_Documento';
 -- Do not execute the DROP below when CurrentWebFingerprint is STOP.
 DROP PROCEDURE IF EXISTS `taikun`.`Carrello_Documento`;
 DELIMITER $$
-CREATE PROCEDURE `taikun`.`Carrello_Documento`(IN pLoginId INT(11), 
+CREATE DEFINER=__KEEPSTORE_HISTORICAL_DEFINER__ PROCEDURE `carrello_Documento`(IN pLoginId INT(11),
 IN pTipoDoc INT(11), IN pTipoPagamento INT(11), IN pVettore INT(11), IN pUtentiInirizzoId INT(11),
  IN pCostoAssicurazione DOUBLE(15,5), IN pCostoSpedizione DOUBLE(15,5), IN pArrotondamento DOUBLE(15,5),
  IN pCostoPagamento DOUBLE(15,5), IN pNoteSpedizione VARCHAR(255), IN pUtenteAbilitatoRC INT(1), IN pIvaVettore DOUBLE(15,5), IN pStatiId INT(11), 
@@ -316,9 +318,13 @@ BEGIN
 		DocumentiId=idDocumento,
 		TotSconto=pBuonoScontoTotale;*/
 	END IF;
-    END$$
+    END
+$$
 DELIMITER ;
 DROP PROCEDURE IF EXISTS `taikun`.`Carrello_Documento_WebV1`;
 DROP PROCEDURE IF EXISTS `taikun`.`Carrello_Documento_InventoryV1`;
-SELECT ROUTINE_NAME, SHA2(ROUTINE_DEFINITION,256) AS HistoricalFingerprint, SECURITY_TYPE, SQL_MODE, CHARACTER_SET_CLIENT, COLLATION_CONNECTION, DATABASE_COLLATION, ROUTINE_COMMENT, SHA2(DEFINER,256) AS DefinerSha256, CASE WHEN SHA2(ROUTINE_DEFINITION,256)='a3e831a40e998c139b58b739a9392d5878da827af3648b0011b9ae84f6995004' THEN 'OK' ELSE 'STOP' END AS HistoricalRestore
+SELECT ROUTINE_NAME, SHA2(ROUTINE_DEFINITION,256) AS HistoricalFingerprint, SECURITY_TYPE, SQL_MODE, CHARACTER_SET_CLIENT, COLLATION_CONNECTION, DATABASE_COLLATION, ROUTINE_COMMENT, SHA2(DEFINER,256) AS DefinerSha256, CASE WHEN SHA2(ROUTINE_DEFINITION,256)='6689fd5206acabd453c5f631d52e08beaa4e9c6025f70fd9894034b5fd6122d2' THEN 'OK' ELSE 'STOP' END AS HistoricalRestore
 FROM information_schema.routines WHERE ROUTINE_SCHEMA='taikun' AND ROUTINE_NAME='Carrello_Documento';
+
+SET SESSION sql_mode=@KeepStoreInitialSqlMode;
+SELECT CASE WHEN @@SESSION.sql_mode <=> @KeepStoreInitialSqlMode THEN 'OK' ELSE 'STOP' END AS SessionSqlModeRestored;
