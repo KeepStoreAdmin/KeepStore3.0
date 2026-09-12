@@ -685,6 +685,23 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         Session(CartPriceRevalidationHelper.SessionChangedKey) = Nothing
     End Sub
 
+    Private Sub ShowOrderInventoryAvailabilityMessage()
+        If pnlOrderInventoryAvailability Is Nothing OrElse litOrderInventoryAvailability Is Nothing Then Return
+
+        Dim message As String = ""
+        If Session(OrderInventoryAvailabilityService.SessionMessageKey) IsNot Nothing Then
+            message = Convert.ToString(Session(OrderInventoryAvailabilityService.SessionMessageKey))
+        End If
+
+        pnlOrderInventoryAvailability.Visible = Not String.IsNullOrWhiteSpace(message)
+        litOrderInventoryAvailability.Text = HttpUtility.HtmlEncode(message).Replace(Environment.NewLine, "<br />")
+        Session(OrderInventoryAvailabilityService.SessionMessageKey) = Nothing
+
+        If pnlOrderInventoryAvailability.Visible Then
+            ScriptManager.RegisterStartupScript(Me, Me.GetType(), "focusOrderInventoryAvailability", "setTimeout(function(){var e=document.getElementById('pnlOrderInventoryAvailability');if(e){e.focus();}},0);", True)
+        End If
+    End Sub
+
     Private Function GetOrderNotesText() As String
         If txtNoteSpedizione Is Nothing OrElse txtNoteSpedizione.Text Is Nothing Then Return ""
         Return txtNoteSpedizione.Text
@@ -1848,6 +1865,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         ApplyCheckoutStepUi()
     End If
     ShowCartPriceRevalidationMessage()
+    ShowOrderInventoryAvailabilityMessage()
     StabilizeCartAddressEditUi()
     End Sub
 
@@ -3573,6 +3591,7 @@ SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
         Panel_BuoniSconto.Visible = showDiscountInput
         ApplyCartAddressEditorLock()
         BindCartRecentlyViewed()
+        Session(OrderInventoryAvailabilityService.SessionLineKeysKey) = Nothing
     End Sub
 
     'Restituisce 1, se il controllo Ã¨ andato a buon fine, altrimenti 0
@@ -5196,6 +5215,41 @@ Private Function SafeMoney(ByVal value As Object, Optional ByVal def As Double =
         Return def
     End Try
 End Function
+
+Private Function GetInventoryErrorKeys() As HashSet(Of String)
+    Dim result As New HashSet(Of String)(StringComparer.Ordinal)
+    Dim raw As String = ""
+    If Session(OrderInventoryAvailabilityService.SessionLineKeysKey) IsNot Nothing Then
+        raw = Convert.ToString(Session(OrderInventoryAvailabilityService.SessionLineKeysKey))
+    End If
+    If String.IsNullOrWhiteSpace(raw) Then Return result
+
+    For Each part As String In raw.Split("|"c)
+        Dim key As String = If(part, "").Trim()
+        If key <> "" Then result.Add(key)
+    Next
+    Return result
+End Function
+
+Protected Sub CartInventoryItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
+    If e Is Nothing OrElse e.Item Is Nothing Then Return
+    If e.Item.ItemType <> ListItemType.Item AndAlso e.Item.ItemType <> ListItemType.AlternatingItem Then Return
+
+    Dim errorKeys As HashSet(Of String) = GetInventoryErrorKeys()
+    If errorKeys.Count = 0 Then Return
+
+    Dim articleId As Integer = SafeInt(DataBinder.Eval(e.Item.DataItem, "ArticoliId"), 0)
+    Dim tcId As Integer = SafeInt(DataBinder.Eval(e.Item.DataItem, "TCId"), -1)
+    Dim key As String = articleId.ToString(CultureInfo.InvariantCulture) & ":" & tcId.ToString(CultureInfo.InvariantCulture)
+    If Not errorKeys.Contains(key) Then Return
+
+    Dim row As HtmlTableRow = TryCast(e.Item.FindControl("CartItemRow"), HtmlTableRow)
+    If row Is Nothing Then Return
+    row.Attributes("class") = "tf-cart-item ks-cart-inventory-error"
+    row.Attributes("style") = "background-color:#fff7f7;box-shadow:inset 4px 0 0 #e12825;"
+    row.Attributes("aria-describedby") = "pnlOrderInventoryAvailability"
+End Sub
+
     ' Gestisce OnItemDataBound="rPromo_ItemDataBound" dei repeater rPromo nei template
     Protected Sub rPromo_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
 

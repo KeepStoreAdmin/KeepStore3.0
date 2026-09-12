@@ -249,6 +249,41 @@ End Function
         SafeRedirect("carrello.aspx?addresserror=1")
     End Sub
 
+    Private Function TryReadInventoryFailureAfterRollback(ByVal conn As MySqlConnection,
+                                                            ByVal loginId As Long,
+                                                            ByRef message As String,
+                                                            ByRef lineKeys As String) As Boolean
+        message = ""
+        lineKeys = ""
+        If conn Is Nothing OrElse conn.State <> ConnectionState.Open OrElse loginId <= 0 Then Return False
+
+        Dim refreshTransaction As MySqlTransaction = Nothing
+        Try
+            refreshTransaction = conn.BeginTransaction(IsolationLevel.ReadCommitted)
+            OrderInventoryAvailabilityService.InspectCurrentCart(conn, refreshTransaction, Convert.ToInt32(loginId))
+            refreshTransaction.Rollback()
+            refreshTransaction.Dispose()
+            refreshTransaction = Nothing
+            Return False
+        Catch ex As OrderInventoryAvailabilityException
+            Try
+                If refreshTransaction IsNot Nothing Then refreshTransaction.Rollback()
+            Catch
+            End Try
+            If refreshTransaction IsNot Nothing Then refreshTransaction.Dispose()
+            message = ex.BuildUserMessage()
+            lineKeys = ex.BuildLineKeys()
+            Return True
+        Catch
+            Try
+                If refreshTransaction IsNot Nothing Then refreshTransaction.Rollback()
+            Catch
+            End Try
+            If refreshTransaction IsNot Nothing Then refreshTransaction.Dispose()
+            Return False
+        End Try
+    End Function
+
     Private Sub InitializeWebPaymentStatus(ByVal conn As MySqlConnection,
                                            ByVal trns As MySqlTransaction,
                                            ByVal documentiId As Integer,
@@ -474,6 +509,10 @@ End If
                         articoliIdGlobali = String.Join(",", tmp.ToArray())
                     End Using
                 End Using
+
+                ' Lock and inspect warehouse-1 availability before the canonical
+                ' procedure. The procedure remains the only reservation owner.
+                OrderInventoryAvailabilityService.InspectCurrentCart(conn, trns, Convert.ToInt32(LoginId))
 
                 Using cmd As New MySqlCommand("Carrello_Documento", conn, trns)
                     cmd.CommandType = CommandType.StoredProcedure
@@ -708,6 +747,31 @@ End If
                         System.Diagnostics.Trace.TraceError("ordine.aspx rollback logging failed. Error type: " & logError.GetType().Name & ".")
                     End Try
                 End Try
+                trns = Nothing
+
+                If TypeOf ex Is OrderInventoryAvailabilityException Then
+                    Dim availabilityError As OrderInventoryAvailabilityException = DirectCast(ex, OrderInventoryAvailabilityException)
+                    Session(OrderInventoryAvailabilityService.SessionMessageKey) = availabilityError.BuildUserMessage()
+                    Session(OrderInventoryAvailabilityService.SessionLineKeysKey) = availabilityError.BuildLineKeys()
+                    Me.SafeRedirect("carrello.aspx?stockerror=1")
+                    Return
+                End If
+
+                Dim canonicalInventoryFailure As MySqlException = TryCast(ex, MySqlException)
+                If canonicalInventoryFailure IsNot Nothing AndAlso
+                   canonicalInventoryFailure.Number = 1644 AndAlso
+                   canonicalInventoryFailure.Message IsNot Nothing AndAlso
+                   canonicalInventoryFailure.Message.IndexOf(OrderInventoryAvailabilityService.CanonicalProcedureSignalPrefix, StringComparison.OrdinalIgnoreCase) >= 0 Then
+                    Dim refreshedMessage As String = ""
+                    Dim refreshedLineKeys As String = ""
+                    If Not TryReadInventoryFailureAfterRollback(conn, LoginId, refreshedMessage, refreshedLineKeys) Then
+                        refreshedMessage = OrderInventoryAvailabilityService.TechnicalErrorMessage
+                    End If
+                    Session(OrderInventoryAvailabilityService.SessionMessageKey) = refreshedMessage
+                    Session(OrderInventoryAvailabilityService.SessionLineKeysKey) = refreshedLineKeys
+                    Me.SafeRedirect("carrello.aspx?stockerror=1")
+                    Return
+                End If
 
                 Me.Panel1.Visible = False
                 Me.Panel2.Visible = True

@@ -2266,3 +2266,10 @@ Roadmap corrente: prossimo task raccomandato `CART-IDEMPOTENCY-PERSISTENCE-AUDIT
 Chiusura A registrata con PR #247, integrata fast-forward in `frontend-rebuild` al checkpoint `2e3384a6a72d06b5cd090e4030d2548d96e4b165` (base `e7834f42eff4c5b11b39bae59780e88863c6e2bf`). Un commit integrato, zero merge commit. Remove/clear sono owner-scoped, transazionali, idempotenti e protetti da CSRF e same-origin; GET non muta. Smoke anonimo/autenticato, retry/rollback, concorrenza, 21906, checkout non distruttivo, viewport, precompile, diff-check e secret scan superati; fixture ripristinate. Il pulsante Svuota non è renderizzato a carrello vuoto: il no-op è stato verificato prima del merge, senza regressione.
 
 Roadmap cart: `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`, `CART-MOBILE-RESPONSIVE-UX-1A`, touch target rimozione 44×44, audit schema monetario DOUBLE. Recesso digitale e Coupon/Groupon restano differiti.
+## Regola permanente multi-database KeepStore
+
+Database-per-cliente con schema canonico condiviso. Nessuna nuova stored procedure, migrazione o modifica schema può essere considerata completata se non comprende sia l’upgrade dei database esistenti sia il provisioning automatico dei nuovi database.
+
+Ogni rollout DB deve essere ripetibile e verificabile per database, con preflight globale read-only, backup/rollback indipendente, applicazione sequenziale e report sanitizzato. Il nome del database è un parametro di deployment e non deve essere hardcoded nel corpo canonico della procedura.
+
+La compatibilità strutturale non costituisce autorizzazione al deployment. L’allowlist dei database destinatari è stabilita esclusivamente dal Product Owner.

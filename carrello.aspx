@@ -108,9 +108,9 @@
                     <tbody>
 
                         <!-- Sezione degli Articoli Spediti GRATIS -->
-                        <asp:Repeater ID="gvArticoliGratis" runat="server" DataSourceID="sdsArticoli_Spedizione_Gratis" OnItemCommand="gvArticoliGratis_ItemCommand">
+                        <asp:Repeater ID="gvArticoliGratis" runat="server" DataSourceID="sdsArticoli_Spedizione_Gratis" OnItemCommand="gvArticoliGratis_ItemCommand" OnItemDataBound="CartInventoryItemDataBound">
                             <ItemTemplate>
-                                <tr class="tf-cart-item">
+                                <tr id="CartItemRow" runat="server" class="tf-cart-item">
                                     <td class="tf-cart-item_product">
                                         <asp:HyperLink ID="HyperLink3" runat="server" CssClass="img-box" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCId") %>'>
                                             <asp:Image ID="Image2" runat="server" ImageUrl='<%# checkImg(Eval("img1")) %>' AlternateText="" />
@@ -222,9 +222,9 @@
                         </asp:Repeater>
 
                         <!-- Sezione degli Articoli normali, senza spedizione Gratis -->
-                        <asp:Repeater ID="Repeater1" runat="server" DataSourceID="sdsArticoli" OnItemCommand="Repeater1_ItemCommand">
+                        <asp:Repeater ID="Repeater1" runat="server" DataSourceID="sdsArticoli" OnItemCommand="Repeater1_ItemCommand" OnItemDataBound="CartInventoryItemDataBound">
                             <ItemTemplate>
-                                <tr class="tf-cart-item">
+                                <tr id="CartItemRow" runat="server" class="tf-cart-item">
                                     <td class="tf-cart-item_product">
                                         <asp:HyperLink ID="HyperLink3" runat="server" CssClass="img-box" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCId") %>'>
                                             <asp:Image ID="Image2" runat="server" ImageUrl='<%# checkImg(Eval("img1")) %>' AlternateText="" />
@@ -360,6 +360,10 @@
 
             <asp:Panel ID="pnlCartPriceRevalidation" runat="server" CssClass="ks-alert ks-alert-warning ks-price-revalidation-alert" Visible="false">
                 <asp:Literal ID="litCartPriceRevalidation" runat="server" />
+            </asp:Panel>
+
+            <asp:Panel ID="pnlOrderInventoryAvailability" runat="server" ClientIDMode="Static" CssClass="ks-alert ks-alert-danger ks-order-inventory-alert" Visible="false" role="alert" aria-live="assertive" tabindex="-1">
+                <asp:Literal ID="litOrderInventoryAvailability" runat="server" />
             </asp:Panel>
 
             <asp:Panel ID="pnlLoginRequired" runat="server" ClientIDMode="Static" CssClass="ks-cart-message ks-cart-message-login" Visible="false" tabindex="-1">

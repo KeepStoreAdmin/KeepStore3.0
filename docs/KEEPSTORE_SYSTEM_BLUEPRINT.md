@@ -1810,3 +1810,10 @@ Regola pratica:
 Se un task cambia una pagina, un flow, una tabella, un componente condiviso, una policy di sicurezza o una integrazione, il blueprint deve essere aggiornato o esplicitamente marcato come non impattato nel report del task.
 
 Quando si lavora su login, registrazione, utenti, indirizzi o documenti, verificare se l'impatto riguarda anche il gestionale e i database condivisi. Quando si lavora sulla registrazione, considerare sempre il registry `city_registry`. Quando si lavora su configurazione clienti/aziende, indirizzamento gestionale o multi-tenant, considerare sempre il registry `connessioni`.
+## Standard multi-database delle stored procedure
+
+Database-per-cliente con schema canonico condiviso. Nessuna nuova stored procedure, migrazione o modifica schema può essere considerata completata se non comprende sia l’upgrade dei database esistenti sia il provisioning automatico dei nuovi database.
+
+La definizione canonica usa tabelle non qualificate; l’installer qualifica soltanto la routine nel database validato, preservando DEFINER, SQL SECURITY, SQL_MODE, charset/collation e privilegi per ciascun cliente. Il rollout è DryRun di default, richiede `-Apply` e conferma locale, esegue preflight globale, verifica immediata e rollback isolato in caso di errore.
+
+La compatibilità strutturale non costituisce autorizzazione al deployment. L’allowlist dei database destinatari è stabilita esclusivamente dal Product Owner.
