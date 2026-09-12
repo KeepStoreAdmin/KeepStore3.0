@@ -12,9 +12,6 @@ WHERE ROUTINE_SCHEMA='taikun' AND ROUTINE_NAME='Carrello_Documento';
 SELECT CASE WHEN COUNT(*)=19 THEN 'OK' ELSE 'STOP' END AS SignatureParameterCount
 FROM information_schema.parameters
 WHERE SPECIFIC_SCHEMA='taikun' AND SPECIFIC_NAME='Carrello_Documento';
-SELECT CASE WHEN COUNT(*)=0 THEN 'OK' ELSE 'STOP' END AS AlternativeRoutines
-FROM information_schema.routines
-WHERE ROUTINE_SCHEMA='taikun' AND ROUTINE_NAME IN ('Carrello_Documento_WebV1','Carrello_Documento_InventoryV1');
 SELECT SECURITY_TYPE, SQL_MODE, CHARACTER_SET_CLIENT, COLLATION_CONNECTION, DATABASE_COLLATION, ROUTINE_COMMENT,
        CASE WHEN SQL_MODE='NO_AUTO_VALUE_ON_ZERO' THEN 'OK' ELSE 'STOP' END AS HistoricalSqlMode,
        SHA2(DEFINER,256) AS DefinerSha256

@@ -458,3 +458,8 @@ Questa blueprint non implementa AI, chatbot, endpoint, DB, UI runtime o correzio
 Checkpoint cart: `CART-REMOVE-TRANSACTION-HARDENING-1A` chiuso A con PR #247 e HEAD `2e3384a6a72d06b5cd090e4030d2548d96e4b165`; remove/clear restano server-side, owner-scoped e idempotenti, senza impatto su search, ranking o AI. Il prossimo audit è `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`; mobile UX e audit monetario seguono. Recesso digitale e Coupon/Groupon restano differiti.
 
 Checkpoint mobile cart: `CART-MOBILE-RESPONSIVE-UX-1A` chiuso A con PR #249 e HEAD `4e1c84a7f0d3528e6479b1b5e2fa6604a8649423`. Il carrello usa card/grid sui viewport touch e conserva la tabella desktop; target 44×44, gerarchia MiniCart ONSUS, accessibilità e assenza di overflow sono verificati. Questo è solo un guardrail storefront: nessun impatto su search, ranking, feed, LLMS, JSON-LD o runtime AI. L’audit di idempotenza persistente resta E/differito e non è risolto.
+## Checkpoint multi-database
+
+Database-per-cliente con schema canonico condiviso. Nessuna nuova stored procedure, migrazione o modifica schema può essere considerata completata se non comprende sia l’upgrade dei database esistenti sia il provisioning automatico dei nuovi database.
+
+Guardrail: niente nomi database hardcoded nella logica canonica, DryRun prima di ogni applicazione, preflight read-only globale, backup/rollback per cliente e report senza credenziali o identificativi sensibili.

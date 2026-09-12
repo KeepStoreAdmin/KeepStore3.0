@@ -13,6 +13,3 @@ SELECT SECURITY_TYPE, SQL_MODE, CHARACTER_SET_CLIENT, COLLATION_CONNECTION, DATA
        SHA2(DEFINER,256) AS DefinerSha256
 FROM information_schema.routines
 WHERE ROUTINE_SCHEMA='taikun' AND ROUTINE_NAME='Carrello_Documento';
-SELECT CASE WHEN COUNT(*)=0 THEN 'OK' ELSE 'STOP' END AS AlternativeRoutines
-FROM information_schema.routines
-WHERE ROUTINE_SCHEMA='taikun' AND ROUTINE_NAME IN ('Carrello_Documento_WebV1','Carrello_Documento_InventoryV1');

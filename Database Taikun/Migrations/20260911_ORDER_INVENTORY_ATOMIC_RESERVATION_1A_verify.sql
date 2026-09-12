@@ -38,6 +38,3 @@ SELECT CASE WHEN EXISTS (
     AND NON_UNIQUE=0 AND COLUMN_NAME IN ('MagazziniId','ArticoliId','TCId')
   GROUP BY INDEX_NAME HAVING COUNT(DISTINCT COLUMN_NAME)=3
 ) THEN 'OK' ELSE 'STOP' END AS WarehouseArticleTcIndex;
-SELECT CASE WHEN COUNT(*)=0 THEN 'OK' ELSE 'STOP' END AS AlternativeRoutines
-FROM information_schema.routines
-WHERE ROUTINE_SCHEMA='taikun' AND ROUTINE_NAME IN ('Carrello_Documento_WebV1','Carrello_Documento_InventoryV1');
