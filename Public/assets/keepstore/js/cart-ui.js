@@ -1,5 +1,21 @@
 // KeepStore UI: Qty stepper for cart page (no jQuery dependency)
 (function () {
+    var cartPage = document.querySelector('.ks-cart-page');
+    if (cartPage) {
+        var refreshKey = 'KeepStore:cart-bfcache-refresh:' + window.location.pathname;
+        window.addEventListener('pageshow', function (event) {
+            if (!event.persisted && !(window.performance && window.performance.getEntriesByType &&
+                window.performance.getEntriesByType('navigation')[0] &&
+                window.performance.getEntriesByType('navigation')[0].type === 'back_forward')) return;
+            if (window.sessionStorage && window.sessionStorage.getItem(refreshKey) === window.location.href) {
+                window.sessionStorage.removeItem(refreshKey);
+                return;
+            }
+            if (window.sessionStorage) window.sessionStorage.setItem(refreshKey, window.location.href);
+            window.location.reload();
+        });
+    }
+
     function clamp(n, min, max) {
         if (isNaN(n)) return min;
         return Math.min(max, Math.max(min, n));

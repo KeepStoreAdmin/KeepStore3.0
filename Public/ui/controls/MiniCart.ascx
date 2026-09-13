@@ -22,12 +22,12 @@
 
             <asp:Repeater ID="rptMiniCart" runat="server">
                 <ItemTemplate>
-                    <div class="d-flex gap-3 align-items-start py-2 border-bottom">
-                        <a class="flex-shrink-0" href='<%# GetProductUrl(Eval("ArticoliId"), Eval("TCId")) %>' aria-label="Vai al prodotto">
+                    <div class="d-flex gap-3 align-items-start py-2 border-bottom ks-mini-cart-item">
+                        <a class="flex-shrink-0 ks-mini-product-link" href='<%# GetProductUrl(Eval("ArticoliId"), Eval("TCId")) %>' aria-label="Vai al prodotto">
                             <img class="rounded ks-mini-product-image" src='<%# GetProductImg(Eval("Img1")) %>' alt="" />
                         </a>
 
-                        <div class="flex-grow-1">
+                        <div class="flex-grow-1 ks-mini-cart-info">
                             <a class="link fw-semibold d-block mb-1" href='<%# GetProductUrl(Eval("ArticoliId"), Eval("TCId")) %>'>
                                 <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>
                             </a>

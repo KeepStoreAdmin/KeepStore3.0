@@ -10,6 +10,7 @@ Imports System.Web.UI.WebControls
 Imports System.Web.UI.HtmlControls
 Imports System.Security.Cryptography
 Imports System.Web
+Imports System.Text.RegularExpressions
 
 
 Public Partial Class carrello
@@ -17,6 +18,12 @@ Public Partial Class carrello
 
 Private Shared ReadOnly CartCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
 Private _cartHasItems As Boolean = True
+
+Private Class InventoryAvailabilityDisplayLine
+    Public ArticleId As Integer
+    Public Requested As String
+    Public Available As String
+End Class
 
 Protected Overrides Sub InitializeCulture()
     System.Threading.Thread.CurrentThread.CurrentCulture = CartCulture
@@ -693,14 +700,71 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
             message = Convert.ToString(Session(OrderInventoryAvailabilityService.SessionMessageKey))
         End If
 
-        pnlOrderInventoryAvailability.Visible = Not String.IsNullOrWhiteSpace(message)
-        litOrderInventoryAvailability.Text = HttpUtility.HtmlEncode(message).Replace(Environment.NewLine, "<br />")
+        Dim safeMessage As String = BuildSafeInventoryAvailabilityMessage(message)
+        pnlOrderInventoryAvailability.Visible = Not String.IsNullOrWhiteSpace(safeMessage)
+        litOrderInventoryAvailability.Text = HttpUtility.HtmlEncode(safeMessage).Replace(Environment.NewLine, "<br />")
         Session(OrderInventoryAvailabilityService.SessionMessageKey) = Nothing
 
         If pnlOrderInventoryAvailability.Visible Then
             ScriptManager.RegisterStartupScript(Me, Me.GetType(), "focusOrderInventoryAvailability", "setTimeout(function(){var e=document.getElementById('pnlOrderInventoryAvailability');if(e){e.focus();}},0);", True)
         End If
     End Sub
+
+    Private Sub ApplyCartNoStoreHeaders()
+        If Response Is Nothing Then Return
+        Response.Cache.SetCacheability(HttpCacheability.NoCache)
+        Response.Cache.SetNoStore()
+        Response.Cache.SetRevalidation(HttpCacheRevalidation.AllCaches)
+        Response.Cache.SetMaxAge(TimeSpan.Zero)
+        Response.Cache.SetExpires(DateTime.UtcNow.AddYears(-1))
+        Response.Cache.SetValidUntilExpires(False)
+    End Sub
+
+    Private Function BuildSafeInventoryAvailabilityMessage(ByVal rawMessage As String) As String
+        If String.IsNullOrWhiteSpace(rawMessage) Then Return ""
+
+        Dim parsed As New List(Of InventoryAvailabilityDisplayLine)()
+        Dim normalized As String = rawMessage.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf)
+        Dim linePattern As New Regex("^\s*Articolo\s+(\d+)\s*:\s*Quantità richiesta:\s*([0-9]+(?:[.,][0-9]+)?)\s*;\s*Disponibilità attuale:\s*([0-9]+(?:[.,][0-9]+)?)\s*$", RegexOptions.IgnoreCase)
+        For Each candidate As String In normalized.Split(vbLf)
+            Dim match As Match = linePattern.Match(If(candidate, ""))
+            If Not match.Success Then Continue For
+            Dim articleId As Integer
+            If Not Integer.TryParse(match.Groups(1).Value, NumberStyles.None, CultureInfo.InvariantCulture, articleId) OrElse articleId <= 0 Then Continue For
+
+            Dim line As New InventoryAvailabilityDisplayLine()
+            line.ArticleId = articleId
+            line.Requested = match.Groups(2).Value.Replace(",", ".")
+            line.Available = match.Groups(3).Value.Replace(",", ".")
+            parsed.Add(line)
+        Next
+
+        If parsed.Count = 0 Then
+            Return "Disponibilità insufficiente per l'articolo selezionato. Modifica la quantità nel carrello, premi Aggiorna e poi riprova a confermare l'ordine."
+        End If
+
+        Dim result As New StringBuilder()
+        For Each line As InventoryAvailabilityDisplayLine In parsed
+            Dim code As String = ""
+            Try
+                Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                    conn.Open()
+                    Using cmd As New MySqlCommand("SELECT Codice FROM articoli WHERE id=@id LIMIT 1", conn)
+                        cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = line.ArticleId
+                        Dim value As Object = cmd.ExecuteScalar()
+                        If value IsNot Nothing AndAlso value IsNot DBNull.Value Then code = Convert.ToString(value).Trim()
+                    End Using
+                End Using
+            Catch
+                code = ""
+            End Try
+
+            If result.Length > 0 Then result.AppendLine()
+            Dim label As String = If(String.IsNullOrWhiteSpace(code), "articolo selezionato", "l'articolo " & code)
+            result.Append("Disponibilità insufficiente per ").Append(label).Append(": hai richiesto ").Append(line.Requested).Append(" pz, ma al momento sono disponibili ").Append(line.Available).Append(" pz. Modifica la quantità nel carrello, premi Aggiorna e poi riprova a confermare l'ordine.")
+        Next
+        Return result.ToString()
+    End Function
 
     Private Function GetOrderNotesText() As String
         If txtNoteSpedizione Is Nothing OrElse txtNoteSpedizione.Text Is Nothing Then Return ""
@@ -1787,6 +1851,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
     End Function
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        ApplyCartNoStoreHeaders()
         If Not Page.IsPostBack Then CaptureContinueShoppingUrl()
 
         Dim loginRequiredLoginId As Integer = 0
