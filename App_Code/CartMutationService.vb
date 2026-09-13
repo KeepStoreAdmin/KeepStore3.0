@@ -73,8 +73,6 @@ End Class
 
 Public Module CartMutationService
     Private Const GenericMutationError As String = "Non è stato possibile aggiornare il carrello. Riprova."
-    Private _testDeadlockFaultCount As Integer
-
     Public Function RemoveCartRowForCurrentOwner(ByVal ctx As HttpContext,
                                                  ByVal cartRowId As Integer) As CartOwnerRemovalResult
         If ctx Is Nothing OrElse ctx.Session Is Nothing OrElse cartRowId <= 0 Then
@@ -114,16 +112,6 @@ Public Module CartMutationService
             Dim ownedRowIds As List(Of Integer) = LoadOwnedRowIds(
                 conn, transaction, owner.LoginId, owner.SessionId)
             Dim affected As Integer = 0
-
-            ' TEST-ONLY 1213 fault hook; removed before final diff.
-            If Threading.Interlocked.Increment(_testDeadlockFaultCount) = 1 Then
-                Using fault As New MySqlCommand(
-                    "SIGNAL SQLSTATE '40001' SET MYSQL_ERRNO=1213, MESSAGE_TEXT='test-only deadlock'",
-                    conn,
-                    transaction)
-                    fault.ExecuteNonQuery()
-                End Using
-            End If
 
             If clearAll Then
                 If ownedRowIds.Count > 0 Then

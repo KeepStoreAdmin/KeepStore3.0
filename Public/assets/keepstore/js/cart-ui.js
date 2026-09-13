@@ -3,15 +3,17 @@
     var cartPage = document.querySelector('.ks-cart-page');
     if (cartPage) {
         var refreshKey = 'KeepStore:cart-bfcache-refresh:' + window.location.pathname;
+        window.addEventListener('pagehide', function (event) {
+            if (event.persisted && window.sessionStorage) window.sessionStorage.setItem(refreshKey, 'pending');
+        });
         window.addEventListener('pageshow', function (event) {
-            if (!event.persisted && !(window.performance && window.performance.getEntriesByType &&
-                window.performance.getEntriesByType('navigation')[0] &&
-                window.performance.getEntriesByType('navigation')[0].type === 'back_forward')) return;
-            if (window.sessionStorage && window.sessionStorage.getItem(refreshKey) === window.location.href) {
+            var pendingBfcache = window.sessionStorage && window.sessionStorage.getItem(refreshKey) === 'pending';
+            if (!event.persisted && !pendingBfcache) return;
+            if (window.sessionStorage && window.sessionStorage.getItem(refreshKey) === 'reloading') {
                 window.sessionStorage.removeItem(refreshKey);
                 return;
             }
-            if (window.sessionStorage) window.sessionStorage.setItem(refreshKey, window.location.href);
+            if (window.sessionStorage) window.sessionStorage.setItem(refreshKey, 'reloading');
             window.location.reload();
         });
     }
