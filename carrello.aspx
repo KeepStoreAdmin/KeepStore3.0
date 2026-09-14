@@ -6,8 +6,8 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260913-cart-history-stockerror-minicart-ux-1a" %>" />
-            <script src="<%= ThemeManager.Asset("js/cart-ui.js") %>" defer></script>
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260914-cart-history-stockerror-minicart-ux-1a-rev2" %>" />
+            <script src="<%= ThemeManager.Asset("js/cart-ui.js") & "?v=20260914-cart-history-stockerror-minicart-ux-1a-rev2" %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/checkout-ui.js") %>" defer></script>
 
 </asp:Content>
@@ -178,9 +178,9 @@
                                         </p>
                                     </td>
 
-                                    <td data-cart-title="Rimuovi" class="remove-cart text-xxl-end">
+                                    <td data-cart-title="Rimuovi" class="ks-cart-remove-cell text-xxl-end">
                                         <button type="submit" form="ksNativeCartForm" name="ksCartAction" value='<%# BuildRemoveCartActionValue(Eval("id"), "free") %>'
-                                            class="remove icon icon-close link border-0 bg-transparent" title="Rimuovi articolo"><span class="visually-hidden">Rimuovi articolo</span></button>
+                                            class="ks-cart-remove-button icon icon-close link border-0 bg-transparent" title="Rimuovi articolo"><span class="visually-hidden">Rimuovi articolo</span></button>
                                     </td>
                                 </tr>
 
@@ -290,9 +290,9 @@
                                         </p>
                                     </td>
 
-                                    <td data-cart-title="Rimuovi" class="remove-cart text-xxl-end">
+                                    <td data-cart-title="Rimuovi" class="ks-cart-remove-cell text-xxl-end">
                                         <button type="submit" form="ksNativeCartForm" name="ksCartAction" value='<%# BuildRemoveCartActionValue(Eval("id"), "standard") %>'
-                                            class="remove icon icon-close link border-0 bg-transparent" title="Rimuovi articolo"><span class="visually-hidden">Rimuovi articolo</span></button>
+                                            class="ks-cart-remove-button icon icon-close link border-0 bg-transparent" title="Rimuovi articolo"><span class="visually-hidden">Rimuovi articolo</span></button>
                                     </td>
                                 </tr>
 

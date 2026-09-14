@@ -749,8 +749,21 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
             Try
                 Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                     conn.Open()
-                    Using cmd As New MySqlCommand("SELECT Codice FROM articoli WHERE id=@id LIMIT 1", conn)
+                    Dim loginId As Integer = GetSessionInt("LoginId", GetSessionInt("LoginID", GetSessionInt("LOGINID", 0)))
+                    Dim sql As String = "SELECT a.Codice FROM articoli a INNER JOIN carrello c ON c.ArticoliId=a.id WHERE a.id=@id AND "
+                    If loginId > 0 Then
+                        sql &= "c.LoginId=@loginId "
+                    Else
+                        sql &= "COALESCE(c.LoginId,0)<=0 AND c.SessionId=@sessionId "
+                    End If
+                    sql &= "ORDER BY c.ID LIMIT 1"
+                    Using cmd As New MySqlCommand(sql, conn)
                         cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = line.ArticleId
+                        If loginId > 0 Then
+                            cmd.Parameters.Add("@loginId", MySqlDbType.Int32).Value = loginId
+                        Else
+                            cmd.Parameters.Add("@sessionId", MySqlDbType.VarChar, 50).Value = If(Session IsNot Nothing, Session.SessionID, "")
+                        End If
                         Dim value As Object = cmd.ExecuteScalar()
                         If value IsNot Nothing AndAlso value IsNot DBNull.Value Then code = Convert.ToString(value).Trim()
                     End Using
@@ -760,7 +773,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
             End Try
 
             If result.Length > 0 Then result.AppendLine()
-            Dim label As String = If(String.IsNullOrWhiteSpace(code), "articolo selezionato", "l'articolo " & code)
+            Dim label As String = If(String.IsNullOrWhiteSpace(code), "l'articolo selezionato", "l'articolo con codice " & code)
             result.Append("Disponibilità insufficiente per ").Append(label).Append(": hai richiesto ").Append(line.Requested).Append(" pz, ma al momento sono disponibili ").Append(line.Available).Append(" pz. Modifica la quantità nel carrello, premi Aggiorna e poi riprova a confermare l'ordine.")
         Next
         Return result.ToString()
