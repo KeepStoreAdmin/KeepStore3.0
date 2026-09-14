@@ -1,23 +1,23 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-09-10
+Aggiornato: 2026-09-14
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
 
-- Aggiornato: 2026-09-10.
+- Aggiornato: 2026-09-14.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Runtime e HEAD stabile corrente: `frontend-rebuild` / `origin/frontend-rebuild` a `d773408588c4fc91472a4b71ef9d3980e1c93072`.
+- Runtime e HEAD stabile corrente: `frontend-rebuild` / `origin/frontend-rebuild` a `055cb6e5c5d764222d5610e1b391d1c184f59882`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - `WORKFLOW-GOVERNANCE-1A` e CHIUSO / A e integrato: il root `AGENTS.md` e la fonte canonica del metodo operativo corrente.
-- Ultimo task runtime chiuso: `CART-DEADLOCK-RETRY-1A`, esito A, PR #245 mergiata fast-forward. Catena `ef3bce60af997b35a2779f43a102c2df5c4ae7c7` -> `d773408588c4fc91472a4b71ef9d3980e1c93072`: un commit integrato e zero merge commit.
-- Task documentale corrente: `DOCS-CART-DEADLOCK-RETRY-1A`, branch `task/docs-cart-deadlock-retry-1a`; aggiorna soltanto i tre manuali canonici e si ferma prima del merge.
-- Prossimo audit cart consigliato, priorita HIGH: `CART-REMOVE-TRANSACTION-HARDENING-1A`. Seguono `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`, `CART-MOBILE-RESPONSIVE-UX-1A`, touch target rimozione `44x44` e audit futuro dello schema monetario `DOUBLE`.
+- Ultimo task runtime chiuso: `CART-HISTORY-STOCKERROR-MINICART-UX-1A`, esito A, PR #252 integrata fast-forward. Catena `647a16ea0991c175a0b80fa811e9a09e93e7d88d` -> `0ace2bc7bfdb75bba03f7bb97beb77cd8a5b847e` -> `c069651b5a11122b023f83c551f79199b3718282` -> `055cb6e5c5d764222d5610e1b391d1c184f59882`: tre commit integrati e zero merge commit.
+- Task documentale corrente: `CART-RUNTIME-RECOVERY-DOCS-1A`, branch `task/docs-cart-runtime-recovery-1a`; aggiorna soltanto i tre manuali canonici e si ferma prima del merge.
+- Prossimo task effettivo: `ORDER-DURABLE-IDEMPOTENCY-1A`, residuo P0 separato del flusso ordine. Non e avviato da questo aggiornamento.
 - La funzione digitale di recesso resta documentata ma differita per decisione del Product Owner: `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A` non e il task attivo e non va avviato senza una nuova priorita esplicita di Germano.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
-- Debiti aperti principali: rimozione singola e svuotamento carrello restano fuori dalle transazioni canoniche e richiedono prima l'audit `CART-REMOVE-TRANSACTION-HARDENING-1A`; catalogo e PDP restano aree non dichiarate complete. Il recesso digitale resta documentato e differito, non corretto ne certificato.
+- Debiti aperti principali: `ORDER-DURABLE-IDEMPOTENCY-1A`; audit monetario `DOUBLE`; `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` chiuso E e differito in attesa di decisione infrastrutturale. Catalogo e PDP restano aree non dichiarate complete; recesso digitale e Coupon/Groupon restano differiti dal Product Owner.
 
 Questo checkpoint va aggiornato dopo ogni blocco importante. E una mappa di ripartenza, non sostituisce la verifica diretta di Git, del root `AGENTS.md` e delle fonti pertinenti.
 
@@ -47,7 +47,16 @@ Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo tas
 - L'idempotenza distingue `processing`, `completed` e `indeterminate`: il replay `completed` non ripete DML, il replay `indeterminate` fallisce chiuso e una collisione di payload viene respinta in modo controllato. La persistenza resta `Session`/`InProc`; `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` rimane aperto.
 - Nel merge anonimo/account si bloccano prima le righe account e poi quelle della sessione anonima, con query separate owner-scoped, `ORDER BY ID FOR UPDATE` e indici `IX_carrello_LoginId_ID` / `IX_carrello_SessionId_ID`, usando la stessa connessione e transazione e senza commit intermedi.
 - Prove A: precompile .NET Framework 4.8; fault harness con 45 asserzioni; lock timeout reale con retry e delta esatto; smoke autenticato con 43 controlli, matrice articolo `21906` invariata, concorrenza e checkout senza documento; fixture ripristinate. Smoke post-merge 18/18 su desktop, `390px` e `360px`, nessun HTTP 500; `git diff --check` e secret scan puliti.
-- Finding residui, non implementati: `CART-REMOVE-TRANSACTION-HARDENING-1A` HIGH e prossimo audit consigliato; `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`; `ORDER-DOCUMENT-INVENTORY-LOCK-AUDIT-1A`; `PROMO-AMBIGUOUS-STATE-REACHABILITY-1A`; funzione digitale di recesso documentata ma differita per decisione Germano.
+- Finding residui al checkpoint PR #245: `CART-REMOVE-TRANSACTION-HARDENING-1A`, `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`, `ORDER-DOCUMENT-INVENTORY-LOCK-AUDIT-1A` e `PROMO-AMBIGUOUS-STATE-REACHABILITY-1A`. Lo stato corrente prevalente e nel checkpoint sopra: remove e audit ordine/inventario sono stati chiusi dai task successivi; idempotenza cart persistente resta E/differita; promo ambigua e recesso digitale restano separati.
+
+### Chiusura CART-HISTORY-STOCKERROR-MINICART-UX-1A
+
+- Esito A runtime e PR #252 integrata fast-forward nel checkpoint stabile `055cb6e5c5d764222d5610e1b391d1c184f59882`; tre commit lineari, zero merge commit e `main` invariato.
+- Risolte la collisione dei selettori legacy `.remove` / `.remove-cart` di `main.js`, la permanenza del fault hook TEST-ONLY `1213` nel runtime, la gestione incompleta della bfcache, la mancata risoluzione owner-scoped del codice articolo e l'assenza globale di `minicart-ui.css`.
+- Contratto definitivo: Remove/Clear sono POST-only, owner-scoped, atomici e idempotenti; nessun fault hook di test e raggiungibile nel runtime pubblicato; i listener JavaScript sono scoped e non interferiscono con i postback WebForms; i messaggi mostrano il codice commerciale, mai l'ID tecnico; MiniCart e globale e carica `minicart-ui.css`, con immagine `64x64`, target touch minimo `44x44`, supporto desktop/tablet/mobile e cache-buster obbligatorio a ogni modifica CSS/JavaScript.
+- Prove runtime A: sessioni autenticata e anonima; Remove prima/centrale/ultima; Clear, refresh e Back/Forward; stock zero e insufficiente; MiniCart su HOME, catalogo, PDP e carrello; quattro viewport; CSRF `403` e GET mutativo `405`; zero HTTP `500`, pageerror, overflow orizzontale e doppie mutazioni.
+- Fixture finali ripristinate: carrello PROVA allo stato iniziale; documenti, wishlist e `Impegnata` invariati.
+- Guardrail permanenti: ogni hook o fault injection deve essere irraggiungibile nel runtime pubblicato; ogni componente globale deve caricare i propri stili su tutte le pagine che lo renderizzano; prima di introdurre nuove classi UI vanno verificati i selettori JavaScript legacy generici.
 
 ### Funzione digitale di recesso B2C - documentata e differita
 
@@ -2182,13 +2191,9 @@ Task consigliato separato per eventuale proseguimento:
 
 ### Immediati
 
-1. `CART-REMOVE-TRANSACTION-HARDENING-1A`: priorita HIGH e prossimo audit consigliato. Rimozione singola e svuotamento sono oggi fuori dalle transazioni canoniche; verificare owner scope, atomicita e ordine dei lock prima di qualsiasi fix.
-2. `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`: auditare la persistenza oltre `Session`/`InProc` per recycle, web farm e piu nodi; non e chiuso dal retry.
-3. `CART-MOBILE-RESPONSIVE-UX-1A`.
-4. Touch target rimozione carrello `44x44`.
-5. Audit futuro dello schema monetario ancora `DOUBLE`.
-6. Candidati separati da conservare senza implementarli ora:
-   - `ORDER-DOCUMENT-INVENTORY-LOCK-AUDIT-1A`: audit separato su ordine del cursore carrello, inventario, numerazione documento e commit ambiguo.
+1. `ORDER-DURABLE-IDEMPOTENCY-1A`: prossimo task effettivo e residuo P0 separato; deve impedire duplicazioni durevoli del documento oltre sessione, recycle e retry, mantenendo ordine, inventario e carrello coerenti. Prerequisiti: audit del contratto idempotente ordine, chiave persistente e piano DB/deployment multi-database approvati. Rischio CRITICAL su ordini e inventario; stima iniziale `24-48h`, da confermare nel preflight. Non avviato.
+2. Audit futuro dello schema monetario ancora `DOUBLE`.
+3. Candidati separati da conservare senza implementarli ora:
    - `PROMO-AMBIGUOUS-STATE-REACHABILITY-1A`: verificare la raggiungibilita di `AmbiguousCommercialRule`; oggi risultano zero offerte ambigue attive ed e un task commerciale non prioritario rispetto al carrello.
    - `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A`: requisiti gia documentati, ma audit differito per decisione Germano; non avviarlo senza nuova priorita esplicita.
    - `HOME-TTFB-PERFORMANCE-1A`.
@@ -2203,13 +2208,11 @@ Task consigliato separato per eventuale proseguimento:
    - GESTIONALE-PASSWORD-AUDIT-1A / JANUS-PASSWORD-RESET-1A: audit gestionale Janus per reset/hash.
    - REGISTRATION-POLICY-1A / REGISTRATION-UX-1A: refinement residuo login/registrazione.
    - PR #171 diagnostica sessione/logout post-ordine: non attiva ora; riprendere solo se il problema torna riproducibile con test manuale mirato.
-7. Mantenere PayPal, BancaSella, gateway e pagamenti in task separati dal carrello UI e dalla funzione di recesso.
-8. Revocare/cambiare la password dell'utente MySQL temporaneo usato nello smoke, se ancora attivo.
-9. Eliminare eventuali variabili ambiente temporanee di smoke.
-10. Eliminare o lasciare scadere eventuali link reset test residui.
-11. AUTH-CSRF-AUDIT-1A: audit `AntiCsrfPage` sui flussi auth.
-12. AUTH-JS-LEGACY-AUDIT-1A: audit errori JS legacy residui.
-13. DATIUTENTE-LEGACY-AUDIT-1A per errore generico, tab/JS legacy e salvataggi/destinazioni.
+4. `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta chiuso E e differito: non promuoverlo senza decisione sulla topologia/infrastruttura.
+5. Mantenere PayPal, BancaSella, gateway e pagamenti in task separati dal carrello UI e dalla funzione di recesso.
+6. AUTH-CSRF-AUDIT-1A: audit `AntiCsrfPage` sui flussi auth.
+7. AUTH-JS-LEGACY-AUDIT-1A: audit errori JS legacy residui.
+8. DATIUTENTE-LEGACY-AUDIT-1A per errore generico, tab/JS legacy e salvataggi/destinazioni.
 
 ### PayPal Express
 
@@ -2259,7 +2262,7 @@ Contratto visuale: desktop 1365×900 mantiene la tabella; tablet 768×1024 e mob
 
 L’audit `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta chiuso con esito E, implementazione differita e nessun DDL: Session/InProc conserva rischi su recycle e topologie multi-nodo. Recesso digitale e Coupon/Groupon restano differiti dal Product Owner.
 
-Roadmap corrente: prossimo task raccomandato `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` solo dopo conferma topologia/decisione infrastrutturale; seguono mobile UX residua, touch target desktop touch eventuale e audit monetari. Ordine/documento, AntiCsrfPage, Delcarrello, promo ambigua, Coupon/Groupon e recesso sono separati o differiti.
+Roadmap corrente: `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta chiuso E e differito; mobile UX e target touch mobile sono chiusi A. Il prossimo task effettivo e `ORDER-DURABLE-IDEMPOTENCY-1A`; audit monetario, AntiCsrfPage e promo ambigua restano separati, mentre Coupon/Groupon e recesso restano differiti.
 
 ## Chiusura CART-REMOVE-TRANSACTION-HARDENING-1A
 
