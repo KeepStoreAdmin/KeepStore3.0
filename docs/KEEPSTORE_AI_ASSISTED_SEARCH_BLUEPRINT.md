@@ -452,6 +452,7 @@ Ogni task futuro deve dichiarare esplicitamente:
 - nessun DB/schema/SP salvo task DB esplicito;
 - nessuna API esterna salvo task AI/privacy approvato;
 - nessun asset non tracciato incluso.
+- se uno smoke autenticato usa PROVA, l'account resta preservato fino alla fine del progetto e l'evidenza sanitizzata segue il Masterplan; credenziali e audit dell'account non entrano in search, AI, feed, retrieval, log o output.
 
 Questa blueprint non implementa AI, chatbot, endpoint, DB, UI runtime o correzioni search. Registra solo architettura e roadmap.
 

@@ -101,6 +101,8 @@ Regola "codice fresco ma compatibile": KeepStore deve restare moderno nella UX, 
 
 Regola sicurezza per task sensibili: ogni task che tocca input utente, URL, querystring, form, carrello, login, checkout, ordine, e-mail, upload, immagini o redirect deve verificare esplicitamente validazione input lato server, query parametrizzate, whitelist per campi dinamici/ordinamenti/redirect/nomi file, output encoding per dati DB o input utente, CSRF/ViewState dove pertinente, assenza di open redirect, segreti hardcoded, log con dati sensibili, path traversal, uso legacy `Public/Images/` e modifiche DB/schema/SP non autorizzate.
 
+Regola account test: PROVA e una fixture permanente di progetto e puo essere eliminato soltanto dal Product Owner alla fine del progetto. Runtime, smoke e cleanup non devono cancellarlo, disabilitarlo, rinominarlo, cambiarne la password o rimuoverne intenzionalmente dati/audit storici. Ogni smoke autenticato deve produrre l'evidenza sanitizzata definita nel Masterplan e puo ripristinare soltanto carrello e fixture allo stato iniziale; nessuna credenziale entra in codice, documentazione, PR, log o output.
+
 Riferimenti metodologici: OWASP Top 10 per i rischi web principali, OWASP ASVS come checklist tecnica dei controlli e documentazione Microsoft ASP.NET WebForms / ASP.NET 4.x security per request validation, WebForms security e protezioni native.
 
 Regola "non hacker-proof": nessun sito va dichiarato "a prova di hacker" in senso assoluto. L'obiettivo operativo e ridurre la superficie d'attacco, rendere ogni modifica verificabile, applicare controlli server-side, eseguire scan e test, proteggere segreti/sessioni/redirect e mantenere regressioni sotto controllo.

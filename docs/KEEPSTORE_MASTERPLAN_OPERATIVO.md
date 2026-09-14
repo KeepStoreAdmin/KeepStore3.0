@@ -605,6 +605,13 @@ Backlog hardening separato: `CART-SESSIONID-LOG-REDACTION-1A`. L'audit cart-stat
 - Non chiamare gateway live salvo autorizzazione esplicita in task dedicato.
 - Non modificare DB/dump SQL salvo task DB esplicito con backup.
 
+#### Account di collaudo PROVA ed evidenza smoke
+
+- L'account di collaudo PROVA deve essere conservato per l'intera durata del progetto. E vietato cancellarlo, disabilitarlo, rinominarlo, modificarne la password o eliminare intenzionalmente i suoi dati e audit storici. Soltanto il Product Owner potra cancellarlo alla fine del progetto.
+- Password e altre credenziali dell'account non devono comparire in repository, commit, PR, manuali, log o output. Le credenziali necessarie a uno smoke restano nei soli canali locali sicuri autorizzati.
+- Ogni smoke autenticato con PROVA conserva evidenza sanitizzata di: task e data; ambiente e URL; fixture/articoli; stato iniziale e finale di carrello, documenti, wishlist e inventario pertinente; operazioni; risultati; anomalie; conferma dell'assenza di pagamenti, gateway, e-mail e ordini reali.
+- E consentito ripristinare tramite i percorsi applicativi il carrello e le fixture allo stato iniziale per evitare contaminazioni tra test. Il ripristino non autorizza la cancellazione dell'account o l'omissione dell'evidenza dello smoke.
+
 ## 2. Regola ONSUS per refactor UI
 
 ONSUS e il riferimento grafico principale per i refactor UI del frontend KeepStore.
