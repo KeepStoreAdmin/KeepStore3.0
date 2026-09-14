@@ -175,8 +175,8 @@ End Function
 
 
 ' === HARDENING HELPERS (VB2012 safe) ===
-Private Const CHECKOUT_TOKEN_SESSION_KEY As String = "CheckoutToken"
-Private Const CHECKOUT_TOKEN_TIME_SESSION_KEY As String = "CheckoutTokenIssuedUtc"
+Private Const CHECKOUT_TOKEN_PURPOSE As String = "KeepStore.OrderCheckout.Idempotency.V1"
+Private Const CHECKOUT_REQUEST_VIEWSTATE_KEY As String = "CheckoutRequestId"
 Private Const SessCheckoutStep As String = "CartCheckoutStep"
 Private Const CartEditorLockMessage As String = "Completa o annulla la modifica dell'indirizzo prima di continuare con il checkout."
 Private Const OrderNotesMaxLength As Integer = 255
@@ -189,28 +189,41 @@ Private Class CityRegistryAddressOption
 End Class
 
 Private Function GenerateCheckoutToken() As String
-    ' 32 bytes random -> Base64Url (no +,/ or =)
-    Dim bytes(31) As Byte
-    Try
-        Using rng As New RNGCryptoServiceProvider()
-            rng.GetBytes(bytes)
-        End Using
-    Catch
-        ' Fallback (should never happen)
-        Dim g As Guid = Guid.NewGuid()
-        bytes = g.ToByteArray()
-    End Try
+    Dim loginId As Long = GetLoginIdSafe(0)
+    If loginId <= 0 Then Throw New InvalidOperationException("Authenticated checkout is required.")
 
-    Dim b64 As String = Convert.ToBase64String(bytes)
+    Dim requestId As String = Convert.ToString(ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY), CultureInfo.InvariantCulture)
+    Dim normalizedRequestId As String = String.Empty
+    If Not OrderDurableIdempotencyService.TryNormalizeRequestId(requestId, normalizedRequestId) Then
+        normalizedRequestId = OrderDurableIdempotencyService.CreateRequestId()
+        ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY) = normalizedRequestId
+    End If
+
+    Dim payload As String = normalizedRequestId & "|" &
+        loginId.ToString(CultureInfo.InvariantCulture) & "|" &
+        DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture)
+    Dim protectedBytes() As Byte = System.Web.Security.MachineKey.Protect(
+        Encoding.UTF8.GetBytes(payload), CHECKOUT_TOKEN_PURPOSE)
+    If protectedBytes Is Nothing OrElse protectedBytes.Length = 0 Then
+        Throw New InvalidOperationException("Checkout token protection failed.")
+    End If
+
+    Dim b64 As String = Convert.ToBase64String(protectedBytes)
     b64 = b64.Replace("+"c, "-"c).Replace("/"c, "_"c).TrimEnd("="c)
     Return b64
 End Function
 
+Private Sub EnsureCheckoutRequestId()
+    Dim current As String = Convert.ToString(ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY), CultureInfo.InvariantCulture)
+    Dim normalized As String = String.Empty
+    If Not OrderDurableIdempotencyService.TryNormalizeRequestId(current, normalized) Then
+        ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY) = OrderDurableIdempotencyService.CreateRequestId()
+    End If
+End Sub
+
 Private Sub RedirectToOrdine()
-    ' Issue one-time token (anti-replay / direct access hardening)
+    ' MachineKey-protected token carries the durable logical checkout request.
     Dim token As String = GenerateCheckoutToken()
-    Session(CHECKOUT_TOKEN_SESSION_KEY) = token
-    Session(CHECKOUT_TOKEN_TIME_SESSION_KEY) = DateTime.UtcNow
     Session("Ordine_FromCheckout") = 1
 
     Dim url As String = "ordine.aspx?t=" & HttpUtility.UrlEncode(token)
@@ -219,8 +232,6 @@ End Sub
 
 Private Sub RedirectToOrdineWithQuery(ByVal extraQuery As String)
     Dim token As String = GenerateCheckoutToken()
-    Session(CHECKOUT_TOKEN_SESSION_KEY) = token
-    Session(CHECKOUT_TOKEN_TIME_SESSION_KEY) = DateTime.UtcNow
     Session("Ordine_FromCheckout") = 1
 
     Dim url As String = "ordine.aspx?t=" & HttpUtility.UrlEncode(token)
@@ -2032,6 +2043,9 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
 
 	
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
+        ' One logical checkout key is protected by the rendered ViewState. Two
+        ' concurrent postbacks from this page therefore claim the same DB row.
+        EnsureCheckoutRequestId()
         Me.Title = Me.Title & " - Il tuo Carrello"
 		
         Dim LoginId As Integer = GetSessionInt("LoginId", 0)

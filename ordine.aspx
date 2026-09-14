@@ -237,8 +237,8 @@
 
                         <asp:Panel ID="Panel2" runat="server" Visible="false">
                             <div class="ks-alert ks-alert-danger">
-                                <div style="font-weight:700; margin-bottom:6px;">Si è verificato un problema durante l'elaborazione.</div>
-                                <div>La preghiamo di contattare l'amministratore.</div>
+                                <div style="font-weight:700; margin-bottom:6px;">Non è stato possibile confermare l'ordine.</div>
+                                <div>Il carrello è rimasto invariato. Riprova tra qualche istante.</div>
                             </div>
                         </asp:Panel>
 

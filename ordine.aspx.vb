@@ -51,9 +51,8 @@ End Sub
     Public idsFbPixelsSku As New Dictionary(Of String, String)
     Public redirect As String = ""
 
-' === HARDENING: anti-replay token from carrello -> ordine (VB2012 safe) ===
-Private Const CHECKOUT_TOKEN_SESSION_KEY As String = "CheckoutToken"
-Private Const CHECKOUT_TOKEN_TIME_SESSION_KEY As String = "CheckoutTokenIssuedUtc"
+' === HARDENING: durable checkout token from carrello -> ordine (VB2012 safe) ===
+Private Const CHECKOUT_TOKEN_PURPOSE As String = "KeepStore.OrderCheckout.Idempotency.V1"
 Private Const CHECKOUT_TOKEN_QS_KEY As String = "t"
 Private Const OrderNotesMaxLength As Integer = 255
 Private Shared ReadOnly CHECKOUT_TOKEN_MAX_AGE As TimeSpan = TimeSpan.FromMinutes(30)
@@ -75,31 +74,54 @@ Private Function OrderNotesAreTooLong(ByVal note As String) As Boolean
     Return note.Length > OrderNotesMaxLength
 End Function
 
-Private Function ConsumeValidCheckoutToken() As Boolean
-    ' Required token to prevent direct access + replay
-    Dim token As String = GetQueryString(CHECKOUT_TOKEN_QS_KEY, 256)
+Private Function TryValidateCheckoutToken(ByVal loginId As Long, ByRef requestId As String) As Boolean
+    requestId = String.Empty
+    If loginId <= 0 Then Return False
+
+    Dim token As String = GetQueryString(CHECKOUT_TOKEN_QS_KEY, 1024)
     If String.IsNullOrEmpty(token) Then Return False
 
-    Dim sToken As String = ""
-    If Session(CHECKOUT_TOKEN_SESSION_KEY) IsNot Nothing Then
-        sToken = Convert.ToString(Session(CHECKOUT_TOKEN_SESSION_KEY))
-    End If
-    If String.IsNullOrEmpty(sToken) Then Return False
-    If Not String.Equals(token, sToken, StringComparison.Ordinal) Then Return False
+    Dim protectedBytes() As Byte = Nothing
+    Dim clearBytes() As Byte = Nothing
+    Try
+        Dim encoded As String = token.Replace("-"c, "+"c).Replace("_"c, "/"c)
+        Select Case encoded.Length Mod 4
+            Case 0
+            Case 2
+                encoded &= "=="
+            Case 3
+                encoded &= "="
+            Case Else
+                Return False
+        End Select
 
-    Dim issuedUtc As DateTime = DateTime.MinValue
-    If Session(CHECKOUT_TOKEN_TIME_SESSION_KEY) IsNot Nothing Then
-        DateTime.TryParse(Convert.ToString(Session(CHECKOUT_TOKEN_TIME_SESSION_KEY)), issuedUtc)
-    End If
-    If issuedUtc <> DateTime.MinValue Then
+        protectedBytes = Convert.FromBase64String(encoded)
+        clearBytes = System.Web.Security.MachineKey.Unprotect(protectedBytes, CHECKOUT_TOKEN_PURPOSE)
+        If clearBytes Is Nothing OrElse clearBytes.Length = 0 Then Return False
+
+        Dim parts() As String = Encoding.UTF8.GetString(clearBytes).Split("|"c)
+        If parts.Length <> 3 Then Return False
+
+        Dim normalized As String = String.Empty
+        If Not OrderDurableIdempotencyService.TryNormalizeRequestId(parts(0), normalized) Then Return False
+
+        Dim tokenLoginId As Long = 0
+        If Not Long.TryParse(parts(1), NumberStyles.None, CultureInfo.InvariantCulture, tokenLoginId) OrElse tokenLoginId <> loginId Then Return False
+
+        Dim issuedTicks As Long = 0
+        If Not Long.TryParse(parts(2), NumberStyles.None, CultureInfo.InvariantCulture, issuedTicks) Then Return False
+        Dim issuedUtc As New DateTime(issuedTicks, DateTimeKind.Utc)
         Dim age As TimeSpan = DateTime.UtcNow.Subtract(issuedUtc)
-        If age > CHECKOUT_TOKEN_MAX_AGE Then Return False
-    End If
+        If age < TimeSpan.FromMinutes(-1) OrElse age > CHECKOUT_TOKEN_MAX_AGE Then Return False
 
-    ' Consume (one-time)
-    Session(CHECKOUT_TOKEN_SESSION_KEY) = Nothing
-    Session(CHECKOUT_TOKEN_TIME_SESSION_KEY) = Nothing
-    Return True
+        requestId = normalized
+        Return True
+    Catch
+        Return False
+    Finally
+        If protectedBytes IsNot Nothing Then Array.Clear(protectedBytes, 0, protectedBytes.Length)
+        If clearBytes IsNot Nothing Then Array.Clear(clearBytes, 0, clearBytes.Length)
+    End Try
 End Function
 
 
@@ -378,6 +400,79 @@ End Function
         Return String.Join(",", outParts)
     End Function
 
+    Private Sub ShowDurableCheckoutTechnicalFailure()
+        Me.Panel1.Visible = False
+        Me.Panel2.Visible = True
+    End Sub
+
+    Private Function RenderCompletedOrder(ByVal conn As MySqlConnection,
+                                          ByVal record As OrderDurableIdempotencyRecord) As Boolean
+        If conn Is Nothing OrElse record Is Nothing OrElse
+           record.Status <> OrderDurableClaimStatus.CompletedReplay OrElse
+           record.DocumentiId <= 0 OrElse record.DocumentoMemorizzato <= 0 Then Return False
+
+        Dim documentId As Integer = 0
+        Dim documentNumber As Long = 0
+        Dim documentType As Integer = 0
+        Dim documentDate As String = String.Empty
+        Dim ownerUtentiId As Long = ResolveCurrentUtentiId(
+            conn, record.LoginId, GetSessionLong("UtentiId", 0))
+        If ownerUtentiId <= 0 Then Return False
+        Using command As New MySqlCommand(
+            "SELECT id, TipoDocumentiId, NDocumento, DataDocumento FROM documenti " &
+            "WHERE id=?id AND UtentiId=?utentiId LIMIT 1", conn)
+            command.Parameters.Add("?id", MySqlDbType.Int64).Value = record.DocumentiId
+            command.Parameters.Add("?utentiId", MySqlDbType.Int64).Value = ownerUtentiId
+            Using reader As MySqlDataReader = command.ExecuteReader()
+                If Not reader.Read() Then Return False
+                documentId = Convert.ToInt32(reader("id"), CultureInfo.InvariantCulture)
+                documentType = Convert.ToInt32(reader("TipoDocumentiId"), CultureInfo.InvariantCulture)
+                documentNumber = Convert.ToInt64(reader("NDocumento"), CultureInfo.InvariantCulture)
+                documentDate = Convert.ToString(reader("DataDocumento"), CultureInfo.InvariantCulture)
+            End Using
+        End Using
+
+        If documentId <= 0 OrElse documentType <> record.TipoDocumentiId OrElse
+           documentNumber <> record.DocumentoMemorizzato Then Return False
+
+        Dim documentLabel As String = "Documento"
+        If documentType = 4 Then
+            documentLabel = "Ordine"
+        ElseIf documentType = 2 Then
+            documentLabel = "Preventivo"
+        End If
+
+        Me.Label1.Text = documentNumber.ToString(CultureInfo.InvariantCulture)
+        Me.Label2.Text = documentLabel
+        Me.Label3.Text = FormatDocumentDate(documentDate)
+        If lblOrderReceiptStatus IsNot Nothing Then lblOrderReceiptStatus.Text = "Ordine ricevuto"
+        If HyperLink1 IsNot Nothing Then
+            HyperLink1.NavigateUrl = ResolveUrl("~/documenti.aspx")
+            HyperLink1.Text = "I miei ordini"
+        End If
+        If litOrderReceipt IsNot Nothing Then
+            litOrderReceipt.Text = BuildOrderReceiptHtml(conn, documentId, documentLabel, documentNumber, documentDate, String.Empty)
+        End If
+        Me.Panel2.Visible = False
+        Me.Panel1.Visible = True
+        Return True
+    End Function
+
+    Private Function TryReconcileCompletedOrder(ByVal connectionString As String,
+                                                ByVal requestId As String,
+                                                ByVal loginId As Long) As Boolean
+        Try
+            Using reconcileConnection As New MySqlConnection(connectionString)
+                reconcileConnection.Open()
+                Dim record As OrderDurableIdempotencyRecord =
+                    OrderDurableIdempotencyService.TryReadCompleted(reconcileConnection, requestId, loginId)
+                Return record IsNot Nothing AndAlso RenderCompletedOrder(reconcileConnection, record)
+            End Using
+        Catch
+            Return False
+        End Try
+    End Function
+
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
 
         If Me.Session("LoginId") Is Nothing Then
@@ -388,8 +483,10 @@ End Function
             Exit Sub
         End If
 
-' Hardening: require one-time token issued by carrello (anti-replay + block direct access)
-If Not ConsumeValidCheckoutToken() Then
+' Durable idempotency token issued by carrello and protected with MachineKey.
+Dim authenticatedLoginId As Long = GetSessionLong("LoginId", 0)
+Dim checkoutRequestId As String = String.Empty
+If Not TryValidateCheckoutToken(authenticatedLoginId, checkoutRequestId) Then
     SafeRedirect("carrello.aspx")
     Exit Sub
 End If
@@ -397,7 +494,7 @@ End If
 
         SyncLock Semaforo
 
-            Dim LoginId As Long = GetSessionLong("LoginId", 0)
+            Dim LoginId As Long = authenticatedLoginId
             Dim UtentiId As Long = GetSessionLong("UtentiId", 0)
             Dim TipoDoc As Integer = GetSessionInt("Ordine_TipoDoc", 0)
             Dim Documento As String = If(TryCast(Me.Session("Ordine_Documento"), String), "")
@@ -421,22 +518,39 @@ End If
                 Exit Sub
             End If
 
-            If TipoDoc <= 0 Then
-                Me.SafeRedirect("documenti.aspx")
-                Exit Sub
-            End If
-
             Dim NumDoc As Long = 0
             Dim numDoc_tracking As String = "1"
             Dim isLegacyCouponFlow As Boolean = String.Equals(Documento, "Coupon", StringComparison.OrdinalIgnoreCase)
 
-            Dim conn As New MySqlConnection()
-            conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+            Dim checkoutConnectionString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+            Dim conn As New MySqlConnection(checkoutConnectionString)
 
             Dim trns As MySqlTransaction = Nothing
 
             Try
                 conn.Open()
+
+                ' A completed durable request is resolved before reading order
+                ' session data, which may already have been cleared by success.
+                Dim completedBeforeWork As OrderDurableIdempotencyRecord =
+                    OrderDurableIdempotencyService.TryReadCompleted(conn, checkoutRequestId, LoginId)
+                If completedBeforeWork IsNot Nothing Then
+                    If completedBeforeWork.Status = OrderDurableClaimStatus.CompletedReplay AndAlso
+                       RenderCompletedOrder(conn, completedBeforeWork) Then
+                        Exit Sub
+                    End If
+                    If completedBeforeWork.Status = OrderDurableClaimStatus.RetryRequired Then
+                        Me.SafeRedirect("carrello.aspx?pricechanged=1")
+                        Exit Sub
+                    End If
+                    ShowDurableCheckoutTechnicalFailure()
+                    Exit Sub
+                End If
+
+                If TipoDoc <= 0 Then
+                    Me.SafeRedirect("documenti.aspx")
+                    Exit Sub
+                End If
 
                 ' --- Tracking numero documento (solo lettura, robusto) ---
                 Using cmdMax As New MySqlCommand("SELECT COALESCE(MAX(ndocumento),0) + 1 AS nmax FROM documenti WHERE YEAR(datadocumento)=YEAR(CURRENT_TIMESTAMP) AND tipodocumentiid = ?TipoDoc", conn)
@@ -454,9 +568,46 @@ End If
                     Exit Sub
                 End If
 
+                Dim payloadFingerprint As String = OrderDurableIdempotencyService.ComputePayloadFingerprint(
+                    TipoDoc, Pagamento, Vettore, SpeseSped, SpeseAss, SpesePag,
+                    PagamentoOnLine, ConfermaOrdinePrimaPagamento, PermettiPagamentoSuccessivo,
+                    InviaEmailOrdinePrimaPagamento, selectedShippingAddressId, Note,
+                    DbVal(Session("Ordine_DescrizioneBuonoSconto")),
+                    DbVal(Session("Ordine_TotaleBuonoScontoImponibile")),
+                    DbVal(Session("Ordine_CodiceBuonoSconto")),
+                    DbVal(Session("Ordine_BuonoScontoIdIva")),
+                    DbVal(Session("Ordine_BuonoScontoValoreIva")),
+                    DbVal(Session("Coupon_Arrotondamento")),
+                    DbVal(Session("AbilitatoIvaReverseCharge")),
+                    DbVal(Session("Iva_Vettori")))
+
                 ' Lock, rivalidazione commerciale e creazione documento condividono
                 ' la stessa connessione e la stessa transazione.
                 trns = conn.BeginTransaction(IsolationLevel.Serializable)
+                Dim durableClaim As OrderDurableIdempotencyRecord =
+                    OrderDurableIdempotencyService.TryClaim(conn, trns, checkoutRequestId, LoginId, TipoDoc, payloadFingerprint)
+                If durableClaim Is Nothing OrElse durableClaim.Status = OrderDurableClaimStatus.Rejected Then
+                    trns.Rollback()
+                    trns.Dispose()
+                    trns = Nothing
+                    ShowDurableCheckoutTechnicalFailure()
+                    Exit Sub
+                End If
+                If durableClaim.Status = OrderDurableClaimStatus.CompletedReplay Then
+                    trns.Rollback()
+                    trns.Dispose()
+                    trns = Nothing
+                    If Not RenderCompletedOrder(conn, durableClaim) Then ShowDurableCheckoutTechnicalFailure()
+                    Exit Sub
+                End If
+                If durableClaim.Status = OrderDurableClaimStatus.RetryRequired Then
+                    trns.Rollback()
+                    trns.Dispose()
+                    trns = Nothing
+                    Me.SafeRedirect("carrello.aspx?pricechanged=1")
+                    Exit Sub
+                End If
+
                 If Not isLegacyCouponFlow Then
                     Dim listino As Integer = GetSessionInt("Listino", GetSessionInt("listino", 1))
                     If listino <= 0 Then listino = 1
@@ -478,6 +629,8 @@ End If
                         Exit Sub
                     End If
                     If priceRevalidation.HasChanges Then
+                        OrderDurableIdempotencyService.MarkRetryRequired(
+                            conn, trns, checkoutRequestId, LoginId, TipoDoc, payloadFingerprint)
                         trns.Commit()
                         trns.Dispose()
                         trns = Nothing
@@ -570,14 +723,21 @@ End If
                     End If
                 End Using
 
-                ' Recupero ultimo documento inserito (limit 1)
-                Using cmdDoc As New MySqlCommand("SELECT id, DataDocumento FROM documenti WHERE UtentiId=?UtentiId AND TipoDocumentiID=?TipoDoc ORDER BY ID DESC LIMIT 1", conn, trns)
+                ' Resolve the exact document created by the canonical procedure.
+                Using cmdDoc As New MySqlCommand("SELECT id, DataDocumento FROM documenti WHERE UtentiId=?UtentiId AND TipoDocumentiID=?TipoDoc AND NDocumento=?NumDoc AND YEAR(DataDocumento)=YEAR(CURRENT_TIMESTAMP) ORDER BY ID DESC LIMIT 2", conn, trns)
                     cmdDoc.Parameters.AddWithValue("?UtentiId", UtentiId)
                     cmdDoc.Parameters.AddWithValue("?TipoDoc", TipoDoc)
+                    cmdDoc.Parameters.Add("?NumDoc", MySqlDbType.Int64).Value = NumDoc
                     Using dr As MySqlDataReader = cmdDoc.ExecuteReader()
+                        Dim matchedDocuments As Integer = 0
                         If dr.Read() Then
+                            matchedDocuments += 1
                             id = Convert.ToInt32(dr("id"))
                             DataDoc = dr("DataDocumento").ToString()
+                        End If
+                        If dr.Read() Then matchedDocuments += 1
+                        If matchedDocuments <> 1 OrElse id <= 0 Then
+                            Throw New DataException("Canonical checkout document could not be resolved uniquely.")
                         End If
                     End Using
                 End Using
@@ -586,6 +746,9 @@ End If
                 If PagamentoOnLine = PAYMENT_ONLINE_PAYPAL Then
                     PayPalPaymentState.MarkPending(id, "PayPal: in attesa di avvio pagamento", conn, trns)
                 End If
+
+                OrderDurableIdempotencyService.Complete(
+                    conn, trns, checkoutRequestId, LoginId, TipoDoc, payloadFingerprint, NumDoc, id)
 
                 Me.Label1.Text = NumDoc.ToString()
                 Me.Label2.Text = Documento
@@ -747,7 +910,15 @@ End If
                         System.Diagnostics.Trace.TraceError("ordine.aspx rollback logging failed. Error type: " & logError.GetType().Name & ".")
                     End Try
                 End Try
+                Try
+                    If trns IsNot Nothing Then trns.Dispose()
+                Catch
+                End Try
                 trns = Nothing
+
+                If TryReconcileCompletedOrder(checkoutConnectionString, checkoutRequestId, LoginId) Then
+                    Return
+                End If
 
                 If TypeOf ex Is OrderInventoryAvailabilityException Then
                     Dim availabilityError As OrderInventoryAvailabilityException = DirectCast(ex, OrderInventoryAvailabilityException)
@@ -773,8 +944,7 @@ End If
                     Return
                 End If
 
-                Me.Panel1.Visible = False
-                Me.Panel2.Visible = True
+                ShowDurableCheckoutTechnicalFailure()
                 Try
                     KeepStoreLog.Error("ordine.aspx", "Errore conferma ordine", ex, HttpContext.Current)
                 Catch
