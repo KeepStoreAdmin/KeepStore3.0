@@ -10,7 +10,6 @@ Partial Class cart_add
     Inherits AntiCsrfPage
 
     Private Const IndeterminateMessage As String = "Non è stato possibile confermare l'aggiornamento. Aggiorna il carrello e riprova."
-
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         If Not String.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase) Then
             Response.StatusCode = 405
@@ -28,26 +27,26 @@ Partial Class cart_add
             Return
         End If
 
-        Dim actionValues As NameValueCollection = Nothing
-        Dim packedAction As String = Convert.ToString(Request.Form("ksCartAction"))
-        If Not String.IsNullOrWhiteSpace(packedAction) Then actionValues = HttpUtility.ParseQueryString(packedAction)
-
-        Dim requestId As String = String.Empty
-        If Not CartMutationIdempotencyService.NormalizeRequestId(ReadActionValue(actionValues, "requestId"), requestId) Then
-            Reject(400, "Identificativo richiesta non valido.")
-            Return
-        End If
-
-        Dim operation As String = ReadActionValue(actionValues, "operation").Trim().ToLowerInvariant()
-        If operation = String.Empty Then operation = "cart-add"
-
-        Dim cartReturnUrl As String = StorefrontReturnUrlPolicy.FirstValidShoppingReturnUrl(
+        Dim cartReturnUrl As String = StorefrontReturnUrlPolicy.FirstValidCartMutationReturnUrl(
             HttpContext.Current,
             Convert.ToString(Request.Form("ReturnUrl")),
             If(Request.UrlReferrer IsNot Nothing, Request.UrlReferrer.AbsoluteUri, String.Empty),
             Convert.ToString(Session("Carrello_Pagina")))
         If cartReturnUrl = String.Empty Then cartReturnUrl = "/articoli.aspx"
         Session("Carrello_Pagina") = cartReturnUrl
+
+        Dim actionValues As NameValueCollection = Nothing
+        Dim packedAction As String = Convert.ToString(Request.Form("ksCartAction"))
+        If Not String.IsNullOrWhiteSpace(packedAction) Then actionValues = HttpUtility.ParseQueryString(packedAction)
+
+        Dim requestId As String = String.Empty
+        If Not CartMutationIdempotencyService.NormalizeRequestId(ReadActionValue(actionValues, "requestId"), requestId) Then
+            RedirectMutationFailure(cartReturnUrl)
+            Return
+        End If
+
+        Dim operation As String = ReadActionValue(actionValues, "operation").Trim().ToLowerInvariant()
+        If operation = String.Empty Then operation = "cart-add"
 
         Select Case operation
             Case "cart-add"
@@ -61,7 +60,7 @@ Partial Class cart_add
             Case "cart-clear"
                 HandleRemovalAction(actionValues, requestId, cartReturnUrl, True)
             Case Else
-                Reject(400, "Operazione carrello non valida.")
+                RedirectMutationFailure(cartReturnUrl)
         End Select
     End Sub
 
@@ -72,7 +71,7 @@ Partial Class cart_add
         Dim cartRowId As Integer = 0
         If Not clearAll AndAlso
            (Not Integer.TryParse(ReadActionValue(actionValues, "rowId"), cartRowId) OrElse cartRowId <= 0) Then
-            Reject(400, "Parametri carrello non validi.")
+            RedirectMutationFailure(cartReturnUrl)
             Return
         End If
 
@@ -87,10 +86,10 @@ Partial Class cart_add
             CartMutationService.RemoveCartRowForCurrentOwner(HttpContext.Current, cartRowId))
         If result Is Nothing OrElse Not result.Succeeded Then
             If result IsNot Nothing AndAlso result.IsIndeterminate Then
-                Reject(409, IndeterminateMessage)
+                RedirectMutationFailure(cartReturnUrl, IndeterminateMessage)
             Else
                 CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
-                Reject(422, "Non è stato possibile aggiornare il carrello. Riprova.")
+                RedirectMutationFailure(cartReturnUrl)
             End If
             Return
         End If
@@ -109,7 +108,7 @@ Partial Class cart_add
                                      ByVal setAbsoluteQuantity As Boolean)
         Dim articleId As Integer = 0
         If Not Integer.TryParse(ReadActionValue(actionValues, "id"), articleId) OrElse articleId <= 0 Then
-            Reject(400, "Parametri carrello non validi.")
+            RedirectMutationFailure(cartReturnUrl)
             Return
         End If
 
@@ -121,7 +120,7 @@ Partial Class cart_add
         If setAbsoluteQuantity Then
             Dim quantityFieldName As String = ReadActionValue(actionValues, "qtyField")
             If Not IsSafeQuantityFieldName(quantityFieldName) Then
-                Reject(400, "Parametri carrello non validi.")
+                RedirectPdpFailure(articleId, tcId)
                 Return
             End If
             quantityRaw = Convert.ToString(Request.Form(quantityFieldName))
@@ -132,7 +131,7 @@ Partial Class cart_add
         Dim quantity As Decimal = 0D
         If Not TryParseQuantity(quantityRaw, quantity) OrElse
            (setAbsoluteQuantity AndAlso quantity <= 0D) Then
-            Reject(400, "Parametri carrello non validi.")
+            RedirectPdpFailure(articleId, tcId)
             Return
         End If
 
@@ -140,7 +139,7 @@ Partial Class cart_add
         Dim payload As String = If(setAbsoluteQuantity,
                                    CartMutationIdempotencyService.BuildSetQuantityPayload(articleId, tcId, quantity),
                                    CartMutationIdempotencyService.BuildStandardPayload(articleId, tcId, quantity))
-        If Not TryAcquireIntent(requestId, operationType, payload, cartReturnUrl) Then Return
+        If Not TryAcquireIntent(requestId, operationType, payload, cartReturnUrl, articleId, tcId) Then Return
 
         If Not setAbsoluteQuantity AndAlso quantity = 0D Then
             CartMutationIdempotencyService.CompleteIntent(HttpContext.Current, requestId)
@@ -159,7 +158,7 @@ Partial Class cart_add
 
         If result Is Nothing OrElse Not result.Succeeded Then
             CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
-            Reject(422, "Il prodotto non è stato aggiunto. Verifica disponibilità e prezzo.")
+            RedirectPdpFailure(articleId, tcId)
             Return
         End If
 
@@ -173,7 +172,7 @@ Partial Class cart_add
                                    ByVal cartReturnUrl As String)
         Dim bundleItems As List(Of CartStandardBatchMutationRequest) = Nothing
         If Not TryParseBundleItems(ReadActionValue(actionValues, "items"), bundleItems) Then
-            Reject(400, "Parametri carrello non validi.")
+            RedirectMutationFailure(cartReturnUrl)
             Return
         End If
 
@@ -181,7 +180,7 @@ Partial Class cart_add
         Dim payload As String = String.Empty
         If Not CartMutationIdempotencyService.TryNormalizeStandardBatchItems(
             bundleItems, 20, normalizedItems, payload) Then
-            Reject(400, "Parametri carrello non validi.")
+            RedirectMutationFailure(cartReturnUrl)
             Return
         End If
         If Not TryAcquireIntent(requestId, "pdp-bundle", payload, cartReturnUrl) Then Return
@@ -197,13 +196,13 @@ Partial Class cart_add
             Catch logError As Exception
                 System.Diagnostics.Trace.TraceError("cart_add bundle logging failed. Error type: " & logError.GetType().Name & ".")
             End Try
-            Reject(500, "Non è stato possibile aggiornare il carrello. Riprova.")
+            RedirectMutationFailure(cartReturnUrl)
             Return
         End Try
 
         If batchResult Is Nothing OrElse Not batchResult.Succeeded OrElse batchResult.Items.Count = 0 Then
             CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
-            Reject(422, "I prodotti selezionati non sono stati aggiunti. Verifica disponibilità e prezzo.")
+            RedirectMutationFailure(cartReturnUrl, "I prodotti selezionati non sono stati aggiunti. Verifica disponibilità e prezzo.")
             Return
         End If
 
@@ -220,7 +219,9 @@ Partial Class cart_add
     Private Function TryAcquireIntent(ByVal requestId As String,
                                       ByVal operationType As String,
                                       ByVal payload As String,
-                                      ByVal cartReturnUrl As String) As Boolean
+                                      ByVal cartReturnUrl As String,
+                                      Optional ByVal articleId As Integer = 0,
+                                      Optional ByVal tcId As Integer = -1) As Boolean
         Dim decision As CartMutationIntentDecision = CartMutationIdempotencyService.RegisterIntent(
             HttpContext.Current, requestId, operationType, payload)
         If decision = CartMutationIntentDecision.Completed Then
@@ -228,7 +229,7 @@ Partial Class cart_add
             Return False
         End If
         If decision = CartMutationIntentDecision.Indeterminate Then
-            Reject(409, IndeterminateMessage)
+            RedirectIntentFailure(cartReturnUrl, articleId, tcId, IndeterminateMessage)
             Return False
         End If
         If decision = CartMutationIntentDecision.Collision Then
@@ -236,16 +237,16 @@ Partial Class cart_add
                 KeepStoreLog.Info("cart_add.aspx", "Richiesta carrello rifiutata per collisione idempotente.", HttpContext.Current)
             Catch
             End Try
-            Reject(409, "Identificativo richiesta non valido.")
+            RedirectIntentFailure(cartReturnUrl, articleId, tcId)
             Return False
         End If
         If decision = CartMutationIntentDecision.Invalid Then
-            Reject(400, "Richiesta carrello non valida.")
+            RedirectIntentFailure(cartReturnUrl, articleId, tcId)
             Return False
         End If
         If decision = CartMutationIntentDecision.Processing OrElse decision = CartMutationIntentDecision.CapacityExceeded Then
             Response.Headers("Retry-After") = "1"
-            Reject(503, "Aggiornamento carrello in corso. Riprova tra poco.")
+            RedirectIntentFailure(cartReturnUrl, articleId, tcId, "Aggiornamento carrello in corso. Riprova tra poco.")
             Return False
         End If
 
@@ -256,13 +257,13 @@ Partial Class cart_add
             Return False
         End If
         If beginDecision = CartMutationIntentDecision.Indeterminate Then
-            Reject(409, IndeterminateMessage)
+            RedirectIntentFailure(cartReturnUrl, articleId, tcId, IndeterminateMessage)
             Return False
         End If
         If beginDecision <> CartMutationIntentDecision.Accepted Then
             If beginDecision = CartMutationIntentDecision.Processing OrElse
                beginDecision = CartMutationIntentDecision.CapacityExceeded Then Response.Headers("Retry-After") = "1"
-            Reject(If(beginDecision = CartMutationIntentDecision.Collision, 409, 503), "Aggiornamento carrello non disponibile. Riprova.")
+            RedirectIntentFailure(cartReturnUrl, articleId, tcId)
             Return False
         End If
         Return True
@@ -318,6 +319,38 @@ Partial Class cart_add
         Session("ks_cart_feedback_count") = 1
         Session("ks_cart_feedback_created_utc") = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
     End Sub
+
+    Private Sub RedirectIntentFailure(ByVal returnUrl As String,
+                                      ByVal articleId As Integer,
+                                      ByVal tcId As Integer,
+                                      Optional ByVal message As String = "")
+        If articleId > 0 Then
+            RedirectPdpFailure(articleId, tcId)
+        Else
+            RedirectMutationFailure(returnUrl, message)
+        End If
+    End Sub
+
+    Private Sub RedirectPdpFailure(ByVal articleId As Integer,
+                                   ByVal tcId As Integer)
+        RedirectAfterPost(BuildPdpFailureReturnUrl(articleId, tcId))
+    End Sub
+
+    Private Sub RedirectMutationFailure(ByVal returnUrl As String,
+                                        Optional ByVal message As String = "")
+        Session(CartPriceRevalidationHelper.SessionMessageKey) =
+            If(String.IsNullOrWhiteSpace(message), "Non è stato possibile aggiornare il carrello. Riprova.", message)
+        RedirectAfterPost(returnUrl)
+    End Sub
+
+    Private Function BuildPdpFailureReturnUrl(ByVal articleId As Integer,
+                                              ByVal tcId As Integer) As String
+        Dim target As String = ResolveUrl("~/articolo.aspx") & "?id=" &
+            articleId.ToString(CultureInfo.InvariantCulture)
+        If tcId > 0 Then target &= "&TCid=" & tcId.ToString(CultureInfo.InvariantCulture)
+        target &= "&cartfeedback=not-added"
+        Return target
+    End Function
 
     Private Function ReadActionValue(ByVal actionValues As NameValueCollection,
                                      ByVal key As String) As String

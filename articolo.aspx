@@ -29,6 +29,15 @@
 </asp:Content>
 
 <asp:Content ID="MainContent1" ContentPlaceHolderID="MainContent" runat="server">
+    <asp:Panel ID="pnlPdpCartFailure" runat="server" Visible="false" CssClass="flat-spacing-2 pb-0" role="alert">
+        <div class="container">
+            <div class="alert alert-warning mb-0">
+                <strong>Prodotto non aggiunto.</strong>
+                <asp:Literal ID="litPdpCartFailure" runat="server" Mode="Encode" />
+            </div>
+        </div>
+    </asp:Panel>
+
     <asp:PlaceHolder ID="phNotFound" runat="server" Visible="false">
         <section class="flat-spacing-2">
             <div class="container">

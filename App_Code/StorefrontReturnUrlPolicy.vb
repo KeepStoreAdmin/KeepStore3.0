@@ -80,7 +80,28 @@ Public NotInheritable Class StorefrontReturnUrlPolicy
         Return String.Empty
     End Function
 
+    Public Shared Function FirstValidCartMutationReturnUrl(ByVal context As HttpContext, ParamArray candidates() As String) As String
+        If candidates Is Nothing Then Return String.Empty
+
+        For Each candidate As String In candidates
+            Dim normalized As String = NormalizeCartMutationReturnUrl(context, candidate)
+            If normalized <> String.Empty Then Return normalized
+        Next
+
+        Return String.Empty
+    End Function
+
     Public Shared Function NormalizeShoppingReturnUrl(ByVal context As HttpContext, ByVal rawValue As String) As String
+        Return NormalizeLocalReturnUrl(context, rawValue, False)
+    End Function
+
+    Public Shared Function NormalizeCartMutationReturnUrl(ByVal context As HttpContext, ByVal rawValue As String) As String
+        Return NormalizeLocalReturnUrl(context, rawValue, True)
+    End Function
+
+    Private Shared Function NormalizeLocalReturnUrl(ByVal context As HttpContext,
+                                                    ByVal rawValue As String,
+                                                    ByVal allowCartPage As Boolean) As String
         If context Is Nothing OrElse context.Request Is Nothing OrElse context.Request.Url Is Nothing Then Return String.Empty
 
         If String.IsNullOrWhiteSpace(rawValue) Then Return String.Empty
@@ -137,7 +158,11 @@ Public NotInheritable Class StorefrontReturnUrlPolicy
         If Not String.Equals(Path.GetExtension(policyPath), ".aspx", StringComparison.OrdinalIgnoreCase) Then Return String.Empty
 
         Dim pageName As String = Path.GetFileName(policyPath)
-        If pageName = String.Empty OrElse DisallowedShoppingPages.Contains(pageName) Then Return String.Empty
+        If pageName = String.Empty Then Return String.Empty
+        If DisallowedShoppingPages.Contains(pageName) AndAlso
+           Not (allowCartPage AndAlso String.Equals(pageName, "carrello.aspx", StringComparison.OrdinalIgnoreCase)) Then
+            Return String.Empty
+        End If
 
         Return resolved.PathAndQuery
     End Function

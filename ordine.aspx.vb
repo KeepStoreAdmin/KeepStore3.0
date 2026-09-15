@@ -54,6 +54,7 @@ End Sub
 ' === HARDENING: durable checkout token from carrello -> ordine (VB2012 safe) ===
 Private Const CHECKOUT_TOKEN_PURPOSE As String = "KeepStore.OrderCheckout.Idempotency.V1"
 Private Const CHECKOUT_TOKEN_QS_KEY As String = "t"
+Private Const ORDER_CONFIRMATION_TOKEN_QS_KEY As String = "c"
 Private Const OrderNotesMaxLength As Integer = 255
 Private Shared ReadOnly CHECKOUT_TOKEN_MAX_AGE As TimeSpan = TimeSpan.FromMinutes(30)
 
@@ -123,6 +124,17 @@ Private Function TryValidateCheckoutToken(ByVal loginId As Long, ByRef requestId
         If clearBytes IsNot Nothing Then Array.Clear(clearBytes, 0, clearBytes.Length)
     End Try
 End Function
+
+Private Sub RedirectToOrderConfirmation(ByVal requestId As String, ByVal loginId As Long)
+    Dim token As String = OrderConfirmationTokenService.CreateToken(requestId, loginId)
+    Response.Clear()
+    Response.StatusCode = 303
+    Response.StatusDescription = "See Other"
+    Response.TrySkipIisCustomErrors = True
+    Response.RedirectLocation = "ordine.aspx?" & ORDER_CONFIRMATION_TOKEN_QS_KEY & "=" &
+        HttpUtility.UrlEncode(token)
+    Context.ApplicationInstance.CompleteRequest()
+End Sub
 
 
 
@@ -213,8 +225,13 @@ End Function
         If candidate <= 0 Then candidate = GetSessionLong("UtentiID", 0)
         If candidate > 0 Then Return candidate
 
-        If loginId <= 0 Then Return 0
+        Return ResolveUtentiIdForLogin(conn, loginId)
+    End Function
 
+    Private Function ResolveUtentiIdForLogin(ByVal conn As MySqlConnection, ByVal loginId As Long) As Long
+        If conn Is Nothing OrElse loginId <= 0 Then Return 0
+
+        Dim candidate As Long = 0
         Using cmd As New MySqlCommand("SELECT utentiid FROM vlogin WHERE id=?LoginId LIMIT 1", conn)
             cmd.CommandType = CommandType.Text
             cmd.Parameters.AddWithValue("?LoginId", loginId)
@@ -415,8 +432,7 @@ End Function
         Dim documentNumber As Long = 0
         Dim documentType As Integer = 0
         Dim documentDate As String = String.Empty
-        Dim ownerUtentiId As Long = ResolveCurrentUtentiId(
-            conn, record.LoginId, GetSessionLong("UtentiId", 0))
+        Dim ownerUtentiId As Long = ResolveUtentiIdForLogin(conn, record.LoginId)
         If ownerUtentiId <= 0 Then Return False
         Using command As New MySqlCommand(
             "SELECT id, TipoDocumentiId, NDocumento, DataDocumento FROM documenti " &
@@ -466,12 +482,49 @@ End Function
                 reconcileConnection.Open()
                 Dim record As OrderDurableIdempotencyRecord =
                     OrderDurableIdempotencyService.TryReadCompleted(reconcileConnection, requestId, loginId)
-                Return record IsNot Nothing AndAlso RenderCompletedOrder(reconcileConnection, record)
+                Return record IsNot Nothing AndAlso
+                    record.Status = OrderDurableClaimStatus.CompletedReplay AndAlso
+                    record.DocumentiId > 0 AndAlso record.DocumentoMemorizzato > 0
             End Using
         Catch
             Return False
         End Try
     End Function
+
+    Private Sub HandleOrderConfirmationGet(ByVal authenticatedLoginId As Long)
+        If Not String.Equals(Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) Then
+            SafeRedirect("documenti.aspx")
+            Return
+        End If
+
+        Dim requestId As String = String.Empty
+        If Not OrderConfirmationTokenService.TryValidate(
+            GetQueryString(ORDER_CONFIRMATION_TOKEN_QS_KEY, 1024),
+            authenticatedLoginId,
+            requestId) Then
+            SafeRedirect("documenti.aspx")
+            Return
+        End If
+
+        Try
+            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                conn.Open()
+                Dim record As OrderDurableIdempotencyRecord =
+                    OrderDurableIdempotencyService.TryReadCompleted(conn, requestId, authenticatedLoginId)
+                If record Is Nothing OrElse
+                   record.Status <> OrderDurableClaimStatus.CompletedReplay OrElse
+                   Not RenderCompletedOrder(conn, record) Then
+                    SafeRedirect("documenti.aspx")
+                    Return
+                End If
+            End Using
+
+            Response.Cache.SetCacheability(HttpCacheability.Private)
+            Response.Cache.SetNoStore()
+        Catch
+            ShowDurableCheckoutTechnicalFailure()
+        End Try
+    End Sub
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
 
@@ -485,6 +538,11 @@ End Function
 
 ' Durable idempotency token issued by carrello and protected with MachineKey.
 Dim authenticatedLoginId As Long = GetSessionLong("LoginId", 0)
+If Not String.IsNullOrEmpty(GetQueryString(ORDER_CONFIRMATION_TOKEN_QS_KEY, 1024)) Then
+    HandleOrderConfirmationGet(authenticatedLoginId)
+    Exit Sub
+End If
+
 Dim checkoutRequestId As String = String.Empty
 If Not TryValidateCheckoutToken(authenticatedLoginId, checkoutRequestId) Then
     SafeRedirect("carrello.aspx")
@@ -536,7 +594,9 @@ End If
                     OrderDurableIdempotencyService.TryReadCompleted(conn, checkoutRequestId, LoginId)
                 If completedBeforeWork IsNot Nothing Then
                     If completedBeforeWork.Status = OrderDurableClaimStatus.CompletedReplay AndAlso
-                       RenderCompletedOrder(conn, completedBeforeWork) Then
+                       completedBeforeWork.DocumentiId > 0 AndAlso
+                       completedBeforeWork.DocumentoMemorizzato > 0 Then
+                        RedirectToOrderConfirmation(checkoutRequestId, LoginId)
                         Exit Sub
                     End If
                     If completedBeforeWork.Status = OrderDurableClaimStatus.RetryRequired Then
@@ -597,7 +657,11 @@ End If
                     trns.Rollback()
                     trns.Dispose()
                     trns = Nothing
-                    If Not RenderCompletedOrder(conn, durableClaim) Then ShowDurableCheckoutTechnicalFailure()
+                    If durableClaim.DocumentiId > 0 AndAlso durableClaim.DocumentoMemorizzato > 0 Then
+                        RedirectToOrderConfirmation(checkoutRequestId, LoginId)
+                    Else
+                        ShowDurableCheckoutTechnicalFailure()
+                    End If
                     Exit Sub
                 End If
                 If durableClaim.Status = OrderDurableClaimStatus.RetryRequired Then
@@ -900,6 +964,11 @@ End If
                     End If
                 End If
 
+                If String.IsNullOrEmpty(redirect) Then
+                    RedirectToOrderConfirmation(checkoutRequestId, LoginId)
+                    Exit Sub
+                End If
+
             Catch ex As Exception
                 Try
                     If trns IsNot Nothing Then trns.Rollback()
@@ -917,6 +986,7 @@ End If
                 trns = Nothing
 
                 If TryReconcileCompletedOrder(checkoutConnectionString, checkoutRequestId, LoginId) Then
+                    RedirectToOrderConfirmation(checkoutRequestId, LoginId)
                     Return
                 End If
 
@@ -1397,11 +1467,13 @@ End If
             Dim pagamentoCosto As String = ""
             Dim iva As String = ""
             Dim totale As String = ""
-            Dim sconto As String = MoneyDisplay(GetSessionDouble("Ordine_TotaleBuonoSconto", 0))
+            Dim sconto As String = ""
             Dim pagamentoDescrizione As String = ""
             Dim pagamentoInformazioni As String = ""
             Dim spedizioneDescrizione As String = ""
             Dim spedizioneInformazioni As String = ""
+            Dim receiptAziendaId As Integer = 0
+            Dim receiptIvaTipo As Integer = 2
             Dim billingName As String = ""
             Dim billingAddress As String = ""
             Dim billingTax As String = ""
@@ -1409,10 +1481,12 @@ End If
             Dim shippingName As String = ""
             Dim shippingAddress As String = ""
             Dim shippingContacts As String = ""
-            Dim brand As OrderEmailBrandData = LoadOrderEmailBrandData(conn)
+            Dim brand As OrderEmailBrandData = Nothing
             Dim lines As New List(Of OrderEmailLine)()
 
-            Using cmdTestata As New MySqlCommand("SELECT * FROM vdocumenticompleta WHERE id=?id", conn)
+            Using cmdTestata As New MySqlCommand(
+                "SELECT vd.*, COALESCE((SELECT u.IvaTipo FROM utenti u WHERE u.Id=vd.UtentiId LIMIT 1),2) AS ReceiptIvaTipo " &
+                "FROM vdocumenticompleta vd WHERE vd.id=?id", conn)
                 cmdTestata.Parameters.AddWithValue("?id", idDocumento)
                 Using dr As MySqlDataReader = cmdTestata.ExecuteReader()
                     If dr.Read() Then
@@ -1423,17 +1497,18 @@ End If
                             dataDisplay = FormatDocumentDate(DbText(dr, "DataDocumento"))
                         End If
                         statoDocumento = JoinNonEmpty(" - ", DbText(dr, "StatiDescrizione1"), DbText(dr, "StatiDescrizione2"))
-                        billingName = JoinNonEmpty(" ", DbText(dr, "RagioneSociale"), DbText(dr, "cognomenome"))
-                        billingAddress = JoinNonEmpty(" - ",
-                                                      DbText(dr, "Indirizzo"),
-                                                      JoinNonEmpty(" ", DbText(dr, "Cap"), DbText(dr, "citta"), DbText(dr, "provincia")))
+                        receiptAziendaId = Convert.ToInt32(dr("AziendeId"), CultureInfo.InvariantCulture)
+                        receiptIvaTipo = Convert.ToInt32(dr("ReceiptIvaTipo"), CultureInfo.InvariantCulture)
+                        billingName = DbText(dr, "Utente")
+                        billingAddress = CleanField(DbText(dr, "SedeLegale"))
                         billingTax = JoinNonEmpty(" - ",
-                                                  If(String.IsNullOrWhiteSpace(DbText(dr, "piva")), "", "P.IVA " & DbText(dr, "piva")),
-                                                  If(String.IsNullOrWhiteSpace(DbText(dr, "codicefiscale")), "", "C.F. " & DbText(dr, "codicefiscale")))
+                                                  If(String.IsNullOrWhiteSpace(DbText(dr, "Piva")), "", "P.IVA " & DbText(dr, "Piva")),
+                                                  If(String.IsNullOrWhiteSpace(DbText(dr, "CodiceFiscale")), "", "C.F. " & DbText(dr, "CodiceFiscale")))
                         billingContacts = JoinNonEmpty(" - ",
                                                        If(String.IsNullOrWhiteSpace(DbText(dr, "Email")), "", DbText(dr, "Email")),
                                                        If(String.IsNullOrWhiteSpace(DbText(dr, "Telefono")), "", "Tel. " & DbText(dr, "Telefono")),
                                                        If(String.IsNullOrWhiteSpace(DbText(dr, "Cellulare")), "", "Cell. " & DbText(dr, "Cellulare")))
+                        shippingAddress = CleanField(DbText(dr, "DestinazioneMerci"))
                         spedizioneDescrizione = DbText(dr, "VettoriDescrizione")
                         spedizioneInformazioni = DbText(dr, "VettoriInformazioni")
                         pagamentoDescrizione = DbText(dr, "PagamentiTipoDescrizione")
@@ -1442,38 +1517,19 @@ End If
                         spedizione = MoneyDisplay(dr("costospedizione"))
                         assicurazione = MoneyDisplay(dr("costoassicurazione"))
                         pagamentoCosto = MoneyDisplay(dr("costopagamento"))
+                        sconto = MoneyDisplay(dr("totsconto"))
                         iva = MoneyDisplay(dr("totiva"))
                         totale = MoneyDisplay(dr("totaledocumento"))
                     End If
                 End Using
             End Using
 
-            Dim selectedAddressId As Integer = 0
-            TryReadSelectedShippingAddressId(selectedAddressId)
-            If selectedAddressId > 0 Then
-                Dim receiptUtentiId As Long = GetSessionLong("UtentiId", 0)
-                If receiptUtentiId <= 0 Then receiptUtentiId = GetSessionLong("UtentIId", 0)
-                If receiptUtentiId <= 0 Then receiptUtentiId = GetSessionLong("UtentiID", 0)
-                Using cmdAddress As New MySqlCommand("SELECT RagioneSocialeA, NomeA, IndirizzoA, CapA, CittaA, ProvinciaA, TelefonoA, CellulareA, Note FROM utentiindirizzi WHERE ID=?id AND UtenteId=?utenteId LIMIT 1", conn)
-                    cmdAddress.Parameters.AddWithValue("?id", selectedAddressId)
-                    cmdAddress.Parameters.AddWithValue("?utenteId", receiptUtentiId)
-                    Using drAddress As MySqlDataReader = cmdAddress.ExecuteReader()
-                        If drAddress.Read() Then
-                            shippingName = JoinNonEmpty(" ", DbText(drAddress, "RagioneSocialeA"), DbText(drAddress, "NomeA"))
-                            shippingAddress = JoinNonEmpty(" - ",
-                                                           DbText(drAddress, "IndirizzoA"),
-                                                           JoinNonEmpty(" ", DbText(drAddress, "CapA"), DbText(drAddress, "CittaA"), DbText(drAddress, "ProvinciaA")))
-                            shippingContacts = JoinNonEmpty(" - ",
-                                                            If(String.IsNullOrWhiteSpace(DbText(drAddress, "TelefonoA")), "", "Tel. " & DbText(drAddress, "TelefonoA")),
-                                                            If(String.IsNullOrWhiteSpace(DbText(drAddress, "CellulareA")), "", "Cell. " & DbText(drAddress, "CellulareA")),
-                                                            DbText(drAddress, "Note"))
-                        End If
-                    End Using
-                End Using
+            brand = LoadOrderEmailBrandData(conn, receiptAziendaId, False)
+            If String.IsNullOrWhiteSpace(shippingAddress) Then
+                shippingName = billingName
+                shippingAddress = billingAddress
+                shippingContacts = billingContacts
             End If
-            If String.IsNullOrWhiteSpace(shippingName) Then shippingName = billingName
-            If String.IsNullOrWhiteSpace(shippingAddress) Then shippingAddress = billingAddress
-            If String.IsNullOrWhiteSpace(shippingContacts) Then shippingContacts = billingContacts
 
             Using cmdRighe As New MySqlCommand("SELECT vr.*, " &
                                                 "img.Immagine1 AS VarianteImmagine1, img.Immagine2 AS VarianteImmagine2, img.Immagine3 AS VarianteImmagine3, img.Immagine4 AS VarianteImmagine4, img.Immagine5 AS VarianteImmagine5, img.Immagine6 AS VarianteImmagine6, " &
@@ -1493,7 +1549,7 @@ End If
                         line.Quantity = FormatQuantity(DbText(drRighe, "qnt"))
                         line.ImageUrl = ResolveOrderProductImageUrl(BuildOrderProductImageCandidates(drRighe))
                         line.ImageAlt = JoinNonEmpty(" - ", line.Code, line.Description)
-                        If GetSessionInt("IvaTipo", 0) = 1 Then
+                        If receiptIvaTipo = 1 Then
                             line.UnitPrice = MoneyDisplay(drRighe("prezzo"))
                             line.LineTotal = MoneyDisplay(drRighe("importo"))
                         Else
@@ -1899,19 +1955,24 @@ End If
         block.Items.Add(item)
     End Sub
 
-    Private Function LoadOrderEmailBrandData(ByVal conn As MySqlConnection) As OrderEmailBrandData
+    Private Function LoadOrderEmailBrandData(ByVal conn As MySqlConnection,
+                                             Optional ByVal persistedAziendaId As Integer = 0,
+                                             Optional ByVal allowSessionFallback As Boolean = True) As OrderEmailBrandData
         Dim data As New OrderEmailBrandData()
-        data.CompanyName = SessionText("AziendaNome")
-        data.SupportEmail = SessionText("AziendaEmail")
+        If allowSessionFallback Then
+            data.CompanyName = SessionText("AziendaNome")
+            data.SupportEmail = SessionText("AziendaEmail")
+        End If
         data.SiteUrl = BuildSiteHomeUrl()
-        data.LogoWeb = ResolveEmailLogoWebFileName()
+        If allowSessionFallback Then data.LogoWeb = ResolveEmailLogoWebFileName()
         data.Beneficiary = data.CompanyName
 
         If conn Is Nothing OrElse conn.State <> ConnectionState.Open Then
             Return data
         End If
 
-        Dim aziendaId As Integer = GetSessionInt("AziendaID", 0)
+        Dim aziendaId As Integer = persistedAziendaId
+        If aziendaId <= 0 AndAlso allowSessionFallback Then aziendaId = GetSessionInt("AziendaID", 0)
         If aziendaId <= 0 Then
             Return data
         End If

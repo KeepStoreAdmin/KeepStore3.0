@@ -21,6 +21,7 @@ Partial Class articolo
     Private _tcEnabled As Boolean
     Private _pdpMainCartRequestId As String
     Private _pdpBundleCartRequestId As String
+    Private _pdpCommercialCode As String
     Private ReadOnly _promotionModelCache As New Dictionary(Of String, ProductPromotionDisplayModel)(StringComparer.Ordinal)
     Private Shared ReadOnly ItCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
 
@@ -187,6 +188,23 @@ Partial Class articolo
         _tcEnabled = (GetSessionInt("TC", 0) = 1)
 
         If Not IsPostBack Then LoadPage()
+        BindPdpCartFailure()
+    End Sub
+
+    Private Sub BindPdpCartFailure()
+        pnlPdpCartFailure.Visible = False
+        If Not String.Equals(Convert.ToString(Request.QueryString("cartfeedback")),
+                             "not-added",
+                             StringComparison.Ordinal) Then Return
+
+        Dim commercialCode As String = Convert.ToString(_pdpCommercialCode, CultureInfo.InvariantCulture).Trim()
+        If commercialCode <> String.Empty Then
+            litPdpCartFailure.Text = " Il prodotto con codice " & commercialCode &
+                " non è acquistabile nella quantità richiesta. Verifica disponibilità e prezzo."
+        Else
+            litPdpCartFailure.Text = " Il prodotto selezionato non è acquistabile nella quantità richiesta. Verifica disponibilità e prezzo."
+        End If
+        pnlPdpCartFailure.Visible = True
     End Sub
 
     Private Function TryParseParams() As Boolean
@@ -250,6 +268,8 @@ Partial Class articolo
             ShowNotFound()
             Return
         End If
+
+        _pdpCommercialCode = GetRowString(row, "Codice")
 
         IncrementVisitsForSession(row)
         BindProduct(row)
