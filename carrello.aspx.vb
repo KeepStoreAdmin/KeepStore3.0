@@ -761,7 +761,17 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         If pnlOrderInventoryAvailability Is Nothing OrElse litOrderInventoryAvailability Is Nothing Then Return
 
         Dim message As String = ""
-        If Session(OrderInventoryAvailabilityService.SessionMessageKey) IsNot Nothing Then
+        Dim stockErrorRequested As Boolean = String.Equals(Request.QueryString("stockerror"), "1", StringComparison.OrdinalIgnoreCase)
+        If stockErrorRequested Then
+            Dim refreshedLineKeys As String = ""
+            Dim technicalFailure As Boolean = False
+            If TryReevaluateCurrentOrderInventoryFailure(message, refreshedLineKeys, technicalFailure) Then
+                Session(OrderInventoryAvailabilityService.SessionLineKeysKey) = refreshedLineKeys
+            Else
+                Session(OrderInventoryAvailabilityService.SessionLineKeysKey) = Nothing
+                If technicalFailure Then message = OrderInventoryAvailabilityService.TechnicalErrorMessage
+            End If
+        ElseIf Session(OrderInventoryAvailabilityService.SessionMessageKey) IsNot Nothing Then
             message = Convert.ToString(Session(OrderInventoryAvailabilityService.SessionMessageKey))
         End If
 
@@ -774,6 +784,49 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
             ScriptManager.RegisterStartupScript(Me, Me.GetType(), "focusOrderInventoryAvailability", "setTimeout(function(){var e=document.getElementById('pnlOrderInventoryAvailability');if(e){e.focus();}},0);", True)
         End If
     End Sub
+
+    Private Function TryReevaluateCurrentOrderInventoryFailure(ByRef message As String,
+                                                               ByRef lineKeys As String,
+                                                               ByRef technicalFailure As Boolean) As Boolean
+        message = ""
+        lineKeys = ""
+        technicalFailure = False
+
+        Dim loginId As Integer = GetLoginIdSafe(0)
+        If loginId <= 0 Then Return False
+
+        Try
+            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                conn.Open()
+                Dim transaction As MySqlTransaction = conn.BeginTransaction(IsolationLevel.ReadCommitted)
+                Try
+                    OrderInventoryAvailabilityService.InspectCurrentCart(conn, transaction, loginId)
+                    transaction.Rollback()
+                    Return False
+                Catch ex As OrderInventoryAvailabilityException
+                    Try
+                        transaction.Rollback()
+                    Catch
+                    End Try
+                    message = ex.BuildUserMessage()
+                    lineKeys = ex.BuildLineKeys()
+                    Return True
+                Catch
+                    Try
+                        transaction.Rollback()
+                    Catch
+                    End Try
+                    technicalFailure = True
+                    Return False
+                Finally
+                    transaction.Dispose()
+                End Try
+            End Using
+        Catch
+            technicalFailure = True
+            Return False
+        End Try
+    End Function
 
     Private Sub ApplyCartNoStoreHeaders()
         If Response Is Nothing Then Return

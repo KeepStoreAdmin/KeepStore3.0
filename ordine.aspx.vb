@@ -149,6 +149,18 @@ Private Sub ReturnToCartAfterPayloadMismatch()
     SafeRedirect("carrello.aspx")
 End Sub
 
+Private Const STOCK_FAILURE_REDIRECT_URL As String = "carrello.aspx?stockerror=1#ksCartStockError"
+
+Private Sub RedirectToStockFailure()
+    Response.Clear()
+    Response.StatusCode = 303
+    Response.StatusDescription = "See Other"
+    Response.TrySkipIisCustomErrors = True
+    Response.RedirectLocation = STOCK_FAILURE_REDIRECT_URL
+    Response.SuppressContent = True
+    Context.ApplicationInstance.CompleteRequest()
+End Sub
+
 Private Sub RedirectToOrderConfirmation(ByVal requestId As String, ByVal loginId As Long)
     Dim token As String = OrderConfirmationTokenService.CreateToken(requestId, loginId)
     Response.Clear()
@@ -498,6 +510,50 @@ End Sub
         Return True
     End Function
 
+    Private Function FindInventoryAvailabilityException(ByVal failure As Exception) As OrderInventoryAvailabilityException
+        Dim current As Exception = failure
+        Dim depth As Integer = 0
+        While current IsNot Nothing AndAlso depth < 16
+            Dim availabilityFailure As OrderInventoryAvailabilityException = TryCast(current, OrderInventoryAvailabilityException)
+            If availabilityFailure IsNot Nothing Then Return availabilityFailure
+            current = current.InnerException
+            depth += 1
+        End While
+        Return Nothing
+    End Function
+
+    Private Function IsCanonicalInventoryFailure(ByVal failure As Exception) As Boolean
+        Dim current As Exception = failure
+        Dim depth As Integer = 0
+        While current IsNot Nothing AndAlso depth < 16
+            Dim mysqlFailure As MySqlException = TryCast(current, MySqlException)
+            If mysqlFailure IsNot Nothing AndAlso
+               mysqlFailure.Number = 1644 AndAlso
+               mysqlFailure.Message IsNot Nothing AndAlso
+               mysqlFailure.Message.IndexOf(OrderInventoryAvailabilityService.CanonicalProcedureSignalPrefix, StringComparison.OrdinalIgnoreCase) >= 0 Then
+                Return True
+            End If
+            current = current.InnerException
+            depth += 1
+        End While
+        Return False
+    End Function
+
+    Private Sub StoreInventoryFailure(ByVal message As String, ByVal lineKeys As String)
+        Session(OrderInventoryAvailabilityService.SessionMessageKey) = message
+        Session(OrderInventoryAvailabilityService.SessionLineKeysKey) = lineKeys
+    End Sub
+
+    Private Function RouteCurrentInventoryFailureToCart(ByVal conn As MySqlConnection, ByVal loginId As Long) As Boolean
+        Dim refreshedMessage As String = ""
+        Dim refreshedLineKeys As String = ""
+        If Not TryReadInventoryFailureAfterRollback(conn, loginId, refreshedMessage, refreshedLineKeys) Then Return False
+
+        StoreInventoryFailure(refreshedMessage, refreshedLineKeys)
+        RedirectToStockFailure()
+        Return True
+    End Function
+
     Private Function TryReconcileCompletedOrder(ByVal connectionString As String,
                                                  ByVal requestId As String,
                                                  ByVal loginId As Long,
@@ -653,6 +709,9 @@ End If
                 End If
 
                 If TipoDoc <= 0 Then
+                    ' A missing checkout-session field must not mask an owner-scoped
+                    ' stock failure with the generic document-history redirect.
+                    If RouteCurrentInventoryFailureToCart(conn, LoginId) Then Exit Sub
                     Me.SafeRedirect("documenti.aspx")
                     Exit Sub
                 End If
@@ -1042,28 +1101,22 @@ End If
                 End Try
                 trns = Nothing
 
-                If TypeOf ex Is OrderInventoryAvailabilityException Then
-                    Dim availabilityError As OrderInventoryAvailabilityException = DirectCast(ex, OrderInventoryAvailabilityException)
-                    Session(OrderInventoryAvailabilityService.SessionMessageKey) = availabilityError.BuildUserMessage()
-                    Session(OrderInventoryAvailabilityService.SessionLineKeysKey) = availabilityError.BuildLineKeys()
-                    Me.SafeRedirect("carrello.aspx?stockerror=1")
-                    Return
+                Dim availabilityError As OrderInventoryAvailabilityException = FindInventoryAvailabilityException(ex)
+                If availabilityError IsNot Nothing Then
+                    StoreInventoryFailure(availabilityError.BuildUserMessage(), availabilityError.BuildLineKeys())
+                    RedirectToStockFailure()
+                    Exit Sub
                 End If
 
-                Dim canonicalInventoryFailure As MySqlException = TryCast(ex, MySqlException)
-                If canonicalInventoryFailure IsNot Nothing AndAlso
-                   canonicalInventoryFailure.Number = 1644 AndAlso
-                   canonicalInventoryFailure.Message IsNot Nothing AndAlso
-                   canonicalInventoryFailure.Message.IndexOf(OrderInventoryAvailabilityService.CanonicalProcedureSignalPrefix, StringComparison.OrdinalIgnoreCase) >= 0 Then
+                If IsCanonicalInventoryFailure(ex) Then
                     Dim refreshedMessage As String = ""
                     Dim refreshedLineKeys As String = ""
                     If Not TryReadInventoryFailureAfterRollback(conn, LoginId, refreshedMessage, refreshedLineKeys) Then
                         refreshedMessage = OrderInventoryAvailabilityService.TechnicalErrorMessage
                     End If
-                    Session(OrderInventoryAvailabilityService.SessionMessageKey) = refreshedMessage
-                    Session(OrderInventoryAvailabilityService.SessionLineKeysKey) = refreshedLineKeys
-                    Me.SafeRedirect("carrello.aspx?stockerror=1")
-                    Return
+                    StoreInventoryFailure(refreshedMessage, refreshedLineKeys)
+                    RedirectToStockFailure()
+                    Exit Sub
                 End If
 
                 If TryReconcileCompletedOrder(checkoutConnectionString, checkoutRequestId, LoginId, payloadFingerprint) Then

@@ -362,6 +362,7 @@
                 <asp:Literal ID="litCartPriceRevalidation" runat="server" />
             </asp:Panel>
 
+            <span id="ksCartStockError" aria-hidden="true"></span>
             <asp:Panel ID="pnlOrderInventoryAvailability" runat="server" ClientIDMode="Static" CssClass="ks-alert ks-alert-danger ks-order-inventory-alert" Visible="false" role="alert" aria-live="assertive" tabindex="-1">
                 <asp:Literal ID="litOrderInventoryAvailability" runat="server" />
             </asp:Panel>
