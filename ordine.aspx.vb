@@ -142,34 +142,39 @@ Private Function TryValidateCheckoutToken(ByVal loginId As Long,
     End Try
 End Function
 
+Private Function GetExactCaseQueryString(ByVal key As String, Optional ByVal maxLen As Integer = 200) As String
+    Try
+        If String.IsNullOrEmpty(key) OrElse Request Is Nothing OrElse Request.QueryString Is Nothing Then Return ""
+        For index As Integer = 0 To Request.QueryString.Count - 1
+            Dim actualKey As String = Request.QueryString.GetKey(index)
+            If Not String.Equals(actualKey, key, StringComparison.Ordinal) Then Continue For
+
+            Dim value As String = Convert.ToString(Request.QueryString.Get(index))
+            If value Is Nothing Then Return ""
+            value = value.Trim()
+            If value.Length > maxLen Then value = value.Substring(0, maxLen)
+            Return value
+        Next
+        Return ""
+    Catch
+        Return ""
+    End Try
+End Function
+
 Private Sub ReturnToCartAfterPayloadMismatch()
     Session(CartPriceRevalidationHelper.SessionMessageKey) =
         "Il carrello è cambiato rispetto alla richiesta precedente. Rivedi articoli e quantità e conferma nuovamente l'ordine."
     Session(CartPriceRevalidationHelper.SessionChangedKey) = 1
-    SafeRedirect("carrello.aspx")
+    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
 End Sub
 
-Private Const STOCK_FAILURE_REDIRECT_URL As String = "carrello.aspx?stockerror=1#ksCartStockError"
-
 Private Sub RedirectToStockFailure()
-    Response.Clear()
-    Response.StatusCode = 303
-    Response.StatusDescription = "See Other"
-    Response.TrySkipIisCustomErrors = True
-    Response.RedirectLocation = STOCK_FAILURE_REDIRECT_URL
-    Response.SuppressContent = True
-    Context.ApplicationInstance.CompleteRequest()
+    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.StockFailure)
 End Sub
 
 Private Sub RedirectToOrderConfirmation(ByVal requestId As String, ByVal loginId As Long)
     Dim token As String = OrderConfirmationTokenService.CreateToken(requestId, loginId)
-    Response.Clear()
-    Response.StatusCode = 303
-    Response.StatusDescription = "See Other"
-    Response.TrySkipIisCustomErrors = True
-    Response.RedirectLocation = "ordine.aspx?" & ORDER_CONFIRMATION_TOKEN_QS_KEY & "=" &
-        HttpUtility.UrlEncode(token)
-    Context.ApplicationInstance.CompleteRequest()
+    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.OrderConfirmation, token)
 End Sub
 
 
@@ -321,7 +326,7 @@ End Sub
 
     Private Sub BlockInvalidShippingAddress()
         Session("SCEGLIINDIRIZZO") = Nothing
-        SafeRedirect("carrello.aspx?addresserror=1")
+        CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.AddressError)
     End Sub
 
     Private Function TryReadInventoryFailureAfterRollback(ByVal conn As MySqlConnection,
@@ -577,16 +582,16 @@ End Sub
 
     Private Sub HandleOrderConfirmationGet(ByVal authenticatedLoginId As Long)
         If Not String.Equals(Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) Then
-            SafeRedirect("documenti.aspx")
+            CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
             Return
         End If
 
         Dim requestId As String = String.Empty
         If Not OrderConfirmationTokenService.TryValidate(
-            GetQueryString(ORDER_CONFIRMATION_TOKEN_QS_KEY, 1024),
+            GetExactCaseQueryString(ORDER_CONFIRMATION_TOKEN_QS_KEY, 1024),
             authenticatedLoginId,
             requestId) Then
-            SafeRedirect("documenti.aspx")
+            CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
             Return
         End If
 
@@ -598,7 +603,7 @@ End Sub
                 If record Is Nothing OrElse
                    record.Status <> OrderDurableClaimStatus.CompletedReplay OrElse
                    Not RenderCompletedOrder(conn, record) Then
-                    SafeRedirect("documenti.aspx")
+                    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
                     Return
                 End If
             End Using
@@ -616,13 +621,13 @@ End Sub
             ' Mantengo la tua variabile originale (Page) e aggiungo anche Pagina_visitata (pattern standard)
             Me.Session("Page") = Me.Request.Url.ToString()
             Me.Session("Pagina_visitata") = Me.Request.Url.ToString()
-            Me.SafeRedirect("accessonegato.aspx")
+            CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.LoginRequired)
             Exit Sub
         End If
 
 ' Durable idempotency token issued by carrello and protected with MachineKey.
 Dim authenticatedLoginId As Long = GetSessionLong("LoginId", 0)
-If Not String.IsNullOrEmpty(GetQueryString(ORDER_CONFIRMATION_TOKEN_QS_KEY, 1024)) Then
+If Not String.IsNullOrEmpty(GetExactCaseQueryString(ORDER_CONFIRMATION_TOKEN_QS_KEY, 1024)) Then
     HandleOrderConfirmationGet(authenticatedLoginId)
     Exit Sub
 End If
@@ -631,7 +636,7 @@ Dim checkoutRequestId As String = String.Empty
 Dim checkoutPayloadFingerprint As String = String.Empty
 Dim isLegacyCheckoutToken As Boolean = False
 If Not TryValidateCheckoutToken(authenticatedLoginId, checkoutRequestId, checkoutPayloadFingerprint, isLegacyCheckoutToken) Then
-    SafeRedirect("carrello.aspx")
+    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
     Exit Sub
 End If
 
@@ -658,7 +663,7 @@ End If
             Dim Note As String = If(TryCast(Me.Session("NoteDocumento"), String), "")
 
             If OrderNotesAreTooLong(Note) Then
-                Me.SafeRedirect("carrello.aspx?noteerror=1")
+                CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.NotesError)
                 Exit Sub
             End If
 
@@ -698,7 +703,7 @@ End If
                     If completedBeforeWork.Status = OrderDurableClaimStatus.RetryRequired Then
                         If Not isLegacyCheckoutToken AndAlso
                            String.Equals(completedBeforeWork.PayloadFingerprint, checkoutPayloadFingerprint, StringComparison.Ordinal) Then
-                            Me.SafeRedirect("carrello.aspx?pricechanged=1")
+                            CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.PriceChanged)
                         Else
                             ReturnToCartAfterPayloadMismatch()
                         End If
@@ -712,7 +717,7 @@ End If
                     ' A missing checkout-session field must not mask an owner-scoped
                     ' stock failure with the generic document-history redirect.
                     If RouteCurrentInventoryFailureToCart(conn, LoginId) Then Exit Sub
-                    Me.SafeRedirect("documenti.aspx")
+                    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
                     Exit Sub
                 End If
 
@@ -784,7 +789,7 @@ End If
                     trns.Rollback()
                     trns.Dispose()
                     trns = Nothing
-                    Me.SafeRedirect("carrello.aspx?pricechanged=1")
+                    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.PriceChanged)
                     Exit Sub
                 End If
 
@@ -805,7 +810,7 @@ End If
                         trns.Dispose()
                         trns = Nothing
                         CartPriceRevalidationHelper.StoreResultInSession(HttpContext.Current, priceRevalidation)
-                        Me.SafeRedirect("carrello.aspx?pricechanged=1")
+                        CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.PriceChanged)
                         Exit Sub
                     End If
                     If priceRevalidation.HasChanges Then
@@ -815,7 +820,7 @@ End If
                         trns.Dispose()
                         trns = Nothing
                         CartPriceRevalidationHelper.StoreResultInSession(HttpContext.Current, priceRevalidation)
-                        Me.SafeRedirect("carrello.aspx?pricechanged=1")
+                        CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.PriceChanged)
                         Exit Sub
                     End If
                 End If
@@ -828,7 +833,7 @@ End If
                             trns.Rollback()
                             trns.Dispose()
                             trns = Nothing
-                            Me.SafeRedirect("carrello.aspx")
+                            CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
                             Exit Sub
                         End If
 

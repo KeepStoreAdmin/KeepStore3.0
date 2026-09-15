@@ -775,9 +775,9 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
             message = Convert.ToString(Session(OrderInventoryAvailabilityService.SessionMessageKey))
         End If
 
-        Dim safeMessage As String = BuildSafeInventoryAvailabilityMessage(message)
-        pnlOrderInventoryAvailability.Visible = Not String.IsNullOrWhiteSpace(safeMessage)
-        litOrderInventoryAvailability.Text = HttpUtility.HtmlEncode(safeMessage).Replace(Environment.NewLine, "<br />")
+        Dim safeHtml As String = BuildSafeInventoryAvailabilityHtml(message)
+        pnlOrderInventoryAvailability.Visible = Not String.IsNullOrWhiteSpace(safeHtml)
+        litOrderInventoryAvailability.Text = safeHtml
         Session(OrderInventoryAvailabilityService.SessionMessageKey) = Nothing
 
         If pnlOrderInventoryAvailability.Visible Then
@@ -828,6 +828,20 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         End Try
     End Function
 
+    Private Function TryDispatchCurrentCheckoutStockFailure() As Boolean
+        Dim message As String = ""
+        Dim lineKeys As String = ""
+        Dim technicalFailure As Boolean = False
+        If Not TryReevaluateCurrentOrderInventoryFailure(message, lineKeys, technicalFailure) Then
+            Return False
+        End If
+
+        Session(OrderInventoryAvailabilityService.SessionMessageKey) = message
+        Session(OrderInventoryAvailabilityService.SessionLineKeysKey) = lineKeys
+        CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.StockFailure)
+        Return True
+    End Function
+
     Private Sub ApplyCartNoStoreHeaders()
         If Response Is Nothing Then Return
         Response.Cache.SetCacheability(HttpCacheability.NoCache)
@@ -838,7 +852,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         Response.Cache.SetValidUntilExpires(False)
     End Sub
 
-    Private Function BuildSafeInventoryAvailabilityMessage(ByVal rawMessage As String) As String
+    Private Function BuildSafeInventoryAvailabilityHtml(ByVal rawMessage As String) As String
         If String.IsNullOrWhiteSpace(rawMessage) Then Return ""
 
         Dim parsed As New List(Of InventoryAvailabilityDisplayLine)()
@@ -856,22 +870,29 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         Next
 
         If parsed.Count = 0 Then
-            Return "Disponibilità insufficiente per l'articolo selezionato. Modifica la quantità nel carrello, premi Aggiorna e poi riprova a confermare l'ordine."
+            Return "<p class=""ks-order-inventory-alert__lead"">Uno o più articoli non sono disponibili nella quantità richiesta.</p>" &
+                "<p class=""ks-order-inventory-alert__action""><strong>Cosa fare:</strong> modifica la quantità oppure rimuovi l'articolo, premi <strong>Aggiorna carrello</strong> e conferma nuovamente l'ordine.</p>"
         End If
 
-        Dim result As New StringBuilder("Ordine non inviato.")
+        Dim result As New StringBuilder()
+        result.Append("<p class=""ks-order-inventory-alert__lead"">Controlla gli articoli indicati prima di confermare nuovamente l'ordine.</p>")
+        result.Append("<ul class=""ks-order-inventory-alert__items"">")
         For Each line As InventoryAvailabilityDisplayLine In parsed
-            result.AppendLine()
-            result.Append("La quantità richiesta non è disponibile per l'articolo con codice ")
-            result.Append(line.CommercialCode)
-            result.Append(". Quantità richiesta: ")
-            result.Append(line.Requested)
-            result.Append("; disponibilità attuale: ")
-            result.Append(line.Available)
-            result.Append(".")
+            result.Append("<li class=""ks-order-inventory-alert__item"">")
+            result.Append("<span class=""ks-order-inventory-alert__code-label"">Codice articolo</span>")
+            result.Append("<strong class=""ks-order-inventory-alert__code"">")
+            result.Append(HttpUtility.HtmlEncode(line.CommercialCode))
+            result.Append("</strong>")
+            result.Append("<span class=""ks-order-inventory-alert__quantity""><span>Richiesta</span><strong>")
+            result.Append(HttpUtility.HtmlEncode(line.Requested))
+            result.Append("</strong></span>")
+            result.Append("<span class=""ks-order-inventory-alert__quantity ks-order-inventory-alert__quantity--available""><span>Disponibile</span><strong>")
+            result.Append(HttpUtility.HtmlEncode(line.Available))
+            result.Append("</strong></span>")
+            result.Append("</li>")
         Next
-        result.AppendLine()
-        result.Append("Modifica la quantità oppure rimuovi l'articolo, premi Aggiorna carrello e conferma nuovamente l'ordine.")
+        result.Append("</ul>")
+        result.Append("<p class=""ks-order-inventory-alert__action""><strong>Cosa fare:</strong> modifica la quantità oppure rimuovi l'articolo, premi <strong>Aggiorna carrello</strong> e conferma nuovamente l'ordine.</p>")
         Return result.ToString()
     End Function
 
@@ -5058,6 +5079,10 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
     End Try
 
     If shouldSendOrder AndAlso Not _cartPriceRevalidationBlockedThisRequest Then
+        ' The final cart POST owns the first stock gate. An insufficient cart
+        ' never enters ordine.aspx, cannot claim idempotency and cannot reach
+        ' document creation or post-commit effects.
+        If TryDispatchCurrentCheckoutStockFailure() Then Return
         Cookie = "N"
         SendOrder()
     End If

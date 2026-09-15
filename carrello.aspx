@@ -6,7 +6,7 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260914-cart-history-stockerror-minicart-ux-1a-rev2" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260915-order-terminal-outcome-rev5" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") & "?v=20260914-cart-history-stockerror-minicart-ux-1a-rev2" %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/checkout-ui.js") %>" defer></script>
 
@@ -363,8 +363,17 @@
             </asp:Panel>
 
             <span id="ksCartStockError" aria-hidden="true"></span>
-            <asp:Panel ID="pnlOrderInventoryAvailability" runat="server" ClientIDMode="Static" CssClass="ks-alert ks-alert-danger ks-order-inventory-alert" Visible="false" role="alert" aria-live="assertive" tabindex="-1">
-                <asp:Literal ID="litOrderInventoryAvailability" runat="server" />
+            <asp:Panel ID="pnlOrderInventoryAvailability" runat="server" ClientIDMode="Static" CssClass="ks-order-inventory-alert" Visible="false" role="alert" aria-live="assertive" aria-labelledby="ksCartStockErrorTitle" tabindex="-1">
+                <span class="ks-order-inventory-alert__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M12 8v5m0 3.5v.1M10.1 3.9 2.3 17.4A2 2 0 0 0 4 20.4h16a2 2 0 0 0 1.7-3L13.9 3.9a2.2 2.2 0 0 0-3.8 0Z" />
+                    </svg>
+                </span>
+                <div class="ks-order-inventory-alert__content">
+                    <span class="ks-order-inventory-alert__eyebrow">Disponibilità aggiornata</span>
+                    <h2 id="ksCartStockErrorTitle">Ordine non inviato</h2>
+                    <asp:Literal ID="litOrderInventoryAvailability" runat="server" />
+                </div>
             </asp:Panel>
 
             <asp:Panel ID="pnlLoginRequired" runat="server" ClientIDMode="Static" CssClass="ks-cart-message ks-cart-message-login" Visible="false" tabindex="-1">

@@ -1,23 +1,23 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-09-14
+Aggiornato: 2026-09-15
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
 
-- Aggiornato: 2026-09-14.
+- Aggiornato: 2026-09-15.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Runtime e HEAD stabile corrente: `frontend-rebuild` / `origin/frontend-rebuild` a `055cb6e5c5d764222d5610e1b391d1c184f59882`.
+- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `d06e33383b911bfcf03e457ff1678c4c03a1c13f`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - `WORKFLOW-GOVERNANCE-1A` e CHIUSO / A e integrato: il root `AGENTS.md` e la fonte canonica del metodo operativo corrente.
 - Ultimo task runtime chiuso: `CART-HISTORY-STOCKERROR-MINICART-UX-1A`, esito A, PR #252 integrata fast-forward. Catena `647a16ea0991c175a0b80fa811e9a09e93e7d88d` -> `0ace2bc7bfdb75bba03f7bb97beb77cd8a5b847e` -> `c069651b5a11122b023f83c551f79199b3718282` -> `055cb6e5c5d764222d5610e1b391d1c184f59882`: tre commit integrati e zero merge commit.
-- Task documentale corrente: `CART-RUNTIME-RECOVERY-DOCS-1A`, branch `task/docs-cart-runtime-recovery-1a`; aggiorna soltanto i tre manuali canonici e si ferma prima del merge.
-- Prossimo task effettivo: `ORDER-DURABLE-IDEMPOTENCY-1A`, residuo P0 separato del flusso ordine. Non e avviato da questo aggiornamento.
+- Task runtime corrente: `ORDER-DURABLE-IDEMPOTENCY-1A`, branch `task/order-durable-idempotency-1a`, PR #254. Implementazione, deployment autorizzato e smoke conclusivo REV5 sono A; la PR resta DRAFT in attesa di review e non e ancora integrata.
+- Prossimo task effettivo: da stabilire dopo review e merge separatamente autorizzato della PR #254; nessun task successivo e avviato da questo aggiornamento.
 - La funzione digitale di recesso resta documentata ma differita per decisione del Product Owner: `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A` non e il task attivo e non va avviato senza una nuova priorita esplicita di Germano.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
-- Debiti aperti principali: `ORDER-DURABLE-IDEMPOTENCY-1A`; audit monetario `DOUBLE`; `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` chiuso E e differito in attesa di decisione infrastrutturale. Catalogo e PDP restano aree non dichiarate complete; recesso digitale e Coupon/Groupon restano differiti dal Product Owner.
+- Debiti aperti principali: audit monetario `DOUBLE`; `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` chiuso E e differito in attesa di decisione infrastrutturale. Catalogo e PDP restano aree non dichiarate complete; recesso digitale e Coupon/Groupon restano differiti dal Product Owner.
 
 Questo checkpoint va aggiornato dopo ogni blocco importante. E una mappa di ripartenza, non sostituisce la verifica diretta di Git, del root `AGENTS.md` e delle fonti pertinenti.
 
@@ -57,6 +57,14 @@ Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo tas
 - Prove runtime A: sessioni autenticata e anonima; Remove prima/centrale/ultima; Clear, refresh e Back/Forward; stock zero e insufficiente; MiniCart su HOME, catalogo, PDP e carrello; quattro viewport; CSRF `403` e GET mutativo `405`; zero HTTP `500`, pageerror, overflow orizzontale e doppie mutazioni.
 - Fixture finali ripristinate: carrello PROVA allo stato iniziale; documenti, wishlist e `Impegnata` invariati.
 - Guardrail permanenti: ogni hook o fault injection deve essere irraggiungibile nel runtime pubblicato; ogni componente globale deve caricare i propri stili su tutte le pagine che lo renderizzano; prima di introdurre nuove classi UI vanno verificati i selettori JavaScript legacy generici.
+
+### Chiusura tecnica ORDER-DURABLE-IDEMPOTENCY-1A REV5
+
+- `ORDER-DURABLE-IDEMPOTENCY-1A` ha esito tecnico A sulla PR #254, ancora OPEN/DRAFT e non integrata. Il registro MySQL persistente lega la richiesta all'owner e al payload; claim, documento, prenotazione inventario, svuotamento carrello e completamento condividono la transazione. Replay completato, doppio clic e risposta ambigua non ripetono documento, prenotazione, e-mail o gateway; la conferma valida resta Post/Redirect/Get con token opaco owner-scoped.
+- Il falso esito ordine era causato dalla collisione case-insensitive fra il flag checkout legacy `C=N` e la chiave token `c`: la richiesta veniva classificata come conferma non valida e deviata verso `documenti.aspx?t=4` prima della verifica stock. Il token di conferma viene ora letto soltanto con chiave dal casing esatto e gli esiti checkout passano da un dispatcher terminale first-wins con `303` e interruzione esplicita dei chiamanti.
+- Per stock insufficiente, il POST finale rivaluta server-side l'intero carrello owner-scoped prima di entrare in `ordine.aspx`; conserva tutte le righe, mostra tutti i codici commerciali interessati in un pannello accessibile e responsive, evidenzia le righe e termina soltanto su `carrello.aspx?stockerror=1#ksCartStockError`. Non vengono chiamati stored procedure ordine, completamento idempotenza, e-mail, pixel o gateway.
+- Smoke autenticato sanitizzato del 2026-09-15 su `https://localhost:8443`: account test PROVA preservato; fixture `PF/PT10`, `ZAP80-A4`, `3343N`; carrello iniziale/finale 3 righe; documenti web iniziali/finali 4; registro idempotenza iniziale/finale una riga `COMPLETED` associata al documento di collaudo 261; `Impegnata` delle fixture invariata. Refresh, Back/Forward e reinvio del vecchio form non hanno raggiunto `documenti.aspx`, creato ordini o prodotto doppie mutazioni; nessun pagamento, gateway o e-mail e stato eseguito.
+- Regola permanente: **ogni esito terminale del checkout deve avere una sola destinazione, interrompere esplicitamente tutti i chiamanti ed essere coperto da un test end-to-end. `documenti.aspx` non e mai una destinazione di fallback per errori checkout.**
 
 ### Funzione digitale di recesso B2C - documentata e differita
 
@@ -2198,9 +2206,10 @@ Task consigliato separato per eventuale proseguimento:
 
 ### Immediati
 
-1. `ORDER-DURABLE-IDEMPOTENCY-1A`: prossimo task effettivo e residuo P0 separato; deve impedire duplicazioni durevoli del documento oltre sessione, recycle e retry, mantenendo ordine, inventario e carrello coerenti. Prerequisiti: audit del contratto idempotente ordine, chiave persistente e piano DB/deployment multi-database approvati. Rischio CRITICAL su ordini e inventario; stima iniziale `24-48h`, da confermare nel preflight. Non avviato.
-2. Audit futuro dello schema monetario ancora `DOUBLE`.
-3. Candidati separati da conservare senza implementarli ora:
+1. Review e merge separatamente autorizzato della PR #254; `ORDER-DURABLE-IDEMPOTENCY-1A` e tecnicamente A ma non ancora integrato.
+2. Il prossimo task runtime effettivo deve essere stabilito dal Product Owner; nessun candidato e avviato da questo checkpoint.
+3. Audit futuro dello schema monetario ancora `DOUBLE`.
+4. Candidati separati da conservare senza implementarli ora:
    - `PROMO-AMBIGUOUS-STATE-REACHABILITY-1A`: verificare la raggiungibilita di `AmbiguousCommercialRule`; oggi risultano zero offerte ambigue attive ed e un task commerciale non prioritario rispetto al carrello.
    - `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A`: requisiti gia documentati, ma audit differito per decisione Germano; non avviarlo senza nuova priorita esplicita.
    - `HOME-TTFB-PERFORMANCE-1A`.
@@ -2269,7 +2278,7 @@ Contratto visuale: desktop 1365×900 mantiene la tabella; tablet 768×1024 e mob
 
 L’audit `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta chiuso con esito E, implementazione differita e nessun DDL: Session/InProc conserva rischi su recycle e topologie multi-nodo. Recesso digitale e Coupon/Groupon restano differiti dal Product Owner.
 
-Roadmap corrente: `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta chiuso E e differito; mobile UX e target touch mobile sono chiusi A. Il prossimo task effettivo e `ORDER-DURABLE-IDEMPOTENCY-1A`; audit monetario, AntiCsrfPage e promo ambigua restano separati, mentre Coupon/Groupon e recesso restano differiti.
+Roadmap corrente: `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta chiuso E e differito; mobile UX, target touch mobile e `ORDER-DURABLE-IDEMPOTENCY-1A` sono tecnicamente chiusi A, con quest'ultimo ancora in PR #254 DRAFT. Il prossimo task effettivo non e stabilito; audit monetario, AntiCsrfPage e promo ambigua restano separati, mentre Coupon/Groupon e recesso restano differiti.
 
 ## Chiusura CART-REMOVE-TRANSACTION-HARDENING-1A
 

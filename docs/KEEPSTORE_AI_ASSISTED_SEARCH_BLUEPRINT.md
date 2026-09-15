@@ -12,7 +12,9 @@ Regola stato: chiudere un micro-task su `articoli.aspx` non significa dichiarare
 
 Nota anti-false-closure: `articoli.aspx` non e una pagina dichiarata completa. I micro-task chiusi non equivalgono alla parita ONSUS completa. Restano sidebar/facet residui, tassonomie/load-more, active filters legacy/reset, Price/Deals/Condition, Reviews con dati reali, performance, componenti commerciali e responsive complessivo. Pager, posizione recent, quattro viste mobile, compact grid e containment recent non vanno invece lasciati come gap aperti.
 
-Checkpoint corrente 2026-09-14: `frontend-rebuild` / `origin/frontend-rebuild` a `055cb6e5c5d764222d5610e1b391d1c184f59882`; `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. `CART-HISTORY-STOCKERROR-MINICART-UX-1A` e chiuso A con PR #252 integrata fast-forward, tre commit e zero merge commit. Le 46 immagini locali non tracciate nelle directory autorizzate restano escluse dai commit e preservate.
+Checkpoint corrente 2026-09-15: `frontend-rebuild` / `origin/frontend-rebuild` a `d06e33383b911bfcf03e457ff1678c4c03a1c13f`; `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. `ORDER-DURABLE-IDEMPOTENCY-1A` e tecnicamente A sulla PR #254 dopo lo smoke REV5, ma la PR resta DRAFT e non integrata. Le 46 immagini locali non tracciate nelle directory autorizzate restano escluse dai commit e preservate.
+
+Guardrail checkout rilevante anche per future superfici AI/search: ogni esito terminale ha una sola destinazione, interrompe esplicitamente tutti i chiamanti ed e coperto end-to-end; `documenti.aspx` non e mai un fallback per errori checkout. Search e assistenza non devono inventare, sostituire o pilotare destinazioni di checkout, ne diventare fonte di verita per stock, owner, RequestId o idempotenza.
 
 Stato login/roadmap rilevante per le future superfici AI/search: `LOGIN-RETURN-CONTEXT-1A` e `LOGIN-ACCESS-AUDIT-1A` sono chiusi / A con merge fast-forward only rispettivamente a `ffbd78ffceaca8db96baf77548732e9b94724b1e` e `2ae053771284f6d3769c7d7bfd18e3a34436bc72`. ReturnUrl e contesto shopping sono centralizzati e sicuri; l'audit accessi usa recorder server-side parametrizzato, IP diretto validato senza header proxy fidati implicitamente, incremento singolo e diagnostica senza segreti/IP completi. La migrazione manuale esterna a Git ha esteso `login.UltimoIp` a `VARCHAR(45) NULL`, lasciando invariati `UltimoAccesso DATETIME NULL` e `NumeroAccessi BIGINT NULL DEFAULT 0`.
 
@@ -24,7 +26,7 @@ La presentazione anonima usa valori `Decimal` reali: nessuna conversione da test
 
 Vincoli discovery promo/EAN: le label umane `EAN/GTIN` migliorano la chiarezza semantica, ma identificatori strutturati `gtin`, `gtin13`, `gtin14`, JSON-LD, feed, CSV/XML e integrazioni non sono stati modificati. `promozioni.aspx` non restituisce piu HTTP 500 nei casi verificati, migliorando la crawlability tecnica, ma mantiene temporaneamente `noindex,follow`, resta fuori sitemap e non va ancora reindirizzata. Canonical e assenza di 5xx non rendono automaticamente equivalenti le route: prodotti, prezzi, campagne personalizzate, `pid`, quantita minima/multipli e filtri devono essere coerenti prima del retirement. Non dichiarare KeepStore `SEO completo`, `Google pronto` o `AI ready`.
 
-Roadmap vigente: il prossimo task effettivo e `ORDER-DURABLE-IDEMPOTENCY-1A`, separato da search/AI e non avviato. `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta chiuso E e differito; Coupon/Groupon e recesso digitale restano differiti dal Product Owner. SEO tecnico, Google Product structured data e AI/Gemini/LLMS restano finali; feed, JSON-LD, LLMS, Gemini e structured data non sono stati modificati. HOME, catalogo, PDP e promo non sono dichiarati completi.
+Roadmap vigente: `ORDER-DURABLE-IDEMPOTENCY-1A` e tecnicamente chiuso A ma attende review e merge separato della PR #254; il prossimo task effettivo non e ancora stabilito. `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta chiuso E e differito; Coupon/Groupon e recesso digitale restano differiti dal Product Owner. SEO tecnico, Google Product structured data e AI/Gemini/LLMS restano finali; feed, JSON-LD, LLMS, Gemini e structured data non sono stati modificati. HOME, catalogo, PDP e promo non sono dichiarati completi.
 
 Stato normativo trasversale: il recesso digitale resta documentato, ma `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A` e differito per decisione del Product Owner e non e il task attivo. Non appartiene alla coda AI/SEO e non riapre cart o promo chiusi. Coupon/Groupon resta differito.
 
@@ -318,7 +320,7 @@ Vincoli:
 
 ## 8. Roadmap micro-task token-safe
 
-Checkpoint cart rilevante ma non estensivo della roadmap AI: batch, retry, remove/clear, mobile UX e runtime recovery sono chiusi; prezzi, promozioni, owner, listino e idempotenza restano server-side. Il prossimo task effettivo `ORDER-DURABLE-IDEMPOTENCY-1A` non e un task AI. Nessun task AI, feed, ranking, cache condivisa o retrieval puo mutare dati commerciali, ritentare mutazioni o assumere ownership. La chiusura non rende KeepStore `AI ready`, `SEO completo` o `Google pronto` e non modifica feed, JSON-LD, LLMS, Gemini o structured data.
+Checkpoint cart rilevante ma non estensivo della roadmap AI: batch, retry, remove/clear, mobile UX, runtime recovery e `ORDER-DURABLE-IDEMPOTENCY-1A` sono tecnicamente chiusi; quest'ultimo resta nella PR #254 DRAFT. Prezzi, promozioni, owner, listino e idempotenza restano server-side. Nessun task AI, feed, ranking, cache condivisa o retrieval puo mutare dati commerciali, ritentare mutazioni o assumere ownership. La chiusura non rende KeepStore `AI ready`, `SEO completo` o `Google pronto` e non modifica feed, JSON-LD, LLMS, Gemini o structured data.
 
 Il recesso digitale resta separato da questa roadmap AI e il relativo audit e differito per decisione Germano. Nessun task AI o SEO puo essere usato come sostituto della funzione digitale di recesso o trattarne i dati in retrieval pubblico.
 
@@ -456,7 +458,7 @@ Ogni task futuro deve dichiarare esplicitamente:
 
 Questa blueprint non implementa AI, chatbot, endpoint, DB, UI runtime o correzioni search. Registra solo architettura e roadmap.
 
-Checkpoint cart: `CART-REMOVE-TRANSACTION-HARDENING-1A`, mobile UX e runtime recovery sono chiusi A; il checkpoint stabile corrente e `055cb6e5c5d764222d5610e1b391d1c184f59882`. Il prossimo task effettivo e `ORDER-DURABLE-IDEMPOTENCY-1A`; idempotenza cart persistente resta E/differita. Recesso digitale e Coupon/Groupon restano differiti.
+Checkpoint cart: `CART-REMOVE-TRANSACTION-HARDENING-1A`, mobile UX, runtime recovery e `ORDER-DURABLE-IDEMPOTENCY-1A` sono tecnicamente chiusi A; il checkpoint stabile di base e `d06e33383b911bfcf03e457ff1678c4c03a1c13f` e la PR #254 resta DRAFT. Il prossimo task effettivo non e stabilito; idempotenza cart persistente resta E/differita. Recesso digitale e Coupon/Groupon restano differiti.
 
 Checkpoint mobile cart: `CART-MOBILE-RESPONSIVE-UX-1A` chiuso A con PR #249 e HEAD `4e1c84a7f0d3528e6479b1b5e2fa6604a8649423`. Il carrello usa card/grid sui viewport touch e conserva la tabella desktop; target 44×44, gerarchia MiniCart ONSUS, accessibilità e assenza di overflow sono verificati. Questo è solo un guardrail storefront: nessun impatto su search, ranking, feed, LLMS, JSON-LD o runtime AI. L’audit di idempotenza persistente resta E/differito e non è risolto.
 
