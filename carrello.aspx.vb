@@ -20,7 +20,7 @@ Private Shared ReadOnly CartCulture As CultureInfo = CultureInfo.GetCultureInfo(
 Private _cartHasItems As Boolean = True
 
 Private Class InventoryAvailabilityDisplayLine
-    Public ArticleId As Integer
+    Public CommercialCode As String
     Public Requested As String
     Public Available As String
 End Class
@@ -199,9 +199,28 @@ Private Function GenerateCheckoutToken() As String
         ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY) = normalizedRequestId
     End If
 
-    Dim payload As String = normalizedRequestId & "|" &
+    Dim payloadFingerprint As String = String.Empty
+    Using connection As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+        connection.Open()
+
+        ' A ViewState restored from a page rendered before an already completed
+        ' checkout must not reuse that durable key for a new cart.
+        Dim existing As OrderDurableIdempotencyRecord =
+            OrderDurableIdempotencyService.TryReadCompleted(connection, normalizedRequestId, loginId)
+        If existing IsNot Nothing AndAlso
+           (existing.Status = OrderDurableClaimStatus.CompletedReplay OrElse
+            existing.Status = OrderDurableClaimStatus.RetryRequired) Then
+            normalizedRequestId = OrderDurableIdempotencyService.CreateRequestId()
+            ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY) = normalizedRequestId
+        End If
+
+        payloadFingerprint = BuildCheckoutPayloadFingerprint(connection, Nothing, loginId, False)
+    End Using
+
+    Dim payload As String = "v2|" & normalizedRequestId & "|" &
         loginId.ToString(CultureInfo.InvariantCulture) & "|" &
-        DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture)
+        DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture) & "|" &
+        payloadFingerprint
     Dim protectedBytes() As Byte = System.Web.Security.MachineKey.Protect(
         Encoding.UTF8.GetBytes(payload), CHECKOUT_TOKEN_PURPOSE)
     If protectedBytes Is Nothing OrElse protectedBytes.Length = 0 Then
@@ -211,6 +230,41 @@ Private Function GenerateCheckoutToken() As String
     Dim b64 As String = Convert.ToBase64String(protectedBytes)
     b64 = b64.Replace("+"c, "-"c).Replace("/"c, "_"c).TrimEnd("="c)
     Return b64
+End Function
+
+Private Function BuildCheckoutPayloadFingerprint(ByVal connection As MySqlConnection,
+                                                 ByVal transaction As MySqlTransaction,
+                                                 ByVal loginId As Long,
+                                                 ByVal lockCart As Boolean) As String
+    Dim optionsFingerprint As String = OrderDurableIdempotencyService.ComputePayloadFingerprint(
+        GetSessionInt("Ordine_TipoDoc", 0),
+        GetSessionInt("Ordine_Pagamento", 0),
+        GetSessionInt("Ordine_Vettore", 0),
+        ParseDecimalForDb(Session("Ordine_SpeseSped"), 0D),
+        ParseDecimalForDb(Session("Ordine_SpeseAss"), 0D),
+        ParseDecimalForDb(Session("Ordine_SpesePag"), 0D),
+        GetSessionInt("Ordine_Pagamento_OnLine", 0),
+        GetSessionInt("Ordine_ConfermaOrdinePrimaPagamento", 1),
+        GetSessionInt("Ordine_PermettiPagamentoSuccessivo", 1),
+        GetSessionInt("Ordine_InviaEmailOrdinePrimaPagamento", 1),
+        GetSessionInt("SCEGLIINDIRIZZO", 0),
+        Convert.ToString(Session("NoteDocumento")),
+        FingerprintDbValue(Session("Ordine_DescrizioneBuonoSconto")),
+        FingerprintDbValue(Session("Ordine_TotaleBuonoScontoImponibile")),
+        FingerprintDbValue(Session("Ordine_CodiceBuonoSconto")),
+        FingerprintDbValue(Session("Ordine_BuonoScontoIdIva")),
+        FingerprintDbValue(Session("Ordine_BuonoScontoValoreIva")),
+        FingerprintDbValue(Session("Coupon_Arrotondamento")),
+        FingerprintDbValue(Session("AbilitatoIvaReverseCharge")),
+        FingerprintDbValue(Session("Iva_Vettori")))
+    Dim cartFingerprint As String = OrderDurableIdempotencyService.ComputeCartFingerprint(
+        connection, transaction, loginId, lockCart)
+    Return OrderDurableIdempotencyService.ComputePayloadFingerprint("checkout-v2", optionsFingerprint, cartFingerprint)
+End Function
+
+Private Function FingerprintDbValue(ByVal value As Object) As Object
+    If value Is Nothing OrElse value Is DBNull.Value Then Return DBNull.Value
+    Return value
 End Function
 
 Private Sub EnsureCheckoutRequestId()
@@ -736,15 +790,13 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
 
         Dim parsed As New List(Of InventoryAvailabilityDisplayLine)()
         Dim normalized As String = rawMessage.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf)
-        Dim linePattern As New Regex("^\s*Articolo\s+(\d+)\s*:\s*Quantità richiesta:\s*([0-9]+(?:[.,][0-9]+)?)\s*;\s*Disponibilità attuale:\s*([0-9]+(?:[.,][0-9]+)?)\s*$", RegexOptions.IgnoreCase)
+        Dim linePattern As New Regex("^\s*Codice\s+([A-Za-z0-9][A-Za-z0-9._/+ -]{0,63})\s*:\s*Quantità richiesta:\s*([0-9]+(?:[.,][0-9]+)?)\s*;\s*Disponibilità attuale:\s*([0-9]+(?:[.,][0-9]+)?)\s*$", RegexOptions.IgnoreCase)
         For Each candidate As String In normalized.Split(vbLf)
             Dim match As Match = linePattern.Match(If(candidate, ""))
             If Not match.Success Then Continue For
-            Dim articleId As Integer
-            If Not Integer.TryParse(match.Groups(1).Value, NumberStyles.None, CultureInfo.InvariantCulture, articleId) OrElse articleId <= 0 Then Continue For
 
             Dim line As New InventoryAvailabilityDisplayLine()
-            line.ArticleId = articleId
+            line.CommercialCode = match.Groups(1).Value.Trim()
             line.Requested = match.Groups(2).Value.Replace(",", ".")
             line.Available = match.Groups(3).Value.Replace(",", ".")
             parsed.Add(line)
@@ -754,39 +806,19 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
             Return "Disponibilità insufficiente per l'articolo selezionato. Modifica la quantità nel carrello, premi Aggiorna e poi riprova a confermare l'ordine."
         End If
 
-        Dim result As New StringBuilder()
+        Dim result As New StringBuilder("Ordine non inviato.")
         For Each line As InventoryAvailabilityDisplayLine In parsed
-            Dim code As String = ""
-            Try
-                Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
-                    conn.Open()
-                    Dim loginId As Integer = GetSessionInt("LoginId", GetSessionInt("LoginID", GetSessionInt("LOGINID", 0)))
-                    Dim sql As String = "SELECT a.Codice FROM articoli a INNER JOIN carrello c ON c.ArticoliId=a.id WHERE a.id=@id AND "
-                    If loginId > 0 Then
-                        sql &= "c.LoginId=@loginId "
-                    Else
-                        sql &= "COALESCE(c.LoginId,0)<=0 AND c.SessionId=@sessionId "
-                    End If
-                    sql &= "ORDER BY c.ID LIMIT 1"
-                    Using cmd As New MySqlCommand(sql, conn)
-                        cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = line.ArticleId
-                        If loginId > 0 Then
-                            cmd.Parameters.Add("@loginId", MySqlDbType.Int32).Value = loginId
-                        Else
-                            cmd.Parameters.Add("@sessionId", MySqlDbType.VarChar, 50).Value = If(Session IsNot Nothing, Session.SessionID, "")
-                        End If
-                        Dim value As Object = cmd.ExecuteScalar()
-                        If value IsNot Nothing AndAlso value IsNot DBNull.Value Then code = Convert.ToString(value).Trim()
-                    End Using
-                End Using
-            Catch
-                code = ""
-            End Try
-
-            If result.Length > 0 Then result.AppendLine()
-            Dim label As String = If(String.IsNullOrWhiteSpace(code), "l'articolo selezionato", "l'articolo con codice " & code)
-            result.Append("Disponibilità insufficiente per ").Append(label).Append(": hai richiesto ").Append(line.Requested).Append(" pz, ma al momento sono disponibili ").Append(line.Available).Append(" pz. Modifica la quantità nel carrello, premi Aggiorna e poi riprova a confermare l'ordine.")
+            result.AppendLine()
+            result.Append("La quantità richiesta non è disponibile per l'articolo con codice ")
+            result.Append(line.CommercialCode)
+            result.Append(". Quantità richiesta: ")
+            result.Append(line.Requested)
+            result.Append("; disponibilità attuale: ")
+            result.Append(line.Available)
+            result.Append(".")
         Next
+        result.AppendLine()
+        result.Append("Modifica la quantità oppure rimuovi l'articolo, premi Aggiorna carrello e conferma nuovamente l'ordine.")
         Return result.ToString()
     End Function
 

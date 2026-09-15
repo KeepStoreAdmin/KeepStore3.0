@@ -1,4 +1,5 @@
 Imports System
+Imports System.Collections.Generic
 Imports System.Data
 Imports System.Globalization
 Imports System.Security.Cryptography
@@ -66,6 +67,54 @@ Public NotInheritable Class OrderDurableIdempotencyService
             Next
             Return result.ToString()
         End Using
+    End Function
+
+    Public Shared Function TryNormalizePayloadFingerprint(ByVal value As String,
+                                                          ByRef normalized As String) As Boolean
+        normalized = Convert.ToString(value).Trim().ToLowerInvariant()
+        If Not IsFingerprintValid(normalized) Then
+            normalized = String.Empty
+            Return False
+        End If
+        Return True
+    End Function
+
+    Public Shared Function ComputeCartFingerprint(ByVal connection As MySqlConnection,
+                                                  ByVal transaction As MySqlTransaction,
+                                                  ByVal loginId As Long,
+                                                  ByVal lockForUpdate As Boolean) As String
+        If connection Is Nothing Then Throw New ArgumentNullException("connection")
+        If loginId <= 0 Then Throw New ArgumentOutOfRangeException("loginId")
+        If lockForUpdate AndAlso transaction Is Nothing Then Throw New ArgumentNullException("transaction")
+
+        Dim values As New List(Of Object)()
+        Dim sql As String =
+            "SELECT ArticoliId, COALESCE(TCId,-1) AS TCId, COALESCE(Codice,'') AS Codice, " &
+            "COALESCE(Descrizione1,'') AS Descrizione1, COALESCE(Qnt,0) AS Qnt, " &
+            "COALESCE(NListino,0) AS NListino, COALESCE(Prezzo,0) AS Prezzo, " &
+            "COALESCE(PrezzoIvato,0) AS PrezzoIvato, COALESCE(OfferteDettaglioId,0) AS OfferteDettaglioId, " &
+            "COALESCE(Prodotto_Gratis,0) AS Prodotto_Gratis, COALESCE(IdIvaRC,-1) AS IdIvaRC, " &
+            "COALESCE(ValoreIvaRC,0) AS ValoreIvaRC, COALESCE(IdEsenzioneIva,-1) AS IdEsenzioneIva, " &
+            "COALESCE(ValoreEsenzioneIva,0) AS ValoreEsenzioneIva " &
+            "FROM carrello WHERE LoginId=?loginId " &
+            "ORDER BY ArticoliId, COALESCE(TCId,-1), ID"
+        If lockForUpdate Then sql &= " FOR UPDATE"
+
+        Using command As New MySqlCommand(sql, connection, transaction)
+            command.Parameters.Add("?loginId", MySqlDbType.Int64).Value = loginId
+            Using reader As MySqlDataReader = command.ExecuteReader()
+                Dim rowCount As Integer = 0
+                While reader.Read()
+                    rowCount += 1
+                    For index As Integer = 0 To reader.FieldCount - 1
+                        values.Add(If(reader.IsDBNull(index), Nothing, reader.GetValue(index)))
+                    Next
+                End While
+                values.Insert(0, rowCount)
+            End Using
+        End Using
+
+        Return ComputePayloadFingerprint(values.ToArray())
     End Function
 
     Public Shared Function TryReadCompleted(ByVal connection As MySqlConnection,

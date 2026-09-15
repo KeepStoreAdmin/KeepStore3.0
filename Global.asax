@@ -21,6 +21,28 @@ Sub Application_BeginRequest(ByVal sender As Object, ByVal e As EventArgs)
             isHttps = True
         End If
 
+        ' La sessione ASP.NET è host-only: i due host pubblici non devono
+        ' generare due identità applicative differenti. Non allarghiamo il
+        ' Domain del cookie; normalizziamo invece l'alias prima del runtime.
+        Dim canonicalTarget As String = StorefrontCanonicalHostPolicy.BuildCanonicalUrl(Request.Url, Request.IsLocal)
+        If Not String.IsNullOrEmpty(canonicalTarget) Then
+            Response.Clear()
+            If String.Equals(Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) OrElse
+               String.Equals(Request.HttpMethod, "HEAD", StringComparison.OrdinalIgnoreCase) Then
+                Response.StatusCode = 301
+                Response.StatusDescription = "Moved Permanently"
+            Else
+                Response.StatusCode = 307
+                Response.StatusDescription = "Temporary Redirect"
+            End If
+            Response.RedirectLocation = canonicalTarget
+            Response.Headers("Location") = canonicalTarget
+            Response.SuppressContent = True
+            Response.TrySkipIisCustomErrors = True
+            Context.ApplicationInstance.CompleteRequest()
+            Exit Sub
+        End If
+
         If Not isHttps Then
             Dim u As Uri = Request.Url
             Dim b As New UriBuilder(u)

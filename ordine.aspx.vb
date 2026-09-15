@@ -75,8 +75,13 @@ Private Function OrderNotesAreTooLong(ByVal note As String) As Boolean
     Return note.Length > OrderNotesMaxLength
 End Function
 
-Private Function TryValidateCheckoutToken(ByVal loginId As Long, ByRef requestId As String) As Boolean
+Private Function TryValidateCheckoutToken(ByVal loginId As Long,
+                                          ByRef requestId As String,
+                                          ByRef payloadFingerprint As String,
+                                          ByRef isLegacyToken As Boolean) As Boolean
     requestId = String.Empty
+    payloadFingerprint = String.Empty
+    isLegacyToken = False
     If loginId <= 0 Then Return False
 
     Dim token As String = GetQueryString(CHECKOUT_TOKEN_QS_KEY, 1024)
@@ -101,16 +106,28 @@ Private Function TryValidateCheckoutToken(ByVal loginId As Long, ByRef requestId
         If clearBytes Is Nothing OrElse clearBytes.Length = 0 Then Return False
 
         Dim parts() As String = Encoding.UTF8.GetString(clearBytes).Split("|"c)
-        If parts.Length <> 3 Then Return False
+        Dim requestIndex As Integer = 0
+        Dim loginIndex As Integer = 1
+        Dim ticksIndex As Integer = 2
+        If parts.Length = 5 AndAlso String.Equals(parts(0), "v2", StringComparison.Ordinal) Then
+            requestIndex = 1
+            loginIndex = 2
+            ticksIndex = 3
+            If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(parts(4), payloadFingerprint) Then Return False
+        ElseIf parts.Length = 3 Then
+            isLegacyToken = True
+        Else
+            Return False
+        End If
 
         Dim normalized As String = String.Empty
-        If Not OrderDurableIdempotencyService.TryNormalizeRequestId(parts(0), normalized) Then Return False
+        If Not OrderDurableIdempotencyService.TryNormalizeRequestId(parts(requestIndex), normalized) Then Return False
 
         Dim tokenLoginId As Long = 0
-        If Not Long.TryParse(parts(1), NumberStyles.None, CultureInfo.InvariantCulture, tokenLoginId) OrElse tokenLoginId <> loginId Then Return False
+        If Not Long.TryParse(parts(loginIndex), NumberStyles.None, CultureInfo.InvariantCulture, tokenLoginId) OrElse tokenLoginId <> loginId Then Return False
 
         Dim issuedTicks As Long = 0
-        If Not Long.TryParse(parts(2), NumberStyles.None, CultureInfo.InvariantCulture, issuedTicks) Then Return False
+        If Not Long.TryParse(parts(ticksIndex), NumberStyles.None, CultureInfo.InvariantCulture, issuedTicks) Then Return False
         Dim issuedUtc As New DateTime(issuedTicks, DateTimeKind.Utc)
         Dim age As TimeSpan = DateTime.UtcNow.Subtract(issuedUtc)
         If age < TimeSpan.FromMinutes(-1) OrElse age > CHECKOUT_TOKEN_MAX_AGE Then Return False
@@ -124,6 +141,13 @@ Private Function TryValidateCheckoutToken(ByVal loginId As Long, ByRef requestId
         If clearBytes IsNot Nothing Then Array.Clear(clearBytes, 0, clearBytes.Length)
     End Try
 End Function
+
+Private Sub ReturnToCartAfterPayloadMismatch()
+    Session(CartPriceRevalidationHelper.SessionMessageKey) =
+        "Il carrello è cambiato rispetto alla richiesta precedente. Rivedi articoli e quantità e conferma nuovamente l'ordine."
+    Session(CartPriceRevalidationHelper.SessionChangedKey) = 1
+    SafeRedirect("carrello.aspx")
+End Sub
 
 Private Sub RedirectToOrderConfirmation(ByVal requestId As String, ByVal loginId As Long)
     Dim token As String = OrderConfirmationTokenService.CreateToken(requestId, loginId)
@@ -475,8 +499,11 @@ End Sub
     End Function
 
     Private Function TryReconcileCompletedOrder(ByVal connectionString As String,
-                                                ByVal requestId As String,
-                                                ByVal loginId As Long) As Boolean
+                                                 ByVal requestId As String,
+                                                 ByVal loginId As Long,
+                                                 ByVal payloadFingerprint As String) As Boolean
+        Dim normalizedFingerprint As String = String.Empty
+        If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(payloadFingerprint, normalizedFingerprint) Then Return False
         Try
             Using reconcileConnection As New MySqlConnection(connectionString)
                 reconcileConnection.Open()
@@ -484,6 +511,7 @@ End Sub
                     OrderDurableIdempotencyService.TryReadCompleted(reconcileConnection, requestId, loginId)
                 Return record IsNot Nothing AndAlso
                     record.Status = OrderDurableClaimStatus.CompletedReplay AndAlso
+                    String.Equals(record.PayloadFingerprint, normalizedFingerprint, StringComparison.Ordinal) AndAlso
                     record.DocumentiId > 0 AndAlso record.DocumentoMemorizzato > 0
             End Using
         Catch
@@ -544,7 +572,9 @@ If Not String.IsNullOrEmpty(GetQueryString(ORDER_CONFIRMATION_TOKEN_QS_KEY, 1024
 End If
 
 Dim checkoutRequestId As String = String.Empty
-If Not TryValidateCheckoutToken(authenticatedLoginId, checkoutRequestId) Then
+Dim checkoutPayloadFingerprint As String = String.Empty
+Dim isLegacyCheckoutToken As Boolean = False
+If Not TryValidateCheckoutToken(authenticatedLoginId, checkoutRequestId, checkoutPayloadFingerprint, isLegacyCheckoutToken) Then
     SafeRedirect("carrello.aspx")
     Exit Sub
 End If
@@ -584,6 +614,7 @@ End If
             Dim conn As New MySqlConnection(checkoutConnectionString)
 
             Dim trns As MySqlTransaction = Nothing
+            Dim payloadFingerprint As String = String.Empty
 
             Try
                 conn.Open()
@@ -596,11 +627,25 @@ End If
                     If completedBeforeWork.Status = OrderDurableClaimStatus.CompletedReplay AndAlso
                        completedBeforeWork.DocumentiId > 0 AndAlso
                        completedBeforeWork.DocumentoMemorizzato > 0 Then
-                        RedirectToOrderConfirmation(checkoutRequestId, LoginId)
+                        ' I token legacy non contengono il fingerprint del carrello:
+                        ' non possono quindi provare che un POST tardivo rappresenti
+                        ' lo stesso checkout completato. Il replay positivo resta
+                        ' disponibile tramite il token di conferma owner-scoped.
+                        If Not isLegacyCheckoutToken AndAlso
+                           String.Equals(completedBeforeWork.PayloadFingerprint, checkoutPayloadFingerprint, StringComparison.Ordinal) Then
+                            RedirectToOrderConfirmation(checkoutRequestId, LoginId)
+                        Else
+                            ReturnToCartAfterPayloadMismatch()
+                        End If
                         Exit Sub
                     End If
                     If completedBeforeWork.Status = OrderDurableClaimStatus.RetryRequired Then
-                        Me.SafeRedirect("carrello.aspx?pricechanged=1")
+                        If Not isLegacyCheckoutToken AndAlso
+                           String.Equals(completedBeforeWork.PayloadFingerprint, checkoutPayloadFingerprint, StringComparison.Ordinal) Then
+                            Me.SafeRedirect("carrello.aspx?pricechanged=1")
+                        Else
+                            ReturnToCartAfterPayloadMismatch()
+                        End If
                         Exit Sub
                     End If
                     ShowDurableCheckoutTechnicalFailure()
@@ -628,7 +673,7 @@ End If
                     Exit Sub
                 End If
 
-                Dim payloadFingerprint As String = OrderDurableIdempotencyService.ComputePayloadFingerprint(
+                Dim optionsFingerprint As String = OrderDurableIdempotencyService.ComputePayloadFingerprint(
                     TipoDoc, Pagamento, Vettore, SpeseSped, SpeseAss, SpesePag,
                     PagamentoOnLine, ConfermaOrdinePrimaPagamento, PermettiPagamentoSuccessivo,
                     InviaEmailOrdinePrimaPagamento, selectedShippingAddressId, Note,
@@ -644,6 +689,18 @@ End If
                 ' Lock, rivalidazione commerciale e creazione documento condividono
                 ' la stessa connessione e la stessa transazione.
                 trns = conn.BeginTransaction(IsolationLevel.Serializable)
+                Dim cartFingerprint As String = OrderDurableIdempotencyService.ComputeCartFingerprint(
+                    conn, trns, LoginId, True)
+                payloadFingerprint = OrderDurableIdempotencyService.ComputePayloadFingerprint(
+                    "checkout-v2", optionsFingerprint, cartFingerprint)
+                If isLegacyCheckoutToken OrElse
+                   Not String.Equals(payloadFingerprint, checkoutPayloadFingerprint, StringComparison.Ordinal) Then
+                    trns.Rollback()
+                    trns.Dispose()
+                    trns = Nothing
+                    ReturnToCartAfterPayloadMismatch()
+                    Exit Sub
+                End If
                 Dim durableClaim As OrderDurableIdempotencyRecord =
                     OrderDurableIdempotencyService.TryClaim(conn, trns, checkoutRequestId, LoginId, TipoDoc, payloadFingerprint)
                 If durableClaim Is Nothing OrElse durableClaim.Status = OrderDurableClaimStatus.Rejected Then
@@ -985,11 +1042,6 @@ End If
                 End Try
                 trns = Nothing
 
-                If TryReconcileCompletedOrder(checkoutConnectionString, checkoutRequestId, LoginId) Then
-                    RedirectToOrderConfirmation(checkoutRequestId, LoginId)
-                    Return
-                End If
-
                 If TypeOf ex Is OrderInventoryAvailabilityException Then
                     Dim availabilityError As OrderInventoryAvailabilityException = DirectCast(ex, OrderInventoryAvailabilityException)
                     Session(OrderInventoryAvailabilityService.SessionMessageKey) = availabilityError.BuildUserMessage()
@@ -1011,6 +1063,11 @@ End If
                     Session(OrderInventoryAvailabilityService.SessionMessageKey) = refreshedMessage
                     Session(OrderInventoryAvailabilityService.SessionLineKeysKey) = refreshedLineKeys
                     Me.SafeRedirect("carrello.aspx?stockerror=1")
+                    Return
+                End If
+
+                If TryReconcileCompletedOrder(checkoutConnectionString, checkoutRequestId, LoginId, payloadFingerprint) Then
+                    RedirectToOrderConfirmation(checkoutRequestId, LoginId)
                     Return
                 End If
 

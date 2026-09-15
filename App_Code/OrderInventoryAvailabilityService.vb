@@ -43,9 +43,11 @@ Public NotInheritable Class OrderInventoryAvailabilityService
         ' Lock the owner-scoped cart deterministically. The transaction belongs
         ' to checkout and remains open for the canonical procedure.
         Using cartCommand As New MySqlCommand(
-            "SELECT ID, ArticoliId, TCId, Qnt FROM carrello " &
-            "WHERE LoginId=?loginId " &
-            "ORDER BY ArticoliId, CASE WHEN TCId IS NULL THEN -2147483648 ELSE TCId END, ID FOR UPDATE",
+            "SELECT c.ID, c.ArticoliId, c.TCId, c.Qnt, " &
+            "COALESCE(NULLIF(TRIM(c.Codice),''), NULLIF(TRIM(a.Codice),''), '') AS CommercialCode " &
+            "FROM carrello c LEFT JOIN articoli a ON a.id=c.ArticoliId " &
+            "WHERE c.LoginId=?loginId " &
+            "ORDER BY c.ArticoliId, CASE WHEN c.TCId IS NULL THEN -2147483648 ELSE c.TCId END, c.ID FOR UPDATE",
             connection, transaction)
             cartCommand.Parameters.Add("?loginId", MySqlDbType.Int32).Value = loginId
 
@@ -62,9 +64,10 @@ Public NotInheritable Class OrderInventoryAvailabilityService
 
                     If articleId <= 0 OrElse Not hasTcId OrElse quantity <= 0D Then
                         invalidLines.Add(New OrderInventoryReservationLine() With {
-                            .ArticleId = articleId,
-                            .TCId = tcId,
-                            .RequestedQuantity = quantity,
+                             .ArticleId = articleId,
+                             .TCId = tcId,
+                             .CommercialCode = Convert.ToString(reader("CommercialCode"), CultureInfo.InvariantCulture).Trim(),
+                             .RequestedQuantity = quantity,
                             .AvailableQuantity = 0D,
                             .IsInvalid = True
                         })
@@ -75,9 +78,10 @@ Public NotInheritable Class OrderInventoryAvailabilityService
                     Dim line As OrderInventoryReservationLine = Nothing
                     If Not requested.TryGetValue(key, line) Then
                         line = New OrderInventoryReservationLine() With {
-                            .ArticleId = articleId,
-                            .TCId = tcId,
-                            .RequestedQuantity = 0D
+                             .ArticleId = articleId,
+                             .TCId = tcId,
+                             .CommercialCode = Convert.ToString(reader("CommercialCode"), CultureInfo.InvariantCulture).Trim(),
+                             .RequestedQuantity = 0D
                         }
                         requested.Add(key, line)
                     End If
@@ -150,6 +154,7 @@ End Class
 Public NotInheritable Class OrderInventoryReservationLine
     Public Property ArticleId As Integer
     Public Property TCId As Integer
+    Public Property CommercialCode As String
     Public Property RequestedQuantity As Decimal
     Public Property AvailableQuantity As Decimal
     Public Property InventoryId As Long
@@ -195,13 +200,19 @@ Public Class OrderInventoryAvailabilityException
 
     Public Function BuildUserMessage() As String
         Dim parts As New List(Of String)()
-        parts.Add(Message)
+        parts.Add("Ordine non inviato.")
         For Each line As OrderInventoryReservationLine In _lines
             If line Is Nothing Then Continue For
             Dim available As String = line.AvailableQuantity.ToString("0.###", CultureInfo.InvariantCulture)
             Dim requested As String = line.RequestedQuantity.ToString("0.###", CultureInfo.InvariantCulture)
-            parts.Add("Articolo " & line.ArticleId.ToString(CultureInfo.InvariantCulture) & ": Quantità richiesta: " & requested & "; Disponibilità attuale: " & available)
+            Dim commercialCode As String = Convert.ToString(line.CommercialCode).Trim()
+            If commercialCode <> String.Empty Then
+                parts.Add("Codice " & commercialCode & ": Quantità richiesta: " & requested & "; Disponibilità attuale: " & available)
+            Else
+                parts.Add("Articolo selezionato: Quantità richiesta: " & requested & "; Disponibilità attuale: " & available)
+            End If
         Next
+        parts.Add("Modifica la quantità oppure rimuovi l'articolo, premi Aggiorna carrello e conferma nuovamente l'ordine.")
         Return String.Join(Environment.NewLine, parts.ToArray())
     End Function
 End Class
