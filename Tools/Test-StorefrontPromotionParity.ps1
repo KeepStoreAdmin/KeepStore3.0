@@ -117,6 +117,7 @@ function Test-StaticContract {
     $resolver = Get-FileText 'App_Code\ProductPromotionEligibilityResolver.vb'
     $display = Get-FileText 'App_Code\ProductPromotionDisplayHelper.vb'
     $legacy = Get-FileText 'promozioni.aspx.vb'
+    $legacyPolicy = Get-FileText 'App_Code\LegacyPromotionRoutePolicy.vb'
     $catalog = Get-FileText 'articoli.aspx.vb'
     $catalogMarkup = Get-FileText 'articoli.aspx'
     $homePage = Get-FileText 'Default.aspx.vb'
@@ -133,9 +134,9 @@ function Test-StaticContract {
     Assert-Contains $provider 'NOT (COALESCE(offer_header.QntMinima,0)>0 AND COALESCE(offer_header.Multipli,0)>0)' 'ambiguous quantity rules fail closed'
     Assert-NotContains $provider 'InOfferta=1' 'provider does not trust materialized InOfferta'
 
-    Assert-Contains $legacy 'StorefrontPromotionCatalogProvider.BuildLegacyCatalogJoin()' 'legacy route uses canonical provider'
-    Assert-Contains $legacy 'ProductPromotionEligibilityResolver.CreateContext' 'legacy route uses server eligibility context'
-    Assert-NotContains $legacy 'FROM vOfferteDettagli d ' 'legacy route no longer expands offers independently'
+    Assert-Contains $legacy 'LegacyPromotionRoutePolicy.BuildModernPath' 'legacy route delegates to the retirement policy'
+    Assert-NotContains $legacy 'MySql' 'retired route performs no database access'
+    Assert-Contains $legacyPolicy '"pid", "pmr", "pst", "pct", "ptp", "pgr", "psg"' 'retirement policy exposes only the approved legacy keys'
 
     Assert-Contains $resolver 'AND (@campaignId<=0 OR o.id=@campaignId)' 'shared resolver enforces campaign id'
     Assert-Contains $resolver 'CurrentUserId.ToString' 'owner participates in request cache key'

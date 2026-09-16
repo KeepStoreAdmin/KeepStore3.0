@@ -2734,6 +2734,13 @@ strWhere = strWhere & " GROUP BY id"
             Dim allowIndex As Boolean = IsSeoIndexAllowed(stId, ctId, tpIds, grIds, sgIds, mrIds)
 
             Dim canonical As String = BuildSeoCanonicalUrl(basePath, allowIndex, stId, ctId, tpIds, grIds, sgIds, mrIds)
+            If String.Equals(Convert.ToString(Request.QueryString("inpromo")), "1", StringComparison.Ordinal) Then
+                canonical = basePath & "?inpromo=1"
+                Dim campaignId As Integer = 0
+                If TryReadPromotionCampaignId(campaignId) AndAlso campaignId > 0 Then
+                    canonical &= "&pid=" & campaignId.ToString(CultureInfo.InvariantCulture)
+                End If
+            End If
             Dim robots As String = If(allowIndex, "index,follow", "noindex,follow")
 
             Dim sb As New StringBuilder()

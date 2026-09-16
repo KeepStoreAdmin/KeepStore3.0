@@ -27,7 +27,6 @@ Public NotInheritable Class PostLoginReturnUrlPolicy
         "privacy.aspx",
         "promo.aspx",
         "promo_in_scadenza.aspx",
-        "promozioni.aspx",
         "search.aspx",
         "settore_disabilitato.aspx",
         "sitemap.aspx",
@@ -221,6 +220,17 @@ Public NotInheritable Class PostLoginReturnUrlPolicy
         If CheckoutPages.Contains(pageName) Then
             If downgradeCheckout Then Return ApplicationPagePath(context, "carrello.aspx")
             Return String.Empty
+        End If
+
+        If LegacyPromotionRoutePolicy.IsLegacyPage(pageName) Then
+            Dim legacyQuery As System.Collections.Specialized.NameValueCollection
+            Try
+                legacyQuery = HttpUtility.ParseQueryString(resolved.Query.TrimStart("?"c))
+            Catch
+                Return LegacyPromotionRoutePolicy.BuildModernPath(Nothing, ApplicationRoot(context)) & "&pid=invalid"
+            End Try
+
+            Return LegacyPromotionRoutePolicy.BuildModernPath(legacyQuery, ApplicationRoot(context))
         End If
 
         If Not AllowedStorefrontPages.Contains(pageName) AndAlso Not AllowedProtectedPages.Contains(pageName) Then
