@@ -1,20 +1,20 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-09-15
+Aggiornato: 2026-09-16
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
 
-- Aggiornato: 2026-09-15.
+- Aggiornato: 2026-09-16.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `d06e33383b911bfcf03e457ff1678c4c03a1c13f`.
+- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `9fed039d4563fd20ecc02859236d90e7a2f0be5d`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - `WORKFLOW-GOVERNANCE-1A` e CHIUSO / A e integrato: il root `AGENTS.md` e la fonte canonica del metodo operativo corrente.
-- Ultimo task runtime chiuso: `CART-HISTORY-STOCKERROR-MINICART-UX-1A`, esito A, PR #252 integrata fast-forward. Catena `647a16ea0991c175a0b80fa811e9a09e93e7d88d` -> `0ace2bc7bfdb75bba03f7bb97beb77cd8a5b847e` -> `c069651b5a11122b023f83c551f79199b3718282` -> `055cb6e5c5d764222d5610e1b391d1c184f59882`: tre commit integrati e zero merge commit.
-- Task runtime corrente: `ORDER-DURABLE-IDEMPOTENCY-1A`, branch `task/order-durable-idempotency-1a`, PR #254. Implementazione, deployment autorizzato e smoke conclusivo REV5 sono A; la PR resta DRAFT in attesa di review e non e ancora integrata.
-- Prossimo task effettivo: da stabilire dopo review e merge separatamente autorizzato della PR #254; nessun task successivo e avviato da questo aggiornamento.
+- Ultimo task runtime chiuso: `ORDER-DURABLE-IDEMPOTENCY-1A`, esito A, PR #254 integrata fast-forward nel checkpoint `9fed039d4563fd20ecc02859236d90e7a2f0be5d`; zero merge commit e `main` invariato.
+- Task runtime corrente: `STOREFRONT-PROMO-MODERN-PARITY-1A`, branch `task/storefront-promo-modern-parity-1a`, base stabile `9fed039d4563fd20ecc02859236d90e7a2f0be5d`. Implementazione e test tecnici sono completati; la review e il merge restano gate separati.
+- Prossimo task candidabile: `STOREFRONT-PROMO-ROUTE-RETIREMENT-1A`, esclusivamente dopo review A, merge autorizzato e parita moderna confermata. Non e avviato da questo aggiornamento.
 - La funzione digitale di recesso resta documentata ma differita per decisione del Product Owner: `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A` non e il task attivo e non va avviato senza una nuova priorita esplicita di Germano.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
 - Debiti aperti principali: audit monetario `DOUBLE`; `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` chiuso E e differito in attesa di decisione infrastrutturale. Catalogo e PDP restano aree non dichiarate complete; recesso digitale e Coupon/Groupon restano differiti dal Product Owner.
@@ -65,6 +65,14 @@ Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo tas
 - Per stock insufficiente, il POST finale rivaluta server-side l'intero carrello owner-scoped prima di entrare in `ordine.aspx`; conserva tutte le righe, mostra tutti i codici commerciali interessati in un pannello accessibile e responsive, evidenzia le righe e termina soltanto su `carrello.aspx?stockerror=1#ksCartStockError`. Non vengono chiamati stored procedure ordine, completamento idempotenza, e-mail, pixel o gateway.
 - Smoke autenticato sanitizzato del 2026-09-15 su `https://localhost:8443`: account test PROVA preservato; fixture `PF/PT10`, `ZAP80-A4`, `3343N`; carrello iniziale/finale 3 righe; documenti web iniziali/finali 4; registro idempotenza iniziale/finale una riga `COMPLETED` associata al documento di collaudo 261; `Impegnata` delle fixture invariata. Refresh, Back/Forward e reinvio del vecchio form non hanno raggiunto `documenti.aspx`, creato ordini o prodotto doppie mutazioni; nessun pagamento, gateway o e-mail e stato eseguito.
 - Regola permanente: **ogni esito terminale del checkout deve avere una sola destinazione, interrompere esplicitamente tutti i chiamanti ed essere coperto da un test end-to-end. `documenti.aspx` non e mai una destinazione di fallback per errori checkout.**
+
+### STOREFRONT-PROMO-MODERN-PARITY-1A - implementazione in review
+
+- La route moderna `articoli.aspx?inpromo=1` seleziona i candidati con provider set-based e rivalida la promozione tramite il resolver condiviso. Azienda, listino, autenticazione e owner restano server-side; `pid` ammette un solo intero positivo, viene preservato nella navigazione e fallisce chiuso se invalido, inesistente o in errore tecnico.
+- Le card non si fidano piu del solo flag materializzato `InOfferta`: una sola card rappresenta ogni prodotto, con tie-break deterministico. Fra piu offerte autorizzate viene presentato il prezzo piu basso; la condizione quantitativa resta visibile e la PDP continua a mostrare tutte le offerte associate. L'articolo `ZAP80-A4` rende `4,00 EUR` con condizione `MULTIPLI 5 PZ.` e due offerte attive.
+- I blocchi `Visti di recente` di catalogo e HOME usano card ricalcolate dal server per badge, prezzo e regola promo; la cronologia locale sceglie i prodotti ma non diventa fonte commerciale. Il fallback client riceve soltanto dati gia autorizzati dalla PDP. Il blocco prezzo HOME riserva geometria stabile anche con importi lunghi, incluso il caso `1.500,00 EUR` / `3.600,00 EUR`.
+- Verifiche tecniche: harness `160/160`, runtime HTTPS senza `500` o disclosure MySQL, precompile ASP.NET Framework 4.8, JavaScript syntax check e cache-buster CSS/JavaScript. Nessuna modifica DB, ordine, pagamento, gateway o e-mail.
+- Questa chiusura tecnica non dichiara completi catalogo, HOME, PDP, UX promo o intero storefront. `promozioni.aspx` resta disponibile e non viene ritirata in questo task; il retirement richiede task, review e autorizzazione separati.
 
 ### Funzione digitale di recesso B2C - documentata e differita
 

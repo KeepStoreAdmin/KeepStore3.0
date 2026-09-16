@@ -11,6 +11,7 @@ Public Class ProductPromotionEligibilityContext
     Public Property CurrentUserId As Integer
     Public Property IsAuthenticated As Boolean
     Public Property EvaluationDate As Date
+    Public Property CampaignId As Integer
 
     Public ReadOnly Property CacheKey As String
         Get
@@ -18,7 +19,8 @@ Public Class ProductPromotionEligibilityContext
                    Listino.ToString(CultureInfo.InvariantCulture) & ":" &
                    If(IsAuthenticated, "1", "0") & ":" &
                    CurrentUserId.ToString(CultureInfo.InvariantCulture) & ":" &
-                   EvaluationDate.ToString("yyyyMMdd", CultureInfo.InvariantCulture)
+                   EvaluationDate.ToString("yyyyMMdd", CultureInfo.InvariantCulture) & ":" &
+                   CampaignId.ToString(CultureInfo.InvariantCulture)
         End Get
     End Property
 End Class
@@ -128,7 +130,8 @@ Public Module ProductPromotionEligibilityResolver
 
     Public Function CreateContext(ByVal ctx As HttpContext,
                                   ByVal companyId As Integer,
-                                  ByVal listino As Integer) As ProductPromotionEligibilityContext
+                                  ByVal listino As Integer,
+                                  Optional ByVal campaignId As Integer = 0) As ProductPromotionEligibilityContext
         Dim loginId As Integer = SessionInt(ctx, "LoginId", SessionInt(ctx, "LoginID", 0))
         Dim currentUserId As Integer = SessionInt(ctx, "UtentiId", 0)
 
@@ -137,7 +140,8 @@ Public Module ProductPromotionEligibilityResolver
             .Listino = listino,
             .CurrentUserId = If(currentUserId > 0, currentUserId, 0),
             .IsAuthenticated = (loginId > 0 AndAlso currentUserId > 0),
-            .EvaluationDate = Date.Today
+            .EvaluationDate = Date.Today,
+            .CampaignId = If(campaignId > 0, campaignId, 0)
         }
     End Function
 
@@ -147,7 +151,8 @@ Public Module ProductPromotionEligibilityResolver
                              FirstPositive(SessionInt(ctx, "AziendaID", 0),
                                            SessionInt(ctx, "AziendaId", 0),
                                            SessionInt(ctx, "AziendeId", 0)),
-                             listino)
+                             listino,
+                             0)
     End Function
 
     Public Function Resolve(ByVal connectionString As String,
@@ -175,6 +180,20 @@ Public Module ProductPromotionEligibilityResolver
 
         Dim snapshot As ProductPromotionEligibilitySnapshot = LoadAuthorizedSnapshot(connectionString, eligibilityContext)
         Return ResolveFromSnapshot(result, snapshot, eligibilityContext, articleId, tcId, quantity, basePriceNet, basePriceGross)
+    End Function
+
+    Public Function PreloadStatus(ByVal connectionString As String,
+                                  ByVal eligibilityContext As ProductPromotionEligibilityContext) As ProductPromotionEligibilityLoadStatus
+        If String.IsNullOrWhiteSpace(connectionString) OrElse
+           eligibilityContext Is Nothing OrElse
+           eligibilityContext.CompanyId <= 0 OrElse
+           eligibilityContext.Listino <= 0 Then
+            Return ProductPromotionEligibilityLoadStatus.InvalidRequest
+        End If
+
+        Dim snapshot As ProductPromotionEligibilitySnapshot = LoadAuthorizedSnapshot(connectionString, eligibilityContext)
+        If snapshot Is Nothing Then Return ProductPromotionEligibilityLoadStatus.TechnicalError
+        Return snapshot.Status
     End Function
 
     Public Function Resolve(ByVal conn As MySqlConnection,
@@ -308,6 +327,7 @@ Public Module ProductPromotionEligibilityResolver
                 cmd.Parameters.Add("@evaluationDate", MySqlDbType.Date).Value = eligibilityContext.EvaluationDate.Date
                 cmd.Parameters.Add("@isAuthenticated", MySqlDbType.Int32).Value = If(eligibilityContext.IsAuthenticated, 1, 0)
                 cmd.Parameters.Add("@currentUserId", MySqlDbType.Int32).Value = If(eligibilityContext.IsAuthenticated, eligibilityContext.CurrentUserId, 0)
+                cmd.Parameters.Add("@campaignId", MySqlDbType.Int32).Value = eligibilityContext.CampaignId
                 If articleId > 0 Then cmd.Parameters.Add("@articleId", MySqlDbType.Int32).Value = articleId
 
                 Using reader As MySqlDataReader = cmd.ExecuteReader()
@@ -373,6 +393,7 @@ Public Module ProductPromotionEligibilityResolver
                "  AND (o.DataInizio IS NULL OR o.DataInizio<=@evaluationDate) " &
                "  AND (o.DataFine IS NULL OR o.DataFine>=@evaluationDate) " &
                "  AND (COALESCE(o.UtentiId,0)<=0 OR (@isAuthenticated=1 AND @currentUserId>0 AND o.UtentiId=@currentUserId)) " &
+               "  AND (@campaignId<=0 OR o.id=@campaignId) " &
                If(filterArticle, "  AND va.id=@articleId ", String.Empty) &
                "  AND EXISTS (SELECT 1 FROM articoli_listini al " &
                "              WHERE al.ArticoliId=va.id AND al.NListino=@listino " &

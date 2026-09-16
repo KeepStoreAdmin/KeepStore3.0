@@ -28,6 +28,10 @@ Partial Class Articoli
     Private productCardPreviewRendered As Boolean = False
     Private productCardReplaceRenderedCount As Integer = 0
     Private ReadOnly catalogPromotionCache As New Dictionary(Of String, ProductPromotionDisplayModel)(StringComparer.Ordinal)
+    Private catalogPromotionActive As Boolean = False
+    Private catalogPromotionCampaignId As Integer = 0
+    Private catalogPromotionRequestInvalid As Boolean = False
+    Private catalogPromotionTechnicalError As Boolean = False
     Private Const UseNewCatalogProductCard As Boolean = True
     Private Const ProductCardReplaceMaxCount As Integer = 3
     Private Const CatalogNavMaxSectors As Integer = 12
@@ -401,6 +405,13 @@ Partial Class Articoli
         Dim parts As New List(Of String)()
         If sectorId > 0 Then parts.Add("st=" & HttpUtility.UrlEncode(sectorId.ToString()))
         If categoryId > 0 Then parts.Add("ct=" & HttpUtility.UrlEncode(categoryId.ToString()))
+        If String.Equals(Convert.ToString(Request.QueryString("inpromo")), "1", StringComparison.Ordinal) Then
+            parts.Add("inpromo=1")
+            Dim campaignId As Integer = 0
+            If TryReadPromotionCampaignId(campaignId) AndAlso campaignId > 0 Then
+                parts.Add("pid=" & HttpUtility.UrlEncode(campaignId.ToString(CultureInfo.InvariantCulture)))
+            End If
+        End If
 
         If parts.Count = 0 Then Return "articoli.aspx"
         Return "articoli.aspx?" & String.Join("&", parts.ToArray())
@@ -623,11 +634,24 @@ End Sub
         If CategorieId < 0 Then CategorieId = 0
         If SettoriId <= 0 AndAlso CategorieId > 0 Then SettoriId = LookupSettoreIdByCategoria(CategorieId)
 
-        Dim rawPid As String = Me.Request.QueryString("pid")
-        If Not String.IsNullOrEmpty(rawPid) Then
-            Integer.TryParse(rawPid, OfferteId)
-        ElseIf Me.Session("pid") IsNot Nothing Then
-            Integer.TryParse(Me.Session("pid").ToString(), OfferteId)
+        Dim promoActive As Boolean = ResolvePromotionCatalogActive()
+        catalogPromotionActive = promoActive
+        If promoActive Then
+            InOfferta = 1
+            If Not TryReadPromotionCampaignId(catalogPromotionCampaignId) Then
+                catalogPromotionRequestInvalid = True
+                catalogPromotionCampaignId = 0
+                ShowPromotionCatalogMessage("La campagna promozionale richiesta non è disponibile.")
+            Else
+                OfferteId = catalogPromotionCampaignId
+            End If
+        Else
+            Dim rawPid As String = Me.Request.QueryString("pid")
+            If Not String.IsNullOrEmpty(rawPid) Then
+                Integer.TryParse(rawPid, OfferteId)
+            ElseIf Me.Session("pid") IsNot Nothing Then
+                Integer.TryParse(Me.Session("pid").ToString(), OfferteId)
+            End If
         End If
 
         Dim rawSped As String = Me.Request.QueryString("spedgratis")
@@ -638,6 +662,35 @@ End Sub
         Me.sdsArticoli.SelectParameters.Clear()
         Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("NListino", TypeCode.Int32, NListino.ToString()))
 
+        Dim promotionMainJoin As String = String.Empty
+        Dim promotionFacetJoin As String = String.Empty
+        Dim promotionTcSelect As String = "-1 AS PromotionTCId,"
+        If promoActive AndAlso Not catalogPromotionRequestInvalid Then
+            Try
+                Dim eligibilityContext As ProductPromotionEligibilityContext =
+                    ProductPromotionEligibilityResolver.CreateContext(HttpContext.Current,
+                                                                      CurrentAziendaId(),
+                                                                      NListino,
+                                                                      catalogPromotionCampaignId)
+                Dim preloadStatus As ProductPromotionEligibilityLoadStatus =
+                    ProductPromotionEligibilityResolver.PreloadStatus(
+                        ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString,
+                        eligibilityContext)
+                If preloadStatus <> ProductPromotionEligibilityLoadStatus.Success Then
+                    catalogPromotionTechnicalError = True
+                    ShowPromotionCatalogMessage("Le offerte non sono temporaneamente disponibili. Riprova tra poco.")
+                Else
+                    StorefrontPromotionCatalogProvider.AddParameters(Me.sdsArticoli.SelectParameters, eligibilityContext)
+                    promotionMainJoin = StorefrontPromotionCatalogProvider.BuildMainCatalogJoin()
+                    promotionFacetJoin = StorefrontPromotionCatalogProvider.BuildFacetCatalogJoin()
+                    promotionTcSelect = StorefrontPromotionCatalogProvider.MainPreferredTCSelect()
+                End If
+            Catch
+                catalogPromotionTechnicalError = True
+                ShowPromotionCatalogMessage("Le offerte non sono temporaneamente disponibili. Riprova tra poco.")
+            End Try
+        End If
+
         ' Filtri multipli (tipologie, gruppi, sottogruppi, marche) da QueryString: accetto solo ID numerici
         TipologieId = SafeIdListFromQuery("tp")
         GruppiId = SafeIdListFromQuery("gr")
@@ -645,12 +698,6 @@ End Sub
         MarcheId = SafeIdListFromQuery("mr")
 
         strCerca = QS("q", 80).Replace("%23up", "").Replace("#up", "")
-
-        If InOfferta = 1 Then
-            Session("Promo") = 1
-        Else
-            Session("Promo") = 0
-        End If
 
         If Not strCerca Is Nothing Then
             strCerca = strCerca.Replace("'", "").Replace("*", "").Replace("&", "").Replace("#", "")
@@ -792,6 +839,7 @@ End Sub
             "     IF(" & ivaUtente & ">0,(Prezzo*((" & ivaUtente & "/100)+1)),PrezzoIvato)" &
             " ) AS PrezzoIvato," &
             " Img1, MarcheDescrizione, Disponibilita, Giacenza, InOrdine, Impegnata, InOfferta," &
+            " " & promotionTcSelect &
             " SettoriDescrizione, CategorieDescrizione, TipologieDescrizione, GruppiDescrizione, SottogruppiDescrizione," &
             " Marche_img, PrezzoPromo," &
             " IF((" & abilRC & "=1) AND (ValoreIvaRC>-1)," &
@@ -815,6 +863,7 @@ End Sub
             " " & searchScoreSql &
             " FROM vsuperarticoli " &
             " LEFT OUTER JOIN (SELECT ArticoliId, MIN(id) AS DefaultTCid FROM articoli_tagliecolori GROUP BY ArticoliId) atc_default ON atc_default.ArticoliId=vsuperarticoli.id" &
+            promotionMainJoin &
             " LEFT OUTER JOIN articoli_tagliecolori tc_lookup ON tc_lookup.id=COALESCE(NULLIF(vsuperarticoli.TCid,0), atc_default.DefaultTCid)" &
             " LEFT OUTER JOIN taglie ON tc_lookup.tagliaid = taglie.id" &
             " LEFT OUTER JOIN colori ON tc_lookup.coloreid = colori.id" &
@@ -841,7 +890,7 @@ If SettoriId > 0 And OfferteId = 0 Then
                 strWhere2 = strWhere2 & " AND (varticolibase.CategorieId=?CategorieId) "
             End If
             TitoloCategoria()
-        ElseIf OfferteId > 0 Then
+        ElseIf OfferteId > 0 AndAlso Not promoActive Then
             strWhere &= " AND (OfferteId=?OfferteId) "
             Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("OfferteId", TypeCode.Int32, OfferteId.ToString()))
             strWhere2 = strWhere2 & " AND (varticolibase.OfferteId=?OfferteId) "
@@ -893,27 +942,12 @@ If SettoriId > 0 And OfferteId = 0 Then
             Me.Session("SpedGratis") = 0
         End If
 
-        'Filtro PROMO (InOfferta=1) - logica compatta e stabile:
-' - attivo se arriva ?inpromo=1 oppure se Session("Promo")=1 (one-shot)
-' - applica il filtro sia a strWhere che a strWhere2
-Dim promoActive As Boolean = (InOfferta = 1)
-
-If Not promoActive Then
-    Dim promoObj As Object = Session.Item("Promo")
-    Dim promoInt As Integer = 0
-    If promoObj IsNot Nothing AndAlso Integer.TryParse(promoObj.ToString(), promoInt) AndAlso promoInt = 1 Then
-        promoActive = True
-        'one-shot: dopo il primo load lo resettiamo
-        Session.Item("Promo") = 0
-    End If
-End If
-
-If promoActive Then
-    'allineiamo anche la variabile per il resto della pagina (datasource promo)
-    InOfferta = 1
-    strWhere &= " AND (InOfferta = 1) "
-    strWhere2 &= " AND (varticolibase.InOfferta = 1) "
-End If
+        ' Il join set-based del provider e l'unica fonte di appartenenza promo.
+        ' Input pid invalido o contesto tecnico non disponibile falliscono chiusi.
+        If promoActive AndAlso (catalogPromotionRequestInvalid OrElse catalogPromotionTechnicalError) Then
+            strWhere &= " AND 1=0 "
+            strWhere2 &= " AND 1=0 "
+        End If
 
         If CheckBox_Disponibile.Checked = True Then
             Session.Item("Disp") = 0
@@ -1062,7 +1096,8 @@ strWhere = strWhere & " GROUP BY id"
 
         Me.sdsArticoli.SelectCommand = strSelect & " WHERE Nlistino=?NListino " & strWhere
 
-        strWhere2 = " LEFT JOIN vsuperarticoli ON vsuperarticoli.Id = varticolibase.id " & strWhere2 & " AND Nlistino=?NListino"
+        strWhere2 = " LEFT JOIN vsuperarticoli ON vsuperarticoli.Id = varticolibase.id " &
+                    promotionFacetJoin & strWhere2 & " AND Nlistino=?NListino"
 
         Me.sdsMarche.SelectCommand =
             "select `varticolibase`.`MarcheId` AS `MarcheId`,`Marche`.`Descrizione` AS `Descrizione`," &
@@ -1100,68 +1135,6 @@ strWhere = strWhere & " GROUP BY id"
         CopyParams(Me.sdsArticoli.SelectParameters, Me.sdsTipologie.SelectParameters)
         CopyParams(Me.sdsArticoli.SelectParameters, Me.sdsGruppo.SelectParameters)
         CopyParams(Me.sdsArticoli.SelectParameters, Me.sdsSottogruppo.SelectParameters)
-        If (InOfferta = 1) Then
-            ' Extra promo filters: ONLY parameter placeholders (mr/tp/gr/sg) generated by BuildInParamsForSds.
-            ' No raw string values are concatenated into SQL.
-            Dim promoExtraFilters As New List(Of String)
-            If Not String.IsNullOrEmpty(inMr) Then promoExtraFilters.Add("(MarcheId IN (" & inMr & "))")
-            If Not String.IsNullOrEmpty(inTp) Then promoExtraFilters.Add("(TipologieId IN (" & inTp & "))")
-            If Not String.IsNullOrEmpty(inGr) Then promoExtraFilters.Add("(GruppiId IN (" & inGr & "))")
-            If Not String.IsNullOrEmpty(inSg) Then promoExtraFilters.Add("(SottogruppiId IN (" & inSg & "))")
-            Dim promoExtraWhere As String = If(promoExtraFilters.Count > 0, " AND " & String.Join(" AND ", promoExtraFilters.ToArray()), "")
-
-            Me.sdsTipologie.SelectCommand =
-                "SELECT *, COUNT(TipologieId) AS Numero FROM (" &
-                " SELECT MarcheId, MarcheDescrizione, SettoriId, SettoriDescrizione, CategorieId, CategorieDescrizione," &
-                " TipologieId, TipologieDescrizione AS Descrizione, GruppiId, GruppiDescrizione, SottogruppiId, SottogruppiDescrizione" &
-                " FROM vsuperarticoli" &
-                " WHERE (inofferta=1)" &
-                " AND ((?NListino>=OfferteDaListino) AND (?NListino<=OfferteAListino))" &
-                " AND (NListino=?NListino)" &
-                " AND ((CURDATE()>=offerteDatainizio) AND (CURDATE()<=offerteDataFine))" &
-                " AND (TipologieDescrizione IS NOT NULL)" &
-                promoExtraWhere &
-                " GROUP BY id) AS t1 GROUP BY Tipologieid"
-
-            Me.sdsGruppo.SelectCommand =
-                "SELECT *, COUNT(GruppiId) AS Numero FROM (" &
-                " SELECT MarcheId, MarcheDescrizione, SettoriId, SettoriDescrizione, CategorieId, CategorieDescrizione," &
-                " TipologieId, TipologieDescrizione, GruppiId, GruppiDescrizione AS Descrizione, SottogruppiId, SottogruppiDescrizione" &
-                " FROM vsuperarticoli" &
-                " WHERE (inofferta=1)" &
-                " AND ((?NListino>=OfferteDaListino) AND (?NListino<=OfferteAListino))" &
-                " AND (NListino=?NListino)" &
-                " AND ((CURDATE()>=offerteDatainizio) AND (CURDATE()<=offerteDataFine))" &
-                " AND (GruppiDescrizione IS NOT NULL)" &
-                promoExtraWhere &
-                " GROUP BY id) AS t1 GROUP BY GruppiId"
-
-            Me.sdsSottogruppo.SelectCommand =
-                "SELECT *, COUNT(SottogruppiId) AS Numero FROM (" &
-                " SELECT MarcheId, MarcheDescrizione, SettoriId, SettoriDescrizione, CategorieId, CategorieDescrizione," &
-                " TipologieId, TipologieDescrizione, GruppiId, GruppiDescrizione, SottogruppiId, SottogruppiDescrizione AS Descrizione" &
-                " FROM vsuperarticoli" &
-                " WHERE (inofferta=1)" &
-                " AND ((?NListino>=OfferteDaListino) AND (?NListino<=OfferteAListino))" &
-                " AND (NListino=?NListino)" &
-                " AND ((CURDATE()>=offerteDatainizio) AND (CURDATE()<=offerteDataFine))" &
-                " AND (SottogruppiDescrizione IS NOT NULL)" &
-                promoExtraWhere &
-                " GROUP BY id) AS t1 GROUP BY Gruppiid"
-
-            Me.sdsMarche.SelectCommand =
-                "SELECT *, COUNT(MarcheId) AS Numero FROM (" &
-                " SELECT MarcheId, MarcheDescrizione AS Descrizione, SettoriId, SettoriDescrizione, CategorieId, CategorieDescrizione," &
-                " TipologieId, TipologieDescrizione, GruppiId, GruppiDescrizione, SottogruppiId, SottogruppiDescrizione" &
-                " FROM vsuperarticoli" &
-                " WHERE (inofferta=1)" &
-                " AND ((?NListino>=OfferteDaListino) AND (?NListino<=OfferteAListino))" &
-                " AND (NListino=?NListino)" &
-                " AND ((CURDATE()>=offerteDatainizio) AND (CURDATE()<=offerteDataFine))" &
-                " AND (MarcheDescrizione IS NOT NULL)" &
-                promoExtraWhere &
-                " GROUP BY id) AS t1 GROUP BY marcheid"
-        End If
 
         If ShouldDeferCatalogSideFilters() Then
             If filtritagliaecolore IsNot Nothing Then filtritagliaecolore.Visible = False
@@ -1192,9 +1165,28 @@ strWhere = strWhere & " GROUP BY id"
     End Sub
 
     Protected Sub sdsArticoli_Selected(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.SqlDataSourceStatusEventArgs) Handles sdsArticoli.Selected
+        If e IsNot Nothing AndAlso e.Exception IsNot Nothing AndAlso catalogPromotionActive Then
+            e.ExceptionHandled = True
+            catalogPromotionTechnicalError = True
+            SetCatalogCountText(0)
+            ShowPromotionCatalogMessage("Le offerte non sono temporaneamente disponibili. Riprova tra poco.")
+            Exit Sub
+        End If
         If e IsNot Nothing AndAlso e.AffectedRows >= 0 Then
             SetCatalogCountText(e.AffectedRows)
         End If
+    End Sub
+
+    Protected Sub sdsPromotionFacet_Selected(ByVal sender As Object,
+                                             ByVal e As System.Web.UI.WebControls.SqlDataSourceStatusEventArgs) Handles sdsMarche.Selected,
+                                                                                                                   sdsTipologie.Selected,
+                                                                                                                   sdsGruppo.Selected,
+                                                                                                                   sdsSottogruppo.Selected
+        If e Is Nothing OrElse e.Exception Is Nothing OrElse Not catalogPromotionActive Then Exit Sub
+
+        e.ExceptionHandled = True
+        catalogPromotionTechnicalError = True
+        ShowPromotionCatalogMessage("Le offerte non sono temporaneamente disponibili. Riprova tra poco.")
     End Sub
     Function controlla_promo_articolo(ByVal cod_articolo As Integer, ByVal listino As Integer) As Integer
         Dim params As New Dictionary(Of String, Object)
@@ -2318,6 +2310,37 @@ strWhere = strWhere & " GROUP BY id"
         Return Request.Url.AbsoluteUri
     End Function
 
+    Private Function ResolvePromotionCatalogActive() As Boolean
+        If String.Equals(Convert.ToString(Request.QueryString("inpromo")), "1", StringComparison.Ordinal) Then Return True
+        If InOfferta = 1 Then Return True
+
+        Dim promoInt As Integer = 0
+        Dim promoObj As Object = Session.Item("Promo")
+        Session.Item("Promo") = 0
+        Return promoObj IsNot Nothing AndAlso
+               Integer.TryParse(Convert.ToString(promoObj), promoInt) AndAlso
+               promoInt = 1
+    End Function
+
+    Private Function TryReadPromotionCampaignId(ByRef campaignId As Integer) As Boolean
+        campaignId = 0
+        Dim values As String() = Request.QueryString.GetValues("pid")
+        If values Is Nothing Then Return True
+        If values.Length <> 1 Then Return False
+
+        Dim raw As String = Convert.ToString(values(0)).Trim()
+        If Not Regex.IsMatch(raw, "^[1-9][0-9]{0,9}$", RegexOptions.CultureInvariant) Then Return False
+        Return Integer.TryParse(raw, NumberStyles.None, CultureInfo.InvariantCulture, campaignId) AndAlso campaignId > 0
+    End Function
+
+    Private Sub ShowPromotionCatalogMessage(ByVal message As String)
+        If Me.lblRicerca IsNot Nothing Then
+            Me.lblRicerca.Visible = True
+            Me.lblRicerca.Text = Server.HtmlEncode(If(message, String.Empty))
+        End If
+        If Me.lblRisultati IsNot Nothing Then Me.lblRisultati.Text = String.Empty
+    End Sub
+
     Private Function IsSameRequestUrl(ByVal newUrl As String) As Boolean
         If Request Is Nothing OrElse Request.Url Is Nothing OrElse String.IsNullOrEmpty(newUrl) Then Return False
 
@@ -2585,6 +2608,10 @@ strWhere = strWhere & " GROUP BY id"
             End If
         End If
 
+        If String.Equals(paramName, "inpromo", StringComparison.OrdinalIgnoreCase) Then
+            qs.Remove("pid")
+        End If
+
         qs.Remove("rimuovi")
         qs.Remove("page")
         qs.Remove("pg")
@@ -2594,7 +2621,7 @@ strWhere = strWhere & " GROUP BY id"
 
     Private Function ClearCatalogFiltersFromUrl(ByVal url As String) As String
         Dim qs = ParseUrlQuery(url)
-        Dim keysToRemove As String() = New String() {"q", "tp", "gr", "sg", "mr", "disponibile", "inpromo", "spedgratis", "ordinamento", "taglia", "colore", "rimuovi", "page", "pg", "p"}
+        Dim keysToRemove As String() = New String() {"q", "tp", "gr", "sg", "mr", "disponibile", "spedgratis", "ordinamento", "taglia", "colore", "rimuovi", "page", "pg", "p"}
         For Each key As String In keysToRemove
             qs.Remove(key)
         Next
@@ -3323,11 +3350,116 @@ strWhere = strWhere & " GROUP BY id"
     ' SEO (Catalogo)
     ' ============================================================
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
+        BindCatalogRecentlyViewed()
         Try
             EnsureCatalogSeo()
         Catch
             ' no-op
         End Try
+    End Sub
+
+    Private Sub BindCatalogRecentlyViewed()
+        Try
+            Dim ids As List(Of Integer) = GetCatalogRecentlyViewedIds(8)
+            If ids.Count = 0 Then
+                rptCatalogRecentlyViewed.DataSource = Nothing
+                rptCatalogRecentlyViewed.DataBind()
+                Return
+            End If
+
+            Dim listino As Integer = CurrentListinoId()
+            If listino <= 0 Then listino = 1
+
+            Dim abilRc As Integer = 0
+            Dim ivaUtente As Integer = 0
+            Integer.TryParse(Convert.ToString(Session("AbilitatoIvaReverseCharge")), abilRc)
+            Integer.TryParse(Convert.ToString(Session("Iva_Utente")), ivaUtente)
+
+            Dim idParameters As New List(Of String)()
+            Dim orderBy As New StringBuilder("CASE recent.id ")
+            For i As Integer = 0 To ids.Count - 1
+                Dim parameterName As String = "@recentId" & i.ToString(CultureInfo.InvariantCulture)
+                idParameters.Add(parameterName)
+                orderBy.Append("WHEN ").Append(parameterName).Append(" THEN ").Append(i.ToString(CultureInfo.InvariantCulture)).Append(" ")
+            Next
+            orderBy.Append("ELSE 9999 END")
+
+            Dim sql As String =
+                "SELECT recent.id,recent.Codice,recent.Descrizione1,recent.Descrizione2,recent.DescrizioneLunga," &
+                " recent.Prezzo,recent.PrezzoIvato,recent.Img1,recent.MarcheDescrizione,recent.Disponibilita," &
+                " recent.Giacenza,recent.InOrdine,recent.Impegnata,recent.InOfferta,recent.SettoriDescrizione," &
+                " recent.CategorieDescrizione,recent.TipologieDescrizione,recent.GruppiDescrizione,recent.SottogruppiDescrizione," &
+                " recent.PrezzoPromo,recent.PrezzoPromoIvato,recent.MarcheId,recent.CategorieId,recent.TipologieId," &
+                " recent.TCid,recent.Ricondizionato " &
+                "FROM (" &
+                " SELECT v.id,v.Codice,v.Descrizione1,v.Descrizione2,v.DescrizioneLunga,v.Prezzo," &
+                " IF((@recentAbilRc=1) AND (v.ValoreIvaRC>-1),(v.Prezzo*((v.ValoreIvaRC/100)+1))," &
+                "    IF(@recentIva>0,(v.Prezzo*((@recentIva/100)+1)),v.PrezzoIvato)) AS PrezzoIvato," &
+                " v.Img1,v.MarcheDescrizione,v.Disponibilita,v.Giacenza,v.InOrdine,v.Impegnata,v.InOfferta," &
+                " v.SettoriDescrizione,v.CategorieDescrizione,v.TipologieDescrizione,v.GruppiDescrizione,v.SottogruppiDescrizione," &
+                " v.PrezzoPromo," &
+                " IF((@recentAbilRc=1) AND (v.ValoreIvaRC>-1),(v.PrezzoPromo*((v.ValoreIvaRC/100)+1))," &
+                "    IF(@recentIva>0,(v.PrezzoPromo*((@recentIva/100)+1)),v.PrezzoPromoIvato)) AS PrezzoPromoIvato," &
+                " v.MarcheId,v.CategorieId,v.TipologieId," &
+                " COALESCE(NULLIF(v.TCid,0),atc_default.DefaultTCid,-1) AS TCId,COALESCE(v.Ricondizionato,0) AS Ricondizionato," &
+                " ROW_NUMBER() OVER (PARTITION BY v.id ORDER BY" &
+                "   CASE WHEN COALESCE(v.TCid,0)>0 THEN 0 ELSE 1 END," &
+                "   COALESCE(v.TCid,-1),COALESCE(v.ArticoliListiniId,0)) AS RecentRank" &
+                " FROM vsuperarticoli v" &
+                " LEFT JOIN (SELECT ArticoliId,MIN(id) AS DefaultTCid FROM articoli_tagliecolori GROUP BY ArticoliId) atc_default" &
+                "   ON atc_default.ArticoliId=v.id" &
+                " WHERE v.NListino=@recentListino AND v.id IN (" & String.Join(",", idParameters.ToArray()) & ")" &
+                ") recent WHERE recent.RecentRank=1 ORDER BY " & orderBy.ToString()
+
+            Dim table As New DataTable()
+            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                conn.Open()
+                Using cmd As New MySqlCommand(sql, conn)
+                    cmd.Parameters.Add("@recentListino", MySqlDbType.Int32).Value = listino
+                    cmd.Parameters.Add("@recentAbilRc", MySqlDbType.Int32).Value = If(abilRc = 1, 1, 0)
+                    cmd.Parameters.Add("@recentIva", MySqlDbType.Int32).Value = Math.Max(0, ivaUtente)
+                    For i As Integer = 0 To ids.Count - 1
+                        cmd.Parameters.Add(idParameters(i), MySqlDbType.Int32).Value = ids(i)
+                    Next
+                    Using reader As MySqlDataReader = cmd.ExecuteReader()
+                        table.Load(reader)
+                    End Using
+                End Using
+            End Using
+
+            rptCatalogRecentlyViewed.DataSource = table
+            rptCatalogRecentlyViewed.DataBind()
+        Catch ex As Exception
+            rptCatalogRecentlyViewed.DataSource = Nothing
+            rptCatalogRecentlyViewed.DataBind()
+            Try
+                KeepStoreLog.Error("catalog-recently-viewed", "Unable to render server-side recent product cards. Error type: " & ex.GetType().Name & ".", Nothing, HttpContext.Current)
+            Catch
+            End Try
+        End Try
+    End Sub
+
+    Private Function GetCatalogRecentlyViewedIds(ByVal limit As Integer) As List(Of Integer)
+        Dim ids As New List(Of Integer)()
+        MergeCatalogRecentIds(ids, Convert.ToString(Session("ks_recent_ids")), limit)
+        MergeCatalogRecentIds(ids, Convert.ToString(Session("ks_recent_session")), limit)
+
+        Dim recentCookie As HttpCookie = Request.Cookies("ks_recent")
+        If recentCookie IsNot Nothing Then MergeCatalogRecentIds(ids, HttpUtility.UrlDecode(recentCookie.Value), limit)
+        Dim sessionCookie As HttpCookie = Request.Cookies("ks_recent_session")
+        If sessionCookie IsNot Nothing Then MergeCatalogRecentIds(ids, HttpUtility.UrlDecode(sessionCookie.Value), limit)
+        Return ids
+    End Function
+
+    Private Sub MergeCatalogRecentIds(ByVal target As List(Of Integer), ByVal raw As String, ByVal limit As Integer)
+        If target Is Nothing OrElse String.IsNullOrWhiteSpace(raw) OrElse target.Count >= limit Then Return
+        For Each part As String In raw.Split(New Char() {","c}, StringSplitOptions.RemoveEmptyEntries)
+            Dim id As Integer = 0
+            If Integer.TryParse(part.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, id) AndAlso id > 0 AndAlso Not target.Contains(id) Then
+                target.Add(id)
+                If target.Count >= limit Then Exit For
+            End If
+        Next
     End Sub
 
     Private Sub EnsureCatalogSeo()
@@ -3733,6 +3865,11 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     Private Function CatalogTcId(ByVal dataItem As Object, ByVal fallbackMinusOne As Boolean) As Integer
+        If catalogPromotionActive AndAlso UiData.HasColumn(dataItem, "PromotionTCId") Then
+            Dim promotionTcId As Integer = UiData.Int(dataItem, "PromotionTCId")
+            If promotionTcId > 0 Then Return promotionTcId
+        End If
+
         Dim tcId As Integer = UiData.Int(dataItem, "TCid")
         If tcId <= 0 Then tcId = UiData.Int(dataItem, "TCId")
         If tcId <= 0 AndAlso fallbackMinusOne Then Return -1
@@ -3776,14 +3913,52 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     Protected Function CatalogPriceText(ByVal dataItem As Object) As String
+        Return CatalogPriceTextFor(dataItem, True)
+    End Function
+
+    Private Function CatalogPriceTextFor(ByVal dataItem As Object, ByVal restrictToCatalogCampaign As Boolean) As String
         Dim price As Decimal = CatalogBasePrice(dataItem)
-        Dim promoModel As ProductPromotionDisplayModel = CatalogPromotionModel(dataItem)
-        If promoModel IsNot Nothing AndAlso promoModel.HasDefaultQuantityOffer Then
-            price = CatalogDefaultQuantityPromoPrice(promoModel)
+        Dim promoModel As ProductPromotionDisplayModel = CatalogPromotionModel(dataItem, restrictToCatalogCampaign)
+        If promoModel IsNot Nothing AndAlso promoModel.HasOffers Then
+            price = CatalogBestPromotionPrice(promoModel)
         End If
 
         If price <= 0D Then Return "Prezzo su richiesta"
-        Return price.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) & " " & ChrW(8364)
+        Dim priceText As String = price.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) & " " & ChrW(8364)
+        If promoModel IsNot Nothing AndAlso promoModel.HasOffers AndAlso promoModel.BestPriceRequiresQuantityTier Then
+            Return "Da " & priceText
+        End If
+        Return priceText
+    End Function
+
+    Protected Function CatalogPriceHtml(ByVal dataItem As Object) As String
+        Return CatalogPriceHtmlFor(dataItem, True)
+    End Function
+
+    Protected Function RecentCatalogPriceHtml(ByVal dataItem As Object) As String
+        Return CatalogPriceHtmlFor(dataItem, False)
+    End Function
+
+    Private Function CatalogPriceHtmlFor(ByVal dataItem As Object, ByVal restrictToCatalogCampaign As Boolean) As String
+        Dim basePriceNet As Decimal = KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "Prezzo"), 0D)
+        Dim basePriceGross As Decimal = KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoIvato"), 0D)
+        Dim promoPriceNet As Decimal = 0D
+        Dim promoPriceGross As Decimal = 0D
+        Dim inPromotion As Integer = 0
+
+        Dim promoModel As ProductPromotionDisplayModel = CatalogPromotionModel(dataItem, restrictToCatalogCampaign)
+        If promoModel IsNot Nothing AndAlso promoModel.HasOffers Then
+            promoPriceNet = promoModel.BestPriceNet
+            promoPriceGross = promoModel.BestPriceGross
+            inPromotion = 1
+        End If
+
+        Return UiPriceFormatter.RenderPriceHtml(basePriceNet,
+                                                basePriceGross,
+                                                promoPriceNet,
+                                                promoPriceGross,
+                                                inPromotion,
+                                                Session("IvaTipo"))
     End Function
 
     Private Function BuildProductCardModel(ByVal dataItem As Object) As ProductCardModel
@@ -3795,20 +3970,20 @@ strWhere = strWhere & " GROUP BY id"
         descriptionText = ThemeManager.CompactText(descriptionText, 180)
 
         Dim promoModel As ProductPromotionDisplayModel = CatalogPromotionModel(dataItem)
-        Dim hasDefaultQuantityPromo As Boolean = (promoModel IsNot Nothing AndAlso promoModel.HasDefaultQuantityOffer)
+        Dim hasPromotion As Boolean = (promoModel IsNot Nothing AndAlso promoModel.HasOffers)
         Dim basePrice As Decimal = CatalogBasePrice(dataItem)
         Dim oldPriceText As String = ""
         Dim badgeText As String = ""
         Dim promoSummaryHtml As String = ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(promoModel)
 
-        If hasDefaultQuantityPromo Then
+        If hasPromotion Then
             If basePrice > 0D Then
                 oldPriceText = basePrice.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) & " " & ChrW(8364)
             End If
 
-            Dim promoPrice As Decimal = CatalogDefaultQuantityPromoPrice(promoModel)
-            badgeText = If(promoModel.BestDefaultQuantityDiscountPercent > 0,
-                           "-" & promoModel.BestDefaultQuantityDiscountPercent.ToString() & "%",
+            Dim promoPrice As Decimal = CatalogBestPromotionPrice(promoModel)
+            badgeText = If(promoModel.BestDiscountPercent > 0,
+                           "-" & promoModel.BestDiscountPercent.ToString() & "%",
                            GetDiscountPercent(basePrice, promoPrice))
             If String.IsNullOrWhiteSpace(badgeText) Then badgeText = "Offerta"
         End If
@@ -3837,7 +4012,7 @@ strWhere = strWhere & " GROUP BY id"
         model.OldPriceText = oldPriceText
         model.BadgeText = badgeText
         model.PromoSummaryHtml = promoSummaryHtml
-        model.IsOnSale = hasDefaultQuantityPromo
+        model.IsOnSale = hasPromotion
         model.IsAvailable = availability.IsAvailable
         model.AvailabilityText = availability.Text
         model.AvailabilityHtml = availability.Html
@@ -3862,12 +4037,20 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     Protected Function CatalogPromoBadgeHtml(ByVal dataItem As Object) As String
-        Dim promoModel As ProductPromotionDisplayModel = CatalogPromotionModel(dataItem)
-        If promoModel IsNot Nothing AndAlso promoModel.HasDefaultQuantityOffer Then
-            Dim modelText As String = If(promoModel.BestDefaultQuantityDiscountPercent > 0,
-                                         "-" & promoModel.BestDefaultQuantityDiscountPercent.ToString() & "%",
+        Return CatalogPromoBadgeHtmlFor(dataItem, True)
+    End Function
+
+    Protected Function RecentCatalogPromoBadgeHtml(ByVal dataItem As Object) As String
+        Return CatalogPromoBadgeHtmlFor(dataItem, False)
+    End Function
+
+    Private Function CatalogPromoBadgeHtmlFor(ByVal dataItem As Object, ByVal restrictToCatalogCampaign As Boolean) As String
+        Dim promoModel As ProductPromotionDisplayModel = CatalogPromotionModel(dataItem, restrictToCatalogCampaign)
+        If promoModel IsNot Nothing AndAlso promoModel.HasOffers Then
+            Dim modelText As String = If(promoModel.BestDiscountPercent > 0,
+                                         "-" & promoModel.BestDiscountPercent.ToString() & "%",
                                          "Offerta")
-            Return "<div class='box-sale-wrap pst-default'><p class='small-text'>" & Server.HtmlEncode(modelText) & "</p></div>"
+            Return "<div class='box-sale-wrap pst-default'><p class='small-text'>Promo</p><p class='title-sidebar-2'>" & Server.HtmlEncode(modelText) & "</p></div>"
         End If
         Return ""
     End Function
@@ -3876,7 +4059,12 @@ strWhere = strWhere & " GROUP BY id"
         Return ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(CatalogPromotionModel(dataItem))
     End Function
 
-    Private Function CatalogPromotionModel(ByVal dataItem As Object) As ProductPromotionDisplayModel
+    Protected Function RecentCatalogPromoDetailsHtml(ByVal dataItem As Object) As String
+        Return ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(CatalogPromotionModel(dataItem, False))
+    End Function
+
+    Private Function CatalogPromotionModel(ByVal dataItem As Object,
+                                           Optional ByVal restrictToCatalogCampaign As Boolean = True) As ProductPromotionDisplayModel
         If dataItem Is Nothing Then Return Nothing
 
         Try
@@ -3887,7 +4075,10 @@ strWhere = strWhere & " GROUP BY id"
             If articleId <= 0 OrElse companyId <= 0 OrElse listino <= 0 Then Return Nothing
 
             Dim eligibilityContext As ProductPromotionEligibilityContext =
-                ProductPromotionEligibilityResolver.CreateContext(HttpContext.Current, companyId, listino)
+                ProductPromotionEligibilityResolver.CreateContext(HttpContext.Current,
+                                                                  companyId,
+                                                                  listino,
+                                                                  If(restrictToCatalogCampaign AndAlso catalogPromotionActive, catalogPromotionCampaignId, 0))
             Dim cacheKey As String = articleId.ToString() & ":" & tcId.ToString() & ":" & eligibilityContext.CacheKey
             If catalogPromotionCache.ContainsKey(cacheKey) Then Return catalogPromotionCache(cacheKey)
 
@@ -3901,12 +4092,31 @@ strWhere = strWhere & " GROUP BY id"
 
             catalogPromotionCache(cacheKey) = model
             Return model
-        Catch
+        Catch ex As Exception
+            If restrictToCatalogCampaign AndAlso catalogPromotionActive Then
+                catalogPromotionTechnicalError = True
+                ShowPromotionCatalogMessage("Le offerte non sono temporaneamente disponibili. Riprova tra poco.")
+                Try
+                    KeepStoreLog.Error("storefront-promotion-catalog",
+                                       "Promotion card eligibility failed. Error type: " & ex.GetType().Name & ".",
+                                       Nothing,
+                                       HttpContext.Current)
+                Catch
+                End Try
+            End If
             Return Nothing
         End Try
     End Function
 
     Protected Function CatalogActionDataAttributes(ByVal dataItem As Object) As String
+        Return BuildCatalogActionDataAttributes(dataItem, CatalogPriceTextFor(dataItem, True))
+    End Function
+
+    Protected Function RecentCatalogActionDataAttributes(ByVal dataItem As Object) As String
+        Return BuildCatalogActionDataAttributes(dataItem, CatalogPriceTextFor(dataItem, False))
+    End Function
+
+    Private Function BuildCatalogActionDataAttributes(ByVal dataItem As Object, ByVal priceText As String) As String
         Dim title As String = UiData.Str(dataItem, "Descrizione1")
         Dim descr As String = UiData.Str(dataItem, "Descrizione2")
         If String.IsNullOrWhiteSpace(descr) Then descr = UiData.Str(dataItem, "DescrizioneLunga")
@@ -3920,7 +4130,7 @@ strWhere = strWhere & " GROUP BY id"
         attrs.Append(" data-ks-code=""").Append(HA(UiData.Str(dataItem, "Codice"))).Append("""")
         attrs.Append(" data-ks-url=""").Append(HA(CatalogProductUrl(dataItem))).Append("""")
         attrs.Append(" data-ks-img=""").Append(HA(ThemeManager.ProductImageUrl(UiData.Get(dataItem, "Img1")))).Append("""")
-        attrs.Append(" data-ks-price=""").Append(HA(CatalogPriceText(dataItem))).Append("""")
+        attrs.Append(" data-ks-price=""").Append(HA(priceText)).Append("""")
         attrs.Append(" data-ks-available=""").Append(HA(CatalogAvailabilityText(dataItem))).Append("""")
         attrs.Append(" data-ks-cart-url=""").Append(HA(CatalogCartAddUrl(dataItem))).Append("""")
         Dim cartQty As Decimal = GetCatalogCartQuantity(UiData.Int(dataItem, "id"), CatalogTcId(dataItem, True))
@@ -3942,13 +4152,13 @@ strWhere = strWhere & " GROUP BY id"
         Return value
     End Function
 
-    Private Function CatalogDefaultQuantityPromoPrice(ByVal model As ProductPromotionDisplayModel) As Decimal
-        If model Is Nothing OrElse Not model.HasDefaultQuantityOffer Then Return 0D
+    Private Function CatalogBestPromotionPrice(ByVal model As ProductPromotionDisplayModel) As Decimal
+        If model Is Nothing OrElse Not model.HasOffers Then Return 0D
 
         Dim ivaMode As Integer = 0
         Integer.TryParse(Convert.ToString(Session("IvaTipo")), ivaMode)
-        If ivaMode = 1 Then Return model.BestDefaultQuantityPriceNet
-        Return model.BestDefaultQuantityPriceGross
+        If ivaMode = 1 Then Return model.BestPriceNet
+        Return model.BestPriceGross
     End Function
 
     Private Function CurrentAziendaId() As Integer

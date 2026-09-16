@@ -359,14 +359,7 @@
                                             </div>
 
                                             <div class="price-wrap fw-medium mt-1">
-                                                <%# UiPriceFormatter.RenderPriceHtml(
-                                                        If(IsDBNull(Eval("Prezzo")), 0, Eval("Prezzo")),
-                                                        If(IsDBNull(Eval("PrezzoIvato")), 0, Eval("PrezzoIvato")),
-                                                        If(IsDBNull(Eval("PrezzoPromo")), 0, Eval("PrezzoPromo")),
-                                                        If(IsDBNull(Eval("PrezzoPromoIvato")), 0, Eval("PrezzoPromoIvato")),
-                                                        Val(Eval("InOfferta")),
-                                                        Session("IvaTipo")
-                                                    ) %>
+                                                <%# CatalogPriceHtml(Container.DataItem) %>
                                             </div>
                                             <%# CatalogPromoDetailsHtml(Container.DataItem) %>
                                         </div>
@@ -461,6 +454,7 @@
                     <section id="ksRecentlyViewedBlock"
                              class="ks-recently-viewed-block d-none"
                              data-ks-limit="8"
+                             data-ks-server-fallback="1"
                              data-ks-placeholder="<%= ThemeManager.PlaceholderProductImageUrl() %>">
                         <div class="flat-title mb-3">
                             <h5 class="fw-semibold">Visti di recente</h5>
@@ -474,7 +468,52 @@
                             </div>
                         </div>
                         <div class="swiper tf-sw-products ks-recently-viewed-swiper">
-                            <div class="swiper-wrapper" data-ks-recent-items></div>
+                            <div class="swiper-wrapper" data-ks-recent-items>
+                                <asp:Repeater ID="rptCatalogRecentlyViewed" runat="server">
+                                    <ItemTemplate>
+                                        <div class="swiper-slide">
+                                            <article class="card-product ks-catalog-card ks-recent-card">
+                                                <div class="card-product-wrapper">
+                                                    <a href='<%# CatalogProductUrl(Container.DataItem) %>' class="product-img">
+                                                        <img class="lazyload img-product" alt='<%# Server.HtmlEncode(UiData.Str(Container.DataItem, "Descrizione1")) %>'
+                                                             src='<%# ThemeManager.ProductImageUrl(UiData.Get(Container.DataItem, "Img1")) %>'
+                                                             data-src='<%# ThemeManager.ProductImageUrl(UiData.Get(Container.DataItem, "Img1")) %>' />
+                                                    </a>
+                                                    <ul class="list-product-btn top-0 end-0">
+                                                        <li>
+                                                            <button type="submit" <%# CatalogNativeCartButtonAttributes(Container.DataItem) %>
+                                                                class="box-icon add-to-cart btn-icon-action hover-tooltip tooltip-left js-ks-cart-link"
+                                                                aria-label="Aggiungi al carrello" <%# RecentCatalogActionDataAttributes(Container.DataItem) %>>
+                                                                <span class="icon icon-cart2"></span><span class="tooltip">Aggiungi al carrello</span>
+                                                            </button>
+                                                        </li>
+                                                        <li class="wishlist">
+                                                            <a href='<%# CatalogWishlistAddUrl(Container.DataItem) %>' class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-wishlist-link"
+                                                               aria-label="Aggiungi a wishlist" <%# RecentCatalogActionDataAttributes(Container.DataItem) %>>
+                                                                <span class="icon icon-heart2"></span><span class="tooltip">Wishlist</span>
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                    <%# RecentCatalogPromoBadgeHtml(Container.DataItem) %>
+                                                </div>
+                                                <div class="card-product-info">
+                                                    <p class="product-tag caption text-main-2 ks-card-category"><%# Server.HtmlEncode(CatalogCategoryLabel(Container.DataItem)) %></p>
+                                                    <a class="name-product body-md-2 fw-semibold text-secondary link ks-card-title" href='<%# CatalogProductUrl(Container.DataItem) %>'><%# Server.HtmlEncode(UiData.Str(Container.DataItem, "Descrizione1")) %></a>
+                                                    <p class="caption text-main-2 ks-card-brand-code"><%# Server.HtmlEncode(CatalogBrandCodeLabel(Container.DataItem)) %></p>
+                                                    <div class="price-wrap fw-medium mt-1"><%# RecentCatalogPriceHtml(Container.DataItem) %></div>
+                                                    <%# RecentCatalogPromoDetailsHtml(Container.DataItem) %>
+                                                    <%# CatalogAvailabilityHtml(Container.DataItem) %>
+                                                    <button type="submit" <%# CatalogNativeCartButtonAttributes(Container.DataItem) %>
+                                                        class="tf-btn text-white w-100 d-lg-none ks-mobile-card-buy-cta ks-home-buy-cta js-ks-cart-link"
+                                                        aria-label="Acquista: aggiungi al carrello" <%# RecentCatalogActionDataAttributes(Container.DataItem) %>>
+                                                        <span class="ks-card-buy-cta__icon icon-cart-2" aria-hidden="true"></span><span class="ks-home-buy-cta__text">Acquista</span>
+                                                    </button>
+                                                </div>
+                                            </article>
+                                        </div>
+                                    </ItemTemplate>
+                                </asp:Repeater>
+                            </div>
                         </div>
                     </section>
 
@@ -517,5 +556,5 @@
     <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>"></script>
     <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>?v=20260831-mediasort1"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20260907-cartidempotency2"></script>
-    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260902-cardlayout1a"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260916-promo-parity2"></script>
 </asp:Content>

@@ -106,6 +106,12 @@
       category: cleanText(input.category, ''),
       image: validUrl(input.image),
       price: cleanText(input.price, 'Prezzo su richiesta'),
+      basePrice: cleanText(input.basePrice, ''),
+      promoActive: input.promoActive === true,
+      promoDiscount: cleanText(input.promoDiscount, '').slice(0, 24),
+      promoPrice: cleanText(input.promoPrice, '').slice(0, 48),
+      promoCondition: cleanText(input.promoCondition, '').slice(0, 120),
+      promoOfferCount: Math.max(0, parseInt(input.promoOfferCount, 10) || 0),
       availability: cleanText(input.availability || input.available, ''),
       availabilityPresentation: normalizeAvailabilityPresentation(input.availabilityPresentation),
       url: validUrl(input.url),
@@ -170,7 +176,7 @@
       ' data-ks-code="' + attr(item.code) + '"' +
       ' data-ks-url="' + attr(item.url) + '"' +
       ' data-ks-img="' + attr(img) + '"' +
-      ' data-ks-price="' + attr(item.price) + '"' +
+      ' data-ks-price="' + attr(item.promoActive && item.promoPrice ? item.promoPrice : item.price) + '"' +
       ' data-ks-available="' + attr(item.availability) + '"' +
       ' data-ks-cart-url="' + attr(deriveCartUrl(item)) + '"' +
       ' data-ks-description="' + attr(item.category || item.brand || item.availability || 'Prodotto') + '"';
@@ -214,6 +220,40 @@
     '</span>';
   }
 
+  function renderPromotionBadge(item) {
+    if (!item.promoActive) return '';
+    var discount = item.promoDiscount || 'Offerta';
+    return '<div class="box-sale-wrap pst-default ks-recent-promo-badge" aria-label="Promozione attiva">' +
+      '<p class="small-text">Promo</p>' +
+      '<p class="title-sidebar-2">' + escapeHtml(discount) + '</p>' +
+    '</div>';
+  }
+
+  function renderPromotionSummary(item) {
+    if (!item.promoActive || !item.promoPrice) return '';
+    var count = item.promoOfferCount > 1
+      ? '<span class="ks-catalog-promos__count">' + item.promoOfferCount + ' offerte attive</span>'
+      : '';
+    var condition = item.promoCondition
+      ? '<span class="ks-catalog-promos__tier">' + escapeHtml(item.promoCondition) + '</span>'
+      : '';
+    return '<div class="ks-catalog-promos" aria-label="Migliore offerta attiva">' +
+      '<span class="ks-catalog-promos__discount">' + escapeHtml((item.promoDiscount ? item.promoDiscount + ' ' : '') + 'Promo') + '</span>' +
+      '<span class="ks-catalog-promos__price"><strong>' + escapeHtml(item.promoPrice) + '</strong></span>' +
+      condition + count +
+    '</div>';
+  }
+
+  function renderPrice(item) {
+    var current = item.promoActive && item.promoPrice ? item.promoPrice : item.price;
+    var old = item.promoActive && item.basePrice && item.basePrice !== current
+      ? '<span class="ks-price-old">' + escapeHtml(item.basePrice) + '</span>'
+      : '';
+    return '<div class="price-wrap fw-medium mt-1 ks-recent-price-slot"><span class="ks-price">' +
+      '<span class="ks-price-now">' + escapeHtml(current || 'Prezzo su richiesta') + '</span>' + old +
+    '</span></div>';
+  }
+
   function renderCard(item, container) {
     var img = item.image || fallbackImage(container);
     var meta = item.category || '';
@@ -232,12 +272,14 @@
             '<li><a href="#quickView" data-bs-toggle="modal" class="box-icon quickview btn-icon-action hover-tooltip tooltip-left js-ks-quickview" aria-label="Vista rapida"' + actionAttrs(item, img) + '><span class="icon icon-view"></span><span class="tooltip d-none d-lg-block">Vista rapida</span></a></li>' +
             '<li><a href="#compare" data-bs-toggle="offcanvas" data-bs-target="#compare" aria-controls="compare" class="box-icon btn-icon-action hover-tooltip tooltip-left js-ks-compare" aria-label="Confronta articolo"' + actionAttrs(item, img) + '><span class="icon icon-compare1"></span><span class="tooltip d-none d-lg-block">Confronta</span></a></li>' +
           '</ul>' +
+          renderPromotionBadge(item) +
         '</div>' +
         '<div class="card-product-info">' +
           '<p class="product-tag caption text-main-2 ks-card-category">' + escapeHtml(meta) + '</p>' +
           '<a class="name-product body-md-2 fw-semibold text-secondary link ks-card-title" href="' + attr(item.url) + '">' + escapeHtml(item.name) + '</a>' +
           (sub ? '<p class="caption text-main-2 ks-card-brand-code">' + escapeHtml(sub) + '</p>' : '') +
-          '<div class="price-wrap fw-medium mt-1"><span class="ks-price"><span class="ks-price-now">' + escapeHtml(item.price || 'Prezzo su richiesta') + '</span></span></div>' +
+          renderPrice(item) +
+          renderPromotionSummary(item) +
           renderAvailability(item) +
           '<a href="' + attr(deriveCartUrl(item)) + '" class="tf-btn text-white w-100 d-lg-none ks-mobile-card-buy-cta ks-home-buy-cta js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello"' + actionAttrs(item, img) + '><span class="ks-card-buy-cta__icon icon-cart-2" aria-hidden="true"></span><span class="ks-home-buy-cta__text">Acquista</span></a>' +
         '</div>' +
@@ -280,6 +322,14 @@
     var target = block.querySelector('[data-ks-recent-items]');
     if (!target) return;
 
+    // Le card server-side contengono prezzi e promozioni live: la cronologia
+    // locale non deve sostituire una sorgente commerciale piu autorevole.
+    if (block.getAttribute('data-ks-server-fallback') === '1' && target.children.length) {
+      block.classList.remove('d-none');
+      initSwiper(block);
+      return;
+    }
+
     var limit = parseInt(block.getAttribute('data-ks-limit') || DEFAULT_RENDER, 10);
     if (!isFinite(limit) || limit <= 0) limit = DEFAULT_RENDER;
 
@@ -290,11 +340,6 @@
     list = list.slice(0, limit);
 
     if (!list.length) {
-      if (block.getAttribute('data-ks-server-fallback') === '1' && target.children.length) {
-        block.classList.remove('d-none');
-        initSwiper(block);
-        return;
-      }
       block.classList.add('d-none');
       target.innerHTML = '';
       return;

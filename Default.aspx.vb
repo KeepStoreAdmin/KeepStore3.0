@@ -2095,7 +2095,13 @@ Partial Public Class _Default
     Private Function TryGetValidPromoPrice(ByVal row As DataRow, ByRef promoPrice As Decimal) As Boolean
         promoPrice = 0D
         If HasPromotionDisplaySnapshot(row) Then
-            promoPrice = ToDecimal(row("DisplayPromoQtyOnePrice"))
+            Dim quantityOnePrice As Decimal = ToDecimal(row("DisplayPromoQtyOnePrice"))
+            Dim tierPrice As Decimal = ToDecimal(row("DisplayPromoTierPrice"))
+            If quantityOnePrice > 0D AndAlso tierPrice > 0D Then
+                promoPrice = Math.Min(quantityOnePrice, tierPrice)
+            Else
+                promoPrice = Math.Max(quantityOnePrice, tierPrice)
+            End If
             Return promoPrice > 0D
         End If
 
@@ -2599,7 +2605,9 @@ Partial Public Class _Default
         Dim priceClass As String = If(emphasize, "new-price h4 fw-normal text-primary mb-0", "new-price body-md-2 fw-medium text-primary mb-0") & " ks-home-price-value ks-home-price-value--current"
         Dim oldPriceClass As String = If(emphasize, "old-price price-text text-main-2", "old-price body-md-2 text-main-2") & " ks-home-price-value ks-home-price-value--old"
         Dim slotClass As String = If(emphasize, "ks-home-price-slot--emphasized", "ks-home-price-slot--compact")
+        Dim stackClass As String = If(emphasize, "ks-home-price-stack--emphasized", "ks-home-price-stack--compact")
 
+        sb.Append("<div class='ks-home-price-stack ").Append(stackClass).Append("'>")
         sb.Append("<p class='price-wrap fw-medium ks-home-price-slot ").Append(slotClass).Append("'>")
         sb.Append("<span class='").Append(priceClass).Append("'>").Append(FormatMoney(CurrentPrice(row))).Append("</span>")
         If ShowDiscount(row) Then
@@ -2607,6 +2615,7 @@ Partial Public Class _Default
         End If
         sb.Append("</p>")
         sb.Append(RenderTierPrice(row))
+        sb.Append("</div>")
 
         Return sb.ToString()
     End Function

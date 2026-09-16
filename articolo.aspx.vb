@@ -1649,7 +1649,7 @@ Partial Class articolo
 
         ' Immagini
         BindImages(row, nome)
-        EmitRecentlyViewedClientScript(row, price, categoryName, brandName, codice, availabilityModel, currentTcid)
+        EmitRecentlyViewedClientScript(row, price, promotionModel, categoryName, brandName, codice, availabilityModel, currentTcid)
 
         ' Quantità desiderata e stato carrello corrente.
         BindPdpCartState(_id, currentTcid, True)
@@ -2567,6 +2567,7 @@ Partial Class articolo
 
     Private Sub EmitRecentlyViewedClientScript(row As DataRow,
                                                price As PriceContext,
+                                               promotionModel As ProductPromotionDisplayModel,
                                                categoryName As String,
                                                brandName As String,
                                                codice As String,
@@ -2591,6 +2592,25 @@ Partial Class articolo
             item("category") = categoryName
             item("image") = img
             item("price") = BuildPriceText(price.CurrentPrice)
+            If promotionModel IsNot Nothing AndAlso promotionModel.HasOffers Then
+                Dim ivaTipo As Integer = GetSessionInt("IvaTipo", 2)
+                Dim bestPrice As Decimal = If(ivaTipo = 1,
+                                              promotionModel.BestPriceNet,
+                                              promotionModel.BestPriceGross)
+                Dim basePrice As Nullable(Of Decimal) = If(ivaTipo = 1,
+                                                           GetRowDecimal(row, "Prezzo"),
+                                                           GetRowDecimal(row, "PrezzoIvato"))
+                item("promoActive") = True
+                item("promoPrice") = BuildPriceText(bestPrice)
+                If basePrice.HasValue AndAlso basePrice.Value > 0D Then item("basePrice") = BuildPriceText(basePrice)
+                If promotionModel.BestDiscountPercent > 0D Then
+                    item("promoDiscount") = "-" & promotionModel.BestDiscountPercent.ToString("0.##", CultureInfo.GetCultureInfo("it-IT")) & "%"
+                End If
+                If promotionModel.BestPriceRequiresQuantityTier Then
+                    item("promoCondition") = promotionModel.BestOfferLabel
+                End If
+                item("promoOfferCount") = promotionModel.Offers.Count
+            End If
             item("availability") = If(availability IsNot Nothing, availability.Text, String.Empty)
             If availability IsNot Nothing Then
                 Dim presentation As New Dictionary(Of String, Object)()
