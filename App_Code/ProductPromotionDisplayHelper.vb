@@ -219,7 +219,7 @@ Public Module ProductPromotionDisplayHelper
             If model.BestDefaultQuantityDiscountPercent > 0D Then
                 sb.Append("<span class=""ks-catalog-promos__discount"">-").Append(HtmlEncode(FormatQuantity(model.BestDefaultQuantityDiscountPercent))).Append("%</span>")
             End If
-            sb.Append("<span class=""ks-catalog-promos__price"">Promo <strong>").Append(HtmlEncode(FormatMoney(DisplayPrice(model.BestDefaultQuantityPriceNet, model.BestDefaultQuantityPriceGross, useNetPrices)))).Append("</strong></span>")
+            sb.Append("<span class=""ks-catalog-promos__label"">Promo</span>")
         End If
         If model.HasQuantityTierOffer Then
             sb.Append("<span class=""ks-catalog-promos__price"">Da <strong>").Append(HtmlEncode(FormatMoney(DisplayPrice(model.BestQuantityTierPriceNet, model.BestQuantityTierPriceGross, useNetPrices)))).Append("</strong></span>")

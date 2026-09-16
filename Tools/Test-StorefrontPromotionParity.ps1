@@ -90,6 +90,71 @@ function Get-ProductCardByCode {
     return ''
 }
 
+function Get-ProductCardCountByCode {
+    param([string]$Html, [string]$Code)
+    return @([regex]::Matches($Html, '<article\b.*?</article>', [Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [Text.RegularExpressions.RegexOptions]::Singleline) |
+        Where-Object { $_.Value.IndexOf($Code, [StringComparison]::OrdinalIgnoreCase) -ge 0 }).Count
+}
+
+function Get-ElementByClass {
+    param([string]$Html, [string]$ClassName)
+    $pattern = '<(?<tag>[a-z][a-z0-9]*)\b[^>]*class=(?<quote>[''"])[^''"]*' + [regex]::Escape($ClassName) + '[^''"]*\k<quote>[^>]*>.*?</\k<tag>>'
+    $match = [regex]::Match($Html, $pattern, [Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [Text.RegularExpressions.RegexOptions]::Singleline)
+    if ($match.Success) { return $match.Value }
+    return ''
+}
+
+function Assert-PromotionSummaryMarkup {
+    param([string]$Html, [string]$Name)
+    $summaries = @([regex]::Matches($Html, '<div class="ks-catalog-promos"[^>]*>.*?</div>', [Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [Text.RegularExpressions.RegexOptions]::Singleline))
+    Assert-True ($summaries.Count -gt 0) ($Name + ' renders promotion summary markup')
+    foreach ($summaryMatch in $summaries) {
+        $summary = $summaryMatch.Value
+        Assert-True (-not [regex]::IsMatch($summary, 'Promo\s*<strong\b', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) ($Name + ' summary does not repeat the immediate price')
+        $labels = @([regex]::Matches($summary, '<span class="ks-catalog-promos__label">\s*Promo\s*</span>', [Text.RegularExpressions.RegexOptions]::IgnoreCase))
+        Assert-True ($labels.Count -le 1) ($Name + ' uses at most one standalone Promo label per card')
+        if ($labels.Count -eq 1) {
+            Assert-True ((Get-PageText $labels[0].Value) -ceq 'Promo') ($Name + ' Promo label contains text only')
+        }
+    }
+}
+
+function Assert-ZapCatalogCardPresentation {
+    param([string]$Card, [string]$Name)
+    $priceWrap = Get-ElementByClass $Card 'price-wrap'
+    $newPrice = Get-ElementByClass $priceWrap 'new-price'
+    if ([string]::IsNullOrWhiteSpace($newPrice)) { $newPrice = Get-ElementByClass $priceWrap 'ks-price-now' }
+    $summary = Get-ElementByClass $Card 'ks-catalog-promos'
+    $summaryText = Get-PageText $summary
+    Assert-True (-not [string]::IsNullOrWhiteSpace($priceWrap)) ($Name + ' has one price-wrap')
+    Assert-True ([regex]::Matches($Card, 'class="[^"]*\bprice-wrap\b[^"]*"', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) ($Name + ' price-wrap occurs once')
+    Assert-True ((Get-PageText $newPrice) -eq '5,00 €') ($Name + ' immediate quantity-one price is 5.00 only in price-wrap')
+    Assert-True ([regex]::Matches($summaryText, '(?<![0-9])5,00\s*€', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 0) ($Name + ' summary does not repeat 5.00')
+    Assert-True ([regex]::Matches($summary, '<span class="ks-catalog-promos__label">\s*Promo\s*</span>', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) ($Name + ' has one standalone Promo label')
+    Assert-True ([regex]::IsMatch($summary, 'ks-catalog-promos__discount[^>]*>.*?</span>\s*<span class="ks-catalog-promos__label">\s*Promo\s*</span>\s*<span class="ks-catalog-promos__price">\s*Da\s*<strong>4,00\s*€</strong></span>\s*<span class="ks-catalog-promos__tier">\s*MULTIPLI\s+5\s+PZ\.\s*</span>', [Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [Text.RegularExpressions.RegexOptions]::Singleline)) ($Name + ' discount, label, tier price and condition are separate siblings')
+    Assert-True ($summaryText.IndexOf('Da 4,00 €', [StringComparison]::OrdinalIgnoreCase) -ge 0) ($Name + ' future tier remains separate at 4.00')
+    Assert-True ($summaryText.IndexOf('MULTIPLI 5 PZ.', [StringComparison]::OrdinalIgnoreCase) -ge 0) ($Name + ' tier condition remains visible')
+    Assert-True ($summaryText.IndexOf('2 offerte attive', [StringComparison]::OrdinalIgnoreCase) -ge 0) ($Name + ' active-offer count remains visible')
+    Assert-True ([regex]::IsMatch($Card, 'data-ks-price="5(?:[\.,]0+)?(?:\s*€)?"', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) ($Name + ' data price remains quantity-one price')
+    Assert-True (-not [regex]::IsMatch($Card, 'data-ks-price="4(?:[\.,]0+)?(?:\s*€)?"', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) ($Name + ' data price is not the future tier')
+}
+
+function Assert-ZapHomePresentation {
+    param([string]$Section, [string]$Name)
+    $priceWrap = Get-ElementByClass $Section 'price-wrap'
+    $newPrice = Get-ElementByClass $priceWrap 'new-price'
+    $tier = Get-ElementByClass $Section 'ks-home-promo-tier'
+    Assert-True ($Section.IndexOf('ZAP80-A4', [StringComparison]::OrdinalIgnoreCase) -ge 0) ($Name + ' renders ZAP80-A4')
+    Assert-True ([regex]::Matches($Section, 'class=[''"][^''"]*\bprice-wrap\b[^''"]*[''"]', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) ($Name + ' price-wrap occurs once')
+    Assert-True ((Get-PageText $newPrice) -eq '5,00 €') ($Name + ' immediate quantity-one price is 5.00 only in price-wrap')
+    Assert-True ([regex]::Matches($Section, '<p class=[''"]small-text[''"]>\s*Promo\s*</p>', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) ($Name + ' keeps one standalone image badge label')
+    Assert-True (-not [regex]::IsMatch($Section, 'Promo\s*(?:<[^>]+>\s*)*5,00\s*€', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) ($Name + ' does not repeat 5.00 beside Promo')
+    Assert-True ((Get-PageText $tier).IndexOf('Da 4,00 €', [StringComparison]::OrdinalIgnoreCase) -ge 0) ($Name + ' keeps future tier separate at 4.00')
+    Assert-True ((Get-PageText $tier).IndexOf('Multipli 5 pz.', [StringComparison]::OrdinalIgnoreCase) -ge 0) ($Name + ' keeps the tier condition')
+    Assert-True ([regex]::IsMatch($Section, 'data-ks-price=[''"]5(?:[\.,]0+)?(?:\s*€)?[''"]', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) ($Name + ' data price remains quantity-one price')
+    Assert-True (-not [regex]::IsMatch($Section, 'data-ks-price=[''"]4(?:[\.,]0+)?(?:\s*€)?[''"]', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) ($Name + ' data price is not the future tier')
+}
+
 function Get-SectionById {
     param([string]$Html, [string]$Id)
     $pattern = '<section\b[^>]*\bid="' + [regex]::Escape($Id) + '"[^>]*>.*?</section>'
@@ -142,9 +207,11 @@ function Test-StaticContract {
     Assert-Contains $resolver 'CurrentUserId.ToString' 'owner participates in request cache key'
     Assert-Contains $resolver 'Public Function PreloadStatus' 'shared resolver supports fail-closed preload'
 
-    Assert-Contains $display 'model.BestDefaultQuantityPriceGross' 'catalog summary uses the quantity-one promotion'
+    Assert-Contains $display 'model.BestDefaultQuantityPriceGross' 'display model preserves the quantity-one promotion price'
     Assert-Contains $display 'model.BestQuantityTierPriceGross' 'catalog summary renders the future tier separately'
     Assert-Contains $display 'Da <strong>' 'quantity tier is explicitly a Da teaser'
+    Assert-Contains $display 'ks-catalog-promos__label"">Promo</span>' 'catalog summary renders a standalone Promo label'
+    Assert-NotContains $display 'ks-catalog-promos__price"">Promo <strong>' 'catalog summary does not repeat the immediate price'
     Assert-NotContains $display 'DisplayPrice(model.BestPriceNet, model.BestPriceGross' 'overall minimum is not the current catalog price'
     Assert-NotContains $homePage 'Math.Min(quantityOnePrice, tierPrice)' 'home never promotes a future tier to current price'
     Assert-Contains $homePage 'DisplayPromoQtyOnePrice' 'home current price is quantity-one price'
@@ -342,6 +409,7 @@ function Test-RuntimeContract {
         $legacyTotal = Get-ReportedProductCount $legacy.Content
         Assert-True ($modernTotal -gt 0) 'modern reports a complete promotion total'
         Assert-True ($legacyTotal -eq $modernTotal) 'legacy and modern HTTP totals match'
+        Assert-PromotionSummaryMarkup $modern.Content 'modern all promotions'
 
         foreach ($campaign in @($SingleCampaignId,$MultiCampaignId,$TierCampaignId,2147483647)) {
             $modernCampaign = Invoke-LocalGet ('articoli.aspx?inpromo=1&pid=' + $campaign)
@@ -349,6 +417,9 @@ function Test-RuntimeContract {
             Assert-HealthyResponse $modernCampaign ('modern campaign ' + $campaign)
             Assert-HealthyResponse $legacyCampaign ('legacy campaign ' + $campaign)
             Assert-True ((Get-ReportedProductCount $modernCampaign.Content) -eq (Get-ReportedProductCount $legacyCampaign.Content)) ('campaign HTTP totals match ' + $campaign)
+            if ((Get-ReportedProductCount $modernCampaign.Content) -gt 0) {
+                Assert-PromotionSummaryMarkup $modernCampaign.Content ('modern campaign ' + $campaign)
+            }
         }
 
         foreach ($badPid in @('abc','-1','0','2147483648','1%26pid%3D2')) {
@@ -360,6 +431,7 @@ function Test-RuntimeContract {
         $normal = Invoke-LocalGet 'articoli.aspx'
         Assert-HealthyResponse $normal 'normal catalog'
         Assert-True (@(Get-ProductIds $normal.Content).Count -gt 0) 'normal catalog still renders products'
+        Assert-PromotionSummaryMarkup $normal.Content 'normal catalog promotion cards'
 
         $session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
         $zap = Invoke-LocalGet 'articoli.aspx?inpromo=1&q=ZAP80-A4' $session
@@ -367,12 +439,8 @@ function Test-RuntimeContract {
         $card = Get-ProductCardByCode $zap.Content 'ZAP80-A4'
         $cardText = Get-PageText $card
         Assert-True (-not [string]::IsNullOrWhiteSpace($card)) 'ZAP80-A4 card is present'
-        Assert-True ($cardText.IndexOf('Promo 5,00 €', [StringComparison]::OrdinalIgnoreCase) -ge 0) 'ZAP80-A4 current quantity-one promo is 5.00'
-        Assert-True ($cardText.IndexOf('Da 4,00 €', [StringComparison]::OrdinalIgnoreCase) -ge 0) 'ZAP80-A4 future tier is separate at 4.00'
-        Assert-True ($cardText.IndexOf('MULTIPLI 5 PZ.', [StringComparison]::OrdinalIgnoreCase) -ge 0) 'ZAP80-A4 tier condition is visible'
-        Assert-True ($cardText.IndexOf('2 offerte attive', [StringComparison]::OrdinalIgnoreCase) -ge 0) 'ZAP80-A4 reports both offers'
-        Assert-True ([regex]::IsMatch($card, 'data-ks-price="5(?:[\.,]0+)?(?:\s*€)?"', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) 'ZAP80-A4 data price is quantity-one price'
-        Assert-True (-not [regex]::IsMatch($card, 'data-ks-price="4(?:[\.,]0+)?(?:\s*€)?"', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) 'ZAP80-A4 data price is not future tier'
+        Assert-True ((Get-ProductCardCountByCode $zap.Content 'ZAP80-A4') -eq 1) 'ZAP80-A4 card is not duplicated'
+        Assert-ZapCatalogCardPresentation $card 'ZAP80-A4 catalog card'
 
         $tierOnly = Invoke-LocalGet ('articoli.aspx?inpromo=1&pid=' + $TierCampaignId) $session
         Assert-HealthyResponse $tierOnly 'tier-only campaign'
@@ -391,15 +459,13 @@ function Test-RuntimeContract {
         $recentSection = Get-SectionById $recentCatalog.Content 'ksRecentlyViewedBlock'
         $recentText = Get-PageText $recentSection
         Assert-HealthyResponse $recentCatalog 'catalog recently viewed'
-        Assert-True ($recentText.IndexOf('Promo 5,00 €', [StringComparison]::OrdinalIgnoreCase) -ge 0) 'catalog recent uses live quantity-one price'
-        Assert-True ($recentText.IndexOf('Da 4,00 €', [StringComparison]::OrdinalIgnoreCase) -ge 0) 'catalog recent keeps tier separate'
+        $recentCard = Get-ProductCardByCode $recentSection 'ZAP80-A4'
+        Assert-ZapCatalogCardPresentation $recentCard 'catalog recently viewed ZAP80-A4 card'
 
         $homeResponse = Invoke-LocalGet 'Default.aspx?ksreview=recent-promo' $session
         $homeRecent = Get-SectionById $homeResponse.Content 'HomeRecentlyViewedSection'
-        $homeRecentText = Get-PageText $homeRecent
         Assert-HealthyResponse $homeResponse 'home'
-        Assert-True ($homeRecentText.IndexOf('Promo', [StringComparison]::OrdinalIgnoreCase) -ge 0 -and $homeRecentText.IndexOf('5,00 €', [StringComparison]::OrdinalIgnoreCase) -ge 0) 'home recent uses live quantity-one price'
-        Assert-True ($homeRecentText.IndexOf('Da 4,00 €', [StringComparison]::OrdinalIgnoreCase) -ge 0) 'home recent keeps tier separate'
+        Assert-ZapHomePresentation $homeRecent 'home recently viewed ZAP80-A4 card'
         Assert-Contains $homeResponse.Content 'ks-home-price-stack--emphasized' 'home keeps stable long-price geometry'
         Assert-True ($homeResponse.Content.IndexOf('1.500,00', [StringComparison]::OrdinalIgnoreCase) -ge 0) 'home renders a long commercial price'
     } finally { Restore-LocalCertificateCompatibility }
