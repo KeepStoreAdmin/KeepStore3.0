@@ -214,17 +214,18 @@ Public Module ProductPromotionDisplayHelper
 
         Dim useNetPrices As Boolean = UseNetPriceDisplay()
         Dim sb As New StringBuilder()
-        sb.Append("<div class=""ks-catalog-promos"" aria-label=""Migliore offerta attiva"">")
-        sb.Append("<span class=""ks-catalog-promos__discount"">")
-        If model.BestDiscountPercent > 0D Then
-            sb.Append("-").Append(HtmlEncode(FormatQuantity(model.BestDiscountPercent))).Append("% ")
+        sb.Append("<div class=""ks-catalog-promos"" aria-label=""Offerte attive"">")
+        If model.HasDefaultQuantityOffer Then
+            If model.BestDefaultQuantityDiscountPercent > 0D Then
+                sb.Append("<span class=""ks-catalog-promos__discount"">-").Append(HtmlEncode(FormatQuantity(model.BestDefaultQuantityDiscountPercent))).Append("%</span>")
+            End If
+            sb.Append("<span class=""ks-catalog-promos__price"">Promo <strong>").Append(HtmlEncode(FormatMoney(DisplayPrice(model.BestDefaultQuantityPriceNet, model.BestDefaultQuantityPriceGross, useNetPrices)))).Append("</strong></span>")
         End If
-        sb.Append("Promo</span>")
-        sb.Append("<span class=""ks-catalog-promos__price""><strong>")
-        sb.Append(HtmlEncode(FormatMoney(DisplayPrice(model.BestPriceNet, model.BestPriceGross, useNetPrices))))
-        sb.Append("</strong></span>")
-        If model.BestPriceRequiresQuantityTier AndAlso Not String.IsNullOrWhiteSpace(model.BestOfferLabel) Then
-            sb.Append("<span class=""ks-catalog-promos__tier"">").Append(HtmlEncode(model.BestOfferLabel)).Append("</span>")
+        If model.HasQuantityTierOffer Then
+            sb.Append("<span class=""ks-catalog-promos__price"">Da <strong>").Append(HtmlEncode(FormatMoney(DisplayPrice(model.BestQuantityTierPriceNet, model.BestQuantityTierPriceGross, useNetPrices)))).Append("</strong></span>")
+            If Not String.IsNullOrWhiteSpace(model.BestQuantityTierOfferLabel) Then
+                sb.Append("<span class=""ks-catalog-promos__tier"">").Append(HtmlEncode(model.BestQuantityTierOfferLabel)).Append("</span>")
+            End If
         End If
         If model.Offers.Count > 1 Then
             sb.Append("<span class=""ks-catalog-promos__count"">").Append(model.Offers.Count.ToString(CultureInfo.InvariantCulture)).Append(" offerte attive</span>")

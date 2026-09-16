@@ -22,6 +22,12 @@ Public Module StorefrontPromotionCatalogProvider
                " ON ks_promo_catalog.ArticleId=varticolibase.id "
     End Function
 
+    Public Function BuildLegacyCatalogJoin() As String
+        Return " INNER JOIN (" & BuildAuthorizedProductsSql() & ") ks_promo_catalog" &
+               " ON ks_promo_catalog.ArticleId=a.id" &
+               " AND ks_promo_catalog.ArticleListPriceId=a.ArticoliListiniId "
+    End Function
+
     Public Function MainPreferredTCSelect() As String
         Return "ks_promo_catalog.PreferredTCId AS PromotionTCId,"
     End Function
@@ -47,11 +53,19 @@ Public Module StorefrontPromotionCatalogProvider
     End Sub
 
     Private Function BuildAuthorizedProductsSql() As String
-        Return "SELECT ranked.ArticleId,ranked.ArticleListPriceId,ranked.PreferredTCId" &
+        Return "SELECT ranked.ArticleId,ranked.ArticleListPriceId,ranked.PreferredTCId," &
+               " ranked.OfferId,ranked.OfferDetailId,ranked.OfferDescription,ranked.OfferImage," &
+               " ranked.OfferStartsOn,ranked.OfferEndsOn,ranked.OfferMinimumQuantity," &
+               " ranked.OfferMultipleQuantity,ranked.OfferPrice,ranked.OfferDiscount" &
                " FROM (" &
                "SELECT catalog.id AS ArticleId," &
                "       catalog.ArticoliListiniId AS ArticleListPriceId," &
                "       CASE WHEN COALESCE(detail.TCId,-1)>0 THEN detail.TCId ELSE -1 END AS PreferredTCId," &
+               "       offer_header.id AS OfferId,detail.id AS OfferDetailId," &
+               "       legacy_detail.Descrizione AS OfferDescription,legacy_detail.Immagine AS OfferImage," &
+               "       offer_header.DataInizio AS OfferStartsOn,offer_header.DataFine AS OfferEndsOn," &
+               "       offer_header.QntMinima AS OfferMinimumQuantity,offer_header.Multipli AS OfferMultipleQuantity," &
+               "       offer_header.Prezzo AS OfferPrice,offer_header.Sconto AS OfferDiscount," &
                "       ROW_NUMBER() OVER (PARTITION BY catalog.id ORDER BY" &
                "           CASE WHEN COALESCE(detail.TCId,-1)>0 THEN 0 ELSE 1 END ASC," &
                "           CASE" &

@@ -649,8 +649,6 @@ End Sub
             Dim rawPid As String = Me.Request.QueryString("pid")
             If Not String.IsNullOrEmpty(rawPid) Then
                 Integer.TryParse(rawPid, OfferteId)
-            ElseIf Me.Session("pid") IsNot Nothing Then
-                Integer.TryParse(Me.Session("pid").ToString(), OfferteId)
             End If
         End If
 
@@ -3919,16 +3917,12 @@ strWhere = strWhere & " GROUP BY id"
     Private Function CatalogPriceTextFor(ByVal dataItem As Object, ByVal restrictToCatalogCampaign As Boolean) As String
         Dim price As Decimal = CatalogBasePrice(dataItem)
         Dim promoModel As ProductPromotionDisplayModel = CatalogPromotionModel(dataItem, restrictToCatalogCampaign)
-        If promoModel IsNot Nothing AndAlso promoModel.HasOffers Then
-            price = CatalogBestPromotionPrice(promoModel)
+        If promoModel IsNot Nothing AndAlso promoModel.HasDefaultQuantityOffer Then
+            price = CatalogDefaultQuantityPromoPrice(promoModel)
         End If
 
         If price <= 0D Then Return "Prezzo su richiesta"
-        Dim priceText As String = price.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) & " " & ChrW(8364)
-        If promoModel IsNot Nothing AndAlso promoModel.HasOffers AndAlso promoModel.BestPriceRequiresQuantityTier Then
-            Return "Da " & priceText
-        End If
-        Return priceText
+        Return price.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) & " " & ChrW(8364)
     End Function
 
     Protected Function CatalogPriceHtml(ByVal dataItem As Object) As String
@@ -3947,9 +3941,9 @@ strWhere = strWhere & " GROUP BY id"
         Dim inPromotion As Integer = 0
 
         Dim promoModel As ProductPromotionDisplayModel = CatalogPromotionModel(dataItem, restrictToCatalogCampaign)
-        If promoModel IsNot Nothing AndAlso promoModel.HasOffers Then
-            promoPriceNet = promoModel.BestPriceNet
-            promoPriceGross = promoModel.BestPriceGross
+        If promoModel IsNot Nothing AndAlso promoModel.HasDefaultQuantityOffer Then
+            promoPriceNet = promoModel.BestDefaultQuantityPriceNet
+            promoPriceGross = promoModel.BestDefaultQuantityPriceGross
             inPromotion = 1
         End If
 
@@ -3971,21 +3965,24 @@ strWhere = strWhere & " GROUP BY id"
 
         Dim promoModel As ProductPromotionDisplayModel = CatalogPromotionModel(dataItem)
         Dim hasPromotion As Boolean = (promoModel IsNot Nothing AndAlso promoModel.HasOffers)
+        Dim hasDefaultQuantityPromo As Boolean = (promoModel IsNot Nothing AndAlso promoModel.HasDefaultQuantityOffer)
         Dim basePrice As Decimal = CatalogBasePrice(dataItem)
         Dim oldPriceText As String = ""
         Dim badgeText As String = ""
         Dim promoSummaryHtml As String = ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(promoModel)
 
-        If hasPromotion Then
+        If hasDefaultQuantityPromo Then
             If basePrice > 0D Then
                 oldPriceText = basePrice.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) & " " & ChrW(8364)
             End If
 
-            Dim promoPrice As Decimal = CatalogBestPromotionPrice(promoModel)
-            badgeText = If(promoModel.BestDiscountPercent > 0,
-                           "-" & promoModel.BestDiscountPercent.ToString() & "%",
+            Dim promoPrice As Decimal = CatalogDefaultQuantityPromoPrice(promoModel)
+            badgeText = If(promoModel.BestDefaultQuantityDiscountPercent > 0,
+                           "-" & promoModel.BestDefaultQuantityDiscountPercent.ToString() & "%",
                            GetDiscountPercent(basePrice, promoPrice))
             If String.IsNullOrWhiteSpace(badgeText) Then badgeText = "Offerta"
+        ElseIf hasPromotion Then
+            badgeText = "Quantità"
         End If
 
         Dim isRefurbished As Boolean = False
@@ -4047,9 +4044,11 @@ strWhere = strWhere & " GROUP BY id"
     Private Function CatalogPromoBadgeHtmlFor(ByVal dataItem As Object, ByVal restrictToCatalogCampaign As Boolean) As String
         Dim promoModel As ProductPromotionDisplayModel = CatalogPromotionModel(dataItem, restrictToCatalogCampaign)
         If promoModel IsNot Nothing AndAlso promoModel.HasOffers Then
-            Dim modelText As String = If(promoModel.BestDiscountPercent > 0,
-                                         "-" & promoModel.BestDiscountPercent.ToString() & "%",
-                                         "Offerta")
+            Dim modelText As String = If(promoModel.HasDefaultQuantityOffer,
+                                         If(promoModel.BestDefaultQuantityDiscountPercent > 0,
+                                            "-" & promoModel.BestDefaultQuantityDiscountPercent.ToString() & "%",
+                                            "Offerta"),
+                                         "Quantità")
             Return "<div class='box-sale-wrap pst-default'><p class='small-text'>Promo</p><p class='title-sidebar-2'>" & Server.HtmlEncode(modelText) & "</p></div>"
         End If
         Return ""
@@ -4152,13 +4151,13 @@ strWhere = strWhere & " GROUP BY id"
         Return value
     End Function
 
-    Private Function CatalogBestPromotionPrice(ByVal model As ProductPromotionDisplayModel) As Decimal
-        If model Is Nothing OrElse Not model.HasOffers Then Return 0D
+    Private Function CatalogDefaultQuantityPromoPrice(ByVal model As ProductPromotionDisplayModel) As Decimal
+        If model Is Nothing OrElse Not model.HasDefaultQuantityOffer Then Return 0D
 
         Dim ivaMode As Integer = 0
         Integer.TryParse(Convert.ToString(Session("IvaTipo")), ivaMode)
-        If ivaMode = 1 Then Return model.BestPriceNet
-        Return model.BestPriceGross
+        If ivaMode = 1 Then Return model.BestDefaultQuantityPriceNet
+        Return model.BestDefaultQuantityPriceGross
     End Function
 
     Private Function CurrentAziendaId() As Integer

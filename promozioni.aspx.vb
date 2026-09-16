@@ -65,9 +65,8 @@ Partial Class promozioni
     End Sub
 
     Public Sub CaricaArticoli()
-        Dim utentiId As Integer = GetSessionInt("UtentiID", 0)
         Dim nListino As Integer = GetSessionInt("Listino", 0)
-        Dim dataCorrente As Date = System.DateTime.Today
+        Dim aziendaId As Integer = GetSessionInt("AziendaID", 0)
 
         iMarcheId = GetSessionInt("pmr", 0)
         iSettoriId = GetSessionInt("pst", 0)
@@ -83,41 +82,39 @@ Partial Class promozioni
         End If
 
         Me.sdsArticoli.SelectParameters.Clear()
+        If nListino <= 0 OrElse aziendaId <= 0 OrElse iPromoID < 0 Then
+            Me.sdsArticoli.SelectCommand = "SELECT * FROM varticolilistini WHERE 1=0"
+            Return
+        End If
+
+        Dim eligibilityContext As ProductPromotionEligibilityContext =
+            ProductPromotionEligibilityResolver.CreateContext(HttpContext.Current,
+                                                              aziendaId,
+                                                              nListino,
+                                                              iPromoID)
+        StorefrontPromotionCatalogProvider.AddParameters(Me.sdsArticoli.SelectParameters, eligibilityContext)
+        Dim promotionJoin As String = StorefrontPromotionCatalogProvider.BuildLegacyCatalogJoin()
+
         Me.sdsArticoli.SelectCommand =
             "SELECT STRAIGHT_JOIN a.id, a.Codice, a.Ean, a.Descrizione1, a.Prezzo, a.PrezzoIvato, " &
             "       a.Img1, a.MarcheDescrizione, a.Disponibilita, a.InOrdine, a.Impegnata, " &
-            "       d.OfferteId AS OfferteID, d.id AS OfferteDettaglioId, " &
-            "       d.Descrizione AS DescrizionePromo, d.Immagine AS ImmaginePromo, " &
-            "       d.DataInizio AS DataInizioPromo, d.DataFine AS DataFinePromo, " &
-            "       d.QntMinima AS QntMinimaPromo, d.Multipli AS MultipliPromo, " &
-            "       d.Prezzo AS PrezzoPromo, d.Sconto AS ScontoPromo " &
-            "FROM vOfferteDettagli d " &
-            "INNER JOIN varticolilistini a ON " &
-            "       a.NListino = @NListino " &
-            "   AND (COALESCE(d.MarcheId, 0) = 0 OR a.MarcheId = d.MarcheId) " &
-            "   AND (COALESCE(d.SettoriId, 0) = 0 OR a.SettoriId = d.SettoriId) " &
-            "   AND (COALESCE(d.CategorieId, 0) = 0 OR a.CategorieId = d.CategorieId) " &
-            "   AND (COALESCE(d.TipologieId, 0) = 0 OR a.TipologieId = d.TipologieId) " &
-            "   AND (COALESCE(d.GruppiId, 0) = 0 OR a.GruppiId = d.GruppiId) " &
-            "   AND (COALESCE(d.SottoGruppiId, 0) = 0 OR a.SottoGruppiId = d.SottoGruppiId) " &
-            "   AND (COALESCE(d.ArticoliId, 0) = 0 OR a.id = d.ArticoliId) " &
-            "WHERE ((d.DaListino <= @NListino AND d.AListino >= @NListino) OR d.UtentiId = @UtentiID) " &
-            "  AND d.Abilitato = 1 " &
-            "  AND d.DataInizio <= @Data " &
-            "  AND d.DataFine >= @Data " &
-            "  AND (@pmr = 0 OR COALESCE(d.MarcheId, 0) = @pmr) " &
-            "  AND (@pst = 0 OR COALESCE(d.SettoriId, 0) = @pst) " &
-            "  AND (@pct = 0 OR COALESCE(d.CategorieId, 0) = @pct) " &
-            "  AND (@ptp = 0 OR COALESCE(d.TipologieId, 0) = @ptp) " &
-            "  AND (@pgr = 0 OR COALESCE(d.GruppiId, 0) = @pgr) " &
-            "  AND (@psg = 0 OR COALESCE(d.SottoGruppiId, 0) = @psg) " &
-            "  AND (@part = 0 OR COALESCE(d.ArticoliId, 0) = @part) " &
-            "  AND (@pid = 0 OR d.OfferteId = @pid) " &
-            "ORDER BY d.OfferteId, d.id, a.Codice, a.Descrizione1, a.id"
+            "       ks_promo_catalog.OfferId AS OfferteID, ks_promo_catalog.OfferDetailId AS OfferteDettaglioId, " &
+            "       ks_promo_catalog.OfferDescription AS DescrizionePromo, ks_promo_catalog.OfferImage AS ImmaginePromo, " &
+            "       ks_promo_catalog.OfferStartsOn AS DataInizioPromo, ks_promo_catalog.OfferEndsOn AS DataFinePromo, " &
+            "       ks_promo_catalog.OfferMinimumQuantity AS QntMinimaPromo, ks_promo_catalog.OfferMultipleQuantity AS MultipliPromo, " &
+            "       ks_promo_catalog.OfferPrice AS PrezzoPromo, ks_promo_catalog.OfferDiscount AS ScontoPromo " &
+            "FROM varticolilistini a " & promotionJoin &
+            "WHERE a.NListino = @NListino " &
+            "  AND (@pmr = 0 OR a.MarcheId = @pmr) " &
+            "  AND (@pst = 0 OR a.SettoriId = @pst) " &
+            "  AND (@pct = 0 OR a.CategorieId = @pct) " &
+            "  AND (@ptp = 0 OR a.TipologieId = @ptp) " &
+            "  AND (@pgr = 0 OR a.GruppiId = @pgr) " &
+            "  AND (@psg = 0 OR a.SottoGruppiId = @psg) " &
+            "  AND (@part = 0 OR a.id = @part) " &
+            "ORDER BY a.Codice, a.Descrizione1, a.id"
 
         Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("NListino", TypeCode.Int32, nListino.ToString()))
-        Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("UtentiID", TypeCode.Int32, utentiId.ToString()))
-        Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("Data", TypeCode.DateTime, dataCorrente.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)))
         Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("pmr", TypeCode.Int32, iMarcheId.ToString()))
         Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("pst", TypeCode.Int32, iSettoriId.ToString()))
         Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("pct", TypeCode.Int32, iCategorieId.ToString()))
@@ -125,7 +122,6 @@ Partial Class promozioni
         Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("pgr", TypeCode.Int32, iGruppiId.ToString()))
         Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("psg", TypeCode.Int32, iSottogruppiId.ToString()))
         Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("part", TypeCode.Int32, iArticoliId.ToString()))
-        Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("pid", TypeCode.Int32, iPromoID.ToString()))
 
     End Sub
 

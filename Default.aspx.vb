@@ -2095,13 +2095,7 @@ Partial Public Class _Default
     Private Function TryGetValidPromoPrice(ByVal row As DataRow, ByRef promoPrice As Decimal) As Boolean
         promoPrice = 0D
         If HasPromotionDisplaySnapshot(row) Then
-            Dim quantityOnePrice As Decimal = ToDecimal(row("DisplayPromoQtyOnePrice"))
-            Dim tierPrice As Decimal = ToDecimal(row("DisplayPromoTierPrice"))
-            If quantityOnePrice > 0D AndAlso tierPrice > 0D Then
-                promoPrice = Math.Min(quantityOnePrice, tierPrice)
-            Else
-                promoPrice = Math.Max(quantityOnePrice, tierPrice)
-            End If
+            promoPrice = ToDecimal(row("DisplayPromoQtyOnePrice"))
             Return promoPrice > 0D
         End If
 
@@ -2553,14 +2547,19 @@ Partial Public Class _Default
     End Function
 
     Private Function RenderSaleBadge(ByVal row As DataRow) As String
-        If row Is Nothing OrElse Not ShowDiscount(row) Then
-            Return String.Empty
-        End If
+        If row Is Nothing Then Return String.Empty
+
+        Dim tierPrice As Decimal = 0D
+        Dim hasImmediateDiscount As Boolean = ShowDiscount(row)
+        Dim hasQuantityTier As Boolean = TryGetValidTierPrice(row, tierPrice)
+        If Not hasImmediateDiscount AndAlso Not hasQuantityTier Then Return String.Empty
 
         Dim discountPercentValue As Integer = DiscountPercent(row)
-        Dim badgeText As String = If(discountPercentValue > 0,
-                                     "-" & discountPercentValue.ToString(ItCulture) & "%",
-                                     "Offerta")
+        Dim badgeText As String = If(hasImmediateDiscount,
+                                     If(discountPercentValue > 0,
+                                        "-" & discountPercentValue.ToString(ItCulture) & "%",
+                                        "Offerta"),
+                                     "Quantità")
 
         Return "<div class='box-sale-wrap top-0 start-0 pst-default z-5'><p class='small-text'>Promo</p><p class='title-sidebar-2'>" &
                badgeText &
@@ -2568,12 +2567,19 @@ Partial Public Class _Default
     End Function
 
     Private Function RenderCenterSaleBadge(ByVal row As DataRow) As String
-        If row Is Nothing OrElse Not ShowDiscount(row) Then
-            Return String.Empty
-        End If
+        If row Is Nothing Then Return String.Empty
+
+        Dim tierPrice As Decimal = 0D
+        Dim hasImmediateDiscount As Boolean = ShowDiscount(row)
+        Dim hasQuantityTier As Boolean = TryGetValidTierPrice(row, tierPrice)
+        If Not hasImmediateDiscount AndAlso Not hasQuantityTier Then Return String.Empty
+
+        Dim badgeText As String = If(hasImmediateDiscount,
+                                     FormatMoney(SavingsAmount(row)),
+                                     "Quantità")
 
         Return "<div class='box-sale-wrap style-2 z-5'><p class='small-text'>Promo</p><p class='title-sidebar-2'>" &
-               HttpUtility.HtmlEncode(FormatMoney(SavingsAmount(row))) &
+               HttpUtility.HtmlEncode(badgeText) &
                "</p></div>"
     End Function
 
