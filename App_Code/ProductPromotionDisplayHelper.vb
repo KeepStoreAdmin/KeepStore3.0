@@ -175,33 +175,52 @@ Public Module ProductPromotionDisplayHelper
 
         Dim useNetPrices As Boolean = UseNetPriceDisplay()
         Dim sb As New StringBuilder()
+        Dim offerCountLabel As String = model.Offers.Count.ToString(CultureInfo.InvariantCulture) &
+                                        If(model.Offers.Count = 1, " offerta attiva", " offerte attive")
         sb.Append("<div class=""ks-product-promos"" aria-label=""Offerte attive"">")
         sb.Append("<div class=""ks-product-promos__head"">")
+        sb.Append("<div class=""ks-product-promos__heading"">")
         sb.Append("<span class=""ks-product-promos__eyebrow"">Offerte attive</span>")
-        If model.HasDefaultQuantityOffer AndAlso model.BestDefaultQuantityDiscountPercent > 0D Then
-            sb.Append("<span class=""ks-product-promos__discount"">-").Append(HtmlEncode(FormatQuantity(model.BestDefaultQuantityDiscountPercent))).Append("%</span>")
-        End If
+        sb.Append("<span class=""ks-product-promos__lede"">Prezzi e condizioni per quantità</span>")
         sb.Append("</div>")
-        sb.Append("<div class=""ks-product-promos__summary"">")
-        sb.Append("<span>Prezzo di Listino <strong>").Append(HtmlEncode(FormatMoney(DisplayPrice(model.ListPriceNet, model.ListPriceGross, useNetPrices)))).Append("</strong></span>")
-        sb.Append("<span>Prezzo Standard <strong>").Append(HtmlEncode(FormatMoney(DisplayPrice(model.StandardPriceNet, model.StandardPriceGross, useNetPrices)))).Append("</strong></span>")
-        If model.HasDefaultQuantityOffer Then
-            sb.Append("<span>Prezzo promo <strong>").Append(HtmlEncode(FormatMoney(DisplayPrice(model.BestDefaultQuantityPriceNet, model.BestDefaultQuantityPriceGross, useNetPrices)))).Append("</strong></span>")
-        End If
-        If model.HasQuantityTierOffer Then
-            sb.Append("<span>Da <strong>").Append(HtmlEncode(FormatMoney(DisplayPrice(model.BestQuantityTierPriceNet, model.BestQuantityTierPriceGross, useNetPrices)))).Append("</strong>")
-            If Not String.IsNullOrWhiteSpace(model.BestQuantityTierOfferLabel) Then
-                sb.Append("<small class=""ks-product-promos__tier-note"">").Append(HtmlEncode(model.BestQuantityTierOfferLabel)).Append("</small>")
-            End If
-            sb.Append("</span>")
-        End If
+        sb.Append("<span class=""ks-product-promos__count"" aria-label=""").Append(HtmlEncode(offerCountLabel)).Append(""">")
+        sb.Append(model.Offers.Count.ToString(CultureInfo.InvariantCulture)).Append(If(model.Offers.Count = 1, " offerta", " offerte")).Append("</span>")
         sb.Append("</div>")
-        sb.Append("<div class=""ks-product-promos__list"">")
+        sb.Append("<div class=""ks-product-promos__list"" role=""list"">")
+        Dim primaryImmediateRendered As Boolean = False
         For Each offer As ProductPromotionOffer In model.Offers
-            sb.Append("<div class=""ks-product-promos__item"">")
-            sb.Append("<span class=""ks-product-promos__label"">").Append(HtmlEncode(offer.Label)).Append("</span>")
-            sb.Append("<strong>A ").Append(HtmlEncode(FormatMoney(DisplayPrice(offer.PriceNet, offer.PriceGross, useNetPrices)))).Append("</strong>")
-            sb.Append("<span class=""ks-product-promos__dates"">").Append(HtmlEncode(FormatDateRange(offer.StartsOn, offer.EndsOn))).Append("</span>")
+            Dim isPrimaryImmediate As Boolean = offer.AppliesToDefaultQuantity AndAlso
+                                                  Not primaryImmediateRendered AndAlso
+                                                  DisplayPrice(offer.PriceNet, offer.PriceGross, useNetPrices) =
+                                                  DisplayPrice(model.BestDefaultQuantityPriceNet, model.BestDefaultQuantityPriceGross, useNetPrices)
+            If isPrimaryImmediate Then primaryImmediateRendered = True
+
+            sb.Append("<div class=""ks-product-promos__item ")
+            sb.Append(If(offer.AppliesToDefaultQuantity, "ks-product-promos__item--immediate", "ks-product-promos__item--tier"))
+            sb.Append(""" role=""listitem"">")
+            sb.Append("<div class=""ks-product-promos__item-head"">")
+            sb.Append("<span class=""ks-product-promos__label"">")
+            sb.Append(If(offer.AppliesToDefaultQuantity, "Promo immediata", "Offerta quantità"))
+            sb.Append("</span>")
+            If offer.DiscountPercent > 0D Then
+                sb.Append("<span class=""ks-product-promos__discount"">-").Append(HtmlEncode(FormatQuantity(offer.DiscountPercent))).Append("%</span>")
+            End If
+            sb.Append("</div>")
+            sb.Append("<div class=""ks-product-promos__item-body"">")
+            If isPrimaryImmediate Then
+                sb.Append("<span class=""ks-product-promos__condition"">").Append(HtmlEncode(offer.Label)).Append("</span>")
+                sb.Append("<span class=""ks-product-promos__applied"">Già applicata al prezzo principale</span>")
+            Else
+                sb.Append("<span class=""ks-product-promos__price"">")
+                sb.Append(If(offer.AppliesToDefaultQuantity, "A ", "Da "))
+                sb.Append("<strong>").Append(HtmlEncode(FormatMoney(DisplayPrice(offer.PriceNet, offer.PriceGross, useNetPrices)))).Append("</strong></span>")
+                sb.Append("<span class=""ks-product-promos__condition"">").Append(HtmlEncode(offer.Label)).Append("</span>")
+            End If
+            sb.Append("</div>")
+            Dim validity As String = FormatOfferValidity(offer.StartsOn, offer.EndsOn)
+            If Not String.IsNullOrWhiteSpace(validity) Then
+                sb.Append("<span class=""ks-product-promos__dates"">Validità: ").Append(HtmlEncode(validity)).Append("</span>")
+            End If
             sb.Append("</div>")
         Next
         sb.Append("</div>")
@@ -211,27 +230,35 @@ Public Module ProductPromotionDisplayHelper
 
     Public Function RenderCatalogSummaryHtml(ByVal model As ProductPromotionDisplayModel) As String
         If model Is Nothing OrElse Not model.HasOffers Then Return String.Empty
+        If Not model.HasQuantityTierOffer AndAlso model.Offers.Count <= 1 Then Return String.Empty
 
         Dim useNetPrices As Boolean = UseNetPriceDisplay()
         Dim sb As New StringBuilder()
-        sb.Append("<div class=""ks-catalog-promos"" aria-label=""Offerte attive"">")
-        If model.HasDefaultQuantityOffer Then
-            If model.BestDefaultQuantityDiscountPercent > 0D Then
-                sb.Append("<span class=""ks-catalog-promos__discount"">-").Append(HtmlEncode(FormatQuantity(model.BestDefaultQuantityDiscountPercent))).Append("%</span>")
-            End If
-            sb.Append("<span class=""ks-catalog-promos__label"">Promo</span>")
-        End If
+        sb.Append("<div class=""ks-catalog-promos"" aria-label=""Dettagli promozione"">")
         If model.HasQuantityTierOffer Then
+            sb.Append("<span class=""ks-catalog-promos__tier-block"">")
+            sb.Append("<span class=""ks-catalog-promos__kicker"">Prezzo quantità</span>")
             sb.Append("<span class=""ks-catalog-promos__price"">Da <strong>").Append(HtmlEncode(FormatMoney(DisplayPrice(model.BestQuantityTierPriceNet, model.BestQuantityTierPriceGross, useNetPrices)))).Append("</strong></span>")
             If Not String.IsNullOrWhiteSpace(model.BestQuantityTierOfferLabel) Then
                 sb.Append("<span class=""ks-catalog-promos__tier"">").Append(HtmlEncode(model.BestQuantityTierOfferLabel)).Append("</span>")
             End If
+            sb.Append("</span>")
         End If
         If model.Offers.Count > 1 Then
-            sb.Append("<span class=""ks-catalog-promos__count"">").Append(model.Offers.Count.ToString(CultureInfo.InvariantCulture)).Append(" offerte attive</span>")
+            sb.Append("<span class=""ks-catalog-promos__count"">").Append(model.Offers.Count.ToString(CultureInfo.InvariantCulture)).Append(" offerte disponibili</span>")
         End If
         sb.Append("</div>")
         Return sb.ToString()
+    End Function
+
+    Private Function FormatOfferValidity(ByVal startDate As Nullable(Of Date),
+                                         ByVal endDate As Nullable(Of Date)) As String
+        If startDate.HasValue AndAlso endDate.HasValue Then
+            Return "dal " & startDate.Value.ToString("dd/MM/yyyy", ItCulture) & " al " & endDate.Value.ToString("dd/MM/yyyy", ItCulture)
+        End If
+        If startDate.HasValue Then Return "dal " & startDate.Value.ToString("dd/MM/yyyy", ItCulture)
+        If endDate.HasValue Then Return "fino al " & endDate.Value.ToString("dd/MM/yyyy", ItCulture)
+        Return String.Empty
     End Function
 
     Public Function BuildLegacyOfferText(ByVal qntMinimaValue As Object,

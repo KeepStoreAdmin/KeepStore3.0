@@ -9,12 +9,12 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 - Aggiornato: 2026-09-16.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `260b470d5cff0350899f0b4433efca2c1f9c3441`.
+- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `192701ae65ecac00c294399a686af52d98d398c1`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - `WORKFLOW-GOVERNANCE-1A` e CHIUSO / A e integrato: il root `AGENTS.md` e la fonte canonica del metodo operativo corrente.
-- Ultimo task runtime chiuso: `STOREFRONT-PROMO-MODERN-PARITY-1A`, esito A, PR #255 integrata fast-forward nel checkpoint `260b470d5cff0350899f0b4433efca2c1f9c3441`; due commit lineari, zero merge commit e `main` invariato.
-- Task runtime corrente: `STOREFRONT-PROMO-ROUTE-RETIREMENT-1A`, branch `task/storefront-promo-route-retirement-1a`, base stabile `260b470d5cff0350899f0b4433efca2c1f9c3441`. Implementazione e test tecnici sono completati; review e merge restano gate separati.
-- Prossimo task candidabile: `STOREFRONT-OFFERS-PROMO-UX-1A`, soltanto dopo review A e merge autorizzato del retirement. Non e avviato da questo aggiornamento.
+- Ultimo task runtime chiuso: `STOREFRONT-PROMO-ROUTE-RETIREMENT-1A`, esito A, PR #256 integrata fast-forward nel checkpoint `192701ae65ecac00c294399a686af52d98d398c1`; tre commit lineari, zero merge commit e `main` invariato.
+- Task runtime corrente: `STOREFRONT-OFFERS-PROMO-UX-1A`, branch `task/storefront-offers-promo-ux-1a`, base stabile `192701ae65ecac00c294399a686af52d98d398c1`. Implementazione e verifiche tecniche sono in review; il gate visuale reale sui quattro viewport resta pendente e il task non e dichiarato A.
+- Prossimo task candidabile: `HOME-ASYNC-CART-1A`, soltanto dopo review A e merge autorizzato di `STOREFRONT-OFFERS-PROMO-UX-1A`. Non e avviato da questo aggiornamento.
 - La funzione digitale di recesso resta documentata ma differita per decisione del Product Owner: `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A` non e il task attivo e non va avviato senza una nuova priorita esplicita di Germano.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
 - Debiti aperti principali: audit monetario `DOUBLE`; `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` chiuso E e differito in attesa di decisione infrastrutturale. Catalogo e PDP restano aree non dichiarate complete; recesso digitale e Coupon/Groupon restano differiti dal Product Owner.
@@ -74,13 +74,21 @@ Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo tas
 - Verifiche tecniche: harness `160/160`, runtime HTTPS senza `500` o disclosure MySQL, precompile ASP.NET Framework 4.8, JavaScript syntax check e cache-buster CSS/JavaScript. Nessuna modifica DB, ordine, pagamento, gateway o e-mail.
 - Il task e CHIUSO / A e integrato con PR #255 nel checkpoint `260b470d5cff0350899f0b4433efca2c1f9c3441`. Il confronto finale certifica anonimo `887/887`, PROVA `840/840`, `SoloLegacy=0`, `SoloModern=0` e duplicati zero su entrambe le route. Questa chiusura non dichiara completi catalogo, HOME, PDP, UX promo o intero storefront.
 
-### STOREFRONT-PROMO-ROUTE-RETIREMENT-1A - implementazione in review
+### Chiusura STOREFRONT-PROMO-ROUTE-RETIREMENT-1A
 
 - `promozioni.aspx` non e piu una UI/query commerciale: il markup e ridotto alla direttiva WebForms e il code-behind produce esclusivamente un redirect locale. GET/HEAD validi usano `301`; POST e postback legacy usano `303`, senza ripetere il POST, body legacy, query DB, filtri Session o vecchio add-to-cart.
 - Destinazione canonica operativa: `articoli.aspx?inpromo=1`. Mapping ammesso, con singoli ID interi positivi: `pid -> pid`, `pmr -> mr`, `pst -> st`, `pct -> ct`, `ptp -> tp`, `pgr -> gr`, `psg -> sg`; `pid=0` equivale all'assenza di campagna. Duplicati, valori negativi/testuali/overflow, chiavi sconosciute e ReturnUrl annidati falliscono chiusi su una destinazione moderna controllata.
 - `part` filtrava direttamente `ArticoliId` nella pagina legacy e non ha un equivalente esatto nel catalogo moderno: la sua presenza fallisce chiusa e non viene mai trasformata in “tutte le promozioni”. I vecchi ReturnUrl locali verso la route sono normalizzati dalla policy post-login; destinazioni esterne restano rifiutate.
 - La route legacy resta fuori sitemap e non restituisce una pagina indicizzabile. Il listing moderno filtrato conserva `noindex,follow`, canonical moderno e nessun riferimento alla route ritirata. Nessuna modifica DB, schema, stored procedure, migration o dato commerciale.
 - Verifiche: harness route-retirement `126/126`, harness commerciale `160/160`, anonimo `887/887`, PROVA `840/840`, campagne singola/multipla/inesistente `1/2/0`, ZAP80-A4 `5,00 EUR` a quantita `1-4` e `4,00 EUR` a quantita `5`; precompile ASP.NET Framework 4.8 e regression GET HOME/catalogo/PDP superati, senza mutazioni ecommerce.
+- Il task e CHIUSO / A con PR #256 integrata fast-forward nel checkpoint `192701ae65ecac00c294399a686af52d98d398c1`, catena lineare `260b470d... -> 5ab2f084... -> c689b4e0... -> 192701ae...` e zero merge commit. Lo smoke visuale Product Owner REV2 ha approvato desktop, tablet `768x1024`, mobile `390x844` e `360x800`, inclusi prezzo non duplicato, label `Promo` separata, tier `Da ...`, condizioni quantitative, layout e spaziatura delle card.
+
+### STOREFRONT-OFFERS-PROMO-UX-1A - implementazione tecnica in review
+
+- Il task uniforma esclusivamente la presentazione promo di HOME, catalogo normale/promozionale, `Visti di recente` e PDP, adattando al markup KeepStore i pattern ONSUS per prezzo corrente/precedente, sale badge e offerte quantitative. Restano fuori scope logica commerciale, query, carrello, ordine, pagamento, gateway, e-mail e database.
+- Contratto visuale: il prezzo applicabile alla quantita `1` compare una sola volta; il precedente e barrato soltanto se realmente valido; label `Promo` e percentuale valida compaiono una sola volta; il tier futuro resta separato come `Da ...` con la propria condizione e non sostituisce il prezzo principale. Un prodotto senza offerta valida non rende label, percentuali, contenitori vuoti o spazi anomali.
+- La PDP rende `Offerte attive` come elenco leggibile: il prezzo immediato non duplica quello principale, i tier e le condizioni restano distinti, le date compaiono soltanto quando reali e nessun ID tecnico o dato owner entra nel DOM. La selezione commerciale, `ProductPromotionEligibilityResolver`, `StorefrontPromotionCatalogProvider`, i calcoli `Decimal`, owner/listino/azienda/campagna, tie-break e `data-ks-price` restano invariati.
+- Implementazione e harness tecnici sono in review. Il controllo visuale reale a `360x800`, `390x844`, `768x1024` e `1365x900` resta un gate esplicito pendente: non e registrato alcun esito A visuale senza quel controllo. `HOME-ASYNC-CART-1A` resta il candidato successivo e non va avviato prima di review A e merge autorizzato di questo task.
 
 ### Funzione digitale di recesso B2C - documentata e differita
 
@@ -142,7 +150,7 @@ Responsabilita: Codex esegue audit e implementazioni tecniche solo nei manifest 
 
 ### Storico audit e hotfix route promozioni legacy
 
-- Stato storico al momento dell'audit, superato dalla PR #255 e dal retirement corrente: `STOREFRONT-PROMO-ROUTES-AUDIT-1A` fu COMPLETATO / A come audit interamente read-only, con zero file, branch, commit o scritture DB. In quel checkpoint `promozioni.aspx` era ancora una route legacy classificata C e non sostituibile tramite redirect immediato.
+- Stato storico al momento dell'audit, superato dalle PR #255 e #256: `STOREFRONT-PROMO-ROUTES-AUDIT-1A` fu COMPLETATO / A come audit interamente read-only, con zero file, branch, commit o scritture DB. In quel checkpoint `promozioni.aspx` era ancora una route legacy classificata C e non sostituibile tramite redirect immediato.
 - La route legacy mantiene GridView/markup, selettore campagna `pid`, filtri legacy, potenziale inclusione per `UtentiID`, `noindex,follow`, canonical verso `/promozioni.aspx`, assenza dalla sitemap, autoriferimenti e whitelist post-login. Non e collegata dalle superfici storefront moderne. La route moderna e invece collegata da header desktop/mobile e HOME e usa listing ONSUS, filtri, ordinamento, paginazione, ProductCard, promo helper condiviso e add-to-cart asincrono.
 - Le route non sono equivalenti: 25 prodotti risultano solo nella moderna e 22 solo nella legacy. Contratti `pid` e `UtentiID`, quantita minima/multipli e filtri legacy non sono ancora migrati. Tre offerte personalizzate sono attive globalmente, ma nessuna era applicabile al listino 1 della sessione verificata. Le querystring tassonomiche presenti nel markup legacy non risultano mappate in modo affidabile dalla pipeline corrente.
 - Causa del 500 provata: `CaricaArticoli()` leggeva `vOfferteDettagli`, inseriva descrizione, immagine, date, prezzi e altri dati DB dentro literal SQL e generava centinaia di `UNION ALL`. Un apostrofo chiudeva il literal e un successivo `@CLIP` diventava un falso parametro MySQL, con `Parameter '@CLIP' must be defined`. Sono state rilevate 13 descrizioni attive con apostrofo e 2 contenenti `@CLIP`; `pid=6534` riproduceva il problema, mentre `pid=14556` dimostrava che `@CLIP` da solo non era la causa.
@@ -154,13 +162,13 @@ Responsabilita: Codex esegue audit e implementazioni tecniche solo nei manifest 
 ### Stato promo e roadmap
 
 1. `STOREFRONT-PROMO-MODERN-PARITY-1A`: CHIUSO / A e integrato con PR #255.
-2. `STOREFRONT-PROMO-ROUTE-RETIREMENT-1A`: implementazione e test tecnici completati sul branch dedicato; review e merge restano separati.
-3. `STOREFRONT-OFFERS-PROMO-UX-1A`: prossimo candidato, redesign professionale ONSUS mobile-first su HOME, catalogo e PDP, con dati reali e contratto commerciale condiviso.
-4. `HOME-ASYNC-CART-1A`.
+2. `STOREFRONT-PROMO-ROUTE-RETIREMENT-1A`: CHIUSO / A e integrato con PR #256 al checkpoint `192701ae65ecac00c294399a686af52d98d398c1`.
+3. `STOREFRONT-OFFERS-PROMO-UX-1A`: task corrente, implementazione e test tecnici in review; gate visuale reale sui quattro viewport ancora pendente, quindi nessun esito A registrato.
+4. `HOME-ASYNC-CART-1A`: prossimo candidato soltanto dopo review A e merge autorizzato del task UX promo.
 5. `PDP-BRAND-LOGO-1A`.
 6. In seguito performance/bulk promo, SEO tecnico, Google Product structured data e infine AI/Gemini/LLMS.
 
-Finding separati ancora aperti: UX promo complessiva, materializzazione promo, performance/N+1 complessiva, `articolix.aspx` HTTP 500, due label `EAN:` nella preview diagnostica `ProductDetailView.ascx` e HOME add-to-cart legacy. I precedenti delta 25/22, la parita owner/campagna, GridView/add-to-cart di `promozioni.aspx` e i relativi filtri sono superati dalla PR #255 e dal retirement corrente. HOME, catalogo, PDP, promo, SEO e AI non sono dichiarati completi.
+Finding separati ancora aperti: materializzazione promo, performance/N+1 complessiva, `articolix.aspx` HTTP 500, due label `EAN:` nella preview diagnostica `ProductDetailView.ascx` e HOME add-to-cart legacy. La UX promo e il task corrente in review, non un finding chiuso; i precedenti delta 25/22, la parita owner/campagna, GridView/add-to-cart di `promozioni.aspx` e i relativi filtri sono superati dalle PR #255 e #256. HOME, catalogo, PDP, promo, SEO e AI non sono dichiarati completi.
 
 ### Chiusura PDP-COMMERCIAL-INFO-SHIPPING-1A
 

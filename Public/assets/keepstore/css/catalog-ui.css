@@ -922,15 +922,21 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  row-gap: 6px;
-  column-gap: 10px;
-  margin-top: 6px;
+  gap: 7px 10px;
+  max-width: 100%;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(216, 0, 39, 0.16);
+  border-left: 3px solid var(--primary-2, #d80027);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(216, 0, 39, 0.055), rgba(216, 0, 39, 0.015));
+  color: var(--text-main-2, #666);
   font-size: 12px;
-  line-height: 22px;
+  line-height: 1.35;
 }
 
-#ksCatalogPage article.card-product .ks-catalog-promos__discount,
-#ksCatalogPage article.card-product .ks-catalog-promos__label,
+#ksCatalogPage article.card-product .ks-catalog-promos__tier-block,
+#ksCatalogPage article.card-product .ks-catalog-promos__kicker,
 #ksCatalogPage article.card-product .ks-catalog-promos__price,
 #ksCatalogPage article.card-product .ks-catalog-promos__tier,
 #ksCatalogPage article.card-product .ks-catalog-promos__count {
@@ -939,21 +945,19 @@
   min-width: 0;
 }
 
-#ksCatalogPage article.card-product .ks-catalog-promos__discount {
-  color: var(--primary, #ff3b30);
-  font-weight: 700;
+#ksCatalogPage article.card-product .ks-catalog-promos__tier-block {
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  gap: 4px 8px;
 }
 
-#ksCatalogPage article.card-product .ks-catalog-promos__label {
-  justify-content: center;
-  padding: 1px 5px;
-  color: var(--primary-2, #D80027);
-  background: rgba(216, 0, 39, 0.08);
-  border: 1px solid rgba(216, 0, 39, 0.24);
-  border-radius: 4px;
-  font-weight: 700;
-  line-height: 18px;
-  white-space: nowrap;
+#ksCatalogPage article.card-product .ks-catalog-promos__kicker {
+  flex-basis: 100%;
+  color: var(--primary-2, #d80027);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
 }
 
 #ksCatalogPage article.card-product .ks-catalog-promos__price {
@@ -962,15 +966,46 @@
 }
 
 #ksCatalogPage article.card-product .ks-catalog-promos__price strong {
-  color: var(--primary-2, #D80027);
-  font-size: 13px;
-  font-weight: 700;
+  color: var(--primary-2, #d80027);
+  font-size: 14px;
+  font-weight: 800;
 }
 
 #ksCatalogPage article.card-product .ks-catalog-promos__tier,
 #ksCatalogPage article.card-product .ks-catalog-promos__count {
   max-width: 100%;
   white-space: normal;
+}
+
+#ksCatalogPage article.card-product .ks-catalog-promos__tier {
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.015em;
+}
+
+#ksCatalogPage article.card-product .ks-catalog-promos__count {
+  flex-basis: 100%;
+  color: var(--text-main-2, #666);
+  font-size: 11px;
+}
+
+#ksCatalogPage article.card-product .card-product-wrapper > .box-sale-wrap.pst-default + .box-sale-wrap.pst-default {
+  top: 72px;
+}
+
+@media (max-width: 575.98px) {
+  #ksCatalogPage article.card-product .ks-catalog-promos {
+    gap: 6px;
+    padding: 7px 8px;
+  }
+
+  #ksCatalogPage article.card-product .ks-catalog-promos__tier-block {
+    align-items: flex-start;
+  }
+
+  #ksCatalogPage article.card-product .ks-catalog-promos__tier {
+    flex-basis: 100%;
+  }
 }
 
 #ksCatalogPage article.card-product .box-infor-detail {
