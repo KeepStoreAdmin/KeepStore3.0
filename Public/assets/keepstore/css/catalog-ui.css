@@ -921,13 +921,16 @@
 #ksCatalogPage article.card-product .ks-catalog-promos {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px 8px;
-  margin-top: 0;
+  align-items: center;
+  row-gap: 6px;
+  column-gap: 10px;
+  margin-top: 6px;
   font-size: 12px;
   line-height: 22px;
 }
 
 #ksCatalogPage article.card-product .ks-catalog-promos__discount,
+#ksCatalogPage article.card-product .ks-catalog-promos__label,
 #ksCatalogPage article.card-product .ks-catalog-promos__price,
 #ksCatalogPage article.card-product .ks-catalog-promos__tier,
 #ksCatalogPage article.card-product .ks-catalog-promos__count {
@@ -939,6 +942,35 @@
 #ksCatalogPage article.card-product .ks-catalog-promos__discount {
   color: var(--primary, #ff3b30);
   font-weight: 700;
+}
+
+#ksCatalogPage article.card-product .ks-catalog-promos__label {
+  justify-content: center;
+  padding: 1px 5px;
+  color: var(--primary-2, #D80027);
+  background: rgba(216, 0, 39, 0.08);
+  border: 1px solid rgba(216, 0, 39, 0.24);
+  border-radius: 4px;
+  font-weight: 700;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+#ksCatalogPage article.card-product .ks-catalog-promos__price {
+  column-gap: 4px;
+  white-space: nowrap;
+}
+
+#ksCatalogPage article.card-product .ks-catalog-promos__price strong {
+  color: var(--primary-2, #D80027);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+#ksCatalogPage article.card-product .ks-catalog-promos__tier,
+#ksCatalogPage article.card-product .ks-catalog-promos__count {
+  max-width: 100%;
+  white-space: normal;
 }
 
 #ksCatalogPage article.card-product .box-infor-detail {

@@ -96,6 +96,14 @@ function Get-ProductCardCountByCode {
         Where-Object { $_.Value.IndexOf($Code, [StringComparison]::OrdinalIgnoreCase) -ge 0 }).Count
 }
 
+function Get-ProductCardWithoutPromotion {
+    param([string]$Html)
+    foreach ($match in [regex]::Matches($Html, '<article\b.*?</article>', [Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [Text.RegularExpressions.RegexOptions]::Singleline)) {
+        if ($match.Value.IndexOf('ks-catalog-promos', [StringComparison]::OrdinalIgnoreCase) -lt 0) { return $match.Value }
+    }
+    return ''
+}
+
 function Get-ElementByClass {
     param([string]$Html, [string]$ClassName)
     $pattern = '<(?<tag>[a-z][a-z0-9]*)\b[^>]*class=(?<quote>[''"])[^''"]*' + [regex]::Escape($ClassName) + '[^''"]*\k<quote>[^>]*>.*?</\k<tag>>'
@@ -190,6 +198,7 @@ function Test-StaticContract {
     $recent = Get-FileText 'Public\assets\keepstore\js\keepstore-recently-viewed.js'
     $cartPrice = Get-FileText 'App_Code\CartPriceRevalidationHelper.vb'
     $css = Get-FileText 'Public\assets\keepstore\css\theme-overrides.css'
+    $catalogCss = Get-FileText 'Public\assets\keepstore\css\catalog-ui.css'
 
     Assert-Contains $provider 'ROW_NUMBER() OVER (PARTITION BY catalog.id ORDER BY' 'provider selects one deterministic offer per article'
     Assert-Contains $provider 'Public Function BuildLegacyCatalogJoin() As String' 'legacy route has a canonical provider join'
@@ -227,6 +236,17 @@ function Test-StaticContract {
     Assert-Contains $recent 'scrubStoredHistory' 'legacy commercial fields are removed from local history'
     Assert-Contains $cartPrice 'quantity' 'cart price revalidation receives the final quantity'
     Assert-Contains $css 'ks-home-price-stack--emphasized' 'long prices keep stable home geometry'
+    Assert-Contains $catalogCss '.ks-catalog-promos__label,' 'standalone Promo label participates in the flex group'
+    Assert-Contains $catalogCss 'margin-top: 6px' 'promotion summary is separated from the main price'
+    Assert-Contains $catalogCss 'row-gap: 6px' 'promotion rows keep measurable spacing'
+    Assert-Contains $catalogCss 'column-gap: 10px' 'promotion items keep measurable spacing'
+    Assert-Contains $catalogCss 'align-items: center' 'promotion items stay vertically aligned'
+    Assert-Contains $catalogCss 'background: rgba(216, 0, 39, 0.08)' 'Promo label uses a light themed background'
+    Assert-Contains $catalogCss 'border: 1px solid rgba(216, 0, 39, 0.24)' 'Promo label has a light themed border'
+    Assert-Contains $catalogCss 'border-radius: 4px' 'Promo label uses a restrained radius'
+    Assert-Contains $catalogCss '.ks-catalog-promos__price strong' 'tier price has dedicated emphasis'
+    Assert-Contains $catalogCss 'column-gap: 4px' 'Da and tier price keep real spacing'
+    Assert-Contains $catalogMarkup 'catalog-ui.css") %>?v=20260916-promocard-visual-rev2' 'catalog CSS cache-buster is REV2'
 
     $ownerVisible = {
         param([int]$OwnerId, [bool]$Authenticated, [int]$CurrentUserId)
@@ -432,6 +452,11 @@ function Test-RuntimeContract {
         Assert-HealthyResponse $normal 'normal catalog'
         Assert-True (@(Get-ProductIds $normal.Content).Count -gt 0) 'normal catalog still renders products'
         Assert-PromotionSummaryMarkup $normal.Content 'normal catalog promotion cards'
+        $nonPromotionCard = Get-ProductCardWithoutPromotion $normal.Content
+        Assert-True (-not [string]::IsNullOrWhiteSpace($nonPromotionCard)) 'normal catalog includes a non-promotion card fixture'
+        Assert-True ($nonPromotionCard.IndexOf('ks-catalog-promos__label', [StringComparison]::OrdinalIgnoreCase) -lt 0) 'non-promotion card has no Promo label'
+        Assert-True ($nonPromotionCard.IndexOf('ks-catalog-promos__price', [StringComparison]::OrdinalIgnoreCase) -lt 0) 'non-promotion card has no invented promotion price'
+        Assert-True ([regex]::Matches($nonPromotionCard, 'class="[^"]*\bprice-wrap\b[^"]*"', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) 'non-promotion card keeps one normal price-wrap'
 
         $session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
         $zap = Invoke-LocalGet 'articoli.aspx?inpromo=1&q=ZAP80-A4' $session
@@ -448,6 +473,9 @@ function Test-RuntimeContract {
         $tierText = Get-PageText $tierCard
         Assert-True ($tierText.IndexOf('Da 4,00 €', [StringComparison]::OrdinalIgnoreCase) -ge 0) 'tier-only card shows Da teaser'
         Assert-True ($tierText.IndexOf('Promo 4,00 €', [StringComparison]::OrdinalIgnoreCase) -lt 0) 'tier-only card does not show tier as current promo'
+        Assert-True ($tierCard.IndexOf('ks-catalog-promos__label', [StringComparison]::OrdinalIgnoreCase) -lt 0) 'tier-only card has no quantity-one Promo label'
+        Assert-True ($tierText.IndexOf('MULTIPLI 5 PZ.', [StringComparison]::OrdinalIgnoreCase) -ge 0) 'tier-only card keeps its quantity condition'
+        Assert-True ([regex]::Matches((Get-PageText (Get-ElementByClass $tierCard 'price-wrap')), '(?<![0-9])6,00\s*€', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) 'tier-only card keeps the normal 6.00 price in price-wrap'
 
         $pdp = Invoke-LocalGet 'articolo.aspx?id=21906' $session
         Assert-HealthyResponse $pdp 'ZAP80-A4 PDP'
