@@ -101,6 +101,7 @@ Ogni task verifica: diff/manifest; `git diff --check`; sintassi/logica; dipenden
 ## Commit, push, review, smoke e merge
 
 - Se emerge un blocker fuori scope, chiudere con B senza committare modifiche incomplete.
+- A ogni chiusura con esito A, il rapporto conclusivo deve indicare automaticamente il prossimo task consigliato, ricavato dal manuale e dai finding aperti. Deve riportare nome, motivo, prerequisiti e stato NON AVVIATO. Nessun task successivo deve essere avviato o implementato senza autorizzazione del Product Owner.
 - Se implementazione e test sono completi, Codex crea un solo commit, pusha il solo task branch e apre o aggiorna la PR verso `frontend-rebuild`, salvo stop condition esplicita.
 - PR e merge sono momenti separati: il push non autorizza merge/deploy; ChatGPT assegna A solo dopo la review indipendente del diff pubblicato.
 - Codex esegue il merge solo dopo A di ChatGPT e autorizzazione esplicita di Germano, esclusivamente fast-forward. Non decide il merge.

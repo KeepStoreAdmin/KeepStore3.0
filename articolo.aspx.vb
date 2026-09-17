@@ -2524,7 +2524,10 @@ Partial Class articolo
                                                                                                     context,
                                                                                                     netValue,
                                                                                                     grossValue)
-        _promotionModelCache(cacheKey) = model
+        If model IsNot Nothing AndAlso
+           model.ResolutionState <> ProductPromotionDisplayResolutionState.TechnicalError Then
+            _promotionModelCache(cacheKey) = model
+        End If
         Return model
     End Function
 

@@ -968,7 +968,8 @@ Partial Public Class _Default
         Dim useNetPrices As Boolean = UseNetPriceDisplay()
 
         For Each row As DataRow In products.Rows
-            row("DisplayPromoSnapshotReady") = True
+            row("DisplayPromoSnapshotReady") = False
+            row("DisplayPromoTechnicalError") = False
             Dim articleId As Integer = SafeInt(row("id"))
             Dim tcId As Integer = If(row.Table.Columns.Contains("TCid"), SafeInt(row("TCid")), -1)
             Dim model As ProductPromotionDisplayModel = ProductPromotionDisplayHelper.BuildForProduct(
@@ -978,6 +979,14 @@ Partial Public Class _Default
                 eligibilityContext,
                 ToDecimal(row("Prezzo")),
                 ToDecimal(row("PrezzoIvato")))
+
+            If model IsNot Nothing AndAlso
+               model.ResolutionState = ProductPromotionDisplayResolutionState.TechnicalError Then
+                row("DisplayPromoTechnicalError") = True
+                Continue For
+            End If
+
+            row("DisplayPromoSnapshotReady") = True
 
             If model IsNot Nothing AndAlso model.HasDefaultQuantityOffer Then
                 row("DisplayPromoQtyOnePrice") = If(useNetPrices, model.BestDefaultQuantityPriceNet, model.BestDefaultQuantityPriceGross)
@@ -1023,6 +1032,7 @@ Partial Public Class _Default
 
     Private Sub EnsurePromotionDisplayColumns(ByVal products As DataTable)
         If Not products.Columns.Contains("DisplayPromoSnapshotReady") Then products.Columns.Add("DisplayPromoSnapshotReady", GetType(Boolean))
+        If Not products.Columns.Contains("DisplayPromoTechnicalError") Then products.Columns.Add("DisplayPromoTechnicalError", GetType(Boolean))
         If Not products.Columns.Contains("DisplayPromoQtyOnePrice") Then products.Columns.Add("DisplayPromoQtyOnePrice", GetType(Decimal))
         If Not products.Columns.Contains("DisplayPromoTierPrice") Then products.Columns.Add("DisplayPromoTierPrice", GetType(Decimal))
         If Not products.Columns.Contains("DisplayPromoTierQntMinima") Then products.Columns.Add("DisplayPromoTierQntMinima", GetType(Decimal))
@@ -1481,6 +1491,7 @@ Partial Public Class _Default
         dt.Columns.Add("OfferteQntMinima", GetType(Integer))
         dt.Columns.Add("OfferteMultipli", GetType(Integer))
         dt.Columns.Add("DisplayPromoSnapshotReady", GetType(Boolean))
+        dt.Columns.Add("DisplayPromoTechnicalError", GetType(Boolean))
         dt.Columns.Add("DisplayPromoQtyOnePrice", GetType(Decimal))
         dt.Columns.Add("DisplayPromoTierPrice", GetType(Decimal))
         dt.Columns.Add("DisplayPromoTierQntMinima", GetType(Decimal))
@@ -2145,6 +2156,7 @@ Partial Public Class _Default
 
     Private Function TryGetValidPromoPrice(ByVal row As DataRow, ByRef promoPrice As Decimal) As Boolean
         promoPrice = 0D
+        If HasPromotionDisplayTechnicalError(row) Then Return False
         If HasPromotionDisplaySnapshot(row) Then
             promoPrice = ToDecimal(row("DisplayPromoQtyOnePrice"))
             Return promoPrice > 0D
@@ -2160,6 +2172,7 @@ Partial Public Class _Default
 
     Private Function TryGetValidTierPrice(ByVal row As DataRow, ByRef promoPrice As Decimal) As Boolean
         promoPrice = 0D
+        If HasPromotionDisplayTechnicalError(row) Then Return False
         If HasPromotionDisplaySnapshot(row) Then
             promoPrice = ToDecimal(row("DisplayPromoTierPrice"))
             Return promoPrice > 0D
@@ -2175,6 +2188,13 @@ Partial Public Class _Default
                row.Table.Columns.Contains("DisplayPromoSnapshotReady") AndAlso
                Not row.IsNull("DisplayPromoSnapshotReady") AndAlso
                Convert.ToBoolean(row("DisplayPromoSnapshotReady"), CultureInfo.InvariantCulture)
+    End Function
+
+    Private Function HasPromotionDisplayTechnicalError(ByVal row As DataRow) As Boolean
+        Return row IsNot Nothing AndAlso
+               row.Table.Columns.Contains("DisplayPromoTechnicalError") AndAlso
+               Not row.IsNull("DisplayPromoTechnicalError") AndAlso
+               Convert.ToBoolean(row("DisplayPromoTechnicalError"), CultureInfo.InvariantCulture)
     End Function
 
     Private Function TryGetCommercialPromoPrice(ByVal row As DataRow,

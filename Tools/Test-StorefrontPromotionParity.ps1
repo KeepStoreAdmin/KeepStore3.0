@@ -277,6 +277,245 @@ function Assert-HealthyResponse {
     Assert-NotContains $Response.Content 'Server Error in' ($Name + ' no ASP.NET error page')
 }
 
+function Test-PromotionDisplayErrorStateIsolated {
+    $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ('KeepStore-PromotionDisplay-' + [Guid]::NewGuid().ToString('N'))
+    [void][IO.Directory]::CreateDirectory($tempRoot)
+    try {
+        $helperSource = Get-FileText 'App_Code\ProductPromotionDisplayHelper.vb'
+        $helperPath = Join-Path $tempRoot 'ProductPromotionDisplayHelper.vb'
+        $fixturePath = Join-Path $tempRoot 'PromotionDisplayFixture.vb'
+        $exePath = Join-Path $tempRoot 'PromotionDisplayFixture.exe'
+        [IO.File]::WriteAllText($helperPath, $helperSource, [Text.UTF8Encoding]::new($false))
+
+        $fixtureSource = @'
+Imports System
+Imports System.Collections.Generic
+Imports System.Web
+
+Public Class ProductPromotionEligibilityContext
+End Class
+
+Public Enum ProductPromotionEligibilityLoadStatus
+    Success = 0
+    InvalidRequest = 1
+    TechnicalError = 2
+    AmbiguousCommercialRule = 3
+End Enum
+
+Public Class ProductPromotionEligibilityOffer
+    Public Property OfferId As Integer
+    Public Property OfferDetailId As Integer
+    Public Property OwnerUserId As Integer
+    Public Overridable Property QntMinima As Decimal
+    Public Property Multipli As Decimal
+    Public Property PriceNet As Decimal
+    Public Property PriceGross As Decimal
+    Public Property DiscountPercent As Decimal
+    Public Property StartsOn As Nullable(Of Date)
+    Public Property EndsOn As Nullable(Of Date)
+    Public Property IsExactVariant As Boolean
+
+    Public Function AppliesToQuantity(ByVal quantity As Decimal) As Boolean
+        If quantity <= 0D Then Return False
+        If QntMinima > 0D Then Return quantity >= QntMinima
+        If Multipli <= 0D Then Return False
+        Return Decimal.Remainder(quantity, Multipli) = 0D
+    End Function
+End Class
+
+Public Class ThrowingPromotionEligibilityOffer
+    Inherits ProductPromotionEligibilityOffer
+
+    Public Overrides Property QntMinima As Decimal
+        Get
+            Throw New InvalidOperationException("LOAD_SECRET_MUST_NOT_ESCAPE")
+        End Get
+        Set(ByVal value As Decimal)
+        End Set
+    End Property
+End Class
+
+Public Class ProductPromotionEligibilityResult
+    Public Sub New()
+        AuthorizedOffers = New List(Of ProductPromotionEligibilityOffer)()
+        Status = ProductPromotionEligibilityLoadStatus.Success
+    End Sub
+
+    Public Property AuthorizedOffers As List(Of ProductPromotionEligibilityOffer)
+    Public Property AppliedOffer As ProductPromotionEligibilityOffer
+    Public Property Status As ProductPromotionEligibilityLoadStatus
+End Class
+
+Public Module ProductPromotionEligibilityResolver
+    Public Mode As String = "NoOffers"
+
+    Public Function Resolve(ByVal connectionString As String,
+                            ByVal eligibilityContext As ProductPromotionEligibilityContext,
+                            ByVal articleId As Integer,
+                            ByVal tcId As Integer,
+                            ByVal quantity As Decimal,
+                            ByVal basePriceNet As Decimal,
+                            ByVal basePriceGross As Decimal) As ProductPromotionEligibilityResult
+        If Mode = "ResolverThrow" Then Throw New InvalidOperationException("RESOLVER_SECRET_MUST_NOT_ESCAPE")
+
+        Dim result As New ProductPromotionEligibilityResult()
+        If Mode = "TechnicalStatus" Then
+            result.Status = ProductPromotionEligibilityLoadStatus.TechnicalError
+            Return result
+        End If
+        If Mode = "NullOffers" Then
+            result.AuthorizedOffers = Nothing
+            Return result
+        End If
+        If Mode = "LoadThrow" Then
+            result.AuthorizedOffers.Add(New ThrowingPromotionEligibilityOffer())
+            Return result
+        End If
+        If Mode = "Immediate" OrElse Mode = "Mixed" Then
+            Dim immediate As New ProductPromotionEligibilityOffer() With {
+                .OfferId = 1,
+                .OfferDetailId = 11,
+                .QntMinima = 1D,
+                .PriceNet = 7D,
+                .PriceGross = 8D,
+                .DiscountPercent = 20D
+            }
+            result.AuthorizedOffers.Add(immediate)
+            result.AppliedOffer = immediate
+        End If
+        If Mode = "Tier" OrElse Mode = "Mixed" Then
+            result.AuthorizedOffers.Add(New ProductPromotionEligibilityOffer() With {
+                .OfferId = 2,
+                .OfferDetailId = 22,
+                .Multipli = 5D,
+                .PriceNet = 6D,
+                .PriceGross = 7D,
+                .DiscountPercent = 30D
+            })
+        End If
+        Return result
+    End Function
+End Module
+
+Public Module KeepStoreLog
+    Public LastArea As String = String.Empty
+    Public LastMessage As String = String.Empty
+    Public LastException As Exception = Nothing
+
+    Public Sub [Error](ByVal area As String,
+                       ByVal message As String,
+                       ByVal ex As Exception,
+                       Optional ByVal context As HttpContext = Nothing)
+        LastArea = If(area, String.Empty)
+        LastMessage = If(message, String.Empty)
+        LastException = ex
+    End Sub
+
+    Public Sub Reset()
+        LastArea = String.Empty
+        LastMessage = String.Empty
+        LastException = Nothing
+    End Sub
+End Module
+
+Public Module PromotionDisplayFixture
+    Private Passed As Integer = 0
+    Private Failed As Integer = 0
+
+    Private Sub Check(ByVal condition As Boolean, ByVal name As String)
+        If condition Then
+            Passed += 1
+            Console.WriteLine("PASS " & name)
+        Else
+            Failed += 1
+            Console.WriteLine("FAIL " & name)
+        End If
+    End Sub
+
+    Private Function Build(ByVal mode As String) As ProductPromotionDisplayModel
+        ProductPromotionEligibilityResolver.Mode = mode
+        Return ProductPromotionDisplayHelper.BuildForProduct(
+            "fixture-connection",
+            21906,
+            -1,
+            New ProductPromotionEligibilityContext(),
+            8D,
+            10D)
+    End Function
+
+    Public Sub Main()
+        Dim noOffers As ProductPromotionDisplayModel = Build("NoOffers")
+        Check(noOffers.ResolutionState = ProductPromotionDisplayResolutionState.ResolvedWithoutOffers, "no-offer state")
+        Check(Not noOffers.HasOffers AndAlso noOffers.Offers.Count = 0 AndAlso noOffers.Html = String.Empty, "no-offer output")
+
+        Dim immediate As ProductPromotionDisplayModel = Build("Immediate")
+        Check(immediate.ResolutionState = ProductPromotionDisplayResolutionState.ResolvedWithOffers, "immediate state")
+        Check(immediate.HasDefaultQuantityOffer AndAlso immediate.HasOffers, "immediate offer preserved")
+
+        Dim tier As ProductPromotionDisplayModel = Build("Tier")
+        Check(tier.ResolutionState = ProductPromotionDisplayResolutionState.ResolvedWithOffers, "tier state")
+        Check(tier.HasQuantityTierOffer AndAlso Not tier.HasDefaultQuantityOffer, "tier offer preserved")
+
+        Dim mixed As ProductPromotionDisplayModel = Build("Mixed")
+        Check(mixed.HasDefaultQuantityOffer AndAlso mixed.HasQuantityTierOffer AndAlso mixed.Offers.Count = 2, "mixed offers preserved")
+
+        KeepStoreLog.Reset()
+        Dim resolverFailure As ProductPromotionDisplayModel = Build("ResolverThrow")
+        Check(resolverFailure.ResolutionState = ProductPromotionDisplayResolutionState.TechnicalError, "resolver exception state")
+        Check(Not resolverFailure.HasOffers AndAlso resolverFailure.Offers.Count = 0 AndAlso resolverFailure.Html = String.Empty, "resolver exception has no promotion")
+        Check(resolverFailure.BestPriceNet = 8D AndAlso resolverFailure.BestPriceGross = 10D, "resolver exception preserves base price")
+        Check(KeepStoreLog.LastArea = "promotion-display" AndAlso KeepStoreLog.LastException Is Nothing, "resolver exception uses sanitized canonical log")
+        Check(KeepStoreLog.LastMessage.IndexOf("RESOLVER_SECRET", StringComparison.Ordinal) < 0, "resolver exception message is not disclosed")
+
+        KeepStoreLog.Reset()
+        Dim loadFailure As ProductPromotionDisplayModel = Build("LoadThrow")
+        Check(loadFailure.ResolutionState = ProductPromotionDisplayResolutionState.TechnicalError, "offer-loading exception state")
+        Check(Not loadFailure.HasOffers AndAlso loadFailure.Offers.Count = 0 AndAlso loadFailure.Html = String.Empty, "offer-loading exception has no promotion")
+        Check(KeepStoreLog.LastMessage.IndexOf("LOAD_SECRET", StringComparison.Ordinal) < 0, "offer-loading exception message is not disclosed")
+
+        Dim statusFailure As ProductPromotionDisplayModel = Build("TechnicalStatus")
+        Check(statusFailure.ResolutionState = ProductPromotionDisplayResolutionState.TechnicalError, "resolver technical status is explicit")
+
+        Dim missingCollection As ProductPromotionDisplayModel = Build("NullOffers")
+        Check(missingCollection.ResolutionState = ProductPromotionDisplayResolutionState.TechnicalError, "missing offer collection is technical")
+        Check(Not missingCollection.HasOffers AndAlso missingCollection.Html = String.Empty, "missing offer collection fails closed")
+
+        Dim afterFailure As ProductPromotionDisplayModel = Build("NoOffers")
+        Check(afterFailure.ResolutionState = ProductPromotionDisplayResolutionState.ResolvedWithoutOffers, "later resolution is not poisoned")
+        Check(afterFailure.ResolutionState <> resolverFailure.ResolutionState, "technical error is not transformed into commercial absence")
+
+        Console.WriteLine("PROMO_ERROR_STATE_RESULT PASS={0} FAIL={1}", Passed, Failed)
+        Environment.ExitCode = Failed
+    End Sub
+End Module
+'@
+        [IO.File]::WriteAllText($fixturePath, $fixtureSource, [Text.UTF8Encoding]::new($false))
+
+        $frameworkRoots = @(
+            (Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'),
+            (Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319')
+        )
+        $frameworkRoot = @($frameworkRoots | Where-Object { Test-Path (Join-Path $_ 'vbc.exe') } | Select-Object -First 1)[0]
+        if ([string]::IsNullOrWhiteSpace($frameworkRoot)) { throw 'PROMO_ERROR_STATE_VBC_UNAVAILABLE' }
+        $vbc = Join-Path $frameworkRoot 'vbc.exe'
+        $references = @('System.dll', 'System.Core.dll', 'System.Web.dll') | ForEach-Object { '/reference:' + (Join-Path $frameworkRoot $_) }
+        $compilerOutput = @(& $vbc /nologo /target:exe ('/out:' + $exePath) $references $helperPath $fixturePath 2>&1)
+        Assert-True ($LASTEXITCODE -eq 0 -and (Test-Path $exePath)) 'isolated promotion error-state fixture compiles'
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path $exePath)) {
+            $compilerOutput | ForEach-Object { Write-Output ('FIXTURE-COMPILER ' + $_) }
+            return
+        }
+
+        $fixtureOutput = @(& $exePath 2>&1)
+        $fixtureExitCode = $LASTEXITCODE
+        $fixtureOutput | ForEach-Object { Write-Output ('FIXTURE ' + $_) }
+        Assert-True ($fixtureExitCode -eq 0) 'isolated resolver and offer-loading failures fail closed'
+        Assert-True (($fixtureOutput -join "`n").IndexOf('PROMO_ERROR_STATE_RESULT PASS=20 FAIL=0', [StringComparison]::Ordinal) -ge 0) 'isolated error-state assertions all pass'
+    } finally {
+        if (Test-Path $tempRoot) { Remove-Item -LiteralPath $tempRoot -Recurse -Force }
+    }
+}
+
 function Test-StaticContract {
     $provider = Get-FileText 'App_Code\StorefrontPromotionCatalogProvider.vb'
     $resolver = Get-FileText 'App_Code\ProductPromotionEligibilityResolver.vb'
@@ -314,6 +553,21 @@ function Test-StaticContract {
     Assert-Contains $resolver 'Public Function PreloadStatus' 'shared resolver supports fail-closed preload'
 
     Assert-Contains $display 'model.BestDefaultQuantityPriceGross' 'display model preserves the quantity-one promotion price'
+    Assert-Contains $display 'Public Enum ProductPromotionDisplayResolutionState' 'display model exposes an explicit resolution state'
+    Assert-Contains $display 'ResolvedWithoutOffers' 'display model distinguishes legitimate no-offer resolution'
+    Assert-Contains $display 'ResolvedWithOffers' 'display model distinguishes successful offer resolution'
+    Assert-Contains $display 'TechnicalError' 'display model distinguishes technical failure'
+    Assert-Contains $display 'eligibility.Status <> ProductPromotionEligibilityLoadStatus.Success' 'display maps resolver failure status without treating it as no offers'
+    Assert-Contains $display 'SetTechnicalError(model, baseNetPrice, baseGrossPrice, "resolver"' 'resolver exceptions fail closed explicitly'
+    Assert-Contains $display 'SetTechnicalError(model, baseNetPrice, baseGrossPrice, "offer-loading"' 'offer-loading exceptions fail closed explicitly'
+    Assert-Contains $display 'KeepStoreLog.Error(' 'display failures use canonical logging'
+    Assert-NotContains $display 'ex.Message' 'display failure logs do not disclose raw exception messages'
+    Assert-Contains $catalog 'model.ResolutionState = ProductPromotionDisplayResolutionState.TechnicalError' 'catalog detects technical promotion failure'
+    Assert-Contains $catalog 'catalogPromotionCache(cacheKey) = model' 'catalog caches resolved promotion models'
+    Assert-True ($catalog.IndexOf('Return model', $catalog.IndexOf('model.ResolutionState = ProductPromotionDisplayResolutionState.TechnicalError', [StringComparison]::Ordinal), [StringComparison]::Ordinal) -lt $catalog.IndexOf('catalogPromotionCache(cacheKey) = model', [StringComparison]::Ordinal)) 'catalog does not cache technical promotion failure'
+    Assert-Contains $pdp 'model.ResolutionState <> ProductPromotionDisplayResolutionState.TechnicalError' 'PDP does not cache technical promotion failure'
+    Assert-Contains $homePage 'DisplayPromoTechnicalError' 'HOME preserves technical failure separately from no offers'
+    Assert-Contains $homePage 'If HasPromotionDisplayTechnicalError(row) Then Return False' 'HOME never falls back to unverified promotion data after a technical failure'
     Assert-Contains $display 'model.BestQuantityTierPriceGross' 'catalog summary renders the future tier separately'
     Assert-Contains $display 'Da <strong>' 'quantity tier is explicitly a Da teaser'
     Assert-Contains $display 'Già applicata al prezzo principale' 'PDP identifies the immediate price without repeating its value'
@@ -766,6 +1020,7 @@ function Test-RuntimeContract {
 }
 
 Test-StaticContract
+Test-PromotionDisplayErrorStateIsolated
 if (-not $SkipDirectParity) { Test-DirectParity }
 if (-not $SkipRuntime) { Test-RuntimeContract }
 

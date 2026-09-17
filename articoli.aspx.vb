@@ -4096,6 +4096,15 @@ strWhere = strWhere & " GROUP BY id"
                 KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "Prezzo"), 0D),
                 KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoIvato"), 0D))
 
+            If model IsNot Nothing AndAlso
+               model.ResolutionState = ProductPromotionDisplayResolutionState.TechnicalError Then
+                If restrictToCatalogCampaign AndAlso catalogPromotionActive Then
+                    catalogPromotionTechnicalError = True
+                    ShowPromotionCatalogMessage("Le offerte non sono temporaneamente disponibili. Riprova tra poco.")
+                End If
+                Return model
+            End If
+
             catalogPromotionCache(cacheKey) = model
             Return model
         Catch ex As Exception

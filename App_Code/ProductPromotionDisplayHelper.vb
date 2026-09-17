@@ -20,7 +20,14 @@ Public Class ProductPromotionOffer
     Public Property IsExactVariant As Boolean
 End Class
 
+Public Enum ProductPromotionDisplayResolutionState
+    ResolvedWithoutOffers = 0
+    ResolvedWithOffers = 1
+    TechnicalError = 2
+End Enum
+
 Public Class ProductPromotionDisplayModel
+    Public Property ResolutionState As ProductPromotionDisplayResolutionState
     Public Property HasOffers As Boolean
     Public Property HasDefaultQuantityOffer As Boolean
     Public Property HasQuantityTierOffer As Boolean
@@ -66,27 +73,49 @@ Public Module ProductPromotionDisplayHelper
         model.BestPriceGross = baseGrossPrice
         model.BestDefaultQuantityPriceNet = baseNetPrice
         model.BestDefaultQuantityPriceGross = baseGrossPrice
+        model.ResolutionState = ProductPromotionDisplayResolutionState.ResolvedWithoutOffers
 
         If String.IsNullOrWhiteSpace(connectionString) OrElse articleId <= 0 OrElse eligibilityContext Is Nothing OrElse baseGrossPrice <= 0D Then
-            model.Html = String.Empty
+            SetTechnicalError(model, baseNetPrice, baseGrossPrice, "validation", "InvalidRequest")
+            Return model
+        End If
+
+        Dim eligibility As ProductPromotionEligibilityResult = Nothing
+        Try
+            eligibility = ProductPromotionEligibilityResolver.Resolve(connectionString,
+                                                                      eligibilityContext,
+                                                                      articleId,
+                                                                      tcId,
+                                                                      1D,
+                                                                      baseNetPrice,
+                                                                      baseGrossPrice)
+        Catch ex As Exception
+            SetTechnicalError(model, baseNetPrice, baseGrossPrice, "resolver", ex.GetType().Name)
+            Return model
+        End Try
+
+        If eligibility Is Nothing OrElse eligibility.Status <> ProductPromotionEligibilityLoadStatus.Success Then
+            Dim statusName As String = If(eligibility Is Nothing, "NullResult", eligibility.Status.ToString())
+            SetTechnicalError(model, baseNetPrice, baseGrossPrice, "resolver-status", statusName)
+            Return model
+        End If
+
+        If eligibility.AuthorizedOffers Is Nothing Then
+            SetTechnicalError(model, baseNetPrice, baseGrossPrice, "offer-loading", "MissingOfferCollection")
             Return model
         End If
 
         Try
-            Dim eligibility As ProductPromotionEligibilityResult =
-                ProductPromotionEligibilityResolver.Resolve(connectionString,
-                                                            eligibilityContext,
-                                                            articleId,
-                                                            tcId,
-                                                            1D,
-                                                            baseNetPrice,
-                                                            baseGrossPrice)
             LoadOffers(eligibility, model)
-        Catch
-            ResetOfferState(model, baseNetPrice, baseGrossPrice)
+        Catch ex As Exception
+            SetTechnicalError(model, baseNetPrice, baseGrossPrice, "offer-loading", ex.GetType().Name)
+            Return model
         End Try
 
         model.HasOffers = (model.Offers.Count > 0)
+        model.ResolutionState = If(model.HasOffers,
+                                   ProductPromotionDisplayResolutionState.ResolvedWithOffers,
+                                   ProductPromotionDisplayResolutionState.ResolvedWithoutOffers)
         model.Html = RenderHtml(model)
         Return model
     End Function
@@ -171,7 +200,9 @@ Public Module ProductPromotionDisplayHelper
     End Sub
 
     Private Function RenderHtml(ByVal model As ProductPromotionDisplayModel) As String
-        If model Is Nothing OrElse Not model.HasOffers Then Return String.Empty
+        If model Is Nothing OrElse
+           model.ResolutionState <> ProductPromotionDisplayResolutionState.ResolvedWithOffers OrElse
+           Not model.HasOffers Then Return String.Empty
 
         Dim useNetPrices As Boolean = UseNetPriceDisplay()
         Dim sb As New StringBuilder()
@@ -229,7 +260,9 @@ Public Module ProductPromotionDisplayHelper
     End Function
 
     Public Function RenderCatalogSummaryHtml(ByVal model As ProductPromotionDisplayModel) As String
-        If model Is Nothing OrElse Not model.HasOffers Then Return String.Empty
+        If model Is Nothing OrElse
+           model.ResolutionState <> ProductPromotionDisplayResolutionState.ResolvedWithOffers OrElse
+           Not model.HasOffers Then Return String.Empty
         If Not model.HasQuantityTierOffer AndAlso model.Offers.Count <= 1 Then Return String.Empty
 
         Dim useNetPrices As Boolean = UseNetPriceDisplay()
@@ -334,6 +367,40 @@ Public Module ProductPromotionDisplayHelper
         model.BestQuantityTierOfferLabel = String.Empty
         model.BestQuantityTierEndsOn = Nothing
     End Sub
+
+    Private Sub SetTechnicalError(ByVal model As ProductPromotionDisplayModel,
+                                  ByVal baseNetPrice As Decimal,
+                                  ByVal baseGrossPrice As Decimal,
+                                  ByVal phase As String,
+                                  ByVal errorType As String)
+        If model Is Nothing Then Return
+        ResetOfferState(model, baseNetPrice, baseGrossPrice)
+        model.ResolutionState = ProductPromotionDisplayResolutionState.TechnicalError
+        model.Html = String.Empty
+
+        Try
+            KeepStoreLog.Error(
+                "promotion-display",
+                "Promotion display resolution failed. phase=" & SafeDiagnosticToken(phase) &
+                " errorType=" & SafeDiagnosticToken(errorType) & ".",
+                Nothing,
+                HttpContext.Current)
+        Catch logError As Exception
+            System.Diagnostics.Trace.TraceError(
+                "promotion-display logging failed. Error type: " & logError.GetType().Name & ".")
+        End Try
+    End Sub
+
+    Private Function SafeDiagnosticToken(ByVal value As String) As String
+        If String.IsNullOrWhiteSpace(value) Then Return "Unknown"
+        Dim safe As New StringBuilder()
+        For Each ch As Char In value
+            If Char.IsLetterOrDigit(ch) OrElse ch = "-"c OrElse ch = "_"c Then safe.Append(ch)
+            If safe.Length >= 48 Then Exit For
+        Next
+        If safe.Length = 0 Then Return "Unknown"
+        Return safe.ToString()
+    End Function
 
     Private Function UseNetPriceDisplay() As Boolean
         Try

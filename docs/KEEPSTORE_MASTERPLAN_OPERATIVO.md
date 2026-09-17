@@ -9,12 +9,12 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 - Aggiornato: 2026-09-17.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `cab4486d229e8c8e8168e2a68798b0ea6d267c4e`.
+- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `b87ad17a5dd346d07f9e53c0697bb562c5cb4a93`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - `WORKFLOW-GOVERNANCE-1A` e CHIUSO / A e integrato: il root `AGENTS.md` e la fonte canonica del metodo operativo corrente.
-- Ultimo task runtime chiuso: `STOREFRONT-OFFERS-PROMO-UX-1A`, esito A, PR #257 integrata nel checkpoint `cab4486d229e8c8e8168e2a68798b0ea6d267c4e`; la fixture ripetibile del logo marca e `articolo.aspx?id=9775`, codice `EPSON ORIG. LIGHT M`, asset locale `logo_epson2.jpg` HTTP `200`, con fallback testuale verificato su `ZAP80-A4` (`id=21906`).
-- Task runtime corrente: `HOME-ASYNC-CART-1A`, branch `task/home-async-cart-1a`, base stabile `cab4486d229e8c8e8168e2a68798b0ea6d267c4e`. Estende alla sola radice HOME il percorso asincrono del catalogo; il gate browser reale anonimo/autenticato sui quattro viewport resta obbligatorio e la HOME non e dichiarata completa.
-- Prossimo task: non stabilito; nessun task successivo viene avviato da questo aggiornamento.
+- Ultimo task runtime chiuso: `HOME-ASYNC-CART-1A`, esito A, PR #258 integrata nel checkpoint `b87ad17a5dd346d07f9e53c0697bb562c5cb4a93`; il Product Owner ha certificato il percorso HOME anonimo/autenticato sui viewport `1365x900`, `768x1024`, `390x844` e `360x800`. La chiusura non dichiara completa la HOME.
+- Task runtime corrente: `PROMO-DISPLAY-ERROR-STATE-HARDENING-1A`, branch `task/promo-display-error-state-hardening-1a`, base stabile `b87ad17a5dd346d07f9e53c0697bb562c5cb4a93`. Distingue risoluzione con offerte, senza offerte ed errore tecnico senza cambiare prezzi o regole commerciali.
+- Prossimo task consigliato dopo la chiusura positiva: `STOREFRONT-PROMO-BULK-PERFORMANCE-1A`, per misurare e correggere soltanto con evidenze eventuali query promozionali ripetute/N+1 su HOME, catalogo, recenti e PDP. Prerequisito: chiusura A di `PROMO-DISPLAY-ERROR-STATE-HARDENING-1A`. Stato: `NON AVVIATO`.
 - La funzione digitale di recesso resta documentata ma differita per decisione del Product Owner: `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A` non e il task attivo e non va avviato senza una nuova priorita esplicita di Germano.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
 - Debiti aperti principali: audit monetario `DOUBLE`; `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` chiuso E e differito in attesa di decisione infrastrutturale. Catalogo e PDP restano aree non dichiarate complete; recesso digitale e Coupon/Groupon restano differiti dal Product Owner.
@@ -95,12 +95,18 @@ Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo tas
 - Verifiche tecniche REV3: prove focalizzate `121/121`, harness finale `620/620`, retirement `126/126`, parita anonima `887/887` e PROVA `840/840` con differenze e duplicati a zero, logo locale HTTP 200 e fallback testuale, precompile ASP.NET Framework 4.8. Il browser interattivo non era disponibile nella sessione: nessuna misura geometrica o conclusione sulla fascia vuota e stata inventata.
 - Il controllo visuale reale sui quattro viewport e la fixture stabile del logo hanno completato il gate Product Owner; PR #257 e stata integrata in `frontend-rebuild` al checkpoint `cab4486d229e8c8e8168e2a68798b0ea6d267c4e`. Questa chiusura non dichiara complete HOME, catalogo, PDP, promo o intero storefront.
 
-### HOME-ASYNC-CART-1A - implementazione tecnica in review
+### Chiusura HOME-ASYNC-CART-1A
 
 - La HOME riusa esclusivamente `catalog_cart_async.aspx`, `CatalogAsyncCartSupport`, `CartMutationIdempotencyService`, `CartMutationService`, la risposta MiniCart esistente e `window.KeepStoreCartState`; non introduce endpoint, business logic, resolver o provider commerciali alternativi.
 - La configurazione asincrona vive nel contenitore HOME dedicato e viene risolta dal controllo `.js-ks-cart-link` nel contenitore configurato piu vicino. Il `body` non abilita globalmente il comportamento e `#ksCatalogPage` conserva il contratto esistente.
 - RequestId, busy state e replay restano idempotenti; dopo successo vengono aggiornate tutte le card equivalenti `ArticoliId/TCId`, i contatori desktop/mobile e il MiniCart, senza reload. Il form `ksNativeCartForm` resta il fallback nativo quando `fetch` non e disponibile.
-- Il gate finale richiede smoke browser reale anonimo e PROVA a `1365x900`, `768x1024`, `390x844` e `360x800`, inclusi scroll/slider, MiniCart, doppio click, errore visibile e assenza di doppio handler. Fino a quel gate l'esito resta tecnico/in review e la HOME non e dichiarata completa.
+- Il gate finale browser reale anonimo e PROVA e stato certificato dal Product Owner a `1365x900`, `768x1024`, `390x844` e `360x800`, inclusi scroll/slider, MiniCart, doppio click, errore visibile e assenza di doppio handler. PR #258 e integrata nel checkpoint `b87ad17a5dd346d07f9e53c0697bb562c5cb4a93`; la HOME non e per questo dichiarata completa.
+
+### PROMO-DISPLAY-ERROR-STATE-HARDENING-1A - implementazione tecnica in review
+
+- `ProductPromotionDisplayModel` distingue esplicitamente `ResolvedWithOffers`, `ResolvedWithoutOffers` e `TechnicalError`. Stato tecnico del resolver, eccezione del resolver, risultato malformato ed eccezione nel caricamento offerte falliscono chiusi, conservano soltanto il prezzo base ricevuto, producono logging sanitizzato e non rendono badge, tier, percentuali o dettagli interni.
+- HOME mantiene separati snapshot riuscito ed errore tecnico e non ricade sui campi promo legacy dopo un errore; catalogo e PDP non memorizzano `TechnicalError` nelle cache di richiesta. Prezzi, IVA, resolver, provider, condizioni quantitative, campagne, carrello, checkout e ordine restano invariati.
+- Verifiche tecniche: fixture isolata VB.NET `20/20`, harness promozionale `638/638`, parita anonimo `887/887`, PROVA `840/840`, differenze e duplicati zero, retirement `126/126`, precompile ASP.NET Framework 4.8, diff check e secret scan superati. Nessuna scrittura o modifica DB.
 
 ### Funzione digitale di recesso B2C - documentata e differita
 
@@ -241,6 +247,7 @@ Finding separati ancora aperti: materializzazione promo, performance/N+1 comples
 ### Metodo
 
 - Ogni lavoro passa da micro-task.
+- A ogni chiusura con esito A, il rapporto conclusivo deve indicare automaticamente il prossimo task consigliato, ricavato dal manuale e dai finding aperti. Deve riportare nome, motivo, prerequisiti e stato NON AVVIATO. Nessun task successivo deve essere avviato o implementato senza autorizzazione del Product Owner.
 - Un solo task resta attivo per volta e il successivo non parte finche il prerequisito non e chiuso.
 - Il solo sistema corrente di classificazione e A/B/E: `A` = requisito autorizzato completato, verificato e chiudibile, senza blocker noti nel perimetro; `B` = direzione valida ma task incompleto, bloccato o in attesa di fix, autorizzazione, verifica tecnica o smoke; `E` = premessa, strategia o modifica errata/pericolosa, regressione grave introdotta o approccio da abbandonare e riprogettare. Un blocker tecnico scoperto prima di una modifica pericolosa e normalmente B, non E.
 - Un task UI in attesa di una conferma umana obbligatoria e non automatizzabile resta B. Non usare classificazioni operative diverse; le lettere presenti in task-id o record storici restano invariate.
@@ -2242,8 +2249,8 @@ Task consigliato separato per eventuale proseguimento:
 
 ### Immediati
 
-1. Review e merge separatamente autorizzato della PR #254; `ORDER-DURABLE-IDEMPOTENCY-1A` e tecnicamente A ma non ancora integrato.
-2. Il prossimo task runtime effettivo deve essere stabilito dal Product Owner; nessun candidato e avviato da questo checkpoint.
+1. Completare e sottoporre a review `PROMO-DISPLAY-ERROR-STATE-HARDENING-1A`, senza modificare resolver, prezzi o logica commerciale.
+2. Dopo la sua chiusura A, proporre `STOREFRONT-PROMO-BULK-PERFORMANCE-1A` per misurare eventuali query promozionali ripetute/N+1 su HOME, catalogo, recenti e PDP. Prerequisito: hardening error-state chiuso A. Stato: `NON AVVIATO` e non autorizzato all'implementazione.
 3. Audit futuro dello schema monetario ancora `DOUBLE`.
 4. Candidati separati da conservare senza implementarli ora:
    - `PROMO-AMBIGUOUS-STATE-REACHABILITY-1A`: verificare la raggiungibilita di `AmbiguousCommercialRule`; oggi risultano zero offerte ambigue attive ed e un task commerciale non prioritario rispetto al carrello.
