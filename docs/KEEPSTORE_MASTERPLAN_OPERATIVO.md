@@ -202,11 +202,13 @@ Responsabilita: Codex esegue audit e implementazioni tecniche solo nei manifest 
 1. `STOREFRONT-PROMO-MODERN-PARITY-1A`: CHIUSO / A e integrato con PR #255.
 2. `STOREFRONT-PROMO-ROUTE-RETIREMENT-1A`: CHIUSO / A e integrato con PR #256 al checkpoint `192701ae65ecac00c294399a686af52d98d398c1`.
 3. `STOREFRONT-OFFERS-PROMO-UX-1A`: CHIUSO / A e integrato con PR #257 al checkpoint `cab4486d229e8c8e8168e2a68798b0ea6d267c4e`.
-4. `HOME-ASYNC-CART-1A`: task corrente, implementazione tecnica in review; gate browser reale anonimo/autenticato ancora obbligatorio.
-5. `PDP-BRAND-LOGO-1A` e assorbito dalla REV3 del task corrente e non resta un task separato.
-6. In seguito performance/bulk promo, SEO tecnico, Google Product structured data e infine AI/Gemini/LLMS.
+4. `HOME-ASYNC-CART-1A`: CHIUSO / A e integrato con PR #258 al checkpoint `b87ad17a5dd346d07f9e53c0697bb562c5cb4a93`; `PDP-BRAND-LOGO-1A` e assorbito dalla REV3 e non resta un task separato.
+5. `PROMO-DISPLAY-ERROR-STATE-HARDENING-1A`: CHIUSO / A e integrato con PR #259 al checkpoint `23f21e6da00e726db9e361ace68de39b3d8f77eb`.
+6. `STOREFRONT-PROMO-BULK-PERFORMANCE-1A`: CHIUSO / A e integrato con PR #260 al checkpoint `eb020eb7f2431d7c91e500e2f1768edcb5cc5d70`.
+7. `STOREFRONT-SEO-TECHNICAL-AUDIT-1A`: task corrente; fondamenta tecniche multi-tenant in PR, nessun merge ancora autorizzato.
+8. Dopo chiusura A e merge: `GOOGLE-PRODUCT-STRUCTURED-DATA-1A`, quindi Merchant/AI/LLMS nei rispettivi task dedicati.
 
-Finding separati ancora aperti: materializzazione promo, performance/N+1 complessiva, `articolix.aspx` HTTP 500, due label `EAN:` nella preview diagnostica `ProductDetailView.ascx` e HOME add-to-cart legacy. La UX promo e il task corrente in review, non un finding chiuso; i precedenti delta 25/22, la parita owner/campagna, GridView/add-to-cart di `promozioni.aspx` e i relativi filtri sono superati dalle PR #255 e #256. HOME, catalogo, PDP, promo, SEO e AI non sono dichiarati completi.
+Finding separati ancora aperti: materializzazione promo, `articolix.aspx` HTTP 500 e due label `EAN:` nella preview diagnostica `ProductDetailView.ascx`. I precedenti delta 25/22, la parita owner/campagna, GridView/add-to-cart di `promozioni.aspx`, HOME async cart e performance bulk promo sono superati dalle PR #255-#260. Catalogo, PDP, Google structured data e AI non sono dichiarati completi dal solo task SEO tecnico.
 
 ### Chiusura PDP-COMMERCIAL-INFO-SHIPPING-1A
 
@@ -2269,8 +2271,8 @@ Task consigliato separato per eventuale proseguimento:
 
 ### Immediati
 
-1. Completare review e chiusura A di `STOREFRONT-PROMO-BULK-PERFORMANCE-1A`, mantenendo resolver, prezzi, presentazione e logica commerciale invariati.
-2. Dopo la sua chiusura A, proporre `STOREFRONT-SEO-TECHNICAL-AUDIT-1A` per verificare canonical, robots, sitemap, meta, paginazione, filtri e indicizzabilita prima di Google Product structured data. Stato: `NON AVVIATO` e non autorizzato all'implementazione.
+1. Completare review e chiusura A di `STOREFRONT-SEO-TECHNICAL-AUDIT-1A`, mantenendo resolver, prezzi, presentazione, dati e logica commerciale invariati.
+2. Solo dopo il merge, proporre `GOOGLE-PRODUCT-STRUCTURED-DATA-1A` per il contratto dinamico `Product`/`Offer`/`Breadcrumb`/`Organization`. Stato: `NON AVVIATO` e non autorizzato all'implementazione.
 3. Audit futuro dello schema monetario ancora `DOUBLE`.
 4. Candidati separati da conservare senza implementarli ora:
    - `PROMO-AMBIGUOUS-STATE-REACHABILITY-1A`: verificare la raggiungibilita di `AmbiguousCommercialRule`; oggi risultano zero offerte ambigue attive ed e un task commerciale non prioritario rispetto al carrello.
