@@ -9,12 +9,12 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 - Aggiornato: 2026-09-17.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `b87ad17a5dd346d07f9e53c0697bb562c5cb4a93`.
+- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `23f21e6da00e726db9e361ace68de39b3d8f77eb`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - `WORKFLOW-GOVERNANCE-1A` e CHIUSO / A e integrato: il root `AGENTS.md` e la fonte canonica del metodo operativo corrente.
-- Ultimo task runtime chiuso: `HOME-ASYNC-CART-1A`, esito A, PR #258 integrata nel checkpoint `b87ad17a5dd346d07f9e53c0697bb562c5cb4a93`; il Product Owner ha certificato il percorso HOME anonimo/autenticato sui viewport `1365x900`, `768x1024`, `390x844` e `360x800`. La chiusura non dichiara completa la HOME.
-- Task runtime corrente: `PROMO-DISPLAY-ERROR-STATE-HARDENING-1A`, branch `task/promo-display-error-state-hardening-1a`, base stabile `b87ad17a5dd346d07f9e53c0697bb562c5cb4a93`. Distingue risoluzione con offerte, senza offerte ed errore tecnico senza cambiare prezzi o regole commerciali.
-- Prossimo task consigliato dopo la chiusura positiva: `STOREFRONT-PROMO-BULK-PERFORMANCE-1A`, per misurare e correggere soltanto con evidenze eventuali query promozionali ripetute/N+1 su HOME, catalogo, recenti e PDP. Prerequisito: chiusura A di `PROMO-DISPLAY-ERROR-STATE-HARDENING-1A`. Stato: `NON AVVIATO`.
+- Ultimo task runtime chiuso: `PROMO-DISPLAY-ERROR-STATE-HARDENING-1A`, esito A, PR #259 integrata fast-forward nel checkpoint `23f21e6da00e726db9e361ace68de39b3d8f77eb`; errori tecnici, assenza legittima di offerte e offerte risolte restano stati distinti e non contaminano le cache di richiesta.
+- Task runtime corrente: `STOREFRONT-PROMO-BULK-PERFORMANCE-1A`, branch `task/storefront-promo-bulk-performance-1a`, base stabile `23f21e6da00e726db9e361ace68de39b3d8f77eb`. Le misure hanno escluso N+1 SQL su HOME, catalogo e PDP e dimostrato elaborazione duplicata nella sola HOME; la correzione minima risolve le promozioni dei pool ordinari soltanto dopo la selezione delle card visibili.
+- Prossimo task consigliato dopo la chiusura positiva: `STOREFRONT-SEO-TECHNICAL-AUDIT-1A`, per verificare canonical, robots, sitemap, meta, paginazione, filtri e indicizzabilita prima di Google Product structured data. Prerequisito: chiusura A di `STOREFRONT-PROMO-BULK-PERFORMANCE-1A`. Stato: `NON AVVIATO`.
 - La funzione digitale di recesso resta documentata ma differita per decisione del Product Owner: `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A` non e il task attivo e non va avviato senza una nuova priorita esplicita di Germano.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
 - Debiti aperti principali: audit monetario `DOUBLE`; `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` chiuso E e differito in attesa di decisione infrastrutturale. Catalogo e PDP restano aree non dichiarate complete; recesso digitale e Coupon/Groupon restano differiti dal Product Owner.
@@ -102,11 +102,19 @@ Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo tas
 - RequestId, busy state e replay restano idempotenti; dopo successo vengono aggiornate tutte le card equivalenti `ArticoliId/TCId`, i contatori desktop/mobile e il MiniCart, senza reload. Il form `ksNativeCartForm` resta il fallback nativo quando `fetch` non e disponibile.
 - Il gate finale browser reale anonimo e PROVA e stato certificato dal Product Owner a `1365x900`, `768x1024`, `390x844` e `360x800`, inclusi scroll/slider, MiniCart, doppio click, errore visibile e assenza di doppio handler. PR #258 e integrata nel checkpoint `b87ad17a5dd346d07f9e53c0697bb562c5cb4a93`; la HOME non e per questo dichiarata completa.
 
-### PROMO-DISPLAY-ERROR-STATE-HARDENING-1A - implementazione tecnica in review
+### Chiusura PROMO-DISPLAY-ERROR-STATE-HARDENING-1A
 
 - `ProductPromotionDisplayModel` distingue esplicitamente `ResolvedWithOffers`, `ResolvedWithoutOffers` e `TechnicalError`. Stato tecnico del resolver, eccezione del resolver, risultato malformato ed eccezione nel caricamento offerte falliscono chiusi, conservano soltanto il prezzo base ricevuto, producono logging sanitizzato e non rendono badge, tier, percentuali o dettagli interni.
 - HOME mantiene separati snapshot riuscito ed errore tecnico e non ricade sui campi promo legacy dopo un errore; catalogo e PDP non memorizzano `TechnicalError` nelle cache di richiesta. Prezzi, IVA, resolver, provider, condizioni quantitative, campagne, carrello, checkout e ordine restano invariati.
 - Verifiche tecniche: fixture isolata VB.NET `20/20`, harness promozionale `638/638`, parita anonimo `887/887`, PROVA `840/840`, differenze e duplicati zero, retirement `126/126`, precompile ASP.NET Framework 4.8, diff check e secret scan superati. Nessuna scrittura o modifica DB.
+- Il task e CHIUSO / A con PR #259 integrata fast-forward nel checkpoint `23f21e6da00e726db9e361ace68de39b3d8f77eb`, un commit lineare e zero merge commit.
+
+### STOREFRONT-PROMO-BULK-PERFORMANCE-1A - misure e correzione focalizzata
+
+- Baseline request-scoped con un warm-up e due misure comparabili: ogni scenario anonimo ha caricato un solo snapshot ed eseguito una sola query promozionale per contesto. HOME `948` chiamate a `BuildForProduct`, `617` chiavi uniche e `331` duplicazioni; catalogo normale e con recenti `22/12/10`; catalogo promo `12/12/0`; PDP con Simili/Correlati/Recenti `32/32/0`; campagne singola/multipla `1/1/0` e `2/2/0`. Lo snapshot anonimo conteneva `919` righe-offerta. Il contesto PROVA, misurato read-only senza login o mutazioni, ha caricato `908` righe con una sola query e conserva parita `840/840`.
+- Causa certa: la HOME eseguiva la risoluzione promozionale su tutti i pool ordinari prima che `TakeDiverseRows` scegliesse le card realmente visibili. Non e emerso alcun N+1 SQL; catalogo e PDP riusavano gia correttamente snapshot e model cache request-scoped. I dieci tentativi ripetuti del catalogo normale sono stati lasciati invariati perche corrispondono a `TechnicalError`/input non valido, stato che per contratto non puo essere memorizzato come assenza commerciale.
+- Correzione minima: il pool promozionale autorizzato continua a essere risolto integralmente per filtro e ordinamento; Featured, Best Seller e Recenti vengono risolti soltanto dopo la selezione finale. Una cache per istanza pagina include articolo, variante TC, chiave completa del contesto, prezzo netto e lordo e non memorizza mai `TechnicalError`. Resolver, provider, formule, owner, campagna, HTML, CSS, JavaScript, carrello e checkout restano invariati.
+- Post-fix HOME: `438` chiamate, `438` chiavi uniche, duplicazioni `0`, snapshot/query ancora `1/1` e `919` righe; riduzione di `510` chiamate (`53,8%`). I tempi di risoluzione osservati sono rimasti sostanzialmente stabili, quindi il miglioramento certificato e nei conteggi e nel lavoro evitato, non in una promessa di latenza. Tutti gli altri scenari conservano i conteggi baseline.
 
 ### Funzione digitale di recesso B2C - documentata e differita
 
@@ -2249,8 +2257,8 @@ Task consigliato separato per eventuale proseguimento:
 
 ### Immediati
 
-1. Completare e sottoporre a review `PROMO-DISPLAY-ERROR-STATE-HARDENING-1A`, senza modificare resolver, prezzi o logica commerciale.
-2. Dopo la sua chiusura A, proporre `STOREFRONT-PROMO-BULK-PERFORMANCE-1A` per misurare eventuali query promozionali ripetute/N+1 su HOME, catalogo, recenti e PDP. Prerequisito: hardening error-state chiuso A. Stato: `NON AVVIATO` e non autorizzato all'implementazione.
+1. Completare review e chiusura A di `STOREFRONT-PROMO-BULK-PERFORMANCE-1A`, mantenendo resolver, prezzi, presentazione e logica commerciale invariati.
+2. Dopo la sua chiusura A, proporre `STOREFRONT-SEO-TECHNICAL-AUDIT-1A` per verificare canonical, robots, sitemap, meta, paginazione, filtri e indicizzabilita prima di Google Product structured data. Stato: `NON AVVIATO` e non autorizzato all'implementazione.
 3. Audit futuro dello schema monetario ancora `DOUBLE`.
 4. Candidati separati da conservare senza implementarli ora:
    - `PROMO-AMBIGUOUS-STATE-REACHABILITY-1A`: verificare la raggiungibilita di `AmbiguousCommercialRule`; oggi risultano zero offerte ambigue attive ed e un task commerciale non prioritario rispetto al carrello.

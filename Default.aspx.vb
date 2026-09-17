@@ -19,6 +19,7 @@ Partial Public Class _Default
     Private Shared ReadOnly ItCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
     Private Shared ReadOnly Rng As New Random()
     Private Const RuntimeSiteBaseUrl As String = "https://www.taikun.it"
+    Private ReadOnly _homePromotionModelCache As New Dictionary(Of String, ProductPromotionDisplayModel)(StringComparer.Ordinal)
 
     Protected ReadOnly Property HomeAsyncCartToken As String
         Get
@@ -141,6 +142,7 @@ Partial Public Class _Default
         End If
 
         Dim featuredRows As DataTable = TakeDiverseRows(8, usedBusinessKeys, usedDisplayKeys, featuredPool, newArrivalsPool, fallbackCatalogPool)
+        PopulatePromotionDisplaySnapshot(featuredRows)
         rptHomeFeaturedProducts.DataSource = featuredRows
         rptHomeFeaturedProducts.DataBind()
         If HomeFeaturedProductsSection IsNot Nothing Then
@@ -156,6 +158,7 @@ Partial Public Class _Default
         End If
 
         Dim bestRows As DataTable = TakeDiverseRows(8, usedBusinessKeys, usedDisplayKeys, bestSellerPool, currentYearSellingPool, topSellingPool, topRatedPool, fallbackCatalogPool)
+        PopulatePromotionDisplaySnapshot(bestRows)
         rptBestSeller.DataSource = bestRows
         rptBestSeller.DataBind()
         If HomeLegacyBestSection IsNot Nothing Then
@@ -163,6 +166,7 @@ Partial Public Class _Default
         End If
 
         Dim recentRows As DataTable = GetRecentlyViewedProducts(8, usedBusinessKeys, True, usedDisplayKeys, True)
+        PopulatePromotionDisplaySnapshot(recentRows)
         rptRecentlyViewed.DataSource = recentRows
         rptRecentlyViewed.DataBind()
         If HomeRecentlyViewedSection IsNot Nothing Then
@@ -945,8 +949,11 @@ Partial Public Class _Default
                         Dim dt As New DataTable()
                         conn.Open()
                         da.Fill(dt)
-                        PopulatePromotionDisplaySnapshot(dt)
-                        If requireAuthorizedPromotion Then dt = FilterAuthorizedPromotionRows(dt)
+                        EnsurePromotionDisplayColumns(dt)
+                        If requireAuthorizedPromotion Then
+                            PopulatePromotionDisplaySnapshot(dt)
+                            dt = FilterAuthorizedPromotionRows(dt)
+                        End If
                         Return dt
                     End Using
                 End Using
@@ -972,13 +979,11 @@ Partial Public Class _Default
             row("DisplayPromoTechnicalError") = False
             Dim articleId As Integer = SafeInt(row("id"))
             Dim tcId As Integer = If(row.Table.Columns.Contains("TCid"), SafeInt(row("TCid")), -1)
-            Dim model As ProductPromotionDisplayModel = ProductPromotionDisplayHelper.BuildForProduct(
-                ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString,
-                articleId,
-                tcId,
-                eligibilityContext,
-                ToDecimal(row("Prezzo")),
-                ToDecimal(row("PrezzoIvato")))
+            Dim model As ProductPromotionDisplayModel = GetHomePromotionModel(articleId,
+                                                                               tcId,
+                                                                               eligibilityContext,
+                                                                               ToDecimal(row("Prezzo")),
+                                                                               ToDecimal(row("PrezzoIvato")))
 
             If model IsNot Nothing AndAlso
                model.ResolutionState = ProductPromotionDisplayResolutionState.TechnicalError Then
@@ -1018,6 +1023,33 @@ Partial Public Class _Default
             End If
         Next
     End Sub
+
+    Private Function GetHomePromotionModel(ByVal articleId As Integer,
+                                           ByVal tcId As Integer,
+                                           ByVal eligibilityContext As ProductPromotionEligibilityContext,
+                                           ByVal baseNetPrice As Decimal,
+                                           ByVal baseGrossPrice As Decimal) As ProductPromotionDisplayModel
+        Dim contextKey As String = If(eligibilityContext Is Nothing, String.Empty, eligibilityContext.CacheKey)
+        Dim cacheKey As String = articleId.ToString(CultureInfo.InvariantCulture) & ":" &
+                                 tcId.ToString(CultureInfo.InvariantCulture) & ":" & contextKey & ":" &
+                                 baseNetPrice.ToString(CultureInfo.InvariantCulture) & ":" &
+                                 baseGrossPrice.ToString(CultureInfo.InvariantCulture)
+        Dim cached As ProductPromotionDisplayModel = Nothing
+        If _homePromotionModelCache.TryGetValue(cacheKey, cached) Then Return cached
+
+        Dim model As ProductPromotionDisplayModel = ProductPromotionDisplayHelper.BuildForProduct(
+            ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString,
+            articleId,
+            tcId,
+            eligibilityContext,
+            baseNetPrice,
+            baseGrossPrice)
+        If model IsNot Nothing AndAlso
+           model.ResolutionState <> ProductPromotionDisplayResolutionState.TechnicalError Then
+            _homePromotionModelCache(cacheKey) = model
+        End If
+        Return model
+    End Function
 
     Private Function FilterAuthorizedPromotionRows(ByVal products As DataTable) As DataTable
         Dim filtered As DataTable = If(products IsNot Nothing, products.Clone(), EmptyProductsTable())
