@@ -1584,7 +1584,8 @@ Partial Class articolo
             phBrandFeature.Visible = True
             phBrandInfo.Visible = True
 
-            lnkMarca.Text = Server.HtmlEncode(brandName)
+            Dim brandLogoUrl As String = NormalizeBrandLogoUrl(GetRowString(row, "Marche_img"))
+            lnkMarca.Text = BuildPrimaryBrandLinkHtml(brandName, brandLogoUrl)
             lnkMarca.NavigateUrl = BuildBrandCatalogUrl(row, brandId)
 
             litMarcaFeature.Text = Server.HtmlEncode(brandName)
@@ -2806,6 +2807,24 @@ Partial Class articolo
         End If
 
         Return "<span class=""ks-brand-text"">" & safeName & "</span>"
+    End Function
+
+    Private Function BuildPrimaryBrandLinkHtml(brandName As String, logoUrl As String) As String
+        Dim safeName As String = Server.HtmlEncode(brandName)
+        Dim textHtml As String = "<span class=""ks-pdp-brand-link__name"">" & safeName & "</span>"
+        Dim localBrandPrefix As String = ResolveUrl("~/Public/assets/images/marche/")
+
+        If String.IsNullOrWhiteSpace(logoUrl) OrElse
+           String.IsNullOrWhiteSpace(localBrandPrefix) OrElse
+           Not logoUrl.StartsWith(localBrandPrefix, StringComparison.OrdinalIgnoreCase) Then
+            Return textHtml
+        End If
+
+        Return "<span class=""ks-pdp-brand-link__logo-frame"">" &
+               "<img class=""ks-pdp-brand-link__logo"" src=""" & HttpUtility.HtmlAttributeEncode(logoUrl) &
+               """ alt=""" & HttpUtility.HtmlAttributeEncode("Logo " & brandName) &
+               """ width=""110"" height=""36"" decoding=""async"" />" &
+               "</span>" & textHtml
     End Function
 
     Private Function BuildCategoryCatalogUrl(row As DataRow) As String

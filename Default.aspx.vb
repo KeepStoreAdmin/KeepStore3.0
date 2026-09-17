@@ -2651,21 +2651,32 @@ Partial Public Class _Default
         Return "<div class='ks-home-corner-badge-stack'>" & badges.ToString() & "</div>"
     End Function
 
-    Private Function RenderPriceBlock(ByVal row As DataRow, ByVal emphasize As Boolean) As String
+    Private Function RenderPriceBlock(ByVal row As DataRow,
+                                      ByVal emphasize As Boolean,
+                                      Optional ByVal reserveDealSlots As Boolean = False) As String
         Dim sb As New StringBuilder()
         Dim priceClass As String = If(emphasize, "new-price h4 fw-normal text-primary mb-0", "new-price body-md-2 fw-medium text-primary mb-0") & " ks-home-price-value ks-home-price-value--current"
         Dim oldPriceClass As String = If(emphasize, "old-price price-text text-main-2", "old-price body-md-2 text-main-2") & " ks-home-price-value ks-home-price-value--old"
         Dim slotClass As String = If(emphasize, "ks-home-price-slot--emphasized", "ks-home-price-slot--compact")
         Dim stackClass As String = If(emphasize, "ks-home-price-stack--emphasized", "ks-home-price-stack--compact")
+        Dim tierHtml As String = RenderTierPrice(row)
 
         sb.Append("<div class='ks-home-price-stack ").Append(stackClass).Append("'>")
+        If reserveDealSlots Then sb.Append("<div class='ks-deal-price-amount-slot'>")
         sb.Append("<p class='price-wrap fw-medium ks-home-price-slot ").Append(slotClass).Append("'>")
         sb.Append("<span class='").Append(priceClass).Append("'>").Append(FormatMoney(CurrentPrice(row))).Append("</span>")
         If ShowDiscount(row) Then
             sb.Append("<span class='").Append(oldPriceClass).Append("'>").Append(FormatMoney(GetBasePrice(row))).Append("</span>")
         End If
         sb.Append("</p>")
-        sb.Append(RenderTierPrice(row))
+        If reserveDealSlots Then
+            sb.Append("</div>")
+            sb.Append("<div class='ks-deal-price-tier-slot'")
+            If String.IsNullOrEmpty(tierHtml) Then sb.Append(" aria-hidden='true'")
+            sb.Append(">").Append(tierHtml).Append("</div>")
+        Else
+            sb.Append(tierHtml)
+        End If
         sb.Append("</div>")
 
         Return sb.ToString()
@@ -2715,6 +2726,9 @@ Partial Public Class _Default
         sb.Append("</div>")
         sb.Append("</div>")
         Dim galleryImages As List(Of String) = ProductGalleryImages(row)
+        sb.Append("<div class='ks-deal-slot ks-deal-slot--gallery'")
+        If galleryImages.Count = 0 Then sb.Append(" aria-hidden='true'")
+        sb.Append(">")
         If galleryImages.Count > 0 Then
             sb.Append("<ul class='list-image-product ks-deal-thumbs'>")
             For i As Integer = 0 To Math.Min(4, galleryImages.Count - 1)
@@ -2724,26 +2738,39 @@ Partial Public Class _Default
             Next
             sb.Append("</ul>")
         End If
-        sb.Append("<div class='card-product-info'>")
-        sb.Append("<div class='box-title gap-xl-12'>")
-        sb.Append("<div class='d-flex flex-column'>")
+        sb.Append("</div>")
+
+        Dim availabilityHtml As String = RenderAvailability(row)
+        Dim countdownHtml As String = RenderCountdownBlock(row)
+        Dim savingsHtml As String = String.Empty
+        If ShowDiscount(row) Then
+            savingsHtml = "<p class='box-sale-tag'>Risparmi " & FormatMoney(SavingsAmount(row)) & "</p>"
+        End If
+
+        sb.Append("<div class='card-product-info box-title gap-xl-12 ks-deal-card__content'>")
+        sb.Append("<div class='ks-deal-slot ks-deal-slot--category'>")
         sb.Append("<p class='caption text-main-2 font-2 ks-card-category'>").Append(CardCategoryLabel(row)).Append("</p>")
+        sb.Append("</div>")
+        sb.Append("<div class='ks-deal-slot ks-deal-slot--title'>")
         sb.Append("<h6><a href='").Append(ProductUrl(row("id"))).Append("' class='name-product fw-semibold text-secondary link ks-card-title'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></h6>")
         sb.Append("</div>")
-        sb.Append(RenderPriceBlock(row, True))
-        sb.Append(RenderAvailability(row))
-        sb.Append("</div>")
-        If ShowDiscount(row) Then
-            sb.Append("<p class='box-sale-tag'>Risparmi ").Append(FormatMoney(SavingsAmount(row))).Append("</p>")
-        End If
-        sb.Append("<div class='box-infor-detail gap-xl-20'>")
-        sb.Append(RenderCountdownBlock(row))
+        sb.Append("<div class='ks-deal-slot ks-deal-slot--price'>").Append(RenderPriceBlock(row, True, True)).Append("</div>")
+        sb.Append("<div class='ks-deal-slot ks-deal-slot--availability'")
+        If String.IsNullOrEmpty(availabilityHtml) Then sb.Append(" aria-hidden='true'")
+        sb.Append(">").Append(availabilityHtml).Append("</div>")
+        sb.Append("<div class='ks-deal-slot ks-deal-slot--savings'")
+        If String.IsNullOrEmpty(savingsHtml) Then sb.Append(" aria-hidden='true'")
+        sb.Append(">").Append(savingsHtml).Append("</div>")
+        sb.Append("<div class='box-infor-detail gap-xl-20 ks-deal-card__footer'>")
+        sb.Append("<div class='ks-deal-slot ks-deal-slot--countdown'")
+        If String.IsNullOrEmpty(countdownHtml) Then sb.Append(" aria-hidden='true'")
+        sb.Append(">").Append(countdownHtml).Append("</div>")
         Dim progressValue As Decimal = AvailabilityPercent(row("Giacenza"), row("VendutiAnno"))
         Dim progressText As String = progressValue.ToString("0.##", ItCulture) & "%"
         Dim soldText As String = FormatQuantity(row("VendutiAnno"))
         Dim availableText As String = FormatQuantity(row("Giacenza"))
         Dim progressAriaText As String = progressText & ": " & soldText & " venduti, " & availableText & " disponibili"
-        sb.Append("<div class='product-progress-sale'>")
+        sb.Append("<div class='product-progress-sale ks-deal-slot ks-deal-slot--progress'>")
         sb.Append("<div class='ks-home-progress-heading'><span>Vendite annuali</span><strong>").Append(progressText).Append("</strong></div>")
         sb.Append("<div class='progress-sold progress ks-home-progress' role='progressbar' aria-valuemin='0' aria-valuemax='100' aria-valuenow='").Append(progressValue.ToString("0.##", CultureInfo.InvariantCulture)).Append("' aria-valuetext='").Append(HttpUtility.HtmlAttributeEncode(progressAriaText)).Append("'>")
         sb.Append("<div class='progress-bar bg-danger ks-home-progress-bar' style='width:").Append(progressValue.ToString("0.##", CultureInfo.InvariantCulture)).Append("%'></div>")

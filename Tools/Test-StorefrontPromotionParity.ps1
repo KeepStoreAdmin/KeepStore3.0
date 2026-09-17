@@ -295,6 +295,7 @@ function Test-StaticContract {
     $catalogCss = Get-FileText 'Public\assets\keepstore\css\catalog-ui.css'
     $productCss = Get-FileText 'Public\assets\keepstore\css\product-ui.css'
     $master = Get-FileText 'Page.master'
+    $dealRenderer = [regex]::Match($homePage, 'Protected Function RenderDealCard\b.*?End Function', [Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [Text.RegularExpressions.RegexOptions]::Singleline).Value
 
     Assert-Contains $provider 'ROW_NUMBER() OVER (PARTITION BY catalog.id ORDER BY' 'provider selects one deterministic offer per article'
     Assert-Contains $provider 'Public Function BuildLegacyCatalogJoin() As String' 'legacy route has a canonical provider join'
@@ -334,6 +335,13 @@ function Test-StaticContract {
     Assert-Contains $pdp 'item("id") = _id.ToString()' 'PDP stores chronology identifiers'
     Assert-NotContains $pdp 'item("price")' 'PDP does not store price in recent history'
     Assert-NotContains $pdp 'item("promo")' 'PDP does not store promotion state in recent history'
+    Assert-Contains $pdp 'NormalizeBrandLogoUrl(GetRowString(row, "Marche_img"))' 'PDP main brand uses the current product Marche_img value'
+    Assert-Contains $pdp 'BuildPrimaryBrandLinkHtml(brandName, brandLogoUrl)' 'PDP main brand renders logo and text through one accessible link'
+    Assert-Contains $pdp 'IO.File.Exists(Server.MapPath(rel))' 'PDP brand normalization requires a real local logo file'
+    Assert-Contains $pdp 'Not logoUrl.StartsWith(localBrandPrefix, StringComparison.OrdinalIgnoreCase)' 'PDP main brand rejects invalid and non-local logo paths'
+    Assert-Contains $pdp 'HttpUtility.HtmlAttributeEncode("Logo " & brandName)' 'PDP main brand logo has a safe descriptive alt'
+    Assert-Contains $pdp 'Return textHtml' 'PDP main brand falls back to its full text name without a logo'
+    Assert-Contains $pdpMarkup 'ks-pdp-brand-link' 'PDP main brand keeps logo and text in one catalog link'
     Assert-NotContains $recent 'basePrice' 'local history has no base price'
     Assert-NotContains $recent 'renderPromotionBadge' 'JavaScript fallback does not invent a promotion badge'
     Assert-NotContains $recent 'availabilityClass' 'JavaScript fallback does not cache availability'
@@ -365,6 +373,17 @@ function Test-StaticContract {
     Assert-Contains $homePage 'aria-valuetext=' 'deal progress exposes understandable accessible text'
     Assert-Contains $homePage '(soldCount / total) * 100D' 'deal progress uses sold over sold plus stock'
     Assert-Contains $homePage 'Math.Min(limit, rows.Count)' 'deal selection enforces its requested maximum'
+    Assert-Contains $homePage 'ks-deal-slot--category' 'deal cards reserve a category slot'
+    Assert-Contains $homePage 'ks-deal-slot--title' 'deal cards reserve a three-line title slot'
+    Assert-Contains $homePage 'ks-deal-slot--price' 'deal cards reserve a price slot'
+    Assert-Contains $homePage 'ks-deal-price-tier-slot' 'deal cards reserve a distinct quantity-tier slot'
+    Assert-Contains $homePage 'ks-deal-slot--availability' 'deal cards reserve an availability slot'
+    Assert-Contains $homePage 'ks-deal-slot--savings' 'deal cards reserve a savings slot'
+    Assert-Contains $homePage 'ks-deal-slot--countdown' 'deal cards reserve a countdown slot'
+    Assert-Contains $homePage 'ks-deal-slot--progress' 'deal cards reserve a sales-progress slot'
+    Assert-Contains $homePage 'aria-hidden=''true''' 'empty optional deal slots stay silent for assistive technology'
+    Assert-NotContains $dealRenderer 'CompactText' 'deal titles stay complete in the DOM'
+    Assert-NotContains $dealRenderer 'Substring' 'deal titles are never shortened server-side'
 
     $availabilityPercent = {
         param([decimal]$Sold, [decimal]$Available)
@@ -395,8 +414,14 @@ function Test-StaticContract {
     Assert-Contains $productCss 'grid-template-columns: minmax(0, 1fr)' 'PDP buy-box uses one fluid promotion column'
     Assert-Contains $productCss '.ks-pdp-buybox-sticky .ks-product-promos *' 'PDP promotion children can shrink inside the buy-box'
     Assert-Contains $productCss 'overflow-wrap: anywhere' 'long promotion content wraps safely'
-    Assert-Contains $pdpMarkup 'product-ui.css") %>?v=20260917-offers-promo-ux1-rev2' 'PDP CSS cache-buster is current'
-    Assert-Contains $master 'theme-overrides.css") & "?v=20260917-offers-promo-ux1-rev2"' 'global theme CSS cache-buster is current'
+    Assert-Contains $productCss '.ks-pdp-brand-link__logo-frame' 'PDP brand logo reserves stable desktop geometry'
+    Assert-Contains $productCss 'flex-basis: 88px' 'PDP brand logo reserves stable mobile geometry'
+    Assert-Contains $productCss '.ks-pdp-brand-link__name' 'long PDP brand names have a dedicated wrapping target'
+    Assert-Contains $css '.ks-home-deals .swiper-wrapper' 'deal swiper stretches all slides uniformly'
+    Assert-Contains $css '.ks-deal-slot--availability' 'deal availability uses a stable structural slot'
+    Assert-Contains $css '.ks-deal-slot--progress' 'deal progress uses a stable bottom slot'
+    Assert-Contains $pdpMarkup 'product-ui.css") %>?v=20260917-offers-promo-ux1-rev3' 'PDP CSS cache-buster is current'
+    Assert-Contains $master 'theme-overrides.css") & "?v=20260917-offers-promo-ux1-rev3"' 'global theme CSS cache-buster is current'
 
     $ownerVisible = {
         param([int]$OwnerId, [bool]$Authenticated, [int]$CurrentUserId)
@@ -667,6 +692,28 @@ function Test-RuntimeContract {
             Assert-True ($promoText.IndexOf('promo attiva', [StringComparison]::OrdinalIgnoreCase) -lt 0) 'PDP does not invent a validity label'
             Assert-True (-not [regex]::IsMatch($promoPanel, '(?:OfferId|OfferDetailId|OwnerUserId|UtentiId|AziendeId|data-offer)', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) 'PDP exposes no technical promotion identifiers'
 
+            $pdpBrandLink = Get-ElementByClass $pdp.Content 'ks-pdp-brand-link'
+            Assert-True (-not [string]::IsNullOrWhiteSpace($pdpBrandLink)) 'PDP renders the current product brand link above the fold'
+            Assert-True (-not [string]::IsNullOrWhiteSpace((Get-PageText $pdpBrandLink))) 'PDP brand link always preserves the text name'
+            Assert-True ($pdpBrandLink.IndexOf('ks-pdp-brand-link__logo', [StringComparison]::OrdinalIgnoreCase) -lt 0) 'PDP product without a usable logo falls back to text without a broken image'
+
+            $brandCatalog = Invoke-LocalGet 'articoli.aspx?q=epson' $session
+            Assert-HealthyResponse $brandCatalog 'brand-logo catalog fixture'
+            $brandLogoFound = $false
+            foreach ($brandProductId in @(Get-ProductIds $brandCatalog.Content | Select-Object -First 5)) {
+                $brandPdp = Invoke-LocalGet ('articolo.aspx?id=' + $brandProductId) $session
+                $brandLogo = [regex]::Match($brandPdp.Content, '<img\b[^>]*class=[''"][^''"]*\bks-pdp-brand-link__logo\b[^''"]*[''"][^>]*>', [Text.RegularExpressions.RegexOptions]::IgnoreCase)
+                if (-not $brandLogo.Success) { continue }
+                $brandLogoFound = $true
+                Assert-True ([regex]::IsMatch($brandLogo.Value, 'alt=[''"]Logo\s+[^''"]+[''"]', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) 'PDP local brand logo has the required accessible alt'
+                $brandLogoSource = [regex]::Match($brandLogo.Value, 'src=[''"]([^''"]+)[''"]', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Groups[1].Value
+                Assert-True ($brandLogoSource.IndexOf('/Public/assets/images/marche/', [StringComparison]::OrdinalIgnoreCase) -ge 0) 'PDP brand logo is a local Marche_img asset'
+                $brandAsset = Invoke-LocalGet $brandLogoSource $session
+                Assert-True ($brandAsset.StatusCode -eq 200) 'PDP local brand logo is served without a broken image'
+                break
+            }
+            Assert-True $brandLogoFound 'PDP resolves a real local brand logo fixture'
+
             $pdpCardSections = @(
                 (Get-ElementByClass $pdp.Content 'ks-similar-products-section'),
                 (Get-ElementByClass $pdp.Content 'ks-related-products-section'),
@@ -710,6 +757,9 @@ function Test-RuntimeContract {
             Assert-True ((Get-PageText $dealCard).IndexOf('Venduti:', [StringComparison]::OrdinalIgnoreCase) -ge 0) 'deal card shows sold quantity'
             Assert-True ((Get-PageText $dealCard).IndexOf('Disponibili:', [StringComparison]::OrdinalIgnoreCase) -ge 0) 'deal card shows available quantity'
             Assert-True ([regex]::IsMatch($dealCard, 'role=[''"]progressbar[''"][^>]*aria-valuemin=[''"]0[''"][^>]*aria-valuemax=[''"]100[''"][^>]*aria-valuenow=[''"][0-9]+(?:\.[0-9]+)?[''"][^>]*aria-valuetext=[''"][^''"]*venduti[^''"]*disponibili[^''"]*[''"]', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) 'deal card progress is real and accessible'
+            foreach ($dealSlot in @('category', 'title', 'price', 'availability', 'savings', 'countdown', 'progress')) {
+                Assert-True ([regex]::Matches($dealCard, 'class=[''"][^''"]*\bks-deal-slot--' + $dealSlot + '\b[^''"]*[''"]', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) ('deal card has one structural ' + $dealSlot + ' slot')
+            }
         }
         Assert-Contains $homeResponse.Content 'ks-home-price-stack--emphasized' 'home keeps stable long-price geometry'
     } finally { Restore-LocalCertificateCompatibility }

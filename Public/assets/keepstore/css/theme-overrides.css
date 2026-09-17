@@ -1084,7 +1084,25 @@ body.ks-page-home .ks-home-deals .flat-title {
   border-bottom: 1px solid #edf0f3;
 }
 
+body.ks-page-home .ks-home-deals .swiper-wrapper {
+  align-items: stretch;
+}
+
+body.ks-page-home .ks-home-deals .swiper-slide {
+  display: flex;
+  height: auto;
+  min-width: 0;
+}
+
+body.ks-page-home .ks-home-deals .swiper-slide > .ks-deal-card {
+  height: 100%;
+  min-width: 0;
+  width: 100%;
+}
+
 body.ks-page-home .ks-home-deals .ks-deal-card {
+  display: flex;
+  flex-direction: column;
   min-height: 628px;
   padding: 24px;
   border-color: #e7ebf0;
@@ -1125,6 +1143,10 @@ body.ks-page-home .ks-home-deals .ks-deal-card .ks-home-buy-cta {
   border-radius: 6px;
 }
 
+body.ks-page-home .ks-home-deals .ks-deal-slot--gallery {
+  min-height: 80px;
+}
+
 body.ks-page-home .ks-home-deals .ks-deal-thumbs {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1154,7 +1176,52 @@ body.ks-page-home .ks-home-deals .ks-deal-thumbs img {
 }
 
 body.ks-page-home .ks-home-deals .ks-deal-card .card-product-info {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
   padding-top: 0;
+  width: 100%;
+}
+
+body.ks-page-home .ks-home-deals .ks-deal-slot {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+}
+
+body.ks-page-home .ks-home-deals .ks-deal-slot--category {
+  min-height: 20px;
+}
+
+body.ks-page-home .ks-home-deals .ks-deal-slot--title,
+body.ks-page-home .ks-home-deals .ks-deal-slot--title h6 {
+  min-height: 76px;
+}
+
+body.ks-page-home .ks-home-deals .ks-deal-slot--title h6 {
+  margin: 0;
+}
+
+body.ks-page-home .ks-home-deals .ks-deal-slot--price .ks-home-price-stack {
+  min-height: 134px;
+}
+
+body.ks-page-home .ks-home-deals .ks-deal-price-amount-slot {
+  min-height: 66px;
+}
+
+body.ks-page-home .ks-home-deals .ks-deal-price-tier-slot {
+  min-height: 62px;
+}
+
+body.ks-page-home .ks-home-deals .ks-deal-slot--availability {
+  min-height: 76px;
+}
+
+body.ks-page-home .ks-home-deals .ks-deal-slot--savings {
+  min-height: 28px;
 }
 
 body.ks-page-home .ks-home-deals .ks-deal-card .name-product {
@@ -1181,16 +1248,34 @@ body.ks-page-home .ks-home-deals .ks-deal-card .old-price {
   font-size: 14px;
 }
 
+body.ks-page-home .ks-home-deals .ks-deal-card .ks-home-price-value {
+  overflow-wrap: anywhere;
+  white-space: normal;
+  word-break: normal;
+}
+
 body.ks-page-home .ks-home-deals .ks-deal-card .box-sale-tag {
   margin-top: 0;
   color: #fff;
   background: #ff3b30;
   font-size: 13px;
+  white-space: normal;
 }
 
 body.ks-page-home .ks-home-deals .ks-deal-card .box-infor-detail {
+  display: flex;
+  flex-direction: column;
   margin-top: auto;
   gap: 18px;
+}
+
+body.ks-page-home .ks-home-deals .ks-deal-slot--countdown {
+  min-height: 48px;
+}
+
+body.ks-page-home .ks-home-deals .ks-deal-slot--progress {
+  margin-top: 0;
+  min-height: 76px;
 }
 
 body.ks-page-home .ks-home-deals .tf-sw-products:not(.swiper-initialized) .swiper-wrapper,
@@ -1962,6 +2047,15 @@ body.ks-page-home .ks-home-main .box-title {
 }
 
 @media (max-width: 767.98px) {
+  body.ks-page-home .ks-home-deals .ks-deal-slot--title,
+  body.ks-page-home .ks-home-deals .ks-deal-slot--title h6 {
+    min-height: 64px;
+  }
+
+  body.ks-page-home .ks-home-deals .ks-deal-slot--availability {
+    min-height: 96px;
+  }
+
   body.ks-page-home .ks-home-deals .ks-deal-card .name-product {
     min-height: 64px;
   }
@@ -2541,7 +2635,13 @@ body.ks-page-home .ks-home-deals .ks-deal-card .box-sale-tag {
   box-sizing: border-box;
   max-width: 100%;
   min-height: 28px;
-  white-space: nowrap;
+  white-space: normal;
+}
+
+body.ks-page-home .ks-home-deals .ks-deal-card .ks-home-price-value {
+  overflow-wrap: anywhere;
+  white-space: normal;
+  word-break: normal;
 }
 
 .ks-recent-card .ks-recent-price-slot {
@@ -2652,6 +2752,10 @@ body.ks-page-home #HomeRecentlyViewedSection .swiper-slide > .ks-grid-card .card
 }
 
 @media (max-width: 575.98px) {
+  body.ks-page-home .ks-home-deals .ks-deal-slot--availability {
+    min-height: 122px;
+  }
+
   body.ks-page-home .ks-home-main .ks-home-price-slot--compact .ks-home-price-value--current {
     font-size: 16px;
   }

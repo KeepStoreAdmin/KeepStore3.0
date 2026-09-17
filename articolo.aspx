@@ -9,7 +9,7 @@
 
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/drift-basic.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/photoswipe.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20260917-offers-promo-ux1-rev2" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20260917-offers-promo-ux1-rev3" />
 
     <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
 </asp:Content>
@@ -144,9 +144,9 @@
                                                     </li>
                                                 </asp:PlaceHolder>
                                                 <asp:PlaceHolder ID="phBrand" runat="server" Visible="false">
-                                                    <li class="d-flex">
+                                                    <li class="d-flex ks-pdp-brand-row">
                                                         <span class="caption text-main-2">Marca:&nbsp;</span>
-                                                        <asp:HyperLink ID="lnkMarca" runat="server" CssClass="caption text-secondary link" />
+                                                        <asp:HyperLink ID="lnkMarca" runat="server" CssClass="caption text-secondary link ks-pdp-brand-link" />
                                                     </li>
                                                 </asp:PlaceHolder>
                                                 <li class="star-review">
