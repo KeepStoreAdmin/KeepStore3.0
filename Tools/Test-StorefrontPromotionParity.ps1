@@ -147,6 +147,15 @@ function Get-BalancedElementAt {
     return ''
 }
 
+function Assert-ProductCardPriceAccessibility {
+    param([string]$Card, [string]$Name)
+    $priceWrap = Get-ElementByClass $Card 'price-wrap'
+    $accessiblePricePattern = '<p\b(?=[^>]*class=(?<cq>[''"])[^''"]*\bprice-wrap\b[^''"]*\k<cq>)(?=[^>]*role=(?<rq>[''"])group\k<rq>)(?=[^>]*aria-label=(?<aq>[''"])Prezzo prodotto\k<aq>)[^>]*>'
+    Assert-True ($Card.IndexOf('Prezzo dimostrativo', [StringComparison]::OrdinalIgnoreCase) -lt 0) ($Name + ' does not expose the diagnostic price label')
+    Assert-True (-not [string]::IsNullOrWhiteSpace($priceWrap)) ($Name + ' exposes a price-wrap')
+    Assert-True ([regex]::IsMatch($priceWrap, $accessiblePricePattern, [Text.RegularExpressions.RegexOptions]::IgnoreCase)) ($Name + ' exposes the product price as an accessible group')
+}
+
 function Assert-PromotionSummaryMarkup {
     param([string]$Html, [string]$Name)
     $cards = @([regex]::Matches($Html, '<article\b.*?</article>', [Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [Text.RegularExpressions.RegexOptions]::Singleline) |
@@ -158,6 +167,7 @@ function Assert-PromotionSummaryMarkup {
     foreach ($cardMatch in $cards) {
         $card = $cardMatch.Value
         $summaries = @([regex]::Matches($card, '<div class="ks-catalog-promos"[^>]*>.*?</div>', [Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [Text.RegularExpressions.RegexOptions]::Singleline))
+        Assert-ProductCardPriceAccessibility $card ($Name + ' card')
         Assert-True ([regex]::Matches($card, '<p class="small-text">\s*Promo\s*</p>', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -le 1) ($Name + ' uses at most one standalone Promo badge per card')
         Assert-True ([regex]::Matches((Get-PageText $card), '-[0-9]{1,2}\s*%', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -le 1) ($Name + ' renders a percentage at most once per card')
         foreach ($summaryMatch in $summaries) {
@@ -170,15 +180,22 @@ function Assert-PromotionSummaryMarkup {
 }
 
 function Assert-ZapCatalogCardPresentation {
-    param([string]$Card, [string]$Name)
+    param([string]$Card, [string]$Name, [bool]$RequireProductPriceGroup = $true)
     $priceWrap = Get-ElementByClass $Card 'price-wrap'
     $newPrice = Get-ElementByClass $priceWrap 'new-price'
     if ([string]::IsNullOrWhiteSpace($newPrice)) { $newPrice = Get-ElementByClass $priceWrap 'ks-price-now' }
     $summary = Get-ElementByClass $Card 'ks-catalog-promos'
     $summaryText = Get-PageText $summary
+    if ($RequireProductPriceGroup) {
+        Assert-ProductCardPriceAccessibility $Card $Name
+    } else {
+        Assert-True ($Card.IndexOf('Prezzo dimostrativo', [StringComparison]::OrdinalIgnoreCase) -lt 0) ($Name + ' does not expose the diagnostic price label')
+    }
     Assert-True (-not [string]::IsNullOrWhiteSpace($priceWrap)) ($Name + ' has one price-wrap')
     Assert-True ([regex]::Matches($Card, 'class="[^"]*\bprice-wrap\b[^"]*"', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) ($Name + ' price-wrap occurs once')
     Assert-True ((Get-PageText $newPrice) -eq '5,00 €') ($Name + ' immediate quantity-one price is 5.00 only in price-wrap')
+    Assert-True ([regex]::Matches((Get-PageText $Card), '(?<![0-9])5,00\s*€', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) ($Name + ' current price occurs once')
+    Assert-True ([regex]::Matches((Get-PageText $Card), '(?<![0-9])6,00\s*€', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) ($Name + ' previous price occurs once')
     Assert-True ([regex]::Matches($summaryText, '(?<![0-9])5,00\s*€', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 0) ($Name + ' summary does not repeat 5.00')
     Assert-True ([regex]::Matches($Card, '<p class=[''"]small-text[''"]>\s*Promo\s*</p>', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) ($Name + ' has one standalone Promo badge label')
     Assert-True ([regex]::Matches((Get-PageText $Card), '-17\s*%', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) ($Name + ' renders the immediate discount once')
@@ -242,6 +259,7 @@ function Test-StaticContract {
     $pdp = Get-FileText 'articolo.aspx.vb'
     $recent = Get-FileText 'Public\assets\keepstore\js\keepstore-recently-viewed.js'
     $cartPrice = Get-FileText 'App_Code\CartPriceRevalidationHelper.vb'
+    $productCard = Get-FileText 'Public\ui\controls\ProductCard.ascx'
     $css = Get-FileText 'Public\assets\keepstore\css\theme-overrides.css'
     $catalogCss = Get-FileText 'Public\assets\keepstore\css\catalog-ui.css'
 
@@ -288,6 +306,8 @@ function Test-StaticContract {
     Assert-NotContains $recent 'availabilityClass' 'JavaScript fallback does not cache availability'
     Assert-Contains $recent 'scrubStoredHistory' 'legacy commercial fields are removed from local history'
     Assert-Contains $cartPrice 'quantity' 'cart price revalidation receives the final quantity'
+    Assert-NotContains $productCard 'Prezzo dimostrativo' 'runtime product card removes the diagnostic price label'
+    Assert-Contains $productCard 'role="group" aria-label="Prezzo prodotto"' 'runtime product card exposes a stable accessible price group'
     Assert-Contains $css 'ks-home-price-stack--emphasized' 'long prices keep stable home geometry'
     Assert-Contains $catalogCss '.ks-catalog-promos__tier-block' 'quantity tier has a dedicated catalog group'
     Assert-Contains $catalogCss 'margin-top: 8px' 'promotion summary is separated from the main price'
@@ -476,6 +496,7 @@ function Test-RuntimeContract {
         $legacy = Invoke-LocalGet 'promozioni.aspx'
         Assert-HealthyResponse $modern 'modern all promotions'
         Assert-HealthyResponse $legacy 'legacy all promotions'
+        Assert-NotContains $modern.Content 'Prezzo dimostrativo' 'promotion catalog exposes no diagnostic price label'
         $modernTotal = Get-ReportedProductCount $modern.Content
         $legacyTotal = Get-ReportedProductCount $legacy.Content
         Assert-True ($modernTotal -gt 0) 'modern reports a complete promotion total'
@@ -497,6 +518,7 @@ function Test-RuntimeContract {
         $immediateCard = Get-ProductCardByCode $immediateOnly.Content 'ZAP80-A4'
         $immediateText = Get-PageText $immediateCard
         Assert-True (-not [string]::IsNullOrWhiteSpace($immediateCard)) 'immediate-only fixture is present'
+        Assert-ProductCardPriceAccessibility $immediateCard 'immediate-only card'
         Assert-True ([regex]::Matches($immediateCard, '<p class="small-text">\s*Promo\s*</p>', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) 'immediate-only card has one Promo label'
         Assert-True ([regex]::Matches($immediateText, '-17\s*%', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) 'immediate-only card has one discount percentage'
         Assert-True ([regex]::Matches($immediateText, '(?<![0-9])5,00\s*€', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) 'immediate-only card has one current price'
@@ -511,10 +533,12 @@ function Test-RuntimeContract {
 
         $normal = Invoke-LocalGet 'articoli.aspx'
         Assert-HealthyResponse $normal 'normal catalog'
+        Assert-NotContains $normal.Content 'Prezzo dimostrativo' 'normal catalog exposes no diagnostic price label'
         Assert-True (@(Get-ProductIds $normal.Content).Count -gt 0) 'normal catalog still renders products'
         Assert-PromotionSummaryMarkup $normal.Content 'normal catalog promotion cards'
         $nonPromotionCard = Get-ProductCardWithoutPromotion $normal.Content
         Assert-True (-not [string]::IsNullOrWhiteSpace($nonPromotionCard)) 'normal catalog includes a non-promotion card fixture'
+        Assert-ProductCardPriceAccessibility $nonPromotionCard 'non-promotion card'
         Assert-True ($nonPromotionCard.IndexOf('ks-catalog-promos__label', [StringComparison]::OrdinalIgnoreCase) -lt 0) 'non-promotion card has no Promo label'
         Assert-True ($nonPromotionCard.IndexOf('ks-catalog-promos__price', [StringComparison]::OrdinalIgnoreCase) -lt 0) 'non-promotion card has no invented promotion price'
         Assert-True ([regex]::Matches($nonPromotionCard, 'class="[^"]*\bprice-wrap\b[^"]*"', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) 'non-promotion card keeps one normal price-wrap'
@@ -570,7 +594,7 @@ function Test-RuntimeContract {
         $recentText = Get-PageText $recentSection
         Assert-HealthyResponse $recentCatalog 'catalog recently viewed'
         $recentCard = Get-ProductCardByCode $recentSection 'ZAP80-A4'
-        Assert-ZapCatalogCardPresentation $recentCard 'catalog recently viewed ZAP80-A4 card'
+        Assert-ZapCatalogCardPresentation $recentCard 'catalog recently viewed ZAP80-A4 card' $false
 
         $homeResponse = Invoke-LocalGet 'Default.aspx?ksreview=recent-promo' $session
         $homeRecent = Get-SectionById $homeResponse.Content 'HomeRecentlyViewedSection'

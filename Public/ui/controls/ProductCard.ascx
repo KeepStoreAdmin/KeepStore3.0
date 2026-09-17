@@ -75,7 +75,7 @@
                     <%= SafeProductName %>
                 </a>
             </div>
-            <p class="price-wrap fw-medium" aria-label="Prezzo dimostrativo">
+            <p class="price-wrap fw-medium" role="group" aria-label="Prezzo prodotto">
                 <span class="new-price price-text fw-medium"><%= SafePriceText %></span>
                 <asp:PlaceHolder ID="phOldPrice" runat="server">
                     <span class="old-price body-md-2 text-main-2"><%= SafeOldPriceText %></span>
