@@ -1,20 +1,20 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-09-17
+Aggiornato: 2026-09-18
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
 
-- Aggiornato: 2026-09-17.
+- Aggiornato: 2026-09-18.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `23f21e6da00e726db9e361ace68de39b3d8f77eb`.
+- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `eb020eb7f2431d7c91e500e2f1768edcb5cc5d70`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - `WORKFLOW-GOVERNANCE-1A` e CHIUSO / A e integrato: il root `AGENTS.md` e la fonte canonica del metodo operativo corrente.
-- Ultimo task runtime chiuso: `PROMO-DISPLAY-ERROR-STATE-HARDENING-1A`, esito A, PR #259 integrata fast-forward nel checkpoint `23f21e6da00e726db9e361ace68de39b3d8f77eb`; errori tecnici, assenza legittima di offerte e offerte risolte restano stati distinti e non contaminano le cache di richiesta.
-- Task runtime corrente: `STOREFRONT-PROMO-BULK-PERFORMANCE-1A`, branch `task/storefront-promo-bulk-performance-1a`, base stabile `23f21e6da00e726db9e361ace68de39b3d8f77eb`. Le misure hanno escluso N+1 SQL su HOME, catalogo e PDP e dimostrato elaborazione duplicata nella sola HOME; la correzione minima risolve le promozioni dei pool ordinari soltanto dopo la selezione delle card visibili.
-- Prossimo task consigliato dopo la chiusura positiva: `STOREFRONT-SEO-TECHNICAL-AUDIT-1A`, per verificare canonical, robots, sitemap, meta, paginazione, filtri e indicizzabilita prima di Google Product structured data. Prerequisito: chiusura A di `STOREFRONT-PROMO-BULK-PERFORMANCE-1A`. Stato: `NON AVVIATO`.
+- Ultimo task runtime chiuso: `STOREFRONT-PROMO-BULK-PERFORMANCE-1A`, esito A, PR #260 integrata fast-forward nel checkpoint `eb020eb7f2431d7c91e500e2f1768edcb5cc5d70`; la risoluzione promozionale request-scoped evita lavoro duplicato cacheabile senza memorizzare gli stati `TechnicalError`.
+- Task runtime corrente: `STOREFRONT-SEO-TECHNICAL-AUDIT-1A`, branch `task/storefront-seo-technical-audit-1a`, base stabile `eb020eb7f2431d7c91e500e2f1768edcb5cc5d70`. Il task rende multi-tenant canonical, robots, sitemap e policy index/noindex senza flag commerciali e senza cambiare prezzi, promozioni o flussi ecommerce.
+- Prossimo task consigliato soltanto dopo la chiusura A: `GOOGLE-PRODUCT-STRUCTURED-DATA-1A`, per implementare e validare `Product`/`Offer`/`Breadcrumb`/`Organization` JSON-LD sui dati commerciali reali. Prerequisito: merge di `STOREFRONT-SEO-TECHNICAL-AUDIT-1A`. Stato: `NON AVVIATO`.
 - La funzione digitale di recesso resta documentata ma differita per decisione del Product Owner: `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A` non e il task attivo e non va avviato senza una nuova priorita esplicita di Germano.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
 - Debiti aperti principali: audit monetario `DOUBLE`; `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` chiuso E e differito in attesa di decisione infrastrutturale. Catalogo e PDP restano aree non dichiarate complete; recesso digitale e Coupon/Groupon restano differiti dal Product Owner.
@@ -22,6 +22,18 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 Questo checkpoint va aggiornato dopo ogni blocco importante. E una mappa di ripartenza, non sostituisce la verifica diretta di Git, del root `AGENTS.md` e delle fonti pertinenti.
 
 Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo task o riportano SHA precedenti sono storico autentico superato dal checkpoint corrente, non istruzioni operative vigenti. Catalogo e PDP restano esplicitamente aree non dichiarate complete.
+
+### Fondamenta SEO tecniche multi-tenant
+
+- La SEO tecnica e una funzione standard per tutte le installazioni KeepStore presenti e future: nessun flag, licenza, entitlement, piano o controllo di pagamento puo disattivarla o differenziarla tra clienti.
+- L'identita SEO autorevole deriva da `aziende.url1/url2` e dai dati azienda risolti server-side. L'host richiesto viene confrontato esattamente con gli alias configurati; `Host` e `X-Forwarded-Host` non sono fonti di canonical. Host sconosciuti falliscono chiusi (`421` sulle pagine, `404` sugli endpoint SEO) e non producono redirect o URL riflessi.
+- Canonical: assoluta, HTTPS, una sola per pagina pubblica indicizzabile. HOME usa `/`; PDP usa `articolo.aspx?id=...` e conserva `TCid` soltanto quando identifica la variante richiesta; catalogo base e tassonomie ammesse hanno canonical deterministica. Ricerca, campagne, ordinamenti, paginazione, selezioni multiple e parametri tecnici sono prudenzialmente `noindex,follow` con canonical ripulita secondo la policy catalogo. Parametri come `ReturnUrl`, token, sessioni e fragment non entrano nelle canonical.
+- Matrice permanente: HOME, catalogo base, tassonomie ammesse e PDP valide sono `index,follow`; carrello, login, registrazione, account, wishlist, documenti, checkout, pagamento, endpoint mutativi/tecnici e route promo legacy sono `noindex,nofollow` e senza canonical pubblica. Ricerca e catalogo promo moderno sono `noindex,follow`; errori e route mancanti ricevono `X-Robots-Tag: noindex,nofollow`.
+- `/robots.txt` e `/sitemap.xml` sono endpoint ASP.NET dinamici, tenant-aware e compatibili GET/HEAD; i file statici concorrenti sono rimossi. Robots indica la sitemap del tenant e disallow delle superfici private. La sitemap usa esclusivamente URL pubblici canonici del tenant corrente, XML escaped, prodotti abilitati del listino di default e tassonomie valide; esclude carrello, auth, documenti, ordine, pagamenti, route legacy e URL tecnici. Nessun nome database determina il comportamento.
+- Inventario metadati: HOME mantiene title, description, canonical, Open Graph e JSON-LD esistente; catalogo mantiene title/description/canonical e `CollectionPage` JSON-LD valido; PDP mantiene title/description/canonical, Open Graph e JSON-LD prodotto esistente. Il nuovo `Product/Offer` avanzato resta esplicitamente fuori da questo task.
+- Problemi risolti: host cliente hardcoded in policy, HOME, robots e sitemap; canonical ricavate dall'authority della richiesta; risoluzione azienda tramite confronto SQL parziale dell'host; segnali statici/dinamici conflittuali; pagine private con canonical/checkout JSON-LD; sitemap su route inesistente e connection key specifica; link social condivisi specifici di un cliente.
+- Prove anti-regressione: harness compilato sulla policy reale con due tenant sintetici e host alterato; canonical/robots/sitemap isolati; matrice HTTP con header `Purpose: prefetch`; XML sitemap valido e univoco; JSON-LD esistente parseabile; precompile ASP.NET Framework 4.8, diff check, secret scan e confronto delle aree commerciali protette. Nessuna DDL/DML, ordine, carrello, pagamento, e-mail o modifica dati appartiene al task.
+- Residui separati: dati strutturati Google avanzati, Merchant Center, IndexNow, Search Console API, `llms.txt`/`llms.ashx`, feed e integrazioni AI. Il primo candidato e `GOOGLE-PRODUCT-STRUCTURED-DATA-1A`, ancora `NON AVVIATO`.
 
 ### Chiusura WORKFLOW-GOVERNANCE-1A
 

@@ -32,6 +32,17 @@ Relazione con le fonti operative: il root `AGENTS.md` governa il metodo permanen
 - Se una informazione non e ancora verificata, marcarla come "da completare con audit dedicato".
 - A ogni chiusura con esito A, il rapporto conclusivo deve indicare automaticamente il prossimo task consigliato, ricavato dal manuale e dai finding aperti. Deve riportare nome, motivo, prerequisiti e stato NON AVVIATO. Nessun task successivo deve essere avviato o implementato senza autorizzazione del Product Owner.
 
+### 2.0.1 Contratto SEO tecnico multi-tenant
+
+- SEO tecnica, Google discovery e future superfici AI sono capacità standard KeepStore per ogni cliente; sono vietati flag di abilitazione, licenze, entitlement o piani che disattivino le fondamenta SEO.
+- `StorefrontSeoTenantContext` risolve l'identita dal record azienda autorevole e `StorefrontCanonicalHostPolicy` normalizza gli URL configurati, ammette soltanto host DNS esatti configurati e costruisce sempre origin HTTPS. Il valore grezzo di `Host` o `X-Forwarded-Host` non entra in canonical, robots o sitemap; un host sconosciuto fallisce chiuso senza open redirect.
+- Policy canonical: HOME `/`; catalogo `/articoli.aspx`; PDP `/articolo.aspx?id=...` con eventuale variante `TCid`; tassonomie catalogo soltanto nella combinazione whitelist. Ricerca, promo/campagne, ordinamenti, paginazione, multiselezioni e parametri tecnici restano `noindex,follow` e non contaminano la canonical. Le superfici private/transazionali non emettono canonical né markup pubblico contraddittorio.
+- Policy index: HOME, catalogo base, tassonomie ammesse e PDP valida sono `index,follow`. Carrello, autenticazione, registrazione, account, wishlist, documenti, ordine, checkout/pagamento, endpoint tecnici/mutativi e promo legacy sono `noindex,nofollow`. Errori HTTP ricevono anche `X-Robots-Tag` fail-closed.
+- `/robots.txt` e `/sitemap.xml` sono instradati da IIS a handler ASP.NET dinamici. Robots e sitemap condividono la stessa identita tenant; non coesistono file statici. La sitemap legge soltanto dati pubblici con query parametrizzate/read-only, usa la connection string applicativa senza dipendere dal nome database, emette XML `application/xml`, supporta GET/HEAD, deduplica e filtra le route ammesse.
+- Metadati esistenti verificati: HOME con Open Graph e grafo WebSite/Organization; catalogo con `CollectionPage`; PDP con Open Graph e grafo prodotto esistente. Cart/checkout non espongono piu `CheckoutPage` pubblico. Il task non introduce il nuovo contratto Google `Product/Offer`, feed, Merchant Center, IndexNow, Search Console, LLMS o AI.
+- Anti-regressione: harness VB compilato insieme alla policy effettiva con due identita sintetiche, alias, host cross-tenant e alterato; route matrix HTTP non mutativa; validazione XML e JSON-LD; precompile .NET Framework 4.8; controllo che resolver promo, card, CSS/JavaScript, ordine e servizi carrello restino byte/diff invariati.
+- Roadmap: dopo chiusura e merge di `STOREFRONT-SEO-TECHNICAL-AUDIT-1A`, il candidato e `GOOGLE-PRODUCT-STRUCTURED-DATA-1A`, stato `NON AVVIATO`.
+
 ### 2.1 Metodo operativo Codex Token-Safe / One-Shot
 
 - Il lavoro Codex deve partire da prompt unici e consolidati: branch, HEAD atteso, file ammessi, divieti, verifiche, output sintetico e criterio A/B/E devono essere gia definiti da ChatGPT.
