@@ -391,17 +391,28 @@
   }
 
   function catalogAsyncConfig(link) {
-    var page = link && link.closest ? link.closest('#ksCatalogPage') : null;
-    if (!page && document.body && document.body.getAttribute('data-ks-async-cart-endpoint')) page = document.body;
+    var page = link && link.closest ? link.closest('[data-ks-async-cart-endpoint]') : null;
+    if (page === document.body) page = null;
     if (!page || typeof window.fetch !== 'function') return null;
     var endpoint = page.getAttribute('data-ks-async-cart-endpoint') || '';
     var token = page.getAttribute('data-ks-async-cart-token') || '';
     return endpoint && token ? { page: page, endpoint: endpoint, token: token } : null;
   }
 
-  function setCatalogCartStatus(config, message) {
-    var status = config && config.page ? config.page.querySelector('#ksCatalogCartStatus') : null;
-    if (status) status.textContent = message || '';
+  function setCatalogCartStatus(config, message, showVisibleError) {
+    var status = config && config.page ? config.page.querySelector('[data-ks-async-cart-status], #ksCatalogCartStatus') : null;
+    if (!status) return;
+
+    status.textContent = message || '';
+    if (!status.hasAttribute('data-ks-async-cart-status')) return;
+
+    if (showVisibleError && message) {
+      status.classList.remove('visually-hidden');
+      status.classList.add('container', 'alert', 'alert-danger', 'mt-3');
+    } else {
+      status.classList.add('visually-hidden');
+      status.classList.remove('container', 'alert', 'alert-danger', 'mt-3');
+    }
   }
 
   function setCatalogCartBusy(link, busy) {
@@ -592,7 +603,7 @@
 
     var identity = cartLinkIdentity(link);
     if (!identity.id) {
-      setCatalogCartStatus(config, 'Prodotto non valido. Riprova.');
+      setCatalogCartStatus(config, 'Prodotto non valido. Riprova.', true);
       return;
     }
 
@@ -636,7 +647,7 @@
     }).catch(function (error) {
       if (error && error.ksTerminal) clearCartIntent(link, identity, qtyToAdd);
       var message = error && error.message ? error.message : 'Risposta del carrello non disponibile. Verifica il carrello prima di riprovare.';
-      setCatalogCartStatus(config, message);
+      setCatalogCartStatus(config, message, true);
     }).then(function () {
       setCatalogCartBusy(link, false);
     });

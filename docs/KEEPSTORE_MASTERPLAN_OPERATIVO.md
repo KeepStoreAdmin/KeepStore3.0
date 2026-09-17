@@ -9,12 +9,12 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 - Aggiornato: 2026-09-17.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `192701ae65ecac00c294399a686af52d98d398c1`.
+- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `cab4486d229e8c8e8168e2a68798b0ea6d267c4e`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - `WORKFLOW-GOVERNANCE-1A` e CHIUSO / A e integrato: il root `AGENTS.md` e la fonte canonica del metodo operativo corrente.
-- Ultimo task runtime chiuso: `STOREFRONT-PROMO-ROUTE-RETIREMENT-1A`, esito A, PR #256 integrata fast-forward nel checkpoint `192701ae65ecac00c294399a686af52d98d398c1`; tre commit lineari, zero merge commit e `main` invariato.
-- Task runtime corrente: `STOREFRONT-OFFERS-PROMO-UX-1A`, branch `task/storefront-offers-promo-ux-1a`, base stabile `192701ae65ecac00c294399a686af52d98d398c1`. La REV3 tecnica completa anche logo marca PDP e geometria strutturale delle card `Occasione Imperdibile`; il gate visuale reale sui quattro viewport resta pendente e il task non e dichiarato A.
-- Prossimo task candidabile: `HOME-ASYNC-CART-1A`, soltanto dopo review A e merge autorizzato di `STOREFRONT-OFFERS-PROMO-UX-1A`. Non e avviato da questo aggiornamento.
+- Ultimo task runtime chiuso: `STOREFRONT-OFFERS-PROMO-UX-1A`, esito A, PR #257 integrata nel checkpoint `cab4486d229e8c8e8168e2a68798b0ea6d267c4e`; la fixture ripetibile del logo marca e `articolo.aspx?id=9775`, codice `EPSON ORIG. LIGHT M`, asset locale `logo_epson2.jpg` HTTP `200`, con fallback testuale verificato su `ZAP80-A4` (`id=21906`).
+- Task runtime corrente: `HOME-ASYNC-CART-1A`, branch `task/home-async-cart-1a`, base stabile `cab4486d229e8c8e8168e2a68798b0ea6d267c4e`. Estende alla sola radice HOME il percorso asincrono del catalogo; il gate browser reale anonimo/autenticato sui quattro viewport resta obbligatorio e la HOME non e dichiarata completa.
+- Prossimo task: non stabilito; nessun task successivo viene avviato da questo aggiornamento.
 - La funzione digitale di recesso resta documentata ma differita per decisione del Product Owner: `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A` non e il task attivo e non va avviato senza una nuova priorita esplicita di Germano.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
 - Debiti aperti principali: audit monetario `DOUBLE`; `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` chiuso E e differito in attesa di decisione infrastrutturale. Catalogo e PDP restano aree non dichiarate complete; recesso digitale e Coupon/Groupon restano differiti dal Product Owner.
@@ -83,7 +83,7 @@ Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo tas
 - Verifiche: harness route-retirement `126/126`, harness commerciale `160/160`, anonimo `887/887`, PROVA `840/840`, campagne singola/multipla/inesistente `1/2/0`, ZAP80-A4 `5,00 EUR` a quantita `1-4` e `4,00 EUR` a quantita `5`; precompile ASP.NET Framework 4.8 e regression GET HOME/catalogo/PDP superati, senza mutazioni ecommerce.
 - Il task e CHIUSO / A con PR #256 integrata fast-forward nel checkpoint `192701ae65ecac00c294399a686af52d98d398c1`, catena lineare `260b470d... -> 5ab2f084... -> c689b4e0... -> 192701ae...` e zero merge commit. Lo smoke visuale Product Owner REV2 ha approvato desktop, tablet `768x1024`, mobile `390x844` e `360x800`, inclusi prezzo non duplicato, label `Promo` separata, tier `Da ...`, condizioni quantitative, layout e spaziatura delle card.
 
-### STOREFRONT-OFFERS-PROMO-UX-1A - implementazione tecnica in review
+### Chiusura STOREFRONT-OFFERS-PROMO-UX-1A
 
 - Il task uniforma esclusivamente la presentazione promo di HOME, catalogo normale/promozionale, `Visti di recente` e PDP, adattando al markup KeepStore i pattern ONSUS per prezzo corrente/precedente, sale badge e offerte quantitative. Restano fuori scope logica commerciale, query, carrello, ordine, pagamento, gateway, e-mail e database.
 - Contratto visuale: il prezzo applicabile alla quantita `1` compare una sola volta; il precedente e barrato soltanto se realmente valido; label `Promo` e percentuale valida compaiono una sola volta; il tier futuro resta separato come `Da ...` con la propria condizione e non sostituisce il prezzo principale. Un prodotto senza offerta valida non rende label, percentuali, contenitori vuoti o spazi anomali.
@@ -93,7 +93,14 @@ Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo tas
 - REV3 PDP/HOME: il logo principale della marca deriva esclusivamente da `Marche_img` della riga prodotto corrente, riusa il link catalogo per marca e resta affiancato al nome nello stesso collegamento accessibile. Sono ammessi soltanto file locali realmente esistenti; valore vuoto, percorso non valido o file assente producono esclusivamente il nome testuale, mai asset demo o immagine rotta. Le card `Occasione Imperdibile` usano slide allungate e slot distinti per categoria, titolo completo fino a tre righe, prezzo, tier, disponibilita, risparmio, countdown e progresso; gli slot opzionali vuoti preservano la geometria senza inventare contenuti e non vengono annunciati agli screen reader.
 - Verifiche REV2: harness promozionale completo `544/544`; matrice card reale con promo immediata, tier-only, mista, multi-offerta e nessuna promo; retirement `126/126`; parita anonima `887/887` e PROVA `840/840`, con elementi solo-route e duplicati a zero; precompile ASP.NET Framework 4.8 superata. Nessuna scrittura ecommerce o DB e nessuna modifica a resolver, provider o formule prezzo.
 - Verifiche tecniche REV3: prove focalizzate `121/121`, harness finale `620/620`, retirement `126/126`, parita anonima `887/887` e PROVA `840/840` con differenze e duplicati a zero, logo locale HTTP 200 e fallback testuale, precompile ASP.NET Framework 4.8. Il browser interattivo non era disponibile nella sessione: nessuna misura geometrica o conclusione sulla fascia vuota e stata inventata.
-- Il controllo visuale reale a `360x800`, `390x844`, `768x1024` e `1365x900` resta l'unico gate esplicito pendente: deve misurare l'allineamento delle card entro `2px`, overflow/focus, logo/fallback e l'eventuale fascia vuota HOME dopo scroll completo con WOW, lazy loading e Swiper attivati. Harness, precompile e HTTP 200 non certificano la resa visuale e non consentono Esito A. Prima di un audit UI costoso si verifica la disponibilita del browser; durante le correzioni si usano test focalizzati e la suite completa si esegue una sola volta alla fine. `HOME-ASYNC-CART-1A` resta il candidato successivo e non va avviato prima di review A e merge autorizzato di questo task.
+- Il controllo visuale reale sui quattro viewport e la fixture stabile del logo hanno completato il gate Product Owner; PR #257 e stata integrata in `frontend-rebuild` al checkpoint `cab4486d229e8c8e8168e2a68798b0ea6d267c4e`. Questa chiusura non dichiara complete HOME, catalogo, PDP, promo o intero storefront.
+
+### HOME-ASYNC-CART-1A - implementazione tecnica in review
+
+- La HOME riusa esclusivamente `catalog_cart_async.aspx`, `CatalogAsyncCartSupport`, `CartMutationIdempotencyService`, `CartMutationService`, la risposta MiniCart esistente e `window.KeepStoreCartState`; non introduce endpoint, business logic, resolver o provider commerciali alternativi.
+- La configurazione asincrona vive nel contenitore HOME dedicato e viene risolta dal controllo `.js-ks-cart-link` nel contenitore configurato piu vicino. Il `body` non abilita globalmente il comportamento e `#ksCatalogPage` conserva il contratto esistente.
+- RequestId, busy state e replay restano idempotenti; dopo successo vengono aggiornate tutte le card equivalenti `ArticoliId/TCId`, i contatori desktop/mobile e il MiniCart, senza reload. Il form `ksNativeCartForm` resta il fallback nativo quando `fetch` non e disponibile.
+- Il gate finale richiede smoke browser reale anonimo e PROVA a `1365x900`, `768x1024`, `390x844` e `360x800`, inclusi scroll/slider, MiniCart, doppio click, errore visibile e assenza di doppio handler. Fino a quel gate l'esito resta tecnico/in review e la HOME non e dichiarata completa.
 
 ### Funzione digitale di recesso B2C - documentata e differita
 
@@ -168,8 +175,8 @@ Responsabilita: Codex esegue audit e implementazioni tecniche solo nei manifest 
 
 1. `STOREFRONT-PROMO-MODERN-PARITY-1A`: CHIUSO / A e integrato con PR #255.
 2. `STOREFRONT-PROMO-ROUTE-RETIREMENT-1A`: CHIUSO / A e integrato con PR #256 al checkpoint `192701ae65ecac00c294399a686af52d98d398c1`.
-3. `STOREFRONT-OFFERS-PROMO-UX-1A`: task corrente, implementazione e test tecnici in review; gate visuale reale sui quattro viewport ancora pendente, quindi nessun esito A registrato.
-4. `HOME-ASYNC-CART-1A`: prossimo candidato soltanto dopo review A e merge autorizzato del task UX promo.
+3. `STOREFRONT-OFFERS-PROMO-UX-1A`: CHIUSO / A e integrato con PR #257 al checkpoint `cab4486d229e8c8e8168e2a68798b0ea6d267c4e`.
+4. `HOME-ASYNC-CART-1A`: task corrente, implementazione tecnica in review; gate browser reale anonimo/autenticato ancora obbligatorio.
 5. `PDP-BRAND-LOGO-1A` e assorbito dalla REV3 del task corrente e non resta un task separato.
 6. In seguito performance/bulk promo, SEO tecnico, Google Product structured data e infine AI/Gemini/LLMS.
 

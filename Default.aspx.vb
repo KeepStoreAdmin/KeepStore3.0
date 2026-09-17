@@ -20,6 +20,12 @@ Partial Public Class _Default
     Private Shared ReadOnly Rng As New Random()
     Private Const RuntimeSiteBaseUrl As String = "https://www.taikun.it"
 
+    Protected ReadOnly Property HomeAsyncCartToken As String
+        Get
+            Return CatalogAsyncCartSupport.GetOrCreateCsrfToken(HttpContext.Current)
+        End Get
+    End Property
+
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         MarkBodyAsHome()
         ApplyHomeSeo()

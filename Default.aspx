@@ -7,7 +7,16 @@
 
 <asp:Content ID="cntMain" ContentPlaceHolderID="MainContent" runat="server">
 
-    <section class="ks-home-main">
+    <section id="ksHomePage"
+             class="ks-home-main"
+             data-ks-async-cart-endpoint="<%= ResolveUrl("~/catalog_cart_async.aspx") %>"
+             data-ks-async-cart-token="<%= System.Web.HttpUtility.HtmlAttributeEncode(HomeAsyncCartToken) %>">
+        <div id="ksHomeCartStatus"
+             class="visually-hidden"
+             role="status"
+             aria-live="polite"
+             aria-atomic="true"
+             data-ks-async-cart-status></div>
 
     <section id="HomeHeroSection" runat="server" class="ks-home-hero-area ks-home-hero-mode-full">
         <div class="container">
@@ -550,7 +559,7 @@
 </asp:Content>
 
 <asp:Content ID="cntScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20260907-cartidempotency2"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20260917-home-async-cart1"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260916-promo-parity-rev1"></script>
     <script src="<%= ThemeManager.Asset("js/home-default.js") & "?v=20260518-home6" %>"></script>
 </asp:Content>
